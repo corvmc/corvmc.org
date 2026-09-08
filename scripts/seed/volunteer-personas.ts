@@ -64,7 +64,13 @@ export const VOLUNTEER_PERSONAS = [
 		email: 'minor@corvallismusic.org',
 		name: 'Robin Vance',
 		memberNumber: 93,
-		roles: ['member']
+		roles: ['member'],
+		// Sixteen. Distinct from the `isAdult: false` on their volunteer profile,
+		// which is a one-time onboarding answer with a guardian process behind it:
+		// this is the date the rest of the site derives eligibility from, and it is
+		// what closes direct messages for them without a moderation row. Relative
+		// to the seed run so they never age out of being a minor.
+		ageYears: 16
 	}
 ] as const;
 
@@ -95,6 +101,12 @@ export async function seedVolunteerPersonas(
 		return { startsAt, endsAt: new Date(startsAt.getTime() + minutes * 60_000) };
 	};
 
+	const yearsAgo = (years: number) => {
+		const d = new Date(now.getTime());
+		d.setFullYear(d.getFullYear() - years);
+		return d;
+	};
+
 	for (const p of VOLUNTEER_PERSONAS) {
 		await db.insert(user).values({
 			id: p.id,
@@ -102,6 +114,9 @@ export async function seedVolunteerPersonas(
 			email: p.email,
 			emailVerified: true,
 			memberNumber: p.memberNumber,
+			// Only the personas that need one carry a date. Most members have none,
+			// which is the case every gate has to keep answering "not a minor" for.
+			dateOfBirth: 'ageYears' in p ? yearsAgo(p.ageYears) : null,
 			createdAt: ago(400),
 			updatedAt: ago(400)
 		});

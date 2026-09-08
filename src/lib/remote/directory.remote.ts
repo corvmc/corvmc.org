@@ -4,7 +4,7 @@ import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { requireFeature, getAllFeatureFlags } from '$lib/server/feature-flags';
-import { requireGroupRole } from '$lib/server/group/group-context';
+import { requireBandRole } from '$lib/server/group/group-context';
 import {
 	listMembers,
 	searchDirectoryMembers,
@@ -665,8 +665,11 @@ export const getMemberProfileEditor = query(z.void(), async () => {
 // Band profile queries & forms
 // ---------------------------------------------------------------------------
 
+// `requireBandRole`: this editor writes `directoryVisibility`, and for a club
+// or committee that setting is staff's — `updateStaffGroup` is its one writer.
+// A club leader reaching a band-shaped form was the second, conflicting path.
 export const getBandProfile = query(z.string(), async (slug) => {
-	const { group: band } = await requireGroupRole({ slug }, 'admin');
+	const { group: band } = await requireBandRole({ slug }, 'admin');
 	return getBandProfileForEdit(band.id);
 });
 
@@ -688,7 +691,7 @@ const bandProfileSchema = z.object({
 });
 
 export const saveBandProfile = form(bandProfileSchema, async (data) => {
-	const { user, group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
+	const { user, group: band } = await requireBandRole({ slug: data.slug }, 'admin');
 
 	const contact = {
 		...(data.contactEmail ? { email: data.contactEmail } : {}),

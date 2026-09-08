@@ -33,7 +33,9 @@ const SEED_FILE = 'scripts/seed-dev.ts';
 const REPORT_PATH = 'docs-drift-report.json';
 const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
 
+/** @param {string} dir @returns {string[]} */
 function walk(dir) {
+	/** @type {string[]} */
 	const out = [];
 	for (const entry of readdirSync(dir)) {
 		const full = join(dir, entry);
@@ -43,10 +45,16 @@ function walk(dir) {
 	return out;
 }
 
-/** Parse YAML frontmatter exactly like scripts/sync-help-articles.ts. */
+/**
+ * Parse YAML frontmatter exactly like scripts/sync-help-articles.ts.
+ *
+ * @param {string} content
+ * @returns {{ meta: Record<string, string | number>, body: string }}
+ */
 function parseFrontmatter(content) {
 	const m = content.match(FRONTMATTER_RE);
 	if (!m) throw new Error('Missing frontmatter');
+	/** @type {Record<string, string | number>} */
 	const meta = {};
 	for (const line of m[1].split('\n')) {
 		const [k, ...rest] = line.split(':');
@@ -97,7 +105,7 @@ function checkHelpContent() {
 		try {
 			parsed = parseFrontmatter(readFileSync(file, 'utf-8'));
 		} catch (e) {
-			errors.push(`${rel}: ${e.message}`);
+			errors.push(`${rel}: ${e instanceof Error ? e.message : String(e)}`);
 			continue;
 		}
 		const { meta, body } = parsed;
@@ -144,11 +152,12 @@ function checkHelpContent() {
  */
 function checkDocIndexes() {
 	const errors = [];
-	const files = walk(DOCS_DIR).map((f) => relative('.', f));
-	const readmes = new Set(files.filter((f) => f.endsWith('/README.md')));
+	const files = walk(DOCS_DIR).map((/** @type {string} */ f) => relative('.', f));
+	const readmes = new Set(files.filter((/** @type {string} */ f) => f.endsWith('/README.md')));
 	const bodies = new Map();
 
 	/** The nearest `README.md` at or above `file`, or null if the doc tree has none. */
+	/** @param {string} file */
 	function ownerOf(file) {
 		let dir = file.slice(0, file.lastIndexOf('/'));
 		for (;;) {
@@ -246,6 +255,6 @@ function main() {
 try {
 	main();
 } catch (e) {
-	console.error('check-docs-drift failed:', e.message);
+	console.error('check-docs-drift failed:', e instanceof Error ? e.message : e);
 	process.exit(2);
 }

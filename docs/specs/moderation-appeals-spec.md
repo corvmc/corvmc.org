@@ -133,8 +133,9 @@ something new turns up, but Sam cannot keep filing.
   a member is rather than what they did — the under-18 messaging case is the only
   one today — is not a moderation action and gets no appeal, because there is no
   judgement to contest. It also should not be a `member_standing` row at all;
-  requiring a report is what makes that obvious. Recorded in `CHORES.md`, since
-  the replacement does not exist yet.
+  requiring a report is what makes that obvious. **Resolved in #556**: `user`
+  carries a `dateOfBirth`, messaging eligibility is derived from it, and the case
+  no longer touches this table.
 - **A second-level appeal.** A denied appeal has been read by two people. A third
   is a committee, and the collective does not have one.
 - **Changing what a report _does_.** The griefing tradeoff in
@@ -168,15 +169,21 @@ shown a report, and offered an appeal against their own date of birth.
 
 So this feature does not accommodate that case; it evicts it. Requiring a report
 on every `member_standing` write is exactly the pressure that surfaces it, and
-the eviction is the point rather than a cost. The replacement — some notion of
-member eligibility or capability that is not moderation — is out of scope here
-and recorded in `CHORES.md`. The root gap is that `user` carries no date of birth
-at all, so "this member is a minor" has nowhere to live but a restriction.
+the eviction is the point rather than a cost.
 
-Until that lands, staff switching messaging off for a minor will file a report
-like any other. That is worse than a proper eligibility field and better than
-`reason: null`, and it is deliberately uncomfortable: the friction is the signal
-that the case is in the wrong home.
+**The replacement has since landed (#556).** `user.date_of_birth` is nullable and
+means "not known to be a minor" when absent, `isMinor` in `$lib/utils/age`
+derives eligibility from it, and `getMessagingState` returns `ageRestricted`
+alongside the standing so `/member/account` can say messaging opens at 18 without
+showing a staff note, an appeal, or the words "switched off by staff". The gate
+is read in the same two places the standing is — `direct-service`'s raw-SQL
+`messagingDisabledFor` predicate and `startDirectThread` — and a minor sender
+gets `ineligible` rather than a `restricted` with an empty reason.
+
+Two consequences for this spec. Nothing under-18 reaches `member_standing`, so
+requiring a report on every write no longer evicts anybody who was not moderated.
+And a derived restriction lifts itself on the member's eighteenth birthday, where
+a standing row would have waited for a staffer to remember.
 
 Note this does not cost the `disabled` rung its purpose. `disabled` has a genuine
 moderation use — the escalation past `restricted`, which for messaging is

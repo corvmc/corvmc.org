@@ -8,6 +8,8 @@ import { sql, type SQL } from 'drizzle-orm';
 
 const mockBand = {
 	id: 'band-1',
+	// `deleteBand` reads it: only a band is deleted by the person who runs it.
+	kind: 'band',
 	name: 'The Velvet Underground',
 	slug: 'the-velvet-underground',
 	bio: 'NYC band',
@@ -171,6 +173,7 @@ import {
 	CannotRemoveOwnerError,
 	OwnerCannotLeaveError,
 	BandNotFoundError,
+	CannotDeleteProgramError,
 	BandMemberNotFoundError,
 	NotAnActiveBandMemberError,
 	listForUser,
@@ -488,6 +491,25 @@ describe('BandService', () => {
 			selectResult = [];
 
 			await expect(deleteBand('band-999')).rejects.toThrow(BandNotFoundError);
+		});
+
+		/**
+		 * The one place the role table differs by kind
+		 * (`docs/specs/groups-spec.md:818`): an appointed leader runs a program,
+		 * they do not own it, and ending one is a staff decision. The guard on the
+		 * remote is `requireGroupRole(…, 'owner')`, which a club owner satisfies —
+		 * so the check has to be here, where the cascade is.
+		 */
+		it.each([['club'], ['committee']])('refuses to delete a %s', async (kind) => {
+			selectResultQueue = [[{ ...mockBand, kind }], []];
+
+			await expect(deleteBand('band-1')).rejects.toThrow(CannotDeleteProgramError);
+
+			// Nothing started: the cascade takes announcements, documents and the
+			// roster, so a partial run is worse than none.
+			expect(cancelReservation).not.toHaveBeenCalled();
+			expect(detachSlot).not.toHaveBeenCalled();
+			expect(deletePrivateObject).not.toHaveBeenCalled();
 		});
 
 		/**

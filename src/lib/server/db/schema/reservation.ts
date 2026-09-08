@@ -81,9 +81,18 @@ export const reservation = sqliteTable(
 		// or comped); > 0 = cash owed. Combined with paidAt: paidAt set ⇒ paid,
 		// paidAt null & >0 ⇒ cash owed, paidAt null & 0 ⇒ comped/credit-settled.
 		cashDueCents: integer('cash_due_cents'),
+		// The lock-assigned user id, recovered by diffing the lock's user list
+		// around the add — U-tec's `add` ack carries no id of its own.
 		lockAccessId: text('lock_access_id'),
 		// Per-reservation door lock code (not backfilled from legacy data).
 		lockCode: text('lock_code'),
+		// When the code was observed on the physical lock (`sync_status` 1), as
+		// opposed to merely queued in U-tec's cloud. Null means we have issued a
+		// code but cannot yet promise it opens the door.
+		lockSyncedAt: integer('lock_synced_at', { mode: 'timestamp' }),
+		// When the member was shown the break-glass code because their own could
+		// not be confirmed. This is the audit trail for who was handed it.
+		lockFallbackRevealedAt: integer('lock_fallback_revealed_at', { mode: 'timestamp' }),
 		recurringSeriesId: text('recurring_series_id').references(() => recurringSeries.id, {
 			onDelete: 'set null'
 		}),
@@ -129,9 +138,81 @@ export const closure = sqliteTable(
 	]
 );
 
+/**
+ * The break-glass door code. Only *changes* need connectivity, so a code synced
+ * last month still opens the door during today's outage.
+ *
+ * Exactly one row is active — `syncedAt` set, `retiredAt` null — and a
+ * successor is minted before the incumbent is retired, never after, or there
+ * would be a window with no working code.
+ */
+export const lockFallbackCode = sqliteTable(
+	'lock_fallback_code',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		/** The keypad code itself. */
+		code: text('code').notNull(),
+		/** Lock-assigned user id; null until the add is reconciled. */
+		lockAccessId: text('lock_access_id'),
+		/** Set when the lock reports sync_status 1 — until then it opens nothing. */
+		syncedAt: integer('synced_at', { mode: 'timestamp' }),
+		/** Set when a confirmed successor has taken over. */
+		retiredAt: integer('retired_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [index('idx_lock_fallback_active').on(t.retiredAt, t.syncedAt)]
+);
+
+/**
+ * A member's persistent door code. These predate the app, so nothing revoked
+ * one when a person stopped being a member.
+ *
+ * `userId` is nullable because an adopted code may not match an account yet: a
+ * row can record that a code is accounted for before anyone has worked out
+ * whose it is.
+ */
+export const lockMemberCode = sqliteTable(
+	'lock_member_code',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+		/** The lock-assigned user id. The handle for revoking: names collide. */
+		lockAccessId: text('lock_access_id').notNull(),
+		code: text('code'),
+		/** The name as it reads on the lock, which is how staff recognise it. */
+		label: text('label').notNull(),
+		grantedByStaffId: text('granted_by_staff_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		/** Set when the lock reports sync_status 1. */
+		syncedAt: integer('synced_at', { mode: 'timestamp' }),
+		revokedAt: integer('revoked_at', { mode: 'timestamp' }),
+		revokedReason: text('revoked_reason'),
+		/** Set on a row created by reconciliation rather than by a staff grant. */
+		adoptedAt: integer('adopted_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		// One row per lock user: reconciliation matches on this to decide what is
+		// unmanaged, so a duplicate would make a code look adopted twice.
+		uniqueIndex('uq_lock_member_code_access').on(t.lockAccessId),
+		index('idx_lock_member_code_user').on(t.userId, t.revokedAt)
+	]
+);
+
 // ---------------------------------------------------------------------------
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
 
 export type Reservation = typeof reservation.$inferSelect;
 export type Closure = typeof closure.$inferSelect;
+export type LockFallbackCode = typeof lockFallbackCode.$inferSelect;
+export type LockMemberCode = typeof lockMemberCode.$inferSelect;

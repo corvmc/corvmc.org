@@ -77,10 +77,8 @@
 		<!--
 			Named even though it is not a form field. `correctStock` never sees
 			`counted` — Zod strips the unknown key and the ledger takes the derived
-			delta below — but without a name the input renders `name=""`, and a
-			`FormField` label is a `<legend>` naming the fieldset rather than a
-			`<label for>`, so an unnamed one is reachable by neither name nor label.
-			See the note at `e2e/staff-groups.e2e.ts`.
+			delta below — but without a name the input renders `name=""`, which
+			`e2e/inventory.e2e.ts` selects on.
 		-->
 		<Field
 			name="counted"

@@ -18,5 +18,10 @@ You'll stay signed in on this device after changing it.
 
 ## Forgot your password?
 
-If you can't sign in, use the password-reset option on the
-[sign-in page](/login) to receive a reset link by email.
+If you can't sign in, choose **Forgot your password?** on the
+[sign-in page](/login), or go straight to [password reset](/forgot-password).
+Enter your email address and we'll send you a link.
+
+The link is good for one hour and can only be used once. Setting a new password
+signs out every other device, so you'll need to sign in again anywhere else you
+use your account.

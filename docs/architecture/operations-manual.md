@@ -218,10 +218,12 @@ Local equivalents: Worker secrets go in **`.dev.vars`** (read by `vite dev` / wr
 Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are gitignored;
 `.env.example` documents the local set.
 
-> **Action item:** `wrangler.toml` currently ships Cloudflare's **always-pass test key** as
-> `PUBLIC_TURNSTILE_SITE_KEY` (the comment in the file says so). Until it's replaced with a
-> real site key + matching `TURNSTILE_SECRET_KEY`, the bot protection on sign-up/contact/
-> subscribe passes everyone.
+> **Turnstile:** `PUBLIC_TURNSTILE_SITE_KEY` in `wrangler.toml` is the real site key — an
+> older comment in that file wrongly described it as Cloudflare's always-pass test key, which
+> is `1x00000000000000000000AA`. Its matching `TURNSTILE_SECRET_KEY` Worker secret is
+> **required**: `verifyTurnstile` only falls back to the always-pass test secret on a local
+> origin (`isLocalOrigin`), so an unset secret in production now rejects every submission and
+> raises a Sentry event, rather than silently accepting every bot.
 
 ## 4. Third-party integrations
 

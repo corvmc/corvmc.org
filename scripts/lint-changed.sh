@@ -10,6 +10,22 @@ set -euo pipefail
 # "Lint (changed)" eventually goes red on your PR for a file a sibling phase touched.
 # Push, merge_group and local runs keep `origin/main`.
 BASE_REF=${BASE_REF:-origin/main}
+
+# A Claude Code cloud session clones the repo fresh and may not have the base ref
+# locally at all, in which case `merge-base` dies under `set -e` with git's own
+# "Not a valid object name" and nothing to act on. Fetch it once before giving up.
+# Deliberately not a fail-open: CI's "Lint (changed)" is a required check, and a
+# run that quietly linted nothing would report success for code nobody linted.
+if ! git rev-parse --verify --quiet "$BASE_REF" >/dev/null; then
+	echo "$BASE_REF is not present locally — fetching it"
+	git fetch --quiet origin "${BASE_REF#origin/}" || true
+	git rev-parse --verify --quiet "$BASE_REF" >/dev/null || {
+		echo "Cannot resolve $BASE_REF even after fetching origin/${BASE_REF#origin/}." >&2
+		echo "Set BASE_REF to a ref this checkout has, or fetch it." >&2
+		exit 1
+	}
+fi
+
 BASE=$(git merge-base "$BASE_REF" HEAD)
 
 # ESLint only understands the code globs. `.mjs`/`.cjs` are listed explicitly:

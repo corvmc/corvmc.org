@@ -42,7 +42,6 @@ const MESSAGE = 'Would you play a Thursday in April? Door split, 40 minute set.'
 
 async function login(page: Page, email: string, password: string) {
 	await page.goto('/login');
-	// FormField renders a <legend>, not a <label for>, so target inputs by name.
 	await page.locator('input[name="email"]').fill(email);
 	await page.locator('input[name="password"]').fill(password);
 	await page.getByRole('button', { name: 'Sign in' }).click();

@@ -4,6 +4,7 @@ import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
 import { fanOutAnnouncement } from '$lib/server/group/announcement-fanout';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
+import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '$lib/server/sentry';
 import { listUsersWithCapability } from '$lib/server/authorization';
 import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
@@ -619,6 +620,195 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Membership: the four moments a contribution touches somebody's money ---
+	// Before these existed a sustaining member's only record was whatever the
+	// Stripe dashboard happened to be configured to send — outside the repo,
+	// outside review, and outside this preference system. All four render
+	// through the generic template; a contribution receipt is a heading, a few
+	// detail rows and a link, which is exactly what that template is.
+
+	function contributionDetails(event: {
+		amountCents: number;
+		freeHoursPerMonth: number;
+		periodEnd: string;
+		coveringFees: boolean;
+	}): NotificationEmailDetail[] {
+		const details: NotificationEmailDetail[] = [
+			{ label: 'Contribution', value: `${formatCents(event.amountCents)} / month` },
+			{ label: 'Free rehearsal hours', value: `${formatHours(event.freeHoursPerMonth)} / month` },
+			{ label: 'Next renewal', value: formatPickupDate(event.periodEnd) }
+		];
+		if (event.coveringFees) {
+			details.push({ label: 'Processing fees', value: 'Covered by you — thank you' });
+		}
+		return details;
+	}
+
+	domainEvents.on('membership.started', async ({ data: event }) => {
+		await dispatch({
+			type: 'membership_receipt',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `Thanks for becoming a sustaining member`,
+			body: `${formatCents(event.amountCents)} per month`,
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Your CorvMC sustaining membership',
+					heading: 'Thank you',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: 'Your sustaining contribution is set up. It keeps the rehearsal space open and the rates low for everyone who uses it.'
+						},
+						{
+							text: 'This email is your receipt. Itemised invoices for every contribution live in the billing portal, linked from your membership page.'
+						}
+					],
+					details: contributionDetails(event),
+					cta: { url: `${siteUrl}/member/membership`, label: 'View My Membership' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	domainEvents.on('membership.renewed', async ({ data: event }) => {
+		await dispatch({
+			type: 'membership_renewal_receipt',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `Contribution received — ${formatCents(event.amountCents)}`,
+			body: 'Your monthly contribution renewed',
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Your contribution receipt — ${formatCents(event.amountCents)}`,
+					heading: 'Contribution received',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: 'Your monthly contribution renewed today. Thank you for keeping this place running.'
+						}
+					],
+					details: contributionDetails(event),
+					cta: { url: `${siteUrl}/member/membership`, label: 'View My Membership' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	domainEvents.on('membership.payment_failed', async ({ data: event }) => {
+		const details: NotificationEmailDetail[] = [
+			{ label: 'Amount due', value: formatCents(event.amountCents) }
+		];
+		if (event.nextAttemptAt) {
+			details.push({ label: 'Next attempt', value: formatPickupDate(event.nextAttemptAt) });
+		}
+
+		// Stripe's hosted invoice is a card form the member can complete without
+		// signing in anywhere; our membership page can only send them onward to
+		// the billing portal. On the one email that asks for an action, the
+		// shorter path wins.
+		const cta = event.hostedInvoiceUrl
+			? { url: event.hostedInvoiceUrl, label: 'Update Payment Method' }
+			: { url: `${siteUrl}/member/membership`, label: 'View My Membership' };
+
+		await dispatch({
+			type: 'membership_payment_failed',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Your contribution payment did not go through',
+			body: `${formatCents(event.amountCents)} could not be charged`,
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Your CorvMC contribution needs attention',
+					heading: 'Payment did not go through',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{ text: 'We could not charge the card on file for your sustaining contribution.' },
+						{
+							text: event.nextAttemptAt
+								? 'We will try again automatically. Updating your card now saves the retry.'
+								: 'Please update your card to keep your membership active.'
+						}
+					],
+					details,
+					cta,
+					footnote:
+						'Your member benefits are unchanged for now. If the card keeps declining, the membership will end and your free hours will reset.'
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	domainEvents.on('membership.cancellation_scheduled', async ({ data: event }) => {
+		const details: NotificationEmailDetail[] = event.endsAt
+			? [{ label: 'Benefits run through', value: formatPickupDate(event.endsAt) }]
+			: [];
+
+		await dispatch({
+			type: 'membership_cancellation_scheduled',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Your membership is set to end',
+			body: event.endsAt ? `Benefits run through ${formatPickupDate(event.endsAt)}` : undefined,
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Your CorvMC membership is set to end',
+					heading: 'Cancellation scheduled',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: 'Your sustaining contribution is scheduled to stop. You will not be charged again.'
+						},
+						{
+							text: 'Nothing changes until then, and you can start it back up any time from your membership page.'
+						}
+					],
+					details,
+					cta: { url: `${siteUrl}/member/membership`, label: 'View My Membership' },
+					footnote: 'Thank you for the time you did support us — it mattered.'
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	domainEvents.on('membership.ended', async ({ data: event }) => {
+		await dispatch({
+			type: 'membership_ended',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Your sustaining membership has ended',
+			body: 'Your member credits have reset',
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Your CorvMC membership has ended',
+					heading: 'Membership ended',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: 'Your sustaining contribution has ended and your free rehearsal hours have reset.'
+						},
+						{
+							text: 'You are still a member — the space, the calendar and your bookings are all still yours at the standard rate.'
+						}
+					],
+					cta: { url: `${siteUrl}/member/membership`, label: 'Start Contributing Again' },
+					footnote:
+						'Any recurring bookings tied to your member hours have been cancelled. You can rebook them at any time.'
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
 	// --- Reservation cancelled (notify member; skip self-cancels) ---
 	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
 		// Members who cancel their own reservation don't need an email about it.
@@ -768,7 +958,10 @@ export function registerAllNotificationListeners(): void {
 				contactEmail: event.email,
 				formSubject: event.subject,
 				replyNote,
-				message: event.message,
+				// `>`-quoted here, not in the template: Mustachio cannot prefix
+				// per line, and the marker has to survive into the staffer's reply
+				// as a quote rather than as literal fence text.
+				message: quoteForPlainText(event.message),
 				threadUrl: `${env.PUBLIC_SITE_URL}/staff/inbox/${event.threadId}`
 			}
 		});

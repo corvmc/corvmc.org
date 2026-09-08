@@ -1,0 +1,14 @@
+# Security headers for responses the static-assets binding answers before the
+# worker runs (favicon, /_app/immutable/**). Everything the worker itself
+# renders is covered by handleSecurityHeaders in src/hooks.server.ts, and the
+# CSP by kit.csp in svelte.config.js.
+#
+# This file must live at the repo root, not in static/ — adapter-cloudflare
+# copies it from here and appends its own cache rules below.
+#
+# No HSTS here on purpose: these rules match on path, not host, so they apply
+# to premium bands' own domains too, and HSTS on an apex we do not own outlives
+# the band leaving CMC. The worker sets it per-host instead.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

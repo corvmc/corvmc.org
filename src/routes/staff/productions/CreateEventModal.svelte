@@ -43,7 +43,10 @@
 	let ticketPriceDollars = $state('');
 	let ticketQuantity = $state('');
 	let posterFile = $state<File | null>(null);
-	let hasConflicts = $state(false);
+	// The space is already taken. Not the same thing as an advisory, and the only
+	// one of the two that gates the submit.
+	let hasBlockingConflict = $state(false);
+	let overrideConflicts = $state(false);
 	let recurring = $state(false);
 	let recurringFrequency = $state('weekly');
 	let monthlyMode = $state('weekday');
@@ -143,7 +146,10 @@
 	// `true` would keep the hidden overrideConflicts input in the form and make
 	// the next submission skip the server's double-booking check.
 	$effect(() => {
-		if (!reserveSpace) hasConflicts = false;
+		if (!reserveSpace) {
+			hasBlockingConflict = false;
+			overrideConflicts = false;
+		}
 	});
 
 	function handleFileSelect(e: Event) {
@@ -193,10 +199,11 @@
 		reservationEndTime = '';
 		lastEventStartTime = '';
 		lastEventEndTime = '';
-		// This one outlives the form unless cleared here: ConflictWarnings writes it
-		// only while mounted, so a conflict seen before Cancel would arm the
+		// These outlive the form unless cleared here: ConflictWarnings writes the
+		// flag only while mounted, so a conflict seen before Cancel would arm the
 		// override for the next event entered in this modal.
-		hasConflicts = false;
+		hasBlockingConflict = false;
+		overrideConflicts = false;
 		posterFile = null;
 		recurring = false;
 		recurringFrequency = 'weekly';
@@ -332,7 +339,7 @@
 						startTime={reservationStartTime}
 						endTime={reservationEndTime}
 						{checkConflicts}
-						bind:hasConflicts
+						bind:hasBlockingConflict
 					/>
 				</Card>
 			{/if}
@@ -400,16 +407,23 @@
 				</Card>
 			{/if}
 
-			{#if hasConflicts}
-				<input {...fields.overrideConflicts.as('hidden', true)} />
+			<!-- A deliberate second action, not a relabelled first one. The submit
+			     used to become "Create with Override" and go yellow, which put
+			     double-booking the space one press away and made an advisory about
+			     opening hours look identical to it. -->
+			{#if hasBlockingConflict}
+				<label class="label cursor-pointer justify-start gap-3">
+					<input type="checkbox" bind:checked={overrideConflicts} class="checkbox checkbox-sm" />
+					<span class="label-text">Book it anyway — I know this double-books the space</span>
+				</label>
+				{#if overrideConflicts}
+					<input {...fields.overrideConflicts.as('hidden', true)} />
+				{/if}
 			{/if}
 
 			<div class="modal-action">
 				<Button type="button" variant="ghost" onclick={() => (open = false)}>Cancel</Button>
-				<SubmitButton
-					label={hasConflicts ? 'Create with Override' : 'Create Event'}
-					class={hasConflicts ? 'btn-warning' : 'btn-primary'}
-				/>
+				<SubmitButton label="Create Event" disabled={hasBlockingConflict && !overrideConflicts} />
 			</div>
 		</Form>
 

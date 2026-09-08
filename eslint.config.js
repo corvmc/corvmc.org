@@ -45,6 +45,10 @@ export default defineConfig(
 	js.configs.recommended,
 	ts.configs.recommended,
 	svelte.configs.recommended,
+	// @ts-expect-error -- eslint-plugin-storybook still ships ESLint 9 `RuleModule`
+	// types, which ESLint 10's `Plugin` no longer structurally accepts (its
+	// `RuleContext` dropped `parserOptions`, `getAncestors` and friends). Runtime is
+	// unaffected; drop this line when the plugin publishes ESLint 10 types.
 	storybook.configs['flat/recommended'],
 	prettier,
 	svelte.configs.prettier,

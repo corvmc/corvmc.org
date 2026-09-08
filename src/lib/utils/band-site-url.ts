@@ -26,6 +26,20 @@ export function baseDomainFromSiteUrl(siteUrl: string | undefined): string {
 }
 
 /**
+ * True for the app's own domain and anything under it — corvmc.org, www, band
+ * subdomains, media. False for a premium band's own domain, which reaches this
+ * worker through the wildcard-host zone route but is not an address we own.
+ *
+ * The distinction matters wherever we make a promise about a domain rather than
+ * just serving it: `hooks.server.ts` uses it to keep HSTS off addresses that
+ * outlive a band's membership.
+ */
+export function isAppDomain(hostname: string, siteUrl: string | undefined): boolean {
+	const baseDomain = baseDomainFromSiteUrl(siteUrl);
+	return hostname === baseDomain || hostname.endsWith(`.${baseDomain}`);
+}
+
+/**
  * The band slug a hostname claims, or null when the host isn't a band subdomain.
  *
  * Every band — free or premium — has `{slug}.<baseDomain>`; what that address

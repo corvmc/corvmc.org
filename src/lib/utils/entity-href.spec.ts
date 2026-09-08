@@ -139,6 +139,14 @@ describe('entityHref', () => {
 			expect(entityHref(ref, viewer({ userId: 'user-2' }))).toBeNull();
 		});
 
+		// The band arm used to land on the list, because there was no
+		// per-reservation band route. #565 built one; the ref never changed.
+		it("routes a band's own booking to the band's page for it", () => {
+			const ref = fakeRef('reservation', { id: 'r1', bandId: 'band-1', bandSlug: 'vu' });
+			const v = viewer({ bandIds: new Set(['band-1']), panel: 'band' });
+			expect(entityHref(ref, v)).toBe('/band/vu/reservations/r1');
+		});
+
 		it("routes a band's own event into the band panel", () => {
 			const ref = fakeRef('event', { id: 'e1', bandId: 'band-1', bandSlug: 'vu' });
 			const v = viewer({ bandIds: new Set(['band-1']), panel: 'band' });

@@ -2,19 +2,16 @@
 	import Button from '../ui/Button.svelte';
 	import { IconUser, IconSettings, IconStar, IconLogout } from '@tabler/icons-svelte';
 	import Avatar from '../ui/Avatar.svelte';
-	import { getMe } from '$lib/remote/layout.remote';
 	import { resolve } from '$app/paths';
+	import type { AppChrome } from './chrome';
 
-	// Declared *above* the awaited derived on purpose. Anything after a top-level
-	// await is async-gated — the compiler assigns it inside a continuation that
-	// only runs once the promise settles — while `<svelte:window onclick>` is
-	// attached synchronously during setup. Gating `open` therefore left the
-	// click-outside handler live for the length of one `getMe()` round trip with
-	// `open` still `undefined`, and touching a signal that isn't there throws
-	// `undefined is not an object (evaluating 'e.f')` (JAVASCRIPT-SVELTEKIT-2S).
+	// A prop, not a query of its own. `AppTopbar` mounts this on every
+	// authenticated page, so a `getMe()` here was a third remote query racing the
+	// layout's and the page's (#569). The layout query already had the user — see
+	// `appChrome` in `$lib/remote/layout.remote`.
+	let { me }: { me: AppChrome['me'] } = $props();
+
 	let open = $state(false);
-
-	let me = $derived(await getMe());
 
 	function handleClickOutside(e: MouseEvent) {
 		const target = e.target as HTMLElement;

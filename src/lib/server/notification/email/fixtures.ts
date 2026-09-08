@@ -88,7 +88,9 @@ export const FIXTURES: Fixture[] = [
 			paragraphs: [{ text: '<script>alert(1)</script>' }, { text: 'Ampersand & "quotes"' }],
 			has_details: true,
 			details: [{ label: '<b>label</b>', value: '<img src=x onerror=alert(1)>' }],
-			cta: { url: 'https://corvmc.org/member', label: '<b>Go</b>' },
+			// Two query params: the text part must keep the bare `&`, the HTML part
+			// must not. That divergence is the whole reason the parts differ.
+			cta: { url: 'https://corvmc.org/member?tab=billing&ref=email', label: '<b>Go</b>' },
 			footnote: '<i>footnote</i>'
 		}
 	},
@@ -168,9 +170,25 @@ export const FIXTURES: Fixture[] = [
 		}
 	},
 	{
+		name: 'band-reply',
+		alias: 'band-reply',
+		// A distinct shape from `inbox-reply`, not a copy of it: the staffer is
+		// speaking as the act, so the signature names the band and the why-line
+		// points at the band's own booking form.
+		model: {
+			contactName: 'Charlie',
+			subject: 'Re: Booking for your Saturday show',
+			body: "Thanks for asking — we're free that weekend and we'd love to play.\n\nWhat time would you want us on & how long a set?",
+			staffName: 'Rosa',
+			bandName: 'Indigo Kiss'
+		}
+	},
+	{
 		name: 'contact-alert',
 		alias: 'contact-alert',
 		// Text-only: staff reply to this one straight from their mail client.
+		// `message` is the post-`quoteForPlainText` shape the listener passes —
+		// the template cannot prefix per line.
 		model: {
 			subject: 'Contact form: Performance Inquiry',
 			contactName: 'Charlie Rivera',
@@ -179,8 +197,49 @@ export const FIXTURES: Fixture[] = [
 			replyNote:
 				'Reply to this email to answer Charlie Rivera. Your reply is sent from CMC and saved on the conversation in the staff inbox.',
 			message:
-				"Hi there,\n\nI run a small folk trio & we're hoping to play a Saturday in March.\n\nThanks!",
+				"> Hi there,\n>\n> I run a small folk trio & we're hoping to play a Saturday in March.\n>\n> Thanks!",
 			threadUrl: 'https://corvmc.org/staff/inbox/thr-1'
+		}
+	},
+	{
+		name: 'password-reset',
+		alias: 'password-reset',
+		// The URL better-auth builds carries a `?callbackURL=` query string, which
+		// is the whole reason this template exists rather than reusing
+		// `notification`: its CTA renders `{{url}}` escaped in the text part, so an
+		// `&` would arrive as `&amp;`. Keep the query string in this fixture — it is
+		// what makes `pnpm email:validate` and the preview prove the triple brace.
+		//
+		// `transactional_only` suppresses the layout's notification-preferences
+		// line, and `preview_text` is set explicitly because only the
+		// `notification` alias goes through `normalizeNotificationModel`.
+		model: {
+			greeting: 'Hi Maya,',
+			resetUrl:
+				'https://corvmc.org/api/auth/reset-password/PfQ2rN8xKvT1?callbackURL=%2Freset-password',
+			expiresIn: '1 hour',
+			preview_text: 'Choose a new password for your CorvMC account.',
+			transactional_only: true
+		}
+	},
+	{
+		name: 'notification-password-changed',
+		alias: 'notification',
+		// The other half of the reset flow, and the one shape in the generic
+		// template that carries `transactional_only`.
+		model: {
+			subject: 'Your CorvMC password was changed',
+			preview_text: 'Your password was reset and other sessions were signed out.',
+			heading: 'Your password was changed',
+			greeting: 'Hi Maya,',
+			paragraphs: [
+				{
+					text: 'The password on your Corvallis Music Collective account was just reset, and any other sessions you had open were signed out.'
+				}
+			],
+			footnote:
+				'If you did not do this, reset your password again straight away and email contact@corvmc.org so we can help.',
+			transactional_only: true
 		}
 	}
 ];

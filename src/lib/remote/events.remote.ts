@@ -7,6 +7,7 @@ import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venue-service';
 import { getProductionByEvent } from '$lib/server/production/production-service';
+import { getPublicSetTimes, getRunOfShow } from '$lib/server/production/run-of-show-service';
 import { listWorkOrders as listOpenWorkOrders } from '$lib/server/volunteer/work-order-service';
 import { bandRefColumns, toBandRef, toEventRef, toMemberRef } from '$lib/server/entity/refs';
 import {
@@ -282,6 +283,10 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	}
 
 	const lineup = await getEventLineup(id);
+	// Only a show CMC produces can have a running order, and nine listings in ten
+	// are not one — so the branch keeps a round trip off most detail views. The
+	// rest of the gate (a confirmed production, a downbeat, a credit) is in SQL.
+	const setTimes = evt.source === 'cmc' ? await getPublicSetTimes(id) : [];
 	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
 	const sold =
 		evt.ticketQuantity != null && remaining != null ? evt.ticketQuantity - remaining : null;
@@ -347,7 +352,11 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 				name: l.name,
 				slug: l.status === 'confirmed' ? l.bandSlug : null,
 				externalUrl: l.status === 'confirmed' && !l.bandSlug ? l.externalUrl : null
-			}))
+			})),
+			// The running order, once the production is confirmed. Empty otherwise,
+			// and separate from `lineup`, which renders for every source and must
+			// not acquire a production gate.
+			setTimes
 		},
 		remaining,
 		sold,
@@ -538,9 +547,10 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
  * The statuses the staff calendar will read, and the only ones it will.
  *
  * `draft` is absent on purpose. A CMC draft is production work and belongs on
- * `/staff/events`; a community draft is a member's private working copy that no
- * staffer should read. `listStaffCalendar` excludes the latter again at the
- * service level — this enum is the first of two guards, not the only one.
+ * `/staff/productions`, which is the page scoped to `source: 'cmc'` at every
+ * status; a community draft is a member's private working copy that no staffer
+ * should read. `listStaffCalendar` excludes the latter again at the service
+ * level — this enum is the first of two guards, not the only one.
  */
 const calendarStatuses = ['pending_review', 'published', 'cancelled', 'rejected'] as const;
 
@@ -1090,7 +1100,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		dutyLists,
 		venues,
 		riders,
-		production
+		production,
+		runOfShow
 	] = await Promise.all([
 		getStaffEventDetail(id),
 		getEventRecurringSeries(id),
@@ -1109,7 +1120,10 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		getEventRiderSummaries(id),
 		// The ops record: load-in through load-out, the producer, the notes.
 		// Null until someone opens one from the event page.
-		getProductionByEvent(id)
+		getProductionByEvent(id),
+		// Who plays when. Times are derived and written on every mutation, so this
+		// read never recomputes — it only re-checks the warnings.
+		getRunOfShow(id)
 	]);
 
 	return {
@@ -1121,7 +1135,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		dutyLists,
 		venues,
 		riders,
-		production
+		production,
+		runOfShow
 	};
 });
 

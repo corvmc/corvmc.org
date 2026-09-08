@@ -6,18 +6,12 @@ import { eq } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 
 // ---------------------------------------------------------------------------
-// BillingService — the half of the Stripe billing portal that was not already
-// in the app.
+// BillingService — the half of the Stripe billing portal not already in the app.
 //
-// Modifying the contribution, cancelling and resuming already live in
-// `subscription-service`. What the portal alone could do was manage the card on
-// file and show the invoice history, and there is no embeddable version of it:
-// Stripe documents that the portal cannot be iframed, so replacing it means
-// building against the API. That is all this file is.
-//
-// Nothing here takes a customer id from the client. Every function is called
-// with the id read off the session user in `billing.remote.ts`, which is what
-// keeps one member's card off another member's page.
+// Modify, cancel and resume live in `subscription-service`. The portal alone
+// did the card on file and the invoice history, and Stripe documents that it
+// cannot be iframed — so replacing it meant building against the API. No
+// function here takes a customer id from the client.
 // ---------------------------------------------------------------------------
 
 /** The caller asked to act on a payment method that is not theirs, or is gone. */

@@ -7,9 +7,10 @@ import {
 	collapseCommentOnlyChunks
 } from './d1-safe-rebuild.mjs';
 import { childGraph, descendantsDeepestFirst, readSnapshot } from './d1-ddl.mjs';
+import type { Snapshot } from './snapshot-types';
 
 /** parent <- child <- grandchild, plus a second child on the parent. */
-const snapshot = {
+const snapshot: Snapshot = {
 	ddl: [
 		{ entityType: 'tables', name: 'parent' },
 		{ entityType: 'tables', name: 'child' },
@@ -333,8 +334,7 @@ describe('collapseCommentOnlyChunks', () => {
 
 	it('is idempotent', () => {
 		const sql = `-- a\n${BREAK}\nSELECT 1;\n`;
-		const once = collapseCommentOnlyChunks(sql);
 
-		expect(collapseCommentOnlyChunks(once)).toBeNull();
+		expect(collapseCommentOnlyChunks(collapse(sql))).toBeNull();
 	});
 });

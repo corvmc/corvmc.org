@@ -43,6 +43,9 @@ export function mediaKey(prefix: string, id: string, contentType: string): strin
 	return `${prefix}/${id}-${token}.${extensionForType(contentType)}`;
 }
 
+/** The prefix every `documentKey` shares. The orphan sweep lists the bucket by it. */
+export const DOCUMENT_KEY_PREFIX = 'groups/';
+
 /**
  * The key for a group document in the **private** bucket.
  *
@@ -52,7 +55,18 @@ export function mediaKey(prefix: string, id: string, contentType: string): strin
  * the id already is one and nothing here is served from a cacheable URL.
  */
 export function documentKey(groupId: string, fileId: string, contentType: string): string {
-	return `groups/${groupId}/documents/${fileId}.${extensionForType(contentType)}`;
+	return `${DOCUMENT_KEY_PREFIX}${groupId}/documents/${fileId}.${extensionForType(contentType)}`;
+}
+
+/**
+ * A key `documentKey` could have produced.
+ *
+ * The orphan sweep reaps nothing else it finds under the prefix. An object it
+ * cannot recognise belongs to something that is not a group document, and has
+ * no `file` row to be missing from — so "no row" would condemn it wrongly.
+ */
+export function isDocumentKey(key: string): boolean {
+	return /^groups\/[^/]+\/documents\/[^/]+$/.test(key);
 }
 
 /** What a filename falls back to once everything unusable is stripped out. */

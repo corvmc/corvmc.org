@@ -1,4 +1,11 @@
 <script lang="ts">
+	/**
+	 * Free text in, new tags out: whatever is typed becomes a tag, lowercased.
+	 * `suggestions` only autocompletes — it never constrains, so a value not on
+	 * that list is still accepted. Use `Form/TagInput` instead when the value has
+	 * to come from a known set; that one cannot invent a tag and this one cannot
+	 * refuse to.
+	 */
 	import { IconX } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 

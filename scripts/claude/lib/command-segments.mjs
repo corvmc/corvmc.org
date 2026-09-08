@@ -19,6 +19,7 @@
  * Everything between a heredoc opener and its terminator, dropped. The opener
  * line itself is kept: it is a real part of the command.
  */
+/** @param {string} command */
 export function stripHeredocs(command) {
 	const kept = [];
 	let terminator = null;
@@ -42,6 +43,7 @@ export function stripHeredocs(command) {
  * something for a chained command — `git fetch && pnpm lint` has two segments,
  * and only the second one runs a linter.
  */
+/** @param {string} command @returns {string[]} */
 export function commandSegments(command) {
 	return stripHeredocs(command)
 		.split(/[;&|()\n]+/)
@@ -50,6 +52,7 @@ export function commandSegments(command) {
 }
 
 /** The command a `PreToolUse` payload describes, or `''` if it is not one. */
+/** @param {string} raw */
 export function readCommand(raw) {
 	try {
 		return JSON.parse(raw).tool_input?.command ?? '';

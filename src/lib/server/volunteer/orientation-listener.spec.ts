@@ -1,14 +1,10 @@
 /**
  * The orientation listener against a real database on the real migrated schema.
  *
- * Every claim worth making here is about rows: that a repeated event creates one
- * set of work orders and not two, that a cancelled booking stands its shift
- * down without un-orienting somebody already shown around, and that a band's
- * hold raises nothing. A mocked query builder can express none of those.
- *
- * Same `db.batch` shim as `duty-list-service.spec.ts` — D1 has it, the node
- * driver does not, and awaiting the statements in order is what D1 does anyway
- * minus the atomicity these tests are not about.
+ * Every claim here is about rows: a repeated event creates one set of work
+ * orders and not two, a cancelled booking stands its shift down without
+ * un-orienting somebody already shown around, a band's hold raises nothing.
+ * Same `db.batch` shim as `duty-list-service.spec.ts`.
  */
 import { describe, expect, it, beforeAll, beforeEach, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
@@ -219,13 +215,12 @@ describe('reservation.created', () => {
 });
 
 /**
- * A booking that came off the waitlist announces itself at the moment it stops
- * being a queue position — `announceWaitlistConfirmed()`, from the member's own
- * confirmation, not from `promoteNextWaitlisted()`, which only offers the slot.
- * By the time the event lands the row is `scheduled`, so from here it is an
- * ordinary `reservation.created` — and that is the point. What these cover is
- * what the *rest of the queue* does to the first-booking rule, which is where
- * `priorBookingCount` excluding `waitlisted` rows starts to matter.
+ * A booking off the waitlist announces itself at the moment it stops being a
+ * queue position — `announceWaitlistConfirmed()`, not `promoteNextWaitlisted()`,
+ * which only offers the slot. By then the row is `scheduled`, so this is an
+ * ordinary `reservation.created`. What these cover is what the rest of the queue
+ * does to the first-booking rule, where `priorBookingCount` excluding
+ * `waitlisted` rows starts to matter.
  */
 describe('a booking confirmed off the waitlist', () => {
 	it('raises an orientation even though the member has been queueing for weeks', async () => {

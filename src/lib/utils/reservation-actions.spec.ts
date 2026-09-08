@@ -7,7 +7,7 @@ import {
 } from './reservation-actions';
 
 describe('reservationPaymentState', () => {
-	const base = { status: 'confirmed' as const };
+	const base = { status: 'confirmed' as const, refundedAt: null };
 
 	it('cash/online paid → paid', () => {
 		expect(reservationPaymentState({ ...base, paidAt: new Date(), cashDueCents: 0 })).toBe('paid');
@@ -18,9 +18,14 @@ describe('reservationPaymentState', () => {
 	});
 
 	it('not yet settled (scheduled) → unpaid', () => {
-		expect(reservationPaymentState({ status: 'scheduled', paidAt: null, cashDueCents: null })).toBe(
-			'unpaid'
-		);
+		expect(
+			reservationPaymentState({
+				status: 'scheduled',
+				paidAt: null,
+				cashDueCents: null,
+				refundedAt: null
+			})
+		).toBe('unpaid');
 	});
 
 	it('fully credit-covered → credits (the bug: must not read as comped)', () => {
@@ -42,15 +47,57 @@ describe('reservationPaymentState', () => {
 		).toBe('paid');
 	});
 
-	it('cancelled with payment → refunded, without → cancelled', () => {
-		expect(reservationPaymentState({ status: 'cancelled', stripePaymentRecordId: 'pr_1' })).toBe(
+	it('cancelled and refunded → refunded, cancelled alone → cancelled', () => {
+		expect(reservationPaymentState({ status: 'cancelled', refundedAt: new Date() })).toBe(
 			'refunded'
 		);
-		expect(reservationPaymentState({ status: 'cancelled' })).toBe('cancelled');
+		expect(reservationPaymentState({ status: 'cancelled', refundedAt: null })).toBe('cancelled');
+	});
+
+	/**
+	 * The whole of #573. Having been charged is not evidence of having been
+	 * repaid: `reservation-service` writes `refundedAt` *inside* the try around
+	 * `refund()`, so a refund that throws leaves a cancelled booking with a
+	 * payment record and no refund — and the old inference called that
+	 * "refunded" to the member whose money we still have.
+	 */
+	it('cancelled with a payment but no refund → cancelled, not refunded', () => {
+		expect(
+			reservationPaymentState({ status: 'cancelled', paidAt: new Date(), refundedAt: null })
+		).toBe('cancelled');
+	});
+
+	/**
+	 * #669: "Refund only" leaves the booking standing (a comp after the fact),
+	 * so the row is still `confirmed` with a `paidAt` on it. `paidAt` used to be
+	 * read first, and staff saw "Paid" on money that had already gone back.
+	 */
+	it('refunded but not cancelled → refunded, not paid', () => {
+		expect(
+			reservationPaymentState({
+				status: 'confirmed',
+				paidAt: new Date(),
+				cashDueCents: 0,
+				refundedAt: new Date()
+			})
+		).toBe('refunded');
+	});
+
+	it('refunded on a completed booking → refunded, not paid', () => {
+		expect(
+			reservationPaymentState({
+				status: 'completed',
+				paidAt: new Date(),
+				cashDueCents: 0,
+				refundedAt: new Date()
+			})
+		).toBe('refunded');
 	});
 
 	it('no_show → no_show', () => {
-		expect(reservationPaymentState({ status: 'no_show', paidAt: new Date() })).toBe('no_show');
+		expect(
+			reservationPaymentState({ status: 'no_show', paidAt: new Date(), refundedAt: null })
+		).toBe('no_show');
 	});
 
 	it('confirmed with credits never committed (staff-created) → unpaid, not comped', () => {
@@ -58,9 +105,14 @@ describe('reservationPaymentState', () => {
 	});
 
 	it('completed with credits never committed → unpaid, not comped', () => {
-		expect(reservationPaymentState({ status: 'completed', paidAt: null, cashDueCents: null })).toBe(
-			'unpaid'
-		);
+		expect(
+			reservationPaymentState({
+				status: 'completed',
+				paidAt: null,
+				cashDueCents: null,
+				refundedAt: null
+			})
+		).toBe('unpaid');
 	});
 });
 
@@ -111,6 +163,41 @@ describe('visibleActions cash tracking', () => {
 				paidAt: new Date()
 			}).has('cashReceived')
 		).toBe(false);
+	});
+});
+
+describe('visibleActions refund split (#669)', () => {
+	const past = new Date(Date.now() - 2 * 60 * 60 * 1000);
+	const pastEnd = new Date(Date.now() - 60 * 60 * 1000);
+	const paid = { cashDueCents: 0, paidAt: new Date(), refundedAt: null };
+
+	it('offers both refund actions on a confirmed, paid, unrefunded booking', () => {
+		const actions = visibleActions('confirmed', past, pastEnd, 'pr_1', new Date(), paid);
+		expect(actions.has('refundAndCancel')).toBe(true);
+		expect(actions.has('refundOnly')).toBe(true);
+	});
+
+	// `cancel()` rejects a completed booking outright, so offering the combined
+	// action there would be a button that can only 400.
+	it('offers only the refund-only action on a completed booking', () => {
+		const actions = visibleActions('completed', past, pastEnd, 'pr_1', new Date(), paid);
+		expect(actions.has('refundAndCancel')).toBe(false);
+		expect(actions.has('refundOnly')).toBe(true);
+	});
+
+	it('offers neither once the row is refunded', () => {
+		const actions = visibleActions('confirmed', past, pastEnd, 'pr_1', new Date(), {
+			...paid,
+			refundedAt: new Date()
+		});
+		expect(actions.has('refundAndCancel')).toBe(false);
+		expect(actions.has('refundOnly')).toBe(false);
+	});
+
+	it('offers neither when there is no payment to refund', () => {
+		const actions = visibleActions('confirmed', past, pastEnd, null, new Date(), paid);
+		expect(actions.has('refundAndCancel')).toBe(false);
+		expect(actions.has('refundOnly')).toBe(false);
 	});
 });
 

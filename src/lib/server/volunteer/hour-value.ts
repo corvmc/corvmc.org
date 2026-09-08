@@ -2,22 +2,12 @@ import { config } from '$lib/server/site-config/site-config-service';
 import { valueOfMinutesCents } from '$lib/config';
 
 /**
- * What donated time was worth — as **two numbers that are never added
- * together**.
+ * What donated time was worth — **two numbers that are never added together**.
  *
- * `impactValueCents` covers every approved hour at the Independent Sector rate
- * in site config. It is the figure grant applications, impact reports and board
- * packets ask for, and it has no eligibility test.
- *
- * `recognizableServicesCents` covers only hours worked under a role marked
- * `is_specialized_skill`, each at that role's own `market_rate_cents`. It is
- * the narrower figure a financial statement can recognise under FASB, and it
- * exists only because the collective would otherwise have had to buy the skill.
- *
- * The two overlap by construction: a donated audio engineer's hour is in both.
- * Summing them therefore double-counts that hour, and produces a figure that is
- * wrong for both audiences — which is why this shape has **no total field**.
- * There is nothing here to add up.
+ * `impactValueCents` covers every approved hour at the Independent Sector rate;
+ * `recognizableServicesCents` covers only hours under an `is_specialized_skill`
+ * role at that role's own rate. They overlap by construction, so summing them
+ * double-counts and is wrong for both audiences. Hence no total field.
  */
 export interface ContributedValue {
 	totalMinutes: number;
@@ -53,13 +43,10 @@ export async function getHourValueSource(): Promise<string> {
 /**
  * Minute totals in, both valuations out.
  *
- * Pure: the caller supplies the totals its own query already computed, so this
- * imposes no opinion about ranges, filters or joins and can serve the volunteer
- * report and a project's burn alike.
- *
- * `specializedValueCents` is summed per role by the caller rather than derived
- * here, because each specialized role carries its own rate — there is no single
- * multiplier that would work.
+ * Pure: the caller supplies totals its own query computed, so this imposes no
+ * opinion about ranges or joins. `specializedValueCents` is summed per role by
+ * the caller because each specialized role carries its own rate — there is no
+ * single multiplier that would work.
  */
 export async function toContributedValue(totals: {
 	totalMinutes: number;

@@ -10,15 +10,10 @@
 	/**
 	 * Stripe's Payment Element in setup mode — saving a card without charging it.
 	 *
-	 * The sibling of `routes/checkout/[id]/PaymentElement.svelte`, and the same
-	 * bargain: the card fields stay inside Stripe's iframe, so the PCI posture is
-	 * unchanged (SAQ A) and the no-raw-`<input>` rule is not in play — the
-	 * Element mounts into a plain `<div>` and the only control here is a
-	 * `Button`. Not a `Form`, because confirmation is an imperative call into
-	 * Stripe.js rather than a submission.
-	 *
-	 * A SetupIntent rather than a Checkout Session, so this uses `elements()` and
-	 * `confirmSetup` where the checkout page uses the Checkout Elements SDK.
+	 * Sibling of `routes/checkout/[id]/PaymentElement.svelte`, same bargain: card
+	 * fields in Stripe's iframe, the Element in a plain `<div>`, one `Button`
+	 * rather than a `Form`. A SetupIntent, so `elements()` + `confirmSetup`
+	 * rather than the Checkout SDK.
 	 */
 	let {
 		clientSecret,

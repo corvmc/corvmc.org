@@ -11,21 +11,10 @@ import {
 /**
  * Managing the card on file, on our own page.
  *
- * Until phase 6 this was Stripe's billing portal — another origin, which no
- * test could follow into, and which the fake driver answered with a URL
- * fragment that went nowhere. There was consequently no coverage of adding,
- * defaulting or removing a card at all, because there was no card management in
- * this app to cover.
- *
- * Under `PAYMENTS_DRIVER=fake` the modal renders a card-number form instead of
- * Stripe's Setup Element and the attachment happens server-side, so the whole
- * round trip runs with no network: SetupIntent → attach → default → detach.
- * What the fake cannot exercise is `confirmSetup` in the browser, which needs a
- * sandbox key and a manual pass.
- *
- * The `pmType` / `pmLastFour` read-back goes through `readLocalDb` (read-only):
- * those columns are the contract between this flow and every surface that names
- * the card without a Stripe call, and they had no writer at all before this.
+ * This was Stripe's billing portal until phase 6 — another origin no test could
+ * follow into — so none of it had coverage. Under `fake` the round trip runs
+ * with no network: SetupIntent → attach → default → detach. What it cannot
+ * reach: `docs/specs/shipped/finance-spec.md#testing`.
  */
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 

@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { requireUser, hasAnyRole } from '$lib/server/authorization';
+import { requireUser, isElevated } from '$lib/server/authorization';
 import type { GroupRole } from '$lib/server/db/schema/group';
 import { getBySlug, getByIdActive, getUserRole } from '$lib/server/band/band-service';
 
@@ -37,16 +37,14 @@ const HIERARCHY: Record<GroupRole, number> = { owner: 0, admin: 1, member: 2 };
  * Resolve a group from an explicit ref and require the caller holds at least
  * `minRole` in it. Hierarchy: owner > admin > member.
  *
- * `allowStaff` admits an `admin`/`staff` user who is not a member, reported as
+ * `allowStaff` admits a non-member who holds any position, reported as
  * `role: 'staff'`. It bypasses `minRole` rather than being ranked against it:
- * passing it IS the decision that staff may do this thing, and a second,
- * invisible rule about where staff sits in a group hierarchy they have no
- * place in would only make that decision harder to read.
+ * passing it IS the decision that staff may do this thing.
  *
- * It settles a live inconsistency. `getBandLayout` already lets staff render a
- * band panel as `userRole: 'staff'` while the mutation guards 403 them, so a
- * staff member currently sees a panel in which every action fails. Reads pass
- * it; destructive writes do not.
+ * `isElevated`, not `hasAnyRole(['admin','staff'])` — the same predicate
+ * `requireStaff()` uses. A narrower predicate here than the one admitting
+ * people to the panel is what gave a `volunteer_coordinator` a group surface
+ * on which every card 403'd.
  *
  * Throws 400 on a blank ref, 404 when no live group matches, 403 otherwise.
  */
@@ -64,11 +62,48 @@ export async function requireGroupRole(
 		return { user, group, role };
 	}
 
-	if (opts?.allowStaff && (await hasAnyRole(user.id, ['admin', 'staff']))) {
+	if (opts?.allowStaff && (await isElevated(user.id))) {
 		return { user, group, role: 'staff' };
 	}
 
 	throw error(403, 'Not a member of this group');
+}
+
+/**
+ * `requireGroupRole`, narrowed to `kind === 'band'`.
+ *
+ * For the band-only surfaces — the profile editor, the press kit, the
+ * microsite, the subscription. Those guards were kind-agnostic, so a club or
+ * committee admin reached band-shaped writes over their own program; the
+ * directory-visibility one mattered, because staff own that setting for a
+ * program and a leader was able to change it anyway.
+ */
+// 404, not 403: `/band/{club-slug}` names no band, and the caller's role in
+// the group is beside the point.
+export async function requireBandRole(
+	ref: GroupRef,
+	minRole: 'owner' | 'admin' | 'member',
+	opts?: { allowStaff?: boolean }
+): Promise<GroupContext> {
+	const ctx = await requireGroupRole(ref, minRole, opts);
+	if (ctx.group.kind !== 'band') throw error(404, 'Band not found');
+	return ctx;
+}
+
+/**
+ * `requireGroupRole`, narrowed to a club or committee.
+ *
+ * The mirror of `requireBandRole`, for the leader surfaces under
+ * `/member/groups/{slug}`. A band has its own panel and must not resolve here.
+ */
+export async function requireProgramRole(
+	ref: GroupRef,
+	minRole: 'owner' | 'admin' | 'member',
+	opts?: { allowStaff?: boolean }
+): Promise<GroupContext> {
+	const ctx = await requireGroupRole(ref, minRole, opts);
+	if (ctx.group.kind === 'band') throw error(404, 'Group not found');
+	return ctx;
 }
 
 /**

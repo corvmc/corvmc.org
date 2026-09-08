@@ -194,6 +194,31 @@ describe('ReservationService', () => {
 			});
 		});
 
+		/**
+		 * #669: the second write, the one that runs only after `refund()` resolves,
+		 * is what makes a refunded booking stop reading as Paid. It has to clear
+		 * `paidAt` — the money is back with the member — and stamp `updatedAt`.
+		 */
+		it('clears paidAt and stamps updatedAt on the post-refund write', async () => {
+			setupSelectMock({
+				id: 'res-1',
+				createdByUserId: 'user-1',
+				status: 'confirmed',
+				stripePaymentRecordId: 'pr_123',
+				startsAt: future,
+				endsAt: futureEnd
+			});
+			const set = setupUpdateMock(1);
+
+			await cancel('res-1', 'user-1');
+
+			const refundWrite = set.mock.calls.map((c) => c[0]).find((v) => v.refundedAt);
+			expect(refundWrite).toBeDefined();
+			expect(refundWrite.paidAt).toBeNull();
+			expect(refundWrite.refundedAt).toBeInstanceOf(Date);
+			expect(refundWrite.updatedAt).toBeInstanceOf(Date);
+		});
+
 		it('rejects cancellation by non-owner', async () => {
 			setupSelectMock({
 				id: 'res-1',
@@ -620,12 +645,29 @@ describe('ReservationService', () => {
 	});
 
 	describe('confirm', () => {
-		function setupUpdateMock(rowCount: number, selectRow?: Record<string, unknown>) {
+		/**
+		 * One row answers both selects `announceConfirmed` makes — the reservation
+		 * and its owner — so it carries the columns of each.
+		 */
+		const CONFIRMED_ROW = {
+			id: 'res-1',
+			status: 'confirmed',
+			createdByUserId: 'user-1',
+			startsAt: new Date('2026-05-20T17:00:00Z'),
+			endsAt: new Date('2026-05-20T19:00:00Z'),
+			name: 'Alice',
+			email: 'alice@test.com'
+		};
+
+		function setupUpdateMock(
+			rowCount: number,
+			selectRow: Record<string, unknown> | null = CONFIRMED_ROW
+		) {
 			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
 			const set = vi.fn().mockReturnValue({ where: updateWhere });
 			vi.mocked(db.update).mockReturnValue({ set } as any);
 
-			if (selectRow !== undefined) {
+			if (selectRow !== null) {
 				const limit = vi.fn().mockResolvedValue([selectRow]);
 				const where = vi.fn().mockReturnValue({ limit });
 				const from = vi.fn().mockReturnValue({ where });
@@ -639,8 +681,33 @@ describe('ReservationService', () => {
 			expect(db.update).toHaveBeenCalled();
 		});
 
+		it('announces the confirmation on the bus', async () => {
+			setupUpdateMock(1);
+
+			await confirm('res-1');
+
+			expect(emit).toHaveBeenCalledWith(
+				'reservation.confirmed',
+				expect.objectContaining({ reservationId: 'res-1', userId: 'user-1', userName: 'Alice' })
+			);
+		});
+
+		// A confirm the atomic update rolled back has nothing to announce, and a
+		// listener acting on one would be acting on a booking that is not confirmed.
+		it('announces nothing when the row is no longer confirmed', async () => {
+			setupUpdateMock(1, null);
+			const limit = vi.fn().mockResolvedValue([]);
+			const where = vi.fn().mockReturnValue({ limit });
+			const from = vi.fn().mockReturnValue({ where });
+			vi.mocked(db.select).mockReturnValue({ from } as any);
+
+			await confirm('res-1');
+
+			expect(emit).not.toHaveBeenCalled();
+		});
+
 		it('throws when reservation not found', async () => {
-			setupUpdateMock(0, undefined);
+			setupUpdateMock(0, null);
 			const limit = vi.fn().mockResolvedValue([]);
 			const where = vi.fn().mockReturnValue({ limit });
 			const from = vi.fn().mockReturnValue({ where });

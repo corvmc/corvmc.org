@@ -1,6 +1,12 @@
 import { defineConfig } from '@playwright/test';
+import { loadEnv } from 'vite';
 import { E2E_PERSIST_PATH, REPO_ROOT } from './e2e/state-dir';
 import { previewPort } from './scripts/lib/checkout-ports';
+import {
+	E2E_STRIPE_SECRET_KEY,
+	E2E_STRIPE_WEBHOOK_SECRET,
+	assertNoTransactableStripeCredentials
+} from './e2e/stripe-guard';
 
 /**
  * The port this checkout's preview server binds, and therefore the one the suite
@@ -10,6 +16,34 @@ import { previewPort } from './scripts/lib/checkout-ports';
  */
 const PORT = previewPort(REPO_ROOT);
 const BASE_URL = `http://localhost:${PORT}`;
+
+/**
+ * Stripe credentials, pinned rather than forwarded.
+ *
+ * These used to be `process.env.X ?? dummy`, so a live key exported in the
+ * shell went straight to the preview server and the suite created real Stripe
+ * customers (#667). Nothing here has any use for a real key, so the shell no
+ * longer gets a vote — and they stay set rather than removed, because an unset
+ * variable falls through to `.env`, which carries a live `rk_live` key.
+ */
+const STRIPE_ENV = {
+	STRIPE_SECRET_KEY: E2E_STRIPE_SECRET_KEY,
+	STRIPE_WEBHOOK_SECRET: E2E_STRIPE_WEBHOOK_SECRET
+};
+
+/**
+ * Fail closed, before the build, on what the preview server will actually see.
+ *
+ * `loadEnv(mode, dir, '')` is the same call SvelteKit's preview server makes to
+ * populate `$env/dynamic/private`, and it layers `process.env` over the `.env`
+ * file — so this resolves the real precedence rather than assuming it. Pinning
+ * the two variables above cannot cover a *third* Stripe credential arriving
+ * from `.env` or the shell, and this is what refuses that.
+ */
+assertNoTransactableStripeCredentials(
+	{ ...loadEnv('production', REPO_ROOT, ''), ...STRIPE_ENV },
+	'the e2e preview server'
+);
 
 export default defineConfig({
 	// Seed the local D1 (member + payable reservation) before any test runs.
@@ -43,6 +77,31 @@ export default defineConfig({
 	// `expect.poll`, never a bare read (`e2e/volunteering.e2e.ts` has the note),
 	// and treat a red mutating test as real rather than waiting on a retry.
 	retries: process.env.CI ? 2 : 0,
+	/**
+	 * What CI can see of a failure from outside the log.
+	 *
+	 * With no reporter configured this took Playwright's default, which prints for
+	 * humans and annotates nothing — so GitHub's annotations API for a failed E2E
+	 * job returned one entry, `Process completed with exit code 1`, and named no
+	 * test. The log is no better as a fallback: its tail is the runner's credential
+	 * teardown, and the actual failure sits ~200 lines up.
+	 *
+	 * Only Playwright needs saying out loud. Vitest adds `github-actions` on its own
+	 * under `GITHUB_ACTIONS`, which is why a failed `Unit tests` job already
+	 * annotated the offending spec and line while a failed `E2E` job annotated
+	 * nothing — so `vite.config.ts` is deliberately left alone.
+	 *
+	 * That gap costs most on a merge-queue rejection. The PR's own checks stay
+	 * green, auto-merge is disarmed, and the session that opened it has ended, so
+	 * the run is the only record of what went wrong —
+	 * `.github/workflows/merge-queue-guard.yml` quotes these annotations into the
+	 * PR for exactly that reason.
+	 *
+	 * `github` emits `::error file=…,line=…` per failed test, which also surfaces
+	 * inline on the diff of an ordinary PR. `list` stays alongside it so the job log
+	 * still reads the way it always has.
+	 */
+	reporter: process.env.CI ? [['github'], ['list']] : 'list',
 	/**
 	 * How long an assertion waits — 15s, not Playwright's 5s.
 	 *
@@ -134,14 +193,18 @@ export default defineConfig({
 			PUBLIC_SITE_URL: process.env.PUBLIC_SITE_URL ?? BASE_URL,
 			BETTER_AUTH_SECRET:
 				process.env.BETTER_AUTH_SECRET ?? 'e2e-local-better-auth-secret-not-for-prod',
-			// The in-memory gateway. Before this, the dummy key below was handed to a
-			// real Stripe client, so anything past `checkout.sessions.create` made an
+			// The in-memory gateway. Before this, the dummy key was handed to a real
+			// Stripe client, so anything past `checkout.sessions.create` made an
 			// outbound call and 401'd — which is why the payment specs used to treat
-			// a 303 toward Stripe as a pass. The fake serves /checkout/fake/<session>
+			// a 303 toward Stripe as a pass. The fake serves `/checkout/<session>`
 			// instead, so a purchase can be completed and its fulfillment asserted.
+			//
+			// It is the belt to `STRIPE_ENV`'s braces, not a replacement for it: the
+			// pinning below is what stops a real credential reaching the server at
+			// all, and this is what stops the server transacting even if one did.
 			PAYMENTS_DRIVER: 'fake',
-			STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? 'sk_test_dummy_e2e',
-			STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ?? 'whsec_dummy_e2e'
+			// Pinned, not forwarded — see STRIPE_ENV above and #667.
+			...STRIPE_ENV
 		}
 	},
 	testMatch: '**/*.e2e.{ts,js}'

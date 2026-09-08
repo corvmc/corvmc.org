@@ -23,10 +23,15 @@ function tableName(table: unknown): string {
 	return sym ? String((table as Record<symbol, unknown>)[sym]) : 'unknown';
 }
 
+// Every select in this path is the group-kind read, so one settable answer
+// covers them all. `[]` is a real case, not a placeholder: a groupId matching
+// no row must be refused the same way a band's is.
+let groupRows: { kind: string }[] = [{ kind: 'club' }];
+
 function chainable() {
 	const proxy: any = new Proxy(() => proxy, {
 		get(_, prop) {
-			if (prop === 'then') return (resolve: (v: unknown[]) => void) => resolve([]);
+			if (prop === 'then') return (resolve: (v: unknown[]) => void) => resolve(groupRows);
 			return () => proxy;
 		}
 	});
@@ -114,6 +119,7 @@ beforeEach(() => {
 	deletes = [];
 	eventInsertThrows = false;
 	conflict = false;
+	groupRows = [{ kind: 'club' }];
 	staffCreate.mockResolvedValue({ id: 'res-1' });
 });
 
@@ -126,6 +132,23 @@ describe('without a room booking', () => {
 		const [evt] = rowsFor('event_listing');
 		expect(evt).toMatchObject({ groupId: 'club-1', source: 'group', reservationId: null });
 		expect(staffCreate).not.toHaveBeenCalled();
+	});
+
+	/**
+	 * Published, not the column default of `draft`.
+	 *
+	 * A club's recurring series publishes each occurrence itself, so the extra
+	 * meeting a chair added by hand was the only one that did not reach the gig
+	 * guide — and the leader had no way to release it. The room is held
+	 * `confirmed` either way, so the draft bought no review that anything acted
+	 * on.
+	 */
+	it('publishes the listing rather than leaving a draft nobody can release', async () => {
+		await createGroupEvent(params());
+
+		const [evt] = rowsFor('event_listing');
+		expect(evt).toMatchObject({ status: 'published' });
+		expect(evt.publishedAt).toBeInstanceOf(Date);
 	});
 
 	it('writes the group its event_group row', async () => {
@@ -208,6 +231,57 @@ describe('holding the room', () => {
 		await expect(createGroupEvent(params())).rejects.toThrow('insert failed');
 
 		expect(deletes).toHaveLength(0);
+	});
+});
+
+/**
+ * #714. The remotes guard with `requireProgramRole`, but free room time is an
+ * invariant of the data rather than of one endpoint: a band that reaches this
+ * creator by any route gets a `confirmed` reservation nobody is billed for, and
+ * `docs/specs/groups-spec.md` rests the whole design on that being impossible.
+ */
+describe('a band is not a program', () => {
+	it('refuses a band group before anything is written', async () => {
+		groupRows = [{ kind: 'band' }];
+
+		await expect(
+			createGroupEvent(
+				params({
+					groupId: 'band-1',
+					reservation: { startsAt: STARTS, endsAt: ENDS, overrideConflicts: false }
+				})
+			)
+		).rejects.toMatchObject({ name: 'NotAProgramError', httpStatus: 404 });
+
+		expect(staffCreate).not.toHaveBeenCalled();
+		expect(rowsFor('event_listing')).toHaveLength(0);
+	});
+
+	// Not only the reserving call. `source: 'group'` on a band's listing is the
+	// quieter half of the same bug, and it is what a series would inherit.
+	it('refuses a band group that reserves nothing', async () => {
+		groupRows = [{ kind: 'band' }];
+
+		await expect(createGroupEvent(params({ groupId: 'band-1' }))).rejects.toMatchObject({
+			name: 'NotAProgramError'
+		});
+		expect(rowsFor('event_listing')).toHaveLength(0);
+	});
+
+	it('refuses a groupId that resolves to nothing', async () => {
+		groupRows = [];
+
+		await expect(createGroupEvent(params({ groupId: 'nope' }))).rejects.toMatchObject({
+			name: 'NotAProgramError'
+		});
+	});
+
+	it('still creates for a committee', async () => {
+		groupRows = [{ kind: 'committee' }];
+
+		await createGroupEvent(params({ groupId: 'cmte-1' }));
+
+		expect(rowsFor('event_listing')).toHaveLength(1);
 	});
 });
 

@@ -801,6 +801,8 @@ This is why free room time is safe: only staff create clubs and committees, so o
 
 Bands are excluded deliberately. A band event is an off-site gig listing and does not reserve anything; a band rehearsal is private paid time under `bookerType: 'group'`. Neither becomes free, and a band cannot reach the free path by creating an "event" for its own rehearsal.
 
+That exclusion is enforced twice, because for a while it was enforced nowhere (#714). The five session remotes in `group-events.remote.ts` guard with `requireProgramRole`, and `requireProgramGroup` in `src/lib/server/group/group-kind.ts` rejects a band inside `createGroupEvent` and again in the recurring generator, which writes occurrences without going through it.
+
 ---
 
 ## Roles and permissions
@@ -870,7 +872,8 @@ Two pieces of this do not exist yet and are the real work: a `createGroupEvent()
 
 1. Staff enter a name, kind, and description, and pick the member who will lead it.
 2. The service creates the `group` and an owner `group_member` row for that member with `status = 'active'` — appointed, not invited, so there is nothing for them to accept.
-3. Staff set `joinPolicy` and the listing's `visibility`.
+3. Staff set `joinPolicy` and the listing's `visibility`. Both stay staff's for the group's life —
+   the leader's own editor covers name, description, photo and join instructions.
 4. The appointee gets a notification and the group appears under **My Groups** in their sidebar.
 
 The appointee never had to opt in, which is deliberate: staff are recording an arrangement that already exists offline. They can leave or hand off afterwards like any owner.
@@ -1042,8 +1045,14 @@ Not `replaceState()`, which neither updates `page.url` nor survives a client-sid
 _Mute_ writes `group_member.notifyAnnouncements`; both it and _Leave_ are `Action` components.
 The Sessions tab stays hidden until phase 9.
 
-Editing the public face — name, description, photo, visibility, join instructions — gets its own
-child route rather than a modal. A photo upload over five fields is cramped in a dialog.
+Editing the public face — name, description, photo, join instructions — gets its own child route
+rather than a modal. A photo upload over four fields is cramped in a dialog.
+
+**`visibility` and `joinPolicy` are not on it.** They decide whether the program is advertised and
+who may walk in, and the argument that makes free room time safe is that staff alone settle both —
+the same argument as [Room time](#room-time). `updateStaffGroup` is their one writer; the leader's
+form shows the policy read-only and says who to ask. `saveBandProfile`, which writes
+`directoryVisibility`, is band-only for the same reason.
 
 ### What `joinPolicy` gates on the roster tab
 
@@ -1158,7 +1167,7 @@ the member panel, and three routes replace the seven a panel would have needed:
 | ---------------------------- | -------------------------------------------------------- | ------------ |
 | `/member/groups`             | Your programs, and the ones you could join. **No bands** | member       |
 | `/member/groups/{slug}`      | The club page — tabbed                                   | group member |
-| `/member/groups/{slug}/edit` | Name, description, photo, visibility, join instructions  | owner, admin |
+| `/member/groups/{slug}/edit` | Name, description, photo, join instructions              | owner, admin |
 
 **`/member/bands` is untouched** — it keeps your bands, their invitations and the create-band modal,
 and nothing about it moves or redirects. The two indexes answer different questions and stay

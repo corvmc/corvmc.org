@@ -71,6 +71,7 @@ import {
 	isFirstReservationSql,
 	priorBookingCount,
 	announceWaitlistConfirmed,
+	announceConfirmed,
 	ReservationConflictError,
 	ReservationValidationError
 } from '$lib/server/reservation/reservation-service';
@@ -81,7 +82,7 @@ import { bookerTypes, type BookerType } from '$lib/config';
 import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
 import { requireInstructor } from '$lib/server/instructor/instructor-context';
 import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
-import { config } from '$lib/server/site-config/site-config-service';
+import { revealFallbackCodeFor } from '$lib/server/lock/fallback-code-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 import {
 	checkout,
@@ -134,7 +135,9 @@ export const getReservationPayment = query(z.string(), async (id) => {
 	if (row.status !== 'scheduled' && !confirmedUnpaid)
 		throw error(400, 'This reservation is not awaiting payment');
 
-	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
+	// Resolved for who is booking. Reading the config directly quoted an
+	// instructor the $15 drop-in rate on the page they pay from.
+	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
 	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
@@ -171,15 +174,22 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	if (!row) throw error(404, 'Reservation not found');
 	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
 
-	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
+	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
 	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
+
+	// A code we issued is not a code that works: U-tec queues writes in its cloud
+	// and only pushes them down when the lock is reachable. `lockSyncedAt` is the
+	// lock's own confirmation. Until it is set, the member gets the break-glass
+	// code instead — but only inside their window, and the reveal is recorded.
+	const fallbackCode = await revealFallbackCodeFor(row);
 
 	return {
 		reservation: row,
 		durationHours,
 		totalCents,
-		hourlyRateCents
+		hourlyRateCents,
+		fallbackCode
 	};
 });
 
@@ -270,6 +280,85 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		past: past.map((r) => withBooker(r, false))
 	};
 });
+
+/**
+ * One of the band's own bookings, for a member of that band.
+ *
+ * The band panel could show *that* a session existed and nothing behind it, so
+ * the notes, the settlement state and a cancellation reason all had to come
+ * from staff. The guard is the list's — `member`, `allowStaff` because staff
+ * administer band panels — and the row must belong to this band, 404 otherwise.
+ *
+ * What it deliberately does not return: the booker's phone or email (a
+ * bandmate's contact details are not the act's business), the payment
+ * instrument, and the door code to anyone but the member who booked. That last
+ * one is the open product decision in #566, not something to settle here.
+ */
+export const getBandReservationDetail = query(
+	z.object({ slug: z.string().min(1), reservationId: z.string().min(1) }),
+	async ({ slug, reservationId }) => {
+		const {
+			user: currentUser,
+			group: band,
+			role
+		} = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+
+		const [row] = await db
+			.select({
+				reservation: reservation,
+				ref: reservationRefColumns(),
+				bookedBy: memberRefColumns()
+			})
+			.from(reservation)
+			.leftJoin(user, eq(user.id, reservation.createdByUserId))
+			.where(eq(reservation.id, reservationId))
+			.limit(1);
+
+		// 404 rather than 403, matching `cancelBandReservation`: whether some other
+		// band's booking exists is not this band's business.
+		if (!row || row.reservation.bookerType !== 'group' || row.reservation.bookerId !== band.id) {
+			error(404, 'Reservation not found');
+		}
+
+		const res = row.reservation;
+		const { hourlyRateCents } = await getBookingTerms(res.bookerType);
+		const durationHours = (res.endsAt.getTime() - res.startsAt.getTime()) / (1000 * 60 * 60);
+		const totalCents = Math.round(durationHours * hourlyRateCents);
+
+		const bandAdmin = role === 'owner' || role === 'admin';
+		const isBooker = res.createdByUserId === currentUser.id;
+
+		return {
+			id: res.id,
+			ref: toReservationRef(row.ref, band),
+			status: res.status,
+			startsAt: res.startsAt,
+			endsAt: res.endsAt,
+			notes: res.notes,
+			cancellationReason: res.cancellationReason,
+			// Email dropped before the ref is built: `toMemberRef` puts it in
+			// `subtitle`, and a bandmate's address is not what this page is for.
+			bookedBy: toMemberRef({ ...row.bookedBy, email: null }),
+			isBooker,
+			durationHours,
+			totalCents,
+			hourlyRateCents,
+			// What the act owes and whether it has been settled. `cashDueCents` is
+			// null until credits are committed at Confirm; see the schema comment.
+			paidAt: res.paidAt,
+			refundedAt: res.refundedAt,
+			cashDueCents: res.cashDueCents,
+			creditsUsed: res.creditsUsed,
+			// The booker already reads this on their own detail page. Widening it to
+			// every bandmate is #566's call, so it is withheld rather than guessed at.
+			lockCode: isBooker ? res.lockCode : null,
+			canCancel:
+				(bandAdmin || isBooker) &&
+				res.startsAt.getTime() > Date.now() &&
+				(res.status === 'scheduled' || res.status === 'confirmed')
+		};
+	}
+);
 
 export const getStaffReservationDetail = query(z.string(), async (id) => {
 	await requireCapability('reservation.read');
@@ -405,7 +494,7 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			row.status !== 'waitlisted' &&
 			priorCount === 0,
 		orientation,
-		hourlyRateCents: await config<number>('reservation.hourlyRateCents')
+		hourlyRateCents: (await getBookingTerms(row.bookerType)).hourlyRateCents
 	};
 });
 
@@ -886,6 +975,10 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			notes: reservation.notes,
 			stripePaymentRecordId: reservation.stripePaymentRecordId,
 			paidAt: reservation.paidAt,
+			// `reservationPaymentState` reads this to tell a refunded booking from a
+			// plain cancellation, and takes it as a required field so a query that
+			// forgets it cannot compile.
+			refundedAt: reservation.refundedAt,
 			cashDueCents: reservation.cashDueCents,
 			creditsUsed: reservation.creditsUsed,
 			createdByUserId: reservation.createdByUserId,
@@ -960,7 +1053,10 @@ export const getUnresolvedReservations = query(async () => {
 			createdByUserId: reservation.createdByUserId,
 			notes: reservation.notes,
 			member: memberRefColumns(),
-			cashDueCents: reservation.cashDueCents
+			cashDueCents: reservation.cashDueCents,
+			// So the resolve modal can price a row that has no `cashDueCents` yet
+			// at the booker's own rate rather than everyone's at the member one.
+			bookerType: reservation.bookerType
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
@@ -985,10 +1081,20 @@ export const getUnresolvedReservations = query(async () => {
 	return rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
 });
 
-/** Staff: current hourly rate for reservation pricing. */
-export const getHourlyRate = query(async () => {
+/**
+ * Staff: the hourly rate for every booker type, for reservation pricing.
+ *
+ * A table rather than a number because the caller is the staff reservations
+ * list, which is mixed: one scalar applied down the rows quoted every
+ * instructor booking at the member rate. There is no booker in scope here to
+ * resolve against, so the page indexes by each row's own `bookerType`.
+ */
+export const getHourlyRates = query(async () => {
 	await requireCapability('reservation.read');
-	return config<number>('reservation.hourlyRateCents');
+	const cfg = await getReservationConfig();
+	return Object.fromEntries(
+		bookerTypes.map((t) => [t, termsFor(t, cfg).hourlyRateCents])
+	) as Record<BookerType, number>;
 });
 
 // ===========================================================================
@@ -1222,6 +1328,8 @@ async function commitCreditsAndSettleIfCovered(opts: {
 			)
 		);
 
+	await announceConfirmed(opts.reservationId);
+
 	return { remainingCents: 0, settled: true };
 }
 
@@ -1299,6 +1407,7 @@ async function payReservationRemainder(opts: {
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, opts.row.id));
+		await announceConfirmed(opts.row.id);
 		return { paid: true };
 	}
 
@@ -1424,6 +1533,9 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 				.update(reservation)
 				.set({ status: 'confirmed', updatedAt: new Date() })
 				.where(eq(reservation.id, res.id));
+			// The settled branch announced it from inside
+			// `commitCreditsAndSettleIfCovered`; this is the other half.
+			await announceConfirmed(res.id);
 		}
 		return { reservationId: res.id, confirmed: true as const };
 	}
@@ -1491,6 +1603,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, res.id));
+
+		await announceConfirmed(res.id);
 
 		return { reservationId: res.id, paid: true as const };
 	}
@@ -2014,20 +2128,62 @@ export const compReservation = form(z.object({ id: z.string() }), async (data, _
 	return { success: true };
 });
 
-/** Staff: refund the payment on a reservation. */
-export const refundReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	await requireCapability('finance.refund');
-
+/**
+ * The row a refund action needs before it commits to anything: who owns the
+ * booking, what there is to refund, and whether it has already been refunded.
+ * Refunding twice is a no-op at the payment layer, but the 400 tells staff why
+ * nothing happened rather than reporting a second success.
+ */
+async function readRefundableReservation(id: string) {
 	const [row] = await db
 		.select({
 			createdByUserId: reservation.createdByUserId,
-			stripePaymentRecordId: reservation.stripePaymentRecordId
+			stripePaymentRecordId: reservation.stripePaymentRecordId,
+			refundedAt: reservation.refundedAt
 		})
 		.from(reservation)
-		.where(eq(reservation.id, data.id))
+		.where(eq(reservation.id, id))
 		.limit(1);
 	if (!row) throw error(404, 'Reservation not found');
 	if (!row.stripePaymentRecordId) throw error(400, 'No payment to refund');
+	if (row.refundedAt) throw error(400, 'Reservation has already been refunded');
+	return row as typeof row & { stripePaymentRecordId: string };
+}
+
+/**
+ * Staff: refund the payment and cancel the booking. Delegates to `cancel()`,
+ * which cancels first and refunds after, and is also what reverses credits,
+ * clears the credit-commit markers and emits `reservation.cancelled` for the
+ * waitlist. Duplicating any of that here would refund twice (#669).
+ */
+export const refundAndCancelReservation = form(
+	z.object({ id: z.string(), reason: z.string().optional() }),
+	async (data, _issue) => {
+		await requireCapability('finance.refund');
+		const currentUser = requireUser();
+		await readRefundableReservation(data.id);
+
+		try {
+			// `staffOverride` unconditionally: the capability check above already
+			// established that, and reading it off the request would let a client
+			// pick its own authority.
+			await cancel(data.id, currentUser.id, data.reason, { staffOverride: true });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		return { success: true };
+	}
+);
+
+/**
+ * Staff: refund the payment and leave the booking standing — a comp after the
+ * fact on a session that went ahead. `status` and `paidAt` are deliberately
+ * untouched; `reservationPaymentState` reads `refundedAt` first, so the row
+ * reports as refunded without pretending the session never happened (#669).
+ */
+export const refundOnlyReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
+	await requireCapability('finance.refund');
+	const row = await readRefundableReservation(data.id);
 
 	await refundPayment({
 		userId: row.createdByUserId,
@@ -2036,7 +2192,10 @@ export const refundReservation = form(z.object({ id: z.string() }), async (data,
 	// Reservation free-hour credits live in the ledger (not the payment record's
 	// breakdown), so reverse them explicitly. Idempotent and a no-op when none.
 	await reverseReservationCredits(row.createdByUserId, data.id);
-	await db.update(reservation).set({ refundedAt: new Date() }).where(eq(reservation.id, data.id));
+	await db
+		.update(reservation)
+		.set({ refundedAt: new Date(), updatedAt: new Date() })
+		.where(eq(reservation.id, data.id));
 	return { success: true };
 });
 
@@ -2241,8 +2400,8 @@ export const getUserRecurringSeries = query(z.string(), async (userId) => {
  * The schedule, whether the band has a sustaining member (which sets the rate the booking form
  * quotes) and the booking contact are all first paint, and the page awaited the three side by
  * side. Past kit 2.64 that renders the error boundary instead of the page; assembled here it is
- * one request. Each callee re-guards — `getBandReservations` in particular does its own slug
- * cross-check, which is the boundary that stops one band reading another's schedule.
+ * one request. Each callee re-guards — `getBandReservations` resolves the band from this slug
+ * through `requireGroupRole`, the boundary that stops one band reading another's schedule.
  */
 export const getBandReservationsPage = query(z.string(), async (slug) => {
 	const [reservations, membership, contact] = await Promise.all([
@@ -2269,14 +2428,14 @@ export const getBandReservationsPage = query(z.string(), async (slug) => {
 export const getStaffReservationsPage = query(staffReservationFiltersSchema, async (filters) => {
 	await requireCapability('reservation.read');
 
-	const [list, counts, unresolved, hourlyRate] = await Promise.all([
+	const [list, counts, unresolved, hourlyRates] = await Promise.all([
 		getStaffReservations(filters),
 		getReservationCounts(),
 		getUnresolvedReservations(),
-		getHourlyRate()
+		getHourlyRates()
 	]);
 
-	return { list, counts, unresolved, hourlyRate };
+	return { list, counts, unresolved, hourlyRates };
 });
 
 /**

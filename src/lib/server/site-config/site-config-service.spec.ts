@@ -119,10 +119,24 @@ describe('getConfigsByPrefix', () => {
 
 	it('returns org defaults', async () => {
 		const result = await getConfigsByPrefix('org');
-		expect(result.name).toBe('Corvallis Music Collective');
-		expect(result.shortName).toBe('CorvMC');
-		expect(result.contactEmail).toBe('staff@corvmc.org');
-		expect(result.timezone).toBe('America/Los_Angeles');
+		expect(result.addressStreet).toBe('6775 SW Philomath Blvd');
+		expect(result.addressCity).toBe('Corvallis');
+		expect(result.socialFacebook).toBe('');
+	});
+
+	// The org prefix is the footer's and /contact's read, nothing more. Name,
+	// short name, contact email and timezone were removed as unread; a
+	// reintroduction shows up here rather than as a staff field that saves
+	// into a void.
+	it('carries no org keys beyond the address and social blocks', async () => {
+		expect(Object.keys(await getConfigsByPrefix('org')).sort()).toEqual([
+			'addressCity',
+			'addressState',
+			'addressStreet',
+			'addressZip',
+			'socialFacebook',
+			'socialInstagram'
+		]);
 	});
 
 	it('returns integration defaults as empty strings', async () => {

@@ -1,16 +1,10 @@
 /**
  * `applyDutyList` against a real database on the real migrated schema.
  *
- * The arithmetic is the point. An item says "3 hours before doors" and the row
- * it produces has to land on an actual instant, in the right column — `startsAt`
- * for a windowed item, `dueAt` for a deadline one — and a mocked query builder
- * cannot tell you whether it did. Nor can it tell you whether the CHECKs accept
- * what the service writes, which is the other half of the risk.
- *
- * The shim below is the whole trick: `db.batch` is a D1 method and the node
- * driver has no such thing, so it is supplied by awaiting the statements in
- * order. That is what D1 does with a batch anyway, minus the atomicity — and
- * atomicity is not what these tests are about.
+ * The arithmetic is the point: "3 hours before doors" has to land on a real
+ * instant in the right column — `startsAt` when windowed, `dueAt` when a
+ * deadline — and the CHECKs have to accept it. Neither is answerable through a
+ * mock. `db.batch` is D1's; the shim below awaits statements in order instead.
  */
 import { describe, expect, it, beforeAll, beforeEach, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
@@ -45,6 +39,11 @@ vi.mock('$lib/server/db', () => ({
 const DOORS = Math.floor(new Date('2026-10-10T02:00:00Z').getTime() / 1000);
 const STARTS = Math.floor(new Date('2026-10-10T03:00:00Z').getTime() / 1000);
 const ENDS = Math.floor(new Date('2026-10-10T07:00:00Z').getTime() / 1000);
+/** The show's own clock, which is not the listing's. */
+const LOAD_IN = Math.floor(new Date('2026-10-10T00:00:00Z').getTime() / 1000);
+const FIRST_SET = Math.floor(new Date('2026-10-10T03:30:00Z').getTime() / 1000);
+const CURFEW = Math.floor(new Date('2026-10-10T06:00:00Z').getTime() / 1000);
+const LOAD_OUT = Math.floor(new Date('2026-10-10T08:00:00Z').getTime() / 1000);
 
 let applyDutyList: typeof import('./duty-list-service').applyDutyList;
 let DutyListAlreadyAppliedError: typeof import('./duty-list-service').DutyListAlreadyAppliedError;
@@ -63,6 +62,8 @@ beforeEach(() => {
 		'work_order',
 		'duty_list_item',
 		'duty_list',
+		'production_slot',
+		'production',
 		'event_listing',
 		'reservation'
 	]) {
@@ -162,6 +163,73 @@ describe('applyDutyList', () => {
 		await expect(applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1')).rejects.toThrow(
 			/no end time/i
 		);
+	});
+
+	// Staffing a show from `doorsAt` alone puts every shift against the one time
+	// the run of show does not turn on. These four are the show's own clock.
+	describe('production anchors', () => {
+		function withProduction(cols = 'load_in_at, first_set_at, curfew_at, load_out_by') {
+			const vals = {
+				load_in_at: LOAD_IN,
+				first_set_at: FIRST_SET,
+				curfew_at: CURFEW,
+				load_out_by: LOAD_OUT
+			};
+			const names = cols.split(',').map((c) => c.trim());
+			sqlite.exec(
+				`INSERT INTO production (id, event_id, status, ${names.join(', ')})
+				 VALUES ('prod-1','evt-1','confirmed', ${names.map((n) => vals[n as keyof typeof vals]).join(', ')})`
+			);
+		}
+
+		it.each([
+			['load_in', LOAD_IN],
+			['first_set', FIRST_SET],
+			['curfew', CURFEW],
+			['load_out', LOAD_OUT]
+		])('anchors to the production’s %s', async (anchor, at) => {
+			withProduction();
+			sqlite.exec(`UPDATE duty_list SET anchor = '${anchor}' WHERE id = 'dl-1'`);
+			addItem('i1', 'offset_minutes, duration_minutes', '-30, 60');
+
+			await applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1');
+
+			expect(shifts()[0].starts_at).toBe(at - 30 * 60);
+		});
+
+		// Two different failures, and the difference matters to whoever reads it.
+		it('says the show has no production rather than falling back to the listing', async () => {
+			sqlite.exec(`UPDATE duty_list SET anchor = 'load_in' WHERE id = 'dl-1'`);
+			addItem('i1', 'offset_minutes, duration_minutes', '0, 60');
+
+			await expect(applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1')).rejects.toThrow(
+				/no production yet/i
+			);
+		});
+
+		it('says the time is unset when the production exists but the column is null', async () => {
+			withProduction('first_set_at');
+			sqlite.exec(`UPDATE duty_list SET anchor = 'load_in' WHERE id = 'dl-1'`);
+			addItem('i1', 'offset_minutes, duration_minutes', '0, 60');
+
+			await expect(applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1')).rejects.toThrow(
+				/no load-in time set/i
+			);
+		});
+
+		// Same reasoning as `doors`: a rehearsal booking has no run of show, and
+		// quietly resolving to its start would read as correct everywhere.
+		it('refuses a production anchor on a booking', async () => {
+			sqlite.exec(`UPDATE duty_list SET anchor = 'curfew', subject = 'event' WHERE id = 'dl-res'`);
+			sqlite.exec(
+				`INSERT INTO duty_list_item (id, duty_list_id, volunteer_role_id, offset_minutes, duration_minutes)
+				 VALUES ('ir1','dl-res','role-1', 0, 60)`
+			);
+
+			await expect(
+				applyDutyList('dl-res', { kind: 'reservation', id: 'res-1' }, 'u1')
+			).rejects.toThrow(DutyListValidationError);
+		});
 	});
 
 	it('refuses a second apply rather than doubling the roster', async () => {

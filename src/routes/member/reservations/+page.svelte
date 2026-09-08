@@ -22,7 +22,7 @@
 	import ReservationCard from './ReservationCard.svelte';
 	import { Tabs } from 'bits-ui';
 	import clsx from 'clsx';
-	import { format } from 'date-fns';
+	import { formatMonthDayYear, formatTimeRange } from '$lib/utils/format';
 
 	let activeTab = $state<'active' | 'all'>('active');
 
@@ -226,15 +226,15 @@
 			<div class="space-y-4">
 				<p class="text-sm">A slot has opened up for your waitlisted reservation:</p>
 				<div class="inset border border-base-300 px-4 py-3">
-					<p class="font-medium">{format(confirmReservation.startsAt, 'PPP')}</p>
+					<p class="font-medium">{formatMonthDayYear(confirmReservation.startsAt)}</p>
 					<p class="text-muted">
-						{format(confirmReservation.startsAt, 'p')} – {format(confirmReservation.endsAt, 'p')}
+						{formatTimeRange(confirmReservation.startsAt, confirmReservation.endsAt)}
 					</p>
 				</div>
 				{#if confirmReservation.waitlistExpiresAt}
 					<p class="text-subtle">
-						Confirm by {format(confirmReservation.waitlistExpiresAt, 'PPP')} or the slot will be offered
-						to someone else.
+						Confirm by {formatMonthDayYear(confirmReservation.waitlistExpiresAt)} or the slot will be
+						offered to someone else.
 					</p>
 				{/if}
 				<input {...fields.id.as('hidden', confirmReservation.id)} />

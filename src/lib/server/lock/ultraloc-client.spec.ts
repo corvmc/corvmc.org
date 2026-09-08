@@ -25,9 +25,12 @@ vi.mock('$lib/server/site-config/site-config-service', () => ({
 const {
 	generateLockCode,
 	createTemporaryUser,
-	createControlUser,
+	addLockUser,
 	removeTemporaryUser,
+	updateLockUser,
 	listLockUsers,
+	getLockUser,
+	queryDeviceHealth,
 	LOCK_GRACE_MINUTES,
 	buildAuthorizeUrl,
 	exchangeAuthorizationCode
@@ -35,6 +38,7 @@ const {
 
 let lastBody: any = null;
 let lastUrl: string | null = null;
+let addBody: any = null;
 
 function mockFetch(payload: Record<string, unknown>) {
 	lastBody = null;
@@ -43,6 +47,35 @@ function mockFetch(payload: Record<string, unknown>) {
 		vi.fn(async (_url: string, init: RequestInit) => {
 			lastBody = JSON.parse(init.body as string);
 			return { ok: true, json: async () => ({ payload }) } as Response;
+		})
+	);
+}
+
+/**
+ * `addLockUser` lists, adds, then lists again to recover the assigned id, so an
+ * add test needs a fetch that answers each command differently. Captures the
+ * `add` body specifically — `lastBody` would otherwise hold the trailing list.
+ */
+function mockAddFetch(
+	before: Array<Record<string, unknown>>,
+	after: Array<Record<string, unknown>>
+) {
+	let listCalls = 0;
+	addBody = null;
+	vi.stubGlobal(
+		'fetch',
+		vi.fn(async (_url: string, init: RequestInit) => {
+			const body = JSON.parse(init.body as string);
+			const command = body.payload.devices[0].command;
+			if (command.name === 'add') {
+				addBody = body;
+				return {
+					ok: true,
+					json: async () => ({ payload: { devices: [{ states: [] }] } })
+				} as Response;
+			}
+			const users = listCalls++ === 0 ? before : after;
+			return { ok: true, json: async () => ({ payload: { devices: [{ users }] } }) } as Response;
 		})
 	);
 }
@@ -68,6 +101,7 @@ beforeEach(() => {
 	vi.unstubAllGlobals();
 	lastBody = null;
 	lastUrl = null;
+	addBody = null;
 });
 
 describe('generateLockCode', () => {
@@ -83,15 +117,22 @@ describe('generateLockCode', () => {
 
 describe('createTemporaryUser', () => {
 	it('sends an st.lockUser add command with a flat temporary-user payload', async () => {
-		mockFetch({ devices: [{ states: [] }] });
+		mockAddFetch(
+			[{ id: 1, name: 'Existing', type: 0 }],
+			[
+				{ id: 1, name: 'Existing', type: 0 },
+				{ id: 55, name: 'Jordan', type: 2 }
+			]
+		);
 
 		const startTime = new Date('2026-07-01T18:00:00-07:00');
 		const endTime = new Date('2026-07-01T20:00:00-07:00');
 
-		await createTemporaryUser({ name: 'Jordan', startTime, endTime, code: 4242 });
+		const id = await createTemporaryUser({ name: 'Jordan', startTime, endTime, code: 4242 }, 0);
 
-		const cmd = lastBody.payload.devices[0].command;
-		expect(lastBody.payload.devices[0].id).toBe('DEV-1');
+		expect(id).toBe(55);
+		const cmd = addBody.payload.devices[0].command;
+		expect(addBody.payload.devices[0].id).toBe('DEV-1');
 		expect(cmd.capability).toBe('st.lockUser');
 		expect(cmd.name).toBe('add');
 		expect(cmd.arguments.type).toBe(2);
@@ -111,15 +152,115 @@ describe('createTemporaryUser', () => {
 	});
 });
 
-describe('createControlUser', () => {
-	it('sends a minimal normal-user (type 0) add — name/type/password only', async () => {
-		mockFetch({ devices: [{ states: [] }] });
+describe('addLockUser', () => {
+	it('sends the add payload through and returns the id the lock assigned', async () => {
+		mockAddFetch([], [{ id: 438263, name: 'CMC Self-Test', type: 0 }]);
 
-		await createControlUser('CMC Self-Test', 4242);
+		const id = await addLockUser({ name: 'CMC Self-Test', type: 0, password: 4242 }, 0);
 
-		const cmd = lastBody.payload.devices[0].command;
+		expect(id).toBe(438263);
+		const cmd = addBody.payload.devices[0].command;
 		expect(cmd.name).toBe('add');
 		expect(cmd.arguments).toEqual({ name: 'CMC Self-Test', type: 0, password: 4242 });
+	});
+
+	it('returns null when nothing new appeared — the add is queued, not applied', async () => {
+		mockAddFetch([{ id: 1, name: 'A', type: 0 }], [{ id: 1, name: 'A', type: 0 }]);
+		expect(await addLockUser({ name: 'X', type: 0, password: 1111 }, 0)).toBeNull();
+	});
+
+	it('returns null rather than guessing when two rows appeared', async () => {
+		mockAddFetch(
+			[],
+			[
+				{ id: 1, name: 'A', type: 0 },
+				{ id: 2, name: 'B', type: 0 }
+			]
+		);
+		expect(await addLockUser({ name: 'X', type: 0, password: 1111 }, 0)).toBeNull();
+	});
+});
+
+describe('updateLockUser', () => {
+	it('sends a partial update carrying the id — U-tec merges rather than replaces', async () => {
+		mockFetch({ devices: [{ states: [] }] });
+
+		await updateLockUser(438263, { daterange: ['2026-09-06 09:00', '2026-09-06 11:00'] });
+
+		const cmd = lastBody.payload.devices[0].command;
+		expect(cmd.name).toBe('update');
+		expect(cmd.arguments).toEqual({
+			id: 438263,
+			daterange: ['2026-09-06 09:00', '2026-09-06 11:00']
+		});
+	});
+});
+
+describe('getLockUser', () => {
+	it('returns the full record, mapping sync_status onto syncStatus', async () => {
+		mockFetch({
+			devices: [
+				{
+					user: {
+						id: 706106,
+						name: 'Res 12',
+						type: 2,
+						status: 1,
+						sync_status: 1,
+						password: '9725',
+						daterange: ['2027-09-05 09:00', '2027-09-05 11:00'],
+						weeks: [0, 1, 2, 3, 4, 5, 6],
+						timerange: ['00:00', '23:59']
+					}
+				}
+			]
+		});
+
+		const user = await getLockUser(706106);
+
+		expect(lastBody.payload.devices[0].command.name).toBe('get');
+		expect(lastBody.payload.devices[0].command.arguments).toEqual({ id: 706106 });
+		expect(user?.syncStatus).toBe(1);
+		expect(user?.password).toBe('9725');
+		expect(user?.daterange).toEqual(['2027-09-05 09:00', '2027-09-05 11:00']);
+	});
+
+	it('returns null when the lock has no such user', async () => {
+		mockFetch({ devices: [{}] });
+		expect(await getLockUser(1)).toBeNull();
+	});
+});
+
+describe('queryDeviceHealth', () => {
+	it('reads online off st.healthCheck, with the cached lock state and battery', async () => {
+		mockFetch({
+			devices: [
+				{
+					states: [
+						{ capability: 'st.healthCheck', name: 'status', value: 'Online' },
+						{ capability: 'st.lock', name: 'lockState', value: 'Locked' },
+						{ capability: 'st.batteryLevel', name: 'level', value: 4 }
+					]
+				}
+			]
+		});
+
+		expect(await queryDeviceHealth()).toEqual({
+			online: true,
+			lockState: 'Locked',
+			batteryLevel: 4
+		});
+		expect(lastBody.header.name).toBe('Query');
+	});
+
+	it('reports offline for anything that is not exactly "Online"', async () => {
+		mockFetch({
+			devices: [{ states: [{ capability: 'st.healthCheck', name: 'status', value: 'Offline' }] }]
+		});
+
+		const health = await queryDeviceHealth();
+		expect(health.online).toBe(false);
+		expect(health.batteryLevel).toBeNull();
 	});
 });
 
@@ -137,15 +278,24 @@ describe('removeTemporaryUser', () => {
 
 describe('listLockUsers', () => {
 	it('parses the users array from the device list', async () => {
-		const users = [
-			{ id: 1, name: 'A', type: 2 },
-			{ id: 2, name: 'B', type: 0 }
-		];
-		mockFetch({ devices: [{ id: 'DEV-1', users }] });
+		mockFetch({
+			devices: [
+				{
+					id: 'DEV-1',
+					users: [
+						{ id: 1, name: 'A', type: 2, status: 1, sync_status: 0 },
+						{ id: 2, name: 'B', type: 0, status: 1, sync_status: 1 }
+					]
+				}
+			]
+		});
 
 		const result = await listLockUsers();
 
-		expect(result).toEqual(users);
+		expect(result).toEqual([
+			{ id: 1, name: 'A', type: 2, status: 1, syncStatus: 0 },
+			{ id: 2, name: 'B', type: 0, status: 1, syncStatus: 1 }
+		]);
 		expect(lastBody.payload.devices[0].command.name).toBe('list');
 	});
 

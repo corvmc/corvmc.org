@@ -26,13 +26,12 @@
 		subscription: SubscriptionInfo;
 		updateRemote: RemoteForm<TInput, TOutput>;
 		/**
-		 * Cancelling used to be reachable only through Stripe's billing portal,
-		 * which is why this is the one control here that is new rather than moved.
+		 * Cancelling was reachable only through Stripe's billing portal, so this is
+		 * the one control here that is new rather than moved.
 		 *
-		 * Typed off `Action`'s own prop rather than as a second `RemoteForm<…>`:
-		 * `RemoteForm` is invariant in its input, so a second one in this props
-		 * object drags `TInput` down to `RemoteFormInput` and `updateRemote` stops
-		 * accepting the concrete form the page passes.
+		 * Typed off `Action`'s own prop, not as a second `RemoteForm<…>`: that type
+		 * is invariant in its input, so a second one here drags `TInput` down to
+		 * `RemoteFormInput` and `updateRemote` stops accepting the page's form.
 		 */
 		cancelAction: ComponentProps<typeof Action>['action'];
 		showModifyForm?: boolean;

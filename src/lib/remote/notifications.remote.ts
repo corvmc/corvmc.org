@@ -18,14 +18,11 @@ function requireUser() {
 	return locals.user;
 }
 
-export const getNotifications = query(async () => {
-	const user = requireUser();
-	const [notifications, unreadCount] = await Promise.all([
-		getForUser(user.id, { limit: 10 }),
-		getUnreadCount(user.id)
-	]);
-	return { notifications, unreadCount };
-});
+// The bell's own `getNotifications` query is gone. `AppTopbar` mounts
+// `NotificationBell` on every authenticated page, so it was a remote query no
+// page could get below; each panel's layout query assembles the same reads now
+// (`appChrome` in `./layout.remote`). The bell was its only caller, so it is
+// deleted rather than left as an endpoint someone can wire a fan-out back to.
 
 export const markNotificationRead = command(z.object({ id: z.string().min(1) }), async ({ id }) => {
 	const user = requireUser();

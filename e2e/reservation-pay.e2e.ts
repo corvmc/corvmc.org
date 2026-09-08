@@ -42,7 +42,6 @@ const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 async function login(page: import('@playwright/test').Page) {
 	await page.goto('/login');
-	// FormField renders a <legend>, not a <label for>, so target inputs by name.
 	await page.locator('input[name="email"]').fill(SEED_MEMBER_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_MEMBER_PASSWORD);
 	await page.getByRole('button', { name: 'Sign in' }).click();
@@ -50,6 +49,18 @@ async function login(page: import('@playwright/test').Page) {
 }
 
 test('a member covers the processing fee and the reservation settles', async ({ page }) => {
+	// Every 5xx this flow provokes, so the assertion at the end can insist there
+	// were none. #546 added this watcher with one tolerated failure: on `main`
+	// the submission reached Stripe with a dummy key and 500'd by design, and
+	// that comment said to delete the tolerance once the driver seam landed.
+	// This is that branch — the payment completes against the fake gateway now,
+	// so nothing here is allowed to 500 at all.
+	const serverErrors: string[] = [];
+	page.on('response', (res) => {
+		if (res.status() < 500) return;
+		serverErrors.push(`${res.request().method()} ${new URL(res.url()).pathname} → ${res.status()}`);
+	});
+
 	await login(page);
 
 	await page.goto(`/member/reservations/${SEED_RESERVATION_ID}/pay`);
@@ -111,4 +122,9 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 	// webhook translation emits — so this asserts fulfillment ran, not just that
 	// the charge succeeded.
 	expect(row.stripePaymentRecordId).not.toBeNull();
+
+	// Nothing in this flow may 500 — the login, the pay page, the remote query
+	// behind it, the checkout page, or the fulfillment. A regression in any of
+	// them used to leave this test green (#546).
+	expect(serverErrors, `unexpected server error(s): ${serverErrors.join(', ')}`).toEqual([]);
 });

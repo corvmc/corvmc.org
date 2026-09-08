@@ -125,18 +125,17 @@ export const testUtecConnection = query(async () => {
 // Exercise the real st.lockUser command path (create + list) and issue a
 // short-lived test code so staff can physically verify the door.
 //
-// `settings.update` rather than a read: this issues a working door code. It is
-// grouped with the integration settings it verifies, and the Technology
-// Coordinator is the position that holds both — but if lock management ever
-// grows past a self-test, it wants a capability of its own rather than riding
-// on the one that also renames the organisation.
+// `lock.manage`, not `settings.update`: lock management has grown past a
+// self-test, so it no longer rides on the capability that also renames the
+// organisation. The rest of it lives in `lock.remote.ts`; these two stay here
+// because they verify the credentials on this page.
 export const runLockSelfTest = command(async () => {
-	await requireCapability('settings.update');
+	await requireCapability('lock.manage');
 	return issueLockSelfTest();
 });
 
 export const revokeLockTest = command(async () => {
-	await requireCapability('settings.update');
+	await requireCapability('lock.manage');
 	return revokeLockSelfTest();
 });
 
@@ -244,10 +243,6 @@ export const updateReservationSettings = form(reservationSettingsSchema, async (
 // ---------------------------------------------------------------------------
 
 const orgSettingsSchema = z.object({
-	name: z.string().trim().min(1, 'Organization name is required'),
-	shortName: z.string().trim().min(1, 'Short name is required'),
-	contactEmail: z.string().trim().email('Invalid email address'),
-	timezone: z.string().trim().min(1, 'Timezone is required'),
 	addressStreet: z.string().trim().max(200).optional().default(''),
 	addressCity: z.string().trim().max(100).optional().default(''),
 	addressState: z.string().trim().max(50).optional().default(''),
@@ -261,10 +256,6 @@ export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
 	const data = raw as z.infer<typeof orgSettingsSchema>;
 
 	await updateSiteConfigs([
-		{ key: 'org.name', value: data.name },
-		{ key: 'org.shortName', value: data.shortName },
-		{ key: 'org.contactEmail', value: data.contactEmail },
-		{ key: 'org.timezone', value: data.timezone },
 		{ key: 'org.addressStreet', value: data.addressStreet ?? '' },
 		{ key: 'org.addressCity', value: data.addressCity ?? '' },
 		{ key: 'org.addressState', value: data.addressState ?? '' },

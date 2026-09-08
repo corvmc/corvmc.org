@@ -1,21 +1,20 @@
 /**
  * Tab vocabulary for the production console.
  *
- * Three now; Phase 3 adds Run of show, Phase 5 Settlement and Phase 6
- * Close-out. `collapse` is on the bar from the start for that reason — six tabs
- * outrun a phone, and the prop costs nothing today.
- *
  * Overview carries everything about the night itself — the listing's own fields,
  * the poster, the room, and the production record. Advance is the work owed
- * before doors: riders in, shifts filled. Tickets is the money.
+ * before doors: riders in, shifts filled. Run of show is who plays when.
+ * Tickets is the money. Settlement and Close-out are still to come, which is
+ * why `collapse` is on the bar: six tabs outrun a phone.
  */
-export const TAB_KEYS = ['overview', 'advance', 'tickets'] as const;
+export const TAB_KEYS = ['overview', 'advance', 'runOfShow', 'tickets'] as const;
 
 export type TabKey = (typeof TAB_KEYS)[number];
 
 export const TAB_LABELS: Record<TabKey, string> = {
 	overview: 'Overview',
 	advance: 'Advance',
+	runOfShow: 'Run of show',
 	tickets: 'Tickets'
 };
 

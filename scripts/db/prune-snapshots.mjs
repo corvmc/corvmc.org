@@ -83,6 +83,7 @@ export function mergedDirs(ref = 'origin/main') {
 }
 
 /** Snapshots to delete: on `origin/main`, and not the newest. */
+/** @param {string[]} dirs @param {Set<string> | null} merged */
 export function prunable(dirs, merged) {
 	if (!merged || dirs.length === 0) return [];
 	const newest = dirs[dirs.length - 1];

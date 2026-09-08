@@ -68,11 +68,11 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// Zero disables the check rather than failing every rider.
 	'venue.consoleChannels': 16,
 
-	'org.name': 'Corvallis Music Collective',
-	'org.shortName': 'CorvMC',
-	'org.contactEmail': 'staff@corvmc.org',
-	'org.timezone': 'America/Los_Angeles',
-
+	// Only keys something reads live here. The org's name, short name, contact
+	// email and timezone were staff-editable and read by nothing: `$lib/config`
+	// holds SITE_NAME and DEFAULT_TIMEZONE, and the staff contact address is the
+	// STAFF_CONTACT_EMAIL binding. `site-config-consumers.spec.ts` fails on a key
+	// added here with no reader, which is how those four survived for so long.
 	'org.addressStreet': '6775 SW Philomath Blvd',
 	'org.addressCity': 'Corvallis',
 	'org.addressState': 'OR',

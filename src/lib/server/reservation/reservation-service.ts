@@ -29,6 +29,7 @@ import { formatDateInTz, formatTimeInTz } from './timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 import type { ReservationStatus } from '$lib/server/db/schema/reservation';
 import type { BookerType } from '$lib/config';
+import { captureException } from '$lib/server/sentry';
 
 // ---------------------------------------------------------------------------
 // ReservationService — create and cancel reservations
@@ -270,6 +271,49 @@ export async function announceWaitlistConfirmed(reservationId: string): Promise<
 	await emitCreated(row);
 }
 
+/**
+ * Tell the bus a booking is confirmed.
+ *
+ * Here rather than in the remotes because a reservation reaches `confirmed` six
+ * ways — staff-created, credit-settled, paid online, paid by webhook, confirmed
+ * inside the window, and paid ahead — and a seventh would be forgotten. It
+ * re-reads under the status it is announcing, so a confirm that a later write
+ * rolled back announces nothing.
+ */
+export async function announceConfirmed(reservationId: string): Promise<void> {
+	const [row] = await db
+		.select()
+		.from(reservation)
+		.where(and(eq(reservation.id, reservationId), eq(reservation.status, 'confirmed')))
+		.limit(1);
+
+	if (!row) return;
+
+	const TZ = DEFAULT_TIMEZONE;
+	const [owner] = await db
+		.select({ name: user.name, email: user.email })
+		.from(user)
+		.where(eq(user.id, row.createdByUserId))
+		.limit(1);
+
+	// Best-effort, unlike `reservation.created`. Every caller is mid-payment or
+	// mid-confirm, so a listener that throws would fail a member's booking after
+	// their money has already moved.
+	try {
+		await domainEvents.emit('reservation.confirmed', {
+			reservationId: row.id,
+			userId: row.createdByUserId,
+			userName: owner?.name ?? '',
+			userEmail: owner?.email ?? '',
+			date: formatDateInTz(row.startsAt, TZ),
+			startTime: formatTimeInTz(row.startsAt, TZ),
+			endTime: formatTimeInTz(row.endsAt, TZ)
+		});
+	} catch (err) {
+		captureException(err, { event: 'reservation.confirmed', reservationId: row.id });
+	}
+}
+
 // ---------------------------------------------------------------------------
 // staffCreate() — skip validation and conflict checks
 // ---------------------------------------------------------------------------
@@ -313,6 +357,9 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 	// `createdByUserId` is the owning member here by design, and
 	// `createdByStaffId` carries the audit trail.
 	await emitCreated(row);
+	// A row that lands directly in `confirmed` never passes through a confirm
+	// path, so this is the only place that moment exists for it.
+	if (row.status === 'confirmed') await announceConfirmed(row.id);
 
 	return row;
 }
@@ -323,6 +370,7 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 
 export async function confirm(reservationId: string): Promise<void> {
 	await updateStatus(reservationId, ['scheduled'], 'confirmed');
+	await announceConfirmed(reservationId);
 }
 
 // ---------------------------------------------------------------------------
@@ -495,9 +543,12 @@ export async function cancel(
 				userId: row.createdByUserId,
 				stripePaymentRecordId: row.stripePaymentRecordId
 			});
+			// `paidAt` goes with the money: it is the display's evidence that the
+			// member's payment is still with us, and leaving it set made a refunded
+			// booking read as Paid (#669).
 			await db
 				.update(reservation)
-				.set({ refundedAt: new Date() })
+				.set({ refundedAt: new Date(), paidAt: null, updatedAt: new Date() })
 				.where(eq(reservation.id, reservationId));
 		} catch (err) {
 			// The row is already `cancelled` at this point and the status guard

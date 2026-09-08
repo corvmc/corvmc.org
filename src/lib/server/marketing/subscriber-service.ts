@@ -1,5 +1,6 @@
 import { db } from '$lib/server/db';
 import { subscriber, type SuppressionReason } from '$lib/server/db/schema/marketing';
+import { user } from '$lib/server/db/schema/authentication';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -128,4 +129,54 @@ export async function findOrCreateForUser(
 		return { ...sub, userId };
 	}
 	return sub;
+}
+
+/**
+ * Attach the subscriber row already under `email` to a new account.
+ *
+ * `user_id` is the only column written, so a suppression or per-audience
+ * opt-out recorded before the account existed still means opted out after
+ * it. `user_id is null` makes it a compare-and-swap: a row another account
+ * already claims is left alone. Returns the id linked, or null.
+ */
+export async function linkExistingSubscriberToUser(
+	userId: string,
+	email: string
+): Promise<string | null> {
+	const normalized = email.toLowerCase().trim();
+
+	const [row] = await db
+		.update(subscriber)
+		.set({ userId })
+		.where(and(eq(subscriber.email, normalized), isNull(subscriber.userId)))
+		.returning({ id: subscriber.id });
+
+	return row?.id ?? null;
+}
+
+/**
+ * The reverse order: an account already exists under this subscriber's
+ * address. Same rule and same restraint — `user_id` only, and only while the
+ * row is unclaimed. A deactivated account does not claim it. Returns the user
+ * id linked, or null.
+ */
+export async function linkSubscriberToExistingUser(
+	subscriberId: string,
+	email: string
+): Promise<string | null> {
+	const normalized = email.toLowerCase().trim();
+
+	const [owner] = await db
+		.select({ id: user.id })
+		.from(user)
+		.where(and(eq(user.email, normalized), isNull(user.deletedAt)))
+		.limit(1);
+	if (!owner) return null;
+
+	await db
+		.update(subscriber)
+		.set({ userId: owner.id })
+		.where(and(eq(subscriber.id, subscriberId), isNull(subscriber.userId)));
+
+	return owner.id;
 }

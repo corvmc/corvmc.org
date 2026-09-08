@@ -94,6 +94,7 @@ import {
 	createGroup,
 	joinGroup,
 	leaveGroup,
+	updateGroupProfile,
 	updateGroupSettings,
 	AlreadyOnRosterError,
 	GroupNotFoundError,
@@ -193,6 +194,59 @@ describe('assignLeader', () => {
 		const rendered = dialect.sqlToQuery(demote.where as SQL);
 		expect(rendered.sql).toContain('<>');
 		expect(rendered.params).toContain('user-1');
+	});
+});
+
+describe('updateGroupProfile', () => {
+	/**
+	 * `name` and `bio` are mirrored onto the listing for the same reason
+	 * band-service `update` mirrors them: the directory orders and searches on
+	 * the copy, so writing only `group` leaves the old name showing.
+	 */
+	it('mirrors the name and bio onto the listing', async () => {
+		await updateGroupProfile('group-1', { name: 'Real Book Club', bio: 'A monthly jam' });
+
+		expect(writes).toEqual([
+			expect.objectContaining({
+				table: 'group',
+				values: expect.objectContaining({ name: 'Real Book Club', bio: 'A monthly jam' })
+			}),
+			expect.objectContaining({
+				table: 'directory_entry',
+				values: expect.objectContaining({ name: 'Real Book Club', bio: 'A monthly jam' })
+			})
+		]);
+	});
+
+	/** Group-only: a listing has no join instructions to keep in step. */
+	it('writes the join instructions to the group alone', async () => {
+		await updateGroupProfile('group-1', { joinInstructions: 'Third Thursday, 7pm' });
+
+		expect(writes[0]).toMatchObject({
+			table: 'group',
+			values: { joinInstructions: 'Third Thursday, 7pm' }
+		});
+		expect(writes[1].values).not.toHaveProperty('joinInstructions');
+	});
+
+	it('clears the instructions when they are submitted empty', async () => {
+		await updateGroupProfile('group-1', { joinInstructions: '' });
+		expect(writes[0].values).toMatchObject({ joinInstructions: null });
+	});
+
+	/**
+	 * The authority split this exists to make true. A leader edits their own
+	 * program's identity; who may walk in and whether it is advertised stay
+	 * `updateGroupSettings`', which is staff-guarded.
+	 */
+	it.each([['joinPolicy'], ['visibility']])('never writes %s', async (column) => {
+		await updateGroupProfile('group-1', {
+			name: 'Real Book Club',
+			bio: 'A monthly jam',
+			joinInstructions: 'Bring a horn'
+		});
+
+		for (const write of writes) expect(write.values).not.toHaveProperty(column);
 	});
 });
 

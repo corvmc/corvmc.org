@@ -12,13 +12,9 @@ import type { VolunteerCertification } from '$lib/server/db/schema/volunteer';
 // ---------------------------------------------------------------------------
 // The certification catalog
 // ---------------------------------------------------------------------------
-// Deliberately the same shape as volunteer-role-service: a catalog of
-// staff-managed rows that other things reference, retired by archiving rather
-// than deleting, with a delete guard for the case where nothing points at it.
-//
-// A certification is a *thing*, not a property of a role. First Aid is not a
-// volunteer role and never will be, and sound-desk clearance covers several
-// roles at once — so roles reference certifications, not the other way round.
+// A certification is a *thing*, not a property of a role: First Aid is not a
+// volunteer role and sound-desk clearance covers several at once, so roles
+// reference certifications and not the other way round.
 // ---------------------------------------------------------------------------
 
 export class CertificationNotFoundError extends DomainError {

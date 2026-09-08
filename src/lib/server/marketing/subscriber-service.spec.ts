@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 vi.mock('$lib/server/db', () => {
-	const db = { update: vi.fn() };
+	const db = { update: vi.fn(), select: vi.fn() };
 	return { db };
 });
 
@@ -13,9 +13,14 @@ vi.mock('$lib/server/db/schema/marketing', () => ({
 	subscriber: {
 		id: 'subscriber.id',
 		email: 'subscriber.email',
+		userId: 'subscriber.userId',
 		suppressedAt: 'subscriber.suppressedAt',
 		suppressionReason: 'subscriber.suppressionReason'
 	}
+}));
+
+vi.mock('$lib/server/db/schema/authentication', () => ({
+	user: { id: 'user.id', email: 'user.email', deletedAt: 'user.deletedAt' }
 }));
 
 vi.mock('drizzle-orm', () => ({
@@ -30,7 +35,9 @@ import { eq, isNull } from 'drizzle-orm';
 import {
 	suppressByEmail,
 	suppressSelfService,
-	clearSelfServiceSuppression
+	clearSelfServiceSuppression,
+	linkExistingSubscriberToUser,
+	linkSubscriberToExistingUser
 } from './subscriber-service';
 
 // Build an update().set().where().returning() chain resolving to `rows`.
@@ -123,5 +130,78 @@ describe('clearSelfServiceSuppression', () => {
 		await clearSelfServiceSuppression('sub-1');
 
 		expect(eq).toHaveBeenCalledWith('subscriber.suppressionReason', 'unsubscribe');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Linking a subscriber to an account (#562)
+// ---------------------------------------------------------------------------
+
+// Build a select().from().where().limit() chain resolving to `rows`.
+function mockSelectLimit(rows: unknown[]) {
+	const from = vi.fn();
+	const where = vi.fn();
+	const limit = vi.fn(() => Promise.resolve(rows));
+	(db.select as any).mockReturnValue({ from });
+	from.mockReturnValue({ where });
+	where.mockReturnValue({ limit });
+	return { where };
+}
+
+describe('linkExistingSubscriberToUser', () => {
+	it('links the row already sitting under the signup address', async () => {
+		mockUpdateReturning([{ id: 'sub-1' }]);
+
+		const linked = await linkExistingSubscriberToUser('user-1', '  Alice@Example.COM ');
+
+		expect(linked).toBe('sub-1');
+		// Matching is equality on the normalized address, not the raw input.
+		expect(eq).toHaveBeenCalledWith('subscriber.email', 'alice@example.com');
+	});
+
+	// The whole point of the link: a subscriber who opted out before they had an
+	// account must still be opted out after signup. Writing any column other
+	// than user_id is how that guarantee gets lost.
+	it('writes user_id and nothing else, so a prior unsubscribe survives', async () => {
+		const { set } = mockUpdateReturning([{ id: 'sub-1' }]);
+
+		await linkExistingSubscriberToUser('user-1', 'alice@example.com');
+
+		expect(set.mock.calls[0][0]).toEqual({ userId: 'user-1' });
+	});
+
+	it('links nothing when no subscriber matches the address', async () => {
+		mockUpdateReturning([]);
+
+		expect(await linkExistingSubscriberToUser('user-1', 'nobody@example.com')).toBeNull();
+	});
+
+	// Signup does not verify the address, so the predicate is the only thing
+	// stopping a second account from taking over a row that is already claimed.
+	it('leaves a row another account already holds alone', async () => {
+		mockUpdateReturning([]);
+
+		await linkExistingSubscriberToUser('user-2', 'alice@example.com');
+
+		expect(isNull).toHaveBeenCalledWith('subscriber.userId');
+	});
+});
+
+describe('linkSubscriberToExistingUser', () => {
+	it('links a fresh subscription to the account already under that address', async () => {
+		mockSelectLimit([{ id: 'user-1' }]);
+		const { set } = mockUpdate();
+
+		expect(await linkSubscriberToExistingUser('sub-1', ' Alice@Example.com ')).toBe('user-1');
+		expect(eq).toHaveBeenCalledWith('user.email', 'alice@example.com');
+		expect(set.mock.calls[0][0]).toEqual({ userId: 'user-1' });
+	});
+
+	it('leaves the row unlinked when no account matches', async () => {
+		mockSelectLimit([]);
+		mockUpdate();
+
+		expect(await linkSubscriberToExistingUser('sub-1', 'nobody@example.com')).toBeNull();
+		expect(db.update).not.toHaveBeenCalled();
 	});
 });

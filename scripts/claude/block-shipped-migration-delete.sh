@@ -46,15 +46,23 @@ rm_segments=$(printf '%s' "$command" | sed 's/&&/\n/g; s/||/\n/g; s/;/\n/g; s/|/
 
 [ -n "$rm_segments" ] || exit 0
 
-# Pull every `migrations/<dir>` those segments name, however they are quoted.
-dirs=$(printf '%s\n' "$rm_segments" |
-	grep -oE '(^|[^A-Za-z0-9_/.-])migrations/[A-Za-z0-9_.-]+' |
+# Pull every `migrations/<dir>[/<file>]` those segments name, however they are quoted.
+paths=$(printf '%s\n' "$rm_segments" |
+	grep -oE '(^|[^A-Za-z0-9_/.-])migrations/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)?' |
 	sed 's#.*\(migrations/\)#\1#' | sort -u)
+
+# `snapshot.json` is the one file inside a shipped folder that is safe to remove:
+# `scripts/db/prune-snapshots.mjs` keeps only the newest and deletes the rest on every
+# `pnpm db:generate`, and merging main into a branch that owns migrations resolves its
+# snapshot conflict the same way. No database has applied it. Everything else the
+# command names — the folder itself, or its `migration.sql` — still counts.
+dirs=$(printf '%s\n' "$paths" | grep -v '/snapshot\.json$' |
+	sed 's#^\(migrations/[A-Za-z0-9_.-]*\)/.*#\1#' | sort -u)
 
 # A remove aimed at the directory itself — `rm -rf migrations/` — names no child and
 # would otherwise slip past. It takes every shipped migration with it, so treat the
-# whole tree as the target.
-if [ -z "$dirs" ] &&
+# whole tree as the target. A command that named only snapshots is not that case.
+if [ -z "$paths" ] &&
 	printf '%s\n' "$rm_segments" | grep -qE '(^|[^A-Za-z0-9_/.-])migrations/?([[:space:]]|$)'; then
 	dirs=$(git -C "$repo_root" ls-tree --name-only origin/main migrations/ 2>/dev/null)
 fi

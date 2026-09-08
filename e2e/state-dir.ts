@@ -6,7 +6,7 @@
  * directory is a set of SQLite files and workerd takes real locks on them, so a
  * second process touching one while the preview server holds it produced the
  * `SQLITE_BUSY` / `SQLITE_BUSY_SNAPSHOT` failures that cost one random test per
- * run (CHORES.md). Its own directory takes everything that is not this suite
+ * run. Its own directory takes everything that is not this suite
  * out of the picture.
  *
  * What stays inside the suite is handled by keeping the count of workerds over

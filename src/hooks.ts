@@ -1,6 +1,6 @@
 import type { Reroute } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
-import { bandSlugFromHost, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
+import { bandSlugFromHost, isAppDomain } from '$lib/utils/band-site-url';
 
 /** Resolves a custom domain to the band whose site it serves. See src/routes/api/host-route. */
 const HOST_ROUTE_ENDPOINT = '/api/host-route';
@@ -34,7 +34,7 @@ export const reroute: Reroute = async ({ url, fetch }) => {
 	// premium band's custom domain. Only the app can tell the two apart, so ask
 	// it. `/api/host-route` is cheap and its answer is cached per URL on the
 	// client; on the server it is a KV-cached lookup.
-	if (isBaseDomain(url.hostname)) return url.pathname;
+	if (isAppDomain(url.hostname, env.PUBLIC_SITE_URL)) return url.pathname;
 
 	try {
 		const api = new URL(HOST_ROUTE_ENDPOINT, url);
@@ -49,9 +49,3 @@ export const reroute: Reroute = async ({ url, fetch }) => {
 
 	return url.pathname;
 };
-
-/** True for the app's own domain and its subdomains, which never need a lookup. */
-function isBaseDomain(hostname: string): boolean {
-	const base = baseDomainFromSiteUrl(env.PUBLIC_SITE_URL);
-	return hostname === base || hostname.endsWith(`.${base}`);
-}

@@ -18,6 +18,12 @@ import {
 	formatDayNumber,
 	formatDayOfWeek,
 	formatShortMonth,
+	formatWeekdayShortCased,
+	formatMonthShortCased,
+	formatDuration,
+	isVenueToday,
+	isVenueTomorrow,
+	isVenueThisWeek,
 	formatTime,
 	formatTimeRange,
 	fullDate,
@@ -85,6 +91,14 @@ describe('format.ts renders in venue time, not the viewer’s zone', () => {
 			expect(formatShortMonth(CROSSES_MIDNIGHT)).toBe('JUL');
 		});
 
+		it('formatWeekdayShortCased uses the venue weekday, without shouting', () => {
+			expect(formatWeekdayShortCased(CROSSES_MIDNIGHT)).toBe('Fri');
+		});
+
+		it('formatMonthShortCased uses the venue month, without shouting', () => {
+			expect(formatMonthShortCased(CROSSES_MIDNIGHT)).toBe('Jul');
+		});
+
 		it('formatTime uses the venue clock', () => {
 			expect(formatTime(CROSSES_MIDNIGHT)).toBe('7:30 PM');
 		});
@@ -120,6 +134,53 @@ describe('format.ts renders in venue time, not the viewer’s zone', () => {
 		it('renders both ends in venue time', () => {
 			const end = new Date('2026-07-04T05:00:00Z'); // 22:00 PDT, same venue day
 			expect(formatTimeRange(CROSSES_MIDNIGHT, end)).toBe('7:30 PM – 10:00 PM');
+		});
+	});
+
+	/**
+	 * The reservation card asked date-fns these three, which compare the
+	 * *viewer's* calendar days. `CROSSES_MIDNIGHT` is 19:30 on the 3rd at the
+	 * venue and 02:30 on the 4th in UTC, so a booking that is "today" at the door
+	 * reads as "tomorrow" to anyone east of the venue — the exact hour the member
+	 * turns up.
+	 */
+	describe('venue-time day predicates', () => {
+		it('calls the venue evening today, where the viewer has already rolled over', () => {
+			expect(isVenueToday(CROSSES_MIDNIGHT, CROSSES_MIDNIGHT)).toBe(true);
+			expect(isVenueTomorrow(CROSSES_MIDNIGHT, CROSSES_MIDNIGHT)).toBe(false);
+		});
+
+		it('counts tomorrow from the venue calendar day', () => {
+			const nextEvening = new Date('2026-07-05T02:30:00Z'); // Jul 4, 19:30 PDT
+			expect(isVenueTomorrow(nextEvening, CROSSES_MIDNIGHT)).toBe(true);
+			expect(isVenueToday(nextEvening, CROSSES_MIDNIGHT)).toBe(false);
+		});
+
+		it('keeps date-fns week semantics — the calendar week, not the next seven days', () => {
+			// Jul 3 2026 is a Friday, so Sunday Jul 5 opens a new week even though
+			// it is two days out.
+			const sunday = new Date('2026-07-06T02:30:00Z'); // Jul 5, 19:30 PDT
+			expect(isVenueThisWeek(sunday, CROSSES_MIDNIGHT)).toBe(false);
+
+			const saturday = new Date('2026-07-05T02:30:00Z'); // Jul 4, 19:30 PDT
+			expect(isVenueThisWeek(saturday, CROSSES_MIDNIGHT)).toBe(true);
+		});
+	});
+
+	describe('formatDuration', () => {
+		it('drops the plural for exactly one hour', () => {
+			const end = new Date(CROSSES_MIDNIGHT.getTime() + 60 * 60 * 1000);
+			expect(formatDuration(CROSSES_MIDNIGHT, end)).toBe('1 hour');
+		});
+
+		it('keeps a half hour as a half hour', () => {
+			const end = new Date(CROSSES_MIDNIGHT.getTime() + 150 * 60 * 1000);
+			expect(formatDuration(CROSSES_MIDNIGHT, end)).toBe('2.5 hours');
+		});
+
+		it('rounds a duration no booking form could have produced', () => {
+			const end = new Date(CROSSES_MIDNIGHT.getTime() + 80 * 60 * 1000);
+			expect(formatDuration(CROSSES_MIDNIGHT, end)).toBe('1.3 hours');
 		});
 	});
 });
