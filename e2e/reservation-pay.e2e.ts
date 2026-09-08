@@ -27,6 +27,20 @@ import {
 
 const ZOD_BUG_PATTERNS = [/invalid option/i, /expected one of/i];
 
+/**
+ * The one server error this spec is allowed to see, and nothing else (#546).
+ *
+ * `payReservation` reaches `ensureStripeCustomer` → `checkout`, and `main` has
+ * no fake gateway to resolve instead (the `PAYMENTS_DRIVER` seam is #522), so
+ * the pinned `sk_test_dummy_e2e` key earns a 401 from Stripe and the submission
+ * 500s. That is expected here; every *other* 5xx is not. Delete this tolerance
+ * when the driver seam lands — the submission should then succeed.
+ */
+const TOLERATED_SERVER_ERROR = {
+	method: 'POST',
+	path: /^(\/member\/reservations\/[^/]+\/pay|\/_app\/remote\/)/
+};
+
 async function login(page: import('@playwright/test').Page) {
 	await page.goto('/login');
 	await page.locator('input[name="email"]').fill(SEED_MEMBER_EMAIL);
@@ -37,6 +51,19 @@ async function login(page: import('@playwright/test').Page) {
 }
 
 test('covering processing fees submits without a Zod validation error', async ({ page }) => {
+	// Every 5xx this test provokes, so the assertion at the end can insist the
+	// only one is the tolerated gateway failure. Before this, the spec asserted
+	// `status !== 400` and nothing more, so a 500 from any cause passed (#546).
+	const serverErrors: string[] = [];
+	page.on('response', (res) => {
+		if (res.status() < 500) return;
+		const { pathname } = new URL(res.url());
+		const method = res.request().method();
+		const tolerated =
+			method === TOLERATED_SERVER_ERROR.method && TOLERATED_SERVER_ERROR.path.test(pathname);
+		if (!tolerated) serverErrors.push(`${method} ${pathname} → ${res.status()}`);
+	});
+
 	await login(page);
 
 	await page.goto(`/member/reservations/${SEED_RESERVATION_ID}/pay`);
@@ -78,8 +105,9 @@ test('covering processing fees submits without a Zod validation error', async ({
 	// a JSON envelope, so assert on the envelope, not the transport status:
 	//   - validation failure → { type: 'error', status: 400, ... } mentioning the issue
 	//   - success            → a redirect/result (no error)
-	//   - post-validation failure (e.g. the dummy Stripe key) → status 500
-	// A 500 here is fine: it happens AFTER Zod validation, proving the fix works.
+	//   - post-validation failure (the dummy Stripe key) → status 500
+	// The 500 happens AFTER Zod validation, so it proves the fix works — but it
+	// is tolerated only on this one request, and the assertion below says so.
 	for (const pattern of ZOD_BUG_PATTERNS) {
 		expect(bodyText, `payReservation response: ${bodyText.slice(0, 400)}`).not.toMatch(pattern);
 	}
@@ -99,4 +127,9 @@ test('covering processing fees submits without a Zod validation error', async ({
 	// And the rendered page must never show the validation error text either.
 	await expect(page.locator('body')).not.toContainText('Invalid option');
 	await expect(page.locator('body')).not.toContainText('expected one of');
+
+	// Nothing else in this flow may 500. The login, the pay page itself and the
+	// remote query behind it are all covered by this — a regression that broke
+	// any of them used to leave this test green (#546).
+	expect(serverErrors, `unexpected server error(s): ${serverErrors.join(', ')}`).toEqual([]);
 });
