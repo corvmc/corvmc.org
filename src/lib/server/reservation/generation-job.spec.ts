@@ -113,11 +113,11 @@ vi.mock('$lib/server/event/event-service', async () => {
 	};
 });
 
-const mockCopyObject = vi.fn();
-
-vi.mock('$lib/server/storage', () => ({
-	copyObject: (...args: unknown[]) => mockCopyObject(...args)
-}));
+// Nothing in `storage.ts` copies an object any more (#771 moved the one caller
+// to the cross-bucket copies in `private-storage.ts`), so generation cannot
+// duplicate a poster even by mistake. The `attachExisting` assertion below is
+// what pins the behaviour that replaced it: one object, many attachments.
+vi.mock('$lib/server/storage', () => ({}));
 
 const mockAttachExisting = vi.fn();
 
@@ -565,7 +565,6 @@ describe('generateRecurringEvents', () => {
 		mockGenerationWindowEnd.mockReturnValue(new Date('2026-06-20T00:00:00Z'));
 		mockStaffCreate.mockResolvedValue({ id: 'eres-new' });
 		mockHasConflict.mockResolvedValue(false);
-		mockCopyObject.mockResolvedValue(null);
 	});
 
 	it('creates a draft event and books space for an unconflicted occurrence', async () => {
@@ -705,7 +704,6 @@ describe('generateRecurringEvents', () => {
 
 		await generateRecurringEvents();
 
-		expect(mockCopyObject).not.toHaveBeenCalled();
 		// One more attachment on the same object, in the occurrence's poster slot.
 		expect(mockAttachExisting).toHaveBeenCalledWith(
 			'event_listing',
@@ -756,7 +754,6 @@ describe('generateRecurringEvents — a prototype that is not a CMC event', () =
 		mockGenerationWindowEnd.mockReturnValue(new Date('2026-06-20T00:00:00Z'));
 		mockStaffCreate.mockResolvedValue({ id: 'eres-new' });
 		mockHasConflict.mockResolvedValue(false);
-		mockCopyObject.mockResolvedValue(null);
 	});
 
 	it("inherits the prototype's source, owner and location", async () => {

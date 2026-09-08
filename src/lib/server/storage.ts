@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { DEFAULT_WIDTH, transformOptions } from '$lib/utils/images';
+import { isWithheldPosterKey } from '$lib/server/storage-keys';
 
 export const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -27,7 +28,13 @@ export function initStorage(bucket: R2Bucket) {
 	_bucket = bucket;
 }
 
-function getBucket(): R2Bucket {
+/**
+ * Exported for `private-storage.ts` alone, which needs both handles to move
+ * withheld bytes between the buckets. Deliberately not the other direction: a
+ * `getPrivateBucket()` imported *here* would sit beside `getPublicUrl()`, which
+ * is the arrangement that module exists to refuse.
+ */
+export function getBucket(): R2Bucket {
 	if (!_bucket)
 		throw new Error('Storage not initialized — call initStorage() in hooks.server.ts first');
 	return _bucket;
@@ -86,27 +93,6 @@ export async function deleteObject(key: string): Promise<void> {
 }
 
 /**
- * Copy an existing object to a new key, preserving its content type. Returns the
- * destination key, or null when the source object does not exist.
- *
- * One caller: the moderation takedown in `event-service.ts`, which *moves* a
- * withheld poster to a fresh key to invalidate links already handed out. That is
- * a rename, not a duplication.
- *
- * It used to have a second caller — recurring-event generation copied the
- * prototype's poster per occurrence. It no longer does: occurrences share one
- * object now that nothing in a request path deletes one. See
- * docs/specs/shipped/media-spec.md.
- */
-export async function copyObject(srcKey: string, destKey: string): Promise<string | null> {
-	const bucket = getBucket();
-	const src = await bucket.get(srcKey);
-	if (!src) return null;
-	await bucket.put(destKey, src.body, { httpMetadata: src.httpMetadata });
-	return destKey;
-}
-
-/**
  * Formats Cloudflare Image Transformations can actually decode. Non-image
  * uploads — rider and stage-plot PDFs from the band media endpoint — must fall
  * through to the plain R2 URL, since wrapping them yields a broken link.
@@ -121,6 +107,15 @@ const TRANSFORMABLE = /\.(jpe?g|png|webp|gif|avif)$/i;
 
 export function getPublicUrl(key: string): string {
 	if (/^https?:\/\//i.test(key)) return key; // already resolved — don't double-prefix
+
+	// A withheld poster's bytes are in the private bucket, so this would mint a
+	// media.corvmc.org URL that 404s — a broken image where the honest answer is
+	// "no poster". Throwing rather than returning null keeps the signature, and
+	// `resolveImageUrl` below turns it into the null every caller already
+	// handles. A reviewer reaches these bytes through the guarded route instead.
+	if (isWithheldPosterKey(key)) {
+		throw new Error(`Refusing to publish a withheld key: ${key}`);
+	}
 
 	const transformUrl = env.R2_TRANSFORM_URL;
 	if (transformUrl && TRANSFORMABLE.test(key)) {
