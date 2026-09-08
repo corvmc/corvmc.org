@@ -128,12 +128,11 @@ export const CAMPAIGN_LAYOUT = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Tra
             <a href="https://corvmc.org" target="_blank" style="${footerLink}">corvmc.org</a>
             <span style="color:${BRAND.brown};">&middot;</span>
             <a href="https://instagram.com/corvmc" target="_blank" style="${footerLink}">@corvmc</a>
-            <span style="color:${BRAND.brown};">&middot;</span>
-            <a href="mailto:contact@corvmc.org" style="${footerLink}">contact@corvmc.org</a>
           </div>
-          <div style="font-family:${FONT}; font-size:12px; line-height:1.6; color:${BRAND.brown};">
+          <div class="footer-fine" style="font-family:${FONT}; font-size:12px; line-height:1.6; color:${BRAND.brown};">
             Corvallis Music Collective &middot; 501(c)(3) nonprofit<br>
-            6775 SW Philomath Blvd, Corvallis, OR 97333
+            6775 SW Philomath Blvd, Corvallis, OR 97333<br>
+            <a href="mailto:contact@corvmc.org" style="color:${BRAND.brown}; text-decoration:underline;">contact@corvmc.org</a>
           </div>
           <div style="margin-top:14px; font-family:${FONT}; font-size:12px; line-height:1.6; color:${BRAND.brown};">
             {{FOOTER}}
