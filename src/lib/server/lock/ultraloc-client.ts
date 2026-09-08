@@ -36,6 +36,24 @@ async function getConfig() {
 	return { clientId, clientSecret, deviceId, refreshToken };
 }
 
+/**
+ * Whether a client secret is available to sign a token request, and from where.
+ *
+ * Presence, never the value: this is what the staff settings page renders, and
+ * `settings.read` being a staff capability is not a reason to put an OAuth
+ * secret somewhere extensions, screenshots and error reports can reach it.
+ * Precedence mirrors `getConfig` above — KV first, environment second.
+ */
+export async function clientSecretStatus(): Promise<{
+	configured: boolean;
+	source: 'kv' | 'env' | null;
+}> {
+	const dbConfig = await getConfigsByPrefix('integration.utec');
+	if (dbConfig.clientSecret) return { configured: true, source: 'kv' };
+	if (env.ULTRALOC_CLIENT_SECRET) return { configured: true, source: 'env' };
+	return { configured: false, source: null };
+}
+
 interface UtecTokenPayload {
 	access_token?: string;
 	refresh_token?: string;
