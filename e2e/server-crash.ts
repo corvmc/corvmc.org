@@ -1,12 +1,10 @@
 /**
  * Recognise, in the runner's own output, that the preview server has died.
  *
- * Playwright watches `webServer` only while it starts: `_processExitedPromise`
- * is raced inside `_waitForProcess` and swallowed afterwards. So a workerd that
- * dies on its first *request* — after the port is open and the suite is already
- * running — is not reported at all, and every remaining test runs against a
- * closed port. Run 34181645841 read as 250 failures across 39 spec files for
- * one dead server. Nothing here prevents the death; it names it.
+ * Playwright races `webServer`'s exit only while waiting for the port and drops
+ * it after, so a workerd that dies on its first *request* goes unreported and
+ * the suite runs on against a closed port. Run 34181645841 read as 250 failures
+ * across 39 spec files for one dead server (#793).
  */
 
 /** Which signature matched, and the output line it matched on. */

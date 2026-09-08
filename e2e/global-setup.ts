@@ -1,5 +1,5 @@
 /**
- * Playwright global setup: reject a stale preview server.
+ * Playwright global setup: reject a stale preview server, then warm the real one.
  *
  * Runs once per `playwright test` invocation. Playwright builds its startup
  * tasks as [remove output dirs, plugin setup, global setup], and `webServer` is
@@ -71,6 +71,48 @@ async function assertPreviewMatchesBuild(config: FullConfig) {
 	);
 }
 
+/**
+ * Make the server open its D1 while it is still the only process on the file.
+ *
+ * workerd opens its SQLite *lazily, on the first request*, and if the file's WAL
+ * needs recovering it wants an exclusive lock to do it. Playwright's workers each
+ * open a read-only `readLocalDb` connection on that same file, and workerd does
+ * not retry — it dies outright, taking the suite with it (#793). Checkpointing
+ * before the server starts (`e2e/checkpoint.ts`) makes recovery unlikely; it
+ * cannot make workerd open the file at a safe *moment*. This hook can: Playwright
+ * runs it after the web server is up and before any worker exists, so the first
+ * request is made here, deliberately, with no reader to lose the race to.
+ *
+ * `/sitemap.xml` because it is server-only, unauthenticated, reads D1, and
+ * renders no page. D1 is the file that matters: it is the only one in the state
+ * directory that anything other than the server opens during a run.
+ */
+async function warmPlatformBindings(port: number) {
+	let response: Response;
+	try {
+		response = await fetch(`http://localhost:${port}/sitemap.xml`);
+	} catch (cause) {
+		throw new Error(
+			[
+				`The e2e web server did not start — port ${port} was open, then answered nothing.`,
+				``,
+				`Its first request is what opens the run's SQLite, so a server that dies here`,
+				`died of the SQLITE_BUSY_RECOVERY race (#793) rather than of anything a test did.`,
+				`Re-run \`pnpm test:e2e\`, which re-prepares and re-checkpoints the state directory.`,
+				``
+			].join('\n'),
+			{ cause }
+		);
+	}
+
+	// A response of any status means the request reached the app and the bindings
+	// are open, which is all this is for. A bad one is still worth saying.
+	if (!response.ok) {
+		console.warn(`Warm-up request to /sitemap.xml answered ${response.status}.`);
+	}
+}
+
 export default async function globalSetup(config: FullConfig) {
 	await assertPreviewMatchesBuild(config);
+	await warmPlatformBindings(config.webServer?.port ?? E2E_PREVIEW_PORT);
 }

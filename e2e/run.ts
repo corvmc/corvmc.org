@@ -1,13 +1,24 @@
 /**
- * Run Playwright, then hand the database back the way we found it.
+ * Run Playwright, abort if its preview server dies, then hand the database back
+ * the way we found it.
  *
- * This wrapper exists for one reason: the cleanup has to happen once the
- * preview server is gone. Playwright's `globalTeardown` runs *before* its
- * plugins are torn down, and `webServer` is a plugin — a write from there would
- * contend with the server for the same SQLite files, which is exactly the
- * overlap `e2e/prepare.ts` was split out to avoid. So the reset runs here,
- * after `playwright test` has exited and taken its server with it, mirroring the
- * way `prepare.ts` seeds before Playwright starts.
+ * This wrapper exists for two reasons.
+ *
+ * The cleanup has to happen once the preview server is gone. Playwright's
+ * `globalTeardown` runs *before* its plugins are torn down, and `webServer` is
+ * a plugin — a write from there would contend with the server for the same
+ * SQLite files, which is exactly the overlap `e2e/prepare.ts` was split out to
+ * avoid. So the reset runs here, after `playwright test` has exited and taken
+ * its server with it, mirroring the way `prepare.ts` seeds before Playwright
+ * starts.
+ *
+ * And nothing inside Playwright watches the web server once it has started:
+ * `WebServerPlugin` races the process's exit only while waiting for the port,
+ * and drops it afterwards. A workerd that dies on its first *request* — the
+ * SQLITE_BUSY_RECOVERY race, #793 — therefore goes unreported, and the suite
+ * runs every remaining test against a closed port: 250 failures across 39 spec
+ * files, none of them an assertion. `e2e/supervise.ts` watches the output this
+ * process is forwarding and stops the run on the first sign of it.
  *
  * A failing run keeps its state. The database after a red run is the most
  * useful thing in the directory — it is what the app actually wrote — and the
@@ -18,10 +29,11 @@
  * `journalDisagreesWithSchema` in `e2e/reset-db.ts`. Keeping a red run's state
  * therefore never costs the run after it.
  */
-import { spawnSync } from 'node:child_process';
 import { forwardedArgs } from '../scripts/lib/forwarded-args';
 import { acquireE2eLock, releaseE2eLock, releaseE2eLockOnExit } from './lock';
 import { resetE2eDatabase } from './reset-db';
+import { E2E_PREVIEW_PORT } from './state-dir';
+import { supervise } from './supervise';
 
 // Adopt the lock `e2e/prepare.ts` took: it exited when its seeding finished, so
 // the run this wrapper is about to start has to carry it the rest of the way.
@@ -39,17 +51,9 @@ releaseE2eLockOnExit();
  */
 const args = forwardedArgs();
 
-const result = spawnSync('pnpm', ['exec', 'playwright', 'test', ...args], {
-	stdio: 'inherit'
+const { status, crash } = await supervise('pnpm', ['exec', 'playwright', 'test', ...args], {
+	port: E2E_PREVIEW_PORT
 });
-
-if (result.error) {
-	console.error(result.error);
-	process.exit(1);
-}
-
-// A signal (Ctrl-C) leaves `status` null; treat it as a failure and keep state.
-const status = result.status ?? 1;
 
 if (status === 0) {
 	try {
@@ -62,6 +66,12 @@ if (status === 0) {
 		console.warn(err);
 	}
 } else {
+	if (crash) {
+		console.log(
+			'\nThis run was aborted because the e2e web server died — see the report above.' +
+				'\nNo assertion failed; whatever ran had nothing to talk to.'
+		);
+	}
 	console.log(
 		'\nLeaving .wrangler/e2e-state intact so the failing run can be inspected.' +
 			'\nClear it with `pnpm tsx e2e/reset-db.ts` — which empties the tables, and' +
