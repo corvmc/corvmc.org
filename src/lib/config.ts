@@ -445,6 +445,32 @@ export const financialCategories = [
 ] as const;
 export type FinancialCategory = (typeof financialCategories)[number];
 
+/**
+ * What a show's expense was for.
+ *
+ * `deductible` on the category is what `production_slot.againstNet` divides
+ * against: a percentage-of-net deal shares the door after these come out, and a
+ * cost the collective carries whatever happens is not one of them.
+ */
+export const productionExpenseCategories = [
+	'sound',
+	'staffing',
+	'hospitality',
+	'marketing',
+	'rental',
+	'other'
+] as const;
+export type ProductionExpenseCategory = (typeof productionExpenseCategories)[number];
+
+export const productionExpenseCategoryLabels: Record<ProductionExpenseCategory, string> = {
+	sound: 'Sound',
+	staffing: 'Staffing',
+	hospitality: 'Hospitality',
+	marketing: 'Marketing',
+	rental: 'Rental',
+	other: 'Other'
+};
+
 /** How the money actually moved, and the key a Stripe cross-check joins on. */
 export const financialSettlements = ['stripe', 'cash', 'credit', 'none'] as const;
 export type FinancialSettlement = (typeof financialSettlements)[number];
