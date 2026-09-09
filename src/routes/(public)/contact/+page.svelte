@@ -5,7 +5,12 @@
 	import { resolve } from '$app/paths';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
 	import { getOrgAddress } from '$lib/remote/settings.remote';
-	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
+	import {
+		TURNSTILE_SITE_KEY,
+		TURNSTILE_RESPONSE_FIELD,
+		turnstileFailureMessage
+	} from '$lib/turnstile';
+	import type { RemoteFormIssue } from '@sveltejs/kit';
 
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -24,6 +29,7 @@
 	);
 
 	let submitted = $state(false);
+	let failure = $state<string | null>(null);
 	let resetTurnstile = $state<() => void>();
 
 	// The list lives in `$lib/config` because the staff inbox filters on it: what
@@ -56,8 +62,17 @@
 			{:else}
 				<Form
 					remote={submitContactForm}
-					onsuccess={() => (submitted = true)}
-					onfailure={() => resetTurnstile?.()}
+					onsuccess={() => {
+						submitted = true;
+						failure = null;
+					}}
+					onfailure={(issues) => {
+						resetTurnstile?.();
+						// Passing `onfailure` at all suppresses Form's fallback toast, and the
+						// field that fails here — the Turnstile token — has no visible input to
+						// hang an error on. Without this, Send does nothing whatsoever.
+						failure = turnstileFailureMessage((issues as RemoteFormIssue[] | null) ?? null);
+					}}
 					class="flex flex-col gap-4"
 				>
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -119,6 +134,9 @@
 						theme="auto"
 						bind:reset={resetTurnstile}
 					/>
+					{#if failure}
+						<Alert type="error">{failure}</Alert>
+					{/if}
 					<SubmitButton label="Send Message" />
 				</Form>
 			{/if}

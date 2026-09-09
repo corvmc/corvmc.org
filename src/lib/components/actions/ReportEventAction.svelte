@@ -4,7 +4,13 @@
 	import { IconFlag } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import { submitEventReport } from '$lib/remote/flags.remote';
-	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
+	import {
+		TURNSTILE_SITE_KEY,
+		TURNSTILE_RESPONSE_FIELD,
+		turnstileFailureMessage
+	} from '$lib/turnstile';
+	import Alert from '../ui/Alert.svelte';
+	import type { RemoteFormIssue } from '@sveltejs/kit';
 
 	let {
 		eventId,
@@ -27,6 +33,7 @@
 	let reason = $state('');
 	let description = $state('');
 	let resetTurnstile = $state<() => void>();
+	let failure = $state<string | null>(null);
 </script>
 
 <Action
@@ -42,9 +49,15 @@
 	onsuccess={() => {
 		reason = '';
 		description = '';
+		failure = null;
 	}}
-	onfailure={() => {
+	onfailure={(issues) => {
 		resetTurnstile?.();
+		// The widget owns its own hidden input, so `turnstileToken` has no
+		// FormField to render its issue in — and passing `onfailure` at all
+		// suppresses Form's fallback toast. Without this the dialog stays open,
+		// the widget resets, and the reporter is told nothing.
+		failure = turnstileFailureMessage((issues as RemoteFormIssue[] | null) ?? null);
 	}}
 	{...rest}
 >
@@ -82,6 +95,9 @@
 				theme="auto"
 				bind:reset={resetTurnstile}
 			/>
+			{#if failure}
+				<Alert type="error">{failure}</Alert>
+			{/if}
 		</div>
 	{/snippet}
 </Action>
