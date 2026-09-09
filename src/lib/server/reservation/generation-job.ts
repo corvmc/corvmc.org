@@ -3,6 +3,7 @@ import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { closure } from '$lib/server/db/schema/reservation';
 import { eventListing, eventBand } from '$lib/server/db/schema/event';
+import { eventListingColumns } from '$lib/server/event/event-columns';
 import { group } from '$lib/server/db/schema/group';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { linkManagingGroup } from '$lib/server/event/event-service';
@@ -420,7 +421,7 @@ async function processEventSeries(
 ): Promise<{ created: number; skipped: number }> {
 	// Load the prototype event
 	const [prototype] = await db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(eq(eventListing.id, series.prototypeId))
 		.limit(1);
@@ -629,11 +630,11 @@ async function processEventSeries(
 					prototype.posterKey
 				);
 
-				// No `media` row for the prototype's key means something wrote a poster
-				// without recording it — the backfill covered every key that existed,
-				// and every write path has recorded one since. Share the key anyway: a
-				// missing poster is an immediate regression, while a missing attachment
-				// is a latent one the sweep would surface. Reported either way.
+				// The prototype's key now comes *from* its `media` row, so this can
+				// only fire if that row vanished between the two reads. It used to be
+				// reachable — a poster written without being recorded read as a key with
+				// no row — and the key was shared anyway. Kept as the report of a race
+				// rather than of a data gap.
 				if (!attached) {
 					captureException(new Error(`No media row for prototype poster ${prototype.posterKey}`), {
 						event: 'event.recurring.poster_unrecorded',

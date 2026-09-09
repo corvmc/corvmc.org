@@ -9,6 +9,7 @@ import {
 	type EventBandStatus,
 	type LineupEntry
 } from '$lib/server/db/schema/event';
+import { eventListingColumns, eventPosterKeySql } from './event-columns';
 import type { EventSource } from '$lib/config';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
@@ -661,7 +662,7 @@ async function restoreWithheldPoster(eventId: string): Promise<void> {
 	const [row] = await db
 		.select({
 			status: eventListing.status,
-			posterKey: eventListing.posterKey
+			posterKey: eventPosterKeySql
 		})
 		.from(eventListing)
 		.where(eq(eventListing.id, eventId))
@@ -852,7 +853,7 @@ export async function unpublishWithNotice(
 			status: eventListing.status,
 			source: eventListing.source,
 			groupId: eventListing.groupId,
-			posterKey: eventListing.posterKey,
+			posterKey: eventPosterKeySql,
 			createdByUserId: eventListing.createdByUserId,
 			bandName: group.name
 		})
@@ -923,6 +924,15 @@ export async function unpublishWithNotice(
 			} catch (err) {
 				captureException(err, { event: 'community_event.poster_withhold', eventId });
 			}
+		}
+
+		// The listing loses its poster whether or not the bytes were preserved: a
+		// takedown that left the image on the page would not be a takedown. This is
+		// the attachment half of writing `posterKey: null` below — reads resolve the
+		// poster through `media_attachment`, so nulling only the column would leave
+		// the withheld image still showing.
+		if (row.posterKey && !nextPosterKey) {
+			await detachSlot('event_listing', eventId, 'poster');
 		}
 
 		// Keep the staff note on the row, not just in the email — the member lands
@@ -1219,7 +1229,11 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function getById(eventId: string): Promise<EventRow | null> {
-	const [row] = await db.select().from(eventListing).where(eq(eventListing.id, eventId)).limit(1);
+	const [row] = await db
+		.select(eventListingColumns)
+		.from(eventListing)
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
 
 	return row ?? null;
 }
@@ -1229,7 +1243,7 @@ export async function getById(eventId: string): Promise<EventRow | null> {
  * parties and meetings are published and advertised, but they are not shows. */
 export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 	const query = db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(
 			and(
@@ -1252,7 +1266,7 @@ export async function getShowTonight(now = new Date()): Promise<EventRow | null>
 	const dayEnd = buildDateInTz(nextDay(today), '00:00', DEFAULT_TIMEZONE);
 
 	const [row] = await db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(
 			and(
@@ -1273,7 +1287,7 @@ export async function getShowTonight(now = new Date()): Promise<EventRow | null>
 /** Published CMC shows that have already ended, newest first. */
 export async function listPast(limit?: number): Promise<EventRow[]> {
 	const query = db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(
 			and(
@@ -1447,7 +1461,7 @@ export async function listEventsNear(
 	const to = new Date(startsAt.getTime() + span);
 
 	const rows = await db
-		.select({ event: eventListing, bandName: group.name, bandSlug: group.slug })
+		.select({ event: eventListingColumns, bandName: group.name, bandSlug: group.slug })
 		.from(eventListing)
 		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.where(
@@ -2113,7 +2127,7 @@ export async function listGroupSessions(
 	if (opts.upcomingOnly) conditions.push(gt(eventListing.startsAt, new Date()));
 
 	return db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(and(...conditions))
 		.orderBy(opts.upcomingOnly ? asc(eventListing.startsAt) : desc(eventListing.startsAt))
@@ -2581,7 +2595,7 @@ export async function importBandEvents(
 /** Published band events with startsAt in the future. */
 export async function listBandEventsUpcoming(bandId: string, limit?: number): Promise<EventRow[]> {
 	const query = db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(
 			and(
@@ -2604,7 +2618,7 @@ export interface BandEventRow extends EventRow {
 /** All events on a band's bill (all statuses), newest first. */
 export async function listBandEvents(bandId: string): Promise<BandEventRow[]> {
 	const rows = await db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(confirmedForBand(bandId))
 		.orderBy(desc(eventListing.startsAt));
@@ -2635,7 +2649,7 @@ export async function listBandEventsPast(
 	opts: { limit: number; offset: number }
 ): Promise<EventRow[]> {
 	return db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(
 			and(
@@ -2746,7 +2760,7 @@ async function withMemberBylines(rows: EventRow[], userId: string): Promise<Memb
 
 export async function listMemberUpcomingShows(userId: string): Promise<MemberShowRow[]> {
 	const rows = await db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(
 			and(
@@ -2769,7 +2783,7 @@ export async function listMemberPastShows(
 	opts: { limit: number; offset: number }
 ): Promise<MemberShowRow[]> {
 	const rows = await db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(
 			and(
@@ -2825,7 +2839,7 @@ export async function listPublicCalendarEvents(
 	end: Date
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
-		.select({ event: eventListing, bandName: group.name, bandSlug: group.slug })
+		.select({ event: eventListingColumns, bandName: group.name, bandSlug: group.slug })
 		.from(eventListing)
 		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.where(
@@ -2854,7 +2868,7 @@ export async function listPublicUpcomingEvents(
 	opts: { limit: number; offset: number }
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
-		.select({ event: eventListing, bandName: group.name, bandSlug: group.slug })
+		.select({ event: eventListingColumns, bandName: group.name, bandSlug: group.slug })
 		.from(eventListing)
 		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.where(

@@ -1388,6 +1388,37 @@ describe('EventService', () => {
 			expect(lastUpdateSet).toMatchObject({ posterKey: null });
 		});
 
+		// The attachment half of the assertion above. Reads resolve the poster
+		// through `media_attachment`, so a takedown that nulled only the mirror
+		// column would leave the withheld image on the page.
+		it('detaches the poster slot when the bytes could not be withheld', async () => {
+			vi.mocked(copyToPrivate).mockResolvedValueOnce(null);
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1', { notes: 'No venue given' });
+
+			expect(detachSlot).toHaveBeenCalledWith('event_listing', 'evt-1', 'poster');
+		});
+
+		it('re-points the slot rather than detaching it when the copy succeeds', async () => {
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1', { notes: 'No venue given' });
+
+			// `replaceSlot` already detaches; a second detach would drop the withheld
+			// poster the appeal in `publish()` exists to restore.
+			expect(replaceSlot).toHaveBeenCalled();
+			expect(detachSlot).not.toHaveBeenCalled();
+		});
+
 		// Same principle one column over: a takedown with no note used to write
 		// `reviewNotes: null`, wiping whatever reason was already on the row.
 		it('leaves an existing reviewNotes alone when no note is given', async () => {

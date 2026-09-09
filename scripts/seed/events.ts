@@ -1,4 +1,5 @@
 import { eventListing } from '../../src/lib/server/db/schema/event';
+import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { recurringSeries } from '../../src/lib/server/db/schema/recurring';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { buildSeedRRule as seedRRule } from '../seed-rrule';
@@ -6,7 +7,44 @@ import { db } from './db';
 import { EVENT_TAGS_POOL, EVENT_TITLES } from './pools';
 import { type SeedEvent, type SeedUser } from './types';
 import { pick, pickN, ptDate, random, randomInt } from './util';
-import { sql } from 'drizzle-orm';
+import { inArray, sql } from 'drizzle-orm';
+
+/**
+ * One poster, attached to every event that shares it.
+ *
+ * `media_attachment` is the source of truth — `eventListingColumns` reads the
+ * key through it — and `poster_key` is mirrored because every writer still
+ * mirrors it. Passing several ids gives them ONE `media` row, which is the
+ * property the media layer exists for: a weekly series holds one JPEG, not one
+ * per occurrence.
+ *
+ * The keys name no real object, which is why `backfill-media.ts` refuses to
+ * invent sizes and the seed may.
+ */
+async function attachSeedPoster(
+	eventIds: string[],
+	slug: string,
+	altText: string | null
+): Promise<void> {
+	if (eventIds.length === 0) return;
+	const key = `events/posters/${slug}.jpg`;
+
+	const [row] = await db
+		.insert(media)
+		.values({ key, contentType: 'image/jpeg', byteSize: 180_000, altText })
+		.returning();
+
+	await db.insert(mediaAttachment).values(
+		eventIds.map((id) => ({
+			mediaId: row.id,
+			attachableType: 'event_listing' as const,
+			attachableId: id,
+			slot: 'poster' as const
+		}))
+	);
+
+	await db.update(eventListing).set({ posterKey: key }).where(inArray(eventListing.id, eventIds));
+}
 
 export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 	console.log('Seeding events...');
@@ -263,6 +301,9 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		.returning();
 	rows.push(workParty);
 
+	/** The prototype and its occurrences, which share one poster object below. */
+	const seriesEventIds: string[] = [];
+
 	// Recurring CMC event: a weekly open mic. Prototype is a published past
 	// occurrence; future occurrences are materialized as drafts (as the
 	// generation job would produce), each with its own space reservation.
@@ -300,6 +341,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 			})
 			.returning();
 		rows.push(proto);
+		seriesEventIds.push(proto.id);
 
 		const rrule = seedRRule(protoStart, 'weekly');
 		const [series] = await db
@@ -344,7 +386,25 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				})
 				.returning();
 			rows.push(inst);
+			seriesEventIds.push(inst.id);
 		}
+	}
+
+	// Posters. The series shares one object across all three of its events; the
+	// rest get their own. Two published shows are deliberately left bare so the
+	// no-poster card and detail states stay reachable without editing the seed,
+	// and every draft and cancelled listing stays bare for the same reason.
+	await attachSeedPoster(seriesEventIds, 'weekly-open-mic', 'Weekly Open Mic at the Collective');
+
+	const posterable = rows.filter((e) => e.status === 'published' && !seriesEventIds.includes(e.id));
+	for (const [i, e] of posterable.slice(2).entries()) {
+		// Alt text on every other one: both the described and the undescribed case
+		// have to be renderable, since the poster had nowhere to put it before.
+		await attachSeedPoster(
+			[e.id],
+			`show-${i}`,
+			i % 2 === 0 ? 'Gig poster: band name over a photograph of the room' : null
+		);
 	}
 
 	// Stamp the back-link every event reservation needs.

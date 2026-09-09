@@ -1,5 +1,6 @@
 import { db } from '$lib/server/db';
 import { eventListing, type LineupEntry } from '$lib/server/db/schema/event';
+import { eventListingColumns } from './event-columns';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, getTableColumns, gte, inArray, like, ne } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
@@ -86,7 +87,7 @@ export type { EventRow } from './event-service';
 /** The member's own listings, drafts included. Nobody else's, ever. */
 export async function listCommunityEventsForUser(userId: string): Promise<EventRow[]> {
 	return db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(
 			and(
@@ -101,7 +102,7 @@ export async function listCommunityEventsForUser(userId: string): Promise<EventR
 /** Rejected listings, split out so the UI can lead with "these need your attention". */
 export async function listRejectedForUser(userId: string): Promise<EventRow[]> {
 	return db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(
 			and(
