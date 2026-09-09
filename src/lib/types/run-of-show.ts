@@ -29,6 +29,8 @@ export interface RunOfShowSlot {
 	actStatus: RunOfShowActStatus | null;
 	/** The band's page on CMC, when the credit names a member band. */
 	actSlug: string | null;
+	/** The act's directory listing — what a contact sheet is sent against. */
+	actEntryId: string | null;
 	sortOrder: number;
 	setLengthMinutes: number;
 	changeoverMinutes: number;

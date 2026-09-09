@@ -149,7 +149,10 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				createdAt: productionSlot.createdAt,
 				actName: eventBand.name,
 				actStatus: eventBand.status,
-				actSlug: group.slug
+				actSlug: group.slug,
+				// An act with no CMC account still has a listing, which is what a
+				// contact sheet is sent against. Null for a slot with no credit.
+				actEntryId: directoryEntry.id
 			})
 			.from(production)
 			.innerJoin(eventListing, eq(eventListing.id, production.eventId))
@@ -185,6 +188,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				actName: r.actName,
 				actStatus: r.actStatus,
 				actSlug: r.actSlug,
+				actEntryId: r.actEntryId,
 				sortOrder: r.sortOrder!,
 				createdAt: r.createdAt!,
 				setLengthMinutes: r.setLengthMinutes!,
@@ -213,6 +217,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 		actName: r.actName,
 		actStatus: r.actStatus,
 		actSlug: r.actSlug,
+		actEntryId: r.actEntryId,
 		sortOrder: r.sortOrder,
 		setLengthMinutes: r.setLengthMinutes,
 		changeoverMinutes: r.changeoverMinutes,
