@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { INVITE_EXPIRY_DAYS } from '$lib/config';
+import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE } from '$lib/config';
 import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
 
@@ -338,6 +338,25 @@ describe('collapsed listeners use the generic template', () => {
 		expect(params.type).toBe('confirmation_reminder');
 		expect(params.email).toBeDefined();
 		expect(params.email.subject).toContain('May 22');
+	});
+
+	// The reminder is the only thing that reaches a member who is not looking at
+	// the app, and the sweep cancels the booking outright. Asking them to confirm
+	// without saying what happens if they do not is the gap #895 filed.
+	it('confirmation_reminder says the booking is released if nobody confirms', async () => {
+		await emit('reservation.confirmation_reminder_due', {
+			userId: 'user-1',
+			userEmail: 'user@test.com',
+			userName: 'Bob',
+			date: 'May 22',
+			startTime: '2:00 PM',
+			endTime: '3:00 PM'
+		});
+
+		const { email } = mockDispatch.mock.calls[0][0];
+		expect(email.paragraphs.map((p: { text: string }) => p.text).join(' ')).toContain(
+			UNCONFIRMED_RELEASE_NOTICE
+		);
 	});
 
 	it('band.invitation_sent → notification alias', async () => {

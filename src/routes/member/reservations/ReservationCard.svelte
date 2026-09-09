@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
-	import { formatDollars, formatDateShort } from '$lib/utils/format';
+	import { formatDollars } from '$lib/utils/format';
 	import {
 		CancelReservationAction,
 		ConfirmReservationAction,
@@ -10,7 +10,8 @@
 	import ReservationSummary from '$lib/components/reservations/ReservationSummary.svelte';
 	import type { Reservation } from '$lib/server/db/schema';
 	import { resolve } from '$app/paths';
-	import { withinConfirmationWindow, confirmWindowOpensAt } from '$lib/config';
+	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
+	import { withinConfirmationWindow } from '$lib/config';
 
 	let { reservation, onchange }: { reservation: Reservation; onchange?: () => void } = $props();
 
@@ -40,11 +41,12 @@
 			</p>
 		{/if}
 	</a>
-	{#if !isPast && reservation.status === 'scheduled' && !canConfirm}
-		<!-- Hint lives above the action row so it never wraps behind the buttons. -->
-		<p class="px-3 text-right text-subtle">
-			Confirm from {formatDateShort(confirmWindowOpensAt(reservation.startsAt))}
-		</p>
+	{#if !isPast && reservation.status === 'scheduled'}
+		<!-- Hints live above the action row so they never wrap behind the buttons. -->
+		<UnconfirmedNotice
+			startsAt={reservation.startsAt}
+			class="space-y-0.5 px-3 text-right text-subtle"
+		/>
 	{/if}
 
 	{#snippet actions()}

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { formatDateLong, formatTime } from '$lib/utils/format';
+	import { formatDateLong, formatDollars, formatTime } from '$lib/utils/format';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -10,6 +10,7 @@
 	import { getReservationDetail } from '$lib/remote/reservations.remote';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
 
 	let data = $derived(await getReservationDetail(page.params.id!));
 
@@ -76,6 +77,17 @@
 	{/if}
 
 	{#if res.status === 'scheduled'}
+		<!-- The card carries the amount, the due date and the confirmation window;
+		     without them here, opening a booking to check what is outstanding
+		     tells a member less than the list they came from (#895). -->
+		<InfoCard title="Not confirmed yet">
+			<p>
+				<span class="font-medium">${formatDollars(data.totalCents)}</span>
+				due — cash at the door, or card online.
+			</p>
+			<UnconfirmedNotice startsAt={res.startsAt} class="space-y-1 text-muted" />
+		</InfoCard>
+
 		<Button href="/member/reservations/{res.id}/pay" variant="primary" class="w-full">
 			Pay for this session
 		</Button>

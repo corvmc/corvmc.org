@@ -1,5 +1,5 @@
 import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { INVITE_EXPIRY_DAYS } from '$lib/config';
+import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE } from '$lib/config';
 import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
 import { fanOutAnnouncement } from '$lib/server/group/announcement-fanout';
@@ -319,7 +319,9 @@ export function registerAllNotificationListeners(): void {
 				subject: `Please confirm your reservation: ${event.date}`,
 				preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
 				heading: 'Please confirm your reservation',
-				paragraphs: [{ text: 'You have an unconfirmed reservation.' }],
+				paragraphs: [
+					{ text: `You have an unconfirmed reservation. ${UNCONFIRMED_RELEASE_NOTICE}` }
+				],
 				details: whenDetails(event.date, event.startTime, event.endTime),
 				footnote: 'Please confirm or cancel your reservation to free up the time slot for others.',
 				cta: { label: 'Confirm now' }
