@@ -49,6 +49,7 @@ import { seedBandEvents } from './seed/band-events';
 import { seedCommunityEvents } from './seed/community-events';
 import { seedCmcEventLineups } from './seed/lineups';
 import { seedProductions } from './seed/productions';
+import { seedArtifactRequests } from './seed/artifact-requests';
 import { seedRunOfShow } from './seed/run-of-show';
 import { seedBandReservations } from './seed/band-reservations';
 import { seedBandSites, seedBandPageConfigs, seedFreePressKits } from './seed/band-sites';
@@ -140,6 +141,8 @@ async function main() {
 	// After the productions, because a slot hangs off one — and it reads the bill
 	// back rather than being handed it, the way the rider seeder reads a roster.
 	const runOfShow = await seedRunOfShow(productions.rows);
+	// After the bill, because an ask is against a listing on it.
+	const artifactRequests = await seedArtifactRequests(productions.rows);
 	const bandReservations = await seedBandReservations(bands);
 	const bandSites = await seedBandSites(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
@@ -286,6 +289,9 @@ async function main() {
 	);
 	console.log(
 		`  ${runOfShow.slots} run-of-show sets — ${runOfShow.uncredited} on no poster, ${runOfShow.withoutTimes} with no downbeat yet`
+	);
+	console.log(
+		`  ${artifactRequests.requests} artifact requests across the bills, half of them overdue`
 	);
 	console.log(
 		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +

@@ -51,6 +51,7 @@
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
 	import SettlementPanel from './SettlementPanel.svelte';
+	import ArtifactRequestsPanel from './ArtifactRequestsPanel.svelte';
 	import { TAB_KEYS, TAB_LABELS, parseTab, type TabKey } from './tabs';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { replaceState } from '$app/navigation';
@@ -1025,6 +1026,14 @@
 			class="space-y-6"
 			class:hidden={tab !== 'advance'}
 		>
+			<ArtifactRequestsPanel
+				eventId={evt.id}
+				eventTitle={evt.title}
+				requests={loaded.artifactRequests}
+				acts={loaded.requestableActs}
+				onchange={() => getStaffEventProduction(id).refresh()}
+			/>
+
 			<!--
 			What the bill needs on stage. The advance checklist has always carried a
 			task reading "Collect tech riders and stage plots"; this is where the answer

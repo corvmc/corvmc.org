@@ -42,6 +42,15 @@ vi.mock('$lib/server/production/run-of-show-service', () => ({
 	buildSlotsFromLineup: (...a: unknown[]) => runOfShow.buildSlotsFromLineup(...a)
 }));
 
+const artifacts = {
+	requestArtifact: vi.fn(),
+	cancelArtifactRequest: vi.fn()
+};
+vi.mock('$lib/server/production/artifact-request-service', () => ({
+	requestArtifact: (...a: unknown[]) => artifacts.requestArtifact(...a),
+	cancelArtifactRequest: (...a: unknown[]) => artifacts.cancelArtifactRequest(...a)
+}));
+
 const refresh = vi.fn();
 vi.mock('./events.remote', () => ({
 	getStaffEventPage: () => ({ refresh }),
@@ -106,7 +115,12 @@ const WRITES: { name: keyof typeof productions; args: unknown[] }[] = [
 	{ name: 'moveRunOfShowSlot', args: [{ ...SLOT, direction: 'up' }] },
 	{ name: 'removeRunOfShowSlot', args: [SLOT] },
 	{ name: 'setRunOfShowTerms', args: [SLOT] },
-	{ name: 'buildRunOfShowFromLineup', args: [{ eventId: 'evt-1', productionId: 'prod-1' }] }
+	{ name: 'buildRunOfShowFromLineup', args: [{ eventId: 'evt-1', productionId: 'prod-1' }] },
+	{
+		name: 'askForArtifact',
+		args: [{ eventId: 'evt-1', entryId: 'entry-1', artifact: 'tech_rider' }]
+	},
+	{ name: 'dropArtifactRequest', args: [{ id: 'req-1', eventId: 'evt-1' }] }
 ];
 
 beforeEach(() => {
@@ -120,7 +134,7 @@ describe('productions.remote guards', () => {
 			await expect(submit(productions[name], args[0])).rejects.toThrow('Staff access required');
 
 			expect(requireCapability).toHaveBeenCalledWith('event.manage');
-			for (const spy of Object.values({ ...service, ...runOfShow })) {
+			for (const spy of Object.values({ ...service, ...runOfShow, ...artifacts })) {
 				expect(spy).not.toHaveBeenCalled();
 			}
 		});

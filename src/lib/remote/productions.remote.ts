@@ -17,10 +17,14 @@ import {
 	setSlotTerms,
 	buildSlotsFromLineup
 } from '$lib/server/production/run-of-show-service';
+import {
+	requestArtifact,
+	cancelArtifactRequest
+} from '$lib/server/production/artifact-request-service';
 import { PERCENTAGE_BPS_MAX } from '$lib/production/terms';
 import { getStaffEventPage, getStaffEventProduction, getStaffEvents } from './events.remote';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE, requestableArtifacts } from '$lib/config';
 
 /**
  * Productions are guarded as events, not on a `production.*` set of their own.
@@ -314,5 +318,52 @@ export const setRunOfShowTerms = form(
 		}
 		await getStaffEventProduction(data.eventId).refresh();
 		return { success: true };
+	}
+);
+
+/**
+ * Asking an act for a rider or a press kit, against a date.
+ *
+ * Guarded as the console it lives on: a request is against the event, so a
+ * repeat ask is a reminder rather than a second row — `requestArtifact` upserts
+ * on (event, act, artifact) and the outstanding count stays honest.
+ */
+export const askForArtifact = form(
+	z.object({
+		eventId: z.string().min(1),
+		entryId: z.string().min(1),
+		artifact: z.enum(requestableArtifacts),
+		dueDate: z.string().optional()
+	}),
+	async (data) => {
+		await requireCapability('event.manage');
+		const { locals } = getRequestEvent();
+		try {
+			await requestArtifact({
+				eventId: data.eventId,
+				entryId: data.entryId,
+				artifact: data.artifact,
+				dueAt: data.dueDate ? buildDateInTz(data.dueDate, '23:59', DEFAULT_TIMEZONE) : null,
+				requestedByUserId: locals.user?.id ?? null
+			});
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+export const dropArtifactRequest = form(
+	z.object({ id: z.string().min(1), eventId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await cancelArtifactRequest(data.id);
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
 	}
 );

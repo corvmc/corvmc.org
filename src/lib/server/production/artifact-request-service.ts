@@ -1,9 +1,13 @@
 import { db } from '$lib/server/db';
 import { artifactRequest } from '$lib/server/db/schema/artifact-request';
 import { directoryEntry } from '$lib/server/db/schema/directory';
-import { and, eq, isNull } from 'drizzle-orm';
+import { eventBand } from '$lib/server/db/schema/event';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import { getEventRiderSummaries } from '$lib/server/band/rider-service';
 import type { RequestableArtifact } from '$lib/config';
+import type { OutstandingRequest } from '$lib/types/artifact-request';
+
+export type { OutstandingRequest };
 
 /**
  * Asking an act for something, and knowing whether it came.
@@ -11,18 +15,6 @@ import type { RequestableArtifact } from '$lib/config';
  * Arrival is derived, never stored — a rider filled in unprompted still counts,
  * and nothing has to be marked done by hand.
  */
-
-export interface OutstandingRequest {
-	id: string;
-	entryId: string;
-	actName: string | null;
-	artifact: RequestableArtifact;
-	dueAt: Date | null;
-	requestedAt: Date;
-	/** Derived from the artifact itself. */
-	fulfilled: boolean;
-	overdue: boolean;
-}
 
 export async function requestArtifact(input: {
 	eventId: string;
@@ -115,4 +107,25 @@ export async function listRequests(
 /** What is still owed across the whole bill — the number staff act on. */
 export async function outstandingCount(eventId: string, now = new Date()): Promise<number> {
 	return (await listRequests(eventId, now)).filter((r) => !r.fulfilled).length;
+}
+
+/**
+ * Who a request can be sent to.
+ *
+ * Off `event_band` rather than `production_slot`: an act can be asked for its
+ * rider before anyone opens a run of show, and a credit with no listing has
+ * nowhere to receive one.
+ */
+export async function requestableActs(
+	eventId: string
+): Promise<{ entryId: string; name: string }[]> {
+	const rows = await db
+		.select({ entryId: eventBand.directoryEntryId, name: eventBand.name })
+		.from(eventBand)
+		.where(eq(eventBand.eventId, eventId))
+		.orderBy(asc(eventBand.billingOrder));
+
+	return rows
+		.filter((r): r is { entryId: string; name: string } => r.entryId !== null)
+		.map((r) => ({ entryId: r.entryId, name: r.name }));
 }
