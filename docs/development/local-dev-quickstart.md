@@ -60,25 +60,52 @@ seed (`scripts/seed-dev.ts`). The seed creates roles, ~dozens of members with re
 names, bands, reservations (past and future, in every status), recurring series, events
 with tickets and RSVPs, credits, equipment, marketing data, and help articles.
 
-**Login:** the seed creates five accounts with a password, all of them `password`:
+<a id="demo-logins"></a>
 
-```
-admin@corvallismusic.org         admin + staff + member
-coordinator@corvallismusic.org   staff — the volunteer coordinator's view, no admin nav
-volunteer@corvallismusic.org     an active volunteer with hours, shifts and a clearance
-newcomer@corvallismusic.org      a member who has never volunteered
-minor@corvallismusic.org         an under-18 signup waiting on a guardian
-```
+**Login:** the seed creates 27 accounts with a password, all of them `password`. It prints
+the full list — with the deep links each one owns — when it finishes, and that print is the
+source of truth. `admin@corvallismusic.org` is the superuser: admin + staff + member at once.
 
-The four named ones exist because volunteering's member surface is gated on onboarding
-stage, and `none` / `blocked` / `active` are mutually exclusive per user — no single
-account can reach all of it. They also make the staff side look like somebody's job
-rather than the admin's. The seed prints them, and the deep links they own, when it
-finishes.
+The other 26 are personas, and they come in two kinds. Reaching for the wrong kind is the
+usual way a screen ends up looking broken when it is only unpopulated.
 
-Every other seeded user has no credential account — to test as a different plain member,
-sign up through the UI (Turnstile passes with the blank/test keys) or use the admin's
-staff console.
+**State fixtures** exist because a state is mutually exclusive per account. Volunteering is
+gated on onboarding stage, so `none` / `blocked` / `active` need three accounts and cannot
+be one; `/member/membership` renders differently for an active, a cancelling, a
+fee-covering and a lapsed subscriber. Each carries that one state and little else:
+
+| set                 | logins                                              |
+| ------------------- | --------------------------------------------------- |
+| Volunteering        | `coordinator@` `volunteer@` `newcomer@` `minor@`    |
+| Membership          | `sustaining@` `cancelling@` `feecoverer@` `lapsed@` |
+| Directory matching  | `seeker@` `bandleader@` `undecided@`                |
+| Group join policies | `clubhost@` `chair@` `facilities@` `invitee@`       |
+| Tech riders         | `rideradmin@` `ridermember@`                        |
+| Solo act            | `soloact@`                                          |
+
+**Usage personas** (`scripts/seed/usage-personas.ts`) are the opposite shape: a goal, and
+whatever a person pursuing it would have accumulated. They exist because ordinary use is
+not a state — it is a spread across features — so no state fixture could reach it:
+
+| login          | the job                                                                        |
+| -------------- | ------------------------------------------------------------------------------ |
+| `regular@`     | books the room weekly: bookings, credits, a ticket, a loan, a suggestion       |
+| `frontperson@` | owns the premium band Saltmarsh Radio — releases, payouts, gigs, no staff role |
+| `bandmate@`    | plays in it without owning it, so an owner-only gate has something that fails  |
+| `restricted@`  | messaging restricted by an upheld report                                       |
+| `treasurer@`   | treasurer — reaches `/staff/payments` and not `/staff/settings`                |
+| `techcoord@`   | technology coordinator — settings and locks, not the flag queue                |
+| `moderator@`   | site moderator — flags and standing, not the money                             |
+| `shiftlead@`   | volunteer coordinator — the hour queue, not the role picker                    |
+
+The last four are the only way to see the capability matrix narrow anything. `staff` holds
+almost everything, so a handler guarded by capability behaves identically for `admin` and
+for a position until you sign in as the position — which is also why none of them holds
+`staff` as well.
+
+Every other seeded user has no credential account — they are the lived-in background. To
+test as a different plain member, sign up through the UI (Turnstile passes with the
+blank/test keys) or use the admin's staff console.
 
 Re-run `pnpm db:reset` any time the data gets weird; it's the supported path back to a
 known state. Note that it deletes the D1 files outright, so it never exercises the seed's own

@@ -181,11 +181,11 @@ export async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, role
 		await db.insert(modelHasRole).values({ roleId: staffRole.id, userId: users[i].id });
 	}
 
-	// One persona per named position, so every row of the matrix can be signed
-	// in as. This is the only way anyone reviews the narrowing against a real
-	// screen rather than against a table: a treasurer should reach /staff/payments
-	// and not /staff/settings, a volunteer coordinator should reach the hour
-	// queue and not the role picker on a user.
+	// One holder per named position, so the staff user list shows the matrix.
+	// These are bulk users and have no `account` row, so they cannot be signed in
+	// as — reviewing the narrowing against a real screen is what the loginable
+	// position personas in `usage-personas.ts` are for. Both exist: this fills the
+	// org chart, those exercise it.
 	const positionSeeds: Array<[string, number]> = [
 		['technology_coordinator', 5],
 		['volunteer_coordinator', 6],

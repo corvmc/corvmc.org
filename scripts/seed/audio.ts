@@ -122,10 +122,11 @@ function split(baseCents: number, cmcBps: number, coverFees: boolean) {
 
 // ---------------------------------------------------------------------------
 
-export async function seedAudio(bands: any[], users: any[]) {
+/** `alsoInclude`: see `seedBandReservations`. Appended, so no draw moves. */
+export async function seedAudio(bands: any[], users: any[], alsoInclude: any[] = []) {
 	console.log('Seeding band audio (releases, tracks, sales)...');
 
-	const live = bands.filter((b: any) => !b.deletedAt).slice(0, 6);
+	const live = [...bands.filter((b: any) => !b.deletedAt).slice(0, 6), ...alsoInclude];
 	if (live.length === 0)
 		return { releases: 0, tracks: 0, purchases: 0, bytes: 0, accounts: 0, radioEntries: 0 };
 
@@ -265,7 +266,20 @@ export async function seedAudio(bands: any[], users: any[]) {
 						updatedAt: new Date()
 					}
 				]
-			: [])
+			: []),
+		// A named band gets the ready state too. The three above sit on bands whose
+		// owner is a bulk account or the admin, so the payouts page was only ever
+		// seen by somebody who also holds every staff capability (#868).
+		...alsoInclude.map((b: any) => ({
+			groupId: b.id,
+			stripeAccountId: `acct_seed${randomUUID().slice(0, 12)}`,
+			chargesEnabled: true,
+			payoutsEnabled: true,
+			detailsSubmitted: true,
+			requirementsJson: { currently_due: [], past_due: [] },
+			createdAt: new Date(),
+			updatedAt: new Date()
+		}))
 	];
 	// 8 × 12 = 96.
 	await batchInsert(bandStripeAccount, accountRows, 12);
