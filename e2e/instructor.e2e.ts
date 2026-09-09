@@ -69,7 +69,14 @@ test('an instructor can book teaching time; a member without a grant cannot', as
 
 	const startTime = dialog.locator('select[name="startTime"]');
 	await expect(startTime).toBeEnabled({ timeout: 15000 });
-	await startTime.selectOption({ index: 1 });
+	// The earliest *bookable* start, found by value: the list carries the taken
+	// hours too now (#874), so a fixed index can land on a disabled option and
+	// `selectOption` waits for it forever.
+	const firstFree = await startTime
+		.locator('option:not([disabled]):not([value=""])')
+		.first()
+		.getAttribute('value');
+	await startTime.selectOption(firstFree ?? '');
 
 	const endTime = dialog.locator('select[name="endTime"]');
 	await expect(endTime).toBeEnabled({ timeout: 15000 });
