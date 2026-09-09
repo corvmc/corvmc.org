@@ -178,6 +178,9 @@ import {
 	NotAnActiveBandMemberError,
 	listForUser,
 	listAll,
+	listBandAdmins,
+	getMembers,
+	listForUser as listForUserExport,
 	partitionByStatus,
 	searchBandsByName
 } from './band-service';
@@ -265,10 +268,47 @@ describe('BandService', () => {
 		 */
 		it('lists bands and nothing else', async () => {
 			await listAll();
-			const { sql: text, params } = dialect.sqlToQuery(whereClauses[0] as SQL);
-			expect(text).toContain('"kind" =');
-			expect(params).toContain('band');
-			expect(params).not.toContain('club');
+			// By content, not by position: the member count's correlated subquery
+			// records its own WHERE before the outer one gets built.
+			const rendered = whereClauses.map((c) => dialect.sqlToQuery(c as SQL));
+			const outer = rendered.find((r) => r.sql.includes('"kind" ='));
+			expect(outer).toBeDefined();
+			expect(outer!.params).toContain('band');
+			expect(outer!.params).not.toContain('club');
+		});
+	});
+
+	// -----------------------------------------------------------------------
+	// Roster reads and a removed account
+	//
+	// These filtered `group_member.status` and never `user.deleted_at`, so a
+	// removed member stayed on the roster, kept counting, and — through
+	// `listBandAdmins`, which notifications fan out to — kept getting band mail.
+	// #812.
+	// -----------------------------------------------------------------------
+
+	describe('removed accounts are off the roster', () => {
+		const dialect = new SQLiteSyncDialect();
+		const renderedWheres = () => whereClauses.map((c) => dialect.sqlToQuery(c as SQL).sql);
+
+		it('leaves a removed member out of the band admins notifications go to', async () => {
+			await listBandAdmins('band-1');
+
+			expect(renderedWheres().at(-1)).toContain('"user"."deleted_at" is null');
+		});
+
+		it('leaves a removed member off the roster', async () => {
+			await getMembers('band-1');
+
+			expect(renderedWheres().at(-1)).toContain('"user"."deleted_at" is null');
+		});
+
+		it('does not count a removed member toward the band', async () => {
+			await listForUserExport('user-1', ['band']);
+
+			// The count is a correlated subquery, so its predicate is one of the
+			// clauses recorded — not necessarily the last.
+			expect(renderedWheres().some((w) => w.includes('"user"."deleted_at" is null'))).toBe(true);
 		});
 	});
 
