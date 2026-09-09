@@ -5,10 +5,16 @@
 	import { Turnstile } from 'svelte-turnstile';
 	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
-	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
+	import {
+		TURNSTILE_SITE_KEY,
+		TURNSTILE_RESPONSE_FIELD,
+		turnstileFailureMessage
+	} from '$lib/turnstile';
+	import type { RemoteFormIssue } from '@sveltejs/kit';
 	import Alert from '$lib/components/ui/Alert.svelte';
 
 	let submitted = $state(false);
+	let failure = $state<string | null>(null);
 	let resetTurnstile = $state<() => void>();
 	let resourceType = $state('Local Resource: Music Shop / Gear');
 
@@ -77,8 +83,17 @@
 			<Form
 				remote={rf}
 				class="flex flex-col gap-2"
-				onsuccess={() => (submitted = true)}
-				onfailure={() => resetTurnstile?.()}
+				onsuccess={() => {
+					submitted = true;
+					failure = null;
+				}}
+				onfailure={(issues) => {
+					resetTurnstile?.();
+					// Passing `onfailure` at all suppresses Form's fallback toast, and the
+					// field that fails here — the Turnstile token — has no visible input to
+					// hang an error on. Without this, Send does nothing whatsoever.
+					failure = turnstileFailureMessage((issues as RemoteFormIssue[] | null) ?? null);
+				}}
 			>
 				<Field
 					name="subject"
@@ -103,6 +118,9 @@
 					theme="auto"
 					bind:reset={resetTurnstile}
 				/>
+				{#if failure}
+					<Alert type="error">{failure}</Alert>
+				{/if}
 				<SubmitButton label="Submit Resource" variant="primary" class="mt-2" />
 			</Form>
 		{/if}
