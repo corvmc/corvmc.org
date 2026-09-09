@@ -40,6 +40,8 @@ export const tableOrder = [
 	// References contractor, inventory_asset and user, so it clears before none
 	// of them.
 	'contractor_job',
+	// References `project` and `user`, so it clears after both.
+	'financial_entry',
 	'event_listing',
 	// The ops half of one listing. References event_listing and user, so it
 	// clears before both.

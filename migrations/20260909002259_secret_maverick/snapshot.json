@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "5c3efaed-a8eb-41c8-b922-af44675eec95",
+  "id": "cc212759-233f-4eee-af06-14dde0db9572",
   "prevIds": [
-    "51118a95-7ef9-413c-8c20-0e0f04e9a3fd"
+    "5c3efaed-a8eb-41c8-b922-af44675eec95"
   ],
   "ddl": [
     {
@@ -392,6 +392,10 @@
     },
     {
       "name": "packing_list",
+      "entityType": "tables"
+    },
+    {
+      "name": "financial_entry",
       "entityType": "tables"
     },
     {
@@ -10825,6 +10829,166 @@
       "table": "packing_list"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount_cents",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "category",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "occurred_at",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "settlement",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stripe_payment_record_id",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "settlement_group",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_type",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_id",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "description",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "recorded_by_user_id",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -13571,6 +13735,51 @@
     },
     {
       "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_financial_entry_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_financial_entry_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        "recorded_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_financial_entry_recorded_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
         "role_id",
         "user_id"
       ],
@@ -14435,6 +14644,15 @@
       "nameExplicit": false,
       "name": "packing_list_pk",
       "table": "packing_list",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "financial_entry_pk",
+      "table": "financial_entry",
       "entityType": "pks"
     },
     {
@@ -17666,6 +17884,116 @@
       "name": "uq_packing_list_group",
       "entityType": "indexes",
       "table": "packing_list"
+    },
+    {
+      "columns": [
+        {
+          "value": "occurred_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_occurred",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "kind",
+          "isExpression": false
+        },
+        {
+          "value": "occurred_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_kind_occurred",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "category",
+          "isExpression": false
+        },
+        {
+          "value": "occurred_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_category_occurred",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "settlement_group",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_group",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "stripe_payment_record_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_stripe",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "subject_type",
+          "isExpression": false
+        },
+        {
+          "value": "subject_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_subject",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_project",
+      "entityType": "indexes",
+      "table": "financial_entry"
     },
     {
       "columns": [

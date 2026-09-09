@@ -53,6 +53,7 @@ import { seedRunOfShow } from './seed/run-of-show';
 import { seedBandReservations } from './seed/band-reservations';
 import { seedBandSites, seedBandPageConfigs, seedFreePressKits } from './seed/band-sites';
 import { seedRecurringSeries } from './seed/recurring';
+import { seedFinancialEntries } from './seed/financial-entries';
 import { seedPaymentRecords } from './seed/payments';
 import { seedTickets } from './seed/tickets';
 import { seedRsvps } from './seed/rsvps';
@@ -145,6 +146,7 @@ async function main() {
 	await seedFreePressKits(bands);
 	const series = await seedRecurringSeries(allUsers);
 	const payments = await seedPaymentRecords(allUsers, reservations);
+	const financialEntries = await seedFinancialEntries(allUsers, reservations);
 	const tickets = await seedTickets(allUsers, events);
 	const rsvps = await seedRsvps(allUsers);
 	const notifications = await seedNotifications(allUsers);
@@ -237,6 +239,7 @@ async function main() {
 	console.log(`  ${pageConfigs.length} band page configs with EPK data`);
 	console.log(`  ${series.length} recurring series`);
 	console.log(`  ${payments.length} payment records`);
+	console.log(`  ${financialEntries.length} financial entries`);
 	console.log(`  ${tickets.length} tickets`);
 	console.log(`  ${rsvps.length} RSVPs`);
 	console.log(`  ${notifications.length} notifications`);

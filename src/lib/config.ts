@@ -398,6 +398,72 @@ export const assetStatusLabels: Record<AssetStatus, string> = {
  * gifts-in-kind report counts `kind = 'donation'`, so an opening balance is
  * invisible to both by construction and cannot drift back in.
  */
+// ---------------------------------------------------------------------------
+// The financial record
+// ---------------------------------------------------------------------------
+
+/**
+ * What a `financial_entry` amount **means** to the collective.
+ *
+ * `in_kind` and `pass_through` are exactly what a naive `sum()` gets wrong, which
+ * is why they are a column rather than a convention. See
+ * `docs/specs/financial-record-spec.md`.
+ */
+export const financialEntryKinds = ['earned', 'spent', 'in_kind', 'pass_through'] as const;
+export type FinancialEntryKind = (typeof financialEntryKinds)[number];
+
+export const financialEntryKindLabels: Record<FinancialEntryKind, string> = {
+	earned: 'Earned',
+	spent: 'Spent',
+	in_kind: 'In kind',
+	pass_through: 'Pass-through'
+};
+
+/**
+ * The chart of accounts — what an amount was **for**.
+ *
+ * A const rather than a table: reports group by it and the annual report's lines
+ * are named after it, so adding one is a deploy and that is correct.
+ */
+export const financialCategories = [
+	'ticket_sales',
+	'act_payout',
+	'act_guarantee',
+	'payout_rounding',
+	'card_fees',
+	'fee_coverage',
+	'reservation',
+	'membership',
+	'music_sales',
+	'donation',
+	'grant',
+	'equipment',
+	'facility',
+	'contractor',
+	'refund_absorbed',
+	'other'
+] as const;
+export type FinancialCategory = (typeof financialCategories)[number];
+
+/** How the money actually moved, and the key a Stripe cross-check joins on. */
+export const financialSettlements = ['stripe', 'cash', 'credit', 'none'] as const;
+export type FinancialSettlement = (typeof financialSettlements)[number];
+
+/** What an entry is about. No foreign key — an entry outlives what it describes. */
+export const financialSubjects = [
+	'ticket',
+	'reservation',
+	'audio_purchase',
+	'acquisition',
+	'purchase_order',
+	'contractor_job',
+	'production',
+	'volunteer_hour',
+	'membership',
+	'other'
+] as const;
+export type FinancialSubject = (typeof financialSubjects)[number];
+
 export const acquisitionKinds = ['purchase', 'donation', 'grant', 'opening_balance'] as const;
 export type AcquisitionKind = (typeof acquisitionKinds)[number];
 
