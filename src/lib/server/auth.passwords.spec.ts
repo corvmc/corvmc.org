@@ -5,6 +5,8 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('$lib/server/db', () => ({ db: {} }));
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
+import { db } from '$lib/server/db';
+
 import {
 	AUTH_IP_ADDRESS_HEADERS,
 	authRateLimitEnabled,
@@ -15,7 +17,8 @@ import {
 	pbkdf2Verify,
 	PBKDF2_ITERATIONS,
 	scryptHash,
-	scryptVerify
+	scryptVerify,
+	verifyBcryptInWorker
 } from './auth';
 
 describe('scrypt password hashing (default)', () => {
@@ -173,5 +176,38 @@ describe('authRateLimitEnabled', () => {
 	it('keeps rate limiting on when the origin is missing or unparseable', () => {
 		expect(authRateLimitEnabled(undefined)).toBe(true);
 		expect(authRateLimitEnabled('not-a-url')).toBe(true);
+	});
+});
+
+/**
+ * The 93 production accounts still on a `$2*` hash verified by proxying to a
+ * Laravel box, because bcrypt-ts was recorded as returning `false` in 0ms on
+ * Workers. It does not (checked on workerd, ~160ms), and this pins the wiring
+ * that makes the box unnecessary (#623). The runtime half is
+ * `e2e/bcrypt-signin.e2e.ts`, which signs in against a real workerd with no
+ * LARAVEL_URL configured.
+ */
+describe('bcrypt verification in the Worker', () => {
+	// Laravel's own output: `$2y$`, cost 10, for "password".
+	const LARAVEL_HASH = '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
+
+	it('rejects a wrong password without touching the database', async () => {
+		expect(await verifyBcryptInWorker(LARAVEL_HASH, 'not the password')).toBe(false);
+	});
+
+	it('accepts the right one and retires the hash', async () => {
+		const written: string[] = [];
+		const update = () => ({
+			set: (values: { password: string }) => {
+				written.push(values.password);
+				return { where: async () => undefined };
+			}
+		});
+		// `db` is the bare stub from the top of this file; give it just this call.
+		(db as unknown as { update: typeof update }).update = update;
+
+		expect(await verifyBcryptInWorker(LARAVEL_HASH, 'password')).toBe(true);
+		expect(written).toHaveLength(1);
+		expect(written[0].startsWith('scrypt:')).toBe(true);
 	});
 });
