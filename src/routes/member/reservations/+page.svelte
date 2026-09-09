@@ -25,6 +25,12 @@
 
 	let activeTab = $state<'active' | 'all'>('active');
 
+	// How much history the All tab draws before asking. A member two years in has
+	// 53 reservations and one five years in has 130; the whole list was 2440px of
+	// panel opening on their first-ever booking.
+	const HISTORY_PAGE_SIZE = 12;
+	let showAllHistory = $state(false);
+
 	// These two MUST stay above the `await`s below. A declaration that follows a
 	// top-level await is compiled as "blocked", and Svelte hangs that blocker on
 	// every template node that reads it — so `{#each await activeReservations}`
@@ -116,25 +122,53 @@
 					>
 				</Tabs.List>
 			</header>
+			<!-- Both panels used to be in the DOM at once: 54 reservation links while
+			     the Active tab showed one. -->
 			<Tabs.Content value="active" class="card-grid">
-				{#each await activeReservations as reservation (reservation.id)}
-					<ReservationCard {reservation} onchange={refreshReservations} />
-				{:else}
-					<EmptyState
-						message="No upcoming reservations. Use Reserve Space above to book your next practice slot."
-						class="col-span-full"
-					/>
-				{/each}
+				{#if activeTab === 'active'}
+					{#each await activeReservations as reservation (reservation.id)}
+						<ReservationCard {reservation} onchange={refreshReservations} />
+					{:else}
+						<EmptyState
+							message="No upcoming reservations. Use Reserve Space above to book your next practice slot."
+							class="col-span-full"
+						/>
+					{/each}
+				{/if}
 			</Tabs.Content>
-			<Tabs.Content value="all" class="card-grid">
-				{#each await allReservations as reservation (reservation.id)}
-					<ReservationCard {reservation} onchange={refreshReservations} />
-				{:else}
-					<EmptyState
-						message="No reservations yet. Use Reserve Space above to book your first practice slot."
-						class="col-span-full"
-					/>
-				{/each}
+			<Tabs.Content value="all">
+				{#if activeTab === 'all'}
+					{#await allReservations then history}
+						{@const shown = showAllHistory ? history : history.slice(0, HISTORY_PAGE_SIZE)}
+						{#if history.length > 0}
+							<p class="mb-3 text-subtle">
+								{#if shown.length < history.length}
+									Showing your {shown.length} most recent of {history.length} reservations.
+								{:else}
+									{history.length}
+									{history.length === 1 ? 'reservation' : 'reservations'}, newest first.
+								{/if}
+							</p>
+						{/if}
+						<div class="card-grid">
+							{#each shown as reservation (reservation.id)}
+								<ReservationCard {reservation} onchange={refreshReservations} />
+							{:else}
+								<EmptyState
+									message="No reservations yet. Use Reserve Space above to book your first practice slot."
+									class="col-span-full"
+								/>
+							{/each}
+						</div>
+						{#if shown.length < history.length}
+							<div class="mt-3 flex justify-center">
+								<Button variant="ghost" size="sm" onclick={() => (showAllHistory = true)}>
+									Show all {history.length}
+								</Button>
+							</div>
+						{/if}
+					{/await}
+				{/if}
 			</Tabs.Content>
 		</Tabs.Root>
 	</article>
