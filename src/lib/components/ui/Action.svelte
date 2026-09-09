@@ -159,8 +159,30 @@
 	}
 
 	function handleClick() {
-		if (hasModal) dialogOpen = true;
-		else run();
+		if (hasModal) {
+			formDirty = false;
+			askingDiscard = false;
+			dialogOpen = true;
+		} else run();
+	}
+
+	// Closing the dialog throws the form away, and there was no step in between:
+	// a mis-click on the ✕ cost a member the whole booking they had just typed.
+	// Only a form that has been typed into asks — a dialog opened and closed
+	// unchanged still closes on the first click.
+	let formDirty = $state(false);
+	let askingDiscard = $state(false);
+
+	function confirmClose(): boolean {
+		if (!formDirty) return true;
+		askingDiscard = true;
+		return false;
+	}
+
+	function discard() {
+		askingDiscard = false;
+		formDirty = false;
+		dialogOpen = false;
 	}
 
 	function handleFormSuccess(result?: unknown) {
@@ -172,6 +194,8 @@
 			const r = result as { conflict?: boolean; validationError?: string };
 			if (r.conflict || r.validationError) return;
 		}
+		// Submitted, so there is nothing left to lose — close without asking.
+		formDirty = false;
 		dialogOpen = false;
 		if (typeof onsuccess === 'function') onsuccess(result);
 	}
@@ -214,18 +238,32 @@
 {/if}
 
 {#if hasModal}
-	<Modal bind:open={dialogOpen} title={modalTitle} {maxWidth}>
+	<Modal bind:open={dialogOpen} title={modalTitle} {maxWidth} {confirmClose}>
 		{#if body}
 			{@render body({ close, run, status })}
 		{:else if isForm}
+			<!-- Hidden, not unmounted: the discard question is asked over the form so
+			     that "Keep editing" gives back exactly what was typed. -->
+			{#if askingDiscard}
+				<div class="space-y-4">
+					<p class="py-4">You have unsaved changes. Closing will lose them.</p>
+					<div class="flex justify-end gap-2">
+						<Button type="button" variant="default" onclick={() => (askingDiscard = false)}>
+							Keep editing
+						</Button>
+						<Button type="button" variant="error" onclick={discard}>Discard</Button>
+					</div>
+				</div>
+			{/if}
 			<!-- RemoteForm actions always submit through <Form> so `run()` (callback-only)
 			     is never involved. `confirm`, when set, renders as a lead-in above the fields. -->
 			<Form
-				class="space-y-4"
+				class="space-y-4 {askingDiscard ? 'hidden' : ''}"
 				remote={remoteAction}
 				{successToast}
 				onsuccess={handleFormSuccess}
 				onfailure={handleFormFailure}
+				ondirtychange={(dirty) => (formDirty = dirty)}
 			>
 				{#if confirm}
 					<p class="py-4">{confirm}</p>

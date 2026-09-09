@@ -308,3 +308,70 @@ describe('Action, canSubmit', () => {
 		expect(trigger.getAttribute('cansubmit')).toBeNull();
 	});
 });
+
+/**
+ * Closing threw the whole form away with no step in between, so a mis-click on
+ * the ✕ cost a member the booking they had just typed. #876.
+ */
+describe('Action, unsaved changes', () => {
+	const closeButton = () => page.getByRole('button', { name: 'Close' });
+
+	it('closes an untouched dialog without asking', async () => {
+		await render(ActionHarness, {
+			action: fakeRemoteForm(),
+			label: 'Book',
+			formFieldName: 'notes'
+		});
+
+		await page.getByRole('button', { name: 'Book' }).click();
+		await expect.element(page.getByRole('dialog')).toBeVisible();
+		await closeButton().click();
+
+		await vi.waitFor(() => expect(dialog()).toBeNull());
+	});
+
+	it('asks before discarding a form that has been typed into', async () => {
+		await render(ActionHarness, {
+			action: fakeRemoteForm(),
+			label: 'Book',
+			formFieldName: 'notes'
+		});
+
+		await page.getByRole('button', { name: 'Book' }).click();
+		await page.getByRole('textbox', { name: 'Note' }).fill('bring the amp');
+		await closeButton().click();
+
+		await expect.element(page.getByText('You have unsaved changes')).toBeVisible();
+		expect(dialog()).not.toBeNull();
+	});
+
+	it('keeps what was typed when the discard is declined', async () => {
+		await render(ActionHarness, {
+			action: fakeRemoteForm(),
+			label: 'Book',
+			formFieldName: 'notes'
+		});
+
+		await page.getByRole('button', { name: 'Book' }).click();
+		await page.getByRole('textbox', { name: 'Note' }).fill('bring the amp');
+		await closeButton().click();
+		await page.getByRole('button', { name: 'Keep editing' }).click();
+
+		await expect.element(page.getByRole('textbox', { name: 'Note' })).toHaveValue('bring the amp');
+	});
+
+	it('closes on the second answer when the discard is confirmed', async () => {
+		await render(ActionHarness, {
+			action: fakeRemoteForm(),
+			label: 'Book',
+			formFieldName: 'notes'
+		});
+
+		await page.getByRole('button', { name: 'Book' }).click();
+		await page.getByRole('textbox', { name: 'Note' }).fill('bring the amp');
+		await closeButton().click();
+		await page.getByRole('button', { name: 'Discard' }).click();
+
+		await vi.waitFor(() => expect(dialog()).toBeNull());
+	});
+});

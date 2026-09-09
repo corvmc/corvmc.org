@@ -54,6 +54,7 @@
 		successToast,
 		onsuccess,
 		onfailure,
+		ondirtychange,
 		children,
 		class: className,
 		...rest
@@ -65,6 +66,12 @@
 		successToast?: string;
 		onsuccess?: (result?: TOutput) => void;
 		onfailure?: (issues: RemoteFormIssue[] | null) => void;
+		/**
+		 * Whether anything has been typed and not yet submitted. A callback rather
+		 * than a `$bindable`, because it is an output: the wrapper that owns the
+		 * dialog needs it to know whether closing throws work away.
+		 */
+		ondirtychange?: (dirty: boolean) => void;
 		children: Snippet;
 		class?: string;
 		[key: string]: unknown;
@@ -97,6 +104,13 @@
 	let stepValidity = $state<boolean[]>([]);
 
 	let status = $state<FormStatus>('idle');
+
+	// `changeCount`, not `status`: status flips to pending/success during a
+	// submit while the typed values are still there, and a wrapper asking "would
+	// closing lose anything" wants the values, not the flash.
+	$effect(() => {
+		ondirtychange?.(changeCount > 0);
+	});
 
 	// Mark the form dirty at the mutation site rather than via an $effect that
 	// reads and writes `status` — an effect here re-scheduled on every keystroke
