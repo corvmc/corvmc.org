@@ -8,6 +8,7 @@ import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venue-service';
 import { getProductionByEvent } from '$lib/server/production/production-service';
 import { getPublicSetTimes, getRunOfShow } from '$lib/server/production/run-of-show-service';
+import { getSettlement } from '$lib/server/production/settlement-service';
 import { listWorkOrders as listOpenWorkOrders } from '$lib/server/volunteer/work-order-service';
 import { bandRefColumns, toBandRef, toEventRef, toMemberRef } from '$lib/server/entity/refs';
 import {
@@ -1101,7 +1102,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		venues,
 		riders,
 		production,
-		runOfShow
+		runOfShow,
+		settlement
 	] = await Promise.all([
 		getStaffEventDetail(id),
 		getEventRecurringSeries(id),
@@ -1123,7 +1125,12 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		getProductionByEvent(id),
 		// Who plays when. Times are derived and written on every mutation, so this
 		// read never recomputes — it only re-checks the warnings.
-		getRunOfShow(id)
+		getRunOfShow(id),
+		// What the night took, cost, and owes. Rides in the page's one query
+		// rather than beside it — `custom/no-concurrent-remote-queries` exists to
+		// stop a page fanning reads out, and this one is cheap when there is no
+		// production because it returns null on the first select.
+		getSettlement(id)
 	]);
 
 	return {
@@ -1136,7 +1143,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		venues,
 		riders,
 		production,
-		runOfShow
+		runOfShow,
+		settlement
 	};
 });
 
