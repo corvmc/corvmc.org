@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "51f81237-2223-451a-8609-d03e5d5d64bc",
+  "id": "b613f751-4927-4286-86a5-2effae3b2516",
   "prevIds": [
-    "43332c45-3680-4fd4-ab52-840a02c109e6"
+    "51f81237-2223-451a-8609-d03e5d5d64bc"
   ],
   "ddl": [
     {
@@ -2013,6 +2013,16 @@
       "default": null,
       "generated": null,
       "name": "published_at",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "announce_at",
       "entityType": "columns",
       "table": "event_listing"
     },
