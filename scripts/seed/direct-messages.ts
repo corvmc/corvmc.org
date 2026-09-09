@@ -9,19 +9,39 @@ import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 
 /**
- * Member↔member conversations, covering every state the UI has to render:
- * an accepted conversation, a request waiting on a decision, a request the
- * sender is still waiting on, a block, a member on probation, a member who
- * switched their own messaging off, and a reported conversation in triage.
+ * Member↔member conversations, covering every state the UI has to render: an
+ * accepted conversation, a request waiting on a decision, a request the sender
+ * is still waiting on, a block, a member on probation, a member who switched
+ * their own messaging off, and a reported conversation in triage. The cast is
+ * six personas because on `users.slice(0, 6)` none of these could be signed in
+ * to and `/member/messages` was empty for everybody (#867).
  */
-export async function seedDirectMessages(users: SeedUser[], adminUser: SeedUser) {
+export async function seedDirectMessages(
+	cast: {
+		/** Books the room weekly; the accepted thread is with their bandmate. */
+		jammer: SeedUser;
+		jamPartner: SeedUser;
+		/** `lookingFor: 'members'` — the two outstanding requests are theirs. */
+		recruiter: SeedUser;
+		/** Switched messaging off, so the recruiter's second request stalls. */
+		optedOut: SeedUser;
+		/** Reported the harassment, and holds the resulting block. */
+		reporter: SeedUser;
+		/** The subject of the upheld report. Exists only for this. */
+		restricted: SeedUser;
+	},
+	adminUser: SeedUser
+) {
 	const now = new Date();
 	const hour = 3600_000;
 	const day = 24 * hour;
 
-	// Six distinct members so no two scenarios interfere.
-	const [alice, bob, carol, dave, erin, frank] = users.slice(0, 6);
-	if (!frank) return { threads: 0, blocks: 0, standings: 0 };
+	const alice = cast.jammer;
+	const bob = cast.jamPartner;
+	const carol = cast.recruiter;
+	const dave = cast.optedOut;
+	const erin = cast.reporter;
+	const frank = cast.restricted;
 
 	const accepted = randomUUID();
 	const pendingForBob = randomUUID();
