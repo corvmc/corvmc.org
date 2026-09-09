@@ -1,10 +1,10 @@
 {
+  "id": "bfd01492-f765-4bdc-a48f-a59b8ff09747",
+  "prevIds": [
+    "3691e4c3-e42c-4aa5-99e3-fcfbdabc0c23"
+  ],
   "version": "7",
   "dialect": "sqlite",
-  "id": "b613f751-4927-4286-86a5-2effae3b2516",
-  "prevIds": [
-    "51f81237-2223-451a-8609-d03e5d5d64bc"
-  ],
   "ddl": [
     {
       "name": "account",
@@ -1463,6 +1463,16 @@
       "default": null,
       "generated": null,
       "name": "ends_at",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "hard_hold",
       "entityType": "columns",
       "table": "reservation"
     },
