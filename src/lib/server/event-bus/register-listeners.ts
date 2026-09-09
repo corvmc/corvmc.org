@@ -58,6 +58,7 @@ async function registerCheckoutListeners(): Promise<void> {
 	const { handleBandPremiumCheckout } = await import('$lib/server/band/band-checkout-listener');
 	const { handleAudioCheckout } = await import('$lib/server/audio/checkout-listener');
 	const { handleCheckoutCache } = await import('$lib/server/finance/checkout-cache-listener');
+	const { handleCheckoutEntries } = await import('$lib/server/finance/checkout-entries-listener');
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleReservationCheckout(event.stripeSession);
@@ -79,6 +80,10 @@ async function registerCheckoutListeners(): Promise<void> {
 	// the member what they paid for, and a cache write must not undo that.
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleCheckoutCache(event.stripeSession);
+	});
+
+	domainEvents.on('checkout.completed', async ({ data: event }) => {
+		await handleCheckoutEntries(event.stripeSession);
 	});
 }
 

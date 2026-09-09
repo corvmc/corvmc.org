@@ -98,7 +98,7 @@ beforeAll(async () => {
 }, 60_000);
 
 describe('registerListeners', () => {
-	it('registers checkout.completed listeners for the four purchasables and the payment cache', async () => {
+	it('registers checkout.completed listeners for the four purchasables, the cache and the record', async () => {
 		const { registerListeners } = await import('./register-listeners');
 		registerListeners();
 
@@ -111,9 +111,10 @@ describe('registerListeners', () => {
 		// so the count is the whole contract — a listener that failed to register
 		// would simply never fulfil, silently.
 		//
-		// The fifth is the cache (#824), and it is last on purpose: the four above
-		// have already given the member what they paid for by the time it runs.
-		expect(registeredHandlers['checkout.completed'].length).toBe(5);
+		// Five and six are the payment cache (#824) and the financial record
+		// (#825), last on purpose: the four above have already given the member
+		// what they paid for by the time either runs.
+		expect(registeredHandlers['checkout.completed'].length).toBe(6);
 	});
 
 	it('invokes handleReservationCheckout with stripe session', async () => {
