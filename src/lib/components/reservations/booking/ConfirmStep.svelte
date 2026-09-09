@@ -178,28 +178,37 @@
 				<div class="h-5 w-16 skeleton"></div>
 			</div>
 		{:else}
-			<div class="py-2 text-sm">
+			<!--
+				A description list, and each figure named: with credits applied the
+				struck-through price and the discounted one sit adjacent, so which
+				was the total and which the amount due was conveyed by position
+				alone — a non-visual reader heard "$15.00 $0.00". The labels are
+				`sr-only` because the strike-through already says it visually.
+			-->
+			<dl class="py-2 text-sm">
 				<div class="flex justify-between">
-					<span>{pricing.durationHours} hr × ${formatDollars(pricing.hourlyRateCents)}/hr</span>
+					<dt>{pricing.durationHours} hr × ${formatDollars(pricing.hourlyRateCents)}/hr</dt>
 					{#if pricing.creditsApplicable > 0}
-						<span>
-							<span class="line-through opacity-60">${formatDollars(pricing.totalCents)}</span>
-							<span class="ml-1 font-medium text-success"
-								>${formatDollars(pricing.remainingCents)}</span
-							>
-						</span>
+						<dd>
+							<span class="line-through opacity-60">
+								<span class="sr-only">Before free hours:</span>${formatDollars(pricing.totalCents)}
+							</span>
+							<span class="ml-1 font-medium text-success">
+								<span class="sr-only">You pay:</span>${formatDollars(pricing.remainingCents)}
+							</span>
+						</dd>
 					{:else}
-						<span>${formatDollars(pricing.totalCents)}</span>
+						<dd>${formatDollars(pricing.totalCents)}</dd>
 					{/if}
 				</div>
 				{#if pricing.creditsApplicable > 0}
 					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
 					<div class="mt-1 flex justify-between text-success">
-						<span>Free hours applied</span>
-						<span>−{freeHours} {freeHours === 1 ? 'hr' : 'hrs'}</span>
+						<dt>Free hours applied</dt>
+						<dd>−{freeHours} {freeHours === 1 ? 'hr' : 'hrs'}</dd>
 					</div>
 				{/if}
-			</div>
+			</dl>
 		{/if}
 
 		{#if isRecurring}

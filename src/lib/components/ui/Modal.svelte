@@ -22,12 +22,28 @@
 		open = next;
 		if (!next) onclose?.();
 	}
+
+	let contentEl = $state<HTMLElement | null>(null);
+
+	// bits-ui focuses the first tabbable element on open, which here is the close
+	// button: a screen-reader user opening any action dialog heard "✕, button"
+	// before the dialog's own name. Focusing the dialog element announces the
+	// title first, and Tab still lands on the close button next.
+	function focusDialog(event: Event) {
+		event.preventDefault();
+		contentEl?.focus();
+	}
 </script>
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
 	<Dialog.Portal>
 		<Dialog.Overlay class="modal modal-open bg-black/40" />
-		<Dialog.Content class="modal modal-open">
+		<Dialog.Content
+			bind:ref={contentEl}
+			class="modal modal-open"
+			tabindex={-1}
+			onOpenAutoFocus={focusDialog}
+		>
 			<div class="modal-box {maxWidth}">
 				<div class="mb-4 flex items-center justify-between">
 					{#if titleSnippet}
@@ -35,7 +51,10 @@
 					{:else if title}
 						<Dialog.Title class="text-lg font-bold">{title}</Dialog.Title>
 					{/if}
-					<Dialog.Close class="btn btn-circle btn-outline btn-sm">✕</Dialog.Close>
+					<!-- The glyph is decoration; "Close" is the name the button is announced by. -->
+					<Dialog.Close class="btn btn-circle btn-outline btn-sm" aria-label="Close">
+						<span aria-hidden="true">✕</span>
+					</Dialog.Close>
 				</div>
 
 				{@render children()}
