@@ -109,6 +109,17 @@ interface SeriesInfo {
 	endsAt: Date | null;
 }
 
+/** Whether a member has been offboarded, so their series must stop generating. */
+async function isRemoved(userId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ deletedAt: user.deletedAt })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+
+	return !row || Boolean(row.deletedAt);
+}
+
 async function processSeries(
 	series: SeriesInfo
 ): Promise<{ created: number; waitlisted: number; skipped: number }> {
@@ -132,10 +143,34 @@ async function processSeries(
 
 	// Load user info for event emission
 	const [owner] = await db
-		.select({ name: user.name, email: user.email })
+		.select({ name: user.name, email: user.email, deletedAt: user.deletedAt })
 		.from(user)
 		.where(eq(user.id, prototype.createdByUserId))
 		.limit(1);
+
+	// A removed member's series keeps holding the room otherwise: offboarding
+	// cancels the reservations that exist and never stops the generator that
+	// makes more. Gated on the same two booker types deactivateUser cancels —
+	// a band or event series outlives whoever created it.
+	//
+	// A personal booking's member is `bookerId` (staff can book on someone's
+	// behalf); a teaching booking's `bookerId` points into `instructor`, whose
+	// `userId` is its `createdByUserId`.
+	const memberId =
+		prototype.bookerType === 'user'
+			? prototype.bookerId
+			: prototype.bookerType === 'instructor'
+				? prototype.createdByUserId
+				: null;
+
+	const memberRemoved =
+		memberId === null
+			? false
+			: memberId === prototype.createdByUserId
+				? !owner || Boolean(owner.deletedAt)
+				: await isRemoved(memberId);
+
+	if (memberRemoved) return { created: 0, waitlisted: 0, skipped: 0 };
 
 	// Compute prototype duration in ms
 	const durationMs = prototype.endsAt.getTime() - prototype.startsAt.getTime();
@@ -396,7 +431,7 @@ async function processEventSeries(
 
 	// Load creator info for staff notifications
 	const [owner] = await db
-		.select({ name: user.name, email: user.email })
+		.select({ name: user.name, email: user.email, deletedAt: user.deletedAt })
 		.from(user)
 		.where(eq(user.id, prototype.createdByUserId))
 		.limit(1);

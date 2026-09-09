@@ -46,9 +46,20 @@ vi.mock('$lib/server/event/community-event-service', () => ({
 	countPublishedListingsBy: (...a: unknown[]) => countPublishedListingsBy(...(a as []))
 }));
 
+const subResumeMock = vi.fn().mockResolvedValue(undefined);
+const getSubscriptionMock = vi.fn(async () => null as { cancelAtPeriodEnd: boolean } | null);
 vi.mock('$lib/server/finance/subscription-service', () => ({
-	cancel: (...args: unknown[]) => subCancelMock(...args)
+	cancel: (...args: unknown[]) => subCancelMock(...args),
+	resume: (...args: unknown[]) => subResumeMock(...args),
+	getSubscription: (...args: unknown[]) => getSubscriptionMock(...(args as []))
 }));
+
+const revokeMemberCodeMock = vi.fn().mockResolvedValue(undefined);
+vi.mock('$lib/server/lock/member-code-service', () => ({
+	revokeMemberCode: (...args: unknown[]) => revokeMemberCodeMock(...args)
+}));
+
+vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
 import {
 	deactivateUser,
@@ -67,6 +78,12 @@ beforeEach(() => {
 	updateResult = [];
 	cancelMock.mockClear();
 	subCancelMock.mockClear();
+	subResumeMock.mockClear();
+	subResumeMock.mockResolvedValue(undefined);
+	getSubscriptionMock.mockClear();
+	getSubscriptionMock.mockResolvedValue(null);
+	revokeMemberCodeMock.mockClear();
+	revokeMemberCodeMock.mockResolvedValue(undefined);
 	deleteWhere.mockClear();
 	updateSet.mockClear();
 });
@@ -78,7 +95,7 @@ beforeEach(() => {
 describe('deactivateUser', () => {
 	it('cancels future reservations and returns the row', async () => {
 		updateResult = [{ id: 'u1', deletedAt: new Date() }];
-		selectResultQueue = [[{ id: 'r1' }, { id: 'r2' }]]; // future reservations
+		selectResultQueue = [[], [{ id: 'r1' }, { id: 'r2' }]]; // door codes, future reservations
 
 		const row = await deactivateUser('u1');
 
@@ -91,7 +108,7 @@ describe('deactivateUser', () => {
 
 	it('purges the user session rows', async () => {
 		updateResult = [{ id: 'u1', deletedAt: new Date() }];
-		selectResultQueue = [[]]; // no future reservations
+		selectResultQueue = [[], []]; // no door codes, no future reservations
 
 		await deactivateUser('u1');
 
@@ -100,7 +117,7 @@ describe('deactivateUser', () => {
 
 	it('cancels the Stripe subscription when the user has a stripeId', async () => {
 		updateResult = [{ id: 'u1', stripeId: 'cus_1', deletedAt: new Date() }];
-		selectResultQueue = [[]];
+		selectResultQueue = [[], []];
 
 		await deactivateUser('u1');
 
@@ -109,11 +126,34 @@ describe('deactivateUser', () => {
 
 	it('skips subscription cancel when the user has no stripeId', async () => {
 		updateResult = [{ id: 'u1', stripeId: null, deletedAt: new Date() }];
-		selectResultQueue = [[]];
+		selectResultQueue = [[], []];
 
 		await deactivateUser('u1');
 
 		expect(subCancelMock).not.toHaveBeenCalled();
+	});
+
+	// A removed member could still open the building: nothing ages a door code
+	// out, and offboarding never told the lock. #809.
+	it('revokes the standing door codes the member still holds', async () => {
+		updateResult = [{ id: 'u1', deletedAt: new Date() }];
+		selectResultQueue = [[{ id: 'mc1' }, { id: 'mc2' }], []];
+
+		await deactivateUser('u1');
+
+		expect(revokeMemberCodeMock).toHaveBeenCalledTimes(2);
+		expect(revokeMemberCodeMock).toHaveBeenCalledWith('mc1', 'Account deactivated');
+	});
+
+	it('completes the removal when the lock cannot be reached', async () => {
+		updateResult = [{ id: 'u1', deletedAt: new Date() }];
+		selectResultQueue = [[{ id: 'mc1' }], [{ id: 'r1' }]];
+		revokeMemberCodeMock.mockRejectedValueOnce(new Error('lock offline'));
+
+		const row = await deactivateUser('u1');
+
+		expect(row).toMatchObject({ id: 'u1' });
+		expect(cancelMock).toHaveBeenCalledTimes(1);
 	});
 
 	it('throws UserNotFoundError when already deactivated / missing', async () => {
@@ -126,7 +166,7 @@ describe('deactivateUser', () => {
 describe('deactivateUsers', () => {
 	it('deactivates multiple users', async () => {
 		updateResult = [{ id: 'x', deletedAt: new Date() }];
-		selectResultQueue = [[], []]; // future reservations per user
+		selectResultQueue = [[], [], [], []]; // door codes + future reservations per user
 
 		const res = await deactivateUsers(['u1', 'u2']);
 
@@ -148,6 +188,47 @@ describe('reactivateUser', () => {
 	it('throws UserNotFoundError when not deactivated', async () => {
 		updateResult = [];
 		await expect(reactivateUser('u1')).rejects.toBeInstanceOf(UserNotFoundError);
+	});
+
+	// deactivateUser cancels at period end, so inside the period the membership
+	// is restorable with the call resume() already implements. #810.
+	it('resumes a subscription that was only cancelled at period end', async () => {
+		updateResult = [{ id: 'u1', stripeId: 'cus_1', deletedAt: null }];
+		getSubscriptionMock.mockResolvedValueOnce({ cancelAtPeriodEnd: true });
+
+		const row = await reactivateUser('u1');
+
+		expect(subResumeMock).toHaveBeenCalledWith('cus_1');
+		expect(row.subscription).toBe('resumed');
+	});
+
+	it('reports a subscription that already elapsed as lapsed', async () => {
+		updateResult = [{ id: 'u1', stripeId: 'cus_1', deletedAt: null }];
+		getSubscriptionMock.mockResolvedValueOnce(null);
+
+		const row = await reactivateUser('u1');
+
+		expect(subResumeMock).not.toHaveBeenCalled();
+		expect(row.subscription).toBe('lapsed');
+	});
+
+	it('leaves a subscription that was never cancelled alone', async () => {
+		updateResult = [{ id: 'u1', stripeId: 'cus_1', deletedAt: null }];
+		getSubscriptionMock.mockResolvedValueOnce({ cancelAtPeriodEnd: false });
+
+		const row = await reactivateUser('u1');
+
+		expect(subResumeMock).not.toHaveBeenCalled();
+		expect(row.subscription).toBe('active');
+	});
+
+	it('reports no subscription when the member never had one', async () => {
+		updateResult = [{ id: 'u1', stripeId: null, deletedAt: null }];
+
+		const row = await reactivateUser('u1');
+
+		expect(getSubscriptionMock).not.toHaveBeenCalled();
+		expect(row.subscription).toBe('none');
 	});
 });
 

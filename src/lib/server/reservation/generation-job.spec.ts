@@ -60,7 +60,7 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: { id: 'id', name: 'name', email: 'email' }
+	user: { id: 'id', name: 'name', email: 'email', deletedAt: 'deletedAt' }
 }));
 
 // `__table` is how `insertTableName` tells these apart. The real tables carry a
@@ -286,6 +286,25 @@ describe('generateRecurringReservations', () => {
 			instancesSkipped: 0,
 			errors: []
 		});
+	});
+
+	// Offboarding cancels the reservations that exist and never stopped the
+	// generator, so a removed member's series went on holding the room — a slot
+	// nobody could book and nothing would ever clear. #811.
+	it('generates nothing for a series whose member has been removed', async () => {
+		queueSelects(
+			[SERIES], // 1. active series
+			[PROTOTYPE], // 2. prototype reservation
+			[{ ...OWNER, deletedAt: new Date('2026-05-01T00:00:00Z') }] // 3. removed owner
+		);
+		setupInsert();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		const result = await generateRecurringReservations();
+
+		expect(result.instancesCreated).toBe(0);
+		expect(result.instancesWaitlisted).toBe(0);
+		expect(insertedRows).toHaveLength(0);
 	});
 
 	it('creates reservation instances for occurrences with no conflicts', async () => {

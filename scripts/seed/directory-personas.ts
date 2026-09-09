@@ -3,7 +3,7 @@ import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { db } from './db';
 import { scryptHash } from './hash';
 import { pendingEntries, pendingTags } from './pending';
-import { type SeedRole } from './types';
+import { type SeedRole, type SeedUser } from './types';
 import { randomUUID } from 'crypto';
 
 /**
@@ -45,7 +45,7 @@ import { randomUUID } from 'crypto';
 export async function seedDirectoryPersonas(roles: SeedRole[]) {
 	console.log('Seeding directory matching personas...');
 	const memberRole = roles.find((r) => r.name === 'member');
-	if (!memberRole) return { users: 0 };
+	if (!memberRole) return { users: 0, seeker: null, leader: null, undecided: null };
 
 	const hashedPassword = await scryptHash('password');
 	const now = new Date();
@@ -183,5 +183,14 @@ export async function seedDirectoryPersonas(roles: SeedRole[]) {
 	pendingTags.push({ subjectId: UNDECIDED.id, kind: 'instrument', value: 'keys' });
 	pendingTags.push({ subjectId: UNDECIDED.id, kind: 'genre', value: 'indie' });
 
-	return { users: 3 };
+	// The cast rides back out because these three are the natural senders and
+	// recipients of a direct message — one recruiting, one being recruited, one
+	// who wants nothing to do with it — and `seedDirectMessages` had been
+	// building its conversations on accounts that cannot sign in (#867).
+	return {
+		users: 3,
+		seeker: SEEKER as SeedUser,
+		leader: LEADER as SeedUser,
+		undecided: UNDECIDED as SeedUser
+	};
 }

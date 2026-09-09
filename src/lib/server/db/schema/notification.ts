@@ -233,6 +233,16 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'reservation_confirmed',
+		category: 'practice-space',
+		label: 'Reservation confirmed',
+		description: 'Your confirmation when a booking is locked in',
+		defaults: { email: true, inApp: true, sms: false }
+		// Not mandatory, by the same rule the membership block states: this
+		// confirms something the member just did themselves. The money side has
+		// its own receipt.
+	},
+	{
 		key: 'reservation_cancelled',
 		category: 'practice-space',
 		label: 'Reservation cancelled',

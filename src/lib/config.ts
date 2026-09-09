@@ -113,6 +113,17 @@ export const creditTypeConfig: Record<CreditType, { maxBalance: number | null }>
 export const CONFIRMATION_WINDOW_DAYS = 3;
 
 /**
+ * What every member surface says about a booking nobody confirmed.
+ *
+ * `cancelUnconfirmedReservations()` cancels anything still `scheduled` at its
+ * start time, so the card, the detail page and the confirmation reminder are
+ * all describing one sweep. Stated once because three wordings of the same
+ * policy is how two of them end up wrong.
+ */
+export const UNCONFIRMED_RELEASE_NOTICE =
+	'We hold the room until your session starts. A booking that is not confirmed by then is released.';
+
+/**
  * How long an unreferenced `media` row is left alone before the sweep reaps it
  * and deletes its R2 object.
  *

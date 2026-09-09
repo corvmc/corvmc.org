@@ -80,6 +80,8 @@ import {
 } from './seed/volunteer';
 import { seedVolunteerPersonas } from './seed/volunteer-personas';
 import { seedSustainingPersonas } from './seed/sustaining-personas';
+import { USAGE_PERSONAS, seedUsagePersonaLife, seedUsagePersonas } from './seed/usage-personas';
+import { STYLE_PERSONAS, seedStylePersonaHistory, seedStylePersonas } from './seed/style-personas';
 import { seedSuggestions } from './seed/suggestions';
 import { seedProjects } from './seed/projects';
 import { seedAudio } from './seed/audio';
@@ -114,6 +116,17 @@ async function main() {
 	// which should include it — or slices the first few, which should not.
 	const soloAct = await seedSoloAct(roles);
 	if (soloAct) bands.push(soloAct);
+	// Same window as the solo act: the band has to be in the pending maps before
+	// the entries and sites drain them. Appending covers the seeders that map the
+	// whole array; the three that take `slice(0, n)` are handed it by name below,
+	// which is why they grow an `alsoInclude` rather than a splice.
+	const usage = await seedUsagePersonas(roles);
+	if (usage) bands.push(usage.band);
+	// Beside it and for the same reason. Its band is the one the create-band modal
+	// leaves behind, so it is appended but deliberately not handed to the seeders
+	// that fill a band in — half-made is the whole of what it is for.
+	const style = await seedStylePersonas(roles);
+	if (style) bands.push(style.bareBand);
 	// Before the groups, which take their leaders from it. Kept out of `allUsers`
 	// for the reason `seedGroupLeaders` gives.
 	const groupLeaders = await seedGroupLeaders(roles);
@@ -132,7 +145,7 @@ async function main() {
 	const externalActs = await seedExternalActs();
 	const groupSessions = await seedGroupSessions(groups);
 	const groupDocuments = await seedGroupDocuments(groups, allUsers);
-	const bandEvents = await seedBandEvents(bands, allUsers);
+	const bandEvents = await seedBandEvents(bands, allUsers, usage ? [usage.band] : []);
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
 	// After the bill, because a production is the ops record for a night that
@@ -143,7 +156,7 @@ async function main() {
 	const runOfShow = await seedRunOfShow(productions.rows);
 	// After the bill, because an ask is against a listing on it.
 	const artifactRequests = await seedArtifactRequests(productions.rows);
-	const bandReservations = await seedBandReservations(bands);
+	const bandReservations = await seedBandReservations(bands, usage ? [usage.band] : []);
 	const bandSites = await seedBandSites(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
 	await seedFreePressKits(bands);
@@ -157,11 +170,33 @@ async function main() {
 	await seedCreditTransactions(allUsers);
 	const marketing = await seedMarketing(allUsers);
 	const eq = await seedEquipment(allUsers);
+	// After the equipment, which is the last thing it borrows from: the rest of
+	// what a weekly booker accumulates — bookings, a ticket, credits — needs only
+	// the events that already exist.
+	const usageLife = usage
+		? await seedUsagePersonaLife(usage.personas, events, adminUser)
+		: { reservations: 0, tickets: 0, loans: 0 };
+	const styleHistory = style
+		? await seedStylePersonaHistory(style.personas, events, adminUser)
+		: { reservations: 0, tickets: 0, notifications: 0 };
 	const help = await seedHelp();
 	const itemArticles = await seedItemArticles();
 	const contractors = await seedContractors(adminUser.id);
 	const inbox = await seedInbox(adminUser, users[0]);
-	const directMessages = await seedDirectMessages(users, adminUser);
+	const dmCast =
+		usage && directoryPersonas.seeker && directoryPersonas.leader && directoryPersonas.undecided
+			? {
+					jammer: usage.personas.get('seed-use-regular')!,
+					jamPartner: usage.personas.get('seed-use-bandmate')!,
+					recruiter: directoryPersonas.leader,
+					optedOut: directoryPersonas.undecided,
+					reporter: directoryPersonas.seeker,
+					restricted: usage.personas.get('seed-use-restricted')!
+				}
+			: null;
+	const directMessages = dmCast
+		? await seedDirectMessages(dmCast, adminUser)
+		: { threads: 0, blocks: 0, standings: 0 };
 	const bandEnquiries = await seedBandEnquiries(bands, allUsers);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
@@ -198,7 +233,7 @@ async function main() {
 	// Needs the bands and somebody to have bought something. Writes real audio
 	// into the local private bucket, so it is the one seeder that does I/O
 	// outside D1 — see its header for why rows alone are not enough.
-	const audio = await seedAudio(bands, allUsers);
+	const audio = await seedAudio(bands, allUsers, usage ? [usage.band] : []);
 	// After the bands and their rosters: a rider is owned corner by corner, so it
 	// reads the roster back rather than being handed one.
 	const riders = await seedRiders(roles);
@@ -334,6 +369,22 @@ async function main() {
 	console.log(
 		`    ${SOLO_ACT_LOGIN.email}    one-person act — /member/bands, /band/${SOLO_ACT_LOGIN.slug}`
 	);
+	console.log('\n  Usage demo logins (all `password`) — a job each, not a screen each:');
+	for (const p of USAGE_PERSONAS) {
+		console.log(`    ${p.email.padEnd(33)} ${p.job}`);
+	}
+	console.log(
+		`    ${usageLife.reservations} bookings, ${usageLife.tickets} tickets, ${usageLife.loans} loans on regular@`
+	);
+
+	console.log('\n  Usage-style demo logins (all `password`) — how, not what:');
+	for (const p of STYLE_PERSONAS) {
+		console.log(`    ${p.email.padEnd(33)} ${p.style}`);
+	}
+	console.log(
+		`    ${styleHistory.reservations} bookings, ${styleHistory.tickets} tickets, ${styleHistory.notifications} notifications between them`
+	);
+
 	console.log('\n  Volunteer deep links:');
 	console.log('    /member/volunteer/feedback/seed-vol-signup-feedback');
 	console.log('    /staff/volunteer/shifts/seed-vol-shift-cancelled');

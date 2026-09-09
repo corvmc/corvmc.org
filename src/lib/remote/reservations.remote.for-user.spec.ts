@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import type { SQL } from 'drizzle-orm';
 import { mockUser } from '$lib/server/db/test-factory';
 import { isStaff } from '$lib/server/authorization';
 
@@ -20,13 +22,18 @@ import { isStaff } from '$lib/server/authorization';
 const actingUser = mockUser({ id: 'user-1', name: 'Acting', email: 'acting@example.com' });
 
 const rows: unknown[] = [];
+/** What the list was ordered by, so a test can tell newest-first from oldest-first. */
+const orderByArgs: unknown[] = [];
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: () => {
 			const c: Record<string, unknown> = {
 				from: () => c,
 				where: () => c,
-				orderBy: () => Promise.resolve(rows)
+				orderBy: (arg: unknown) => {
+					orderByArgs.push(arg);
+					return Promise.resolve(rows);
+				}
 			};
 			return c;
 		}
@@ -74,6 +81,7 @@ const { getReservations } = (await import('$lib/remote/reservations.remote')) as
 
 beforeEach(() => {
 	rows.length = 0;
+	orderByArgs.length = 0;
 	vi.mocked(isStaff).mockReset();
 	vi.mocked(isStaff).mockResolvedValue(false);
 });
@@ -102,5 +110,31 @@ describe('getReservations({ forUser })', () => {
 	it('needs no forUser to list your own', async () => {
 		await expect(getReservations()).resolves.toEqual([]);
 		expect(isStaff).not.toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Regression: the All tab drew every reservation a member had ever had, oldest
+// first. Two years in that is 53 rows opening on their first-ever booking, with
+// no control to reverse it. History reads backward; an upcoming list does not.
+// #875.
+// ---------------------------------------------------------------------------
+
+describe('getReservations ordering', () => {
+	const dialect = new SQLiteSyncDialect();
+
+	it('lists history newest first when asked', async () => {
+		await getReservations({ includeTerminal: true, newestFirst: true });
+
+		const rendered = dialect.sqlToQuery(orderByArgs.at(-1) as SQL).sql;
+		expect(rendered).toMatch(/desc/i);
+	});
+
+	it('leaves an upcoming list reading forward', async () => {
+		await getReservations({});
+
+		// A bare column, not a `desc(...)` fragment: the next booking is the one
+		// that matters, so this list must not flip with the history one.
+		expect(orderByArgs.at(-1)).toHaveProperty('name', 'starts_at');
 	});
 });

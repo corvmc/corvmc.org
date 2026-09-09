@@ -207,7 +207,7 @@ content is either shipped (git history is the record) or was filed as an issue w
 | Doc                                                            | Status | Notes                                                                               |
 | -------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
 | [local-dev-quickstart.md](development/local-dev-quickstart.md) | ✅     | Zero to running locally: env, seed data, tests, Stripe test mode                    |
-| [business-workflows.md](development/business-workflows.md)     | ✅     | The eight core workflows, traced through code, with triage notes                    |
+| [business-workflows.md](development/business-workflows.md)     | ✅     | The fifteen core workflows, traced through code, with triage notes                  |
 | [conventions.md](development/conventions.md)                   | ✅     | Feature checklist, layering rules, custom lint rules, script reference              |
 | [feature-analysis.md](development/feature-analysis.md)         | ✅     | How to work out what to build — verify the premise, map handoffs, date the drift    |
 | [working-with-claude.md](development/working-with-claude.md)   | ✅     | Agent-instruction surface: CLAUDE.md vs rules vs skills vs hooks, verification loop |

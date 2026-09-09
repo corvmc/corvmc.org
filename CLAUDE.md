@@ -158,7 +158,9 @@ queue, which is the one way back to the race. No `--delete-branch` either: `gh` 
 while a queue is enabled, and the repo deletes merged branches on its own.
 
 The one thing queueing does not survive is a rejection: GitHub disarms auto-merge when the queue
-run goes red, and the queue does not pick the PR back up on its own. The failed run cannot be
+run goes red, and the queue does not pick the PR back up on its own. Note that it also consumes the
+auto-merge request on queue _entry_, so an unarmed PR is a running one about as often as it is a
+rejected one — read the `queue-rejected` label or the timeline, never the armed flag alone. The failed run cannot be
 re-run either — the `gh-readonly-queue/main/pr-<n>-<sha>` ref is deleted on dequeue, so re-arming
 auto-merge is the only way back in. `.github/workflows/merge-queue-guard.yml` catches the rejection
 and leaves a `queue-rejected` label plus a comment naming the failing job; nothing re-arms

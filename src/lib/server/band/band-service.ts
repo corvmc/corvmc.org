@@ -29,6 +29,7 @@ import {
 	isNull,
 	isNotNull,
 	count,
+	exists,
 	type SQL
 } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
@@ -98,7 +99,26 @@ export interface UpdateMemberData {
  * wanted here is on `band.id`.
  */
 const activeMemberCount = () =>
-	db.$count(groupMember, and(eq(groupMember.groupId, group.id), eq(groupMember.status, 'active')));
+	db.$count(
+		groupMember,
+		and(eq(groupMember.groupId, group.id), eq(groupMember.status, 'active'), memberAccountIsLive())
+	);
+
+/**
+ * The roster reads count and list people, and a person whose account was
+ * removed is not one of them: their `group_member` row survives untouched, so
+ * reactivation puts them back and the band's history is never destroyed.
+ *
+ * Correlated on `group_member.user_id`, so the subquery's own `FROM user`
+ * shadows any outer one — the same shadowing `activeMemberCount` relies on.
+ */
+const memberAccountIsLive = () =>
+	exists(
+		db
+			.select({ one: sql`1` })
+			.from(user)
+			.where(and(eq(user.id, groupMember.userId), isNull(user.deletedAt)))
+	);
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -401,7 +421,9 @@ async function selectGroupContext(where: SQL | undefined) {
 			customDomainVerification: bandSite.customDomainVerification,
 			createdAt: group.createdAt,
 			updatedAt: group.updatedAt,
-			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`
+			// `user.deleted_at is null` for the same reason every other roster read
+			// carries it: a removed member is off the roster, not still counted on it.
+			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' and ${user.deletedAt} is null then 1 end)`
 		})
 		.from(group)
 		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
@@ -414,6 +436,7 @@ async function selectGroupContext(where: SQL | undefined) {
 			)
 		)
 		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
+		.leftJoin(user, eq(user.id, groupMember.userId))
 		.where(where)
 		.groupBy(group.id);
 
@@ -519,7 +542,10 @@ export async function listBandAdmins(
 			and(
 				eq(groupMember.groupId, bandId),
 				inArray(groupMember.role, ['owner', 'admin']),
-				eq(groupMember.status, 'active')
+				eq(groupMember.status, 'active'),
+				// This list is fanned out to as a notification recipient set, so a
+				// removed member kept getting band mail without it.
+				isNull(user.deletedAt)
 			)
 		);
 
@@ -543,7 +569,7 @@ export async function getMembers(bandId: string) {
 		})
 		.from(groupMember)
 		.innerJoin(user, eq(user.id, groupMember.userId))
-		.where(eq(groupMember.groupId, bandId))
+		.where(and(eq(groupMember.groupId, bandId), isNull(user.deletedAt)))
 		.orderBy(
 			sql`case ${groupMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
 			user.name

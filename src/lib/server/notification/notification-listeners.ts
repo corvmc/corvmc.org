@@ -1,5 +1,5 @@
 import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { INVITE_EXPIRY_DAYS } from '$lib/config';
+import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE } from '$lib/config';
 import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
 import { fanOutAnnouncement } from '$lib/server/group/announcement-fanout';
@@ -265,7 +265,7 @@ export function registerAllNotificationListeners(): void {
 						userEmail: holder.attendeeEmail,
 						title: `${event.eventTitle} has been cancelled`,
 						body: event.refundNote,
-						href: '/member/tickets',
+						href: '/member/purchases',
 						email
 					});
 				} else {
@@ -319,7 +319,9 @@ export function registerAllNotificationListeners(): void {
 				subject: `Please confirm your reservation: ${event.date}`,
 				preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
 				heading: 'Please confirm your reservation',
-				paragraphs: [{ text: 'You have an unconfirmed reservation.' }],
+				paragraphs: [
+					{ text: `You have an unconfirmed reservation. ${UNCONFIRMED_RELEASE_NOTICE}` }
+				],
 				details: whenDetails(event.date, event.startTime, event.endTime),
 				footnote: 'Please confirm or cancel your reservation to free up the time slot for others.',
 				cta: { label: 'Confirm now' }
@@ -356,7 +358,9 @@ export function registerAllNotificationListeners(): void {
 					userEmail: admin.userEmail,
 					title: `${event.acceptedByName} joined ${event.bandName}`,
 					body: 'A new member has joined your band',
-					href: `/member/bands/${event.bandId}`,
+					// The acts list, not the band: a band page is addressed by slug and
+					// this bus carries ids.
+					href: '/member/bands',
 					email: {
 						recipientName: admin.userName,
 						subject: `${event.acceptedByName} joined ${event.bandName}`,
@@ -754,6 +758,34 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Reservation confirmed ---
+	//
+	// The payload was assembled for exactly this and had no consumer: the service
+	// loads the owner's row purely to fill in `userEmail`, `date`, `startTime`
+	// and `endTime`, and wraps the emit in a try/catch because a listener that
+	// throws would fail a booking after the money had moved. Until now nothing
+	// listened, so a member who booked and paid for a room was never told.
+	domainEvents.on('reservation.confirmed', async ({ data: event }) => {
+		await dispatch({
+			type: 'reservation_confirmed',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Reservation confirmed',
+			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
+			href: '/member/reservations',
+			email: {
+				recipientName: event.userName,
+				subject: `Reservation confirmed: ${event.date}`,
+				preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
+				heading: 'Reservation confirmed',
+				paragraphs: [{ text: 'The practice room is yours for this slot.' }],
+				details: whenDetails(event.date, event.startTime, event.endTime),
+				footnote: 'Cancel from your reservations page if your plans change.',
+				cta: { label: 'View my reservations' }
+			}
+		});
+	});
+
 	// --- Reservation cancelled (notify member; skip self-cancels) ---
 	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
 		// Members who cancel their own reservation don't need an email about it.
@@ -971,7 +1003,9 @@ export function registerAllNotificationListeners(): void {
 					body: event.notes
 						? `CMC staff removed this event from the public gig guide: ${event.notes}`
 						: 'CMC staff removed this event from the public gig guide following a report.',
-					href: `/member/bands/${event.bandId}`,
+					// Where the listing is republished from, which is what the email asks
+					// them to do.
+					href: `/member/events/${event.eventId}/manage`,
 					email: {
 						recipientName: admin.userName,
 						subject: `Your event "${event.eventTitle}" was unlisted`,

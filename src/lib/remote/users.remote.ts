@@ -535,13 +535,16 @@ export const reactivateUser = form(
 	}),
 	async (data) => {
 		await requireCapability('user.deactivate');
+		let subscription: 'resumed' | 'active' | 'lapsed' | 'none' = 'none';
 		try {
-			await reactivateUserService(data.id);
+			({ subscription } = await reactivateUserService(data.id));
 		} catch (err) {
 			mapDomainError(err);
 		}
 		void getUserPage(data.id).refresh();
-		return { success: true };
+		// `lapsed` is the one outcome staff have to act on: the membership needs a
+		// fresh checkout rather than the resume the other cases got.
+		return { success: true, subscription };
 	}
 );
 

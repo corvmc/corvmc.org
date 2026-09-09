@@ -16,6 +16,25 @@ gh pr list --repo corvmc/corvmc.org --label queue-rejected --state open \
 
 Empty output means nothing is stranded. Say so and stop.
 
+**The label is the signal; the armed flag is not.** GitHub consumes the auto-merge request when a
+PR _enters_ the queue, so `gh pr view <n> --json autoMergeRequest` returns `null` for the whole
+~8 minutes a healthy PR is mid-run. Acting on that reading means firing `gh pr merge --auto` at a
+PR that is already queued.
+
+| Reading                                             | Means                                             |
+| --------------------------------------------------- | ------------------------------------------------- |
+| unarmed + `added_to_merge_queue`, no later `merged` | running — leave it alone                          |
+| unarmed + `queue-rejected` label + guard comment    | rejected                                          |
+| `removed_from_merge_queue` with nothing after it    | rejected                                          |
+| armed + `BLOCKED`                                   | still on its own PR-head checks, not enqueued yet |
+
+When a PR arrives without the label — the user names it, or a watch caught it flipping — read the
+timeline before triaging it:
+
+```bash
+gh api repos/corvmc/corvmc.org/issues/<N>/timeline --jq '.[] | select(.event) | .event'
+```
+
 ## Per PR
 
 **Read the guard's own comment first.** It names the failing tests (from GitHub's
