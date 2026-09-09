@@ -70,6 +70,14 @@ export const eventListing = sqliteTable(
 		doorsAt: integer('doors_at', { mode: 'timestamp' }),
 		status: text('status', { enum: eventStatuses }).notNull().default('draft'),
 		publishedAt: integer('published_at', { mode: 'timestamp' }),
+		/**
+		 * When this is meant to go public, as opposed to when it did.
+		 *
+		 * Publishing has always been immediate, so "announce Monday at 10" was a
+		 * person remembering. Nullable: a listing published on the spot never
+		 * needed one.
+		 */
+		announceAt: integer('announce_at', { mode: 'timestamp' }),
 		reservationId: text('reservation_id').references(() => reservation.id),
 		posterKey: text('poster_key'),
 		tags: text('tags'),

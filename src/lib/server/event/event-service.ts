@@ -108,6 +108,16 @@ export class EventStateError extends DomainError {
 	}
 }
 
+/** A CMC listing that is not ready to be seen, and what it is missing. */
+export class EventNotReadyError extends DomainError {
+	readonly httpStatus = 422;
+
+	constructor(readonly blockers: string[]) {
+		super(`Not ready to announce: ${blockers.join(', ')}.`);
+		this.name = 'EventNotReadyError';
+	}
+}
+
 /**
  * Deleting would strand the people holding tickets. Cancelling is the way out:
  * it voids the tickets and notifies their holders.
@@ -708,7 +718,79 @@ async function restoreWithheldPoster(eventId: string): Promise<void> {
  * splitting it into two functions would mean two places to get the
  * publishedAt/status pair right.
  */
+/**
+ * CMC shows that are close and still not public.
+ *
+ * No query answered this, so an unannounced show was noticed by someone
+ * remembering it. Ordered soonest first, because that is the order they stop
+ * being fixable in.
+ */
+export async function unannouncedShows(withinDays = 21, now = new Date()) {
+	const horizon = new Date(now.getTime() + withinDays * 86_400_000);
+	return db
+		.select({
+			id: eventListing.id,
+			title: eventListing.title,
+			startsAt: eventListing.startsAt,
+			announceAt: eventListing.announceAt,
+			status: eventListing.status
+		})
+		.from(eventListing)
+		.where(
+			and(
+				eq(eventListing.source, 'cmc'),
+				inArray(eventListing.status, ['draft', 'pending_review']),
+				gt(eventListing.startsAt, now),
+				lte(eventListing.startsAt, horizon)
+			)
+		)
+		.orderBy(asc(eventListing.startsAt));
+}
+
+/**
+ * What a CMC listing still needs before the public sees it.
+ *
+ * Community listings are exempt: a member posting somebody else's gig is not
+ * making a promise on the collective's behalf, and gating them would break the
+ * community calendar.
+ */
+export async function publishBlockers(eventId: string): Promise<string[]> {
+	const [row] = await db
+		.select({
+			source: eventListing.source,
+			description: eventListing.description,
+			posterKey: eventListing.posterKey,
+			productionStatus: production.status
+		})
+		.from(eventListing)
+		.leftJoin(production, eq(production.eventId, eventListing.id))
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
+
+	if (!row || row.source !== 'cmc') return [];
+
+	const blockers: string[] = [];
+	// Announcing a show whose lineup is not agreed is the promise the collective
+	// cannot keep. Cancellation already cascades listing → production; this is
+	// the same coherence in the other direction.
+	if (
+		row.productionStatus &&
+		!['confirmed', 'completed', 'settled', 'closed'].includes(row.productionStatus)
+	) {
+		blockers.push('the production is not confirmed yet');
+	}
+	if (!row.posterKey) blockers.push('there is no poster');
+	if (!row.description?.trim()) blockers.push('there is no description');
+	return blockers;
+}
+
 export async function publish(eventId: string): Promise<void> {
+	// The readiness gate. A CMC show used to go public with no poster, no
+	// description and an unconfirmed lineup, because `publish` checked its own
+	// status and nothing else.
+	const blockers = await publishBlockers(eventId);
+	if (blockers.length > 0) throw new EventNotReadyError(blockers);
+
 	await restoreWithheldPoster(eventId);
 
 	const result = await db
