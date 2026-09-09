@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "7f2c35d5-44a4-41ff-8b43-f5e3a0d5bca2",
+  "id": "51f81237-2223-451a-8609-d03e5d5d64bc",
   "prevIds": [
     "43332c45-3680-4fd4-ab52-840a02c109e6"
   ],
@@ -400,6 +400,10 @@
     },
     {
       "name": "financial_entry",
+      "entityType": "tables"
+    },
+    {
+      "name": "artifact_request",
       "entityType": "tables"
     },
     {
@@ -2009,16 +2013,6 @@
       "default": null,
       "generated": null,
       "name": "published_at",
-      "entityType": "columns",
-      "table": "event_listing"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "announce_at",
       "entityType": "columns",
       "table": "event_listing"
     },
@@ -11123,6 +11117,96 @@
       "table": "financial_entry"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "entry_id",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "artifact",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "due_at",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "requested_by_user_id",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "requested_at",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_at",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -13944,6 +14028,51 @@
     },
     {
       "columns": [
+        "event_id"
+      ],
+      "tableTo": "event_listing",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_artifact_request_event_id_event_listing_id_fk",
+      "entityType": "fks",
+      "table": "artifact_request"
+    },
+    {
+      "columns": [
+        "entry_id"
+      ],
+      "tableTo": "directory_entry",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_artifact_request_entry_id_directory_entry_id_fk",
+      "entityType": "fks",
+      "table": "artifact_request"
+    },
+    {
+      "columns": [
+        "requested_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_artifact_request_requested_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "artifact_request"
+    },
+    {
+      "columns": [
         "role_id",
         "user_id"
       ],
@@ -14826,6 +14955,15 @@
       "nameExplicit": false,
       "name": "financial_entry_pk",
       "table": "financial_entry",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "artifact_request_pk",
+      "table": "artifact_request",
       "entityType": "pks"
     },
     {
@@ -18185,6 +18323,56 @@
       "name": "idx_financial_entry_project",
       "entityType": "indexes",
       "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        },
+        {
+          "value": "entry_id",
+          "isExpression": false
+        },
+        {
+          "value": "artifact",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_artifact_request_live",
+      "entityType": "indexes",
+      "table": "artifact_request"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_artifact_request_event",
+      "entityType": "indexes",
+      "table": "artifact_request"
+    },
+    {
+      "columns": [
+        {
+          "value": "due_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_artifact_request_due",
+      "entityType": "indexes",
+      "table": "artifact_request"
     },
     {
       "columns": [

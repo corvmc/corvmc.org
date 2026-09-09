@@ -471,6 +471,25 @@ export const productionExpenseCategoryLabels: Record<ProductionExpenseCategory, 
 	other: 'Other'
 };
 
+/**
+ * What CMC asks an act or an artist to hand over before a show.
+ *
+ * The collection surfaces already exist — `/band/[slug]/rider`,
+ * `/band/[slug]/press-kit`, and `/act/[token]` for an act with no account.
+ * A request is the asking, and whether it arrived is **derived** from the
+ * artifact rather than stored, so a rider filled in without being asked still
+ * counts. See `docs/development/feature-analysis.md` on one mechanism serving
+ * several features.
+ */
+export const requestableArtifacts = ['tech_rider', 'epk', 'poster_art'] as const;
+export type RequestableArtifact = (typeof requestableArtifacts)[number];
+
+export const requestableArtifactLabels: Record<RequestableArtifact, string> = {
+	tech_rider: 'Tech rider',
+	epk: 'Press kit',
+	poster_art: 'Poster art'
+};
+
 /** How the money actually moved, and the key a Stripe cross-check joins on. */
 export const financialSettlements = ['stripe', 'cash', 'credit', 'none'] as const;
 export type FinancialSettlement = (typeof financialSettlements)[number];
