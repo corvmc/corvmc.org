@@ -57,6 +57,8 @@ async function registerCheckoutListeners(): Promise<void> {
 	const { handleTicketCheckout } = await import('$lib/server/ticket/checkout-listener');
 	const { handleBandPremiumCheckout } = await import('$lib/server/band/band-checkout-listener');
 	const { handleAudioCheckout } = await import('$lib/server/audio/checkout-listener');
+	const { handleCheckoutCache } = await import('$lib/server/finance/checkout-cache-listener');
+	const { handleCheckoutEntries } = await import('$lib/server/finance/checkout-entries-listener');
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleReservationCheckout(event.stripeSession);
@@ -72,6 +74,16 @@ async function registerCheckoutListeners(): Promise<void> {
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleAudioCheckout(event.stripeSession);
+	});
+
+	// Last, and best-effort inside: the domain handlers above have already given
+	// the member what they paid for, and a cache write must not undo that.
+	domainEvents.on('checkout.completed', async ({ data: event }) => {
+		await handleCheckoutCache(event.stripeSession);
+	});
+
+	domainEvents.on('checkout.completed', async ({ data: event }) => {
+		await handleCheckoutEntries(event.stripeSession);
 	});
 }
 
@@ -156,7 +168,6 @@ async function registerInboxListeners(): Promise<void> {
 	}): Promise<void> {
 		const { bandOfThread } = await import('$lib/server/inbox/band-service');
 		const { getById, listBandAdmins } = await import('$lib/server/band/band-service');
-		const { env } = await import('$env/dynamic/private');
 
 		const groupId = await bandOfThread(event.threadId);
 		if (!groupId) return;
@@ -164,7 +175,6 @@ async function registerInboxListeners(): Promise<void> {
 		const [band, admins] = await Promise.all([getById(groupId), listBandAdmins(groupId)]);
 		if (!band || admins.length === 0) return;
 
-		const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 		const href = `/band/${band.slug}/messages/${event.threadId}`;
 		const from = event.contactName ?? 'Someone';
 
@@ -177,20 +187,15 @@ async function registerInboxListeners(): Promise<void> {
 					title: `${from} contacted ${band.name}`,
 					body: event.preview,
 					href,
-					emailTemplate: {
-						alias: 'notification',
-						model: {
-							subject: `New booking enquiry — ${band.name}`,
-							heading: 'New enquiry',
-							greeting: `Hi ${admin.userName},`,
-							paragraphs: [
-								{ text: `${from} used the booking form on ${band.name}'s public page.` }
-							],
-							quote: event.preview,
-							cta: { url: `${siteUrl}${href}`, label: 'Read and reply' },
-							footnote:
-								'Reply on the site — it reaches them by email, and neither of you sees the other’s address.'
-						}
+					email: {
+						recipientName: admin.userName,
+						subject: `New booking enquiry — ${band.name}`,
+						heading: 'New enquiry',
+						paragraphs: [{ text: `${from} used the booking form on ${band.name}'s public page.` }],
+						quote: event.preview,
+						cta: { label: 'Read and reply' },
+						footnote:
+							'Reply on the site — it reaches them by email, and neither of you sees the other’s address.'
 					}
 				});
 			} catch (err) {
@@ -210,7 +215,6 @@ async function registerInboxListeners(): Promise<void> {
 		const { db } = await import('$lib/server/db');
 		const { user } = await import('$lib/server/db/schema/authentication');
 		const { inArray } = await import('drizzle-orm');
-		const { env } = await import('$env/dynamic/private');
 
 		const thread = await findThreadById(event.threadId);
 		if (!thread) return;
@@ -224,8 +228,6 @@ async function registerInboxListeners(): Promise<void> {
 			.from(user)
 			.where(inArray(user.id, recipientIds));
 
-		const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
-		const url = `${siteUrl}/member/messages/${event.threadId}`;
 		const subject = thread.subject ?? 'your message';
 
 		for (const recipient of recipients) {
@@ -237,18 +239,15 @@ async function registerInboxListeners(): Promise<void> {
 					title: `CorvMC replied to "${subject}"`,
 					body: thread.preview ?? undefined,
 					href: `/member/messages/${event.threadId}`,
-					emailTemplate: {
-						alias: 'notification',
-						model: {
-							subject: `Re: ${subject}`,
-							preview_text: thread.preview ?? 'You have a new reply.',
-							heading: 'New reply',
-							greeting: `Hi ${recipient.name},`,
-							paragraphs: [{ text: 'A staff member replied to your conversation with CorvMC.' }],
-							// Raw — the dispatcher escapes it and preserves the line breaks.
-							quote: thread.preview ?? '',
-							cta: { url, label: 'View Conversation' }
-						}
+					email: {
+						recipientName: recipient.name,
+						subject: `Re: ${subject}`,
+						preview_text: thread.preview ?? 'You have a new reply.',
+						heading: 'New reply',
+						paragraphs: [{ text: 'A staff member replied to your conversation with CorvMC.' }],
+						// Raw — the dispatcher escapes it and preserves the line breaks.
+						quote: thread.preview ?? '',
+						cta: { label: 'View conversation' }
 					}
 				});
 			} catch (err) {

@@ -68,7 +68,7 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 	await expect(dialog).toBeHidden({ timeout: 20000 });
 
 	// The booking lands on the band's list, visible to the whole band.
-	const upcomingRow = page.locator('.card', { hasText: 'Booked by' }).first();
+	const upcomingRow = page.locator('.reservation-card', { hasText: 'Booked by' }).first();
 	await expect(upcomingRow).toBeVisible({ timeout: 15000 });
 	await expect(upcomingRow.getByRole('button', { name: 'Cancel' })).toBeVisible();
 
@@ -77,7 +77,7 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 	await login(page, SEED_BANDMATE_EMAIL, SEED_BANDMATE_PASSWORD);
 	await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/reservations`);
 
-	const mateRow = page.locator('.card', { hasText: 'Booked by' }).first();
+	const mateRow = page.locator('.reservation-card', { hasText: 'Booked by' }).first();
 	await expect(mateRow).toBeVisible({ timeout: 15000 });
 	await expect(mateRow.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
 });

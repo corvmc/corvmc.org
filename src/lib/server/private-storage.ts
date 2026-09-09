@@ -23,7 +23,7 @@
  * no per-bucket "private" switch to get wrong.
  *
  * The surface is deliberately thin. Three consumers were designed and unbuilt —
- * group documents (`docs/specs/groups-spec.md`), contractor invoices, and
+ * group documents (`docs/specs/shipped/groups-spec.md`), contractor invoices, and
  * digital downloads — and each will want different key conventions, validation
  * and retention. Guessing at those now would mean three callers bending around
  * one wrong abstraction, so this exposes the bucket and lets the first real
@@ -36,6 +36,8 @@
  * everybody is `MAX_DOCUMENT_BYTES`, which is a property of the 128 MB isolate
  * the body passes through rather than of documents.
  */
+
+import { getBucket } from '$lib/server/storage';
 
 let _bucket: R2Bucket;
 
@@ -109,6 +111,36 @@ export async function getPrivateObject(key: string): Promise<R2ObjectBody | null
  */
 export async function deletePrivateObject(key: string): Promise<void> {
 	await getPrivateBucket().delete(key);
+}
+
+/**
+ * Move bytes into this bucket from the public one, or null when the source is
+ * already gone. Returns the destination **key**, never a URL — the rule at the
+ * top of this file still holds, and `getBucket` is the only thing imported from
+ * `storage.ts` precisely so that `getPublicUrl` is not in scope here.
+ *
+ * Streams rather than buffering, so `MAX_DOCUMENT_BYTES` cannot be checked. That
+ * is correct: the source object is already in R2 and was size-checked on its way
+ * in, and re-reading it into the isolate to count bytes is the one thing a copy
+ * must not do.
+ */
+export async function copyToPrivate(srcKey: string, destKey: string): Promise<string | null> {
+	const src = await getBucket().get(srcKey);
+	if (!src) return null;
+	await getPrivateBucket().put(destKey, src.body, { httpMetadata: src.httpMetadata });
+	return destKey;
+}
+
+/**
+ * The other direction: back out to the public bucket, for a successful appeal.
+ * Same contract, and the caller is responsible for deleting the private source
+ * only after nothing names it any more.
+ */
+export async function copyFromPrivate(srcKey: string, destKey: string): Promise<string | null> {
+	const src = await getPrivateBucket().get(srcKey);
+	if (!src) return null;
+	await getBucket().put(destKey, src.body, { httpMetadata: src.httpMetadata });
+	return destKey;
 }
 
 /** One listed object. Deliberately not an `R2Object`: nothing downstream needs its body or metadata. */

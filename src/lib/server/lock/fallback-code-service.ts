@@ -174,16 +174,27 @@ export async function rotateFallbackCodeNow(): Promise<{ ok: boolean; error?: st
 }
 
 // ---------------------------------------------------------------------------
-// Reveal
+// Handing it out
 // ---------------------------------------------------------------------------
 
 /**
- * Whether to show this member the break-glass code. All three must hold:
- * the reservation is confirmed; now is inside the access window, with the
- * grace the lock itself gives; and their own code is not confirmed on the
- * device.
+ * Whether the booking is live right now, counting the grace the lock itself
+ * gives either side. The break-glass code opens the door at any hour, so it is
+ * only ever handed to someone whose session is actually happening.
+ */
+export function isInAccessWindow(row: { startsAt: Date; endsAt: Date }): boolean {
+	const now = Date.now();
+	const graceMs = LOCK_GRACE_MINUTES * 60_000;
+	return now >= row.startsAt.getTime() - graceMs && now <= row.endsAt.getTime() + graceMs;
+}
+
+/**
+ * The break-glass code for this booking, or null. All three must hold: it is
+ * confirmed, inside the access window, and its own code is not on the device.
  *
- * Revealing stamps `lockFallbackRevealedAt`: the record of who was given it.
+ * Not a gesture (#780) — every page that shows a door code calls this on load,
+ * so nobody has to ask for what their bandmates already read. The stamp stays
+ * as the record that this booking fell back.
  */
 export async function revealFallbackCodeFor(row: {
 	id: string;
@@ -194,11 +205,7 @@ export async function revealFallbackCodeFor(row: {
 }): Promise<string | null> {
 	if (row.status !== 'confirmed') return null;
 	if (row.lockSyncedAt) return null;
-
-	const now = Date.now();
-	const graceMs = LOCK_GRACE_MINUTES * 60_000;
-	if (now < row.startsAt.getTime() - graceMs) return null;
-	if (now > row.endsAt.getTime() + graceMs) return null;
+	if (!isInAccessWindow(row)) return null;
 
 	const active = await getActiveFallbackCode();
 	if (!active) return null;

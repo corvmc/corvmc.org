@@ -15,7 +15,12 @@
 	import { toast } from 'svelte-sonner';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { IconMail, IconBell } from '@tabler/icons-svelte';
-	import { updateProfile, changePassword, deleteAccount } from '$lib/remote/account.remote';
+	import {
+		updateProfile,
+		changePassword,
+		deleteAccount,
+		resendVerificationEmail
+	} from '$lib/remote/account.remote';
 	import { ADULT_AGE_YEARS, toBirthDateInput } from '$lib/utils/age';
 	import {
 		getMemberAccountPage,
@@ -58,6 +63,25 @@
 					readonly
 					description="Contact staff to change your email address."
 				/>
+
+				<!-- Nothing on the site is gated on this. Confirming is what lets us
+				     attach a mailing list this address was already on (#757). -->
+				{#if !data.user.emailVerified}
+					<Alert type="info">
+						This address is not confirmed yet. Your account works either way — confirming lets us
+						link any mailing list you joined with it before.
+						{#snippet action()}
+							<Action
+								action={resendVerificationEmail}
+								label="Resend link"
+								size="sm"
+								variant="default"
+								successToast="Verification email sent"
+								onfailure={() => toast.error('Could not send the email')}
+							/>
+						{/snippet}
+					</Alert>
+				{/if}
 
 				<FormField
 					field={fields.phone}

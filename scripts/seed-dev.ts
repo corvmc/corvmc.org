@@ -49,10 +49,12 @@ import { seedBandEvents } from './seed/band-events';
 import { seedCommunityEvents } from './seed/community-events';
 import { seedCmcEventLineups } from './seed/lineups';
 import { seedProductions } from './seed/productions';
+import { seedArtifactRequests } from './seed/artifact-requests';
 import { seedRunOfShow } from './seed/run-of-show';
 import { seedBandReservations } from './seed/band-reservations';
 import { seedBandSites, seedBandPageConfigs, seedFreePressKits } from './seed/band-sites';
 import { seedRecurringSeries } from './seed/recurring';
+import { seedFinancialEntries } from './seed/financial-entries';
 import { seedPaymentRecords } from './seed/payments';
 import { seedTickets } from './seed/tickets';
 import { seedRsvps } from './seed/rsvps';
@@ -82,6 +84,7 @@ import { seedSuggestions } from './seed/suggestions';
 import { seedProjects } from './seed/projects';
 import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
+import { seedPacking } from './seed/packing';
 
 async function main() {
 	console.log('\nStarting dev seed...\n');
@@ -138,12 +141,15 @@ async function main() {
 	// After the productions, because a slot hangs off one — and it reads the bill
 	// back rather than being handed it, the way the rider seeder reads a roster.
 	const runOfShow = await seedRunOfShow(productions.rows);
+	// After the bill, because an ask is against a listing on it.
+	const artifactRequests = await seedArtifactRequests(productions.rows);
 	const bandReservations = await seedBandReservations(bands);
 	const bandSites = await seedBandSites(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
 	await seedFreePressKits(bands);
 	const series = await seedRecurringSeries(allUsers);
 	const payments = await seedPaymentRecords(allUsers, reservations);
+	const financialEntries = await seedFinancialEntries(allUsers, reservations);
 	const tickets = await seedTickets(allUsers, events);
 	const rsvps = await seedRsvps(allUsers);
 	const notifications = await seedNotifications(allUsers);
@@ -196,6 +202,9 @@ async function main() {
 	// After the bands and their rosters: a rider is owned corner by corner, so it
 	// reads the roster back rather than being handed one.
 	const riders = await seedRiders(roles);
+	// Straight after the rider, whose band and logins it reuses: one account
+	// reaches both features, and the promote path has a real rider to aim at.
+	const packing = await seedPacking(riders.structuredBandId);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -233,6 +242,7 @@ async function main() {
 	console.log(`  ${pageConfigs.length} band page configs with EPK data`);
 	console.log(`  ${series.length} recurring series`);
 	console.log(`  ${payments.length} payment records`);
+	console.log(`  ${financialEntries.length} financial entries`);
 	console.log(`  ${tickets.length} tickets`);
 	console.log(`  ${rsvps.length} RSVPs`);
 	console.log(`  ${notifications.length} notifications`);
@@ -281,12 +291,18 @@ async function main() {
 		`  ${runOfShow.slots} run-of-show sets — ${runOfShow.uncredited} on no poster, ${runOfShow.withoutTimes} with no downbeat yet`
 	);
 	console.log(
+		`  ${artifactRequests.requests} artifact requests across the bills, half of them overdue`
+	);
+	console.log(
 		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +
 			`${audio.purchases} sales, ${audio.accounts} band Stripe accounts, ` +
 			`${audio.radioEntries} radio entries`
 	);
 	console.log(
 		`  ${riders.riders} tech riders — ${riders.structuredBand ?? '—'} (fits the room), ${riders.oversizedBand ?? '—'} (over it); ${riders.uploadBand ?? '—'} uploaded a PDF; ${riders.emptyBand ?? '—'} has nothing`
+	);
+	console.log(
+		`  ${packing.items} packing rows on the same band — ${packing.packed} already in the van, ${packing.unassigned} nobody has yet, ${packing.settled} already on the rider`
 	);
 	console.log('\n  Tech rider demo logins (all `password`):');
 	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');

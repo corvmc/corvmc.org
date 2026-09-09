@@ -14,7 +14,8 @@
 		IconCrown,
 		IconBrush,
 		IconExternalLink,
-		IconPlug
+		IconPlug,
+		IconPackage
 	} from '@tabler/icons-svelte';
 	import { env } from '$env/dynamic/public';
 	import { bandSiteUrl } from '$lib/utils/band-site-url';
@@ -71,6 +72,7 @@
 		messages: IconMessages,
 		members: IconUsersGroup,
 		rider: IconPlug,
+		packing: IconPackage,
 		announcements: IconSpeakerphone,
 		reservations: IconCalendar,
 		events: IconCalendarEvent,

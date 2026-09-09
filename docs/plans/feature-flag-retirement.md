@@ -162,7 +162,7 @@ feature branch, not a flag.
 
 Specs: `bandPremium`, `emailMarketing`, `contentFlags`, `directMessages` and `volunteering` all have
 specs in `docs/specs/shipped/`. `groups`, `groupEvents`, `announcements` and `groupFiles` belong to
-`docs/specs/groups-spec.md`, whose phase table shows 0–10 complete and only phase 8 deferred.
+`docs/specs/shipped/groups-spec.md`, whose phase table shows 0–10 complete and only phase 8 deferred.
 `helpArticles` has no spec.
 
 ### If a feature is not ready to launch
@@ -193,7 +193,7 @@ Then one final PR deletes the machinery: `src/lib/server/feature-flags.ts` and i
 `e2e/prepare.ts`, the `feature.volunteering` write in `seed-volunteering.ts`, the `feature.*` block
 in `DEFAULTS`, and the docs that describe the system —
 `docs/reports/feature-catalog.md` §Feature flags, `docs/architecture/overview.md`,
-`docs/specs/groups-spec.md` §Feature flags and rollout, `docs/development/business-workflows.md`,
+`docs/specs/shipped/groups-spec.md` §Feature flags and rollout, `docs/development/business-workflows.md`,
 `docs/architecture/operations-manual.md`, `docs/development/local-dev-quickstart.md`, `CLAUDE.md`
 and `.claude/rules/remote-functions.md`. Run `pnpm docs:check`.
 

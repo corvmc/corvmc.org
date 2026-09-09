@@ -81,7 +81,7 @@ export type DirectoryTagKind = (typeof directoryTagKinds)[number];
  * **This table is authoritative.** The phase-3a port landed and the listing
  * columns it replaced were dropped from `user` and `group` in 3c, so this is the
  * only place a member's or a group's public presence lives. See
- * docs/specs/groups-spec.md, phases 0-4 of which have shipped.
+ * docs/specs/shipped/groups-spec.md, phases 0-4 of which have shipped.
  */
 export const directoryEntry = sqliteTable(
 	'directory_entry',

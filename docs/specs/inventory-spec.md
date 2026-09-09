@@ -591,11 +591,16 @@ on purpose:
 
 - **The `supplier` table.** It would normalise `acquisition.sourceName` to give
   vendor-level spend. The collective buys from a handful of shops, so free text
-  plus a `GROUP BY` answers that; and the same _local business_ entity is wanted
-  by the **Local Resources Directory** and **Affiliate Commissions** entries in
-  IDEAS.md. Building a thin `supplier` now means two tables describing Guitar
-  Center later. Revisit when free text actually fragments, or when one of those
-  features forces the entity into being.
+  plus a `GROUP BY` answers that. **Revisit when free text actually fragments** —
+  that is the whole condition.
+
+  This entry used to add a second reason: that the same _local business_ entity
+  was wanted by the Local Resources Directory. It is not. A supplier is who CMC
+  buys from — internal, operational, mostly not a music business. A local
+  resource is who CMC points the community at. See
+  [local-resources-spec.md](local-resources-spec.md#a-local-resource-is-not-a-supplier);
+  that feature does not gate this one.
+
 - **A stored link from a suggestion to the item it became.** See
   [Acquiring things](#acquiring-things).
 

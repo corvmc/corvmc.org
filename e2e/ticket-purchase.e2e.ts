@@ -87,9 +87,11 @@ test('the scale opens at the suggested price', async ({ page }) => {
 });
 
 test('the split bar opens with the collective at its suggested share', async ({ page }) => {
-	// $20, less 88¢ of card processing, leaves $19.12 to divide; 30% of that is
-	// $5.74 and the acts take the rest. The point of the assertion is that the
-	// share is of what is *divisible* — 30% of the gross would read $6.00.
+	// $20 less 88¢ of card processing leaves $19.12. The acts' share is anchored
+	// to the $20 base — 70% of it, $14.00 — and the collective takes what is
+	// left, so it absorbs the fee (#827). The assertion's point is that the acts
+	// are paid off the gross: 70% of the divisible amount would read $13.38, and
+	// the acts would be quietly funding most of the card fee.
 	await openPurchasePage(page);
 
 	// Read off the slider rather than off the page: SplitBar writes each amount
@@ -98,9 +100,9 @@ test('the split bar opens with the collective at its suggested share', async ({ 
 	// `aria-valuetext` carries both figures in one place, and is the thing a
 	// screen reader is told, which makes it the better contract anyway.
 	const bar = page.getByRole('slider');
-	await expect(bar).toHaveAttribute('aria-valuenow', '574');
-	await expect(bar).toHaveAttribute('aria-valuetext', /\$5\.74.*\$13\.38/);
-	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('574');
+	await expect(bar).toHaveAttribute('aria-valuenow', '512');
+	await expect(bar).toHaveAttribute('aria-valuetext', /\$5\.12.*\$14\.00/);
+	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('512');
 });
 
 test('moving the bar moves what the acts get, and what is posted', async ({ page }) => {
@@ -113,8 +115,10 @@ test('moving the bar moves what the acts get, and what is posted', async ({ page
 	await bar.press('ArrowLeft');
 	await bar.press('ArrowLeft');
 
-	await expect(bar).toHaveAttribute('aria-valuenow', '524');
-	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('524');
+	// Two 25¢ steps down from the opening 512. The bar moves toward the acts and
+	// cannot move the other way past it — the collective's share is the residual.
+	await expect(bar).toHaveAttribute('aria-valuenow', '462');
+	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('462');
 });
 
 test('the fee-coverage offer is priced on everything the card is charged', async ({ page }) => {

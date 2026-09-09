@@ -1,0 +1,1 @@
+ALTER TABLE `event_listing` ADD `announce_at` integer;

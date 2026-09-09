@@ -82,7 +82,6 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'org.socialInstagram': '',
 
 	'integration.utec.clientId': '',
-	'integration.utec.clientSecret': '',
 	'integration.utec.deviceId': '',
 	'integration.utec.refreshToken': '',
 

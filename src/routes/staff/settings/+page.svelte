@@ -83,21 +83,22 @@
 	let revokingTest = $state(false);
 
 	// U-tec is "connected" once a refresh token has been minted (via OAuth or
-	// pasted manually). Until then, only the Connect flow makes sense.
-	const utecConnected = $derived(!!integrationSettings.refreshToken);
+	// pasted manually). Until then, only the Connect flow makes sense. Presence
+	// is all this needs, which is the whole reason the value can stay server-side.
+	const utecConnected = $derived(integrationSettings.refreshToken.configured);
 	const utecCanConnect = $derived(
 		!!integrationSettings.clientId && integrationSettings.clientSecret.configured
 	);
 
-	// The field renders empty whether or not a secret is stored, so the hint is
-	// the only thing telling a staffer which it is — and that saving blank keeps
-	// what is there rather than wiping the lock's credential.
-	const clientSecretHint = $derived(
+	// The refresh token field renders empty whether or not one is stored, so the
+	// hint is the only thing telling a staffer which it is — and that saving
+	// blank keeps what is there rather than wiping the lock's credential.
+	const refreshTokenHint = $derived(
 		{
-			kv: 'Saved. Leave blank to keep it, or enter a new one to replace it.',
-			env: 'Set by the ULTRALOC_CLIENT_SECRET environment variable. Saving a value here overrides it.',
-			null: 'Not set. The lock cannot authenticate until this is entered.'
-		}[String(integrationSettings.clientSecret.source)]
+			kv: 'Saved by the Connect flow. Leave blank to keep it.',
+			env: 'Set by the ULTRALOC_REFRESH_TOKEN environment variable. Saving a value here overrides it.',
+			null: 'Not set. Use Connect above rather than pasting one, where you can.'
+		}[String(integrationSettings.refreshToken.source)]
 	);
 	const utecRedirectUri = $derived(`${page.url.origin}/api/integrations/utec/callback`);
 
@@ -657,7 +658,7 @@
 
 						{#if !utecConnected && !utecCanConnect}
 							<p class="text-subtle">
-								Enter and save your Client ID and Secret, then connect to authorize the lock.
+								Save a Client ID and deploy the client secret, then connect to authorize the lock.
 							</p>
 						{/if}
 
@@ -759,13 +760,6 @@
 								value={integrationSettings.clientId}
 							/>
 							<FormField
-								name="clientSecret"
-								label="Client Secret"
-								type="password"
-								value=""
-								description={clientSecretHint}
-							/>
-							<FormField
 								name="deviceId"
 								label="Device ID"
 								type="text"
@@ -775,8 +769,24 @@
 								name="refreshToken"
 								label="Refresh Token"
 								type="password"
-								value={integrationSettings.refreshToken}
+								value=""
+								description={refreshTokenHint}
 							/>
+						</div>
+
+						<div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+							{#if integrationSettings.clientSecret.configured}
+								<IconCircleCheck class="size-4 shrink-0 text-success" />
+							{:else}
+								<IconCircleX class="size-4 shrink-0 text-error" />
+							{/if}
+							<span>Client secret</span>
+							<code class="code-block px-1.5 py-0.5 text-xs">ULTRALOC_CLIENT_SECRET</code>
+							<span class="text-subtle">
+								{integrationSettings.clientSecret.configured ? 'set' : 'not set'} — a Worker secret, not
+								a setting. Change it with
+								<code class="code-block px-1.5 py-0.5">wrangler secret put</code> and redeploy.
+							</span>
 						</div>
 
 						<div class="mt-2">
@@ -803,9 +813,10 @@
 						</div>
 
 						<p class="mt-2 text-subtle">
-							Click "Connect to U-tec" to authorize and fill the Refresh Token automatically, or set
-							credentials via environment variables (ULTRALOC_CLIENT_ID, etc.). Values saved here
-							take precedence over environment variables.
+							Click "Connect to U-tec" to authorize and fill the Refresh Token automatically. The
+							Client ID and Device ID also read from ULTRALOC_CLIENT_ID / ULTRALOC_DEVICE_ID when
+							blank; values saved here take precedence. The client secret is the exception — it is
+							only ever read from its Worker secret.
 						</p>
 					</CardBody>
 				</Card>

@@ -1,10 +1,10 @@
 {
+  "id": "bfd01492-f765-4bdc-a48f-a59b8ff09747",
+  "prevIds": [
+    "3691e4c3-e42c-4aa5-99e3-fcfbdabc0c23"
+  ],
   "version": "7",
   "dialect": "sqlite",
-  "id": "51118a95-7ef9-413c-8c20-0e0f04e9a3fd",
-  "prevIds": [
-    "071b8c64-5dfd-4fc0-833b-082926d6fbaa"
-  ],
   "ddl": [
     {
       "name": "account",
@@ -72,6 +72,10 @@
     },
     {
       "name": "production",
+      "entityType": "tables"
+    },
+    {
+      "name": "production_expense",
       "entityType": "tables"
     },
     {
@@ -384,6 +388,22 @@
     },
     {
       "name": "rider_input",
+      "entityType": "tables"
+    },
+    {
+      "name": "packing_item",
+      "entityType": "tables"
+    },
+    {
+      "name": "packing_list",
+      "entityType": "tables"
+    },
+    {
+      "name": "financial_entry",
+      "entityType": "tables"
+    },
+    {
+      "name": "artifact_request",
       "entityType": "tables"
     },
     {
@@ -1447,6 +1467,16 @@
       "table": "reservation"
     },
     {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "hard_hold",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
       "type": "text",
       "notNull": false,
       "autoincrement": false,
@@ -1997,6 +2027,16 @@
       "table": "event_listing"
     },
     {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "announce_at",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
       "type": "text",
       "notNull": false,
       "autoincrement": false,
@@ -2335,6 +2375,126 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "production_expense"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "production_id",
+      "entityType": "columns",
+      "table": "production_expense"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "label",
+      "entityType": "columns",
+      "table": "production_expense"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "category",
+      "entityType": "columns",
+      "table": "production_expense"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount_cents",
+      "entityType": "columns",
+      "table": "production_expense"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "true",
+      "generated": null,
+      "name": "deductible",
+      "entityType": "columns",
+      "table": "production_expense"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "paid_to",
+      "entityType": "columns",
+      "table": "production_expense"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "paid_at",
+      "entityType": "columns",
+      "table": "production_expense"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "production_expense"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "recorded_by_user_id",
+      "entityType": "columns",
+      "table": "production_expense"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "production_expense"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "production_expense"
     },
     {
       "type": "text",
@@ -10577,6 +10737,496 @@
       "table": "rider_input"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "list_id",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "assigned_user_id",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "assigned_at",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "assigned_by_user_id",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'other'",
+      "generated": null,
+      "name": "category",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "label",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "1",
+      "generated": null,
+      "name": "quantity",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "rider_kind",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "sort_order",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "packed",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "packed_at",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "packed_by_user_id",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "promoted_at",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_reset_at",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_reset_by_user_id",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount_cents",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "category",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "occurred_at",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "settlement",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stripe_payment_record_id",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "settlement_group",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_type",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_id",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "description",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "recorded_by_user_id",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "financial_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "entry_id",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "artifact",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "due_at",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "requested_by_user_id",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "requested_at",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_at",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "artifact_request"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -10965,6 +11615,36 @@
       "name": "fk_production_created_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "production"
+    },
+    {
+      "columns": [
+        "production_id"
+      ],
+      "tableTo": "production",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_production_expense_production_id_production_id_fk",
+      "entityType": "fks",
+      "table": "production_expense"
+    },
+    {
+      "columns": [
+        "recorded_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_production_expense_recorded_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "production_expense"
     },
     {
       "columns": [
@@ -13218,6 +13898,201 @@
     },
     {
       "columns": [
+        "list_id"
+      ],
+      "tableTo": "packing_list",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_packing_item_list_id_packing_list_id_fk",
+      "entityType": "fks",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_packing_item_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        "assigned_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_packing_item_assigned_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        "assigned_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_packing_item_assigned_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        "packed_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_packing_item_packed_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_packing_list_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "packing_list"
+    },
+    {
+      "columns": [
+        "last_reset_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_packing_list_last_reset_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "packing_list"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_financial_entry_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_financial_entry_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        "recorded_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_financial_entry_recorded_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        "event_id"
+      ],
+      "tableTo": "event_listing",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_artifact_request_event_id_event_listing_id_fk",
+      "entityType": "fks",
+      "table": "artifact_request"
+    },
+    {
+      "columns": [
+        "entry_id"
+      ],
+      "tableTo": "directory_entry",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_artifact_request_entry_id_directory_entry_id_fk",
+      "entityType": "fks",
+      "table": "artifact_request"
+    },
+    {
+      "columns": [
+        "requested_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_artifact_request_requested_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "artifact_request"
+    },
+    {
+      "columns": [
         "role_id",
         "user_id"
       ],
@@ -13398,6 +14273,15 @@
       "nameExplicit": false,
       "name": "production_pk",
       "table": "production",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "production_expense_pk",
+      "table": "production_expense",
       "entityType": "pks"
     },
     {
@@ -14068,6 +14952,42 @@
     },
     {
       "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "packing_item_pk",
+      "table": "packing_item",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "packing_list_pk",
+      "table": "packing_list",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "financial_entry_pk",
+      "table": "financial_entry",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "artifact_request_pk",
+      "table": "artifact_request",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
         {
           "value": "member_number",
           "isExpression": false
@@ -14623,6 +15543,24 @@
       "name": "idx_production_producer",
       "entityType": "indexes",
       "table": "production"
+    },
+    {
+      "columns": [
+        {
+          "value": "production_id",
+          "isExpression": false
+        },
+        {
+          "value": "category",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_production_expense_production",
+      "entityType": "indexes",
+      "table": "production_expense"
     },
     {
       "columns": [
@@ -17216,6 +18154,248 @@
     },
     {
       "columns": [
+        {
+          "value": "list_id",
+          "isExpression": false
+        },
+        {
+          "value": "sort_order",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_packing_item_list",
+      "entityType": "indexes",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_packing_item_user",
+      "entityType": "indexes",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        {
+          "value": "list_id",
+          "isExpression": false
+        },
+        {
+          "value": "assigned_user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_packing_item_assigned",
+      "entityType": "indexes",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        {
+          "value": "list_id",
+          "isExpression": false
+        },
+        {
+          "value": "packed",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_packing_item_packed",
+      "entityType": "indexes",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_packing_list_group",
+      "entityType": "indexes",
+      "table": "packing_list"
+    },
+    {
+      "columns": [
+        {
+          "value": "occurred_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_occurred",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "kind",
+          "isExpression": false
+        },
+        {
+          "value": "occurred_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_kind_occurred",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "category",
+          "isExpression": false
+        },
+        {
+          "value": "occurred_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_category_occurred",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "settlement_group",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_group",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "stripe_payment_record_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_stripe",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "subject_type",
+          "isExpression": false
+        },
+        {
+          "value": "subject_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_subject",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_financial_entry_project",
+      "entityType": "indexes",
+      "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        },
+        {
+          "value": "entry_id",
+          "isExpression": false
+        },
+        {
+          "value": "artifact",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_artifact_request_live",
+      "entityType": "indexes",
+      "table": "artifact_request"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_artifact_request_event",
+      "entityType": "indexes",
+      "table": "artifact_request"
+    },
+    {
+      "columns": [
+        {
+          "value": "due_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_artifact_request_due",
+      "entityType": "indexes",
+      "table": "artifact_request"
+    },
+    {
+      "columns": [
         "name",
         "guard_name"
       ],
@@ -17654,6 +18834,24 @@
       "name": "rider_input_sort_nonneg",
       "entityType": "checks",
       "table": "rider_input"
+    },
+    {
+      "value": "sort_order >= 0",
+      "name": "packing_item_sort_nonneg",
+      "entityType": "checks",
+      "table": "packing_item"
+    },
+    {
+      "value": "quantity >= 1",
+      "name": "packing_item_quantity_positive",
+      "entityType": "checks",
+      "table": "packing_item"
+    },
+    {
+      "value": "quantity <= 99",
+      "name": "packing_item_quantity_bounded",
+      "entityType": "checks",
+      "table": "packing_item"
     }
   ],
   "renames": []

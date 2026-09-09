@@ -180,15 +180,17 @@ beforeEach(() => {
 
 describe('purchaseTickets, on the sliding scale', () => {
 	it('charges what the buyer named, and records where they sent it', async () => {
-		// $15 × 2 = $30, card takes 117¢, and the collective's suggested position
-		// is 30% of what is left. The acts get the remainder, derived.
-		await purchase({ quantity: 2, unitPriceCents: 1500, collectiveCents: 866 });
+		// $15 × 2 = $30 at the suggestion, card takes 117¢. The acts' share is
+		// anchored to the $30 base — 70% of it, $21 — and the collective takes
+		// what is left after the card, so it absorbs the fee (#827). This used to
+		// post 866 and expect 2017, which is 30/70 of the divisible amount.
+		await purchase({ quantity: 2, unitPriceCents: 1500, collectiveCents: 783 });
 
 		expect(lineItems().lineItems).toEqual([{ key: 'ticket', unitAmountCents: 1500, quantity: 2 }]);
 		expect(ticketArgs()).toMatchObject({
 			unitPriceCents: 1500,
-			collectiveCents: 866,
-			actsCents: 3000 - 866 - 117
+			collectiveCents: 783,
+			actsCents: 2100
 		});
 	});
 
@@ -260,11 +262,14 @@ describe('purchaseTickets, above the suggestion', () => {
 	});
 
 	it('carries the allocation into metadata for settle-time reconciliation', async () => {
-		await purchase({ unitPriceCents: 1500, collectiveCents: 400 });
+		// 376 is the collective's ceiling on a $15 ticket: $14.26 divisible, less
+		// the acts' anchored $10.50. Posting 400 is now refused rather than
+		// silently taking 24¢ off the acts.
+		await purchase({ unitPriceCents: 1500, collectiveCents: 376 });
 
 		expect(lineItems().metadata).toMatchObject({
-			ticket_acts_cents: String(1500 - 400 - 74),
-			ticket_collective_cents: '400'
+			ticket_acts_cents: '1050',
+			ticket_collective_cents: '376'
 		});
 	});
 });

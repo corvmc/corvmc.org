@@ -8,10 +8,9 @@ import { formatDateInTz, formatTimeInTz } from '$lib/server/reservation/timezone
 // ---------------------------------------------------------------------------
 // Ultraloc API client
 // ---------------------------------------------------------------------------
-// Wraps the U-tec OpenAPI for managing temporary lock users.
-// Uses OAuth2 client credentials flow with token caching.
-//
-// Credentials are read from site_config (admin UI), falling back to env vars.
+// Wraps the U-tec OpenAPI for managing temporary lock users, refreshing and
+// caching the access token. Everything but the client secret is staff-settable
+// in site_config, falling back to env — see `CREDENTIALS` for why it differs.
 // ---------------------------------------------------------------------------
 
 const API_URL = 'https://api.u-tec.com/action';
@@ -23,13 +22,17 @@ async function getConfig() {
 	const dbConfig = await getConfigsByPrefix('integration.utec');
 
 	const clientId = (dbConfig.clientId as string) || env.ULTRALOC_CLIENT_ID;
-	const clientSecret = (dbConfig.clientSecret as string) || env.ULTRALOC_CLIENT_SECRET;
 	const deviceId = (dbConfig.deviceId as string) || env.ULTRALOC_DEVICE_ID;
-	const refreshToken = (dbConfig.refreshToken as string) || env.ULTRALOC_REFRESH_TOKEN;
+
+	// Env only, and deliberately not `dbConfig`: #745 dropped the client secret's
+	// site-config key, so an entry left behind by that must not resurrect itself
+	// as a source. The refresh token kept its key — the Connect flow writes one.
+	const clientSecret = env[CREDENTIALS.clientSecret.env];
+	const refreshToken = (dbConfig.refreshToken as string) || env[CREDENTIALS.refreshToken.env];
 
 	if (!clientId || !clientSecret || !deviceId || !refreshToken) {
 		throw new Error(
-			'Ultraloc credentials not configured — set them in Staff Settings > Integrations or via environment variables'
+			'Ultraloc credentials not configured — set the ULTRALOC_CLIENT_SECRET secret, and the ids and lock connection in Staff Settings > Integrations'
 		);
 	}
 
@@ -37,21 +40,46 @@ async function getConfig() {
 }
 
 /**
- * Whether a client secret is available to sign a token request, and from where.
+ * The two values that mint an access token, and where each may come from.
  *
- * Presence, never the value: this is what the staff settings page renders, and
- * `settings.read` being a staff capability is not a reason to put an OAuth
- * secret somewhere extensions, screenshots and error reports can reach it.
- * Precedence mirrors `getConfig` above — KV first, environment second.
+ * `kv: false` is the whole of #745: the client secret's site-config key is gone,
+ * so a leftover entry is not a source and is not read. The refresh token kept
+ * its key because the Connect flow has to write the token it mints somewhere —
+ * the weaker half of the posture, taken so reconnecting stays a button.
  */
-export async function clientSecretStatus(): Promise<{
-	configured: boolean;
-	source: 'kv' | 'env' | null;
-}> {
-	const dbConfig = await getConfigsByPrefix('integration.utec');
-	if (dbConfig.clientSecret) return { configured: true, source: 'kv' };
-	if (env.ULTRALOC_CLIENT_SECRET) return { configured: true, source: 'env' };
-	return { configured: false, source: null };
+const CREDENTIALS = {
+	clientSecret: { env: 'ULTRALOC_CLIENT_SECRET', kv: false },
+	refreshToken: { env: 'ULTRALOC_REFRESH_TOKEN', kv: true }
+} as const;
+
+type CredentialField = keyof typeof CREDENTIALS;
+
+/**
+ * Where a credential came from. `'kv'` is absent from the client secret's type
+ * rather than merely unreachable, so a consumer branching on `source` has no
+ * dead case to write.
+ */
+export type CredentialSource<F extends CredentialField> =
+	'env' | null | ((typeof CREDENTIALS)[F]['kv'] extends true ? 'kv' : never);
+
+/**
+ * Whether a credential is set, and from where — never its value.
+ *
+ * Presence is all the staff settings page needs, and `settings.read` being a
+ * staff capability is not a reason to put a bearer credential where extensions,
+ * screenshots and error reports reach it. Precedence mirrors `getConfig`.
+ */
+export async function credentialStatus<F extends CredentialField>(
+	field: F
+): Promise<{ configured: boolean; source: CredentialSource<F> }> {
+	if (CREDENTIALS[field].kv) {
+		const dbConfig = await getConfigsByPrefix('integration.utec');
+		// Only reachable for a kv-backed field, which is what the type encodes.
+		if (dbConfig[field]) return { configured: true, source: 'kv' as CredentialSource<F> };
+	}
+	return env[CREDENTIALS[field].env]
+		? { configured: true, source: 'env' }
+		: { configured: false, source: null };
 }
 
 interface UtecTokenPayload {
@@ -392,10 +420,10 @@ export async function exchangeAuthorizationCode(
 ): Promise<{ refreshToken: string; accessToken: string; expiresIn: number }> {
 	const dbConfig = await getConfigsByPrefix('integration.utec');
 	const clientId = (dbConfig.clientId as string) || env.ULTRALOC_CLIENT_ID;
-	const clientSecret = (dbConfig.clientSecret as string) || env.ULTRALOC_CLIENT_SECRET;
+	const clientSecret = env[CREDENTIALS.clientSecret.env];
 
 	if (!clientId || !clientSecret) {
-		throw new Error('Ultraloc client ID/secret not configured');
+		throw new Error('Ultraloc client ID or ULTRALOC_CLIENT_SECRET not configured');
 	}
 
 	const params = new URLSearchParams({

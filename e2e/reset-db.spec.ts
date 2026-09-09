@@ -146,9 +146,10 @@ describe('journalDisagreesWithSchema', () => {
  *
  * miniflare keeps one SQLite per storage kind, so a build leaves a WAL beside
  * each — six of them in a seeded state directory. Checkpointing only D1 left
- * five windows open, and the failure that closed them named `SENTRY_DO` rather
- * than D1, so no amount of work on the D1 file would ever have reached it.
- * What has to hold is that the walk finds every database and nothing else.
+ * five windows open, and the crash text names no file at all: `SENTRY_DO` is
+ * workerd's redaction marker on "SQLite failed", not a database. A sweep of all
+ * of them is the only answer available, so what has to hold is that the walk
+ * finds every database and nothing else.
  */
 describe('sqliteFilesUnder', () => {
 	/** miniflare's real layout: `<kind>/miniflare-<Kind>Object/<name>.sqlite`. */

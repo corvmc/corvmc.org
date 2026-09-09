@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { eq } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Mock dependencies before importing the module under test
@@ -52,7 +53,8 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 		endsAt: 'endsAt',
 		notes: 'notes',
 		recurringSeriesId: 'recurringSeriesId',
-		status: 'status'
+		status: 'status',
+		hardHold: 'hardHold'
 	},
 	closure: { reason: 'reason', startsAt: 'startsAt', endsAt: 'endsAt' }
 }));
@@ -113,11 +115,11 @@ vi.mock('$lib/server/event/event-service', async () => {
 	};
 });
 
-const mockCopyObject = vi.fn();
-
-vi.mock('$lib/server/storage', () => ({
-	copyObject: (...args: unknown[]) => mockCopyObject(...args)
-}));
+// Nothing in `storage.ts` copies an object any more (#771 moved the one caller
+// to the cross-bucket copies in `private-storage.ts`), so generation cannot
+// duplicate a poster even by mistake. The `attachExisting` assertion below is
+// what pins the behaviour that replaced it: one object, many attachments.
+vi.mock('$lib/server/storage', () => ({}));
 
 const mockAttachExisting = vi.fn();
 
@@ -336,6 +338,23 @@ describe('generateRecurringReservations', () => {
 		expect(result.instancesCreated).toBe(0);
 		expect(result.instancesSkipped).toBe(0); // deduped, not counted as skipped
 		expect(insertedRows).toHaveLength(0);
+	});
+
+	/**
+	 * The predicate itself, not just its result. Moving the hard block off
+	 * `booker_type` is the change that would otherwise fail in silence: nothing
+	 * throws, holds just quietly stop blocking, and a member's booking takes a
+	 * show's room.
+	 */
+	it('blocks on the hold that says it is hard, not on how the row was created', async () => {
+		queueSelects([SERIES], [PROTOTYPE], [OWNER], [], [{ id: 'event-1' }], []);
+		setupInsert();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		await generateRecurringReservations();
+
+		expect(eq).toHaveBeenCalledWith('hardHold', true);
+		expect(eq).not.toHaveBeenCalledWith('bookerType', 'event_listing');
 	});
 
 	it('skips occurrences with event conflicts and emits recurring_skipped event', async () => {
@@ -565,7 +584,6 @@ describe('generateRecurringEvents', () => {
 		mockGenerationWindowEnd.mockReturnValue(new Date('2026-06-20T00:00:00Z'));
 		mockStaffCreate.mockResolvedValue({ id: 'eres-new' });
 		mockHasConflict.mockResolvedValue(false);
-		mockCopyObject.mockResolvedValue(null);
 	});
 
 	it('creates a draft event and books space for an unconflicted occurrence', async () => {
@@ -608,6 +626,9 @@ describe('generateRecurringEvents', () => {
 		expect(mockStaffCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
 				bookerType: 'event_listing',
+				// A show holds the room outright, and says so on the row rather than
+				// leaving it to be inferred from how the row was created.
+				hardHold: true,
 				// Matches the one-off path: event-booked space is staff-held, so it
 				// must not look like an uncommitted member booking.
 				status: 'confirmed',
@@ -705,7 +726,6 @@ describe('generateRecurringEvents', () => {
 
 		await generateRecurringEvents();
 
-		expect(mockCopyObject).not.toHaveBeenCalled();
 		// One more attachment on the same object, in the occurrence's poster slot.
 		expect(mockAttachExisting).toHaveBeenCalledWith(
 			'event_listing',
@@ -756,7 +776,6 @@ describe('generateRecurringEvents — a prototype that is not a CMC event', () =
 		mockGenerationWindowEnd.mockReturnValue(new Date('2026-06-20T00:00:00Z'));
 		mockStaffCreate.mockResolvedValue({ id: 'eres-new' });
 		mockHasConflict.mockResolvedValue(false);
-		mockCopyObject.mockResolvedValue(null);
 	});
 
 	it("inherits the prototype's source, owner and location", async () => {

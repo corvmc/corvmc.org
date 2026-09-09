@@ -93,7 +93,24 @@ export async function seedMarketing(users: SeedUser[]) {
 		)
 		.returning();
 
-	const allSubs = [...subscriberRows, ...externalSubs];
+	// #757: an address that joined a list before its account existed, where the
+	// account has still not confirmed it. Nothing claims this row — not signup,
+	// not a system-audience send, not the account page — until Kit Alvarez
+	// clicks the verification link, which is the only way to see the refusal.
+	const unconfirmedSubs = await db
+		.insert(subscriber)
+		.values([
+			{
+				id: randomUUID(),
+				email: 'undecided@corvallismusic.org',
+				name: 'Kit Alvarez',
+				userId: null,
+				createdAt: new Date(Date.now() - 300 * 86400000)
+			}
+		])
+		.returning();
+
+	const allSubs = [...subscriberRows, ...externalSubs, ...unconfirmedSubs];
 
 	const membershipRows: {
 		id: string;

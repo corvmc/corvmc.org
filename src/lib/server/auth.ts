@@ -18,8 +18,10 @@ import { linkExistingSubscriberToUser } from '$lib/server/marketing/subscriber-s
 import { verifyTurnstile } from '$lib/server/turnstile';
 import {
 	RESET_PASSWORD_TOKEN_TTL_SECONDS,
+	VERIFY_EMAIL_TOKEN_TTL_SECONDS,
 	sendPasswordChangedEmail,
-	sendPasswordResetEmail
+	sendPasswordResetEmail,
+	sendVerifyEmail
 } from '$lib/server/auth-emails';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
 // ---------------------------------------------------------------------------
@@ -339,6 +341,9 @@ async function reportSignInAnomaly(rawEmail: unknown): Promise<void> {
 			event: 'auth.sign_in',
 			stage: reason,
 			email,
+			// False means the link was never clicked, not that sign-in was blocked
+			// — verification gates nothing (#757). Useful as a signal alongside the
+			// structural anomalies, never as the anomaly itself.
 			emailVerified: userRow?.emailVerified ?? null,
 			hasCredentialAccount: Boolean(acctRow),
 			// prefix only — never log the full hash or the password
@@ -407,16 +412,49 @@ export async function onUserCreated(created: {
 	} catch (err) {
 		captureException(err);
 	}
-	// Someone who joined a list before they joined the collective already has a
-	// `subscriber` row under this address; without this it stays orphaned until
-	// a built-in audience sends, and their account page reads as if they had
-	// subscribed to nothing. Link only — see linkExistingSubscriberToUser.
+}
+
+/**
+ * Claim the `subscriber` row already sitting under this address (#562).
+ *
+ * Runs on verification rather than at signup (#757): the row carries someone's
+ * audience memberships and their suppression state, and until the link is
+ * clicked, typing an address into the signup form proves nothing about who owns
+ * it. `linkExistingSubscriberToUser` only writes an unclaimed row, so a replayed
+ * verification cannot move a row a different account already holds.
+ */
+export async function onEmailVerified(verified: { id: string; email: string }): Promise<void> {
 	try {
-		await linkExistingSubscriberToUser(created.id, created.email);
+		await linkExistingSubscriberToUser(verified.id, verified.email);
 	} catch (err) {
 		captureException(err);
 	}
 }
+
+/**
+ * better-auth's email-verification wiring, lifted out of the config so a spec
+ * can read it without standing up the whole auth instance.
+ *
+ * `requireEmailVerification` is deliberately absent from `emailAndPassword`:
+ * unverified accounts sign in and use the site exactly as before. Turning it on
+ * would lock out every account that predates this, none of which is verified.
+ */
+export const emailVerificationConfig = {
+	sendOnSignUp: true,
+	expiresIn: VERIFY_EMAIL_TOKEN_TTL_SECONDS,
+	sendVerificationEmail: async ({
+		user: recipient,
+		url
+	}: {
+		user: { email: string; name: string };
+		url: string;
+	}) => {
+		await sendVerifyEmail({ toEmail: recipient.email, name: recipient.name, verifyUrl: url });
+	},
+	afterEmailVerification: async (verified: { id: string; email: string }) => {
+		await onEmailVerified(verified);
+	}
+};
 
 export function authRateLimitEnabled(origin: string | undefined): boolean {
 	return !isLocalOrigin(origin);
@@ -444,6 +482,7 @@ function createAuth() {
 			provider: 'sqlite',
 			schema
 		}),
+		emailVerification: emailVerificationConfig,
 		emailAndPassword: {
 			enabled: true,
 			password: {

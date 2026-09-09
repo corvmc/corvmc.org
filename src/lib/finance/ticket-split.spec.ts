@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { computeTicketSplit, suggestedCollectiveCents, validateTicketSplit } from './ticket-split';
+import {
+	actsAnchoredCollectiveCents,
+	computeTicketSplit,
+	suggestedCollectiveCents,
+	validateTicketSplit
+} from './ticket-split';
 import { calculateTotalWithFeeCoverage } from './fees';
 import { TICKET_MIN_CHARGE_CENTS } from '$lib/config';
 
@@ -206,11 +211,16 @@ describe('validateTicketSplit', () => {
 	it('recomputes the fee rather than believing a posted one', () => {
 		// There is nowhere in the input for a client to put a fee at all, which is
 		// the strongest form of not trusting it.
-		const result = validateTicketSplit({ ...base, unitPriceCents: 1500, collectiveCents: 428 });
+		//
+		// The figures moved in #827: at the suggestion the acts take 70% of the
+		// $15 gross — $10.50 — rather than 70% of the $14.26 left after the card
+		// fee, and the collective is what remains. This case used to post 428 and
+		// expect 998, which is the proportional split that shorted the acts.
+		const result = validateTicketSplit({ ...base, unitPriceCents: 1500, collectiveCents: 376 });
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.split.stripeFeeCents).toBe(74);
-			expect(result.split.actsCents).toBe(998);
+			expect(result.split.actsCents).toBe(1050);
 		}
 	});
 
@@ -218,5 +228,52 @@ describe('validateTicketSplit', () => {
 		const result = validateTicketSplit({ ...base, unitPriceCents: 10_000, collectiveCents: 0 });
 		expect(result.ok).toBe(true);
 		if (result.ok) expect(result.split.contributionCents).toBe(8500);
+	});
+});
+
+/**
+ * The acts' take is anchored to the base rate, not to what the buyer paid (#827).
+ *
+ * A proportional split hands the acts 70% of a discount as well as of a sale,
+ * so a NOTAFLOF buyer shorts the band rather than the collective. Here their
+ * number is absolute and the collective is the residual.
+ */
+describe('the acts are paid off the base rate', () => {
+	const show = { quantity: 1, coverFees: false, suggestedUnitCents: 1000, floorCents: 0 };
+
+	it.each([
+		// paid,  acts,  collective   — base $10 at the default 70/30
+		[500, 455, 0], // below the floor: the acts take the whole divisible amount
+		[700, 649, 0], // NOTAFLOF: $7 paid sends $7 to the acts, nothing to CMC
+		[1000, 700, 241], // at the suggestion: acts get exactly 70% of $10
+		[1500, 1050, 376] // above it: the surplus splits at the same ratio
+	])('$%i paid → acts %i¢, collective %i¢', (paid, acts, collective) => {
+		const split = computeTicketSplit({
+			...show,
+			unitPriceCents: paid,
+			collectiveCents: actsAnchoredCollectiveCents({
+				baseCents: show.suggestedUnitCents,
+				grossPaidCents: paid,
+				coverFees: false
+			})
+		});
+		expect(split.actsCents).toBe(acts);
+		expect(split.collectiveCents).toBe(collective);
+	});
+
+	it('never lets the collective take money the acts are owed', () => {
+		// The bar's UI clamps this; the UI is not the guard.
+		const result = validateTicketSplit({
+			...show,
+			unitPriceCents: 1000,
+			collectiveCents: 941 // the whole divisible amount
+		});
+		expect(result).toEqual({ ok: false, reason: 'That leaves the acts short.' });
+	});
+
+	it('lets a buyer opt the acts up, but never down', () => {
+		const result = validateTicketSplit({ ...show, unitPriceCents: 1000, collectiveCents: 0 });
+		expect(result.ok).toBe(true);
+		if (result.ok) expect(result.split.actsCents).toBe(941);
 	});
 });

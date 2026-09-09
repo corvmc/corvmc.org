@@ -1,6 +1,9 @@
 # Contractor work
 
-**Status:** 🔧 In progress — schema, services and seed shipped; staff surfaces to follow.
+**Status: ✅ shipped.** `contractor` and `contractor_job`, the service and seed, and the staff
+surfaces at `/staff/contractors` — the list, a contractor's detail page, and its jobs. What
+survives here is the design rationale; how it behaves is
+[business-workflows](../../development/business-workflows.md).
 
 A damaged asset gets repaired in one of two places, and until now the app modelled neither. The
 **work order** (`docs/specs/` — the `work_order` extension) covers the first: work somebody at

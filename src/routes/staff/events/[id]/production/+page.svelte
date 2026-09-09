@@ -50,6 +50,8 @@
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
+	import SettlementPanel from './SettlementPanel.svelte';
+	import ArtifactRequestsPanel from './ArtifactRequestsPanel.svelte';
 	import { TAB_KEYS, TAB_LABELS, parseTab, type TabKey } from './tabs';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { replaceState } from '$app/navigation';
@@ -91,6 +93,7 @@
 	const riders = $derived(loaded.riders);
 	const productionRecord = $derived(loaded.production);
 	const runOfShow = $derived(loaded.runOfShow);
+	const settlement = $derived(loaded.settlement);
 	/** The advance question: who has told us nothing at all. */
 	const ridersMissing = $derived(riders.filter((r) => r.empty).length);
 
@@ -1023,6 +1026,14 @@
 			class="space-y-6"
 			class:hidden={tab !== 'advance'}
 		>
+			<ArtifactRequestsPanel
+				eventId={evt.id}
+				eventTitle={evt.title}
+				requests={loaded.artifactRequests}
+				acts={loaded.requestableActs}
+				onchange={() => getStaffEventProduction(id).refresh()}
+			/>
+
 			<!--
 			What the bill needs on stage. The advance checklist has always carried a
 			task reading "Collect tech riders and stage plots"; this is where the answer
@@ -1374,6 +1385,17 @@
 					</InfoCard>
 				{/if}
 			{/if}
+		</div>
+	{/if}
+
+	{#if visited.has('settlement')}
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-settlement"
+			class="space-y-6"
+			class:hidden={tab !== 'settlement'}
+		>
+			<SettlementPanel {settlement} />
 		</div>
 	{/if}
 </PageContent>

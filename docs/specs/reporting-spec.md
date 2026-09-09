@@ -150,6 +150,12 @@ for hours used. But there is no `sum()` over `paymentCache.amountCents` anywhere
 volunteer-hours and credits lines have services behind them already, and its **revenue line is a
 design decision rather than a query to write**.
 
+> **Amended after #824.** Until that issue, `payment_cache` held only credits-covered purchases (at
+> zero) and cash — **no card revenue at all** — so the breakdown below would have under-reported by
+> the largest channel while returning plausible non-zero numbers. A `checkout.completed` listener now
+> caches card payments too. Anything written before that fix is still missing them, which is what the
+> backfill in [financial-record-spec.md](financial-record-spec.md) exists to reconstruct.
+
 The proposal, following the discipline `production-workflow-spec.md` settled on:
 
 1. **Stripe is the authoritative total.** The Reporting API (`reporting.report_run`) produces the

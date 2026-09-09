@@ -13,11 +13,14 @@ vi.mock('$lib/server/sentry', () => ({
 
 import {
 	RESET_PASSWORD_TOKEN_TTL_SECONDS,
+	VERIFY_EMAIL_TOKEN_TTL_SECONDS,
 	buildPasswordChangedModel,
 	buildResetPasswordModel,
+	buildVerifyEmailModel,
 	formatExpiry,
 	sendPasswordChangedEmail,
-	sendPasswordResetEmail
+	sendPasswordResetEmail,
+	sendVerifyEmail
 } from './auth-emails';
 
 // The URL better-auth actually hands `sendResetPassword`: its own callback
@@ -123,6 +126,70 @@ describe('sending', () => {
 
 		await expect(
 			sendPasswordResetEmail({ toEmail: 'maya@example.com', resetUrl: BETTER_AUTH_URL })
+		).resolves.toBeUndefined();
+		expect(captureException).toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Signup verification (#757)
+// ---------------------------------------------------------------------------
+
+// The URL better-auth hands `sendVerificationEmail`: its own callback endpoint,
+// with both the token and the landing page carried as query parameters.
+const VERIFY_URL =
+	'https://corvmc.org/api/auth/verify-email?token=eyJhbGciOiJIUzI1NiJ9.PfQ2rN8xKvT1&callbackURL=%2Fmember%2Faccount';
+
+describe('buildVerifyEmailModel', () => {
+	it('passes the verification URL through untouched, query string and all', () => {
+		expect(buildVerifyEmailModel({ name: 'Maya', verifyUrl: VERIFY_URL }).verifyUrl).toBe(
+			VERIFY_URL
+		);
+	});
+
+	it('says the same expiry the token is actually given', () => {
+		expect(buildVerifyEmailModel({ name: 'Maya', verifyUrl: VERIFY_URL }).expiresIn).toBe(
+			formatExpiry(VERIFY_EMAIL_TOKEN_TTL_SECONDS)
+		);
+	});
+
+	it('greets by name, and omits the greeting when there is no usable one', () => {
+		expect(buildVerifyEmailModel({ name: 'Maya', verifyUrl: VERIFY_URL }).greeting).toContain(
+			'Maya'
+		);
+		expect(buildVerifyEmailModel({ name: '  ', verifyUrl: VERIFY_URL }).greeting).toBeUndefined();
+	});
+
+	// There is no preference behind a verification link, and the layout's
+	// "manage your preferences" footer would offer one that does not exist.
+	it('suppresses the preferences footer and sets its own preview line', () => {
+		const model = buildVerifyEmailModel({ name: 'Maya', verifyUrl: VERIFY_URL });
+
+		expect(model.transactional_only).toBe(true);
+		expect(model.preview_text).toBeTruthy();
+	});
+});
+
+describe('sendVerifyEmail', () => {
+	it('sends on the verify-email template', async () => {
+		await sendVerifyEmail({ toEmail: 'maya@example.com', name: 'Maya', verifyUrl: VERIFY_URL });
+
+		expect(dispatchEmailOnly).toHaveBeenCalledWith(
+			expect.objectContaining({
+				toEmail: 'maya@example.com',
+				templateAlias: 'verify-email',
+				type: 'email_verification'
+			})
+		);
+	});
+
+	// This runs inside better-auth's sign-up response. A Postmark outage must
+	// not cost the member the account that already committed.
+	it('reports a send failure rather than raising it', async () => {
+		dispatchEmailOnly.mockRejectedValueOnce(new Error('Postmark is down'));
+
+		await expect(
+			sendVerifyEmail({ toEmail: 'maya@example.com', verifyUrl: VERIFY_URL })
 		).resolves.toBeUndefined();
 		expect(captureException).toHaveBeenCalled();
 	});

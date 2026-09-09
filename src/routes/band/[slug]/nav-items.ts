@@ -17,6 +17,7 @@ export type BandNavKey =
 	| 'messages'
 	| 'members'
 	| 'rider'
+	| 'packing'
 	| 'announcements'
 	| 'reservations'
 	| 'events'
@@ -120,6 +121,14 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	// their own corner of it. Writes are still split — a member's save only ever
 	// touches their own rows.
 	items.push({ key: 'rider', label: 'Tech rider', href: resolve('/band/[slug]/rider', { slug }) });
+	// Beside the rider and on the same footing, for the same reason — and because
+	// this is the easier of the two doors: a band can say what it packs on the day
+	// it forms, which is not true of what a desk has to find.
+	items.push({
+		key: 'packing',
+		label: 'Packing list',
+		href: resolve('/band/[slug]/packing', { slug })
+	});
 
 	if (isOwnerOrAdmin) {
 		items.push({

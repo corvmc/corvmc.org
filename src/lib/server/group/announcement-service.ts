@@ -10,7 +10,7 @@ import { renderMarkdown } from '$lib/utils/markdown';
 
 /**
  * Announcements — a group talking to its own roster. Phase 7 of
- * `docs/specs/groups-spec.md`.
+ * `docs/specs/shipped/groups-spec.md`.
  *
  * The whole module is group-scoped by argument: every function takes a
  * `groupId` and every write is scoped to it. Nothing here guards — that is
@@ -27,7 +27,7 @@ import { renderMarkdown } from '$lib/utils/markdown';
 /**
  * The hard cap on a list, because there is no pagination yet and an uncapped
  * read of a decade of committee minutes is not a query anyone chose. A group at
- * 100 posts is the signal to add paging — see docs/specs/groups-spec.md, which
+ * 100 posts is the signal to add paging — see docs/specs/shipped/groups-spec.md, which
  * names it as the first thing to add if a club stops being small.
  */
 const MAX_LIST = 100;

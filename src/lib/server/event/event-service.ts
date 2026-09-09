@@ -47,14 +47,15 @@ import { staffCreate, adjustWindow } from '$lib/server/reservation/reservation-s
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { captureException } from '$lib/server/sentry';
-import { uploadFile, copyObject, deleteObject } from '$lib/server/storage';
+import { uploadFile, deleteObject } from '$lib/server/storage';
+import { copyToPrivate, copyFromPrivate, deletePrivateObject } from '$lib/server/private-storage';
 import {
 	detachSlot,
 	findByKey,
 	isKeyReferenced,
 	replaceSlot
 } from '$lib/server/media/media-service';
-import { mediaKey } from '$lib/server/storage-keys';
+import { isWithheldPosterKey, mediaKey, withheldPosterKey } from '$lib/server/storage-keys';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import {
@@ -104,6 +105,16 @@ export class EventStateError extends DomainError {
 
 	constructor(message: string) {
 		super(message);
+	}
+}
+
+/** A CMC listing that is not ready to be seen, and what it is missing. */
+export class EventNotReadyError extends DomainError {
+	readonly httpStatus = 422;
+
+	constructor(readonly blockers: string[]) {
+		super(`Not ready to announce: ${blockers.join(', ')}.`);
+		this.name = 'EventNotReadyError';
 	}
 }
 
@@ -269,6 +280,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		const res = await staffCreate({
 			userId: createdByUserId,
 			bookerType: 'event_listing',
+			hardHold: true,
 			bookerId: eventId,
 			startsAt: reservationParams.startsAt,
 			endsAt: reservationParams.endsAt,
@@ -596,6 +608,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 			const newRes = await staffCreate({
 				userId,
 				bookerType: 'event_listing',
+				hardHold: true,
 				bookerId: eventId,
 				startsAt: reservationStartsAt,
 				endsAt: reservationEndsAt,
@@ -627,6 +640,78 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 // publish()
 // ---------------------------------------------------------------------------
 
+/** Thrown when a withheld poster could not be brought back out of the private bucket. */
+export class PosterRestoreError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'PosterRestoreError';
+	}
+}
+
+/**
+ * Bring a withheld poster back into the public bucket, before the listing it
+ * belongs to goes live.
+ *
+ * A no-op for every event that was not taken down — the key shape is the whole
+ * test, and no column records it. Run before the status flips, never after: a
+ * failure here must leave the listing unpublished rather than publish a listing
+ * whose poster 404s. Throwing is the point, not a bug to swallow.
+ */
+async function restoreWithheldPoster(eventId: string): Promise<void> {
+	const [row] = await db
+		.select({
+			status: eventListing.status,
+			posterKey: eventListing.posterKey
+		})
+		.from(eventListing)
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
+
+	if (!row || !isWithheldPosterKey(row.posterKey)) return;
+	// Only for the transition `publish()` itself allows. Restoring for a status
+	// the update below will refuse would republish bytes for a listing that stays
+	// down.
+	if (row.status !== 'draft' && row.status !== 'pending_review') return;
+
+	const withheldKey = row.posterKey!;
+	const original = await findByKey(withheldKey);
+	const contentType = original?.contentType ?? 'image/jpeg';
+	// A fresh key, not the one the takedown deleted. Reusing a URL that was
+	// public before is what `mediaKey`'s random token exists to prevent.
+	const publicKey = mediaKey('events/posters', eventId, contentType);
+
+	const restored = await copyFromPrivate(withheldKey, publicKey);
+	if (!restored) {
+		throw new PosterRestoreError(
+			`Withheld poster ${withheldKey} is missing from the private bucket; refusing to publish ${eventId}`
+		);
+	}
+
+	// Same ordering as the takedown, in reverse: the bytes are at the public key
+	// and the row names it before the private copy is deleted, so the last copy
+	// can never be the one that goes.
+	await replaceSlot({
+		attachableType: 'event_listing',
+		attachableId: eventId,
+		slot: 'poster',
+		key: publicKey,
+		contentType,
+		byteSize: original?.byteSize ?? 0
+	});
+	await db
+		.update(eventListing)
+		.set({ posterKey: publicKey, updatedAt: new Date() })
+		.where(eq(eventListing.id, eventId));
+
+	try {
+		if (!(await isKeyReferenced(withheldKey))) await deletePrivateObject(withheldKey);
+	} catch (err) {
+		// The bytes are already public and the row names them. A private leftover
+		// is a billing nuisance the sweep collects, not a reason to fail an appeal.
+		captureException(err, { event: 'community_event.poster_restore_purge', eventId });
+	}
+}
+
 /**
  * Take an event live.
  *
@@ -635,7 +720,81 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
  * splitting it into two functions would mean two places to get the
  * publishedAt/status pair right.
  */
+/**
+ * CMC shows that are close and still not public.
+ *
+ * No query answered this, so an unannounced show was noticed by someone
+ * remembering it. Ordered soonest first, because that is the order they stop
+ * being fixable in.
+ */
+export async function unannouncedShows(withinDays = 21, now = new Date()) {
+	const horizon = new Date(now.getTime() + withinDays * 86_400_000);
+	return db
+		.select({
+			id: eventListing.id,
+			title: eventListing.title,
+			startsAt: eventListing.startsAt,
+			announceAt: eventListing.announceAt,
+			status: eventListing.status
+		})
+		.from(eventListing)
+		.where(
+			and(
+				eq(eventListing.source, 'cmc'),
+				inArray(eventListing.status, ['draft', 'pending_review']),
+				gt(eventListing.startsAt, now),
+				lte(eventListing.startsAt, horizon)
+			)
+		)
+		.orderBy(asc(eventListing.startsAt));
+}
+
+/**
+ * What a CMC listing still needs before the public sees it.
+ *
+ * Community listings are exempt: a member posting somebody else's gig is not
+ * making a promise on the collective's behalf, and gating them would break the
+ * community calendar.
+ */
+export async function publishBlockers(eventId: string): Promise<string[]> {
+	const [row] = await db
+		.select({
+			source: eventListing.source,
+			description: eventListing.description,
+			posterKey: eventListing.posterKey,
+			productionStatus: production.status
+		})
+		.from(eventListing)
+		.leftJoin(production, eq(production.eventId, eventListing.id))
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
+
+	if (!row || row.source !== 'cmc') return [];
+
+	const blockers: string[] = [];
+	// Announcing a show whose lineup is not agreed is the promise the collective
+	// cannot keep. Cancellation already cascades listing → production; this is
+	// the same coherence in the other direction.
+	if (
+		row.productionStatus &&
+		!['confirmed', 'completed', 'settled', 'closed'].includes(row.productionStatus)
+	) {
+		blockers.push('the production is not confirmed yet');
+	}
+	if (!row.posterKey) blockers.push('there is no poster');
+	if (!row.description?.trim()) blockers.push('there is no description');
+	return blockers;
+}
+
 export async function publish(eventId: string): Promise<void> {
+	// The readiness gate. A CMC show used to go public with no poster, no
+	// description and an unconfirmed lineup, because `publish` checked its own
+	// status and nothing else.
+	const blockers = await publishBlockers(eventId);
+	if (blockers.length > 0) throw new EventNotReadyError(blockers);
+
+	await restoreWithheldPoster(eventId);
+
 	const result = await db
 		.update(eventListing)
 		.set({ status: 'published', publishedAt: new Date(), updatedAt: new Date() })
@@ -720,26 +879,26 @@ export async function unpublishWithNotice(
 		// artwork. Restoring a listing could never restore its poster, and an
 		// unpublish done in error was unrecoverable.
 		//
-		// So rotate the key instead. The old URL stops resolving — which is the
-		// property that matters, since anyone who saw the listing may have the link
-		// — while the bytes survive, and republishing brings the poster back with
-		// the listing.
+		// So move the bytes to the private bucket instead. The old URL stops
+		// resolving — which is the property that matters, since anyone who saw the
+		// listing may have the link — while the bytes survive, and a successful
+		// appeal copies them back (see `publish()`).
 		//
-		// Note this is no longer about *guessability*: `mediaKey` gives every
-		// upload its own random token, so the key was never derivable from the
-		// event id to begin with. What rotation buys is invalidating links already
-		// handed out, which a random-on-upload key does nothing about.
+		// Rotating the key inside the *public* bucket, which is what this used to
+		// do, only made the poster unreachable in practice: the withheld key was
+		// unguessable and unlinked, but anyone holding it — from a log, a cache, a
+		// referrer — could still fetch content that was deliberately moderated
+		// away. The bucket is what makes it unreachable in principle.
 		let nextPosterKey: string | null = null;
 		if (row.posterKey) {
 			try {
-				// Not `mediaKey`: that builds a key from a content type, and here we
-				// only have the existing key. Carrying its extension across is both
-				// simpler and more faithful than re-deriving one.
+				// Carrying the existing key's extension across rather than re-deriving
+				// one from a content type: this path has a key, not a file.
 				const ext = row.posterKey.split('.').pop() ?? 'jpg';
-				const withheldKey = `events/posters/withheld/${eventId}-${crypto.randomUUID()}.${ext}`;
-				// copyObject returns null when the source is already gone, in which
-				// case there is nothing to preserve and nothing to delete.
-				const moved = await copyObject(row.posterKey, withheldKey);
+				const withheldKey = withheldPosterKey(eventId, ext);
+				// Null when the source is already gone, in which case there is nothing
+				// to preserve and nothing to delete.
+				const moved = await copyToPrivate(row.posterKey, withheldKey);
 				if (moved) {
 					// The listing is re-pointed at the copy first; the original object is
 					// deleted below, once the database no longer names it. Order matters
@@ -2054,8 +2213,9 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 		const res = await staffCreate({
 			userId: createdByUserId,
 			// Not `'group'`. The room is held for the session, not booked by the
-			// program — see docs/specs/groups-spec.md § Room time.
+			// program — see docs/specs/shipped/groups-spec.md § Room time.
 			bookerType: 'event_listing',
+			hardHold: true,
 			bookerId: eventId,
 			startsAt: reservationParams.startsAt,
 			endsAt: reservationParams.endsAt,

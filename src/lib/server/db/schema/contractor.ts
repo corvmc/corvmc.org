@@ -27,7 +27,7 @@ import { contractorJobStatuses, contractorTrades } from '../../../config';
 //   takes an `acquisitionId`. A labor invoice is not stock arriving, which is
 //   also why cost lives here rather than on `acquisition`.
 //
-// See `docs/specs/contractor-work-spec.md`.
+// See `docs/specs/shipped/contractor-work-spec.md`.
 // ---------------------------------------------------------------------------
 
 /**

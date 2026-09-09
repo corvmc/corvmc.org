@@ -8,7 +8,7 @@ export const contactSources = ['self_entered', 'staff_entered'] as const;
 export type ContactSource = (typeof contactSources)[number];
 
 /**
- * The private half of a party record. Phase 10 of `docs/specs/groups-spec.md`.
+ * The private half of a party record. Phase 10 of `docs/specs/shipped/groups-spec.md`.
  *
  * `directory_entry` is a **public** listing; an external act's booking details
  * are the opposite of public, and the two must not share a row.

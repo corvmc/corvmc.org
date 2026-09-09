@@ -137,7 +137,7 @@ export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
  * document's row and object are written in one request, so no such gap exists —
  * what the delay buys instead is an undo window on a destructive click, and a
  * week is the useful size for "the minutes I deleted on Monday". See
- * docs/specs/groups-spec.md § Documents and private storage.
+ * docs/specs/shipped/groups-spec.md § Documents and private storage.
  */
 export const DOCUMENT_SWEEP_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -258,7 +258,7 @@ export type GroupKind = (typeof groupKinds)[number];
  * and no page open, so "you've been invited to join a band" has to be true, and
  * for the Real Book Club it is not.
  */
-/** An announcement's title and markdown body — see docs/specs/groups-spec.md. */
+/** An announcement's title and markdown body — see docs/specs/shipped/groups-spec.md. */
 export const ANNOUNCEMENT_TITLE_MAX = 200;
 export const ANNOUNCEMENT_BODY_MAX = 10000;
 
@@ -267,7 +267,7 @@ export const groupKindLabels: Record<GroupKind, string> = {
 	// a musical group of any size: both call sites — the invitation email and the
 	// announcement fan-out — address somebody about a roster they are joining or
 	// already on, and a roster of people is exactly where "band" still reads
-	// better. See docs/specs/groups-spec.md § Solo acts.
+	// better. See docs/specs/shipped/groups-spec.md § Solo acts.
 	band: 'band',
 	club: 'club',
 	committee: 'committee'
@@ -291,7 +291,7 @@ export const groupKindLabels: Record<GroupKind, string> = {
  * under all three. A band is always `invite_only` and the service refuses any
  * other value for `kind: 'band'` — a band member may spend the band's credits on
  * rehearsal time, so an `open` band would be a way to join a stranger's band and
- * spend their money. See `docs/specs/groups-spec.md`.
+ * spend their money. See `docs/specs/shipped/groups-spec.md`.
  */
 export const groupJoinPolicies = ['invite_only', 'open', 'by_application'] as const;
 export type GroupJoinPolicy = (typeof groupJoinPolicies)[number];
@@ -398,6 +398,117 @@ export const assetStatusLabels: Record<AssetStatus, string> = {
  * gifts-in-kind report counts `kind = 'donation'`, so an opening balance is
  * invisible to both by construction and cannot drift back in.
  */
+// ---------------------------------------------------------------------------
+// The financial record
+// ---------------------------------------------------------------------------
+
+/**
+ * What a `financial_entry` amount **means** to the collective.
+ *
+ * `in_kind` and `pass_through` are exactly what a naive `sum()` gets wrong, which
+ * is why they are a column rather than a convention. See
+ * `docs/specs/financial-record-spec.md`.
+ */
+export const financialEntryKinds = ['earned', 'spent', 'in_kind', 'pass_through'] as const;
+export type FinancialEntryKind = (typeof financialEntryKinds)[number];
+
+export const financialEntryKindLabels: Record<FinancialEntryKind, string> = {
+	earned: 'Earned',
+	spent: 'Spent',
+	in_kind: 'In kind',
+	pass_through: 'Pass-through'
+};
+
+/**
+ * The chart of accounts — what an amount was **for**.
+ *
+ * A const rather than a table: reports group by it and the annual report's lines
+ * are named after it, so adding one is a deploy and that is correct.
+ */
+export const financialCategories = [
+	'ticket_sales',
+	'act_payout',
+	'act_guarantee',
+	'payout_rounding',
+	'card_fees',
+	'fee_coverage',
+	'reservation',
+	'membership',
+	'music_sales',
+	'donation',
+	'grant',
+	'equipment',
+	'facility',
+	'contractor',
+	'refund_absorbed',
+	'other'
+] as const;
+export type FinancialCategory = (typeof financialCategories)[number];
+
+/**
+ * What a show's expense was for.
+ *
+ * `deductible` on the category is what `production_slot.againstNet` divides
+ * against: a percentage-of-net deal shares the door after these come out, and a
+ * cost the collective carries whatever happens is not one of them.
+ */
+export const productionExpenseCategories = [
+	'sound',
+	'staffing',
+	'hospitality',
+	'marketing',
+	'rental',
+	'other'
+] as const;
+export type ProductionExpenseCategory = (typeof productionExpenseCategories)[number];
+
+export const productionExpenseCategoryLabels: Record<ProductionExpenseCategory, string> = {
+	sound: 'Sound',
+	staffing: 'Staffing',
+	hospitality: 'Hospitality',
+	marketing: 'Marketing',
+	rental: 'Rental',
+	other: 'Other'
+};
+
+/**
+ * What CMC asks an act or an artist to hand over before a show.
+ *
+ * The collection surfaces already exist — `/band/[slug]/rider`,
+ * `/band/[slug]/press-kit`, and `/act/[token]` for an act with no account.
+ * A request is the asking, and whether it arrived is **derived** from the
+ * artifact rather than stored, so a rider filled in without being asked still
+ * counts. See `docs/development/feature-analysis.md` on one mechanism serving
+ * several features.
+ */
+export const requestableArtifacts = ['tech_rider', 'epk', 'poster_art'] as const;
+export type RequestableArtifact = (typeof requestableArtifacts)[number];
+
+export const requestableArtifactLabels: Record<RequestableArtifact, string> = {
+	tech_rider: 'Tech rider',
+	epk: 'Press kit',
+	poster_art: 'Poster art'
+};
+
+/** How the money actually moved, and the key a Stripe cross-check joins on. */
+export const financialSettlements = ['stripe', 'cash', 'credit', 'none'] as const;
+export type FinancialSettlement = (typeof financialSettlements)[number];
+
+/** What an entry is about. No foreign key — an entry outlives what it describes. */
+export const financialSubjects = [
+	'ticket',
+	'reservation',
+	'audio_purchase',
+	'acquisition',
+	'purchase_order',
+	'contractor_job',
+	'production',
+	'volunteer_hour',
+	'membership',
+	'other'
+] as const;
+export type FinancialSubject = (typeof financialSubjects)[number];
+
 export const acquisitionKinds = ['purchase', 'donation', 'grant', 'opening_balance'] as const;
 export type AcquisitionKind = (typeof acquisitionKinds)[number];
 
@@ -1289,6 +1400,81 @@ export const RIDER_ITEM_NOTES_MAX = 500;
  */
 export const RIDER_MAX_ELEMENTS = 60;
 export const RIDER_MAX_INPUTS_PER_ELEMENT = 24;
+
+// ---------------------------------------------------------------------------
+// Packing lists
+// ---------------------------------------------------------------------------
+
+/**
+ * What kind of thing goes in the van — one value per shelf you would sort a
+ * load-out onto.
+ *
+ * **Declaration order is the order the page groups by**, and it is the order a
+ * van gets packed rather than alphabetical: the heavy backline goes in first
+ * and the thing you carry in your hand goes last. Unlike `riderElementKinds`,
+ * nothing numeric is derived from this order — no channel count depends on it —
+ * so it is a presentation default rather than a load-bearing sequence. What it
+ * *is* load-bearing for is the same thing `kind` is on a rider element: it is
+ * the spine that lets two members save their own rows without either
+ * renumbering the other, because `sortOrder` only ever breaks ties inside one
+ * owner's rows in one category.
+ *
+ * `personal` is here because the answer to "what do you bring to a gig?" from
+ * an actual musician contains earplugs and a spare shirt, and a vocabulary that
+ * refuses those is one people work around in the `other` box.
+ */
+export const packingCategories = [
+	'backline',
+	'instruments',
+	'audio',
+	'cables_power',
+	'merch',
+	'documents',
+	'personal',
+	'other'
+] as const;
+export type PackingCategory = (typeof packingCategories)[number];
+
+export const packingCategoryLabels: Record<PackingCategory, string> = {
+	backline: 'Backline',
+	instruments: 'Instruments',
+	audio: 'Audio & mics',
+	cables_power: 'Cables & power',
+	merch: 'Merch',
+	documents: 'Paperwork',
+	personal: 'Personal',
+	other: 'Other'
+};
+
+export const packingCategoryOptions = packingCategories.map((value) => ({
+	value,
+	label: packingCategoryLabels[value]
+}));
+
+/** "Fender Twin", "Merch tub". The rider's element label, same bound. */
+export const PACKING_LABEL_MAX = 120;
+
+/** Per-row free text: "the one with the broken latch". */
+export const PACKING_ITEM_NOTES_MAX = 500;
+
+/**
+ * Band-level notes. Deliberately shorter than `RIDER_NOTES_MAX` — a rider's
+ * notes are a document a venue reads and a packing list's are a sticky note the
+ * band reads, and the two should not invite the same amount of prose.
+ */
+export const PACKING_NOTES_MAX = 2000;
+
+/**
+ * Ceilings, validated in the service as well as the schema.
+ *
+ * Twice `RIDER_MAX_ELEMENTS` because a packing list is longer than a rider by
+ * nature: every cable, stand, tub and clipboard is a row here and none of them
+ * is an element there.
+ */
+export const PACKING_MAX_ITEMS = 120;
+
+/** Mirrored by the `packing_item_quantity_bounded` check; a client can post anything. */
+export const PACKING_MAX_QUANTITY = 99;
 
 // ---------------------------------------------------------------------------
 // Instructors

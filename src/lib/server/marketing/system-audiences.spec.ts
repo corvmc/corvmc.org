@@ -227,7 +227,15 @@ describe('ensureSubscribersForUsers', () => {
 	it('links an existing subscriber row rather than creating a duplicate', async () => {
 		// A public signup under this address who has since become a member.
 		selectResults = [
-			[{ userId: 'user-1', email: 'a@example.com', name: 'A', subscriberId: 'sub-1' }]
+			[
+				{
+					userId: 'user-1',
+					email: 'a@example.com',
+					name: 'A',
+					emailVerified: true,
+					subscriberId: 'sub-1'
+				}
+			]
 		];
 
 		await ensureSubscribersForUsers(predicate);
@@ -236,11 +244,45 @@ describe('ensureSubscribersForUsers', () => {
 		expect(insertedRows).toHaveLength(0);
 	});
 
-	it('creates linked subscriber rows for members who have none', async () => {
-		selectResults = [[{ userId: 'user-1', email: 'a@example.com', name: 'A', subscriberId: null }]];
+	// #757: the row holds whoever-signed-up-first's audience memberships and
+	// suppression state, and bare email equality is not proof of holding the
+	// address. Nothing is written until the verification link is clicked.
+	it('leaves an existing row alone for a member who has not confirmed the address', async () => {
+		selectResults = [
+			[
+				{
+					userId: 'user-1',
+					email: 'a@example.com',
+					name: 'A',
+					emailVerified: false,
+					subscriberId: 'sub-1'
+				}
+			]
+		];
 
 		await ensureSubscribersForUsers(predicate);
 
+		expect(updatedSets).toHaveLength(0);
+		expect(insertedRows).toHaveLength(0);
+	});
+
+	it('creates linked subscriber rows for members who have none', async () => {
+		selectResults = [
+			[
+				{
+					userId: 'user-1',
+					email: 'a@example.com',
+					name: 'A',
+					emailVerified: false,
+					subscriberId: null
+				}
+			]
+		];
+
+		await ensureSubscribersForUsers(predicate);
+
+		// Unconfirmed and still created: a fresh row under their own address
+		// takes nothing from anybody.
 		expect(updatedSets).toHaveLength(0);
 		expect(insertedRows[0]).toEqual([{ email: 'a@example.com', name: 'A', userId: 'user-1' }]);
 	});
@@ -253,6 +295,7 @@ describe('ensureSubscribersForUsers', () => {
 				userId: `user-${i}`,
 				email: `u${i}@example.com`,
 				name: `U${i}`,
+				emailVerified: true,
 				subscriberId: null
 			}))
 		];
