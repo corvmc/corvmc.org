@@ -16,7 +16,7 @@
 		toLocalDate,
 		toLocalTime
 	} from '$lib/utils/format';
-	import { creditsToHours } from '$lib/config';
+	import { confirmWindowOpensAt, creditsToHours, withinConfirmationWindow } from '$lib/config';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {
@@ -69,6 +69,7 @@
 		remainingCents: number;
 	} | null>(null);
 
+	let startsAt = $state<Date | null>(null);
 	let dateLabel = $state('');
 	let timeLabel = $state('');
 	let recurringFrequency = $state('');
@@ -80,6 +81,19 @@
 	// Only offer "Pay Ahead" when a balance is actually owed; otherwise "Confirm"
 	// (which skips payment) is the single action — no redundant payment screen.
 	const showPayAhead = $derived(payAhead && !!pricing && pricing.remainingCents > 0);
+
+	// The confirmation window is enforced by `bookAndPayReservation`, so it
+	// applies to exactly the flow that goes through it: not a staff confirm, not
+	// a band session, and not teaching time (`payAhead={false}`, and
+	// `bookInstructorReservation` has no window at all).
+	//
+	// Before this the step drew "Free hours applied" and a button called Confirm
+	// for a booking that could only be held — the credits were never committed
+	// and the button's 400 reached the member nowhere.
+	const beforeConfirmWindow = $derived(
+		payAhead && !staff && !band && !!startsAt && !withinConfirmationWindow(startsAt)
+	);
+	const confirmOpensLabel = $derived(startsAt ? formatDate(confirmWindowOpensAt(startsAt)) : '');
 
 	function formatPreviewDate(iso: string): string {
 		return formatDate(new Date(iso));
@@ -97,6 +111,7 @@
 				date = start.date;
 				startTime = start.time;
 				endTime = end.time;
+				startsAt = reservation.startsAt;
 				dateLabel = fullDate(reservation.startsAt);
 				timeLabel = formatTimeRange(reservation.startsAt, reservation.endsAt);
 				recurringFrequency = '';
@@ -112,6 +127,7 @@
 					if (date && startTime) {
 						const startIso = new Date(`${date}T${startTime}:00`);
 						const endIso = endTime ? new Date(`${date}T${endTime}:00`) : startIso;
+						startsAt = startIso;
 						dateLabel = fullDate(startIso);
 						timeLabel = formatTimeRange(startIso, endIso);
 					}
@@ -185,10 +201,11 @@
 				alone — a non-visual reader heard "$15.00 $0.00". The labels are
 				`sr-only` because the strike-through already says it visually.
 			-->
+			{@const creditsCommitNow = pricing.creditsApplicable > 0 && !beforeConfirmWindow}
 			<dl class="py-2 text-sm">
 				<div class="flex justify-between">
 					<dt>{pricing.durationHours} hr × ${formatDollars(pricing.hourlyRateCents)}/hr</dt>
-					{#if pricing.creditsApplicable > 0}
+					{#if creditsCommitNow}
 						<dd>
 							<span class="line-through opacity-60">
 								<span class="sr-only">Before free hours:</span>${formatDollars(pricing.totalCents)}
@@ -204,11 +221,23 @@
 				{#if pricing.creditsApplicable > 0}
 					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
 					<div class="mt-1 flex justify-between text-success">
-						<dt>Free hours applied</dt>
+						<!-- Free hours are spent at confirmation, so before the window opens
+						     they are a promise rather than a discount. Saying "applied" there
+						     was a number the booking would not get. -->
+						<dt>{creditsCommitNow ? 'Free hours applied' : 'Free hours will apply'}</dt>
 						<dd>−{freeHours} {freeHours === 1 ? 'hr' : 'hrs'}</dd>
 					</div>
 				{/if}
 			</dl>
+
+			{#if beforeConfirmWindow}
+				<p class="text-subtle">
+					Confirmation opens {confirmOpensLabel}. We'll hold the room until then{pricing.remainingCents >
+					0
+						? ' — or pay online now to lock it in.'
+						: '.'}
+				</p>
+			{/if}
 		{/if}
 
 		{#if isRecurring}
@@ -291,7 +320,8 @@
 					type="submit"
 					name="skipPayment"
 					value="on"
-					variant={showPayAhead ? 'ghost' : 'primary'}>Confirm</Button
+					variant={showPayAhead ? 'ghost' : 'primary'}
+					>{beforeConfirmWindow ? 'Hold this slot' : 'Confirm'}</Button
 				>
 				{#if showPayAhead}
 					<Button type="button" onclick={() => formCtx.next()}>Pay Ahead</Button>
