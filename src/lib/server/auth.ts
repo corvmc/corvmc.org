@@ -23,13 +23,15 @@ import {
 	sendPasswordResetEmail,
 	sendVerifyEmail
 } from '$lib/server/auth-emails';
+import { compare as bcryptCompare } from 'bcrypt-ts';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
 // ---------------------------------------------------------------------------
 // PBKDF2 password hashing via Web Crypto API
 // ---------------------------------------------------------------------------
 // @noble/hashes scrypt is silently broken on Cloudflare Workers — it returns
-// in 0ms with non-deterministic garbage. bcrypt-ts has the same issue.
-// PBKDF2-SHA-256 via Web Crypto is natively supported on Workers.
+// in 0ms with non-deterministic garbage. PBKDF2-SHA-256 via Web Crypto is
+// natively supported on Workers. bcrypt-ts was recorded as broken the same way
+// and is not: see `verifyBcryptInWorker`.
 // Format: "pbkdf2:iterations:salt_hex:key_hex"
 //
 // Cloudflare Workers' Web Crypto caps PBKDF2 at 100,000 iterations — anything
@@ -156,7 +158,7 @@ export async function scryptVerify(hash: string, password: string): Promise<bool
 }
 
 // ---------------------------------------------------------------------------
-// bcrypt → scrypt migration via Laravel proxy
+// bcrypt → scrypt migration
 // ---------------------------------------------------------------------------
 
 // Build the verify-password endpoint URL. LARAVEL_URL is operator-configured and
@@ -165,6 +167,25 @@ export async function scryptVerify(hash: string, password: string): Promise<bool
 // router 404s, silently failing sign-in for every un-migrated bcrypt user.
 export function buildVerifyPasswordUrl(laravelUrl: string): string {
 	return `${laravelUrl.replace(/\/+$/, '')}/api/verify-password`;
+}
+
+/**
+ * Verify a Laravel bcrypt hash in the Worker, rehashing to scrypt on success.
+ *
+ * bcrypt-ts was recorded above as silently broken on Workers; on workerd today
+ * it verifies a `$2y$` hash in ~160ms and rejects a wrong one. Correct
+ * passwords therefore no longer reach `LARAVEL_URL` at all, which is what makes
+ * that box decommissionable without forcing 93 members through a reset (#623).
+ */
+export async function verifyBcryptInWorker(hash: string, password: string): Promise<boolean> {
+	if (!(await bcryptCompare(password, hash))) return false;
+
+	// Same rewrite the proxy path does: one successful sign-in retires the hash.
+	await db
+		.update(account)
+		.set({ password: await scryptHash(password) })
+		.where(eq(account.password, hash));
+	return true;
 }
 
 async function verifyBcryptViaLaravel(hash: string, password: string): Promise<boolean> {
@@ -243,6 +264,14 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 		const { valid } = JSON.parse(body) as { valid: boolean };
 
 		if (valid) {
+			// The proxy now runs only after `verifyBcryptInWorker` has rejected the
+			// same credentials, so reaching here means local bcrypt is wrong about a
+			// real password — the one finding that would keep the box alive.
+			captureException(new Error('bcrypt migration: local verify missed a valid password'), {
+				event: 'auth.bcrypt_migration',
+				stage: 'local_false_negative',
+				email: userRow.email
+			});
 			const newHash = await scryptHash(password);
 
 			await db.update(account).set({ password: newHash }).where(eq(account.password, hash));
@@ -491,6 +520,10 @@ function createAuth() {
 						return scryptVerify(hash, password);
 					}
 					if (hash.startsWith('$2')) {
+						if (await verifyBcryptInWorker(hash, password)) return true;
+						// The proxy is kept only as a net under local bcrypt going quiet
+						// on a runtime change, and is skipped once the box is gone.
+						if (!env.LARAVEL_URL || !env.MIGRATION_SECRET) return false;
 						return verifyBcryptViaLaravel(hash, password);
 					}
 					// Legacy PBKDF2 hashes (written during the brief 100k-iteration
