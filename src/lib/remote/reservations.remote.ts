@@ -113,6 +113,7 @@ import {
 	SEARCH_LIMIT,
 	LIST_LIMIT,
 	CONFIRMATION_WINDOW_DAYS,
+	confirmWindowOpensAt,
 	withinConfirmationWindow
 } from '$lib/config';
 
@@ -1543,15 +1544,33 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
-	// Only a real Stripe charge (or staff) confirms a reservation outside the
-	// confirmation window.
+	// Only a real Stripe charge (or staff) commits a reservation outside the
+	// confirmation window: free hours are spent at confirmation, and confirmation
+	// opens CONFIRMATION_WINDOW_DAYS out.
 	const staff = await isStaff(locals.user.id);
 	const outsideWindow = !staff && !withinConfirmationWindow(startsAt);
+
+	// Nothing to charge and too early to commit — so the booking `create()` just
+	// wrote is the answer, not an error. This threw a 400 the member never saw,
+	// over a `scheduled` row that survived it: they were left owning a booking
+	// they had been told nothing about, which `cancel-unconfirmed` then killed at
+	// its start time. The row is exactly what `bookMemberReservation` produces;
+	// report it as the hold it is.
+	if (
+		outsideWindow &&
+		(data.skipPayment === 'on' ||
+			(await isFullyCreditCovered(locals.user.id, durationHours, totalCents, hourlyRateCents)))
+	) {
+		return {
+			reservationId: res.id,
+			scheduled: true as const,
+			confirmOpensAt: confirmWindowOpensAt(startsAt).toISOString()
+		};
+	}
 
 	if (data.skipPayment === 'on') {
 		// Confirm: commit free hours now. If fully covered, it's settled; otherwise
 		// the cash remainder is collected at the door.
-		if (outsideWindow) throw error(400, CONFIRM_WINDOW_MSG);
 		const { settled } = await commitCreditsAndSettleIfCovered({
 			reservationId: res.id,
 			userId: locals.user.id,
@@ -1572,14 +1591,6 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 		}
 		return { reservationId: res.id, confirmed: true as const };
 	}
-
-	// Pay Ahead: a fully credit-covered booking would confirm without a charge, so
-	// it's blocked outside the window — only a real charge commits early.
-	if (
-		outsideWindow &&
-		(await isFullyCreditCovered(locals.user.id, durationHours, totalCents, hourlyRateCents))
-	)
-		throw error(400, CONFIRM_WINDOW_MSG);
 
 	// Pay Ahead: commit free hours, then charge any cash remainder online now.
 	const { remainingCents, settled } = await commitCreditsAndSettleIfCovered({

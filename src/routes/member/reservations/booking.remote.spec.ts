@@ -46,7 +46,9 @@ class ReservationAuthorizationError extends Error {
 
 const reservationServiceMock = {
 	staffCreate: vi.fn(),
-	create: vi.fn(async () => {
+	// Return type declared, not inferred: the default implementation throws, so
+	// `never` would reject the success row the confirmation-window specs install.
+	create: vi.fn(async (): Promise<{ id: string; status: string; startsAt: Date; endsAt: Date }> => {
 		throw new ReservationConflictError();
 	}),
 	createWaitlisted: vi.fn(async () => ({
@@ -90,6 +92,14 @@ vi.mock('$lib/server/reservation/recurring-series-service', () => recurringSerie
 
 vi.mock('$lib/server/feature-flags', () => ({
 	requireFeature: vi.fn(async () => undefined)
+}));
+
+const isStaff = vi.fn(async () => false);
+vi.mock('$lib/server/authorization', () => ({
+	isStaff: (...a: unknown[]) => isStaff(...(a as [])),
+	requireCapability: vi.fn(async () => testUser),
+	requireCapabilityOrOwner: vi.fn(),
+	requireUser: () => testUser
 }));
 
 // Mock DB — the recurring path reads the member's subscription to gate the flow.
@@ -170,6 +180,7 @@ const { bookAndPayReservation, bookMemberReservation } =
 beforeEach(() => {
 	vi.clearAllMocks();
 	ensureContactPhone.mockResolvedValue(true);
+	isStaff.mockResolvedValue(false);
 	selectResult = [];
 	reservationServiceMock.create.mockImplementation(async () => {
 		throw new ReservationConflictError();
@@ -293,5 +304,67 @@ describe('contact phone requirement', () => {
 
 		expect(ensureContactPhone).toHaveBeenCalledWith('user-1', '(541) 555-0123');
 		expect(result).toMatchObject({ reservationId: 'res-1' });
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The confirmation window
+//
+// Confirming a booking further out than CONFIRMATION_WINDOW_DAYS inserted a
+// `scheduled` row, then threw a 400 the member never saw, and the row survived
+// the error that rejected it: they were left owning a booking nobody had told
+// them about, which `cancel-unconfirmed` kills at its start time. The row is
+// exactly what `bookMemberReservation` writes, so it is the answer, not a
+// failure — but it has to be reported as the hold it is. #872.
+// ---------------------------------------------------------------------------
+
+describe('bookAndPayReservation before the confirmation window opens', () => {
+	/** A date far enough out that no plausible window covers it. */
+	function farOutDate(): string {
+		return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+	}
+
+	beforeEach(() => {
+		reservationServiceMock.create.mockImplementation(async () => ({
+			id: 'res-held',
+			status: 'scheduled',
+			startsAt: new Date(),
+			endsAt: new Date()
+		}));
+	});
+
+	it('reports the booking as held rather than throwing over it', async () => {
+		const result = await bookAndPayReservation({
+			date: farOutDate(),
+			startTime: '09:00',
+			endTime: '10:00',
+			skipPayment: 'on'
+		});
+
+		expect(result).toMatchObject({ reservationId: 'res-held', scheduled: true });
+		expect(result.confirmOpensAt).toEqual(expect.any(String));
+	});
+
+	/**
+	 * Both control cases run on past the held-booking return into the credit
+	 * commit, which this spec does not stand up — so what is asserted is that the
+	 * hold was not taken, not what the commit then did.
+	 */
+	async function tookTheHold(date: string): Promise<boolean> {
+		return bookAndPayReservation({ date, startTime: '09:00', endTime: '10:00', skipPayment: 'on' })
+			.then((r: { scheduled?: boolean }) => r?.scheduled === true)
+			.catch(() => false);
+	}
+
+	it('still confirms inside the window', async () => {
+		const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+		expect(await tookTheHold(tomorrow)).toBe(false);
+	});
+
+	it('lets staff confirm outside the window', async () => {
+		isStaff.mockResolvedValue(true);
+
+		expect(await tookTheHold(farOutDate())).toBe(false);
 	});
 });
