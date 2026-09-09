@@ -70,6 +70,12 @@ const { sqlite, testDb } = vi.hoisted(() => {
 		for (const stmt of ddlFor(t)) sqlite.exec(stmt);
 	}
 
+	// `event_band` by hand, and only the columns `requestableActs` reads: it was
+	// rebuilt, so `ddlFor` finds no CREATE under its current name (#847).
+	sqlite.exec(
+		'create table event_band (id text primary key, event_id text, name text, billing_order integer, directory_entry_id text)'
+	);
+
 	// `drizzle({ client })`, not `drizzle(client)`. drizzle 1.0 dropped the
 	// positional overload: a raw Database passed positionally is read as a
 	// *config* object, finds no client in it, and quietly opens a second, empty
@@ -85,14 +91,14 @@ vi.mock('$lib/server/band/rider-service', () => ({
 	getEventRiderSummaries: () => riderSummaries()
 }));
 
-const { cancelArtifactRequest, listRequests, outstandingCount, requestArtifact } =
+const { cancelArtifactRequest, listRequests, outstandingCount, requestArtifact, requestableActs } =
 	await import('./artifact-request-service');
 
 const EVENT = 'evt-1';
 const ENTRY = 'entry-1';
 
 beforeEach(() => {
-	for (const t of ['artifact_request', 'directory_entry']) {
+	for (const t of ['artifact_request', 'directory_entry', 'event_band']) {
 		sqlite.exec(`delete from ${t}`);
 	}
 	sqlite.exec(
@@ -182,5 +188,30 @@ describe('overdue', () => {
 	it('does not flag an ask with no deadline', async () => {
 		await requestArtifact({ eventId: EVENT, entryId: ENTRY, artifact: 'epk' });
 		expect((await listRequests(EVENT, now))[0].overdue).toBe(false);
+	});
+});
+
+describe('who can be asked', () => {
+	const credit = (id: string, name: string, order: number, entry: string | null) =>
+		sqlite.exec(
+			`insert into event_band (id, event_id, name, billing_order, directory_entry_id) values ('${id}', '${EVENT}', '${name}', ${order}, ${entry ? `'${entry}'` : 'null'})`
+		);
+
+	it('offers the bill in billing order', async () => {
+		credit('eb-2', 'Second', 2, ENTRY);
+		sqlite.exec(
+			`insert into directory_entry (id, name, visibility) values ('entry-2', 'Openers', 'public')`
+		);
+		credit('eb-1', 'First', 1, 'entry-2');
+
+		expect(await requestableActs(EVENT)).toEqual([
+			{ entryId: 'entry-2', name: 'First' },
+			{ entryId: ENTRY, name: 'Second' }
+		]);
+	});
+
+	it('leaves out a credit with no listing, which has nowhere to receive an ask', async () => {
+		credit('eb-1', 'Bare name', 1, null);
+		expect(await requestableActs(EVENT)).toEqual([]);
 	});
 });

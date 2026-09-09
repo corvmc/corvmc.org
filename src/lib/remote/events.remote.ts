@@ -9,6 +9,10 @@ import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venu
 import { getProductionByEvent } from '$lib/server/production/production-service';
 import { getPublicSetTimes, getRunOfShow } from '$lib/server/production/run-of-show-service';
 import { getSettlement } from '$lib/server/production/settlement-service';
+import {
+	listRequests as listArtifactRequests,
+	requestableActs as listRequestableActs
+} from '$lib/server/production/artifact-request-service';
 import { listWorkOrders as listOpenWorkOrders } from '$lib/server/volunteer/work-order-service';
 import { bandRefColumns, toBandRef, toEventRef, toMemberRef } from '$lib/server/entity/refs';
 import {
@@ -1103,7 +1107,9 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		riders,
 		production,
 		runOfShow,
-		settlement
+		settlement,
+		artifactRequests,
+		requestableActs
 	] = await Promise.all([
 		getStaffEventDetail(id),
 		getEventRecurringSeries(id),
@@ -1130,7 +1136,12 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		// rather than beside it — `custom/no-concurrent-remote-queries` exists to
 		// stop a page fanning reads out, and this one is cheap when there is no
 		// production because it returns null on the first select.
-		getSettlement(id)
+		getSettlement(id),
+		// What the bill still owes us, and who can be asked. Fulfilment is derived
+		// from the artifact itself, so a rider filled in unprompted already counts
+		// and nothing here has to be ticked off by hand.
+		listArtifactRequests(id),
+		listRequestableActs(id)
 	]);
 
 	return {
@@ -1144,7 +1155,9 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		riders,
 		production,
 		runOfShow,
-		settlement
+		settlement,
+		artifactRequests,
+		requestableActs
 	};
 });
 
