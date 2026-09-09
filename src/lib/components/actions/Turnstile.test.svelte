@@ -1,12 +1,10 @@
 <!--
 	Stand-in for `svelte-turnstile`'s widget: the hidden input it writes into the
-	form, and nothing else. The real one injects Cloudflare's challenge script.
-	`siteKey` and `theme` are passed by the component under test and ignored here.
+	form, and nothing else. `siteKey` and `theme` are ignored.
 
-	Writing the `$bindable` IS this component's output — `bind:reset` is how
-	svelte-turnstile hands the parent its reset — so `no-useless-assignment` is
-	off twice below. A fallback value instead would make the parent's
-	`bind:reset={undefined}` a Svelte error.
+	Writing the `$bindable` IS the output — `bind:reset` is how the real widget
+	hands back its reset — so `no-useless-assignment` is off twice below. A
+	fallback value would make the parent's `bind:reset={undefined}` a Svelte error.
 -->
 <script lang="ts">
 	let {
