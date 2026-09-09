@@ -754,6 +754,34 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Reservation confirmed ---
+	//
+	// The payload was assembled for exactly this and had no consumer: the service
+	// loads the owner's row purely to fill in `userEmail`, `date`, `startTime`
+	// and `endTime`, and wraps the emit in a try/catch because a listener that
+	// throws would fail a booking after the money had moved. Until now nothing
+	// listened, so a member who booked and paid for a room was never told.
+	domainEvents.on('reservation.confirmed', async ({ data: event }) => {
+		await dispatch({
+			type: 'reservation_confirmed',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Reservation confirmed',
+			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
+			href: '/member/reservations',
+			email: {
+				recipientName: event.userName,
+				subject: `Reservation confirmed: ${event.date}`,
+				preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
+				heading: 'Reservation confirmed',
+				paragraphs: [{ text: 'The practice room is yours for this slot.' }],
+				details: whenDetails(event.date, event.startTime, event.endTime),
+				footnote: 'Cancel from your reservations page if your plans change.',
+				cta: { label: 'View my reservations' }
+			}
+		});
+	});
+
 	// --- Reservation cancelled (notify member; skip self-cancels) ---
 	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
 		// Members who cancel their own reservation don't need an email about it.
