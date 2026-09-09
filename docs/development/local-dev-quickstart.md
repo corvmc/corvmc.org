@@ -62,11 +62,11 @@ with tickets and RSVPs, credits, equipment, marketing data, and help articles.
 
 <a id="demo-logins"></a>
 
-**Login:** the seed creates 27 accounts with a password, all of them `password`. It prints
+**Login:** the seed creates 31 accounts with a password, all of them `password`. It prints
 the full list — with the deep links each one owns — when it finishes, and that print is the
 source of truth. `admin@corvallismusic.org` is the superuser: admin + staff + member at once.
 
-The other 26 are personas, and they come in two kinds. Reaching for the wrong kind is the
+The other 30 are personas, and they come in three kinds. Reaching for the wrong kind is the
 usual way a screen ends up looking broken when it is only unpopulated.
 
 **State fixtures** exist because a state is mutually exclusive per account. Volunteering is
