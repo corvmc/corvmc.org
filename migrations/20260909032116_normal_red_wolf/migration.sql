@@ -1,1 +1,0 @@
-ALTER TABLE `reservation` ADD `hard_hold` integer DEFAULT false NOT NULL;

@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "a9dcb1cc-4887-43b4-ae6a-85d6050b93e3",
+  "id": "b613f751-4927-4286-86a5-2effae3b2516",
   "prevIds": [
     "51f81237-2223-451a-8609-d03e5d5d64bc"
   ],
@@ -1467,16 +1467,6 @@
       "table": "reservation"
     },
     {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "false",
-      "generated": null,
-      "name": "hard_hold",
-      "entityType": "columns",
-      "table": "reservation"
-    },
-    {
       "type": "text",
       "notNull": false,
       "autoincrement": false,
@@ -2023,6 +2013,16 @@
       "default": null,
       "generated": null,
       "name": "published_at",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "announce_at",
       "entityType": "columns",
       "table": "event_listing"
     },

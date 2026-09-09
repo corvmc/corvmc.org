@@ -188,6 +188,7 @@ import {
 	EventNotFoundError,
 	EventValidationError,
 	EventStateError,
+	EventNotReadyError,
 	EventHasTicketsError,
 	PosterRestoreError
 } from './event-service';
@@ -424,9 +425,69 @@ describe('EventService', () => {
 
 		it('throws when event is not in draft status', async () => {
 			updateRowCount = 0;
-			selectResult = [{ ...mockEventRow, status: 'published' }];
+			// A poster, so the readiness gate passes and the status error is what
+			// surfaces. Without one the gate now refuses first, which is correct
+			// but not what this case is about.
+			selectResult = [{ ...mockEventRow, status: 'published', posterKey: 'events/p.jpg' }];
 
 			await expect(publish('evt-1')).rejects.toThrow(EventStateError);
+		});
+
+		// -------------------------------------------------------------------
+		// The readiness gate
+		// -------------------------------------------------------------------
+		//
+		// `publish` used to check the listing's own status and nothing else, so a
+		// CMC show went public with no poster, no description and an unconfirmed
+		// lineup. Community listings stay exempt: a member posting somebody
+		// else's gig makes no promise on the collective's behalf.
+
+		it('refuses a CMC listing with no poster, and says so', async () => {
+			selectResult = [{ ...mockEventRow, source: 'cmc', posterKey: null }];
+
+			await expect(publish('evt-1')).rejects.toThrow(EventNotReadyError);
+			await expect(publish('evt-1')).rejects.toThrow(/no poster/);
+		});
+
+		it('refuses a CMC listing with no description', async () => {
+			selectResult = [
+				{ ...mockEventRow, source: 'cmc', posterKey: 'events/p.jpg', description: '   ' }
+			];
+
+			await expect(publish('evt-1')).rejects.toThrow(/no description/);
+		});
+
+		it('refuses while the production is not confirmed', async () => {
+			// Cancellation already cascades listing → production; this is the same
+			// coherence in the other direction.
+			selectResult = [
+				{ ...mockEventRow, source: 'cmc', posterKey: 'events/p.jpg', productionStatus: 'draft' }
+			];
+
+			await expect(publish('evt-1')).rejects.toThrow(/not confirmed/);
+		});
+
+		it('publishes a CMC listing once it is ready', async () => {
+			updateRowCount = 1;
+			selectResult = [
+				{
+					...mockEventRow,
+					source: 'cmc',
+					posterKey: 'events/p.jpg',
+					productionStatus: 'confirmed'
+				}
+			];
+
+			await expect(publish('evt-1')).resolves.toBeUndefined();
+		});
+
+		it('leaves a community listing alone', async () => {
+			// No poster, no production — and it publishes, because gating the
+			// community calendar would break it.
+			updateRowCount = 1;
+			selectResult = [{ ...mockEventRow, source: 'community', posterKey: null }];
+
+			await expect(publish('evt-1')).resolves.toBeUndefined();
 		});
 
 		it('throws when event does not exist', async () => {
