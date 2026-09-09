@@ -354,7 +354,7 @@ export async function seedUsagePersonaLife(
 				cashDueCents: 2 * HOURLY_RATE_CENTS
 			}
 		],
-		9
+		8
 	);
 
 	// --- a ticket to something coming up, and a stub from one that happened ---
@@ -395,8 +395,8 @@ export async function seedUsagePersonaLife(
 			createdAt: ago(40)
 		});
 	}
-	// 16 columns at their widest × 6 = 96, under D1's 100 bound parameters.
-	if (ticketRows.length) await batchInsert(ticket, ticketRows, 6);
+	// 17 bound parameters a row × 5 = 85, under D1's 100.
+	if (ticketRows.length) await batchInsert(ticket, ticketRows, 5);
 
 	// --- something borrowed, something given back ----------------------------
 	const items = await db

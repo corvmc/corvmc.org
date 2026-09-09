@@ -81,6 +81,7 @@ import {
 import { seedVolunteerPersonas } from './seed/volunteer-personas';
 import { seedSustainingPersonas } from './seed/sustaining-personas';
 import { USAGE_PERSONAS, seedUsagePersonaLife, seedUsagePersonas } from './seed/usage-personas';
+import { STYLE_PERSONAS, seedStylePersonaHistory, seedStylePersonas } from './seed/style-personas';
 import { seedSuggestions } from './seed/suggestions';
 import { seedProjects } from './seed/projects';
 import { seedAudio } from './seed/audio';
@@ -121,6 +122,11 @@ async function main() {
 	// which is why they grow an `alsoInclude` rather than a splice.
 	const usage = await seedUsagePersonas(roles);
 	if (usage) bands.push(usage.band);
+	// Beside it and for the same reason. Its band is the one the create-band modal
+	// leaves behind, so it is appended but deliberately not handed to the seeders
+	// that fill a band in — half-made is the whole of what it is for.
+	const style = await seedStylePersonas(roles);
+	if (style) bands.push(style.bareBand);
 	// Before the groups, which take their leaders from it. Kept out of `allUsers`
 	// for the reason `seedGroupLeaders` gives.
 	const groupLeaders = await seedGroupLeaders(roles);
@@ -170,6 +176,9 @@ async function main() {
 	const usageLife = usage
 		? await seedUsagePersonaLife(usage.personas, events, adminUser)
 		: { reservations: 0, tickets: 0, loans: 0 };
+	const styleHistory = style
+		? await seedStylePersonaHistory(style.personas, events, adminUser)
+		: { reservations: 0, tickets: 0, notifications: 0 };
 	const help = await seedHelp();
 	const itemArticles = await seedItemArticles();
 	const contractors = await seedContractors(adminUser.id);
@@ -366,6 +375,14 @@ async function main() {
 	}
 	console.log(
 		`    ${usageLife.reservations} bookings, ${usageLife.tickets} tickets, ${usageLife.loans} loans on regular@`
+	);
+
+	console.log('\n  Usage-style demo logins (all `password`) — how, not what:');
+	for (const p of STYLE_PERSONAS) {
+		console.log(`    ${p.email.padEnd(33)} ${p.style}`);
+	}
+	console.log(
+		`    ${styleHistory.reservations} bookings, ${styleHistory.tickets} tickets, ${styleHistory.notifications} notifications between them`
 	);
 
 	console.log('\n  Volunteer deep links:');

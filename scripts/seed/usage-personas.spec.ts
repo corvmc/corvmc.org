@@ -44,6 +44,18 @@ describe('usage personas', () => {
 		expect(roleLists.filter((list) => /'(staff|admin)'/.test(list))).toEqual([]);
 	});
 
+	it('leaves the styles that are not data out of the seed', () => {
+		// Device, viewport and assistive technology are runtime properties. A
+		// persona claiming one would be a fixture that cannot be true, and the
+		// place for them is Playwright — see the quickstart.
+		const styles = readFileSync(new URL('style-personas.ts', seedDir), 'utf8');
+		const claimed = ['viewport', 'screenReader', 'userAgent', 'prefersReducedMotion'].filter(
+			(field) => new RegExp(`\\b${field}\\b`).test(styles)
+		);
+
+		expect(claimed, `${claimed.join(', ')} cannot be seeded — see the quickstart`).toEqual([]);
+	});
+
 	it('allocates member numbers no other seeder has taken', () => {
 		// UNIQUE, and a reuse takes the whole seed down on an error that names the
 		// column and not the two files fighting over it.

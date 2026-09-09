@@ -62,11 +62,11 @@ with tickets and RSVPs, credits, equipment, marketing data, and help articles.
 
 <a id="demo-logins"></a>
 
-**Login:** the seed creates 27 accounts with a password, all of them `password`. It prints
+**Login:** the seed creates 31 accounts with a password, all of them `password`. It prints
 the full list — with the deep links each one owns — when it finishes, and that print is the
 source of truth. `admin@corvallismusic.org` is the superuser: admin + staff + member at once.
 
-The other 26 are personas, and they come in two kinds. Reaching for the wrong kind is the
+The other 30 are personas, and they come in three kinds. Reaching for the wrong kind is the
 usual way a screen ends up looking broken when it is only unpopulated.
 
 **State fixtures** exist because a state is mutually exclusive per account. Volunteering is
@@ -102,6 +102,32 @@ The last four are the only way to see the capability matrix narrow anything. `st
 almost everything, so a handler guarded by capability behaves identically for `admin` and
 for a position until you sign in as the position — which is also why none of them holds
 `staff` as well.
+
+**Usage-style personas** (`scripts/seed/style-personas.ts`) are a third axis: not what
+somebody wants, but _how_ they use the thing. They cut across every page rather than
+exercising one feature, which is what makes them worth reaching for during a redesign:
+
+| login           | the style                                                                                                                                                        |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `halffinished@` | starts things and finishes none — an incomplete profile, a band with only a name, an unpaid booking, a draft listing, a loan request left in the queue           |
+| `poweruser@`    | two years of fortnightly bookings, 50-odd credit ledger rows, a long ticket history and a 28-deep bell — every list, pager and total meets a real _n_            |
+| `returning@`    | dormant two years: nothing recent anywhere, an all-old unread backlog, an invitation that expired while they were away                                           |
+| `lockeddown@`   | hidden from the directory, DMs off, every notification preference off — with real activity behind it, so a blank page is the preference and not an empty account |
+
+A truly empty account already exists: `newcomer@` is out of `allUsers` like every persona,
+so beyond its volunteering state it has nothing, and it is the one to sign in as for a
+first-run empty state.
+
+To walk a workflow as one of these — or as one of the six styles no seed can hold — invoke
+the `workflow-evaluation` skill. It pairs a workflow from
+[business-workflows.md](business-workflows.md) with a style prompt from
+`.claude/skills/workflow-evaluation/styles/` and reports what broke for that person.
+
+**What a seed cannot carry.** Device, viewport, input method, assistive technology and
+reading pace are runtime properties, so there is no persona for them and adding one would
+be a lie. Those belong to Playwright (`page.setViewportSize`, as `staff-users.e2e.ts` does
+at 375px) and to Storybook. What the seed holds is the _residue_ a style leaves in the
+database, which is what the four above are.
 
 Every other seeded user has no credential account — they are the lived-in background. To
 test as a different plain member, sign up through the UI (Turnstile passes with the
