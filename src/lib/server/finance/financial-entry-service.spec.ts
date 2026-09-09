@@ -75,6 +75,7 @@ const {
 	totalEarnedCents,
 	totalsByCategory
 } = await import('./financial-entry-service');
+type RecordEntryInput = Parameters<typeof recordEntry>[0];
 
 const JAN = new Date('2026-01-15T00:00:00Z');
 const FEB = new Date('2026-02-15T00:00:00Z');
@@ -83,7 +84,7 @@ const YEAR = { from: new Date('2026-01-01T00:00:00Z'), to: new Date('2026-12-31T
 const JANUARY = { from: new Date('2026-01-01T00:00:00Z'), to: new Date('2026-01-31T23:59:59Z') };
 
 /** A $10 ticket at the default split, as the spec's worked example writes it. */
-const ticketSale = (over: Partial<Parameters<typeof recordEntry>[0]> = {}) => ({
+const ticketSale = (over: Partial<RecordEntryInput> = {}): RecordEntryInput => ({
 	amountCents: 300,
 	kind: 'earned' as const,
 	category: 'ticket_sales' as const,
@@ -118,6 +119,11 @@ describe('recording', () => {
 
 	it('writes nothing for an empty batch rather than erroring', async () => {
 		await expect(recordEntries([])).resolves.toBeUndefined();
+	});
+
+	it('writes a single entry through the singular helper', async () => {
+		await recordEntry(ticketSale({ description: 'One row' }));
+		expect(await listForSubject('ticket', 'tkt-1')).toHaveLength(1);
 	});
 });
 
