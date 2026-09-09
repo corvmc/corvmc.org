@@ -69,6 +69,11 @@ export const reservation = sqliteTable(
 		status: text('status', { enum: reservationStatuses }).notNull().default('scheduled'),
 		startsAt: integer('starts_at', { mode: 'timestamp' }).notNull(),
 		endsAt: integer('ends_at', { mode: 'timestamp' }).notNull(),
+		// A show holds the room outright; a member booking does not. Explicit
+		// rather than inferred from `booker_type`, which asked "was this created
+		// via a listing?" — so advertising a session quietly upgraded its
+		// priority. `checkEventAndClosureConflict` is the only reader.
+		hardHold: integer('hard_hold', { mode: 'boolean' }).notNull().default(false),
 		notes: text('notes'),
 		cancellationReason: text('cancellation_reason'),
 		stripePaymentRecordId: text('stripe_payment_record_id'),

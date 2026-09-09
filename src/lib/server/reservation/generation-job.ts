@@ -265,13 +265,16 @@ async function checkEventAndClosureConflict(
 	startsAt: Date,
 	endsAt: Date
 ): Promise<ConflictInfo | null> {
-	// Check event-type reservations
+	// A show holds the room outright. Keyed on `hard_hold` rather than on the
+	// booker type, which answered "was this created via a listing?" — so a club
+	// session that happened to be advertised got a hard hold and the same
+	// session without a listing got a soft one.
 	const eventConflicts = await db
 		.select({ id: reservation.id })
 		.from(reservation)
 		.where(
 			and(
-				eq(reservation.bookerType, 'event_listing'),
+				eq(reservation.hardHold, true),
 				notInArray(reservation.status, ['cancelled', 'waitlisted']),
 				lt(reservation.startsAt, endsAt),
 				gt(reservation.endsAt, startsAt)
@@ -640,6 +643,7 @@ async function processEventSeries(
 					const res = await staffCreate({
 						userId: prototype.createdByUserId,
 						bookerType: 'event_listing',
+						hardHold: true,
 						bookerId: newEventId,
 						startsAt: occResStart,
 						endsAt: occResEnd,

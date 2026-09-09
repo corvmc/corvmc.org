@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { eq } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Mock dependencies before importing the module under test
@@ -52,7 +53,8 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 		endsAt: 'endsAt',
 		notes: 'notes',
 		recurringSeriesId: 'recurringSeriesId',
-		status: 'status'
+		status: 'status',
+		hardHold: 'hardHold'
 	},
 	closure: { reason: 'reason', startsAt: 'startsAt', endsAt: 'endsAt' }
 }));
@@ -338,6 +340,23 @@ describe('generateRecurringReservations', () => {
 		expect(insertedRows).toHaveLength(0);
 	});
 
+	/**
+	 * The predicate itself, not just its result. Moving the hard block off
+	 * `booker_type` is the change that would otherwise fail in silence: nothing
+	 * throws, holds just quietly stop blocking, and a member's booking takes a
+	 * show's room.
+	 */
+	it('blocks on the hold that says it is hard, not on how the row was created', async () => {
+		queueSelects([SERIES], [PROTOTYPE], [OWNER], [], [{ id: 'event-1' }], []);
+		setupInsert();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		await generateRecurringReservations();
+
+		expect(eq).toHaveBeenCalledWith('hardHold', true);
+		expect(eq).not.toHaveBeenCalledWith('bookerType', 'event_listing');
+	});
+
 	it('skips occurrences with event conflicts and emits recurring_skipped event', async () => {
 		queueSelects(
 			[SERIES],
@@ -607,6 +626,9 @@ describe('generateRecurringEvents', () => {
 		expect(mockStaffCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
 				bookerType: 'event_listing',
+				// A show holds the room outright, and says so on the row rather than
+				// leaving it to be inferred from how the row was created.
+				hardHold: true,
 				// Matches the one-off path: event-booked space is staff-held, so it
 				// must not look like an uncommitted member booking.
 				status: 'confirmed',

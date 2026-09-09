@@ -270,6 +270,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		const res = await staffCreate({
 			userId: createdByUserId,
 			bookerType: 'event_listing',
+			hardHold: true,
 			bookerId: eventId,
 			startsAt: reservationParams.startsAt,
 			endsAt: reservationParams.endsAt,
@@ -597,6 +598,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 			const newRes = await staffCreate({
 				userId,
 				bookerType: 'event_listing',
+				hardHold: true,
 				bookerId: eventId,
 				startsAt: reservationStartsAt,
 				endsAt: reservationEndsAt,
@@ -2131,6 +2133,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 			// Not `'group'`. The room is held for the session, not booked by the
 			// program — see docs/specs/shipped/groups-spec.md § Room time.
 			bookerType: 'event_listing',
+			hardHold: true,
 			bookerId: eventId,
 			startsAt: reservationParams.startsAt,
 			endsAt: reservationParams.endsAt,
