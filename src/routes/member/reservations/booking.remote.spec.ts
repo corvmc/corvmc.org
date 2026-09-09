@@ -310,12 +310,10 @@ describe('contact phone requirement', () => {
 // ---------------------------------------------------------------------------
 // The confirmation window
 //
-// Confirming a booking further out than CONFIRMATION_WINDOW_DAYS inserted a
-// `scheduled` row, then threw a 400 the member never saw, and the row survived
-// the error that rejected it: they were left owning a booking nobody had told
-// them about, which `cancel-unconfirmed` kills at its start time. The row is
-// exactly what `bookMemberReservation` writes, so it is the answer, not a
-// failure — but it has to be reported as the hold it is. #872.
+// Confirming further out than the window inserted a `scheduled` row and then
+// threw a 400 the member never saw, which the row survived. That row is what
+// `bookMemberReservation` writes for any booking, so it is the answer rather
+// than a failure — but it has to be reported as the hold it is. #872.
 // ---------------------------------------------------------------------------
 
 describe('bookAndPayReservation before the confirmation window opens', () => {
