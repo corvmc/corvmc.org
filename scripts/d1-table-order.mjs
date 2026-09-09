@@ -46,6 +46,8 @@ export const tableOrder = [
 	// The ops half of one listing. References event_listing and user, so it
 	// clears before both.
 	'production',
+	// Cascades from production, so it clears with it.
+	'production_expense',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
 	// (docs/specs/shipped/media-spec.md), so it constrains nothing else in this order.

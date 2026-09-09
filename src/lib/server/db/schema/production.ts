@@ -10,6 +10,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { eventListing, eventBand } from './event';
 import { user } from './authentication';
+import { productionExpenseCategories } from '../../../config';
 
 // ---------------------------------------------------------------------------
 // Productions
@@ -264,3 +265,53 @@ export const productionSlot = sqliteTable(
 
 export type ProductionSlot = typeof productionSlot.$inferSelect;
 export type NewProductionSlot = typeof productionSlot.$inferInsert;
+
+/**
+ * What a show cost, per line.
+ *
+ * The denominator `production_slot.againstNet` needs: a percentage-of-net deal
+ * shares the door *after* these come out, and until this table existed that
+ * promise was rendered to acts with nothing behind it (#839).
+ */
+export const productionExpense = sqliteTable(
+	'production_expense',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		productionId: text('production_id')
+			.notNull()
+			.references(() => production.id, { onDelete: 'cascade' }),
+
+		label: text('label').notNull(),
+		category: text('category', { enum: productionExpenseCategories }).notNull(),
+		amountCents: integer('amount_cents').notNull(),
+
+		/**
+		 * Whether this comes off the door before a net deal is worked out.
+		 *
+		 * Stored rather than derived from `category`: the same cost is deductible
+		 * at one show and the collective's own at another, and which it was has to
+		 * survive being asked a year later.
+		 */
+		deductible: integer('deductible', { mode: 'boolean' }).notNull().default(true),
+
+		paidTo: text('paid_to'),
+		paidAt: integer('paid_at', { mode: 'timestamp' }),
+		notes: text('notes'),
+
+		recordedByUserId: text('recorded_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [index('idx_production_expense_production').on(t.productionId, t.category)]
+);
+
+export type ProductionExpense = typeof productionExpense.$inferSelect;
+export type NewProductionExpense = typeof productionExpense.$inferInsert;
