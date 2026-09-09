@@ -658,11 +658,20 @@ export const getReservationStartTimes = query(z.string(), async (dateParam) => {
 		return count;
 	}
 
-	const options = slots
-		.filter((s, i) => s.available && contiguousFrom(i) >= minSlots)
-		.map((s) => ({ value: s.startTime, label: formatSlotTime(s.startTime) }));
-
-	return options;
+	// Every operating-hour slot, not only the bookable ones. Dropping the rest
+	// left gaps with no cause: the policy strip says 9 AM – 10 PM and the list
+	// simply did not contain 10 AM, which reads as a broken app rather than as
+	// somebody else having the room.
+	return slots.map((s, i) => {
+		const label = formatSlotTime(s.startTime);
+		if (!s.available) return { value: s.startTime, label: `${label} — booked`, disabled: true };
+		if (contiguousFrom(i) < minSlots) {
+			// Free, but with a booking or closing time too soon after it to fit the
+			// shortest session — which is a different thing from being taken.
+			return { value: s.startTime, label: `${label} — too short`, disabled: true };
+		}
+		return { value: s.startTime, label, disabled: false };
+	});
 });
 
 /** Available end times for a given date and start time. */
