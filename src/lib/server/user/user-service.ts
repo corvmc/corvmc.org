@@ -2,10 +2,16 @@ import { db } from '$lib/server/db';
 import { DomainError } from '../domain-error';
 import { user, session } from '$lib/server/db/schema/authentication';
 import { group, groupMember } from '$lib/server/db/schema/group';
-import { reservation } from '$lib/server/db/schema/reservation';
+import { lockMemberCode, reservation } from '$lib/server/db/schema/reservation';
 import { and, count, desc, eq, gt, isNotNull, isNull, ne, or } from 'drizzle-orm';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
+import {
+	cancel as cancelSubscription,
+	getSubscription,
+	resume as resumeSubscription
+} from '$lib/server/finance/subscription-service';
+import { revokeMemberCode } from '$lib/server/lock/member-code-service';
+import { captureException } from '$lib/server/sentry';
 import { isValidPhone, normalizePhone } from '$lib/utils/phone';
 
 // ---------------------------------------------------------------------------
@@ -63,10 +69,11 @@ export class UserHasLinkedRecordsError extends DomainError {
 
 /**
  * Soft-delete a user: the single offboarding entry point used by both staff
- * deactivation and user self-delete. Sets deletedAt, purges sessions, cancels
- * the user's future personal reservations, and cancels their Stripe
- * subscription. Reversible via reactivateUser (which does not restore the
- * cancelled reservations or subscription).
+ * deactivation and user self-delete. Sets deletedAt, purges sessions, revokes
+ * standing door codes, cancels the user's future personal reservations, and
+ * cancels their Stripe subscription. Reversible via reactivateUser, which
+ * resumes the subscription but restores neither the reservations nor the door
+ * code — a withdrawn code is re-granted by staff, not silently reinstated.
  */
 export async function deactivateUser(userId: string) {
 	const [row] = await db
@@ -87,6 +94,26 @@ export async function deactivateUser(userId: string) {
 	// 60s. Acceptable for offboarding; if a hard cut ever matters, disable the
 	// cache rather than adding a second gate.
 	await db.delete(session).where(eq(session.userId, userId));
+
+	// Revoke standing door codes. Without this a removed member still opens the
+	// building: the lock has no idea the account is gone, and nothing ages a
+	// member code out.
+	//
+	// A lock that is unreachable must not block the removal, so a failure is
+	// captured and the row is left un-revoked — it keeps showing as live on the
+	// staff codes page, which is where a stuck revoke gets noticed.
+	const standingCodes = await db
+		.select({ id: lockMemberCode.id })
+		.from(lockMemberCode)
+		.where(and(eq(lockMemberCode.userId, userId), isNull(lockMemberCode.revokedAt)));
+
+	for (const codeRow of standingCodes) {
+		try {
+			await revokeMemberCode(codeRow.id, 'Account deactivated');
+		} catch (err) {
+			captureException(err);
+		}
+	}
 
 	// Cancel this user's own future reservations — the personal ones and the
 	// teaching ones, which are two booker types and one person.
@@ -168,7 +195,15 @@ export async function deactivateUsers(
 	return { deactivated, skipped };
 }
 
-/** Restore a soft-deleted user. */
+/**
+ * Restore a soft-deleted user.
+ *
+ * `deactivateUser` cancels the subscription at period end rather than
+ * immediately, so inside the period resuming it is one Stripe call. Past it the
+ * subscription is gone and needs a fresh checkout, which is a different message
+ * to the member — hence `subscription`, which distinguishes the two rather than
+ * leaving a lapsed membership to be discovered later.
+ */
 export async function reactivateUser(userId: string) {
 	const [row] = await db
 		.update(user)
@@ -177,7 +212,29 @@ export async function reactivateUser(userId: string) {
 		.returning();
 
 	if (!row) throw new UserNotFoundError();
-	return row;
+
+	let subscription: 'resumed' | 'active' | 'lapsed' | 'none' = 'none';
+
+	if (row.stripeId) {
+		try {
+			const info = await getSubscription(row.stripeId);
+			if (!info) {
+				// The period elapsed while the account was closed, so there is nothing
+				// left to resume — restarting needs a fresh checkout.
+				subscription = 'lapsed';
+			} else if (info.cancelAtPeriodEnd) {
+				await resumeSubscription(row.stripeId);
+				subscription = 'resumed';
+			} else {
+				subscription = 'active';
+			}
+		} catch (err) {
+			captureException(err);
+			subscription = 'lapsed';
+		}
+	}
+
+	return { ...row, subscription };
 }
 
 /**
