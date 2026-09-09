@@ -197,6 +197,33 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	};
 });
 
+/**
+ * Every hold a group actually has, including the ones it does not appear to own.
+ *
+ * A group session books the room through its listing — `bookerType:
+ * 'event_listing'`, `bookerId` the event — so a plain `bookerType = 'group'`
+ * filter cannot see it, and a club could not find the hold for its own weekly
+ * jam on its own reservations page. Both shapes are the same group's booking.
+ *
+ * The listing side is a subquery rather than a join so the two branches stay
+ * one predicate the callers can drop into an existing `and(...)`.
+ */
+function bookedByGroup(groupId: string) {
+	return or(
+		and(eq(reservation.bookerType, 'group'), eq(reservation.bookerId, groupId)),
+		and(
+			eq(reservation.bookerType, 'event_listing'),
+			inArray(
+				reservation.bookerId,
+				db
+					.select({ id: eventListing.id })
+					.from(eventListing)
+					.where(eq(eventListing.groupId, groupId))
+			)
+		)
+	);
+}
+
 export const getBandReservations = query(z.string(), async (slug) => {
 	// A bare `requireUser()` here meant any signed-in account could read any
 	// band's practice schedule, the name of whoever booked each session, and the
@@ -239,8 +266,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(
 			and(
-				eq(reservation.bookerType, 'group'),
-				eq(reservation.bookerId, band.id),
+				bookedByGroup(band.id),
 				gt(reservation.startsAt, now),
 				ne(reservation.status, 'cancelled')
 			)
@@ -262,13 +288,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
-		.where(
-			and(
-				eq(reservation.bookerType, 'group'),
-				eq(reservation.bookerId, band.id),
-				lte(reservation.startsAt, now)
-			)
-		)
+		.where(and(bookedByGroup(band.id), lte(reservation.startsAt, now)))
 		.orderBy(desc(reservation.startsAt))
 		.limit(SEARCH_LIMIT);
 
