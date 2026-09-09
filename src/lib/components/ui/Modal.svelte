@@ -8,7 +8,8 @@
 		maxWidth = 'max-w-lg',
 		titleSnippet,
 		children,
-		onclose
+		onclose,
+		confirmClose
 	}: {
 		open?: boolean;
 		title?: string;
@@ -16,9 +17,19 @@
 		titleSnippet?: Snippet;
 		children: Snippet;
 		onclose?: () => void;
+		/**
+		 * Vetoes a close. Return false to keep the dialog open — the caller is
+		 * expected to be asking the user something. Every close goes through here:
+		 * the ✕, Escape and a click on the backdrop.
+		 */
+		confirmClose?: () => boolean;
 	} = $props();
 
 	function handleOpenChange(next: boolean) {
+		if (!next && confirmClose && !confirmClose()) {
+			open = true;
+			return;
+		}
 		open = next;
 		if (!next) onclose?.();
 	}
