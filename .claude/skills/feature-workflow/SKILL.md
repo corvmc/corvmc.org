@@ -13,7 +13,8 @@ The checklist below is the canonical version. A few notes on what the phases mea
   `docs/development/conventions.md#long-lived-feature-branches` before the first merge from `main`
   — the migration rule there is counter-intuitive and the failure is silent.
 - **Design** — a spec in `docs/specs/` is the deliverable for anything with new schema or
-  cross-file reach. The existing specs are the templates; `reservation-system-spec.md` is a good
+  cross-file reach. Getting _to_ a spec worth building from is its own pass: `feature-analysis`,
+  and `docs/development/feature-analysis.md`. The existing specs are the templates; `reservation-system-spec.md` is a good
   short one, `volunteering-spec.md` a good long one.
 - **Schema → Services → Routes** is a strict order. Generate the migration and review its SQL
   before writing the service, and write the service before the route, so the remote function has
