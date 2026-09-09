@@ -1,8 +1,9 @@
 import { db, getRowCount } from '$lib/server/db';
 import { production } from '$lib/server/db/schema/production';
-import { and, eq, getTableColumns, inArray } from 'drizzle-orm';
+import { and, eq, getTableColumns, inArray, isNull } from 'drizzle-orm';
 import { user } from '$lib/server/db/schema/authentication';
 import { eventListing } from '$lib/server/db/schema/event';
+import { dutyList, workOrder, workTask } from '$lib/server/db/schema/volunteer';
 import { DomainError } from '$lib/server/domain-error';
 import type { Production, ProductionStatus } from '$lib/server/db/schema/production';
 import { recomputeSetTimes } from './run-of-show-service';
@@ -66,9 +67,8 @@ export class InvalidProductionTransitionError extends DomainError {
  * list the atomic update needs: no second derivation step, and no way for the
  * table and the SQL to disagree.
  *
- * `settled` and `closed` have no button in the UI yet — the settlement
- * worksheet and the close-out drive them, and neither is built. They are here
- * so the machine is declared whole; do not "finish" the button set.
+ * `settled` is #593's tab; `closed` is gated below on the load-out checklist
+ * being finished.
  */
 const REACHABLE_FROM: Record<ProductionStatus, readonly ProductionStatus[]> = {
 	// Un-offer, because a mis-click needs a way back.
@@ -84,6 +84,17 @@ const REACHABLE_FROM: Record<ProductionStatus, readonly ProductionStatus[]> = {
 };
 
 /** The statuses a production can still be pulled out of when its event is cancelled. */
+export class CloseOutIncompleteError extends DomainError {
+	readonly httpStatus = 422;
+	constructor(readonly outstanding: string[]) {
+		super(
+			`Close-out is not finished: ${outstanding.slice(0, 5).join(', ')}` +
+				(outstanding.length > 5 ? ` and ${outstanding.length - 5} more` : '')
+		);
+		this.name = 'CloseOutIncompleteError';
+	}
+}
+
 const PRE_COMPLETED: readonly ProductionStatus[] = ['draft', 'offered', 'confirmed'];
 
 export interface ProductionDetailsInput {
@@ -202,8 +213,41 @@ export async function updateProductionDetails(
 	return row;
 }
 
+/**
+ * The close-out tasks a show still owes.
+ *
+ * Load-out work: tasks on a work order for this event whose duty list is
+ * anchored at `load_out`. The room being reset is the thing `closed` claims,
+ * and a button that claimed it without checking would be the button
+ * `production-service` warns against finishing.
+ */
+export async function outstandingCloseOutTasks(productionId: string): Promise<string[]> {
+	const rows = await db
+		.select({ label: workTask.label })
+		.from(workTask)
+		.innerJoin(workOrder, eq(workOrder.id, workTask.workOrderId))
+		.innerJoin(production, eq(production.eventId, workOrder.eventId))
+		.innerJoin(dutyList, eq(dutyList.id, workOrder.dutyListId))
+		.where(
+			and(
+				eq(production.id, productionId),
+				eq(dutyList.anchor, 'load_out'),
+				eq(workTask.done, false),
+				isNull(workOrder.cancelledAt)
+			)
+		);
+	return rows.map((r) => r.label);
+}
+
 export async function transitionProduction(id: string, to: ProductionStatus): Promise<Production> {
 	const from = REACHABLE_FROM[to];
+
+	// The gate is the whole feature: `closed` says the room is reset and the
+	// checklist is done, so it refuses while any of it is open and names what.
+	if (to === 'closed') {
+		const outstanding = await outstandingCloseOutTasks(id);
+		if (outstanding.length > 0) throw new CloseOutIncompleteError(outstanding);
+	}
 
 	const result = await db
 		.update(production)

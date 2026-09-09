@@ -77,6 +77,7 @@ import {
 	ProductionNotFoundError,
 	ProductionExistsError,
 	InvalidProductionTransitionError,
+	CloseOutIncompleteError,
 	NotACmcListingError,
 	ListingNotFoundError
 } from './production-service';
@@ -193,6 +194,35 @@ describe('updateProductionDetails', () => {
 	});
 });
 
+describe('the close-out gate', () => {
+	it('refuses to close while a load-out task is open, and names it', async () => {
+		// The gate is the whole feature: a button that set `closed` without
+		// checking would be the one production-service warns against finishing.
+		selectQueue = [[{ label: 'Reset the room' }, { label: 'Gear back to storage' }]];
+
+		await expect(transitionProduction('prod-1', 'closed')).rejects.toThrow(CloseOutIncompleteError);
+		// It must not have written anything.
+		expect(() => whereParams('update')).toThrow();
+	});
+
+	it('names at most five, and says how many more there are', async () => {
+		selectQueue = [Array.from({ length: 8 }, (_, i) => ({ label: `Task ${i + 1}` }))];
+
+		await expect(transitionProduction('prod-1', 'closed')).rejects.toThrow(/and 3 more/);
+	});
+
+	it('lets a show with nothing outstanding close', async () => {
+		selectQueue = [[], [productionRow({ status: 'closed' })]];
+		await expect(transitionProduction('prod-1', 'closed')).resolves.toBeDefined();
+	});
+
+	it('checks nothing on any other transition', async () => {
+		// Only `closed` claims the room is reset, so only `closed` pays for the read.
+		selectQueue = [[productionRow({ status: 'settled' })]];
+		await expect(transitionProduction('prod-1', 'settled')).resolves.toBeDefined();
+	});
+});
+
 describe('transitionProduction', () => {
 	// Every legal edge, asserted against the source list the UPDATE actually
 	// carries — the machine and the SQL cannot drift because they are one table.
@@ -208,7 +238,10 @@ describe('transitionProduction', () => {
 
 	for (const [to, from] of legal) {
 		it(`reaches ${to} only from ${from.join(', ')}`, async () => {
-			selectQueue = [[productionRow({ status: to })]];
+			// `closed` reads the close-out tasks first; an empty list is a show with
+			// nothing outstanding, which is the case this edge is about.
+			selectQueue =
+				to === 'closed' ? [[], [productionRow({ status: to })]] : [[productionRow({ status: to })]];
 
 			await transitionProduction('prod-1', to as never);
 
