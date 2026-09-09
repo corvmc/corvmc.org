@@ -265,7 +265,7 @@ export function registerAllNotificationListeners(): void {
 						userEmail: holder.attendeeEmail,
 						title: `${event.eventTitle} has been cancelled`,
 						body: event.refundNote,
-						href: '/member/tickets',
+						href: '/member/purchases',
 						email
 					});
 				} else {
@@ -358,7 +358,9 @@ export function registerAllNotificationListeners(): void {
 					userEmail: admin.userEmail,
 					title: `${event.acceptedByName} joined ${event.bandName}`,
 					body: 'A new member has joined your band',
-					href: `/member/bands/${event.bandId}`,
+					// The acts list, not the band: a band page is addressed by slug and
+					// this bus carries ids.
+					href: '/member/bands',
 					email: {
 						recipientName: admin.userName,
 						subject: `${event.acceptedByName} joined ${event.bandName}`,
@@ -1001,7 +1003,9 @@ export function registerAllNotificationListeners(): void {
 					body: event.notes
 						? `CMC staff removed this event from the public gig guide: ${event.notes}`
 						: 'CMC staff removed this event from the public gig guide following a report.',
-					href: `/member/bands/${event.bandId}`,
+					// Where the listing is republished from, which is what the email asks
+					// them to do.
+					href: `/member/events/${event.eventId}/manage`,
 					email: {
 						recipientName: admin.userName,
 						subject: `Your event "${event.eventTitle}" was unlisted`,
