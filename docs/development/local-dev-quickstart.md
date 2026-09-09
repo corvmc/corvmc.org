@@ -118,6 +118,11 @@ A truly empty account already exists: `newcomer@` is out of `allUsers` like ever
 so beyond its volunteering state it has nothing, and it is the one to sign in as for a
 first-run empty state.
 
+To walk a workflow as one of these — or as one of the six styles no seed can hold — invoke
+the `workflow-evaluation` skill. It pairs a workflow from
+[business-workflows.md](business-workflows.md) with a style prompt from
+`.claude/skills/workflow-evaluation/styles/` and reports what broke for that person.
+
 **What a seed cannot carry.** Device, viewport, input method, assistive technology and
 reading pace are runtime properties, so there is no persona for them and adding one would
 be a lie. Those belong to Playwright (`page.setViewportSize`, as `staff-users.e2e.ts` does
