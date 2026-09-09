@@ -6,6 +6,7 @@ vi.mock('./email/postmark-client', () => ({ sendEmailWithTemplate: vi.fn() }));
 vi.mock('./in-app-service', () => ({ createNotification: vi.fn() }));
 vi.mock('./preference-service', () => ({ getPreference: vi.fn() }));
 vi.mock('./sse', () => ({ pushToUser: vi.fn() }));
+vi.mock('./recipient', () => ({ isDeliverable: vi.fn() }));
 
 const EMAIL_CONTENT = {
 	recipientName: 'Ada',
@@ -54,11 +55,13 @@ const { sendEmailWithTemplate } = (await import('./email/postmark-client')) as a
 const { createNotification } = (await import('./in-app-service')) as any;
 const { getPreference } = (await import('./preference-service')) as any;
 const { pushToUser } = (await import('./sse')) as any;
+const { isDeliverable } = (await import('./recipient')) as any;
 const { dispatch, dispatchEmailOnly } = (await import('./dispatcher')) as any;
 
 describe('dispatch', () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
+		isDeliverable.mockResolvedValue(true);
 		createNotification.mockResolvedValue(FAKE_ROW);
 	});
 
@@ -104,6 +107,33 @@ describe('dispatch', () => {
 		await dispatch({ ...BASE_PARAMS, email: undefined });
 
 		expect(sendEmailWithTemplate).not.toHaveBeenCalled();
+	});
+
+	// Nothing in the notification path knew about `user.deletedAt`, and one of
+	// the lists it fans out to is a band roster — so a member removed by staff
+	// kept getting mail from the organisation that removed them. Guarded once
+	// here rather than in each fan-out. #813.
+	it('delivers nothing to a removed account, on any channel', async () => {
+		getPreference.mockResolvedValue({ email: true, inApp: true });
+		isDeliverable.mockResolvedValue(false);
+
+		await dispatch(BASE_PARAMS);
+
+		expect(createNotification).not.toHaveBeenCalled();
+		expect(pushToUser).not.toHaveBeenCalled();
+		expect(sendEmailWithTemplate).not.toHaveBeenCalled();
+		expect(getPreference).not.toHaveBeenCalled();
+	});
+
+	// The removal confirmation a closing account is owed still has to reach it,
+	// and a ticket buyer has no account to check at all.
+	it('still sends a forceEmail with no userId to check', async () => {
+		getPreference.mockResolvedValue({ email: false, inApp: false });
+
+		await dispatch({ ...BASE_PARAMS, userId: '', forceEmail: true });
+
+		expect(isDeliverable).not.toHaveBeenCalled();
+		expect(sendEmailWithTemplate).toHaveBeenCalled();
 	});
 
 	it('sends email via forceEmail even when pref.email is false', async () => {
@@ -154,6 +184,7 @@ describe('dispatch', () => {
 describe('dispatchEmailOnly', () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
+		isDeliverable.mockResolvedValue(true);
 	});
 
 	it('sends a templated email with the provided params', async () => {
@@ -215,6 +246,7 @@ describe('dispatchEmailOnly', () => {
 describe('notification model normalization', () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
+		isDeliverable.mockResolvedValue(true);
 	});
 
 	/**
@@ -302,6 +334,7 @@ describe('emailOmitsUserContent', () => {
 	// back there, and would say nothing about the other ~22 call sites.
 	beforeEach(() => {
 		vi.resetAllMocks();
+		isDeliverable.mockResolvedValue(true);
 		getPreference.mockResolvedValue({ email: true, inApp: false, sms: false });
 	});
 
