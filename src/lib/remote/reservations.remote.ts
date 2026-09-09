@@ -2313,10 +2313,18 @@ export const getReservations = query(
 		.object({
 			after: z.coerce.date().optional(),
 			forUser: z.string().optional(),
-			includeTerminal: z.boolean().optional()
+			includeTerminal: z.boolean().optional(),
+			/**
+			 * Newest first. An upcoming list reads forward — the next booking is the
+			 * one that matters — but history reads backward, and the All tab opened
+			 * on a member's first-ever reservation with no way to reverse it.
+			 */
+			newestFirst: z.boolean().optional()
 		})
 		.optional(),
-	async ({ after, forUser, includeTerminal } = {}): Promise<ReservationWithPrice[]> => {
+	async ({ after, forUser, includeTerminal, newestFirst } = {}): Promise<
+		ReservationWithPrice[]
+	> => {
 		const { locals } = getRequestEvent();
 
 		if (!locals.user) throw error(401, 'Not authenticated');
@@ -2347,7 +2355,7 @@ export const getReservations = query(
 			.select()
 			.from(reservation)
 			.where(and(...filters.filter((f): f is SQL => Boolean(f))))
-			.orderBy(reservation.startsAt);
+			.orderBy(newestFirst ? desc(reservation.startsAt) : reservation.startsAt);
 
 		// `price` is the full room rate. We deliberately do NOT project a credit
 		// discount onto uncommitted bookings here: free hours are only applied at
@@ -2484,7 +2492,7 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 	// query exists to collapse.
 	const [active, all, membership, contact, instructor] = await Promise.all([
 		getReservations({ after: new Date().toISOString() }),
-		getReservations({ includeTerminal: true }),
+		getReservations({ includeTerminal: true, newestFirst: true }),
 		getMembershipStatus(),
 		getBookingContact(),
 		getInstructorByUserId(currentUser.id)
