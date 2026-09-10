@@ -10,6 +10,7 @@
 	import { resolve } from '$app/paths';
 	import JoinGroupAction from '$lib/components/groups/JoinGroupAction.svelte';
 	import AnswerGroupInviteAction from '$lib/components/groups/AnswerGroupInviteAction.svelte';
+	import EmailInviteCard from '$lib/components/groups/EmailInviteCard.svelte';
 	import { getMemberGroups } from '$lib/remote/groups.remote';
 
 	/**
@@ -41,7 +42,7 @@
 <PageHeader title="Groups" subtitle="Clubs and committees at the Collective" />
 <PageContent width="3xl">
 	<InfoCard title="Your programs">
-		{#if active.length === 0 && invited.length === 0 && applied.length === 0}
+		{#if active.length === 0 && invited.length === 0 && applied.length === 0 && data.emailInvites.length === 0}
 			<EmptyState description="You're not in any clubs or committees yet." />
 		{:else}
 			<div class="space-y-3">
@@ -68,6 +69,10 @@
 							<AnswerGroupInviteAction groupId={g.id} groupName={g.name} />
 						</CardBody>
 					</Card>
+				{/each}
+
+				{#each data.emailInvites as inv (inv.id)}
+					<EmailInviteCard invite={inv} kindLabel={kindLabel(inv.kind)} />
 				{/each}
 
 				{#each applied as g (g.id)}

@@ -3,7 +3,7 @@ import { INVITE_EXPIRY_DAYS } from '$lib/config';
 import { groupInvite } from '$lib/server/db/schema/group-invite';
 import { groupMember, group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, gt, desc, sql } from 'drizzle-orm';
+import { eq, and, gt, desc, isNull, sql } from 'drizzle-orm';
 import { SEARCH_LIMIT } from '$lib/config';
 import { BandMemberExistsError, invite } from '$lib/server/band/band-service';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
@@ -178,6 +178,44 @@ export async function resolvePendingInvites(userId: string, email: string): Prom
 	}
 
 	return resolved;
+}
+
+/**
+ * The emailed invitations addressed to this member, expired ones included.
+ *
+ * `resolvePendingInvites` above filters on `gt(expiresAt, now)` and only runs at
+ * signup; `getByToken` returns null past expiry. So an invitation that lapsed
+ * before the invitee got to it was invisible on every surface — the member had
+ * no way to learn they had been invited, that it expired, or by whom (#906).
+ * Expiry is returned rather than filtered, because "this expired" is the thing
+ * worth saying.
+ */
+export async function listInvitesForEmail(email: string) {
+	return db
+		.select({
+			id: groupInvite.id,
+			groupId: groupInvite.groupId,
+			groupName: group.name,
+			groupSlug: group.slug,
+			groupKind: group.kind,
+			role: groupInvite.role,
+			position: groupInvite.position,
+			expiresAt: groupInvite.expiresAt,
+			createdAt: groupInvite.createdAt,
+			invitedByName: user.name
+		})
+		.from(groupInvite)
+		.innerJoin(group, eq(group.id, groupInvite.groupId))
+		.leftJoin(user, eq(user.id, groupInvite.invitedById))
+		.where(
+			and(
+				eq(groupInvite.email, email.toLowerCase().trim()),
+				eq(groupInvite.status, 'pending'),
+				isNull(group.deletedAt)
+			)
+		)
+		.orderBy(desc(groupInvite.createdAt))
+		.limit(SEARCH_LIMIT);
 }
 
 export async function listForGroup(groupId: string) {

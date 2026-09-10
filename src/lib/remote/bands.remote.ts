@@ -41,6 +41,7 @@ import { bandTiers } from '$lib/server/db/schema/band-site';
 import {
 	createInvite as createEmailInviteService,
 	listForGroup as listEmailInvitesForGroup,
+	listInvitesForEmail,
 	revoke as revokeEmailInviteService
 } from '$lib/server/group/group-invite-service';
 import { requireGroupRole } from '$lib/server/group/group-context';
@@ -226,7 +227,15 @@ export const getMemberBands = query(async () => {
 	const currentUser = requireUser();
 	// Bands only. Clubs and committees live at `/member/groups`, which answers a
 	// different question and has its own index.
-	const bands = await listForUser(currentUser.id, ['band']);
+	//
+	// The second read is the emailed invitations: those are `group_invite` rows
+	// rather than pending roster rows, so none of them reached this page — an
+	// invitation that lapsed before the invitee followed the link was invisible
+	// everywhere (#906).
+	const [bands, invites] = await Promise.all([
+		listForUser(currentUser.id, ['band']),
+		listInvitesForEmail(currentUser.email)
+	]);
 
 	const serialize = (b: (typeof bands)[number]) => ({
 		id: b.id,
@@ -247,7 +256,17 @@ export const getMemberBands = query(async () => {
 		// Always empty for a band, which is `invite_only` by construction — but it
 		// is the shape the data can take, and leaving it out is how the club
 		// mount of this list would lose its applicants.
-		requested: byStatus.requested.map(serialize)
+		requested: byStatus.requested.map(serialize),
+		emailInvites: invites
+			.filter((i) => i.groupKind === 'band')
+			.map((i) => ({
+				id: i.id,
+				name: i.groupName,
+				role: i.role,
+				invitedByName: i.invitedByName,
+				expiresAt: i.expiresAt,
+				expired: i.expiresAt <= new Date()
+			}))
 	};
 });
 

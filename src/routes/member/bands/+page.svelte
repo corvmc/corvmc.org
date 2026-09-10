@@ -4,6 +4,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import EmailInviteCard from '$lib/components/groups/EmailInviteCard.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -75,7 +76,7 @@
 </PageHeader>
 <PageContent width="2xl">
 	<!-- Pending invitations -->
-	{#if pending.length > 0}
+	{#if pending.length > 0 || data.emailInvites.length > 0}
 		<section>
 			<h2 class="mb-3 text-lg font-semibold">Pending Invitations</h2>
 			<div class="space-y-3">
@@ -135,13 +136,17 @@
 						</CardBody>
 					</Card>
 				{/each}
+
+				{#each data.emailInvites as inv (inv.id)}
+					<EmailInviteCard invite={inv} />
+				{/each}
 			</div>
 		</section>
 	{/if}
 
 	<!-- Active acts -->
 	<section>
-		{#if active.length === 0 && pending.length === 0}
+		{#if active.length === 0 && pending.length === 0 && data.emailInvites.length === 0}
 			<EmptyState message="You're not in any acts yet. Create one to get started." />
 		{:else if active.length === 0}
 			<EmptyState message="No active acts yet." />
