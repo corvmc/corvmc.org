@@ -187,6 +187,10 @@ export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
  * three different deals has no single percentage — the deal itself lives on
  * `event_band` (see `docs/specs/project-spec.md`, the deal shape). Say "we
  * suggest 70% to the acts" in copy, never "the acts' deal is 70%".
+ *
+ * The acts' 70% is a guarantee against the **suggested price**, not against
+ * what the buyer paid. Anything above the suggestion opens as the collective's
+ * and stays the buyer's to redirect — a gift they cannot direct is not one.
  */
 export const TICKET_COLLECTIVE_SHARE_BPS = 3000;
 

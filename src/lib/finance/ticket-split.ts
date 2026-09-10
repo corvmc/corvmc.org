@@ -35,6 +35,7 @@
 import {
 	computeSplit as computeCoreSplit,
 	divisibleCents,
+	otherFloorCents,
 	otherTakeCents,
 	suggestedShareCents,
 	validateSplit as validateCoreSplit,
@@ -87,12 +88,12 @@ export function suggestedCollectiveCents(
 }
 
 /**
- * Where the bar opens for a ticket: everything the acts are not owed.
+ * Where the bar opens for a ticket: everything the acts are not suggested.
  *
- * The acts' take is anchored to the event's suggested price, so the collective
- * is the residual — it absorbs the discount when a buyer pays under, and the
- * card fee always, until its own share is zero. On a $10 show a buyer paying $7
- * sends $6.49 to the acts and nothing to the collective.
+ * The collective is the residual — it absorbs the discount when a buyer pays
+ * under the suggestion, and the card fee always, until its own share is zero.
+ * On a $10 show a buyer paying $7 sends $6.49 to the acts and nothing to the
+ * collective.
  */
 export function actsAnchoredCollectiveCents(input: {
 	/** The event's suggested price for the whole order. */
@@ -106,11 +107,13 @@ export function actsAnchoredCollectiveCents(input: {
 }): number {
 	const { baseCents, grossPaidCents, coverFees, actsOptUpCents, bps } = input;
 	const divisible = divisibleCents(grossPaidCents, coverFees);
-	return divisible - actsMinCents({ baseCents, grossPaidCents, coverFees, actsOptUpCents, bps });
+	return (
+		divisible - actsSuggestedCents({ baseCents, grossPaidCents, coverFees, actsOptUpCents, bps })
+	);
 }
 
-/** The acts' anchored take, clamped to what is divisible. The floor the bar cannot cross. */
-export function actsMinCents(input: {
+/** The acts' opening take: their guarantee, or their ratio of the gross when it is larger. */
+export function actsSuggestedCents(input: {
 	baseCents: number;
 	grossPaidCents: number;
 	coverFees: boolean;
@@ -130,6 +133,29 @@ export function actsMinCents(input: {
 		shareBps: bps,
 		divisibleCents: divisibleCents(grossPaidCents, coverFees),
 		optUpCents: actsOptUpCents
+	});
+}
+
+/**
+ * The acts' guarantee: their share of the event's **suggested** price, clamped
+ * to what is divisible. The floor the bar cannot cross.
+ *
+ * Deliberately not a share of what was paid. Anything above the suggestion is a
+ * gift, and the bar is where the buyer says who it is for — so this does not
+ * rise with generosity, and `actsOptUpCents` is not a term in it: folding a
+ * buyer's own choice into the floor is what would stop them taking it back.
+ */
+export function actsMinCents(input: {
+	baseCents: number;
+	grossPaidCents: number;
+	coverFees: boolean;
+	bps?: number;
+}): number {
+	const { baseCents, grossPaidCents, coverFees, bps = TICKET_COLLECTIVE_SHARE_BPS } = input;
+	return otherFloorCents({
+		baseCents,
+		shareBps: bps,
+		divisibleCents: divisibleCents(grossPaidCents, coverFees)
 	});
 }
 
@@ -192,8 +218,8 @@ export function validateTicketSplit(
 		minChargeCents: TICKET_MIN_CHARGE_CENTS,
 		// A buyer may always pay more than suggested. That is the point.
 		allowPayMore: true,
-		// The acts' take is anchored to the suggestion, so the collective's share
-		// has a ceiling the buyer cannot drag past. #827.
+		// The acts' guarantee is a share of the suggestion, not of what was paid,
+		// so the collective's ceiling is whatever sits above it. #827.
 		otherMinCents: actsMinCents({
 			baseCents: suggestedUnitCents * quantity,
 			grossPaidCents: unitPriceCents * quantity,
