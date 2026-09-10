@@ -218,9 +218,10 @@
 			<FormField
 				field={fields.title}
 				type="text"
-				label="Title *"
+				label="Title"
 				value={listing.title}
 				maxlength="200"
+				required
 			/>
 
 			<FormField name="description" label="Description">
@@ -235,14 +236,14 @@
 				<FormField
 					field={fields.eventDate}
 					type="date"
-					label="Date *"
+					label="Date"
 					value={toDateValue(listing.startsAt)}
 					required
 				/>
 				<FormField
 					field={fields.eventStartTime}
 					type="time"
-					label="Start Time *"
+					label="Start Time"
 					value={toTimeValue(listing.startsAt)}
 					required
 				/>
@@ -265,9 +266,10 @@
 				<FormField
 					field={fields.location}
 					type="text"
-					label="Venue *"
+					label="Venue"
 					value={listing.location ?? ''}
 					maxlength="500"
+					required
 				/>
 			</div>
 

@@ -52,6 +52,15 @@
 			(ctx.status !== 'idle' && ctx.status !== 'dirty')
 	);
 
+	// A disabled button is not focusable, so a member who cannot see why it is
+	// disabled cannot tab to it to find out either — the booking dialog's Continue
+	// sat dead behind an unfilled Contact phone with nothing saying so (#901).
+	// `Button` renders a native `title` on a disabled control precisely for this;
+	// `{...rest}` is spread after it, so a caller's own `title` still wins.
+	const disabledReason = $derived(
+		browser && !disabled && !ctx.currentStepValid ? 'Fill in the required fields first' : undefined
+	);
+
 	// The status flash outranks the caller's colour: a destructive `variant="error"`
 	// submit that has just succeeded should read as success, not stay red.
 	const activeVariant = $derived(
@@ -78,6 +87,7 @@
 		variant={activeVariant}
 		{size}
 		class={className}
+		title={disabledReason}
 		disabled={isDisabled}
 		onclick={isLastStep ? undefined : () => ctx.next()}
 		{...rest}

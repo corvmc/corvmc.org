@@ -81,6 +81,12 @@
 		src?: string;
 		/** Inline label beside the `checkbox` / `toggle` input. */
 		checkboxLabel?: string;
+		/**
+		 * Marks the caption and forwards the native attribute. Stays in `rest`
+		 * like `options` does, so which controls receive the attribute is
+		 * unchanged — only the caption is new.
+		 */
+		required?: boolean;
 		placeholder?: string;
 		multiple?: boolean;
 		orientation?: 'row' | 'col';
@@ -230,7 +236,7 @@
 		class="fieldset-legend"
 		for={labelsOneControl ? resolvedId : undefined}
 	>
-		{_label}
+		{_label}{#if rest.required}<span class="ml-0.5 text-error" aria-hidden="true">*</span>{/if}
 	</svelte:element>
 	{#if issues}
 		{#each issues as issue (issue.message)}
