@@ -21,6 +21,16 @@
 	} as const;
 
 	export type SplitTone = keyof typeof TONES;
+
+	/**
+	 * Below this share of the track, a segment shows no amount at all.
+	 *
+	 * `$13.38` plus its padding is around 50px — roughly 12% of the narrowest
+	 * track this renders in. The segment names live in the legend and in
+	 * `aria-valuetext`, so keeping them out of the bar is what lets the threshold
+	 * sit this low; a name would put it back over 20% and hide amounts that fit.
+	 */
+	const LABEL_MIN_PCT = 12;
 </script>
 
 <script lang="ts">
@@ -149,7 +159,7 @@
 <div class="space-y-2">
 	<div
 		bind:this={track}
-		class="flex h-10 w-full overflow-hidden rounded border border-base-300"
+		class="flex h-10 w-full overflow-hidden rounded border border-base-300 select-none"
 		onpointerdown={(e) => {
 			dragging = true;
 			fromClientX(e.clientX);
@@ -159,14 +169,16 @@
 		<div
 			class="flex items-center justify-center overflow-hidden whitespace-nowrap {TONES[otherTone]}"
 			style="width: {pct(otherCents)}%"
+			title="{otherLabel} {dollars(otherCents)}"
 		>
-			{#if pct(otherCents) > 22}<span class="px-2">{otherLabel} {dollars(otherCents)}</span>{/if}
+			{#if pct(otherCents) > LABEL_MIN_PCT}<span class="px-2">{dollars(otherCents)}</span>{/if}
 		</div>
 		<div
 			class="flex items-center justify-center overflow-hidden whitespace-nowrap {TONES[valueTone]}"
 			style="width: {pct(clamped)}%"
+			title="{valueLabel} {dollars(clamped)}"
 		>
-			{#if pct(clamped) > 22}<span class="px-2">{valueLabel} {dollars(clamped)}</span>{/if}
+			{#if pct(clamped) > LABEL_MIN_PCT}<span class="px-2">{dollars(clamped)}</span>{/if}
 		</div>
 		{#if fixedCents > 0}
 			<!-- Locked, and shown rather than hidden: an unexplained missing 59¢
@@ -179,7 +191,7 @@
 				style="width: {pct(fixedCents)}%"
 				title="{fixedLabel} {dollars(fixedCents)}"
 			>
-				{#if pct(fixedCents) > 22}<span class="px-2">{dollars(fixedCents)}</span>{/if}
+				{#if pct(fixedCents) > LABEL_MIN_PCT}<span class="px-2">{dollars(fixedCents)}</span>{/if}
 			</div>
 		{/if}
 	</div>
