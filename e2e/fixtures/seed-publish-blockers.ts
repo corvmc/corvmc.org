@@ -1,10 +1,7 @@
 /**
  * Two CMC drafts for the publish-readiness e2e: one that cannot go public and
- * one that can.
- *
- * Read-only for the suite that uses it — neither row is published by the test,
- * because a published row would make the second run assert against a state the
- * first run left behind.
+ * one that can. Neither is published by the test — a published row would make
+ * the second run assert against what the first run left behind.
  *
  * Idempotent: deletes and recreates its own rows on every run.
  */

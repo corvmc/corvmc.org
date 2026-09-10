@@ -8,13 +8,12 @@ import {
 } from './fixtures/seed-publish-blockers';
 
 /**
- * The publish dialog used to say "Publish this event to make it visible to the
- * public?" and, on a listing that was not ready, answer the click with a button
- * reading "Error" — the sentence naming what was missing never left the server.
+ * A listing that was not ready used to answer the click with a button reading
+ * "Error" — the sentence naming what was missing never left the server.
  *
- * Only an e2e proves the whole chain: the query runs under the staff guard, the
- * blockers reach the dialog, and the submit is gated on them. The component
- * specs mock the remote function, so they cannot see any of that.
+ * Only an e2e sees the whole chain: the query under the staff guard, the
+ * blockers in the dialog, the submit gated on them. The component specs mock
+ * the remote function.
  */
 
 async function loginAsStaff(page: Page) {
@@ -25,11 +24,8 @@ async function loginAsStaff(page: Page) {
 	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
 }
 
-/**
- * `goto` resolves before the page's awaited remote queries commit, so the
- * heading is the gate — without it a negative assertion passes on an empty
- * <main>.
- */
+// `goto` resolves before the page's awaited remote queries commit, so the
+// heading is the gate: without it a negative assertion passes on an empty <main>.
 async function openEvent(page: Page, id: string, title: string) {
 	await page.goto(`/staff/events/${id}`);
 	await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
