@@ -41,6 +41,7 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
 	import { Button as BitsButton, Tooltip, mergeProps } from 'bits-ui';
 	import clsx from 'clsx';
 
@@ -94,8 +95,21 @@
 		outline?: boolean;
 		class?: string;
 		children?: Snippet;
-		[key: string]: unknown;
-	} = $props();
+		// The overflow is the element's own attribute type, not
+		// `[key: string]: unknown`. A catch-all index signature turns off
+		// prop-name checking altogether, so a prop that does not exist lands on
+		// the DOM as a dead attribute and nothing — not svelte-check, not
+		// ESLint, not the browser — says so. Seven call sites passed a bare
+		// `square` for a component whose prop is `shape` (#938).
+	} & Omit<HTMLButtonAttributes, 'class'> &
+		Omit<HTMLAnchorAttributes, 'type' | 'class'> = $props();
+
+	// Widened again on the way into bits-ui: `ButtonRootProps` is itself a union
+	// of the anchor and button props, and intersecting a 450-member attribute
+	// type against it makes TS give up with "union type is too complex to
+	// represent". The precision is wanted at the call site, where the typo
+	// happens — not on this hop, where the value has already been checked.
+	const passthrough = $derived(rest as Record<string, unknown>);
 
 	const resolvedVariant = $derived(
 		variant ?? (CARRIES_VARIANT.test(className) ? 'default' : 'primary')
@@ -118,7 +132,9 @@
      <button> (or an <a> inside a <button>), which drops the control out of the
      accessibility tree entirely. -->
 {#snippet renderButton(triggerProps?: Record<string | symbol, unknown>)}
-	<BitsButton.Root {...mergeProps(triggerProps ?? {}, rest, { href, disabled, class: classes })}>
+	<BitsButton.Root
+		{...mergeProps(triggerProps ?? {}, passthrough, { href, disabled, class: classes })}
+	>
 		{@render children?.()}
 	</BitsButton.Root>
 {/snippet}
@@ -127,7 +143,9 @@
      open and the explanation would be unreachable — which is the opposite of
      what a disabled control needs. Fall back to the native attribute. -->
 {#snippet plainButton(nativeTitle?: string)}
-	<BitsButton.Root {...mergeProps(rest, { href, disabled, class: classes, title: nativeTitle })}>
+	<BitsButton.Root
+		{...mergeProps(passthrough, { href, disabled, class: classes, title: nativeTitle })}
+	>
 		{@render children?.()}
 	</BitsButton.Root>
 {/snippet}

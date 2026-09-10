@@ -1051,7 +1051,7 @@
 						<div class="flex items-center justify-between gap-2">
 							<CardTitle>{title}</CardTitle>
 							{#if ridersMissing > 0}
-								<Badge color="warning">{ridersMissing} not in yet</Badge>
+								<Badge variant="warning">{ridersMissing} not in yet</Badge>
 							{/if}
 						</div>
 					{/snippet}
@@ -1071,10 +1071,10 @@
 										<Badge>{act.phantomCount} × +48V</Badge>
 									{/if}
 									{#if act.venueProvidedCount > 0}
-										<Badge color="info">{act.venueProvidedCount} from us</Badge>
+										<Badge variant="info">{act.venueProvidedCount} from us</Badge>
 									{/if}
 									{#if act.uploadCount > 0}
-										<Badge color="ghost"
+										<Badge variant="ghost"
 											>{act.uploadCount} file{act.uploadCount === 1 ? '' : 's'}</Badge
 										>
 									{/if}
