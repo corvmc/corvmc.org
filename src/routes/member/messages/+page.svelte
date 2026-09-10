@@ -8,8 +8,5 @@
 </script>
 
 <div class="flex h-full items-center justify-center">
-	<EmptyState
-		title="No conversation selected"
-		description="Pick a conversation on the left, or start a new one."
-	/>
+	<EmptyState title="No conversation selected" description="Pick a conversation on the left." />
 </div>

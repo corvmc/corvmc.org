@@ -89,7 +89,7 @@
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px">
 							<div class="flex items-center gap-1">
-								<StatusBadge status={l.status} />
+								<StatusBadge status={l.status} label />
 								{#if l.isOverdue}
 									<Badge variant="error" size="xs">Overdue</Badge>
 								{/if}
