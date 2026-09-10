@@ -28,6 +28,7 @@ import {
 	formatTimeRange,
 	fullDate,
 	initials,
+	timeAgo,
 	formatPaymentBreakdown,
 	reservationPaymentBreakdown,
 	toLocalDate,
@@ -292,5 +293,39 @@ describe('formatBytes', () => {
 		expect(formatBytes(9.5 * 1024 * 1024)).toBe('9.5 MB');
 		expect(formatBytes(25 * 1024 * 1024)).toBe('25 MB');
 		expect(formatBytes(250 * 1024 * 1024)).toBe('250 MB');
+	});
+});
+
+describe('timeAgo', () => {
+	const now = new Date('2026-09-10T12:00:00Z');
+	const ago = (ms: number) => timeAgo(new Date(now.getTime() - ms), now);
+
+	const MINUTE = 60_000;
+	const HOUR = 60 * MINUTE;
+	const DAY = 24 * HOUR;
+
+	it('says "just now" under a minute', () => {
+		expect(ago(0)).toBe('just now');
+		expect(ago(59_000)).toBe('just now');
+	});
+
+	it('counts minutes, hours and days', () => {
+		expect(ago(MINUTE)).toBe('1m ago');
+		expect(ago(59 * MINUTE)).toBe('59m ago');
+		expect(ago(HOUR)).toBe('1h ago');
+		expect(ago(23 * HOUR)).toBe('23h ago');
+		expect(ago(DAY)).toBe('1d ago');
+		expect(ago(6 * DAY)).toBe('6d ago');
+	});
+
+	// #898: the bell's own version stopped here, so a returning member's whole
+	// backlog read as three-digit day counts.
+	it('does not stop at days', () => {
+		expect(ago(7 * DAY)).toBe('1w ago');
+		expect(ago(29 * DAY)).toBe('4w ago');
+		expect(ago(30 * DAY)).toBe('1mo ago');
+		expect(ago(364 * DAY)).toBe('12mo ago');
+		expect(ago(620 * DAY)).toBe('1y ago');
+		expect(ago(763 * DAY)).toBe('2y ago');
 	});
 });
