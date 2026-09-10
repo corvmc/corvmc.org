@@ -40,9 +40,10 @@
 		<FormField
 			field={fields.title}
 			type="text"
-			label="Title *"
+			label="Title"
 			placeholder="e.g. Paper Wolves at The Whiteside"
 			maxlength="200"
+			required
 		/>
 
 		<!-- Custom input mode: FormField's built-in textarea drops `rest`, so rows,
@@ -57,8 +58,8 @@
 		</FormField>
 
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-			<FormField field={fields.eventDate} type="date" label="Date *" required />
-			<FormField field={fields.eventStartTime} type="time" label="Start Time *" required />
+			<FormField field={fields.eventDate} type="date" label="Date" required />
+			<FormField field={fields.eventStartTime} type="time" label="Start Time" required />
 			<FormField
 				field={fields.eventEndTime}
 				type="time"
@@ -72,9 +73,10 @@
 			<FormField
 				field={fields.location}
 				type="text"
-				label="Venue *"
+				label="Venue"
 				placeholder="Venue name & address"
 				maxlength="500"
+				required
 			/>
 		</div>
 
