@@ -56,8 +56,8 @@
 				Let staff know what's wrong with this content. Reports are private and reviewed by the CMC
 				team.
 			</p>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Reason</span></div>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">Reason</span>
 				<input
 					{...fields.reason.as('text')}
 					class="input w-full"
@@ -66,8 +66,8 @@
 					placeholder="e.g. Inappropriate content, impersonation, spam"
 				/>
 			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Details (optional)</span></div>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">Details (optional)</span>
 				<textarea
 					{...fields.description.as('text')}
 					class="textarea w-full"

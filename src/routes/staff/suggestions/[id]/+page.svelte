@@ -166,15 +166,15 @@
 				{#snippet form()}
 					<input {...reviewSuggestion.fields.suggestionId.as('hidden', id)} />
 					<div class="space-y-3">
-						<label class="form-control w-full">
-							<div class="label"><span class="label-text">Decision</span></div>
+						<label class="fieldset w-full">
+							<span class="fieldset-legend">Decision</span>
 							<Select class="w-full" {...reviewSuggestion.fields.decision.as('select')}>
 								<option value="approve">Approve — put it on the board</option>
 								<option value="reject">Reject — hide it</option>
 							</Select>
 						</label>
-						<label class="form-control w-full">
-							<div class="label"><span class="label-text">Note to the member (optional)</span></div>
+						<label class="fieldset w-full">
+							<span class="fieldset-legend">Note to the member (optional)</span>
 							<textarea
 								class="textarea w-full"
 								rows="3"
@@ -238,16 +238,16 @@
 						<input {...reviewSuggestionEdit.fields.suggestionId.as('hidden', id)} />
 						<input {...reviewSuggestionEdit.fields.editId.as('hidden', pendingEdit?.id ?? '')} />
 						<div class="space-y-3">
-							<label class="form-control w-full">
-								<div class="label"><span class="label-text">Decision</span></div>
+							<label class="fieldset w-full">
+								<span class="fieldset-legend">Decision</span>
 								<Select class="w-full" {...reviewSuggestionEdit.fields.decision.as('select')}>
 									<option value="approve">Approve — replace the text</option>
 									<option value="reject">Reject — keep what members voted for</option>
 								</Select>
 							</label>
-							<label class="form-control w-full">
+							<label class="fieldset w-full">
 								<div class="label">
-									<span class="label-text">Note to the member (optional)</span>
+									<span class="fieldset-legend">Note to the member (optional)</span>
 								</div>
 								<textarea
 									class="textarea w-full"
@@ -285,16 +285,16 @@
 				{#snippet form()}
 					<input {...respondToSuggestion.fields.suggestionId.as('hidden', id)} />
 					<div class="space-y-3">
-						<label class="form-control w-full">
-							<div class="label"><span class="label-text">Status</span></div>
+						<label class="fieldset w-full">
+							<span class="fieldset-legend">Status</span>
 							<Select class="w-full" {...respondToSuggestion.fields.status.as('select', s.status)}>
 								{#each suggestionStatuses as st (st)}
 									<option value={st}>{suggestionStatusLabels[st]}</option>
 								{/each}
 							</Select>
 						</label>
-						<label class="form-control w-full">
-							<div class="label"><span class="label-text">Public reply</span></div>
+						<label class="fieldset w-full">
+							<span class="fieldset-legend">Public reply</span>
 							<textarea
 								class="textarea w-full"
 								rows="4"
@@ -342,8 +342,8 @@
 								s.visibility === 'hidden' ? 'visible' : 'hidden'
 							)}
 						/>
-						<label class="form-control w-full">
-							<div class="label"><span class="label-text">Reason (shown to the member)</span></div>
+						<label class="fieldset w-full">
+							<span class="fieldset-legend">Reason (shown to the member)</span>
 							<textarea
 								class="textarea w-full"
 								rows="3"
@@ -375,8 +375,8 @@
 				>
 					{#snippet form()}
 						<input {...mergeSuggestion.fields.sourceId.as('hidden', id)} />
-						<label class="form-control w-full">
-							<div class="label"><span class="label-text">Merge into</span></div>
+						<label class="fieldset w-full">
+							<span class="fieldset-legend">Merge into</span>
 							<Select class="w-full" {...mergeSuggestion.fields.targetId.as('select')}>
 								<MergeCandidateOptions {id} />
 							</Select>

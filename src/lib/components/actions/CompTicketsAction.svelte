@@ -41,16 +41,16 @@
 	{#snippet form()}
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<div class="space-y-3">
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Attendee name</span></div>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">Attendee name</span>
 				<input {...fields.attendeeName.as('text')} class="input w-full" required />
 			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Email</span></div>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">Email</span>
 				<input {...fields.attendeeEmail.as('email')} class="input w-full" required />
 			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Quantity</span></div>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">Quantity</span>
 				<input
 					{...fields.quantity.as('text')}
 					type="number"

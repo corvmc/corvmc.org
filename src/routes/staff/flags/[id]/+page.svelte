@@ -150,8 +150,8 @@
 						{#snippet form()}
 							<input {...fields.flagId.as('hidden', id)} />
 							<div class="space-y-3">
-								<label class="form-control w-full">
-									<div class="label"><span class="label-text">Resolution</span></div>
+								<label class="fieldset w-full">
+									<span class="fieldset-legend">Resolution</span>
 									<Select
 										class="w-full"
 										{...fields.resolution.as('select')}
@@ -161,8 +161,8 @@
 										<option value="dismissed">Dismissed — no action needed</option>
 									</Select>
 								</label>
-								<label class="form-control w-full">
-									<div class="label"><span class="label-text">Notes (optional)</span></div>
+								<label class="fieldset w-full">
+									<span class="fieldset-legend">Notes (optional)</span>
 									<textarea
 										class="textarea w-full"
 										rows="3"
@@ -196,7 +196,7 @@
 								{#if canUnpublish && resolution === 'resolved'}
 									<label class="label cursor-pointer justify-start gap-2">
 										<input class="checkbox checkbox-sm" {...fields.unpublishEvent.as('checkbox')} />
-										<span class="label-text text-wrap">
+										<span class="fieldset-legend text-wrap">
 											{#if flag.eventContext?.source === 'community'}
 												Also unpublish this listing (removes it from the public gig guide and
 												deletes its poster; the member is notified with your note)

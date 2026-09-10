@@ -76,8 +76,8 @@
 					>
 				</div>
 			{:else}
-				<label class="form-control w-full">
-					<div class="label"><span class="label-text">Search members</span></div>
+				<label class="fieldset w-full">
+					<span class="fieldset-legend">Search members</span>
 					<input
 						type="text"
 						class="input w-full"
@@ -101,15 +101,15 @@
 					</div>
 				{/if}
 			{/if}
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Role</span></div>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">Role</span>
 				<Select class="w-full" {...fields.role.as('select')}>
 					<option value="member">Member</option>
 					<option value="admin">Admin</option>
 				</Select>
 			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Position (optional)</span></div>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">Position (optional)</span>
 				<input {...fields.position.as('text')} class="input w-full" placeholder="e.g. Guitarist" />
 			</label>
 		</div>
