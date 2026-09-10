@@ -45,23 +45,23 @@
 				Invite someone who doesn't have a CorvMC account. They'll get a signup link and be
 				auto-added to this band.
 			</p>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Email</span></div>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">Email</span>
 				<input
 					{...fields.email.as('email')}
 					class="input w-full"
 					placeholder="musician@example.com"
 				/>
 			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Role</span></div>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">Role</span>
 				<Select class="w-full" {...fields.role.as('select')}>
 					<option value="member">Member</option>
 					<option value="admin">Admin</option>
 				</Select>
 			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Position (optional)</span></div>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">Position (optional)</span>
 				<input {...fields.position.as('text')} class="input w-full" placeholder="e.g. Bassist" />
 			</label>
 		</div>

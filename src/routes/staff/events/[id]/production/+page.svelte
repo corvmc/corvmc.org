@@ -639,7 +639,7 @@
 											class="input w-full"
 											required={editTicketingEnabled}
 										/>
-										<span class="label-text-alt mt-1 opacity-60">
+										<span class="mt-1 text-muted">
 											Where the sliding scale opens. Leave blank for a free event.
 										</span>
 									</FormField>
@@ -654,16 +654,16 @@
 											placeholder="0.00"
 											class="input w-full"
 										/>
-										<span class="label-text-alt mt-1 opacity-60">
+										<span class="mt-1 text-muted">
 											The least someone can pay. $0 lets anyone come for free — no card, no
 											questions. Leave it at $0 unless an act needs a floor.
 										</span>
 									</FormField>
 
-									<div class="form-control">
+									<div class="fieldset">
 										<label class="label cursor-pointer justify-start gap-3">
 											<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
-											<span class="label-text">Sell tickets through the site</span>
+											<span class="fieldset-legend">Sell tickets through the site</span>
 										</label>
 									</div>
 
@@ -701,7 +701,7 @@
 														bind:checked={rebookConfirmed}
 														class="checkbox checkbox-sm"
 													/>
-													<span class="label-text">Confirm rebook</span>
+													<span class="fieldset-legend">Confirm rebook</span>
 												</label>
 
 												{#if rebookConfirmed}
@@ -741,7 +741,7 @@
 																bind:checked={overrideConflicts}
 																class="checkbox checkbox-sm"
 															/>
-															<span class="label-text">
+															<span class="fieldset-legend">
 																Book it anyway — I know this double-books the space
 															</span>
 														</label>
@@ -764,7 +764,7 @@
 													onchange={toggleReserveSpace}
 													class="checkbox checkbox-sm"
 												/>
-												<span class="label-text">Reserve practice space</span>
+												<span class="fieldset-legend">Reserve practice space</span>
 											</label>
 
 											{#if reserveSpace}
@@ -809,7 +809,7 @@
 																bind:checked={overrideConflicts}
 																class="checkbox checkbox-sm"
 															/>
-															<span class="label-text">
+															<span class="fieldset-legend">
 																Book it anyway — I know this double-books the space
 															</span>
 														</label>

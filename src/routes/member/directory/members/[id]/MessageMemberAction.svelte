@@ -31,8 +31,8 @@
 				This goes to {recipientName} as a message request. They'll see it in their Messages and can accept
 				or decline — you'll be able to write again once they accept.
 			</p>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Message</span></div>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">Message</span>
 				<textarea
 					{...fields.body.as('text')}
 					class="textarea w-full"

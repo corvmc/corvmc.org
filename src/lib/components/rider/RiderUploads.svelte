@@ -134,7 +134,7 @@
 			{/each}
 
 			{#if canManage}
-				<label class="form-control">
+				<label class="fieldset">
 					<span class="sr-only">Upload {entry.label}</span>
 					<input
 						type="file"

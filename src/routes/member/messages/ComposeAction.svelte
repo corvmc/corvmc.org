@@ -56,8 +56,8 @@
 				{#if recipient}
 					<input {...directForm.fields.recipientId.as('hidden', recipient.id)} />
 				{/if}
-				<label class="form-control w-full">
-					<div class="label"><span class="label-text">To</span></div>
+				<label class="fieldset w-full">
+					<span class="fieldset-legend">To</span>
 					<!-- The picker lists everyone the viewer can already see in the
 					     directory, and says nothing about who accepts messages. Marking
 					     the unreachable ones would leak exactly what the silent drop in
@@ -83,8 +83,8 @@
 					— you'll be able to write again once they accept.
 				</p>
 
-				<label class="form-control w-full">
-					<div class="label"><span class="label-text">Message</span></div>
+				<label class="fieldset w-full">
+					<span class="fieldset-legend">Message</span>
 					<textarea
 						{...directForm.fields.body.as('text')}
 						class="textarea w-full"
