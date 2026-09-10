@@ -5,7 +5,6 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -100,11 +99,7 @@
 	{#if soldOut}
 		<Alert type="warning">This event is {isFreeEvent ? 'full' : 'sold out'}.</Alert>
 	{:else if isFreeEvent}
-		<Form
-			remote={claimFreeTicket}
-			onsuccess={handleSuccess}
-			onfailure={() => toast.error('Something went wrong')}
-		>
+		<Form remote={claimFreeTicket} onsuccess={handleSuccess}>
 			<input {...freeTicketFields.eventId.as('hidden', page.params.id!)} />
 			<Card>
 				<CardBody class="space-y-4">
@@ -131,11 +126,7 @@
 			</Card>
 		</Form>
 	{:else}
-		<Form
-			remote={purchaseTickets}
-			onsuccess={handleSuccess}
-			onfailure={() => toast.error('Something went wrong')}
-		>
+		<Form remote={purchaseTickets} onsuccess={handleSuccess}>
 			<input {...purchaseFields.eventId.as('hidden', page.params.id!)} />
 			<Card>
 				<CardBody class="space-y-4">

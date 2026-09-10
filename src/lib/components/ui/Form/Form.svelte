@@ -42,6 +42,7 @@
 	import type { Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { reportError } from '$lib/report-error';
+	import { errorMessage } from '$lib/error-message';
 	import { recoverFromStaleDeploy } from '$lib/stale-deploy-recovery';
 	import { getErrorBoundary } from '../ErrorToastBoundary.svelte';
 	import FormGuard from './FormGuard.svelte';
@@ -65,7 +66,14 @@
 		flashDuration?: number;
 		successToast?: string;
 		onsuccess?: (result?: TOutput) => void;
-		onfailure?: (issues: RemoteFormIssue[] | null) => void;
+		/**
+		 * Notified on failure; it does not take ownership of the message. A
+		 * validation failure passes issues and no error, and a caller may still
+		 * answer it in place of the fallback toast — those issues render under
+		 * their own fields. A *thrown* error is always surfaced first, because
+		 * there is no field for it to render in.
+		 */
+		onfailure?: (issues: RemoteFormIssue[] | null, error?: unknown) => void;
 		/**
 		 * Whether anything has been typed and not yet submitted. A callback rather
 		 * than a `$bindable`, because it is an output: the wrapper that owns the
@@ -178,6 +186,15 @@
 
 	const delay = (t: number) => new Promise((r) => setTimeout(r, Math.max(0, t)));
 
+	// The boundary reports to Sentry and toasts; without one, do both here.
+	function surfaceFailure(err: unknown) {
+		if (errorBoundary) errorBoundary.reportError(err);
+		else {
+			reportError(err);
+			toast.error(errorMessage(err));
+		}
+	}
+
 	// Step navigation is button-driven (a non-last-step button calls next()); the
 	// only way to accidentally submit mid-wizard is pressing Enter inside a text
 	// field, which we redirect to "advance" below. A submit *event* always means
@@ -252,16 +269,12 @@
 				// bug — reload onto the new build instead of reporting it.
 				if (await recoverFromStaleDeploy(err)) return;
 
-				// Genuine submission failure (network/server). Capture it: forms with
-				// an onfailure handler bypass the error boundary, so report directly.
-				if (onfailure) {
-					reportError(err);
-					onfailure(ctx.issues);
-				} else if (errorBoundary) {
-					errorBoundary.reportError(err);
-				} else {
-					reportError(err);
-				}
+				// Genuine submission failure (network/server). Surfaced whether or not
+				// the caller passed `onfailure`: a thrown error has no field to render
+				// in, and a handler that swallowed it left the user with nothing but a
+				// button reading "Error" — which is what the whole app did.
+				surfaceFailure(err);
+				onfailure?.(ctx.issues, err);
 				status = 'error';
 			} finally {
 				submitting = false;
@@ -292,12 +305,8 @@
 			changeCount = 0;
 		} catch (err) {
 			await delay(150 - (performance.now() - start));
-			if (errorBoundary) {
-				errorBoundary.reportError(err); // reports to Sentry + toasts
-			} else {
-				reportError(err);
-			}
-			onfailure?.(null);
+			surfaceFailure(err);
+			onfailure?.(null, err);
 			status = 'error';
 		}
 

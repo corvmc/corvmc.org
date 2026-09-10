@@ -5,7 +5,6 @@
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { toast } from 'svelte-sonner';
 	import { formatBytes, formatDateShort } from '$lib/utils/format';
 	import { deleteDocument } from '$lib/remote/files.remote';
 	import DocumentUploadAction from './DocumentUploadAction.svelte';
@@ -111,7 +110,6 @@
 							size="xs"
 							outline
 							onsuccess={() => invalidateAll()}
-							onfailure={() => toast.error('Failed to delete')}
 						>
 							{#snippet form()}
 								<input {...deleteFields.groupId.as('hidden', groupId)} />

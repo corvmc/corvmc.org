@@ -80,7 +80,6 @@
 		// page always stays where it is. Band settings is where an owner changes it.
 		invalidateAll();
 	}}
-	onfailure={() => toast.error('Failed to save')}
 >
 	<input {...profileFields.slug.as('hidden', band.slug)} />
 	<input {...profileFields.genres.as('hidden', JSON.stringify(genres))} />

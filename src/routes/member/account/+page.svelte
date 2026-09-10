@@ -38,12 +38,7 @@
 <PageContent width="2xl">
 	<!-- Profile info -->
 	<InfoCard title="Contact Information">
-		<Form
-			remote={updateProfile}
-			guard
-			onsuccess={() => toast.success('Contact info updated')}
-			onfailure={() => toast.error('Update failed')}
-		>
+		<Form remote={updateProfile} guard onsuccess={() => toast.success('Contact info updated')}>
 			<div class="space-y-4">
 				<div class="grid grid-cols-2 gap-4">
 					<FormField field={fields.name} type="text" label="Name" value={data.user.name} required />
@@ -77,7 +72,6 @@
 								size="sm"
 								variant="default"
 								successToast="Verification email sent"
-								onfailure={() => toast.error('Could not send the email')}
 							/>
 						{/snippet}
 					</Alert>
@@ -194,7 +188,6 @@
 					label="Change Password"
 					modalTitle="Change Password"
 					onsuccess={() => toast.success('Password changed')}
-					onfailure={() => toast.error('Password change failed')}
 					variant="default"
 					size="sm"
 					outline
@@ -235,7 +228,6 @@
 						label="Delete Account"
 						modalTitle="Delete Account"
 						submitLabel="Delete My Account"
-						onfailure={() => toast.error('Deletion failed')}
 						variant="error"
 						size="sm"
 						onsuccess={() => {

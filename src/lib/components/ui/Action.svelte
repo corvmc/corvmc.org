@@ -200,8 +200,9 @@
 		if (typeof onsuccess === 'function') onsuccess(result);
 	}
 
-	function handleFormFailure(issues?: unknown) {
-		if (typeof onfailure === 'function') onfailure(issues);
+	function handleFormFailure(issues?: unknown, err?: unknown) {
+		// `err` is present only for a thrown failure; Form has already surfaced it.
+		if (typeof onfailure === 'function') onfailure(err ?? issues);
 	}
 </script>
 
@@ -262,7 +263,7 @@
 				remote={remoteAction}
 				{successToast}
 				onsuccess={handleFormSuccess}
-				onfailure={handleFormFailure}
+				onfailure={onfailure ? handleFormFailure : undefined}
 				ondirtychange={(dirty) => (formDirty = dirty)}
 			>
 				{#if confirm}

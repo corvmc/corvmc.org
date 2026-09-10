@@ -77,7 +77,6 @@
 			// re-keys them instead.
 			goto(resolve(`/band/${result.slug}/settings`));
 		}}
-		onfailure={() => {}}
 	>
 		<div class="space-y-4">
 			<!-- The band this renames. `newSlug` is the desired address, so the ref

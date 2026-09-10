@@ -189,7 +189,6 @@
 										confirm="Remove {member.member.title} from {layout.band.name}?"
 										successToast="Member removed"
 										onsuccess={refreshMembers}
-										onfailure={() => toast.error('Failed to remove')}
 									>
 										{#snippet form()}
 											<input {...removeFields.bandId.as('hidden', layout.band.id)} />
@@ -238,7 +237,6 @@
 									confirm="Revoke the invitation for {invite.member.title}?"
 									successToast="Invitation revoked"
 									onsuccess={refreshMembers}
-									onfailure={() => toast.error('Failed to revoke')}
 								>
 									{#snippet form()}
 										<input {...revokeFields.bandId.as('hidden', layout.band.id)} />
@@ -275,7 +273,6 @@
 									confirm="Revoke the invitation for {invite.email}?"
 									successToast="Invite revoked"
 									onsuccess={refreshInvites}
-									onfailure={() => toast.error('Failed to revoke')}
 								>
 									{#snippet form()}
 										<input {...revokeEmailFields.bandId.as('hidden', layout.band.id)} />
@@ -312,7 +309,6 @@
 				searchQuery = '';
 				refreshMembers();
 			}}
-			onfailure={() => toast.error('Failed to send invitation')}
 		>
 			<div class="space-y-4">
 				<Field label="Search by name or email" id="user-search">
@@ -380,7 +376,6 @@
 				refreshMembers();
 				refreshInvites();
 			}}
-			onfailure={() => toast.error('Failed to send invitation')}
 		>
 			<div class="space-y-4">
 				<input {...inviteEmailFields.bandId.as('hidden', layout.band.id)} />
@@ -416,7 +411,6 @@
 				showTransferModal = false;
 				refreshMembers();
 			}}
-			onfailure={() => toast.error('Failed to transfer')}
 		>
 			<div class="space-y-4">
 				<Alert type="warning">
