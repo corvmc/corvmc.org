@@ -58,6 +58,7 @@ import { seedFeatureFlags } from './fixtures/seed-feature-flags';
 import { seedGroups } from './fixtures/seed-groups';
 import { seedCommunityEvents } from './fixtures/seed-community-events';
 import { seedEventsSplit } from './fixtures/seed-events-split';
+import { seedPublishBlockers } from './fixtures/seed-publish-blockers';
 import { seedSuggestions } from './fixtures/seed-suggestions';
 import { seedMessaging } from './fixtures/seed-messaging';
 import { seedInboxAwaiting } from './fixtures/seed-inbox-awaiting';
@@ -113,6 +114,7 @@ await seedInventory();
 // its own item and unit so the two suites never mutate the same asset.
 await seedContractors();
 await seedStaffEvent();
+await seedPublishBlockers();
 // After the staff fixture: the show is created by the staff user.
 await seedTicketPurchase();
 await seedReservationPayments();
