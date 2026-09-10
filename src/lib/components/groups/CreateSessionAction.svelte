@@ -2,7 +2,6 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import { createGroupSession } from '$lib/remote/group-events.remote';
 
 	/**
@@ -28,7 +27,6 @@
 	variant="primary"
 	size="sm"
 	onsuccess={() => invalidateAll()}
-	onfailure={() => toast.error('Could not create the session')}
 >
 	{#snippet form()}
 		<div class="space-y-4">

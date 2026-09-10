@@ -129,11 +129,7 @@
 	{/if}
 
 	{#if res.canCancel}
-		<Form
-			remote={cancel}
-			onsuccess={() => toast.success('Reservation cancelled')}
-			onfailure={() => toast.error('Failed to cancel')}
-		>
+		<Form remote={cancel} onsuccess={() => toast.success('Reservation cancelled')}>
 			<input {...cancelFields.slug.as('hidden', slug)} />
 			<input {...cancelFields.reservationId.as('hidden', res.id)} />
 			<SubmitButton label="Cancel this session" variant="error" outline class="w-full" />

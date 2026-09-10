@@ -39,12 +39,7 @@
 	}
 </script>
 
-<Form
-	remote={updateGroupProfileForm}
-	guard
-	onsuccess={() => toast.success('Saved')}
-	onfailure={() => toast.error('Failed to save')}
->
+<Form remote={updateGroupProfileForm} guard onsuccess={() => toast.success('Saved')}>
 	<input {...fields.slug.as('hidden', group.slug)} />
 
 	<InfoCard title="Basics">

@@ -2,7 +2,6 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import { createAnnouncement, updateAnnouncement } from '$lib/remote/announcements.remote';
 
 	/**
@@ -42,7 +41,6 @@
 		variant="ghost"
 		size="xs"
 		onsuccess={() => invalidateAll()}
-		onfailure={() => toast.error('Failed to save')}
 	>
 		{#snippet form()}
 			<div class="space-y-4">
@@ -76,7 +74,6 @@
 		variant="primary"
 		size="sm"
 		onsuccess={() => invalidateAll()}
-		onfailure={() => toast.error('Failed to save')}
 	>
 		{#snippet form()}
 			<div class="space-y-4">

@@ -5,7 +5,6 @@
 	import { claimStaffExternalAct } from '$lib/remote/external-acts.remote';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { toast } from 'svelte-sonner';
 
 	/**
 	 * Turn an act into a CMC band, with the member who joined as its owner.
@@ -33,7 +32,6 @@
 		const slug = (result as { slug?: string } | undefined)?.slug;
 		if (slug) goto(resolve(`/band/${slug}`));
 	}}
-	onfailure={() => toast.error('Could not claim the act')}
 >
 	{#snippet form()}
 		<div class="space-y-4">

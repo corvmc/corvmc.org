@@ -2,6 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createAttachmentKey } from 'svelte/attachments';
+import { toast } from 'svelte-sonner';
 import ActionHarness from './Action.test.svelte';
 
 /**
@@ -10,6 +11,10 @@ import ActionHarness from './Action.test.svelte';
  * a bare callback, a confirm dialog, and a remote form — and the trigger states
  * every one of them shares.
  */
+
+vi.mock('svelte-sonner', () => ({
+	toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() })
+}));
 
 vi.mock('$app/navigation', () => ({
 	invalidateAll: vi.fn(),
@@ -23,7 +28,11 @@ vi.mock('$app/navigation', () => ({
  * properties, so those are all `<Form>`'s spread puts on the `<form>`. The
  * attachment is what intercepts the submit; without it the form navigates.
  */
-function fakeRemoteForm({ result, ok = true }: { result?: unknown; ok?: boolean } = {}) {
+function fakeRemoteForm({
+	result,
+	ok = true,
+	rejectWith
+}: { result?: unknown; ok?: boolean; rejectWith?: unknown } = {}) {
 	let callback: ((instance: { submit: () => Promise<boolean> }) => unknown) | null = null;
 	const instance: Record<string | symbol, unknown> = { method: 'POST', action: '?/thing' };
 
@@ -32,6 +41,7 @@ function fakeRemoteForm({ result, ok = true }: { result?: unknown; ok?: boolean 
 			event.preventDefault();
 			void callback?.({
 				submit: async () => {
+					if (rejectWith) throw rejectWith;
 					instance.result = result;
 					return ok;
 				}
@@ -217,6 +227,50 @@ describe('Action, form mode', () => {
 			expect(onsuccess).not.toHaveBeenCalled();
 		});
 	}
+
+	/**
+	 * The whole app used to answer a failed action with the word "Error" and
+	 * nothing else: `Action` passed `onfailure` on every dialog, and `Form` read
+	 * that as "the caller owns the message" and stayed silent. A thrown error has
+	 * no field to render in, so it is surfaced whether a handler exists or not.
+	 */
+	it('surfaces a thrown failure, with no onfailure handler', async () => {
+		vi.mocked(toast.error).mockClear();
+		await render(ActionHarness, {
+			action: fakeRemoteForm({
+				rejectWith: { status: 422, body: { message: 'Not ready to announce: there is no poster.' } }
+			}),
+			label: 'Publish',
+			fieldName: 'id'
+		});
+
+		await page.getByRole('button', { name: 'Publish' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Publish' }).click();
+
+		await vi.waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith('Not ready to announce: there is no poster.')
+		);
+	});
+
+	it('surfaces a thrown failure even when the caller passes onfailure', async () => {
+		vi.mocked(toast.error).mockClear();
+		const onfailure = vi.fn();
+		await render(ActionHarness, {
+			action: fakeRemoteForm({ rejectWith: { status: 409, body: { message: '3 tickets sold' } } }),
+			label: 'Unpublish',
+			fieldName: 'id',
+			onfailure
+		});
+
+		await page.getByRole('button', { name: 'Unpublish' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Unpublish' }).click();
+
+		await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('3 tickets sold'));
+		// The handler still runs, and now receives the error rather than the issues.
+		await vi.waitFor(() =>
+			expect(onfailure).toHaveBeenCalledWith({ status: 409, body: { message: '3 tickets sold' } })
+		);
+	});
 
 	// `submitLabel` is separate from `label` because the trigger names the thing
 	// you are opening and the submit names the thing you are doing.

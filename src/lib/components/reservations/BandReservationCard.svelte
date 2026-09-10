@@ -49,11 +49,7 @@
      the bottom border, so an empty one is 20px of dead space under every past
      session and every card on the dashboard. -->
 {#snippet cancelAction()}
-	<Form
-		remote={cancel}
-		onsuccess={() => toast.success('Reservation cancelled')}
-		onfailure={() => toast.error('Failed to cancel')}
-	>
+	<Form remote={cancel} onsuccess={() => toast.success('Reservation cancelled')}>
 		<input {...cancelFields.slug.as('hidden', slug)} />
 		<input {...cancelFields.reservationId.as('hidden', reservation.id)} />
 		<SubmitButton label="Cancel" variant="error" size="xs" outline />

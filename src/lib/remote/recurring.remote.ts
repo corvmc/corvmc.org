@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireCapability, requireCapabilityOrOwner } from '$lib/server/authorization';
+import { mapDomainError } from '$lib/server/errors';
 import {
 	get,
 	getHistory,
@@ -45,7 +46,11 @@ export const getStaffRecurring = query(staffRecurringFilters, async (filters) =>
 /** Cancel from staff list page (takes seriesId in form data) */
 export const cancelStaffSeries = form(z.object({ seriesId: z.string() }), async (data) => {
 	await requireCapability('reservation.manageRecurring');
-	await cancel(data.seriesId as string);
+	try {
+		await cancel(data.seriesId as string);
+	} catch (err) {
+		mapDomainError(err);
+	}
 	return { success: true };
 });
 
@@ -53,7 +58,11 @@ export const cancelStaffSeries = form(z.object({ seriesId: z.string() }), async 
 export const cancelDetailSeries = form(z.object({ seriesId: z.string() }), async (data) => {
 	await requireCapability('reservation.manageRecurring');
 	const seriesId = data.seriesId as string;
-	await cancel(seriesId);
+	try {
+		await cancel(seriesId);
+	} catch (err) {
+		mapDomainError(err);
+	}
 	void getStaffSeriesDetail(seriesId).refresh();
 	return { success: true };
 });
@@ -69,7 +78,11 @@ export const cancelRecurringSeries = form(z.object({ id: z.string() }), async (d
 
 	await requireCapabilityOrOwner('reservation.manageRecurring', series.prototypeCreatedByUserId);
 
-	await cancel(id);
+	try {
+		await cancel(id);
+	} catch (err) {
+		mapDomainError(err);
+	}
 	return { success: true };
 });
 

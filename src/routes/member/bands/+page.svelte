@@ -94,7 +94,6 @@
 								<div class="flex gap-2">
 									<Form
 										remote={accept}
-										onfailure={() => toast.error('Failed to accept')}
 										onsuccess={(result) => {
 											if (result?.success === false) {
 												toast.error('That invitation is no longer available.');
@@ -114,7 +113,6 @@
 									</Form>
 									<Form
 										remote={decline}
-										onfailure={() => toast.error('Failed to decline')}
 										onsuccess={(result) => {
 											if (result?.success === false) {
 												toast.error('That invitation is no longer available.');
