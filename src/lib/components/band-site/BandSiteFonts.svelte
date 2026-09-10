@@ -1,12 +1,9 @@
 <!--
-	The faces the band-site themes are built around. Declared in five
-	`font-family` rules and loaded by nobody, so `metal` rendered in Impact and
-	`electronic` in whatever generic monospace the machine had (#914).
-
-	Mounted by the public band site and by the page editor's live preview rather
-	than in `app.html`: a band's audience should pay for these, the rest of the
-	app should not. `indie` is not here — its Inter is close enough to `system-ui`
-	that a request for it buys nothing.
+	The faces the band-site themes are built around: declared in five
+	`font-family` rules and loaded by nobody, so `metal` rendered in Impact
+	(#914). Mounted here rather than in `app.html` so a band's audience pays
+	for them and the rest of the app does not. `indie` is absent — its Inter
+	is close enough to `system-ui` that a request buys nothing.
 -->
 <svelte:head>
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
