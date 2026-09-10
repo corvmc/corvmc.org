@@ -153,4 +153,26 @@ describe('NotificationBell rows', () => {
 			);
 		}
 	});
+
+	// #897: colour was the *only* unread marker — a 10%-opacity tint and a 2px
+	// dot with no text. In the accessibility tree 28 rows read identically.
+	it('names an unread row as unread, without relying on colour', async () => {
+		const rows = await openPanel();
+		const [linkedUnread, , linkedRead] = rows;
+
+		expect(linkedUnread.textContent).toContain('Unread');
+		expect(linkedRead.textContent).not.toContain('Unread');
+
+		const weight = (row: HTMLElement) => getComputedStyle(row.querySelector('p')!).fontWeight;
+		expect(Number(weight(linkedUnread))).toBeGreaterThan(Number(weight(linkedRead)));
+	});
+
+	// The dot repeats what the text now says, so it must not be a second thing
+	// for a screen reader to read out.
+	it('leaves the unread dot out of the accessibility tree', async () => {
+		const [linkedUnread] = await openPanel();
+		const dot = linkedUnread.querySelector<HTMLElement>('.rounded-full')!;
+
+		expect(dot.getAttribute('aria-hidden')).toBe('true');
+	});
 });

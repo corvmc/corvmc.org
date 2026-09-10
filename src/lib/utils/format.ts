@@ -120,6 +120,31 @@ export function relativeDay(d: Date): string {
 	return diffDays > 0 ? `In ${label}` : `${label} ago`;
 }
 
+/**
+ * Elapsed time, coarsest unit that still says something: "just now", "5m ago",
+ * "3h ago", "6d ago", "3w ago", "5mo ago", "2y ago".
+ *
+ * Stops nowhere. The notification bell's own version stopped at days, so a
+ * returning member's backlog read "620d ago" for every row (#898). Units are
+ * abbreviated because this renders in a 320px panel under each title.
+ */
+export function timeAgo(date: Date, now: Date = new Date()): string {
+	const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+	if (seconds < 60) return 'just now';
+
+	const minutes = Math.floor(seconds / 60);
+	if (minutes < 60) return `${minutes}m ago`;
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `${hours}h ago`;
+	const days = Math.floor(hours / 24);
+	if (days < 7) return `${days}d ago`;
+	if (days < 30) return `${Math.floor(days / 7)}w ago`;
+	// Both boundaries key off `days`, not off each other: a `months < 12` gate
+	// over 30-day months leaves 360-364 days falling through to `0y ago`.
+	if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+	return `${Math.floor(days / 365)}y ago`;
+}
+
 /** Long date: "Tuesday, May 13, 2026" */
 export function fullDate(d: Date): string {
 	return venue(d, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
