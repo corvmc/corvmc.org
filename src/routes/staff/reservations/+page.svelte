@@ -239,8 +239,10 @@
 					{@const actions = visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId)}
 					{@const href = resolve(`/staff/reservations/${r.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
+						<!-- `label`, not the glyph alone: the tooltip that carried the status
+						     word only opens on hover, so a keyboard user got nothing (#896). -->
 						<td class="w-px">
-							<StatusBadge status={r.status} class="size-6" />
+							<StatusBadge status={r.status} label />
 						</td>
 
 						<!-- Member, band or event — the chip's glyph is what says which. -->

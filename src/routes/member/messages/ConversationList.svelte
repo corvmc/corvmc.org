@@ -51,10 +51,16 @@
 	{/if}
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
+		<!-- The copy names the control that is actually on screen. "Start a
+		     conversation" pointed at Message a Member, which only renders when the
+		     direct-messages feature is on — so with it off the page promised
+		     something it did not offer (#907). -->
 		<DataList
 			{result}
 			emptyTitle="No messages yet"
-			empty="Start a conversation and it will appear here."
+			empty={layout.features.directMessages
+				? 'Use Message a Member or Message Staff above to start one.'
+				: 'Use Message Staff above to start one.'}
 			onpage={(p) => (conversationList.page = p)}
 		>
 			{#snippet children(conversations)}
