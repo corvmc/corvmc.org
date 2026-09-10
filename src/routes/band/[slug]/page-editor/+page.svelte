@@ -6,6 +6,7 @@
 	// it shows what applies. The rules only ever match inside a `.theme-x`
 	// container, so importing them into the app leaks nothing.
 	import '$lib/themes/band-site/index.css';
+	import BandSiteFonts from '$lib/components/band-site/BandSiteFonts.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -130,6 +131,8 @@
 		return blocks.find((b) => b.id === id);
 	}
 </script>
+
+<BandSiteFonts />
 
 <!-- The whole editor is one form: the header carries Save, so it has to be
      inside it, and every control on the canvas writes state the hidden inputs

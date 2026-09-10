@@ -98,7 +98,10 @@
 	--bs-accent: #e879a8;
 	--bs-surface: #ffffff;
 	--bs-muted: #8b8b8b;
-	font-family: 'Inter', system-ui, sans-serif;
+	font-family:
+		system-ui,
+		-apple-system,
+		sans-serif;
 	background-color: var(--bs-bg);
 	color: var(--bs-text);
 }
