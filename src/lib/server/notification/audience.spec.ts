@@ -5,18 +5,14 @@ import { NOTIFICATION_TYPES, preferenceTypesFor } from '$lib/server/db/schema/no
 /**
  * Who a notification type is *for* is a field, not a suffix on its label.
  *
- * `getNotificationPreferences` filtered on `mandatory` and nothing else, so
- * every member's table listed nine rows labelled "(staff)" — switches for
- * notifications only a staffer can receive, inert as well as confusing because
- * each one fans out over a capability or the staff mailbox rather than over
- * subscribers (#899).
+ * `getNotificationPreferences` filtered on `mandatory` alone, so every member's
+ * table listed nine "(staff)" switches — inert as well as confusing, since each
+ * fans out over a capability rather than over subscribers (#899).
  */
-/**
- * Dispatch is spread across three files: most types fan out from the listener
- * registry, the inbox's two are dispatched by the remote that assigns a thread.
- * Read all three rather than naming one, so a type that moves does not quietly
- * stop being checked.
- */
+
+// Three files dispatch, not one: most types come from the listener registry,
+// the inbox's two from the remote that assigns a thread. Read all three, so a
+// type that moves does not quietly stop being checked.
 const dispatchSites = [
 	'src/lib/server/notification/notification-listeners.ts',
 	'src/lib/server/event-bus/register-listeners.ts',
