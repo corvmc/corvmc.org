@@ -18,6 +18,7 @@
 	import { setContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { reportError } from '$lib/report-error';
+	import { errorMessage } from '$lib/error-message';
 	import Alert from './Alert.svelte';
 
 	let {
@@ -36,25 +37,12 @@
 		showPending?: boolean;
 	} = $props();
 
-	function extractMessage(err: unknown): string {
-		if (err instanceof Error) return err.message;
-		if (typeof err === 'string') return err;
-		// Remote function rejections arrive as plain objects, e.g.
-		// { body: { message: 'Internal Error' }, status: 500 }.
-		if (err && typeof err === 'object') {
-			const e = err as { message?: unknown; body?: { message?: unknown } };
-			if (typeof e.body?.message === 'string') return e.body.message;
-			if (typeof e.message === 'string') return e.message;
-		}
-		return 'Something went wrong';
-	}
-
 	function handleError(err: unknown) {
 		// Single client-side sink: forward genuine errors to Sentry (filtered) and
 		// surface a toast. Covers both boundary-caught render/async errors and
 		// errors handed up by child components (e.g. the Form component's catch).
 		reportError(err);
-		toast.error(extractMessage(err));
+		toast.error(errorMessage(err));
 	}
 
 	setContext(ERROR_BOUNDARY_KEY, {
@@ -80,6 +68,6 @@
 	{@render children()}
 
 	{#snippet failed(error, reset)}
-		<Alert type="error" {reset}>Failed to load: {extractMessage(error)}</Alert>
+		<Alert type="error" {reset}>Failed to load: {errorMessage(error)}</Alert>
 	{/snippet}
 </svelte:boundary>

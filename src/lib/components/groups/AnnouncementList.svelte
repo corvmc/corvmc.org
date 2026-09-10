@@ -6,7 +6,6 @@
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import { formatDateShort } from '$lib/utils/format';
 	import {
 		deleteAnnouncement,
@@ -108,7 +107,6 @@
 									variant="primary"
 									size="xs"
 									onsuccess={() => invalidateAll()}
-									onfailure={() => toast.error('Failed to publish')}
 								>
 									{#snippet form()}
 										<input {...publishFields.groupId.as('hidden', groupId)} />
@@ -126,7 +124,6 @@
 								variant="ghost"
 								size="xs"
 								onsuccess={() => invalidateAll()}
-								onfailure={() => toast.error('Failed to pin')}
 							>
 								{#snippet form()}
 									<input {...pinFields.groupId.as('hidden', groupId)} />
@@ -146,7 +143,6 @@
 								size="xs"
 								outline
 								onsuccess={() => invalidateAll()}
-								onfailure={() => toast.error('Failed to delete')}
 							>
 								{#snippet form()}
 									<input {...deleteFields.groupId.as('hidden', groupId)} />

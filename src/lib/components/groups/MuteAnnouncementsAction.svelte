@@ -1,7 +1,6 @@
 <script lang="ts">
 	import Action from '$lib/components/ui/Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import { setAnnouncementMute } from '$lib/remote/announcements.remote';
 
 	/**
@@ -37,7 +36,6 @@
 	variant="ghost"
 	size="sm"
 	onsuccess={() => invalidateAll()}
-	onfailure={() => toast.error('Failed to save')}
 >
 	{#snippet form()}
 		<input {...fields.groupId.as('hidden', groupId)} />

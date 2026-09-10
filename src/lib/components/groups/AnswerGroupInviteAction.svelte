@@ -36,7 +36,6 @@
 		size="sm"
 		onsuccess={(result) =>
 			onAnswered(result as { success: boolean }, `You have joined ${groupName}`)}
-		onfailure={() => toast.error('Failed to accept')}
 	>
 		{#snippet form()}
 			<input {...acceptFields.groupId.as('hidden', groupId)} />
@@ -55,7 +54,6 @@
 		variant="ghost"
 		size="sm"
 		onsuccess={(result) => onAnswered(result as { success: boolean }, 'Invitation declined')}
-		onfailure={() => toast.error('Failed to decline')}
 	>
 		{#snippet form()}
 			<input {...declineFields.groupId.as('hidden', groupId)} />

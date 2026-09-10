@@ -2,7 +2,6 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import { uploadDocument } from '$lib/remote/files.remote';
 
 	/**
@@ -50,7 +49,6 @@
 	size="sm"
 	disabled={atQuota}
 	onsuccess={() => invalidateAll()}
-	onfailure={() => toast.error('Failed to upload')}
 >
 	{#snippet form()}
 		<div class="space-y-4">

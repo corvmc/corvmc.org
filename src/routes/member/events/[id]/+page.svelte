@@ -4,7 +4,6 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { toast } from 'svelte-sonner';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -328,8 +327,6 @@
 								variant="primary"
 								size="lg"
 								onsuccess={handlePurchaseSuccess}
-								onfailure={(err) =>
-									toast.error(err instanceof Error ? err.message : 'Something went wrong')}
 							>
 								{#snippet form()}
 									<input {...rsvpFields.eventId.as('hidden', evt.id)} />
@@ -363,8 +360,6 @@
 								variant="primary"
 								size="lg"
 								onsuccess={handlePurchaseSuccess}
-								onfailure={(err) =>
-									toast.error(err instanceof Error ? err.message : 'Something went wrong')}
 							>
 								{#snippet form()}
 									<input {...fields.eventId.as('hidden', evt.id)} />
@@ -473,8 +468,6 @@
 							canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
 							class="btn-lg {mode === 'external' ? 'btn-outline' : 'btn-primary'}"
 							onsuccess={refreshDetail}
-							onfailure={(err) =>
-								toast.error(err instanceof Error ? err.message : 'Something went wrong')}
 						>
 							{#snippet form()}
 								<input {...rsvpToEventFields.eventId.as('hidden', evt.id)} />
