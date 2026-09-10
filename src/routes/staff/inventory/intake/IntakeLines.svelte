@@ -163,7 +163,7 @@
 						aria-label="Remove line {index + 1}"
 						onclick={() => removeLine(index)}
 					>
-						{#snippet icon()}<IconTrash size={16} />{/snippet}
+						<IconTrash size={16} />
 					</Button>
 				</div>
 			</div>
@@ -203,7 +203,7 @@
 	{/each}
 
 	<Button type="button" variant="ghost" size="sm" onclick={addLine}>
-		{#snippet icon()}<IconPlus size={16} />{/snippet}
+		<IconPlus size={16} />
 		Add a line
 	</Button>
 </div>

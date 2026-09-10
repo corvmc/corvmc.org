@@ -121,7 +121,7 @@
 						<Button
 							variant="ghost"
 							size="sm"
-							square
+							shape="square"
 							class="ml-auto"
 							aria-label="Remove {file.filename ?? entry.label}"
 							disabled={busy === file.attachmentId}

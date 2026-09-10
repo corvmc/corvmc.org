@@ -210,7 +210,7 @@
 						<Button
 							variant="ghost"
 							size="sm"
-							square
+							shape="square"
 							aria-label="Move {element.label || 'item'} up"
 							disabled={index === 0}
 							onclick={() => moveElement(index, -1)}
@@ -220,7 +220,7 @@
 						<Button
 							variant="ghost"
 							size="sm"
-							square
+							shape="square"
 							aria-label="Move {element.label || 'item'} down"
 							disabled={index === elements.length - 1}
 							onclick={() => moveElement(index, 1)}
@@ -230,7 +230,7 @@
 						<Button
 							variant="ghost"
 							size="sm"
-							square
+							shape="square"
 							aria-label="Remove {element.label || 'item'}"
 							onclick={() => removeElement(index)}
 						>
@@ -344,7 +344,7 @@
 									<Button
 										variant="ghost"
 										size="sm"
-										square
+										shape="square"
 										aria-label="Move {input.label || 'input'} up"
 										disabled={j === 0}
 										onclick={() => moveInput(element, j, -1)}
@@ -354,7 +354,7 @@
 									<Button
 										variant="ghost"
 										size="sm"
-										square
+										shape="square"
 										aria-label="Move {input.label || 'input'} down"
 										disabled={j === element.inputs.length - 1}
 										onclick={() => moveInput(element, j, 1)}
@@ -364,7 +364,7 @@
 									<Button
 										variant="ghost"
 										size="sm"
-										square
+										shape="square"
 										aria-label="Remove {input.label || 'input'}"
 										onclick={() => removeInput(element, j)}
 									>

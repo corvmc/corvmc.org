@@ -41,9 +41,9 @@
 			<CardTitle>{title}</CardTitle>
 			<div class="flex items-center gap-1">
 				{#if overdue > 0}
-					<Badge color="error">{overdue} overdue</Badge>
+					<Badge variant="error">{overdue} overdue</Badge>
 				{:else if outstanding.length > 0}
-					<Badge color="warning">{outstanding.length} outstanding</Badge>
+					<Badge variant="warning">{outstanding.length} outstanding</Badge>
 				{/if}
 				{#if acts.length > 0}
 					<Action
@@ -98,11 +98,11 @@
 					<span class="font-medium">{req.actName ?? 'Unknown act'}</span>
 					<span class="text-sm">{requestableArtifactLabels[req.artifact]}</span>
 					{#if req.fulfilled}
-						<Badge color="success">In</Badge>
+						<Badge variant="success">In</Badge>
 					{:else if req.overdue}
-						<Badge color="error">Overdue</Badge>
+						<Badge variant="error">Overdue</Badge>
 					{:else}
-						<Badge color="warning">Waiting</Badge>
+						<Badge variant="warning">Waiting</Badge>
 					{/if}
 					<span class="text-subtle text-sm whitespace-nowrap">
 						{#if req.dueAt}
