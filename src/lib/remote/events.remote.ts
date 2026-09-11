@@ -1028,8 +1028,9 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 	const [nearby, venues, production] = await Promise.all([
 		listEventsNear(detail.event.startsAt, { excludeEventId: id }),
 		venuePickerOptions(),
-		// Only so the header knows whether to offer "Add production". The record
-		// itself is worked on in the console.
+		// The header's one entry reads this to name itself, and the production
+		// card renders its status, producer and load-in. Everything else about
+		// the record is worked on in the console.
 		getProductionByEvent(id)
 	]);
 

@@ -23,7 +23,6 @@
 		DeleteEventAction
 	} from '$lib/components/actions';
 	import { getStaffEventPage, updateEvent, setStaffEventLineup } from '$lib/remote/events.remote';
-	import { createProduction } from '$lib/remote/productions.remote';
 	import { rejectListing, searchBandsForListing } from '$lib/remote/community-events.remote';
 	import { rowLink } from '$lib/actions/row-link';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
@@ -53,7 +52,6 @@
 	const isCommunityEvent = $derived(evt.source === 'community');
 
 	const rejectFields = rejectListing.fields;
-	const createProductionFields = createProduction.fields;
 	const { fields } = updateEvent;
 
 	function refresh() {
@@ -106,19 +104,15 @@
 <PageHeader title={evt.title} subtitle="Event" backHref="/staff/events">
 	<div class="flex flex-wrap items-center gap-2">
 		{#if isProduction}
+			<!-- One entry, not two. "Manage production" and "Add production" sat
+			     side by side before a production existed, and a first-timer picked
+			     the first — landing on a console that told them to go back where
+			     they came from. Opening one now lives in that console's empty
+			     state, which is the page that explains what a production is
+			     (#976). -->
 			<Button href={resolve(`/staff/events/${id}/production`)} variant="default" size="sm" outline>
-				Manage production
+				{data.production ? 'Manage production' : 'Open a production'}
 			</Button>
-		{/if}
-
-		{#if isProduction && !data.production}
-			<!-- The only way a production comes into existence. Nothing to fill in,
-			     so a plain form rather than an Action modal: the record opens as a
-			     draft and is worked on in the console. -->
-			<Form remote={createProduction}>
-				<input {...createProductionFields.eventId.as('hidden', evt.id)} />
-				<SubmitButton label="Add production" size="sm" variant="ghost" />
-			</Form>
 		{/if}
 
 		{#if evt.ticketingEnabled}
@@ -228,6 +222,43 @@
 			</Alert>
 		{/if}
 	</InfoCard>
+
+	<!--
+		The record a producer just made, on the page they made it from. Creating
+		one changed nothing visible here except that a button disappeared from the
+		header, so the only way to know it had worked was to read the database
+		(#976). Rendered only when one exists: a listing that is not a CMC
+		production never becomes one, and an empty card on every band gig would be
+		noise.
+	-->
+	{#if data.production}
+		<InfoCard title="Production">
+			<div class="flex flex-wrap items-center gap-2">
+				<StatusBadge status={data.production.status} label />
+				{#if data.production.producerName}
+					<span class="text-muted">Produced by {data.production.producerName}</span>
+				{:else}
+					<span class="text-muted">No producer yet</span>
+				{/if}
+			</div>
+
+			{#if data.production.loadInAt}
+				<p class="mt-2 text-sm">Load-in {fullDate(data.production.loadInAt)}</p>
+			{:else}
+				<p class="mt-2 text-muted">Load-in, soundcheck and curfew are not set yet.</p>
+			{/if}
+
+			<Button
+				href={resolve(`/staff/events/${id}/production`)}
+				variant="default"
+				size="sm"
+				outline
+				class="mt-3"
+			>
+				Open the console
+			</Button>
+		</InfoCard>
+	{/if}
 
 	{#if editing}
 		<InfoCard title="Edit">
