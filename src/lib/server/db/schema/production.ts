@@ -105,6 +105,17 @@ export const production = sqliteTable(
 			onDelete: 'set null'
 		}),
 
+		/**
+		 * When close-out was signed off, and by whom. `updatedAt` is not a proxy:
+		 * it moves on any later write to the row. Set-null on the user for the
+		 * same reason as `createdByUserId` — who closed a night is history.
+		 * `closed` is terminal, so neither is ever cleared.
+		 */
+		closedAt: integer('closed_at', { mode: 'timestamp' }),
+		closedByUserId: text('closed_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),

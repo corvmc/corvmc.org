@@ -1,6 +1,7 @@
 import { db, getRowCount } from '$lib/server/db';
 import { production } from '$lib/server/db/schema/production';
 import { and, eq, getTableColumns, inArray, isNull } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
 import { user } from '$lib/server/db/schema/authentication';
 import { eventListing } from '$lib/server/db/schema/event';
 import { dutyList, workOrder, workTask } from '$lib/server/db/schema/volunteer';
@@ -122,6 +123,8 @@ export async function getProduction(id: string): Promise<Production> {
 export interface ProductionWithProducer extends Production {
 	/** Null when nobody has taken it, or when the account behind it was purged. */
 	producerName: string | null;
+	/** Null until close-out is signed off, or once that account is purged. */
+	closedByName: string | null;
 }
 
 /**
@@ -132,10 +135,16 @@ export interface ProductionWithProducer extends Production {
 export async function getProductionByEvent(
 	eventId: string
 ): Promise<ProductionWithProducer | null> {
+	const closer = alias(user, 'closed_by_user');
 	const [row] = await db
-		.select({ ...getTableColumns(production), producerName: user.name })
+		.select({
+			...getTableColumns(production),
+			producerName: user.name,
+			closedByName: closer.name
+		})
 		.from(production)
 		.leftJoin(user, eq(user.id, production.producerUserId))
+		.leftJoin(closer, eq(closer.id, production.closedByUserId))
 		.where(eq(production.eventId, eventId))
 		.limit(1);
 	return row ?? null;
@@ -239,7 +248,11 @@ export async function outstandingCloseOutTasks(productionId: string): Promise<st
 	return rows.map((r) => r.label);
 }
 
-export async function transitionProduction(id: string, to: ProductionStatus): Promise<Production> {
+export async function transitionProduction(
+	id: string,
+	to: ProductionStatus,
+	actorUserId?: string | null
+): Promise<Production> {
 	const from = REACHABLE_FROM[to];
 
 	// The gate is the whole feature: `closed` says the room is reset and the
@@ -249,9 +262,15 @@ export async function transitionProduction(id: string, to: ProductionStatus): Pr
 		if (outstanding.length > 0) throw new CloseOutIncompleteError(outstanding);
 	}
 
+	// Stamped in the same conditional update as the status, so a row can never
+	// read `closed` without saying when. `updatedAt` cannot stand in for it: it
+	// moves again on the next write to the row.
+	const closing =
+		to === 'closed' ? { closedAt: new Date(), closedByUserId: actorUserId ?? null } : {};
+
 	const result = await db
 		.update(production)
-		.set({ status: to, updatedAt: new Date() })
+		.set({ status: to, updatedAt: new Date(), ...closing })
 		.where(and(eq(production.id, id), inArray(production.status, [...from])));
 
 	if (getRowCount(result) === 0) {
