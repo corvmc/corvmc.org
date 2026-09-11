@@ -225,86 +225,102 @@ function bookedByGroup(groupId: string) {
 	);
 }
 
-export const getBandReservations = query(z.string(), async (slug) => {
-	// A bare `requireUser()` here meant any signed-in account could read any
-	// band's practice schedule, the name of whoever booked each session, and the
-	// notes on it, just by passing that band's slug — which matters more now the
-	// feature is on for everyone rather than flag-gated off. The read-side guard
-	// rather than a member-only one: staff administer band panels, and the layout
-	// already lets them in, so member-only would 403 them into the error
-	// boundary. The slug cross-check this used to carry is gone with the two
-	// sources of truth that needed it — the guard resolves the band from this
-	// argument, so there is no second band for it to diverge from.
-	const {
-		user: currentUser,
-		group: band,
-		role
-	} = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+export const getBandReservations = query(
+	z.object({ slug: z.string(), pastPage: z.number().int().min(1).default(1) }),
+	async ({ slug, pastPage }) => {
+		// A bare `requireUser()` here meant any signed-in account could read any
+		// band's practice schedule, the name of whoever booked each session, and the
+		// notes on it, just by passing that band's slug — which matters more now the
+		// feature is on for everyone rather than flag-gated off. The read-side guard
+		// rather than a member-only one: staff administer band panels, and the layout
+		// already lets them in, so member-only would 403 them into the error
+		// boundary. The slug cross-check this used to carry is gone with the two
+		// sources of truth that needed it — the guard resolves the band from this
+		// argument, so there is no second band for it to diverge from.
+		const {
+			user: currentUser,
+			group: band,
+			role
+		} = await requireGroupRole({ slug }, 'member', { allowStaff: true });
 
-	const now = new Date();
-	// Whether the viewer may cancel each row. `cancel()` authorizes on
-	// `createdByUserId`, so a bandmate who didn't book cannot — the page used to
-	// render Cancel on every row regardless and answered with an error toast.
-	// Band admins may cancel any of their band's sessions; everyone else only
-	// their own. Computed here because the client cannot be trusted to.
-	const bandAdmin = role === 'owner' || role === 'admin';
-	const canCancelRow = (createdByUserId: string) => bandAdmin || createdByUserId === currentUser.id;
+		const now = new Date();
+		// Whether the viewer may cancel each row. `cancel()` authorizes on
+		// `createdByUserId`, so a bandmate who didn't book cannot — the page used to
+		// render Cancel on every row regardless and answered with an error toast.
+		// Band admins may cancel any of their band's sessions; everyone else only
+		// their own. Computed here because the client cannot be trusted to.
+		const bandAdmin = role === 'owner' || role === 'admin';
+		const canCancelRow = (createdByUserId: string) =>
+			bandAdmin || createdByUserId === currentUser.id;
 
-	const upcoming = await db
-		.select({
-			id: reservation.id,
-			status: reservation.status,
-			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt,
-			notes: reservation.notes,
-			ref: reservationRefColumns(),
-			// Who booked it for the band. The `user` join is already here.
-			bookedBy: memberRefColumns(),
-			// Not for display — `canCancel` below is derived from it.
-			createdByUserId: reservation.createdByUserId
-		})
-		.from(reservation)
-		.leftJoin(user, eq(user.id, reservation.createdByUserId))
-		.where(
-			and(
-				bookedByGroup(band.id),
-				gt(reservation.startsAt, now),
-				ne(reservation.status, 'cancelled')
+		const upcoming = await db
+			.select({
+				id: reservation.id,
+				status: reservation.status,
+				startsAt: reservation.startsAt,
+				endsAt: reservation.endsAt,
+				notes: reservation.notes,
+				ref: reservationRefColumns(),
+				// Who booked it for the band. The `user` join is already here.
+				bookedBy: memberRefColumns(),
+				// Not for display — `canCancel` below is derived from it.
+				createdByUserId: reservation.createdByUserId
+			})
+			.from(reservation)
+			.leftJoin(user, eq(user.id, reservation.createdByUserId))
+			.where(
+				and(
+					bookedByGroup(band.id),
+					gt(reservation.startsAt, now),
+					ne(reservation.status, 'cancelled')
+				)
 			)
-		)
-		.orderBy(reservation.startsAt);
+			.orderBy(reservation.startsAt);
 
-	const past = await db
-		.select({
-			id: reservation.id,
-			status: reservation.status,
-			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt,
-			notes: reservation.notes,
-			ref: reservationRefColumns(),
-			// Who booked it for the band. The `user` join is already here.
-			bookedBy: memberRefColumns(),
-			// Not for display — `canCancel` below is derived from it.
-			createdByUserId: reservation.createdByUserId
-		})
-		.from(reservation)
-		.leftJoin(user, eq(user.id, reservation.createdByUserId))
-		.where(and(bookedByGroup(band.id), lte(reservation.startsAt, now)))
-		.orderBy(desc(reservation.startsAt))
-		.limit(SEARCH_LIMIT);
+		const pastQuery = db
+			.select({
+				id: reservation.id,
+				status: reservation.status,
+				startsAt: reservation.startsAt,
+				endsAt: reservation.endsAt,
+				notes: reservation.notes,
+				ref: reservationRefColumns(),
+				// Who booked it for the band. The `user` join is already here.
+				bookedBy: memberRefColumns(),
+				// Not for display — `canCancel` below is derived from it.
+				createdByUserId: reservation.createdByUserId
+			})
+			.from(reservation)
+			.leftJoin(user, eq(user.id, reservation.createdByUserId))
+			.where(and(bookedByGroup(band.id), lte(reservation.startsAt, now)))
+			.orderBy(desc(reservation.startsAt))
+			.$dynamic();
 
-	const withBooker = (r: (typeof upcoming)[number], cancellable: boolean) => ({
-		...r,
-		ref: toReservationRef(r.ref, band),
-		bookedBy: toMemberRef(r.bookedBy),
-		canCancel: cancellable && canCancelRow(r.createdByUserId)
-	});
-	return {
-		upcoming: upcoming.map((r) => withBooker(r, true)),
-		// A session that has already happened is nobody's to cancel.
-		past: past.map((r) => withBooker(r, false))
-	};
-});
+		// `SEARCH_LIMIT` is a *search* bound, and it was being used as a history
+		// bound: twenty rows, no count, no control, for an act with three years of
+		// sessions (#1040).
+		const pastPaged = await paginate(
+			pastQuery,
+			db
+				.select({ count: count() })
+				.from(reservation)
+				.where(and(bookedByGroup(band.id), lte(reservation.startsAt, now))),
+			{ page: pastPage }
+		);
+
+		const withBooker = (r: (typeof upcoming)[number], cancellable: boolean) => ({
+			...r,
+			ref: toReservationRef(r.ref, band),
+			bookedBy: toMemberRef(r.bookedBy),
+			canCancel: cancellable && canCancelRow(r.createdByUserId)
+		});
+		return {
+			upcoming: upcoming.map((r) => withBooker(r, true)),
+			// A session that has already happened is nobody's to cancel.
+			past: { ...pastPaged, rows: pastPaged.rows.map((r) => withBooker(r, false)) }
+		};
+	}
+);
 
 /**
  * One of the band's own bookings, for a member of that band.
@@ -2476,15 +2492,18 @@ export const getUserRecurringSeries = query(z.string(), async (userId) => {
  * one request. Each callee re-guards — `getBandReservations` resolves the band from this slug
  * through `requireGroupRole`, the boundary that stops one band reading another's schedule.
  */
-export const getBandReservationsPage = query(z.string(), async (slug) => {
-	const [reservations, membership, contact] = await Promise.all([
-		getBandReservations(slug),
-		getBandMembershipStatus(slug),
-		getBookingContact()
-	]);
+export const getBandReservationsPage = query(
+	z.object({ slug: z.string(), pastPage: z.number().int().min(1).default(1) }),
+	async ({ slug, pastPage }) => {
+		const [reservations, membership, contact] = await Promise.all([
+			getBandReservations({ slug, pastPage }),
+			getBandMembershipStatus(slug),
+			getBookingContact()
+		]);
 
-	return { reservations, membership, contact };
-});
+		return { reservations, membership, contact };
+	}
+);
 
 /**
  * The staff reservations page's one load-bearing query.

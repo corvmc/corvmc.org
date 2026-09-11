@@ -10,6 +10,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import {
 		IconHash,
 		IconCalendar,
@@ -19,7 +20,10 @@
 	} from '@tabler/icons-svelte';
 	import { getMemberEquipmentLoans } from '$lib/remote/inventory.remote';
 
-	let data = $derived(await getMemberEquipmentLoans());
+	let pastPage = $state(1);
+	// The active set comes back whole; history pages, because history is the
+	// half that grows (#1039).
+	let data = $derived(await getMemberEquipmentLoans({ pastPage }));
 
 	let activeTab = $state<'active' | 'past'>('active');
 </script>
@@ -33,7 +37,9 @@
 			// Not "Active": the set includes loans still `requested`, which staff
 			// have not approved yet (#896).
 			{ key: 'active', label: 'Current', badge: data.active.length },
-			{ key: 'past', label: 'Past', badge: data.past.length }
+			// The real total, not the length of the page in hand — the badge used to
+			// read 50 forever.
+			{ key: 'past', label: 'Past', badge: data.past.pagination.total }
 		]}
 		active={activeTab}
 		onchange={(key) => (activeTab = key as 'active' | 'past')}
@@ -123,7 +129,7 @@
 			/>
 		{/each}
 	{:else}
-		{#each data.past as loan (loan.id)}
+		{#each data.past.rows as loan (loan.id)}
 			<Card class="border opacity-80">
 				<CardBody padding="sm">
 					<div class="flex items-start justify-between">
@@ -151,5 +157,6 @@
 		{:else}
 			<p class="py-8 text-center opacity-60">No past loans.</p>
 		{/each}
+		<Pagination {...data.past.pagination} onpage={(p) => (pastPage = p)} />
 	{/if}
 </PageContent>

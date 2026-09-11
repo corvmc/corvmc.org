@@ -381,7 +381,7 @@ describe('cancelBandReservation', () => {
 
 describe('getBandReservations', () => {
 	it('returns upcoming and past for a member', async () => {
-		const result = await getBandReservations('the-velvet-underground');
+		const result = await getBandReservations({ slug: 'the-velvet-underground' });
 
 		expect(result).toHaveProperty('upcoming');
 		expect(result).toHaveProperty('past');
@@ -390,7 +390,7 @@ describe('getBandReservations', () => {
 	it('refuses a signed-in non-member', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
 
-		await expect(getBandReservations('the-velvet-underground')).rejects.toMatchObject({
+		await expect(getBandReservations({ slug: 'the-velvet-underground' })).rejects.toMatchObject({
 			status: 403
 		});
 	});
@@ -399,7 +399,7 @@ describe('getBandReservations', () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
 		isElevated.mockResolvedValue(true);
 
-		await expect(getBandReservations('the-velvet-underground')).resolves.toBeDefined();
+		await expect(getBandReservations({ slug: 'the-velvet-underground' })).resolves.toBeDefined();
 	});
 
 	// There used to be two slugs here — the guard's, from `params`, and the
@@ -410,13 +410,15 @@ describe('getBandReservations', () => {
 		bandServiceMock.getBySlug.mockResolvedValueOnce({ ...mockBand, id: 'other-band' });
 		bandServiceMock.getUserRole.mockResolvedValueOnce(null);
 
-		await expect(getBandReservations('some-other-band')).rejects.toMatchObject({ status: 403 });
+		await expect(getBandReservations({ slug: 'some-other-band' })).rejects.toMatchObject({
+			status: 403
+		});
 	});
 
 	it('marks a row cancellable only for its booker', async () => {
 		selectResult = [reservationRow('user-2')];
 
-		const result = await getBandReservations('the-velvet-underground');
+		const result = await getBandReservations({ slug: 'the-velvet-underground' });
 
 		expect(result.upcoming[0].canCancel).toBe(false);
 	});
@@ -425,7 +427,7 @@ describe('getBandReservations', () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
 		selectResult = [reservationRow('user-2')];
 
-		const result = await getBandReservations('the-velvet-underground');
+		const result = await getBandReservations({ slug: 'the-velvet-underground' });
 
 		expect(result.upcoming[0].canCancel).toBe(true);
 	});
@@ -435,9 +437,9 @@ describe('getBandReservations', () => {
 		bandServiceMock.getUserRole.mockResolvedValue('owner');
 		selectResult = [reservationRow('user-owner', 'completed')];
 
-		const result = await getBandReservations('the-velvet-underground');
+		const result = await getBandReservations({ slug: 'the-velvet-underground' });
 
-		expect(result.past[0].canCancel).toBe(false);
+		expect(result.past.rows[0].canCancel).toBe(false);
 	});
 });
 

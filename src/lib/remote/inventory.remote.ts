@@ -295,15 +295,30 @@ export const getMemberEquipmentMeta = query(z.void(), async () => {
 	};
 });
 
-export const getMemberEquipmentLoans = query(async () => {
-	const currentUser = requireUser();
-	const loans = await listUserLoans(currentUser.id);
+/** Still on the go. Bounded by how much gear one member can hold at once. */
+const ACTIVE_LOAN_STATUSES = ['requested', 'scheduled', 'checked_out'] as const;
+const PAST_LOAN_STATUSES = ['returned', 'cancelled'] as const;
 
-	return {
-		active: loans.filter((l) => ['requested', 'scheduled', 'checked_out'].includes(l.status)),
-		past: loans.filter((l) => ['returned', 'cancelled'].includes(l.status))
-	};
-});
+/**
+ * Two queries, not one split in memory.
+ *
+ * This used to read the first 50 of everything and partition the result, so a
+ * member with more than 50 lost the rest silently (#1039). History is the half
+ * that grows, so it is the half that pages; the active set is small by
+ * definition and stays whole.
+ */
+export const getMemberEquipmentLoans = query(
+	z.object({ pastPage: z.number().int().min(1).default(1) }).default({ pastPage: 1 }),
+	async ({ pastPage }) => {
+		const currentUser = requireUser();
+		const [active, past] = await Promise.all([
+			listUserLoans(currentUser.id, [...ACTIVE_LOAN_STATUSES]),
+			listUserLoans(currentUser.id, [...PAST_LOAN_STATUSES], { page: pastPage })
+		]);
+
+		return { active: active.rows, past };
+	}
+);
 
 /**
  * What a member sees after scanning the sticker on a piece of gear.
@@ -1220,7 +1235,8 @@ export const returnLoan = form(
 
 export const getUserLoans = query(z.string(), async (userId) => {
 	await requireCapability('inventory.read');
-	return listUserLoans(userId);
+	const { rows } = await listUserLoans(userId, [...ACTIVE_LOAN_STATUSES, ...PAST_LOAN_STATUSES]);
+	return rows;
 });
 
 // ---------------------------------------------------------------------------

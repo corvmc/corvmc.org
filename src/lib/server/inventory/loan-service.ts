@@ -6,7 +6,7 @@ import {
 	inventoryLoan
 } from '$lib/server/db/schema/inventory';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, sql, like, or, desc, count } from 'drizzle-orm';
+import { eq, and, sql, like, or, desc, count, inArray } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { memberRefColumns, toGenericRef, toMemberRef } from '$lib/server/entity/refs';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -645,6 +645,8 @@ export async function getLoanById(id: string) {
 
 export interface ListLoansOptions {
 	status?: LoanStatus;
+	/** A set of statuses, for the active/past split a member's own list makes. */
+	statuses?: LoanStatus[];
 	userId?: string;
 	itemId?: string;
 	search?: string;
@@ -654,6 +656,7 @@ export async function listLoans(opts: ListLoansOptions = {}, pagination: Paginat
 	const conditions = [];
 
 	if (opts.status) conditions.push(eq(inventoryLoan.status, opts.status));
+	if (opts.statuses?.length) conditions.push(inArray(inventoryLoan.status, opts.statuses));
 	if (opts.userId) conditions.push(eq(inventoryLoan.userId, opts.userId));
 	if (opts.itemId) conditions.push(eq(inventoryLoan.itemId, opts.itemId));
 	if (opts.search) {
@@ -703,9 +706,21 @@ export async function listLoans(opts: ListLoansOptions = {}, pagination: Paginat
 	};
 }
 
-export async function listUserLoans(userId: string) {
-	const { rows } = await listLoans({ userId });
-	return rows;
+/**
+ * One member's loans, in one status set, paginated.
+ *
+ * It used to take the first 50 of *everything* and hand back the rows, which
+ * the caller then split into active and past — so a member with more than 50
+ * simply never saw the rest, with no count and no control (#1039). Paginating
+ * the combined list would not have worked either: page two of a mixed set can
+ * be all active, and the page renders two sections.
+ */
+export async function listUserLoans(
+	userId: string,
+	statuses: LoanStatus[],
+	pagination: PaginationInput = {}
+) {
+	return listLoans({ userId, statuses }, pagination);
 }
 
 export async function getLoanHistory(itemId: string) {
