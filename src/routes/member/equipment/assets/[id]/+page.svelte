@@ -7,6 +7,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
@@ -30,7 +31,21 @@
 	const resources = $derived(asset.resources);
 </script>
 
-<PageHeader subtitle={asset.categoryName} title={asset.name} backHref="/member/equipment" />
+<PageHeader subtitle={asset.categoryName} title={asset.name} backHref="/member/equipment">
+	<!-- The whole point of the sticker. This page had `itemId` and used it only
+	     to fetch resources, so a member who scanned a thing they wanted was told
+	     its condition and left with nowhere to go (#1073). The catalog owns the
+	     request form; `?request=` opens it on the right item. -->
+	{#if asset.isAvailable}
+		<Button href={resolve(`/member/equipment?request=${asset.itemId}`)} variant="primary" size="sm">
+			Ask to borrow this
+		</Button>
+	{:else}
+		<Button href={resolve('/member/equipment')} variant="default" size="sm" outline>
+			See what else is free
+		</Button>
+	{/if}
+</PageHeader>
 
 <PageContent width="2xl">
 	<InfoCard title={asset.assetTag ?? 'This unit'}>

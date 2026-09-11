@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
@@ -66,6 +67,24 @@
 		returnDateValue = '';
 		showRequestModal = true;
 	}
+
+	/**
+	 * Opened from a scanned sticker. The asset page has the item id and no form
+	 * to put it in, so it links here with `?request=<itemId>` and this finds the
+	 * catalog row to fill the modal from (#1073). Fires once: `opened` stops the
+	 * effect reopening it after the member closes it.
+	 */
+	let opened = $state(false);
+	$effect(() => {
+		const wanted = page.url.searchParams.get('request');
+		if (!wanted || opened) return;
+		void Promise.resolve(equipmentResult).then((rows) => {
+			const match = rows.find((r) => r.id === wanted);
+			if (!match) return;
+			opened = true;
+			openRequest(match.id, match.name, match.pricingTier);
+		});
+	});
 
 	function openFreeFormRequest() {
 		selectedEquipmentId = undefined;

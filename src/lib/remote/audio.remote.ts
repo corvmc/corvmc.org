@@ -9,6 +9,8 @@ import {
 	deleteRelease,
 	deleteTrack,
 	getReleaseById,
+	coverUrlsFor,
+	salesCountFor,
 	listReleasesForBand,
 	listTracks,
 	publishRelease,
@@ -88,9 +90,18 @@ export const getBandRelease = query(
 		const release = await getReleaseById(releaseId);
 		if (!release || release.groupId !== band.id) throw error(404, 'Release not found');
 
+		// Both shown by the card that links here and by neither half of this page
+		// before (#1071).
+		const [covers, salesCount] = await Promise.all([
+			coverUrlsFor([releaseId]),
+			salesCountFor(releaseId)
+		]);
+
 		return {
 			release: {
 				id: release.id,
+				coverUrl: covers.get(releaseId) ?? null,
+				salesCount,
 				title: release.title,
 				slug: release.slug,
 				kind: release.kind,

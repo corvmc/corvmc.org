@@ -3,6 +3,9 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatCents, formatDate } from '$lib/utils/format';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -90,6 +93,42 @@
 				: ''}. It is not public and cannot be republished from here. Reply to the message staff sent
 			you to sort it out.
 		</Alert>
+	{/if}
+
+	<!--
+		What the record *is*, for everyone. Every card below is gated on
+		`canManage` with no read-only fallback, so a plain band member — a member
+		of the band whose release this is — saw a one-card page and had to read
+		the price and the date off the list they came from (#1071).
+	-->
+	{#if !canManage}
+		<Card>
+			<CardBody row>
+				{#if release.coverUrl}
+					<img src={release.coverUrl} alt="" class="size-20 shrink-0 rounded object-cover" />
+				{/if}
+				<DefinitionList class="grow">
+					<Fact label="Price">
+						{release.priceMinCents > 0 ? formatCents(release.priceMinCents) : 'Free'}
+					</Fact>
+					{#if release.releasedAt}
+						<Fact label="Released">{formatDate(release.releasedAt)}</Fact>
+					{/if}
+					<Fact label="Sold">{release.salesCount}</Fact>
+					<Fact label="CMC Radio">
+						{#if release.radioExcluded}
+							Pulled by staff
+						{:else}
+							{release.radioOptIn ? 'In the rotation' : 'Not in the rotation'}
+						{/if}
+					</Fact>
+				</DefinitionList>
+			</CardBody>
+		</Card>
+
+		{#if release.description}
+			<p class="text-muted">{release.description}</p>
+		{/if}
 	{/if}
 
 	<!-- Tracks first. Everything else on this page is a decision about a record

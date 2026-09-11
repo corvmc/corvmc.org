@@ -76,7 +76,7 @@ export class ReleaseHasSalesError extends DomainError {
 // ---------------------------------------------------------------------------
 
 /** The release's cover, resolved through the transform pipeline. `null` when unset. */
-async function coverUrlsFor(releaseIds: string[]): Promise<Map<string, string>> {
+export async function coverUrlsFor(releaseIds: string[]): Promise<Map<string, string>> {
 	if (releaseIds.length === 0) return new Map();
 
 	const rows = await db
@@ -118,6 +118,20 @@ const TRACK_RUNTIME = sql<number>`COALESCE((SELECT SUM("audio_track"."duration_m
 const PAID_SALES = sql<number>`(SELECT COUNT(*) FROM "release_purchase" WHERE "release_purchase"."release_id" = "audio_release"."id" AND "release_purchase"."status" = 'paid')`;
 
 export const releaseAggregates = { TRACK_COUNT, TRACK_RUNTIME, PAID_SALES };
+
+/**
+ * Paid sales for one release. The list has always shown this per row; the
+ * detail page did not, so the members of the band whose record it is could not
+ * see how it was doing from the page about it (#1071).
+ */
+export async function salesCountFor(releaseId: string): Promise<number> {
+	const [row] = await db
+		.select({ n: PAID_SALES })
+		.from(audioRelease)
+		.where(eq(audioRelease.id, releaseId))
+		.limit(1);
+	return Number(row?.n ?? 0);
+}
 
 export type ReleaseSummary = {
 	id: string;
