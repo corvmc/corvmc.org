@@ -257,6 +257,12 @@ export async function checkIn(ticketId: string, staffUserId: string): Promise<vo
 // Queries
 // ---------------------------------------------------------------------------
 
+/** One ticket, or null. The caller that needs to know which show it is for. */
+export async function getTicketById(ticketId: string) {
+	const [row] = await db.select().from(ticket).where(eq(ticket.id, ticketId)).limit(1);
+	return row ?? null;
+}
+
 export async function getTicketsByPurchase(purchaseId: string) {
 	return db
 		.select()

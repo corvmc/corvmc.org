@@ -712,6 +712,38 @@ export async function listSignupsForUser(
 		.limit(options.limit ?? 20);
 }
 
+/**
+ * One of the member's own shifts, by signup id.
+ *
+ * The signup id is the scope: it names one person and one work order at once,
+ * so a caller cannot reach somebody else's shift by guessing an id. The event
+ * comes back as a bare id — this file knows nothing of the event schema beyond
+ * the title subquery, and the caller reads the show through `event-service`.
+ */
+export async function getSignupForUser(signupId: string, userId: string) {
+	const [row] = await db
+		.select({
+			signupId: volunteerSignup.id,
+			shiftId: workOrder.id,
+			status: volunteerSignup.status,
+			cancelledAt: volunteerSignup.cancelledAt,
+			roleName: volunteerRole.name,
+			startsAt: workOrder.startsAt,
+			endsAt: workOrder.endsAt,
+			notes: workOrder.notes,
+			shiftCancelledAt: workOrder.cancelledAt,
+			eventId: workOrder.eventId,
+			eventTitle: eventTitleSql
+		})
+		.from(volunteerSignup)
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.where(and(eq(volunteerSignup.id, signupId), eq(volunteerSignup.userId, userId)))
+		.limit(1);
+
+	return row ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // The coordinator's worklist
 // ---------------------------------------------------------------------------

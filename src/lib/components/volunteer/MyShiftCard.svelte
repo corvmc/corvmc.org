@@ -106,6 +106,17 @@
 		{/if}
 
 		<div class="mt-2 flex flex-wrap gap-2">
+			{#if !calledOff}
+				<!-- The checklist and, on a ticketed show, the door list. Both were
+				     staff-only until #934 and #931. -->
+				<Button
+					href={resolve(`/member/volunteer/shifts/${shift.signupId}`)}
+					variant="ghost"
+					size="xs"
+				>
+					Open shift
+				</Button>
+			{/if}
 			{#if worked}
 				<Button
 					href={resolve(`/member/volunteer/feedback/${shift.signupId}`)}
