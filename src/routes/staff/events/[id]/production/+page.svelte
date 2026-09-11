@@ -46,6 +46,7 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
 	import { createShift } from '$lib/remote/volunteer.remote';
+	import { listActInDirectory } from '$lib/remote/external-acts.remote';
 	import { applyDutyList } from '$lib/remote/duty-lists.remote';
 	import { updateProduction, setProductionProducer } from '$lib/remote/productions.remote';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
@@ -1069,9 +1070,34 @@
 							<li class="flex flex-wrap items-center gap-2 py-2">
 								<span class="font-medium">{act.name}</span>
 								{#if act.empty}
-									<span class="text-sm text-base-content/60">
-										{act.slug ? 'Nothing sent yet' : 'Not a CMC act — ask them directly'}
-									</span>
+									<!-- Three states, not two. A credit with no `directoryEntryId`
+									     is not merely silent: `requestableActs` filters on that
+									     column, so it cannot be asked at all — and the old copy
+									     blamed the act for it (#974). -->
+									{#if act.entryId}
+										<span class="text-sm text-base-content/60">Nothing sent yet</span>
+									{:else}
+										<span class="text-sm text-base-content/60">Not in the directory yet</span>
+										<Action
+											action={listActInDirectory.for(act.id)}
+											label="Add to the directory"
+											variant="ghost"
+											size="xs"
+											modalTitle="Add {act.name} to the directory?"
+											submitLabel="Add to the directory"
+											successToast="{act.name} can be asked now"
+											onsuccess={() => getStaffEventProduction(id).refresh()}
+										>
+											{#snippet form()}
+												<input {...listActInDirectory.fields.eventBandId.as('hidden', act.id)} />
+												<p class="text-sm">
+													This records <strong>{act.name}</strong> as an external act — no page, no membership,
+													nothing members can see. It is what makes them askable for a rider, and gives
+													them a link to answer on.
+												</p>
+											{/snippet}
+										</Action>
+									{/if}
 								{:else}
 									{#if act.channelCount > 0}
 										<Badge>{act.channelCount} ch</Badge>
