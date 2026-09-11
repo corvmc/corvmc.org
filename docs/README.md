@@ -229,6 +229,7 @@ content is either shipped (git history is the record) or was filed as an issue w
 | [social-prior-art.md](reports/social-prior-art.md)                               | ✅     | The social vertical by role, against the products that compete with each — and what to steal            |
 | [library-candidates.md](reports/library-candidates.md)                           | ✅     | Packages surveyed for unbuilt work, and the ones rejected — split out of the retired `IDEAS.md`         |
 | [ledger-reconciliation-prior-art.md](reports/ledger-reconciliation-prior-art.md) | ✅     | How four ledger systems associate a pass-through in with its payout — grouping keys, not pairwise links |
+| [card-surface-inventory.md](reports/card-surface-inventory.md)                   | ✅     | Every surface that draws a list of cards, audited for density; the work left as #1032                   |
 
 ## checklists
 
