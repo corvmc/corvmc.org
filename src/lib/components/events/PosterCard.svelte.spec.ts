@@ -40,3 +40,31 @@ describe('PosterCard poster sizing', () => {
 		expect(img()?.hasAttribute('sizes')).toBe(false);
 	});
 });
+
+/**
+ * The tape carries the event's first tag. Suppressing the whole badge row
+ * whenever a tape was set meant the same event showed one tag on
+ * /member/events and all of them on /events (#1041).
+ */
+describe('PosterCard tags beside a tape label', () => {
+	const tagsOf = () =>
+		[...document.querySelectorAll('.sticker-badge')].map((el) => el.textContent?.trim());
+
+	it('shows the tags the tape is not already showing', async () => {
+		await render(PosterCard, { ...base, tags: 'Workshop, All-ages', tapeLabel: 'Workshop' });
+
+		expect(tagsOf()).toEqual(['All-ages']);
+	});
+
+	it('shows every tag when there is no tape', async () => {
+		await render(PosterCard, { ...base, tags: 'Workshop, All-ages' });
+
+		expect(tagsOf()).toEqual(['Workshop', 'All-ages']);
+	});
+
+	it('renders no badge row when the tape is the only tag', async () => {
+		await render(PosterCard, { ...base, tags: 'Workshop', tapeLabel: 'Workshop' });
+
+		expect(tagsOf()).toEqual([]);
+	});
+});

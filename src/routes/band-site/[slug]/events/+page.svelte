@@ -2,7 +2,8 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
 	import { resolve } from '$app/paths';
-	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
+	import { formatDate, formatTime } from '$lib/utils/format';
+	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import { bandSiteHref } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
 	import { imageSrc } from '$lib/utils/images';
@@ -51,9 +52,11 @@
 						{#if evt.location}
 							<p class="text-muted">{evt.location}</p>
 						{/if}
-						{#if evt.ticketPrice}
-							<p class="text-muted">{formatCents(evt.ticketPrice)}</p>
-						{/if}
+						<!-- Through `priceDisplay`, like every other price label: a missing
+						     price is only "free" when nobody is selling tickets, and this
+						     rendered nothing at all for an externally-ticketed show, which
+						     reads as free (#1037). -->
+						<p class="text-muted">{priceDisplay(evt).label}</p>
 						{#if evt.description}
 							<p class="mt-2 text-sm opacity-80">{evt.description}</p>
 						{/if}

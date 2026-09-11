@@ -36,6 +36,10 @@ function toSiteEvent(e: EventRow) {
 		location: e.location,
 		externalTicketUrl: e.externalTicketUrl,
 		ticketPrice: e.ticketPrice,
+		// `confirmedForBand` includes CMC-produced shows the band is credited on,
+		// and those can be platform-ticketed — so `priceDisplay` needs all three
+		// fields here to tell "we sell these" from "somebody else does" (#1037).
+		ticketingEnabled: e.ticketingEnabled,
 		posterUrl: resolveImageUrl(e.posterKey)
 	};
 }
