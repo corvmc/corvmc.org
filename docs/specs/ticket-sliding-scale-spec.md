@@ -1,17 +1,18 @@
 # The ticket sliding scale, and where the money goes
 
-> ## Status, 2026-09-08 — partly shipped
+> ## Status, 2026-09-10 — shipped
 >
-> Two pieces of this are already in the tree and this document does not say so, which is how a
-> price floor gets built twice:
+> All of it is in the tree. Read what follows as the record of the decisions, not as work to do.
 >
-> - **`event.ticketPriceFloorCents`** (`src/lib/server/db/schema/event.ts:85`) — the per-event
->   floor, defaulting to 0.
+> - **`event.ticketPriceFloorCents`** (`src/lib/server/db/schema/event.ts`) — the per-event floor,
+>   defaulting to 0, editable by staff.
 > - **`src/lib/finance/ticket-split.ts`** — the split arithmetic.
+> - **`src/lib/components/events/TicketPurchaseFields.svelte`** and
+>   **`src/routes/(public)/events/[id]/tickets/+page.svelte`** — the checkout surface: the
+>   suggested price, the scale, the split bar and the $0 path.
+> - The 50% sustaining-member ticket discount is gone (`src/lib/server/db/schema/ticket.ts`).
 >
-> What is unbuilt is the checkout surface that uses them: the suggested price, the split bar the
-> buyer sees, and the retirement of the member ticket discount. Check the tree before building
-> any section below.
+> Covered by `e2e/ticket-purchase.e2e.ts` and the unit tests around the split.
 
 CMC concert tickets are NOTAFLOF — no one is turned away for lack of funds. Up
 to now that has been a sentence on the checkout page rather than something the

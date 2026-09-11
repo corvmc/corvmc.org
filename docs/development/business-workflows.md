@@ -371,8 +371,11 @@ events use RSVP instead.
   is one of those parts (`ticket_contribution_cents` in the session metadata) and must come out
   before the remainder is called fees — otherwise the buyer's confirmation email reports their gift
   back to them as a processing charge. Guarded by `checkout-listener.spec.ts`.
-- **NOTAFLOF is still a door policy.** Checkout cannot sell a $0 ticket, so the purchase page says
-  so in as many words and staff `compTickets` remains the mechanism for a free ticket.
+- **NOTAFLOF is operational online.** Checkout does sell a $0 ticket: at zero `purchaseTickets`
+  skips Stripe entirely and mints valid tickets outright, capped per email by
+  `FREE_TICKETS_PER_EMAIL`. A show whose `ticketPriceFloorCents` is above 0 takes its scale no
+  lower than that floor, and on those the purchase page points at the door and staff
+  `compTickets` remains the mechanism for a free ticket.
 - **Check-in:** `staff/events/[id]/check-in` → `checkInTicket` form → `checkIn()` in
   `ticket-service.ts` (records who checked in and when; rejects reused codes).
 - **Cancellation:** `cancelEvent` → `event-service.cancel()` — collects ticket holders and
