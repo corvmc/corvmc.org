@@ -45,6 +45,7 @@ vi.mock('drizzle-orm', () => ({
 	and: vi.fn(),
 	gte: vi.fn(),
 	lt: vi.fn(),
+	or: vi.fn(),
 	ne: (...args: unknown[]) => mockNe(...args)
 }));
 
@@ -150,6 +151,50 @@ describe('POST /api/cron/confirmation-reminders', () => {
 				reservationId: 'res-2',
 				userId: 'user-2'
 			})
+		);
+	});
+
+	it('calls the day-before sweep final and the window-opening one an invitation', async () => {
+		// Both bands come back from one statement, so the stage is decided per
+		// row rather than per query — a booking three days out must not be told
+		// its session is tomorrow (#965).
+		const DAY = 24 * 60 * 60 * 1000;
+		const tomorrow = new Date(Date.now() + 12 * 60 * 60 * 1000);
+		const inThreeDays = new Date(Date.now() + 2.5 * DAY);
+
+		queryResult = [
+			{
+				id: 'res-final',
+				startsAt: tomorrow,
+				endsAt: new Date(tomorrow.getTime() + 3600000),
+				userId: 'user-1',
+				userName: 'Alice',
+				userEmail: 'alice@example.com'
+			},
+			{
+				id: 'res-opening',
+				startsAt: inThreeDays,
+				endsAt: new Date(inThreeDays.getTime() + 3600000),
+				userId: 'user-2',
+				userName: 'Bob',
+				userEmail: 'bob@example.com'
+			}
+		];
+
+		await POST({
+			request: new Request('http://localhost/api/cron/confirmation-reminders', {
+				method: 'POST',
+				headers: { Authorization: 'Bearer test-secret' }
+			})
+		} as any);
+
+		expect(mockEmit).toHaveBeenCalledWith(
+			'reservation.confirmation_reminder_due',
+			expect.objectContaining({ reservationId: 'res-final', stage: 'final' })
+		);
+		expect(mockEmit).toHaveBeenCalledWith(
+			'reservation.confirmation_reminder_due',
+			expect.objectContaining({ reservationId: 'res-opening', stage: 'window_open' })
 		);
 	});
 

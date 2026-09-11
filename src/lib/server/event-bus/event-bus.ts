@@ -137,6 +137,12 @@ export interface ReservationReminderDueEvent {
 }
 
 export interface ConfirmationReminderDueEvent {
+	/**
+	 * Which reminder this is. `window_open` is the day confirming becomes
+	 * possible, `final` the day before the session — the same event twice, and
+	 * the copy differs because "please confirm" three days out reads as noise.
+	 */
+	stage: 'window_open' | 'final';
 	reservationId: string;
 	userId: string;
 	userName: string;
