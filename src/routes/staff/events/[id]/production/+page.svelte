@@ -27,6 +27,7 @@
 	import {
 		formatCents,
 		formatDateShort,
+		formatDateTime,
 		formatDollars,
 		formatTime,
 		formatTimeRange,
@@ -863,6 +864,14 @@
 					act that should not wait on a Save, and there is no list of candidates
 					a picker could offer — the capability matrix names no production lead.
 				-->
+					{#if productionRecord.closedAt}
+						<!-- `updatedAt` is not this date: it moves on any later write. -->
+						<p class="text-muted text-sm">
+							Closed {formatDateTime(productionRecord.closedAt)}{productionRecord.closedByName
+								? ` by ${productionRecord.closedByName}`
+								: ''}
+						</p>
+					{/if}
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-muted">Producer</span>
 						<span class="font-medium">{productionRecord.producerName ?? 'Nobody yet'}</span>
