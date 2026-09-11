@@ -30,6 +30,7 @@ import { pendingSites } from './seed/pending';
 import { seedRoles, seedUsers, seedAdminUser, seedUserRoles } from './seed/users';
 import { seedReservations, seedClosures, seedLockAccess } from './seed/reservations';
 import { seedEvents } from './seed/events';
+import { findRoomConflicts, resetRoom } from './seed/room';
 import { seedVenues } from './seed/venues';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
@@ -89,6 +90,10 @@ import { seedRiders } from './seed/rider';
 import { seedPacking } from './seed/packing';
 
 async function main() {
+	// The one room's ledger, shared by every seeder that books it. Reset here
+	// rather than at module scope so a second run in one process starts clean.
+	resetRoom();
+
 	console.log('\nStarting dev seed...\n');
 
 	// Off for the whole seed: the call order below is a dependency graph, not a
@@ -387,6 +392,16 @@ async function main() {
 
 	console.log('\n  External act self-service (no login — the token is the whole of it):');
 	console.log(`    /act/${SEED_ACT_SHEET_TOKEN}   Sawtooth Rivals — contact sheet + tech rider`);
+
+	// The room holds one booking at a time and eight modules book it, so the
+	// invariant is asserted rather than assumed (#966).
+	const clashes = await findRoomConflicts();
+	if (clashes.length > 0) {
+		console.warn(`\n  ⚠ ${clashes.length} overlapping reservation(s) — the room is one room:`);
+		for (const c of clashes.slice(0, 5)) {
+			console.warn(`    ${c.at.toISOString()}  ${c.a}  vs  ${c.b}`);
+		}
+	}
 
 	console.log('\n  Volunteer deep links:');
 	console.log('    /member/volunteer/feedback/seed-vol-signup-feedback');

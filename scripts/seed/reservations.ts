@@ -8,8 +8,17 @@ import {
 import { db } from './db';
 import { CLOSURE_REASONS } from './pools';
 import { HOURLY_RATE_CENTS, type SeedReservation, type SeedUser } from './types';
+import { claimRoomNear, holdRoom } from './room';
 import { pick, ptDate, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
+
+/** A slot for a row of this status: cancelled ones take the time they asked for. */
+function bookRoom(startsAt: Date, durationHours: number, status: string) {
+	if (status === 'cancelled' || status === 'waitlisted') {
+		return { startsAt, endsAt: new Date(startsAt.getTime() + durationHours * 3_600_000) };
+	}
+	return claimRoomNear(startsAt, durationHours);
+}
 
 export async function seedReservations(users: SeedUser[]): Promise<SeedReservation[]> {
 	console.log('Seeding reservations...');
@@ -20,12 +29,16 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 		let hour = randomInt(9, 14);
 		for (let i = 0; i < count; i++) {
 			const duration = pick([1, 1.5, 2]);
-			const startsAt = ptDate(day, hour);
-			const endsAt = ptDate(day, hour + duration);
 			hour += duration + 0.5;
 			if (hour > 21) break;
 
 			const status = random() > 0.15 ? 'completed' : pick(['no_show', 'cancelled']);
+			// The room is one room and eight seeders book it. A cancelled row is
+			// exempt: `hasConflict` ignores those, so holding the room for one
+			// would make the seed stricter than the rule it is modelling.
+			const slot = bookRoom(ptDate(day, hour - duration - 0.5), duration, status);
+			if (!slot) continue;
+			const { startsAt, endsAt } = slot;
 			const member = pick(users);
 
 			// Free-hour settlement, mirroring `commitReservationCredits`:
@@ -90,12 +103,13 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 		let hour = randomInt(10, 15);
 		for (let i = 0; i < count; i++) {
 			const duration = pick([1, 1.5, 2]);
-			const startsAt = ptDate(day, hour);
-			const endsAt = ptDate(day, hour + duration);
 			hour += duration + 0.5;
 			if (hour > 21) break;
 
 			const status = day === 0 ? 'confirmed' : pick(['scheduled', 'confirmed']);
+			const slot = bookRoom(ptDate(day, hour - duration - 0.5), duration, status);
+			if (!slot) continue;
+			const { startsAt, endsAt } = slot;
 			const member = pick(users);
 
 			// Confirmed bookings inside the provisioning window carry a door code,
@@ -154,6 +168,10 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 		})
 		.returning();
 
+	// A named booking a walkthrough is pointed at, so it takes the room rather
+	// than asking for it — `findRoomConflicts` is what says if that hurt.
+	const newcomerSlot = holdRoom(ptDate(2, 18), ptDate(2, 20), 'newcomer');
+
 	const [firstEver] = await db
 		.insert(reservation)
 		.values({
@@ -161,8 +179,7 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 			bookerId: newcomer.id,
 			createdByUserId: newcomer.id,
 			status: 'scheduled',
-			startsAt: ptDate(2, 18),
-			endsAt: ptDate(2, 20),
+			...newcomerSlot,
 			notes: 'First time here — is there somewhere to park a van?'
 		})
 		.returning();

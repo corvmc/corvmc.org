@@ -1,4 +1,5 @@
 import { account, user } from '../../src/lib/server/db/schema/authentication';
+import { holdRoom } from './room';
 import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { creditTransaction } from '../../src/lib/server/db/schema/finance';
 import { group, groupMember } from '../../src/lib/server/db/schema/group';
@@ -313,6 +314,12 @@ export async function seedUsagePersonaLife(
 	// --- the bookings --------------------------------------------------------
 	// Tuesday evenings, which is the whole persona: one behind, one ahead, and
 	// one today so the dashboard's "this week" list is never empty.
+	// Tuesday evenings are this persona's whole identity, so these take the room
+	// rather than asking for it; `findRoomConflicts` reports if that collided.
+	const tuesday = Object.fromEntries(
+		[-7, 0, 7].map((d) => [d, holdRoom(ptDate(d, 18), ptDate(d, 20), 'regular')])
+	);
+
 	const reservations = await batchInsert(
 		reservation,
 		[
@@ -321,8 +328,7 @@ export async function seedUsagePersonaLife(
 				bookerId: regular.id,
 				createdByUserId: regular.id,
 				status: 'completed' as const,
-				startsAt: ptDate(-7, 18),
-				endsAt: ptDate(-7, 20),
+				...tuesday[-7],
 				notes: 'Drum practice',
 				creditsUsed: 4,
 				cashDueCents: 0,
@@ -333,8 +339,7 @@ export async function seedUsagePersonaLife(
 				bookerId: regular.id,
 				createdByUserId: regular.id,
 				status: 'confirmed' as const,
-				startsAt: ptDate(0, 18),
-				endsAt: ptDate(0, 20),
+				...tuesday[0],
 				notes: 'Drum practice',
 				creditsUsed: 1,
 				cashDueCents: Math.round(1.5 * HOURLY_RATE_CENTS),
@@ -347,8 +352,7 @@ export async function seedUsagePersonaLife(
 				bookerId: regular.id,
 				createdByUserId: regular.id,
 				status: 'scheduled' as const,
-				startsAt: ptDate(7, 18),
-				endsAt: ptDate(7, 20),
+				...tuesday[7],
 				notes: 'Drum practice',
 				creditsUsed: null,
 				cashDueCents: 2 * HOURLY_RATE_CENTS

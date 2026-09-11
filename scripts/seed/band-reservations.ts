@@ -1,4 +1,5 @@
 import { reservation } from '../../src/lib/server/db/schema/reservation';
+import { claimRoomNear } from './room';
 import { db } from './db';
 import { pick, ptDate, randomInt } from './util';
 
@@ -17,8 +18,9 @@ export async function seedBandReservations(bands: any[], alsoInclude: any[] = []
 		for (const day of [-6, 3]) {
 			const hour = randomInt(17, 20);
 			const duration = pick([2, 3]);
-			const startsAt = ptDate(day, hour);
-			const endsAt = ptDate(day, hour + duration);
+			const slot = claimRoomNear(ptDate(day, hour), duration);
+			if (!slot) continue;
+			const { startsAt, endsAt } = slot;
 			const isPast = day < 0;
 
 			const [r] = await db
