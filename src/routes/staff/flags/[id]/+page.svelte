@@ -38,7 +38,21 @@
 	);
 
 	const { fields } = resolveFlag;
-	let resolution = $state<'resolved' | 'dismissed'>('resolved');
+	// No default. "Resolved — action taken" used to be pre-selected, so a
+	// moderator who pressed the primary button without reading recorded
+	// enforcement against a member rather than the no-op — and the consequence
+	// copy below only renders once `resolved` is chosen, so it was invisible
+	// exactly when it mattered (#981).
+	let resolution = $state<'' | 'resolved' | 'dismissed'>('');
+
+	// The button says what it will do, because it is the only thing read.
+	const resolveLabel = $derived(
+		resolution === 'resolved'
+			? 'Resolve — action taken'
+			: resolution === 'dismissed'
+				? 'Dismiss — no action'
+				: 'Choose an outcome first'
+	);
 	let notes = $state('');
 </script>
 
@@ -140,8 +154,8 @@
 					<Action
 						action={resolveFlag}
 						label="Resolve / Dismiss"
-						modalTitle="Resolve flag"
-						submitLabel="Save"
+						modalTitle="Resolve or dismiss this report"
+						submitLabel={resolveLabel}
 						successToast="Flag updated"
 						variant="primary"
 						size="sm"
@@ -157,6 +171,7 @@
 										{...fields.resolution.as('select')}
 										bind:value={resolution}
 									>
+										<option value="" disabled>Choose an outcome</option>
 										<option value="resolved">Resolved — action taken</option>
 										<option value="dismissed">Dismissed — no action needed</option>
 									</Select>

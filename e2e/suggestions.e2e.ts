@@ -83,13 +83,21 @@ async function reportSuggestion(page: Page, suggestionId: string, reason: string
 }
 
 /** Resolve or dismiss the newest pending report from the staff flag queue. */
+const SUBMIT_LABEL = {
+	resolved: 'Resolve — action taken',
+	dismissed: 'Dismiss — no action'
+} as const;
+
 async function decideReport(page: Page, entityTitle: string, decision: 'resolved' | 'dismissed') {
 	await page.goto('/staff/flags');
 	await page.getByRole('link', { name: entityTitle }).first().click();
 	await page.waitForURL(/\/staff\/flags\/[^/]+$/);
 	await page.getByRole('button', { name: 'Resolve / Dismiss' }).click();
 	await page.locator('select[name="resolution"]').selectOption(decision);
-	await page.getByRole('button', { name: 'Save' }).click();
+	// By the decision's own name, not "Save": the submit says what it will record,
+	// which is the whole of #981. Clicking it by label is also the only assertion
+	// that the dialog and the picked outcome agree.
+	await page.getByRole('button', { name: SUBMIT_LABEL[decision] }).click();
 	await expect(page.getByRole('dialog')).toBeHidden({ timeout: 15000 });
 }
 

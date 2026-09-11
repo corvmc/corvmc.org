@@ -48,7 +48,12 @@ export const getFlagDetail = query(z.string(), async (flagId) => {
 
 const resolveSchema = z.object({
 	flagId: z.string().min(1),
-	resolution: z.enum(['resolved', 'dismissed']),
+	// Named message rather than zod's default: submitting with nothing chosen is
+	// the ordinary path now that there is no default, and "Invalid option" is
+	// not an instruction (#981).
+	resolution: z.enum(['resolved', 'dismissed'], {
+		message: 'Choose whether this is resolved or dismissed'
+	}),
 	notes: z.string().max(FLAG_DESCRIPTION_MAX).optional(),
 	unpublishEvent: z.boolean().default(false)
 });
