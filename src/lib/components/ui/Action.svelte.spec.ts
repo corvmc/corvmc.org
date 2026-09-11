@@ -279,6 +279,29 @@ describe('Action, form mode', () => {
 		);
 	});
 
+	// #1000 said a failed subscription showed the member nothing, and blamed
+	// `Form.surfaceFailure` routing to an error boundary "that renders nothing".
+	// Every panel layout mounts one, so this is the branch the app actually
+	// takes — and the two tests above only ever exercised the other one.
+	it('surfaces a thrown failure through the error boundary the panels mount', async () => {
+		vi.mocked(toast.error).mockClear();
+		await render(ActionHarness, {
+			boundary: true,
+			action: fakeRemoteForm({
+				rejectWith: { status: 400, body: { message: 'You already have a subscription.' } }
+			}),
+			label: 'Subscribe',
+			fieldName: 'id'
+		});
+
+		await page.getByRole('button', { name: 'Subscribe' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Subscribe' }).click();
+
+		await vi.waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith('You already have a subscription.')
+		);
+	});
+
 	// `submitLabel` is separate from `label` because the trigger names the thing
 	// you are opening and the submit names the thing you are doing.
 	it('gives the submit its own label', async () => {
