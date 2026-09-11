@@ -2,7 +2,9 @@
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -89,26 +91,19 @@
 					<CardTitle level={2}>Premium Act Page</CardTitle>
 					<Badge variant="success">Active</Badge>
 				</div>
-				<dl class="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-					<div>
-						<dt class="font-medium opacity-60">Billing</dt>
-						<dd class="capitalize">{info.subscription.billingInterval}</dd>
-					</div>
-					<div>
-						<dt class="font-medium opacity-60">Renews</dt>
-						<dd>{formatDate(new Date(info.subscription.currentPeriodEnd))}</dd>
-					</div>
-					<div class="sm:col-span-2">
-						<dt class="font-medium opacity-60">Your site</dt>
-						<dd>
-							<!-- The band's own subdomain, so this leaves the app: rel="external" is both the
-							     correct annotation and what keeps it out of the router. -->
-							<a href={siteUrl} target="_blank" rel="external noopener" class="link">
-								{siteUrl.replace(/^https?:\/\//, '')}
-							</a>
-						</dd>
-					</div>
-				</dl>
+				<DefinitionList class="mt-4">
+					<Fact label="Billing">
+						<span class="capitalize">{info.subscription.billingInterval}</span>
+					</Fact>
+					<Fact label="Renews">{formatDate(new Date(info.subscription.currentPeriodEnd))}</Fact>
+					<Fact label="Your site">
+						<!-- The band's own subdomain, so this leaves the app: rel="external" is
+						     both the correct annotation and what keeps it out of the router. -->
+						<a href={siteUrl} target="_blank" rel="external noopener" class="link">
+							{siteUrl.replace(/^https?:\/\//, '')}
+						</a>
+					</Fact>
+				</DefinitionList>
 
 				{#if info.subscription.cancelAtPeriodEnd}
 					<Alert type="warning" class="mt-4">
@@ -123,7 +118,7 @@
 							onsuccess={() => invalidateAll()}
 						>
 							<input {...resumePremium.fields.slug.as('hidden', band.slug)} />
-							<Button variant="primary" size="sm" class="mt-2">Resume Subscription</Button>
+							<SubmitButton label="Resume Subscription" variant="primary" size="sm" class="mt-2" />
 						</Form>
 					{/if}
 				{:else if isOwner}
@@ -133,7 +128,12 @@
 						onsuccess={() => invalidateAll()}
 					>
 						<input {...cancelPremium.fields.slug.as('hidden', band.slug)} />
-						<Button variant="ghost" size="sm" class="mt-4 text-error">Cancel Subscription</Button>
+						<SubmitButton
+							label="Cancel Subscription"
+							variant="ghost"
+							size="sm"
+							class="mt-4 text-error"
+						/>
 					</Form>
 				{/if}
 			</CardBody>
@@ -165,7 +165,7 @@
 							<Form remote={upgradeMonthly} onsuccess={startCheckout}>
 								<input {...upgradeMonthly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeMonthly.fields.billingInterval.as('hidden', 'monthly')} />
-								<Button variant="primary" class="mt-4">Subscribe Monthly</Button>
+								<SubmitButton label="Subscribe Monthly" variant="primary" class="mt-4" />
 							</Form>
 						{/if}
 					</CardBody>
@@ -185,7 +185,7 @@
 							<Form remote={upgradeYearly} onsuccess={startCheckout}>
 								<input {...upgradeYearly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeYearly.fields.billingInterval.as('hidden', 'yearly')} />
-								<Button variant="primary" class="mt-4">Subscribe Yearly</Button>
+								<SubmitButton label="Subscribe Yearly" variant="primary" class="mt-4" />
 							</Form>
 						{/if}
 					</CardBody>
