@@ -1,0 +1,1 @@
+ALTER TABLE `band_site` ADD `stripe_customer_id` text;

@@ -1,5 +1,6 @@
 import { db } from '$lib/server/db';
 import { bandSite } from '$lib/server/db/schema/band-site';
+import { directoryEntry } from '$lib/server/db/schema/directory';
 import { bandSubscriptionSchema, type BandSubscription } from '$lib/server/db/schema/band-site';
 import { stripe } from '$lib/server/stripe';
 import { checkout } from '$lib/server/finance/payment-service';
@@ -38,6 +39,71 @@ export async function getBandPremiumPricing(): Promise<BandPremiumPricing> {
 		yearlyCents: config.unitAmountCents * (12 - YEARLY_DISCOUNT_MONTHS),
 		yearlyMonthsFree: YEARLY_DISCOUNT_MONTHS
 	};
+}
+
+// ---------------------------------------------------------------------------
+// Customer
+// ---------------------------------------------------------------------------
+
+/**
+ * The band's own Stripe customer, created on demand.
+ *
+ * Premium used to bill the owner's personal customer, and Stripe refuses a
+ * second subscription for one customer — so an owner who already contributed
+ * could not buy it, and one who did not was refused before reaching Stripe.
+ * The band paying for itself removes both, and survives a change of owner
+ * (#1081).
+ *
+ * The contact address rather than the owner's: it is the band's, so it does
+ * not walk out of the door with whoever set the subscription up. Stripe puts
+ * no uniqueness on customer email, so sharing it with a member's personal
+ * customer is fine.
+ */
+/**
+ * The act's own contact address, from its directory entry.
+ *
+ * Null when it has none — Stripe accepts a customer without an email, and
+ * inventing one from the owner would put a personal address on an object
+ * meant to outlive them.
+ */
+export async function bandContactEmail(bandId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ contact: directoryEntry.contact })
+		.from(directoryEntry)
+		.where(eq(directoryEntry.groupId, bandId))
+		.limit(1);
+
+	return row?.contact?.email ?? null;
+}
+
+export async function ensureBandStripeCustomer(input: {
+	bandId: string;
+	bandName: string;
+	email?: string | null;
+}): Promise<string> {
+	const [row] = await db
+		.select({ stripeCustomerId: bandSite.stripeCustomerId })
+		.from(bandSite)
+		.where(eq(bandSite.groupId, input.bandId))
+		.limit(1);
+
+	if (row?.stripeCustomerId) return row.stripeCustomerId;
+
+	const customer = await stripe.customers.create({
+		name: input.bandName,
+		email: input.email ?? undefined,
+		// The link back, matching the Connect account's `corvmc_group_id`: a
+		// Stripe object that cannot be traced to a band is unresolvable from the
+		// dashboard, which is where a support question starts.
+		metadata: { corvmc_group_id: input.bandId }
+	});
+
+	await db
+		.update(bandSite)
+		.set({ stripeCustomerId: customer.id, updatedAt: new Date() })
+		.where(eq(bandSite.groupId, input.bandId));
+
+	return customer.id;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "e485607d-6c71-49ed-a667-5b6a7bb03ca0",
+  "id": "d13bc83c-81eb-4276-994d-fb9e4c8f3089",
   "prevIds": [
-    "bfd01492-f765-4bdc-a48f-a59b8ff09747"
+    "e485607d-6c71-49ed-a667-5b6a7bb03ca0"
   ],
   "ddl": [
     {
@@ -5483,6 +5483,16 @@
       "default": null,
       "generated": null,
       "name": "subscription",
+      "entityType": "columns",
+      "table": "band_site"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stripe_customer_id",
       "entityType": "columns",
       "table": "band_site"
     },
