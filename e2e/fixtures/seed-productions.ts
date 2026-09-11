@@ -3,7 +3,7 @@
  *
  * Two CMC shows, deliberately asymmetric: one carries a production and one does
  * not. Both states have to be reachable — the row with no production is the
- * only way "Add production" is on the event page at all, and the row with one
+ * only way the console offers to open one at all, and the row with one
  * is the only way the index's status column has anything to print.
  *
  * The one with a production is at the off-site venue, because filtering by
@@ -26,7 +26,7 @@ export const SEED_PRODUCTION_EVENT_ID = 'e2e-production-event';
 export const SEED_PRODUCTION_EVENT_TITLE = 'E2E Production Riverfront Night';
 export const SEED_PRODUCTION_ID = 'e2e-production-record';
 
-/** The CMC show the "Add production" test opens one on. Mutated by that test. */
+/** The CMC show the open-a-production test uses. Mutated by that test. */
 export const SEED_PRODUCTION_BARE_EVENT_ID = 'e2e-production-bare-event';
 export const SEED_PRODUCTION_BARE_EVENT_TITLE = 'E2E Production Unopened Night';
 
