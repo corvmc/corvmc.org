@@ -10,6 +10,7 @@
 	import { computeAudioSplit, suggestedPlatformCents } from '$lib/finance/audio-split';
 	import { AUDIO_MIN_PRICE_CENTS } from '$lib/config';
 	import { goto } from '$app/navigation';
+	import { goToCheckout } from '$lib/utils/checkout-navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
@@ -68,11 +69,12 @@
 
 	const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
-	function afterBuy(result: unknown) {
+	async function afterBuy(result: unknown) {
 		const r = result as { checkoutUrl?: string | null; downloadToken?: string } | undefined;
-		// Paid: off to Stripe. Free: already fulfilled, straight to the download.
-		if (r?.checkoutUrl) window.location.href = r.checkoutUrl;
-		else if (r?.downloadToken) goto(resolve(`/music/download/${r.downloadToken}`));
+		// Paid: off to pay, wherever `checkout()` decided that is. Free: already
+		// fulfilled, straight to the download.
+		if (r?.checkoutUrl) await goToCheckout(r.checkoutUrl);
+		else if (r?.downloadToken) await goto(resolve(`/music/download/${r.downloadToken}`));
 	}
 </script>
 

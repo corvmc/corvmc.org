@@ -9,9 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // reproduce the runtime SubtleCrypto-sync failure (Node has sync crypto).
 const mockConstructEvent = vi.fn();
 vi.mock('$lib/server/stripe', () => ({
-	stripe: {
-		webhooks: { constructEventAsync: (...args: unknown[]) => mockConstructEvent(...args) }
-	},
+	stripeWebhooks: { constructEventAsync: (...args: unknown[]) => mockConstructEvent(...args) },
 	webhookCryptoProvider: {}
 }));
 

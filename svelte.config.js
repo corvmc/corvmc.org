@@ -68,7 +68,15 @@ const config = {
 				// is dynamically imported and its bundled zxing build instantiates wasm
 				// fetched from jsdelivr, so neither the directive nor the connect-src
 				// entry below is visible to a grep of src/.
-				'script-src': ['self', 'wasm-unsafe-eval', 'https://challenges.cloudflare.com'],
+				// js.stripe.com is Stripe.js, which the in-app checkout and the add-card
+				// modal load at runtime. Stripe requires it be served from their
+				// origin; self-hosting it is unsupported and breaks PCI SAQ A.
+				'script-src': [
+					'self',
+					'wasm-unsafe-eval',
+					'https://challenges.cloudflare.com',
+					'https://js.stripe.com'
+				],
 				'style-src': [
 					'self',
 					'unsafe-inline',
@@ -93,11 +101,19 @@ const config = {
 					'self',
 					'https://o4510014650384384.ingest.us.sentry.io',
 					'https://challenges.cloudflare.com',
-					'https://fastly.jsdelivr.net'
+					'https://fastly.jsdelivr.net',
+					// The Payment Element talks to the API directly, and reads wallet
+					// and Link availability from merchant-ui-api.
+					'https://api.stripe.com',
+					'https://merchant-ui-api.stripe.com'
 				],
-				// Turnstile, plus the four embed origins minted by link-platform.ts.
+				// Turnstile, the four embed origins minted by link-platform.ts, and
+				// Stripe: js.stripe.com is where the Payment Element's card fields
+				// live, hooks.stripe.com is the 3-D Secure challenge.
 				'frame-src': [
 					'https://challenges.cloudflare.com',
+					'https://js.stripe.com',
+					'https://hooks.stripe.com',
 					'https://www.youtube.com',
 					'https://w.soundcloud.com',
 					'https://open.spotify.com',
@@ -105,8 +121,8 @@ const config = {
 				],
 				// Sentry's session replay compresses in a worker built from a blob.
 				'worker-src': ['self', 'blob:'],
-				// Stripe is never embedded — every checkout is a top-level navigation,
-				// which only form-action can block.
+				// Kept for the hosted-page fallback: `uiMode` still defaults to
+				// `hosted_page`, so an un-migrated caller would navigate out to Stripe.
 				'form-action': [
 					'self',
 					'https://checkout.stripe.com',

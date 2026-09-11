@@ -1,6 +1,8 @@
 # Member Portal & Membership Page
 
-A member-facing portal at `/member/` with a sustaining membership page as the first route. The membership page explains what sustaining membership is, shows benefits and community impact stats, and lets members create, modify, or cancel their subscription. Active members see a dashboard with their credit balance, contribution details, and a link to the Stripe Customer Portal.
+A member-facing portal at `/member/` with a sustaining membership page as the first route. The membership page explains what sustaining membership is, shows benefits and community impact stats, and lets members create, modify, or cancel their subscription. Active members see a dashboard with their credit balance, contribution details, the card on file and their billing history.
+
+> **Superseded, 2026-09.** The Stripe Customer Portal this spec leaned on is gone; the in-house checkout work replaced it. Payment methods, invoice history and cancelling are all in-app now. The sections below are annotated where they no longer describe the code.
 
 No new domain models. This feature is a UI layer over the existing `subscription-service`, `credit-service`, and `credit_transaction` ledger.
 
@@ -29,7 +31,6 @@ The load function in `+page.server.ts` returns:
 interface MembershipPageData {
 	subscription: SubscriptionInfo | null;
 	credits: Credits;
-	billingPortalUrl: string | null;
 	communityStats: {
 		sustainingMemberCount: number;
 		totalFreeHoursAllocated: number;
@@ -46,9 +47,11 @@ From `getSubscription(user.stripeId)`. Returns null when no active subscription 
 
 From `getAllBalances(user.id)`. Returns `{ free_hours, equipment_credits }`.
 
-### Billing portal URL
+### Billing details — no longer part of this payload
 
-Generated at load time via `stripe.billingPortal.sessions.create()` with `return_url` pointing back to `/member/membership`. Only generated when `user.stripeId` is set; null otherwise. Portal sessions are valid for a few hours, which is fine for page load.
+The billing portal URL used to be generated here, inside the same `Promise.all` as everything else, which made a convenience link load-bearing: a Stripe outage or a customer deleted from the dashboard took the whole page down for every sustaining member.
+
+The card on file and the invoice history that replaced it are `getBilling()` in `src/lib/remote/billing.remote.ts`, loaded beside this query behind its own `<svelte:boundary>`. Nothing in `getMemberMembership` talks to Stripe any more.
 
 ### Community stats
 
@@ -119,9 +122,11 @@ Action: resume(stripeCustomerId)
 Result: return { success: true }
 ```
 
-### cancel is handled by the Stripe Customer Portal
+### cancel
 
-Members cancel through the portal link rather than a custom form action. The portal handles the confirmation UI and sets `cancel_at_period_end`. Our `customer.subscription.deleted` webhook handles the downstream credit reset.
+`cancelSubscription` in `membership.remote.ts`, a confirm-and-submit `Action` on the contribution card. Sets `cancel_at_period_end` — the member has paid for the month and their free hours are allocated against it. Our `customer.subscription.deleted` webhook handles the downstream credit reset.
+
+Originally this was the Stripe Customer Portal's job, which is why `subscription-service.cancel()` sat exported with no caller for so long.
 
 ---
 
@@ -285,14 +290,17 @@ Six collapsible items:
 All components live in `src/lib/components/member/membership/`:
 
 - **MembershipHero.svelte** — heading, subtext, optional CTA button. Props: `variant: 'marketing' | 'dashboard'`, optional `onAction` for the CTA.
-- **ContributionCard.svelte** — current amount, fee coverage badge, next billing date, inline modify form, billing portal link. Props: `subscription: SubscriptionInfo`, `billingPortalUrl: string`.
+- **ContributionCard.svelte** — current amount, fee coverage badge, next billing date, inline modify form, cancel action. Props: `subscription: SubscriptionInfo`, `updateRemote`, `cancelAction`.
 - **CreditBalanceCard.svelte** — three stat boxes (total/remaining/used hours), refresh date, feature checklist. Props: `credits: Credits`, `subscription: SubscriptionInfo`.
 - **BenefitsGrid.svelte** — benefit columns. Props: `variant: 'full' | 'compact'` (three-column for non-members, two-column for active members).
 - **SlidingScale.svelte** — tier table, "why sliding scale" callout, footer note. No props (static content).
 - **CommunityImpact.svelte** — three stat counters. Props: `stats: CommunityStats`.
 - **MembershipFAQ.svelte** — collapsible details elements. No props (static content).
 - **SubscriptionForm.svelte** — quantity input (in dollars), fee coverage checkbox, fee preview, submit button. Props: `mode: 'create' | 'modify'`, `currentQuantity?: number`, `currentCoverFees?: boolean`.
-- **CancelledBanner.svelte** — warning banner with resume button and billing link. Props: `subscription: SubscriptionInfo`, `billingPortalUrl: string`.
+- **CancelledBanner.svelte** — warning banner with resume button. Props: `subscription: SubscriptionInfo`, `resumeAction`.
+- **PaymentMethodsCard.svelte** — the cards on file, which one is billed, add/make-default/remove. Props: `cards: SavedCard[]`, `available: boolean`, `driver`.
+- **AddCardModal.svelte** / **SetupElement.svelte** — a SetupIntent confirmed by Stripe's Payment Element under the `stripe` driver, and a card-number form under `fake`.
+- **InvoiceHistoryCard.svelte** — every charge with its hosted receipt and PDF. Props: `invoices: BillingInvoice[]`, `available: boolean`.
 
 ---
 
@@ -338,12 +346,12 @@ Reuses the existing `Sidebar`, `Topbar`, and `UserFooter` components from `$lib/
 
 ## What changes
 
-| Area       | Change                                                               |
-| ---------- | -------------------------------------------------------------------- |
-| Routes     | New `/member/` route group with layout and membership page           |
-| Components | New `member/membership/` component directory                         |
-| Stripe     | New billing portal session creation in page server                   |
-| DB queries | New community stats aggregation queries against `credit_transaction` |
+| Area       | Change                                                                  |
+| ---------- | ----------------------------------------------------------------------- |
+| Routes     | New `/member/` route group with layout and membership page              |
+| Components | New `member/membership/` component directory                            |
+| Stripe     | Setup intents, payment methods and invoice list, from `billing-service` |
+| DB queries | New community stats aggregation queries against `credit_transaction`    |
 
 ## What doesn't change
 
@@ -358,11 +366,11 @@ Reuses the existing `Sidebar`, `Topbar`, and `UserFooter` components from `$lib/
 
 ## Deferred
 
-- **Payment history page** — could show past invoices pulled from Stripe. For now, the Stripe Customer Portal covers this.
+- ~~**Payment history page**~~ — shipped as `InvoiceHistoryCard` when the portal was replaced.
 - **Equipment credits display** — the credit balance card focuses on free hours. Equipment credits are a future addition when the equipment module is built.
 - **Notification on subscription events** — email confirmations for subscription create/cancel/resume. Deferred until the notification system is in place.
 - **Additional member portal pages** — reservations dashboard, band management, profile settings. The member layout is built to support these but they're separate features.
 
 ## Open questions
 
-None. The backend services are complete, the UI is a presentation layer, and the Stripe Customer Portal handles the complex billing management flows.
+None. The backend services are complete and the UI is a presentation layer. The Stripe Customer Portal that this spec deferred the hard billing flows to has since been replaced in-app — see the annotations above.

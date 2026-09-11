@@ -3,6 +3,7 @@
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { payForReservation, confirmReservation } from '$lib/remote/reservations.remote';
+	import { goToCheckout } from '$lib/utils/checkout-navigation';
 	import ConfirmStep from '../reservations/booking/ConfirmStep.svelte';
 	import PaymentStep from '../reservations/booking/PaymentStep.svelte';
 
@@ -42,7 +43,7 @@
 	onsuccess={async (result) => {
 		const r = result as { paid?: boolean; confirmed?: boolean; redirectUrl?: string };
 		if (r?.redirectUrl) {
-			window.location.href = r.redirectUrl;
+			await goToCheckout(r.redirectUrl);
 		} else {
 			if (onsuccess) onsuccess();
 			else await invalidateAll();

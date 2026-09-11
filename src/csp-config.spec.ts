@@ -29,6 +29,20 @@ describe('kit.csp', () => {
 		expect(url.searchParams.get('sentry_key')).toBe(publicKey);
 	});
 
+	// Every checkout used to be a top-level navigation to checkout.stripe.com, so
+	// `form-action` was the only Stripe directive that mattered. The in-app
+	// checkout embeds Stripe instead: Stripe.js is a script, the card fields are
+	// an iframe, and the Element calls the API from the page. This policy is
+	// report-only today, so a missing entry costs nothing until it is enforced —
+	// at which point it would silently break every payment.
+	it('allows the Stripe origins the embedded Payment Element needs', () => {
+		expect(csp?.reportOnly?.['script-src']).toContain('https://js.stripe.com');
+		// The card fields, and the 3-D Secure challenge.
+		expect(csp?.reportOnly?.['frame-src']).toContain('https://js.stripe.com');
+		expect(csp?.reportOnly?.['frame-src']).toContain('https://hooks.stripe.com');
+		expect(csp?.reportOnly?.['connect-src']).toContain('https://api.stripe.com');
+	});
+
 	// Kit only injects a nonce into a style directive that does NOT already allow
 	// 'unsafe-inline' (runtime/server/page/csp.js). A nonce would make the browser
 	// ignore 'unsafe-inline', which would break ~97 inline style attributes, the

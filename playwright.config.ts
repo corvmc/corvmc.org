@@ -193,6 +193,16 @@ export default defineConfig({
 			PUBLIC_SITE_URL: process.env.PUBLIC_SITE_URL ?? BASE_URL,
 			BETTER_AUTH_SECRET:
 				process.env.BETTER_AUTH_SECRET ?? 'e2e-local-better-auth-secret-not-for-prod',
+			// The in-memory gateway. Before this, the dummy key was handed to a real
+			// Stripe client, so anything past `checkout.sessions.create` made an
+			// outbound call and 401'd — which is why the payment specs used to treat
+			// a 303 toward Stripe as a pass. The fake serves `/checkout/<session>`
+			// instead, so a purchase can be completed and its fulfillment asserted.
+			//
+			// It is the belt to `STRIPE_ENV`'s braces, not a replacement for it: the
+			// pinning below is what stops a real credential reaching the server at
+			// all, and this is what stops the server transacting even if one did.
+			PAYMENTS_DRIVER: 'fake',
 			// Pinned empty for the same reason as STRIPE_ENV: `.env` carries a real
 			// LARAVEL_URL and MIGRATION_SECRET, and the bcrypt fallback would POST a
 			// test's password attempt to the production box. Absent, `verify` never

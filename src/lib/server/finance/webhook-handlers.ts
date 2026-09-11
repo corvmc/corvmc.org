@@ -7,6 +7,7 @@ import * as creditService from './credit-service';
 import { DOLLARS_PER_UNIT } from '$lib/config';
 import { cancelAllForUser } from '$lib/server/reservation/recurring-series-service';
 import { buildMemberSubscriptionState } from './subscription-service';
+import { syncCardFromSubscription } from './billing-service';
 import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { getStripeProductId } from './product-config-service';
@@ -243,6 +244,11 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
 	const existingSub = member.subscription as Subscription | null;
 	const next = await buildMemberSubscriptionState(subscription, existingSub);
 	await db.update(user).set({ subscription: next }).where(eq(user.id, member.id));
+
+	// Checkout attaches the card, so this is the only place the signup path can
+	// learn what it was. Without it `pmType`/`pmLastFour` stay null for every
+	// member who joined the ordinary way.
+	await syncCardFromSubscription(member.id, customerId);
 
 	// A member cancels in Stripe's billing portal, off-site, and returns to an
 	// app that says nothing about it. This is the transition — false to true —
