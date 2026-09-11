@@ -160,7 +160,13 @@
 		{#if unplaced.length}
 			<span class="text-xs text-base-content/60">Not on the stage yet:</span>
 			{#each unplaced as item (item.id)}
-				<Button variant="ghost" size="sm" disabled={!item.movable} onclick={() => place(item.id)}>
+				<Button
+					type="button"
+					variant="ghost"
+					size="sm"
+					disabled={!item.movable}
+					onclick={() => place(item.id)}
+				>
 					{item.label}
 				</Button>
 			{/each}
@@ -209,6 +215,7 @@
 					/>
 					<div class="flex items-end pb-1">
 						<Button
+							type="button"
 							variant="ghost"
 							size="sm"
 							disabled={!item.movable}
