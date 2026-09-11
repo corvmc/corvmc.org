@@ -208,6 +208,7 @@
 				{#if !readonly}
 					<div class="flex items-end gap-1 pb-1">
 						<Button
+							type="button"
 							variant="ghost"
 							size="sm"
 							shape="square"
@@ -218,6 +219,7 @@
 							<IconChevronUp size={16} />
 						</Button>
 						<Button
+							type="button"
 							variant="ghost"
 							size="sm"
 							shape="square"
@@ -228,6 +230,7 @@
 							<IconChevronDown size={16} />
 						</Button>
 						<Button
+							type="button"
 							variant="ghost"
 							size="sm"
 							shape="square"
@@ -262,6 +265,7 @@
 						<span class="text-xs font-medium">Inputs</span>
 						{#if !readonly}
 							<Button
+								type="button"
 								variant="ghost"
 								size="sm"
 								disabled={element.inputs.length >= RIDER_MAX_INPUTS_PER_ELEMENT}
@@ -342,6 +346,7 @@
 								/>
 								{#if !readonly}
 									<Button
+										type="button"
 										variant="ghost"
 										size="sm"
 										shape="square"
@@ -352,6 +357,7 @@
 										<IconChevronUp size={14} />
 									</Button>
 									<Button
+										type="button"
 										variant="ghost"
 										size="sm"
 										shape="square"
@@ -362,6 +368,7 @@
 										<IconChevronDown size={14} />
 									</Button>
 									<Button
+										type="button"
 										variant="ghost"
 										size="sm"
 										shape="square"
@@ -382,6 +389,7 @@
 	<div class="flex items-center justify-between">
 		{#if !readonly}
 			<Button
+				type="button"
 				variant="ghost"
 				size="sm"
 				disabled={elements.length >= RIDER_MAX_ELEMENTS}
