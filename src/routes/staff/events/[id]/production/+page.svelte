@@ -38,6 +38,9 @@
 		toLocalTime
 	} from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
+	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -444,6 +447,27 @@
 			class="space-y-6"
 			class:hidden={tab !== 'overview'}
 		>
+			<!--
+				When the show is. These four were on the page only as seeds for the
+				edit form, so the one question a production console is opened to
+				answer needed you to click Edit to read it (#1068).
+			-->
+			<InfoCard title="The night">
+				<DefinitionList>
+					<Fact label="Doors">
+						{evt.doorsAt ? formatEventTimeRange(evt.doorsAt, null) : 'Not set'}
+					</Fact>
+					<Fact label="Show">{formatEventTimeRange(evt.startsAt, evt.endsAt)}</Fact>
+					<Fact label="Where">
+						{evt.venueName ?? evt.location ?? 'The practice space'}
+					</Fact>
+				</DefinitionList>
+
+				{#if evt.description}
+					<p class="mt-3 text-muted">{evt.description}</p>
+				{/if}
+			</InfoCard>
+
 			<!-- Status -->
 			<div class="flex items-center gap-2">
 				<StatusBadge status={evt.status} />
