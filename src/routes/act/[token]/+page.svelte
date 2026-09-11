@@ -129,7 +129,9 @@
 
 		{#if sheet.rider}
 			<p class="mt-3 text-sm">
-				We have <a href={sheet.rider.url} class="link" target="_blank" rel="noreferrer"
+				<!-- `rel="external"` because the object is served from R2, not routed. -->
+				We have
+				<a href={sheet.rider.url} class="link" target="_blank" rel="external noreferrer"
 					>{sheet.rider.filename ?? 'your rider'}</a
 				>. Uploading another replaces it.
 			</p>
