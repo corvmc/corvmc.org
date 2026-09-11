@@ -10,6 +10,7 @@ import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
 import { countPortalUnread } from '$lib/server/inbox/portal-service';
 import { countBandUnread } from '$lib/server/inbox/band-service';
 import { countDirectUnread, countPendingRequests } from '$lib/server/inbox/direct-service';
+import { acceptsDirectMessages } from '$lib/server/moderation/moderation-service';
 import { countVolunteerWorkWaiting } from '$lib/server/volunteer/volunteer-signup-service';
 import { countPendingSubmissions } from '$lib/server/event/community-event-service';
 import {
@@ -90,6 +91,7 @@ export const getMemberLayout = query(async () => {
 		portalUnread,
 		directUnread,
 		pendingRequests,
+		acceptsDirect,
 		hasLoanableEquipment,
 		chrome
 	] = await Promise.all([
@@ -103,6 +105,10 @@ export const getMemberLayout = query(async () => {
 		countPortalUnread(user.id).catch(() => 0),
 		countDirectUnread(user.id).catch(() => 0),
 		countPendingRequests(user.id).catch(() => 0),
+		// The member's own switch, not the feature flag beside it. An inbox that
+		// is empty because they turned it off has to say so, or it reads as one
+		// nobody has written to.
+		acceptsDirectMessages(user.id).catch(() => true),
 		// Data, not a flag: the Equipment row appears once there is something to
 		// lend. Falls back to hidden, which is the harmless direction — a missing
 		// row is a link somebody has to be told about, a row onto an empty
@@ -146,7 +152,8 @@ export const getMemberLayout = query(async () => {
 		features,
 		hasLoanableEquipment,
 		messagesUnread,
-		pendingRequests
+		pendingRequests,
+		acceptsDirectMessages: acceptsDirect
 	};
 });
 

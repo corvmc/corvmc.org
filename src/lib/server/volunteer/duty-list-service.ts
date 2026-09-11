@@ -5,6 +5,7 @@ import {
 	dutyList,
 	dutyListItem,
 	volunteerRole,
+	volunteerSignup,
 	workOrder,
 	workTask
 } from '$lib/server/db/schema/volunteer';
@@ -54,6 +55,21 @@ export class WorkTaskNotFoundError extends DomainError {
 	readonly httpStatus = 404;
 	constructor() {
 		super('Task not found');
+	}
+}
+
+/**
+ * Authorisation by assignment rather than by capability.
+ *
+ * `volunteer.manageShifts` is the capability for administering the programme,
+ * so gating a checkbox on it means the setup crew has to ask a coordinator to
+ * record that the stage was swept. Being rostered on the work is the right
+ * predicate, and it is one the database can answer.
+ */
+export class NotAssignedToShiftError extends DomainError {
+	readonly httpStatus = 403;
+	constructor() {
+		super('That task is not on a shift you are working');
 	}
 }
 
@@ -763,6 +779,32 @@ export async function setWorkTaskDone(id: string, done: boolean, userId: string)
 		.returning();
 
 	return row;
+}
+
+/**
+ * Tick a task on a shift you are actually working.
+ *
+ * The assignment is checked in SQL, in one statement with the lookup, so there
+ * is no window between deciding and writing. A cancelled signup or a called-off
+ * work order is not an assignment: both drop out through the `IS NULL`s rather
+ * than through a second read.
+ */
+export async function setWorkTaskDoneAsAssignee(id: string, done: boolean, userId: string) {
+	const [assigned] = await db
+		.select({ id: workTask.id })
+		.from(workTask)
+		.innerJoin(workOrder, eq(workOrder.id, workTask.workOrderId))
+		.innerJoin(
+			volunteerSignup,
+			and(eq(volunteerSignup.shiftId, workOrder.id), eq(volunteerSignup.userId, userId))
+		)
+		.where(
+			and(eq(workTask.id, id), isNull(volunteerSignup.cancelledAt), isNull(workOrder.cancelledAt))
+		)
+		.limit(1);
+
+	if (!assigned) throw new NotAssignedToShiftError();
+	return setWorkTaskDone(id, done, userId);
 }
 
 /** How many of a work order's tasks are ticked — the close-out card's number. */

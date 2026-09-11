@@ -43,8 +43,16 @@
 	);
 </script>
 
-<InfoCard title={matches.direction ? title : 'Find your people'}>
-	{#if matches.matches.length === 0}
+<InfoCard title={matches.direction && !matches.hidden ? title : 'Find your people'}>
+	{#if matches.hidden}
+		<!-- Naming the setting rather than hiding the card: a member who cannot
+		     remember switching off reads an empty card as a broken one. -->
+		<EmptyState
+			message="Your profile is hidden, so we're not suggesting people to meet — and you're not being suggested to anyone either."
+			actionLabel="Change who can see you"
+			actionHref="/member/profile"
+		/>
+	{:else if matches.matches.length === 0}
 		<EmptyState
 			message={missing.length > 0
 				? `Add ${missingSentence} to your profile and we’ll suggest people to meet.`

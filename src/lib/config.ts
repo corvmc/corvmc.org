@@ -1777,6 +1777,14 @@ export const positions: Record<Position, Grants> = {
 		contractor: ['read', 'recordInvoice'],
 		inventory: ['read', 'manageAcquisitions', 'report'],
 		reservation: ['read', 'comp'],
+		// A show's settlement is on the production console, behind `event.read`
+		// like everything else on that page, so the one person whose job is the
+		// money could not see where it went. Read only — the advance, the lineup
+		// and the run of show come with it, which is the same breadth
+		// `volunteer_coordinator` already has and for the same reason: a console
+		// is not divisible into per-reader slices without splitting the page's
+		// one load-bearing query.
+		event: ['read'],
 		user: ['list', 'read']
 	}
 };

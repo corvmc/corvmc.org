@@ -286,7 +286,7 @@ describe('findMatchesFor', () => {
 
 		const result = await findMatchesFor('u1');
 
-		expect(result).toEqual({ direction: null, gaps: ['lookingFor'], matches: [] });
+		expect(result).toEqual({ direction: null, gaps: ['lookingFor'], matches: [], hidden: false });
 		expect(entryFindMany).not.toHaveBeenCalled();
 	});
 
