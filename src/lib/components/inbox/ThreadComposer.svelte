@@ -58,6 +58,18 @@
 	let draft = $state('');
 	let assignTo = $state('');
 
+	// A thread change is a param change, so SvelteKit keeps this component
+	// mounted and its state with it — a half-written reply to one member turned
+	// up in the reply box of the next thread clicked, one press from the wrong
+	// recipient (#978). The conversation changing is what clears it.
+	$effect(() => {
+		if (threadId) {
+			draft = '';
+			requestedMode = 'reply';
+			assignTo = '';
+		}
+	});
+
 	// When replying is impossible the composer is a note box regardless of what
 	// was last picked — a channel can be disabled while the page is open, and the
 	// draft should not end up pointed at a target it can't reach. With no note

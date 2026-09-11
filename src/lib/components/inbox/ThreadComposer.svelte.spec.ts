@@ -50,6 +50,25 @@ describe('ThreadComposer', () => {
 		await expect.element(page.getByRole('button', { name: 'Add note' })).toBeVisible();
 	});
 
+	// A thread change is a param change, so the component stays mounted. Without
+	// a reset the draft rode along into the next conversation and sat above a
+	// Send button addressed to somebody else (#978).
+	it('drops the draft when the conversation changes', async () => {
+		const { rerender } = await render(ThreadComposer, {
+			threadId: 'thread-1',
+			replyForm: fakeRemoteForm(),
+			noteForm: fakeRemoteForm()
+		});
+
+		const textarea = page.getByRole('textbox');
+		await textarea.fill('DRAFT FOR THREAD ONE');
+		await expect.element(textarea).toHaveValue('DRAFT FOR THREAD ONE');
+
+		await rerender({ threadId: 'thread-2' });
+
+		await expect.element(page.getByRole('textbox')).toHaveValue('');
+	});
+
 	it('sends replies by default', async () => {
 		await render(ThreadComposer, {
 			threadId: 'thread-1',

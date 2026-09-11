@@ -44,9 +44,13 @@
 	// `custom/no-concurrent-remote-queries`.
 	const t = $derived(await getInboxThread(threadId));
 
-	const replyForm = replyToThread.for('reply');
-	const noteForm = addThreadNote.for('note');
-	const assignForm = assignThread.for('assign');
+	// Keyed on the thread, not on a constant. One key for the whole inbox means
+	// one form instance across every conversation, so a half-written reply to
+	// one member turned up in the reply box of the next one clicked — one press
+	// from the wrong recipient (#978).
+	const replyForm = $derived(replyToThread.for(threadId));
+	const noteForm = $derived(addThreadNote.for(threadId));
+	const assignForm = $derived(assignThread.for(threadId));
 
 	const ChannelIcon = $derived(channelIcon(t.channel));
 
