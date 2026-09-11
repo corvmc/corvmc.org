@@ -55,49 +55,59 @@
 
 <!-- Phone: only the status glyph and the primary cell survive. -->
 <Story name="Narrow (327px)">
-	{@render demo(327)}
+	{#snippet template()}
+		{@render demo(327)}
+	{/snippet}
 </Story>
 
 <!-- Tablet: col-support appears, col-extra still hidden. -->
 <Story name="Medium (720px)">
-	{@render demo(720)}
+	{#snippet template()}
+		{@render demo(720)}
+	{/snippet}
 </Story>
 
 <!-- Laptop: every column. -->
 <Story name="Wide (976px)">
-	{@render demo(976)}
+	{#snippet template()}
+		{@render demo(976)}
+	{/snippet}
 </Story>
 
 <Story name="Without zebra striping">
-	<div class="@container" style="width: 976px; max-width: 100%;">
-		<Table zebra={false}>
-			{#snippet head()}
-				<th>Member</th>
-				<th class="cell-num">Amount</th>
-			{/snippet}
-			{#each rows as row (row.id)}
-				<tr class="hover">
-					<td class="cell-primary">{row.name}</td>
-					<td class="cell-num">{row.amount}</td>
-				</tr>
-			{/each}
-		</Table>
-	</div>
+	{#snippet template()}
+		<div class="@container" style="width: 976px; max-width: 100%;">
+			<Table zebra={false}>
+				{#snippet head()}
+					<th>Member</th>
+					<th class="cell-num">Amount</th>
+				{/snippet}
+				{#each rows as row (row.id)}
+					<tr class="hover">
+						<td class="cell-primary">{row.name}</td>
+						<td class="cell-num">{row.amount}</td>
+					</tr>
+				{/each}
+			</Table>
+		</div>
+	{/snippet}
 </Story>
 
 <Story name="Default size (md)">
-	<div class="@container" style="width: 976px; max-width: 100%;">
-		<Table size="md">
-			{#snippet head()}
-				<th>Member</th>
-				<th class="cell-num">Amount</th>
-			{/snippet}
-			{#each rows as row (row.id)}
-				<tr class="hover">
-					<td class="cell-primary">{row.name}</td>
-					<td class="cell-num">{row.amount}</td>
-				</tr>
-			{/each}
-		</Table>
-	</div>
+	{#snippet template()}
+		<div class="@container" style="width: 976px; max-width: 100%;">
+			<Table size="md">
+				{#snippet head()}
+					<th>Member</th>
+					<th class="cell-num">Amount</th>
+				{/snippet}
+				{#each rows as row (row.id)}
+					<tr class="hover">
+						<td class="cell-primary">{row.name}</td>
+						<td class="cell-num">{row.amount}</td>
+					</tr>
+				{/each}
+			</Table>
+		</div>
+	{/snippet}
 </Story>
