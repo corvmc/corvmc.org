@@ -178,7 +178,10 @@ export const getPublicAudiences = query(z.void(), async () => {
 /** Single audience detail (staff). */
 export const getAudienceDetail = query(z.string(), async (id) => {
 	await requireCapability('marketing.read');
-	return getAudience(id);
+	const audience = await getAudience(id);
+	// Same as `getCampaignDetail`: its page had the same blank-document shape.
+	if (!audience) throw error(404, 'Audience not found');
+	return audience;
 });
 
 /** List subscribers for an audience. */
@@ -210,7 +213,12 @@ export const getCampaigns = query(z.object({ status: z.string().optional() }), a
 /** Single campaign detail (staff). */
 export const getCampaignDetail = query(z.string(), async (id) => {
 	await requireCapability('marketing.read');
-	return getCampaign(id);
+	const campaign = await getCampaign(id);
+	// 404 rather than null. The page wrapped its whole body in `{#if campaign}`
+	// with no `{:else}`, so a mistyped or deleted id rendered an entirely blank
+	// document — no header, no title, no back link (#1069).
+	if (!campaign) throw error(404, 'Campaign not found');
+	return campaign;
 });
 
 /** Render markdown to campaign HTML preview. */

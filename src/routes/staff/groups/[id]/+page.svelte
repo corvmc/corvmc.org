@@ -3,6 +3,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import { formatDateShortYear } from '$lib/utils/format';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -29,8 +30,20 @@
 	const isDeactivated = $derived(!!group.deletedAt);
 </script>
 
-<PageHeader title={group.name} subtitle={group.kind === 'committee' ? 'Committee' : 'Club'}>
+<!-- `backHref` because this was the only staff `[id]` page without one: the
+     browser's Back button was the only way to the list. The two facts beside
+     the badge are the ones the list row carries and this page dropped —
+     `getGroupDetail` has returned both all along (#1070). -->
+<PageHeader
+	title={group.name}
+	subtitle={group.kind === 'committee' ? 'Committee' : 'Club'}
+	backHref="/staff/groups"
+>
 	<StatusBadge status={isDeactivated ? 'deactivated' : 'active'} />
+	<span class="text-muted">
+		{group.memberCount}
+		{group.memberCount === 1 ? 'member' : 'members'} · since {formatDateShortYear(group.createdAt)}
+	</span>
 	<AssignLeaderAction groupId={id} hasLeader={!!group.ownerId} />
 </PageHeader>
 
