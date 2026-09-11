@@ -8,6 +8,9 @@
 	import Form from './Form/Form.svelte';
 	import SubmitButton from './Form/SubmitButton.svelte';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
+	import { getErrorBoundary } from './ErrorToastBoundary.svelte';
+	import { reportError } from '$lib/report-error';
+	import { errorMessage } from '$lib/error-message';
 
 	// ---------------------------------------------------------------------------
 	// Props
@@ -132,6 +135,19 @@
 	// Direct / confirm / callback+form / callback+body action mode
 	// ---------------------------------------------------------------------------
 
+	const errorBoundary = getErrorBoundary();
+
+	// The boundary reports to Sentry and toasts; without one, do both here. The
+	// same three lines as `Form.surfaceFailure`, deliberately — a third answer to
+	// "how does a failure reach the member" is one more than this app needs.
+	function surfaceFailure(err: unknown) {
+		if (errorBoundary) errorBoundary.reportError(err);
+		else {
+			reportError(err);
+			toast.error(errorMessage(err));
+		}
+	}
+
 	async function run() {
 		if (status === 'pending' || isForm) return;
 
@@ -147,9 +163,15 @@
 			status = 'success';
 		} catch (err) {
 			await minDelay;
+			// Surfaced the way `Form` surfaces a thrown failure, and for the same
+			// reason. `status = 'error'` renders `errorLabel` on the *trigger*, and
+			// a confirmed action's trigger is behind the open dialog — so an action
+			// whose whole value is a specific refusal discarded it and the member
+			// saw nothing at all (#1030). Form mode got this in #920; callback mode
+			// never did, and only 2 of the 56 `actions/*` pass `onfailure`.
+			surfaceFailure(err);
 			onfailure?.(err);
 			status = 'error';
-			console.error('[Action] action failed:', err);
 			throw err;
 		} finally {
 			setTimeout(() => {
