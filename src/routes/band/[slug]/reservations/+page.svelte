@@ -2,6 +2,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import BandReservationCard from '$lib/components/reservations/BandReservationCard.svelte';
 	import { getBandReservationsPage } from '$lib/remote/reservations.remote';
@@ -15,7 +16,8 @@
 	const layout = $derived(bandLayout.current);
 	// One query. Membership and contact are still resolved before render and handed down, so
 	// the step components stay synchronous — they just arrive on the same request now.
-	const page_ = $derived(await getBandReservationsPage(page.params.slug!));
+	let pastPage = $state(1);
+	const page_ = $derived(await getBandReservationsPage({ slug: page.params.slug!, pastPage }));
 	const data = $derived(page_.reservations);
 	const membership = $derived(page_.membership);
 	const contact = $derived(page_.contact);
@@ -53,7 +55,9 @@
 	<TabBar
 		tabs={[
 			{ key: 'upcoming', label: `Upcoming (${upcoming.length})` },
-			{ key: 'past', label: 'Past' }
+			// Counted too. One tab counted and the other did not, and the
+			// uncounted one was the truncated one (#1040).
+			{ key: 'past', label: `Past (${past.pagination.total})` }
 		]}
 		active={activeTab}
 		onchange={(key) => (activeTab = key as 'upcoming' | 'past')}
@@ -75,14 +79,15 @@
 	{/if}
 
 	{#if activeTab === 'past'}
-		{#if past.length === 0}
+		{#if past.rows.length === 0}
 			<EmptyState message="No past reservations." />
 		{:else}
 			<div>
-				{#each past as res (res.id)}
+				{#each past.rows as res (res.id)}
 					<BandReservationCard reservation={res} slug={band.slug} />
 				{/each}
 			</div>
+			<Pagination {...past.pagination} onpage={(p) => (pastPage = p)} />
 		{/if}
 	{/if}
 </PageContent>
