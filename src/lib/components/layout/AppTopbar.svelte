@@ -66,11 +66,17 @@
 			{/each}
 
 			{#if bandPanels.length > 0}
-				<div class="bands-dropdown-wrapper relative join-item">
+				<!-- `.join-item` lands on this wrapper rather than on the Button,
+				     because the popover needs the positioning context — so the join
+				     sizes the div and the button inside it was free to be shorter
+				     than its neighbours. `flex` plus `h-full` puts them back in
+				     step; the `rounded-[inherit]` below is the same mismatch
+				     already patched once, for corners (#1023). -->
+				<div class="bands-dropdown-wrapper relative join-item flex">
 					<Button
 						variant={activeBand ? 'primary' : 'ghost'}
 						size="sm"
-						class="rounded-[inherit] {activeBand ? 'latched' : ''}"
+						class="h-full rounded-[inherit] {activeBand ? 'latched' : ''}"
 						onclick={() => (bandsOpen = !bandsOpen)}
 					>
 						<IconMusic size={16} />
@@ -82,7 +88,11 @@
 						<div
 							class="absolute top-full left-0 z-[1000] mt-1 w-48 rounded-lg border border-base-300 bg-base-100 shadow-lg"
 						>
-							<ul class="menu menu-sm p-2">
+							<!-- `w-full` because daisyUI's `.menu` is `width: fit-content`,
+							     so the rows stopped at the longest label instead of reaching
+							     the popover's edge. Same class, same trap, as the note in
+							     SearchSelect. -->
+							<ul class="menu w-full menu-sm p-2">
 								{#each bandPanels as band (band.key)}
 									<li>
 										<a

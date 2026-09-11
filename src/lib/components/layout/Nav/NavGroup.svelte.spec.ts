@@ -3,6 +3,9 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import NavGroupHarness from './NavGroup.test.svelte';
 import { readCollapsed, writeCollapsed } from './nav-collapse';
+// The app stylesheet, so the flex utilities in the header row resolve against
+// real Tailwind output. The `client` project loads no CSS of its own.
+import '../../../../routes/layout.css';
 
 /**
  * The staff sidebar outgrew a list that was always fully expanded, so groups
@@ -102,4 +105,33 @@ describe('NavGroup', () => {
 		expect(readCollapsed('member', 'people')).toBe(true);
 		expect(readCollapsed('staff', 'people')).toBe(false);
 	});
+});
+
+/**
+ * The action shares the title's row. It used to be a sibling of a `w-full`
+ * toggle in the collapsible branch, so "All" was pushed onto a line of its own
+ * in My Acts and My Groups — the only two groups that pass one (#1022).
+ */
+describe('NavGroup action slot', () => {
+	for (const collapsible of [false, true]) {
+		it(`keeps the action on the title's row when collapsible=${collapsible}`, async () => {
+			await render(NavGroupHarness, { withAction: true, collapsible, title: 'My Acts' });
+
+			// By its text: the collapsible branch's disclosure toggle is also a
+			// `button[type=button]`, and picking that one compares the heading
+			// with its own parent, which lines up however the row is laid out.
+			const all = [...document.querySelectorAll<HTMLElement>('button')].find(
+				(el) => el.textContent?.trim() === 'All'
+			)!;
+			const heading = [...document.querySelectorAll<HTMLElement>('span')].find(
+				(el) => el.textContent === 'My Acts'
+			)!;
+
+			// Same row: their vertical centres line up. A wrapped action sits a
+			// whole line below, which no tolerance this small would absorb.
+			const a = all.getBoundingClientRect();
+			const h = heading.getBoundingClientRect();
+			expect(Math.abs((a.top + a.bottom) / 2 - (h.top + h.bottom) / 2)).toBeLessThan(4);
+		});
+	}
 });
