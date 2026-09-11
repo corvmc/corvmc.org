@@ -122,14 +122,19 @@ export const createSubscription = form(amountSchema, async (data) => {
 	const stripeId = await ensureStripeCustomer(user.id, user.email, user.name);
 	const { url } = getRequestEvent();
 
-	const checkoutUrl = await createCheckoutSession({
-		userId: user.id,
-		stripeCustomerId: stripeId,
-		quantity: data.amount / DOLLARS_PER_UNIT,
-		coverFees: data.coverFees,
-		successUrl: `${url.origin}/member/membership`,
-		cancelUrl: `${url.origin}/member/membership`
-	});
+	let checkoutUrl: string;
+	try {
+		checkoutUrl = await createCheckoutSession({
+			userId: user.id,
+			stripeCustomerId: stripeId,
+			quantity: data.amount / DOLLARS_PER_UNIT,
+			coverFees: data.coverFees,
+			successUrl: `${url.origin}/member/membership`,
+			cancelUrl: `${url.origin}/member/membership`
+		});
+	} catch (err) {
+		mapDomainError(err);
+	}
 
 	redirect(303, checkoutUrl);
 });

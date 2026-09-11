@@ -381,7 +381,11 @@ export const removeBandEventPoster = form(
 	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
 		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
-		await clearBandEventPoster(data.eventId, band.id);
+		try {
+			await clearBandEventPoster(data.eventId, band.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );

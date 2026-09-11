@@ -45,17 +45,24 @@ function domainErrorNames(sources: Map<string, string>): Set<string> {
 }
 
 /** Top-level exported functions, by name, with their source text. */
+/**
+ * Each export's own body, bounded by the next function of **any** kind rather
+ * than the next export. Private helpers sit between exports, and slicing to
+ * the next `export` swept their throws into whichever export preceded them:
+ * `countPublishedListingsBy`, which throws nothing, was reported for the
+ * `ListingNotFoundError`s in the `requireOwnedListing` below it.
+ */
 function exportedBodies(source: string): Map<string, string> {
 	const marks = [
-		...source.matchAll(/export (?:async )?function (\w+)/g),
-		...source.matchAll(/export const (\w+)\s*(?::[^=]+)?=\s*(?:async\s*)?\(/g)
+		...source.matchAll(/^(export )?(?:async )?function (\w+)/gm),
+		...source.matchAll(/^(export )?const (\w+)\s*(?::[^=\n]+)?=\s*(?:async\s*)?\(/gm)
 	]
-		.map((m) => ({ at: m.index, name: m[1] }))
+		.map((m) => ({ at: m.index, name: m[2], exported: !!m[1] }))
 		.sort((a, b) => a.at - b.at);
 
 	const bodies = new Map<string, string>();
-	marks.forEach(({ at, name }, i) => {
-		bodies.set(name, source.slice(at, marks[i + 1]?.at ?? source.length));
+	marks.forEach(({ at, name, exported }, i) => {
+		if (exported) bodies.set(name, source.slice(at, marks[i + 1]?.at ?? source.length));
 	});
 	return bodies;
 }
@@ -113,17 +120,51 @@ function mappedTryRanges(source: string): [number, number][] {
 			else if (source[i] === '}') depth--;
 			i++;
 		}
-		// The catch clause runs to the end of its own block; reading the next 400
-		// characters is enough to see whether the mapper is the thing in it.
-		if (/catch\s*\([^)]*\)\s*\{[^}]*mapDomainError/.test(source.slice(i, i + 400))) {
-			ranges.push([m.index, i]);
+		// Brace-counted, not `[^}]*`: a catch that narrows first —
+		// `if (err instanceof PackingAlreadyClaimedError) { … }` then the mapper —
+		// closes a nested block before it reaches `mapDomainError`, and a
+		// character class that stops at the first `}` never sees it.
+		const clause = /^\s*catch\s*\([^)]*\)\s*\{/.exec(source.slice(i));
+		if (clause) {
+			let d = 1;
+			let j = i + clause[0].length;
+			while (j < source.length && d > 0) {
+				if (source[j] === '{') d++;
+				else if (source[j] === '}') d--;
+				j++;
+			}
+			if (source.slice(i, j).includes('mapDomainError')) ranges.push([m.index, i]);
 		}
 	}
 	return ranges;
 }
 
+/** From a call's `(` to just past its matching `)`, so the tail can be read. */
+function closingParenOnwards(source: string, at: number): string {
+	let i = source.indexOf('(', at);
+	let depth = 1;
+	i++;
+	while (i < source.length && depth > 0) {
+		if (source[i] === '(') depth++;
+		else if (source[i] === ')') depth--;
+		i++;
+	}
+	return source.slice(i - 1, i + 120);
+}
+
+/**
+ * Comments blanked, spaces kept so every offset still lines up.
+ *
+ * `publish()` written in a sentence about `publish()` is not a call, and
+ * counting one reported a correctly-mapped site as unmapped for as long as
+ * somebody described it accurately.
+ */
+function withoutComments(source: string): string {
+	return source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (c) => c.replace(/[^\n]/g, ' '));
+}
+
 function unmappedCalls(file: string, throwing: Map<string, Set<string>>): string[] {
-	const source = readFileSync(file, 'utf8');
+	const source = withoutComments(readFileSync(file, 'utf8'));
 	const mapped = mappedTryRanges(source);
 	const offenders = new Set<string>();
 
@@ -134,7 +175,12 @@ function unmappedCalls(file: string, throwing: Map<string, Set<string>>): string
 			// The import statement itself is not a call site.
 			if (source.slice(0, at).lastIndexOf('import') > source.slice(0, at).lastIndexOf(';'))
 				continue;
-			if (!mapped.some(([start, end]) => at > start && at < end)) offenders.add(local);
+			if (mapped.some(([start, end]) => at > start && at < end)) continue;
+			// `foo(x).catch(mapDomainError)` maps as surely as a try/catch does,
+			// and reads better for a one-call handler. Two real sites were being
+			// reported as unmapped because only the block form was recognised.
+			if (/^\s*\)?[^;\n]*\.catch\(mapDomainError\)/.test(closingParenOnwards(source, at))) continue;
+			offenders.add(local);
 		}
 	}
 	return [...offenders].sort();

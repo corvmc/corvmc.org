@@ -599,7 +599,13 @@ function splitName(name: string): { firstName: string; lastName: string } {
 
 async function loadOnboarding() {
 	const currentUser = requireUser();
-	const { profile, account } = await getVolunteerOnboarding(currentUser.id);
+	let loaded: Awaited<ReturnType<typeof getVolunteerOnboarding>>;
+	try {
+		loaded = await getVolunteerOnboarding(currentUser.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	const { profile, account } = loaded;
 	const fallback = splitName(account.name);
 
 	return {

@@ -1,22 +1,4 @@
 [
-	"src/lib/remote/announcements.remote.ts \u2192 publish()",
-	"src/lib/remote/band-events.remote.ts \u2192 clearBandEventPoster()",
-	"src/lib/remote/bands.remote.ts \u2192 removeMemberService()",
-	"src/lib/remote/bands.remote.ts \u2192 revokeEmailInviteService()",
-	"src/lib/remote/bands.remote.ts \u2192 transferOwnershipService()",
-	"src/lib/remote/bands.remote.ts \u2192 updateMember()",
-	"src/lib/remote/community-events.remote.ts \u2192 countPublishedListingsBy()",
-	"src/lib/remote/events.remote.ts \u2192 cancelTicketService()",
-	"src/lib/remote/events.remote.ts \u2192 checkIn()",
-	"src/lib/remote/events.remote.ts \u2192 checkRebookNeeded()",
 	"src/lib/remote/events.remote.ts \u2192 checkout()",
-	"src/lib/remote/events.remote.ts \u2192 update()",
-	"src/lib/remote/membership.remote.ts \u2192 createCheckoutSession()",
-	"src/lib/remote/packing.remote.ts \u2192 claimItem()",
-	"src/lib/remote/packing.remote.ts \u2192 getPackingList()",
-	"src/lib/remote/reservations.remote.ts \u2192 checkout()",
-	"src/lib/remote/reservations.remote.ts \u2192 requireInstructor()",
-	"src/lib/remote/suggestions.remote.ts \u2192 getSuggestion()",
-	"src/lib/remote/venues.remote.ts \u2192 getService()",
-	"src/lib/remote/volunteer.remote.ts \u2192 getVolunteerOnboarding()"
+	"src/lib/remote/reservations.remote.ts \u2192 checkout()"
 ]

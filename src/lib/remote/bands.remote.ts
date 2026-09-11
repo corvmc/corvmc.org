@@ -297,10 +297,14 @@ export const updateMemberRole = form(
 	}),
 	async (data) => {
 		await requireCapability('band.manageMembers');
-		await updateMember(data.memberId, {
-			role: data.role,
-			position: data.position ?? undefined
-		});
+		try {
+			await updateMember(data.memberId, {
+				role: data.role,
+				position: data.position ?? undefined
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
 		const { params } = getRequestEvent();
 		void getStaffBandPage(params.id!).refresh();
 		return { success: true };
@@ -384,7 +388,11 @@ export const removeBandMember = form(
 	}),
 	async (data) => {
 		await requireCapability('band.manageMembers');
-		await removeMemberService(data.memberId);
+		try {
+			await removeMemberService(data.memberId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -413,7 +421,11 @@ export const transferOwnership = form(
 		// normal way staff fix one — so the actor is the outgoing owner when there
 		// is one, and the incoming owner when there is not. The service demotes by
 		// this id, which matches nothing in the empty case, which is correct.
-		await transferOwnershipService(data.bandId, data.newOwnerId, band.ownerId ?? data.newOwnerId);
+		try {
+			await transferOwnershipService(data.bandId, data.newOwnerId, band.ownerId ?? data.newOwnerId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -449,7 +461,11 @@ export const revokeStaffEmailInvite = form(
 	}),
 	async (data) => {
 		await requireCapability('band.manageMembers');
-		await revokeEmailInviteService(data.inviteId);
+		try {
+			await revokeEmailInviteService(data.inviteId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -605,14 +621,18 @@ export const updateMemberRemote = form(
 	}),
 	async (data) => {
 		const { group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
-		await updateMember(
-			data.memberId,
-			{
-				role: data.role,
-				position: data.position !== undefined ? data.position || null : undefined
-			},
-			band.id
-		);
+		try {
+			await updateMember(
+				data.memberId,
+				{
+					role: data.role,
+					position: data.position !== undefined ? data.position || null : undefined
+				},
+				band.id
+			);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );

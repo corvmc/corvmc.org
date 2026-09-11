@@ -847,7 +847,12 @@ export const checkRebook = query(
 	}),
 	async ({ eventId, newStartsAt, newEndsAt }) => {
 		await requireCapability('event.read');
-		const result = await checkRebookNeeded(eventId, new Date(newStartsAt), new Date(newEndsAt));
+		let result: Awaited<ReturnType<typeof checkRebookNeeded>>;
+		try {
+			result = await checkRebookNeeded(eventId, new Date(newStartsAt), new Date(newEndsAt));
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return {
 			needed: result.needed,
 			reason: result.reason,
@@ -1439,14 +1444,24 @@ export const cancelTicket = form(
 	}),
 	async (data) => {
 		await requireCapability('event.manageTickets');
-		await cancelTicketService(data.ticketId);
+		try {
+			await cancelTicketService(data.ticketId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
 
 export const checkInTicket = form(z.object({ ticketId: z.string().min(1) }), async (data) => {
 	const staff = await requireCapability('event.manageTickets');
-	await checkIn(data.ticketId, staff.id);
+	try {
+		// A ticket scanned twice at a busy door is the ordinary case, and
+		// TicketStateError says so in words. Unmapped it was a 500.
+		await checkIn(data.ticketId, staff.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
 	return { success: true };
 });
 
