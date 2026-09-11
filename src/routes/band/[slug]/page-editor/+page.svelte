@@ -11,6 +11,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
@@ -161,7 +162,7 @@
 				<IconAdjustments size={16} />
 				Style
 			</Button>
-			<Button variant="primary" size="sm">Save Changes</Button>
+			<SubmitButton label="Save Changes" variant="primary" size="sm" />
 		{/if}
 	</PageHeader>
 

@@ -336,7 +336,12 @@
 				</div>
 				<div class="mt-4 flex gap-2">
 					<SubmitButton label="Save" />
-					<Button variant="ghost" size="sm" onclick={() => (editing = false)}>Cancel</Button>
+					<!-- `type="button"`: a Button carries no type of its own, so inside a
+					     Form it submits. Cancel was saving the form on its way out
+					     (#1075's sweep). -->
+					<Button type="button" variant="ghost" size="sm" onclick={() => (editing = false)}>
+						Cancel
+					</Button>
 				</div>
 			</Form>
 
