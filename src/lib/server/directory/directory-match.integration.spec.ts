@@ -56,7 +56,8 @@ beforeAll(() => {
 			('u-leader',  'Marisol Trent',  'mari@example.com',   1),
 			('u-drummer', 'Jo Fields',      'jo@example.com',     1),
 			('u-blocked', 'Sam Reyes',      'sam@example.com',    1),
-			('u-gone',    'Deactivated',    'gone@example.com',   1);
+			('u-gone',    'Deactivated',    'gone@example.com',   1),
+			('u-lockeddown', 'Robin Ash',   'robin@example.com',  1);
 
 		UPDATE user SET deleted_at = unixepoch() WHERE id = 'u-gone';
 
@@ -75,7 +76,8 @@ beforeAll(() => {
 			('e-leader',  'u-leader',  'Marisol Trent', 'members', 'members'),
 			('e-drummer', 'u-drummer', 'Jo Fields',     'band',    'members'),
 			('e-blocked', 'u-blocked', 'Sam Reyes',     'band',    'members'),
-			('e-gone',    'u-gone',    'Deactivated',   'band',    'members');
+			('e-gone',    'u-gone',    'Deactivated',   'band',    'members'),
+			('e-lockeddown', 'u-lockeddown', 'Robin Ash', 'band',  'hidden');
 
 		INSERT INTO directory_entry (id, group_id, name, looking_for, visibility) VALUES
 			('e-match',  'g-match',  'The Overlap', 'members', 'public'),
@@ -109,7 +111,11 @@ beforeAll(() => {
 			('e-mine',   'genre',              'jazz'),
 			-- Opted out of the directory entirely.
 			('e-hidden', 'seeking_instrument', 'bass'),
-			('e-hidden', 'genre',              'jazz');
+			('e-hidden', 'genre',              'jazz'),
+			-- A member who opted out of the directory, with a profile that would
+			-- otherwise match the same bands the seeker matches.
+			('e-lockeddown', 'instrument', 'bass'),
+			('e-lockeddown', 'genre',      'jazz');
 
 		INSERT INTO user_block (id, blocker_user_id, blocked_user_id) VALUES
 			('b-1', 'u-blocked', 'u-leader');
@@ -145,6 +151,18 @@ describe('findMatchesFor, against SQLite', () => {
 		expect(matches.map((m) => m.ref.id)).toEqual(['u-drummer']);
 	});
 
+	it('suggests nobody to a member who hid themselves, and says so', async () => {
+		// Matching is mutual: a hidden member is already absent from everyone
+		// else's suggestions, so offering them a list is an invitation to a
+		// conversation only one side can start. `gaps` is empty rather than
+		// accurate — a profile nobody can see does not need filling in.
+		const { hidden, gaps, matches } = await findMatchesFor('u-lockeddown');
+
+		expect(hidden).toBe(true);
+		expect(gaps).toEqual([]);
+		expect(matches).toEqual([]);
+	});
+
 	it('answers for an account the directory has never seen, rather than throwing', async () => {
 		// `findFirst` returns undefined and every branch below has to cope: no
 		// entry is the state a brand-new account is in for one request, before
@@ -152,7 +170,8 @@ describe('findMatchesFor, against SQLite', () => {
 		await expect(findMatchesFor('nobody')).resolves.toEqual({
 			direction: null,
 			gaps: ['lookingFor', 'instruments', 'genres'],
-			matches: []
+			matches: [],
+			hidden: false
 		});
 	});
 });
