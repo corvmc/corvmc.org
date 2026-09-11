@@ -57,6 +57,8 @@ async function registerCheckoutListeners(): Promise<void> {
 	const { handleTicketCheckout } = await import('$lib/server/ticket/checkout-listener');
 	const { handleBandPremiumCheckout } = await import('$lib/server/band/band-checkout-listener');
 	const { handleAudioCheckout } = await import('$lib/server/audio/checkout-listener');
+	const { handleCheckoutCache } = await import('$lib/server/finance/checkout-cache-listener');
+	const { handleCheckoutEntries } = await import('$lib/server/finance/checkout-entries-listener');
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleReservationCheckout(event.stripeSession);
@@ -72,6 +74,16 @@ async function registerCheckoutListeners(): Promise<void> {
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleAudioCheckout(event.stripeSession);
+	});
+
+	// Last, and best-effort inside: the domain handlers above have already given
+	// the member what they paid for, and a cache write must not undo that.
+	domainEvents.on('checkout.completed', async ({ data: event }) => {
+		await handleCheckoutCache(event.stripeSession);
+	});
+
+	domainEvents.on('checkout.completed', async ({ data: event }) => {
+		await handleCheckoutEntries(event.stripeSession);
 	});
 }
 
@@ -235,7 +247,7 @@ async function registerInboxListeners(): Promise<void> {
 						paragraphs: [{ text: 'A staff member replied to your conversation with CorvMC.' }],
 						// Raw — the dispatcher escapes it and preserves the line breaks.
 						quote: thread.preview ?? '',
-						cta: { label: 'View Conversation' }
+						cta: { label: 'View conversation' }
 					}
 				});
 			} catch (err) {

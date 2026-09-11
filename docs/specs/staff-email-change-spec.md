@@ -169,10 +169,13 @@ token alone (the member confirming is, by definition, locked out).
    domain entirely, mailbox closed) still cannot be recovered. Is an
    in-person-verified override needed, and if so what stops it being the
    takeover path this design exists to prevent?
-5. **`emailVerified` semantics.** Setting it true on confirm is right for the
+5. **`emailVerified` semantics.** ~~Setting it true on confirm is right for the
    new address, but the account may have been unverified before. Does confirming
    an email change also imply the member has completed onboarding gates keyed on
-   `emailVerified`?
+   `emailVerified`?~~ Settled by #757: nothing is gated on `emailVerified`. It
+   governs one thing — whether an unclaimed `subscriber` row under the address
+   may be claimed — so setting it true on confirm carries exactly that meaning
+   and no onboarding gate rides along.
 6. **Generalising the token helper.** `unsubscribe.ts` should probably become a
    shared `signed-token.ts` with a purpose/expiry parameter before this adds a
    second near-copy of it.

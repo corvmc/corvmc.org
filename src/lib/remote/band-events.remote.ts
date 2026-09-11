@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireGroupRole } from '$lib/server/group/group-context';
+import { mapDomainError } from '$lib/server/errors';
 import { listBandSlotTerms } from '$lib/server/production/run-of-show-service';
 import {
 	createBandEvent,
@@ -223,22 +224,28 @@ export const createBandEventForm = form(
 
 		const lineup = parseLineupField(data.lineup);
 
-		const evt = await createBandEvent({
-			bandId: band.id,
-			createdByUserId: user.id,
-			title: data.title,
-			description: data.description || undefined,
-			startsAt,
-			endsAt,
-			doorsAt,
-			location: data.location || undefined,
-			tags: data.tags || undefined,
-			externalTicketUrl: data.externalTicketUrl || undefined,
-			ticketPrice,
-			// The owner's own slot is written by the service; these are the rest.
-			support: lineup?.filter((l) => l.bandId !== band.id),
-			posterFile: await toPosterParam(poster)
-		});
+		// `mapDomainError` returns `never`, so `evt` is assigned past the catch.
+		let evt;
+		try {
+			evt = await createBandEvent({
+				bandId: band.id,
+				createdByUserId: user.id,
+				title: data.title,
+				description: data.description || undefined,
+				startsAt,
+				endsAt,
+				doorsAt,
+				location: data.location || undefined,
+				tags: data.tags || undefined,
+				externalTicketUrl: data.externalTicketUrl || undefined,
+				ticketPrice,
+				// The owner's own slot is written by the service; these are the rest.
+				support: lineup?.filter((l) => l.bandId !== band.id),
+				posterFile: await toPosterParam(poster)
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		return { eventId: evt.id };
 	}
@@ -307,11 +314,15 @@ export const updateBandEventForm = form(
 			params.posterFile = await toPosterParam(poster);
 		}
 
-		await updateBandEvent(data.eventId, band.id, params);
+		try {
+			await updateBandEvent(data.eventId, band.id, params);
 
-		const lineup = parseLineupField(data.lineup);
-		if (lineup) {
-			await setEventLineup(data.eventId, lineup, { actingBandId: band.id });
+			const lineup = parseLineupField(data.lineup);
+			if (lineup) {
+				await setEventLineup(data.eventId, lineup, { actingBandId: band.id });
+			}
+		} catch (err) {
+			mapDomainError(err);
 		}
 
 		return { success: true };
@@ -326,7 +337,11 @@ export const publishBandEvent = form(
 		const evt = await getById(data.eventId);
 		if (!evt || evt.groupId !== band.id) throw error(404, 'Event not found');
 
-		await publish(data.eventId);
+		try {
+			await publish(data.eventId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -339,7 +354,11 @@ export const unpublishBandEvent = form(
 		const evt = await getById(data.eventId);
 		if (!evt || evt.groupId !== band.id) throw error(404, 'Event not found');
 
-		await unpublish(data.eventId);
+		try {
+			await unpublish(data.eventId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -349,7 +368,11 @@ export const cancelBandEventForm = form(
 	async (data) => {
 		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
-		await cancelBandEvent(data.eventId, band.id);
+		try {
+			await cancelBandEvent(data.eventId, band.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -382,17 +405,22 @@ export const importGigsForm = form(
 		}
 
 		const tz = DEFAULT_TIMEZONE;
-		const imported = await importBandEvents(
-			band.id,
-			user.id,
-			rows.map((r) => ({
-				title: r.title,
-				startsAt: buildDateInTz(r.date, GIG_IMPORT_DEFAULT_START, tz),
-				location: r.location,
-				externalTicketUrl: r.externalTicketUrl,
-				support: r.support
-			}))
-		);
+		let imported;
+		try {
+			imported = await importBandEvents(
+				band.id,
+				user.id,
+				rows.map((r) => ({
+					title: r.title,
+					startsAt: buildDateInTz(r.date, GIG_IMPORT_DEFAULT_START, tz),
+					location: r.location,
+					externalTicketUrl: r.externalTicketUrl,
+					support: r.support
+				}))
+			);
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		return { imported, skipped: errors.length };
 	}
@@ -406,7 +434,11 @@ export const confirmLineupSlotForm = form(
 	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
 		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
-		await confirmLineupSlot(data.eventId, band.id);
+		try {
+			await confirmLineupSlot(data.eventId, band.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -420,7 +452,11 @@ export const declineLineupSlotForm = form(
 	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
 		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
-		await declineLineupSlot(data.eventId, band.id);
+		try {
+			await declineLineupSlot(data.eventId, band.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );

@@ -1,0 +1,11 @@
+Confirm your email address
+
+{{#greeting}}{{{greeting}}}
+
+{{/greeting}}This address was used to make a Corvallis Music Collective account. Open this link to confirm it is yours:
+
+{{{verifyUrl}}}
+
+This link expires in {{{expiresIn}}}. Your account already works either way — confirming only proves the address is yours, which is what lets us attach the mailing lists it is already on.
+
+If this was not you, ignore this email and nothing will be attached to the address.

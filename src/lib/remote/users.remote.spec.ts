@@ -176,7 +176,7 @@ vi.mock('$lib/server/user/user-service', () => ({
 	getLastLoginAt: (...a: unknown[]) => getLastLoginAt(...(a as [])),
 	deactivateUser: vi.fn(async () => undefined),
 	deactivateUsers: vi.fn(async () => ({ deactivated: [], skipped: [] })),
-	reactivateUser: vi.fn(async () => undefined),
+	reactivateUser: vi.fn(async () => ({ subscription: 'none' as const })),
 	purgeUser: purgeUserService,
 	UserNotFoundError,
 	UserNotDeactivatedError,

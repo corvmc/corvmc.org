@@ -81,6 +81,12 @@
 		src?: string;
 		/** Inline label beside the `checkbox` / `toggle` input. */
 		checkboxLabel?: string;
+		/**
+		 * Marks the caption and forwards the native attribute. Stays in `rest`
+		 * like `options` does, so which controls receive the attribute is
+		 * unchanged — only the caption is new.
+		 */
+		required?: boolean;
 		placeholder?: string;
 		multiple?: boolean;
 		orientation?: 'row' | 'col';
@@ -99,7 +105,7 @@
 	// that would be wrong for the other.
 	const tagOptions = $derived((rest.options ?? []) as { id: string; label: string }[]);
 	const selectOptions = $derived(
-		(rest.options ?? []) as { value: string | number; label: string }[]
+		(rest.options ?? []) as { value: string | number; label: string; disabled?: boolean }[]
 	);
 
 	const uid = Math.random().toString(16).slice(2, 8);
@@ -230,7 +236,7 @@
 		class="fieldset-legend"
 		for={labelsOneControl ? resolvedId : undefined}
 	>
-		{_label}
+		{_label}{#if rest.required}<span class="ml-0.5 text-error" aria-hidden="true">*</span>{/if}
 	</svelte:element>
 	{#if issues}
 		{#each issues as issue (issue.message)}
@@ -296,6 +302,7 @@
 			{#each selectOptions as option (option.value)}
 				<option
 					value={option.value}
+					disabled={option.disabled}
 					selected={Array.isArray(value) && value.includes(option.value)}
 				>
 					{option.label}
@@ -308,8 +315,10 @@
 			{#if rest.placeholder}
 				<option value="">{rest.placeholder}</option>
 			{/if}
+			<!-- A listed-but-unselectable option is how a picker says a slot exists
+			     and is taken, instead of leaving a hole with no cause. -->
 			{#each selectOptions as option (option.value)}
-				<option value={option.value}>{option.label}</option>
+				<option value={option.value} disabled={option.disabled}>{option.label}</option>
 			{/each}
 			{@render children?.()}
 		</Select>

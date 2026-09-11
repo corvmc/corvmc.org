@@ -63,8 +63,8 @@
 
 <!-- A `div`, not a `label`: `FileUpload` puts the file input inside a `label`
      of its own, and nesting labels is both invalid and ambiguous to click. -->
-<div class="form-control">
-	<span class="label-text text-xs">{label}</span>
+<div class="fieldset">
+	<span class="fieldset-legend text-xs">{label}</span>
 	<div class="mt-1">
 		<FileUpload {upload} {accept} {src} {previewClass} emptyLabel="Upload" replaceLabel="Replace" />
 	</div>

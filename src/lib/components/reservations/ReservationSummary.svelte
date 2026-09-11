@@ -20,10 +20,18 @@
 			paidAt?: Date | null;
 			refundedAt?: Date | null;
 			creditsAvailable?: boolean;
+			waitlistExpiresAt?: Date | null;
 		};
 		member?: { name: string };
 		class?: string;
 	} = $props();
+
+	// Promoted, not merely queued: the offer exists and has not lapsed.
+	const offered = $derived(
+		reservation.status === 'waitlisted' &&
+			!!reservation.waitlistExpiresAt &&
+			reservation.waitlistExpiresAt.getTime() > Date.now()
+	);
 </script>
 
 <div class={className}>
@@ -34,7 +42,20 @@
 			reservation.endsAt
 		)}
 	</p>
-	{#if reservation.price === 0}
+	{#if offered}
+		<!-- A promoted waitlist entry is an offer with a clock on it, and nothing
+		     is owed on it yet. The money line here said "$30.00 · Due in 14 days"
+		     off the session date while the offer expired in 24 hours — the one
+		     deadline that mattered, contradicted by the only line that named
+		     one (#1005). -->
+		<p class="font-medium text-success">A slot opened up</p>
+		<p class="text-muted">
+			Confirm by {formatMonthDayYear(reservation.waitlistExpiresAt!)}, {formatDistanceToNow(
+				reservation.waitlistExpiresAt!,
+				{ addSuffix: true }
+			)}, or it goes to the next person.
+		</p>
+	{:else if reservation.price === 0}
 		<p class="text-muted">Covered by credits</p>
 	{:else if reservation.price != null}
 		<p class="text-muted">

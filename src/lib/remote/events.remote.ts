@@ -3,11 +3,17 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { getEventRiderSummaries } from '$lib/server/band/rider-service';
 import { requireCapability, requireUser } from '$lib/server/authorization';
+import { mapDomainError } from '$lib/server/errors';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venue-service';
 import { getProductionByEvent } from '$lib/server/production/production-service';
 import { getPublicSetTimes, getRunOfShow } from '$lib/server/production/run-of-show-service';
+import { getSettlement } from '$lib/server/production/settlement-service';
+import {
+	listRequests as listArtifactRequests,
+	requestableActs as listRequestableActs
+} from '$lib/server/production/artifact-request-service';
 import { listWorkOrders as listOpenWorkOrders } from '$lib/server/volunteer/work-order-service';
 import { bandRefColumns, toBandRef, toEventRef, toMemberRef } from '$lib/server/entity/refs';
 import {
@@ -15,6 +21,7 @@ import {
 	update,
 	checkRebookNeeded,
 	publish,
+	publishBlockers,
 	unpublishWithNotice,
 	remove as removeEvent,
 	getDeletionImpact,
@@ -914,32 +921,43 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 			}
 		: undefined;
 
-	const event = await create({
-		title: data.title,
-		description: data.description || undefined,
-		startsAt,
-		endsAt,
-		doorsAt,
-		tags: data.tags || undefined,
-		kind: data.kind,
-		ticketingEnabled,
-		ticketPrice: ticketingEnabled ? ticketPrice : undefined,
-		ticketQuantity: ticketingEnabled ? ticketQuantity : undefined,
-		venueId: data.venueId || null,
-		location: data.location || null,
-		createdByUserId: staff.id,
-		reservation
-	});
+	// A title clash or a booking conflict from `create` is a written rule, not a
+	// fault. `mapDomainError` returns `never`, so `event` is assigned past here.
+	let event;
+	try {
+		event = await create({
+			title: data.title,
+			description: data.description || undefined,
+			startsAt,
+			endsAt,
+			doorsAt,
+			tags: data.tags || undefined,
+			kind: data.kind,
+			ticketingEnabled,
+			ticketPrice: ticketingEnabled ? ticketPrice : undefined,
+			ticketQuantity: ticketingEnabled ? ticketQuantity : undefined,
+			venueId: data.venueId || null,
+			location: data.location || null,
+			createdByUserId: staff.id,
+			reservation
+		});
+	} catch (err) {
+		mapDomainError(err);
+	}
 
 	// Recurring: register a series so the generation job materializes occurrences.
 	if (data.recurring && data.recurringFrequency) {
-		await createEventSeries({
-			prototypeEventId: event.id,
-			frequency: data.recurringFrequency as RecurringFrequency,
-			prototypeStartsAt: startsAt,
-			monthlyMode: data.monthlyMode,
-			endsAt: data.recurringEndsAt ? buildDateInTz(data.recurringEndsAt, '23:59', tz) : undefined
-		});
+		try {
+			await createEventSeries({
+				prototypeEventId: event.id,
+				frequency: data.recurringFrequency as RecurringFrequency,
+				prototypeStartsAt: startsAt,
+				monthlyMode: data.monthlyMode,
+				endsAt: data.recurringEndsAt ? buildDateInTz(data.recurringEndsAt, '23:59', tz) : undefined
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
 	}
 
 	return { eventId: event.id };
@@ -1065,7 +1083,11 @@ export const setStaffEventLineup = form(
 
 		const lineup = parseStaffLineupField(data.lineup);
 		if (lineup) {
-			await setEventLineup(data.eventId, lineup, { asStaff: evt.source === 'cmc' });
+			try {
+				await setEventLineup(data.eventId, lineup, { asStaff: evt.source === 'cmc' });
+			} catch (err) {
+				mapDomainError(err);
+			}
 		}
 
 		void getStaffEventPage(data.eventId).refresh();
@@ -1101,7 +1123,10 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		venues,
 		riders,
 		production,
-		runOfShow
+		runOfShow,
+		settlement,
+		artifactRequests,
+		requestableActs
 	] = await Promise.all([
 		getStaffEventDetail(id),
 		getEventRecurringSeries(id),
@@ -1123,7 +1148,17 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		getProductionByEvent(id),
 		// Who plays when. Times are derived and written on every mutation, so this
 		// read never recomputes — it only re-checks the warnings.
-		getRunOfShow(id)
+		getRunOfShow(id),
+		// What the night took, cost, and owes. Rides in the page's one query
+		// rather than beside it — `custom/no-concurrent-remote-queries` exists to
+		// stop a page fanning reads out, and this one is cheap when there is no
+		// production because it returns null on the first select.
+		getSettlement(id),
+		// What the bill still owes us, and who can be asked. Fulfilment is derived
+		// from the artifact itself, so a rider filled in unprompted already counts
+		// and nothing here has to be ticked off by hand.
+		listArtifactRequests(id),
+		listRequestableActs(id)
 	]);
 
 	return {
@@ -1136,7 +1171,10 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		venues,
 		riders,
 		production,
-		runOfShow
+		runOfShow,
+		settlement,
+		artifactRequests,
+		requestableActs
 	};
 });
 
@@ -1150,7 +1188,11 @@ export const getEventRecurringSeries = query(z.string(), async (eventId) => {
 /** Stop a recurring event series; existing occurrences remain (staff). */
 export const cancelEventSeries = form(z.object({ seriesId: z.string() }), async (data) => {
 	await requireCapability('event.manage');
-	await cancelSeries(data.seriesId);
+	try {
+		await cancelSeries(data.seriesId);
+	} catch (err) {
+		mapDomainError(err);
+	}
 	return { success: true };
 });
 
@@ -1259,14 +1301,25 @@ export const updateEvent = form(
 			};
 		}
 
-		await update(data.eventId, updateParams);
+		try {
+			await update(data.eventId, updateParams);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
 
 export const publishEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
 	await requireCapability('event.publish');
-	await publish(data.id);
+	try {
+		await publish(data.id);
+	} catch (err) {
+		// `EventNotReadyError` names what the listing is still missing. Unmapped it
+		// reached the staffer as a 500 whose message was the string "Internal
+		// Error", and Sentry as a crash.
+		mapDomainError(err);
+	}
 	return { success: true };
 });
 
@@ -1286,15 +1339,35 @@ export const unpublishEvent = form(
 		await requireCapability('event.publish');
 		// Band-sourced events notify the band's admins — pulling a gig silently is
 		// the one unpublish that needs a word back to whoever posted it.
-		await unpublishWithNotice(data.id, { notes: data.notes });
+		try {
+			await unpublishWithNotice(data.id, { notes: data.notes });
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
 
 export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
 	const staff = await requireCapability('event.manage');
-	await cancel(data.id, staff.id);
+	try {
+		await cancel(data.id, staff.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
 	return { success: true };
+});
+
+/**
+ * What a CMC listing still needs before it can go public. Empty for community
+ * and band listings, which are exempt.
+ *
+ * Loaded by the publish dialog so the answer arrives before the click. It was
+ * only ever thrown *by* `publish`, so the way to find out was to fail.
+ */
+export const getEventPublishBlockers = query(z.string(), async (id) => {
+	await requireCapability('event.read');
+	return publishBlockers(id);
 });
 
 /**
@@ -1312,10 +1385,9 @@ export const deleteEvent = form(z.object({ id: z.string().min(1) }), async (data
 		await removeEvent(data.id, staff.id);
 	} catch (err) {
 		// The ticket refusal is a business rule with a written explanation, not an
-		// internal fault — surfacing it as a 500 would hide the sentence that
-		// tells the staffer to cancel instead.
-		const message = err instanceof Error ? err.message : 'Could not delete this event';
-		throw error(message.includes('tickets') ? 409 : 500, message);
+		// internal fault. It used to be picked out by matching the word "tickets"
+		// in the message, which left `EventNotFoundError` as a 500.
+		mapDomainError(err);
 	}
 	void getStaffEvents({}).refresh();
 	return { success: true };

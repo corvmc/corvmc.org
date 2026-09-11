@@ -1,7 +1,8 @@
 ---
 name: Tech debt
 about: Cleanup, duplication, or a shape that will cost later
-labels: tech-debt, needs-triage
+type: Tech debt
+labels: needs-triage
 ---
 
 ## What is duplicated, wrong-shaped, or owed

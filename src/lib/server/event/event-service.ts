@@ -13,6 +13,7 @@ import type { EventSource } from '$lib/config';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { directoryEntry } from '$lib/server/db/schema/directory';
+import { createExternalAct } from '$lib/server/directory/entry-service';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
@@ -105,6 +106,16 @@ export class EventStateError extends DomainError {
 
 	constructor(message: string) {
 		super(message);
+	}
+}
+
+/** A CMC listing that is not ready to be seen, and what it is missing. */
+export class EventNotReadyError extends DomainError {
+	readonly httpStatus = 422;
+
+	constructor(readonly blockers: string[]) {
+		super(`Not ready to announce: ${blockers.join(', ')}.`);
+		this.name = 'EventNotReadyError';
 	}
 }
 
@@ -270,6 +281,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		const res = await staffCreate({
 			userId: createdByUserId,
 			bookerType: 'event_listing',
+			hardHold: true,
 			bookerId: eventId,
 			startsAt: reservationParams.startsAt,
 			endsAt: reservationParams.endsAt,
@@ -597,6 +609,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 			const newRes = await staffCreate({
 				userId,
 				bookerType: 'event_listing',
+				hardHold: true,
 				bookerId: eventId,
 				startsAt: reservationStartsAt,
 				endsAt: reservationEndsAt,
@@ -708,7 +721,79 @@ async function restoreWithheldPoster(eventId: string): Promise<void> {
  * splitting it into two functions would mean two places to get the
  * publishedAt/status pair right.
  */
+/**
+ * CMC shows that are close and still not public.
+ *
+ * No query answered this, so an unannounced show was noticed by someone
+ * remembering it. Ordered soonest first, because that is the order they stop
+ * being fixable in.
+ */
+export async function unannouncedShows(withinDays = 21, now = new Date()) {
+	const horizon = new Date(now.getTime() + withinDays * 86_400_000);
+	return db
+		.select({
+			id: eventListing.id,
+			title: eventListing.title,
+			startsAt: eventListing.startsAt,
+			announceAt: eventListing.announceAt,
+			status: eventListing.status
+		})
+		.from(eventListing)
+		.where(
+			and(
+				eq(eventListing.source, 'cmc'),
+				inArray(eventListing.status, ['draft', 'pending_review']),
+				gt(eventListing.startsAt, now),
+				lte(eventListing.startsAt, horizon)
+			)
+		)
+		.orderBy(asc(eventListing.startsAt));
+}
+
+/**
+ * What a CMC listing still needs before the public sees it.
+ *
+ * Community listings are exempt: a member posting somebody else's gig is not
+ * making a promise on the collective's behalf, and gating them would break the
+ * community calendar.
+ */
+export async function publishBlockers(eventId: string): Promise<string[]> {
+	const [row] = await db
+		.select({
+			source: eventListing.source,
+			description: eventListing.description,
+			posterKey: eventListing.posterKey,
+			productionStatus: production.status
+		})
+		.from(eventListing)
+		.leftJoin(production, eq(production.eventId, eventListing.id))
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
+
+	if (!row || row.source !== 'cmc') return [];
+
+	const blockers: string[] = [];
+	// Announcing a show whose lineup is not agreed is the promise the collective
+	// cannot keep. Cancellation already cascades listing → production; this is
+	// the same coherence in the other direction.
+	if (
+		row.productionStatus &&
+		!['confirmed', 'completed', 'settled', 'closed'].includes(row.productionStatus)
+	) {
+		blockers.push('the production is not confirmed yet');
+	}
+	if (!row.posterKey) blockers.push('there is no poster');
+	if (!row.description?.trim()) blockers.push('there is no description');
+	return blockers;
+}
+
 export async function publish(eventId: string): Promise<void> {
+	// The readiness gate. A CMC show used to go public with no poster, no
+	// description and an unconfirmed lineup, because `publish` checked its own
+	// status and nothing else.
+	const blockers = await publishBlockers(eventId);
+	if (blockers.length > 0) throw new EventNotReadyError(blockers);
+
 	await restoreWithheldPoster(eventId);
 
 	const result = await db
@@ -2129,8 +2214,9 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 		const res = await staffCreate({
 			userId: createdByUserId,
 			// Not `'group'`. The room is held for the session, not booked by the
-			// program — see docs/specs/groups-spec.md § Room time.
+			// program — see docs/specs/shipped/groups-spec.md § Room time.
 			bookerType: 'event_listing',
+			hardHold: true,
 			bookerId: eventId,
 			startsAt: reservationParams.startsAt,
 			endsAt: reservationParams.endsAt,
@@ -2780,6 +2866,40 @@ export async function listPublicUpcomingEvents(
 		.offset(opts.offset);
 
 	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
+}
+
+/**
+ * Give a credit with no directory entry one, so the act can be asked for a
+ * rider.
+ *
+ * `requestableActs` filters on `directoryEntryId !== null`, and the only writer
+ * of that column is the lineup editor — which sets it from the *group* a member
+ * picked. So an act typed onto a bill by name was unaskable by construction,
+ * and the advance said "Not a CMC act — ask them directly" for exactly the case
+ * the asking was built for (#974).
+ *
+ * An external act, not a band: both owner columns stay null, so this mints no
+ * public page and no membership. Claiming remains the separate door it was.
+ */
+export async function listCreditInDirectory(eventBandId: string): Promise<string> {
+	const [credit] = await db
+		.select({ id: eventBand.id, name: eventBand.name, entryId: eventBand.directoryEntryId })
+		.from(eventBand)
+		.where(eq(eventBand.id, eventBandId))
+		.limit(1);
+
+	if (!credit) throw new EventNotFoundError();
+	// Already listed — return what it has rather than minting a duplicate for a
+	// double-clicked button.
+	if (credit.entryId) return credit.entryId;
+
+	const entryId = await createExternalAct({ name: credit.name });
+	await db
+		.update(eventBand)
+		.set({ directoryEntryId: entryId })
+		.where(eq(eventBand.id, eventBandId));
+
+	return entryId;
 }
 
 // ---------------------------------------------------------------------------

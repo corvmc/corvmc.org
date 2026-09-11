@@ -10,7 +10,8 @@ import {
 import { type SeedUser } from './types';
 import { pick, pickN, ptDate, random, randomInt } from './util';
 
-export async function seedBandEvents(bands: any[], _users: SeedUser[]) {
+/** `alsoInclude`: see `seedBandReservations`. Appended, so no draw moves. */
+export async function seedBandEvents(bands: any[], _users: SeedUser[], alsoInclude: any[] = []) {
 	console.log('Seeding band events...');
 	const rows = [];
 
@@ -53,7 +54,7 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 		}
 	}
 
-	for (const b of bands.slice(0, 6)) {
+	for (const b of [...bands.slice(0, 6), ...alsoInclude]) {
 		if (b.deletedAt) continue;
 		const eventCount = randomInt(2, 4);
 

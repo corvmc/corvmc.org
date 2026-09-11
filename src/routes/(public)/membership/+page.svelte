@@ -118,7 +118,7 @@
 				<li>• Everything in the free account</li>
 				<li>• Free practice hours every month</li>
 				<li>• Recurring reservations</li>
-				<li>• Ticket discounts &amp; gear perks</li>
+				<li>• Gear perks and member-only events</li>
 			</ul>
 			<Button
 				href={resolve('/login?register&redirect=/member/membership')}

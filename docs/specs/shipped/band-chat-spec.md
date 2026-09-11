@@ -39,7 +39,7 @@ own. The `email` toggle governs the inbound support mailbox, not our ability to 
 
 ### Ownership is live, and that is why the cursor moved
 
-`docs/specs/groups-spec.md` left "a group as a messaging recipient" open with one question:
+`docs/specs/shipped/groups-spec.md` left "a group as a messaging recipient" open with one question:
 
 > whether addressing a group **expands to participant rows at send time** (a snapshot — later
 > joiners never see the thread, leavers stay in it) or **references the group and resolves

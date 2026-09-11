@@ -118,7 +118,14 @@
 	let availableSet = $derived(new Set(availableDates));
 	const isDateUnavailable = (d: DateValue) => !availableSet.has(d.toString());
 
-	let startTimeOptions = $state<{ value: string; label: string }[] | null>(null);
+	let startTimeOptions = $state<{ value: string; label: string; disabled?: boolean }[] | null>(
+		null
+	);
+	// The list now carries the taken slots too, so "nothing on this date" is a
+	// question about what is selectable rather than about how long the list is.
+	const noStartTimes = $derived(
+		startTimeOptions !== null && !startTimeOptions.some((o) => !o.disabled)
+	);
 	let endTimeOptions = $state<{ value: string; label: string }[] | null>(null);
 
 	let startGen = 0;
@@ -194,7 +201,13 @@
 			maxValue={maxDate}
 		/>
 
-		{#if date && startTimeOptions !== null && startTimeOptions.length === 0}
+		<!-- A day that is fully booked and a day past the booking window were both
+		     just unpickable, with nothing to tell them apart. -->
+		<p class="mt-1 text-subtle">
+			Greyed days are fully booked. The calendar ends where the booking window does.
+		</p>
+
+		{#if date && noStartTimes}
 			<p class="mt-2 text-sm text-error">
 				No available times on this date. Please select another day.
 			</p>
@@ -209,7 +222,7 @@
 				options={startTimeOptions ?? []}
 				placeholder={startTimeOptions === null
 					? 'Loading...'
-					: startTimeOptions.length === 0
+					: noStartTimes
 						? 'No times available'
 						: 'Select a start time'}
 				required

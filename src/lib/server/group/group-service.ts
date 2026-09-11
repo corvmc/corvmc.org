@@ -31,7 +31,7 @@ import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
  * grant by kind — the abuse case, spin up a fake club and collect free room
  * time, is closed structurally rather than by a check someone has to remember.
  *
- * See docs/specs/groups-spec.md.
+ * See docs/specs/shipped/groups-spec.md.
  */
 
 /** Kinds this module governs. A band is created by its own member, not here. */

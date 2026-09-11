@@ -122,10 +122,11 @@ function split(baseCents: number, cmcBps: number, coverFees: boolean) {
 
 // ---------------------------------------------------------------------------
 
-export async function seedAudio(bands: any[], users: any[]) {
+/** `alsoInclude`: see `seedBandReservations`. Appended, so no draw moves. */
+export async function seedAudio(bands: any[], users: any[], alsoInclude: any[] = []) {
 	console.log('Seeding band audio (releases, tracks, sales)...');
 
-	const live = bands.filter((b: any) => !b.deletedAt).slice(0, 6);
+	const live = [...bands.filter((b: any) => !b.deletedAt).slice(0, 6), ...alsoInclude];
 	if (live.length === 0)
 		return { releases: 0, tracks: 0, purchases: 0, bytes: 0, accounts: 0, radioEntries: 0 };
 
@@ -265,7 +266,20 @@ export async function seedAudio(bands: any[], users: any[]) {
 						updatedAt: new Date()
 					}
 				]
-			: [])
+			: []),
+		// A named band gets the ready state too. The three above sit on bands whose
+		// owner is a bulk account or the admin, so the payouts page was only ever
+		// seen by somebody who also holds every staff capability (#868).
+		...alsoInclude.map((b: any) => ({
+			groupId: b.id,
+			stripeAccountId: `acct_seed${randomUUID().slice(0, 12)}`,
+			chargesEnabled: true,
+			payoutsEnabled: true,
+			detailsSubmitted: true,
+			requirementsJson: { currently_due: [], past_due: [] },
+			createdAt: new Date(),
+			updatedAt: new Date()
+		}))
 	];
 	// 8 × 12 = 96.
 	await batchInsert(bandStripeAccount, accountRows, 12);
@@ -390,15 +404,18 @@ export async function seedAudio(bands: any[], users: any[]) {
 			lastPlayedAt: null
 		}));
 
-	// An hour behind and an hour ahead, so a freshly seeded database has a
-	// "now playing", an "up next" and a "recently played" the moment you open it
-	// — rather than three empty panels until the cron next fires.
+	// Forward-weighted, because `buildSchedule` stops at MAX_ENTRIES_PER_RUN and
+	// the fixture tracks are ~35s — so the 200-entry budget buys about two hours
+	// however wide the horizon is. Symmetric hours spent half of it on plays that
+	// were already over, and the station went dark an hour after `db:reset`
+	// (#992). Ten minutes behind still fills "Recently played", which shows 12.
+	// Staying on air past that is the `schedule-radio` cron's job, not the seed's.
 	const now = new Date();
 	const entries = eligible.length
 		? buildSchedule(
 				eligible,
-				new Date(now.getTime() - 60 * 60 * 1000),
-				new Date(now.getTime() + 60 * 60 * 1000)
+				new Date(now.getTime() - 10 * 60 * 1000),
+				new Date(now.getTime() + 24 * 60 * 60 * 1000)
 			)
 		: [];
 

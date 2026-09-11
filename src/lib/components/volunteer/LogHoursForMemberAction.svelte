@@ -69,8 +69,8 @@
 			prop: RoleOptions owns the role query, and handing it over as options would
 			mean this component holding that query open just to pass it down.
 		-->
-		<label class="form-control w-full">
-			<div class="label"><span class="label-text">What did they help with?</span></div>
+		<label class="fieldset w-full">
+			<span class="fieldset-legend">What did they help with?</span>
 			<Select name="volunteerRoleId">
 				<RoleOptions activeOnly />
 			</Select>

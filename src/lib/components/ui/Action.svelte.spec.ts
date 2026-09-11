@@ -2,6 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createAttachmentKey } from 'svelte/attachments';
+import { toast } from 'svelte-sonner';
 import ActionHarness from './Action.test.svelte';
 
 /**
@@ -10,6 +11,10 @@ import ActionHarness from './Action.test.svelte';
  * a bare callback, a confirm dialog, and a remote form — and the trigger states
  * every one of them shares.
  */
+
+vi.mock('svelte-sonner', () => ({
+	toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() })
+}));
 
 vi.mock('$app/navigation', () => ({
 	invalidateAll: vi.fn(),
@@ -23,7 +28,11 @@ vi.mock('$app/navigation', () => ({
  * properties, so those are all `<Form>`'s spread puts on the `<form>`. The
  * attachment is what intercepts the submit; without it the form navigates.
  */
-function fakeRemoteForm({ result, ok = true }: { result?: unknown; ok?: boolean } = {}) {
+function fakeRemoteForm({
+	result,
+	ok = true,
+	rejectWith
+}: { result?: unknown; ok?: boolean; rejectWith?: unknown } = {}) {
 	let callback: ((instance: { submit: () => Promise<boolean> }) => unknown) | null = null;
 	const instance: Record<string | symbol, unknown> = { method: 'POST', action: '?/thing' };
 
@@ -32,6 +41,7 @@ function fakeRemoteForm({ result, ok = true }: { result?: unknown; ok?: boolean 
 			event.preventDefault();
 			void callback?.({
 				submit: async () => {
+					if (rejectWith) throw rejectWith;
 					instance.result = result;
 					return ok;
 				}
@@ -83,18 +93,25 @@ describe('Action, callback mode', () => {
 
 	// `successLabel` flashes in place of the label so a click that changed
 	// something server-side is acknowledged without a page change.
+	//
+	// The flash has to outlast a loaded runner. Nothing holds it open, so a
+	// window short enough to close before the locator's first poll makes the
+	// first assertion unsatisfiable rather than slow. Both halves are asserted:
+	// the flash, then the revert waited for past the window's own length.
 	it('flashes the success label, then goes back to the label', async () => {
 		await render(ActionHarness, {
 			action: async () => undefined,
 			label: 'Retry',
 			successLabel: 'Retried',
-			flashDuration: 50
+			flashDuration: 2000
 		});
 
 		await page.getByRole('button', { name: 'Retry' }).click();
 
 		await expect.element(page.getByRole('button', { name: 'Retried' })).toBeVisible();
-		await expect.element(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+		await expect
+			.element(page.getByRole('button', { name: 'Retry' }), { timeout: 5000 })
+			.toBeVisible();
 	});
 
 	it('reports the callback result to onsuccess', async () => {
@@ -218,6 +235,73 @@ describe('Action, form mode', () => {
 		});
 	}
 
+	/**
+	 * The whole app used to answer a failed action with the word "Error" and
+	 * nothing else: `Action` passed `onfailure` on every dialog, and `Form` read
+	 * that as "the caller owns the message" and stayed silent. A thrown error has
+	 * no field to render in, so it is surfaced whether a handler exists or not.
+	 */
+	it('surfaces a thrown failure, with no onfailure handler', async () => {
+		vi.mocked(toast.error).mockClear();
+		await render(ActionHarness, {
+			action: fakeRemoteForm({
+				rejectWith: { status: 422, body: { message: 'Not ready to announce: there is no poster.' } }
+			}),
+			label: 'Publish',
+			fieldName: 'id'
+		});
+
+		await page.getByRole('button', { name: 'Publish' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Publish' }).click();
+
+		await vi.waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith('Not ready to announce: there is no poster.')
+		);
+	});
+
+	it('surfaces a thrown failure even when the caller passes onfailure', async () => {
+		vi.mocked(toast.error).mockClear();
+		const onfailure = vi.fn();
+		await render(ActionHarness, {
+			action: fakeRemoteForm({ rejectWith: { status: 409, body: { message: '3 tickets sold' } } }),
+			label: 'Unpublish',
+			fieldName: 'id',
+			onfailure
+		});
+
+		await page.getByRole('button', { name: 'Unpublish' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Unpublish' }).click();
+
+		await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('3 tickets sold'));
+		// The handler still runs, and now receives the error rather than the issues.
+		await vi.waitFor(() =>
+			expect(onfailure).toHaveBeenCalledWith({ status: 409, body: { message: '3 tickets sold' } })
+		);
+	});
+
+	// #1000 said a failed subscription showed the member nothing, and blamed
+	// `Form.surfaceFailure` routing to an error boundary "that renders nothing".
+	// Every panel layout mounts one, so this is the branch the app actually
+	// takes — and the two tests above only ever exercised the other one.
+	it('surfaces a thrown failure through the error boundary the panels mount', async () => {
+		vi.mocked(toast.error).mockClear();
+		await render(ActionHarness, {
+			boundary: true,
+			action: fakeRemoteForm({
+				rejectWith: { status: 400, body: { message: 'You already have a subscription.' } }
+			}),
+			label: 'Subscribe',
+			fieldName: 'id'
+		});
+
+		await page.getByRole('button', { name: 'Subscribe' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Subscribe' }).click();
+
+		await vi.waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith('You already have a subscription.')
+		);
+	});
+
 	// `submitLabel` is separate from `label` because the trigger names the thing
 	// you are opening and the submit names the thing you are doing.
 	it('gives the submit its own label', async () => {
@@ -306,5 +390,72 @@ describe('Action, canSubmit', () => {
 
 		const trigger = page.getByRole('button', { name: 'Adjust' }).element();
 		expect(trigger.getAttribute('cansubmit')).toBeNull();
+	});
+});
+
+/**
+ * Closing threw the whole form away with no step in between, so a mis-click on
+ * the ✕ cost a member the booking they had just typed. #876.
+ */
+describe('Action, unsaved changes', () => {
+	const closeButton = () => page.getByRole('button', { name: 'Close' });
+
+	it('closes an untouched dialog without asking', async () => {
+		await render(ActionHarness, {
+			action: fakeRemoteForm(),
+			label: 'Book',
+			formFieldName: 'notes'
+		});
+
+		await page.getByRole('button', { name: 'Book' }).click();
+		await expect.element(page.getByRole('dialog')).toBeVisible();
+		await closeButton().click();
+
+		await vi.waitFor(() => expect(dialog()).toBeNull());
+	});
+
+	it('asks before discarding a form that has been typed into', async () => {
+		await render(ActionHarness, {
+			action: fakeRemoteForm(),
+			label: 'Book',
+			formFieldName: 'notes'
+		});
+
+		await page.getByRole('button', { name: 'Book' }).click();
+		await page.getByRole('textbox', { name: 'Note' }).fill('bring the amp');
+		await closeButton().click();
+
+		await expect.element(page.getByText('You have unsaved changes')).toBeVisible();
+		expect(dialog()).not.toBeNull();
+	});
+
+	it('keeps what was typed when the discard is declined', async () => {
+		await render(ActionHarness, {
+			action: fakeRemoteForm(),
+			label: 'Book',
+			formFieldName: 'notes'
+		});
+
+		await page.getByRole('button', { name: 'Book' }).click();
+		await page.getByRole('textbox', { name: 'Note' }).fill('bring the amp');
+		await closeButton().click();
+		await page.getByRole('button', { name: 'Keep editing' }).click();
+
+		await expect.element(page.getByRole('textbox', { name: 'Note' })).toHaveValue('bring the amp');
+	});
+
+	it('closes on the second answer when the discard is confirmed', async () => {
+		await render(ActionHarness, {
+			action: fakeRemoteForm(),
+			label: 'Book',
+			formFieldName: 'notes'
+		});
+
+		await page.getByRole('button', { name: 'Book' }).click();
+		await page.getByRole('textbox', { name: 'Note' }).fill('bring the amp');
+		await closeButton().click();
+		await page.getByRole('button', { name: 'Discard' }).click();
+
+		await vi.waitFor(() => expect(dialog()).toBeNull());
 	});
 });

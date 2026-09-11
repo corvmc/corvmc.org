@@ -13,13 +13,44 @@ import { NOTIFICATION_TYPES } from '$lib/server/db/schema/notification';
  * mail. A sweep fixes the day it runs; only a guard keeps it fixed.
  */
 
+/**
+ * A file that writes notification copy: it imports `dispatch` /
+ * `dispatchEmailOnly`, or it builds a `NotificationEmailModel` of its own (the
+ * group fan-out does, because it batches rather than dispatching per member).
+ */
+const SENDS_COPY =
+	/(?:import\s*\{|const\s*\{)[^}]*\bdispatch(?:EmailOnly)?\b[^}]*\}\s*(?:from|=)|\bNotificationEmailModel\b/;
+
+/** The keys a sender puts member-facing copy under. */
+const COPY_KEYS = ['subject', 'title', 'heading', 'label'];
+
+/**
+ * Senders are found, not listed.
+ *
+ * A hand-maintained list guarded two files while three others wrote the same
+ * copy, and `'View Conversation'` sat in one of them (#783). Discovery covers a
+ * new sender the day it is written instead of the day someone remembers it.
+ */
+function senderFiles(dir = 'src/lib/server'): string[] {
+	const found: string[] = [];
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		const path = join(dir, entry.name);
+		if (entry.isDirectory()) found.push(...senderFiles(path));
+		else if (
+			entry.name.endsWith('.ts') &&
+			!entry.name.endsWith('.spec.ts') &&
+			SENDS_COPY.test(readFileSync(path, 'utf8'))
+		)
+			found.push(path);
+	}
+	return found;
+}
+
 const SOURCES = [
-	{
-		path: 'src/lib/server/notification/notification-listeners.ts',
-		keys: ['subject', 'title', 'heading', 'label']
-	},
+	...senderFiles().map((path) => ({ path, keys: COPY_KEYS })),
 	// Fixture subjects stand in for text a member typed into a form, so only the
-	// fields this repo writes itself are checked in there.
+	// fields this repo writes itself are checked in there. It imports nothing, so
+	// discovery cannot reach it.
 	{
 		path: 'src/lib/server/notification/email/fixtures.ts',
 		keys: ['heading', 'label']
@@ -134,9 +165,20 @@ function templateCopy(): { path: string; value: string }[] {
 }
 
 describe('notification copy casing', () => {
+	// A signal that stopped matching would leave the guard passing over an empty
+	// set, which is how it read as green with an offender in the tree (#783).
+	it('finds the files that write notification copy', () => {
+		expect(SOURCES.map((s) => s.path)).toContain(
+			'src/lib/server/notification/notification-listeners.ts'
+		);
+		expect(SOURCES.length).toBeGreaterThan(3);
+		expect(SOURCES.flatMap(({ path, keys }) => copyStrings(path, keys)).length).toBeGreaterThan(50);
+	});
+
+	// A discovered file need not carry copy of its own — `build-model.ts` passes
+	// a label through without writing one — so there is no per-file floor here.
 	it.each(SOURCES)('$path writes sentence case', ({ path, keys }) => {
 		const strings = copyStrings(path, keys);
-		expect(strings.length).toBeGreaterThan(0);
 
 		const offenders = strings
 			.map(({ key, value }) => ({ key, value, words: titleCasedWords(value) }))

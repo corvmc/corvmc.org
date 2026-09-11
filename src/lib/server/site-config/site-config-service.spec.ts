@@ -139,12 +139,14 @@ describe('getConfigsByPrefix', () => {
 		]);
 	});
 
-	it('returns integration defaults as empty strings', async () => {
-		const result = await getConfigsByPrefix('integration.utec');
-		expect(result.clientId).toBe('');
-		expect(result.clientSecret).toBe('');
-		expect(result.deviceId).toBe('');
-		expect(result.refreshToken).toBe('');
+	// The client secret is absent by design — env only, per #745 — so the exact
+	// key set is pinned rather than the survivors spot-checked.
+	it('registers the integration keys KV still backs, and no others', async () => {
+		expect(Object.keys(await getConfigsByPrefix('integration.utec')).sort()).toEqual([
+			'clientId',
+			'deviceId',
+			'refreshToken'
+		]);
 	});
 });
 

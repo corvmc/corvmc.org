@@ -1,7 +1,6 @@
 <script lang="ts">
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { toast } from 'svelte-sonner';
 	import { updateGroupSession } from '$lib/remote/group-events.remote';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -59,7 +58,6 @@
 	variant="ghost"
 	size="xs"
 	onsuccess={onchanged}
-	onfailure={() => toast.error('Could not save the session')}
 >
 	{#snippet form()}
 		<div class="space-y-4">

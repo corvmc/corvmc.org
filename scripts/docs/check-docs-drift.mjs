@@ -28,6 +28,14 @@ import { join, relative } from 'path';
 import { listRoutes, readSnapshot, SNAPSHOT_PATH } from './route-inventory.mjs';
 
 const HELP_DIR = 'src/content/help';
+
+/**
+ * A folder README that orients rather than catalogues; the index above it owns the files.
+ * Anchored to its own line so a README that *documents* the marker inline — as `docs/README.md`
+ * does — is not read as using it. That mistake makes the root index delegate to nothing above it,
+ * which strips every doc in the tree of an owner at once.
+ */
+export const DELEGATED = /^<!--\s*docs-index:\s*delegated\s*-->\s*$/m;
 const DOCS_DIR = 'docs';
 const SEED_FILE = 'scripts/seed-dev.ts';
 const REPORT_PATH = 'docs-drift-report.json';
@@ -149,24 +157,47 @@ function checkHelpContent() {
  * Matching on basename rather than full path is deliberate. The indexes link with relative
  * paths, anchors and URL-encoded spaces, and a filename is a unique enough key here to avoid
  * teaching this script markdown.
+ *
+ * A folder README that carries `<!-- docs-index: delegated -->` is skipped as an owner and the
+ * search continues upward. That is for a README whose job is orientation rather than cataloguing
+ * — a landing page for the folder on github.com, where `docs/README.md` stays the one index. The
+ * marker is required rather than inferred: a folder README that simply forgot to list a file is
+ * the exact failure this check exists to catch, and it must not be able to opt out by accident.
  */
-function checkDocIndexes() {
+/**
+ * The nearest `README.md` at or above `file` that actually indexes it — skipping any that
+ * delegates upward — or null if the tree has none.
+ *
+ * @param {Set<string>} readmes every README path in the tree
+ * @param {(path: string) => string} bodyOf reads a README's text
+ * @param {string} file
+ * @returns {string | null}
+ */
+export function nearestIndex(readmes, bodyOf, file) {
+	let dir = file.slice(0, file.lastIndexOf('/'));
+	for (;;) {
+		const candidate = `${dir}/README.md`;
+		if (candidate !== file && readmes.has(candidate) && !DELEGATED.test(bodyOf(candidate))) {
+			return candidate;
+		}
+		if (!dir.includes('/')) return null;
+		dir = dir.slice(0, dir.lastIndexOf('/'));
+	}
+}
+
+export function checkDocIndexes() {
 	const errors = [];
 	const files = walk(DOCS_DIR).map((/** @type {string} */ f) => relative('.', f));
 	const readmes = new Set(files.filter((/** @type {string} */ f) => f.endsWith('/README.md')));
 	const bodies = new Map();
 
-	/** The nearest `README.md` at or above `file`, or null if the doc tree has none. */
 	/** @param {string} file */
-	function ownerOf(file) {
-		let dir = file.slice(0, file.lastIndexOf('/'));
-		for (;;) {
-			const candidate = `${dir}/README.md`;
-			if (candidate !== file && readmes.has(candidate)) return candidate;
-			if (!dir.includes('/')) return null;
-			dir = dir.slice(0, dir.lastIndexOf('/'));
-		}
+	function body(file) {
+		if (!bodies.has(file)) bodies.set(file, readFileSync(file, 'utf-8'));
+		return bodies.get(file);
 	}
+
+	const ownerOf = (/** @type {string} */ f) => nearestIndex(readmes, body, f);
 
 	for (const file of files) {
 		// A README is indexed by its own parent folder's link, not by name; the folders are few
@@ -178,9 +209,8 @@ function checkDocIndexes() {
 			errors.push(`${file} has no index above it (expected a README.md in docs/)`);
 			continue;
 		}
-		if (!bodies.has(owner)) bodies.set(owner, readFileSync(owner, 'utf-8'));
 		const name = file.slice(file.lastIndexOf('/') + 1);
-		if (!bodies.get(owner).includes(name)) {
+		if (!body(owner).includes(name)) {
 			errors.push(`${file} is not linked from ${owner}`);
 		}
 	}
@@ -252,9 +282,12 @@ function main() {
 	process.exit(hasIntegrity || hasDrift ? 1 : 0);
 }
 
-try {
-	main();
-} catch (e) {
-	console.error('check-docs-drift failed:', e instanceof Error ? e.message : e);
-	process.exit(2);
+// Guarded so the checks above can be imported and unit-tested; `main` exits the process.
+if (import.meta.url === `file://${process.argv[1]}`) {
+	try {
+		main();
+	} catch (e) {
+		console.error('check-docs-drift failed:', e instanceof Error ? e.message : e);
+		process.exit(2);
+	}
 }

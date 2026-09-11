@@ -14,7 +14,7 @@ import { documentKey, sanitizeFilename } from '$lib/server/storage-keys';
 
 /**
  * Group documents — a file store, not a document tool. Phase 8 of
- * `docs/specs/groups-spec.md`.
+ * `docs/specs/shipped/groups-spec.md`.
  *
  * Group-scoped by argument, exactly as `announcement-service.ts` is: every
  * function takes a `groupId` and every write is scoped to it. Nothing here

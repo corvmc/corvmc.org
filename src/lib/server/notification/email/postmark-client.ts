@@ -167,7 +167,7 @@ export interface TemplateBatchMessage {
  *
  * On the **transactional** stream, like `sendEmailWithTemplate` and unlike
  * `sendBroadcastBatch`. That is deliberate and argued in
- * docs/specs/groups-spec.md: an announcement is not marketing, you are getting
+ * docs/specs/shipped/groups-spec.md: an announcement is not marketing, you are getting
  * it because you joined a roster, and a marketing opt-out must not silence a
  * group somebody chose to be in. The cost of that choice is that a spam
  * complaint here lands on the stream that also carries password resets, which

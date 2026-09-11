@@ -1,6 +1,7 @@
 ---
 name: Finding (found while doing something else)
 about: A real problem noticed in passing, filed rather than fixed
+type: Bug
 labels: needs-triage, agent-filed
 ---
 
@@ -8,7 +9,11 @@ labels: needs-triage, agent-filed
      not fix. The bar is the same as a human's: a finding worth filing is one
      someone else could act on without asking you what you meant.
 
-     Do not file a hunch, a style preference, or something you already fixed. -->
+     Do not file a hunch, a style preference, or something you already fixed.
+
+     Type defaults to Bug because a finding is a defect by definition. If what you
+     found is a shape that will cost later rather than something behaving wrongly,
+     change the type to Tech debt after filing. -->
 
 ## What is wrong
 

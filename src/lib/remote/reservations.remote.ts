@@ -113,6 +113,7 @@ import {
 	SEARCH_LIMIT,
 	LIST_LIMIT,
 	CONFIRMATION_WINDOW_DAYS,
+	confirmWindowOpensAt,
 	withinConfirmationWindow
 } from '$lib/config';
 
@@ -197,6 +198,33 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	};
 });
 
+/**
+ * Every hold a group actually has, including the ones it does not appear to own.
+ *
+ * A group session books the room through its listing — `bookerType:
+ * 'event_listing'`, `bookerId` the event — so a plain `bookerType = 'group'`
+ * filter cannot see it, and a club could not find the hold for its own weekly
+ * jam on its own reservations page. Both shapes are the same group's booking.
+ *
+ * The listing side is a subquery rather than a join so the two branches stay
+ * one predicate the callers can drop into an existing `and(...)`.
+ */
+function bookedByGroup(groupId: string) {
+	return or(
+		and(eq(reservation.bookerType, 'group'), eq(reservation.bookerId, groupId)),
+		and(
+			eq(reservation.bookerType, 'event_listing'),
+			inArray(
+				reservation.bookerId,
+				db
+					.select({ id: eventListing.id })
+					.from(eventListing)
+					.where(eq(eventListing.groupId, groupId))
+			)
+		)
+	);
+}
+
 export const getBandReservations = query(z.string(), async (slug) => {
 	// A bare `requireUser()` here meant any signed-in account could read any
 	// band's practice schedule, the name of whoever booked each session, and the
@@ -239,8 +267,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(
 			and(
-				eq(reservation.bookerType, 'group'),
-				eq(reservation.bookerId, band.id),
+				bookedByGroup(band.id),
 				gt(reservation.startsAt, now),
 				ne(reservation.status, 'cancelled')
 			)
@@ -262,13 +289,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
-		.where(
-			and(
-				eq(reservation.bookerType, 'group'),
-				eq(reservation.bookerId, band.id),
-				lte(reservation.startsAt, now)
-			)
-		)
+		.where(and(bookedByGroup(band.id), lte(reservation.startsAt, now)))
 		.orderBy(desc(reservation.startsAt))
 		.limit(SEARCH_LIMIT);
 
@@ -638,11 +659,20 @@ export const getReservationStartTimes = query(z.string(), async (dateParam) => {
 		return count;
 	}
 
-	const options = slots
-		.filter((s, i) => s.available && contiguousFrom(i) >= minSlots)
-		.map((s) => ({ value: s.startTime, label: formatSlotTime(s.startTime) }));
-
-	return options;
+	// Every operating-hour slot, not only the bookable ones. Dropping the rest
+	// left gaps with no cause: the policy strip says 9 AM – 10 PM and the list
+	// simply did not contain 10 AM, which reads as a broken app rather than as
+	// somebody else having the room.
+	return slots.map((s, i) => {
+		const label = formatSlotTime(s.startTime);
+		if (!s.available) return { value: s.startTime, label: `${label} — booked`, disabled: true };
+		if (contiguousFrom(i) < minSlots) {
+			// Free, but with a booking or closing time too soon after it to fit the
+			// shortest session — which is a different thing from being taken.
+			return { value: s.startTime, label: `${label} — too short`, disabled: true };
+		}
+		return { value: s.startTime, label, disabled: false };
+	});
 });
 
 /** Available end times for a given date and start time. */
@@ -1523,15 +1553,33 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
-	// Only a real Stripe charge (or staff) confirms a reservation outside the
-	// confirmation window.
+	// Only a real Stripe charge (or staff) commits a reservation outside the
+	// confirmation window: free hours are spent at confirmation, and confirmation
+	// opens CONFIRMATION_WINDOW_DAYS out.
 	const staff = await isStaff(locals.user.id);
 	const outsideWindow = !staff && !withinConfirmationWindow(startsAt);
+
+	// Nothing to charge and too early to commit — so the booking `create()` just
+	// wrote is the answer, not an error. This threw a 400 the member never saw,
+	// over a `scheduled` row that survived it: they were left owning a booking
+	// they had been told nothing about, which `cancel-unconfirmed` then killed at
+	// its start time. The row is exactly what `bookMemberReservation` produces;
+	// report it as the hold it is.
+	if (
+		outsideWindow &&
+		(data.skipPayment === 'on' ||
+			(await isFullyCreditCovered(locals.user.id, durationHours, totalCents, hourlyRateCents)))
+	) {
+		return {
+			reservationId: res.id,
+			scheduled: true as const,
+			confirmOpensAt: confirmWindowOpensAt(startsAt).toISOString()
+		};
+	}
 
 	if (data.skipPayment === 'on') {
 		// Confirm: commit free hours now. If fully covered, it's settled; otherwise
 		// the cash remainder is collected at the door.
-		if (outsideWindow) throw error(400, CONFIRM_WINDOW_MSG);
 		const { settled } = await commitCreditsAndSettleIfCovered({
 			reservationId: res.id,
 			userId: locals.user.id,
@@ -1552,14 +1600,6 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 		}
 		return { reservationId: res.id, confirmed: true as const };
 	}
-
-	// Pay Ahead: a fully credit-covered booking would confirm without a charge, so
-	// it's blocked outside the window — only a real charge commits early.
-	if (
-		outsideWindow &&
-		(await isFullyCreditCovered(locals.user.id, durationHours, totalCents, hourlyRateCents))
-	)
-		throw error(400, CONFIRM_WINDOW_MSG);
 
 	// Pay Ahead: commit free hours, then charge any cash remainder online now.
 	const { remainingCents, settled } = await commitCreditsAndSettleIfCovered({
@@ -2293,10 +2333,18 @@ export const getReservations = query(
 		.object({
 			after: z.coerce.date().optional(),
 			forUser: z.string().optional(),
-			includeTerminal: z.boolean().optional()
+			includeTerminal: z.boolean().optional(),
+			/**
+			 * Newest first. An upcoming list reads forward — the next booking is the
+			 * one that matters — but history reads backward, and the All tab opened
+			 * on a member's first-ever reservation with no way to reverse it.
+			 */
+			newestFirst: z.boolean().optional()
 		})
 		.optional(),
-	async ({ after, forUser, includeTerminal } = {}): Promise<ReservationWithPrice[]> => {
+	async ({ after, forUser, includeTerminal, newestFirst } = {}): Promise<
+		ReservationWithPrice[]
+	> => {
 		const { locals } = getRequestEvent();
 
 		if (!locals.user) throw error(401, 'Not authenticated');
@@ -2327,7 +2375,7 @@ export const getReservations = query(
 			.select()
 			.from(reservation)
 			.where(and(...filters.filter((f): f is SQL => Boolean(f))))
-			.orderBy(reservation.startsAt);
+			.orderBy(newestFirst ? desc(reservation.startsAt) : reservation.startsAt);
 
 		// `price` is the full room rate. We deliberately do NOT project a credit
 		// discount onto uncommitted bookings here: free hours are only applied at
@@ -2464,7 +2512,7 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 	// query exists to collapse.
 	const [active, all, membership, contact, instructor] = await Promise.all([
 		getReservations({ after: new Date().toISOString() }),
-		getReservations({ includeTerminal: true }),
+		getReservations({ includeTerminal: true, newestFirst: true }),
 		getMembershipStatus(),
 		getBookingContact(),
 		getInstructorByUserId(currentUser.id)

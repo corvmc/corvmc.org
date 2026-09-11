@@ -1,5 +1,6 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import { expect, within } from 'storybook/test';
 	import SplitBar from './SplitBar.svelte';
 
 	const { Story } = defineMeta({
@@ -38,91 +39,112 @@
 </script>
 
 <!-- The default position: $15.00, 74¢ to the card, 30% of what is left to divide. -->
-<Story name="Default">
-	<div class="max-w-lg">
-		<SplitBar
-			totalCents={1500}
-			value={atSuggested}
-			onchange={(c) => (atSuggested = c)}
-			fixedCents={74}
-			fixedLabel="Card processing"
-			valueLabel="The collective"
-			otherLabel="Sun Atoms"
-		/>
-	</div>
+<Story
+	name="Default"
+	play={async ({ canvasElement }) => {
+		// A story that renders the meta component with empty args instead of this
+		// markup reads `$NaN` and has no value on the slider at all.
+		const slider = within(canvasElement).getByRole('slider');
+		await expect(slider).toHaveAttribute('aria-valuenow', '282');
+		await expect(canvasElement).toHaveTextContent('$2.82');
+	}}
+>
+	{#snippet template()}
+		<div class="max-w-lg">
+			<SplitBar
+				totalCents={1500}
+				value={atSuggested}
+				onchange={(c) => (atSuggested = c)}
+				fixedCents={74}
+				fixedLabel="Card processing"
+				valueLabel="The collective"
+				otherLabel="Sun Atoms"
+			/>
+		</div>
+	{/snippet}
 </Story>
 
 <!-- Refused entirely. The whole net goes to the other party and the collective's
      segment disappears — the position that has to look deliberate, not broken. -->
 <Story name="Dragged to zero">
-	<div class="max-w-lg">
-		<SplitBar
-			totalCents={1500}
-			value={atZero}
-			onchange={(c) => (atZero = c)}
-			fixedCents={74}
-			fixedLabel="Card processing"
-			valueLabel="The collective"
-			otherLabel="Sun Atoms"
-		/>
-	</div>
+	{#snippet template()}
+		<div class="max-w-lg">
+			<SplitBar
+				totalCents={1500}
+				value={atZero}
+				onchange={(c) => (atZero = c)}
+				fixedCents={74}
+				fixedLabel="Card processing"
+				valueLabel="The collective"
+				otherLabel="Sun Atoms"
+			/>
+		</div>
+	{/snippet}
 </Story>
 
 <!-- The other end: everything divisible allocated, the other party at $0.00. -->
 <Story name="Dragged to the maximum">
-	<div class="max-w-lg">
-		<SplitBar
-			totalCents={1500}
-			value={atMax}
-			onchange={(c) => (atMax = c)}
-			fixedCents={74}
-			fixedLabel="Card processing"
-			valueLabel="The collective"
-			otherLabel="Sun Atoms"
-		/>
-	</div>
+	{#snippet template()}
+		<div class="max-w-lg">
+			<SplitBar
+				totalCents={1500}
+				value={atMax}
+				onchange={(c) => (atMax = c)}
+				fixedCents={74}
+				fixedLabel="Card processing"
+				valueLabel="The collective"
+				otherLabel="Sun Atoms"
+			/>
+		</div>
+	{/snippet}
 </Story>
 
 <!-- No fixed slice: the plain two-party case, for a payment that isn't on a card. -->
 <Story name="No fixed slice">
-	<div class="max-w-lg">
-		<SplitBar
-			totalCents={1500}
-			value={noFee}
-			onchange={(c) => (noFee = c)}
-			valueLabel="The collective"
-			otherLabel="Sun Atoms"
-		/>
-	</div>
+	{#snippet template()}
+		<div class="max-w-lg">
+			<SplitBar
+				totalCents={1500}
+				value={noFee}
+				onchange={(c) => (noFee = c)}
+				valueLabel="The collective"
+				otherLabel="Sun Atoms"
+			/>
+		</div>
+	{/snippet}
 </Story>
 
 <!-- `otherLabel` is real user data — a band picked its own name, and a bill can
      carry a long one. The segment labels have to survive it at every width. -->
 <Story name="Long party names">
-	<div class="max-w-lg">
-		<SplitBar
-			totalCents={2000}
-			value={longNames}
-			onchange={(c) => (longNames = c)}
-			fixedCents={88}
-			fixedLabel="Card processing"
-			valueLabel="Corvallis Music Collective"
-			otherLabel="The Reluctant Astronauts & Friends"
-		/>
-	</div>
+	{#snippet template()}
+		<div class="max-w-lg">
+			<SplitBar
+				totalCents={2000}
+				value={longNames}
+				onchange={(c) => (longNames = c)}
+				fixedCents={88}
+				fixedLabel="Card processing"
+				valueLabel="Corvallis Music Collective"
+				otherLabel="The Reluctant Astronauts & Friends"
+			/>
+		</div>
+	{/snippet}
 </Story>
 
 <!-- A free ticket or a name-your-price release taken to zero. Nothing to divide,
      so the control must render inert rather than divide by zero. -->
 <Story name="Zero total">
-	<div class="max-w-lg">
-		<SplitBar
-			totalCents={0}
-			value={0}
-			onchange={() => {}}
-			fixedLabel="Card processing"
-			valueLabel="The collective"
-			otherLabel="Sun Atoms"
-		/>
-	</div>
+	{#snippet template()}
+		<div class="max-w-lg">
+			<SplitBar
+				totalCents={0}
+				value={0}
+				onchange={() => {}}
+				fixedLabel="Card processing"
+				valueLabel="The collective"
+				otherLabel="Sun Atoms"
+			/>
+		</div>
+	{/snippet}
 </Story>

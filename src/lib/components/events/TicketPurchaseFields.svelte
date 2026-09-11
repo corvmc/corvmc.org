@@ -10,7 +10,11 @@
 	import SplitBar from '$lib/components/ui/SplitBar.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { formatCents } from '$lib/utils/format';
-	import { computeTicketSplit, suggestedCollectiveCents } from '$lib/finance/ticket-split';
+	import {
+		actsAnchoredCollectiveCents,
+		actsMinCents,
+		computeTicketSplit
+	} from '$lib/finance/ticket-split';
 	import { TICKET_MIN_CHARGE_CENTS } from '$lib/config';
 	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
 
@@ -84,14 +88,34 @@
 		})
 	);
 	const divisibleCents = $derived(atZero.chargeCents - atZero.stripeFeeCents);
+	// The acts' guarantee is a share of the *suggested* price, so the bar has a
+	// **ceiling** as well as a floor of zero — and above the suggestion that
+	// ceiling sits well clear of where the bar opens, which is what makes the
+	// surplus the buyer's to direct. Same number the server validates against:
+	// `validateTicketSplit` calls `actsMinCents` too.
+	const actsFloorCents = $derived(
+		actsMinCents({
+			baseCents: suggestedUnitCents * quantity,
+			grossPaidCents: totalCents,
+			coverFees,
+			bps: collectiveShareBps
+		})
+	);
+	const collectiveCeilingCents = $derived(Math.max(0, divisibleCents - actsFloorCents));
 	const collective = $derived(
-		collectiveOverride ?? suggestedCollectiveCents(divisibleCents, collectiveShareBps)
+		collectiveOverride ??
+			actsAnchoredCollectiveCents({
+				baseCents: suggestedUnitCents * quantity,
+				grossPaidCents: totalCents,
+				coverFees,
+				bps: collectiveShareBps
+			})
 	);
 	const split = $derived(
 		computeTicketSplit({
 			unitPriceCents: unitCents,
 			quantity,
-			collectiveCents: Math.min(collective, Math.max(0, divisibleCents)),
+			collectiveCents: Math.min(Math.max(0, collective), collectiveCeilingCents),
 			coverFees,
 			suggestedUnitCents
 		})
@@ -147,8 +171,13 @@
 >
 	<label class="input w-full items-center gap-1">
 		<span class="opacity-60">$</span>
+		<!-- Named explicitly. The wrapping `<label class="input">` is daisyUI's
+		     input group, and it was claiming the accessible name — a screen
+		     reader read this field as "$ per ticket" rather than the question
+		     above it (#994). -->
 		<input
 			id="ticketAmount"
+			aria-label="How much are you paying, per ticket"
 			type="number"
 			step="0.01"
 			min="0"
@@ -195,15 +224,18 @@
 {#if !isFree && !inDeadZone && !belowFloor}
 	<div class="space-y-3 border-t border-base-200 pt-4">
 		<p class="font-medium">Where should it go?</p>
-		<!-- No `otherFloorCents`. Passing the price floor there is the bug fixed in
-		     the music BuyPanel: it consumed the whole amount, clamped the
-		     collective's share to zero, and the suggested position never appeared.
-		     The acts' protection is the total the buyer named, not a floor on the
-		     bar. -->
+		<!-- `otherFloorCents` is the acts' **guarantee**, not the event's price
+		     floor. Passing the price floor there is the bug fixed in the music
+		     BuyPanel: it consumed the whole amount, clamped the collective's share
+		     to zero, and the suggested position never appeared. This number is
+		     already clamped to what is divisible, so on a show paid under the
+		     suggestion it is the whole divisible amount and the bar correctly has
+		     nowhere to go — the acts get everything. #827. -->
 		<SplitBar
 			{totalCents}
 			value={split.collectiveCents}
 			onchange={(c) => (collectiveOverride = c)}
+			otherFloorCents={actsFloorCents}
 			fixedCents={split.stripeFeeCents}
 			fixedLabel="Card processing"
 			valueLabel="The Collective"

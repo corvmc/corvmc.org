@@ -5,6 +5,7 @@
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
+	import SendContactSheetAction from '$lib/components/actions/SendContactSheetAction.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import Field from '$lib/components/ui/Form/FormField.svelte';
 	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
@@ -272,7 +273,21 @@
 									value={slot.contactPhone ?? ''}
 								/>
 							</div>
-							<div class="flex justify-end"><SubmitButton label="Save" /></div>
+							<div class="flex items-center justify-between gap-3">
+								{#if slot.actEntryId}
+									<!-- The act fills its own details in rather than a staffer typing
+									     them: `/act/[token]` is the privacy-best path, and CMC then
+									     holds what the act chose to give. -->
+									<SendContactSheetAction
+										entryId={slot.actEntryId}
+										actName={slot.actName}
+										defaultEmail={slot.contactEmail ?? ''}
+									/>
+								{:else}
+									<span></span>
+								{/if}
+								<SubmitButton label="Save" />
+							</div>
 						</Form>
 
 						{#if slot.eventBandId}

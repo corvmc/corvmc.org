@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '$lib/themes/band-site/index.css';
+	import BandSiteFonts from '$lib/components/band-site/BandSiteFonts.svelte';
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
 	import { bandSitePath, bandSiteUrl } from '$lib/utils/band-site-url';
 	import { env } from '$env/dynamic/public';
@@ -40,6 +41,8 @@
 		<meta name="twitter:card" content="summary" />
 	{/if}
 </svelte:head>
+
+<BandSiteFonts />
 
 <div class="band-site-container {containerClass} min-h-screen">
 	{@render children()}

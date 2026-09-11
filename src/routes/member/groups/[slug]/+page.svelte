@@ -14,7 +14,6 @@
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShort } from '$lib/utils/format';
 	import { goto, invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import {
 		getMemberGroup,
 		leaveGroupForm,
@@ -45,7 +44,7 @@
 	 * a band member keeps coming back to band-shaped work with money attached. A
 	 * club is a subscription to a program: its value arrives by notification and
 	 * on the calendar, and this page is where you come for the archive and the
-	 * roster. See docs/specs/groups-spec.md § Interface.
+	 * roster. See docs/specs/shipped/groups-spec.md § Interface.
 	 *
 	 * Announcements, Documents and Sessions are phases 7, 8 and 9, and all three
 	 * are now built.
@@ -73,7 +72,7 @@
 	const members = $derived(data.members);
 
 	/**
-	 * Announcements lead, per docs/specs/groups-spec.md § Interface: the archive
+	 * Announcements lead, per docs/specs/shipped/groups-spec.md § Interface: the archive
 	 * is what you come back for, where Overview is what you read once. It is also
 	 * the default tab, so `?tab=` names the other three and the bare URL is the
 	 * post list.
@@ -143,7 +142,6 @@
 			variant="ghost"
 			size="sm"
 			onsuccess={() => goto(resolve('/member/groups'))}
-			onfailure={() => toast.error('Failed to leave')}
 		>
 			{#snippet form()}
 				<input {...leaveFields.groupId.as('hidden', group.id)} />
@@ -282,7 +280,6 @@
 													size="xs"
 													successToast="Taken off the guide"
 													onsuccess={refreshRoster}
-													onfailure={() => toast.error('Could not unlist it')}
 												>
 													{#snippet form()}
 														<input {...unpublishSessionFields.groupId.as('hidden', group.id)} />
@@ -301,7 +298,6 @@
 													size="xs"
 													successToast="Published"
 													onsuccess={refreshRoster}
-													onfailure={() => toast.error('Could not publish it')}
 												>
 													{#snippet form()}
 														<input {...publishSessionFields.groupId.as('hidden', group.id)} />
@@ -322,7 +318,6 @@
 												size="xs"
 												successToast="Session cancelled"
 												onsuccess={refreshRoster}
-												onfailure={() => toast.error('Could not cancel it')}
 											>
 												{#snippet form()}
 													<input {...cancelSessionFields.groupId.as('hidden', group.id)} />
@@ -456,7 +451,6 @@
 												confirm="Revoke the invitation for {m.member.title}?"
 												successToast="Invitation revoked"
 												onsuccess={refreshRoster}
-												onfailure={() => toast.error('Failed to revoke')}
 											>
 												{#snippet form()}
 													<input {...revokeFields.slug.as('hidden', slug)} />
@@ -487,7 +481,6 @@
 													size="xs"
 													successToast="Ownership transferred"
 													onsuccess={refreshRoster}
-													onfailure={() => toast.error('Failed to transfer')}
 												>
 													{#snippet form()}
 														<input {...transferFields.slug.as('hidden', slug)} />
@@ -504,7 +497,6 @@
 												confirm="Remove {m.member.title} from {group.name}?"
 												successToast="Member removed"
 												onsuccess={refreshRoster}
-												onfailure={() => toast.error('Failed to remove')}
 											>
 												{#snippet form()}
 													<input {...removeFields.slug.as('hidden', slug)} />
@@ -545,7 +537,6 @@
 									confirm="Revoke the invitation to {inv.email}?"
 									successToast="Invitation revoked"
 									onsuccess={refreshRoster}
-									onfailure={() => toast.error('Failed to revoke')}
 								>
 									{#snippet form()}
 										<input {...revokeEmailFields.slug.as('hidden', slug)} />

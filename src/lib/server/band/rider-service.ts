@@ -561,6 +561,12 @@ export interface EventRiderSummary {
 	id: string;
 	/** The credit as it appears on the bill, which is not always a CMC band. */
 	name: string;
+	/**
+	 * The `directory_entry` this credit points at, or null if nobody has listed
+	 * the act. Null is what makes it unaskable: `requestableActs` filters on this
+	 * column, so the advance could not tell "silent" from "unreachable" (#974).
+	 */
+	entryId: string | null;
 	/** Null for an external act — there is no rider to link to. */
 	slug: string | null;
 	channelCount: number;
@@ -590,6 +596,9 @@ export async function getEventRiderSummaries(eventId: string): Promise<EventRide
 			id: eventBand.id,
 			name: eventBand.name,
 			billingOrder: eventBand.billingOrder,
+			// Distinguishes an act that is merely silent from one that cannot be
+			// asked at all, which the card used to render identically (#974).
+			entryId: eventBand.directoryEntryId,
 			groupId: directoryEntry.groupId,
 			slug: group.slug
 		})
@@ -604,6 +613,7 @@ export async function getEventRiderSummaries(eventId: string): Promise<EventRide
 		return rows.map((r) => ({
 			id: r.id,
 			name: r.name,
+			entryId: r.entryId,
 			slug: null,
 			channelCount: 0,
 			phantomCount: 0,
@@ -666,6 +676,7 @@ export async function getEventRiderSummaries(eventId: string): Promise<EventRide
 		return {
 			id: row.id,
 			name: row.name,
+			entryId: row.entryId,
 			slug: row.slug ?? null,
 			channelCount,
 			phantomCount: Number(count?.phantomCount ?? 0),

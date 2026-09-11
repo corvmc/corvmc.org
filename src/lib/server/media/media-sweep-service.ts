@@ -11,6 +11,7 @@ import {
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { audioRelease } from '$lib/server/db/schema/audio';
+import { directoryEntry } from '$lib/server/db/schema/directory';
 import { deleteObject } from '$lib/server/storage';
 import { deletePrivateObject } from '$lib/server/private-storage';
 import { isWithheldPosterKey } from '$lib/server/storage-keys';
@@ -45,7 +46,10 @@ const PARENT_TABLES = {
 	// not `media` rows, so this pass reaps the cover of a deleted release and
 	// has nothing to say about the audio — which `audio_track` deletes outright,
 	// having no sibling usages to count.
-	audio_release: audioRelease
+	audio_release: audioRelease,
+	// An external act's tech rider. The entry outlives the show, so this only
+	// fires when staff delete the listing itself.
+	directory_entry: directoryEntry
 } as const satisfies Record<AttachableType, unknown>;
 
 export type SweepResult = {

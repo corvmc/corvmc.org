@@ -92,8 +92,8 @@
 			<input type="hidden" name="shiftId" value={shift!.shiftId} />
 			<p class="text-sm">Pre-filled from the shift. Adjust if it differs.</p>
 		{:else}
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">What did you help with?</span></div>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">What did you help with?</span>
 				<Select name="volunteerRoleId">
 					{#each roles as role (role.id)}
 						<option value={role.id}>{role.name}</option>

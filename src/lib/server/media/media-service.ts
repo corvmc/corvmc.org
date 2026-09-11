@@ -195,6 +195,34 @@ export async function attachExisting(
 // ---------------------------------------------------------------------------
 
 /**
+ * Which of these parents have anything in this slot.
+ *
+ * One statement for a whole list rather than a `listFor` each: the caller is
+ * asking a yes/no per parent across a bill, and the per-parent read would be
+ * one round trip per act.
+ */
+export async function listAttachedEntries(
+	attachableType: AttachableType,
+	attachableIds: string[],
+	slot: MediaSlot
+): Promise<Set<string>> {
+	if (attachableIds.length === 0) return new Set();
+
+	const rows = await db
+		.selectDistinct({ attachableId: mediaAttachment.attachableId })
+		.from(mediaAttachment)
+		.where(
+			and(
+				eq(mediaAttachment.attachableType, attachableType),
+				inArray(mediaAttachment.attachableId, attachableIds),
+				eq(mediaAttachment.slot, slot)
+			)
+		);
+
+	return new Set(rows.map((r) => r.attachableId));
+}
+
+/**
  * One parent's media, newest slot ordering first.
  *
  * Safe against orphans without any extra predicate, because the caller supplies

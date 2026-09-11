@@ -40,10 +40,16 @@ export const tableOrder = [
 	// References contractor, inventory_asset and user, so it clears before none
 	// of them.
 	'contractor_job',
+	// References `project` and `user`, so it clears after both.
+	'financial_entry',
 	'event_listing',
 	// The ops half of one listing. References event_listing and user, so it
 	// clears before both.
 	'production',
+	// Cascades from production, so it clears with it.
+	'production_expense',
+	// References event_listing and directory_entry, so it clears before both.
+	'artifact_request',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
 	// (docs/specs/shipped/media-spec.md), so it constrains nothing else in this order.

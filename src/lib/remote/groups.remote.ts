@@ -22,6 +22,7 @@ import {
 import {
 	createInvite as createEmailInvite,
 	listForGroup as listEmailInvites,
+	listInvitesForEmail,
 	revoke as revokeEmailInviteService
 } from '$lib/server/group/group-invite-service';
 import { resolveImageUrl } from '$lib/server/storage';
@@ -58,7 +59,7 @@ import {
  *
  * Staff-guarded throughout, and flag-gated on `groups`. Bands are deliberately
  * absent from every export here: they are member self-service and have their own
- * staff surface at `/staff/bands`. See docs/specs/groups-spec.md.
+ * staff surface at `/staff/bands`. See docs/specs/shipped/groups-spec.md.
  */
 
 async function requireGroupsStaff() {
@@ -209,7 +210,28 @@ export const reactivateGroup = form(z.object({ groupId: z.string().min(1) }), as
  */
 export const getMemberGroups = query(async () => {
 	const user = requireUser();
-	return listMemberGroups(user.id);
+	// An emailed invitation is a `group_invite` row, not a pending roster row, so
+	// none of them reached this page — a member who was invited by email and did
+	// not follow the link had no way to learn it existed or that it lapsed (#906).
+	const [groups, invites] = await Promise.all([
+		listMemberGroups(user.id),
+		listInvitesForEmail(user.email)
+	]);
+
+	return {
+		...groups,
+		emailInvites: invites
+			.filter((i) => i.groupKind !== 'band')
+			.map((i) => ({
+				id: i.id,
+				name: i.groupName,
+				kind: i.groupKind,
+				role: i.role,
+				invitedByName: i.invitedByName,
+				expiresAt: i.expiresAt,
+				expired: i.expiresAt <= new Date()
+			}))
+	};
 });
 
 /**

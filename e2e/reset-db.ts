@@ -232,8 +232,13 @@ export function clearE2eStateDir(): boolean {
  * build leaves a WAL beside each. A freshly seeded state directory here has six:
  * two for D1 (the database and its metadata), two for R2, one for KV and one for
  * the cache. Checkpointing only D1 closed one of six windows, which is why the
- * race survived #360: the failure that started this names `SENTRY_DO`, not D1,
- * and no amount of checkpointing D1 was ever going to reach it.
+ * race survived #360.
+ *
+ * `SENTRY_DO` in the crash text names no database and no Durable Object — this
+ * app declares none. It is workerd's redaction marker on the words "SQLite
+ * failed", paired with the `NOSENTRY` marking the detail after it. The crash
+ * says which *kind* of failure, never which file, so a sweep of all of them is
+ * the only answer available.
  *
  * Failures are swallowed per file. A database workerd already holds open is one
  * this cannot help with, and throwing here would turn a missed optimisation into

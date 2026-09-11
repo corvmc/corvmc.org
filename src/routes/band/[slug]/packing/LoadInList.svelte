@@ -74,7 +74,7 @@
 							<span class="font-medium" class:line-through={item.packed}>{item.label}</span>
 							{#if item.quantity > 1}<Badge size="sm">×{item.quantity}</Badge>{/if}
 							{#if item.packed}
-								<Badge color="success" size="sm"><IconCheck size={12} /> In the van</Badge>
+								<Badge variant="success" size="sm"><IconCheck size={12} /> In the van</Badge>
 							{/if}
 						</div>
 						<p class="mt-0.5 text-xs text-base-content/60">
@@ -92,7 +92,7 @@
 					-->
 					<div class="flex items-center gap-2">
 						{#if item.assignedUserId}
-							<Badge color="info" size="sm">{item.assignedName}</Badge>
+							<Badge variant="info" size="sm">{item.assignedName}</Badge>
 							{#if item.assignedUserId === viewerId}
 								<Form
 									remote={releasePackingItem.for(item.id)}
@@ -117,7 +117,7 @@
 								<SubmitButton label="I'll bring it" variant="secondary" size="xs" />
 							</Form>
 						{:else}
-							<Badge color="warning" size="sm">Nobody has this</Badge>
+							<Badge variant="warning" size="sm">Nobody has this</Badge>
 						{/if}
 
 						{#if isOnRoster}

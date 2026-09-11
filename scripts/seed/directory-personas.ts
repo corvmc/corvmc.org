@@ -3,7 +3,7 @@ import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { db } from './db';
 import { scryptHash } from './hash';
 import { pendingEntries, pendingTags } from './pending';
-import { type SeedRole } from './types';
+import { type SeedRole, type SeedUser } from './types';
 import { randomUUID } from 'crypto';
 
 /**
@@ -45,7 +45,7 @@ import { randomUUID } from 'crypto';
 export async function seedDirectoryPersonas(roles: SeedRole[]) {
 	console.log('Seeding directory matching personas...');
 	const memberRole = roles.find((r) => r.name === 'member');
-	if (!memberRole) return { users: 0 };
+	if (!memberRole) return { users: 0, seeker: null, leader: null, undecided: null };
 
 	const hashedPassword = await scryptHash('password');
 	const now = new Date();
@@ -55,12 +55,13 @@ export async function seedDirectoryPersonas(roles: SeedRole[]) {
 		email: string;
 		name: string;
 		memberNumber: number;
+		emailVerified?: boolean;
 	}) => {
 		await db.insert(user).values({
 			id: p.id,
 			name: p.name,
 			email: p.email,
-			emailVerified: true,
+			emailVerified: p.emailVerified ?? true,
 			memberNumber: p.memberNumber,
 			pronouns: 'they/them',
 			createdAt: now,
@@ -159,11 +160,16 @@ export async function seedDirectoryPersonas(roles: SeedRole[]) {
 	pendingTags.push({ subjectId: LEADER.id, kind: 'instrument', value: 'guitar' });
 
 	// --- the undecided: a finished profile with nothing to match on ----------
+	// The only persona with an unconfirmed address, so the account page's
+	// verification notice, its resend button and the staff panel's "Not yet"
+	// are all reachable by signing in as this one. `seedMarketing` puts an
+	// unclaimed subscriber row under the same address for the refusal (#757).
 	const UNDECIDED = {
 		id: 'seed-dir-undecided',
 		email: 'undecided@corvallismusic.org',
 		name: 'Kit Alvarez',
-		memberNumber: 72
+		memberNumber: 72,
+		emailVerified: false
 	};
 	await insertPersona(UNDECIDED);
 	pendingEntries.set(UNDECIDED.id, {
@@ -177,5 +183,14 @@ export async function seedDirectoryPersonas(roles: SeedRole[]) {
 	pendingTags.push({ subjectId: UNDECIDED.id, kind: 'instrument', value: 'keys' });
 	pendingTags.push({ subjectId: UNDECIDED.id, kind: 'genre', value: 'indie' });
 
-	return { users: 3 };
+	// The cast rides back out because these three are the natural senders and
+	// recipients of a direct message — one recruiting, one being recruited, one
+	// who wants nothing to do with it — and `seedDirectMessages` had been
+	// building its conversations on accounts that cannot sign in (#867).
+	return {
+		users: 3,
+		seeker: SEEKER as SeedUser,
+		leader: LEADER as SeedUser,
+		undecided: UNDECIDED as SeedUser
+	};
 }

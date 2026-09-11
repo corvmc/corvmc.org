@@ -10,6 +10,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { eventListing, eventBand } from './event';
 import { user } from './authentication';
+import { productionExpenseCategories } from '../../../config';
 
 // ---------------------------------------------------------------------------
 // Productions
@@ -101,6 +102,17 @@ export const production = sqliteTable(
 		 * opened one is history, not a live reference.
 		 */
 		createdByUserId: text('created_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+
+		/**
+		 * When close-out was signed off, and by whom. `updatedAt` is not a proxy:
+		 * it moves on any later write to the row. Set-null on the user for the
+		 * same reason as `createdByUserId` — who closed a night is history.
+		 * `closed` is terminal, so neither is ever cleared.
+		 */
+		closedAt: integer('closed_at', { mode: 'timestamp' }),
+		closedByUserId: text('closed_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
 
@@ -224,7 +236,15 @@ export const productionSlot = sqliteTable(
 		 * have to anyway.
 		 */
 		guaranteeCents: integer('guarantee_cents'),
-		/** Basis points of the acts' pool. 7000 is the house's opening 70%. */
+		/**
+		 * Basis points **of the acts' pool**, not of the door — the pool is already
+		 * the acts' 70%, and these divide it among them. A solo act is `10000`.
+		 *
+		 * They must sum to `10000` across the bill; `setSlotTerms` refuses a share
+		 * that overspends, because three acts at 7000 each pays out 210% of a pool
+		 * that holds 100% and the overspend comes out of the collective's own cut.
+		 * The default is an equal split — CMC has no house headliner/opener split.
+		 */
 		percentageBps: integer('percentage_bps'),
 		/** Guarantee *or* percentage, whichever is greater — rather than both. */
 		versus: integer('versus', { mode: 'boolean' }).notNull().default(false),
@@ -256,3 +276,53 @@ export const productionSlot = sqliteTable(
 
 export type ProductionSlot = typeof productionSlot.$inferSelect;
 export type NewProductionSlot = typeof productionSlot.$inferInsert;
+
+/**
+ * What a show cost, per line.
+ *
+ * The denominator `production_slot.againstNet` needs: a percentage-of-net deal
+ * shares the door *after* these come out, and until this table existed that
+ * promise was rendered to acts with nothing behind it (#839).
+ */
+export const productionExpense = sqliteTable(
+	'production_expense',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		productionId: text('production_id')
+			.notNull()
+			.references(() => production.id, { onDelete: 'cascade' }),
+
+		label: text('label').notNull(),
+		category: text('category', { enum: productionExpenseCategories }).notNull(),
+		amountCents: integer('amount_cents').notNull(),
+
+		/**
+		 * Whether this comes off the door before a net deal is worked out.
+		 *
+		 * Stored rather than derived from `category`: the same cost is deductible
+		 * at one show and the collective's own at another, and which it was has to
+		 * survive being asked a year later.
+		 */
+		deductible: integer('deductible', { mode: 'boolean' }).notNull().default(true),
+
+		paidTo: text('paid_to'),
+		paidAt: integer('paid_at', { mode: 'timestamp' }),
+		notes: text('notes'),
+
+		recordedByUserId: text('recorded_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [index('idx_production_expense_production').on(t.productionId, t.category)]
+);
+
+export type ProductionExpense = typeof productionExpense.$inferSelect;
+export type NewProductionExpense = typeof productionExpense.$inferInsert;

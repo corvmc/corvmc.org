@@ -322,6 +322,11 @@ export interface StaffCreateReservationParams extends CreateReservationParams {
 	status?: ReservationStatus;
 	/** The staff member performing the booking — recorded as the audit trail. */
 	staffUserId?: string;
+	/**
+	 * This hold blocks a recurring series outright. Only a show does; a member
+	 * booking is soft and can be waitlisted behind one.
+	 */
+	hardHold?: boolean;
 }
 
 export async function staffCreate(params: StaffCreateReservationParams): Promise<ReservationRow> {
@@ -333,7 +338,8 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 		endsAt,
 		notes,
 		status = 'confirmed',
-		staffUserId
+		staffUserId,
+		hardHold = false
 	} = params;
 
 	if (startsAt >= endsAt)
@@ -349,7 +355,8 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 			status,
 			startsAt,
 			endsAt,
-			notes: notes ?? null
+			notes: notes ?? null,
+			hardHold
 		})
 		.returning();
 

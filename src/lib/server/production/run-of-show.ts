@@ -136,3 +136,38 @@ export function runOfShowWarnings(input: {
 
 	return warnings;
 }
+
+// ---------------------------------------------------------------------------
+// How the acts' pool divides
+// ---------------------------------------------------------------------------
+
+/** A whole pool. `percentageBps` is basis points **of the acts' pool**, not of the door. */
+export const POOL_BPS = 10_000;
+
+/**
+ * Equal shares of the acts' pool, in basis points, summing to exactly `POOL_BPS`.
+ *
+ * The acts split the pool on an equal basis — no house headliner/opener split.
+ * Three acts get 3333/3333/3334: the remainder goes one basis point at a time
+ * down the billing order, so the total is exact. Returned in `sortOrder` order.
+ */
+export function equalPoolShares(count: number): number[] {
+	if (count <= 0) return [];
+	const base = Math.floor(POOL_BPS / count);
+	const shares = Array.from({ length: count }, () => base);
+	// `POOL_BPS - base * count` is at most `count - 1`, so this never wraps.
+	for (let i = 0; i < POOL_BPS - base * count; i++) shares[shares.length - 1 - i] += 1;
+	return shares;
+}
+
+/**
+ * Whether a proposed share fits in what the pool has left.
+ *
+ * Only the overspend is refused: three acts at 7000 each pays out 210% of a
+ * pool holding 100%, and the excess comes out of the collective's own cut. A
+ * bill mid-edit legitimately sums low, which is unfinished rather than wrong.
+ */
+export function poolShareFits(otherSharesBps: number[], proposedBps: number): boolean {
+	const used = otherSharesBps.reduce((sum, bps) => sum + bps, 0);
+	return used + proposedBps <= POOL_BPS;
+}

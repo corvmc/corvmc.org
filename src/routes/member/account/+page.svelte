@@ -15,7 +15,12 @@
 	import { toast } from 'svelte-sonner';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { IconMail, IconBell } from '@tabler/icons-svelte';
-	import { updateProfile, changePassword, deleteAccount } from '$lib/remote/account.remote';
+	import {
+		updateProfile,
+		changePassword,
+		deleteAccount,
+		resendVerificationEmail
+	} from '$lib/remote/account.remote';
 	import { ADULT_AGE_YEARS, toBirthDateInput } from '$lib/utils/age';
 	import {
 		getMemberAccountPage,
@@ -33,12 +38,7 @@
 <PageContent width="2xl">
 	<!-- Profile info -->
 	<InfoCard title="Contact Information">
-		<Form
-			remote={updateProfile}
-			guard
-			onsuccess={() => toast.success('Contact info updated')}
-			onfailure={() => toast.error('Update failed')}
-		>
+		<Form remote={updateProfile} guard onsuccess={() => toast.success('Contact info updated')}>
 			<div class="space-y-4">
 				<div class="grid grid-cols-2 gap-4">
 					<FormField field={fields.name} type="text" label="Name" value={data.user.name} required />
@@ -58,6 +58,24 @@
 					readonly
 					description="Contact staff to change your email address."
 				/>
+
+				<!-- Nothing on the site is gated on this. Confirming is what lets us
+				     attach a mailing list this address was already on (#757). -->
+				{#if !data.user.emailVerified}
+					<Alert type="info">
+						This address is not confirmed yet. Your account works either way — confirming lets us
+						link any mailing list you joined with it before.
+						{#snippet action()}
+							<Action
+								action={resendVerificationEmail}
+								label="Resend link"
+								size="sm"
+								variant="default"
+								successToast="Verification email sent"
+							/>
+						{/snippet}
+					</Alert>
+				{/if}
 
 				<FormField
 					field={fields.phone}
@@ -170,7 +188,6 @@
 					label="Change Password"
 					modalTitle="Change Password"
 					onsuccess={() => toast.success('Password changed')}
-					onfailure={() => toast.error('Password change failed')}
 					variant="default"
 					size="sm"
 					outline
@@ -211,7 +228,6 @@
 						label="Delete Account"
 						modalTitle="Delete Account"
 						submitLabel="Delete My Account"
-						onfailure={() => toast.error('Deletion failed')}
 						variant="error"
 						size="sm"
 						onsuccess={() => {

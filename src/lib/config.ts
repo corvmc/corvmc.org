@@ -113,6 +113,17 @@ export const creditTypeConfig: Record<CreditType, { maxBalance: number | null }>
 export const CONFIRMATION_WINDOW_DAYS = 3;
 
 /**
+ * What every member surface says about a booking nobody confirmed.
+ *
+ * `cancelUnconfirmedReservations()` cancels anything still `scheduled` at its
+ * start time, so the card, the detail page and the confirmation reminder are
+ * all describing one sweep. Stated once because three wordings of the same
+ * policy is how two of them end up wrong.
+ */
+export const UNCONFIRMED_RELEASE_NOTICE =
+	'We hold the room until your session starts. A booking that is not confirmed by then is released.';
+
+/**
  * How long an unreferenced `media` row is left alone before the sweep reaps it
  * and deletes its R2 object.
  *
@@ -137,7 +148,7 @@ export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
  * document's row and object are written in one request, so no such gap exists —
  * what the delay buys instead is an undo window on a destructive click, and a
  * week is the useful size for "the minutes I deleted on Monday". See
- * docs/specs/groups-spec.md § Documents and private storage.
+ * docs/specs/shipped/groups-spec.md § Documents and private storage.
  */
 export const DOCUMENT_SWEEP_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -176,6 +187,10 @@ export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
  * three different deals has no single percentage — the deal itself lives on
  * `event_band` (see `docs/specs/project-spec.md`, the deal shape). Say "we
  * suggest 70% to the acts" in copy, never "the acts' deal is 70%".
+ *
+ * The acts' 70% is a guarantee against the **suggested price**, not against
+ * what the buyer paid. Anything above the suggestion opens as the collective's
+ * and stays the buyer's to redirect — a gift they cannot direct is not one.
  */
 export const TICKET_COLLECTIVE_SHARE_BPS = 3000;
 
@@ -258,7 +273,7 @@ export type GroupKind = (typeof groupKinds)[number];
  * and no page open, so "you've been invited to join a band" has to be true, and
  * for the Real Book Club it is not.
  */
-/** An announcement's title and markdown body — see docs/specs/groups-spec.md. */
+/** An announcement's title and markdown body — see docs/specs/shipped/groups-spec.md. */
 export const ANNOUNCEMENT_TITLE_MAX = 200;
 export const ANNOUNCEMENT_BODY_MAX = 10000;
 
@@ -267,7 +282,7 @@ export const groupKindLabels: Record<GroupKind, string> = {
 	// a musical group of any size: both call sites — the invitation email and the
 	// announcement fan-out — address somebody about a roster they are joining or
 	// already on, and a roster of people is exactly where "band" still reads
-	// better. See docs/specs/groups-spec.md § Solo acts.
+	// better. See docs/specs/shipped/groups-spec.md § Solo acts.
 	band: 'band',
 	club: 'club',
 	committee: 'committee'
@@ -291,7 +306,7 @@ export const groupKindLabels: Record<GroupKind, string> = {
  * under all three. A band is always `invite_only` and the service refuses any
  * other value for `kind: 'band'` — a band member may spend the band's credits on
  * rehearsal time, so an `open` band would be a way to join a stranger's band and
- * spend their money. See `docs/specs/groups-spec.md`.
+ * spend their money. See `docs/specs/shipped/groups-spec.md`.
  */
 export const groupJoinPolicies = ['invite_only', 'open', 'by_application'] as const;
 export type GroupJoinPolicy = (typeof groupJoinPolicies)[number];
@@ -398,6 +413,117 @@ export const assetStatusLabels: Record<AssetStatus, string> = {
  * gifts-in-kind report counts `kind = 'donation'`, so an opening balance is
  * invisible to both by construction and cannot drift back in.
  */
+// ---------------------------------------------------------------------------
+// The financial record
+// ---------------------------------------------------------------------------
+
+/**
+ * What a `financial_entry` amount **means** to the collective.
+ *
+ * `in_kind` and `pass_through` are exactly what a naive `sum()` gets wrong, which
+ * is why they are a column rather than a convention. See
+ * `docs/specs/financial-record-spec.md`.
+ */
+export const financialEntryKinds = ['earned', 'spent', 'in_kind', 'pass_through'] as const;
+export type FinancialEntryKind = (typeof financialEntryKinds)[number];
+
+export const financialEntryKindLabels: Record<FinancialEntryKind, string> = {
+	earned: 'Earned',
+	spent: 'Spent',
+	in_kind: 'In kind',
+	pass_through: 'Pass-through'
+};
+
+/**
+ * The chart of accounts — what an amount was **for**.
+ *
+ * A const rather than a table: reports group by it and the annual report's lines
+ * are named after it, so adding one is a deploy and that is correct.
+ */
+export const financialCategories = [
+	'ticket_sales',
+	'act_payout',
+	'act_guarantee',
+	'payout_rounding',
+	'card_fees',
+	'fee_coverage',
+	'reservation',
+	'membership',
+	'music_sales',
+	'donation',
+	'grant',
+	'equipment',
+	'facility',
+	'contractor',
+	'refund_absorbed',
+	'other'
+] as const;
+export type FinancialCategory = (typeof financialCategories)[number];
+
+/**
+ * What a show's expense was for.
+ *
+ * `deductible` on the category is what `production_slot.againstNet` divides
+ * against: a percentage-of-net deal shares the door after these come out, and a
+ * cost the collective carries whatever happens is not one of them.
+ */
+export const productionExpenseCategories = [
+	'sound',
+	'staffing',
+	'hospitality',
+	'marketing',
+	'rental',
+	'other'
+] as const;
+export type ProductionExpenseCategory = (typeof productionExpenseCategories)[number];
+
+export const productionExpenseCategoryLabels: Record<ProductionExpenseCategory, string> = {
+	sound: 'Sound',
+	staffing: 'Staffing',
+	hospitality: 'Hospitality',
+	marketing: 'Marketing',
+	rental: 'Rental',
+	other: 'Other'
+};
+
+/**
+ * What CMC asks an act or an artist to hand over before a show.
+ *
+ * The collection surfaces already exist — `/band/[slug]/rider`,
+ * `/band/[slug]/press-kit`, and `/act/[token]` for an act with no account.
+ * A request is the asking, and whether it arrived is **derived** from the
+ * artifact rather than stored, so a rider filled in without being asked still
+ * counts. See `docs/development/feature-analysis.md` on one mechanism serving
+ * several features.
+ */
+export const requestableArtifacts = ['tech_rider', 'epk', 'poster_art'] as const;
+export type RequestableArtifact = (typeof requestableArtifacts)[number];
+
+export const requestableArtifactLabels: Record<RequestableArtifact, string> = {
+	tech_rider: 'Tech rider',
+	epk: 'Press kit',
+	poster_art: 'Poster art'
+};
+
+/** How the money actually moved, and the key a Stripe cross-check joins on. */
+export const financialSettlements = ['stripe', 'cash', 'credit', 'none'] as const;
+export type FinancialSettlement = (typeof financialSettlements)[number];
+
+/** What an entry is about. No foreign key — an entry outlives what it describes. */
+export const financialSubjects = [
+	'ticket',
+	'reservation',
+	'audio_purchase',
+	'acquisition',
+	'purchase_order',
+	'contractor_job',
+	'production',
+	'volunteer_hour',
+	'membership',
+	'other'
+] as const;
+export type FinancialSubject = (typeof financialSubjects)[number];
+
 export const acquisitionKinds = ['purchase', 'donation', 'grant', 'opening_balance'] as const;
 export type AcquisitionKind = (typeof acquisitionKinds)[number];
 
@@ -1651,6 +1777,14 @@ export const positions: Record<Position, Grants> = {
 		contractor: ['read', 'recordInvoice'],
 		inventory: ['read', 'manageAcquisitions', 'report'],
 		reservation: ['read', 'comp'],
+		// A show's settlement is on the production console, behind `event.read`
+		// like everything else on that page, so the one person whose job is the
+		// money could not see where it went. Read only — the advance, the lineup
+		// and the run of show come with it, which is the same breadth
+		// `volunteer_coordinator` already has and for the same reason: a console
+		// is not divisible into per-reader slices without splitting the page's
+		// one load-bearing query.
+		event: ['read'],
 		user: ['list', 'read']
 	}
 };
@@ -1768,7 +1902,13 @@ export const attachableTypes = [
 	 * is one `getPublicUrl()` away from being addressable. See
 	 * `audio_track.objectKey`.
 	 */
-	'audio_release'
+	'audio_release',
+	/**
+	 * An act with no CMC account. `rider` only: the structured rider is keyed on
+	 * `group_id` and an external act has no group, so a file is the only tech
+	 * rider it can ever hand over (#863).
+	 */
+	'directory_entry'
 ] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 

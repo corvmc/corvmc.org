@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { titleCase } from '$lib/utils/format';
-import { SHORT_TEXT_MAX } from '$lib/config';
+import { CONFIRMATION_WINDOW_DAYS, SHORT_TEXT_MAX } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
@@ -535,13 +535,16 @@ export const reactivateUser = form(
 	}),
 	async (data) => {
 		await requireCapability('user.deactivate');
+		let subscription: 'resumed' | 'active' | 'lapsed' | 'none' = 'none';
 		try {
-			await reactivateUserService(data.id);
+			({ subscription } = await reactivateUserService(data.id));
 		} catch (err) {
 			mapDomainError(err);
 		}
 		void getUserPage(data.id).refresh();
-		return { success: true };
+		// `lapsed` is the one outcome staff have to act on: the membership needs a
+		// fresh checkout rather than the resume the other cases got.
+		return { success: true, subscription };
 	}
 );
 
@@ -601,7 +604,8 @@ export const getMemberDashboard = query(async () => {
 		credits,
 		dbSubscription,
 		profileComplete,
-		matches
+		matches,
+		unconfirmed
 	] = await Promise.all([
 		db
 			.select()
@@ -638,7 +642,34 @@ export const getMemberDashboard = query(async () => {
 		// Into the existing Promise.all rather than a query of its own. The page
 		// is on one load-bearing query (`custom/no-concurrent-remote-queries`),
 		// and a card that fanned out a second one would not render past kit 2.64.
-		findMatchesFor(currentUser.id)
+		findMatchesFor(currentUser.id),
+		// Every future booking still waiting to be committed, whatever week it
+		// falls in. `weekReservations` above is bounded to this week, so a
+		// booking further out could not reach the page at all — and the one the
+		// member has to act on is exactly the one they have forgotten (#964).
+		db
+			.select()
+			.from(reservation)
+			.where(
+				and(
+					eq(reservation.status, 'scheduled'),
+					gte(reservation.startsAt, nowDate),
+					or(
+						and(
+							eq(reservation.createdByUserId, currentUser.id),
+							eq(reservation.bookerType, 'user')
+						),
+						activeBandIds.length > 0
+							? and(
+									eq(reservation.bookerType, 'group'),
+									inArray(reservation.bookerId, activeBandIds)
+								)
+							: undefined
+					)
+				)
+			)
+			.orderBy(reservation.startsAt)
+			.limit(5)
 	]);
 
 	const subscription = mapDbSubscription(dbSubscription);
@@ -679,7 +710,14 @@ export const getMemberDashboard = query(async () => {
 		usedThisMonth,
 		pendingInviteCount,
 		profileComplete,
-		matches
+		matches,
+		unconfirmed: unconfirmed.map((r) => ({
+			id: r.id,
+			startsAt: r.startsAt,
+			endsAt: r.endsAt,
+			bandName: r.bookerType === 'group' ? (bandNameMap[r.bookerId] ?? null) : null,
+			confirmFrom: new Date(r.startsAt.getTime() - CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000)
+		}))
 	};
 });
 

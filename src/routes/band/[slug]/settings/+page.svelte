@@ -87,7 +87,6 @@
 			toast.success('Act deleted');
 			goto(resolve('/member/bands'));
 		}}
-		onfailure={() => toast.error('Failed to delete act')}
 	>
 		<div class="space-y-4">
 			<input {...deleteFields.bandId.as('hidden', band.id)} />

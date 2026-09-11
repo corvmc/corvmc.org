@@ -46,7 +46,7 @@
 <Form {remote} {onsuccess} class="space-y-6">
 	<div>
 		<div class="flex items-baseline justify-between">
-			<span class="label-text font-medium">Monthly contribution</span>
+			<span class="fieldset-legend font-medium">Monthly contribution</span>
 			<span class="text-3xl font-bold text-primary">${amount}</span>
 		</div>
 

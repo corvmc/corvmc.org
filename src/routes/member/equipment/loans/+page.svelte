@@ -9,6 +9,7 @@
 	import { CancelLoanAction } from '$lib/components/actions';
 	import Button from '$lib/components/ui/Button.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import {
 		IconHash,
 		IconCalendar,
@@ -29,7 +30,9 @@
 <PageContent>
 	<TabBar
 		tabs={[
-			{ key: 'active', label: 'Active', badge: data.active.length },
+			// Not "Active": the set includes loans still `requested`, which staff
+			// have not approved yet (#896).
+			{ key: 'active', label: 'Current', badge: data.active.length },
 			{ key: 'past', label: 'Past', badge: data.past.length }
 		]}
 		active={activeTab}
@@ -47,7 +50,7 @@
 								{loan.equipmentName ?? 'Free-form Request'}
 							</h3>
 							<div class="mt-1 flex gap-2">
-								<StatusBadge status={loan.status} />
+								<StatusBadge status={loan.status} label />
 								{#if loan.isOverdue}
 									<Badge variant="error">Overdue</Badge>
 								{/if}
@@ -113,7 +116,11 @@
 				</CardBody>
 			</Card>
 		{:else}
-			<p class="py-8 text-center opacity-60">No active loans.</p>
+			<EmptyState
+				message="No loans on the go."
+				actionLabel="Browse the catalog"
+				actionHref="/member/equipment"
+			/>
 		{/each}
 	{:else}
 		{#each data.past as loan (loan.id)}
@@ -121,7 +128,7 @@
 				<CardBody padding="sm">
 					<div class="flex items-start justify-between">
 						<h3 class="font-semibold">{loan.equipmentName ?? 'Free-form Request'}</h3>
-						<StatusBadge status={loan.status} />
+						<StatusBadge status={loan.status} label />
 					</div>
 
 					<dl class="mt-2 grid gap-x-4 gap-y-1 text-sm" style="grid-template-columns: auto 1fr;">

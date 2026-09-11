@@ -115,7 +115,6 @@
 							toast.success('Status updated');
 							invalidateAll();
 						}}
-						onfailure={() => toast.error('Could not check the domain')}
 					>
 						<input {...refreshFields.slug.as('hidden', slug)} />
 						<SubmitButton
@@ -133,7 +132,6 @@
 						toast.success('Custom domain removed');
 						invalidateAll();
 					}}
-					onfailure={() => toast.error('Could not remove the domain')}
 				>
 					<input {...removeFields.slug.as('hidden', slug)} />
 					<SubmitButton
@@ -158,7 +156,6 @@
 					toast.success('Domain added — add the DNS records to finish');
 					invalidateAll();
 				}}
-				onfailure={() => toast.error('Could not add that domain')}
 			>
 				<input {...setFields.slug.as('hidden', slug)} />
 				<div class="mt-3 space-y-3">

@@ -67,7 +67,7 @@ vi.mock('$lib/server/db/schema/group-invite', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/group', () => ({
-	group: { id: 'id', name: 'name', kind: 'kind' },
+	group: { id: 'id', name: 'name', slug: 'slug', kind: 'kind', deletedAt: 'deleted_at' },
 	groupMember: {
 		id: 'id',
 		groupId: 'group_id',
@@ -88,6 +88,7 @@ vi.mock('drizzle-orm', () => ({
 	and: vi.fn(),
 	gt: vi.fn(),
 	desc: vi.fn(),
+	isNull: vi.fn(),
 	sql: (strings: TemplateStringsArray) => strings.join('')
 }));
 
@@ -114,6 +115,7 @@ const {
 	createInvite,
 	resolvePendingInvites,
 	listForGroup,
+	listInvitesForEmail,
 	revoke,
 	getByToken,
 	GroupInviteNotFoundError,
@@ -454,5 +456,33 @@ describe('listForGroup', () => {
 		expect(result).toHaveLength(2);
 		expect(result[0].email).toBe('a@test.com');
 		expect(result[1].position).toBe('Bass');
+	});
+});
+
+/**
+ * #906: an emailed invitation reached the member nowhere. `resolvePendingInvites`
+ * filters on `gt(expiresAt, now)` and only runs at signup; `getByToken` returns
+ * null past expiry. This is the read that lets a surface say it happened.
+ */
+describe('listInvitesForEmail', () => {
+	it('returns expired invitations rather than filtering them out', async () => {
+		const past = new Date(Date.now() - 600 * 86400000);
+		selectResults.push([
+			{ id: 'inv-1', groupName: 'The Strokes', groupKind: 'band', expiresAt: past }
+		]);
+
+		const rows = await listInvitesForEmail('alice@test.com');
+
+		expect(rows).toHaveLength(1);
+		expect(rows[0].expiresAt).toEqual(past);
+	});
+
+	it('normalises the email the way createInvite stores it', async () => {
+		selectResults.push([]);
+		const { eq } = await import('drizzle-orm');
+
+		await listInvitesForEmail('  Alice@Test.com  ');
+
+		expect(vi.mocked(eq)).toHaveBeenCalledWith('email', 'alice@test.com');
 	});
 });

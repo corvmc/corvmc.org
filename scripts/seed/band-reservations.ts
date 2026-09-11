@@ -1,17 +1,26 @@
 import { reservation } from '../../src/lib/server/db/schema/reservation';
+import { claimRoomNear } from './room';
 import { db } from './db';
 import { pick, ptDate, randomInt } from './util';
 
-export async function seedBandReservations(bands: any[]) {
+/**
+ * `alsoInclude` is appended to the slice rather than folded into `bands`,
+ * because a persona band appended to that array falls outside every
+ * `slice(0, n)` in the seed and a persona band spliced into it moves whichever
+ * band it displaced. Named here, its rows are drawn last and nothing else moves.
+ */
+export async function seedBandReservations(bands: any[], alsoInclude: any[] = []) {
 	console.log('Seeding band reservations...');
 	const rows = [];
 
-	for (const b of bands.filter((x: any) => !x.deletedAt).slice(0, 4)) {
+	const chosen = [...bands.filter((x: any) => !x.deletedAt).slice(0, 4), ...alsoInclude];
+	for (const b of chosen) {
 		for (const day of [-6, 3]) {
 			const hour = randomInt(17, 20);
 			const duration = pick([2, 3]);
-			const startsAt = ptDate(day, hour);
-			const endsAt = ptDate(day, hour + duration);
+			const slot = claimRoomNear(ptDate(day, hour), duration);
+			if (!slot) continue;
+			const { startsAt, endsAt } = slot;
 			const isPast = day < 0;
 
 			const [r] = await db

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { INVITE_EXPIRY_DAYS } from '$lib/config';
+import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE } from '$lib/config';
 import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
 
@@ -125,6 +125,7 @@ describe('registerAllNotificationListeners', () => {
 			'event.cancelled',
 			'reservation.reminder_due',
 			'reservation.confirmation_reminder_due',
+			'reservation.confirmed',
 			'reservation.cancelled',
 			'band.invitation_sent',
 			'band.invitation_accepted',
@@ -337,6 +338,25 @@ describe('collapsed listeners use the generic template', () => {
 		expect(params.type).toBe('confirmation_reminder');
 		expect(params.email).toBeDefined();
 		expect(params.email.subject).toContain('May 22');
+	});
+
+	// The reminder is the only thing that reaches a member who is not looking at
+	// the app, and the sweep cancels the booking outright. Asking them to confirm
+	// without saying what happens if they do not is the gap #895 filed.
+	it('confirmation_reminder says the booking is released if nobody confirms', async () => {
+		await emit('reservation.confirmation_reminder_due', {
+			userId: 'user-1',
+			userEmail: 'user@test.com',
+			userName: 'Bob',
+			date: 'May 22',
+			startTime: '2:00 PM',
+			endTime: '3:00 PM'
+		});
+
+		const { email } = mockDispatch.mock.calls[0][0];
+		expect(email.paragraphs.map((p: { text: string }) => p.text).join(' ')).toContain(
+			UNCONFIRMED_RELEASE_NOTICE
+		);
 	});
 
 	it('band.invitation_sent → notification alias', async () => {
@@ -614,6 +634,36 @@ describe('equipment.returned handler', () => {
 	});
 });
 
+// `confirmReservation` assembled an email-shaped payload — userEmail, date,
+// startTime, endTime — wrapped the emit in a try/catch on the grounds that a
+// listener must not fail a booking after the money moved, and had no listener.
+// A member who booked and paid for a room was never told. #817.
+describe('reservation.confirmed handler', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	it('sends the member their confirmation', async () => {
+		await emit('reservation.confirmed', {
+			reservationId: 'r1',
+			userId: 'user-1',
+			userName: 'Bob',
+			userEmail: 'user@test.com',
+			date: 'May 21',
+			startTime: '10:00 AM',
+			endTime: '11:00 AM'
+		});
+
+		expect(mockDispatch).toHaveBeenCalledTimes(1);
+		const params = mockDispatch.mock.calls[0][0];
+		expect(params.type).toBe('reservation_confirmed');
+		expect(params.userEmail).toBe('user@test.com');
+		expect(params.email.subject).toContain('May 21');
+		expect(params.email.details).toEqual([
+			{ label: 'Date', value: 'May 21' },
+			{ label: 'Time', value: '10:00 AM – 11:00 AM' }
+		]);
+	});
+});
+
 describe('reservation.cancelled handler', () => {
 	beforeEach(() => registerAllNotificationListeners());
 
@@ -765,6 +815,7 @@ describe('every notification-alias model', () => {
 
 		await emit('reservation.reminder_due', { ...member, ...when });
 		await emit('reservation.confirmation_reminder_due', { ...member, ...when });
+		await emit('reservation.confirmed', { ...member, ...when });
 		await emit('reservation.cancelled', { ...member, ...when, cancelledBy: 'staff' });
 		await emit('reservation.recurring_waitlisted', { ...member, ...when });
 		await emit('reservation.waitlist_expired', { ...member, ...when });

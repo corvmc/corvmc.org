@@ -5,6 +5,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { requireCapability } from '$lib/server/authorization';
+import { mapDomainError } from '$lib/server/errors';
 import {
 	listAudiences,
 	getAudience,
@@ -241,12 +242,19 @@ export const createAudience = form(
 		const baseSlug = (data.slug as string)?.trim() || generateSlug(name);
 		const slug = await ensureUniqueSlug(baseSlug, audience, audience.slug);
 
-		const created = await createAudienceService({
-			name,
-			slug,
-			description: (data.description as string)?.trim() || undefined,
-			allowOptIn: data.allowOptIn
-		});
+		// `mapDomainError` is declared `: never`, so `created` is definitely
+		// assigned past the catch without a non-null assertion.
+		let created: Awaited<ReturnType<typeof createAudienceService>>;
+		try {
+			created = await createAudienceService({
+				name,
+				slug,
+				description: (data.description as string)?.trim() || undefined,
+				allowOptIn: data.allowOptIn
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		void getAudiences().refresh();
 		return { audienceId: created.id };
@@ -264,11 +272,16 @@ export const updateAudience = form(
 		await requireCapability('marketing.manageAudiences');
 
 		const id = data.id as string;
-		await updateAudienceService(id, {
-			name: data.name ? (data.name as string).trim() : undefined,
-			description: data.description !== undefined ? (data.description as string).trim() : undefined,
-			allowOptIn: data.allowOptIn
-		});
+		try {
+			await updateAudienceService(id, {
+				name: data.name ? (data.name as string).trim() : undefined,
+				description:
+					data.description !== undefined ? (data.description as string).trim() : undefined,
+				allowOptIn: data.allowOptIn
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		void getStaffAudienceDetail(id).refresh();
 		return { success: true };
@@ -347,10 +360,12 @@ export const createDraft = command(
 	}),
 	async (data) => {
 		const user = await requireCapability('marketing.manageCampaigns');
-		const campaign = await createCampaign({
-			...data,
-			sentById: user.id
-		});
+		let campaign: Awaited<ReturnType<typeof createCampaign>>;
+		try {
+			campaign = await createCampaign({ ...data, sentById: user.id });
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { campaignId: campaign.id };
 	}
 );
@@ -363,11 +378,13 @@ export const createAndSend = command(
 	}),
 	async (data) => {
 		const user = await requireCapability('marketing.send');
-		const campaign = await createCampaign({
-			...data,
-			sentById: user.id
-		});
-		await sendNow(campaign.id);
+		let campaign: Awaited<ReturnType<typeof createCampaign>>;
+		try {
+			campaign = await createCampaign({ ...data, sentById: user.id });
+			await sendNow(campaign.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { campaignId: campaign.id };
 	}
 );
@@ -381,13 +398,18 @@ export const createAndSchedule = command(
 	}),
 	async (data) => {
 		const user = await requireCapability('marketing.send');
-		const campaign = await createCampaign({
-			subject: data.subject,
-			markdownBody: data.markdownBody,
-			audienceIds: data.audienceIds,
-			sentById: user.id
-		});
-		await scheduleCampaignService(campaign.id, data.scheduledFor);
+		let campaign: Awaited<ReturnType<typeof createCampaign>>;
+		try {
+			campaign = await createCampaign({
+				subject: data.subject,
+				markdownBody: data.markdownBody,
+				audienceIds: data.audienceIds,
+				sentById: user.id
+			});
+			await scheduleCampaignService(campaign.id, data.scheduledFor);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { campaignId: campaign.id };
 	}
 );
@@ -402,7 +424,11 @@ export const saveDraft = command(
 		await requireCapability('marketing.manageCampaigns');
 		const { params } = getRequestEvent();
 		const id = params.id!;
-		await updateCampaign(id, data);
+		try {
+			await updateCampaign(id, data);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		void getCampaignDetail(id).refresh();
 		return { success: true };
 	}
@@ -411,7 +437,11 @@ export const saveDraft = command(
 export const sendCampaignNow = command(z.object({}), async () => {
 	await requireCapability('marketing.send');
 	const { params } = getRequestEvent();
-	await sendNow(params.id!);
+	try {
+		await sendNow(params.id!);
+	} catch (err) {
+		mapDomainError(err);
+	}
 	return { success: true };
 });
 
@@ -422,7 +452,11 @@ export const scheduleCampaign = command(
 	async (data) => {
 		await requireCapability('marketing.send');
 		const { params } = getRequestEvent();
-		await scheduleCampaignService(params.id!, data.scheduledFor);
+		try {
+			await scheduleCampaignService(params.id!, data.scheduledFor);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -430,7 +464,11 @@ export const scheduleCampaign = command(
 export const deleteCampaign = command(z.object({}), async () => {
 	await requireCapability('marketing.manageCampaigns');
 	const { params } = getRequestEvent();
-	await deleteCampaignService(params.id!);
+	try {
+		await deleteCampaignService(params.id!);
+	} catch (err) {
+		mapDomainError(err);
+	}
 	return { success: true };
 });
 
@@ -440,7 +478,11 @@ export const unscheduleCampaign = form(
 	}),
 	async (data) => {
 		await requireCapability('marketing.manageCampaigns');
-		await unscheduleCampaignService(data.campaignId as string);
+		try {
+			await unscheduleCampaignService(data.campaignId as string);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		void getCampaignDetail(data.campaignId as string).refresh();
 		return { success: true };
 	}

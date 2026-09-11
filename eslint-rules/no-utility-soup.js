@@ -34,14 +34,6 @@ const COMPONENTISED = {
  */
 const RAW_OK_FOR = { btn: ['label', 'summary', 'span'], card: ['a', 'li', 'Button'] };
 
-/** daisyUI 4 spellings that emit no CSS in daisyUI 5. */
-const DEAD = new Set([
-	'input-bordered',
-	'select-bordered',
-	'textarea-bordered',
-	'file-input-bordered'
-]);
-
 const OPACITY = new Set(['opacity-50', 'opacity-60', 'opacity-70']);
 
 /**
@@ -106,7 +98,6 @@ export default {
 			tooMany:
 				'{{count}} non-layout utility classes on one element — past about {{max}} this is a component, not a class list. Flexbox/grid/gap classes are not counted. See docs/development/ui-patterns.md.',
 			componentised: 'Use {{use}} instead of a raw `{{cls}}` class.',
-			dead: '`{{cls}}` emits no CSS in daisyUI 5 (the border is the default) — delete it.',
 			muted:
 				'Use `{{use}}` instead of `{{size}} {{opacity}}`. Colour, not opacity, so nested badges and links keep their own.',
 			inlineVar:
@@ -151,10 +142,9 @@ export default {
 				const el = elementName(node);
 
 				for (const cls of tokens) {
-					if (DEAD.has(cls)) {
-						context.report({ node, messageId: 'dead', data: { cls } });
-						continue;
-					}
+					// Dead daisyUI 4 spellings are `custom/no-dead-daisyui-classes`,
+					// which errors and reads every component rather than warning on
+					// route pages.
 					const use = /** @type {Record<string, string | undefined>} */ (COMPONENTISED)[cls];
 					if (!use) continue;
 					if (/** @type {Record<string, string[] | undefined>} */ (RAW_OK_FOR)[cls]?.includes(el))

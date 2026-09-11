@@ -8,6 +8,7 @@ import {
 	createExternalAct,
 	listExternalActs
 } from '$lib/server/directory/entry-service';
+import { listCreditInDirectory } from '$lib/server/event/event-service';
 
 /**
  * External acts — parties CMC has booked that are not members of anything here.
@@ -80,6 +81,30 @@ export const claimStaffExternalAct = form(
 		} catch (err) {
 			// `ActAlreadyClaimedError` is a 409 — two staff on the same act, which
 			// is an ordinary race rather than a fault.
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * List a credit that was typed onto a bill by name, so the act becomes
+ * askable.
+ *
+ * `requestableActs` filters on `event_band.directoryEntryId`, whose only writer
+ * is the lineup editor — and that sets it from the *group* a member picked. An
+ * act with no CMC relationship therefore could never be asked for a rider, for
+ * exactly the case the asking exists for (#974). Deliberate rather than
+ * automatic on lineup save: minting directory rows from typing is the heavier
+ * of the two options, and this keeps it a thing a producer does on purpose.
+ */
+export const listActInDirectory = form(
+	z.object({ eventBandId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			const entryId = await listCreditInDirectory(data.eventBandId);
+			return { success: true, entryId };
+		} catch (err) {
 			mapDomainError(err);
 		}
 	}

@@ -7,6 +7,7 @@
 	import ConfirmStep from '$lib/components/reservations/booking/ConfirmStep.svelte';
 	import PaymentStep from '$lib/components/reservations/booking/PaymentStep.svelte';
 	import BookingConflict from '$lib/components/reservations/booking/BookingConflict.svelte';
+	import { formatDate } from '$lib/utils/format';
 
 	const { fields } = bookAndPayReservation;
 
@@ -39,6 +40,8 @@
 			paid?: boolean;
 			confirmed?: boolean;
 			waitlisted?: boolean;
+			scheduled?: boolean;
+			confirmOpensAt?: string;
 			redirectUrl?: string;
 		};
 		if (r?.redirectUrl) {
@@ -46,6 +49,17 @@
 		} else {
 			if (r?.waitlisted) {
 				toast.info('The first instance is waitlisted because the slot is currently booked.');
+			}
+			// Booked too far out to commit free hours yet. Saying so is the point:
+			// this outcome used to arrive as a 400 nobody rendered, over a held
+			// booking the member was never told about.
+			if (r?.scheduled) {
+				const opens = r.confirmOpensAt ? formatDate(new Date(r.confirmOpensAt)) : null;
+				toast.info(
+					opens
+						? `Room held. Confirm it from ${opens} to spend your free hours.`
+						: 'Room held. Confirm it closer to the date to spend your free hours.'
+				);
 			}
 			onbooked?.();
 		}

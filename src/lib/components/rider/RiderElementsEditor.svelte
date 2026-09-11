@@ -208,9 +208,10 @@
 				{#if !readonly}
 					<div class="flex items-end gap-1 pb-1">
 						<Button
+							type="button"
 							variant="ghost"
 							size="sm"
-							square
+							shape="square"
 							aria-label="Move {element.label || 'item'} up"
 							disabled={index === 0}
 							onclick={() => moveElement(index, -1)}
@@ -218,9 +219,10 @@
 							<IconChevronUp size={16} />
 						</Button>
 						<Button
+							type="button"
 							variant="ghost"
 							size="sm"
-							square
+							shape="square"
 							aria-label="Move {element.label || 'item'} down"
 							disabled={index === elements.length - 1}
 							onclick={() => moveElement(index, 1)}
@@ -228,9 +230,10 @@
 							<IconChevronDown size={16} />
 						</Button>
 						<Button
+							type="button"
 							variant="ghost"
 							size="sm"
-							square
+							shape="square"
 							aria-label="Remove {element.label || 'item'}"
 							onclick={() => removeElement(index)}
 						>
@@ -262,6 +265,7 @@
 						<span class="text-xs font-medium">Inputs</span>
 						{#if !readonly}
 							<Button
+								type="button"
 								variant="ghost"
 								size="sm"
 								disabled={element.inputs.length >= RIDER_MAX_INPUTS_PER_ELEMENT}
@@ -342,9 +346,10 @@
 								/>
 								{#if !readonly}
 									<Button
+										type="button"
 										variant="ghost"
 										size="sm"
-										square
+										shape="square"
 										aria-label="Move {input.label || 'input'} up"
 										disabled={j === 0}
 										onclick={() => moveInput(element, j, -1)}
@@ -352,9 +357,10 @@
 										<IconChevronUp size={14} />
 									</Button>
 									<Button
+										type="button"
 										variant="ghost"
 										size="sm"
-										square
+										shape="square"
 										aria-label="Move {input.label || 'input'} down"
 										disabled={j === element.inputs.length - 1}
 										onclick={() => moveInput(element, j, 1)}
@@ -362,9 +368,10 @@
 										<IconChevronDown size={14} />
 									</Button>
 									<Button
+										type="button"
 										variant="ghost"
 										size="sm"
-										square
+										shape="square"
 										aria-label="Remove {input.label || 'input'}"
 										onclick={() => removeInput(element, j)}
 									>
@@ -382,6 +389,7 @@
 	<div class="flex items-center justify-between">
 		{#if !readonly}
 			<Button
+				type="button"
 				variant="ghost"
 				size="sm"
 				disabled={elements.length >= RIDER_MAX_ELEMENTS}

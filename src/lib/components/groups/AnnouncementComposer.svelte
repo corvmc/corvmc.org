@@ -2,7 +2,6 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import { createAnnouncement, updateAnnouncement } from '$lib/remote/announcements.remote';
 
 	/**
@@ -10,7 +9,7 @@
 	 *
 	 * Mount-agnostic: it takes its group as a prop and knows nothing about either
 	 * route, because the same component is the band panel's composer and the club
-	 * page's. See docs/specs/groups-spec.md § One implementation, two mount points.
+	 * page's. See docs/specs/shipped/groups-spec.md § One implementation, two mount points.
 	 *
 	 * Writing is not publishing. What this saves is a draft — the roster hears
 	 * nothing until somebody presses Publish — which is why the submit button
@@ -42,7 +41,6 @@
 		variant="ghost"
 		size="xs"
 		onsuccess={() => invalidateAll()}
-		onfailure={() => toast.error('Failed to save')}
 	>
 		{#snippet form()}
 			<div class="space-y-4">
@@ -76,7 +74,6 @@
 		variant="primary"
 		size="sm"
 		onsuccess={() => invalidateAll()}
-		onfailure={() => toast.error('Failed to save')}
 	>
 		{#snippet form()}
 			<div class="space-y-4">

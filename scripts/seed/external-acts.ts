@@ -1,5 +1,15 @@
 import { directoryEntry } from '../../src/lib/server/db/schema/directory';
+import { directoryEntryLink } from '../../src/lib/server/db/schema/directory-link';
 import { db } from './db';
+
+/**
+ * A live contact-sheet token, so `/act/{token}` is reachable locally.
+ *
+ * Nothing seeded one before, and staff issuing one is the only other way in —
+ * so the act's whole self-service surface, the rider upload included, could
+ * not be opened in a browser without three clicks of setup first.
+ */
+export const SEED_ACT_SHEET_TOKEN = 'seed-act-sheet-token';
 
 export async function seedExternalActs() {
 	const acts = [
@@ -41,5 +51,13 @@ export async function seedExternalActs() {
 			.returning();
 		rows.push(row);
 	}
+
+	await db.insert(directoryEntryLink).values({
+		entryId: rows[0].id,
+		token: SEED_ACT_SHEET_TOKEN,
+		email: 'booking@sawtoothrivals.example.com',
+		expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+	});
+
 	return rows;
 }

@@ -27,6 +27,7 @@
 	import {
 		formatCents,
 		formatDateShort,
+		formatDateTime,
 		formatDollars,
 		formatTime,
 		formatTimeRange,
@@ -45,11 +46,14 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
 	import { createShift } from '$lib/remote/volunteer.remote';
+	import { listActInDirectory } from '$lib/remote/external-acts.remote';
 	import { applyDutyList } from '$lib/remote/duty-lists.remote';
 	import { updateProduction, setProductionProducer } from '$lib/remote/productions.remote';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
+	import SettlementPanel from './SettlementPanel.svelte';
+	import ArtifactRequestsPanel from './ArtifactRequestsPanel.svelte';
 	import { TAB_KEYS, TAB_LABELS, parseTab, type TabKey } from './tabs';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { replaceState } from '$app/navigation';
@@ -91,6 +95,7 @@
 	const riders = $derived(loaded.riders);
 	const productionRecord = $derived(loaded.production);
 	const runOfShow = $derived(loaded.runOfShow);
+	const settlement = $derived(loaded.settlement);
 	/** The advance question: who has told us nothing at all. */
 	const ridersMissing = $derived(riders.filter((r) => r.empty).length);
 
@@ -636,7 +641,7 @@
 											class="input w-full"
 											required={editTicketingEnabled}
 										/>
-										<span class="label-text-alt mt-1 opacity-60">
+										<span class="mt-1 text-muted">
 											Where the sliding scale opens. Leave blank for a free event.
 										</span>
 									</FormField>
@@ -651,16 +656,16 @@
 											placeholder="0.00"
 											class="input w-full"
 										/>
-										<span class="label-text-alt mt-1 opacity-60">
+										<span class="mt-1 text-muted">
 											The least someone can pay. $0 lets anyone come for free — no card, no
 											questions. Leave it at $0 unless an act needs a floor.
 										</span>
 									</FormField>
 
-									<div class="form-control">
+									<div class="fieldset">
 										<label class="label cursor-pointer justify-start gap-3">
 											<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
-											<span class="label-text">Sell tickets through the site</span>
+											<span class="fieldset-legend">Sell tickets through the site</span>
 										</label>
 									</div>
 
@@ -698,7 +703,7 @@
 														bind:checked={rebookConfirmed}
 														class="checkbox checkbox-sm"
 													/>
-													<span class="label-text">Confirm rebook</span>
+													<span class="fieldset-legend">Confirm rebook</span>
 												</label>
 
 												{#if rebookConfirmed}
@@ -738,7 +743,7 @@
 																bind:checked={overrideConflicts}
 																class="checkbox checkbox-sm"
 															/>
-															<span class="label-text">
+															<span class="fieldset-legend">
 																Book it anyway — I know this double-books the space
 															</span>
 														</label>
@@ -761,7 +766,7 @@
 													onchange={toggleReserveSpace}
 													class="checkbox checkbox-sm"
 												/>
-												<span class="label-text">Reserve practice space</span>
+												<span class="fieldset-legend">Reserve practice space</span>
 											</label>
 
 											{#if reserveSpace}
@@ -806,7 +811,7 @@
 																bind:checked={overrideConflicts}
 																class="checkbox checkbox-sm"
 															/>
-															<span class="label-text">
+															<span class="fieldset-legend">
 																Book it anyway — I know this double-books the space
 															</span>
 														</label>
@@ -860,6 +865,14 @@
 					act that should not wait on a Save, and there is no list of candidates
 					a picker could offer — the capability matrix names no production lead.
 				-->
+					{#if productionRecord.closedAt}
+						<!-- `updatedAt` is not this date: it moves on any later write. -->
+						<p class="text-muted text-sm">
+							Closed {formatDateTime(productionRecord.closedAt)}{productionRecord.closedByName
+								? ` by ${productionRecord.closedByName}`
+								: ''}
+						</p>
+					{/if}
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-muted">Producer</span>
 						<span class="font-medium">{productionRecord.producerName ?? 'Nobody yet'}</span>
@@ -1023,6 +1036,14 @@
 			class="space-y-6"
 			class:hidden={tab !== 'advance'}
 		>
+			<ArtifactRequestsPanel
+				eventId={evt.id}
+				eventTitle={evt.title}
+				requests={loaded.artifactRequests}
+				acts={loaded.requestableActs}
+				onchange={() => getStaffEventProduction(id).refresh()}
+			/>
+
 			<!--
 			What the bill needs on stage. The advance checklist has always carried a
 			task reading "Collect tech riders and stage plots"; this is where the answer
@@ -1040,7 +1061,7 @@
 						<div class="flex items-center justify-between gap-2">
 							<CardTitle>{title}</CardTitle>
 							{#if ridersMissing > 0}
-								<Badge color="warning">{ridersMissing} not in yet</Badge>
+								<Badge variant="warning">{ridersMissing} not in yet</Badge>
 							{/if}
 						</div>
 					{/snippet}
@@ -1049,9 +1070,34 @@
 							<li class="flex flex-wrap items-center gap-2 py-2">
 								<span class="font-medium">{act.name}</span>
 								{#if act.empty}
-									<span class="text-sm text-base-content/60">
-										{act.slug ? 'Nothing sent yet' : 'Not a CMC act — ask them directly'}
-									</span>
+									<!-- Three states, not two. A credit with no `directoryEntryId`
+									     is not merely silent: `requestableActs` filters on that
+									     column, so it cannot be asked at all — and the old copy
+									     blamed the act for it (#974). -->
+									{#if act.entryId}
+										<span class="text-sm text-base-content/60">Nothing sent yet</span>
+									{:else}
+										<span class="text-sm text-base-content/60">Not in the directory yet</span>
+										<Action
+											action={listActInDirectory.for(act.id)}
+											label="Add to the directory"
+											variant="ghost"
+											size="xs"
+											modalTitle="Add {act.name} to the directory?"
+											submitLabel="Add to the directory"
+											successToast="{act.name} can be asked now"
+											onsuccess={() => getStaffEventProduction(id).refresh()}
+										>
+											{#snippet form()}
+												<input {...listActInDirectory.fields.eventBandId.as('hidden', act.id)} />
+												<p class="text-sm">
+													This records <strong>{act.name}</strong> as an external act — no page, no membership,
+													nothing members can see. It is what makes them askable for a rider, and gives
+													them a link to answer on.
+												</p>
+											{/snippet}
+										</Action>
+									{/if}
 								{:else}
 									{#if act.channelCount > 0}
 										<Badge>{act.channelCount} ch</Badge>
@@ -1060,10 +1106,10 @@
 										<Badge>{act.phantomCount} × +48V</Badge>
 									{/if}
 									{#if act.venueProvidedCount > 0}
-										<Badge color="info">{act.venueProvidedCount} from us</Badge>
+										<Badge variant="info">{act.venueProvidedCount} from us</Badge>
 									{/if}
 									{#if act.uploadCount > 0}
-										<Badge color="ghost"
+										<Badge variant="ghost"
 											>{act.uploadCount} file{act.uploadCount === 1 ? '' : 's'}</Badge
 										>
 									{/if}
@@ -1374,6 +1420,17 @@
 					</InfoCard>
 				{/if}
 			{/if}
+		</div>
+	{/if}
+
+	{#if visited.has('settlement')}
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-settlement"
+			class="space-y-6"
+			class:hidden={tab !== 'settlement'}
+		>
+			<SettlementPanel {settlement} />
 		</div>
 	{/if}
 </PageContent>

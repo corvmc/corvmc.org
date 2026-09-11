@@ -5,6 +5,7 @@ import { NOTIFICATION_TYPES } from '$lib/server/db/schema/notification';
 import { NOTIFICATION_CATEGORIES } from '$lib/email/notification-category';
 import { createNotification } from './in-app-service';
 import { getPreference } from './preference-service';
+import { isDeliverable } from './recipient';
 import { pushToUser } from './sse';
 import { captureException } from '$lib/server/sentry';
 import { afterResponse } from '$lib/server/after-response';
@@ -101,6 +102,16 @@ export interface DispatchParams {
  * because nobody is waiting on it and Postmark is not fast.
  */
 export async function dispatch(params: DispatchParams): Promise<void> {
+	// A removed account is not a recipient, on any channel. Guarded at the seam
+	// rather than in each fan-out, so a sender written next year inherits it —
+	// the lists feeding this are roster reads and any of them can go stale.
+	//
+	// Mail a removal itself owes — a confirmation that the account is closed —
+	// goes through `dispatchEmailOnly`, which is the accountless path and is
+	// deliberately not guarded here. Nor is a `forceEmail` send with no userId,
+	// which has no account to check.
+	if (params.userId && !(await isDeliverable(params.userId))) return;
+
 	const pref = await getPreference(params.userId, params.type);
 
 	// In-app notification

@@ -3,6 +3,7 @@ import { error } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { requireFeature } from '$lib/server/feature-flags';
+import { mapDomainError } from '$lib/server/errors';
 import {
 	createRelease,
 	deleteRelease,
@@ -183,12 +184,16 @@ export const updateReleaseForm = form(
 	async ({ slug, releaseId, title, kind, description, releasedAt }) => {
 		await requireFeature('bandAudio');
 		await requireReleaseAdmin(slug, releaseId);
-		await updateRelease(releaseId, {
-			title,
-			kind,
-			description: description ?? null,
-			releasedAt: toReleaseDate(releasedAt)
-		});
+		try {
+			await updateRelease(releaseId, {
+				title,
+				kind,
+				description: description ?? null,
+				releasedAt: toReleaseDate(releasedAt)
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		void getBandRelease({ slug, releaseId }).refresh();
 		void getBandMusicPage(slug).refresh();
@@ -217,7 +222,11 @@ export const setRadioOptInForm = form(
 	async ({ slug, releaseId, radioOptIn }) => {
 		await requireFeature('bandAudio');
 		await requireReleaseAdmin(slug, releaseId);
-		await updateRelease(releaseId, { radioOptIn });
+		try {
+			await updateRelease(releaseId, { radioOptIn });
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		void getBandRelease({ slug, releaseId }).refresh();
 		void getBandMusicPage(slug).refresh();
@@ -230,7 +239,11 @@ export const publishReleaseForm = form(
 	async ({ slug, releaseId }) => {
 		await requireFeature('bandAudio');
 		await requireReleaseAdmin(slug, releaseId);
-		await publishRelease(releaseId);
+		try {
+			await publishRelease(releaseId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		void getBandRelease({ slug, releaseId }).refresh();
 		void getBandMusicPage(slug).refresh();
@@ -243,7 +256,11 @@ export const unpublishReleaseForm = form(
 	async ({ slug, releaseId }) => {
 		await requireFeature('bandAudio');
 		await requireReleaseAdmin(slug, releaseId);
-		await unpublishRelease(releaseId);
+		try {
+			await unpublishRelease(releaseId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		void getBandRelease({ slug, releaseId }).refresh();
 		void getBandMusicPage(slug).refresh();
@@ -256,7 +273,14 @@ export const deleteReleaseForm = form(
 	async ({ slug, releaseId }) => {
 		await requireFeature('bandAudio');
 		await requireReleaseAdmin(slug, releaseId);
-		const outcome = await deleteRelease(releaseId);
+		// `mapDomainError` is declared `: never`, so `outcome` is definitely
+		// assigned past the catch without a non-null assertion.
+		let outcome: Awaited<ReturnType<typeof deleteRelease>>;
+		try {
+			outcome = await deleteRelease(releaseId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		void getBandMusicPage(slug).refresh();
 		return { success: true, outcome };
@@ -280,7 +304,11 @@ export const renameTrackForm = form(
 		await requireFeature('bandAudio');
 		await requireReleaseAdmin(slug, releaseId);
 		await assertTrackInRelease(trackId, releaseId);
-		await renameTrack(trackId, title);
+		try {
+			await renameTrack(trackId, title);
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		void getBandRelease({ slug, releaseId }).refresh();
 		return { success: true };
@@ -297,7 +325,11 @@ export const deleteTrackForm = form(
 		await requireFeature('bandAudio');
 		await requireReleaseAdmin(slug, releaseId);
 		await assertTrackInRelease(trackId, releaseId);
-		await deleteTrack(trackId);
+		try {
+			await deleteTrack(trackId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		void getBandRelease({ slug, releaseId }).refresh();
 		void getBandMusicPage(slug).refresh();
@@ -391,7 +423,11 @@ export const startPayoutOnboarding = form(
 export const openPayoutDashboard = form(z.object({ slug: z.string().min(1) }), async ({ slug }) => {
 	await requireFeature('bandAudio');
 	const { group: band } = await requireGroupRole({ slug }, 'admin');
-	return { success: true, url: await createDashboardLink(band.id) };
+	try {
+		return { success: true, url: await createDashboardLink(band.id) };
+	} catch (err) {
+		mapDomainError(err);
+	}
 });
 
 // ---------------------------------------------------------------------------
@@ -429,12 +465,16 @@ export const updatePricingForm = form(
 		await requireFeature('bandAudio');
 		await requireReleaseAdmin(slug, releaseId);
 
-		await updateRelease(releaseId, {
-			// A cleared box is indistinguishable from an untouched one, so absent
-			// leaves the price alone rather than silently making the record free.
-			...(priceMinCents === undefined ? {} : { priceMinCents }),
-			allowPayMore
-		});
+		try {
+			await updateRelease(releaseId, {
+				// A cleared box is indistinguishable from an untouched one, so absent
+				// leaves the price alone rather than silently making the record free.
+				...(priceMinCents === undefined ? {} : { priceMinCents }),
+				allowPayMore
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		void getBandRelease({ slug, releaseId }).refresh();
 		void getBandMusicPage(slug).refresh();

@@ -17,7 +17,11 @@ comments what failed, and **nothing re-arms auto-merge on its own**. The failed 
 re-run either, because the `gh-readonly-queue/main/pr-<n>-<sha>` ref is deleted on dequeue, so
 re-arming is the only way back in.
 
-Two rules from that file are the ones most easily rationalized away, so hold them:
+Three rules from that file are the ones most easily rationalized away, so hold them:
+
+- **An unarmed PR is not a rejected PR.** GitHub consumes the auto-merge request on queue _entry_,
+  so `autoMergeRequest` is `null` for the whole run. The `queue-rejected` label and the timeline
+  say which happened; the armed flag conflates running with ejected.
 
 - **Never `--admin`, never `gh pr update-branch`.** Both bypass the queue, which is the one thing
   that keeps two sessions finishing at once from racing for the merge.
@@ -35,6 +39,11 @@ You keep the count, because nobody looking at a single PR can.
   like a flake.
 - A spec that fails **on the queue head and nowhere else** is an ordering bug more often than it is
   noise. Say so rather than re-arming and hoping.
+- A rejection that lands **shortly after another PR was ejected** is often downstream of it. GitHub
+  resets every entry behind an ejection onto a new base and re-runs it, so each gets a fresh chance
+  at an unrelated flake — one ejection took five PRs with it on 2026-09-08. Failure rate compounds
+  with queue depth rather than staying per-PR, so count failures per _queue-entry re-run_, not per
+  PR, and check what was ejected just before the one in front of you.
 
 `.claude/rules/testing.md` covers the failure shapes that are not what they look like — a browser
 project that cannot bind reports zero failed tests over a short file count, and a retry cannot

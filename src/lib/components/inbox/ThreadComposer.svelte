@@ -58,6 +58,18 @@
 	let draft = $state('');
 	let assignTo = $state('');
 
+	// A thread change is a param change, so SvelteKit keeps this component
+	// mounted and its state with it — a half-written reply to one member turned
+	// up in the reply box of the next thread clicked, one press from the wrong
+	// recipient (#978). The conversation changing is what clears it.
+	$effect(() => {
+		if (threadId) {
+			draft = '';
+			requestedMode = 'reply';
+			assignTo = '';
+		}
+	});
+
 	// When replying is impossible the composer is a note box regardless of what
 	// was last picked — a channel can be disabled while the page is open, and the
 	// draft should not end up pointed at a target it can't reach. With no note
@@ -104,7 +116,12 @@
 			<p class="text-xs text-warning">{replyBlockedReason}</p>
 		{/if}
 
+		<!-- `guard` because every other abandonable form here has one — the profile,
+		     the account page, the booking wizard — and a half-written reply left
+		     silently on navigate-away or reload (#979). It asks; it does not keep
+		     the text. A draft that survives is storage and a clearing rule. -->
 		<Form
+			guard
 			remote={activeForm}
 			successToast={isNote ? 'Note added' : 'Reply sent'}
 			onsuccess={() => {

@@ -7,23 +7,45 @@
 <script lang="ts">
 	import { Tooltip } from 'bits-ui';
 	import Action from './Action.svelte';
+	import ErrorToastBoundary from './ErrorToastBoundary.svelte';
+	import FormField from './Form/FormField.svelte';
 	import type { ComponentProps } from 'svelte';
 
 	let {
 		action,
 		fieldName,
+		formFieldName,
 		bodyText,
+		/**
+		 * Mounts the boundary every panel layout mounts. `Form` routes a failure
+		 * to it *instead of* toasting directly, so without one in context the
+		 * specs only ever exercise the other branch (#1000).
+		 */
+		boundary = false,
 		...rest
 	}: {
 		action: ComponentProps<typeof Action>['action'];
 		fieldName?: string;
+		/**
+		 * A real `FormField`, not the bare input `fieldName` renders: only
+		 * `FormField` reports a change to the form context, which is what the
+		 * unsaved-changes prompt keys on.
+		 */
+		formFieldName?: string;
 		bodyText?: string;
+		boundary?: boolean;
 		[key: string]: unknown;
 	} = $props();
 </script>
 
-<Tooltip.Provider delayDuration={300}>
-	{#if fieldName}
+{#snippet content()}
+	{#if formFieldName}
+		<Action {action} {...rest}>
+			{#snippet form()}
+				<FormField name={formFieldName} label="Note" type="text" />
+			{/snippet}
+		</Action>
+	{:else if fieldName}
 		<Action {action} {...rest}>
 			{#snippet form()}
 				<input name={fieldName} class="input" />
@@ -39,5 +61,13 @@
 		</Action>
 	{:else}
 		<Action {action} {...rest} />
+	{/if}
+{/snippet}
+
+<Tooltip.Provider delayDuration={300}>
+	{#if boundary}
+		<ErrorToastBoundary>{@render content()}</ErrorToastBoundary>
+	{:else}
+		{@render content()}
 	{/if}
 </Tooltip.Provider>

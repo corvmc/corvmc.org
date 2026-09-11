@@ -34,6 +34,9 @@
  */
 import {
 	computeSplit as computeCoreSplit,
+	divisibleCents,
+	otherFloorCents,
+	otherTakeCents,
 	suggestedShareCents,
 	validateSplit as validateCoreSplit,
 	type Split
@@ -69,16 +72,91 @@ export type TicketSplit = {
 };
 
 /**
- * Where the bar opens: the collective's suggested share.
+ * Where the bar opens: the collective's suggested share of what is divisible.
  *
- * Pass the charge *minus* the card fee — what the two parties actually divide.
- * 30% of the gross is not 30% of anything anyone receives.
+ * **Prefer `actsAnchoredCollectiveCents` for a ticket.** This is the raw
+ * percentage and it is proportional to what was paid, which is the behaviour
+ * #827 removed: it divides a discount as well as a sale, so a NOTAFLOF buyer
+ * shorts the acts rather than the collective. Kept because a caller that
+ * genuinely wants a percentage of a known divisible amount still has one.
  */
 export function suggestedCollectiveCents(
 	divisibleCents: number,
 	bps = TICKET_COLLECTIVE_SHARE_BPS
 ): number {
 	return suggestedShareCents(divisibleCents, bps);
+}
+
+/**
+ * Where the bar opens for a ticket: everything the acts are not suggested.
+ *
+ * The collective is the residual — it absorbs the discount when a buyer pays
+ * under the suggestion, and the card fee always, until its own share is zero.
+ * On a $10 show a buyer paying $7 sends $6.49 to the acts and nothing to the
+ * collective.
+ */
+export function actsAnchoredCollectiveCents(input: {
+	/** The event's suggested price for the whole order. */
+	baseCents: number;
+	/** What the buyer chose to pay for the whole order, before fee coverage. */
+	grossPaidCents: number;
+	coverFees: boolean;
+	/** A buyer dragging the bar towards the acts. Never away from them. */
+	actsOptUpCents?: number;
+	bps?: number;
+}): number {
+	const { baseCents, grossPaidCents, coverFees, actsOptUpCents, bps } = input;
+	const divisible = divisibleCents(grossPaidCents, coverFees);
+	return (
+		divisible - actsSuggestedCents({ baseCents, grossPaidCents, coverFees, actsOptUpCents, bps })
+	);
+}
+
+/** The acts' opening take: their guarantee, or their ratio of the gross when it is larger. */
+export function actsSuggestedCents(input: {
+	baseCents: number;
+	grossPaidCents: number;
+	coverFees: boolean;
+	actsOptUpCents?: number;
+	bps?: number;
+}): number {
+	const {
+		baseCents,
+		grossPaidCents,
+		coverFees,
+		actsOptUpCents = 0,
+		bps = TICKET_COLLECTIVE_SHARE_BPS
+	} = input;
+	return otherTakeCents({
+		baseCents,
+		grossPaidCents,
+		shareBps: bps,
+		divisibleCents: divisibleCents(grossPaidCents, coverFees),
+		optUpCents: actsOptUpCents
+	});
+}
+
+/**
+ * The acts' guarantee: their share of the event's **suggested** price, clamped
+ * to what is divisible. The floor the bar cannot cross.
+ *
+ * Deliberately not a share of what was paid. Anything above the suggestion is a
+ * gift, and the bar is where the buyer says who it is for — so this does not
+ * rise with generosity, and `actsOptUpCents` is not a term in it: folding a
+ * buyer's own choice into the floor is what would stop them taking it back.
+ */
+export function actsMinCents(input: {
+	baseCents: number;
+	grossPaidCents: number;
+	coverFees: boolean;
+	bps?: number;
+}): number {
+	const { baseCents, grossPaidCents, coverFees, bps = TICKET_COLLECTIVE_SHARE_BPS } = input;
+	return otherFloorCents({
+		baseCents,
+		shareBps: bps,
+		divisibleCents: divisibleCents(grossPaidCents, coverFees)
+	});
 }
 
 /** Split the buyer's per-ticket amount into what Stripe is sold and what is recorded. */
@@ -140,11 +218,18 @@ export function validateTicketSplit(
 		minChargeCents: TICKET_MIN_CHARGE_CENTS,
 		// A buyer may always pay more than suggested. That is the point.
 		allowPayMore: true,
+		// The acts' guarantee is a share of the suggestion, not of what was paid,
+		// so the collective's ceiling is whatever sits above it. #827.
+		otherMinCents: actsMinCents({
+			baseCents: suggestedUnitCents * quantity,
+			grossPaidCents: unitPriceCents * quantity,
+			coverFees
+		}),
 		messages: {
 			belowFloor: `The least you can pay for this show is $${(floorCents / 100).toFixed(2)} a ticket.`,
 			deadZone: (min) =>
 				`Pay nothing, or at least $${(min / 100).toFixed(2)} — below that, card fees take almost all of it.`,
-			remainderNegative: 'That leaves the acts nothing.',
+			remainderNegative: 'That leaves the acts short.',
 			shareTooLarge: 'The collective cannot take more than you paid.'
 		}
 	});

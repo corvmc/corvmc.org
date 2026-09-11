@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 vi.mock('$lib/server/db', () => {
-	const db = { update: vi.fn(), select: vi.fn() };
+	const db = { update: vi.fn(), select: vi.fn(), insert: vi.fn() };
 	return { db };
 });
 
@@ -36,6 +36,7 @@ import {
 	suppressByEmail,
 	suppressSelfService,
 	clearSelfServiceSuppression,
+	findOrCreateForUser,
 	linkExistingSubscriberToUser,
 	linkSubscriberToExistingUser
 } from './subscriber-service';
@@ -176,14 +177,114 @@ describe('linkExistingSubscriberToUser', () => {
 		expect(await linkExistingSubscriberToUser('user-1', 'nobody@example.com')).toBeNull();
 	});
 
-	// Signup does not verify the address, so the predicate is the only thing
-	// stopping a second account from taking over a row that is already claimed.
+	// The caller checks verification before reaching here, but the predicate is
+	// what makes a replayed verification link harmless: a claimed row cannot be
+	// taken over however many times the link is presented.
 	it('leaves a row another account already holds alone', async () => {
 		mockUpdateReturning([]);
 
 		await linkExistingSubscriberToUser('user-2', 'alice@example.com');
 
 		expect(isNull).toHaveBeenCalledWith('subscriber.userId');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// findOrCreateForUser (#757)
+// ---------------------------------------------------------------------------
+// The account page's subscribe/unsubscribe path. Same claim rule as the signup
+// link: taking over a row somebody else's list signup created needs a proven
+// address; making a fresh one under your own address does not.
+// ---------------------------------------------------------------------------
+
+// db.select() is called once per lookup. Each call takes the next queued rows,
+// and the chain is awaitable both directly (findByUserId) and via .limit(1)
+// (findByEmail).
+function mockSelectQueue(...results: unknown[][]) {
+	let call = 0;
+	(db.select as any).mockImplementation(() => {
+		const rows = results[call++] ?? [];
+		const where = vi.fn(() => {
+			const chain: any = Promise.resolve(rows);
+			chain.limit = vi.fn(() => Promise.resolve(rows));
+			return chain;
+		});
+		return { from: vi.fn(() => ({ where })) };
+	});
+}
+
+function mockInsertReturning(rows: unknown[]) {
+	const returning = vi.fn(() => Promise.resolve(rows));
+	const onConflictDoUpdate = vi.fn(() => ({ returning }));
+	const values = vi.fn(() => ({ onConflictDoUpdate }));
+	(db.insert as any).mockReturnValue({ values });
+	return { values };
+}
+
+describe('findOrCreateForUser', () => {
+	const own = { id: 'sub-1', email: 'alice@example.com', name: 'Alice', userId: 'user-1' };
+	const stranger = { id: 'sub-9', email: 'alice@example.com', name: null, userId: null };
+
+	it('returns the row this account already holds without writing anything', async () => {
+		mockSelectQueue([own]);
+		const { set } = mockUpdate();
+
+		const sub = await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', {
+			emailVerified: false
+		});
+
+		expect(sub?.id).toBe('sub-1');
+		expect(set).not.toHaveBeenCalled();
+	});
+
+	// The claim vector: that row carries a stranger's audience memberships and
+	// suppression state, and typing their address into a signup form proves
+	// nothing about holding it.
+	it('refuses to claim an unclaimed row for an unconfirmed address', async () => {
+		mockSelectQueue([], [stranger]);
+		const { set } = mockUpdate();
+
+		const sub = await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', {
+			emailVerified: false
+		});
+
+		expect(sub).toBeNull();
+		expect(set).not.toHaveBeenCalled();
+	});
+
+	it('claims that same row once the address is confirmed', async () => {
+		mockSelectQueue([], [stranger]);
+		const { set } = mockUpdate();
+
+		const sub = await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', {
+			emailVerified: true
+		});
+
+		expect(sub).toEqual({ ...stranger, userId: 'user-1' });
+		expect(set.mock.calls[0][0]).toEqual({ userId: 'user-1' });
+	});
+
+	it('never hands over a row a different account holds, confirmed or not', async () => {
+		mockSelectQueue([], [{ ...stranger, userId: 'user-2' }]);
+
+		expect(
+			await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', { emailVerified: true })
+		).toBeNull();
+	});
+
+	// A fresh row takes nothing from anybody, so an unconfirmed member can still
+	// manage the lists they choose themselves.
+	it('creates and links a new row for an unconfirmed address with no row yet', async () => {
+		mockSelectQueue([], []);
+		mockInsertReturning([{ id: 'sub-2', email: 'alice@example.com', name: 'Alice', userId: null }]);
+		const { set } = mockUpdate();
+
+		const sub = await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', {
+			emailVerified: false
+		});
+
+		expect(sub?.userId).toBe('user-1');
+		expect(set.mock.calls[0][0]).toEqual({ userId: 'user-1' });
 	});
 });
 

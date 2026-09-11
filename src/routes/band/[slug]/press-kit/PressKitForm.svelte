@@ -52,11 +52,7 @@
 	}
 </script>
 
-<Form
-	remote={saveBandEpk}
-	onsuccess={() => toast.success('Press kit saved')}
-	onfailure={() => toast.error('Failed to save')}
->
+<Form remote={saveBandEpk} onsuccess={() => toast.success('Press kit saved')}>
 	<input {...saveBandEpk.fields.slug.as('hidden', band.slug)} />
 	<input {...saveBandEpk.fields.epk.as('hidden', epkJson)} />
 

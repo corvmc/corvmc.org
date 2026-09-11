@@ -3,21 +3,21 @@ import { captureException } from '$lib/server/sentry';
 import type { NotificationEmailModel } from '$lib/types/notification-email';
 
 // ---------------------------------------------------------------------------
-// The two emails better-auth's password-reset flow sends
+// The emails better-auth's own flows send
 // ---------------------------------------------------------------------------
 // Kept out of auth.ts so the model builders can be tested without standing up
-// the auth config, and so `sendResetPassword` reads as one line there.
+// the auth config, and so each better-auth callback reads as one line there.
 //
-// Neither type is registered in NOTIFICATION_TYPES, deliberately. Registration
+// No type here is registered in NOTIFICATION_TYPES, deliberately. Registration
 // is what makes a type a member-toggleable preference, and an account-recovery
 // email is not something a member should be able to switch off — nor is the
 // notice that their password changed, which is how they find out if it wasn't
 // them. `type` here is only the Postmark tag.
 //
-// Both models pass `transactional_only`, which suppresses the shared layout's
+// Every model passes `transactional_only`, which suppresses the shared layout's
 // "you're receiving this because of your notification preferences" line. There
-// is no preference behind either of these, and a member who cannot sign in
-// cannot go and manage one.
+// is no preference behind any of these, and a member who cannot sign in cannot
+// go and manage one.
 // ---------------------------------------------------------------------------
 
 /** How long a reset link stays good. Fed to better-auth as `resetPasswordTokenExpiresIn`. */
@@ -124,6 +124,68 @@ export async function sendPasswordResetEmail(params: {
 		});
 	} catch (err) {
 		captureException(err, { event: 'auth.password_reset', stage: 'send' });
+	}
+}
+
+/**
+ * How long a signup verification link stays good. Fed to better-auth as
+ * `emailVerification.expiresIn`.
+ *
+ * A day rather than the reset link's hour: nothing is blocked on clicking it,
+ * so the member may well come back to the email tomorrow, and an expired link
+ * costs them a trip through the resend button for no security gain.
+ */
+export const VERIFY_EMAIL_TOKEN_TTL_SECONDS = 86_400;
+
+export interface VerifyEmailModel {
+	greeting?: string;
+	verifyUrl: string;
+	expiresIn: string;
+	preview_text: string;
+	transactional_only: true;
+}
+
+/**
+ * The model for the `verify-email` template.
+ *
+ * `verifyUrl` is passed through exactly as better-auth built it — it carries a
+ * `?token=…&callbackURL=…` query string, which is why the plaintext part of
+ * that template triple-braces it.
+ */
+export function buildVerifyEmailModel(params: {
+	name?: string | null;
+	verifyUrl: string;
+	ttlSeconds?: number;
+}): VerifyEmailModel {
+	return {
+		greeting: greeting(params.name),
+		verifyUrl: params.verifyUrl,
+		expiresIn: formatExpiry(params.ttlSeconds ?? VERIFY_EMAIL_TOKEN_TTL_SECONDS),
+		preview_text: 'Confirm this address so we know our email reaches you.',
+		transactional_only: true
+	};
+}
+
+/**
+ * Send the signup verification link. Same failure treatment as the reset send:
+ * a Postmark problem is captured, never thrown, because this runs inside
+ * better-auth's sign-up response and must not cost the member the account that
+ * already committed.
+ */
+export async function sendVerifyEmail(params: {
+	toEmail: string;
+	name?: string | null;
+	verifyUrl: string;
+}): Promise<void> {
+	try {
+		await dispatchEmailOnly({
+			type: 'email_verification',
+			toEmail: params.toEmail,
+			templateAlias: 'verify-email',
+			model: buildVerifyEmailModel(params) as unknown as Record<string, unknown>
+		});
+	} catch (err) {
+		captureException(err, { event: 'auth.email_verification', stage: 'send' });
 	}
 }
 

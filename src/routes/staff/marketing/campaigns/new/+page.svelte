@@ -5,8 +5,10 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
+	import { errorMessage } from '$lib/error-message';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 	import { createDraft, createAndSend, createAndSchedule } from '$lib/remote/marketing.remote';
 
 	let subject = $state('');
@@ -18,60 +20,79 @@
 	// Written back by AudiencePicker, which owns the audience query.
 	let totalSubscribers = $state(0);
 
-	async function handleSaveDraft() {
-		if (!isValid()) return;
+	let confirmingSend = $state(false);
+
+	/**
+	 * The `try` covers the call and nothing else. Wrapping the toast and the
+	 * navigation too reported a post-success failure as a send failure, on the
+	 * one action here that cannot be undone. `submitting` also stays set after
+	 * a success, so the button cannot invite a second send while the navigation
+	 * is in flight (#988).
+	 */
+	async function submit(
+		call: () => Promise<{ campaignId: string } | undefined>,
+		done: string,
+		to: (id: string) => string
+	) {
 		submitting = true;
+		let result: { campaignId: string } | undefined;
 		try {
-			const result = await createDraft({
-				subject: subject.trim(),
-				markdownBody,
-				audienceIds: selectedAudienceIds
-			});
-			toast.success('Draft saved');
-			goto(resolve(`/staff/marketing/campaigns/${result?.campaignId}/edit`));
+			result = await call();
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to save');
-		} finally {
+			// Remote rejections are not `Error`s — reading `.message` off one
+			// yields undefined, which is how every failure here read "Failed to".
+			toast.error(errorMessage(err));
 			submitting = false;
+			return;
 		}
+		toast.success(done);
+		if (result?.campaignId) goto(to(result.campaignId));
 	}
 
-	async function handleSendNow() {
+	function handleSaveDraft() {
 		if (!isValid()) return;
-		if (!window.confirm(`Send to approximately ${totalSubscribers} recipients now?`)) return;
-		submitting = true;
-		try {
-			const result = await createAndSend({
-				subject: subject.trim(),
-				markdownBody,
-				audienceIds: selectedAudienceIds
-			});
-			toast.success('Campaign sent');
-			goto(resolve(`/staff/marketing/campaigns/${result?.campaignId}`));
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to send');
-		} finally {
-			submitting = false;
-		}
+		return submit(
+			() =>
+				createDraft({ subject: subject.trim(), markdownBody, audienceIds: selectedAudienceIds }),
+			'Draft saved',
+			(id) => resolve(`/staff/marketing/campaigns/${id}/edit`)
+		);
 	}
 
-	async function handleSchedule() {
+	/**
+	 * Two steps, because this is the one action in the app that cannot be undone
+	 * and it was the one confirmed by `window.confirm` — whose button says OK.
+	 * Every other consequential act here names itself on the submit: Send the
+	 * offer, Delete permanently, Drop out (#989).
+	 */
+	function handleSendNow() {
+		if (!isValid()) return;
+		confirmingSend = true;
+	}
+
+	function sendNow() {
+		confirmingSend = false;
+		return submit(
+			() =>
+				createAndSend({ subject: subject.trim(), markdownBody, audienceIds: selectedAudienceIds }),
+			'Campaign sent',
+			(id) => resolve(`/staff/marketing/campaigns/${id}`)
+		);
+	}
+
+	function handleSchedule() {
 		if (!isValid() || !isFutureSchedule()) return;
-		submitting = true;
-		try {
-			const result = await createAndSchedule({
-				subject: subject.trim(),
-				markdownBody,
-				audienceIds: selectedAudienceIds,
-				scheduledFor: new Date(scheduledFor).toISOString()
-			});
-			toast.success('Campaign scheduled');
-			goto(resolve(`/staff/marketing/campaigns/${result?.campaignId}`));
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to schedule');
-		} finally {
-			submitting = false;
-		}
+		return submit(
+			() =>
+				createAndSchedule({
+					subject: subject.trim(),
+					markdownBody,
+					audienceIds: selectedAudienceIds,
+					scheduledFor: new Date(scheduledFor).toISOString()
+				}),
+			'Campaign scheduled',
+			(id) => resolve(`/staff/marketing/campaigns/${id}`)
+		);
 	}
 
 	function isValid() {
@@ -178,3 +199,24 @@
 		</div>
 	</div>
 </PageContent>
+
+<Modal bind:open={confirmingSend} title="Send this campaign now?">
+	<p>
+		This goes to <strong>{totalSubscribers}</strong>
+		{totalSubscribers === 1 ? 'person' : 'people'} immediately, as
+		<em>{subject.trim() || 'an untitled campaign'}</em>.
+	</p>
+	<p class="mt-2 text-muted">
+		There is no recall. If you are not sure, save it as a draft and send it from the campaign page
+		once you have read it back.
+	</p>
+	<div class="modal-action">
+		<Button variant="default" size="sm" outline onclick={() => (confirmingSend = false)}>
+			Not yet
+		</Button>
+		<Button variant="primary" size="sm" onclick={sendNow}>
+			Send to {totalSubscribers}
+			{totalSubscribers === 1 ? 'person' : 'people'}
+		</Button>
+	</div>
+</Modal>

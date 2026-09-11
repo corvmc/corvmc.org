@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { eq } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Mock dependencies before importing the module under test
@@ -52,13 +53,14 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 		endsAt: 'endsAt',
 		notes: 'notes',
 		recurringSeriesId: 'recurringSeriesId',
-		status: 'status'
+		status: 'status',
+		hardHold: 'hardHold'
 	},
 	closure: { reason: 'reason', startsAt: 'startsAt', endsAt: 'endsAt' }
 }));
 
 vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: { id: 'id', name: 'name', email: 'email' }
+	user: { id: 'id', name: 'name', email: 'email', deletedAt: 'deletedAt' }
 }));
 
 // `__table` is how `insertTableName` tells these apart. The real tables carry a
@@ -286,6 +288,25 @@ describe('generateRecurringReservations', () => {
 		});
 	});
 
+	// Offboarding cancels the reservations that exist and never stopped the
+	// generator, so a removed member's series went on holding the room — a slot
+	// nobody could book and nothing would ever clear. #811.
+	it('generates nothing for a series whose member has been removed', async () => {
+		queueSelects(
+			[SERIES], // 1. active series
+			[PROTOTYPE], // 2. prototype reservation
+			[{ ...OWNER, deletedAt: new Date('2026-05-01T00:00:00Z') }] // 3. removed owner
+		);
+		setupInsert();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		const result = await generateRecurringReservations();
+
+		expect(result.instancesCreated).toBe(0);
+		expect(result.instancesWaitlisted).toBe(0);
+		expect(insertedRows).toHaveLength(0);
+	});
+
 	it('creates reservation instances for occurrences with no conflicts', async () => {
 		// Selects: activeSeries, prototype, owner, existingInstances, eventConflict, closureConflict, reservationConflict
 		queueSelects(
@@ -336,6 +357,23 @@ describe('generateRecurringReservations', () => {
 		expect(result.instancesCreated).toBe(0);
 		expect(result.instancesSkipped).toBe(0); // deduped, not counted as skipped
 		expect(insertedRows).toHaveLength(0);
+	});
+
+	/**
+	 * The predicate itself, not just its result. Moving the hard block off
+	 * `booker_type` is the change that would otherwise fail in silence: nothing
+	 * throws, holds just quietly stop blocking, and a member's booking takes a
+	 * show's room.
+	 */
+	it('blocks on the hold that says it is hard, not on how the row was created', async () => {
+		queueSelects([SERIES], [PROTOTYPE], [OWNER], [], [{ id: 'event-1' }], []);
+		setupInsert();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		await generateRecurringReservations();
+
+		expect(eq).toHaveBeenCalledWith('hardHold', true);
+		expect(eq).not.toHaveBeenCalledWith('bookerType', 'event_listing');
 	});
 
 	it('skips occurrences with event conflicts and emits recurring_skipped event', async () => {
@@ -607,6 +645,9 @@ describe('generateRecurringEvents', () => {
 		expect(mockStaffCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
 				bookerType: 'event_listing',
+				// A show holds the room outright, and says so on the row rather than
+				// leaving it to be inferred from how the row was created.
+				hardHold: true,
 				// Matches the one-off path: event-booked space is staff-held, so it
 				// must not look like an uncommitted member booking.
 				status: 'confirmed',

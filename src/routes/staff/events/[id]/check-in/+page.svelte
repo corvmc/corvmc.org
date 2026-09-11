@@ -63,6 +63,8 @@
 						{:else if ticket.status === 'cancelled'}
 							<StatusBadge status="cancelled" />
 						{:else}
+							<!-- 44px on purpose: tapped a hundred times in a row at a
+							     door, one-handed. daisyUI's default `btn` is 40 (#971). -->
 							<Form
 								remote={checkInTicket.for(ticket.id)}
 								successToast="Checked in"
@@ -70,7 +72,7 @@
 								class="inline"
 							>
 								<input {...fields.ticketId.as('hidden', ticket.id)} />
-								<SubmitButton label="Check In" variant="primary" size="sm" />
+								<SubmitButton label="Check In" variant="primary" class="min-h-11" />
 							</Form>
 							<CancelTicketAction ticketId={ticket.id} attendeeName={ticket.attendeeName} />
 						{/if}

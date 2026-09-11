@@ -66,7 +66,7 @@
 	<CardBody>
 		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<h2 class="text-base font-semibold">{title}</h2>
-			{#if mine}<Badge color="primary">You</Badge>{/if}
+			{#if mine}<Badge variant="primary">You</Badge>{/if}
 			<Badge class="ml-auto">{inputCount} {inputCount === 1 ? 'input' : 'inputs'}</Badge>
 		</div>
 		{#if subtitle}

@@ -2,7 +2,6 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import { createStaffExternalAct } from '$lib/remote/external-acts.remote';
 
 	/**
@@ -23,7 +22,6 @@
 	variant="primary"
 	size="sm"
 	onsuccess={() => invalidateAll()}
-	onfailure={() => toast.error('Could not record the act')}
 >
 	{#snippet form()}
 		<div class="space-y-4">

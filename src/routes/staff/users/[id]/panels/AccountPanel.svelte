@@ -22,6 +22,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
+	import { toast } from 'svelte-sonner';
 
 	let { id, member }: { id: string; member: Awaited<ReturnType<typeof getUser>> } = $props();
 
@@ -34,6 +35,17 @@
 	function refreshAccount() {
 		// One refresh: the page reads both halves through `getUserPage`.
 		void getUserPage(id).refresh();
+	}
+
+	// Reactivation resumes a subscription cancelled at period end, but a period
+	// that elapsed while the account was closed cannot be resumed at all. Staff
+	// have to know which happened — the success toast says the same thing either
+	// way, and a silently unsubscribed member is found weeks later.
+	function onReactivated(result?: unknown) {
+		refreshAccount();
+		if ((result as { subscription?: string } | undefined)?.subscription === 'lapsed') {
+			toast.warning('Membership lapsed while the account was closed — it needs a new checkout.');
+		}
 	}
 </script>
 
@@ -151,7 +163,15 @@
 
 		<Fact label="Member no.">{member.memberNumber ?? '—'}</Fact>
 
-		<Fact label="Email verified">{member.emailVerified ? 'Yes' : 'No'}</Fact>
+		<!-- Nothing is gated on this, so "not confirmed" is not a restriction and
+		     should not read like one. Every account predating #757 shows it. -->
+		<Fact label="Email confirmed">
+			{#if member.emailVerified}
+				Yes
+			{:else}
+				<span class="text-muted">Not yet — full access either way</span>
+			{/if}
+		</Fact>
 
 		<Fact label="Stripe ID" mono>{member.stripeId ?? '—'}</Fact>
 
@@ -175,7 +195,7 @@
 				successToast="Account reactivated"
 				variant="success"
 				size="sm"
-				onsuccess={refreshAccount}
+				onsuccess={onReactivated}
 			>
 				{#snippet form()}
 					<input {...reactivateFields.id.as('hidden', id)} />

@@ -30,6 +30,7 @@ import { pendingSites } from './seed/pending';
 import { seedRoles, seedUsers, seedAdminUser, seedUserRoles } from './seed/users';
 import { seedReservations, seedClosures, seedLockAccess } from './seed/reservations';
 import { seedEvents } from './seed/events';
+import { findRoomConflicts, resetRoom } from './seed/room';
 import { seedVenues } from './seed/venues';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
@@ -43,16 +44,18 @@ import { seedGroupDocuments } from './seed/group-documents';
 import { seedDirectoryEntries } from './seed/directory';
 import { seedDirectoryPersonas } from './seed/directory-personas';
 import { seedInstructors } from './seed/instructors';
-import { seedExternalActs } from './seed/external-acts';
+import { seedExternalActs, SEED_ACT_SHEET_TOKEN } from './seed/external-acts';
 import { seedGroupSessions } from './seed/group-sessions';
 import { seedBandEvents } from './seed/band-events';
 import { seedCommunityEvents } from './seed/community-events';
 import { seedCmcEventLineups } from './seed/lineups';
 import { seedProductions } from './seed/productions';
+import { seedArtifactRequests } from './seed/artifact-requests';
 import { seedRunOfShow } from './seed/run-of-show';
 import { seedBandReservations } from './seed/band-reservations';
 import { seedBandSites, seedBandPageConfigs, seedFreePressKits } from './seed/band-sites';
 import { seedRecurringSeries } from './seed/recurring';
+import { seedFinancialEntries } from './seed/financial-entries';
 import { seedPaymentRecords } from './seed/payments';
 import { seedTickets } from './seed/tickets';
 import { seedRsvps } from './seed/rsvps';
@@ -78,6 +81,8 @@ import {
 } from './seed/volunteer';
 import { seedVolunteerPersonas } from './seed/volunteer-personas';
 import { seedSustainingPersonas } from './seed/sustaining-personas';
+import { USAGE_PERSONAS, seedUsagePersonaLife, seedUsagePersonas } from './seed/usage-personas';
+import { STYLE_PERSONAS, seedStylePersonaHistory, seedStylePersonas } from './seed/style-personas';
 import { seedSuggestions } from './seed/suggestions';
 import { seedProjects } from './seed/projects';
 import { seedAudio } from './seed/audio';
@@ -85,6 +90,10 @@ import { seedRiders } from './seed/rider';
 import { seedPacking } from './seed/packing';
 
 async function main() {
+	// The one room's ledger, shared by every seeder that books it. Reset here
+	// rather than at module scope so a second run in one process starts clean.
+	resetRoom();
+
 	console.log('\nStarting dev seed...\n');
 
 	// Off for the whole seed: the call order below is a dependency graph, not a
@@ -112,6 +121,20 @@ async function main() {
 	// which should include it — or slices the first few, which should not.
 	const soloAct = await seedSoloAct(roles);
 	if (soloAct) bands.push(soloAct);
+	// Same window as the solo act: the band has to be in the pending maps before
+	// the entries and sites drain them. Appending covers the seeders that map the
+	// whole array; the three that take `slice(0, n)` are handed it by name below,
+	// which is why they grow an `alsoInclude` rather than a splice.
+	const usage = await seedUsagePersonas(roles);
+	if (usage) bands.push(usage.band);
+	// Beside it and for the same reason. Its band is the one the create-band modal
+	// leaves behind, so it is appended but deliberately not handed to the seeders
+	// that fill a band in — half-made is the whole of what it is for.
+	const style = await seedStylePersonas(roles);
+	// The bare band and the three style bands both go in: downstream seeders map
+	// the whole array, and the three exist precisely to be filled in (#996). The
+	// bare one stays out of the `slice(0, n)` seeders — half-made is its point.
+	if (style) bands.push(style.bareBand, ...style.styleBands);
 	// Before the groups, which take their leaders from it. Kept out of `allUsers`
 	// for the reason `seedGroupLeaders` gives.
 	const groupLeaders = await seedGroupLeaders(roles);
@@ -130,7 +153,7 @@ async function main() {
 	const externalActs = await seedExternalActs();
 	const groupSessions = await seedGroupSessions(groups);
 	const groupDocuments = await seedGroupDocuments(groups, allUsers);
-	const bandEvents = await seedBandEvents(bands, allUsers);
+	const bandEvents = await seedBandEvents(bands, allUsers, usage ? [usage.band] : []);
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
 	// After the bill, because a production is the ops record for a night that
@@ -139,12 +162,15 @@ async function main() {
 	// After the productions, because a slot hangs off one — and it reads the bill
 	// back rather than being handed it, the way the rider seeder reads a roster.
 	const runOfShow = await seedRunOfShow(productions.rows);
-	const bandReservations = await seedBandReservations(bands);
+	// After the bill, because an ask is against a listing on it.
+	const artifactRequests = await seedArtifactRequests(productions.rows);
+	const bandReservations = await seedBandReservations(bands, usage ? [usage.band] : []);
 	const bandSites = await seedBandSites(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
 	await seedFreePressKits(bands);
 	const series = await seedRecurringSeries(allUsers);
 	const payments = await seedPaymentRecords(allUsers, reservations);
+	const financialEntries = await seedFinancialEntries(allUsers, reservations);
 	const tickets = await seedTickets(allUsers, events);
 	const rsvps = await seedRsvps(allUsers);
 	const notifications = await seedNotifications(allUsers);
@@ -152,11 +178,33 @@ async function main() {
 	await seedCreditTransactions(allUsers);
 	const marketing = await seedMarketing(allUsers);
 	const eq = await seedEquipment(allUsers);
+	// After the equipment, which is the last thing it borrows from: the rest of
+	// what a weekly booker accumulates — bookings, a ticket, credits — needs only
+	// the events that already exist.
+	const usageLife = usage
+		? await seedUsagePersonaLife(usage.personas, events, adminUser)
+		: { reservations: 0, tickets: 0, loans: 0 };
+	const styleHistory = style
+		? await seedStylePersonaHistory(style.personas, events, adminUser)
+		: { reservations: 0, tickets: 0, notifications: 0 };
 	const help = await seedHelp();
 	const itemArticles = await seedItemArticles();
 	const contractors = await seedContractors(adminUser.id);
 	const inbox = await seedInbox(adminUser, users[0]);
-	const directMessages = await seedDirectMessages(users, adminUser);
+	const dmCast =
+		usage && directoryPersonas.seeker && directoryPersonas.leader && directoryPersonas.undecided
+			? {
+					jammer: usage.personas.get('seed-use-regular')!,
+					jamPartner: usage.personas.get('seed-use-bandmate')!,
+					recruiter: directoryPersonas.leader,
+					optedOut: directoryPersonas.undecided,
+					reporter: directoryPersonas.seeker,
+					restricted: usage.personas.get('seed-use-restricted')!
+				}
+			: null;
+	const directMessages = dmCast
+		? await seedDirectMessages(dmCast, adminUser)
+		: { threads: 0, blocks: 0, standings: 0 };
 	const bandEnquiries = await seedBandEnquiries(bands, allUsers);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
@@ -193,7 +241,7 @@ async function main() {
 	// Needs the bands and somebody to have bought something. Writes real audio
 	// into the local private bucket, so it is the one seeder that does I/O
 	// outside D1 — see its header for why rows alone are not enough.
-	const audio = await seedAudio(bands, allUsers);
+	const audio = await seedAudio(bands, allUsers, usage ? [usage.band] : []);
 	// After the bands and their rosters: a rider is owned corner by corner, so it
 	// reads the roster back rather than being handed one.
 	const riders = await seedRiders(roles);
@@ -237,6 +285,7 @@ async function main() {
 	console.log(`  ${pageConfigs.length} band page configs with EPK data`);
 	console.log(`  ${series.length} recurring series`);
 	console.log(`  ${payments.length} payment records`);
+	console.log(`  ${financialEntries.length} financial entries`);
 	console.log(`  ${tickets.length} tickets`);
 	console.log(`  ${rsvps.length} RSVPs`);
 	console.log(`  ${notifications.length} notifications`);
@@ -285,6 +334,9 @@ async function main() {
 		`  ${runOfShow.slots} run-of-show sets — ${runOfShow.uncredited} on no poster, ${runOfShow.withoutTimes} with no downbeat yet`
 	);
 	console.log(
+		`  ${artifactRequests.requests} artifact requests across the bills, half of them overdue`
+	);
+	console.log(
 		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +
 			`${audio.purchases} sales, ${audio.accounts} band Stripe accounts, ` +
 			`${audio.radioEntries} radio entries`
@@ -325,8 +377,38 @@ async function main() {
 	console.log(
 		`    ${SOLO_ACT_LOGIN.email}    one-person act — /member/bands, /band/${SOLO_ACT_LOGIN.slug}`
 	);
+	console.log('\n  Usage demo logins (all `password`) — a job each, not a screen each:');
+	for (const p of USAGE_PERSONAS) {
+		console.log(`    ${p.email.padEnd(33)} ${p.job}`);
+	}
+	console.log(
+		`    ${usageLife.reservations} bookings, ${usageLife.tickets} tickets, ${usageLife.loans} loans on regular@`
+	);
+
+	console.log('\n  Usage-style demo logins (all `password`) — how, not what:');
+	for (const p of STYLE_PERSONAS) {
+		console.log(`    ${p.email.padEnd(33)} ${p.style}`);
+	}
+	console.log(
+		`    ${styleHistory.reservations} bookings, ${styleHistory.tickets} tickets, ${styleHistory.notifications} notifications between them`
+	);
+
+	console.log('\n  External act self-service (no login — the token is the whole of it):');
+	console.log(`    /act/${SEED_ACT_SHEET_TOKEN}   Sawtooth Rivals — contact sheet + tech rider`);
+
+	// The room holds one booking at a time and eight modules book it, so the
+	// invariant is asserted rather than assumed (#966).
+	const clashes = await findRoomConflicts();
+	if (clashes.length > 0) {
+		console.warn(`\n  ⚠ ${clashes.length} overlapping reservation(s) — the room is one room:`);
+		for (const c of clashes.slice(0, 5)) {
+			console.warn(`    ${c.at.toISOString()}  ${c.a}  vs  ${c.b}`);
+		}
+	}
+
 	console.log('\n  Volunteer deep links:');
 	console.log('    /member/volunteer/feedback/seed-vol-signup-feedback');
+	console.log('    /member/volunteer/shifts/seed-vol-signup-door   (checklist + door list)');
 	console.log('    /staff/volunteer/shifts/seed-vol-shift-cancelled');
 
 	console.log('\n  Premium band pages available at:');

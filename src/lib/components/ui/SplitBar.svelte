@@ -21,6 +21,16 @@
 	} as const;
 
 	export type SplitTone = keyof typeof TONES;
+
+	/**
+	 * Below this share of the track, a segment shows no amount at all.
+	 *
+	 * `$13.38` plus its padding is around 50px — roughly 12% of the narrowest
+	 * track this renders in. The segment names live in the legend and in
+	 * `aria-valuetext`, so keeping them out of the bar is what lets the threshold
+	 * sit this low; a name would put it back over 20% and hide amounts that fit.
+	 */
+	const LABEL_MIN_PCT = 12;
 </script>
 
 <script lang="ts">
@@ -147,57 +157,72 @@
 />
 
 <div class="space-y-2">
+	<!--
+		The divider is the control, and it is `sr-only` — right for a screen
+		reader, and 1x1 for somebody who uses a keyboard and can see, who tabbed
+		from the last button into apparently nothing (#995). It cannot show a ring
+		itself, so this wrapper shows one for it. `sr-only` is absolutely
+		positioned, so the bar's own flex row is untouched.
+	-->
 	<div
-		bind:this={track}
-		class="flex h-10 w-full overflow-hidden rounded border border-base-300"
-		onpointerdown={(e) => {
-			dragging = true;
-			fromClientX(e.clientX);
-		}}
-		role="presentation"
+		class="rounded has-[[role=slider]:focus-visible]:outline-2 has-[[role=slider]:focus-visible]:outline-offset-2 has-[[role=slider]:focus-visible]:outline-[var(--cmc-orange)]"
 	>
 		<div
-			class="flex items-center justify-center overflow-hidden whitespace-nowrap {TONES[otherTone]}"
-			style="width: {pct(otherCents)}%"
-		>
-			{#if pct(otherCents) > 22}<span class="px-2">{otherLabel} {dollars(otherCents)}</span>{/if}
-		</div>
+			role="slider"
+			tabindex="0"
+			aria-label="{valueLabel} share"
+			aria-valuemin={0}
+			aria-valuemax={maxValue}
+			aria-valuenow={clamped}
+			aria-valuetext="{valueLabel} {dollars(clamped)}, {otherLabel} {dollars(
+				otherCents
+			)}, {fixedLabel} {dollars(fixedCents)}"
+			class="sr-only"
+			onkeydown={onKeydown}
+		></div>
 		<div
-			class="flex items-center justify-center overflow-hidden whitespace-nowrap {TONES[valueTone]}"
-			style="width: {pct(clamped)}%"
+			bind:this={track}
+			class="flex h-10 w-full overflow-hidden rounded border border-base-300 select-none"
+			onpointerdown={(e) => {
+				dragging = true;
+				fromClientX(e.clientX);
+			}}
+			role="presentation"
 		>
-			{#if pct(clamped) > 22}<span class="px-2">{valueLabel} {dollars(clamped)}</span>{/if}
-		</div>
-		{#if fixedCents > 0}
-			<!-- Locked, and shown rather than hidden: an unexplained missing 59¢
+			<div
+				class="flex items-center justify-center overflow-hidden whitespace-nowrap {TONES[
+					otherTone
+				]}"
+				style="width: {pct(otherCents)}%"
+				title="{otherLabel} {dollars(otherCents)}"
+			>
+				{#if pct(otherCents) > LABEL_MIN_PCT}<span class="px-2">{dollars(otherCents)}</span>{/if}
+			</div>
+			<div
+				class="flex items-center justify-center overflow-hidden whitespace-nowrap {TONES[
+					valueTone
+				]}"
+				style="width: {pct(clamped)}%"
+				title="{valueLabel} {dollars(clamped)}"
+			>
+				{#if pct(clamped) > LABEL_MIN_PCT}<span class="px-2">{dollars(clamped)}</span>{/if}
+			</div>
+			{#if fixedCents > 0}
+				<!-- Locked, and shown rather than hidden: an unexplained missing 59¢
 			     reads worse than a labelled one. Gold once somebody else is
 			     covering it — the one segment whose colour carries information. -->
-			<div
-				class="flex items-center justify-center overflow-hidden whitespace-nowrap {fixedCovered
-					? TONES.gold
-					: TONES.gray}"
-				style="width: {pct(fixedCents)}%"
-				title="{fixedLabel} {dollars(fixedCents)}"
-			>
-				{#if pct(fixedCents) > 22}<span class="px-2">{dollars(fixedCents)}</span>{/if}
-			</div>
-		{/if}
+				<div
+					class="flex items-center justify-center overflow-hidden whitespace-nowrap {fixedCovered
+						? TONES.gold
+						: TONES.gray}"
+					style="width: {pct(fixedCents)}%"
+					title="{fixedLabel} {dollars(fixedCents)}"
+				>
+					{#if pct(fixedCents) > LABEL_MIN_PCT}<span class="px-2">{dollars(fixedCents)}</span>{/if}
+				</div>
+			{/if}
+		</div>
 	</div>
-
-	<!-- The divider, as a control rather than as decoration. -->
-	<div
-		role="slider"
-		tabindex="0"
-		aria-label="{valueLabel} share"
-		aria-valuemin={0}
-		aria-valuemax={maxValue}
-		aria-valuenow={clamped}
-		aria-valuetext="{valueLabel} {dollars(clamped)}, {otherLabel} {dollars(
-			otherCents
-		)}, {fixedLabel} {dollars(fixedCents)}"
-		class="sr-only"
-		onkeydown={onKeydown}
-	></div>
 
 	<!-- A legend, because a colour nobody can name carries nothing. -->
 	<div class="flex flex-wrap items-center gap-x-4 gap-y-1">

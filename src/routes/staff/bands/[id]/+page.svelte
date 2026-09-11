@@ -15,7 +15,6 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShort, formatTimeRange } from '$lib/utils/format';
-	import { toast } from 'svelte-sonner';
 	import {
 		InviteByEmailAction,
 		InviteMemberAction,
@@ -73,11 +72,7 @@
 						<td class="w-px">
 							{#if m.role !== 'owner' && m.status === 'active'}
 								{@const rf = updateMemberRole.for(m.id)}
-								<Form
-									remote={rf}
-									successToast="Role updated"
-									onfailure={() => toast.error('Failed to update role')}
-								>
+								<Form remote={rf} successToast="Role updated">
 									<input {...rf.fields.memberId.as('hidden', m.id)} />
 									<Select
 										class="select-xs"

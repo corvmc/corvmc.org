@@ -6,6 +6,7 @@
 	import { browser } from '$app/environment';
 	import { invalidateAll } from '$app/navigation';
 	import { markNotificationRead, markAllNotificationsRead } from '$lib/remote/notifications.remote';
+	import { timeAgo } from '$lib/utils/format';
 	import type { ChromeNotification } from './chrome';
 
 	// Props, not a query of its own. This component is mounted by `AppTopbar` on
@@ -88,17 +89,6 @@
 		invalidateAll();
 	}
 
-	function timeAgo(date: Date): string {
-		const diff = Date.now() - date.getTime();
-		const minutes = Math.floor(diff / 60_000);
-		if (minutes < 1) return 'just now';
-		if (minutes < 60) return `${minutes}m ago`;
-		const hours = Math.floor(minutes / 60);
-		if (hours < 24) return `${hours}h ago`;
-		const days = Math.floor(hours / 24);
-		return `${days}d ago`;
-	}
-
 	function handleClickOutside(e: MouseEvent) {
 		// This handler can be invoked by the very click that unmounts the component
 		// (navigation), after its reactive state is torn down — even reading `open`
@@ -172,12 +162,21 @@
 								>
 									<div class="flex items-start gap-2">
 										{#if isUnread}
-											<span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary"></span>
+											<span
+												class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary"
+												aria-hidden="true"
+											></span>
 										{:else}
 											<span class="w-2 shrink-0"></span>
 										{/if}
 										<div class="min-w-0">
-											<p class="truncate text-sm font-medium">{n.title}</p>
+											<!-- The tint and the dot are both colour. Weight carries the
+											     same state for anyone who cannot separate a 10%-opacity
+											     primary from the panel, and `sr-only` carries it into the
+											     accessibility tree, where 28 rows read identically. -->
+											<p class={['truncate text-sm', isUnread ? 'font-bold' : 'font-medium']}>
+												{#if isUnread}<span class="sr-only">Unread. </span>{/if}{n.title}
+											</p>
 											{#if n.body}
 												<p class="truncate text-xs text-base-content/60">{n.body}</p>
 											{/if}
@@ -198,7 +197,9 @@
 											<span class="w-2 shrink-0"></span>
 										{/if}
 										<div class="min-w-0">
-											<p class="truncate text-sm font-medium">{n.title}</p>
+											<p class={['truncate text-sm', isUnread ? 'font-bold' : 'font-medium']}>
+												{n.title}
+											</p>
 											{#if n.body}
 												<p class="truncate text-xs text-base-content/60">{n.body}</p>
 											{/if}

@@ -62,6 +62,74 @@ export function suggestedShareCents(divisibleCents: number, bps: number): number
 }
 
 /**
+ * What the two parties actually divide: the charge, less the card fee.
+ *
+ * Exported because the allocation has to be decided *before* `computeSplit`
+ * runs — the ceiling on either share is this number, and a caller that
+ * recomputed it would eventually disagree by a cent.
+ */
+export function divisibleCents(totalCents: number, coverFees: boolean): number {
+	if (totalCents <= 0) return 0;
+	const charge = coverFees ? calculateTotalWithFeeCoverage(totalCents).totalCents : totalCents;
+	return charge - calculateProcessingFee(charge);
+}
+
+/**
+ * The least the other party may be left with: their share of the **base rate**,
+ * and nothing to do with what the buyer paid.
+ *
+ * A proportional split divides a discount as well as a sale, so a buyer paying
+ * under the sticker price would short the other party rather than the one
+ * offering the discount. Anchoring to the base fixes that in both directions:
+ * money above the sticker price is a gift, and a gift the buyer cannot direct
+ * is not one.
+ *
+ * `min(divisibleCents, …)` is the clamp, and it is why paying $7 on a $10 show
+ * leaves $6.49 rather than a $7 that does not exist.
+ */
+export function otherFloorCents(input: {
+	/** The sticker price for the whole order — what the floor is anchored to. */
+	baseCents: number;
+	/** The allocating party's share, in basis points. */
+	shareBps: number;
+	/** What is left after the card fee. */
+	divisibleCents: number;
+}): number {
+	const { baseCents, shareBps, divisibleCents } = input;
+	if (divisibleCents <= 0) return 0;
+	return Math.min(divisibleCents, Math.round((baseCents * (10000 - shareBps)) / 10000));
+}
+
+/**
+ * Where the bar opens: the other party's floor, or their share of the gross
+ * when the buyer paid over the sticker price, whichever is larger.
+ *
+ * This is a suggestion, not the limit — `otherFloorCents` is the limit. The
+ * surplus above the base opens split at the same ratio, and the buyer may move
+ * it either way until one share or the other runs out.
+ */
+export function otherTakeCents(input: {
+	/** The sticker price for the whole order — what the share is anchored to. */
+	baseCents: number;
+	/** What the buyer chose to pay, before any fee coverage. */
+	grossPaidCents: number;
+	/** The allocating party's share, in basis points. */
+	shareBps: number;
+	/** What is left after the card fee. */
+	divisibleCents: number;
+	/** A buyer's deliberate increase. Never a decrease. */
+	optUpCents?: number;
+}): number {
+	const { baseCents, grossPaidCents, shareBps, divisibleCents, optUpCents = 0 } = input;
+	if (divisibleCents <= 0) return 0;
+	// Built on the floor rather than beside it, so a take can never land under
+	// the number the validator holds the same allocation to.
+	const floor = otherFloorCents({ baseCents, shareBps, divisibleCents });
+	const ofGross = Math.round((grossPaidCents * (10000 - shareBps)) / 10000);
+	return Math.min(divisibleCents, Math.max(floor, ofGross, optUpCents));
+}
+
+/**
  * Resolve a complete split from an allocation.
  *
  * Total in, four numbers out, and they always reconcile: the remainder is
@@ -126,9 +194,23 @@ export function validateSplit(input: {
 	/** Below this, and above zero, card fees eat almost everything. */
 	minChargeCents: number;
 	allowPayMore: boolean;
+	/**
+	 * The least the other party may be left with, already clamped to what is
+	 * divisible — see `otherFloorCents`. Defaults to `0`, which is the old
+	 * behaviour: an allocation may take everything.
+	 */
+	otherMinCents?: number;
 	messages?: SplitMessages;
 }): SplitValidation {
-	const { totalCents, shareCents, coverFees, priceMinCents, minChargeCents, allowPayMore } = input;
+	const {
+		totalCents,
+		shareCents,
+		coverFees,
+		priceMinCents,
+		minChargeCents,
+		allowPayMore,
+		otherMinCents = 0
+	} = input;
 	const m = input.messages ?? {};
 
 	if (!Number.isInteger(totalCents) || !Number.isInteger(shareCents)) {
@@ -159,11 +241,11 @@ export function validateSplit(input: {
 
 	const split = computeSplit({ totalCents, shareCents, coverFees });
 
-	// The other party's protection, stated as the invariant that actually holds
-	// it: the allocation must not push their share below zero. The bar's UI
-	// prevents this, and the UI is not the guard.
-	if (split.remainderCents < 0) {
-		return { ok: false, reason: m.remainderNegative ?? 'That leaves nothing for the other party.' };
+	// The other party's protection. `otherMinCents` is their anchored take, so an
+	// allocation may reduce the allocating party's own share to nothing and never
+	// theirs. The bar's UI clamps to the same number, and the UI is not the guard.
+	if (split.remainderCents < otherMinCents) {
+		return { ok: false, reason: m.remainderNegative ?? 'That leaves the other party short.' };
 	}
 	if (shareCents > split.chargeCents) {
 		return { ok: false, reason: m.shareTooLarge ?? 'A share cannot exceed the total.' };

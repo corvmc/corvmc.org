@@ -1,4 +1,4 @@
-import { production } from '../../src/lib/server/db/schema/production';
+import { production, productionExpense } from '../../src/lib/server/db/schema/production';
 import { batchInsert } from './db';
 import { type SeedEvent, type SeedUser } from './types';
 
@@ -101,6 +101,44 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 	// The rows come back because the run of show hangs off them: a slot needs the
 	// production id and the downbeat the set times are walked from.
 	const inserted = await batchInsert(production, rows);
+
+	// One show's costs, so a net deal has a denominator and the settlement
+	// worksheet has something to subtract. The insurance line is deliberately
+	// not deductible: it is the collective's cost whatever happens, and an act
+	// on a percentage of net does not share it.
+	const settledShow = inserted.find((p) => p.status === 'completed') ?? inserted[0];
+	if (settledShow) {
+		await batchInsert(productionExpense, [
+			{
+				productionId: settledShow.id,
+				label: 'Sound engineer',
+				category: 'sound' as const,
+				amountCents: 15_000,
+				deductible: true
+			},
+			{
+				productionId: settledShow.id,
+				label: 'Door staff',
+				category: 'staffing' as const,
+				amountCents: 8_000,
+				deductible: true
+			},
+			{
+				productionId: settledShow.id,
+				label: 'Rider — green room',
+				category: 'hospitality' as const,
+				amountCents: 4_500,
+				deductible: true
+			},
+			{
+				productionId: settledShow.id,
+				label: 'PA insurance, annual share',
+				category: 'other' as const,
+				amountCents: 12_000,
+				deductible: false
+			}
+		]);
+	}
 
 	return {
 		productions: rows.length,

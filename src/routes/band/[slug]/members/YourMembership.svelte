@@ -12,7 +12,6 @@
 	import { leave, updateMyBandMembership } from '$lib/remote/bands.remote';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { toast } from 'svelte-sonner';
 
 	/**
 	 * The viewer's own membership, at the top of the members page.
@@ -122,7 +121,6 @@
 						confirm="Leave {bandName}? You'll need to be re-invited to rejoin."
 						successToast="You have left the band"
 						onsuccess={() => goto(resolve('/member/bands'))}
-						onfailure={() => toast.error('Failed to leave')}
 					>
 						{#snippet form()}
 							<input {...leaveFields.bandId.as('hidden', bandId)} />
