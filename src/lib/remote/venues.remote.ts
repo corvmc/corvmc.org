@@ -82,8 +82,10 @@ export const getVenueDetail = query(z.string(), async (id) => {
 	await requireCapability('event.read');
 	try {
 		return await getService(id);
-	} catch {
-		error(404, 'Venue not found');
+	} catch (err) {
+		// The mapper rather than a fixed 404: VenueNotFoundError already carries
+		// its own status and sentence, and swallowing the error discarded both.
+		mapDomainError(err);
 	}
 });
 

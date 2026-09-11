@@ -14,9 +14,5 @@
 	"src/lib/remote/membership.remote.ts \u2192 createCheckoutSession()",
 	"src/lib/remote/packing.remote.ts \u2192 claimItem()",
 	"src/lib/remote/packing.remote.ts \u2192 getPackingList()",
-	"src/lib/remote/reservations.remote.ts \u2192 checkout()",
-	"src/lib/remote/reservations.remote.ts \u2192 requireInstructor()",
-	"src/lib/remote/suggestions.remote.ts \u2192 getSuggestion()",
-	"src/lib/remote/venues.remote.ts \u2192 getService()",
-	"src/lib/remote/volunteer.remote.ts \u2192 getVolunteerOnboarding()"
+	"src/lib/remote/reservations.remote.ts \u2192 checkout()"
 ]

@@ -122,6 +122,19 @@ function mappedTryRanges(source: string): [number, number][] {
 	return ranges;
 }
 
+/** From a call's `(` to just past its matching `)`, so the tail can be read. */
+function closingParenOnwards(source: string, at: number): string {
+	let i = source.indexOf('(', at);
+	let depth = 1;
+	i++;
+	while (i < source.length && depth > 0) {
+		if (source[i] === '(') depth++;
+		else if (source[i] === ')') depth--;
+		i++;
+	}
+	return source.slice(i - 1, i + 120);
+}
+
 function unmappedCalls(file: string, throwing: Map<string, Set<string>>): string[] {
 	const source = readFileSync(file, 'utf8');
 	const mapped = mappedTryRanges(source);
@@ -134,7 +147,12 @@ function unmappedCalls(file: string, throwing: Map<string, Set<string>>): string
 			// The import statement itself is not a call site.
 			if (source.slice(0, at).lastIndexOf('import') > source.slice(0, at).lastIndexOf(';'))
 				continue;
-			if (!mapped.some(([start, end]) => at > start && at < end)) offenders.add(local);
+			if (mapped.some(([start, end]) => at > start && at < end)) continue;
+			// `foo(x).catch(mapDomainError)` maps as surely as a try/catch does,
+			// and reads better for a one-call handler. Two real sites were being
+			// reported as unmapped because only the block form was recognised.
+			if (/^\s*\)?[^;\n]*\.catch\(mapDomainError\)/.test(closingParenOnwards(source, at))) continue;
+			offenders.add(local);
 		}
 	}
 	return [...offenders].sort();
