@@ -68,18 +68,24 @@
 				description="Shown on the group's public page and in the group directory."
 			/>
 
-			<fieldset class="fieldset">
-				<legend class="fieldset-legend">Leader</legend>
+			<!-- `FormField` with the remote field, not a raw fieldset with a plain
+			     `name`: a remote form encodes its own field names, so the hidden
+			     input arrived as nothing and Zod rejected `leaderId` with no
+			     control to render the issue against — a toast about highlighted
+			     fields, and nothing highlighted (#1019). -->
+			<FormField
+				name="leaderId"
+				label="Leader"
+				required
+				description="They become the owner immediately — there is nothing for them to accept."
+			>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={leader}
-					name="leaderId"
+					field={fields.leaderId}
 					placeholder="Search by name or email..."
 				/>
-				<p class="text-subtle">
-					They become the owner immediately — there is nothing for them to accept.
-				</p>
-			</fieldset>
+			</FormField>
 		</div>
 	{/snippet}
 </Action>

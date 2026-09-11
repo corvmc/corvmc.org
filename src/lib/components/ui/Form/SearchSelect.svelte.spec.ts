@@ -69,3 +69,47 @@ describe('SearchSelect keyboard selection, in context', () => {
 		});
 	}
 });
+
+/**
+ * A remote form encodes its own field names, so a hidden input carrying a bare
+ * `name` arrives as nothing: Zod rejects a field the page never posted and the
+ * issue has no control to render against — a toast saying to fix the
+ * highlighted fields, with nothing highlighted (#1019).
+ */
+describe('SearchSelect posting into a remote form', () => {
+	/** What `fields.leaderId` is: `as()` returns the *encoded* attributes. */
+	const remoteField = (encoded: string) => ({
+		as: (type: string, value?: unknown) => ({ type, name: encoded, value }),
+		issues: () => null
+	});
+
+	const hidden = () => document.querySelector<HTMLInputElement>('input[type="hidden"]');
+
+	async function pick() {
+		await vi.waitFor(() => expect(input()).not.toBeNull());
+		await userEvent.click(input());
+		await userEvent.type(input(), 'Ada');
+		await vi.waitFor(() =>
+			expect(document.querySelectorAll('[role="option"]').length).toBeGreaterThan(0)
+		);
+		await userEvent.keyboard('{ArrowDown}');
+		await userEvent.keyboard('{Enter}');
+	}
+
+	it('posts under the name the remote form encoded, not the plain one', async () => {
+		await render(SearchSelect, { search, field: remoteField('leaderId_x7') as never });
+		await pick();
+
+		await vi.waitFor(() => expect(hidden()).not.toBeNull());
+		expect(hidden()!.name).toBe('leaderId_x7');
+		expect(hidden()!.value).toBe('u1');
+	});
+
+	it('still posts a plain name when given one, for a plain form', async () => {
+		await render(SearchSelect, { search, name: 'leaderId' });
+		await pick();
+
+		await vi.waitFor(() => expect(hidden()).not.toBeNull());
+		expect(hidden()!.name).toBe('leaderId');
+	});
+});
