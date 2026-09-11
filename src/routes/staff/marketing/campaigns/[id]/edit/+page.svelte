@@ -8,6 +8,8 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import { errorMessage } from '$lib/error-message';
 	import {
 		getCampaignDetail,
 		saveDraft,
@@ -26,6 +28,8 @@
 	let scheduledFor = $state('');
 	let submitting = $state(false);
 	let initialized = $state(false);
+	let confirmingSend = $state(false);
+	let confirmingDelete = $state(false);
 
 	$effect(() => {
 		if (campaignData && !initialized) {
@@ -73,28 +77,38 @@
 		}
 	}
 
-	async function handleSendNow() {
+	/**
+	 * Ask before saving, not after: the old order saved the draft and *then* put
+	 * up the dialog, so cancelling still wrote the edits. A named submit rather
+	 * than a browser OK, for the one action here with no recall (#989).
+	 */
+	function handleSendNow() {
 		if (!isValid()) return;
-		// Save first, then send
+		confirmingSend = true;
+	}
+
+	async function sendNow() {
+		confirmingSend = false;
 		submitting = true;
 		try {
+			// Save first: `sendCampaignNow` sends what is stored, so unsaved edits
+			// would otherwise go out with the old copy.
 			await saveDraft({
 				subject: subject.trim(),
 				markdownBody,
 				audienceIds: selectedAudienceIds
 			});
-			if (!window.confirm(`Send to approximately ${totalSubscribers} recipients now?`)) {
-				submitting = false;
-				return;
-			}
 			await sendCampaignNow({});
-			toast.success('Campaign sent');
-			goto(resolve(`/staff/marketing/campaigns/${id}`));
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to send');
-		} finally {
+			// The try covers the calls and nothing else, and a remote rejection is
+			// not an `Error` — reading `.message` off one always fell through to
+			// "Failed to send", whatever actually went wrong (#988).
+			toast.error(errorMessage(err));
 			submitting = false;
+			return;
 		}
+		toast.success('Campaign sent');
+		goto(resolve(`/staff/marketing/campaigns/${id}`));
 	}
 
 	async function handleSchedule() {
@@ -118,8 +132,12 @@
 		}
 	}
 
-	async function handleDelete() {
-		if (!window.confirm('Delete this draft campaign?')) return;
+	function handleDelete() {
+		confirmingDelete = true;
+	}
+
+	async function deleteNow() {
+		confirmingDelete = false;
 		try {
 			await deleteCampaign({});
 			toast.success('Campaign deleted');
@@ -224,3 +242,33 @@
 		</div>
 	</div>
 </PageContent>
+
+<Modal bind:open={confirmingSend} title="Send this campaign now?">
+	<p>
+		This goes to <strong>{totalSubscribers}</strong>
+		{totalSubscribers === 1 ? 'person' : 'people'} immediately, as
+		<em>{subject.trim() || 'an untitled campaign'}</em>.
+	</p>
+	<p class="mt-2 text-muted">There is no recall.</p>
+	<div class="modal-action">
+		<Button variant="default" size="sm" outline onclick={() => (confirmingSend = false)}>
+			Not yet
+		</Button>
+		<Button variant="primary" size="sm" onclick={sendNow}>
+			Send to {totalSubscribers}
+			{totalSubscribers === 1 ? 'person' : 'people'}
+		</Button>
+	</div>
+</Modal>
+
+<Modal bind:open={confirmingDelete} title="Delete this draft?">
+	<p>
+		<em>{subject.trim() || 'This untitled campaign'}</em> and its audience selection go with it.
+	</p>
+	<div class="modal-action">
+		<Button variant="default" size="sm" outline onclick={() => (confirmingDelete = false)}>
+			Keep it
+		</Button>
+		<Button variant="error" size="sm" onclick={deleteNow}>Delete the draft</Button>
+	</div>
+</Modal>

@@ -171,8 +171,13 @@
 >
 	<label class="input w-full items-center gap-1">
 		<span class="opacity-60">$</span>
+		<!-- Named explicitly. The wrapping `<label class="input">` is daisyUI's
+		     input group, and it was claiming the accessible name — a screen
+		     reader read this field as "$ per ticket" rather than the question
+		     above it (#994). -->
 		<input
 			id="ticketAmount"
+			aria-label="How much are you paying, per ticket"
 			type="number"
 			step="0.01"
 			min="0"

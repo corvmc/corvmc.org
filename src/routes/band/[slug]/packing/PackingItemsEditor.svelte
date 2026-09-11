@@ -158,6 +158,7 @@
 			{#if !readonly}
 				<div class="mt-2 flex justify-end gap-1">
 					<Button
+						type="button"
 						variant="ghost"
 						size="xs"
 						onclick={() => moveItem(i, -1)}
@@ -167,6 +168,7 @@
 						<IconChevronUp size={16} />
 					</Button>
 					<Button
+						type="button"
 						variant="ghost"
 						size="xs"
 						onclick={() => moveItem(i, 1)}
@@ -175,7 +177,13 @@
 					>
 						<IconChevronDown size={16} />
 					</Button>
-					<Button variant="ghost" size="xs" onclick={() => removeItem(i)} aria-label="Remove">
+					<Button
+						type="button"
+						variant="ghost"
+						size="xs"
+						onclick={() => removeItem(i)}
+						aria-label="Remove"
+					>
 						<IconTrash size={16} />
 					</Button>
 				</div>
@@ -189,6 +197,7 @@
 		<div class="flex items-center justify-between">
 			<span class="text-xs text-base-content/60">{filled} of {PACKING_MAX_ITEMS}</span>
 			<Button
+				type="button"
 				variant="ghost"
 				size="sm"
 				onclick={addItem}

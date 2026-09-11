@@ -134,12 +134,17 @@
 			<input {...purchaseFields.eventId.as('hidden', page.params.id!)} />
 			<Card>
 				<CardBody class="space-y-4">
+					<!-- The `input` snippet, not children: only it is handed the id the
+					     caption points at, so as children this select had no accessible
+					     name at all and read as "combo box, 1" (#994). -->
 					<Field label="Number of tickets" name="quantity">
-						<Select name="quantity" bind:value={quantity} class="w-full">
-							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
-								<option value={n}>{n}</option>
-							{/each}
-						</Select>
+						{#snippet input(id)}
+							<Select {id} name="quantity" bind:value={quantity} class="w-full">
+								{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
+									<option value={n}>{n}</option>
+								{/each}
+							</Select>
+						{/snippet}
 					</Field>
 
 					{#if !data.isAuthenticated}

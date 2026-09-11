@@ -378,8 +378,12 @@ export async function executeSend(campaignId: string): Promise<number> {
 		};
 	});
 
-	await sendBroadcastBatch(messages);
-
+	// Claimed before the batch, not after. sendBroadcastBatch chunks and rethrows
+	// from whichever chunk failed, so a mid-batch throw has already delivered to
+	// the earlier ones — and a row still matching processDueCampaigns' predicate
+	// (scheduledFor <= now AND sentAt IS NULL) would be re-sent to the whole list
+	// by the next cron tick. At-most-once is the right trade for a broadcast; the
+	// throw still reaches Sentry and the caller (#988).
 	await db
 		.update(campaign)
 		.set({
@@ -388,6 +392,8 @@ export async function executeSend(campaignId: string): Promise<number> {
 			updatedAt: new Date()
 		})
 		.where(eq(campaign.id, campaignId));
+
+	await sendBroadcastBatch(messages);
 
 	return recipients.length;
 }

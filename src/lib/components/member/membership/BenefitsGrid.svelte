@@ -59,8 +59,9 @@
 					</div>
 					<CardTitle>Shows & Community</CardTitle>
 					<p class="opacity-70">
-						Half-price tickets to every Collective event and show, first dibs on workshops, and the
-						satisfaction of knowing you're helping keep independent music going in Corvallis.
+						First dibs on workshops and member-only events, and the satisfaction of knowing you're
+						helping keep independent music going in Corvallis. Show tickets are a sliding scale for
+						everyone — your contribution is what keeps that possible.
 					</p>
 				</CardBody>
 			</Card>
@@ -89,7 +90,7 @@
 				<CardTitle>Shows & Community</CardTitle>
 				<ul class="mt-2 space-y-2">
 					{@render benefitItem(
-						'<strong>Half-price tickets</strong> to every Collective event and show'
+						'<strong>Show tickets on a sliding scale</strong> — for everyone, because of you'
 					)}
 					{@render benefitItem('<strong>First dibs</strong> on workshops and special events')}
 					{@render benefitItem(

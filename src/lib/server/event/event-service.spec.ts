@@ -171,6 +171,10 @@ vi.mock('$lib/server/ticket/ticket-service', () => ({
 }));
 
 const mockCancelProductions = vi.fn().mockResolvedValue(0);
+vi.mock('$lib/server/directory/entry-service', () => ({
+	createExternalAct: vi.fn(async () => 'entry-new')
+}));
+
 vi.mock('$lib/server/production/production-service', () => ({
 	cancelProductionsForEvent: (...args: unknown[]) => mockCancelProductions(...args)
 }));
@@ -183,6 +187,7 @@ import {
 	listAll,
 	checkRebookNeeded,
 	unpublishWithNotice,
+	listCreditInDirectory,
 	listPublicUpcomingEvents,
 	remove,
 	EventNotFoundError,
@@ -192,6 +197,7 @@ import {
 	EventHasTicketsError,
 	PosterRestoreError
 } from './event-service';
+import { createExternalAct } from '$lib/server/directory/entry-service';
 import {
 	staffCreate,
 	cancel as cancelReservation,
@@ -1092,6 +1098,36 @@ describe('EventService', () => {
 			const params = whereParams();
 			expect(params).toContain('community');
 			expect(params).toContain('draft');
+		});
+	});
+
+	// #974: requestableActs filters on event_band.directoryEntryId, whose only
+	// writer sets it from the group a lineup editor picked — so an act typed onto
+	// a bill by name could never be asked for a rider.
+	describe('listCreditInDirectory', () => {
+		it('mints an external act for an unlisted credit and links it', async () => {
+			selectResultQueue = [[{ id: 'eb-1', name: 'Willamette Static', entryId: null }]];
+			vi.mocked(createExternalAct).mockResolvedValueOnce('entry-9');
+
+			const id = await listCreditInDirectory('eb-1');
+
+			expect(id).toBe('entry-9');
+			expect(createExternalAct).toHaveBeenCalledWith({ name: 'Willamette Static' });
+			expect(lastUpdateSet).toEqual({ directoryEntryId: 'entry-9' });
+		});
+
+		it('returns the existing entry rather than minting a second one', async () => {
+			selectResultQueue = [[{ id: 'eb-1', name: 'Sun Kissed', entryId: 'entry-3' }]];
+			vi.mocked(createExternalAct).mockClear();
+
+			expect(await listCreditInDirectory('eb-1')).toBe('entry-3');
+			expect(createExternalAct).not.toHaveBeenCalled();
+		});
+
+		it('refuses a credit that does not exist', async () => {
+			selectResultQueue = [[]];
+
+			await expect(listCreditInDirectory('nope')).rejects.toThrow(EventNotFoundError);
 		});
 	});
 

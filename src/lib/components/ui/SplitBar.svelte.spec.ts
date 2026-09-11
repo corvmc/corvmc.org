@@ -103,3 +103,34 @@ describe('SplitBar track', () => {
 		expect(titles).toEqual(['The acts $13.38', 'The Collective $5.74', 'Fees $0.88']);
 	});
 });
+
+/**
+ * The slider is `sr-only`, so 1x1 — correct for a screen reader and nothing at
+ * all for somebody who uses a keyboard and can see, who tabbed from "$30.00"
+ * into apparently nothing (#995). The ring goes on the bar, which is why this
+ * reads the parent. A real focus, because the rule is `:focus-visible`.
+ */
+describe('SplitBar focus visibility', () => {
+	it('rings the bar when the slider is focused by keyboard', async () => {
+		await render(SplitBar, {
+			totalCents: 2000,
+			value: 574,
+			onchange: () => {},
+			fixedCents: 88,
+			valueLabel: 'The Collective',
+			otherLabel: 'The acts'
+		});
+
+		const slider = document.querySelector<HTMLElement>('[role="slider"]')!;
+		const ringed = slider.parentElement!;
+		expect(getComputedStyle(ringed).outlineStyle).toBe('none');
+
+		slider.focus();
+		// `:focus-visible` needs the browser to believe the focus was not a click.
+		slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+
+		const ring = getComputedStyle(ringed);
+		expect(ring.outlineStyle).not.toBe('none');
+		expect(parseFloat(ring.outlineWidth)).toBeGreaterThan(0);
+	});
+});
