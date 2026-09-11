@@ -223,13 +223,10 @@ async function patchUserCard(
 /**
  * Mirror whatever card the subscription currently bills onto the user row.
  *
- * `setDefaultCard` covers a card added through the billing page, but that is
- * the rarer path: most members arrive with a card because Checkout attached one
- * during signup, and nothing on that route touches these columns. Called from
- * the subscription webhook so both paths end up in the same place.
- *
- * Best-effort by design — it runs inside a webhook, and failing to cache a
- * brand and last four is not a reason to fail the event Stripe will redeliver.
+ * `setDefaultCard` covers a card added on the billing page; most members arrive
+ * with one Checkout attached at signup, which touches neither column. Called
+ * from the subscription webhook so both paths land together. Best-effort:
+ * caching a brand is not worth failing an event Stripe will redeliver.
  */
 export async function syncCardFromSubscription(
 	userId: string,
