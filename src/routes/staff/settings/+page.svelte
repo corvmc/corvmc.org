@@ -307,16 +307,7 @@
 			<Form remote={updateReservationSettings} guard successToast="Reservation settings updated">
 				<Card>
 					<CardBody>
-						<div class="flex items-center justify-between">
-							<CardTitle size="base">Pricing</CardTitle>
-							<SubmitButton
-								label="Save"
-								successLabel="Saved"
-								errorLabel="Error"
-								variant="primary"
-								size="sm"
-							/>
-						</div>
+						<CardTitle size="base">Pricing</CardTitle>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<div class="fieldset">
@@ -443,6 +434,19 @@
 						</div>
 					</CardBody>
 				</Card>
+				<!-- One form, one Save, named for what it saves. The button used to sit
+				     in the first card's header while the form wrapped three of them, so
+				     editing an operating hour or a social URL offered no save control in
+				     the card you were editing (#1076). Three buttons would have been
+				     worse: each one saves all of it. -->
+				<div class="flex justify-end">
+					<SubmitButton
+						label="Save reservation settings"
+						successLabel="Saved"
+						errorLabel="Error"
+						variant="primary"
+					/>
+				</div>
 			</Form>
 		{:else if activeTab === 'organization'}
 			<p class="text-muted">
@@ -452,16 +456,7 @@
 			<Form remote={updateOrgSettings} guard successToast="Organization settings updated">
 				<Card>
 					<CardBody>
-						<div class="flex items-center justify-between">
-							<CardTitle size="base">Location</CardTitle>
-							<SubmitButton
-								label="Save"
-								successLabel="Saved"
-								errorLabel="Error"
-								variant="primary"
-								size="sm"
-							/>
-						</div>
+						<CardTitle size="base">Location</CardTitle>
 						<p class="text-subtle">Shown in the site footer and on the contact page.</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
@@ -520,6 +515,19 @@
 						</div>
 					</CardBody>
 				</Card>
+				<!-- One form, one Save, named for what it saves. The button used to sit
+				     in the first card's header while the form wrapped three of them, so
+				     editing an operating hour or a social URL offered no save control in
+				     the card you were editing (#1076). Three buttons would have been
+				     worse: each one saves all of it. -->
+				<div class="flex justify-end">
+					<SubmitButton
+						label="Save organization settings"
+						successLabel="Saved"
+						errorLabel="Error"
+						variant="primary"
+					/>
+				</div>
 			</Form>
 
 			<Form remote={updateVolunteerValueSettings} guard successToast="Volunteer hour value updated">
