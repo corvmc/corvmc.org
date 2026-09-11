@@ -5,6 +5,8 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { formatDateShort } from '$lib/utils/format';
@@ -38,6 +40,31 @@
 </script>
 
 <PageHeader subtitle="Audience" title={audienceData.name} backHref="/staff/marketing/audiences">
+	<!-- Not gated on `isBuiltIn`: `updateAudience` refuses a built-in's *slug*
+	     and its opt-in, and says in its own comment that "name and description
+	     are staff-editable copy". Before this there was no way to change either
+	     on any audience, built-in or not (#1074). -->
+	<Action
+		action={updateAudience}
+		label="Rename"
+		modalTitle="Rename this audience"
+		submitLabel="Save"
+		successToast="Audience updated"
+		variant="ghost"
+		size="sm"
+	>
+		{#snippet form()}
+			<input {...fields.id.as('hidden', id)} />
+			<FormField field={fields.name} type="text" label="Name" value={audienceData.name} required />
+			<FormField
+				field={fields.description}
+				type="textarea"
+				label="Description"
+				value={audienceData.description ?? ''}
+				description="What this list is for. Staff-only — subscribers never see it."
+			/>
+		{/snippet}
+	</Action>
 	{#if !isBuiltIn}
 		<DeleteAudienceAction
 			audienceId={id}

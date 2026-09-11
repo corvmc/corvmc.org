@@ -274,7 +274,16 @@ export const updateAudience = form(
 		id: z.string(),
 		name: z.string().max(SHORT_TEXT_MAX).optional(),
 		description: z.string().max(LONG_TEXT_MAX).optional(),
-		allowOptIn: z.boolean().default(false)
+		/**
+		 * Optional with **no default**. `.default(false)` meant a form that did
+		 * not name this field switched public opt-in off as a side effect of
+		 * saving something else — which is what the rename form below would have
+		 * done (#1074). Undefined reaches drizzle's `set()`, which skips it.
+		 *
+		 * The opt-in toggle posts a hidden field rather than the checkbox, so it
+		 * always sends an explicit value and can still turn opt-in off.
+		 */
+		allowOptIn: z.boolean().optional()
 	}),
 	async (data) => {
 		await requireCapability('marketing.manageAudiences');

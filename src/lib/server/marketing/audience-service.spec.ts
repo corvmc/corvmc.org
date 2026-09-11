@@ -202,6 +202,16 @@ describe('updateAudience', () => {
 			AudienceValidationError
 		);
 	});
+
+	// The remote's `allowOptIn` used to carry `.default(false)`, so a form that
+	// only renamed the audience switched public opt-in off on its way past. The
+	// schema is `.optional()` now, and this is the half that makes that safe:
+	// an absent key must not reach the update at all (#1074).
+	it('leaves a field alone when the caller does not name it', async () => {
+		await updateAudience('aud-1', { name: 'Renamed' });
+
+		expect(updateData[0]).not.toHaveProperty('allowOptIn');
+	});
 });
 
 describe('deleteAudience', () => {
