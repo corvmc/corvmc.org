@@ -102,6 +102,19 @@ export const bandSite = sqliteTable(
 		tier: text('tier', { enum: bandTiers }).notNull().default('free'),
 		subscription: text('subscription', { mode: 'json' }).$type<BandSubscription>(),
 
+		/**
+		 * The band's own Stripe customer, which is what the premium subscription
+		 * bills.
+		 *
+		 * It used to hang off the owner's personal customer, and Stripe declines a
+		 * second subscription there — so an owner who was already a sustaining
+		 * member could not buy premium, and one who was not got a 400 before
+		 * reaching Stripe. Nobody could buy it (#1081). Stripe puts no uniqueness
+		 * on customer email, so the band's contact address is free to be used here
+		 * as well as anywhere else.
+		 */
+		stripeCustomerId: text('stripe_customer_id'),
+
 		// Premium only, and backed by a Cloudflare for SaaS custom hostname.
 		// `customDomainHostnameId` is that hostname's id, needed to poll status and
 		// to delete it.

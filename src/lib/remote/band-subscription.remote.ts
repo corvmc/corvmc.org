@@ -6,6 +6,8 @@ import { mapDomainError } from '$lib/server/errors';
 import {
 	getBandSubscription,
 	createBandPremiumCheckout,
+	ensureBandStripeCustomer,
+	bandContactEmail,
 	cancelBandSubscription,
 	resumeBandSubscription,
 	getBandPremiumPricing
@@ -46,27 +48,29 @@ export const upgradeToPremium = form(
 		billingInterval: z.enum(['monthly', 'yearly'])
 	}),
 	async (data) => {
-		const { user, group: band } = await requireGroupRole({ slug: data.slug }, 'owner');
+		const { group: band } = await requireGroupRole({ slug: data.slug }, 'owner');
 
 		if (band.tier === 'premium') {
 			throw error(400, 'Band already has premium tier');
 		}
 
-		if (!user.stripeId) {
-			throw error(
-				400,
-				'Payment method required. Please set up billing in your membership settings first.'
-			);
-		}
-
+		// No `user.stripeId` guard. Premium used to bill the owner's personal
+		// customer, which refused an owner who had never contributed and — worse
+		// — was refused *by Stripe* for one who had, since a customer cannot hold
+		// two subscriptions. Between them nobody could buy it (#1081).
 		const { url } = getRequestEvent();
 		// `mapDomainError` is declared `: never`, so `checkoutUrl` is definitely
 		// assigned past the catch without a non-null assertion.
 		let checkoutUrl: string;
 		try {
+			const stripeCustomerId = await ensureBandStripeCustomer({
+				bandId: band.id,
+				bandName: band.name,
+				email: await bandContactEmail(band.id)
+			});
 			checkoutUrl = await createBandPremiumCheckout({
 				bandId: band.id,
-				stripeCustomerId: user.stripeId,
+				stripeCustomerId,
 				billingInterval: data.billingInterval,
 				successUrl: `${url.origin}/band/${band.slug}/subscription?success=true`,
 				cancelUrl: `${url.origin}/band/${band.slug}/subscription`
