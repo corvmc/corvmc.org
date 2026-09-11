@@ -58,6 +58,8 @@
 					{#if ticket.status === 'checked_in'}
 						<StatusBadge status="checked_in" />
 					{:else}
+						<!-- 44px on purpose: tapped a hundred times in a row, standing
+						     at a door, one-handed. daisyUI's default `btn` is 40 (#971). -->
 						<Form
 							remote={checkInAsVolunteer.for(ticket.id)}
 							successToast="Checked in"
@@ -65,7 +67,7 @@
 						>
 							<input type="hidden" name="ticketId" value={ticket.id} />
 							<input type="hidden" name="signupId" value={signupId} />
-							<SubmitButton label="Check in" variant="primary" size="sm" />
+							<SubmitButton label="Check in" variant="primary" class="min-h-11" />
 						</Form>
 					{/if}
 				</CardBody>

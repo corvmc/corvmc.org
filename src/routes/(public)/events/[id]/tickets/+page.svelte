@@ -47,7 +47,11 @@
 	}
 </script>
 
-<div class="mx-auto max-w-lg space-y-6">
+<!-- `px-6` is not decoration: `PageHeader` bleeds to its container's edges with
+     `-mx-6`, and on the app side the 24px comes from AppShell's `main`. Without
+     it here the header hung off both sides and the page scrolled sideways on a
+     phone (#970). `/events/[id]` wraps its own header the same way. -->
+<div class="mx-auto max-w-lg space-y-6 px-6">
 	<PageHeader title={isFreeEvent ? 'Get free ticket' : 'Get Tickets'} backHref="/events" />
 
 	<Card>
