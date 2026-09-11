@@ -1,0 +1,45 @@
+name: Issue type guard
+
+# Every issue carries a type, so `Bug 1` in the SessionStart digest means what it says.
+#
+# It did not. `.github/ISSUE_TEMPLATE/finding.md` declares `type: Bug` in its frontmatter, and
+# `gh issue create --template` applies that file's `labels:` while silently dropping its `type:`
+# — there is a `--type` flag instead, which nothing was passing. So every agent-filed finding
+# arrived untyped, including ones that turned out to be the most serious thing in the tracker,
+# and the Bug count read 1 while several real defects were open.
+#
+# Flagged, not inferred. `agent-filed` looks like it should mean Bug and does not: the same
+# label is on the walkthrough records, which are Tasks. A guess that is right most of the time
+# is worse than a queue, because nobody rechecks a type that is already set. `needs-type` is
+# something someone can work; a missing type is invisible. Same shape as the area guard.
+on:
+  issues:
+    types: [opened, reopened, labeled, unlabeled, typed, untyped]
+
+permissions:
+  issues: write
+
+jobs:
+  type:
+    name: Require an issue type
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.issue.number;
+
+            const labels = context.payload.issue.labels.map((l) => l.name);
+            const typed = !!context.payload.issue.type;
+            const flagged = labels.includes('needs-type');
+
+            if (typed === flagged) {
+              await github.rest.issues[typed ? 'removeLabel' : 'addLabels']({
+                owner,
+                repo,
+                issue_number,
+                ...(typed ? { name: 'needs-type' } : { labels: ['needs-type'] })
+              });
+            }

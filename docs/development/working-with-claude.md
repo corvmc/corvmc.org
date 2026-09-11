@@ -120,7 +120,9 @@ do with that, and two of them lose it:
   unrelated fix with it.
 - **Say it in the chat.** Gone when the session ends, which for a background `dev` agent is a few
   minutes after it is said.
-- **File it.** `gh issue create --template finding.md`, labelled `agent-filed` and `needs-triage`.
+- **File it.** `gh issue create --template finding.md --type Bug`, labelled `agent-filed` and
+  `needs-triage`. The `--type` is not redundant with the template: `--template` applies its
+  `labels:` frontmatter and drops its `type:`, which is how every finding arrived untyped.
 
 The third is the rule, and `CLAUDE.md` states it. The template asks for the location, how it was
 found, why it was not fixed there, and — the field worth defending — whether the finding was
