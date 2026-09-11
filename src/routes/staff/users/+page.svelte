@@ -110,7 +110,18 @@
 			/>
 		{/snippet}
 		<div onchange={onStatusChange}>
-			<Field type="select" label="" bind:value={status} options={statusOptions} class="w-40" />
+			<!-- Named, not `label=""`. A select has no placeholder to fall back on
+			     the way the search box beside it does, so an empty caption left it
+			     with no accessible name at all. `FormField` builds its input props
+			     from a closed set, so an `aria-label` here would not reach the
+			     element — the caption is the supported way to name it. -->
+			<Field
+				type="select"
+				label="Status"
+				bind:value={status}
+				options={statusOptions}
+				class="w-40"
+			/>
 		</div>
 	</FilterBar>
 
