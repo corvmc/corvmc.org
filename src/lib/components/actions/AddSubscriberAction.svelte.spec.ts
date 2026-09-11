@@ -75,7 +75,11 @@ describe('AddSubscriberAction', () => {
 		const submit = page.getByRole('button', { name: 'Add Subscriber', exact: true }).last();
 		await expect.element(submit).toBeDisabled();
 
-		await userEvent.fill(page.getByLabelText('Email', { exact: true }), 'nina@example.dev');
+		// By role, not by label text: `required` puts an `aria-hidden` `*` inside
+		// the caption, so the label reads "Email*" while the accessible name is
+		// "Email". Asserting the name is both what a screen reader gets and the
+		// stronger claim.
+		await userEvent.fill(page.getByRole('textbox', { name: 'Email' }), 'nina@example.dev');
 
 		await expect.element(submit).toBeEnabled();
 	});

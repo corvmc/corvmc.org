@@ -5,12 +5,10 @@ import { render } from 'vitest-browser-svelte';
 /**
  * A search box whose value is never submitted, beside a hidden input that is.
  * The person picked has to reach `userId`, and nothing on screen shows that it
- * did — the chip that appears is the component's own state, not the field. A
- * pick that fails to commit invites nobody and reports nothing.
- *
- * Which is also why the search box carries `userId`'s *caption and issues*
- * without carrying its value: an issue on a hidden field has nowhere to render,
- * and the box is the only thing on screen while `userId` is still empty.
+ * did — the chip is the component's own state, not the field. So the box
+ * carries `userId`'s caption and issues without carrying its value: an issue
+ * on a hidden field has nowhere to render, and the box is all that is on
+ * screen while `userId` is still empty.
  */
 const issues: Record<string, { path: string[]; message: string }[] | null> = {};
 
