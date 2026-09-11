@@ -27,10 +27,12 @@ const PORT_SURFACE: ReadonlyArray<readonly [keyof PaymentGateway, readonly strin
 	['customers', ['create']],
 	['invoices', ['list']],
 	['paymentIntents', ['retrieve']],
+	['paymentMethods', ['list', 'detach', 'update']],
 	['paymentRecords', ['reportPayment', 'reportRefund', 'retrieve']],
 	['prices', ['retrieve']],
 	['products', ['list', 'create', 'update']],
 	['refunds', ['create']],
+	['setupIntents', ['create', 'retrieve']],
 	['subscriptions', ['list', 'update', 'retrieve']]
 ];
 
@@ -299,6 +301,17 @@ describe('fake gateway behaviour', () => {
 		expect((await gateway.paymentMethods.list({ customer: 'cus_seed_persona' })).data).toHaveLength(
 			0
 		);
+	});
+
+	it('marks a card the member chose to save as redisplayable', async () => {
+		const cards = await gateway.paymentMethods.list({ customer: 'cus_seed_persona' });
+		const updated = await gateway.paymentMethods.update(cards.data[0].id, {
+			allow_redisplay: 'always'
+		});
+
+		// Stripe hides a saved card from Checkout unless this says otherwise, so
+		// it is what makes "pay with the card on file" work at all.
+		expect(updated.allow_redisplay).toBe('always');
 	});
 
 	it('leaves a customer the fake minted itself alone', async () => {

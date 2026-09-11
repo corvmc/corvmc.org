@@ -587,6 +587,62 @@ describe('checkout ui_mode', () => {
 		expect(params.payment_intent_data.application_fee_amount).toBe(150);
 	});
 
+	it('offers a member their card on file, and the chance to add one', async () => {
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			id: 'cs_elements',
+			client_secret: 'cs_elements_secret_abc'
+		});
+
+		await checkout({ ...baseOptions, uiMode: 'elements', stripeCustomerId: 'cus_member' });
+
+		// Stripe shows a saved card only when `allow_redisplay` is `always`, which
+		// no card attached before this was, so all three values are filtered back
+		// in. Without it the Element offers nothing but a fresh card entry.
+		const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		expect(params.saved_payment_method_options.allow_redisplay_filters).toEqual([
+			'always',
+			'limited',
+			'unspecified'
+		]);
+		expect(params.saved_payment_method_options.payment_method_save).toBe('enabled');
+	});
+
+	it('does not offer to save a card on a subscription, which always saves one', async () => {
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			id: 'cs_sub',
+			client_secret: 'cs_sub_secret'
+		});
+
+		await checkout({
+			...baseOptions,
+			mode: 'subscription',
+			uiMode: 'elements',
+			stripeCustomerId: 'cus_member'
+		});
+
+		const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		expect(params.saved_payment_method_options.payment_method_save).toBeUndefined();
+		expect(params.saved_payment_method_options.allow_redisplay_filters).toContain('always');
+	});
+
+	it('sends no saved-card options for a guest, who has no customer', async () => {
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			id: 'cs_guest',
+			client_secret: 'cs_guest_secret'
+		});
+
+		await checkout({
+			...baseOptions,
+			uiMode: 'elements',
+			stripeCustomerId: undefined,
+			customerEmail: 'guest@example.test'
+		});
+
+		const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		expect(params.saved_payment_method_options).toBeUndefined();
+		expect(params.customer_email).toBe('guest@example.test');
+	});
+
 	it('throws when an elements session comes back without a client secret', async () => {
 		mockStripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_elements' });
 

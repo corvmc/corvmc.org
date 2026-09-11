@@ -189,6 +189,11 @@ export async function rememberCard(
 	stripeCustomerId: string,
 	paymentMethodId: string
 ): Promise<void> {
+	// Stripe hides a saved card from a later Checkout unless `allow_redisplay`
+	// says otherwise, and a card added through the billing page is as deliberate
+	// a choice to save one as exists. Without this the member adds a card and is
+	// then asked to retype it at the next purchase.
+	await stripe.paymentMethods.update(paymentMethodId, { allow_redisplay: 'always' });
 	await setDefaultCard(userId, stripeCustomerId, paymentMethodId);
 }
 

@@ -347,6 +347,19 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 	};
 
 	if (stripeCustomerId) {
+		// A member who has paid before should not have to retype a card.
+		//
+		// Stripe already renders saved cards in the Payment Element, but hides any
+		// whose `allow_redisplay` is not `always` — which is every card attached
+		// before we started setting it, and every one Checkout attached without
+		// asking. Filtering all three values back in is what makes the card on
+		// file actually appear; `payment_method_save` is the other half, offering
+		// to put one there during an ordinary purchase. Subscriptions save the
+		// card unconditionally, so the prompt only belongs on a one-time payment.
+		sessionParams.saved_payment_method_options = {
+			allow_redisplay_filters: ['always', 'limited', 'unspecified'],
+			...(mode === 'payment' && { payment_method_save: 'enabled' as const })
+		};
 		sessionParams.customer = stripeCustomerId;
 	} else if (customerEmail) {
 		sessionParams.customer_email = customerEmail;

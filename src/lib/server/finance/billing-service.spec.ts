@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // unioning two quietly widens what each was testing.
 const mockStripe = vi.hoisted(() => ({
 	setupIntents: { create: vi.fn(), retrieve: vi.fn() },
-	paymentMethods: { list: vi.fn(), detach: vi.fn() },
+	paymentMethods: { list: vi.fn(), detach: vi.fn(), update: vi.fn() },
 	subscriptions: { list: vi.fn(), update: vi.fn() },
 	invoices: { list: vi.fn() }
 }));
@@ -22,6 +22,7 @@ const {
 	listCards,
 	listInvoices,
 	removeCard,
+	rememberCard,
 	setDefaultCard,
 	syncCardFromSubscription,
 	PaymentMethodError
@@ -129,6 +130,18 @@ describe('setDefaultCard', () => {
 
 		expect(mockStripe.subscriptions.update).not.toHaveBeenCalled();
 		expect(dbUpdate).toHaveBeenCalledWith({ pmType: 'visa', pmLastFour: '4242' });
+	});
+});
+
+describe('rememberCard', () => {
+	it('marks the card redisplayable, or Checkout will not offer it back', async () => {
+		mockStripe.paymentMethods.list.mockResolvedValue({ data: [card('pm_a', '4242')] });
+
+		await rememberCard('user-1', 'cus_1', 'pm_a');
+
+		expect(mockStripe.paymentMethods.update).toHaveBeenCalledWith('pm_a', {
+			allow_redisplay: 'always'
+		});
 	});
 });
 

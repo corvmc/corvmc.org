@@ -25,7 +25,7 @@ export interface PaymentGateway {
 	readonly customers: Pick<Stripe['customers'], 'create'>;
 	readonly invoices: Pick<Stripe['invoices'], 'list'>;
 	readonly paymentIntents: Pick<Stripe['paymentIntents'], 'retrieve'>;
-	readonly paymentMethods: Pick<Stripe['paymentMethods'], 'list' | 'detach'>;
+	readonly paymentMethods: Pick<Stripe['paymentMethods'], 'list' | 'detach' | 'update'>;
 	readonly paymentRecords: Pick<
 		Stripe['paymentRecords'],
 		'reportPayment' | 'reportRefund' | 'retrieve'

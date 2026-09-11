@@ -368,6 +368,16 @@ export function createFakeGateway(): PaymentGateway {
 					)
 				);
 			},
+			update: (async (id: string, params?: Stripe.PaymentMethodUpdateParams) => {
+				const method = store.paymentMethods.get(id);
+				if (!method) notFound('payment method', id);
+				const updated = {
+					...method,
+					...(params?.allow_redisplay && { allow_redisplay: params.allow_redisplay })
+				};
+				store.paymentMethods.set(id, updated);
+				return respond(updated);
+			}) as PaymentGateway['paymentMethods']['update'],
 			detach: (async (id: string) => {
 				const method = store.paymentMethods.get(id);
 				if (!method) notFound('payment method', id);
