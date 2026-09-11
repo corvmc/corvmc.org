@@ -54,6 +54,13 @@
 			/>
 		</div>
 	{:else}
-		<p class="text-muted">No active recurring reservations.</p>
+		<!-- The control is a Frequency selector on step one of the Reserve Space
+		     modal, two steps from the card that looks like it is about the same
+		     thing. An empty list with nothing else in it read as a feature with
+		     no way in, and a walk reached exactly that conclusion (#1001). -->
+		<p class="text-muted">
+			No active recurring reservations. Use <strong>Reserve Space</strong> at the top of this page and
+			pick a frequency on the first step to start a series.
+		</p>
 	{/each}
 {/if}

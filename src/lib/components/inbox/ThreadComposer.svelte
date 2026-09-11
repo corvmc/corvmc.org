@@ -116,7 +116,12 @@
 			<p class="text-xs text-warning">{replyBlockedReason}</p>
 		{/if}
 
+		<!-- `guard` because every other abandonable form here has one — the profile,
+		     the account page, the booking wizard — and a half-written reply left
+		     silently on navigate-away or reload (#979). It asks; it does not keep
+		     the text. A draft that survives is storage and a clearing rule. -->
 		<Form
+			guard
 			remote={activeForm}
 			successToast={isNote ? 'Note added' : 'Reply sent'}
 			onsuccess={() => {
