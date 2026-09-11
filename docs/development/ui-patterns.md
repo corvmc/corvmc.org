@@ -510,6 +510,39 @@ set (`PosterCard`, `VinylCard`, `IdCard`, `GigList`, `directory/profile/*`). Tha
 `member/` too: `member/events/**` and `member/directory/**` are art-directed routes. Don't
 "consistency-fix" one into the other — they optimise for different things.
 
+### A detail page is a superset of its row
+
+Whatever a record's row shows, its own page shows too — the same facts, the same labels, the same
+actions, and then more. A row is a preview of a page, so a fact that survives the trip _down_ to a
+`cell-primary` and is then missing from the page it links to is always a bug.
+
+This is easy to get wrong because the two are written apart and nothing compares them. The usual
+mechanism is that **the list service computes the presentation and the detail service does not**:
+
+```ts
+// recurring-series-service.ts — listAll(), :468
+booker: toBookerRef(…),
+frequencyLabel: describeFrequency(r.rrule),
+
+// recurring-series-service.ts — get(), :251  …neither. Same file.
+```
+
+The page then renders what it was given, so the row says "Every Tuesday" and links to a page saying
+`FREQ=WEEKLY;BYDAY=TU`.
+
+Three rules:
+
+- **Project the ref in both queries.** A row rendering an `EntityChip` and a page rendering a bare
+  `<a>` for the same person is the commonest form of this, and usually needs only
+  `memberRefColumns()` adding to the detail select.
+- **A row action is a page action.** If the row can cancel, confirm or pay, the page can too. The
+  row is the shortcut; the page is not allowed to be the long way round to less.
+- **Status is a fact, not a control.** Rendering a status only inside an edit form means reading it
+  costs opening a form and cancelling out of it.
+
+The audit in `docs/reports/card-surface-inventory.md` found twelve pages breaking this, which is
+what the rule is for. #1064 tracks the rest.
+
 ### Refs come from the query, not the page
 
 `src/lib/server/entity/refs.ts` projects a record into its ref: `memberRefColumns()` drops into a
