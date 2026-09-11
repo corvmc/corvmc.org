@@ -6,6 +6,7 @@
 		string;
 	import { Combobox } from 'bits-ui';
 	import Button from '$lib/components/ui/Button.svelte';
+	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
 
 	let {
 		search,
@@ -15,6 +16,7 @@
 		placeholder = 'Search by name or email...',
 		minChars = 2,
 		name,
+		field,
 		onselect
 	}: {
 		search: (query: string) => Promise<T[]>;
@@ -23,7 +25,19 @@
 		descriptionKey?: StringKey<T>;
 		placeholder?: string;
 		minChars?: number;
+		/**
+		 * A plain `name`, for a plain `<form>`.
+		 *
+		 * **Not for a remote form.** A remote form encodes its own field names, so
+		 * a hidden input carrying a bare `name` arrives as nothing: the submit
+		 * fails Zod on a field the page never posted, and the issue has no
+		 * control to render against. That is invisible — a toast saying to fix
+		 * the highlighted fields, and nothing highlighted (#1019). Pass `field`
+		 * instead.
+		 */
 		name?: string;
+		/** The remote form's own field, which is what makes the value arrive. */
+		field?: RemoteFormField<RemoteFormFieldValue>;
 		/** Fires when a result is picked, and with `null` when the choice is cleared. */
 		onselect?: (value: T | null) => void;
 	} = $props();
@@ -61,7 +75,9 @@
 	}
 </script>
 
-{#if name && value}
+{#if field && value}
+	<input {...field.as('hidden', value.id)} />
+{:else if name && value}
 	<input type="hidden" {name} value={value.id} />
 {/if}
 

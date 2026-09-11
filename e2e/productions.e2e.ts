@@ -28,25 +28,39 @@ async function loginAsStaff(page: Page) {
 
 test.describe('productions', () => {
 	/**
-	 * The event page owns the listing's lifecycle and the console owns the
-	 * production — so the only way one comes into existence is from the event
-	 * page, and once it exists that button has to go away.
+	 * One entry from the event page, and the console's empty state is what opens
+	 * the record — the page that explains a production is the page that makes one
+	 * (#976). Creating it has to show on the event page afterwards, which is the
+	 * whole of that finding.
 	 */
-	test('a production is opened from the event page and advances from the console', async ({
-		page
-	}) => {
+	test('a production is opened from the console and shows on the event page', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}`);
 
-		const add = page.getByRole('button', { name: 'Add production' });
-		await expect(add).toBeVisible({ timeout: 15000 });
-		await add.click();
+		// Before: one button, and it does not claim there is something to manage.
+		const enter = page.getByRole('link', { name: 'Open a production' });
+		await expect(enter).toBeVisible({ timeout: 15000 });
+		await expect(page.getByRole('button', { name: 'Add production' })).toHaveCount(0);
+		await enter.click();
+		await page.waitForURL(/\/production$/);
+
+		const open = page.getByRole('button', { name: 'Open a production' });
+		await expect(open).toBeVisible({ timeout: 15000 });
+		await open.click();
 
 		// The button is the whole form, so its own disappearance is the receipt.
-		await expect(add).toHaveCount(0, { timeout: 15000 });
+		await expect(open).toHaveCount(0, { timeout: 15000 });
+		await expect(page.getByText('Nobody yet')).toBeVisible({ timeout: 15000 });
+
+		// #976: the record is visible from the page it belongs to, which before
+		// this changed in no way at all except a button vanishing.
+		await page.goto(`/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}`);
+		await expect(page.getByRole('link', { name: 'Open the console' })).toBeVisible({
+			timeout: 15000
+		});
+		await expect(page.getByRole('link', { name: 'Manage production' })).toBeVisible();
 
 		await page.goto(`/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}/production`);
-		await expect(page.getByText('Nobody yet')).toBeVisible({ timeout: 15000 });
 
 		// Which moves are offered *is* the status, and it is the assertion that
 		// cannot pass against a badge whose text happens to match the listing's.
