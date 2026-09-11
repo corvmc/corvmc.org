@@ -1,4 +1,5 @@
 import { user, account } from '../../src/lib/server/db/schema/authentication';
+import { claimRoomNear } from './room';
 import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { insertBandWithOwner } from './bands';
@@ -122,15 +123,17 @@ export async function seedSoloAct(roles: SeedRole[]) {
 	// band-reservation seeder only reaches the first four bands, and this one is
 	// appended after them.
 	const hour = randomInt(17, 20);
-	await db.insert(reservation).values({
-		bookerType: 'group',
-		bookerId: act.id,
-		createdByUserId: PERSONA.id,
-		status: 'confirmed',
-		startsAt: ptDate(4, hour),
-		endsAt: ptDate(4, hour + 2),
-		notes: 'Working up the new set'
-	});
+	const slot = claimRoomNear(ptDate(4, hour), 2, 'solo-act');
+	if (slot) {
+		await db.insert(reservation).values({
+			bookerType: 'group',
+			bookerId: act.id,
+			createdByUserId: PERSONA.id,
+			status: 'confirmed',
+			...slot,
+			notes: 'Working up the new set'
+		});
+	}
 
 	return act;
 }

@@ -1,4 +1,5 @@
 import { eventListing } from '../../src/lib/server/db/schema/event';
+import { claimRoom } from './room';
 import { recurringSeries } from '../../src/lib/server/db/schema/recurring';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { buildSeedRRule as seedRRule } from '../seed-rrule';
@@ -20,9 +21,15 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		eventEndHour: number,
 		createdByUserId: string,
 		reservationStatus: (typeof reservation.$inferSelect)['status']
-	): Promise<string> {
+	): Promise<string | undefined> {
 		const startsAt = ptDate(day, eventStartHour, -30);
 		const endsAt = ptDate(day, eventEndHour, 30);
+		// A show whose room is already taken simply has no hold, which is the
+		// state a quarter of these are in anyway. Shifting the hold instead would
+		// make it disagree with the listing it is the room for (#966).
+		if (reservationStatus !== 'cancelled' && !claimRoom(startsAt, endsAt, 'event')) {
+			return undefined;
+		}
 		const [r] = await db
 			.insert(reservation)
 			.values({
