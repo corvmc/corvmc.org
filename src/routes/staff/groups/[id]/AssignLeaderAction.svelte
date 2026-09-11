@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
 	import { searchMembers } from '$lib/remote/reservations.remote';
 	import { assignGroupLeader } from '$lib/remote/groups.remote';
@@ -36,14 +35,12 @@
 		<div class="space-y-4">
 			<input {...fields.groupId.as('hidden', groupId)} />
 
-			<FormField name="userId" label="Member" required>
-				<SearchSelect
-					search={searchMembers}
-					bind:value={leader}
-					field={fields.userId}
-					placeholder="Search by name or email..."
-				/>
-			</FormField>
+			<SearchSelect
+				search={searchMembers}
+				bind:value={leader}
+				name="userId"
+				placeholder="Search by name or email..."
+			/>
 
 			<p class="text-subtle">
 				{#if hasLeader}

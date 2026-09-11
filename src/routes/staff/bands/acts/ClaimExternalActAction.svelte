@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
 	import { searchMembers } from '$lib/remote/reservations.remote';
 	import { claimStaffExternalAct } from '$lib/remote/external-acts.remote';
@@ -41,15 +40,14 @@
 				{actName} becomes a CMC band with a slug and a page. Everything already on its record — bio, links,
 				and every event it played — comes with it.
 			</p>
-			<FormField name="ownerId" label="Owner" required>
+			<fieldset class="fieldset">
+				<legend class="fieldset-legend">Owner</legend>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={owner}
-					field={fields.ownerId}
+					name="ownerId"
 					placeholder="Search by name or email..."
 				/>
-			</FormField>
-			<fieldset class="fieldset">
 				<p class="text-subtle">
 					The member from the act who joined. They become the owner immediately.
 				</p>
