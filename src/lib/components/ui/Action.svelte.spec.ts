@@ -110,8 +110,8 @@ describe('Action, callback mode', () => {
 
 		await expect.element(page.getByRole('button', { name: 'Retried' })).toBeVisible();
 		await expect
-			.element(page.getByRole('button', { name: 'Retry' }))
-			.toBeVisible({ timeout: 5000 });
+			.element(page.getByRole('button', { name: 'Retry' }), { timeout: 5000 })
+			.toBeVisible();
 	});
 
 	it('reports the callback result to onsuccess', async () => {
