@@ -2,12 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 
 /**
  * Every nav link in every panel reported `outline: none` under real keyboard
- * focus, so the sidebar was a run of invisible tab stops — twelve consecutive
- * ones in the band panel (#991). Read off the live element, because a rule
- * emitting in the stylesheet is not the same as it applying here.
- *
- * The split bar's sr-only slider, the other half of that walk (#995), is
- * covered by `SplitBar.svelte.spec.ts` — it needs no server.
+ * focus — twelve consecutive invisible stops in the band panel (#991). Read
+ * off the live element: a rule emitting in the stylesheet is not the same as
+ * it applying here. #995, the other half, is in SplitBar.svelte.spec.ts.
  */
 function ring(el: Element) {
 	const s = getComputedStyle(el);
