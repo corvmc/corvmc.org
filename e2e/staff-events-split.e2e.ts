@@ -133,7 +133,10 @@ test.describe('staff events split', () => {
 
 	test('a production reaches its console, and a listing is turned away', async ({ page }) => {
 		await page.goto(`/staff/events/${SEED_SPLIT_CMC_LIVE_ID}`);
-		await expect(page.getByRole('link', { name: 'Manage production' })).toBeVisible();
+		// "Open a production", not "Manage production": this fixture seeds no
+		// production row, and the one entry into the console names the state it
+		// is in rather than claiming there is something to manage (#976).
+		await expect(page.getByRole('link', { name: 'Open a production' })).toBeVisible();
 
 		await page.goto(`/staff/events/${SEED_SPLIT_CMC_LIVE_ID}/production`);
 		await expect(page.getByRole('heading', { name: SEED_SPLIT_CMC_LIVE_TITLE })).toBeVisible();

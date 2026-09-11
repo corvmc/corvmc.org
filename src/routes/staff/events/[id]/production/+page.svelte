@@ -21,6 +21,7 @@
 		cancelEventSeries
 	} from '$lib/remote/events.remote';
 	const { fields } = updateEvent;
+	const createProductionFields = createProduction.fields;
 	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -46,6 +47,7 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
 	import { createShift } from '$lib/remote/volunteer.remote';
+	import { createProduction } from '$lib/remote/productions.remote';
 	import { listActInDirectory } from '$lib/remote/external-acts.remote';
 	import { applyDutyList } from '$lib/remote/duty-lists.remote';
 	import { updateProduction, setProductionProducer } from '$lib/remote/productions.remote';
@@ -945,14 +947,18 @@
 					</Form>
 				</InfoCard>
 			{:else}
-				<!-- Reachable state, and it has to say where the button is: "Add production"
-			     lives on the event page, which owns the listing's lifecycle. -->
+				<!-- The page that explains the thing is the page that makes it. This
+				     used to point back at the event page, so a first-timer who came
+				     here was sent where they had just been, with nothing on screen
+				     naming the button (#976). -->
 				<InfoCard title="Production">
 					<p class="text-muted">
-						No production record yet. Open one from
-						<a class="link" href={resolve(`/staff/events/${id}`)}>the event page</a>
-						to plan load-in, soundcheck and curfew.
+						No production record yet. Open one to plan load-in, soundcheck and curfew.
 					</p>
+					<Form remote={createProduction} class="mt-3">
+						<input {...createProductionFields.eventId.as('hidden', id)} />
+						<SubmitButton label="Open a production" variant="primary" size="sm" />
+					</Form>
 				</InfoCard>
 			{/if}
 
