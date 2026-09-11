@@ -186,3 +186,45 @@ test.describe('deleting an event', () => {
 			.toBe(false);
 	});
 });
+
+/**
+ * The new-listing form.
+ *
+ * A half-written listing is the common case — the member knows the band and the
+ * date and goes looking for the address. Leaving with it is what #905 filed:
+ * the page threw the draft away silently, while `/member/profile` and
+ * `/member/account` both stop on the same move.
+ */
+test.describe('starting a listing', () => {
+	test('leaving a part-written listing asks before discarding it', async ({ page }) => {
+		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
+
+		// The whole attempt retries, for the hydration race `ticket-purchase.e2e.ts`
+		// documents: the form is server-rendered, so typing before Svelte attaches
+		// leaves it clean, the back arrow simply navigates, and the assertion waits
+		// out its budget on a dialog nothing opened. Each attempt starts over.
+		await expect(async () => {
+			await page.goto('/member/events/submit');
+			await page.getByLabel('Title').fill('Paper Wolves at a house show');
+			await page.getByRole('link', { name: '←' }).click();
+			await expect(page.getByRole('heading', { name: 'Unsaved changes' })).toBeVisible({
+				timeout: 2000
+			});
+		}).toPass({ timeout: 20000 });
+
+		// Keep editing leaves the member where they were, with what they typed.
+		await page.getByRole('button', { name: 'Keep editing' }).click();
+		await expect(page).toHaveURL(/\/member\/events\/submit/);
+		await expect(page.getByLabel('Title')).toHaveValue('Paper Wolves at a house show');
+	});
+
+	test('the description field is named by its label, not its placeholder', async ({ page }) => {
+		// A custom-input FormField is only handed the caption's id through the
+		// `input` snippet. Passed as children instead, the caption becomes a
+		// `<legend>`, and a screen reader reads the placeholder as the field's name.
+		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
+		await page.goto('/member/events/submit');
+
+		await expect(page.getByLabel('Description')).toBeVisible();
+	});
+});
