@@ -110,6 +110,16 @@ describe('grantsCapability', () => {
 		expect(grantsCapability(positions.treasurer, 'credit.adjust')).toBe(false);
 	});
 
+	it('lets the treasurer read a production, and no more than read it', () => {
+		// The settlement is on the production console, behind `event.read`. A
+		// treasurer who cannot open it cannot see where the night's money went
+		// (#930). Writing the show stays with the people who run it.
+		expect(grantsCapability(positions.treasurer, 'event.read')).toBe(true);
+		expect(grantsCapability(positions.treasurer, 'event.manage')).toBe(false);
+		expect(grantsCapability(positions.treasurer, 'event.publish')).toBe(false);
+		expect(grantsCapability(positions.treasurer, 'event.manageTickets')).toBe(false);
+	});
+
 	it('round-trips against allCapabilities', () => {
 		for (const cap of everyCapability) {
 			expect(grantsCapability(allCapabilities, cap)).toBe(true);
