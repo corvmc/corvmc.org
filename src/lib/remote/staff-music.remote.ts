@@ -13,6 +13,7 @@ import {
 } from '$lib/server/audio/staff-audio-service';
 import { getRadioNow, getRecentlyPlayed } from '$lib/server/audio/radio-service';
 import { refundPurchase } from '$lib/server/audio/purchase-service';
+import { mapDomainError } from '$lib/server/errors';
 import { LONG_TEXT_MAX } from '$lib/config';
 
 /**
@@ -59,7 +60,11 @@ export const withholdReleaseForm = form(
 	}),
 	async ({ releaseId, reason }) => {
 		await requireStaff();
-		await withholdRelease(releaseId, reason);
+		try {
+			await withholdRelease(releaseId, reason);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		void getStaffMusicPage().refresh();
 		return { success: true };
 	}
@@ -70,7 +75,11 @@ export const restoreReleaseForm = form(
 	z.object({ releaseId: z.string().min(1) }),
 	async ({ releaseId }) => {
 		await requireStaff();
-		await restoreRelease(releaseId);
+		try {
+			await restoreRelease(releaseId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		void getStaffMusicPage().refresh();
 		return { success: true };
 	}
@@ -91,7 +100,11 @@ export const setRadioExclusionForm = form(
 	}),
 	async ({ releaseId, excluded, reason }) => {
 		await requireStaff();
-		await setRadioExclusion(releaseId, excluded, reason);
+		try {
+			await setRadioExclusion(releaseId, excluded, reason);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		void getStaffMusicPage().refresh();
 		return { success: true };
 	}
@@ -112,7 +125,11 @@ export const refundPurchaseForm = form(
 	z.object({ purchaseId: z.string().min(1) }),
 	async ({ purchaseId }) => {
 		await requireStaff();
-		await refundPurchase(purchaseId);
+		try {
+			await refundPurchase(purchaseId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		void getStaffMusicPage().refresh();
 		return { success: true };
 	}

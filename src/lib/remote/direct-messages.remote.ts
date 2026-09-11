@@ -34,6 +34,7 @@ import {
 	FLAG_DESCRIPTION_MAX
 } from '$lib/server/flag/flag-service';
 import { updateStatus } from '$lib/server/inbox/thread-service';
+import { mapDomainError } from '$lib/server/errors';
 
 // ---------------------------------------------------------------------------
 // Member↔member conversations
@@ -281,14 +282,18 @@ export const reportDirectThread = form(reportDirectSchema, async (data, issue) =
 		);
 	}
 
-	await createFlag({
-		entityType: 'inbox_thread',
-		entityId: data.threadId,
-		reportedByUserId: reporter.id,
-		reportedByName: reporter.name,
-		reason: data.reason,
-		description: data.description
-	});
+	try {
+		await createFlag({
+			entityType: 'inbox_thread',
+			entityId: data.threadId,
+			reportedByUserId: reporter.id,
+			reportedByName: reporter.name,
+			reason: data.reason,
+			description: data.description
+		});
+	} catch (err) {
+		mapDomainError(err);
+	}
 
 	// The reporter should not have to wait on a staff queue to stop hearing from
 	// someone. Same block and same closed thread as Decline.
