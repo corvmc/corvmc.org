@@ -387,6 +387,7 @@ async function main() {
 
 	console.log('\n  Volunteer deep links:');
 	console.log('    /member/volunteer/feedback/seed-vol-signup-feedback');
+	console.log('    /member/volunteer/shifts/seed-vol-signup-door   (checklist + door list)');
 	console.log('    /staff/volunteer/shifts/seed-vol-shift-cancelled');
 
 	console.log('\n  Premium band pages available at:');

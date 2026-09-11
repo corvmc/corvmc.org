@@ -6,9 +6,12 @@ import {
 	volunteerProfile,
 	volunteerRoleInterest,
 	workOrder,
+	workTask,
 	volunteerShiftFeedback,
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
+import { eventListing } from '../../src/lib/server/db/schema/event';
+import { and, eq, gt } from 'drizzle-orm';
 import { batchInsert, db } from './db';
 import { scryptHash } from './hash';
 import { type SeedRole } from './types';
@@ -231,7 +234,78 @@ export async function seedVolunteerPersonas(
 			cancelledByUserId: 'seed-vol-coordinator'
 		}
 	].map((sh) => ({ ...sh, eventId: null, createdByUserId: 'seed-vol-coordinator' }));
-	await batchInsert(workOrder, shifts, 8);
+
+	// The door shift, which is the only one hung off a show. Everything the
+	// volunteer's own shift page offers needs one: the checklist below, and the
+	// check-in list, which exists only where a show sells tickets. Read back
+	// rather than passed in — event ids are generated, and `seedTickets` has
+	// already put 3–8 tickets on every ticketed show by the time this runs.
+	const [doorEvent] = await db
+		.select({ id: eventListing.id })
+		.from(eventListing)
+		.where(and(eq(eventListing.ticketingEnabled, true), gt(eventListing.startsAt, now)))
+		.limit(1);
+
+	const doorShift = doorEvent
+		? {
+				id: 'seed-vol-shift-door',
+				volunteerRoleId: frontDesk.id,
+				...shiftAt(1, 18, 300),
+				capacity: 2,
+				notes: 'Cash box from the office. Wristbands are in the drawer.',
+				eventId: doorEvent.id,
+				createdByUserId: 'seed-vol-coordinator'
+			}
+		: null;
+
+	await batchInsert(workOrder, doorShift ? [...shifts, doorShift] : shifts, 8);
+
+	// A checklist on two of them, because `applyDutyList` is the only other
+	// writer of `work_task` and none of the persona shifts come from a duty
+	// list — so the volunteer's own page had nothing to tick.
+	await batchInsert(
+		workTask,
+		[
+			{
+				id: 'seed-vol-task-float',
+				workOrderId: 'seed-vol-shift-upcoming',
+				label: 'Count the float',
+				sortOrder: 0
+			},
+			{
+				id: 'seed-vol-task-signage',
+				workOrderId: 'seed-vol-shift-upcoming',
+				label: 'Put the A-board out',
+				sortOrder: 1
+			},
+			...(doorShift
+				? [
+						{
+							id: 'seed-vol-task-wristbands',
+							workOrderId: doorShift.id,
+							label: 'Lay out wristbands and the guest list',
+							sortOrder: 0
+						},
+						{
+							id: 'seed-vol-task-door-open',
+							workOrderId: doorShift.id,
+							label: 'Prop the side door for load-in',
+							sortOrder: 1,
+							done: true,
+							doneAt: ago(0),
+							doneByUserId: 'seed-vol-active'
+						},
+						{
+							id: 'seed-vol-task-cashup',
+							workOrderId: doorShift.id,
+							label: 'Cash up and hand the box to staff',
+							sortOrder: 2
+						}
+					]
+				: [])
+		],
+		8
+	);
 
 	const byId = new Map(shifts.map((sh) => [sh.id, sh]));
 	const shiftEnd = (id: string) => byId.get(id)!.endsAt;
@@ -248,6 +322,21 @@ export async function seedVolunteerPersonas(
 				claimedAt: ago(6),
 				confirmedAt: ago(4)
 			},
+			...(doorShift
+				? [
+						{
+							// The one signup that reaches a checklist and a door list,
+							// which is what makes /member/volunteer/shifts/<id> worth
+							// opening as `volunteer@`.
+							id: 'seed-vol-signup-door',
+							shiftId: doorShift.id,
+							userId: 'seed-vol-active',
+							status: 'confirmed' as const,
+							claimedAt: ago(9),
+							confirmedAt: ago(7)
+						}
+					]
+				: []),
 			{
 				id: 'seed-vol-signup-claimed',
 				shiftId: 'seed-vol-shift-claimed',
