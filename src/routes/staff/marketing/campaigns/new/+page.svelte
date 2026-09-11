@@ -8,6 +8,7 @@
 	import { errorMessage } from '$lib/error-message';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 	import { createDraft, createAndSend, createAndSchedule } from '$lib/remote/marketing.remote';
 
 	let subject = $state('');
@@ -18,6 +19,8 @@
 
 	// Written back by AudiencePicker, which owns the audience query.
 	let totalSubscribers = $state(0);
+
+	let confirmingSend = $state(false);
 
 	/**
 	 * The `try` covers the call and nothing else. Wrapping the toast and the
@@ -56,9 +59,19 @@
 		);
 	}
 
+	/**
+	 * Two steps, because this is the one action in the app that cannot be undone
+	 * and it was the one confirmed by `window.confirm` — whose button says OK.
+	 * Every other consequential act here names itself on the submit: Send the
+	 * offer, Delete permanently, Drop out (#989).
+	 */
 	function handleSendNow() {
 		if (!isValid()) return;
-		if (!window.confirm(`Send to approximately ${totalSubscribers} recipients now?`)) return;
+		confirmingSend = true;
+	}
+
+	function sendNow() {
+		confirmingSend = false;
 		return submit(
 			() =>
 				createAndSend({ subject: subject.trim(), markdownBody, audienceIds: selectedAudienceIds }),
@@ -186,3 +199,24 @@
 		</div>
 	</div>
 </PageContent>
+
+<Modal bind:open={confirmingSend} title="Send this campaign now?">
+	<p>
+		This goes to <strong>{totalSubscribers}</strong>
+		{totalSubscribers === 1 ? 'person' : 'people'} immediately, as
+		<em>{subject.trim() || 'an untitled campaign'}</em>.
+	</p>
+	<p class="mt-2 text-muted">
+		There is no recall. If you are not sure, save it as a draft and send it from the campaign page
+		once you have read it back.
+	</p>
+	<div class="modal-action">
+		<Button variant="default" size="sm" outline onclick={() => (confirmingSend = false)}>
+			Not yet
+		</Button>
+		<Button variant="primary" size="sm" onclick={sendNow}>
+			Send to {totalSubscribers}
+			{totalSubscribers === 1 ? 'person' : 'people'}
+		</Button>
+	</div>
+</Modal>
