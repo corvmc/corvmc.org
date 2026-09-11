@@ -470,6 +470,13 @@ export type DirectoryMatches = {
 	direction: LookingFor | null;
 	gaps: MatchGap[];
 	matches: DirectoryMatch[];
+	/**
+	 * The viewer hid themselves from the directory, so there is nothing to
+	 * suggest and no gap worth naming. Separate from an empty `matches` because
+	 * the surfaces answer it differently: one asks for more profile, the other
+	 * points at the switch.
+	 */
+	hidden: boolean;
 };
 
 /**
@@ -558,11 +565,16 @@ function notBlockedCondition<W>(viewerId: string): W {
 export async function findMatchesFor(userId: string): Promise<DirectoryMatches> {
 	const viewer = await db.query.directoryEntry.findFirst({
 		where: { userId },
-		columns: { lookingFor: true },
+		columns: { lookingFor: true, visibility: true },
 		with: { tags: { columns: { kind: true, value: true } } }
 	});
 
 	const direction: LookingFor | null = viewer?.lookingFor ?? null;
+
+	// Matching is mutual: a hidden member is already excluded from everyone
+	// else's suggestions, so a list here would be an introduction only one side
+	// could act on.
+	if (viewer?.visibility === 'hidden') return { direction, gaps: [], matches: [], hidden: true };
 	const tagsOf = (kind: DirectoryTagKind) =>
 		(viewer?.tags ?? []).filter((t) => t.kind === kind).map((t) => t.value);
 
@@ -581,7 +593,7 @@ export async function findMatchesFor(userId: string): Promise<DirectoryMatches> 
 	// No direction is not a thin result, it is no question — and with neither
 	// kind of tag there is nothing to intersect. Both are for `gaps` to explain.
 	if (!direction || (instruments.length === 0 && genres.length === 0)) {
-		return { direction, gaps, matches: [] };
+		return { direction, gaps, matches: [], hidden: false };
 	}
 
 	const matches =
@@ -589,7 +601,12 @@ export async function findMatchesFor(userId: string): Promise<DirectoryMatches> 
 			? await bandMatches(userId, instruments, genres)
 			: await memberMatches(userId, instruments, genres);
 
-	return { direction, gaps, matches: matches.sort(byRankThenName).slice(0, MATCH_LIMIT) };
+	return {
+		direction,
+		gaps,
+		matches: matches.sort(byRankThenName).slice(0, MATCH_LIMIT),
+		hidden: false
+	};
 }
 
 /** The overlap filter itself: at least one instrument or one genre in common. */

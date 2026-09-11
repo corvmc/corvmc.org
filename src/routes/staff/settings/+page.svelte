@@ -225,9 +225,9 @@
 							<input {...instance.fields.key.as('hidden', product.key)} />
 
 							<div class="mt-2 grid gap-4 sm:grid-cols-2">
-								<div class="form-control">
+								<div class="fieldset">
 									<label class="label" for="name-{product.key}">
-										<span class="label-text">Product name</span>
+										<span class="fieldset-legend">Product name</span>
 									</label>
 									{#each instance.fields.name.issues() ?? [] as issue (issue.message)}
 										<p class="text-sm text-error">{issue.message}</p>
@@ -242,9 +242,9 @@
 								</div>
 
 								{#if !isFee}
-									<div class="form-control">
+									<div class="fieldset">
 										<label class="label" for="amount-{product.key}">
-											<span class="label-text">
+											<span class="fieldset-legend">
 												Amount ({product.unitLabel ?? 'per unit'})
 											</span>
 										</label>
@@ -283,9 +283,9 @@
 								{/if}
 							</div>
 
-							<div class="form-control mt-2">
+							<div class="mt-2 fieldset">
 								<label class="label" for="desc-{product.key}">
-									<span class="label-text">Description</span>
+									<span class="fieldset-legend">Description</span>
 								</label>
 								<textarea
 									id="desc-{product.key}"
@@ -319,9 +319,9 @@
 						</div>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
-							<div class="form-control">
+							<div class="fieldset">
 								<label class="label" for="hourlyRate">
-									<span class="label-text">Hourly rate</span>
+									<span class="fieldset-legend">Hourly rate</span>
 								</label>
 								<label class="input flex items-center gap-1 input-sm">
 									<span class="opacity-60">$</span>

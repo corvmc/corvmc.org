@@ -110,7 +110,18 @@
 			/>
 		{/snippet}
 		<div onchange={onStatusChange}>
-			<Field type="select" label="" bind:value={status} options={statusOptions} class="w-40" />
+			<!-- Named, not `label=""`. A select has no placeholder to fall back on
+			     the way the search box beside it does, so an empty caption left it
+			     with no accessible name at all. `FormField` builds its input props
+			     from a closed set, so an `aria-label` here would not reach the
+			     element — the caption is the supported way to name it. -->
+			<Field
+				type="select"
+				label="Status"
+				bind:value={status}
+				options={statusOptions}
+				class="w-40"
+			/>
 		</div>
 	</FilterBar>
 
@@ -193,13 +204,13 @@
 									variant="ghost"
 									size="xs"
 									shape="square"
-									tabindex="0"
+									tabindex={0}
 									aria-label="Row actions"
 								>
 									<IconDots size={16} />
 								</Button>
 								<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-								<ul tabindex="0" class="menu dropdown-content dropdown-panel w-44 bg-base-200">
+								<ul tabindex={0} class="menu dropdown-content dropdown-panel w-44 bg-base-200">
 									<li>
 										<a href={resolve(`/staff/users/${row.id}`)}><IconEye size={16} />View</a>
 									</li>

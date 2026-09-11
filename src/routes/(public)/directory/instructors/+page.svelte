@@ -35,56 +35,60 @@
 	/>
 </svelte:head>
 
-<PageHeader title="Teachers" subtitle="Music lessons at the Collective" />
+<!-- `px-6` supplies what `PageHeader`'s `-mx-6` bleeds into; without it the
+     header overhangs and the page scrolls sideways at 375px (#970). -->
+<div class="px-6">
+	<PageHeader title="Teachers" subtitle="Music lessons at the Collective" />
 
-<PageContent>
-	<div class="mb-6 flex justify-center">
-		<TabBar
-			tabs={[
-				{ key: 'bands', label: 'Acts', href: resolve('/directory') },
-				{ key: 'musicians', label: 'Musicians', href: resolve('/directory?tab=musicians') },
-				{ key: 'instructors', label: 'Teachers', href: resolve('/directory/instructors') }
-			]}
-			active="instructors"
-		/>
-	</div>
+	<PageContent>
+		<div class="mb-6 flex justify-center">
+			<TabBar
+				tabs={[
+					{ key: 'bands', label: 'Acts', href: resolve('/directory') },
+					{ key: 'musicians', label: 'Musicians', href: resolve('/directory?tab=musicians') },
+					{ key: 'instructors', label: 'Teachers', href: resolve('/directory/instructors') }
+				]}
+				active="instructors"
+			/>
+		</div>
 
-	<div class="mb-8 flex justify-center">
-		<FormField
-			type="text"
-			name="q"
-			label="Search"
-			class="w-full max-w-sm"
-			placeholder="Search teachers by name…"
-			bind:value={searchText}
-		/>
-	</div>
+		<div class="mb-8 flex justify-center">
+			<FormField
+				type="text"
+				name="q"
+				label="Search"
+				class="w-full max-w-sm"
+				placeholder="Search teachers by name…"
+				bind:value={searchText}
+			/>
+		</div>
 
-	<svelte:boundary>
-		{#await instructors then rows}
-			{#if rows.length === 0}
-				<EmptyState
-					title="No teachers listed yet"
-					description="Nobody is currently taking students here. Check back, or get in touch."
-				/>
-			{:else}
-				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					{#each rows as row (row.userId)}
-						<InstructorCard
-							href="/directory/members/{row.userId}"
-							name={row.name}
-							image={row.image}
-							pronouns={row.pronouns}
-							headline={row.headline}
-							blurb={row.blurb}
-							ratesNote={row.ratesNote}
-							bookingUrl={row.bookingUrl}
-							instruments={row.instruments}
-							contact={row.contact}
-						/>
-					{/each}
-				</div>
-			{/if}
-		{/await}
-	</svelte:boundary>
-</PageContent>
+		<svelte:boundary>
+			{#await instructors then rows}
+				{#if rows.length === 0}
+					<EmptyState
+						title="No teachers listed yet"
+						description="Nobody is currently taking students here. Check back, or get in touch."
+					/>
+				{:else}
+					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						{#each rows as row (row.userId)}
+							<InstructorCard
+								href="/directory/members/{row.userId}"
+								name={row.name}
+								image={row.image}
+								pronouns={row.pronouns}
+								headline={row.headline}
+								blurb={row.blurb}
+								ratesNote={row.ratesNote}
+								bookingUrl={row.bookingUrl}
+								instruments={row.instruments}
+								contact={row.contact}
+							/>
+						{/each}
+					</div>
+				{/if}
+			{/await}
+		</svelte:boundary>
+	</PageContent>
+</div>

@@ -414,7 +414,7 @@
 			{#if hasBlockingConflict}
 				<label class="label cursor-pointer justify-start gap-3">
 					<input type="checkbox" bind:checked={overrideConflicts} class="checkbox checkbox-sm" />
-					<span class="label-text">Book it anyway — I know this double-books the space</span>
+					<span class="fieldset-legend">Book it anyway — I know this double-books the space</span>
 				</label>
 				{#if overrideConflicts}
 					<input {...fields.overrideConflicts.as('hidden', true)} />

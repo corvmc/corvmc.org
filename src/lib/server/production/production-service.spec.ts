@@ -255,6 +255,41 @@ describe('transitionProduction', () => {
 		});
 	}
 
+	it('stamps who closed it and when, and only on closed', async () => {
+		// `updatedAt` is not a proxy for a close date: it moves again on the next
+		// write to the row, so a closed production would report the last edit.
+		selectQueue = [[], [productionRow({ status: 'closed' })]];
+		await transitionProduction('prod-1', 'closed', 'u-treasurer');
+
+		const closedSet = calls.find((c) => c.op === 'update' && c.method === 'set')?.args[0] as Record<
+			string,
+			unknown
+		>;
+		expect(closedSet.closedByUserId).toBe('u-treasurer');
+		expect(closedSet.closedAt).toBeInstanceOf(Date);
+
+		calls = [];
+		selectQueue = [[productionRow({ status: 'settled' })]];
+		await transitionProduction('prod-1', 'settled', 'u-treasurer');
+
+		const settledSet = calls.find((c) => c.op === 'update' && c.method === 'set')
+			?.args[0] as Record<string, unknown>;
+		expect(settledSet).not.toHaveProperty('closedAt');
+		expect(settledSet).not.toHaveProperty('closedByUserId');
+	});
+
+	it('closes without an actor rather than refusing, and records the absence', async () => {
+		selectQueue = [[], [productionRow({ status: 'closed' })]];
+		await transitionProduction('prod-1', 'closed');
+
+		const set = calls.find((c) => c.op === 'update' && c.method === 'set')?.args[0] as Record<
+			string,
+			unknown
+		>;
+		expect(set.closedByUserId).toBeNull();
+		expect(set.closedAt).toBeInstanceOf(Date);
+	});
+
 	it('names the actual status when the transition is illegal', async () => {
 		updateRowCount = 0;
 		// Two entries: the assertion below calls through twice, once for the class

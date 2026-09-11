@@ -187,6 +187,10 @@ export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
  * three different deals has no single percentage — the deal itself lives on
  * `event_band` (see `docs/specs/project-spec.md`, the deal shape). Say "we
  * suggest 70% to the acts" in copy, never "the acts' deal is 70%".
+ *
+ * The acts' 70% is a guarantee against the **suggested price**, not against
+ * what the buyer paid. Anything above the suggestion opens as the collective's
+ * and stays the buyer's to redirect — a gift they cannot direct is not one.
  */
 export const TICKET_COLLECTIVE_SHARE_BPS = 3000;
 
@@ -1773,6 +1777,14 @@ export const positions: Record<Position, Grants> = {
 		contractor: ['read', 'recordInvoice'],
 		inventory: ['read', 'manageAcquisitions', 'report'],
 		reservation: ['read', 'comp'],
+		// A show's settlement is on the production console, behind `event.read`
+		// like everything else on that page, so the one person whose job is the
+		// money could not see where it went. Read only — the advance, the lineup
+		// and the run of show come with it, which is the same breadth
+		// `volunteer_coordinator` already has and for the same reason: a console
+		// is not divisible into per-reader slices without splitting the page's
+		// one load-bearing query.
+		event: ['read'],
 		user: ['list', 'read']
 	}
 };
@@ -1890,7 +1902,13 @@ export const attachableTypes = [
 	 * is one `getPublicUrl()` away from being addressable. See
 	 * `audio_track.objectKey`.
 	 */
-	'audio_release'
+	'audio_release',
+	/**
+	 * An act with no CMC account. `rider` only: the structured rider is keyed on
+	 * `group_id` and an external act has no group, so a file is the only tech
+	 * rider it can ever hand over (#863).
+	 */
+	'directory_entry'
 ] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 

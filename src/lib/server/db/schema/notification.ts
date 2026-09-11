@@ -31,6 +31,12 @@ export interface NotificationTypeDef {
 	};
 	mandatory?: boolean;
 	/**
+	 * Only a staffer can receive this. Every one of these fans out over a
+	 * capability or the staff mailbox rather than over subscribers, so a member's
+	 * preference row for it was inert as well as confusing (#899).
+	 */
+	staffOnly?: boolean;
+	/**
 	 * This type's email must never carry text a member wrote.
 	 *
 	 * Enforced in the email layer rather than at the call site: there are ~23
@@ -175,10 +181,11 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'event_recurring_reservation_skipped',
 		category: 'practice-space',
-		label: 'Recurring event could not reserve space (staff)',
+		label: 'Recurring event could not reserve space',
 		description:
 			'Notification when a generated recurring event could not reserve the practice space due to a conflict',
-		defaults: { email: true, inApp: true, sms: false }
+		defaults: { email: true, inApp: true, sms: false },
+		staffOnly: true
 	},
 	{
 		key: 'recurring_waitlisted',
@@ -214,9 +221,10 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'equipment_loan_requested',
 		category: 'practice-space',
-		label: 'Equipment loan requested (staff)',
+		label: 'Equipment loan requested',
 		description: 'Notification when a member requests equipment',
-		defaults: { email: true, inApp: true, sms: false }
+		defaults: { email: true, inApp: true, sms: false },
+		staffOnly: true
 	},
 	{
 		key: 'equipment_checked_out',
@@ -253,16 +261,18 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		key: 'contact_form',
 		category: 'people',
 		label: 'Contact form submission',
-		description: 'Forwarded contact form messages (staff only)',
+		description: 'Forwarded contact form messages',
 		defaults: { email: true, inApp: false, sms: false },
-		mandatory: true
+		mandatory: true,
+		staffOnly: true
 	},
 	{
 		key: 'inbox_message_received',
 		category: 'people',
-		label: 'New inbox message (staff)',
+		label: 'New inbox message',
 		description: 'Notification when a new message arrives in the staff inbox',
-		defaults: { email: false, inApp: true, sms: false }
+		defaults: { email: false, inApp: true, sms: false },
+		staffOnly: true
 	},
 	{
 		key: 'portal_message_reply',
@@ -325,16 +335,18 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'inbox_assigned',
 		category: 'people',
-		label: 'Inbox conversation assigned (staff)',
+		label: 'Inbox conversation assigned',
 		description: 'Notification when a staff inbox conversation is assigned to you',
-		defaults: { email: false, inApp: true, sms: false }
+		defaults: { email: false, inApp: true, sms: false },
+		staffOnly: true
 	},
 	{
 		key: 'content_flagged',
 		category: 'volunteering',
-		label: 'Content flagged (staff)',
+		label: 'Content flagged',
 		description: 'Notification when a member reports a profile for review',
-		defaults: { email: false, inApp: true, sms: false }
+		defaults: { email: false, inApp: true, sms: false },
+		staffOnly: true
 	},
 	{
 		key: 'band_lineup_invited',
@@ -353,12 +365,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_hours_submitted',
 		category: 'volunteering',
-		label: 'Volunteer hours submitted (staff)',
+		label: 'Volunteer hours submitted',
 		// In-app only, like the inbox and content-flag queues. A log every few
 		// days is routine queue work; emailing every staffer would train them to
 		// ignore it.
 		description: 'Notification when a member logs volunteer hours for review',
-		defaults: { email: false, inApp: true, sms: false }
+		defaults: { email: false, inApp: true, sms: false },
+		staffOnly: true
 	},
 	{
 		key: 'volunteer_hours_approved',
@@ -377,13 +390,14 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_shift_claimed',
 		category: 'volunteering',
-		label: 'Volunteer shift claimed (staff)',
+		label: 'Volunteer shift claimed',
 		// In-app only, like the hours queue above and for the same reason: it is
 		// queue work, not news. But it has to exist — until now a claim produced
 		// no signal at all, and confirming is what turns it into a booking that
 		// gets a reminder and completes afterwards.
 		description: 'Notification when a member claims a volunteer shift and needs confirming',
-		defaults: { email: false, inApp: true, sms: false }
+		defaults: { email: false, inApp: true, sms: false },
+		staffOnly: true
 	},
 	{
 		key: 'volunteer_shift_confirmed',
@@ -398,11 +412,12 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_shift_dropped',
 		category: 'volunteering',
-		label: 'Volunteer dropped a shift (staff)',
+		label: 'Volunteer dropped a shift',
 		// In-app only. The useful half is that a place reopened, which is a
 		// coordinator's problem and nobody else's.
 		description: 'Notification when somebody comes off a shift and their place reopens',
-		defaults: { email: false, inApp: true, sms: false }
+		defaults: { email: false, inApp: true, sms: false },
+		staffOnly: true
 	},
 	{
 		key: 'volunteer_shift_cancelled',
@@ -454,12 +469,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'community_event_submitted',
 		category: 'shows',
-		label: 'Community listing needs review (staff)',
+		label: 'Community listing needs review',
 		// In-app only, for the same reason as the volunteer queue above. Fires
 		// only when a listing actually enters pending_review — a member saving a
 		// draft is nobody's business but theirs.
 		description: 'Notification when a member submits a community listing for review',
-		defaults: { email: false, inApp: true, sms: false }
+		defaults: { email: false, inApp: true, sms: false },
+		staffOnly: true
 	},
 	{
 		key: 'community_event_reviewed',
@@ -524,6 +540,17 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 
 export function getNotificationType(key: string): NotificationTypeDef | undefined {
 	return NOTIFICATION_TYPES.find((t) => t.key === key);
+}
+
+/**
+ * The switches one audience may be offered.
+ *
+ * `mandatory` was the only filter for a long time, so every member's
+ * preferences table listed nine staff-only types (#899). Audience is a field
+ * here rather than a "(staff)" suffix on the label, so the query can act on it.
+ */
+export function preferenceTypesFor(audience: 'member' | 'staff'): NotificationTypeDef[] {
+	return NOTIFICATION_TYPES.filter((t) => !t.mandatory && (audience === 'staff' || !t.staffOnly));
 }
 
 // ---------------------------------------------------------------------------

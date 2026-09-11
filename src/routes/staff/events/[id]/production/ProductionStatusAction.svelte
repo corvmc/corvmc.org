@@ -44,7 +44,27 @@
 
 	const moves = $derived(NEXT[production.status] ?? []);
 	const canCancel = $derived(['draft', 'offered', 'confirmed'].includes(production.status));
+
+	/**
+	 * Why there is no button, for the three states that have none.
+	 *
+	 * Every earlier transition offers one, so silence here reads as a broken
+	 * screen or as "I did something wrong" rather than as a phase nobody has
+	 * built (#975). Settling and close-out are Phase 5/6.
+	 */
+	const restingReason: Partial<Record<ProductionStatus, string>> = {
+		completed: 'On the books. Settling and close-out are not in the app yet.',
+		settled: 'Close-out is not in the app yet.',
+		cancelled: 'Called off.'
+	};
+	const resting = $derived(
+		moves.length === 0 && !canCancel ? restingReason[production.status] : undefined
+	);
 </script>
+
+{#if resting}
+	<p class="text-muted text-sm text-wrap">{resting}</p>
+{/if}
 
 {#each moves as move (move.to)}
 	<Action

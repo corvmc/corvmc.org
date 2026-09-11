@@ -74,8 +74,8 @@
 	</div>
 
 	<div class="flex min-h-0 flex-1 flex-col gap-3 p-4">
-		<label class="form-control">
-			<span class="label-text text-xs font-medium">Theme</span>
+		<label class="fieldset">
+			<span class="fieldset-legend text-xs font-medium">Theme</span>
 			<Select
 				size="sm"
 				class="mt-1 w-full"
@@ -108,7 +108,7 @@
 
 		<div class="flex min-h-0 flex-1 flex-col">
 			<div class="flex flex-wrap items-center justify-between gap-2 pb-1">
-				<span class="label-text text-xs font-medium">
+				<span class="fieldset-legend text-xs font-medium">
 					{forked ? 'Your CSS' : 'What this theme does'}
 				</span>
 				{#if !forked}

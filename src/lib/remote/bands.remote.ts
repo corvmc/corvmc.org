@@ -41,6 +41,7 @@ import { bandTiers } from '$lib/server/db/schema/band-site';
 import {
 	createInvite as createEmailInviteService,
 	listForGroup as listEmailInvitesForGroup,
+	listInvitesForEmail,
 	revoke as revokeEmailInviteService
 } from '$lib/server/group/group-invite-service';
 import { requireGroupRole } from '$lib/server/group/group-context';
@@ -226,7 +227,15 @@ export const getMemberBands = query(async () => {
 	const currentUser = requireUser();
 	// Bands only. Clubs and committees live at `/member/groups`, which answers a
 	// different question and has its own index.
-	const bands = await listForUser(currentUser.id, ['band']);
+	//
+	// The second read is the emailed invitations: those are `group_invite` rows
+	// rather than pending roster rows, so none of them reached this page — an
+	// invitation that lapsed before the invitee followed the link was invisible
+	// everywhere (#906).
+	const [bands, invites] = await Promise.all([
+		listForUser(currentUser.id, ['band']),
+		listInvitesForEmail(currentUser.email)
+	]);
 
 	const serialize = (b: (typeof bands)[number]) => ({
 		id: b.id,
@@ -247,7 +256,17 @@ export const getMemberBands = query(async () => {
 		// Always empty for a band, which is `invite_only` by construction — but it
 		// is the shape the data can take, and leaving it out is how the club
 		// mount of this list would lose its applicants.
-		requested: byStatus.requested.map(serialize)
+		requested: byStatus.requested.map(serialize),
+		emailInvites: invites
+			.filter((i) => i.groupKind === 'band')
+			.map((i) => ({
+				id: i.id,
+				name: i.groupName,
+				role: i.role,
+				invitedByName: i.invitedByName,
+				expiresAt: i.expiresAt,
+				expired: i.expiresAt <= new Date()
+			}))
 	};
 });
 
@@ -278,10 +297,14 @@ export const updateMemberRole = form(
 	}),
 	async (data) => {
 		await requireCapability('band.manageMembers');
-		await updateMember(data.memberId, {
-			role: data.role,
-			position: data.position ?? undefined
-		});
+		try {
+			await updateMember(data.memberId, {
+				role: data.role,
+				position: data.position ?? undefined
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
 		const { params } = getRequestEvent();
 		void getStaffBandPage(params.id!).refresh();
 		return { success: true };
@@ -365,7 +388,11 @@ export const removeBandMember = form(
 	}),
 	async (data) => {
 		await requireCapability('band.manageMembers');
-		await removeMemberService(data.memberId);
+		try {
+			await removeMemberService(data.memberId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -394,7 +421,11 @@ export const transferOwnership = form(
 		// normal way staff fix one — so the actor is the outgoing owner when there
 		// is one, and the incoming owner when there is not. The service demotes by
 		// this id, which matches nothing in the empty case, which is correct.
-		await transferOwnershipService(data.bandId, data.newOwnerId, band.ownerId ?? data.newOwnerId);
+		try {
+			await transferOwnershipService(data.bandId, data.newOwnerId, band.ownerId ?? data.newOwnerId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -430,7 +461,11 @@ export const revokeStaffEmailInvite = form(
 	}),
 	async (data) => {
 		await requireCapability('band.manageMembers');
-		await revokeEmailInviteService(data.inviteId);
+		try {
+			await revokeEmailInviteService(data.inviteId);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -586,14 +621,18 @@ export const updateMemberRemote = form(
 	}),
 	async (data) => {
 		const { group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
-		await updateMember(
-			data.memberId,
-			{
-				role: data.role,
-				position: data.position !== undefined ? data.position || null : undefined
-			},
-			band.id
-		);
+		try {
+			await updateMember(
+				data.memberId,
+				{
+					role: data.role,
+					position: data.position !== undefined ? data.position || null : undefined
+				},
+				band.id
+			);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );

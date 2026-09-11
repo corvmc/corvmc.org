@@ -96,19 +96,24 @@ export const createSubscription = form(amountSchema, async (data) => {
 	const stripeId = await ensureStripeCustomer(user.id, user.email, user.name);
 	const { url } = getRequestEvent();
 
-	const checkoutUrl = await createCheckoutSession({
-		userId: user.id,
-		stripeCustomerId: stripeId,
-		quantity: data.amount / DOLLARS_PER_UNIT,
-		coverFees: data.coverFees,
-		// The two used to be the same URL, which made a cancel indistinguishable
-		// from a success. `elements` has no cancel redirect at all, so that bug is
-		// gone either way — but the cancel destination is now the page's "Cancel
-		// and go back" link, and `?subscribed` is what tells the page to wait for
-		// the webhook rather than declare the member a non-member.
-		successUrl: `${url.origin}/member/membership?subscribed=1`,
-		cancelUrl: `${url.origin}/member/membership`
-	});
+	let checkoutUrl: string;
+	try {
+		checkoutUrl = await createCheckoutSession({
+			userId: user.id,
+			stripeCustomerId: stripeId,
+			quantity: data.amount / DOLLARS_PER_UNIT,
+			coverFees: data.coverFees,
+			// The two used to be the same URL, which made a cancel indistinguishable
+			// from a success. `elements` has no cancel redirect at all, so that is
+			// gone either way — but the cancel destination is now the page's "Cancel
+			// and go back" link, and `?subscribed` is what tells the page to wait for
+			// the webhook rather than declare the member a non-member.
+			successUrl: `${url.origin}/member/membership?subscribed=1`,
+			cancelUrl: `${url.origin}/member/membership`
+		});
+	} catch (err) {
+		mapDomainError(err);
+	}
 
 	// Relative now — `elements` returns the in-app `/checkout/<session>`, so this
 	// is a client-side navigation rather than a document load off to Stripe.

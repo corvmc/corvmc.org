@@ -13,6 +13,7 @@ import type { EventSource } from '$lib/config';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { directoryEntry } from '$lib/server/db/schema/directory';
+import { createExternalAct } from '$lib/server/directory/entry-service';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
@@ -2865,6 +2866,40 @@ export async function listPublicUpcomingEvents(
 		.offset(opts.offset);
 
 	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
+}
+
+/**
+ * Give a credit with no directory entry one, so the act can be asked for a
+ * rider.
+ *
+ * `requestableActs` filters on `directoryEntryId !== null`, and the only writer
+ * of that column is the lineup editor — which sets it from the *group* a member
+ * picked. So an act typed onto a bill by name was unaskable by construction,
+ * and the advance said "Not a CMC act — ask them directly" for exactly the case
+ * the asking was built for (#974).
+ *
+ * An external act, not a band: both owner columns stay null, so this mints no
+ * public page and no membership. Claiming remains the separate door it was.
+ */
+export async function listCreditInDirectory(eventBandId: string): Promise<string> {
+	const [credit] = await db
+		.select({ id: eventBand.id, name: eventBand.name, entryId: eventBand.directoryEntryId })
+		.from(eventBand)
+		.where(eq(eventBand.id, eventBandId))
+		.limit(1);
+
+	if (!credit) throw new EventNotFoundError();
+	// Already listed — return what it has rather than minting a duplicate for a
+	// double-clicked button.
+	if (credit.entryId) return credit.entryId;
+
+	const entryId = await createExternalAct({ name: credit.name });
+	await db
+		.update(eventBand)
+		.set({ directoryEntryId: entryId })
+		.where(eq(eventBand.id, eventBandId));
+
+	return entryId;
 }
 
 // ---------------------------------------------------------------------------

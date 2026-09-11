@@ -500,4 +500,46 @@ describe('FormField', () => {
 			expect(container.querySelector('label.fieldset-legend')).toBeNull();
 		});
 	});
+
+	// #901: `required` reached the input as a native attribute and rendered
+	// nothing. The convention was a `*` hand-typed into the label string at ten
+	// call sites, so 79 other required fields were marked in code and invisible
+	// on screen.
+	describe('required', () => {
+		it('marks the caption, and leaves the marker out of the accessible name', async () => {
+			const { container } = await render(FormField, {
+				name: 'phone',
+				type: 'tel',
+				label: 'Contact phone',
+				required: true
+			});
+
+			const caption = container.querySelector('.fieldset-legend')!;
+			expect(caption.textContent).toContain('Contact phone');
+			const marker = caption.querySelector('span')!;
+			expect(marker.textContent).toBe('*');
+			expect(marker.getAttribute('aria-hidden')).toBe('true');
+		});
+
+		it('marks nothing when the field is optional', async () => {
+			const { container } = await render(FormField, {
+				name: 'notes',
+				type: 'text',
+				label: 'Notes'
+			});
+
+			expect(container.querySelector('.fieldset-legend span')).toBeNull();
+		});
+
+		it('still forwards the native attribute', async () => {
+			const { container } = await render(FormField, {
+				name: 'phone',
+				type: 'tel',
+				label: 'Contact phone',
+				required: true
+			});
+
+			expect(container.querySelector('input')!.required).toBe(true);
+		});
+	});
 });

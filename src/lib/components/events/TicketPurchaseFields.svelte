@@ -88,10 +88,11 @@
 		})
 	);
 	const divisibleCents = $derived(atZero.chargeCents - atZero.stripeFeeCents);
-	// The acts' take is anchored to the suggested price, so the collective is the
-	// residual and the bar has a **ceiling**, not just a floor of zero: a buyer
-	// may drag money towards the acts and never away from them. Same number the
-	// server validates against — `validateTicketSplit` calls `actsMinCents` too.
+	// The acts' guarantee is a share of the *suggested* price, so the bar has a
+	// **ceiling** as well as a floor of zero — and above the suggestion that
+	// ceiling sits well clear of where the bar opens, which is what makes the
+	// surplus the buyer's to direct. Same number the server validates against:
+	// `validateTicketSplit` calls `actsMinCents` too.
 	const actsFloorCents = $derived(
 		actsMinCents({
 			baseCents: suggestedUnitCents * quantity,
@@ -170,8 +171,13 @@
 >
 	<label class="input w-full items-center gap-1">
 		<span class="opacity-60">$</span>
+		<!-- Named explicitly. The wrapping `<label class="input">` is daisyUI's
+		     input group, and it was claiming the accessible name — a screen
+		     reader read this field as "$ per ticket" rather than the question
+		     above it (#994). -->
 		<input
 			id="ticketAmount"
+			aria-label="How much are you paying, per ticket"
 			type="number"
 			step="0.01"
 			min="0"
@@ -218,7 +224,7 @@
 {#if !isFree && !inDeadZone && !belowFloor}
 	<div class="space-y-3 border-t border-base-200 pt-4">
 		<p class="font-medium">Where should it go?</p>
-		<!-- `otherFloorCents` is the acts' **anchored** take, not the event's price
+		<!-- `otherFloorCents` is the acts' **guarantee**, not the event's price
 		     floor. Passing the price floor there is the bug fixed in the music
 		     BuyPanel: it consumed the whole amount, clamped the collective's share
 		     to zero, and the suggested position never appeared. This number is

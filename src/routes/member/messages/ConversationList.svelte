@@ -27,13 +27,27 @@
 	const memberLayout = getMemberLayoutContext();
 	const layout = $derived(memberLayout.current);
 	const openId = $derived(page.params.id);
+
+	// Two different offs. The feature flag is the collective's (#907); this is
+	// the member's own switch, and an inbox empty because of it reads as one
+	// nobody has written to unless it says otherwise.
+	const dmsOff = $derived(layout.features.directMessages && !layout.acceptsDirectMessages);
+	const emptyMessage = $derived(
+		dmsOff
+			? 'Direct messages are switched off for your account, so only staff can reach you here.'
+			: layout.features.directMessages
+				? 'Use Message a Member or Message Staff above to start one.'
+				: 'Use Message Staff above to start one.'
+	);
 </script>
 
 <div class="flex min-h-0 flex-col gap-3">
 	<div class="flex flex-wrap items-center justify-between gap-2">
 		<h1 class="text-xl font-bold">Messages</h1>
 		<div class="flex flex-wrap gap-2">
-			<ComposeAction canMessageMembers={layout.features.directMessages} />
+			<ComposeAction
+				canMessageMembers={layout.features.directMessages && layout.acceptsDirectMessages}
+			/>
 		</div>
 	</div>
 
@@ -51,10 +65,16 @@
 	{/if}
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
+		<!-- The copy names the control that is actually on screen. "Start a
+		     conversation" pointed at Message a Member, which only renders when the
+		     direct-messages feature is on — so with it off the page promised
+		     something it did not offer (#907). -->
 		<DataList
 			{result}
 			emptyTitle="No messages yet"
-			empty="Start a conversation and it will appear here."
+			empty={emptyMessage}
+			actionLabel={dmsOff ? 'Turn direct messages on' : undefined}
+			actionHref={dmsOff ? '/member/account' : undefined}
 			onpage={(p) => (conversationList.page = p)}
 		>
 			{#snippet children(conversations)}

@@ -46,11 +46,18 @@
 <li class="card bg-base-100 shadow">
 	<CardBody padding="sm" class="flex-row items-start gap-4">
 		<!-- The vote control is a Form whose only field is hidden. SubmitButton has
-		     no dirty gate, so a fields-free form still submits. -->
+		     no dirty gate, so a fields-free form still submits.
+
+		     `aria-label` and `aria-pressed` because the visible label is the count
+		     and nothing else: without them the row reads `button "11"`, which says
+		     neither what pressing it does nor that a vote is already cast (#903). -->
 		<Form remote={vote} class="shrink-0" onsuccess={onchanged}>
 			<input {...vote.fields.suggestionId.as('hidden', suggestion.id)} />
 			<SubmitButton
 				label={String(suggestion.voteCount)}
+				aria-pressed={!!suggestion.hasVoted}
+				aria-label="{suggestion.hasVoted ? 'Remove your vote for' : 'Vote for'} {suggestion.ref
+					.title}"
 				class="h-auto flex-col gap-0 py-1 btn-sm {suggestion.hasVoted
 					? 'btn-primary'
 					: 'btn-outline'}"

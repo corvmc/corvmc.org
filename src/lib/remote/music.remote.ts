@@ -9,6 +9,7 @@ import { db } from '$lib/server/db';
 import { media, mediaAttachment } from '$lib/server/db/schema/media';
 import { and, eq } from 'drizzle-orm';
 import { resolveImageUrl } from '$lib/server/storage';
+import { mapDomainError } from '$lib/server/errors';
 
 // ---------------------------------------------------------------------------
 // Public reads
@@ -165,20 +166,27 @@ export const buyReleaseForm = form(
 		// is exactly what lets a buyer with no account land on it.
 		const downloadToken = crypto.randomUUID().replace(/-/g, '');
 
-		const result = await beginPurchase({
-			bandSlug,
-			releaseSlug,
-			buyerEmail: email,
-			// Attached when there is a session, so the purchase turns up in
-			// /member/purchases. Absent is the ordinary case and must stay allowed.
-			userId: locals.user?.id ?? null,
-			totalCents,
-			platformCents,
-			coverFees,
-			downloadToken,
-			successUrl: new URL(`/music/download/${downloadToken}`, url.origin).toString(),
-			cancelUrl: new URL(`/music/${bandSlug}/${releaseSlug}`, url.origin).toString()
-		});
+		// `mapDomainError` is declared `: never`, so `result` is definitely
+		// assigned past the catch without a non-null assertion.
+		let result: Awaited<ReturnType<typeof beginPurchase>>;
+		try {
+			result = await beginPurchase({
+				bandSlug,
+				releaseSlug,
+				buyerEmail: email,
+				// Attached when there is a session, so the purchase turns up in
+				// /member/purchases. Absent is the ordinary case and must stay allowed.
+				userId: locals.user?.id ?? null,
+				totalCents,
+				platformCents,
+				coverFees,
+				downloadToken,
+				successUrl: new URL(`/music/download/${downloadToken}`, url.origin).toString(),
+				cancelUrl: new URL(`/music/${bandSlug}/${releaseSlug}`, url.origin).toString()
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		return {
 			success: true,

@@ -114,9 +114,14 @@
 		<div class="flex items-start gap-4">
 			<Form remote={vote} class="shrink-0" onsuccess={refresh}>
 				<input {...vote.fields.suggestionId.as('hidden', s.id)} />
+				<!-- See SuggestionCard: the visible label is the count, so without these
+				     the control reads `button "11"` and says neither what it does nor
+				     that a vote is already cast (#903). -->
 				<SubmitButton
 					label={String(s.voteCount)}
 					disabled={s.visibility !== 'visible' || !!s.mergedIntoId}
+					aria-pressed={!!s.hasVoted}
+					aria-label={s.hasVoted ? 'Remove your vote' : 'Vote for this suggestion'}
 					class="h-auto flex-col gap-0 py-1 btn-sm {s.hasVoted ? 'btn-primary' : 'btn-outline'}"
 				>
 					{#snippet icon()}<IconCaretUpFilled size={16} />{/snippet}

@@ -4,9 +4,14 @@
 	import { invalidateAll } from '$app/navigation';
 	import { addBandMember } from '$lib/remote/bands.remote';
 	import Button from '$lib/components/ui/Button.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 
 	const { fields } = addBandMember;
+
+	const ROLE_OPTIONS = [
+		{ value: 'member', label: 'Member' },
+		{ value: 'admin', label: 'Admin' }
+	];
 
 	let {
 		bandId,
@@ -76,16 +81,22 @@
 					>
 				</div>
 			{:else}
-				<label class="form-control w-full">
-					<div class="label"><span class="label-text">Search members</span></div>
-					<input
-						type="text"
-						class="input w-full"
-						bind:value={query}
-						oninput={handleSearch}
-						placeholder="Name or email..."
-					/>
-				</label>
+				<!-- Named `userId` without being the input that carries it: the value
+				     posts from the hidden field above, but an issue on it belongs
+				     beside the box where the member is picked, which is the only
+				     thing on screen when `userId` is still empty. -->
+				<FormField name="userId" label="Search members">
+					{#snippet input(id)}
+						<input
+							{id}
+							type="text"
+							class="input w-full"
+							bind:value={query}
+							oninput={handleSearch}
+							placeholder="Name or email..."
+						/>
+					{/snippet}
+				</FormField>
 				{#if searchResults.length > 0}
 					<div class="max-h-40 overflow-y-auto rounded bg-base-200">
 						{#each searchResults as u (u.id)}
@@ -101,17 +112,8 @@
 					</div>
 				{/if}
 			{/if}
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Role</span></div>
-				<Select class="w-full" {...fields.role.as('select')}>
-					<option value="member">Member</option>
-					<option value="admin">Admin</option>
-				</Select>
-			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Position (optional)</span></div>
-				<input {...fields.position.as('text')} class="input w-full" placeholder="e.g. Guitarist" />
-			</label>
+			<FormField field={fields.role} type="select" label="Role" options={ROLE_OPTIONS} />
+			<FormField field={fields.position} label="Position (optional)" placeholder="e.g. Guitarist" />
 		</div>
 	{/snippet}
 </Action>

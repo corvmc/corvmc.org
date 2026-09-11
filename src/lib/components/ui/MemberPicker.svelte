@@ -65,8 +65,8 @@
 		>
 	</div>
 {:else}
-	<label class="form-control w-full">
-		<div class="label"><span class="label-text">{label}</span></div>
+	<label class="fieldset w-full">
+		<span class="fieldset-legend">{label}</span>
 		<input type="text" class="input w-full" bind:value={query} oninput={search} {placeholder} />
 	</label>
 	{#if results.length > 0}

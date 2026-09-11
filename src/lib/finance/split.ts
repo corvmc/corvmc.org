@@ -75,17 +75,38 @@ export function divisibleCents(totalCents: number, coverFees: boolean): number {
 }
 
 /**
- * The other party's take, anchored to the base rate rather than to what was paid.
+ * The least the other party may be left with: their share of the **base rate**,
+ * and nothing to do with what the buyer paid.
  *
  * A proportional split divides a discount as well as a sale, so a buyer paying
- * under the sticker price shorts the other party rather than the one offering
- * the discount. Here their number is **absolute**: a share of the base, or of
- * the gross when the buyer paid more, whichever is larger — so the allocating
- * party is the residual and absorbs both the discount and the card fee, until
- * its own share reaches zero and the clamp stops it going further.
+ * under the sticker price would short the other party rather than the one
+ * offering the discount. Anchoring to the base fixes that in both directions:
+ * money above the sticker price is a gift, and a gift the buyer cannot direct
+ * is not one.
  *
- * `min(divisibleCents, …)` is that clamp, and it is why paying $7 on a $10 show
- * sends $6.49 rather than a $7 that does not exist.
+ * `min(divisibleCents, …)` is the clamp, and it is why paying $7 on a $10 show
+ * leaves $6.49 rather than a $7 that does not exist.
+ */
+export function otherFloorCents(input: {
+	/** The sticker price for the whole order — what the floor is anchored to. */
+	baseCents: number;
+	/** The allocating party's share, in basis points. */
+	shareBps: number;
+	/** What is left after the card fee. */
+	divisibleCents: number;
+}): number {
+	const { baseCents, shareBps, divisibleCents } = input;
+	if (divisibleCents <= 0) return 0;
+	return Math.min(divisibleCents, Math.round((baseCents * (10000 - shareBps)) / 10000));
+}
+
+/**
+ * Where the bar opens: the other party's floor, or their share of the gross
+ * when the buyer paid over the sticker price, whichever is larger.
+ *
+ * This is a suggestion, not the limit — `otherFloorCents` is the limit. The
+ * surplus above the base opens split at the same ratio, and the buyer may move
+ * it either way until one share or the other runs out.
  */
 export function otherTakeCents(input: {
 	/** The sticker price for the whole order — what the share is anchored to. */
@@ -101,9 +122,10 @@ export function otherTakeCents(input: {
 }): number {
 	const { baseCents, grossPaidCents, shareBps, divisibleCents, optUpCents = 0 } = input;
 	if (divisibleCents <= 0) return 0;
-	const otherBps = 10000 - shareBps;
-	const floor = Math.round((baseCents * otherBps) / 10000);
-	const ofGross = Math.round((grossPaidCents * otherBps) / 10000);
+	// Built on the floor rather than beside it, so a take can never land under
+	// the number the validator holds the same allocation to.
+	const floor = otherFloorCents({ baseCents, shareBps, divisibleCents });
+	const ofGross = Math.round((grossPaidCents * (10000 - shareBps)) / 10000);
 	return Math.min(divisibleCents, Math.max(floor, ofGross, optUpCents));
 }
 
@@ -174,7 +196,7 @@ export function validateSplit(input: {
 	allowPayMore: boolean;
 	/**
 	 * The least the other party may be left with, already clamped to what is
-	 * divisible — see `otherTakeCents`. Defaults to `0`, which is the old
+	 * divisible — see `otherFloorCents`. Defaults to `0`, which is the old
 	 * behaviour: an allocation may take everything.
 	 */
 	otherMinCents?: number;

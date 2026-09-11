@@ -1,4 +1,5 @@
 import { directoryEntry, directoryTag } from '../../src/lib/server/db/schema/directory';
+import { holdRoom } from './room';
 import { instructor } from '../../src/lib/server/db/schema/instructor';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { batchInsert, db } from './db';
@@ -225,6 +226,15 @@ export async function seedInstructors(users: any[], reviewer: any) {
 	// Teaching bookings, so the member reservation list and the staff calendar
 	// both show a row priced at the teaching rate rather than the drop-in one.
 	const teaching = rows[0];
+	// Half-hour lessons on a weekly clock: every week has to be free, or the
+	// series would half-land on somebody else's booking.
+	const slots = Object.fromEntries(
+		[0, 7, 14].map((offset) => {
+			const at = new Date(now.getTime() + (offset + 2) * day + 16 * 3_600_000);
+			return [offset, holdRoom(at, new Date(at.getTime() + 1_800_000), 'lesson')];
+		})
+	);
+
 	const lessons = [0, 7, 14].map((offset, i) => ({
 		id: randomUUID(),
 		bookerType: 'instructor' as const,
@@ -232,8 +242,7 @@ export async function seedInstructors(users: any[], reviewer: any) {
 		bookerName: null,
 		createdByUserId: gtr.id,
 		status: 'confirmed' as const,
-		startsAt: new Date(now.getTime() + (offset + 2) * day + 16 * 3_600_000),
-		endsAt: new Date(now.getTime() + (offset + 2) * day + 16.5 * 3_600_000),
+		...slots[offset],
 		notes: i === 0 ? 'Weekly lesson block' : null,
 		createdAt: now,
 		updatedAt: now

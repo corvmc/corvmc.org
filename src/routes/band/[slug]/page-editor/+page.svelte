@@ -6,6 +6,7 @@
 	// it shows what applies. The rules only ever match inside a `.theme-x`
 	// container, so importing them into the app leaks nothing.
 	import '$lib/themes/band-site/index.css';
+	import BandSiteFonts from '$lib/components/band-site/BandSiteFonts.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -131,6 +132,8 @@
 	}
 </script>
 
+<BandSiteFonts />
+
 <!-- The whole editor is one form: the header carries Save, so it has to be
      inside it, and every control on the canvas writes state the hidden inputs
      below post back. -->
@@ -254,8 +257,8 @@
 					if (url) freshUrls[key] = url;
 				}}
 			/>
-			<label class="form-control">
-				<span class="label-text text-xs">…or an image key / URL</span>
+			<label class="fieldset">
+				<span class="fieldset-legend text-xs">…or an image key / URL</span>
 				<input
 					type="text"
 					class="input w-full input-sm"
@@ -265,8 +268,8 @@
 					}}
 				/>
 			</label>
-			<label class="form-control">
-				<span class="label-text text-xs">Headline</span>
+			<label class="fieldset">
+				<span class="fieldset-legend text-xs">Headline</span>
 				<input
 					type="text"
 					class="input w-full input-sm"
@@ -276,8 +279,8 @@
 					}}
 				/>
 			</label>
-			<label class="form-control">
-				<span class="label-text text-xs">Subtitle</span>
+			<label class="fieldset">
+				<span class="fieldset-legend text-xs">Subtitle</span>
 				<input
 					type="text"
 					class="input w-full input-sm"
@@ -288,8 +291,8 @@
 				/>
 			</label>
 		{:else if block.type === 'bio'}
-			<label class="form-control w-full">
-				<span class="label-text text-xs">Content (HTML/Markdown)</span>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend text-xs">Content (HTML/Markdown)</span>
 				<textarea
 					class="textarea w-full text-sm"
 					rows="5"
@@ -299,8 +302,8 @@
 					}}></textarea>
 			</label>
 		{:else if block.type === 'links'}
-			<label class="form-control">
-				<span class="label-text text-xs">Style</span>
+			<label class="fieldset">
+				<span class="fieldset-legend text-xs">Style</span>
 				<Select
 					size="sm"
 					class="w-full"
@@ -328,8 +331,8 @@
 				<span class="text-sm">Show member positions</span>
 			</label>
 		{:else if block.type === 'events'}
-			<label class="form-control">
-				<span class="label-text text-xs">Max events to show</span>
+			<label class="fieldset">
+				<span class="fieldset-legend text-xs">Max events to show</span>
 				<input
 					type="number"
 					class="input w-24 input-sm"
@@ -378,8 +381,8 @@
 				<span class="text-sm">Allow downloads (press-quality)</span>
 			</label>
 		{:else if block.type === 'embed'}
-			<label class="form-control">
-				<span class="label-text text-xs">Platform</span>
+			<label class="fieldset">
+				<span class="fieldset-legend text-xs">Platform</span>
 				<input
 					type="text"
 					class="input w-full input-sm"
@@ -390,8 +393,8 @@
 					}}
 				/>
 			</label>
-			<label class="form-control">
-				<span class="label-text text-xs">URL</span>
+			<label class="fieldset">
+				<span class="fieldset-legend text-xs">URL</span>
 				<input
 					type="url"
 					class="input w-full input-sm"
@@ -403,8 +406,8 @@
 				/>
 			</label>
 		{:else if block.type === 'spacer'}
-			<label class="form-control">
-				<span class="label-text text-xs">Height</span>
+			<label class="fieldset">
+				<span class="fieldset-legend text-xs">Height</span>
 				<Select
 					size="sm"
 					class="w-full"
@@ -419,8 +422,8 @@
 				</Select>
 			</label>
 		{:else if block.type === 'custom_html'}
-			<label class="form-control w-full">
-				<span class="label-text text-xs">HTML content (sanitized on save)</span>
+			<label class="fieldset w-full">
+				<span class="fieldset-legend text-xs">HTML content (sanitized on save)</span>
 				<textarea
 					class="textarea w-full font-mono text-sm"
 					rows="6"
@@ -518,8 +521,8 @@
 		{/if}
 
 		<!-- CSS class (all blocks) -->
-		<label class="form-control">
-			<span class="label-text text-xs">CSS class (optional)</span>
+		<label class="fieldset">
+			<span class="fieldset-legend text-xs">CSS class (optional)</span>
 			<input
 				type="text"
 				class="input w-full input-sm"

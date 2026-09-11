@@ -34,8 +34,19 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { HTMLAttributes } from 'svelte/elements';
 	import clsx from 'clsx';
 
+	/**
+	 * The overflow is the `<span>`'s own attribute type, not `[key: string]: unknown`.
+	 *
+	 * A catch-all index signature turns off prop-name checking altogether, so a
+	 * prop that does not exist lands on the DOM as a dead attribute and nothing —
+	 * not svelte-check, not ESLint, not the browser — says so. Thirteen call sites
+	 * passed `color=` for a component whose prop is `variant` (#912) and rendered a
+	 * grey pill for it. `HTMLAttributes` still forwards `title`, `id`, `data-*` and
+	 * every aria attribute, and now a typo is a type error at the call site.
+	 */
 	let {
 		variant,
 		size = 'sm',
@@ -45,11 +56,8 @@
 	}: {
 		variant?: BadgeVariant;
 		size?: BadgeSize;
-		class?: string;
 		children: Snippet;
-		/** Forwarded to the `<span>` — `title`, `id`, `data-*`, aria attributes. */
-		[key: string]: unknown;
-	} = $props();
+	} & HTMLAttributes<HTMLSpanElement> = $props();
 
 	const classes = $derived(clsx('badge', variant && VARIANTS[variant], SIZES[size], className));
 </script>

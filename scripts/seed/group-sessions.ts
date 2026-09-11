@@ -1,4 +1,5 @@
 import { eventListing, eventGroup } from '../../src/lib/server/db/schema/event';
+import { claimRoom } from './room';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { db } from './db';
 import { ptDate } from './util';
@@ -25,7 +26,7 @@ export async function seedGroupSessions(groups: any[]) {
 			// Only the upcoming ones hold the room — a past session's hold is spent,
 			// and seeding one would put a stale confirmed booking on the calendar.
 			let reservationId: string | null = null;
-			if (offset > 0) {
+			if (offset > 0 && claimRoom(startsAt, endsAt, 'group-session')) {
 				const [res] = await db
 					.insert(reservation)
 					.values({

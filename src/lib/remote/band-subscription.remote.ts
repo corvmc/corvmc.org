@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireGroupRole } from '$lib/server/group/group-context';
+import { mapDomainError } from '$lib/server/errors';
 import {
 	getBandSubscription,
 	createBandPremiumCheckout,
@@ -59,13 +60,20 @@ export const upgradeToPremium = form(
 		}
 
 		const { url } = getRequestEvent();
-		const checkoutUrl = await createBandPremiumCheckout({
-			bandId: band.id,
-			stripeCustomerId: user.stripeId,
-			billingInterval: data.billingInterval,
-			successUrl: `${url.origin}/band/${band.slug}/subscription?success=true`,
-			cancelUrl: `${url.origin}/band/${band.slug}/subscription`
-		});
+		// `mapDomainError` is declared `: never`, so `checkoutUrl` is definitely
+		// assigned past the catch without a non-null assertion.
+		let checkoutUrl: string;
+		try {
+			checkoutUrl = await createBandPremiumCheckout({
+				bandId: band.id,
+				stripeCustomerId: user.stripeId,
+				billingInterval: data.billingInterval,
+				successUrl: `${url.origin}/band/${band.slug}/subscription?success=true`,
+				cancelUrl: `${url.origin}/band/${band.slug}/subscription`
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		return { redirectUrl: checkoutUrl };
 	}

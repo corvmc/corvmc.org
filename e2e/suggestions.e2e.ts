@@ -83,13 +83,21 @@ async function reportSuggestion(page: Page, suggestionId: string, reason: string
 }
 
 /** Resolve or dismiss the newest pending report from the staff flag queue. */
+const SUBMIT_LABEL = {
+	resolved: 'Resolve — action taken',
+	dismissed: 'Dismiss — no action'
+} as const;
+
 async function decideReport(page: Page, entityTitle: string, decision: 'resolved' | 'dismissed') {
 	await page.goto('/staff/flags');
 	await page.getByRole('link', { name: entityTitle }).first().click();
 	await page.waitForURL(/\/staff\/flags\/[^/]+$/);
 	await page.getByRole('button', { name: 'Resolve / Dismiss' }).click();
 	await page.locator('select[name="resolution"]').selectOption(decision);
-	await page.getByRole('button', { name: 'Save' }).click();
+	// By the decision's own name, not "Save": the submit says what it will record,
+	// which is the whole of #981. Clicking it by label is also the only assertion
+	// that the dialog and the picked outcome agree.
+	await page.getByRole('button', { name: SUBMIT_LABEL[decision] }).click();
 	await expect(page.getByRole('dialog')).toBeHidden({ timeout: 15000 });
 }
 
@@ -109,16 +117,24 @@ test.describe('suggestion board', () => {
 
 		const before = (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount;
 
-		await page.getByRole('button', { name: /^\d+$/ }).first().click();
+		// Named for what it does, not by its count: the control used to be
+		// `button "11"` with no pressed state, which is what #903 fixed. Locating
+		// it by that name is what keeps the fix from being undone silently.
+		const vote = page.getByRole('button', { name: /vote/i }).first();
+		await expect(vote).toHaveAttribute('aria-pressed', 'false');
+
+		await vote.click();
 		await expect
 			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount, DB_POLL)
 			.toBe(before + 1);
+		await expect(vote).toHaveAttribute('aria-pressed', 'true');
 
 		// Clicking again removes it rather than adding a second.
-		await page.getByRole('button', { name: /^\d+$/ }).first().click();
+		await vote.click();
 		await expect
 			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount, DB_POLL)
 			.toBe(before);
+		await expect(vote).toHaveAttribute('aria-pressed', 'false');
 	});
 
 	test('a merged suggestion carries the union of both voter sets, not the sum', async ({

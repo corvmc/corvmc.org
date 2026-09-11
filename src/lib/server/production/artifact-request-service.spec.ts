@@ -66,7 +66,9 @@ const { sqlite, testDb } = vi.hoisted(() => {
 	// created as `event` and renamed, and `event_band` was rebuilt, so neither
 	// has a CREATE under its current name for `ddlFor` to find. Neither is
 	// queried here: the FK is production's, and `foreign_keys` is off above.
-	for (const t of ['artifact_request', 'directory_entry']) {
+	// `media_attachment` too: an external act's tech rider is a file on the
+	// listing, because the structured rider is keyed on `group_id` (#863).
+	for (const t of ['artifact_request', 'directory_entry', 'media_attachment']) {
 		for (const stmt of ddlFor(t)) sqlite.exec(stmt);
 	}
 
@@ -98,7 +100,7 @@ const EVENT = 'evt-1';
 const ENTRY = 'entry-1';
 
 beforeEach(() => {
-	for (const t of ['artifact_request', 'directory_entry', 'event_band']) {
+	for (const t of ['artifact_request', 'directory_entry', 'event_band', 'media_attachment']) {
 		sqlite.exec(`delete from ${t}`);
 	}
 	sqlite.exec(
@@ -153,6 +155,32 @@ describe('deriving whether it came', () => {
 	it('leaves an empty rider outstanding', async () => {
 		riderSummaries.mockResolvedValue([{ name: 'The Wrens', empty: true }]);
 		await requestArtifact({ eventId: EVENT, entryId: ENTRY, artifact: 'tech_rider' });
+		expect(await outstandingCount(EVENT)).toBe(1);
+	});
+
+	it('counts a rider file, which is the only kind an act with no account can send', async () => {
+		// `rider` is keyed on `group_id` and an external act has no group, so the
+		// structured summary is empty however much they sent. Before #863 that
+		// made the ask permanently outstanding.
+		riderSummaries.mockResolvedValue([{ name: 'The Wrens', empty: true }]);
+		sqlite.exec(
+			`insert into media_attachment (id, media_id, attachable_type, attachable_id, slot)
+			 values ('att-1', 'med-1', 'directory_entry', '${ENTRY}', 'rider')`
+		);
+		await requestArtifact({ eventId: EVENT, entryId: ENTRY, artifact: 'tech_rider' });
+
+		expect((await listRequests(EVENT))[0].fulfilled).toBe(true);
+		expect(await outstandingCount(EVENT)).toBe(0);
+	});
+
+	it('does not read a file in another slot as a rider', async () => {
+		riderSummaries.mockResolvedValue([{ name: 'The Wrens', empty: true }]);
+		sqlite.exec(
+			`insert into media_attachment (id, media_id, attachable_type, attachable_id, slot)
+			 values ('att-2', 'med-2', 'directory_entry', '${ENTRY}', 'stage_plot')`
+		);
+		await requestArtifact({ eventId: EVENT, entryId: ENTRY, artifact: 'tech_rider' });
+
 		expect(await outstandingCount(EVENT)).toBe(1);
 	});
 

@@ -1700,7 +1700,15 @@ export const bookInstructorReservation = form(instructorBookingSchema, async (da
 	// The grant is the authorization, and it is checked here rather than inferred
 	// from anything the client sent. Returns the row, so `bookerId` needs no
 	// second read.
-	const instructor = await requireInstructor(currentUser.id);
+	let instructor: Awaited<ReturnType<typeof requireInstructor>>;
+	try {
+		instructor = await requireInstructor(currentUser.id);
+	} catch (err) {
+		// InstructorNotActiveError carries "Your application to teach at CMC has
+		// not been approved yet." An unmapped DomainError is not an HttpError, so
+		// that sentence became a 500 "Internal Error" and a Sentry crash (#958).
+		mapDomainError(err);
+	}
 
 	// Same reason as every other booking path: a reservation staff cannot call
 	// about is the problem this guard exists to prevent.

@@ -1,4 +1,5 @@
 import { recurringSeries } from '../../src/lib/server/db/schema/recurring';
+import { holdRoom, isRoomFree } from './room';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { buildSeedRRule as seedRRule } from '../seed-rrule';
 import { db } from './db';
@@ -18,8 +19,17 @@ export async function seedRecurringSeries(users: SeedUser[]) {
 		const hour = 10 + i * 2;
 		const duration = pick([1, 1.5, 2]);
 
-		const protoStart = ptDate(dayOffset - 14, hour);
-		const protoEnd = ptDate(dayOffset - 14, hour + duration);
+		// A series repeats on the same clock, so the prototype's slot has to be
+		// free on every week it lands on — not just its own.
+		const weeks = [0, 7, 14];
+		const wanted = weeks.map((d) => ptDate(dayOffset - 14 + d, hour));
+		if (!wanted.every((w) => isRoomFree(w, new Date(w.getTime() + duration * 3_600_000)))) continue;
+		const slots = wanted.map(
+			(w) => holdRoom(w, new Date(w.getTime() + duration * 3_600_000), 'recurring').startsAt
+		);
+
+		const protoStart = slots[0];
+		const protoEnd = new Date(protoStart.getTime() + duration * 3_600_000);
 
 		const [proto] = await db
 			.insert(reservation)
@@ -52,8 +62,8 @@ export async function seedRecurringSeries(users: SeedUser[]) {
 		);
 
 		for (let w = 1; w <= 2; w++) {
-			const instStart = ptDate(dayOffset - 14 + w * 7, hour);
-			const instEnd = ptDate(dayOffset - 14 + w * 7, hour + duration);
+			const instStart = slots[w];
+			const instEnd = new Date(instStart.getTime() + duration * 3_600_000);
 			const status = instStart < new Date() ? 'completed' : 'scheduled';
 
 			await db.insert(reservation).values({

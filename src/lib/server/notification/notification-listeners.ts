@@ -307,20 +307,31 @@ export function registerAllNotificationListeners(): void {
 
 	// --- Confirmation reminder ---
 	domainEvents.on('reservation.confirmation_reminder_due', async ({ data: event }) => {
+		// The first reminder is an invitation and the second is a deadline. Same
+		// notification type either way: a member who silenced one silenced both.
+		const opening = event.stage === 'window_open';
+		const title = opening
+			? 'You can confirm your reservation now'
+			: 'Please confirm your reservation';
+
 		await dispatch({
 			type: 'confirmation_reminder',
 			userId: event.userId,
 			userEmail: event.userEmail,
-			title: 'Please confirm your reservation',
+			title,
 			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Please confirm your reservation: ${event.date}`,
+				subject: `${title}: ${event.date}`,
 				preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
-				heading: 'Please confirm your reservation',
+				heading: title,
 				paragraphs: [
-					{ text: `You have an unconfirmed reservation. ${UNCONFIRMED_RELEASE_NOTICE}` }
+					{
+						text: opening
+							? `Confirming is open for this booking from today. ${UNCONFIRMED_RELEASE_NOTICE}`
+							: `You have an unconfirmed reservation. ${UNCONFIRMED_RELEASE_NOTICE}`
+					}
 				],
 				details: whenDetails(event.date, event.startTime, event.endTime),
 				footnote: 'Please confirm or cancel your reservation to free up the time slot for others.',

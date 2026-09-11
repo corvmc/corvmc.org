@@ -404,15 +404,18 @@ export async function seedAudio(bands: any[], users: any[], alsoInclude: any[] =
 			lastPlayedAt: null
 		}));
 
-	// An hour behind and an hour ahead, so a freshly seeded database has a
-	// "now playing", an "up next" and a "recently played" the moment you open it
-	// — rather than three empty panels until the cron next fires.
+	// Forward-weighted, because `buildSchedule` stops at MAX_ENTRIES_PER_RUN and
+	// the fixture tracks are ~35s — so the 200-entry budget buys about two hours
+	// however wide the horizon is. Symmetric hours spent half of it on plays that
+	// were already over, and the station went dark an hour after `db:reset`
+	// (#992). Ten minutes behind still fills "Recently played", which shows 12.
+	// Staying on air past that is the `schedule-radio` cron's job, not the seed's.
 	const now = new Date();
 	const entries = eligible.length
 		? buildSchedule(
 				eligible,
-				new Date(now.getTime() - 60 * 60 * 1000),
-				new Date(now.getTime() + 60 * 60 * 1000)
+				new Date(now.getTime() - 10 * 60 * 1000),
+				new Date(now.getTime() + 24 * 60 * 60 * 1000)
 			)
 		: [];
 

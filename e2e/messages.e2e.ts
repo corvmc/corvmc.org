@@ -85,6 +85,30 @@ test.describe('member messaging', () => {
 		await expect(page.locator('body')).not.toContainText('no such table');
 	});
 
+	// #1004 reported that no key committed the pick — the chip never appeared and
+	// Send request stayed disabled forever. SearchSelect's own keyboard path is
+	// sound in a component harness, in four nestings including this one, so this
+	// drives the real dialog to say whether the defect is here or was misread.
+	test('the recipient can be picked with the keyboard', async ({ page }) => {
+		await login(page, SEED_MSG_SENDER_EMAIL, SEED_MSG_PASSWORD);
+		await page.goto('/member/messages');
+		await page.getByRole('button', { name: 'Message a Member' }).click();
+
+		const picker = page.locator('input[role="combobox"]');
+		await picker.click();
+		await picker.pressSequentially('E2E Message Recip');
+		await expect(
+			page.getByRole('option', { name: new RegExp(SEED_MSG_RECIPIENT_NAME) })
+		).toBeVisible(WAIT);
+
+		await picker.press('ArrowDown');
+		await picker.press('Enter');
+
+		// The input is swapped for a badge the moment the pick commits.
+		await expect(picker).toHaveCount(0, WAIT);
+		await expect(page.getByText(SEED_MSG_RECIPIENT_NAME).first()).toBeVisible(WAIT);
+	});
+
 	test('request, accept, reply, block', async ({ page }) => {
 		const body = `E2E first contact ${Date.now()}`;
 

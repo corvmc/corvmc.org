@@ -1,17 +1,18 @@
 # The ticket sliding scale, and where the money goes
 
-> ## Status, 2026-09-08 — partly shipped
+> ## Status, 2026-09-10 — shipped
 >
-> Two pieces of this are already in the tree and this document does not say so, which is how a
-> price floor gets built twice:
+> All of it is in the tree. Read what follows as the record of the decisions, not as work to do.
 >
-> - **`event.ticketPriceFloorCents`** (`src/lib/server/db/schema/event.ts:85`) — the per-event
->   floor, defaulting to 0.
+> - **`event.ticketPriceFloorCents`** (`src/lib/server/db/schema/event.ts`) — the per-event floor,
+>   defaulting to 0, editable by staff.
 > - **`src/lib/finance/ticket-split.ts`** — the split arithmetic.
+> - **`src/lib/components/events/TicketPurchaseFields.svelte`** and
+>   **`src/routes/(public)/events/[id]/tickets/+page.svelte`** — the checkout surface: the
+>   suggested price, the scale, the split bar and the $0 path.
+> - The 50% sustaining-member ticket discount is gone (`src/lib/server/db/schema/ticket.ts`).
 >
-> What is unbuilt is the checkout surface that uses them: the suggested price, the split bar the
-> buyer sees, and the retirement of the member ticket discount. Check the tree before building
-> any section below.
+> Covered by `e2e/ticket-purchase.e2e.ts` and the unit tests around the split.
 
 CMC concert tickets are NOTAFLOF — no one is turned away for lack of funds. Up
 to now that has been a sentence on the checkout page rather than something the
@@ -147,12 +148,23 @@ ticketLineUnit  = min(chosenUnit, ticketPrice)            → the `ticket` line
 contribution    = max(0, chosenUnit − ticketPrice) × qty  → `ticket_contribution`
 totalCents      = chosenUnit × qty
 chargeCents     = coverFees ? grossed up : totalCents
-collectiveCents = the bar's position          (max: chargeCents − stripeFee)
+actsFloor       = min(divisible, 70% × ticketPrice × qty)  ← the guarantee
+collectiveCents = the bar's position          (max: divisible − actsFloor)
 actsCents       = chargeCents − collectiveCents − stripeFeeCents   ← derived
 ```
 
 The acts' share is derived rather than computed independently, so the three
 figures always add up to the charge and no cent can round its way into a gap.
+
+**The guarantee is a share of the suggested price, not of what was paid.** The
+bar opens at 70% of the gross, so a buyer who does nothing splits their whole
+payment at the house ratio — but the floor beneath it stays anchored at 70% of
+`ticketPrice`, which is what makes the surplus above the suggestion theirs to
+direct. Anchoring the floor to the gross instead would raise the acts'
+guarantee every time somebody was generous, capping the very gift being made:
+on a $10 show a buyer paying $20 could send the collective $5.12 rather than
+$12.12. Below the suggestion the two coincide and the bar has nowhere to go —
+the acts take the whole divisible amount.
 
 Nothing posted by the client is trusted, including the arithmetic: the server
 re-derives the whole split from the event's own price and floor, which are the

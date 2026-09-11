@@ -1,4 +1,5 @@
 import { account, user } from '../../src/lib/server/db/schema/authentication';
+import { claimRoomNear, holdRoom } from './room';
 import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { creditTransaction } from '../../src/lib/server/db/schema/finance';
@@ -63,6 +64,45 @@ export const STYLE_PERSONAS = [
 const BARE_BAND = { name: 'Second Thoughts', slug: 'second-thoughts' };
 
 const ago = (days: number) => new Date(Date.now() - days * 86400000);
+
+/**
+ * A band per style, so the band half of the app has an account that can walk it.
+ * Owner rather than member on purpose: a read-only corner is already covered by
+ * the rider fixture's two logins, and what was missing was any style persona who
+ * could reach the editing side at all.
+ */
+const PERSONA_BANDS = [
+	{
+		owner: 'seed-sty-poweruser',
+		name: 'Ninety Proof',
+		slug: 'ninety-proof',
+		position: 'Guitar',
+		tier: 'premium' as const,
+		age: 740,
+		lastTouched: 1,
+		bio: 'Two years of Tuesdays. Everything is already in the van.'
+	},
+	{
+		owner: 'seed-sty-returning',
+		name: 'Marlin Street',
+		slug: 'marlin-street',
+		position: 'Bass',
+		tier: 'free' as const,
+		age: 1160,
+		lastTouched: 700,
+		bio: 'Quiet since the last tour. Still here, somewhere.'
+	},
+	{
+		owner: 'seed-sty-lockeddown',
+		name: 'Closed Session',
+		slug: 'closed-session',
+		position: 'Drums',
+		tier: 'free' as const,
+		age: 290,
+		lastTouched: 12,
+		bio: 'Rehearsal only. Ask before you print anything.'
+	}
+];
 
 /**
  * Phase one: accounts, listing rows, and the band nobody finished.
@@ -163,7 +203,24 @@ export async function seedStylePersonas(roles: SeedRole[]) {
 	pendingSites.set(bareBand.id, { tier: 'free' });
 	pendingEntries.set(bareBand.id, { visibility: 'members' });
 
-	return { personas: seeded, bareBand };
+	// One band each for the other three. Without these, no band-facing surface —
+	// riders, packing lists, band events, press kits, band chat — is reachable as
+	// the heavy user, the returner or the opted-out member, which is the whole
+	// reason those three personas exist (#996). Each band's own age carries the
+	// style: established, dormant, and one that must not leak an opt-out.
+	const styleBands = [];
+	for (const b of PERSONA_BANDS) {
+		const band = await insertBandWithOwner(
+			{ name: b.name, slug: b.slug, createdAt: ago(b.age), updatedAt: ago(b.lastTouched) },
+			b.owner,
+			b.position
+		);
+		pendingSites.set(band.id, { tier: b.tier });
+		pendingEntries.set(band.id, { visibility: 'public', bio: b.bio });
+		styleBands.push(band);
+	}
+
+	return { personas: seeded, bareBand, styleBands };
 }
 
 /**
@@ -187,14 +244,27 @@ export async function seedStylePersonaHistory(
 	const LOCKED = 'seed-sty-lockeddown';
 
 	const reservationRows: (typeof reservation.$inferInsert)[] = [];
+	// Named bookings take the room rather than asking for it — a walkthrough
+	// that cannot find the booking it is pointed at is worse than an overlap,
+	// and `findRoomConflicts` is what says if one happened anyway (#966).
+	const holdFixture = (r: { status?: string; startsAt?: Date; endsAt?: Date }) => {
+		if (!r.startsAt || !r.endsAt || r.status === 'cancelled') return;
+		const slot = holdRoom(r.startsAt, r.endsAt, 'persona');
+		r.startsAt = slot.startsAt;
+		r.endsAt = slot.endsAt;
+	};
 	const ticketRows: (typeof ticket.$inferInsert)[] = [];
+	const pushReservation = (r: typeof reservation.$inferInsert) => {
+		holdFixture(r as { status?: string; startsAt?: Date; endsAt?: Date });
+		reservationRows.push(r);
+	};
 	const creditRows: (typeof creditTransaction.$inferInsert)[] = [];
 	const notificationRows: (typeof notification.$inferInsert)[] = [];
 
 	// --- the abandoner -------------------------------------------------------
 	// Booked, never paid, and still in the future: the one reservation state a
 	// member can leave sitting there themselves.
-	reservationRows.push({
+	pushReservation({
 		bookerType: 'user',
 		bookerId: HALF,
 		createdByUserId: HALF,
@@ -224,13 +294,16 @@ export async function seedStylePersonaHistory(
 	// pages, sorts and totals over a real number rather than over four rows.
 	let balance = 24;
 	for (let week = 104; week >= 2; week -= 2) {
+		// Volume, not a particular hour — so these ask for the room rather than
+		// taking it, unlike the named bookings above.
+		const slot = claimRoomNear(ptDate(-week * 7, 17), 2, 'poweruser');
+		if (!slot) continue;
 		reservationRows.push({
 			bookerType: 'user',
 			bookerId: POWER,
 			createdByUserId: POWER,
 			status: 'completed',
-			startsAt: ptDate(-week * 7, 17),
-			endsAt: ptDate(-week * 7, 19),
+			...slot,
 			notes: week % 6 === 0 ? 'Recording session' : null,
 			creditsUsed: 4,
 			cashDueCents: 0,
@@ -249,7 +322,7 @@ export async function seedStylePersonaHistory(
 			createdAt: ptDate(-week * 7, 17)
 		});
 	}
-	reservationRows.push({
+	pushReservation({
 		bookerType: 'user',
 		bookerId: POWER,
 		createdByUserId: POWER,
@@ -297,17 +370,18 @@ export async function seedStylePersonaHistory(
 	// The history stops dead two years ago. Every "recent activity" panel is
 	// empty for somebody who is nonetheless not a new member.
 	for (const week of [96, 92, 88]) {
+		const slot = claimRoomNear(ptDate(-week * 7, 18), 2, 'returning');
+		if (!slot) continue;
 		reservationRows.push({
 			bookerType: 'user',
 			bookerId: BACK,
 			createdByUserId: BACK,
 			status: 'completed',
-			startsAt: ptDate(-week * 7, 18),
-			endsAt: ptDate(-week * 7, 20),
+			...slot,
 			notes: null,
 			creditsUsed: null,
 			cashDueCents: 2 * HOURLY_RATE_CENTS,
-			paidAt: ptDate(-week * 7, 18)
+			paidAt: slot.startsAt
 		});
 	}
 	for (let i = 0; i < 14; i++) {
@@ -345,7 +419,7 @@ export async function seedStylePersonaHistory(
 	// --- locked down ---------------------------------------------------------
 	// Real activity behind the opt-outs, so a page that renders nothing is
 	// rendering the preference rather than an empty account.
-	reservationRows.push({
+	pushReservation({
 		bookerType: 'user',
 		bookerId: LOCKED,
 		createdByUserId: LOCKED,
@@ -357,7 +431,7 @@ export async function seedStylePersonaHistory(
 		cashDueCents: 2 * HOURLY_RATE_CENTS,
 		paidAt: ptDate(-11, 20)
 	});
-	reservationRows.push({
+	pushReservation({
 		bookerType: 'user',
 		bookerId: LOCKED,
 		createdByUserId: LOCKED,

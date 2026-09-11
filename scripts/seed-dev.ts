@@ -30,6 +30,7 @@ import { pendingSites } from './seed/pending';
 import { seedRoles, seedUsers, seedAdminUser, seedUserRoles } from './seed/users';
 import { seedReservations, seedClosures, seedLockAccess } from './seed/reservations';
 import { seedEvents } from './seed/events';
+import { findRoomConflicts, resetRoom } from './seed/room';
 import { seedVenues } from './seed/venues';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
@@ -43,7 +44,7 @@ import { seedGroupDocuments } from './seed/group-documents';
 import { seedDirectoryEntries } from './seed/directory';
 import { seedDirectoryPersonas } from './seed/directory-personas';
 import { seedInstructors } from './seed/instructors';
-import { seedExternalActs } from './seed/external-acts';
+import { seedExternalActs, SEED_ACT_SHEET_TOKEN } from './seed/external-acts';
 import { seedGroupSessions } from './seed/group-sessions';
 import { seedBandEvents } from './seed/band-events';
 import { seedCommunityEvents } from './seed/community-events';
@@ -89,6 +90,10 @@ import { seedRiders } from './seed/rider';
 import { seedPacking } from './seed/packing';
 
 async function main() {
+	// The one room's ledger, shared by every seeder that books it. Reset here
+	// rather than at module scope so a second run in one process starts clean.
+	resetRoom();
+
 	console.log('\nStarting dev seed...\n');
 
 	// Off for the whole seed: the call order below is a dependency graph, not a
@@ -126,7 +131,10 @@ async function main() {
 	// leaves behind, so it is appended but deliberately not handed to the seeders
 	// that fill a band in — half-made is the whole of what it is for.
 	const style = await seedStylePersonas(roles);
-	if (style) bands.push(style.bareBand);
+	// The bare band and the three style bands both go in: downstream seeders map
+	// the whole array, and the three exist precisely to be filled in (#996). The
+	// bare one stays out of the `slice(0, n)` seeders — half-made is its point.
+	if (style) bands.push(style.bareBand, ...style.styleBands);
 	// Before the groups, which take their leaders from it. Kept out of `allUsers`
 	// for the reason `seedGroupLeaders` gives.
 	const groupLeaders = await seedGroupLeaders(roles);
@@ -385,8 +393,22 @@ async function main() {
 		`    ${styleHistory.reservations} bookings, ${styleHistory.tickets} tickets, ${styleHistory.notifications} notifications between them`
 	);
 
+	console.log('\n  External act self-service (no login — the token is the whole of it):');
+	console.log(`    /act/${SEED_ACT_SHEET_TOKEN}   Sawtooth Rivals — contact sheet + tech rider`);
+
+	// The room holds one booking at a time and eight modules book it, so the
+	// invariant is asserted rather than assumed (#966).
+	const clashes = await findRoomConflicts();
+	if (clashes.length > 0) {
+		console.warn(`\n  ⚠ ${clashes.length} overlapping reservation(s) — the room is one room:`);
+		for (const c of clashes.slice(0, 5)) {
+			console.warn(`    ${c.at.toISOString()}  ${c.a}  vs  ${c.b}`);
+		}
+	}
+
 	console.log('\n  Volunteer deep links:');
 	console.log('    /member/volunteer/feedback/seed-vol-signup-feedback');
+	console.log('    /member/volunteer/shifts/seed-vol-signup-door   (checklist + door list)');
 	console.log('    /staff/volunteer/shifts/seed-vol-shift-cancelled');
 
 	console.log('\n  Premium band pages available at:');

@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { holdRoom } from './room';
 import { eq } from 'drizzle-orm';
 import {
 	dutyList,
@@ -127,6 +128,9 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 	// booking, because Wren's is the future one the flag depends on.
 	const veteran = users.find((u: any) => u.id !== wren?.id);
 	if (veteran) {
+		// The orientation's own booking; the cancelled one below holds nothing,
+		// because `hasConflict` ignores a cancelled row.
+		const slot = holdRoom(ptDate(-14, 18), ptDate(-14, 20), 'orientation');
 		const [past] = await db
 			.insert(reservation)
 			.values({
@@ -134,8 +138,7 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 				bookerId: veteran.id,
 				createdByUserId: veteran.id,
 				status: 'completed',
-				startsAt: ptDate(-14, 18),
-				endsAt: ptDate(-14, 20)
+				...slot
 			})
 			.returning();
 

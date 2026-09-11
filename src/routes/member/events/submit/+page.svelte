@@ -31,6 +31,7 @@
 
 	<Form
 		remote={createListing}
+		guard
 		successToast="Draft saved"
 		onsuccess={(result) => {
 			if (result?.eventId) goto(resolve(`/member/events/${result.eventId}/manage`));
@@ -40,25 +41,31 @@
 		<FormField
 			field={fields.title}
 			type="text"
-			label="Title *"
+			label="Title"
 			placeholder="e.g. Paper Wolves at The Whiteside"
 			maxlength="200"
+			required
 		/>
 
 		<!-- Custom input mode: FormField's built-in textarea drops `rest`, so rows,
-		     maxlength and placeholder would be lost. Issues still resolve by name. -->
+		     maxlength and placeholder would be lost. The `input` snippet rather than
+		     children, because only it is handed the id the caption points at —
+		     without it the field's accessible name is its placeholder. -->
 		<FormField name="description" label="Description">
-			<textarea
-				{...fields.description.as('text')}
-				class="textarea w-full"
-				rows="4"
-				maxlength="5000"
-				placeholder="Who's playing, what it sounds like, anything worth knowing..."></textarea>
+			{#snippet input(id)}
+				<textarea
+					{...fields.description.as('text')}
+					{id}
+					class="textarea w-full"
+					rows="4"
+					maxlength="5000"
+					placeholder="Who's playing, what it sounds like, anything worth knowing..."></textarea>
+			{/snippet}
 		</FormField>
 
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-			<FormField field={fields.eventDate} type="date" label="Date *" required />
-			<FormField field={fields.eventStartTime} type="time" label="Start Time *" required />
+			<FormField field={fields.eventDate} type="date" label="Date" required />
+			<FormField field={fields.eventStartTime} type="time" label="Start Time" required />
 			<FormField
 				field={fields.eventEndTime}
 				type="time"
@@ -72,9 +79,10 @@
 			<FormField
 				field={fields.location}
 				type="text"
-				label="Venue *"
+				label="Venue"
 				placeholder="Venue name & address"
 				maxlength="500"
+				required
 			/>
 		</div>
 

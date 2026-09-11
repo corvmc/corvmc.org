@@ -41,7 +41,11 @@
 	}
 </script>
 
-<div class="mx-auto max-w-lg space-y-6">
+<!-- `px-6` is not decoration: `PageHeader` bleeds to its container's edges with
+     `-mx-6`, and on the app side the 24px comes from AppShell's `main`. Without
+     it here the header hung off both sides and the page scrolled sideways on a
+     phone (#970). `/events/[id]` wraps its own header the same way. -->
+<div class="mx-auto max-w-lg space-y-6 px-6">
 	<PageHeader title={isFreeEvent ? 'Get free ticket' : 'Get Tickets'} backHref="/events" />
 
 	<Card>
@@ -124,12 +128,17 @@
 			<input {...purchaseFields.eventId.as('hidden', page.params.id!)} />
 			<Card>
 				<CardBody class="space-y-4">
+					<!-- The `input` snippet, not children: only it is handed the id the
+					     caption points at, so as children this select had no accessible
+					     name at all and read as "combo box, 1" (#994). -->
 					<Field label="Number of tickets" name="quantity">
-						<Select name="quantity" bind:value={quantity} class="w-full">
-							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
-								<option value={n}>{n}</option>
-							{/each}
-						</Select>
+						{#snippet input(id)}
+							<Select {id} name="quantity" bind:value={quantity} class="w-full">
+								{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
+									<option value={n}>{n}</option>
+								{/each}
+							</Select>
+						{/snippet}
 					</Field>
 
 					{#if !data.isAuthenticated}

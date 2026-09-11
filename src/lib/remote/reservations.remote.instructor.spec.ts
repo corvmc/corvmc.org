@@ -83,6 +83,11 @@ const { bookInstructorReservation } = (await import('./reservations.remote')) as
 	bookInstructorReservation: (d: unknown, i: unknown) => Promise<unknown>;
 };
 
+// The real class, deliberately unmocked: `mapDomainError` short-circuits on a
+// `DomainError` before it touches any of the other error classes it imports,
+// several of which come from modules this file replaces wholesale.
+const { InstructorNotActiveError } = await import('$lib/server/instructor/instructor-service');
+
 const booking = {
 	date: '2026-09-15',
 	startTime: '16:00',
@@ -109,10 +114,17 @@ describe('bookInstructorReservation', () => {
 		);
 	});
 
+	// The real error, not a stand-in `Error('403')`: what the grant guard throws
+	// is an InstructorNotActiveError carrying a sentence written for the member,
+	// and until #958 that reached them as a 500 "Internal Error" instead (the
+	// guard's throw was never mapped). Asserting the sentence is what pins it.
 	it('refuses anyone without an active grant, before writing anything', async () => {
-		requireInstructor.mockRejectedValueOnce(new Error('403'));
+		requireInstructor.mockRejectedValueOnce(new InstructorNotActiveError('requested'));
 
-		await expect(bookInstructorReservation(booking, issue)).rejects.toThrow('403');
+		await expect(bookInstructorReservation(booking, issue)).rejects.toMatchObject({
+			status: 403,
+			body: { message: expect.stringContaining('has not been approved') }
+		});
 		expect(create).not.toHaveBeenCalled();
 	});
 

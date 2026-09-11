@@ -79,7 +79,7 @@ produced several is a parent issue plus one sub-issue each — never one long bo
 
 ```
 gh issue list --state open --search '<terms>'     # required first, a hook enforces it
-gh issue create --template finding.md             # one per finding, labelled agent-filed
+gh issue create --template finding.md --type Bug  # one per finding, labelled agent-filed
 gh api --method POST repos/corvmc/corvmc.org/issues/<parent>/sub_issues \
   -F sub_issue_id=$(gh api repos/corvmc/corvmc.org/issues/<n> --jq .id)
 ```

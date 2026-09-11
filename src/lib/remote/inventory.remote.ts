@@ -274,18 +274,19 @@ export const getMemberEquipment = query(memberEquipmentFilters, async (filters) 
 export const getMemberEquipmentMeta = query(z.void(), async () => {
 	const currentUser = requireUser();
 	const { getBalance } = await import('$lib/server/finance/credit-service');
-	const { getSubscription } = await import('$lib/server/finance/subscription-service');
+	const { isSustainingMember: checkSustaining } =
+		await import('$lib/server/finance/subscription-service');
 
-	const [categories, creditBalance] = await Promise.all([
+	// The local snapshot, not `getSubscription` — that is
+	// `stripe.subscriptions.list()`, a network round trip to price one loan
+	// estimate, and it took the whole catalog down with it when Stripe was
+	// unreachable. `user.subscription` is the documented source of truth and is
+	// what every other surface reads.
+	const [categories, creditBalance, isSustainingMember] = await Promise.all([
 		listCategories(),
-		getBalance(currentUser.id, 'equipment_credits')
+		getBalance(currentUser.id, 'equipment_credits'),
+		checkSustaining(currentUser.id)
 	]);
-
-	let isSustainingMember = false;
-	if (currentUser.stripeId) {
-		const sub = await getSubscription(currentUser.stripeId);
-		isSustainingMember = sub !== null;
-	}
 
 	return {
 		categories: categories.map((c) => ({ id: c.id, name: c.name, pricingTier: c.pricingTier })),

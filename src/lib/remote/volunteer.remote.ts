@@ -5,7 +5,10 @@ import { requireCapability, requireUser } from '$lib/server/authorization';
 import { getStaffLayout } from './layout.remote';
 import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
 import { listInterestsForUser } from '$lib/server/volunteer/volunteer-interest-service';
-import { listSignupsForUser } from '$lib/server/volunteer/volunteer-signup-service';
+import {
+	getSignupForUser,
+	listSignupsForUser
+} from '$lib/server/volunteer/volunteer-signup-service';
 import { mapDomainError } from '$lib/server/errors';
 import { renderMarkdown } from '$lib/utils/markdown';
 import {
@@ -63,7 +66,14 @@ import {
 	getRequirementsForRoles,
 	setRoleRequirements
 } from '$lib/server/volunteer/volunteer-certification-service';
-import { listWorkTasks } from '$lib/server/volunteer/duty-list-service';
+import { listWorkTasks, setWorkTaskDoneAsAssignee } from '$lib/server/volunteer/duty-list-service';
+import { getById } from '$lib/server/event/event-service';
+import {
+	checkIn as checkInTicketService,
+	getEventTickets,
+	getTicketById,
+	getTicketsSold
+} from '$lib/server/ticket/ticket-service';
 import {
 	createShift as createShiftService,
 	duplicateShift as duplicateShiftService,
@@ -589,7 +599,13 @@ function splitName(name: string): { firstName: string; lastName: string } {
 
 async function loadOnboarding() {
 	const currentUser = requireUser();
-	const { profile, account } = await getVolunteerOnboarding(currentUser.id);
+	let loaded: Awaited<ReturnType<typeof getVolunteerOnboarding>>;
+	try {
+		loaded = await getVolunteerOnboarding(currentUser.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	const { profile, account } = loaded;
 	const fallback = splitName(account.name);
 
 	return {
@@ -2315,3 +2331,126 @@ export const getVolunteerWorklist = query(async () => {
  * scrolling an unbounded list. Dates cross the wire as ISO strings, like every other date
  * on this layer.
  */
+
+// ---------------------------------------------------------------------------
+// The volunteer's own shift
+// ---------------------------------------------------------------------------
+// Everything below is authorised by assignment rather than by capability.
+// `volunteer.manageShifts` administers the programme, so gating the day-of
+// checklist on it meant the crew doing the work could only ever read it, and a
+// door volunteer holding no staff position was redirected out of /staff before
+// reaching a check-in screen at all (#934, #931).
+//
+// The signup id is the scope. It names one person and one work order together,
+// so no caller can reach another member's shift by guessing.
+// ---------------------------------------------------------------------------
+
+export const getMyShift = query(z.string().min(1), async (signupId) => {
+	const currentUser = requireUser();
+	const shift = await getSignupForUser(signupId, currentUser.id);
+	if (!shift) throw error(404, 'Shift not found');
+
+	const [tasks, event] = await Promise.all([
+		listWorkTasks(shift.shiftId),
+		shift.eventId ? getById(shift.eventId) : Promise.resolve(null)
+	]);
+
+	return {
+		shift,
+		tasks: tasks.map((t) => ({
+			id: t.id,
+			label: t.label,
+			done: t.done,
+			doneAt: t.doneAt
+		})),
+		// Offered only where there is something to check people into. A work party
+		// has no door, and a show with ticketing off has no list.
+		checkIn:
+			event && event.ticketingEnabled && !shift.cancelledAt && !shift.shiftCancelledAt
+				? { eventId: event.id, eventTitle: event.title }
+				: null
+	};
+});
+
+export const setMyWorkTaskDone = form(
+	z.object({
+		id: z.string().min(1),
+		/** Which of the member's shifts to put back in sync. Not read by the service. */
+		signupId: z.string().min(1),
+		// An unchecked box is not submitted, so absence has to read as false
+		// rather than as a missing required field.
+		done: z.boolean().optional().default(false)
+	}),
+	async (data) => {
+		const currentUser = requireUser();
+		try {
+			await setWorkTaskDoneAsAssignee(data.id, data.done, currentUser.id);
+			await getMyShift(data.signupId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * The door list, for the person actually on the door.
+ *
+ * Narrower than the staff screen on purpose: a name and a code are what it
+ * takes to find somebody at the door, and an email address is not. Cancelling
+ * a ticket stays with staff.
+ */
+export const getMyShiftCheckIn = query(z.string().min(1), async (signupId) => {
+	const currentUser = requireUser();
+	const shift = await getSignupForUser(signupId, currentUser.id);
+	if (!shift?.eventId) throw error(404, 'Shift not found');
+	if (shift.cancelledAt || shift.shiftCancelledAt) throw error(403, 'That shift is off');
+
+	const event = await getById(shift.eventId);
+	if (!event) throw error(404, 'Event not found');
+	if (!event.ticketingEnabled) throw error(400, 'Ticketing not enabled for this event');
+
+	const [tickets, sold] = await Promise.all([getEventTickets(event.id), getTicketsSold(event.id)]);
+	const live = tickets.filter((t) => t.status === 'valid' || t.status === 'checked_in');
+
+	return {
+		signupId,
+		event: { id: event.id, title: event.title, startsAt: event.startsAt },
+		tickets: live.map((t) => ({
+			id: t.id,
+			attendeeName: t.attendeeName,
+			code: t.code,
+			status: t.status
+		})),
+		stats: { sold, checkedIn: live.filter((t) => t.status === 'checked_in').length }
+	};
+});
+
+export const checkInAsVolunteer = form(
+	z.object({ ticketId: z.string().min(1), signupId: z.string().min(1) }),
+	async (data) => {
+		const currentUser = requireUser();
+
+		// The scope comes from the signup, not from the ticket: the signup is
+		// already this member's, and it names the one show they are working. A
+		// volunteer rostered on Friday cannot reach Saturday's door by posting a
+		// ticket id, because the ticket has to belong to Friday's show.
+		const shift = await getSignupForUser(data.signupId, currentUser.id);
+		if (!shift?.eventId) throw error(404, 'Shift not found');
+		if (shift.cancelledAt || shift.shiftCancelledAt) throw error(403, 'That shift is off');
+
+		const ticket = await getTicketById(data.ticketId);
+		if (!ticket) throw error(404, 'Ticket not found');
+		if (ticket.eventId !== shift.eventId) {
+			throw error(403, 'That ticket is not for the show you are working');
+		}
+
+		try {
+			await checkInTicketService(data.ticketId, currentUser.id);
+			await getMyShiftCheckIn(data.signupId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);

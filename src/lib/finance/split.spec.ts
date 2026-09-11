@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { computeSplit, suggestedShareCents, validateSplit } from './split';
+import {
+	computeSplit,
+	otherFloorCents,
+	otherTakeCents,
+	suggestedShareCents,
+	validateSplit
+} from './split';
 
 /**
  * The one arithmetic in a payment split that must not diverge: what the buyer is
@@ -178,5 +184,48 @@ describe('validateSplit', () => {
 		const result = validateSplit({ totalCents: 1000, shareCents: 100, coverFees: false, ...paid });
 		expect(result.ok).toBe(true);
 		if (result.ok) expect(result.split.stripeFeeCents).toBe(59);
+	});
+});
+
+/**
+ * The floor is a share of the base rate and of nothing else.
+ *
+ * Anchoring it to what was paid instead would raise the other party's guarantee
+ * every time a buyer was generous, which caps the very gift being made.
+ */
+describe('otherFloorCents', () => {
+	const base = { baseCents: 1000, shareBps: 3000, divisibleCents: 1426 };
+
+	it('is a share of the base rate, whatever the buyer paid', () => {
+		expect(otherFloorCents(base)).toBe(700);
+	});
+
+	it('clamps to what is actually divisible', () => {
+		// $7 paid on a $10 show: the 70% the base implies does not exist yet.
+		expect(otherFloorCents({ ...base, divisibleCents: 649 })).toBe(649);
+	});
+
+	it('is zero when there is nothing to divide', () => {
+		expect(otherFloorCents({ ...base, divisibleCents: 0 })).toBe(0);
+		expect(otherFloorCents({ ...base, divisibleCents: -100 })).toBe(0);
+	});
+});
+
+describe('otherTakeCents', () => {
+	const base = { baseCents: 1000, shareBps: 3000, divisibleCents: 1426 };
+
+	it('opens above the floor once the buyer pays over the base', () => {
+		// $15 on a $10 show: 70% of the gross, not the $7 the floor guarantees.
+		expect(otherTakeCents({ ...base, grossPaidCents: 1500 })).toBe(1050);
+	});
+
+	it('never opens below the floor', () => {
+		for (const grossPaidCents of [0, 500, 1000, 1500, 5000]) {
+			const floor = otherFloorCents(base);
+			expect(
+				otherTakeCents({ ...base, grossPaidCents }),
+				`${grossPaidCents}`
+			).toBeGreaterThanOrEqual(floor);
+		}
 	});
 });

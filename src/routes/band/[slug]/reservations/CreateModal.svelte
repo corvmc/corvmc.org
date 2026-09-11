@@ -10,7 +10,7 @@
 	 * Booking the practice space for a band.
 	 *
 	 * Replaces a 280-line `/reservations/new` page that hand-rolled its own slot
-	 * arithmetic, its own `div.form-control` markup, and a price of
+	 * arithmetic, its own `div.fieldset` markup, and a price of
 	 * `hours × rate` that never consulted `getReservationPricing` — so the
 	 * booking member's own free hours were invisible until after the fact.
 	 *

@@ -24,7 +24,7 @@ have used, then file:
 
   gh issue list --state open --search '<terms>'
   gh issue list --label area:<vertical>          # the labels are per-vertical
-  gh issue create --template finding.md ...
+  gh issue create --template finding.md --type Bug ...
 
 If it is already there, comment on it instead — a second issue costs the reader
 more than the duplicate saved you.

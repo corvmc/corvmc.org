@@ -1368,6 +1368,16 @@ p {
 	outline: 2px solid var(--cmc-orange);
 	outline-offset: 2px;
 }
+
+/* Nav links are plain <a> inside daisyUI's `.menu > li`. daisyUI styles them but
+   gives them no focus ring — it only clears one on `li > details > summary` —
+   and nothing else in the cascade supplies one either, so every sidebar was a
+   run of invisible tab stops: twelve consecutive ones in the band panel (#991).
+   Scoped to `.menu` rather than to NavItem, because every menu has the hole. */
+.menu :where(li) > :is(a, button):focus-visible {
+	outline: 2px solid var(--cmc-orange);
+	outline-offset: 2px;
+}
 .stub:hover {
 	transform: translateY(-3px);
 	box-shadow: 0 6px 0 var(--cmc-brown);

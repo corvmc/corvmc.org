@@ -7,6 +7,7 @@ import { auth } from '$lib/server/auth';
 import { eq } from 'drizzle-orm';
 import { parseBirthDateInput } from '$lib/utils/age';
 import { requireUser, hasAnyRole } from '$lib/server/authorization';
+import { mapDomainError } from '$lib/server/errors';
 import { deactivateUser } from '$lib/server/user/user-service';
 import {
 	getSubscriptionsForUser,
@@ -164,7 +165,11 @@ export const deleteAccount = form(
 
 		// Full offboarding (cancels reservations + subscription, purges sessions,
 		// soft-deletes) lives in the shared service shared with staff deactivation.
-		await deactivateUser(currentUser.id);
+		try {
+			await deactivateUser(currentUser.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 
 		// Sign out
 		await auth.api.signOut({ headers: event.request.headers });

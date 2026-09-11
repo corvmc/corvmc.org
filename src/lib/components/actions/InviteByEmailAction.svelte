@@ -1,11 +1,16 @@
 <script lang="ts">
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { inviteByEmailApi } from '$lib/remote/bands.remote';
 
 	const { fields } = inviteByEmailApi;
+
+	const ROLE_OPTIONS = [
+		{ value: 'member', label: 'Member' },
+		{ value: 'admin', label: 'Admin' }
+	];
 
 	let {
 		bandId,
@@ -45,25 +50,16 @@
 				Invite someone who doesn't have a CorvMC account. They'll get a signup link and be
 				auto-added to this band.
 			</p>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Email</span></div>
-				<input
-					{...fields.email.as('email')}
-					class="input w-full"
-					placeholder="musician@example.com"
-				/>
-			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Role</span></div>
-				<Select class="w-full" {...fields.role.as('select')}>
-					<option value="member">Member</option>
-					<option value="admin">Admin</option>
-				</Select>
-			</label>
-			<label class="form-control w-full">
-				<div class="label"><span class="label-text">Position (optional)</span></div>
-				<input {...fields.position.as('text')} class="input w-full" placeholder="e.g. Bassist" />
-			</label>
+			<!-- The handler raises its "already a member" rejection as an issue on
+			     `email`, which a bare input renders as `aria-invalid` and nothing else. -->
+			<FormField
+				field={fields.email}
+				type="email"
+				label="Email"
+				placeholder="musician@example.com"
+			/>
+			<FormField field={fields.role} type="select" label="Role" options={ROLE_OPTIONS} />
+			<FormField field={fields.position} label="Position (optional)" placeholder="e.g. Bassist" />
 		</div>
 	{/snippet}
 </Action>

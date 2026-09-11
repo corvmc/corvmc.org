@@ -300,6 +300,14 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/volunteer/shifts/[signupId]",
+		"panel": "member"
+	},
+	{
+		"route": "/member/volunteer/shifts/[signupId]/check-in",
+		"panel": "member"
+	},
+	{
 		"route": "/member/volunteer/start",
 		"panel": "member"
 	},

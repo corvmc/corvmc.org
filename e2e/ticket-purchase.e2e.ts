@@ -110,15 +110,45 @@ test('moving the bar moves what the acts get, and what is posted', async ({ page
 	// the affordance rather than the mechanism.
 	await openPurchasePage(page);
 
-	const bar = page.getByRole('slider');
-	await bar.focus();
-	await bar.press('ArrowLeft');
-	await bar.press('ArrowLeft');
+	// Two 25¢ steps down from the opening 512: paid at exactly the suggested $20
+	// the acts' guarantee and their opening take are the same $14.00, so the bar
+	// has nowhere above 512 to go.
 
-	// Two 25¢ steps down from the opening 512. The bar moves toward the acts and
-	// cannot move the other way past it — the collective's share is the residual.
-	await expect(bar).toHaveAttribute('aria-valuenow', '462');
+	// Stepped rather than pressed twice, for the hydration race `payPerTicket`
+	// documents: the slider is server-rendered, so an arrow key before
+	// `onkeydown` attaches is lost, and the budget then goes on a value that
+	// cannot change. Re-reading `aria-valuenow` each attempt is what makes the
+	// retry safe — a press that landed advances, a lost one repeats.
+	const bar = page.getByRole('slider');
+	await expect(async () => {
+		if (Number(await bar.getAttribute('aria-valuenow')) > 462) await bar.press('ArrowLeft');
+		expect(await bar.getAttribute('aria-valuenow')).toBe('462');
+	}).toPass({ timeout: 15000 });
 	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('462');
+});
+
+test("paying over the suggestion leaves the surplus the buyer's to direct", async ({ page }) => {
+	// The acts are guaranteed 70% of the *suggested* $20 — $14.00 — and not 70%
+	// of whatever was handed over. At $45 that is the difference between a
+	// collective capped at $11.89 and one the buyer can take to $29.39: $45 less
+	// $1.61 of card processing is $43.39 divisible, less the acts' $14.00.
+	await openPurchasePage(page);
+	await payPerTicket(page, '45');
+
+	const bar = page.getByRole('slider');
+	// Unchanged: the bar still opens at 70% of the gross to the acts ($31.50).
+	await expect(bar).toHaveAttribute('aria-valuenow', '1189');
+	await expect(bar).toHaveAttribute('aria-valuemax', '2939');
+
+	// Rightward travel is what the anchored floor buys, and it did nothing before.
+	await bar.focus();
+	await bar.press('ArrowRight');
+	await expect(bar).toHaveAttribute('aria-valuenow', '1214');
+	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('1214');
+
+	// All the way over: the acts keep their guarantee and not a cent less.
+	await bar.press('End');
+	await expect(bar).toHaveAttribute('aria-valuetext', /\$29\.39.*\$14\.00/);
 });
 
 test('the fee-coverage offer is priced on everything the card is charged', async ({ page }) => {

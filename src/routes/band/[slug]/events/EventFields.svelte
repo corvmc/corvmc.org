@@ -122,14 +122,14 @@
 		<FormField
 			field={fields.eventDate}
 			type="date"
-			label="Date *"
+			label="Date"
 			value={evt ? toLocalDate(evt.startsAt) : ''}
 			required
 		/>
 		<FormField
 			field={fields.eventStartTime}
 			type="time"
-			label="Start Time *"
+			label="Start Time"
 			value={evt ? toLocalTime(evt.startsAt) : ''}
 			required
 		/>

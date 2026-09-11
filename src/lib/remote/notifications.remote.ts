@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, command, getRequestEvent } from '$app/server';
-import { requireCapability } from '$lib/server/authorization';
+import { requireCapability, isElevated } from '$lib/server/authorization';
 import {
 	getForUser,
 	getUnreadCount,
@@ -10,7 +10,7 @@ import {
 } from '$lib/server/notification/in-app-service';
 import { getAllPreferences, setPreference } from '$lib/server/notification/preference-service';
 import { getMemberAccount } from './account.remote';
-import { NOTIFICATION_TYPES, getNotificationType } from '$lib/server/db/schema/notification';
+import { getNotificationType, preferenceTypesFor } from '$lib/server/db/schema/notification';
 
 function requireUser() {
 	const { locals } = getRequestEvent();
@@ -40,8 +40,8 @@ export const markAllNotificationsRead = command(async () => {
 
 export const getNotificationPreferences = query(async () => {
 	const user = requireUser();
-	const prefs = await getAllPreferences(user.id);
-	return NOTIFICATION_TYPES.filter((t) => !t.mandatory).map((t) => ({
+	const [prefs, staff] = await Promise.all([getAllPreferences(user.id), isElevated(user.id)]);
+	return preferenceTypesFor(staff ? 'staff' : 'member').map((t) => ({
 		key: t.key,
 		label: t.label,
 		description: t.description,
@@ -64,6 +64,9 @@ export const setNotificationPreference = command(
 		if (!typeDef) throw error(400, 'Unknown notification type');
 		if (typeDef.mandatory)
 			throw error(400, 'Cannot change preferences for mandatory notifications');
+		// A member must not be able to write a row for a type they can never
+		// receive, whatever the table happened to render.
+		if (typeDef.staffOnly && !(await isElevated(user.id))) throw error(403, 'Not authorized');
 
 		await setPreference(user.id, notificationType, { email, inApp, sms });
 		void getMemberAccountPage().refresh();

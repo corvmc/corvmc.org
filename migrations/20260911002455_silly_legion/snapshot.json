@@ -1,10 +1,10 @@
 {
-  "id": "bfd01492-f765-4bdc-a48f-a59b8ff09747",
-  "prevIds": [
-    "3691e4c3-e42c-4aa5-99e3-fcfbdabc0c23"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "e485607d-6c71-49ed-a667-5b6a7bb03ca0",
+  "prevIds": [
+    "bfd01492-f765-4bdc-a48f-a59b8ff09747"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -2353,6 +2353,26 @@
       "default": null,
       "generated": null,
       "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "closed_at",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "closed_by_user_id",
       "entityType": "columns",
       "table": "production"
     },
@@ -11613,6 +11633,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_production_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "production"
+    },
+    {
+      "columns": [
+        "closed_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_production_closed_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "production"
     },

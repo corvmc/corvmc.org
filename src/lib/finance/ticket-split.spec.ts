@@ -276,4 +276,39 @@ describe('the acts are paid off the base rate', () => {
 		expect(result.ok).toBe(true);
 		if (result.ok) expect(result.split.actsCents).toBe(941);
 	});
+
+	/**
+	 * The guarantee is a share of the *suggested* price, so it does not rise
+	 * with what the buyer paid. A floor that did would cap the gift being made:
+	 * on this show it would hold the acts at $10.50 and leave the collective a
+	 * ceiling of $3.76, when the buyer meant the extra $5 for them.
+	 */
+	describe("the surplus above the suggestion is the buyer's to direct", () => {
+		// $15 paid on a $10 show: $14.26 divisible, and the acts' $7.00 guarantee
+		// leaves $7.26 the buyer may send to the collective.
+		const overpaid = { ...show, unitPriceCents: 1500 };
+
+		it('still opens at the same place — only the ceiling moves', () => {
+			expect(
+				actsAnchoredCollectiveCents({
+					baseCents: show.suggestedUnitCents,
+					grossPaidCents: 1500,
+					coverFees: false
+				})
+			).toBe(376);
+		});
+
+		it("accepts an allocation up to the acts' guarantee", () => {
+			const result = validateTicketSplit({ ...overpaid, collectiveCents: 726 });
+			expect(result.ok).toBe(true);
+			if (result.ok) expect(result.split.actsCents).toBe(700);
+		});
+
+		it('refuses the cent past it', () => {
+			expect(validateTicketSplit({ ...overpaid, collectiveCents: 727 })).toEqual({
+				ok: false,
+				reason: 'That leaves the acts short.'
+			});
+		});
+	});
 });

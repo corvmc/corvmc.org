@@ -146,9 +146,10 @@ export const advanceProduction = form(
 		status: z.enum(productionStatuses)
 	}),
 	async (data) => {
+		const { locals } = getRequestEvent();
 		await requireCapability('event.manage');
 		try {
-			await transitionService(data.id, data.status);
+			await transitionService(data.id, data.status, locals.user?.id ?? null);
 			await Promise.all([
 				getStaffEventProduction(data.eventId).refresh(),
 				// The index carries the status column now, so it goes stale here too.

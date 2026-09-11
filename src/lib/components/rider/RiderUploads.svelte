@@ -121,7 +121,7 @@
 						<Button
 							variant="ghost"
 							size="sm"
-							square
+							shape="square"
 							class="ml-auto"
 							aria-label="Remove {file.filename ?? entry.label}"
 							disabled={busy === file.attachmentId}
@@ -134,7 +134,7 @@
 			{/each}
 
 			{#if canManage}
-				<label class="form-control">
+				<label class="fieldset">
 					<span class="sr-only">Upload {entry.label}</span>
 					<input
 						type="file"
