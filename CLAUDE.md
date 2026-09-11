@@ -78,7 +78,8 @@ local run you did not do. Triage of a red or rejected run is the `qc` role's job
   density — much of this tree predates the rule.
 - **A problem you find but did not cause is filed, not fixed.** Search the tracker
   (`gh issue list --state open --search '<terms>'`), then
-  `gh issue create --template finding.md`, labelled `agent-filed`. Fixing it inside an unrelated PR
+  `gh issue create --template finding.md --type Bug`, labelled `agent-filed` — `--template`
+  applies the file's `labels:` and silently drops its `type:`. Fixing it inside an unrelated PR
   buries it; leaving it in the chat loses it when the session ends. A `PreToolUse` hook blocks the
   create until a search has run.
 - **A review with several findings is a parent issue plus one sub-issue each**, not one long body —
