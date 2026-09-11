@@ -131,7 +131,10 @@ async function main() {
 	// leaves behind, so it is appended but deliberately not handed to the seeders
 	// that fill a band in — half-made is the whole of what it is for.
 	const style = await seedStylePersonas(roles);
-	if (style) bands.push(style.bareBand);
+	// The bare band and the three style bands both go in: downstream seeders map
+	// the whole array, and the three exist precisely to be filled in (#996). The
+	// bare one stays out of the `slice(0, n)` seeders — half-made is its point.
+	if (style) bands.push(style.bareBand, ...style.styleBands);
 	// Before the groups, which take their leaders from it. Kept out of `allUsers`
 	// for the reason `seedGroupLeaders` gives.
 	const groupLeaders = await seedGroupLeaders(roles);

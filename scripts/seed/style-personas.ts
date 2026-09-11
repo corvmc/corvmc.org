@@ -66,6 +66,45 @@ const BARE_BAND = { name: 'Second Thoughts', slug: 'second-thoughts' };
 const ago = (days: number) => new Date(Date.now() - days * 86400000);
 
 /**
+ * A band per style, so the band half of the app has an account that can walk it.
+ * Owner rather than member on purpose: a read-only corner is already covered by
+ * the rider fixture's two logins, and what was missing was any style persona who
+ * could reach the editing side at all.
+ */
+const PERSONA_BANDS = [
+	{
+		owner: 'seed-sty-poweruser',
+		name: 'Ninety Proof',
+		slug: 'ninety-proof',
+		position: 'Guitar',
+		tier: 'premium' as const,
+		age: 740,
+		lastTouched: 1,
+		bio: 'Two years of Tuesdays. Everything is already in the van.'
+	},
+	{
+		owner: 'seed-sty-returning',
+		name: 'Marlin Street',
+		slug: 'marlin-street',
+		position: 'Bass',
+		tier: 'free' as const,
+		age: 1160,
+		lastTouched: 700,
+		bio: 'Quiet since the last tour. Still here, somewhere.'
+	},
+	{
+		owner: 'seed-sty-lockeddown',
+		name: 'Closed Session',
+		slug: 'closed-session',
+		position: 'Drums',
+		tier: 'free' as const,
+		age: 290,
+		lastTouched: 12,
+		bio: 'Rehearsal only. Ask before you print anything.'
+	}
+];
+
+/**
  * Phase one: accounts, listing rows, and the band nobody finished.
  *
  * Runs beside `seedUsagePersonas` for the same reason — `pendingEntries` and
@@ -164,7 +203,24 @@ export async function seedStylePersonas(roles: SeedRole[]) {
 	pendingSites.set(bareBand.id, { tier: 'free' });
 	pendingEntries.set(bareBand.id, { visibility: 'members' });
 
-	return { personas: seeded, bareBand };
+	// One band each for the other three. Without these, no band-facing surface —
+	// riders, packing lists, band events, press kits, band chat — is reachable as
+	// the heavy user, the returner or the opted-out member, which is the whole
+	// reason those three personas exist (#996). Each band's own age carries the
+	// style: established, dormant, and one that must not leak an opt-out.
+	const styleBands = [];
+	for (const b of PERSONA_BANDS) {
+		const band = await insertBandWithOwner(
+			{ name: b.name, slug: b.slug, createdAt: ago(b.age), updatedAt: ago(b.lastTouched) },
+			b.owner,
+			b.position
+		);
+		pendingSites.set(band.id, { tier: b.tier });
+		pendingEntries.set(band.id, { visibility: 'public', bio: b.bio });
+		styleBands.push(band);
+	}
+
+	return { personas: seeded, bareBand, styleBands };
 }
 
 /**
