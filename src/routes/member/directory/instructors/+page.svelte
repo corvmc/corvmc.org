@@ -39,14 +39,15 @@
 
 <PageContent>
 	<div class="mb-6 flex justify-center">
+		<!-- The same three tabs the directory itself renders, with the same keys
+		     and labels. "Acts" pointed at the bare route, which the directory
+		     reads as Members, and "Musicians" used a `?tab=` value it does not
+		     recognise — so two of the three landed in the same place and Acts
+		     was unreachable from here (#1038). Only `tab=bands` is a tab. -->
 		<TabBar
 			tabs={[
-				{ key: 'bands', label: 'Acts', href: resolve('/member/directory') },
-				{
-					key: 'musicians',
-					label: 'Musicians',
-					href: resolve('/member/directory?tab=musicians')
-				},
+				{ key: 'members', label: 'Members', href: resolve('/member/directory') },
+				{ key: 'bands', label: 'Acts', href: resolve('/member/directory?tab=bands') },
 				{ key: 'instructors', label: 'Teachers', href: resolve('/member/directory/instructors') }
 			]}
 			active="instructors"

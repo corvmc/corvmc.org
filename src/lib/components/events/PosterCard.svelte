@@ -61,6 +61,9 @@
 	}
 
 	const tagList = $derived(parseTags(tags));
+	// Everything the tape is not already showing. The tape carries one tag; the
+	// badges carry the rest, rather than the row vanishing whole (#1041).
+	const badgeTags = $derived(tagList.filter((t) => t !== tapeLabel));
 
 	const poster = $derived(imageSrc(posterUrl, 'poster'));
 
@@ -209,9 +212,13 @@
 {/snippet}
 
 {#snippet tagBadges()}
-	{#if tagList.length > 0 && !tapeLabel}
+	<!-- The tape carries the *first* tag, so suppressing the whole row for it
+	     dropped every tag after it — the same event showed one tag on
+	     /member/events and all of them on /events (#1041). Only the tag already
+	     on the tape is redundant. -->
+	{#if badgeTags.length > 0}
 		<div class="poster-card__tags">
-			{#each tagList as tag (tag)}
+			{#each badgeTags as tag (tag)}
 				<span class="sticker-badge sticker-badge--sm">{tag}</span>
 			{/each}
 		</div>
