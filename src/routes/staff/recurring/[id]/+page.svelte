@@ -6,7 +6,8 @@
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
-	import { formatTimeRange, formatDate } from '$lib/utils/format';
+	import { formatTimeRange, formatDate, formatScheduleLabel } from '$lib/utils/format';
+	import { EntityChip } from '$lib/components/ui/entity';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
@@ -21,7 +22,13 @@
 	let isActive = $derived(!series.cancelledAt);
 </script>
 
-<PageHeader title="Recurring Series" backHref="/staff/recurring">
+<!-- The schedule, not the word "Recurring Series": the title was a constant, so
+     every series had the same heading and the same browser-tab title (#1065). -->
+<PageHeader
+	title={formatScheduleLabel(series.frequencyLabel, series.prototypeStartsAt, series.monthlyMode)}
+	subtitle="Recurring series"
+	backHref="/staff/recurring"
+>
 	{#if isActive}
 		<Action
 			action={cancelDetailSeries}
@@ -52,13 +59,20 @@
 	<!-- Current schedule -->
 	<InfoCard title="Schedule">
 		<DefinitionList>
+			<!-- The plain-English schedule the list row shows. The raw RRULE stays,
+			     because staff do read it when a series misbehaves — but it is no
+			     longer the only thing on offer (#1065). -->
+			<Fact label="Schedule">
+				{formatScheduleLabel(series.frequencyLabel, series.prototypeStartsAt, series.monthlyMode)}
+			</Fact>
+
 			<Fact label="RRULE" mono>{series.rrule}</Fact>
 
 			<Fact label="Prototype Time"
 				>{formatTimeRange(series.prototypeStartsAt, series.prototypeEndsAt)}</Fact
 			>
 
-			<Fact label="Booker">{series.prototypeBookerType}: {series.prototypeBookerId}</Fact>
+			<Fact label="Booker"><EntityChip ref={series.booker} /></Fact>
 
 			{#if series.prototypeNotes}
 				<Fact label="Notes">{series.prototypeNotes}</Fact>

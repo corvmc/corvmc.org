@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -54,6 +55,10 @@
 	{@const roleOptions = d.roles.map((r) => ({ value: r.id, label: r.name }))}
 
 	<PageHeader title={d.list.name} subtitle="Duty list" backHref="/staff/volunteer/duty-lists">
+		<!-- The status its list row shows. It existed on this page only as a
+		     toggle inside the Edit modal, so reading it meant opening a form you
+		     then had to cancel (#1067). -->
+		<StatusBadge status={d.list.isActive ? 'active' : 'archived'} label />
 		<Action
 			action={updateDutyList}
 			label="Edit"
@@ -144,6 +149,12 @@
 	</PageHeader>
 
 	<PageContent width="3xl">
+		<!-- Same reason as the badge above: the description was readable only by
+		     opening the editor. -->
+		{#if d.list.description}
+			<p class="text-muted">{d.list.description}</p>
+		{/if}
+
 		<InfoCard title="Items">
 			<p class="mb-3 text-sm text-base-content/70">
 				Offsets are measured from {anchorLabel.toLowerCase()}, on {dutyListSubjectLabels[

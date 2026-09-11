@@ -74,6 +74,14 @@ export interface SeriesWithPrototype extends SeriesRow {
 	prototypeStartsAt: Date;
 	prototypeEndsAt: Date;
 	prototypeNotes: string | null;
+	/**
+	 * The same two `listAll` derives for its rows. The detail page rendered the
+	 * raw RRULE and a bare UUID where the row that links to it shows "Every
+	 * Tuesday" and a linked chip, because `get()` selected neither (#1065).
+	 */
+	booker: EntityRef;
+	frequencyLabel: string;
+	monthlyMode: ReturnType<typeof monthlyModeOf>;
 }
 
 export interface SeriesListItem {
@@ -265,15 +273,34 @@ export async function get(seriesId: string): Promise<SeriesWithPrototype | null>
 			prototypeCreatedByUserId: reservation.createdByUserId,
 			prototypeStartsAt: reservation.startsAt,
 			prototypeEndsAt: reservation.endsAt,
-			prototypeNotes: reservation.notes
+			prototypeNotes: reservation.notes,
+			member: memberRefColumns(),
+			band: bandRefColumns(),
+			event: eventRefColumns()
 		})
 		.from(recurringSeries)
 		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.leftJoin(group, bandBookerJoin)
+		.leftJoin(eventListing, eventBookerJoin)
 		.where(eq(recurringSeries.id, seriesId))
 		.limit(1);
 
-	return rows[0] ?? null;
+	const row = rows[0];
+	if (!row) return null;
+
+	const { member, band: bandRow, event: eventRow, ...rest } = row;
+	return {
+		...rest,
+		booker: toBookerRef({
+			bookerType: rest.prototypeBookerType,
+			member,
+			band: bandRow,
+			event: eventRow
+		}),
+		frequencyLabel: describeFrequency(rest.rrule),
+		monthlyMode: monthlyModeOf(rest.rrule)
+	};
 }
 
 // ---------------------------------------------------------------------------
