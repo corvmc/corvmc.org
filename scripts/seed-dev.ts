@@ -43,7 +43,7 @@ import { seedGroupDocuments } from './seed/group-documents';
 import { seedDirectoryEntries } from './seed/directory';
 import { seedDirectoryPersonas } from './seed/directory-personas';
 import { seedInstructors } from './seed/instructors';
-import { seedExternalActs } from './seed/external-acts';
+import { seedExternalActs, SEED_ACT_SHEET_TOKEN } from './seed/external-acts';
 import { seedGroupSessions } from './seed/group-sessions';
 import { seedBandEvents } from './seed/band-events';
 import { seedCommunityEvents } from './seed/community-events';
@@ -384,6 +384,9 @@ async function main() {
 	console.log(
 		`    ${styleHistory.reservations} bookings, ${styleHistory.tickets} tickets, ${styleHistory.notifications} notifications between them`
 	);
+
+	console.log('\n  External act self-service (no login — the token is the whole of it):');
+	console.log(`    /act/${SEED_ACT_SHEET_TOKEN}   Sawtooth Rivals — contact sheet + tech rider`);
 
 	console.log('\n  Volunteer deep links:');
 	console.log('    /member/volunteer/feedback/seed-vol-signup-feedback');
