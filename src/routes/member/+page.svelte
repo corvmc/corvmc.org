@@ -70,6 +70,25 @@
 		<!-- This week's reservations -->
 		<div class="lg:col-span-2">
 			<InfoCard title="This Week">
+				<!-- Above the week, because a booking nobody confirms is released at
+				     its start time and the week it falls in is not the member's
+				     problem. This card used to say "No sessions booked" over one
+				     (#964). -->
+				{#each data.unconfirmed as res (res.id)}
+					<Alert type="warning" class="mb-3 text-sm">
+						<div class="flex flex-wrap items-center justify-between gap-2">
+							<span>
+								<strong>{formatDate(res.startsAt)}</strong>
+								{formatTimeRange(res.startsAt, res.endsAt)}{#if res.bandName}
+									· {res.bandName}{/if}
+								is not confirmed yet. We release the room if it is not confirmed before it starts{#if res.confirmFrom > new Date()},
+									and confirmation opens
+									{formatDate(res.confirmFrom)}{/if}.
+							</span>
+							<Button href="/member/reservations" variant="warning" size="xs">Sort it out</Button>
+						</div>
+					</Alert>
+				{/each}
 				{#if data.weekReservations.length === 0}
 					<EmptyState
 						message="No sessions booked this week."
