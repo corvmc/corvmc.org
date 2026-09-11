@@ -9,6 +9,7 @@
 	 * says it without needing a sentence.
 	 */
 	import Action from '$lib/components/ui/Action.svelte';
+	import ShiftProgress from './ShiftProgress.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
@@ -31,7 +32,6 @@
 		};
 	} = $props();
 
-	const booked = $derived(shift.status !== 'claimed');
 	const worked = $derived(shift.status === 'completed');
 	const calledOff = $derived(!!shift.shiftCancelledAt);
 
@@ -80,29 +80,9 @@
 		{#if calledOff}
 			<p class="mt-2 text-sm text-error">This was called off. There's nothing to turn up for.</p>
 		{:else}
-			<!--
-				Two steps, not a percentage: the gap between them is a person deciding,
-				and only one of the two earns you a reminder. Withdrawn once the shift
-				is worked — by then the rail has answered its question, and leaving it
-				up makes a finished thing look like it is still in progress.
-			-->
-			{#if !worked}
-				<div class="mt-2 flex items-center gap-2 text-xs">
-					<span class="font-bold text-success">Claimed</span>
-					<span class="text-subtle">→</span>
-					<span class={booked ? 'font-bold text-success' : 'text-subtle'}>Booked</span>
-				</div>
-			{/if}
-
-			<p class="mt-1 text-subtle text-sm">
-				{#if !booked}
-					Awaiting staff confirmation.
-				{:else if worked}
-					Worked. Log your hours when you get a moment.
-				{:else}
-					{shift.notes ? `${shift.notes} ` : ''}Reminder lands the day before.
-				{/if}
-			</p>
+			<div class="mt-2">
+				<ShiftProgress status={shift.status} notes={shift.notes} />
+			</div>
 		{/if}
 
 		<div class="mt-2 flex flex-wrap gap-2">

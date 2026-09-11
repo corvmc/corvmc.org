@@ -13,12 +13,15 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import ShiftProgress from '$lib/components/volunteer/ShiftProgress.svelte';
+	import { goto } from '$app/navigation';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { formatDateLong, formatTimeRange } from '$lib/utils/format';
-	import { getMyShift, setMyWorkTaskDone } from '$lib/remote/volunteer.remote';
+	import { getMyShift, setMyWorkTaskDone, cancelMySignup } from '$lib/remote/volunteer.remote';
 
 	const signupId = $derived(page.params.signupId!);
 	const data = $derived(await getMyShift(signupId));
@@ -54,6 +57,15 @@
 		</p>
 		{#if data.shift.notes}
 			<p class="mt-2 text-muted">{data.shift.notes}</p>
+		{/if}
+
+		<!-- The rail the card on /member/volunteer shows. `status` was loaded here
+		     and rendered nowhere, so opening a shift told you less about where it
+		     stood than the row you clicked (#1066). -->
+		{#if !calledOff}
+			<div class="mt-3">
+				<ShiftProgress status={data.shift.status} notes={null} />
+			</div>
 		{/if}
 	</InfoCard>
 
@@ -110,4 +122,39 @@
 			</ul>
 		{/if}
 	</InfoCard>
+
+	<!-- Both of these were on the card and absent here. A page you open to work
+	     a shift from should be able to do what the row that linked to it could
+	     (#1066). -->
+	<div class="flex flex-wrap gap-2">
+		{#if data.shift.status === 'completed'}
+			<Button
+				href={resolve(`/member/volunteer/feedback/${signupId}`)}
+				variant="default"
+				size="sm"
+				outline
+			>
+				How did it go?
+			</Button>
+		{:else if !calledOff}
+			<Action
+				action={cancelMySignup.for(signupId)}
+				label="Drop out"
+				variant="ghost"
+				size="sm"
+				modalTitle="Drop out of this shift?"
+				submitLabel="Drop out"
+				successToast="Dropped. The place is back on the board."
+				onsuccess={() => goto(resolve('/member/volunteer'))}
+			>
+				{#snippet form()}
+					<input type="hidden" name="signupId" value={signupId} />
+					<p class="text-sm">
+						Notice isn't a no-show. The place goes back on the board for someone else, and nothing
+						is held against you for telling us.
+					</p>
+				{/snippet}
+			</Action>
+		{/if}
+	</div>
 </PageContent>

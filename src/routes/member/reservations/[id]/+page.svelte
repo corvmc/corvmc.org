@@ -11,11 +11,15 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
+	import { CancelReservationAction, ConfirmWaitlistedAction } from '$lib/components/actions';
 
 	let data = $derived(await getReservationDetail(page.params.id!));
 
 	const res = $derived(data.reservation);
 	const durationHours = $derived(data.durationHours);
+	const isPast = $derived(res.startsAt.getTime() <= Date.now());
+
+	const refresh = () => getReservationDetail(page.params.id!).refresh();
 </script>
 
 <PageHeader title="Your Reservation" backHref="/member/reservations" />
@@ -91,6 +95,31 @@
 		<Button href="/member/reservations/{res.id}/pay" variant="primary" class="w-full">
 			Pay for this session
 		</Button>
+	{/if}
+
+	<!--
+		The same actions the row that links here offers. This page used to be a
+		strict subset of that row on the two things a member opens a booking to
+		do: cancelling was absent for every status, and a confirmed-but-unpaid
+		booking offered no way to pay (#1062).
+	-->
+	{#if !isPast && ['waitlisted', 'scheduled', 'confirmed'].includes(res.status)}
+		<div class="flex flex-wrap items-center gap-2">
+			{#if res.status === 'waitlisted' && res.waitlistNotifiedAt}
+				<ConfirmWaitlistedAction reservation={res} onsuccess={refresh} variant="success" />
+			{/if}
+			{#if res.status === 'confirmed' && !res.paidAt && (res.cashDueCents == null || res.cashDueCents > 0)}
+				{#if (res.cashDueCents ?? 0) > 0}
+					<span class="text-sm font-medium">
+						${formatDollars(res.cashDueCents ?? 0)} due at door
+					</span>
+				{/if}
+				<Button href="/member/reservations/{res.id}/pay" variant="primary" outline>
+					Pay online
+				</Button>
+			{/if}
+			<CancelReservationAction reservation={res} onsuccess={refresh} variant="error" outline />
+		</div>
 	{/if}
 
 	<Button href="/member/reservations" variant="ghost" class="w-full">Back to Reservations</Button>
