@@ -4,6 +4,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
+import { captureException } from '$lib/server/sentry';
 
 // ---------------------------------------------------------------------------
 // BillingService — the half of the Stripe billing portal not already in the app.
@@ -212,6 +213,30 @@ async function patchUserCard(
 		.update(user)
 		.set({ pmType: card?.brand ?? null, pmLastFour: card?.last4 ?? null })
 		.where(eq(user.id, userId));
+}
+
+/**
+ * Mirror whatever card the subscription currently bills onto the user row.
+ *
+ * `setDefaultCard` covers a card added through the billing page, but that is
+ * the rarer path: most members arrive with a card because Checkout attached one
+ * during signup, and nothing on that route touches these columns. Called from
+ * the subscription webhook so both paths end up in the same place.
+ *
+ * Best-effort by design — it runs inside a webhook, and failing to cache a
+ * brand and last four is not a reason to fail the event Stripe will redeliver.
+ */
+export async function syncCardFromSubscription(
+	userId: string,
+	stripeCustomerId: string
+): Promise<void> {
+	try {
+		const cards = await listCards(stripeCustomerId);
+		const current = cards.find((c) => c.isDefault) ?? cards[0] ?? null;
+		await patchUserCard(userId, current && { brand: current.brand, last4: current.last4 });
+	} catch (err) {
+		captureException(err);
+	}
 }
 
 export async function listInvoices(

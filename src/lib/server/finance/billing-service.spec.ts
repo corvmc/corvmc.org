@@ -23,6 +23,7 @@ const {
 	listInvoices,
 	removeCard,
 	setDefaultCard,
+	syncCardFromSubscription,
 	PaymentMethodError
 } = await import('./billing-service');
 
@@ -168,6 +169,36 @@ describe('removeCard', () => {
 		expect(mockStripe.subscriptions.update).toHaveBeenCalledWith('sub_1', {
 			default_payment_method: 'pm_b'
 		});
+	});
+});
+
+describe('syncCardFromSubscription', () => {
+	it('mirrors the card Checkout attached, which no other path writes', async () => {
+		mockStripe.paymentMethods.list.mockResolvedValue({ data: [card('pm_a', '4242')] });
+		mockStripe.subscriptions.list.mockResolvedValue({
+			data: [{ id: 'sub_1', default_payment_method: 'pm_a' }]
+		});
+
+		await syncCardFromSubscription('user-1', 'cus_1');
+
+		// A member who signed up the ordinary way never touches the billing page,
+		// so `setDefaultCard` never runs for them and these columns stayed null.
+		expect(dbUpdate).toHaveBeenCalledWith({ pmType: 'visa', pmLastFour: '4242' });
+	});
+
+	it('clears the columns when the customer has no card at all', async () => {
+		await syncCardFromSubscription('user-1', 'cus_1');
+
+		expect(dbUpdate).toHaveBeenCalledWith({ pmType: null, pmLastFour: null });
+	});
+
+	it('swallows a Stripe failure rather than failing the webhook', async () => {
+		mockStripe.paymentMethods.list.mockRejectedValue(new Error('stripe down'));
+
+		// Stripe redelivers the event; caching a brand and last four is not worth
+		// a 500 that makes it do so.
+		await expect(syncCardFromSubscription('user-1', 'cus_1')).resolves.toBeUndefined();
+		expect(dbUpdate).not.toHaveBeenCalled();
 	});
 });
 

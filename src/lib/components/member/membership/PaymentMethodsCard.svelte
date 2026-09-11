@@ -38,6 +38,18 @@
 	};
 	const brandName = (brand: string) => BRAND_NAMES[brand] ?? 'Card';
 
+	/**
+	 * `Action`'s callback mode reports a failure only by flashing its trigger,
+	 * which sits behind the confirm modal — so the reason never reaches the
+	 * member. Removing the last card on a live subscription is refused with a
+	 * message that tells them what to do instead, and that message is the whole
+	 * point of the guard.
+	 */
+	function failureMessage(err: unknown): string {
+		const e = err as { body?: { message?: string }; message?: string } | undefined;
+		return e?.body?.message ?? e?.message ?? 'That did not work. Please try again.';
+	}
+
 	const expiry = (month: number, year: number) =>
 		`${String(month).padStart(2, '0')}/${String(year).slice(-2)}`;
 </script>
@@ -87,6 +99,7 @@
 									size="sm"
 									outline
 									onsuccess={() => toast.success('Default card updated')}
+									onfailure={(err) => toast.error(failureMessage(err))}
 								/>
 							{/if}
 							<Action
@@ -100,6 +113,7 @@
 								modalTitle="Remove card"
 								confirm="Remove this card from your account?"
 								onsuccess={() => toast.success('Card removed')}
+								onfailure={(err) => toast.error(failureMessage(err))}
 							/>
 						</div>
 					</li>
