@@ -1,10 +1,11 @@
 # Card surfaces: what the app draws as a list of cards, and how dense it is
 
 **Date:** 2026-09-11
-**Scope:** every route whose main content is a repeated card per record — 30 surfaces, plus the
+**Scope:** every route whose main content is a repeated card per record — 31 surfaces, plus the
 card components and grid utilities behind them.
 **Method:** `src/routes/**/+page.svelte` swept for `{#each}` blocks producing card markup, plus
-`src/lib/components/**/*Card.svelte`. Each surface was then read in full — page, card component,
+`src/lib/components/**/*Card.svelte`. That scoping has a known gap — see
+[what the sweep missed](#what-the-sweep-missed). Each surface was then read in full — page, card component,
 remote function and the service behind it — against the density rulebook in
 [ui-patterns.md](../development/ui-patterns.md). Static reading at `c5b9540`; no rendering and no
 runtime verification. A claim here means "this is what the code does", not "this was observed in a
@@ -12,7 +13,7 @@ browser". Where a claim needed the query behind it — row caps, ordering, unbou
 service was read and the limit quoted.
 
 The work this argues for left as [#1032](https://github.com/corvmc/corvmc.org/issues/1032) and its
-26 sub-issues before this was written. This document keeps the evidence and the method; the issues
+28 sub-issues before this was written. This document keeps the evidence and the method; the issues
 keep the things to do.
 
 ---
@@ -89,6 +90,7 @@ Audience is `P` public, `M` member, `B` band, `S` staff.
 | `/member/bands`                 | `member/bands/+page.svelte`                   | inline `Card`               | M    | none                                       | `space-y-3`, `2xl`           |
 | `/member/groups`                | `member/groups/+page.svelte`                  | inline `Card`               | M    | sectioned by state                         | `space-y-3`, `3xl`           |
 | `/member/reservations`          | `member/reservations/+page.svelte`            | `ReservationCardShell`      | M    | Active/All tabs, client window             | 1 / `@lg` 2 / `@3xl` 3       |
+| `/member/reservations/[id]`     | `member/reservations/[id]/+page.svelte`       | inline `Card` + `InfoCard`  | M    | n/a — a stack, not a list                  | `max-w-md` stack             |
 | `/member/equipment`             | `member/equipment/+page.svelte`               | inline `Card`               | M    | search + category, grouped                 | `sm:2 lg:3`                  |
 | `/member/equipment/loans`       | `member/equipment/loans/+page.svelte`         | inline `Card`               | M    | Current/Past tabs                          | single column                |
 | `/member/suggestions`           | `member/suggestions/SuggestionCard.svelte`    | `SuggestionCard`            | M    | `FilterBar` + `DataList`                   | `ul.space-y-2`               |
@@ -121,6 +123,22 @@ a container query, and `PageContent` is already an `@container` — which is how
 `col-extra` tiers work (`:544-550`).
 
 ---
+
+## What the sweep missed
+
+Sweeping for `{#each}` over records finds pages that are a **list** of cards and misses pages that
+are a **stack** of them. `/member/reservations/[id]` is the case that surfaced it: 97 lines, three
+boxes for about six facts at a 448px measure, using none of the detail-page primitives — no
+`EntityIdentity size="lg"`, no `DefinitionList`/`Fact`, the identity hand-written as an `hgroup`
+while `toReservationRef` already exists. Four of its five door-code branches are a single sentence
+wrapped in `InfoCard` chrome. Filed as #1061, with #1062 for the sharper thing found underneath it:
+the page is a strict subset of the row that links to it, offering no way to cancel and — for a
+confirmed, unpaid booking — no way to pay.
+
+Whether that generalises is **open and unverified**. 76 route files under a dynamic segment render a
+`+page.svelte` and 10 of them use `DefinitionList`; the other 66 were not read, and many are edit
+forms, pay steps and wizards where a fact grid would be wrong. The count is a reason to do a
+detail-page pass, not evidence of 66 defects.
 
 ## Examined and found sound
 
