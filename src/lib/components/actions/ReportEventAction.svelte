@@ -3,6 +3,7 @@
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { submitEventReport } from '$lib/remote/flags.remote';
 	import {
 		TURNSTILE_SITE_KEY,
@@ -69,26 +70,35 @@
 				Let staff know what's wrong with this listing. Reports are private and reviewed by the CMC
 				team.
 			</p>
-			<label class="fieldset w-full">
-				<span class="fieldset-legend">Reason</span>
-				<input
-					{...fields.reason.as('text')}
-					class="input w-full"
-					bind:value={reason}
-					maxlength="100"
-					placeholder="e.g. Inappropriate content, misleading info, spam"
-				/>
-			</label>
-			<label class="fieldset w-full">
-				<span class="fieldset-legend">Details (optional)</span>
-				<textarea
-					{...fields.description.as('text')}
-					class="textarea w-full"
-					rows="3"
-					maxlength="1000"
-					bind:value={description}
-					placeholder="Anything else that would help us review this"></textarea>
-			</label>
+			<!-- Custom inputs rather than FormField's own: both keep `bind:value`,
+			     which `canSubmit` and the post-success reset read, and the textarea
+			     keeps its rows and length cap. The wrapper is here for the error
+			     slot — a rejected report whose message never renders reads as a
+			     submit that did nothing. -->
+			<FormField field={fields.reason} label="Reason">
+				{#snippet input(id)}
+					<input
+						{...fields.reason.as('text')}
+						{id}
+						class="input w-full"
+						bind:value={reason}
+						maxlength="100"
+						placeholder="e.g. Inappropriate content, misleading info, spam"
+					/>
+				{/snippet}
+			</FormField>
+			<FormField field={fields.description} label="Details (optional)">
+				{#snippet input(id)}
+					<textarea
+						{...fields.description.as('text')}
+						{id}
+						class="textarea w-full"
+						rows="3"
+						maxlength="1000"
+						bind:value={description}
+						placeholder="Anything else that would help us review this"></textarea>
+				{/snippet}
+			</FormField>
 			<Turnstile
 				siteKey={TURNSTILE_SITE_KEY}
 				responseFieldName={TURNSTILE_RESPONSE_FIELD}

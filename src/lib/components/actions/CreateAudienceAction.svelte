@@ -59,19 +59,24 @@
 	{...rest}
 >
 	{#snippet form()}
+		{#snippet slugHint()}Used in the signup URL: /subscribe/{slug || '...'}{/snippet}
 		<Field name="name" type="text" label="Name" bind:value={name} />
-		<fieldset class="fieldset">
-			<legend class="fieldset-legend">Slug</legend>
-			<input
-				type="text"
-				name="slug"
-				bind:value={slug}
-				placeholder="newsletter"
-				class="input w-full font-mono text-sm"
-				oninput={() => (slugManuallyEdited = true)}
-			/>
-			<p class="mt-1 text-subtle">Used in the signup URL: /subscribe/{slug || '...'}</p>
-		</fieldset>
+		<!-- Custom input to keep the monospace slug box; `Field`'s own input has a
+		     fixed class. The wrapper supplies the label association and the error
+		     slot the bare fieldset had no room for. -->
+		<Field name="slug" label="Slug" description={slugHint}>
+			{#snippet input(id)}
+				<input
+					{id}
+					type="text"
+					name="slug"
+					bind:value={slug}
+					placeholder="newsletter"
+					class="input w-full font-mono text-sm"
+					oninput={() => (slugManuallyEdited = true)}
+				/>
+			{/snippet}
+		</Field>
 		<Field name="description" type="textarea" label="Description" bind:value={description} />
 		<Field
 			name="allowOptIn"

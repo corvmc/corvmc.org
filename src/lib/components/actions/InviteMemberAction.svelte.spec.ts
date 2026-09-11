@@ -5,14 +5,17 @@ import { render } from 'vitest-browser-svelte';
 /**
  * A search box whose value is never submitted, beside a hidden input that is.
  * The person picked has to reach `userId`, and nothing on screen shows that it
- * did — the chip that appears is the component's own state, not the field. A
- * pick that fails to commit invites nobody and reports nothing.
+ * did — the chip is the component's own state, not the field. So the box
+ * carries `userId`'s caption and issues without carrying its value: an issue
+ * on a hidden field has nowhere to render, and the box is all that is on
+ * screen while `userId` is still empty.
  */
+const issues: Record<string, { path: string[]; message: string }[] | null> = {};
 
 vi.mock('$lib/remote/bands.remote', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
-		issues: () => null
+		issues: () => issues[name] ?? null
 	});
 	return {
 		addBandMember: {
@@ -46,7 +49,9 @@ const MEMBERS = [
 ];
 
 const hidden = (name: string) =>
-	document.querySelector(`[role="dialog"] input[name="${name}"]`) as unknown as HTMLInputElement;
+	document.querySelector(
+		`[role="dialog"] input[name="${name}"][type="hidden"]`
+	) as unknown as HTMLInputElement;
 
 const open = async () => {
 	await render(InviteMemberAction, { bandId: 'band-2' });
@@ -93,6 +98,17 @@ describe('InviteMemberAction', () => {
 		await vi.waitFor(() => expect(hidden('userId').value).toBe('user-4'));
 	});
 
+	// The search box must stay unnamed: give it `userId` and the query text
+	// posts as the member id.
+	it('submits nothing from the search box itself', async () => {
+		await open();
+
+		await userEvent.type(page.getByPlaceholder('Name or email...'), 'Jam');
+
+		expect(page.getByPlaceholder('Name or email...').element().getAttribute('name')).toBeNull();
+		expect(hidden('userId').value).toBe('');
+	});
+
 	// The search box is replaced by the chosen name, so "Change" is the only way
 	// back — and it has to clear the field, not just the chip.
 	it('lets the choice be taken back', async () => {
@@ -115,5 +131,27 @@ describe('InviteMemberAction', () => {
 			'[role="dialog"] select[name="role"]'
 		) as unknown as HTMLSelectElement;
 		expect(Array.from(roles.options, (o) => o.value)).toEqual(['member', 'admin']);
+	});
+
+	// An issue on `userId` has no input of its own to sit beside — it belongs to
+	// the picker. Before the wrapper it rendered nowhere at all, and a rejected
+	// invite looked like a submit that did nothing.
+	it('renders a server issue on the member as a message beside the picker', async () => {
+		issues.userId = [{ path: ['userId'], message: 'Choose a member to invite.' }];
+		try {
+			await open();
+
+			await expect.element(page.getByText('Choose a member to invite.')).toBeVisible();
+		} finally {
+			issues.userId = null;
+		}
+	});
+
+	it('associates every caption with the control it names', async () => {
+		await open();
+
+		await expect.element(page.getByLabelText('Search members')).toBeVisible();
+		await expect.element(page.getByLabelText('Role')).toBeVisible();
+		await expect.element(page.getByLabelText('Position (optional)')).toBeVisible();
 	});
 });
