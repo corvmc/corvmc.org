@@ -607,6 +607,19 @@ describe('campaign-service', () => {
 			expect(signUnsubscribeToken).toHaveBeenCalledWith(mockRecipient.subscriberId, 'aud-1');
 		});
 
+		// #988: a mid-batch Postmark failure had left the row matching
+		// processDueCampaigns' predicate, so the cron re-sent to the whole list.
+		it('marks the campaign sent before the batch, so a failed send is never re-queued', async () => {
+			selectResults = [[{ ...mockCampaign }], [{ audienceId: 'aud-1' }], [mockRecipient]];
+			vi.mocked(sendBroadcastBatch).mockRejectedValueOnce(new Error('Postmark 500'));
+
+			await expect(executeSend('camp-1')).rejects.toThrow('Postmark 500');
+
+			const claim = updatedSets.at(-1) as { sentAt?: Date; recipientCount?: number };
+			expect(claim.sentAt).toBeInstanceOf(Date);
+			expect(claim.recipientCount).toBe(1);
+		});
+
 		it('builds unsubscribe URL from env.PUBLIC_SITE_URL and renders per-recipient HTML', async () => {
 			selectResults = [[{ ...mockCampaign }], [{ audienceId: 'aud-1' }], [mockRecipient]];
 
