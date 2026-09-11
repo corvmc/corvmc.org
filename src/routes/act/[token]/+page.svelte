@@ -6,6 +6,8 @@
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import { toast } from 'svelte-sonner';
 	import { getContactSheet, saveContactSheetForm } from '$lib/remote/contact-sheet.remote';
 
 	/**
@@ -24,6 +26,38 @@
 
 	let token = $derived(page.params.token!);
 	const sheet = $derived(await getContactSheet(token));
+
+	let busy = $state(false);
+	let riderError = $state<string | null>(null);
+
+	async function send(method: 'POST' | 'DELETE', body?: FormData) {
+		busy = true;
+		riderError = null;
+		try {
+			const res = await fetch(`/api/acts/${token}/rider`, { method, body });
+			if (!res.ok) {
+				const body = (await res.json().catch(() => null)) as { message?: string } | null;
+				riderError = body?.message ?? 'That upload did not work.';
+				return;
+			}
+			await getContactSheet(token).refresh();
+			toast.success(method === 'POST' ? 'Rider received — thank you' : 'Rider removed');
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function upload(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		const body = new FormData();
+		body.set('file', file);
+		await send('POST', body);
+		input.value = '';
+	}
+
+	const remove = () => send('DELETE');
 </script>
 
 <svelte:head>
@@ -80,4 +114,44 @@
 
 		<SubmitButton>Save</SubmitButton>
 	</Form>
+
+	<!--
+		Outside the form above, and posting to a route rather than to a remote
+		`form()`, because it carries a file. Uploading is its own act anyway: an
+		act that attaches a rider and then leaves without pressing Save has still
+		sent us the rider.
+	-->
+	<InfoCard title="Tech rider">
+		<p class="text-sm">
+			What you need on stage — inputs, backline, anything we have to know before the day. A PDF is
+			ideal; a photo of a hand-drawn plot is fine.
+		</p>
+
+		{#if sheet.rider}
+			<p class="mt-3 text-sm">
+				We have <a href={sheet.rider.url} class="link" target="_blank" rel="noreferrer"
+					>{sheet.rider.filename ?? 'your rider'}</a
+				>. Uploading another replaces it.
+			</p>
+		{/if}
+
+		{#if riderError}
+			<Alert type="error" class="mt-3 text-sm">{riderError}</Alert>
+		{/if}
+
+		<div class="mt-3 flex flex-wrap items-center gap-2">
+			<input
+				type="file"
+				accept="application/pdf,image/jpeg,image/png,image/webp"
+				class="file-input"
+				disabled={busy}
+				onchange={upload}
+			/>
+			{#if sheet.rider}
+				<Button type="button" variant="ghost" size="sm" disabled={busy} onclick={remove}>
+					Remove
+				</Button>
+			{/if}
+		</div>
+	</InfoCard>
 </PageContent>

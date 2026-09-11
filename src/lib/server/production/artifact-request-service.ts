@@ -4,6 +4,7 @@ import { directoryEntry } from '$lib/server/db/schema/directory';
 import { eventBand } from '$lib/server/db/schema/event';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { getEventRiderSummaries } from '$lib/server/band/rider-service';
+import { listAttachedEntries } from '$lib/server/media/media-service';
 import type { RequestableArtifact } from '$lib/config';
 import type { OutstandingRequest } from '$lib/types/artifact-request';
 
@@ -51,9 +52,10 @@ export async function cancelArtifactRequest(id: string): Promise<void> {
 /**
  * What a show is still waiting on.
  *
- * Fulfilment per artifact: a tech rider is the summary the Advance tab already
- * computes, and a press kit is a listing with a bio. Poster art is #608's and
- * always reads unfulfilled until then, which is honest rather than wrong.
+ * A tech rider is the summary the Advance tab computes **or** a file on the
+ * listing — `rider` is keyed on `group_id`, so for an act with no account the
+ * summary is always empty and the file is the only answer (#863). A press kit
+ * is a listing with a bio. Poster art is #608's and always reads unfulfilled.
  */
 export async function listRequests(
 	eventId: string,
@@ -78,16 +80,26 @@ export async function listRequests(
 
 	if (rows.length === 0) return [];
 
-	// One read for every rider on the bill, rather than one per request.
-	const riders = rows.some((r) => r.artifact === 'tech_rider')
-		? await getEventRiderSummaries(eventId)
-		: [];
+	const wantsRider = rows.some((r) => r.artifact === 'tech_rider');
+
+	// One read for every rider on the bill, rather than one per request, and one
+	// more for the files — both are a single statement over the whole bill.
+	const [riders, riderFiles] = await Promise.all([
+		wantsRider ? getEventRiderSummaries(eventId) : Promise.resolve([]),
+		wantsRider
+			? listAttachedEntries(
+					'directory_entry',
+					rows.filter((r) => r.artifact === 'tech_rider').map((r) => r.entryId),
+					'rider'
+				)
+			: Promise.resolve(new Set<string>())
+	]);
 	const riderArrived = new Map(riders.map((r) => [r.name, !r.empty]));
 
 	return rows.map((r) => {
 		const fulfilled =
 			r.artifact === 'tech_rider'
-				? (riderArrived.get(r.actName ?? '') ?? false)
+				? (riderArrived.get(r.actName ?? '') ?? false) || riderFiles.has(r.entryId)
 				: r.artifact === 'epk'
 					? Boolean(r.bio && r.bio.trim().length > 0)
 					: false;

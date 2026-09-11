@@ -1894,7 +1894,13 @@ export const attachableTypes = [
 	 * is one `getPublicUrl()` away from being addressable. See
 	 * `audio_track.objectKey`.
 	 */
-	'audio_release'
+	'audio_release',
+	/**
+	 * An act with no CMC account. `rider` only: the structured rider is keyed on
+	 * `group_id` and an external act has no group, so a file is the only tech
+	 * rider it can ever hand over (#863).
+	 */
+	'directory_entry'
 ] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 

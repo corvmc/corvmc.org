@@ -9,6 +9,8 @@ import {
 	revokeContactSheetLink,
 	saveContactSheet
 } from '$lib/server/directory/contact-sheet-service';
+import { listFor } from '$lib/server/media/media-service';
+import { resolveImageUrl } from '$lib/server/storage';
 
 /**
  * `/act/{token}` — the one surface an external act can reach.
@@ -40,13 +42,17 @@ const tokenField = z.string().min(1);
 export const getContactSheet = query(tokenField, async (token) => {
 	try {
 		const sheet = await getContactSheetDisclosure(token);
+		const [rider] = await listFor('directory_entry', sheet.entryId, 'rider');
 		return {
 			// The name is shown but never editable — staff own it, because it
 			// appears on posters and in settlement records.
 			name: sheet.name,
 			bio: sheet.bio,
 			hometown: sheet.hometown,
-			url: sheet.links?.[0]?.url ?? null
+			url: sheet.links?.[0]?.url ?? null,
+			// A file, because the structured rider is keyed on `group_id` and an
+			// act with no account has no group to key it on (#863).
+			rider: rider ? { url: resolveImageUrl(rider.key), filename: rider.filename } : null
 		};
 	} catch (err) {
 		mapDomainError(err);
