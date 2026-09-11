@@ -106,15 +106,20 @@ test('moving the bar moves what the acts get, and what is posted', async ({ page
 	// the affordance rather than the mechanism.
 	await openPurchasePage(page);
 
-	const bar = page.getByRole('slider');
-	await bar.focus();
-	await bar.press('ArrowLeft');
-	await bar.press('ArrowLeft');
-
-	// Two 25¢ steps down from the opening 512. Paid at exactly the suggested $20,
-	// the acts' guarantee and their opening take are the same $14.00, so this bar
+	// Two 25¢ steps down from the opening 512: paid at exactly the suggested $20
+	// the acts' guarantee and their opening take are the same $14.00, so the bar
 	// has nowhere above 512 to go.
-	await expect(bar).toHaveAttribute('aria-valuenow', '462');
+
+	// Stepped rather than pressed twice, for the hydration race `payPerTicket`
+	// documents: the slider is server-rendered, so an arrow key before
+	// `onkeydown` attaches is lost, and the budget then goes on a value that
+	// cannot change. Re-reading `aria-valuenow` each attempt is what makes the
+	// retry safe — a press that landed advances, a lost one repeats.
+	const bar = page.getByRole('slider');
+	await expect(async () => {
+		if (Number(await bar.getAttribute('aria-valuenow')) > 462) await bar.press('ArrowLeft');
+		expect(await bar.getAttribute('aria-valuenow')).toBe('462');
+	}).toPass({ timeout: 15000 });
 	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('462');
 });
 
