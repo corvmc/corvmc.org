@@ -93,18 +93,25 @@ describe('Action, callback mode', () => {
 
 	// `successLabel` flashes in place of the label so a click that changed
 	// something server-side is acknowledged without a page change.
+	//
+	// The flash has to outlast a loaded runner. Nothing holds it open, so a
+	// window short enough to close before the locator's first poll makes the
+	// first assertion unsatisfiable rather than slow. Both halves are asserted:
+	// the flash, then the revert waited for past the window's own length.
 	it('flashes the success label, then goes back to the label', async () => {
 		await render(ActionHarness, {
 			action: async () => undefined,
 			label: 'Retry',
 			successLabel: 'Retried',
-			flashDuration: 50
+			flashDuration: 2000
 		});
 
 		await page.getByRole('button', { name: 'Retry' }).click();
 
 		await expect.element(page.getByRole('button', { name: 'Retried' })).toBeVisible();
-		await expect.element(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+		await expect
+			.element(page.getByRole('button', { name: 'Retry' }))
+			.toBeVisible({ timeout: 5000 });
 	});
 
 	it('reports the callback result to onsuccess', async () => {
