@@ -16,6 +16,11 @@
 	import TrackList from '$lib/components/audio/TrackList.svelte';
 	import TrackUploader from './TrackUploader.svelte';
 	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import { IconDisc } from '@tabler/icons-svelte';
+	import { toast } from 'svelte-sonner';
+	import { responseErrorMessage } from '$lib/api';
+	import { errorMessage } from '$lib/error-message';
 	import {
 		getBandRelease,
 		getBandMusicPage,
@@ -72,6 +77,37 @@
 	);
 
 	const editFields = updateReleaseForm.fields;
+
+	async function handleCoverUpload(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+
+		const body = new FormData();
+		body.append('cover', file);
+
+		try {
+			const res = await fetch(`/api/releases/${releaseId}/cover`, { method: 'POST', body });
+			if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
+			toast.success('Cover updated');
+			void getBandRelease({ slug, releaseId }).refresh();
+			void getBandMusicPage(slug).refresh();
+		} catch (err) {
+			toast.error(errorMessage(err, 'Failed to upload the cover'));
+		}
+	}
+
+	async function removeCover() {
+		try {
+			const res = await fetch(`/api/releases/${releaseId}/cover`, { method: 'DELETE' });
+			if (!res.ok) throw new Error(await responseErrorMessage(res, 'Remove failed'));
+			toast.success('Cover removed');
+			void getBandRelease({ slug, releaseId }).refresh();
+			void getBandMusicPage(slug).refresh();
+		} catch (err) {
+			toast.error(errorMessage(err, 'Failed to remove the cover'));
+		}
+	}
 </script>
 
 <PageHeader title={release.title} subtitle={band.name}>
@@ -209,6 +245,36 @@
 			</TrackList>
 		</CardBody>
 	</Card>
+
+	<!-- The cover. The slot had three readers and a deleter and no writer, so
+	     every release showed the IconDisc fallback forever — while the create
+	     modal told bands the cover lived here (#1072). -->
+	{#if canManage}
+		<Card>
+			<CardBody row>
+				{#if release.coverUrl}
+					<img src={release.coverUrl} alt="" class="size-24 shrink-0 rounded object-cover" />
+				{:else}
+					<div class="grid size-24 shrink-0 place-items-center rounded bg-base-200 text-subtle">
+						<IconDisc size={28} />
+					</div>
+				{/if}
+				<div class="grow">
+					<CardTitle>Cover</CardTitle>
+					<p class="text-muted">Square art, shown wherever the record appears.</p>
+					<input
+						type="file"
+						accept="image/*"
+						class="file-input mt-2 file-input-sm"
+						onchange={handleCoverUpload}
+					/>
+				</div>
+				{#if release.coverUrl}
+					<Button type="button" variant="ghost" size="sm" onclick={removeCover}>Remove</Button>
+				{/if}
+			</CardBody>
+		</Card>
+	{/if}
 
 	<!-- Radio consent, on its own control. A checkbox that only takes effect when
 	     you also press Save on the metadata below is the kind of consent people
