@@ -60,26 +60,19 @@
 
 {#if collapsible}
 	<li>
-		<!-- The action shares the title's row, as it does in the plain branch
-		     below. It used to be a sibling of a `w-full` toggle, so "All" was
-		     pushed onto a line of its own in My Acts and My Groups — the only two
-		     collapsible groups that have one (#1022). `grow` rather than `w-full`
-		     is what leaves room beside it. -->
-		<div class="flex flex-row items-center">
-			<button
-				type="button"
-				class="menu-dropdown-toggle flex grow flex-row items-center justify-between menu-title"
-				class:menu-dropdown-show={!collapsed}
-				aria-expanded={!collapsed}
-				aria-controls="nav-group-{uid}"
-				onclick={toggle}
-			>
-				<span>{title}</span>
-			</button>
-			{#if action}
-				{@render action()}
-			{/if}
-		</div>
+		<button
+			type="button"
+			class="menu-dropdown-toggle flex w-full flex-row items-center justify-between menu-title"
+			class:menu-dropdown-show={!collapsed}
+			aria-expanded={!collapsed}
+			aria-controls="nav-group-{uid}"
+			onclick={toggle}
+		>
+			<span>{title}</span>
+		</button>
+		{#if action}
+			{@render action()}
+		{/if}
 		<!-- daisyUI indents and draws a guide rule on any `li ul`; cancelled here so
 		     a collapsible group sits flush like the plain one. Its rule is wrapped
 		     in `:where()`, so plain utilities outrank it without `!`. -->
