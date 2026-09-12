@@ -172,7 +172,11 @@
 			surfaceFailure(err);
 			onfailure?.(err);
 			status = 'error';
-			throw err;
+			// Not rethrown. `handleClick` calls `run()` without awaiting it, so a
+			// throw here has always become an unhandled rejection that nothing
+			// could catch — it was tolerated because the rethrow was the only
+			// thing reporting the error at all. `surfaceFailure` now does that,
+			// so the rethrow is pure noise, and Vitest fails a run on it.
 		} finally {
 			setTimeout(() => {
 				status = 'idle';
