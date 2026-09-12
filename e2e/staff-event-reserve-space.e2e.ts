@@ -285,8 +285,9 @@ test.describe('staff event edit — reserve space', () => {
 
 		await page.getByRole('button', { name: 'Save' }).click();
 
-		// Presence of the link proves the reservation was created AND linked.
-		await expect(page.getByRole('link', { name: /View reservation/ })).toBeVisible({
+		// Presence of the link proves the reservation was created AND linked. By
+		// href, not by wording: the card is an EntityIdentity now.
+		await expect(page.locator('a[href^="/staff/reservations/"]').first()).toBeVisible({
 			timeout: 15000
 		});
 	});
@@ -307,7 +308,7 @@ test.describe('staff event edit — reserve space', () => {
 		await page.getByRole('button', { name: 'Create Event' }).click();
 
 		await goToConsole(page, title);
-		await expect(page.getByRole('link', { name: /View reservation/ })).toBeVisible();
+		await expect(page.locator('a[href^="/staff/reservations/"]').first()).toBeVisible();
 
 		// Start the show two hours earlier. That escapes the current hold, so the
 		// edit form raises the rebook alert and mounts ConflictWarnings against a
