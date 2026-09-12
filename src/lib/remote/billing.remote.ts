@@ -14,6 +14,10 @@ import {
 import { completeFakeSetupIntent } from '$lib/server/finance/gateway/fake-gateway';
 import { mapDomainError } from '$lib/server/errors';
 import { captureException } from '$lib/server/sentry';
+import { requireGroupRole } from '$lib/server/group/group-context';
+import { db } from '$lib/server/db';
+import { bandSite } from '$lib/server/db/schema/band-site';
+import { eq } from 'drizzle-orm';
 
 /**
  * The card on file and the invoice history — what the billing portal alone
@@ -161,5 +165,94 @@ export const forgetCard = command(
 		}
 
 		await getBilling().refresh();
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Band billing
+// ---------------------------------------------------------------------------
+//
+// The member's service, resolved from `bandSite.stripeCustomerId` rather than
+// `user.stripeId` and guarded as the band. `userId: null` skips the
+// mirror-onto-user step: the card is the band's, which is the whole of #1098.
+// ---------------------------------------------------------------------------
+
+/** The band's customer, and the caller's right to act for it. */
+async function requireBandCustomer(slug: string): Promise<string> {
+	const { group: band } = await requireGroupRole({ slug }, 'admin');
+
+	const [row] = await db
+		.select({ stripeCustomerId: bandSite.stripeCustomerId })
+		.from(bandSite)
+		.where(eq(bandSite.groupId, band.id))
+		.limit(1);
+
+	if (!row?.stripeCustomerId) error(400, 'This act has no billing account yet.');
+	return row.stripeCustomerId;
+}
+
+export const getBandBilling = query(z.string(), async (slug) => {
+	const customerId = await requireBandCustomer(slug);
+
+	try {
+		return {
+			available: true as const,
+			driver: paymentDriver(),
+			cards: await listCards(customerId)
+		};
+	} catch (err) {
+		// Same reasoning as `getBilling`: a Stripe outage makes the card list
+		// unknown, not empty, and must not take the subscription page with it.
+		captureException(err);
+		return { available: false as const, driver: paymentDriver(), cards: [] };
+	}
+});
+
+export const startBandAddCard = command(z.string(), async (slug) => {
+	const customerId = await requireBandCustomer(slug);
+	return { clientSecret: await createSetupIntent(customerId), driver: paymentDriver() };
+});
+
+export const finishBandAddCard = command(
+	z.object({ slug: z.string().min(1), setupIntentId: z.string().min(1) }),
+	async (data) => {
+		const customerId = await requireBandCustomer(data.slug);
+
+		// Re-read rather than trusted: the id comes from the client, and what
+		// matters is the customer it was created against.
+		const intent = await stripe.setupIntents.retrieve(data.setupIntentId);
+		const owner = typeof intent.customer === 'string' ? intent.customer : intent.customer?.id;
+		if (owner !== customerId) error(403, 'That setup does not belong to this act.');
+
+		const methodId =
+			typeof intent.payment_method === 'string' ? intent.payment_method : intent.payment_method?.id;
+		if (intent.status !== 'succeeded' || !methodId) {
+			error(400, 'That card was not confirmed. Please try again.');
+		}
+
+		try {
+			// Straight to default: a band has one payer, so a card added here is
+			// always the one the subscription should bill.
+			await rememberCard(null, customerId, methodId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await getBandBilling(data.slug).refresh();
+	}
+);
+
+export const forgetBandCard = command(
+	z.object({ slug: z.string().min(1), paymentMethodId: z.string().min(1) }),
+	async (data) => {
+		const customerId = await requireBandCustomer(data.slug);
+
+		try {
+			await removeCard(null, customerId, data.paymentMethodId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await getBandBilling(data.slug).refresh();
 	}
 );

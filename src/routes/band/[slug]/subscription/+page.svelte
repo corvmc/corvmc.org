@@ -8,6 +8,9 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import AddCardModal from '$lib/components/member/membership/AddCardModal.svelte';
+	import { getBandBilling, startBandAddCard } from '$lib/remote/billing.remote';
 	import { invalidateAll } from '$app/navigation';
 	import { goToCheckout } from '$lib/utils/checkout-navigation';
 	import { formatDate, formatCents } from '$lib/utils/format';
@@ -31,6 +34,11 @@
 	let info = $derived(await getBandSubscriptionInfo(page.params.slug!));
 	const band = $derived(layout.band);
 	const isOwner = $derived(layout.userRole === 'owner');
+	// An owner who has left the act is precisely the person who cannot fix the
+	// card, so an admin has to be able to (#1098).
+	const canManageBilling = $derived(isOwner || layout.userRole === 'admin');
+
+	let addCardOpen = $state(false);
 	const siteUrl = $derived(
 		bandSiteUrl(
 			band.slug,
@@ -138,6 +146,65 @@
 				{/if}
 			</CardBody>
 		</Card>
+
+		<!--
+			Whose card this is, and a way to change it. The band's customer carried
+			whatever the owner typed at checkout, with nothing showing it and no way
+			to replace it — so an act kept billing whoever set it up after they
+			left, and an expired card meant premium lapsed with no self-service fix
+			(#1098). Admins too, not just the owner: an owner who has left is
+			exactly who cannot fix it.
+		-->
+		{#if canManageBilling}
+			{#await getBandBilling(band.slug) then billing}
+				<Card>
+					<CardBody>
+						<div class="flex flex-wrap items-center justify-between gap-2">
+							<CardTitle size="base">Card on file</CardTitle>
+							<Button
+								type="button"
+								variant="default"
+								size="sm"
+								outline
+								onclick={() => (addCardOpen = true)}
+							>
+								{billing.cards.length > 0 ? 'Replace card' : 'Add a card'}
+							</Button>
+						</div>
+
+						{#if !billing.available}
+							<p class="text-muted">
+								We could not reach our payment processor just now, so the card on file is unknown.
+							</p>
+						{:else if billing.cards.length === 0}
+							<p class="text-muted">
+								No card is saved for this act. Renewals will fail until one is.
+							</p>
+						{:else}
+							{#each billing.cards as card (card.id)}
+								<p class="text-sm">
+									<span class="font-medium">{card.brand.toUpperCase()} ···· {card.last4}</span>
+									<span class="text-muted">
+										expires {card.expMonth}/{card.expYear}{card.isDefault ? ' · billed' : ''}
+									</span>
+								</p>
+							{/each}
+							<p class="mt-2 text-muted">
+								This is the act's card, not a member's. Replacing it here does not touch anyone's
+								own membership.
+							</p>
+						{/if}
+
+						<AddCardModal
+							bind:open={addCardOpen}
+							driver={billing.driver}
+							start={() => startBandAddCard(band.slug)}
+							onsaved={() => getBandBilling(band.slug).refresh()}
+						/>
+					</CardBody>
+				</Card>
+			{/await}
+		{/if}
 	{:else}
 		<!-- Free tier — upgrade CTA -->
 		<div class="space-y-6">
