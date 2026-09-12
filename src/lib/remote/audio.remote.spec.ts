@@ -54,7 +54,13 @@ const svc = {
 	addTrack: vi.fn(async () => ({ id: 'track-1' })),
 	renameTrack: vi.fn(async () => ({ id: 'track-1' })),
 	deleteTrack: vi.fn(async () => undefined),
-	reorderTracks: vi.fn(async () => undefined)
+	reorderTracks: vi.fn(async () => undefined),
+	// `getBandRelease` reads both so the detail page can show the cover and the
+	// sales count its list row already shows (#1071). This mock replaces the
+	// module export by export, so a new one it does not name is a hard failure
+	// at the call, not a missing spy.
+	coverUrlsFor: vi.fn(async () => new Map<string, string>()),
+	salesCountFor: vi.fn(async () => 0)
 };
 vi.mock('$lib/server/audio/audio-service', () => svc);
 
