@@ -13,6 +13,9 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
 	import Action from '$lib/components/ui/Action.svelte';
 	import ShiftProgress from '$lib/components/volunteer/ShiftProgress.svelte';
 	import { goto } from '$app/navigation';
@@ -42,6 +45,19 @@
 				? 'This shift was called off. There is nothing to turn up for.'
 				: 'You dropped out of this shift.'}
 		</Alert>
+	{/if}
+
+	<!--
+		The night this shift belongs to, as the record it is rather than a string
+		in the subtitle. A volunteer who wants to know what they signed up for had
+		the event's name and no way to reach it.
+	-->
+	{#if data.event}
+		<Card>
+			<CardBody>
+				<EntityIdentity ref={data.event} size="md" status />
+			</CardBody>
+		</Card>
 	{/if}
 
 	<InfoCard title="When">

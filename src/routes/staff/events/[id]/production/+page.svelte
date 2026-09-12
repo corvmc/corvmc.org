@@ -40,6 +40,7 @@
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import { EntityIdentity, EntityChip } from '$lib/components/ui/entity';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -901,7 +902,13 @@
 					{/if}
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-muted">Producer</span>
-						<span class="font-medium">{productionRecord.producerName ?? 'Nobody yet'}</span>
+						<!-- The person running the night, reachable. It was their name as
+						     a bare string. -->
+						{#if productionRecord.producer}
+							<EntityChip ref={productionRecord.producer} />
+						{:else}
+							<span class="font-medium">Nobody yet</span>
+						{/if}
 						<Form remote={setProductionProducer} successToast="Producer updated">
 							<input {...producerFields.id.as('hidden', productionRecord.id)} />
 							<input {...producerFields.eventId.as('hidden', evt.id)} />
@@ -1034,22 +1041,11 @@
 						Off-site — {evt.venueName}. The practice space stays bookable while this runs.
 					</p>
 				{:else if data.linkedReservation}
-					<div class="flex items-center gap-3">
-						<StatusBadge status={data.linkedReservation.status} />
-						<span
-							>{formatTime(data.linkedReservation.startsAt)} – {formatTime(
-								data.linkedReservation.endsAt
-							)}</span
-						>
-					</div>
-					<div class="mt-2">
-						<a
-							href={resolve(`/staff/reservations/${data.linkedReservation.id}`)}
-							class="link text-sm link-primary"
-						>
-							View reservation →
-						</a>
-					</div>
+					<!-- The room held for this night, as the record it is. This was a
+					     badge, a hand-formatted time range and a "View reservation →"
+					     link — the row `EntityIdentity` exists to stop being rewritten
+					     once per page. -->
+					<EntityIdentity ref={data.linkedReservation.ref} size="md" status />
 				{:else}
 					<p class="text-muted">
 						No space held for this event. Use Edit to reserve the practice space.

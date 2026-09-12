@@ -170,8 +170,17 @@ export const getReservationPayment = query(z.string(), async (id) => {
 export const getReservationDetail = query(z.string(), async (id) => {
 	const currentUser = requireUser();
 
-	const [row] = await db.select().from(reservation).where(eq(reservation.id, id)).limit(1);
+	const [joined] = await db
+		.select({ row: reservation, band: bandRefColumns() })
+		.from(reservation)
+		// Only the band. A member's own booking is booked by them, so naming them
+		// on their own page says nothing — but a booking made *for an act* is the
+		// act's, and this page never said which one.
+		.leftJoin(group, and(eq(reservation.bookerType, 'group'), eq(group.id, reservation.bookerId)))
+		.where(eq(reservation.id, id))
+		.limit(1);
 
+	const row = joined?.row;
 	if (!row) throw error(404, 'Reservation not found');
 	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
 
@@ -187,6 +196,8 @@ export const getReservationDetail = query(z.string(), async (id) => {
 
 	return {
 		reservation: row,
+		/** The act this was booked for, or null when it is the member's own. */
+		band: row.bookerType === 'group' ? toBandRef(joined.band) : null,
 		durationHours,
 		totalCents,
 		hourlyRateCents,
