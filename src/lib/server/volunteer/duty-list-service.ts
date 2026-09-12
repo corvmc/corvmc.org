@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { toGenericRef } from '$lib/server/entity/refs';
 import { and, asc, count, eq, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import {
@@ -229,6 +230,8 @@ export async function listDutyLists(
 
 export interface DutyListItemRow extends DutyListItem {
 	roleName: string;
+	/** The role as a record, so the item can link to it. */
+	role: import('$lib/types/entity').GenericRef;
 }
 
 export interface DutyListDetail {
@@ -241,13 +244,22 @@ export async function getDutyListDetail(id: string): Promise<DutyListDetail | nu
 	if (!list) return null;
 
 	const rows = await db
-		.select({ item: dutyListItem, roleName: volunteerRole.name })
+		.select({ item: dutyListItem, roleName: volunteerRole.name, roleId: volunteerRole.id })
 		.from(dutyListItem)
 		.innerJoin(volunteerRole, eq(volunteerRole.id, dutyListItem.volunteerRoleId))
 		.where(eq(dutyListItem.dutyListId, id))
 		.orderBy(asc(dutyListItem.sortOrder));
 
-	return { list, items: rows.map((r) => ({ ...r.item, roleName: r.roleName })) };
+	return {
+		list,
+		items: rows.map((r) => ({
+			...r.item,
+			roleName: r.roleName,
+			// A duty list item *is* a role at an offset, and the role was a bare
+			// string with no way to reach it.
+			role: toGenericRef('role', { id: r.roleId, title: r.roleName })
+		}))
+	};
 }
 
 export async function createDutyList(data: {

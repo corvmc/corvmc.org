@@ -56,6 +56,14 @@ vi.mock('$lib/server/entity/refs', () => ({
 		type: row.bookerType === 'group' ? 'band' : 'member',
 		id: row.member?.id ?? null,
 		title: row.member?.name ?? 'Unknown member'
+	})),
+	// `get()` reads this so the series page can open the booking it was cut
+	// from. This mock replaces the module export by export, so one it does not
+	// name is a hard failure at the call rather than a missing spy.
+	toReservationRef: vi.fn((row: { id: string | null }) => ({
+		type: 'reservation',
+		id: row.id,
+		title: 'A booking'
 	}))
 }));
 

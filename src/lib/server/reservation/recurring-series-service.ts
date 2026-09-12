@@ -21,9 +21,10 @@ import {
 	bandRefColumns,
 	eventRefColumns,
 	memberRefColumns,
-	toBookerRef
+	toBookerRef,
+	toReservationRef
 } from '$lib/server/entity/refs';
-import type { EntityRef } from '$lib/types/entity';
+import type { EntityRef, ReservationRef } from '$lib/types/entity';
 import { buildRRule, describeFrequency, monthlyModeOf, type MonthlyMode } from './rrule-helpers';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 
@@ -80,6 +81,8 @@ export interface SeriesWithPrototype extends SeriesRow {
 	 * Tuesday" and a linked chip, because `get()` selected neither (#1065).
 	 */
 	booker: EntityRef;
+	/** The booking the series was cut from, so the page can open it. */
+	prototype: ReservationRef;
 	frequencyLabel: string;
 	monthlyMode: ReturnType<typeof monthlyModeOf>;
 }
@@ -292,6 +295,19 @@ export async function get(seriesId: string): Promise<SeriesWithPrototype | null>
 	const { member, band: bandRow, event: eventRow, ...rest } = row;
 	return {
 		...rest,
+		// The booking the series was cut from. Its id was on the record and its
+		// times were on the page, and there was no way to open it.
+		prototype: toReservationRef(
+			{
+				id: rest.prototypeId,
+				startsAt: rest.prototypeStartsAt,
+				endsAt: rest.prototypeEndsAt,
+				status: null,
+				bookerType: rest.prototypeBookerType,
+				ownerUserId: rest.prototypeCreatedByUserId
+			},
+			bandRow
+		),
 		booker: toBookerRef({
 			bookerType: rest.prototypeBookerType,
 			member,
