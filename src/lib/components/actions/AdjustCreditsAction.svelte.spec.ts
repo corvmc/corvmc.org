@@ -107,3 +107,55 @@ describe('AdjustCreditsAction', () => {
 		}
 	});
 });
+
+/**
+ * `canSubmit` only became a real gate in #769 — before that it fell into
+ * `...rest` and landed on the trigger as a stray attribute. `ui/Action.svelte`'s
+ * own spec owns the plumbing; what is pinned here is this component's predicate,
+ * `amount !== 0 && description.trim().length > 0`.
+ */
+describe('AdjustCreditsAction, what it will let staff submit', () => {
+	const submit = () =>
+		document.querySelector('[role="dialog"] button[type="submit"]') as HTMLButtonElement;
+
+	const amount = (v: string) =>
+		page.getByPlaceholder('Positive to add, negative to deduct').fill(v);
+	const reason = (v: string) => page.getByPlaceholder('Why is this adjustment being made?').fill(v);
+
+	// The state the modal opens in. Committing it writes a ledger row saying
+	// nothing happened, against a balance nobody changed.
+	it('refuses an adjustment of zero', async () => {
+		await open();
+
+		await vi.waitFor(() => expect(submit().disabled).toBe(true));
+	});
+
+	// The reason is all a later reader has to go on, and whitespace is not one —
+	// hence `.trim()` rather than a length check on the raw value.
+	it('refuses an amount with a blank reason', async () => {
+		await open();
+		await amount('5');
+		await reason('   ');
+
+		await vi.waitFor(() => expect(submit().disabled).toBe(true));
+	});
+
+	it('allows an amount with a reason', async () => {
+		await open();
+		await amount('5');
+		await reason('Comped a session');
+
+		await vi.waitFor(() => expect(submit().disabled).toBe(false));
+	});
+
+	// The gate is `!== 0`, not `> 0`. A deduction is the case the placeholder
+	// advertises, so a `> 0` predicate would block every one of them while
+	// leaving the field that invites them in place.
+	it('allows a deduction', async () => {
+		await open();
+		await amount('-3');
+		await reason('Reversing a mistaken credit');
+
+		await vi.waitFor(() => expect(submit().disabled).toBe(false));
+	});
+});
