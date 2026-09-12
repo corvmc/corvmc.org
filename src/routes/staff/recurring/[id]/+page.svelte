@@ -74,6 +74,10 @@
 
 			<Fact label="Booker"><EntityChip ref={series.booker} /></Fact>
 
+			<!-- The booking the series was cut from. Its times were on this page and
+			     its id was on the record, and there was no way to open it. -->
+			<Fact label="Prototype"><EntityChip ref={series.prototype} /></Fact>
+
 			{#if series.prototypeNotes}
 				<Fact label="Notes">{series.prototypeNotes}</Fact>
 			{/if}

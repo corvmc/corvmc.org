@@ -5,6 +5,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -180,7 +181,10 @@
 					{#each d.items as item (item.id)}
 						<tr>
 							<td>
-								<div class="font-medium">{item.roleName}</div>
+								<!-- The role as the record it is. `EntityIdentity` at `sm` is the
+								     staff table's primary cell, which this was a hand-written
+								     copy of — name in bold, muted subline. -->
+								<EntityIdentity ref={item.role} />
 								{#if item.notes}
 									<div class="line-clamp-1 text-sm text-base-content/60">{item.notes}</div>
 								{/if}
