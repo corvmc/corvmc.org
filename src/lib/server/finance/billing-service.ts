@@ -126,7 +126,11 @@ async function ownedCard(
  * user row so the page can name the card without a Stripe call.
  */
 export async function setDefaultCard(
-	userId: string,
+	/**
+	 * Null for a customer that is not a person. A band's card belongs to the
+	 * band, so there is no user record to mirror it onto (#1098).
+	 */
+	userId: string | null,
 	stripeCustomerId: string,
 	paymentMethodId: string
 ): Promise<void> {
@@ -140,7 +144,7 @@ export async function setDefaultCard(
 		await stripe.subscriptions.update(sub.id, { default_payment_method: paymentMethodId });
 	}
 
-	await mirrorCardOntoUser(userId, method);
+	if (userId) await mirrorCardOntoUser(userId, method);
 }
 
 /**
@@ -151,7 +155,8 @@ export async function setDefaultCard(
  * about from a dunning email rather than from this page.
  */
 export async function removeCard(
-	userId: string,
+	/** Null for a customer that is not a person — see `setDefaultCard`. */
+	userId: string | null,
 	stripeCustomerId: string,
 	paymentMethodId: string
 ): Promise<void> {
@@ -179,13 +184,14 @@ export async function removeCard(
 	} else {
 		const remaining = await listCards(stripeCustomerId);
 		const current = remaining.find((c) => c.isDefault) ?? remaining[0];
-		await patchUserCard(userId, current ?? null);
+		if (userId) await patchUserCard(userId, current ?? null);
 	}
 }
 
 /** Mirror a newly attached card onto the user row and make it the default. */
 export async function rememberCard(
-	userId: string,
+	/** Null for a customer that is not a person — see `setDefaultCard`. */
+	userId: string | null,
 	stripeCustomerId: string,
 	paymentMethodId: string
 ): Promise<void> {

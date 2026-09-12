@@ -10,10 +10,21 @@
 
 	let {
 		open = $bindable(false),
-		driver
+		driver,
+		/**
+		 * Which SetupIntent to mint. Defaults to the member's own; a band passes
+		 * its own so the card lands on the band's customer rather than on the
+		 * person adding it (#1098). The fake driver's form is member-only — the
+		 * band path is stripe-only, which `startBandAddCard` reports.
+		 */
+		start = startAddCard,
+		onsaved
 	}: {
 		open?: boolean;
 		driver: 'stripe' | 'fake';
+		start?: () => Promise<{ clientSecret: string }>;
+		/** Runs after a card is confirmed, for a caller that must refresh its own query. */
+		onsaved?: () => void;
 	} = $props();
 
 	const fields = payFakeSetupIntent.fields;
@@ -32,7 +43,7 @@
 
 		starting = true;
 		errorMessage = null;
-		startAddCard()
+		start()
 			.then((result) => {
 				clientSecret = result.clientSecret;
 			})
@@ -50,6 +61,7 @@
 
 	function done() {
 		open = false;
+		onsaved?.();
 		// Dropped so reopening mints a fresh intent: a confirmed one cannot be
 		// confirmed twice, and a modal that reopened onto a spent secret would
 		// fail with nothing on screen to explain why.
