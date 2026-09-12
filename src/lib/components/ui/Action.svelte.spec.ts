@@ -187,6 +187,53 @@ describe('Action, confirm mode', () => {
 	});
 });
 
+// #1030: callback mode set `status = 'error'`, which renders `errorLabel` on
+// the *trigger* — and a confirmed action's trigger is behind the open dialog.
+// Nothing else happened, so a refusal written for the member reached nobody.
+describe('Action, callback failure', () => {
+	const refusal = {
+		status: 400,
+		body: { message: 'This is the only card on your membership.' }
+	};
+
+	it('tells the member why a confirmed action was refused', async () => {
+		vi.mocked(toast.error).mockClear();
+		await render(ActionHarness, {
+			action: vi.fn(async () => {
+				throw refusal;
+			}),
+			label: 'Remove',
+			confirm: 'This cannot be undone.'
+		});
+
+		await page.getByRole('button', { name: 'Remove' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Remove' }).click();
+
+		await vi.waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith('This is the only card on your membership.')
+		);
+	});
+
+	it('surfaces it through the error boundary the panels mount', async () => {
+		vi.mocked(toast.error).mockClear();
+		await render(ActionHarness, {
+			boundary: true,
+			action: vi.fn(async () => {
+				throw refusal;
+			}),
+			label: 'Remove',
+			confirm: 'This cannot be undone.'
+		});
+
+		await page.getByRole('button', { name: 'Remove' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Remove' }).click();
+
+		await vi.waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith('This is the only card on your membership.')
+		);
+	});
+});
+
 describe('Action, form mode', () => {
 	it('submits through the modal and closes it', async () => {
 		const onsuccess = vi.fn();
