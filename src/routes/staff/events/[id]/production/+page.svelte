@@ -30,7 +30,6 @@
 		formatDateShort,
 		formatDateTime,
 		formatDollars,
-		formatTime,
 		formatTimeRange,
 		fullDate,
 		toLocalDate,

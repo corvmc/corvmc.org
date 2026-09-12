@@ -129,7 +129,10 @@ test.describe('staff event creation — reserve space', () => {
 		// staff sidebar's Space group reads "Space / Reservations / Equipment" as
 		// one node, which a substring match on "Space Reservation" also catches.
 		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toBeVisible();
-		await expect(page.getByRole('link', { name: /View reservation/ })).toBeVisible();
+		// The card is an EntityIdentity now, not a hand-rolled "View reservation →"
+		// link, so the assertion is the link to the record rather than to that
+		// wording — which is the thing that actually proves it was linked.
+		await expect(page.locator('a[href^="/staff/reservations/"]').first()).toBeVisible();
 	});
 
 	test('re-timing the event carries the setup and teardown padding', async ({ page }) => {
