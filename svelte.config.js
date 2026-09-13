@@ -44,12 +44,11 @@ const config = {
 		// because it has to nonce the inline hydration script it injects into every
 		// rendered page, and only the renderer can mint a per-response nonce.
 		//
-		// `frame-ancestors` is enforced now — nothing in the app frames itself, and
-		// it is the clickjacking defence. Everything else ships report-only first:
-		// the allowlist below is derived from a sweep of the codebase, and the point
-		// of report-only is to find out where that sweep was wrong before a wrong
-		// entry starts breaking pages. Flipping `reportOnly` to `directives` is a
-		// follow-up, once there is violation data.
+		// Enforced. The allowlist below came from a sweep of the codebase and
+		// shipped report-only first, so a wrong entry would report rather than
+		// break a page. Two weeks of violations named no first-party resource, so
+		// it moved to `directives` unchanged. `report-uri` stays: a violation after
+		// enforcement is a broken page, and it should still be visible.
 		//
 		// Keep 'unsafe-inline' on every style directive. Kit adds a nonce only to a
 		// style directive that lacks it, and a nonce makes the browser ignore
@@ -60,9 +59,6 @@ const config = {
 		csp: {
 			mode: 'auto',
 			directives: {
-				'frame-ancestors': ['self']
-			},
-			reportOnly: {
 				'default-src': ['self'],
 				// 'wasm-unsafe-eval' is for the barcode scanner: `barcode-detector/pure`
 				// is dynamically imported and its bundled zxing build instantiates wasm
@@ -77,6 +73,12 @@ const config = {
 					'https://challenges.cloudflare.com',
 					'https://js.stripe.com'
 				],
+				// Every inline-handler violation in the report-only window came from an
+				// in-app browser or an extension injecting into the page; src/ has no
+				// on* attribute of its own. script-src already refuses them, because a
+				// nonce there makes the browser ignore 'unsafe-inline' — naming the
+				// directive keeps that true if script-src ever has to allow inline.
+				'script-src-attr': ['none'],
 				'style-src': [
 					'self',
 					'unsafe-inline',
@@ -92,8 +94,10 @@ const config = {
 				],
 				'font-src': ['self', 'https://fonts.gstatic.com', 'https://fonts.bunny.net'],
 				// Knowingly narrower than reality: js-xss's default whitelist lets
-				// user-authored content reference an <img> on any origin. Whether that
-				// widens or the sanitizer tightens is a decision for the report data.
+				// user-authored content reference an <img> on any origin. Enforcing this
+				// breaks such an image rather than reporting it; no violation in the
+				// report-only window named one, and media.corvmc.org is where the
+				// uploader puts everything the app itself stores.
 				'img-src': ['self', 'data:', 'blob:', 'https://media.corvmc.org'],
 				// blob: is the upload preview and the audio duration probe.
 				'media-src': ['self', 'blob:'],

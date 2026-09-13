@@ -8,8 +8,8 @@ import { SEED_PUBLIC_BAND_SLUG } from './fixtures/seed-band-onboarding';
  * kit.csp survives the production build, and that the hook survives the
  * adapter.
  *
- * The CSP is report-only by design for everything except frame-ancestors, so
- * these assert the *shape* of the rollout, not a locked-down policy.
+ * The CSP is enforced whole, so these assert that the policy arrives on the
+ * enforcing header and that Kit's nonce landed where it is wanted.
  */
 const PORT = E2E_PREVIEW_PORT;
 
@@ -22,15 +22,16 @@ test('a page response carries the always-on security headers', async ({ page }) 
 	expect(headers['x-frame-options']).toBe('SAMEORIGIN');
 });
 
-test('frame-ancestors is enforced and everything else is report-only', async ({ page }) => {
+test('the whole policy arrives enforced, with nothing left report-only', async ({ page }) => {
 	const response = await page.goto(`http://localhost:${PORT}/`);
 	const headers = response?.headers() ?? {};
 
-	expect(headers['content-security-policy']).toBe("frame-ancestors 'self'");
+	const csp = headers['content-security-policy'] ?? '';
+	expect(csp).toContain("default-src 'self'");
+	expect(csp).toContain("frame-ancestors 'self'");
+	expect(csp).toContain('report-uri https://');
 
-	const reportOnly = headers['content-security-policy-report-only'] ?? '';
-	expect(reportOnly).toContain("default-src 'self'");
-	expect(reportOnly).toContain('report-uri https://');
+	expect(headers['content-security-policy-report-only']).toBeUndefined();
 });
 
 // Kit adds a nonce only to a directive that does not already allow
@@ -40,10 +41,10 @@ test('frame-ancestors is enforced and everything else is report-only', async ({ 
 // near the styles.
 test('the CSP nonce is on script-src only', async ({ page }) => {
 	const response = await page.goto(`http://localhost:${PORT}/`);
-	const reportOnly = response?.headers()['content-security-policy-report-only'] ?? '';
+	const csp = response?.headers()['content-security-policy'] ?? '';
 
 	const directive = (name: string) =>
-		reportOnly
+		csp
 			.split(';')
 			.map((part) => part.trim())
 			.find((part) => part.startsWith(`${name} `)) ?? '';

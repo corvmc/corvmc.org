@@ -20,7 +20,7 @@ describe('kit.csp', () => {
 		const projectId = dsn.pathname.slice(1);
 		const publicKey = dsn.username;
 
-		const reportUri = csp?.reportOnly?.['report-uri']?.[0];
+		const reportUri = csp?.directives?.['report-uri']?.[0];
 		expect(reportUri).toBeDefined();
 
 		const url = new URL(reportUri as string);
@@ -32,15 +32,14 @@ describe('kit.csp', () => {
 	// Every checkout used to be a top-level navigation to checkout.stripe.com, so
 	// `form-action` was the only Stripe directive that mattered. The in-app
 	// checkout embeds Stripe instead: Stripe.js is a script, the card fields are
-	// an iframe, and the Element calls the API from the page. This policy is
-	// report-only today, so a missing entry costs nothing until it is enforced —
-	// at which point it would silently break every payment.
+	// an iframe, and the Element calls the API from the page. Now that the policy
+	// is enforced, dropping one of these silently breaks every payment.
 	it('allows the Stripe origins the embedded Payment Element needs', () => {
-		expect(csp?.reportOnly?.['script-src']).toContain('https://js.stripe.com');
+		expect(csp?.directives?.['script-src']).toContain('https://js.stripe.com');
 		// The card fields, and the 3-D Secure challenge.
-		expect(csp?.reportOnly?.['frame-src']).toContain('https://js.stripe.com');
-		expect(csp?.reportOnly?.['frame-src']).toContain('https://hooks.stripe.com');
-		expect(csp?.reportOnly?.['connect-src']).toContain('https://api.stripe.com');
+		expect(csp?.directives?.['frame-src']).toContain('https://js.stripe.com');
+		expect(csp?.directives?.['frame-src']).toContain('https://hooks.stripe.com');
+		expect(csp?.directives?.['connect-src']).toContain('https://api.stripe.com');
 	});
 
 	// Kit only injects a nonce into a style directive that does NOT already allow
@@ -50,20 +49,32 @@ describe('kit.csp', () => {
 	// custom CSS is injected as a `<style>` element through {@html}.
 	it('keeps unsafe-inline on every style directive so Kit adds no style nonce', () => {
 		for (const directive of ['style-src', 'style-src-attr', 'style-src-elem'] as const) {
-			expect(csp?.reportOnly?.[directive]).toContain('unsafe-inline');
+			expect(csp?.directives?.[directive]).toContain('unsafe-inline');
 		}
 	});
 
 	// The barcode scanner's zxing build fetches its wasm from jsdelivr at runtime,
 	// from inside a dynamically imported dependency — invisible to a grep of src/.
 	it('allows the wasm and its CDN that the barcode scanner needs', () => {
-		expect(csp?.reportOnly?.['script-src']).toContain('wasm-unsafe-eval');
-		expect(csp?.reportOnly?.['connect-src']).toContain('https://fastly.jsdelivr.net');
+		expect(csp?.directives?.['script-src']).toContain('wasm-unsafe-eval');
+		expect(csp?.directives?.['connect-src']).toContain('https://fastly.jsdelivr.net');
 	});
 
-	// frame-ancestors is enforced from day one; everything else is report-only
-	// until the violation data says what the real allowlist is.
-	it('enforces frame-ancestors and nothing else', () => {
-		expect(csp?.directives).toEqual({ 'frame-ancestors': ['self'] });
+	// The whole policy is enforced. A directive left in `reportOnly` would be
+	// sent as Content-Security-Policy-Report-Only, so the browser reports the
+	// violation and loads the resource anyway — the state this policy spent two
+	// weeks in on purpose, and must not fall back into unnoticed.
+	it('enforces the whole policy rather than reporting any of it', () => {
+		expect(csp?.reportOnly).toBeUndefined();
+		expect(csp?.directives?.['frame-ancestors']).toEqual(['self']);
+	});
+
+	// src/ has no inline on* attribute; every such violation in the report-only
+	// window was injected by an in-app browser or an extension. script-src covers
+	// this already, because Kit's nonce there makes the browser ignore any
+	// 'unsafe-inline' — this directive is what keeps it covered if script-src
+	// ever has to allow inline for something else.
+	it('refuses inline event-handler attributes outright', () => {
+		expect(csp?.directives?.['script-src-attr']).toEqual(['none']);
 	});
 });
