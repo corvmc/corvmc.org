@@ -4,7 +4,9 @@ import { form } from '$app/server';
 import { mapDomainError } from '$lib/server/errors';
 import { requireProgramRole } from '$lib/server/group/group-context';
 import { DEFAULT_TIMEZONE, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
-import { buildTimeRangeInTz } from '$lib/server/reservation/timezone';
+import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
+import { createEventSeries } from '$lib/server/reservation/recurring-series-service';
+import { RECURRING_FREQUENCIES } from '$lib/server/db/schema/recurring';
 import {
 	cancelGroupSession as cancelSession,
 	createGroupEvent,
@@ -45,7 +47,20 @@ export const createGroupSession = form(
 		 * required boolean in a `form()` schema — an unchecked checkbox sends
 		 * nothing, and here "absent" genuinely does mean "do not reserve".
 		 */
-		reserveRoom: z.boolean().optional().default(false)
+		reserveRoom: z.boolean().optional().default(false),
+		/**
+		 * Repeat. The generator does the rest: `processEventSeries` inherits
+		 * `source` and `groupId` from this prototype, publishes each occurrence
+		 * because `source !== 'cmc'`, and re-books the room for the same window.
+		 */
+		recurring: z.boolean().optional().default(false),
+		recurringFrequency: z.enum(RECURRING_FREQUENCIES).optional(),
+		// 'weekday' is what expresses "third Thursday" rather than "the 17th".
+		monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+		recurringEndsAt: z
+			.string()
+			.regex(/^$|^\d{4}-\d{2}-\d{2}$/, 'Invalid date')
+			.optional()
 	}),
 	async (data, issue) => {
 		// Owner or admin, matching the spec's role table: members read the
@@ -66,6 +81,9 @@ export const createGroupSession = form(
 		if (endsAt <= startsAt) {
 			invalid(issue.endTime('The session has to end after it starts'));
 		}
+		if (data.recurring && !data.recurringFrequency) {
+			invalid(issue.recurringFrequency('Choose how often it repeats'));
+		}
 
 		try {
 			const evt = await createGroupEvent({
@@ -80,6 +98,22 @@ export const createGroupSession = form(
 				// programs asked for.
 				reservation: data.reserveRoom ? { startsAt, endsAt, overrideConflicts: false } : undefined
 			});
+
+			// Registered after the event exists, because the series points at it as
+			// its prototype. A failure here leaves a real one-off session rather
+			// than a half-made series, which is the better of the two.
+			if (data.recurring && data.recurringFrequency) {
+				await createEventSeries({
+					prototypeEventId: evt.id,
+					frequency: data.recurringFrequency,
+					prototypeStartsAt: startsAt,
+					monthlyMode: data.monthlyMode,
+					endsAt: data.recurringEndsAt
+						? buildDateInTz(data.recurringEndsAt, '23:59', DEFAULT_TIMEZONE)
+						: undefined
+				});
+			}
+
 			return { success: true, id: evt.id };
 		} catch (err) {
 			// `ReservationConflictError` is a 409 and an ordinary answer — the room

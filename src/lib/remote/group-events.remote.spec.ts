@@ -21,7 +21,13 @@ vi.mock('$app/server', () => ({
 		const fn = async (raw: unknown) => {
 			const parsed = schema.safeParse(raw);
 			if (!parsed.success) throw new ValidationFailure(parsed.error.issues);
-			return handler(parsed.data, {});
+			// A proxy rather than `{}`: the handlers reject bad input through
+			// `invalid(issue.<field>(...))`, so every field name has to be callable.
+			const issue = new Proxy(
+				{},
+				{ get: (_, field) => (message: string) => ({ field: String(field), message }) }
+			);
+			return handler(parsed.data, issue);
 		};
 		const marked = fn as unknown as Record<string, unknown>;
 		marked.__ = { type: 'form' };
@@ -54,6 +60,11 @@ vi.mock('$lib/server/group/group-context', () => ({
 		requireGroupRole(...(a as Parameters<typeof requireGroupRole>)),
 	requireProgramRole: (...a: unknown[]) =>
 		requireProgramRole(...(a as Parameters<typeof requireProgramRole>))
+}));
+
+const createEventSeries = vi.fn(async () => ({ id: 'series-1' }));
+vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+	createEventSeries: (...a: unknown[]) => createEventSeries(...(a as []))
 }));
 
 const service = {
@@ -143,6 +154,46 @@ describe('a program still reaches them', () => {
 		expect(service.createGroupEvent).toHaveBeenCalledWith(
 			expect.objectContaining({ groupId: 'group-1' })
 		);
+	});
+
+	// #1104. `processEventSeries` was built to inherit a group prototype in #338;
+	// until now nothing could make one, so that branch was unreachable.
+	it('registers a series when the session repeats', async () => {
+		await remotes.createGroupSession({
+			groupId: 'group-1',
+			...SESSION,
+			reserveRoom: true,
+			recurring: true,
+			recurringFrequency: 'monthly',
+			monthlyMode: 'weekday',
+			recurringEndsAt: '2027-06-17'
+		});
+
+		expect(createEventSeries).toHaveBeenCalledWith(
+			expect.objectContaining({
+				prototypeEventId: 'evt-1',
+				frequency: 'monthly',
+				monthlyMode: 'weekday'
+			})
+		);
+	});
+
+	it('leaves a one-off session with no series', async () => {
+		await remotes.createGroupSession({ groupId: 'group-1', ...SESSION, reserveRoom: true });
+
+		expect(service.createGroupEvent).toHaveBeenCalledOnce();
+		expect(createEventSeries).not.toHaveBeenCalled();
+	});
+
+	// A series with no frequency has nothing to expand, so it is refused before
+	// the event is written rather than leaving a prototype pointing at nothing.
+	it('refuses a repeat with no frequency', async () => {
+		await expect(
+			remotes.createGroupSession({ groupId: 'group-1', ...SESSION, recurring: true })
+		).rejects.toBeDefined();
+
+		expect(service.createGroupEvent).not.toHaveBeenCalled();
+		expect(createEventSeries).not.toHaveBeenCalled();
 	});
 
 	it.each(['cancelGroupSession', 'publishGroupSession', 'unpublishGroupSession'])(
