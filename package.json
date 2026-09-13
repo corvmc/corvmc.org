@@ -46,6 +46,7 @@
 		"email:pull": "postmark templates pull postmark/templates --server-token $POSTMARK_SERVER_TOKEN",
 		"email:preview": "tsx scripts/email-preview.ts",
 		"email:validate": "tsx scripts/email-validate.ts",
+		"email:verify": "tsx scripts/email-verify.ts",
 		"db:reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local && pnpm db:seed",
 		"db:migrate:local": "tsx scripts/db/migrate-local.ts"
 	},
