@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "0f2a61bb-7e44-4231-bb47-f1a4e8cf4af1",
+  "id": "d13bc83c-81eb-4276-994d-fb9e4c8f3089",
   "prevIds": [
-    "d13bc83c-81eb-4276-994d-fb9e4c8f3089"
+    "e485607d-6c71-49ed-a667-5b6a7bb03ca0"
   ],
   "ddl": [
     {
@@ -3723,16 +3723,6 @@
       "default": null,
       "generated": null,
       "name": "reimbursed_at",
-      "entityType": "columns",
-      "table": "acquisition"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "receipt_key",
       "entityType": "columns",
       "table": "acquisition"
     },

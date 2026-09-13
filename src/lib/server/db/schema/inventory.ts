@@ -392,12 +392,6 @@ export const acquisition = sqliteTable(
 		 * records that a person dealt with a filing.
 		 */
 		reimbursedAt: integer('reimbursed_at', { mode: 'timestamp' }),
-		/**
-		 * The receipt image, in the **private** bucket — see `receiptKey`. It is
-		 * what lets a row be recorded before anyone itemises it: the total and the
-		 * proof arrive together, and the lines can follow from the picture.
-		 */
-		receiptKey: text('receipt_key'),
 		notes: text('notes'),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()

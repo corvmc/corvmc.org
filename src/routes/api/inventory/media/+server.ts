@@ -1,7 +1,8 @@
 import { json, error, type RequestHandler } from '@sveltejs/kit';
 import { randomUUID } from 'node:crypto';
 import { uploadFile } from '$lib/server/storage';
-import { mediaKey } from '$lib/server/storage-keys';
+import { putPrivateObject } from '$lib/server/private-storage';
+import { mediaKey, RECEIPT_KEY_PREFIX } from '$lib/server/storage-keys';
 import { attach, record } from '$lib/server/media/media-service';
 import { isStaff } from '$lib/server/authorization';
 import type { MediaSlot } from '$lib/server/db/schema/media';
@@ -57,12 +58,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	if (file.size > MAX_BYTES) error(413, 'File is larger than 10MB');
+	if (!allowed.includes(file.type)) error(400, `${file.type} is not allowed here`);
 
 	const buffer = await file.arrayBuffer();
-	const key = mediaKey(`inventory/${slot}`, randomUUID(), file.type);
+
+	// A receipt goes to the private bucket and is read back through
+	// `/api/inventory/receipts/[id]`. The others stay public: a manual and a
+	// photograph of a dented amp are not sensitive, and a receipt carries card
+	// digits, a name and an address. Its `media_attachment` row is identical
+	// either way — only the bucket and the read path differ.
+	const isReceipt = slot === 'receipt';
+	const key = isReceipt
+		? `${RECEIPT_KEY_PREFIX}${attachableId}/${randomUUID()}`
+		: mediaKey(`inventory/${slot}`, randomUUID(), file.type);
 
 	try {
-		await uploadFile(buffer, key, file.type, allowed);
+		if (isReceipt) await putPrivateObject(key, buffer, file.type);
+		else await uploadFile(buffer, key, file.type, allowed);
 	} catch (err) {
 		error(400, (err as Error).message);
 	}

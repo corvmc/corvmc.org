@@ -9,7 +9,7 @@ import {
 import { user } from '$lib/server/db/schema/authentication';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { listFor } from '$lib/server/media/media-service';
-import { resolveImageUrl } from '$lib/server/storage';
+import { isReceiptKey } from '$lib/server/storage-keys';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { recordMovement, signedQuantity } from './stock-service';
 import { createAsset, AssetTagTakenError } from './asset-service';
@@ -466,9 +466,16 @@ export async function getAcquisitionById(id: string) {
 		paidByName: header.paidByName,
 		lines: lines.map((l) => ({ ...l.line, item: l.item })),
 		movements: movements.map((m) => ({ ...m.movement, item: m.item })),
-		// Resolved here because `resolveImageUrl` lives in `$lib/server/`, which
-		// components may not import — the same reason `listItemResources` does it.
-		receipts: receipts.map((r) => ({ ...r, url: resolveImageUrl(r.key) }))
+		// Never `resolveImageUrl`: that hands out a media.corvmc.org address, and
+		// a receipt carries card digits, a name and an address. The authorized
+		// route resolves the object from the attachment, so no key ever reaches
+		// the browser. A receipt attached before private storage still has a
+		// public key — the route refuses those rather than pretending.
+		receipts: receipts.map((r) => ({
+			...r,
+			url: `/api/inventory/receipts/${r.attachmentId}`,
+			migrated: isReceiptKey(r.key)
+		}))
 	};
 }
 
