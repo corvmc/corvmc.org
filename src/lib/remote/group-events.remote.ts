@@ -114,10 +114,16 @@ export const updateGroupSession = form(
 		description: z.string().max(LONG_TEXT_MAX).optional(),
 		sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick a date'),
 		startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Pick a start time'),
-		endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Pick an end time')
+		endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Pick an end time'),
+		/**
+		 * Unlike create's, this one has no safe default. The form always renders
+		 * the checkbox at the session's current state, so an absent field is an
+		 * unticked box and means release — not "leave it alone".
+		 */
+		reserveRoom: z.boolean().optional().default(false)
 	}),
 	async (data, issue) => {
-		const { group } = await requireOwnSession(data);
+		const { user, group } = await requireOwnSession(data);
 
 		const { startsAt, endsAt } = buildTimeRangeInTz(
 			data.sessionDate,
@@ -130,16 +136,17 @@ export const updateGroupSession = form(
 		}
 
 		try {
-			await updateSession(data.eventId, group.id, {
+			await updateSession(data.eventId, group.id, user.id, {
 				title: data.title,
 				description: data.description || null,
 				startsAt,
-				endsAt
+				endsAt,
+				reserveRoom: data.reserveRoom
 			});
 			return { success: true };
 		} catch (err) {
-			// A moved session can collide with something else in the room. That is
-			// a 409 and an ordinary answer, not a fault.
+			// A session moved into a taken slot, or one asking for a room already
+			// held, is a 409 and an ordinary answer rather than a fault.
 			mapDomainError(err);
 		}
 	}

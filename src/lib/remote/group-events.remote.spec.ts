@@ -153,4 +153,22 @@ describe('a program still reaches them', () => {
 			});
 		}
 	);
+
+	// The room hold is the field the edit form could not send before #1108, and
+	// the actor is what taking or releasing one is booked to.
+	it.each([true, false])('carries reserveRoom=%s and the actor into the update', async (hold) => {
+		await remotes.updateGroupSession({
+			groupId: 'group-1',
+			eventId: 'evt-1',
+			...SESSION,
+			reserveRoom: hold
+		});
+
+		expect(service.updateGroupSession).toHaveBeenCalledWith(
+			'evt-1',
+			'group-1',
+			expect.any(String),
+			expect.objectContaining({ reserveRoom: hold })
+		);
+	});
 });

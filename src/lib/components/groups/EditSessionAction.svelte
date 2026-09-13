@@ -5,10 +5,12 @@
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 
 	/**
-	 * Move or rename a session that is already on the calendar.
+	 * Move, rename, or change what a session does with the room.
 	 *
-	 * The room follows: `updateGroupSession` re-runs the conflict check against
-	 * everything but this session's own reservation, then moves the held window.
+	 * The room follows a move: `updateGroupSession` re-runs the conflict check
+	 * against everything but this session's own reservation, then moves the held
+	 * window. The checkbox can also take a room the session never held or give
+	 * one back, which before #1108 meant cancelling and recreating.
 	 */
 	let {
 		groupId,
@@ -22,6 +24,7 @@
 			description: string | null;
 			startsAt: Date;
 			endsAt: Date | null;
+			reservesRoom: boolean;
 		};
 		onchanged: () => void;
 	} = $props();
@@ -92,6 +95,14 @@
 					required
 				/>
 			</div>
+
+			<FormField
+				field={fields.reserveRoom}
+				type="checkbox"
+				label="Hold the practice room"
+				value={session.reservesRoom}
+				description="Free for a program — no credits are spent. Unticking gives the room back without calling the session off."
+			/>
 
 			<p class="text-subtle">
 				Moving a session moves the room it holds. If the new time is taken, the save is refused
