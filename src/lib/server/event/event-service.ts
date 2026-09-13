@@ -2288,19 +2288,29 @@ export interface UpdateGroupSessionParams {
 	description?: string | null;
 	startsAt?: Date;
 	endsAt?: Date;
+	/**
+	 * Whether the session holds the room afterwards. Undefined leaves the hold
+	 * as it is, which is what every caller that only renames or moves sends.
+	 */
+	reserveRoom?: boolean;
 }
 
 /**
- * Move or rename a program's session, keeping the room it holds in step.
+ * Move, rename, or change what a program's session does with the room.
  *
  * The reservation is the reason this is not `updateBandEvent`: a gig reserves
  * nothing, so moving one is a single write. Moving a session has to re-run the
  * conflict check — excluding its own reservation, or it collides with itself —
  * and then move the held window too.
+ *
+ * `userId` is the actor, needed because taking the room books a reservation to
+ * someone and releasing it cancels one. Positional, matching its sibling
+ * `cancelGroupSession`.
  */
 export async function updateGroupSession(
 	eventId: string,
 	groupId: string,
+	userId: string,
 	params: UpdateGroupSessionParams
 ): Promise<EventRow> {
 	const existing = await getById(eventId);
@@ -2315,14 +2325,50 @@ export async function updateGroupSession(
 		(params.startsAt && +params.startsAt !== +existing.startsAt) ||
 		(params.endsAt && +params.endsAt !== +(existing.endsAt ?? 0));
 
-	if (existing.reservationId && timeMoved && endsAt) {
-		if (await hasConflict(startsAt, endsAt, existing.reservationId)) {
+	// Resolved before any of the three branches so they stay exclusive: asking
+	// for the state it is already in must not book a second reservation, and a
+	// move that also takes the room must reserve the window it is moving to
+	// rather than the one it is leaving.
+	const holdsNow = !!existing.reservationId;
+	const holdWanted = params.reserveRoom ?? holdsNow;
+	let reservationId: string | null | undefined;
+
+	if (holdsNow && holdWanted && timeMoved && endsAt) {
+		if (await hasConflict(startsAt, endsAt, existing.reservationId!)) {
 			throw new ReservationConflictError();
 		}
 		await db
 			.update(reservation)
 			.set({ startsAt, endsAt, updatedAt: new Date() })
-			.where(eq(reservation.id, existing.reservationId));
+			.where(eq(reservation.id, existing.reservationId!));
+	}
+
+	if (!holdsNow && holdWanted) {
+		// The same rule `createGroupEvent` enforces: a reservation needs an end.
+		if (!endsAt) throw new EventValidationError('Event must end after it starts', 'endsAt');
+		if (await hasConflict(startsAt, endsAt)) throw new ReservationConflictError();
+
+		const res = await staffCreate({
+			userId,
+			// Not `'group'` — the room is held for the session, not booked by the
+			// program. See docs/specs/shipped/groups-spec.md § Room time.
+			bookerType: 'event_listing',
+			hardHold: true,
+			bookerId: eventId,
+			startsAt,
+			endsAt,
+			status: 'confirmed'
+		});
+		reservationId = res.id;
+	}
+
+	if (holdsNow && !holdWanted) {
+		// Cancelled, not deleted, and the listing stays up: giving the room back
+		// is not calling the session off. `cancelGroupSession` is that.
+		await cancelReservation(existing.reservationId!, userId, 'Session no longer holds the room', {
+			staffOverride: true
+		});
+		reservationId = null;
 	}
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -2330,6 +2376,7 @@ export async function updateGroupSession(
 	if (params.description !== undefined) updates.description = params.description;
 	if (params.startsAt !== undefined) updates.startsAt = params.startsAt;
 	if (params.endsAt !== undefined) updates.endsAt = params.endsAt;
+	if (reservationId !== undefined) updates.reservationId = reservationId;
 
 	const [updated] = await db
 		.update(eventListing)
