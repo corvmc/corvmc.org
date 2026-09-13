@@ -59,6 +59,8 @@
 	 */
 	const isGift = $derived(kind === 'donation' || kind === 'grant');
 
+	let donorUserId = $state('');
+	let donorName = $state('');
 	let paidByUserId = $state('');
 	let paidByName = $state('');
 	let uploading = $state(false);
@@ -66,6 +68,8 @@
 	// Seeded from the record once, so the picker shows who is already on the row
 	// without clobbering a choice the staffer has started making.
 	$effect(() => {
+		donorUserId = data.donorUserId ?? '';
+		donorName = data.donorName ?? '';
 		paidByUserId = data.paidByUserId ?? '';
 		paidByName = data.paidByName ?? '';
 	});
@@ -171,6 +175,13 @@
 					value={data.reference ?? ''}
 				/>
 
+				<MoneyField
+					field={fields.totalCents}
+					label="Receipt total"
+					value={data.totalCents}
+					description="What the paperwork says, including tax and postage the lines do not carry. Wins over the itemisation where the two disagree."
+				/>
+
 				{#if isGift}
 					<MoneyField
 						field={fields.fairValueCents}
@@ -201,10 +212,22 @@
 
 				<div class="mt-3">
 					<MemberPicker
+						field={fields.donorUserId}
+						bind:value={donorUserId}
+						bind:name={donorName}
+						label="Donated by"
+					/>
+				</div>
+
+				<!-- Beside the donor on purpose, and they are opposites: a member
+				     who is owed goes here, a member who gave goes above. Filling
+				     both turns a gift into a debt. -->
+				<div class="mt-3">
+					<MemberPicker
 						field={fields.paidByUserId}
 						bind:value={paidByUserId}
 						bind:name={paidByName}
-						label="Paid by (leave blank if the collective paid)"
+						label="Paid by, and owed it back (leave blank for a gift or a collective card)"
 					/>
 				</div>
 
@@ -226,7 +249,14 @@
 					<Fact label="Kind">{acquisitionKindLabels[data.kind]}</Fact>
 					<Fact label="Occurred">{formatDateShort(data.occurredAt)}</Fact>
 					<Fact label="Source">{data.donorName ?? '—'}</Fact>
-					<Fact label="Lines total">{formatCents(data.linesTotalCents)}</Fact>
+					<Fact label="Lines total">
+						{formatCents(data.linesTotalCents)}
+						{#if data.totalCents != null && data.totalCents !== data.linesTotalCents}
+							<span class="text-subtle">
+								— receipt says {formatCents(data.totalCents)}
+							</span>
+						{/if}
+					</Fact>
 					{#if data.paidByName}
 						<Fact label="Paid by">
 							{data.paidByName}

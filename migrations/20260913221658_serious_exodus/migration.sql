@@ -1,0 +1,1 @@
+ALTER TABLE `acquisition` ADD `receipt_key` text;

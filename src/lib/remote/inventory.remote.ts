@@ -718,7 +718,9 @@ const intakeLineSchema = z.object({
 	units: z.array(intakeUnitSchema).max(INTAKE_MAX_UNITS_PER_LINE).optional()
 });
 
-const intakeLinesSchema = z.array(intakeLineSchema).min(1).max(INTAKE_MAX_LINES);
+// No `.min(1)`: a receipt recorded before anyone itemises it posts `[]`, and
+// the handler routes that to the header-only path.
+const intakeLinesSchema = z.array(intakeLineSchema).max(INTAKE_MAX_LINES);
 
 /**
  * The whole arrival, in one POST.
@@ -744,8 +746,16 @@ export const recordIntake = form(
 		notes: z.string().max(2000).optional(),
 		/** Set when this arrival is being received against an order. */
 		purchaseOrderId: z.string().optional(),
+		/**
+		 * What the receipt says, which is not what the lines add up to: postage,
+		 * tax and a discount are on the paper and never on a line. Authoritative
+		 * where the two disagree — see `getStaffAcquisitionDetail`.
+		 */
+		totalCents: z.number().int().min(0).optional(),
 		/** JSON, written by the line editor. */
-		lines: z.string().min(1)
+		// Empty is legitimate: a receipt photographed now, itemised later by
+		// whoever can read it.
+		lines: z.string()
 	}),
 	async (raw, issue) => {
 		await requireCapability('inventory.manageStock');
@@ -760,12 +770,13 @@ export const recordIntake = form(
 			locationId?: string;
 			notes?: string;
 			purchaseOrderId?: string;
+			totalCents?: number;
 			lines: string;
 		};
 
-		let lines: z.infer<typeof intakeLinesSchema>;
+		let lines: z.infer<typeof intakeLinesSchema> = [];
 		try {
-			lines = intakeLinesSchema.parse(JSON.parse(data.lines));
+			if (data.lines.trim()) lines = intakeLinesSchema.parse(JSON.parse(data.lines));
 		} catch {
 			// A field issue rather than a 400: the editor is on screen, and this
 			// is the only thing on the form the operator cannot see or correct.
@@ -774,8 +785,13 @@ export const recordIntake = form(
 			);
 		}
 
+		// A header with no lines is one insert, which is what the sequential path
+		// is for; `recordAcquisitionBulk` refuses it outright. The two return
+		// different shapes, so the branch is here rather than on the function.
+		const headerOnly = lines.length === 0;
+
 		try {
-			const result = await recordAcquisitionBulk({
+			const input = {
 				kind: data.kind,
 				occurredAt: calendarDate(data.occurredAt),
 				sourceName: data.sourceName || undefined,
@@ -784,6 +800,7 @@ export const recordIntake = form(
 				paidByUserId: data.paidByUserId || undefined,
 				locationId: data.locationId || undefined,
 				notes: data.notes || undefined,
+				totalCents: data.totalCents,
 				recordedByUserId: currentUser.id,
 				lines: lines.map((l) => ({
 					itemId: l.itemId,
@@ -791,7 +808,16 @@ export const recordIntake = form(
 					unitValueCents: l.unitValueCents,
 					units: l.units
 				}))
-			});
+			};
+
+			const result = headerOnly
+				? {
+						acquisitionId: (await recordAcquisition(input)).id,
+						lineCount: 0,
+						unitCount: 0,
+						movementCount: 0
+					}
+				: await recordAcquisitionBulk(input);
 
 			// Receiving *is* intake, prefilled — so an arrival against an order
 			// links back to it and bumps what has been received, partially or in
@@ -1450,6 +1476,13 @@ export const editAcquisition = form(
 		intendedUse: z.string().max(1000).optional(),
 		monetized: z.boolean().optional().default(false),
 		paidByUserId: z.string().optional(),
+		/** What the receipt says. Authoritative over the lines — see the detail page. */
+		totalCents: z.number().int().min(0).optional(),
+		/**
+		 * Who gave it. Deliberately not `paidByUserId`: that one is a debt, and
+		 * the schema's own comment warns against conflating the two.
+		 */
+		donorUserId: z.string().optional(),
 		/**
 		 * Date and kind are editable because both are now *guessed* at entry.
 		 * Two hundred rows typed in one sitting will contain wrong ones, and a
@@ -1467,6 +1500,8 @@ export const editAcquisition = form(
 			id: string;
 			sourceName?: string;
 			reference?: string;
+			totalCents?: number;
+			donorUserId?: string;
 			fairValueCents?: number;
 			fairValueBasis?: string;
 			intendedUse?: string;
@@ -1490,6 +1525,8 @@ export const editAcquisition = form(
 				intendedUse: data.intendedUse || null,
 				monetized: data.monetized ?? false,
 				paidByUserId: data.paidByUserId || null,
+				totalCents: data.totalCents ?? null,
+				donorUserId: data.donorUserId || null,
 				notes: data.notes || null
 			});
 		} catch (err) {

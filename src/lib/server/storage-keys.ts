@@ -113,6 +113,20 @@ const FALLBACK_FILENAME = 'download';
  * `../../etc/passwd` cannot become a path). Never returns an empty string,
  * because a `filename=""` is worse than a made-up name.
  */
+/** The prefix every `receiptKey` shares, so the orphan sweep can find them. */
+export const RECEIPT_KEY_PREFIX = 'acquisitions/';
+
+/**
+ * The key for an acquisition's receipt in the **private** bucket.
+ *
+ * Not `media_attachment`, despite that table declaring an `acquisition`/
+ * `receipt` pair: everything there resolves through `getPublicUrl()` onto
+ * media.corvmc.org, and a receipt carries card digits, a name and an address.
+ */
+export function receiptKey(acquisitionId: string, contentType: string): string {
+	return `${RECEIPT_KEY_PREFIX}${acquisitionId}/receipt.${extensionForType(contentType)}`;
+}
+
 export function sanitizeFilename(name: string): string {
 	const flattened = name
 		// eslint-disable-next-line no-control-regex -- the point is to remove them
