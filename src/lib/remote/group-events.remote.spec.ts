@@ -178,6 +178,30 @@ describe('a program still reaches them', () => {
 		);
 	});
 
+	// #1109. These three were declared on `CreateGroupEventParams` and reachable
+	// from nothing, so a program's listing was thinner than a band's gig.
+	it('carries the poster, doors, tags and price into the service', async () => {
+		await remotes.createGroupSession({
+			groupId: 'group-1',
+			...SESSION,
+			doorsTime: '18:30',
+			tags: 'jazz, jam',
+			ticketPriceDollars: '10.00',
+			externalTicketUrl: 'https://tickets.example/rbc',
+			posterFile: new File([new Uint8Array([1, 2, 3])], 'poster.png', { type: 'image/png' })
+		});
+
+		expect(service.createGroupEvent).toHaveBeenCalledWith(
+			expect.objectContaining({
+				doorsAt: expect.any(Date),
+				tags: 'jazz, jam',
+				ticketPrice: 1000,
+				externalTicketUrl: 'https://tickets.example/rbc',
+				posterFile: expect.objectContaining({ contentType: 'image/png' })
+			})
+		);
+	});
+
 	it('leaves a one-off session with no series', async () => {
 		await remotes.createGroupSession({ groupId: 'group-1', ...SESSION, reserveRoom: true });
 
@@ -194,6 +218,32 @@ describe('a program still reaches them', () => {
 
 		expect(service.createGroupEvent).not.toHaveBeenCalled();
 		expect(createEventSeries).not.toHaveBeenCalled();
+	});
+
+	// Cleared, not left alone: `undefined` means "leave alone" in the service, so
+	// an emptied field has to arrive as null or it could never be removed.
+	it('clears an emptied listing field on edit rather than leaving it', async () => {
+		await remotes.updateGroupSession({ groupId: 'group-1', eventId: 'evt-1', ...SESSION });
+
+		expect(service.updateGroupSession).toHaveBeenCalledWith(
+			'evt-1',
+			'group-1',
+			expect.any(String),
+			expect.objectContaining({
+				doorsAt: null,
+				tags: null,
+				externalTicketUrl: null,
+				ticketPrice: null
+			})
+		);
+	});
+
+	it('refuses a price it cannot read, before the event is written', async () => {
+		await expect(
+			remotes.createGroupSession({ groupId: 'group-1', ...SESSION, ticketPriceDollars: 'ten quid' })
+		).rejects.toBeDefined();
+
+		expect(service.createGroupEvent).not.toHaveBeenCalled();
 	});
 
 	it.each(['cancelGroupSession', 'publishGroupSession', 'unpublishGroupSession'])(

@@ -319,6 +319,12 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			startsAt: e.startsAt,
 			endsAt: e.endsAt,
 			status: e.status,
+			// The listing half, so the edit form opens pre-filled on the fields a
+			// band gig has carried all along.
+			doorsAt: e.doorsAt,
+			tags: e.tags,
+			externalTicketUrl: e.externalTicketUrl,
+			ticketPrice: e.ticketPrice,
 			// Whether this one holds the room, which is the fact that distinguishes
 			// a program's session from a listing it merely advertises. A cancelled
 			// session keeps the pointer — the reservation is cancelled beside it,

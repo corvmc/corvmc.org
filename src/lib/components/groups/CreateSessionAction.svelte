@@ -120,6 +120,41 @@
 					</p>
 				</div>
 			{/if}
+			field={fields.doorsTime}
+			type="time" label="Doors" description="Optional. When people can turn up." />
+
+			<FormField
+				field={fields.tags}
+				type="text"
+				label="Tags"
+				placeholder="jazz, jam, all ages"
+				description="Optional. Comma separated — how the gig guide filters."
+			/>
+
+			<FormField
+				field={fields.posterFile}
+				type="file"
+				label="Poster"
+				accept="image/jpeg,image/png,image/webp"
+				description="Optional. Shown on the event page and the gig guide."
+			/>
+
+			<div class="grid grid-cols-2 gap-3">
+				<FormField
+					field={fields.ticketPriceDollars}
+					type="text"
+					label="Price"
+					placeholder="10.00"
+					description="Optional. Leave blank if it's free."
+				/>
+				<FormField
+					field={fields.externalTicketUrl}
+					type="text"
+					label="Tickets at"
+					placeholder="https://"
+					description="Optional. Where people buy."
+				/>
+			</div>
 		</div>
 	{/snippet}
 </Action>

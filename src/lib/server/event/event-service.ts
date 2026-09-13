@@ -2137,6 +2137,15 @@ export interface CreateGroupEventParams {
 	doorsAt?: Date;
 	tags?: string;
 	/**
+	 * A program's show can be paid, and it sells the way a band's does: a
+	 * display price and a link to whoever is taking the money. Not
+	 * `ticketingEnabled` — CMC's own checkout stays closed to every non-CMC
+	 * source alike, because the money would land in CMC's Stripe account with
+	 * no payout path back. See `update`.
+	 */
+	externalTicketUrl?: string;
+	ticketPrice?: number | null;
+	/**
 	 * Hold the room for the session. Omitted for a program meeting somewhere
 	 * else, which is a listing like any other.
 	 */
@@ -2183,6 +2192,8 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 		endsAt,
 		doorsAt,
 		tags,
+		externalTicketUrl,
+		ticketPrice,
 		reservation: reservationParams,
 		posterFile
 	} = params;
@@ -2191,6 +2202,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 		throw new EventValidationError('Event must end after it starts', 'endsAt');
 	if (doorsAt && doorsAt > startsAt)
 		throw new EventValidationError('Doors must open before event starts', 'doorsAt');
+	assertValidTicketPrice(ticketPrice);
 
 	// The invariant the free room rests on. A band's rehearsal is paid time under
 	// `bookerType: 'group'` and its gig is an off-site listing; neither is this,
@@ -2237,6 +2249,8 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 				endsAt,
 				doorsAt: doorsAt ?? null,
 				tags: tags ?? null,
+				externalTicketUrl: externalTicketUrl ?? null,
+				ticketPrice: ticketPrice ?? null,
 				groupId,
 				source: 'group',
 				// Published, matching `processEventSeries` — a club's weekly series
@@ -2293,6 +2307,12 @@ export interface UpdateGroupSessionParams {
 	 * as it is, which is what every caller that only renames or moves sends.
 	 */
 	reserveRoom?: boolean;
+	doorsAt?: Date | null;
+	tags?: string | null;
+	externalTicketUrl?: string | null;
+	ticketPrice?: number | null;
+	/** A replacement poster. Absent leaves the existing one alone. */
+	posterFile?: { buffer: ArrayBuffer; contentType: string };
 }
 
 /**
@@ -2371,12 +2391,27 @@ export async function updateGroupSession(
 		reservationId = null;
 	}
 
+	if (params.ticketPrice !== undefined) assertValidTicketPrice(params.ticketPrice);
+	if (params.doorsAt && params.doorsAt > startsAt) {
+		throw new EventValidationError('Doors must open before event starts', 'doorsAt');
+	}
+
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (params.title !== undefined) updates.title = params.title;
 	if (params.description !== undefined) updates.description = params.description;
 	if (params.startsAt !== undefined) updates.startsAt = params.startsAt;
 	if (params.endsAt !== undefined) updates.endsAt = params.endsAt;
 	if (reservationId !== undefined) updates.reservationId = reservationId;
+	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
+	if (params.tags !== undefined) updates.tags = params.tags;
+	if (params.externalTicketUrl !== undefined) updates.externalTicketUrl = params.externalTicketUrl;
+	if (params.ticketPrice !== undefined) updates.ticketPrice = params.ticketPrice;
+
+	// Written after the row, matching `createGroupEvent`: `writeEventPoster`
+	// needs the event to exist to key the object against it.
+	if (params.posterFile) {
+		updates.posterKey = await writeEventPoster(eventId, params.posterFile);
+	}
 
 	const [updated] = await db
 		.update(eventListing)
