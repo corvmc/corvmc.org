@@ -114,15 +114,44 @@ beforeEach(() => {
 
 // ---------------------------------------------------------------------------
 
+// Staff pick both at creation now (#1106); these tests are about other rules.
+const SETTINGS = { joinPolicy: 'invite_only' as const, visibility: 'public' as const };
+
 describe('createGroup', () => {
 	it('creates a club through the shared group create', async () => {
-		await createGroup({ kind: 'club', name: 'Real Book Club', leaderId: 'user-1' });
+		await createGroup({ ...SETTINGS, kind: 'club', name: 'Real Book Club', leaderId: 'user-1' });
 
 		expect(bandServiceCreate).toHaveBeenCalledWith('user-1', {
 			kind: 'club',
 			name: 'Real Book Club',
-			bio: undefined
+			bio: undefined,
+			joinPolicy: 'invite_only',
+			joinInstructions: undefined,
+			visibility: 'public'
 		});
+	});
+
+	// #1106. The column defaults are `invite_only` and a `public` listing, which
+	// together advertise a group nobody can join. Staff's choice has to reach the
+	// insert, or the group is born wrong and nothing says so.
+	it('carries the chosen policy and visibility into the insert', async () => {
+		await createGroup({
+			kind: 'club',
+			name: 'Real Book Club',
+			leaderId: 'user-1',
+			joinPolicy: 'open',
+			joinInstructions: 'Third Thursday, 7pm.',
+			visibility: 'members'
+		});
+
+		expect(bandServiceCreate).toHaveBeenCalledWith(
+			'user-1',
+			expect.objectContaining({
+				joinPolicy: 'open',
+				joinInstructions: 'Third Thursday, 7pm.',
+				visibility: 'members'
+			})
+		);
 	});
 
 	/**
@@ -132,7 +161,7 @@ describe('createGroup', () => {
 	 */
 	it('refuses to create a band', async () => {
 		await expect(
-			createGroup({ kind: 'band' as never, name: 'Not A Band', leaderId: 'user-1' })
+			createGroup({ ...SETTINGS, kind: 'band' as never, name: 'Not A Band', leaderId: 'user-1' })
 		).rejects.toBeInstanceOf(NotAStaffGroupError);
 		expect(bandServiceCreate).not.toHaveBeenCalled();
 	});
@@ -145,7 +174,7 @@ describe('createGroup', () => {
 	 */
 	it('refuses to create one with no leader', async () => {
 		await expect(
-			createGroup({ kind: 'club', name: 'Leaderless', leaderId: '' })
+			createGroup({ ...SETTINGS, kind: 'club', name: 'Leaderless', leaderId: '' })
 		).rejects.toBeInstanceOf(LeaderNotFoundError);
 		expect(bandServiceCreate).not.toHaveBeenCalled();
 	});

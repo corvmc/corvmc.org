@@ -1,3 +1,5 @@
+import type { GroupJoinPolicy } from '$lib/config';
+import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
 import { db } from '$lib/server/db';
 import { DomainError } from '../domain-error';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
@@ -53,6 +55,14 @@ import type { BandTier } from '$lib/server/db/schema/band-site';
 export interface CreateBandData {
 	name: string;
 	bio?: string;
+	/**
+	 * Staff's to set, and only at creation from `/staff/groups`. Omitted — which
+	 * is every band, since a band is self-created — leaves the column defaults:
+	 * `invite_only` and a `public` listing.
+	 */
+	joinPolicy?: GroupJoinPolicy;
+	joinInstructions?: string | null;
+	visibility?: DirectoryVisibility;
 	/**
 	 * Defaults to `'band'`, which is what every existing caller means.
 	 *
@@ -251,7 +261,9 @@ export async function create(ownerId: string, data: CreateBandData) {
 			kind,
 			name: data.name,
 			slug,
-			bio: data.bio ? sanitizeBio(data.bio) : null
+			bio: data.bio ? sanitizeBio(data.bio) : null,
+			...(data.joinPolicy ? { joinPolicy: data.joinPolicy } : {}),
+			...(data.joinInstructions !== undefined ? { joinInstructions: data.joinInstructions } : {})
 		}),
 		db.insert(groupMember).values({
 			groupId: bandId,
@@ -266,7 +278,8 @@ export async function create(ownerId: string, data: CreateBandData) {
 		groupEntryInsert({
 			groupId: bandId,
 			name: data.name,
-			bio: data.bio ? sanitizeBio(data.bio) : null
+			bio: data.bio ? sanitizeBio(data.bio) : null,
+			visibility: data.visibility
 		}),
 		// The site record, in the same batch for the same reason. It carries the
 		// band's tier, so a band without one has no tier to read — and it is what

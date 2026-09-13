@@ -119,7 +119,13 @@ export const createStaffGroup = form(
 		kind: staffKind,
 		name: z.string().trim().min(1, 'Name is required').max(SHORT_TEXT_MAX),
 		bio: z.string().trim().max(LONG_TEXT_MAX).optional().default(''),
-		leaderId: z.string().min(1, 'Pick a member to lead this group')
+		leaderId: z.string().min(1, 'Pick a member to lead this group'),
+		// Asked here rather than left to the column defaults. A group born
+		// `invite_only` with a `public` listing is advertised and unjoinable, and
+		// nothing said a second step was outstanding — #1106.
+		joinPolicy: z.enum(groupJoinPolicies),
+		joinInstructions: z.string().trim().max(LONG_TEXT_MAX).optional().default(''),
+		visibility: z.enum(directoryVisibilities)
 	}),
 	async (data) => {
 		await requireGroupsStaff();
@@ -128,7 +134,10 @@ export const createStaffGroup = form(
 				kind: data.kind,
 				name: data.name,
 				bio: data.bio || undefined,
-				leaderId: data.leaderId
+				leaderId: data.leaderId,
+				joinPolicy: data.joinPolicy,
+				joinInstructions: data.joinInstructions || null,
+				visibility: data.visibility
 			});
 			return { success: true, id: created.id, slug: created.slug };
 		} catch (err) {
