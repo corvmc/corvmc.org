@@ -1,0 +1,61 @@
+# Postmark templates: validated on a PR, pushed and read back on merge.
+#
+# Deliberately not a job in ci.yml. That workflow runs on `merge_group`, and a
+# push from the queue would deploy templates for a PR that may still be dequeued
+# — and adding a job there risks it becoming a required check, which would gate
+# the queue on Postmark's API being up.
+#
+# Needs POSTMARK_SERVER_TOKEN as a repository secret. The `paths` filter means
+# Dependabot never triggers this, which matters: Dependabot runs cannot read
+# ordinary repository secrets.
+name: Email templates
+
+on:
+  pull_request:
+    paths: &paths
+      - 'postmark/**'
+      - 'src/lib/server/notification/email/fixtures.ts'
+      - 'scripts/email-*.ts'
+      - '.github/workflows/email-templates.yml'
+  push:
+    branches: [main]
+    paths: *paths
+
+# One deploy at a time, and never cancel a push mid-flight: a half-applied set
+# is the state this workflow exists to prevent.
+concurrency:
+  group: email-templates-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  templates:
+    name: Templates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      POSTMARK_SERVER_TOKEN: ${{ secrets.POSTMARK_SERVER_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Postmark's own Mustachio engine, which the local Handlebars renderer
+      # only approximates. Runs on a PR so a broken template is caught before
+      # it can be pushed, and again before pushing for the same reason.
+      - name: Validate
+        run: pnpm email:validate
+
+      - name: Push
+        if: github.event_name == 'push'
+        run: pnpm email:push
+
+      # A clean push is not evidence. `password-reset`, `verify-email` and
+      # `band-reply` were absent from the server for weeks while the code sent
+      # them, and nothing noticed — see #1126.
+      - name: Verify the server matches the repo
+        if: github.event_name == 'push'
+        run: pnpm email:verify
