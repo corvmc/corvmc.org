@@ -11,6 +11,7 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { CancelReservationAction, ConfirmWaitlistedAction } from '$lib/components/actions';
 
 	let data = $derived(await getReservationDetail(page.params.id!));
@@ -24,6 +25,16 @@
 
 <PageHeader title="Your Reservation" backHref="/member/reservations" />
 <PageContent width="md">
+	<!-- Whose booking this is, when it is not simply the member's own. A band
+	     booking looked identical to a personal one on this page. -->
+	{#if data.band}
+		<Card>
+			<CardBody>
+				<EntityIdentity ref={data.band} size="md" />
+			</CardBody>
+		</Card>
+	{/if}
+
 	<Card>
 		<CardBody>
 			<header class="flex items-start justify-between gap-2">

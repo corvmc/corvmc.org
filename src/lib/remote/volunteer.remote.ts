@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireCapability, requireUser } from '$lib/server/authorization';
+import { toEventRef } from '$lib/server/entity/refs';
 import { getStaffLayout } from './layout.remote';
 import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
 import { listInterestsForUser } from '$lib/server/volunteer/volunteer-interest-service';
@@ -2363,6 +2364,9 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 			done: t.done,
 			doneAt: t.doneAt
 		})),
+		// The night itself. The page had its *name* in a subtitle and no way to
+		// reach it, though this query already holds the whole row.
+		event: event ? toEventRef(event) : null,
 		// Offered only where there is something to check people into. A work party
 		// has no door, and a show with ticketing off has no list.
 		checkIn:

@@ -1,4 +1,5 @@
 import { db, getRowCount } from '$lib/server/db';
+import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import { production } from '$lib/server/db/schema/production';
 import { and, eq, getTableColumns, inArray, isNull } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
@@ -121,6 +122,8 @@ export async function getProduction(id: string): Promise<Production> {
 }
 
 export interface ProductionWithProducer extends Production {
+	/** The producer as a record, so the console can link to them. */
+	producer: import('$lib/types/entity').MemberRef | null;
 	/** Null when nobody has taken it, or when the account behind it was purged. */
 	producerName: string | null;
 	/** Null until close-out is signed off, or once that account is purged. */
@@ -140,14 +143,20 @@ export async function getProductionByEvent(
 		.select({
 			...getTableColumns(production),
 			producerName: user.name,
-			closedByName: closer.name
+			closedByName: closer.name,
+			// The producer as a record rather than a name: the console showed the
+			// string and gave no way to reach the person running the night.
+			producer: memberRefColumns()
 		})
 		.from(production)
 		.leftJoin(user, eq(user.id, production.producerUserId))
 		.leftJoin(closer, eq(closer.id, production.closedByUserId))
 		.where(eq(production.eventId, eventId))
 		.limit(1);
-	return row ?? null;
+
+	if (!row) return null;
+	const { producer, ...rest } = row;
+	return { ...rest, producer: rest.producerUserId ? toMemberRef(producer) : null };
 }
 
 // ---------------------------------------------------------------------------

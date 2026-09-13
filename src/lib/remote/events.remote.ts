@@ -15,7 +15,15 @@ import {
 	requestableActs as listRequestableActs
 } from '$lib/server/production/artifact-request-service';
 import { listWorkOrders as listOpenWorkOrders } from '$lib/server/volunteer/work-order-service';
-import { bandRefColumns, toBandRef, toEventRef, toMemberRef } from '$lib/server/entity/refs';
+import {
+	bandRefColumns,
+	reservationRefColumns,
+	toBandRef,
+	toEventRef,
+	toMemberRef,
+	toReservationRef
+} from '$lib/server/entity/refs';
+import type { ReservationRef } from '$lib/types/entity';
 import {
 	create,
 	update,
@@ -693,19 +701,30 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		}
 	}
 
-	let linkedReservation: { id: string; status: string; startsAt: Date; endsAt: Date } | null = null;
+	// The ref *and* the raw window. The console hand-rolled a badge, a time range
+	// and a "View reservation →" link — the row shape `EntityIdentity` exists to
+	// stop being rewritten per page — but the rebook form pre-fills its time
+	// inputs from the same record, and a ref carries no times.
+	let linkedReservation: {
+		id: string;
+		startsAt: Date;
+		endsAt: Date;
+		ref: ReservationRef;
+	} | null = null;
 	if (evt.reservationId) {
 		const [res] = await db
-			.select({
-				id: reservation.id,
-				status: reservation.status,
-				startsAt: reservation.startsAt,
-				endsAt: reservation.endsAt
-			})
+			.select(reservationRefColumns())
 			.from(reservation)
 			.where(eq(reservation.id, evt.reservationId))
 			.limit(1);
-		if (res) linkedReservation = res;
+		if (res) {
+			linkedReservation = {
+				id: res.id,
+				startsAt: res.startsAt,
+				endsAt: res.endsAt,
+				ref: toReservationRef(res)
+			};
+		}
 	}
 
 	const posterUrl = resolveImageUrl(evt.posterKey);
