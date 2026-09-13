@@ -5,7 +5,7 @@
 	import { createGroupSession } from '$lib/remote/group-events.remote';
 
 	/**
-	 * Put a session on the calendar, and optionally hold the room for it.
+	 * Put a session on the calendar — once, or on a repeat.
 	 *
 	 * Mount-agnostic like the rest of `groups/`: it takes its group as a prop.
 	 *
@@ -16,6 +16,23 @@
 	let { groupId }: { groupId: string } = $props();
 
 	const fields = createGroupSession.fields;
+
+	// Local, only to show or hide the rest of the repeat block. The submitted
+	// value is the checkbox's own; this is not a second source of truth for it.
+	let recurring = $state(false);
+	let frequency = $state('');
+
+	const frequencyOptions = [
+		{ value: 'weekly', label: 'Every week' },
+		{ value: 'biweekly', label: 'Every other week' },
+		{ value: 'monthly', label: 'Every month' }
+	];
+
+	// "Third Thursday" versus "the 17th". Only a monthly series has the choice.
+	const monthlyModeOptions = [
+		{ value: 'weekday', label: 'Same weekday of the month' },
+		{ value: 'monthday', label: 'Same date each month' }
+	];
 </script>
 
 <Action
@@ -60,6 +77,49 @@
 				label="Hold the practice room"
 				description="Free for a program — the booking belongs to the session, and no credits are spent. Leave off if you're meeting somewhere else."
 			/>
+
+			<FormField
+				field={fields.recurring}
+				type="checkbox"
+				label="Repeats"
+				bind:value={recurring}
+				description="Puts the following sessions up automatically, each one published and holding the same room."
+			/>
+
+			{#if recurring}
+				<div class="space-y-4 border-l-2 border-base-300 pl-4">
+					<FormField
+						field={fields.recurringFrequency}
+						type="select"
+						label="How often"
+						options={frequencyOptions}
+						bind:value={frequency}
+						required
+					/>
+
+					{#if frequency === 'monthly'}
+						<FormField
+							field={fields.monthlyMode}
+							type="select"
+							label="Which day"
+							options={monthlyModeOptions}
+							value="weekday"
+						/>
+					{/if}
+
+					<FormField
+						field={fields.recurringEndsAt}
+						type="date"
+						label="Until"
+						description="Optional. Leave empty to keep going."
+					/>
+
+					<p class="text-subtle">
+						If a later date is already booked, that session still goes up — it just doesn't hold the
+						room, and you get told which one.
+					</p>
+				</div>
+			{/if}
 		</div>
 	{/snippet}
 </Action>
