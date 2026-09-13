@@ -374,6 +374,13 @@ export interface CreateGroupData {
 	bio?: string;
 	/** The member who will run it. Appointed, not invited — see `assignLeader`. */
 	leaderId: string;
+	/**
+	 * Set at creation, so a program is never briefly listed and unjoinable. Both
+	 * stay staff's for its life — `updateGroupSettings` is the other writer.
+	 */
+	joinPolicy: GroupJoinPolicy;
+	joinInstructions?: string | null;
+	visibility: DirectoryVisibility;
 }
 
 /**
@@ -391,7 +398,14 @@ export async function createGroup(data: CreateGroupData) {
 	// batch, and skips the `band_site` row for a non-band kind. The leader is the
 	// owner from the first write rather than a second one, so there is no window
 	// in which the group exists with an empty owner seat.
-	return createGroupRow(data.leaderId, { kind: data.kind, name: data.name, bio: data.bio });
+	return createGroupRow(data.leaderId, {
+		kind: data.kind,
+		name: data.name,
+		bio: data.bio,
+		joinPolicy: data.joinPolicy,
+		joinInstructions: data.joinInstructions,
+		visibility: data.visibility
+	});
 }
 
 export interface UpdateGroupProfile {

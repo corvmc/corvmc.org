@@ -1,3 +1,4 @@
+import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
 import { db } from '$lib/server/db';
 import {
 	directoryEntry,
@@ -33,9 +34,12 @@ export function groupEntryInsert(values: {
 	name: string;
 	bio?: string | null;
 	avatarKey?: string | null;
+	/** Omitted keeps the column default, `'public'` — what a new band wants. */
+	visibility?: DirectoryVisibility;
 }) {
 	return db.insert(directoryEntry).values({
 		groupId: values.groupId,
+		...(values.visibility ? { visibility: values.visibility } : {}),
 		// A copy, deliberately — see the column comment. `group.name` stays
 		// canonical, so a rename has to write both.
 		name: values.name,

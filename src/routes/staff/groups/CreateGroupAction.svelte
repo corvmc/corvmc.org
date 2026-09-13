@@ -27,6 +27,21 @@
 		{ value: 'club', label: 'Club' },
 		{ value: 'committee', label: 'Committee' }
 	];
+
+	// Same wording as GroupSettingsForm, which is the other writer of both.
+	const policyOptions = [
+		{ value: 'invite_only', label: 'Invite only — someone adds you' },
+		{ value: 'open', label: 'Open — any member joins themselves' },
+		{ value: 'by_application', label: 'By application — you ask, a leader approves' }
+	];
+
+	const visibilityOptions = [
+		{ value: 'public', label: 'Public — anyone can find it' },
+		{ value: 'members', label: 'Members — signed-in members only' },
+		{ value: 'hidden', label: 'Hidden — not listed anywhere' }
+	];
+
+	let joinPolicy = $state('invite_only');
 </script>
 
 <Action
@@ -66,6 +81,37 @@
 				type="textarea"
 				label="What this program is"
 				description="Shown on the group's public page and in the group directory."
+			/>
+
+			<!-- Asked at creation, not left to the column defaults: those make a
+			     group public and invite-only at once, so it is advertised and
+			     unjoinable until someone finds the settings form (#1106). -->
+			<FormField
+				field={fields.joinPolicy}
+				type="select"
+				label="Who can join"
+				bind:value={joinPolicy}
+				options={policyOptions}
+				required
+			/>
+
+			{#if joinPolicy !== 'invite_only'}
+				<FormField
+					field={fields.joinInstructions}
+					type="textarea"
+					label="How it works"
+					placeholder="Third Thursday, 7pm. Bring a horn; charts provided."
+					description="Shown beside the Join button. The leader can change it later."
+				/>
+			{/if}
+
+			<FormField
+				field={fields.visibility}
+				type="select"
+				label="Visibility"
+				value="public"
+				options={visibilityOptions}
+				required
 			/>
 
 			<!-- `FormField` with the remote field, not a raw fieldset with a plain
