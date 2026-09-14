@@ -13,9 +13,12 @@ vi.mock('$lib/server/storage', () => ({
 	uploadFile: (...a: unknown[]) => uploadFile(...(a as []))
 }));
 
-const putPrivateObject = vi.fn(async () => undefined);
+const putPrivateObject = vi.fn(
+	async (_key: string, _body: ArrayBuffer, _type: string) => undefined
+);
 vi.mock('$lib/server/private-storage', () => ({
-	putPrivateObject: (...a: unknown[]) => putPrivateObject(...(a as []))
+	putPrivateObject: (...a: unknown[]) =>
+		putPrivateObject(...(a as Parameters<typeof putPrivateObject>))
 }));
 
 const record = vi.fn(async () => ({ id: 'media-1' }));
