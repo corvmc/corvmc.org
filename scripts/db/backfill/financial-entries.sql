@@ -15,6 +15,14 @@
 -- *intended* from local columns, which know nothing of disputes or partial
 -- refunds — per the spec, historical figures here orient rather than attest,
 -- and the Stripe baseline per period is what says by how much they are off.
+--
+-- ONE CONSTANT TO CHECK BEFORE RUNNING: 750, the cents a single credit is
+-- worth. A credit is 30 minutes (`MINUTES_PER_CREDIT`), so it is half the
+-- hourly rate — 750 at the $15/hr the site config defaults to. The rate lives
+-- in KV rather than in D1, so this file cannot read it, and it is written out
+-- here rather than hidden in an expression. **If the hourly rate has ever been
+-- something other than $15, this number is wrong and so is every credit row
+-- below.**
 
 -- ---------------------------------------------------------------------------
 -- Ticket sales
@@ -81,13 +89,13 @@ GROUP BY t.purchase_id, t.event_id;
 -- ---------------------------------------------------------------------------
 -- Reservations — the cash half only
 -- ---------------------------------------------------------------------------
--- `cash_due_cents` is what was owed after credits and is stored exactly.
+-- Both halves. `cash_due_cents` is what was owed after credits and is stored
+-- exactly; the credit half is `credits_used` valued at the constant above.
 --
--- The credit half is deliberately NOT reconstructed. `credits_used` is in
--- credit units — 30-minute blocks — and the hourly rate that valued them is
--- not stored per reservation, so any figure here would be today's rate applied
--- to last year's booking. Wrong silently is worse than absent, and the gap is
--- visible: a backfilled reservation shows its cash and nothing else.
+-- Valuing credits at today's rate is only sound because the rate has never
+-- moved. It is not stored per reservation, so if it ever does move, a later
+-- re-run cannot tell the eras apart — which is the argument for recording the
+-- rate on the reservation before that happens.
 
 INSERT INTO financial_entry (
 	id, amount_cents, kind, category, occurred_at, settlement,
@@ -110,6 +118,31 @@ WHERE r.status IN ('confirmed', 'completed')
   AND NOT EXISTS (
     SELECT 1 FROM financial_entry e
      WHERE e.subject_type = 'reservation' AND e.subject_id = r.id
+  );
+
+-- The credit half, as its own row and its own settlement. `stripeSettledCents`
+-- sums what cleared, so merging these into the cash figure would make the
+-- ledger permanently unreconcilable against Stripe.
+INSERT INTO financial_entry (
+	id, amount_cents, kind, category, occurred_at, settlement,
+	subject_type, subject_id, user_id, description, metadata, created_at
+)
+SELECT
+	lower(hex(randomblob(16))),
+	CAST(ROUND(r.credits_used * 750) AS INTEGER),
+	'earned', 'reservation',
+	COALESCE(r.paid_at, r.starts_at),
+	'credit',
+	'reservation', r.id || ':credit', r.created_by_user_id,
+	'Practice room, settled with credits (backfilled)',
+	json_object('backfilled', json('true'), 'creditsUsed', r.credits_used, 'creditValueCents', 750),
+	unixepoch()
+FROM reservation r
+WHERE r.status IN ('confirmed', 'completed')
+  AND COALESCE(r.credits_used, 0) > 0
+  AND NOT EXISTS (
+    SELECT 1 FROM financial_entry e
+     WHERE e.subject_type = 'reservation' AND e.subject_id = r.id || ':credit'
   );
 
 -- ---------------------------------------------------------------------------

@@ -92,7 +92,7 @@ describe('financial entry backfill', () => {
 		expect(entries()).toHaveLength(0);
 	});
 
-	it('reconstructs the cash half of a reservation and not the credit half', () => {
+	it('splits a part-credit reservation into its two settlements', () => {
 		sqlite.exec(`
 			insert into reservation (id, created_by_user_id, status, starts_at, paid_at,
 				credits_used, cash_due_cents)
@@ -102,17 +102,22 @@ describe('financial entry backfill', () => {
 		run();
 
 		const rows = entries();
-		expect(rows).toHaveLength(1);
-		expect(rows[0].amount_cents).toBe(500);
+		expect(rows).toHaveLength(2);
+
+		const cash = rows.find((r) => r.settlement === 'cash');
+		expect(cash?.amount_cents).toBe(500);
 		// When the money moved, not when the row was written.
-		expect(rows[0].occurred_at).toBe(1200);
-		// The units are recorded so the gap is visible rather than silent.
-		expect(JSON.parse(String(rows[0].metadata)).creditsUsed).toBe(4);
+		expect(cash?.occurred_at).toBe(1200);
+
+		// Four credits at 750 — half the $15 hourly rate, per the constant.
+		const credit = rows.find((r) => r.settlement === 'credit');
+		expect(credit?.amount_cents).toBe(3000);
+		expect(credit?.subject_id).toBe('r1:credit');
 	});
 
-	// A booking wholly covered by credits has no cash, and its credit value
-	// cannot be reconstructed — so it writes nothing rather than a wrong figure.
-	it('writes nothing for a fully credit-covered reservation', () => {
+	// Wholly credit-covered: no cash row at all, and the credit row carries the
+	// whole value. The rate has never moved, so valuing at today's is exact.
+	it('writes only the credit half when no cash was owed', () => {
 		sqlite.exec(`
 			insert into reservation (id, created_by_user_id, status, starts_at, credits_used, cash_due_cents)
 			values ('r1','u1','confirmed',1000,6,0)
@@ -120,7 +125,10 @@ describe('financial entry backfill', () => {
 
 		run();
 
-		expect(entries()).toHaveLength(0);
+		const rows = entries();
+		expect(rows).toHaveLength(1);
+		expect(rows[0].settlement).toBe('credit');
+		expect(rows[0].amount_cents).toBe(4500);
 	});
 
 	it('reconstructs a valued gift and skips an unvalued one', () => {
