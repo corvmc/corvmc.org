@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+	committeeApplicationQuestions,
+	committeeApplicationStatuses,
+	committeeApplicationStatusLabels,
 	capabilities,
 	positions,
 	positionOrder,
@@ -132,5 +135,30 @@ describe('hasCapability', () => {
 		expect(hasCapability(['user.list', 'credit.read'], 'user.list')).toBe(true);
 		expect(hasCapability(['user.list'], 'user.purge')).toBe(false);
 		expect(hasCapability([], 'user.list')).toBe(false);
+	});
+});
+
+describe('committeeApplicationQuestions', () => {
+	/**
+	 * The Zod schema in `committee-applications.remote.ts` spells its answer
+	 * fields out, because a schema built in a loop infers as `{}` and every
+	 * field loses its type. This is what stops the two lists drifting: add a
+	 * question here and the schema, the form and the chair's view all still
+	 * have to learn about it, and this test is where they are told.
+	 */
+	it('declares exactly the ids the apply form has fields for', () => {
+		expect(committeeApplicationQuestions.map((q) => q.id)).toEqual(['experience', 'vision']);
+	});
+
+	it('gives every question a prompt, since the prompt is the label', () => {
+		for (const question of committeeApplicationQuestions) {
+			expect(question.prompt.trim().length).toBeGreaterThan(0);
+		}
+	});
+
+	it('labels every status, so a badge never renders a raw enum', () => {
+		expect(Object.keys(committeeApplicationStatusLabels).sort()).toEqual(
+			[...committeeApplicationStatuses].sort()
+		);
 	});
 });

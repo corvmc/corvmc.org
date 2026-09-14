@@ -889,6 +889,21 @@ edited away, because each one closes off an alternative that will otherwise be r
 9. **The application is paper.** See decision 2 — this is what keeps `by_application` a bare
    status flip and keeps a schema change out of the committee work entirely.
 
+   > ⏫ **Reversed 2026-09-14.** The paper form asks two questions — _"Describe any relevant
+   > experience"_ and _"What would you like your music community to look like?"_ — and the app
+   > had nowhere to put the answers. `committee_application` now does.
+   >
+   > It is **not** `by_application`, and the reason is specific: `declineApplication()` deletes
+   > the `group_member` row, which `instructor-service.ts` names as correct _"because a group
+   > application carries no content"_. Adding answers to that row would falsify a statement
+   > another module depends on and destroy what somebody wrote on decline; `unique(groupId,
+userId)` would also leave a declined applicant unable to ever apply again. Committees stay
+   > `invite_only`, membership stays the outcome, and accepting invites.
+   >
+   > What survives from this decision is its actual content: the **conversation is still the
+   > gate**, there is still no seat cap, and the interview still happens off the app.
+   > `contacted` is a status because the form promises a chair will call.
+
 10. **Committee titles and positions are at the chair's discretion, and nothing reads them.**
     `group_member.position` stays free text with no consumer. A committee names its own roles,
     renames them, and drops them without asking the app's permission, and code that read the

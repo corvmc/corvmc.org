@@ -5,6 +5,7 @@ import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupJoinPolicies } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { requireGroupRole, requireProgramRole } from '$lib/server/group/group-context';
+import { listForCommittee } from '$lib/server/group/committee-application-service';
 import { directoryVisibilities } from '$lib/server/db/schema/directory';
 import {
 	acceptInvitation,
@@ -282,7 +283,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		files,
 		documentUsage,
 		projects,
-		emailInvites
+		emailInvites,
+		committeeApplications
 	] = await Promise.all([
 		getMembers(group.id).then(partitionByStatus),
 		canManage ? listForManager(group.id) : listPublished(group.id),
@@ -301,7 +303,11 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		// Invitations to an address rather than to an account. Withheld from a
 		// plain member for the same reason `requested` is: who was asked is a
 		// manager's business.
-		canManage ? listEmailInvites(group.id) : Promise.resolve([])
+		canManage ? listEmailInvites(group.id) : Promise.resolve([]),
+		// Folded in rather than given a query of its own, per
+		// `custom/no-concurrent-remote-queries`. A committee is invite-only, so
+		// its applications are their own entity and never reach `roster.requested`.
+		group.kind === 'committee' && canManage ? listForCommittee(group.id) : Promise.resolve([])
 	]);
 
 	return {
@@ -355,6 +361,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			endsAt: project.endsAt
 		})),
 		emailInvites,
+		committeeApplications,
 		members: {
 			active: roster.active,
 			pending: roster.pending,

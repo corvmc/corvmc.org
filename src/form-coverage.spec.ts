@@ -86,7 +86,11 @@ async function uncoveredFields() {
 }
 
 describe('form field coverage', () => {
-	it('renders a control for every field its schema accepts', async () => {
+	// It reads every `form()` in the tree and every component that might render
+	// one, so it runs near the 5s default on its own and tips over it whenever
+	// a sibling file is competing for the machine. The budget is generous
+	// rather than tuned: this is one assertion over a whole-tree scan.
+	it('renders a control for every field its schema accepts', { timeout: 30_000 }, async () => {
 		const grandfathered = new Set(GRANDFATHERED);
 		const offenders = (await uncoveredFields()).filter((f) => !grandfathered.has(f));
 

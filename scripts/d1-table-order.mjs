@@ -108,6 +108,10 @@ export const tableOrder = [
 	'notification',
 	'account',
 	'group_member',
+	// References only `user`; its choices reference it and `group`, so the pair
+	// sits together and after both.
+	'committee_application',
+	'committee_application_choice',
 	'payment_cache',
 	'ticket',
 	'event_rsvp',

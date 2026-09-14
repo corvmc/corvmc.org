@@ -17,6 +17,7 @@
 		IconUser,
 		IconSettings,
 		IconHeartHandshake,
+		IconUsersGroup,
 		IconBulb
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/layout/AppShell.svelte';
@@ -65,6 +66,7 @@
 		equipment: IconTool,
 		'equipment-loans': IconPackage,
 		volunteer: IconHeartHandshake,
+		'volunteer-committees': IconUsersGroup,
 		suggestions: IconBulb,
 		profile: IconUser,
 		account: IconSettings,

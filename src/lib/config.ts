@@ -955,6 +955,46 @@ export const volunteerHourStatusLabels: Record<(typeof volunteerHourStatuses)[nu
  * happens in a monthly meeting rather than at the space, which is why it reads
  * as its own group rather than as more "away from shows".
  */
+/**
+ * What CMC asks every committee applicant, in the order the paper form asks it.
+ *
+ * A const rather than a table: the board settles these, not a chair, and the
+ * two are the same for all six committees. Answers are stored keyed by `id`, so
+ * rewording a prompt is a deploy and leaves old answers readable.
+ */
+export const committeeApplicationQuestions = [
+	{ id: 'experience', prompt: 'Describe any relevant experience.' },
+	{ id: 'vision', prompt: 'What would you like your music community to look like?' }
+] as const;
+
+export type CommitteeApplicationQuestionId = (typeof committeeApplicationQuestions)[number]['id'];
+
+/** How long an answer may be. Generous: the paper form gives three lines and a margin. */
+export const COMMITTEE_ANSWER_MAX = 2000;
+
+/**
+ * Where one committee's half of an application has got to.
+ *
+ * Per committee, not per application: the paper form ticks several, and Booking
+ * accepting you says nothing about what Facility decided. `contacted` is a real
+ * state rather than a nicety — the form promises "a chair will contact you to
+ * discuss it", and a chair needs to know which of those calls they have made.
+ */
+export const committeeApplicationStatuses = [
+	'submitted',
+	'contacted',
+	'accepted',
+	'declined'
+] as const;
+export type CommitteeApplicationStatus = (typeof committeeApplicationStatuses)[number];
+
+export const committeeApplicationStatusLabels: Record<CommitteeApplicationStatus, string> = {
+	submitted: 'Submitted',
+	contacted: 'Contacted',
+	accepted: 'Accepted',
+	declined: 'Declined'
+};
+
 export const volunteerRoleGroups = ['at-shows', 'away-from-shows', 'committee'] as const;
 
 export const volunteerRoleGroupLabels: Record<(typeof volunteerRoleGroups)[number], string> = {
