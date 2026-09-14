@@ -39,6 +39,7 @@ import {
 	VOLUNTEER_ROLE_NAME_MAX,
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_NOTES_MAX,
+	VOLUNTEER_SHIFT_TITLE_MAX,
 	ORIENTATION_NOTES_MAX,
 	ORIENTATION_WAIVED_REASON_MAX,
 	dutyListAnchors,
@@ -156,6 +157,7 @@ export const revokeCertificationSchema = z.object({
 
 export const createShiftSchema = z.object({
 	volunteerRoleId: z.uuid(),
+	title: z.string().trim().max(VOLUNTEER_SHIFT_TITLE_MAX).optional(),
 	eventId: z.uuid().optional(),
 	// Wall-clock in club time, `YYYY-MM-DDTHH:mm` from a datetime-local input.
 	startsAt: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
@@ -287,6 +289,14 @@ export const workOrder = sqliteTable(
 		// deleting an event must not silently delete the record that four people
 		// worked it.
 		eventId: text('event_id').references(() => eventListing.id, { onDelete: 'set null' }),
+
+		// What to call this shift, where the event does not already say. A shift
+		// with an event borrows its title; one without had only its role name, so
+		// two "Work Parties" on one Saturday read identically on the claim board.
+		//
+		// Nullable and not defaulted: an empty title means "use the event, or the
+		// role", which is what every shift did before this column existed.
+		title: text('title'),
 
 		// Nullable, because an unscheduled row is a bare work order: work that
 		// needs doing with nobody booked to do it yet. Setting a window turns it

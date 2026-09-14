@@ -1157,6 +1157,8 @@ export const VOLUNTEER_SHIFT_MAX_MINUTES = 1440;
 export const VOLUNTEER_SHIFT_MAX_CAPACITY = 50;
 
 export const VOLUNTEER_SHIFT_NOTES_MAX = 1000;
+/** A shift's own name, for one that hangs off no event. Short: it is a heading. */
+export const VOLUNTEER_SHIFT_TITLE_MAX = 100;
 
 // ---------------------------------------------------------------------------
 // Orientation

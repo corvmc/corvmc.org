@@ -9,7 +9,8 @@ import {
 	DEFAULT_TIMEZONE,
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_MAX_MINUTES,
-	VOLUNTEER_SHIFT_NOTES_MAX
+	VOLUNTEER_SHIFT_NOTES_MAX,
+	VOLUNTEER_SHIFT_TITLE_MAX
 } from '$lib/config';
 import type { WorkOrder, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
 
@@ -75,6 +76,14 @@ function validateCapacity(capacity: number): number {
 	return capacity;
 }
 
+function validateTitle(title?: string | null): string | null {
+	const trimmed = title?.trim() ?? '';
+	if (trimmed.length > VOLUNTEER_SHIFT_TITLE_MAX) {
+		throw new ShiftValidationError(`Keep the name under ${VOLUNTEER_SHIFT_TITLE_MAX} characters.`);
+	}
+	return trimmed || null;
+}
+
 function validateNotes(notes?: string | null): string | null {
 	const trimmed = notes?.trim() ?? '';
 	if (trimmed.length > VOLUNTEER_SHIFT_NOTES_MAX) {
@@ -90,6 +99,8 @@ function validateNotes(notes?: string | null): string | null {
 export async function createShift(data: {
 	volunteerRoleId: string;
 	eventId?: string | null;
+	/** What to call it, where the event does not. Blank falls back to the role. */
+	title?: string | null;
 	/** `YYYY-MM-DDTHH:mm`, club time. */
 	startsAt: string;
 	endsAt: string;
@@ -115,6 +126,7 @@ export async function createShift(data: {
 		.values({
 			volunteerRoleId: data.volunteerRoleId,
 			eventId: data.eventId || null,
+			title: validateTitle(data.title),
 			startsAt: times.startsAt,
 			endsAt: times.endsAt,
 			capacity: validateCapacity(data.capacity),
@@ -183,6 +195,10 @@ export async function duplicateShift(
 			volunteerRoleId: original.volunteerRoleId,
 			// Deliberately not copied: the new date is not that event's date.
 			eventId: null,
+			// The title IS copied, and matters more here than anywhere: a standing
+			// slot with no event is exactly what gets duplicated forward, and it is
+			// the name that tells the two apart on the board.
+			title: original.title,
 			startsAt,
 			endsAt,
 			capacity: original.capacity,
@@ -199,6 +215,7 @@ export async function updateShift(
 	data: {
 		volunteerRoleId?: string;
 		eventId?: string | null;
+		title?: string | null;
 		startsAt?: string;
 		endsAt?: string;
 		capacity?: number;
@@ -238,6 +255,7 @@ export async function updateShift(
 		.set({
 			...(data.volunteerRoleId ? { volunteerRoleId: data.volunteerRoleId } : {}),
 			...(data.eventId !== undefined ? { eventId: data.eventId || null } : {}),
+			...(data.title !== undefined ? { title: validateTitle(data.title) } : {}),
 			startsAt,
 			endsAt,
 			...(data.capacity !== undefined ? { capacity: data.capacity } : {}),

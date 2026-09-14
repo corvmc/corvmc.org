@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "eb86e0ee-419d-4459-8f70-0f25da51a555",
+  "id": "1ee9237f-5712-4ddc-b159-d7d78c3244da",
   "prevIds": [
-    "463077ec-0b42-410c-a92a-a696f9396aa0"
+    "eb86e0ee-419d-4459-8f70-0f25da51a555"
   ],
   "ddl": [
     {
@@ -8841,6 +8841,16 @@
       "default": null,
       "generated": null,
       "name": "event_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
       "entityType": "columns",
       "table": "work_order"
     },

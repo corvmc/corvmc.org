@@ -9,6 +9,7 @@
 	 * says it without needing a sentence.
 	 */
 	import Action from '$lib/components/ui/Action.svelte';
+	import { shiftLabel, shiftRoleSuffix } from '$lib/utils/shift-label';
 	import ShiftProgress from './ShiftProgress.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
@@ -22,6 +23,7 @@
 		shift: {
 			signupId: string;
 			roleName: string;
+			title?: string | null;
 			/** Null for an unscheduled work order — work with no window booked yet. */
 			startsAt: Date | null;
 			endsAt: Date | null;
@@ -71,10 +73,10 @@
 	</div>
 
 	<div class="min-w-0 flex-1">
-		<div class="font-medium">{shift.roleName}</div>
+		<div class="font-medium">{shiftLabel(shift)}</div>
 		<div class="text-subtle text-xs">
-			{timeRange}{#if shift.eventTitle}
-				· {shift.eventTitle}{/if}
+			{timeRange}{#if shiftRoleSuffix(shift)}
+				· {shiftRoleSuffix(shift)}{/if}
 		</div>
 
 		{#if calledOff}

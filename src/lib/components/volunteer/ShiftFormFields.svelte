@@ -4,7 +4,7 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
 	import { searchEvents } from '$lib/remote/events.remote';
-	import { VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
+	import { VOLUNTEER_SHIFT_TITLE_MAX, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
 
 	/** The shape SearchSelect hands back, and the shape an edit form seeds it with. */
 	type ShiftEvent = { id: string; title: string; when?: string };
@@ -18,7 +18,8 @@
 		startsAt,
 		endsAt,
 		capacity,
-		notes
+		notes,
+		title
 	}: {
 		/**
 		 * The remote form this field set posts into — `createShift`, or
@@ -51,6 +52,8 @@
 		endsAt: string;
 		capacity: string;
 		notes?: string;
+		/** The shift's own name. Blank falls back to the event, then the role. */
+		title?: string;
 	} = $props();
 
 	// Seeded once and then owned by the picker. `untrack` says that on purpose:
@@ -104,6 +107,20 @@
 		/>
 	</FormField>
 {/if}
+
+<!--
+	Under the event picker, because the two answer the same question and the
+	event usually answers it. A shift with a show borrows its title; one without
+	had nothing but the role name, so two work parties on one Saturday read
+	identically on the board.
+-->
+<FormField
+	name="title"
+	label="Name"
+	value={title}
+	maxlength={String(VOLUNTEER_SHIFT_TITLE_MAX)}
+	description="Optional. Leave it blank to use the event's name, or the role's."
+/>
 
 <FormField name="startsAt" label="Starts" type="datetime-local" value={startsAt} />
 <FormField name="endsAt" label="Ends" type="datetime-local" value={endsAt} />

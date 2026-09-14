@@ -21,12 +21,14 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
+	import { shiftLabel, shiftRoleSuffix } from '$lib/utils/shift-label';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { claimShift } from '$lib/remote/volunteer.remote';
 
 	type Shift = {
 		id: string;
 		roleName: string;
+		title?: string | null;
 		startsAt: Date;
 		endsAt: Date;
 		capacity: number;
@@ -109,7 +111,7 @@
 				{@const blocked = blockedReason(shift)}
 				<li class="rounded-lg border border-base-300 p-3" class:opacity-60={blocked}>
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="font-medium">{shift.roleName}</span>
+						<span class="font-medium">{shiftLabel(shift)}</span>
 						{#if shift.interested}
 							<Badge variant="info" size="xs">INTERESTED</Badge>
 						{/if}
@@ -117,8 +119,8 @@
 
 					<div class="text-subtle text-sm">
 						{formatDateShort(shift.startsAt)} · {timeRange(shift.startsAt, shift.endsAt)}
-						{#if shift.eventTitle}
-							· {shift.eventTitle}
+						{#if shiftRoleSuffix(shift)}
+							· {shiftRoleSuffix(shift)}
 						{/if}
 					</div>
 
@@ -146,7 +148,7 @@
 								{#snippet form()}
 									<input type="hidden" name="shiftId" value={shift.id} />
 									<p class="text-sm">
-										{shift.roleName}, {formatDateShort(shift.startsAt)},
+										{shiftLabel(shift)}, {formatDateShort(shift.startsAt)},
 										{timeRange(shift.startsAt, shift.endsAt)}.
 									</p>
 
