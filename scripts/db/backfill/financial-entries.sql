@@ -25,66 +25,28 @@
 -- below.**
 
 -- ---------------------------------------------------------------------------
--- Ticket sales
+-- Ticket sales — deliberately NOT reconstructed here
 -- ---------------------------------------------------------------------------
--- Three columns, three rows, exactly as a live sale writes them. Only `valid`
--- and `checked_in` count: a `pending` ticket never completed and a `cancelled`
--- one was refunded, which a reversal covers rather than a sale.
+-- Checked against production before this file was ever run: all 35 valid
+-- tickets across 28 purchases have `unit_price_cents`, `contribution_cents`,
+-- `acts_cents` and `collective_cents` at zero. No ticket has ever carried a
+-- split. Those columns arrived with the sliding scale on 2026-09-10 and
+-- nothing has sold since.
 --
--- Grouped by purchase, not by ticket: one sale of three tickets is one
--- transaction, and `subject_id` is the purchase everywhere else.
-
-INSERT INTO financial_entry (
-	id, amount_cents, kind, category, occurred_at, settlement,
-	stripe_payment_record_id, subject_type, subject_id, user_id, description, metadata, created_at
-)
-SELECT
-	lower(hex(randomblob(16))),
-	SUM(t.collective_cents),
-	'earned', 'ticket_sales',
-	MIN(t.created_at),
-	CASE WHEN MAX(t.stripe_payment_record_id) IS NULL THEN 'none' ELSE 'stripe' END,
-	MAX(t.stripe_payment_record_id),
-	'ticket', t.purchase_id, MAX(t.user_id),
-	'Ticket sale (backfilled)',
-	json_object('backfilled', json('true'), 'tickets', COUNT(*)),
-	unixepoch()
-FROM ticket t
-WHERE t.status IN ('valid', 'checked_in')
-  AND NOT EXISTS (
-    SELECT 1 FROM financial_entry e
-     WHERE e.subject_type = 'ticket' AND e.subject_id = t.purchase_id
-  )
-GROUP BY t.purchase_id;
-
--- The acts' share of the same sales. A pass-through nets to zero within its
--- group, and the out-leg is written when settlement pays the act — which is
--- phase 5's third row and not yet built, so these sit as an open pool
--- deliberately.
-INSERT INTO financial_entry (
-	id, amount_cents, kind, category, occurred_at, settlement,
-	stripe_payment_record_id, settlement_group, subject_type, subject_id, description, metadata, created_at
-)
-SELECT
-	lower(hex(randomblob(16))),
-	SUM(t.acts_cents),
-	'pass_through', 'act_payout',
-	MIN(t.created_at),
-	CASE WHEN MAX(t.stripe_payment_record_id) IS NULL THEN 'none' ELSE 'stripe' END,
-	MAX(t.stripe_payment_record_id),
-	t.event_id,
-	'ticket', t.purchase_id || ':acts',
-	'Acts'' share (backfilled)',
-	json_object('backfilled', json('true')),
-	unixepoch()
-FROM ticket t
-WHERE t.status IN ('valid', 'checked_in')
-  AND t.acts_cents > 0
-  AND NOT EXISTS (
-    SELECT 1 FROM financial_entry e
-     WHERE e.subject_type = 'ticket' AND e.subject_id = t.purchase_id || ':acts'
-  )
-GROUP BY t.purchase_id, t.event_id;
+-- Reconstructing from them would write 28 rows of $0, which the spec's "a free
+-- sale still writes a $0 entry" rule makes look deliberate — a priced show
+-- would be permanently indistinguishable from a free one. Absent beats wrong
+-- wearing the costume of a rule.
+--
+-- Ticket history has to come from Stripe, where the money actually is:
+-- $10,272.86 gross across 334 charges since Dec 2024. Two facts the
+-- reconstruction will need, both confirmed by the collective:
+--
+--   * the split has only ever been 30% collective / 70% acts
+--   * the hourly rate has only ever been $15
+--
+-- That makes the Stripe baseline the *primary source* for ticket history
+-- rather than a cross-check on it — see #825 phase 3.
 
 -- ---------------------------------------------------------------------------
 -- Reservations — the cash half only

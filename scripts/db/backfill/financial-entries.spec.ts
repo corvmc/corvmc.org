@@ -62,36 +62,6 @@ beforeEach(() => {
 });
 
 describe('financial entry backfill', () => {
-	it('reconstructs a ticket sale as the collective share and the acts pool', () => {
-		sqlite.exec(`
-			insert into ticket (id, event_id, purchase_id, user_id, status, stripe_payment_record_id,
-				acts_cents, collective_cents, created_at)
-			values ('t1','evt-1','pur-1','u1','valid','pr_1',700,300,1000),
-			       ('t2','evt-1','pur-1','u1','valid','pr_1',700,300,1000)
-		`);
-
-		run();
-
-		const rows = entries();
-		expect(rows).toHaveLength(2);
-		// One sale of two tickets is one transaction, not two.
-		expect(rows.find((r) => r.kind === 'earned')?.amount_cents).toBe(600);
-		expect(rows.find((r) => r.kind === 'pass_through')?.amount_cents).toBe(1400);
-		expect(rows.find((r) => r.kind === 'pass_through')?.settlement_group).toBe('evt-1');
-	});
-
-	it('skips a pending or cancelled ticket', () => {
-		sqlite.exec(`
-			insert into ticket (id, event_id, purchase_id, status, collective_cents, created_at)
-			values ('t1','evt-1','pur-1','pending',300,1000),
-			       ('t2','evt-1','pur-2','cancelled',300,1000)
-		`);
-
-		run();
-
-		expect(entries()).toHaveLength(0);
-	});
-
 	it('splits a part-credit reservation into its two settlements', () => {
 		sqlite.exec(`
 			insert into reservation (id, created_by_user_id, status, starts_at, paid_at,
@@ -153,10 +123,8 @@ describe('financial entry backfill', () => {
 	 */
 	it('is a no-op on a second run', () => {
 		sqlite.exec(`
-			insert into ticket (id, event_id, purchase_id, status, acts_cents, collective_cents, created_at)
-			values ('t1','evt-1','pur-1','valid',700,300,1000);
-			insert into reservation (id, created_by_user_id, status, starts_at, cash_due_cents)
-			values ('r1','u1','completed',1000,500);
+			insert into reservation (id, created_by_user_id, status, starts_at, credits_used, cash_due_cents)
+			values ('r1','u1','completed',1000,2,500);
 			insert into acquisition (id, kind, occurred_at, fair_value_cents)
 			values ('a1','donation',900,8240)
 		`);
@@ -170,8 +138,8 @@ describe('financial entry backfill', () => {
 
 	it('marks every row as backfilled', () => {
 		sqlite.exec(`
-			insert into ticket (id, event_id, purchase_id, status, acts_cents, collective_cents, created_at)
-			values ('t1','evt-1','pur-1','valid',700,300,1000)
+			insert into reservation (id, created_by_user_id, status, starts_at, cash_due_cents)
+			values ('r1','u1','completed',1000,500)
 		`);
 
 		run();
