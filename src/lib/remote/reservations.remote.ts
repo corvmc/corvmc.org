@@ -1,3 +1,7 @@
+import {
+	recordReservationCash,
+	recordReservationCredit
+} from '$lib/server/finance/reservation-entries';
 import { z } from 'zod';
 import { error, redirect, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
@@ -1355,7 +1359,19 @@ async function commitCreditsAndSettleIfCovered(opts: {
 		hourlyRateCents: opts.hourlyRateCents
 	});
 
+	// `alreadyCommitted` is the guard: this funnel is reached from both the
+	// confirm path and the settle path, and the credits are deducted once.
+	if (!credit.alreadyCommitted) {
+		await recordReservationCredit({
+			reservationId: opts.reservationId,
+			userId: opts.userId,
+			creditDiscountCents: credit.creditDiscountCents,
+			occurredAt: new Date()
+		});
+	}
+
 	if (credit.remainingCents > 0) {
+		// Part credit, part cash. The cash half is recorded where it is taken.
 		return { remainingCents: credit.remainingCents, settled: false };
 	}
 
@@ -2195,6 +2211,14 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 			metadata: { reservation_id: data.id },
 			reference: data.id
 		}));
+
+		await recordReservationCash({
+			reservationId: data.id,
+			userId: row.createdByUserId,
+			amountCents: remainingCents,
+			stripePaymentRecordId: paymentRecordId,
+			occurredAt: new Date()
+		});
 	} else {
 		// Fully covered by credits — already settled by the commit (creditsUsed set).
 		const [r] = await db
