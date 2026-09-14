@@ -4,6 +4,8 @@ let selectResultQueue: unknown[][] = [];
 let insertResult: unknown[] = [];
 let updateResult: unknown[] = [];
 let updateCalls: unknown[] = [];
+/** Every `insert().values()` payload, so a header's own columns can be asserted. */
+let insertCalls: unknown[] = [];
 
 function chainable() {
 	const proxy: any = new Proxy(() => proxy, {
@@ -22,7 +24,8 @@ vi.mock('$lib/server/db', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
-			values: vi.fn(() => {
+			values: vi.fn((values: unknown) => {
+				insertCalls.push(values);
 				const p: any = Promise.resolve(insertResult);
 				p.returning = () => Promise.resolve(insertResult);
 				return p;
@@ -78,6 +81,7 @@ beforeEach(() => {
 	insertResult = [{ id: 'acq-1' }];
 	updateResult = [{ id: 'acq-1' }];
 	updateCalls = [];
+	insertCalls = [];
 	vi.mocked(recordMovement).mockResolvedValue({ id: 'mv-1' } as never);
 	vi.mocked(createAsset).mockResolvedValue({ id: 'as-1' } as never);
 });
@@ -106,6 +110,41 @@ describe('recordAcquisition', () => {
 				acquisitionId: 'acq-1'
 			})
 		);
+	});
+
+	/**
+	 * A receipt photographed now and itemised later by whoever can read it. The
+	 * register already tolerated this on the read side — every total falls back
+	 * to the lines — but the write side required at least one.
+	 */
+	it('records a header with no lines at all', async () => {
+		const row = await recordAcquisition({
+			kind: 'donation',
+			occurredAt: new Date('2026-09-13'),
+			sourceName: 'Committee cleanup',
+			totalCents: 8240
+		});
+
+		expect(row).toBeDefined();
+		expect(recordMovement).not.toHaveBeenCalled();
+		expect(createAsset).not.toHaveBeenCalled();
+	});
+
+	// The distinction the schema warns about: a member who gave is not a member
+	// who is owed, and the two must not collapse into one column.
+	it('keeps the donor and the payer apart', async () => {
+		await recordAcquisition({
+			kind: 'donation',
+			occurredAt: new Date('2026-09-13'),
+			donorUserId: 'user-donor',
+			totalCents: 8240
+		});
+
+		expect(insertCalls.at(0)).toMatchObject({
+			donorUserId: 'user-donor',
+			paidByUserId: null,
+			totalCents: 8240
+		});
 	});
 
 	/**

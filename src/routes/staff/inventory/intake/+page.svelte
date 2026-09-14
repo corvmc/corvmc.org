@@ -8,6 +8,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
+	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
 	import LocationField from '$lib/components/inventory/LocationField.svelte';
 	import IntakeLines from './IntakeLines.svelte';
 	import { getIntakePage, recordIntake } from '$lib/remote/inventory.remote';
@@ -65,6 +66,8 @@
 	// An arrival against an order is a purchase by definition; a walk-in stocktake
 	// entry is not, so the default depends on how the page was reached.
 	let kind = $state<(typeof acquisitionKinds)[number]>(orderId ? 'purchase' : 'opening_balance');
+	let donorUserId = $state('');
+	let donorName = $state('');
 	let paidByUserId = $state('');
 	let paidByName = $state('');
 
@@ -134,12 +137,31 @@
 				{/if}
 				<Field field={fields.reference} type="text" label="Reference / receipt no." />
 
+				<MoneyField
+					field={fields.totalCents}
+					label="Receipt total"
+					description="What the paperwork says. Enough on its own — the lines below can wait for someone who can read the picture."
+				/>
+
+				{#if isGift}
+					<!-- A member who bought supplies and waived the money is a donor,
+					     not a creditor. `paidByUserId` below is the opposite claim and
+					     the schema warns against conflating them, so the two pickers
+					     never appear together. -->
+					<MemberPicker
+						field={fields.donorUserId}
+						bind:value={donorUserId}
+						bind:name={donorName}
+						label="Donated by"
+					/>
+				{/if}
+
 				{#if kind === 'purchase'}
 					<MemberPicker
 						field={fields.paidByUserId}
 						bind:value={paidByUserId}
 						bind:name={paidByName}
-						label="Paid by (leave blank if the collective paid)"
+						label="Paid by, and owed it back (leave blank if the collective paid)"
 					/>
 				{/if}
 
@@ -156,6 +178,12 @@
 
 			<InfoCard title="What arrived">
 				<IntakeLines {items} bind:lines />
+				{#if lines.length === 0}
+					<p class="mt-2 text-subtle">
+						Optional. Record the total and the receipt now; whoever itemises it later adds the lines
+						from the image.
+					</p>
+				{/if}
 			</InfoCard>
 
 			<div>

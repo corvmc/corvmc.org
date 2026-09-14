@@ -113,6 +113,20 @@ const FALLBACK_FILENAME = 'download';
  * `../../etc/passwd` cannot become a path). Never returns an empty string,
  * because a `filename=""` is worse than a made-up name.
  */
+/**
+ * The prefix every acquisition receipt shares, in the **private** bucket.
+ *
+ * Receipts are the one inventory attachment that is not public: a manual and a
+ * photo of a dented amp are harmless, a till receipt carries card digits, a
+ * name and an address. `isReceiptKey` is what the read route checks before it
+ * reaches for the private bucket rather than the public one.
+ */
+export const RECEIPT_KEY_PREFIX = 'inventory/receipts/';
+
+export function isReceiptKey(key: string | null | undefined): boolean {
+	return !!key && key.startsWith(RECEIPT_KEY_PREFIX);
+}
+
 export function sanitizeFilename(name: string): string {
 	const flattened = name
 		// eslint-disable-next-line no-control-regex -- the point is to remove them

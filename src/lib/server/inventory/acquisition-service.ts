@@ -9,7 +9,7 @@ import {
 import { user } from '$lib/server/db/schema/authentication';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { listFor } from '$lib/server/media/media-service';
-import { resolveImageUrl } from '$lib/server/storage';
+import { isReceiptKey } from '$lib/server/storage-keys';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { recordMovement, signedQuantity } from './stock-service';
 import { createAsset, AssetTagTakenError } from './asset-service';
@@ -59,7 +59,13 @@ export interface CreateAcquisitionData {
 	paidByUserId?: string;
 	locationId?: string;
 	notes?: string;
-	lines: AcquisitionLineInput[];
+	/**
+	 * Omitted or empty records the header alone — a receipt photographed now and
+	 * itemised later by whoever can read it. The register already tolerates this
+	 * on the read side: every total falls back to the lines when the header has
+	 * none, so an unitemised row still reports a number.
+	 */
+	lines?: AcquisitionLineInput[];
 	recordedByUserId?: string;
 }
 
@@ -83,7 +89,7 @@ export async function recordAcquisition(data: CreateAcquisitionData) {
 		})
 		.returning();
 
-	for (const line of data.lines) {
+	for (const line of data.lines ?? []) {
 		await db.insert(acquisitionLine).values({
 			acquisitionId: header.id,
 			itemId: line.itemId,
@@ -201,10 +207,14 @@ export interface BulkAcquisitionResult {
 export async function recordAcquisitionBulk(
 	data: CreateAcquisitionData
 ): Promise<BulkAcquisitionResult> {
-	if (data.lines.length === 0) {
+	// Still required here, unlike `recordAcquisition`: this path exists to avoid
+	// the round-trip explosion of many lines, and a header with none is one
+	// insert that belongs on the sequential path.
+	const lines = data.lines ?? [];
+	if (lines.length === 0) {
 		throw new InvalidAcquisitionError('An acquisition needs at least one line');
 	}
-	for (const line of data.lines) {
+	for (const line of lines) {
 		if (!Number.isInteger(line.quantity) || line.quantity < 1) {
 			throw new InvalidAcquisitionError('Every line needs a whole quantity of at least one');
 		}
@@ -212,7 +222,7 @@ export async function recordAcquisitionBulk(
 
 	// --- Validation: two queries, regardless of how many lines arrived. ---
 
-	const itemIds = [...new Set(data.lines.map((l) => l.itemId))];
+	const itemIds = [...new Set(lines.map((l) => l.itemId))];
 	const items = await db
 		.select({ id: inventoryItem.id, kind: inventoryItem.kind })
 		.from(inventoryItem)
@@ -224,7 +234,7 @@ export async function recordAcquisitionBulk(
 
 	// A serialized line may name its units; a bulk line may not, because a
 	// counted item has no units to name.
-	for (const line of data.lines) {
+	for (const line of lines) {
 		if (line.units?.length && kindById.get(line.itemId) !== 'serialized') {
 			throw new InvalidAcquisitionError(
 				'Only a serialized item can list individual units on a line'
@@ -232,7 +242,7 @@ export async function recordAcquisitionBulk(
 		}
 	}
 
-	const tags = data.lines
+	const tags = lines
 		.flatMap((l) => l.units ?? [])
 		.map((u) => u.assetTag)
 		.filter((t): t is string => !!t);
@@ -269,7 +279,7 @@ export async function recordAcquisitionBulk(
 	const assetRows: (typeof inventoryAsset.$inferInsert)[] = [];
 	const movementRows: (typeof stockMovement.$inferInsert)[] = [];
 
-	for (const line of data.lines) {
+	for (const line of lines) {
 		lineRows.push({
 			id: crypto.randomUUID(),
 			acquisitionId,
@@ -456,9 +466,16 @@ export async function getAcquisitionById(id: string) {
 		paidByName: header.paidByName,
 		lines: lines.map((l) => ({ ...l.line, item: l.item })),
 		movements: movements.map((m) => ({ ...m.movement, item: m.item })),
-		// Resolved here because `resolveImageUrl` lives in `$lib/server/`, which
-		// components may not import — the same reason `listItemResources` does it.
-		receipts: receipts.map((r) => ({ ...r, url: resolveImageUrl(r.key) }))
+		// Never `resolveImageUrl`: that hands out a media.corvmc.org address, and
+		// a receipt carries card digits, a name and an address. The authorized
+		// route resolves the object from the attachment, so no key ever reaches
+		// the browser. A receipt attached before private storage still has a
+		// public key — the route refuses those rather than pretending.
+		receipts: receipts.map((r) => ({
+			...r,
+			url: `/api/inventory/receipts/${r.attachmentId}`,
+			migrated: isReceiptKey(r.key)
+		}))
 	};
 }
 
