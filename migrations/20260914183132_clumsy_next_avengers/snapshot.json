@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "1ee9237f-5712-4ddc-b159-d7d78c3244da",
+  "id": "706c600d-8a25-4f16-b5b2-7c1a56e36498",
   "prevIds": [
-    "eb86e0ee-419d-4459-8f70-0f25da51a555"
+    "1ee9237f-5712-4ddc-b159-d7d78c3244da"
   ],
   "ddl": [
     {
@@ -8746,6 +8746,36 @@
     },
     {
       "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invited_at",
+      "entityType": "columns",
+      "table": "volunteer_signup"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invited_by_user_id",
+      "entityType": "columns",
+      "table": "volunteer_signup"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "declined_at",
+      "entityType": "columns",
+      "table": "volunteer_signup"
+    },
+    {
+      "type": "integer",
       "notNull": true,
       "autoincrement": false,
       "default": "(unixepoch())",
@@ -13606,6 +13636,21 @@
       "onDelete": "CASCADE",
       "nameExplicit": false,
       "name": "fk_volunteer_signup_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "volunteer_signup"
+    },
+    {
+      "columns": [
+        "invited_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_signup_invited_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "volunteer_signup"
     },
