@@ -21,6 +21,7 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import ProfileFields from '$lib/components/volunteer/ProfileFields.svelte';
 	import OpenShifts from '$lib/components/volunteer/OpenShifts.svelte';
+	import ShiftInvitations from '$lib/components/volunteer/ShiftInvitations.svelte';
 	import MyShiftCard from '$lib/components/volunteer/MyShiftCard.svelte';
 	import LogHoursAction from '$lib/components/volunteer/LogHoursAction.svelte';
 	import { resolve } from '$app/paths';
@@ -195,6 +196,10 @@
 				</ul>
 			</InfoCard>
 		</div>
+
+		<!-- Above the board: an invitation is addressed to this member, where the
+		     board is addressed to everybody. -->
+		<ShiftInvitations invitations={pageData.invitations} />
 
 		<OpenShifts shifts={pageData.openShifts} hasInterests={pageData.interests.length > 0} />
 	</div>

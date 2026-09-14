@@ -21,7 +21,11 @@
 	import { toast } from 'svelte-sonner';
 	import { formatDateShort } from '$lib/utils/format';
 	import { formatVolunteerHours } from '$lib/config';
-	import { assignShiftToMember, getShiftCandidates } from '$lib/remote/volunteer.remote';
+	import {
+		assignShiftToMember,
+		inviteMemberToShift,
+		getShiftCandidates
+	} from '$lib/remote/volunteer.remote';
 
 	let {
 		shiftId,
@@ -163,6 +167,28 @@
 								Blocked
 							</Button>
 						{:else}
+							<!-- Two verbs on purpose. Invite asks and holds no place, so the
+							     shift keeps reading short-staffed until somebody answers;
+							     Add books them, which is what a coordinator who has already
+							     spoken to them means. -->
+							<Action
+								action={inviteMemberToShift.for(`${shiftId}:${row.userId}`)}
+								label="Invite"
+								variant="primary"
+								size="xs"
+								modalTitle="Ask {row.member.title} to take this?"
+								submitLabel="Send the invitation"
+								successToast="Asked. They'll see it on their dashboard."
+							>
+								{#snippet form()}
+									<input type="hidden" name="shiftId" value={shiftId} />
+									<input type="hidden" name="userId" value={row.userId} />
+									<p class="text-sm">
+										An invitation holds no place — the shift still counts as needing somebody until {row
+											.member.title} says yes. You can ask more people than the shift has room for.
+									</p>
+								{/snippet}
+							</Action>
 							<Action
 								action={assignShiftToMember.for(`${shiftId}:${row.userId}`)}
 								label="Add"

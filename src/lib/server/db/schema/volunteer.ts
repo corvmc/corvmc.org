@@ -454,6 +454,15 @@ export const volunteerSignup = sqliteTable(
 		scheduledStartsAt: integer('scheduled_starts_at', { mode: 'timestamp' }),
 		scheduledEndsAt: integer('scheduled_ends_at', { mode: 'timestamp' }),
 
+		// The chase. Set when a coordinator asks rather than assigns, and left in
+		// place once the invitation is answered — "we asked and they said no" is
+		// what stops the same person being chased three times.
+		invitedAt: integer('invited_at', { mode: 'timestamp' }),
+		invitedByUserId: text('invited_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		declinedAt: integer('declined_at', { mode: 'timestamp' }),
+
 		claimedAt: integer('claimed_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),

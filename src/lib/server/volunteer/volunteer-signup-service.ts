@@ -183,9 +183,13 @@ export async function claimShift(
 		.limit(1);
 
 	// Re-claiming after cancelling is ordinary — people change their minds — so
-	// that reuses the row rather than tripping the unique index.
+	// that reuses the row rather than tripping the unique index. An `invited` or
+	// `declined` row is reused for a different reason: neither holds a place, so
+	// somebody claiming a shift they were asked about is claiming it, not
+	// colliding with their own invitation.
+	const REUSABLE = ['cancelled', 'invited', 'declined'];
 	if (existing) {
-		if (existing.status !== 'cancelled') return reloadSignup(existing.id);
+		if (!REUSABLE.includes(existing.status)) return reloadSignup(existing.id);
 
 		const now = unixNow();
 		// `returning "id"` rather than `*`: raw SQL hands back snake_case columns,
@@ -195,7 +199,7 @@ export async function claimShift(
 			update "volunteer_signup"
 			set "status" = ${status}, "claimed_at" = ${now},
 				"confirmed_at" = ${assigned ? now : null},
-				"cancelled_at" = null, "updated_at" = ${now}
+				"cancelled_at" = null, "declined_at" = null, "updated_at" = ${now}
 			where "id" = ${existing.id} and ${hasRoomSql(shiftId, shift.capacity, shift.startsAt, shift.endsAt)}
 			returning "id"
 		`);
@@ -292,6 +296,8 @@ export async function cancelSignup(signupId: string, userId: string): Promise<Vo
  */
 async function emitSignupEvent(
 	event:
+		| 'volunteer.signup_invited'
+		| 'volunteer.signup_declined'
 		| 'volunteer.signup_claimed'
 		| 'volunteer.signup_confirmed'
 		| 'volunteer.signup_cancelled'
@@ -1064,4 +1070,250 @@ export async function listShiftCandidates(
 		approvedMinutes: Number(r.approvedMinutes),
 		workedThisRole: Number(r.workedThisRole)
 	}));
+}
+
+// ---------------------------------------------------------------------------
+// Invitations — the chase
+// ---------------------------------------------------------------------------
+
+/**
+ * Ask somebody to take a shift, without booking them onto it.
+ *
+ * Distinct from `claimShift(..., { assignedByStaff: true })`, which lands
+ * `confirmed` because a coordinator typing a name IS the look. An invitation
+ * is the question before that, and it holds no place.
+ */
+export class AlreadyOnShiftError extends DomainError {
+	readonly httpStatus = 409;
+
+	constructor(status: string) {
+		super(
+			status === 'invited'
+				? 'They have already been invited to this one.'
+				: 'They are already on this shift.'
+		);
+		this.name = 'AlreadyOnShiftError';
+	}
+}
+
+export interface InviteResult {
+	signupId: string;
+	/**
+	 * Clearances they lack for this role, as of the shift's date.
+	 *
+	 * A warning, not a refusal — unlike a claim. You may be inviting somebody
+	 * precisely so that they get cleared, and refusing the ask would make the
+	 * clearance a chicken-and-egg.
+	 */
+	missingCertifications: { name: string }[];
+}
+
+export async function inviteToShift(
+	shiftId: string,
+	userId: string,
+	invitedByUserId: string
+): Promise<InviteResult> {
+	await requireActiveVolunteer(userId);
+
+	const shift = await getShiftById(shiftId);
+	if (!shift) throw new SignupNotFoundError();
+	if (shift.cancelledAt) throw new ShiftClosedError('That shift was called off.');
+	if (shift.endsAt && shift.endsAt < new Date())
+		throw new ShiftClosedError('That shift has already happened.');
+
+	// No room check. Chasing four people for two places is the normal case, and
+	// capacity gates claiming rather than asking.
+	const missing = await missingRequirements(
+		userId,
+		shift.volunteerRoleId,
+		shift.startsAt ?? new Date()
+	);
+
+	const [existing] = await db
+		.select({ id: volunteerSignup.id, status: volunteerSignup.status })
+		.from(volunteerSignup)
+		.where(and(eq(volunteerSignup.shiftId, shiftId), eq(volunteerSignup.userId, userId)))
+		.limit(1);
+
+	const now = new Date();
+
+	if (existing) {
+		// Re-inviting somebody who declined or dropped out is a real thing to
+		// want — plans change — and reuses the row. Anyone holding a place is
+		// already answered, so asking again is the coordinator misreading the
+		// board rather than an action to take.
+		if (!['cancelled', 'declined'].includes(existing.status)) {
+			throw new AlreadyOnShiftError(existing.status);
+		}
+
+		await db
+			.update(volunteerSignup)
+			.set({
+				status: 'invited',
+				invitedAt: now,
+				invitedByUserId,
+				declinedAt: null,
+				cancelledAt: null,
+				updatedAt: now
+			})
+			.where(eq(volunteerSignup.id, existing.id));
+
+		void emitSignupEvent('volunteer.signup_invited', existing.id);
+		return { signupId: existing.id, missingCertifications: missing };
+	}
+
+	const [row] = await db
+		.insert(volunteerSignup)
+		.values({
+			shiftId,
+			userId,
+			status: 'invited',
+			invitedAt: now,
+			invitedByUserId
+		})
+		.returning({ id: volunteerSignup.id });
+
+	void emitSignupEvent('volunteer.signup_invited', row.id);
+	return { signupId: row.id, missingCertifications: missing };
+}
+
+/**
+ * Whether an invitation is still worth answering.
+ *
+ * Derived rather than stored, which is what keeps this off a cron: an
+ * invitation dies when the shift starts, when it is called off, or when
+ * somebody else fills the last place. All three are already columns.
+ */
+const invitationIsLive = sql`(
+	${workOrder.cancelledAt} is null
+	and (${workOrder.startsAt} is null or ${workOrder.startsAt} > unixepoch())
+	and (
+		select count(*) from "volunteer_signup" held
+		where held."shift_id" = ${workOrder.id}
+			and held."status" in ('claimed', 'confirmed', 'completed')
+	) < ${workOrder.capacity}
+)`;
+
+/** The invitations a member should see: theirs, unanswered, still worth answering. */
+export async function listInvitationsForUser(userId: string) {
+	const rows = await db
+		.select({
+			signupId: volunteerSignup.id,
+			shiftId: workOrder.id,
+			startsAt: workOrder.startsAt,
+			endsAt: workOrder.endsAt,
+			notes: workOrder.notes,
+			invitedAt: volunteerSignup.invitedAt,
+			roleName: volunteerRole.name,
+			eventTitle: eventTitleSql,
+			invitedByName: sql<
+				string | null
+			>`(select name from "user" where "user".id = ${volunteerSignup.invitedByUserId})`
+		})
+		.from(volunteerSignup)
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.where(
+			and(
+				eq(volunteerSignup.userId, userId),
+				eq(volunteerSignup.status, 'invited'),
+				invitationIsLive
+			)
+		)
+		.orderBy(asc(workOrder.startsAt));
+
+	return rows;
+}
+
+/** The invitations outstanding on one shift, for the coordinator who sent them. */
+export async function listInvitationsForShift(shiftId: string) {
+	return db
+		.select({
+			signupId: volunteerSignup.id,
+			status: volunteerSignup.status,
+			invitedAt: volunteerSignup.invitedAt,
+			declinedAt: volunteerSignup.declinedAt,
+			member: memberRefColumns(),
+			invitedByName: sql<
+				string | null
+			>`(select name from "user" where "user".id = ${volunteerSignup.invitedByUserId})`
+		})
+		.from(volunteerSignup)
+		.innerJoin(user, eq(user.id, volunteerSignup.userId))
+		.where(
+			and(
+				eq(volunteerSignup.shiftId, shiftId),
+				inArray(volunteerSignup.status, ['invited', 'declined'])
+			)
+		)
+		.orderBy(asc(volunteerSignup.invitedAt))
+		.then((rows) => rows.map((r) => ({ ...r, member: toMemberRef(r.member) })));
+}
+
+/**
+ * Take an invitation up. Lands `claimed`, not `confirmed`.
+ *
+ * Accepting is the member's act and confirming is the coordinator's, so this
+ * joins the ordinary queue rather than skipping it — the same reason a claim
+ * from the board does.
+ */
+export async function acceptInvitation(signupId: string, userId: string): Promise<VolunteerSignup> {
+	const [invitation] = await db
+		.select({ shiftId: volunteerSignup.shiftId })
+		.from(volunteerSignup)
+		.where(
+			and(
+				eq(volunteerSignup.id, signupId),
+				eq(volunteerSignup.userId, userId),
+				eq(volunteerSignup.status, 'invited')
+			)
+		)
+		.limit(1);
+
+	if (!invitation) throw new SignupNotFoundError();
+
+	const shift = await getShiftById(invitation.shiftId);
+	if (!shift) throw new SignupNotFoundError();
+	if (shift.cancelledAt) throw new ShiftClosedError('That shift was called off.');
+	if (shift.endsAt && shift.endsAt < new Date())
+		throw new ShiftClosedError('That shift has already happened.');
+
+	const now = unixNow();
+	// The room check runs here and not at invite time: four people can be asked
+	// for two places, and the two who answer first get them.
+	const taken = await db.all<{ id: string }>(sql`
+		update "volunteer_signup"
+		set "status" = 'claimed', "claimed_at" = ${now}, "declined_at" = null, "updated_at" = ${now}
+		where "id" = ${signupId} and "status" = 'invited'
+			and ${hasRoomSql(invitation.shiftId, shift.capacity, shift.startsAt, shift.endsAt)}
+		returning "id"
+	`);
+
+	if (taken.length === 0) throw new ShiftFullError();
+
+	const row = await reloadSignup(signupId);
+	void emitSignupEvent('volunteer.signup_claimed', signupId);
+	return row;
+}
+
+/** Say no. The row stays, so the same person is not chased again by mistake. */
+export async function declineInvitation(
+	signupId: string,
+	userId: string
+): Promise<VolunteerSignup> {
+	const [row] = await db
+		.update(volunteerSignup)
+		.set({ status: 'declined', declinedAt: new Date(), updatedAt: new Date() })
+		.where(
+			and(
+				eq(volunteerSignup.id, signupId),
+				eq(volunteerSignup.userId, userId),
+				eq(volunteerSignup.status, 'invited')
+			)
+		)
+		.returning();
+
+	if (!row) throw new SignupNotFoundError();
+	void emitSignupEvent('volunteer.signup_declined', signupId);
+	return row;
 }

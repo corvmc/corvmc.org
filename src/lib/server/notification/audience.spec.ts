@@ -63,6 +63,7 @@ describe('notification audience', () => {
 				'inbox_message_received',
 				'volunteer_hours_submitted',
 				'volunteer_shift_claimed',
+				'volunteer_shift_declined',
 				'volunteer_shift_dropped'
 			].sort()
 		);

@@ -1131,6 +1131,42 @@ export function registerAllNotificationListeners(): void {
 	// are actually expected. Before these, a claim produced no signal anywhere — see
 	// docs/reports/volunteer-workflow-findings.md#a3.
 
+	// Invited (notify the member). The one signal that makes a chase a chase: the
+	// coordinator has asked, and the member has to be able to answer.
+	domainEvents.on('volunteer.signup_invited', async ({ data: event }) => {
+		await dispatch({
+			type: 'volunteer_shift_invited',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `Can you take ${event.roleName}?`,
+			body: `${formatShiftWhen(event.startsAt, event.endsAt)} — say yes or no from your dashboard`,
+			href: '/member/volunteer'
+		});
+	});
+
+	// Declined (notify staff). Fanned out like a claim, because the next move is
+	// somebody else's to ask and whoever picks it up needs to know.
+	domainEvents.on('volunteer.signup_declined', async ({ data: event }) => {
+		const staff = await listUsersWithCapability('volunteer.manageShifts');
+		for (const member of staff) {
+			try {
+				await dispatch({
+					type: 'volunteer_shift_declined',
+					userId: member.id,
+					userEmail: member.email,
+					title: `${event.userName} can't do ${event.roleName}`,
+					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — still needs somebody`,
+					href: '/staff/volunteer/schedule'
+				});
+			} catch (err) {
+				captureException(err, {
+					event: 'notification.volunteer_shift_declined',
+					to: member.email
+				});
+			}
+		}
+	});
+
 	// Claimed (notify staff). In-app only, and fanned out per staffer like the hours
 	// queue, because confirming is queue work with a badge rather than news.
 	domainEvents.on('volunteer.signup_claimed', async ({ data: event }) => {
