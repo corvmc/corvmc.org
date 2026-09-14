@@ -93,6 +93,69 @@ const inRange = (r: RangeFilter) =>
 const asCents = (v: string | null) => Number(v ?? 0);
 
 /** What the collective kept over a window. Excludes in-kind and pass-through by construction. */
+/**
+ * Reverse everything a settled sale wrote.
+ *
+ * A refund is a reversing entry, never a mutation: a January refund against a
+ * November sale must not change a month that may already have been reported.
+ * Keyed on the payment record, which is what a refund knows.
+ */
+export async function reverseEntriesForPaymentRecord(
+	stripePaymentRecordId: string,
+	occurredAt: Date = new Date()
+): Promise<number> {
+	const rows = await db
+		.select()
+		.from(financialEntry)
+		.where(eq(financialEntry.stripePaymentRecordId, stripePaymentRecordId));
+
+	// Idempotent on its own, not only through `refund()`'s cache guard. A
+	// reversal carries the same payment record, so without this a second pass
+	// negates both the sale and its reversal — the total stays right and the
+	// rows become nonsense.
+	const reversed = new Set<string>();
+	for (const r of rows) {
+		const of = readMetadata(r.metadata)?.reversalOf;
+		if (typeof of === 'string') reversed.add(of);
+	}
+
+	const originals = rows.filter(
+		(r) => !readMetadata(r.metadata)?.reversalOf && !reversed.has(r.id)
+	);
+	if (originals.length === 0) return 0;
+
+	await recordEntries(
+		originals.map((r) => ({
+			amountCents: -r.amountCents,
+			kind: r.kind,
+			category: r.category,
+			// When the money came back, not when it went out.
+			occurredAt,
+			settlement: r.settlement,
+			stripePaymentRecordId,
+			settlementGroup: r.settlementGroup,
+			subjectType: r.subjectType,
+			subjectId: r.subjectId,
+			projectId: r.projectId,
+			userId: r.userId,
+			description: `Refund — ${r.description}`,
+			metadata: { reversalOf: r.id }
+		}))
+	);
+
+	return originals.length;
+}
+
+function readMetadata(raw: unknown): Record<string, unknown> | null {
+	if (!raw) return null;
+	if (typeof raw === 'object') return raw as Record<string, unknown>;
+	try {
+		return JSON.parse(String(raw)) as Record<string, unknown>;
+	} catch {
+		return null;
+	}
+}
+
 export async function totalEarnedCents(range: RangeFilter): Promise<number> {
 	const [row] = await db
 		.select({ total: sum(financialEntry.amountCents) })

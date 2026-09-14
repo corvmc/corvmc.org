@@ -71,6 +71,7 @@ const {
 	poolBalanceCents,
 	recordEntries,
 	recordEntry,
+	reverseEntriesForPaymentRecord,
 	stripeSettledCents,
 	totalEarnedCents,
 	totalsByCategory
@@ -97,6 +98,76 @@ const ticketSale = (over: Partial<RecordEntryInput> = {}): RecordEntryInput => (
 });
 
 beforeEach(() => sqlite.exec('delete from financial_entry'));
+
+describe('refunds reverse rather than mutate', () => {
+	/** The three rows a $10 card sale writes, all carrying the payment record. */
+	const sold = async (occurredAt = JAN) => {
+		await recordEntries([
+			ticketSale({ occurredAt, stripePaymentRecordId: 'pr_1' }),
+			ticketSale({
+				occurredAt,
+				amountCents: 700,
+				kind: 'pass_through',
+				category: 'act_payout',
+				settlementGroup: 'evt-1',
+				stripePaymentRecordId: 'pr_1'
+			}),
+			ticketSale({
+				occurredAt,
+				amountCents: -59,
+				kind: 'spent',
+				category: 'card_fees',
+				stripePaymentRecordId: 'pr_1'
+			})
+		]);
+	};
+
+	it('negates every row the sale wrote', async () => {
+		await sold();
+
+		expect(await reverseEntriesForPaymentRecord('pr_1', FEB)).toBe(3);
+
+		const rows = await listForSubject('ticket', 'tkt-1');
+		expect(rows).toHaveLength(6);
+		expect(rows.reduce((n, r) => n + r.amountCents, 0)).toBe(0);
+	});
+
+	/**
+	 * The rule the whole append-only shape exists for: a February refund against
+	 * a January sale must leave January reading what it read when it was
+	 * reported.
+	 */
+	it('leaves the month of the sale alone', async () => {
+		await sold(JAN);
+		await reverseEntriesForPaymentRecord('pr_1', FEB);
+
+		expect(await totalEarnedCents(JANUARY)).toBe(300);
+		expect(await totalEarnedCents(YEAR)).toBe(0);
+	});
+
+	// A reversal carries the same payment record, so a second pass would negate
+	// its own work and write three rows of nonsense.
+	it('does not reverse a reversal', async () => {
+		await sold();
+		await reverseEntriesForPaymentRecord('pr_1', FEB);
+
+		expect(await reverseEntriesForPaymentRecord('pr_1', FEB)).toBe(0);
+		expect(await listForSubject('ticket', 'tkt-1')).toHaveLength(6);
+	});
+
+	it('reverses nothing for a payment record that wrote nothing', async () => {
+		expect(await reverseEntriesForPaymentRecord('pr_unknown')).toBe(0);
+	});
+
+	// The acts' pool has to keep netting to zero after a refund, or a settlement
+	// reads a balance that was handed back.
+	it('keeps the pass-through pool at zero', async () => {
+		await sold();
+		await reverseEntriesForPaymentRecord('pr_1', FEB);
+
+		expect(await poolBalanceCents('evt-1')).toBe(0);
+	});
+});
 
 describe('recording', () => {
 	it('writes a sale as the several rows it actually is', async () => {
