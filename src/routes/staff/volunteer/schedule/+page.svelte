@@ -21,6 +21,7 @@
 	 * as one more thing to staff.
 	 */
 	import { page } from '$app/state';
+	import { shiftLabel } from '$lib/utils/shift-label';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -237,12 +238,18 @@
 									href={resolve(`/staff/volunteer/shifts/${shift.id}`)}
 									class="link truncate font-medium"
 								>
-									{shift.roleName}
+									{shiftLabel(shift)}
 								</a>
 								<!-- One subline, resolved by what the shift actually has:
-								     the show it staffs, else the briefing, else the absence
-								     of a show — which is information, not a blank. -->
-								{#if shift.eventTitle}
+								     the role where the heading is a name, else the show it
+								     staffs, else the briefing, else the absence of a show —
+								     which is information, not a blank. -->
+								{#if shift.title}
+									<div class="truncate text-subtle">
+										{shift.roleName}{#if shift.eventTitle}
+											· {shift.eventTitle}{/if}
+									</div>
+								{:else if shift.eventTitle}
 									<div class="truncate">
 										<a href={resolve(`/staff/events/${shift.eventId}`)} class="link text-info">
 											{shift.eventTitle}

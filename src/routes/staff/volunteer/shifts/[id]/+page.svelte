@@ -13,6 +13,7 @@
 	 * and the candidate column and the cancel action withdraw.
 	 */
 	import { page } from '$app/state';
+	import { shiftLabel } from '$lib/utils/shift-label';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -83,8 +84,8 @@
 	     and the body line says a window is still to be booked. -->
 	<PageHeader
 		title={shift.startsAt
-			? `${shift.roleName} · ${formatDateShortYear(shift.startsAt)}`
-			: shift.roleName}
+			? `${shiftLabel(shift)} · ${formatDateShortYear(shift.startsAt)}`
+			: shiftLabel(shift)}
 		subtitle="Shift"
 		backHref="/staff/volunteer/schedule"
 	/>
@@ -415,6 +416,7 @@
 									endsAt={shift.endsAt ? toLocalDateTime(shift.endsAt) : ''}
 									capacity={String(shift.capacity)}
 									notes={shift.notes ?? ''}
+									title={shift.title ?? ''}
 								/>
 							{/snippet}
 						</Action>

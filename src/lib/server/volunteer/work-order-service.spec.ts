@@ -206,6 +206,37 @@ describe('updateShift and the event link', () => {
 	});
 });
 
+describe("a shift's own name", () => {
+	beforeEach(() => {
+		selectResult = [shiftRow()];
+	});
+
+	it('trims it, because a heading with trailing space is a heading', async () => {
+		await updateShift('shift-1', { title: '  Spring Deep Clean  ' });
+		expect(updatedColumns().title).toBe('Spring Deep Clean');
+	});
+
+	/** Same contract as `eventId`: empty means clear, absent means leave alone. */
+	it('clears the name when the field arrives empty', async () => {
+		await updateShift('shift-1', { title: '' });
+
+		const set = updatedColumns();
+		expect('title' in set).toBe(true);
+		expect(set.title).toBeNull();
+	});
+
+	it('leaves the name alone when the field is absent', async () => {
+		await updateShift('shift-1', { capacity: 3 });
+		expect('title' in updatedColumns()).toBe(false);
+	});
+
+	it('refuses one longer than the cap rather than truncating it', async () => {
+		await expect(updateShift('shift-1', { title: 'x'.repeat(101) })).rejects.toThrow(
+			/under 100 characters/i
+		);
+	});
+});
+
 describe('cancelShift', () => {
 	it('records who called it off and leaves the signups alone', async () => {
 		selectResult = [{ id: 'shift-1', cancelledAt: new Date() }];
