@@ -397,6 +397,9 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 	const pastShows = published.filter((e) => e.startsAt < now);
 	const futureShows = published.filter((e) => e.startsAt >= now);
 
+	// Named work parties, so the board shows something other than the role.
+	const UNATTACHED_SHIFT_TITLES = ['Spring Deep Clean', 'Back Room Build', 'Gear Triage Day'];
+
 	// `startsAt`/`endsAt` are nullable on `work_order` — an undated duty-list job
 	// has no times — but every row built below sets both. Narrowed once here so
 	// the reads downstream do not each need a non-null assertion.
@@ -416,6 +419,10 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 				id: randomUUID(),
 				volunteerRoleId: pick(liveRoles).id,
 				eventId: show?.id ?? null,
+				// Named only where there is no show to borrow a title from, which is
+				// the case the column exists for — and left blank on some of those
+				// too, so the role-name fallback is exercised on a fresh seed.
+				title: !show && i % 2 === 0 ? UNATTACHED_SHIFT_TITLES[i % 3] : null,
 				startsAt,
 				endsAt,
 				// One deliberately over-subscribed shift, so the staff dashboard's

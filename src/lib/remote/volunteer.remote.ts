@@ -139,6 +139,7 @@ import {
 	CERT_REFERENCE_MAX,
 	CERT_REVOKED_REASON_MAX,
 	VOLUNTEER_SHIFT_NOTES_MAX,
+	VOLUNTEER_SHIFT_TITLE_MAX,
 	SHIFT_FEEDBACK_COMMENT_MAX,
 	VOLUNTEER_AVAILABILITY_MAX,
 	VOLUNTEER_DESCRIPTION_MAX,
@@ -1525,6 +1526,11 @@ export const getUnloggedShifts = query(async () => {
 const shiftFormSchema = z.object({
 	volunteerRoleId: z.string().min(1, 'Pick a role'),
 	eventId: z.string().optional(),
+	title: z
+		.string()
+		.trim()
+		.max(VOLUNTEER_SHIFT_TITLE_MAX, `Keep the name under ${VOLUNTEER_SHIFT_TITLE_MAX} characters`)
+		.optional(),
 	startsAt: z.string().min(1, 'Pick when it starts'),
 	endsAt: z.string().min(1, 'Pick when it ends'),
 	capacity: z.string().min(1, 'How many people do you need?'),
@@ -1541,6 +1547,7 @@ export const createShift = form(shiftFormSchema, async (data) => {
 		await createShiftService({
 			volunteerRoleId: data.volunteerRoleId,
 			eventId: data.eventId,
+			title: data.title,
 			startsAt: data.startsAt,
 			endsAt: data.endsAt,
 			capacity: parseInt(data.capacity, 10),
@@ -1563,6 +1570,7 @@ export const updateShift = form(
 			await updateShiftService(data.id, {
 				volunteerRoleId: data.volunteerRoleId,
 				eventId: data.eventId,
+				title: data.title,
 				startsAt: data.startsAt,
 				endsAt: data.endsAt,
 				capacity: data.capacity ? parseInt(data.capacity, 10) : undefined,
