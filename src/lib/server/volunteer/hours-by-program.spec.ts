@@ -94,8 +94,8 @@ async function seed() {
 			id: `gm-${i}`,
 			groupId,
 			userId: MEMBER,
-			role: 'member',
-			status: 'active'
+			role: 'member' as const,
+			status: 'active' as const
 		}))
 	);
 }
