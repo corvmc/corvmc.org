@@ -1,7 +1,38 @@
 # The financial record
 
-> **Status: 🔧 partly built.** Tracking issue: #825.
+> ## Status, 2026-09-14 — shipped
 >
+> Every phase is in the tree and the ledger is populated in production: **514
+> rows**, stripe-settled netting to **$10,087.14**, which is Stripe's gross
+> less its refunds less the one fee row the live writer recorded. Reconciled
+> to the cent, and both backfills are idempotent.
+>
+> Read what follows as the record of the decisions, not as work to do.
+>
+> - **Phase 1–2** — `financial_entry`, `financial-entry-service.ts`, the
+>   vocabulary and the seed (#838); then the write paths: checkout, refunds
+>   (#1136), reservation cash and credit (#1137), free sales (#1138).
+> - **Phase 3** — the local backfill (#1139, #1141) and the Stripe
+>   reconstruction (#1142). The per-period baseline this spec describes was
+>   superseded by per-charge reconstruction: same data, finer grain, and it
+>   reconciles by construction rather than by comparison.
+> - **Phase 4** — outflow from contractor jobs and purchased acquisitions
+>   (#1140). Reimbursements deliberately write nothing: a member who fronts
+>   money and is repaid creates a payable, not a second expense.
+> - **Phase 5** — gifts in kind and contributed services (#1135). Only a
+>   specialized skill counts, which is the FASB line `volunteer_role` already
+>   draws.
+>
+> **Two facts the reconstruction rests on**, both confirmed by the collective
+> and worth keeping visible: the ticket split has only ever been 30/70, and
+> the practice-room rate has only ever been $15/hr. Neither is recorded
+> per-row, so if either changes, a later re-run cannot tell the eras apart.
+>
+> **Still open, and tracked elsewhere.** Settlement paying an act is the one
+> write path unbuilt — it needs the payout columns in #1133. The annual
+> report renders the contributed-services expense side from these rows
+> (#587); the ledger deliberately stores one row per contribution rather than
+> a revenue/expense pair.
 > Phases 1–2 shipped in #838 (9 Sep): the `financial_entry` table, `financial-entry-service.ts`,
 > the category vocabulary and the seed. `checkout-entries-listener.ts` is the one writer in
 > production code. What is still open is on #825 — the remaining write paths, so every module
