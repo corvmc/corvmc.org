@@ -1,3 +1,4 @@
+import { syncAcquisitionInKind } from '$lib/server/finance/in-kind-acquisition';
 import { db } from '$lib/server/db';
 import {
 	acquisition,
@@ -95,6 +96,19 @@ export async function recordAcquisition(data: CreateAcquisitionData) {
 			actorId: data.recordedByUserId
 		});
 	}
+
+	// A gift valued at entry. One recorded from its receipt alone has no fair
+	// value yet, so this writes nothing and `updateAcquisition` picks it up when
+	// somebody prices it.
+	await syncAcquisitionInKind({
+		acquisitionId: header.id,
+		before: null,
+		after: { kind: header.kind, fairValueCents: header.fairValueCents },
+		occurredAt: header.occurredAt,
+		donorUserId: header.donorUserId,
+		recordedByUserId: header.recordedByUserId,
+		description: header.sourceName ? `Gift in kind — ${header.sourceName}` : 'Gift in kind'
+	});
 
 	return header;
 }
@@ -629,6 +643,14 @@ export interface UpdateAcquisitionData {
 }
 
 export async function updateAcquisition(id: string, data: UpdateAcquisitionData) {
+	// Read first: the in-kind entry is the *difference* a re-valuation makes,
+	// and an append-only ledger cannot work that out after the fact.
+	const [before] = await db
+		.select({ kind: acquisition.kind, fairValueCents: acquisition.fairValueCents })
+		.from(acquisition)
+		.where(eq(acquisition.id, id))
+		.limit(1);
+
 	const [row] = await db
 		.update(acquisition)
 		.set({ ...data, updatedAt: new Date() })
@@ -636,6 +658,16 @@ export async function updateAcquisition(id: string, data: UpdateAcquisitionData)
 		.returning();
 
 	if (!row) throw new AcquisitionNotFoundError();
+
+	await syncAcquisitionInKind({
+		acquisitionId: row.id,
+		before: before ?? null,
+		after: { kind: row.kind, fairValueCents: row.fairValueCents },
+		occurredAt: row.occurredAt,
+		donorUserId: row.donorUserId,
+		description: row.sourceName ? `Gift in kind — ${row.sourceName}` : 'Gift in kind'
+	});
+
 	return row;
 }
 
