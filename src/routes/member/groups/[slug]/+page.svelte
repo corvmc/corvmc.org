@@ -35,6 +35,7 @@
 	import CreateSessionAction from '$lib/components/groups/CreateSessionAction.svelte';
 	import InviteGroupMemberAction from '$lib/components/groups/InviteGroupMemberAction.svelte';
 	import GroupMemberEditAction from '$lib/components/groups/GroupMemberEditAction.svelte';
+	import GroupSelfEditAction from '$lib/components/groups/GroupSelfEditAction.svelte';
 	import EditSessionAction from '$lib/components/groups/EditSessionAction.svelte';
 
 	/**
@@ -108,6 +109,12 @@
 	// already active on the roster — staff appoint over a leader's head through
 	// `assignGroupLeader` instead.
 	const isOwner = $derived(data.role === 'owner');
+
+	// The actions column exists for a leader, and for a plain member who has a
+	// row of their own to edit. A staff non-member matches neither.
+	const rosterActions = $derived(
+		data.canManage || members.active.some((m) => m.userId === data.viewerId)
+	);
 	const pendingEmailInvites = $derived(data.emailInvites.filter((i) => i.status === 'pending'));
 
 	// Repointed at the wrapper query: nothing reads the parts, so refreshing one
@@ -426,7 +433,7 @@
 						<th>Member</th>
 						<th class="w-px">Role</th>
 						<th class="col-support">Position</th>
-						{#if data.canManage}
+						{#if rosterActions}
 							<th class="w-px"><span class="sr-only">Actions</span></th>
 						{/if}
 					{/snippet}
@@ -438,10 +445,19 @@
 							<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
 							<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
 							<td class="col-support">{m.position ?? '—'}</td>
-							{#if data.canManage}
+							{#if rosterActions}
 								<td class="w-px">
 									<div class="flex justify-end gap-2">
-										{#if m.status === 'pending'}
+										{#if m.userId === data.viewerId && m.status === 'active'}
+											<GroupSelfEditAction
+												{slug}
+												alias={m.alias}
+												position={m.position}
+												kindLabel={group.kind}
+												onchanged={refreshRoster}
+											/>
+										{/if}
+										{#if data.canManage && m.status === 'pending'}
 											<Action
 												action={revokeGroupInvitation.for(m.id)}
 												label="Revoke"
@@ -457,7 +473,7 @@
 													<input {...revokeFields.memberId.as('hidden', m.id)} />
 												{/snippet}
 											</Action>
-										{:else if m.role !== 'owner'}
+										{:else if data.canManage && m.role !== 'owner'}
 											<GroupMemberEditAction
 												{slug}
 												memberId={m.id}

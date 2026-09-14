@@ -20,17 +20,19 @@ import {
 } from '$lib/server/event/event-service';
 
 /**
- * A club's or committee's sessions.
+ * A club's or committee's sessions — the writes.
  *
- * Reads live on `getMemberGroup`, which returns the sessions with the rest of
- * the page in one round trip — a per-tab query fanned out of a section component
- * is what `custom/no-concurrent-remote-queries` exists to stop. What is here
- * is the write.
- *
- * Flagged on `groupEvents`, separately from `groups`: this is the one path
- * outside the staff panel that can reserve the room, and a program holding time
- * is not a thing to turn on by accident.
+ * Reads live on `getMemberGroup`, one round trip for the whole page, which is
+ * what `custom/no-concurrent-remote-queries` exists to get.
  */
+
+// This is the one path outside the staff panel that can reserve the room, so
+// every write resolves `requireProgramRole(ref, 'admin')` — a leader, of a club
+// or committee rather than a band — and the ones taking an event id go through
+// `requireOwnSession`, which re-scopes the listing to that group.
+
+// There is no feature flag: `ALL_FLAGS` never held a `groupEvents` entry, and
+// flags were retired for long-lived `feature/*` branches.
 
 /**
  * The listing fields a session carries for the same reasons a band's gig does.
