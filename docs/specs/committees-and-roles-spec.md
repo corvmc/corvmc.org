@@ -30,6 +30,30 @@ have to exist.
 
 ---
 
+## Re-checked 2026-09-13
+
+The markers below were set on 5 September. **Eighteen are now wrong, all in the good
+direction**, and each is corrected in place with a ⏫ rather than by rewriting the story — the
+original reading is what makes the correction legible. Five of the eighteen are partial, marked
+**Split**: the half that shipped and the half still owed were one marker and are now two.
+
+Two corrections are structural rather than per-story, and both change what this document asks
+for next:
+
+- **[The authority problem](#the-authority-problem) is no longer the problem it describes.**
+  `capabilities`, `Capability` and six named positions are in `src/lib/config.ts`, guards call
+  `requireCapability`, and the staff nav filters rows by it. "Programming may edit events but
+  not payments" is now expressible. What is still missing is the committee-scoped guard this
+  document asks for on top of that — see the ⏫ in that section.
+- **Every ⏫ in [Chairs](#chairs) is a groups phase that landed.** `groups-spec.md` now reports
+  all eleven phases shipped, so `by_application`, announcements and documents are built, and
+  the four chair stories that were blocked on them are served.
+
+Not re-checked: the ~40 🆕 stories with no linked spec. A 🆕 here means "nothing covered this on
+5 September", which for an unstarted feature is still true, but it was not re-verified.
+
+---
+
 ## What a committee is in this app
 
 **A committee is a `group` with `joinPolicy = 'by_application'`. The committee volunteer roles
@@ -104,6 +128,20 @@ So "Programming may edit events but not payments" is not a permission this app c
 Anyone handed the panel to do committee work today gets the whole panel, including account
 purges and credit adjustments. That is a policy the Collective has not chosen; it is a
 consequence of there being one door.
+
+> ⏫ **2026-09-13: the four bullets above are all out of date, and so is this paragraph.**
+> `capabilities` maps each resource to its actions and `Capability` is the `"user.purge"` string
+> a guard names; `positionLabels` declares six positions with per-resource grants, and
+> `adminOnlyCapabilities` names what belongs to nobody's job description — `credit.adjust`
+> among them. `requireCapability` is the guard, and `staffNavSections` gates every row on one,
+> so a treasurer is no longer offered Volunteering. The inert `permissions` tables are still
+> inert, and `group_member.position` is still read by nothing — which
+> [decision 10](#decisions-that-were-open) says is correct.
+>
+> **What this section asks for beyond that is unchanged and unbuilt**: a
+> `requireCommitteeRole('programming')` reading `group_member` for a `kind = 'committee'`
+> group, resolving the committee from the thing being acted on and composing with staff. The
+> capability layer is the vocabulary that guard would speak; it is not the guard.
 
 **This document does not solve it, and the structure it describes requires it solved.**
 Committee members are to be **empowered to act within their own domain** — that is the settled
@@ -221,14 +259,18 @@ booking state on a thread.
 
 **As Programming**, I want to build a bill — acts in billing order, set lengths, a run of show
 — and have set times follow from it.
-📋 `production_slot` in [production-workflow-spec.md](production-workflow-spec.md). Set times
-are derived from the lineup on every mutation, with no override.
+~~📋~~ ⏫ **✅ since.** `production_slot` carries `sortOrder`, `setLengthMinutes` and
+`changeoverMinutes`; `run-of-show-service.ts` and six remotes edit the bill, and
+`run-of-show.ts` computes each start from the walk rather than storing it — the no-override
+rule as designed. The console is `/staff/events/[id]/production`.
 
 **As Programming**, I want each act's terms recorded — guarantee, door split, or a donated
 night — and visible to the act before the show.
-📋 Same spec: per-slot `guaranteeCents` and a per-show `bandSplitPercent`, with a read-only
-terms summary in the band's own panel. What we offer in return for a donated night is not
-modeled.
+~~📋~~ ⏫ **Split.** ✅ Recorded: `production_slot` carries `guaranteeCents`, `percentageBps`,
+`versus`, `againstNet` and `contributed` — the donated night is that last flag — and
+`setRunOfShowTerms` writes them. 🆕 **Visible to the act is not built**: nothing under
+`src/routes/band/` reads any of it, so the terms summary in the band's own panel is still
+owed. What we offer in return for a donated night remains unmodeled.
 
 **As Programming**, I want to advance a show — set times, backline, hospitality, load-in — off
 a checklist rather than a group chat.
@@ -254,8 +296,9 @@ a public upvote board, not an application with terms.
 someone steps back, and end a program that has stopped meeting.
 🔧 A program is a `group` with `kind = 'club'` and its lead is the owner row; staff can
 reassign a club's leader without the outgoing leader's participation, and `deactivate()` ends a
-program while keeping its documents and roster as the record. Blocked on `/staff/groups`, which
-is where a club comes into existence and is not built yet.
+program while keeping its documents and roster as the record. ~~Blocked on `/staff/groups`,
+which is where a club comes into existence and is not built yet.~~ ⏫ **✅ since:**
+`/staff/groups` and its `CreateGroupAction` are built, and appoint the leader in the same step.
 
 **As Programming**, I want a program's standing slot held on the practice calendar and its
 details published on the site.
@@ -295,15 +338,18 @@ supervisor, so neither the roster nor the certification record knows a training 
 
 **As Production**, I want stage plots and input lists from the acts before load-in, and to flag
 what the room cannot do.
-📋 Rider and stage-plot upload plus per-slot `techNotes` / `backlineNeeds` in
-[production-workflow-spec.md](production-workflow-spec.md). 🆕 Matching a rider against the
-equipment catalog is explicitly out of that spec — it is `Tech Rider Management` in
+~~📋~~ ⏫ **✅ since** for both halves: `/band/[slug]/rider` collects the rider and
+`production_slot` carries `techNotes` and `backlineNeeds`, edited from the run-of-show panel.
+🆕 Matching a rider against the equipment catalog is explicitly out of that spec — it is `Tech Rider Management` in
 [the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement).
 
 **As Production**, I want the show-day tech schedule — soundcheck, doors, changeovers — to come
 from the lineup rather than a separate document.
-📋 Derived set times plus the `day_of` task phase, which exists precisely because the pre-show
-walkthrough belongs to whoever is on shift rather than whoever booked the show.
+⏫ **Split.** ✅ Derived set times are built (`run-of-show.ts`), alongside per-slot
+`soundcheckAt` and the production's own `loadInAt` / `soundcheckAt` / `curfewAt`. 📋 The
+`day_of` task phase is not: **there is no `production_task` table**, and the phase exists
+precisely because the pre-show walkthrough belongs to whoever is on shift rather than whoever
+booked the show.
 
 **As Production**, I want to lend a band a piece of backline for the night and know it came
 back.
@@ -332,8 +378,10 @@ rather than per-person, and a session is not an entity yet, so it has nothing to
 Money, rooms, and partners.
 
 **As Development**, I want to decide how each event makes money and set its pricing.
-✅ Ticketing lives on the event, with member discounts and guest checkout. 📋 Settlement — door
-cash, expenses, band payouts — is the productions spec.
+✅ Ticketing lives on the event, with member discounts and guest checkout. ~~📋~~ ⏫ **🔧
+since:** `settlement-service.ts` reads a settlement and `production_expense` records what the
+show cost, but **nothing settles** — no payout columns on a slot, no door cash, no close-out.
+See #1133.
 
 **As Development**, I want to run the membership program and see who has lapsed, failed, or
 not renewed.
@@ -347,14 +395,21 @@ a human the two counts side by side.
 
 **As Development**, I want to report membership numbers — active, new, cancelled, failed to
 renew — to the board at every meeting.
-🆕 The numbers exist; the packet does not. [reporting-spec.md](reporting-spec.md) sequences a
-rollup that calls each module's existing report service, and `Annual Report Generator` in
-[the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement) is the same thing at annual cadence.
+~~🆕~~ ⏫ **✅ since.** `/staff/reports` takes any date range, so "every meeting" and "every
+year" are the same page — earned, spent, in-kind and pass-through by category off
+`financial_entry`, plus donated time, events, room use and membership, with a CSV. Built as
+phase 4 of [reporting-spec.md](shipped/reporting-spec.md), which is now fully shipped. 🔧 The
+membership-specific cut — active, new, cancelled, failed to renew — is not a line on it.
 
 **As Development**, I want to record an in-kind donation and stay compliant on the paperwork.
 ✅ For gear: `acquisition` records the donor, and the Form 8283 / 8282 machinery on
 `/staff/inventory/compliance` fires a disposal warning only where a form was actually signed.
-🆕 In-kind that is not gear has nowhere to go.
+~~🆕~~ ⏫ **🔧 since.** `financial_entry.kind = 'in_kind'` is the home. `in-kind-listener.ts`
+writes contributed services from approved specialized volunteer hours, and
+`in-kind-acquisition.ts` writes donated goods from an acquisition — which covers non-gear
+supplies, since an acquisition line need not be an asset. Both surface on `/staff/reports`.
+🆕 There is still no form for an in-kind gift that is neither an acquisition nor volunteer
+time.
 
 **As Development**, I want donor records, an annual appeal, and year-end statements.
 🔧 `audience` and `campaign` can send the appeal. 🆕 A donor is not an entity; cultivation
@@ -367,8 +422,10 @@ unbuilt.
 
 **As Development**, I want a record per venue of the terms we negotiated and the checklist we
 walk every time.
-📋 A real `venue` table arrives with [production-workflow-spec.md](production-workflow-spec.md);
-`production_task` templates are the shape a venue checklist would take.
+⏫ **Split.** ✅ The `venue` table shipped with `/staff/venues`, carrying capacity, contacts
+and `loadInNotes`. 🆕 The negotiated _terms_ and the walk-every-time checklist did not;
+`production_task` templates are still the shape the checklist would take, and that table does
+not exist.
 
 **As Development**, I want each room's access answers — step-free entry, accessible restroom,
 seating — recorded once and published on every listing for that room.
@@ -562,7 +619,9 @@ was wrong, and the label is doing exactly the job it should.
 
 **As a chair**, I want members to be able to apply to my committee, and to approve or decline
 them myself.
-📋 `joinPolicy = 'by_application'` — phase 5 of [groups-spec.md](shipped/groups-spec.md). Approving is
+~~📋~~ ⏫ **✅ since** — all eleven groups phases shipped. `'requested'` is a
+`groupMemberStatuses` value, a `by_application` group shows an Apply button beside its join
+instructions, and the applications sit apart from the roster on the club page. Approving is
 a `group_member.status` flip from `'requested'` to `'active'`, the same flip that accepts an
 invitation. This replaces the interest-to-roster funnel an earlier draft proposed; see
 [What a committee is in this app](#what-a-committee-is-in-this-app) for what retires with it.
@@ -573,12 +632,15 @@ gate is the conversation, not the count.
 **As a chair**, I want to invite someone onto the committee and hand the seat off cleanly when
 they leave.
 🔧 Group invitations are built for bands and generalize; an invited member is a `group_member`
-row with `status = 'pending'` that appears on the invitee's dashboard. Blocked on
-`/staff/groups`.
+row with `status = 'pending'` that appears on the invitee's dashboard. ~~Blocked on
+`/staff/groups`.~~ ⏫ **✅ since:** `/staff/groups` is built, and a leader invites from the club
+page by account or by email address. Handing the seat off is `transferGroupOwner` — though a
+chair is an `admin`, so for a committee there is usually no seat to hand.
 
 **As a chair**, I want the committee's minutes and its working documents in one place that
 outlives whoever took them.
-📋 Group documents — phase 8 of [groups-spec.md](shipped/groups-spec.md), unbuilt. Designed with
+~~📋~~ ⏫ **✅ since:** group documents are built — the private bucket behind an authorized
+download route, with a per-group quota meter. Designed with
 committee minutes as the named use case, and deliberately a file store rather than a document
 tool: no in-app authoring, no versioning, no structured agenda format. A dissolved committee
 keeps its documents, because they are the record of it. The same store would hold the
@@ -586,16 +648,18 @@ committee's checklists, templates and rosters — but nothing prompts anyone to 
 current, which the proposal makes a standing duty of the chair.
 
 **As a chair**, I want to post to my committee without email.
-📋 Group announcements — phase 7 of [groups-spec.md](shipped/groups-spec.md), unbuilt. The per-member
-mute (`group_member.notifyAnnouncements`) already exists and its schema comment says outright
-that nothing reads it until phase 7 lands.
+~~📋~~ ⏫ **✅ since:** announcements fan out in-app and by email to unmuted members, latched
+against the at-least-once bus and chunked for D1's bound-parameter cap. The per-member mute
+(`group_member.notifyAnnouncements`) is read now, so its schema comment saying nothing reads it
+is itself stale.
 
 **As a chair**, I want to report my committee's numbers and status to the board on a schedule,
 and to flag when we cannot cover our work with the people we have.
-📋 Not six committee report pages — one rollup, at two cadences. [reporting-spec.md](reporting-spec.md)'s
-strategy is that the packet calls each module's existing report service rather than writing its
-own queries, so a committee's numbers are whatever its domain already computes and the board
-reads one document. `/staff/volunteer/report` is both the precedent for the shape (a date
+~~📋~~ ⏫ **🔧 since.** The rollup is built — `/staff/reports`, calling each module's existing
+report service exactly as [reporting-spec.md](shipped/reporting-spec.md) proposed, so the board
+reads one document over any date range. What it is **not** is committee-scoped: it is one
+organization-wide page behind `finance.read`, not a chair's view of their own committee's
+numbers. That scoping is the `requireCommitteeRole` guard, not a second report. `/staff/volunteer/report` is both the precedent for the shape (a date
 range, tables, no charts, not cached) and one of the services the rollup would call.
 
 Noticing that a duty has gone unstaffed is **deliberately not a feature**. It would need
@@ -645,13 +709,14 @@ Responsible for one recurring program, session to session.
 
 **As a program lead**, I want to run my program's sessions, welcome newcomers, and keep the
 roster.
-🔧 A club `group` with the lead as owner. Blocked on `/staff/groups` and the club page, which
-arrive later in [groups-spec.md](shipped/groups-spec.md).
+~~🔧~~ ⏫ **✅ since:** `/staff/groups` creates the club and appoints its lead, and
+`/member/groups/[slug]` is the lead's six-tab page — roster, sessions, announcements,
+documents, applications and, for a committee, its projects.
 
 **As a program lead**, I want to tell my own attendees about a cancellation or a change,
 directly.
-📋 Group announcements would reach the roster, once phase 7 lands. 🆕 Reaching the program's
-_email segment_ — attendees who never joined the roster — is the delegation gap under
+~~📋~~ ⏫ **✅ since** for the roster half: announcements are built and reach unmuted members
+in-app and by email. 🆕 Reaching the program's _email segment_ — attendees who never joined the roster — is the delegation gap under
 Communications, and is the larger half for a drop-in program.
 
 **As a program lead**, I want the published details and the standing slot to change together
@@ -671,9 +736,9 @@ role. 🔧 It is a staff page, and the host is a volunteer — there is no host-
 
 **As a host**, I want to count the till with Merch before doors and again at the end, with both
 of us signing, and to settle with the bands off an agreed ticket count.
-📋 Settlement in [production-workflow-spec.md](production-workflow-spec.md) — door cash,
-expenses, per-slot payouts, an editable settlement with an audit trail, deliberately a
-worksheet rather than a disbursement system. 🆕 Two-person sign-off is not in it.
+⏫ **Split.** 🔧 `settlement-service.ts` reads a settlement and `production_expense` records
+what the show cost. 🆕 Door cash has no column, a slot has no payout field, and nothing
+settles — see #1133. Two-person sign-off was never in the spec either.
 
 **As a host**, I want to record afterward what worked and what didn't.
 ✅ Post-shift feedback — a rating, a separate "were you set up to succeed?", and a comment —
@@ -683,7 +748,7 @@ already exists per signup and rolls up anonymously per role.
 
 **As tech**, I want the stage plot and input list the act supplied, and to flag room limitations
 before the event.
-📋 Rider upload and per-slot tech notes.
+~~📋~~ ⏫ **✅ since:** `/band/[slug]/rider` and `production_slot.techNotes`.
 _Claiming a desk shift is already gated on clearance — see Production._
 
 ### Door
@@ -779,10 +844,15 @@ edited away, because each one closes off an alternative that will otherwise be r
    attaches to a `contact` like anything else. No release table, in any of the three cases.
 
 4. **Two cadences, one strategy.** There is a monthly committee report to the board and an
-   annual report, and both compose the same way: per [reporting-spec.md](reporting-spec.md) the
-   packet calls each module's existing report service rather than writing its own queries. The
-   monthly is the smaller artifact — this committee, since the last meeting — and the annual is
-   the rollup across all of them. Not six standing report pages either way.
+   annual report, and both compose the same way: per
+   [reporting-spec.md](shipped/reporting-spec.md) the packet calls each module's existing report
+   service rather than writing its own queries. The monthly is the smaller artifact — this
+   committee, since the last meeting — and the annual is the rollup across all of them. Not six
+   standing report pages either way.
+
+   ⏫ **2026-09-13:** the strategy shipped and the decision held — `/staff/reports` calls the
+   module services and takes any range, so the two cadences are one page. The **per-committee**
+   cut is what is left, and it is a scoping question rather than a reporting one.
 
 5. **Committee members act within their own domain.** This was the question the rest depended
    on, and the answer is the one that costs the most: committee-scoped authority is real work.
