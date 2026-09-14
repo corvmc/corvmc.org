@@ -10,10 +10,13 @@ what survives here is the design rationale — the options weighed and rejected,
 article carries.
 
 **A spec is not a backlog.** An unbuilt spec describes _how_; the tracker says _whether_ and _when_.
-Every file in this directory should have an open tracking issue labelled `spec` — three do not
-(`project-spec.md`, `staff-email-change-spec.md`, `reservation-confirmation-window.md`), which is
-the failure mode this rule exists to catch: work that only exists as a markdown file is work nobody
-is going to pick up.
+Every file in this directory has an open tracking issue labelled `spec`, and as of 2026-09-13 every
+one of them does. Naming the offenders here was the previous approach and it rotted in both
+directions at once — two of the three named had been tracked for days, while four specs it did not
+name had nothing. The list is the query below, not a sentence in this file.
+
+The failure this rule exists to catch: work that only exists as a markdown file is work nobody is
+going to pick up.
 
 ```bash
 gh issue list --label spec          # the specs someone is tracking
