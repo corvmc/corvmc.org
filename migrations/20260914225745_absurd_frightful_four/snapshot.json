@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "706c600d-8a25-4f16-b5b2-7c1a56e36498",
+  "id": "ecdb042f-9315-4982-911b-8f8addfd49a5",
   "prevIds": [
-    "1ee9237f-5712-4ddc-b159-d7d78c3244da"
+    "706c600d-8a25-4f16-b5b2-7c1a56e36498"
   ],
   "ddl": [
     {
@@ -2711,6 +2711,36 @@
       "default": "false",
       "generated": null,
       "name": "contributed",
+      "entityType": "columns",
+      "table": "production_slot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "paid_cents",
+      "entityType": "columns",
+      "table": "production_slot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "paid_at",
+      "entityType": "columns",
+      "table": "production_slot"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "paid_by_user_id",
       "entityType": "columns",
       "table": "production_slot"
     },
@@ -11926,6 +11956,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_production_slot_event_band_id_event_band_id_fk",
+      "entityType": "fks",
+      "table": "production_slot"
+    },
+    {
+      "columns": [
+        "paid_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_production_slot_paid_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "production_slot"
     },
