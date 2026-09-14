@@ -27,6 +27,7 @@ export type MemberNavKey =
 	| 'equipment'
 	| 'equipment-loans'
 	| 'volunteer'
+	| 'volunteer-committees'
 	| 'suggestions'
 	| 'profile'
 	| 'account'
@@ -104,7 +105,23 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 	// Was gated on a `volunteering` flag. The flag is retired and the feature was
 	// on in production, so the row is simply always here — this is a flag removal,
 	// not an unlink.
-	items.push({ key: 'volunteer', label: 'Volunteering', href: resolve('/member/volunteer') });
+	// Committees sit under Volunteering because that is where /contribute puts
+	// them and because "how do I get more involved" is one question to a member.
+	// They are not volunteering in the model — a committee is governance and a
+	// `volunteer_role` grants nothing — but a second top-level row for something
+	// most people use once would be the wrong trade.
+	items.push({
+		key: 'volunteer',
+		label: 'Volunteering',
+		href: resolve('/member/volunteer'),
+		children: [
+			{
+				key: 'volunteer-committees',
+				label: 'Committees',
+				href: resolve('/member/volunteer/committees')
+			}
+		]
+	});
 
 	// Not flag-gated: a suggestion board with no audience collects single-vote
 	// posts, so there is nothing useful to dark-launch.

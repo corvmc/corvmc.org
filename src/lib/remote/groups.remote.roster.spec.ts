@@ -151,6 +151,13 @@ vi.mock('$lib/server/group/announcement-service', () => ({
 	listForManager: vi.fn(),
 	listPublished: vi.fn()
 }));
+// Mocked like every other service here. Unmocked it reaches the real
+// `$lib/server/db`, which builds `relations.ts` against a schema index whose
+// `directory` module this file replaces — so the failure surfaces as
+// "Cannot read properties of undefined (reading 'userId')" in relations.
+vi.mock('$lib/server/group/committee-application-service', () => ({
+	listForCommittee: vi.fn(async () => [])
+}));
 vi.mock('$lib/server/event/event-service', () => ({ listGroupSessions: vi.fn() }));
 vi.mock('$lib/server/project/project-service', () => ({ listProjects: vi.fn() }));
 vi.mock('$lib/server/group/file-service', () => ({ list: vi.fn(), getUsage: vi.fn() }));

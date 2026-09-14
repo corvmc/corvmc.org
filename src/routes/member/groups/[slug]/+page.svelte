@@ -36,6 +36,7 @@
 	import InviteGroupMemberAction from '$lib/components/groups/InviteGroupMemberAction.svelte';
 	import GroupMemberEditAction from '$lib/components/groups/GroupMemberEditAction.svelte';
 	import GroupSelfEditAction from '$lib/components/groups/GroupSelfEditAction.svelte';
+	import CommitteeApplicationsCard from '$lib/components/groups/CommitteeApplicationsCard.svelte';
 	import EditSessionAction from '$lib/components/groups/EditSessionAction.svelte';
 
 	/**
@@ -412,6 +413,11 @@
 				</Table>
 			</InfoCard>
 		{/if}
+
+		<!-- A committee is invite-only, so its applications are their own entity and
+		     never reach `members.requested`. Above the roster for the same reason
+		     Requests is: they are the rows waiting on somebody. -->
+		<CommitteeApplicationsCard {slug} applications={data.committeeApplications} />
 
 		{#if data.canManage}
 			<div class="flex justify-end">

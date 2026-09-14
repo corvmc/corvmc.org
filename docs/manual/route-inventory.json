@@ -288,6 +288,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/volunteer/committees",
+		"panel": "member"
+	},
+	{
 		"route": "/member/volunteer/feedback/[signupId]",
 		"panel": "member"
 	},
