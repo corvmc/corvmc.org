@@ -1,3 +1,5 @@
+import { captureException } from '$lib/server/sentry';
+import { recordFreeTicketSale } from '$lib/server/finance/ticket-entries';
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
@@ -1697,6 +1699,20 @@ export const purchaseTickets = form(
 				attendeeName: attendee.name,
 				attendeeEmail: attendee.email
 			});
+			// The tickets are already valid; the ledger row is the record that a
+			// free show reached these people. Best-effort for that reason.
+			try {
+				await recordFreeTicketSale({
+					purchaseId: freeId,
+					eventId: evt.id,
+					quantity: data.quantity,
+					userId: locals.user?.id ?? null,
+					occurredAt: new Date()
+				});
+			} catch (err) {
+				captureException(err, { event: 'finance.free_ticket_entry', purchaseId: freeId });
+			}
+
 			return { redirectUrl: `/events/${evt.id}/tickets/success?purchase_id=${freeId}` };
 		}
 
