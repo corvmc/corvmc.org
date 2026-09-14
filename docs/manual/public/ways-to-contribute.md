@@ -17,7 +17,7 @@ The page lists the roles you can sign up for, grouped three ways:
 - **At shows** — host, tech (soundboard), door, merch, and photo or video.
 - **Away from shows** — street team, tabling at community events, work parties,
   gear repair, and audio engineering.
-- **Committees** — Programming, Production, Development, Communications, Art and
+- **Committees** — Booking, Production, Development, Communications, Art and
   Merchandise, and Facility. Committees meet monthly to guide the organization.
 
 **Create a Free Account to Volunteer** goes to registration, and the first time

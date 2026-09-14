@@ -72,7 +72,7 @@
 			title: 'Committees',
 			desc: 'Committees meet monthly to build and guide the organization.',
 			roles: [
-				{ name: 'Programming', desc: 'Planning and booking CMC-produced events.' },
+				{ name: 'Booking', desc: 'Planning and booking CMC-produced events.' },
 				{ name: 'Production', desc: 'Operating, staffing, and running CMC events.' },
 				{ name: 'Development', desc: 'Fundraising, member and partner development, outreach.' },
 				{ name: 'Communications', desc: 'Social media, posters, press, and the newsletter.' },

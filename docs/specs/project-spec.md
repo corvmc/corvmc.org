@@ -130,7 +130,7 @@ Retrofitting either onto existing rows is far harder than starting with them.
 
 The schema anticipated this before there was anywhere to put it. From `duty_list`:
 
-> Facility and Programming own their own lists, and a list you need a deploy to change
+> Facility and Booking own their own lists, and a list you need a deploy to change
 > is not owned by them.
 
 [committees-and-roles-spec.md](committees-and-roles-spec.md) establishes a committee as

@@ -32,7 +32,7 @@ export const GROUP_LEADER_PERSONAS = [
 		name: 'Devin Achebe',
 		memberNumber: 74,
 		joinPolicy: 'by_application' as const,
-		tagline: 'Chairs the Programming Committee',
+		tagline: 'Chairs the Booking Committee',
 		bio: 'Books the room and argues about it afterwards.'
 	},
 	{

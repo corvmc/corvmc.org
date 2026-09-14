@@ -28,8 +28,8 @@ export const SEED_CLUB_SLUG = 'e2e-real-book-club';
 export const SEED_CLUB_NAME = 'E2E Real Book Club';
 
 export const SEED_COMMITTEE_ID = 'e2e-group-committee';
-export const SEED_COMMITTEE_SLUG = 'e2e-programming-committee';
-export const SEED_COMMITTEE_NAME = 'E2E Programming Committee';
+export const SEED_COMMITTEE_SLUG = 'e2e-booking-committee';
+export const SEED_COMMITTEE_NAME = 'E2E Booking Committee';
 
 /**
  * Two more, for the member surfaces, and they exist separately because the

@@ -46,7 +46,7 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 	const [programming] = await db
 		.select({ id: group.id })
 		.from(group)
-		.where(eq(group.slug, 'programming-committee'))
+		.where(eq(group.slug, 'booking-committee'))
 		.limit(1);
 
 	// The seeded suggestion about soundproofing: a member asked, and this is the

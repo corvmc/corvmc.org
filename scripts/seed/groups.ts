@@ -61,8 +61,8 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 		},
 		{
 			kind: 'committee' as const,
-			name: 'Programming Committee',
-			slug: 'programming-committee',
+			name: 'Booking Committee',
+			slug: 'booking-committee',
 			bio: 'Decides what the Collective books, and when. Meets fortnightly.',
 			joinPolicy: 'by_application' as const,
 			joinInstructions:

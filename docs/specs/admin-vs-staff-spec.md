@@ -403,7 +403,7 @@ mappings.
 - _A committee is an organization._ Now the check works, but `group` is one table holding bands,
   clubs and committees, so every band becomes an organization too; `activeOrganizationId` lands
   on the session, which is tenant-switching state this app has no use for (somebody on both
-  Programming and Production does not switch between them); and the cross-cutting positions are
+  Booking and Production does not switch between them); and the cross-cutting positions are
   not organization-scoped at all, so `createAccessControl` is still needed beside it. Two
   mechanisms rather than one.
 
@@ -427,7 +427,7 @@ differently.
 **Worth stealing, though, and recorded so it is not reinvented badly:** `organizationRole` is a
 role row scoped to one organization with its permissions stored as JSON, created at runtime.
 That is the shape to copy as a `group_role` table _if_ committees ever want their own internal
-positions — "Programming has a booker with these capabilities" — which is the one place
+positions — "Booking has a booker with these capabilities" — which is the one place
 roles-as-data is right, because the people maintaining it are the committee itself. Not needed
 now: today's positions are cross-cutting and belong in the code matrix.
 
@@ -468,7 +468,7 @@ position count triples or per-resource sharing becomes a real feature.
 ## Committee scope: the two shapes
 
 A capability like `event.publish` is unqualified. A committee member holds it _for their own
-domain_ — Programming may publish the shows Programming owns, and not the rest. Something has
+domain_ — Booking may publish the shows Booking owns, and not the rest. Something has
 to carry that qualification. There are two places to put it.
 
 ### Option A — beside: two guards, composed at the call site
