@@ -42,6 +42,11 @@ vi.mock('$lib/server/production/run-of-show-service', () => ({
 	buildSlotsFromLineup: (...a: unknown[]) => runOfShow.buildSlotsFromLineup(...a)
 }));
 
+const settlement = { recordSlotPayout: vi.fn() };
+vi.mock('$lib/server/production/settlement-service', () => ({
+	recordSlotPayout: (...a: unknown[]) => settlement.recordSlotPayout(...(a as []))
+}));
+
 const artifacts = {
 	requestArtifact: vi.fn(),
 	cancelArtifactRequest: vi.fn()
@@ -98,8 +103,14 @@ const SLOT = { eventId: 'evt-1', slotId: 'slot-1' };
  */
 const submit = (fn: unknown, data: unknown) => (fn as (d: unknown) => Promise<unknown>)(data);
 
-/** Every write in the module, with the capability it must name. */
-const WRITES: { name: keyof typeof productions; args: unknown[] }[] = [
+/**
+ * Every write in the module, with the capability it must name.
+ *
+ * `capability` defaults to `event.manage`, which is the console's. Recording a
+ * payout is the exception and says so: the rest of this page arranges a night,
+ * that one moves money out of the till and writes the ledger.
+ */
+const WRITES: { name: keyof typeof productions; args: unknown[]; capability?: string }[] = [
 	{ name: 'createProduction', args: [{ eventId: 'evt-1' }] },
 	{ name: 'updateProduction', args: [{ id: 'prod-1', eventId: 'evt-1' }] },
 	{ name: 'setProductionProducer', args: [{ id: 'prod-1', eventId: 'evt-1', producer: 'me' }] },
@@ -120,7 +131,12 @@ const WRITES: { name: keyof typeof productions; args: unknown[] }[] = [
 		name: 'askForArtifact',
 		args: [{ eventId: 'evt-1', entryId: 'entry-1', artifact: 'tech_rider' }]
 	},
-	{ name: 'dropArtifactRequest', args: [{ id: 'req-1', eventId: 'evt-1' }] }
+	{ name: 'dropArtifactRequest', args: [{ id: 'req-1', eventId: 'evt-1' }] },
+	{
+		name: 'recordActPayout',
+		args: [{ ...SLOT, amountCents: 1000 }],
+		capability: 'finance.refund'
+	}
 ];
 
 beforeEach(() => {
@@ -129,12 +145,12 @@ beforeEach(() => {
 });
 
 describe('productions.remote guards', () => {
-	for (const { name, args } of WRITES) {
-		it(`${name} requires event.manage before doing any work`, async () => {
+	for (const { name, args, capability = 'event.manage' } of WRITES) {
+		it(`${name} requires ${capability} before doing any work`, async () => {
 			await expect(submit(productions[name], args[0])).rejects.toThrow('Staff access required');
 
-			expect(requireCapability).toHaveBeenCalledWith('event.manage');
-			for (const spy of Object.values({ ...service, ...runOfShow, ...artifacts })) {
+			expect(requireCapability).toHaveBeenCalledWith(capability);
+			for (const spy of Object.values({ ...service, ...runOfShow, ...artifacts, ...settlement })) {
 				expect(spy).not.toHaveBeenCalled();
 			}
 		});

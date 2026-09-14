@@ -3,6 +3,7 @@ import { form } from '$app/server';
 import { getRequestEvent } from '$app/server';
 import { requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
+import { recordSlotPayout } from '$lib/server/production/settlement-service';
 import { productionStatuses } from '$lib/server/db/schema/production';
 import {
 	createProduction as createService,
@@ -314,6 +315,31 @@ export const setRunOfShowTerms = form(
 				againstNet: data.againstNet,
 				contributed: data.contributed
 			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getStaffEventProduction(data.eventId).refresh();
+		return { success: true };
+	}
+);
+
+/**
+ * What an act was actually handed.
+ *
+ * `finance.refund` rather than `event.manage`, which every other control on
+ * this console uses: the rest of the page arranges a night, and this one moves
+ * money out of the till and writes the ledger. A producer runs the show; a
+ * treasurer says what was paid.
+ */
+export const recordActPayout = form(
+	z.object({
+		...slotRef,
+		amountCents: z.number().int().min(0).max(100_000_000)
+	}),
+	async (data) => {
+		const staff = await requireCapability('finance.refund');
+		try {
+			await recordSlotPayout(data.slotId, data.amountCents, staff.id);
 		} catch (err) {
 			mapDomainError(err);
 		}

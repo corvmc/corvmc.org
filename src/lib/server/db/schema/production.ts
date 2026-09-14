@@ -253,6 +253,22 @@ export const productionSlot = sqliteTable(
 		/** Zero and zero on purpose: the act played for free, and it was worth this. */
 		contributed: integer('contributed', { mode: 'boolean' }).notNull().default(false),
 
+		/**
+		 * What this act was actually handed, and when.
+		 *
+		 * Distinct from the deal above, which is what was agreed: a settlement is
+		 * a conversation and the number can move. Null means unpaid — not zero,
+		 * which is a real and different answer for a `contributed` set.
+		 *
+		 * The money is recorded against the show's pool in `financial_entry` at
+		 * the same time; these columns are the production's own record of it, and
+		 * what makes a closed show answerable without recomputing a deal that may
+		 * have been edited since.
+		 */
+		paidCents: integer('paid_cents'),
+		paidAt: integer('paid_at', { mode: 'timestamp' }),
+		paidByUserId: text('paid_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),

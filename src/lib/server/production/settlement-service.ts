@@ -4,6 +4,8 @@ import { production, productionSlot } from '$lib/server/db/schema/production';
 import { eventBand } from '$lib/server/db/schema/event';
 import { and, asc, eq, sum } from 'drizzle-orm';
 import { deductibleTotalCents } from './expense-service';
+import { recordActPayout } from '$lib/server/finance/payout-entries';
+import { DomainError } from '$lib/server/domain-error';
 
 /**
  * What a show took, what it cost, and what each act is owed.
@@ -26,6 +28,9 @@ export interface ActSettlement {
 	suggestedPayoutCents: number;
 	/** What the collective adds on top of the designated pool to reach it. */
 	topUpCents: number;
+	/** What the act was actually handed. Null is unpaid; 0 is a paid nothing. */
+	paidCents: number | null;
+	paidAt: Date | null;
 }
 
 export interface Settlement {
@@ -40,6 +45,10 @@ export interface Settlement {
 	deductibleExpensesCents: number;
 	acts: ActSettlement[];
 	suggestedPayoutTotalCents: number;
+	/** What has actually gone out so far. */
+	paidTotalCents: number;
+	/** Acts with no payout recorded yet — what settling still has left to do. */
+	unpaidActCount: number;
 	/** The collective's position once the acts and the costs are paid. */
 	netCents: number;
 }
@@ -114,7 +123,9 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 			percentageBps: productionSlot.percentageBps,
 			versus: productionSlot.versus,
 			againstNet: productionSlot.againstNet,
-			contributed: productionSlot.contributed
+			contributed: productionSlot.contributed,
+			paidCents: productionSlot.paidCents,
+			paidAt: productionSlot.paidAt
 		})
 		.from(productionSlot)
 		.leftJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
@@ -150,11 +161,17 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 			// What the collective adds beyond what arrived earmarked — a guarantee
 			// on a soft night. Never negative: paying an act less than was
 			// designated is not a saving, it is a different problem.
-			topUpCents: Math.max(0, suggestedPayoutCents - designatedCents)
+			topUpCents: Math.max(0, suggestedPayoutCents - designatedCents),
+			paidCents: s.paidCents,
+			paidAt: s.paidAt
 		};
 	});
 
 	const suggestedPayoutTotalCents = acts.reduce((t, a) => t + a.suggestedPayoutCents, 0);
+	const paidTotalCents = acts.reduce((t, a) => t + (a.paidCents ?? 0), 0);
+	// A `contributed` set still has to be marked paid — at zero. Otherwise a
+	// donated night reads as permanently outstanding.
+	const unpaidActCount = acts.filter((a) => a.paidCents === null).length;
 
 	return {
 		productionId: prod.id,
@@ -166,8 +183,77 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 		deductibleExpensesCents,
 		acts,
 		suggestedPayoutTotalCents,
+		paidTotalCents,
+		unpaidActCount,
 		// Expenses come out of the collective's share, not the pool — the acts'
 		// number is what buyers designated. `againstNet` is the per-act exception.
 		netCents: collectiveRevenueCents - expensesCents - (suggestedPayoutTotalCents - actsPoolCents)
 	};
+}
+
+export class PayoutError extends DomainError {
+	readonly httpStatus = 422;
+
+	constructor(message: string) {
+		super(message);
+		this.name = 'PayoutError';
+	}
+}
+
+/**
+ * Record what an act was handed.
+ *
+ * The amount is staff's, not the worksheet's: `suggestedPayoutCents` is what
+ * the deal produces, and a settlement is a conversation at the end of the
+ * night. Writes the slot's record and the ledger's together.
+ */
+export async function recordSlotPayout(
+	slotId: string,
+	amountCents: number,
+	recordedByUserId: string
+): Promise<void> {
+	if (!Number.isInteger(amountCents) || amountCents < 0) {
+		throw new PayoutError('A payout is a whole number of cents, and not negative.');
+	}
+
+	const [slot] = await db
+		.select({
+			id: productionSlot.id,
+			paidCents: productionSlot.paidCents,
+			productionId: production.id,
+			eventId: production.eventId,
+			status: production.status,
+			actName: eventBand.name
+		})
+		.from(productionSlot)
+		.innerJoin(production, eq(production.id, productionSlot.productionId))
+		.leftJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
+		.where(eq(productionSlot.id, slotId))
+		.limit(1);
+
+	if (!slot) throw new PayoutError('That slot is no longer on the bill.');
+	// Closed is terminal. Re-opening a settled night to change a number is a
+	// correction, and a correction is a reversing entry rather than an edit.
+	if (slot.status === 'closed') {
+		throw new PayoutError('This show is closed. Reopen it before changing what was paid.');
+	}
+	if (slot.paidCents !== null) {
+		throw new PayoutError('That act is already marked paid.');
+	}
+
+	const now = new Date();
+	await db
+		.update(productionSlot)
+		.set({ paidCents: amountCents, paidAt: now, paidByUserId: recordedByUserId, updatedAt: now })
+		.where(eq(productionSlot.id, slotId));
+
+	await recordActPayout({
+		eventId: slot.eventId,
+		productionId: slot.productionId,
+		slotId,
+		actName: slot.actName ?? 'the act',
+		amountCents,
+		occurredAt: now,
+		recordedByUserId
+	});
 }
