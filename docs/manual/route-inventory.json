@@ -360,6 +360,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/committees",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/contractors",
 		"panel": "staff"
 	},

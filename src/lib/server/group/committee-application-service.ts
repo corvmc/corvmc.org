@@ -349,3 +349,21 @@ export async function countOpenForCommittee(groupId: string): Promise<number> {
 		);
 	return Number(row?.total ?? 0);
 }
+
+/**
+ * Every committee with something waiting, for a reviewer who holds no seat.
+ *
+ * A chair reads their own on the club page. This is the other door: a headless
+ * committee has no chair to read it, and the volunteer coordinator answers for
+ * all six rather than one.
+ */
+export async function listOpenByCommittee() {
+	const committees = await listCommittees();
+	const perCommittee = await Promise.all(
+		committees.map(async (committee) => ({
+			...committee,
+			applications: await listForCommittee(committee.id)
+		}))
+	);
+	return perCommittee.filter((c) => c.applications.length > 0);
+}

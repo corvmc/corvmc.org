@@ -98,7 +98,6 @@ import {
 	updateGroupSettings,
 	AlreadyOnRosterError,
 	GroupNotFoundError,
-	LeaderNotFoundError,
 	NotAStaffGroupError,
 	NotJoinableError
 } from './group-service';
@@ -167,16 +166,22 @@ describe('createGroup', () => {
 	});
 
 	/**
-	 * A program created with an empty owner seat is a program nobody has been
-	 * told they run. The seat is legal to be empty *later* — a leader steps down
-	 * — but never at creation, which is staff recording an arrangement that
-	 * already exists.
+	 * Reversed 2026-09-14. An ownerless group is legal — the partial unique index
+	 * permits zero and `assignLeader` treats an empty seat as normal — and the
+	 * six committees exist before the board has appointed their chairs. The form
+	 * still asks; the model no longer insists.
 	 */
-	it('refuses to create one with no leader', async () => {
-		await expect(
-			createGroup({ ...SETTINGS, kind: 'club', name: 'Leaderless', leaderId: '' })
-		).rejects.toBeInstanceOf(LeaderNotFoundError);
-		expect(bandServiceCreate).not.toHaveBeenCalled();
+	it('creates one with no leader, and writes no owner row', async () => {
+		await createGroup({ ...SETTINGS, kind: 'committee', name: 'Booking', leaderId: null });
+		expect(bandServiceCreate).toHaveBeenCalledWith(
+			null,
+			expect.objectContaining({ name: 'Booking' })
+		);
+	});
+
+	it('treats an empty string the same as absent, since that is what a blank field sends', async () => {
+		await createGroup({ ...SETTINGS, kind: 'club', name: 'Leaderless', leaderId: '' });
+		expect(bandServiceCreate).toHaveBeenCalledWith(null, expect.anything());
 	});
 });
 

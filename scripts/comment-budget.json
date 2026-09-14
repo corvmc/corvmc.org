@@ -637,7 +637,6 @@
 	"src/routes/staff/events/[id]/production/+page.svelte",
 	"src/routes/staff/events/[id]/production/ProductionStatusAction.svelte",
 	"src/routes/staff/events/[id]/production/tabs.ts",
-	"src/routes/staff/groups/CreateGroupAction.svelte",
 	"src/routes/staff/groups/[id]/AssignLeaderAction.svelte",
 	"src/routes/staff/groups/[id]/GroupSettingsForm.svelte",
 	"src/routes/staff/inbox/FilterPanel.svelte",

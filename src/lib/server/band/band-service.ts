@@ -244,7 +244,14 @@ export async function getOwnerId(bandId: string): Promise<string | null> {
 // Create / Update / Delete
 // ---------------------------------------------------------------------------
 
-export async function create(ownerId: string, data: CreateBandData) {
+/**
+ * `ownerId` is nullable for a staff-created program only.
+ *
+ * A group with no owner is legal — the partial unique index permits zero — and
+ * a committee exists before the board appoints its chair. A band always has
+ * one: it is created by the person who owns it.
+ */
+export async function create(ownerId: string | null, data: CreateBandData) {
 	const kind = data.kind ?? 'band';
 	const baseSlug = generateSlug(data.name);
 	const slug = await ensureUniqueSlug(baseSlug, group, group.slug, undefined, isReservedSlug);
@@ -265,12 +272,16 @@ export async function create(ownerId: string, data: CreateBandData) {
 			...(data.joinPolicy ? { joinPolicy: data.joinPolicy } : {}),
 			...(data.joinInstructions !== undefined ? { joinInstructions: data.joinInstructions } : {})
 		}),
-		db.insert(groupMember).values({
-			groupId: bandId,
-			userId: ownerId,
-			role: 'owner',
-			status: 'active'
-		}),
+		...(ownerId
+			? [
+					db.insert(groupMember).values({
+						groupId: bandId,
+						userId: ownerId,
+						role: 'owner',
+						status: 'active'
+					})
+				]
+			: []),
 		// The public listing, in the same batch as the band it belongs to. A band
 		// with no entry is not in the directory at all — see `directory-service.ts`
 		// — so creating them apart would leave a window where a new band is

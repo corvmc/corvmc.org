@@ -121,7 +121,9 @@ export const createStaffGroup = form(
 		kind: staffKind,
 		name: z.string().trim().min(1, 'Name is required').max(SHORT_TEXT_MAX),
 		bio: z.string().trim().max(LONG_TEXT_MAX).optional().default(''),
-		leaderId: z.string().min(1, 'Pick a member to lead this group'),
+		// Optional: a committee exists before the board appoints its chair, and an
+		// ownerless group is legal. `assignGroupLeader` fills the seat later.
+		leaderId: z.string().optional(),
 		// Asked here rather than left to the column defaults. A group born
 		// `invite_only` with a `public` listing is advertised and unjoinable, and
 		// nothing said a second step was outstanding — #1106.
@@ -136,7 +138,7 @@ export const createStaffGroup = form(
 				kind: data.kind,
 				name: data.name,
 				bio: data.bio || undefined,
-				leaderId: data.leaderId,
+				leaderId: data.leaderId || null,
 				joinPolicy: data.joinPolicy,
 				joinInstructions: data.joinInstructions || null,
 				visibility: data.visibility

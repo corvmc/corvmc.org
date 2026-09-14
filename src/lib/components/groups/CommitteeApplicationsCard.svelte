@@ -26,9 +26,12 @@
 	 */
 	let {
 		slug,
+		title = 'Applications',
 		applications
 	}: {
 		slug: string;
+		/** Named when several committees stack on one page. */
+		title?: string;
 		applications: {
 			choiceId: string;
 			status: CommitteeApplicationStatus;
@@ -44,7 +47,7 @@
 </script>
 
 {#if applications.length > 0}
-	<InfoCard title="Applications">
+	<InfoCard {title}>
 		{#each applications as application (application.choiceId)}
 			<div class="mb-4 rounded-box border border-base-300 p-4 last:mb-0">
 				<div class="flex flex-wrap items-center gap-3">

@@ -138,10 +138,20 @@ consequence of there being one door.
 > inert, and `group_member.position` is still read by nothing — which
 > [decision 10](#decisions-that-were-open) says is correct.
 >
-> **What this section asks for beyond that is unchanged and unbuilt**: a
-> `requireCommitteeRole('programming')` reading `group_member` for a `kind = 'committee'`
-> group, resolving the committee from the thing being acted on and composing with staff. The
-> capability layer is the vocabulary that guard would speak; it is not the guard.
+> ⏫ **2026-09-14: part of it is built.** `requireCommitteeReviewer` resolves a committee from
+> the ref and admits two doors — an `admin` seat, or `committee.reviewApplications`, which the
+> volunteer coordinator holds. It 404s a band or a club before checking either, so the
+> capability cannot reach sideways. That is the shape this section describes, applied to one
+> resource; extending it is naming more capabilities, not designing a second mechanism.
+>
+> **A committee can also now exist with no chair.** `createGroup` no longer requires a leader,
+> which is what makes the second door load-bearing rather than a convenience: for a headless
+> committee it is the only one.
+>
+> **What is still unbuilt** is the general case: applications are one resource, and a committee's
+> authority over events, inventory or money needs the same guard resolving the committee from
+> _the thing being acted on_ rather than from a slug in the request. `requireCommitteeReviewer`
+> is the pattern; the rest is applying it.
 
 **This document does not solve it, and the structure it describes requires it solved.**
 Committee members are to be **empowered to act within their own domain** — that is the settled
