@@ -1,10 +1,16 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { IconDeviceFloppy, IconFileText, IconUpload } from '@tabler/icons-svelte';
-	import { getStaffAcquisitionDetail, editAcquisition } from '$lib/remote/inventory.remote';
+	import {
+		addAcquisitionLineForm,
+		getStaffAcquisitionDetail,
+		editAcquisition
+	} from '$lib/remote/inventory.remote';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { Field, MoneyField } from '$lib/components/ui/Form';
+	import Action from '$lib/components/ui/Action.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -58,6 +64,9 @@
 	 * decade-old amp was determined and file the answer as a gift in kind.
 	 */
 	const isGift = $derived(kind === 'donation' || kind === 'grant');
+
+	const addLineFields = addAcquisitionLineForm.fields;
+	const itemOptions = $derived(data.items.map((i) => ({ value: i.id, label: i.name })));
 
 	let donorUserId = $state('');
 	let donorName = $state('');
@@ -336,8 +345,52 @@
 	</div>
 
 	<InfoCard title="What arrived" class="mb-6">
+		{#snippet header(title)}
+			<div class="flex items-center justify-between gap-2">
+				<CardTitle>{title}</CardTitle>
+				<Action
+					action={addAcquisitionLineForm}
+					label="Add a line"
+					modalTitle="Add a line"
+					submitLabel="Add"
+					successToast="Line added"
+					variant="ghost"
+					size="xs"
+				>
+					{#snippet form()}
+						<div class="space-y-4">
+							<input {...addLineFields.acquisitionId.as('hidden', id)} />
+							<Field
+								field={addLineFields.itemId}
+								type="select"
+								label="What it was"
+								options={itemOptions}
+								required
+							/>
+							<div class="grid grid-cols-2 gap-3">
+								<Field
+									field={addLineFields.quantity}
+									type="number"
+									label="How many"
+									value={1}
+									required
+								/>
+								<MoneyField field={addLineFields.unitValueCents} label="Each" />
+							</div>
+							<p class="text-subtle">
+								Adding a line receives the stock now — a serialized item becomes one unit per
+								quantity, anything else a receive movement.
+							</p>
+						</div>
+					{/snippet}
+				</Action>
+			</div>
+		{/snippet}
+
 		{#if data.lines.length === 0}
-			<EmptyState description="No lines on this acquisition" />
+			<EmptyState
+				description="Nothing itemised yet. The receipt above is the record; add the lines from it when someone can read them."
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}

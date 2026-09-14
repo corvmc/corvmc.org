@@ -43,6 +43,7 @@ import {
 	getAcquisitionById,
 	listAcquisitions,
 	markReimbursed,
+	addAcquisitionLine,
 	recordAcquisition,
 	recordAcquisitionBulk,
 	spendByCategory,
@@ -1448,11 +1449,18 @@ export const getAcquisitions = query(
 export const getStaffAcquisitionDetail = query(z.string(), async (id) => {
 	await requireCapability('inventory.read');
 
-	const acq = await getAcquisitionById(id);
+	// The catalog rides along so the page can itemise a receipt without a second
+	// query in flight — `no-concurrent-remote-queries`, and the same reason
+	// `getIntakePage` composes its picker server-side.
+	const [acq, { rows: items }] = await Promise.all([
+		getAcquisitionById(id),
+		listItems({}, { pageSize: 1000 })
+	]);
 	if (!acq) error(404, 'Acquisition not found');
 
 	return {
 		...acq,
+		items: items.map((i) => ({ id: i.id, name: i.name, kind: i.kind })),
 		linesTotalCents: acq.lines.reduce((sum, l) => sum + l.quantity * (l.unitValueCents ?? 0), 0),
 		awaitingReimbursement: acq.paidByUserId !== null && acq.reimbursedAt === null
 	};
@@ -1572,6 +1580,52 @@ export const recordForm8283 = form(
 		// A newly-signed 8283 can make an already-disposed unit reportable, so the
 		// compliance queue has to be re-read rather than left to go stale.
 		void getForm8282Obligations().refresh();
+		return { success: true };
+	}
+);
+
+/**
+ * Add one line to an acquisition recorded from its receipt alone.
+ *
+ * The stock moves now rather than when the header was written, which is the
+ * honest order: nobody knew what arrived until somebody read the picture.
+ */
+export const addAcquisitionLineForm = form(
+	z.object({
+		acquisitionId: z.string().min(1),
+		itemId: z.string().min(1, 'Pick what it was'),
+		quantity: z.number().int().min(1).max(9999),
+		unitValueCents: z.number().int().min(0).optional()
+	}),
+	async (raw) => {
+		const currentUser = requireUser();
+		await requireCapability('inventory.manageAcquisitions');
+		const data = raw as {
+			acquisitionId: string;
+			itemId: string;
+			quantity: number;
+			unitValueCents?: number;
+		};
+
+		try {
+			await addAcquisitionLine(
+				data.acquisitionId,
+				{
+					itemId: data.itemId,
+					quantity: data.quantity,
+					unitValueCents: data.unitValueCents
+				},
+				currentUser.id
+			);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		// The line moved stock, so the catalog's on-hand numbers and the tagging
+		// backlog both changed with it.
+		void getStaffAcquisitionDetail(data.acquisitionId).refresh();
+		void getUntaggedAssets().refresh();
+		void getRestockList().refresh();
 		return { success: true };
 	}
 );
