@@ -185,7 +185,7 @@ jobs:
       # `if: failure()` so a green run uploads nothing. `retention-days` is short
       # because these are only ever read while the run is still being triaged.
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-failures-${{ github.run_id }}-${{ github.run_attempt }}
           path: test-results/
