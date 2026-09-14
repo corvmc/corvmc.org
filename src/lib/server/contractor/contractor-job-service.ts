@@ -1,3 +1,4 @@
+import { recordCompletedJob } from '$lib/server/finance/contractor-entries';
 import { db } from '$lib/server/db';
 import { contractor, contractorJob } from '$lib/server/db/schema/contractor';
 import { inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
@@ -159,6 +160,16 @@ export async function completeJob(
 		})
 		.where(eq(contractorJob.id, id))
 		.returning();
+
+	await recordCompletedJob({
+		jobId: row.id,
+		summary: job.summary,
+		projectId: row.projectId,
+		occurredAt: row.completedAt ?? now,
+		costCents: row.costCents,
+		isDonated: row.isDonated,
+		fairValueCents: row.fairValueCents
+	});
 
 	if (job.assetId && opts.returnToService !== false) {
 		const asset = await assetStatusOf(job.assetId);

@@ -42,3 +42,42 @@ export async function syncAcquisitionInKind(params: {
 		}
 	});
 }
+
+/**
+ * What a purchased acquisition cost.
+ *
+ * The receipt total wins over the lines, which is the rule the register
+ * already follows everywhere it shows a figure: postage and tax are on the
+ * paper and never on a line. A delta again, because the total arrives after
+ * the receipt as often as with it.
+ */
+export async function syncAcquisitionSpend(params: {
+	acquisitionId: string;
+	before: { kind: AcquisitionKind; totalCents: number | null } | null;
+	after: { kind: AcquisitionKind; totalCents: number | null };
+	description: string;
+	occurredAt: Date;
+	recordedByUserId?: string | null;
+	projectId?: string | null;
+}): Promise<void> {
+	const spendOf = (s: { kind: AcquisitionKind; totalCents: number | null } | null) =>
+		s && s.kind === 'purchase' ? (s.totalCents ?? 0) : 0;
+
+	const delta = spendOf(params.after) - spendOf(params.before);
+	if (delta === 0) return;
+
+	await recordEntry({
+		// Negative: money out.
+		amountCents: -delta,
+		kind: 'spent',
+		category: 'equipment',
+		occurredAt: params.occurredAt,
+		settlement: 'none',
+		subjectType: 'acquisition',
+		subjectId: `${params.acquisitionId}:spend`,
+		projectId: params.projectId ?? null,
+		recordedByUserId: params.recordedByUserId ?? null,
+		description: params.description,
+		metadata: { totalCents: params.after.totalCents }
+	});
+}

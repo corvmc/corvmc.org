@@ -1,4 +1,7 @@
-import { syncAcquisitionInKind } from '$lib/server/finance/in-kind-acquisition';
+import {
+	syncAcquisitionInKind,
+	syncAcquisitionSpend
+} from '$lib/server/finance/in-kind-acquisition';
 import { db } from '$lib/server/db';
 import {
 	acquisition,
@@ -108,6 +111,16 @@ export async function recordAcquisition(data: CreateAcquisitionData) {
 		donorUserId: header.donorUserId,
 		recordedByUserId: header.recordedByUserId,
 		description: header.sourceName ? `Gift in kind — ${header.sourceName}` : 'Gift in kind'
+	});
+
+	await syncAcquisitionSpend({
+		acquisitionId: header.id,
+		before: null,
+		after: { kind: header.kind, totalCents: header.totalCents },
+		occurredAt: header.occurredAt,
+		projectId: header.projectId,
+		recordedByUserId: header.recordedByUserId,
+		description: header.sourceName ? `Bought from ${header.sourceName}` : 'Purchase'
 	});
 
 	return header;
@@ -646,10 +659,15 @@ export async function updateAcquisition(id: string, data: UpdateAcquisitionData)
 	// Read first: the in-kind entry is the *difference* a re-valuation makes,
 	// and an append-only ledger cannot work that out after the fact.
 	const [before] = await db
-		.select({ kind: acquisition.kind, fairValueCents: acquisition.fairValueCents })
+		.select({
+			kind: acquisition.kind,
+			fairValueCents: acquisition.fairValueCents,
+			totalCents: acquisition.totalCents
+		})
 		.from(acquisition)
 		.where(eq(acquisition.id, id))
 		.limit(1);
+	const beforeSpend = before && { kind: before.kind, totalCents: before.totalCents };
 
 	const [row] = await db
 		.update(acquisition)
@@ -666,6 +684,15 @@ export async function updateAcquisition(id: string, data: UpdateAcquisitionData)
 		occurredAt: row.occurredAt,
 		donorUserId: row.donorUserId,
 		description: row.sourceName ? `Gift in kind — ${row.sourceName}` : 'Gift in kind'
+	});
+
+	await syncAcquisitionSpend({
+		acquisitionId: row.id,
+		before: beforeSpend ?? null,
+		after: { kind: row.kind, totalCents: row.totalCents },
+		occurredAt: row.occurredAt,
+		projectId: row.projectId,
+		description: row.sourceName ? `Bought from ${row.sourceName}` : 'Purchase'
 	});
 
 	return row;
