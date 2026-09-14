@@ -116,6 +116,15 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		displayOrder: 70
 	},
 	{
+		// What replaced the six per-committee roles: one role, and the log names
+		// which program. `group_id` on the log is what makes that work.
+		name: 'Program Work',
+		group: 'away-from-shows' as const,
+		description:
+			'Committee meetings and club sessions — the work of running a program. Name the committee or club on the log.',
+		displayOrder: 75
+	},
+	{
 		// Archived so the restore path and the "archived roles still resolve in
 		// reports" behaviour both have coverage on a fresh seed.
 		name: 'Zine & Print',

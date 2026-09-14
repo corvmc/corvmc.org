@@ -1,7 +1,21 @@
 import { db } from '$lib/server/db';
 import { volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, or, inArray, like, gte, lte, desc, count, sql, type SQL } from 'drizzle-orm';
+import { group, groupMember } from '$lib/server/db/schema/group';
+import {
+	eq,
+	and,
+	or,
+	inArray,
+	isNull,
+	like,
+	gte,
+	lte,
+	desc,
+	count,
+	sql,
+	type SQL
+} from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { memberRefColumns, toMemberRef, type MemberRefRow } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
@@ -77,6 +91,8 @@ export class HourLogValidationError extends DomainError {
 
 export interface SubmitHoursData {
 	volunteerRoleId: string;
+	/** The committee or club this time was given to. Null for CMC at large. */
+	groupId?: string | null;
 	/** YYYY-MM-DD in club time. */
 	workedOn: string;
 	minutes: number;
@@ -170,6 +186,32 @@ function validateReviewNotes(notes: string | undefined, required: boolean): stri
 }
 
 /**
+ * The program this time was given to, or null.
+ *
+ * A committee or a club the member actually holds an active row on — not a
+ * band, which is its own members' business rather than volunteering for CMC,
+ * and not a program they have never joined.
+ */
+async function requireOwnProgram(groupId: string, userId: string): Promise<string> {
+	const [row] = await db
+		.select({ id: group.id })
+		.from(group)
+		.innerJoin(groupMember, eq(groupMember.groupId, group.id))
+		.where(
+			and(
+				eq(group.id, groupId),
+				isNull(group.deletedAt),
+				inArray(group.kind, ['club', 'committee']),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'active')
+			)
+		)
+		.limit(1);
+	if (!row) throw new HourLogValidationError('Pick a committee or club you are a member of.');
+	return row.id;
+}
+
+/**
  * Submission may only target a live role. Review deliberately does NOT check
  * this — archiving a role while logs sit in the queue must not strand them.
  */
@@ -203,6 +245,7 @@ export async function submitHours(
 	await requireActiveVolunteer(userId);
 
 	const role = await requireActiveRole(data.volunteerRoleId);
+	const groupId = data.groupId ? await requireOwnProgram(data.groupId, userId) : null;
 	const workedOn = toWorkedOn(data.workedOn, enteredByStaff);
 	const minutes = validateMinutes(data.minutes);
 	const description = validateDescription(data.description);
@@ -214,6 +257,7 @@ export async function submitHours(
 		.values({
 			userId,
 			volunteerRoleId: role.id,
+			groupId,
 			shiftId: data.shiftId ?? null,
 			workedOn,
 			minutes,
@@ -509,6 +553,9 @@ export interface HourLogRow {
 	volunteerRoleId: string;
 	roleName: string;
 	roleIsActive: boolean;
+	/** The committee or club this was given to, if it named one. */
+	groupId: string | null;
+	groupName: string | null;
 	workedOn: Date;
 	minutes: number;
 	description: string;
@@ -560,7 +607,12 @@ function hourLogSelect() {
 		// need an alias and complicate the count query that shares this WHERE.
 		reviewedByName: sql<
 			string | null
-		>`(select name from "user" where "user".id = ${volunteerHourLog.reviewedByUserId})`
+		>`(select name from "user" where "user".id = ${volunteerHourLog.reviewedByUserId})`,
+		// Subquery, not a join: the group is nullable and a left join here would
+		// need an alias in the count query that shares this WHERE.
+		groupName: sql<
+			string | null
+		>`(select name from "group" where "group".id = ${volunteerHourLog.groupId})`
 	};
 }
 
@@ -570,6 +622,7 @@ type HourLogSelectRow = {
 	roleName: string;
 	roleIsActive: boolean;
 	reviewedByName: string | null;
+	groupName: string | null;
 };
 
 function toHourLogRow(row: HourLogSelectRow): HourLogRow {
@@ -580,6 +633,8 @@ function toHourLogRow(row: HourLogSelectRow): HourLogRow {
 		volunteerRoleId: row.log.volunteerRoleId,
 		roleName: row.roleName,
 		roleIsActive: row.roleIsActive,
+		groupId: row.log.groupId,
+		groupName: row.groupName,
 		workedOn: row.log.workedOn,
 		minutes: row.log.minutes,
 		description: row.log.description,

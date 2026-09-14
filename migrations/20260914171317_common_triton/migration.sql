@@ -1,0 +1,1 @@
+ALTER TABLE `volunteer_hour_log` ADD `group_id` text REFERENCES `group`(id) ON DELETE SET NULL;

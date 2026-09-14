@@ -20,10 +20,12 @@
 	import { submitVolunteerHours, editVolunteerHours } from '$lib/remote/volunteer.remote';
 
 	type Role = { id: string; name: string };
+	type Program = { id: string; name: string };
 
 	let {
 		mode = 'free',
 		roles = [],
+		programs = [],
 		label,
 		variant = 'ghost',
 		size = 'sm',
@@ -32,6 +34,8 @@
 	}: {
 		mode?: 'free' | 'shift' | 'fix';
 		roles?: Role[];
+		/** Committees and clubs the member belongs to. Empty hides the picker. */
+		programs?: Program[];
 		label?: string;
 		variant?: 'primary' | 'ghost';
 		size?: 'xs' | 'sm' | 'md';
@@ -97,6 +101,20 @@
 				<Select name="volunteerRoleId">
 					{#each roles as role (role.id)}
 						<option value={role.id}>{role.name}</option>
+					{/each}
+				</Select>
+			</label>
+		{/if}
+
+		{#if mode !== 'fix' && programs.length > 0}
+			<!-- Only for somebody who is on one. Most volunteering is for CMC at
+			     large, so this stays optional and blank by default. -->
+			<label class="fieldset w-full">
+				<span class="fieldset-legend">Was this for a committee or club?</span>
+				<Select name="groupId">
+					<option value="">CMC generally</option>
+					{#each programs as program (program.id)}
+						<option value={program.id}>{program.name}</option>
 					{/each}
 				</Select>
 			</label>

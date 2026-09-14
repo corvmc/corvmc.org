@@ -672,6 +672,12 @@ against the at-least-once bus and chunked for D1's bound-parameter cap. The per-
 (`group_member.notifyAnnouncements`) is read now, so its schema comment saying nothing reads it
 is itself stale.
 
+**As a chair**, I want to know how many hours my committee put in.
+⏫ **✅ 2026-09-14.** `volunteer_hour_log.group_id` attributes a log to a committee or club, and
+`/staff/volunteer/report` breaks approved hours down by program. It arrived because retiring the
+six committee `volunteer_role` rows left committee work unloggable — `submitHours` needs a live
+role — and the fix worth having was attribution rather than six roles back.
+
 **As a chair**, I want to report my committee's numbers and status to the board on a schedule,
 and to flag when we cannot cover our work with the people we have.
 ~~📋~~ ⏫ **🔧 since.** The rollup is built — `/staff/reports`, calling each module's existing
