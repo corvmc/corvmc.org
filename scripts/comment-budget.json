@@ -268,7 +268,6 @@
 	"src/lib/remote/external-acts.remote.ts",
 	"src/lib/remote/files.remote.ts",
 	"src/lib/remote/flags.remote.ts",
-	"src/lib/remote/group-events.remote.ts",
 	"src/lib/remote/groups.remote.ts",
 	"src/lib/remote/inbox.remote.ts",
 	"src/lib/remote/instructors.remote.spec.ts",

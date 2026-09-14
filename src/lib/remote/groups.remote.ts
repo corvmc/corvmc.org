@@ -17,6 +17,7 @@ import {
 	searchMembers as searchMembersService,
 	transferOwnership as transferOwnershipService,
 	updateMember,
+	updateOwnMembership,
 	BandMemberExistsError
 } from '$lib/server/band/band-service';
 import {
@@ -316,6 +317,9 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		},
 		role,
 		canManage,
+		// The roster renders a self-edit on this row and nothing else reads it.
+		// A staff non-member has no row, so it simply matches nobody.
+		viewerId: ctx.user.id,
 		announcements,
 		notifyAnnouncements,
 		files,
@@ -547,6 +551,33 @@ export const updateGroupMember = form(
 				},
 				group.id
 			);
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * A member editing their own row: their stage name, and what they do here.
+ *
+ * The counterpart to `updateGroupMember`, which cannot set `alias` — without
+ * this the rule was enforced and the thing it protects did not exist. No
+ * `memberId`: the row comes from the guard's unique `(group.id, user.id)`,
+ * because keying a self-edit on a caller's id is how one member edits another.
+ */
+export const updateMyGroupMembership = form(
+	rosterRef.extend({
+		alias: z.string().trim().max(100).optional(),
+		position: z.string().trim().max(100).optional()
+	}),
+	async (data) => {
+		const { user, group } = await requireProgramRole({ slug: data.slug }, 'member');
+		try {
+			await updateOwnMembership(group.id, user.id, {
+				alias: data.alias !== undefined ? data.alias || null : undefined,
+				position: data.position !== undefined ? data.position || null : undefined
+			});
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);

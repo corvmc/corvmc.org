@@ -90,6 +90,7 @@ const band = {
 	removeMember: vi.fn(async () => undefined),
 	revokeInvitation: vi.fn(async () => undefined),
 	updateMember: vi.fn(async () => undefined),
+	updateOwnMembership: vi.fn(async () => undefined),
 	transferOwnership: vi.fn(async () => undefined),
 	searchMembers: vi.fn(async () => [{ id: 'user-9', name: 'Nine', email: 'nine@example.com' }]),
 	acceptInvitation: vi.fn(async () => ({ status: 'active' as string })),
@@ -107,6 +108,7 @@ vi.mock('$lib/server/band/band-service', () => ({
 	removeMember: (...a: unknown[]) => band.removeMember(...(a as [])),
 	revokeInvitation: (...a: unknown[]) => band.revokeInvitation(...(a as [])),
 	updateMember: (...a: unknown[]) => band.updateMember(...(a as [])),
+	updateOwnMembership: (...a: unknown[]) => band.updateOwnMembership(...(a as [])),
 	transferOwnership: (...a: unknown[]) => band.transferOwnership(...(a as [])),
 	searchMembers: (...a: unknown[]) => band.searchMembers(...(a as [])),
 	acceptInvitation: (...a: unknown[]) => band.acceptInvitation(...(a as [])),
@@ -275,6 +277,63 @@ describe('the roster writes a leader reaches', () => {
 		['searchGroupUsers', () => groups.searchGroupUsers({ slug: 'wren-halloway', q: 'nine' })]
 	])('%s 404s a band slug', async (_name, call) => {
 		expect(await statusOf(call)).toBe(404);
+	});
+});
+
+describe('updateMyGroupMembership', () => {
+	/**
+	 * A member floor, not a leader one. `updateGroupMember` above cannot set
+	 * `alias` because a stage name is self-identification — before this form
+	 * existed, that meant nobody on a program could set one at all.
+	 */
+	it('lets a plain member set their own stage name', async () => {
+		callerRole = 'member';
+		await groups.updateMyGroupMembership({ slug: SLUG, alias: 'Doc', position: 'Piano' });
+		expect(band.updateOwnMembership).toHaveBeenCalledWith('group-1', 'user-1', {
+			alias: 'Doc',
+			position: 'Piano'
+		});
+	});
+
+	/**
+	 * The row is `(group.id, user.id)` from the guard. There is no `memberId` in
+	 * the schema, so a caller cannot name somebody else's row to edit.
+	 */
+	it('takes the row from the guard rather than from the request', async () => {
+		callerRole = 'member';
+		await groups.updateMyGroupMembership({
+			slug: SLUG,
+			memberId: 'member-7',
+			userId: 'user-9',
+			alias: 'Impostor'
+		} as never);
+		expect(band.updateOwnMembership).toHaveBeenCalledWith('group-1', 'user-1', expect.anything());
+	});
+
+	it('clears a field spelled blank rather than leaving it set', async () => {
+		callerRole = 'member';
+		await groups.updateMyGroupMembership({ slug: SLUG, alias: '', position: '' });
+		expect(band.updateOwnMembership).toHaveBeenCalledWith('group-1', 'user-1', {
+			alias: null,
+			position: null
+		});
+	});
+
+	it('leaves an omitted field alone', async () => {
+		callerRole = 'member';
+		await groups.updateMyGroupMembership({ slug: SLUG, alias: 'Doc' });
+		expect(band.updateOwnMembership).toHaveBeenCalledWith('group-1', 'user-1', {
+			alias: 'Doc',
+			position: undefined
+		});
+	});
+
+	/** A band edits at `/band/{slug}/members`, through `updateMyBandMembership`. */
+	it('404s a band slug', async () => {
+		callerRole = 'member';
+		expect(await statusOf(() => groups.updateMyGroupMembership({ slug: 'wren-halloway' }))).toBe(
+			404
+		);
 	});
 });
 
