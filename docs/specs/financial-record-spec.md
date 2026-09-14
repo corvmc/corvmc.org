@@ -1,6 +1,11 @@
 # The financial record
 
-> **Status: 📋 designed, not built.** Tracking issue: #825.
+> **Status: 🔧 partly built.** Tracking issue: #825.
+>
+> Phases 1–2 shipped in #838 (9 Sep): the `financial_entry` table, `financial-entry-service.ts`,
+> the category vocabulary and the seed. `checkout-entries-listener.ts` is the one writer in
+> production code. What is still open is on #825 — the remaining write paths, so every module
+> that moves money records it rather than only the checkout.
 >
 > One append-only table recording what the collective earned, spent, and was given — the half
 > [finance-spec.md](shipped/finance-spec.md) never covered. **Stripe stays authoritative for

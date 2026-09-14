@@ -111,6 +111,13 @@ the flags were retired in favour of long-lived feature branches
 >
 > Still unbuilt and still belonging here: run of show (`production_slot`, Phase 3), the
 > deal shape (Phase 4), settlement and expenses (Phase 5), close-out (Phase 6).
+>
+> **Superseded 2026-09-13.** Phase 3 shipped: `production_slot`, `run-of-show-service.ts`
+> and six remotes behind `RunOfShowPanel`. Phases 4 and 5 are part-shipped —
+> `setRunOfShowTerms` writes the deal, `production_expense` and `expense-service.ts`
+> exist with no writer (#927), and `getSettlement` reads but nothing settles. What is
+> genuinely unstarted is close-out (Phase 6) and the payout columns settlement needs
+> (#926). Tracked as #1133.
 
 > ## Amendment, 2026-09-07 — the deal lives on `production_slot`, and `production_slot` is a child of `event_band`
 >
