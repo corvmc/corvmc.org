@@ -77,6 +77,15 @@ the group. That is one join table and one chair-facing queue to build, and it le
 named "Booking Committee" in unrelated tables forever — a trap somebody eventually falls
 into.
 
+> ⏫ **Done 2026-09-14.** The `committee` bucket is gone from `volunteerRoleGroups`, the six
+> roles that shadowed the committees are **archived rather than deleted** — four hour logs point
+> at two of them, and retiring a role does not un-happen the work done under it — and their 26
+> interest rows became 9 committee applications. The six committees exist as headless `group`
+> rows. `/contribute` now sends people to apply rather than to a shift signup.
+>
+> One correction to the paragraph below: the funnel was not deleted so much as **replaced**, and
+> not by `by_application` — see the reversal of decision 9.
+
 **`by_application` deletes the funnel instead of building it.** A committee group publishes
 itself, a member applies from its own page, and a chair approves — `group_member.status` moves
 `requested → active` and the roster is the only record. Interest and membership stop being two

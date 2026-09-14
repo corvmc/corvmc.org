@@ -19,6 +19,9 @@ The page lists the roles you can sign up for, grouped three ways:
   gear repair, and audio engineering.
 - **Committees** — Booking, Production, Development, Communications, Art and
   Merchandise, and Facility. Committees meet monthly to guide the organization.
+  A committee is not a shift you sign up for: you **apply** at
+  `/member/volunteer/committees`, ticking as many as you like and answering two
+  questions, and a chair contacts you to talk it over.
 
 **Create a Free Account to Volunteer** goes to registration, and the first time
 you open your volunteering page it asks for a few details: your name, a phone

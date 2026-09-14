@@ -20,6 +20,8 @@
 		/** Only the committees group needs a lead-in above its roles. */
 		desc?: string;
 		roles: { name: string; desc: string }[];
+		/** A door of its own, where the page's shared signup button is the wrong one. */
+		link?: { href: string; label: string };
 	};
 
 	type ContributeWay = {
@@ -70,7 +72,7 @@
 		{
 			icon: IconBuildingCommunity,
 			title: 'Committees',
-			desc: 'Committees meet monthly to build and guide the organization.',
+			desc: 'Committees meet monthly to build and guide the organization. You apply, and a chair contacts you to talk it over.',
 			roles: [
 				{ name: 'Booking', desc: 'Planning and booking CMC-produced events.' },
 				{ name: 'Production', desc: 'Operating, staffing, and running CMC events.' },
@@ -78,7 +80,10 @@
 				{ name: 'Communications', desc: 'Social media, posters, press, and the newsletter.' },
 				{ name: 'Art and merchandise', desc: 'CMC merch and local artists for poster art.' },
 				{ name: 'Facility', desc: 'Building management, gear library, rehearsal scheduling.' }
-			]
+			],
+			// Committees are not volunteer roles any more, so the shift signup at the
+			// foot of this section is the wrong door for them. Members apply.
+			link: { href: '/member/volunteer/committees', label: 'Apply to a committee' }
 		}
 	];
 
@@ -160,6 +165,9 @@
 						</li>
 					{/each}
 				</ul>
+				{#if group.link}
+					<Button href={group.link.href} variant="ghost" size="sm">{group.link.label}</Button>
+				{/if}
 			</Tile>
 		{/each}
 	</div>

@@ -17,11 +17,11 @@ import { randomUUID } from 'crypto';
 
 // `defaultDurationMinutes` / `defaultCapacity` are what the New Shift form starts
 // with, so they are only set on the roles that really are scheduled as shifts —
-// leaving the committee roles blank exercises the fallback path too.
+// leaving the last two blank exercises the fallback path too.
 export const VOLUNTEER_ROLE_SEEDS: Array<{
 	name: string;
 	description: string;
-	group: 'at-shows' | 'away-from-shows' | 'committee';
+	group: 'at-shows' | 'away-from-shows';
 	displayOrder: number;
 	isActive?: boolean;
 	defaultDurationMinutes?: number;
@@ -107,8 +107,10 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		displayOrder: 60
 	},
 	{
+		// Was filed under a `committee` bucket that retired with the committees
+		// themselves; it is ordinary away-from-shows work and always was.
 		name: 'Administration',
-		group: 'committee' as const,
+		group: 'away-from-shows' as const,
 		description:
 			'Behind-the-scenes work: data entry, grant paperwork, scheduling, and answering the inbox.',
 		displayOrder: 70
@@ -117,7 +119,7 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		// Archived so the restore path and the "archived roles still resolve in
 		// reports" behaviour both have coverage on a fresh seed.
 		name: 'Zine & Print',
-		group: 'committee' as const,
+		group: 'away-from-shows' as const,
 		description: 'Layout and printing for the quarterly zine. On hiatus while we rethink the run.',
 		displayOrder: 80,
 		isActive: false
