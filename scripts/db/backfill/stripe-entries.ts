@@ -61,7 +61,7 @@ function rowsFor(c: Stripe.Charge): Row[] {
 	if (b === 'ticket') {
 		const collective = Math.round((c.amount * COLLECTIVE_BPS) / 10_000);
 		const acts = c.amount - collective;
-		const id = m.purchase_id || m.ticket_order_uuid || m.ticket_order_id || c.id;
+		const id = m.purchase_id || m.ticket_order_uuid || m.ticket_order_id || recordId(c);
 		return [
 			{
 				amount: collective,
@@ -95,7 +95,7 @@ function rowsFor(c: Stripe.Charge): Row[] {
 				category: 'reservation',
 				settlement: 'stripe',
 				subjectType: 'reservation',
-				subjectId: m.reservation_id || c.id,
+				subjectId: m.reservation_id || recordId(c),
 				description: 'Practice room (backfilled from Stripe)'
 			}
 		];
@@ -108,11 +108,20 @@ function rowsFor(c: Stripe.Charge): Row[] {
 			category: b === 'membership' ? 'membership' : 'other',
 			settlement: 'stripe',
 			subjectType: b === 'membership' ? 'membership' : 'other',
-			subjectId: c.id,
+			subjectId: recordId(c),
 			description: `${b === 'membership' ? 'Membership' : 'Uncategorised'} (backfilled from Stripe)`
 		}
 	];
 }
+
+/**
+ * The id the app itself records, which is the PaymentIntent and not the
+ * charge. Keying on the charge id instead double-counted a sale the live
+ * writer had already captured: same payment, two identifiers, so neither
+ * guard matched and the fee row it writes was invisible.
+ */
+const recordId = (c: Stripe.Charge) =>
+	typeof c.payment_intent === 'string' ? c.payment_intent : (c.payment_intent?.id ?? c.id);
 
 const charges: Stripe.Charge[] = [];
 for await (const c of stripe.charges.list({ limit: 100 })) charges.push(c);
@@ -136,15 +145,15 @@ for (const c of charges) {
 			`INSERT INTO financial_entry (id, amount_cents, kind, category, occurred_at, settlement,` +
 				` stripe_payment_record_id, settlement_group, subject_type, subject_id, user_id,` +
 				` description, metadata, created_at)\nSELECT lower(hex(randomblob(16))), ${r.amount},` +
-				` ${q(r.kind)}, ${q(r.category)}, ${c.created}, ${q(r.settlement)}, ${q(c.id)},` +
+				` ${q(r.kind)}, ${q(r.category)}, ${c.created}, ${q(r.settlement)}, ${q(recordId(c))},` +
 				` ${q(r.group ?? null)}, ${q(r.subjectType)}, ${q(r.subjectId)}, NULL, ${q(r.description)},` +
 				` json_object('backfilled', json('true'), 'source', 'stripe'), unixepoch()\n` +
-				`WHERE NOT EXISTS (SELECT 1 FROM financial_entry e WHERE e.stripe_payment_record_id = ${q(c.id)}` +
+				`WHERE NOT EXISTS (SELECT 1 FROM financial_entry e WHERE e.stripe_payment_record_id = ${q(recordId(c))}` +
 				` AND e.subject_id = ${q(r.subjectId)})\n` +
 				// The live checkout writer records the same charge id. If it already
 				// did, this charge is history the app captured properly and must not
 				// be reconstructed on top of — it writes a fee row this cannot see.
-				`  AND NOT EXISTS (SELECT 1 FROM financial_entry l WHERE l.stripe_payment_record_id = ${q(c.id)}` +
+				`  AND NOT EXISTS (SELECT 1 FROM financial_entry l WHERE l.stripe_payment_record_id = ${q(recordId(c))}` +
 				` AND COALESCE(json_extract(l.metadata, '$.source'), '') <> 'stripe');`
 		);
 		written++;
@@ -157,9 +166,9 @@ for (const c of charges) {
 			`INSERT INTO financial_entry (id, amount_cents, kind, category, occurred_at, settlement,` +
 				` stripe_payment_record_id, subject_type, subject_id, description, metadata, created_at)\n` +
 				`SELECT lower(hex(randomblob(16))), ${-c.amount_refunded}, 'earned', 'refund_absorbed',` +
-				` ${c.created}, 'stripe', ${q(c.id)}, 'other', ${q(c.id + ':refund')},` +
+				` ${c.created}, 'stripe', ${q(recordId(c))}, 'other', ${q(recordId(c) + ':refund')},` +
 				` 'Refund (backfilled from Stripe)', json_object('backfilled', json('true'), 'source', 'stripe'), unixepoch()\n` +
-				`WHERE NOT EXISTS (SELECT 1 FROM financial_entry e WHERE e.subject_id = ${q(c.id + ':refund')});`
+				`WHERE NOT EXISTS (SELECT 1 FROM financial_entry e WHERE e.subject_id = ${q(recordId(c) + ':refund')});`
 		);
 		refunds++;
 	}
