@@ -548,6 +548,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/reports",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/reservations",
 		"panel": "staff"
 	},

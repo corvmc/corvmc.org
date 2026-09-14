@@ -39,3 +39,21 @@ export function rangeCondition(
 
 	return conditions.length > 0 ? and(...conditions) : undefined;
 }
+
+/**
+ * The same range as instants, for a service whose filter wants `Date`s.
+ *
+ * `rangeCondition` covers the common case of one column in one query. A rollup
+ * that hands the range to several services cannot: each owns its own column and
+ * some take a bounded `{ from, to }` rather than a condition. Resolving once
+ * here keeps the club-time conversion in one place.
+ */
+export function rangeInstants(
+	range: ReportRange,
+	timezone: string = DEFAULT_TIMEZONE
+): { from?: Date; to?: Date } {
+	return {
+		from: range.from ? buildDateInTz(range.from, '00:00', timezone) : undefined,
+		to: range.to ? buildDateInTz(range.to, '23:59', timezone) : undefined
+	};
+}

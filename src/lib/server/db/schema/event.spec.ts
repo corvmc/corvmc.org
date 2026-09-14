@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createEventSchema } from '$lib/server/db/schema/event';
+import { createEventSchema, eventKinds } from '$lib/server/db/schema/event';
+import { eventKindLabels } from '$lib/config';
 import { dollarsToCents } from '$lib/utils/event-ticketing';
 
 // Regression: enabling ticketing without a valid price used to pass schema
@@ -91,5 +92,13 @@ describe('dollarsToCents', () => {
 		expect(dollarsToCents('free')).toBeUndefined();
 		expect(dollarsToCents('0')).toBeUndefined();
 		expect(dollarsToCents('-5')).toBeUndefined();
+	});
+});
+
+// The labels live in config because a component may not import the schema, so
+// nothing in the type system ties the two lists together. This does.
+describe('eventKindLabels', () => {
+	it('names every kind and nothing else', () => {
+		expect(Object.keys(eventKindLabels).sort()).toEqual([...eventKinds].sort());
 	});
 });

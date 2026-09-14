@@ -460,6 +460,26 @@ export const financialCategories = [
 ] as const;
 export type FinancialCategory = (typeof financialCategories)[number];
 
+/** The line names on the annual report, and the only place they are spelled. */
+export const financialCategoryLabels: Record<FinancialCategory, string> = {
+	ticket_sales: 'Ticket sales',
+	act_payout: 'Paid to acts',
+	act_guarantee: 'Act guarantees',
+	payout_rounding: 'Payout rounding',
+	card_fees: 'Card fees',
+	fee_coverage: 'Fees covered by buyers',
+	reservation: 'Practice room',
+	membership: 'Memberships',
+	music_sales: 'Music sales',
+	donation: 'Donations',
+	grant: 'Grants',
+	equipment: 'Equipment',
+	facility: 'Facility',
+	contractor: 'Contracted work',
+	refund_absorbed: 'Refunds',
+	other: 'Other'
+};
+
 /**
  * What a show's expense was for.
  *
@@ -1940,6 +1960,23 @@ export type PrototypeType = (typeof prototypeTypes)[number];
  * TypeScript-only constraint.
  */
 export const eventSources = ['cmc', 'band', 'community', 'group'] as const;
+
+/**
+ * What kind of occasion a listing is, for display.
+ *
+ * Declared here rather than beside `eventKinds` because the schema module
+ * imports this one and a component may not import the schema at all. Two staff
+ * pages hand-rolled these strings before this existed; `event.spec.ts` asserts
+ * the keys still match `eventKinds`, which is the half a literal map loses.
+ *
+ * Plural: every reader so far is a count.
+ */
+export const eventKindLabels = {
+	show: 'Shows',
+	work_party: 'Work parties',
+	meeting: 'Meetings',
+	class: 'Classes'
+} as const;
 export type EventSource = (typeof eventSources)[number];
 
 /** The member kinds `memberSubtype()` can report. */

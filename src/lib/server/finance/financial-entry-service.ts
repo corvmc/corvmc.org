@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { financialEntry } from '$lib/server/db/schema/financial';
-import { and, eq, gte, lte, sql, sum } from 'drizzle-orm';
+import { and, asc, eq, gte, lte, sql, sum } from 'drizzle-orm';
 import { captureException } from '$lib/server/sentry';
 import type {
 	FinancialCategory,
@@ -215,4 +215,47 @@ export async function listForSubject(subjectType: FinancialSubject, subjectId: s
 			and(eq(financialEntry.subjectType, subjectType), eq(financialEntry.subjectId, subjectId))
 		)
 		.orderBy(sql`${financialEntry.occurredAt} asc`);
+}
+
+/**
+ * Every kind and category over one window, in one query.
+ *
+ * `totalsByCategory` answers one kind and the annual report needs all four.
+ * Four round trips would also let the kinds disagree if a write landed between
+ * them, which on a page whose whole claim is that the numbers reconcile is the
+ * wrong failure to leave available.
+ */
+export async function totalsByKindAndCategory(
+	range: RangeFilter
+): Promise<{ kind: FinancialEntryKind; category: FinancialCategory; totalCents: number }[]> {
+	const rows = await db
+		.select({
+			kind: financialEntry.kind,
+			category: financialEntry.category,
+			total: sum(financialEntry.amountCents)
+		})
+		.from(financialEntry)
+		.where(inRange(range))
+		.groupBy(financialEntry.kind, financialEntry.category);
+	return rows.map((r) => ({ kind: r.kind, category: r.category, totalCents: asCents(r.total) }));
+}
+
+/**
+ * The oldest thing the record knows about, or null on an empty ledger.
+ *
+ * A report asked for a range that starts before this is not wrong so much as
+ * incomplete, and it cannot tell on its own: a year with no rows and a year
+ * before the ledger existed both sum to zero. The caller compares.
+ */
+export async function ledgerStartsAt(): Promise<Date | null> {
+	// The oldest row rather than `min()`: drizzle types an aggregate over a
+	// timestamp column as a string and hands back the raw epoch integer, where
+	// selecting the column itself maps to a Date. `idx_financial_entry_occurred`
+	// makes the ordered limit as cheap as the aggregate.
+	const [row] = await db
+		.select({ occurredAt: financialEntry.occurredAt })
+		.from(financialEntry)
+		.orderBy(asc(financialEntry.occurredAt))
+		.limit(1);
+	return row?.occurredAt ?? null;
 }

@@ -69,6 +69,7 @@ export type StaffNavKey =
 	| 'help'
 	| 'payments'
 	| 'credits'
+	| 'reports'
 	| 'settings';
 
 export type StaffNavSectionKey =
@@ -391,6 +392,20 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'money',
 		title: 'Money',
 		items: [
+			// First in the section because it is the summary the other rows feed:
+			// every figure on it is readable on the page it came from, and this is
+			// where you go when the question is the year rather than the record.
+			//
+			// `finance.read` rather than a report capability of its own. The page
+			// also carries volunteering, events and room-use counts, but those are
+			// aggregate and already public-ish; the money lines are what decides
+			// who may open it.
+			{
+				key: 'reports',
+				capability: 'finance.read',
+				label: 'Annual Report',
+				href: resolve('/staff/reports')
+			},
 			{
 				key: 'payments',
 				capability: 'finance.read',
