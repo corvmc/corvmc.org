@@ -42,7 +42,7 @@
 </script>
 
 <PageHeader title="Your hours" subtitle="Volunteering" backHref="/member/volunteer">
-	<LogHoursAction roles={data.roles} label="Log Hours" variant="primary" />
+	<LogHoursAction roles={data.roles} programs={data.programs} label="Log Hours" variant="primary" />
 </PageHeader>
 
 <PageContent width="3xl">

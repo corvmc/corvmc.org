@@ -677,3 +677,25 @@ export async function leaveGroup(groupId: string, userId: string) {
  * it so a deactivated group leaves the directory.
  */
 export { deactivate, reactivate };
+
+/**
+ * The committees and clubs a member is actually on.
+ *
+ * For the hour log's program picker. Bands are excluded: a band is its own
+ * members' business, not volunteering for the Collective.
+ */
+export async function listMyPrograms(userId: string) {
+	return db
+		.select({ id: group.id, name: group.name, kind: group.kind })
+		.from(group)
+		.innerJoin(groupMember, eq(groupMember.groupId, group.id))
+		.where(
+			and(
+				isNull(group.deletedAt),
+				inArray(group.kind, [...STAFF_GROUP_KINDS]),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'active')
+			)
+		)
+		.orderBy(group.name);
+}

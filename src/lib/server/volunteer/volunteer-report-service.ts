@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
+import { group } from '$lib/server/db/schema/group';
 import { eq, and, asc, desc, count, sql, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
@@ -277,5 +278,44 @@ export async function listApprovedHoursForExport(
 		...row,
 		marketRateCents: row.marketRateCents === null ? null : Number(row.marketRateCents),
 		minutes: Number(row.minutes)
+	}));
+}
+
+export interface GroupHours {
+	groupId: string;
+	groupName: string;
+	kind: string;
+	minutes: number;
+	volunteerCount: number;
+}
+
+/**
+ * Approved hours by the program they were given to.
+ *
+ * Inner join, so hours that named no program are absent rather than grouped
+ * under a blank row — "what did Booking put in this year" is the question, and
+ * CMC-at-large volunteering is already the rest of this report.
+ */
+export async function getHoursByGroup(range: ReportRange = {}): Promise<GroupHours[]> {
+	const rows = await db
+		.select({
+			groupId: group.id,
+			groupName: group.name,
+			kind: group.kind,
+			minutes: sumMinutes,
+			volunteerCount: sql<number>`count(distinct ${volunteerHourLog.userId})`
+		})
+		.from(volunteerHourLog)
+		.innerJoin(group, eq(group.id, volunteerHourLog.groupId))
+		.where(approvedIn(range))
+		.groupBy(group.id, group.name, group.kind)
+		.orderBy(desc(sumMinutes));
+
+	return rows.map((r) => ({
+		groupId: r.groupId,
+		groupName: r.groupName,
+		kind: r.kind,
+		minutes: Number(r.minutes ?? 0),
+		volunteerCount: Number(r.volunteerCount ?? 0)
 	}));
 }

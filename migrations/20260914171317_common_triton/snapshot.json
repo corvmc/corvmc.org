@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "463077ec-0b42-410c-a92a-a696f9396aa0",
+  "id": "eb86e0ee-419d-4459-8f70-0f25da51a555",
   "prevIds": [
-    "d13bc83c-81eb-4276-994d-fb9e4c8f3089"
+    "463077ec-0b42-410c-a92a-a696f9396aa0"
   ],
   "ddl": [
     {
@@ -8215,6 +8215,16 @@
       "table": "volunteer_hour_log"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "volunteer_hour_log"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -13421,6 +13431,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_volunteer_hour_log_shift_id_volunteer_shift_id_fk",
+      "entityType": "fks",
+      "table": "volunteer_hour_log"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_hour_log_group_id_group_id_fk",
       "entityType": "fks",
       "table": "volunteer_hour_log"
     },

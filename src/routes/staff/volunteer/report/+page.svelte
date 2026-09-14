@@ -47,6 +47,7 @@
 	const report = $derived(pageData.then((d) => d.report));
 	const feedbackByRole = $derived(pageData.then((d) => d.feedbackByRole));
 	const byMember = $derived(pageData.then((d) => d.byMember));
+	const byGroup = $derived(pageData.then((d) => d.byGroup));
 	const stillInReview = $derived(pageData.then((d) => d.stillInReview));
 
 	// Refresh once on mount. An approval on /staff/volunteer changes these totals,
@@ -164,6 +165,30 @@
 				</p>
 			{/if}
 		</InfoCard>
+
+		{#await byGroup then groups}
+			{#if groups.length > 0}
+				<!-- Only when something named a program. Hours given to CMC at large
+				     are the rest of this page, so a "no program" row would be a
+				     restatement of the total under a confusing label. -->
+				<InfoCard title="Hours by committee or club">
+					<Table>
+						{#snippet head()}
+							<th>Program</th>
+							<th class="text-right">Hours</th>
+							<th class="text-right">People</th>
+						{/snippet}
+						{#each groups as g (g.groupId)}
+							<tr>
+								<td class="cell-primary">{g.groupName}</td>
+								<td class="text-right tabular-nums">{formatVolunteerHours(g.minutes)}</td>
+								<td class="text-right tabular-nums">{g.volunteerCount}</td>
+							</tr>
+						{/each}
+					</Table>
+				</InfoCard>
+			{/if}
+		{/await}
 
 		<InfoCard title="Hours by role">
 			{#if r.byRole.length === 0}
