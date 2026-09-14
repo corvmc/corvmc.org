@@ -1,3 +1,5 @@
+import { captureException } from '$lib/server/sentry';
+import { reverseEntriesForPaymentRecord } from './financial-entry-service';
 import type Stripe from 'stripe';
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/server/db';
@@ -566,6 +568,15 @@ export async function refund(options: RefundOptions): Promise<void> {
 		.update(paymentCache)
 		.set({ status: 'refunded', refundedAt: new Date() })
 		.where(eq(paymentCache.id, stripePaymentRecordId));
+
+	// After the cache flips, so the idempotency guard above already protects
+	// this from running twice. Best-effort: the money is back either way, and a
+	// missing reversal is a reconcilable gap rather than a stranded refund.
+	try {
+		await reverseEntriesForPaymentRecord(stripePaymentRecordId);
+	} catch (err) {
+		captureException(err, { event: 'finance.refund.reverse_entries', stripePaymentRecordId });
+	}
 }
 
 async function refundPaymentIntent(paymentIntentId: string, userId?: string): Promise<void> {

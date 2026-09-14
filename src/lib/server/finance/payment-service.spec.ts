@@ -97,8 +97,16 @@ vi.mock('$lib/server/db/schema/finance', () => ({
 	creditTypes: ['free_hours', 'equipment_credits'] as const
 }));
 
+// `refund()` reverses the sale's financial entries now, and that module reaches
+// for more of drizzle than this one does. These mocks are per-export, so a new
+// operator in a sibling breaks this spec rather than its own.
 vi.mock('drizzle-orm', () => ({
-	eq: vi.fn()
+	eq: vi.fn(),
+	and: vi.fn(),
+	gte: vi.fn(),
+	lte: vi.fn(),
+	sql: Object.assign(vi.fn(), { raw: vi.fn() }),
+	sum: vi.fn()
 }));
 
 // Import after mocking
