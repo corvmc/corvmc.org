@@ -995,12 +995,15 @@ export const committeeApplicationStatusLabels: Record<CommitteeApplicationStatus
 	declined: 'Declined'
 };
 
-export const volunteerRoleGroups = ['at-shows', 'away-from-shows', 'committee'] as const;
+// `committee` retired 2026-09-14. A committee is a `group` and is applied to
+// through `committee_application`, not signed up for — see decision 2 of
+// committees-and-roles-spec.md. The six roles that shadowed them are archived
+// in `away-from-shows` rather than deleted, because hour logs point at two.
+export const volunteerRoleGroups = ['at-shows', 'away-from-shows'] as const;
 
 export const volunteerRoleGroupLabels: Record<(typeof volunteerRoleGroups)[number], string> = {
 	'at-shows': 'At shows',
-	'away-from-shows': 'Away from shows',
-	committee: 'Committees'
+	'away-from-shows': 'Away from shows'
 };
 
 /**

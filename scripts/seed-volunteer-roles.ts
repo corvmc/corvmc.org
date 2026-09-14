@@ -18,7 +18,7 @@ import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
 import { volunteerRole } from '../src/lib/server/db/schema/volunteer';
 
-type Group = 'at-shows' | 'away-from-shows' | 'committee';
+type Group = 'at-shows' | 'away-from-shows';
 
 interface RoleSeed {
 	name: string;
@@ -71,40 +71,6 @@ const ROLES: RoleSeed[] = [
 		name: 'Audio Engineering',
 		group: 'away-from-shows',
 		description: 'Assist members with recording, mixing, or mastering.'
-	},
-
-	{
-		name: 'Booking Committee',
-		group: 'committee',
-		description: 'Planning and booking CMC-produced events. Meets monthly.'
-	},
-	{
-		name: 'Production Committee',
-		group: 'committee',
-		description: 'Operating, staffing, and running CMC events. Meets monthly.'
-	},
-	{
-		name: 'Development Committee',
-		group: 'committee',
-		description:
-			'Fundraising, member and partner development, business and venue outreach. Meets monthly.'
-	},
-	{
-		name: 'Communications Committee',
-		group: 'committee',
-		description: 'Social media, posters, press, and the newsletter. Meets monthly.'
-	},
-	{
-		name: 'Art and Merchandise Committee',
-		group: 'committee',
-		description:
-			'Create and manage CMC merch, and work with local artists on poster art. Meets monthly.'
-	},
-	{
-		name: 'Facility Committee',
-		group: 'committee',
-		description:
-			'Building management, gear library maintenance, rehearsal scheduling. Meets monthly.'
 	}
 ];
 
