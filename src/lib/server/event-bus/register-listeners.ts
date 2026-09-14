@@ -20,6 +20,9 @@ export function registerListeners(): void {
 	// --- Checkout fulfillment (migrated from callback pattern) ---
 	registerCheckoutListeners();
 
+	// --- Contributed services into the financial record ---
+	registerInKindListeners();
+
 	// --- Notification dispatch ---
 	registerNotificationListeners();
 
@@ -51,6 +54,19 @@ async function registerOrientationGroup(): Promise<void> {
 // These replace the old onCheckoutComplete() callback registry.
 // Each module checks session metadata to decide whether to act.
 // ---------------------------------------------------------------------------
+
+/**
+ * An approved volunteer hour is a contributed service when the skill is one
+ * the collective would otherwise have bought. See `in-kind-listener.ts` for
+ * why a door shift writes nothing.
+ */
+async function registerInKindListeners(): Promise<void> {
+	const { handleApprovedHours } = await import('$lib/server/finance/in-kind-listener');
+
+	domainEvents.on('volunteer.hours_approved', async ({ data: event }) => {
+		await handleApprovedHours(event.logId);
+	});
+}
 
 async function registerCheckoutListeners(): Promise<void> {
 	const { handleReservationCheckout } = await import('$lib/server/reservation/checkout-listener');
