@@ -1141,7 +1141,17 @@ export const VOLUNTEER_HOUR_STEP = 0.25;
  *
  * `claimed` is a member putting their hand up; `confirmed` is staff saying yes.
  */
+/**
+ * Where one person stands on one shift.
+ *
+ * `invited` and `declined` sit before the rest: an invitation is a coordinator
+ * asking, and it holds no place. Every capacity predicate names the three that
+ * do — `claimed`, `confirmed`, `completed` — rather than excluding the others,
+ * which is what keeps a new value out of a count by construction.
+ */
 export const volunteerSignupStatuses = [
+	'invited',
+	'declined',
 	'claimed',
 	'confirmed',
 	'completed',

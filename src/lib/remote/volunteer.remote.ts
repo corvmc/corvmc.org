@@ -101,6 +101,11 @@ import {
 	notifySignupsOfCancellation as notifySignupsOfCancellationService,
 	markSignupNotified as markSignupNotifiedService,
 	listShiftCandidates,
+	inviteToShift as inviteToShiftService,
+	acceptInvitation as acceptInvitationService,
+	declineInvitation as declineInvitationService,
+	listInvitationsForUser,
+	listInvitationsForShift,
 	availabilityConflictsWithDay,
 	listClaimants,
 	listOutstandingClaims,
@@ -1790,6 +1795,59 @@ export const cancelMySignup = form(z.object({ signupId: z.string().min(1) }), as
  * `mapDomainError` turns into a 403 naming the certification, so the coordinator learns
  * what to go and grant rather than being told "no".
  */
+/**
+ * Ask somebody, rather than book them.
+ *
+ * `volunteer.manageRoster`, the same as adding them: both are the coordinator
+ * acting on a roster. A missing clearance comes back as a warning here rather
+ * than a refusal, because inviting somebody is often how they end up cleared.
+ */
+export const inviteMemberToShift = form(
+	z.object({
+		shiftId: z.string().min(1),
+		userId: z.string().min(1, 'Pick a member')
+	}),
+	async (data) => {
+		const staff = await requireCapability('volunteer.manageRoster');
+
+		try {
+			const result = await inviteToShiftService(data.shiftId, data.userId, staff.id);
+			await refreshShiftViews(data.shiftId);
+			return { success: true, missingCertifications: result.missingCertifications };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+export const acceptShiftInvitation = form(
+	z.object({ signupId: z.string().min(1) }),
+	async (data) => {
+		const currentUser = requireUser();
+		try {
+			await acceptInvitationService(data.signupId, currentUser.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await refreshMemberViews();
+		return { success: true };
+	}
+);
+
+export const declineShiftInvitation = form(
+	z.object({ signupId: z.string().min(1) }),
+	async (data) => {
+		const currentUser = requireUser();
+		try {
+			await declineInvitationService(data.signupId, currentUser.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await refreshMemberViews();
+		return { success: true };
+	}
+);
+
 export const assignShiftToMember = form(
 	z.object({
 		shiftId: z.string().min(1),
@@ -2055,7 +2113,8 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 		summary,
 		certifications,
 		myShifts,
-		programs
+		programs,
+		invitations
 	] = await Promise.all([
 		getActiveVolunteerRoles(),
 		getMyVolunteerInterests(),
@@ -2068,7 +2127,10 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 		// already hold (docs/reports/volunteer-workflow-findings.md#d4).
 		getMyCertifications(),
 		getMyShifts(),
-		listMyPrograms(requireUser().id)
+		listMyPrograms(requireUser().id),
+		// Above the claim board on the page: an invitation is addressed to this
+		// member, where the board is addressed to everybody.
+		listInvitationsForUser(requireUser().id)
 	]);
 
 	return {
@@ -2081,7 +2143,8 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 		summary,
 		certifications,
 		myShifts,
-		programs
+		programs,
+		invitations
 	};
 });
 
@@ -2155,12 +2218,16 @@ export const getStaffVolunteerRolePage = query(z.string(), async (id) => {
  * because the duty list promises it.
  */
 export const getStaffShiftPage = query(z.string(), async (id) => {
-	const [shift, feedback, tasks] = await Promise.all([
+	const [shift, feedback, tasks, invitations] = await Promise.all([
 		getShift(id),
 		getShiftFeedback(id),
-		listWorkTasks(id)
+		listWorkTasks(id),
+		// Asked but not answered, plus the nos. Apart from the claimants, because
+		// neither holds a place — a shift with three invitations and no claims is
+		// still a shift that needs somebody.
+		listInvitationsForShift(id)
 	]);
-	return { shift, feedback, tasks };
+	return { shift, feedback, tasks, invitations };
 });
 
 /**

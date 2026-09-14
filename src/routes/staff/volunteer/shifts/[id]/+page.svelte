@@ -46,6 +46,7 @@
 	// unparameterized and refreshed by name, so it could not join this one.
 	const pageData = $derived(getStaffShiftPage(id));
 	const data = $derived(pageData.then((d) => d.shift));
+	const invitations = $derived(pageData.then((d) => d.invitations));
 	const feedback = $derived(pageData.then((d) => d.feedback));
 	const tasks = $derived(pageData.then((d) => d.tasks));
 
@@ -339,6 +340,33 @@
 				{#await tasks then rows}
 					{#if rows.length > 0}
 						<ShiftChecklist tasks={rows} shiftId={shift.id} />
+					{/if}
+				{/await}
+
+				<!-- Apart from "Who's on it", because neither an invitation nor a
+				     refusal holds a place: a shift with three invitations and no
+				     claims still needs somebody, and the counts above say so. -->
+				{#await invitations then asked}
+					{#if asked.length > 0}
+						<InfoCard title="Asked">
+							<ul class="flex flex-col gap-2">
+								{#each asked as invitation (invitation.signupId)}
+									<li class="flex flex-wrap items-center gap-2">
+										<EntityIdentity ref={invitation.member} size="sm" />
+										<Badge variant={invitation.status === 'declined' ? 'error' : 'ghost'} size="xs">
+											{invitation.status === 'declined' ? 'SAID NO' : 'WAITING'}
+										</Badge>
+										{#if invitation.invitedByName}
+											<span class="text-subtle text-xs">{invitation.invitedByName} asked</span>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+							<p class="mt-2 text-subtle text-xs">
+								An invitation holds no place. A no is kept so the same person is not asked twice by
+								mistake.
+							</p>
+						</InfoCard>
 					{/if}
 				{/await}
 

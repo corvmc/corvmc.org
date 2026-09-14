@@ -388,6 +388,26 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'volunteer_shift_invited',
+		category: 'volunteering',
+		label: 'Invited to a shift',
+		// Email on. An invitation is a question addressed to one person, and a
+		// question nobody sees is not a chase — which is the whole reason this
+		// exists rather than staff adding them and hoping.
+		description: 'Notification when a coordinator asks you to take a shift',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'volunteer_shift_declined',
+		category: 'volunteering',
+		label: 'A shift invitation was declined',
+		// In-app only and staff-only: it is the answer to a question they asked,
+		// and it belongs next to the shift rather than in their inbox.
+		description: 'Notification when somebody you invited to a shift says no',
+		defaults: { email: false, inApp: true, sms: false },
+		staffOnly: true
+	},
+	{
 		key: 'volunteer_shift_claimed',
 		category: 'volunteering',
 		label: 'Volunteer shift claimed',

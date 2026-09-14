@@ -550,6 +550,30 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 
 	// 8 cols x default 10 rows = 80 bound params — inside D1's 100 ceiling, but
 	// batch smaller anyway to stay clear of drizzle's own additions.
+	// Invitations: a chase in progress on the demo account, and one refusal, so
+	// the member's "You've been asked" card and the shift page's "Asked" panel
+	// both have something in them on a fresh seed. Neither holds a place, which
+	// is what keeps the short-staffed card honest beside them.
+	const invitableShift = shiftRows.find(
+		(s) => s.startsAt > now && s.id !== strandedShiftId && !s.cancelledAt
+	);
+	if (invitableShift) {
+		const asked = users.filter((u) => !signupRows.some((r) => r.userId === u.id)).slice(0, 2);
+		for (const [i, u] of asked.entries()) {
+			signupRows.push({
+				id: randomUUID(),
+				shiftId: invitableShift.id,
+				userId: u.id,
+				status: i === 0 ? ('invited' as const) : ('declined' as const),
+				invitedAt: new Date(now.getTime() - (i + 1) * day),
+				// Whoever is doing the asking locally; the coordinator persona is not
+				// threaded into this seeder, and the name only has to be somebody.
+				invitedByUserId: users[0].id,
+				declinedAt: i === 1 ? new Date(now.getTime() - day / 2) : null
+			});
+		}
+	}
+
 	const signups = await batchInsert(volunteerSignup, signupRows, 8);
 	const feedback = await batchInsert(volunteerShiftFeedback, feedbackRows, 8);
 
