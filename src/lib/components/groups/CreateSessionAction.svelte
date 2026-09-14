@@ -120,8 +120,13 @@
 					</p>
 				</div>
 			{/if}
-			field={fields.doorsTime}
-			type="time" label="Doors" description="Optional. When people can turn up." />
+
+			<FormField
+				field={fields.doorsTime}
+				type="time"
+				label="Doors"
+				description="Optional. When people can turn up."
+			/>
 
 			<FormField
 				field={fields.tags}

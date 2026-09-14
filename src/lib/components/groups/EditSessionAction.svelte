@@ -111,9 +111,14 @@
 				value={session.reservesRoom}
 				description="Free for a program — no credits are spent. Unticking gives the room back without calling the session off."
 			/>
-			field={fields.doorsTime}
-			type="time" label="Doors" value={doors ?? ''}
-			description="Optional. When people can turn up." />
+
+			<FormField
+				field={fields.doorsTime}
+				type="time"
+				label="Doors"
+				value={doors ?? ''}
+				description="Optional. When people can turn up."
+			/>
 
 			<FormField
 				field={fields.tags}
