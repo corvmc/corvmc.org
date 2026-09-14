@@ -9,7 +9,7 @@
 	import StatCard from '$lib/components/ui/StatCard.svelte';
 	import DataList from '$lib/components/ui/DataList.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import DateRangeFilter from '$lib/components/ui/DateRangeFilter.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { formatDateShortYear, formatCents } from '$lib/utils/format';
@@ -61,14 +61,6 @@
 		void getVolunteerReportPage({ ...range, page: pageNumber }).refresh();
 	});
 
-	const activeFilterCount = $derived((fromDate !== yearStart ? 1 : 0) + (toDate ? 1 : 0));
-
-	function clearFilters() {
-		fromDate = yearStart;
-		toDate = '';
-		pageNumber = 1;
-	}
-
 	function monthLabel(month: string): string {
 		const [year, m] = month.split('-');
 		const date = new Date(Number(year), Number(m) - 1, 1);
@@ -111,34 +103,12 @@
 </PageHeader>
 
 <PageContent>
-	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
-		{#snippet search()}
-			<div class="flex flex-wrap items-center gap-2">
-				<label class="text-muted" for="report-from">From</label>
-				<input
-					id="report-from"
-					type="date"
-					class="input input-sm"
-					value={fromDate}
-					onchange={(e) => {
-						fromDate = (e.currentTarget as HTMLInputElement).value;
-						pageNumber = 1;
-					}}
-				/>
-				<label class="text-muted" for="report-to">To</label>
-				<input
-					id="report-to"
-					type="date"
-					class="input input-sm"
-					value={toDate}
-					onchange={(e) => {
-						toDate = (e.currentTarget as HTMLInputElement).value;
-						pageNumber = 1;
-					}}
-				/>
-			</div>
-		{/snippet}
-	</FilterBar>
+	<DateRangeFilter
+		bind:from={fromDate}
+		bind:to={toDate}
+		defaultFrom={yearStart}
+		onchange={() => (pageNumber = 1)}
+	/>
 
 	{#await report then r}
 		<!-- Approved hours only. That is the whole point of the review step: this

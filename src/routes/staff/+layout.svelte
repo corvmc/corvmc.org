@@ -114,6 +114,7 @@
 		campaigns: IconMail,
 		audiences: IconMailbox,
 		help: IconBook,
+		reports: IconReportAnalytics,
 		payments: IconCash,
 		credits: IconCoins,
 		settings: IconSettings

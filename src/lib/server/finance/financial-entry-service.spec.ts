@@ -72,9 +72,11 @@ const {
 	recordEntries,
 	recordEntry,
 	reverseEntriesForPaymentRecord,
+	ledgerStartsAt,
 	stripeSettledCents,
 	totalEarnedCents,
-	totalsByCategory
+	totalsByCategory,
+	totalsByKindAndCategory
 } = await import('./financial-entry-service');
 type RecordEntryInput = Parameters<typeof recordEntry>[0];
 
@@ -285,5 +287,49 @@ describe('the Stripe cross-check', () => {
 			ticketSale({ amountCents: 0, settlement: 'credit', subjectId: 'tkt-3' })
 		]);
 		expect(await stripeSettledCents(YEAR)).toBe(300);
+	});
+});
+
+describe('the annual rollup\u2019s one query', () => {
+	it('separates kinds that share a category', async () => {
+		// The case a `GROUP BY category` alone gets wrong: the same $7 is a
+		// pass-through liability and would otherwise net against ticket income.
+		await recordEntries([
+			ticketSale({ amountCents: 300 }),
+			ticketSale({ amountCents: 700, kind: 'pass_through', subjectId: 'tkt-2' }),
+			ticketSale({ amountCents: 2500, category: 'membership', subjectId: 'sub-1' })
+		]);
+
+		const rows = await totalsByKindAndCategory(YEAR);
+
+		expect(rows).toContainEqual({ kind: 'earned', category: 'ticket_sales', totalCents: 300 });
+		expect(rows).toContainEqual({
+			kind: 'pass_through',
+			category: 'ticket_sales',
+			totalCents: 700
+		});
+		expect(rows).toContainEqual({ kind: 'earned', category: 'membership', totalCents: 2500 });
+	});
+
+	it('honours the range', async () => {
+		await recordEntries([ticketSale(), ticketSale({ occurredAt: DEC, subjectId: 'tkt-2' })]);
+		expect(await totalsByKindAndCategory(JANUARY)).toEqual([
+			{ kind: 'earned', category: 'ticket_sales', totalCents: 300 }
+		]);
+	});
+});
+
+describe('where the record begins', () => {
+	it('is null on an empty ledger, so a caller can tell that from a quiet year', async () => {
+		expect(await ledgerStartsAt()).toBeNull();
+	});
+
+	it('is the oldest entry, whatever order they were written in', async () => {
+		await recordEntries([
+			ticketSale({ occurredAt: DEC }),
+			ticketSale({ occurredAt: JAN, subjectId: 'tkt-2' }),
+			ticketSale({ occurredAt: FEB, subjectId: 'tkt-3' })
+		]);
+		expect(await ledgerStartsAt()).toEqual(JAN);
 	});
 });

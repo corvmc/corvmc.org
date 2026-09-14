@@ -1,5 +1,14 @@
 # Reporting — Spec
 
+> **Status: all four phases shipped (2026-09-13).** The kit (`range.ts`, `bucket.ts`, `csv.ts`),
+> the shared `DateRangeFilter`, the volunteer CSV, and the annual rollup at `/staff/reports` with
+> its own export. What the module pages do is documented in
+> [business-workflows](../../development/business-workflows.md); what survives here is the
+> rationale — module-owned reports over a shared kit, why Stripe is the view of revenue and not of
+> net income, and why the annual report has no charts. Two phase notes were **amended on the way
+> in**: phase 2 is not bits-ui, and phase 4's revenue prerequisite was superseded by #825. Both
+> say so in place.
+
 ## Purpose
 
 There is exactly one report in this app. `/staff/volunteer/report` takes a date range and answers
@@ -142,7 +151,16 @@ module-owned service, then that module's report page, then the annual rollup if 
 number. `volunteer-feedback-service.ts` is the precedent, and a board packet plausibly wants the
 volunteer satisfaction average it already computes.
 
-## Prerequisite: nothing in the app sums cash
+## Prerequisite: nothing in the app sums cash — resolved by #825
+
+> **Superseded 2026-09-13.** This section proposed a three-part workaround because no table
+> summed revenue. `financial_entry` now does, reconciled to Stripe to the cent, so the annual
+> report's revenue lines are `totalsByKindAndCategory` over the ledger and nothing calls Stripe's
+> Reporting API. The reasoning below is kept because the boundary it draws still holds: Stripe is
+> the single view of **revenue**, not of net income, and pass-through money is not income at all —
+> which is why `financial_entry.kind` exists. What the rollup added on top is **coverage**: the
+> ledger begins where the payment history does, and a range reaching further back says so rather
+> than rendering a confident under-count.
 
 Credits are aggregated — `credit-service.ts` runs `coalesce(-sum(creditTransaction.amount), 0)`
 for hours used. But there is no `sum()` over `paymentCache.amountCents` anywhere;
@@ -178,16 +196,22 @@ Each is its own PR.
    it. Shipped with the valued volunteer hour, which needed the range helpers anyway.
    `range.spec.ts` pins both club-time boundaries as instants: a naive `new Date('2026-07-01')` is
    the previous evening here, and an upper bound spelled as a date drops the final day's work.
-2. **`DateRangeFilter.svelte`** — bits-ui, wired into the volunteer report in place of its
-   hand-rolled inputs. Still open; the report keeps its own date inputs for now.
+2. ✅ **`DateRangeFilter.svelte`** — the volunteer report and the annual report now share it.
+   **Not bits-ui**, as this phase originally said: a native `<input type="date">` is what every
+   other filter bar here already uses, works without JavaScript, and hands the user the platform's
+   own picker. What the shared component actually adds over two inputs is **presets** — This year,
+   Last year, All time — because typing two dates for "last year" is where a wrong year enters a
+   board packet unnoticed.
 3. ✅ **First CSV** — `/staff/volunteer/report/export`, closing the volunteering spec's deferred
    item. A `+server.ts` rather than a remote function, because a download needs
    `Content-Disposition` — so `requireStaff()` is the first statement rather than the
    remote-function boundary doing it. Two decisions worth carrying to the next export: an unpriced
    figure exports **blank, not zero**, and there is **no footer total** where two columns overlap.
-4. **The annual rollup** — `annual-report-service.ts` and `/staff/reports`, including the revenue
-   decision above. Charts decided here or not at all. `getContributedValue` is the query its
-   volunteer-value line will call; no work needed there.
+4. ✅ **The annual rollup** — `annual-report-service.ts` and `/staff/reports`, with a CSV export
+   beside it. **Charts: no.** Every section is a handful of lines that a table states exactly and
+   a chart would only approximate, and the one figure a reader takes away — a dollar total — is
+   the thing a bar chart is worst at. Revisit when there is a series to plot; a single year is not
+   one.
 
 ## Deferred
 
