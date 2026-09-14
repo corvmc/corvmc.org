@@ -1,16 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { getTableColumns } from 'drizzle-orm';
-import { accountSchema, createLocalAccountIssuer } from 'better-auth/db';
+import { accountSchema } from 'better-auth/db';
 import { account } from './db/schema/authentication';
 
 // ---------------------------------------------------------------------------
 // Regression: our `account` table must carry every field better-auth requires.
 //
-// better-auth 1.7 added `issuer` and matches on it during credential sign-in
-// (`accounts.find(a => a.providerId === 'credential' && a.issuer === ... )`).
-// A missing column makes that find return undefined for every user, and the
-// route answers "User not found" — the identical message an unknown email
-// gets. Nothing about the failure points at a schema gap, and the only thing
+// better-auth 1.7 added `issuer` and matched on it during credential sign-in,
+// so a missing column made that find return undefined for every user and the
+// route answered "User not found" — the identical message an unknown email
+// gets. **1.7.3 reverted that**, back to `(providerId, accountId)`, so the
+// column is no longer what sign-in turns on. The file stays because the
+// property it pins is the general one: a required field better-auth grows and
+// we have not got is a fast failure on the bump, naming the column. Nothing about the failure points at a schema gap, and the only thing
 // that caught it last time (#272) was e2e signing in for real, which took 25
 // minutes of Playwright retries to say so.
 //
@@ -37,10 +39,17 @@ describe('better-auth account schema', () => {
 		}
 	});
 
-	it('issuer defaults to the synthetic issuer better-auth matches on', () => {
-		// Credential-only, so every row is the local issuer for 'credential'. The
-		// default is what backfilled the rows predating the column, and what the
-		// seed and e2e fixtures rely on since none of them set `issuer`.
-		expect(getTableColumns(account).issuer.default).toBe(createLocalAccountIssuer('credential'));
+	/**
+	 * Was: `issuer` defaults to what `createLocalAccountIssuer('credential')`
+	 * returns. **better-auth reverted the scheme in 1.7.3** — "Restored
+	 * compatibility with 1.6 account schemas by identifying accounts with
+	 * `(providerId, accountId)` instead of issuer" — and removed the export
+	 * along with it. Pinning our default against a format the library no longer
+	 * uses would assert nothing, so this asserts the column still exists and
+	 * still has a default, which is what the seed and the e2e fixtures rely on.
+	 */
+	it('issuer still carries a default, which nothing that writes an account sets', () => {
+		expect(columnPropertyKeys).toContain('issuer');
+		expect(getTableColumns(account).issuer.default).toBe('local:credential');
 	});
 });
