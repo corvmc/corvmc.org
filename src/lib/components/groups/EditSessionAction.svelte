@@ -25,6 +25,10 @@
 			startsAt: Date;
 			endsAt: Date | null;
 			reservesRoom: boolean;
+			doorsAt: Date | null;
+			tags: string | null;
+			externalTicketUrl: string | null;
+			ticketPrice: number | null;
 		};
 		onchanged: () => void;
 	} = $props();
@@ -49,6 +53,10 @@
 
 	const start = $derived(parts(session.startsAt));
 	const end = $derived(session.endsAt ? parts(session.endsAt) : null);
+	const doors = $derived(session.doorsAt ? parts(session.doorsAt)[1] : null);
+
+	// Stored in cents; the field takes dollars, as the band gig form's does.
+	const centsToDollars = (cents: number | null) => (cents == null ? '' : (cents / 100).toFixed(2));
 </script>
 
 <Action
@@ -103,6 +111,50 @@
 				value={session.reservesRoom}
 				description="Free for a program — no credits are spent. Unticking gives the room back without calling the session off."
 			/>
+
+			<FormField
+				field={fields.doorsTime}
+				type="time"
+				label="Doors"
+				value={doors ?? ''}
+				description="Optional. When people can turn up."
+			/>
+
+			<FormField
+				field={fields.tags}
+				type="text"
+				label="Tags"
+				value={session.tags ?? ''}
+				placeholder="jazz, jam, all ages"
+				description="Optional. Comma separated — how the gig guide filters."
+			/>
+
+			<FormField
+				field={fields.posterFile}
+				type="file"
+				label="Poster"
+				description="Optional. Replaces the current one."
+				accept="image/jpeg,image/png,image/webp"
+			/>
+
+			<div class="grid grid-cols-2 gap-3">
+				<FormField
+					field={fields.ticketPriceDollars}
+					type="text"
+					label="Price"
+					value={centsToDollars(session.ticketPrice)}
+					placeholder="10.00"
+					description="Optional. Leave blank if it's free."
+				/>
+				<FormField
+					field={fields.externalTicketUrl}
+					type="text"
+					label="Tickets at"
+					value={session.externalTicketUrl ?? ''}
+					placeholder="https://"
+					description="Optional. Where people buy."
+				/>
+			</div>
 
 			<p class="text-subtle">
 				Moving a session moves the room it holds. If the new time is taken, the save is refused

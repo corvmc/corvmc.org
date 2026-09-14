@@ -27,6 +27,7 @@ import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timez
 import { dollarsToCents } from '$lib/utils/event-ticketing';
 import { parseGigImport, GIG_IMPORT_DEFAULT_START } from '$lib/utils/gig-import';
 import { resolveImageUrl, validateUpload } from '$lib/server/storage';
+import { readPosterFile, toPosterParam } from '$lib/server/event/poster-file';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -143,16 +144,6 @@ export const searchBandsForLineup = query(
 // ---------------------------------------------------------------------------
 
 /** A poster upload, or undefined when the field was left empty. */
-function readPosterFile(file: File | undefined) {
-	if (!file || file.size === 0) return undefined;
-	return file;
-}
-
-async function toPosterParam(file: File | undefined) {
-	if (!file) return undefined;
-	return { buffer: await file.arrayBuffer(), contentType: file.type };
-}
-
 /** Hidden JSON field written by LineupEditor. Absent means "leave the bill alone". */
 function parseLineupField(raw: string | undefined) {
 	if (raw === undefined || raw === '') return undefined;

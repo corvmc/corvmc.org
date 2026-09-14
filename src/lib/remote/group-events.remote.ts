@@ -7,6 +7,9 @@ import { DEFAULT_TIMEZONE, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
 import { createEventSeries } from '$lib/server/reservation/recurring-series-service';
 import { RECURRING_FREQUENCIES } from '$lib/server/db/schema/recurring';
+import { readPosterFile, toPosterParam } from '$lib/server/event/poster-file';
+import { validateUpload } from '$lib/server/storage';
+import { dollarsToCents } from '$lib/utils/event-ticketing';
 import {
 	cancelGroupSession as cancelSession,
 	createGroupEvent,
@@ -28,6 +31,19 @@ import {
  * outside the staff panel that can reserve the room, and a program holding time
  * is not a thing to turn on by accident.
  */
+
+/**
+ * The listing fields a session carries for the same reasons a band's gig does.
+ * A program's show can be paid — it just is not sold through CMC's checkout,
+ * which is closed to every non-CMC source alike. See `update` in event-service.
+ */
+const listingFields = {
+	doorsTime: z.string().optional(),
+	tags: z.string().max(500).optional(),
+	externalTicketUrl: z.string().url().optional().or(z.literal('')),
+	ticketPriceDollars: z.string().max(12).optional(),
+	posterFile: z.instanceof(File).optional()
+};
 
 export const createGroupSession = form(
 	z.object({
@@ -60,7 +76,8 @@ export const createGroupSession = form(
 		recurringEndsAt: z
 			.string()
 			.regex(/^$|^\d{4}-\d{2}-\d{2}$/, 'Invalid date')
-			.optional()
+			.optional(),
+		...listingFields
 	}),
 	async (data, issue) => {
 		// Owner or admin, matching the spec's role table: members read the
@@ -85,6 +102,13 @@ export const createGroupSession = form(
 			invalid(issue.recurringFrequency('Choose how often it repeats'));
 		}
 
+		const listing = readListingFields(data, data.sessionDate);
+		if (listing.priceUnparseable) {
+			invalid(issue.ticketPriceDollars('Enter a price like 10.00, or leave blank'));
+		}
+		if (listing.posterReason) invalid(issue.posterFile(listing.posterReason));
+		const { doorsAt, tags, externalTicketUrl, ticketPrice, poster } = listing;
+
 		try {
 			const evt = await createGroupEvent({
 				groupId: group.id,
@@ -96,7 +120,12 @@ export const createGroupSession = form(
 				// The room is held for exactly the session's own window. A second pair
 				// of fields would be another thing to keep in step, for no benefit the
 				// programs asked for.
-				reservation: data.reserveRoom ? { startsAt, endsAt, overrideConflicts: false } : undefined
+				doorsAt,
+				tags,
+				externalTicketUrl,
+				ticketPrice,
+				reservation: data.reserveRoom ? { startsAt, endsAt, overrideConflicts: false } : undefined,
+				posterFile: await toPosterParam(poster)
 			});
 
 			// Registered after the event exists, because the series points at it as
@@ -122,6 +151,41 @@ export const createGroupSession = form(
 		}
 	}
 );
+
+/**
+ * Normalise the listing fields. Pure: the two that can fail report *why*, and
+ * each caller raises it on its own field — kit's `issue` object is not worth
+ * threading through a helper.
+ *
+ * `doorsTime` resolves against the session's date in the app's zone, the same
+ * way the start and end do.
+ */
+function readListingFields(
+	data: {
+		doorsTime?: string;
+		tags?: string;
+		externalTicketUrl?: string;
+		ticketPriceDollars?: string;
+		posterFile?: File;
+	},
+	sessionDate: string
+) {
+	const ticketPrice = dollarsToCents(data.ticketPriceDollars);
+	const poster = readPosterFile(data.posterFile);
+
+	return {
+		doorsAt: data.doorsTime
+			? buildDateInTz(sessionDate, data.doorsTime, DEFAULT_TIMEZONE)
+			: undefined,
+		tags: data.tags || undefined,
+		externalTicketUrl: data.externalTicketUrl || undefined,
+		ticketPrice,
+		poster,
+		/** `undefined` from `dollarsToCents` means unparseable, not absent. */
+		priceUnparseable: ticketPrice === undefined,
+		posterReason: poster ? validateUpload(poster) : null
+	};
+}
 
 const sessionRef = z.object({
 	groupId: z.string().min(1),
@@ -154,7 +218,8 @@ export const updateGroupSession = form(
 		 * the checkbox at the session's current state, so an absent field is an
 		 * unticked box and means release — not "leave it alone".
 		 */
-		reserveRoom: z.boolean().optional().default(false)
+		reserveRoom: z.boolean().optional().default(false),
+		...listingFields
 	}),
 	async (data, issue) => {
 		const { user, group } = await requireOwnSession(data);
@@ -169,13 +234,27 @@ export const updateGroupSession = form(
 			invalid(issue.endTime('The session has to end after it starts'));
 		}
 
+		const listing = readListingFields(data, data.sessionDate);
+		if (listing.priceUnparseable) {
+			invalid(issue.ticketPriceDollars('Enter a price like 10.00, or leave blank'));
+		}
+		if (listing.posterReason) invalid(issue.posterFile(listing.posterReason));
+		const { doorsAt, tags, externalTicketUrl, ticketPrice, poster } = listing;
+
 		try {
 			await updateSession(data.eventId, group.id, user.id, {
 				title: data.title,
 				description: data.description || null,
 				startsAt,
 				endsAt,
-				reserveRoom: data.reserveRoom
+				reserveRoom: data.reserveRoom,
+				// `null` not `undefined` for the cleared ones: undefined means "leave
+				// alone" in the service, so an emptied field would never clear.
+				doorsAt: doorsAt ?? null,
+				tags: tags ?? null,
+				externalTicketUrl: externalTicketUrl ?? null,
+				ticketPrice: ticketPrice ?? null,
+				posterFile: await toPosterParam(poster)
 			});
 			return { success: true };
 		} catch (err) {

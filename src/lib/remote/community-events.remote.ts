@@ -36,6 +36,7 @@ import { communityEventSchema, lineupSchema } from '$lib/server/db/schema/event'
 import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
 import { dollarsToCents } from '$lib/utils/event-ticketing';
 import { resolveImageUrl, validateUpload } from '$lib/server/storage';
+import { readPosterFile, toPosterParam } from '$lib/server/event/poster-file';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 import { getStaffLayout } from './layout.remote';
 
@@ -142,16 +143,6 @@ export const searchBandsForListing = query(z.string(), async (q) => {
 // ---------------------------------------------------------------------------
 // Form helpers
 // ---------------------------------------------------------------------------
-
-function readPosterFile(file: File | undefined) {
-	if (!file || file.size === 0) return undefined;
-	return file;
-}
-
-async function toPosterParam(file: File | undefined) {
-	if (!file) return undefined;
-	return { buffer: await file.arrayBuffer(), contentType: file.type };
-}
 
 function parseLineupField(raw: string | undefined) {
 	if (raw === undefined || raw === '') return undefined;
