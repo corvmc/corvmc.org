@@ -72,7 +72,7 @@
 <PageHeader title="Volunteering" subtitle="Member">
 	<Button href={resolve('/member/volunteer/interests')} variant="ghost" size="sm">Interests</Button>
 	<Button href={resolve('/member/volunteer/hours')} variant="ghost" size="sm">Hours</Button>
-	<LogHoursAction roles={pageData.roles} label="Log Hours" />
+	<LogHoursAction roles={pageData.roles} programs={pageData.programs} label="Log Hours" />
 	<!--
 		Not in the redesign's three header actions, and kept anyway: it is the only
 		way to correct a name or a phone number on the volunteer record, and the

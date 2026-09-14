@@ -11,6 +11,7 @@ import {
 	listSignupsForUser
 } from '$lib/server/volunteer/volunteer-signup-service';
 import { mapDomainError } from '$lib/server/errors';
+import { listMyPrograms } from '$lib/server/group/group-service';
 import { renderMarkdown } from '$lib/utils/markdown';
 import {
 	createVolunteerRole as createRoleService,
@@ -36,6 +37,7 @@ import {
 	getVolunteerTotals,
 	getContributedValue,
 	getHoursByMember,
+	getHoursByGroup,
 	getHoursByRole,
 	getHoursByMonth
 } from '$lib/server/volunteer/volunteer-report-service';
@@ -744,6 +746,9 @@ export const updateVolunteerProfile = form(profileFieldsSchema, async (data) => 
 // have >=1 characters".
 const hoursFormSchema = z.object({
 	volunteerRoleId: z.string().min(1, 'Pick what you helped with'),
+	// Which committee or club, where the work was for one. Blank means CMC at
+	// large, which is most volunteering.
+	groupId: z.string().optional(),
 	// Present when the log comes from a completed shift's pre-fill; staff see
 	// those marked as scheduled in the queue and can approve with less scrutiny.
 	shiftId: z.string().optional(),
@@ -761,6 +766,7 @@ export const submitVolunteerHours = form(hoursFormSchema, async (data) => {
 	try {
 		await submitHours(currentUser.id, {
 			volunteerRoleId: data.volunteerRoleId,
+			groupId: data.groupId || null,
 			workedOn: data.workedOn,
 			minutes: hoursToMinutes(data.hours),
 			description: data.description,
@@ -2048,20 +2054,30 @@ export const getMyShifts = query(async () => {
 export const getMemberVolunteerPage = query(z.void(), async () => {
 	const access = await getMyVolunteerAccess();
 
-	const [roles, interests, openShifts, unloggedShifts, logs, summary, certifications, myShifts] =
-		await Promise.all([
-			getActiveVolunteerRoles(),
-			getMyVolunteerInterests(),
-			getOpenShifts(),
-			getUnloggedShifts(),
-			getMyVolunteerHours(),
-			getMyVolunteerSummary(),
-			// `getMyCertifications` was written and then had no caller anywhere, so a member
-			// could be told a shift needs a clearance and had no page saying which ones they
-			// already hold (docs/reports/volunteer-workflow-findings.md#d4).
-			getMyCertifications(),
-			getMyShifts()
-		]);
+	const [
+		roles,
+		interests,
+		openShifts,
+		unloggedShifts,
+		logs,
+		summary,
+		certifications,
+		myShifts,
+		programs
+	] = await Promise.all([
+		getActiveVolunteerRoles(),
+		getMyVolunteerInterests(),
+		getOpenShifts(),
+		getUnloggedShifts(),
+		getMyVolunteerHours(),
+		getMyVolunteerSummary(),
+		// `getMyCertifications` was written and then had no caller anywhere, so a member
+		// could be told a shift needs a clearance and had no page saying which ones they
+		// already hold (docs/reports/volunteer-workflow-findings.md#d4).
+		getMyCertifications(),
+		getMyShifts(),
+		listMyPrograms(requireUser().id)
+	]);
 
 	return {
 		access,
@@ -2072,7 +2088,8 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 		logs,
 		summary,
 		certifications,
-		myShifts
+		myShifts,
+		programs
 	};
 });
 
@@ -2088,15 +2105,17 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 export const getMemberHoursPage = query(z.void(), async () => {
 	const access = await getMyVolunteerAccess();
 
-	const [logs, summary, roles] = await Promise.all([
+	const [logs, summary, roles, programs] = await Promise.all([
 		getMyVolunteerHours(),
 		getMyVolunteerSummary(),
 		// The log modal's role picker, for a correction or a free entry started
 		// from this page.
-		getActiveVolunteerRoles()
+		getActiveVolunteerRoles(),
+		// And its program picker — the committees and clubs this member is on.
+		listMyPrograms(requireUser().id)
 	]);
 
-	return { access, logs, summary, roles };
+	return { access, logs, summary, roles, programs };
 });
 
 /**
@@ -2214,17 +2233,20 @@ export const getClearancesPage = query(
 export const getVolunteerReportPage = query(
 	z.object({ from: z.string().optional(), to: z.string().optional(), page: z.number().optional() }),
 	async ({ from, to, page }) => {
-		const [report, feedbackByRole, byMember, statusCounts] = await Promise.all([
+		const [report, feedbackByRole, byMember, statusCounts, byGroup] = await Promise.all([
 			getVolunteerReport({ from, to }),
 			getFeedbackByRole(),
 			getVolunteerReportByMember({ from, to, page }),
 			// The fourth tile. Everything else here is approved-only by design, so
 			// the report cannot say how much is still waiting to become a number —
 			// and "the total is low" and "the queue is long" are different problems.
-			getStatusCounts()
+			getStatusCounts(),
+			// Hours a committee or club can claim as its own — the question a chair
+			// is asked at a board meeting, which by-role cannot answer.
+			getHoursByGroup({ from, to })
 		]);
 
-		return { report, feedbackByRole, byMember, stillInReview: statusCounts.pending };
+		return { report, feedbackByRole, byMember, byGroup, stillInReview: statusCounts.pending };
 	}
 );
 

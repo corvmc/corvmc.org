@@ -15,6 +15,7 @@ import { eventListing } from './event';
 import { inventoryAsset } from './inventory';
 import { project } from './project';
 import { reservation } from './reservation';
+import { group } from './group';
 import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
@@ -111,6 +112,9 @@ export const setVolunteerAvailabilitySchema = z.object({
 
 export const submitHoursSchema = z.object({
 	volunteerRoleId: z.uuid(),
+	// The committee or club this was given to. Optional — most volunteering is
+	// for CMC at large — and the service checks the member actually belongs.
+	groupId: z.uuid().optional(),
 	// YYYY-MM-DD in club time; the service anchors it at noon.
 	workedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 	minutes: z.coerce.number().int().min(1).max(VOLUNTEER_MAX_MINUTES_PER_LOG),
@@ -503,6 +507,15 @@ export const volunteerHourLog = sqliteTable(
 		// they already knew the person was rostered. Set-null, not cascade:
 		// deleting a shift must not delete the hours somebody actually worked.
 		shiftId: text('shift_id').references(() => workOrder.id, { onDelete: 'set null' }),
+
+		// The program this time was given to — a committee or a club. Nullable:
+		// most volunteering is for CMC at large and names no program.
+		//
+		// Set-null for the same reason as `shiftId`: deleting a group must not
+		// delete hours somebody worked. `volunteerRoleId` stays NOT NULL beside
+		// it — the role is what you did, this is who for, and every report joins
+		// the role.
+		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
 
 		// A calendar date, but this schema has no text-date columns, so it's a
 		// timestamp anchored at NOON club time.

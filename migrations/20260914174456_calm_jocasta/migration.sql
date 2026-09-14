@@ -1,1 +1,0 @@
-ALTER TABLE `work_order` ADD `title` text;

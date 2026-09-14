@@ -71,6 +71,15 @@ const ROLES: RoleSeed[] = [
 		name: 'Audio Engineering',
 		group: 'away-from-shows',
 		description: 'Assist members with recording, mixing, or mastering.'
+	},
+	{
+		// What replaced the six per-committee roles, retired in #1157. One role,
+		// and the log names which program — so a committee cannot turn into a
+		// second row that drifts from the group of the same name.
+		name: 'Program Work',
+		group: 'away-from-shows',
+		description:
+			'Committee meetings and club sessions — the work of running a program. Name the committee or club on the log.'
 	}
 ];
 
