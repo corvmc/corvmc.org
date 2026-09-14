@@ -90,48 +90,100 @@ export async function recordAcquisition(data: CreateAcquisitionData) {
 		.returning();
 
 	for (const line of data.lines ?? []) {
-		await db.insert(acquisitionLine).values({
-			acquisitionId: header.id,
-			itemId: line.itemId,
-			quantity: line.quantity,
-			unitValueCents: line.unitValueCents ?? null
+		await applyLine(header.id, line, {
+			locationId: data.locationId,
+			actorId: data.recordedByUserId
 		});
-
-		const [item] = await db
-			.select({ kind: inventoryItem.kind })
-			.from(inventoryItem)
-			.where(eq(inventoryItem.id, line.itemId))
-			.limit(1);
-
-		if (item?.kind === 'serialized') {
-			// One asset per unit. `createAsset` writes its own `receive`, so this
-			// branch must not also write one — that would double the count.
-			const units: NonNullable<AcquisitionLineInput['units']> =
-				line.units ?? Array.from({ length: line.quantity }, () => ({}));
-			for (const unit of units) {
-				await createAsset({
-					itemId: line.itemId,
-					assetTag: unit.assetTag,
-					serialNumber: unit.serialNumber,
-					condition: unit.condition ?? 'good',
-					locationId: data.locationId,
-					acquisitionId: header.id,
-					actorId: data.recordedByUserId
-				});
-			}
-		} else {
-			await recordMovement({
-				itemId: line.itemId,
-				quantity: line.quantity,
-				reason: 'receive',
-				locationId: data.locationId ?? null,
-				acquisitionId: header.id,
-				actorId: data.recordedByUserId ?? null
-			});
-		}
 	}
 
 	return header;
+}
+
+/**
+ * One line, and the stock it means.
+ *
+ * A line is never just a row: a serialized item becomes one asset per unit and
+ * anything else becomes a `receive` movement. Shared with
+ * `addAcquisitionLine`, because a line added a week later has to move stock
+ * exactly as one entered on the day would have — otherwise the on-hand count
+ * disagrees with the register that explains it.
+ */
+async function applyLine(
+	acquisitionId: string,
+	line: AcquisitionLineInput,
+	opts: { locationId?: string; actorId?: string }
+): Promise<void> {
+	await db.insert(acquisitionLine).values({
+		acquisitionId,
+		itemId: line.itemId,
+		quantity: line.quantity,
+		unitValueCents: line.unitValueCents ?? null
+	});
+
+	const [item] = await db
+		.select({ kind: inventoryItem.kind })
+		.from(inventoryItem)
+		.where(eq(inventoryItem.id, line.itemId))
+		.limit(1);
+
+	if (item?.kind === 'serialized') {
+		// One asset per unit. `createAsset` writes its own `receive`, so this
+		// branch must not also write one — that would double the count.
+		const units: NonNullable<AcquisitionLineInput['units']> =
+			line.units ?? Array.from({ length: line.quantity }, () => ({}));
+		for (const unit of units) {
+			await createAsset({
+				itemId: line.itemId,
+				assetTag: unit.assetTag,
+				serialNumber: unit.serialNumber,
+				condition: unit.condition ?? 'good',
+				locationId: opts.locationId,
+				acquisitionId,
+				actorId: opts.actorId
+			});
+		}
+	} else {
+		await recordMovement({
+			itemId: line.itemId,
+			quantity: line.quantity,
+			reason: 'receive',
+			locationId: opts.locationId ?? null,
+			acquisitionId,
+			actorId: opts.actorId ?? null
+		});
+	}
+}
+
+/**
+ * Itemise an acquisition that was recorded from its receipt alone.
+ *
+ * The reason a header may have no lines: someone photographs the till slip and
+ * records the total, and whoever can read it adds the rows later. The stock
+ * moves when the line is added, not when the header was, which is the honest
+ * order — nobody knew what arrived until somebody read the picture.
+ *
+ * Deliberately no `removeAcquisitionLine`. Reversing a receive is a stock
+ * question rather than a bookkeeping one: the units may be tagged, loaned or
+ * already consumed, and `adjustStock` is where a correction of that kind
+ * belongs.
+ */
+export async function addAcquisitionLine(
+	acquisitionId: string,
+	line: AcquisitionLineInput,
+	actorId?: string
+): Promise<void> {
+	if (!Number.isInteger(line.quantity) || line.quantity < 1) {
+		throw new InvalidAcquisitionError('A line needs a whole quantity of at least one');
+	}
+
+	const [header] = await db
+		.select({ id: acquisition.id })
+		.from(acquisition)
+		.where(eq(acquisition.id, acquisitionId))
+		.limit(1);
+	if (!header) throw new AcquisitionNotFoundError();
+
+	await applyLine(acquisitionId, line, { actorId });
 }
 
 /**

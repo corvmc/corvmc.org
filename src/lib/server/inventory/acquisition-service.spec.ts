@@ -68,6 +68,7 @@ import {
 	adjustStock,
 	consumeStock,
 	markReimbursed,
+	addAcquisitionLine,
 	recordAcquisition,
 	updateAcquisition,
 	AcquisitionNotFoundError
@@ -84,6 +85,58 @@ beforeEach(() => {
 	insertCalls = [];
 	vi.mocked(recordMovement).mockResolvedValue({ id: 'mv-1' } as never);
 	vi.mocked(createAsset).mockResolvedValue({ id: 'as-1' } as never);
+});
+
+describe('addAcquisitionLine', () => {
+	/**
+	 * The point of recording a receipt before anyone itemises it: the stock has
+	 * to move when the line is added, not when the header was. A line that only
+	 * wrote its row would leave the on-hand count disagreeing with the register
+	 * that explains it.
+	 */
+	it('receives the stock, not just the row', async () => {
+		selectResultQueue = [[{ id: 'acq-1' }], [{ kind: 'bulk' }]];
+
+		await addAcquisitionLine(
+			'acq-1',
+			{ itemId: 'it-1', quantity: 4, unitValueCents: 250 },
+			'user-1'
+		);
+
+		expect(recordMovement).toHaveBeenCalledWith(
+			expect.objectContaining({
+				itemId: 'it-1',
+				quantity: 4,
+				reason: 'receive',
+				acquisitionId: 'acq-1'
+			})
+		);
+	});
+
+	// The same split `recordAcquisition` makes: `createAsset` writes its own
+	// receive, so a serialized line must not write a second one.
+	it('creates one unit per quantity for a serialized item', async () => {
+		selectResultQueue = [[{ id: 'acq-1' }], [{ kind: 'serialized' }]];
+
+		await addAcquisitionLine('acq-1', { itemId: 'it-1', quantity: 2 }, 'user-1');
+
+		expect(createAsset).toHaveBeenCalledTimes(2);
+		expect(recordMovement).not.toHaveBeenCalled();
+	});
+
+	it('refuses a line against an acquisition that does not exist', async () => {
+		selectResultQueue = [[]];
+
+		await expect(addAcquisitionLine('nope', { itemId: 'it-1', quantity: 1 })).rejects.toThrow();
+		expect(recordMovement).not.toHaveBeenCalled();
+		expect(createAsset).not.toHaveBeenCalled();
+	});
+
+	it('refuses a quantity that is not a whole number of at least one', async () => {
+		await expect(addAcquisitionLine('acq-1', { itemId: 'it-1', quantity: 0 })).rejects.toThrow();
+		// Rejected before the acquisition is even looked up.
+		expect(recordMovement).not.toHaveBeenCalled();
+	});
 });
 
 describe('recordAcquisition', () => {
