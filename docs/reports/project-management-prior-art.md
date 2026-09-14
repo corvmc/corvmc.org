@@ -195,7 +195,7 @@ management, and that category has four things the volunteer products do not:**
 - **Position, not task type.** An employee holds a _position_ with a standing job
   description. `volunteer_role` is closer to a task type attached to one shift.
   Committees-as-departments (Consequence B) is what makes position a real concept
-  here — "Programming Committee, Booking Lead" is a position; "Door" is a task.
+  here — "Booking Committee, Chair" is a position; "Door" is a task.
 - **Reliability as a tracked attribute.** `/staff/volunteer/people` shows lifetime
   approved hours — _contribution_, not _reliability_. The data exists
   (`volunteer_signup` records no-shows); nothing aggregates it per person. Worth
@@ -247,7 +247,7 @@ rather than assumed.
 
 Already half-designed, and the schema anticipated it. From `duty_list`'s comment:
 
-> Facility and Programming own their own lists, and a list you need a deploy to change
+> Facility and Booking own their own lists, and a list you need a deploy to change
 > is not owned by them.
 
 `docs/specs/committees-and-roles-spec.md` establishes a committee as a `group` row

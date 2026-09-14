@@ -74,7 +74,7 @@ const ROLES: RoleSeed[] = [
 	},
 
 	{
-		name: 'Programming Committee',
+		name: 'Booking Committee',
 		group: 'committee',
 		description: 'Planning and booking CMC-produced events. Meets monthly.'
 	},

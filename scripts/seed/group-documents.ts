@@ -43,7 +43,7 @@ const CHART_CSV = [
 ].join('\n');
 
 const AGENDA_TXT = [
-	'Programming Committee — agenda',
+	'Booking Committee — agenda',
 	'',
 	'1. Fall showcase: confirm the date and the two holds',
 	'2. All-ages policy — deferred from August',
@@ -83,7 +83,7 @@ const DOCUMENTS: DocumentSeed[] = [
 	},
 	{
 		id: '11111111-0000-4000-8000-00000000d003',
-		slug: 'programming-committee',
+		slug: 'booking-committee',
 		filename: 'agenda-september.txt',
 		contentType: 'text/plain',
 		body: AGENDA_TXT,
@@ -91,7 +91,7 @@ const DOCUMENTS: DocumentSeed[] = [
 	},
 	{
 		id: '11111111-0000-4000-8000-00000000d004',
-		slug: 'programming-committee',
+		slug: 'booking-committee',
 		filename: 'minutes-august.pdf',
 		contentType: 'application/pdf',
 		body: MINIMAL_PDF,
@@ -102,7 +102,7 @@ const DOCUMENTS: DocumentSeed[] = [
 		// list (which is how you see the filter working) and it is not yet a sweep
 		// candidate, which is how you see the window working.
 		id: '11111111-0000-4000-8000-00000000d005',
-		slug: 'programming-committee',
+		slug: 'booking-committee',
 		filename: 'minutes-august-draft.pdf',
 		contentType: 'application/pdf',
 		body: MINIMAL_PDF,

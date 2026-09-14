@@ -8,7 +8,7 @@ written down in an internal proposal that describes duties: who keeps the roster
 answers the inbox, who holds the keys, who counts the till.
 
 The app knows none of it. There is no committee anywhere in the staff panel, no way to say
-"this is Programming's problem", and no page a new Communications member can open to see what
+"this is Booking's problem", and no page a new Communications member can open to see what
 their committee is responsible for. What the app has instead is a set of capabilities that
 happen to cover a lot of those duties — volunteering, inventory, marketing, the inbox,
 reservations — organized by _feature_, because that is how they were built, one at a time.
@@ -43,14 +43,14 @@ The word means two unrelated things in the codebase today, with no key between t
   only, which is what makes free room time safe to grant by kind. The roster is live today;
   everything hanging off it is designed and unbuilt.
 - `volunteerRoleGroups = ['at-shows', 'away-from-shows', 'committee']` — same file. A
-  presentational bucket on the `/contribute` role picker, holding rows like "Programming
+  presentational bucket on the `/contribute` role picker, holding rows like "Booking
   Committee" from [scripts/seed-volunteer-roles.ts](../../scripts/seed-volunteer-roles.ts).
   Nothing branches on it, and the volunteering spec is explicit that a `volunteer_role` grants
   nothing at all.
 
 An earlier draft of this section kept both and made the volunteer role a recruiting funnel into
 the group. That is one join table and one chair-facing queue to build, and it leaves two rows
-named "Programming Committee" in unrelated tables forever — a trap somebody eventually falls
+named "Booking Committee" in unrelated tables forever — a trap somebody eventually falls
 into.
 
 **`by_application` deletes the funnel instead of building it.** A committee group publishes
@@ -100,7 +100,7 @@ The state of authorization, as of this writing:
 - `group_member.role` (`owner | admin | member`) is real, but only read inside a group's own
   pages. `group_member.position` — free text, "Treasurer", "Bass" — is read by nothing.
 
-So "Programming may edit events but not payments" is not a permission this app can express.
+So "Booking may edit events but not payments" is not a permission this app can express.
 Anyone handed the panel to do committee work today gets the whole panel, including account
 purges and credit adjustments. That is a policy the Collective has not chosen; it is a
 consequence of there being one door.
@@ -135,7 +135,7 @@ staff-only for the same reason.
 Two things follow, both deliberate:
 
 - **A chair and their deputy are indistinguishable in the data**, because under first-among-
-  equals there is nothing to distinguish. "Who chairs Programming" is answered by
+  equals there is nothing to distinguish. "Who chairs Booking" is answered by
   `group_member.position`, which is a label, not a permission.
 - **A committee is normally unowned**, and that is legal rather than a gap.
   [groups-spec.md](shipped/groups-spec.md) says so directly — "a group with no owner is legal", a normal
@@ -155,7 +155,7 @@ the one it has.**
 The staff panel is filed by entity: Users, Bands, Reservations, Events, Inventory, Payments,
 Credits. That is the shape of the database, and it was the right shape to build first — every
 row has to be reachable before anything can be made pleasant. It is not the shape of anybody's
-job. No committee's work is "the event table"; Programming's booking runs across `event`,
+job. No committee's work is "the event table"; Booking's work runs across `event`,
 `production_slot`, `directory_entry`, `reservation` and `work_order`, and there is no page
 in the panel called booking.
 
@@ -198,73 +198,73 @@ way to do the job.
 
 ## Stories
 
-### Programming
+### Booking
 
 Decides what the Collective spends its resources on, and plans it.
 
-**As Programming**, I want a roster of acts carrying contact details, what they've played, and
+**As Booking**, I want a roster of acts carrying contact details, what they've played, and
 what they drew, so booking the next bill starts from what happened rather than from memory.
 🔧 `directory_entry` is the member-facing listing; [production-workflow-spec.md](production-workflow-spec.md)
 adds a profile for a touring act with no account, and gig history falls out of past slots.
 Draw is not recorded anywhere, and neither is scouting — acts noticed locally or regionally, and
 the relationships with bookers in nearby towns that turn up new ones.
 
-**As Programming**, I want to record that an act was asked and never answered, or said no and
+**As Booking**, I want to record that an act was asked and never answered, or said no and
 why, so the same act is not chased three times in a season.
 🆕 Nothing models an offer that did not become a show. `Booking Request Pipeline` in
 [the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement) is the inbound half; this is the outbound half.
 
-**As Programming**, I want submissions from acts to arrive somewhere I can work through rather
+**As Booking**, I want submissions from acts to arrive somewhere I can work through rather
 than in a personal inbox.
 🔧 `/staff/inbox` receives the contact form and threads replies. It is a general inbox with no
 booking state on a thread.
 
-**As Programming**, I want to build a bill — acts in billing order, set lengths, a run of show
+**As Booking**, I want to build a bill — acts in billing order, set lengths, a run of show
 — and have set times follow from it.
 📋 `production_slot` in [production-workflow-spec.md](production-workflow-spec.md). Set times
 are derived from the lineup on every mutation, with no override.
 
-**As Programming**, I want each act's terms recorded — guarantee, door split, or a donated
+**As Booking**, I want each act's terms recorded — guarantee, door split, or a donated
 night — and visible to the act before the show.
 📋 Same spec: per-slot `guaranteeCents` and a per-show `bandSplitPercent`, with a read-only
 terms summary in the band's own panel. What we offer in return for a donated night is not
 modeled.
 
-**As Programming**, I want to advance a show — set times, backline, hospitality, load-in — off
+**As Booking**, I want to advance a show — set times, backline, hospitality, load-in — off
 a checklist rather than a group chat.
 📋 `production_task`, seeded from templates per phase (`advance`, `day_of`, `close_out`), and
 a production cannot close with unfinished close-out tasks.
 
-**As Programming**, I want to cancel a show and put a replacement in its place without losing
+**As Booking**, I want to cancel a show and put a replacement in its place without losing
 the listing.
 ✅ A cancelled event stays on the gig guide marked cancelled rather than vanishing. 📋 Swapping
 one act for another within a bill is a slot edit.
 
-**As Programming**, I want to appoint an event lead to a specific event and have them receive
+**As Booking**, I want to appoint an event lead to a specific event and have them receive
 the roster, the terms, and the format's rules.
 🆕 There is no event-lead concept. `event.createdByUserId` is the nearest column and means
 something else. See [Event and program roles](#event-and-program-roles).
 
-**As Programming**, I want to receive a proposal for a club, class, jam or workshop and decide
+**As Booking**, I want to receive a proposal for a club, class, jam or workshop and decide
 whether it runs.
 🔧 The `suggestion` board takes member ideas and gives staff a response and a status, but it is
 a public upvote board, not an application with terms.
 
-**As Programming**, I want to appoint a program lead for a recurring program, replace them when
+**As Booking**, I want to appoint a program lead for a recurring program, replace them when
 someone steps back, and end a program that has stopped meeting.
 🔧 A program is a `group` with `kind = 'club'` and its lead is the owner row; staff can
 reassign a club's leader without the outgoing leader's participation, and `deactivate()` ends a
 program while keeping its documents and roster as the record. Blocked on `/staff/groups`, which
 is where a club comes into existence and is not built yet.
 
-**As Programming**, I want a program's standing slot held on the practice calendar and its
+**As Booking**, I want a program's standing slot held on the practice calendar and its
 details published on the site.
 ✅ `recurring_series` holds a repeating reservation; the listing is `/staff/events`.
 
-**As Programming**, I want a booking cutoff that the calendar actually enforces.
+**As Booking**, I want a booking cutoff that the calendar actually enforces.
 🆕 No deadline concept on an event or a series.
 
-**As Programming**, I want to record how an act was to work with after the show, against the
+**As Booking**, I want to record how an act was to work with after the show, against the
 act.
 🆕 Nothing carries a post-show note back to the roster.
 
@@ -632,7 +632,7 @@ is no person the app can hand them to as a set. Introducing an event lead is mos
 naming an owner on an event and giving them a page that already-built queries can fill.
 
 **As an event lead**, I want to cast an ensemble or assemble a lineup for a participatory
-format, working from Programming's roster and terms.
+format, working from Booking's roster and terms.
 🆕 Special and participatory formats are not modeled at all.
 
 **As an event lead**, I want to decide an event is cancelled or postponed and have that reach
@@ -658,7 +658,7 @@ Communications, and is the larger half for a drop-in program.
 when my program moves.
 🔧 Both `recurring_series` and the listing exist; keeping them in step is manual.
 
-**As a program lead**, I want to report attendance to Programming.
+**As a program lead**, I want to report attendance to Booking.
 🆕 Nothing records attendance at a session.
 
 ### Host
@@ -806,14 +806,14 @@ edited away, because each one closes off an alternative that will otherwise be r
    every workflow eventually fails to do. Nothing below marked ✅ or 🔧 is at risk of being taken
    away; it stops being the _only_ way to do the work rather than stopping being a way.
 
-8. **Programming and Production get the first surfaces**, because that is where the surface
+8. **Booking and Production get the first surfaces**, because that is where the surface
    would ease the most relevant work. Conveniently, most of it is already designed:
    [production-workflow-spec.md](production-workflow-spec.md) is the back-of-house layer for a
    show end to end — lineup, advance, run of show, settlement, close-out — and reads in
    retrospect like the first committee workflow surface written before the framing existed. What
-   it does not cover is Programming's front half: the roster of acts, and the offer that has not
+   it does not cover is Booking's front half: the roster of acts, and the offer that has not
    become a show yet. Those are its two deferrals — "Public booking inquiries" and emailing
-   external acts — and they are the gap between Productions as specced and Programming as a
+   external acts — and they are the gap between Productions as specced and Booking as a
    domain.
 
 9. **The application is paper.** See decision 2 — this is what keeps `by_application` a bare
@@ -838,6 +838,6 @@ What is left is not a question but a sequence. Committee-scoped authority does n
 two now share a design: guards name capabilities, and a committee guard resolves the committee
 from the resource. The application flow needs phase 5 of
 [groups-spec.md](shipped/groups-spec.md), and carries the status-blind roster reads with it. The first
-workflow surface is Programming and Production, most of which is
+workflow surface is Booking and Production, most of which is
 [production-workflow-spec.md](production-workflow-spec.md) already — so the honest next step is
 to build that spec and find out whether a domain surface is what it turns out to be.

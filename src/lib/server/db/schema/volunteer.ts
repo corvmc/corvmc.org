@@ -914,7 +914,7 @@ export const workTask = sqliteTable(
  * last month's show and someone cancelling a shift on it silently rewrites the
  * template. A prototype event survives that because nobody edits an event after
  * it happens; a roster is edited constantly. It is a table rather than a config
- * tuple for the adjacent reason — Facility and Programming own their own lists,
+ * tuple for the adjacent reason — Facility and Booking own their own lists,
  * and a list you need a deploy to change is not owned by them.
  */
 export const dutyList = sqliteTable(
