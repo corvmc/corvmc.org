@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { form, query } from '$app/server';
 import { mapDomainError } from '$lib/server/errors';
-import { requireUser } from '$lib/server/authorization';
-import { requireProgramRole } from '$lib/server/group/group-context';
+import { requireCapability, requireUser } from '$lib/server/authorization';
+import { requireCommitteeReviewer } from '$lib/server/group/group-context';
 import { getMemberGroup } from '$lib/remote/groups.remote';
 import { COMMITTEE_ANSWER_MAX, committeeApplicationQuestions } from '$lib/config';
 import {
@@ -10,8 +10,8 @@ import {
 	declineApplication,
 	listCommittees,
 	listForApplicant,
+	listOpenByCommittee,
 	markContacted,
-	NotACommitteeError,
 	submitApplication,
 	withdrawApplication
 } from '$lib/server/group/committee-application-service';
@@ -80,6 +80,18 @@ export const withdrawCommitteeApplication = form(
 // The chair's side
 // ---------------------------------------------------------------------------
 
+/**
+ * The queue a reviewer works who holds no committee seat.
+ *
+ * Its own page rather than a panel on `/staff/groups/[id]`: that surface wants
+ * `group.read`, which the volunteer coordinator does not hold and should not
+ * gain just to answer an application.
+ */
+export const getCommitteeApplicationQueue = query(async () => {
+	await requireCapability('committee.reviewApplications');
+	return { committees: await listOpenByCommittee() };
+});
+
 const chairRef = z.object({ slug: z.string().min(1) });
 const choiceRef = chairRef.extend({ choiceId: z.string().min(1) });
 
@@ -91,16 +103,17 @@ const choiceRef = chairRef.extend({ choiceId: z.string().min(1) });
  * section component is what `custom/no-concurrent-remote-queries` stops.
  */
 async function chairOf(slug: string) {
-	const { user, group } = await requireProgramRole({ slug }, 'admin');
-	if (group.kind !== 'committee') throw mapDomainError(new NotACommitteeError());
-	return { user, group };
+	return requireCommitteeReviewer({ slug });
 }
 
 export const markApplicantContacted = form(choiceRef, async (data) => {
 	const { user, group } = await chairOf(data.slug);
 	try {
 		await markContacted(data.choiceId, group.id, user.id);
-		await getMemberGroup(data.slug).refresh();
+		await Promise.all([
+			getMemberGroup(data.slug).refresh(),
+			getCommitteeApplicationQueue().refresh()
+		]);
 		return { success: true };
 	} catch (err) {
 		mapDomainError(err);
@@ -111,7 +124,10 @@ export const acceptCommitteeApplication = form(choiceRef, async (data) => {
 	const { user, group } = await chairOf(data.slug);
 	try {
 		await acceptApplication(data.choiceId, group.id, user.id);
-		await getMemberGroup(data.slug).refresh();
+		await Promise.all([
+			getMemberGroup(data.slug).refresh(),
+			getCommitteeApplicationQueue().refresh()
+		]);
 		return { success: true };
 	} catch (err) {
 		mapDomainError(err);
@@ -124,7 +140,10 @@ export const declineCommitteeApplication = form(
 		const { user, group } = await chairOf(data.slug);
 		try {
 			await declineApplication(data.choiceId, group.id, user.id, data.reviewNotes ?? null);
-			await getMemberGroup(data.slug).refresh();
+			await Promise.all([
+				getMemberGroup(data.slug).refresh(),
+				getCommitteeApplicationQueue().refresh()
+			]);
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);

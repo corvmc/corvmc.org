@@ -1653,6 +1653,10 @@ export const capabilities = {
 	directory: ['readContact', 'shareContactSheet'],
 	band: ['read', 'manage', 'manageMembers', 'setTier'],
 	group: ['read', 'manage'],
+	// Reviewing what arrives on a committee, for somebody who holds no seat on
+	// it. A chair does this through `group_member.role = 'admin'`; this is the
+	// other door, and a headless committee has only this one.
+	committee: ['reviewApplications'],
 	event: ['read', 'manage', 'publish', 'manageTickets'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
 	// Door access: granting and revoking standing member codes, adopting the
@@ -1821,7 +1825,11 @@ export const positions: Record<Position, Grants> = {
 		],
 		user: ['list', 'read'],
 		directory: ['readContact'],
-		event: ['read']
+		event: ['read'],
+		// The coordinator is who people reach when they want to get involved, and
+		// a committee with no chair yet has nobody else to answer. Not a seat on
+		// any committee — they review and decide, they do not attend.
+		committee: ['reviewApplications']
 	},
 	site_moderator: {
 		moderation: ['reviewFlags', 'setStanding'],

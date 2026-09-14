@@ -250,3 +250,24 @@ describe('withdrawing', () => {
 		);
 	});
 });
+
+describe('the reviewer queue', () => {
+	it('lists only committees with something waiting', async () => {
+		await svc.submitApplication(APPLICANT, { groupIds: [BOOKING], answers });
+
+		const queue = await svc.listOpenByCommittee();
+
+		// Facility has no applications, so it is absent rather than empty — a
+		// reviewer's page should not be six headings and one list.
+		expect(queue.map((c) => c.slug)).toEqual(['booking-committee']);
+		expect(queue[0].applications).toHaveLength(1);
+	});
+
+	it('drops a committee once its last application is decided', async () => {
+		await svc.submitApplication(APPLICANT, { groupIds: [BOOKING], answers });
+		const [choice] = await svc.listForCommittee(BOOKING);
+		await svc.acceptApplication(choice.choiceId, BOOKING, CHAIR);
+
+		expect(await svc.listOpenByCommittee()).toEqual([]);
+	});
+});

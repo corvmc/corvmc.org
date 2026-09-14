@@ -37,6 +37,7 @@ export type StaffNavKey =
 	| 'bands'
 	| 'music'
 	| 'groups'
+	| 'committees'
 	| 'volunteer'
 	| 'volunteer-schedule'
 	| 'volunteer-people'
@@ -126,6 +127,16 @@ export const staffNavSections: StaffNavSection[] = [
 			// member's own project and a program is a sanctioned CMC one, and this
 			// is the only place a program comes into existence.
 			{ key: 'groups', capability: 'group.read', label: 'Groups', href: resolve('/staff/groups') },
+			// Its own row rather than a panel on a group's page: the volunteer
+			// coordinator holds `committee.reviewApplications` and not
+			// `group.read`, so the row above is invisible to them — and a headless
+			// committee has no chair to read its applications anywhere else.
+			{
+				key: 'committees',
+				capability: 'committee.reviewApplications',
+				label: 'Committee Applications',
+				href: resolve('/staff/committees')
+			},
 			{
 				// The parent row is a dashboard, not an index — see
 				// docs/development/ui-patterns.md#section-dashboards. It keeps its own href

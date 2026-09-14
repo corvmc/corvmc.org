@@ -10,15 +10,13 @@
 	/**
 	 * The only door a club or committee comes through.
 	 *
-	 * A leader is picked here rather than invited afterwards: staff are recording
-	 * an arrangement that already exists offline, so the owner row lands active
-	 * with nothing for the appointee to accept. It is a required field for the
-	 * same reason — a program created with an empty owner seat is a program
-	 * nobody has been told they run.
-	 *
-	 * Synchronous script: `fields` is read at module scope, and the page above
-	 * holds the awaited query.
+	 * A leader is picked here rather than invited: staff are recording an
+	 * arrangement that exists offline, so the owner row lands active with
+	 * nothing to accept. **Optional since #607** — a committee exists before the
+	 * board appoints a chair, and `assignGroupLeader` fills the seat later.
 	 */
+	// Synchronous script: `fields` is read at module scope, and the page above
+	// holds the awaited query.
 	const fields = createStaffGroup.fields;
 
 	let leader = $state<{ id: string; name: string; email: string } | null>(null);
@@ -122,8 +120,7 @@
 			<FormField
 				name="leaderId"
 				label="Leader"
-				required
-				description="They become the owner immediately — there is nothing for them to accept."
+				description="They become the owner immediately — there is nothing for them to accept. Leave it empty for a committee the board has not appointed a chair to yet; assign one later from the group's page."
 			>
 				<SearchSelect
 					search={searchMembers}

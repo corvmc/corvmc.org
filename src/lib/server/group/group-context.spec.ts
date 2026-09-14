@@ -10,10 +10,12 @@ const requireUser = vi.fn(() => ({ id: 'user-1' }));
 // use the first, matching `requireStaff()`.
 const isElevated = vi.fn(async () => false);
 const hasAnyRole = vi.fn(async () => false);
+const can = vi.fn(async () => false);
 vi.mock('$lib/server/authorization', () => ({
 	requireUser: () => requireUser(),
 	isElevated: (...a: unknown[]) => isElevated(...(a as [])),
-	hasAnyRole: (...a: unknown[]) => hasAnyRole(...(a as []))
+	hasAnyRole: (...a: unknown[]) => hasAnyRole(...(a as [])),
+	can: (...a: unknown[]) => can(...(a as []))
 }));
 
 // Typed with their parameters so the D1-rejecting overrides below are
@@ -27,17 +29,24 @@ vi.mock('$lib/server/band/band-service', () => ({
 	getUserRole: (...a: unknown[]) => getUserRole(...(a as []))
 }));
 
-import { requireBandRole, requireGroupRole, requireProgramRole } from './group-context';
+import {
+	requireBandRole,
+	requireCommitteeReviewer,
+	requireGroupRole,
+	requireProgramRole
+} from './group-context';
 
 const GROUP = { id: 'group-1', slug: 'our-band', name: 'Our Band', kind: 'band' };
 const CLUB = { id: 'group-2', slug: 'real-book-club', name: 'Real Book Club', kind: 'club' };
 
 beforeEach(() => {
-	for (const m of [getBySlug, getByIdActive, getUserRole, isElevated, hasAnyRole]) m.mockReset();
+	for (const m of [getBySlug, getByIdActive, getUserRole, isElevated, hasAnyRole, can])
+		m.mockReset();
 	getBySlug.mockResolvedValue(null);
 	getByIdActive.mockResolvedValue(null);
 	getUserRole.mockResolvedValue(null);
 	isElevated.mockResolvedValue(false);
+	can.mockResolvedValue(false);
 	hasAnyRole.mockResolvedValue(false);
 });
 
@@ -272,5 +281,71 @@ describe('requireProgramRole', () => {
 	it('404s a band', async () => {
 		getBySlug.mockResolvedValue(GROUP);
 		expect(await statusOf(() => requireProgramRole({ slug: 'our-band' }, 'admin'))).toBe(404);
+	});
+});
+
+describe('requireCommitteeReviewer', () => {
+	const COMMITTEE = {
+		id: 'group-3',
+		slug: 'booking-committee',
+		name: 'Booking Committee',
+		kind: 'committee'
+	};
+
+	const call = () => requireCommitteeReviewer({ slug: 'booking-committee' });
+	const statusOf = async (fn: () => Promise<unknown>) => {
+		try {
+			await fn();
+			return 200;
+		} catch (err) {
+			return (err as { status?: number }).status;
+		}
+	};
+
+	beforeEach(() => getBySlug.mockResolvedValue(COMMITTEE));
+
+	it('admits the chair, who holds an admin seat', async () => {
+		getUserRole.mockResolvedValue('admin');
+		await expect(call()).resolves.toMatchObject({ role: 'admin' });
+		// The seat is enough on its own; nothing asked for a capability.
+		expect(can).not.toHaveBeenCalled();
+	});
+
+	it('admits the owner, who outranks admin', async () => {
+		getUserRole.mockResolvedValue('owner');
+		await expect(call()).resolves.toMatchObject({ role: 'owner' });
+	});
+
+	it('refuses a plain member of the committee', async () => {
+		getUserRole.mockResolvedValue('member');
+		expect(await statusOf(call)).toBe(403);
+	});
+
+	/** The whole point: a headless committee has no chair, so this is the only door. */
+	it('admits a capability holder with no seat at all', async () => {
+		can.mockResolvedValue(true);
+		await expect(call()).resolves.toMatchObject({ role: 'staff' });
+		expect(can).toHaveBeenCalledWith('committee.reviewApplications');
+	});
+
+	it('refuses somebody with neither', async () => {
+		expect(await statusOf(call)).toBe(403);
+	});
+
+	/**
+	 * 404 rather than 403, and checked before the role: a band and a club take
+	 * no applications, so naming one is a wrong address. It also stops the
+	 * capability reaching sideways into a club a coordinator has no business in.
+	 */
+	it('404s a club, even for a capability holder', async () => {
+		getBySlug.mockResolvedValue(CLUB);
+		can.mockResolvedValue(true);
+		expect(await statusOf(() => requireCommitteeReviewer({ slug: 'real-book-club' }))).toBe(404);
+	});
+
+	it('404s a band', async () => {
+		getBySlug.mockResolvedValue(GROUP);
+		can.mockResolvedValue(true);
+		expect(await statusOf(() => requireCommitteeReviewer({ slug: 'our-band' }))).toBe(404);
 	});
 });

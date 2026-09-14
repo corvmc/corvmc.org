@@ -372,8 +372,11 @@ export interface CreateGroupData {
 	kind: StaffGroupKind;
 	name: string;
 	bio?: string;
-	/** The member who will run it. Appointed, not invited — see `assignLeader`. */
-	leaderId: string;
+	/**
+	 * The member who will run it. Appointed, not invited — see `assignLeader`.
+	 * Omitted leaves the group headless, which is the committee case.
+	 */
+	leaderId?: string | null;
 	/**
 	 * Set at creation, so a program is never briefly listed and unjoinable. Both
 	 * stay staff's for its life — `updateGroupSettings` is the other writer.
@@ -384,21 +387,26 @@ export interface CreateGroupData {
 }
 
 /**
- * Create a club or committee and appoint its leader.
+ * Create a club or committee, with or without a leader.
  *
- * The appointee never had to opt in, which is deliberate: staff are recording an
- * arrangement that already exists offline, so the owner row lands `active` with
- * nothing to accept. They can leave or hand off afterwards like any owner.
+ * An appointed leader never had to opt in: staff are recording an arrangement
+ * that already exists offline, so the owner row lands `active` with nothing to
+ * accept. They can leave or hand off afterwards like any owner.
  */
+// Headless is legal and is the committee case: the six exist before the board
+// has appointed their chairs, and `assignLeader` fills the seat later — it
+// already treats an empty one as normal. A club should normally name its lead,
+// but nothing here enforces that; the form asks, and the model does not care.
 export async function createGroup(data: CreateGroupData) {
 	if (!STAFF_GROUP_KINDS.includes(data.kind)) throw new NotAStaffGroupError();
-	if (!data.leaderId) throw new LeaderNotFoundError();
 
 	// `create` writes the group, the owner row and the directory entry in one
 	// batch, and skips the `band_site` row for a non-band kind. The leader is the
 	// owner from the first write rather than a second one, so there is no window
 	// in which the group exists with an empty owner seat.
-	return createGroupRow(data.leaderId, {
+	// `|| null`, not `??`: a blank form field arrives as an empty string, and
+	// `''` is a userId nothing matches rather than a headless group.
+	return createGroupRow(data.leaderId || null, {
 		kind: data.kind,
 		name: data.name,
 		bio: data.bio,

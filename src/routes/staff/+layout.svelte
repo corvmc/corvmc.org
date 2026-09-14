@@ -84,6 +84,7 @@
 		bands: IconMusic,
 		music: IconDisc,
 		groups: IconUsersGroup,
+		committees: IconClipboardList,
 		volunteer: IconHeartHandshake,
 		'volunteer-schedule': IconCalendarWeek,
 		'volunteer-people': IconUsersGroup,

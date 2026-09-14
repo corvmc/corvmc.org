@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { requireUser, isElevated } from '$lib/server/authorization';
+import { requireUser, isElevated, can } from '$lib/server/authorization';
 import type { GroupRole } from '$lib/server/db/schema/group';
 import { getBySlug, getByIdActive, getUserRole } from '$lib/server/band/band-service';
 
@@ -67,6 +67,30 @@ export async function requireGroupRole(
 	}
 
 	throw error(403, 'Not a member of this group');
+}
+
+/**
+ * Who may work a committee's applications: its chair, or the coordinator.
+ *
+ * Two doors on purpose. A chair reaches it through `group_member.role`;
+ * `committee.reviewApplications` is the other, and a **headless committee has
+ * only the second** — the state the six start life in.
+ */
+// 404, not 403, for a band or a club: neither takes applications, so naming
+// one here is a wrong address rather than a refusal.
+export async function requireCommitteeReviewer(ref: GroupRef): Promise<GroupContext> {
+	const user = requireUser();
+	const group = await resolveGroup(ref);
+	if (group.kind !== 'committee') throw error(404, 'Group not found');
+
+	const role = await getUserRole(group.id, user.id);
+	if (role && HIERARCHY[role] <= HIERARCHY['admin']) return { user, group, role };
+
+	if (await can('committee.reviewApplications')) {
+		return { user, group, role: 'staff' };
+	}
+
+	throw error(403, 'Not a chair of this committee');
 }
 
 /**
