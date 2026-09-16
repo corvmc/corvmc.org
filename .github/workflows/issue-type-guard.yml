@@ -31,8 +31,19 @@ jobs:
             const { owner, repo } = context.repo;
             const issue_number = context.payload.issue.number;
 
-            const labels = context.payload.issue.labels.map((l) => l.name);
-            const typed = !!context.payload.issue.type;
+            // Re-read rather than trusting `context.payload.issue`. One
+            // `gh issue edit --type X --remove-label needs-type` fires two events, and
+            // the `unlabeled` payload can carry the PRE-edit type while already
+            // reflecting the label removal. That reads as `typed=false, flagged=false`,
+            // the two agree, and the guard re-labels an issue that is now typed — seven
+            // seconds after somebody took the label off (#1156).
+            //
+            // The area guard needs no such read: both of its facts come off the one
+            // `labels` array, so its snapshot cannot disagree with itself.
+            const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number });
+
+            const labels = issue.labels.map((l) => (typeof l === 'string' ? l : l.name));
+            const typed = !!issue.type;
             const flagged = labels.includes('needs-type');
 
             if (typed === flagged) {
