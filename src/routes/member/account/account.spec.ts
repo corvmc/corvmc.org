@@ -328,7 +328,10 @@ describe('deleteAccount', () => {
 		await deleteAccount({ password: 'correct-pass' });
 
 		expect(auth.api.signInEmail).toHaveBeenCalled();
-		expect(deactivateUser).toHaveBeenCalledWith('user-1');
+		// `member`, so the cancellation listener stays silent: you do not need an
+		// email telling you staff cancelled the bookings you released by closing
+		// your own account (#1189).
+		expect(deactivateUser).toHaveBeenCalledWith('user-1', { actor: 'member' });
 		expect(auth.api.signOut).toHaveBeenCalled();
 	});
 

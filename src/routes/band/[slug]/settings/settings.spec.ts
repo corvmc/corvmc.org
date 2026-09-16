@@ -74,7 +74,11 @@ describe('deleteBand', () => {
 	it('deletes the band', async () => {
 		const result = await deleteBand({ bandId: 'band-1' });
 
-		expect(bandServiceMock.deleteBand).toHaveBeenCalledWith('band-1');
+		// The acting owner, not a lookup. `requireGroupRole(…, 'owner')` has already
+		// established who this is, and the service used to re-derive it from
+		// `group_member` — which told the band's members CMC staff had cancelled
+		// their sessions whenever the two owner sources disagreed (#1189).
+		expect(bandServiceMock.deleteBand).toHaveBeenCalledWith('band-1', 'user-owner');
 		expect(result.success).toBe(true);
 	});
 
