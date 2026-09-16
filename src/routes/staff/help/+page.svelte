@@ -186,7 +186,7 @@
 				{/each}
 			</div>
 			<Form remote={createCategory} successToast="Category created" onsuccess={refreshData}>
-				<div class="mt-4 flex items-end gap-2">
+				<div class="mt-4 flex flex-wrap items-end gap-2">
 					<FormField name="name" label="Name">
 						<input
 							name="name"
@@ -202,6 +202,15 @@
 							type="text"
 							class="input w-40 input-sm"
 							placeholder={slugFromName(catNameValue) || 'auto'}
+						/>
+					</FormField>
+					<FormField name="description" label="Description">
+						<!-- The binding, like the edit row and the hidden sortOrder beside it,
+						     rather than the raw `name=` inputs this form otherwise uses. -->
+						<input
+							{...createCatFields.description.as('text', '')}
+							class="input w-56 input-sm"
+							placeholder="What it is for"
 						/>
 					</FormField>
 					<FormField name="icon" label="Icon">
