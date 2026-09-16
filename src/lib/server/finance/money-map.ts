@@ -141,8 +141,8 @@ export const moneyColumns = {
 	// --------------------------------------------------------------- the rest
 	'payment_cache.amount_cents': {
 		unaccounted:
-			'a row exists for every Stripe payment, but only ticket and reservation reach the ledger',
-		issue: 1172
+			'music sales and band premium still fall through the checkout listener\u2019s else',
+		issue: 1175
 	},
 	'credit_transaction.amount': {
 		notAccounting: 'credits are not currency; the cash they displace is recorded where it settles'
@@ -176,6 +176,5 @@ export const manualOnlyCategories = {
  * Moving one here is a claim that it is owed a writer, not that it is exempt.
  */
 export const unwrittenCategories = {
-	membership: 1172,
 	music_sales: 1175
 } as const;
