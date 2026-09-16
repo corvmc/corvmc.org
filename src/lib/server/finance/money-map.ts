@@ -144,9 +144,10 @@ export const moneyColumns = {
 
 	// --------------------------------------------------------------- the rest
 	'payment_cache.amount_cents': {
-		unaccounted:
-			'music sales and band premium still fall through the checkout listener\u2019s else',
-		issue: 1175
+		// Every kind of payment it mirrors now reaches an entry of its own, so
+		// classifying this as a movement would double-count all of them.
+		notAccounting:
+			'a mirror of the Stripe Payment Record; the movement is what the payment paid for'
 	},
 	'credit_transaction.amount': {
 		notAccounting: 'credits are not currency; the cash they displace is recorded where it settles'

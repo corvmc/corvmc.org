@@ -449,6 +449,7 @@ export const financialCategories = [
 	'fee_coverage',
 	'reservation',
 	'membership',
+	'band_premium',
 	'music_sales',
 	'donation',
 	'grant',
@@ -470,6 +471,7 @@ export const financialCategoryLabels: Record<FinancialCategory, string> = {
 	fee_coverage: 'Fees covered by buyers',
 	reservation: 'Practice room',
 	membership: 'Memberships',
+	band_premium: 'Band premium',
 	music_sales: 'Music sales',
 	donation: 'Donations',
 	grant: 'Grants',
@@ -541,6 +543,7 @@ export const financialSubjects = [
 	'volunteer_hour',
 	'inventory_loan',
 	'membership',
+	'band_premium',
 	'other'
 ] as const;
 export type FinancialSubject = (typeof financialSubjects)[number];

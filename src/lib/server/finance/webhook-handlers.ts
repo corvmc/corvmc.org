@@ -9,6 +9,7 @@ import { cancelAllForUser } from '$lib/server/reservation/recurring-series-servi
 import { buildMemberSubscriptionState } from './subscription-service';
 import { syncCardFromSubscription } from './billing-service';
 import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
+import { recordBandPremiumInvoice } from './band-premium-entries';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { getStripeProductId } from './product-config-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -78,6 +79,20 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 	// Only process subscription invoices
 	const subDetails = invoice.parent?.subscription_details;
 	if (!subDetails) return;
+
+	// A band premium invoice bills the BAND's own Stripe customer (#1081), so
+	// everything below finds no member and warns. It is a different payer and a
+	// different line on the report, and it returns here rather than falling
+	// through to credit allocation that would be derived from the wrong price.
+	const bandId = subDetails.metadata?.band_id;
+	if (subDetails.metadata?.subscription_type === 'band_premium' && bandId) {
+		await recordBandPremiumInvoice({
+			bandId,
+			invoiceId: invoice.id ?? '',
+			amountCents: invoice.amount_paid ?? 0
+		});
+		return;
+	}
 
 	const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
 
