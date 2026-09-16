@@ -9,6 +9,13 @@ export interface VolunteerShiftEvent {
 	userEmail: string;
 	roleName: string;
 	/**
+	 * What to call the shift, for `shiftLabel()` — its own name, then the show it
+	 * staffs, then the role. Required rather than optional so a new emit site
+	 * cannot fall back to the role the way every one of them used to (#1160).
+	 */
+	title: string | null;
+	eventTitle: string | null;
+	/**
 	 * ISO strings, like every other date on this bus — and null when the shift is
 	 * an unscheduled work order, which has no window until somebody books one.
 	 * Copy that reads a date must say so rather than rendering "null".

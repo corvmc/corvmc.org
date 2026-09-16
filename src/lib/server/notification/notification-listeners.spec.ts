@@ -155,6 +155,63 @@ describe('registerAllNotificationListeners', () => {
 });
 
 /**
+ * Regression for #1160. Every shift notification read `roleName`, so a member
+ * who claimed "Spring Deep Clean" was told about "Work Parties" — and the
+ * notification is where that ambiguity bites hardest, arriving with no date
+ * column beside it to tell two Saturday work parties apart.
+ */
+describe('what a shift notification calls the shift', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const shift = {
+		signupId: 'sg-9',
+		shiftId: 'wo-9',
+		userId: 'vol-9',
+		userName: 'Sam',
+		userEmail: 'sam@test.com',
+		roleName: 'Work Parties',
+		title: null as string | null,
+		eventTitle: null as string | null,
+		startsAt: '2026-09-06T00:45:00.000Z',
+		endsAt: '2026-09-06T01:30:00.000Z'
+	};
+
+	const dispatchedTitle = (type: string) =>
+		(
+			mockDispatch.mock.calls.find(([a]) => (a as { type: string }).type === type)?.[0] as {
+				title: string;
+			}
+		).title;
+
+	it("uses the shift's own name when it has one", async () => {
+		await emit('volunteer.signup_confirmed', { ...shift, title: 'Spring Deep Clean' });
+
+		expect(dispatchedTitle('volunteer_shift_confirmed')).toContain('Spring Deep Clean');
+		expect(dispatchedTitle('volunteer_shift_confirmed')).not.toContain('Work Parties');
+	});
+
+	it('falls back to the show it staffs', async () => {
+		await emit('volunteer.signup_confirmed', { ...shift, eventTitle: 'The Velvet Sound' });
+
+		expect(dispatchedTitle('volunteer_shift_confirmed')).toContain('The Velvet Sound');
+	});
+
+	it('falls back to the role when it is all there is', async () => {
+		// The pre-#1159 shape, and still the common one: a shift with no name and
+		// no event has only its role to go on.
+		await emit('volunteer.signup_confirmed', shift);
+
+		expect(dispatchedTitle('volunteer_shift_confirmed')).toContain('Work Parties');
+	});
+
+	it('names the shift on the reminder too, not just the confirmation', async () => {
+		await emit('volunteer.shift_reminder_due', { ...shift, title: 'Spring Deep Clean' });
+
+		expect(dispatchedTitle('volunteer_shift_reminder')).toContain('Spring Deep Clean');
+	});
+});
+
+/**
  * The member being shown around is told who is meeting them.
  *
  * Two listeners sit on `volunteer.signup_confirmed`: the roster email to the
@@ -172,6 +229,8 @@ describe('orientation_confirmed handler', () => {
 		userName: 'Sam',
 		userEmail: 'sam@test.com',
 		roleName: 'Rehearsal Orientation',
+		title: null,
+		eventTitle: null,
 		startsAt: '2026-09-06T00:45:00.000Z',
 		endsAt: '2026-09-06T01:30:00.000Z'
 	};

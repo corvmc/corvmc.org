@@ -12,6 +12,7 @@ import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq } from 'drizzle-orm';
+import { shiftLabel } from '$lib/utils/shift-label';
 import type {
 	NotificationEmailCtaSpec,
 	NotificationEmailDetail,
@@ -1138,7 +1139,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'volunteer_shift_invited',
 			userId: event.userId,
 			userEmail: event.userEmail,
-			title: `Can you take ${event.roleName}?`,
+			title: `Can you take ${shiftLabel(event)}?`,
 			body: `${formatShiftWhen(event.startsAt, event.endsAt)} — say yes or no from your dashboard`,
 			href: '/member/volunteer'
 		});
@@ -1154,7 +1155,7 @@ export function registerAllNotificationListeners(): void {
 					type: 'volunteer_shift_declined',
 					userId: member.id,
 					userEmail: member.email,
-					title: `${event.userName} can't do ${event.roleName}`,
+					title: `${event.userName} can't do ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — still needs somebody`,
 					href: '/staff/volunteer/schedule'
 				});
@@ -1177,7 +1178,7 @@ export function registerAllNotificationListeners(): void {
 					type: 'volunteer_shift_claimed',
 					userId: member.id,
 					userEmail: member.email,
-					title: `${event.userName} claimed ${event.roleName}`,
+					title: `${event.userName} claimed ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — needs confirming`,
 					href: '/staff/volunteer'
 				});
@@ -1198,16 +1199,16 @@ export function registerAllNotificationListeners(): void {
 			type: 'volunteer_shift_confirmed',
 			userId: event.userId,
 			userEmail: event.userEmail,
-			title: `You're on for ${event.roleName}`,
+			title: `You're on for ${shiftLabel(event)}`,
 			body: formatShiftWhen(event.startsAt, event.endsAt),
 			href: '/member/volunteer',
 			email: {
 				recipientName: event.userName,
-				subject: `You're on for ${event.roleName}`,
+				subject: `You're on for ${shiftLabel(event)}`,
 				heading: "You're on the roster",
 				paragraphs: [
 					{
-						text: `You're confirmed for ${event.roleName} on ${formatShiftWhen(event.startsAt, event.endsAt)}. We'll send a reminder the day before.`
+						text: `You're confirmed for ${shiftLabel(event)} on ${formatShiftWhen(event.startsAt, event.endsAt)}. We'll send a reminder the day before.`
 					},
 					{
 						text: "If something comes up, drop the shift from your volunteering page so somebody else can take it — that's much more useful to us than a no-show."
@@ -1262,7 +1263,7 @@ export function registerAllNotificationListeners(): void {
 					type: 'volunteer_shift_dropped',
 					userId: member.id,
 					userEmail: member.email,
-					title: `${event.userName} dropped ${event.roleName}`,
+					title: `${event.userName} dropped ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — a place is open again`,
 					href: '/staff/volunteer'
 				});
@@ -1284,18 +1285,18 @@ export function registerAllNotificationListeners(): void {
 			type: 'volunteer_shift_cancelled',
 			userId: event.userId,
 			userEmail: event.userEmail,
-			title: `${event.roleName} is off`,
+			title: `${shiftLabel(event)} is off`,
 			body: formatShiftWhen(event.startsAt, event.endsAt),
 			href: '/member/volunteer',
 			email: {
 				recipientName: event.userName,
-				subject: `Called off: ${event.roleName}`,
+				subject: `Called off: ${shiftLabel(event)}`,
 				heading: 'That shift is off',
 				paragraphs: [
 					{
 						// `formatShiftWhen` carries the unscheduled case — a work order
 						// that gets called off has no date to name.
-						text: `${event.roleName}, ${formatShiftWhen(event.startsAt, event.endsAt)}, has been called off, so there's nothing to turn up for. Sorry for the change.`
+						text: `${shiftLabel(event)}, ${formatShiftWhen(event.startsAt, event.endsAt)}, has been called off, so there's nothing to turn up for. Sorry for the change.`
 					},
 					{
 						text: 'Nothing else is needed from you. There are usually other shifts open, and your volunteering page has them.'
@@ -1318,15 +1319,15 @@ export function registerAllNotificationListeners(): void {
 			type: 'volunteer_shift_reminder',
 			userId: event.userId,
 			userEmail: event.userEmail,
-			title: `${event.roleName} tomorrow`,
+			title: `${shiftLabel(event)} tomorrow`,
 			body: formatShiftWhen(event.startsAt, event.endsAt),
 			href: '/member/volunteer',
 			email: {
 				recipientName: event.userName,
-				subject: `Reminder: ${event.roleName} tomorrow`,
+				subject: `Reminder: ${shiftLabel(event)} tomorrow`,
 				heading: 'Your shift is tomorrow',
 				paragraphs: [
-					{ text: `You're down for ${event.roleName} tomorrow. Thanks for helping out.` },
+					{ text: `You're down for ${shiftLabel(event)} tomorrow. Thanks for helping out.` },
 					{
 						text: "If something has come up, drop the shift from your volunteering page so somebody else can take it — that's much more useful to us than a no-show."
 					}
@@ -1348,7 +1349,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'volunteer_shift_completed',
 			userId: event.userId,
 			userEmail: event.userEmail,
-			title: `Log your hours for ${event.roleName}`,
+			title: `Log your hours for ${shiftLabel(event)}`,
 			body: formatShiftWhen(event.startsAt, event.endsAt),
 			href: '/member/volunteer'
 		});
@@ -1360,18 +1361,18 @@ export function registerAllNotificationListeners(): void {
 			type: 'volunteer_shift_feedback',
 			userId: event.userId,
 			userEmail: event.userEmail,
-			title: `How did ${event.roleName} go?`,
+			title: `How did ${shiftLabel(event)} go?`,
 			body: 'Two questions, takes a moment.',
 			href: `/member/volunteer/feedback/${event.signupId}`,
 			email: {
 				recipientName: event.userName,
-				subject: `How did ${event.roleName} go?`,
+				subject: `How did ${shiftLabel(event)} go?`,
 				heading: 'How did it go?',
 				paragraphs: [
 					{
 						// The date is dropped rather than faked when the work had no
 						// scheduled window — "on null" is worse than no date at all.
-						text: `Thanks for working ${event.roleName}${event.startsAt ? ` on ${formatWorkedOn(event.startsAt)}` : ''}. Two questions, and they genuinely change how we run the next one.`
+						text: `Thanks for working ${shiftLabel(event)}${event.startsAt ? ` on ${formatWorkedOn(event.startsAt)}` : ''}. Two questions, and they genuinely change how we run the next one.`
 					}
 				],
 				cta: { label: 'Answer two questions' }

@@ -312,6 +312,8 @@ async function emitSignupEvent(
 				userName: user.name,
 				userEmail: user.email,
 				roleName: volunteerRole.name,
+				title: workOrder.title,
+				eventTitle: eventTitleSql,
 				startsAt: workOrder.startsAt,
 				endsAt: workOrder.endsAt
 			})
@@ -331,6 +333,8 @@ async function emitSignupEvent(
 			userName: row.userName,
 			userEmail: row.userEmail,
 			roleName: row.roleName,
+			title: row.title,
+			eventTitle: row.eventTitle,
 			startsAt: row.startsAt?.toISOString() ?? null,
 			endsAt: row.endsAt?.toISOString() ?? null
 		});
@@ -400,6 +404,9 @@ export interface CompletedSignup {
 	userEmail: string;
 	shiftId: string;
 	roleName: string;
+	/** For `shiftLabel()`: the cron emits these straight onto the event. */
+	title: string | null;
+	eventTitle: string | null;
 	startsAt: Date;
 	endsAt: Date;
 }
@@ -420,6 +427,8 @@ export async function completeFinishedShifts(now = new Date()): Promise<Complete
 			userEmail: user.email,
 			shiftId: workOrder.id,
 			roleName: volunteerRole.name,
+			title: workOrder.title,
+			eventTitle: eventTitleSql,
 			startsAt: workOrder.startsAt,
 			endsAt: workOrder.endsAt
 		})
@@ -575,6 +584,8 @@ export async function listSignupsStartingBetween(from: Date, to: Date): Promise<
 			userEmail: user.email,
 			shiftId: workOrder.id,
 			roleName: volunteerRole.name,
+			title: workOrder.title,
+			eventTitle: eventTitleSql,
 			startsAt: workOrder.startsAt,
 			endsAt: workOrder.endsAt
 		})
@@ -649,6 +660,8 @@ export async function listCompletionsAwaitingFeedback(
 			userEmail: user.email,
 			shiftId: workOrder.id,
 			roleName: volunteerRole.name,
+			title: workOrder.title,
+			eventTitle: eventTitleSql,
 			startsAt: workOrder.startsAt,
 			endsAt: workOrder.endsAt
 		})
