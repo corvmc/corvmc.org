@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { financialEntry } from '$lib/server/db/schema/financial';
+import { financialEntry, type FinancialEntry } from '$lib/server/db/schema/financial';
 import { and, asc, eq, gte, lte, sql, sum } from 'drizzle-orm';
 import { captureException } from '$lib/server/sentry';
 import type {
@@ -109,10 +109,40 @@ export async function reverseEntriesForPaymentRecord(
 		.from(financialEntry)
 		.where(eq(financialEntry.stripePaymentRecordId, stripePaymentRecordId));
 
-	// Idempotent on its own, not only through `refund()`'s cache guard. A
-	// reversal carries the same payment record, so without this a second pass
-	// negates both the sale and its reversal — the total stays right and the
-	// rows become nonsense.
+	return reverseAll(rows, occurredAt);
+}
+
+/**
+ * The same reversal, keyed on what the money was about.
+ *
+ * A Connect sale has no payment record to key on: `refundPurchase` reverses a
+ * transfer and an application fee on the *charge*, and never reaches the
+ * `refund()` that writes `stripePaymentRecordId`. The subject is the key both
+ * halves of such a sale already share.
+ */
+export async function reverseEntriesForSubject(
+	subjectType: FinancialSubject,
+	subjectId: string,
+	occurredAt: Date = new Date()
+): Promise<number> {
+	const rows = await db
+		.select()
+		.from(financialEntry)
+		.where(
+			and(eq(financialEntry.subjectType, subjectType), eq(financialEntry.subjectId, subjectId))
+		);
+
+	return reverseAll(rows, occurredAt);
+}
+
+/**
+ * Idempotent on its own, not only through a caller's guard.
+ *
+ * A reversal carries the same key as what it reverses, so without the
+ * `reversalOf` check a second pass negates both the sale and its reversal —
+ * the total stays right and the rows become nonsense.
+ */
+async function reverseAll(rows: FinancialEntry[], occurredAt: Date): Promise<number> {
 	const reversed = new Set<string>();
 	for (const r of rows) {
 		const of = readMetadata(r.metadata)?.reversalOf;
@@ -132,7 +162,7 @@ export async function reverseEntriesForPaymentRecord(
 			// When the money came back, not when it went out.
 			occurredAt,
 			settlement: r.settlement,
-			stripePaymentRecordId,
+			stripePaymentRecordId: r.stripePaymentRecordId,
 			settlementGroup: r.settlementGroup,
 			subjectType: r.subjectType,
 			subjectId: r.subjectId,

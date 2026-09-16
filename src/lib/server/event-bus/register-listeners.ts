@@ -26,6 +26,9 @@ export function registerListeners(): void {
 	// --- Paid contribution invoices into the financial record ---
 	registerMembershipEntryListeners();
 
+	// --- Music sales into the financial record ---
+	registerAudioEntryListeners();
+
 	// --- Notification dispatch ---
 	registerNotificationListeners();
 
@@ -84,6 +87,20 @@ async function registerMembershipEntryListeners(): Promise<void> {
 			await recordMembershipInvoice(event);
 		});
 	}
+}
+
+/**
+ * A music sale is the collective's application fee on a Connect charge, and
+ * nothing recorded it (#1175). On `audio.purchased` rather than in the
+ * checkout listener, so the free-download path — which never reaches a
+ * checkout — is covered by the same writer.
+ */
+async function registerAudioEntryListeners(): Promise<void> {
+	const { recordAudioSale } = await import('$lib/server/finance/audio-entries');
+
+	domainEvents.on('audio.purchased', async ({ data: event }) => {
+		await recordAudioSale(event);
+	});
 }
 
 async function registerCheckoutListeners(): Promise<void> {

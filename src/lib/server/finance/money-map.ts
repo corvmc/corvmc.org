@@ -122,20 +122,24 @@ export const moneyColumns = {
 		notAccounting: 'the floor a buyer may name, not an amount that moved'
 	},
 	'release_purchase.amount_paid_cents': {
-		unaccounted: 'music sales reach no ledger writer; `music_sales` has never been written',
-		issue: 1175
+		movement: 'audio_sale',
+		writer: 'src/lib/server/finance/audio-entries.ts'
 	},
 	'release_purchase.platform_fee_cents': {
-		unaccounted: "the collective's share of a music sale reaches no ledger writer",
-		issue: 1175
+		movement: 'audio_sale',
+		writer: 'src/lib/server/finance/audio-entries.ts'
 	},
 	'release_purchase.band_net_cents': {
-		unaccounted: "the band's share of a music sale reaches no ledger writer",
-		issue: 1175
+		// Recorded by that writer as the thing it deliberately does NOT enter: a
+		// destination charge moves this to the band's own Stripe account at the
+		// moment of sale, so the collective never holds it and it is not a
+		// pass-through.
+		movement: 'audio_sale',
+		writer: 'src/lib/server/finance/audio-entries.ts'
 	},
 	'release_purchase.fee_covered_cents': {
-		unaccounted: 'the covered fee on a music sale reaches no ledger writer',
-		issue: 1175
+		movement: 'audio_sale',
+		writer: 'src/lib/server/finance/audio-entries.ts'
 	},
 
 	// --------------------------------------------------------------- the rest
@@ -175,6 +179,4 @@ export const manualOnlyCategories = {
  * in `payment_cache` — so only the chart of accounts can notice it missing.
  * Moving one here is a claim that it is owed a writer, not that it is exempt.
  */
-export const unwrittenCategories = {
-	music_sales: 1175
-} as const;
+export const unwrittenCategories = {} as const;
