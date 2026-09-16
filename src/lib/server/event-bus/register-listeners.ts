@@ -23,6 +23,9 @@ export function registerListeners(): void {
 	// --- Contributed services into the financial record ---
 	registerInKindListeners();
 
+	// --- Paid contribution invoices into the financial record ---
+	registerMembershipEntryListeners();
+
 	// --- Notification dispatch ---
 	registerNotificationListeners();
 
@@ -66,6 +69,21 @@ async function registerInKindListeners(): Promise<void> {
 	domainEvents.on('volunteer.hours_approved', async ({ data: event }) => {
 		await handleApprovedHours(event.logId);
 	});
+}
+
+/**
+ * A paid contribution invoice is revenue, and nothing recorded it — the
+ * backfill wrote `membership` rows and no live path replaced it (#1172).
+ * Both events carry the same shape; only the copy a receipt uses differs.
+ */
+async function registerMembershipEntryListeners(): Promise<void> {
+	const { recordMembershipInvoice } = await import('$lib/server/finance/membership-entries');
+
+	for (const name of ['membership.started', 'membership.renewed'] as const) {
+		domainEvents.on(name, async ({ data: event }) => {
+			await recordMembershipInvoice(event);
+		});
+	}
 }
 
 async function registerCheckoutListeners(): Promise<void> {
