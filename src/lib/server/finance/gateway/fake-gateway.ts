@@ -338,6 +338,14 @@ export function createFakeGateway(): PaymentGateway {
 			}
 		},
 
+		// Nothing seeds a balance transaction, so the fake reconciles a window to
+		// zero against a ledger that is also empty under this driver. That is the
+		// honest answer offline; the live driver is the only place the comparison
+		// means anything.
+		balanceTransactions: {
+			list: () => listOf([] as Stripe.BalanceTransaction[])
+		},
+
 		invoices: {
 			list: (params) => {
 				materialiseSeedCustomer(params?.customer as string | undefined);

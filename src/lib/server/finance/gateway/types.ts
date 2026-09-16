@@ -18,6 +18,13 @@ export interface PaymentGateway {
 	 */
 	readonly accounts: Pick<Stripe['accounts'], 'create' | 'retrieve' | 'createLoginLink'>;
 	readonly accountLinks: Pick<Stripe['accountLinks'], 'create'>;
+	/**
+	 * What actually hit the platform balance, which is what the weekly
+	 * reconciliation compares the ledger against (#1183). A charge total would
+	 * not do: a Connect destination charge reports in full while only its
+	 * application fee is ever the collective's.
+	 */
+	readonly balanceTransactions: Pick<Stripe['balanceTransactions'], 'list'>;
 	readonly checkout: {
 		sessions: Pick<Stripe['checkout']['sessions'], 'create' | 'retrieve' | 'list'>;
 	};
