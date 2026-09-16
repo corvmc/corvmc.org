@@ -4,9 +4,15 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import { formatCents } from '$lib/utils/format';
+	import Action from '$lib/components/ui/Action.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import { recordActPayout } from '$lib/remote/productions.remote';
 	import type { Settlement } from '$lib/server/production/settlement-service';
 
-	let { settlement }: { settlement: Settlement | null } = $props();
+	let { settlement, eventId }: { settlement: Settlement | null; eventId: string } = $props();
+
+	const { fields } = recordActPayout;
 
 	/** What each act was designated versus what its deal produces. */
 	const acts = $derived(settlement?.acts ?? []);
@@ -17,8 +23,9 @@
 	<EmptyState title="No production" description="Open one from the event page first." />
 {:else}
 	<Alert type="info">
-		A worksheet, not a payment. Nothing here moves money — it is what the night took, what it cost,
-		and what each act is owed under its own deal.
+		What the night took, what it cost, and what each act is owed under its own deal. Recording a
+		payout writes it against the show's pool in the financial record — the app does not move the
+		money, it keeps the account of it.
 	</Alert>
 
 	<InfoCard title="The night">
@@ -60,6 +67,7 @@
 					<th class="text-right">Designated</th>
 					<th>Deal</th>
 					<th class="text-right">Suggested</th>
+					<th class="text-right">Paid</th>
 				{/snippet}
 				{#each acts as act (act.slotId)}
 					<tr>
@@ -78,9 +86,55 @@
 							{/if}
 						</td>
 						<td class="text-right font-medium">{formatCents(act.suggestedPayoutCents)}</td>
+						<td class="text-right">
+							{#if act.paidCents !== null}
+								<Badge variant="success" size="xs">{formatCents(act.paidCents)}</Badge>
+							{:else}
+								<!-- The amount is staff's, not the worksheet's: a settlement is a
+								     conversation at the end of the night, and what changed hands is
+								     the number that matters afterwards. -->
+								<Action
+									action={recordActPayout.for(act.slotId)}
+									label="Record"
+									variant="ghost"
+									size="xs"
+									modalTitle="What did {act.actName ?? 'the act'} take?"
+									submitLabel="Record it"
+									successToast="Recorded"
+								>
+									{#snippet form()}
+										<input {...fields.eventId.as('hidden', eventId)} />
+										<input {...fields.slotId.as('hidden', act.slotId)} />
+										<FormField
+											field={fields.amountCents}
+											type="number"
+											label="Paid"
+											step="1"
+											min="0"
+											value={String(act.suggestedPayoutCents)}
+											description="In cents. The deal suggests {formatCents(
+												act.suggestedPayoutCents
+											)} — change it if the night went differently. A donated set records zero."
+										/>
+									{/snippet}
+								</Action>
+							{/if}
+						</td>
 					</tr>
 				{/each}
 			</Table>
+
+			{#if settlement.unpaidActCount > 0}
+				<p class="mt-3 text-sm text-warning">
+					{settlement.unpaidActCount}
+					{settlement.unpaidActCount === 1 ? 'act has' : 'acts have'} no payout recorded. A donated set
+					still records zero — otherwise the night reads as permanently outstanding.
+				</p>
+			{:else if acts.length > 0}
+				<p class="mt-3 text-sm text-success">
+					Everybody settled — {formatCents(settlement.paidTotalCents)} paid out.
+				</p>
+			{/if}
 
 			{#if topUpTotal > 0}
 				<!-- The number a programming committee should see: what the guarantees

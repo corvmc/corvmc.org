@@ -1455,7 +1455,7 @@
 			class="space-y-6"
 			class:hidden={tab !== 'settlement'}
 		>
-			<SettlementPanel {settlement} />
+			<SettlementPanel {settlement} eventId={evt.id} />
 		</div>
 	{/if}
 </PageContent>
