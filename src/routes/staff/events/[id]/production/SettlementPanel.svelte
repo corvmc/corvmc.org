@@ -14,9 +14,6 @@
 
 	const { fields } = recordActPayout;
 
-	/** The suggested figure, as the amount input starts. Staff may change it. */
-	const dollars = (cents: number) => (cents / 100).toFixed(2);
-
 	/** What each act was designated versus what its deal produces. */
 	const acts = $derived(settlement?.acts ?? []);
 	const topUpTotal = $derived(acts.reduce((t, a) => t + a.topUpCents, 0));
