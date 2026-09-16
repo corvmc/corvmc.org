@@ -94,6 +94,7 @@ import {
 	refund as refundPayment
 } from '$lib/server/finance/payment-service';
 import { getBalance } from '$lib/server/finance/credit-service';
+import { notAProgramHold } from '$lib/server/reservation/program-hold';
 import {
 	commitReservationCredits,
 	computeReservationCredit,
@@ -2422,10 +2423,9 @@ export const getReservations = query(
 
 		const filters = [
 			eq(reservation.createdByUserId, forUser ?? locals.user?.id),
-			// Space a staff member booked for an event is the venue's, not theirs —
-			// it has no member confirm/pay flow, so listing it here offered actions
-			// that don't apply.
-			ne(reservation.bookerType, 'event_listing'),
+			// The room a program holds is the venue's, not theirs — it has no member
+			// confirm/pay flow, so listing it here offered actions that don't apply.
+			notAProgramHold(),
 			after && gt(reservation.endsAt, after),
 			!includeTerminal && inArray(reservation.status, ['scheduled', 'confirmed', 'waitlisted'])
 		];

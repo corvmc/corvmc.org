@@ -984,6 +984,9 @@ describe('ReservationService', () => {
 			const { sql: rendered, params } = dialect.sqlToQuery(sweepWhere.mock.calls[0][0] as SQL);
 			expect(rendered).toContain('"booker_type" <>');
 			expect(params).toContain('event_listing');
+			// And a program's hold once #855 re-points it at the group running it,
+			// which is the same room and the same reason.
+			expect(rendered).toContain('"group"."kind" <> \'band\'');
 		});
 	});
 
