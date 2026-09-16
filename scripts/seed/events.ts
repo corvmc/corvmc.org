@@ -13,14 +13,10 @@ import { inArray, sql } from 'drizzle-orm';
 /**
  * One poster, attached to every event that shares it.
  *
- * `media_attachment` is the source of truth — `eventListingColumns` reads the
- * key through it — and `poster_key` is mirrored because every writer still
- * mirrors it. Passing several ids gives them ONE `media` row, which is the
- * property the media layer exists for: a weekly series holds one JPEG, not one
- * per occurrence.
- *
- * The keys name no real object, which is why `backfill-media.ts` refuses to
- * invent sizes and the seed may.
+ * `media_attachment` is the source of truth; `poster_key` is mirrored because
+ * every writer still mirrors it. Several ids share ONE `media` row — a weekly
+ * series holds one JPEG, not one per occurrence. The keys name no real object,
+ * which is why `backfill-media.ts` refuses to invent sizes and the seed may.
  */
 async function attachSeedPoster(
 	eventIds: string[],
