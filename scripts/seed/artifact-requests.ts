@@ -12,7 +12,7 @@ import { asc, inArray, isNotNull, and } from 'drizzle-orm';
  * artifact, so "arrived" is seeded by asking an act that already has a rider
  * rather than by writing a flag.
  */
-type ProductionRow = typeof production.$inferSelect;
+type ProductionRow = typeof production.$inferSelect & { eventId: string };
 
 export async function seedArtifactRequests(productions: ProductionRow[]) {
 	// Every production, not just the confirmed ones: the panel is on the console

@@ -513,7 +513,7 @@ async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
 				loadOutBy: production.loadOutBy
 			})
 			.from(eventListing)
-			.leftJoin(production, eq(production.eventId, eventListing.id))
+			.leftJoin(production, eq(production.id, eventListing.productionId))
 			.where(eq(eventListing.id, subject.id))
 			.limit(1);
 		return row

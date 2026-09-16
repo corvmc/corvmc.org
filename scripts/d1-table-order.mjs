@@ -42,10 +42,12 @@ export const tableOrder = [
 	'contractor_job',
 	// References `project` and `user`, so it clears after both.
 	'financial_entry',
-	'event_listing',
-	// The ops half of one listing. References event_listing and user, so it
-	// clears before both.
+	// The ops half of a show, and no longer downstream of the listing: nothing on
+	// it points at one since #1202. It comes first because `event_listing` now
+	// references *it*.
 	'production',
+	// Names the production it announces, so it follows one.
+	'event_listing',
 	// Cascades from production, so it clears with it.
 	'production_expense',
 	// References event_listing and directory_entry, so it clears before both.
