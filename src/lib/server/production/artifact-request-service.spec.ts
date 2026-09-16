@@ -6,84 +6,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * mocked `db` has none.
  */
 
-const { sqlite, testDb } = vi.hoisted(() => {
-	/* eslint-disable @typescript-eslint/no-require-imports */
-	const { readFileSync, globSync } = require('node:fs') as typeof import('node:fs');
-	const Database = require('better-sqlite3') as typeof import('better-sqlite3');
-	const { drizzle } =
-		require('drizzle-orm/better-sqlite3') as typeof import('drizzle-orm/better-sqlite3');
-	/* eslint-enable @typescript-eslint/no-require-imports */
-
-	/**
-	 * The `CREATE TABLE` from whichever migration last created it, plus any later
-	 * `ALTER TABLE … ADD`. Replaying the ALTERs is what keeps this tracking the
-	 * schema rather than a fossil — see `inventory/reports.spec.ts`, which
-	 * established the pattern and explains the quiet failure it avoids.
-	 */
-	function ddlFor(table: string): string[] {
-		const marker = `CREATE TABLE \`${table}\``;
-		const files = globSync('migrations/*/migration.sql').sort();
-		const createdIn = files.filter((f: string) => readFileSync(f, 'utf8').includes(marker)).pop();
-		if (!createdIn) throw new Error(`no migration creates ${table}`);
-
-		const statementsIn = (file: string) =>
-			readFileSync(file, 'utf8')
-				.split('--> statement-breakpoint')
-				.map((c: string) => c.trim().replace(/;$/, ''))
-				.filter(Boolean);
-
-		const create = statementsIn(createdIn).find((c: string) => c.startsWith(marker));
-		if (!create) throw new Error(`no CREATE TABLE statement for ${table} in ${createdIn}`);
-
-		const alterMarker = `ALTER TABLE \`${table}\` ADD`;
-		const alters = files
-			.slice(files.indexOf(createdIn) + 1)
-			.flatMap(statementsIn)
-			.filter((c: string) => c.startsWith(alterMarker));
-
-		// Indexes too, which `inventory/reports.spec.ts` does not need and this
-		// does: `requestArtifact` upserts on a unique index, and ON CONFLICT
-		// against an index the harness never created fails at runtime rather
-		// than looking like a missing table.
-		const indexes = files
-			.slice(files.indexOf(createdIn))
-			.flatMap(statementsIn)
-			.filter((c: string) => /^CREATE (UNIQUE )?INDEX/.test(c) && c.includes(`ON \`${table}\``))
-			// A rebuild re-creates its indexes, so the same name appears twice.
-			.map((c: string) => c.replace(/^CREATE (UNIQUE )?INDEX/, 'CREATE $1INDEX IF NOT EXISTS'));
-
-		return [create, ...alters, ...indexes];
-	}
-
-	const sqlite = new Database(':memory:');
-	// The DDL carries foreign keys into `user`, which this spec has no reason to
-	// create — it is testing aggregation, not referential integrity. better-sqlite3
-	// turns enforcement on by default, so turn it back off rather than seeding a
-	// user table that no assertion reads.
-	sqlite.pragma('foreign_keys = OFF');
-
-	// Two tables the service touches are absent on purpose. `event_listing` was
-	// created as `event` and renamed, and `event_band` was rebuilt, so neither
-	// has a CREATE under its current name for `ddlFor` to find. Neither is
-	// queried here: the FK is production's, and `foreign_keys` is off above.
-	// `media_attachment` too: an external act's tech rider is a file on the
-	// listing, because the structured rider is keyed on `group_id` (#863).
-	for (const t of ['artifact_request', 'directory_entry', 'media_attachment']) {
-		for (const stmt of ddlFor(t)) sqlite.exec(stmt);
-	}
-
-	// `event_band` by hand, and only the columns `requestableActs` reads: it was
-	// rebuilt, so `ddlFor` finds no CREATE under its current name (#847).
-	sqlite.exec(
-		'create table event_band (id text primary key, event_id text, name text, billing_order integer, directory_entry_id text)'
-	);
-
-	// `drizzle({ client })`, not `drizzle(client)`. drizzle 1.0 dropped the
-	// positional overload: a raw Database passed positionally is read as a
-	// *config* object, finds no client in it, and quietly opens a second, empty
-	// database — so every query answers "no such table" against tables that
-	// demonstrably exist on `sqlite`.
-	return { sqlite, testDb: drizzle({ client: sqlite }) };
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	// `await import`, not `require`: the helper is TypeScript, which Node's
+	// require cannot load. An async hoisted factory still resolves before the
+	// mock below is asked for a database.
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
 });
 
 vi.mock('$lib/server/db', () => ({ db: testDb }));
