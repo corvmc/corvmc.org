@@ -29,6 +29,9 @@ export function registerListeners(): void {
 	// --- Music sales into the financial record ---
 	registerAudioEntryListeners();
 
+	// --- Equipment loan charges into the financial record ---
+	registerEquipmentEntryListeners();
+
 	// --- Notification dispatch ---
 	registerNotificationListeners();
 
@@ -100,6 +103,19 @@ async function registerAudioEntryListeners(): Promise<void> {
 
 	domainEvents.on('audio.purchased', async ({ data: event }) => {
 		await recordAudioSale(event);
+	});
+}
+
+/**
+ * A loan's charge is settled at return, part credit and part cash, and
+ * neither half reached an entry (#1174). `equipment` was written only on the
+ * spend side, so the report showed what gear cost and not what it earned.
+ */
+async function registerEquipmentEntryListeners(): Promise<void> {
+	const { recordEquipmentLoanCharge } = await import('$lib/server/finance/equipment-entries');
+
+	domainEvents.on('equipment.returned', async ({ data: event }) => {
+		await recordEquipmentLoanCharge(event);
 	});
 }
 

@@ -539,6 +539,7 @@ export const financialSubjects = [
 	'contractor_job',
 	'production',
 	'volunteer_hour',
+	'inventory_loan',
 	'membership',
 	'other'
 ] as const;

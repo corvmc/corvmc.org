@@ -105,16 +105,16 @@ export const moneyColumns = {
 	},
 	'inventory_loan.estimated_cost_cents': { notAccounting: 'an estimate, before the return' },
 	'inventory_loan.total_charge_cents': {
-		unaccounted: 'what a loan was charged reaches no ledger writer',
-		issue: 1174
+		movement: 'equipment_loan_charge',
+		writer: 'src/lib/server/finance/equipment-entries.ts'
 	},
 	'inventory_loan.cash_cents': {
-		unaccounted: 'the cash half of a loan charge reaches no ledger writer',
-		issue: 1174
+		movement: 'equipment_loan_charge',
+		writer: 'src/lib/server/finance/equipment-entries.ts'
 	},
 	'inventory_loan.credits_cents': {
-		unaccounted: 'the credit half of a loan charge reaches no ledger writer',
-		issue: 1174
+		movement: 'equipment_loan_charge',
+		writer: 'src/lib/server/finance/equipment-entries.ts'
 	},
 
 	// ------------------------------------------------------------ band audio
