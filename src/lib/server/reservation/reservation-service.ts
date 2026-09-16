@@ -26,7 +26,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { formatDateInTz, formatTimeInTz } from './timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE, withinConfirmationWindow } from '$lib/config';
 import type { ReservationStatus } from '$lib/server/db/schema/reservation';
 import type { BookerType } from '$lib/config';
 import { captureException } from '$lib/server/sentry';
@@ -129,13 +129,21 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 		throw new ReservationConflictError();
 	}
 
+	// A booking made inside the confirmation window is its own confirmation:
+	// nobody is asked to re-assert an intent they expressed minutes ago. It also
+	// closes #1123 at the source — the reminder cron's bands only see rows that
+	// existed when it ran, so a `scheduled` row born inside the window was never
+	// reminded and was released at its start. `cash_due_cents` is untouched, so a
+	// costed one settles at the desk rather than prepay-or-lose-it.
+	const status = withinConfirmationWindow(startsAt) ? 'confirmed' : 'scheduled';
+
 	const [row] = await db
 		.insert(reservation)
 		.values({
 			bookerType,
 			bookerId,
 			createdByUserId: userId,
-			status: 'scheduled',
+			status,
 			startsAt,
 			endsAt,
 			notes: notes ?? null
@@ -165,6 +173,7 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 	// After the race check, never before: a booking that gets compensated away
 	// above must not have announced itself to anybody.
 	await emitCreated(row);
+	if (row.status === 'confirmed') await announceConfirmed(row.id);
 
 	return row;
 }
@@ -489,6 +498,13 @@ export async function cancel(
 		 * reusing `staffOverride` here would misattribute it.
 		 */
 		authorizedActor?: boolean;
+		/**
+		 * Who this cancellation is *by*, when that is not what `staffOverride`
+		 * implies. A cron passes `'system'`: the flag waives the permission and
+		 * past-start checks, which a job needs, but it is not evidence that a
+		 * person acted — and the member's email says which.
+		 */
+		actor?: 'member' | 'staff' | 'system';
 	}
 ): Promise<void> {
 	// Read current state to check authorization and determine refund eligibility
@@ -584,7 +600,7 @@ export async function cancel(
 		date: formatDateInTz(row.startsAt, TZ),
 		startTime: formatTimeInTz(row.startsAt, TZ),
 		endTime: formatTimeInTz(row.endsAt, TZ),
-		cancelledBy: options?.staffOverride ? 'staff' : 'member'
+		cancelledBy: options?.actor ?? (options?.staffOverride ? 'staff' : 'member')
 	});
 
 	// Cancellation is complete and consistent; the refund is not. Surface it so
@@ -604,7 +620,8 @@ export async function cancel(
  * member confirm/pay flow, and releasing it at showtime handed a live event's
  * room to the waitlist. Delegates to `cancel()` with `staffOverride` so the already-started
  * guard is bypassed and any refund/credit reversal runs idempotently (a still-
- * scheduled reservation has neither, so they are no-ops). The emitted
+ * scheduled reservation has neither, so they are no-ops), and with
+ * `actor: 'system'` because no person acted. The emitted
  * `reservation.cancelled` event cascades waitlist promotion for the freed slot.
  */
 export async function cancelUnconfirmedReservations(
@@ -625,7 +642,10 @@ export async function cancelUnconfirmedReservations(
 	let cancelled = 0;
 	for (const row of rows) {
 		try {
-			await cancel(row.id, '', 'Not confirmed before start', { staffOverride: true });
+			await cancel(row.id, '', 'Not confirmed before start', {
+				staffOverride: true,
+				actor: 'system'
+			});
 			cancelled++;
 		} catch (err) {
 			const msg = `Failed to auto-cancel unconfirmed reservation ${row.id}: ${(err as Error).message}`;

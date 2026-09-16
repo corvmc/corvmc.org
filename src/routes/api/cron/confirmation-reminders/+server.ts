@@ -23,6 +23,11 @@ const TZ = DEFAULT_TIMEZONE;
  * One run a day is what keeps each band a single send — neither is bounded by
  * a "reminded already" mark, so they must not overlap and the job must not run
  * twice in a day. Schedule: daily at 09:00 AM Pacific.
+ *
+ * Both bands only see rows that already existed when the run fired, which is
+ * sound only because `create()` births a booking made inside the window
+ * `confirmed`: a `scheduled` row younger than the window cannot exist. Undo
+ * that and #1123 reopens silently. #1186 replaces this with a sent-mark.
  *   POST /api/cron/confirmation-reminders
  *   Authorization: Bearer <CRON_SECRET>
  */
