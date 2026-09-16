@@ -4,7 +4,12 @@ import { is, getTableColumns, getTableName } from 'drizzle-orm';
 import { SQLiteTable } from 'drizzle-orm/sqlite-core';
 import * as schema from '$lib/server/db/schema';
 import { financialCategories } from '$lib/config';
-import { moneyColumns, manualOnlyCategories, unwrittenCategories } from './money-map';
+import {
+	moneyColumns,
+	manualOnlyCategories,
+	unwrittenCategories,
+	type MoneyColumn
+} from './money-map';
 
 /**
  * The forcing function: the schema is the list, so adding a money column
@@ -49,7 +54,10 @@ describe('every money column is accounted for', () => {
 });
 
 describe('the map stays honest', () => {
-	const entries = Object.entries(moneyColumns);
+	// Typed as the declared union rather than what the map happens to hold today:
+	// with no `unaccounted` entry left, inference narrows it and the checks below
+	// stop compiling — which would be the map going silent, not green.
+	const entries = Object.entries(moneyColumns) as [string, MoneyColumn][];
 
 	it('names a writer that exists for every accounted column', () => {
 		const missing = entries

@@ -68,8 +68,8 @@ export const moneyColumns = {
 		writer: 'src/lib/server/finance/payout-entries.ts'
 	},
 	'production_expense.amount_cents': {
-		unaccounted: 'a show cost is the collective spending, and nothing writes a `spent` row for it',
-		issue: 1173
+		movement: 'production_expense',
+		writer: 'src/lib/server/finance/production-expense-entries.ts'
 	},
 
 	// ------------------------------------------------------------- contractor

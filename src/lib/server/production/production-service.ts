@@ -1,4 +1,5 @@
 import { db, getRowCount } from '$lib/server/db';
+import { postProductionExpenses } from '$lib/server/finance/production-expense-entries';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import { production } from '$lib/server/db/schema/production';
 import { and, eq, getTableColumns, inArray, isNull } from 'drizzle-orm';
@@ -294,7 +295,16 @@ export async function transitionProduction(
 		throw new InvalidProductionTransitionError(row.status, to);
 	}
 
-	return getProduction(id);
+	const settled = await getProduction(id);
+
+	// Posted here rather than when a producer types a line: a cost sheet is a
+	// worksheet until the night is settled. Idempotent per line, so `closed`
+	// picks up anything added after `settled`.
+	if (to === 'settled' || to === 'closed') {
+		await postProductionExpenses(id, settled.eventId);
+	}
+
+	return settled;
 }
 
 /**
