@@ -808,10 +808,16 @@ export function registerAllNotificationListeners(): void {
 		// automatically" note on top of it would be the same news twice.
 		if (event.cause === 'waitlist_expired') return;
 
-		const reasonLine =
-			event.cancelledBy === 'staff'
-				? 'This was done by CMC staff. Reach out if you have any questions.'
-				: 'This reservation was cancelled automatically.';
+		// A literal table, so a new `cancelledBy` value fails the type rather than
+		// falling through to "cancelled automatically" — which is how a band
+		// deletion came to be reported as a staff decision. `member` never lands
+		// here; the self-cancel returns above.
+		const reasonLine = {
+			staff: 'This was done by CMC staff. Reach out if you have any questions.',
+			owner: 'The band it was booked for was removed, so its sessions were released.',
+			system: 'This reservation was cancelled automatically.',
+			member: 'This reservation was cancelled automatically.'
+		}[event.cancelledBy];
 
 		await dispatch({
 			type: 'reservation_cancelled',

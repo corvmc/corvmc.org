@@ -113,7 +113,7 @@ export interface ReservationCancelledEvent {
 	date: string;
 	startTime: string;
 	endTime: string;
-	cancelledBy: 'member' | 'staff' | 'system';
+	cancelledBy: 'member' | 'staff' | 'owner' | 'system';
 	/**
 	 * Why the cancellation happened, on the paths where the member has already
 	 * been told about it by a more specific event. Today only the waitlist

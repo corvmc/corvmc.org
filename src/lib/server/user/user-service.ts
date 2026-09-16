@@ -69,13 +69,15 @@ export class UserHasLinkedRecordsError extends DomainError {
 
 /**
  * Soft-delete a user: the single offboarding entry point used by both staff
- * deactivation and user self-delete. Sets deletedAt, purges sessions, revokes
+ * deactivation and user self-delete. `actor` says which, and is required
+ * because the two send different mail: a member who closed their own account
+ * needs no email about the bookings that closing it released. Sets deletedAt, purges sessions, revokes
  * standing door codes, cancels the user's future personal reservations, and
  * cancels their Stripe subscription. Reversible via reactivateUser, which
  * resumes the subscription but restores neither the reservations nor the door
  * code — a withdrawn code is re-granted by staff, not silently reinstated.
  */
-export async function deactivateUser(userId: string) {
+export async function deactivateUser(userId: string, opts: { actor: 'member' | 'staff' }) {
 	const [row] = await db
 		.update(user)
 		.set({ deletedAt: new Date(), updatedAt: new Date() })
@@ -144,7 +146,10 @@ export async function deactivateUser(userId: string) {
 		);
 
 	for (const r of futureReservations) {
-		await cancelReservation(r.id, userId, 'Account deactivated', { staffOverride: true });
+		await cancelReservation(r.id, userId, 'Account deactivated', {
+			staffOverride: true,
+			actor: opts.actor
+		});
 	}
 
 	// Cancel the Stripe subscription if one exists. The subscription may already
@@ -181,7 +186,7 @@ export async function deactivateUsers(
 			continue;
 		}
 		try {
-			await deactivateUser(id);
+			await deactivateUser(id, { actor: 'staff' });
 			deactivated.push(id);
 		} catch (err) {
 			if (err instanceof UserNotFoundError) {

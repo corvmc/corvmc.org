@@ -547,9 +547,9 @@ export const updateBand = form(
 // read the band out of the request context. The ref is a field now, so there is
 // something to validate and the schema comes back.
 export const deleteBand = form(z.object({ bandId: bandIdField }), async (data) => {
-	const { group: band } = await requireGroupRole({ id: data.bandId }, 'owner');
+	const { user, group: band } = await requireGroupRole({ id: data.bandId }, 'owner');
 	try {
-		await deleteBandService(band.id);
+		await deleteBandService(band.id, user.id);
 	} catch (err) {
 		// `CannotDeleteProgramError` is a 403 and a rule, not a fault. Unmapped it
 		// reached the client as a 500.

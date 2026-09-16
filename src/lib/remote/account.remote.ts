@@ -166,7 +166,7 @@ export const deleteAccount = form(
 		// Full offboarding (cancels reservations + subscription, purges sessions,
 		// soft-deletes) lives in the shared service shared with staff deactivation.
 		try {
-			await deactivateUser(currentUser.id);
+			await deactivateUser(currentUser.id, { actor: 'member' });
 		} catch (err) {
 			mapDomainError(err);
 		}

@@ -504,7 +504,7 @@ export async function cancel(
 		 * past-start checks, which a job needs, but it is not evidence that a
 		 * person acted — and the member's email says which.
 		 */
-		actor?: 'member' | 'staff' | 'system';
+		actor?: 'member' | 'staff' | 'owner' | 'system';
 	}
 ): Promise<void> {
 	// Read current state to check authorization and determine refund eligibility

@@ -158,6 +158,7 @@ import {
 	create,
 	update,
 	deleteBand,
+	deactivate,
 	invite,
 	acceptInvitation,
 	declineInvitation,
@@ -495,14 +496,59 @@ describe('BandService', () => {
 	// deleteBand
 	// -----------------------------------------------------------------------
 
+	// -----------------------------------------------------------------------
+	// deactivate
+	// -----------------------------------------------------------------------
+
+	describe('deactivate', () => {
+		// Its remote guards with `requireCapability('band.manage')`, so the actor
+		// is staff and never the owner — the `getOwnerId` guess here was not
+		// merely redundant like `deleteBand`'s, it named the wrong person.
+		it('attributes the cancellations to staff', async () => {
+			vi.mocked(db.batch).mockResolvedValueOnce([[mockBand], []] as any);
+			selectResultQueue = [[{ id: 'res-1' }]];
+
+			await deactivate('band-1');
+
+			expect(cancelReservation).toHaveBeenCalledWith(
+				'res-1',
+				'',
+				'Band deactivated',
+				expect.objectContaining({ actor: 'staff' })
+			);
+		});
+	});
+
 	describe('deleteBand', () => {
+		/** The caller the remote's `requireGroupRole(…, 'owner')` guard admitted. */
+		const OWNER = 'owner-7';
+
+		/**
+		 * Regression for #1189. The actor used to be looked up with
+		 * `getOwnerId(bandId) ?? row.id`, re-deriving what the guard had just
+		 * proved and falling back to a *group* id where a user id goes. Every
+		 * affected member was then told CMC staff had cancelled their session.
+		 */
+		it('attributes the cancellations to the owner who deleted the band', async () => {
+			selectResultQueue = [[mockBand], [{ id: 'res-1' }]];
+
+			await deleteBand('band-1', OWNER);
+
+			expect(cancelReservation).toHaveBeenCalledWith(
+				'res-1',
+				OWNER,
+				'Band deleted',
+				expect.objectContaining({ actor: 'owner' })
+			);
+		});
+
 		it('cancels future reservations and deletes band', async () => {
 			selectResultQueue = [
 				[{ ...mockBand, avatarKey: 'bands/avatars/band-1.jpg' }], // getById
 				[{ id: 'res-1' }, { id: 'res-2' }] // future reservations
 			];
 
-			await deleteBand('band-1');
+			await deleteBand('band-1', OWNER);
 
 			expect(cancelReservation).toHaveBeenCalledTimes(2);
 			// Detached, not deleted: `media_attachment` has no foreign key to the
@@ -521,7 +567,7 @@ describe('BandService', () => {
 				[] // no future reservations
 			];
 
-			await deleteBand('band-1');
+			await deleteBand('band-1', OWNER);
 
 			expect(detachSlot).toHaveBeenCalledWith('group', 'band-1', 'avatar');
 			expect(deleteObject).not.toHaveBeenCalled();
@@ -530,7 +576,7 @@ describe('BandService', () => {
 		it('throws when band not found', async () => {
 			selectResult = [];
 
-			await expect(deleteBand('band-999')).rejects.toThrow(BandNotFoundError);
+			await expect(deleteBand('band-999', OWNER)).rejects.toThrow(BandNotFoundError);
 		});
 
 		/**
@@ -543,7 +589,7 @@ describe('BandService', () => {
 		it.each([['club'], ['committee']])('refuses to delete a %s', async (kind) => {
 			selectResultQueue = [[{ ...mockBand, kind }], []];
 
-			await expect(deleteBand('band-1')).rejects.toThrow(CannotDeleteProgramError);
+			await expect(deleteBand('band-1', OWNER)).rejects.toThrow(CannotDeleteProgramError);
 
 			// Nothing started: the cascade takes announcements, documents and the
 			// roster, so a partial run is worse than none.
@@ -566,7 +612,7 @@ describe('BandService', () => {
 				{ id: 'f2', key: 'groups/band-1/documents/f2.csv' }
 			];
 
-			await deleteBand('band-1');
+			await deleteBand('band-1', OWNER);
 
 			expect(deletePrivateObject).toHaveBeenCalledWith('groups/band-1/documents/f1.pdf');
 			expect(deletePrivateObject).toHaveBeenCalledWith('groups/band-1/documents/f2.csv');
@@ -583,7 +629,7 @@ describe('BandService', () => {
 			vi.mocked(deletePrivateObject).mockRejectedValueOnce(new Error('R2 down'));
 			vi.spyOn(console, 'error').mockImplementation(() => {});
 
-			await expect(deleteBand('band-1')).rejects.toThrow(DocumentPurgeFailedError);
+			await expect(deleteBand('band-1', OWNER)).rejects.toThrow(DocumentPurgeFailedError);
 
 			// The rows survive as the recovery record, which is the point.
 			expect(vi.mocked(db.delete)).not.toHaveBeenCalled();

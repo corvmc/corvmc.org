@@ -507,7 +507,7 @@ export const deactivateUser = form(
 	async (data) => {
 		await requireCapability('user.deactivate');
 		try {
-			await deactivateUserService(data.id);
+			await deactivateUserService(data.id, { actor: 'staff' });
 		} catch (err) {
 			mapDomainError(err);
 		}
