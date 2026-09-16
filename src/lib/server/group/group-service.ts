@@ -699,3 +699,17 @@ export async function listMyPrograms(userId: string) {
 		)
 		.orderBy(group.name);
 }
+
+/**
+ * Clubs and committees, as picker options.
+ *
+ * Never bands: a band is a member's own project, and a CMC event is never run
+ * by one. `/staff/bands` is that surface.
+ */
+export async function listProgramGroupOptions(): Promise<{ id: string; name: string }[]> {
+	return db
+		.select({ id: group.id, name: group.name })
+		.from(group)
+		.where(and(inArray(group.kind, [...STAFF_GROUP_KINDS]), isNull(group.deletedAt)))
+		.orderBy(group.name);
+}

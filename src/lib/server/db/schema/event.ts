@@ -349,6 +349,8 @@ export const createEventSchema = z
 		title: z.string().min(1, 'Title is required'),
 		description: z.string().optional(),
 		kind: z.enum(eventKinds).default('show'),
+		/** The committee or club running it. A show has none; a work party does. */
+		groupId: z.string().optional(),
 		eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
 		eventStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
 		eventEndTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),

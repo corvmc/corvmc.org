@@ -10,7 +10,12 @@
 	import { Field } from '$lib/components/ui/Form';
 	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import { checkConflicts, createEvent, previewRecurringEvents } from '$lib/remote/events.remote';
+	import {
+		checkConflicts,
+		createEvent,
+		getProgramGroups,
+		previewRecurringEvents
+	} from '$lib/remote/events.remote';
 	import { getVenueOptions } from '$lib/remote/venues.remote';
 	import { responseErrorMessage } from '$lib/api';
 
@@ -30,6 +35,7 @@
 	let title = $state('');
 	let description = $state('');
 	let kind = $state('show');
+	let groupId = $state('');
 	let eventDate = $state(new Date().toISOString().split('T')[0]);
 	let eventStartTime = $state('');
 	let eventEndTime = $state('');
@@ -54,9 +60,11 @@
 	let recurringPreview = $state<{ dates: string[]; totalInWindow: number } | null>(null);
 
 	let venues = $state<{ id: string; name: string; isPrimary: boolean }[]>([]);
+	let programs = $state<{ id: string; name: string }[]>([]);
 	$effect(() => {
 		if (!open) return;
 		getVenueOptions().then((rows) => (venues = rows));
+		getProgramGroups().then((rows) => (programs = rows));
 	});
 
 	const offSiteVenues = $derived(venues.filter((v) => !v.isPrimary));
@@ -185,6 +193,7 @@
 		title = '';
 		description = '';
 		kind = 'show';
+		groupId = '';
 		eventDate = new Date().toISOString().split('T')[0];
 		eventStartTime = '';
 		eventEndTime = '';
@@ -236,6 +245,19 @@
 				]}
 				description="Only shows reach the homepage posters. Anything published still appears on the public calendar."
 			/>
+			{#if programs.length > 0}
+				<Field
+					name="groupId"
+					type="select"
+					label="Run by"
+					bind:value={groupId}
+					options={[
+						{ value: '', label: 'CMC' },
+						...programs.map((g) => ({ value: g.id, label: g.name }))
+					]}
+					description="The committee or club behind it — a work party is Facilities', outreach is Development's. Leave it on CMC for a show."
+				/>
+			{/if}
 			<Field name="eventDate" type="date" label="Date" bind:value={eventDate} />
 
 			<div class="grid grid-cols-2 gap-4">

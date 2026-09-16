@@ -211,6 +211,11 @@ export interface CreateEventParams {
 	doorsAt?: Date;
 	tags?: string;
 	kind?: EventKind;
+	/**
+	 * The committee or club running it. A work party is Facilities'; outreach is
+	 * Development's. Optional because a CMC show has no program behind it.
+	 */
+	groupId?: string | null;
 	ticketingEnabled?: boolean;
 	ticketPrice?: number | null;
 	ticketQuantity?: number | null;
@@ -238,6 +243,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		doorsAt,
 		tags,
 		kind = 'show',
+		groupId,
 		ticketingEnabled = false,
 		ticketPrice,
 		ticketQuantity,
@@ -310,6 +316,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				ticketQuantity: ticketingEnabled ? (ticketQuantity ?? null) : null,
 				venueId: venueId ?? null,
 				location: location ?? null,
+				groupId: groupId ?? null,
 				reservationId,
 				createdByUserId
 			})
@@ -326,6 +333,11 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		}
 		throw err;
 	}
+
+	// The invariant `linkManagingGroup` documents: a write that sets
+	// `event.groupId` owes the managing group its own `event_group` row, so read
+	// paths never have to branch on "sometimes present".
+	if (groupId) await linkManagingGroup([{ eventId: row.id, groupId }]);
 
 	// Upload poster outside the transaction (non-critical, idempotent)
 	if (posterFile) {
