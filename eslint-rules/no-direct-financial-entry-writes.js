@@ -25,6 +25,7 @@
  * happened, not recording one. `act-payout.spec.ts` does exactly that.
  */
 const MAY_INSERT = ['src/lib/server/finance/', 'scripts/seed/'];
+/** @param {string} file */
 const isFixture = (file) => file.endsWith('.spec.ts');
 
 /** @type {import('eslint').Rule.RuleModule} */
