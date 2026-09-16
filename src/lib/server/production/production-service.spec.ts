@@ -55,7 +55,8 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 		db: {
 			select: vi.fn(() => chainable('select')),
 			insert: vi.fn(() => chainable('insert')),
-			update: vi.fn(() => chainable('update'))
+			update: vi.fn(() => chainable('update')),
+			delete: vi.fn(() => chainable('delete'))
 		}
 	};
 });
@@ -111,25 +112,45 @@ beforeEach(() => {
 });
 
 describe('createProduction', () => {
-	it('opens a draft production on the event', async () => {
+	it('opens a draft production and has the listing announce it', async () => {
 		selectQueue = listingSource('cmc');
+		returningRows = [{ id: 'prod-1', status: 'draft' }];
+		updateRowCount = 1;
 
 		await createProduction('evt-1', { createdByUserId: 'staff-1' });
 
 		const values = calls.find((c) => c.method === 'values')?.args[0] as Record<string, unknown>;
-		expect(values).toMatchObject({ eventId: 'evt-1', createdByUserId: 'staff-1' });
-		// Status is the column default, not something the service restates.
+		expect(values).toMatchObject({ createdByUserId: 'staff-1' });
+		// Status is the column default, not something the service restates. The
+		// event id is not here at all any more: the listing names the production
+		// it announces, not the reverse (#1202).
 		expect(values).not.toHaveProperty('status');
+		expect(values).not.toHaveProperty('eventId');
+
+		const set = calls.find((c) => c.op === 'update' && c.method === 'set')?.args[0];
+		expect(set).toMatchObject({ productionId: 'prod-1' });
 	});
 
-	// The 1:1 is held by uq_production_event, not by a select-then-insert — that
-	// would be a race. This is the index's violation reaching the caller as a
-	// 409 rather than a 500.
+	// The 1:1 is held by the conditional update — the listing takes a production
+	// only while it is announcing none — not by a select-then-insert, which
+	// would be a race. Zero rows changed means somebody else got there first.
 	it('reports the second production on one event as a conflict', async () => {
 		selectQueue = listingSource('cmc');
-		insertShouldViolateUnique = true;
+		returningRows = [{ id: 'prod-2', status: 'draft' }];
+		updateRowCount = 0;
 
 		await expect(createProduction('evt-1')).rejects.toThrow(ProductionExistsError);
+	});
+
+	it('removes the production it could not get announced', async () => {
+		// Otherwise the loser of that race leaves a shell nothing can reach: no
+		// listing names it, so no surface can find it to clean it up.
+		selectQueue = listingSource('cmc');
+		returningRows = [{ id: 'prod-2', status: 'draft' }];
+		updateRowCount = 0;
+
+		await expect(createProduction('evt-1')).rejects.toThrow(ProductionExistsError);
+		expect(calls.some((c) => c.op === 'delete')).toBe(true);
 	});
 
 	// A production is the ops record for a show CMC puts on. Roughly nine in ten

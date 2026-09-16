@@ -15,7 +15,7 @@
  * Idempotent: deletes and recreates its own rows on every run. Mirrors the D1
  * access pattern in seed-staff-user.ts.
  */
-import { inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { withPlatformDb } from './platform-db';
 import { eventListing, eventBand } from '../../src/lib/server/db/schema/event';
 import { production } from '../../src/lib/server/db/schema/production';
@@ -116,11 +116,16 @@ export async function seedProductions(): Promise<void> {
 		// `draft`, so the advance path — offer, confirm — is walkable from the top.
 		await db.insert(production).values({
 			id: SEED_PRODUCTION_ID,
-			eventId: SEED_PRODUCTION_EVENT_ID,
 			status: 'draft',
 			createdByUserId: SEED_STAFF_ID,
 			createdAt: now,
 			updatedAt: now
 		});
+
+		// The listing names what it announces (#1202).
+		await db
+			.update(eventListing)
+			.set({ productionId: SEED_PRODUCTION_ID })
+			.where(eq(eventListing.id, SEED_PRODUCTION_EVENT_ID));
 	});
 }

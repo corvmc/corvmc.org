@@ -8,7 +8,7 @@ import {
 	check
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { eventListing, eventBand } from './event';
+import { eventBand } from './event';
 import { user } from './authentication';
 import { productionExpenseCategories } from '../../../config';
 
@@ -74,10 +74,6 @@ export const production = sqliteTable(
 		 * already refuses once any ticket exists, so this only ever fires on rows
 		 * that should never have existed.
 		 */
-		eventId: text('event_id')
-			.notNull()
-			.references(() => eventListing.id, { onDelete: 'cascade' }),
-
 		status: text('status', { enum: productionStatuses }).notNull().default('draft'),
 
 		/** Who is running the night. Not a capability — the matrix names no such position. */
@@ -126,7 +122,7 @@ export const production = sqliteTable(
 	(t) => [
 		// The 1:1, stated by the database rather than by the service remembering.
 		// It also serves the join the productions index does on every page load.
-		uniqueIndex('uq_production_event').on(t.eventId),
+
 		index('idx_production_status').on(t.status),
 		index('idx_production_producer').on(t.producerUserId),
 		// Passes on NULL, like every other CHECK here — most productions carry

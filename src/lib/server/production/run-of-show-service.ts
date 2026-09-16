@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { announcedBy } from './production-service';
 import { production, productionSlot } from '$lib/server/db/schema/production';
 import { eventBand, eventListing } from '$lib/server/db/schema/event';
 import { directoryEntry } from '$lib/server/db/schema/directory';
@@ -155,12 +156,12 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				actEntryId: directoryEntry.id
 			})
 			.from(production)
-			.innerJoin(eventListing, eq(eventListing.id, production.eventId))
+			.innerJoin(eventListing, eq(eventListing.productionId, production.id))
 			.leftJoin(productionSlot, eq(productionSlot.productionId, production.id))
 			.leftJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
 			.leftJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
 			.leftJoin(group, eq(group.id, directoryEntry.groupId))
-			.where(eq(production.eventId, eventId)),
+			.where(announcedBy(eventId)),
 		db
 			.select({
 				eventBandId: eventBand.id,
@@ -272,7 +273,7 @@ export async function getPublicSetTimes(eventId: string): Promise<PublicSetTime[
 		.innerJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
 		.where(
 			and(
-				eq(production.eventId, eventId),
+				announcedBy(eventId),
 				inArray(production.status, [...PUBLISHED_STATUSES]),
 				isNotNull(production.firstSetAt),
 				isNotNull(productionSlot.scheduledStartAt)
@@ -655,7 +656,7 @@ export async function listBandSlotTerms(groupId: string): Promise<BandSlotTerms[
 		.innerJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
 		.innerJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
 		.innerJoin(production, eq(production.id, productionSlot.productionId))
-		.innerJoin(eventListing, eq(eventListing.id, production.eventId))
+		.innerJoin(eventListing, eq(eventListing.productionId, production.id))
 		.where(
 			and(
 				eq(directoryEntry.groupId, groupId),
@@ -694,7 +695,7 @@ export async function findProductionIdForEvent(eventId: string): Promise<string 
 	const [row] = await db
 		.select({ id: production.id })
 		.from(production)
-		.where(eq(production.eventId, eventId))
+		.where(announcedBy(eventId))
 		.limit(1);
 	return row?.id ?? null;
 }

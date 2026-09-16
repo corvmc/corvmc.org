@@ -2,7 +2,7 @@ import { db, getRowCount } from '$lib/server/db';
 import { postProductionExpenses } from '$lib/server/finance/production-expense-entries';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import { production } from '$lib/server/db/schema/production';
-import { and, eq, getTableColumns, inArray, isNull } from 'drizzle-orm';
+import { and, eq, getTableColumns, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { user } from '$lib/server/db/schema/authentication';
 import { eventListing } from '$lib/server/db/schema/event';
@@ -116,6 +116,20 @@ export interface ProductionDetailsInput {
 // Reads
 // ---------------------------------------------------------------------------
 
+/**
+ * The production a listing announces.
+ *
+ * A correlated subquery because callers filter `production` while holding an
+ * event id. The edge is on the listing now — it names what it advertises, and
+ * the production no longer hangs off its own advertisement (#1202).
+ */
+export function announcedBy(eventId: string): SQL {
+	return sql`"production"."id" = (
+		select "event_listing"."production_id" from "event_listing"
+		 where "event_listing"."id" = ${eventId}
+	)`;
+}
+
 export async function getProduction(id: string): Promise<Production> {
 	const [row] = await db.select().from(production).where(eq(production.id, id)).limit(1);
 	if (!row) throw new ProductionNotFoundError();
@@ -152,7 +166,7 @@ export async function getProductionByEvent(
 		.from(production)
 		.leftJoin(user, eq(user.id, production.producerUserId))
 		.leftJoin(closer, eq(closer.id, production.closedByUserId))
-		.where(eq(production.eventId, eventId))
+		.where(announcedBy(eventId))
 		.limit(1);
 
 	if (!row) return null;
@@ -167,9 +181,11 @@ export async function getProductionByEvent(
 /**
  * Open a production on an event.
  *
- * The 1:1 is enforced by `uq_production_event`, so this inserts and reads the
- * violation rather than selecting first: a select-then-insert is a race, and
- * the index is the thing that actually holds the invariant.
+ * The 1:1 is held by a conditional update: the listing takes the new production
+ * only while it is announcing none, and a zero row count means somebody else
+ * got there first. Same shape as `reservation-service.updateStatus`, and the
+ * reason is the same — D1 has no interactive transaction to hold a check and a
+ * write together.
  *
  * The **source** check above it is a different shape and is not a race. A
  * production is the ops record for a show CMC puts on, and `event_listing` is a
@@ -192,17 +208,25 @@ export async function createProduction(
 	if (!listing) throw new ListingNotFoundError();
 	if (listing.source !== 'cmc') throw new NotACmcListingError(listing.source);
 
-	try {
-		const [row] = await db
-			.insert(production)
-			.values({ eventId, createdByUserId: opts?.createdByUserId ?? null })
-			.returning();
-		return row;
-	} catch (err) {
-		const message = (err as Error).message ?? '';
-		if (/UNIQUE constraint failed/i.test(message)) throw new ProductionExistsError();
-		throw err;
+	const [row] = await db
+		.insert(production)
+		.values({ createdByUserId: opts?.createdByUserId ?? null })
+		.returning();
+
+	// The listing names what it announces, so claiming it is the write that can
+	// lose. If it does, the production just written has nothing announcing it and
+	// is removed rather than left as a shell nothing can reach.
+	const claimed = await db
+		.update(eventListing)
+		.set({ productionId: row.id, updatedAt: new Date() })
+		.where(and(eq(eventListing.id, eventId), isNull(eventListing.productionId)));
+
+	if (getRowCount(claimed) === 0) {
+		await db.delete(production).where(eq(production.id, row.id));
+		throw new ProductionExistsError();
 	}
+
+	return row;
 }
 
 /**
@@ -245,7 +269,8 @@ export async function outstandingCloseOutTasks(productionId: string): Promise<st
 		.select({ label: workTask.label })
 		.from(workTask)
 		.innerJoin(workOrder, eq(workOrder.id, workTask.workOrderId))
-		.innerJoin(production, eq(production.eventId, workOrder.eventId))
+		.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+		.innerJoin(production, eq(production.id, eventListing.productionId))
 		.innerJoin(dutyList, eq(dutyList.id, workOrder.dutyListId))
 		.where(
 			and(
@@ -301,7 +326,12 @@ export async function transitionProduction(
 	// worksheet until the night is settled. Idempotent per line, so `closed`
 	// picks up anything added after `settled`.
 	if (to === 'settled' || to === 'closed') {
-		await postProductionExpenses(id, settled.eventId);
+		const [listing] = await db
+			.select({ id: eventListing.id })
+			.from(eventListing)
+			.where(eq(eventListing.productionId, id))
+			.limit(1);
+		if (listing) await postProductionExpenses(id, listing.id);
 	}
 
 	return settled;
@@ -319,7 +349,7 @@ export async function cancelProductionsForEvent(eventId: string): Promise<number
 	const result = await db
 		.update(production)
 		.set({ status: 'cancelled', updatedAt: new Date() })
-		.where(and(eq(production.eventId, eventId), inArray(production.status, [...PRE_COMPLETED])));
+		.where(and(announcedBy(eventId), inArray(production.status, [...PRE_COMPLETED])));
 
 	return getRowCount(result);
 }
