@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { productionExpense } from '$lib/server/db/schema/production';
 import { and, asc, eq, sum } from 'drizzle-orm';
 import type { ProductionExpenseCategory } from '$lib/config';
+import { reverseProductionExpense } from '$lib/server/finance/production-expense-entries';
 
 /**
  * What a show cost, and the denominator a percentage-of-net deal divides against.
@@ -40,7 +41,14 @@ export async function addExpense(input: AddExpenseInput): Promise<string> {
 	return row.id;
 }
 
+/**
+ * Removing a line the ledger has already seen is a reversal, not a delete.
+ *
+ * Before settlement nothing has been posted and the reversal is a no-op, which
+ * is why removing a line while a show is being worked stays free.
+ */
 export async function removeExpense(expenseId: string): Promise<void> {
+	await reverseProductionExpense(expenseId);
 	await db.delete(productionExpense).where(eq(productionExpense.id, expenseId));
 }
 

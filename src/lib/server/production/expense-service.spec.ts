@@ -52,7 +52,9 @@ const { sqlite, testDb } = vi.hoisted(() => {
 	// user table that no assertion reads.
 	sqlite.pragma('foreign_keys = OFF');
 
-	for (const t of ['production_expense']) {
+	// `removeExpense` reverses whatever the ledger already holds for the line, so
+	// the table has to exist even though nothing here asserts on it.
+	for (const t of ['production_expense', 'financial_entry']) {
 		for (const stmt of ddlFor(t)) sqlite.exec(stmt);
 	}
 

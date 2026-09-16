@@ -455,6 +455,7 @@ export const financialCategories = [
 	'grant',
 	'equipment',
 	'facility',
+	'production',
 	'contractor',
 	'refund_absorbed',
 	'other'
@@ -477,6 +478,7 @@ export const financialCategoryLabels: Record<FinancialCategory, string> = {
 	grant: 'Grants',
 	equipment: 'Equipment',
 	facility: 'Facility',
+	production: 'Show costs',
 	contractor: 'Contracted work',
 	refund_absorbed: 'Refunds',
 	other: 'Other'
@@ -540,6 +542,7 @@ export const financialSubjects = [
 	'purchase_order',
 	'contractor_job',
 	'production',
+	'production_expense',
 	'volunteer_hour',
 	'inventory_loan',
 	'membership',
