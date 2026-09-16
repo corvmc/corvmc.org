@@ -19,6 +19,7 @@ import { DomainError } from '$lib/server/domain-error';
 import { checkout } from '$lib/server/finance/payment-service';
 import { getStripeProductId } from '$lib/server/finance/product-config-service';
 import { destinationFor } from './connect-service';
+import { recordAudioRefund } from '$lib/server/finance/audio-entries';
 import { validateSplit } from '$lib/finance/audio-split';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { stripe } from '$lib/server/stripe';
@@ -373,6 +374,10 @@ export async function refundPurchase(purchaseId: string): Promise<void> {
 		.update(releasePurchase)
 		.set({ status: 'refunded', refundedAt: new Date() })
 		.where(eq(releasePurchase.id, row.id));
+
+	// After the status flip, so the `status === 'refunded'` return above keeps a
+	// second call from writing a second reversal. The writer is idempotent too.
+	await recordAudioRefund(purchaseId);
 }
 
 // ---------------------------------------------------------------------------
