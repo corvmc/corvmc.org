@@ -44,6 +44,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				userName: row.userName,
 				userEmail: row.userEmail,
 				roleName: row.roleName,
+				title: row.title,
+				eventTitle: row.eventTitle,
 				startsAt: row.startsAt.toISOString(),
 				endsAt: row.endsAt.toISOString()
 			});
