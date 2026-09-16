@@ -9,6 +9,7 @@ import noConcurrentRemoteQueries from './eslint-rules/no-concurrent-remote-queri
 import refreshTheComposedQuery from './eslint-rules/refresh-the-composed-query.js';
 import noDomainImportsInUi from './eslint-rules/no-domain-imports-in-ui.js';
 import noContactSchemaImports from './eslint-rules/no-contact-schema-imports.js';
+import noDirectFinancialEntryWrites from './eslint-rules/no-direct-financial-entry-writes.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -36,7 +37,8 @@ const customPlugin = {
 		'no-concurrent-remote-queries': noConcurrentRemoteQueries,
 		'refresh-the-composed-query': refreshTheComposedQuery,
 		'no-domain-imports-in-ui': noDomainImportsInUi,
-		'no-contact-schema-imports': noContactSchemaImports
+		'no-contact-schema-imports': noContactSchemaImports,
+		'no-direct-financial-entry-writes': noDirectFinancialEntryWrites
 	}
 };
 
@@ -193,6 +195,14 @@ export default defineConfig(
 				}
 			]
 		}
+	},
+	{
+		// Like the contact rule below, deliberately unscoped and without a spec
+		// exemption: a spec that inserted an entry directly would be asserting
+		// against a row the finance module never agreed to write. The rule keeps
+		// its own allow-list, and `scripts/seed/` is on it.
+		files: ['**/*.{ts,svelte}'],
+		rules: { 'custom/no-direct-financial-entry-writes': 'error' }
 	},
 	{
 		// The private contact table has one access path. Unlike the rules above,
