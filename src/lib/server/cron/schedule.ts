@@ -40,7 +40,10 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		// Last in the batch: it reads what every job above may have deleted, and
 		// nothing downstream depends on its result.
 		'/api/cron/sweep-media'
-	]
+	],
+	// Monday, after the daily batch. Reads a closed week and writes nothing, so
+	// it has no ordering relationship with anything above it.
+	'0 17 * * 1': ['/api/cron/reconcile-ledger']
 };
 
 export interface CronEnv {

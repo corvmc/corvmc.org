@@ -20,7 +20,8 @@ const ALL_ENDPOINTS = [
 	'/api/cron/shift-feedback',
 	'/api/cron/sweep-media',
 	'/api/cron/schedule-radio',
-	'/api/cron/sweep-audio-purchases'
+	'/api/cron/sweep-audio-purchases',
+	'/api/cron/reconcile-ledger'
 ];
 
 function okFetcher() {

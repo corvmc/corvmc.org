@@ -28,6 +28,7 @@ crons = [
                   #   cancel-stale-tickets, sweep-audio-purchases, shift-reminders,
   #   shift-feedback,
                   #   sweep-media
+  "0 17 * * 1",   # reconcile-ledger, Mondays 9am PST / 10am PDT
 ]
 
 # ---------------------------------------------------------------------------
