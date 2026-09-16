@@ -3,13 +3,11 @@ import { listForSubject, recordEntries, type RecordEntryInput } from './financia
 import type { MembershipPaymentEvent } from '$lib/server/event-bus/event-bus';
 
 /**
- * A paid contribution invoice, in the ledger's terms.
+ * A paid contribution invoice, in the ledger's terms (#1172).
  *
- * The backfill wrote `membership` rows from Stripe and no live path replaced
- * it, so the record has drifted every month since (#1172). A listener rather
- * than a call inside `handleInvoicePaid`: the webhook already emits the event
- * with the amount on it, and the accounting stays in the finance module where
- * `no-direct-financial-entry-writes` can see it.
+ * A listener rather than a call inside `handleInvoicePaid`: the webhook
+ * already emits the event with the amount on it, and the accounting stays in
+ * the finance module where `no-direct-financial-entry-writes` can see it.
  */
 
 /**
