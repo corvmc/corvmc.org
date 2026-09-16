@@ -119,6 +119,63 @@ describe('ReservationService', () => {
 			expect(result.id).toBe('res-1');
 		});
 
+		/**
+		 * Regression for #1123. A booking made inside the window used to be born
+		 * `scheduled`, which meant the daily reminder cron — whose two bands only
+		 * see rows that existed when it ran — never caught it, and
+		 * `cancelUnconfirmedReservations` released the slot at its start time. The
+		 * member's first and only word about the booking was that it was cancelled.
+		 */
+		function setupCreate(status: string) {
+			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
+			const row = { id: 'res-1', ...params, status, createdByUserId: 'user-1' };
+
+			// One `.limit(1)` result answers both reads a born-confirmed booking
+			// makes: `announceConfirmed`'s re-read of the row, and the owner lookup
+			// `emitCreated` does — so it carries the row's fields and the user's.
+			const txWhere = vi
+				.fn()
+				.mockReturnValue(whereResult([], [{ ...row, name: 'Ada', email: 'a@x.test' }]));
+			const txFrom = vi.fn().mockReturnValue({ where: txWhere });
+			txSelect.mockReturnValue({ from: txFrom });
+
+			const returning = vi.fn().mockResolvedValue([row]);
+			const values = vi.fn().mockReturnValue({ returning });
+			txInsert.mockReturnValue({ values });
+			return values;
+		}
+
+		it('confirms a booking whose start is already inside the window', async () => {
+			const values = setupCreate('confirmed');
+			const soon = new Date(Date.now() + 60 * 60 * 1000);
+
+			await create({ ...params, startsAt: soon, endsAt: new Date(soon.getTime() + 3600_000) });
+
+			expect(values).toHaveBeenCalledWith(expect.objectContaining({ status: 'confirmed' }));
+		});
+
+		it('leaves a booking made ahead of the window scheduled', async () => {
+			// Outside the window a member cannot confirm without paying, so the
+			// cron's bands are the right mechanism and still reach it.
+			const values = setupCreate('scheduled');
+			const later = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+			await create({ ...params, startsAt: later, endsAt: new Date(later.getTime() + 3600_000) });
+
+			expect(values).toHaveBeenCalledWith(expect.objectContaining({ status: 'scheduled' }));
+		});
+
+		it('announces a booking that is born confirmed', async () => {
+			// `confirmed` reached without passing through a confirm path is the one
+			// case `announceConfirmed` exists for — see its docstring.
+			setupCreate('confirmed');
+			const soon = new Date(Date.now() + 60 * 60 * 1000);
+
+			await create({ ...params, startsAt: soon, endsAt: new Date(soon.getTime() + 3600_000) });
+
+			expect(emit).toHaveBeenCalledWith('reservation.confirmed', expect.anything());
+		});
+
 		it('throws ReservationValidationError when time is invalid', async () => {
 			vi.mocked(validateBooking).mockResolvedValue({ valid: false, error: 'Too short' });
 
@@ -857,6 +914,29 @@ describe('ReservationService', () => {
 			);
 			// No payment on a scheduled reservation → no refund.
 			expect(refund).not.toHaveBeenCalled();
+		});
+
+		// Regression for #1124. `staffOverride` means "skip the permission and
+		// past-start checks"; it was being read as "a person did this", so the cron
+		// told the member CMC staff had cancelled and invited them to reach out
+		// about a conversation that never happened.
+		it('attributes the sweep to the system, not to staff', async () => {
+			setupSweep([{ id: 'res-1' }], {
+				id: 'res-1',
+				createdByUserId: 'user-1',
+				status: 'scheduled',
+				stripePaymentRecordId: null,
+				startsAt: past,
+				endsAt: pastEnd
+			});
+			setupUpdateMock(1);
+
+			await cancelUnconfirmedReservations(new Date());
+
+			expect(emit).toHaveBeenCalledWith(
+				'reservation.cancelled',
+				expect.objectContaining({ cancelledBy: 'system' })
+			);
 		});
 
 		it('returns zero when nothing is unconfirmed', async () => {
