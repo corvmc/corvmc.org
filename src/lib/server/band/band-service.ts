@@ -224,22 +224,6 @@ export class BandTierManagedByStripeError extends DomainError {
  */
 const ownerMember = alias(groupMember, 'owner_member');
 
-/** The owner's user id for a band, or null if the seat is empty. */
-export async function getOwnerId(bandId: string): Promise<string | null> {
-	const [row] = await db
-		.select({ userId: groupMember.userId })
-		.from(groupMember)
-		.where(
-			and(
-				eq(groupMember.groupId, bandId),
-				eq(groupMember.role, 'owner'),
-				eq(groupMember.status, 'active')
-			)
-		)
-		.limit(1);
-	return row?.userId ?? null;
-}
-
 // ---------------------------------------------------------------------------
 // Create / Update / Delete
 // ---------------------------------------------------------------------------
@@ -344,7 +328,7 @@ export async function update(bandId: string, data: UpdateBandData) {
 	return updated;
 }
 
-export async function deleteBand(bandId: string) {
+export async function deleteBand(bandId: string, actorUserId: string) {
 	const [row] = await db.select().from(group).where(eq(group.id, bandId)).limit(1);
 	if (!row) throw new BandNotFoundError();
 	// In the service rather than in `deleteBand`'s remote: the remote is one
@@ -365,12 +349,14 @@ export async function deleteBand(bandId: string) {
 			)
 		);
 
-	// The owner is the actor on these cancellations. A band with an empty owner
-	// seat can still be deleted, so fall back to the caller-independent staff
-	// override path with the band's own id — `staffOverride` is already set.
-	const deleteActor = (await getOwnerId(bandId)) ?? row.id;
+	// `actorUserId`, not a lookup: the remote's `requireGroupRole(…, 'owner')`
+	// has already established that this caller owns the band, so re-deriving it
+	// from `group_member` only reintroduces the owner drift it guards against.
 	for (const r of futureReservations) {
-		await cancelReservation(r.id, deleteActor, 'Band deleted', { staffOverride: true });
+		await cancelReservation(r.id, actorUserId, 'Band deleted', {
+			staffOverride: true,
+			actor: 'owner'
+		});
 	}
 
 	// Release the avatar. Not a delete: `media_attachment` has no foreign key to
@@ -1117,9 +1103,14 @@ export async function deactivate(bandId: string) {
 			)
 		);
 
-	const deactivateActor = (await getOwnerId(bandId)) ?? row.id;
+	// Staff, always: this path's remote guards with `requireCapability`, so the
+	// owner never reaches it. The id is unused — `staffOverride` waives the only
+	// check that reads it — and naming a member here would be a guess.
 	for (const r of futureReservations) {
-		await cancelReservation(r.id, deactivateActor, 'Band deactivated', { staffOverride: true });
+		await cancelReservation(r.id, '', 'Band deactivated', {
+			staffOverride: true,
+			actor: 'staff'
+		});
 	}
 
 	return row;

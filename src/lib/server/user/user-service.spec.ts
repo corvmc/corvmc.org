@@ -97,20 +97,55 @@ describe('deactivateUser', () => {
 		updateResult = [{ id: 'u1', deletedAt: new Date() }];
 		selectResultQueue = [[], [{ id: 'r1' }, { id: 'r2' }]]; // door codes, future reservations
 
-		const row = await deactivateUser('u1');
+		const row = await deactivateUser('u1', { actor: 'staff' });
 
 		expect(row).toMatchObject({ id: 'u1' });
 		expect(cancelMock).toHaveBeenCalledTimes(2);
 		expect(cancelMock).toHaveBeenCalledWith('r1', 'u1', 'Account deactivated', {
-			staffOverride: true
+			staffOverride: true,
+			actor: 'staff'
 		});
+	});
+
+	/**
+	 * Regression for #1189. Offboarding is one entry point for two actors — staff
+	 * deactivating a member, and a member closing their own account — and it read
+	 * `staffOverride` as the attribution for both. A member who closed their own
+	 * account was emailed that CMC staff had cancelled their bookings.
+	 */
+	it('attributes a self-delete to the member, so no email goes out', async () => {
+		updateResult = [{ id: 'u1', deletedAt: new Date() }];
+		selectResultQueue = [[], [{ id: 'res-1' }]];
+
+		await deactivateUser('u1', { actor: 'member' });
+
+		expect(cancelMock).toHaveBeenCalledWith(
+			'res-1',
+			'u1',
+			'Account deactivated',
+			expect.objectContaining({ actor: 'member' })
+		);
+	});
+
+	it('attributes a staff deactivation to staff', async () => {
+		updateResult = [{ id: 'u1', deletedAt: new Date() }];
+		selectResultQueue = [[], [{ id: 'res-1' }]];
+
+		await deactivateUser('u1', { actor: 'staff' });
+
+		expect(cancelMock).toHaveBeenCalledWith(
+			'res-1',
+			'u1',
+			'Account deactivated',
+			expect.objectContaining({ actor: 'staff' })
+		);
 	});
 
 	it('purges the user session rows', async () => {
 		updateResult = [{ id: 'u1', deletedAt: new Date() }];
 		selectResultQueue = [[], []]; // no door codes, no future reservations
 
-		await deactivateUser('u1');
+		await deactivateUser('u1', { actor: 'staff' });
 
 		expect(deleteWhere).toHaveBeenCalledTimes(1);
 	});
@@ -119,7 +154,7 @@ describe('deactivateUser', () => {
 		updateResult = [{ id: 'u1', stripeId: 'cus_1', deletedAt: new Date() }];
 		selectResultQueue = [[], []];
 
-		await deactivateUser('u1');
+		await deactivateUser('u1', { actor: 'staff' });
 
 		expect(subCancelMock).toHaveBeenCalledWith('cus_1');
 	});
@@ -128,7 +163,7 @@ describe('deactivateUser', () => {
 		updateResult = [{ id: 'u1', stripeId: null, deletedAt: new Date() }];
 		selectResultQueue = [[], []];
 
-		await deactivateUser('u1');
+		await deactivateUser('u1', { actor: 'staff' });
 
 		expect(subCancelMock).not.toHaveBeenCalled();
 	});
@@ -139,7 +174,7 @@ describe('deactivateUser', () => {
 		updateResult = [{ id: 'u1', deletedAt: new Date() }];
 		selectResultQueue = [[{ id: 'mc1' }, { id: 'mc2' }], []];
 
-		await deactivateUser('u1');
+		await deactivateUser('u1', { actor: 'staff' });
 
 		expect(revokeMemberCodeMock).toHaveBeenCalledTimes(2);
 		expect(revokeMemberCodeMock).toHaveBeenCalledWith('mc1', 'Account deactivated');
@@ -150,7 +185,7 @@ describe('deactivateUser', () => {
 		selectResultQueue = [[{ id: 'mc1' }], [{ id: 'r1' }]];
 		revokeMemberCodeMock.mockRejectedValueOnce(new Error('lock offline'));
 
-		const row = await deactivateUser('u1');
+		const row = await deactivateUser('u1', { actor: 'staff' });
 
 		expect(row).toMatchObject({ id: 'u1' });
 		expect(cancelMock).toHaveBeenCalledTimes(1);
@@ -158,7 +193,9 @@ describe('deactivateUser', () => {
 
 	it('throws UserNotFoundError when already deactivated / missing', async () => {
 		updateResult = []; // no row updated (deletedAt was already set)
-		await expect(deactivateUser('u1')).rejects.toBeInstanceOf(UserNotFoundError);
+		await expect(deactivateUser('u1', { actor: 'staff' })).rejects.toBeInstanceOf(
+			UserNotFoundError
+		);
 		expect(deleteWhere).not.toHaveBeenCalled();
 	});
 });
