@@ -69,13 +69,19 @@ let lastUpdateSet: Record<string, unknown> | null = null;
 // compensating-delete path in create().
 let insertShouldThrow = false;
 
-const insertValues = vi.fn((vals: Record<string, unknown>) => {
-	lastInsertedValues = vals;
+// An array is `linkManagingGroup`'s bulk insert, not the listing's — recorded
+// apart so it cannot overwrite the row under assertion, and so the managing-group
+// invariant is assertable at all.
+let lastLinkedGroups: Record<string, unknown>[] | null = null;
+const insertValues = vi.fn((vals: Record<string, unknown> | Record<string, unknown>[]) => {
+	if (Array.isArray(vals)) lastLinkedGroups = vals;
+	else lastInsertedValues = vals;
 	return {
+		onConflictDoNothing: vi.fn(() => Promise.resolve()),
 		returning: vi.fn(() =>
 			insertShouldThrow
 				? Promise.reject(new Error('insert failed'))
-				: Promise.resolve([{ ...mockEventRow, ...vals }])
+				: Promise.resolve([{ ...mockEventRow, ...(Array.isArray(vals) ? {} : vals) }])
 		)
 	};
 });
@@ -245,6 +251,28 @@ describe('EventService', () => {
 			expect(lastInsertedValues!.reservationId).toBeNull();
 			expect(staffCreate).not.toHaveBeenCalled();
 			expect(uploadFile).not.toHaveBeenCalled();
+		});
+
+		it('records the committee running it, and its managing-group row', async () => {
+			// The invariant `linkManagingGroup` documents: a write that sets
+			// `event.groupId` owes the group its own `event_group` row, or every
+			// read that lists "whose page does this appear on" has to branch on
+			// whether the managing group is in its own list (#1199).
+			await create({ ...baseParams, kind: 'work_party', groupId: 'group-facilities' });
+
+			expect(lastInsertedValues!.groupId).toBe('group-facilities');
+			expect(lastInsertedValues!.kind).toBe('work_party');
+			expect(lastLinkedGroups).toEqual([
+				expect.objectContaining({ eventId: lastInsertedValues!.id, groupId: 'group-facilities' })
+			]);
+		});
+
+		it('leaves a show unattributed rather than inventing a group', async () => {
+			lastLinkedGroups = null;
+			await create(baseParams);
+
+			expect(lastInsertedValues!.groupId).toBeNull();
+			expect(lastLinkedGroups).toBeNull();
 		});
 
 		it('creates linked reservation when reservation params provided', async () => {

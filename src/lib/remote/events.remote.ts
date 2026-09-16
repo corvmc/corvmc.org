@@ -12,6 +12,7 @@ import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venu
 import { getProductionByEvent } from '$lib/server/production/production-service';
 import { getPublicSetTimes, getRunOfShow } from '$lib/server/production/run-of-show-service';
 import { getSettlement } from '$lib/server/production/settlement-service';
+import { listProgramGroupOptions } from '$lib/server/group/group-service';
 import {
 	listRequests as listArtifactRequests,
 	requestableActs as listRequestableActs
@@ -892,6 +893,17 @@ export const checkRebook = query(
 // Forms
 // ---------------------------------------------------------------------------
 
+/**
+ * Clubs and committees, for the create form's "run by" picker.
+ *
+ * Guarded on `event.manage` rather than the groups capability: this is the
+ * event form asking who is running an event, not a groups surface.
+ */
+export const getProgramGroups = query(async () => {
+	await requireCapability('event.manage');
+	return listProgramGroupOptions();
+});
+
 export const createEvent = form(createEventSchema, async (data, issue) => {
 	const staff = await requireCapability('event.manage');
 
@@ -959,6 +971,7 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 			doorsAt,
 			tags: data.tags || undefined,
 			kind: data.kind,
+			groupId: data.groupId || null,
 			ticketingEnabled,
 			ticketPrice: ticketingEnabled ? ticketPrice : undefined,
 			ticketQuantity: ticketingEnabled ? ticketQuantity : undefined,
