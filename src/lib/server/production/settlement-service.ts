@@ -3,7 +3,7 @@ import { financialEntry } from '$lib/server/db/schema/financial';
 import { production, productionSlot } from '$lib/server/db/schema/production';
 import { eventBand } from '$lib/server/db/schema/event';
 import { and, asc, eq, sum } from 'drizzle-orm';
-import { deductibleTotalCents } from './expense-service';
+import { expenseLines, type ProductionExpenseLine } from './expense-service';
 import { recordActPayout } from '$lib/server/finance/payout-entries';
 import { DomainError } from '$lib/server/domain-error';
 
@@ -43,6 +43,8 @@ export interface Settlement {
 	actsPoolCents: number;
 	expensesCents: number;
 	deductibleExpensesCents: number;
+	/** The cost sheet behind those two totals, so the worksheet can show it. */
+	expenses: ProductionExpenseLine[];
 	acts: ActSettlement[];
 	suggestedPayoutTotalCents: number;
 	/** What has actually gone out so far. */
@@ -108,12 +110,16 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 	const collectiveRevenueCents = Number(earned?.total ?? 0);
 	const actsPoolCents = Number(pool?.total ?? 0);
 
-	const deductibleExpensesCents = await deductibleTotalCents(prod.id);
-	const [allExpenses] = await db
-		.select({ total: sum(financialEntry.amountCents) })
-		.from(financialEntry)
-		.where(and(eq(financialEntry.kind, 'spent'), eq(financialEntry.settlementGroup, eventId)));
-	const expensesCents = Math.abs(Number(allExpenses?.total ?? 0));
+	// The show's own cost sheet, not the ledger's `spent` rows. Those also carry
+	// the guarantee top-ups that `netCents` subtracts below as the gap between
+	// suggested payouts and the pool, so reading them here charged a soft night
+	// twice. The spec names `production_expense` as the expense total.
+	const expenses = await expenseLines(prod.id);
+	const expensesCents = expenses.reduce((t, e) => t + e.amountCents, 0);
+	const deductibleExpensesCents = expenses.reduce(
+		(t, e) => (e.deductible ? t + e.amountCents : t),
+		0
+	);
 
 	const slots = await db
 		.select({
@@ -181,6 +187,7 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 		actsPoolCents,
 		expensesCents,
 		deductibleExpensesCents,
+		expenses,
 		acts,
 		suggestedPayoutTotalCents,
 		paidTotalCents,

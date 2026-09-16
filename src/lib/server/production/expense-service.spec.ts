@@ -66,8 +66,14 @@ const { sqlite, testDb } = vi.hoisted(() => {
 
 vi.mock('$lib/server/db', () => ({ db: testDb }));
 
-const { addExpense, deductibleTotalCents, listExpenses, removeExpense, shareBaseCents } =
-	await import('./expense-service');
+const {
+	addExpense,
+	deductibleTotalCents,
+	expenseLines,
+	listExpenses,
+	removeExpense,
+	shareBaseCents
+} = await import('./expense-service');
 
 const forShow = (over: Record<string, unknown> = {}) => ({
 	productionId: 'prod-1',
@@ -97,6 +103,37 @@ describe('recording what a show cost', () => {
 		const id = await addExpense(forShow());
 		await removeExpense(id);
 		expect(await listExpenses('prod-1')).toHaveLength(0);
+	});
+});
+
+describe('the cost sheet the worksheet reads', () => {
+	it('carries both totals, so a deductible line and a carried one stay apart', async () => {
+		// The settlement derives expensesCents and deductibleExpensesCents from
+		// this one list rather than from the ledger's `spent` rows, which also hold
+		// the guarantee top-ups that netCents already subtracts.
+		await addExpense(forShow({ amountCents: 15_000 }));
+		await addExpense(
+			forShow({ label: 'PA insurance', category: 'other', amountCents: 12_000, deductible: false })
+		);
+
+		const lines = await expenseLines('prod-1');
+		expect(lines.map((l) => l.label)).toEqual(['Sound engineer', 'PA insurance']);
+		expect(lines.reduce((t, l) => t + l.amountCents, 0)).toBe(27_000);
+		expect(lines.filter((l) => l.deductible).reduce((t, l) => t + l.amountCents, 0)).toBe(15_000);
+	});
+
+	it('leaves out who recorded it and when, which the worksheet has no use for', async () => {
+		await addExpense(forShow({ recordedByUserId: null, paidTo: 'Sam' }));
+		const [line] = await expenseLines('prod-1');
+		expect(Object.keys(line).sort()).toEqual([
+			'amountCents',
+			'category',
+			'deductible',
+			'id',
+			'label',
+			'paidTo'
+		]);
+		expect(line.paidTo).toBe('Sam');
 	});
 });
 

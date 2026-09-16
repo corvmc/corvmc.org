@@ -4,6 +4,7 @@ import { getRequestEvent } from '$app/server';
 import { requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { recordSlotPayout } from '$lib/server/production/settlement-service';
+import { addExpense, removeExpense } from '$lib/server/production/expense-service';
 import { productionStatuses } from '$lib/server/db/schema/production';
 import {
 	createProduction as createService,
@@ -25,7 +26,7 @@ import {
 import { PERCENTAGE_BPS_MAX } from '$lib/production/terms';
 import { getStaffEventPage, getStaffEventProduction, getStaffEvents } from './events.remote';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE, requestableArtifacts } from '$lib/config';
+import { DEFAULT_TIMEZONE, productionExpenseCategories, requestableArtifacts } from '$lib/config';
 
 /**
  * Productions are guarded as events, not on a `production.*` set of their own.
@@ -340,6 +341,58 @@ export const recordActPayout = form(
 		const staff = await requireCapability('finance.refund');
 		try {
 			await recordSlotPayout(data.slotId, data.amountCents, staff.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getStaffEventProduction(data.eventId).refresh();
+		return { success: true };
+	}
+);
+
+/**
+ * What the night cost, line by line.
+ *
+ * `event.manage`, not the payout's `finance.refund`: booking the engineer and
+ * buying the hospitality is the producer's own work, and writing down what it
+ * cost is part of it. Nothing leaves the till here — the line is a cost sheet
+ * entry, and `deductible` is what an `againstNet` deal divides against.
+ */
+export const addProductionExpense = form(
+	z.object({
+		eventId: z.string().min(1),
+		productionId: z.string().min(1),
+		label: z.string().min(1).max(120),
+		category: z.enum(productionExpenseCategories),
+		amountCents: z.number().int().min(0).max(100_000_000),
+		deductible: z.boolean().optional().default(true),
+		paidTo: z.string().max(120).optional()
+	}),
+	async (data) => {
+		const staff = await requireCapability('event.manage');
+		try {
+			await addExpense({
+				productionId: data.productionId,
+				label: data.label,
+				category: data.category,
+				amountCents: data.amountCents,
+				deductible: data.deductible,
+				paidTo: data.paidTo?.trim() || null,
+				recordedByUserId: staff.id
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getStaffEventProduction(data.eventId).refresh();
+		return { success: true };
+	}
+);
+
+export const removeProductionExpense = form(
+	z.object({ eventId: z.string().min(1), expenseId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await removeExpense(data.expenseId);
 		} catch (err) {
 			mapDomainError(err);
 		}
