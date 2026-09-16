@@ -10,6 +10,7 @@
  */
 import { db } from '$lib/server/db';
 import { eventListing } from '$lib/server/db/schema/event';
+import { eventListingColumns } from '$lib/server/event/event-columns';
 import { ticket } from '$lib/server/db/schema/ticket';
 import { eq } from 'drizzle-orm';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -38,7 +39,7 @@ export async function emitTicketPurchased(
 
 	const eventId = tickets[0].eventId;
 	const [eventRow] = await db
-		.select()
+		.select(eventListingColumns)
 		.from(eventListing)
 		.where(eq(eventListing.id, eventId))
 		.limit(1);

@@ -122,7 +122,10 @@ vi.mock('drizzle-orm', () => ({
 	lt: vi.fn((...args: unknown[]) => ['lt', ...args]),
 	sql: vi.fn(),
 	asc: vi.fn((col: unknown) => ['asc', col]),
-	desc: vi.fn((col: unknown) => ['desc', col])
+	desc: vi.fn((col: unknown) => ['desc', col]),
+	// `purchased-event` pulls in `event-columns`, which builds its listing column
+	// map — poster resolved from `media_attachment` — at import time.
+	getTableColumns: vi.fn(() => ({}))
 }));
 
 const {
