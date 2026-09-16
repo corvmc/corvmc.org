@@ -197,10 +197,10 @@ export default defineConfig(
 		}
 	},
 	{
-		// Like the contact rule below, deliberately unscoped and without a spec
-		// exemption: a spec that inserted an entry directly would be asserting
-		// against a row the finance module never agreed to write. The rule keeps
-		// its own allow-list, and `scripts/seed/` is on it.
+		// Deliberately unscoped, like the contact rule below: the table is
+		// append-only everywhere, specs included. The rule keeps its own
+		// allow-list for `.insert()` — the finance module, `scripts/seed/`, and
+		// specs, where seeding a balance describes a sale rather than recording one.
 		files: ['**/*.{ts,svelte}'],
 		rules: { 'custom/no-direct-financial-entry-writes': 'error' }
 	},

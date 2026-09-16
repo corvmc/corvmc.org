@@ -17,8 +17,15 @@
  * written somewhere the map cannot see.
  */
 
-/** Where an entry may be inserted. Updates and deletes are allowed nowhere. */
+/**
+ * Where an entry may be inserted. Updates and deletes are allowed nowhere.
+ *
+ * A `.spec.ts` is on the list because a fixture is not a transaction: seeding
+ * a pool balance into an in-memory SQLite is describing a sale that already
+ * happened, not recording one. `act-payout.spec.ts` does exactly that.
+ */
 const MAY_INSERT = ['src/lib/server/finance/', 'scripts/seed/'];
+const isFixture = (file) => file.endsWith('.spec.ts');
 
 /** @type {import('eslint').Rule.RuleModule} */
 export default {
@@ -37,7 +44,7 @@ export default {
 	},
 	create(context) {
 		const filename = context.filename.replaceAll('\\', '/');
-		const mayInsert = MAY_INSERT.some((dir) => filename.includes(dir));
+		const mayInsert = isFixture(filename) || MAY_INSERT.some((dir) => filename.includes(dir));
 
 		return {
 			CallExpression(node) {
