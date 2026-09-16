@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { notAProgramHold } from '$lib/server/reservation/program-hold';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { groupMember } from '$lib/server/db/schema/group';
@@ -112,7 +113,7 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 					and(eq(reservation.bookerType, 'group'), inArray(reservation.bookerId, activeBandIds))
 				)!
 			: mine,
-		ne(reservation.bookerType, 'event_listing')
+		notAProgramHold()
 	)!;
 
 	const scalar = async (q: Promise<{ count: number }[]>) => (await q)[0]?.count ?? 0;

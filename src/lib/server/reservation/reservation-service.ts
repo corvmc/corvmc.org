@@ -19,6 +19,7 @@ import {
 	type AnyColumn
 } from 'drizzle-orm';
 import { validateBooking, hasConflict } from './conflict-service';
+import { notAProgramHold } from './program-hold';
 import { refund } from '$lib/server/finance/payment-service';
 import { reverseReservationCredits } from './reservation-credit-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -632,11 +633,7 @@ export async function cancelUnconfirmedReservations(
 		.select({ id: reservation.id })
 		.from(reservation)
 		.where(
-			and(
-				eq(reservation.status, 'scheduled'),
-				lt(reservation.startsAt, now),
-				ne(reservation.bookerType, 'event_listing')
-			)
+			and(eq(reservation.status, 'scheduled'), lt(reservation.startsAt, now), notAProgramHold())
 		);
 
 	let cancelled = 0;
@@ -823,7 +820,7 @@ export async function listForMember(
 		bandIds.length > 0
 			? or(mine, and(eq(reservation.bookerType, 'group'), inArray(reservation.bookerId, bandIds)))!
 			: mine;
-	const scope = and(theirs, ne(reservation.bookerType, 'event_listing'))!;
+	const scope = and(theirs, notAProgramHold())!;
 
 	const columns = {
 		id: reservation.id,
