@@ -92,7 +92,6 @@ const inRange = (r: RangeFilter) =>
 
 const asCents = (v: string | null) => Number(v ?? 0);
 
-/** What the collective kept over a window. Excludes in-kind and pass-through by construction. */
 /**
  * Reverse everything a settled sale wrote.
  *
@@ -186,6 +185,7 @@ function readMetadata(raw: unknown): Record<string, unknown> | null {
 	}
 }
 
+/** What the collective kept over a window. Excludes in-kind and pass-through by construction. */
 export async function totalEarnedCents(range: RangeFilter): Promise<number> {
 	const [row] = await db
 		.select({ total: sum(financialEntry.amountCents) })
