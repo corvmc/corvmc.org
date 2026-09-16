@@ -198,7 +198,12 @@ export async function getProductionByEvent(
  */
 export async function createProduction(
 	eventId: string,
-	opts?: { createdByUserId?: string }
+	/**
+	 * `id` is for `event-service.create()`, which books the room before the
+	 * listing row exists and so mints the id itself — the booker has to name the
+	 * show before either row is written.
+	 */
+	opts?: { createdByUserId?: string; id?: string }
 ): Promise<Production> {
 	const [listing] = await db
 		.select({ source: eventListing.source })
@@ -210,7 +215,10 @@ export async function createProduction(
 
 	const [row] = await db
 		.insert(production)
-		.values({ createdByUserId: opts?.createdByUserId ?? null })
+		.values({
+			...(opts?.id ? { id: opts.id } : {}),
+			createdByUserId: opts?.createdByUserId ?? null
+		})
 		.returning();
 
 	// The listing names what it announces, so claiming it is the write that can

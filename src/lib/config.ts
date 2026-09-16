@@ -1958,7 +1958,7 @@ export function hasCapability(held: readonly string[], cap: Capability): boolean
  * nothing was backfilled, which is what a rename would have required and what
  * would have minted staff grants out of historical data.
  */
-export const bookerTypes = ['user', 'group', 'event_listing', 'instructor'] as const;
+export const bookerTypes = ['user', 'group', 'production', 'instructor'] as const;
 export type BookerType = (typeof bookerTypes)[number];
 
 export function isBookerType(value: string): value is BookerType {
