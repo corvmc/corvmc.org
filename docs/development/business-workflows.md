@@ -75,8 +75,9 @@ route returns 500 on handler failure so Stripe re-delivers.
   cancels every reservation still `scheduled` at its start time.
 - `auto-complete` → `autoCompleteExpired()` — marks confirmed, fully-paid reservations
   past their end time as `completed` (cash-owed ones are left for staff).
-- `confirmation-reminders` / `reservation-reminders` — emit reminder events for
-  reservations starting within 24 hours (notification listeners send the emails).
+- `reminders` — drains the registry in `src/lib/server/reminders/registry.ts` every 15
+  minutes and emits the reminder events for anything owed one (notification listeners
+  send the emails). `reminder_sent` is what makes each fire once.
 
 **Cancellation.** `cancel()` in `reservation-service.ts`: authorization (owner or staff
 override), atomic conditional status update, Stripe refund if a payment record exists
@@ -1025,8 +1026,9 @@ So:
 - **Hours and review:** `hour-log-service.ts`; the report is `volunteer-report-service.ts`.
 - **Feedback:** `volunteer-feedback-service.ts` — the day-after two-question survey, rolled
   up per role anonymously.
-- **Crons:** `shift-reminders` (daily), `complete-shifts` (frequent), `shift-feedback`
-  (daily), all under `src/routes/api/cron/`.
+- **Crons:** `complete-shifts` (every 15 minutes) under `src/routes/api/cron/`. The shift
+  reminder and the feedback ask are entries in the reminder registry, drained by
+  `/api/cron/reminders` on the same tick.
 - **Surfaces:** `volunteer.remote.ts` for the member
   side; the staff pages under `/staff/volunteer/` are always on, per the panel-wide rule
   that staff surfaces ignore flags.

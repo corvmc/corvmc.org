@@ -42,9 +42,18 @@ export const tableOrder = [
 	'contractor_job',
 	// References `project` and `user`, so it clears after both.
 	'financial_entry',
+<<<<<<< HEAD
 	// The ops half of a show, and no longer downstream of the listing: nothing on
 	// it points at one since #1202. It comes first because `event_listing` now
 	// references *it*.
+=======
+	// A root: no foreign key at all. `subject_id` is polymorphic, so it names
+	// reservations and signups without referencing either.
+	'reminder_sent',
+	'event_listing',
+	// The ops half of one listing. References event_listing and user, so it
+	// clears before both.
+>>>>>>> 9fd75e4 (Drain reminders from a registry instead of four cron endpoints)
 	'production',
 	// Names the production it announces, so it follows one.
 	'event_listing',

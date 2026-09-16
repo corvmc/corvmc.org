@@ -9,7 +9,8 @@ import type { CronCheckIn } from './sentry-check-in';
  * when that trigger fires. Must stay in sync with `[triggers]` in wrangler.toml.
  *
  * The daily batch order is deliberate: generation runs first so freshly
- * generated occurrences are visible to lock provisioning and the reminders.
+ * generated occurrences are visible to lock provisioning. Reminders are not
+ * here: they are a registry drained every 15 minutes (#1186).
  */
 export const CRON_SCHEDULE: Record<string, string[]> = {
 	'*/5 * * * *': ['/api/cron/send-campaigns'],
@@ -19,6 +20,10 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		'/api/cron/cancel-unconfirmed',
 		'/api/cron/expire-waitlisted',
 		'/api/cron/wake-snoozed',
+		// Last of the 15-minute jobs: complete-shifts above decides what the
+		// feedback ask is owed, so running after it asks a day sooner rather than
+		// a day later. Firing once is `reminder_sent`'s job, not the cadence's.
+		'/api/cron/reminders',
 		// Fills the radio timetable 45 minutes ahead — three passes of slack, so
 		// one missed run is inaudible rather than dead air. No-ops while the
 		// `cmcRadio` flag is off.
@@ -27,16 +32,10 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 	'0 16 * * *': [
 		'/api/cron/generate-recurring-reservations',
 		'/api/cron/lock-access',
-		'/api/cron/confirmation-reminders',
-		'/api/cron/reservation-reminders',
 		'/api/cron/cancel-stale-tickets',
 		// The same job for music: a row written pending before the buyer left for
 		// Stripe, whose checkout was never completed.
 		'/api/cron/sweep-audio-purchases',
-		// After the reminders: both read confirmed signups, and complete-shifts
-		// has had all night of 15-minute passes before the feedback ask runs.
-		'/api/cron/shift-reminders',
-		'/api/cron/shift-feedback',
 		// Last in the batch: it reads what every job above may have deleted, and
 		// nothing downstream depends on its result.
 		'/api/cron/sweep-media'

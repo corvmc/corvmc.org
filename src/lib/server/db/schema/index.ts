@@ -37,3 +37,4 @@ export * from './packing';
 export * from './financial';
 export * from './artifact-request';
 export * from './committee-application';
+export * from './reminder';
