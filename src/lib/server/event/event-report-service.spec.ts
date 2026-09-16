@@ -9,43 +9,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * committed migrations for the reason `inventory/reports.spec.ts` sets out.
  */
 
-/**
- * The whole schema, replayed from the committed migrations.
- *
- * Not `ddlFor(table)` as three sibling specs use: that lifts the `CREATE TABLE`
- * out of the migration that last created it, and `event` was renamed to
- * `event_listing` after creation, so it finds nothing. Replaying every
- * migration is what a rename survives, and it is what `db:migrate:local` does.
- */
-const { sqlite, testDb } = vi.hoisted(() => {
-	/* eslint-disable @typescript-eslint/no-require-imports */
-	const { readFileSync, globSync } = require('node:fs') as typeof import('node:fs');
-	const Database = require('better-sqlite3') as typeof import('better-sqlite3');
-	const { drizzle } =
-		require('drizzle-orm/better-sqlite3') as typeof import('drizzle-orm/better-sqlite3');
-	/* eslint-enable @typescript-eslint/no-require-imports */
-
-	const sqlite = new Database(':memory:');
-
-	for (const file of globSync('migrations/*/migration.sql').sort()) {
-		for (const statement of readFileSync(file, 'utf8')
-			.split('--> statement-breakpoint')
-			.map((s: string) => s.trim())
-			.filter(Boolean)) {
-			sqlite.exec(statement);
-		}
-	}
-
-	// After the replay, not before: a table rebuild toggles this pragma back on
-	// as its last statement. Off for the same reason the sibling specs turn it
-	// off — these are aggregate queries, and seeding every referenced parent
-	// row would test nothing extra.
-	sqlite.pragma('foreign_keys = OFF');
-
-	// `drizzle({ client })`, not `drizzle(client)` — the positional overload is
-	// gone in drizzle 1.0 and a raw Database is read as a config object, which
-	// quietly opens a second, empty database.
-	return { sqlite, testDb: drizzle({ client: sqlite }) };
+/** The whole schema, replayed from the committed migrations. Why: #847. */
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	// `await import`, not `require`: the helper is TypeScript, which Node's
+	// require cannot load. An async hoisted factory still resolves before the
+	// mock below is asked for a database.
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
 });
 
 vi.mock('$lib/server/db', () => ({ db: testDb }));

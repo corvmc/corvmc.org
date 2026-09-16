@@ -7,61 +7,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * test told it to and agrees with any `WHERE`. DDL comes from the migration.
  */
 
-const { sqlite, testDb } = vi.hoisted(() => {
-	/* eslint-disable @typescript-eslint/no-require-imports */
-	const { readFileSync, globSync } = require('node:fs') as typeof import('node:fs');
-	const Database = require('better-sqlite3') as typeof import('better-sqlite3');
-	const { drizzle } =
-		require('drizzle-orm/better-sqlite3') as typeof import('drizzle-orm/better-sqlite3');
-	/* eslint-enable @typescript-eslint/no-require-imports */
-
-	/**
-	 * The `CREATE TABLE` from whichever migration last created it, plus any later
-	 * `ALTER TABLE … ADD`. Replaying the ALTERs is what keeps this tracking the
-	 * schema rather than a fossil — see `inventory/reports.spec.ts`, which
-	 * established the pattern and explains the quiet failure it avoids.
-	 */
-	function ddlFor(table: string): string[] {
-		const marker = `CREATE TABLE \`${table}\``;
-		const files = globSync('migrations/*/migration.sql').sort();
-		const createdIn = files.filter((f: string) => readFileSync(f, 'utf8').includes(marker)).pop();
-		if (!createdIn) throw new Error(`no migration creates ${table}`);
-
-		const statementsIn = (file: string) =>
-			readFileSync(file, 'utf8')
-				.split('--> statement-breakpoint')
-				.map((c: string) => c.trim().replace(/;$/, ''))
-				.filter(Boolean);
-
-		const create = statementsIn(createdIn).find((c: string) => c.startsWith(marker));
-		if (!create) throw new Error(`no CREATE TABLE statement for ${table} in ${createdIn}`);
-
-		const alterMarker = `ALTER TABLE \`${table}\` ADD`;
-		const alters = files
-			.slice(files.indexOf(createdIn) + 1)
-			.flatMap(statementsIn)
-			.filter((c: string) => c.startsWith(alterMarker));
-
-		return [create, ...alters];
-	}
-
-	const sqlite = new Database(':memory:');
-	// The DDL carries foreign keys into `user`, which this spec has no reason to
-	// create — it is testing aggregation, not referential integrity. better-sqlite3
-	// turns enforcement on by default, so turn it back off rather than seeding a
-	// user table that no assertion reads.
-	sqlite.pragma('foreign_keys = OFF');
-
-	for (const t of ['financial_entry']) {
-		for (const stmt of ddlFor(t)) sqlite.exec(stmt);
-	}
-
-	// `drizzle({ client })`, not `drizzle(client)`. drizzle 1.0 dropped the
-	// positional overload: a raw Database passed positionally is read as a
-	// *config* object, finds no client in it, and quietly opens a second, empty
-	// database — so every query answers "no such table" against tables that
-	// demonstrably exist on `sqlite`.
-	return { sqlite, testDb: drizzle({ client: sqlite }) };
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	// `await import`, not `require`: the helper is TypeScript, which Node's
+	// require cannot load. An async hoisted factory still resolves before the
+	// mock below is asked for a database.
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
 });
 
 vi.mock('$lib/server/db', () => ({ db: testDb }));
