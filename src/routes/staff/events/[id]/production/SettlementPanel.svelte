@@ -6,16 +6,30 @@
 	import { formatCents } from '$lib/utils/format';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import { recordActPayout } from '$lib/remote/productions.remote';
+	import {
+		recordActPayout,
+		addProductionExpense,
+		removeProductionExpense
+	} from '$lib/remote/productions.remote';
+	import { productionExpenseCategoryLabels, productionExpenseCategories } from '$lib/config';
+	import { IconTrash } from '@tabler/icons-svelte';
 	import type { Settlement } from '$lib/server/production/settlement-service';
 
 	let { settlement, eventId }: { settlement: Settlement | null; eventId: string } = $props();
 
 	const { fields } = recordActPayout;
 
+	const categoryOptions = productionExpenseCategories.map((c) => ({
+		value: c,
+		label: productionExpenseCategoryLabels[c]
+	}));
+
 	/** What each act was designated versus what its deal produces. */
 	const acts = $derived(settlement?.acts ?? []);
+	const expenses = $derived(settlement?.expenses ?? []);
 	const topUpTotal = $derived(acts.reduce((t, a) => t + a.topUpCents, 0));
 </script>
 
@@ -55,6 +69,113 @@
 				</p>
 			</div>
 		</div>
+	</InfoCard>
+
+	<InfoCard title="What the night cost">
+		{#snippet header(title)}
+			<div class="flex flex-wrap items-center justify-between gap-2">
+				<CardTitle>{title}</CardTitle>
+				<Action
+					action={addProductionExpense}
+					label="Add a cost"
+					variant="ghost"
+					size="xs"
+					modalTitle="What did the show pay for?"
+					submitLabel="Add it"
+					successToast="Cost recorded"
+				>
+					{#snippet form()}
+						<input {...addProductionExpense.fields.eventId.as('hidden', eventId)} />
+						<input
+							{...addProductionExpense.fields.productionId.as('hidden', settlement.productionId)}
+						/>
+						<FormField field={addProductionExpense.fields.label} label="What it was" required />
+						<FormField
+							field={addProductionExpense.fields.category}
+							type="select"
+							label="Category"
+							options={categoryOptions}
+							value="sound"
+						/>
+						<MoneyField field={addProductionExpense.fields.amountCents} label="Amount" />
+						<FormField
+							field={addProductionExpense.fields.paidTo}
+							label="Paid to"
+							description="Who was handed the money. Optional."
+						/>
+						<FormField
+							field={addProductionExpense.fields.deductible}
+							type="checkbox"
+							label="Deductible"
+							checkboxLabel="Comes off the door before a percentage-of-net deal is worked out"
+							value={true}
+						/>
+					{/snippet}
+				</Action>
+			</div>
+		{/snippet}
+
+		{#if expenses.length === 0}
+			<p class="text-fg-2">
+				Nothing recorded. Until a cost is entered here the Expenses figure above is zero and an
+				against-net deal divides the whole pool.
+			</p>
+		{:else}
+			<Table>
+				{#snippet head()}
+					<th>What</th>
+					<th>Category</th>
+					<th>Paid to</th>
+					<th class="text-right">Amount</th>
+					<th></th>
+				{/snippet}
+				{#each expenses as expense (expense.id)}
+					{@const drop = removeProductionExpense.for(expense.id)}
+					<tr>
+						<td>
+							{expense.label}
+							{#if !expense.deductible}
+								<!-- A cost the collective carries whatever happens is real spend, but
+								     it is not the act's to share. That distinction is what
+								     `againstNet` means, so it has to be visible on the line. -->
+								<Badge variant="neutral" size="xs">Not deductible</Badge>
+							{/if}
+						</td>
+						<td class="text-sm text-fg-2">{productionExpenseCategoryLabels[expense.category]}</td>
+						<td class="text-sm text-fg-2">{expense.paidTo ?? '—'}</td>
+						<td class="text-right font-medium">{formatCents(expense.amountCents)}</td>
+						<td class="text-right">
+							<Action
+								action={drop}
+								label="Remove"
+								iconOnly
+								icon={trashIcon}
+								variant="ghost"
+								size="xs"
+								class="text-error"
+								modalTitle="Remove this cost?"
+								submitLabel="Remove"
+								submitVariant="error"
+								successToast="Cost removed"
+							>
+								{#snippet form()}
+									<input {...drop.fields.eventId.as('hidden', eventId)} />
+									<input {...drop.fields.expenseId.as('hidden', expense.id)} />
+								{/snippet}
+							</Action>
+						</td>
+					</tr>
+				{/each}
+			</Table>
+
+			{#if settlement.deductibleExpensesCents !== settlement.expensesCents}
+				<p class="mt-3 text-sm text-fg-2">
+					{formatCents(settlement.deductibleExpensesCents)} of {formatCents(
+						settlement.expensesCents
+					)} comes off the door before an against-net deal is worked out.
+				</p>
+			{/if}
+		{/if}
 	</InfoCard>
 
 	<InfoCard title="What each act is owed">
@@ -147,3 +268,7 @@
 		{/if}
 	</InfoCard>
 {/if}
+
+{#snippet trashIcon()}
+	<IconTrash size={16} />
+{/snippet}
