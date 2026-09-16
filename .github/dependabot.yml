@@ -36,12 +36,22 @@ updates:
           - wrangler
           - '@cloudflare/*'
           - miniflare
+      # Named in full as well as by glob. In #1153 the three bare names grouped
+      # and the three the globs should have caught did not, leaving
+      # `@playwright/test` behind `playwright` — the split that kills e2e
+      # collection with "did not expect test() to be called here" and reads like
+      # a flake. Why the globs missed is not established (#1166); the explicit
+      # names do not depend on the answer. Keep both lists in step when adding a
+      # package. `@storybook/addon-vitest` belongs to the storybook group above.
       testing:
         patterns:
           - vitest
           - '@vitest/*'
+          - '@vitest/browser-playwright'
+          - '@vitest/coverage-v8'
           - playwright
           - '@playwright/*'
+          - '@playwright/test'
           - vitest-browser-svelte
       linting:
         patterns:
