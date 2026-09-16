@@ -47,6 +47,12 @@ vi.mock('$lib/server/production/settlement-service', () => ({
 	recordSlotPayout: (...a: unknown[]) => settlement.recordSlotPayout(...(a as []))
 }));
 
+const expenses = { addExpense: vi.fn(), removeExpense: vi.fn() };
+vi.mock('$lib/server/production/expense-service', () => ({
+	addExpense: (...a: unknown[]) => expenses.addExpense(...a),
+	removeExpense: (...a: unknown[]) => expenses.removeExpense(...a)
+}));
+
 const artifacts = {
 	requestArtifact: vi.fn(),
 	cancelArtifactRequest: vi.fn()
@@ -136,7 +142,20 @@ const WRITES: { name: keyof typeof productions; args: unknown[]; capability?: st
 		name: 'recordActPayout',
 		args: [{ ...SLOT, amountCents: 1000 }],
 		capability: 'finance.refund'
-	}
+	},
+	{
+		name: 'addProductionExpense',
+		args: [
+			{
+				eventId: 'evt-1',
+				productionId: 'prod-1',
+				label: 'Sound engineer',
+				category: 'sound',
+				amountCents: 15_000
+			}
+		]
+	},
+	{ name: 'removeProductionExpense', args: [{ eventId: 'evt-1', expenseId: 'exp-1' }] }
 ];
 
 beforeEach(() => {
@@ -150,7 +169,13 @@ describe('productions.remote guards', () => {
 			await expect(submit(productions[name], args[0])).rejects.toThrow('Staff access required');
 
 			expect(requireCapability).toHaveBeenCalledWith(capability);
-			for (const spy of Object.values({ ...service, ...runOfShow, ...artifacts, ...settlement })) {
+			for (const spy of Object.values({
+				...service,
+				...runOfShow,
+				...artifacts,
+				...settlement,
+				...expenses
+			})) {
 				expect(spy).not.toHaveBeenCalled();
 			}
 		});

@@ -54,6 +54,37 @@ export async function listExpenses(productionId: string) {
 }
 
 /**
+ * The cost sheet as the settlement shows it.
+ *
+ * Narrower than `listExpenses` because it crosses to the client inside
+ * `Settlement`: who recorded a line and when are staff-log questions, not
+ * worksheet ones.
+ */
+export interface ProductionExpenseLine {
+	id: string;
+	label: string;
+	category: ProductionExpenseCategory;
+	amountCents: number;
+	deductible: boolean;
+	paidTo: string | null;
+}
+
+export async function expenseLines(productionId: string): Promise<ProductionExpenseLine[]> {
+	return db
+		.select({
+			id: productionExpense.id,
+			label: productionExpense.label,
+			category: productionExpense.category,
+			amountCents: productionExpense.amountCents,
+			deductible: productionExpense.deductible,
+			paidTo: productionExpense.paidTo
+		})
+		.from(productionExpense)
+		.where(eq(productionExpense.productionId, productionId))
+		.orderBy(asc(productionExpense.createdAt));
+}
+
+/**
  * What comes off the door before a net deal is worked out.
  *
  * Only `deductible` lines. A cost the collective carries whatever happens is
