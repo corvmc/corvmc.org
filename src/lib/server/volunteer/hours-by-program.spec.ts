@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { clubToday } from '$lib/config';
 
 /**
  * Hours attributed to a program, against a real SQLite.
@@ -71,7 +72,10 @@ async function seed() {
 }
 
 // Today, because submission refuses anything older than the backdate limit.
-const today = () => new Date().toISOString().slice(0, 10);
+// `clubToday()`, whose docstring describes this exact trap: a UTC date is
+// tomorrow in club time from 5pm PT, and `toWorkedOn` refuses it as a future
+// date (#1205).
+const today = clubToday;
 
 const log = (over: Record<string, unknown> = {}) => ({
 	volunteerRoleId: ROLE,
