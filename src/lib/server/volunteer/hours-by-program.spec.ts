@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { formatDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { clubToday } from '$lib/config';
 
 /**
  * Hours attributed to a program, against a real SQLite.
@@ -73,10 +72,10 @@ async function seed() {
 }
 
 // Today, because submission refuses anything older than the backdate limit.
-// The service's today, not UTC's. `toWorkedOn` compares against
-// `formatDateInTz(now, TZ)`, so between 17:00 Pacific and midnight a UTC date
-// is tomorrow and every log here is refused as a future date (#1205).
-const today = () => formatDateInTz(new Date(), DEFAULT_TIMEZONE);
+// `clubToday()`, whose docstring describes this exact trap: a UTC date is
+// tomorrow in club time from 5pm PT, and `toWorkedOn` refuses it as a future
+// date (#1205).
+const today = clubToday;
 
 const log = (over: Record<string, unknown> = {}) => ({
 	volunteerRoleId: ROLE,
