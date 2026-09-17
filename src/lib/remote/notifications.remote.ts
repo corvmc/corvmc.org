@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { query, command, getRequestEvent } from '$app/server';
+import { query, getRequestEvent } from '$app/server';
+import { command } from './_remote';
 import { requireCapability, isElevated } from '$lib/server/authorization';
 import {
 	getForUser,

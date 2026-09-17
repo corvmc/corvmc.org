@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { mapDomainError } from '$lib/server/errors';
 import { error } from '@sveltejs/kit';
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { bandSite } from '$lib/server/db/schema/band-site';

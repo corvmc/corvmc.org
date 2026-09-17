@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { mapDomainError } from '$lib/server/errors';
 import { requireCapability } from '$lib/server/authorization';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';

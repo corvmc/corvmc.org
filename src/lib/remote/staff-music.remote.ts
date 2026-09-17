@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { requireStaff } from '$lib/server/authorization';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import {

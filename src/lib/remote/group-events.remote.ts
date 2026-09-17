@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
-import { form } from '$app/server';
+import { form } from './_remote';
 import { mapDomainError } from '$lib/server/errors';
 import { requireProgramRole } from '$lib/server/group/group-context';
 import { DEFAULT_TIMEZONE, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { toEventRef } from '$lib/server/entity/refs';
 import { getStaffLayout } from './layout.remote';

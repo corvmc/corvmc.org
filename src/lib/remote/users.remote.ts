@@ -3,7 +3,8 @@ import { titleCase } from '$lib/utils/format';
 import { CONFIRMATION_WINDOW_DAYS, SHORT_TEXT_MAX } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
-import { query, form, getRequestEvent } from '$app/server';
+import { query, getRequestEvent } from '$app/server';
+import { form } from './_remote';
 import { listLowStock } from '$lib/server/inventory/stock-service';
 import { listShortStaffedShifts } from '$lib/server/volunteer/work-order-service';
 

@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { LONG_TEXT_MAX } from '$lib/config';
 import { error, redirect } from '@sveltejs/kit';
-import { query, form, getRequestEvent } from '$app/server';
+import { query, getRequestEvent } from '$app/server';
+import { form } from './_remote';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { requireFeature, getAllFeatureFlags } from '$lib/server/feature-flags';
 import { requireBandRole } from '$lib/server/group/group-context';

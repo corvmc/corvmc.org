@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
-import { query, form, command, getRequestEvent } from '$app/server';
+import { query, getRequestEvent } from '$app/server';
+import { form, command } from './_remote';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { requireCapability, requireUser, listUsersWithCapability } from '$lib/server/authorization';
 import { getUserContact } from '$lib/server/user/user-service';

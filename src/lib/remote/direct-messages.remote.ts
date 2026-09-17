@@ -1,4 +1,5 @@
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { error, invalid } from '@sveltejs/kit';
 import * as z from 'zod';
 import { requireUser } from '$lib/server/authorization';

@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
-import { query, form, getRequestEvent } from '$app/server';
+import { query, getRequestEvent } from '$app/server';
+import { form } from './_remote';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { getById as getEventById } from '$lib/server/event/event-service';

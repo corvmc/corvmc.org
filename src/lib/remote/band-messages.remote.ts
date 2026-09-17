@@ -23,7 +23,8 @@
  */
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
-import { query, form, command } from '$app/server';
+import { query } from '$app/server';
+import { form, command } from './_remote';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import {
 	listBandThreads,

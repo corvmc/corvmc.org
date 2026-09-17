@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { form, getRequestEvent } from '$app/server';
+import { getRequestEvent } from '$app/server';
+import { form } from './_remote';
 import { invalid } from '@sveltejs/kit';
 import { auth } from '$lib/server/auth';
 import { allowRateLimited } from '$lib/server/rate-limit';

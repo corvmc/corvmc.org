@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { DomainError } from '$lib/server/domain-error';
 import { mockUser } from '$lib/server/db/test-factory';
 
 // ---------------------------------------------------------------------------
@@ -59,11 +60,21 @@ const bandServiceMock = {
 	// With the module mocked they must be here, or the ladder compares against
 	// `undefined` and throws a TypeError instead of mapping the status. Same
 	// shape as the real ones — plain Error subclasses, matched by identity.
-	CannotRemoveOwnerError: class CannotRemoveOwnerError extends Error {},
-	OwnerCannotLeaveError: class OwnerCannotLeaveError extends Error {},
-	BandMemberExistsError: class BandMemberExistsError extends Error {},
-	BandNotFoundError: class BandNotFoundError extends Error {},
-	BandTierManagedByStripeError: class BandTierManagedByStripeError extends Error {}
+	CannotRemoveOwnerError: class CannotRemoveOwnerError extends DomainError {
+		readonly httpStatus = 422;
+	},
+	OwnerCannotLeaveError: class OwnerCannotLeaveError extends DomainError {
+		readonly httpStatus = 422;
+	},
+	BandMemberExistsError: class BandMemberExistsError extends DomainError {
+		readonly httpStatus = 409;
+	},
+	BandNotFoundError: class BandNotFoundError extends DomainError {
+		readonly httpStatus = 404;
+	},
+	BandTierManagedByStripeError: class BandTierManagedByStripeError extends DomainError {
+		readonly httpStatus = 409;
+	}
 };
 
 vi.mock('$lib/server/band/band-service', () => bandServiceMock);

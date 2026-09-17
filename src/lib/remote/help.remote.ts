@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { toGenericRef } from '$lib/server/entity/refs';
 import { BLURB_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { error } from '@sveltejs/kit';
-import { query, form, getRequestEvent } from '$app/server';
+import { query, getRequestEvent } from '$app/server';
+import { form } from './_remote';
 import { requireCapability } from '$lib/server/authorization';
 import { generateSlug } from '$lib/server/utils/slug';
 import {

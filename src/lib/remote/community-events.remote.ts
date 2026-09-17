@@ -9,7 +9,8 @@
  */
 import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { getStanding } from '$lib/server/moderation/standing-service';

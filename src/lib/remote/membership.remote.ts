@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { redirect, error } from '@sveltejs/kit';
-import { form, getRequestEvent, query } from '$app/server';
+import { getRequestEvent, query } from '$app/server';
+import { form } from './_remote';
 import { requireMember } from '$lib/server/authorization';
 import {
 	createCheckoutSession,

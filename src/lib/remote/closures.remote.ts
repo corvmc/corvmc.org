@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { requireCapability } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { closure } from '$lib/server/db/schema/reservation';

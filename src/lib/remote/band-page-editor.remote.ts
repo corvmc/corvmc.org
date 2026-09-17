@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { jsonArrayField } from '$lib/utils/zod-json';
 import { error } from '@sveltejs/kit';
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { sanitizeCss } from '$lib/server/band/css-sanitizer';
 import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';

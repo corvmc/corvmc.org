@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockUser } from '$lib/server/db/test-factory';
+import { DomainError } from '$lib/server/domain-error';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -7,7 +8,8 @@ import { mockUser } from '$lib/server/db/test-factory';
 
 // Real error class so the remote's `instanceof ReservationConflictError` check
 // matches what create() throws (both resolve to this same mocked export).
-class ReservationConflictError extends Error {
+class ReservationConflictError extends DomainError {
+	readonly httpStatus = 409;
 	constructor() {
 		super('Time slot is not available');
 		this.name = 'ReservationConflictError';
@@ -16,28 +18,33 @@ class ReservationConflictError extends Error {
 
 // Real error class so the remote's `instanceof ReservationValidationError` check
 // matches what create() throws (both resolve to this same mocked export).
-class ReservationValidationError extends Error {
+class ReservationValidationError extends DomainError {
+	readonly httpStatus = 400;
 	constructor(message: string) {
 		super(message);
 		this.name = 'ReservationValidationError';
 	}
 }
 
-// Also imported by the shared mapDomainError() (src/lib/server/errors.ts). Stubbed
-// so its `instanceof` checks resolve instead of throwing "no export" from the mock.
-class ReservationStateError extends Error {
+// A stub stands in for a real class that declares its own `httpStatus`, so it
+// has to declare the same one — `mapDomainError` reads the status off the
+// instance now rather than from a list of classes it imported.
+class ReservationStateError extends DomainError {
+	readonly httpStatus = 409;
 	constructor(message = 'Invalid reservation state') {
 		super(message);
 		this.name = 'ReservationStateError';
 	}
 }
-class ReservationNotFoundError extends Error {
+class ReservationNotFoundError extends DomainError {
+	readonly httpStatus = 404;
 	constructor() {
 		super('Reservation not found');
 		this.name = 'ReservationNotFoundError';
 	}
 }
-class ReservationAuthorizationError extends Error {
+class ReservationAuthorizationError extends DomainError {
+	readonly httpStatus = 403;
 	constructor(message = 'Not authorized') {
 		super(message);
 		this.name = 'ReservationAuthorizationError';

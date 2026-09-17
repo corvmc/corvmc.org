@@ -6,20 +6,20 @@ import { sourceFiles } from './lib/source-files';
  * A `DomainError` that reaches SvelteKit unmapped is a 500 reading "Internal
  * Error" and a business rule filed in Sentry as a crash — `hooks.server.ts`
  * guards on `status >= 500`, and a `DomainError` is not an `HttpError`. Every
- * call from a remote function into a service that throws one has to sit inside
- * a `try` whose `catch` calls `mapDomainError`. #921 counted 26 remote modules
- * without the mapper; this is what stops the next vertical drifting back.
+ * call into a service that throws one has to be mapped: by a `try` whose
+ * `catch` calls `mapDomainError`, or by a `form`/`command` from
+ * `$lib/remote/_remote`. A `query` gets no wrapper and still needs its own.
  */
 const SERVER_GLOBS = ['src/lib/server/**/*.ts'];
 const REMOTE_GLOB = ['src/lib/remote/*.remote.ts'];
 
 /**
- * Call sites that predate the gate, as a path list rather than a count — a
- * count is a whole-tree snapshot that any PR merging alongside yours
- * invalidates, and two PRs editing this list conflict in git instead, which is
- * visible. Every one of these is a `DomainError` reaching the browser as a
- * 500; they are in files #921's `grep -L mapDomainError` could not see, because
- * those files already use the mapper somewhere else.
+ * Call sites this gate cannot clear, as a path list rather than a count: a
+ * count is a snapshot any PR merging alongside yours invalidates, where two
+ * PRs editing a list conflict in git instead, which is visible.
+ *
+ * The entry left is a false positive — the call sits in a module-local helper a
+ * wrapped mutation awaits, so the catch does see it.
  */
 const GRANDFATHERED: string[] = JSON.parse(
 	readFileSync('scripts/remote-domain-error.json', 'utf8')
@@ -139,6 +139,34 @@ function mappedTryRanges(source: string): [number, number][] {
 	return ranges;
 }
 
+/**
+ * Character ranges of every mutation body the `_remote` wrapper covers.
+ *
+ * Scoped to the export's own body, not the file, so a `query` in the same
+ * module is still judged on its own. Bounded by the next top-level declaration
+ * rather than by counting parens: a `)` inside a string literal closes the
+ * count early, which cut `bookMemberReservation` off 150 lines short.
+ */
+function wrappedMutationRanges(source: string): [number, number][] {
+	if (!/import\s*\{[^}]*\}\s*from\s*'\.\/_remote'/.test(source)) return [];
+
+	const marks = [
+		...source.matchAll(/^(?:export )?(?:async )?function \w+/gm),
+		...source.matchAll(/^(?:export )?const \w+\s*(?::[^=\n]+)?=/gm)
+	]
+		.map((m) => ({ at: m.index, mutation: /=\s*(form|command)\($/.test(m[0]) }))
+		.sort((a, b) => a.at - b.at);
+
+	// The regex above stops at `=`, so re-read each mark against the source to
+	// see whether a `form(`/`command(` follows it.
+	return marks
+		.map((mark, i) => ({ ...mark, end: marks[i + 1]?.at ?? source.length }))
+		.filter(({ at }) =>
+			/^(?:export )?const \w+\s*=\s*(form|command)\(/.test(source.slice(at, at + 120))
+		)
+		.map(({ at, end }) => [at, end] as [number, number]);
+}
+
 /** From a call's `(` to just past its matching `)`, so the tail can be read. */
 function closingParenOnwards(source: string, at: number): string {
 	let i = source.indexOf('(', at);
@@ -165,7 +193,7 @@ function withoutComments(source: string): string {
 
 function unmappedCalls(file: string, throwing: Map<string, Set<string>>): string[] {
 	const source = withoutComments(readFileSync(file, 'utf8'));
-	const mapped = mappedTryRanges(source);
+	const mapped = [...mappedTryRanges(source), ...wrappedMutationRanges(source)];
 	const offenders = new Set<string>();
 
 	for (const [local, origin] of importsOf(source, file)) {
@@ -205,7 +233,8 @@ describe('remote functions and domain errors', () => {
 			offenders,
 			`These calls can throw a DomainError that nothing maps, so the browser gets ` +
 				`a 500 reading "Internal Error" and Sentry files a business rule as a crash. ` +
-				`Wrap each in try/catch and call mapDomainError:\n` +
+				`A mutation gets this for free from $lib/remote/_remote; a query needs its ` +
+				`own try/catch calling mapDomainError:\n` +
 				`${offenders.map((o) => `  ${o}`).join('\n')}\n`
 		).toEqual([]);
 

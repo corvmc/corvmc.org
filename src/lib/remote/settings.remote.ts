@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { query, form, command } from '$app/server';
+import { query } from '$app/server';
+import { form, command } from './_remote';
 import {
 	getAllProductConfigs,
 	updateProductConfig,
