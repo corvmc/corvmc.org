@@ -274,7 +274,7 @@
 							{#if data.canManage}
 								<td class="w-px">
 									{#if s.status !== 'cancelled'}
-										<div class="flex justify-end gap-2">
+										<div class="flex w-max justify-end gap-2">
 											<EditSessionAction groupId={group.id} session={s} onchanged={refreshRoster} />
 											{#if s.status === 'published'}
 												<Action
@@ -379,7 +379,7 @@
 						<tr>
 							<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
 							<td class="w-px">
-								<div class="flex gap-2">
+								<div class="flex w-max gap-2">
 									<Action
 										action={approveApplicationForm.for(m.id)}
 										label="Approve"
@@ -453,7 +453,7 @@
 							<td class="col-support">{m.position ?? '—'}</td>
 							{#if rosterActions}
 								<td class="w-px">
-									<div class="flex justify-end gap-2">
+									<div class="flex w-max justify-end gap-2">
 										{#if m.userId === data.viewerId && m.status === 'active'}
 											<GroupSelfEditAction
 												{slug}

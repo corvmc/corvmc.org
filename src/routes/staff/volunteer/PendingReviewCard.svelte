@@ -59,7 +59,7 @@
 				<td class="col-support">{row.firstName} {row.lastName}</td>
 				<td class="col-extra whitespace-nowrap">{relativeDay(row.createdAt)}</td>
 				<td class="w-px">
-					<div class="flex justify-end">
+					<div class="flex w-max justify-end">
 						<Action
 							action={approveVolunteerSignup.for(row.userId)}
 							label="Approve"

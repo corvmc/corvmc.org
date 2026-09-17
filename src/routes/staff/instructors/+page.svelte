@@ -48,8 +48,8 @@
 						{/snippet}
 						{#each awaitingReview as row (row.id)}
 							<tr>
-								<td class="cell-primary"><EntityIdentity ref={row.member} /></td>
-								<td>
+								<td><EntityIdentity ref={row.member} /></td>
+								<td class="cell-primary">
 									{row.headline ?? '—'}
 									{#if row.applicationNote}
 										<!--
@@ -87,8 +87,8 @@
 						{/snippet}
 						{#each active as row (row.id)}
 							<tr>
-								<td class="cell-primary"><EntityIdentity ref={row.member} /></td>
-								<td>{row.headline ?? '—'}</td>
+								<td><EntityIdentity ref={row.member} /></td>
+								<td class="cell-primary">{row.headline ?? '—'}</td>
 								<td class="w-px">
 									<!--
 										The instructor's own switch, not a staff one: "my book is
@@ -121,13 +121,13 @@
 						{#each resolved as row (row.id)}
 							<tr>
 								<td class="w-px"><StatusBadge status={row.status} /></td>
-								<td class="cell-primary"><EntityIdentity ref={row.member} /></td>
+								<td><EntityIdentity ref={row.member} /></td>
 								<!--
 									`reviewNotes` is what the member was told; `statusNote` is what
 									staff told each other. Both end up here, and which one is set
 									says which happened.
 								-->
-								<td class="text-subtle">{row.reviewNotes ?? row.statusNote ?? '—'}</td>
+								<td class="cell-primary text-subtle">{row.reviewNotes ?? row.statusNote ?? '—'}</td>
 								<td class="col-support whitespace-nowrap">
 									{formatDateShortYear(row.createdAt)}
 								</td>

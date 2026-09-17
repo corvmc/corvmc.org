@@ -323,7 +323,7 @@
 
 						<td class="w-px">
 							{#if log.status === 'pending'}
-								<div class="flex justify-end gap-1">
+								<div class="flex w-max justify-end gap-1">
 									<Action
 										action={approveVolunteerHours.for(log.id)}
 										label="Approve"

@@ -19,7 +19,7 @@
 	const retireFields = retireInstructor.fields;
 </script>
 
-<div class="flex gap-2">
+<div class="flex w-max gap-2">
 	<Action
 		action={pauseInstructor}
 		label="Pause"

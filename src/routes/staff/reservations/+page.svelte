@@ -339,7 +339,7 @@
 						</td>
 
 						<td class="w-px">
-							<div class="flex items-center justify-end gap-1">
+							<div class="flex w-max items-center justify-end gap-1">
 								{#if actions.has('confirm')}
 									<ConfirmReservationAction
 										reservation={r}

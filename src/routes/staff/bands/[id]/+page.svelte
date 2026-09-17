@@ -93,7 +93,7 @@
 						<td class="col-extra whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
 						<td class="w-px">
 							{#if m.role !== 'owner'}
-								<div class="flex justify-end gap-1">
+								<div class="flex w-max justify-end gap-1">
 									{#if m.status === 'pending'}
 										<RevokeInviteAction memberId={m.id} name={m.member.title} />
 									{/if}
