@@ -1,15 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-<<<<<<<< HEAD:migrations/20260916232317_rapid_xavin/snapshot.json
-  "id": "e49300c3-61bf-43f5-a88b-1e208a87108e",
+  "id": "ff9e619f-0f8f-4a40-b848-f5e63eb07714",
   "prevIds": [
-    "cc204cb2-8513-4999-a997-34c7307b6516"
-========
-  "id": "55387623-8b0a-4c41-8a04-8a8e7984d597",
-  "prevIds": [
-    "ecdb042f-9315-4982-911b-8f8addfd49a5"
->>>>>>>> 9fd75e4 (Drain reminders from a registry instead of four cron endpoints):migrations/20260916222301_gray_killer_shrike/snapshot.json
+    "e49300c3-61bf-43f5-a88b-1e208a87108e"
   ],
   "ddl": [
     {

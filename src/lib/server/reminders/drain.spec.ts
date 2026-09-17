@@ -14,11 +14,11 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit, on: vi
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
 let marks: { subjectId: string }[] = [];
-const insertValues = vi.fn(async () => undefined);
+const insertValues = vi.fn(async (_values: unknown) => undefined);
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: () => ({ from: () => ({ where: async () => marks }) }),
-		insert: () => ({ values: (v: unknown) => insertValues(v as never) })
+		insert: () => ({ values: (v: unknown) => insertValues(v) })
 	}
 }));
 
