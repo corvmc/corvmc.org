@@ -1,12 +1,14 @@
 <script lang="ts">
 	import type { ResolvedPathname } from '$app/types';
 	import Button from '../ui/Button.svelte';
-	import { IconMenu2, IconMusic, IconChevronDown } from '@tabler/icons-svelte';
+	import { IconMenu2, IconMusic, IconChevronDown, IconMessages } from '@tabler/icons-svelte';
+	import { page } from '$app/state';
 	import NotificationBell from './NotificationBell.svelte';
 	import AccountDropdown from './AccountDropdown.svelte';
 	import logo from '$lib/assets/cmc-compact-logo.svg';
 	import ButtonGroup from '../ui/ButtonGroup.svelte';
 	import type { AppChrome } from './chrome';
+	import { MESSAGES_HREF } from './account-menu';
 
 	export interface PanelTab {
 		key: string;
@@ -32,6 +34,10 @@
 	const activeBand = $derived(bandPanels.find((b) => b.key === activePanel));
 
 	let bandsOpen = $state(false);
+
+	// Nothing in any sidebar lights on /member/messages any more, so the icon
+	// carries its own active state (#1244).
+	const messagesActive = $derived(page.url.pathname.startsWith(MESSAGES_HREF));
 
 	function handleClickOutside(e: MouseEvent) {
 		const target = e.target as HTMLElement;
@@ -117,12 +123,35 @@
 		<img src={logo} alt="CorvMC" class="h-full" />
 	</span>
 
-	<!-- Right: notifications + account -->
+	<!-- Right: notifications + messages + account.
+	     Messages is its own control rather than a tab inside the bell: the two
+	     have different lifecycles, a conversation needs the full two-pane page
+	     anyway, and one merged count would answer neither question. It lives up
+	     here so a band or staff panel can reach the member's own inbox without
+	     switching panels first (#1244). -->
 	<div class="flex flex-none items-center gap-1">
 		<NotificationBell
 			notifications={chrome.notifications.items}
 			unreadCount={chrome.notifications.unreadCount}
 		/>
+
+		<Button
+			href={MESSAGES_HREF}
+			variant={messagesActive ? 'primary' : 'ghost'}
+			size="sm"
+			shape="circle"
+			class="relative {messagesActive ? 'latched' : ''}"
+			aria-label={chrome.messagesUnread ? `Messages, ${chrome.messagesUnread} unread` : 'Messages'}
+			aria-current={messagesActive ? 'page' : undefined}
+		>
+			<IconMessages size={20} />
+			{#if chrome.messagesUnread > 0}
+				<span class="absolute -top-0.5 -right-0.5 badge badge-xs badge-primary" aria-hidden="true">
+					{chrome.messagesUnread > 9 ? '9+' : chrome.messagesUnread}
+				</span>
+			{/if}
+		</Button>
+
 		<AccountDropdown me={chrome.me} />
 	</div>
 </nav>

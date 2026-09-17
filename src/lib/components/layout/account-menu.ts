@@ -1,3 +1,4 @@
+import type { ResolvedPathname } from '$app/types';
 import { resolve } from '$app/paths';
 import { activeNavKey, type NavNode } from './Nav/active-nav';
 
@@ -20,6 +21,12 @@ export type AccountMenuKey = 'profile' | 'account' | 'purchases' | 'membership';
 
 export interface AccountMenuItem extends NavNode<AccountMenuKey> {
 	label: string;
+	/**
+	 * Narrower than `NavNode`'s, which allows `''` for a row with no in-app
+	 * destination. Every item here has one, and `svelte/no-navigation-without-resolve`
+	 * rejects the union at the `<a href>` that renders it.
+	 */
+	href: ResolvedPathname;
 }
 
 export const ACCOUNT_MENU: AccountMenuItem[] = [

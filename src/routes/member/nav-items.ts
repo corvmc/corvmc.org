@@ -23,7 +23,11 @@
 
 import { resolve } from '$app/paths';
 import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
-import { ACCOUNT_MENU, MESSAGES_HREF } from '$lib/components/layout/account-menu';
+import {
+	ACCOUNT_MENU,
+	MESSAGES_HREF,
+	type AccountMenuKey
+} from '$lib/components/layout/account-menu';
 
 export type MemberNavKey =
 	| 'dashboard'
@@ -43,12 +47,15 @@ export type MemberNavKey =
 	| 'purchases'
 	| 'membership';
 
-/** Field names on `getMemberLayout()`'s return. */
-export type MemberNavBadgeKey = 'messagesUnread';
+/**
+ * The keys the sidebar actually draws. The rest of `MemberNavKey` is chrome —
+ * still a member destination, still resolved by `activeMemberNavKey`, but drawn
+ * by `AppTopbar` and `AccountDropdown`, which own their own glyphs.
+ */
+export type SidebarNavKey = Exclude<MemberNavKey, 'messages' | AccountMenuKey>;
 
 export interface MemberNavItem extends NavNode<MemberNavKey> {
 	label: string;
-	badgeKey?: MemberNavBadgeKey;
 	children?: MemberNavItem[];
 }
 
@@ -142,7 +149,7 @@ export function memberNavFooter(_input: MemberNavInput): MemberNavItem[] {
  */
 export function memberNavChrome(): MemberNavItem[] {
 	return [
-		{ key: 'messages', label: 'Messages', href: MESSAGES_HREF, badgeKey: 'messagesUnread' },
+		{ key: 'messages', label: 'Messages', href: MESSAGES_HREF },
 		...ACCOUNT_MENU.map((item) => ({ key: item.key, label: item.label, href: item.href }))
 	];
 }

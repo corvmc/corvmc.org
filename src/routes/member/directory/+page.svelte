@@ -7,6 +7,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import { IconPencil } from '@tabler/icons-svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
 	import IdCard from '$lib/components/directory/IdCard.svelte';
@@ -117,10 +118,20 @@
 			{ key: 'bands', label: 'Acts', badge: bands.length, href: directoryHref('bands') },
 			// A sibling route rather than a `?tab=`: different reader, different
 			// columns, and a different truth from the self-declared flag.
-			{ key: 'instructors', label: 'Teachers', href: '/member/directory/instructors' }
+			{
+				key: 'instructors',
+				label: 'Teachers',
+				href: '/member/directory/instructors'
+			}
 		]}
 		active={tab}
 	/>
+	<!-- The other half of the link on the profile editor: the entry you are
+	     looking at is the shape yours takes, and Profile left the sidebar for
+	     the account menu (#1244). -->
+	<Button href={resolve('/member/profile')} variant="ghost" size="sm">
+		<IconPencil size={16} /> Edit your profile
+	</Button>
 </PageHeader>
 <PageContent>
 	<!-- Search & Filters -->

@@ -62,9 +62,11 @@ function activeOnly<T extends { status: string }>(bands: T[]): T[] {
  * swallow their failure: uncaught, a bell that cannot load would take the whole layout down.
  */
 async function appChrome(user: SignedInUser) {
-	const [items, unreadCount] = await Promise.all([
+	const [items, unreadCount, portalUnread, directUnread] = await Promise.all([
 		getForUser(user.id, { limit: 10 }).catch(() => []),
-		getUnreadCount(user.id).catch(() => 0)
+		getUnreadCount(user.id).catch(() => 0),
+		countPortalUnread(user.id).catch(() => 0),
+		countDirectUnread(user.id).catch(() => 0)
 	]);
 
 	return {
@@ -74,7 +76,17 @@ async function appChrome(user: SignedInUser) {
 			email: user.email,
 			image: resolveImageUrl(user.image)
 		},
-		notifications: { items, unreadCount }
+		notifications: { items, unreadCount },
+		/**
+		 * The member's own inbox, here rather than on `getMemberLayout` because
+		 * the topbar's messages icon renders on the staff and band panels too —
+		 * which is the point of moving it into the chrome (#1244).
+		 *
+		 * Requests are deliberately absent. They show up in the Messages list
+		 * marked as requests, so a member finds them when they go looking, but an
+		 * unconsented message must not follow anyone around the site.
+		 */
+		messagesUnread: portalUnread + directUnread
 	};
 }
 
@@ -88,8 +100,6 @@ export const getMemberLayout = query(async () => {
 		userGroups,
 		positions,
 		features,
-		portalUnread,
-		directUnread,
 		pendingRequests,
 		acceptsDirect,
 		hasLoanableEquipment,
@@ -102,8 +112,6 @@ export const getMemberLayout = query(async () => {
 		listForUser(user.id, ['club', 'committee']).catch(() => []),
 		positionsFor(user.id),
 		getAllFeatureFlags(),
-		countPortalUnread(user.id).catch(() => 0),
-		countDirectUnread(user.id).catch(() => 0),
 		countPendingRequests(user.id).catch(() => 0),
 		// The member's own switch, not the feature flag beside it. An inbox that
 		// is empty because they turned it off has to say so, or it reads as one
@@ -116,12 +124,6 @@ export const getMemberLayout = query(async () => {
 		hasLoanableItems().catch(() => false),
 		appChrome(user)
 	]);
-
-	// Requests are deliberately absent from the badge. They show up in the
-	// Messages list marked as requests, so a member finds them when they go
-	// looking — but an unconsented message should not follow anyone around the
-	// site. `pendingRequests` is surfaced separately for the label on the list.
-	const messagesUnread = portalUnread + directUnread;
 
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
@@ -151,7 +153,6 @@ export const getMemberLayout = query(async () => {
 		isStaff: positions.length > 0,
 		features,
 		hasLoanableEquipment,
-		messagesUnread,
 		pendingRequests,
 		acceptsDirectMessages: acceptsDirect
 	};

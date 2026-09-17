@@ -1,9 +1,10 @@
 <script lang="ts">
 	import Button from '../ui/Button.svelte';
-	import { IconUser, IconSettings, IconStar, IconLogout } from '@tabler/icons-svelte';
+	import { IconUser, IconSettings, IconStar, IconReceipt, IconLogout } from '@tabler/icons-svelte';
 	import Avatar from '../ui/Avatar.svelte';
-	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import type { AppChrome } from './chrome';
+	import { ACCOUNT_MENU, activeAccountMenuKey, type AccountMenuKey } from './account-menu';
 
 	// A prop, not a query of its own. `AppTopbar` mounts this on every
 	// authenticated page, so a `getMe()` here was a third remote query racing the
@@ -12,6 +13,18 @@
 	let { me }: { me: AppChrome['me'] } = $props();
 
 	let open = $state(false);
+
+	const icons: Record<AccountMenuKey, typeof IconUser> = {
+		profile: IconUser,
+		account: IconSettings,
+		purchases: IconReceipt,
+		membership: IconStar
+	};
+
+	// Four destinations rather than three, so which one you are on has to be on
+	// screen. The menu had no active state at all while it duplicated the
+	// sidebar, which carried it (#1244).
+	const activeKey = $derived(activeAccountMenuKey(page.url.pathname));
 
 	function handleClickOutside(e: MouseEvent) {
 		const target = e.target as HTMLElement;
@@ -52,25 +65,24 @@
 				<p class="truncate text-subtle">{me?.email}</p>
 			</div>
 
-			<ul class="menu menu-sm p-2">
-				<li>
-					<a href={resolve('/member/profile')} onclick={() => (open = false)}>
-						<IconUser size={16} />
-						Profile
-					</a>
-				</li>
-				<li>
-					<a href={resolve('/member/account')} onclick={() => (open = false)}>
-						<IconSettings size={16} />
-						Account
-					</a>
-				</li>
-				<li>
-					<a href={resolve('/member/membership')} onclick={() => (open = false)}>
-						<IconStar size={16} />
-						Membership
-					</a>
-				</li>
+			<!-- `w-full` because daisyUI's `.menu` is `width: fit-content`, so the
+			     rows would stop at the longest label instead of reaching the
+			     popover's edge. -->
+			<ul class="menu w-full menu-sm p-2">
+				{#each ACCOUNT_MENU as item (item.key)}
+					{@const Icon = icons[item.key]}
+					<li>
+						<a
+							href={item.href}
+							class:menu-active={activeKey === item.key}
+							aria-current={activeKey === item.key ? 'page' : undefined}
+							onclick={() => (open = false)}
+						>
+							<Icon size={16} />
+							{item.label}
+						</a>
+					</li>
+				{/each}
 			</ul>
 
 			<div class="border-t border-base-300 p-2">
