@@ -1,17 +1,10 @@
 <script lang="ts">
 	/**
-	 * The desktop right pane with nothing open. On a phone this route renders only
-	 * the list — `InboxShell` hides this pane below `lg` — so it is never the whole
-	 * screen, and does not need to be.
-	 *
-	 * A master/detail layout has three states, not two: an empty list, a list with
-	 * nothing selected, and a record. "Pick a conversation on the left" beside a
-	 * pane that says "No messages yet" was the first state rendering as the second
-	 * (#1233), so this pane stands down and lets the list's own empty state be the
-	 * page's single answer.
-	 *
-	 * The same query the list runs, at the same page: queries are cached per
-	 * argument, so this is the list's own entry rather than a second request.
+	 * The desktop right pane with nothing open, hidden below `lg`. Silent when
+	 * the list is empty: a master/detail layout has three states, and "Pick a
+	 * conversation on the left" beside "No messages yet" was the first rendering
+	 * as the second (#1233). The list's own query at the same page — queries are
+	 * cached per argument, so this is its entry, not a second read.
 	 */
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { getMyMessages } from '$lib/remote/direct-messages.remote';

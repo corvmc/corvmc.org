@@ -1,15 +1,10 @@
 <script lang="ts">
 	/**
-	 * The right pane with nothing open. Hidden below `lg`, where the queue itself
-	 * is the whole screen.
-	 *
-	 * Silent when the queue is empty: "pick a conversation from the queue" beside
-	 * a queue that says there is nothing in it is the empty-list state rendering
-	 * as the nothing-selected state (#1233). The seed has seven threads, which is
-	 * the only reason this read correctly.
-	 *
-	 * The same query the list runs, with the same filters: queries are cached per
-	 * argument, so this is the list's own entry rather than a second request.
+	 * The right pane with nothing open, hidden below `lg`. Silent when the queue
+	 * is empty: "pick a conversation from the queue" beside a queue saying there
+	 * is nothing in it is the empty-list state rendering as the nothing-selected
+	 * one (#1233). The list's own query, same filters — queries are cached per
+	 * argument, so this is its entry, not a second read.
 	 */
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { getInboxThreads } from '$lib/remote/inbox.remote';
