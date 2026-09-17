@@ -58,7 +58,7 @@
 
 <PageHeader title="Acquisitions" subtitle="Inventory" backHref="/staff/inventory" />
 
-<PageContent width="3xl">
+<PageContent>
 	<div class="mb-4 flex flex-wrap items-end gap-3">
 		<Field
 			name="kind"

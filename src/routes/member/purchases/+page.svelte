@@ -29,7 +29,7 @@
 
 <PageHeader title="Purchases" subtitle="What you've bought" />
 
-<PageContent width="3xl">
+<PageContent>
 	{#if purchases.length === 0}
 		<EmptyState
 			title="Nothing yet"

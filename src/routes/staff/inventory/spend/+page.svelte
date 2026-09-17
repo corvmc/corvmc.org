@@ -51,7 +51,7 @@
 
 <PageHeader title="Spend" subtitle="Inventory" backHref="/staff/inventory" />
 
-<PageContent width="3xl">
+<PageContent>
 	<div class="mb-4 flex flex-wrap items-end gap-3">
 		<Field name="from" type="date" label="From" bind:value={from} />
 		<Field name="to" type="date" label="To" bind:value={to} />

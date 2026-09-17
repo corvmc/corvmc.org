@@ -62,7 +62,7 @@
 	<Button href="/staff/inventory/orders" variant="ghost" size="sm">Orders</Button>
 </PageHeader>
 
-<PageContent width="3xl">
+<PageContent>
 	{#if data.rows.length === 0}
 		<EmptyState
 			title="Nothing to restock"
