@@ -10,6 +10,7 @@ import refreshTheComposedQuery from './eslint-rules/refresh-the-composed-query.j
 import noDomainImportsInUi from './eslint-rules/no-domain-imports-in-ui.js';
 import noContactSchemaImports from './eslint-rules/no-contact-schema-imports.js';
 import noDirectFinancialEntryWrites from './eslint-rules/no-direct-financial-entry-writes.js';
+import noUnwrappedRemoteMutation from './eslint-rules/no-unwrapped-remote-mutation.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -38,7 +39,8 @@ const customPlugin = {
 		'refresh-the-composed-query': refreshTheComposedQuery,
 		'no-domain-imports-in-ui': noDomainImportsInUi,
 		'no-contact-schema-imports': noContactSchemaImports,
-		'no-direct-financial-entry-writes': noDirectFinancialEntryWrites
+		'no-direct-financial-entry-writes': noDirectFinancialEntryWrites,
+		'no-unwrapped-remote-mutation': noUnwrappedRemoteMutation
 	}
 };
 
@@ -154,6 +156,13 @@ export default defineConfig(
 	{
 		files: ['src/lib/remote/**/*.remote.ts'],
 		rules: { 'custom/refresh-the-composed-query': 'error' }
+	},
+	{
+		// `_remote.ts` is the wrapper, so it is the one file that may import the
+		// originals. Its spec mocks the module rather than importing from it.
+		files: ['src/lib/remote/**/*.ts'],
+		ignores: ['src/lib/remote/_remote.ts'],
+		rules: { 'custom/no-unwrapped-remote-mutation': 'error' }
 	},
 	{
 		files: ['src/lib/server/**/*.ts'],
