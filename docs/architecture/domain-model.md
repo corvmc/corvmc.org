@@ -54,11 +54,15 @@ staff moderate. Both read the same table, at different layers.
 
 Three layers, not two:
 
-| Layer           | What it is                                                                        | Cardinality               |
-| --------------- | --------------------------------------------------------------------------------- | ------------------------- |
-| `project`       | A body of work with a budget and an owner                                         | 0, 1 or many listings     |
-| `event_listing` | The public advertisement: one entry on the calendar                               | The common case           |
-| `production`    | A show's back-of-house — the room hold, doors, ticketing, run of show, settlement | Only `source='cmc'` shows |
+| Layer           | What it is                                                      | Cardinality               |
+| --------------- | --------------------------------------------------------------- | ------------------------- |
+| `project`       | A body of work with a budget and an owner                       | 0, 1 or many listings     |
+| `event_listing` | The public advertisement: one entry on the calendar             | The common case           |
+| `production`    | A show's back-of-house — the room hold, run of show, settlement | Only `source='cmc'` shows |
+
+Doors and ticketing stay on the listing: a community submission has doors and can never
+have a production, and a band gig will sell tickets without one (#1203). Doors is the one
+time the public needs; load-in, soundcheck, first set, curfew and load-out are internal.
 
 The listing names the production it announces (`event_listing.production_id`), not the
 other way round: the advertisement is downstream of the show. A production with no
