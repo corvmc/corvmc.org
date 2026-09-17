@@ -12,7 +12,6 @@
 	 * modals was the old cost of it.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -63,15 +62,9 @@
 	});
 </script>
 
-<InfoCard title="Needs confirming" class="border-l-4 border-warning">
-	{#snippet header(title)}
-		<div class="flex items-center justify-between gap-2">
-			<CardTitle>
-				{title}
-				<span class="text-muted font-normal">· {claims.length}</span>
-			</CardTitle>
-			<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
-		</div>
+<InfoCard title="Needs confirming" state={claims.length} class="border-l-4 border-warning">
+	{#snippet action()}
+		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
 	{/snippet}
 
 	<p class="text-muted">Unconfirmed claims get no reminder and never auto-complete.</p>

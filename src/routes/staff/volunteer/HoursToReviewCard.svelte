@@ -7,7 +7,6 @@
 	 * table it was meant to summarise.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -33,17 +32,11 @@
 	let { logs, total }: { logs: Log[]; total: number } = $props();
 </script>
 
-<InfoCard title="Hours to review">
-	{#snippet header(title)}
-		<div class="flex items-center justify-between gap-2">
-			<CardTitle>
-				{title}
-				<span class="text-muted font-normal">· {total}</span>
-			</CardTitle>
-			<Button href="/staff/volunteer/hours" variant="ghost" size="sm">
-				{total > logs.length ? `All ${total} →` : 'Open the queue →'}
-			</Button>
-		</div>
+<InfoCard title="Hours to review" state={total}>
+	{#snippet action()}
+		<Button href="/staff/volunteer/hours" variant="ghost" size="sm">
+			{total > logs.length ? `All ${total} →` : 'Open the queue →'}
+		</Button>
 	{/snippet}
 
 	<Table>

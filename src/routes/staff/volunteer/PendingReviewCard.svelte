@@ -1,6 +1,5 @@
 <script lang="ts">
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -30,11 +29,8 @@
 </script>
 
 <InfoCard title="Awaiting guardian sign-off">
-	{#snippet header(title)}
-		<div class="flex items-center justify-between gap-2">
-			<CardTitle>{title}</CardTitle>
-			<Button href="/staff/volunteer/people?tab=signoff" variant="ghost" size="sm">People →</Button>
-		</div>
+	{#snippet action()}
+		<Button href="/staff/volunteer/people?tab=signoff" variant="ghost" size="sm">People →</Button>
 	{/snippet}
 
 	<p class="text-muted">

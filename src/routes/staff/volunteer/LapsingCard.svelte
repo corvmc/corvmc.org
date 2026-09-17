@@ -12,7 +12,6 @@
 	 * Waiting on a member rather than on staff, which is why it sits below everything else.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -39,13 +38,10 @@
 </script>
 
 <InfoCard title="Lapses before a shift they're on">
-	{#snippet header(title)}
-		<div class="flex items-center justify-between gap-2">
-			<CardTitle>{title}</CardTitle>
-			<Button href="/staff/volunteer/people?tab=cleared" variant="ghost" size="sm">
-				Who's cleared →
-			</Button>
-		</div>
+	{#snippet action()}
+		<Button href="/staff/volunteer/people?tab=cleared" variant="ghost" size="sm">
+			Who's cleared →
+		</Button>
 	{/snippet}
 
 	<Table>

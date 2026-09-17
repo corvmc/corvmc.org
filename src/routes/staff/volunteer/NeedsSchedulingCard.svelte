@@ -17,7 +17,6 @@
 	 * row that never had one.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { IconCheck } from '@tabler/icons-svelte';
@@ -58,14 +57,7 @@
 	}
 </script>
 
-<InfoCard title="Needs scheduling">
-	{#snippet header(title)}
-		<CardTitle>
-			{title}
-			<span class="text-muted font-normal">· {orders.length}</span>
-		</CardTitle>
-	{/snippet}
-
+<InfoCard title="Needs scheduling" state={orders.length}>
 	<p class="text-muted">
 		Work with nobody booked to do it. Give it a window and it becomes a shift members can claim.
 	</p>

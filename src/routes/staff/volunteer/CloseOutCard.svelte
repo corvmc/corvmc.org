@@ -12,7 +12,6 @@
 	 * no-show. Doing nothing is the third answer and the one the app used to make for you.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
@@ -48,14 +47,7 @@
 	}
 </script>
 
-<InfoCard title="Close these out">
-	{#snippet header(title)}
-		<CardTitle>
-			{title}
-			<span class="text-muted font-normal">· {claims.length} from the last week</span>
-		</CardTitle>
-	{/snippet}
-
+<InfoCard title="Close these out" state="{claims.length} from the last week">
 	<p class="text-muted">
 		Nobody confirmed these before the shift, so they never completed — no hours were offered and no
 		feedback was asked for.

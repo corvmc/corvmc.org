@@ -8,7 +8,6 @@
 	 * clearances actually cover *this shift's date*, and a way to put them on it.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -41,15 +40,9 @@
 	}
 </script>
 
-<InfoCard title="Short-staffed">
-	{#snippet header(title)}
-		<div class="flex items-center justify-between gap-2">
-			<CardTitle>
-				{title}
-				<span class="text-muted font-normal">· next two weeks</span>
-			</CardTitle>
-			<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
-		</div>
+<InfoCard title="Short-staffed" state="next two weeks">
+	{#snippet action()}
+		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
 	{/snippet}
 
 	<Table>
