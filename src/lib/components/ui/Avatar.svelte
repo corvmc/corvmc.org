@@ -7,8 +7,22 @@
 		src,
 		name,
 		size = 'avatar-md',
+		shape = 'circle',
 		...rest
-	}: { src?: string; name: string; size?: ImagePreset; [key: string]: unknown } = $props();
+	}: {
+		src?: string;
+		name: string;
+		size?: ImagePreset;
+		/**
+		 * `square` for an avatar standing in for an icon — a band or club in a
+		 * nav row, where a circle among square glyphs reads as a different kind
+		 * of thing and lines up with none of them.
+		 */
+		shape?: 'circle' | 'square';
+		[key: string]: unknown;
+	} = $props();
+
+	const radius = $derived(shape === 'square' ? 'rounded-sm' : 'rounded-full');
 
 	const img = $derived(imageSrc(src, size));
 
@@ -24,7 +38,7 @@
 	const patternClass = $derived(`poster-gen--${hashPattern(name)}`);
 </script>
 
-<Avatar.Root {...rest} class="avatar relative overflow-hidden rounded-full {rest.class}">
+<Avatar.Root {...rest} class="avatar relative overflow-hidden {radius} {rest.class}">
 	<Avatar.Fallback class="avatar-pattern poster-gen {patternClass}">
 		<span class="avatar-initials">{initials}</span>
 	</Avatar.Fallback>

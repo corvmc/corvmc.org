@@ -14,6 +14,8 @@
 	const count = $derived(await getPendingSubmissionCount());
 </script>
 
+<!-- The noun travels with the number. A bare badge in the corner of a page
+     titled "Calendar" reads as an unexplained 1, and announces as "1" (#1234). -->
 {#if count}
-	<Badge class="ml-1">{count}</Badge>
+	<Badge class="ml-1">{count} to review</Badge>
 {/if}

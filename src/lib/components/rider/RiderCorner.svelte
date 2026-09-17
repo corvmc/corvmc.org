@@ -57,8 +57,13 @@
 
 	let elements = $state<RiderElementRowState[]>(initial);
 
+	// Labelled inputs only, matching what the editor posts. It is now the card's
+	// only count, so it has to be the number the save will produce (#1230).
 	const inputCount = $derived(
-		elements.reduce((n, el) => n + (el.kind === 'monitor' ? 0 : el.inputs.length), 0)
+		elements.reduce(
+			(n, el) => n + (el.kind === 'monitor' ? 0 : el.inputs.filter((i) => i.label?.trim()).length),
+			0
+		)
 	);
 </script>
 
@@ -88,11 +93,9 @@
 					{roster}
 					field={saveMyRiderElements.fields.elements}
 					idPrefix={ownerUserId ?? 'shared'}
-				/>
-
-				<div class="flex justify-end">
-					<SubmitButton label="Save" />
-				</div>
+				>
+					{#snippet action()}<SubmitButton label="Save" />{/snippet}
+				</RiderElementsEditor>
 			</Form>
 		{:else if canEdit}
 			<Form
@@ -110,11 +113,9 @@
 					{roster}
 					field={adminRemote.fields.elements}
 					idPrefix={ownerUserId ?? 'shared'}
-				/>
-
-				<div class="flex justify-end">
-					<SubmitButton label="Save" />
-				</div>
+				>
+					{#snippet action()}<SubmitButton label="Save" />{/snippet}
+				</RiderElementsEditor>
 			</Form>
 		{:else}
 			<RiderElementsEditor bind:elements {roster} idPrefix={ownerUserId ?? 'shared'} readonly />

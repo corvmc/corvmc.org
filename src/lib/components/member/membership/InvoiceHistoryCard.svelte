@@ -74,7 +74,7 @@
 								<td class="tabular-nums">{formatCents(invoice.amountPaidCents)}</td>
 								<td><Badge variant={status.variant}>{status.label}</Badge></td>
 								<td class="text-right">
-									<div class="flex justify-end gap-1">
+									<div class="flex w-max justify-end gap-1">
 										{#if invoice.hostedUrl}
 											<Button href={invoice.hostedUrl} variant="ghost" size="sm">Receipt</Button>
 										{/if}

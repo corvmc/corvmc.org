@@ -74,6 +74,7 @@
 	const directory = $derived(await getMemberDirectory(filters));
 	const members = $derived(directory.members);
 	const bands = $derived(directory.bands);
+	const instructorCount = $derived(directory.instructorCount);
 	const instrumentSuggestions = $derived(directory.instrumentSuggestions);
 	const genreSuggestions = $derived(directory.genreSuggestions);
 
@@ -121,6 +122,7 @@
 			{
 				key: 'instructors',
 				label: 'Teachers',
+				badge: instructorCount,
 				href: '/member/directory/instructors'
 			}
 		]}

@@ -35,6 +35,7 @@ import { PAST_SHOWS_PAGE_SIZE } from '$lib/types/calendar';
 import { update as updateBandBasics } from '$lib/server/band/band-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { resolveImageUrl } from '$lib/server/storage';
+import { listInstructors } from '$lib/server/instructor/instructor-directory-service';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { listPublishedReleasesForBand } from '$lib/server/audio/audio-service';
 import { bandSite } from '$lib/server/db/schema/band-site';
@@ -131,28 +132,40 @@ export const getMemberDirectory = query(filtersSchema, async (filters) => {
 	// `.transform()` steps, so a query's parsed output is not its own input type and handing one
 	// straight to the other does not compile. The two stay exported for nothing in particular —
 	// this page is their only caller — but re-deriving the list logic here would be worse.
-	const [members, rawBands, instrumentSuggestions, genreSuggestions] = await Promise.all([
-		listMembers({
-			search: filters.search,
-			instruments: filters.instruments,
-			genres: filters.genres,
-			lookingForBand: filters.lookingForBand,
-			availableForHire: filters.availableForHire,
-			teachesLessons: filters.teachesLessons,
-			openToCollaboration: filters.openToCollaboration
-		}),
-		listBands({
-			search: filters.search,
-			genres: filters.genres,
-			lookingForMembers: filters.lookingForMembers
-		}),
-		getInstrumentSuggestions(),
-		getGenreSuggestions()
-	]);
+	const [members, rawBands, instructors, instrumentSuggestions, genreSuggestions] =
+		await Promise.all([
+			listMembers({
+				search: filters.search,
+				instruments: filters.instruments,
+				genres: filters.genres,
+				lookingForBand: filters.lookingForBand,
+				availableForHire: filters.availableForHire,
+				teachesLessons: filters.teachesLessons,
+				openToCollaboration: filters.openToCollaboration
+			}),
+			listBands({
+				search: filters.search,
+				genres: filters.genres,
+				lookingForMembers: filters.lookingForMembers
+			}),
+			// Only for the tab count. Teachers are a sibling route, so the tab bar
+			// had a number on two of its three tabs and nothing on the third, which
+			// reads as zero rather than as "not loaded" (#1238). The search applies
+			// so the count matches what the tab leads to.
+			listInstructors('members', filters.search ? { search: filters.search } : undefined),
+			getInstrumentSuggestions(),
+			getGenreSuggestions()
+		]);
 
 	const bands = rawBands.map((b) => ({ ...b, avatarUrl: resolveImageUrl(b.avatarKey) }));
 
-	return { members, bands, instrumentSuggestions, genreSuggestions };
+	return {
+		members,
+		bands,
+		instructorCount: instructors.length,
+		instrumentSuggestions,
+		genreSuggestions
+	};
 });
 
 export const getDirectoryMembers = query(filtersSchema, async (filters) => {
