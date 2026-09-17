@@ -129,7 +129,7 @@ describe('createSentryCheckIn', () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
 		const id = await createSentryCheckIn()({
-			slug: 'confirmation-reminders',
+			slug: 'reminders',
 			status: 'ok',
 			checkInId: 'ci-9'
 		});
