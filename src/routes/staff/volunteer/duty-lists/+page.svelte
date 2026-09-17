@@ -59,7 +59,7 @@
 	</Action>
 </PageHeader>
 
-<PageContent width="3xl">
+<PageContent>
 	{#await lists then rows}
 		{#if rows.length === 0}
 			<EmptyState

@@ -24,7 +24,7 @@
 
 <PageHeader title="Compliance" subtitle="Inventory" backHref="/staff/inventory" />
 
-<PageContent width="3xl">
+<PageContent>
 	{#if data.rows.length === 0}
 		<EmptyState
 			title="Nothing outstanding"

@@ -2,6 +2,7 @@
 import storybook from 'eslint-plugin-storybook';
 import noRawFormElements from './eslint-rules/no-raw-form-elements.js';
 import noUtilitySoup from './eslint-rules/no-utility-soup.js';
+import noClampedTieredTable from './eslint-rules/no-clamped-tiered-table.js';
 import noDeadDaisyuiClasses from './eslint-rules/no-dead-daisyui-classes.js';
 import noDuplicateFieldNames from './eslint-rules/no-duplicate-field-names.js';
 import noDbTransaction from './eslint-rules/no-db-transaction.js';
@@ -32,6 +33,7 @@ const customPlugin = {
 	rules: {
 		'no-raw-form-elements': noRawFormElements,
 		'no-utility-soup': noUtilitySoup,
+		'no-clamped-tiered-table': noClampedTieredTable,
 		'no-dead-daisyui-classes': noDeadDaisyuiClasses,
 		'no-duplicate-field-names': noDuplicateFieldNames,
 		'no-db-transaction': noDbTransaction,
@@ -150,6 +152,7 @@ export default defineConfig(
 		rules: {
 			'custom/no-duplicate-field-names': 'error',
 			'custom/no-dead-daisyui-classes': 'error',
+			'custom/no-clamped-tiered-table': 'error',
 			'custom/no-concurrent-remote-queries': 'error'
 		}
 	},
