@@ -22,33 +22,38 @@ import { movementStatement, recordMovement } from './stock-service';
 import { loanDailyRateCents, loanChargeDays, estimateLoanCost } from '$lib/config';
 import { captureException } from '$lib/server/sentry';
 import type { PricingTier, LoanStatus } from '$lib/config';
+import { DomainError } from '$lib/server/domain-error';
 
 // ---------------------------------------------------------------------------
 // Errors
 // ---------------------------------------------------------------------------
 
-export class LoanNotFoundError extends Error {
+export class LoanNotFoundError extends DomainError {
+	readonly httpStatus = 404;
 	constructor() {
 		super('Loan not found');
 		this.name = 'LoanNotFoundError';
 	}
 }
 
-export class InvalidLoanTransitionError extends Error {
+export class InvalidLoanTransitionError extends DomainError {
+	readonly httpStatus = 422;
 	constructor(from: string, to: string) {
 		super(`Cannot transition loan from '${from}' to '${to}'`);
 		this.name = 'InvalidLoanTransitionError';
 	}
 }
 
-export class InsufficientQuantityError extends Error {
+export class InsufficientQuantityError extends DomainError {
+	readonly httpStatus = 422;
 	constructor(available: number, requested: number) {
 		super(`Only ${available} available, requested ${requested}`);
 		this.name = 'InsufficientQuantityError';
 	}
 }
 
-export class AssetRequiredError extends Error {
+export class AssetRequiredError extends DomainError {
+	readonly httpStatus = 422;
 	constructor() {
 		super('A serialized item needs a specific unit assigned before checkout');
 		this.name = 'AssetRequiredError';

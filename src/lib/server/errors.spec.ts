@@ -12,8 +12,20 @@ import {
 	FlagTargetNotFoundError,
 	FlagAlreadyResolvedError
 } from './flag/flag-service';
-import { BandTierManagedByStripeError } from './band/band-service';
+import {
+	BandTierManagedByStripeError,
+	BandNotFoundError,
+	BandMemberExistsError,
+	CannotRemoveOwnerError
+} from './band/band-service';
 import { CustomDomainError } from './band/custom-domain-service';
+import { SlugUnavailableError } from './band/band-address-service';
+import { ReservationNotFoundError } from './reservation/reservation-service';
+import { LocationNotFoundError } from './inventory/item-service';
+import { InsufficientStockError } from './inventory/stock-service';
+import { AcquisitionNotFoundError } from './inventory/acquisition-service';
+import { AssetNotFlaggableError, WorkRequestNotFoundError } from './inventory/work-request-service';
+import { StandingStatusNotAllowedError } from './moderation/standing-service';
 
 /**
  * These classes used to be mapped by hand in each remote file's catch block.
@@ -32,7 +44,31 @@ const CASES: Array<[string, () => Error, number]> = [
 	['FlagTargetNotFoundError', () => new FlagTargetNotFoundError(), 404],
 	['FlagAlreadyResolvedError', () => new FlagAlreadyResolvedError(), 409],
 	['BandTierManagedByStripeError', () => new BandTierManagedByStripeError(), 409],
-	['CustomDomainError', () => new CustomDomainError('domain already claimed'), 400]
+	['CustomDomainError', () => new CustomDomainError('domain already claimed'), 400],
+	['BandNotFoundError', () => new BandNotFoundError(), 404],
+	['BandMemberExistsError', () => new BandMemberExistsError(), 409],
+	['CannotRemoveOwnerError', () => new CannotRemoveOwnerError(), 422],
+	['ReservationNotFoundError', () => new ReservationNotFoundError(), 404]
+];
+
+/**
+ * These had no entry in the `instanceof` ladder this file used to assert, so a
+ * remote that mapped them correctly still answered 500. Two of them were hidden
+ * by a name collision with a class that *was* listed.
+ */
+const PREVIOUSLY_UNMAPPED: Array<[string, () => Error, number]> = [
+	['SlugUnavailableError', () => new SlugUnavailableError('That address is taken.'), 400],
+	['LocationNotFoundError', () => new LocationNotFoundError(), 404],
+	['AcquisitionNotFoundError', () => new AcquisitionNotFoundError(), 404],
+	['InsufficientStockError', () => new InsufficientStockError(2, 5), 422],
+	['AssetNotFlaggableError', () => new AssetNotFlaggableError(), 422],
+	[
+		'StandingStatusNotAllowedError',
+		() => new StandingStatusNotAllowedError('messaging', 'disabled'),
+		422
+	],
+	// Shadowed flag-service's FlagNotFoundError until it was renamed for its table.
+	['WorkRequestNotFoundError', () => new WorkRequestNotFoundError(), 404]
 ];
 
 describe('mapDomainError', () => {
@@ -49,6 +85,28 @@ describe('mapDomainError', () => {
 			expect(thrown?.body?.message).toBeTruthy();
 		});
 	}
+
+	for (const [name, make, status] of PREVIOUSLY_UNMAPPED) {
+		it(`maps ${name} to ${status} — it used to fall through to a 500`, () => {
+			const thrown = (() => {
+				try {
+					mapDomainError(make());
+				} catch (e) {
+					return e as { status?: number; body?: { message?: string } };
+				}
+			})();
+			expect(thrown?.status).toBe(status);
+			expect(thrown?.body?.message).toBeTruthy();
+		});
+	}
+
+	// The storage fault half of the same rule: a missing private-bucket object is
+	// ours, not the caller's, so it must keep paging us as a 500.
+	it('does not classify PosterRestoreError — a storage fault is not a 4xx', async () => {
+		const { PosterRestoreError } = await import('./event/event-service');
+		const err = new PosterRestoreError('withheld poster is missing');
+		expect(() => mapDomainError(err)).toThrow(err);
+	});
 
 	it('keeps the message the service wrote', () => {
 		const thrown = (() => {

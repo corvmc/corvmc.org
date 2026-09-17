@@ -9,33 +9,38 @@ import { and, count, eq, isNull, like, or, sql } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { getAvailableQuantity, getOnHandMany } from './stock-service';
 import type { ItemKind, PricingTier, UnitOfMeasure } from '$lib/config';
+import { DomainError } from '$lib/server/domain-error';
 
 // ---------------------------------------------------------------------------
 // Errors
 // ---------------------------------------------------------------------------
 
-export class ItemNotFoundError extends Error {
+export class ItemNotFoundError extends DomainError {
+	readonly httpStatus = 404;
 	constructor() {
 		super('Item not found');
 		this.name = 'ItemNotFoundError';
 	}
 }
 
-export class CategoryNotFoundError extends Error {
+export class CategoryNotFoundError extends DomainError {
+	readonly httpStatus = 404;
 	constructor() {
 		super('Category not found');
 		this.name = 'CategoryNotFoundError';
 	}
 }
 
-export class CategoryHasItemsError extends Error {
+export class CategoryHasItemsError extends DomainError {
+	readonly httpStatus = 422;
 	constructor() {
 		super('Cannot delete category that has items assigned');
 		this.name = 'CategoryHasItemsError';
 	}
 }
 
-export class LocationNotFoundError extends Error {
+export class LocationNotFoundError extends DomainError {
+	readonly httpStatus = 404;
 	constructor() {
 		super('Location not found');
 		this.name = 'LocationNotFoundError';

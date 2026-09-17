@@ -31,6 +31,15 @@ const creditColumnKey = {
 	equipment_credits: 'creditEquipment'
 } as const satisfies Record<CreditType, keyof typeof user.$inferInsert>;
 
+/**
+ * Deliberately NOT a `DomainError`, so it stays a 500.
+ *
+ * Every service that spends credits clamps to the balance first, so this only
+ * ever means "someone spent between my read and my write" — a race to retry,
+ * not a request the caller can fix, and no 4xx describes that. The one place a
+ * human can cause it is the staff credit adjustment form, which answers with a
+ * field issue on the amount instead. See `adjustCredits` in users.remote.ts.
+ */
 export class InsufficientCreditsError extends Error {
 	constructor(type: CreditType, requested: number, available: number) {
 		super(`Insufficient ${type}: requested ${requested}, available ${available}`);

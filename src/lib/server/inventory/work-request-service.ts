@@ -4,6 +4,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { AssetNotFoundError, setAssetStatus } from './asset-service';
 import type { EquipmentCondition } from '$lib/config';
+import { DomainError } from '$lib/server/domain-error';
 
 /**
  * Flags: what somebody noticed about one unit.
@@ -20,17 +21,19 @@ import type { EquipmentCondition } from '$lib/config';
  * usable".
  */
 
-export class AssetNotFlaggableError extends Error {
+export class AssetNotFlaggableError extends DomainError {
+	readonly httpStatus = 422;
 	constructor() {
 		super('This unit has been retired or written off, so there is nothing to report against.');
 		this.name = 'AssetNotFlaggableError';
 	}
 }
 
-export class FlagNotFoundError extends Error {
+export class WorkRequestNotFoundError extends DomainError {
+	readonly httpStatus = 404;
 	constructor() {
 		super('That report no longer exists');
-		this.name = 'FlagNotFoundError';
+		this.name = 'WorkRequestNotFoundError';
 	}
 }
 
@@ -190,7 +193,7 @@ export async function dismissFlag(id: string, staffUserId: string, notes?: strin
 		})
 		.where(and(eq(workRequest.id, id), eq(workRequest.status, 'pending')))
 		.returning();
-	if (!row) throw new FlagNotFoundError();
+	if (!row) throw new WorkRequestNotFoundError();
 	return row;
 }
 

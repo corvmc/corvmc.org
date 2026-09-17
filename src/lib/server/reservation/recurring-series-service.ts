@@ -27,12 +27,14 @@ import {
 import type { EntityRef, ReservationRef } from '$lib/types/entity';
 import { buildRRule, describeFrequency, monthlyModeOf, type MonthlyMode } from './rrule-helpers';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
+import { DomainError } from '$lib/server/domain-error';
 
 // ---------------------------------------------------------------------------
 // RecurringSeriesService — create, cancel, and query recurring series
 // ---------------------------------------------------------------------------
 
-export class RecurringSeriesError extends Error {
+export class RecurringSeriesError extends DomainError {
+	readonly httpStatus = 422;
 	constructor(message: string) {
 		super(message);
 		this.name = 'RecurringSeriesError';

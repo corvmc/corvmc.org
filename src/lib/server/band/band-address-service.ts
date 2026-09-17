@@ -20,12 +20,14 @@ import { generateSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { forgetCustomDomain } from '$lib/server/band/band-host-service';
 import { BandNotFoundError } from '$lib/server/band/band-service';
+import { DomainError } from '$lib/server/domain-error';
 
 /** A DNS label cannot exceed 63 characters — a longer subdomain would not resolve. */
 export const MAX_BAND_SLUG_LENGTH = 63;
 
 /** Raised for anything that makes a requested address unusable, with a message safe to show the owner. */
-export class SlugUnavailableError extends Error {
+export class SlugUnavailableError extends DomainError {
+	readonly httpStatus = 400;
 	constructor(message: string) {
 		super(message);
 		this.name = 'SlugUnavailableError';
