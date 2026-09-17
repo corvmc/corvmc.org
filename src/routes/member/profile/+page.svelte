@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { env } from '$env/dynamic/public';
 	import { getMemberProfileEditor } from '$lib/remote/directory.remote';
+
+	// Read above the awaited query below: a declaration after a top-level await
+	// is async-gated, and the header renders before it resolves.
+	const memberLayout = getMemberLayoutContext();
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import { resolve } from '$app/paths';
+	import { IconEye } from '@tabler/icons-svelte';
+	import { getMemberLayoutContext } from '../layout-context';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import AddressCard from '$lib/components/ui/AddressCard.svelte';
 	import { canonicalAddress } from '$lib/utils/canonical-address';
@@ -28,7 +36,13 @@
 	);
 </script>
 
-<PageHeader width="3xl" subtitle="Profile" title="My Profile" />
+<PageHeader width="3xl" subtitle="Profile" title="My Profile">
+	<!-- This page is the form; the record it writes is read somewhere else
+	     entirely, and until now nothing connected the two (#1244). -->
+	<Button href={resolve(`/member/directory/members/${memberLayout.current.user.id}`)} size="sm">
+		<IconEye size={16} /> View as others see it
+	</Button>
+</PageHeader>
 <PageContent width="3xl">
 	<!-- The address leads, ahead of the form: it is the thing a member has, and
 	     the form is how they fill the page behind it. Absent only for an account

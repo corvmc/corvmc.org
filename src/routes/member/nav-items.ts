@@ -1,21 +1,33 @@
 /**
  * The member panel's sidebar, as data.
  *
- * Two entries are feature-flagged and one is data-gated, and they used to be
- * nested `{#if}`s in the
+ * One entry is data-gated, and the gating used to be a nested `{#if}` in the
  * layout. That is the exact shape `band/[slug]/nav-items.ts` was extracted to
  * escape — its header records the gating being silently wrong twice, because a
  * condition buried in markup is invisible until someone reports a missing link.
- * As a list it can be asserted against, which `nav-items.spec.ts` does for
- * every flag combination.
+ * As a list it can be asserted against, which `nav-items.spec.ts` does.
  *
- * The panel has two zones rather than staff's seven groups: the things you do,
- * then a bottom cluster (profile, account, help, membership) that a spacer
- * pushes to the foot of the sidebar. Twelve rows do not need regrouping.
+ * The panel has three zones. The sidebar renders two of them: the things you do
+ * in the space, then a pair of meta rows (suggestions, help) that a spacer
+ * pushes to the foot — feedback about the collective and how to use the site
+ * are both *about* the thing rather than *in* it.
+ *
+ * The third zone is not in the sidebar at all. Messages and the four
+ * member-context destinations moved into the app chrome, which mounts on every
+ * authenticated page, so a band admin can reach their own inbox without
+ * switching panels first (#1244). They stay in this file's key union and in
+ * `memberNavItems` because they are still member routes that have to resolve to
+ * something — `nav-items.spec.ts` asserts every `/member/**` page lights a key,
+ * and dropping them would strand five pages on Dashboard.
  */
 
 import { resolve } from '$app/paths';
 import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
+import {
+	ACCOUNT_MENU,
+	MESSAGES_HREF,
+	type AccountMenuKey
+} from '$lib/components/layout/account-menu';
 
 export type MemberNavKey =
 	| 'dashboard'
@@ -35,12 +47,15 @@ export type MemberNavKey =
 	| 'purchases'
 	| 'membership';
 
-/** Field names on `getMemberLayout()`'s return. */
-export type MemberNavBadgeKey = 'messagesUnread';
+/**
+ * The keys the sidebar actually draws. The rest of `MemberNavKey` is chrome —
+ * still a member destination, still resolved by `activeMemberNavKey`, but drawn
+ * by `AppTopbar` and `AccountDropdown`, which own their own glyphs.
+ */
+export type SidebarNavKey = Exclude<MemberNavKey, 'messages' | AccountMenuKey>;
 
 export interface MemberNavItem extends NavNode<MemberNavKey> {
 	label: string;
-	badgeKey?: MemberNavBadgeKey;
 	children?: MemberNavItem[];
 }
 
@@ -60,12 +75,6 @@ export interface MemberNavInput {
 export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 	const items: MemberNavItem[] = [
 		{ key: 'dashboard', label: 'Dashboard', href: resolve('/member') },
-		{
-			key: 'messages',
-			label: 'Messages',
-			href: resolve('/member/messages'),
-			badgeKey: 'messagesUnread'
-		},
 		{ key: 'reservations', label: 'Reservations', href: resolve('/member/reservations') },
 		{
 			key: 'events',
@@ -77,17 +86,6 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 		},
 		{ key: 'directory', label: 'Directory', href: resolve('/member/directory') }
 	];
-
-	/**
-	 * Unconditional, and no longer behind `bandAudio`.
-	 *
-	 * It was, while it listed only records. Now it lists tickets too, which are
-	 * not flagged and which members have been buying since long before the
-	 * storefront existed — gating the row on the storefront would hide receipts
-	 * that have nothing to do with it. An empty page is the right answer for
-	 * somebody who has bought nothing; a missing one is not.
-	 */
-	items.push({ key: 'purchases', label: 'Purchases', href: resolve('/member/purchases') });
 
 	// Between Directory and Volunteering: it belongs with the things you do in
 	// the space, not with the bottom cluster.
@@ -123,36 +121,42 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 		]
 	});
 
-	// Not flag-gated: a suggestion board with no audience collects single-vote
-	// posts, so there is nothing useful to dark-launch.
-	items.push({ key: 'suggestions', label: 'Suggestions', href: resolve('/member/suggestions') });
-
 	return items;
 }
 
-/** The cluster a spacer pins to the bottom of the sidebar. */
+/**
+ * The two meta rows a spacer pins to the foot of the sidebar.
+ *
+ * Neither is flag-gated. A suggestion board with no audience collects
+ * single-vote posts, so there is nothing useful to dark-launch; and the help
+ * centre has nothing to gate on — the articles ship in the repo, and the row
+ * being left out when the `helpArticles` flag went left 75 of them reachable
+ * only by typing the URL.
+ */
 // Takes the input none of its rows read. The parameter stays so adding a
 // conditional footer entry is a one-line change rather than a signature change
 // across every caller.
 export function memberNavFooter(_input: MemberNavInput): MemberNavItem[] {
-	const items: MemberNavItem[] = [
-		{ key: 'profile', label: 'Profile', href: resolve('/member/profile') },
-		{ key: 'account', label: 'Account', href: resolve('/member/account') },
-		// Unconditional, because the help centre has nothing to gate on: the
-		// `helpArticles` flag is retired, `/member/help` was already ungated, and
-		// the articles ship in the repo rather than accumulating like posts. The
-		// row was left out when the flag went, which left 75 articles reachable
-		// only by typing the URL.
+	return [
+		{ key: 'suggestions', label: 'Suggestions', href: resolve('/member/suggestions') },
 		{ key: 'help', label: 'Help', href: resolve('/member/help') }
 	];
-
-	items.push({ key: 'membership', label: 'Membership', href: resolve('/member/membership') });
-
-	return items;
 }
 
+/**
+ * Destinations the app chrome owns — the topbar's messages icon and the avatar
+ * dropdown. Never rendered in the sidebar; here so they still resolve.
+ */
+export function memberNavChrome(): MemberNavItem[] {
+	return [
+		{ key: 'messages', label: 'Messages', href: MESSAGES_HREF },
+		...ACCOUNT_MENU.map((item) => ({ key: item.key, label: item.label, href: item.href }))
+	];
+}
+
+/** Every member destination, sidebar and chrome alike. Not a render list. */
 export function memberNavItems(input: MemberNavInput): MemberNavItem[] {
-	return [...memberNavMain(input), ...memberNavFooter(input)];
+	return [...memberNavMain(input), ...memberNavFooter(input), ...memberNavChrome()];
 }
 
 /**

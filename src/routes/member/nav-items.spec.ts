@@ -3,6 +3,7 @@ import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
 	activeMemberNavKey,
+	memberNavChrome,
 	memberNavFooter,
 	memberNavItems,
 	memberNavMain,
@@ -21,11 +22,14 @@ import {
 const ALL_ON: MemberNavInput = { hasLoanableEquipment: true };
 const ALL_OFF: MemberNavInput = {};
 
+/** Every destination, sidebar and chrome alike. */
 const keysOf = (input: MemberNavInput) => memberNavItems(input).map((i) => i.key);
 
-// The music library is flag-gated, and the flag is the launch switch for the
-// whole storefront — so with it off the row must be absent even though the
-// route still answers.
+/** Only what the sidebar draws — the assertion that a row did not creep back. */
+const sidebarKeysOf = (input: MemberNavInput) => [
+	...memberNavMain(input).map((i) => i.key),
+	...memberNavFooter(input).map((i) => i.key)
+];
 
 function concrete(route: string): string {
 	return route.replace(/\[[^\]]+\]/g, 'x');
@@ -85,21 +89,61 @@ describe('flag gating', () => {
 		expect(keysOf(ALL_OFF)).toContain('suggestions');
 	});
 
+	// Both are meta — feedback about the collective, and how to use the site —
+	// which is why they share the foot of the sidebar rather than sitting among
+	// the things you do in the space.
+	it('keeps Suggestions and Help together at the foot', () => {
+		expect(memberNavFooter(ALL_ON).map((i) => i.key)).toEqual(['suggestions', 'help']);
+	});
+
 	it('never lets a flag disturb the bottom cluster order', () => {
 		// Identical for both inputs: no footer row is conditional on anything.
 		for (const input of [ALL_OFF, ALL_ON]) {
-			expect(memberNavFooter(input).map((i) => i.key)).toEqual([
-				'profile',
-				'account',
-				'help',
-				'membership'
-			]);
+			expect(memberNavFooter(input).map((i) => i.key)).toEqual(['suggestions', 'help']);
 		}
 	});
 
-	it('keeps the two zones disjoint', () => {
-		const main = new Set(memberNavMain(ALL_ON).map((i) => i.key));
-		for (const item of memberNavFooter(ALL_ON)) expect(main.has(item.key)).toBe(false);
+	it('keeps the three zones disjoint', () => {
+		const seen = new Set<string>();
+		for (const item of memberNavItems(ALL_ON)) {
+			expect(seen.has(item.key), `${item.key} is in two zones`).toBe(false);
+			seen.add(item.key);
+		}
+	});
+});
+
+/**
+ * The move in #1244. Five destinations left the sidebar for the app chrome,
+ * which mounts on every authenticated page; they stay in `memberNavItems` so
+ * every `/member` page still resolves to a key. The two assertions that matter
+ * are that the sidebar no longer draws them and that they still resolve.
+ */
+describe('the chrome zone', () => {
+	it('draws none of them in the sidebar', () => {
+		for (const input of [ALL_OFF, ALL_ON]) {
+			const sidebar = sidebarKeysOf(input);
+			for (const key of ['messages', 'profile', 'account', 'purchases', 'membership']) {
+				expect(sidebar, `${key} is back in the sidebar`).not.toContain(key);
+			}
+		}
+	});
+
+	it('is exactly Messages plus the account menu', () => {
+		expect(memberNavChrome().map((i) => i.key)).toEqual([
+			'messages',
+			'profile',
+			'account',
+			'purchases',
+			'membership'
+		]);
+	});
+
+	it('still lights a key for every page behind it', () => {
+		expect(activeMemberNavKey(ALL_ON, '/member/messages/abc')).toBe('messages');
+		expect(activeMemberNavKey(ALL_ON, '/member/purchases')).toBe('purchases');
+		expect(activeMemberNavKey(ALL_ON, '/member/membership')).toBe('membership');
+		expect(activeMemberNavKey(ALL_ON, '/member/account')).toBe('account');
+		expect(activeMemberNavKey(ALL_ON, '/member/profile')).toBe('profile');
 	});
 });
 
