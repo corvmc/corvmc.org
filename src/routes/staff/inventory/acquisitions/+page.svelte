@@ -3,6 +3,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -28,17 +29,20 @@
 	let from = $state(page.url.searchParams.get('from') ?? '');
 	let to = $state(page.url.searchParams.get('to') ?? '');
 	let owed = $state(page.url.searchParams.get('owed') === '1');
+	let pageNo = $state(Number(page.url.searchParams.get('page') ?? '1'));
 
 	const data = $derived(
 		await getAcquisitions({
 			kind: (kind || undefined) as (typeof acquisitionKinds)[number] | undefined,
 			from: from || undefined,
 			to: to || undefined,
-			awaitingReimbursement: owed || undefined
+			awaitingReimbursement: owed || undefined,
+			page: pageNo
 		})
 	);
 
-	function apply() {
+	function apply(toPage = 1) {
+		pageNo = toPage;
 		// Assembled by hand for the same reason as the spend report: the lint rule
 		// bans a mutable `URLSearchParams` in a component, and `resolve()` takes a
 		// literal route id and nothing else.
@@ -47,6 +51,7 @@
 		if (from) parts.push(`from=${encodeURIComponent(from)}`);
 		if (to) parts.push(`to=${encodeURIComponent(to)}`);
 		if (owed) parts.push('owed=1');
+		if (pageNo > 1) parts.push(`page=${pageNo}`);
 		const qs = parts.length > 0 ? `?${parts.join('&')}` : '';
 		goto(`${resolve('/staff/inventory/acquisitions')}${qs}`, {
 			replaceState: true,
@@ -79,7 +84,7 @@
 			bind:value={owed}
 			checkboxLabel="Only what somebody is owed for"
 		/>
-		<Button variant="default" size="sm" onclick={apply}>Apply</Button>
+		<Button variant="default" size="sm" onclick={() => apply()}>Apply</Button>
 	</div>
 
 	{#if data.owedCount > 0 && !owed}
@@ -139,5 +144,6 @@
 				</tr>
 			{/each}
 		</Table>
+		<Pagination {...data.pagination} onpage={(n) => apply(n)} />
 	{/if}
 </PageContent>

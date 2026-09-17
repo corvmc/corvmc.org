@@ -14,11 +14,12 @@ import { user } from '$lib/server/db/schema/authentication';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { listFor } from '$lib/server/media/media-service';
 import { isReceiptKey } from '$lib/server/storage-keys';
-import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { recordMovement, signedQuantity } from './stock-service';
 import { createAsset, AssetTagTakenError } from './asset-service';
 import { inventoryAsset } from '$lib/server/db/schema/inventory';
 import { DomainError } from '$lib/server/domain-error';
+import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { type AcquisitionKind } from '$lib/config';
 import type { EquipmentCondition } from '$lib/config';
 import { chunk, chunkSize } from '$lib/server/utils/chunk';
@@ -565,10 +566,12 @@ export interface ListAcquisitionsOptions {
 	to?: Date;
 	/** Somebody fronted the money and has not been paid back. */
 	awaitingReimbursement?: boolean;
-	limit?: number;
 }
 
-export async function listAcquisitions(opts: ListAcquisitionsOptions = {}) {
+export async function listAcquisitions(
+	opts: ListAcquisitionsOptions = {},
+	pagination: PaginationInput = {}
+) {
 	const payer = alias(user, 'payer');
 
 	const filters = [
@@ -581,7 +584,9 @@ export async function listAcquisitions(opts: ListAcquisitionsOptions = {}) {
 			: undefined
 	].filter(Boolean);
 
-	return db
+	const where = filters.length ? and(...filters) : undefined;
+
+	const dataQ = db
 		.select({
 			acquisition,
 			donorName: user.name,
@@ -602,18 +607,39 @@ export async function listAcquisitions(opts: ListAcquisitionsOptions = {}) {
 		.from(acquisition)
 		.leftJoin(user, eq(acquisition.donorUserId, user.id))
 		.leftJoin(payer, eq(acquisition.paidByUserId, payer.id))
-		.where(filters.length ? and(...filters) : undefined)
+		.where(where)
 		.orderBy(desc(acquisition.occurredAt))
-		.limit(opts.limit ?? 100)
-		.then((rows) =>
-			rows.map((r) => ({
-				...r.acquisition,
-				donorName: r.acquisition.donorUserId ? r.donorName : r.acquisition.sourceName,
-				paidByName: r.paidByName,
-				lineCount: r.lineCount,
-				linesTotalCents: r.linesTotalCents
-			}))
-		);
+		.$dynamic();
+
+	const countQ = db.select({ count: count() }).from(acquisition).where(where);
+
+	const { rows, pagination: pageInfo } = await paginate(dataQ, countQ, pagination);
+
+	return {
+		rows: rows.map((r) => ({
+			...r.acquisition,
+			donorName: r.acquisition.donorUserId ? r.donorName : r.acquisition.sourceName,
+			paidByName: r.paidByName,
+			lineCount: r.lineCount,
+			linesTotalCents: r.linesTotalCents
+		})),
+		pagination: pageInfo
+	};
+}
+
+/**
+ * How many acquisitions somebody is still owed for, across the whole set.
+ *
+ * Its own query because the list is paginated: counting the rows on the current
+ * page would answer a different question, quietly, and the banner that reads it
+ * exists to say there is something off-screen worth filtering to.
+ */
+export async function countAwaitingReimbursement() {
+	const [row] = await db
+		.select({ count: count() })
+		.from(acquisition)
+		.where(and(isNotNull(acquisition.paidByUserId), isNull(acquisition.reimbursedAt)));
+	return row?.count ?? 0;
 }
 
 // ---------------------------------------------------------------------------

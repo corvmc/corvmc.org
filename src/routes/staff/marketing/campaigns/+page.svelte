@@ -5,6 +5,7 @@
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
+	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
@@ -56,5 +57,6 @@
 				</tr>
 			{/each}
 		</Table>
+		<Pagination total={campaigns.length} unit="campaigns" />
 	{/if}
 </PageContent>

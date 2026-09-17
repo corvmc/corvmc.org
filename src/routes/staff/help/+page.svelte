@@ -22,6 +22,7 @@
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
+	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
@@ -337,5 +338,6 @@
 				</tr>
 			{/each}
 		</Table>
+		<Pagination total={articles.length} unit="articles" />
 	{/if}
 </PageContent>

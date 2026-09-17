@@ -7,7 +7,8 @@ import {
 } from '$lib/server/db/schema/directory';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, desc, eq, isNull, like } from 'drizzle-orm';
+import { and, count, desc, eq, isNull, like } from 'drizzle-orm';
+import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { groupMember, groupSlugHistory } from '$lib/server/db/schema/group';
 import { bandSiteInsert } from '$lib/server/band/band-site-service';
@@ -16,7 +17,6 @@ import { isReservedSlug } from '$lib/reserved-slugs';
 import { sanitizeBio } from '$lib/utils/markdown';
 import { DomainError } from '$lib/server/domain-error';
 import { archiveContactForClaim } from './contact-service';
-import { SEARCH_LIMIT } from '$lib/config';
 import type { ProfileLink } from '$lib/server/db/schema/authentication';
 
 /**
@@ -223,14 +223,21 @@ export async function createExternalAct(data: CreateExternalActData): Promise<st
 	return row.id;
 }
 
-/** Everything staff can book — unowned entries, newest first. */
-export async function listExternalActs(search?: string) {
+/**
+ * Everything staff can book — unowned entries, newest first.
+ *
+ * Paginated rather than capped: this was the whole of how anyone sees an
+ * external act, and it stopped at `SEARCH_LIMIT` without saying so, so a
+ * collective that had booked more than that could not reach the rest (#1215).
+ */
+export async function listExternalActs(search?: string, pagination: PaginationInput = {}) {
 	const conditions = [isNull(directoryEntry.userId), isNull(directoryEntry.groupId)];
 	if (search?.trim()) {
 		conditions.push(like(directoryEntry.name, `%${search.trim()}%`));
 	}
+	const where = and(...conditions);
 
-	return db
+	const dataQ = db
 		.select({
 			id: directoryEntry.id,
 			name: directoryEntry.name,
@@ -239,9 +246,13 @@ export async function listExternalActs(search?: string) {
 			createdAt: directoryEntry.createdAt
 		})
 		.from(directoryEntry)
-		.where(and(...conditions))
+		.where(where)
 		.orderBy(desc(directoryEntry.createdAt))
-		.limit(SEARCH_LIMIT);
+		.$dynamic();
+
+	const countQ = db.select({ count: count() }).from(directoryEntry).where(where);
+
+	return paginate(dataQ, countQ, pagination);
 }
 
 /**
