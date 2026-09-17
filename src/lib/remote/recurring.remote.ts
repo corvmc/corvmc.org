@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { query, form, getRequestEvent } from '$app/server';
+import { query, getRequestEvent } from '$app/server';
+import { form } from './_remote';
 import { requireCapability, requireCapabilityOrOwner } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import {

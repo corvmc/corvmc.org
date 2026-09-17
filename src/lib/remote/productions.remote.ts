@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { form } from '$app/server';
+import { form } from './_remote';
 import { getRequestEvent } from '$app/server';
 import { requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';

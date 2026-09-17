@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error, invalid, redirect } from '@sveltejs/kit';
-import { form, query } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { paymentDriver, stripe } from '$lib/server/stripe';
 import {
 	FAKE_CARDS,

@@ -42,7 +42,8 @@ export class SubscriptionValidationError extends DomainError {
 	}
 }
 
-export class SubscriptionStateError extends Error {
+export class SubscriptionStateError extends DomainError {
+	readonly httpStatus = 409;
 	constructor(message: string) {
 		super(message);
 		this.name = 'SubscriptionStateError';

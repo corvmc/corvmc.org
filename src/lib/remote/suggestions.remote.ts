@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { toGenericRef, toMemberRef } from '$lib/server/entity/refs';
 import { error, invalid } from '@sveltejs/kit';
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { getStanding } from '$lib/server/moderation/standing-service';

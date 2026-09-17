@@ -1,4 +1,5 @@
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { z } from 'zod';
 import {
 	requireCapability,

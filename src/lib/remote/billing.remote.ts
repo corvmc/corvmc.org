@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { command, form, query } from '$app/server';
+import { query } from '$app/server';
+import { command, form } from './_remote';
 import { requireMember } from '$lib/server/authorization';
 import { paymentDriver, stripe } from '$lib/server/stripe';
 import {

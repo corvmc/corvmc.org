@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { toGenericRef } from '$lib/server/entity/refs';
 import { error, invalid } from '@sveltejs/kit';
-import { query, form, getRequestEvent } from '$app/server';
+import { query, getRequestEvent } from '$app/server';
+import { form } from './_remote';
 import {
 	requireCapability,
 	requireCapabilityOrOwner,

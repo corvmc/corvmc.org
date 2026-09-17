@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { query, command } from '$app/server';
+import { query } from '$app/server';
+import { command } from './_remote';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';

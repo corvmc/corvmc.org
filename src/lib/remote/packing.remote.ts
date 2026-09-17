@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { mapDomainError } from '$lib/server/errors';
 import { getMembers } from '$lib/server/band/band-service';

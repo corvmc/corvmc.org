@@ -21,7 +21,8 @@
  */
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
-import { form, getRequestEvent } from '$app/server';
+import { getRequestEvent } from '$app/server';
+import { form } from './_remote';
 import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { group } from '$lib/server/db/schema/group';

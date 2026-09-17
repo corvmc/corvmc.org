@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { mapDomainError } from '$lib/server/errors';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { domainEvents } from '$lib/server/event-bus/event-bus';

@@ -655,6 +655,12 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 // ---------------------------------------------------------------------------
 
 /** Thrown when a withheld poster could not be brought back out of the private bucket. */
+/**
+ * Deliberately NOT a `DomainError`, so it stays a 500. The withheld poster is
+ * missing from the private bucket, which is a fault in our storage rather than
+ * anything the caller got wrong — there is no 4xx that tells them something
+ * useful, and it should page us rather than read as a handled outcome.
+ */
 export class PosterRestoreError extends Error {
 	constructor(message: string) {
 		super(message);

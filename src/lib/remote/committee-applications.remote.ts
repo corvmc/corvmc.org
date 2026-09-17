@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { form, query } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { mapDomainError } from '$lib/server/errors';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { requireCommitteeReviewer } from '$lib/server/group/group-context';

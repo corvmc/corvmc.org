@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
-import { form } from '$app/server';
+import { form } from './_remote';
 import { mapDomainError } from '$lib/server/errors';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { DOCUMENT_DESCRIPTION_MAX } from '$lib/config';

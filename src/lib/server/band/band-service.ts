@@ -1,7 +1,7 @@
 import type { GroupJoinPolicy } from '$lib/config';
 import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
 import { db } from '$lib/server/db';
-import { DomainError } from '../domain-error';
+import { DomainError } from '$lib/server/domain-error';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import {
 	group,
@@ -134,28 +134,32 @@ const memberAccountIsLive = () =>
 // Errors
 // ---------------------------------------------------------------------------
 
-export class BandNotFoundError extends Error {
+export class BandNotFoundError extends DomainError {
+	readonly httpStatus = 404;
 	constructor() {
 		super('Band not found');
 		this.name = 'BandNotFoundError';
 	}
 }
 
-export class BandMemberExistsError extends Error {
+export class BandMemberExistsError extends DomainError {
+	readonly httpStatus = 409;
 	constructor(message = 'User is already a member or has a pending invitation') {
 		super(message);
 		this.name = 'BandMemberExistsError';
 	}
 }
 
-export class CannotRemoveOwnerError extends Error {
+export class CannotRemoveOwnerError extends DomainError {
+	readonly httpStatus = 422;
 	constructor() {
 		super('Cannot remove or demote the band owner');
 		this.name = 'CannotRemoveOwnerError';
 	}
 }
 
-export class OwnerCannotLeaveError extends Error {
+export class OwnerCannotLeaveError extends DomainError {
+	readonly httpStatus = 422;
 	constructor() {
 		super('Owner must transfer ownership before leaving');
 		this.name = 'OwnerCannotLeaveError';

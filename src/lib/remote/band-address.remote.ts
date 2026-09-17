@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
-import { form } from '$app/server';
+import { form } from './_remote';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { allowRateLimited } from '$lib/server/rate-limit';
 import {

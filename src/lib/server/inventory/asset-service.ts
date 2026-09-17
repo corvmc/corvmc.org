@@ -11,6 +11,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { form8282Status, needsAttention } from './form-8282';
 import { movementStatement, recordMovement } from './stock-service';
 import type { AssetStatus, EquipmentCondition } from '$lib/config';
+import { DomainError } from '$lib/server/domain-error';
 
 /**
  * One physical unit of a `serialized` item.
@@ -24,28 +25,32 @@ import type { AssetStatus, EquipmentCondition } from '$lib/config';
 // Errors
 // ---------------------------------------------------------------------------
 
-export class AssetNotFoundError extends Error {
+export class AssetNotFoundError extends DomainError {
+	readonly httpStatus = 404;
 	constructor() {
 		super('Asset not found');
 		this.name = 'AssetNotFoundError';
 	}
 }
 
-export class AssetTagTakenError extends Error {
+export class AssetTagTakenError extends DomainError {
+	readonly httpStatus = 422;
 	constructor(tag: string) {
 		super(`Tag '${tag}' is already bound to another asset`);
 		this.name = 'AssetTagTakenError';
 	}
 }
 
-export class NotSerializedError extends Error {
+export class NotSerializedError extends DomainError {
+	readonly httpStatus = 422;
 	constructor() {
 		super('Only a serialized item can have individual assets');
 		this.name = 'NotSerializedError';
 	}
 }
 
-export class InvalidAssetTransitionError extends Error {
+export class InvalidAssetTransitionError extends DomainError {
+	readonly httpStatus = 422;
 	constructor(from: string, to: string) {
 		super(`Cannot transition asset from '${from}' to '${to}'`);
 		this.name = 'InvalidAssetTransitionError';

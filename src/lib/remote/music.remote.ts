@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { query, form, getRequestEvent } from '$app/server';
+import { query, getRequestEvent } from '$app/server';
+import { form } from './_remote';
 import { requireFeature } from '$lib/server/feature-flags';
 import { getPublishedRelease, listTracks } from '$lib/server/audio/audio-service';
 import { beginPurchase, findPurchaseByToken } from '$lib/server/audio/purchase-service';

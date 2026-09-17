@@ -9,6 +9,7 @@ import {
 	type StandingScope,
 	type StandingStatus
 } from '$lib/config';
+import { DomainError } from '$lib/server/domain-error';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -21,7 +22,8 @@ import {
  * path picks its own status. It throws instead of silently storing the value so
  * a scope can never accumulate rows no reader knows how to interpret.
  */
-export class StandingStatusNotAllowedError extends Error {
+export class StandingStatusNotAllowedError extends DomainError {
+	readonly httpStatus = 422;
 	constructor(scope: StandingScope, status: StandingStatus) {
 		super(`"${status}" is not a standing ${scope} can hold`);
 		this.name = 'StandingStatusNotAllowedError';

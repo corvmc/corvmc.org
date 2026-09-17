@@ -10,6 +10,7 @@ import {
 	type StockReason
 } from '$lib/server/db/schema/inventory';
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { DomainError } from '$lib/server/domain-error';
 
 /**
  * The ledger.
@@ -28,14 +29,8 @@ import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 // Errors
 // ---------------------------------------------------------------------------
 
-export class ItemNotFoundError extends Error {
-	constructor() {
-		super('Item not found');
-		this.name = 'ItemNotFoundError';
-	}
-}
-
-export class InsufficientStockError extends Error {
+export class InsufficientStockError extends DomainError {
+	readonly httpStatus = 422;
 	constructor(
 		public available: number,
 		public requested: number
@@ -45,7 +40,8 @@ export class InsufficientStockError extends Error {
 	}
 }
 
-export class InvalidMovementError extends Error {
+export class InvalidMovementError extends DomainError {
+	readonly httpStatus = 422;
 	constructor(message: string) {
 		super(message);
 		this.name = 'InvalidMovementError';

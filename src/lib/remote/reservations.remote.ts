@@ -4,7 +4,8 @@ import {
 } from '$lib/server/finance/reservation-entries';
 import { z } from 'zod';
 import { error, redirect, invalid } from '@sveltejs/kit';
-import { query, form, getRequestEvent } from '$app/server';
+import { query, getRequestEvent } from '$app/server';
+import { form } from './_remote';
 import { db } from '$lib/server/db';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
 import {

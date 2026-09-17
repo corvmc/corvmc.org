@@ -33,7 +33,8 @@ import { chunk, chunkSize } from '$lib/server/utils/chunk';
  * thing that cannot be backfilled.
  */
 
-export class AcquisitionNotFoundError extends Error {
+export class AcquisitionNotFoundError extends DomainError {
+	readonly httpStatus = 404;
 	constructor() {
 		super('Acquisition not found');
 		this.name = 'AcquisitionNotFoundError';

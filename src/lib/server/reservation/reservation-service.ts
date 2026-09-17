@@ -31,19 +31,22 @@ import { DEFAULT_TIMEZONE, withinConfirmationWindow } from '$lib/config';
 import type { ReservationStatus } from '$lib/server/db/schema/reservation';
 import type { BookerType } from '$lib/config';
 import { captureException } from '$lib/server/sentry';
+import { DomainError } from '$lib/server/domain-error';
 
 // ---------------------------------------------------------------------------
 // ReservationService — create and cancel reservations
 // ---------------------------------------------------------------------------
 
-export class ReservationConflictError extends Error {
+export class ReservationConflictError extends DomainError {
+	readonly httpStatus = 409;
 	constructor() {
 		super('Time slot is not available');
 		this.name = 'ReservationConflictError';
 	}
 }
 
-export class ReservationValidationError extends Error {
+export class ReservationValidationError extends DomainError {
+	readonly httpStatus = 400;
 	constructor(message: string) {
 		super(message);
 		this.name = 'ReservationValidationError';
@@ -55,21 +58,24 @@ export class ReservationValidationError extends Error {
  * cancelling an already-cancelled reservation, or a concurrent status change.
  * These are expected conflicts (stale UI, double-click), not server faults.
  */
-export class ReservationStateError extends Error {
+export class ReservationStateError extends DomainError {
+	readonly httpStatus = 409;
 	constructor(message: string) {
 		super(message);
 		this.name = 'ReservationStateError';
 	}
 }
 
-export class ReservationNotFoundError extends Error {
+export class ReservationNotFoundError extends DomainError {
+	readonly httpStatus = 404;
 	constructor() {
 		super('Reservation not found');
 		this.name = 'ReservationNotFoundError';
 	}
 }
 
-export class ReservationAuthorizationError extends Error {
+export class ReservationAuthorizationError extends DomainError {
+	readonly httpStatus = 403;
 	constructor(message: string) {
 		super(message);
 		this.name = 'ReservationAuthorizationError';

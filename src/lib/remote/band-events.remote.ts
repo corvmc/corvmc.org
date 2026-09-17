@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
-import { query, form } from '$app/server';
+import { query } from '$app/server';
+import { form } from './_remote';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { mapDomainError } from '$lib/server/errors';
 import { listBandSlotTerms } from '$lib/server/production/run-of-show-service';
