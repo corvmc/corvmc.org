@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { QueryBuilder, SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import { and, eq, gt, ne } from 'drizzle-orm';
 import { reservation } from '$lib/server/db/schema/reservation';
 
@@ -15,7 +15,6 @@ const dialect = new SQLiteSyncDialect();
 
 // A real builder, not a stub: `inArray` renders a subquery only when handed
 // one, and a fake object is silently read as a value instead.
-const qb = new QueryBuilder();
 
 /** The predicate under test, as `getBandReservations` composes it. */
 // A copy of the predicate in `reservations.remote.ts`, because it is module
