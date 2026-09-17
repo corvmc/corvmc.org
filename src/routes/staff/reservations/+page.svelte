@@ -209,8 +209,10 @@
 		>
 			<option value="">Anyone</option>
 			<option value="user">Members</option>
-			<option value="group">Bands</option>
-			<option value="production">Events</option>
+			<!-- A programme's session books as its group too, so this is no longer
+			     bands alone; a production's hold is only ever a show. -->
+			<option value="group">Bands &amp; programs</option>
+			<option value="production">Shows</option>
 		</Select>
 	</FilterBar>
 

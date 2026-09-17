@@ -148,7 +148,7 @@
 						{conflicts
 							.map(
 								(c) =>
-									`${formatTime(c.startsAt)} – ${formatTime(c.endsAt)} (${c.bookerType === 'production' ? 'event' : c.status})`
+									`${formatTime(c.startsAt)} – ${formatTime(c.endsAt)} (${c.bookerType === 'production' ? 'show' : c.status})`
 							)
 							.join(', ')}
 					</span>
@@ -191,9 +191,9 @@
 		<!-- Member card — a band or event booking leads with it, then who booked it -->
 		<InfoCard
 			title={r.bookerType === 'group'
-				? 'Band Booking'
+				? 'Group booking'
 				: r.bookerType === 'production'
-					? 'Event'
+					? 'Show'
 					: 'Member'}
 		>
 			{#snippet header(title)}
