@@ -60,6 +60,10 @@ Three layers, not two:
 | `event_listing` | The public advertisement: one entry on the calendar                               | The common case           |
 | `production`    | A show's back-of-house — the room hold, doors, ticketing, run of show, settlement | Only `source='cmc'` shows |
 
+The listing names the production it announces (`event_listing.production_id`), not the
+other way round: the advertisement is downstream of the show. A production with no
+listing is a show being built before it is announced. See #1202.
+
 Three of the app's columns store this table's _name_ as data, and so they read
 `'event_listing'` too: `reservation.booker_type`, `media_attachment.attachable_type`
 and `recurring_series.prototype_type`.

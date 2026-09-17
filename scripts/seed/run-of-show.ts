@@ -18,7 +18,8 @@ import { asc, inArray } from 'drizzle-orm';
  * Hand-writing them would seed a schedule that disagrees with the derived one.
  */
 
-type ProductionRow = typeof production.$inferSelect;
+/** The seed's shape: the row plus the listing it announces (#1202). */
+type ProductionRow = typeof production.$inferSelect & { eventId: string };
 
 /**
  * One deal per act, walking `docs/specs/project-spec.md#the-deal-shape`. Every

@@ -177,9 +177,11 @@ describe('applyDutyList', () => {
 			};
 			const names = cols.split(',').map((c) => c.trim());
 			sqlite.exec(
-				`INSERT INTO production (id, event_id, status, ${names.join(', ')})
-				 VALUES ('prod-1','evt-1','confirmed', ${names.map((n) => vals[n as keyof typeof vals]).join(', ')})`
+				`INSERT INTO production (id, status, ${names.join(', ')})
+				 VALUES ('prod-1','confirmed', ${names.map((n) => vals[n as keyof typeof vals]).join(', ')})`
 			);
+			// The listing names what it announces (#1202).
+			sqlite.exec(`UPDATE event_listing SET production_id = 'prod-1' WHERE id = 'evt-1'`);
 		}
 
 		it.each([

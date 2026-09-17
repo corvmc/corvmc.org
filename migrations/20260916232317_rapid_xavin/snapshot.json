@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ecdb042f-9315-4982-911b-8f8addfd49a5",
+  "id": "e49300c3-61bf-43f5-a88b-1e208a87108e",
   "prevIds": [
-    "706c600d-8a25-4f16-b5b2-7c1a56e36498"
+    "cc204cb2-8513-4999-a997-34c7307b6516"
   ],
   "ddl": [
     {
@@ -2120,6 +2120,16 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "production_id",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "group_id",
       "entityType": "columns",
       "table": "event_listing"
@@ -2241,16 +2251,6 @@
       "default": null,
       "generated": null,
       "name": "id",
-      "entityType": "columns",
-      "table": "production"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "event_id",
       "entityType": "columns",
       "table": "production"
     },
@@ -11766,6 +11766,21 @@
     },
     {
       "columns": [
+        "production_id"
+      ],
+      "tableTo": "production",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_event_listing_production_id_production_id_fk",
+      "entityType": "fks",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
         "group_id"
       ],
       "tableTo": "group",
@@ -11838,21 +11853,6 @@
       "name": "fk_event_created_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "event_listing"
-    },
-    {
-      "columns": [
-        "event_id"
-      ],
-      "tableTo": "event_listing",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_production_event_id_event_listing_id_fk",
-      "entityType": "fks",
-      "table": "production"
     },
     {
       "columns": [
@@ -15865,6 +15865,20 @@
     {
       "columns": [
         {
+          "value": "production_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_event_production",
+      "entityType": "indexes",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
           "value": "project_id",
           "isExpression": false
         }
@@ -15907,20 +15921,6 @@
       "name": "uq_event_recurring_instance",
       "entityType": "indexes",
       "table": "event_listing"
-    },
-    {
-      "columns": [
-        {
-          "value": "event_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "origin": "manual",
-      "name": "uq_production_event",
-      "entityType": "indexes",
-      "table": "production"
     },
     {
       "columns": [

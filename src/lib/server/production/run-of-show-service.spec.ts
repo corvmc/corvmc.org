@@ -436,7 +436,9 @@ describe('getPublicSetTimes', () => {
 		const where = calls.find((c) => c.op === 'select')!.where as SQL;
 		const sql = dialect.sqlToQuery(where);
 
-		expect(sql.sql).toContain('"production"."event_id" = ?');
+		// Reached through the listing that announces it, not a column on the
+		// production — the edge moved in #1202 and this gate has to follow it.
+		expect(sql.sql).toContain('"event_listing"."production_id"');
 		expect(sql.sql).toContain('"production"."status" in');
 		expect(sql.params).toEqual(
 			expect.arrayContaining(['evt-1', 'confirmed', 'completed', 'settled', 'closed'])

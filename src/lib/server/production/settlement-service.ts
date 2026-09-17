@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db';
+import { announcedBy } from './production-service';
 import { financialEntry } from '$lib/server/db/schema/financial';
 import { production, productionSlot } from '$lib/server/db/schema/production';
-import { eventBand } from '$lib/server/db/schema/event';
+import { eventBand, eventListing } from '$lib/server/db/schema/event';
 import { and, asc, eq, sum } from 'drizzle-orm';
 import { expenseLines, type ProductionExpenseLine } from './expense-service';
 import { recordActPayout } from '$lib/server/finance/payout-entries';
@@ -81,7 +82,7 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 	const [prod] = await db
 		.select({ id: production.id, status: production.status })
 		.from(production)
-		.where(eq(production.eventId, eventId))
+		.where(announcedBy(eventId))
 		.limit(1);
 	if (!prod) return null;
 
@@ -228,12 +229,15 @@ export async function recordSlotPayout(
 			id: productionSlot.id,
 			paidCents: productionSlot.paidCents,
 			productionId: production.id,
-			eventId: production.eventId,
+			eventId: eventListing.id,
 			status: production.status,
 			actName: eventBand.name
 		})
 		.from(productionSlot)
 		.innerJoin(production, eq(production.id, productionSlot.productionId))
+		// The listing is where the event id lives now: a production no longer
+		// carries its own advertisement's id (#1202).
+		.innerJoin(eventListing, eq(eventListing.productionId, production.id))
 		.leftJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
 		.where(eq(productionSlot.id, slotId))
 		.limit(1);

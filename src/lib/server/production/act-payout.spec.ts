@@ -52,11 +52,11 @@ async function seed(opts: { poolCents?: number; guaranteeCents?: number | null }
 		createdByUserId: STAFF,
 		status: 'published',
 		source: 'cmc',
-		kind: 'show'
+		kind: 'show',
+		// The listing names the production it announces (#1202).
+		productionId: PROD
 	} as never);
-	await testDb
-		.insert(production)
-		.values({ id: PROD, eventId: EVENT, status: 'completed' } as never);
+	await testDb.insert(production).values({ id: PROD, status: 'completed' } as never);
 	await testDb.insert(productionSlot).values({
 		id: SLOT,
 		productionId: PROD,

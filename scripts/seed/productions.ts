@@ -1,5 +1,7 @@
 import { production, productionExpense } from '../../src/lib/server/db/schema/production';
-import { batchInsert } from './db';
+import { eventListing } from '../../src/lib/server/db/schema/event';
+import { batchInsert, db } from './db';
+import { eq } from 'drizzle-orm';
 import { type SeedEvent, type SeedUser } from './types';
 
 /**
@@ -42,6 +44,10 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 	const rows: (typeof production.$inferInsert)[] = [];
 	const used = new Set<string>();
 
+	// The listing names the production now (#1202), so the event id rides
+	// alongside the insert payload rather than in it, positionally paired.
+	const eventIds: string[] = [];
+
 	function add(
 		event: SeedEvent | undefined,
 		status: NonNullable<(typeof production.$inferSelect)['status']>,
@@ -49,8 +55,8 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 	) {
 		if (!event || used.has(event.id)) return;
 		used.add(event.id);
+		eventIds.push(event.id);
 		rows.push({
-			eventId: event.id,
 			status,
 			createdByUserId: producer,
 			...extras
@@ -102,11 +108,22 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 	// production id and the downbeat the set times are walked from.
 	const inserted = await batchInsert(production, rows);
 
+	// Point each listing at the production it announces.
+	for (const [i, row] of inserted.entries()) {
+		await db
+			.update(eventListing)
+			.set({ productionId: row.id })
+			.where(eq(eventListing.id, eventIds[i]));
+	}
+
+	/** What the downstream seeds ask for: the row plus the listing it announces. */
+	const withEvent = inserted.map((row, i) => ({ ...row, eventId: eventIds[i] }));
+
 	// One show's costs, so a net deal has a denominator and the settlement
 	// worksheet has something to subtract. The insurance line is deliberately
 	// not deductible: it is the collective's cost whatever happens, and an act
 	// on a percentage of net does not share it.
-	const settledShow = inserted.find((p) => p.status === 'completed') ?? inserted[0];
+	const settledShow = withEvent.find((p) => p.status === 'completed') ?? inserted[0];
 	if (settledShow) {
 		await batchInsert(productionExpense, [
 			{
@@ -143,6 +160,6 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 	return {
 		productions: rows.length,
 		withoutProduction: upcoming.length - 2,
-		rows: inserted
+		rows: withEvent
 	};
 }

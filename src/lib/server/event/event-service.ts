@@ -785,7 +785,7 @@ export async function publishBlockers(eventId: string): Promise<string[]> {
 			productionStatus: production.status
 		})
 		.from(eventListing)
-		.leftJoin(production, eq(production.eventId, eventListing.id))
+		.leftJoin(production, eq(production.id, eventListing.productionId))
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
 
@@ -1369,7 +1369,7 @@ export async function listAll(
 		.from(eventListing)
 		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.leftJoin(venue, eq(venue.id, eventListing.venueId))
-		.leftJoin(production, eq(production.eventId, eventListing.id))
+		.leftJoin(production, eq(production.id, eventListing.productionId))
 		.where(where)
 		.orderBy(desc(eventListing.startsAt))
 		.$dynamic();
