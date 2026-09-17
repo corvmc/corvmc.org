@@ -52,7 +52,7 @@
 	const waiting = $derived(work.waitingCount + work.lapsing.length);
 </script>
 
-<PageHeader title="Today" subtitle="Volunteering">
+<PageHeader width="5xl" title="Today" subtitle="Volunteering">
 	<LogHoursForMemberAction />
 	<NewShiftAction {defaultStart} />
 </PageHeader>

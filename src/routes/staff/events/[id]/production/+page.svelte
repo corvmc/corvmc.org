@@ -424,7 +424,12 @@
 	the room, the ticket ledger, the poster, the staffing. One rule, so nobody
 	has to remember which page a given button lives on.
 -->
-<PageHeader title={evt.title} subtitle="Production" backHref={resolve(`/staff/events/${id}`)}>
+<PageHeader
+	width="3xl"
+	title={evt.title}
+	subtitle="Production"
+	backHref={resolve(`/staff/events/${id}`)}
+>
 	<div class="flex items-center gap-2">
 		{#if evt.ticketingEnabled}
 			<Button href="/staff/events/{evt.id}/check-in" variant="ghost" size="sm">Check-in</Button>

@@ -110,7 +110,7 @@
 	}
 </script>
 
-<PageHeader title={release.title} subtitle={band.name}>
+<PageHeader width="2xl" title={release.title} subtitle={band.name}>
 	<Badge>{releaseKindLabels[release.kind]}</Badge>
 	{#if release.status === 'draft'}
 		<Badge variant="ghost">Draft</Badge>

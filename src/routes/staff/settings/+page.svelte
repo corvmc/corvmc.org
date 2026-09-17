@@ -187,7 +187,7 @@
 	}
 </script>
 
-<PageHeader title="Settings" subtitle="Staff" />
+<PageHeader width="2xl" title="Settings" subtitle="Staff" />
 
 <PageContent width="2xl">
 	<TabBar {tabs} active={activeTab} onchange={(key) => (activeTab = key)} />

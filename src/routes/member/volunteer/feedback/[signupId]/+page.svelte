@@ -31,7 +31,12 @@
 	const setUp = $derived(submitShiftFeedback.result?.wasSetUp ?? null);
 </script>
 
-<PageHeader title="How did it go?" subtitle="Volunteering" backHref="/member/volunteer" />
+<PageHeader
+	width="md"
+	title="How did it go?"
+	subtitle="Volunteering"
+	backHref="/member/volunteer"
+/>
 
 <PageContent width="md">
 	{#await context then ctx}

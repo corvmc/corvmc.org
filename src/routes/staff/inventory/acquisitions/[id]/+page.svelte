@@ -112,6 +112,7 @@
 </script>
 
 <PageHeader
+	width="3xl"
 	subtitle="Acquisition"
 	title={`${acquisitionKindLabels[data.kind]} — ${formatDateShort(data.occurredAt)}`}
 	backHref={resolve('/staff/inventory/acquisitions')}

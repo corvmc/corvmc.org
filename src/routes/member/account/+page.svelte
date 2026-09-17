@@ -34,7 +34,7 @@
 	const { fields } = updateProfile;
 </script>
 
-<PageHeader title="Account Settings" />
+<PageHeader width="2xl" title="Account Settings" />
 <PageContent width="2xl">
 	<!-- Profile info -->
 	<InfoCard title="Contact Information">

@@ -3,6 +3,8 @@ import storybook from 'eslint-plugin-storybook';
 import noRawFormElements from './eslint-rules/no-raw-form-elements.js';
 import noUtilitySoup from './eslint-rules/no-utility-soup.js';
 import noClampedTieredTable from './eslint-rules/no-clamped-tiered-table.js';
+import noInlineAlertAction from './eslint-rules/no-inline-alert-action.js';
+import pageHeaderWidthMatchesContent from './eslint-rules/page-header-width-matches-content.js';
 import noDeadDaisyuiClasses from './eslint-rules/no-dead-daisyui-classes.js';
 import noDuplicateFieldNames from './eslint-rules/no-duplicate-field-names.js';
 import noDbTransaction from './eslint-rules/no-db-transaction.js';
@@ -34,6 +36,8 @@ const customPlugin = {
 		'no-raw-form-elements': noRawFormElements,
 		'no-utility-soup': noUtilitySoup,
 		'no-clamped-tiered-table': noClampedTieredTable,
+		'no-inline-alert-action': noInlineAlertAction,
+		'page-header-width-matches-content': pageHeaderWidthMatchesContent,
 		'no-dead-daisyui-classes': noDeadDaisyuiClasses,
 		'no-duplicate-field-names': noDuplicateFieldNames,
 		'no-db-transaction': noDbTransaction,
@@ -153,6 +157,8 @@ export default defineConfig(
 			'custom/no-duplicate-field-names': 'error',
 			'custom/no-dead-daisyui-classes': 'error',
 			'custom/no-clamped-tiered-table': 'error',
+			'custom/no-inline-alert-action': 'error',
+			'custom/page-header-width-matches-content': 'error',
 			'custom/no-concurrent-remote-queries': 'error'
 		}
 	},

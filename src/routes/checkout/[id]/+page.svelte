@@ -29,6 +29,7 @@
 </script>
 
 <PageHeader
+	width="md"
 	title={session.driver === 'fake' ? 'Test checkout' : 'Checkout'}
 	subtitle={session.driver === 'fake'
 		? 'This is not Stripe — the fake payment gateway is active'

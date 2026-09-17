@@ -30,7 +30,11 @@
 	);
 </script>
 
-<PageHeader title="Check-in: {data.event.title}" backHref="/staff/events/{data.event.id}" />
+<PageHeader
+	width="3xl"
+	title="Check-in: {data.event.title}"
+	backHref="/staff/events/{data.event.id}"
+/>
 <PageContent width="3xl">
 	<!-- Stats -->
 	<div class="flex gap-6">

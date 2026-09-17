@@ -32,6 +32,7 @@
 </script>
 
 <PageHeader
+	width="3xl"
 	title={order.supplierName ?? 'Order'}
 	subtitle="Order"
 	backHref="/staff/inventory/orders"

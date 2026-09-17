@@ -19,6 +19,7 @@
 </script>
 
 <PageHeader
+	width="2xl"
 	title="Add a show to the calendar"
 	subtitle="Something happening around town that the scene should know about"
 	backHref={resolve('/member/events')}

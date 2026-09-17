@@ -54,7 +54,7 @@
 	}
 </script>
 
-<PageHeader title="Help Center" subtitle="Support" />
+<PageHeader width="2xl" title="Help Center" subtitle="Support" />
 <PageContent width="2xl">
 	<HelpSearch onselect={handleSelect} />
 

@@ -151,10 +151,10 @@ describe('test discovery', () => {
 	});
 
 	it('keeps every spec under a root some vitest project scans', () => {
-		// `src/`, `scripts/` and `e2e/` are the three include roots in
-		// vite.config.ts. A spec outside them is the same silent no-op.
+		// The include roots in vite.config.ts. A spec outside them is the same
+		// silent no-op. Keep this list and that one in step.
 		const stranded = filesMatching('**/*.spec.{ts,js}', ROOT).filter(
-			(file) => !/^(src|scripts|e2e)\//.test(file)
+			(file) => !/^(src|scripts|e2e|eslint-rules)\//.test(file)
 		);
 
 		expect(stranded, 'no vitest project includes these').toEqual([]);

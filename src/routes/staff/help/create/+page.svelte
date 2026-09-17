@@ -30,7 +30,7 @@
 	let autoSlug = $derived(slugify(titleValue));
 </script>
 
-<PageHeader title="New Article" subtitle="Help" backHref="/staff/help" />
+<PageHeader width="3xl" title="New Article" subtitle="Help" backHref="/staff/help" />
 <PageContent width="3xl">
 	<Form
 		remote={createArticle}

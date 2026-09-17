@@ -18,7 +18,7 @@
 	const { releases, canManage } = $derived(await getBandMusicPage(page.params.slug!));
 </script>
 
-<PageHeader title="Releases" subtitle={band.name}>
+<PageHeader width="2xl" title="Releases" subtitle={band.name}>
 	{#if canManage}
 		<CreateReleaseModal bandSlug={band.slug} />
 	{/if}

@@ -51,7 +51,7 @@
 	}
 </script>
 
-<PageHeader title={s.title} subtitle="Suggestion" backHref="/staff/suggestions">
+<PageHeader width="3xl" title={s.title} subtitle="Suggestion" backHref="/staff/suggestions">
 	<StatusBadge status={isMerged ? 'merged' : s.status} label />
 </PageHeader>
 

@@ -71,7 +71,7 @@
 	successToast="Event updated"
 	onsuccess={() => invalidateAll()}
 >
-	<PageHeader title={evt.title} subtitle={band.name}>
+	<PageHeader width="2xl" title={evt.title} subtitle={band.name}>
 		<StatusBadge status={evt.status} />
 		{#if canEdit}
 			<SubmitButton label="Save" shortcut="mod+s" />

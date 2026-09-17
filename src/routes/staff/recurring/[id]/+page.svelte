@@ -25,6 +25,7 @@
 <!-- The schedule, not the word "Recurring Series": the title was a constant, so
      every series had the same heading and the same browser-tab title (#1065). -->
 <PageHeader
+	width="3xl"
 	title={formatScheduleLabel(series.frequencyLabel, series.prototypeStartsAt, series.monthlyMode)}
 	subtitle="Recurring series"
 	backHref="/staff/recurring"

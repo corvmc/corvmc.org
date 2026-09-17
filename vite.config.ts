@@ -173,7 +173,10 @@ export default defineConfig({
 						'scripts/**/*.spec.{js,ts}',
 						// Helpers the e2e suite runs outside Playwright. `*.e2e.ts` does not
 						// match `*.{test,spec}.ts`, so the Playwright specs stay out.
-						'e2e/**/*.spec.{js,ts}'
+						'e2e/**/*.spec.{js,ts}',
+						// The custom lint rules. They are the regression tests for whole
+						// classes of layout defect, so they need tests of their own.
+						'eslint-rules/**/*.spec.{js,ts}'
 					],
 					exclude: ['src/**/*.svelte.spec.{js,ts}'],
 					server: {

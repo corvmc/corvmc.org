@@ -19,7 +19,7 @@
 	const editor = await getPressKitEditor(band.slug);
 </script>
 
-<PageHeader title="Press Kit" subtitle={band.name} />
+<PageHeader width="3xl" title="Press Kit" subtitle={band.name} />
 <PageContent width="3xl">
 	<PressKitProgress
 		slug={band.slug}

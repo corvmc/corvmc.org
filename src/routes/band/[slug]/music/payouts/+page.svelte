@@ -36,7 +36,7 @@
 	const suggested = (AUDIO_PLATFORM_FEE_BPS / 100).toFixed(0);
 </script>
 
-<PageHeader title="Payouts" subtitle={band.name} />
+<PageHeader width="2xl" title="Payouts" subtitle={band.name} />
 
 <PageContent width="2xl">
 	<Card>
