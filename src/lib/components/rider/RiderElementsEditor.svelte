@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import {
 		riderElementKindLabels,
@@ -18,6 +17,7 @@
 	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
 	import { safeFieldPrefix } from './field-names';
 	import { IconPlus, IconTrash, IconChevronUp, IconChevronDown } from '@tabler/icons-svelte';
+	import type { Snippet } from 'svelte';
 
 	/**
 	 * One person's corner of a rider: the gear they bring and the channels it
@@ -39,9 +39,16 @@
 		roster,
 		field,
 		idPrefix = 'el',
-		readonly = false
+		readonly = false,
+		action
 	}: {
 		elements: RiderElementRowState[];
+		/**
+		 * The corner's submit button. It belongs on the same line as "Add
+		 * something to the stage" — rendered by the parent below the editor it sat
+		 * alone on a second row with ~580px of nothing between them (#1230).
+		 */
+		action?: Snippet;
 		/** Whose monitor mix an input can feed. */
 		roster: { userId: string; name: string }[];
 		/**
@@ -155,12 +162,7 @@
 		)
 	);
 
-	const inputTotal = $derived(
-		elements.reduce(
-			(n, el) => n + (el.kind === 'monitor' ? 0 : el.inputs.filter((i) => text(i.label)).length),
-			0
-		)
-	);
+	const atLimit = $derived(elements.length >= RIDER_MAX_ELEMENTS);
 </script>
 
 <!--
@@ -386,20 +388,21 @@
 		</div>
 	{/each}
 
-	<div class="flex items-center justify-between">
-		{#if !readonly}
-			<Button
-				type="button"
-				variant="ghost"
-				size="sm"
-				disabled={elements.length >= RIDER_MAX_ELEMENTS}
-				onclick={addElement}
-			>
-				<IconPlus size={16} /> Add something to the stage
-			</Button>
-		{:else}
-			<span></span>
-		{/if}
-		<Badge>{inputTotal} {inputTotal === 1 ? 'input' : 'inputs'}</Badge>
-	</div>
+	<!-- The corner's channel count is the badge in the card header. A second one
+	     here printed the same number twice, ~80px apart. -->
+	{#if !readonly}
+		<div class="flex flex-wrap items-center justify-between gap-2">
+			<div class="flex items-center gap-2">
+				<Button type="button" variant="ghost" size="sm" disabled={atLimit} onclick={addElement}>
+					<IconPlus size={16} /> Add something to the stage
+				</Button>
+				{#if atLimit}
+					<span class="text-xs text-base-content/60">
+						{RIDER_MAX_ELEMENTS} is the limit for one corner.
+					</span>
+				{/if}
+			</div>
+			{#if action}{@render action()}{/if}
+		</div>
+	{/if}
 </div>

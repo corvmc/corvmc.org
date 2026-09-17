@@ -101,6 +101,24 @@
 		};
 	}
 
+	/**
+	 * Askable first, blocked last, and the two counted apart.
+	 *
+	 * The heading counted rows, so a shift whose only two interested members
+	 * both lacked a required clearance was headed "Who to ask · 2" and offered
+	 * nobody (#1236). This panel answers one question at a glance — can I fill
+	 * this from people who already said yes — and a count that includes
+	 * refusals answers it wrongly.
+	 */
+	function grade(rows: Row[]) {
+		const graded = rows.map((row) => ({ row, f: flag(row) }));
+		return {
+			ordered: graded.toSorted((a, b) => Number(a.f.blocked) - Number(b.f.blocked)),
+			askable: graded.filter((g) => !g.f.blocked).length,
+			blocked: graded.filter((g) => g.f.blocked).length
+		};
+	}
+
 	function refuse(row: Row) {
 		toast.error(
 			`Refused. ${row.missing.map((m) => m.name).join(' and ')} is required for ${roleName}.`
@@ -112,7 +130,13 @@
 	{#snippet header()}
 		<div class="flex flex-col gap-2">
 			{#await candidates then result}
-				<CardTitle>Who to ask · {result.rows.length}</CardTitle>
+				{@const g = grade(result.rows)}
+				<CardTitle>
+					Who to ask · {g.askable}
+					{#if g.blocked > 0}
+						<span class="text-subtle text-sm font-normal">· {g.blocked} blocked</span>
+					{/if}
+				</CardTitle>
 			{/await}
 			<!-- Says which date the clearances were judged against, because "cleared"
 			     without a date is the bug this column exists to fix: a card valid
@@ -136,6 +160,7 @@
 	{/snippet}
 
 	{#await candidates then result}
+		{@const g = grade(result.rows)}
 		{#if result.rows.length === 0}
 			<EmptyState
 				title="Nobody left in this group"
@@ -147,8 +172,7 @@
 			/>
 		{:else}
 			<ul class="flex flex-col gap-3">
-				{#each result.rows as row (row.userId)}
-					{@const f = flag(row)}
+				{#each g.ordered as { row, f } (row.userId)}
 					<li class="flex flex-wrap items-center justify-between gap-3">
 						<div class="min-w-0">
 							<EntityIdentity ref={row.member} />

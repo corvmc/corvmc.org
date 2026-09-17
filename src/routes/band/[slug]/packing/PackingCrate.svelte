@@ -77,8 +77,9 @@
 				class="space-y-4"
 			>
 				<input {...savePackingItems.fields.bandId.as('hidden', bandId)} />
-				<PackingItemsEditor bind:items field={savePackingItems.fields.items} idPrefix={slotKey} />
-				<div class="flex justify-end"><SubmitButton label="Save" /></div>
+				<PackingItemsEditor bind:items field={savePackingItems.fields.items} idPrefix={slotKey}>
+					{#snippet action()}<SubmitButton label="Save" />{/snippet}
+				</PackingItemsEditor>
 			</Form>
 		{:else if canEdit}
 			<Form
@@ -90,8 +91,9 @@
 			>
 				<input {...adminRemote.fields.bandId.as('hidden', bandId)} />
 				<input {...adminRemote.fields.targetUserId.as('hidden', ownerUserId ?? '')} />
-				<PackingItemsEditor bind:items field={adminRemote.fields.items} idPrefix={slotKey} />
-				<div class="flex justify-end"><SubmitButton label="Save" /></div>
+				<PackingItemsEditor bind:items field={adminRemote.fields.items} idPrefix={slotKey}>
+					{#snippet action()}<SubmitButton label="Save" />{/snippet}
+				</PackingItemsEditor>
 			</Form>
 		{:else}
 			<PackingItemsEditor bind:items idPrefix={slotKey} readonly />
