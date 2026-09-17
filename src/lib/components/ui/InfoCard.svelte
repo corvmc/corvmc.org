@@ -13,14 +13,28 @@
 	 */
 	let {
 		title,
+		state,
 		class: extraClass = '',
 		children,
+		action,
 		header
 	}: {
 		title: string;
+		/**
+		 * What this section's contents amount to — "1 of 4 unfilled", "6 · 24.5
+		 * hrs", "Empty". A console section states its own state in its heading so
+		 * the page can be scanned without being read; passing it here keeps the
+		 * separator and weight in one place instead of in 26 copies.
+		 */
+		state?: string | number;
 		class?: string;
 		children: Snippet;
-		/** Replaces the default `CardTitle`, e.g. to add an action beside it. */
+		/** A control beside the title — usually a link into the full queue. */
+		action?: Snippet;
+		/**
+		 * Replaces the whole heading. For a genuinely bespoke one, like a title
+		 * with an `Action` and its modal form; `state` and `action` cover the rest.
+		 */
 		header?: Snippet<[title: string]>;
 	} = $props();
 </script>
@@ -29,8 +43,19 @@
 	<CardBody>
 		{#if header}
 			{@render header(title)}
+		{:else if action}
+			<div class="flex items-center justify-between gap-2">
+				<CardTitle>
+					{title}
+					{#if state}<span class="text-muted font-normal">· {state}</span>{/if}
+				</CardTitle>
+				{@render action()}
+			</div>
 		{:else}
-			<CardTitle>{title}</CardTitle>
+			<CardTitle>
+				{title}
+				{#if state}<span class="text-muted font-normal">· {state}</span>{/if}
+			</CardTitle>
 		{/if}
 		{@render children()}
 	</CardBody>
