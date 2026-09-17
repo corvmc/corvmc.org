@@ -20,6 +20,7 @@
  * dressed as a projection.
  */
 import type { BuildAliasTable } from 'drizzle-orm/sqlite-core';
+import type { BookerType } from '$lib/config';
 import { user } from '$lib/server/db/schema/authentication';
 import { group } from '$lib/server/db/schema/group';
 import { eventListing } from '$lib/server/db/schema/event';
@@ -196,7 +197,12 @@ export function toEventRef(row: EventRefRow | null | undefined): EventRef {
  * day that invariant changes, which is the whole reason it is written out.
  */
 export function toBookerRef(row: {
-	bookerType: string;
+	/**
+	 * Typed as the enum, not `string`: the value moved from `'event_listing'` to
+	 * `'production'` in #855 and a bare string comparison went on compiling
+	 * while the staff list quietly stopped linking a hold to its show.
+	 */
+	bookerType: BookerType | (string & {});
 	member: MemberRefRow | null;
 	band?: BandRefRow | null;
 	event?: EventRefRow | null;
@@ -205,7 +211,7 @@ export function toBookerRef(row: {
 	// own ref rather than silently reporting as a member booking. `id: null`
 	// renders unlinked, so the row stays honest about what it is.
 	if (row.bookerType === 'group') return toBandRef(row.band);
-	if (row.bookerType === 'event_listing') return toEventRef(row.event);
+	if (row.bookerType === 'production') return toEventRef(row.event);
 	if (row.bookerType === 'instructor') return toMemberRef(row.member);
 	return toMemberRef(row.member);
 }

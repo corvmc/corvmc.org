@@ -116,7 +116,7 @@ describe('toBookerRef', () => {
 			title: 'The Velvet Underground',
 			slug: 'the-velvet-underground'
 		});
-		expect(toBookerRef({ ...args, bookerType: 'event_listing' })).toMatchObject({
+		expect(toBookerRef({ ...args, bookerType: 'production' })).toMatchObject({
 			type: 'event',
 			title: 'Loud Night'
 		});

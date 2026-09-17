@@ -283,7 +283,10 @@ test.describe('staff event edit — reserve space', () => {
 		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue(EVENT_START);
 		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue(EVENT_END);
 
-		await page.getByRole('button', { name: 'Save' }).click();
+		// `exact`: the console also carries "Save bill", and a substring match
+		// resolves to both the moment the lineup editor renders — which every CMC
+		// show now does, because every CMC show now has a production (#1202).
+		await page.getByRole('button', { name: 'Save', exact: true }).click();
 
 		// Presence of the link proves the reservation was created AND linked. By
 		// href, not by wording: the card is an EntityIdentity now.
