@@ -283,12 +283,20 @@ The claim the whole document rests on — a card is a row folded at the containe
   never seen, so it moves to second. Worth deciding deliberately rather than by scroll order.
 - **A transaction moves its receipt to a sticky footer**, or onto the button: `Pay $20.00`. The
   total has to stay visible while the inputs change, which is what the sidebar was for.
+- **The navigation itself folds to a drawer, not a tab bar.** Fifteen destinations across three
+  panels do not fit a ribbon, and truncating to four silently hides Intake, Reports, Settings and
+  the rest. This is not a proposal — `AppShell` is already a daisyUI drawer at `lg:drawer-open`,
+  permanent from 1024px and off-canvas below it, with the hamburger in `AppTopbar`. The wireframes
+  had invented a four-tab bar; they now show what the app does.
 - **A thread is the only shape whose fold changes navigation.** Master and detail cannot share
   390px, so the two panes become two screens and the split becomes a push. Every other shape folds
   within one screen; this one gains a step, which is a cost of the shape rather than a flaw in it.
 
-One thing the exercise found in the desktop boards: on a narrow card, `H2`'s unread state was a
-left rule _and_ a pill. The phone drops the pill — and the desktop board should too.
+Two things the exercise found in the desktop boards. On a narrow card, `H2`'s unread state was a
+left rule _and_ a pill; the phone drops the pill, and the desktop board should too. And the panel
+switcher was drawn as a three-way Member/Band/Staff toggle, which is wrong — `panelTabs()` emits
+Member, Staff if you are staff, then **one tab per band**, collapsing to a dropdown. A member in
+three bands has no toggle to draw.
 
 ## Where this loses
 
