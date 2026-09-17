@@ -15,7 +15,6 @@ const mockEventRow = {
 	// and the hold's booker turns on it (#855).
 	kind: 'show',
 	productionId: null,
-	groupId: null,
 	status: 'draft',
 	publishedAt: null,
 	reservationId: null,
