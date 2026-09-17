@@ -46,9 +46,9 @@ describe('staffInboxChannels', () => {
 		expect(staffInboxChannels as readonly string[]).not.toContain('band');
 	});
 
-	it('covers every channel except the two staff are not party to', () => {
+	it('covers every channel except the three staff are not party to', () => {
 		expect([...staffInboxChannels]).toEqual(
-			inboxChannels.filter((ch) => ch !== 'direct' && ch !== 'band')
+			inboxChannels.filter((ch) => ch !== 'direct' && ch !== 'band' && ch !== 'group')
 		);
 	});
 

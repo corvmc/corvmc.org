@@ -25,6 +25,7 @@
 	"createVolunteerRole.isSpecializedSkill",
 	"createVolunteerRole.marketRate",
 	"payForReservation.skipPayment",
+	"postGroupChatMessage.body",
 	"refundAndCancelReservation.reason",
 	"replyToThread.body",
 	"replyToThread.disposition",

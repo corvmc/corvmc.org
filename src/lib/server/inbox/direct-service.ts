@@ -96,7 +96,10 @@ function counterpartAccepted(userId: string) {
  * unknown rather than false — but the explicit guard says the intent, which is
  * that not knowing somebody's age is not grounds for restricting them.
  */
-function messagingDisabledFor(userIdExpr: SQL | AnyColumn) {
+// Exported for `unified-service.ts`, which reads the same threads this file
+// does and must apply the same filter — a second spelling of it would be a
+// second chance to get the D1 binding below wrong.
+export function messagingDisabledFor(userIdExpr: SQL | AnyColumn) {
 	// Unix *seconds*, not a `Date` and not milliseconds. Drizzle converts a Date
 	// for a typed `integer(..., { mode: 'timestamp' })` column, but a raw `sql`
 	// parameter goes to D1 as-is — and D1 rejects an object outright:

@@ -35,9 +35,23 @@
 
 	let bandsOpen = $state(false);
 
-	// Nothing in any sidebar lights on /member/messages any more, so the icon
+	/**
+	 * Messages in the panel you are standing in: a band's inbox from its own
+	 * panel, the queue from staff's, your own from the member panel. The icon
+	 * used to go to `/member/messages` from everywhere, which moved you out of
+	 * the panel you were working in to read a thread about it.
+	 */
+	const messagesHref = $derived.by(() => {
+		if (activePanel === 'staff') return '/staff/inbox';
+		const band = bandPanels.find((b) => b.key === activePanel);
+		return band ? `${band.href}/messages` : MESSAGES_HREF;
+	});
+
+	// Nothing in any sidebar lights on the member inbox any more, so the icon
 	// carries its own active state (#1244).
-	const messagesActive = $derived(page.url.pathname.startsWith(MESSAGES_HREF));
+	const messagesActive = $derived(
+		page.url.pathname === messagesHref || page.url.pathname.startsWith(messagesHref + '/')
+	);
 
 	function handleClickOutside(e: MouseEvent) {
 		const target = e.target as HTMLElement;
@@ -136,7 +150,7 @@
 		/>
 
 		<Button
-			href={MESSAGES_HREF}
+			href={messagesHref as ResolvedPathname}
 			variant={messagesActive ? 'primary' : 'ghost'}
 			size="sm"
 			shape="circle"

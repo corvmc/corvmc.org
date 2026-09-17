@@ -9,11 +9,12 @@ import {
 	replyToDirectThread,
 	acceptDirectThread,
 	declineDirectThread,
-	listMemberConversations,
 	getDirectThread,
 	counterpartOf
 } from '$lib/server/inbox/direct-service';
 import { getPortalThread } from '$lib/server/inbox/portal-service';
+import { listUnifiedConversations, type InboxScope } from '$lib/server/inbox/unified-service';
+import { listForUser } from '$lib/server/band/band-service';
 import {
 	blockUser,
 	unblockUser,
@@ -54,18 +55,63 @@ import { mapDomainError } from '$lib/server/errors';
 // `getMyDirectThreads()`. The pages refresh in `onsuccess`, where the page
 // number is in scope. See `src/routes/member/messages/list-state.svelte.ts`.
 
-/** Everything in the member's Messages list: staff threads and member threads. */
+/**
+ * The bands whose inbox this member may read — owner or admin, the same gate
+ * the band panel's own messages route applies. Shared by the list and the
+ * selector so the two cannot offer different inboxes.
+ */
+async function adminBandsFor(userId: string) {
+	const bands = await listForUser(userId, ['band']).catch(() => []);
+	return bands.filter((b) => b.status === 'active' && (b.role === 'owner' || b.role === 'admin'));
+}
+
+/**
+ * Everything in the member's Messages list — their own threads and every band
+ * inbox they administer, newest activity first (#1250).
+ *
+ * No entity ref here, unlike every other list: #234 made this a two-pane inbox
+ * whose whole row is the anchor, with an active state and a channel icon. An
+ * identity's own link inside that row would be an anchor inside an anchor, so
+ * `ConversationList` owns its markup and the tier stays out.
+ */
 export const getMyMessages = query(
-	z.object({ page: z.coerce.number().int().min(1).optional() }).optional(),
+	z
+		.object({
+			page: z.coerce.number().int().min(1).optional(),
+			/** `all`, `own`, or a band slug. */
+			inbox: z.string().optional()
+		})
+		.optional(),
 	async (args) => {
 		const user = requireUser();
-		// No entity ref here, unlike every other list: #234 made this a two-pane
-		// inbox whose whole row is the anchor, with an active state and a channel
-		// icon. An identity's own link inside that row would be an anchor inside an
-		// anchor, so `ConversationList` owns its markup and the tier stays out.
-		return listMemberConversations(user.id, { page: args?.page ?? 1, pageSize: 25 });
+		const bands = await adminBandsFor(user.id);
+
+		const requested = args?.inbox ?? 'all';
+		// A slug the viewer does not administer resolves to nothing rather than
+		// erroring: the selector is in the URL, and a stale link should show an
+		// empty inbox, not a 403 page.
+		const scope: InboxScope =
+			requested === 'all'
+				? 'all'
+				: requested === 'own'
+					? 'own'
+					: { groupId: bands.find((b) => b.slug === requested)?.id ?? '' };
+
+		return listUnifiedConversations(
+			user.id,
+			bands.map((b) => b.id),
+			scope,
+			{ page: args?.page ?? 1, pageSize: 25 }
+		);
 	}
 );
+
+/** The selector's options: the viewer's own inbox, then each band's. */
+export const getMyInboxes = query(async () => {
+	const user = requireUser();
+	const bands = await adminBandsFor(user.id);
+	return bands.map((b) => ({ slug: b.slug, name: b.name }));
+});
 
 /**
  * One conversation from the member's Messages list, whichever kind it is.

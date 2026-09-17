@@ -36,7 +36,8 @@
 		/** Why replying is impossible, if it is. Set = the Reply tab is disabled. */
 		replyBlockedReason,
 		assignees,
-		onsent
+		onsent,
+		sendLabel = 'Send Reply'
 	}: {
 		threadId: string;
 		replyForm: Omit<RemoteForm<{ threadId: string; body: string }, unknown>, 'for'>;
@@ -46,6 +47,11 @@
 			'for'
 		>;
 		replyBlockedReason?: string;
+		/**
+		 * The send button's words. "Reply" is wrong in a group chat, where
+		 * nobody is replying to anybody in particular (#1252).
+		 */
+		sendLabel?: string;
 		/**
 		 * The assignable staff, as a thunk so the composer decides when to fetch
 		 * them. Omitted on the member side, which has neither notes nor assignment.
@@ -208,7 +214,7 @@
 							: 'Add note'
 						: staffSend
 							? 'Send + wait for reply'
-							: 'Send Reply'}
+							: sendLabel}
 					successLabel={isNote ? (assignTo ? 'Assigned' : 'Added') : 'Sent'}
 					shortcut="mod+enter"
 					disabled={!draft.trim()}
