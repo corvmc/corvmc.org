@@ -5,11 +5,12 @@ import { reservation } from '$lib/server/db/schema/reservation';
  * Not a program's free hold — the room CMC or a committee took, rather than a
  * booking somebody owns.
  *
- * Four reads meant this and said `ne(bookerType, 'event_listing')`, shorthand
- * that #855 stops being true. Written to hold in both eras.
+ * Four reads said `ne(bookerType, 'event_listing')`, which was shorthand until
+ * #855 re-pointed those holds at the party responsible for them.
  */
 export function notAProgramHold(): SQL {
-	return and(ne(reservation.bookerType, 'event_listing'), notAProgramGroup())!;
+	// A production's hold is CMC's own room time, never a member's booking.
+	return and(ne(reservation.bookerType, 'production'), notAProgramGroup())!;
 }
 
 /**

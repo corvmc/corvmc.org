@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getTableName } from 'drizzle-orm';
+import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -11,6 +13,10 @@ const mockEventRow = {
 	startsAt: new Date('2025-07-15T02:00:00Z'),
 	endsAt: new Date('2025-07-15T05:00:00Z'),
 	doorsAt: null,
+	// `notNull` with this default on the real table: a listing always has a kind,
+	// and the hold's booker turns on it (#855).
+	kind: 'show',
+	productionId: null,
 	status: 'draft',
 	publishedAt: null,
 	reservationId: null,
@@ -75,7 +81,10 @@ let insertShouldThrow = false;
 let lastLinkedGroups: Record<string, unknown>[] | null = null;
 const insertValues = vi.fn((vals: Record<string, unknown> | Record<string, unknown>[]) => {
 	if (Array.isArray(vals)) lastLinkedGroups = vals;
-	else lastInsertedValues = vals;
+	// The listing, identified by the one column only it has. `create()` writes the
+	// production first — the listing's `production_id` is a real foreign key — so
+	// neither "first insert" nor "last insert" picks the right row.
+	else if ('title' in vals) lastInsertedValues = vals;
 	return {
 		onConflictDoNothing: vi.fn(() => Promise.resolve()),
 		returning: vi.fn(() =>
@@ -181,8 +190,14 @@ vi.mock('$lib/server/directory/entry-service', () => ({
 	createExternalAct: vi.fn(async () => 'entry-new')
 }));
 
+const mockCreateProduction = vi.fn(async (_eventId: string, opts?: { id?: string }) => ({
+	id: opts?.id ?? 'prod-new'
+}));
+const mockGetProductionByEvent = vi.fn(async () => null);
 vi.mock('$lib/server/production/production-service', () => ({
-	cancelProductionsForEvent: (...args: unknown[]) => mockCancelProductions(...args)
+	cancelProductionsForEvent: (...args: unknown[]) => mockCancelProductions(...args),
+	createProduction: (...a: unknown[]) => mockCreateProduction(...(a as [string, { id?: string }])),
+	getProductionByEvent: () => mockGetProductionByEvent()
 }));
 
 import {
@@ -286,12 +301,13 @@ describe('EventService', () => {
 			});
 
 			expect(hasConflict).toHaveBeenCalled();
-			// Reservation is created first, booked against the generated event id,
-			// then the event is inserted already linked to it.
+			// The reservation is created first, booked against the production id
+			// minted before either row exists, and the listing is then inserted
+			// already naming both (#855, #1202).
 			expect(staffCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
-					bookerType: 'event_listing',
-					bookerId: lastInsertedValues!.id,
+					bookerType: 'production',
+					bookerId: lastInsertedValues!.productionId,
 					status: 'confirmed'
 				})
 			);
@@ -318,13 +334,20 @@ describe('EventService', () => {
 			expect(deleteWhere).toHaveBeenCalled();
 		});
 
-		it('does not attempt compensation when there is no reservation', async () => {
+		it('compensates the production but has no reservation to compensate', async () => {
+			// A show opens its production before the listing, because the listing's
+			// `production_id` is a real foreign key. So a failed listing insert
+			// leaves a production nothing announces, and that has to go too — there
+			// is simply no hold to release here (#1202).
 			insertShouldThrow = true;
 
 			await expect(create(baseParams)).rejects.toThrow('insert failed');
 
 			expect(staffCreate).not.toHaveBeenCalled();
-			expect(eventDelete).not.toHaveBeenCalled();
+			const deleted = (eventDelete.mock.calls as unknown as SQLiteTable[][]).map(([t]) =>
+				getTableName(t)
+			);
+			expect(deleted).toEqual(['production']);
 		});
 
 		it('skips conflict check when overrideConflicts is true', async () => {
@@ -1011,10 +1034,12 @@ describe('EventService', () => {
 
 			// Nothing to release — this is an add, not a replace.
 			expect(cancelReservation).not.toHaveBeenCalled();
+			// A show holds its room as the production running it; this listing had
+			// none, so the hold opens one.
 			expect(staffCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
-					bookerType: 'event_listing',
-					bookerId: 'evt-1',
+					bookerType: 'production',
+					bookerId: 'prod-new',
 					status: 'confirmed'
 				})
 			);

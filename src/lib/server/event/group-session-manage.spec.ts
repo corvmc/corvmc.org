@@ -124,8 +124,8 @@ describe('updateGroupSession — taking and releasing the room', () => {
 
 		expect(staffCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
-				bookerType: 'event_listing',
-				bookerId: 'evt-1',
+				bookerType: 'group',
+				bookerId: 'club-1',
 				hardHold: true,
 				startsAt: STARTS,
 				endsAt: ENDS,

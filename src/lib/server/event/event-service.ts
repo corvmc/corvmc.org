@@ -46,6 +46,7 @@ import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { memberRefColumns } from '$lib/server/entity/refs';
 import type { EventStatus } from '$lib/server/db/schema/event';
 import { staffCreate, adjustWindow } from '$lib/server/reservation/reservation-service';
+import { createProduction, getProductionByEvent } from '$lib/server/production/production-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { captureException } from '$lib/server/sentry';
@@ -275,9 +276,22 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	// reservation first, then insert the event with the link already set. If the
 	// event insert fails, compensate by deleting the just-created reservation.
 	const eventId = crypto.randomUUID();
+	// A CMC show is a production; the listing is the advertisement it emits. The
+	// id is minted here rather than by `createProduction` because the room is
+	// booked before the listing exists, and the booker has to name the show.
+	const productionId = kind === 'show' ? crypto.randomUUID() : null;
 
 	let reservationId: string | null = null;
 	if (reservationParams) {
+		// Anything that is not a show is somebody's programme — a work party is
+		// Facilities', outreach is Development's — and the room is held for them.
+		// Without a group there is no party to hold it for (#1199).
+		if (!productionId && !groupId) {
+			throw new EventValidationError(
+				'A work party, meeting or class that takes the room has to say which group is running it',
+				'groupId'
+			);
+		}
 		if (!reservationParams.overrideConflicts) {
 			const conflict = await hasConflict(reservationParams.startsAt, reservationParams.endsAt);
 			if (conflict) {
@@ -287,14 +301,24 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 
 		const res = await staffCreate({
 			userId: createdByUserId,
-			bookerType: 'event_listing',
+			bookerType: productionId ? 'production' : 'group',
 			hardHold: true,
-			bookerId: eventId,
+			bookerId: productionId ?? groupId!,
 			startsAt: reservationParams.startsAt,
 			endsAt: reservationParams.endsAt,
 			status: 'confirmed'
 		});
 		reservationId = res.id;
+	}
+
+	// Before the listing, because the listing names it and `production_id` is a
+	// real foreign key. The room is booked first because `booker_id` has none —
+	// that is the only reason the reservation may come earlier.
+	//
+	// Every CMC show gets one, room or no room: the back-of-house is what a show
+	// is, and leaving it to a button is why every show before 2026-09-04 has none.
+	if (productionId) {
+		await db.insert(production).values({ id: productionId, createdByUserId });
 	}
 
 	let row: EventRow;
@@ -317,18 +341,26 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				venueId: venueId ?? null,
 				location: location ?? null,
 				groupId: groupId ?? null,
+				productionId,
 				reservationId,
 				createdByUserId
 			})
 			.returning();
 	} catch (err) {
-		// Compensating write: the event never persisted, so remove the orphan
-		// reservation we created for it.
+		// Compensating writes: the listing never persisted, so neither the hold nor
+		// the production it would have announced has anything pointing at it.
 		if (reservationId) {
 			try {
 				await db.delete(reservation).where(eq(reservation.id, reservationId));
 			} catch (cleanupErr) {
 				captureException(cleanupErr, { event: 'event.create.compensate', reservationId });
+			}
+		}
+		if (productionId) {
+			try {
+				await db.delete(production).where(eq(production.id, productionId));
+			} catch (cleanupErr) {
+				captureException(cleanupErr, { event: 'event.create.compensate', productionId });
 			}
 		}
 		throw err;
@@ -496,6 +528,34 @@ function assertValidTicketFloor(floor: number | null | undefined, price: number 
 	}
 }
 
+/**
+ * Who holds the room for a listing that already exists.
+ *
+ * A show's is its production, opened here if the listing predates the table.
+ * Anything else is its group's — a work party is Facilities'. #853 has why the
+ * listing itself stopped being the answer.
+ */
+async function holdBookerFor(
+	eventId: string,
+	kind: EventKind,
+	groupId: string | null,
+	userId: string
+): Promise<{ type: 'production' | 'group'; id: string }> {
+	if (kind === 'show') {
+		const existingProduction = await getProductionByEvent(eventId);
+		if (existingProduction) return { type: 'production', id: existingProduction.id };
+		const opened = await createProduction(eventId, { createdByUserId: userId });
+		return { type: 'production', id: opened.id };
+	}
+	if (!groupId) {
+		throw new EventValidationError(
+			'A work party, meeting or class that takes the room has to say which group is running it',
+			'groupId'
+		);
+	}
+	return { type: 'group', id: groupId };
+}
+
 export async function update(eventId: string, params: UpdateEventParams): Promise<EventRow> {
 	const existing = await getById(eventId);
 	if (!existing) throw new EventNotFoundError();
@@ -619,11 +679,18 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 				}
 			}
 
+			const booker = await holdBookerFor(
+				eventId,
+				params.kind ?? existing.kind,
+				existing.groupId,
+				userId
+			);
+
 			const newRes = await staffCreate({
 				userId,
-				bookerType: 'event_listing',
+				bookerType: booker.type,
 				hardHold: true,
-				bookerId: eventId,
+				bookerId: booker.id,
 				startsAt: reservationStartsAt,
 				endsAt: reservationEndsAt,
 				// Event space is staff-held for drafts too: there is no member confirm/pay
@@ -2203,11 +2270,9 @@ export interface CreateGroupEventParams {
  * hosted nor managed by CMC. So this is `create()`'s reservation path with
  * `createBandEvent()`'s ownership.
  *
- * **The room is free and the group does not book it.** The reservation belongs
- * to the *event* — `bookerType: 'event_listing'`, `bookerId` the event id — exactly as a
- * staff CMC event's does. Booking as the group would imply the group has a
- * balance to spend, which is precisely what a sanctioned program does not need,
- * and no credit ledger is touched.
+ * **The room is free and no credit ledger is touched.** The hold is the group's
+ * — `bookerType: 'group'` — because the group is the party responsible for it.
+ * That grants nothing: free-versus-paid is `group.kind`, and only a band pays.
  *
  * The write order is `create()`'s, and for the same reason: D1 has no
  * interactive transactions, so the reservation is written first and the event
@@ -2257,11 +2322,12 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 
 		const res = await staffCreate({
 			userId: createdByUserId,
-			// Not `'group'`. The room is held for the session, not booked by the
-			// program — see docs/specs/shipped/groups-spec.md § Room time.
-			bookerType: 'event_listing',
+			// `'group'` since #855. The discriminator says which table `booker_id`
+			// points at; free-versus-paid is `group.kind`, and only a band pays —
+			// groups-spec.md § Room time keeps those two apart on purpose.
+			bookerType: 'group',
 			hardHold: true,
-			bookerId: eventId,
+			bookerId: groupId,
 			startsAt: reservationParams.startsAt,
 			endsAt: reservationParams.endsAt,
 			status: 'confirmed'
@@ -2402,11 +2468,10 @@ export async function updateGroupSession(
 
 		const res = await staffCreate({
 			userId,
-			// Not `'group'` — the room is held for the session, not booked by the
-			// program. See docs/specs/shipped/groups-spec.md § Room time.
-			bookerType: 'event_listing',
+			// `'group'` since #855 — see `createGroupEvent`.
+			bookerType: 'group',
 			hardHold: true,
-			bookerId: eventId,
+			bookerId: groupId,
 			startsAt,
 			endsAt,
 			status: 'confirmed'

@@ -12,8 +12,8 @@ import { group } from '$lib/server/db/schema/group';
  */
 const bandBookerJoin = and(eq(reservation.bookerType, 'group'), eq(group.id, reservation.bookerId));
 const eventBookerJoin = and(
-	eq(reservation.bookerType, 'event_listing'),
-	eq(eventListing.id, reservation.bookerId)
+	eq(reservation.bookerType, 'production'),
+	eq(eventListing.productionId, reservation.bookerId)
 );
 import { eq, and, isNull, sql, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';

@@ -34,7 +34,7 @@ beforeEach(() => {
 			${row('band', 'group', 'band-1')},
 			${row('committee', 'group', 'facilities')},
 			${row('club', 'group', 'film-club')},
-			${row('listing', 'event_listing', 'event-1')}`
+			${row('show', 'production', 'prod-1')}`
 	);
 });
 
@@ -47,8 +47,8 @@ describe('what counts as somebody’s own booking', () => {
 	});
 
 	it('excludes a committee’s hold, which is free room time', async () => {
-		// The case #855 creates: today this row is an `event_listing`, and after
-		// the re-point it is the committee's own group id. Both are excluded.
+		// A committee's hold is its own group id since #855, and it is free room
+		// time either way — `group.kind` is what says so.
 		expect(ids(await matching())).not.toContain('committee');
 	});
 
@@ -56,8 +56,8 @@ describe('what counts as somebody’s own booking', () => {
 		expect(ids(await matching())).not.toContain('club');
 	});
 
-	it('still excludes a listing hold, so it is correct before #855 too', async () => {
-		expect(ids(await matching())).not.toContain('listing');
+	it("excludes a show's hold, which is the collective's own room time", async () => {
+		expect(ids(await matching())).not.toContain('show');
 	});
 
 	it('does not exclude a band whose group row is gone', async () => {

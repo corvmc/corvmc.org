@@ -128,7 +128,7 @@ describe('validateBooking', () => {
 	});
 
 	it('still rejects a 30-minute booking for everyone else', async () => {
-		for (const bookerType of ['user', 'group', 'event_listing'] as const) {
+		for (const bookerType of ['user', 'group', 'production'] as const) {
 			const result = await validateBooking(makeDate(date, '10:00'), makeDate(date, '10:30'), {
 				bookerType
 			});

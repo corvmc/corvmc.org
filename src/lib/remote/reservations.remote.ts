@@ -227,19 +227,10 @@ export const getReservationDetail = query(z.string(), async (id) => {
  * one predicate the callers can drop into an existing `and(...)`.
  */
 function bookedByGroup(groupId: string) {
-	return or(
-		and(eq(reservation.bookerType, 'group'), eq(reservation.bookerId, groupId)),
-		and(
-			eq(reservation.bookerType, 'event_listing'),
-			inArray(
-				reservation.bookerId,
-				db
-					.select({ id: eventListing.id })
-					.from(eventListing)
-					.where(eq(eventListing.groupId, groupId))
-			)
-		)
-	);
+	// One branch since #855: a group's session holds the room as the group, so
+	// there is no longer a listing to reach through. A show is a production's
+	// hold and is never a group's, whoever is on the bill.
+	return and(eq(reservation.bookerType, 'group'), eq(reservation.bookerId, groupId));
 }
 
 export const getBandReservations = query(
@@ -989,8 +980,8 @@ const bandBookerJoin = and(eq(reservation.bookerType, 'group'), eq(group.id, res
 
 /** The same shape for the other polymorphic booker: an event holding the room. */
 const eventBookerJoin = and(
-	eq(reservation.bookerType, 'event_listing'),
-	eq(eventListing.id, reservation.bookerId)
+	eq(reservation.bookerType, 'production'),
+	eq(eventListing.productionId, reservation.bookerId)
 );
 
 /** Staff: paginated, filtered reservation list. */

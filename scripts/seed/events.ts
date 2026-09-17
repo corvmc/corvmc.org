@@ -1,4 +1,5 @@
 import { eventListing } from '../../src/lib/server/db/schema/event';
+import { production } from '../../src/lib/server/db/schema/production';
 import { claimRoom } from './room';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { recurringSeries } from '../../src/lib/server/db/schema/recurring';
@@ -55,7 +56,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		eventEndHour: number,
 		createdByUserId: string,
 		reservationStatus: (typeof reservation.$inferSelect)['status']
-	): Promise<string | undefined> {
+	): Promise<{ reservationId: string; productionId: string } | undefined> {
 		const startsAt = ptDate(day, eventStartHour, -30);
 		const endsAt = ptDate(day, eventEndHour, 30);
 		// A show whose room is already taken simply has no hold, which is the
@@ -64,13 +65,16 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		if (reservationStatus !== 'cancelled' && !claimRoom(startsAt, endsAt, 'event')) {
 			return undefined;
 		}
+		// The show holds its own room (#855). Minted here so the hold can name it
+		// before either row exists, the ordering event-service.create() uses.
+		const productionId = crypto.randomUUID();
+		await db.insert(production).values({ id: productionId, createdByUserId });
+
 		const [r] = await db
 			.insert(reservation)
 			.values({
-				bookerType: 'event_listing',
-				// The real polymorphic pointer, as event-service writes it. A literal
-				// 'event_listing' here left every seeded hold unattached to its show.
-				bookerId: eventId,
+				bookerType: 'production',
+				bookerId: productionId,
 				createdByUserId,
 				status: reservationStatus,
 				startsAt,
@@ -79,7 +83,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				cancellationReason: reservationStatus === 'cancelled' ? 'Event cancelled' : null
 			})
 			.returning();
-		return r.id;
+		return { reservationId: r.id, productionId };
 	}
 
 	for (let i = 0; i < 6; i++) {
@@ -95,9 +99,9 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		// The id is minted up front so the hold can point at the event, the same
 		// ordering event-service.create() uses.
 		const eventId = crypto.randomUUID();
-		let reservationId: string | undefined;
+		let held: { reservationId: string; productionId: string } | undefined;
 		if (random() < 0.75) {
-			reservationId = await createEventReservation(
+			held = await createEventReservation(
 				eventId,
 				day,
 				hour,
@@ -119,7 +123,8 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				status: 'published',
 				publishedAt,
 				tags,
-				reservationId,
+				reservationId: held?.reservationId,
+				productionId: held?.productionId,
 				createdByUserId: creator.id
 			})
 			.returning();
@@ -167,9 +172,9 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		const config = futureConfigs[i];
 
 		const eventId = crypto.randomUUID();
-		let reservationId: string | undefined;
+		let held: { reservationId: string; productionId: string } | undefined;
 		if (random() < 0.75) {
-			reservationId = await createEventReservation(
+			held = await createEventReservation(
 				eventId,
 				day,
 				hour,
@@ -195,7 +200,8 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				status: 'published',
 				publishedAt: new Date(),
 				tags,
-				reservationId,
+				reservationId: held?.reservationId,
+				productionId: held?.productionId,
 				ticketingEnabled: config.ticketingEnabled,
 				ticketPrice: config.ticketPrice,
 				ticketPriceFloorCents: config.ticketPriceFloorCents ?? 0,
@@ -213,16 +219,9 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		const creator = pick(staffUsers);
 
 		const eventId = crypto.randomUUID();
-		let reservationId: string | undefined;
+		let held: { reservationId: string; productionId: string } | undefined;
 		if (random() < 0.75) {
-			reservationId = await createEventReservation(
-				eventId,
-				day,
-				hour,
-				hour + 3,
-				creator.id,
-				'scheduled'
-			);
+			held = await createEventReservation(eventId, day, hour, hour + 3, creator.id, 'scheduled');
 		}
 
 		const [e] = await db
@@ -235,7 +234,8 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				endsAt: ptDate(day, hour + 3),
 				status: 'draft',
 				tags: pick(EVENT_TAGS_POOL),
-				reservationId,
+				reservationId: held?.reservationId,
+				productionId: held?.productionId,
 				createdByUserId: creator.id
 			})
 			.returning();
@@ -244,7 +244,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 
 	const cancelledCreator = pick(staffUsers);
 	const cancelledEventId = crypto.randomUUID();
-	const cancelledResId = await createEventReservation(
+	const cancelledHeld = await createEventReservation(
 		cancelledEventId,
 		7,
 		14,
@@ -262,7 +262,8 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 			endsAt: ptDate(7, 20),
 			status: 'cancelled',
 			tags: 'community, all ages',
-			reservationId: cancelledResId,
+			reservationId: cancelledHeld?.reservationId,
+			productionId: cancelledHeld?.productionId,
 			createdByUserId: cancelledCreator.id
 		})
 		.returning();
@@ -318,7 +319,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		const protoStart = ptDate(protoDay, hour);
 
 		const protoEventId = crypto.randomUUID();
-		const protoResId = await createEventReservation(
+		const protoHeld = await createEventReservation(
 			protoEventId,
 			protoDay,
 			hour,
@@ -339,7 +340,8 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				status: 'published',
 				publishedAt: new Date(protoStart.getTime() - 14 * 86400000),
 				tags: 'open mic, all ages, community',
-				reservationId: protoResId,
+				reservationId: protoHeld?.reservationId,
+				productionId: protoHeld?.productionId,
 				createdByUserId: creator.id
 			})
 			.returning();
@@ -364,7 +366,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		for (let w = 1; w <= 2; w++) {
 			const instDay = protoDay + w * 7;
 			const instEventId = crypto.randomUUID();
-			const instResId = await createEventReservation(
+			const instHeld = await createEventReservation(
 				instEventId,
 				instDay,
 				hour,
@@ -383,7 +385,8 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 					doorsAt: ptDate(instDay, hour - 0.5),
 					status: 'draft',
 					tags: proto.tags,
-					reservationId: instResId,
+					reservationId: instHeld?.reservationId,
+					productionId: instHeld?.productionId,
 					recurringSeriesId: series.id,
 					createdByUserId: creator.id
 				})
