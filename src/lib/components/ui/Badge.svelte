@@ -59,7 +59,11 @@
 		children: Snippet;
 	} & HTMLAttributes<HTMLSpanElement> = $props();
 
-	const classes = $derived(clsx('badge', variant && VARIANTS[variant], SIZES[size], className));
+	// Same fixed-height-without-nowrap shape as `.btn`: a two-word tag wrapped
+	// inside the pill and crossed its border (#1226).
+	const classes = $derived(
+		clsx('badge whitespace-nowrap', variant && VARIANTS[variant], SIZES[size], className)
+	);
 </script>
 
 <span {...rest} class={classes}>
