@@ -79,11 +79,10 @@ async function appChrome(user: SignedInUser) {
 		notifications: { items, unreadCount },
 		/**
 		 * The member's own inbox, here rather than on `getMemberLayout` because
-		 * the topbar's messages icon renders on the staff and band panels too —
-		 * which is the point of moving it into the chrome (#1244).
+		 * the topbar's messages icon renders on every panel (#1244).
 		 *
 		 * Requests are deliberately absent. They show up in the Messages list
-		 * marked as requests, so a member finds them when they go looking, but an
+		 * marked as such, so a member finds them when they go looking, but an
 		 * unconsented message must not follow anyone around the site.
 		 */
 		messagesUnread: portalUnread + directUnread

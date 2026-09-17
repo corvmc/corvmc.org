@@ -3,18 +3,12 @@ import { resolve } from '$app/paths';
 import { activeNavKey, type NavNode } from './Nav/active-nav';
 
 /**
- * The member-context destinations, which live in the avatar dropdown rather
- * than in any panel's sidebar.
+ * The member-context destinations — the avatar dropdown, not a sidebar (#1244).
  *
- * "Member-context" is strictly self-context: your identity, your settings, your
- * receipts, your subscription. The Directory is not here even though Profile is
- * — `/member/profile` edits your own record, and the rendered version somebody
- * else reads is a directory page.
- *
- * Here rather than in `routes/member/nav-items.ts` because `AppTopbar` mounts
- * the dropdown on every authenticated page, so these four are reachable from
- * the staff and band panels too. `nav-items.ts` imports this list back for
- * active-row resolution, so there is one source rather than two that drift.
+ * Strictly self-context: identity, settings, receipts, subscription. Directory
+ * is not here even though Profile is, because `/member/profile` edits your own
+ * record. Here rather than in `nav-items.ts` because the dropdown mounts on
+ * every panel; that file imports this one back, so the two cannot drift.
  */
 
 export type AccountMenuKey = 'profile' | 'account' | 'purchases' | 'membership';
