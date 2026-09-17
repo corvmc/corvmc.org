@@ -216,9 +216,9 @@ show was without entering edit mode.
 
 Nothing is filed for this — it is a proposal, not a defect.
 
-## Eight shapes, and the fold
+## Twelve shapes, and the fold
 
-Every non-public page in the app is one of eight shapes. The canvas draws each one three times —
+Every page in the app — 162 of them — is one of twelve shapes. Eight cover the signed-in app. The canvas draws each one three times —
 once as a member surface, once as a band surface, once as a staff surface — so that "one shape"
 is a claim with evidence rather than an assertion.
 
@@ -232,6 +232,21 @@ is a claim with evidence rather than an assertion.
 | **F · Dashboard** | `StatCard`s — exempt from the list rule, not hierarchy | account         | payouts        | reports                        |
 | **G · Form**      | One question at a time, and what submit will do        | submit an event | edit band page | equipment intake               |
 | **H · Thread**    | A list of conversations, and one conversation          | messages        | band messages  | inbox with a queue             |
+
+The public site has four of its own. It is not the panel with the chrome removed:
+
+| Shape                 | What it is                                          | Surfaces                            |
+| --------------------- | --------------------------------------------------- | ----------------------------------- |
+| **J · Browse**        | Art-directed, exempt from the panel rules           | the gig guide, the directory, radio |
+| **K · Public record** | A stranger's first screen: art above, grammar below | an event, a band site, a release    |
+| **L · Marketing**     | No records behind it, so no list rule               | membership, programs, contribute    |
+| **N · Transact**      | Money or identity, one way through                  | tickets, checkout, sign in          |
+
+`/events` is **not redesigned**: #1059 calls it the reference implementation the browse issues point
+at, so it gets that issue's two fixes — price as a right-aligned column that is always present, and
+a pager that states the total — and nothing else. `band-site/[slug]/events` gets #1058's fix: the
+date column the _past_ list already had, and "3 shows · all of them" in place of a page titled "All
+Events" that showed ten.
 
 Two things the catalogue settled that the per-issue boards could not:
 
@@ -260,6 +275,14 @@ The claim the whole document rests on — a card is a row folded at the containe
   hierarchy decision, not a space one.
 - **A form loses its running summary** and keeps its progress bar; the submit button moves to the
   bottom, where the thumb is.
+- **A public record folds its fact band into a 2×2**, for the same reason a dashboard does: a grid
+  stays comparable, a stack becomes a list you read.
+- **A marketing page's fold is an argument change, not a layout change.** Two tiers side by side are
+  a comparison; stacked they are a recommendation, because order implies one. `/programs` has the
+  sharper version — in a grid the volunteer tile can sit in the corner, but stacked, last means
+  never seen, so it moves to second. Worth deciding deliberately rather than by scroll order.
+- **A transaction moves its receipt to a sticky footer**, or onto the button: `Pay $20.00`. The
+  total has to stay visible while the inputs change, which is what the sidebar was for.
 - **A thread is the only shape whose fold changes navigation.** Master and detail cannot share
   390px, so the two panes become two screens and the split becomes a push. Every other shape folds
   within one screen; this one gains a step, which is a cost of the shape rather than a flaw in it.
