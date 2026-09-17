@@ -118,7 +118,7 @@
 							{/if}
 						</td>
 						<td class="w-px">
-							<div class="flex items-center gap-2">
+							<div class="flex w-max items-center gap-2">
 								<Field
 									name="pick_{row.id}"
 									type="checkbox"

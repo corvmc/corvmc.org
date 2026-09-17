@@ -73,7 +73,7 @@
 				<td class="col-support whitespace-nowrap">{formatDateShort(log.workedOn)}</td>
 				<td class="cell-num">{formatVolunteerHours(log.minutes)}</td>
 				<td class="w-px">
-					<div class="flex justify-end gap-1">
+					<div class="flex w-max justify-end gap-1">
 						<Action
 							action={approveVolunteerHours.for(log.id)}
 							label="Approve"

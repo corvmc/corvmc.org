@@ -256,7 +256,7 @@
 						use:rowLink={resolve(`/staff/inventory/loans/${loan.id}`)}
 					>
 						<td class="w-px">
-							<div class="flex items-center gap-1">
+							<div class="flex w-max items-center gap-1">
 								<StatusBadge status={loan.status} />
 								{#if loan.isOverdue}
 									<Badge variant="error" size="xs">Overdue</Badge>

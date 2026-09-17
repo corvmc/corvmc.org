@@ -277,7 +277,7 @@
 							</td>
 
 							<td class="w-px">
-								<div class="flex justify-end gap-1">
+								<div class="flex w-max justify-end gap-1">
 									{#if unconfirmed > 0}
 										<Action
 											label="Confirm {unconfirmed}"
