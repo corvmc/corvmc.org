@@ -144,7 +144,10 @@
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Paid</th>
 					<th class="cell-num">Amount</th>
+					<!-- The Stripe id is diagnostic and tiers away; the link to the
+					     reservation is the row's only action and must not (#1229). -->
 					<th class="col-extra">Record</th>
+					<th class="w-px"><span class="sr-only">Reservation</span></th>
 				{/snippet}
 				{#each payments as p (p.id)}
 					<tr class="hover">
@@ -159,14 +162,16 @@
 						</td>
 						<td class="cell-num font-medium">{formatCents(p.amountCents)}</td>
 						<td class="col-extra">
-							<div class="flex items-center gap-2">
-								<CopyableId value={p.id} label="Stripe" />
-								{#if p.reservationId}
+							<CopyableId value={p.id} label="Stripe" />
+						</td>
+						<td class="w-px">
+							{#if p.reservationId}
+								<div class="flex w-max justify-end">
 									<Button href="/staff/reservations/{p.reservationId}" variant="ghost" size="xs">
 										View
 									</Button>
-								{/if}
-							</div>
+								</div>
+							{/if}
 						</td>
 					</tr>
 				{/each}

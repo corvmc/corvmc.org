@@ -14,6 +14,7 @@ import noDomainImportsInUi from './eslint-rules/no-domain-imports-in-ui.js';
 import noContactSchemaImports from './eslint-rules/no-contact-schema-imports.js';
 import noDirectFinancialEntryWrites from './eslint-rules/no-direct-financial-entry-writes.js';
 import noUnwrappedRemoteMutation from './eslint-rules/no-unwrapped-remote-mutation.js';
+import noClippedRowAction from './eslint-rules/no-clipped-row-action.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -46,7 +47,8 @@ const customPlugin = {
 		'no-domain-imports-in-ui': noDomainImportsInUi,
 		'no-contact-schema-imports': noContactSchemaImports,
 		'no-direct-financial-entry-writes': noDirectFinancialEntryWrites,
-		'no-unwrapped-remote-mutation': noUnwrappedRemoteMutation
+		'no-unwrapped-remote-mutation': noUnwrappedRemoteMutation,
+		'no-clipped-row-action': noClippedRowAction
 	}
 };
 
@@ -156,6 +158,7 @@ export default defineConfig(
 		rules: {
 			'custom/no-duplicate-field-names': 'error',
 			'custom/no-dead-daisyui-classes': 'error',
+			'custom/no-clipped-row-action': 'error',
 			'custom/no-clamped-tiered-table': 'error',
 			'custom/no-inline-alert-action': 'error',
 			'custom/page-header-width-matches-content': 'error',
