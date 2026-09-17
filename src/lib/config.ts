@@ -727,8 +727,8 @@ export const inboxChannels = [
 ] as const;
 
 /**
- * The channels the staff inbox is a party to — every channel except `direct`
- * and `band`.
+ * The channels the staff inbox is a party to — every channel except `direct`,
+ * `band` and `group`.
  *
  * `direct` is member↔member. Staff have no queue role in it: `staffVisibleThread`
  * keeps direct threads out of every staff read, `dispatchReply` throws rather
@@ -741,6 +741,10 @@ export const inboxChannels = [
  * it from `/band/{slug}/messages`. It is *always enabled* — that is what lets
  * `dispatchReply` send a band's reply — so its absence here is about who
  * administers it, not about whether it is on.
+ *
+ * `group` is out for the third version of the same reason: a group's chat is
+ * its members talking to each other, and `dispatchReply` throws rather than
+ * write into one (#1252).
  *
  * `inboxChannels` stays the `inbox_thread.channel` vocabulary; this is the
  * subset staff administer.
