@@ -4,14 +4,13 @@
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/reservations/BookerTypeIcon.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
-	import { IconCalendarPlus, IconCalendarEvent, IconStar } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { getMemberDashboard } from '$lib/remote/users.remote';
 	import MatchesCard from './MatchesCard.svelte';
+	import NeedsYouCard from './NeedsYouCard.svelte';
 	import { creditsToHours } from '$lib/config';
 	import { resolve } from '$app/paths';
 	import { imageSrc } from '$lib/utils/images';
@@ -23,72 +22,21 @@
 	const freeHours = $derived(creditsToHours(data.credits.free_hours ?? 0));
 	const usedHours = $derived(creditsToHours(data.usedThisMonth));
 	const allocatedHours = $derived(creditsToHours(data.allocatedThisMonth));
-	const pendingInvites = $derived(data.pendingInviteCount ?? 0);
 </script>
 
 <PageHeader title="Dashboard" />
 <PageContent>
-	{#if pendingInvites > 0}
-		<Alert type="info" href="/member/bands" class="shadow-sm">
-			You have {pendingInvites} pending band invitation{pendingInvites === 1 ? '' : 's'}.
-		</Alert>
-	{/if}
-
-	<!-- Resolves itself the moment the profile has anything on it, so it needs no
-	     dismiss control and can't be permanently silenced by accident. States the
-	     consequence rather than issuing an instruction, and never blocks the page. -->
-	{#if !data.profileComplete}
-		<Alert type="info" href="/member/profile" class="shadow-sm">
-			Add your instruments or a short bio so other members can find you in the directory.
-		</Alert>
-	{/if}
-
-	<!-- Quick links -->
-	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-		<Button href="/member/reservations" variant="default" class="card h-auto bg-base-100">
-			<CardBody class="flex-row items-center gap-3 py-4">
-				<IconCalendarPlus size={24} class="text-primary" />
-				<span class="font-medium">Book a Session</span>
-			</CardBody>
-		</Button>
-		<Button href="/member/events" variant="default" class="card h-auto bg-base-100">
-			<CardBody class="flex-row items-center gap-3 py-4">
-				<IconCalendarEvent size={24} class="text-primary" />
-				<span class="font-medium">Browse Events</span>
-			</CardBody>
-		</Button>
-		<Button href="/member/membership" variant="default" class="card h-auto bg-base-100">
-			<CardBody class="flex-row items-center gap-3 py-4">
-				<IconStar size={24} class="text-primary" />
-				<span class="font-medium">Manage Membership</span>
-			</CardBody>
-		</Button>
-	</div>
+	<!-- Everything that has a clock on it, soonest first. The invitations alert,
+	     the profile nudge and the unconfirmed-booking warnings were three
+	     regions of this page; the quick links below them were the sidebar
+	     again (#1245). -->
+	<NeedsYouCard items={data.needsYou} />
 
 	<!-- Reservations + Credits grid -->
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
 		<!-- This week's reservations -->
 		<div class="lg:col-span-2">
 			<InfoCard title="This Week">
-				<!-- Above the week, because a booking nobody confirms is released at
-				     its start time and the week it falls in is not the member's
-				     problem. This card used to say "No sessions booked" over one
-				     (#964). -->
-				{#each data.unconfirmed as res (res.id)}
-					<Alert type="warning" class="mb-3 text-sm">
-						<div class="flex flex-wrap items-center justify-between gap-2">
-							<span>
-								<strong>{formatDate(res.startsAt)}</strong>
-								{formatTimeRange(res.startsAt, res.endsAt)}{#if res.bandName}
-									· {res.bandName}{/if}
-								is not confirmed yet. We release the room if it is not confirmed before it starts{#if res.confirmFrom > new Date()},
-									and confirmation opens
-									{formatDate(res.confirmFrom)}{/if}.
-							</span>
-							<Button href="/member/reservations" variant="warning" size="xs">Sort it out</Button>
-						</div>
-					</Alert>
-				{/each}
 				{#if data.weekReservations.length === 0}
 					<EmptyState
 						message="No sessions booked this week."

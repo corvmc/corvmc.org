@@ -53,6 +53,7 @@ import {
 import { getMemberSubscription, mapDbSubscription } from '$lib/server/finance/subscription-service';
 import { listUpcoming } from '$lib/server/event/event-service';
 import { getUserOverview as getUserOverviewService } from '$lib/server/user/user-overview-service';
+import { listNeedsYou } from '$lib/server/user/needs-you-service';
 import { listForMember as listReservationsForMember } from '$lib/server/reservation/reservation-service';
 import { listActiveSessions, getLastLoginAt } from '$lib/server/user/user-service';
 import {
@@ -675,6 +676,21 @@ export const getMemberDashboard = query(async () => {
 
 	const subscription = mapDbSubscription(dbSubscription);
 
+	// After the fan-out above rather than inside it: it needs three of its
+	// results. Its own five reads are parallel, so this is one extra round of
+	// work on the server, not five.
+	const needsYou = await listNeedsYou({
+		userId: currentUser.id,
+		unconfirmed: unconfirmed.map((r) => ({
+			id: r.id,
+			startsAt: r.startsAt,
+			bandName: r.bookerType === 'group' ? (bandNameMap[r.bookerId] ?? null) : null
+		})),
+		pendingInviteCount,
+		profileComplete,
+		now: nowDate
+	});
+
 	const allReservations = [...weekReservations, ...bandWeekReservations].sort(
 		(a, b) => a.startsAt.getTime() - b.startsAt.getTime()
 	);
@@ -687,6 +703,11 @@ export const getMemberDashboard = query(async () => {
 	const usedThisMonth = ledgerUsage ?? Math.max(0, allocatedThisMonth - (credits.free_hours ?? 0));
 
 	return {
+		/**
+		 * What the member has to act on, soonest deadline first. The page leads
+		 * with it; everything below is the calm half (#1245).
+		 */
+		needsYou,
 		weekReservations: allReservations.map((r) => ({
 			id: r.id,
 			bookerType: r.bookerType,
