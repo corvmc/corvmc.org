@@ -26,8 +26,14 @@ function classOf(/** @type {RuleNode} */ node) {
 	return '';
 }
 
-/** Every `SvelteElement` under `node`, itself excluded. */
-function* descendants(/** @type {RuleNode} */ node) {
+/**
+ * Every `SvelteElement` under `node`, itself excluded.
+ *
+ * @param {RuleNode} node
+ * @returns {Generator<RuleNode>} annotated because the recursion below makes
+ * the inferred return type circular, which `checkJs` reports as an error.
+ */
+function* descendants(node) {
 	for (const child of node.children ?? []) {
 		if (child.type === 'SvelteElement') yield child;
 		yield* descendants(child);
