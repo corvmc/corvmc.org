@@ -73,6 +73,7 @@
 	const directory = $derived(await getMemberDirectory(filters));
 	const members = $derived(directory.members);
 	const bands = $derived(directory.bands);
+	const instructorCount = $derived(directory.instructorCount);
 	const instrumentSuggestions = $derived(directory.instrumentSuggestions);
 	const genreSuggestions = $derived(directory.genreSuggestions);
 
@@ -117,7 +118,12 @@
 			{ key: 'bands', label: 'Acts', badge: bands.length, href: directoryHref('bands') },
 			// A sibling route rather than a `?tab=`: different reader, different
 			// columns, and a different truth from the self-declared flag.
-			{ key: 'instructors', label: 'Teachers', href: '/member/directory/instructors' }
+			{
+				key: 'instructors',
+				label: 'Teachers',
+				badge: instructorCount,
+				href: '/member/directory/instructors'
+			}
 		]}
 		active={tab}
 	/>

@@ -126,7 +126,10 @@
 					<th class="cell-num">Amount</th>
 					<th class="col-support w-px"><span class="sr-only">Method</span></th>
 					<th class="col-support whitespace-nowrap">Paid</th>
+					<!-- The Stripe id is diagnostic and tiers away; the link to the
+					     reservation is the row's only action and must not (#1229). -->
 					<th class="col-extra">Record</th>
+					<th class="w-px"><span class="sr-only">Reservation</span></th>
 				{/snippet}
 
 				{#each payments as p (p.id)}
@@ -143,14 +146,16 @@
 							{formatDateTimeShort(new Date(p.paidAt))}
 						</td>
 						<td class="col-extra">
-							<div class="flex items-center gap-2">
-								<CopyableId value={p.id} label="Stripe" />
-								{#if p.reservationId}
+							<CopyableId value={p.id} label="Stripe" />
+						</td>
+						<td class="w-px">
+							{#if p.reservationId}
+								<div class="flex w-max justify-end">
 									<Button href="/staff/reservations/{p.reservationId}" variant="ghost" size="xs">
 										View reservation
 									</Button>
-								{/if}
-							</div>
+								</div>
+							{/if}
 						</td>
 					</tr>
 				{/each}
