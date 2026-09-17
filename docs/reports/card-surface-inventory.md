@@ -34,6 +34,9 @@ ask it of, and a third finding cuts across both.
 
 ## Finding 1 — the rule that decides card-vs-table cites three precedents, and none of them satisfies it
 
+> **Resolved.** #1034 replaced this with a four-clause test; see "A table, unless the row earns a
+> card" in `ui-patterns.md`. The quote below is the rule as it stood when this report was written.
+
 `ui-patterns.md:959-961` is the most consequential density decision in the app:
 
 > Give it a card list instead of a `Table` when the row's primary content is unbounded prose
@@ -92,6 +95,10 @@ and not carried across ([#1064](https://github.com/corvmc/corvmc.org/issues/1064
 | row    | `EntityIdentity` (`sm`/`md`) | 40     |
 | card   | `EntityCard`                 | **1**  |
 | detail | `EntityIdentity size="lg"`   | **1**  |
+
+> **Partly resolved.** #1063 dropped `EntityIdentity size="lg"` from the tier table and documented
+> what `staff/users/[id]` actually does instead. `EntityCard`'s single adopter is still open as
+> #1035.
 
 **These two ones mean different things, and conflating them would be the easy mistake.**
 
