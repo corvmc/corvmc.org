@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getTableName } from 'drizzle-orm';
+import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -79,9 +81,10 @@ let insertShouldThrow = false;
 let lastLinkedGroups: Record<string, unknown>[] | null = null;
 const insertValues = vi.fn((vals: Record<string, unknown> | Record<string, unknown>[]) => {
 	if (Array.isArray(vals)) lastLinkedGroups = vals;
-	// The FIRST object insert, not the last: `create()` writes the listing and
-	// then its production, and every assertion here is about the listing.
-	else if (!lastInsertedValues) lastInsertedValues = vals;
+	// The listing, identified by the one column only it has. `create()` writes the
+	// production first — the listing's `production_id` is a real foreign key — so
+	// neither "first insert" nor "last insert" picks the right row.
+	else if ('title' in vals) lastInsertedValues = vals;
 	return {
 		onConflictDoNothing: vi.fn(() => Promise.resolve()),
 		returning: vi.fn(() =>
@@ -331,13 +334,18 @@ describe('EventService', () => {
 			expect(deleteWhere).toHaveBeenCalled();
 		});
 
-		it('does not attempt compensation when there is no reservation', async () => {
+		it('compensates the production but has no reservation to compensate', async () => {
+			// A show opens its production before the listing, because the listing's
+			// `production_id` is a real foreign key. So a failed listing insert
+			// leaves a production nothing announces, and that has to go too — there
+			// is simply no hold to release here (#1202).
 			insertShouldThrow = true;
 
 			await expect(create(baseParams)).rejects.toThrow('insert failed');
 
 			expect(staffCreate).not.toHaveBeenCalled();
-			expect(eventDelete).not.toHaveBeenCalled();
+			const deleted = eventDelete.mock.calls.map(([t]) => getTableName(t as SQLiteTable));
+			expect(deleted).toEqual(['production']);
 		});
 
 		it('skips conflict check when overrideConflicts is true', async () => {

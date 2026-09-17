@@ -311,6 +311,16 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		reservationId = res.id;
 	}
 
+	// Before the listing, because the listing names it and `production_id` is a
+	// real foreign key. The room is booked first because `booker_id` has none —
+	// that is the only reason the reservation may come earlier.
+	//
+	// Every CMC show gets one, room or no room: the back-of-house is what a show
+	// is, and leaving it to a button is why every show before 2026-09-04 has none.
+	if (productionId) {
+		await db.insert(production).values({ id: productionId, createdByUserId });
+	}
+
 	let row: EventRow;
 	try {
 		[row] = await db
@@ -337,13 +347,20 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 			})
 			.returning();
 	} catch (err) {
-		// Compensating write: the event never persisted, so remove the orphan
-		// reservation we created for it.
+		// Compensating writes: the listing never persisted, so neither the hold nor
+		// the production it would have announced has anything pointing at it.
 		if (reservationId) {
 			try {
 				await db.delete(reservation).where(eq(reservation.id, reservationId));
 			} catch (cleanupErr) {
 				captureException(cleanupErr, { event: 'event.create.compensate', reservationId });
+			}
+		}
+		if (productionId) {
+			try {
+				await db.delete(production).where(eq(production.id, productionId));
+			} catch (cleanupErr) {
+				captureException(cleanupErr, { event: 'event.create.compensate', productionId });
 			}
 		}
 		throw err;
@@ -353,15 +370,6 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	// `event.groupId` owes the managing group its own `event_group` row, so read
 	// paths never have to branch on "sometimes present".
 	if (groupId) await linkManagingGroup([{ eventId: row.id, groupId }]);
-
-	// Written directly rather than through `createProduction`: the listing above
-	// already names it, and that function's job is to claim a listing that names
-	// none. Every CMC show gets one, room or no room — the back-of-house is what
-	// a show is, and leaving it to a button is why every show before 2026-09-04
-	// has none.
-	if (productionId) {
-		await db.insert(production).values({ id: productionId, createdByUserId });
-	}
 
 	// Upload poster outside the transaction (non-critical, idempotent)
 	if (posterFile) {
