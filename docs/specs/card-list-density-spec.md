@@ -1,13 +1,13 @@
 # Card lists: density and hierarchy
 
-Status: **proposal**, for #1032 and its fifteen open card-list children.
+Status: **proposal**, for #1032 — its fifteen open card-list children and its three detail-tier ones.
 Designs: <https://claude.ai/artifact/A1f6cCEmSBLTb4tMLG5gaH>
 
-The canvas is a UX work-up, not a style proposal: thirteen artboards, each naming the primary and
+The canvas is a UX work-up, not a style proposal: seventeen artboards, each naming the primary and
 secondary task for its surface before arguing a layout from them. Three set up the problem (the task
-map, the five failure patterns, the rule), eight draw a surface before and after at the same scale,
-one holds the card anatomy, and one evaluates the set. This file is the part that belongs in the
-repo — the rule itself, and what it decides.
+map, the five failure patterns, the card rule), eight draw a list surface before and after at the
+same scale, one holds the card anatomy, four cover the detail tier, and one evaluates the set. This
+file is the part that belongs in the repo — the rules themselves, and what they decide.
 
 Nothing on the canvas was rendered. Every claim is argued from the source at `c5b9540`, at
 plausible data; they are claims about the design, not measurements of the app.
@@ -100,6 +100,62 @@ yes. Matching at three makes the row six lines of prose with nothing distinguish
 The response also needs to stop reading as a continuation of the body — a quote rule and a "Staff
 replied" label, so the clamp reads as a boundary rather than a truncation.
 
+## The detail rule
+
+Every row links somewhere, so a list design is half a design. #1064 found twelve detail pages showing
+**less** than the row that reaches them, and the shape is always the same: the list service computes
+the presentation — a ref, a label, a flag — the detail service selects raw columns instead, and the
+template hand-rolls a poorer version of what the row already had. Nothing is ever missing from the
+database.
+
+> **Never less than the row.** If a fact, a badge or an action was on the row, it is on the page.
+> The row is the floor, not a preview.
+
+1. **Share the projection by construction.** The detail query calls the same `toXRef` / label helper
+   as the list query, from the same service file. Written twice is drifted once.
+2. **Every action the row offered.** A page that cannot do what its row could is a dead end — the
+   reader goes back and does it from the list, which is exactly #1062.
+3. **Raw is never the answer.** If the row rendered "Every Tuesday", the page does not print an
+   RRULE. A UUID on a page is a missing join.
+4. **Same fact, same treatment.** A status that is a tinted rail on the row is not a plain sentence
+   on the page. One vocabulary across both tiers, or the reader relearns it.
+
+### #1064 re-measured
+
+Checked against `main` on 2026-09-17: **seven of the twelve are already fixed** — five by their own
+issues (#1062, #1065, #1066, #1067, #1068), plus `band/music/[releaseId]` (#1071) and
+`staff/groups/[id]`, which gained its count and created date with no issue at all. Five remain:
+`staff/reservations/[id]` (series glyph, teaching booker), `staff/suggestions/[id]` (author as a
+bare link), `staff/events/[id]` (submitter as a hand-written link beside a band that _is_ a chip),
+`staff/inventory/orders/[id]` (no `Late` treatment), `member/groups/[slug]` (role badge gated behind
+`canManage`).
+
+Each fix rediscovered the rule locally and none of them wrote it down, which is #1064's own argument
+for stating it once.
+
+### #1063 — which identity
+
+Document what won. The documented detail tier is `EntityIdentity size="lg"` + `RelatedList`, and the
+single `size="lg"` in the tree renders a _related_ record, so the tier has zero adopters as
+documented — while the richest detail page in the repo rejected it on purpose and wrote down why.
+Promote that instead: `PageHeader` with a `leading` snippet, a meta row beneath, `InfoCard`
+sections, `DefinitionList`/`Fact` grids, `RelatedList` for related records. Drop the `lg` strip.
+
+**One sentence is never a card.** A box with a border, a shadow, a title and a single paragraph
+inside is chrome charging rent — it becomes a line in the fact grid or a note under the header. That
+is four of #1061's five door-code branches, and it is why that page is three boxes for six facts.
+
+### What the detail rule decides
+
+| Issue   | Surface                        | Outcome                                                                                                                                                  |
+| ------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #1061   | `member/reservations/[id]`     | `width` goes `md` → `lg`; one header with the status pill and Cancel, one fact grid, one loud door code. The four one-sentence `InfoCard`s become lines. |
+| #1063   | the doc                        | Promote the `PageHeader` + `leading` pattern; drop the `lg` strip from the tier table.                                                                   |
+| #1064   | five pages                     | Mechanical once the rule exists — mostly reusing a helper already in the same service file.                                                              |
+| #1066 ✓ | `member/volunteer/shifts/[id]` | Already passes; reorder so the checklist leads, since that is what a volunteer opens it mid-shift to do. Check-in gets a number, not a paragraph.        |
+| new     | `member/equipment/loans/[id]`  | Required by #1042 — a timeline of what happened and the derivation of the charge. Without it, moving facts off the row deletes them.                     |
+| new     | `member/suggestions/[id]`      | Required by #1046 — the response in full, leading, with the suggestion beneath it. The clamp on the board is only safe because this page exists.         |
+
 ## Where this loses
 
 Recorded because it is the part worth arguing with.
@@ -118,8 +174,9 @@ Recorded because it is the part worth arguing with.
   coordinator scrolls past four sections to reach their first action.
 - **A count is a query.** Three of these lists need a `count(*)` the service does not run today. If
   it is expensive, the honest fallback is "8 of many" — a worse design than the one drawn.
-- **Two detail pages are assumed to exist** — a loan's and a suggestion's — and neither does.
-  #1063 and #1064 would build them, and they are outside this set.
+- **Two detail pages have to be built, not assumed.** A loan's and a suggestion's; neither route
+  exists. They are drawn on the canvas for that reason — a fact moved to a page that does not exist
+  is a fact deleted.
 
 ## Not in this proposal
 
