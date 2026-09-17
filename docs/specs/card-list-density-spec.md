@@ -244,14 +244,28 @@ Two things the catalogue settled that the per-issue boards could not:
 ### The fold
 
 The claim the whole document rests on — a card is a row folded at the container query — is drawn at
-390px for three of the shapes:
+390px for **every** board in the catalogue, each beside its desktop version. What generalised:
 
-- **A list sheds columns by tier** and its action goes full width. Six columns become three facts
-  on two lines; `Picked up` is dropped, not shrunk, because at 327px the budget is three.
+- **A list sheds columns by tier**, merging before hiding, and its action goes full width.
 - **A detail page only restacks.** It has no column pressure, so nothing is dropped — which is why
-  the superset rule holds at every width.
-- **A card list barely changes**, and that is the tell that the card was earned rather than
-  defaulted to. When the narrow view is the wide view minus nothing, there were no columns to lose.
+  the superset rule holds at every width. Artwork is the one element that may scale instead.
+- **A desk stacks its sections in urgency order**, and may merge the quiet ones into a single
+  counted line. Merging is allowed when the merged thing is one job, never when it hides a deadline.
+- **A console's unset sections sort above its set ones** — that ordering outranks "a form reads top
+  to bottom", which is why `band/[slug]/edit` puts its two empty sections above the name field.
+- **A card list barely changes**, and that is the tell the card was earned. When the narrow view is
+  the wide view minus nothing, there were no columns to lose.
+- **A dashboard goes two-up, not one-up.** Four figures in a 2×2 stay comparable; stacked they
+  become a list you read rather than a set you compare. Where only three fit, dropping one is a
+  hierarchy decision, not a space one.
+- **A form loses its running summary** and keeps its progress bar; the submit button moves to the
+  bottom, where the thumb is.
+- **A thread is the only shape whose fold changes navigation.** Master and detail cannot share
+  390px, so the two panes become two screens and the split becomes a push. Every other shape folds
+  within one screen; this one gains a step, which is a cost of the shape rather than a flaw in it.
+
+One thing the exercise found in the desktop boards: on a narrow card, `H2`'s unread state was a
+left rule _and_ a pill. The phone drops the pill — and the desktop board should too.
 
 ## Where this loses
 
