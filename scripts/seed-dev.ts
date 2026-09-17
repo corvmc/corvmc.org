@@ -68,6 +68,7 @@ import { seedHelp } from './seed/help';
 import { seedInbox } from './seed/inbox';
 import { seedDirectMessages } from './seed/direct-messages';
 import { seedBandEnquiries } from './seed/band-enquiries';
+import { seedGroupChats } from './seed/group-chats';
 import { seedContentFlags } from './seed/content-flags';
 import { seedContractors } from './seed/contractors';
 import { seedDutyLists } from './seed/duty-lists';
@@ -209,6 +210,12 @@ async function main() {
 		? await seedDirectMessages(dmCast, adminUser)
 		: { threads: 0, blocks: 0, standings: 0 };
 	const bandEnquiries = await seedBandEnquiries(bands, allUsers);
+	// Bands and clubs alike: a shared thread is not specific to either, and the
+	// member panel's group pages need one to show.
+	// `groupLeaders` as well as `allUsers`: a club's owner is a leader persona,
+	// and those are deliberately kept out of `allUsers`, so passing that alone
+	// left every club's thread unseeded while the bands' filled in.
+	const groupChats = await seedGroupChats([...bands, ...groups], [...allUsers, ...groupLeaders]);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
 	// Profiles first, and everything downstream is seeded against the members who
@@ -315,6 +322,7 @@ async function main() {
 	console.log(
 		`  ${bandEnquiries.threads} band booking enquiries, ${bandEnquiries.messages} messages`
 	);
+	console.log(`  ${groupChats.threads} group chats, ${groupChats.messages} messages`);
 	console.log(
 		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings, 1 member-set messaging preference`
 	);

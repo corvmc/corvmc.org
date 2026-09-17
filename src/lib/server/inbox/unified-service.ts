@@ -9,20 +9,12 @@ import type { PaginationInput } from '$lib/server/db/paginate';
 import { messagingDisabledFor } from './direct-service';
 
 /**
- * Every thread one member can read, whichever inbox it is in.
+ * Every thread one member can read, whichever inbox it is in (#1250).
  *
- * `inbox_thread.groupId` already models the inbox — null is the member's own
- * correspondence with CorvMC or another member, a group id is that band's
- * booking enquiries. What this adds is the *union*, because the two halves
- * establish readership differently and deliberately so (#1250):
- *
- *   own   — an `inbox_participant` row naming the viewer
- *   band  — no participant row at all; the roster decides, live, so a new
- *           admin inherits the back catalogue and a departing one loses it
- *
- * One query rather than two merged in memory: the list is paginated by last
- * activity across every inbox, and two independently-paged readers cannot be
- * interleaved correctly.
+ * `groupId` already models the inbox; this adds the *union*, because the two
+ * halves establish readership differently — own by an `inbox_participant`
+ * row, group by the roster resolved live. One query, not two merged: the list
+ * pages by activity across every inbox, which two pagers cannot interleave.
  */
 
 export type InboxScope = 'all' | 'own' | { groupId: string };

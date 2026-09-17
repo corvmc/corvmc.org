@@ -2,11 +2,10 @@
 	/**
 	 * A group's shared thread, whichever panel it is mounted in.
 	 *
-	 * `ThreadTimeline` in **viewer** mode, not direction mode: a chat is a room
-	 * of named people, so your messages sit right and everyone else's left with
-	 * their name on them. The band's enquiry pane is the opposite case — there
-	 * the band is an organisation answering an outsider — which is why these two
-	 * surfaces share the timeline and not its configuration (#1252).
+	 * `ThreadTimeline` in **viewer** mode: a chat is a room of named people, so
+	 * your messages sit right and everyone else's left. The enquiry pane is the
+	 * opposite — a band answering an outsider — so the two share the timeline
+	 * and not its configuration (#1252).
 	 */
 	import ThreadTimeline from './ThreadTimeline.svelte';
 	import ThreadComposer from './ThreadComposer.svelte';
@@ -30,5 +29,5 @@
 		{/if}
 	</div>
 
-	<ThreadComposer threadId={chat.id} replyForm={postGroupChatMessage} />
+	<ThreadComposer threadId={chat.id} replyForm={postGroupChatMessage} sendLabel="Send" />
 </div>

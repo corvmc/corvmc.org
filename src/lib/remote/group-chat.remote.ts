@@ -15,14 +15,10 @@ import { mapDomainError } from '$lib/server/errors';
 /**
  * A group's shared thread — every active member reads and writes it.
  *
- * `requireGroupRole({ slug }, 'member')` is the whole gate and it is here, not in
- * a layout: a remote function is its own endpoint and never runs one. Note
- * `'member'`, not `'admin'` — that is the entire difference between this and
- * the band's enquiry inbox, and it is the reason this is a separate module
- * rather than an option on that one (#1252).
- *
- * No `allowStaff`. Staff read a group's correspondence through the flags queue
- * if they ever need to; a chat is not a support surface.
+ * `requireGroupRole({ slug }, 'member')` is the whole gate, and it is here
+ * because a remote function is its own endpoint. `'member'`, not `'admin'`, is
+ * the entire difference from the band's enquiry inbox. No `allowStaff`: a chat
+ * is not a support surface (#1252).
  */
 
 const slugSchema = z.string().min(1);
@@ -33,11 +29,9 @@ export const getGroupChatThread = query(slugSchema, async (slug) => {
 });
 
 /**
- * `{ threadId, body }`, not `{ slug, body }`: that is the shape
- * `ThreadComposer` posts, and reusing it is what keeps the draft handling,
- * the `mod+enter` shortcut and the pending state in one place. The gate
- * therefore starts from the thread — `groupOfChatThread` returns null for
- * anything that is not a group chat, so this cannot reach an enquiry.
+ * `{ threadId, body }` is what `ThreadComposer` posts, so the gate starts from
+ * the thread. `groupOfChatThread` returns null for anything that is not a
+ * group chat, so this cannot reach an enquiry.
  */
 export const postGroupChatMessage = form(
 	z.object({

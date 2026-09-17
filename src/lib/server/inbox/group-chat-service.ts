@@ -6,21 +6,12 @@ import { group } from '$lib/server/db/schema/group';
 import { touchThread } from './message-service';
 
 /**
- * The one thread a group's members share.
+ * The one thread a group's members share — the band-enquiry shape with the
+ * door widened from owner|admin to any active member (#1252).
  *
- * The band-enquiry shape with the door widened: readership is resolved live
- * from the roster rather than from participant rows, so a member who joins
- * today can read what the group said last month and one who leaves loses it,
- * with no backfill either way. The per-reader cursor is `inbox_group_read`,
- * exactly as for an enquiry (#1252).
- *
- * `channel: 'group'`, never `'band'`: that one means a stranger used the
- * public booking form. Every message here is `direction: 'peer'` — nobody is
- * inbound or outbound in a room of named people, which is the case `'peer'`
- * was added for.
- *
- * **This module does not gate.** The caller establishes active membership with
- * `requireGroupRole(ref, 'member')` before reaching any of it.
+ * Readership is the roster, resolved live. `channel: 'group'`, never `'band'`:
+ * that one means a stranger used the booking form. **Nothing here gates** —
+ * the caller does, with `requireGroupRole(ref, 'member')`.
  */
 
 /** The group's chat thread, creating it on first use. */
@@ -162,10 +153,8 @@ export async function countGroupChatUnread(groupId: string, userId: string): Pro
 /**
  * The group a chat thread belongs to, for a guard that starts from the thread.
  *
- * `ThreadComposer` posts `{ threadId, body }` — the shape every other thread
- * surface uses — so the gate has to resolve the group itself rather than being
- * handed a slug. Returns null for anything that is not a group chat, which is
- * what keeps this from becoming a way into an enquiry.
+ * Returns null for anything that is not a group chat, which keeps this from
+ * becoming a way into an enquiry.
  */
 export async function groupOfChatThread(
 	threadId: string
