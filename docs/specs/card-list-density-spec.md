@@ -1,13 +1,14 @@
 # Card lists: density and hierarchy
 
-Status: **proposal**, for #1032 — its fifteen open card-list children and its three detail-tier ones.
+Status: **proposal**, for #1032 — its fifteen open card-list children and its three detail-tier ones — and for the staff-panel sweep in #1214.
 Designs: <https://claude.ai/artifact/A1f6cCEmSBLTb4tMLG5gaH>
 
-The canvas is a UX work-up, not a style proposal: seventeen artboards, each naming the primary and
+The canvas is a UX work-up, not a style proposal: twenty-one artboards, each naming the primary and
 secondary task for its surface before arguing a layout from them. Three set up the problem (the task
 map, the five failure patterns, the card rule), eight draw a list surface before and after at the
-same scale, one holds the card anatomy, four cover the detail tier, and one evaluates the set. This
-file is the part that belongs in the repo — the rules themselves, and what they decide.
+same scale, one holds the card anatomy, four cover the detail tier, four sweep the staff panel, and
+one evaluates the set. This file is the part that belongs in the repo — the rules themselves, and
+what they decide.
 
 Nothing on the canvas was rendered. Every claim is argued from the source at `c5b9540`, at
 plausible data; they are claims about the design, not measurements of the app.
@@ -156,6 +157,65 @@ is four of #1061's five door-code branches, and it is why that page is three box
 | new     | `member/equipment/loans/[id]`  | Required by #1042 — a timeline of what happened and the derivation of the charge. Without it, moving facts off the row deletes them.                     |
 | new     | `member/suggestions/[id]`      | Required by #1046 — the response in full, leading, with the suggestion beneath it. The clamp on the board is only safe because this page exists.         |
 
+## The staff panel, swept
+
+All 73 `+page.svelte` under `/staff`, read structurally and measured against both rules above. Filed
+as #1214 with two sub-issues; the detail-page half was already filed as #1078 and #1079.
+
+**The panel mostly agrees with itself.** Fourteen lists render `FilterBar` + `DataList` + pager +
+count and match down to the prop names; ten detail pages use `DefinitionList`/`Fact`. The work is
+adoption, not invention — which is why the canvas draws each shape once rather than 73 times.
+
+| Shape               | Count | Where it stands                                              |
+| ------------------- | ----: | ------------------------------------------------------------ |
+| Standard list       |    14 | The reference. `StaffList` draws it.                         |
+| Bare list           |    16 | #1215 and #1216.                                             |
+| Fact-grid detail    |    10 | Right shape; still owes the superset rule.                   |
+| Stacked-card detail |    15 | #1078 and #1079. `StaffDetail` draws the fix.                |
+| Console             |     4 | New rule below. `StaffConsole` draws it.                     |
+| Dashboard           |     4 | `StatCard` surfaces, exempt by `ui-patterns.md`. Left alone. |
+| Form / wizard       |    10 | Out of scope — a form is not a record list.                  |
+
+### The clamp that disables the tier system (#1216)
+
+The column tiers are container queries on `PageContent`'s `@container`: `col-support` hides below
+**32rem**, `col-extra` below **48rem**. `max-w-3xl` **is** 48rem — so a `width="3xl"` list renders
+its widest tier set in the narrowest container the app allows, and the tiers only ever fire on a
+phone. Six inventory lists do this, `inventory/acquisitions` with seven columns at 768px where the
+budget is four. The fix is deleting one prop per page; the lesson is that a fixed `max-w` silently
+converts a responsive system into its worst case.
+
+### A list states its total, always (#1215)
+
+Sixteen staff lists render every row with no count and no pager, and they do not fail the same way:
+`listVenues` and `listAudiences` have no `limit` at all, while `listExternalActs` stops at
+`SEARCH_LIMIT` and says nothing. Two pages that look identical behave completely differently.
+
+> **A list states its true total, always. It paginates when that total can exceed one screen.**
+
+Under that rule `locations`, `venues`, `committees` and probably `duty-lists` need a count only; the
+rest need both.
+
+## The console rule
+
+Four staff pages are neither a list nor a detail page: `events/[id]/production` (1,461 lines, nine
+`InfoCard`s), `settings` (1,037, eleven), `volunteer/setup` (415) and `volunteer/shifts/[id]` (503).
+Treating a console as a long detail page is what produced #1068 — it could not tell you when the
+show was without entering edit mode.
+
+> **State first, then the work.** A console opens with what is done and what is not.
+
+1. **Reading never requires editing.** Every fact a section owns is legible without opening its
+   form. That is #1068 as a rule instead of a fix.
+2. **A section states its own state** — done, empty or blocked — in its heading, so the page can be
+   scanned without being read. Nine equal boxes cannot be scanned.
+3. **Order by the work, not the schema.** An empty section that is not due yet sits below one that
+   is.
+4. **The rows inside obey the list rule.** A console's lineup, shift board and ticket table are
+   lists; the container exempts nothing. Same finding as the volunteer desk in #1054.
+
+Nothing is filed for this — it is a proposal, not a defect.
+
 ## Where this loses
 
 Recorded because it is the part worth arguing with.
@@ -174,6 +234,9 @@ Recorded because it is the part worth arguing with.
   coordinator scrolls past four sections to reach their first action.
 - **A count is a query.** Three of these lists need a `count(*)` the service does not run today. If
   it is expensive, the honest fallback is "8 of many" — a worse design than the one drawn.
+- **The staff sweep is structural, not page-by-page.** Component counts, widths and query limits are
+  exact; calling a page a "list" or a "console" is judgement from those signals, and a handful of
+  the 73 could be argued either way.
 - **Two detail pages have to be built, not assumed.** A loan's and a suggestion's; neither route
   exists. They are drawn on the canvas for that reason — a fact moved to a page that does not exist
   is a fact deleted.
