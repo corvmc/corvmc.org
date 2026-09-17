@@ -463,12 +463,12 @@ Props: `type` (`info`, `warning`, `error`, `success`), `href` (renders as `<a>` 
 Four ways to show one record, in `$lib/components/ui/entity/`. Every reference to a record in
 the staff and member panels should be one of them.
 
-| Tier   | Component                                  | Use                                                                      |
-| ------ | ------------------------------------------ | ------------------------------------------------------------------------ |
-| chip   | `EntityChip`                               | mentioning a record mid-sentence, in a `Fact`, or in a column of its own |
-| row    | `EntityIdentity`                           | `size="sm"` is the table primary cell, `md` a list row                   |
-| card   | `EntityCard`                               | a related record on someone else's detail page                           |
-| detail | `EntityIdentity size="lg"` + `RelatedList` | the identity strip and the related sections                              |
+| Tier   | Component                                 | Use                                                                      |
+| ------ | ----------------------------------------- | ------------------------------------------------------------------------ |
+| chip   | `EntityChip`                              | mentioning a record mid-sentence, in a `Fact`, or in a column of its own |
+| row    | `EntityIdentity`                          | `size="sm"` is the table primary cell, `md` a list row                   |
+| card   | `EntityCard`                              | a related record on someone else's detail page                           |
+| detail | `PageHeader` + a meta row + `RelatedList` | see below — **not** an identity strip                                    |
 
 All of them take a single `ref: EntityRef` (`$lib/types/entity`) and nothing about presentation.
 
@@ -491,10 +491,36 @@ keep the status in its own `w-px` column, which is what ~30 staff tables already
 `avatar` and let it ride the 24px avatar or glyph tile like every other size.
 `EntityIdentity.svelte.spec.ts` pins both.
 
-`lg` does not link by default — the record's own page is where you already are — and takes
-`email`/`phone` for its subline, because a detail strip wants to be actionable where a row wants to
-be read. `heading` puts the name in a heading element, for a card whose title is the record; leave
-it off in lists, since fifty headings in a table are not an outline.
+`lg` does not link by default and takes `email`/`phone` for its subline. It is for a **related**
+record shown large on someone else's page — the member at the top of `staff/reservations/[id]`,
+say — **not** for the record the page is about. See "The detail tier" below; that distinction is
+#1063. `heading` puts the name in a heading element, for a card whose title is the record; leave it
+off in lists, since fifty headings in a table are not an outline.
+
+#### The detail tier
+
+A record's own page is `PageHeader` with a `{#snippet leading()}` for the avatar, a meta row of
+contact or identity facts beneath it, then `InfoCard` sections with `DefinitionList`/`Fact` grids,
+and `RelatedList` for related records.
+
+`staff/users/[id]` is the reference — 35 `Fact`s and 22 `RelatedList`s across its `panels/`, and
+not one box whose body is a single sentence. It is also where `RelatedList` was promoted from. The
+comment at `staff/users/[id]/+page.svelte:121-124` states the rule this section is generalising:
+
+> One identity block, not two. The avatar rides in the header rather than in a strip below it,
+> because the strip's only reason to restate the name was to have something to put beside the
+> picture.
+
+Three things follow:
+
+- **One sentence is never a card.** A box with a border, a title and a single paragraph inside is
+  chrome charging rent — it becomes a line in the fact grid or a note under the header (#1078).
+- **Don't hand-roll the fact grid.** `<dl class="grid …" style="grid-template-columns: auto 1fr">`
+  with `opacity-60` labels is `DefinitionList` + `Fact`, retyped. Fifteen detail pages did this
+  (#1079).
+- **A detail page is a superset of its row.** Every fact, badge and action the row carried is on
+  the page, the detail query reuses the list query's ref and label helpers, and a status that is a
+  tinted rail on the row is not a plain sentence here (#1064).
 
 It was briefly split into `EntityRow` plus an `EntityHeader`. Two implementations meant two places
 for the avatar convention, the subtype glyph and the status rule to drift apart — and one had
@@ -989,9 +1015,38 @@ a paginated `query()` returned.
 - `empty` / `emptyTitle` / `actionLabel` + `actionHref` — passed to `EmptyState`.
 - `onpage` — omit for un-paginated lists and no `Pagination` renders.
 
-Give it a card list instead of a `Table` when the row's primary content is
-unbounded prose (`/staff/flags`) or the row has three or more always-visible
-actions. `/staff/closures` and the event check-in list are the card precedents.
+### A table, unless the row earns a card
+
+A row earns a card by passing **at least one** of four tests. Each has a check you
+can run against the source, because the previous version of this rule was a
+judgement call and the three pages it cited as precedents all failed it (#1034).
+
+1. **Unbounded prose.** The primary content has no schema cap and routinely wraps
+   past two lines.
+   _Check: grep the Zod schema for `.max(`. A cap means a table._
+2. **The artwork is the content.** Somebody made an image for this record and
+   choosing between records depends on seeing it.
+   _A poster, a sleeve, a face — not an avatar beside a name._
+3. **Three or more always-visible actions**, each needing its own target.
+   _Count them. A conditional action counts as zero; a dropdown holds them._
+4. **Operated standing up.** Used one-handed, away from a desk.
+   _56px targets, one row per screen-third, no hover-only affordance._
+
+A card list passing none of the four is a table that lost its columns.
+
+Clause 4 is what actually justifies the event check-in list, which the old rule
+justified by miscounting its actions. Clause 2 is how the art-directed exemption
+above is stated, not a change to it.
+
+Two rules hold whichever you pick:
+
+- **A list states its true total, always.** It paginates when that total can
+  exceed one screen. A list with no count cannot be told apart from a truncated
+  one, which is what #1039 and #1040 each were.
+- **Do not set `width` on a `PageContent` whose main content is a table.**
+  The column tiers are container queries — `col-support` below `32rem`,
+  `col-extra` below `48rem` — and `max-w-3xl` **is** `48rem`, so a clamped list
+  renders its widest tier set in the narrowest container the app allows (#1216).
 
 ### Table
 
