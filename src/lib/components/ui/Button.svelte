@@ -117,7 +117,11 @@
 
 	const classes = $derived(
 		clsx(
-			'btn',
+			// daisyUI 5's `.btn` sets a fixed `height` and `flex-wrap: nowrap` but no
+			// `white-space`, so a label that wraps overflows the button's own border
+			// rather than growing it — "Add people" rendered with "people" outside
+			// the outline on every row of the volunteer desk (#1226).
+			'btn whitespace-nowrap',
 			VARIANTS[resolvedVariant],
 			SIZES[size],
 			shape && SHAPES[shape],
