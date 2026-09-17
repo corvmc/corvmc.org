@@ -223,7 +223,10 @@ describe('route coverage', () => {
 		'/member/groups/[slug]',
 		// Reached from the club page's own Edit button. A leader edits the program
 		// they are already looking at; a nav row to it would point at no group.
-		'/member/groups/[slug]/edit'
+		'/member/groups/[slug]/edit',
+		// Same: reached from the club's own page. A nav row for "chat" with no
+		// group named would point at nothing (#1252).
+		'/member/groups/[slug]/chat'
 	]);
 
 	it('leaves no member page unmatched', () => {

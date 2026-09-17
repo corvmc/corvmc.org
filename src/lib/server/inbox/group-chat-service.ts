@@ -159,6 +159,26 @@ export async function countGroupChatUnread(groupId: string, userId: string): Pro
 	return row?.count ?? 0;
 }
 
+/**
+ * The group a chat thread belongs to, for a guard that starts from the thread.
+ *
+ * `ThreadComposer` posts `{ threadId, body }` — the shape every other thread
+ * surface uses — so the gate has to resolve the group itself rather than being
+ * handed a slug. Returns null for anything that is not a group chat, which is
+ * what keeps this from becoming a way into an enquiry.
+ */
+export async function groupOfChatThread(
+	threadId: string
+): Promise<{ id: string; slug: string } | null> {
+	const [row] = await db
+		.select({ id: group.id, slug: group.slug })
+		.from(inboxThread)
+		.innerJoin(group, eq(group.id, inboxThread.groupId))
+		.where(and(eq(inboxThread.id, threadId), eq(inboxThread.channel, 'group')))
+		.limit(1);
+	return row ?? null;
+}
+
 /** Who is in the room, for the header. */
 export async function listGroupChatReaders(groupId: string) {
 	const { groupMember } = await import('$lib/server/db/schema/group');

@@ -63,7 +63,10 @@ describe('bandNavItems', () => {
 
 	// The badge is what makes an unanswered enquiry visible from anywhere in the
 	// panel; a row that lost its key would go quiet rather than break.
-	it('carries the unread badge key on the Messages row and nowhere else', () => {
+	// Two counts, two rows, and they are not interchangeable: Messages is
+	// booking enquiries and admins only, Chat is the band's own room and every
+	// member reads it (#1252).
+	it('carries a badge key on Messages and Chat, and nowhere else', () => {
 		const items = bandNavItems({
 			slug: 'the-velvet-underground',
 			bandId: 'band-1',
@@ -73,7 +76,14 @@ describe('bandNavItems', () => {
 			features: {}
 		});
 		expect(items.find((i) => i.key === 'messages')?.badgeKey).toBe('messagesUnread');
-		expect(items.filter((i) => i.badgeKey).length).toBe(1);
+		expect(items.find((i) => i.key === 'chat')?.badgeKey).toBe('chatUnread');
+		expect(items.filter((i) => i.badgeKey).length).toBe(2);
+	});
+
+	it('offers Chat to a plain member, who gets no Messages row', () => {
+		const labels = labelsFor({ userRole: 'member' });
+		expect(labels).toContain('Chat');
+		expect(labels).not.toContain('Messages');
 	});
 
 	it('sends a staff non-member to staff tools instead of Settings', () => {

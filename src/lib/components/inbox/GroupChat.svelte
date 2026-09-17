@@ -1,0 +1,34 @@
+<script lang="ts">
+	/**
+	 * A group's shared thread, whichever panel it is mounted in.
+	 *
+	 * `ThreadTimeline` in **viewer** mode, not direction mode: a chat is a room
+	 * of named people, so your messages sit right and everyone else's left with
+	 * their name on them. The band's enquiry pane is the opposite case — there
+	 * the band is an organisation answering an outsider — which is why these two
+	 * surfaces share the timeline and not its configuration (#1252).
+	 */
+	import ThreadTimeline from './ThreadTimeline.svelte';
+	import ThreadComposer from './ThreadComposer.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import { getGroupChatThread, postGroupChatMessage } from '$lib/remote/group-chat.remote';
+
+	let { slug, viewerUserId }: { slug: string; viewerUserId: string } = $props();
+
+	const chat = $derived(await getGroupChatThread(slug));
+</script>
+
+<div class="flex h-full min-h-0 flex-col gap-4">
+	<div class="min-h-0 flex-1 overflow-y-auto">
+		{#if chat.messages.length === 0}
+			<EmptyState
+				title="Nothing here yet"
+				description="This is {chat.groupName}'s own thread — everyone in the group reads it. Say something."
+			/>
+		{:else}
+			<ThreadTimeline messages={chat.messages} {viewerUserId} />
+		{/if}
+	</div>
+
+	<ThreadComposer threadId={chat.id} replyForm={postGroupChatMessage} />
+</div>
