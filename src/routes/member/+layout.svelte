@@ -137,14 +137,17 @@
 			containsActive={page.url.pathname.startsWith('/band/')}
 		>
 			{#snippet action()}
-				<Button href="/member/bands" variant="ghost" size="xs">All</Button>
+				<Button href="/member/bands" variant="ghost" size="xs" class="latched">All</Button>
 			{/snippet}
 			{#each layout.userBands as band (band.slug)}
 				<Nav.Item href={`/band/${band.slug}`} label={band.name}>
 					{#snippet icon()}
+						<!-- Icon-sized and square: these rows sit among 20px glyphs, and a
+						     32px circle lined up with none of them. -->
 						<Avatar
-							class="size-8"
+							class="size-5"
 							size="avatar-sm"
+							shape="square"
 							src={band.avatarUrl ?? undefined}
 							name={band.name}
 						/>
@@ -171,14 +174,15 @@
 			containsActive={page.url.pathname.startsWith('/member/groups')}
 		>
 			{#snippet action()}
-				<Button href="/member/groups" variant="ghost" size="xs">All</Button>
+				<Button href="/member/groups" variant="ghost" size="xs" class="latched">All</Button>
 			{/snippet}
 			{#each layout.userGroups as group (group.slug)}
 				<Nav.Item href={`/member/groups/${group.slug}`} label={group.name}>
 					{#snippet icon()}
 						<Avatar
-							class="size-8"
+							class="size-5"
 							size="avatar-sm"
+							shape="square"
 							src={group.avatarUrl ?? undefined}
 							name={group.name}
 						/>
