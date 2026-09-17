@@ -44,7 +44,7 @@
 	 */
 </script>
 
-<PageHeader title="Reservations" subtitle={band.name}>
+<PageHeader width="2xl" title="Reservations" subtitle={band.name}>
 	<CreateModal
 		slug={band.slug}
 		hasSustainingMember={membership.hasSustainingMember}

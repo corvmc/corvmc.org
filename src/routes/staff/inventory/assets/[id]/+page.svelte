@@ -46,6 +46,7 @@
 </script>
 
 <PageHeader
+	width="3xl"
 	subtitle={asset.item.name}
 	title={asset.assetTag ?? 'Untagged unit'}
 	backHref={resolve(`/staff/inventory/${asset.itemId}`)}

@@ -14,6 +14,7 @@
 </script>
 
 <PageHeader
+	width="3xl"
 	title="Edit {group.kind === 'committee' ? 'committee' : 'club'}"
 	subtitle={group.name}
 />

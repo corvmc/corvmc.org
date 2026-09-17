@@ -28,7 +28,7 @@
 	);
 </script>
 
-<PageHeader subtitle="Profile" title="My Profile" />
+<PageHeader width="3xl" subtitle="Profile" title="My Profile" />
 <PageContent width="3xl">
 	<!-- The address leads, ahead of the form: it is the thing a member has, and
 	     the form is how they fill the page behind it. Absent only for an account

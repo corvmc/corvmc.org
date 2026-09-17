@@ -85,6 +85,7 @@
 </script>
 
 <PageHeader
+	width="3xl"
 	title="Packing list"
 	subtitle="What {layout.band.name} takes to a gig"
 	documentTitle="Packing list · {layout.band.name}"

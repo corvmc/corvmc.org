@@ -144,7 +144,7 @@
 	onsuccess={() => invalidateAll()}
 	class="flex h-full min-h-0 flex-col"
 >
-	<PageHeader title="Page Editor" subtitle={band.name} flush={isPremium}>
+	<PageHeader width="2xl" title="Page Editor" subtitle={band.name} flush={isPremium}>
 		{#if isPremium && pageData.config}
 			<Badge variant="success">Premium</Badge>
 			<!-- The band's own subdomain, so this leaves the app: rel="external" is

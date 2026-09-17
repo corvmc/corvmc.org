@@ -30,7 +30,7 @@
 	const cashDue = $derived(res.cashDueCents ?? 0);
 </script>
 
-<PageHeader title="Session" backHref="/band/{slug}/reservations" />
+<PageHeader width="md" title="Session" backHref="/band/{slug}/reservations" />
 <PageContent width="md">
 	<Card>
 		<CardBody>

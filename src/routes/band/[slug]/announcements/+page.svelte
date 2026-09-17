@@ -20,7 +20,7 @@
 	const data = $derived(await getBandAnnouncementsPage(layout.band.id));
 </script>
 
-<PageHeader title="Announcements" subtitle="Posts to everyone on the roster.">
+<PageHeader width="3xl" title="Announcements" subtitle="Posts to everyone on the roster.">
 	<!-- Null for a staff non-member, who has no roster row to mute. -->
 	{#if data.notifyAnnouncements !== null}
 		<MuteAnnouncementsAction

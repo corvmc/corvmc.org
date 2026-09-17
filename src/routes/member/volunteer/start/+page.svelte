@@ -20,7 +20,12 @@
 	let step = $derived(getVolunteerStartStep());
 </script>
 
-<PageHeader title="Volunteer with CMC" subtitle="Volunteering" documentTitle="Volunteer sign-up" />
+<PageHeader
+	width="md"
+	title="Volunteer with CMC"
+	subtitle="Volunteering"
+	documentTitle="Volunteer sign-up"
+/>
 
 <PageContent width="md">
 	{#await step then me}

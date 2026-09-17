@@ -56,7 +56,7 @@
 	let notes = $state('');
 </script>
 
-<PageHeader subtitle="Content Flag" title={flag.entityLabel} backHref="/staff/flags">
+<PageHeader width="3xl" subtitle="Content Flag" title={flag.entityLabel} backHref="/staff/flags">
 	<StatusBadge status={flag.status} label />
 </PageHeader>
 <PageContent width="3xl">

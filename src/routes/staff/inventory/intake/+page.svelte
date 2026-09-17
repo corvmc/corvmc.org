@@ -76,6 +76,7 @@
 </script>
 
 <PageHeader
+	width="3xl"
 	title={orderId ? 'Receive an order' : 'Intake'}
 	subtitle="Inventory"
 	backHref={orderId ? `/staff/inventory/orders/${orderId}` : '/staff/inventory'}

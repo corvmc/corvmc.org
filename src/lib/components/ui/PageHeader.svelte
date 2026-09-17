@@ -2,10 +2,12 @@
 	import type { Snippet } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { pageTitle } from '$lib/config';
+	import { PAGE_WIDTH, type PageWidth } from './page-width';
 
 	let {
 		title,
 		subtitle,
+		width = 'full',
 		backHref,
 		documentTitle,
 		flush = false,
@@ -13,6 +15,12 @@
 		children
 	}: {
 		title: string;
+		/**
+		 * Match the `PageContent` below. The header is full-bleed and sticky, so
+		 * its row has to be constrained to the same column or the title floats
+		 * left of everything it labels — 232px left of it at `2xl` (#1231).
+		 */
+		width?: PageWidth;
 		backHref?: string;
 		children?: Snippet;
 		subtitle?: string;
@@ -55,30 +63,37 @@
 <div
 	class="sticky top-0 z-10 -mx-6 {flush
 		? ''
-		: 'mb-6'} flex flex-wrap items-center justify-between gap-2 border-b border-base-300 bg-base-100 px-6 py-3"
+		: 'mb-6'} border-b border-base-300 bg-base-100 px-6 py-3"
 >
-	<div class="flex min-w-0 items-center gap-3">
-		{#if backHref}
-			<Button href={backHref} variant="ghost" size="lg" shape="square">←</Button>
-		{/if}
-		{#if leading}
-			{@render leading()}
-		{/if}
-		<hgroup class="flex min-w-0 flex-col">
-			<h1 class="truncate text-2xl font-bold">{title}</h1>
-			{#if subtitle}
-				<span class="text-sm font-bold text-primary uppercase">{subtitle}</span>
-			{/if}
-		</hgroup>
-	</div>
 	<!--
-		Actions are grouped rather than rendered as bare flex children: the header
-		is `justify-between`, so two or more loose buttons get spread across its
-		whole width instead of sitting together opposite the title.
+		The whole row is constrained, not just the title: the bar itself stays
+		full-bleed so its border and background still run edge to edge, while the
+		title and the actions land on the same two edges as the content below.
 	-->
-	{#if children}
-		<div class="flex flex-wrap items-center justify-end gap-2">
-			{@render children()}
+	<div class="flex flex-wrap items-center justify-between gap-2 {PAGE_WIDTH[width]}">
+		<div class="flex min-w-0 flex-1 items-center gap-3">
+			{#if backHref}
+				<Button href={backHref} variant="ghost" size="lg" shape="square">←</Button>
+			{/if}
+			{#if leading}
+				{@render leading()}
+			{/if}
+			<hgroup class="flex min-w-0 flex-col">
+				<h1 class="truncate text-2xl font-bold">{title}</h1>
+				{#if subtitle}
+					<span class="text-sm font-bold text-primary uppercase">{subtitle}</span>
+				{/if}
+			</hgroup>
 		</div>
-	{/if}
+		<!--
+			Actions are grouped rather than rendered as bare flex children: the
+			header is `justify-between`, so two or more loose buttons get spread
+			across its whole width instead of sitting together opposite the title.
+		-->
+		{#if children}
+			<div class="flex flex-wrap items-center justify-end gap-2">
+				{@render children()}
+			</div>
+		{/if}
+	</div>
 </div>

@@ -47,7 +47,7 @@
 	};
 </script>
 
-<PageHeader title={s.title} subtitle="Suggestion" backHref="/member/suggestions">
+<PageHeader width="3xl" title={s.title} subtitle="Suggestion" backHref="/member/suggestions">
 	{#if s.status !== 'open'}
 		<StatusBadge status={s.status} label />
 	{/if}

@@ -23,7 +23,7 @@
 	);
 </script>
 
-<PageHeader title="Act Profile" subtitle={band.name} />
+<PageHeader width="3xl" title="Act Profile" subtitle={band.name} />
 <PageContent width="3xl">
 	<BandProfileForm
 		{band}

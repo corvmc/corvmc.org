@@ -103,7 +103,7 @@
 	});
 </script>
 
-<PageHeader title="Reservation" backHref="/staff/reservations" />
+<PageHeader width="3xl" title="Reservation" backHref="/staff/reservations" />
 <PageContent width="3xl">
 	<!-- Hero card -->
 	<Card>

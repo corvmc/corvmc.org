@@ -69,7 +69,7 @@
 </script>
 
 {#if !listing}
-	<PageHeader title="Listing not found" backHref={resolve('/member/events')} />
+	<PageHeader width="2xl" title="Listing not found" backHref={resolve('/member/events')} />
 	<PageContent width="2xl">
 		<Alert type="warning">
 			This listing doesn't exist, or it isn't yours.

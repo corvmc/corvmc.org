@@ -38,7 +38,7 @@
 	let showDeleteModal = $state(false);
 </script>
 
-<PageHeader title="Settings" subtitle={band.name} />
+<PageHeader width="md" title="Settings" subtitle={band.name} />
 <PageContent width="md">
 	<!-- The free subdomain is the band's primary address; the custom domain below
 	     is the upsell on top of it. -->

@@ -53,7 +53,12 @@
 	`Button.Root`, which leaves `type` unset — so an action trigger nested in the
 	form would default to `type="submit"` and post the role edit on click.
 -->
-<PageHeader title={role.name} subtitle="Volunteer Role" backHref="/staff/volunteer/roles">
+<PageHeader
+	width="3xl"
+	title={role.name}
+	subtitle="Volunteer Role"
+	backHref="/staff/volunteer/roles"
+>
 	<StatusBadge status={role.isActive ? 'active' : 'retired'} label />
 
 	<!--

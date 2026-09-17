@@ -45,7 +45,7 @@
 	const chargeTotal = $derived(remainingCents + feeCents);
 </script>
 
-<PageHeader title="Pay for Your Session" />
+<PageHeader width="md" title="Pay for Your Session" />
 <PageContent width="md">
 	<Card>
 		<CardBody>
