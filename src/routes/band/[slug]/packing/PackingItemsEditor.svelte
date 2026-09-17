@@ -13,6 +13,7 @@
 	import type { PackingItemRowState } from '$lib/types/packing';
 	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
 	import { IconPlus, IconTrash, IconChevronUp, IconChevronDown } from '@tabler/icons-svelte';
+	import type { Snippet } from 'svelte';
 
 	/**
 	 * One owner's rows: what they bring, and what it becomes on a stage.
@@ -26,9 +27,16 @@
 		items = $bindable(),
 		field,
 		idPrefix = 'pk',
-		readonly = false
+		readonly = false,
+		action
 	}: {
 		items: PackingItemRowState[];
+		/**
+		 * The crate's submit button. It belongs on the same line as "Add
+		 * something" — rendered by the parent below the editor it sat alone on a
+		 * second row with ~580px of nothing between them (#1230).
+		 */
+		action?: Snippet;
 		/**
 		 * The remote form's own `items` field. Taken from the form rather than
 		 * emitted as `name="items"`: a remote form encodes its field names, so a
@@ -89,7 +97,7 @@
 	);
 
 	const kindOptions = [{ value: '', label: 'Never goes on a stage' }, ...riderElementKindOptions];
-	const filled = $derived(items.filter((it) => text(it.label)).length);
+	const atLimit = $derived(items.length >= PACKING_MAX_ITEMS);
 </script>
 
 <!--
@@ -193,18 +201,21 @@
 		<p class="text-sm text-base-content/60">Nothing here yet.</p>
 	{/each}
 
+	<!-- The crate's count is the badge in the card header. A running total here
+	     too printed the same number twice, ~80px apart. -->
 	{#if !readonly}
-		<div class="flex items-center justify-between">
-			<span class="text-xs text-base-content/60">{filled} of {PACKING_MAX_ITEMS}</span>
-			<Button
-				type="button"
-				variant="ghost"
-				size="sm"
-				onclick={addItem}
-				disabled={items.length >= PACKING_MAX_ITEMS}
-			>
-				<IconPlus size={16} /> Add something
-			</Button>
+		<div class="flex flex-wrap items-center justify-between gap-2">
+			<div class="flex items-center gap-2">
+				<Button type="button" variant="ghost" size="sm" onclick={addItem} disabled={atLimit}>
+					<IconPlus size={16} /> Add something
+				</Button>
+				{#if atLimit}
+					<span class="text-xs text-base-content/60">
+						{PACKING_MAX_ITEMS} is the limit for one crate.
+					</span>
+				{/if}
+			</div>
+			{#if action}{@render action()}{/if}
 		</div>
 	{/if}
 </div>

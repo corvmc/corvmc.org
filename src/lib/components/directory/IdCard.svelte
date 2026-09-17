@@ -217,11 +217,17 @@
 			var(--cmc-red-orange) 66.666% 100%
 		);
 	}
+	/* `min-height: 0` is what makes `aspect-ratio` above authoritative. A flex
+	   item's automatic minimum is its content, so a member who filled in a
+	   tagline, instruments, genres and three acts pushed the card ~25px past
+	   the ratio while a name-and-pronouns card sat exactly on it — a ragged
+	   bottom edge that read as the sparse profiles being broken (#1238). */
 	.id-card__body {
 		flex: 1;
+		min-height: 0;
 		display: flex;
 		gap: 3.5cqi;
-		padding: 5cqi 5cqi 4cqi;
+		padding: 5cqi 5cqi 2.5cqi;
 		align-items: stretch;
 	}
 	.id-card__photo {
@@ -256,6 +262,8 @@
 		flex-direction: column;
 		gap: 0.5cqi;
 		min-width: 0;
+		min-height: 0;
+		overflow: hidden;
 		flex: 1;
 	}
 	.id-card__name {
@@ -271,18 +279,35 @@
 		color: var(--fg-3);
 		margin-left: 0.5cqi;
 	}
+	/* One line. A two-line tagline is the single biggest contributor to a card
+	   outgrowing its ratio, and the full text is on the member's own page. */
 	.id-card__role {
 		font-size: 3.8cqi;
 		color: var(--fg-2);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
-	.id-card__badges {
-		display: flex;
-		gap: 1.2cqi;
-		flex-wrap: wrap;
-		margin-top: 1cqi;
+	/* One line each, and a run of inline text rather than a flex row so the
+	   overflow ellipses instead of cutting a word in half. `MAX_TAGS` caps the
+	   count, not the width: three long instrument names wrapped to a second
+	   line and pushed the row below out of the card's fixed shape. */
+	.id-card__badges,
+	.id-card__bands {
+		display: block;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		/* The default `normal` was ~1.9 on this font at 2.9cqi. Five rows then
+		   needed 103px of the 98px the fixed card leaves, and because they are
+		   flex items they shrank to fit — clipping the last row through the
+		   middle of its letters rather than overflowing visibly. */
+		line-height: 1.45;
 	}
 	.id-tag {
-		display: inline-block;
+		/* `inline`, not `inline-block`: an ellipsis lands between atomic inline
+		   boxes, so an inline-block tag is cut off mid-word instead. */
+		display: inline;
 		font-weight: 700;
 		font-size: 2.9cqi;
 		letter-spacing: 0.08em;
@@ -311,11 +336,6 @@
 		&:has(+ .id-tag--genre)::after {
 			content: ', ';
 		}
-	}
-	.id-card__bands {
-		display: flex;
-		gap: 1.2cqi;
-		flex-wrap: wrap;
 	}
 	.id-card__footer {
 		display: flex;
