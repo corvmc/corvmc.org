@@ -970,11 +970,11 @@ describe('ReservationService', () => {
 			consoleSpy.mockRestore();
 		});
 
-		// Regression: space booked for an event is staff-held — there is no member
+		// Regression: the room a show holds is staff-held — there is no member
 		// confirm/pay flow for it and publishing an event never touches its
 		// reservation. Sweeping it as "unconfirmed" released the room at showtime
 		// and cascaded waitlist promotion into a live event.
-		it('excludes event-booked space from the sweep', async () => {
+		it("excludes a show's room from the sweep", async () => {
 			const sweepWhere = vi.fn().mockResolvedValue([]);
 			const sweepFrom = vi.fn().mockReturnValue({ where: sweepWhere });
 			vi.mocked(db.select).mockReturnValue({ from: sweepFrom } as any);
@@ -983,7 +983,7 @@ describe('ReservationService', () => {
 
 			const { sql: rendered, params } = dialect.sqlToQuery(sweepWhere.mock.calls[0][0] as SQL);
 			expect(rendered).toContain('"booker_type" <>');
-			expect(params).toContain('event_listing');
+			expect(params).toContain('production');
 			// And a program's hold once #855 re-points it at the group running it,
 			// which is the same room and the same reason.
 			expect(rendered).toContain('"group"."kind" <> \'band\'');

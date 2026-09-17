@@ -209,9 +209,9 @@ function queueSelects(...results: unknown[][]) {
 
 /**
  * Which table each insert went to, so a test can tell an `event` row from the
- * `event_group` link the same write now owes. `insertedRows` keeps its old
- * meaning — everything, in order — because the existing assertions index into
- * it, and a CMC prototype still produces exactly one row.
+ * `event_group` link the same write now owes, and from the `production` each
+ * occurrence of a show opens (#855). `insertedRows` keeps its old meaning —
+ * everything, in order.
  */
 let insertedByTable: { table: string; row: unknown }[] = [];
 
@@ -559,6 +559,9 @@ const EVENT_PROTO = {
 	ticketPrice: 1000,
 	ticketQuantity: 40,
 	source: 'cmc',
+	// `notNull` on the real table, and what decides each occurrence's booker: a
+	// show's night is its own production's (#855).
+	kind: 'show',
 	createdByUserId: 'user-1',
 	reservationId: 'eres-proto'
 };
@@ -627,9 +630,11 @@ describe('generateRecurringEvents', () => {
 		expect(result.instancesSkipped).toBe(0);
 		expect(result.errors).toHaveLength(0);
 
-		// Draft event copies prototype config with shifted times
-		expect(insertedRows).toHaveLength(1);
-		expect(insertedRows[0]).toMatchObject({
+		// Draft event copies prototype config with shifted times. Counted by table:
+		// a show's occurrence also opens its own production (#855).
+		const listings = insertedByTable.filter((i) => i.table === 'event_listing');
+		expect(listings).toHaveLength(1);
+		expect(listings[0].row).toMatchObject({
 			title: EVENT_PROTO.title,
 			description: EVENT_PROTO.description,
 			startsAt: OCC1,
@@ -647,7 +652,7 @@ describe('generateRecurringEvents', () => {
 		expect(mockHasConflict).toHaveBeenCalledOnce();
 		expect(mockStaffCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
-				bookerType: 'event_listing',
+				bookerType: 'production',
 				// A show holds the room outright, and says so on the row rather than
 				// leaving it to be inferred from how the row was created.
 				hardHold: true,
@@ -673,7 +678,7 @@ describe('generateRecurringEvents', () => {
 
 		expect(result.instancesCreated).toBe(1); // event still created
 		expect(result.instancesSkipped).toBe(1); // space not booked
-		expect(insertedRows).toHaveLength(1);
+		expect(insertedByTable.filter((i) => i.table === 'event_listing')).toHaveLength(1);
 		expect(mockStaffCreate).not.toHaveBeenCalled();
 		expect(updatedRows).toHaveLength(0);
 

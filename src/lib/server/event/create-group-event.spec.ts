@@ -174,11 +174,11 @@ describe('holding the room', () => {
 		);
 
 		const [call] = staffCreate.mock.calls as unknown as [Record<string, unknown>][];
-		// `'event_listing'`, never `'group'`: booking as the group would imply the group
-		// has a balance, which is exactly what a sanctioned program does not need.
-		expect(call[0]).toMatchObject({ bookerType: 'event_listing', status: 'confirmed' });
-		// The reservation points at the event, and the event links back.
-		expect(call[0].bookerId).toBe(rowsFor('event_listing')[0].id);
+		// `'group'` since #855: the discriminator says which table `booker_id`
+		// points at. Free-versus-paid is `group.kind` — only a band pays — so this
+		// grants the programme nothing it did not already have.
+		expect(call[0]).toMatchObject({ bookerType: 'group', status: 'confirmed' });
+		expect(call[0].bookerId).toBe('club-1');
 		expect(rowsFor('event_listing')[0].reservationId).toBe('res-1');
 	});
 

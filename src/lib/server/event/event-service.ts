@@ -331,6 +331,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				venueId: venueId ?? null,
 				location: location ?? null,
 				groupId: groupId ?? null,
+				productionId,
 				reservationId,
 				createdByUserId
 			})
@@ -353,10 +354,14 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	// paths never have to branch on "sometimes present".
 	if (groupId) await linkManagingGroup([{ eventId: row.id, groupId }]);
 
-	// After the listing exists, because `createProduction` reads its `source`.
-	// Every CMC show gets one, room or no room: the back-of-house is what a show
-	// is, and leaving it to a button is why every show before 2026-09-04 has none.
-	if (productionId) await createProduction(row.id, { createdByUserId, id: productionId });
+	// Written directly rather than through `createProduction`: the listing above
+	// already names it, and that function's job is to claim a listing that names
+	// none. Every CMC show gets one, room or no room — the back-of-house is what
+	// a show is, and leaving it to a button is why every show before 2026-09-04
+	// has none.
+	if (productionId) {
+		await db.insert(production).values({ id: productionId, createdByUserId });
+	}
 
 	// Upload poster outside the transaction (non-critical, idempotent)
 	if (posterFile) {

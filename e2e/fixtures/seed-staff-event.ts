@@ -112,7 +112,11 @@ export async function seedStaffEvent() {
 /** Drop the event (and held space) the previous run created through the UI. */
 async function clearStaleEvents(db: DrizzleD1Database) {
 	const stale = await db
-		.select({ id: eventListing.id, reservationId: eventListing.reservationId })
+		.select({
+			id: eventListing.id,
+			reservationId: eventListing.reservationId,
+			productionId: eventListing.productionId
+		})
 		.from(eventListing)
 		.where(like(eventListing.title, `${SEED_EVENT_TITLE_PREFIX}%`));
 
@@ -129,10 +133,16 @@ async function clearStaleEvents(db: DrizzleD1Database) {
 	}
 
 	// A reservation whose event insert was rolled back carries no link back, so
-	// sweep by booker as well.
-	await db
-		.delete(reservation)
-		.where(and(eq(reservation.bookerType, 'event_listing'), inArray(reservation.bookerId, ids)));
+	// sweep by booker as well. The booker is the production now (#855), and the
+	// production ids come off the listings read above.
+	const productionIds = stale.map((e) => e.productionId).filter((id): id is string => !!id);
+	if (productionIds.length > 0) {
+		await db
+			.delete(reservation)
+			.where(
+				and(eq(reservation.bookerType, 'production'), inArray(reservation.bookerId, productionIds))
+			);
+	}
 }
 
 /** Hold SEED_CONFLICT_DATE so the modal's conflict warning has to fire. */

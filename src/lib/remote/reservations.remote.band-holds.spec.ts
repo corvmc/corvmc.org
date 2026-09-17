@@ -1,13 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { QueryBuilder, SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
-import { and, eq, gt, inArray, ne, or } from 'drizzle-orm';
+import { and, eq, gt, ne } from 'drizzle-orm';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eventListing } from '$lib/server/db/schema/event';
 
 /**
  * A group's holds include the ones booked through its listings.
  *
- * A group session books the room as `bookerType: 'event_listing'`, so a plain
+ * A group session books the room as `bookerType: 'production'`, so a plain
  * `bookerType = 'group'` filter cannot see it and a club could not find the
  * hold for its own weekly jam. Rendered rather than executed — the point is the
  * predicate's shape, and `SQLiteSyncDialect` shows it without a database.
@@ -19,20 +18,11 @@ const dialect = new SQLiteSyncDialect();
 const qb = new QueryBuilder();
 
 /** The predicate under test, as `getBandReservations` composes it. */
+// A copy of the predicate in `reservations.remote.ts`, because it is module
+// private there. Copies drift — this one claimed a listing branch that #855
+// removed — so keep the two in step, or export the real one.
 function bookedByGroup(groupId: string) {
-	return or(
-		and(eq(reservation.bookerType, 'group'), eq(reservation.bookerId, groupId)),
-		and(
-			eq(reservation.bookerType, 'event_listing'),
-			inArray(
-				reservation.bookerId,
-				qb
-					.select({ id: eventListing.id })
-					.from(eventListing)
-					.where(eq(eventListing.groupId, groupId))
-			)
-		)
-	);
+	return and(eq(reservation.bookerType, 'group'), eq(reservation.bookerId, groupId));
 }
 
 describe('the predicate a club sees its holds through', () => {
@@ -49,10 +39,11 @@ describe('the predicate a club sees its holds through', () => {
 		expect(sql().sql).toContain('"booker_type" = ?');
 	});
 
-	it('also matches a hold booked through one of its listings', () => {
-		// The bug: without this branch the club's own session is invisible to it.
-		expect(sql().sql).toContain('event_listing');
-		expect(sql().sql).toMatch(/or /i);
+	it('needs no second branch through a listing', () => {
+		// It used to reach the club's own session through the listing that held the
+		// room. Since #855 the session holds it as the group, so the direct branch
+		// is the whole predicate and the subquery is gone.
+		expect(sql().sql).not.toContain('event_listing');
 	});
 
 	it('still excludes cancelled and past rows', () => {
@@ -61,8 +52,7 @@ describe('the predicate a club sees its holds through', () => {
 		expect(sql().sql).toContain('"starts_at" > ?');
 	});
 
-	it('scopes the listing subquery to the group', () => {
-		// Without this it would match every event hold in the building.
-		expect(sql().sql).toContain('"group_id" = ?');
+	it('scopes to this group, not every hold in the building', () => {
+		expect(sql().sql).toContain('"booker_id" = ?');
 	});
 });

@@ -10,7 +10,7 @@ import { ptDate } from './util';
  *
  * Written straight to the tables rather than through `createGroupEvent`, so the
  * reservation and the `event_group` row are restated here. That the reservation
- * is `bookerType: 'event_listing'` is the whole point: the room is held for the session,
+ * is `bookerType: 'group'` is the whole point: the room is the programme's, free,
  * not booked by the program, and no credit ledger is touched.
  */
 export async function seedGroupSessions(groups: any[]) {
@@ -30,8 +30,8 @@ export async function seedGroupSessions(groups: any[]) {
 				const [res] = await db
 					.insert(reservation)
 					.values({
-						bookerType: 'event_listing',
-						bookerId: eventId,
+						bookerType: 'group',
+						bookerId: g.id,
 						createdByUserId: g.ownerId,
 						status: 'confirmed',
 						startsAt,

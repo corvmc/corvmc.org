@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { production } from '$lib/server/db/schema/production';
 import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { closure } from '$lib/server/db/schema/reservation';
@@ -472,9 +473,9 @@ async function processEventSeries(
 
 	// Generate occurrences within the window
 	const now = new Date();
-	// Event series hold the room outright; `'event_listing'` is the only booker type a
-	// CMC event ever books as.
-	let windowEnd = await generationWindowEnd(now, 'event_listing');
+	// Event series hold the room outright. `termsFor` gives every non-instructor
+	// booker the same window, so the value only has to be one a CMC event uses.
+	let windowEnd = await generationWindowEnd(now, 'production');
 	if (series.endsAt && series.endsAt < windowEnd) {
 		windowEnd = series.endsAt;
 	}
@@ -558,6 +559,9 @@ async function processEventSeries(
 		const occDoors = doorsLeadMs != null ? new Date(occStart.getTime() - doorsLeadMs) : null;
 
 		const newEventId = crypto.randomUUID();
+		// Each night of a series is its own show, with its own running order and
+		// its own settlement, so each occurrence opens its own production (#1202).
+		const occProductionId = prototype.kind === 'show' ? crypto.randomUUID() : null;
 
 		// Insert the draft event first (no reservation), so a failed space booking
 		// never leaves an orphan reservation.
@@ -579,6 +583,7 @@ async function processEventSeries(
 			// hero slot on the homepage every month.
 			source: prototype.source,
 			kind: prototype.kind,
+			productionId: occProductionId,
 			groupId: prototype.groupId,
 			location: prototype.location,
 			status: occurrenceStatus,
@@ -587,6 +592,16 @@ async function processEventSeries(
 			recurringSeriesId: series.id
 		});
 		created++;
+
+		// After the listing, which already names it: the occurrence's back-of-house
+		// exists from the moment the night does, rather than waiting for somebody
+		// to open one (#1202).
+		if (occProductionId) {
+			await db.insert(production).values({
+				id: occProductionId,
+				createdByUserId: prototype.createdByUserId
+			});
+		}
 
 		// The two invariants a write that sets `groupId` owes. They are maintained
 		// here rather than by calling `createGroupEvent`/`createBandEvent`, because
@@ -678,9 +693,11 @@ async function processEventSeries(
 				} else {
 					const res = await staffCreate({
 						userId: prototype.createdByUserId,
-						bookerType: 'event_listing',
+						// The production for a show, the programme for anything else — the
+						// party responsible for the night, not the advertisement (#855).
+						bookerType: occProductionId ? 'production' : 'group',
 						hardHold: true,
-						bookerId: newEventId,
+						bookerId: occProductionId ?? prototype.groupId!,
 						startsAt: occResStart,
 						endsAt: occResEnd,
 						// Same as the one-off path: event space is staff-held. A `scheduled`
