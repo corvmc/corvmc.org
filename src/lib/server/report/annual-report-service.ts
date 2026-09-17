@@ -115,7 +115,10 @@ export async function getAnnualReport(range: ReportRange = {}): Promise<AnnualRe
 		money: {
 			byKind,
 			totalsByKind,
-			netCents: totalsByKind.earned - totalsByKind.spent
+			// A sum, not a difference: `financialEntry.amountCents` is signed
+			// ("positive into the collective, negative out"), so a `spent` total is
+			// already negative and subtracting it added the spend instead (#1235).
+			netCents: totalsByKind.earned + totalsByKind.spent
 		},
 		volunteering: { totals, contributed },
 		membership,
