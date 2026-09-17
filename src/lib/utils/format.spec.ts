@@ -8,6 +8,7 @@ process.env.TZ = 'UTC';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 import {
+	formatCents,
 	formatDate,
 	formatDateLong,
 	formatDateShort,
@@ -327,5 +328,19 @@ describe('timeAgo', () => {
 		expect(ago(364 * DAY)).toBe('12mo ago');
 		expect(ago(620 * DAY)).toBe('1y ago');
 		expect(ago(763 * DAY)).toBe('2y ago');
+	});
+});
+
+describe('formatCents with a negative', () => {
+	it('puts the sign outside the symbol', () => {
+		// A spend is stored negative, so the annual report and every settlement
+		// line renders one. `$-138.06` reads as a typo.
+		expect(formatCents(-13_806)).toBe('-$138.06');
+		expect(formatCents(-5)).toBe('-$0.05');
+	});
+
+	it('leaves zero and positives alone', () => {
+		expect(formatCents(0)).toBe('$0.00');
+		expect(formatCents(13_806)).toBe('$138.06');
 	});
 });
