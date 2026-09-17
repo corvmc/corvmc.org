@@ -9,7 +9,6 @@ import {
 	replyToDirectThread,
 	acceptDirectThread,
 	declineDirectThread,
-	listMemberConversations,
 	getDirectThread,
 	counterpartOf
 } from '$lib/server/inbox/direct-service';
