@@ -344,7 +344,9 @@ describe('EventService', () => {
 			await expect(create(baseParams)).rejects.toThrow('insert failed');
 
 			expect(staffCreate).not.toHaveBeenCalled();
-			const deleted = eventDelete.mock.calls.map(([t]) => getTableName(t as SQLiteTable));
+			const deleted = (eventDelete.mock.calls as unknown as SQLiteTable[][]).map(([t]) =>
+				getTableName(t)
+			);
 			expect(deleted).toEqual(['production']);
 		});
 

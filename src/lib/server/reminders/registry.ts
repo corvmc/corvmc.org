@@ -16,7 +16,7 @@ const DAY = 24 * 60 * 60 * 1000;
 /**
  * Reservations owed a reminder, by status and how far ahead they start.
  *
- * `event_listing` space is excluded from the confirmation ones: staff-held,
+ * A show's room is excluded from the confirmation ones: staff-held,
  * with no member confirm/pay flow to nag about.
  */
 async function reservationsStartingWithin(
@@ -38,7 +38,7 @@ async function reservationsStartingWithin(
 		.where(
 			and(
 				eq(reservation.status, status),
-				...(status === 'scheduled' ? [ne(reservation.bookerType, 'event_listing')] : []),
+				...(status === 'scheduled' ? [ne(reservation.bookerType, 'production')] : []),
 				gte(reservation.startsAt, now),
 				lt(reservation.startsAt, new Date(now.getTime() + ms))
 			)
