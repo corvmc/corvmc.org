@@ -106,7 +106,7 @@ export interface StaffNavSection {
 
 /** Rows above the first section header. */
 export const staffNavTop: StaffNavItem[] = [
-	{ key: 'dashboard', label: 'Dashboard', href: resolve('/staff') },
+	{ key: 'dashboard', label: 'Dashboard', href: resolve('/staff'), exact: true },
 	{
 		key: 'inbox',
 		capability: 'inbox.read',

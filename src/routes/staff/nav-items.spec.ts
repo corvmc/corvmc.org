@@ -85,7 +85,11 @@ describe('activeNavKey', () => {
 
 	it('never matches a sibling that merely shares a prefix', () => {
 		// The whole reason for the `href + '/'` test rather than bare `startsWith`.
-		expect(activeNavKey('/staff/usersomething')).toBe('dashboard');
+		// This used to expect 'dashboard', because `/staff` matched every path in
+		// the panel as a prefix. That fallback was the #1237 bug — it lit the
+		// Dashboard row on pages that are not the dashboard — so the root is now
+		// `exact` and an unrecognised path lights nothing.
+		expect(activeNavKey('/staff/usersomething')).toBeNull();
 		expect(activeNavKey('/staffing')).toBeNull();
 	});
 

@@ -7,7 +7,7 @@ import { activeNavKey, childHrefsFor, flattenNav, type NavNode } from './active-
  */
 
 const ITEMS: NavNode[] = [
-	{ key: 'dashboard', href: '/member' },
+	{ key: 'dashboard', href: '/member', exact: true },
 	{
 		key: 'events',
 		href: '/member/events',
@@ -16,6 +16,28 @@ const ITEMS: NavNode[] = [
 	{ key: 'reservations', href: '/member/reservations' },
 	{ key: 'live-site', href: '' }
 ];
+
+describe('a panel root marked exact', () => {
+	/**
+	 * `/member` prefixes every route in the panel, so without `exact` the
+	 * Dashboard row won anywhere no deeper row matched — `/member/groups` and
+	 * `/member/bands` are index pages the sidebar has no row for — and lit up
+	 * *beside* the group rows, which compute their own active state (#1237).
+	 */
+	it('does not claim a page that merely lives under it', () => {
+		expect(activeNavKey(ITEMS, '/member/groups')).toBeNull();
+		expect(activeNavKey(ITEMS, '/member/groups/real-book-club')).toBeNull();
+		expect(activeNavKey(ITEMS, '/member/bands')).toBeNull();
+	});
+
+	it('still matches the panel root itself', () => {
+		expect(activeNavKey(ITEMS, '/member')).toBe('dashboard');
+	});
+
+	it('leaves rows that are not marked exact matching by prefix', () => {
+		expect(activeNavKey(ITEMS, '/member/reservations/abc/pay')).toBe('reservations');
+	});
+});
 
 describe('activeNavKey', () => {
 	it('matches a row exactly', () => {
@@ -36,8 +58,10 @@ describe('activeNavKey', () => {
 	});
 
 	it('requires a segment boundary, not a bare prefix', () => {
-		// A bare `startsWith` would hand this to Events.
-		expect(activeNavKey(ITEMS, '/member/eventsomething')).toBe('dashboard');
+		// A bare `startsWith` would hand this to Events. It used to fall through to
+		// 'dashboard' because the root matched everything as a prefix; that
+		// fallback was #1237, so the root is `exact` now and this lights nothing.
+		expect(activeNavKey(ITEMS, '/member/eventsomething')).toBeNull();
 	});
 
 	it('tolerates a trailing slash', () => {

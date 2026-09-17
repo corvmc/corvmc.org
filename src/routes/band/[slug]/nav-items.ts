@@ -61,7 +61,7 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	const premium = input.tier === 'premium';
 
 	const items: BandNavItem[] = [
-		{ key: 'dashboard', label: 'Dashboard', href: resolve('/band/[slug]', { slug }) }
+		{ key: 'dashboard', label: 'Dashboard', href: resolve('/band/[slug]', { slug }), exact: true }
 	];
 
 	// Second, above Members, because it is the only row that can be waiting on

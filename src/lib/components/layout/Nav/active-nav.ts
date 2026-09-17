@@ -20,6 +20,15 @@ export interface NavNode<K extends string = string> {
 	 * why the empty string is meaningful rather than merely absent.
 	 */
 	href: ResolvedPathname | '';
+	/**
+	 * Match this path and nothing below it.
+	 *
+	 * A panel root's href is a prefix of every route in the panel — `/member`
+	 * prefixes `/member/groups` — so without this the root row wins by default
+	 * anywhere no deeper row matches, and lights up beside rows that compute
+	 * their own active state (#1237).
+	 */
+	exact?: boolean;
 	children?: NavNode<K>[];
 }
 
@@ -57,7 +66,8 @@ export function activeNavKey<K extends string>(items: NavNode<K>[], pathname: st
 	let bestLength = -1;
 	for (const item of flattenNav(items)) {
 		if (!item.href.startsWith('/')) continue;
-		if (path !== item.href && !path.startsWith(item.href + '/')) continue;
+		if (item.exact ? path !== item.href : path !== item.href && !path.startsWith(item.href + '/'))
+			continue;
 		if (item.href.length > bestLength) {
 			bestLength = item.href.length;
 			best = item.key;

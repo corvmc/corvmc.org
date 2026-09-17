@@ -59,7 +59,7 @@ export interface MemberNavInput {
 /** The rows above the "My Bands" group. */
 export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 	const items: MemberNavItem[] = [
-		{ key: 'dashboard', label: 'Dashboard', href: resolve('/member') },
+		{ key: 'dashboard', label: 'Dashboard', href: resolve('/member'), exact: true },
 		{
 			key: 'messages',
 			label: 'Messages',
