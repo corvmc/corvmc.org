@@ -68,6 +68,14 @@ export async function dispatchReply(params: DispatchReplyParams): Promise<string
 			throw new Error(
 				'Direct threads have no reply path: staff do not write into member conversations.'
 			);
+		// Same reasoning as `direct`, and the same protection. A group's chat is
+		// its members talking to each other; nothing outside the group writes
+		// into it, and `group-chat-service` inserts the row itself rather than
+		// dispatching. Loud rather than silent if a caller ever arrives (#1252).
+		case 'group':
+			throw new Error(
+				'Group chat has no dispatch path: its members post through group-chat-service.'
+			);
 		case 'sms':
 			return dispatchSmsReply(params);
 		case 'instagram':

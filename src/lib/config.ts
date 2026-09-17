@@ -717,6 +717,11 @@ export const inboxChannels = [
 	'portal',
 	'direct',
 	'band',
+	// A group's own shared thread. Separate from `band`, which is a stranger
+	// using the public booking form — this is a member typing in the app, and
+	// the two differ on who may read, who may write and where a reply goes
+	// (#1252).
+	'group',
 	'instagram',
 	'messenger'
 ] as const;

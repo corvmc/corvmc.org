@@ -27,7 +27,9 @@ export interface AddInboundMessageParams {
  * cannot survive an answer on a channel someone forgot about. Peer messages
  * clear a column that direct threads never set, which costs nothing.
  */
-async function touchThread(threadId: string, body: string): Promise<void> {
+// Exported for `group-chat-service.ts`, whose insert cannot go through
+// `addPeerMessage` — that one emits a DM event naming a single recipient.
+export async function touchThread(threadId: string, body: string): Promise<void> {
 	await db
 		.update(inboxThread)
 		.set({
