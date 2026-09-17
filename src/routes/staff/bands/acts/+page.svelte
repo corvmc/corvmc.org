@@ -4,6 +4,7 @@
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { getStaffExternalActs } from '$lib/remote/external-acts.remote';
@@ -25,8 +26,16 @@
 	 */
 	let searchText = $state('');
 	let searchDebounced = $state('');
+	let pageNo = $state(1);
 
-	const acts = $derived(await getStaffExternalActs({ search: searchDebounced || undefined }));
+	const acts = $derived(
+		await getStaffExternalActs({ search: searchDebounced || undefined, page: pageNo })
+	);
+
+	function search(q: string) {
+		searchDebounced = q;
+		pageNo = 1;
+	}
 </script>
 
 <PageHeader title="External acts" subtitle="Touring and off-platform acts CMC has booked">
@@ -41,13 +50,9 @@
 	</Alert>
 
 	<InfoCard title="Acts">
-		<SearchInput
-			bind:value={searchText}
-			placeholder="Search by name..."
-			onsearch={(q) => (searchDebounced = q)}
-		/>
+		<SearchInput bind:value={searchText} placeholder="Search by name..." onsearch={search} />
 
-		{#if acts.length === 0}
+		{#if acts.rows.length === 0}
 			<EmptyState
 				description={searchDebounced ? 'No acts match that.' : 'No external acts recorded yet.'}
 			/>
@@ -60,7 +65,7 @@
 					<th class="col-extra whitespace-nowrap">Added</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
-				{#each acts as act (act.id)}
+				{#each acts.rows as act (act.id)}
 					<tr>
 						<td class="cell-primary">{act.name}</td>
 						<td class="col-support">{act.hometown ?? '—'}</td>
@@ -83,6 +88,7 @@
 					</tr>
 				{/each}
 			</Table>
+			<Pagination {...acts.pagination} onpage={(n) => (pageNo = n)} />
 		{/if}
 	</InfoCard>
 </PageContent>

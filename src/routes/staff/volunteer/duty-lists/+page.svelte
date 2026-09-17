@@ -3,6 +3,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
+	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -98,6 +99,7 @@
 						</tr>
 					{/each}
 				</Table>
+				<Pagination total={rows.length} unit="duty lists" />
 			</InfoCard>
 		{/if}
 	{/await}

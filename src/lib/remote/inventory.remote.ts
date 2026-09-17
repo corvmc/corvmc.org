@@ -42,6 +42,7 @@ import {
 	adjustStock,
 	consumeStock,
 	getAcquisitionById,
+	countAwaitingReimbursement,
 	listAcquisitions,
 	markReimbursed,
 	addAcquisitionLine,
@@ -1402,22 +1403,32 @@ export const recordForm8282 = form(
  * Form 8283 is signed weeks after the gift walks in, and there was no acquisition
  * to come back to.
  */
+/** Twenty-five fits a screen without scrolling the header away. */
+const ACQUISITIONS_PAGE_SIZE = 25;
+
 export const getAcquisitions = query(
 	z.object({
 		kind: z.enum(acquisitionKinds).optional(),
 		from: z.string().optional(),
 		to: z.string().optional(),
-		awaitingReimbursement: z.boolean().optional()
+		awaitingReimbursement: z.boolean().optional(),
+		page: z.number().int().positive().optional()
 	}),
 	async (opts) => {
 		await requireCapability('inventory.manageAcquisitions');
 
-		const rows = await listAcquisitions({
-			kind: opts.kind,
-			from: opts.from ? new Date(opts.from) : undefined,
-			to: opts.to ? new Date(opts.to) : undefined,
-			awaitingReimbursement: opts.awaitingReimbursement
-		});
+		const [{ rows, pagination }, owedCount] = await Promise.all([
+			listAcquisitions(
+				{
+					kind: opts.kind,
+					from: opts.from ? new Date(opts.from) : undefined,
+					to: opts.to ? new Date(opts.to) : undefined,
+					awaitingReimbursement: opts.awaitingReimbursement
+				},
+				{ page: opts.page ?? 1, pageSize: ACQUISITIONS_PAGE_SIZE }
+			),
+			countAwaitingReimbursement()
+		]);
 
 		return {
 			rows: rows.map((r) => ({
@@ -1433,7 +1444,8 @@ export const getAcquisitions = query(
 				reimbursedAt: r.reimbursedAt,
 				acknowledgedAt: r.acknowledgedAt
 			})),
-			owedCount: rows.filter((r) => r.paidByUserId !== null && r.reimbursedAt === null).length
+			pagination,
+			owedCount
 		};
 	}
 );

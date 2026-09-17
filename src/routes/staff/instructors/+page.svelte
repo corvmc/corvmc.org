@@ -3,6 +3,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
+	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -68,6 +69,7 @@
 							</tr>
 						{/each}
 					</Table>
+					<Pagination total={awaitingReview.length} unit="waiting" />
 				</InfoCard>
 			{/if}
 
@@ -106,6 +108,7 @@
 							</tr>
 						{/each}
 					</Table>
+					<Pagination total={active.length} unit="instructors" />
 				{/if}
 			</InfoCard>
 
@@ -134,6 +137,7 @@
 							</tr>
 						{/each}
 					</Table>
+					<Pagination total={resolved.length} unit="past instructors" />
 				</InfoCard>
 			{/if}
 		{/await}

@@ -2,6 +2,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
+	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
@@ -152,5 +153,6 @@
 				</tr>
 			{/each}
 		</Table>
+		<Pagination total={data.projects.length} unit="projects" />
 	{/if}
 </PageContent>

@@ -26,11 +26,17 @@ import { listCreditInDirectory } from '$lib/server/event/event-service';
  * members — does not exist when nothing reaches members at all.
  */
 
+/** Twenty-five fits a screen without scrolling the search box away. */
+const ACTS_PAGE_SIZE = 25;
+
 export const getStaffExternalActs = query(
-	z.object({ search: z.string().optional() }),
+	z.object({ search: z.string().optional(), page: z.number().int().positive().optional() }),
 	async (filters) => {
 		await requireCapability('event.read');
-		return listExternalActs(filters.search || undefined);
+		return listExternalActs(filters.search || undefined, {
+			page: filters.page ?? 1,
+			pageSize: ACTS_PAGE_SIZE
+		});
 	}
 );
 

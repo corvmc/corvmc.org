@@ -7,6 +7,7 @@
 	import { CreateAudienceAction } from '$lib/components/actions';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
+	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { EntityIdentity } from '$lib/components/ui/entity';
@@ -52,5 +53,6 @@
 				</tr>
 			{/each}
 		</Table>
+		<Pagination total={audiences.length} unit="audiences" />
 	{/if}
 </PageContent>

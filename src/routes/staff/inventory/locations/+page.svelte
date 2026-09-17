@@ -2,6 +2,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
+	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -94,6 +95,7 @@
 						</tr>
 					{/if}
 				</Table>
+				<Pagination total={rows.length} unit="locations" />
 			{/if}
 		</div>
 
