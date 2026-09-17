@@ -155,7 +155,7 @@ is four of #1061's five door-code branches, and it is why that page is three box
 | #1064   | five pages                     | Mechanical once the rule exists — mostly reusing a helper already in the same service file.                                                              |
 | #1066 ✓ | `member/volunteer/shifts/[id]` | Already passes; reorder so the checklist leads, since that is what a volunteer opens it mid-shift to do. Check-in gets a number, not a paragraph.        |
 | new     | `member/equipment/loans/[id]`  | Required by #1042 — a timeline of what happened and the derivation of the charge. Without it, moving facts off the row deletes them.                     |
-| new     | `member/suggestions/[id]`      | Required by #1046 — the response in full, leading, with the suggestion beneath it. The clamp on the board is only safe because this page exists.         |
+| #1046   | `member/suggestions/[id]`      | Exists, 222 lines. Invert it — response first, suggestion beneath. The board's clamps are only safe because this page reads an answer properly.          |
 
 ## The staff panel, swept
 
@@ -216,6 +216,43 @@ show was without entering edit mode.
 
 Nothing is filed for this — it is a proposal, not a defect.
 
+## Eight shapes, and the fold
+
+Every non-public page in the app is one of eight shapes. The canvas draws each one three times —
+once as a member surface, once as a band surface, once as a staff surface — so that "one shape"
+is a claim with evidence rather than an assertion.
+
+| Shape             | What it is                                             | Member          | Band           | Staff                          |
+| ----------------- | ------------------------------------------------------ | --------------- | -------------- | ------------------------------ |
+| **A · List**      | Filters, a true count, column tiers, a pager           | purchases       | roster         | 1,284 members                  |
+| **B · Detail**    | Header, meta row, fact grid, related sections          | an asset        | a release      | a member (the #1063 reference) |
+| **C · Desk**      | Sections by job, state answered first                  | —               | band dashboard | flags queue, volunteer desk    |
+| **D · Console**   | Reading never requires editing                         | —               | tech rider     | settings, roles & clearances   |
+| **E · Card list** | Only where a clause earns it                           | suggestions (1) | releases (2)   | check-in (4)                   |
+| **F · Dashboard** | `StatCard`s — exempt from the list rule, not hierarchy | account         | payouts        | reports                        |
+| **G · Form**      | One question at a time, and what submit will do        | submit an event | edit band page | equipment intake               |
+| **H · Thread**    | A list of conversations, and one conversation          | messages        | band messages  | inbox with a queue             |
+
+Two things the catalogue settled that the per-issue boards could not:
+
+- **The desk and the console are different shapes**, though both are "a page of sections". A desk's
+  sections are _queues of other people's records_ and sort by what is asking; a console's are
+  _parts of one record_ and sort by the order the work is done in.
+- **A dashboard is not exempt from hierarchy**, only from the list rule. A `StatCard` is not a
+  record, but the rows inside a breakdown still are.
+
+### The fold
+
+The claim the whole document rests on — a card is a row folded at the container query — is drawn at
+390px for three of the shapes:
+
+- **A list sheds columns by tier** and its action goes full width. Six columns become three facts
+  on two lines; `Picked up` is dropped, not shrunk, because at 327px the budget is three.
+- **A detail page only restacks.** It has no column pressure, so nothing is dropped — which is why
+  the superset rule holds at every width.
+- **A card list barely changes**, and that is the tell that the card was earned rather than
+  defaulted to. When the narrow view is the wide view minus nothing, there were no columns to lose.
+
 ## Where this loses
 
 Recorded because it is the part worth arguing with.
@@ -237,9 +274,10 @@ Recorded because it is the part worth arguing with.
 - **The staff sweep is structural, not page-by-page.** Component counts, widths and query limits are
   exact; calling a page a "list" or a "console" is judgement from those signals, and a handful of
   the 73 could be argued either way.
-- **Two detail pages have to be built, not assumed.** A loan's and a suggestion's; neither route
-  exists. They are drawn on the canvas for that reason — a fact moved to a page that does not exist
-  is a fact deleted.
+- **One detail page has to be built, not assumed.** `/member/equipment/loans/[id]` does not exist,
+  and #1042's row design moves facts onto it — a fact moved to a page that does not exist is a fact
+  deleted. `/member/suggestions/[id]` **does** exist (222 lines); what #1046 needs there is an
+  ordering change, response first, not a new route.
 
 ## Not in this proposal
 
