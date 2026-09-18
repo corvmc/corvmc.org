@@ -955,7 +955,10 @@
 								Find somebody
 							</a>
 						{:else}
-							<span class="font-medium">Nobody yet</span>
+							<!-- "No host yet", not "Nobody yet": the Producer line above
+							     already says that, and `productions.e2e.ts` reads it by
+							     text — two matches make its locator ambiguous. -->
+							<span class="font-medium">No host yet</span>
 							<Form remote={openHostShift} successToast="Host shift opened">
 								<input {...openHostShift.fields.eventId.as('hidden', evt.id)} />
 								<SubmitButton label="Open a host shift" variant="ghost" size="xs" />
