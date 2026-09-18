@@ -1,13 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-<<<<<<<< HEAD:migrations/20260918081603_sloppy_natasha_romanoff/snapshot.json
-  "id": "7a960e58-3dc8-4cdc-8c49-9cbc8ffe2d19",
-========
-  "id": "de199cf0-2d2f-4aa6-bb13-b692570b5233",
->>>>>>>> 43957e5 (Close the loop between a gear request and the thing arriving):migrations/20260918080233_late_butterfly/snapshot.json
+  "id": "9ed595c0-90ee-451b-97ab-a8aac0abd5e7",
   "prevIds": [
-    "a175e0c8-21c7-4fc4-b188-7133e1ce130c"
+    "7a960e58-3dc8-4cdc-8c49-9cbc8ffe2d19"
   ],
   "ddl": [
     {
