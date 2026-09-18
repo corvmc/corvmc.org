@@ -12,6 +12,8 @@
 	 * no-show. Doing nothing is the third answer and the one the app used to make for you.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
@@ -34,7 +36,7 @@
 		eventTitle: string | null;
 	};
 
-	let { claims }: { claims: Claim[] } = $props();
+	let { claims, total }: { claims: Claim[]; total: number } = $props();
 
 	function dateInput(d: Date): string {
 		return new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(d);
@@ -47,93 +49,104 @@
 	}
 </script>
 
-<InfoCard title="Close these out" state="{claims.length} from the last week">
+<InfoCard title="Close these out" state="{total} from the last week">
+	{#snippet action()}
+		<Button href="/staff/volunteer/people" variant="ghost" size="sm">Volunteers →</Button>
+	{/snippet}
+
 	<p class="text-muted">
 		Nobody confirmed these before the shift, so they never completed — no hours were offered and no
 		feedback was asked for.
 	</p>
 
-	<ul class="flex flex-col gap-3">
+	<Table>
+		{#snippet head()}
+			<th>Member</th>
+			<th class="col-support">Shift</th>
+			<th class="col-support whitespace-nowrap">When</th>
+			<th class="w-px"><span class="sr-only">Actions</span></th>
+		{/snippet}
+
 		{#each claims as claim (claim.signupId)}
-			<li class="flex flex-wrap items-center justify-between gap-3">
-				<div class="min-w-0">
-					<EntityIdentity ref={claim.member} />
-					<div class="text-subtle">
-						<a href={resolve(`/staff/volunteer/shifts/${claim.shiftId}`)} class="link">
-							{claim.roleName}
-						</a>
-						· {formatDateShort(claim.startsAt)}
+			<tr class="hover">
+				<td class="cell-primary"><EntityIdentity ref={claim.member} /></td>
+				<td class="col-support truncate">
+					<a href={resolve(`/staff/volunteer/shifts/${claim.shiftId}`)} class="link">
+						{claim.roleName}
+					</a>
+				</td>
+				<td class="col-support whitespace-nowrap">{formatDateShort(claim.startsAt)}</td>
+
+				<td class="w-px">
+					<div class="flex w-max items-center gap-1">
+						<Action
+							action={logHoursForMember.for(claim.signupId)}
+							label="They worked it"
+							variant="primary"
+							size="xs"
+							modalTitle="Record hours for {claim.member.title}"
+							submitLabel="Record"
+							successToast="Hours recorded"
+						>
+							{#snippet form()}
+								<input type="hidden" name="userId" value={claim.userId} />
+								<input type="hidden" name="volunteerRoleId" value={claim.volunteerRoleId} />
+								<input type="hidden" name="shiftId" value={claim.shiftId} />
+								<p class="text-sm">
+									{claim.roleName} on {formatDateShort(claim.startsAt)}. Recorded as approved and
+									attributed to you.
+								</p>
+								<FormField
+									name="workedOn"
+									label="Date"
+									type="date"
+									value={dateInput(claim.startsAt)}
+								/>
+								<FormField
+									name="hours"
+									label="Hours"
+									type="number"
+									step={VOLUNTEER_HOUR_STEP}
+									min="0.25"
+									value={shiftHours(claim.startsAt, claim.endsAt)}
+									description="Pre-filled from the shift's length."
+								/>
+								<FormField
+									name="description"
+									label="What they did"
+									type="textarea"
+									value="Worked the {claim.roleName} shift"
+								/>
+							{/snippet}
+						</Action>
+
+						<Action
+							action={markSignupNoShow.for(claim.signupId)}
+							label="No-show"
+							iconOnly
+							icon={noShowIcon}
+							variant="ghost"
+							size="sm"
+							class="text-error"
+							modalTitle="Mark {claim.member.title} as a no-show?"
+							submitLabel="No-show"
+							submitVariant="error"
+							successToast="Marked as no-show"
+						>
+							{#snippet form()}
+								<input type="hidden" name="signupId" value={claim.signupId} />
+								<input type="hidden" name="shiftId" value={claim.shiftId} />
+								<p class="text-sm">
+									Only if they genuinely didn't turn up. If they told you in advance, that was
+									notice and not a no-show — take them off the shift instead.
+								</p>
+							{/snippet}
+						</Action>
 					</div>
-				</div>
-
-				<div class="flex shrink-0 items-center gap-1">
-					<Action
-						action={logHoursForMember.for(claim.signupId)}
-						label="They worked it"
-						variant="primary"
-						size="xs"
-						modalTitle="Record hours for {claim.member.title}"
-						submitLabel="Record"
-						successToast="Hours recorded"
-					>
-						{#snippet form()}
-							<input type="hidden" name="userId" value={claim.userId} />
-							<input type="hidden" name="volunteerRoleId" value={claim.volunteerRoleId} />
-							<input type="hidden" name="shiftId" value={claim.shiftId} />
-							<p class="text-sm">
-								{claim.roleName} on {formatDateShort(claim.startsAt)}. Recorded as approved and
-								attributed to you.
-							</p>
-							<FormField
-								name="workedOn"
-								label="Date"
-								type="date"
-								value={dateInput(claim.startsAt)}
-							/>
-							<FormField
-								name="hours"
-								label="Hours"
-								type="number"
-								step={VOLUNTEER_HOUR_STEP}
-								min="0.25"
-								value={shiftHours(claim.startsAt, claim.endsAt)}
-								description="Pre-filled from the shift's length."
-							/>
-							<FormField
-								name="description"
-								label="What they did"
-								type="textarea"
-								value="Worked the {claim.roleName} shift"
-							/>
-						{/snippet}
-					</Action>
-
-					<Action
-						action={markSignupNoShow.for(claim.signupId)}
-						label="No-show"
-						iconOnly
-						icon={noShowIcon}
-						variant="ghost"
-						size="sm"
-						class="text-error"
-						modalTitle="Mark {claim.member.title} as a no-show?"
-						submitLabel="No-show"
-						submitVariant="error"
-						successToast="Marked as no-show"
-					>
-						{#snippet form()}
-							<input type="hidden" name="signupId" value={claim.signupId} />
-							<input type="hidden" name="shiftId" value={claim.shiftId} />
-							<p class="text-sm">
-								Only if they genuinely didn't turn up. If they told you in advance, that was notice
-								and not a no-show — take them off the shift instead.
-							</p>
-						{/snippet}
-					</Action>
-				</div>
-			</li>
+				</td>
+			</tr>
 		{/each}
-	</ul>
+	</Table>
 </InfoCard>
 
 {#snippet noShowIcon()}

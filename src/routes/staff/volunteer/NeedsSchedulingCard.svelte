@@ -17,6 +17,8 @@
 	 * row that never had one.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { IconCheck } from '@tabler/icons-svelte';
@@ -34,7 +36,7 @@
 		notes: string | null;
 	};
 
-	let { orders }: { orders: WorkOrder[] } = $props();
+	let { orders, total }: { orders: WorkOrder[]; total: number } = $props();
 
 	const now = Date.now();
 
@@ -57,91 +59,109 @@
 	}
 </script>
 
-<InfoCard title="Needs scheduling" state={orders.length}>
+<InfoCard title="Needs scheduling" state={total}>
+	{#snippet action()}
+		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
+	{/snippet}
+
 	<p class="text-muted">
 		Work with nobody booked to do it. Give it a window and it becomes a shift members can claim.
 	</p>
 
-	<ul class="flex flex-col gap-3">
+	<Table>
+		{#snippet head()}
+			<th>Role</th>
+			<th class="col-support whitespace-nowrap">Due</th>
+			<th class="col-support cell-num whitespace-nowrap">On it</th>
+			<th class="w-px"><span class="sr-only">Actions</span></th>
+		{/snippet}
+
 		{#each orders as order (order.id)}
-			<li class="flex flex-wrap items-center justify-between gap-3">
-				<div class="min-w-0">
+			<tr class="hover">
+				<td class="cell-primary">
 					<a href={resolve(`/staff/volunteer/shifts/${order.id}`)} class="link font-medium">
 						{order.roleName}
 					</a>
-					<div class="text-subtle">
-						{#if order.eventTitle}
-							{order.eventTitle}
-						{/if}
-						{#if order.dueAt}
-							{#if order.eventTitle}·{/if}
-							<span class:text-error={isLate(order.dueAt)}>
-								{isLate(order.dueAt) ? 'was due' : 'due'}
-								{formatDateShort(order.dueAt)}
-							</span>
-						{:else if !order.eventTitle}
-							No deadline
-						{/if}
-						{#if order.claimed > 0}
-							· {order.claimed} of {order.capacity} on it
-						{/if}
+					{#if order.eventTitle}
+						<div class="truncate text-subtle">{order.eventTitle}</div>
+					{/if}
+				</td>
+
+				<td class="col-support whitespace-nowrap">
+					{#if order.dueAt}
+						<span class:text-error={isLate(order.dueAt)}>
+							{isLate(order.dueAt) ? 'was due' : 'due'}
+							{formatDateShort(order.dueAt)}
+						</span>
+					{:else}
+						<span class="text-subtle">No deadline</span>
+					{/if}
+				</td>
+
+				<td class="col-support cell-num whitespace-nowrap">
+					{#if order.claimed > 0}
+						{order.claimed} of {order.capacity}
+					{:else}
+						<span class="text-subtle">—</span>
+					{/if}
+				</td>
+
+				<td class="w-px">
+					<div class="flex w-max items-center gap-1">
+						<Action
+							action={scheduleWorkOrder.for(order.id)}
+							label="Schedule"
+							variant="primary"
+							size="xs"
+							modalTitle="Find a time for {order.roleName}"
+							submitLabel="Schedule"
+							successToast="Scheduled"
+						>
+							{#snippet form()}
+								<input type="hidden" name="id" value={order.id} />
+								<p class="text-sm">
+									Once it has a window it appears on the schedule and members can claim it.
+								</p>
+								<FormField
+									name="startsAt"
+									label="Starts"
+									type="datetime-local"
+									value={defaultStart(order.dueAt)}
+								/>
+								<FormField
+									name="endsAt"
+									label="Ends"
+									type="datetime-local"
+									value={defaultEnd(order.dueAt)}
+								/>
+							{/snippet}
+						</Action>
+
+						<Action
+							action={resolveWorkOrder.for(order.id)}
+							label="Close it"
+							iconOnly
+							icon={doneIcon}
+							variant="ghost"
+							size="sm"
+							modalTitle="Close {order.roleName}?"
+							submitLabel="Close it"
+							successToast="Closed"
+						>
+							{#snippet form()}
+								<input type="hidden" name="id" value={order.id} />
+								<p class="text-sm">
+									Says the work is finished, which is not the same as anybody having turned up.
+									Anyone on it is completed at the same time.
+								</p>
+								<FormField name="notes" label="What happened" type="textarea" />
+							{/snippet}
+						</Action>
 					</div>
-				</div>
-
-				<div class="flex shrink-0 items-center gap-1">
-					<Action
-						action={scheduleWorkOrder.for(order.id)}
-						label="Schedule"
-						variant="primary"
-						size="xs"
-						modalTitle="Find a time for {order.roleName}"
-						submitLabel="Schedule"
-						successToast="Scheduled"
-					>
-						{#snippet form()}
-							<input type="hidden" name="id" value={order.id} />
-							<p class="text-sm">
-								Once it has a window it appears on the schedule and members can claim it.
-							</p>
-							<FormField
-								name="startsAt"
-								label="Starts"
-								type="datetime-local"
-								value={defaultStart(order.dueAt)}
-							/>
-							<FormField
-								name="endsAt"
-								label="Ends"
-								type="datetime-local"
-								value={defaultEnd(order.dueAt)}
-							/>
-						{/snippet}
-					</Action>
-
-					<Action
-						action={resolveWorkOrder.for(order.id)}
-						label="Close it"
-						iconOnly
-						icon={doneIcon}
-						variant="ghost"
-						size="sm"
-						modalTitle="Close {order.roleName}?"
-						submitLabel="Close it"
-						successToast="Closed"
-					>
-						{#snippet form()}
-							<input type="hidden" name="id" value={order.id} />
-							<p class="text-sm">
-								Says the work is finished, which is not the same as anybody having turned up. Anyone
-								on it is completed at the same time.
-							</p>
-							<FormField name="notes" label="What happened" type="textarea" />
-						{/snippet}
-					</Action>
-				</div>
-			</li>
+				</td>
+			</tr>
 		{/each}
-	</ul>
+	</Table>
 </InfoCard>
 
 {#snippet doneIcon()}

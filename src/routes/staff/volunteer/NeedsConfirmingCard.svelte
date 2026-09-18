@@ -12,6 +12,7 @@
 	 * modals was the old cost of it.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -35,7 +36,7 @@
 		claimedAt: Date;
 	};
 
-	let { claims }: { claims: Claim[] } = $props();
+	let { claims, total }: { claims: Claim[]; total: number } = $props();
 
 	function timeRange(start: Date, end: Date): string {
 		const fmt = new Intl.DateTimeFormat('en-US', {
@@ -62,92 +63,104 @@
 	});
 </script>
 
-<InfoCard title="Needs confirming" state={claims.length} class="border-l-4 border-warning">
+<InfoCard title="Needs confirming" state={total} class="border-l-4 border-warning">
 	{#snippet action()}
 		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
 	{/snippet}
 
 	<p class="text-muted">Unconfirmed claims get no reminder and never auto-complete.</p>
 
-	<ul class="flex flex-col gap-4">
+	<!-- Zebra off: the group header rows are the banding, which striping
+	     muddies. The same choice the reservations and events tables make. -->
+	<Table zebra={false}>
+		{#snippet head()}
+			<th>Member</th>
+			<th class="col-support whitespace-nowrap">Claimed</th>
+			<th class="w-px"><span class="sr-only">Actions</span></th>
+		{/snippet}
+
 		{#each byShift as group (group.shift.shiftId)}
 			{@const shift = group.shift}
-			<li>
-				<div class="flex flex-wrap items-baseline justify-between gap-2">
-					<div class="min-w-0">
-						<a href={resolve(`/staff/volunteer/shifts/${shift.shiftId}`)} class="link font-medium">
-							{shift.roleName}
-						</a>
-						<span class="text-muted">
-							· {formatDateShort(shift.startsAt)}, {timeRange(shift.startsAt, shift.endsAt)}
-						</span>
-						{#if shift.eventTitle}
-							<span class="text-subtle">· {shift.eventTitle}</span>
-						{/if}
-					</div>
+			<tr class="bg-base-200">
+				<th colspan="3" class="font-normal">
+					<div class="flex flex-wrap items-baseline justify-between gap-2">
+						<div class="min-w-0">
+							<a
+								href={resolve(`/staff/volunteer/shifts/${shift.shiftId}`)}
+								class="link font-medium"
+							>
+								{shift.roleName}
+							</a>
+							<span class="text-muted">
+								· {formatDateShort(shift.startsAt)}, {timeRange(shift.startsAt, shift.endsAt)}
+							</span>
+							{#if shift.eventTitle}
+								<span class="text-subtle">· {shift.eventTitle}</span>
+							{/if}
+						</div>
 
-					{#if group.rows.length > 1}
-						<Action
-							action={confirmSignups.for(shift.shiftId)}
-							label="Confirm all {group.rows.length}"
-							variant="ghost"
-							size="xs"
-							class="text-success"
-							modalTitle="Confirm everyone on this shift?"
-							submitLabel="Confirm all"
-							successToast="Confirmed"
-						>
-							{#snippet form()}
-								<input type="hidden" name="shiftId" value={shift.shiftId} />
-								{#each group.rows as row (row.signupId)}
-									<input type="hidden" name="signupIds" value={row.signupId} />
-								{/each}
-								<p class="text-sm">
-									{group.rows.map((r) => r.member.title).join(', ')} — all confirmed for
-									{shift.roleName} on {formatDateShort(shift.startsAt)}. Each of them gets a
-									reminder the day before.
-								</p>
-							{/snippet}
-						</Action>
-					{/if}
-				</div>
-
-				<ul class="mt-2 flex flex-col gap-2">
-					{#each group.rows as claim (claim.signupId)}
-						<li class="flex flex-wrap items-center justify-between gap-2">
-							<div class="flex min-w-0 items-center gap-2">
-								<EntityIdentity ref={claim.member} />
-								<Badge variant="ghost" size="xs">claimed {relativeDay(claim.claimedAt)}</Badge>
-							</div>
-
+						{#if group.rows.length > 1}
 							<Action
-								action={confirmSignup.for(claim.signupId)}
-								label="Confirm"
-								iconOnly
-								icon={checkIcon}
+								action={confirmSignups.for(shift.shiftId)}
+								label="Confirm all {group.rows.length}"
 								variant="ghost"
-								size="sm"
+								size="xs"
 								class="text-success"
-								modalTitle="Confirm {claim.member.title}?"
-								submitLabel="Confirm"
+								modalTitle="Confirm everyone on this shift?"
+								submitLabel="Confirm all"
 								successToast="Confirmed"
 							>
 								{#snippet form()}
-									<input type="hidden" name="signupId" value={claim.signupId} />
-									<input type="hidden" name="shiftId" value={claim.shiftId} />
+									<input type="hidden" name="shiftId" value={shift.shiftId} />
+									{#each group.rows as row (row.signupId)}
+										<input type="hidden" name="signupIds" value={row.signupId} />
+									{/each}
 									<p class="text-sm">
-										{claim.roleName} on {formatDateShort(claim.startsAt)},
-										{timeRange(claim.startsAt, claim.endsAt)}. They'll get a reminder the day
-										before, and only a confirmed claim completes afterwards.
+										{group.rows.map((r) => r.member.title).join(', ')} — all confirmed for
+										{shift.roleName} on {formatDateShort(shift.startsAt)}. Each of them gets a
+										reminder the day before.
 									</p>
 								{/snippet}
 							</Action>
-						</li>
-					{/each}
-				</ul>
-			</li>
+						{/if}
+					</div>
+				</th>
+			</tr>
+
+			{#each group.rows as claim (claim.signupId)}
+				<tr class="hover">
+					<td class="cell-primary"><EntityIdentity ref={claim.member} /></td>
+					<td class="col-support whitespace-nowrap">
+						<Badge variant="ghost" size="xs">{relativeDay(claim.claimedAt)}</Badge>
+					</td>
+					<td class="w-px">
+						<Action
+							action={confirmSignup.for(claim.signupId)}
+							label="Confirm"
+							iconOnly
+							icon={checkIcon}
+							variant="ghost"
+							size="sm"
+							class="text-success"
+							modalTitle="Confirm {claim.member.title}?"
+							submitLabel="Confirm"
+							successToast="Confirmed"
+						>
+							{#snippet form()}
+								<input type="hidden" name="signupId" value={claim.signupId} />
+								<input type="hidden" name="shiftId" value={claim.shiftId} />
+								<p class="text-sm">
+									{claim.roleName} on {formatDateShort(claim.startsAt)},
+									{timeRange(claim.startsAt, claim.endsAt)}. They'll get a reminder the day before,
+									and only a confirmed claim completes afterwards.
+								</p>
+							{/snippet}
+						</Action>
+					</td>
+				</tr>
+			{/each}
 		{/each}
-	</ul>
+	</Table>
 </InfoCard>
 
 {#snippet checkIcon()}
