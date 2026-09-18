@@ -10,10 +10,11 @@
 
 	/**
 	 * One record, expanded: image, name, status, a few facts, and its actions.
+	 * Bigger than a row, smaller than the page itself.
 	 *
-	 * This is what a *related* record looks like on someone else's detail page —
-	 * the band on an event, the member on a reservation. Bigger than a row,
-	 * smaller than the page itself.
+	 * Both a *related* record on someone else's detail page and a row in a card
+	 * list. It read as detail-page-only and fifteen pages hand-rolled the list
+	 * case, drifting into real defects each time (#1035).
 	 *
 	 * Built on `Card`/`CardBody` rather than `InfoCard` on purpose: an
 	 * `InfoCard`'s title is a section label ("Payment"), whereas this card's

@@ -467,10 +467,24 @@ the staff and member panels should be one of them.
 | ------ | ----------------------------------------- | ------------------------------------------------------------------------ |
 | chip   | `EntityChip`                              | mentioning a record mid-sentence, in a `Fact`, or in a column of its own |
 | row    | `EntityIdentity`                          | `size="sm"` is the table primary cell, `md` a list row                   |
-| card   | `EntityCard`                              | a related record on someone else's detail page                           |
+| card   | `EntityCard`                              | one record as a card — a related record, or a row in a card list         |
 | detail | `PageHeader` + a meta row + `RelatedList` | see below — **not** an identity strip                                    |
 
 All of them take a single `ref: EntityRef` (`$lib/types/entity`) and nothing about presentation.
+
+**The card tier covers list cards too** (#1035). It was documented as "a
+related record on someone else's detail page" and used on one route, while
+~15 pages hand-rolled `Card`/`CardBody` to draw the same thing — and those
+re-implementations drifted into real defects: a poster hidden when absent so
+the grid went ragged (#1047), an identity hand-written two sections below one
+that used `EntityIdentity` (#1050), a title fallback recomputed in different
+words from the one the query already returned (#1042). The card a list draws
+and the card a detail page draws are one object; a page that needs `EntityCard`
+and does not use it is the defect, not the exception.
+
+What that costs is a `ref` on the query. `eventRefColumns`/`toEventRef` and
+`toReservationRef` already exist; several list queries simply do not project
+one yet, and adding it is the work.
 
 `EntityIdentity` covers three of the four tiers because a table cell, a list row and the strip at
 the top of a record's own page are one object at three scales:
