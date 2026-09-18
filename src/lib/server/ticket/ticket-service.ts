@@ -231,26 +231,50 @@ export async function cancelTicket(ticketId: string): Promise<void> {
 // Check in
 // ---------------------------------------------------------------------------
 
-export async function checkIn(ticketId: string, staffUserId: string): Promise<void> {
+export interface CheckInResult {
+	/** True when this scan is not the one that let them in. */
+	alreadyIn: boolean;
+	checkedInAt: Date;
+}
+
+/**
+ * Let one ticket through the door. **Idempotent** (#933).
+ *
+ * A second scan reports `alreadyIn` with the time of the first rather than
+ * throwing: two volunteers work one queue on two phones, a patron hands over
+ * a phone twice, and a door that errors at either is a door that stops. Only
+ * a ticket that is refunded or cancelled is refused — that is a real "no".
+ */
+export async function checkIn(ticketId: string, staffUserId: string): Promise<CheckInResult> {
 	const [row] = await db
-		.select({ status: ticket.status })
+		.select({ status: ticket.status, checkedInAt: ticket.checkedInAt })
 		.from(ticket)
 		.where(eq(ticket.id, ticketId))
 		.limit(1);
 
 	if (!row) throw new TicketNotFoundError();
+
+	if (row.status === 'checked_in') {
+		// `checkedInAt` has been set on every check-in since the column existed,
+		// but the type allows null and the door should not crash over it.
+		return { alreadyIn: true, checkedInAt: row.checkedInAt ?? new Date() };
+	}
+
 	if (row.status !== 'valid')
 		throw new TicketStateError(`Cannot check in ticket with status "${row.status}"`);
 
+	const checkedInAt = new Date();
 	await db
 		.update(ticket)
 		.set({
 			status: 'checked_in',
-			checkedInAt: new Date(),
+			checkedInAt,
 			checkedInByUserId: staffUserId,
 			updatedAt: new Date()
 		})
 		.where(eq(ticket.id, ticketId));
+
+	return { alreadyIn: false, checkedInAt };
 }
 
 // ---------------------------------------------------------------------------

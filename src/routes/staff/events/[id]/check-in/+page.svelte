@@ -11,6 +11,7 @@
 	import { checkInTicket, getStaffCheckIn } from '$lib/remote/events.remote';
 	import { page } from '$app/state';
 	import StatCard from '$lib/components/ui/StatCard.svelte';
+	import DoorScanner from './DoorScanner.svelte';
 	const { fields } = checkInTicket;
 
 	let data = $derived(await getStaffCheckIn(page.params.id!));
@@ -41,6 +42,10 @@
 		<StatCard title="Checked In" value={data.stats.checkedIn} size="sm" class="p-4" />
 		<StatCard title="Tickets Sold" value={data.stats.sold} size="sm" class="p-4" />
 	</div>
+
+	<!-- The scanner leads, and the list below is the fallback it degrades to.
+	     Searching per person is workable for fifty and not for two hundred. -->
+	<DoorScanner tickets={data.tickets} eventId={data.event.id} />
 
 	<!-- Search -->
 	<input
@@ -76,6 +81,7 @@
 								class="inline"
 							>
 								<input {...fields.ticketId.as('hidden', ticket.id)} />
+								<input {...fields.eventId.as('hidden', page.params.id!)} />
 								<SubmitButton label="Check In" variant="primary" class="min-h-11" />
 							</Form>
 							<CancelTicketAction ticketId={ticket.id} attendeeName={ticket.attendeeName} />

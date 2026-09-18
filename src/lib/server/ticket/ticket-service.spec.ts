@@ -364,9 +364,23 @@ describe('checkIn', () => {
 		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow(TicketStateError);
 	});
 
-	it('throws when ticket is already checked in', async () => {
-		selectResult = [{ status: 'checked_in' }];
-		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow(TicketStateError);
+	// Idempotent since #933: two volunteers on two phones work one queue, and a
+	// door that errors on the second scan is a door that stops. The first
+	// check-in's time comes back so the UI can say when they came in.
+	it('reports an already-checked-in ticket instead of throwing', async () => {
+		const at = new Date('2026-09-18T19:30:00Z');
+		selectResult = [{ status: 'checked_in', checkedInAt: at }];
+
+		await expect(checkIn('ticket-1', 'staff-1')).resolves.toEqual({
+			alreadyIn: true,
+			checkedInAt: at
+		});
+		expect(mockDb.update).not.toHaveBeenCalled();
+	});
+
+	it('does not crash on a checked-in ticket with no recorded time', async () => {
+		selectResult = [{ status: 'checked_in', checkedInAt: null }];
+		await expect(checkIn('ticket-1', 'staff-1')).resolves.toMatchObject({ alreadyIn: true });
 	});
 
 	it('throws when ticket is cancelled', async () => {
@@ -374,9 +388,10 @@ describe('checkIn', () => {
 		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow(TicketStateError);
 	});
 
-	it('updates the ticket when valid', async () => {
+	it('updates the ticket when valid, and says it was this scan', async () => {
 		selectResult = [{ status: 'valid' }];
-		await checkIn('ticket-1', 'staff-1');
+
+		await expect(checkIn('ticket-1', 'staff-1')).resolves.toMatchObject({ alreadyIn: false });
 		expect(mockDb.update).toHaveBeenCalled();
 	});
 });
