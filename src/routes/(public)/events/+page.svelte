@@ -94,19 +94,22 @@
 	{/if}
 
 	{#if upcoming.length > 0}
-		<div class="mb-14 grid-gallery gap-8">
-			{#each upcoming as evt (evt.id)}
-				<PosterCard
-					href="/events/{evt.id}"
-					title={evt.title}
-					posterUrl={evt.posterUrl}
-					startsAt={evt.startsAt}
-					ticketingEnabled={evt.ticketingEnabled}
-					ticketPrice={evt.ticketPrice}
-					externalTicketUrl={evt.externalTicketUrl}
-					tags={evt.tags}
-				/>
-			{/each}
+		<!-- Its own container: this page does not use `PageContent` (#1036). -->
+		<div class="@container mb-14">
+			<div class="grid-gallery gap-8">
+				{#each upcoming as evt (evt.id)}
+					<PosterCard
+						href="/events/{evt.id}"
+						title={evt.title}
+						posterUrl={evt.posterUrl}
+						startsAt={evt.startsAt}
+						ticketingEnabled={evt.ticketingEnabled}
+						ticketPrice={evt.ticketPrice}
+						externalTicketUrl={evt.externalTicketUrl}
+						tags={evt.tags}
+					/>
+				{/each}
+			</div>
 		</div>
 	{/if}
 

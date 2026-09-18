@@ -345,22 +345,24 @@ p {
    how many fit per row, which is a property of the card, not of the page — so
    the breakpoints belong here rather than being retyped on both directories.
 
+   **Container queries, like the table tiers below.** "A property of the card,
+   not of the page" is the definition of one, and a viewport rule picks a column
+   count for a width the grid does not have: inside `AppShell` the sidebar takes
+   ~256px, so at a 1440 viewport the member directory fired its 3-column rule
+   against a ~1136px column (#1036).
+
    `grid-gallery` holds the wide cards, `grid-gallery-tight` the narrow ones. */
 @utility grid-gallery {
 	display: grid;
 	justify-items: center;
 	gap: calc(var(--spacing) * 6);
 	grid-template-columns: repeat(1, minmax(0, 1fr));
-}
 
-@media (width >= 40rem) {
-	.grid-gallery {
+	@container (width >= 40rem) {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
-}
 
-@media (width >= 64rem) {
-	.grid-gallery {
+	@container (width >= 64rem) {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
 }
@@ -370,16 +372,12 @@ p {
 	justify-items: center;
 	gap: calc(var(--spacing) * 6);
 	grid-template-columns: repeat(2, minmax(0, 1fr));
-}
 
-@media (width >= 40rem) {
-	.grid-gallery-tight {
+	@container (width >= 40rem) {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
-}
 
-@media (width >= 64rem) {
-	.grid-gallery-tight {
+	@container (width >= 64rem) {
 		grid-template-columns: repeat(4, minmax(0, 1fr));
 	}
 }
