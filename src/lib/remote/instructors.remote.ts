@@ -17,7 +17,8 @@ import {
 } from '$lib/config';
 import {
 	listInstructors,
-	type InstructorFilters
+	type InstructorFilters,
+	listInstructorInstruments
 } from '$lib/server/instructor/instructor-directory-service';
 
 // NOTE: a `.remote.ts` module may export **only** remote functions — SvelteKit
@@ -220,11 +221,24 @@ const filterSchema = z
  * difference is the gate and a gate chosen by a parameter is a gate somebody can
  * pass the wrong value to. The public one takes no session at all.
  */
+/**
+ * Rows and the instrument facets in one round trip — the page's one
+ * load-bearing query. The facets are unfiltered by instrument, so choosing one
+ * does not empty the control you chose it from.
+ */
+async function instructorPage(visibility: 'public' | 'members', filters?: InstructorFilters) {
+	const [rows, instruments] = await Promise.all([
+		listInstructors(visibility, filters),
+		listInstructorInstruments(visibility)
+	]);
+	return { rows, instruments };
+}
+
 export const getPublicInstructors = query(filterSchema, async (filters) =>
-	listInstructors('public', filters as InstructorFilters | undefined)
+	instructorPage('public', filters as InstructorFilters | undefined)
 );
 
 export const getMemberInstructors = query(filterSchema, async (filters) => {
 	requireUser();
-	return listInstructors('members', filters as InstructorFilters | undefined);
+	return instructorPage('members', filters as InstructorFilters | undefined);
 });

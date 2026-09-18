@@ -37,7 +37,7 @@ import {
 	and
 } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import { memberRefColumns, toMemberRef, toEventRef } from '$lib/server/entity/refs';
 import { paginate } from '$lib/server/db/paginate';
 import { jsonArrayField } from '$lib/utils/zod-json';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
@@ -724,7 +724,9 @@ export const getMemberDashboard = query(async () => {
 			startsAt: e.startsAt,
 			endsAt: e.endsAt,
 			doorsAt: e.doorsAt ? e.doorsAt : null,
-			posterUrl: resolveImageUrl(e.posterKey)
+			posterUrl: resolveImageUrl(e.posterKey),
+			/** For `EntityCard`, which keeps the tile portrait with no artwork (#1047). */
+			ref: toEventRef(e)
 		})),
 		credits,
 		subscription,

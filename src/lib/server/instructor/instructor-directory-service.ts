@@ -52,6 +52,38 @@ export interface InstructorFilters {
 	instrument?: string;
 }
 
+/**
+ * Every instrument any listed teacher teaches, for the filter's options.
+ *
+ * Unfiltered by the instrument itself, so picking one does not shrink the list
+ * you picked it from. Same two gates as the listing below.
+ */
+export async function listInstructorInstruments(
+	visibility: 'members' | 'public'
+): Promise<string[]> {
+	const rows = await db
+		.selectDistinct({ value: directoryTag.value })
+		.from(directoryTag)
+		.innerJoin(directoryEntry, eq(directoryEntry.id, directoryTag.entryId))
+		.innerJoin(user, eq(user.id, directoryEntry.userId))
+		.innerJoin(instructor, eq(instructor.userId, user.id))
+		.where(
+			and(
+				eq(directoryTag.kind, 'instrument'),
+				eq(instructor.status, 'active'),
+				eq(instructor.acceptingStudents, true),
+				isNull(directoryEntry.deletedAt),
+				isNull(user.deletedAt),
+				visibility === 'public'
+					? eq(directoryEntry.visibility, 'public')
+					: inArray(directoryEntry.visibility, ['members', 'public'])
+			)
+		)
+		.orderBy(asc(directoryTag.value));
+
+	return rows.map((r) => r.value);
+}
+
 export async function listInstructors(
 	visibility: 'members' | 'public',
 	filters?: InstructorFilters

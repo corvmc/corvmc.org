@@ -59,7 +59,10 @@
 	const shownInstruments = $derived(instruments.slice(0, MAX_TAGS));
 </script>
 
-<article class="card border border-base-300 bg-base-100">
+<!-- `h-full` plus a growing spacer: the contact row is the one thing a visitor
+     came for, and in a 3-up grid one six-line blurb put the three "Book a
+     lesson" buttons at three different heights (#1057). -->
+<article class="card h-full border border-base-300 bg-base-100">
 	<div class="card-body gap-3">
 		<div class="flex items-start gap-3">
 			<div class="h-16 w-16 shrink-0">
@@ -99,14 +102,20 @@
 		{/if}
 
 		{#if blurb}
-			<p class="text-sm whitespace-pre-line">{blurb}</p>
+			<!-- Clamped, and `line-clamp` needs the pre-line wrapping to stay: a
+			     teacher can paste forty lines into this and did not have to. -->
+			<p class="line-clamp-4 text-sm whitespace-pre-line">{blurb}</p>
 		{/if}
 
 		{#if ratesNote}
 			<!-- Free text, never a number CMC could total: lesson money is between
 			     the teacher and the student, and CMC does not process it. -->
-			<p class="text-subtle text-sm">{ratesNote}</p>
+			<p class="line-clamp-2 text-subtle text-sm">{ratesNote}</p>
 		{/if}
+
+		<!-- Pushes the contact row to the card's foot, so it lands at one height
+		     across a row however long the blurbs above it are. -->
+		<div class="grow"></div>
 
 		{#if contact?.email || contact?.phone || bookingUrl}
 			<div class="flex flex-wrap items-center gap-3 text-sm">
