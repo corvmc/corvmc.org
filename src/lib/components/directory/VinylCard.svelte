@@ -11,6 +11,8 @@
 		avatarUrl?: string | null;
 		tagline?: string | null;
 		memberCount: number;
+		/** What the act plays. The payload has carried these all along (#1056). */
+		genres?: string[];
 		lookingForMembers?: boolean;
 		color?: string;
 		id: string;
@@ -22,6 +24,7 @@
 		avatarUrl,
 		tagline,
 		memberCount,
+		genres = [],
 		lookingForMembers = false,
 		color = 'var(--cmc-orange)',
 		id
@@ -75,11 +78,16 @@
 	</div>
 	<div class="vinyl-card__caption">
 		<div class="vinyl-card__band">{name}</div>
+		<!-- The size is always here. It used to appear only on acts that left
+		     their tagline blank, so two sleeves in one row could not be compared
+		     on it for a reason that had nothing to do with the acts (#1056). -->
+		{#if tagline}
+			<div class="vinyl-card__meta vinyl-card__tagline">{tagline}</div>
+		{/if}
 		<div class="vinyl-card__meta">
-			{#if tagline}
-				{tagline}
-			{:else}
-				{memberCount} member{memberCount === 1 ? '' : 's'}
+			{memberCount} member{memberCount === 1 ? '' : 's'}
+			{#if genres.length}
+				&middot; {genres.slice(0, 2).join(', ')}
 			{/if}
 		</div>
 	</div>
@@ -244,5 +252,13 @@
 		font-size: 0.7rem;
 		color: var(--fg-2);
 		margin-top: 2px;
+	}
+
+	/* One line: a tagline is free text, and the caption sits under a fixed
+	   sleeve — an unclamped one pushes the row's baseline around. */
+	.vinyl-card__tagline {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 </style>
