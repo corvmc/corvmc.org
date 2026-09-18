@@ -81,23 +81,24 @@ describe('getReservationStartTimes', () => {
 		]);
 	});
 
-	it('marks a taken slot as booked rather than dropping it', async () => {
+	it('disables a taken slot rather than dropping it', async () => {
 		const options: Option[] = await getReservationStartTimes('2026-09-09');
 		const taken = options.find((o) => o.value === '10:00')!;
 
 		expect(taken.disabled).toBe(true);
-		expect(taken.label).toContain('booked');
+		// The label is the time and nothing else: a greyed row already reads as
+		// unavailable, and the reason doubled every line's length (#1027).
+		expect(taken.label).toBe('10:00 AM');
 	});
 
-	// Free, but with too little room after it — saying "booked" there would be a
-	// claim about somebody else's booking that is not true.
-	it('distinguishes a slot that is free but too short', async () => {
+	// Free, but with too little room after it to fit the shortest session, which
+	// is as unpickable as taken.
+	it('disables a slot that is free but too short', async () => {
 		const options: Option[] = await getReservationStartTimes('2026-09-09');
 		const short = options.find((o) => o.value === '09:30')!;
 
 		expect(short.disabled).toBe(true);
-		expect(short.label).toContain('too short');
-		expect(short.label).not.toContain('booked');
+		expect(short.label).toBe('9:30 AM');
 	});
 
 	it('leaves a genuinely bookable slot selectable', async () => {

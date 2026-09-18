@@ -693,16 +693,16 @@ export const getReservationStartTimes = query(z.string(), async (dateParam) => {
 	// Every operating-hour slot, not only the bookable ones. Dropping the rest
 	// left gaps with no cause: the policy strip says 9 AM – 10 PM and the list
 	// simply did not contain 10 AM, which reads as a broken app rather than as
-	// somebody else having the room.
+	// somebody else having the room. The *reason* it is unpickable is not
+	// spelled out on the option — "booked" and "too short" were asked for and
+	// then asked back off, because a greyed row already reads as unavailable and
+	// the suffix doubled the length of every line (#1027).
 	return slots.map((s, i) => {
 		const label = formatSlotTime(s.startTime);
-		if (!s.available) return { value: s.startTime, label: `${label} — booked`, disabled: true };
-		if (contiguousFrom(i) < minSlots) {
-			// Free, but with a booking or closing time too soon after it to fit the
-			// shortest session — which is a different thing from being taken.
-			return { value: s.startTime, label: `${label} — too short`, disabled: true };
-		}
-		return { value: s.startTime, label, disabled: false };
+		// Free, but with a booking or closing time too soon after it to fit the
+		// shortest session, is as unpickable as taken.
+		const bookable = s.available && contiguousFrom(i) >= minSlots;
+		return { value: s.startTime, label, disabled: !bookable };
 	});
 });
 

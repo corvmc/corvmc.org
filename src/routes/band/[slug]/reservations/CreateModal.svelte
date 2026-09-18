@@ -45,7 +45,7 @@
 	noFooter
 	variant="primary"
 	size="sm"
-	maxWidth="max-w-md"
+	maxWidth="max-w-sm"
 	onsuccess={(result) => {
 		const r = result as { waitlisted?: boolean } | undefined;
 		if (r?.waitlisted) {

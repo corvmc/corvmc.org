@@ -25,7 +25,8 @@
 		staff = false,
 		band = false,
 		bookerType = undefined,
-		payAhead = true
+		payAhead = true,
+		submitLabel = 'Confirm'
 	}: {
 		reservation?: { id: string; startsAt: Date; endsAt: Date };
 		fields?: { id?: RemoteFormField<string> };
@@ -49,6 +50,12 @@
 		 * a payment step that does not exist.
 		 */
 		payAhead?: boolean;
+		/**
+		 * What the primary action is called. It names the dialog it finishes, so
+		 * each caller passes its own — "Book teaching time" is not a session
+		 * (#1027).
+		 */
+		submitLabel?: string;
 	} = $props();
 
 	const formCtx = getFormContext()!;
@@ -133,6 +140,8 @@
 					}
 
 					if (recurringFrequency && date && startTime) {
+						// `formatScheduleLabel` matches on these exact strings — they are
+						// the keys `describeFrequency` produces, not the picker's labels.
 						const freqLabel =
 							recurringFrequency === 'weekly'
 								? 'Weekly'
@@ -202,7 +211,7 @@
 				`sr-only` because the strike-through already says it visually.
 			-->
 			{@const creditsCommitNow = pricing.creditsApplicable > 0 && !beforeConfirmWindow}
-			<dl class="py-2 text-sm">
+			<dl class="space-y-2 py-4 text-sm">
 				<div class="flex justify-between">
 					<dt>{pricing.durationHours} hr × ${formatDollars(pricing.hourlyRateCents)}/hr</dt>
 					{#if creditsCommitNow}
@@ -220,7 +229,7 @@
 				</div>
 				{#if pricing.creditsApplicable > 0}
 					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
-					<div class="mt-1 flex justify-between text-success">
+					<div class="flex justify-between text-success">
 						<!-- Free hours are spent at confirmation, so before the window opens
 						     they are a promise rather than a discount. Saying "applied" there
 						     was a number the booking would not get. -->
@@ -315,16 +324,17 @@
 					{pricing && pricing.creditsApplicable > 0 ? 'Apply Credits' : 'Confirm'}
 				</Button>
 			{:else}
-				<!-- Native submit: the button's name/value sets skipPayment only when it's the submitter. -->
-				<Button
-					type="submit"
-					name="skipPayment"
-					value="on"
-					variant={showPayAhead ? 'ghost' : 'primary'}
-					>{beforeConfirmWindow ? 'Hold this slot' : 'Confirm'}</Button
+				<!-- Native submit: the button's name/value sets skipPayment only when
+				     it's the submitter. Named for the dialog it finishes, and primary
+				     even beside Pay Ahead — booking is the action, paying early is the
+				     option (#1027). "Hold this slot" stays where it is true: before the
+				     confirmation window that is the outcome, and calling it booking
+				     would promise free hours the booking cannot spend yet. -->
+				<Button type="submit" name="skipPayment" value="on" variant="primary"
+					>{beforeConfirmWindow ? 'Hold this slot' : submitLabel}</Button
 				>
 				{#if showPayAhead}
-					<Button type="button" onclick={() => formCtx.next()}>Pay Ahead</Button>
+					<Button type="button" variant="ghost" onclick={() => formCtx.next()}>Pay Ahead</Button>
 				{/if}
 			{/if}
 		</div>

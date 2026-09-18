@@ -34,7 +34,7 @@
 	modalTitle="Book a Session"
 	noFooter
 	variant="primary"
-	maxWidth="max-w-md"
+	maxWidth="max-w-sm"
 	onsuccess={async (result) => {
 		const r = result as {
 			reservationId?: string;
@@ -69,7 +69,7 @@
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
 	{#snippet form()}
 		<DateTimeStep {isSustaining} {needsPhone} {reloadToken} />
-		<ConfirmStep />
+		<ConfirmStep submitLabel="Book Session" />
 		<PaymentStep fields={{ coverFees: fields.coverFees }} />
 		<BookingConflict result={bookAndPayReservation.result} onconflict={() => reloadToken++} />
 	{/snippet}

@@ -201,12 +201,6 @@
 			maxValue={maxDate}
 		/>
 
-		<!-- A day that is fully booked and a day past the booking window were both
-		     just unpickable, with nothing to tell them apart. -->
-		<p class="mt-1 text-subtle">
-			Greyed days are fully booked. The calendar ends where the booking window does.
-		</p>
-
 		{#if date && noStartTimes}
 			<p class="mt-2 text-sm text-error">
 				No available times on this date. Please select another day.
@@ -274,7 +268,7 @@
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Frequency</legend>
 				<div class="flex gap-1">
-					{#each [{ value: '', label: 'One Time' }, { value: 'weekly', label: 'Weekly' }, { value: 'biweekly', label: 'Every 2 Weeks' }, { value: 'monthly', label: 'Monthly' }] as opt (opt.value)}
+					{#each [{ value: '', label: 'One Time' }, { value: 'weekly', label: 'Weekly' }, { value: 'biweekly', label: 'Biweekly' }, { value: 'monthly', label: 'Monthly' }] as opt (opt.value)}
 						<label class="btn flex-1 btn-sm" class:btn-primary={frequency === opt.value}>
 							<input
 								type="radio"
