@@ -90,9 +90,13 @@ export async function loadBandSiteContent(
 		.innerJoin(directoryEntry, eq(directoryEntry.id, directoryTag.entryId))
 		.where(and(eq(directoryEntry.groupId, bandRow.id), eq(directoryTag.kind, 'genre')));
 
-	// Upcoming, plus enough history for a "past shows" section
+	// Upcoming, plus enough history for a "past shows" section.
+	//
+	// 50, not 10: the microsite home slices to its block's own limit, but
+	// `/events` is titled "All Events" and was silently showing ten of them
+	// with no pager and no count (#1058).
 	const [events, pastEvents] = await Promise.all([
-		listBandEventsUpcoming(bandRow.id, 10),
+		listBandEventsUpcoming(bandRow.id, 50),
 		listBandEventsPast(bandRow.id, { limit: 20, offset: 0 })
 	]);
 
