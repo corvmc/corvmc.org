@@ -3,6 +3,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import InstructorCard from '$lib/components/directory/InstructorCard.svelte';
 	import { resolve } from '$app/paths';
@@ -24,7 +25,14 @@
 	 */
 	let searchText = $state('');
 
-	const instructors = $derived(getPublicInstructors({ search: searchText || undefined }));
+	let instrument = $state('');
+
+	const instructors = $derived(
+		getPublicInstructors({
+			search: searchText || undefined,
+			instrument: instrument || undefined
+		})
+	);
 </script>
 
 <svelte:head>
@@ -64,15 +72,38 @@
 		</div>
 
 		<svelte:boundary>
-			{#await instructors then rows}
-				{#if rows.length === 0}
+			{#await instructors then page}
+				<!-- Built, tested and unwired until now: `filterSchema` has accepted
+				     `instrument` and the SQL has implemented it all along (#1057). -->
+				{#if page.instruments.length > 1}
+					<div class="mb-6 flex flex-wrap justify-center gap-2">
+						<Button
+							size="sm"
+							variant={instrument === '' ? 'primary' : 'default'}
+							onclick={() => (instrument = '')}
+						>
+							All
+						</Button>
+						{#each page.instruments as inst (inst)}
+							<Button
+								size="sm"
+								variant={instrument === inst ? 'primary' : 'default'}
+								onclick={() => (instrument = instrument === inst ? '' : inst)}
+							>
+								{inst}
+							</Button>
+						{/each}
+					</div>
+				{/if}
+
+				{#if page.rows.length === 0}
 					<EmptyState
 						title="No teachers listed yet"
 						description="Nobody is currently taking students here. Check back, or get in touch."
 					/>
 				{:else}
 					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-						{#each rows as row (row.userId)}
+						{#each page.rows as row (row.userId)}
 							<InstructorCard
 								href="/directory/members/{row.userId}"
 								name={row.name}

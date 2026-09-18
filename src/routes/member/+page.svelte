@@ -1,6 +1,6 @@
 <script lang="ts">
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import { EntityCard } from '$lib/components/ui/entity';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/reservations/BookerTypeIcon.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -13,7 +13,6 @@
 	import NeedsYouCard from './NeedsYouCard.svelte';
 	import { creditsToHours } from '$lib/config';
 	import { resolve } from '$app/paths';
-	import { imageSrc } from '$lib/utils/images';
 
 	let data = $derived(await getMemberDashboard());
 
@@ -112,28 +111,17 @@
 				actionHref="/member/events"
 			/>
 		{:else}
+			<!-- `EntityCard`, whose own comment states the rule this grid broke:
+			     the portrait is keyed off the shape, not off whether an image
+			     loaded, so an event with no artwork is still a full-height tile
+			     and the row stays even (#1047). It also crops 2:3 like every
+			     other poster rather than letterboxing to h-32. -->
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 				{#each data.upcomingEvents as evt (evt.id)}
-					<a
-						href={resolve(`/member/events/${evt.id}`)}
-						class="card bg-base-200 transition-shadow hover:shadow-md"
-					>
-						{#if evt.posterUrl}
-							{@const poster = imageSrc(evt.posterUrl, 'poster')}
-							<figure>
-								<img
-									src={poster.src}
-									srcset={poster.srcset}
-									sizes={poster.sizes}
-									alt={evt.title}
-									class="h-32 w-full object-cover"
-								/>
-							</figure>
-						{/if}
-						<CardBody class="p-3">
-							<p class="text-sm font-medium">{evt.title}</p>
+					<a href={resolve(`/member/events/${evt.id}`)} class="block">
+						<EntityCard ref={evt.ref} class="h-full transition-shadow hover:shadow-md">
 							<p class="text-subtle">{formatDate(evt.startsAt)}</p>
-						</CardBody>
+						</EntityCard>
 					</a>
 				{/each}
 			</div>
