@@ -15,7 +15,6 @@ import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-na
 export type BandNavKey =
 	| 'dashboard'
 	| 'messages'
-	| 'chat'
 	| 'members'
 	| 'rider'
 	| 'packing'
@@ -42,7 +41,7 @@ export interface BandNavInput {
 }
 
 /** Field names on `getBandLayout()`'s return. */
-export type BandNavBadgeKey = 'messagesUnread' | 'chatUnread';
+export type BandNavBadgeKey = 'messagesUnread' | 'chatUnread' | 'bandInboxUnread';
 
 export interface BandNavItem extends NavNode<BandNavKey> {
 	label: string;
@@ -71,28 +70,19 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	];
 
 	// Second, above Members, because it is the only row that can be waiting on
-	// somebody. Owner/admin like Press Kit and Edit Profile: answering an enquiry
-	// commits the act to a date and a price. A member who is not an admin sees no
-	// row, and `getBandConversations` refuses them anyway — the nav is not the
-	// guard, `requireGroupRole` is.
-	if (isOwnerOrAdmin) {
-		items.push({
-			key: 'messages',
-			label: 'Messages',
-			href: resolve('/band/[slug]/messages', { slug }),
-			badgeKey: 'messagesUnread'
-		});
-	}
-
-	// Every member, unlike Messages above: chat is the band talking to itself,
-	// and gating it on admin would be gating members out of their own room. The
-	// two are separate rows because they are separate conversations with
-	// different readers — #1252.
+	// somebody.
+	//
+	// **One row for two inboxes.** Chat and enquiries are still two lists with
+	// two sets of readers — every active member, versus owner and admin — but
+	// they share a page, so a member no longer has to know which of two rows a
+	// message arrived on. Every member gets the row; the page draws the
+	// Enquiries section only for an admin, and `requireGroupRole` inside
+	// `band-messages.remote.ts` is what actually refuses the rest.
 	items.push({
-		key: 'chat',
-		label: 'Chat',
-		href: resolve('/band/[slug]/chat', { slug }),
-		badgeKey: 'chatUnread'
+		key: 'messages',
+		label: 'Messages',
+		href: resolve('/band/[slug]/messages', { slug }),
+		badgeKey: isOwnerOrAdmin ? 'bandInboxUnread' : 'chatUnread'
 	});
 
 	items.push({ key: 'members', label: 'Members', href: resolve('/band/[slug]/members', { slug }) });

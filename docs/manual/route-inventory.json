@@ -28,10 +28,6 @@
 		"panel": "band"
 	},
 	{
-		"route": "/band/[slug]/chat",
-		"panel": "band"
-	},
-	{
 		"route": "/band/[slug]/edit",
 		"panel": "band"
 	},
@@ -53,6 +49,10 @@
 	},
 	{
 		"route": "/band/[slug]/messages/[id]",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/messages/chat",
 		"panel": "band"
 	},
 	{
