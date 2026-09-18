@@ -96,7 +96,7 @@
 													class="input input-sm"
 												/>
 											</div>
-											<div class="flex justify-end gap-2">
+											<div class="ml-auto flex w-max gap-2">
 												<Button variant="ghost" size="sm" onclick={() => (editId = null)}>
 													Cancel
 												</Button>
