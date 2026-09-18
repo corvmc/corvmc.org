@@ -77,9 +77,11 @@
 			{#if sessions.length === 0}
 				<EmptyState message="No upcoming sessions scheduled." />
 			{:else}
-				{#each sessions as res (res.id)}
-					<BandReservationCard reservation={res} slug={band.slug} />
-				{/each}
+				<div class="flex flex-col gap-2">
+					{#each sessions as res (res.id)}
+						<BandReservationCard reservation={res} slug={band.slug} />
+					{/each}
+				</div>
 			{/if}
 		{/await}
 	</section>

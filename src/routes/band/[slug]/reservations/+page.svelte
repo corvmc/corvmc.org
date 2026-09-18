@@ -70,7 +70,7 @@
 				description="Book the practice space and it'll show up here for the whole act."
 			/>
 		{:else}
-			<div>
+			<div class="flex flex-col gap-2">
 				{#each upcoming as res (res.id)}
 					<BandReservationCard reservation={res} slug={band.slug} />
 				{/each}
@@ -82,7 +82,7 @@
 		{#if past.rows.length === 0}
 			<EmptyState message="No past reservations." />
 		{:else}
-			<div>
+			<div class="flex flex-col gap-2">
 				{#each past.rows as res (res.id)}
 					<BandReservationCard reservation={res} slug={band.slug} />
 				{/each}
