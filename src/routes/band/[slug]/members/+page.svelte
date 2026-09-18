@@ -171,7 +171,12 @@
 						<CardBody row class="py-3">
 							<EntityIdentity ref={member.member} size="md" />
 							<div class="flex shrink-0 items-center gap-2">
-								<StatusBadge status={member.role} />
+								<!-- Exception-only, like every other marker in the registry: a
+								     badge on every row marks nothing, and `member` is what most
+								     of a roster is (#1050). -->
+								{#if member.role !== 'member'}
+									<StatusBadge status={member.role} />
+								{/if}
 								{#if canManage && member.role !== 'owner'}
 									<EditMemberAction
 										bandId={layout.band.id}
@@ -257,12 +262,28 @@
 				{#each pendingEmailInvites as invite (invite.id)}
 					<Card tone="base-200">
 						<CardBody row class="py-3">
-							<div class="min-w-0">
-								<p class="truncate font-medium">{invite.email}</p>
-								<p class="truncate text-subtle">
-									Invited as {invite.role}{invite.position ? ` · ${invite.position}` : ''} · by {invite.invitedByName}
-								</p>
-							</div>
+							<!-- `EntityIdentity`, like the pending section above it. Written by
+							     hand this had already drifted: a `·` in a template string
+							     against a `&middot;` in a snippet, and no media tile at all
+							     (#1050). The ref has no id — nobody has signed up yet — so it
+							     renders unlinked. -->
+							<EntityIdentity
+								ref={{
+									type: 'member',
+									id: null,
+									title: invite.email,
+									subtitle: null,
+									pronouns: null,
+									image: null,
+									subtype: null
+								}}
+								size="md"
+							>
+								{#snippet subtitle()}
+									Invited as {invite.role}{#if invite.position}
+										&middot; {invite.position}{/if} &middot; by {invite.invitedByName}
+								{/snippet}
+							</EntityIdentity>
 							<div class="flex shrink-0 items-center gap-2">
 								<Badge variant="warning">awaiting signup</Badge>
 								<Action
