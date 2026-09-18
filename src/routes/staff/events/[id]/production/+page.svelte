@@ -53,7 +53,11 @@
 	import { createProduction } from '$lib/remote/productions.remote';
 	import { listActInDirectory } from '$lib/remote/external-acts.remote';
 	import { applyDutyList } from '$lib/remote/duty-lists.remote';
-	import { updateProduction, setProductionProducer } from '$lib/remote/productions.remote';
+	import {
+		updateProduction,
+		setProductionProducer,
+		openHostShift
+	} from '$lib/remote/productions.remote';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
@@ -99,6 +103,7 @@
 	const advance = $derived(loaded.advance);
 	const riders = $derived(loaded.riders);
 	const productionRecord = $derived(loaded.production);
+	const hostShift = $derived(loaded.hostShift);
 	const runOfShow = $derived(loaded.runOfShow);
 	const settlement = $derived(loaded.settlement);
 	/** The advance question: who has told us nothing at all. */
@@ -928,6 +933,37 @@
 								size="xs"
 							/>
 						</Form>
+					</div>
+
+					<!-- Who runs the night, which is not always who booked it. A shift
+					     rather than a field: the producer opens it, and a host claims
+					     it through the same pipeline as any other volunteer, so the
+					     handover carries confirmation and hours with it (#932). -->
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-muted">Host</span>
+						{#if hostShift && hostShift.hosts.length > 0}
+							{#each hostShift.hosts as host (host.signupId)}
+								<span class="font-medium">{host.name}</span>
+								<StatusBadge status={host.status} />
+							{/each}
+						{:else if hostShift}
+							<span class="font-medium">Shift open, nobody on it</span>
+							<a
+								class="link text-sm"
+								href={resolve(`/staff/volunteer/shifts/${hostShift.workOrderId}`)}
+							>
+								Find somebody
+							</a>
+						{:else}
+							<!-- "No host yet", not "Nobody yet": the Producer line above
+							     already says that, and `productions.e2e.ts` reads it by
+							     text — two matches make its locator ambiguous. -->
+							<span class="font-medium">No host yet</span>
+							<Form remote={openHostShift} successToast="Host shift opened">
+								<input {...openHostShift.fields.eventId.as('hidden', evt.id)} />
+								<SubmitButton label="Open a host shift" variant="ghost" size="xs" />
+							</Form>
+						{/if}
 					</div>
 
 					<Form

@@ -13,6 +13,7 @@ import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venu
 import { getProductionByEvent } from '$lib/server/production/production-service';
 import { getPublicSetTimes, getRunOfShow } from '$lib/server/production/run-of-show-service';
 import { getSettlement } from '$lib/server/production/settlement-service';
+import { getHostShift } from '$lib/server/production/host-service';
 import { listProgramGroupOptions } from '$lib/server/group/group-service';
 import {
 	listRequests as listArtifactRequests,
@@ -1167,7 +1168,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		runOfShow,
 		settlement,
 		artifactRequests,
-		requestableActs
+		requestableActs,
+		hostShift
 	] = await Promise.all([
 		getStaffEventDetail(id),
 		getEventRecurringSeries(id),
@@ -1199,7 +1201,10 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		// from the artifact itself, so a rider filled in unprompted already counts
 		// and nothing here has to be ticked off by hand.
 		listArtifactRequests(id),
-		listRequestableActs(id)
+		listRequestableActs(id),
+		// Who is running the night. A volunteer shift rather than a column, so
+		// this is the roster's answer and not the production's (#932).
+		getHostShift(id)
 	]);
 
 	return {
@@ -1215,7 +1220,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		runOfShow,
 		settlement,
 		artifactRequests,
-		requestableActs
+		requestableActs,
+		hostShift
 	};
 });
 

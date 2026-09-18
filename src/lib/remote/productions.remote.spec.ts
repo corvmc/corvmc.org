@@ -34,6 +34,9 @@ const runOfShow = {
 	setSlotTerms: vi.fn(),
 	buildSlotsFromLineup: vi.fn()
 };
+vi.mock('$lib/server/production/host-service', () => ({
+	openHostShift: vi.fn()
+}));
 vi.mock('$lib/server/production/run-of-show-service', () => ({
 	addSlot: (...a: unknown[]) => runOfShow.addSlot(...a),
 	updateSlot: (...a: unknown[]) => runOfShow.updateSlot(...a),
@@ -128,6 +131,7 @@ const WRITES: { name: keyof typeof productions; args: unknown[]; capability?: st
 		args: [{ slotId: 'slot-1', eventId: 'evt-1', edge: 'start', action: 'now' }]
 	},
 	{ name: 'recordDoorTake', args: [{ id: 'prod-1', eventId: 'evt-1', doorCashCents: 12_000 }] },
+	{ name: 'openHostShift', args: [{ eventId: 'evt-1' }] },
 	{
 		name: 'addRunOfShowSlot',
 		args: [{ eventId: 'evt-1', productionId: 'prod-1', setLengthMinutes: 30 }]
