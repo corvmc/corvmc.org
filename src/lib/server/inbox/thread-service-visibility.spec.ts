@@ -146,7 +146,7 @@ function containsPrivateExclusion(node: unknown): boolean {
 }
 
 describe('staffVisibleThread', () => {
-	it('excludes direct and band threads unless a pending flag exists', () => {
+	it('excludes every private channel unless a pending flag exists', () => {
 		// The predicate is an OR: not one of the private channels, or a pending
 		// inbox_thread flag. Both halves matter — the first is the rule, the
 		// second is the only way back in.
@@ -159,7 +159,10 @@ describe('staffVisibleThread', () => {
 		const [notPrivate, flagged] = node.a as Record<string, unknown>[];
 		expect(notPrivate.op).toBe('notInArray');
 		expect(notPrivate.a).toBe(TABLES.inboxThread.channel);
-		expect(notPrivate.b).toEqual(['direct', 'band']);
+		// `group` is here because it was NOT, and every band's own room sat in
+		// the staff queue as a result (#1296). A new private channel that skips
+		// this list is the same bug again.
+		expect(notPrivate.b).toEqual(['direct', 'band', 'group']);
 		expect(flagged.op).toBe('sql');
 		expect(flagged.text).toContain('content_flag');
 		expect(flagged.text).toContain("cf.entity_type = 'inbox_thread'");
@@ -220,7 +223,7 @@ describe('getThread', () => {
 	// only the channel probe would make these pass either way — the second query
 	// would come back empty and the function would return null for the wrong
 	// reason.
-	const fullThreadOn = (channel: 'direct' | 'band') => () => [
+	const fullThreadOn = (channel: 'direct' | 'band' | 'group') => () => [
 		[{ channel }],
 		[{ id: 'thread-1', channel, subject: 'private' }],
 		[{ id: 'm1', body: 'private words' }],
@@ -228,6 +231,7 @@ describe('getThread', () => {
 	];
 	const fullDirectThread = fullThreadOn('direct');
 	const fullBandThread = fullThreadOn('band');
+	const fullGroupThread = fullThreadOn('group');
 
 	it('returns null for a direct thread even when every row is there to return', async () => {
 		results = fullDirectThread();
@@ -253,6 +257,20 @@ describe('getThread', () => {
 
 	it('reads no messages or notes for a band thread', async () => {
 		results = fullBandThread();
+		await getThread('thread-1');
+		expect(touched).not.toContain('inbox_message');
+		expect(touched).not.toContain('inbox_note');
+	});
+
+	it('returns null for a group chat even when every row is there to return', async () => {
+		// A band's or committee's own room. Staff hosting it is not staff being
+		// in it, and knowing the thread id is not a way in (#1296).
+		results = fullGroupThread();
+		expect(await getThread('thread-1')).toBeNull();
+	});
+
+	it('reads no messages or notes for a group chat', async () => {
+		results = fullGroupThread();
 		await getThread('thread-1');
 		expect(touched).not.toContain('inbox_message');
 		expect(touched).not.toContain('inbox_note');

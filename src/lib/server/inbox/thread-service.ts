@@ -36,20 +36,37 @@ import type { InboxView } from '$lib/config';
  * The one expression that keeps conversations the collective is not party to out
  * of every staff view.
  *
- * Two channels qualify. A `direct` thread is nobody's business but its two
+ * Three channels qualify. A `direct` thread is nobody's business but its two
  * participants' — it is not the org talking to the outside world, and staff have
  * no queue role in it. A `band` thread is a booking negotiation between an act
- * and whoever wants to hire it; CorvMC hosts it and does not read it. Both
- * become visible only by being reported, and drop back out when the report is
- * resolved.
+ * and whoever wants to hire it; CorvMC hosts it and does not read it. A `group`
+ * thread is a band's or committee's own room, which is the same proposition
+ * again. All three become visible only by being reported, and drop back out
+ * when the report is resolved.
+ *
+ * **A new private channel has to be added here.** `group` shipped with #1252 and
+ * was not, so every band's chat sat in the staff queue — and because a chat
+ * thread is created when a member *opens* the room, opening one put an empty
+ * thread in front of staff and lit the badge (#1296).
  *
  * **If a query in this file reads `inbox_thread` and does not use this, it is a
  * leak.** That includes the aggregates: an unfiltered COUNT puts live DMs in the
- * staff badge, and `listThreads`' search does a LIKE over `preview`, which for a
- * direct or band thread is somebody else's private text.
+ * staff badge, and `listThreads`' search does a LIKE over `preview`, which for
+ * one of these is somebody else's private text.
  */
+/**
+ * The channels the collective is not party to. `staffVisibleThread` filters on
+ * these and `getThread` refuses them; keeping one list is what stops the two
+ * drifting, which is how #1296 happened.
+ */
+export const PRIVATE_CHANNELS = [
+	'direct',
+	'band',
+	'group'
+] as const satisfies readonly InboxChannel[];
+
 export const staffVisibleThread = or(
-	notInArray(inboxThread.channel, ['direct', 'band']),
+	notInArray(inboxThread.channel, [...PRIVATE_CHANNELS]),
 	sql`EXISTS (SELECT 1 FROM content_flag cf
 	            WHERE cf.entity_type = 'inbox_thread'
 	              AND cf.entity_id = ${inboxThread.id}
@@ -370,11 +387,11 @@ export async function listThreads(filters: ListThreadsFilters, pagination: Pagin
  * The staff detail read: thread, every message, and the staff-only notes.
  *
  * There is no ownership check here and there does not need to be — every other
- * channel is the org's own correspondence. `direct` and `band` are the
- * exceptions, so both are refused outright. That one line is what stops a staff
- * member reading a private conversation by knowing its id, and it covers three
- * endpoints at once: the detail page, the reply box and the note box all go
- * through here.
+ * channel is the org's own correspondence. `direct`, `band` and `group` are the
+ * exceptions, so all three are refused outright. That one line is what stops a
+ * staff member reading a private conversation by knowing its id, and it covers
+ * three endpoints at once: the detail page, the reply box and the note box all
+ * go through here.
  *
  * A reported conversation is read through `getFlaggedDirectThread`, which is
  * keyed on the flag rather than the thread — so the report is the only handle
@@ -387,7 +404,7 @@ export async function getThread(id: string) {
 		.from(inboxThread)
 		.where(eq(inboxThread.id, id))
 		.limit(1);
-	if (!visible || visible.channel === 'direct' || visible.channel === 'band') return null;
+	if (!visible || (PRIVATE_CHANNELS as readonly string[]).includes(visible.channel)) return null;
 
 	// The member behind a portal thread, if there is one. Joined live rather than
 	// read off the thread's denormalized contactName, which goes stale the moment
