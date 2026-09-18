@@ -13,6 +13,7 @@
 	} from '@tabler/icons-svelte';
 	import type { Icon } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import { getPublicCommittees } from '$lib/remote/committees.remote';
 
 	type VolunteerGroup = {
 		icon: Icon;
@@ -44,7 +45,12 @@
 	const ZEFFY_DONATION_URL =
 		'https://www.zeffy.com/donation-form/donate-to-the-corvallis-music-collective';
 
-	const volunteerGroups: VolunteerGroup[] = [
+	// The committees are `group` rows with a staff-editable `bio`, and that bio
+	// is the canonical remit — the literal list here went stale within a week
+	// of #1149 renaming one of them by hand (#1167).
+	const committees = $derived(await getPublicCommittees());
+
+	const volunteerGroups: VolunteerGroup[] = $derived([
 		{
 			icon: IconTicket,
 			title: 'At shows',
@@ -73,19 +79,12 @@
 			icon: IconBuildingCommunity,
 			title: 'Committees',
 			desc: 'Committees meet monthly to build and guide the organization. You apply, and a chair contacts you to talk it over.',
-			roles: [
-				{ name: 'Booking', desc: 'Planning and booking CMC-produced events.' },
-				{ name: 'Production', desc: 'Operating, staffing, and running CMC events.' },
-				{ name: 'Development', desc: 'Fundraising, member and partner development, outreach.' },
-				{ name: 'Communications', desc: 'Social media, posters, press, and the newsletter.' },
-				{ name: 'Art and merchandise', desc: 'CMC merch and local artists for poster art.' },
-				{ name: 'Facility', desc: 'Building management, gear library, rehearsal scheduling.' }
-			],
+			roles: committees.map((c) => ({ name: c.name, desc: c.bio ?? '' })),
 			// Committees are not volunteer roles any more, so the shift signup at the
 			// foot of this section is the wrong door for them. Members apply.
 			link: { href: '/member/volunteer/committees', label: 'Apply to a committee' }
 		}
-	];
+	]);
 
 	const otherWays: ContributeWay[] = [
 		{
@@ -161,7 +160,9 @@
 					{#each group.roles as role (role.name)}
 						<li class="text-sm leading-relaxed">
 							<span class="font-bold">{role.name}</span>
-							<span class="text-fg-2"> — {role.desc}</span>
+							{#if role.desc}
+								<span class="text-fg-2"> — {role.desc}</span>
+							{/if}
 						</li>
 					{/each}
 				</ul>
