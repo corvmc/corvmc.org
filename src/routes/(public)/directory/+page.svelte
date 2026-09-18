@@ -235,44 +235,50 @@
 			{#if matchCount === 0}
 				{@render empty('act', 'acts', bands.length)}
 			{:else}
-				<div class="grid-gallery-tight">
-					{#each visibleBands as b (b.id)}
-						<VinylCard
-							href="/directory/bands/{b.slug}"
-							id={b.id}
-							name={b.name}
-							avatarUrl={b.avatarUrl}
-							tagline={b.tagline}
-							memberCount={b.memberCount}
-							lookingForMembers={b.lookingForMembers}
-							color={bandColor(b.id)}
-						/>
-					{/each}
-					{#if !user && remaining === 0}<VinylCardCta />{/if}
+				<!-- Its own container: these pages do not use `PageContent`, which is
+				     what supplies the `@container` the gallery tiers measure (#1036). -->
+				<div class="@container">
+					<div class="grid-gallery-tight">
+						{#each visibleBands as b (b.id)}
+							<VinylCard
+								href="/directory/bands/{b.slug}"
+								id={b.id}
+								name={b.name}
+								avatarUrl={b.avatarUrl}
+								tagline={b.tagline}
+								memberCount={b.memberCount}
+								lookingForMembers={b.lookingForMembers}
+								color={bandColor(b.id)}
+							/>
+						{/each}
+						{#if !user && remaining === 0}<VinylCardCta />{/if}
+					</div>
 				</div>
 			{/if}
 		{:else if matchCount === 0}
 			{@render empty('musician', 'musicians', members.length)}
 		{:else}
-			<div class="grid-gallery">
-				{#each visibleMusicians as member (member.id)}
-					<IdCard
-						href="/directory/members/{member.id}"
-						name={member.name}
-						image={member.image}
-						pronouns={member.pronouns}
-						tagline={member.tagline}
-						instruments={member.instruments}
-						genres={member.genres}
-						bands={member.bands}
-						lookingForBand={member.lookingForBand}
-						availableForHire={member.availableForHire}
-						teachesLessons={member.teachesLessons}
-						openToCollaboration={member.openToCollaboration}
-						memberSince={new Date(member.memberSince).getFullYear()}
-					/>
-				{/each}
-				{#if !user && remaining === 0}<IdCardCta />{/if}
+			<div class="@container">
+				<div class="grid-gallery">
+					{#each visibleMusicians as member (member.id)}
+						<IdCard
+							href="/directory/members/{member.id}"
+							name={member.name}
+							image={member.image}
+							pronouns={member.pronouns}
+							tagline={member.tagline}
+							instruments={member.instruments}
+							genres={member.genres}
+							bands={member.bands}
+							lookingForBand={member.lookingForBand}
+							availableForHire={member.availableForHire}
+							teachesLessons={member.teachesLessons}
+							openToCollaboration={member.openToCollaboration}
+							memberSince={new Date(member.memberSince).getFullYear()}
+						/>
+					{/each}
+					{#if !user && remaining === 0}<IdCardCta />{/if}
+				</div>
 			</div>
 		{/if}
 
