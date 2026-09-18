@@ -36,7 +36,11 @@ const requireGroupRole = vi.fn(async (ref: { slug?: string }, minRole: string, _
 	if (minRole === 'owner' && role !== 'owner') {
 		throw Object.assign(new Error('Insufficient permissions'), { status: 403 });
 	}
-	return { user: { id: 'user-1' }, group: { id: 'band-1', slug, name: 'Our Band' }, role };
+	return {
+		user: { id: 'user-1', name: 'Ada', email: 'ada@example.com' },
+		group: { id: 'band-1', slug, name: 'Our Band' },
+		role
+	};
 });
 vi.mock('$lib/server/group/group-context', () => ({
 	requireGroupRole: (...a: unknown[]) =>
@@ -48,6 +52,7 @@ const getEventLineups = vi.fn(async () => new Map());
 const getEventLineup = vi.fn(async () => [] as unknown[]);
 const getById = vi.fn(async () => null as unknown);
 const updateBandEvent = vi.fn(async () => undefined);
+const isCreditedOn = vi.fn(async () => true);
 vi.mock('$lib/server/event/event-service', () => ({
 	listBandEvents: (...a: unknown[]) => listBandEvents(...(a as [])),
 	getEventLineups: (...a: unknown[]) => getEventLineups(...(a as [])),
@@ -61,12 +66,27 @@ vi.mock('$lib/server/event/event-service', () => ({
 	setEventLineup: vi.fn(),
 	confirmLineupSlot: vi.fn(),
 	declineLineupSlot: vi.fn(),
+	isCreditedOn: (...a: unknown[]) => isCreditedOn(...(a as [])),
 	listBandLineupInvites: vi.fn(async () => []),
 	publish: vi.fn(),
 	unpublish: vi.fn()
 }));
 
 vi.mock('$lib/server/band/band-service', () => ({ searchBandsByName: vi.fn(async () => []) }));
+
+const startPortalConversation = vi.fn(
+	async (_params: {
+		userId: string;
+		userName: string;
+		userEmail: string;
+		subject: string;
+		body: string;
+	}) =>
+		({ threadId: 'thread-1', messageId: 'msg-1' }) as { threadId: string; messageId: string } | null
+);
+vi.mock('$lib/server/inbox/portal-service', () => ({
+	startPortalConversation: (p: any) => startPortalConversation(p)
+}));
 vi.mock('$lib/server/storage', () => ({
 	resolveImageUrl: (k: string | null) => k,
 	validateUpload: vi.fn(() => null)
@@ -76,7 +96,8 @@ import {
 	getBandEvents,
 	getBandEventDetail,
 	updateBandEventForm,
-	publishBandEvent
+	publishBandEvent,
+	requestListingCorrectionForm
 } from './band-events.remote';
 
 const OWN_BAND = { id: 'band-1', slug: 'our-band', name: 'Our Band' };
@@ -89,6 +110,10 @@ beforeEach(() => {
 	getEventLineups.mockReset();
 	getEventLineups.mockResolvedValue(new Map());
 	updateBandEvent.mockClear();
+	isCreditedOn.mockClear();
+	isCreditedOn.mockResolvedValue(true);
+	startPortalConversation.mockClear();
+	startPortalConversation.mockResolvedValue({ threadId: 'thread-1', messageId: 'msg-1' });
 });
 
 // ---------------------------------------------------------------------------
@@ -231,5 +256,63 @@ describe('publishBandEvent', () => {
 			)
 		).resolves.toBeDefined();
 		expect(requireGroupRole).toHaveBeenCalledWith({ slug: 'our-band' }, 'admin');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// requestListingCorrectionForm (#564)
+// ---------------------------------------------------------------------------
+
+describe('requestListingCorrectionForm', () => {
+	const EVENT = {
+		id: 'evt-1',
+		title: 'Saturday at the Hall',
+		startsAt: new Date('2026-10-03T02:00:00Z')
+	};
+
+	it('refuses an event this band is not credited on', async () => {
+		isCreditedOn.mockResolvedValue(false);
+		getById.mockResolvedValue(EVENT);
+
+		await expect(
+			(requestListingCorrectionForm as any)({
+				slug: 'our-band',
+				eventId: 'evt-1',
+				body: 'The date is a day out.'
+			})
+		).rejects.toMatchObject({ status: 404 });
+
+		expect(startPortalConversation).not.toHaveBeenCalled();
+	});
+
+	it('opens a staff thread naming the act and the listing', async () => {
+		getById.mockResolvedValue(EVENT);
+
+		const result = await (requestListingCorrectionForm as any)({
+			slug: 'our-band',
+			eventId: 'evt-1',
+			body: 'The date is a day out.'
+		});
+
+		expect(result).toMatchObject({ success: true, threadId: 'thread-1' });
+		const sent = startPortalConversation.mock.calls[0][0];
+		expect(sent.userId).toBe('user-1');
+		expect(sent.subject).toContain('Saturday at the Hall');
+		// The queue shows a preview, not a subject, so the body has to name it too.
+		expect(sent.body).toContain('Our Band');
+		expect(sent.body).toContain('Saturday at the Hall');
+		expect(sent.body).toContain('The date is a day out.');
+	});
+
+	it('404s on an event that does not exist', async () => {
+		getById.mockResolvedValue(null);
+
+		await expect(
+			(requestListingCorrectionForm as any)({
+				slug: 'our-band',
+				eventId: 'evt-1',
+				body: 'x'
+			})
+		).rejects.toMatchObject({ status: 404 });
 	});
 });

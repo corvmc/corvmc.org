@@ -17,12 +17,15 @@ import {
 	getEventLineups,
 	confirmLineupSlot,
 	declineLineupSlot,
+	isCreditedOn,
 	listBandLineupInvites,
 	publish,
 	unpublish,
 	getById
 } from '$lib/server/event/event-service';
 import { lineupSchema } from '$lib/server/db/schema/event';
+import { startPortalConversation } from '$lib/server/inbox/portal-service';
+import { formatDate } from '$lib/utils/format';
 import { searchBandsByName } from '$lib/server/band/band-service';
 import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
 import { dollarsToCents } from '$lib/utils/event-ticketing';
@@ -436,6 +439,53 @@ export const confirmLineupSlotForm = form(
 			mapDomainError(err);
 		}
 		return { success: true };
+	}
+);
+
+/**
+ * Ask for a correction to a listing this act is on but does not own. Accept
+ * and decline were the only replies, so a wrong date meant taking a bad
+ * listing or vanishing from a bill it was playing (#564). To staff, not the
+ * owner: staff can edit every listing, a community one may be authored by a
+ * stranger to the act, and this does not belong on an act-to-act channel.
+ */
+export const requestListingCorrectionForm = form(
+	z.object({
+		slug: z.string().min(1),
+		eventId: z.string().min(1),
+		body: z.string().trim().min(1, 'Say what needs changing').max(2000)
+	}),
+	async (data, issue) => {
+		const { group: band, user: actor } = await requireGroupRole({ slug: data.slug }, 'admin');
+
+		// Being credited is the whole authorization: an act may ask about a bill
+		// it is on and about no other.
+		if (!(await isCreditedOn(data.eventId, band.id))) error(404, 'Event not found');
+
+		const evt = await getById(data.eventId);
+		if (!evt) error(404, 'Event not found');
+
+		const thread = await startPortalConversation({
+			userId: actor.id,
+			userName: actor.name,
+			userEmail: actor.email,
+			subject: `Correction requested: ${evt.title} (${formatDate(evt.startsAt)})`,
+			// The listing is named in the body as well as the subject, because the
+			// staff queue shows a preview and not a subject line.
+			body: `${band.name} is on the bill for ${evt.title} on ${formatDate(evt.startsAt)} and asked for a correction.\n\n${data.body}`
+		});
+
+		// `startPortalConversation` returns null at the open-thread cap, which is
+		// a field issue rather than an error page: they have somewhere to go.
+		if (!thread) {
+			invalid(
+				issue.body(
+					'You have too many open conversations with staff. Close one and try again, or reply on the one that covers this.'
+				)
+			);
+		}
+
+		return { success: true, threadId: thread.threadId };
 	}
 );
 
