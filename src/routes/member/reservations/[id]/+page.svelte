@@ -1,23 +1,22 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { formatDateLong, formatDollars, formatTime } from '$lib/utils/format';
+	import { formatDollars } from '$lib/utils/format';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { getReservationDetail } from '$lib/remote/reservations.remote';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import { EntityIdentity, EntityChip } from '$lib/components/ui/entity';
 	import { CancelReservationAction, ConfirmWaitlistedAction } from '$lib/components/actions';
 
 	let data = $derived(await getReservationDetail(page.params.id!));
 
 	const res = $derived(data.reservation);
-	const durationHours = $derived(data.durationHours);
 	const isPast = $derived(res.startsAt.getTime() <= Date.now());
 
 	const refresh = () => getReservationDetail(page.params.id!).refresh();
@@ -25,70 +24,67 @@
 
 <PageHeader width="md" title="Your Reservation" backHref="/member/reservations" />
 <PageContent width="md">
-	<!-- Whose booking this is, when it is not simply the member's own. A band
-	     booking looked identical to a personal one on this page. -->
-	{#if data.band}
-		<Card>
-			<CardBody>
-				<EntityIdentity ref={data.band} size="md" />
-			</CardBody>
-		</Card>
-	{/if}
+	<!--
+		The detail-page shape ui-patterns names: `EntityIdentity size="lg"` over a
+		`DefinitionList`. This was a hand-written hgroup and loose `<p>`s, with
+		`toReservationRef` already available and unused (#1061).
+	-->
+	<EntityIdentity ref={data.ref} size="lg" status />
 
-	<Card>
-		<CardBody>
-			<header class="flex items-start justify-between gap-2">
-				<hgroup>
-					<p class="font-medium">{formatDateLong(res.startsAt)}</p>
-					<p class="text-muted">
-						{formatTime(res.startsAt)}–{formatTime(res.endsAt)} · {durationHours} hour{durationHours ===
-						1
-							? ''
-							: 's'}
-					</p>
-				</hgroup>
-				<StatusBadge status={res.status} label />
-			</header>
-			{#if res.notes}
-				<p class="mt-2 text-muted">{res.notes}</p>
-			{/if}
-		</CardBody>
-	</Card>
+	<!-- No When/Time facts: `toReservationRef` builds the title out of exactly
+	     those, and the identity above already reads "Mon, Sep 21 · 6:00–8:00 PM
+	     / 2 hours". Restating them is the duplication #1043 removed from the
+	     card. -->
+	<DefinitionList>
+		{#if data.band}
+			<!-- Whose booking this is, when it is not simply the member's own. A
+			     band booking looked identical to a personal one on this page. -->
+			<Fact label="Booked for"><EntityChip ref={data.band} /></Fact>
+		{/if}
+		{#if res.notes}
+			<Fact label="Notes">{res.notes}</Fact>
+		{/if}
+	</DefinitionList>
 
 	{#if res.status === 'confirmed'}
-		<InfoCard title="Door Code">
-			{#if res.lockCode && res.lockSyncedAt}
+		<!-- A card only when there is a code to frame. Four of the five branches
+		     were a single paragraph inside an `InfoCard` titled "Door Code",
+		     which is a box around one sentence (#1061). -->
+		{#if res.lockCode && res.lockSyncedAt}
+			<InfoCard title="Door Code">
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
 				<p class="text-muted">
 					Enter this code on the door keypad to get in. It works for the length of your reservation.
 				</p>
-			{:else if data.fallbackCode}
-				<!-- Their own code has not reached the lock, and they are due in
-				     now. The break-glass code was synced long ago, so it opens the
-				     door even while the lock is offline. -->
+			</InfoCard>
+		{:else if data.fallbackCode}
+			<!-- Their own code has not reached the lock, and they are due in now.
+			     The break-glass code was synced long ago, so it opens the door
+			     even while the lock is offline. -->
+			<InfoCard title="Door Code">
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{data.fallbackCode}</p>
 				<p class="text-muted">
 					We couldn't confirm your usual code reached the door, so this one will get you in for now.
 					Staff know about it. If it doesn't work, call us rather than waiting outside.
 				</p>
-			{:else if data.inAccessWindow}
-				<!-- Their session is running and nothing here opens the door: no
-				     break-glass code is confirmed on the lock right now, which
-				     happens mid-rotation. Standing outside is the failure mode. -->
-				<p class="text-muted">
-					Your code hasn't reached the door and we don't have a backup to give you right now. Don't
-					wait outside — <a class="link" href={resolve('/contact')}>get in touch</a> and someone will
-					let you in.
-				</p>
-			{:else if res.lockCode}
-				<p class="text-muted">
-					Your code is issued but the door hasn't confirmed it yet. It should be ready before your
-					session — check back here, and get in touch if it still isn't showing.
-				</p>
-			{:else}
-				<p class="text-muted">Your door code will appear here before your reservation.</p>
-			{/if}
-		</InfoCard>
+			</InfoCard>
+		{:else if data.inAccessWindow}
+			<!-- Their session is running and nothing here opens the door: no
+			     break-glass code is confirmed on the lock right now, which happens
+			     mid-rotation. Standing outside is the failure mode. -->
+			<Alert type="error">
+				Your code hasn't reached the door and we don't have a backup to give you right now. Don't
+				wait outside — <a class="link" href={resolve('/contact')}>get in touch</a> and someone will let
+				you in.
+			</Alert>
+		{:else if res.lockCode}
+			<p class="text-muted">
+				Your door code is issued but the door hasn't confirmed it yet. It should be ready before
+				your session — check back here, and get in touch if it still isn't showing.
+			</p>
+		{:else}
+			<p class="text-muted">Your door code will appear here before your reservation.</p>
+		{/if}
 	{/if}
 
 	{#if res.status === 'scheduled'}
