@@ -719,6 +719,18 @@ export const creditSourceLabels: Record<string, string> = {
  */
 export const DOOR_SPLIT_ACTS_PERCENT = 70;
 
+/**
+ * The volunteer role that owns a show on the night.
+ *
+ * A host is a **shift**, not a column and not a standing position: the
+ * producer books the advance, and on the night either works it themselves or
+ * hands it over. Modelling it as a work order means claiming, confirming,
+ * check-in and hours all already work, and "who is running this show tonight"
+ * is answered by a `volunteer_signup` (#932). Matched by name, which
+ * `volunteer_role.name` makes unique.
+ */
+export const HOST_VOLUNTEER_ROLE = 'Show Host';
+
 export const inboxChannels = [
 	'email',
 	'sms',

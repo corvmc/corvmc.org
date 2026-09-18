@@ -20,6 +20,7 @@ import {
 	setSlotTerms,
 	buildSlotsFromLineup
 } from '$lib/server/production/run-of-show-service';
+import { openHostShift as openHost } from '$lib/server/production/host-service';
 import {
 	requestArtifact,
 	cancelArtifactRequest
@@ -209,6 +210,26 @@ export const recordDoorTake = form(
 		}
 	}
 );
+
+/**
+ * Open the host shift for a show.
+ *
+ * It creates the work order and stops — it does not put anybody on it. A host
+ * is claimed through the volunteering pipeline like any other shift, which is
+ * the whole reason for modelling it as one: the producer cannot assign
+ * somebody their night from here, and a host who takes it gets the claim, the
+ * confirmation and the hours that follow (#932).
+ */
+export const openHostShift = form(z.object({ eventId: z.string().min(1) }), async (data) => {
+	await requireCapability('event.manage');
+	try {
+		await openHost(data.eventId);
+		await getStaffEventProduction(data.eventId).refresh();
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
 
 export const advanceProduction = form(
 	z.object({

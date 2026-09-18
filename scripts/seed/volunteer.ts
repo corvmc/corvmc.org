@@ -44,6 +44,15 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		marketRateCents: 6500
 	},
 	{
+		name: 'Show Host',
+		group: 'at-shows' as const,
+		description:
+			'Own the night. The running order, the crew and the door are yours from load-in to load-out.\n\nThe producer books the show; the host runs it. Often the same person, and the point of the role is that it does not have to be.',
+		displayOrder: 5,
+		defaultDurationMinutes: 300,
+		defaultCapacity: 1
+	},
+	{
 		name: 'Event Setup',
 		group: 'at-shows' as const,
 		description:
