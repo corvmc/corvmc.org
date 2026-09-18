@@ -3060,6 +3060,17 @@ export async function listPublicUpcomingEvents(
 	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
 }
 
+/** How many the guide has in total, so its pager can say what is left (#1059). */
+export async function countPublicUpcomingEvents(from: Date): Promise<number> {
+	const [row] = await db
+		.select({ n: count() })
+		.from(eventListing)
+		.where(
+			and(inArray(eventListing.status, [...publicEventStatuses]), gte(eventListing.startsAt, from))
+		);
+	return Number(row?.n ?? 0);
+}
+
 /**
  * Give a credit with no directory entry one, so the act can be asked for a
  * rider.

@@ -34,6 +34,7 @@
 	const hasMore = $derived(
 		extraFor === from && extraHasMore !== null ? extraHasMore : guide.hasMore
 	);
+	const remaining = $derived(Math.max(0, guide.total - allEvents.length));
 
 	async function showMore() {
 		loadingMore = true;
@@ -125,8 +126,10 @@
 				<GigList events={allEvents} />
 				{#if hasMore}
 					<div class="mt-8 text-center">
+						<!-- Says what is left, like the directory's pager: a bare "Show
+						     more" cannot tell two remaining from two hundred (#1059). -->
 						<Button type="button" variant="ghost" disabled={loadingMore} onclick={showMore}>
-							{loadingMore ? 'Loading…' : 'Show more'}
+							{loadingMore ? 'Loading…' : `Show more (${remaining} left)`}
 						</Button>
 					</div>
 				{/if}

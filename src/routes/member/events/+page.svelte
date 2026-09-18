@@ -3,6 +3,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import PosterCard from '$lib/components/events/PosterCard.svelte';
+	import GigList from '$lib/components/events/GigList.svelte';
 	import TicketStub from '$lib/components/events/TicketStub.svelte';
 	import TicketQRModal from '$lib/components/events/TicketQRModal.svelte';
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
@@ -12,6 +13,7 @@
 	import { getMemberEventsPage } from '$lib/remote/events.remote';
 	import MyListingsSection from './MyListingsSection.svelte';
 	import { resolve } from '$app/paths';
+	import type { CalendarEntry } from '$lib/types/calendar';
 
 	interface EventItem {
 		id: string;
@@ -25,6 +27,9 @@
 		ticketPrice: number | null;
 		externalTicketUrl: string | null;
 		posterUrl: string | null;
+		location: string | null;
+		source: string;
+		status: string;
 	}
 
 	const pageData = $derived(await getMemberEventsPage());
@@ -71,6 +76,28 @@
 					return e.tags.split(',').some((t) => t.trim() === activeFilter);
 				})
 			: upcoming
+	);
+	/**
+	 * `filteredEvents` as `GigList` wants them. `listUpcoming` is published CMC
+	 * shows with no band credit, so the byline is off and those fields are the
+	 * constants the query already guarantees.
+	 */
+	const gigRows: CalendarEntry[] = $derived(
+		filteredEvents.map((e) => ({
+			id: e.id,
+			title: e.title,
+			startsAt: e.startsAt,
+			endsAt: e.endsAt,
+			source: e.source,
+			status: e.status,
+			location: e.location,
+			bandName: null,
+			bandSlug: null,
+			posterUrl: e.posterUrl,
+			ticketingEnabled: e.ticketingEnabled,
+			ticketPrice: e.ticketPrice,
+			externalTicketUrl: e.externalTicketUrl
+		}))
 	);
 
 	function primaryTag(tags: string | null | undefined): string | undefined {
@@ -141,8 +168,12 @@
 				<p class="text-base">No upcoming events right now. Check back soon!</p>
 			</div>
 		{:else}
+			<!-- Three posters over the dense reader, the pairing `/events` uses.
+			     The member saw the same shows through a flat run of ~490px cards —
+			     one per screen-and-a-half on a phone — with the date as 11px text
+			     under each title and no grouping at all (#1055). -->
 			<div class="pgrid">
-				{#each filteredEvents as evt (evt.id)}
+				{#each filteredEvents.slice(0, 3) as evt (evt.id)}
 					<PosterCard
 						href="/member/events/{evt.id}"
 						title={evt.title}
@@ -158,6 +189,10 @@
 						class="w-full"
 					/>
 				{/each}
+			</div>
+
+			<div class="mt-8">
+				<GigList events={gigRows} eventBase="/member/events" bandBase="/member/directory/bands" />
 			</div>
 		{/if}
 	</section>
