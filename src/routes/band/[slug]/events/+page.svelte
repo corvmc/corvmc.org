@@ -6,6 +6,9 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import BadgeList from '$lib/components/ui/BadgeList.svelte';
+	import { rowLink } from '$lib/actions/row-link';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -34,12 +37,9 @@
 
 	let importing = $state(false);
 
-	/** Other acts on the bill, for the "w/" byline. */
-	function supportNames(lineup: { name: string; bandId: string | null }[]): string {
-		return lineup
-			.filter((l) => l.bandId !== band.id)
-			.map((l) => l.name)
-			.join(', ');
+	/** Other acts on the bill. Clamped by `BadgeList`: a five-act bill was a paragraph. */
+	function supportNames(lineup: { name: string; bandId: string | null }[]): string[] {
+		return lineup.filter((l) => l.bandId !== band.id).map((l) => l.name);
 	}
 </script>
 
@@ -148,35 +148,48 @@
 			{/if}
 		</EmptyState>
 	{:else}
-		<div class="space-y-3">
+		<!--
+			A table: zero always-visible actions and no prose, which is none of the
+			four tests a card has to pass. The two conditional facts — location and
+			the rest of the bill — set the card's height, so the stack went ragged
+			between events that had both, one or neither (#1048).
+		-->
+		<Table>
+			{#snippet head()}
+				<th class="w-px"><span class="sr-only">Status</span></th>
+				<th class="cell-primary">Event</th>
+				<th class="col-support">Where</th>
+				<th class="col-extra">On the bill</th>
+			{/snippet}
+
 			{#each events as evt (evt.id)}
-				<a
-					href={resolve(`/band/${band.slug}/events/${evt.id}`)}
-					class="card block bg-base-100 shadow-sm card-interactive"
+				<tr
+					class="hover cursor-pointer"
+					use:rowLink={resolve(`/band/${band.slug}/events/${evt.id}`)}
 				>
-					<CardBody row class="py-4">
-						<div>
-							<p class="font-medium">{evt.title}</p>
-							<p class="text-muted">
-								{formatDate(evt.startsAt)} &middot; {formatEventTimeRange(evt.startsAt, evt.endsAt)}
-							</p>
-							{#if evt.location}
-								<p class="text-subtle">{evt.location}</p>
-							{/if}
-							{#if supportNames(evt.lineup)}
-								<p class="text-subtle">w/ {supportNames(evt.lineup)}</p>
-							{/if}
+					<td class="w-px whitespace-nowrap">
+						<StatusBadge status={evt.status} />
+						{#if !evt.isOwner}
+							<Badge variant="ghost" size="xs">guest</Badge>
+						{/if}
+					</td>
+					<td class="cell-primary">
+						<div class="truncate font-medium">{evt.title}</div>
+						<div class="text-subtle">
+							{formatDate(evt.startsAt)} &middot; {formatEventTimeRange(evt.startsAt, evt.endsAt)}
 						</div>
-						<div class="flex shrink-0 items-center gap-2">
-							{#if !evt.isOwner}
-								<Badge variant="ghost">guest</Badge>
-							{/if}
-							<StatusBadge status={evt.status} />
-						</div>
-					</CardBody>
-				</a>
+					</td>
+					<td class="col-support truncate">{evt.location ?? '—'}</td>
+					<td class="col-extra">
+						{#if supportNames(evt.lineup).length}
+							<BadgeList items={supportNames(evt.lineup)} max={2} />
+						{:else}
+							<span class="text-subtle">—</span>
+						{/if}
+					</td>
+				</tr>
 			{/each}
-		</div>
+		</Table>
 	{/if}
 </PageContent>
 
