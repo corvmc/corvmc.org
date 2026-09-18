@@ -11,6 +11,7 @@
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import { EntityChip } from '$lib/components/ui/entity';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { formatDateTime } from '$lib/utils/format';
@@ -91,8 +92,19 @@
 				: ''}.
 		</Alert>
 	{:else if isGear && !isMerged && (s.status === 'planned' || s.status === 'in_progress')}
-		<Alert type="info" href="{resolve('/staff/inventory/intake')}?suggestion={s.id}">
+		<Alert type="info">
 			Got it in? Record the arrival and this closes itself — the member who asked hears about it.
+			<!-- The action, not the alert's own `href`: that prop is a
+			     `ResolvedPathname` and a query string is not one. -->
+			{#snippet action()}
+				<Button
+					href="{resolve('/staff/inventory/intake')}?suggestion={s.id}"
+					variant="ghost"
+					size="sm"
+				>
+					Record the arrival
+				</Button>
+			{/snippet}
 		</Alert>
 	{/if}
 
