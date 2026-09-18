@@ -103,7 +103,7 @@
 </PageHeader>
 
 <PageContent width="5xl">
-	<div class="grid gap-6 lg:grid-cols-2">
+	<div class="grid items-start gap-6 lg:grid-cols-2">
 		<div class="flex flex-col gap-6">
 			{#if pageData.unloggedShifts.length > 0}
 				<!--
@@ -111,7 +111,13 @@
 					is genuinely owed: they did the work, and the record does not exist
 					until they say what it was.
 				-->
-				<InfoCard title="Hours to log" class="border-l-4 border-warning">
+				<InfoCard
+					title="Hours to log"
+					state={pageData.unloggedShifts.length}
+					class="border-l-4 border-warning"
+				>
+					<!-- Once, not on every row: it was the same sentence under each. -->
+					<p class="text-subtle text-sm">Add what you did to file it.</p>
 					<ul class="flex flex-col gap-3">
 						{#each pageData.unloggedShifts as owed (owed.signupId)}
 							<li class="flex flex-wrap items-center justify-between gap-2">
@@ -124,7 +130,6 @@
 											No time was booked for this — say how long it took.
 										{/if}
 									</div>
-									<div class="text-subtle text-xs">Add what you did to file it.</div>
 								</div>
 								<LogHoursAction
 									mode="shift"
@@ -146,14 +151,14 @@
 				</InfoCard>
 			{/if}
 
-			<InfoCard title="Your shifts">
+			<InfoCard title="Your shifts" state={liveShifts.length}>
 				{#if liveShifts.length === 0}
 					<EmptyState
 						title="You're not on any shifts"
 						description="Claim one from the list beside this."
 					/>
 				{:else}
-					<ul class="flex flex-col gap-3">
+					<ul class="divide-y divide-base-300">
 						{#each liveShifts as shift (shift.signupId)}
 							<li><MyShiftCard {shift} /></li>
 						{/each}
@@ -197,10 +202,15 @@
 			</InfoCard>
 		</div>
 
-		<!-- Above the board: an invitation is addressed to this member, where the
-		     board is addressed to everybody. -->
-		<ShiftInvitations invitations={pageData.invitations} />
+		<!-- Its own column, like the left one. As two bare grid items these landed
+		     in different rows, so the board started at the bottom of whatever the
+		     left column's height happened to be. -->
+		<div class="flex flex-col gap-6">
+			<!-- Above the board: an invitation is addressed to this member, where
+			     the board is addressed to everybody. -->
+			<ShiftInvitations invitations={pageData.invitations} />
 
-		<OpenShifts shifts={pageData.openShifts} hasInterests={pageData.interests.length > 0} />
+			<OpenShifts shifts={pageData.openShifts} hasInterests={pageData.interests.length > 0} />
+		</div>
 	</div>
 </PageContent>

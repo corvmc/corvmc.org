@@ -10,14 +10,13 @@ import ShiftProgress from './ShiftProgress.svelte';
 const text = () => document.body.textContent ?? '';
 
 describe('ShiftProgress', () => {
-	it('lights only Claimed while staff have not confirmed', async () => {
+	it('says it in words, not twice, while staff have not confirmed', async () => {
 		await render(ShiftProgress, { status: 'claimed' });
 
-		expect(text()).toContain('Claimed');
+		// The rail said "Booked" unlit and the sentence then said the same thing
+		// — two rows for one bit of state in a 480px column (#1044).
 		expect(text()).toContain('Awaiting staff confirmation.');
-		// Booked is present as the next step, but not reached.
-		const booked = [...document.querySelectorAll('span')].find((s) => s.textContent === 'Booked')!;
-		expect(booked.className).not.toContain('font-bold');
+		expect(text()).not.toContain('Claimed');
 	});
 
 	it('lights Booked once the claim is confirmed', async () => {
@@ -35,9 +34,13 @@ describe('ShiftProgress', () => {
 		expect(text()).toContain('Worked.');
 	});
 
-	it('puts the shift notes before the reminder line', async () => {
+	it('gives the shift notes their own line', async () => {
 		await render(ShiftProgress, { status: 'confirmed', notes: 'Bring a torch.' });
 
-		expect(text()).toContain('Bring a torch. Reminder lands the day before.');
+		// Spliced in front of the fixed copy, an unbounded note and the
+		// boilerplate ran together into one paragraph (#1044).
+		expect(text()).toContain('Reminder lands the day before.');
+		expect(text()).toContain('Bring a torch.');
+		expect(text()).not.toContain('Bring a torch. Reminder');
 	});
 });
