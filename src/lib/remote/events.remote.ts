@@ -5,6 +5,8 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
 import { getEventRiderSummaries } from '$lib/server/band/rider-service';
+import { getBillInputList } from '$lib/server/band/bill-input-list-service';
+import { config } from '$lib/server/site-config/site-config-service';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
@@ -1223,6 +1225,24 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		requestableActs,
 		hostShift
 	};
+});
+
+/**
+ * The night's input list, numbered straight through the bill.
+ *
+ * Its own query rather than a field on `getStaffEventProduction`: this backs a
+ * print page nobody opens while advancing, and the console page already awaits
+ * thirteen things.
+ */
+export const getEventInputList = query(z.string(), async (id) => {
+	await requireCapability('event.read');
+	const [evt, consoleChannels] = await Promise.all([
+		getById(id),
+		config<number>('venue.consoleChannels')
+	]);
+	if (!evt) throw error(404, 'Event not found');
+	const list = await getBillInputList(id, Number(consoleChannels) || 0);
+	return { title: evt.title, startsAt: evt.startsAt, ...list };
 });
 
 export const getEventRecurringSeries = query(z.string(), async (eventId) => {

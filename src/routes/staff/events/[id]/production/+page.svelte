@@ -1193,6 +1193,13 @@
 							</li>
 						{/each}
 					</ul>
+					<!-- The check no per-act sheet can run: the desk has one channel
+					     count and it is the show that has to fit it (#818). -->
+					<div class="mt-2 border-t border-base-300 pt-2">
+						<Button href={resolve('/staff/events/[id]/inputs', { id })} variant="ghost" size="sm">
+							Input list for the whole bill
+						</Button>
+					</div>
 				</InfoCard>
 			{/if}
 
