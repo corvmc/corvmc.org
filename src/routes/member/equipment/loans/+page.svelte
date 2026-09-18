@@ -66,7 +66,10 @@
 					<tr class="hover">
 						<td class="w-px whitespace-nowrap"><StatusBadge status={loan.status} label /></td>
 						<td class="cell-primary">
-							<span class="font-medium">{loan.equipmentName ?? 'Free-form Request'}</span>
+							<!-- `loan.ref`, not a second fallback written by hand: `listLoans`
+							     already computes the title and said "(free-form request)"
+							     where this said "Free-form Request" (#1035). -->
+							<span class="font-medium">{loan.ref.title}</span>
 							{#if loan.quantity > 1}
 								<span class="text-subtle">&times;{loan.quantity}</span>
 							{/if}
@@ -132,7 +135,7 @@
 			{#each data.past.rows as loan (loan.id)}
 				<tr class="hover">
 					<td class="w-px whitespace-nowrap"><StatusBadge status={loan.status} label /></td>
-					<td class="cell-primary truncate">{loan.equipmentName ?? 'Free-form Request'}</td>
+					<td class="cell-primary truncate">{loan.ref.title}</td>
 					<td class="col-support whitespace-nowrap">
 						{loan.returnedAt ? formatDate(loan.returnedAt) : '—'}
 					</td>
