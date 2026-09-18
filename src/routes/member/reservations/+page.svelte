@@ -23,6 +23,8 @@
 	import { Tabs } from 'bits-ui';
 	import clsx from 'clsx';
 	import { formatMonthDayYear, formatTimeRange } from '$lib/utils/format';
+	import { groupReservationsByMonth } from '$lib/utils/reservation-groups';
+	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 
 	let activeTab = $state<'active' | 'all'>('active');
 
@@ -217,16 +219,24 @@
 								{/if}
 							</p>
 						{/if}
-						<div class="card-grid">
-							{#each shown as reservation (reservation.id)}
-								<ReservationCard {reservation} onchange={refreshReservations} />
-							{:else}
-								<EmptyState
-									message="No reservations yet. Use Reserve Space above to book your first practice slot."
-									class="col-span-full"
-								/>
-							{/each}
-						</div>
+						{#if shown.length === 0}
+							<EmptyState
+								message="No reservations yet. Use Reserve Space above to book your first practice slot."
+							/>
+						{/if}
+						<!-- A month header every dozen-or-so rows. Two years of fortnightly
+						     bookings is 53 rows that look alike, and scrolling was the only
+						     way back to one of them (#904). -->
+						{#each groupReservationsByMonth(shown) as [month, rows] (month + rows[0].id)}
+							<section class="mb-6">
+								<SectionLabel label={month} count={rows.length} />
+								<div class="card-grid">
+									{#each rows as reservation (reservation.id)}
+										<ReservationCard {reservation} onchange={refreshReservations} />
+									{/each}
+								</div>
+							</section>
+						{/each}
 						{#if shown.length < history.length}
 							<div class="mt-3 flex justify-center">
 								<Button variant="ghost" size="sm" onclick={() => (showAllHistory = true)}>
