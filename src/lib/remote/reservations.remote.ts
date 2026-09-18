@@ -424,7 +424,18 @@ export const getBandReservationDetail = query(
 			canCancel:
 				(bandAdmin || isBooker) &&
 				res.startsAt.getTime() > Date.now() &&
-				(res.status === 'scheduled' || res.status === 'confirmed')
+				(res.status === 'scheduled' || res.status === 'confirmed'),
+			// The member checkout takes this row — it authorizes on
+			// `createdByUserId`, and a band booking is in its booker's own list —
+			// so the booker gets the link the member page has. The condition is
+			// `getReservationPayment`'s own, restated rather than re-derived:
+			// awaiting confirmation, or confirmed with a balance still owed.
+			canPay:
+				isBooker &&
+				(res.status === 'scheduled' ||
+					(res.status === 'confirmed' &&
+						!res.paidAt &&
+						(res.cashDueCents == null || res.cashDueCents > 0)))
 		};
 	}
 );

@@ -1,15 +1,16 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
 	import Form from '$lib/components/ui/Form';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
-	import { formatDateLong, formatTimeRange, formatDollars } from '$lib/utils/format';
+	import { formatDollars } from '$lib/utils/format';
 	import { cancelBandReservation, getBandReservationDetail } from '$lib/remote/reservations.remote';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -32,100 +33,103 @@
 
 <PageHeader width="md" title="Session" backHref="/band/{slug}/reservations" />
 <PageContent width="md">
-	<Card>
-		<CardBody>
-			<header class="flex items-start justify-between gap-2">
-				<hgroup>
-					<p class="font-medium">{formatDateLong(res.startsAt)}</p>
-					<p class="text-muted">
-						{formatTimeRange(res.startsAt, res.endsAt)} · {durationLabel}
-					</p>
-				</hgroup>
-				<StatusBadge status={res.status} label />
-			</header>
-			{#if res.bookedBy.id}
-				<p class="mt-2 flex items-center gap-1 text-muted">
-					Booked by <EntityChip ref={res.bookedBy} />
-				</p>
-			{/if}
-			{#if res.notes}
-				<p class="mt-2 text-muted">{res.notes}</p>
-			{/if}
-		</CardBody>
-	</Card>
+	<!--
+		The shape #1061 settled on the member's twin of this page: the ref the
+		query already built, rendered once, over a `DefinitionList`. This was an
+		`hgroup` of `formatDateLong` and `formatTimeRange` inside a `Card`, with
+		`res.ref` unused (#1077).
+	-->
+	<EntityIdentity ref={res.ref} size="lg" status />
 
-	{#if res.status === 'cancelled'}
-		<InfoCard title="Cancelled">
-			<p class="text-muted">{res.cancellationReason ?? 'No reason was recorded.'}</p>
-		</InfoCard>
+	<!-- No When/Time facts: `toReservationRef` builds the title out of exactly
+	     those, so the identity above already reads them out. -->
+	<DefinitionList>
+		{#if res.bookedBy.id}
+			<Fact label="Booked by"><EntityChip ref={res.bookedBy} /></Fact>
+		{/if}
+		{#if res.status === 'cancelled'}
+			<Fact label="Cancelled" wrap>{res.cancellationReason ?? 'No reason was recorded.'}</Fact>
+		{/if}
+		{#if res.notes}
+			<Fact label="Notes" wrap>{res.notes}</Fact>
+		{/if}
+		<Fact label="Rate">${formatDollars(res.hourlyRateCents)}/hour · {durationLabel}</Fact>
+		{#if res.creditsUsed}
+			<Fact label="Free hours applied">{res.creditsUsed}</Fact>
+		{/if}
+		<Fact label="Total" class="font-medium">${formatDollars(res.totalCents)}</Fact>
+	</DefinitionList>
+
+	<!-- Where the money stands, in a sentence. A three-row grid and one line of
+	     prose is not a section; it was an `InfoCard` titled "Payment" around a
+	     hand-written `<dl>` (#1077). -->
+	<p>
+		{#if res.refundedAt}
+			Refunded.
+		{:else if res.paidAt}
+			Paid in full.
+		{:else if res.cashDueCents === 0}
+			Settled — nothing owed at the door.
+		{:else if cashDue > 0}
+			<span class="font-medium">${formatDollars(cashDue)} due at the door.</span>
+		{:else}
+			Not yet paid.
+		{/if}
+	</p>
+
+	{#if res.canPay}
+		<!-- The checkout takes this row: it authorizes on `createdByUserId`, and a
+		     band booking appears in its booker's own list. Only the booker saw
+		     what was owed and no way to settle it (#1077). -->
+		<Button href="/member/reservations/{res.id}/pay" variant="primary" class="w-full">
+			Pay for this session
+		</Button>
+	{:else if !res.isBooker && !res.paidAt && !res.refundedAt}
+		<!-- Whoever booked pays, from their own reservation page; the act sees
+		     what it owes without being handed someone else's checkout. -->
+		<p class="text-subtle">{res.bookedBy.title} booked this session and can settle it.</p>
 	{/if}
 
-	<InfoCard title="Payment">
-		<dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-			<dt class="text-muted">Session rate</dt>
-			<dd class="text-right">
-				${formatDollars(res.hourlyRateCents)}/hour · {durationLabel}
-			</dd>
-			<dt class="text-muted">Total</dt>
-			<dd class="text-right font-medium">${formatDollars(res.totalCents)}</dd>
-			{#if res.creditsUsed}
-				<dt class="text-muted">Free hours applied</dt>
-				<dd class="text-right">{res.creditsUsed}</dd>
-			{/if}
-		</dl>
-		<p class="mt-2">
-			{#if res.refundedAt}
-				Refunded.
-			{:else if res.paidAt}
-				Paid in full.
-			{:else if res.cashDueCents === 0}
-				Settled — nothing owed at the door.
-			{:else if cashDue > 0}
-				<span class="font-medium">${formatDollars(cashDue)} due at the door.</span>
-			{:else}
-				Not yet paid.
-			{/if}
-		</p>
-		{#if !res.isBooker}
-			<!-- Whoever booked pays, from their own reservation page; the act sees
-			     what it owes without being handed someone else's checkout. -->
-			<p class="text-subtle">{res.bookedBy.title} booked this session and can settle it.</p>
-		{/if}
-	</InfoCard>
-
 	{#if res.status === 'confirmed'}
-		<InfoCard title="Door Code">
-			{#if res.lockCode && res.lockSyncedAt}
+		<!-- A card only when there is a code to frame. Four of the five branches
+		     were a single paragraph inside an `InfoCard` titled "Door Code",
+		     which is a box around one sentence (#1061, #1077). -->
+		{#if res.lockCode && res.lockSyncedAt}
+			<InfoCard title="Door Code">
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
 				<p class="text-muted">
 					Enter this code on the door keypad. It works for the length of the session, for whoever on
 					the act gets there first.
 				</p>
-			{:else if res.fallbackCode}
-				<!-- The session's own code has not reached the lock. The break-glass
-				     code was synced long ago, so it opens the door even now, and it
-				     is shown rather than asked for — see #780. -->
+			</InfoCard>
+		{:else if res.fallbackCode}
+			<!-- The session's own code has not reached the lock. The break-glass
+			     code was synced long ago, so it opens the door even now, and it
+			     is shown rather than asked for — see #780. -->
+			<InfoCard title="Door Code">
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.fallbackCode}</p>
 				<p class="text-muted">
 					We couldn't confirm this session's usual code reached the door, so this one will get the
 					act in for now. Staff know about it. If it doesn't work, call us rather than waiting
 					outside.
 				</p>
-			{:else if res.inAccessWindow}
-				<p class="text-muted">
-					This session's code hasn't reached the door and we don't have a backup to give you right
-					now. Don't wait outside — <a class="link" href={resolve('/contact')}>get in touch</a> and someone
-					will let the act in.
-				</p>
-			{:else if res.lockCode}
-				<p class="text-muted">
-					The code is issued but the door hasn't confirmed it yet. It should be ready before the
-					session — check back here, and get in touch if it still isn't showing.
-				</p>
-			{:else}
-				<p class="text-muted">The door code appears here on the day of the session.</p>
-			{/if}
-		</InfoCard>
+			</InfoCard>
+		{:else if res.inAccessWindow}
+			<!-- The session is running and nothing here opens the door. Standing
+			     outside is the failure mode, so this one is loud. -->
+			<Alert type="error">
+				This session's code hasn't reached the door and we don't have a backup to give you right
+				now. Don't wait outside — <a class="link" href={resolve('/contact')}>get in touch</a> and someone
+				will let the act in.
+			</Alert>
+		{:else if res.lockCode}
+			<p class="text-muted">
+				The code is issued but the door hasn't confirmed it yet. It should be ready before the
+				session — check back here, and get in touch if it still isn't showing.
+			</p>
+		{:else}
+			<p class="text-muted">The door code appears here on the day of the session.</p>
+		{/if}
 	{/if}
 
 	{#if res.canCancel}
