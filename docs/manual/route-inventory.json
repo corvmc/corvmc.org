@@ -396,6 +396,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/events/[id]/inputs",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/events/[id]/production",
 		"panel": "staff"
 	},
