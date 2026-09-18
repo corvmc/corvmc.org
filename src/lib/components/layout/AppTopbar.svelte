@@ -44,7 +44,11 @@
 	const messagesHref = $derived.by(() => {
 		if (activePanel === 'staff') return '/staff/inbox';
 		const band = bandPanels.find((b) => b.key === activePanel);
-		return band ? `${band.href}/messages` : MESSAGES_HREF;
+		// The band's **chat**, not its enquiries: chat is every active member's,
+		// enquiries are owner-and-admin only. The topbar has no role to check, so
+		// it offers the one every member can open — a plain bandmate was being
+		// handed a link to a page that refuses them (#1250).
+		return band ? `${band.href}/chat` : MESSAGES_HREF;
 	});
 
 	// Nothing in any sidebar lights on the member inbox any more, so the icon
