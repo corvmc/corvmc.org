@@ -1951,6 +1951,14 @@ export const getPublicEventsPage = query(z.string().optional(), async (from) => 
  * listings section owns that query itself instead.
  */
 export const getMemberEventsPage = query(z.void(), async () => {
-	const [events, tickets] = await Promise.all([getMemberEvents(), getMemberTickets()]);
-	return { events, tickets };
+	// The gig guide rides along, as it does on `/events`. A member's events page
+	// listed published CMC shows and nothing else, so a band gig at another
+	// venue was on the public calendar and invisible to the members it is for
+	// (#1025).
+	const [events, tickets, guide] = await Promise.all([
+		getMemberEvents(),
+		getMemberTickets(),
+		getPublicGigGuide({ offset: 0 })
+	]);
+	return { events, tickets, guide };
 });

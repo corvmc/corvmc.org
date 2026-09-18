@@ -11,6 +11,8 @@
 	import ButtonGroup from '$lib/components/ui/ButtonGroup.svelte';
 	import { tagToTapeVariant } from '$lib/utils/tag-colors';
 	import { getMemberEventsPage } from '$lib/remote/events.remote';
+	// Still needed on its own for the lazy "show more" pager, which is not a fan-out.
+	import { getPublicGigGuide } from '$lib/remote/calendar.remote';
 	import MyListingsSection from './MyListingsSection.svelte';
 	import { resolve } from '$app/paths';
 	import type { CalendarEntry } from '$lib/types/calendar';
@@ -37,6 +39,27 @@
 		pageData.events
 	);
 	const tickets = $derived(pageData.tickets);
+	const guide = $derived(pageData.guide);
+
+	// "Show more" appends pages client-side, the same pager `/events` uses.
+	let extra: CalendarEntry[] = $state([]);
+	let extraHasMore = $state<boolean | null>(null);
+	let loadingMore = $state(false);
+
+	const allEvents = $derived([...guide.events, ...extra]);
+	const hasMore = $derived(extraHasMore !== null ? extraHasMore : guide.hasMore);
+	const remaining = $derived(Math.max(0, guide.total - allEvents.length));
+
+	async function showMore() {
+		loadingMore = true;
+		try {
+			const next = await getPublicGigGuide({ offset: allEvents.length });
+			extra = [...extra, ...next.events];
+			extraHasMore = next.hasMore;
+		} finally {
+			loadingMore = false;
+		}
+	}
 
 	const activeTickets = $derived(
 		tickets.filter((t) => t.event && t.event.startsAt > new Date() && t.status !== 'cancelled')
@@ -77,28 +100,6 @@
 				})
 			: upcoming
 	);
-	/**
-	 * `filteredEvents` as `GigList` wants them. `listUpcoming` is published CMC
-	 * shows with no band credit, so the byline is off and those fields are the
-	 * constants the query already guarantees.
-	 */
-	const gigRows: CalendarEntry[] = $derived(
-		filteredEvents.map((e) => ({
-			id: e.id,
-			title: e.title,
-			startsAt: e.startsAt,
-			endsAt: e.endsAt,
-			source: e.source,
-			status: e.status,
-			location: e.location,
-			bandName: null,
-			bandSlug: null,
-			posterUrl: e.posterUrl,
-			ticketingEnabled: e.ticketingEnabled,
-			ticketPrice: e.ticketPrice,
-			externalTicketUrl: e.externalTicketUrl
-		}))
-	);
 
 	function primaryTag(tags: string | null | undefined): string | undefined {
 		if (!tags) return undefined;
@@ -132,46 +133,44 @@
 		</section>
 	{/if}
 
-	<section>
-		<SectionLabel label="Upcoming" count={filteredEvents.length} />
+	<!-- Hidden outright when the Collective has nothing on. An empty-state under
+	     a poster grid said "no upcoming events" while the gig guide below it
+	     listed a dozen (#1025). -->
+	{#if upcoming.length > 0}
+		<section>
+			<SectionLabel label="At the Collective" count={upcoming.length} />
 
-		{#if allTags.length > 1}
-			<div class="mb-4">
-				<ButtonGroup wrap>
-					<Button
-						variant={activeFilter === null ? 'primary' : 'default'}
-						size="sm"
-						class="join-item {activeFilter === null ? 'latched' : ''}"
-						onclick={() => (activeFilter = null)}
-					>
-						All <span class="ml-1 opacity-60">{upcoming.length}</span>
-					</Button>
-					{#each allTags as tag (tag)}
+			{#if allTags.length > 1}
+				<div class="mb-4">
+					<ButtonGroup wrap>
 						<Button
-							variant={activeFilter === tag ? 'primary' : 'default'}
+							variant={activeFilter === null ? 'primary' : 'default'}
 							size="sm"
-							class="join-item {activeFilter === tag ? 'latched' : ''}"
-							onclick={() => (activeFilter = activeFilter === tag ? null : tag)}
+							class="join-item {activeFilter === null ? 'latched' : ''}"
+							onclick={() => (activeFilter = null)}
 						>
-							{tag}
-							<span class="ml-1 opacity-60">
-								{upcoming.filter((e) => e.tags?.split(',').some((t) => t.trim() === tag)).length}
-							</span>
+							All <span class="ml-1 opacity-60">{upcoming.length}</span>
 						</Button>
-					{/each}
-				</ButtonGroup>
-			</div>
-		{/if}
+						{#each allTags as tag (tag)}
+							<Button
+								variant={activeFilter === tag ? 'primary' : 'default'}
+								size="sm"
+								class="join-item {activeFilter === tag ? 'latched' : ''}"
+								onclick={() => (activeFilter = activeFilter === tag ? null : tag)}
+							>
+								{tag}
+								<span class="ml-1 opacity-60">
+									{upcoming.filter((e) => e.tags?.split(',').some((t) => t.trim() === tag)).length}
+								</span>
+							</Button>
+						{/each}
+					</ButtonGroup>
+				</div>
+			{/if}
 
-		{#if filteredEvents.length === 0}
-			<div class="py-8 text-center opacity-60">
-				<p class="text-base">No upcoming events right now. Check back soon!</p>
-			</div>
-		{:else}
-			<!-- Three posters over the dense reader, the pairing `/events` uses.
-			     The member saw the same shows through a flat run of ~490px cards —
-			     one per screen-and-a-half on a phone — with the date as 11px text
-			     under each title and no grouping at all (#1055). -->
+			<!-- Posters over the dense reader, the pairing `/events` uses. The member
+			     saw the same shows through a flat run of ~490px cards — one per
+			     screen-and-a-half on a phone (#1055). -->
 			<div class="pgrid">
 				{#each filteredEvents.slice(0, 3) as evt (evt.id)}
 					<PosterCard
@@ -190,10 +189,26 @@
 					/>
 				{/each}
 			</div>
+		</section>
+	{/if}
 
-			<div class="mt-8">
-				<GigList events={gigRows} eventBase="/member/events" bandBase="/member/directory/bands" />
+	<!-- The same gig guide the public calendar shows, so a member reads one
+	     calendar rather than the subset we happen to produce (#1025). -->
+	<section>
+		<SectionLabel label="Around town" count={guide.total} />
+		{#if allEvents.length === 0}
+			<div class="py-8 text-center opacity-60">
+				<p class="text-base">Nothing on the calendar yet. Check back soon!</p>
 			</div>
+		{:else}
+			<GigList events={allEvents} eventBase="/member/events" bandBase="/member/directory/bands" />
+			{#if hasMore}
+				<div class="mt-8 text-center">
+					<Button type="button" variant="ghost" disabled={loadingMore} onclick={showMore}>
+						{loadingMore ? 'Loading…' : `Show more (${remaining} left)`}
+					</Button>
+				</div>
+			{/if}
 		{/if}
 	</section>
 
