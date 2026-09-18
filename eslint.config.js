@@ -8,6 +8,7 @@ import pageHeaderWidthMatchesContent from './eslint-rules/page-header-width-matc
 import noDeadDaisyuiClasses from './eslint-rules/no-dead-daisyui-classes.js';
 import noDuplicateFieldNames from './eslint-rules/no-duplicate-field-names.js';
 import noDbTransaction from './eslint-rules/no-db-transaction.js';
+import stableCreatedAtOrder from './eslint-rules/stable-created-at-order.js';
 import noConcurrentRemoteQueries from './eslint-rules/no-concurrent-remote-queries.js';
 import refreshTheComposedQuery from './eslint-rules/refresh-the-composed-query.js';
 import noDomainImportsInUi from './eslint-rules/no-domain-imports-in-ui.js';
@@ -41,6 +42,7 @@ const customPlugin = {
 		'page-header-width-matches-content': pageHeaderWidthMatchesContent,
 		'no-dead-daisyui-classes': noDeadDaisyuiClasses,
 		'no-duplicate-field-names': noDuplicateFieldNames,
+		'stable-created-at-order': stableCreatedAtOrder,
 		'no-db-transaction': noDbTransaction,
 		'no-concurrent-remote-queries': noConcurrentRemoteQueries,
 		'refresh-the-composed-query': refreshTheComposedQuery,
@@ -179,7 +181,7 @@ export default defineConfig(
 	{
 		files: ['src/lib/server/**/*.ts'],
 		ignores: ['**/*.spec.ts'],
-		rules: { 'custom/no-db-transaction': 'error' }
+		rules: { 'custom/no-db-transaction': 'error', 'custom/stable-created-at-order': 'error' }
 	},
 	{
 		// components/ui/ is the design system — primitives only, no domain knowledge.

@@ -130,6 +130,7 @@ vi.mock('drizzle-orm', () => ({
 	isNotNull: (a: unknown) => ({ op: 'isNotNull', a }),
 	count: () => ({ op: 'count' }),
 	desc: (a: unknown) => ({ op: 'desc', a }),
+	asc: (a: unknown) => ({ op: 'asc', a }),
 	sql: (strings: TemplateStringsArray, ...v: unknown[]) => ({
 		op: 'sql',
 		text: strings.join('?'),

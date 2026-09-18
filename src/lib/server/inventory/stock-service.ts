@@ -294,7 +294,7 @@ export async function listMovements(opts: ListMovementsOptions = {}) {
 		.select()
 		.from(stockMovement)
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		.orderBy(desc(stockMovement.occurredAt), desc(stockMovement.createdAt))
+		.orderBy(desc(stockMovement.occurredAt), desc(stockMovement.createdAt), desc(stockMovement.id))
 		.limit(opts.limit ?? 100);
 }
 

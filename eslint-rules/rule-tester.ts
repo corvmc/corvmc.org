@@ -22,3 +22,12 @@ export function svelteRuleTester(): RuleTester {
 		languageOptions: { parser: svelteParser, ecmaVersion: 2022, sourceType: 'module' }
 	});
 }
+
+/**
+ * The plain-ESTree tester, for a rule that only ever sees `.ts` files.
+ * Defaults to espree, which is enough for a rule reading call and member
+ * expressions — no TypeScript syntax appears in these fixtures.
+ */
+export function tsRuleTester(): RuleTester {
+	return new RuleTester({ languageOptions: { ecmaVersion: 2022, sourceType: 'module' } });
+}

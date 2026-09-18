@@ -46,7 +46,7 @@ export async function promoteNextWaitlisted(
 				gt(reservation.endsAt, startsAt)
 			)
 		)
-		.orderBy(asc(reservation.createdAt))
+		.orderBy(asc(reservation.createdAt), asc(reservation.id))
 		.limit(1);
 
 	if (candidates.length === 0) {

@@ -182,7 +182,7 @@ export async function listReleasesForBand(groupId: string): Promise<ReleaseSumma
 		})
 		.from(audioRelease)
 		.where(and(eq(audioRelease.groupId, groupId), isNull(audioRelease.deletedAt)))
-		.orderBy(desc(audioRelease.releasedAt), desc(audioRelease.createdAt));
+		.orderBy(desc(audioRelease.releasedAt), desc(audioRelease.createdAt), desc(audioRelease.id));
 
 	const covers = await coverUrlsFor(rows.map((r) => r.id));
 

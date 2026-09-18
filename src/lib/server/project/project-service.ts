@@ -190,7 +190,7 @@ export async function listProjects(
 				opts.unowned ? isNull(project.groupId) : undefined
 			)
 		)
-		.orderBy(desc(project.createdAt));
+		.orderBy(desc(project.createdAt), desc(project.id));
 }
 
 /**
@@ -435,12 +435,12 @@ export async function listProjectAttachments(projectId: string) {
 			.select()
 			.from(contractorJob)
 			.where(eq(contractorJob.projectId, projectId))
-			.orderBy(desc(contractorJob.createdAt)),
+			.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id)),
 		db
 			.select()
 			.from(purchaseOrder)
 			.where(eq(purchaseOrder.projectId, projectId))
-			.orderBy(desc(purchaseOrder.createdAt)),
+			.orderBy(desc(purchaseOrder.createdAt), desc(purchaseOrder.id)),
 		db
 			.select()
 			.from(acquisition)

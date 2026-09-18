@@ -136,7 +136,8 @@ export async function listOrders(opts: { status?: OrderStatus } = {}) {
 		// Open ones first, then most recent — the list is a worklist, not an archive.
 		.orderBy(
 			sql`CASE ${purchaseOrder.status} WHEN 'placed' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END`,
-			desc(purchaseOrder.createdAt)
+			desc(purchaseOrder.createdAt),
+			desc(purchaseOrder.id)
 		);
 
 	if (orders.length === 0) return [];

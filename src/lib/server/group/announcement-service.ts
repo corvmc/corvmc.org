@@ -91,7 +91,8 @@ function runSelect(where: ReturnType<typeof and>) {
 			.orderBy(
 				desc(announcement.pinned),
 				desc(announcement.publishedAt),
-				desc(announcement.createdAt)
+				desc(announcement.createdAt),
+				desc(announcement.id)
 			)
 			.limit(MAX_LIST)
 	);

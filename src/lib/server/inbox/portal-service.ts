@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
-import { and, count, desc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, isNull, or, sql, asc } from 'drizzle-orm';
 import type { PaginationInput } from '$lib/server/db/paginate';
 import { paginate } from '$lib/server/db/paginate';
 import { findOrCreateThread, reopenThread } from './thread-service';
@@ -121,7 +121,7 @@ export async function getPortalThread(threadId: string, userId: string) {
 		})
 		.from(inboxMessage)
 		.where(eq(inboxMessage.threadId, threadId))
-		.orderBy(inboxMessage.createdAt);
+		.orderBy(inboxMessage.createdAt, asc(inboxMessage.id));
 
 	return {
 		...thread,

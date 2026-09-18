@@ -361,7 +361,7 @@ export async function listActiveSessions(userId: string): Promise<ActiveSession[
 		})
 		.from(session)
 		.where(and(eq(session.userId, userId), gt(session.expiresAt, new Date())))
-		.orderBy(desc(session.createdAt));
+		.orderBy(desc(session.createdAt), desc(session.id));
 }
 
 /**
@@ -376,7 +376,7 @@ export async function getLastLoginAt(userId: string): Promise<Date | null> {
 		.select({ createdAt: session.createdAt })
 		.from(session)
 		.where(eq(session.userId, userId))
-		.orderBy(desc(session.createdAt))
+		.orderBy(desc(session.createdAt), desc(session.id))
 		.limit(1);
 
 	return row?.createdAt ?? null;

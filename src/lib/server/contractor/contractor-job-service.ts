@@ -268,7 +268,7 @@ export async function listJobs(
 				opts.assetId ? eq(contractorJob.assetId, opts.assetId) : undefined
 			)
 		)
-		.orderBy(desc(contractorJob.createdAt));
+		.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id));
 }
 
 /**
@@ -297,7 +297,7 @@ export async function jobsForAsset(assetId: string) {
 		.from(contractorJob)
 		.innerJoin(contractor, eq(contractorJob.contractorId, contractor.id))
 		.where(eq(contractorJob.assetId, assetId))
-		.orderBy(desc(contractorJob.createdAt));
+		.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id));
 }
 
 /**

@@ -351,7 +351,7 @@ export async function listBlockedVolunteers(): Promise<BlockedVolunteer[]> {
 		.from(volunteerProfile)
 		.innerJoin(user, eq(user.id, volunteerProfile.userId))
 		.where(eq(volunteerProfile.status, 'blocked'))
-		.orderBy(asc(volunteerProfile.createdAt));
+		.orderBy(asc(volunteerProfile.createdAt), asc(volunteerProfile.id));
 
 	return rows.map((row) => ({ ...row, member: toMemberRef(row.member) }));
 }

@@ -58,7 +58,7 @@ export async function listExpenses(productionId: string) {
 		.select()
 		.from(productionExpense)
 		.where(eq(productionExpense.productionId, productionId))
-		.orderBy(asc(productionExpense.createdAt));
+		.orderBy(asc(productionExpense.createdAt), asc(productionExpense.id));
 }
 
 /**
@@ -89,7 +89,7 @@ export async function expenseLines(productionId: string): Promise<ProductionExpe
 		})
 		.from(productionExpense)
 		.where(eq(productionExpense.productionId, productionId))
-		.orderBy(asc(productionExpense.createdAt));
+		.orderBy(asc(productionExpense.createdAt), asc(productionExpense.id));
 }
 
 /**

@@ -427,7 +427,7 @@ export async function listUntaggedAssets(opts: { itemId?: string } = {}) {
 		.innerJoin(inventoryItem, eq(inventoryAsset.itemId, inventoryItem.id))
 		.leftJoin(inventoryLocation, eq(inventoryAsset.locationId, inventoryLocation.id))
 		.where(and(...conditions))
-		.orderBy(asc(inventoryAsset.createdAt))
+		.orderBy(asc(inventoryAsset.createdAt), asc(inventoryAsset.id))
 		.then((rows) => rows.map((r) => ({ ...r.asset, item: r.item, location: r.location })));
 }
 

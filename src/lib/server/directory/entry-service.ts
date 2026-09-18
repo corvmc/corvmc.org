@@ -247,7 +247,7 @@ export async function listExternalActs(search?: string, pagination: PaginationIn
 		})
 		.from(directoryEntry)
 		.where(where)
-		.orderBy(desc(directoryEntry.createdAt))
+		.orderBy(desc(directoryEntry.createdAt), desc(directoryEntry.id))
 		.$dynamic();
 
 	const countQ = db.select({ count: count() }).from(directoryEntry).where(where);

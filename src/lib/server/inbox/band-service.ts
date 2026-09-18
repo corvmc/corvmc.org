@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { inboxThread, inboxMessage, inboxGroupRead } from '$lib/server/db/schema/inbox';
-import { and, count, desc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, isNull, or, sql, asc } from 'drizzle-orm';
 import type { PaginationInput } from '$lib/server/db/paginate';
 import { paginate } from '$lib/server/db/paginate';
 import { BAND_ENQUIRY_SUBJECT } from '$lib/config';
@@ -151,7 +151,7 @@ export async function getBandThread(threadId: string, groupId: string) {
 		})
 		.from(inboxMessage)
 		.where(eq(inboxMessage.threadId, threadId))
-		.orderBy(inboxMessage.createdAt);
+		.orderBy(inboxMessage.createdAt, asc(inboxMessage.id));
 
 	return { ...thread, messages };
 }

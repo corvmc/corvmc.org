@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql, asc } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { getRowCount } from '$lib/server/db';
 import {
@@ -235,7 +235,7 @@ export async function listForCommittee(groupId: string, opts?: { includeDecided?
 				inArray(committeeApplicationChoice.status, [...statuses])
 			)
 		)
-		.orderBy(committeeApplication.createdAt);
+		.orderBy(committeeApplication.createdAt, asc(committeeApplication.id));
 
 	return rows.map((row) => ({
 		choiceId: row.choiceId,
