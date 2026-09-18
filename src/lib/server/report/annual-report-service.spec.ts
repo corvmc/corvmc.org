@@ -66,7 +66,7 @@ describe('the money section', () => {
 		// goods it was given.
 		totalsByKindAndCategory.mockResolvedValue([
 			{ kind: 'earned', category: 'ticket_sales', totalCents: 1000 },
-			{ kind: 'spent', category: 'card_fees', totalCents: 300 },
+			{ kind: 'spent', category: 'card_fees', totalCents: -300 },
 			{ kind: 'in_kind', category: 'equipment', totalCents: 50_000 },
 			{ kind: 'pass_through', category: 'act_payout', totalCents: 7000 }
 		]);
@@ -76,6 +76,36 @@ describe('the money section', () => {
 		expect(report.money.netCents).toBe(700);
 		expect(report.money.totalsByKind.in_kind).toBe(50_000);
 		expect(report.money.totalsByKind.pass_through).toBe(7000);
+	});
+
+	it('subtracts the spend, on a ledger whose spend is stored negative', async () => {
+		// The regression #1235 was: `earned - spent` on a signed column. The old
+		// fixture wrote spend as +300, which made the wrong expression produce the
+		// right answer, so nothing failed while the report overstated net by twice
+		// the spend on every real ledger.
+		//
+		// `financialEntry.amountCents` is documented signed — "positive into the
+		// collective, negative out" — so this asserts the arithmetic against a
+		// ledger shaped like the database, with the answer worked out by hand.
+		totalsByKindAndCategory.mockResolvedValue([
+			{ kind: 'earned', category: 'ticket_sales', totalCents: 41_250 },
+			{ kind: 'spent', category: 'card_fees', totalCents: -1806 },
+			{ kind: 'spent', category: 'act_guarantee', totalCents: -12_000 }
+		]);
+
+		const report = await getAnnualReport(YEAR);
+
+		expect(report.money.totalsByKind.spent).toBe(-13_806);
+		// 412.50 earned less 138.06 spent is 274.44 — never 550.56.
+		expect(report.money.netCents).toBe(27_444);
+	});
+
+	it('leaves net at the earnings when nothing was spent', async () => {
+		totalsByKindAndCategory.mockResolvedValue([
+			{ kind: 'earned', category: 'ticket_sales', totalCents: 5000 }
+		]);
+		const report = await getAnnualReport(YEAR);
+		expect(report.money.netCents).toBe(5000);
 	});
 
 	it('names every kind even when nothing was recorded under it', async () => {

@@ -36,19 +36,38 @@ test.describe('member sidebar', () => {
 		}
 	});
 
-	test('keeps the bottom cluster pinned to the foot of the sidebar', async ({ page }) => {
+	test('keeps the meta rows pinned to the foot of the sidebar', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/member');
 
-		const membership = nav(page).getByRole('link', { name: 'Membership' });
-		await expect(membership).toBeVisible();
+		// Suggestions and Help, since #1244 — the member-context rows that used to
+		// end this cluster are in the avatar dropdown now.
+		await expect(nav(page).getByRole('link', { name: 'Help' })).toBeVisible();
 		// The spacer still does its job now that the list is a scroll container.
 		const gap = await nav(page).evaluate((ul) => {
 			const list = ul.getBoundingClientRect();
-			const last = ul.querySelector('a[href="/member/membership"]')!.getBoundingClientRect();
+			const last = ul.querySelector('a[href="/member/help"]')!.getBoundingClientRect();
 			return list.bottom - last.bottom;
 		});
 		expect(gap).toBeLessThan(40);
+	});
+
+	test('keeps the member-context rows out of the sidebar and in the chrome', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/member');
+
+		for (const name of ['Messages', 'Profile', 'Account', 'Purchases', 'Membership']) {
+			await expect(nav(page).getByRole('link', { name, exact: true })).toHaveCount(0);
+		}
+
+		// The topbar carries Messages on every panel, which is the point of the
+		// move — a band admin reaches their own inbox without switching panels.
+		await expect(page.locator('a[aria-label^="Messages"]')).toBeVisible();
+
+		await page.getByRole('button', { name: 'Account menu' }).click();
+		for (const name of ['Profile', 'Account', 'Purchases', 'Membership']) {
+			await expect(page.getByRole('link', { name, exact: true })).toBeVisible();
+		}
 	});
 
 	test('collapses My Acts and remembers it', async ({ page }) => {

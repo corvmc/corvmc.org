@@ -29,7 +29,7 @@
 	});
 </script>
 
-<PageHeader title="Edit Article" subtitle="Help" backHref="/staff/help">
+<PageHeader width="3xl" title="Edit Article" subtitle="Help" backHref="/staff/help">
 	<Action
 		action={deleteArticle}
 		modalTitle="Confirm"

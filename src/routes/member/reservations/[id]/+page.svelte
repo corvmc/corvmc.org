@@ -23,7 +23,7 @@
 	const refresh = () => getReservationDetail(page.params.id!).refresh();
 </script>
 
-<PageHeader title="Your Reservation" backHref="/member/reservations" />
+<PageHeader width="md" title="Your Reservation" backHref="/member/reservations" />
 <PageContent width="md">
 	<!-- Whose booking this is, when it is not simply the member's own. A band
 	     booking looked identical to a personal one on this page. -->

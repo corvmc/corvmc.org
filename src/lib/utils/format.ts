@@ -349,7 +349,11 @@ export function formatDuration(startsAt: Date, endsAt: Date): string {
 
 /** Format cents as dollars: 1500 → "$15.00" */
 export function formatCents(cents: number): string {
-	return `$${(cents / 100).toFixed(2)}`;
+	// The sign goes outside the symbol. `$-138.06` is what the naive template
+	// produces and it reads as a typo; every ledger surface renders negatives
+	// because `financialEntry.amountCents` is signed (#1235).
+	const sign = cents < 0 ? '-' : '';
+	return `${sign}$${(Math.abs(cents) / 100).toFixed(2)}`;
 }
 
 /** Format cents as dollars without symbol: 1500 → "15.00" */

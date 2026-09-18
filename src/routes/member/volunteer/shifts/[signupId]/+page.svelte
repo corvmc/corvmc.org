@@ -34,6 +34,7 @@
 </script>
 
 <PageHeader
+	width="2xl"
 	title={data.shift.roleName}
 	subtitle={data.shift.eventTitle ?? 'Volunteer shift'}
 	backHref={resolve('/member/volunteer')}

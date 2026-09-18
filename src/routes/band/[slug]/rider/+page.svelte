@@ -126,6 +126,7 @@
 </script>
 
 <PageHeader
+	width="3xl"
 	title="Tech rider"
 	subtitle="What {layout.band.name} needs on stage"
 	documentTitle="Tech rider · {layout.band.name}"

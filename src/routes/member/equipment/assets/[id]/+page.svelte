@@ -31,7 +31,12 @@
 	const resources = $derived(asset.resources);
 </script>
 
-<PageHeader subtitle={asset.categoryName} title={asset.name} backHref="/member/equipment">
+<PageHeader
+	width="2xl"
+	subtitle={asset.categoryName}
+	title={asset.name}
+	backHref="/member/equipment"
+>
 	<!-- The whole point of the sticker. This page had `itemId` and used it only
 	     to fetch resources, so a member who scanned a thing they wanted was told
 	     its condition and left with nowhere to go (#1073). The catalog owns the

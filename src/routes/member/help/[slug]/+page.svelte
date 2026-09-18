@@ -17,7 +17,7 @@
 	let category = $derived(categories.find((c) => c.id === article.categoryId));
 </script>
 
-<PageHeader title={article.title} subtitle="Help Center" backHref="/member/help" />
+<PageHeader width="3xl" title={article.title} subtitle="Help Center" backHref="/member/help" />
 <PageContent width="3xl">
 	<div class="breadcrumbs mb-4 text-sm">
 		<ul>

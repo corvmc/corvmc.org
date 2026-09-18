@@ -35,6 +35,7 @@
 </script>
 
 <PageHeader
+	width="2xl"
 	title="Check-in"
 	subtitle={data.event.title}
 	backHref={resolve(`/member/volunteer/shifts/${signupId}`)}

@@ -64,6 +64,7 @@
 </script>
 
 <PageHeader
+	width="3xl"
 	subtitle="Equipment Loan"
 	title={loan.equipmentName ?? 'Free-form Request'}
 	backHref="/staff/inventory/loans"

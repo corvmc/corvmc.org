@@ -71,7 +71,7 @@
 	const active = $derived(data.active);
 </script>
 
-<PageHeader title="My Acts" subtitle="Member">
+<PageHeader width="2xl" title="My Acts" subtitle="Member">
 	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}>Create Act</Button>
 </PageHeader>
 <PageContent width="2xl">

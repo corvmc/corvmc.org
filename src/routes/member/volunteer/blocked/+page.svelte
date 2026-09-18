@@ -20,7 +20,12 @@
 	let notice = $derived(getVolunteerBlockedNotice());
 </script>
 
-<PageHeader title="Almost there" subtitle="Volunteering" documentTitle="Volunteer sign-up" />
+<PageHeader
+	width="md"
+	title="Almost there"
+	subtitle="Volunteering"
+	documentTitle="Volunteer sign-up"
+/>
 
 <PageContent width="md">
 	{#await notice then me}

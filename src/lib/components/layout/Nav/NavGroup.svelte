@@ -60,12 +60,14 @@
 
 {#if collapsible}
 	<li>
-		<!-- The action shares the title's row, as it does in the plain branch
-		     below. It used to be a sibling of a `w-full` toggle, so "All" was
-		     pushed onto a line of its own in My Acts and My Groups — the only two
-		     collapsible groups that have one (#1022). `grow` rather than `w-full`
-		     is what leaves room beside it. -->
-		<div class="flex flex-row items-center">
+		<!-- The action shares the title's row. It used to be a sibling of a
+		     `w-full` toggle, so "All" was pushed onto a line of its own (#1022);
+		     `grow` is what leaves room beside it. -->
+		<!-- A direct `li` child, so daisyUI gave this wrapper padding and a hover
+		     of its own — drawn behind the toggle's at a different size, lighting
+		     the header twice. The utilities hand both back to the button, and
+		     daisyUI's rule is `:where()`-wrapped so they win without `!`. -->
+		<div class="flex flex-row items-center gap-1 p-0 hover:bg-transparent hover:shadow-none">
 			<button
 				type="button"
 				class="menu-dropdown-toggle flex grow flex-row items-center justify-between menu-title"

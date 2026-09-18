@@ -102,9 +102,9 @@
 					<Alert type="info">
 						As the owner you can't leave <strong>{bandName}</strong> until you transfer ownership to
 						another active member.
-						<Button variant="ghost" size="sm" class="ml-2" onclick={ontransfer}>
-							Transfer ownership
-						</Button>
+						{#snippet action()}
+							<Button variant="ghost" size="sm" onclick={ontransfer}>Transfer ownership</Button>
+						{/snippet}
 					</Alert>
 				{:else}
 					<!-- `confirm` and a `form` snippet together: Action renders the

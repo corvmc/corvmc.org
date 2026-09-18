@@ -123,7 +123,7 @@
 	const refreshRoster = () => void getMemberGroup(slug).refresh();
 </script>
 
-<PageHeader title={group.name} subtitle={kindLabel}>
+<PageHeader width="3xl" title={group.name} subtitle={kindLabel}>
 	{#if data.canManage}
 		<Badge variant="ghost">{data.role}</Badge>
 		<Button href={resolve(`/member/groups/${slug}/edit`)} variant="ghost" size="sm">Edit</Button>

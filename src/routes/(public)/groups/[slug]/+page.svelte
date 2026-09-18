@@ -60,9 +60,11 @@
 		{#if status === 'active'}
 			<Alert type="success">
 				You're already in this group.
-				<Button href={resolve(`/member/groups/${group.slug}`)} variant="ghost" size="sm">
-					Open it
-				</Button>
+				{#snippet action()}
+					<Button href={resolve(`/member/groups/${group.slug}`)} variant="ghost" size="sm">
+						Open it
+					</Button>
+				{/snippet}
 			</Alert>
 		{:else if status === 'requested'}
 			<Alert type="info">Your application is with this group's leaders.</Alert>
@@ -78,9 +80,11 @@
 			     back here, where the button will work. -->
 			<Alert type="info">
 				<span>Sign in to {group.joinPolicy === 'open' ? 'join' : 'apply'}.</span>
-				<Button href={`/login?redirect=/groups/${group.slug}`} variant="primary" size="sm">
-					Sign in
-				</Button>
+				{#snippet action()}
+					<Button href={`/login?redirect=/groups/${group.slug}`} variant="primary" size="sm">
+						Sign in
+					</Button>
+				{/snippet}
 			</Alert>
 		{:else}
 			<div>

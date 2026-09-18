@@ -133,7 +133,7 @@
 	}
 </script>
 
-<PageHeader title="Members" subtitle={layout.band.name}>
+<PageHeader width="2xl" title="Members" subtitle={layout.band.name}>
 	{#if canManage}
 		<Button variant="default" size="sm" onclick={() => (showInviteModal = true)}>
 			Invite Member

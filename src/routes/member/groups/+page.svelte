@@ -39,7 +39,7 @@
 	const kindLabel = (kind: string) => (kind === 'committee' ? 'Committee' : 'Club');
 </script>
 
-<PageHeader title="Groups" subtitle="Clubs and committees at the Collective" />
+<PageHeader width="3xl" title="Groups" subtitle="Clubs and committees at the Collective" />
 <PageContent width="3xl">
 	<InfoCard title="Your programs">
 		{#if active.length === 0 && invited.length === 0 && applied.length === 0 && data.emailInvites.length === 0}

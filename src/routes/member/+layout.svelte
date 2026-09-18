@@ -2,9 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import {
-		IconReceipt,
 		IconLayoutDashboard,
-		IconStar,
 		IconCalendarEvent,
 		IconAddressBook,
 		IconTool,
@@ -13,9 +11,6 @@
 		IconSearch,
 		IconHelp,
 		IconMetronome,
-		IconMessages,
-		IconUser,
-		IconSettings,
 		IconHeartHandshake,
 		IconUsersGroup,
 		IconBulb
@@ -34,9 +29,8 @@
 		activeMemberNavKey,
 		memberNavFooter,
 		memberNavMain,
-		type MemberNavBadgeKey,
 		type MemberNavItem,
-		type MemberNavKey
+		type SidebarNavKey
 	} from './nav-items';
 
 	let { children } = $props();
@@ -53,14 +47,18 @@
 
 	const panels = $derived(panelTabs(layout));
 
-	const icons: Record<MemberNavKey, typeof IconLayoutDashboard> = {
+	/**
+	 * Only the rows the sidebar renders. Messages and the four member-context
+	 * destinations are in `memberNavItems` so every `/member` page still
+	 * resolves to a key, but the chrome draws them and owns their glyphs
+	 * (#1244).
+	 */
+	const icons: Record<SidebarNavKey, typeof IconLayoutDashboard> = {
 		dashboard: IconLayoutDashboard,
-		messages: IconMessages,
 		reservations: IconMetronome,
 		events: IconCalendarEvent,
 		'events-submit': IconPlus,
 		directory: IconAddressBook,
-		purchases: IconReceipt,
 		// Matches the staff panel's Inventory glyph, so the same thing looks the
 		// same on both sides.
 		equipment: IconTool,
@@ -68,10 +66,7 @@
 		volunteer: IconHeartHandshake,
 		'volunteer-committees': IconUsersGroup,
 		suggestions: IconBulb,
-		profile: IconUser,
-		account: IconSettings,
-		help: IconHelp,
-		membership: IconStar
+		help: IconHelp
 	};
 
 	// No `features` any more: every flag the member nav consulted is retired.
@@ -82,25 +77,16 @@
 	let mainItems = $derived(memberNavMain(navInput));
 	let footerItems = $derived(memberNavFooter(navInput));
 
-	let badges = $derived({
-		messagesUnread: layout.messagesUnread
-	} satisfies Record<MemberNavBadgeKey, number>);
-
 	let activeKey = $derived(activeMemberNavKey(navInput, page.url.pathname));
-
-	function badgeFor(item: MemberNavItem): number | undefined {
-		return item.badgeKey ? badges[item.badgeKey] : undefined;
-	}
 </script>
 
 {#snippet row(item: MemberNavItem)}
-	{@const Icon = icons[item.key]}
+	{@const Icon = icons[item.key as SidebarNavKey]}
 	{#if item.children}
 		<Nav.Collapsible
 			href={item.href}
 			label={item.label}
 			childHrefs={childHrefsFor(item)}
-			badge={badgeFor(item)}
 			active={activeKey === item.key}
 		>
 			{#snippet icon()}<Icon />{/snippet}
@@ -109,12 +95,7 @@
 			{/each}
 		</Nav.Collapsible>
 	{:else}
-		<Nav.Item
-			href={item.href}
-			label={item.label}
-			badge={badgeFor(item)}
-			active={activeKey === item.key}
-		>
+		<Nav.Item href={item.href} label={item.label} active={activeKey === item.key}>
 			{#snippet icon()}<Icon />{/snippet}
 		</Nav.Item>
 	{/if}
@@ -137,14 +118,17 @@
 			containsActive={page.url.pathname.startsWith('/band/')}
 		>
 			{#snippet action()}
-				<Button href="/member/bands" variant="ghost" size="xs">All</Button>
+				<Button href="/member/bands" variant="ghost" size="xs" class="latched">All</Button>
 			{/snippet}
 			{#each layout.userBands as band (band.slug)}
 				<Nav.Item href={`/band/${band.slug}`} label={band.name}>
 					{#snippet icon()}
+						<!-- Icon-sized and square: these rows sit among 20px glyphs, and a
+						     32px circle lined up with none of them. -->
 						<Avatar
-							class="size-8"
+							class="size-5"
 							size="avatar-sm"
+							shape="square"
 							src={band.avatarUrl ?? undefined}
 							name={band.name}
 						/>
@@ -171,14 +155,15 @@
 			containsActive={page.url.pathname.startsWith('/member/groups')}
 		>
 			{#snippet action()}
-				<Button href="/member/groups" variant="ghost" size="xs">All</Button>
+				<Button href="/member/groups" variant="ghost" size="xs" class="latched">All</Button>
 			{/snippet}
 			{#each layout.userGroups as group (group.slug)}
 				<Nav.Item href={`/member/groups/${group.slug}`} label={group.name}>
 					{#snippet icon()}
 						<Avatar
-							class="size-8"
+							class="size-5"
 							size="avatar-sm"
+							shape="square"
 							src={group.avatarUrl ?? undefined}
 							name={group.name}
 						/>

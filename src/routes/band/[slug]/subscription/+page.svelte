@@ -80,7 +80,7 @@
 	});
 </script>
 
-<PageHeader title="Subscription" subtitle={band.name} />
+<PageHeader width="2xl" title="Subscription" subtitle={band.name} />
 <PageContent width="2xl">
 	{#if awaitingUpgrade}
 		<div class="mb-4">

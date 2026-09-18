@@ -23,6 +23,7 @@
 </script>
 
 <PageHeader
+	width="md"
 	title="Select the roles you'd take"
 	subtitle="Volunteering"
 	backHref="/member/volunteer"

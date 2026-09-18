@@ -35,6 +35,7 @@
      the badge are the ones the list row carries and this page dropped —
      `getGroupDetail` has returned both all along (#1070). -->
 <PageHeader
+	width="3xl"
 	title={group.name}
 	subtitle={group.kind === 'committee' ? 'Committee' : 'Club'}
 	backHref="/staff/groups"

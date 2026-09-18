@@ -27,7 +27,7 @@
 	const assets = $derived(await getUntaggedAssets());
 </script>
 
-<PageHeader title="Needs tagging" subtitle="Inventory" backHref="/staff/inventory">
+<PageHeader width="3xl" title="Needs tagging" subtitle="Inventory" backHref="/staff/inventory">
 	{#if assets.length > 0}
 		<Badge variant="warning" size="md">{assets.length} waiting</Badge>
 	{/if}
