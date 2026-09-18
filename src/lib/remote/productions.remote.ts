@@ -177,23 +177,30 @@ export const markSlotTiming = form(
  *
  * An empty field clears back to null rather than writing a zero — "nobody
  * counted" and "counted nothing" are different states and the worksheet shows
- * them differently. `splitActsPercent` left blank means the house rule (#929).
+ * them differently. `splitActsPercent` left blank means the house rule.
+ *
+ * Numbers, not strings: `MoneyField` carries cents in a hidden `n:` field so
+ * nobody types 45 for a $45 door and records 45¢ (#929).
  */
 export const recordDoorTake = form(
 	z.object({
 		id: z.string().min(1),
 		eventId: z.string().min(1),
-		doorCash: z.string().optional(),
-		doorCount: z.string().optional(),
-		splitActsPercent: z.string().optional()
+		doorCashCents: z.number().int().min(0).optional(),
+		doorCount: z.number().int().min(0).optional(),
+		splitActsPercent: z.number().int().min(0).max(100).optional()
 	}),
 	async (data) => {
 		await requireCapability('event.manage');
 		try {
+			// `undefined` is an empty box, not an untouched one: the form renders
+			// every existing value into its field, so one that arrives missing is
+			// one somebody cleared. That is what lets a door count go back to
+			// "nobody counted" rather than being stuck at a number (#929).
 			await updateService(data.id, {
-				doorCashCents: centsOrNull(data.doorCash),
-				doorCount: intOrNull(data.doorCount),
-				doorSplitActsPercent: percentOrNull(data.splitActsPercent)
+				doorCashCents: data.doorCashCents ?? null,
+				doorCount: data.doorCount ?? null,
+				doorSplitActsPercent: data.splitActsPercent ?? null
 			});
 			await getStaffEventProduction(data.eventId).refresh();
 			return { success: true };
@@ -509,29 +516,3 @@ export const dropArtifactRequest = form(
 		}
 	}
 );
-
-/**
- * A money field as cents, or null when it was left empty.
- *
- * Empty is not zero: a production nobody has counted the door for has no door
- * figure, and writing 0 would tell the worksheet the night took nothing (#929).
- */
-function centsOrNull(input: string | undefined): number | null {
-	const text = input?.trim();
-	if (!text) return null;
-	const amount = Number(text.replace(/[$,]/g, ''));
-	return Number.isFinite(amount) ? Math.round(amount * 100) : null;
-}
-
-function intOrNull(input: string | undefined): number | null {
-	const text = input?.trim();
-	if (!text) return null;
-	const n = Number(text);
-	return Number.isInteger(n) && n >= 0 ? n : null;
-}
-
-/** Out of range is treated as unset rather than clamped — a typo is not a policy. */
-function percentOrNull(input: string | undefined): number | null {
-	const n = intOrNull(input);
-	return n !== null && n <= 100 ? n : null;
-}

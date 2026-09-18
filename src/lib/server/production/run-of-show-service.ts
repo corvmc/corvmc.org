@@ -472,10 +472,8 @@ export async function updateSlot(slotId: string, patch: UpdateSlotInput): Promis
  *
  * Deliberately **not** part of the schedule walk: `recomputeSetTimes` derives
  * every `scheduledStartAt` from the lineup, and letting a late start rewrite
- * the plan would destroy the very comparison the host is reading. Scheduled is
- * what was meant to happen; these are what did.
- *
- * `null` clears a mistap, which is the whole correction path.
+ * the plan would destroy the comparison the host is reading. `null` clears a
+ * mistap, which is the whole correction path.
  */
 export async function markSlotTiming(
 	slotId: string,

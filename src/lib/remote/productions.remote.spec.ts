@@ -127,7 +127,7 @@ const WRITES: { name: keyof typeof productions; args: unknown[]; capability?: st
 		name: 'markSlotTiming',
 		args: [{ slotId: 'slot-1', eventId: 'evt-1', edge: 'start', action: 'now' }]
 	},
-	{ name: 'recordDoorTake', args: [{ id: 'prod-1', eventId: 'evt-1', doorCash: '120' }] },
+	{ name: 'recordDoorTake', args: [{ id: 'prod-1', eventId: 'evt-1', doorCashCents: 12_000 }] },
 	{
 		name: 'addRunOfShowSlot',
 		args: [{ eventId: 'evt-1', productionId: 'prod-1', setLengthMinutes: 30 }]

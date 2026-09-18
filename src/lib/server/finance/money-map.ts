@@ -60,6 +60,14 @@ export const moneyColumns = {
 	},
 
 	// ------------------------------------------------------------ productions
+	// The drawer count at the end of the night. #929 added the column so a
+	// settlement including door cash is auditable; it deliberately does not
+	// write the ledger rows — the split is derived at read time, and who owes
+	// whom what once it is counted is #825's question.
+	'production.door_cash_cents': {
+		unaccounted: 'counted but never posted — the split is derived, not journalled',
+		issue: 825
+	},
 	'production_slot.guarantee_cents': {
 		notAccounting: 'the deal. What was handed over is `paid_cents`'
 	},
