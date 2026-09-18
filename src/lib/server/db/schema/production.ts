@@ -105,6 +105,22 @@ export const production = sqliteTable(
 		 */
 		doorSplitActsPercent: integer('door_split_acts_percent'),
 
+		/**
+		 * How many acts the bill is meant to have, when somebody has said.
+		 *
+		 * Null is not zero and not "finished": most nights nobody states a
+		 * target, and a two-act bill with no target is indistinguishable from a
+		 * finished one — which is exactly the gap this closes (#859). A count
+		 * rather than placeholder slot rows, so every existing slot query stays
+		 * a query about real acts and none of them learns to skip a row that
+		 * stands for an absence.
+		 *
+		 * No CHECK: adding one to an existing table is a rebuild in SQLite, and
+		 * rebuilding `production` on D1 drags fourteen cascade children through
+		 * it. The floor of 1 is in the Zod schema instead.
+		 */
+		actsWanted: integer('acts_wanted'),
+
 		billingNotes: text('billing_notes'),
 		/** Green room, food, parking — what the advance promised. */
 		hospitalityNotes: text('hospitality_notes'),

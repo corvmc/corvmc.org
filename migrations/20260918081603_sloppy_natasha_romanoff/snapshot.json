@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "a175e0c8-21c7-4fc4-b188-7133e1ce130c",
+  "id": "7a960e58-3dc8-4cdc-8c49-9cbc8ffe2d19",
   "prevIds": [
-    "01a0a2c4-3aff-4cb5-bb2d-834cd8534cbd"
+    "a175e0c8-21c7-4fc4-b188-7133e1ce130c"
   ],
   "ddl": [
     {
@@ -2345,6 +2345,16 @@
       "default": null,
       "generated": null,
       "name": "door_split_acts_percent",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "acts_wanted",
       "entityType": "columns",
       "table": "production"
     },

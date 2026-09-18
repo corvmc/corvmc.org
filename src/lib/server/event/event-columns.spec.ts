@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
-import { eventPosterKeySql, eventListingColumns } from './event-columns';
+import { eventPosterKeySql, eventListingColumns, shortOfActsSql } from './event-columns';
 
 /**
  * The poster subquery, rendered and inspected — no database, per the repo's
@@ -45,5 +45,27 @@ describe('eventListingColumns', () => {
 		for (const name of ['id', 'title', 'startsAt', 'status', 'source']) {
 			expect(eventListingColumns).toHaveProperty(name);
 		}
+	});
+});
+
+describe('shortOfActsSql', () => {
+	const short = dialect.sqlToQuery(shortOfActsSql).sql;
+
+	it('correlates both halves on the OUTER listing', () => {
+		expect(short).toContain('"p"."id" = "event_listing"."production_id"');
+		expect(short).toContain('"eb"."event_id" = "event_listing"."id"');
+	});
+
+	it('compares the target against the credits on the bill', () => {
+		expect(short).toContain('"p"."acts_wanted"');
+		expect(short).toContain('count(*)');
+		expect(short).toContain('>');
+	});
+
+	// The distinction the whole issue turns on: a bill with no target is not a
+	// short bill, and `NULL > n` is NULL in SQLite, so it never matches.
+	it('has no COALESCE that would make an unset target read as zero', () => {
+		expect(short.toLowerCase()).not.toContain('coalesce');
+		expect(short.toLowerCase()).not.toContain('ifnull');
 	});
 });

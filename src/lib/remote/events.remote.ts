@@ -518,6 +518,8 @@ const staffEventsFilters = z.object({
 	// bounds are anchored to the app timezone below.
 	dateFrom: z.string().optional(),
 	dateTo: z.string().optional(),
+	/** Only bills short of the act count their production asks for (#859). */
+	needsActs: z.boolean().optional(),
 	page: z.number().optional()
 });
 
@@ -538,6 +540,7 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 			source: filters.source,
 			status: filters.status,
 			venueId: filters.venueId,
+			needsActs: filters.needsActs,
 			from: filters.dateFrom
 				? buildDateInTz(filters.dateFrom, '00:00', DEFAULT_TIMEZONE)
 				: undefined,
@@ -563,8 +566,15 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 				// here for the byline.
 				band: toBandRef({ id: e.groupId, name: e.bandName, slug: e.bandSlug }),
 				// Headliner plus a count, not the whole bill: the column is one line
-				// wide and the console is one click away.
-				lineup: { headliner: bill[0]?.name ?? null, count: bill.length }
+				// wide and the console is one click away. `wanted` is how many the
+				// bill is meant to reach, so "which shows still need an opener" is a
+				// comparison rather than a guess (#859).
+				lineup: {
+					headliner: bill[0]?.name ?? null,
+					count: bill.length,
+					wanted: e.actsWanted ?? null,
+					short: e.actsWanted == null ? 0 : Math.max(0, e.actsWanted - bill.length)
+				}
 			};
 		}),
 		venues: venues.map((v) => ({ id: v.id, name: v.name })),

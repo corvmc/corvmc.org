@@ -86,11 +86,19 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 	add(upcoming[0], 'confirmed', {
 		...schedule(upcoming[0]?.startsAt ?? now),
 		producerUserId: producer,
+		// Met: the bill has as many acts as it asked for, so it is finished
+		// rather than short. The contrast with `upcoming[1]` is the point.
+		actsWanted: 3,
 		billingNotes: 'Guarantee against 70% of the door, whichever is greater.',
 		hospitalityNotes: 'Green room is the office. Coffee, and somebody has to move the desk.',
 		internalNotes: 'Backline is ours except the drum kit — headliner brings their own.'
 	});
+	// A bill that says out loud it is not finished. Six is comfortably above
+	// what the event seed credits this listing, so the Short-of-acts filter
+	// always has something to find — which is the whole question #859 made
+	// askable.
 	add(upcoming[1], 'offered', {
+		actsWanted: 6,
 		internalNotes: 'Offer out to the booking agent; no answer as of this morning.'
 	});
 

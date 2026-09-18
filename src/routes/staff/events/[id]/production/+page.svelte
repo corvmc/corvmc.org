@@ -998,6 +998,24 @@
 						<input {...productionFields.curfewDate.as('hidden', productionDate)} />
 						<input {...productionFields.loadOutDate.as('hidden', productionDate)} />
 
+						<!-- What makes "still needs an opener" answerable. Until a target
+						     exists, a two-act bill nobody has finished looks exactly like
+						     a two-act bill that is done (#859). -->
+						<FormField
+							field={productionFields.actsWanted}
+							type="select"
+							label="Acts wanted"
+							value={productionRecord.actsWanted?.toString() ?? ''}
+							options={[
+								{ value: '', label: 'No target set' },
+								...Array.from({ length: 8 }, (_, i) => ({
+									value: String(i + 1),
+									label: `${i + 1} ${i === 0 ? 'act' : 'acts'}`
+								}))
+							]}
+							description="How many the bill should end up with. Leave it unset if nobody has decided."
+						/>
+
 						<FormField
 							field={productionFields.billingNotes}
 							label="Billing"
