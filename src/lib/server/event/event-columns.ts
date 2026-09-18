@@ -30,3 +30,16 @@ export const eventListingColumns = {
 	...getTableColumns(eventListing),
 	posterKey: eventPosterKeySql
 };
+
+/**
+ * Bills short of the act count their production asks for (#859).
+ *
+ * Correlated subqueries rather than the joined `production` row, because the
+ * index's count query is over `event_listing` alone and carries the same
+ * predicate. A null target never matches: nobody said, so the bill is not
+ * short of anything. Identifiers are spelled out for the reason above.
+ */
+export const shortOfActsSql = sql`(SELECT "p"."acts_wanted" FROM "production" "p"
+	WHERE "p"."id" = "event_listing"."production_id") >
+	(SELECT count(*) FROM "event_band" "eb"
+	WHERE "eb"."event_id" = "event_listing"."id")`;

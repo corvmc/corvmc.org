@@ -107,6 +107,8 @@ export interface ProductionDetailsInput {
 	firstSetAt?: Date | null;
 	curfewAt?: Date | null;
 	loadOutBy?: Date | null;
+	/** How many acts the bill should end up with. Null clears the target. */
+	actsWanted?: number | null;
 	billingNotes?: string | null;
 	hospitalityNotes?: string | null;
 	internalNotes?: string | null;

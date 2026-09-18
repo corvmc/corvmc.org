@@ -41,6 +41,9 @@
 	let venueId = $state(initial.get('venue') ?? '');
 	let dateFrom = $state(initial.get('from') ?? '');
 	let dateTo = $state(initial.get('to') ?? '');
+	// "Which shows still need an opener" — the question the panel could not ask
+	// at all before a production could state how many acts it wants (#859).
+	let needsActs = $state(initial.get('needs') === '1');
 
 	// Writes the URL, never state — the filters above stay the source of truth.
 	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
@@ -52,6 +55,7 @@
 		if (venueId) pairs.push(['venue', venueId]);
 		if (dateFrom) pairs.push(['from', dateFrom]);
 		if (dateTo) pairs.push(['to', dateTo]);
+		if (needsActs) pairs.push(['needs', '1']);
 		if (page > 1) pairs.push(['page', String(page)]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
@@ -72,6 +76,7 @@
 			venueId: venueId || undefined,
 			dateFrom: dateFrom || undefined,
 			dateTo: dateTo || undefined,
+			needsActs: needsActs || undefined,
 			page
 		})
 	);
@@ -98,7 +103,11 @@
 	}
 
 	const activeCount = $derived(
-		(status ? 1 : 0) + (venueId ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0)
+		(status ? 1 : 0) +
+			(venueId ? 1 : 0) +
+			(dateFrom ? 1 : 0) +
+			(dateTo ? 1 : 0) +
+			(needsActs ? 1 : 0)
 	);
 
 	function clearFilters() {
@@ -106,6 +115,7 @@
 		venueId = '';
 		dateFrom = '';
 		dateTo = '';
+		needsActs = false;
 		page = 1;
 	}
 </script>
@@ -145,6 +155,15 @@
 			bind:value={dateTo}
 			onchange={() => (page = 1)}
 		/>
+		<label class="label gap-2 text-sm">
+			<input
+				type="checkbox"
+				class="checkbox checkbox-sm"
+				bind:checked={needsActs}
+				onchange={() => (page = 1)}
+			/>
+			Short of acts
+		</label>
 	</FilterBar>
 
 	<DataList {result} empty="No events yet" onpage={(p) => (page = p)}>
@@ -202,6 +221,12 @@
 								{lineupLabel(e)}
 							{:else}
 								<span class="opacity-40">—</span>
+							{/if}
+							<!-- What is still owed on the bill. Without a target there is
+							     nothing to be short of, which is why an unset one shows
+							     nothing rather than "0 wanted" (#859). -->
+							{#if e.lineup.short > 0}
+								<Badge variant="warning" size="xs">needs {e.lineup.short}</Badge>
 							{/if}
 						</td>
 						<td class="col-extra">

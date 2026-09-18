@@ -1,0 +1,1 @@
+ALTER TABLE `production` ADD `acts_wanted` integer;

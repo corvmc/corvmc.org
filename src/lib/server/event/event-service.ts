@@ -9,7 +9,7 @@ import {
 	type EventBandStatus,
 	type LineupEntry
 } from '$lib/server/db/schema/event';
-import { eventListingColumns, eventPosterKeySql } from './event-columns';
+import { eventListingColumns, eventPosterKeySql, shortOfActsSql } from './event-columns';
 import type { EventSource } from '$lib/config';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
@@ -1420,6 +1420,8 @@ export async function listAll(
 		venueId?: string;
 		from?: Date;
 		to?: Date;
+		/** Only bills short of the act count their production asks for (#859). */
+		needsActs?: boolean;
 	} = {},
 	pagination: PaginationInput = {}
 ) {
@@ -1429,6 +1431,7 @@ export async function listAll(
 		opts.venueId ? eq(eventListing.venueId, opts.venueId) : undefined,
 		opts.from ? gte(eventListing.startsAt, opts.from) : undefined,
 		opts.to ? lte(eventListing.startsAt, opts.to) : undefined,
+		opts.needsActs ? shortOfActsSql : undefined,
 		not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
 	].filter(Boolean);
 	const where = and(...filters);
@@ -1444,7 +1447,9 @@ export async function listAll(
 			venueName: venue.name,
 			venueIsPrimary: venue.isPrimary,
 			productionId: production.id,
-			productionStatus: production.status
+			productionStatus: production.status,
+			/** How many acts the bill is meant to have, when anybody has said (#859). */
+			actsWanted: production.actsWanted
 		})
 		.from(eventListing)
 		.leftJoin(group, eq(group.id, eventListing.groupId))

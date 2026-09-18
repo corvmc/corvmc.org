@@ -87,6 +87,16 @@ export const updateProduction = form(
 	z.object({
 		id: z.string().min(1),
 		eventId: z.string().min(1),
+		/**
+		 * A string, not a number: an emptied number field is *dropped* from a
+		 * remote `form()` payload, so a `z.number()` here could set a target and
+		 * never clear one. The `<select>` posts `''` for "not set", which is the
+		 * clear, and absent still means untouched.
+		 */
+		actsWanted: z
+			.string()
+			.regex(/^$|^([1-9]|1\d|20)$/, 'Pick a number of acts')
+			.optional(),
 		billingNotes: z.string().max(2000).optional(),
 		hospitalityNotes: z.string().max(2000).optional(),
 		internalNotes: z.string().max(2000).optional(),
@@ -101,6 +111,12 @@ export const updateProduction = form(
 				firstSetAt: optionalMoment(data.firstSetDate, data.firstSetTime),
 				curfewAt: optionalMoment(data.curfewDate, data.curfewTime),
 				loadOutBy: optionalMoment(data.loadOutDate, data.loadOutTime),
+				actsWanted:
+					data.actsWanted === undefined
+						? undefined
+						: data.actsWanted
+							? Number(data.actsWanted)
+							: null,
 				billingNotes: data.billingNotes || null,
 				hospitalityNotes: data.hospitalityNotes || null,
 				internalNotes: data.internalNotes || null
