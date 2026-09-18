@@ -2327,6 +2327,13 @@ const WORKLIST_HORIZON_DAYS = 14;
 /** Pending hours shown inline before the card sends you to the full queue. */
 const WORKLIST_HOURS_PREVIEW = 5;
 
+/**
+ * How many rows a worklist card shows. Only the hours queue was capped, so six
+ * of seven cards rendered every row they had — a dashboard is a summary and
+ * each card links to the table that holds the rest (#1054).
+ */
+const WORKLIST_PREVIEW = 8;
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -2405,18 +2412,26 @@ export const getVolunteerWorklist = query(async () => {
 			short: shift.capacity - shift.claimed
 		}));
 
+	// Each card gets at most `WORKLIST_PREVIEW` rows and the true total beside
+	// them, which is the rule a list follows whether it is cards or a table.
 	return {
 		/** Claims on upcoming shifts nobody has confirmed. The reason the badge moved. */
-		needsConfirming: claims,
-		shortStaffed,
+		needsConfirming: claims.slice(0, WORKLIST_PREVIEW),
+		needsConfirmingTotal: claims.length,
+		shortStaffed: shortStaffed.slice(0, WORKLIST_PREVIEW),
+		shortStaffedTotal: shortStaffed.length,
 		pendingHours: hours,
 		pendingHoursTotal: counts.pending,
-		blockedVolunteers: blocked,
+		blockedVolunteers: blocked.slice(0, WORKLIST_PREVIEW),
+		blockedVolunteersTotal: blocked.length,
 		/** Finished shifts whose claims never completed, so no hours were ever offered. */
-		closeOut: unclosed,
-		lapsing,
+		closeOut: unclosed.slice(0, WORKLIST_PREVIEW),
+		closeOutTotal: unclosed.length,
+		lapsing: lapsing.slice(0, WORKLIST_PREVIEW),
+		lapsingTotal: lapsing.length,
 		/** Work orders waiting for a window, oldest first. */
-		unscheduled,
+		unscheduled: unscheduled.slice(0, WORKLIST_PREVIEW),
+		unscheduledTotal: unscheduled.length,
 		/** What the sidebar badge counts — the same call, so the two always agree. */
 		waitingCount
 	};

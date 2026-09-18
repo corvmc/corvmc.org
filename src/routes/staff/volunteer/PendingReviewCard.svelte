@@ -25,10 +25,10 @@
 		createdAt: Date;
 	};
 
-	let { rows }: { rows: BlockedVolunteer[] } = $props();
+	let { rows, total }: { rows: BlockedVolunteer[]; total: number } = $props();
 </script>
 
-<InfoCard title="Awaiting guardian sign-off">
+<InfoCard title="Awaiting guardian sign-off" state={total}>
 	{#snippet action()}
 		<Button href="/staff/volunteer/people?tab=signoff" variant="ghost" size="sm">People →</Button>
 	{/snippet}

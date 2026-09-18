@@ -28,7 +28,7 @@
 		short: number;
 	};
 
-	let { shifts }: { shifts: ShortShift[] } = $props();
+	let { shifts, total }: { shifts: ShortShift[]; total: number } = $props();
 
 	function timeRange(start: Date, end: Date): string {
 		const fmt = new Intl.DateTimeFormat('en-US', {
@@ -40,7 +40,7 @@
 	}
 </script>
 
-<InfoCard title="Short-staffed" state="next two weeks">
+<InfoCard title="Short-staffed" state="{total} in the next two weeks">
 	{#snippet action()}
 		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
 	{/snippet}

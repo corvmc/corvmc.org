@@ -83,11 +83,11 @@
 	{/if}
 
 	{#if work.needsConfirming.length > 0}
-		<NeedsConfirmingCard claims={work.needsConfirming} />
+		<NeedsConfirmingCard claims={work.needsConfirming} total={work.needsConfirmingTotal} />
 	{/if}
 
 	{#if work.shortStaffed.length > 0}
-		<ShortStaffedCard shifts={work.shortStaffed} />
+		<ShortStaffedCard shifts={work.shortStaffed} total={work.shortStaffedTotal} />
 	{/if}
 
 	{#if work.pendingHours.length > 0}
@@ -95,18 +95,18 @@
 	{/if}
 
 	{#if work.blockedVolunteers.length > 0}
-		<PendingReviewCard rows={work.blockedVolunteers} />
+		<PendingReviewCard rows={work.blockedVolunteers} total={work.blockedVolunteersTotal} />
 	{/if}
 
 	{#if work.unscheduled.length > 0}
-		<NeedsSchedulingCard orders={work.unscheduled} />
+		<NeedsSchedulingCard orders={work.unscheduled} total={work.unscheduledTotal} />
 	{/if}
 
 	{#if work.closeOut.length > 0}
-		<CloseOutCard claims={work.closeOut} />
+		<CloseOutCard claims={work.closeOut} total={work.closeOutTotal} />
 	{/if}
 
 	{#if work.lapsing.length > 0}
-		<LapsingCard rows={work.lapsing} />
+		<LapsingCard rows={work.lapsing} total={work.lapsingTotal} />
 	{/if}
 </PageContent>

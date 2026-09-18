@@ -37,7 +37,10 @@ test.describe('duty lists — the unscheduled half', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff/volunteer');
 
-		const card = page.locator('section, div').filter({ hasText: 'Needs scheduling' }).last();
+		// Scoped by the card root, not `div…last()`: that picked whichever div
+		// most recently contained the words, which became the header the moment
+		// the card gained a "Schedule →" action beside its title.
+		const card = page.locator('.card').filter({ hasText: 'Needs scheduling' });
 		await expect(card.getByRole('link', { name: SEED_VOL_ADVANCE_ROLE_NAME })).toBeVisible();
 	});
 

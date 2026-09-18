@@ -34,10 +34,10 @@
 		startsAt: Date;
 	};
 
-	let { rows }: { rows: Row[] } = $props();
+	let { rows, total }: { rows: Row[]; total: number } = $props();
 </script>
 
-<InfoCard title="Lapses before a shift they're on">
+<InfoCard title="Lapses before a shift they're on" state={total}>
 	{#snippet action()}
 		<Button href="/staff/volunteer/people?tab=cleared" variant="ghost" size="sm">
 			Who's cleared →
