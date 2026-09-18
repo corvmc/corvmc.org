@@ -8,10 +8,51 @@ import {
 	listSignupsStartingBetween,
 	listCompletionsAwaitingFeedback
 } from '$lib/server/volunteer/volunteer-signup-service';
+import { listLoansDueBetween } from '$lib/server/inventory/loan-service';
 import { defineReminder, type ReminderDefinition } from './types';
 
 const TZ = DEFAULT_TIMEZONE;
 const DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * The overdue stages, as the bands between them. The last one is floored
+ * rather than open-ended: without it, switching these on would nag about every
+ * loan ever lost, and a loan already fifteen days late would take all three
+ * stages in one drain rather than the one it is actually at.
+ */
+const OVERDUE_BANDS = [
+	{ days: 1, until: 3 },
+	{ days: 3, until: 7 },
+	{ days: 7, until: 30 }
+] as const;
+
+/** One overdue nag: due inside this stage's band, still out. */
+function overdueLoans({ days, until }: { days: number; until: number }) {
+	return defineReminder({
+		key: `loan_overdue_${days}d`,
+		subjectType: 'inventory_loan',
+		event: 'equipment.loan_due' as const,
+		async due(now: Date) {
+			const rows = await listLoansDueBetween(
+				new Date(now.getTime() - until * DAY),
+				new Date(now.getTime() - days * DAY)
+			);
+			return rows.map((row) => ({
+				subjectId: row.loanId,
+				payload: {
+					stage: 'overdue' as const,
+					daysLate: days,
+					loanId: row.loanId,
+					userId: row.userId,
+					userName: row.userName,
+					userEmail: row.userEmail,
+					equipmentName: row.equipmentName,
+					dueDate: formatDateFull(row.dueDate, TZ)
+				}
+			}));
+		}
+	});
+}
 
 /**
  * Reservations owed a reminder, by status and how far ahead they start.
@@ -178,5 +219,33 @@ export const reminders: ReminderDefinition[] = [
 				}
 			}));
 		}
-	})
+	}),
+
+	// The courtesy, then three nags. Four entries against one anchor rather than
+	// one entry with a "reminded already" flag: the sent-mark is keyed by
+	// (reminder_key, subject), so each fires once and the set is declarative —
+	// the case #1186's registry exists for.
+	defineReminder({
+		key: 'loan_due_tomorrow',
+		subjectType: 'inventory_loan',
+		event: 'equipment.loan_due',
+		async due(now) {
+			const rows = await listLoansDueBetween(now, new Date(now.getTime() + DAY));
+			return rows.map((row) => ({
+				subjectId: row.loanId,
+				payload: {
+					stage: 'due_tomorrow' as const,
+					daysLate: 0,
+					loanId: row.loanId,
+					userId: row.userId,
+					userName: row.userName,
+					userEmail: row.userEmail,
+					equipmentName: row.equipmentName,
+					dueDate: formatDateFull(row.dueDate, TZ)
+				}
+			}));
+		}
+	}),
+
+	...OVERDUE_BANDS.map(overdueLoans)
 ];

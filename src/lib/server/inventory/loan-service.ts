@@ -6,7 +6,20 @@ import {
 	inventoryLoan
 } from '$lib/server/db/schema/inventory';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, sql, like, or, desc, count, inArray } from 'drizzle-orm';
+import {
+	eq,
+	and,
+	sql,
+	like,
+	or,
+	desc,
+	count,
+	inArray,
+	isNull,
+	isNotNull,
+	gte,
+	lt
+} from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { memberRefColumns, toGenericRef, toMemberRef } from '$lib/server/entity/refs';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -731,4 +744,48 @@ export async function listUserLoans(
 export async function getLoanHistory(itemId: string) {
 	const { rows } = await listLoans({ itemId });
 	return rows;
+}
+
+export interface LoanDueRow {
+	loanId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	equipmentName: string | null;
+	dueDate: Date;
+}
+
+/**
+ * Checked-out loans whose due date falls in `[from, to)`, still out.
+ *
+ * A half-open band rather than "everything past due": the reminder registry's
+ * sent-mark already guarantees once, but an unbounded floor would nag about
+ * every loan ever lost, in one burst, on the first run — the same argument
+ * `shift_feedback` makes for keeping its window.
+ */
+export async function listLoansDueBetween(from: Date, to: Date): Promise<LoanDueRow[]> {
+	const rows = await db
+		.select({
+			loanId: inventoryLoan.id,
+			userId: inventoryLoan.userId,
+			userName: user.name,
+			userEmail: user.email,
+			equipmentName: inventoryItem.name,
+			dueDate: inventoryLoan.dueDate
+		})
+		.from(inventoryLoan)
+		.innerJoin(user, eq(user.id, inventoryLoan.userId))
+		.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryLoan.itemId))
+		.where(
+			and(
+				eq(inventoryLoan.status, 'checked_out'),
+				isNull(inventoryLoan.returnedAt),
+				isNotNull(inventoryLoan.dueDate),
+				gte(inventoryLoan.dueDate, from),
+				lt(inventoryLoan.dueDate, to)
+			)
+		)
+		.limit(500);
+
+	return rows.filter((r): r is LoanDueRow => r.dueDate != null);
 }

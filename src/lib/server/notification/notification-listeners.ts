@@ -586,6 +586,44 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Equipment due back, then late ---
+	// One notification type across all four stages: a member who silenced the
+	// courtesy silenced the nags, which is the same rule the confirmation
+	// reminder states.
+	domainEvents.on('equipment.loan_due', async ({ data: event }) => {
+		const item = event.equipmentName ?? 'Borrowed equipment';
+		const late = event.stage === 'overdue';
+		const days = `${event.daysLate} day${event.daysLate === 1 ? '' : 's'}`;
+		const title = late ? `${item} is ${days} overdue` : `${item} is due back tomorrow`;
+
+		await dispatch({
+			type: 'equipment_loan_due',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title,
+			body: `Due ${event.dueDate}`,
+			href: '/member/equipment/loans',
+			email: {
+				recipientName: event.userName,
+				subject: title,
+				preview_text: `Due ${event.dueDate}`,
+				heading: title,
+				paragraphs: [
+					{
+						text: late
+							? `${item} was due back on ${event.dueDate}. Please bring it in — somebody else is waiting on it.`
+							: `${item} is due back on ${event.dueDate}. Let us know if you need longer.`
+					}
+				],
+				details: [
+					{ label: 'Item', value: item },
+					{ label: 'Due', value: event.dueDate }
+				],
+				cta: { label: 'View my loans' }
+			}
+		});
+	});
+
 	// --- Equipment returned (notify member) ---
 	domainEvents.on('equipment.returned', async ({ data: event }) => {
 		const details: NotificationEmailDetail[] = [
