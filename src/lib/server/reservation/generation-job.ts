@@ -659,7 +659,7 @@ async function processEventSeries(
 
 				await db
 					.update(eventListing)
-					.set({ posterKey: prototype.posterKey, updatedAt: new Date() })
+					.set({ updatedAt: new Date() })
 					.where(eq(eventListing.id, newEventId));
 			} catch (err) {
 				// Best-effort: the draft event remains; staff can add a poster manually.

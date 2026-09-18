@@ -760,8 +760,10 @@ describe('generateRecurringEvents', () => {
 			'poster',
 			'events/posters/eproto-1.webp'
 		);
-		// And the column points at the prototype's key, not a new one.
-		expect(updatedRows[0]).toMatchObject({ posterKey: 'events/posters/eproto-1.webp' });
+		// The attachment is the whole record — there is no column to mirror it
+		// into any more (#808) — so the occurrence's row is only touched.
+		expect(updatedRows[0]).toMatchObject({ updatedAt: expect.any(Date) });
+		expect(updatedRows[0]).not.toHaveProperty('posterKey');
 	});
 
 	it('still shares the key when the prototype poster was never recorded', async () => {
@@ -782,7 +784,14 @@ describe('generateRecurringEvents', () => {
 
 		await generateRecurringEvents();
 
-		expect(updatedRows[0]).toMatchObject({ posterKey: 'events/posters/eproto-1.webp' });
+		// Shared regardless: the attachment is attempted and the anomaly reported.
+		expect(mockAttachExisting).toHaveBeenCalledWith(
+			'event_listing',
+			expect.any(String),
+			'poster',
+			'events/posters/eproto-1.webp'
+		);
+		expect(updatedRows[0]).not.toHaveProperty('posterKey');
 	});
 });
 

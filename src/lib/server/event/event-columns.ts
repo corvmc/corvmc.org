@@ -2,11 +2,12 @@ import { sql, getTableColumns } from 'drizzle-orm';
 import { eventListing } from '$lib/server/db/schema/event';
 
 /**
- * The event's poster key, from its `media_attachment` rather than the
- * `event_listing.poster_key` mirror — still written, no longer read, dropped
- * separately (#617). Identifiers are spelled out, not interpolated: drizzle
- * qualifies a column only when the outer statement joins, so an interpolated
- * id would bind to the *inner* table and read as an empty slot, not an error.
+ * The event's poster key, from its `media_attachment` (#808).
+ *
+ * Identifiers are spelled out, not interpolated: drizzle qualifies a column
+ * only when the outer statement joins, so an interpolated id binds to the
+ * *inner* table and reads as an empty slot. It correlates on `event_listing`
+ * by name, so an aliased query needs its own selection.
  */
 export const eventPosterKeySql = sql<string | null>`(SELECT "media"."key"
 	FROM "media_attachment"

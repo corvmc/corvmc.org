@@ -166,6 +166,22 @@ export async function linkManagingGroup(
 	}
 }
 
+/**
+ * The poster key a row resolves to now.
+ *
+ * `RETURNING` cannot carry it: SQLite forbids a subquery there, and the key
+ * comes from `media_attachment` since `event_listing.poster_key` was dropped
+ * (#808). One indexed read on the write paths that hand a row back.
+ */
+async function posterKeyFor(eventId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ posterKey: eventPosterKeySql })
+		.from(eventListing)
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
+	return row?.posterKey ?? null;
+}
+
 export interface EventRow {
 	id: string;
 	title: string;
@@ -323,7 +339,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 
 	let row: EventRow;
 	try {
-		[row] = await db
+		const [inserted] = await db
 			.insert(eventListing)
 			.values({
 				id: eventId,
@@ -346,6 +362,9 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				createdByUserId
 			})
 			.returning();
+		// A listing one statement old has no attachment yet; the poster block
+		// below writes one and sets this.
+		row = { ...inserted, posterKey: null };
 	} catch (err) {
 		// Compensating writes: the listing never persisted, so neither the hold nor
 		// the production it would have announced has anything pointing at it.
@@ -374,10 +393,9 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	// Upload poster outside the transaction (non-critical, idempotent)
 	if (posterFile) {
 		const key = await writeEventPoster(row.id, posterFile);
-		await db
-			.update(eventListing)
-			.set({ posterKey: key, updatedAt: new Date() })
-			.where(eq(eventListing.id, row.id));
+		await db.update(eventListing).set({ updatedAt: new Date() }).where(eq(eventListing.id, row.id));
+		// The attachment is the record; this is the value the caller was going
+		// to read back off the row it already has.
 		row.posterKey = key;
 	}
 
@@ -705,7 +723,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 
 	// Handle poster replacement
 	if (params.posterFile) {
-		updates.posterKey = await writeEventPoster(eventId, params.posterFile);
+		await writeEventPoster(eventId, params.posterFile);
 	}
 
 	const [updated] = await db
@@ -714,7 +732,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		.where(eq(eventListing.id, eventId))
 		.returning();
 
-	return updated;
+	return { ...updated, posterKey: await posterKeyFor(eventId) };
 }
 
 // ---------------------------------------------------------------------------
@@ -785,10 +803,7 @@ async function restoreWithheldPoster(eventId: string): Promise<void> {
 		contentType,
 		byteSize: original?.byteSize ?? 0
 	});
-	await db
-		.update(eventListing)
-		.set({ posterKey: publicKey, updatedAt: new Date() })
-		.where(eq(eventListing.id, eventId));
+	await db.update(eventListing).set({ updatedAt: new Date() }).where(eq(eventListing.id, eventId));
 
 	try {
 		if (!(await isKeyReferenced(withheldKey))) await deletePrivateObject(withheldKey);
@@ -848,7 +863,7 @@ export async function publishBlockers(eventId: string): Promise<string[]> {
 		.select({
 			source: eventListing.source,
 			description: eventListing.description,
-			posterKey: eventListing.posterKey,
+			posterKey: eventPosterKeySql,
 			productionStatus: production.status
 		})
 		.from(eventListing)
@@ -1013,10 +1028,9 @@ export async function unpublishWithNotice(
 		}
 
 		// The listing loses its poster whether or not the bytes were preserved: a
-		// takedown that left the image on the page would not be a takedown. This is
-		// the attachment half of writing `posterKey: null` below — reads resolve the
-		// poster through `media_attachment`, so nulling only the column would leave
-		// the withheld image still showing.
+		// takedown that left the image on the page would not be a takedown.
+		// Detaching *is* the whole of it now — reads resolve the poster through
+		// `media_attachment` and there is no column left to null.
 		if (row.posterKey && !nextPosterKey) {
 			await detachSlot('event_listing', eventId, 'poster');
 		}
@@ -1032,7 +1046,6 @@ export async function unpublishWithNotice(
 		await db
 			.update(eventListing)
 			.set({
-				posterKey: nextPosterKey,
 				...(opts.notes ? { reviewNotes: opts.notes } : {}),
 				updatedAt: new Date()
 			})
@@ -2131,7 +2144,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 		throw new EventValidationError('Doors must open before event starts', 'doorsAt');
 	assertValidTicketPrice(ticketPrice);
 
-	const [row] = await db
+	const [inserted] = await db
 		.insert(eventListing)
 		.values({
 			title,
@@ -2150,6 +2163,9 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 			createdByUserId
 		})
 		.returning();
+	// A listing one statement old has no attachment yet; the poster block below
+	// writes one and sets this.
+	const row: EventRow = { ...inserted, posterKey: null };
 
 	await linkManagingGroup([{ eventId: row.id, groupId: bandId }]);
 
@@ -2181,10 +2197,9 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 
 	if (posterFile) {
 		const key = await writeEventPoster(row.id, posterFile);
-		await db
-			.update(eventListing)
-			.set({ posterKey: key, updatedAt: new Date() })
-			.where(eq(eventListing.id, row.id));
+		await db.update(eventListing).set({ updatedAt: new Date() }).where(eq(eventListing.id, row.id));
+		// The attachment is the record; this is the value the caller was going
+		// to read back off the row it already has.
 		row.posterKey = key;
 	}
 
@@ -2337,7 +2352,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 
 	let row: EventRow;
 	try {
-		[row] = await db
+		const [inserted] = await db
 			.insert(eventListing)
 			.values({
 				id: eventId,
@@ -2361,6 +2376,9 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 				createdByUserId
 			})
 			.returning();
+		// A listing one statement old has no attachment yet; the poster block
+		// below writes one and sets this.
+		row = { ...inserted, posterKey: null };
 	} catch (err) {
 		// Compensating write: the event never persisted, so remove the orphan
 		// reservation made for it.
@@ -2385,10 +2403,9 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 
 	if (posterFile) {
 		const key = await writeEventPoster(row.id, posterFile);
-		await db
-			.update(eventListing)
-			.set({ posterKey: key, updatedAt: new Date() })
-			.where(eq(eventListing.id, row.id));
+		await db.update(eventListing).set({ updatedAt: new Date() }).where(eq(eventListing.id, row.id));
+		// The attachment is the record; this is the value the caller was going
+		// to read back off the row it already has.
 		row.posterKey = key;
 	}
 
@@ -2507,7 +2524,7 @@ export async function updateGroupSession(
 	// Written after the row, matching `createGroupEvent`: `writeEventPoster`
 	// needs the event to exist to key the object against it.
 	if (params.posterFile) {
-		updates.posterKey = await writeEventPoster(eventId, params.posterFile);
+		await writeEventPoster(eventId, params.posterFile);
 	}
 
 	const [updated] = await db
@@ -2516,7 +2533,7 @@ export async function updateGroupSession(
 		.where(eq(eventListing.id, eventId))
 		.returning();
 
-	return updated;
+	return { ...updated, posterKey: await posterKeyFor(eventId) };
 }
 
 /**
@@ -2556,14 +2573,13 @@ export async function cancelGroupSession(
 }
 
 /**
- * Upload a poster and point the event's `poster` slot at it, returning the key
- * for `event.posterKey`.
+ * Upload a poster, point the event's `poster` slot at it, and return the key.
  *
- * That column stays as the read path — 60-odd queries select it inline — with
- * this as its single writer. What the media tables add underneath is the
- * object's lifetime: the previous poster is *detached*, never deleted here,
- * because a recurring series' occurrences may share one object and only the
- * sweep can see that. See docs/specs/shipped/media-spec.md.
+ * `media_attachment` is the only record — `event_listing.poster_key` is gone
+ * (#808) and reads resolve through `eventPosterKeySql`. The previous poster is
+ * *detached*, never deleted here, because a recurring series' occurrences may
+ * share one object and only the sweep can see that.
+ * See docs/specs/shipped/media-spec.md.
  */
 async function writeEventPoster(
 	eventId: string,
@@ -2625,7 +2641,7 @@ export async function updateBandEvent(
 	}
 
 	if (params.posterFile) {
-		updates.posterKey = await writeEventPoster(eventId, params.posterFile);
+		await writeEventPoster(eventId, params.posterFile);
 	}
 
 	const [updated] = await db
@@ -2634,7 +2650,7 @@ export async function updateBandEvent(
 		.where(eq(eventListing.id, eventId))
 		.returning();
 
-	return updated;
+	return { ...updated, posterKey: await posterKeyFor(eventId) };
 }
 
 export async function cancelBandEvent(eventId: string, bandId: string): Promise<void> {
@@ -2659,10 +2675,7 @@ export async function clearBandEventPoster(eventId: string, bandId: string): Pro
 	if (!existing.posterKey) return;
 
 	await detachSlot('event_listing', eventId, 'poster');
-	await db
-		.update(eventListing)
-		.set({ posterKey: null, updatedAt: new Date() })
-		.where(eq(eventListing.id, eventId));
+	await db.update(eventListing).set({ updatedAt: new Date() }).where(eq(eventListing.id, eventId));
 }
 
 /** One backfilled gig, already parsed and validated by `parseGigImport`. */

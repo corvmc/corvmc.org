@@ -339,21 +339,12 @@ export async function findByKey(key: string): Promise<Media | null> {
  * allowed to delete an object inline (the moderation takedown in
  * `event-service.ts`) asks it exactly the way the sweep does.
  *
- * The `poster_key` arm is the last reader of that column and goes with it (issue
- * #617). It is kept for now because the column is still written, so a row that
- * names a key must not have its object reaped underneath it — not because a
- * generated occurrence can still hold an unattached key, which it no longer can.
+ * One question, not two: `event_listing.poster_key` was a second place a key
+ * could be named and it is gone (#808).
  */
 export async function isKeyReferenced(key: string): Promise<boolean> {
 	const row = await findByKey(key);
-	if (row && (await countAttachments(row.id)) > 0) return true;
-
-	const [listing] = await db
-		.select({ id: eventListing.id })
-		.from(eventListing)
-		.where(eq(eventListing.posterKey, key))
-		.limit(1);
-	return !!listing;
+	return !!row && (await countAttachments(row.id)) > 0;
 }
 
 /** Total bytes referenced by live attachments. Uses the guard above. */

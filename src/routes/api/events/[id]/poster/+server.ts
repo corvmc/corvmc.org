@@ -49,7 +49,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	await db
 		.update(eventListing)
-		.set({ posterKey: key, updatedAt: new Date() })
+		.set({ updatedAt: new Date() })
 		.where(eq(eventListing.id, params.id));
 
 	return json({ posterKey: key });
@@ -68,7 +68,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		await detachSlot('event_listing', params.id, 'poster');
 		await db
 			.update(eventListing)
-			.set({ posterKey: null, updatedAt: new Date() })
+			.set({ updatedAt: new Date() })
 			.where(eq(eventListing.id, params.id));
 	}
 
