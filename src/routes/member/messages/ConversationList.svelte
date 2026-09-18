@@ -9,24 +9,53 @@
 	 * whether it is waiting on you.
 	 */
 	import { page } from '$app/state';
-	import { resolve } from '$app/paths';
-	import { relativeDay } from '$lib/utils/format';
-	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
 	import DataList from '$lib/components/ui/DataList.svelte';
+	import ConversationRows from '$lib/components/inbox/ConversationRows.svelte';
 	import ComposeAction from './ComposeAction.svelte';
 	import { getMyMessages } from '$lib/remote/direct-messages.remote';
+	import Select from '$lib/components/ui/Form/Select.svelte';
+	import { goto } from '$app/navigation';
 	import { getMemberLayoutContext } from '../layout-context';
 	import { conversationList } from './list-state.svelte';
 
 	// The page number is shared module state, not local: the thread pane is a
 	// sibling, and it has to be able to refresh this list at the page it is
 	// actually showing. See list-state.svelte.ts.
-	const result = $derived(getMyMessages({ page: conversationList.page }));
+	/**
+	 * The inbox in the URL, mirrored into local state rather than read back.
+	 * `replaceState` updates neither `page.url` nor the router, so a filter read
+	 * straight off the URL lags the control by a navigation.
+	 */
+	let inbox = $state(page.url.searchParams.get('inbox') ?? 'all');
+
+	function chooseInbox(next: string) {
+		inbox = next;
+		conversationList.page = 1;
+		const url = new URL(page.url);
+		if (next === 'all') url.searchParams.delete('inbox');
+		else url.searchParams.set('inbox', next);
+		void goto(url, { replaceState: true, noScroll: true, keepFocus: true });
+	}
+
+	const result = $derived(getMyMessages({ page: conversationList.page, inbox }));
 	// The member layout above already holds this; re-awaiting it here was a second remote query in
 	// flight in this component. See `member/layout-context.ts`.
 	const memberLayout = getMemberLayoutContext();
 	const layout = $derived(memberLayout.current);
-	const openId = $derived(page.params.id);
+
+	/**
+	 * The selector's options come off the layout the panel already holds, not a
+	 * query of their own — `custom/no-concurrent-remote-queries`, and the same
+	 * two lists the sidebar draws its My Acts and My Groups from.
+	 *
+	 * Every active membership is offered: a group's chat is every member's, so
+	 * a plain bandmate gets its inbox even with no enquiries in it.
+	 */
+	const inboxes = $derived(
+		[...layout.userBands, ...layout.userGroups]
+			.map((g) => ({ slug: g.slug, name: g.name }))
+			.sort((a, b) => a.name.localeCompare(b.name))
+	);
 
 	// Two different offs. The feature flag is the collective's (#907); this is
 	// the member's own switch, and an inbox empty because of it reads as one
@@ -64,6 +93,24 @@
 		</p>
 	{/if}
 
+	<!-- One list, narrowed rather than split. `groupId` is the inbox, so the
+	     options are "everything you can read", your own, then one per group —
+	     and a group you only belong to offers its chat, not its bookings. -->
+	{#if inboxes.length > 0}
+		<Select
+			size="sm"
+			aria-label="Inbox"
+			value={inbox}
+			onchange={(e: Event) => chooseInbox((e.currentTarget as HTMLSelectElement).value)}
+		>
+			<option value="all">All inboxes</option>
+			<option value="own">Just mine</option>
+			{#each inboxes as box (box.slug)}
+				<option value={box.slug}>{box.name}</option>
+			{/each}
+		</Select>
+	{/if}
+
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		<!-- The copy names the control that is actually on screen. "Start a
 		     conversation" pointed at Message a Member, which only renders when the
@@ -78,51 +125,7 @@
 			onpage={(p) => (conversationList.page = p)}
 		>
 			{#snippet children(conversations)}
-				<ul class="flex flex-col gap-1">
-					{#each conversations as c (c.id)}
-						{@const href = resolve(`/member/messages/${c.id}`)}
-						{@const Icon = channelIcon(c.channel)}
-						{@const active = c.id === openId}
-						<li>
-							<a
-								{href}
-								class="flex items-start gap-3 rounded-box p-3 hover:bg-base-200 {active
-									? 'bg-base-200'
-									: ''}"
-								aria-current={active ? 'page' : undefined}
-							>
-								<span class="mt-0.5 shrink-0 opacity-60" title={channelLabel(c.channel)}>
-									<Icon size={18} />
-								</span>
-
-								<span class="flex min-w-0 flex-1 flex-col gap-0.5">
-									<span class="flex items-center gap-2">
-										<span class="truncate font-medium" class:font-bold={c.unread}>
-											{c.channel === 'direct'
-												? (c.counterpartName ?? 'Member')
-												: (c.subject ?? 'Conversation')}
-										</span>
-										{#if c.pending}
-											<span class="badge shrink-0 badge-sm badge-warning">Request</span>
-										{/if}
-										{#if c.unread}
-											<span class="size-2 shrink-0 rounded-full bg-primary" title="Unread"></span>
-										{/if}
-									</span>
-
-									{#if c.preview}
-										<span class="truncate text-muted text-sm">{c.preview}</span>
-									{/if}
-
-									<span class="text-subtle text-xs">
-										{c.lastMessageAt ? relativeDay(c.lastMessageAt) : '—'}
-										{#if c.status === 'resolved'}· Closed{/if}
-									</span>
-								</span>
-							</a>
-						</li>
-					{/each}
-				</ul>
+				<ConversationRows rows={conversations} hrefFor={(id) => `/member/messages/${id}`} />
 			{/snippet}
 		</DataList>
 	</div>

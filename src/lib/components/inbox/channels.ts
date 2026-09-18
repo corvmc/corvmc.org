@@ -6,7 +6,8 @@ import {
 	IconBrandInstagram,
 	IconBrandFacebook,
 	IconUsers,
-	IconMicrophone2
+	IconMicrophone2,
+	IconUsersGroup
 } from '@tabler/icons-svelte';
 import { inboxChannels, META_HUMAN_AGENT_WINDOW_MS } from '$lib/config';
 
@@ -24,6 +25,7 @@ export const channelLabels: Record<Channel, string> = {
 	portal: 'Member Portal',
 	direct: 'Direct Message',
 	band: 'Booking Enquiry',
+	group: 'Group Chat',
 	instagram: 'Instagram',
 	messenger: 'Messenger'
 };
@@ -35,6 +37,7 @@ export const channelIcons: Record<Channel, typeof IconMail> = {
 	portal: IconMessages,
 	direct: IconUsers,
 	band: IconMicrophone2,
+	group: IconUsersGroup,
 	instagram: IconBrandInstagram,
 	messenger: IconBrandFacebook
 };

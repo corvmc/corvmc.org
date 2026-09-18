@@ -391,6 +391,23 @@ export interface InboxDirectMessageEvent {
 	isRequest: boolean;
 }
 
+/**
+ * Somebody posted in a group's shared thread.
+ *
+ * Carries the roster minus the author rather than leaving a listener to fan
+ * out and remember to skip them — the mistake that, on a two-person thread,
+ * means notifying someone about their own message.
+ */
+export interface InboxGroupMessageEvent {
+	threadId: string;
+	messageId: string;
+	groupId: string;
+	groupName: string;
+	senderId: string;
+	senderName: string;
+	recipientIds: string[];
+}
+
 export interface InboxMessageReceivedEvent {
 	threadId: string;
 	messageId: string;
@@ -700,6 +717,7 @@ export type DomainEvents = {
 	'inbox.message_received': InboxMessageReceivedEvent;
 	'inbox.message_sent': InboxMessageSentEvent;
 	'inbox.direct_message': InboxDirectMessageEvent;
+	'inbox.group_message': InboxGroupMessageEvent;
 	'content.flagged': ContentFlaggedEvent;
 	'suggestion.responded': SuggestionRespondedEvent;
 	'suggestion.moderated': SuggestionModeratedEvent;

@@ -585,7 +585,6 @@
 	"src/routes/band/[slug]/members/YourMembership.svelte",
 	"src/routes/band/[slug]/messages/+layout.svelte",
 	"src/routes/band/[slug]/messages/EnquiryList.svelte",
-	"src/routes/band/[slug]/messages/[id]/+page.svelte",
 	"src/routes/band/[slug]/messages/list-state.svelte.ts",
 	"src/routes/band/[slug]/music/CreateReleaseModal.svelte",
 	"src/routes/band/[slug]/music/ReleaseCard.svelte",

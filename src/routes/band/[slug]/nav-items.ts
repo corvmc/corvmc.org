@@ -15,6 +15,7 @@ import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-na
 export type BandNavKey =
 	| 'dashboard'
 	| 'messages'
+	| 'chat'
 	| 'members'
 	| 'rider'
 	| 'packing'
@@ -41,7 +42,7 @@ export interface BandNavInput {
 }
 
 /** Field names on `getBandLayout()`'s return. */
-export type BandNavBadgeKey = 'messagesUnread';
+export type BandNavBadgeKey = 'messagesUnread' | 'chatUnread';
 
 export interface BandNavItem extends NavNode<BandNavKey> {
 	label: string;
@@ -82,6 +83,17 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 			badgeKey: 'messagesUnread'
 		});
 	}
+
+	// Every member, unlike Messages above: chat is the band talking to itself,
+	// and gating it on admin would be gating members out of their own room. The
+	// two are separate rows because they are separate conversations with
+	// different readers — #1252.
+	items.push({
+		key: 'chat',
+		label: 'Chat',
+		href: resolve('/band/[slug]/chat', { slug }),
+		badgeKey: 'chatUnread'
+	});
 
 	items.push({ key: 'members', label: 'Members', href: resolve('/band/[slug]/members', { slug }) });
 
