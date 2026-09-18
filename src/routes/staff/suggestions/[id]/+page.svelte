@@ -45,6 +45,9 @@
 	const s = $derived(data.suggestion);
 	const pendingEdit = $derived(data.pendingEdit);
 	const project = $derived(data.project);
+	const fulfilledBy = $derived(data.fulfilledBy);
+	// Only gear can be answered by something arriving on a shelf.
+	const isGear = $derived(s.category === 'gear_equipment');
 	const committeeOptions = $derived(data.committees.map((c) => ({ value: c.id, label: c.name })));
 
 	const isMerged = $derived(!!s.mergedIntoId);
@@ -75,6 +78,21 @@
 	{:else if s.visibility === 'hidden'}
 		<Alert type="error">
 			Hidden from the board.{s.visibilityNote ? ` Note: ${s.visibilityNote}` : ''}
+		</Alert>
+	{/if}
+
+	<!-- The thing itself, or the way to record it arriving. A gear request sat
+	     at Planned after the amp was on the shelf, because the acquisition and
+	     the suggestion had no relationship at all (#603). -->
+	{#if fulfilledBy}
+		<Alert type="success" href={resolve(`/staff/inventory/acquisitions/${fulfilledBy.id}`)}>
+			Arrived {formatDateTime(fulfilledBy.occurredAt)}{fulfilledBy.sourceName
+				? ` from ${fulfilledBy.sourceName}`
+				: ''}.
+		</Alert>
+	{:else if isGear && !isMerged && (s.status === 'planned' || s.status === 'in_progress')}
+		<Alert type="info" href="{resolve('/staff/inventory/intake')}?suggestion={s.id}">
+			Got it in? Record the arrival and this closes itself — the member who asked hears about it.
 		</Alert>
 	{/if}
 

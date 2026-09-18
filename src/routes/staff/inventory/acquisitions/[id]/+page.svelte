@@ -259,6 +259,15 @@
 					<Fact label="Kind">{acquisitionKindLabels[data.kind]}</Fact>
 					<Fact label="Occurred">{formatDateShort(data.occurredAt)}</Fact>
 					<Fact label="Source">{data.donorName ?? '—'}</Fact>
+					{#if data.fulfils}
+						<!-- What a member asked for, and where it came from. The request
+						     sat at Planned after the thing was on the shelf (#603). -->
+						<Fact label="Fulfils">
+							<a class="link" href={resolve(`/staff/suggestions/${data.fulfils.id}`)}>
+								{data.fulfils.title}
+							</a>
+						</Fact>
+					{/if}
 					<Fact label="Lines total">
 						{formatCents(data.linesTotalCents)}
 						{#if data.totalCents != null && data.totalCents !== data.linesTotalCents}

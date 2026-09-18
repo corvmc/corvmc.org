@@ -28,6 +28,9 @@
 	 * owns its own, the way `CategoryOptions` does.
 	 */
 	const orderId = page.url.searchParams.get('order') ?? undefined;
+	// Prefilled when a staffer came from the gear request itself, editable
+	// either way — an arrival nobody navigated here for can still be linked.
+	let suggestionId = $state(page.url.searchParams.get('suggestion') ?? '');
 
 	/** One query, composed on the server — see `getIntakePage`. */
 	const data = $derived(await getIntakePage({ orderId }));
@@ -137,6 +140,21 @@
 					/>
 				{/if}
 				<Field field={fields.reference} type="text" label="Reference / receipt no." />
+
+				{#if data.plannedGear.length > 0}
+					<Field
+						field={fields.suggestionId}
+						type="select"
+						label="Fulfils a gear request"
+						bind:value={suggestionId}
+						placeholder="Nothing in particular"
+						options={data.plannedGear.map((g) => ({
+							value: g.id,
+							label: `${g.title} (${g.voteCount} ${g.voteCount === 1 ? 'vote' : 'votes'})`
+						}))}
+						description="Marks the request Done and tells whoever asked for it that it arrived."
+					/>
+				{/if}
 
 				<MoneyField
 					field={fields.totalCents}

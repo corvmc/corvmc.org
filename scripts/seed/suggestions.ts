@@ -5,6 +5,8 @@ import {
 	suggestionEdit,
 	suggestionVote
 } from '../../src/lib/server/db/schema/suggestion';
+import { acquisition } from '../../src/lib/server/db/schema/inventory';
+import { eq } from 'drizzle-orm';
 import { batchInsert, db } from './db';
 import { ptDate, randomInt } from './util';
 
@@ -51,7 +53,7 @@ export const SUGGESTION_SEEDS = [
 	}
 ] as const;
 
-export async function seedSuggestions(users: any[], adminUser: any) {
+export async function seedSuggestions(users: any[], adminUser: any, restockAcquisitionId?: string) {
 	console.log('Seeding suggestions...');
 	if (users.length < 4) return { total: 0, votes: 0 };
 
@@ -114,6 +116,51 @@ export async function seedSuggestions(users: any[], adminUser: any) {
 			.returning();
 		rows.push(row);
 		addVotes(row.id, spec.votes, i);
+	}
+
+	// --- The gear loop: one request waiting for the thing, one the thing
+	//     arrived for. Without both, the intake picker is empty locally and
+	//     neither end of the #603 link is visible.
+	const [wantedGear] = await db
+		.insert(suggestion)
+		.values({
+			authorUserId: users[2 % users.length].id,
+			title: 'A second bass amp',
+			body: 'There is one bass rig and two bands booked most evenings. A second combo would stop the handover being a negotiation.',
+			category: 'gear_equipment',
+			status: 'planned',
+			visibility: 'visible',
+			responseBody: "Agreed. It's in the budget for this quarter — we'll post when it lands.",
+			responseByUserId: adminUser.id,
+			responseAt: ptDate(-12, 11),
+			createdAt: ptDate(-40, 14)
+		})
+		.returning();
+	rows.push(wantedGear);
+	addVotes(wantedGear.id, 8, 2);
+
+	if (restockAcquisitionId) {
+		const [arrivedGear] = await db
+			.insert(suggestion)
+			.values({
+				authorUserId: users[3 % users.length].id,
+				title: 'Spare drum heads on the shelf',
+				body: 'A batter head goes every couple of months and the session stops. A few spares in the cupboard would cover it.',
+				category: 'gear_equipment',
+				status: 'done',
+				visibility: 'visible',
+				createdAt: ptDate(-55, 15)
+			})
+			.returning();
+		rows.push(arrivedGear);
+		addVotes(arrivedGear.id, 5, 4);
+
+		// The link itself. Set here rather than in the equipment seed because the
+		// suggestion is what does not exist yet when the acquisition is written.
+		await db
+			.update(acquisition)
+			.set({ suggestionId: arrivedGear.id })
+			.where(eq(acquisition.id, restockAcquisitionId));
 	}
 
 	// --- A merged pair whose voter sets OVERLAP ---

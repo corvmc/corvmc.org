@@ -94,6 +94,7 @@ import {
 	toggleVote,
 	mergeSuggestions,
 	respondToSuggestion,
+	fulfilSuggestion,
 	withholdForReview,
 	getEditableState,
 	editSuggestion,
@@ -700,5 +701,48 @@ describe('cancelEditRequest', () => {
 	it('refuses once staff have already decided', async () => {
 		selectResultQueue = [[{ id: 'edit-1', requestedByUserId: 'u1', status: 'approved' }]];
 		await expect(cancelEditRequest('edit-1', 'u1')).rejects.toThrow(SuggestionEditError);
+	});
+});
+
+describe('fulfilSuggestion', () => {
+	const AUTHOR = [
+		{ id: 's1', title: 'A bass amp', authorUserId: 'u1', authorName: 'A', authorEmail: 'a@x.com' }
+	];
+
+	it('marks a planned request done and tells the author', async () => {
+		selectResultQueue = [AUTHOR, [{ status: 'planned' }]];
+
+		await expect(fulfilSuggestion('s1', { staffId: 'staff-1' })).resolves.toBe(true);
+		expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({ status: 'done' }));
+
+		await flushMicrotasks();
+		expect(emit).toHaveBeenCalledWith(
+			'suggestion.responded',
+			expect.objectContaining({ suggestionId: 's1', status: 'done' })
+		);
+	});
+
+	it.each(['open', 'in_progress'])('also closes one still at %s', async (status) => {
+		selectResultQueue = [AUTHOR, [{ status }]];
+		await expect(fulfilSuggestion('s1', { staffId: 'staff-1' })).resolves.toBe(true);
+	});
+
+	// A donation that happens to satisfy a request staff turned down does not
+	// overturn the decision, and one already closed is not re-announced.
+	it.each(['declined', 'done'])('leaves a %s request alone', async (status) => {
+		selectResultQueue = [AUTHOR, [{ status }]];
+
+		await expect(fulfilSuggestion('s1', { staffId: 'staff-1' })).resolves.toBe(false);
+		expect(updateSet).not.toHaveBeenCalled();
+
+		await flushMicrotasks();
+		expect(emit).not.toHaveBeenCalled();
+	});
+
+	it('is a no-op for a suggestion that is gone', async () => {
+		selectResultQueue = [[]];
+
+		await expect(fulfilSuggestion('missing', { staffId: 'staff-1' })).resolves.toBe(false);
+		expect(updateSet).not.toHaveBeenCalled();
 	});
 });
