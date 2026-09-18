@@ -3,6 +3,8 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -128,8 +130,9 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title="Public page">
-		<p class="text-sm">
+	<!-- One line, so a labelled fact rather than a card of its own (#1078). -->
+	<DefinitionList>
+		<Fact label="Public page">
 			{#if group.visibility === 'public'}
 				<a class="link link-primary" href={resolve(`/groups/${group.slug}`)}>/groups/{group.slug}</a
 				>
@@ -139,8 +142,8 @@
 					<code class="text-xs">/groups/{group.slug}</code>.
 				</span>
 			{/if}
-		</p>
-	</InfoCard>
+		</Fact>
+	</DefinitionList>
 
 	{#if !isDeactivated}
 		<InfoCard title="End this program">

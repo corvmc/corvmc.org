@@ -22,6 +22,8 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { IconUserPlus } from '@tabler/icons-svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import {
 		fullDate,
 		formatTime,
@@ -332,11 +334,11 @@
 		</InfoCard>
 	{/if}
 
-	<!-- Notes -->
+	<!-- A labelled line, not a titled box around one paragraph (#1078). -->
 	{#if r.notes}
-		<InfoCard title="Notes">
-			<p>{r.notes}</p>
-		</InfoCard>
+		<DefinitionList>
+			<Fact label="Notes">{r.notes}</Fact>
+		</DefinitionList>
 	{/if}
 
 	<!-- Audit -->
@@ -348,12 +350,11 @@
 
 	<!-- Cancellation -->
 	{#if status === 'cancelled'}
-		<InfoCard title="Cancelled" class="border-l-4 border-error">
-			{#if r.cancellationReason}
-				<p>{r.cancellationReason}</p>
-			{:else}
-				<p class="opacity-50">No reason provided</p>
-			{/if}
-		</InfoCard>
+		<!-- An alert rather than a card: a cancellation is a state the reader has
+		     to notice, and the body is one line either way. -->
+		<Alert type="error">
+			<strong>Cancelled.</strong>
+			{r.cancellationReason ?? 'No reason given.'}
+		</Alert>
 	{/if}
 </PageContent>
