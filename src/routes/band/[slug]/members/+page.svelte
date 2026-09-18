@@ -230,7 +230,7 @@
 							<EntityIdentity ref={invite.member} size="md">
 								{#snippet subtitle()}
 									Invited as {invite.role}{#if invite.position}
-										&middot; {invite.position}{/if}
+										&nbsp;&middot; {invite.position}{/if}
 								{/snippet}
 							</EntityIdentity>
 							{#if canManage}
@@ -281,7 +281,7 @@
 							>
 								{#snippet subtitle()}
 									Invited as {invite.role}{#if invite.position}
-										&middot; {invite.position}{/if} &middot; by {invite.invitedByName}
+										&nbsp;&middot; {invite.position}{/if}&nbsp;&middot; by {invite.invitedByName}
 								{/snippet}
 							</EntityIdentity>
 							<div class="flex shrink-0 items-center gap-2">

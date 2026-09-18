@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatDateLong, formatDollars, formatTime } from '$lib/utils/format';
+	import { formatDollars } from '$lib/utils/format';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -17,7 +17,6 @@
 	let data = $derived(await getReservationDetail(page.params.id!));
 
 	const res = $derived(data.reservation);
-	const durationHours = $derived(data.durationHours);
 	const isPast = $derived(res.startsAt.getTime() <= Date.now());
 
 	const refresh = () => getReservationDetail(page.params.id!).refresh();
@@ -32,13 +31,11 @@
 	-->
 	<EntityIdentity ref={data.ref} size="lg" status />
 
+	<!-- No When/Time facts: `toReservationRef` builds the title out of exactly
+	     those, and the identity above already reads "Mon, Sep 21 · 6:00–8:00 PM
+	     / 2 hours". Restating them is the duplication #1043 removed from the
+	     card. -->
 	<DefinitionList>
-		<Fact label="When">{formatDateLong(res.startsAt)}</Fact>
-		<Fact label="Time">
-			{formatTime(res.startsAt)}–{formatTime(res.endsAt)} · {durationHours} hour{durationHours === 1
-				? ''
-				: 's'}
-		</Fact>
 		{#if data.band}
 			<!-- Whose booking this is, when it is not simply the member's own. A
 			     band booking looked identical to a personal one on this page. -->
