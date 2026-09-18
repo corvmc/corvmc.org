@@ -1181,14 +1181,25 @@
 									{/if}
 								{/if}
 								{#if act.slug}
-									<Button
-										href={resolve('/band/[slug]/rider/list', { slug: act.slug })}
-										variant="ghost"
-										size="sm"
-										class="ml-auto"
-									>
-										Open
-									</Button>
+									<!-- Two links, because an advance asks two questions: what the desk has
+									     to find, and what is arriving in the van. `getBandPackingPage` has
+									     allowed a staff reader all along and nothing offered it (#858). -->
+									<div class="ml-auto flex gap-1">
+										<Button
+											href={resolve('/band/[slug]/rider/list', { slug: act.slug })}
+											variant="ghost"
+											size="sm"
+										>
+											Rider
+										</Button>
+										<Button
+											href={resolve('/band/[slug]/packing', { slug: act.slug })}
+											variant="ghost"
+											size="sm"
+										>
+											Packing
+										</Button>
+									</div>
 								{/if}
 							</li>
 						{/each}
