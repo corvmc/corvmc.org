@@ -21,7 +21,7 @@ product UI stays clean and contemporary.
 
 This system was built from:
 
-- **Website / app codebase:** [`DevonCash/corvmc.org`](https://github.com/DevonCash/corvmc.org)
+- **Website / app codebase:** [`corvmc/corvmc.org`](https://github.com/corvmc/corvmc.org)
   (Laravel 12 + Filament v5, daisyUI on Tailwind v4). The primary source of
   truth for color, type, components, and iconography. We mirrored the
   `corvmc` daisyUI theme from `resources/css/app.css`.
