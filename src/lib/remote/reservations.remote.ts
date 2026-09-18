@@ -202,6 +202,13 @@ export const getReservationDetail = query(z.string(), async (id) => {
 
 	return {
 		reservation: row,
+		/** The booking as a record, for the detail page's identity (#1061). */
+		ref: toReservationRef(
+			row,
+			row.bookerType === 'group'
+				? { id: joined.band?.id ?? null, slug: joined.band?.slug ?? null }
+				: null
+		),
 		/** The act this was booked for, or null when it is the member's own. */
 		band: row.bookerType === 'group' ? toBandRef(joined.band) : null,
 		durationHours,
