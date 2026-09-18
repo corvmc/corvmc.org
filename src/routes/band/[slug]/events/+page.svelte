@@ -1,11 +1,13 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import BadgeList from '$lib/components/ui/BadgeList.svelte';
+	import { rowLink } from '$lib/actions/row-link';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -34,22 +36,22 @@
 
 	let importing = $state(false);
 
-	/** Other acts on the bill, for the "w/" byline. */
-	function supportNames(lineup: { name: string; bandId: string | null }[]): string {
-		return lineup
-			.filter((l) => l.bandId !== band.id)
-			.map((l) => l.name)
-			.join(', ');
+	/** Other acts on the bill. Clamped by `BadgeList`: a five-act bill was a paragraph. */
+	function supportNames(lineup: { name: string; bandId: string | null }[]): string[] {
+		return lineup.filter((l) => l.bandId !== band.id).map((l) => l.name);
 	}
 </script>
 
-<PageHeader width="2xl" title="Events" subtitle={band.name}>
+<!-- Unclamped: the column tiers are container queries, and `2xl` is 672px —
+     narrower than `col-extra`'s 768px, so a clamped page renders its widest
+     tier set in the narrowest container the app allows (ui-patterns, #1216). -->
+<PageHeader title="Events" subtitle={band.name}>
 	{#if isAdmin}
 		<Button variant="ghost" size="sm" onclick={() => (importing = true)}>Import past gigs</Button>
 		<CreateEventModal bandId={band.id} bandSlug={band.slug} bandName={band.name} />
 	{/if}
 </PageHeader>
-<PageContent width="2xl">
+<PageContent>
 	<!-- Bills this band was named on but hasn't answered. Until it confirms,
 	     the show is on the other band's listing only — never on this profile. -->
 	{#if invites.length > 0}
@@ -109,32 +111,47 @@
 	{#if bookings.length > 0}
 		<div class="mb-6 space-y-3">
 			<h2 class="text-muted font-semibold uppercase">Bookings</h2>
-			{#each bookings as booking (booking.eventId)}
-				<Card>
-					<CardBody class="gap-1 py-4">
-						<p class="font-medium">{booking.eventTitle}</p>
-						<p class="text-muted">
-							{formatDate(booking.startsAt)}{booking.location ? ` · ${booking.location}` : ''}
-						</p>
-						<p class="text-subtle">
+			<!-- A table: read-only with no actions at all, and the call times were a
+			     run-on line of up to four conditional facts (#1048). -->
+			<Table>
+				{#snippet head()}
+					<th class="cell-primary">Show</th>
+					<th class="col-support whitespace-nowrap">On at</th>
+					<th class="col-extra whitespace-nowrap">Call times</th>
+					<th class="whitespace-nowrap">Terms</th>
+				{/snippet}
+
+				{#each bookings as booking (booking.eventId)}
+					<tr class="hover">
+						<td class="cell-primary">
+							<div class="truncate font-medium">{booking.eventTitle}</div>
+							<div class="text-subtle">
+								{formatDate(booking.startsAt)}{booking.location ? ` · ${booking.location}` : ''}
+							</div>
+						</td>
+						<td class="col-support whitespace-nowrap">
 							{#if booking.scheduledStartAt}
-								On at {formatTime(booking.scheduledStartAt)} ·
+								{formatTime(booking.scheduledStartAt)}
+							{:else}
+								<span class="text-subtle">—</span>
 							{/if}
-							{booking.setLengthMinutes} min set
+							<div class="text-subtle">{booking.setLengthMinutes} min</div>
+						</td>
+						<td class="col-extra text-subtle">
 							{#if booking.soundcheckAt}
-								· soundcheck {formatTime(booking.soundcheckAt)}
+								<div>soundcheck {formatTime(booking.soundcheckAt)}</div>
 							{/if}
 							{#if booking.loadInAt}
-								· load-in {formatTime(booking.loadInAt)}
+								<div>load-in {formatTime(booking.loadInAt)}</div>
 							{/if}
 							{#if booking.curfewAt}
-								· curfew {formatTime(booking.curfewAt)}
+								<div>curfew {formatTime(booking.curfewAt)}</div>
 							{/if}
-						</p>
-						<p>{describeTerms(booking.terms)}</p>
-					</CardBody>
-				</Card>
-			{/each}
+						</td>
+						<td class="whitespace-nowrap">{describeTerms(booking.terms)}</td>
+					</tr>
+				{/each}
+			</Table>
 		</div>
 	{/if}
 
@@ -148,35 +165,48 @@
 			{/if}
 		</EmptyState>
 	{:else}
-		<div class="space-y-3">
+		<!--
+			A table: zero always-visible actions and no prose, which is none of the
+			four tests a card has to pass. The two conditional facts — location and
+			the rest of the bill — set the card's height, so the stack went ragged
+			between events that had both, one or neither (#1048).
+		-->
+		<Table>
+			{#snippet head()}
+				<th class="w-px"><span class="sr-only">Status</span></th>
+				<th class="cell-primary">Event</th>
+				<th class="col-support">Where</th>
+				<th class="col-extra">On the bill</th>
+			{/snippet}
+
 			{#each events as evt (evt.id)}
-				<a
-					href={resolve(`/band/${band.slug}/events/${evt.id}`)}
-					class="card block bg-base-100 shadow-sm card-interactive"
+				<tr
+					class="hover cursor-pointer"
+					use:rowLink={resolve(`/band/${band.slug}/events/${evt.id}`)}
 				>
-					<CardBody row class="py-4">
-						<div>
-							<p class="font-medium">{evt.title}</p>
-							<p class="text-muted">
-								{formatDate(evt.startsAt)} &middot; {formatEventTimeRange(evt.startsAt, evt.endsAt)}
-							</p>
-							{#if evt.location}
-								<p class="text-subtle">{evt.location}</p>
-							{/if}
-							{#if supportNames(evt.lineup)}
-								<p class="text-subtle">w/ {supportNames(evt.lineup)}</p>
-							{/if}
+					<td class="w-px whitespace-nowrap">
+						<StatusBadge status={evt.status} />
+						{#if !evt.isOwner}
+							<Badge variant="ghost" size="xs">guest</Badge>
+						{/if}
+					</td>
+					<td class="cell-primary">
+						<div class="truncate font-medium">{evt.title}</div>
+						<div class="text-subtle">
+							{formatDate(evt.startsAt)} &middot; {formatEventTimeRange(evt.startsAt, evt.endsAt)}
 						</div>
-						<div class="flex shrink-0 items-center gap-2">
-							{#if !evt.isOwner}
-								<Badge variant="ghost">guest</Badge>
-							{/if}
-							<StatusBadge status={evt.status} />
-						</div>
-					</CardBody>
-				</a>
+					</td>
+					<td class="col-support truncate">{evt.location ?? '—'}</td>
+					<td class="col-extra">
+						{#if supportNames(evt.lineup).length}
+							<BadgeList items={supportNames(evt.lineup)} max={2} />
+						{:else}
+							<span class="text-subtle">—</span>
+						{/if}
+					</td>
+				</tr>
 			{/each}
-		</div>
+		</Table>
 	{/if}
 </PageContent>
 
