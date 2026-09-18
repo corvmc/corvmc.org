@@ -12,16 +12,12 @@
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 
 	/**
-	 * A booking as a card: date block tinted by status, the status, and a body
-	 * the panel supplies.
+	 * A booking as a card: a date block tinted by status, the status, and a body
+	 * the panel supplies. The block is shared with the band panel (#566); the
+	 * action row is not.
 	 *
-	 * The identity and the date block are what the two panels share (#566). The
-	 * action row is not: what a bandmate may do with a booking made on the act's
-	 * behalf is not what its booker may do.
-	 *
-	 * Two channels for status, deliberately: the tint reads at a glance and
-	 * names nothing, `StatusBadge` is the app's shared vocabulary. The bespoke
-	 * mono word this replaced was a third, and it overlapped the text (#1043).
+	 * Two status channels on purpose — the tint glances, `StatusBadge` names.
+	 * The mono word this replaced was a third, and it overlapped (#1043).
 	 */
 	let {
 		startsAt,
