@@ -68,10 +68,13 @@
 				{#if reservation.bookedBy.id}
 					&middot; Booked by {reservation.bookedBy.title}
 				{/if}
-				{#if reservation.notes}
-					&middot; {reservation.notes}
-				{/if}
 			{/snippet}
 		</EntityIdentity>
+		<!-- Its own line, because the subline truncates at `size="md"` and notes
+		     were third in it — so the one fact the card adds over the date rail
+		     was the one that got clipped (#1051). -->
+		{#if reservation.notes}
+			<p class="mt-1 text-sm text-base-content/70">{reservation.notes}</p>
+		{/if}
 	</div>
 </ReservationCardShell>

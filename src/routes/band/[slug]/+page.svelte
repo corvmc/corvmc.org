@@ -32,34 +32,43 @@
 
 <PageHeader title="Dashboard" subtitle={band.name} />
 <PageContent>
-	{#await upcoming}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-lg loading-spinner"></span>
-		</div>
-	{:then sessions}
-		{#if address}
-			<AddressCard url={address} title="Your act's address">
-				Put this on a flyer or in a bio — it goes to {band.name}'s page.
-			</AddressCard>
-		{/if}
+	{#if address}
+		<AddressCard url={address} title="Your act's address">
+			Put this on a flyer or in a bio — it goes to {band.name}'s page.
+		</AddressCard>
+	{/if}
 
-		{#if isOwnerOrAdmin}
-			<svelte:boundary>
-				<PressKitCard slug={band.slug} />
-			</svelte:boundary>
-		{/if}
+	{#if isOwnerOrAdmin}
+		<svelte:boundary>
+			<PressKitCard slug={band.slug} />
+		</svelte:boundary>
+	{/if}
 
-		<!-- Act overview -->
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-			<StatCard title="Members" value={band.memberCount} size="sm" />
-			<StatCard title="Upcoming Sessions" value={sessions.length} size="sm" />
-			<StatCard title="Your Role" value={layout.userRole} size="sm" valueClass="capitalize" />
-		</div>
+	<!-- Act overview -->
+	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+		<StatCard title="Members" value={band.memberCount} size="sm" />
+		<StatCard title="Your Role" value={layout.userRole} size="sm" valueClass="capitalize" />
+	</div>
 
-		<!-- Upcoming reservations -->
-		<section>
+	<!-- Upcoming reservations. The only thing on this page that waits: everything
+	     above comes from `bandLayout`, which is already resolved, and awaiting
+	     one list at the top left the whole dashboard a spinner (#1051). -->
+	<section>
+		{#await upcoming}
 			<div class="mb-3 flex items-center justify-between">
-				<h2 class="text-lg font-semibold">Upcoming Sessions</h2>
+				<h2 class="text-lg font-semibold">Upcoming sessions</h2>
+			</div>
+			<div class="flex justify-center py-8">
+				<span class="loading loading-lg loading-spinner"></span>
+			</div>
+		{:then sessions}
+			<div class="mb-3 flex items-center justify-between">
+				<h2 class="text-lg font-semibold">
+					Upcoming sessions
+					{#if sessions.length > 0}
+						<span class="font-normal text-base-content/60">({sessions.length})</span>
+					{/if}
+				</h2>
 				<a href={resolve(`/band/${band.slug}/reservations`)} class="link text-sm link-primary">
 					View all
 				</a>
@@ -68,24 +77,22 @@
 			{#if sessions.length === 0}
 				<EmptyState message="No upcoming sessions scheduled." />
 			{:else}
-				<div class="grid grid-cols-1">
-					{#each sessions as res (res.id)}
-						<BandReservationCard reservation={res} slug={band.slug} />
-					{/each}
-				</div>
+				{#each sessions as res (res.id)}
+					<BandReservationCard reservation={res} slug={band.slug} />
+				{/each}
 			{/if}
-		</section>
+		{/await}
+	</section>
 
-		<!-- Quick links -->
-		<div class="flex gap-3">
-			<Button href="/band/{band.slug}/members" variant="default" size="sm" outline
-				>Manage Members</Button
+	<!-- Quick links -->
+	<div class="flex gap-3">
+		<Button href="/band/{band.slug}/members" variant="default" size="sm" outline
+			>Manage Members</Button
+		>
+		{#if isOwnerOrAdmin}
+			<Button href="/band/{band.slug}/edit" variant="default" size="sm" outline
+				>Edit Act Profile</Button
 			>
-			{#if isOwnerOrAdmin}
-				<Button href="/band/{band.slug}/edit" variant="default" size="sm" outline
-					>Edit Act Profile</Button
-				>
-			{/if}
-		</div>
-	{/await}
+		{/if}
+	</div>
 </PageContent>
