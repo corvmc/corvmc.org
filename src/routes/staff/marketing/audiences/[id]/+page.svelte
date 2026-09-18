@@ -39,12 +39,7 @@
 	let allowOptIn = $derived(audienceData.allowOptIn);
 </script>
 
-<PageHeader
-	width="3xl"
-	subtitle="Audience"
-	title={audienceData.name}
-	backHref="/staff/marketing/audiences"
->
+<PageHeader subtitle="Audience" title={audienceData.name} backHref="/staff/marketing/audiences">
 	<!-- Not gated on `isBuiltIn`: `updateAudience` refuses a built-in's *slug*
 	     and its opt-in, and says in its own comment that "name and description
 	     are staff-editable copy". Before this there was no way to change either
@@ -77,7 +72,7 @@
 		/>
 	{/if}
 </PageHeader>
-<PageContent width="3xl">
+<PageContent>
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
 		<InfoCard title="Details">
 			<DefinitionList>

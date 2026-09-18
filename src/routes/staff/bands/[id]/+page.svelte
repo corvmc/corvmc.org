@@ -39,7 +39,7 @@
      effect_update_depth_exceeded crash (same bug as /member/profile). -->
 <StaffBandForm {band} {id} />
 
-<PageContent width="3xl">
+<PageContent>
 	<InfoCard title="Members">
 		{#snippet header(title)}
 			<header class="flex items-center justify-between">

@@ -187,13 +187,13 @@
 				{#snippet head()}
 					<th class="whitespace-nowrap">When</th>
 					<th>What happened</th>
-					<th class="col-extra">Note</th>
+					<th>Note</th>
 				{/snippet}
 				{#each movements as movement (movement.id)}
 					<tr>
 						<td class="whitespace-nowrap">{formatDateShort(movement.occurredAt)}</td>
 						<td class="cell-primary">{stockReasonLabels[movement.reason]}</td>
-						<td class="col-extra">{movement.notes ?? '—'}</td>
+						<td>{movement.notes ?? '—'}</td>
 					</tr>
 				{/each}
 			</Table>

@@ -1466,7 +1466,7 @@
 								<th class="w-px"><span class="sr-only">Status</span></th>
 								<th>Attendee</th>
 								<th class="w-px text-right">Paid</th>
-								<th class="col-support w-px">Code</th>
+								<th class="w-px">Code</th>
 							{/snippet}
 							{#each data.tickets as t (t.id)}
 								<tr class="hover">
@@ -1497,7 +1497,7 @@
 											<div class="text-muted">Waived discount</div>
 										{/if}
 									</td>
-									<td class="col-support w-px"><span class="font-mono text-sm">{t.code}</span></td>
+									<td class="w-px"><span class="font-mono text-sm">{t.code}</span></td>
 								</tr>
 							{/each}
 						</Table>

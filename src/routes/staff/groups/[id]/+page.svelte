@@ -95,12 +95,12 @@
 			<Table>
 				{#snippet head()}
 					<th>Member</th>
-					<th class="col-support whitespace-nowrap">Applied</th>
+					<th class="whitespace-nowrap">Applied</th>
 				{/snippet}
 				{#each members.requested as m (m.id)}
 					<tr>
 						<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
-						<td class="col-support whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
+						<td class="whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
 					</tr>
 				{/each}
 			</Table>
@@ -114,16 +114,16 @@
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Member</th>
 					<th class="w-px">Role</th>
-					<th class="col-support">Position</th>
-					<th class="col-extra whitespace-nowrap">Joined</th>
+					<th>Position</th>
+					<th class="whitespace-nowrap">Joined</th>
 				{/snippet}
 				{#each [...members.active, ...members.pending] as m (m.id)}
 					<tr>
 						<td class="w-px"><StatusBadge status={m.status} /></td>
 						<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
 						<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
-						<td class="col-support">{m.position ?? '—'}</td>
-						<td class="col-extra whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
+						<td>{m.position ?? '—'}</td>
+						<td class="whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
 					</tr>
 				{/each}
 			</Table>

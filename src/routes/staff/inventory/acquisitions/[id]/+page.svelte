@@ -436,14 +436,14 @@
 				{#snippet head()}
 					<th class="whitespace-nowrap">When</th>
 					<th>Item</th>
-					<th class="col-support">What happened</th>
+					<th>What happened</th>
 					<th class="cell-num">Quantity</th>
 				{/snippet}
 				{#each data.movements as movement (movement.id)}
 					<tr>
 						<td class="whitespace-nowrap">{formatDateShort(movement.occurredAt)}</td>
 						<td class="cell-primary">{movement.item.name}</td>
-						<td class="col-support">{stockReasonLabels[movement.reason]}</td>
+						<td>{stockReasonLabels[movement.reason]}</td>
 						<td class="cell-num">{movement.quantity > 0 ? '+' : ''}{movement.quantity}</td>
 					</tr>
 				{/each}

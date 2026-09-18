@@ -441,7 +441,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Event</th>
-					<th class="col-support">Posted by</th>
+					<th>Posted by</th>
 				{/snippet}
 				{#each data.nearby as n (n.id)}
 					{@const href = resolve(`/staff/events/${n.id}`)}
@@ -456,7 +456,7 @@
 								{/snippet}
 							</EntityIdentity>
 						</td>
-						<td class="col-support">
+						<td>
 							{#if n.source === 'cmc'}
 								<span class="text-muted">CMC</span>
 							{:else if n.source === 'band'}
