@@ -52,10 +52,15 @@
 	function handleSelect(slug: string) {
 		goto(resolve(`/member/help/${slug}`));
 	}
+
+	/** Enough to show what a category covers without the tallest card setting the row. */
+	const ARTICLES_SHOWN = 5;
 </script>
 
-<PageHeader width="2xl" title="Help Center" subtitle="Support" />
-<PageContent width="2xl">
+<!-- `3xl`, not `2xl`: 672px split into two columns is ~320px each, which
+     wrapped every category name and description (#1045). -->
+<PageHeader width="3xl" title="Help Center" subtitle="Support" />
+<PageContent width="3xl">
 	<HelpSearch onselect={handleSelect} />
 
 	{#if categories.length === 0}
@@ -71,15 +76,21 @@
 								<Icon size={20} class="text-primary" />
 							</div>
 							<div class="min-w-0 flex-1">
-								<h3 class="text-sm font-semibold">{category.name}</h3>
+								<!-- The thing you navigate by, a size above the links under it:
+								     at `text-sm font-semibold` over `text-sm` links, a
+								     10-article card read as eleven near-identical lines. -->
+								<h3 class="text-base font-semibold">{category.name}</h3>
 								{#if category.description}
 									<p class="mt-0.5 text-subtle">{category.description}</p>
 								{/if}
 							</div>
 						</div>
 						{#if category.articles.length > 0}
+							<!-- Capped: nothing limited this, so a 12-article category sat
+							     beside a 2-article one and the short card stretched to
+							     leave a hole (#1045). -->
 							<ul class="mt-3 space-y-1">
-								{#each category.articles as article (article.slug)}
+								{#each category.articles.slice(0, ARTICLES_SHOWN) as article (article.slug)}
 									<li>
 										<a
 											href={resolve(`/member/help/${article.slug}`)}
@@ -90,6 +101,13 @@
 									</li>
 								{/each}
 							</ul>
+							{#if category.articles.length > ARTICLES_SHOWN}
+								<!-- A count, not a link: there is no per-category page to go
+								     to, and the search above is how the rest are found. -->
+								<p class="mt-2 text-subtle text-sm">
+									and {category.articles.length - ARTICLES_SHOWN} more
+								</p>
+							{/if}
 						{:else}
 							<p class="mt-3 text-subtle italic">No articles yet</p>
 						{/if}

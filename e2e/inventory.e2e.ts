@@ -466,8 +466,9 @@ test.describe('inventory', () => {
 			await loginAsMember(page);
 			await page.goto('/member/equipment/loans');
 
-			const card = page.locator('.card').filter({ hasText: 'Changed my mind' }).first();
-			await card.getByRole('button', { name: /Cancel/ }).click();
+			// The row, not a card: the member's loans are a table now (#1042).
+			const row = page.locator('tbody tr').filter({ hasText: 'Changed my mind' }).first();
+			await row.getByRole('button', { name: /Cancel/ }).click();
 			await modalSubmit(page, /Cancel/).click();
 
 			await expect

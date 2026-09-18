@@ -1,7 +1,6 @@
 <script lang="ts">
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -11,13 +10,6 @@
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import {
-		IconHash,
-		IconCalendar,
-		IconCalendarCheck,
-		IconClock,
-		IconCoin
-	} from '@tabler/icons-svelte';
 	import { getMemberEquipmentLoans } from '$lib/remote/inventory.remote';
 
 	let pastPage = $state(1);
@@ -45,118 +37,118 @@
 		onchange={(key) => (activeTab = key as 'active' | 'past')}
 	/>
 
-	<!-- Loan Cards -->
+	<!--
+		Tables, not cards: two facts and one conditional action on a past loan,
+		and on an active one seven facts at a single type weight in a left-pinned
+		column — where the due date, the only one with a deadline, read exactly
+		like the rate. Each label was also encoded three times (icon, hidden
+		word, tooltip); as column headers that apparatus goes (#1042).
+	-->
 	{#if activeTab === 'active'}
-		{#each data.active as loan (loan.id)}
-			<Card class="border">
-				<CardBody padding="sm">
-					<div class="flex items-start justify-between">
-						<div>
-							<h3 class="font-semibold">
-								{loan.equipmentName ?? 'Free-form Request'}
-							</h3>
-							<div class="mt-1 flex gap-2">
-								<StatusBadge status={loan.status} label />
-								{#if loan.isOverdue}
-									<Badge variant="error">Overdue</Badge>
-								{/if}
-							</div>
-						</div>
-						{#if loan.status === 'requested' || loan.status === 'scheduled'}
-							<CancelLoanAction
-								loanId={loan.id}
-								label="Cancel"
-								confirm="Cancel this loan request?"
-							/>
-						{/if}
-					</div>
-
-					<dl class="mt-2 grid gap-x-4 gap-y-1 text-sm" style="grid-template-columns: auto 1fr;">
-						{#if loan.quantity > 1}
-							<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Quantity">
-								<IconHash size={14} /><span class="hidden sm:inline">Qty</span>
-							</dt>
-							<dd>{loan.quantity}</dd>
-						{/if}
-						<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Requested pickup">
-							<IconCalendar size={14} /><span class="hidden sm:inline">Pickup</span>
-						</dt>
-						<dd>{formatDate(loan.requestedPickupDate)}</dd>
-						{#if loan.estimatedReturnDate}
-							<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Estimated return">
-								<IconCalendar size={14} /><span class="hidden sm:inline">Est. Return</span>
-							</dt>
-							<dd>{formatDate(loan.estimatedReturnDate)}</dd>
-						{/if}
-						{#if loan.estimatedCostCents != null}
-							<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Estimated cost">
-								<IconCoin size={14} /><span class="hidden sm:inline">Est. Cost</span>
-							</dt>
-							<dd>
-								{loan.estimatedCostCents === 0 ? 'Free' : formatCents(loan.estimatedCostCents)}
-							</dd>
-						{/if}
-						{#if loan.scheduledPickupDate}
-							<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Confirmed pickup">
-								<IconCalendarCheck size={14} /><span class="hidden sm:inline">Confirmed</span>
-							</dt>
-							<dd>{formatDate(loan.scheduledPickupDate)}</dd>
-						{/if}
-						{#if loan.dueDate}
-							<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Due date">
-								<IconClock size={14} /><span class="hidden sm:inline">Due</span>
-							</dt>
-							<dd class:text-error={loan.isOverdue}>{formatDate(loan.dueDate)}</dd>
-						{/if}
-						{#if loan.dailyRateCents != null}
-							<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Daily rate">
-								<IconCoin size={14} /><span class="hidden sm:inline">Rate</span>
-							</dt>
-							<dd>{formatCents(loan.dailyRateCents)}/day</dd>
-						{/if}
-					</dl>
-
-					{#if loan.memberNotes}
-						<p class="mt-2 rounded bg-base-200 p-2 text-subtle">{loan.memberNotes}</p>
-					{/if}
-				</CardBody>
-			</Card>
-		{:else}
+		{#if data.active.length === 0}
 			<EmptyState
 				message="No loans on the go."
 				actionLabel="Browse the catalog"
 				actionHref="/member/equipment"
 			/>
-		{/each}
-	{:else}
-		{#each data.past.rows as loan (loan.id)}
-			<Card class="border opacity-80">
-				<CardBody padding="sm">
-					<div class="flex items-start justify-between">
-						<h3 class="font-semibold">{loan.equipmentName ?? 'Free-form Request'}</h3>
-						<StatusBadge status={loan.status} label />
-					</div>
-
-					<dl class="mt-2 grid gap-x-4 gap-y-1 text-sm" style="grid-template-columns: auto 1fr;">
-						{#if loan.returnedAt}
-							<dt class="opacity-60">Returned</dt>
-							<dd>{formatDate(loan.returnedAt)}</dd>
-						{/if}
-						{#if loan.totalChargeCents != null}
-							<dt class="opacity-60">Charged</dt>
-							<dd>
-								{formatCents(loan.totalChargeCents)}
-								{#if loan.creditsCents && loan.creditsCents > 0}
-									<span class="text-subtle">({formatCents(loan.creditsCents)} credits)</span>
-								{/if}
-							</dd>
-						{/if}
-					</dl>
-				</CardBody>
-			</Card>
 		{:else}
-			<p class="py-8 text-center opacity-60">No past loans.</p>
-		{/each}
+			<Table>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th class="cell-primary">Item</th>
+					<th class="col-support whitespace-nowrap">Pickup</th>
+					<th class="whitespace-nowrap">Due</th>
+					<th class="col-extra cell-num whitespace-nowrap">Cost</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
+				{/snippet}
+
+				{#each data.active as loan (loan.id)}
+					<tr class="hover">
+						<td class="w-px whitespace-nowrap"><StatusBadge status={loan.status} label /></td>
+						<td class="cell-primary">
+							<span class="font-medium">{loan.equipmentName ?? 'Free-form Request'}</span>
+							{#if loan.quantity > 1}
+								<span class="text-subtle">&times;{loan.quantity}</span>
+							{/if}
+							{#if loan.memberNotes}
+								<div class="truncate text-subtle">{loan.memberNotes}</div>
+							{/if}
+						</td>
+						<td class="col-support whitespace-nowrap">
+							{formatDate(loan.scheduledPickupDate ?? loan.requestedPickupDate)}
+							{#if !loan.scheduledPickupDate}
+								<div class="text-subtle">requested</div>
+							{/if}
+						</td>
+						<!-- The one fact with a deadline on it, so it keeps a full column
+						     rather than a tier that drops at 512px. -->
+						<td class="whitespace-nowrap">
+							{#if loan.dueDate}
+								<span class:text-error={loan.isOverdue}>{formatDate(loan.dueDate)}</span>
+								{#if loan.isOverdue}
+									<Badge variant="error" size="xs">Overdue</Badge>
+								{/if}
+							{:else if loan.estimatedReturnDate}
+								<span class="text-subtle">~{formatDate(loan.estimatedReturnDate)}</span>
+							{:else}
+								<span class="text-subtle">—</span>
+							{/if}
+						</td>
+						<td class="col-extra cell-num whitespace-nowrap">
+							{#if loan.estimatedCostCents != null}
+								{loan.estimatedCostCents === 0 ? 'Free' : formatCents(loan.estimatedCostCents)}
+							{:else if loan.dailyRateCents != null}
+								{formatCents(loan.dailyRateCents)}/day
+							{:else}
+								<span class="text-subtle">—</span>
+							{/if}
+						</td>
+						<td class="w-px">
+							{#if loan.status === 'requested' || loan.status === 'scheduled'}
+								<div class="flex w-max">
+									<CancelLoanAction
+										loanId={loan.id}
+										label="Cancel"
+										confirm="Cancel this loan request?"
+									/>
+								</div>
+							{/if}
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/if}
+	{:else if data.past.rows.length === 0}
+		<p class="py-8 text-center opacity-60">No past loans.</p>
+	{:else}
+		<Table>
+			{#snippet head()}
+				<th class="w-px"><span class="sr-only">Status</span></th>
+				<th class="cell-primary">Item</th>
+				<th class="col-support whitespace-nowrap">Returned</th>
+				<th class="cell-num whitespace-nowrap">Charged</th>
+			{/snippet}
+
+			{#each data.past.rows as loan (loan.id)}
+				<tr class="hover">
+					<td class="w-px whitespace-nowrap"><StatusBadge status={loan.status} label /></td>
+					<td class="cell-primary truncate">{loan.equipmentName ?? 'Free-form Request'}</td>
+					<td class="col-support whitespace-nowrap">
+						{loan.returnedAt ? formatDate(loan.returnedAt) : '—'}
+					</td>
+					<td class="cell-num whitespace-nowrap">
+						{#if loan.totalChargeCents != null}
+							{formatCents(loan.totalChargeCents)}
+							{#if loan.creditsCents && loan.creditsCents > 0}
+								<div class="text-subtle">{formatCents(loan.creditsCents)} credits</div>
+							{/if}
+						{:else}
+							<span class="text-subtle">—</span>
+						{/if}
+					</td>
+				</tr>
+			{/each}
+		</Table>
 		<Pagination {...data.past.pagination} onpage={(p) => (pastPage = p)} />
 	{/if}
 </PageContent>

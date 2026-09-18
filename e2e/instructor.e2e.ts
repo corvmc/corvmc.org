@@ -122,10 +122,13 @@ test('staff see a waiting application, and approving it clears the queue', async
 	await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 	await page.goto('/staff/instructors');
 
-	// Applications lead the page — the only rows on it waiting on staff. Asserted
-	// on the visible heading rather than a container class, so the test does not
-	// encode `InfoCard`'s markup.
-	await expect(page.getByText('Applications')).toBeVisible({ timeout: 15000 });
+	// Applications lead the page — the only rows on it waiting on staff. The
+	// *heading*, not the text: the staff sidebar has a "Committee Applications"
+	// row, so a bare `getByText` is two elements once the capability-filtered
+	// nav has rendered, and which of those wins is a race.
+	await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible({
+		timeout: 15000
+	});
 	await expect(page.getByText(SEED_APPLICANT_HEADLINE)).toBeVisible({ timeout: 15000 });
 	// The private half of the application is staff-only, and this is the one
 	// surface allowed to render it.
