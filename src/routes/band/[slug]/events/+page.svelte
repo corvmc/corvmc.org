@@ -21,6 +21,7 @@
 		confirmLineupSlotForm,
 		declineLineupSlotForm
 	} from '$lib/remote/band-events.remote';
+	import RequestCorrectionAction from './RequestCorrectionAction.svelte';
 	import { getBandLayoutContext } from '../layout-context';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -74,7 +75,8 @@
 							</p>
 						</div>
 						{#if isAdmin}
-							<div class="flex shrink-0 gap-2">
+							<div class="flex shrink-0 flex-wrap gap-2">
+								<RequestCorrectionAction slug={band.slug} eventId={invite.eventId} />
 								<Form
 									remote={confirm}
 									successToast="Added to your profile"
@@ -177,6 +179,7 @@
 				<th class="cell-primary">Event</th>
 				<th class="col-support">Where</th>
 				<th class="col-extra">On the bill</th>
+				<th class="w-px"><span class="sr-only">Actions</span></th>
 			{/snippet}
 
 			{#each events as evt (evt.id)}
@@ -202,6 +205,16 @@
 							<BadgeList items={supportNames(evt.lineup)} max={2} />
 						{:else}
 							<span class="text-subtle">—</span>
+						{/if}
+					</td>
+					<td class="w-px">
+						<!-- A guest act can now say "the date is wrong" instead of
+						     choosing between a bad listing and vanishing from a bill it
+						     is playing (#564). Owners edit theirs directly. -->
+						{#if isAdmin && !evt.isOwner}
+							<div class="w-max">
+								<RequestCorrectionAction slug={band.slug} eventId={evt.id} />
+							</div>
 						{/if}
 					</td>
 				</tr>

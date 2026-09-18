@@ -2014,6 +2014,22 @@ export async function declineLineupSlot(eventId: string, bandId: string): Promis
 }
 
 /**
+ * Whether this band is credited on this bill at all.
+ *
+ * The guard for asking about a listing somebody else owns: the act has to be
+ * on it. `unlinked` cannot match, because an unlinked credit is a name and
+ * not a party (#564).
+ */
+export async function isCreditedOn(eventId: string, bandId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ id: eventBand.id })
+		.from(eventBand)
+		.where(and(eq(eventBand.eventId, eventId), creditBelongsToGroup(bandId)))
+		.limit(1);
+	return !!row;
+}
+
+/**
  * Staff: attach a party to a name that was typed in free-text.
  *
  * Still takes the *group* a staffer picked, and resolves it to that band's
