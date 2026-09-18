@@ -47,6 +47,11 @@ vi.mock('$app/server', () => ({
 		url: new URL('http://localhost/staff/volunteer/schedule'),
 		request: { headers: new Headers() }
 	}),
+	// `scanTicketIn` is a command (#933), so the module now needs one.
+	command: (_schema: unknown, handler: (...args: any[]) => any) => {
+		(handler as any).__ = { type: 'command' };
+		return handler;
+	},
 	form: (_schema: unknown, handler: (...args: any[]) => any) => {
 		(handler as any).__ = { type: 'form' };
 		(handler as any).for = () => handler;

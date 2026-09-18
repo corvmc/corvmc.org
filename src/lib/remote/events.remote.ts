@@ -3,7 +3,7 @@ import { recordFreeTicketSale } from '$lib/server/finance/ticket-entries';
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
-import { form } from './_remote';
+import { form, command } from './_remote';
 import { getEventRiderSummaries } from '$lib/server/band/rider-service';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
@@ -1489,17 +1489,54 @@ export const cancelTicket = form(
 	}
 );
 
-export const checkInTicket = form(z.object({ ticketId: z.string().min(1) }), async (data) => {
-	const staff = await requireCapability('event.manageTickets');
-	try {
-		// A ticket scanned twice at a busy door is the ordinary case, and
-		// TicketStateError says so in words. Unmapped it was a 500.
-		await checkIn(data.ticketId, staff.id);
-	} catch (err) {
-		mapDomainError(err);
+/**
+ * Let one ticket through from the scanner.
+ *
+ * A `command` rather than the form beside it: the door calls this from a
+ * camera callback, not from a submit, and it needs the result in hand to say
+ * "already in at 7:42" rather than just refreshing a list (#933).
+ *
+ * Same guard, same idempotent service call. A thrown error is the door's
+ * signal to queue the check-in and carry on.
+ */
+export const scanTicketIn = command(
+	z.object({ ticketId: z.string().min(1), eventId: z.string().min(1) }),
+	async (data) => {
+		const staff = await requireCapability('event.manageTickets');
+		try {
+			const result = await checkIn(data.ticketId, staff.id);
+			await getStaffCheckIn(data.eventId).refresh();
+			return result;
+		} catch (err) {
+			mapDomainError(err);
+			throw err;
+		}
 	}
-	return { success: true };
-});
+);
+
+/**
+ * Let one ticket through. Carries `eventId` so the list behind the scanner
+ * refreshes at the page it is actually showing — a refresh from inside the
+ * handler cannot know which.
+ */
+export const checkInTicket = form(
+	z.object({ ticketId: z.string().min(1), eventId: z.string().min(1) }),
+	async (data) => {
+		const staff = await requireCapability('event.manageTickets');
+		try {
+			// A ticket scanned twice at a busy door is the ordinary case, so `checkIn`
+			// reports it rather than throwing (#933). A refunded or cancelled one is a
+			// real refusal, and `TicketStateError` says so in words — unmapped it was
+			// a 500.
+			const result = await checkIn(data.ticketId, staff.id);
+			await getStaffCheckIn(data.eventId).refresh();
+			return { success: true, ...result };
+		} catch (err) {
+			mapDomainError(err);
+		}
+		return { success: true };
+	}
+);
 
 // A single field issue as constructed by a form handler's `issue` helper. Note that
 // constructing one does nothing on its own — it only takes effect when handed to
