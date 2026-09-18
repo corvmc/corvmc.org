@@ -192,32 +192,22 @@ describe('activeMemberNavKey', () => {
 
 describe('route coverage', () => {
 	/**
-	 * Pages that resolve to the panel root, so the sidebar lights Dashboard while
-	 * you are somewhere else. Two different situations, both deliberate for now:
+	 * Pages with no nav row of their own, which therefore light nothing.
 	 *
-	 *  - Equipment is flag-gated (`equipment`) and has no affordance in the nav at
-	 *    all — today it is reachable only from notification links. Giving it a row
-	 *    is a product decision about a flagged surface, so it is recorded rather
-	 *    than quietly fixed.
-	 *  - `/member/bands` is reachable, just not as a row: the "All" button in the
-	 *    My Bands group header goes there. Highlighting a group's action is not
-	 *    something `NavGroup` models.
-	 *  - `/member/equipment/assets/[id]` is reached by pointing a phone at the
-	 *    sticker on a piece of gear and nothing else. It is not stranded pending
-	 *    a nav row — a row would be meaningless, since there is no "the unit" to
-	 *    navigate to. This line is expected to stay.
+	 * Before #1237 they lit Dashboard, because `/member` is a prefix of every
+	 * route in the panel. `exact` on the panel root is what stopped that, and
+	 * what turned "lights the wrong row" into "lights none" — which is correct
+	 * for a page reached through a group rather than a row.
 	 *
-	 * `/member/equipment` and its loans page used to be here. They now get a row
-	 * once `hasLoanableEquipment` is true, which is why `ALL_ON` sets it: the
-	 * stranded check asks what a fully-lit nav reaches.
-	 *
-	 * Delete a line when its page gets a row of its own.
+	 * Delete a line when its page gets a row.
 	 */
-	const strandedOnDashboard = new Set([
+	const reachedWithoutARow = new Set([
+		// Pointed at by a sticker on a piece of gear and nothing else. A row would
+		// be meaningless: there is no "the unit" to navigate to.
 		'/member/equipment/assets/[id]',
-		// Reached through the My Bands and My Groups sidebar groups and their
-		// "All" links, not through a nav row of their own. Two collapsible groups
-		// for two indexes, which is the separation the routes draw.
+		// Reached through the My Acts and My Groups sidebar groups and their "All"
+		// links rather than a row of their own. Two collapsible groups for two
+		// indexes, which is the separation the routes draw.
 		'/member/bands',
 		'/member/groups',
 		'/member/groups/[slug]',
@@ -226,19 +216,33 @@ describe('route coverage', () => {
 		'/member/groups/[slug]/edit'
 	]);
 
-	it('leaves no member page unmatched', () => {
-		const orphans = memberPageRoutes().filter(
-			(r) => activeMemberNavKey(ALL_ON, concrete(r)) === null
-		);
-		expect(orphans).toEqual([]);
+	it('lights a row for every page that has one', () => {
+		const orphans = memberPageRoutes()
+			.filter((r) => r !== '/member')
+			.filter((r) => !reachedWithoutARow.has(r))
+			.filter((r) => activeMemberNavKey(ALL_ON, concrete(r)) === null);
+
+		expect(orphans, 'these pages light no row at all').toEqual([]);
 	});
 
-	it('lights something other than Dashboard for every page below the root', () => {
-		const stranded = memberPageRoutes()
+	/**
+	 * Dashboard's href is `/member`, a prefix of every route in the panel, so
+	 * before `exact` it matched everything and only lost to a longer row. The
+	 * pages with no row of their own therefore lit Dashboard — and on a group's
+	 * page, Dashboard *and* the group, two rows at once (#1237).
+	 */
+	it('lights Dashboard for the dashboard and nothing else', () => {
+		const wrong = memberPageRoutes()
 			.filter((r) => r !== '/member')
-			.filter((r) => activeMemberNavKey(ALL_ON, concrete(r)) === 'dashboard')
-			.filter((r) => !strandedOnDashboard.has(r));
-		expect(stranded).toEqual([]);
+			.filter((r) => activeMemberNavKey(ALL_ON, concrete(r)) === 'dashboard');
+
+		expect(wrong, 'a panel root must match its own path exactly').toEqual([]);
+		expect(activeMemberNavKey(ALL_ON, '/member')).toBe('dashboard');
+	});
+
+	it('keeps the no-row list honest', () => {
+		const routes = new Set(memberPageRoutes());
+		for (const route of reachedWithoutARow) expect(routes.has(route)).toBe(true);
 	});
 
 	it('shows Equipment only when there is something to lend', () => {
@@ -258,7 +262,7 @@ describe('route coverage', () => {
 
 	it('keeps the stranded list honest', () => {
 		const routes = new Set(memberPageRoutes());
-		for (const route of strandedOnDashboard) expect(routes.has(route)).toBe(true);
+		for (const route of reachedWithoutARow) expect(routes.has(route)).toBe(true);
 	});
 });
 
