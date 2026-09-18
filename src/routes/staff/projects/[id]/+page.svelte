@@ -6,6 +6,8 @@
 	import Table from '$lib/components/ui/Table.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { Field, MoneyField } from '$lib/components/ui/Form';
@@ -149,9 +151,11 @@
 </PageHeader>
 
 <PageContent>
-	<div class="flex flex-wrap items-center gap-3">
-		<StatusBadge status={project.status} label />
-		<span class="text-subtle">
+	<!-- Labelled and in a list: the status, the dates and the description sat
+	     loose above the cards, in no box and with nothing naming them (#1080). -->
+	<DefinitionList>
+		<Fact label="Status"><StatusBadge status={project.status} label /></Fact>
+		<Fact label="Dates">
 			{#if project.startsAt}
 				{formatDateShort(project.startsAt)}{project.endsAt
 					? ` – ${formatDateShort(project.endsAt)}`
@@ -159,12 +163,11 @@
 			{:else}
 				No dates set
 			{/if}
-		</span>
-	</div>
-
-	{#if project.description}
-		<p>{project.description}</p>
-	{/if}
+		</Fact>
+		{#if project.description}
+			<Fact label="About">{project.description}</Fact>
+		{/if}
+	</DefinitionList>
 
 	{#if overBudget}
 		<Alert type="warning">
@@ -278,20 +281,6 @@
 							/>
 						{/snippet}
 					</Action>
-					<Action
-						action={detachFromProjectForm}
-						label="Detach"
-						variant="ghost"
-						size="sm"
-						modalTitle="Detach from this project"
-						successToast="Detached"
-					>
-						{#snippet form()}
-							<input {...detachFields.projectId.as('hidden', project.id)} />
-							<Field field={detachFields.kind} type="select" label="What" options={attachKinds} />
-							<Field field={detachFields.rowId} type="text" label="Id" />
-						{/snippet}
-					</Action>
 				</div>
 			</div>
 		{/snippet}
@@ -303,6 +292,7 @@
 					<li>
 						<a class="link" href={resolve(`/staff/contractors/jobs/${job.id}`)}>{job.summary}</a>
 						— {job.costCents === null ? 'no invoice yet' : formatCents(job.costCents)}
+						{@render detach('contractor_job', job.id, job.summary)}
 					</li>
 				{/each}
 			</ul>
@@ -313,8 +303,12 @@
 			<ul class="list-disc pl-5">
 				{#each data.attachments.workOrders as wo (wo.id)}
 					<li>
-						{wo.notes ?? 'Unscheduled work order'}
+						<!-- Linked: a project could not reach the work it attached. -->
+						<a class="link" href={resolve(`/staff/volunteer/shifts/${wo.id}`)}>
+							{wo.notes ?? 'Unscheduled work order'}
+						</a>
 						{wo.startsAt ? ` — ${formatDateShort(wo.startsAt)}` : ' — not scheduled'}
+						{@render detach('work_order', wo.id, wo.notes ?? 'this work order')}
 					</li>
 				{/each}
 			</ul>
@@ -325,10 +319,12 @@
 			<ul class="list-disc pl-5">
 				{#each data.attachments.orders as order (order.id)}
 					<li>
-						<a class="link" href={resolve(`/staff/inventory/orders`)}>
+						<!-- The order, not the index it sits on. -->
+						<a class="link" href={resolve(`/staff/inventory/orders/${order.id}`)}>
 							{order.supplierName ?? 'Order'}
 						</a>
 						{order.reference ? ` — ${order.reference}` : ''}
+						{@render detach('purchase_order', order.id, order.supplierName ?? 'this order')}
 					</li>
 				{/each}
 			</ul>
@@ -339,9 +335,12 @@
 			<ul class="list-disc pl-5">
 				{#each data.attachments.acquisitions as acq (acq.id)}
 					<li>
-						{acq.sourceName ?? acq.kind}
+						<a class="link" href={resolve(`/staff/inventory/acquisitions/${acq.id}`)}>
+							{acq.sourceName ?? acq.kind}
+						</a>
 						{acq.totalCents ? ` — ${formatCents(acq.totalCents)}` : ''}
 						{acq.fairValueCents ? ` — ${formatCents(acq.fairValueCents)} donated` : ''}
+						{@render detach('acquisition', acq.id, acq.sourceName ?? acq.kind)}
 					</li>
 				{/each}
 			</ul>
@@ -354,6 +353,7 @@
 					<li>
 						<a class="link" href={resolve(`/staff/events/${ev.id}`)}>{ev.title}</a>
 						— {formatDateShort(ev.startsAt)}
+						{@render detach('event', ev.id, ev.title)}
 					</li>
 				{/each}
 			</ul>
@@ -367,3 +367,28 @@
 		{/if}
 	</InfoCard>
 </PageContent>
+
+<!--
+	Detach is per row. It used to be one action asking for a `kind` and a
+	UUID "copied from its own page" — while the complete list of attached
+	rows, each with its id in scope, rendered directly beneath it (#1080).
+-->
+{#snippet detach(kind: string, rowId: string, label: string)}
+	<Action
+		action={detachFromProjectForm.for(rowId)}
+		label="Detach"
+		variant="ghost"
+		size="xs"
+		modalTitle="Detach {label}?"
+		successToast="Detached"
+	>
+		{#snippet form()}
+			<input {...detachFields.projectId.as('hidden', project.id)} />
+			<input {...detachFields.kind.as('hidden', kind)} />
+			<input {...detachFields.rowId.as('hidden', rowId)} />
+			<p class="text-sm">
+				Takes <strong>{label}</strong> off this project. The record itself is untouched.
+			</p>
+		{/snippet}
+	</Action>
+{/snippet}
