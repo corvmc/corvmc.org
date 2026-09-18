@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "9ed595c0-90ee-451b-97ab-a8aac0abd5e7",
+  "id": "ad785a52-807d-4439-86dd-8a2e7db60488",
   "prevIds": [
-    "7a960e58-3dc8-4cdc-8c49-9cbc8ffe2d19"
+    "9ed595c0-90ee-451b-97ab-a8aac0abd5e7"
   ],
   "ddl": [
     {
@@ -3515,6 +3515,16 @@
       "default": null,
       "generated": null,
       "name": "sent_by_id",
+      "entityType": "columns",
+      "table": "campaign"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
       "entityType": "columns",
       "table": "campaign"
     },
@@ -16332,6 +16342,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_campaign_sent_by",
+      "entityType": "indexes",
+      "table": "campaign"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_campaign_event",
       "entityType": "indexes",
       "table": "campaign"
     },

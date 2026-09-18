@@ -75,8 +75,8 @@ function render(sql: SQL): string {
 	return dialect.sqlToQuery(sql).sql;
 }
 
-function predicateSql(key: SystemAudienceKey): string {
-	return render(SYSTEM_AUDIENCES[key].predicate());
+function predicateSql(key: SystemAudienceKey, eventId?: string): string {
+	return render(SYSTEM_AUDIENCES[key].predicate(eventId));
 }
 
 beforeEach(() => {
@@ -94,12 +94,13 @@ beforeEach(() => {
 describe('SYSTEM_AUDIENCES registry', () => {
 	const keys = Object.keys(SYSTEM_AUDIENCES) as SystemAudienceKey[];
 
-	it('ships the four built-in audiences', () => {
+	it('ships the built-in audiences', () => {
 		expect(keys).toEqual([
 			'all-members',
 			'sustaining-members',
 			'non-sustaining-members',
-			'band-leaders'
+			'band-leaders',
+			'event-interest'
 		]);
 	});
 
@@ -119,7 +120,7 @@ describe('SYSTEM_AUDIENCES registry', () => {
 	});
 
 	it('gives every audience a distinct predicate', () => {
-		const rendered = keys.map(predicateSql);
+		const rendered = keys.map((k) => predicateSql(k, 'evt-1'));
 		expect(new Set(rendered).size).toBe(keys.length);
 	});
 });
@@ -131,7 +132,8 @@ describe('SYSTEM_AUDIENCES registry', () => {
 describe('predicates', () => {
 	it('every predicate excludes soft-deleted accounts', () => {
 		for (const key of Object.keys(SYSTEM_AUDIENCES) as SystemAudienceKey[]) {
-			expect(predicateSql(key), key).toContain('"user"."deleted_at" is null');
+			// `event-interest` only has a predicate at all once it has an event.
+			expect(predicateSql(key, 'evt-1'), key).toContain('"user"."deleted_at" is null');
 		}
 	});
 
@@ -161,6 +163,33 @@ describe('predicates', () => {
 	// renders it with its table prefix intact in this position.
 	it('band-leaders qualifies its correlated outer reference', () => {
 		expect(predicateSql('band-leaders')).toContain('"group_member"."user_id" = "user"."id"');
+	});
+
+	// #857. The whole audience turns on this: a campaign that names no show must
+	// resolve to nobody, and the failure direction here is sending a show blast
+	// to the entire membership.
+	it('event-interest matches nobody when the campaign names no show', () => {
+		expect(predicateSql('event-interest')).toContain('1 = 0');
+		expect(predicateSql('event-interest')).not.toContain('deleted_at');
+	});
+
+	it('event-interest is ticket holders or RSVPs for the named show', () => {
+		const sql = predicateSql('event-interest', 'evt-1');
+		expect(sql).toContain('"ticket"."event_id"');
+		expect(sql).toContain('"event_rsvp"."event_id"');
+		expect(sql).toMatch(/\bor\b/);
+	});
+
+	// A refunded buyer is not waiting to hear about the doors. An RSVP has no
+	// status because cancelling one deletes the row.
+	it('event-interest skips a cancelled ticket', () => {
+		expect(predicateSql('event-interest', 'evt-1')).toContain('"ticket"."status" != \'cancelled\'');
+	});
+
+	it('event-interest qualifies both correlated outer references', () => {
+		const sql = predicateSql('event-interest', 'evt-1');
+		expect(sql).toContain('"ticket"."user_id" = "user"."id"');
+		expect(sql).toContain('"event_rsvp"."user_id" = "user"."id"');
 	});
 });
 
@@ -204,7 +233,11 @@ describe('ensureSystemAudiences', () => {
 		await ensureSystemAudiences();
 
 		const rows = insertedRows[0] as { systemKey: string }[];
-		expect(rows.map((r) => r.systemKey)).toEqual(['non-sustaining-members', 'band-leaders']);
+		expect(rows.map((r) => r.systemKey)).toEqual([
+			'non-sustaining-members',
+			'band-leaders',
+			'event-interest'
+		]);
 	});
 });
 

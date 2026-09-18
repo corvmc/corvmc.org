@@ -104,6 +104,14 @@ export const campaign = sqliteTable(
 		sentById: text('sent_by_id')
 			.notNull()
 			.references(() => user.id),
+		/**
+		 * The show this blast is about, when it is about one (#857). The only
+		 * thing that makes the `event-interest` audience resolve to anybody;
+		 * null on every other campaign, and that audience then matches nobody
+		 * rather than everybody. Bare `text`, because a foreign key onto an
+		 * existing table is a rebuild and `campaign_audience` cascades off this.
+		 */
+		eventId: text('event_id'),
 		recipientCount: integer('recipient_count'),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
@@ -116,7 +124,8 @@ export const campaign = sqliteTable(
 		index('idx_campaign_pending_send')
 			.on(t.scheduledFor)
 			.where(sql`sent_at IS NULL`),
-		index('idx_campaign_sent_by').on(t.sentById)
+		index('idx_campaign_sent_by').on(t.sentById),
+		index('idx_campaign_event').on(t.eventId)
 	]
 );
 

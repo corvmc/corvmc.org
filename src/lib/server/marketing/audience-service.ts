@@ -423,3 +423,20 @@ export async function getOptInAudiences() {
 		.where(eq(audience.allowOptIn, true))
 		.orderBy(audience.name);
 }
+
+/**
+ * How many people the show's own audience resolves to for one event (#857).
+ *
+ * A service function rather than a number on `listAudiences`: that read is
+ * unparameterised and shared by every audience surface, and this figure is a
+ * fact about one campaign's chosen show.
+ */
+export async function countEventAudience(eventId: string): Promise<number> {
+	const [row] = await db
+		.select({ id: audience.id })
+		.from(audience)
+		.where(eq(audience.systemKey, 'event-interest'))
+		.limit(1);
+	if (!row) return 0;
+	return countSystemAudience(row.id, 'event-interest', eventId);
+}
