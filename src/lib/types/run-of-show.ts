@@ -35,6 +35,13 @@ export interface RunOfShowSlot {
 	setLengthMinutes: number;
 	changeoverMinutes: number;
 	scheduledStartAt: Date | null;
+	/**
+	 * What actually happened, from the host's Started and Finished taps. Null
+	 * on both until the set runs; the drift the host reads is the gap between
+	 * these and the scheduled time above (#928).
+	 */
+	actualStartAt: Date | null;
+	actualEndAt: Date | null;
 	/** Derived on read — start plus length, and nothing stored. */
 	scheduledEndAt: Date | null;
 	soundcheckAt: Date | null;

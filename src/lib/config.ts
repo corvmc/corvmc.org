@@ -710,6 +710,15 @@ export const creditSourceLabels: Record<string, string> = {
 // Inbox enum values
 // ---------------------------------------------------------------------------
 
+/**
+ * The house share of undesignated door cash that goes to the acts.
+ *
+ * Cash handed over at the door is not designated to an act the way an online
+ * ticket is, so something has to say how it splits. A production may override
+ * it for one night with `doorSplitActsPercent`; null there means this (#929).
+ */
+export const DOOR_SPLIT_ACTS_PERCENT = 70;
+
 export const inboxChannels = [
 	'email',
 	'sms',

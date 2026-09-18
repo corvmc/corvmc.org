@@ -4,6 +4,7 @@ import { financialEntry } from '$lib/server/db/schema/financial';
 import { production, productionSlot } from '$lib/server/db/schema/production';
 import { eventBand, eventListing } from '$lib/server/db/schema/event';
 import { and, asc, eq, sum } from 'drizzle-orm';
+import { DOOR_SPLIT_ACTS_PERCENT } from '$lib/config';
 import { expenseLines, type ProductionExpenseLine } from './expense-service';
 import { recordActPayout } from '$lib/server/finance/payout-entries';
 import { DomainError } from '$lib/server/domain-error';
@@ -34,14 +35,37 @@ export interface ActSettlement {
 	paidAt: Date | null;
 }
 
+/** The drawer count, and the split applied to it. */
+export interface DoorTake {
+	cashCents: number;
+	count: number | null;
+	/** The percentage actually used — this show's override, or the house rule. */
+	actsPercent: number;
+	actsCents: number;
+	collectiveCents: number;
+	/** True when this night departed from `DOOR_SPLIT_ACTS_PERCENT`. */
+	overridden: boolean;
+}
+
 export interface Settlement {
 	productionId: string;
 	eventId: string;
 	status: string;
-	/** Earned by the collective — its share of tickets, already net of the acts'. */
+	/**
+	 * Earned by the collective — its share of tickets, already net of the acts',
+	 * plus its share of the door (#929).
+	 */
 	collectiveRevenueCents: number;
-	/** What buyers set aside for the acts. The pool, and it is not a percentage. */
+	/**
+	 * What the acts are owed from: what buyers designated to them, plus their
+	 * share of undesignated door cash. `door` below breaks out the second part.
+	 */
 	actsPoolCents: number;
+	/**
+	 * The night's cash, and how it split. Absent until somebody counts the
+	 * drawer — a show with no door take is not a show with a zero (#929).
+	 */
+	door: DoorTake | null;
 	expensesCents: number;
 	deductibleExpensesCents: number;
 	/** The cost sheet behind those two totals, so the worksheet can show it. */
@@ -78,13 +102,48 @@ export function payoutForDeal(input: {
 	return input.versus ? Math.max(guarantee, percentage) : guarantee + percentage;
 }
 
+/**
+ * How one night's door cash divides.
+ *
+ * Null when nobody has counted — which is not the same as a zero, and the
+ * worksheet says so. Rounding favours the acts: the collective keeps the
+ * remainder, because a cent lost to rounding is the house's to absorb.
+ */
+export function splitDoorTake(input: {
+	doorCashCents: number | null;
+	doorCount: number | null;
+	doorSplitActsPercent: number | null;
+}): DoorTake | null {
+	if (input.doorCashCents === null) return null;
+
+	const actsPercent = input.doorSplitActsPercent ?? DOOR_SPLIT_ACTS_PERCENT;
+	const actsCents = Math.round((input.doorCashCents * actsPercent) / 100);
+
+	return {
+		cashCents: input.doorCashCents,
+		count: input.doorCount,
+		actsPercent,
+		actsCents,
+		collectiveCents: input.doorCashCents - actsCents,
+		overridden: input.doorSplitActsPercent !== null
+	};
+}
+
 export async function getSettlement(eventId: string): Promise<Settlement | null> {
 	const [prod] = await db
-		.select({ id: production.id, status: production.status })
+		.select({
+			id: production.id,
+			status: production.status,
+			doorCashCents: production.doorCashCents,
+			doorCount: production.doorCount,
+			doorSplitActsPercent: production.doorSplitActsPercent
+		})
 		.from(production)
 		.where(announcedBy(eventId))
 		.limit(1);
 	if (!prod) return null;
+
+	const door = splitDoorTake(prod);
 
 	// Revenue and pool come from the financial record rather than `payment_cache`,
 	// which holds no card revenue for anything written before #837.
@@ -108,8 +167,11 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 
 	// Tickets record the collective's share against the ticket, not the show, so
 	// the earned figure is read by category over the same group.
-	const collectiveRevenueCents = Number(earned?.total ?? 0);
-	const actsPoolCents = Number(pool?.total ?? 0);
+	// Door cash joins both sides rather than sitting beside them: the acts are
+	// owed from the whole pool, and a deal against net is measured against it.
+	// The `door` breakdown is what lets the worksheet show where it came from.
+	const collectiveRevenueCents = Number(earned?.total ?? 0) + (door?.collectiveCents ?? 0);
+	const actsPoolCents = Number(pool?.total ?? 0) + (door?.actsCents ?? 0);
 
 	// The show's own cost sheet, not the ledger's `spent` rows. Those also carry
 	// the guarantee top-ups that `netCents` subtracts below as the gap between
@@ -186,6 +248,7 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 		status: prod.status,
 		collectiveRevenueCents,
 		actsPoolCents,
+		door,
 		expensesCents,
 		deductibleExpensesCents,
 		expenses,

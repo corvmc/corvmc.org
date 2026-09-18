@@ -9,8 +9,11 @@
 	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		recordActPayout,
+		recordDoorTake,
 		addProductionExpense,
 		removeProductionExpense
 	} from '$lib/remote/productions.remote';
@@ -47,7 +50,10 @@
 			<div>
 				<p class="text-muted">Acts' pool</p>
 				<p class="text-lg font-medium">{formatCents(settlement.actsPoolCents)}</p>
-				<p class="text-xs text-fg-2">What buyers designated</p>
+				<p class="text-xs text-fg-2">
+					What buyers designated{#if settlement.door}, plus
+						{formatCents(settlement.door.actsCents)} of the door{/if}
+				</p>
 			</div>
 			<div>
 				<p class="text-muted">Collective</p>
@@ -69,6 +75,58 @@
 				</p>
 			</div>
 		</div>
+	</InfoCard>
+
+	<!-- The drawer, and the split that follows from it. Its own card because
+	     counting the door is a thing somebody does at the end of the night,
+	     not a figure that arrives on its own like a ticket sale (#929). -->
+	<InfoCard title="The door">
+		<Form remote={recordDoorTake} successToast="Door recorded">
+			<input {...recordDoorTake.fields.id.as('hidden', settlement.productionId)} />
+			<input {...recordDoorTake.fields.eventId.as('hidden', eventId)} />
+
+			<div class="grid gap-3 sm:grid-cols-4">
+				<MoneyField
+					field={recordDoorTake.fields.doorCashCents}
+					label="Cash counted"
+					value={settlement.door?.cashCents ?? null}
+				/>
+				<FormField
+					{...recordDoorTake.fields.doorCount.as('number')}
+					label="Through the door"
+					value={settlement.door?.count ?? undefined}
+					min={0}
+				/>
+				<FormField
+					{...recordDoorTake.fields.splitActsPercent.as('number')}
+					label="Acts' share %"
+					description="Blank is the house rule"
+					value={settlement.door?.overridden ? settlement.door.actsPercent : undefined}
+					min={0}
+					max={100}
+				/>
+				<div class="flex items-end">
+					<SubmitButton label="Record" size="sm" />
+				</div>
+			</div>
+		</Form>
+
+		{#if settlement.door}
+			<p class="mt-3 text-muted">
+				{formatCents(settlement.door.cashCents)} splits
+				{settlement.door.actsPercent}/{100 - settlement.door.actsPercent} —
+				<strong>{formatCents(settlement.door.actsCents)}</strong> to the acts,
+				<strong>{formatCents(settlement.door.collectiveCents)}</strong> to the collective.
+				{#if settlement.door.overridden}
+					<Badge size="sm" variant="warning">This show's own split</Badge>
+				{/if}
+			</p>
+		{:else}
+			<!-- Absent, not zero. A night nobody counted is not a night that took
+			     nothing, and a settlement cannot be honest about the difference
+			     unless the page is. -->
+			<p class="mt-3 text-muted">Nobody has counted the drawer yet.</p>
+		{/if}
 	</InfoCard>
 
 	<InfoCard title="What the night cost">

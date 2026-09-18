@@ -28,6 +28,7 @@ vi.mock('$lib/server/production/production-service', () => ({
 const runOfShow = {
 	addSlot: vi.fn(),
 	updateSlot: vi.fn(),
+	markSlotTiming: vi.fn(),
 	moveSlot: vi.fn(),
 	removeSlot: vi.fn(),
 	setSlotTerms: vi.fn(),
@@ -36,6 +37,7 @@ const runOfShow = {
 vi.mock('$lib/server/production/run-of-show-service', () => ({
 	addSlot: (...a: unknown[]) => runOfShow.addSlot(...a),
 	updateSlot: (...a: unknown[]) => runOfShow.updateSlot(...a),
+	markSlotTiming: (...a: unknown[]) => runOfShow.markSlotTiming(...a),
 	moveSlot: (...a: unknown[]) => runOfShow.moveSlot(...a),
 	removeSlot: (...a: unknown[]) => runOfShow.removeSlot(...a),
 	setSlotTerms: (...a: unknown[]) => runOfShow.setSlotTerms(...a),
@@ -121,6 +123,11 @@ const WRITES: { name: keyof typeof productions; args: unknown[]; capability?: st
 	{ name: 'updateProduction', args: [{ id: 'prod-1', eventId: 'evt-1' }] },
 	{ name: 'setProductionProducer', args: [{ id: 'prod-1', eventId: 'evt-1', producer: 'me' }] },
 	{ name: 'advanceProduction', args: [{ id: 'prod-1', eventId: 'evt-1', status: 'offered' }] },
+	{
+		name: 'markSlotTiming',
+		args: [{ slotId: 'slot-1', eventId: 'evt-1', edge: 'start', action: 'now' }]
+	},
+	{ name: 'recordDoorTake', args: [{ id: 'prod-1', eventId: 'evt-1', doorCashCents: 12_000 }] },
 	{
 		name: 'addRunOfShowSlot',
 		args: [{ eventId: 'evt-1', productionId: 'prod-1', setLengthMinutes: 30 }]

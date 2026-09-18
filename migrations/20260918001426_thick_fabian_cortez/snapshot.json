@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "e49300c3-61bf-43f5-a88b-1e208a87108e",
+  "id": "01a0a2c4-3aff-4cb5-bb2d-834cd8534cbd",
   "prevIds": [
-    "cc204cb2-8513-4999-a997-34c7307b6516"
+    "ff9e619f-0f8f-4a40-b848-f5e63eb07714"
   ],
   "ddl": [
     {
@@ -412,6 +412,10 @@
     },
     {
       "name": "committee_application_choice",
+      "entityType": "tables"
+    },
+    {
+      "name": "reminder_sent",
       "entityType": "tables"
     },
     {
@@ -2325,6 +2329,36 @@
       "table": "production"
     },
     {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "door_cash_cents",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "door_count",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "door_split_acts_percent",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
       "type": "text",
       "notNull": false,
       "autoincrement": false,
@@ -2591,6 +2625,26 @@
       "default": null,
       "generated": null,
       "name": "scheduled_start_at",
+      "entityType": "columns",
+      "table": "production_slot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "actual_start_at",
+      "entityType": "columns",
+      "table": "production_slot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "actual_end_at",
       "entityType": "columns",
       "table": "production_slot"
     },
@@ -11495,6 +11549,56 @@
       "table": "committee_application_choice"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "reminder_sent"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reminder_key",
+      "entityType": "columns",
+      "table": "reminder_sent"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_type",
+      "entityType": "columns",
+      "table": "reminder_sent"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_id",
+      "entityType": "columns",
+      "table": "reminder_sent"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "sent_at",
+      "entityType": "columns",
+      "table": "reminder_sent"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -15394,6 +15498,15 @@
     },
     {
       "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "reminder_sent_pk",
+      "table": "reminder_sent",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
         {
           "value": "member_number",
           "isExpression": false
@@ -18831,6 +18944,38 @@
       "name": "idx_committee_choice_group_status",
       "entityType": "indexes",
       "table": "committee_application_choice"
+    },
+    {
+      "columns": [
+        {
+          "value": "reminder_key",
+          "isExpression": false
+        },
+        {
+          "value": "subject_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "reminder_sent_once",
+      "entityType": "indexes",
+      "table": "reminder_sent"
+    },
+    {
+      "columns": [
+        {
+          "value": "sent_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "reminder_sent_at_idx",
+      "entityType": "indexes",
+      "table": "reminder_sent"
     },
     {
       "columns": [

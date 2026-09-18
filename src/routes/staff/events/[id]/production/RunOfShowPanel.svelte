@@ -18,10 +18,24 @@
 		moveRunOfShowSlot,
 		removeRunOfShowSlot,
 		setRunOfShowTerms,
-		buildRunOfShowFromLineup
+		buildRunOfShowFromLineup,
+		markSlotTiming
 	} from '$lib/remote/productions.remote';
 	import { describeTerms } from '$lib/production/terms';
 	import type { RunOfShow } from '$lib/types/run-of-show';
+
+	/**
+	 * How late this set actually started, in whole minutes. Positive is behind.
+	 *
+	 * Null when there is nothing to compare — a slot with no schedule, or one
+	 * nobody has started. The host reads this number to decide whether a long
+	 * changeover is a problem, which it could only ever be asserted before
+	 * `actualStartAt` existed (#928).
+	 */
+	function driftMinutes(slot: RunOfShow['slots'][number]): number | null {
+		if (!slot.actualStartAt || !slot.scheduledStartAt) return null;
+		return Math.round((slot.actualStartAt.getTime() - slot.scheduledStartAt.getTime()) / 60_000);
+	}
 
 	/**
 	 * The running order, as a producer works it.
@@ -113,6 +127,9 @@
 				{@const down = moveRunOfShowSlot.for(`${slot.id}:down`)}
 				{@const edit = updateRunOfShowSlot.for(slot.id)}
 				{@const drop = removeRunOfShowSlot.for(slot.id)}
+				{@const clock = markSlotTiming.for(slot.id)}
+				{@const undo = markSlotTiming.for(`${slot.id}:clear`)}
+				{@const drift = driftMinutes(slot)}
 				<li class="p-3">
 					<div class="flex flex-wrap items-center gap-3">
 						<div class="w-36 shrink-0 tabular-nums">
@@ -120,6 +137,20 @@
 								{formatTime(slot.scheduledStartAt)} – {formatTime(slot.scheduledEndAt)}
 							{:else}
 								<span class="text-subtle">—</span>
+							{/if}
+							<!-- What it actually ran to, under what it was meant to. Drift is
+							     the number the host is reading, so it is the loud part. -->
+							{#if slot.actualStartAt}
+								<div class="text-sm">
+									{formatTime(slot.actualStartAt)}{#if slot.actualEndAt}&nbsp;– {formatTime(
+											slot.actualEndAt
+										)}{/if}
+									{#if drift !== null}
+										<span class:text-error={drift > 0} class:text-success={drift <= 0}>
+											{drift > 0 ? `+${drift}` : drift}m
+										</span>
+									{/if}
+								</div>
 							{/if}
 						</div>
 
@@ -140,6 +171,39 @@
 								<!-- The deal reads on the row, not only inside the editor: the
 								     number the act will question is the one worth showing. -->
 								<div class="text-subtle">{describeTerms(slot.terms)}</div>
+							{/if}
+						</div>
+
+						<!-- Started and Finished, and a way back from a mistap. The server
+						     stamps the time: a tab left open since load-in would otherwise
+						     write a moment that has long passed (#928). -->
+						<div class="flex w-max shrink-0 items-center gap-1">
+							<!-- Gone once the set has ended rather than disabled: a dead
+							     button on every finished row is three quarters of the
+							     running order by the end of the night. Undo is the way back. -->
+							{#if !slot.actualEndAt}
+								<Form remote={clock} successToast="Noted">
+									<input {...clock.fields.slotId.as('hidden', slot.id)} />
+									<input {...clock.fields.eventId.as('hidden', eventId)} />
+									<input
+										{...clock.fields.edge.as('hidden', slot.actualStartAt ? 'end' : 'start')}
+									/>
+									<input {...clock.fields.action.as('hidden', 'now')} />
+									<SubmitButton
+										label={slot.actualStartAt ? 'Finished' : 'Started'}
+										variant={slot.actualStartAt ? 'default' : 'primary'}
+										size="xs"
+									/>
+								</Form>
+							{/if}
+							{#if slot.actualStartAt}
+								<Form remote={undo} successToast="Cleared">
+									<input {...undo.fields.slotId.as('hidden', slot.id)} />
+									<input {...undo.fields.eventId.as('hidden', eventId)} />
+									<input {...undo.fields.edge.as('hidden', slot.actualEndAt ? 'end' : 'start')} />
+									<input {...undo.fields.action.as('hidden', 'clear')} />
+									<SubmitButton label="Undo" variant="ghost" size="xs" />
+								</Form>
 							{/if}
 						</div>
 

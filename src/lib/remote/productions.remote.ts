@@ -14,6 +14,7 @@ import {
 import {
 	addSlot,
 	updateSlot,
+	markSlotTiming as markTiming,
 	moveSlot,
 	removeSlot,
 	setSlotTerms,
@@ -132,6 +133,74 @@ export const setProductionProducer = form(
 		try {
 			await updateService(data.id, {
 				producerUserId: data.producer === 'me' ? (locals.user?.id ?? null) : null
+			});
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * What a set actually ran to — Started and Finished on the running order.
+ *
+ * `now` is taken server side and the client sends only which end it is, so a
+ * stale tab cannot stamp a time from ten minutes ago. `clear` is the
+ * correction path a mistap needs: there is no other way back (#928).
+ */
+export const markSlotTiming = form(
+	z.object({
+		slotId: z.string().min(1),
+		eventId: z.string().min(1),
+		edge: z.enum(['start', 'end']),
+		action: z.enum(['now', 'clear'])
+	}),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			const value = data.action === 'now' ? new Date() : null;
+			await markTiming(
+				data.slotId,
+				data.edge === 'start' ? { actualStartAt: value } : { actualEndAt: value }
+			);
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * The drawer count at the end of the night.
+ *
+ * An empty field clears back to null rather than writing a zero — "nobody
+ * counted" and "counted nothing" are different states and the worksheet shows
+ * them differently. `splitActsPercent` left blank means the house rule.
+ *
+ * Numbers, not strings: `MoneyField` carries cents in a hidden `n:` field so
+ * nobody types 45 for a $45 door and records 45¢ (#929).
+ */
+export const recordDoorTake = form(
+	z.object({
+		id: z.string().min(1),
+		eventId: z.string().min(1),
+		doorCashCents: z.number().int().min(0).optional(),
+		doorCount: z.number().int().min(0).optional(),
+		splitActsPercent: z.number().int().min(0).max(100).optional()
+	}),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			// `undefined` is an empty box, not an untouched one: the form renders
+			// every existing value into its field, so one that arrives missing is
+			// one somebody cleared. That is what lets a door count go back to
+			// "nobody counted" rather than being stuck at a number (#929).
+			await updateService(data.id, {
+				doorCashCents: data.doorCashCents ?? null,
+				doorCount: data.doorCount ?? null,
+				doorSplitActsPercent: data.splitActsPercent ?? null
 			});
 			await getStaffEventProduction(data.eventId).refresh();
 			return { success: true };
