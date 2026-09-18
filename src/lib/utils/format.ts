@@ -443,6 +443,11 @@ export function formatMonthDayYear(d: Date): string {
 	return venue(d, { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+/** "May 2026" — the section header a long history is cut on. */
+export function formatMonthYear(d: Date): string {
+	return venue(d, { month: 'long', year: 'numeric' });
+}
+
 /** Ordinal suffix for a number: 1 -> "1st", 22 -> "22nd", 13 -> "13th". */
 function ordinalNumber(n: number): string {
 	const mod100 = n % 100;

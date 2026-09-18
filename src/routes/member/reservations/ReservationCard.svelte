@@ -27,6 +27,12 @@
 		class="block hover:bg-base-200/40"
 	>
 		<ReservationSummary {reservation} class="space-y-1 p-2 px-3" />
+		{#if reservation.notes}
+			<!-- The one thing that tells an old booking apart from the fortnightly
+			     ones either side of it. It was on the detail page only, so a member
+			     searching their history for "Recording session" found nothing (#904). -->
+			<p class="line-clamp-2 px-3 pb-1 text-subtle">{reservation.notes}</p>
+		{/if}
 		{#if reservation.status === 'confirmed' && reservation.lockCode}
 			<p class="px-3 pb-1 text-sm">
 				{#if reservation.lockSyncedAt}
