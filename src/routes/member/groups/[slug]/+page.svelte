@@ -124,8 +124,13 @@
 </script>
 
 <PageHeader width="3xl" title={group.name} subtitle={kindLabel}>
-	{#if data.canManage}
+	<!-- Your role, for anyone who has one. It was gated behind `canManage`, so
+	     the list row told a plain member they were a member and the group's own
+	     page did not (#1064). -->
+	{#if isMember}
 		<Badge variant="ghost">{data.role}</Badge>
+	{/if}
+	{#if data.canManage}
 		<Button href={resolve(`/member/groups/${slug}/edit`)} variant="ghost" size="sm">Edit</Button>
 	{/if}
 	<!-- Beside Leave, which is the other thing a member does to a group they are

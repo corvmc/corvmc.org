@@ -9,6 +9,7 @@
 	import { getOrders } from '$lib/remote/inventory.remote';
 	import { orderStatusLabels, orderStatusBadge, type OrderStatus } from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
+	import { isOrderLate } from '$lib/utils/order-late';
 	import { resolve } from '$app/paths';
 
 	/**
@@ -22,8 +23,7 @@
 	const orders = $derived(await getOrders());
 	const now = new Date();
 
-	const isLate = (o: (typeof orders)[number]) =>
-		o.status === 'placed' && o.expectedAt && o.expectedAt < now && !o.isComplete;
+	const isLate = (o: (typeof orders)[number]) => isOrderLate(o, now);
 </script>
 
 <PageHeader title="Orders" subtitle="Inventory" backHref="/staff/inventory">

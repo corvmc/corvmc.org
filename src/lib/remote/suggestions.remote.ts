@@ -134,6 +134,18 @@ const staffFiltersSchema = boardFiltersSchema.extend({
 	includeMerged: z.boolean().optional()
 });
 
+/**
+ * A suggestion's author as an `EntityRef`, for the queue row and the detail
+ * page alike. "A former member", not the generic fallback: a suggestion
+ * outlives the account that made it, and that is worth saying precisely.
+ */
+function authorRef(row: { authorUserId: string | null; authorName: string | null }) {
+	return {
+		...toMemberRef({ id: row.authorUserId, name: row.authorName }),
+		title: row.authorName ?? 'A former member'
+	};
+}
+
 export const getSuggestionsQueue = query(staffFiltersSchema, async (filters) => {
 	await requireCapability('suggestion.read');
 	const { rows, pagination } = await listSuggestions(filters, {
@@ -146,12 +158,7 @@ export const getSuggestionsQueue = query(staffFiltersSchema, async (filters) => 
 		rows: rows.map((s) => ({
 			...s,
 			ref: toGenericRef('suggestion', { id: s.id, title: s.title }),
-			// "A former member", not the generic fallback: a suggestion outlives the
-			// account that made it, and that is worth saying precisely.
-			author: {
-				...toMemberRef({ id: s.authorUserId, name: s.authorName }),
-				title: s.authorName ?? 'A former member'
-			}
+			author: authorRef(s)
 		})),
 		pagination
 	};
@@ -159,7 +166,10 @@ export const getSuggestionsQueue = query(staffFiltersSchema, async (filters) => 
 
 export const getStaffSuggestionDetail = query(z.string(), async (id) => {
 	await requireCapability('suggestion.read');
-	return getSuggestion(id).catch(mapDomainError);
+	const row = await getSuggestion(id).catch(mapDomainError);
+	// The same ref the queue row carries: the detail page hand-wrote a plain
+	// link, so the author arrived there without their avatar or standing.
+	return { ...row, author: authorRef(row) };
 });
 
 export const getMergeCandidates = query(z.string(), async (excludeId) => {

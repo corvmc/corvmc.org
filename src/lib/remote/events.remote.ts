@@ -24,6 +24,7 @@ import {
 import { listWorkOrders as listOpenWorkOrders } from '$lib/server/volunteer/work-order-service';
 import {
 	bandRefColumns,
+	memberRefColumns,
 	reservationRefColumns,
 	toBandRef,
 	toEventRef,
@@ -680,7 +681,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 	if (!evt) throw error(404, 'Event not found');
 
 	const [creator] = await db
-		.select({ name: user.name, email: user.email })
+		.select({ name: user.name, email: user.email, ref: memberRefColumns() })
 		.from(user)
 		.where(eq(user.id, evt.createdByUserId))
 		.limit(1);
@@ -832,6 +833,8 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		submitterStanding:
 			evt.source === 'community' ? await getStanding(evt.createdByUserId, 'community_event') : null,
 		submitterId: evt.createdByUserId,
+		/** The ref the queue row carries. The page hand-wrote a link without it. */
+		submitter: creator ? toMemberRef(creator.ref) : null,
 		// The bill. The *public* event page has shown this all along, so until
 		// now a visitor to a published listing could see who was playing and the
 		// staffer deciding whether to publish it could not.
