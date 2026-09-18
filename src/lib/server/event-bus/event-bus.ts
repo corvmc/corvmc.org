@@ -286,6 +286,23 @@ export interface EquipmentLoanRequestedEvent {
 	requestedPickupDate: string;
 }
 
+export interface EquipmentLoanDueEvent {
+	/**
+	 * Which nag this is. `due_tomorrow` is a courtesy; `overdue` is the same
+	 * event again with `daysLate` set, and the copy differs because "you are
+	 * late" the day before the due date reads as a mistake.
+	 */
+	stage: 'due_tomorrow' | 'overdue';
+	/** Whole days past the due date. Zero on `due_tomorrow`. */
+	daysLate: number;
+	loanId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	equipmentName: string | null;
+	dueDate: string;
+}
+
 export interface EquipmentLoanScheduledEvent {
 	loanId: string;
 	userId: string;
@@ -710,6 +727,7 @@ export type DomainEvents = {
 	'reservation.waitlist_expired': WaitlistExpiredEvent;
 	'equipment.loan_requested': EquipmentLoanRequestedEvent;
 	'equipment.loan_scheduled': EquipmentLoanScheduledEvent;
+	'equipment.loan_due': EquipmentLoanDueEvent;
 	'equipment.checked_out': EquipmentCheckedOutEvent;
 	'equipment.returned': EquipmentReturnedEvent;
 	'group_invite.created': GroupInviteCreatedEvent;

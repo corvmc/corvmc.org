@@ -234,6 +234,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'equipment_loan_due',
+		category: 'practice-space',
+		label: 'Equipment due back',
+		description: 'Reminder the day before a loan is due, and again while it is late',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'equipment_returned',
 		category: 'practice-space',
 		label: 'Equipment returned',

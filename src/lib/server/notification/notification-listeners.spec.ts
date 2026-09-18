@@ -138,6 +138,7 @@ describe('registerAllNotificationListeners', () => {
 			'equipment.loan_scheduled',
 			'equipment.loan_requested',
 			'equipment.checked_out',
+			'equipment.loan_due',
 			'equipment.returned',
 			'contact.form_submitted',
 			'volunteer.hours_submitted',
@@ -693,6 +694,56 @@ describe('equipment.returned handler', () => {
 	});
 });
 
+describe('equipment.loan_due handler', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const loan = {
+		loanId: 'l1',
+		userId: 'user-1',
+		userName: 'Bob',
+		userEmail: 'user@test.com',
+		equipmentName: 'SM58',
+		dueDate: 'June 16'
+	};
+
+	it('asks nicely the day before', async () => {
+		await emit('equipment.loan_due', { ...loan, stage: 'due_tomorrow', daysLate: 0 });
+
+		const params = mockDispatch.mock.calls[0][0];
+		expect(params.type).toBe('equipment_loan_due');
+		expect(params.title).toBe('SM58 is due back tomorrow');
+		expect(params.email.paragraphs[0].text).not.toMatch(/overdue|late/i);
+	});
+
+	it('says how late it is once it is late, and pluralizes the day', async () => {
+		await emit('equipment.loan_due', { ...loan, stage: 'overdue', daysLate: 1 });
+		expect(mockDispatch.mock.calls[0][0].title).toBe('SM58 is 1 day overdue');
+
+		mockDispatch.mockClear();
+		await emit('equipment.loan_due', { ...loan, stage: 'overdue', daysLate: 3 });
+		expect(mockDispatch.mock.calls[0][0].title).toBe('SM58 is 3 days overdue');
+	});
+
+	it('still names something when the loan is a free-form request', async () => {
+		// `inventory_loan.item_id` is nullable and `listLoansDueBetween` left-joins
+		// it, so a title of "null is 3 days overdue" is one row away.
+		await emit('equipment.loan_due', {
+			...loan,
+			equipmentName: null,
+			stage: 'overdue',
+			daysLate: 3
+		});
+		expect(mockDispatch.mock.calls[0][0].title).toBe('Borrowed equipment is 3 days overdue');
+	});
+
+	it('uses one type for every stage, so silencing it silences all four', async () => {
+		await emit('equipment.loan_due', { ...loan, stage: 'due_tomorrow', daysLate: 0 });
+		await emit('equipment.loan_due', { ...loan, stage: 'overdue', daysLate: 7 });
+		const types = mockDispatch.mock.calls.map((c) => c[0].type);
+		expect(new Set(types)).toEqual(new Set(['equipment_loan_due']));
+	});
+});
+
 // `confirmReservation` assembled an email-shaped payload — userEmail, date,
 // startTime, endTime — wrapped the emit in a try/catch on the grounds that a
 // listener must not fail a booking after the money moved, and had no listener.
@@ -938,6 +989,14 @@ describe('every notification-alias model', () => {
 			loanId: 'loan-1'
 		});
 		await emit('equipment.checked_out', { ...member, equipmentName: 'SM58' });
+		await emit('equipment.loan_due', {
+			...member,
+			stage: 'overdue',
+			daysLate: 3,
+			loanId: 'l1',
+			equipmentName: 'SM58',
+			dueDate: 'June 16'
+		});
 		await emit('equipment.returned', {
 			...member,
 			loanId: 'l1',
