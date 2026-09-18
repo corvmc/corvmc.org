@@ -16,9 +16,11 @@ vi.mock('$app/server', () => ({
 
 const listPublicCalendarEvents = vi.fn(async (..._args: unknown[]) => [] as unknown[]);
 const listPublicUpcomingEvents = vi.fn(async (..._args: unknown[]) => [] as unknown[]);
+const countPublicUpcomingEvents = vi.fn(async (..._args: unknown[]) => 0);
 vi.mock('$lib/server/event/event-service', () => ({
 	listPublicCalendarEvents: (...args: unknown[]) => listPublicCalendarEvents(...(args as [])),
-	listPublicUpcomingEvents: (...args: unknown[]) => listPublicUpcomingEvents(...(args as []))
+	listPublicUpcomingEvents: (...args: unknown[]) => listPublicUpcomingEvents(...(args as [])),
+	countPublicUpcomingEvents: (...args: unknown[]) => countPublicUpcomingEvents(...(args as []))
 }));
 
 vi.mock('$lib/server/storage', () => ({
@@ -139,6 +141,18 @@ describe('getPublicGigGuide', () => {
 		const result = await getPublicGigGuide({ offset: 0 });
 		expect(result.hasMore).toBe(true);
 		expect(result.events).toHaveLength(GIG_GUIDE_PAGE_SIZE);
+	});
+
+	// The pager says what is left, so the count has to be the whole set rather
+	// than the page — a bare "Show more" cannot tell two from two hundred (#1059).
+	it('carries the full total, not the page length', async () => {
+		listPublicUpcomingEvents.mockResolvedValue([fakeRow('evt-1')]);
+		countPublicUpcomingEvents.mockResolvedValue(57);
+
+		const result = await getPublicGigGuide({ offset: 0 });
+
+		expect(result.total).toBe(57);
+		expect(result.events).toHaveLength(1);
 	});
 
 	it('reports no more when a short page comes back', async () => {

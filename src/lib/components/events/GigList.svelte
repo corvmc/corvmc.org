@@ -129,11 +129,6 @@
 									·
 								{/if}
 								{formatTime(evt.startsAt)}
-								<!-- The price reads the same whoever sells it; the link is extra.
-								     Skipped only when an off-site seller sets a price we don't know. -->
-								{#if !evt.externalTicketUrl || evt.ticketPrice}
-									· {priceDisplay(evt).label}
-								{/if}
 								{#if evt.externalTicketUrl && !isPast && !isCancelled}
 									·
 									<a
@@ -148,6 +143,13 @@
 								{/if}
 							</span>
 						</div>
+						<!-- Its own column, not the end of a flowing meta line whose
+						     preceding items are conditional: at the end of that line the
+						     price landed at a different x on every row and two gigs could
+						     not be compared by eye (#1059). -->
+						{#if !evt.externalTicketUrl || evt.ticketPrice}
+							<span class="gig-row__price">{priceDisplay(evt).label}</span>
+						{/if}
 					</li>
 				{/each}
 			</ul>
@@ -296,6 +298,18 @@
 
 	.gig-row__band:hover {
 		text-decoration: underline;
+	}
+
+	/* `margin-left: auto` rather than a fixed width: the label is short and the
+	   right edge is what the eye compares along. */
+	.gig-row__price {
+		margin-left: auto;
+		flex-shrink: 0;
+		padding-left: 0.5rem;
+		font-size: 0.8rem;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		color: var(--fg-2);
 	}
 
 	.gig-row__meta {

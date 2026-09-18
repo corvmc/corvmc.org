@@ -142,7 +142,13 @@ export const getMemberEvents = query(async () => {
 		// Without the ticket link a card can't tell an off-site sale from a free
 		// show, and an unpriced external gig would advertise itself as free.
 		externalTicketUrl: e.externalTicketUrl,
-		posterUrl: resolveImageUrl(e.posterKey)
+		posterUrl: resolveImageUrl(e.posterKey),
+		// For the gig-guide reader beside the posters (#1055). `listUpcoming`
+		// is published CMC shows by construction, so those two are constants
+		// and there is no band credit to carry.
+		location: e.location,
+		source: e.source,
+		status: e.status
 	});
 	return { upcoming: upcoming.map(mapEvent), past: past.map(mapEvent) };
 });

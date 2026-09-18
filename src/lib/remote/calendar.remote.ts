@@ -1,7 +1,8 @@
 import { query } from '$app/server';
 import {
 	listPublicCalendarEvents,
-	listPublicUpcomingEvents
+	listPublicUpcomingEvents,
+	countPublicUpcomingEvents
 } from '$lib/server/event/event-service';
 import { toCalendarEntry } from '$lib/server/event/calendar-entry';
 import { buildDateInTz, formatDateInTz } from '$lib/server/reservation/timezone';
@@ -31,15 +32,17 @@ export const getPublicGigGuide = query(gigGuideSchema, async ({ from, offset }) 
 	const anchor = from ?? formatDateInTz(new Date(), DEFAULT_TIMEZONE);
 	const windowStart = buildDateInTz(anchor, '00:00', DEFAULT_TIMEZONE);
 
-	const rows = await listPublicUpcomingEvents(windowStart, {
-		limit: GIG_GUIDE_PAGE_SIZE,
-		offset
-	});
+	const [rows, total] = await Promise.all([
+		listPublicUpcomingEvents(windowStart, { limit: GIG_GUIDE_PAGE_SIZE, offset }),
+		countPublicUpcomingEvents(windowStart)
+	]);
 
 	const hasMore = rows.length > GIG_GUIDE_PAGE_SIZE;
 	return {
 		from: anchor,
 		hasMore,
+		/** So "Show more" can say what is left, the way the directory's does (#1059). */
+		total,
 		events: rows.slice(0, GIG_GUIDE_PAGE_SIZE).map(toCalendarEntry)
 	};
 });
