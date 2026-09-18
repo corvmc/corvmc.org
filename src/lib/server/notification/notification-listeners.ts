@@ -11,7 +11,7 @@ import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { shiftLabel } from '$lib/utils/shift-label';
 import type {
 	NotificationEmailCtaSpec,
@@ -97,6 +97,34 @@ export function registerAllNotificationListeners(): void {
 	// That is enforced in the email layer via `emailOmitsUserContent` on the
 	// notification type, not by remembering it here — but there is nothing to
 	// strip, because nothing below passes a quote.
+	// In-app only by default — see the catalogue entry. A chat is the highest
+	// frequency thing on the site, and the notification names the group and the
+	// person, never what they wrote.
+	domainEvents.on('inbox.group_message', async ({ data: event }) => {
+		const readers = await db
+			.select({ id: user.id, name: user.name, email: user.email })
+			.from(user)
+			.where(inArray(user.id, event.recipientIds.length > 0 ? event.recipientIds : ['']));
+
+		for (const reader of readers) {
+			await dispatch({
+				type: 'group_chat_message',
+				userId: reader.id,
+				userEmail: reader.email,
+				title: `${event.senderName} posted in ${event.groupName}`,
+				href: `/member/messages/${event.threadId}`,
+				email: {
+					recipientName: reader.name,
+					subject: `New message in ${event.groupName}`,
+					preview_text: `${event.senderName} posted in ${event.groupName}.`,
+					heading: `New message in ${event.groupName}`,
+					paragraphs: [{ text: `${event.senderName} posted in ${event.groupName}.` }],
+					cta: { label: 'Read it' }
+				}
+			});
+		}
+	});
+
 	domainEvents.on('inbox.direct_message', async ({ data: event }) => {
 		const [recipient] = await db
 			.select({ id: user.id, name: user.name, email: user.email })

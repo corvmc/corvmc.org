@@ -11,6 +11,7 @@
 	import { resolve } from '$app/paths';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import ThreadPane from '$lib/components/inbox/ThreadPane.svelte';
 	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
 	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
 	import ThreadHeader from '$lib/components/inbox/ThreadHeader.svelte';
@@ -70,7 +71,7 @@
 	const metaWindowClosed = $derived(isMetaReplyWindowClosed(t.channel, t.messages));
 </script>
 
-<div class="flex flex-col gap-4 overflow-y-auto sm:h-full sm:min-h-0 sm:overflow-visible">
+<ThreadPane stacked>
 	<ThreadHeader
 		title={t.contactUserName ?? t.contactName ?? t.contactEmail ?? 'Conversation'}
 		subtitle={t.subject ?? channelLabel(t.channel)}
@@ -175,4 +176,4 @@
 			</div>
 		</div>
 	{/await}
-</div>
+</ThreadPane>

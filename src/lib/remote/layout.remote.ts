@@ -7,10 +7,10 @@ import { capabilitySet, isElevated, positionsFor } from '$lib/server/authorizati
 import { hasLoanableItems } from '$lib/server/inventory/item-service';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
-import { countPortalUnread } from '$lib/server/inbox/portal-service';
 import { countBandUnread } from '$lib/server/inbox/band-service';
 import { countGroupChatUnread } from '$lib/server/inbox/group-chat-service';
-import { countDirectUnread, countPendingRequests } from '$lib/server/inbox/direct-service';
+import { countUnifiedUnread } from '$lib/server/inbox/unified-service';
+import { countPendingRequests } from '$lib/server/inbox/direct-service';
 import { acceptsDirectMessages } from '$lib/server/moderation/moderation-service';
 import { countVolunteerWorkWaiting } from '$lib/server/volunteer/volunteer-signup-service';
 import { countPendingSubmissions } from '$lib/server/event/community-event-service';
@@ -62,12 +62,23 @@ function activeOnly<T extends { status: string }>(bands: T[]): T[] {
  * already awaiting half a dozen others — parallel hops, not round trips of their own. Both
  * swallow their failure: uncaught, a bell that cannot load would take the whole layout down.
  */
+
+/** Unread across every inbox: the roster answers who, the threads how many. */
+async function countUnifiedUnreadFor(userId: string): Promise<number> {
+	const groups = (await listForUser(userId, ['band', 'club', 'committee']).catch(() => [])).filter(
+		(g) => g.status === 'active'
+	);
+	return countUnifiedUnread(userId, {
+		memberOf: groups.map((g) => g.id),
+		adminOf: groups.filter((g) => g.role === 'owner' || g.role === 'admin').map((g) => g.id)
+	});
+}
+
 async function appChrome(user: SignedInUser) {
-	const [items, unreadCount, portalUnread, directUnread] = await Promise.all([
+	const [items, unreadCount, messagesUnread] = await Promise.all([
 		getForUser(user.id, { limit: 10 }).catch(() => []),
 		getUnreadCount(user.id).catch(() => 0),
-		countPortalUnread(user.id).catch(() => 0),
-		countDirectUnread(user.id).catch(() => 0)
+		countUnifiedUnreadFor(user.id).catch(() => 0)
 	]);
 
 	return {
@@ -79,14 +90,13 @@ async function appChrome(user: SignedInUser) {
 		},
 		notifications: { items, unreadCount },
 		/**
-		 * The member's own inbox, here rather than on `getMemberLayout` because
-		 * the topbar's messages icon renders on every panel (#1244).
+		 * Every inbox the viewer can read (#1250) — one number, because one page
+		 * now holds all of them.
 		 *
-		 * Requests are deliberately absent. They show up in the Messages list
-		 * marked as such, so a member finds them when they go looking, but an
-		 * unconsented message must not follow anyone around the site.
+		 * Requests stay out. They are marked in the list, so a member finds them
+		 * when they look; an unconsented message must not follow anyone around.
 		 */
-		messagesUnread: portalUnread + directUnread
+		messagesUnread
 	};
 }
 

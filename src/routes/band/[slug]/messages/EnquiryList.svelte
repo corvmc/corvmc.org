@@ -1,27 +1,23 @@
 <script lang="ts">
 	/**
-	 * The band's booking enquiries, oldest activity last.
+	 * The band's booking enquiries — the unified Messages list, scoped to this
+	 * band's inbox (#1250).
 	 *
-	 * Cards rather than table rows, for the same reason `/member/messages` uses
-	 * them: a table wants columns of comparable values, and what matters here is
-	 * who wrote, what they last said, and whether it is waiting on you.
-	 *
-	 * Each row says which of three states it is in, because they are the only
-	 * thing the band has to act on — new (nobody here has opened it), waiting on
-	 * them (answered, no reply yet), and closed.
+	 * The route survives the unification rather than redirecting: the band nav
+	 * row points at it, and every enquiry notification email deep-links into
+	 * it. What changed is that it is now one view of one list rather than a
+	 * second list that had drifted from the first.
 	 */
 	import { page } from '$app/state';
-	import { resolve } from '$app/paths';
-	import { relativeDay } from '$lib/utils/format';
+	import ConversationRows from '$lib/components/inbox/ConversationRows.svelte';
 	import DataList from '$lib/components/ui/DataList.svelte';
-	import { getBandConversations } from '$lib/remote/band-messages.remote';
+	import { getMyMessages } from '$lib/remote/direct-messages.remote';
 	import { enquiryList } from './list-state.svelte';
 
 	const slug = $derived(page.params.slug!);
-	// The page number is shared module state, not local: the thread pane is a
-	// sibling and has to refresh this list at the page it is actually showing.
-	const result = $derived(getBandConversations({ slug, page: enquiryList.page }));
-	const openId = $derived(page.params.id);
+	// `channel: 'band'` — enquiries only. The band's own chat is the Chat row
+	// next door, and this list showing both would double every group.
+	const result = $derived(getMyMessages({ inbox: slug, channel: 'band', page: enquiryList.page }));
 </script>
 
 <div class="flex min-h-0 flex-col gap-3">
@@ -40,46 +36,12 @@
 			empty="When someone uses the booking form on your profile, it lands here."
 			onpage={(p) => (enquiryList.page = p)}
 		>
-			{#snippet children(enquiries)}
-				<ul class="flex flex-col gap-1">
-					{#each enquiries as e (e.id)}
-						{@const href = resolve(`/band/${slug}/messages/${e.id}`)}
-						{@const active = e.id === openId}
-						<li>
-							<a
-								{href}
-								class="flex items-start gap-3 rounded-box p-3 hover:bg-base-200 {active
-									? 'bg-base-200'
-									: ''}"
-								aria-current={active ? 'page' : undefined}
-							>
-								<span class="flex min-w-0 flex-1 flex-col gap-0.5">
-									<span class="flex items-center gap-2">
-										<span class="truncate font-medium" class:font-bold={e.unread}>
-											{e.contactName ?? 'Someone'}
-										</span>
-										{#if e.unread}
-											<span class="size-2 shrink-0 rounded-full bg-primary" title="Unread"></span>
-										{/if}
-									</span>
-
-									{#if e.preview}
-										<span class="truncate text-muted text-sm">{e.preview}</span>
-									{/if}
-
-									<span class="text-subtle text-xs">
-										{e.lastMessageAt ? relativeDay(e.lastMessageAt) : '—'}
-										{#if e.status === 'resolved'}
-											· Closed
-										{:else if e.awaitingReply}
-											· Waiting on them
-										{/if}
-									</span>
-								</span>
-							</a>
-						</li>
-					{/each}
-				</ul>
+			{#snippet children(rows)}
+				<ConversationRows
+					{rows}
+					hrefFor={(id) => `/band/${slug}/messages/${id}`}
+					showInbox={false}
+				/>
 			{/snippet}
 		</DataList>
 	</div>

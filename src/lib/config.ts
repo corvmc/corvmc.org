@@ -743,8 +743,8 @@ export const inboxChannels = [
  * administers it, not about whether it is on.
  *
  * `group` is out for the third version of the same reason: a group's chat is
- * its members talking to each other, and `dispatchReply` throws rather than
- * write into one (#1252).
+ * its members talking to each other, staff have no queue role in it, and
+ * `dispatchReply` throws rather than write into one (#1252).
  *
  * `inboxChannels` stays the `inbox_thread.channel` vocabulary; this is the
  * subset staff administer.

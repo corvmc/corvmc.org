@@ -28,13 +28,12 @@ vi.mock('$lib/server/inventory/item-service', () => ({
 }));
 vi.mock('$lib/server/feature-flags', () => ({ getAllFeatureFlags: vi.fn(async () => ({})) }));
 vi.mock('$lib/server/inbox/thread-service', () => ({ getUnresolvedCount: vi.fn(async () => 0) }));
-vi.mock('$lib/server/inbox/portal-service', () => ({ countPortalUnread: vi.fn(async () => 0) }));
 vi.mock('$lib/server/inbox/band-service', () => ({ countBandUnread: vi.fn(async () => 0) }));
 vi.mock('$lib/server/inbox/group-chat-service', () => ({
 	countGroupChatUnread: vi.fn(async () => 0)
 }));
+vi.mock('$lib/server/inbox/unified-service', () => ({ countUnifiedUnread: vi.fn(async () => 0) }));
 vi.mock('$lib/server/inbox/direct-service', () => ({
-	countDirectUnread: vi.fn(async () => 0),
 	countPendingRequests: vi.fn(async () => 0)
 }));
 vi.mock('$lib/server/volunteer/volunteer-signup-service', () => ({
