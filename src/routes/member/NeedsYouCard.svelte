@@ -21,7 +21,7 @@
 {#if count > 0}
 	<InfoCard title="Needs you" state={count}>
 		<ul class="flex flex-col divide-y divide-base-300">
-			{#each items as item (item.kind + item.title)}
+			{#each items as item (item.id)}
 				<li class="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
 					<div class="min-w-0">
 						<p class="font-medium">{item.title}</p>

@@ -19,6 +19,14 @@ export type NeedsYouKind =
 	| 'profile-incomplete';
 
 export interface NeedsYouItem {
+	/**
+	 * Unique within one member's list, and the `{#each}` key.
+	 *
+	 * `kind + title` is not: two shifts for the same role produce the same
+	 * string, and a duplicate key is a hard render error that takes the whole
+	 * dashboard down rather than mis-ordering a row.
+	 */
+	id: string;
 	kind: NeedsYouKind;
 	/** What has to happen, in the member's words. */
 	title: string;
