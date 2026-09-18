@@ -81,7 +81,11 @@
 			<p class="line-clamp-3 text-sm opacity-80">{suggestion.body}</p>
 
 			{#if suggestion.responseBody}
-				<p class="border-l-2 border-primary/40 pl-3 text-sm">
+				<!-- The same three lines as the body above. A reply is the answer to
+				     that text, so clamping it shorter would rank the two; leaving it
+				     unclamped made one row several times taller than its neighbours,
+				     and it was the only unclamped text on the board (#1046). -->
+				<p class="line-clamp-3 border-l-2 border-primary/40 pl-3 text-sm">
 					<span class="font-medium">Staff:</span>
 					{suggestion.responseBody}
 				</p>
