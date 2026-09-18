@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { sortNeedsYou, type NeedsYouItem } from './needs-you';
 
 const at = (iso: string | null, rank: number, kind = 'loan-due'): NeedsYouItem => ({
+	id: `${kind}:${iso ?? 'undated'}:${rank}`,
 	kind: kind as NeedsYouItem['kind'],
 	title: `${kind} ${iso ?? 'undated'}`,
 	href: '/member' as NeedsYouItem['href'],
@@ -56,5 +57,21 @@ describe('sortNeedsYou', () => {
 		sortNeedsYou(items);
 
 		expect(items[0].dueAt?.toISOString().slice(0, 10)).toBe('2026-10-01');
+	});
+});
+
+/**
+ * A duplicate `{#each}` key is a hard render error, so it takes the whole
+ * dashboard down rather than mis-ordering a row. The old key was
+ * `kind + title`, and two shifts for the same role produce the same string.
+ */
+describe('needs-you ids', () => {
+	it('separates two items whose kind and title are identical', () => {
+		const a: NeedsYouItem = { ...at(null, 1, 'volunteer-shift-soon'), id: 'volunteer:sign-1' };
+		const b: NeedsYouItem = { ...a, id: 'volunteer:sign-2' };
+
+		expect(a.title).toBe(b.title);
+		expect(a.kind).toBe(b.kind);
+		expect(new Set([a.id, b.id]).size).toBe(2);
 	});
 });

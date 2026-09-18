@@ -54,6 +54,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 
 	for (const r of input.unconfirmed) {
 		items.push({
+			id: `reservation-unconfirmed:${r.id}`,
 			kind: 'reservation-unconfirmed',
 			title: 'Confirm your practice room booking',
 			detail: r.bandName
@@ -73,6 +74,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 		if (s.startsAt <= now) continue;
 		if (s.status !== 'claimed' && s.status !== 'confirmed') continue;
 		items.push({
+			id: `volunteer-shift-soon:${s.signupId}`,
 			kind: 'volunteer-shift-soon',
 			title: `You are on ${s.roleName}`,
 			detail: s.eventTitle ?? undefined,
@@ -88,6 +90,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 		// The window closes: hours cannot be backdated past the limit, so this is
 		// a deadline even though nothing happens on the day it passes.
 		items.push({
+			id: `volunteer-hours-unlogged:${c.signupId}`,
 			kind: 'volunteer-hours-unlogged',
 			title: `Log your hours for ${c.roleName}`,
 			href: resolve('/member/volunteer/hours'),
@@ -100,6 +103,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 	for (const loan of loans.rows) {
 		if (!loan.dueDate) continue;
 		items.push({
+			id: `loan-due:${loan.id}`,
 			kind: 'loan-due',
 			title: `Return ${loan.equipmentName ?? 'the gear you borrowed'}`,
 			href: resolve('/member/equipment/loans'),
@@ -111,6 +115,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 
 	if (subscription?.cancelAtPeriodEnd && subscription.creditsResetAt) {
 		items.push({
+			id: 'membership-ending',
 			kind: 'membership-ending',
 			title: 'Your sustaining membership ends',
 			detail: 'Practice hours stop resetting after that date',
@@ -126,6 +131,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 	// more urgent than a room you lose on Friday.
 	if (input.pendingInviteCount > 0) {
 		items.push({
+			id: 'band-invitation',
 			kind: 'band-invitation',
 			title:
 				input.pendingInviteCount === 1
@@ -140,6 +146,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 
 	if (messageRequests > 0) {
 		items.push({
+			id: 'message-request',
 			kind: 'message-request',
 			title:
 				messageRequests === 1
@@ -154,6 +161,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 
 	if (!input.profileComplete) {
 		items.push({
+			id: 'profile-incomplete',
 			kind: 'profile-incomplete',
 			title: 'Add your instruments or a short bio',
 			detail: 'So other members can find you in the directory',
