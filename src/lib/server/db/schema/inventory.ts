@@ -387,6 +387,11 @@ export const acquisition = sqliteTable(
 		 */
 		purchaseOrderId: text('purchase_order_id'),
 		/**
+		 * The `planned` gear suggestion this arrival fulfilled, when it fulfilled
+		 * one. Bare `text` for the same reason as `purchaseOrderId` above.
+		 */
+		suggestionId: text('suggestion_id'),
+		/**
 		 * When they were paid back. The transfer itself happens outside the app —
 		 * this records that a person settled it, the same way `form8282ResolvedAt`
 		 * records that a person dealt with a filing.
@@ -405,7 +410,8 @@ export const acquisition = sqliteTable(
 		index('idx_acquisition_occurred').on(t.occurredAt),
 		index('idx_acquisition_donor').on(t.donorUserId),
 		index('idx_acquisition_project').on(t.projectId),
-		index('idx_acquisition_paid_by').on(t.paidByUserId)
+		index('idx_acquisition_paid_by').on(t.paidByUserId),
+		index('idx_acquisition_suggestion').on(t.suggestionId)
 	]
 );
 

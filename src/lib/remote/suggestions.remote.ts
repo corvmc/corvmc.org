@@ -37,6 +37,7 @@ import {
 } from '$lib/server/suggestion/suggestion-service';
 import { createFlag, FLAG_REASON_MAX, FLAG_DESCRIPTION_MAX } from '$lib/server/flag/flag-service';
 import { getProjectForSuggestion, listCommittees } from '$lib/server/project/project-service';
+import { getAcquisitionForSuggestion } from '$lib/server/inventory/acquisition-service';
 
 const BOARD_PAGE_SIZE = 20;
 const STAFF_PAGE_SIZE = 25;
@@ -450,13 +451,17 @@ export const getStaffSuggestionDetailPage = query(z.string(), async (id) => {
 	// `project` rides along rather than being its own query: it is one line on
 	// this page, and a second awaited remote query in the component is a serial
 	// round trip that also stops the page rendering past kit 2.64.
-	const [suggestion, pendingEdit, project, committees] = await Promise.all([
+	const [suggestion, pendingEdit, project, committees, fulfilledBy] = await Promise.all([
 		getStaffSuggestionDetail(id),
 		getSuggestionPendingEdit(id),
 		getProjectForSuggestion(id),
-		listCommittees()
+		listCommittees(),
+		// The arrival that answered a gear request. Same reason as `project`: one
+		// line on this page, and a second awaited query in the component is a
+		// serial round trip.
+		getAcquisitionForSuggestion(id)
 	]);
-	return { suggestion, pendingEdit, project, committees };
+	return { suggestion, pendingEdit, project, committees, fulfilledBy };
 });
 
 /**

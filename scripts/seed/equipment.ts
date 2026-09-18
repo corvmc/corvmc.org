@@ -842,6 +842,9 @@ export async function seedEquipment(users: SeedUser[]) {
 		items: items.length,
 		assets: assets.length,
 		acquisitions: acquisitionRows.length,
+		// Handed to the suggestion seed, which links a fulfilled gear request to
+		// it — the loop #603 built has to be visible locally to be checked.
+		restockAcquisitionId: restock.id,
 		orders: 4,
 		movements: movements.length,
 		loans: loans.length

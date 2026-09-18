@@ -10,7 +10,7 @@ import {
 	type SuggestionVisibility
 } from '$lib/server/db/schema/suggestion';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, or, desc, count, like, inArray, isNull, sql } from 'drizzle-orm';
+import { eq, and, or, asc, desc, count, like, inArray, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { DomainError } from '$lib/server/errors';
@@ -269,6 +269,83 @@ export async function respondToSuggestion(
 		statusLabel: suggestionStatusLabels[params.status],
 		responseBody: response || null
 	});
+}
+
+/** Just enough of a suggestion to name it from another module's page. */
+export async function getSuggestionBrief(id: string) {
+	const [row] = await db
+		.select({ id: suggestion.id, title: suggestion.title, status: suggestion.status })
+		.from(suggestion)
+		.where(eq(suggestion.id, id))
+		.limit(1);
+	return row ?? null;
+}
+
+/**
+ * Gear the members asked for that staff said yes to and nobody has bought yet.
+ *
+ * What intake picks from. Ordered by votes so the one the most people want is
+ * first, and capped because this is a picker, not a report.
+ */
+export async function listPlannedGear(limit = 50) {
+	return db
+		.select({
+			id: suggestion.id,
+			title: suggestion.title,
+			status: suggestion.status,
+			voteCount: voteCountSql
+		})
+		.from(suggestion)
+		.leftJoin(suggestionVote, eq(suggestionVote.suggestionId, suggestion.id))
+		.where(
+			and(
+				eq(suggestion.category, 'gear_equipment'),
+				inArray(suggestion.status, ['planned', 'in_progress'])
+			)
+		)
+		.groupBy(suggestion.id)
+		.orderBy(desc(voteCountSql), asc(suggestion.id))
+		.limit(limit);
+}
+
+/**
+ * A gear suggestion, closed by the thing arriving (#603).
+ *
+ * The status advance is a consequence of a physical fact rather than an
+ * editorial call, which is why intake makes it under `inventory.manageStock`
+ * and not `suggestion.respond`. It is also why it never overwrites an outcome
+ * somebody already decided: only a suggestion still moving through the queue
+ * is moved, so a `declined` one that a donation happens to satisfy stays
+ * declined for whoever reads it.
+ */
+export async function fulfilSuggestion(
+	suggestionId: string,
+	params: { staffId: string }
+): Promise<boolean> {
+	const existing = await loadForNotification(suggestionId);
+	if (!existing) return false;
+
+	const [row] = await db
+		.select({ status: suggestion.status })
+		.from(suggestion)
+		.where(eq(suggestion.id, suggestionId))
+		.limit(1);
+	if (!row || !['open', 'planned', 'in_progress'].includes(row.status)) return false;
+
+	await db
+		.update(suggestion)
+		.set({ status: 'done', updatedAt: new Date() })
+		.where(eq(suggestion.id, suggestionId));
+
+	notifyAuthor('suggestion.responded', existing, params.staffId, {
+		suggestionId,
+		title: existing.title,
+		status: 'done',
+		statusLabel: suggestionStatusLabels.done,
+		responseBody: null
+	});
+
+	return true;
 }
 
 export interface SetVisibilityParams {

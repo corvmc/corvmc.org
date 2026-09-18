@@ -11,6 +11,7 @@
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import { EntityChip } from '$lib/components/ui/entity';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { formatDateTime } from '$lib/utils/format';
@@ -45,6 +46,9 @@
 	const s = $derived(data.suggestion);
 	const pendingEdit = $derived(data.pendingEdit);
 	const project = $derived(data.project);
+	const fulfilledBy = $derived(data.fulfilledBy);
+	// Only gear can be answered by something arriving on a shelf.
+	const isGear = $derived(s.category === 'gear_equipment');
 	const committeeOptions = $derived(data.committees.map((c) => ({ value: c.id, label: c.name })));
 
 	const isMerged = $derived(!!s.mergedIntoId);
@@ -75,6 +79,32 @@
 	{:else if s.visibility === 'hidden'}
 		<Alert type="error">
 			Hidden from the board.{s.visibilityNote ? ` Note: ${s.visibilityNote}` : ''}
+		</Alert>
+	{/if}
+
+	<!-- The thing itself, or the way to record it arriving. A gear request sat
+	     at Planned after the amp was on the shelf, because the acquisition and
+	     the suggestion had no relationship at all (#603). -->
+	{#if fulfilledBy}
+		<Alert type="success" href={resolve(`/staff/inventory/acquisitions/${fulfilledBy.id}`)}>
+			Arrived {formatDateTime(fulfilledBy.occurredAt)}{fulfilledBy.sourceName
+				? ` from ${fulfilledBy.sourceName}`
+				: ''}.
+		</Alert>
+	{:else if isGear && !isMerged && (s.status === 'planned' || s.status === 'in_progress')}
+		<Alert type="info">
+			Got it in? Record the arrival and this closes itself — the member who asked hears about it.
+			<!-- The action, not the alert's own `href`: that prop is a
+			     `ResolvedPathname` and a query string is not one. -->
+			{#snippet action()}
+				<Button
+					href="{resolve('/staff/inventory/intake')}?suggestion={s.id}"
+					variant="ghost"
+					size="sm"
+				>
+					Record the arrival
+				</Button>
+			{/snippet}
 		</Alert>
 	{/if}
 

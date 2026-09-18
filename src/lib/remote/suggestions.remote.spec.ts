@@ -60,6 +60,11 @@ const projectSvc = {
 };
 vi.mock('$lib/server/project/project-service', () => projectSvc);
 
+// Same trap, one module over: the staff detail page also reads the arrival
+// that answered a gear request (#603).
+const acquisitionSvc = { getAcquisitionForSuggestion: vi.fn(async () => null) };
+vi.mock('$lib/server/inventory/acquisition-service', () => acquisitionSvc);
+
 // Standing moved out of the domain services into one shared one. It stays a
 // spy here for the same reason the others are: a guard that runs late would
 // show up as a service call on a rejected request.

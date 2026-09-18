@@ -244,7 +244,7 @@ async function main() {
 	// Needs only the role catalog. Kept out of `allUsers` like the volunteer
 	// personas, so nothing that slices or indexes that array shifts under it.
 	const sustainingPersonas = await seedSustainingPersonas(roles);
-	const suggestions = await seedSuggestions(allUsers, adminUser);
+	const suggestions = await seedSuggestions(allUsers, adminUser, eq.restockAcquisitionId);
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);

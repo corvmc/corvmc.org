@@ -36,6 +36,11 @@ import {
 	updateAsset
 } from '$lib/server/inventory/asset-service';
 import { listLowStock, listMovements } from '$lib/server/inventory/stock-service';
+import {
+	fulfilSuggestion,
+	getSuggestionBrief,
+	listPlannedGear
+} from '$lib/server/suggestion/suggestion-service';
 import { contractorSpend, jobsForAsset } from '$lib/server/contractor/contractor-job-service';
 import {
 	acknowledgeForm8283,
@@ -672,9 +677,10 @@ export const getIntakePage = query(z.object({ orderId: z.string().optional() }),
 	// queries in flight from one component is what `no-concurrent-remote-queries`
 	// forbids — and past kit 2.64 it renders the error boundary instead of the
 	// page. Composed on the server, these are two local database hops.
-	const [{ rows }, order] = await Promise.all([
+	const [{ rows }, order, plannedGear] = await Promise.all([
 		listItems({}, { pageSize: 1000 }),
-		input.orderId ? getOrderById(input.orderId) : Promise.resolve(null)
+		input.orderId ? getOrderById(input.orderId) : Promise.resolve(null),
+		listPlannedGear()
 	]);
 
 	return {
@@ -693,7 +699,10 @@ export const getIntakePage = query(z.object({ orderId: z.string().optional() }),
 				outstanding: l.outstanding,
 				unitCostCents: l.unitCostCents
 			}))
-		}
+		},
+		// The gear members asked for and staff agreed to buy. Recording the
+		// arrival against one is what finally tells the member it is here (#603).
+		plannedGear
 	};
 });
 
@@ -749,6 +758,8 @@ export const recordIntake = form(
 		notes: z.string().max(2000).optional(),
 		/** Set when this arrival is being received against an order. */
 		purchaseOrderId: z.string().optional(),
+		/** Set when this arrival fulfils a planned gear suggestion. */
+		suggestionId: z.string().optional(),
 		/**
 		 * What the receipt says, which is not what the lines add up to: postage,
 		 * tax and a discount are on the paper and never on a line. Authoritative
@@ -773,6 +784,7 @@ export const recordIntake = form(
 			locationId?: string;
 			notes?: string;
 			purchaseOrderId?: string;
+			suggestionId?: string;
 			totalCents?: number;
 			lines: string;
 		};
@@ -805,6 +817,7 @@ export const recordIntake = form(
 				notes: data.notes || undefined,
 				totalCents: data.totalCents,
 				recordedByUserId: currentUser.id,
+				suggestionId: data.suggestionId || undefined,
 				lines: lines.map((l) => ({
 					itemId: l.itemId,
 					quantity: l.quantity,
@@ -834,6 +847,13 @@ export const recordIntake = form(
 				});
 				void getOrder(data.purchaseOrderId).refresh();
 				void getOrders().refresh();
+			}
+
+			// The member who asked for it hears that it arrived. Best-effort in the
+			// same sense as the order link above: the acquisition is the record,
+			// and a suggestion that has already been decided is left alone.
+			if (data.suggestionId) {
+				await fulfilSuggestion(data.suggestionId, { staffId: currentUser.id });
 			}
 
 			// Everything this touched: the catalog's on-hand numbers, the tagging
@@ -1471,8 +1491,12 @@ export const getStaffAcquisitionDetail = query(z.string(), async (id) => {
 	]);
 	if (!acq) error(404, 'Acquisition not found');
 
+	// The gear request this arrival answered, named rather than left as an id.
+	const fulfils = acq.suggestionId ? await getSuggestionBrief(acq.suggestionId) : null;
+
 	return {
 		...acq,
+		fulfils,
 		items: items.map((i) => ({ id: i.id, name: i.name, kind: i.kind })),
 		linesTotalCents: acq.lines.reduce((sum, l) => sum + l.quantity * (l.unitValueCents ?? 0), 0),
 		awaitingReimbursement: acq.paidByUserId !== null && acq.reimbursedAt === null

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "7a960e58-3dc8-4cdc-8c49-9cbc8ffe2d19",
+  "id": "9ed595c0-90ee-451b-97ab-a8aac0abd5e7",
   "prevIds": [
-    "a175e0c8-21c7-4fc4-b188-7133e1ce130c"
+    "7a960e58-3dc8-4cdc-8c49-9cbc8ffe2d19"
   ],
   "ddl": [
     {
@@ -3805,6 +3805,16 @@
       "default": null,
       "generated": null,
       "name": "purchase_order_id",
+      "entityType": "columns",
+      "table": "acquisition"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "suggestion_id",
       "entityType": "columns",
       "table": "acquisition"
     },
@@ -16406,6 +16416,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_acquisition_paid_by",
+      "entityType": "indexes",
+      "table": "acquisition"
+    },
+    {
+      "columns": [
+        {
+          "value": "suggestion_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_acquisition_suggestion",
       "entityType": "indexes",
       "table": "acquisition"
     },

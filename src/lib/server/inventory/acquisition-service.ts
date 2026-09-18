@@ -14,7 +14,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { listFor } from '$lib/server/media/media-service';
 import { isReceiptKey } from '$lib/server/storage-keys';
-import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { recordMovement, signedQuantity } from './stock-service';
 import { createAsset, AssetTagTakenError } from './asset-service';
 import { inventoryAsset } from '$lib/server/db/schema/inventory';
@@ -73,6 +73,29 @@ export interface CreateAcquisitionData {
 	 */
 	lines?: AcquisitionLineInput[];
 	recordedByUserId?: string;
+	/** The `planned` gear suggestion this arrival fulfils, when it fulfils one. */
+	suggestionId?: string;
+}
+
+/**
+ * The arrival that answered a gear request, if one has been recorded (#603).
+ *
+ * Newest first and one row: a request answered twice is a data-entry slip, and
+ * the page names the arrival rather than reconciling them.
+ */
+export async function getAcquisitionForSuggestion(suggestionId: string) {
+	const [row] = await db
+		.select({
+			id: acquisition.id,
+			kind: acquisition.kind,
+			occurredAt: acquisition.occurredAt,
+			sourceName: acquisition.sourceName
+		})
+		.from(acquisition)
+		.where(eq(acquisition.suggestionId, suggestionId))
+		.orderBy(desc(acquisition.occurredAt), asc(acquisition.id))
+		.limit(1);
+	return row ?? null;
 }
 
 export async function recordAcquisition(data: CreateAcquisitionData) {
@@ -91,6 +114,7 @@ export async function recordAcquisition(data: CreateAcquisitionData) {
 			monetized: data.monetized ?? false,
 			paidByUserId: data.paidByUserId ?? null,
 			recordedByUserId: data.recordedByUserId ?? null,
+			suggestionId: data.suggestionId ?? null,
 			notes: data.notes ?? null
 		})
 		.returning();
@@ -436,6 +460,7 @@ export async function recordAcquisitionBulk(
 			monetized: data.monetized ?? false,
 			paidByUserId: data.paidByUserId ?? null,
 			recordedByUserId: data.recordedByUserId ?? null,
+			suggestionId: data.suggestionId ?? null,
 			notes: data.notes ?? null
 		}),
 		...chunk(lineRows, chunkSize(LINE_COLUMNS)).map((g) => db.insert(acquisitionLine).values(g))
