@@ -61,7 +61,12 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	const premium = input.tier === 'premium';
 
 	const items: BandNavItem[] = [
-		{ key: 'dashboard', label: 'Dashboard', href: resolve('/band/[slug]', { slug }), exact: true }
+		// Deliberately not `exact`, unlike the member panel's. A band row can be
+		// hidden by role, and a viewer on a page whose row they cannot see should
+		// land on the panel root rather than on nothing — `nav-items.spec.ts`
+		// pins that. #1237 is about rows that exist for nobody, which is a
+		// different situation and only the member panel has it.
+		{ key: 'dashboard', label: 'Dashboard', href: resolve('/band/[slug]', { slug }) }
 	];
 
 	// Second, above Members, because it is the only row that can be waiting on

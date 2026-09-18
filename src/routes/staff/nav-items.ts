@@ -106,6 +106,11 @@ export interface StaffNavSection {
 
 /** Rows above the first section header. */
 export const staffNavTop: StaffNavItem[] = [
+	// `exact`, unlike the band panel's. `/staff` is a prefix of every path here,
+	// so without it an unrecognised one — `/staff/usersomething` — lit Dashboard,
+	// which is the #1237 bug. The band panel keeps its fallback because a row
+	// there can be hidden by role and the root is the honest answer; no staff
+	// spec asserts that, and none of the eight paths #1237 sampled needed it.
 	{ key: 'dashboard', label: 'Dashboard', href: resolve('/staff'), exact: true },
 	{
 		key: 'inbox',
