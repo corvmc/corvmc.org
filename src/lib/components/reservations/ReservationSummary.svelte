@@ -35,12 +35,17 @@
 </script>
 
 <div class={className}>
-	<p class="font-medium">{formatMonthDayYear(reservation.startsAt)}</p>
+	<!-- No date line: the shell's rail already says Sat / 3 / May beside this,
+	     and the only thing the second copy added was the year — which is worth a
+	     word only when it is not this one (#1043). -->
+	<p class="font-medium">
+		{formatTimeRange(reservation.startsAt, reservation.endsAt)}
+		{#if reservation.startsAt.getFullYear() !== new Date().getFullYear()}
+			<span class="text-muted font-normal">{reservation.startsAt.getFullYear()}</span>
+		{/if}
+	</p>
 	<p class="text-muted">
-		{formatTimeRange(reservation.startsAt, reservation.endsAt)} · {formatDuration(
-			reservation.startsAt,
-			reservation.endsAt
-		)}
+		{formatDuration(reservation.startsAt, reservation.endsAt)}
 	</p>
 	{#if offered}
 		<!-- A promoted waitlist entry is an offer with a clock on it, and nothing
