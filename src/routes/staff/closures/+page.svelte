@@ -1,8 +1,7 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { formatDateTime } from '$lib/utils/format';
+	import { formatDateTimeShort } from '$lib/utils/format';
+	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -54,53 +53,86 @@
 		</Form>
 	</InfoCard>
 
-	{#if closures.length === 0}
+	<!--
+		A table: two facts per row and two conditional actions, which is none of
+		the four tests a card has to pass (#1034). Upcoming and past are separate
+		sections because the page already knew which side of now each row was on
+		and never said so.
+	-->
+	{#if closures.upcoming.length === 0 && closures.past.length === 0}
 		<EmptyState message="No closures." />
 	{:else}
-		<div class="space-y-3">
-			{#each closures as c (c.id)}
-				<Card>
-					<CardBody class="py-4">
-						{#if editId === c.id}
-							<div class="space-y-3">
-								<input type="text" bind:value={editReason} class="input w-full input-sm" />
-								<div class="grid grid-cols-2 gap-4">
-									<input type="datetime-local" bind:value={editStartsAt} class="input input-sm" />
-									<input type="datetime-local" bind:value={editEndsAt} class="input input-sm" />
-								</div>
-								<div class="flex justify-end gap-2">
-									<Button variant="ghost" size="sm" onclick={() => (editId = null)}>Cancel</Button>
-									<UpdateClosureAction
-										closureId={c.id}
-										reason={editReason}
-										startsAt={editStartsAt}
-										endsAt={editEndsAt}
-										onsuccess={() => {
-											editId = null;
-											invalidateAll();
-										}}
-									/>
-								</div>
-							</div>
-						{:else}
-							<div class="flex items-center justify-between">
-								<div>
-									<p class="font-medium">{c.reason}</p>
-									<p class="text-muted">
-										{formatDateTime(c.startsAt)} — {formatDateTime(c.endsAt)}
-									</p>
-								</div>
-								{#if isFuture(c.startsAt)}
-									<div class="flex gap-1">
-										<Button variant="ghost" size="sm" onclick={() => startEdit(c)}>Edit</Button>
-										<DeleteClosureAction closureId={c.id} />
-									</div>
-								{/if}
-							</div>
-						{/if}
-					</CardBody>
-				</Card>
-			{/each}
-		</div>
+		{#each [{ key: 'upcoming', title: 'Upcoming', rows: closures.upcoming }, { key: 'past', title: 'Past', rows: closures.past }] as section (section.key)}
+			{#if section.rows.length > 0}
+				<InfoCard
+					title={section.title}
+					state={section.key === 'past' && closures.morePast
+						? `last ${section.rows.length}`
+						: section.rows.length}
+				>
+					<Table>
+						{#snippet head()}
+							<th class="cell-primary">Reason</th>
+							<th class="col-support whitespace-nowrap">From</th>
+							<th class="col-support whitespace-nowrap">Until</th>
+							<th class="w-px"><span class="sr-only">Actions</span></th>
+						{/snippet}
+
+						{#each section.rows as c (c.id)}
+							{#if editId === c.id}
+								<tr>
+									<td colspan="4">
+										<div class="space-y-3">
+											<input type="text" bind:value={editReason} class="input w-full input-sm" />
+											<div class="grid grid-cols-2 gap-4">
+												<input
+													type="datetime-local"
+													bind:value={editStartsAt}
+													class="input input-sm"
+												/>
+												<input
+													type="datetime-local"
+													bind:value={editEndsAt}
+													class="input input-sm"
+												/>
+											</div>
+											<div class="ml-auto flex w-max gap-2">
+												<Button variant="ghost" size="sm" onclick={() => (editId = null)}>
+													Cancel
+												</Button>
+												<UpdateClosureAction
+													closureId={c.id}
+													reason={editReason}
+													startsAt={editStartsAt}
+													endsAt={editEndsAt}
+													onsuccess={() => {
+														editId = null;
+														invalidateAll();
+													}}
+												/>
+											</div>
+										</div>
+									</td>
+								</tr>
+							{:else}
+								<tr class="hover">
+									<td class="cell-primary truncate font-medium">{c.reason}</td>
+									<td class="col-support whitespace-nowrap">{formatDateTimeShort(c.startsAt)}</td>
+									<td class="col-support whitespace-nowrap">{formatDateTimeShort(c.endsAt)}</td>
+									<td class="w-px">
+										{#if isFuture(c.startsAt)}
+											<div class="flex w-max gap-1">
+												<Button variant="ghost" size="xs" onclick={() => startEdit(c)}>Edit</Button>
+												<DeleteClosureAction closureId={c.id} />
+											</div>
+										{/if}
+									</td>
+								</tr>
+							{/if}
+						{/each}
+					</Table>
+				</InfoCard>
+			{/if}
+		{/each}
 	{/if}
 </PageContent>
