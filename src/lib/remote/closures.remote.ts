@@ -5,22 +5,53 @@ import { form } from './_remote';
 import { requireCapability } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { closure } from '$lib/server/db/schema/reservation';
-import { desc, eq } from 'drizzle-orm';
+import { asc, desc, eq, gte, lt } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
 
+/**
+ * Upcoming closures soonest-first, then past ones newest-first.
+ *
+ * One `desc(startsAt)` put the most *distant* future closure at the top and
+ * buried the imminent one under it; past rows then trailed off with nothing
+ * saying where now was (#1053). The past side is capped — the page is for
+ * arranging what is coming, and the archive grows forever.
+ */
+const PAST_CLOSURES_SHOWN = 20;
+
 export const getClosures = query(z.void(), async () => {
 	await requireCapability('reservation.read');
-	const rows = await db.select().from(closure).orderBy(desc(closure.startsAt));
+	const now = new Date();
 
-	return rows.map((c) => ({
+	const [upcoming, past] = await Promise.all([
+		db
+			.select()
+			.from(closure)
+			.where(gte(closure.endsAt, now))
+			.orderBy(asc(closure.startsAt), asc(closure.id)),
+		db
+			.select()
+			.from(closure)
+			.where(lt(closure.endsAt, now))
+			.orderBy(desc(closure.startsAt), desc(closure.id))
+			.limit(PAST_CLOSURES_SHOWN + 1)
+	]);
+
+	const shape = (c: typeof closure.$inferSelect) => ({
 		id: c.id,
 		reason: c.reason,
 		startsAt: c.startsAt,
 		endsAt: c.endsAt
-	}));
+	});
+
+	return {
+		upcoming: upcoming.map(shape),
+		past: past.slice(0, PAST_CLOSURES_SHOWN).map(shape),
+		/** True when the archive is longer than what is shown. */
+		morePast: past.length > PAST_CLOSURES_SHOWN
+	};
 });
 
 // ---------------------------------------------------------------------------
