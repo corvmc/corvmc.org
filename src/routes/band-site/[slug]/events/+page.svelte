@@ -2,7 +2,12 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
 	import { resolve } from '$app/paths';
-	import { formatDate, formatTime } from '$lib/utils/format';
+	import {
+		formatDate,
+		formatTime,
+		formatDayNumber,
+		formatMonthShortCased
+	} from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import { bandSiteHref } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
@@ -22,35 +27,51 @@
 		&larr; Back to {data.band.name}
 	</a>
 
-	<h1 class="mb-8 text-3xl font-bold">All Events</h1>
+	<h1 class="mb-8 text-3xl font-bold">
+		All Events
+		{#if events.length > 0}
+			<span class="text-xl font-normal opacity-60">· {events.length} upcoming</span>
+		{/if}
+	</h1>
 
 	{#if events.length === 0 && pastEvents.length === 0}
 		<p class="py-12 text-center opacity-60">No events yet.</p>
 	{:else if events.length === 0}
 		<p class="py-4 opacity-60">No upcoming events.</p>
 	{:else}
-		<div class="space-y-4">
+		<!-- A fixed date column and a bounded description, the shape `GigList`
+		     uses for these same events. Without it the upcoming list was less
+		     scannable than the past one below, which is backwards (#1058). -->
+		<div class="space-y-3">
 			{#each events as evt (evt.id)}
 				<div
-					class="flex items-start justify-between rounded-lg p-5"
+					class="flex items-start gap-4 rounded-lg p-5"
 					style="background-color: var(--bs-surface, oklch(var(--b2)));"
 				>
-					<div>
-						{#if evt.posterUrl}
-							{@const poster = imageSrc(evt.posterUrl, 'thumb')}
-							<img
-								src={poster.src}
-								srcset={poster.srcset}
-								alt=""
-								class="float-left mr-4 h-16 w-16 rounded-lg object-cover"
-							/>
-						{/if}
+					<div class="flex w-12 shrink-0 flex-col items-center leading-tight">
+						<span class="text-[10px] font-bold tracking-widest uppercase opacity-60">
+							{formatMonthShortCased(evt.startsAt)}
+						</span>
+						<span class="text-2xl font-bold">{formatDayNumber(evt.startsAt)}</span>
+					</div>
+
+					{#if evt.posterUrl}
+						{@const poster = imageSrc(evt.posterUrl, 'thumb')}
+						<img
+							src={poster.src}
+							srcset={poster.srcset}
+							alt=""
+							class="h-16 w-16 shrink-0 rounded-lg object-cover"
+						/>
+					{/if}
+
+					<div class="min-w-0 flex-1">
 						<h2 class="text-lg font-semibold">{evt.title}</h2>
 						<p class="mt-1 text-muted">
 							{formatDate(evt.startsAt)} &middot; {formatTime(evt.startsAt)}
 						</p>
 						{#if evt.location}
-							<p class="text-muted">{evt.location}</p>
+							<p class="truncate text-muted">{evt.location}</p>
 						{/if}
 						<!-- Through `priceDisplay`, like every other price label: a missing
 						     price is only "free" when nobody is selling tickets, and this
@@ -58,7 +79,7 @@
 						     reads as free (#1037). -->
 						<p class="text-muted">{priceDisplay(evt).label}</p>
 						{#if evt.description}
-							<p class="mt-2 text-sm opacity-80">{evt.description}</p>
+							<p class="mt-2 line-clamp-2 text-sm opacity-80">{evt.description}</p>
 						{/if}
 					</div>
 					{#if evt.externalTicketUrl}

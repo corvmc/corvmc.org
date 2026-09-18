@@ -58,8 +58,11 @@
 			{/if}
 
 			<div class="min-w-0 flex-1">
+				<!-- The title is the row's subject and gets its own line: sharing a
+				     wrapping flex row with up to three badges, it was pushed onto a
+				     second line whenever the badges filled the first (#1049). -->
+				<p class="truncate text-base font-semibold">{release.title}</p>
 				<div class="flex flex-wrap items-center gap-2">
-					<span class="truncate font-medium">{release.title}</span>
 					<Badge size="sm">{releaseKindLabels[release.kind]}</Badge>
 					{#if release.status === 'draft'}
 						<Badge size="sm" variant="ghost">Draft</Badge>
@@ -84,7 +87,7 @@
 				     a band that cannot see why a record was pulled has no way to fix it,
 				     and this is where they will look. -->
 				{#if release.radioExcluded}
-					<p class="text-warning">
+					<p class="line-clamp-2 text-warning">
 						Pulled from the radio{release.radioExcludedReason
 							? ` — ${release.radioExcludedReason}`
 							: ''}
@@ -92,8 +95,10 @@
 				{/if}
 			</div>
 
-			<div class="text-right">
-				<p class="font-medium">
+			<!-- Not `font-medium`: at the title's weight, and isolated in its own
+			     column, the price won the eye over the release's name (#1049). -->
+			<div class="shrink-0 text-right">
+				<p>
 					{release.priceMinCents === 0 ? 'Free' : formatCents(release.priceMinCents)}
 					{#if release.priceMinCents > 0 && release.allowPayMore}
 						<span class="text-muted">or more</span>
