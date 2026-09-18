@@ -152,93 +152,97 @@
 			{/if}
 		</InfoCard>
 
-		<!-- Actions Panel -->
-		<InfoCard title="Actions">
-			{#if loan.status === 'requested'}
-				<h4 class="mb-3 text-sm font-semibold">Schedule Pickup</h4>
-				<Form remote={schedule} successToast="Pickup scheduled" class="space-y-3">
-					<input {...scheduleFields.loanId.as('hidden', id)} />
-					{#if !loan.itemId}
-						<Field name="itemId" label="Assign Equipment">
-							<Select class="w-full" name="itemId" required>
-								<option value="" disabled selected>Select equipment...</option>
-								{#each availableItems as eq (eq.id)}
-									{#if eq.availableQuantity > 0}
-										<option value={eq.id}>{eq.name} ({eq.availableQuantity} available)</option>
-									{/if}
-								{/each}
-							</Select>
-						</Field>
-					{:else}
-						<input {...scheduleFields.itemId.as('hidden', loan.itemId)} />
-					{/if}
-					<Field name="scheduledPickupDate" type="date" label="Pickup Date" />
-					<div class="flex gap-2">
-						<SubmitButton label="Schedule" variant="primary" size="sm" />
-						<CancelLoanAction
-							loanId={id}
-							label="Cancel Request"
-							confirm="Cancel this loan request?"
-						/>
-					</div>
-				</Form>
-			{:else if loan.status === 'scheduled'}
-				<h4 class="mb-3 text-sm font-semibold">Mark as Checked Out</h4>
-				<Form remote={checkout} successToast="Checked out" class="space-y-3">
-					<input {...checkoutFields.loanId.as('hidden', id)} />
-					<Field name="dueDate" type="date" label="Due Date" />
-					<!-- A serialized loan has to name the unit that actually left, or
+		<!-- No card once the loan is done with: its terminal branch is one
+		     sentence, and most historical records are terminal — the right half
+		     of the page was a titled box around it (#1078). -->
+		{#if loan.status !== 'requested' && loan.status !== 'scheduled' && loan.status !== 'checked_out'}
+			<p class="text-muted">
+				This loan is <strong>{loan.status}</strong>. No actions available.
+			</p>
+		{:else}
+			<InfoCard title="Actions">
+				{#if loan.status === 'requested'}
+					<h4 class="mb-3 text-sm font-semibold">Schedule Pickup</h4>
+					<Form remote={schedule} successToast="Pickup scheduled" class="space-y-3">
+						<input {...scheduleFields.loanId.as('hidden', id)} />
+						{#if !loan.itemId}
+							<Field name="itemId" label="Assign Equipment">
+								<Select class="w-full" name="itemId" required>
+									<option value="" disabled selected>Select equipment...</option>
+									{#each availableItems as eq (eq.id)}
+										{#if eq.availableQuantity > 0}
+											<option value={eq.id}>{eq.name} ({eq.availableQuantity} available)</option>
+										{/if}
+									{/each}
+								</Select>
+							</Field>
+						{:else}
+							<input {...scheduleFields.itemId.as('hidden', loan.itemId)} />
+						{/if}
+						<Field name="scheduledPickupDate" type="date" label="Pickup Date" />
+						<div class="flex gap-2">
+							<SubmitButton label="Schedule" variant="primary" size="sm" />
+							<CancelLoanAction
+								loanId={id}
+								label="Cancel Request"
+								confirm="Cancel this loan request?"
+							/>
+						</div>
+					</Form>
+				{:else if loan.status === 'scheduled'}
+					<h4 class="mb-3 text-sm font-semibold">Mark as Checked Out</h4>
+					<Form remote={checkout} successToast="Checked out" class="space-y-3">
+						<input {...checkoutFields.loanId.as('hidden', id)} />
+						<Field name="dueDate" type="date" label="Due Date" />
+						<!-- A serialized loan has to name the unit that actually left, or
 					     "which amp came back broken" has no answer. Without this the
 					     service throws `AssetRequiredError` and the form goes nowhere. -->
-					{#if needsAsset}
-						<Field name="assetId" label="Unit Handed Over">
-							<Select class="w-full" name="assetId" bind:value={chosenAssetId} required>
-								<option value="" disabled>Scan or select the tag...</option>
-								{#each availableAssets as unit (unit.id)}
-									<option value={unit.id}>
-										{unit.assetTag ?? unit.serialNumber ?? 'Untagged unit'}
-										{unit.condition ? ` — ${unit.condition}` : ''}
-									</option>
-								{/each}
-							</Select>
-						</Field>
-						<BarcodeScanner onscan={handleScan} label="Scan the tag" />
-						{#if availableAssets.length === 0}
-							<p class="text-subtle">
-								No unit of this item is in service, so there is nothing to hand over.
-							</p>
+						{#if needsAsset}
+							<Field name="assetId" label="Unit Handed Over">
+								<Select class="w-full" name="assetId" bind:value={chosenAssetId} required>
+									<option value="" disabled>Scan or select the tag...</option>
+									{#each availableAssets as unit (unit.id)}
+										<option value={unit.id}>
+											{unit.assetTag ?? unit.serialNumber ?? 'Untagged unit'}
+											{unit.condition ? ` — ${unit.condition}` : ''}
+										</option>
+									{/each}
+								</Select>
+							</Field>
+							<BarcodeScanner onscan={handleScan} label="Scan the tag" />
+							{#if availableAssets.length === 0}
+								<p class="text-subtle">
+									No unit of this item is in service, so there is nothing to hand over.
+								</p>
+							{/if}
 						{/if}
+						<div class="flex gap-2">
+							<SubmitButton label="Check Out" variant="primary" size="sm" />
+							<CancelLoanAction loanId={id} />
+						</div>
+					</Form>
+				{:else if loan.status === 'checked_out'}
+					<h4 class="mb-3 text-sm font-semibold">Mark as Returned</h4>
+
+					{#if chargePreview}
+						<div class="mb-3 rounded bg-base-200 p-3 text-sm">
+							<p>
+								<strong>Charge preview:</strong>
+								{chargePreview.days} day{chargePreview.days !== 1 ? 's' : ''} × {formatCents(
+									loan.dailyRateCents ?? 0
+								)}/day = <strong>{formatCents(chargePreview.total)}</strong>
+							</p>
+						</div>
 					{/if}
-					<div class="flex gap-2">
-						<SubmitButton label="Check Out" variant="primary" size="sm" />
-						<CancelLoanAction loanId={id} />
-					</div>
-				</Form>
-			{:else if loan.status === 'checked_out'}
-				<h4 class="mb-3 text-sm font-semibold">Mark as Returned</h4>
 
-				{#if chargePreview}
-					<div class="mb-3 rounded bg-base-200 p-3 text-sm">
-						<p>
-							<strong>Charge preview:</strong>
-							{chargePreview.days} day{chargePreview.days !== 1 ? 's' : ''} × {formatCents(
-								loan.dailyRateCents ?? 0
-							)}/day = <strong>{formatCents(chargePreview.total)}</strong>
-						</p>
-					</div>
+					<MarkReturnedAction
+						loanId={id}
+						chargeMessage={chargePreview
+							? `Charge preview: ${chargePreview.days} day${chargePreview.days !== 1 ? 's' : ''} × ${formatCents(loan.dailyRateCents ?? 0)}/day = ${formatCents(chargePreview.total)}`
+							: undefined}
+					/>
 				{/if}
-
-				<MarkReturnedAction
-					loanId={id}
-					chargeMessage={chargePreview
-						? `Charge preview: ${chargePreview.days} day${chargePreview.days !== 1 ? 's' : ''} × ${formatCents(loan.dailyRateCents ?? 0)}/day = ${formatCents(chargePreview.total)}`
-						: undefined}
-				/>
-			{:else}
-				<p class="text-muted">
-					This loan is <strong>{loan.status}</strong>. No actions available.
-				</p>
-			{/if}
-		</InfoCard>
+			</InfoCard>
+		{/if}
 	</div>
 </PageContent>

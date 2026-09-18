@@ -145,10 +145,8 @@
 	</div>
 
 	{#if !isBuiltIn}
-		<!-- Add Subscriber -->
-		<InfoCard title="Add Subscriber" class="mb-6">
-			<AddSubscriberAction audienceId={id} />
-		</InfoCard>
+		<!-- The button, not a titled box around the button (#1078). -->
+		<div class="mb-6"><AddSubscriberAction audienceId={id} /></div>
 	{/if}
 
 	<!-- Subscriber List -->

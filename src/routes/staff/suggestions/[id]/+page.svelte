@@ -5,6 +5,8 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -120,30 +122,25 @@
 	{/if}
 
 	<InfoCard title="Suggestion">
-		<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-			<dt class="opacity-60">Category</dt>
-			<dd>
+		<DefinitionList>
+			<Fact label="Category">
 				<Badge size="sm" variant="outline">
 					{suggestionCategoryLabels[s.category as keyof typeof suggestionCategoryLabels] ??
 						s.category}
 				</Badge>
-			</dd>
+			</Fact>
 
-			<dt class="opacity-60">Suggested by</dt>
-			<dd>
+			<Fact label="Suggested by">
 				{#if s.authorUserId && s.authorName}
 					<a class="link" href={resolve(`/staff/users/${s.authorUserId}`)}>{s.authorName}</a>
 				{:else}
 					A former member
 				{/if}
-			</dd>
+			</Fact>
 
-			<dt class="opacity-60">Posted</dt>
-			<dd>{formatDateTime(s.createdAt)}</dd>
-
-			<dt class="opacity-60">Votes</dt>
-			<dd class="font-medium">{s.voteCount}</dd>
-		</dl>
+			<Fact label="Posted">{formatDateTime(s.createdAt)}</Fact>
+			<Fact label="Votes" class="font-medium">{s.voteCount}</Fact>
+		</DefinitionList>
 		<p class="mt-3 whitespace-pre-wrap">{s.body}</p>
 	</InfoCard>
 

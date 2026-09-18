@@ -1,8 +1,9 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import StatCard from '$lib/components/ui/StatCard.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
@@ -215,103 +216,88 @@
 			{/if}
 		{/key}
 
-		<Card>
-			<CardBody>
-				<h2 class="mb-1 text-base font-semibold">Stage plot</h2>
-				<p class="mb-3 text-xs text-base-content/60">
-					Where everything stands. Drag it, or use the arrow keys once something is focused — "Place
-					exactly" below types the same numbers. Channel order on the input list is a separate thing
-					and this does not touch it.
-				</p>
-				<Form
-					remote={saveRiderPlacements}
-					guard
-					successToast="Stage plot saved"
-					onsuccess={refresh}
-					class="space-y-3"
-				>
-					<input {...placementFields.bandId.as('hidden', data.bandId)} />
-					<StagePlot items={plotItems} field={placementFields.placements} readonly={!canPlaceAny} />
-					{#if canPlaceAny}
-						<div class="flex justify-end"><SubmitButton label="Save plot" /></div>
-					{/if}
-				</Form>
-			</CardBody>
-		</Card>
-
-		<Card>
-			<CardBody>
-				<h2 class="mb-3 text-base font-semibold">The rest of the rider</h2>
-				{#if data.canManage}
-					<Form
-						remote={saveRiderDetails}
-						guard
-						successToast="Saved"
-						onsuccess={refresh}
-						class="space-y-4"
-					>
-						<input {...detailFields.bandId.as('hidden', data.bandId)} />
-						<div class="grid gap-4 md:grid-cols-2">
-							<Field
-								field={detailFields.techContactUserId}
-								type="select"
-								label="Who an engineer should call"
-								options={contactOptions}
-								value={rider.techContactUserId ?? ''}
-								description="Every rider guide asks for one name. It is the field most often missing."
-							/>
-							<Field
-								field={detailFields.monitorFormat}
-								type="select"
-								label="Monitors"
-								options={[{ value: '', label: 'No preference' }, ...riderMonitorFormatOptions]}
-								value={rider.monitorFormat ?? ''}
-							/>
-						</div>
-						<Field
-							field={detailFields.notes}
-							type="textarea"
-							label="Anything else"
-							value={rider.notes ?? ''}
-							maxlength={RIDER_NOTES_MAX}
-							description="Power, load-in, anything that is not a piece of gear."
-						/>
-						<div class="flex justify-end"><SubmitButton label="Save" /></div>
-					</Form>
-				{:else}
-					<dl class="space-y-2 text-sm">
-						<div>
-							<dt class="text-xs text-base-content/60">Who an engineer should call</dt>
-							<dd>
-								{roster.find((m) => m.userId === rider.techContactUserId)?.name ?? 'Nobody yet'}
-							</dd>
-						</div>
-						{#if rider.notes}
-							<div>
-								<dt class="text-xs text-base-content/60">Notes</dt>
-								<dd class="whitespace-pre-line">{rider.notes}</dd>
-							</div>
-						{/if}
-					</dl>
+		<InfoCard title="Stage plot">
+			<p class="mb-3 text-xs text-base-content/60">
+				Where everything stands. Drag it, or use the arrow keys once something is focused — "Place
+				exactly" below types the same numbers. Channel order on the input list is a separate thing
+				and this does not touch it.
+			</p>
+			<Form
+				remote={saveRiderPlacements}
+				guard
+				successToast="Stage plot saved"
+				onsuccess={refresh}
+				class="space-y-3"
+			>
+				<input {...placementFields.bandId.as('hidden', data.bandId)} />
+				<StagePlot items={plotItems} field={placementFields.placements} readonly={!canPlaceAny} />
+				{#if canPlaceAny}
+					<div class="flex justify-end"><SubmitButton label="Save plot" /></div>
 				{/if}
-			</CardBody>
-		</Card>
+			</Form>
+		</InfoCard>
 
-		<Card>
-			<CardBody>
-				<h2 class="mb-1 text-base font-semibold">Or hand over the one you already have</h2>
-				<p class="mb-4 text-xs text-base-content/60">
-					Filling in the list above is not compulsory. If you already send venues a rider PDF,
-					upload it here and CMC will read that instead — and you can do both, which is what a typed
-					input list beside a hand-drawn stage plot looks like.
-				</p>
-				<RiderUploads
-					bandId={data.bandId}
-					uploads={data.uploads}
-					canManage={data.canManage}
-					onchanged={refresh}
-				/>
-			</CardBody>
-		</Card>
+		<InfoCard title="The rest of the rider">
+			{#if data.canManage}
+				<Form
+					remote={saveRiderDetails}
+					guard
+					successToast="Saved"
+					onsuccess={refresh}
+					class="space-y-4"
+				>
+					<input {...detailFields.bandId.as('hidden', data.bandId)} />
+					<div class="grid gap-4 md:grid-cols-2">
+						<Field
+							field={detailFields.techContactUserId}
+							type="select"
+							label="Who an engineer should call"
+							options={contactOptions}
+							value={rider.techContactUserId ?? ''}
+							description="Every rider guide asks for one name. It is the field most often missing."
+						/>
+						<Field
+							field={detailFields.monitorFormat}
+							type="select"
+							label="Monitors"
+							options={[{ value: '', label: 'No preference' }, ...riderMonitorFormatOptions]}
+							value={rider.monitorFormat ?? ''}
+						/>
+					</div>
+					<Field
+						field={detailFields.notes}
+						type="textarea"
+						label="Anything else"
+						value={rider.notes ?? ''}
+						maxlength={RIDER_NOTES_MAX}
+						description="Power, load-in, anything that is not a piece of gear."
+					/>
+					<div class="flex justify-end"><SubmitButton label="Save" /></div>
+				</Form>
+			{:else}
+				<DefinitionList>
+					<Fact label="Who an engineer should call">
+						{roster.find((m) => m.userId === rider.techContactUserId)?.name ?? 'Nobody yet'}
+					</Fact>
+					{#if rider.notes}
+						<Fact label="Notes" class="whitespace-pre-line">{rider.notes}</Fact>
+					{/if}
+				</DefinitionList>
+			{/if}
+		</InfoCard>
+
+		<InfoCard title="Or hand over the one you already have">
+			<p class="mb-4 text-xs text-base-content/60">
+				Filling in the list above is not compulsory. If you already send venues a rider PDF, upload
+				it here and CMC will read that instead — and you can do both, which is what a typed input
+				list beside a hand-drawn stage plot looks like.
+			</p>
+			<RiderUploads
+				bandId={data.bandId}
+				uploads={data.uploads}
+				canManage={data.canManage}
+				onchanged={refresh}
+			/>
+		</InfoCard>
 	</div>
 </PageContent>

@@ -93,22 +93,19 @@
 					A private conversation between two members. It is not in the inbox and has no page of its
 					own — this report is what makes it readable.
 				</p>
-				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-					<dt class="opacity-60">Between</dt>
-					<dd class="flex flex-wrap gap-2">
+				<!-- `DefinitionList`, like the two cards further up this same page. -->
+				<DefinitionList>
+					<Fact label="Between" class="flex flex-wrap gap-2">
 						{#each flag.threadContext.participants as p (p.userId)}
 							<a class="link" href={resolve(`/staff/users/${p.userId}`)}>
 								{p.name}{#if p.isReporter}<span class="ml-1 opacity-60">(reported it)</span>{/if}
 							</a>
 						{/each}
-					</dd>
+					</Fact>
 
-					<dt class="opacity-60">Messages</dt>
-					<dd>{flag.threadContext.messageCount}</dd>
-
-					<dt class="opacity-60">Started</dt>
-					<dd>{formatDateTime(flag.threadContext.createdAt)}</dd>
-				</dl>
+					<Fact label="Messages">{flag.threadContext.messageCount}</Fact>
+					<Fact label="Started">{formatDateTime(flag.threadContext.createdAt)}</Fact>
+				</DefinitionList>
 
 				<div class="mt-4">
 					<ThreadTimeline messages={flag.threadContext.messages} viewerUserId={reporterId} />
