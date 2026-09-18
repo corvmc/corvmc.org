@@ -110,6 +110,10 @@ export interface ProductionDetailsInput {
 	billingNotes?: string | null;
 	hospitalityNotes?: string | null;
 	internalNotes?: string | null;
+	/** The drawer count at the end of the night, and how it splits (#929). */
+	doorCashCents?: number | null;
+	doorCount?: number | null;
+	doorSplitActsPercent?: number | null;
 }
 
 // ---------------------------------------------------------------------------
