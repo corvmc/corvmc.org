@@ -61,7 +61,9 @@
 	});
 </script>
 
-<div class="flex gap-3 rounded-lg border border-base-300 p-3">
+<!-- No border of its own: the list divides, and PageContent → InfoCard → this
+     was three padded containers for one row (#1044). -->
+<div class="flex gap-3 py-3">
 	<div class="text-center leading-tight">
 		{#if dayParts}
 			<div class="text-subtle text-xs uppercase">{dayParts.month}</div>

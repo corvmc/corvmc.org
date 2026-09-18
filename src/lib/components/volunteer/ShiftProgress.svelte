@@ -14,12 +14,14 @@
 </script>
 
 <!-- Withdrawn once the shift is worked: by then the rail has answered its
-     question, and leaving it up makes a finished thing look in progress. -->
-{#if !worked}
+     question, and leaving it up makes a finished thing look in progress.
+     Also withdrawn while unconfirmed, where the sentence below says the same
+     thing in words — two rows for one bit of state in a 480px column (#1044). -->
+{#if booked && !worked}
 	<div class="flex items-center gap-2 text-xs">
 		<span class="font-bold text-success">Claimed</span>
 		<span class="text-subtle">→</span>
-		<span class={booked ? 'font-bold text-success' : 'text-subtle'}>Booked</span>
+		<span class="font-bold text-success">Booked</span>
 	</div>
 {/if}
 
@@ -29,6 +31,13 @@
 	{:else if worked}
 		Worked. Log your hours when you get a moment.
 	{:else}
-		{notes ? `${notes} ` : ''}Reminder lands the day before.
+		Reminder lands the day before.
 	{/if}
 </p>
+
+<!-- Its own line. Spliced in front of the fixed copy, an unbounded staff note
+     and the boilerplate ran together into one paragraph, and the note then set
+     the card's height. -->
+{#if notes && booked && !worked}
+	<p class="mt-1 text-sm">{notes}</p>
+{/if}

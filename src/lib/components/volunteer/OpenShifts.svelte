@@ -10,8 +10,8 @@
 	 *
 	 * A shift they can't take is shown with the reason rather than hidden: "you
 	 * need Sound Desk Cleared" is the useful half of a refusal, and hiding it
-	 * just makes the board look empty. Ordering comes from the service — their
-	 * own claims first, then interested roles, then everything else.
+	 * just makes the board look empty. Rendering order is the calendar, grouped
+	 * by day; interest is the badge and the filter, not the sort (#1044).
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
@@ -54,6 +54,27 @@
 	// picked no roles should see the whole board rather than an empty one.
 	const filtered = $derived(showAll || !hasInterests ? available : matches);
 
+	/**
+	 * Date order, and a header per day.
+	 *
+	 * The service orders by interest rank first, so the board used to jump
+	 * around in time with nothing to scan by. Interest is still visible — it is
+	 * the badge and the default filter — but the spine is the calendar (#1044).
+	 */
+	const byDate = $derived([...filtered].sort((a, b) => +a.startsAt - +b.startsAt));
+
+	/** One screenful. The service caps at 50, which is ~5,500px in this column. */
+	const PREVIEW = 6;
+	let expanded = $state(false);
+	const shown = $derived(expanded ? byDate : byDate.slice(0, PREVIEW));
+	const hidden = $derived(byDate.length - shown.length);
+
+	/** A day header only where the day changes. */
+	function startsADay(list: Shift[], i: number): boolean {
+		if (i === 0) return true;
+		return formatDateShort(list[i].startsAt) !== formatDateShort(list[i - 1].startsAt);
+	}
+
 	function timeRange(start: Date, end: Date): string {
 		const fmt = new Intl.DateTimeFormat('en-US', {
 			hour: 'numeric',
@@ -77,6 +98,7 @@
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<CardTitle>
 				{showAll || !hasInterests ? 'All open shifts' : 'Open shifts for you'}
+				<span class="text-muted font-normal">· {filtered.length}</span>
 			</CardTitle>
 			{#if hasInterests && matches.length !== available.length}
 				<Button size="xs" variant="ghost" onclick={() => (showAll = !showAll)}>
@@ -106,10 +128,15 @@
 				: 'Try every open shift, or add a role to your list.'}
 		/>
 	{:else}
-		<ul class="flex flex-col gap-3">
-			{#each filtered as shift (shift.id)}
+		<ul class="divide-y divide-base-300">
+			{#each shown as shift, i (shift.id)}
 				{@const blocked = blockedReason(shift)}
-				<li class="rounded-lg border border-base-300 p-3" class:opacity-60={blocked}>
+				{#if startsADay(shown, i)}
+					<li class="pt-3 text-xs font-semibold text-base-content/60 uppercase first:pt-0">
+						{formatDateShort(shift.startsAt)}
+					</li>
+				{/if}
+				<li class="py-3" class:opacity-60={blocked}>
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="font-medium">{shiftLabel(shift)}</span>
 						{#if shift.interested}
@@ -118,7 +145,7 @@
 					</div>
 
 					<div class="text-subtle text-sm">
-						{formatDateShort(shift.startsAt)} · {timeRange(shift.startsAt, shift.endsAt)}
+						{timeRange(shift.startsAt, shift.endsAt)}
 						{#if shiftRoleSuffix(shift)}
 							· {shiftRoleSuffix(shift)}
 						{/if}
@@ -178,5 +205,11 @@
 				</li>
 			{/each}
 		</ul>
+
+		{#if hidden > 0}
+			<Button size="xs" variant="ghost" class="mt-1" onclick={() => (expanded = true)}>
+				Show {hidden} more
+			</Button>
+		{/if}
 	{/if}
 </InfoCard>
