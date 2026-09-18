@@ -114,35 +114,39 @@
 				</InfoCard>
 			{/if}
 
-			<InfoCard title="Next step">
-				{#if status === 'draft'}
-					<Form remote={markOrderPlaced} successToast="Order placed">
-						<input {...markOrderPlaced.fields.id.as('hidden', order.id)} />
-						<SubmitButton label="Mark as placed" />
-					</Form>
-					<div class="mt-3">
-						<Form remote={dropOrder} successToast="Order cancelled">
-							<input {...dropOrder.fields.id.as('hidden', order.id)} />
-							<SubmitButton label="Cancel this order" variant="ghost" />
+			<!-- No card once the order is closed: the whole body is four words, and
+			     a titled box around one sentence is chrome (#1078). -->
+			{#if status !== 'draft' && status !== 'placed'}
+				<p class="text-subtle">This order is closed.</p>
+			{:else}
+				<InfoCard title="Next step">
+					{#if status === 'draft'}
+						<Form remote={markOrderPlaced} successToast="Order placed">
+							<input {...markOrderPlaced.fields.id.as('hidden', order.id)} />
+							<SubmitButton label="Mark as placed" />
 						</Form>
-					</div>
-				{:else if status === 'placed'}
-					<p class="mb-3 text-subtle">
-						Receiving opens the intake page with these lines already filled in. Partial deliveries
-						are normal — the order stays open until every line is met.
-					</p>
-					<Form remote={closeOrder} successToast="Order closed">
-						<input {...closeOrder.fields.id.as('hidden', order.id)} />
-						<SubmitButton label="Close it short" variant="ghost" />
-					</Form>
-					<p class="mt-2 text-subtle text-sm">
-						Use that when the rest is never coming — an order left open keeps suppressing restock
-						suggestions for goods that will not arrive.
-					</p>
-				{:else}
-					<p class="text-subtle">This order is closed.</p>
-				{/if}
-			</InfoCard>
+						<div class="mt-3">
+							<Form remote={dropOrder} successToast="Order cancelled">
+								<input {...dropOrder.fields.id.as('hidden', order.id)} />
+								<SubmitButton label="Cancel this order" variant="ghost" />
+							</Form>
+						</div>
+					{:else if status === 'placed'}
+						<p class="mb-3 text-subtle">
+							Receiving opens the intake page with these lines already filled in. Partial deliveries
+							are normal — the order stays open until every line is met.
+						</p>
+						<Form remote={closeOrder} successToast="Order closed">
+							<input {...closeOrder.fields.id.as('hidden', order.id)} />
+							<SubmitButton label="Close it short" variant="ghost" />
+						</Form>
+						<p class="mt-2 text-subtle text-sm">
+							Use that when the rest is never coming — an order left open keeps suppressing restock
+							suggestions for goods that will not arrive.
+						</p>
+					{/if}
+				</InfoCard>
+			{/if}
 		</div>
 	</div>
 </PageContent>
