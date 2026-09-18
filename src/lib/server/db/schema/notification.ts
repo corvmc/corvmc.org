@@ -315,6 +315,17 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		emailOmitsUserContent: true
 	},
 	{
+		key: 'group_chat_message',
+		category: 'people',
+		label: 'Your groups’ chat',
+		description: 'When somebody posts in a band or club you are in',
+		// In-app only by default. A chat is the highest-frequency thing on the
+		// site and a room of five people can produce twenty messages in an hour;
+		// mailing each one would teach people to filter the whole sender.
+		defaults: { email: false, inApp: true, sms: false },
+		emailOmitsUserContent: true
+	},
+	{
 		key: 'direct_message_received',
 		category: 'people',
 		label: 'New direct message',

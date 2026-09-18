@@ -13,7 +13,13 @@ import {
 	counterpartOf
 } from '$lib/server/inbox/direct-service';
 import { getPortalThread } from '$lib/server/inbox/portal-service';
-import { listUnifiedConversations, type InboxScope } from '$lib/server/inbox/unified-service';
+import { getGroupChat } from '$lib/server/inbox/group-chat-service';
+import { getBandThread } from '$lib/server/inbox/band-service';
+import {
+	listUnifiedConversations,
+	groupOfThread,
+	type InboxScope
+} from '$lib/server/inbox/unified-service';
 import { listForUser } from '$lib/server/band/band-service';
 import {
 	blockUser,
@@ -56,13 +62,23 @@ import { mapDomainError } from '$lib/server/errors';
 // number is in scope. See `src/routes/member/messages/list-state.svelte.ts`.
 
 /**
- * The bands whose inbox this member may read — owner or admin, the same gate
- * the band panel's own messages route applies. Shared by the list and the
- * selector so the two cannot offer different inboxes.
+ * The groups whose inbox this member may read, and what of each.
+ *
+ * Every active membership can read that group's chat; owners and admins can
+ * also read its booking enquiries. Shared by the list and the selector so the
+ * two cannot offer different inboxes.
  */
-async function adminBandsFor(userId: string) {
-	const bands = await listForUser(userId, ['band']).catch(() => []);
-	return bands.filter((b) => b.status === 'active' && (b.role === 'owner' || b.role === 'admin'));
+async function inboxesFor(userId: string) {
+	const groups = (await listForUser(userId, ['band', 'club', 'committee']).catch(() => [])).filter(
+		(g) => g.status === 'active'
+	);
+	return {
+		groups,
+		access: {
+			memberOf: groups.map((g) => g.id),
+			adminOf: groups.filter((g) => g.role === 'owner' || g.role === 'admin').map((g) => g.id)
+		}
+	};
 }
 
 /**
@@ -78,13 +94,15 @@ export const getMyMessages = query(
 	z
 		.object({
 			page: z.coerce.number().int().min(1).optional(),
-			/** `all`, `own`, or a band slug. */
-			inbox: z.string().optional()
+			/** `all`, `own`, or a group slug. */
+			inbox: z.string().optional(),
+			/** Narrows a group inbox to one of its two thread kinds. */
+			channel: z.enum(['band', 'group']).optional()
 		})
 		.optional(),
 	async (args) => {
 		const user = requireUser();
-		const bands = await adminBandsFor(user.id);
+		const { groups, access } = await inboxesFor(user.id);
 
 		const requested = args?.inbox ?? 'all';
 		// A slug the viewer does not administer resolves to nothing rather than
@@ -95,23 +113,14 @@ export const getMyMessages = query(
 				? 'all'
 				: requested === 'own'
 					? 'own'
-					: { groupId: bands.find((b) => b.slug === requested)?.id ?? '' };
+					: { groupId: groups.find((g) => g.slug === requested)?.id ?? '', channel: args?.channel };
 
-		return listUnifiedConversations(
-			user.id,
-			bands.map((b) => b.id),
-			scope,
-			{ page: args?.page ?? 1, pageSize: 25 }
-		);
+		return listUnifiedConversations(user.id, access, scope, {
+			page: args?.page ?? 1,
+			pageSize: 25
+		});
 	}
 );
-
-/** The selector's options: the viewer's own inbox, then each band's. */
-export const getMyInboxes = query(async () => {
-	const user = requireUser();
-	const bands = await adminBandsFor(user.id);
-	return bands.map((b) => ({ slug: b.slug, name: b.name }));
-});
 
 /**
  * One conversation from the member's Messages list, whichever kind it is.
@@ -132,6 +141,38 @@ export const getMyMessageThread = query(z.string(), async (id) => {
 
 	const portal = await getPortalThread(id, user.id);
 	if (portal) return { kind: 'staff' as const, ...portal };
+
+	// A group's threads, gated by what the viewer is *to* that group: its chat
+	// to any active member, its booking enquiries to owners and admins. The
+	// lookup resolves the group from the thread first, so an id the viewer has
+	// no standing in falls through to the same 404 as anything else (#1250).
+	const owner = await groupOfThread(id);
+	if (owner) {
+		const { access } = await inboxesFor(user.id);
+
+		if (owner.channel === 'group' && access.memberOf.includes(owner.id)) {
+			const chat = await getGroupChat(owner.id);
+			return {
+				kind: 'group' as const,
+				groupSlug: owner.slug,
+				viewerUserId: user.id,
+				status: 'open' as const,
+				...chat
+			};
+		}
+
+		if (owner.channel === 'band' && access.adminOf.includes(owner.id)) {
+			const enquiry = await getBandThread(id, owner.id);
+			if (enquiry) {
+				return {
+					kind: 'enquiry' as const,
+					groupSlug: owner.slug,
+					bandName: owner.name,
+					...enquiry
+				};
+			}
+		}
+	}
 
 	throw error(404, 'Conversation not found');
 });

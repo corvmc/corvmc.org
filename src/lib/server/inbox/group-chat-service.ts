@@ -4,6 +4,7 @@ import { inboxThread, inboxMessage, inboxGroupRead } from '$lib/server/db/schema
 import { user } from '$lib/server/db/schema/authentication';
 import { group } from '$lib/server/db/schema/group';
 import { touchThread } from './message-service';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 
 /**
  * The one thread a group's members share — the band-enquiry shape with the
@@ -85,6 +86,7 @@ export async function getGroupChat(groupId: string) {
  */
 export async function postToGroupChat(params: {
 	groupId: string;
+	groupName: string;
 	userId: string;
 	userName: string;
 	body: string;
@@ -106,6 +108,20 @@ export async function postToGroupChat(params: {
 	// Your own message is read the moment you send it, or the sender's own
 	// badge lights for something they just wrote.
 	await markGroupChatRead(params.groupId, params.userId);
+
+	// The roster minus the author, resolved here rather than by the listener:
+	// on a two-person thread, forgetting to skip them means notifying somebody
+	// about their own message.
+	const readers = await listGroupChatReaders(params.groupId);
+	domainEvents.emit('inbox.group_message', {
+		threadId,
+		messageId: message.id,
+		groupId: params.groupId,
+		groupName: params.groupName,
+		senderId: params.userId,
+		senderName: params.userName,
+		recipientIds: readers.filter((r) => r.id !== params.userId).map((r) => r.id)
+	});
 
 	return { messageId: message.id };
 }

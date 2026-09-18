@@ -43,9 +43,10 @@ export const postGroupChatMessage = form(
 			const chatGroup = await groupOfChatThread(data.threadId);
 			if (!chatGroup) error(404, 'No such conversation');
 
-			const { user } = await requireGroupRole({ id: chatGroup.id }, 'member');
+			const { user, group } = await requireGroupRole({ id: chatGroup.id }, 'member');
 			await postToGroupChat({
 				groupId: chatGroup.id,
+				groupName: group.name,
 				userId: user.id,
 				userName: user.name,
 				body: data.body
