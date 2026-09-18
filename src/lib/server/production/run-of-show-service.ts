@@ -135,6 +135,8 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				setLengthMinutes: productionSlot.setLengthMinutes,
 				changeoverMinutes: productionSlot.changeoverMinutes,
 				scheduledStartAt: productionSlot.scheduledStartAt,
+				actualStartAt: productionSlot.actualStartAt,
+				actualEndAt: productionSlot.actualEndAt,
 				soundcheckAt: productionSlot.soundcheckAt,
 				techNotes: productionSlot.techNotes,
 				backlineNeeds: productionSlot.backlineNeeds,
@@ -195,6 +197,8 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				setLengthMinutes: r.setLengthMinutes!,
 				changeoverMinutes: r.changeoverMinutes!,
 				scheduledStartAt: r.scheduledStartAt,
+				actualStartAt: r.actualStartAt,
+				actualEndAt: r.actualEndAt,
 				soundcheckAt: r.soundcheckAt,
 				techNotes: r.techNotes,
 				backlineNeeds: r.backlineNeeds,
@@ -226,6 +230,8 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 		scheduledEndAt: r.scheduledStartAt
 			? new Date(r.scheduledStartAt.getTime() + r.setLengthMinutes * 60_000)
 			: null,
+		actualStartAt: r.actualStartAt,
+		actualEndAt: r.actualEndAt,
 		soundcheckAt: r.soundcheckAt,
 		techNotes: r.techNotes,
 		backlineNeeds: r.backlineNeeds,
@@ -430,6 +436,8 @@ export async function addSlot(productionId: string, input: AddSlotInput): Promis
 
 export interface UpdateSlotInput {
 	setLengthMinutes?: number;
+	actualStartAt?: Date | null;
+	actualEndAt?: Date | null;
 	changeoverMinutes?: number;
 	soundcheckAt?: Date | null;
 	techNotes?: string | null;
@@ -457,6 +465,29 @@ export async function updateSlot(slotId: string, patch: UpdateSlotInput): Promis
 
 	const movesTimes = patch.setLengthMinutes !== undefined || patch.changeoverMinutes !== undefined;
 	if (movesTimes) await recomputeSetTimes(row.productionId);
+}
+
+/**
+ * What a set actually ran to — the two taps a host makes on the night (#928).
+ *
+ * Deliberately **not** part of the schedule walk: `recomputeSetTimes` derives
+ * every `scheduledStartAt` from the lineup, and letting a late start rewrite
+ * the plan would destroy the very comparison the host is reading. Scheduled is
+ * what was meant to happen; these are what did.
+ *
+ * `null` clears a mistap, which is the whole correction path.
+ */
+export async function markSlotTiming(
+	slotId: string,
+	patch: { actualStartAt?: Date | null; actualEndAt?: Date | null }
+): Promise<void> {
+	const [row] = await db
+		.update(productionSlot)
+		.set({ ...patch, updatedAt: new Date() })
+		.where(eq(productionSlot.id, slotId))
+		.returning({ id: productionSlot.id });
+
+	if (!row) throw new SlotNotFoundError();
 }
 
 /**

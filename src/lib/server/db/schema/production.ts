@@ -86,6 +86,25 @@ export const production = sqliteTable(
 		loadOutBy: integer('load_out_by', { mode: 'timestamp' }),
 
 		/** What the acts were told about the money, in the acts' own words. */
+		/**
+		 * The drawer count at the end of the night, and how many came through the
+		 * door. Cash is the only part of a settlement with no system of record —
+		 * an online ticket writes its own row, a note handed over does not — so a
+		 * pool that includes door money is unauditable without these (#929).
+		 *
+		 * Both nullable: a show with no door take is not a show with a zero.
+		 */
+		doorCashCents: integer('door_cash_cents'),
+		doorCount: integer('door_count'),
+
+		/**
+		 * What share of undesignated door cash goes to the acts, when this night
+		 * is not the house rule. Null means `DOOR_SPLIT_ACTS_PERCENT`, so raising
+		 * the house share later moves every show that never overrode it — which
+		 * is the point of storing the exception rather than the number.
+		 */
+		doorSplitActsPercent: integer('door_split_acts_percent'),
+
 		billingNotes: text('billing_notes'),
 		/** Green room, food, parking — what the advance promised. */
 		hospitalityNotes: text('hospitality_notes'),
@@ -202,6 +221,17 @@ export const productionSlot = sqliteTable(
 		 * than one that is always a function of the lineup.
 		 */
 		scheduledStartAt: integer('scheduled_start_at', { mode: 'timestamp' }),
+
+		/**
+		 * What actually happened, written by Started and Finished on the running
+		 * order. Every drift figure the host reads derives from these two — "four
+		 * minutes late" could only ever be asserted before they existed (#928).
+		 *
+		 * Editable, not append-only: a mistapped Finished is a wrong time with no
+		 * other correction path, and the host has a show to run.
+		 */
+		actualStartAt: integer('actual_start_at', { mode: 'timestamp' }),
+		actualEndAt: integer('actual_end_at', { mode: 'timestamp' }),
 
 		/**
 		 * Manual, and **not** part of the walk — soundcheck order is frequently the
