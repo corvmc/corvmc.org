@@ -87,9 +87,9 @@ export async function generateRecurringReservations(): Promise<GenerationResult>
 
 /**
  * Expand all active recurring series. Events are processed BEFORE reservations:
- * recurring events book `bookerType: 'event_listing'` reservations that the reservation
- * pass treats as hard blocks, so generating events first lets the reservation
- * pass step aside instead of grabbing a slot a recurring event needs.
+ * a recurring event's room hold is `bookerType: 'production'`, which the
+ * reservation pass treats as a hard block, so generating events first lets it
+ * step aside instead of grabbing a slot a recurring event needs.
  */
 export async function generateRecurring(): Promise<{
 	events: GenerationResult;
