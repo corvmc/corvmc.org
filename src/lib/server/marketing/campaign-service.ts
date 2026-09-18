@@ -13,6 +13,8 @@ import { signUnsubscribeToken } from './unsubscribe';
 import { sendBroadcastBatch, type BroadcastMessage } from '$lib/server/notification/email';
 import { env } from '$env/dynamic/private';
 import { DomainError } from '$lib/server/domain-error';
+import { eventListing } from '$lib/server/db/schema/event';
+import { formatDateShortYear } from '$lib/utils/format';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -74,6 +76,8 @@ export async function createCampaign(data: {
 	markdownBody: string;
 	audienceIds: string[];
 	sentById: string;
+	/** The show this blast is about, which is what `event-interest` resolves. */
+	eventId?: string | null;
 }) {
 	if (data.subject.length > 500) throw new CampaignValidationError('Subject too long (max 500)');
 	if (data.audienceIds.length === 0)
@@ -89,6 +93,7 @@ export async function createCampaign(data: {
 			subject: data.subject,
 			markdownBody: data.markdownBody,
 			htmlBody,
+			eventId: data.eventId ?? null,
 			sentById: data.sentById
 		})
 		.returning();
@@ -107,7 +112,13 @@ export async function createCampaign(data: {
 
 export async function updateCampaign(
 	id: string,
-	data: { subject?: string; markdownBody?: string; audienceIds?: string[] }
+	data: {
+		subject?: string;
+		markdownBody?: string;
+		audienceIds?: string[];
+		/** Null clears the scope; absent leaves it alone. */
+		eventId?: string | null;
+	}
 ) {
 	const existing = await getCampaignRaw(id);
 	if (!existing) throw new CampaignNotFoundError();
@@ -128,6 +139,7 @@ export async function updateCampaign(
 		updates.markdownBody = data.markdownBody;
 		updates.htmlBody = renderCampaignPreview(data.markdownBody);
 	}
+	if (data.eventId !== undefined) updates.eventId = data.eventId;
 
 	const [updated] = await db.update(campaign).set(updates).where(eq(campaign.id, id)).returning();
 
@@ -177,10 +189,27 @@ export async function getCampaign(id: string) {
 
 	if (!row) return null;
 
+	// The show this blast is about, named rather than left as an id, so the
+	// editor can show what it is scoped to without a second lookup (#857).
+	const [scopedEvent] = row.eventId
+		? await db
+				.select({ id: eventListing.id, title: eventListing.title, startsAt: eventListing.startsAt })
+				.from(eventListing)
+				.where(eq(eventListing.id, row.eventId))
+				.limit(1)
+		: [];
+
 	return {
 		...row,
 		status: deriveCampaignStatus(row.scheduledFor, row.sentAt),
-		audiences: row.audiences.filter((ca) => ca.audience).map((ca) => ca.audience!)
+		audiences: row.audiences.filter((ca) => ca.audience).map((ca) => ca.audience!),
+		event: scopedEvent
+			? {
+					id: scopedEvent.id,
+					title: scopedEvent.title,
+					when: formatDateShortYear(scopedEvent.startsAt)
+				}
+			: null
 	};
 }
 
@@ -269,6 +298,15 @@ export async function sendNow(id: string) {
 // ---------------------------------------------------------------------------
 
 export async function getRecipientsForCampaign(campaignId: string) {
+	// The show this blast is about, if it is about one. Only `event-interest`
+	// reads it, and without it that audience resolves to nobody (#857).
+	const [scoped] = await db
+		.select({ eventId: campaign.eventId })
+		.from(campaign)
+		.where(eq(campaign.id, campaignId))
+		.limit(1);
+	const eventId = scoped?.eventId ?? null;
+
 	// Targeted audiences, with the marker that says how to resolve each one.
 	const targeted = await db
 		.select({ id: audience.id, systemKey: audience.systemKey })
@@ -313,7 +351,7 @@ export async function getRecipientsForCampaign(campaignId: string) {
 
 	for (const a of ordered) {
 		if (!isSystemAudienceKey(a.systemKey)) continue;
-		rows.push(...(await resolveSystemAudienceRecipients(a.id, a.systemKey)));
+		rows.push(...(await resolveSystemAudienceRecipients(a.id, a.systemKey, eventId)));
 	}
 
 	// One message per subscriber, however many of the targeted audiences they

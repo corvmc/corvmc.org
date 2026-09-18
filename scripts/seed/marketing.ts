@@ -12,7 +12,7 @@ import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { random } from './util';
 
-export async function seedMarketing(users: SeedUser[]) {
+export async function seedMarketing(users: SeedUser[], showEventId?: string) {
 	console.log('Seeding marketing...');
 
 	const audienceRows = await db
@@ -66,6 +66,7 @@ export async function seedMarketing(users: SeedUser[]) {
 		.returning();
 	const allMembersAudience = systemAudienceRows.find((a) => a.systemKey === 'all-members')!;
 	const sustainingAudience = systemAudienceRows.find((a) => a.systemKey === 'sustaining-members')!;
+	const eventAudience = systemAudienceRows.find((a) => a.systemKey === 'event-interest')!;
 
 	const subscriberRows = await db
 		.insert(subscriber)
@@ -296,10 +297,35 @@ export async function seedMarketing(users: SeedUser[]) {
 		.insert(campaignAudience)
 		.values({ campaignId: sustainingDraft.id, audienceId: sustainingAudience.id });
 
+	// A blast about one show, which is the only campaign whose audience is not a
+	// fact about the membership. Without it the `event-interest` predicate has
+	// nothing to resolve locally and reads as permanently empty (#857).
+	let eventCampaigns = 0;
+	if (showEventId) {
+		const [showDraft] = await db
+			.insert(campaign)
+			.values({
+				id: randomUUID(),
+				subject: 'Doors at 7 — everything you need for Saturday',
+				markdownBody: '# See you Saturday\n\nDoors at 7, first set at 8.',
+				htmlBody: '<p>Doors at 7, first set at 8.</p>',
+				scheduledFor: null,
+				sentAt: null,
+				eventId: showEventId,
+				sentById: adminUser.id,
+				recipientCount: null
+			})
+			.returning();
+		await db
+			.insert(campaignAudience)
+			.values({ campaignId: showDraft.id, audienceId: eventAudience.id });
+		eventCampaigns = 1;
+	}
+
 	return {
 		audiences: audienceRows.length + systemAudienceRows.length,
 		subscribers: allSubs.length,
 		memberships: membershipRows.length,
-		campaigns: sentCampaigns.length + 5
+		campaigns: sentCampaigns.length + 5 + eventCampaigns
 	};
 }

@@ -50,7 +50,7 @@ vi.mock('drizzle-orm', () => ({
 }));
 
 vi.mock('./system-audiences', () => ({
-	isSystemAudienceKey: vi.fn((key: unknown) => key === 'all-members'),
+	isSystemAudienceKey: vi.fn((key: unknown) => key === 'all-members' || key === 'event-interest'),
 	resolveSystemAudienceRecipients: vi.fn(async () => [])
 }));
 
@@ -472,6 +472,7 @@ describe('campaign-service', () => {
 		it('returns 0 and marks campaign sent with recipientCount 0 when no recipients', async () => {
 			selectResults = [
 				[{ ...mockCampaign }], // getCampaignRaw
+				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
 				[] // getRecipientsForCampaign → audienceIds select (empty)
 			];
 
@@ -487,6 +488,7 @@ describe('campaign-service', () => {
 		it('calls sendBroadcastBatch with one message per recipient', async () => {
 			selectResults = [
 				[{ ...mockCampaign }], // getCampaignRaw
+				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
 				[{ audienceId: 'aud-1' }], // getRecipientsForCampaign → audienceIds
 				[mockRecipient] // getRecipientsForCampaign → selectDistinct subscribers
 			];
@@ -508,7 +510,12 @@ describe('campaign-service', () => {
 		});
 
 		it('filters out globally-suppressed subscribers in the recipient query', async () => {
-			selectResults = [[{ ...mockCampaign }], [{ audienceId: 'aud-1' }], [mockRecipient]];
+			selectResults = [
+				[{ ...mockCampaign }],
+				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
+				[{ audienceId: 'aud-1' }],
+				[mockRecipient]
+			];
 
 			await executeSend('camp-1');
 
@@ -518,7 +525,12 @@ describe('campaign-service', () => {
 		});
 
 		it('marks campaign as sent with correct recipient count after sending', async () => {
-			selectResults = [[{ ...mockCampaign }], [{ audienceId: 'aud-1' }], [mockRecipient]];
+			selectResults = [
+				[{ ...mockCampaign }],
+				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
+				[{ audienceId: 'aud-1' }],
+				[mockRecipient]
+			];
 
 			await executeSend('camp-1');
 
@@ -534,6 +546,7 @@ describe('campaign-service', () => {
 		it('sends exactly one message to a subscriber who is in two targeted audiences', async () => {
 			selectResults = [
 				[{ ...mockCampaign }], // getCampaignRaw
+				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
 				[
 					{ audienceId: 'aud-1', id: 'aud-1', systemKey: null },
 					{ audienceId: 'aud-2', id: 'aud-2', systemKey: null }
@@ -558,6 +571,7 @@ describe('campaign-service', () => {
 			]);
 			selectResults = [
 				[{ ...mockCampaign }],
+				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
 				[
 					{ audienceId: 'aud-1', id: 'aud-1', systemKey: null },
 					{ audienceId: 'aud-system', id: 'aud-system', systemKey: 'all-members' }
@@ -568,7 +582,12 @@ describe('campaign-service', () => {
 			const count = await executeSend('camp-1');
 
 			expect(count).toBe(1);
-			expect(resolveSystemAudienceRecipients).toHaveBeenCalledWith('aud-system', 'all-members');
+			expect(resolveSystemAudienceRecipients).toHaveBeenCalledWith(
+				'aud-system',
+				'all-members',
+				// The campaign's show, or null when it names none (#857).
+				null
+			);
 		});
 
 		it('does not run the static-list query when every targeted audience is built-in', async () => {
@@ -577,6 +596,7 @@ describe('campaign-service', () => {
 			]);
 			selectResults = [
 				[{ ...mockCampaign }],
+				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
 				[{ audienceId: 'aud-system', id: 'aud-system', systemKey: 'all-members' }]
 			];
 
@@ -584,6 +604,27 @@ describe('campaign-service', () => {
 
 			expect(count).toBe(1);
 			expect(db.selectDistinct).not.toHaveBeenCalled();
+		});
+
+		// #857. The event audience is the one built-in whose membership depends on
+		// the campaign, so the campaign's show has to reach the resolver.
+		it("passes the campaign's show to the event audience", async () => {
+			vi.mocked(resolveSystemAudienceRecipients).mockResolvedValueOnce([
+				{ ...mockRecipient, audienceId: 'aud-event' }
+			]);
+			selectResults = [
+				[{ ...mockCampaign }],
+				[{ eventId: 'evt-9' }], // the campaign names a show
+				[{ audienceId: 'aud-event', id: 'aud-event', systemKey: 'event-interest' }]
+			];
+
+			await executeSend('camp-1');
+
+			expect(resolveSystemAudienceRecipients).toHaveBeenCalledWith(
+				'aud-event',
+				'event-interest',
+				'evt-9'
+			);
 		});
 
 		it('scopes a deduplicated recipient to a deterministic audience', async () => {
@@ -595,6 +636,7 @@ describe('campaign-service', () => {
 			];
 			selectResults = [
 				[{ ...mockCampaign }],
+				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
 				[
 					{ audienceId: 'aud-1', id: 'aud-1', systemKey: null },
 					{ audienceId: 'aud-2', id: 'aud-2', systemKey: null }
@@ -610,7 +652,12 @@ describe('campaign-service', () => {
 		// #988: a mid-batch Postmark failure had left the row matching
 		// processDueCampaigns' predicate, so the cron re-sent to the whole list.
 		it('marks the campaign sent before the batch, so a failed send is never re-queued', async () => {
-			selectResults = [[{ ...mockCampaign }], [{ audienceId: 'aud-1' }], [mockRecipient]];
+			selectResults = [
+				[{ ...mockCampaign }],
+				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
+				[{ audienceId: 'aud-1' }],
+				[mockRecipient]
+			];
 			vi.mocked(sendBroadcastBatch).mockRejectedValueOnce(new Error('Postmark 500'));
 
 			await expect(executeSend('camp-1')).rejects.toThrow('Postmark 500');
@@ -621,7 +668,12 @@ describe('campaign-service', () => {
 		});
 
 		it('builds unsubscribe URL from env.PUBLIC_SITE_URL and renders per-recipient HTML', async () => {
-			selectResults = [[{ ...mockCampaign }], [{ audienceId: 'aud-1' }], [mockRecipient]];
+			selectResults = [
+				[{ ...mockCampaign }],
+				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
+				[{ audienceId: 'aud-1' }],
+				[mockRecipient]
+			];
 
 			await executeSend('camp-1');
 

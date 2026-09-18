@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AudiencePicker from '../AudiencePicker.svelte';
+	import EventScopePicker from '../EventScopePicker.svelte';
 	import CampaignPreview from '../CampaignPreview.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
@@ -14,6 +15,7 @@
 	let subject = $state('');
 	let markdownBody = $state('');
 	let selectedAudienceIds = $state<string[]>([]);
+	let eventId = $state('');
 	let scheduledFor = $state('');
 	let submitting = $state(false);
 
@@ -53,7 +55,12 @@
 		if (!isValid()) return;
 		return submit(
 			() =>
-				createDraft({ subject: subject.trim(), markdownBody, audienceIds: selectedAudienceIds }),
+				createDraft({
+					subject: subject.trim(),
+					markdownBody,
+					audienceIds: selectedAudienceIds,
+					eventId
+				}),
 			'Draft saved',
 			(id) => resolve(`/staff/marketing/campaigns/${id}/edit`)
 		);
@@ -74,7 +81,12 @@
 		confirmingSend = false;
 		return submit(
 			() =>
-				createAndSend({ subject: subject.trim(), markdownBody, audienceIds: selectedAudienceIds }),
+				createAndSend({
+					subject: subject.trim(),
+					markdownBody,
+					audienceIds: selectedAudienceIds,
+					eventId
+				}),
 			'Campaign sent',
 			(id) => resolve(`/staff/marketing/campaigns/${id}`)
 		);
@@ -88,6 +100,7 @@
 					subject: subject.trim(),
 					markdownBody,
 					audienceIds: selectedAudienceIds,
+					eventId,
 					scheduledFor: new Date(scheduledFor).toISOString()
 				}),
 			'Campaign scheduled',
@@ -125,6 +138,11 @@
 			<div>
 				<p class="label text-sm font-medium">Audiences</p>
 				<AudiencePicker bind:selected={selectedAudienceIds} bind:total={totalSubscribers} />
+			</div>
+
+			<div>
+				<p class="label text-sm font-medium">About a show</p>
+				<EventScopePicker onchange={(id) => (eventId = id)} />
 			</div>
 
 			<div>

@@ -180,7 +180,9 @@ async function main() {
 	const notifications = await seedNotifications(allUsers);
 	const preferences = await seedNotificationPreferences(allUsers);
 	await seedCreditTransactions(allUsers);
-	const marketing = await seedMarketing(allUsers);
+	// The upcoming show the event-scoped blast is about (#857).
+	const upcomingShow = events.find((e) => e.status === 'published' && e.startsAt >= new Date());
+	const marketing = await seedMarketing(allUsers, upcomingShow?.id);
 	const eq = await seedEquipment(allUsers);
 	// After the equipment, which is the last thing it borrows from: the rest of
 	// what a weekly booker accumulates — bookings, a ticket, credits — needs only

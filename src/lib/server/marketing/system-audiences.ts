@@ -124,9 +124,10 @@ function notOptedOut(audienceId: string): SQL {
  */
 export async function resolveSystemAudienceRecipients(
 	audienceId: string,
-	key: SystemAudienceKey
+	key: SystemAudienceKey,
+	eventId?: string | null
 ): Promise<{ subscriberId: string; email: string; name: string | null; audienceId: string }[]> {
-	const predicate = SYSTEM_AUDIENCES[key].predicate();
+	const predicate = SYSTEM_AUDIENCES[key].predicate(eventId);
 	await ensureSubscribersForUsers(predicate);
 
 	const rows = await db
@@ -143,7 +144,11 @@ export async function resolveSystemAudienceRecipients(
  * than subscriber rows, so it is accurate before any backfill has run — but
  * still excludes members who have opted out or been suppressed.
  */
-export async function countSystemAudience(audienceId: string, key: SystemAudienceKey) {
+export async function countSystemAudience(
+	audienceId: string,
+	key: SystemAudienceKey,
+	eventId?: string | null
+) {
 	const [row] = await db
 		// distinct: a user could in principle have more than one subscriber row
 		// (different addresses linked to the same account).
@@ -152,7 +157,7 @@ export async function countSystemAudience(audienceId: string, key: SystemAudienc
 		.leftJoin(subscriber, eq(subscriber.userId, user.id))
 		.where(
 			and(
-				SYSTEM_AUDIENCES[key].predicate(),
+				SYSTEM_AUDIENCES[key].predicate(eventId),
 				isNull(subscriber.suppressedAt),
 				sql`not exists (
 					select 1 from ${audienceMember}
@@ -179,7 +184,11 @@ export const PREVIEW_LIMIT = 100;
  * Applies the same exclusions as `countSystemAudience`, so the preview and the
  * headline count can never disagree.
  */
-export async function previewSystemAudience(audienceId: string, key: SystemAudienceKey) {
+export async function previewSystemAudience(
+	audienceId: string,
+	key: SystemAudienceKey,
+	eventId?: string | null
+) {
 	return db
 		.select({
 			subscriberId: subscriber.id,
@@ -197,7 +206,7 @@ export async function previewSystemAudience(audienceId: string, key: SystemAudie
 		)
 		.where(
 			and(
-				SYSTEM_AUDIENCES[key].predicate(),
+				SYSTEM_AUDIENCES[key].predicate(eventId),
 				isNull(subscriber.suppressedAt),
 				// Left join: a member with no audience_member row at all passes,
 				// a tombstoned one is excluded.
@@ -230,6 +239,9 @@ export async function getSystemAudiencesForUser(userId: string) {
 		const [hit] = await db
 			.select({ id: user.id })
 			.from(user)
+			// No campaign in hand, so `event-interest` evaluates to nobody and
+			// never appears here. That is right: it is a per-show list, and a
+			// member opts out of it from the mail they received, not in advance.
 			.where(and(eq(user.id, userId), SYSTEM_AUDIENCES[row.systemKey].predicate()))
 			.limit(1);
 		if (!hit) continue;

@@ -20,7 +20,8 @@ import {
 	unsubscribe,
 	bulkAddMembers as bulkAddMembersService,
 	listSubscribers,
-	getSubscriptionsForUser
+	getSubscriptionsForUser,
+	countEventAudience
 } from '$lib/server/marketing/audience-service';
 import {
 	listCampaigns,
@@ -211,6 +212,18 @@ export const getCampaigns = query(z.object({ status: z.string().optional() }), a
 	}));
 });
 
+/**
+ * How many people the show's own audience currently resolves to (#857).
+ *
+ * Its own query rather than a number on `getAudiences`: that one is
+ * unparameterised and cached across every audience surface, and this figure
+ * is a fact about one campaign's chosen show rather than about the audience.
+ */
+export const getEventAudienceCount = query(z.string(), async (eventId) => {
+	await requireCapability('marketing.read');
+	return countEventAudience(eventId);
+});
+
 /** Single campaign detail (staff). */
 export const getCampaignDetail = query(z.string(), async (id) => {
 	await requireCapability('marketing.read');
@@ -374,13 +387,20 @@ export const createDraft = command(
 	z.object({
 		subject: z.string().trim().min(1).max(500),
 		markdownBody: z.string().min(1),
-		audienceIds: z.array(z.string()).min(1).max(20)
+		audienceIds: z.array(z.string()).min(1).max(20),
+		eventId: z.string().optional()
 	}),
 	async (data) => {
 		const user = await requireCapability('marketing.manageCampaigns');
 		let campaign: Awaited<ReturnType<typeof createCampaign>>;
 		try {
-			campaign = await createCampaign({ ...data, sentById: user.id });
+			// `''` is the picker's "not about a show", and `createCampaign` stores
+			// null for it so the `event-interest` predicate short-circuits.
+			campaign = await createCampaign({
+				...data,
+				eventId: data.eventId || null,
+				sentById: user.id
+			});
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -392,13 +412,20 @@ export const createAndSend = command(
 	z.object({
 		subject: z.string().trim().min(1).max(500),
 		markdownBody: z.string().min(1),
-		audienceIds: z.array(z.string()).min(1).max(20)
+		audienceIds: z.array(z.string()).min(1).max(20),
+		eventId: z.string().optional()
 	}),
 	async (data) => {
 		const user = await requireCapability('marketing.send');
 		let campaign: Awaited<ReturnType<typeof createCampaign>>;
 		try {
-			campaign = await createCampaign({ ...data, sentById: user.id });
+			// `''` is the picker's "not about a show", and `createCampaign` stores
+			// null for it so the `event-interest` predicate short-circuits.
+			campaign = await createCampaign({
+				...data,
+				eventId: data.eventId || null,
+				sentById: user.id
+			});
 			await sendNow(campaign.id);
 		} catch (err) {
 			mapDomainError(err);
@@ -412,6 +439,7 @@ export const createAndSchedule = command(
 		subject: z.string().trim().min(1).max(500),
 		markdownBody: z.string().min(1),
 		audienceIds: z.array(z.string()).min(1).max(20),
+		eventId: z.string().optional(),
 		scheduledFor: z.string().transform((s) => new Date(s))
 	}),
 	async (data) => {
@@ -422,6 +450,7 @@ export const createAndSchedule = command(
 				subject: data.subject,
 				markdownBody: data.markdownBody,
 				audienceIds: data.audienceIds,
+				eventId: data.eventId || null,
 				sentById: user.id
 			});
 			await scheduleCampaignService(campaign.id, data.scheduledFor);
@@ -436,14 +465,17 @@ export const saveDraft = command(
 	z.object({
 		subject: z.string().trim().min(1).max(500),
 		markdownBody: z.string().min(1),
-		audienceIds: z.array(z.string()).min(1).max(20)
+		audienceIds: z.array(z.string()).min(1).max(20),
+		eventId: z.string().optional()
 	}),
 	async (data) => {
 		await requireCapability('marketing.manageCampaigns');
 		const { params } = getRequestEvent();
 		const id = params.id!;
 		try {
-			await updateCampaign(id, data);
+			// The form always posts the field, so absent means cleared rather than
+			// untouched — which is what makes un-scoping a draft possible.
+			await updateCampaign(id, { ...data, eventId: data.eventId || null });
 		} catch (err) {
 			mapDomainError(err);
 		}

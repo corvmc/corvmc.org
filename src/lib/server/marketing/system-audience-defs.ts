@@ -2,6 +2,8 @@ import { sql, type SQL } from 'drizzle-orm';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
+import { eventRsvp } from '$lib/server/db/schema/event-rsvp';
+import { ticket } from '$lib/server/db/schema/ticket';
 
 // ---------------------------------------------------------------------------
 // Built-in ("system") audience definitions
@@ -31,8 +33,14 @@ import { user } from '$lib/server/db/schema/authentication';
 type SystemAudienceDef = {
 	name: string;
 	description: string;
-	/** Predicate over the `user` table. Must qualify outer references. */
-	predicate: () => SQL;
+	/**
+	 * Predicate over the `user` table. Must qualify outer references.
+	 *
+	 * `eventId` is the campaign's, and only `event-interest` reads it. Every
+	 * other audience ignores it, which is what keeps the registry a closed set
+	 * of four-plus-one rather than a rules engine.
+	 */
+	predicate: (eventId?: string | null) => SQL;
 };
 
 /**
@@ -71,6 +79,31 @@ const LEADS_A_BAND = sql`exists (
 /** Active (not soft-deleted) member accounts. */
 const ACTIVE_MEMBER = sql`"user"."deleted_at" is null`;
 
+/**
+ * Bought a ticket to this show, or said they were coming.
+ *
+ * Two correlated EXISTS rather than a union: the outer query is over `user`
+ * already, and a subscriber matching either one is one row either way. A
+ * cancelled ticket does not count — somebody who refunded is not waiting to
+ * hear about the doors — but an `event_rsvp` has no status, because cancelling
+ * one deletes the row.
+ */
+function caresAbout(eventId: string): SQL {
+	return sql`(
+		exists (
+			select 1 from ${ticket}
+			where ${ticket.eventId} = ${eventId}
+				and ${ticket.userId} = ${user.id}
+				and ${ticket.status} != 'cancelled'
+		)
+		or exists (
+			select 1 from ${eventRsvp}
+			where ${eventRsvp.eventId} = ${eventId}
+				and ${eventRsvp.userId} = ${user.id}
+		)
+	)`;
+}
+
 export const SYSTEM_AUDIENCES = {
 	'all-members': {
 		name: 'All Members',
@@ -91,6 +124,22 @@ export const SYSTEM_AUDIENCES = {
 		name: 'Band Leaders',
 		description: 'Members who own or administer an active band.',
 		predicate: () => sql`${ACTIVE_MEMBER} and ${LEADS_A_BAND}`
+	},
+	/**
+	 * The one audience whose membership depends on the campaign rather than
+	 * only on the member (#857).
+	 *
+	 * Nobody, unless the campaign names a show. `1 = 0` and not "everybody" is
+	 * the safe direction for a blast, and it means the audience can be left
+	 * ticked on a campaign that is not about a show without sending to the
+	 * whole list.
+	 */
+	'event-interest': {
+		name: "This show's audience",
+		description:
+			'Everyone holding a ticket to the show a campaign is about, plus everyone who RSVP’d. Empty unless the campaign names a show.',
+		predicate: (eventId?: string | null) =>
+			eventId ? sql`${ACTIVE_MEMBER} and ${caresAbout(eventId)}` : sql`1 = 0`
 	}
 } as const satisfies Record<string, SystemAudienceDef>;
 

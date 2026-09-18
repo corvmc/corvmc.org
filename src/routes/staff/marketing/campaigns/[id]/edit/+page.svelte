@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AudiencePicker from '../../AudiencePicker.svelte';
+	import EventScopePicker from '../../EventScopePicker.svelte';
 	import CampaignPreview from '../../CampaignPreview.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -25,6 +26,7 @@
 	let subject = $state('');
 	let markdownBody = $state('');
 	let selectedAudienceIds = $state<string[]>([]);
+	let eventId = $state('');
 	let scheduledFor = $state('');
 	let submitting = $state(false);
 	let initialized = $state(false);
@@ -36,6 +38,7 @@
 			subject = campaignData.subject;
 			markdownBody = campaignData.markdownBody;
 			selectedAudienceIds = campaignData.audiences.map((a) => a.id);
+			eventId = campaignData.eventId ?? '';
 			initialized = true;
 		}
 	});
@@ -67,7 +70,8 @@
 			await saveDraft({
 				subject: subject.trim(),
 				markdownBody,
-				audienceIds: selectedAudienceIds
+				audienceIds: selectedAudienceIds,
+				eventId
 			});
 			toast.success('Draft saved');
 		} catch (err) {
@@ -96,7 +100,8 @@
 			await saveDraft({
 				subject: subject.trim(),
 				markdownBody,
-				audienceIds: selectedAudienceIds
+				audienceIds: selectedAudienceIds,
+				eventId
 			});
 			await sendCampaignNow({});
 		} catch (err) {
@@ -120,7 +125,8 @@
 			await saveDraft({
 				subject: subject.trim(),
 				markdownBody,
-				audienceIds: selectedAudienceIds
+				audienceIds: selectedAudienceIds,
+				eventId
 			});
 			await scheduleCampaign({ scheduledFor: new Date(scheduledFor).toISOString() });
 			toast.success('Campaign scheduled');
@@ -169,6 +175,11 @@
 			<div>
 				<p class="label text-sm font-medium">Audiences</p>
 				<AudiencePicker bind:selected={selectedAudienceIds} bind:total={totalSubscribers} />
+			</div>
+
+			<div>
+				<p class="label text-sm font-medium">About a show</p>
+				<EventScopePicker initial={campaignData.event} onchange={(id) => (eventId = id)} />
 			</div>
 
 			<div>
