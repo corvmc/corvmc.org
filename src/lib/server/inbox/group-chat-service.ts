@@ -61,7 +61,7 @@ export async function getGroupChat(groupId: string) {
 		})
 		.from(inboxMessage)
 		.where(eq(inboxMessage.threadId, threadId))
-		.orderBy(asc(inboxMessage.createdAt));
+		.orderBy(asc(inboxMessage.createdAt), asc(inboxMessage.id));
 
 	const [g] = await db
 		.select({ name: group.name })

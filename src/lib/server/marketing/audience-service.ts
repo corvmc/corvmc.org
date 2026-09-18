@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { audience, audienceMember, subscriber } from '$lib/server/db/schema/marketing';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, sql, isNull } from 'drizzle-orm';
+import { eq, and, sql, isNull, asc } from 'drizzle-orm';
 import { findOrCreateByEmail } from './subscriber-service';
 import {
 	countSystemAudience,
@@ -345,7 +345,7 @@ export async function listSubscribers(audienceId: string) {
 		.from(audienceMember)
 		.innerJoin(subscriber, eq(subscriber.id, audienceMember.subscriberId))
 		.where(eq(audienceMember.audienceId, audienceId))
-		.orderBy(audienceMember.createdAt);
+		.orderBy(audienceMember.createdAt, asc(audienceMember.id));
 }
 
 // ---------------------------------------------------------------------------

@@ -42,7 +42,7 @@ async function getPendingFallbackCode(): Promise<LockFallbackCode | null> {
 		.select()
 		.from(lockFallbackCode)
 		.where(and(isNull(lockFallbackCode.syncedAt), isNull(lockFallbackCode.retiredAt)))
-		.orderBy(desc(lockFallbackCode.createdAt))
+		.orderBy(desc(lockFallbackCode.createdAt), desc(lockFallbackCode.id))
 		.limit(1);
 
 	return row ?? null;

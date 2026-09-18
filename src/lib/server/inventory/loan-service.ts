@@ -693,7 +693,7 @@ export async function listLoans(opts: ListLoansOptions = {}, pagination: Paginat
 		.innerJoin(user, eq(inventoryLoan.userId, user.id))
 		.leftJoin(inventoryItem, eq(inventoryLoan.itemId, inventoryItem.id))
 		.where(where)
-		.orderBy(desc(inventoryLoan.createdAt))
+		.orderBy(desc(inventoryLoan.createdAt), desc(inventoryLoan.id))
 		.$dynamic();
 
 	const countQ = db

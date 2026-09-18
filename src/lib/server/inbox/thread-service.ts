@@ -434,7 +434,7 @@ export async function getThread(id: string) {
 		.select()
 		.from(inboxMessage)
 		.where(eq(inboxMessage.threadId, id))
-		.orderBy(inboxMessage.createdAt);
+		.orderBy(inboxMessage.createdAt, asc(inboxMessage.id));
 
 	const notes = await db
 		.select({
@@ -448,7 +448,7 @@ export async function getThread(id: string) {
 		.from(inboxNote)
 		.leftJoin(user, eq(inboxNote.authorUserId, user.id))
 		.where(eq(inboxNote.threadId, id))
-		.orderBy(inboxNote.createdAt);
+		.orderBy(inboxNote.createdAt, asc(inboxNote.id));
 
 	return { ...thread, messages, notes };
 }

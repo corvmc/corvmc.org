@@ -723,7 +723,7 @@ export async function listPendingEdits() {
 		.from(suggestionEdit)
 		.leftJoin(requester, eq(requester.id, suggestionEdit.requestedByUserId))
 		.where(eq(suggestionEdit.status, 'pending'))
-		.orderBy(desc(suggestionEdit.createdAt));
+		.orderBy(desc(suggestionEdit.createdAt), desc(suggestionEdit.id));
 }
 
 export async function countPendingEdits(): Promise<number> {
@@ -861,7 +861,7 @@ export async function listMergeCandidates(excludeId: string) {
 			)
 		)
 		.groupBy(suggestion.id)
-		.orderBy(desc(voteCountSql), desc(suggestion.createdAt))
+		.orderBy(desc(voteCountSql), desc(suggestion.createdAt), desc(suggestion.id))
 		.limit(MERGE_CANDIDATE_LIMIT);
 }
 

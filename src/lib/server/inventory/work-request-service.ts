@@ -149,7 +149,7 @@ export async function listPendingFlags() {
 		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
 		.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
 		.where(and(eq(workRequest.status, 'pending'), isNull(workRequest.workOrderId)))
-		.orderBy(asc(workRequest.createdAt));
+		.orderBy(asc(workRequest.createdAt), asc(workRequest.id));
 }
 
 /** Everything ever raised against one unit, newest first — the unit's own page. */
@@ -159,7 +159,7 @@ export async function listFlagsForAsset(assetId: string) {
 		.from(workRequest)
 		.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
 		.where(eq(workRequest.assetId, assetId))
-		.orderBy(desc(workRequest.createdAt));
+		.orderBy(desc(workRequest.createdAt), desc(workRequest.id));
 }
 
 /** Flags answered by one work order, so resolving it can close them together. */

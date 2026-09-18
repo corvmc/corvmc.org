@@ -660,7 +660,11 @@ export async function listHourLogs(
 		.innerJoin(user, eq(volunteerHourLog.userId, user.id))
 		.innerJoin(volunteerRole, eq(volunteerHourLog.volunteerRoleId, volunteerRole.id))
 		.where(where)
-		.orderBy(desc(volunteerHourLog.workedOn), desc(volunteerHourLog.createdAt))
+		.orderBy(
+			desc(volunteerHourLog.workedOn),
+			desc(volunteerHourLog.createdAt),
+			desc(volunteerHourLog.id)
+		)
 		.$dynamic();
 
 	const countQ = db

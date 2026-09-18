@@ -31,7 +31,7 @@ export async function listSavedViews(userId: string) {
 			.from(inboxSavedView)
 			.where(eq(inboxSavedView.userId, userId))
 			// Oldest first, so the tabs do not reshuffle every time one is added.
-			.orderBy(asc(inboxSavedView.createdAt))
+			.orderBy(asc(inboxSavedView.createdAt), asc(inboxSavedView.id))
 	);
 }
 

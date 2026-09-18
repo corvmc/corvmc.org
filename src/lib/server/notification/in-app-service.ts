@@ -51,7 +51,7 @@ export async function getForUser(userId: string, opts: { limit?: number; offset?
 		.select()
 		.from(notification)
 		.where(eq(notification.userId, userId))
-		.orderBy(desc(notification.createdAt))
+		.orderBy(desc(notification.createdAt), desc(notification.id))
 		.limit(limit)
 		.offset(offset);
 }

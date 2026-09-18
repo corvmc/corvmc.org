@@ -87,6 +87,7 @@ vi.mock('drizzle-orm', () => ({
 	and: (...a: unknown[]) => ({ op: 'and', a }),
 	or: (...a: unknown[]) => ({ op: 'or', a }),
 	desc: vi.fn(),
+	asc: vi.fn(),
 	count: vi.fn(),
 	gt: vi.fn(),
 	isNull: vi.fn(),

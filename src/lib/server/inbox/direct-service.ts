@@ -2,7 +2,20 @@ import { db } from '$lib/server/db';
 import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
 import { directoryEntry } from '$lib/server/db/schema/directory';
-import { and, count, desc, eq, gt, inArray, isNull, isNotNull, ne, or, sql } from 'drizzle-orm';
+import {
+	and,
+	count,
+	desc,
+	eq,
+	gt,
+	inArray,
+	isNull,
+	isNotNull,
+	ne,
+	or,
+	sql,
+	asc
+} from 'drizzle-orm';
 import type { AnyColumn, SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import type { PaginationInput } from '$lib/server/db/paginate';
@@ -590,7 +603,7 @@ export async function getDirectThread(threadId: string, userId: string) {
 		})
 		.from(inboxMessage)
 		.where(eq(inboxMessage.threadId, threadId))
-		.orderBy(inboxMessage.createdAt);
+		.orderBy(inboxMessage.createdAt, asc(inboxMessage.id));
 
 	const blocked = thread.counterpartId
 		? await isBlockedEitherWay(userId, thread.counterpartId)

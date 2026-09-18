@@ -139,7 +139,7 @@ function runSelect(where: ReturnType<typeof and>) {
 		.from(file)
 		.leftJoin(user, eq(user.id, file.uploadedById))
 		.where(where)
-		.orderBy(desc(file.createdAt))
+		.orderBy(desc(file.createdAt), desc(file.id))
 		.limit(MAX_LIST);
 }
 

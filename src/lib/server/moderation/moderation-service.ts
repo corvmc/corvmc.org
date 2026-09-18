@@ -103,7 +103,7 @@ export async function listBlockedBy(blockerUserId: string): Promise<BlockedMembe
 		.from(userBlock)
 		.innerJoin(user, eq(user.id, userBlock.blockedUserId))
 		.where(eq(userBlock.blockerUserId, blockerUserId))
-		.orderBy(desc(userBlock.createdAt));
+		.orderBy(desc(userBlock.createdAt), desc(userBlock.id));
 
 	return rows.map((r) => ({
 		userId: r.userId,

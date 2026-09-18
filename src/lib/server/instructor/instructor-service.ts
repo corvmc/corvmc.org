@@ -472,7 +472,7 @@ export async function listForStaff(): Promise<{
 		})
 		.from(instructor)
 		.innerJoin(user, eq(user.id, instructor.userId))
-		.orderBy(asc(instructor.createdAt));
+		.orderBy(asc(instructor.createdAt), asc(instructor.id));
 
 	const shaped = rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
 

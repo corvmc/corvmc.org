@@ -609,7 +609,7 @@ export async function listWorkOrders(
 				filters.projectId ? eq(workOrder.projectId, filters.projectId) : undefined
 			)
 		)
-		.orderBy(asc(workOrder.createdAt));
+		.orderBy(asc(workOrder.createdAt), asc(workOrder.id));
 
 	return withCounts(rows);
 }

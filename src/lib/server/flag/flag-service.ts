@@ -10,7 +10,7 @@ import { eventListing } from '$lib/server/db/schema/event';
 import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
 import type { InboxMessageDirection } from '$lib/server/db/schema/inbox';
 import { suggestion } from '$lib/server/db/schema/suggestion';
-import { eq, ne, and, desc, count, like, inArray, getTableColumns } from 'drizzle-orm';
+import { eq, ne, and, desc, count, like, inArray, getTableColumns, asc } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
@@ -369,7 +369,7 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 		.from(contentFlag)
 		.leftJoin(user, eq(user.id, contentFlag.reportedByUserId))
 		.where(where)
-		.orderBy(desc(contentFlag.createdAt))
+		.orderBy(desc(contentFlag.createdAt), desc(contentFlag.id))
 		.$dynamic();
 
 	const countQ = db.select({ count: count() }).from(contentFlag).where(where);
@@ -584,7 +584,7 @@ export async function getFlaggedDirectThread(flagId: string): Promise<FlaggedThr
 		})
 		.from(inboxMessage)
 		.where(eq(inboxMessage.threadId, thread.threadId))
-		.orderBy(inboxMessage.createdAt);
+		.orderBy(inboxMessage.createdAt, asc(inboxMessage.id));
 
 	return {
 		threadId: thread.threadId,

@@ -64,7 +64,7 @@ export async function listAllReleases(): Promise<StaffReleaseRow[]> {
 		.from(audioRelease)
 		.innerJoin(group, eq(group.id, audioRelease.groupId))
 		.where(isNull(audioRelease.deletedAt))
-		.orderBy(desc(audioRelease.createdAt));
+		.orderBy(desc(audioRelease.createdAt), desc(audioRelease.id));
 
 	return rows.map((r) => ({
 		id: r.id,
@@ -248,7 +248,7 @@ export async function recentSales(limit = 50): Promise<StaffSaleRow[]> {
 		.from(releasePurchase)
 		.innerJoin(audioRelease, eq(audioRelease.id, releasePurchase.releaseId))
 		.innerJoin(group, eq(group.id, audioRelease.groupId))
-		.orderBy(desc(releasePurchase.createdAt))
+		.orderBy(desc(releasePurchase.createdAt), desc(releasePurchase.id))
 		.limit(limit);
 
 	return rows.map((r) => ({

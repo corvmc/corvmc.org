@@ -214,7 +214,7 @@ export async function listInvitesForEmail(email: string) {
 				isNull(group.deletedAt)
 			)
 		)
-		.orderBy(desc(groupInvite.createdAt))
+		.orderBy(desc(groupInvite.createdAt), desc(groupInvite.id))
 		.limit(SEARCH_LIMIT);
 }
 
@@ -233,7 +233,7 @@ export async function listForGroup(groupId: string) {
 		.from(groupInvite)
 		.leftJoin(user, eq(user.id, groupInvite.invitedById))
 		.where(eq(groupInvite.groupId, groupId))
-		.orderBy(desc(groupInvite.createdAt))
+		.orderBy(desc(groupInvite.createdAt), desc(groupInvite.id))
 		.limit(SEARCH_LIMIT);
 }
 

@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { inboxThread, inboxMessage, inboxNote } from '$lib/server/db/schema/inbox';
-import { eq, sql, desc, and } from 'drizzle-orm';
+import { eq, sql, desc, and, asc } from 'drizzle-orm';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { truncatePreview } from './thread-service';
 import { dispatchReply } from './channel-dispatcher';
@@ -268,7 +268,7 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 		.select({ channelMessageId: inboxMessage.channelMessageId, createdAt: inboxMessage.createdAt })
 		.from(inboxMessage)
 		.where(and(eq(inboxMessage.threadId, params.threadId), eq(inboxMessage.direction, 'inbound')))
-		.orderBy(desc(inboxMessage.createdAt))
+		.orderBy(desc(inboxMessage.createdAt), desc(inboxMessage.id))
 		.limit(1);
 
 	// Build References chain from all inbound message IDs
@@ -276,7 +276,7 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 		.select({ channelMessageId: inboxMessage.channelMessageId })
 		.from(inboxMessage)
 		.where(and(eq(inboxMessage.threadId, params.threadId), eq(inboxMessage.direction, 'inbound')))
-		.orderBy(inboxMessage.createdAt);
+		.orderBy(inboxMessage.createdAt, asc(inboxMessage.id));
 
 	const references =
 		inboundIds

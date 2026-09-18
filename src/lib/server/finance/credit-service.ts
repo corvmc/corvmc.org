@@ -293,7 +293,7 @@ export async function getUsageSinceLastAllocation(
 				eq(creditTransaction.source, 'monthly_allocation')
 			)
 		)
-		.orderBy(desc(creditTransaction.createdAt))
+		.orderBy(desc(creditTransaction.createdAt), desc(creditTransaction.id))
 		.limit(1);
 
 	if (!alloc) return null;
@@ -410,7 +410,7 @@ export async function listTransactions(
 		.from(creditTransaction)
 		.innerJoin(user, eq(user.id, creditTransaction.userId))
 		.where(where)
-		.orderBy(desc(creditTransaction.createdAt))
+		.orderBy(desc(creditTransaction.createdAt), desc(creditTransaction.id))
 		.$dynamic();
 
 	const countQ = db
