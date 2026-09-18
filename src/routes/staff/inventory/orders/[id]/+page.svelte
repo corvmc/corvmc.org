@@ -14,6 +14,7 @@
 	import { getOrder, markOrderPlaced, dropOrder, closeOrder } from '$lib/remote/inventory.remote';
 	import { orderStatusLabels, orderStatusBadge, type OrderStatus } from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
+	import { isOrderLate } from '$lib/utils/order-late';
 	import { resolve } from '$app/paths';
 
 	/**
@@ -29,6 +30,13 @@
 
 	const status = $derived(order.status as OrderStatus);
 	const outstanding = $derived(order.lines.filter((l) => l.outstanding > 0));
+	const late = $derived(
+		isOrderLate({
+			status: order.status,
+			expectedAt: order.expectedAt,
+			isComplete: outstanding.length === 0
+		})
+	);
 </script>
 
 <PageHeader
@@ -38,6 +46,9 @@
 	backHref="/staff/inventory/orders"
 >
 	<Badge variant={orderStatusBadge[status]} size="md">{orderStatusLabels[status]}</Badge>
+	{#if late}
+		<Badge variant="error" size="md">Late</Badge>
+	{/if}
 	{#if status === 'placed' && outstanding.length > 0}
 		<Button href={`/staff/inventory/intake?order=${order.id}`} variant="primary" size="sm">
 			Receive
@@ -87,7 +98,7 @@
 					<Fact label="Placed">
 						{order.placedAt ? formatDateShort(order.placedAt) : 'Not yet'}
 					</Fact>
-					<Fact label="Expected">
+					<Fact label="Expected" class={late ? 'text-error' : ''}>
 						{order.expectedAt ? formatDateShort(order.expectedAt) : '—'}
 					</Fact>
 					<Fact label="Estimated">{formatCents(order.estimatedTotalCents)}</Fact>

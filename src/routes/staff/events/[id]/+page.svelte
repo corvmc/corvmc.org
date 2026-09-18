@@ -199,9 +199,11 @@
 			</p>
 		{:else}
 			<p class="flex flex-wrap items-center gap-2 text-sm">
-				<a href={resolve(`/staff/users/${detail.submitterId}`)} class="link font-medium">
-					{detail.creator?.name ?? 'Unknown member'}
-				</a>
+				{#if detail.submitter}
+					<EntityChip ref={detail.submitter} />
+				{:else}
+					<span class="font-medium">Unknown member</span>
+				{/if}
 				{#if detail.creator?.email}
 					<span class="text-muted">{detail.creator.email}</span>
 				{/if}

@@ -9,6 +9,7 @@
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { EntityChip } from '$lib/components/ui/entity';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
@@ -130,13 +131,7 @@
 				</Badge>
 			</Fact>
 
-			<Fact label="Suggested by">
-				{#if s.authorUserId && s.authorName}
-					<a class="link" href={resolve(`/staff/users/${s.authorUserId}`)}>{s.authorName}</a>
-				{:else}
-					A former member
-				{/if}
-			</Fact>
+			<Fact label="Suggested by"><EntityChip ref={s.author} /></Fact>
 
 			<Fact label="Posted">{formatDateTime(s.createdAt)}</Fact>
 			<Fact label="Votes" class="font-medium">{s.voteCount}</Fact>
