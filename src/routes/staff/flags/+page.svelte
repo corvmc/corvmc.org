@@ -1,15 +1,16 @@
 <script lang="ts">
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import DataList from '$lib/components/ui/DataList.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
+	import { rowLink } from '$lib/actions/row-link';
 	import { entityLabels } from '$lib/config';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	import { resolve } from '$app/paths';
 	import { relativeDay } from '$lib/utils/format';
 	import { getFlagsQueue } from '$lib/remote/flags.remote';
 
@@ -72,33 +73,36 @@
 	</FilterBar>
 
 	<!--
-		Cards, not a table: the reason is unbounded prose, and a report only makes
-		sense read as a whole. Truncating it to a column width is what made this
-		queue unusable — you had to open every row to know what was reported.
+		A table: the reason is capped at 100 characters (`FLAG_REASON_MAX`) and the
+		queue has no row actions, so it passes none of the four card tests
+		(ui-patterns.md, "A table, unless the row earns a card"). The old comment
+		here claimed unbounded prose, which is what #1034 was about.
 	-->
 	<DataList {result} empty="No flags found" onpage={(p) => (page = p)}>
 		{#snippet children(flags)}
-			<ul class="space-y-2">
+			<Table>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th class="col-support">Type</th>
+					<th>Flagged</th>
+					<th class="cell-primary">Reason</th>
+					<th class="col-support">Reported by</th>
+					<th class="col-support">When</th>
+				{/snippet}
 				{#each flags as f (f.id)}
-					<li class="card bg-base-100 shadow">
-						<CardBody padding="sm" class="gap-2">
-							<!-- No `flex-wrap`, and the title truncates: wrapping this row pushed
-							     the status badge and the timestamp onto ragged extra lines. -->
-							<div class="flex min-w-0 items-center gap-2">
-								<Badge size="sm" variant="outline" class="shrink-0">
-									{entityLabels[f.target.type].one}
-								</Badge>
-								<EntityIdentity ref={f.ref} class="min-w-0" />
-								<span class="shrink-0"><StatusBadge status={f.status} label /></span>
-							</div>
-							<p class="text-sm">{f.reason}</p>
-							<p class="text-muted">
-								Reported by {f.reportedByName ?? 'Anonymous visitor'} · {relativeDay(f.createdAt)}
-							</p>
-						</CardBody>
-					</li>
+					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/flags/${f.id}`)}>
+						<td class="w-px"><StatusBadge status={f.status} label /></td>
+						<!-- Its own column, not a glyph: `ref.type` is `flag` for every row
+						     (flag-service.ts), so the registry glyph marks nothing and what
+						     was flagged is only in `target.type`. -->
+						<td class="col-support whitespace-nowrap">{entityLabels[f.target.type].one}</td>
+						<td class="whitespace-nowrap"><EntityIdentity ref={f.ref} /></td>
+						<td class="cell-primary truncate">{f.reason}</td>
+						<td class="col-support truncate">{f.reportedByName ?? 'Anonymous visitor'}</td>
+						<td class="col-support whitespace-nowrap">{relativeDay(f.createdAt)}</td>
+					</tr>
 				{/each}
-			</ul>
+			</Table>
 		{/snippet}
 	</DataList>
 </PageContent>
