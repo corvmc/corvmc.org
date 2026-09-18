@@ -24,6 +24,7 @@ import type { BookerType } from '$lib/config';
 import { user } from '$lib/server/db/schema/authentication';
 import { group } from '$lib/server/db/schema/group';
 import { eventListing } from '$lib/server/db/schema/event';
+import { eventPosterKeySql } from '$lib/server/event/event-columns';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { topPositionFor } from '$lib/server/authorization';
 import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
@@ -148,7 +149,17 @@ export function toBandRef(row: BandRefRow | null | undefined): BandRef {
 type EventTable = typeof eventListing | BuildAliasTable<typeof eventListing, string>;
 
 export function eventRefColumns(e: EventTable = eventListing) {
-	return { id: e.id, title: e.title, status: e.status, startsAt: e.startsAt, image: e.posterKey };
+	// `image` resolves through `media_attachment` — `event_listing.poster_key`
+	// is gone (#808). The subquery correlates on the table by name, so this is
+	// the one field an aliased `e` would get wrong; every caller passes the
+	// default.
+	return {
+		id: e.id,
+		title: e.title,
+		status: e.status,
+		startsAt: e.startsAt,
+		image: eventPosterKeySql
+	};
 }
 
 export interface EventRefRow {

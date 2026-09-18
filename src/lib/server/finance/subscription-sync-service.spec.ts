@@ -92,6 +92,7 @@ vi.mock('$lib/server/db/schema/band-site', () => ({
 
 vi.mock('drizzle-orm', () => ({
 	eq: (col: unknown, val: unknown) => ({ op: 'eq', col, val }),
+	getTableColumns: () => ({}),
 	and: (...c: unknown[]) => ({ op: 'and', c }),
 	isNotNull: (col: unknown) => ({ op: 'isNotNull', col }),
 	notInArray: (col: unknown, vals: unknown[]) => ({ op: 'notInArray', col, vals }),

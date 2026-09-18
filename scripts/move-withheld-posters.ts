@@ -29,14 +29,15 @@ const PREFIX = 'events/posters/withheld/';
 const scope = REMOTE ? '--remote' : '--local';
 
 /**
- * Every withheld key the database knows, from both places one can be recorded.
+ * Every withheld key the database knows.
  *
- * `wrangler r2` has no list-objects subcommand, so the bucket cannot be walked
- * from here. An object whose row is already gone is therefore out of reach of
- * this script and stays for the media sweep, which now deletes by key shape.
+ * One place now, not two: `event_listing.poster_key` is dropped (#808) and a
+ * withheld poster is a `media` row. `wrangler r2` has no list-objects
+ * subcommand, so an object whose row is already gone is out of reach here and
+ * stays for the media sweep, which deletes by key shape.
  */
 function withheldKeysFromDb(): string[] {
-	const sql = `SELECT key FROM media WHERE key LIKE '${PREFIX}%' UNION SELECT poster_key AS key FROM event_listing WHERE poster_key LIKE '${PREFIX}%'`;
+	const sql = `SELECT key FROM media WHERE key LIKE '${PREFIX}%'`;
 	const out = execFileSync(
 		'wrangler',
 		['d1', 'execute', 'corvmc-db', scope, '--json', '--command', sql],

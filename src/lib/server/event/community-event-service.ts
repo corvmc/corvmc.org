@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { eventListing, type LineupEntry } from '$lib/server/db/schema/event';
-import { eventListingColumns } from './event-columns';
+import { eventListingColumns, eventPosterKeySql } from './event-columns';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, getTableColumns, gte, inArray, like, ne } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
@@ -226,7 +226,7 @@ export async function createCommunityEvent(params: CreateCommunityEventParams): 
 	assertTimes(params.startsAt, params.endsAt ?? null, params.doorsAt ?? null);
 	assertValidTicketPrice(params.ticketPrice);
 
-	const [row] = await db
+	const [inserted] = await db
 		.insert(eventListing)
 		.values({
 			title: params.title,
@@ -243,6 +243,8 @@ export async function createCommunityEvent(params: CreateCommunityEventParams): 
 			createdByUserId: params.createdByUserId
 		})
 		.returning();
+	// A listing one statement old has no attachment yet.
+	const row: EventRow = { ...inserted, posterKey: null };
 
 	if (params.lineup?.length) {
 		await setEventLineup(row.id, params.lineup);
@@ -323,7 +325,7 @@ export async function updateCommunityEvent(
 	}
 
 	if (params.posterFile) {
-		updates.posterKey = await uploadPosterKey(eventId, params.posterFile);
+		await uploadPosterKey(eventId, params.posterFile);
 	}
 
 	const [updated] = await db
@@ -339,9 +341,18 @@ export async function updateCommunityEvent(
 		await setEventLineup(eventId, params.lineup);
 	}
 
-	if (requeued) await emitSubmitted(updated, userId);
+	// `RETURNING` cannot carry the poster key — SQLite forbids a subquery there
+	// — so the row is completed from the attachment (#808).
+	const [resolved] = await db
+		.select({ posterKey: eventPosterKeySql })
+		.from(eventListing)
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
+	const row: EventRow = { ...updated, posterKey: resolved?.posterKey ?? null };
 
-	return updated;
+	if (requeued) await emitSubmitted(row, userId);
+
+	return row;
 }
 
 export interface PublishResult {
@@ -585,10 +596,7 @@ async function storePoster(
 	file: { buffer: ArrayBuffer; contentType: string }
 ): Promise<string> {
 	const key = await uploadPosterKey(eventId, file);
-	await db
-		.update(eventListing)
-		.set({ posterKey: key, updatedAt: new Date() })
-		.where(eq(eventListing.id, eventId));
+	await db.update(eventListing).set({ updatedAt: new Date() }).where(eq(eventListing.id, eventId));
 	return key;
 }
 

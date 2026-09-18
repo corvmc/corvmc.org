@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "01a0a2c4-3aff-4cb5-bb2d-834cd8534cbd",
+  "id": "a175e0c8-21c7-4fc4-b188-7133e1ce130c",
   "prevIds": [
-    "ff9e619f-0f8f-4a40-b848-f5e63eb07714"
+    "01a0a2c4-3aff-4cb5-bb2d-834cd8534cbd"
   ],
   "ddl": [
     {
@@ -2055,16 +2055,6 @@
       "default": null,
       "generated": null,
       "name": "reservation_id",
-      "entityType": "columns",
-      "table": "event_listing"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "poster_key",
       "entityType": "columns",
       "table": "event_listing"
     },

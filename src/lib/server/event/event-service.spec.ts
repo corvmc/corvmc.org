@@ -1309,15 +1309,17 @@ describe('EventService', () => {
 				/^events\/posters\/withheld\/evt-1-[0-9a-f-]{36}\.jpg$/
 			);
 			expect(copyToPrivate).toHaveBeenCalledWith('events/posters/evt-1.jpg', withheldKey);
+			// The attachment names the withheld key; there is no mirror column
+			// left to also carry it (#808).
 			expect(replaceSlot).toHaveBeenCalledWith(
 				expect.objectContaining({
 					attachableType: 'event_listing',
 					attachableId: 'evt-1',
-					slot: 'poster'
+					slot: 'poster',
+					key: withheldKey
 				})
 			);
 			expect(lastUpdateSet).toMatchObject({
-				posterKey: withheldKey,
 				reviewNotes: 'No venue given'
 			});
 		});
@@ -1404,7 +1406,8 @@ describe('EventService', () => {
 
 			await unpublishWithNotice('evt-1');
 
-			const withheld = (lastUpdateSet as { posterKey: string }).posterKey;
+			// Read off the attachment, which is the only record of it now.
+			const withheld = vi.mocked(replaceSlot).mock.calls[0][0].key;
 			expect(withheld).toMatch(/^events\/posters\/withheld\//);
 			expect(deleteObject).not.toHaveBeenCalledWith(withheld);
 			expect(vi.mocked(deleteObject).mock.calls).toEqual([['events/posters/evt-1.jpg']]);
@@ -1462,7 +1465,7 @@ describe('EventService', () => {
 			expect(lastUpdateSet).toMatchObject({ reviewNotes: 'No venue given' });
 		});
 
-		it('nulls posterKey only when the object is already gone', async () => {
+		it('deletes nothing when there were no bytes to preserve', async () => {
 			vi.mocked(copyToPrivate).mockResolvedValueOnce(null);
 			selectResultQueue = [
 				[publishedCommunityListing],
@@ -1472,9 +1475,9 @@ describe('EventService', () => {
 
 			await unpublishWithNotice('evt-1', { notes: 'No venue given' });
 
-			// Nothing to preserve, so don't leave the row pointing at a dead key.
+			// The detach below is what takes the poster off the page; the object
+			// itself is already gone, so there is nothing to delete.
 			expect(deleteObject).not.toHaveBeenCalled();
-			expect(lastUpdateSet).toMatchObject({ posterKey: null });
 		});
 
 		// The attachment half of the assertion above. Reads resolve the poster

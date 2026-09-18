@@ -1,0 +1,1 @@
+ALTER TABLE `event_listing` DROP COLUMN `poster_key`;

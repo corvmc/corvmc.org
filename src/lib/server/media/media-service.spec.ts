@@ -263,31 +263,24 @@ describe('isKeyReferenced', () => {
 		expect(await isKeyReferenced('events/posters/a.jpg')).toBe(true);
 	});
 
-	it('reports referenced when a listing still names the key with no attachment', async () => {
-		// The generated-occurrence gap: `event_listing.poster_key` can hold a key
-		// whose attachment was never written.
-		selectResultQueue = [[{ id: 'm1' }], [{ n: 0 }], [{ id: 'evt-2' }]];
-
-		expect(await isKeyReferenced('events/posters/a.jpg')).toBe(true);
-	});
-
-	it('reports unreferenced when neither an attachment nor a listing names it', async () => {
-		selectResultQueue = [[{ id: 'm1' }], [{ n: 0 }], []];
+	it('reports unreferenced once the last attachment is gone', async () => {
+		// One question now, not two: `event_listing.poster_key` was the second
+		// place a key could be named and it is dropped (#808).
+		selectResultQueue = [[{ id: 'm1' }], [{ n: 0 }]];
 
 		expect(await isKeyReferenced('events/posters/a.jpg')).toBe(false);
 	});
 
-	it('still checks listings for a key that was never recorded', async () => {
-		// No `media` row is not proof nothing uses the object — the backfill gap
-		// is exactly the case where only the listing column knows.
-		selectResultQueue = [[], [{ id: 'evt-2' }]];
+	it('reports unreferenced for a key that was never recorded', async () => {
+		// No `media` row means nothing can point at it: an attachment is by id.
+		selectResultQueue = [[]];
 
-		expect(await isKeyReferenced('events/posters/a.jpg')).toBe(true);
+		expect(await isKeyReferenced('events/posters/a.jpg')).toBe(false);
 	});
 
 	it('answers the question without deleting anything', async () => {
 		// The module's rule survives the new export: only the caller deletes.
-		selectResultQueue = [[{ id: 'm1' }], [{ n: 0 }], []];
+		selectResultQueue = [[{ id: 'm1' }], [{ n: 0 }]];
 
 		await isKeyReferenced('events/posters/a.jpg');
 

@@ -9,7 +9,7 @@ import { db } from './db';
 import { EVENT_TAGS_POOL, EVENT_TITLES } from './pools';
 import { type SeedEvent, type SeedUser } from './types';
 import { pick, pickN, ptDate, random, randomInt } from './util';
-import { inArray, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 /**
  * One poster, attached to every event that shares it.
@@ -40,8 +40,6 @@ async function attachSeedPoster(
 			slot: 'poster' as const
 		}))
 	);
-
-	await db.update(eventListing).set({ posterKey: key }).where(inArray(eventListing.id, eventIds));
 }
 
 export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {

@@ -6,9 +6,10 @@
  * to. Nothing is removed and no behaviour changes: the source columns keep their
  * values and stay authoritative until phase 6 drops them.
  *
- *   event_listing.poster_key   -> slot 'poster'   on attachable_type 'event_listing'
  *   group.avatar_key   -> slot 'avatar'   on attachable_type 'group'
  *   user.image         -> slot 'avatar'   on attachable_type 'user'
+ *
+ * The `event_listing.poster_key` arm ran and the column is dropped (#808).
  *
  * It read `band_media` too, until phase 6 retired that table. Production held no
  * rows in it, so the run this script already performed is unaffected.
@@ -164,18 +165,8 @@ async function mapLimit<T, R>(
 function collectSources(): Source[] {
 	const sources: Source[] = [];
 
-	for (const r of d1(
-		`SELECT id, poster_key, title FROM event_listing WHERE poster_key IS NOT NULL AND poster_key != ''`
-	)) {
-		sources.push({
-			key: String(r.poster_key),
-			attachableType: 'event_listing',
-			attachableId: String(r.id),
-			slot: 'poster',
-			sortOrder: 0,
-			label: `event "${r.title}"`
-		});
-	}
+	// The `event_listing.poster_key` arm is gone with the column (#808). That
+	// source is spent: its backfill ran, and posters are attachments now.
 
 	for (const r of d1(
 		`SELECT id, avatar_key, name FROM "group" WHERE avatar_key IS NOT NULL AND avatar_key != ''`

@@ -64,6 +64,7 @@ vi.mock('$lib/server/db/schema/finance', () => ({
 
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn(),
+	getTableColumns: () => ({}),
 	and: vi.fn(),
 	gt: vi.fn(),
 	gte: vi.fn(),
