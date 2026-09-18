@@ -438,7 +438,7 @@
 						<th class="w-px"><span class="sr-only">Status</span></th>
 						<th>Member</th>
 						<th class="w-px">Role</th>
-						<th class="col-support">Position</th>
+						<th>Position</th>
 						{#if rosterActions}
 							<th class="w-px"><span class="sr-only">Actions</span></th>
 						{/if}
@@ -450,7 +450,7 @@
 							     the ref already does that. -->
 							<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
 							<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
-							<td class="col-support">{m.position ?? '—'}</td>
+							<td>{m.position ?? '—'}</td>
 							{#if rosterActions}
 								<td class="w-px">
 									<div class="flex w-max justify-end gap-2">

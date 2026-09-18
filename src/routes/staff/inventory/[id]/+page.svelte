@@ -51,7 +51,7 @@
 
 <Form remote={editItem} guard successToast="Item updated">
 	<input {...fields.id.as('hidden', id)} />
-	<PageHeader width="3xl" subtitle="Inventory" title={item.name} backHref="/staff/inventory">
+	<PageHeader subtitle="Inventory" title={item.name} backHref="/staff/inventory">
 		{#if isDeactivated}
 			<Badge variant="error" size="md">Deactivated</Badge>
 		{/if}
@@ -61,7 +61,7 @@
 			{/snippet}
 		</SubmitButton>
 	</PageHeader>
-	<PageContent width="3xl">
+	<PageContent>
 		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Item">
 				<div class="grid grid-cols-1 gap-x-2">
@@ -166,7 +166,7 @@
 	</PageContent>
 </Form>
 
-<PageContent width="3xl">
+<PageContent>
 	{#if isSerialized}
 		<InfoCard title="Units">
 			{#if assets.length === 0}

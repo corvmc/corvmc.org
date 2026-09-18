@@ -55,12 +55,7 @@
 	{@const anchorLabel = dutyListAnchorLabels[d.list.anchor]}
 	{@const roleOptions = d.roles.map((r) => ({ value: r.id, label: r.name }))}
 
-	<PageHeader
-		width="3xl"
-		title={d.list.name}
-		subtitle="Duty list"
-		backHref="/staff/volunteer/duty-lists"
-	>
+	<PageHeader title={d.list.name} subtitle="Duty list" backHref="/staff/volunteer/duty-lists">
 		<!-- The status its list row shows. It existed on this page only as a
 		     toggle inside the Edit modal, so reading it meant opening a form you
 		     then had to cancel (#1067). -->
@@ -154,7 +149,7 @@
 		</Action>
 	</PageHeader>
 
-	<PageContent width="3xl">
+	<PageContent>
 		<!-- Same reason as the badge above: the description was readable only by
 		     opening the editor. -->
 		{#if d.list.description}

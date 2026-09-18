@@ -18,23 +18,12 @@
 const TIER = /\b(col-support|col-extra)\b/;
 
 /**
- * Detail pages carrying the same defect, where the fix is a per-page call
- * rather than dropping the prop: the clamp is there for the fact grids, and
- * unclamping to fix one inner table would widen the prose past a measure.
- * #1218 decides each; closing it means emptying this list.
+ * Empty, and meant to stay that way. Ten detail pages were listed here while
+ * #1218 decided each one; four unclamped and six dropped the tier instead.
+ *
+ * @type {string[]}
  */
-const GRANDFATHERED = [
-	'member/groups/[slug]',
-	'staff/bands/[id]',
-	'staff/groups/[id]',
-	'staff/volunteer/duty-lists/[id]',
-	'staff/inventory/[id]',
-	'staff/inventory/acquisitions/[id]',
-	'staff/inventory/assets/[id]',
-	'staff/marketing/audiences/[id]',
-	'staff/events/[id]',
-	'staff/events/[id]/production'
-].map((r) => `src/routes/${r}/+page.svelte`);
+const GRANDFATHERED = [];
 
 /** @type {import('eslint').Rule.RuleModule} */
 export default {
