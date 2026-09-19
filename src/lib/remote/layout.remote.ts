@@ -274,8 +274,9 @@ export const getBandLayout = query(z.string(), async (slug) => {
 			// whether to ask. The Messages nav row is owner/admin-only, so the number
 			// simply goes unread for anyone else.
 			countBandUnread(band.id, locals.user.id),
-			// The band's own room, which every member reads — a different count from
-			// the enquiry one above, and a different row (#1252).
+			// The band's own room, which every member reads — a different count
+			// from the enquiry one above, and a different list on the page they
+			// now share (#1252).
 			countGroupChatUnread(band.id, locals.user.id),
 			appChrome(locals.user)
 		]);
@@ -294,6 +295,10 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		chrome,
 		features,
 		messagesUnread,
-		chatUnread
+		chatUnread,
+		// What the one Messages row badges for an admin, who reads both lists.
+		// A plain member's row badges `chatUnread` alone — they cannot open the
+		// enquiries, so counting them would be a number with nowhere to go.
+		bandInboxUnread: messagesUnread + chatUnread
 	};
 });

@@ -105,8 +105,8 @@ test.describe.serial('band booking enquiries', () => {
 
 		await row.click();
 
-		// The thread header is the enquirer's name; the list pane's own heading is
-		// "Messages", so this resolves to the thread pane and nothing else.
+		// The thread header is the enquirer's name; the list pane's own headings
+		// are "Chat" and "Enquiries", so this resolves to the thread pane alone.
 		await expect(page.getByRole('heading', { name: enquirer })).toBeVisible({ timeout: 15000 });
 
 		// `.last()` because the message reads twice: once truncated into the row's
@@ -142,20 +142,32 @@ test.describe.serial('band booking enquiries', () => {
 		await expect(page.getByRole('listitem').filter({ hasText: ENQUIRER })).toHaveCount(0);
 	});
 
-	test('a plain bandmate is offered neither the row nor the route', async ({ page }) => {
+	// Chat and enquiries share a page now, so the row is no longer the gate —
+	// a plain bandmate has a room to read and gets it. What they must not get
+	// is the enquiries, and the page is what decides that.
+	test('a plain bandmate gets the chat and not the enquiries', async ({ page }) => {
 		await login(page, SEED_BANDMATE_EMAIL, SEED_BANDMATE_PASSWORD);
 
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}`);
-		await expect(page.locator(`a[href="/band/${SEED_MEMBERS_BAND_SLUG}/messages"]`)).toHaveCount(0);
+		await expect(
+			page.locator(`a[href="/band/${SEED_MEMBERS_BAND_SLUG}/messages"]`).first()
+		).toBeVisible({ timeout: 15000 });
 
-		// The nav is decoration; `requireGroupRole` in the remote function is the
-		// guard. The page still has to say so rather than render an empty inbox —
-		// the shell plus "No enquiry selected" reads as a band with no enquiries,
-		// which is a different and untrue thing.
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/messages`);
-		await expect(page.getByText('Booking enquiries are for band admins')).toBeVisible({
+		// Their own room is there...
+		await expect(page.getByRole('link', { name: 'Everyone in the band' })).toBeVisible({
 			timeout: 15000
 		});
-		await expect(page.getByRole('heading', { name: 'Messages' })).toHaveCount(0);
+		// ...and the enquiry list is not drawn at all. `requireGroupRole` in the
+		// remote function is still the guard; this is the page not offering them
+		// a list that would refuse them.
+		await expect(page.getByText('Enquiries from your public booking form')).toHaveCount(0);
+	});
+
+	test('the retired chat route still lands on the chat', async ({ page }) => {
+		await login(page, SEED_BANDMATE_EMAIL, SEED_BANDMATE_PASSWORD);
+
+		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/chat`);
+		await expect(page).toHaveURL(new RegExp(`/band/${SEED_MEMBERS_BAND_SLUG}/messages/chat$`));
 	});
 });

@@ -3,7 +3,6 @@
 		IconLayoutDashboard,
 		IconUsersGroup,
 		IconMessages,
-		IconMessageCircle,
 		IconSpeakerphone,
 		IconCalendar,
 		IconCoin,
@@ -71,7 +70,6 @@
 	const icons: Record<BandNavKey, typeof IconLayoutDashboard> = {
 		dashboard: IconLayoutDashboard,
 		messages: IconMessages,
-		chat: IconMessageCircle,
 		members: IconUsersGroup,
 		rider: IconPlug,
 		packing: IconPackage,
@@ -93,7 +91,8 @@
 
 	let badges = $derived({
 		messagesUnread: layout.messagesUnread,
-		chatUnread: layout.chatUnread
+		chatUnread: layout.chatUnread,
+		bandInboxUnread: layout.bandInboxUnread
 	} satisfies Record<BandNavBadgeKey, number>);
 
 	function badgeFor(item: BandNavItem): number | undefined {

@@ -54,19 +54,28 @@ describe('bandNavItems', () => {
 	// draws the same line Press Kit and Edit Profile do. A staff non-member is
 	// excluded for the same reason they are excluded from Settings: they are not
 	// the act, and `requireGroupRole(..., 'admin')` refuses them anyway.
-	it('gives Messages to an owner and an admin, but not a member or staff', () => {
-		expect(labelsFor({ userRole: 'owner' })).toContain('Messages');
-		expect(labelsFor({ userRole: 'admin' })).toContain('Messages');
-		expect(labelsFor({ userRole: 'member' })).not.toContain('Messages');
-		expect(labelsFor({ userRole: 'staff', isStaff: true })).not.toContain('Messages');
+	// One row for two inboxes now, so the row itself is no longer the gate: it
+	// goes to everyone who has a room to read, and the page draws the Enquiries
+	// section only for an owner or admin. `requireGroupRole` in
+	// `band-messages.remote.ts` is what refuses the rest, as it always was.
+	it('gives Messages to everyone in the band, and to staff reading it', () => {
+		for (const userRole of ['owner', 'admin', 'member'] as const) {
+			expect(labelsFor({ userRole }), userRole).toContain('Messages');
+		}
+		expect(labelsFor({ userRole: 'staff', isStaff: true })).toContain('Messages');
+	});
+
+	it('no longer offers Chat as a row of its own', () => {
+		for (const userRole of ['owner', 'member'] as const) {
+			expect(labelsFor({ userRole }), userRole).not.toContain('Chat');
+		}
 	});
 
 	// The badge is what makes an unanswered enquiry visible from anywhere in the
 	// panel; a row that lost its key would go quiet rather than break.
-	// Two counts, two rows, and they are not interchangeable: Messages is
-	// booking enquiries and admins only, Chat is the band's own room and every
-	// member reads it (#1252).
-	it('carries a badge key on Messages and Chat, and nowhere else', () => {
+	// Two counts behind one row, and they are not interchangeable: enquiries
+	// are admins only, chat is the band's own room and every member reads it.
+	it('carries a badge key on Messages and nowhere else', () => {
 		const items = bandNavItems({
 			slug: 'the-velvet-underground',
 			bandId: 'band-1',
@@ -75,15 +84,27 @@ describe('bandNavItems', () => {
 			isStaff: false,
 			features: {}
 		});
-		expect(items.find((i) => i.key === 'messages')?.badgeKey).toBe('messagesUnread');
-		expect(items.find((i) => i.key === 'chat')?.badgeKey).toBe('chatUnread');
-		expect(items.filter((i) => i.badgeKey).length).toBe(2);
+		// One row, both lists: an admin reads chat and enquiries, so the badge is
+		// the sum rather than either one.
+		expect(items.find((i) => i.key === 'messages')?.badgeKey).toBe('bandInboxUnread');
+		expect(items.filter((i) => i.badgeKey).length).toBe(1);
 	});
 
-	it('offers Chat to a plain member, who gets no Messages row', () => {
-		const labels = labelsFor({ userRole: 'member' });
-		expect(labels).toContain('Chat');
-		expect(labels).not.toContain('Messages');
+	it('gives a plain member the Messages row, badged on chat alone', () => {
+		const items = bandNavItems({
+			slug: 'the-velvet-underground',
+			bandId: 'band-1',
+			tier: 'free',
+			userRole: 'member',
+			isStaff: false,
+			features: {}
+		});
+		// They have a room to read, so the row is theirs. It badges `chatUnread`
+		// and not the sum, because they cannot open the enquiries and a count
+		// they cannot act on is a number with nowhere to go.
+		expect(items.find((i) => i.key === 'messages')?.badgeKey).toBe('chatUnread');
+		expect(items.map((i) => i.label)).toContain('Messages');
+		expect(items.map((i) => i.label)).not.toContain('Chat');
 	});
 
 	it('sends a staff non-member to staff tools instead of Settings', () => {

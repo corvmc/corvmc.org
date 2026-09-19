@@ -11,6 +11,7 @@
 	import { page } from '$app/state';
 	import ConversationRows from '$lib/components/inbox/ConversationRows.svelte';
 	import DataList from '$lib/components/ui/DataList.svelte';
+	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 	import { getMyMessages } from '$lib/remote/direct-messages.remote';
 	import { enquiryList } from './list-state.svelte';
 
@@ -21,9 +22,9 @@
 </script>
 
 <div class="flex min-h-0 flex-col gap-3">
-	<div class="flex flex-wrap items-center justify-between gap-2">
-		<h1 class="text-xl font-bold">Messages</h1>
-	</div>
+	<!-- "Enquiries", not "Messages": Messages is the page, and this is one of
+	     the two lists on it. -->
+	<SectionLabel label="Enquiries" />
 
 	<p class="text-muted text-sm">
 		Enquiries from your public booking form. Replies go back by email; nobody sees your address.
