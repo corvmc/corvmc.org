@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { activeBandNavKey, bandNavItems, type BandNavInput } from './nav-items';
+import {
+	activeBandNavKey,
+	bandNavFooter,
+	bandNavItems,
+	bandNavMain,
+	type BandNavInput
+} from './nav-items';
 
 /**
  * The band panel's nav gating has been wrong twice in the same file, both times
@@ -280,5 +286,52 @@ describe('activeBandNavKey', () => {
 				expect(activeBandNavKey(forRole, item.href)).toBe(item.key);
 			}
 		}
+	});
+});
+
+// Two zones, the shape the member panel uses: what the band does, then what it
+// administers, with a spacer between them. The split is the whole point, so
+// what matters is that nothing falls between the two.
+describe('the two zones', () => {
+	const base = {
+		slug: 'the-velvet-underground',
+		bandId: 'band-1',
+		tier: 'premium',
+		isStaff: false,
+		features: { bandAudio: true }
+	};
+
+	it('puts billing and settings at the foot, and nothing else', () => {
+		const footer = bandNavFooter({ ...base, userRole: 'owner' }).map((i) => i.key);
+		expect(footer).toEqual(['subscription', 'settings']);
+	});
+
+	it('keeps an admin out of billing but not out of settings', () => {
+		expect(bandNavFooter({ ...base, userRole: 'admin' }).map((i) => i.key)).toEqual(['settings']);
+	});
+
+	it('leaves a plain member nothing to administer', () => {
+		// The spacer then simply reaches the bottom, which is the right empty
+		// state for a zone rather than a heading with no rows under it.
+		expect(bandNavFooter({ ...base, userRole: 'member' })).toEqual([]);
+	});
+
+	it('sends a staff non-member to staff tools, at the foot', () => {
+		const footer = bandNavFooter({ ...base, userRole: 'staff', isStaff: true });
+		expect(footer.map((i) => i.key)).toEqual(['staff-tools']);
+	});
+
+	// The zones are rendered separately, so a row in neither is a page with no
+	// way to reach it — invisible in either list read on its own.
+	it.each(['owner', 'admin', 'member', 'staff'])('loses no row for %s', (userRole) => {
+		const input = { ...base, userRole, isStaff: userRole === 'staff' };
+		expect([...bandNavMain(input), ...bandNavFooter(input)]).toEqual(bandNavItems(input));
+	});
+
+	it('leads with Dashboard and never ends on an admin row', () => {
+		const main = bandNavMain({ ...base, userRole: 'owner' }).map((i) => i.key);
+		expect(main[0]).toBe('dashboard');
+		expect(main).not.toContain('settings');
+		expect(main).not.toContain('subscription');
 	});
 });
