@@ -75,7 +75,7 @@
 	{#if t.kind === 'group'}
 		<!-- The group's own room. Its own pane because a reply here goes in-app
 		     as you, not out as the group. -->
-		<GroupChat slug={t.groupSlug} viewerUserId={t.viewerUserId} />
+		<GroupChat {threadId} viewerUserId={t.viewerUserId} />
 	{:else if t.kind === 'enquiry'}
 		<!-- A booking enquiry, the same pane the band panel renders — reply as
 		     the band, by email, with the address hidden either way. -->

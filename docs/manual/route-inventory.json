@@ -52,7 +52,7 @@
 		"panel": "band"
 	},
 	{
-		"route": "/band/[slug]/messages/chat",
+		"route": "/band/[slug]/messages/chat/[threadId]",
 		"panel": "band"
 	},
 	{
@@ -233,6 +233,10 @@
 	},
 	{
 		"route": "/member/groups/[slug]/chat",
+		"panel": "member"
+	},
+	{
+		"route": "/member/groups/[slug]/chat/[threadId]",
 		"panel": "member"
 	},
 	{

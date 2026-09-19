@@ -216,7 +216,10 @@ describe('route coverage', () => {
 		'/member/groups/[slug]/edit',
 		// Same: reached from the club's own page. A nav row for "chat" with no
 		// group named would point at nothing (#1252).
-		'/member/groups/[slug]/chat'
+		'/member/groups/[slug]/chat',
+		// And one topic inside it, reached from the topic list on the line
+		// above. There is no "the topic" to navigate to either (#1301).
+		'/member/groups/[slug]/chat/[threadId]'
 	]);
 
 	it('lights a row for every page that has one', () => {

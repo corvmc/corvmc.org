@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * A group's shared thread, whichever panel it is mounted in.
+	 * One topic of a group's chat, whichever panel it is mounted in.
 	 *
 	 * `ThreadTimeline` in **viewer** mode: a chat is a room of named people, so
 	 * your messages sit right and everyone else's left. The enquiry pane is the
@@ -10,11 +10,21 @@
 	import ThreadTimeline from './ThreadTimeline.svelte';
 	import ThreadComposer from './ThreadComposer.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { getGroupChatThread, postGroupChatMessage } from '$lib/remote/group-chat.remote';
+	import {
+		getGroupChatTopic,
+		markGroupChatSeen,
+		postGroupChatMessage
+	} from '$lib/remote/group-chat.remote';
 
-	let { slug, viewerUserId }: { slug: string; viewerUserId: string } = $props();
+	let { threadId, viewerUserId }: { threadId: string; viewerUserId: string } = $props();
 
-	const chat = $derived(await getGroupChatThread(slug));
+	const chat = $derived(await getGroupChatTopic(threadId));
+
+	// Opening a topic is what clears its dot. Fire-and-forget: a failed mark is
+	// a dot that stays lit, which is not worth interrupting the reader for.
+	$effect(() => {
+		void markGroupChatSeen(threadId).catch(() => {});
+	});
 </script>
 
 <div class="flex h-full min-h-0 flex-col gap-4">
@@ -22,7 +32,9 @@
 		{#if chat.messages.length === 0}
 			<EmptyState
 				title="Nothing here yet"
-				description="This is {chat.groupName}'s own thread — everyone in the group reads it. Say something."
+				description={chat.isGeneral
+					? `This is ${chat.groupName}'s own thread — everyone in the group reads it. Say something.`
+					: `${chat.topicName} is empty. Everyone in ${chat.groupName} reads it.`}
 			/>
 		{:else}
 			<ThreadTimeline messages={chat.messages} {viewerUserId} />

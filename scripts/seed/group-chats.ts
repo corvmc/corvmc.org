@@ -66,6 +66,42 @@ export async function seedGroupChats(
 				createdAt: new Date(now - (turns.length - i) * hour)
 			});
 		});
+
+		// A second, named topic on the first group only — one group with two
+		// rooms and the rest with one is what makes the list's General-first
+		// ordering and the per-topic dot visible locally (#1301).
+		if (group.id === groups[0].id) {
+			const topicId = randomUUID();
+			const topicTurns = [
+				{ by: roster[1], body: 'Van is booked for the Eugene run. Leaving 3pm.' },
+				{ by: roster[0], body: 'Perfect. I will sort the merch float.' }
+			];
+
+			threads.push({
+				id: topicId,
+				channel: 'group',
+				groupId: group.id,
+				status: 'open',
+				subject: 'Tour logistics',
+				preview: topicTurns[topicTurns.length - 1].body.slice(0, 120),
+				messageCount: topicTurns.length,
+				lastMessageAt: new Date(now - 2 * hour),
+				createdAt: new Date(now - 5 * hour),
+				updatedAt: new Date(now - 2 * hour)
+			});
+
+			topicTurns.forEach((turn, i) => {
+				messages.push({
+					id: randomUUID(),
+					threadId: topicId,
+					direction: 'peer',
+					body: turn.body,
+					authorName: turn.by.name,
+					authorUserId: turn.by.id,
+					createdAt: new Date(now - (topicTurns.length - i) * hour)
+				});
+			});
+		}
 	}
 
 	await batchInsert(inboxThread, threads);

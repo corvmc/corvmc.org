@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gt, isNull, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { inboxThread, inboxMessage, inboxGroupRead } from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
@@ -7,26 +7,128 @@ import { touchThread } from './message-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 
 /**
- * The one thread a group's members share — the band-enquiry shape with the
- * door widened from owner|admin to any active member (#1252).
- *
- * Readership is the roster, resolved live. `channel: 'group'`, never `'band'`:
- * that one means a stranger used the booking form. **Nothing here gates** —
- * the caller does, with `requireGroupRole(ref, 'member')`.
+ * The threads a group's members share (#1252), several per group since #1301.
+ * A **topic** is an `inbox_thread` with `channel: 'group'`, the group's id
+ * and a `subject`; a null subject is General, which is what every group had
+ * before topics, so nothing had to be migrated. `channel: 'group'` and never
+ * `'band'` — that one means a stranger used the booking form. **Nothing here
+ * gates**; `requireGroupRole` does.
  */
 
-/** The group's chat thread, creating it on first use. */
+/** What a null subject is called wherever a topic is named. */
+export const GENERAL_TOPIC = 'General';
+
+/** Every topic in one group, General first and then most recent. */
+function topicsOf(groupId: string) {
+	return and(eq(inboxThread.channel, 'group'), eq(inboxThread.groupId, groupId))!;
+}
+
+/**
+ * The group's General topic, creating it on first use.
+ *
+ * Scoped to `subject IS NULL`, which is what keeps it from picking up a named
+ * topic — before topics there was one thread per group and the lookup did not
+ * have to say so.
+ */
 export async function getOrCreateGroupChat(groupId: string): Promise<string> {
 	const [existing] = await db
 		.select({ id: inboxThread.id })
 		.from(inboxThread)
-		.where(and(eq(inboxThread.channel, 'group'), eq(inboxThread.groupId, groupId)))
+		.where(and(topicsOf(groupId), isNull(inboxThread.subject)))
 		.limit(1);
 	if (existing) return existing.id;
 
 	const [created] = await db
 		.insert(inboxThread)
 		.values({ channel: 'group', groupId, status: 'open' })
+		.returning({ id: inboxThread.id });
+	return created.id;
+}
+
+export interface GroupTopic {
+	id: string;
+	/** Null is General — see the note above. */
+	subject: string | null;
+	name: string;
+	isGeneral: boolean;
+	messageCount: number;
+	lastMessageAt: Date | null;
+	unread: boolean;
+}
+
+/**
+ * Every topic in a group, with this reader's unread mark.
+ *
+ * General is pinned first however quiet it gets — a landing place that moves
+ * is worse than a stale one — and the rest are newest-activity-first. The
+ * General row is created on read, as it always was.
+ */
+export async function listGroupTopics(groupId: string, userId: string): Promise<GroupTopic[]> {
+	await getOrCreateGroupChat(groupId);
+
+	const rows = await db
+		.select({
+			id: inboxThread.id,
+			subject: inboxThread.subject,
+			messageCount: inboxThread.messageCount,
+			lastMessageAt: inboxThread.lastMessageAt,
+			lastReadAt: inboxGroupRead.lastReadAt
+		})
+		.from(inboxThread)
+		.leftJoin(
+			inboxGroupRead,
+			and(eq(inboxGroupRead.threadId, inboxThread.id), eq(inboxGroupRead.userId, userId))
+		)
+		.where(topicsOf(groupId))
+		.orderBy(
+			// `subject IS NULL` sorts 1 before 0 ascending, so General leads.
+			desc(sql`${inboxThread.subject} is null`),
+			desc(inboxThread.lastMessageAt),
+			asc(inboxThread.id)
+		);
+
+	return rows.map((r) => ({
+		id: r.id,
+		subject: r.subject,
+		name: r.subject ?? GENERAL_TOPIC,
+		isGeneral: r.subject === null,
+		messageCount: r.messageCount,
+		lastMessageAt: r.lastMessageAt,
+		// Never read at all counts as unread only once something has been said,
+		// or every empty topic would wear a dot the moment it is created.
+		unread: r.lastMessageAt !== null && (r.lastReadAt === null || r.lastMessageAt > r.lastReadAt)
+	}));
+}
+
+export class TopicNameTakenError extends Error {
+	readonly httpStatus = 409;
+	constructor() {
+		super('This group already has a topic with that name.');
+		this.name = 'TopicNameTakenError';
+	}
+}
+
+/**
+ * Open a named topic. The name is unique within the group,
+ * case-insensitively: "Tour" and "tour" are a mistake every time and the list
+ * cannot tell them apart. `General` is refused because a null subject is
+ * already called that, and a second one would be unreachable beside it.
+ */
+export async function createGroupTopic(groupId: string, subject: string): Promise<string> {
+	const name = subject.trim();
+
+	const clash = await db
+		.select({ id: inboxThread.id })
+		.from(inboxThread)
+		.where(and(topicsOf(groupId), sql`lower(${inboxThread.subject}) = lower(${name})`))
+		.limit(1);
+	if (clash.length > 0 || name.toLowerCase() === GENERAL_TOPIC.toLowerCase()) {
+		throw new TopicNameTakenError();
+	}
+
+	const [created] = await db
+		.insert(inboxThread)
+		.values({ channel: 'group', groupId, status: 'open', subject: name })
 		.returning({ id: inboxThread.id });
 	return created.id;
 }
@@ -47,8 +149,9 @@ export interface GroupChatMessage {
  * `ThreadTimeline` scrolls it. A group that outgrows one page is the signal to
  * page it, and there is none yet.
  */
-export async function getGroupChat(groupId: string) {
-	const threadId = await getOrCreateGroupChat(groupId);
+export async function getGroupChat(groupId: string, threadId?: string) {
+	// No topic named means General, which is where `/…/chat` lands.
+	const id = threadId ?? (await getOrCreateGroupChat(groupId));
 
 	const messages = await db
 		.select({
@@ -60,8 +163,14 @@ export async function getGroupChat(groupId: string) {
 			createdAt: inboxMessage.createdAt
 		})
 		.from(inboxMessage)
-		.where(eq(inboxMessage.threadId, threadId))
+		.where(eq(inboxMessage.threadId, id))
 		.orderBy(asc(inboxMessage.createdAt), asc(inboxMessage.id));
+
+	const [topic] = await db
+		.select({ subject: inboxThread.subject })
+		.from(inboxThread)
+		.where(eq(inboxThread.id, id))
+		.limit(1);
 
 	const [g] = await db
 		.select({ name: group.name })
@@ -70,8 +179,10 @@ export async function getGroupChat(groupId: string) {
 		.limit(1);
 
 	return {
-		id: threadId,
+		id,
 		groupName: g?.name ?? 'This group',
+		topicName: topic?.subject ?? GENERAL_TOPIC,
+		isGeneral: (topic?.subject ?? null) === null,
 		messages: messages as GroupChatMessage[]
 	};
 }
@@ -90,8 +201,10 @@ export async function postToGroupChat(params: {
 	userId: string;
 	userName: string;
 	body: string;
+	/** Which topic. Omitted means General, for a caller that has no topic. */
+	threadId?: string;
 }): Promise<{ messageId: string }> {
-	const threadId = await getOrCreateGroupChat(params.groupId);
+	const threadId = params.threadId ?? (await getOrCreateGroupChat(params.groupId));
 
 	const [message] = await db
 		.insert(inboxMessage)
@@ -107,7 +220,7 @@ export async function postToGroupChat(params: {
 	await touchThread(threadId, params.body);
 	// Your own message is read the moment you send it, or the sender's own
 	// badge lights for something they just wrote.
-	await markGroupChatRead(params.groupId, params.userId);
+	await markGroupChatRead(threadId, params.userId);
 
 	// The roster minus the author, resolved here rather than by the listener:
 	// on a two-person thread, forgetting to skip them means notifying somebody
@@ -126,10 +239,8 @@ export async function postToGroupChat(params: {
 	return { messageId: message.id };
 }
 
-/** Move this reader's cursor to now. */
-export async function markGroupChatRead(groupId: string, userId: string): Promise<void> {
-	const threadId = await getOrCreateGroupChat(groupId);
-
+/** Move this reader's cursor to now, in one topic. */
+export async function markGroupChatRead(threadId: string, userId: string): Promise<void> {
 	await db
 		.insert(inboxGroupRead)
 		.values({ threadId, userId, lastReadAt: new Date() })
@@ -140,10 +251,11 @@ export async function markGroupChatRead(groupId: string, userId: string): Promis
 }
 
 /**
- * Whether this reader has unread chat in one group.
+ * How many of a group's topics this reader has unread.
  *
- * A count of threads, not of messages — there is only ever one — so this is 0
- * or 1 and reads as a dot rather than a number.
+ * A count of topics, not of messages: the badge answers "how many rooms want
+ * you", which is the number you can act on one at a time. Before topics this
+ * was structurally 0 or 1 and read as a dot.
  */
 export async function countGroupChatUnread(groupId: string, userId: string): Promise<number> {
 	const [row] = await db
@@ -155,8 +267,9 @@ export async function countGroupChatUnread(groupId: string, userId: string): Pro
 		)
 		.where(
 			and(
-				eq(inboxThread.channel, 'group'),
-				eq(inboxThread.groupId, groupId),
+				topicsOf(groupId),
+				// An empty topic is not unread — see `listGroupTopics`.
+				isNotNull(inboxThread.lastMessageAt),
 				or(
 					isNull(inboxGroupRead.lastReadAt),
 					gt(inboxThread.lastMessageAt, inboxGroupRead.lastReadAt)
