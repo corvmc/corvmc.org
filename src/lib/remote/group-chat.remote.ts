@@ -1,12 +1,14 @@
 import * as z from 'zod';
 import { query } from '$app/server';
-import { form } from './_remote';
+import { command, form } from './_remote';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import {
 	getGroupChat,
 	postToGroupChat,
 	markGroupChatRead,
-	groupOfChatThread
+	groupOfChatThread,
+	listGroupTopics,
+	createGroupTopic
 } from '$lib/server/inbox/group-chat-service';
 import { error } from '@sveltejs/kit';
 import { DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
@@ -27,6 +29,49 @@ export const getGroupChatThread = query(slugSchema, async (slug) => {
 	const { group } = await requireGroupRole({ slug }, 'member');
 	return getGroupChat(group.id);
 });
+
+/** The group's topics, with this reader's unread marks (#1301). */
+export const getGroupChatTopics = query(slugSchema, async (slug) => {
+	const { group, user } = await requireGroupRole({ slug }, 'member');
+	return listGroupTopics(group.id, user.id);
+});
+
+/**
+ * One topic, by thread id.
+ *
+ * The gate starts from the thread rather than a slug, the same way posting
+ * does: `groupOfChatThread` returns null for anything that is not a group
+ * chat, so a caller cannot reach an enquiry or a DM by knowing its id, and
+ * cannot name their own group to read someone else's topic.
+ */
+export const getGroupChatTopic = query(z.string().min(1), async (threadId) => {
+	const chatGroup = await groupOfChatThread(threadId);
+	if (!chatGroup) error(404, 'No such conversation');
+
+	const { group } = await requireGroupRole({ id: chatGroup.id }, 'member');
+	return getGroupChat(group.id, threadId);
+});
+
+/**
+ * Open a named topic. Any active member, like posting — a room the whole
+ * group reads is not an admin's to ration.
+ */
+export const createGroupChatTopic = form(
+	z.object({
+		slug: slugSchema,
+		subject: z.string().trim().min(1, 'Give the topic a name').max(80)
+	}),
+	async (data) => {
+		const { group } = await requireGroupRole({ slug: data.slug }, 'member');
+		try {
+			const threadId = await createGroupTopic(group.id, data.subject);
+			await getGroupChatTopics(data.slug).refresh();
+			return { success: true, threadId };
+		} catch (err) {
+			throw mapDomainError(err);
+		}
+	}
+);
 
 /**
  * `{ threadId, body }` is what `ThreadComposer` posts, so the gate starts from
@@ -49,9 +94,12 @@ export const postGroupChatMessage = form(
 				groupName: group.name,
 				userId: user.id,
 				userName: user.name,
-				body: data.body
+				body: data.body,
+				threadId: data.threadId
 			});
-			await getGroupChatThread(chatGroup.slug).refresh();
+			// Both: the topic the message landed in, and the list that badges it.
+			await getGroupChatTopic(data.threadId).refresh();
+			await getGroupChatTopics(chatGroup.slug).refresh();
 			return { success: true };
 		} catch (err) {
 			throw mapDomainError(err);
@@ -59,8 +107,20 @@ export const postGroupChatMessage = form(
 	}
 );
 
-export const markGroupChatSeen = form(z.object({ slug: slugSchema }), async (data) => {
-	const { group, user } = await requireGroupRole({ slug: data.slug }, 'member');
-	await markGroupChatRead(group.id, user.id);
+/**
+ * Reading a topic clears its dot.
+ *
+ * A `command`, not a `form`: the caller is an effect on the open topic rather
+ * than a button. Nothing called the form version at all, so before topics the
+ * dot only ever cleared by posting — survivable when there was one room,
+ * wrong the moment there are several.
+ */
+export const markGroupChatSeen = command(z.string().min(1), async (threadId) => {
+	const chatGroup = await groupOfChatThread(threadId);
+	if (!chatGroup) error(404, 'No such conversation');
+
+	const { user } = await requireGroupRole({ id: chatGroup.id }, 'member');
+	await markGroupChatRead(threadId, user.id);
+	await getGroupChatTopics(chatGroup.slug).refresh();
 	return { success: true };
 });

@@ -19,8 +19,6 @@
 	const bandLayout = getBandLayoutContext();
 	const role = $derived(bandLayout.current.userRole);
 	const canReadEnquiries = $derived(role === 'owner' || role === 'admin');
-	const chatUnread = $derived(bandLayout.current.chatUnread ?? 0);
-
 	// Both panes count as "open" below `lg`: the chat is a conversation in the
 	// right pane exactly as an enquiry is.
 	const threadOpen = $derived(
@@ -30,6 +28,6 @@
 
 <InboxShell {threadOpen} {children}>
 	{#snippet list()}
-		<BandInbox {canReadEnquiries} {chatUnread} />
+		<BandInbox {canReadEnquiries} />
 	{/snippet}
 </InboxShell>
