@@ -8,6 +8,12 @@
  * the band's own address. As a template of nested `{#if}`s the mistake was
  * invisible; as a list it can be asserted against, which `nav-items.spec.ts`
  * does for every role and flag combination.
+ *
+ * **Two zones**, the shape the member panel uses. `bandNavMain` is what the
+ * band does; `bandNavFooter` is what it administers — billing, settings, and
+ * the staff escape hatch — which a spacer pins to the foot of the sidebar.
+ * Administering the band is *about* it rather than *in* it, and those rows
+ * were sitting at the end of a sixteen-row list where the useful ones are.
  */
 import { resolve } from '$app/paths';
 import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
@@ -54,7 +60,8 @@ export interface BandNavItem extends NavNode<BandNavKey> {
 	external?: boolean;
 }
 
-export function bandNavItems(input: BandNavInput): BandNavItem[] {
+/** The rows above the spacer — what the band does. */
+export function bandNavMain(input: BandNavInput): BandNavItem[] {
 	const slug = input.slug;
 	const isOwner = input.userRole === 'owner';
 	const isOwnerOrAdmin = isOwner || input.userRole === 'admin';
@@ -164,6 +171,20 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 		items.push({ key: 'live-site', label: 'View Live Site', href: '', external: true });
 	}
 
+	return items;
+}
+
+/**
+ * The rows a spacer pins to the foot — administering the band rather than
+ * running it. Can be empty: a plain member administers nothing, and the
+ * spacer simply reaches the bottom.
+ */
+export function bandNavFooter(input: BandNavInput): BandNavItem[] {
+	const slug = input.slug;
+	const isOwner = input.userRole === 'owner';
+	const isOwnerOrAdmin = isOwner || input.userRole === 'admin';
+	const items: BandNavItem[] = [];
+
 	if (isOwnerOrAdmin) {
 		// Billing is genuinely owner-only — `upgradeToPremium` and friends are
 		// `requireBandOwner` — so unlike Settings this one stays keyed on owner.
@@ -192,6 +213,11 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	}
 
 	return items;
+}
+
+/** Every band destination, both zones. Not a render list. */
+export function bandNavItems(input: BandNavInput): BandNavItem[] {
+	return [...bandNavMain(input), ...bandNavFooter(input)];
 }
 
 /**

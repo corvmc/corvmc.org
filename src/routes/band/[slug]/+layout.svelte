@@ -29,7 +29,8 @@
 	import { setBandLayoutContext } from './layout-context';
 	import {
 		activeBandNavKey,
-		bandNavItems,
+		bandNavFooter,
+		bandNavMain,
 		type BandNavKey,
 		type BandNavBadgeKey,
 		type BandNavItem
@@ -64,7 +65,8 @@
 		features: layout.features
 	});
 
-	const navItems = $derived(bandNavItems(navInput));
+	const mainItems = $derived(bandNavMain(navInput));
+	const footerItems = $derived(bandNavFooter(navInput));
 	let activeKey = $derived(activeBandNavKey(navInput, page.url.pathname));
 
 	const icons: Record<BandNavKey, typeof IconLayoutDashboard> = {
@@ -100,22 +102,35 @@
 	}
 </script>
 
+{#snippet row(item: BandNavItem)}
+	{@const Icon = icons[item.key]}
+	<Nav.Item
+		href={item.href}
+		externalHref={item.key === 'live-site'
+			? bandSiteUrl(layout.band.slug, env.PUBLIC_SITE_URL, liveCustomDomain)
+			: undefined}
+		label={item.label}
+		active={activeKey === item.key}
+		badge={badgeFor(item)}
+		target={item.external ? '_blank' : undefined}
+	>
+		{#snippet icon()}<Icon />{/snippet}
+	</Nav.Item>
+{/snippet}
+
 <AppShell drawerId="band-drawer" {panels} activePanel={layout.band.slug} chrome={layout.chrome}>
 	{#snippet navigation()}
-		{#each navItems as item (item.key)}
-			{@const Icon = icons[item.key]}
-			<Nav.Item
-				href={item.href}
-				externalHref={item.key === 'live-site'
-					? bandSiteUrl(layout.band.slug, env.PUBLIC_SITE_URL, liveCustomDomain)
-					: undefined}
-				label={item.label}
-				active={activeKey === item.key}
-				badge={badgeFor(item)}
-				target={item.external ? '_blank' : undefined}
-			>
-				{#snippet icon()}<Icon />{/snippet}
-			</Nav.Item>
+		{#each mainItems as item (item.key)}
+			{@render row(item)}
+		{/each}
+
+		<!-- The spacer the member panel uses: administering the band is about it
+		     rather than in it, so those rows sit at the foot rather than at the
+		     end of the list where the useful ones are. -->
+		<div class="flex grow"></div>
+
+		{#each footerItems as item (item.key)}
+			{@render row(item)}
 		{/each}
 	{/snippet}
 	<ErrorToastBoundary>
