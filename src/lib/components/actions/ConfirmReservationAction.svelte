@@ -55,11 +55,12 @@
 		{#if staff}
 			<ConfirmStep {reservation} fields={{ id: confirmReservation.fields.id }} staff />
 		{:else}
+			<!-- `id` on the first step only. `FormStep` hides an inactive step
+			     rather than unmounting it, so both steps' hidden inputs are in the
+			     form at submit — handing `id` to each posted it twice, which
+			     SvelteKit refuses outright and the member read as a 500 (#1299). -->
 			<ConfirmStep {reservation} fields={{ id: payForReservation.fields.id }} />
-			<PaymentStep
-				{reservation}
-				fields={{ id: payForReservation.fields.id, coverFees: payForReservation.fields.coverFees }}
-			/>
+			<PaymentStep {reservation} fields={{ coverFees: payForReservation.fields.coverFees }} />
 		{/if}
 	{/snippet}
 </Action>
