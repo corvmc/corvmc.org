@@ -154,20 +154,22 @@ test.describe.serial('band booking enquiries', () => {
 		).toBeVisible({ timeout: 15000 });
 
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/messages`);
-		// Their own room is there...
-		await expect(page.getByRole('link', { name: 'Everyone in the band' })).toBeVisible({
-			timeout: 15000
-		});
+		// Their own rooms are there — General at least, since every group has
+		// one whether or not anybody has named a topic (#1301).
+		await expect(page.getByRole('link', { name: 'General' })).toBeVisible({ timeout: 15000 });
 		// ...and the enquiry list is not drawn at all. `requireGroupRole` in the
 		// remote function is still the guard; this is the page not offering them
 		// a list that would refuse them.
 		await expect(page.getByText('Enquiries from your public booking form')).toHaveCount(0);
 	});
 
-	test('the retired chat route still lands on the chat', async ({ page }) => {
+	// The old single-room route. It lands on the inbox rather than on a thread,
+	// because with topics there is no one room to send a bookmark to (#1301).
+	test('the retired chat route still lands on the inbox', async ({ page }) => {
 		await login(page, SEED_BANDMATE_EMAIL, SEED_BANDMATE_PASSWORD);
 
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/chat`);
-		await expect(page).toHaveURL(new RegExp(`/band/${SEED_MEMBERS_BAND_SLUG}/messages/chat$`));
+		await expect(page).toHaveURL(new RegExp(`/band/${SEED_MEMBERS_BAND_SLUG}/messages$`));
+		await expect(page.getByRole('link', { name: 'General' })).toBeVisible({ timeout: 15000 });
 	});
 });
