@@ -262,6 +262,33 @@ describe('getThread', () => {
 		expect(touched).not.toContain('inbox_note');
 	});
 
+	// #1304 turns an announcement into a `channel: 'group'` thread — published,
+	// pinned, leadership-only. That is a new *kind* of group thread, and a new
+	// kind of group thread slipping past this guard is exactly what #1296 was.
+	// Refused on the channel, so no shape of one can be read.
+	it('returns null for an announcement-shaped group thread', async () => {
+		results = [
+			[{ channel: 'group' }],
+			[
+				{
+					id: 'thread-1',
+					channel: 'group',
+					subject: 'Rehearsal moves to Thursdays',
+					pinned: true,
+					publishedAt: new Date('2026-09-02'),
+					postPolicy: 'leadership',
+					notifyPolicy: 'email'
+				}
+			],
+			[{ id: 'm1', body: 'From Thursday we are in the big room.' }],
+			[{ id: 'n1', body: 'staff note' }]
+		];
+
+		expect(await getThread('thread-1')).toBeNull();
+		expect(touched).not.toContain('inbox_message');
+		expect(touched).not.toContain('inbox_note');
+	});
+
 	it('returns null for a group chat even when every row is there to return', async () => {
 		// A band's or committee's own room. Staff hosting it is not staff being
 		// in it, and knowing the thread id is not a way in (#1296).

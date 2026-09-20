@@ -7,7 +7,9 @@ import {
 	inboxChannels,
 	inboxThreadStatuses,
 	inboxMessageDirections,
-	inboxParticipantRoles
+	inboxParticipantRoles,
+	threadNotifyPolicies,
+	threadPostPolicies
 } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -108,6 +110,41 @@ export const inboxThread = sqliteTable(
 		 * a history. Cleared once used.
 		 */
 		undoState: text('undo_state', { mode: 'json' }),
+		/**
+		 * An announcement is a thread (#1304), and these are what it needs that a
+		 * chat topic does not. Every one is nullable or has a constant default,
+		 * so each is a plain `ADD COLUMN` — `inbox_thread` has five tables
+		 * cascading off it and a rebuild would take them all.
+		 */
+		pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+		/**
+		 * Null while a draft. Nothing reaches a reader before it is stamped, and
+		 * stamping is what emits the notification — the same contract
+		 * `announcement.publishedAt` has today.
+		 *
+		 * Deliberately not a `status` value: `open | resolved | snoozed` is about
+		 * whether a conversation needs answering, which is an orthogonal question
+		 * to whether a post has gone out.
+		 */
+		publishedAt: integer('published_at', { mode: 'timestamp' }),
+		/** Soft delete. A withdrawn announcement still happened. */
+		deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+		/**
+		 * The fan-out latch. `UPDATE … WHERE notified_at IS NULL` returning no
+		 * row means another invocation already sent, which is what makes the
+		 * side effect idempotent under the event bus's at-least-once delivery.
+		 * Not a display field.
+		 */
+		notifiedAt: integer('notified_at', { mode: 'timestamp' }),
+		/** How many readers the fan-out actually reached. Written with the latch. */
+		recipientCount: integer('recipient_count'),
+		/**
+		 * Who may post, and how a post reaches its readers. Defaulted so every
+		 * row that already exists is a chat topic and nothing changes behaviour
+		 * until a caller sets them. See `$lib/config`.
+		 */
+		postPolicy: text('post_policy', { enum: threadPostPolicies }).notNull().default('members'),
+		notifyPolicy: text('notify_policy', { enum: threadNotifyPolicies }).notNull().default('in_app'),
 		messageCount: integer('message_count').notNull().default(0),
 		lastMessageAt: integer('last_message_at', { mode: 'timestamp' }),
 		/**
@@ -137,7 +174,13 @@ export const inboxThread = sqliteTable(
 		index('idx_inbox_thread_contact_phone').on(t.contactPhone),
 		index('idx_inbox_thread_contact_ext').on(t.channel, t.contactExternalId),
 		// The band inbox's only list query: one group's threads, newest activity first.
-		index('idx_inbox_thread_group').on(t.groupId, t.status, t.lastMessageAt)
+		index('idx_inbox_thread_group').on(t.groupId, t.status, t.lastMessageAt),
+		// The announcement list's shape, once they are threads: one group's
+		// posts, pinned first, newest first — what `idx_announcement_group`
+		// covers today (#1304).
+		index('idx_inbox_thread_group_pinned').on(t.groupId, t.pinned, t.publishedAt),
+		// The fan-out cursor: unsent published rows, across every group.
+		index('idx_inbox_thread_notified').on(t.notifiedAt)
 	]
 );
 
