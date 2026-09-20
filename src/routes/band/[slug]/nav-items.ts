@@ -32,7 +32,6 @@ export type BandNavKey =
 	| 'edit'
 	| 'press-kit'
 	| 'page-editor'
-	| 'live-site'
 	| 'subscription'
 	| 'settings'
 	| 'staff-tools';
@@ -46,18 +45,8 @@ export interface BandNavInput {
 	features: { bandAudio?: boolean };
 }
 
-/** Field names on `getBandLayout()`'s return. */
-export type BandNavBadgeKey = 'messagesUnread' | 'chatUnread' | 'bandInboxUnread';
-
 export interface BandNavItem extends NavNode<BandNavKey> {
 	label: string;
-	badgeKey?: BandNavBadgeKey;
-	/**
-	 * Absolute, inside the panel. An `external` row's href leaves the origin and
-	 * is filled in by the layout, which is the only place that knows the band's
-	 * custom domain — it stays empty here, and `activeBandNavKey` skips it.
-	 */
-	external?: boolean;
 }
 
 /** The rows above the spacer — what the band does. */
@@ -75,22 +64,6 @@ export function bandNavMain(input: BandNavInput): BandNavItem[] {
 		// different situation and only the member panel has it.
 		{ key: 'dashboard', label: 'Dashboard', href: resolve('/band/[slug]', { slug }) }
 	];
-
-	// Second, above Members, because it is the only row that can be waiting on
-	// somebody.
-	//
-	// **One row for two inboxes.** Chat and enquiries are still two lists with
-	// two sets of readers — every active member, versus owner and admin — but
-	// they share a page, so a member no longer has to know which of two rows a
-	// message arrived on. Every member gets the row; the page draws the
-	// Enquiries section only for an admin, and `requireGroupRole` inside
-	// `band-messages.remote.ts` is what actually refuses the rest.
-	items.push({
-		key: 'messages',
-		label: 'Messages',
-		href: resolve('/band/[slug]/messages', { slug }),
-		badgeKey: isOwnerOrAdmin ? 'bandInboxUnread' : 'chatUnread'
-	});
 
 	items.push({ key: 'members', label: 'Members', href: resolve('/band/[slug]/members', { slug }) });
 
@@ -163,12 +136,14 @@ export function bandNavMain(input: BandNavInput): BandNavItem[] {
 	}
 
 	if (premium && isOwnerOrAdmin) {
+		// No View Live Site row beside it: the editor's own header already
+		// carries that link, and it is the only place that can — the band's
+		// custom domain is resolved there, not here.
 		items.push({
 			key: 'page-editor',
 			label: 'Page Editor',
 			href: resolve('/band/[slug]/page-editor', { slug })
 		});
-		items.push({ key: 'live-site', label: 'View Live Site', href: '', external: true });
 	}
 
 	return items;
@@ -215,9 +190,32 @@ export function bandNavFooter(input: BandNavInput): BandNavItem[] {
 	return items;
 }
 
-/** Every band destination, both zones. Not a render list. */
+/**
+ * Destinations the app chrome owns. Never rendered in the sidebar; here so
+ * they still resolve.
+ *
+ * The topbar's messages icon points at the panel you are standing in, so in a
+ * band panel it already opens that band's inbox — a second copy in the
+ * sidebar was the same link twice. The member panel drew that conclusion
+ * first; this follows it.
+ *
+ * The badge goes with the row, and it is not the same number: the topbar's is
+ * `countUnifiedUnread` across every inbox the viewer can read, so it says
+ * "you have mail somewhere" where the sidebar's said "in this band".
+ */
+export function bandNavChrome(input: BandNavInput): BandNavItem[] {
+	return [
+		{
+			key: 'messages',
+			label: 'Messages',
+			href: resolve('/band/[slug]/messages', { slug: input.slug })
+		}
+	];
+}
+
+/** Every band destination, sidebar and chrome alike. Not a render list. */
 export function bandNavItems(input: BandNavInput): BandNavItem[] {
-	return [...bandNavMain(input), ...bandNavFooter(input)];
+	return [...bandNavMain(input), ...bandNavFooter(input), ...bandNavChrome(input)];
 }
 
 /**

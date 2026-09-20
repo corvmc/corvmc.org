@@ -4,21 +4,18 @@
 		IconUsersGroup,
 		IconMessages,
 		IconSpeakerphone,
-		IconCalendar,
 		IconCoin,
 		IconDisc,
 		IconCalendarEvent,
+		IconMetronome,
 		IconPencil,
 		IconFolders,
 		IconSettings,
 		IconCrown,
 		IconBrush,
-		IconExternalLink,
 		IconPlug,
 		IconPackage
 	} from '@tabler/icons-svelte';
-	import { env } from '$env/dynamic/public';
-	import { bandSiteUrl } from '$lib/utils/band-site-url';
 	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
 	import { EntityViewer } from '$lib/components/ui/entity';
 	import AppShell from '$lib/components/layout/AppShell.svelte';
@@ -32,7 +29,6 @@
 		bandNavFooter,
 		bandNavMain,
 		type BandNavKey,
-		type BandNavBadgeKey,
 		type BandNavItem
 	} from './nav-items';
 
@@ -49,10 +45,6 @@
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 
-	// A custom domain only replaces the subdomain once it is actually serving.
-	const liveCustomDomain = $derived(
-		layout.band.customDomainStatus === 'active' ? layout.band.customDomain : null
-	);
 	// The gating itself lives in `nav-items.ts` as data, so it can be asserted
 	// against for every role and flag combination — this file has had the role
 	// checks wrong twice. The template below only decides how to draw each entry.
@@ -76,44 +68,24 @@
 		rider: IconPlug,
 		packing: IconPackage,
 		announcements: IconSpeakerphone,
-		reservations: IconCalendar,
+		reservations: IconMetronome,
 		events: IconCalendarEvent,
 		music: IconDisc,
 		payouts: IconCoin,
 		edit: IconPencil,
 		'press-kit': IconFolders,
 		'page-editor': IconBrush,
-		'live-site': IconExternalLink,
 		subscription: IconCrown,
 		settings: IconSettings,
 		'staff-tools': IconSettings
 	};
 
 	const panels = $derived(panelTabs(layout));
-
-	let badges = $derived({
-		messagesUnread: layout.messagesUnread,
-		chatUnread: layout.chatUnread,
-		bandInboxUnread: layout.bandInboxUnread
-	} satisfies Record<BandNavBadgeKey, number>);
-
-	function badgeFor(item: BandNavItem): number | undefined {
-		return item.badgeKey ? badges[item.badgeKey] : undefined;
-	}
 </script>
 
 {#snippet row(item: BandNavItem)}
 	{@const Icon = icons[item.key]}
-	<Nav.Item
-		href={item.href}
-		externalHref={item.key === 'live-site'
-			? bandSiteUrl(layout.band.slug, env.PUBLIC_SITE_URL, liveCustomDomain)
-			: undefined}
-		label={item.label}
-		active={activeKey === item.key}
-		badge={badgeFor(item)}
-		target={item.external ? '_blank' : undefined}
-	>
+	<Nav.Item href={item.href} label={item.label} active={activeKey === item.key}>
 		{#snippet icon()}<Icon />{/snippet}
 	</Nav.Item>
 {/snippet}

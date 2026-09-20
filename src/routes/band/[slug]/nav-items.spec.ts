@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
 	activeBandNavKey,
+	bandNavChrome,
 	bandNavFooter,
 	bandNavItems,
 	bandNavMain,
@@ -81,7 +82,7 @@ describe('bandNavItems', () => {
 	// panel; a row that lost its key would go quiet rather than break.
 	// Two counts behind one row, and they are not interchangeable: enquiries
 	// are admins only, chat is the band's own room and every member reads it.
-	it('carries a badge key on Messages and nowhere else', () => {
+	it('carries no badge key at all, the sidebar having no badged row', () => {
 		const items = bandNavItems({
 			slug: 'the-velvet-underground',
 			bandId: 'band-1',
@@ -90,27 +91,42 @@ describe('bandNavItems', () => {
 			isStaff: false,
 			features: {}
 		});
-		// One row, both lists: an admin reads chat and enquiries, so the badge is
-		// the sum rather than either one.
-		expect(items.find((i) => i.key === 'messages')?.badgeKey).toBe('bandInboxUnread');
-		expect(items.filter((i) => i.badgeKey).length).toBe(1);
+		// The sidebar badges nothing now. Messages was the only row that ever
+		// carried one, and it moved to the topbar, which draws its own from
+		// `chrome.messagesUnread`.
+		expect(items.every((i) => !('badgeKey' in i))).toBe(true);
 	});
 
-	it('gives a plain member the Messages row, badged on chat alone', () => {
-		const items = bandNavItems({
+	it('keeps Messages resolvable without drawing it in the sidebar', () => {
+		const chromeInput = {
 			slug: 'the-velvet-underground',
 			bandId: 'band-1',
 			tier: 'free',
 			userRole: 'member',
 			isStaff: false,
 			features: {}
-		});
-		// They have a room to read, so the row is theirs. It badges `chatUnread`
-		// and not the sum, because they cannot open the enquiries and a count
-		// they cannot act on is a number with nowhere to go.
-		expect(items.find((i) => i.key === 'messages')?.badgeKey).toBe('chatUnread');
-		expect(items.map((i) => i.label)).toContain('Messages');
-		expect(items.map((i) => i.label)).not.toContain('Chat');
+		};
+		const sidebar = [...bandNavMain(chromeInput), ...bandNavFooter(chromeInput)].map((i) => i.key);
+		expect(sidebar).not.toContain('messages');
+
+		// Still a destination: without it `/band/x/messages/**` lights no row and
+		// the route-coverage spec strands every page under it on Dashboard.
+		expect(bandNavItems(chromeInput).map((i) => i.key)).toContain('messages');
+		expect(activeBandNavKey(chromeInput, '/band/the-velvet-underground/messages')).toBe('messages');
+	});
+
+	it('offers no View Live Site row, the editor carrying that link', () => {
+		const premiumOwner = {
+			slug: 'the-velvet-underground',
+			bandId: 'band-1',
+			tier: 'premium',
+			userRole: 'owner',
+			isStaff: false,
+			features: { bandAudio: true }
+		};
+		expect(bandNavItems(premiumOwner).map((i) => i.label)).not.toContain('View Live Site');
+		// It was the only external row; nothing else in the panel leaves the app.
+		expect(bandNavItems(premiumOwner).every((i) => i.href.startsWith('/'))).toBe(true);
 	});
 
 	it('sends a staff non-member to staff tools instead of Settings', () => {
@@ -282,7 +298,6 @@ describe('activeBandNavKey', () => {
 		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
 			const forRole = { ...input, userRole, isStaff: userRole === 'staff' };
 			for (const item of bandNavItems(forRole)) {
-				if (item.external) continue;
 				expect(activeBandNavKey(forRole, item.href)).toBe(item.key);
 			}
 		}
@@ -325,7 +340,9 @@ describe('the two zones', () => {
 	// way to reach it — invisible in either list read on its own.
 	it.each(['owner', 'admin', 'member', 'staff'])('loses no row for %s', (userRole) => {
 		const input = { ...base, userRole, isStaff: userRole === 'staff' };
-		expect([...bandNavMain(input), ...bandNavFooter(input)]).toEqual(bandNavItems(input));
+		expect([...bandNavMain(input), ...bandNavFooter(input), ...bandNavChrome(input)]).toEqual(
+			bandNavItems(input)
+		);
 	});
 
 	it('leads with Dashboard and never ends on an admin row', () => {
