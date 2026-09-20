@@ -62,26 +62,20 @@ export const getGroupChatTopic = query(z.string().min(1), async (threadId) => {
 export const createGroupChatTopic = form(
 	z.object({
 		slug: slugSchema,
-		subject: z.string().trim().min(1, 'Give the topic a name').max(80),
-		/**
-		 * A room only leadership posts in, which emails the roster — what an
-		 * announcement is (#1304). Only leadership can make one; a member
-		 * asking for it is refused rather than quietly given a chat topic.
-		 */
-		announcement: z.boolean().optional()
+		subject: z.string().trim().min(1, 'Give the topic a name').max(80)
 	}),
 	async (data) => {
-		const { group, role } = await requireGroupRole({ slug: data.slug }, 'member');
-		const isLeader = role === 'owner' || role === 'admin';
-		if (data.announcement && !isLeader) error(403, 'Only the group’s leaders can do that');
+		const { group } = await requireGroupRole({ slug: data.slug }, 'member');
 		try {
-			const threadId = await createGroupTopic(
-				group.id,
-				data.subject,
-				data.announcement
-					? { postPolicy: 'leadership', notifyPolicy: 'email' }
-					: { postPolicy: 'members', notifyPolicy: 'in_app' }
-			);
+			// A chat topic, always. An announcement is made on the announcements
+			// page, which is the surface that knows about drafts and publishing —
+			// a flag here would be a second way to make one, with no control to
+			// set it and no draft step. `createGroupTopic` takes the policies for
+			// `announcement-service` to use.
+			const threadId = await createGroupTopic(group.id, data.subject, {
+				postPolicy: 'members',
+				notifyPolicy: 'in_app'
+			});
 			await getGroupChatTopics(data.slug).refresh();
 			return { success: true, threadId };
 		} catch (err) {
