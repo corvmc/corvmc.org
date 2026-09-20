@@ -32,9 +32,16 @@ async function loginAsStaff(page: Page) {
 	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
 }
 
-/** The Inbox count in the staff sidebar; absent entirely when it is zero. */
+/**
+ * The Inbox count in the staff sidebar; absent entirely when it is zero.
+ *
+ * Scoped to the sidebar landmark because the topbar's Messages link points at
+ * `/staff/inbox` too, and it comes first in the DOM. Its badge is a different
+ * number — every inbox the viewer can read — so an unscoped locator silently
+ * reads that one the moment it is non-zero.
+ */
 async function navBadgeCount(page: Page): Promise<number> {
-	const badge = page.locator('a[href="/staff/inbox"] .badge');
+	const badge = page.getByRole('complementary').locator('a[href="/staff/inbox"] .badge');
 	if ((await badge.count()) === 0) return 0;
 	return Number((await badge.first().innerText()).trim());
 }

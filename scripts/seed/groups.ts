@@ -1,4 +1,4 @@
-import { announcement } from '../../src/lib/server/db/schema/announcement';
+import { inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
 import { groupMember } from '../../src/lib/server/db/schema/group';
 import { insertBandWithOwner } from './bands';
 import { db } from './db';
@@ -204,19 +204,41 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			}
 		}
 
+		// An announcement is a thread now (#1304): `leadership` + `email` is what
+		// separates one from the group's chat topics, and the body is its first
+		// message.
+		//
 		// `notifiedAt` stays null on every one of these. It is the fan-out latch,
 		// written only by the notification listener — seeding it would claim these
 		// posts were sent, and seeding it *unset* is what leaves the listener a
 		// backlog to work through locally.
 		for (let j = 0; j < d.announcements.length; j++) {
 			const a = d.announcements[j];
-			await db.insert(announcement).values({
-				groupId: g.id,
-				authorId: leader.id,
-				title: a.title,
+			const publishedAt = a.published ? new Date(Date.now() - (j + 1) * 5 * 86400000) : null;
+			const [thread] = await db
+				.insert(inboxThread)
+				.values({
+					channel: 'group',
+					groupId: g.id,
+					status: 'open',
+					subject: a.title,
+					preview: a.body.slice(0, 120),
+					pinned: a.pinned,
+					publishedAt,
+					postPolicy: 'leadership',
+					notifyPolicy: 'email',
+					messageCount: 1,
+					// Drives the list order; a draft falls back to now.
+					lastMessageAt: publishedAt ?? new Date()
+				})
+				.returning({ id: inboxThread.id });
+
+			await db.insert(inboxMessage).values({
+				threadId: thread.id,
+				direction: 'peer',
 				body: a.body,
-				pinned: a.pinned,
-				publishedAt: a.published ? new Date(Date.now() - (j + 1) * 5 * 86400000) : null
+				authorName: leader.name,
+				authorUserId: leader.id
 			});
 		}
 	}

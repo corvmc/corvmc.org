@@ -1,6 +1,6 @@
-import { and, desc, eq, isNotNull, isNull, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { announcement } from '$lib/server/db/schema/announcement';
+import { inboxMessage, inboxThread } from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
 import { groupMember } from '$lib/server/db/schema/group';
 import { getNotificationType, notificationPreference } from '$lib/server/db/schema/notification';
@@ -22,6 +22,15 @@ import { renderMarkdown } from '$lib/utils/markdown';
  * announcement emailed to 200 people cannot be unsent, and an editor that
  * notified on every keystroke-save would make that the default. Nothing reaches
  * a member before `publishedAt` is set.
+ *
+ * **An announcement is a thread** (#1304): `channel: 'group'` with
+ * `post_policy: 'leadership'`, its title in `subject` and its body in its
+ * first message. `AnnouncementView` and every signature below are unchanged,
+ * which is what keeps the two pages that render them out of this change.
+ *
+ * `post_policy` is what separates one from a chat topic, and it is in every
+ * read here. Without it a band's "Tour logistics" would appear on its
+ * announcements page.
  */
 
 /**
@@ -62,19 +71,41 @@ export interface CreateAnnouncementData {
 	pinned?: boolean;
 }
 
+/**
+ * The first message of a thread — the announcement's body.
+ *
+ * A leadership room holds one post today, but nothing stops it holding a
+ * reply once discussion is turned on, so "the announcement" is explicitly the
+ * earliest message rather than whichever one the join happens to return.
+ */
+const firstMessageOf = sql`${inboxMessage.id} = (
+	SELECT m2."id" FROM "inbox_message" m2
+	 WHERE m2."thread_id" = ${inboxThread.id}
+	 ORDER BY m2."created_at" ASC, m2."id" ASC
+	 LIMIT 1)`;
+
+/** Only a leadership room is an announcement; a chat topic is not. */
+function announcementsOf(groupId: string) {
+	return and(
+		eq(inboxThread.channel, 'group'),
+		eq(inboxThread.groupId, groupId),
+		eq(inboxThread.postPolicy, 'leadership')
+	)!;
+}
+
 /** The columns every read returns, with the author resolved to a member ref. */
 function selectColumns() {
 	return {
-		id: announcement.id,
-		groupId: announcement.groupId,
-		title: announcement.title,
-		body: announcement.body,
-		pinned: announcement.pinned,
-		publishedAt: announcement.publishedAt,
-		notifiedAt: announcement.notifiedAt,
-		recipientCount: announcement.recipientCount,
-		createdAt: announcement.createdAt,
-		updatedAt: announcement.updatedAt,
+		id: inboxThread.id,
+		groupId: inboxThread.groupId,
+		title: inboxThread.subject,
+		body: inboxMessage.body,
+		pinned: inboxThread.pinned,
+		publishedAt: inboxThread.publishedAt,
+		notifiedAt: inboxThread.notifiedAt,
+		recipientCount: inboxThread.recipientCount,
+		createdAt: inboxThread.createdAt,
+		updatedAt: inboxThread.updatedAt,
 		author: memberRefColumns()
 	};
 }
@@ -83,16 +114,17 @@ function runSelect(where: ReturnType<typeof and>) {
 	return (
 		db
 			.select(selectColumns())
-			.from(announcement)
-			.leftJoin(user, eq(user.id, announcement.authorId))
+			.from(inboxThread)
+			.innerJoin(inboxMessage, and(eq(inboxMessage.threadId, inboxThread.id), firstMessageOf))
+			.leftJoin(user, eq(user.id, inboxMessage.authorUserId))
 			.where(where)
 			// Pinned first, then newest. A draft has no `publishedAt`, so it sorts by
 			// `createdAt` — which is why both are in the order rather than one.
 			.orderBy(
-				desc(announcement.pinned),
-				desc(announcement.publishedAt),
-				desc(announcement.createdAt),
-				desc(announcement.id)
+				desc(inboxThread.pinned),
+				desc(inboxThread.publishedAt),
+				desc(inboxThread.createdAt),
+				desc(inboxThread.id)
 			)
 			.limit(MAX_LIST)
 	);
@@ -104,7 +136,7 @@ function shape(row: Row) {
 	return {
 		id: row.id,
 		groupId: row.groupId,
-		title: row.title,
+		title: row.title ?? '',
 		body: row.body,
 		/** Sanitized on the way out — `renderMarkdown` runs the allowlist filter. */
 		bodyHtml: renderMarkdown(row.body),
@@ -130,20 +162,14 @@ export type AnnouncementView = ReturnType<typeof shape>;
  */
 export async function listPublished(groupId: string): Promise<AnnouncementView[]> {
 	const rows = await runSelect(
-		and(
-			eq(announcement.groupId, groupId),
-			isNull(announcement.deletedAt),
-			isNotNull(announcement.publishedAt)
-		)
+		and(announcementsOf(groupId), isNull(inboxThread.deletedAt), isNotNull(inboxThread.publishedAt))
 	);
 	return rows.map(shape);
 }
 
 /** What an owner or admin sees: drafts included. */
 export async function listForManager(groupId: string): Promise<AnnouncementView[]> {
-	const rows = await runSelect(
-		and(eq(announcement.groupId, groupId), isNull(announcement.deletedAt))
-	);
+	const rows = await runSelect(and(announcementsOf(groupId), isNull(inboxThread.deletedAt)));
 	return rows.map(shape);
 }
 
@@ -156,7 +182,7 @@ export async function listForManager(groupId: string): Promise<AnnouncementView[
  */
 export async function getById(id: string, groupId: string): Promise<AnnouncementView> {
 	const [row] = await runSelect(
-		and(eq(announcement.id, id), eq(announcement.groupId, groupId), isNull(announcement.deletedAt))
+		and(eq(inboxThread.id, id), announcementsOf(groupId), isNull(inboxThread.deletedAt))
 	);
 	if (!row) throw new AnnouncementNotFoundError();
 	return shape(row);
@@ -167,16 +193,38 @@ export async function create(
 	authorId: string,
 	data: CreateAnnouncementData
 ): Promise<AnnouncementView> {
+	const [author] = await db
+		.select({ name: user.name })
+		.from(user)
+		.where(eq(user.id, authorId))
+		.limit(1);
+
 	const [row] = await db
-		.insert(announcement)
+		.insert(inboxThread)
 		.values({
+			channel: 'group',
 			groupId,
-			authorId,
-			title: data.title.trim(),
-			body: data.body,
-			pinned: data.pinned ?? false
+			status: 'open',
+			subject: data.title.trim(),
+			preview: data.body.slice(0, 120),
+			pinned: data.pinned ?? false,
+			// What makes it an announcement rather than a chat topic.
+			postPolicy: 'leadership',
+			notifyPolicy: 'email',
+			messageCount: 1,
+			lastMessageAt: new Date()
 		})
-		.returning({ id: announcement.id });
+		.returning({ id: inboxThread.id });
+
+	await db.insert(inboxMessage).values({
+		threadId: row.id,
+		direction: 'peer',
+		body: data.body,
+		// Stored, not joined: the post outlives the account, and the timeline
+		// renders this rather than re-reading `user`.
+		authorName: author?.name ?? 'A former member',
+		authorUserId: authorId
+	});
 
 	return getById(row.id, groupId);
 }
@@ -187,23 +235,32 @@ export async function update(
 	data: Partial<CreateAnnouncementData>
 ): Promise<AnnouncementView> {
 	const result = await db
-		.update(announcement)
+		.update(inboxThread)
 		.set({
-			...(data.title !== undefined ? { title: data.title.trim() } : {}),
-			...(data.body !== undefined ? { body: data.body } : {}),
+			...(data.title !== undefined ? { subject: data.title.trim() } : {}),
+			...(data.body !== undefined ? { preview: data.body.slice(0, 120) } : {}),
 			...(data.pinned !== undefined ? { pinned: data.pinned } : {}),
 			updatedAt: new Date()
 		})
-		.where(
-			and(
-				eq(announcement.id, id),
-				eq(announcement.groupId, groupId),
-				isNull(announcement.deletedAt)
-			)
-		)
-		.returning({ id: announcement.id });
+		.where(and(eq(inboxThread.id, id), announcementsOf(groupId), isNull(inboxThread.deletedAt)))
+		.returning({ id: inboxThread.id });
 
 	if (result.length === 0) throw new AnnouncementNotFoundError();
+
+	// The body lives on the first message, and editing an announcement edits
+	// that message rather than adding one — an edit is not a second post.
+	if (data.body !== undefined) {
+		const [first] = await db
+			.select({ id: inboxMessage.id })
+			.from(inboxMessage)
+			.where(eq(inboxMessage.threadId, id))
+			.orderBy(asc(inboxMessage.createdAt), asc(inboxMessage.id))
+			.limit(1);
+		if (first) {
+			await db.update(inboxMessage).set({ body: data.body }).where(eq(inboxMessage.id, first.id));
+		}
+	}
+
 	return getById(id, groupId);
 }
 
@@ -217,30 +274,24 @@ export async function update(
  */
 export async function publish(id: string, groupId: string): Promise<AnnouncementView> {
 	const result = await db
-		.update(announcement)
+		.update(inboxThread)
 		.set({ publishedAt: new Date(), updatedAt: new Date() })
 		.where(
 			and(
-				eq(announcement.id, id),
-				eq(announcement.groupId, groupId),
-				isNull(announcement.deletedAt),
-				isNull(announcement.publishedAt)
+				eq(inboxThread.id, id),
+				announcementsOf(groupId),
+				isNull(inboxThread.deletedAt),
+				isNull(inboxThread.publishedAt)
 			)
 		)
-		.returning({ id: announcement.id });
+		.returning({ id: inboxThread.id });
 
 	if (result.length === 0) {
 		// Distinguish the two ways to get no row, so the admin is told which.
 		const [existing] = await db
-			.select({ publishedAt: announcement.publishedAt })
-			.from(announcement)
-			.where(
-				and(
-					eq(announcement.id, id),
-					eq(announcement.groupId, groupId),
-					isNull(announcement.deletedAt)
-				)
-			)
+			.select({ publishedAt: inboxThread.publishedAt })
+			.from(inboxThread)
+			.where(and(eq(inboxThread.id, id), announcementsOf(groupId), isNull(inboxThread.deletedAt)))
 			.limit(1);
 		if (existing) throw new AlreadyPublishedError();
 		throw new AnnouncementNotFoundError();
@@ -257,16 +308,10 @@ export async function publish(id: string, groupId: string): Promise<Announcement
  */
 export async function remove(id: string, groupId: string): Promise<void> {
 	const result = await db
-		.update(announcement)
+		.update(inboxThread)
 		.set({ deletedAt: new Date(), updatedAt: new Date() })
-		.where(
-			and(
-				eq(announcement.id, id),
-				eq(announcement.groupId, groupId),
-				isNull(announcement.deletedAt)
-			)
-		)
-		.returning({ id: announcement.id });
+		.where(and(eq(inboxThread.id, id), announcementsOf(groupId), isNull(inboxThread.deletedAt)))
+		.returning({ id: inboxThread.id });
 
 	if (result.length === 0) throw new AnnouncementNotFoundError();
 }
@@ -287,17 +332,17 @@ export async function remove(id: string, groupId: string): Promise<void> {
  */
 export async function claimForNotification(id: string): Promise<boolean> {
 	const claimed = await db
-		.update(announcement)
+		.update(inboxThread)
 		.set({ notifiedAt: new Date() })
-		.where(and(eq(announcement.id, id), isNull(announcement.notifiedAt)))
-		.returning({ id: announcement.id });
+		.where(and(eq(inboxThread.id, id), isNull(inboxThread.notifiedAt)))
+		.returning({ id: inboxThread.id });
 
 	return claimed.length > 0;
 }
 
 /** Written after the send, so the number reflects what was actually attempted. */
 export async function recordRecipientCount(id: string, recipientCount: number): Promise<void> {
-	await db.update(announcement).set({ recipientCount }).where(eq(announcement.id, id));
+	await db.update(inboxThread).set({ recipientCount }).where(eq(inboxThread.id, id));
 }
 
 export interface AnnouncementRecipient {

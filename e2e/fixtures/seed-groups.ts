@@ -18,7 +18,7 @@ import 'dotenv/config';
 import { and, eq } from 'drizzle-orm';
 import { group, groupMember } from '../../src/lib/server/db/schema/group';
 import { directoryEntry, directoryTag } from '../../src/lib/server/db/schema/directory';
-import { announcement } from '../../src/lib/server/db/schema/announcement';
+import { inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
 import { SEED_STAFF_ID, SEED_TARGET_ID } from './seed-staff-user';
 import { SEED_BANDMATE_ID } from './seed-band-onboarding';
 import { withPlatformEnv, readLocalDb } from './platform-db';
@@ -101,6 +101,10 @@ export async function seedGroups(): Promise<void> {
 		// Clean slate. Delete explicitly, and tags before entries: local D1 may
 		// have foreign keys off, so no cascade can be relied on here.
 		for (const groupId of GROUP_IDS) {
+			for (const suffix of ['-published', '-draft']) {
+				await db.delete(inboxMessage).where(eq(inboxMessage.threadId, `${groupId}${suffix}`));
+			}
+			await db.delete(inboxThread).where(eq(inboxThread.groupId, groupId));
 			await db.delete(groupMember).where(eq(groupMember.groupId, groupId));
 			await db.delete(directoryTag).where(eq(directoryTag.entryId, entryIdFor(groupId)));
 			await db.delete(directoryEntry).where(eq(directoryEntry.groupId, groupId));
@@ -255,25 +259,52 @@ export async function seedGroups(): Promise<void> {
 		// One published post and one draft on each, so "a member sees the post but
 		// not the draft" and "a leader sees both" are the same fixture read twice.
 		// `notifiedAt` stays null: it is the fan-out latch, and nothing has sent.
-		await db.insert(announcement).values(
-			[SEED_LED_ID, SEED_READER_ID].flatMap((groupId) => [
-				{
-					id: `${groupId}-published`,
-					groupId,
-					authorId: SEED_STAFF_ID,
-					title: SEED_PUBLISHED_TITLE,
-					body: 'Everyone on the roster can read this one.',
-					publishedAt: new Date('2026-08-01T00:00:00Z')
-				},
-				{
-					id: `${groupId}-draft`,
-					groupId,
-					authorId: SEED_STAFF_ID,
-					title: SEED_DRAFT_TITLE,
-					body: 'Nobody outside the leadership should ever see this.',
-					publishedAt: null
-				}
-			])
+		//
+		// An announcement is a thread (#1304) — `post_policy: 'leadership'` is what
+		// separates one from a chat topic, and the title lives on the thread while
+		// the body lives on its first message.
+		const posts = [SEED_LED_ID, SEED_READER_ID].flatMap((groupId) => [
+			{
+				id: `${groupId}-published`,
+				groupId,
+				title: SEED_PUBLISHED_TITLE,
+				body: 'Everyone on the roster can read this one.',
+				publishedAt: new Date('2026-08-01T00:00:00Z')
+			},
+			{
+				id: `${groupId}-draft`,
+				groupId,
+				title: SEED_DRAFT_TITLE,
+				body: 'Nobody outside the leadership should ever see this.',
+				publishedAt: null
+			}
+		]);
+
+		await db.insert(inboxThread).values(
+			posts.map((post) => ({
+				id: post.id,
+				channel: 'group' as const,
+				groupId: post.groupId,
+				status: 'open' as const,
+				subject: post.title,
+				preview: post.body.slice(0, 120),
+				postPolicy: 'leadership' as const,
+				notifyPolicy: 'email' as const,
+				messageCount: 1,
+				publishedAt: post.publishedAt,
+				lastMessageAt: post.publishedAt ?? new Date('2026-08-01T00:00:00Z')
+			}))
+		);
+
+		await db.insert(inboxMessage).values(
+			posts.map((post) => ({
+				id: `${post.id}-body`,
+				threadId: post.id,
+				direction: 'peer' as const,
+				body: post.body,
+				authorName: 'E2E Staff',
+				authorUserId: SEED_STAFF_ID
+			}))
 		);
 	});
 }

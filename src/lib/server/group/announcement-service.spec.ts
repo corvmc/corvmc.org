@@ -213,21 +213,32 @@ describe('getById', () => {
 
 describe('create', () => {
 	it('writes a draft — no publishedAt', async () => {
+		// The author's name is looked up first and stored on the message: the
+		// post outlives the account, so the timeline cannot re-join `user`.
+		selectQueue.push([{ name: 'Ada Lovelace' }]);
 		returningQueue.push([{ id: 'ann-new' }]);
 		selectQueue.push([row({ id: 'ann-new', publishedAt: null })]);
 
 		const post = await create('group-1', 'user-1', { title: '  Trimmed  ', body: 'Body' });
 
-		const insert = statements.find((s) => s.op === 'insert');
-		expect(insert?.values).toMatchObject({
+		const inserts = statements.filter((s) => s.op === 'insert');
+		// The thread carries the title and what makes it an announcement (#1304).
+		expect(inserts[0]?.values).toMatchObject({
+			channel: 'group',
 			groupId: 'group-1',
-			authorId: 'user-1',
-			title: 'Trimmed',
+			subject: 'Trimmed',
+			pinned: false,
+			postPolicy: 'leadership',
+			notifyPolicy: 'email'
+		});
+		// The body is its first message.
+		expect(inserts[1]?.values).toMatchObject({
 			body: 'Body',
-			pinned: false
+			authorUserId: 'user-1',
+			authorName: 'Ada Lovelace'
 		});
 		// Nothing reaches a member until publish() stamps it.
-		expect(insert?.values).not.toHaveProperty('publishedAt');
+		expect(inserts[0]?.values).not.toHaveProperty('publishedAt');
 		expect(post.publishedAt).toBeNull();
 	});
 });
