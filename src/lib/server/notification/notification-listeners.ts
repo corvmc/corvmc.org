@@ -2,7 +2,7 @@ import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE } from '$lib/config';
 import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
-import { fanOutAnnouncement } from '$lib/server/group/announcement-fanout';
+import { fanOutAnnouncement, fanOutGroupRoom } from '$lib/server/group/announcement-fanout';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '$lib/server/sentry';
@@ -101,6 +101,16 @@ export function registerAllNotificationListeners(): void {
 	// frequency thing on the site, and the notification names the group and the
 	// person, never what they wrote.
 	domainEvents.on('inbox.group_message', async ({ data: event }) => {
+		// An `email` room is an announcement, and a roster-sized email fan-out
+		// does not belong in the per-reader loop below: `dispatch` is a
+		// preference SELECT, an INSERT, an SSE push and an outbound HTTPS call
+		// each, awaited serially, against a Worker's 1000-subrequest ceiling.
+		// `fanOutGroupRoom` is the batched path (#1304).
+		if (event.notifyPolicy === 'email') {
+			await fanOutGroupRoom(event, siteUrl);
+			return;
+		}
+
 		const readers = await db
 			.select({ id: user.id, name: user.name, email: user.email })
 			.from(user)

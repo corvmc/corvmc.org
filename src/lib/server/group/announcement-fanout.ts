@@ -6,7 +6,13 @@ import { pushToUser } from '$lib/server/notification/sse';
 import { captureException } from '$lib/server/sentry';
 import { groupKindLabels } from '$lib/config';
 import type { NotificationEmailModel } from '$lib/types/notification-email';
-import type { AnnouncementPublishedEvent } from '$lib/server/event-bus/event-bus';
+import { and, eq, isNull } from 'drizzle-orm';
+import { inboxMessage, inboxThread } from '$lib/server/db/schema/inbox';
+import { group } from '$lib/server/db/schema/group';
+import type {
+	AnnouncementPublishedEvent,
+	InboxGroupMessageEvent
+} from '$lib/server/event-bus/event-bus';
 import {
 	claimForNotification,
 	listRecipients,
@@ -114,17 +120,27 @@ function emailModel(
  */
 export async function fanOutAnnouncement(
 	event: AnnouncementPublishedEvent,
-	siteUrl: string
+	siteUrl: string,
+	/**
+	 * Where the latch lives. Defaults to the `announcement` table; a room
+	 * (#1304) is the same fan-out latched on `inbox_thread` instead, which is
+	 * the only thing about it that differs.
+	 */
+	latch: {
+		claim: (id: string) => Promise<boolean>;
+		record: (id: string, count: number) => Promise<void>;
+		href?: string;
+	} = { claim: claimForNotification, record: recordRecipientCount }
 ): Promise<void> {
 	// 1. Claim it. The bus delivers at least once, and a roster emailed twice is
 	//    the failure this exists to prevent.
-	if (!(await claimForNotification(event.announcementId))) return;
+	if (!(await latch.claim(event.announcementId))) return;
 
 	// 2. One query for everyone who should hear it, with the author, the muted
 	//    and the deactivated already excluded.
 	const recipients = await listRecipients(event.groupId, event.authorId);
 	if (recipients.length === 0) {
-		await recordRecipientCount(event.announcementId, 0);
+		await latch.record(event.announcementId, 0);
 		return;
 	}
 
@@ -135,7 +151,7 @@ export async function fanOutAnnouncement(
 		);
 	}
 
-	const href = announcementsHref(event.groupKind, event.groupSlug);
+	const href = latch.href ?? announcementsHref(event.groupKind, event.groupSlug);
 	const body = excerpt(event.body);
 
 	// 3. In-app rows, chunked under D1's bound-parameter cap and grouped into
@@ -211,5 +227,67 @@ export async function fanOutAnnouncement(
 
 	// 5. What the send actually reached, written last so it reflects the attempt
 	//    rather than the intention.
-	await recordRecipientCount(event.announcementId, recipients.length);
+	await latch.record(event.announcementId, recipients.length);
+}
+
+/**
+ * The same fan-out, for a group room whose `notify_policy` is `email` (#1304).
+ *
+ * An announcement is a thread now, so the only differences are where the latch
+ * lives — `inbox_thread.notified_at` rather than `announcement.notified_at` —
+ * and that the link opens the thread rather than the announcements page.
+ * Everything that makes this worth batching is unchanged, which is the point
+ * of reusing it rather than writing a second loop.
+ */
+export async function fanOutGroupRoom(
+	event: InboxGroupMessageEvent,
+	siteUrl: string
+): Promise<void> {
+	const [row] = await db
+		.select({
+			subject: inboxThread.subject,
+			body: inboxMessage.body,
+			groupSlug: group.slug,
+			groupKind: group.kind
+		})
+		.from(inboxThread)
+		.innerJoin(group, eq(group.id, inboxThread.groupId))
+		.leftJoin(inboxMessage, eq(inboxMessage.id, event.messageId))
+		.where(eq(inboxThread.id, event.threadId))
+		.limit(1);
+	if (!row) return;
+
+	await fanOutAnnouncement(
+		{
+			announcementId: event.threadId,
+			groupId: event.groupId,
+			groupName: event.groupName,
+			groupSlug: row.groupSlug,
+			groupKind: row.groupKind,
+			title: row.subject ?? event.groupName,
+			body: row.body ?? '',
+			authorId: event.senderId,
+			authorName: event.senderName
+		},
+		siteUrl,
+		{
+			claim: claimRoomForNotification,
+			record: recordRoomRecipientCount,
+			href: `/member/messages/${event.threadId}`
+		}
+	);
+}
+
+/** The room latch: one row back means this invocation owns the send. */
+async function claimRoomForNotification(threadId: string): Promise<boolean> {
+	const claimed = await db
+		.update(inboxThread)
+		.set({ notifiedAt: new Date() })
+		.where(and(eq(inboxThread.id, threadId), isNull(inboxThread.notifiedAt)))
+		.returning({ id: inboxThread.id });
+	return claimed.length > 0;
+}
+
+async function recordRoomRecipientCount(threadId: string, recipientCount: number): Promise<void> {
+	await db.update(inboxThread).set({ recipientCount }).where(eq(inboxThread.id, threadId));
 }

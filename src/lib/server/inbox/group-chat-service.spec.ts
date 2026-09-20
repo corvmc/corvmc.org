@@ -72,8 +72,15 @@ vi.mock('$lib/server/db/schema/group', () => ({
 	groupMember: { __table: 'group_member' }
 }));
 vi.mock('./message-service', () => ({ touchThread: vi.fn(async () => undefined) }));
+const emitted: [string, unknown][] = [];
 vi.mock('$lib/server/event-bus/event-bus', () => ({
-	domainEvents: { emit: vi.fn(), on: vi.fn() }
+	domainEvents: {
+		emit: (name: string, payload: unknown) => {
+			emitted.push([name, payload]);
+			return Promise.resolve();
+		},
+		on: vi.fn()
+	}
 }));
 
 vi.mock('drizzle-orm', () => ({
@@ -93,12 +100,16 @@ const {
 	getOrCreateGroupChat,
 	listGroupTopics,
 	createGroupTopic,
+	postToGroupChat,
+	publishGroupRoom,
+	RoomIsReadOnlyError,
 	TopicNameTakenError,
 	GENERAL_TOPIC
 } = await import('./group-chat-service');
 
 beforeEach(() => {
 	results = [];
+	emitted.length = 0;
 	insertedValues = [];
 	lastWhere = null;
 	lastOrderBy = [];
@@ -138,6 +149,8 @@ describe('listGroupTopics', () => {
 		messageCount: 0,
 		lastMessageAt: null,
 		lastReadAt: null,
+		postPolicy: 'members',
+		notifyPolicy: 'in_app',
 		...over
 	});
 
@@ -211,5 +224,133 @@ describe('createGroupTopic', () => {
 
 		await expect(createGroupTopic('g1', name)).rejects.toBeInstanceOf(TopicNameTakenError);
 		expect(insertedValues).toHaveLength(0);
+	});
+});
+
+// #1304. A room differs from a chat topic on two axes and nothing else, so
+// these are the whole of "announcement" as a behaviour.
+describe('room policy', () => {
+	const leadershipRoom = { postPolicy: 'leadership', notifyPolicy: 'email', publishedAt: null };
+
+	it('marks a leadership room read-only for a member, and not for a leader', async () => {
+		results = [
+			[{ id: 'general-1' }],
+			[
+				{
+					id: 'a1',
+					subject: 'Notices',
+					messageCount: 1,
+					lastMessageAt: null,
+					lastReadAt: null,
+					postPolicy: 'leadership',
+					notifyPolicy: 'email'
+				}
+			]
+		];
+		expect((await listGroupTopics('g1', 'u1', false))[0].readOnly).toBe(true);
+
+		results = [
+			[{ id: 'general-1' }],
+			[
+				{
+					id: 'a1',
+					subject: 'Notices',
+					messageCount: 1,
+					lastMessageAt: null,
+					lastReadAt: null,
+					postPolicy: 'leadership',
+					notifyPolicy: 'email'
+				}
+			]
+		];
+		expect((await listGroupTopics('g1', 'u1', true))[0].readOnly).toBe(false);
+	});
+
+	it('refuses a member posting to a leadership room', async () => {
+		results = [[leadershipRoom]];
+		await expect(
+			postToGroupChat({
+				groupId: 'g1',
+				groupName: 'The Band',
+				userId: 'u1',
+				userName: 'Ada',
+				body: 'hi',
+				threadId: 't1',
+				isLeader: false
+			})
+		).rejects.toBeInstanceOf(RoomIsReadOnlyError);
+		// Refused before the insert, not filtered after it.
+		expect(insertedValues).toHaveLength(0);
+	});
+
+	// The whole reason a room can email: a half-written notice must not reach
+	// the roster because somebody saved it.
+	it('does not notify an unpublished email room', async () => {
+		results = [[leadershipRoom], [{ id: 'm1' }]];
+		await postToGroupChat({
+			groupId: 'g1',
+			groupName: 'The Band',
+			userId: 'u1',
+			userName: 'Ada',
+			body: 'draft',
+			threadId: 't1',
+			isLeader: true
+		});
+		expect(emitted).toEqual([]);
+	});
+
+	it('notifies once it is published, and says which policy', async () => {
+		results = [
+			[{ ...leadershipRoom, publishedAt: new Date('2026-09-02') }],
+			[{ id: 'm1' }],
+			[{ id: 'u2', name: 'Bo' }]
+		];
+		await postToGroupChat({
+			groupId: 'g1',
+			groupName: 'The Band',
+			userId: 'u1',
+			userName: 'Ada',
+			body: 'Rehearsal moves',
+			threadId: 't1',
+			isLeader: true
+		});
+		expect(emitted[0][0]).toBe('inbox.group_message');
+		// `email` routes the listener to the batched announcement fan-out and
+		// the notification type whose default is email. `in_app` is the chat
+		// type, whose default is not. Getting this wrong is silent.
+		expect(emitted[0][1]).toMatchObject({ notifyPolicy: 'email' });
+	});
+
+	it('keeps a chat topic on the quiet path', async () => {
+		results = [
+			[{ postPolicy: 'members', notifyPolicy: 'in_app', publishedAt: null }],
+			[{ id: 'm1' }],
+			[{ id: 'u2', name: 'Bo' }]
+		];
+		await postToGroupChat({
+			groupId: 'g1',
+			groupName: 'The Band',
+			userId: 'u1',
+			userName: 'Ada',
+			body: 'see you thursday',
+			threadId: 't1'
+		});
+		// Unpublished, and it still notifies: publishing is a step an email room
+		// has and a chat topic does not.
+		expect(emitted[0][1]).toMatchObject({ notifyPolicy: 'in_app' });
+	});
+});
+
+describe('publishGroupRoom', () => {
+	it('stamps once and reports it', async () => {
+		results = [[{ id: 't1' }]];
+		await expect(publishGroupRoom('t1')).resolves.toBe(true);
+	});
+
+	// The latch. At-least-once delivery means the second publish must emit
+	// nothing, or the roster is emailed twice.
+	it('reports nothing on a second publish', async () => {
+		results = [[]];
+		await expect(publishGroupRoom('t1')).resolves.toBe(false);
 	});
 });

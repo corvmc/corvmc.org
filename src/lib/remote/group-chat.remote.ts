@@ -32,8 +32,11 @@ export const getGroupChatThread = query(slugSchema, async (slug) => {
 
 /** The group's topics, with this reader's unread marks (#1301). */
 export const getGroupChatTopics = query(slugSchema, async (slug) => {
-	const { group, user } = await requireGroupRole({ slug }, 'member');
-	return listGroupTopics(group.id, user.id);
+	const { group, user, role } = await requireGroupRole({ slug }, 'member');
+	// Leadership decides whether a `leadership` room reads as writable. The
+	// list marks the rest read-only rather than hiding them: a member reads
+	// every room, and only posting is restricted (#1304).
+	return listGroupTopics(group.id, user.id, role === 'owner' || role === 'admin');
 });
 
 /**
@@ -59,12 +62,26 @@ export const getGroupChatTopic = query(z.string().min(1), async (threadId) => {
 export const createGroupChatTopic = form(
 	z.object({
 		slug: slugSchema,
-		subject: z.string().trim().min(1, 'Give the topic a name').max(80)
+		subject: z.string().trim().min(1, 'Give the topic a name').max(80),
+		/**
+		 * A room only leadership posts in, which emails the roster — what an
+		 * announcement is (#1304). Only leadership can make one; a member
+		 * asking for it is refused rather than quietly given a chat topic.
+		 */
+		announcement: z.boolean().optional()
 	}),
 	async (data) => {
-		const { group } = await requireGroupRole({ slug: data.slug }, 'member');
+		const { group, role } = await requireGroupRole({ slug: data.slug }, 'member');
+		const isLeader = role === 'owner' || role === 'admin';
+		if (data.announcement && !isLeader) error(403, 'Only the group’s leaders can do that');
 		try {
-			const threadId = await createGroupTopic(group.id, data.subject);
+			const threadId = await createGroupTopic(
+				group.id,
+				data.subject,
+				data.announcement
+					? { postPolicy: 'leadership', notifyPolicy: 'email' }
+					: { postPolicy: 'members', notifyPolicy: 'in_app' }
+			);
 			await getGroupChatTopics(data.slug).refresh();
 			return { success: true, threadId };
 		} catch (err) {
@@ -88,14 +105,15 @@ export const postGroupChatMessage = form(
 			const chatGroup = await groupOfChatThread(data.threadId);
 			if (!chatGroup) error(404, 'No such conversation');
 
-			const { user, group } = await requireGroupRole({ id: chatGroup.id }, 'member');
+			const { user, group, role } = await requireGroupRole({ id: chatGroup.id }, 'member');
 			await postToGroupChat({
 				groupId: chatGroup.id,
 				groupName: group.name,
 				userId: user.id,
 				userName: user.name,
 				body: data.body,
-				threadId: data.threadId
+				threadId: data.threadId,
+				isLeader: role === 'owner' || role === 'admin'
 			});
 			// Both: the topic the message landed in, and the list that badges it.
 			await getGroupChatTopic(data.threadId).refresh();
