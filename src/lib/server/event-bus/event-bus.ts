@@ -1,5 +1,5 @@
 import Emittery from 'emittery';
-import type { BookerType, GroupKind } from '$lib/config';
+import type { BookerType, GroupKind, ThreadNotifyPolicy } from '$lib/config';
 
 export interface VolunteerShiftEvent {
 	signupId: string;
@@ -423,6 +423,13 @@ export interface InboxGroupMessageEvent {
 	senderId: string;
 	senderName: string;
 	recipientIds: string[];
+	/**
+	 * Which notification type the listener dispatches on. `in_app` is
+	 * `group_chat_message`, which defaults to no email on purpose; `email` is
+	 * `announcement`, which defaults to email. The two are opposite and that
+	 * difference is the point of #1304, so it travels with the event.
+	 */
+	notifyPolicy: ThreadNotifyPolicy;
 }
 
 export interface InboxMessageReceivedEvent {
