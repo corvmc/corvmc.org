@@ -2,6 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createAttachmentKey } from 'svelte/attachments';
+import type { Reservation } from '$lib/server/reservation';
 
 /**
  * Where the member goes after paying. `payForReservation` answers one of two
@@ -80,11 +81,13 @@ vi.mock('$lib/utils/checkout-navigation', () => ({ goToCheckout }));
 
 const PayReservationAction = (await import('./PayReservationAction.svelte')).default;
 
+// The three fields the summary and the payment step read, cast to the row
+// they come from — the other twenty are columns nothing here renders.
 const reservation = {
 	id: 'res-9',
 	startsAt: new Date('2026-03-14T19:00:00Z'),
 	endsAt: new Date('2026-03-14T21:00:00Z')
-};
+} as unknown as Reservation;
 
 async function payWith(result: unknown) {
 	submitResult = result;
