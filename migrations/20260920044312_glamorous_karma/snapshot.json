@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ad785a52-807d-4439-86dd-8a2e7db60488",
+  "id": "94590f74-c492-4b2a-ad0c-7cea5fba766d",
   "prevIds": [
-    "9ed595c0-90ee-451b-97ab-a8aac0abd5e7"
+    "ad785a52-807d-4439-86dd-8a2e7db60488"
   ],
   "ddl": [
     {
@@ -7005,6 +7005,76 @@
       "default": null,
       "generated": null,
       "name": "undo_state",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "pinned",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "published_at",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notified_at",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "recipient_count",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'members'",
+      "generated": null,
+      "name": "post_policy",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'in_app'",
+      "generated": null,
+      "name": "notify_policy",
       "entityType": "columns",
       "table": "inbox_thread"
     },
@@ -17606,6 +17676,42 @@
       "where": null,
       "origin": "manual",
       "name": "idx_inbox_thread_group",
+      "entityType": "indexes",
+      "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        },
+        {
+          "value": "pinned",
+          "isExpression": false
+        },
+        {
+          "value": "published_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_thread_group_pinned",
+      "entityType": "indexes",
+      "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        {
+          "value": "notified_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_thread_notified",
       "entityType": "indexes",
       "table": "inbox_thread"
     },

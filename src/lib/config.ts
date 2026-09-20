@@ -731,6 +731,26 @@ export const DOOR_SPLIT_ACTS_PERCENT = 70;
  */
 export const HOST_VOLUNTEER_ROLE = 'Show Host';
 
+/**
+ * Who may post in a group's room, and how a post reaches its readers (#1304).
+ *
+ * The two axes an announcement differs from a chat topic on. A chat topic is
+ * `(members, in_app)`; an announcement is `(leadership, email)`. Keeping them
+ * as policy rather than as a channel is what makes turning discussion on for
+ * one announcement a column change.
+ */
+export const threadPostPolicies = ['members', 'leadership'] as const;
+export type ThreadPostPolicy = (typeof threadPostPolicies)[number];
+
+/**
+ * `in_app` is the chat default and deliberately quiet — a room of five people
+ * can produce twenty messages in an hour, and mailing each one teaches people
+ * to filter the sender. `email` is the announcement default, and is the only
+ * way a post reaches somebody who is not looking at the site.
+ */
+export const threadNotifyPolicies = ['in_app', 'email'] as const;
+export type ThreadNotifyPolicy = (typeof threadNotifyPolicies)[number];
+
 export const inboxChannels = [
 	'email',
 	'sms',

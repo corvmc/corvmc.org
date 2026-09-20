@@ -9,6 +9,7 @@
  */
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
+import { getTableColumns } from 'drizzle-orm';
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { assertRows } from './validate';
@@ -24,15 +25,19 @@ export const db = drizzle(env.DB);
  * Insert in chunks, because **D1 caps a single statement at 100 bound
  * parameters** and a multi-row insert binds every column of every row.
  *
- * `batchSize` is therefore not a performance knob — it is arithmetic. Pick it so
- * `columns × batchSize ≤ 100` and write the sum in a comment at the call site,
- * the way `seedDirectoryEntries` (19 × 5 = 95) and `seedVolunteerHours`
- * (13 × 7 = 91) do. The default of 10 is safe for anything up to 10 columns.
+ * `batchSize` is not a performance knob — it is arithmetic, `columns ×
+ * batchSize ≤ 100`. **It is now derived from the table**, because the caller
+ * doing that sum by hand meant adding a column to a wide table silently broke
+ * a seeder somewhere else: seven columns on `inbox_thread` (#1305) took
+ * `seedGroupChats` from 19 × 10 to 26 × 10 and the seed died on
+ * `too many SQL variables`, in a file that change never touched.
+ *
+ * Pass one explicitly only to go *lower* than the arithmetic allows.
  */
 export async function batchInsert<TTable extends SQLiteTable>(
 	table: TTable,
 	rows: InferInsertModel<TTable>[],
-	batchSize = 10
+	batchSize = Math.max(1, Math.floor(100 / Object.keys(getTableColumns(table)).length))
 ): Promise<InferSelectModel<TTable>[]> {
 	assertRows(table, rows);
 
