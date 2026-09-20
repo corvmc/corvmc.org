@@ -9,12 +9,10 @@
 	 */
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import Badge from '$lib/components/ui/Badge.svelte';
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 	import EnquiryList from './EnquiryList.svelte';
 
-	let { canReadEnquiries, chatUnread }: { canReadEnquiries: boolean; chatUnread: number } =
-		$props();
+	let { canReadEnquiries }: { canReadEnquiries: boolean } = $props();
 
 	const slug = $derived(page.params.slug!);
 	const chatHref = $derived(resolve('/band/[slug]/messages/chat', { slug }));
@@ -32,9 +30,6 @@
 			class="flex items-center justify-between gap-2 rounded-lg px-3 py-2 hover:bg-base-200 aria-[current=page]:bg-base-200"
 		>
 			<span class="font-medium">Everyone in the band</span>
-			{#if chatUnread > 0}
-				<Badge variant="primary" size="sm">New</Badge>
-			{/if}
 		</a>
 	</section>
 

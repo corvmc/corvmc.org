@@ -7,8 +7,6 @@ import { capabilitySet, isElevated, positionsFor } from '$lib/server/authorizati
 import { hasLoanableItems } from '$lib/server/inventory/item-service';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
-import { countBandUnread } from '$lib/server/inbox/band-service';
-import { countGroupChatUnread } from '$lib/server/inbox/group-chat-service';
 import { countUnifiedUnread } from '$lib/server/inbox/unified-service';
 import { countPendingRequests } from '$lib/server/inbox/direct-service';
 import { acceptsDirectMessages } from '$lib/server/moderation/moderation-service';
@@ -263,23 +261,18 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		redirect(302, `/member/groups/${band.slug}`);
 	}
 
-	const [role, isStaff, userBands, features, messagesUnread, chatUnread, chrome] =
-		await Promise.all([
-			getUserRole(band.id, locals.user.id),
-			isElevated(locals.user.id),
-			listForUser(locals.user.id, ['band']).catch(() => []),
-			getAllFeatureFlags(),
-			// In the same round trip rather than behind the role check below: one
-			// indexed COUNT is cheaper than the extra await it would take to know
-			// whether to ask. The Messages nav row is owner/admin-only, so the number
-			// simply goes unread for anyone else.
-			countBandUnread(band.id, locals.user.id),
-			// The band's own room, which every member reads — a different count
-			// from the enquiry one above, and a different list on the page they
-			// now share (#1252).
-			countGroupChatUnread(band.id, locals.user.id),
-			appChrome(locals.user)
-		]);
+	// No per-band unread here any more. Messages left the sidebar for the
+	// topbar, which draws its own badge from `chrome.messagesUnread` — one
+	// `countUnifiedUnread` across every inbox the viewer can read. These were
+	// two more indexed COUNTs on every band page load, for a badge nothing
+	// renders.
+	const [role, isStaff, userBands, features, chrome] = await Promise.all([
+		getUserRole(band.id, locals.user.id),
+		isElevated(locals.user.id),
+		listForUser(locals.user.id, ['band']).catch(() => []),
+		getAllFeatureFlags(),
+		appChrome(locals.user)
+	]);
 
 	if (!role && !isStaff) {
 		throw error(403, 'You are not a member of this band');
@@ -293,12 +286,6 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		user: { id: locals.user.id, name: locals.user.name, email: locals.user.email },
 		// See `appChrome`.
 		chrome,
-		features,
-		messagesUnread,
-		chatUnread,
-		// What the one Messages row badges for an admin, who reads both lists.
-		// A plain member's row badges `chatUnread` alone — they cannot open the
-		// enquiries, so counting them would be a number with nowhere to go.
-		bandInboxUnread: messagesUnread + chatUnread
+		features
 	};
 });
