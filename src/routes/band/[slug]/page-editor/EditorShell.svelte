@@ -9,7 +9,7 @@
 	 * padding the same way `PageHeader` does (`-mx-6`, plus `-mb-6` at the foot)
 	 * and gives the canvas everything that is left.
 	 *
-	 * Height: `<main>` is `flex-1 overflow-y-auto` inside an `h-screen` column, so
+	 * Height: `<main>` is `flex-1 overflow-y-auto` inside an `h-dvh` column, so
 	 * `h-full` here is a definite height and each pane scrolls its own overflow —
 	 * the same arrangement `InboxShell` documents, and for the same reason: a page
 	 * and the CSS that styles it have no business sharing a scrollbar.
