@@ -63,21 +63,21 @@ export function readMeta(alias: string): TemplateMeta {
 	return JSON.parse(readFileSync(join(templateDir(alias), 'meta.json'), 'utf8'));
 }
 
-// Mustache renders `{{#name}}…{{/name}}` for a truthy scalar once, keeping the
-// enclosing context on the stack, so `{{name}}` inside the block still resolves.
-// Handlebars instead makes the scalar itself the context, where `{{name}}` finds
-// nothing and the block renders empty. Restore the Mustache behaviour so the
-// preview matches what Postmark actually produces.
+// Mustachio scopes `{{#name}}…{{/name}}` to the value and never walks back up,
+// so `{{name}}` inside the block resolves to nothing and `{{.}}` is the only way
+// to reach it — and inside `{{#flag}}`, scoped to a boolean, a sibling key needs
+// `../`. Stock Handlebars keeps the parent context for `true`, which is the one
+// difference; matching Mustachio here is what makes the preview and
+// `render.spec.ts` disagree with production the moment a template regresses.
+// Verified against `client.validateTemplate`; see #1125.
 Handlebars.registerHelper('blockHelperMissing', function (this: unknown, context, options) {
-	if (context === true) return options.fn(this);
 	if (context === false || context == null) return options.inverse(this);
 	if (Array.isArray(context)) {
 		return context.length > 0
 			? context.map((item) => options.fn(item)).join('')
 			: options.inverse(this);
 	}
-	// Objects get scoped as usual; scalars keep the parent context.
-	return options.fn(typeof context === 'object' ? context : this);
+	return options.fn(context);
 });
 
 function compile(source: string, model: object): string {

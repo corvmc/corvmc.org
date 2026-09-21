@@ -1,6 +1,6 @@
 Confirm your email address
 
-{{#greeting}}{{{greeting}}}
+{{#greeting}}{{{.}}}
 
 {{/greeting}}This address was used to make a Corvallis Music Collective account. Open this link to confirm it is yours:
 

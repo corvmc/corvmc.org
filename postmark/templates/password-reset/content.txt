@@ -1,6 +1,6 @@
 Reset your password
 
-{{#greeting}}{{{greeting}}}
+{{#greeting}}{{{.}}}
 
 {{/greeting}}Someone asked to reset the password for your Corvallis Music Collective account. Open this link to choose a new one:
 
