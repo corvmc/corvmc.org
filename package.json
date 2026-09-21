@@ -42,7 +42,7 @@
 		"docs:routes": "node scripts/docs/route-inventory.mjs --write",
 		"docs:check": "node scripts/docs/check-docs-drift.mjs",
 		"class-census": "node scripts/class-census.mjs",
-		"email:push": "postmark templates push postmark/templates --server-token $POSTMARK_SERVER_TOKEN",
+		"email:push": "postmark templates push postmark/templates --force --server-token $POSTMARK_SERVER_TOKEN",
 		"email:pull": "postmark templates pull postmark/templates --server-token $POSTMARK_SERVER_TOKEN",
 		"email:preview": "tsx scripts/email-preview.ts",
 		"email:validate": "tsx scripts/email-validate.ts",

@@ -49,6 +49,10 @@ jobs:
       - name: Validate
         run: pnpm email:validate
 
+      # `--force` in the script, because the CLI asks "Would you like to
+      # continue? (y/N)" whenever a template differs and answers itself with N
+      # on a runner. The step went green for weeks on runs that had nothing to
+      # push; the first one that did failed, and #1125's fix sat undeployed.
       - name: Push
         if: github.event_name == 'push'
         run: pnpm email:push
