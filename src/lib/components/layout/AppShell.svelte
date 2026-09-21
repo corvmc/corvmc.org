@@ -39,11 +39,15 @@
 <div class="drawer lg:drawer-open">
 	<input id={drawerId} type="checkbox" class="drawer-toggle" />
 
-	<div class="drawer-content flex h-screen flex-col overflow-hidden">
+	<!-- `h-dvh`, not `h-screen`: `100vh` on a phone is the LARGE viewport, so the
+	     column outgrew the visible one and the document scrolled behind `<main>`,
+	     which scrolls too. Two scrollbars, and anything at the foot of a page sat
+	     under the browser chrome. `Sidebar` already used `max-h-dvh`. -->
+	<div class="drawer-content flex h-dvh flex-col overflow-hidden">
 		<AppTopbar {drawerId} {panels} {activePanel} {chrome} />
 		<div class="tri-stripe"></div>
 
-		<main class="flex-1 overflow-x-hidden overflow-y-auto p-6 pt-0">
+		<main class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-6 pt-0">
 			{@render children()}
 		</main>
 	</div>

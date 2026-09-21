@@ -12,7 +12,7 @@
 	 * shows on a phone is decided by whether a thread is open, so the list is the
 	 * page you land on and the thread replaces it.
 	 *
-	 * Height: `AppShell`'s `<main>` is `flex-1` inside an `h-screen` column and
+	 * Height: `AppShell`'s `<main>` is `flex-1` inside an `h-dvh` column and
 	 * scrolls itself, so `h-full` here is a definite height. Each pane then scrolls
 	 * its own overflow — which is the point, since a conversation and a list of
 	 * conversations have no business sharing a scrollbar. `min-h-0` on every link
