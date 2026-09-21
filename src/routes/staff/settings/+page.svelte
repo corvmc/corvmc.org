@@ -21,6 +21,7 @@
 	} from '$lib/remote/settings.remote';
 	import LockHealth from './LockHealth.svelte';
 	import UnmanagedLockCodes from './UnmanagedLockCodes.svelte';
+	import UtecDevicePicker from './UtecDevicePicker.svelte';
 	import { updateInboxChannelConfig, testMetaConnection } from '$lib/remote/inbox.remote';
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { channelLabel, channelIcon } from '$lib/components/inbox/channels';
@@ -86,21 +87,11 @@
 	// U-tec is "connected" once a refresh token has been minted (via OAuth or
 	// pasted manually). Until then, only the Connect flow makes sense. Presence
 	// is all this needs, which is the whole reason the value can stay server-side.
-	const utecConnected = $derived(integrationSettings.refreshToken.configured);
+	const utecConnected = $derived(integrationSettings.connected);
 	const utecCanConnect = $derived(
 		!!integrationSettings.clientId && integrationSettings.clientSecret.configured
 	);
 
-	// The refresh token field renders empty whether or not one is stored, so the
-	// hint is the only thing telling a staffer which it is — and that saving
-	// blank keeps what is there rather than wiping the lock's credential.
-	const refreshTokenHint = $derived(
-		{
-			kv: 'Saved by the Connect flow. Leave blank to keep it.',
-			env: 'Set by the ULTRALOC_REFRESH_TOKEN environment variable. Saving a value here overrides it.',
-			null: 'Not set. Use Connect above rather than pasting one, where you can.'
-		}[String(integrationSettings.refreshToken.source)]
-	);
 	// Same shape as the refresh token's: the field renders empty either way, so
 	// the hint is the only thing saying which, and that blank keeps what is set.
 	const clientSecretHint = $derived(
@@ -798,19 +789,19 @@
 								value=""
 								description={clientSecretHint}
 							/>
-							<FormField
-								name="deviceId"
-								label="Device ID"
-								type="text"
-								value={integrationSettings.deviceId}
-							/>
-							<FormField
-								name="refreshToken"
-								label="Refresh Token"
-								type="password"
-								value=""
-								description={refreshTokenHint}
-							/>
+							<svelte:boundary>
+								<UtecDevicePicker deviceId={integrationSettings.deviceId} />
+
+								{#snippet failed()}
+									<FormField
+										name="deviceId"
+										label="Device ID"
+										type="text"
+										value={integrationSettings.deviceId}
+										description="Could not reach U-tec to list devices."
+									/>
+								{/snippet}
+							</svelte:boundary>
 						</div>
 
 						<div class="mt-2">

@@ -146,6 +146,7 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 	{ name: 'getIntegrationSettings', cap: 'settings.read' },
 	{ name: 'getStaffSettingsPage', cap: 'settings.read' },
 	{ name: 'testUtecConnection', cap: 'settings.read' },
+	{ name: 'getUtecDevices', cap: 'settings.read' },
 	// Not reads: each has a real-world effect. runLockSelfTest issues a working
 	// door code, revokeLockTest withdraws one, and the other two reach Stripe.
 	// The two lock commands moved to `lock.manage` when lock management grew past
@@ -241,7 +242,9 @@ describe('settings.remote staff guards', () => {
 			clientId: 'utec-client',
 			clientSecret: { configured: true, source: 'kv' },
 			deviceId: 'device-1',
-			refreshToken: { configured: true, source: 'kv' }
+			// Presence alone: there is no refresh-token field, and "Connected" is
+			// the only thing the page does with it.
+			connected: true
 		});
 	});
 
@@ -269,12 +272,15 @@ describe('settings.remote staff guards', () => {
 	// Both credentials are written now (#745 reversed): an id and its secret are
 	// one credential, and a form that can save only half of it is how the two
 	// drift into `invalid_client`.
-	it('updateIntegrationSettings writes both credentials beside the ids', async () => {
+	it('updateIntegrationSettings writes the secret beside the ids', async () => {
 		requireCapability.mockResolvedValue(undefined);
 		await settings.updateIntegrationSettings({
 			clientId: 'utec-client',
 			deviceId: 'device-1',
 			clientSecret: CREDENTIALS.clientSecret,
+			// Handed one anyway: a schema that drops an unknown field and a handler
+			// that writes it look identical from the browser, and only the write
+			// list tells them apart. The Connect flow owns this one.
 			refreshToken: CREDENTIALS.refreshToken
 		});
 
@@ -282,9 +288,11 @@ describe('settings.remote staff guards', () => {
 		expect(writes.map((c) => c.key)).toEqual([
 			'integration.utec.clientId',
 			'integration.utec.deviceId',
-			'integration.utec.clientSecret',
-			'integration.utec.refreshToken'
+			'integration.utec.clientSecret'
 		]);
+		expect(JSON.stringify(writes), 'the refresh token was written by the form').not.toContain(
+			CREDENTIALS.refreshToken
+		);
 	});
 
 	// Same rule as the refresh token below, and for the same reason: the field
