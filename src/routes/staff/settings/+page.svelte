@@ -32,6 +32,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import { errorMessage } from '$lib/error-message';
 	import StatCard from '$lib/components/ui/StatCard.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -686,13 +687,27 @@
 
 						{#if utecConnected}
 							<!-- Live health. `utecConnected` only means a refresh token is
-							     stored; it says nothing about whether the door is reachable. -->
+							     stored; it says nothing about whether the door is reachable.
+							     Both boundaries need a `failed` snippet to catch anything at
+							     all, and this is the page you fix the lock from. -->
 							<svelte:boundary>
 								<LockHealth />
+
+								{#snippet failed(error, reset)}
+									<Alert type="warning" {reset}>
+										The lock did not answer: {errorMessage(error)}
+									</Alert>
+								{/snippet}
 							</svelte:boundary>
 
 							<svelte:boundary>
 								<UnmanagedLockCodes />
+
+								{#snippet failed(error, reset)}
+									<Alert type="warning" {reset}>
+										Could not read the lock's own door codes: {errorMessage(error)}
+									</Alert>
+								{/snippet}
 							</svelte:boundary>
 
 							<div class="mt-2 border-t border-base-200 pt-3">
