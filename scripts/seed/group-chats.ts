@@ -1,4 +1,4 @@
-import { inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
+import { inboxGroupRead, inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
 import { batchInsert } from './db';
 import { type SeedUser } from './types';
 import { randomUUID } from 'crypto';
@@ -24,6 +24,7 @@ export async function seedGroupChats(
 
 	const threads: (typeof inboxThread.$inferInsert)[] = [];
 	const messages: (typeof inboxMessage.$inferInsert)[] = [];
+	const reads: (typeof inboxGroupRead.$inferInsert)[] = [];
 
 	// The owner and one other member, which is enough for the timeline to show
 	// both sides — the viewer's own messages right, the other's left.
@@ -90,6 +91,17 @@ export async function seedGroupChats(
 				updatedAt: new Date(now - 2 * hour)
 			});
 
+			// The owner has muted the second topic: the one state where a room
+			// with unread messages wears no dot, and the only way to see the
+			// bell in the list without muting something by hand (#1309).
+			reads.push({
+				id: randomUUID(),
+				threadId: topicId,
+				userId: roster[0].id,
+				lastReadAt: new Date(now - 4 * hour),
+				muted: true
+			});
+
 			topicTurns.forEach((turn, i) => {
 				messages.push({
 					id: randomUUID(),
@@ -106,6 +118,7 @@ export async function seedGroupChats(
 
 	await batchInsert(inboxThread, threads);
 	await batchInsert(inboxMessage, messages);
+	await batchInsert(inboxGroupRead, reads);
 
-	return { threads: threads.length, messages: messages.length };
+	return { threads: threads.length, messages: messages.length, muted: reads.length };
 }

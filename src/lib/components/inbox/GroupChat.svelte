@@ -8,6 +8,7 @@
 	 * and not its configuration (#1252).
 	 */
 	import ThreadTimeline from './ThreadTimeline.svelte';
+	import MuteRoomAction from './MuteRoomAction.svelte';
 	import ThreadComposer from './ThreadComposer.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import {
@@ -28,6 +29,10 @@
 </script>
 
 <div class="flex h-full min-h-0 flex-col gap-4">
+	<div class="flex items-center justify-end">
+		<MuteRoomAction threadId={chat.id} roomName={chat.topicName} muted={chat.muted} />
+	</div>
+
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		{#if chat.messages.length === 0}
 			<EmptyState

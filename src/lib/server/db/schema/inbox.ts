@@ -302,6 +302,16 @@ export const inboxGroupRead = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		lastReadAt: integer('last_read_at', { mode: 'timestamp' }),
+		/**
+		 * This reader wants nothing from this room — no email, no in-app
+		 * notification, no unread dot.
+		 *
+		 * Here rather than on `group_member` because a room is a thread: the
+		 * per-group `notifyAnnouncements` can silence six groups but not one
+		 * noisy topic, and it keeps its own job of pre-empting announcements
+		 * that do not have a thread yet (#1309).
+		 */
+		muted: integer('muted', { mode: 'boolean' }).notNull().default(false),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`)

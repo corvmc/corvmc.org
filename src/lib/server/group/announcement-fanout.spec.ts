@@ -133,9 +133,11 @@ describe('recipients', () => {
 
 		await fanOutAnnouncement(event(), 'https://test.corvmc.org');
 
-		// The exclusions live in the query, so this pins that the author id
-		// actually reaches it — being emailed your own post reads as a bug.
-		expect(mockList).toHaveBeenCalledWith('group-1', 'user-author');
+		// The exclusions live in the query, so this pins that both ids actually
+		// reach it: the author, because being emailed your own post reads as a
+		// bug, and the room, because a reader who muted it is excluded there
+		// rather than here (#1309).
+		expect(mockList).toHaveBeenCalledWith('group-1', 'user-author', 'ann-1');
 	});
 
 	it('records a count of zero and sends nothing when nobody is left', async () => {

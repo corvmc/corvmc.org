@@ -1,10 +1,10 @@
 {
-  "id": "cb80684a-3ba7-416e-aefa-3a81c9b09483",
-  "prevIds": [
-    "94590f74-c492-4b2a-ad0c-7cea5fba766d"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "44b6220f-1245-4c8a-ba12-d467c95f7101",
+  "prevIds": [
+    "cb80684a-3ba7-416e-aefa-3a81c9b09483"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -6585,6 +6585,16 @@
       "default": null,
       "generated": null,
       "name": "last_read_at",
+      "entityType": "columns",
+      "table": "inbox_group_read"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "muted",
       "entityType": "columns",
       "table": "inbox_group_read"
     },

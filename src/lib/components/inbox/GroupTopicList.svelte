@@ -7,6 +7,7 @@
 	 * The dot is per topic, which is what `inbox_group_read` already keyed on
 	 * before topics existed (#1301).
 	 */
+	import { IconBellOff } from '@tabler/icons-svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 	import NewTopicAction from './NewTopicAction.svelte';
@@ -47,6 +48,8 @@
 					<span class="min-w-0 truncate" class:font-medium={topic.unread}>{topic.name}</span>
 					{#if topic.unread}
 						<Badge variant="primary" size="xs">New</Badge>
+					{:else if topic.muted}
+						<IconBellOff size={14} class="shrink-0 text-base-content/50" aria-label="Muted" />
 					{/if}
 				</a>
 			</li>

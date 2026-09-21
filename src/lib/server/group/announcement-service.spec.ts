@@ -78,6 +78,7 @@ const {
 	update,
 	publish,
 	remove,
+	listRecipients,
 	AnnouncementNotFoundError,
 	AlreadyPublishedError
 } = await import('./announcement-service');
@@ -320,5 +321,30 @@ describe('remove', () => {
 
 		await expect(remove('ann-1', 'group-1')).rejects.toBeInstanceOf(AnnouncementNotFoundError);
 		expect(lastWhere()).toContain('"group_id" = ?');
+	});
+});
+
+describe('listRecipients', () => {
+	it('drops anyone who muted this one room, without muting the group for them', async () => {
+		// The group-wide `notify_announcements` cannot express "this thread":
+		// a room is a thread, so the exclusion is a join on `inbox_group_read`
+		// keyed to the pair (#1309).
+		selectQueue.push([]);
+
+		await listRecipients('group-1', null, 'thread-1');
+
+		const where = lastWhere();
+		expect(where).toContain('"notify_announcements" = ?');
+		expect(where).toContain('"muted"');
+	});
+
+	it('excludes nobody extra when the post has no room', async () => {
+		selectQueue.push([]);
+
+		await listRecipients('group-1', null);
+
+		// Still joined, but on a false predicate, so the LEFT JOIN contributes
+		// no rows and the mute cannot exclude a reader who never had one.
+		expect(lastWhere()).toContain('"notify_announcements" = ?');
 	});
 });
