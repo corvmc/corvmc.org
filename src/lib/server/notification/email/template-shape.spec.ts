@@ -3,16 +3,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { FIXTURES } from './fixtures';
 
-// ---------------------------------------------------------------------------
-// Section scoping in postmark/templates/
-// ---------------------------------------------------------------------------
 // Mustachio scopes `{{#name}}…{{/name}}` to its value and never walks back up,
 // so inside a section entered on a string or a boolean the only names that
-// resolve are `{{.}}` and `../`-prefixed ones. Everything else renders empty —
-// which is how every notification email lost its heading, greeting and details
-// card for months (#1125). Read from the fixture models rather than guessed:
-// a section whose value is an object or an array genuinely does scope into it.
-// ---------------------------------------------------------------------------
+// resolve are `{{.}}` and `../`-prefixed ones — everything else renders empty
+// (#1125). Which sections those are is read off the fixture models rather than
+// guessed: a section holding an object or an array does scope into it.
 
 const ROOT = 'postmark/templates';
 
