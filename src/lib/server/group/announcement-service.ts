@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, isNotNull, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { inboxMessage, inboxThread } from '$lib/server/db/schema/inbox';
+import { inboxGroupRead, inboxMessage, inboxThread } from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
 import { groupMember } from '$lib/server/db/schema/group';
 import { getNotificationType, notificationPreference } from '$lib/server/db/schema/notification';
@@ -361,10 +361,10 @@ export interface AnnouncementRecipient {
  * call, all awaited serially — roughly 600 sequential subrequests for a
  * 200-member group, against a 1000-subrequest ceiling.
  *
- * The joins carry all three exclusions so none of them can be forgotten by a
- * caller: a non-active membership, a member who muted this group, and a
- * deactivated account. The author is excluded too — being emailed your own post
- * reads as a bug every time.
+ * The joins carry every exclusion so none of them can be forgotten by a caller:
+ * a non-active membership, a member who muted this group, a member who muted
+ * this one room (#1309), and a deactivated account. The author is excluded too
+ * — being emailed your own post reads as a bug every time.
  *
  * A missing `notification_preference` row means the member never chose, which
  * is the common case; it coalesces to the type's own defaults here rather than
@@ -372,7 +372,9 @@ export interface AnnouncementRecipient {
  */
 export async function listRecipients(
 	groupId: string,
-	authorId: string | null
+	authorId: string | null,
+	/** The room, when the post has one. A thread nobody muted excludes nobody. */
+	threadId?: string
 ): Promise<AnnouncementRecipient[]> {
 	const defaults = getNotificationType('announcement')?.defaults ?? {
 		email: true,
@@ -397,11 +399,18 @@ export async function listRecipients(
 				eq(notificationPreference.notificationType, 'announcement')
 			)
 		)
+		.leftJoin(
+			inboxGroupRead,
+			threadId
+				? and(eq(inboxGroupRead.threadId, threadId), eq(inboxGroupRead.userId, user.id))
+				: sql`1 = 0`
+		)
 		.where(
 			and(
 				eq(groupMember.groupId, groupId),
 				eq(groupMember.status, 'active'),
 				eq(groupMember.notifyAnnouncements, true),
+				or(isNull(inboxGroupRead.muted), eq(inboxGroupRead.muted, false)),
 				isNull(user.deletedAt),
 				authorId ? ne(user.id, authorId) : undefined
 			)

@@ -60,6 +60,8 @@ export interface GroupTopic {
 	notifyPolicy: ThreadNotifyPolicy;
 	/** A room this reader may read but not write — the list marks it. */
 	readOnly: boolean;
+	/** This reader silenced the room: no notification, and never unread. */
+	muted: boolean;
 }
 
 /**
@@ -85,7 +87,8 @@ export async function listGroupTopics(
 			lastMessageAt: inboxThread.lastMessageAt,
 			postPolicy: inboxThread.postPolicy,
 			notifyPolicy: inboxThread.notifyPolicy,
-			lastReadAt: inboxGroupRead.lastReadAt
+			lastReadAt: inboxGroupRead.lastReadAt,
+			muted: inboxGroupRead.muted
 		})
 		.from(inboxThread)
 		.leftJoin(
@@ -109,10 +112,14 @@ export async function listGroupTopics(
 		lastMessageAt: r.lastMessageAt,
 		// Never read at all counts as unread only once something has been said,
 		// or every empty topic would wear a dot the moment it is created.
-		unread: r.lastMessageAt !== null && (r.lastReadAt === null || r.lastMessageAt > r.lastReadAt),
+		unread:
+			r.muted !== true &&
+			r.lastMessageAt !== null &&
+			(r.lastReadAt === null || r.lastMessageAt > r.lastReadAt),
 		postPolicy: r.postPolicy,
 		notifyPolicy: r.notifyPolicy,
-		readOnly: r.postPolicy === 'leadership' && !isLeader
+		readOnly: r.postPolicy === 'leadership' && !isLeader,
+		muted: r.muted === true
 	}));
 }
 
@@ -199,7 +206,7 @@ export interface GroupChatMessage {
  * `ThreadTimeline` scrolls it. A group that outgrows one page is the signal to
  * page it, and there is none yet.
  */
-export async function getGroupChat(groupId: string, threadId?: string) {
+export async function getGroupChat(groupId: string, threadId?: string, userId?: string) {
 	// No topic named means General, which is where `/…/chat` lands.
 	const id = threadId ?? (await getOrCreateGroupChat(groupId));
 
@@ -228,11 +235,22 @@ export async function getGroupChat(groupId: string, threadId?: string) {
 		.where(eq(group.id, groupId))
 		.limit(1);
 
+	// A reader with no row has muted nothing, which is also the answer for a
+	// caller that named no reader.
+	const [read] = userId
+		? await db
+				.select({ muted: inboxGroupRead.muted })
+				.from(inboxGroupRead)
+				.where(and(eq(inboxGroupRead.threadId, id), eq(inboxGroupRead.userId, userId)))
+				.limit(1)
+		: [];
+
 	return {
 		id,
 		groupName: g?.name ?? 'This group',
 		topicName: topic?.subject ?? GENERAL_TOPIC,
 		isGeneral: (topic?.subject ?? null) === null,
+		muted: read?.muted === true,
 		messages: messages as GroupChatMessage[]
 	};
 }
@@ -290,7 +308,7 @@ export async function postToGroupChat(params: {
 	// The roster minus the author, resolved here rather than by the listener:
 	// on a two-person thread, forgetting to skip them means notifying somebody
 	// about their own message.
-	const readers = await listGroupChatReaders(params.groupId);
+	const readers = await listGroupChatReaders(params.groupId, threadId);
 	domainEvents.emit('inbox.group_message', {
 		threadId,
 		messageId: message.id,
@@ -339,6 +357,9 @@ export async function countGroupChatUnread(groupId: string, userId: string): Pro
 				topicsOf(groupId),
 				// An empty topic is not unread — see `listGroupTopics`.
 				isNotNull(inboxThread.lastMessageAt),
+				// A LEFT JOIN with no row is a reader who never opened it, which
+				// is unread and unmuted both.
+				or(isNull(inboxGroupRead.muted), eq(inboxGroupRead.muted, false)),
 				or(
 					isNull(inboxGroupRead.lastReadAt),
 					gt(inboxThread.lastMessageAt, inboxGroupRead.lastReadAt)
@@ -367,13 +388,48 @@ export async function groupOfChatThread(
 }
 
 /** Who is in the room, for the header. */
-export async function listGroupChatReaders(groupId: string) {
+export async function listGroupChatReaders(groupId: string, threadId?: string) {
 	const { groupMember } = await import('$lib/server/db/schema/group');
-	return db
+	const query = db
 		.select({ id: user.id, name: user.name })
 		.from(groupMember)
-		.innerJoin(user, eq(user.id, groupMember.userId))
-		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.status, 'active')));
+		.innerJoin(user, eq(user.id, groupMember.userId));
+
+	// Without a room there is nobody to have muted it — the header asks who is
+	// on the roster, the notify path asks who still wants to hear.
+	if (threadId === undefined) {
+		return query.where(and(eq(groupMember.groupId, groupId), eq(groupMember.status, 'active')));
+	}
+
+	return query
+		.leftJoin(
+			inboxGroupRead,
+			and(eq(inboxGroupRead.threadId, threadId), eq(inboxGroupRead.userId, user.id))
+		)
+		.where(
+			and(
+				eq(groupMember.groupId, groupId),
+				eq(groupMember.status, 'active'),
+				or(isNull(inboxGroupRead.muted), eq(inboxGroupRead.muted, false))
+			)
+		);
+}
+
+/**
+ * Silence one room for one reader, or let it speak again.
+ *
+ * The pair is the whole authorization, as it is for the group-wide mute: a
+ * member may only ever change their own row, so the caller passes the id from
+ * the session. Upserts because a reader can mute a room before opening it.
+ */
+export async function setRoomMute(threadId: string, userId: string, muted: boolean): Promise<void> {
+	await db
+		.insert(inboxGroupRead)
+		.values({ threadId, userId, muted })
+		.onConflictDoUpdate({
+			target: [inboxGroupRead.threadId, inboxGroupRead.userId],
+			set: { muted }
+		});
 }
 
 /**

@@ -1,0 +1,1 @@
+ALTER TABLE `inbox_group_read` ADD `muted` integer DEFAULT false NOT NULL;

@@ -324,7 +324,9 @@ async function main() {
 	console.log(
 		`  ${bandEnquiries.threads} band booking enquiries, ${bandEnquiries.messages} messages`
 	);
-	console.log(`  ${groupChats.threads} group chats, ${groupChats.messages} messages`);
+	console.log(
+		`  ${groupChats.threads} group chats, ${groupChats.messages} messages, ${groupChats.muted} muted`
+	);
 	console.log(
 		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings, 1 member-set messaging preference`
 	);

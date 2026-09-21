@@ -138,7 +138,7 @@ export async function fanOutAnnouncement(
 
 	// 2. One query for everyone who should hear it, with the author, the muted
 	//    and the deactivated already excluded.
-	const recipients = await listRecipients(event.groupId, event.authorId);
+	const recipients = await listRecipients(event.groupId, event.authorId, event.announcementId);
 	if (recipients.length === 0) {
 		await latch.record(event.announcementId, 0);
 		return;

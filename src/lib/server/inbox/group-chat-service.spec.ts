@@ -22,13 +22,15 @@ const TABLES = {
 		__table: 'inbox_group_read',
 		threadId: 'read.threadId',
 		userId: 'read.userId',
-		lastReadAt: 'read.lastReadAt'
+		lastReadAt: 'read.lastReadAt',
+		muted: 'read.muted'
 	}
 };
 
 let results: unknown[] = [];
 let insertedValues: unknown[] = [];
 let lastWhere: unknown = null;
+let lastJoinOn: unknown[] = [];
 let lastOrderBy: unknown[] = [];
 
 function chain() {
@@ -55,7 +57,14 @@ function chain() {
 		insertedValues.push(v);
 		return self;
 	};
-	for (const m of ['from', 'innerJoin', 'leftJoin']) self[m] = () => self;
+	self.from = () => self;
+	// The join's own condition, not the where: a mute that is not scoped to one
+	// thread silences every room the reader is in.
+	for (const m of ['innerJoin', 'leftJoin'])
+		self[m] = (_t: unknown, on: unknown) => {
+			lastJoinOn.push(on);
+			return self;
+		};
 	self.then = (resolve: (v: unknown) => unknown) => resolve(results.shift() ?? []);
 	return self;
 }
@@ -98,6 +107,9 @@ vi.mock('drizzle-orm', () => ({
 
 const {
 	getOrCreateGroupChat,
+	countGroupChatUnread,
+	listGroupChatReaders,
+	setRoomMute,
 	listGroupTopics,
 	createGroupTopic,
 	postToGroupChat,
@@ -112,6 +124,7 @@ beforeEach(() => {
 	emitted.length = 0;
 	insertedValues = [];
 	lastWhere = null;
+	lastJoinOn = [];
 	lastOrderBy = [];
 });
 
@@ -196,6 +209,72 @@ describe('listGroupTopics', () => {
 		];
 
 		expect((await listGroupTopics('g1', 'u1'))[0].unread).toBe(false);
+	});
+
+	it('never marks a muted topic unread, however much it has said', async () => {
+		// A dot you cannot clear by not caring is not a mute (#1309).
+		results = [
+			[{ id: 'general-1' }],
+			[row({ lastMessageAt: new Date('2026-02-02'), lastReadAt: null, muted: true })]
+		];
+
+		const [topic] = await listGroupTopics('g1', 'u1');
+		expect(topic.unread).toBe(false);
+		expect(topic.muted).toBe(true);
+	});
+});
+
+describe('the per-room mute', () => {
+	it('keeps a muted room out of the unread badge', async () => {
+		results = [[{ count: 0 }]];
+		await countGroupChatUnread('g1', 'u1');
+
+		// A LEFT JOIN with no row is a reader who never opened it — unread and
+		// unmuted both — so the condition has to allow the null.
+		expect(flatten(lastWhere)).toContainEqual({
+			op: 'eq',
+			a: TABLES.inboxGroupRead.muted,
+			b: false
+		});
+		expect(flatten(lastWhere)).toContainEqual({
+			op: 'isNull',
+			a: TABLES.inboxGroupRead.muted
+		});
+	});
+
+	it('leaves the muted out of a room notification', async () => {
+		results = [[{ id: 'u2', name: 'Someone' }]];
+		await listGroupChatReaders('g1', 'thread-1');
+
+		expect(lastJoinOn.flatMap(flatten)).toContainEqual({
+			op: 'eq',
+			a: TABLES.inboxGroupRead.threadId,
+			b: 'thread-1'
+		});
+		expect(flatten(lastWhere)).toContainEqual({
+			op: 'eq',
+			a: TABLES.inboxGroupRead.muted,
+			b: false
+		});
+	});
+
+	it('asks the roster and nothing else when no room is named', async () => {
+		// The header asks who is on the roster; only the notify path asks who
+		// still wants to hear, and it is the one that passes a thread.
+		results = [[{ id: 'u2', name: 'Someone' }]];
+		await listGroupChatReaders('g1');
+
+		expect(flatten(lastWhere)).not.toContainEqual({
+			op: 'eq',
+			a: TABLES.inboxGroupRead.muted,
+			b: false
+		});
+	});
+
+	it('upserts, so a room can be muted before it is ever opened', async () => {
+		await setRoomMute('thread-1', 'u1', true);
+
+		expect(insertedValues[0]).toEqual({ threadId: 'thread-1', userId: 'u1', muted: true });
 	});
 });
 
