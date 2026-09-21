@@ -42,7 +42,7 @@
 			<Fact label="Booked for"><EntityChip ref={data.band} /></Fact>
 		{/if}
 		{#if res.notes}
-			<Fact label="Notes">{res.notes}</Fact>
+			<Fact label="Notes" wrap>{res.notes}</Fact>
 		{/if}
 	</DefinitionList>
 
