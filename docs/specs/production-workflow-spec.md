@@ -30,8 +30,8 @@ the flags were retired in favour of long-lived feature branches
 > | -------------------------------- | ------------------------------------------------------------------------------------- |
 > | Advance checklist                | ✅ A due-dated work order whose tasks are the checklist (#403, #405)                  |
 > | Day-of shifts, `production_task` | ✅ `duty_list` → work orders → `work_task`, anchored `doors\|start\|end` (#405, #407) |
-> | Run of show (`production_slot`)  | ❌ Still unbuilt. Per-night, and still belongs here                                   |
-> | Settlement and expenses          | ⚠️ Still unbuilt, but the 70/30 model below is superseded — see below                 |
+> | Run of show (`production_slot`)  | ✅ Shipped (#1133). Per-night, and it does belong here                                |
+> | Settlement and expenses          | ✅ Shipped, but **derived** — the 70/30 model below is superseded, see below          |
 >
 > **Three amendments to what remains:**
 >
@@ -118,6 +118,21 @@ the flags were retired in favour of long-lived feature branches
 > exist with no writer (#927), and `getSettlement` reads but nothing settles. What is
 > genuinely unstarted is close-out (Phase 6) and the payout columns settlement needs
 > (#926). Tracked as #1133.
+>
+> **Superseded again 2026-09-21 — phases 3 to 6 have all shipped.** `recordSlotPayout`
+> writes a payout, `productions.remote.ts` writes an expense, and `production` carries
+> `doorCashCents`, `closedAt` and `closedByUserId`. #926, #927, #928, #929 and the #825
+> the sequencing waited on are closed, and milestones 2.0 and 3.0 closed on them.
+>
+> **One thing here is not coming back:** `totalPayoutCents`, `netCents` and
+> `settledAt/By` were dropped by design. Settlement is **derived** from
+> `financial_entry` rows keyed by `settlement_group`
+> (`src/lib/server/production/settlement-service.ts`), and there is deliberately no
+> settlement table — see `src/lib/server/db/schema/production.ts`. Read any "settlement
+> columns" in the body below as describing a shape that was rejected.
+>
+> What is left is **first use**, not code: #1318 runs one show through to close-out and
+> #1319 runs one with the host, door and task roles.
 
 > ## Amendment, 2026-09-07 — the deal lives on `production_slot`, and `production_slot` is a child of `event_band`
 >
