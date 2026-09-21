@@ -1,16 +1,16 @@
-{{#category_label}}{{{category_label}}}
+{{#category_label}}{{{.}}}
 
-{{/category_label}}{{#heading}}{{{heading}}}
+{{/category_label}}{{#heading}}{{{.}}}
 
-{{/heading}}{{#greeting}}{{{greeting}}}
+{{/heading}}{{#greeting}}{{{.}}}
 
 {{/greeting}}{{#each paragraphs}}{{{text}}}
 
-{{/each}}{{#has_details}}{{#each details}}{{{label}}}: {{{value}}}
+{{/each}}{{#has_details}}{{#each ../details}}{{{label}}}: {{{value}}}
 {{/each}}
-{{/has_details}}{{#quote}}{{{quote_text}}}
+{{/has_details}}{{#quote}}{{{../quote_text}}}
 
 {{/quote}}{{#cta}}{{{label}}}: {{{url}}}
 
-{{/cta}}{{#footnote}}{{{footnote}}}
+{{/cta}}{{#footnote}}{{{.}}}
 {{/footnote}}

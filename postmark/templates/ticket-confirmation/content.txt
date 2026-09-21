@@ -1,6 +1,6 @@
 You're going
 
-Hi {{{attendeeName}}}, thanks for picking up {{#multiple}}{{{quantity}}} tickets{{/multiple}}{{^multiple}}a ticket{{/multiple}} for {{{eventTitle}}}.
+Hi {{{attendeeName}}}, thanks for picking up {{#multiple}}{{{../quantity}}} tickets{{/multiple}}{{^multiple}}a ticket{{/multiple}} for {{{eventTitle}}}.
 
 EVENT: {{{eventTitle}}}
 DATE: {{{eventDate}}}
@@ -11,13 +11,13 @@ TICKET{{#multiple}}S{{/multiple}}:
 RECEIPT
 ORDER: {{{orderId}}}
 {{{quantity}}} x {{{unitPrice}}} ticket{{#multiple}}s{{/multiple}}: {{{subtotal}}}
-{{#contributionMade}}Contribution to the band & venue: {{{contribution}}}
-{{/contributionMade}}{{#feesCovered}}Processing fees covered: {{{fees}}}
+{{#contributionMade}}Contribution to the band & venue: {{{../contribution}}}
+{{/contributionMade}}{{#feesCovered}}Processing fees covered: {{{../fees}}}
 {{/feesCovered}}TOTAL PAID: {{{total}}}
 {{#splitShown}}
 WHERE YOU SENT IT
-To the acts on the bill: {{{toActs}}}
-To the Collective: {{{toCollective}}}
+To the acts on the bill: {{{../toActs}}}
+To the Collective: {{{../toCollective}}}
 {{/splitShown}}
 
 View your tickets: {{{ticketsUrl}}}

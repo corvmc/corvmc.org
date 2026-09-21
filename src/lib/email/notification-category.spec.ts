@@ -107,7 +107,9 @@ describe('notification categories', () => {
 	it.each(ENTRIES)('%s has a dark-mode rule the layout will actually apply', (key, category) => {
 		// A fill class added to the template and not to the layout's dark block is
 		// silent: the bar just keeps its light colour on a dark surface.
-		expect(TEMPLATE).toContain('{{category_class}}');
+		// `../` because the class sits inside `{{#category_color}}`, which
+		// Mustachio scopes to the colour string — see #1125.
+		expect(TEMPLATE).toContain('{{../category_class}}');
 		expect(LAYOUT).toContain(`.${category.className} { background-color:${category.dark}`);
 	});
 
