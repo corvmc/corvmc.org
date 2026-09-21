@@ -18,6 +18,21 @@ const TOKEN_URL = 'https://oauth.u-tec.com/token';
 
 const TOKEN_KEY = 'ultraloc:token';
 
+/**
+ * Both token grants, the way the vendor's own Postman collection asks for them:
+ * `client_authentication: "body"`, so a POST with a form-encoded body rather
+ * than credentials on the query string. The refresh grant used to interpolate
+ * them into a URL unescaped, which corrupts any secret holding `+`, `/` or `&`
+ * — and a query string is the one place a credential is certain to be logged.
+ */
+function postToken(params: Record<string, string>): Promise<Response> {
+	return fetch(TOKEN_URL, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams(params).toString()
+	});
+}
+
 async function getConfig() {
 	const dbConfig = await getConfigsByPrefix('integration.utec');
 
@@ -106,9 +121,12 @@ async function getAccessToken(): Promise<string> {
 
 	const { clientId, clientSecret, refreshToken } = await getConfig();
 
-	const res = await fetch(
-		`${TOKEN_URL}?grant_type=refresh_token&client_id=${clientId}&client_secret=${clientSecret}&refresh_token=${refreshToken}`
-	);
+	const res = await postToken({
+		grant_type: 'refresh_token',
+		client_id: clientId,
+		client_secret: clientSecret,
+		refresh_token: refreshToken
+	});
 
 	if (!res.ok) {
 		throw new Error(`Ultraloc token refresh failed: ${res.status} ${await res.text()}`);
@@ -441,15 +459,13 @@ export async function exchangeAuthorizationCode(
 		throw new Error('Ultraloc client ID or ULTRALOC_CLIENT_SECRET not configured');
 	}
 
-	const params = new URLSearchParams({
+	const res = await postToken({
 		grant_type: 'authorization_code',
 		client_id: clientId,
 		client_secret: clientSecret,
 		code,
 		redirect_uri: redirectUri
 	});
-
-	const res = await fetch(`${TOKEN_URL}?${params.toString()}`);
 	if (!res.ok) {
 		throw new Error(`Ultraloc code exchange failed: ${res.status} ${await res.text()}`);
 	}
@@ -474,9 +490,12 @@ export async function testConnection(): Promise<{ ok: boolean; error?: string }>
 	try {
 		const { clientId, clientSecret, refreshToken } = await getConfig();
 
-		const res = await fetch(
-			`${TOKEN_URL}?grant_type=refresh_token&client_id=${clientId}&client_secret=${clientSecret}&refresh_token=${refreshToken}`
-		);
+		const res = await postToken({
+			grant_type: 'refresh_token',
+			client_id: clientId,
+			client_secret: clientSecret,
+			refresh_token: refreshToken
+		});
 
 		if (!res.ok) {
 			const text = await res.text();
