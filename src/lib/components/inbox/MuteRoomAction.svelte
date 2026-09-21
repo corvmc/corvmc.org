@@ -2,11 +2,10 @@
 	/**
 	 * Silence one room without silencing the group.
 	 *
-	 * `group_member.notifyAnnouncements` can mute six groups but not one noisy
+	 * `group_member.notifyAnnouncements` mutes six groups but not one noisy
 	 * topic, because a room is a thread — so this writes `inbox_group_read`,
-	 * which is already keyed on exactly that pair (#1309). A muted room also
-	 * stops counting toward the unread badge; a dot you cannot clear by not
-	 * caring is not a mute.
+	 * already keyed on that pair. A muted room stops counting as unread too
+	 * (#1309).
 	 */
 	import { IconBell, IconBellOff } from '@tabler/icons-svelte';
 	import Action from '$lib/components/ui/Action.svelte';

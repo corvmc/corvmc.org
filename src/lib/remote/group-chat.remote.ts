@@ -141,11 +141,10 @@ export const markGroupChatSeen = command(z.string().min(1), async (threadId) => 
 /**
  * Silence one room, or let it speak again.
  *
- * The gate is the thread's own group, as posting and reading are, and the
- * reader is the session's: a member may only ever mute a room for themselves,
- * so there is no `userId` field to forge. An intent enum rather than a boolean
- * — a cleared checkbox is indistinguishable from an untouched one in a remote
- * form.
+ * The gate is the thread's own group, as posting is, and the reader is the
+ * session's: a member may only ever mute a room for themselves, so there is
+ * no `userId` field to forge. An intent enum rather than a boolean — a
+ * cleared checkbox reads as untouched in a remote form.
  */
 export const setRoomMute = form(
 	z.object({ threadId: z.string().min(1), intent: z.enum(['mute', 'unmute']) }),
