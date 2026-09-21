@@ -24,15 +24,12 @@ async function getConfig() {
 	const clientId = (dbConfig.clientId as string) || env.ULTRALOC_CLIENT_ID;
 	const deviceId = (dbConfig.deviceId as string) || env.ULTRALOC_DEVICE_ID;
 
-	// Env only, and deliberately not `dbConfig`: #745 dropped the client secret's
-	// site-config key, so an entry left behind by that must not resurrect itself
-	// as a source. The refresh token kept its key — the Connect flow writes one.
-	const clientSecret = env[CREDENTIALS.clientSecret.env];
+	const clientSecret = (dbConfig.clientSecret as string) || env[CREDENTIALS.clientSecret.env];
 	const refreshToken = (dbConfig.refreshToken as string) || env[CREDENTIALS.refreshToken.env];
 
 	if (!clientId || !clientSecret || !deviceId || !refreshToken) {
 		throw new Error(
-			'Ultraloc credentials not configured — set the ULTRALOC_CLIENT_SECRET secret, and the ids and lock connection in Staff Settings > Integrations'
+			'Ultraloc credentials not configured — set the ids, the client secret and the lock connection in Staff Settings > Integrations'
 		);
 	}
 
@@ -42,23 +39,19 @@ async function getConfig() {
 /**
  * The two values that mint an access token, and where each may come from.
  *
- * `kv: false` is the whole of #745: the client secret's site-config key is gone,
- * so a leftover entry is not a source and is not read. The refresh token kept
- * its key because the Connect flow has to write the token it mints somewhere —
- * the weaker half of the posture, taken so reconnecting stays a button.
+ * Both are staff-settable, and #745's split is deliberately reversed: a client
+ * id and its secret are one credential, and keeping half in a Worker secret let
+ * them drift apart — which reads as `invalid_client` and nothing else. The env
+ * var stays as a fallback for a checkout with no stored value.
  */
 const CREDENTIALS = {
-	clientSecret: { env: 'ULTRALOC_CLIENT_SECRET', kv: false },
+	clientSecret: { env: 'ULTRALOC_CLIENT_SECRET', kv: true },
 	refreshToken: { env: 'ULTRALOC_REFRESH_TOKEN', kv: true }
 } as const;
 
 type CredentialField = keyof typeof CREDENTIALS;
 
-/**
- * Where a credential came from. `'kv'` is absent from the client secret's type
- * rather than merely unreachable, so a consumer branching on `source` has no
- * dead case to write.
- */
+/** Where a credential came from — a stored value, the env fallback, or nowhere. */
 export type CredentialSource<F extends CredentialField> =
 	'env' | null | ((typeof CREDENTIALS)[F]['kv'] extends true ? 'kv' : never);
 
@@ -420,7 +413,7 @@ export async function exchangeAuthorizationCode(
 ): Promise<{ refreshToken: string; accessToken: string; expiresIn: number }> {
 	const dbConfig = await getConfigsByPrefix('integration.utec');
 	const clientId = (dbConfig.clientId as string) || env.ULTRALOC_CLIENT_ID;
-	const clientSecret = env[CREDENTIALS.clientSecret.env];
+	const clientSecret = (dbConfig.clientSecret as string) || env[CREDENTIALS.clientSecret.env];
 
 	if (!clientId || !clientSecret) {
 		throw new Error('Ultraloc client ID or ULTRALOC_CLIENT_SECRET not configured');

@@ -6,14 +6,13 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 // Mocks — credentials + a cached token so no token refresh fetch is needed.
 // ---------------------------------------------------------------------------
 
-// Fixture values, not credentials. `KV_LEFTOVER_SECRET` stands in for the
-// production `integration.utec.clientSecret` entry #745 stopped reading: it
-// outlives the code that wrote it, so the tests assert it reaches nothing.
+// Fixture values, not credentials. Both credentials resolve the same way —
+// stored value first, env var as the fallback for a checkout that has none.
 const ENV_CREDENTIALS = {
 	ULTRALOC_CLIENT_SECRET: 'env-client-secret-fixture',
 	ULTRALOC_REFRESH_TOKEN: 'env-refresh-token-fixture'
 };
-const KV_LEFTOVER_SECRET = 'kv-client-secret-leftover';
+const STORED_SECRET = 'kv-client-secret-stored';
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
 
@@ -26,7 +25,7 @@ vi.mock('$lib/server/site-config/site-config-service', () => ({
 	getConfigsByPrefix: vi.fn().mockResolvedValue({
 		clientId: 'cid',
 		deviceId: 'DEV-1',
-		clientSecret: 'kv-client-secret-leftover',
+		clientSecret: 'kv-client-secret-stored',
 		refreshToken: 'kv-refresh-token'
 	})
 }));
@@ -361,20 +360,32 @@ describe('exchangeAuthorizationCode', () => {
 		expect(url.searchParams.get('client_id')).toBe('cid');
 	});
 
-	// The exchange signs with the deployed secret, not the config read it makes
-	// for the client id — the one place a KV leftover could still slip back in.
-	it('signs the exchange with the deployed secret, never the KV leftover', async () => {
+	// The id and the secret have to come from the same place, or they drift and
+	// U-tec answers `invalid_client` — which is the whole reason #745 was undone.
+	it('signs the exchange with the stored secret, beside the stored id', async () => {
 		mockFetchUrl({ code: 200, data: { refresh_token: 'rt' } });
 		await exchangeAuthorizationCode('c', 'https://corvmc.org/cb');
 
-		expect(lastUrl).not.toContain(KV_LEFTOVER_SECRET);
-		expect(new URL(lastUrl!).searchParams.get('client_secret')).toBeTruthy();
+		const params = new URL(lastUrl!).searchParams;
+		expect(params.get('client_secret')).toBe(STORED_SECRET);
+		expect(params.get('client_id')).toBe('cid');
 	});
 
-	it('refuses to exchange when the client secret is not deployed', async () => {
+	it('falls back to the environment when nothing is stored', async () => {
+		vi.mocked(getConfigsByPrefix).mockResolvedValueOnce({ clientId: 'cid' });
+		mockFetchUrl({ code: 200, data: { refresh_token: 'rt' } });
+		await exchangeAuthorizationCode('c', 'https://corvmc.org/cb');
+
+		expect(new URL(lastUrl!).searchParams.get('client_secret')).toBe(
+			ENV_CREDENTIALS.ULTRALOC_CLIENT_SECRET
+		);
+	});
+
+	it('refuses to exchange when neither source has a client secret', async () => {
+		vi.mocked(getConfigsByPrefix).mockResolvedValueOnce({ clientId: 'cid' });
 		delete env.ULTRALOC_CLIENT_SECRET;
 		await expect(exchangeAuthorizationCode('c', 'https://corvmc.org/cb')).rejects.toThrow(
-			/ULTRALOC_CLIENT_SECRET not configured/
+			/not configured/
 		);
 	});
 
@@ -393,17 +404,18 @@ describe('exchangeAuthorizationCode', () => {
 });
 
 describe('credential resolution', () => {
-	// Presence and provenance only. A test that pinned a value would put a
-	// credential in a fixture, which is the thing #745 was about.
-	//
-	// The two differ on purpose: KV is a source for the refresh token and not
-	// for the client secret, whose site-config key #745 removed.
-	it('reports the client secret from the environment', async () => {
+	// Presence and provenance only: the page renders the source, never the value.
+	it('reports the client secret from storage, which now holds it', async () => {
+		expect(await credentialStatus('clientSecret')).toEqual({ configured: true, source: 'kv' });
+	});
+
+	it('falls the client secret back to the environment when none is stored', async () => {
+		vi.mocked(getConfigsByPrefix).mockResolvedValueOnce({ clientId: 'cid' });
 		expect(await credentialStatus('clientSecret')).toEqual({ configured: true, source: 'env' });
 	});
 
-	// The regression #745 turns on: the KV mock above still holds a leftover.
-	it('reads the client secret as unset when its secret is, KV leftover or not', async () => {
+	it('reports the client secret unset when neither source has one', async () => {
+		vi.mocked(getConfigsByPrefix).mockResolvedValueOnce({ clientId: 'cid' });
 		delete env.ULTRALOC_CLIENT_SECRET;
 		expect(await credentialStatus('clientSecret')).toEqual({ configured: false, source: null });
 	});
@@ -423,23 +435,20 @@ describe('credential resolution', () => {
 		expect(await credentialStatus('refreshToken')).toEqual({ configured: false, source: null });
 	});
 
-	it('signs a token request with the deployed secret, never the KV leftover', async () => {
+	it('signs a token request with the stored secret', async () => {
 		mockFetchUrl({ code: 200, data: { access_token: 'at', expires_in: 3600 } });
 
 		expect(await testConnection()).toEqual({ ok: true });
 
-		expect(lastUrl, 'the KV client secret reached the token request').not.toContain(
-			KV_LEFTOVER_SECRET
-		);
-		// Proves the assertion above looked at a real request, not an empty one.
 		const url = new URL(lastUrl!);
-		expect(url.searchParams.get('client_secret')).toBeTruthy();
+		expect(url.searchParams.get('client_secret')).toBe(STORED_SECRET);
 		expect(url.searchParams.get('refresh_token')).toBeTruthy();
 	});
 
-	it('refuses to run on a leftover KV client secret alone', async () => {
+	it('runs on a stored client secret with no environment variable', async () => {
 		delete env.ULTRALOC_CLIENT_SECRET;
+		mockFetchUrl({ code: 200, data: { access_token: 'at', expires_in: 3600 } });
 
-		await expect(listLockUsers()).rejects.toThrow(/not configured/);
+		await expect(testConnection()).resolves.toEqual({ ok: true });
 	});
 });

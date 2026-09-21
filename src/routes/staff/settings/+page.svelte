@@ -101,6 +101,15 @@
 			null: 'Not set. Use Connect above rather than pasting one, where you can.'
 		}[String(integrationSettings.refreshToken.source)]
 	);
+	// Same shape as the refresh token's: the field renders empty either way, so
+	// the hint is the only thing saying which, and that blank keeps what is set.
+	const clientSecretHint = $derived(
+		{
+			kv: 'Saved here. Leave blank to keep it.',
+			env: 'Set by the ULTRALOC_CLIENT_SECRET environment variable. Saving a value here overrides it.',
+			null: 'Not set. Paste the secret from the U-tec developer console.'
+		}[String(integrationSettings.clientSecret.source)]
+	);
 	const utecRedirectUri = $derived(`${page.url.origin}/api/integrations/utec/callback`);
 
 	// Surface the result of the OAuth round-trip (?utec=… set by the callback).
@@ -667,7 +676,7 @@
 
 						{#if !utecConnected && !utecCanConnect}
 							<p class="text-subtle">
-								Save a Client ID and deploy the client secret, then connect to authorize the lock.
+								Save a Client ID and Client Secret, then connect to authorize the lock.
 							</p>
 						{/if}
 
@@ -783,6 +792,13 @@
 								value={integrationSettings.clientId}
 							/>
 							<FormField
+								name="clientSecret"
+								label="Client Secret"
+								type="password"
+								value=""
+								description={clientSecretHint}
+							/>
+							<FormField
 								name="deviceId"
 								label="Device ID"
 								type="text"
@@ -795,21 +811,6 @@
 								value=""
 								description={refreshTokenHint}
 							/>
-						</div>
-
-						<div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
-							{#if integrationSettings.clientSecret.configured}
-								<IconCircleCheck class="size-4 shrink-0 text-success" />
-							{:else}
-								<IconCircleX class="size-4 shrink-0 text-error" />
-							{/if}
-							<span>Client secret</span>
-							<code class="code-block px-1.5 py-0.5 text-xs">ULTRALOC_CLIENT_SECRET</code>
-							<span class="text-subtle">
-								{integrationSettings.clientSecret.configured ? 'set' : 'not set'} — a Worker secret, not
-								a setting. Change it with
-								<code class="code-block px-1.5 py-0.5">wrangler secret put</code> and redeploy.
-							</span>
 						</div>
 
 						<div class="mt-2">

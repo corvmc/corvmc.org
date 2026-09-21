@@ -196,23 +196,23 @@ Bulk secret upload: copy `secrets.template.json` → `.secrets.json` (gitignored
 
 ### Secret inventory
 
-| Secret                                                             | Used by                                                                                                                                                                                                                                                      |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `BETTER_AUTH_SECRET`                                               | Session/signing key for better-auth (`src/lib/server/auth.ts`)                                                                                                                                                                                               |
-| `CRON_SECRET`                                                      | Bearer token every `/api/cron/*` endpoint requires; sent by the Worker's own `scheduled` handler (`worker.js`) and by manual curl invocations                                                                                                                |
-| `MIGRATION_SECRET`                                                 | Shared secret for the legacy-Laravel `verify-password` proxy (see §6; retire with the bridge)                                                                                                                                                                |
-| `DATABASE_URL`                                                     | **Not read by anything.** The Worker never referenced it, and the three Postgres one-offs that did are deleted — see §6. Remove it from Worker secrets and from `.env`.                                                                                      |
-| `MARKETING_UNSUBSCRIBE_SECRET`                                     | Signs unsubscribe links (`src/lib/server/marketing/unsubscribe.ts`)                                                                                                                                                                                          |
-| `STRIPE_SECRET_KEY`                                                | All Stripe API calls (`src/lib/server/stripe.ts`)                                                                                                                                                                                                            |
-| `STRIPE_WEBHOOK_SECRET`                                            | Webhook signature verification (`src/routes/api/stripe/webhook/+server.ts`)                                                                                                                                                                                  |
-| `STRIPE_WEBHOOK_ID`                                                | Which endpoint `pnpm stripe:sync-webhooks` manages                                                                                                                                                                                                           |
-| `POSTMARK_SERVER_TOKEN`                                            | Outbound email (`src/lib/server/notification/email/postmark-client.ts`) + the `email:push/pull` CLI                                                                                                                                                          |
-| `POSTMARK_INBOUND_TOKEN`                                           | Authenticates Postmark's inbound webhook (`src/routes/api/inbox/postmark/+server.ts`) — sent as the HTTP Basic _password_ in the hook URL                                                                                                                    |
-| `INBOX_REPLY_SECRET`                                               | Signs the thread id in inbox reply addresses (`src/lib/server/inbox/reply-address.ts`). Optional — falls back to `POSTMARK_SERVER_TOKEN`                                                                                                                     |
-| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN`                         | SMS send/receive (`src/lib/server/inbox/twilio-client.ts`)                                                                                                                                                                                                   |
-| `META_APP_SECRET` / `META_PAGE_ACCESS_TOKEN` / `META_VERIFY_TOKEN` | Instagram + Messenger inbox channels (`src/routes/api/inbox/meta/+server.ts`) — built and tested, not yet provisioned; see [meta-inbox-setup](meta-inbox-setup.md)                                                                                           |
-| `ULTRALOC_CLIENT_SECRET`                                           | U-Tec smart-lock API (`src/lib/server/lock/ultraloc-client.ts`) — **required**, and the only source: its site-config key was dropped in #745. `ULTRALOC_CLIENT_ID` / `_DEVICE_ID` / `_REFRESH_TOKEN` are optional fallbacks behind the staff-settable values |
-| `TURNSTILE_SECRET_KEY`                                             | Server-side Turnstile verification (`src/lib/server/turnstile.ts`)                                                                                                                                                                                           |
+| Secret                                                             | Used by                                                                                                                                                                                                    |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`                                               | Session/signing key for better-auth (`src/lib/server/auth.ts`)                                                                                                                                             |
+| `CRON_SECRET`                                                      | Bearer token every `/api/cron/*` endpoint requires; sent by the Worker's own `scheduled` handler (`worker.js`) and by manual curl invocations                                                              |
+| `MIGRATION_SECRET`                                                 | Shared secret for the legacy-Laravel `verify-password` proxy (see §6; retire with the bridge)                                                                                                              |
+| `DATABASE_URL`                                                     | **Not read by anything.** The Worker never referenced it, and the three Postgres one-offs that did are deleted — see §6. Remove it from Worker secrets and from `.env`.                                    |
+| `MARKETING_UNSUBSCRIBE_SECRET`                                     | Signs unsubscribe links (`src/lib/server/marketing/unsubscribe.ts`)                                                                                                                                        |
+| `STRIPE_SECRET_KEY`                                                | All Stripe API calls (`src/lib/server/stripe.ts`)                                                                                                                                                          |
+| `STRIPE_WEBHOOK_SECRET`                                            | Webhook signature verification (`src/routes/api/stripe/webhook/+server.ts`)                                                                                                                                |
+| `STRIPE_WEBHOOK_ID`                                                | Which endpoint `pnpm stripe:sync-webhooks` manages                                                                                                                                                         |
+| `POSTMARK_SERVER_TOKEN`                                            | Outbound email (`src/lib/server/notification/email/postmark-client.ts`) + the `email:push/pull` CLI                                                                                                        |
+| `POSTMARK_INBOUND_TOKEN`                                           | Authenticates Postmark's inbound webhook (`src/routes/api/inbox/postmark/+server.ts`) — sent as the HTTP Basic _password_ in the hook URL                                                                  |
+| `INBOX_REPLY_SECRET`                                               | Signs the thread id in inbox reply addresses (`src/lib/server/inbox/reply-address.ts`). Optional — falls back to `POSTMARK_SERVER_TOKEN`                                                                   |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN`                         | SMS send/receive (`src/lib/server/inbox/twilio-client.ts`)                                                                                                                                                 |
+| `META_APP_SECRET` / `META_PAGE_ACCESS_TOKEN` / `META_VERIFY_TOKEN` | Instagram + Messenger inbox channels (`src/routes/api/inbox/meta/+server.ts`) — built and tested, not yet provisioned; see [meta-inbox-setup](meta-inbox-setup.md)                                         |
+| `ULTRALOC_CLIENT_SECRET`                                           | U-Tec smart-lock API (`src/lib/server/lock/ultraloc-client.ts`) — an optional fallback, like `ULTRALOC_CLIENT_ID` / `_DEVICE_ID` / `_REFRESH_TOKEN`. All four are staff-settable and the stored value wins |
+| `TURNSTILE_SECRET_KEY`                                             | Server-side Turnstile verification (`src/lib/server/turnstile.ts`)                                                                                                                                         |
 
 Local equivalents: Worker secrets go in **`.dev.vars`** (read by `vite dev` / wrangler),
 Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are gitignored;
@@ -319,23 +319,24 @@ Smart-lock access for the practice space. Client code in `src/lib/server/lock/`
 collection for the vendor API is checked in at
 `docs/architecture/U-Tec Api.postman_collection.json`.
 
-**The client secret is a Worker secret and nothing else.** #745 dropped its site-config key,
-so `ULTRALOC_CLIENT_SECRET` is the only source and Staff Settings → Integrations can report
-whether it is set but not change it. **Rotating it is a deploy**, and the round-trip is
-manual:
+**All four values are staff-settable**, each falling back to its `ULTRALOC_*` env var when
+the stored value is blank. Change any of them at Staff Settings → Integrations; no deploy is
+involved, and the client secret is not a special case.
 
-1. Get the new secret from the U-tec developer console.
-2. `pnpm wrangler secret put ULTRALOC_CLIENT_SECRET`, paste it, then deploy.
+#745 had moved the client secret out to a Worker secret alone. That is **reversed**: a client
+id and its secret are one credential, and keeping half of it somewhere the app could not write
+meant the two could be rotated apart — which U-tec reports as `invalid_client` and nothing
+more specific. The credential that relocation was protecting, the refresh token, stayed in KV
+throughout, so the split bought little: a refresh token mints access tokens on its own, while
+a client secret cannot without a user authorization bound to this origin's redirect URI.
 
-The **refresh token still lives in KV**, which is what keeps "Connect to U-tec" on the
-settings page working: the callback under `src/routes/api/integrations/utec/` exchanges the
-authorization code and writes `integration.utec.refreshToken`. That is the weaker half of the
-posture on purpose — a refresh token is a bearer credential too — traded for a reconnect that
-does not need a deploy. It never reaches the browser either way: the settings query projects
-`{ configured, source }` for both credentials, never a value.
+Neither credential reaches the browser. The settings query projects `{ configured, source }`
+and the fields render empty, so **saving blank keeps what is stored** rather than clearing it
+— the OAuth callback is a second writer for the refresh token, and a wipe would undo a Connect.
 
-Client ID, Device ID and the refresh token stay staff-settable, each falling back to its
-`ULTRALOC_*` env var when the KV value is blank.
+"Connect to U-tec" runs the OAuth code flow: the callback under
+`src/routes/api/integrations/utec/` exchanges the authorization code and writes
+`integration.utec.refreshToken`.
 
 ### Turnstile (bot protection)
 

@@ -24,9 +24,9 @@ vi.mock('$lib/server/authorization', () => ({
 // reintroduction under any field name, nested or renamed. Both mint access
 // tokens for the door lock; neither is something a staff browser needs.
 //
-// The KV mock below holds both. For the refresh token that is just how it is
-// stored; for the client secret it is a leftover #745 stopped reading, which
-// the guard doubles as a check on — a production entry outlives its writer.
+// The config mock below holds both, which is how they are stored now that #745
+// is reversed. Storing them is not the risk; projecting them is, and that is
+// what these assertions are about.
 const CREDENTIALS = {
 	clientSecret: 'utec-client-secret-sentinel',
 	refreshToken: 'utec-refresh-token-sentinel'
@@ -60,9 +60,9 @@ vi.mock('$lib/server/finance/product-config-service', () => ({
 }));
 
 const testConnection = vi.fn(async () => ({ ok: true }));
-const credentialStatus = vi.fn(async (field: string) => ({
+const credentialStatus = vi.fn(async (_field: string) => ({
 	configured: true,
-	source: (field === 'refreshToken' ? 'kv' : 'env') as 'kv' | 'env'
+	source: 'kv' as 'kv' | 'env'
 }));
 vi.mock('$lib/server/lock/ultraloc-client', () => ({
 	testConnection: () => testConnection(),
@@ -239,7 +239,7 @@ describe('settings.remote staff guards', () => {
 		expect(requireCapability).toHaveBeenCalledWith('settings.read');
 		expect(result).toEqual({
 			clientId: 'utec-client',
-			clientSecret: { configured: true, source: 'env' },
+			clientSecret: { configured: true, source: 'kv' },
 			deviceId: 'device-1',
 			refreshToken: { configured: true, source: 'kv' }
 		});
@@ -266,13 +266,10 @@ describe('settings.remote staff guards', () => {
 		}
 	);
 
-	// The other half of the guard: the client secret must not reach KV either.
-	// The form is handed one under that name anyway, because a schema that drops
-	// an unknown field and a handler that writes it look identical from the
-	// browser — only the write list tells them apart. The refresh token is the
-	// deliberate exception, and is asserted present so this cannot pass by the
-	// handler writing nothing at all.
-	it('updateIntegrationSettings writes the refresh token, never the client secret', async () => {
+	// Both credentials are written now (#745 reversed): an id and its secret are
+	// one credential, and a form that can save only half of it is how the two
+	// drift into `invalid_client`.
+	it('updateIntegrationSettings writes both credentials beside the ids', async () => {
 		requireCapability.mockResolvedValue(undefined);
 		await settings.updateIntegrationSettings({
 			clientId: 'utec-client',
@@ -285,11 +282,24 @@ describe('settings.remote staff guards', () => {
 		expect(writes.map((c) => c.key)).toEqual([
 			'integration.utec.clientId',
 			'integration.utec.deviceId',
+			'integration.utec.clientSecret',
 			'integration.utec.refreshToken'
 		]);
-		expect(JSON.stringify(writes), 'the client secret was written to KV').not.toContain(
-			CREDENTIALS.clientSecret
-		);
+	});
+
+	// Same rule as the refresh token below, and for the same reason: the field
+	// renders empty whether or not one is stored.
+	it('a blank client secret leaves the stored one alone rather than clearing it', async () => {
+		requireCapability.mockResolvedValue(undefined);
+		await settings.updateIntegrationSettings({
+			clientId: 'utec-client',
+			deviceId: 'device-1',
+			clientSecret: '',
+			refreshToken: ''
+		});
+
+		const keys = updateSiteConfigs.mock.calls[0][0]!.map((c) => c.key);
+		expect(keys).not.toContain('integration.utec.clientSecret');
 	});
 
 	// The refresh token has a second writer — the OAuth callback — so a save on

@@ -111,9 +111,9 @@ export const getIntegrationSettings = query(async () => {
 	await requireCapability('settings.read');
 	const raw = await getConfigsByPrefix('integration.utec');
 
-	// Presence, never the value, for the two that mint an access token — the
-	// refresh token included, which KV still holds so the Connect flow can write
-	// it. Everything this query returns is serialised to the browser, since
+	// Presence, never the value, for the two that mint an access token. Both are
+	// stored now (#745 reversed), and everything this query returns is
+	// serialised to the browser, since
 	// `getStaffSettingsPage` folds it into the payload the staff route SSRs into
 	// its HTML. `clientId` and `deviceId` are not credentials and stay verbatim:
 	// see `CREDENTIALS` in `ultraloc-client.ts`.
@@ -336,10 +336,9 @@ export const updateVenueSettings = form(venueSettingsSchema, async (raw) => {
 // Forms — Integration settings
 // ---------------------------------------------------------------------------
 
-// No `clientSecret`: the form cannot write one, since it is a `wrangler secret`
-// value and a field saving into KV would save somewhere nothing reads (#745).
 const integrationSettingsSchema = z.object({
 	clientId: z.string().trim(),
+	clientSecret: z.string().trim(),
 	deviceId: z.string().trim(),
 	refreshToken: z.string().trim()
 });
@@ -391,12 +390,16 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
 	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof integrationSettingsSchema>;
 
-	// A blank refresh token means "unchanged", not "clear it". The field is never
-	// rendered with its value, so an untouched one submits empty — and the OAuth
-	// callback is a second writer, which a wipe here would silently undo.
+	// A blank credential means "unchanged", not "clear it". Neither field is ever
+	// rendered with its value, so an untouched one submits empty — and for the
+	// refresh token the OAuth callback is a second writer, which a wipe here
+	// would silently undo.
 	await updateSiteConfigs([
 		{ key: 'integration.utec.clientId', value: data.clientId },
 		{ key: 'integration.utec.deviceId', value: data.deviceId },
+		...(data.clientSecret
+			? [{ key: 'integration.utec.clientSecret', value: data.clientSecret }]
+			: []),
 		...(data.refreshToken
 			? [{ key: 'integration.utec.refreshToken', value: data.refreshToken }]
 			: [])
