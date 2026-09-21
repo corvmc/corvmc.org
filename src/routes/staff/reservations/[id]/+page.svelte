@@ -337,7 +337,7 @@
 	<!-- A labelled line, not a titled box around one paragraph (#1078). -->
 	{#if r.notes}
 		<DefinitionList>
-			<Fact label="Notes">{r.notes}</Fact>
+			<Fact label="Notes" wrap>{r.notes}</Fact>
 		</DefinitionList>
 	{/if}
 

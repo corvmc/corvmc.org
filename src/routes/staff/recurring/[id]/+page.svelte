@@ -80,7 +80,7 @@
 			<Fact label="Prototype"><EntityChip ref={series.prototype} /></Fact>
 
 			{#if series.prototypeNotes}
-				<Fact label="Notes">{series.prototypeNotes}</Fact>
+				<Fact label="Notes" wrap>{series.prototypeNotes}</Fact>
 			{/if}
 
 			<Fact label="Created">{formatDate(series.createdAt)}</Fact>
