@@ -112,6 +112,15 @@ export default defineConfig({
 		port: previewPort(dirname),
 		strictPort: true
 	},
+	optimizeDeps: {
+		// Vite's cold scan follows static imports only, so a dependency reached
+		// solely by `await import()` is discovered when a test first renders it —
+		// mid-run, which re-bundles and **reloads the browser**, and whatever file
+		// was importing at that moment dies with "Failed to fetch dynamically
+		// imported module" and zero failed tests. `scripts/optimize-deps.spec.ts`
+		// keeps this list honest; see #1295.
+		include: ['barcode-detector/pure']
+	},
 	test: {
 		expect: {
 			requireAssertions: true
