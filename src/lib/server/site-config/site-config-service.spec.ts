@@ -141,9 +141,12 @@ describe('getConfigsByPrefix', () => {
 
 	// The client secret is absent by design — env only, per #745 — so the exact
 	// key set is pinned rather than the survivors spot-checked.
-	it('registers the integration keys KV still backs, and no others', async () => {
+	it('registers every integration key, and no others', async () => {
+		// All four, since #745's split was reversed: an id and its secret are one
+		// credential and have to be settable together.
 		expect(Object.keys(await getConfigsByPrefix('integration.utec')).sort()).toEqual([
 			'clientId',
+			'clientSecret',
 			'deviceId',
 			'refreshToken'
 		]);
