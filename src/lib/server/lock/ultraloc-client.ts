@@ -358,6 +358,28 @@ export async function getLockUser(userId: number): Promise<LockUserDetail | null
  * cloud last heard from the device, which may be months old — an offline lock
  * still reports a plausible-looking battery level.
  */
+export interface UtecDevice {
+	id: string;
+	name: string;
+	category: string;
+}
+
+/**
+ * Every device on the U-tec account, so the Device ID is picked rather than
+ * typed. `Uhome.Device`/`Discovery` per the vendor collection; the category is
+ * kept because an account holds bulbs and switches too, and the lock has to be
+ * told apart from them by eye.
+ */
+export async function listDevices(): Promise<UtecDevice[]> {
+	const payload = (await apiCall('Uhome.Device', 'Discovery', {})) as {
+		devices?: { id?: string; name?: string; category?: string }[];
+	};
+
+	return (payload.devices ?? [])
+		.filter((d): d is { id: string; name?: string; category?: string } => Boolean(d.id))
+		.map((d) => ({ id: d.id, name: d.name ?? d.id, category: d.category ?? '' }));
+}
+
 export async function queryDeviceHealth(): Promise<LockDeviceHealth> {
 	const { deviceId } = await getConfig();
 

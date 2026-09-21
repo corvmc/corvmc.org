@@ -12,7 +12,7 @@ import {
 	updateSiteConfigs,
 	updateSiteConfig
 } from '$lib/server/site-config/site-config-service';
-import { testConnection, credentialStatus } from '$lib/server/lock/ultraloc-client';
+import { testConnection, credentialStatus, listDevices } from '$lib/server/lock/ultraloc-client';
 import { issueLockSelfTest, revokeLockSelfTest } from '$lib/server/lock/lock-service';
 import { requireCapability } from '$lib/server/authorization';
 import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '$lib/server/feature-flags';
@@ -126,8 +126,26 @@ export const getIntegrationSettings = query(async () => {
 		clientId: raw.clientId ? String(raw.clientId) : '',
 		clientSecret,
 		deviceId: raw.deviceId ? String(raw.deviceId) : '',
-		refreshToken
+		// Presence alone, and only because it is what "Connected" means. There is
+		// no field for it: the Connect flow writes it and nothing else reads it.
+		connected: refreshToken.configured
 	};
+});
+
+/**
+ * The devices the account can see, for the Device ID picker.
+ *
+ * Returns the failure rather than throwing: this feeds a field on the
+ * integrations form, and credentials that do not work yet are the normal state
+ * of that page — a throw here would take down the form you fix them in.
+ */
+export const getUtecDevices = query(async () => {
+	await requireCapability('settings.read');
+	try {
+		return { devices: await listDevices(), error: null };
+	} catch (err) {
+		return { devices: [], error: (err as Error).message };
+	}
 });
 
 export const testUtecConnection = query(async () => {
@@ -336,11 +354,12 @@ export const updateVenueSettings = form(venueSettingsSchema, async (raw) => {
 // Forms — Integration settings
 // ---------------------------------------------------------------------------
 
+// No `refreshToken`: the Connect flow is its only writer. A field for pasting
+// one was a way to hand-carry a token before that flow existed.
 const integrationSettingsSchema = z.object({
 	clientId: z.string().trim(),
 	clientSecret: z.string().trim(),
-	deviceId: z.string().trim(),
-	refreshToken: z.string().trim()
+	deviceId: z.string().trim()
 });
 
 // ---------------------------------------------------------------------------
@@ -390,18 +409,13 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
 	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof integrationSettingsSchema>;
 
-	// A blank credential means "unchanged", not "clear it". Neither field is ever
-	// rendered with its value, so an untouched one submits empty — and for the
-	// refresh token the OAuth callback is a second writer, which a wipe here
-	// would silently undo.
+	// A blank secret means "unchanged", not "clear it": the field is never
+	// rendered with its value, so an untouched one submits empty.
 	await updateSiteConfigs([
 		{ key: 'integration.utec.clientId', value: data.clientId },
 		{ key: 'integration.utec.deviceId', value: data.deviceId },
 		...(data.clientSecret
 			? [{ key: 'integration.utec.clientSecret', value: data.clientSecret }]
-			: []),
-		...(data.refreshToken
-			? [{ key: 'integration.utec.refreshToken', value: data.refreshToken }]
 			: [])
 	]);
 
