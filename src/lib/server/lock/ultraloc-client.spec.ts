@@ -51,6 +51,7 @@ const {
 
 let lastBody: any = null;
 let lastUrl: string | null = null;
+let lastTokenParams: URLSearchParams | null = null;
 let addBody: any = null;
 
 function mockFetch(payload: Record<string, unknown>) {
@@ -94,12 +95,22 @@ function mockAddFetch(
 }
 
 // Captures the request URL (token endpoint calls are GETs with query params).
+/**
+ * The token endpoint. Credentials travel in the POST body, so `lastTokenParams`
+ * is what the assertions read; `lastUrl` stays for the endpoint itself.
+ */
 function mockFetchUrl(json: Record<string, unknown>, ok = true) {
 	lastUrl = null;
+	lastTokenParams = null;
 	vi.stubGlobal(
 		'fetch',
-		vi.fn(async (url: string) => {
+		vi.fn(async (url: string, init?: RequestInit) => {
 			lastUrl = url;
+			// Only the token endpoint: `testConnection` follows it with an API call
+			// whose JSON body would otherwise overwrite this.
+			if (init?.body && url === 'https://oauth.u-tec.com/token') {
+				lastTokenParams = new URLSearchParams(init.body as string);
+			}
 			return {
 				ok,
 				status: ok ? 200 : 400,
@@ -114,6 +125,7 @@ beforeEach(() => {
 	vi.unstubAllGlobals();
 	lastBody = null;
 	lastUrl = null;
+	lastTokenParams = null;
 	addBody = null;
 
 	// Every lock command resolves the credentials, so the deployed secrets are
@@ -352,12 +364,13 @@ describe('exchangeAuthorizationCode', () => {
 		expect(result.refreshToken).toBe('rt');
 		expect(result.accessToken).toBe('at');
 		expect(result.expiresIn).toBe(601200);
-		const url = new URL(lastUrl!);
-		expect(url.origin + url.pathname).toBe('https://oauth.u-tec.com/token');
-		expect(url.searchParams.get('grant_type')).toBe('authorization_code');
-		expect(url.searchParams.get('code')).toBe('the-code');
-		expect(url.searchParams.get('redirect_uri')).toBe('https://corvmc.org/cb');
-		expect(url.searchParams.get('client_id')).toBe('cid');
+		// The grant goes in the body, not the query: U-tec's own collection says
+		// `client_authentication: "body"`, and a credential on a URL is logged.
+		expect(lastUrl).toBe('https://oauth.u-tec.com/token');
+		expect(lastTokenParams?.get('grant_type')).toBe('authorization_code');
+		expect(lastTokenParams?.get('code')).toBe('the-code');
+		expect(lastTokenParams?.get('redirect_uri')).toBe('https://corvmc.org/cb');
+		expect(lastTokenParams?.get('client_id')).toBe('cid');
 	});
 
 	// The id and the secret have to come from the same place, or they drift and
@@ -366,9 +379,9 @@ describe('exchangeAuthorizationCode', () => {
 		mockFetchUrl({ code: 200, data: { refresh_token: 'rt' } });
 		await exchangeAuthorizationCode('c', 'https://corvmc.org/cb');
 
-		const params = new URL(lastUrl!).searchParams;
-		expect(params.get('client_secret')).toBe(STORED_SECRET);
-		expect(params.get('client_id')).toBe('cid');
+		// Read off the body, not the query: the grant travels as a form post now.
+		expect(lastTokenParams?.get('client_secret')).toBe(STORED_SECRET);
+		expect(lastTokenParams?.get('client_id')).toBe('cid');
 	});
 
 	it('falls back to the environment when nothing is stored', async () => {
@@ -376,9 +389,7 @@ describe('exchangeAuthorizationCode', () => {
 		mockFetchUrl({ code: 200, data: { refresh_token: 'rt' } });
 		await exchangeAuthorizationCode('c', 'https://corvmc.org/cb');
 
-		expect(new URL(lastUrl!).searchParams.get('client_secret')).toBe(
-			ENV_CREDENTIALS.ULTRALOC_CLIENT_SECRET
-		);
+		expect(lastTokenParams?.get('client_secret')).toBe(ENV_CREDENTIALS.ULTRALOC_CLIENT_SECRET);
 	});
 
 	it('refuses to exchange when neither source has a client secret', async () => {
@@ -440,9 +451,8 @@ describe('credential resolution', () => {
 
 		expect(await testConnection()).toEqual({ ok: true });
 
-		const url = new URL(lastUrl!);
-		expect(url.searchParams.get('client_secret')).toBe(STORED_SECRET);
-		expect(url.searchParams.get('refresh_token')).toBeTruthy();
+		expect(lastTokenParams?.get('client_secret')).toBe(STORED_SECRET);
+		expect(lastTokenParams?.get('refresh_token')).toBeTruthy();
 	});
 
 	it('runs on a stored client secret with no environment variable', async () => {
