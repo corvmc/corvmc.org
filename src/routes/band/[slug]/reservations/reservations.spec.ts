@@ -233,15 +233,22 @@ beforeEach(() => {
 });
 
 /** A row shaped like the entity-ref projection `getBandReservations` selects. */
-function reservationRow(createdByUserId: string, status = 'scheduled') {
+/**
+ * An upcoming session by default. The hour matters now: `canCancel` is false
+ * once a session has started, because `cancel()` refuses it — and `new Date()`
+ * is already in the past by the time the handler reads its own clock.
+ */
+function reservationRow(createdByUserId: string, status = 'scheduled', hoursFromNow = 24) {
+	const startsAt = new Date(Date.now() + hoursFromNow * 3600_000);
+	const endsAt = new Date(startsAt.getTime() + 3600_000);
 	return {
 		id: 'res-1',
 		status,
-		startsAt: new Date(),
-		endsAt: new Date(),
+		startsAt,
+		endsAt,
 		notes: null,
 		createdByUserId,
-		ref: { id: 'res-1', startsAt: new Date(), endsAt: new Date(), status },
+		ref: { id: 'res-1', startsAt, endsAt, status },
 		bookedBy: { id: createdByUserId, name: 'Someone', email: null }
 	};
 }
@@ -435,11 +442,33 @@ describe('getBandReservations', () => {
 	// Past sessions are never cancellable, whoever is looking.
 	it('never marks a past row cancellable', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('owner');
-		selectResult = [reservationRow('user-owner', 'completed')];
+		selectResult = [reservationRow('user-owner', 'completed', -24)];
 
 		const result = await getBandReservations({ slug: 'the-velvet-underground' });
 
 		expect(result.past.rows[0].canCancel).toBe(false);
+	});
+
+	// The upcoming list carries cancellations until their slot ends, and a
+	// session already under way until it does. `cancel()` refuses both, so a
+	// button on either answers with an error toast.
+	it('offers no second cancel on a row that is already cancelled', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('owner');
+		selectResult = [reservationRow('user-owner', 'cancelled')];
+
+		const result = await getBandReservations({ slug: 'the-velvet-underground' });
+
+		expect(result.upcoming[0].status).toBe('cancelled');
+		expect(result.upcoming[0].canCancel).toBe(false);
+	});
+
+	it('offers no cancel once the session has started', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('owner');
+		selectResult = [reservationRow('user-owner', 'confirmed', -0.5)];
+
+		const result = await getBandReservations({ slug: 'the-velvet-underground' });
+
+		expect(result.upcoming[0].canCancel).toBe(false);
 	});
 });
 
