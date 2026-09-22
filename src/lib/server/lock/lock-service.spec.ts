@@ -130,8 +130,13 @@ vi.mock('./ultraloc-client', () => ({
 	LOCK_GRACE_MINUTES: 30
 }));
 
-const { runDailyLockJob, issueLockSelfTest, revokeLockSelfTest, syncAccessWindow } =
-	await import('./lock-service');
+const {
+	runDailyLockJob,
+	getLastLockJobRun,
+	issueLockSelfTest,
+	revokeLockSelfTest,
+	syncAccessWindow
+} = await import('./lock-service');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -713,5 +718,72 @@ describe('provisioning window', () => {
 		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
 			expect.objectContaining({ name: 'Jordan' })
 		);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The record staff read on the settings page. Three days of unminted door codes
+// left no trace but a log line (#1326), which is what this exists to fix.
+// ---------------------------------------------------------------------------
+
+describe('last run record', () => {
+	const lastRunWrites = () =>
+		mockPutJson.mock.calls.filter(([key]) => key === 'ultraloc:lastJobRun');
+
+	it('records a clean run, attributed to the schedule when nobody triggered it', async () => {
+		selectResults.push([]);
+		selectResults.push([]);
+
+		await runDailyLockJob();
+
+		const [[, record]] = lastRunWrites();
+		expect(record).toMatchObject({ triggeredBy: null, errors: [] });
+		expect(Date.parse((record as { at: string }).at)).not.toBeNaN();
+	});
+
+	it('names the staff member who triggered it', async () => {
+		selectResults.push([]);
+		selectResults.push([]);
+
+		await runDailyLockJob('Jordan Martinez');
+
+		const [[, record]] = lastRunWrites();
+		expect(record).toMatchObject({ triggeredBy: 'Jordan Martinez' });
+	});
+
+	// The failing run is the one worth seeing, so it must be recorded too — the
+	// state #1326 sat in for three days.
+	it('records a run that failed', async () => {
+		mockQueryDeviceHealth.mockRejectedValue(new Error('Ultraloc credentials not configured'));
+		selectResults.push([]);
+		selectResults.push([]);
+
+		await runDailyLockJob();
+
+		const [[, record]] = lastRunWrites();
+		expect((record as { errors: string[] }).errors).toContainEqual(
+			expect.stringContaining('Ultraloc credentials not configured')
+		);
+	});
+
+	// Only this write: a rejecting `putJson` across the board takes the run down
+	// in `checkDeviceHealth`, whose own KV write is outside its try — filed, not
+	// fixed here.
+	it('does not fail the run when the record cannot be written', async () => {
+		mockPutJson.mockImplementation(async (key: string) => {
+			if (key === 'ultraloc:lastJobRun') throw new Error('KV is down');
+		});
+		selectResults.push([]);
+		selectResults.push([]);
+
+		await expect(runDailyLockJob()).resolves.toMatchObject({ provisioned: 0 });
+	});
+
+	it('reads the stored record back', async () => {
+		const stored = { at: '2026-09-22T16:00:00.000Z', triggeredBy: null, errors: [] };
+		mockGetJson.mockResolvedValue(stored);
+
+		await expect(getLastLockJobRun()).resolves.toEqual(stored);
+		expect(mockGetJson).toHaveBeenCalledWith('ultraloc:lastJobRun');
 	});
 });

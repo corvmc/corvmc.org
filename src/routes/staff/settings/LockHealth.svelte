@@ -9,12 +9,16 @@
 	// this says whether a door code will actually work.
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import { getLockHealth, rotateFallbackCode } from '$lib/remote/lock.remote';
+	import { getLockHealth, rotateFallbackCode, runLockJobNow } from '$lib/remote/lock.remote';
+	import { timeAgo } from '$lib/utils/format';
 
 	const health = $derived(await getLockHealth());
 
 	let rotating = $state(false);
 	let rotateResult = $state<{ ok: boolean; error?: string } | null>(null);
+
+	let running = $state(false);
+	let runError = $state<string | null>(null);
 
 	async function handleRotate() {
 		rotating = true;
@@ -26,6 +30,21 @@
 			rotateResult = { ok: false, error: (err as Error).message };
 		} finally {
 			rotating = false;
+		}
+	}
+
+	// Safe to press twice: every stage of the job is filtered on work still
+	// outstanding, so a repeat run reports zeros rather than issuing a code again.
+	async function handleRun() {
+		running = true;
+		runError = null;
+		try {
+			await runLockJobNow();
+			await getLockHealth().refresh();
+		} catch (err) {
+			runError = (err as Error).message;
+		} finally {
+			running = false;
 		}
 	}
 </script>
@@ -49,6 +68,43 @@
 			</span>
 		{/if}
 	</div>
+
+	<div class="mt-3 flex flex-wrap items-center gap-2">
+		<span class="text-subtle">Daily job</span>
+		{#if health.lastRun}
+			{#if health.lastRun.errors.length > 0}
+				<Badge variant="error">
+					{health.lastRun.errors.length}
+					{health.lastRun.errors.length === 1 ? 'error' : 'errors'}
+				</Badge>
+			{:else}
+				<Badge variant="success">Clean</Badge>
+			{/if}
+			<span class="text-subtle">
+				{timeAgo(new Date(health.lastRun.at))} ·
+				{health.lastRun.triggeredBy ?? 'scheduled'} ·
+				{health.lastRun.provisioned} provisioned, {health.lastRun.cleaned} cleaned,
+				{health.lastRun.confirmed} confirmed
+			</span>
+		{:else}
+			<span class="text-subtle">Never run, or not since this was added.</span>
+		{/if}
+		<Button type="button" variant="ghost" size="sm" onclick={handleRun} disabled={running}>
+			{running ? 'Running…' : 'Run now'}
+		</Button>
+	</div>
+
+	{#if health.lastRun?.errors.length}
+		<ul class="mt-1 list-disc pl-5 text-subtle">
+			{#each health.lastRun.errors as message (message)}
+				<li>{message}</li>
+			{/each}
+		</ul>
+	{/if}
+
+	{#if runError}
+		<p class="mt-1 text-error">{runError}</p>
+	{/if}
 
 	{#if health.ok}
 		<div class="mt-3 flex flex-wrap items-center gap-2">
