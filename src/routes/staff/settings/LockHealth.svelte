@@ -96,7 +96,7 @@
 
 	{#if health.lastRun?.errors.length}
 		<ul class="mt-1 list-disc pl-5 text-subtle">
-			{#each health.lastRun.errors as message (message)}
+			{#each health.lastRun.errors as message}
 				<li>{message}</li>
 			{/each}
 		</ul>
