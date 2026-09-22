@@ -969,21 +969,35 @@ and not a regression this feature introduces.
   This design records well-behaved application writes and does not defend against
   its own operators.
 
-## Open questions
+## Settled, 2026-09-22
 
-These need the maintainer's decision and are not the author's to make.
+The three questions this spec was held open for, answered by the maintainer.
 
-1. **Does a suspended member keep paying?** This spec proposes pausing
-   collection, on the grounds that it is reversible and cancellation is not. The
-   alternative — they keep paying, because they are still a member and the
-   collective's costs do not pause — is defensible and is a values question about
-   what a sustaining membership is for, not a technical one. Pausing is the
-   recommendation because it can be reversed either way; billing somebody for a
-   period you barred them from cannot be undone as gracefully.
-2. **How long is the default suspension, and is there a maximum?** A suspension
-   with no cap is a ban that lapses eventually. Somewhere around three months is
-   where the two stop being meaningfully different.
-3. **Who may impose a ban?** This spec says staff, matching every other
-   moderation action. An indefinite removal is a heavier decision than a
-   takedown, and restricting it to admin — or requiring a second staffer to
-   confirm, which nothing in the app does today — is a reasonable alternative.
+1. **The default term is a setting, not a constant.**
+   `moderation.suspensionDefaultDays` in `site_config`, defaulting to **30**, and
+   `moderation.suspensionMaxDays`, defaulting to **90**. The form pre-fills the
+   first and refuses past the second, so the term stays a staffer's decision with
+   a house answer rather than a number in the source. 90 is the ceiling for the
+   reason this spec already gives: past roughly three months a suspension and a
+   ban stop being different things, and a staffer reaching for a longer one is
+   reaching for a ban.
+
+   Both keys go in the registry in `site-config-service.ts` with a reader in
+   `moderation/`, which `site-config-consumers.spec.ts` enforces.
+
+2. **Staff may impose a ban, and every ban is appealable.** No admin-only tier and
+   no second-staffer confirmation — the same capability that takes content down
+   removes an account, which is what [Permissions](#permissions) already says.
+   What makes that safe is the appeal, and this spec already builds it as a
+   `moderation_appeal` inheriting `moderation-appeals-spec.md` wholesale: one per
+   upheld report, the staffer who imposed it barred from denying it, reopenable.
+   See [Appeal](#appeal). A ban is therefore not a staff decision that stands
+   alone — it is a staff decision a second staffer can be made to read.
+
+3. **A suspended member stops paying.** Collection pauses, per this spec's own
+   recommendation: it is reversible in both directions, and billing somebody for a
+   period you barred them from is not. This is the one answer the maintainer did
+   not give explicitly, so it stands as the spec's recommendation rather than a
+   ruling — flagged here rather than buried, because it is a values question about
+   what a sustaining membership is for, and reversing it later is a one-line
+   change to [Blast radius](#blast-radius) before anything is built.
