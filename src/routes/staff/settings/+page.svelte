@@ -22,6 +22,7 @@
 	import LockHealth from './LockHealth.svelte';
 	import UnmanagedLockCodes from './UnmanagedLockCodes.svelte';
 	import UtecDevicePicker from './UtecDevicePicker.svelte';
+	import { getLockHealth, getUnmanagedLockUsers } from '$lib/remote/lock.remote';
 	import { updateInboxChannelConfig, testMetaConnection } from '$lib/remote/inbox.remote';
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { channelLabel, channelIcon } from '$lib/components/inbox/channels';
@@ -101,6 +102,21 @@
 			null: 'Not set. Paste the secret from the U-tec developer console.'
 		}[String(integrationSettings.clientSecret.source)]
 	);
+	/**
+	 * Retry a panel whose query failed.
+	 *
+	 * `reset()` alone only re-renders the boundary, and the component then reads
+	 * the same rejected query back out of the cache — so the alert outlives the
+	 * outage that caused it. `refresh()` is what re-requests; it rejects again
+	 * when the fault persists, and the boundary catches that on re-render.
+	 */
+	async function retry(query: () => { refresh: () => Promise<unknown> }, reset: () => void) {
+		await query()
+			.refresh()
+			.catch(() => {});
+		reset();
+	}
+
 	const utecRedirectUri = $derived(`${page.url.origin}/api/integrations/utec/callback`);
 
 	// Surface the result of the OAuth round-trip (?utec=… set by the callback).
@@ -694,7 +710,7 @@
 								<LockHealth />
 
 								{#snippet failed(error, reset)}
-									<Alert type="warning" {reset}>
+									<Alert type="warning" reset={() => retry(getLockHealth, reset)}>
 										The lock did not answer: {errorMessage(error)}
 									</Alert>
 								{/snippet}
@@ -704,7 +720,7 @@
 								<UnmanagedLockCodes />
 
 								{#snippet failed(error, reset)}
-									<Alert type="warning" {reset}>
+									<Alert type="warning" reset={() => retry(getUnmanagedLockUsers, reset)}>
 										Could not read the lock's own door codes: {errorMessage(error)}
 									</Alert>
 								{/snippet}
