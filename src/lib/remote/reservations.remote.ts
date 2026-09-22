@@ -283,13 +283,11 @@ export const getBandReservations = query(
 			})
 			.from(reservation)
 			.leftJoin(user, eq(user.id, reservation.createdByUserId))
-			.where(
-				and(
-					bookedByGroup(band.id),
-					gt(reservation.startsAt, now),
-					ne(reservation.status, 'cancelled')
-				)
-			)
+			// Upcoming means the slot has not ended, cancellations included: the
+			// hour is still the band's until it is over, and a session that
+			// vanished the moment it was cancelled is one nobody can ask about.
+			// Same rule as the member's own list and the staff tab.
+			.where(and(bookedByGroup(band.id), gte(reservation.endsAt, now)))
 			.orderBy(reservation.startsAt);
 
 		const pastQuery = db
@@ -307,7 +305,7 @@ export const getBandReservations = query(
 			})
 			.from(reservation)
 			.leftJoin(user, eq(user.id, reservation.createdByUserId))
-			.where(and(bookedByGroup(band.id), lte(reservation.startsAt, now)))
+			.where(and(bookedByGroup(band.id), lt(reservation.endsAt, now)))
 			.orderBy(desc(reservation.startsAt))
 			.$dynamic();
 
@@ -319,7 +317,7 @@ export const getBandReservations = query(
 			db
 				.select({ count: count() })
 				.from(reservation)
-				.where(and(bookedByGroup(band.id), lte(reservation.startsAt, now))),
+				.where(and(bookedByGroup(band.id), lt(reservation.endsAt, now))),
 			{ page: pastPage }
 		);
 
@@ -329,8 +327,12 @@ export const getBandReservations = query(
 			bookedBy: toMemberRef(r.bookedBy),
 			canCancel: cancellable && canCancelRow(r.createdByUserId)
 		});
+		// `cancel()` refuses a session already cancelled or already started, so
+		// neither may offer the button: the upcoming list now holds both.
+		const stillCancellable = (r: (typeof upcoming)[number]) =>
+			r.status !== 'cancelled' && r.startsAt > now;
 		return {
-			upcoming: upcoming.map((r) => withBooker(r, true)),
+			upcoming: upcoming.map((r) => withBooker(r, stillCancellable(r))),
 			// A session that has already happened is nobody's to cancel.
 			past: { ...pastPaged, rows: pastPaged.rows.map((r) => withBooker(r, false)) }
 		};
@@ -1010,9 +1012,12 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 	const tab = filters.tab ?? 'upcoming';
 	const conditions = [];
 
+	// A cancelled booking stays on Upcoming until its slot is over. The room is
+	// free from the moment it is cancelled, but the hour is still the one staff
+	// are looking at, and "why is nobody here?" is only answerable from a list
+	// that still shows it. `statusFilter` is how you get the old view back.
 	if (tab === 'upcoming') {
 		conditions.push(gt(reservation.endsAt, now));
-		conditions.push(ne(reservation.status, 'cancelled'));
 	}
 
 	if (filters.statusFilter && filters.statusFilter.length > 0) {
@@ -1118,10 +1123,12 @@ export const getReservationCounts = query(async () => {
 	await requireCapability('reservation.read');
 	const now = new Date();
 
+	// Matches the tab's own filter, cancellations included — a badge that counts
+	// something other than what the tab lists is worse than no badge.
 	const [upcomingCount] = await db
 		.select({ count: count() })
 		.from(reservation)
-		.where(and(gt(reservation.endsAt, now), ne(reservation.status, 'cancelled')));
+		.where(gt(reservation.endsAt, now));
 
 	const [allCount] = await db.select({ count: count() }).from(reservation);
 

@@ -7,7 +7,7 @@ import { form } from './_remote';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, desc, gt, ne } from 'drizzle-orm';
+import { eq, and, desc, gte } from 'drizzle-orm';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { listAll, listForUser, partitionByStatus } from '$lib/server/band/band-service';
 import {
@@ -167,12 +167,13 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
+		// One rule across every reservation list: a booking is upcoming until its
+		// slot ends, cancellations included.
 		.where(
 			and(
 				eq(reservation.bookerType, 'group'),
 				eq(reservation.bookerId, bandId),
-				gt(reservation.startsAt, now),
-				ne(reservation.status, 'cancelled')
+				gte(reservation.endsAt, now)
 			)
 		)
 		.orderBy(reservation.startsAt)

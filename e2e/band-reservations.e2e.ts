@@ -87,4 +87,24 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 	const mateRow = page.locator('.reservation-card', { hasText: 'Booked by' }).first();
 	await expect(mateRow).toBeVisible({ timeout: 15000 });
 	await expect(mateRow.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
+
+	// A cancelled session stays on the list until its slot is over, everywhere.
+	// The band panel used to drop it twice over — it filtered cancellations out
+	// and split the list on `startsAt` — so "why is nobody in the room?" had no
+	// answer on the surface the band was looking at.
+	await page.context().clearCookies();
+	await login(page, SEED_OWNER_EMAIL, SEED_OWNER_PASSWORD);
+	await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/reservations`);
+
+	// A plain submit, not a confirm dialog — the card posts the form directly.
+	const ownRow = page.locator('.reservation-card', { hasText: 'Booked by' }).first();
+	await ownRow.getByRole('button', { name: 'Cancel' }).click();
+
+	// The row keeps its place in the list and changes state in it. `.cancelled`
+	// is the shell's own class, from the raw status.
+	const cancelledRow = page.locator('.reservation-card.cancelled').first();
+	await expect(cancelledRow).toBeVisible({ timeout: 20000 });
+	await expect(cancelledRow).toContainText('Booked by');
+	// Nobody's to cancel twice.
+	await expect(cancelledRow.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
 });
