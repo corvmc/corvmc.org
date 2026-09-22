@@ -332,6 +332,14 @@ Recorded because it is the part worth arguing with.
 - **Keeping the volunteer desk's seven sections is the weakest call on the canvas.** It leaves two
   scan models on one page: vertical across sections, horizontal within one. The test is whether a
   coordinator scrolls past four sections to reach their first action.
+- **Open shifts (#1044) is the one clause-4 claim the tightened wording puts in doubt.** Event
+  check-in passes it outright — a volunteer at a door with wristbands in the other hand. Browsing
+  shifts to claim one is done on a phone often, but it is not obviously done _in the room_ with
+  hands full, and "often on a phone" is the reading the clause now refuses. It may hold on the
+  claim action rather than the browse; it may want a table. The honest way to settle it is the
+  clause's own second check — whether the phone session outnumbers the desktop one on that route —
+  which is a question for the analytics, not the canvas. Left as cards here because that is the
+  status quo, and flipping it on an unmeasured hunch is the thing this spec is against.
 - **A count is a query.** Three of these lists need a `count(*)` the service does not run today. If
   it is expensive, the honest fallback is "8 of many" — a worse design than the one drawn.
 - **The staff sweep is structural, not page-by-page.** Component counts, widths and query limits are
