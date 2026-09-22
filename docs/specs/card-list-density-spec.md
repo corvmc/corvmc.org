@@ -48,21 +48,39 @@ The rule that was supposed to arbitrate is `ui-patterns.md:959-961`. It cites th
    records depends on seeing it. _A poster, a sleeve, a face — not an avatar beside a name._
 3. **Three or more always-visible actions**, each needing a 44px target. _Count them. A conditional
    action counts as zero; a dropdown holds them._
-4. **Operated standing up.** Used one-handed, away from a desk. _56px targets, one row per
-   screen-third, no hover-only affordance._
+4. **The phone is the primary case.** Not "works on a phone" — everything here does, and a
+   responsive table is still a table. This clause is for a surface whose _main_ use is someone
+   standing in the room with a phone in one hand and something else in the other, where the
+   desktop view is the fallback rather than the other way round.
+
+   _Check, and all three have to hold: name who uses it and what they are doing with their hands;
+   show that the phone session is the common one, not the accessible one; and show that the task
+   is done **in the room**, at a door or beside a shelf, rather than at a desk afterwards._
+
+   _Consequences, which are how you tell this clause was applied honestly: 56px targets rather
+   than 44px, at most one row per screen-third so a thumb cannot mis-hit, and no affordance that
+   needs hover, because there is no hover._
 
 **Corollary.** A card list passing none of the four is a table that lost its columns.
 
 Clause 4 is new. It is what actually justifies the event check-in list, which the current rule
-justifies by miscounting its actions.
+justifies by miscounting its actions: a volunteer at the door, phone in one hand, wristbands in the
+other, tapping names as people arrive. Nobody does that sitting down, and no desktop session of
+that screen exists.
+
+**It is the clause most likely to be claimed wrongly**, because every surface is reachable on a
+phone and every author believes their surface is used in the room. The three checks above are
+deliberately hard to satisfy from an armchair: if the answer to "who, with what in their hands,
+where" is a shrug, the clause does not hold and the row wants a table. Being mobile-friendly is
+not this clause. Being mobile-_first_ — the phone session outnumbering the desktop one — is.
 
 ### Re-testing the three cited precedents
 
-| Precedent         | Cited for  | Measured                               | Verdict   |
-| ----------------- | ---------- | -------------------------------------- | --------- |
-| `/staff/flags`    | prose      | `FLAG_REASON_MAX = 100`; 0 row actions | **Table** |
-| `/staff/closures` | 3+ actions | 2 facts, 2 conditional actions         | **Table** |
-| Event check-in    | 3+ actions | 2 actions — but clause 4 holds         | **Card**  |
+| Precedent         | Cited for  | Measured                                                | Verdict   |
+| ----------------- | ---------- | ------------------------------------------------------- | --------- |
+| `/staff/flags`    | prose      | `FLAG_REASON_MAX = 100`; 0 row actions                  | **Table** |
+| `/staff/closures` | 3+ actions | 2 facts, 2 conditional actions                          | **Table** |
+| Event check-in    | 3+ actions | 2 actions — but clause 4 holds: door, phone, wristbands | **Card**  |
 
 ## The card grammar
 
