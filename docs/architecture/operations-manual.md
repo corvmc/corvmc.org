@@ -338,6 +338,14 @@ and the fields render empty, so **saving blank keeps what is stored** rather tha
 `src/routes/api/integrations/utec/` exchanges the authorization code and writes
 `integration.utec.refreshToken`.
 
+**"Run now" runs the daily job off-schedule**, and the line beside it shows what the last run
+did — when, who triggered it, the counters and any errors. Use it after fixing credentials
+rather than waiting for the 16:00 UTC batch: before this existed, the only trace of a failed
+run was a log line, which is how three days of unminted door codes went unnoticed (#1326).
+Pressing it twice is safe — every stage filters on work still outstanding, so a repeat run
+reports zeros rather than issuing a code again. The run record lives in KV at
+`ultraloc:lastJobRun`, written by the scheduled batch too.
+
 ### Turnstile (bot protection)
 
 Widget on public sign-up/contact/subscribe forms. Site key in `wrangler.toml [vars]`

@@ -36,6 +36,35 @@ import { DEFAULT_TIMEZONE, CONFIRMATION_WINDOW_DAYS } from '$lib/config';
 const LAST_ONLINE_KEY = 'ultraloc:lastSeenOnline';
 
 /**
+ * KV key holding the last run's outcome, so staff can see whether the batch
+ * worked without a shell. Sits beside the other `ultraloc:` keys.
+ */
+const LAST_RUN_KEY = 'ultraloc:lastJobRun';
+
+/** What one run of the daily job did. */
+export interface LockJobSummary {
+	provisioned: number;
+	cleaned: number;
+	confirmed: number;
+	online: boolean | null;
+	/** Whether a break-glass code is confirmed on the lock right now. */
+	fallbackActive: boolean;
+	errors: string[];
+}
+
+/** A run as stored. `at` is an ISO string because KV holds JSON, not Dates. */
+export interface LockJobRun extends LockJobSummary {
+	at: string;
+	/** Who pressed Run now, or null for the scheduled batch. */
+	triggeredBy: string | null;
+}
+
+/** The last run of the daily job, scheduled or manual. */
+export async function getLastLockJobRun(): Promise<LockJobRun | null> {
+	return getJson<LockJobRun>(LAST_RUN_KEY);
+}
+
+/**
  * Run the daily lock job: check the lock is reachable, clean up yesterday's
  * access, provision today's, then confirm which codes have actually landed.
  *
@@ -44,15 +73,7 @@ const LAST_ONLINE_KEY = 'ultraloc:lastSeenOnline';
  * an outage is still worth doing — it is only the *promise* that a code works
  * that has to wait for `reconcileSyncState`.
  */
-export async function runDailyLockJob(): Promise<{
-	provisioned: number;
-	cleaned: number;
-	confirmed: number;
-	online: boolean | null;
-	/** Whether a break-glass code is confirmed on the lock right now. */
-	fallbackActive: boolean;
-	errors: string[];
-}> {
+export async function runDailyLockJob(triggeredBy: string | null = null): Promise<LockJobSummary> {
 	const errors: string[] = [];
 
 	const online = await checkDeviceHealth(errors);
@@ -61,7 +82,7 @@ export async function runDailyLockJob(): Promise<{
 	const confirmed = (await reconcileSyncState(errors)) + (await reconcileMemberCodeSync(errors));
 	const fallback = await maintainFallbackCode(errors);
 
-	return {
+	const summary: LockJobSummary = {
 		provisioned,
 		cleaned,
 		confirmed,
@@ -69,6 +90,20 @@ export async function runDailyLockJob(): Promise<{
 		fallbackActive: fallback.active !== null,
 		errors
 	};
+
+	// Recorded whatever happened: a run that failed is the one worth seeing, and
+	// a failure to record it must not fail the run.
+	try {
+		await putJson<LockJobRun>(LAST_RUN_KEY, {
+			...summary,
+			at: new Date().toISOString(),
+			triggeredBy
+		});
+	} catch (err) {
+		console.error(`Failed to record the lock job run: ${(err as Error).message}`);
+	}
+
+	return summary;
 }
 
 /**

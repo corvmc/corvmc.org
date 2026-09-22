@@ -8,7 +8,11 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq } from 'drizzle-orm';
 import { queryDeviceHealth } from '$lib/server/lock/ultraloc-client';
-import { reprovisionAccessFor } from '$lib/server/lock/lock-service';
+import {
+	getLastLockJobRun,
+	reprovisionAccessFor,
+	runDailyLockJob
+} from '$lib/server/lock/lock-service';
 import {
 	getActiveFallbackCode,
 	rotateFallbackCodeNow
@@ -38,11 +42,16 @@ import {
 export const getLockHealth = query(async () => {
 	await requireCapability('lock.manage');
 
+	// Read outside the try: an unreachable lock is exactly when the last run's
+	// errors are worth showing, and they are a KV read rather than a U-tec call.
+	const lastRun = await getLastLockJobRun();
+
 	try {
 		const [health, fallback] = await Promise.all([queryDeviceHealth(), getActiveFallbackCode()]);
 
 		return {
 			ok: true as const,
+			lastRun,
 			online: health.online,
 			lockState: health.lockState,
 			batteryLevel: health.batteryLevel,
@@ -50,8 +59,21 @@ export const getLockHealth = query(async () => {
 			fallbackSyncedAt: fallback?.syncedAt ?? null
 		};
 	} catch (err) {
-		return { ok: false as const, error: (err as Error).message };
+		return { ok: false as const, lastRun, error: (err as Error).message };
 	}
+});
+
+/**
+ * Run the daily lock job now, rather than waiting for the 16:00 UTC batch.
+ *
+ * Safe to repeat: every stage is filtered on work still outstanding — a
+ * booking with no code, a code not yet confirmed on the device, a missing
+ * break-glass code — so a second run reports zeros instead of issuing anything
+ * twice.
+ */
+export const runLockJobNow = command(async () => {
+	const staff = await requireCapability('lock.manage');
+	return runDailyLockJob(staff.name);
 });
 
 /** Type-0 lock users the app does not account for, for staff to adopt or revoke. */
