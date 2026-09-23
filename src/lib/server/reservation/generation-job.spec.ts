@@ -558,6 +558,8 @@ const EVENT_PROTO = {
 	ticketingEnabled: true,
 	ticketPrice: 1000,
 	ticketQuantity: 40,
+	// A fixed-price show: the sliding scale opens at the price.
+	ticketPriceFloorCents: 1000,
 	source: 'cmc',
 	// `notNull` on the real table, and what decides each occurrence's booker: a
 	// show's night is its own production's (#855).
@@ -643,6 +645,7 @@ describe('generateRecurringEvents', () => {
 			ticketingEnabled: true,
 			ticketPrice: 1000,
 			ticketQuantity: 40,
+			ticketPriceFloorCents: 1000,
 			source: 'cmc',
 			status: 'draft',
 			recurringSeriesId: EVENT_SERIES.id
