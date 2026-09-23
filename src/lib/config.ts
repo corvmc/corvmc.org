@@ -460,6 +460,7 @@ export const financialEntryKindLabels: Record<FinancialEntryKind, string> = {
  */
 export const financialCategories = [
 	'ticket_sales',
+	'band_ticket_sales',
 	'act_payout',
 	'act_guarantee',
 	'payout_rounding',
@@ -483,6 +484,7 @@ export type FinancialCategory = (typeof financialCategories)[number];
 /** The line names on the annual report, and the only place they are spelled. */
 export const financialCategoryLabels: Record<FinancialCategory, string> = {
 	ticket_sales: 'Ticket sales',
+	band_ticket_sales: 'Band ticket sales',
 	act_payout: 'Paid to acts',
 	act_guarantee: 'Act guarantees',
 	payout_rounding: 'Payout rounding',

@@ -7,12 +7,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const recordEntry = vi.fn(async () => undefined);
+const reverseEntriesForSubject = vi.fn(async () => 2);
 vi.mock('./financial-entry-service', () => ({
 	recordEntry: (...a: unknown[]) => recordEntry(...(a as [])),
-	recordEntries: vi.fn()
+	recordEntries: vi.fn(),
+	reverseEntriesForSubject: (...a: unknown[]) => reverseEntriesForSubject(...(a as []))
 }));
 
-const { recordFreeTicketSale } = await import('./ticket-entries');
+const { recordFreeTicketSale, recordBandTicketRefund } = await import('./ticket-entries');
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -63,5 +65,12 @@ describe('free ticket sales', () => {
 		});
 
 		expect(recordEntry).toHaveBeenCalledWith(expect.objectContaining({ userId: null }));
+	});
+});
+
+describe('a band ticket refund (#1472)', () => {
+	it('reverses what the sale wrote, keyed on the purchase', async () => {
+		await recordBandTicketRefund('tkt-2');
+		expect(reverseEntriesForSubject).toHaveBeenCalledWith('ticket', 'tkt-2');
 	});
 });

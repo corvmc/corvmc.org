@@ -4,6 +4,7 @@ import { ticket, ticketSale } from '$lib/server/db/schema/ticket';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { destinationFor } from '$lib/server/audio/connect-service';
 import { stripe } from '$lib/server/stripe';
+import { recordBandTicketRefund } from '$lib/server/finance/ticket-entries';
 import { BAND_TICKET_PLATFORM_FEE_BPS, TICKET_COLLECTIVE_SHARE_BPS } from '$lib/config';
 
 /**
@@ -96,6 +97,7 @@ export async function refundBandTicketSale(eventListingId: string): Promise<{ re
 				{ payment_intent: paymentRef, reverse_transfer: true, refund_application_fee: true },
 				{ idempotencyKey: `band-ticket-refund-${purchaseId}` }
 			);
+			await recordBandTicketRefund(purchaseId);
 			refunded++;
 		}
 		await db

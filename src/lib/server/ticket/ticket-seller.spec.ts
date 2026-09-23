@@ -32,6 +32,11 @@ vi.mock('$lib/server/audio/connect-service', () => ({
 	destinationFor: (...a: unknown[]) => destinationFor(...(a as []))
 }));
 
+const recordBandTicketRefund = vi.fn();
+vi.mock('$lib/server/finance/ticket-entries', () => ({
+	recordBandTicketRefund: (...a: unknown[]) => recordBandTicketRefund(...(a as []))
+}));
+
 const refundsCreate = vi.fn();
 vi.mock('$lib/server/stripe', () => ({
 	stripe: { refunds: { create: (...a: unknown[]) => refundsCreate(...(a as [])) } }
@@ -47,6 +52,7 @@ beforeEach(() => {
 	updates.length = 0;
 	destinationFor.mockReset();
 	refundsCreate.mockReset();
+	recordBandTicketRefund.mockReset();
 });
 
 describe('sellerFor', () => {
@@ -117,6 +123,9 @@ describe('refundBandTicketSale', () => {
 		);
 		expect(result).toEqual({ refunded: 2 });
 		expect(updates.every((u) => u.set.status === 'cancelled')).toBe(true);
+		// The ledger follows the money back.
+		expect(recordBandTicketRefund).toHaveBeenCalledWith('p1');
+		expect(recordBandTicketRefund).toHaveBeenCalledWith('p2');
 	});
 
 	it('cancels a free claim without calling Stripe', async () => {
