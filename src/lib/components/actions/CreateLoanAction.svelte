@@ -5,6 +5,9 @@
 	import { createLoan, getAvailableItems } from '$lib/remote/inventory.remote';
 	import { Field } from '../ui/Form';
 	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { errorMessage } from '$lib/error-message';
+	import { retryQuery } from '$lib/utils/retry-query';
 
 	const { fields } = createLoan;
 
@@ -74,6 +77,12 @@
 				<div class="flex items-center justify-center p-8">
 					<span class="loading loading-md loading-spinner"></span>
 				</div>
+			{/snippet}
+
+			{#snippet failed(error, reset)}
+				<Alert type="warning" reset={() => retryQuery(getAvailableItems(), reset)}>
+					Could not load the equipment list: {errorMessage(error)}
+				</Alert>
 			{/snippet}
 		</svelte:boundary>
 	{/snippet}

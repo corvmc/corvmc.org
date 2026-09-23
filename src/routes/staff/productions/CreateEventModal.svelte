@@ -9,6 +9,8 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { errorMessage } from '$lib/error-message';
 	import Button from '$lib/components/ui/Button.svelte';
 	import {
 		checkConflicts,
@@ -453,6 +455,10 @@
 			<div class="flex items-center justify-center p-8">
 				<span class="loading loading-md loading-spinner"></span>
 			</div>
+		{/snippet}
+
+		{#snippet failed(error, reset)}
+			<Alert type="warning" {reset}>Could not load the event form: {errorMessage(error)}</Alert>
 		{/snippet}
 	</svelte:boundary>
 </Modal>

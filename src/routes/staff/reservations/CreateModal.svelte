@@ -12,6 +12,9 @@
 	import { Field, Select } from '$lib/components/ui/Form';
 	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
 	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { errorMessage } from '$lib/error-message';
+	import { retryQuery } from '$lib/utils/retry-query';
 	import { formatSlotTime } from '$lib/utils/format';
 
 	const { fields } = createReservation;
@@ -195,6 +198,12 @@
 				<div class="flex items-center justify-center p-8">
 					<span class="loading loading-md loading-spinner"></span>
 				</div>
+			{/snippet}
+
+			{#snippet failed(error, reset)}
+				<Alert type="warning" reset={() => retryQuery(slots, reset)}>
+					Could not load the booking form: {errorMessage(error)}
+				</Alert>
 			{/snippet}
 		</svelte:boundary>
 	{/snippet}

@@ -35,6 +35,7 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { errorMessage } from '$lib/error-message';
+	import { retryQuery } from '$lib/utils/retry-query';
 	import StatCard from '$lib/components/ui/StatCard.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -102,20 +103,6 @@
 			null: 'Not set. Paste the secret from the U-tec developer console.'
 		}[String(integrationSettings.clientSecret.source)]
 	);
-	/**
-	 * Retry a panel whose query failed.
-	 *
-	 * `reset()` alone only re-renders the boundary, and the component then reads
-	 * the same rejected query back out of the cache — so the alert outlives the
-	 * outage that caused it. `refresh()` is what re-requests; it rejects again
-	 * when the fault persists, and the boundary catches that on re-render.
-	 */
-	async function retry(query: () => { refresh: () => Promise<unknown> }, reset: () => void) {
-		await query()
-			.refresh()
-			.catch(() => {});
-		reset();
-	}
 
 	const utecRedirectUri = $derived(`${page.url.origin}/api/integrations/utec/callback`);
 
@@ -710,7 +697,7 @@
 								<LockHealth />
 
 								{#snippet failed(error, reset)}
-									<Alert type="warning" reset={() => retry(getLockHealth, reset)}>
+									<Alert type="warning" reset={() => retryQuery(getLockHealth(), reset)}>
 										The lock did not answer: {errorMessage(error)}
 									</Alert>
 								{/snippet}
@@ -720,7 +707,7 @@
 								<UnmanagedLockCodes />
 
 								{#snippet failed(error, reset)}
-									<Alert type="warning" reset={() => retry(getUnmanagedLockUsers, reset)}>
+									<Alert type="warning" reset={() => retryQuery(getUnmanagedLockUsers(), reset)}>
 										Could not read the lock's own door codes: {errorMessage(error)}
 									</Alert>
 								{/snippet}
