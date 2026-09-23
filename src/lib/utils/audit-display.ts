@@ -16,6 +16,15 @@ function plural(n: number, one: string, many = `${one}s`): string {
 /** The one line a staffer reads for an audit entry. The actor and time render beside it. */
 export function summarizeAuditEntry(entry: AuditEntry): string {
 	switch (entry.action) {
+		case 'reservation.cancelled_by_staff': {
+			const d = entry.details;
+			const head = `Cancelled the ${d.date} ${d.startTime}–${d.endTime} reservation`;
+			return d.reason ? `${head}: “${d.reason}”` : head;
+		}
+		case 'band.deactivated':
+			return `Deactivated ${entry.details.bandName}`;
+		case 'band.reactivated':
+			return `Reactivated ${entry.details.bandName}`;
 		case 'user.roles_changed': {
 			const parts: string[] = [];
 			if (entry.details.added.length) parts.push(`granted ${entry.details.added.join(', ')}`);

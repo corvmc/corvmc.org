@@ -7,6 +7,9 @@
  * A key is only listed once something writes it.
  */
 export const auditActions = [
+	'reservation.cancelled_by_staff',
+	'band.deactivated',
+	'band.reactivated',
 	'user.roles_changed',
 	'user.profile_updated',
 	'user.deactivated',
@@ -16,13 +19,23 @@ export const auditActions = [
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
-export const auditSubjectTypes = ['user'] as const;
+export const auditSubjectTypes = ['user', 'band'] as const;
 export type AuditSubjectType = (typeof auditSubjectTypes)[number];
 
 /** Profile field names only — never values, which would copy phone numbers into a second table. */
 export type AuditProfileField = 'name' | 'pronouns' | 'phone' | 'dateOfBirth';
 
 export interface AuditDetailsByAction {
+	/** The subject is the member who booked. Date and times are pre-formatted in the space's zone. */
+	'reservation.cancelled_by_staff': {
+		reservationId: string;
+		reason: string | null;
+		date: string;
+		startTime: string;
+		endTime: string;
+	};
+	'band.deactivated': { bandId: string; bandName: string };
+	'band.reactivated': { bandId: string; bandName: string };
 	'user.roles_changed': { added: string[]; removed: string[] };
 	'user.profile_updated': { fields: AuditProfileField[] };
 	'user.deactivated': {
