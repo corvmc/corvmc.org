@@ -7,7 +7,6 @@ import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import {
 	getContactSheetDisclosure,
 	issueContactSheetLink,
-	revokeContactSheetLink,
 	saveContactSheet
 } from '$lib/server/directory/contact-sheet-service';
 import { listFor } from '$lib/server/media/media-service';
@@ -118,14 +117,5 @@ export const sendContactSheetLink = form(
 		// Returned rather than emailed here: the send belongs to the notification
 		// layer, and staff need the URL anyway when an act asks for it again.
 		return { success: true, token };
-	}
-);
-
-export const revokeContactSheetLinkForm = form(
-	z.object({ entryId: z.string().min(1) }),
-	async (data) => {
-		await requireCapability('directory.shareContactSheet');
-		await revokeContactSheetLink(data.entryId);
-		return { success: true };
 	}
 );

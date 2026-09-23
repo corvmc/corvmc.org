@@ -181,8 +181,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { bookAndPayReservation, bookMemberReservation } =
-	(await import('$lib/remote/reservations.remote')) as any;
+const { bookAndPayReservation } = (await import('$lib/remote/reservations.remote')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -250,30 +249,6 @@ describe('bookAndPayReservation slot conflict', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Non-wizard forms map domain errors to HTTP status (via mapDomainError) rather
-// than the wizard's in-band { validationError } signal or a raw 500.
-// ---------------------------------------------------------------------------
-
-describe('bookMemberReservation domain-error mapping', () => {
-	it('maps a one-time slot conflict to a 409 (not a 500)', async () => {
-		// Default mock: create() throws ReservationConflictError.
-		await expect(
-			bookMemberReservation({ date: '2026-06-15', startTime: '09:00', endTime: '10:00' })
-		).rejects.toMatchObject({ status: 409 });
-	});
-
-	it('maps an out-of-window validation error to a 400 (not a 500)', async () => {
-		reservationServiceMock.create.mockImplementation(async () => {
-			throw new ReservationValidationError('Cannot book more than 14 days in advance');
-		});
-
-		await expect(
-			bookMemberReservation({ date: '2026-08-01', startTime: '09:00', endTime: '10:00' })
-		).rejects.toMatchObject({ status: 400 });
-	});
-});
-
-// ---------------------------------------------------------------------------
 // Contact phone requirement
 // ---------------------------------------------------------------------------
 
@@ -302,11 +277,14 @@ describe('contact phone requirement', () => {
 			endsAt: new Date()
 		})) as never);
 
-		const result = await bookMemberReservation({
-			date: '2026-06-15',
+		// Far enough out that the booking is held rather than charged.
+		const date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+		const result = await bookAndPayReservation({
+			date,
 			startTime: '09:00',
 			endTime: '10:00',
-			phone: '(541) 555-0123'
+			phone: '(541) 555-0123',
+			skipPayment: 'on'
 		});
 
 		expect(ensureContactPhone).toHaveBeenCalledWith('user-1', '(541) 555-0123');
@@ -318,9 +296,8 @@ describe('contact phone requirement', () => {
 // The confirmation window
 //
 // Confirming further out than the window inserted a `scheduled` row and then
-// threw a 400 the member never saw, which the row survived. That row is what
-// `bookMemberReservation` writes for any booking, so it is the answer rather
-// than a failure — but it has to be reported as the hold it is. #872.
+// threw a 400 the member never saw, which the row survived. That row is an
+// ordinary unconfirmed booking, so it is the answer rather than a failure — but it has to be reported as the hold it is. #872.
 // ---------------------------------------------------------------------------
 
 describe('bookAndPayReservation before the confirmation window opens', () => {

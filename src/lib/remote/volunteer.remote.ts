@@ -125,7 +125,6 @@ import {
 import {
 	grantCertification as grantCertificationService,
 	revokeCertification as revokeCertificationService,
-	deleteCertificationRecord,
 	listForUser as listCertificationsForUser,
 	listClearances,
 	listHeldForGate,
@@ -1414,22 +1413,6 @@ export const revokeCertification = form(
 	}
 );
 
-export const deleteCertificationGrant = form(
-	z.object({ id: z.string().min(1), userId: z.string().min(1) }),
-	async (data) => {
-		const staff = await requireCapability('volunteer.manageCertifications');
-
-		try {
-			await deleteCertificationRecord(data.id, staff.id);
-		} catch (err) {
-			mapDomainError(err);
-		}
-
-		void getMemberCertifications(data.userId).refresh();
-		return { success: true };
-	}
-);
-
 async function refreshCertificationViews() {
 	await Promise.all([
 		getCertifications().refresh(),
@@ -1598,17 +1581,16 @@ export const updateShift = form(
 );
 
 export const duplicateShift = form(
-	z.object({ id: z.string().min(1), offsetDays: z.string().min(1) }),
+	z.object({ id: z.string().min(1), offsetDays: z.number().int() }),
 	async (data) => {
 		const staff = await requireCapability('volunteer.manageShifts');
 
 		try {
-			await duplicateShiftService(data.id, parseInt(data.offsetDays, 10), staff.id);
+			const copy = await duplicateShiftService(data.id, data.offsetDays, staff.id);
+			return { success: true, id: copy.id };
 		} catch (err) {
 			mapDomainError(err);
 		}
-
-		return { success: true };
 	}
 );
 

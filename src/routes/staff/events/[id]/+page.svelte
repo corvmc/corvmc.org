@@ -23,7 +23,11 @@
 		DeleteEventAction
 	} from '$lib/components/actions';
 	import { getStaffEventPage, updateEvent, setStaffEventLineup } from '$lib/remote/events.remote';
-	import { rejectListing, searchBandsForListing } from '$lib/remote/community-events.remote';
+	import {
+		approveListing,
+		rejectListing,
+		searchBandsForListing
+	} from '$lib/remote/community-events.remote';
 	import { rowLink } from '$lib/actions/row-link';
 	import RecapPhotos from './RecapPhotos.svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
@@ -129,11 +133,22 @@
 		{/if}
 
 		{#if evt.status === 'pending_review'}
-			<!-- Approving is the same transition as publishing a draft, so it goes
-			     through the same action. Turning it down is its own thing: it needs
-			     a reason, because `rejected` exists so the member can fix and
-			     resubmit. -->
-			<PublishEventAction eventId={evt.id} label="Approve" />
+			<!-- Approve, not Publish: approving also clears the last turn-down note
+			     and tells the member. Turning it down needs a reason, because
+			     `rejected` exists so the member can fix and resubmit. -->
+			<Action
+				action={approveListing}
+				label="Approve"
+				successToast="Approved and published"
+				variant="success"
+				size="sm"
+				onsuccess={() => invalidateAll()}
+			>
+				{#snippet form()}
+					<input {...approveListing.fields.eventId.as('hidden', evt.id)} />
+					<p class="py-2">Publish this listing and let the member know it was approved?</p>
+				{/snippet}
+			</Action>
 			<Action
 				action={rejectListing}
 				label="Turn down"

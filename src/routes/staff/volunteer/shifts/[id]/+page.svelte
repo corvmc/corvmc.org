@@ -39,8 +39,11 @@
 		markSignupNotified,
 		notifyCancelledShift,
 		cancelShift,
+		duplicateShift,
 		updateShift
 	} from '$lib/remote/volunteer.remote';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { goto } from '$app/navigation';
 
 	let id = $derived(page.params.id!);
 	// One query. The role list the edit form needs moved into ShiftRoleFields — it is
@@ -420,6 +423,34 @@
 								/>
 							{/snippet}
 						</Action>
+
+						{#if shift.startsAt}
+							{@const copy = duplicateShift.for(shift.id)}
+							<Action
+								action={copy}
+								label="Copy forward"
+								variant="ghost"
+								size="sm"
+								modalTitle="Copy this shift forward"
+								submitLabel="Copy"
+								successToast="Copied. Nobody is on the copy yet."
+								onsuccess={(r) => {
+									const copyId = (r as { id?: string } | undefined)?.id;
+									if (copyId) goto(resolve(`/staff/volunteer/shifts/${copyId}`));
+								}}
+							>
+								{#snippet form()}
+									<input {...copy.fields.id.as('hidden', shift.id)} />
+									<FormField
+										field={copy.fields.offsetDays}
+										type="number"
+										label="Days later"
+										value={7}
+										description="Same role, times and capacity, on a later date. A weekly slot is 7."
+									/>
+								{/snippet}
+							</Action>
+						{/if}
 
 						{#if !calledOff}
 							<Action
