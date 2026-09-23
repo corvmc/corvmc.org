@@ -19,6 +19,7 @@ import {
 	type ListingSaleTerms
 } from './event-columns';
 import { saveTicketSale, type TicketSaleTerms } from '$lib/server/ticket/ticket-sale';
+import { bandSaleBlocker, refundBandTicketSale } from '$lib/server/ticket/ticket-seller';
 import type { EventSource } from '$lib/config';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
@@ -140,6 +141,19 @@ export class EventHasTicketsError extends DomainError {
 	constructor() {
 		super(
 			'This event has tickets and cannot be deleted. Cancel it instead — that voids the tickets and tells the people holding them.'
+		);
+	}
+}
+
+/** A band that may not sell through us right now: not premium, or no payouts. */
+export class BandTicketSaleUnavailableError extends DomainError {
+	readonly httpStatus = 403;
+
+	constructor(readonly reason: 'not_premium' | 'no_payouts') {
+		super(
+			reason === 'not_premium'
+				? 'Selling tickets through the collective is part of the premium plan.'
+				: 'Finish setting up payouts before putting tickets on sale.'
 		);
 	}
 }
@@ -2733,7 +2747,71 @@ export async function cancelBandEvent(eventId: string, bandId: string): Promise<
 		.set({ status: 'cancelled', updatedAt: new Date() })
 		.where(eq(eventListing.id, eventId));
 
+	// A band cannot cancel and keep the money (#1472): checkout closes first, so
+	// nobody buys into the refund, then every paid ticket is given back, even one
+	// sold before the band closed its checkout.
+	if (existing.ticketingEnabled) await saveTicketSale(eventId, { enabled: false, quantity: null });
+	await refundBandTicketSale(eventId);
+
 	await detachSlot('event_listing', eventId, 'poster');
+}
+
+/** The terms a band puts its own gig on sale at. */
+export interface BandTicketSaleTerms {
+	priceCents: number;
+	priceFloorCents: number;
+	quantity: number | null;
+}
+
+/** A band's own gig, for the band that owns it, or a thrown reason why not. */
+async function ownBandGig(eventId: string, bandId: string): Promise<EventRow> {
+	const existing = await getById(eventId);
+	if (!existing) throw new EventNotFoundError();
+	if (existing.groupId !== bandId || existing.source !== 'band') {
+		throw new EventValidationError('Only the band that owns a gig can sell it', 'groupId');
+	}
+	if (existing.status === 'cancelled') throw new EventStateError('This gig is cancelled');
+	return existing;
+}
+
+/**
+ * Put a band's own gig on sale through the collective, with the band as the
+ * seller (#1203). Only a premium band whose Stripe account takes charges may
+ * (#1471); the money reaches it by destination charge at checkout.
+ */
+export async function openBandTicketSale(
+	eventId: string,
+	bandId: string,
+	terms: BandTicketSaleTerms
+): Promise<void> {
+	await ownBandGig(eventId, bandId);
+	if (!Number.isInteger(terms.priceCents) || terms.priceCents <= 0) {
+		throw new EventValidationError(
+			'Ticket price is required when ticketing is enabled',
+			'ticketPrice'
+		);
+	}
+	assertValidTicketFloor(terms.priceFloorCents, terms.priceCents);
+	if (terms.quantity != null && (!Number.isInteger(terms.quantity) || terms.quantity < 1)) {
+		throw new EventValidationError('Capacity must be a whole number of tickets', 'ticketQuantity');
+	}
+
+	const blocker = await bandSaleBlocker(bandId);
+	if (blocker) throw new BandTicketSaleUnavailableError(blocker);
+
+	await saveTicketSale(eventId, {
+		enabled: true,
+		priceCents: terms.priceCents,
+		priceFloorCents: terms.priceFloorCents,
+		quantity: terms.quantity,
+		groupId: bandId
+	});
+}
+
+/** Close a band's checkout. Tickets already sold stay valid; the price stays as the door price. */
+export async function closeBandTicketSale(eventId: string, bandId: string): Promise<void> {
+	await ownBandGig(eventId, bandId);
+	await saveTicketSale(eventId, { enabled: false, quantity: null });
 }
 
 /** Remove a gig's poster. Owner-only, like every other edit. */

@@ -106,7 +106,8 @@ const saleNames: Record<string, string> = {
 	enabled: 'ticketingEnabled',
 	priceCents: 'ticketPrice',
 	priceFloorCents: 'ticketPriceFloorCents',
-	quantity: 'ticketQuantity'
+	quantity: 'ticketQuantity',
+	groupId: 'groupId'
 };
 vi.mock('$lib/server/ticket/ticket-sale', () => ({
 	saveTicketSale: vi.fn((_id: string, terms: Record<string, unknown>) => {
@@ -119,6 +120,13 @@ vi.mock('$lib/server/ticket/ticket-sale', () => ({
 		lastSaleSet = set;
 		return Promise.resolve();
 	})
+}));
+
+const bandSaleBlocker = vi.fn();
+const refundBandTicketSale = vi.fn();
+vi.mock('$lib/server/ticket/ticket-seller', () => ({
+	bandSaleBlocker: (...a: unknown[]) => bandSaleBlocker(...(a as [])),
+	refundBandTicketSale: (...a: unknown[]) => refundBandTicketSale(...(a as []))
 }));
 
 vi.mock('$lib/server/db', async (importOriginal) => {
@@ -233,6 +241,10 @@ import {
 	listCreditInDirectory,
 	listPublicUpcomingEvents,
 	remove,
+	openBandTicketSale,
+	closeBandTicketSale,
+	cancelBandEvent,
+	BandTicketSaleUnavailableError,
 	EventNotFoundError,
 	EventValidationError,
 	EventStateError,
@@ -1977,5 +1989,77 @@ describe('EventService', () => {
 
 			expect(lastSaleSet).toEqual({});
 		});
+	});
+});
+
+describe('a band selling its own gig (#1203)', () => {
+	const bandGig = { ...mockEventRow, status: 'published', source: 'band', groupId: 'band-1' };
+	const terms = { priceCents: 1500, priceFloorCents: 0, quantity: 100 };
+
+	beforeEach(() => {
+		bandSaleBlocker.mockReset().mockResolvedValue(null);
+		refundBandTicketSale.mockReset().mockResolvedValue({ refunded: 0 });
+		lastSaleSet = {};
+	});
+
+	it('puts the gig on sale with the band as the seller', async () => {
+		selectResult = [bandGig];
+
+		await openBandTicketSale('evt-1', 'band-1', terms);
+
+		expect(lastSaleSet).toEqual({
+			ticketingEnabled: true,
+			ticketPrice: 1500,
+			ticketPriceFloorCents: 0,
+			ticketQuantity: 100,
+			groupId: 'band-1'
+		});
+	});
+
+	it('refuses a band that does not own the gig', async () => {
+		selectResult = [bandGig];
+		await expect(openBandTicketSale('evt-1', 'band-2', terms)).rejects.toThrow();
+		expect(lastSaleSet).toEqual({});
+	});
+
+	it('refuses a CMC show, which the collective sells', async () => {
+		selectResult = [{ ...bandGig, source: 'cmc' }];
+		await expect(openBandTicketSale('evt-1', 'band-1', terms)).rejects.toThrow();
+	});
+
+	it.each(['not_premium', 'no_payouts'])('refuses while the band is %s', async (blocker) => {
+		selectResult = [bandGig];
+		bandSaleBlocker.mockResolvedValue(blocker);
+		await expect(openBandTicketSale('evt-1', 'band-1', terms)).rejects.toThrow(
+			BandTicketSaleUnavailableError
+		);
+		expect(lastSaleSet).toEqual({});
+	});
+
+	it('holds a band to the same price rules as a CMC show', async () => {
+		selectResult = [bandGig];
+		await expect(
+			openBandTicketSale('evt-1', 'band-1', { ...terms, priceCents: 0 })
+		).rejects.toThrow(EventValidationError);
+		await expect(
+			openBandTicketSale('evt-1', 'band-1', { ...terms, priceFloorCents: 2000 })
+		).rejects.toThrow(EventValidationError);
+	});
+
+	it('takes the gig off sale, keeping the price as the door price', async () => {
+		selectResult = [bandGig];
+
+		await closeBandTicketSale('evt-1', 'band-1');
+
+		expect(lastSaleSet).toEqual({ ticketingEnabled: false, ticketQuantity: null });
+	});
+
+	it('refunds every buyer when the band cancels (#1472)', async () => {
+		selectResult = [{ ...bandGig, ticketingEnabled: true }];
+
+		await cancelBandEvent('evt-1', 'band-1');
+
+		expect(lastSaleSet).toMatchObject({ ticketingEnabled: false });
+		expect(refundBandTicketSale).toHaveBeenCalledWith('evt-1');
 	});
 });
