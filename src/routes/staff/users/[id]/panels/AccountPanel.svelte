@@ -4,6 +4,7 @@
 		getRoleCatalog,
 		getUserPage,
 		getUserSessions,
+		getUserHistory,
 		deactivateUser,
 		reactivateUser,
 		purgeUser,
@@ -25,6 +26,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
+	import { summarizeAuditEntry } from '$lib/utils/audit-display';
 	import { toast } from 'svelte-sonner';
 
 	let { id, member }: { id: string; member: Awaited<ReturnType<typeof getUser>> } = $props();
@@ -155,6 +157,34 @@
 						</td>
 						<td class="col-support font-mono text-xs">{s.ipAddress ?? '—'}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(s.expiresAt)}</td>
+					</tr>
+				{/each}
+			</Table>
+		{/if}
+	{/snippet}
+</RelatedList>
+
+<!-- Staff changes to this account, newest first. Reads only; nothing here edits the log. -->
+<RelatedList title="History" result={getUserHistory(id)}>
+	{#snippet children(entries)}
+		{#if entries.length === 0}
+			<EmptyState
+				title="No recorded changes"
+				description="Role, profile, credit and account changes made by staff show up here."
+			/>
+		{:else}
+			<Table>
+				{#snippet head()}
+					<th>Change</th>
+				{/snippet}
+				{#each entries as entry (entry.id)}
+					<tr>
+						<td class="cell-primary">
+							<div>{summarizeAuditEntry(entry)}</div>
+							<div class="text-muted">
+								{entry.actorName} · {formatDateTimeShort(entry.createdAt)}
+							</div>
+						</td>
 					</tr>
 				{/each}
 			</Table>

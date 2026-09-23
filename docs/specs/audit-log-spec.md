@@ -1,5 +1,12 @@
 # Staff Audit Log — Spec
 
+> **Status: first phase shipped (#1351).** Built: the `audit_log` table, `recordAuditEntry`,
+> `listAuditEntriesForSubject`, the `user.*` and `credits.adjusted` writes, and the History
+> card on `/staff/users/[id]`. Behavior now lives in business-workflows §16. Not yet built:
+> the global `/staff/audit` view (#1374), reservation and band actions (#1375), retention
+> (#1376), and ban/unban (#1377). Open questions 2–4 were answered in #1380, and by recording
+> successes only and using a "System" actor.
+
 ## Purpose
 
 Nothing in the app records **who did what** to a member's account. Staff can

@@ -165,6 +165,9 @@ export const tableOrder = [
 	// member their standing, in whichever scope. One table where there were three
 	// (community_event_standing, messaging_standing, suggestion_standing).
 	'member_standing',
+	// References user (the actor) and nothing else: `subject_id` is deliberately
+	// not a foreign key, so the row survives the purge it records.
+	'audit_log',
 	'user_block',
 	'suggestion_vote',
 	'suggestion_edit',

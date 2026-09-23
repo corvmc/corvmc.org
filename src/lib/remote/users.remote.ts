@@ -65,6 +65,8 @@ import {
 	unbanUser as unbanUserService
 } from '$lib/server/user/user-service';
 import { resolveImageUrl } from '$lib/server/storage';
+import { recordAuditEntry, listAuditEntriesForSubject } from '$lib/server/audit/audit-service';
+import type { AuditProfileField } from '$lib/types/audit';
 import { findMatchesFor, isProfileComplete } from '$lib/server/directory/directory-service';
 import { startOfWeek, endOfWeek } from 'date-fns';
 import type { CreditType } from '$lib/server/db/schema/finance';
@@ -368,6 +370,7 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 	// cannot edit roles, so leave them alone. An empty array is a real request
 	// to remove every role and is handled as one.
 	let roleIds: number[] | null = null;
+	let roleChange: { added: string[]; removed: string[] } | null = null;
 
 	if (data.roles !== undefined) {
 		const namesById = new Map(
@@ -414,21 +417,37 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 			}
 
 			roleIds = submitted;
+			roleChange = {
+				added: nextRoleNames.filter((n) => !targetCurrentRoles.includes(n)),
+				removed: targetCurrentRoles.filter((n) => !nextRoleNames.includes(n))
+			};
 		}
 	}
+
+	// Read before the write so the audit entry can name which fields changed.
+	const [before] = await db
+		.select({
+			name: user.name,
+			pronouns: user.pronouns,
+			phone: user.phone,
+			dateOfBirth: user.dateOfBirth
+		})
+		.from(user)
+		.where(eq(user.id, id))
+		.limit(1);
+	const next = {
+		name: data.name,
+		pronouns: data.pronouns || null,
+		phone: data.phone || null,
+		dateOfBirth: parseBirthDateInput(data.dateOfBirth)
+	};
 
 	// D1 has no interactive transactions; these writes are independent, so batch
 	// them for atomicity (db.batch runs in a single implicit transaction).
 	const ops: BatchItem<'sqlite'>[] = [
 		db
 			.update(user)
-			.set({
-				name: data.name,
-				pronouns: data.pronouns || null,
-				phone: data.phone || null,
-				dateOfBirth: parseBirthDateInput(data.dateOfBirth),
-				updatedAt: new Date()
-			})
+			.set({ ...next, updatedAt: new Date() })
 			.where(eq(user.id, id))
 	];
 
@@ -445,6 +464,19 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 	}
 
 	await db.batch(ops as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
+
+	const subject = { type: 'user' as const, id, label: data.name };
+	if (roleChange) {
+		await recordAuditEntry({ action: 'user.roles_changed', subject, details: roleChange });
+	}
+	const fields = before
+		? (Object.keys(next) as AuditProfileField[]).filter(
+				(f) => String(before[f] ?? '') !== String(next[f] ?? '')
+			)
+		: [];
+	if (fields.length > 0) {
+		await recordAuditEntry({ action: 'user.profile_updated', subject, details: { fields } });
+	}
 
 	void getUserPage(id).refresh();
 
@@ -485,8 +517,16 @@ export const adjustCredits = form(
 		if (!Number.isFinite(amount)) invalid(issue.amount('Enter a number.'));
 		if (amount === 0) invalid(issue.amount('Enter an amount above or below zero.'));
 
+		let balanceAfter: number;
 		if (amount > 0) {
-			await addCredits(userId, type, amount, 'admin_adjustment', undefined, description);
+			balanceAfter = await addCredits(
+				userId,
+				type,
+				amount,
+				'admin_adjustment',
+				undefined,
+				description
+			);
 		} else {
 			const units = Math.abs(amount);
 
@@ -497,7 +537,14 @@ export const adjustCredits = form(
 			if (units > available) invalid(issue.amount(overdrawn(type, available, units)));
 
 			try {
-				await deductCredits(userId, type, units, 'admin_adjustment', undefined, description);
+				balanceAfter = await deductCredits(
+					userId,
+					type,
+					units,
+					'admin_adjustment',
+					undefined,
+					description
+				);
 			} catch (e) {
 				// Someone spent between the read above and this write. Same message,
 				// re-read so the number in it is the one that actually applies.
@@ -507,6 +554,12 @@ export const adjustCredits = form(
 				throw e;
 			}
 		}
+
+		await recordAuditEntry({
+			action: 'credits.adjusted',
+			subject: { type: 'user', id: userId },
+			details: { creditType: type, delta: amount, balanceAfter, description }
+		});
 
 		void getUserCredits(userId).refresh();
 		return { success: true };
@@ -863,6 +916,12 @@ export const getUserCreditHistory = query(
 		return listTransactions({ userId }, { page, pageSize: 10 });
 	}
 );
+
+/** Who changed this member's account, newest first. Staff-only, like the rest of the record. */
+export const getUserHistory = query(z.string(), async (userId) => {
+	await requireCapability('user.read');
+	return listAuditEntriesForSubject('user', userId, { limit: 20 });
+});
 
 export const getUserSessions = query(z.string(), async (userId) => {
 	await requireCapability('user.read');
