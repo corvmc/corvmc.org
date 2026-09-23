@@ -70,7 +70,11 @@ import {
 	UserNotFoundError,
 	UserNotDeactivatedError,
 	UserHasOwnedBandsError,
-	UserHasPublishedListingsError
+	UserHasPublishedListingsError,
+	banUser,
+	unbanUser,
+	CannotBanSelfError,
+	UserBannedError
 } from './user-service';
 
 beforeEach(() => {
@@ -266,6 +270,88 @@ describe('reactivateUser', () => {
 
 		expect(getSubscriptionMock).not.toHaveBeenCalled();
 		expect(row.subscription).toBe('none');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// banUser / unbanUser
+// ---------------------------------------------------------------------------
+
+describe('banUser', () => {
+	it('records who banned the member and why, then deactivates them', async () => {
+		updateResult = [{ id: 'u1', deletedAt: null, stripeId: null }];
+		selectResultQueue = [[], [{ id: 'r1' }]]; // door codes, future reservations
+
+		await banUser('u1', { actorId: 'staff-1', reason: 'Threatened another member' });
+
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({
+				bannedAt: expect.any(Date),
+				bannedById: 'staff-1',
+				banReason: 'Threatened another member'
+			})
+		);
+		// The offboarding path ran: a second update set deletedAt, and the
+		// member's future booking was released.
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({ deletedAt: expect.any(Date) })
+		);
+		expect(cancelMock).toHaveBeenCalledWith('r1', 'u1', 'Account deactivated', {
+			staffOverride: true,
+			actor: 'staff'
+		});
+	});
+
+	it('bans an already-deactivated account without re-running offboarding', async () => {
+		updateResult = [{ id: 'u1', deletedAt: new Date('2026-01-01'), stripeId: null }];
+
+		await banUser('u1', { actorId: 'staff-1', reason: 'Left, then harassed members by email' });
+
+		expect(updateSet).toHaveBeenCalledTimes(1);
+		expect(deleteWhere).not.toHaveBeenCalled();
+		expect(cancelMock).not.toHaveBeenCalled();
+	});
+
+	it('refuses to let staff ban themselves', async () => {
+		await expect(banUser('u1', { actorId: 'u1', reason: 'x' })).rejects.toBeInstanceOf(
+			CannotBanSelfError
+		);
+		expect(updateSet).not.toHaveBeenCalled();
+	});
+
+	it('throws UserNotFoundError when the account is missing or already banned', async () => {
+		updateResult = [];
+		await expect(banUser('u1', { actorId: 'staff-1', reason: 'x' })).rejects.toBeInstanceOf(
+			UserNotFoundError
+		);
+	});
+});
+
+describe('reactivateUser on a banned account', () => {
+	it('refuses, so a ban is only ever lifted on purpose', async () => {
+		updateResult = [];
+		selectResultQueue = [[{ bannedAt: new Date() }]];
+		await expect(reactivateUser('u1')).rejects.toBeInstanceOf(UserBannedError);
+	});
+});
+
+describe('unbanUser', () => {
+	it('clears the ban record and restores the account', async () => {
+		updateResult = [{ id: 'u1', stripeId: 'cus_1', deletedAt: null }];
+		getSubscriptionMock.mockResolvedValueOnce({ cancelAtPeriodEnd: true });
+
+		const row = await unbanUser('u1');
+
+		expect(updateSet).toHaveBeenCalledWith(
+			expect.objectContaining({ bannedAt: null, bannedById: null, banReason: null })
+		);
+		expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({ deletedAt: null }));
+		expect(row.subscription).toBe('resumed');
+	});
+
+	it('throws UserNotFoundError when the account is not banned', async () => {
+		updateResult = [];
+		await expect(unbanUser('u1')).rejects.toBeInstanceOf(UserNotFoundError);
 	});
 });
 

@@ -57,6 +57,8 @@ that would bury the writes.
 | `user.profile_updated`                  | `updateUser`                             | `{ fields: string[] }` (names only, not values)                                    |
 | `user.deactivated`                      | `deactivateUser` / `bulkDeactivateUsers` | `{ reservationsCancelled: number, subscriptionCancelled: boolean, bulk: boolean }` |
 | `user.reactivated`                      | `reactivateUser`                         | `{}`                                                                               |
+| `user.banned`                           | `banUser`                                | `{ reason: string }` (the actor is already the service's `actorId`)                |
+| `user.unbanned`                         | `unbanUser`                              | `{ reason: string }` (the lifted ban's, read before it is cleared)                 |
 | `user.purged`                           | `purgeUser`                              | `{ name: string, email: string }` (the only surviving record of the account)       |
 | `credits.adjusted`                      | `adjustCredits`                          | `{ creditType, delta, balanceAfter, description }`                                 |
 | `reservation.cancelled_by_staff`        | event-bus listener                       | `{ reservationId, reason }`                                                        |

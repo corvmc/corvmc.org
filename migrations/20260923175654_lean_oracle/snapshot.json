@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "44b6220f-1245-4c8a-ba12-d467c95f7101",
+  "id": "a604d8c5-202c-4541-ab33-23774235ece4",
   "prevIds": [
-    "cb80684a-3ba7-416e-aefa-3a81c9b09483"
+    "44b6220f-1245-4c8a-ba12-d467c95f7101"
   ],
   "ddl": [
     {
@@ -835,6 +835,36 @@
       "default": null,
       "generated": null,
       "name": "date_of_birth",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "banned_at",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "banned_by_id",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ban_reason",
       "entityType": "columns",
       "table": "user"
     },
