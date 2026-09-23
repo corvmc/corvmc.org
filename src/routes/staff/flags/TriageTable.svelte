@@ -1,10 +1,12 @@
 <script lang="ts" module>
 	import type { EntityRef } from '$lib/types/entity';
+	import type { ResolvedPathname } from '$app/types';
 
 	/** One report in a triage queue, whichever source it came from (#552). */
 	export interface TriageRow {
 		id: string;
-		href: string;
+		/** Already passed through `resolve()` by the page that built the row. */
+		href: ResolvedPathname;
 		status: string;
 		/** What kind of thing was reported — the type column. */
 		kind: string;
@@ -44,7 +46,10 @@
 			<td class="w-px"><StatusBadge status={r.status} label /></td>
 			<td class="col-support whitespace-nowrap">{r.kind}</td>
 			<td class="whitespace-nowrap"><EntityIdentity ref={r.subject} /></td>
-			<td class="cell-primary truncate"><a class="link-hover" href={r.href}>{r.text}</a></td>
+			<td class="cell-primary truncate">
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- `href` is typed ResolvedPathname; the caller resolved it -->
+				<a class="link-hover" href={r.href}>{r.text}</a>
+			</td>
 			<td class="col-support truncate">{r.reporter}</td>
 			<td class="col-support whitespace-nowrap">{relativeDay(r.createdAt)}</td>
 		</tr>

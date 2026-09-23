@@ -355,7 +355,7 @@ export async function getWorkRequestDetail(id: string) {
 			.from(workRequest)
 			.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
 			.where(and(eq(workRequest.assetId, row.asset.id), eq(workRequest.status, 'pending')))
-			.orderBy(asc(workRequest.createdAt)),
+			.orderBy(asc(workRequest.createdAt), asc(workRequest.id)),
 		db
 			.select({
 				id: workOrder.id,
@@ -373,7 +373,7 @@ export async function getWorkRequestDetail(id: string) {
 					isNull(workOrder.cancelledAt)
 				)
 			)
-			.orderBy(asc(workOrder.createdAt))
+			.orderBy(asc(workOrder.createdAt), asc(workOrder.id))
 	]);
 
 	return {
