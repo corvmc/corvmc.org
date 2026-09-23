@@ -362,7 +362,7 @@ async function main() {
 		`  ${runOfShow.slots} run-of-show sets — ${runOfShow.uncredited} on no poster, ${runOfShow.withoutTimes} with no downbeat yet`
 	);
 	console.log(
-		`  ${artifactRequests.requests} artifact requests across the bills, half of them overdue`
+		`  ${artifactRequests.requests} artifact requests, half overdue, two of them poster art from Maren Holt`
 	);
 	console.log(
 		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +

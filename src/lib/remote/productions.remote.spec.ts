@@ -60,11 +60,13 @@ vi.mock('$lib/server/production/expense-service', () => ({
 
 const artifacts = {
 	requestArtifact: vi.fn(),
-	cancelArtifactRequest: vi.fn()
+	cancelArtifactRequest: vi.fn(),
+	promotePosterArt: vi.fn()
 };
 vi.mock('$lib/server/production/artifact-request-service', () => ({
 	requestArtifact: (...a: unknown[]) => artifacts.requestArtifact(...a),
-	cancelArtifactRequest: (...a: unknown[]) => artifacts.cancelArtifactRequest(...a)
+	cancelArtifactRequest: (...a: unknown[]) => artifacts.cancelArtifactRequest(...a),
+	promotePosterArt: (...a: unknown[]) => artifacts.promotePosterArt(...a)
 }));
 
 const refresh = vi.fn();
@@ -149,6 +151,7 @@ const WRITES: { name: keyof typeof productions; args: unknown[]; capability?: st
 		args: [{ eventId: 'evt-1', entryId: 'entry-1', artifact: 'tech_rider' }]
 	},
 	{ name: 'dropArtifactRequest', args: [{ id: 'req-1', eventId: 'evt-1' }] },
+	{ name: 'usePosterArt', args: [{ requestId: 'req-1', eventId: 'evt-1' }] },
 	{
 		name: 'recordActPayout',
 		args: [{ ...SLOT, amountCents: 1000 }],

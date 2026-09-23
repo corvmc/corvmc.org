@@ -23,7 +23,8 @@ import {
 import { openHostShift as openHost } from '$lib/server/production/host-service';
 import {
 	requestArtifact,
-	cancelArtifactRequest
+	cancelArtifactRequest,
+	promotePosterArt
 } from '$lib/server/production/artifact-request-service';
 import { PERCENTAGE_BPS_MAX } from '$lib/production/terms';
 import { getStaffEventPage, getStaffEventProduction, getStaffEvents } from './events.remote';
@@ -546,6 +547,21 @@ export const dropArtifactRequest = form(
 		await requireCapability('event.manage');
 		try {
 			await cancelArtifactRequest(data.id);
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/** Make delivered poster art the event's poster. The same object, re-pointed. */
+export const usePosterArt = form(
+	z.object({ requestId: z.string().min(1), eventId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await promotePosterArt(data.requestId);
 			await getStaffEventProduction(data.eventId).refresh();
 			return { success: true };
 		} catch (err) {

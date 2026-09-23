@@ -2055,7 +2055,13 @@ export const attachableTypes = [
 	 * `group_id` and an external act has no group, so a file is the only tech
 	 * rider it can ever hand over (#863).
 	 */
-	'directory_entry'
+	'directory_entry',
+	/**
+	 * What an artist delivered against an ask, in `poster`. On the request rather
+	 * than the event: the `/act` token authorizes the artist's own record, and
+	 * the event's public poster is not that until staff promote it.
+	 */
+	'artifact_request'
 ] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 

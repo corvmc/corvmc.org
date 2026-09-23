@@ -7,6 +7,9 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDateShort, formatDateTime } from '$lib/utils/format';
 	import { toast } from 'svelte-sonner';
 	import { getContactSheet, saveContactSheetForm } from '$lib/remote/contact-sheet.remote';
 
@@ -58,6 +61,32 @@
 	}
 
 	const remove = () => send('DELETE');
+
+	let artError = $state<string | null>(null);
+
+	async function sendArt(event: Event, requestId: string) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		busy = true;
+		artError = null;
+		try {
+			const body = new FormData();
+			body.set('requestId', requestId);
+			body.set('file', file);
+			const res = await fetch(`/api/acts/${token}/poster-art`, { method: 'POST', body });
+			if (!res.ok) {
+				const err = (await res.json().catch(() => null)) as { message?: string } | null;
+				artError = err?.message ?? 'That upload did not work.';
+				return;
+			}
+			await getContactSheet(token).refresh();
+			toast.success('Art received — thank you');
+		} finally {
+			busy = false;
+			input.value = '';
+		}
+	}
 </script>
 
 <svelte:head>
@@ -156,4 +185,49 @@
 			{/if}
 		</div>
 	</InfoCard>
+
+	{#each sheet.posterAsks as ask (ask.id)}
+		<InfoCard title="Poster art — {ask.eventTitle}">
+			<DefinitionList>
+				<Fact label="When">{formatDateTime(ask.startsAt)}</Fact>
+				{#if ask.venue}
+					<Fact label="Where">{ask.venue}</Fact>
+				{/if}
+				{#if ask.bill.length > 0}
+					<Fact label="Playing">{ask.bill.join(', ')}</Fact>
+				{/if}
+				<Fact label="Art due">
+					{ask.dueAt ? formatDateShort(ask.dueAt) : 'No date set — sooner is better'}
+				</Fact>
+			</DefinitionList>
+
+			<p class="mt-3 text-sm">
+				A JPEG or PNG, portrait, at least 1080 pixels wide. CMC adds the show details if the art
+				leaves them off.
+			</p>
+
+			{#if ask.deliveredUrl}
+				<p class="mt-3 text-sm">
+					We have
+					<a href={ask.deliveredUrl} class="link" target="_blank" rel="external noreferrer"
+						>your art</a
+					>. Uploading another replaces it.
+				</p>
+			{/if}
+
+			{#if artError}
+				<Alert type="error" class="mt-3 text-sm">{artError}</Alert>
+			{/if}
+
+			<div class="mt-3">
+				<input
+					type="file"
+					accept="image/jpeg,image/png"
+					class="file-input"
+					disabled={busy}
+					onchange={(e) => sendArt(e, ask.id)}
+				/>
+			</div>
+		</InfoCard>
+	{/each}
 </PageContent>
