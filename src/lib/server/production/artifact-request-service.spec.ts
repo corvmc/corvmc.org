@@ -21,14 +21,37 @@ vi.mock('$lib/server/band/rider-service', () => ({
 	getEventRiderSummaries: () => riderSummaries()
 }));
 
-const { cancelArtifactRequest, listRequests, outstandingCount, requestArtifact, requestableActs } =
-	await import('./artifact-request-service');
+const uploaded = vi.fn(async (_buf: ArrayBuffer, key: string) => key);
+vi.mock('$lib/server/storage', () => ({
+	uploadFile: (buf: ArrayBuffer, key: string) => uploaded(buf, key),
+	resolveImageUrl: (key: string | null) => (key ? `https://media.test/${key}` : null)
+}));
+
+const {
+	cancelArtifactRequest,
+	deliverPosterArt,
+	listRequests,
+	livePosterRequests,
+	outstandingCount,
+	promotePosterArt,
+	requestArtifact,
+	requestableActs,
+	searchAskableEntries,
+	PosterRequestNotFoundError
+} = await import('./artifact-request-service');
 
 const EVENT = 'evt-1';
 const ENTRY = 'entry-1';
 
 beforeEach(() => {
-	for (const t of ['artifact_request', 'directory_entry', 'event_band', 'media_attachment']) {
+	for (const t of [
+		'artifact_request',
+		'directory_entry',
+		'event_band',
+		'media_attachment',
+		'media',
+		'event_listing'
+	]) {
 		sqlite.exec(`delete from ${t}`);
 	}
 	sqlite.exec(
@@ -169,5 +192,126 @@ describe('who can be asked', () => {
 	it('leaves out a credit with no listing, which has nowhere to receive an ask', async () => {
 		credit('eb-1', 'Bare name', 1, null);
 		expect(await requestableActs(EVENT)).toEqual([]);
+	});
+});
+
+describe('poster art', () => {
+	const ARTIST = 'entry-artist';
+	const png = { buffer: new ArrayBuffer(8), contentType: 'image/png', filename: 'art.png' };
+
+	beforeEach(() => {
+		sqlite.exec(
+			`insert into directory_entry (id, name, visibility) values ('${ARTIST}', 'Ada Ink', 'hidden')`
+		);
+		sqlite.exec(
+			`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id)
+			 values ('${EVENT}', 'Harvest Show', 1790000000, 1790010000, 'u-1')`
+		);
+		uploaded.mockClear();
+	});
+
+	async function ask() {
+		await requestArtifact({ eventId: EVENT, entryId: ARTIST, artifact: 'poster_art' });
+		return (await listRequests(EVENT))[0];
+	}
+
+	it('reads outstanding until the artist delivers, then in', async () => {
+		const req = await ask();
+		expect(req).toMatchObject({ fulfilled: false, deliveredUrl: null });
+
+		await deliverPosterArt({ entryId: ARTIST, requestId: req.id, file: png });
+
+		const [after] = await listRequests(EVENT);
+		expect(after.fulfilled).toBe(true);
+		expect(after.deliveredUrl).toMatch(/^https:\/\/media\.test\//);
+	});
+
+	it('credits the artist on the delivered file', async () => {
+		const req = await ask();
+		await deliverPosterArt({ entryId: ARTIST, requestId: req.id, file: png });
+		const row = sqlite.prepare('select caption from media').get() as { caption: string };
+		expect(row.caption).toBe('Poster art by Ada Ink');
+	});
+
+	it('replaces a first delivery with a second', async () => {
+		const req = await ask();
+		await deliverPosterArt({ entryId: ARTIST, requestId: req.id, file: png });
+		await deliverPosterArt({ entryId: ARTIST, requestId: req.id, file: png });
+		const n = sqlite
+			.prepare(
+				`select count(*) as n from media_attachment where attachable_type = 'artifact_request'`
+			)
+			.get() as { n: number };
+		expect(n.n).toBe(1);
+	});
+
+	it("refuses a request that is not this entry's, before uploading anything", async () => {
+		// The token authorizes one entry. A request id is client-supplied.
+		const req = await ask();
+		await expect(
+			deliverPosterArt({ entryId: ENTRY, requestId: req.id, file: png })
+		).rejects.toBeInstanceOf(PosterRequestNotFoundError);
+		expect(uploaded).not.toHaveBeenCalled();
+	});
+
+	it('refuses a withdrawn request', async () => {
+		const req = await ask();
+		await cancelArtifactRequest(req.id);
+		await expect(
+			deliverPosterArt({ entryId: ARTIST, requestId: req.id, file: png })
+		).rejects.toBeInstanceOf(PosterRequestNotFoundError);
+	});
+
+	it('refuses a request for something other than poster art', async () => {
+		await requestArtifact({ eventId: EVENT, entryId: ARTIST, artifact: 'epk' });
+		const [req] = await listRequests(EVENT);
+		await expect(
+			deliverPosterArt({ entryId: ARTIST, requestId: req.id, file: png })
+		).rejects.toBeInstanceOf(PosterRequestNotFoundError);
+	});
+
+	it('promotes the delivered art to the poster without copying the object', async () => {
+		const req = await ask();
+		await deliverPosterArt({ entryId: ARTIST, requestId: req.id, file: png });
+		await promotePosterArt(req.id);
+
+		const rows = sqlite
+			.prepare(`select attachable_type, media_id from media_attachment order by attachable_type`)
+			.all() as { attachable_type: string; media_id: string }[];
+		expect(rows.map((r) => r.attachable_type)).toEqual(['artifact_request', 'event_listing']);
+		expect(rows[0].media_id).toBe(rows[1].media_id);
+		expect(sqlite.prepare('select count(*) as n from media').get()).toEqual({ n: 1 });
+	});
+
+	it('refuses to promote art that has not arrived', async () => {
+		const req = await ask();
+		await expect(promotePosterArt(req.id)).rejects.toBeInstanceOf(PosterRequestNotFoundError);
+	});
+
+	it("lists an artist's live asks, with the show they are for", async () => {
+		const req = await ask();
+		await requestArtifact({ eventId: EVENT, entryId: ARTIST, artifact: 'epk' });
+
+		expect(await livePosterRequests(ARTIST)).toEqual([
+			expect.objectContaining({ id: req.id, eventTitle: 'Harvest Show', deliveredUrl: null })
+		]);
+
+		await cancelArtifactRequest(req.id);
+		expect(await livePosterRequests(ARTIST)).toEqual([]);
+	});
+});
+
+describe('finding someone to ask', () => {
+	it('finds a listing by name, bill or no bill', async () => {
+		expect(await searchAskableEntries('wren')).toEqual([{ id: ENTRY, name: 'The Wrens' }]);
+	});
+
+	it('leaves out a deleted listing', async () => {
+		sqlite.exec(`update directory_entry set deleted_at = 1`);
+		expect(await searchAskableEntries('wren')).toEqual([]);
+	});
+
+	it('needs two characters before it searches', async () => {
+		expect(await searchAskableEntries('w')).toEqual([]);
 	});
 });

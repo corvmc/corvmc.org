@@ -1,6 +1,8 @@
 import { eventBand } from '../../src/lib/server/db/schema/event';
 import { artifactRequest } from '../../src/lib/server/db/schema/artifact-request';
 import { production } from '../../src/lib/server/db/schema/production';
+import { directoryEntry } from '../../src/lib/server/db/schema/directory';
+import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { batchInsert, db } from './db';
 import { asc, inArray, isNotNull, and } from 'drizzle-orm';
 
@@ -34,8 +36,58 @@ export async function seedArtifactRequests(productions: ProductionRow[]) {
 		// Every other ask is already past its date, so overdue renders too.
 		dueAt: new Date(Date.now() + (i % 2 === 1 ? -2 : 10) * day)
 	}));
-	if (rows.length === 0) return { requests: 0 };
+	if (rows.length > 0) await batchInsert(artifactRequest, rows);
+	const posters = await seedPosterCommissions(productions.map((p) => p.eventId));
+	return { requests: rows.length + posters };
+}
 
-	await batchInsert(artifactRequest, rows);
-	return { requests: rows.length };
+/**
+ * An illustrator who is on no bill, asked for two shows' posters: one overdue
+ * with nothing sent, so the template fallback has a reason to exist, and one
+ * delivered and not yet promoted. The media key names no real object.
+ */
+async function seedPosterCommissions(eventIds: string[]): Promise<number> {
+	const [overdueFor, deliveredFor] = eventIds;
+	if (!overdueFor || !deliveredFor) return 0;
+
+	const [artist] = await db
+		.insert(directoryEntry)
+		.values({ name: 'Maren Holt', hometown: 'Philomath, OR', visibility: 'hidden' })
+		.returning({ id: directoryEntry.id });
+
+	const day = 24 * 60 * 60 * 1000;
+	const [, delivered] = await db
+		.insert(artifactRequest)
+		.values([
+			{
+				eventId: overdueFor,
+				entryId: artist.id,
+				artifact: 'poster_art',
+				dueAt: new Date(Date.now() - 3 * day)
+			},
+			{
+				eventId: deliveredFor,
+				entryId: artist.id,
+				artifact: 'poster_art',
+				dueAt: new Date(Date.now() + 7 * day)
+			}
+		])
+		.returning({ id: artifactRequest.id });
+
+	const [art] = await db
+		.insert(media)
+		.values({
+			key: `acts/poster-art/${delivered.id}-seed.png`,
+			contentType: 'image/png',
+			byteSize: 420_000,
+			caption: 'Poster art by Maren Holt'
+		})
+		.returning({ id: media.id });
+	await db.insert(mediaAttachment).values({
+		mediaId: art.id,
+		attachableType: 'artifact_request',
+		attachableId: delivered.id,
+		slot: 'poster'
+	});
+	return 2;
 }

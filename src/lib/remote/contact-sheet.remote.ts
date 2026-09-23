@@ -12,6 +12,7 @@ import {
 } from '$lib/server/directory/contact-sheet-service';
 import { listFor } from '$lib/server/media/media-service';
 import { resolveImageUrl } from '$lib/server/storage';
+import { livePosterRequests } from '$lib/server/production/artifact-request-service';
 
 /**
  * `/act/{token}` — the one surface an external act can reach.
@@ -43,7 +44,11 @@ const tokenField = z.string().min(1);
 export const getContactSheet = query(tokenField, async (token) => {
 	try {
 		const sheet = await getContactSheetDisclosure(token);
-		const [rider] = await listFor('directory_entry', sheet.entryId, 'rider');
+		const [[rider], posterAsks] = await Promise.all([
+			listFor('directory_entry', sheet.entryId, 'rider'),
+			// An artist's info packet: each show they have been asked to draw for.
+			livePosterRequests(sheet.entryId)
+		]);
 		return {
 			// The name is shown but never editable — staff own it, because it
 			// appears on posters and in settlement records.
@@ -53,7 +58,8 @@ export const getContactSheet = query(tokenField, async (token) => {
 			url: sheet.links?.[0]?.url ?? null,
 			// A file, because the structured rider is keyed on `group_id` and an
 			// act with no account has no group to key it on (#863).
-			rider: rider ? { url: resolveImageUrl(rider.key), filename: rider.filename } : null
+			rider: rider ? { url: resolveImageUrl(rider.key), filename: rider.filename } : null,
+			posterAsks
 		};
 	} catch (err) {
 		mapDomainError(err);
