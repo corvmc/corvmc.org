@@ -19,13 +19,9 @@
 	/**
 	 * Two lists, two flags — a double-booking is not a late night.
 	 *
-	 * `checkConflicts` already returns the distinction: `conflicts` is typed
-	 * (`type: 'reservation' | 'closure'`, with `label` naming whose booking it
-	 * is) and `validationWarnings` is free text about hours, advance days and
-	 * slot boundaries. This component used to flatten both into one `string[]`
-	 * and collapse that into one boolean, which is why "the space is taken" and
-	 * "that is later than we usually open" wore the same yellow and offered the
-	 * same override.
+	 * `conflicts` (an existing booking or a closure) blocks; `validationWarnings`
+	 * (hours, advance days, slot boundaries) only advises. Keep them apart: one
+	 * merged list gave both the same yellow and the same override.
 	 */
 	let {
 		date,
@@ -52,11 +48,22 @@
 		hasAdvisories?: boolean;
 	} = $props();
 
-	const conflictData = $derived(
+	/**
+	 * The rejection is caught here, not by the boundary below: a script `await`
+	 * reports to the boundary *around* this component, so its failed snippet
+	 * cannot see it and a down check would take the caller's form with it.
+	 * Do not move the await under a pending boundary of its own either: that
+	 * stalls CreateEventModal's re-timing effect (staff-event-reserve-space e2e).
+	 */
+	const checked = $derived(
 		date && startTime && endTime
-			? await checkConflicts({ date, startTime, endTime, excludeReservationId })
-			: null
+			? await checkConflicts({ date, startTime, endTime, excludeReservationId }).then(
+					(result) => ({ result, error: null }),
+					(error: unknown) => ({ result: null, error: error ?? new Error('Unknown error') })
+				)
+			: { result: null, error: null }
 	);
+	const conflictData = $derived(checked.result);
 
 	const blockers = $derived.by(() => {
 		if (!conflictData) return [];
@@ -84,23 +91,30 @@
 </script>
 
 <svelte:boundary>
-	<!-- `data-conflicts` marks the settled state — the answer is in, whether or
-	     not it has anything to say. The wrapper renders unconditionally for that
-	     reason; the alerts inside it do not. -->
-	<div data-conflicts>
-		<div class="space-y-2">
-			{#each blockers as blocker, i (i)}
-				<div class="alert py-2 text-sm alert-error">
-					{blocker}
-				</div>
-			{/each}
-			{#each advisories as advisory, i (i)}
-				<div class="alert py-2 text-sm alert-warning">
-					{advisory}
-				</div>
-			{/each}
+	{#if checked.error}
+		<!-- No `data-conflicts` here: the check never settled, so nothing may read it as clear. -->
+		<Alert type="warning">
+			Could not check this time for conflicts: {errorMessage(checked.error)}
+		</Alert>
+	{:else}
+		<!-- `data-conflicts` marks the settled state — the answer is in, whether or
+		     not it has anything to say. The wrapper renders unconditionally for that
+		     reason; the alerts inside it do not. -->
+		<div data-conflicts>
+			<div class="space-y-2">
+				{#each blockers as blocker, i (i)}
+					<div class="alert py-2 text-sm alert-error">
+						{blocker}
+					</div>
+				{/each}
+				{#each advisories as advisory, i (i)}
+					<div class="alert py-2 text-sm alert-warning">
+						{advisory}
+					</div>
+				{/each}
+			</div>
 		</div>
-	</div>
+	{/if}
 
 	{#snippet pending()}
 		<div class="flex items-center gap-2 py-1">
