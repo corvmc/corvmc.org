@@ -1,4 +1,4 @@
-import { recordEntry } from './financial-entry-service';
+import { recordEntry, reverseEntriesForSubject } from './financial-entry-service';
 
 /**
  * A free ticket, recorded as the $0 sale it is.
@@ -28,4 +28,14 @@ export async function recordFreeTicketSale(params: {
 		description: `${params.quantity} free ticket${params.quantity === 1 ? '' : 's'}`,
 		metadata: { eventId: params.eventId, quantity: params.quantity }
 	});
+}
+
+/**
+ * Giving a band's ticket sale back (#1472).
+ *
+ * The refund reverses the transfer and the application fee on the charge, so
+ * both legs the sale wrote come back. Keyed on the purchase, as the sale was.
+ */
+export async function recordBandTicketRefund(purchaseId: string): Promise<void> {
+	await reverseEntriesForSubject('ticket', purchaseId);
 }

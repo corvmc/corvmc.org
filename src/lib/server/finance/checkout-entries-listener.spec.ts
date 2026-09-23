@@ -91,6 +91,43 @@ describe('a ticket sale', () => {
 	});
 });
 
+describe('a band selling its own gig (#1203)', () => {
+	// $10, the buyer left the collective 41¢: the band's transfer is $9.00 and
+	// the application fee is $1.00, of which 59¢ goes to Stripe.
+	const bandSession = () =>
+		ticketSession({
+			metadata: {
+				type: 'ticket',
+				user_id: 'user-1',
+				event_id: 'evt-1',
+				purchase_id: 'tkt-2',
+				ticket_seller_group_id: 'band-1',
+				ticket_acts_cents: '900',
+				ticket_collective_cents: '41'
+			}
+		});
+
+	it('earns only the application fee, and pays Stripe out of it', async () => {
+		await handleCheckoutEntries(bandSession());
+
+		expect(of('earned', 'band_ticket_sales')[0]).toMatchObject({
+			amountCents: 100,
+			subjectType: 'ticket',
+			subjectId: 'tkt-2'
+		});
+		expect(of('spent', 'card_fees')[0]).toMatchObject({ amountCents: -59 });
+		// The collective nets its share and nothing else.
+		expect(rows().reduce((s, r) => s + (r.amountCents as number), 0)).toBe(41);
+	});
+
+	it('never enters the band share, which the collective does not hold', async () => {
+		await handleCheckoutEntries(bandSession());
+
+		expect(of('pass_through')).toHaveLength(0);
+		expect(of('earned', 'ticket_sales')).toHaveLength(0);
+	});
+});
+
 describe('a reservation', () => {
 	it('records the whole charge as earned, less the card', async () => {
 		await handleCheckoutEntries({
