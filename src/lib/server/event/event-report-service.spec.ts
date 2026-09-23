@@ -61,13 +61,14 @@ describe('getEventTotals', () => {
 		const totals = await getEventTotals(YEAR);
 
 		expect(totals.cmcTotal).toBe(2);
-		expect(totals.cmcByKind).toEqual({ show: 1, work_party: 1, meeting: 0, class: 0 });
+		expect(totals.cmcByKind).toEqual({ show: 1, work_party: 1, meeting: 0, class: 0, market: 0 });
 	});
 
 	it('names every kind even when none happened, so a column never vanishes', async () => {
 		const totals = await getEventTotals(YEAR);
 		expect(Object.keys(totals.cmcByKind).sort()).toEqual([
 			'class',
+			'market',
 			'meeting',
 			'show',
 			'work_party'

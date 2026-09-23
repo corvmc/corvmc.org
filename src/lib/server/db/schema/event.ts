@@ -51,7 +51,7 @@ export const publicEventStatuses = ['published', 'cancelled'] as const;
  * the default and the backfill. Adding a value emits zero SQL — drizzle's
  * `text({ enum })` is a TypeScript-only constraint.
  */
-export const eventKinds = ['show', 'work_party', 'meeting', 'class'] as const;
+export const eventKinds = ['show', 'work_party', 'meeting', 'class', 'market'] as const;
 export type EventKind = (typeof eventKinds)[number];
 
 export const eventListing = sqliteTable(
