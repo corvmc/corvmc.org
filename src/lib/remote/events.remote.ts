@@ -20,6 +20,7 @@ import {
 	MAX_PHOTOS_PER_EVENT,
 	MAX_PHOTOS_PER_UPLOAD
 } from '$lib/server/event/event-photo-service';
+import { recapUploadAccess } from '$lib/server/event/recap-access';
 import { getPublicSetTimes, getRunOfShow } from '$lib/server/production/run-of-show-service';
 import { getSettlement } from '$lib/server/production/settlement-service';
 import { getHostShift } from '$lib/server/production/host-service';
@@ -335,6 +336,15 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 
 	const isPast = hasEventEnded(evt.startsAt, evt.endsAt);
 	const photos = await listEventPhotos(id);
+	// Only a photographer needs the uploader here; staff have the console's.
+	const recapUpload =
+		(await recapUploadAccess(locals.user?.id)) === 'photographer'
+			? {
+					closedReason: recapClosedReason(evt),
+					remaining: Math.max(0, MAX_PHOTOS_PER_EVENT - photos.length),
+					maxPerUpload: MAX_PHOTOS_PER_UPLOAD
+				}
+			: null;
 
 	// "More shows" tail: other upcoming events, excluding this one.
 	const upcomingRows = await listUpcoming();
@@ -406,6 +416,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		// the moderation spec closed.
 		canReport: evt.status === 'published',
 		collectiveShareBps: TICKET_COLLECTIVE_SHARE_BPS,
+		recapUpload,
 		photos: photos.map((p) => ({
 			id: p.attachmentId,
 			url: p.url,

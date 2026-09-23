@@ -1,18 +1,27 @@
 import { z } from 'zod';
+import { error } from '@sveltejs/kit';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '$lib/server/authorization';
 import {
 	addEventPhotos,
 	describeEventPhoto as describePhoto,
 	removeEventPhoto as removePhoto
 } from '$lib/server/event/event-photo-service';
-import { getStaffEventPage } from '$lib/remote/events.remote';
+import { recapUploadAccess } from '$lib/server/event/recap-access';
+import { getPublicEventDetail, getStaffEventPage } from '$lib/remote/events.remote';
 
 /**
- * Recap photo writes (docs/specs/event-recaps-spec.md). The list rides
- * `getStaffEventPage`, so each write refreshes that query. The event id comes
- * from the form body and is the scope every service call checks against.
+ * Recap photo writes (docs/specs/event-recaps-spec.md). The event id comes from
+ * the form body and is the scope every service call checks against. Uploading
+ * is open to volunteer photographers; editing and removing stay `event.manage`.
  */
+
+async function requireRecapUploader() {
+	const user = requireUser();
+	const access = await recapUploadAccess(user.id);
+	if (!access) error(403, 'Not permitted');
+	return { user, staff: access === 'capability' };
+}
 
 export const uploadEventPhotos = form(
 	z.object({
@@ -20,11 +29,12 @@ export const uploadEventPhotos = form(
 		photos: z.array(z.instanceof(File)).default([])
 	}),
 	async (data) => {
-		const user = await requireCapability('event.manage');
+		const { user, staff } = await requireRecapUploader();
 		// An untouched file input still posts one zero-byte File.
 		const files = data.photos.filter((f) => f.size > 0);
 		await addEventPhotos(data.eventId, user.id, files);
-		void getStaffEventPage(data.eventId).refresh();
+		void getPublicEventDetail(data.eventId).refresh();
+		if (staff) void getStaffEventPage(data.eventId).refresh();
 		return { success: true };
 	}
 );
