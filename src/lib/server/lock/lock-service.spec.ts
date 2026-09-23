@@ -176,6 +176,7 @@ beforeEach(() => {
 	mockListLockUsers.mockResolvedValue([]);
 	mockQueryDeviceHealth.mockResolvedValue({ online: true, lockState: 'Locked', batteryLevel: 4 });
 	mockGetJson.mockResolvedValue(true);
+	mockPutJson.mockResolvedValue(undefined);
 	mockDispatchEmailOnly.mockResolvedValue(undefined);
 	mockMaintainFallbackCode.mockResolvedValue({ active: null, rotated: false });
 	mockHasActiveMemberCode.mockResolvedValue(false);
@@ -766,9 +767,6 @@ describe('last run record', () => {
 		);
 	});
 
-	// Only this write: a rejecting `putJson` across the board takes the run down
-	// in `checkDeviceHealth`, whose own KV write is outside its try — filed, not
-	// fixed here.
 	it('does not fail the run when the record cannot be written', async () => {
 		mockPutJson.mockImplementation(async (key: string) => {
 			if (key === 'ultraloc:lastJobRun') throw new Error('KV is down');
@@ -785,5 +783,48 @@ describe('last run record', () => {
 
 		await expect(getLastLockJobRun()).resolves.toEqual(stored);
 		expect(mockGetJson).toHaveBeenCalledWith('ultraloc:lastJobRun');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// One step failing must not stop the steps after it: a throw anywhere used to
+// abort the run before a single door code was issued (#1339).
+// ---------------------------------------------------------------------------
+
+describe('step isolation', () => {
+	it('still provisions when KV is down for the health reading', async () => {
+		mockGetJson.mockRejectedValue(new Error('KV is down'));
+		mockPutJson.mockRejectedValue(new Error('KV is down'));
+		selectResults.push([
+			{
+				id: 'res-1',
+				startsAt: new Date(),
+				endsAt: new Date(Date.now() + 3_600_000),
+				createdByUserId: 'user-1',
+				memberName: 'Jordan'
+			}
+		]);
+		selectResults.push([]);
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		const result = await runDailyLockJob();
+
+		expect(result.provisioned).toBe(1);
+		expect(result.errors).toContainEqual(expect.stringContaining('KV is down'));
+		consoleSpy.mockRestore();
+	});
+
+	it('runs the later steps when an earlier one throws', async () => {
+		mockListLockUsers.mockRejectedValue(new Error('lock offline'));
+		mockReconcileMemberCodeSync.mockRejectedValue(new Error('D1 unavailable'));
+		selectResults.push([]);
+		selectResults.push([]);
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		const result = await runDailyLockJob();
+
+		expect(mockMaintainFallbackCode).toHaveBeenCalled();
+		expect(result.errors).toContainEqual(expect.stringContaining('D1 unavailable'));
+		consoleSpy.mockRestore();
 	});
 });

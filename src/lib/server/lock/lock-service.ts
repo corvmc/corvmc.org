@@ -76,11 +76,29 @@ export async function getLastLockJobRun(): Promise<LockJobRun | null> {
 export async function runDailyLockJob(triggeredBy: string | null = null): Promise<LockJobSummary> {
 	const errors: string[] = [];
 
-	const online = await checkDeviceHealth(errors);
-	const cleaned = await cleanupPreviousDayAccess(errors);
-	const provisioned = await provisionDailyAccess(errors);
-	const confirmed = (await reconcileSyncState(errors)) + (await reconcileMemberCodeSync(errors));
-	const fallback = await maintainFallbackCode(errors);
+	// Each step is guarded here, once, so a throw in any of them — however deep —
+	// is recorded and the next step still runs. Door codes must not depend on
+	// every step remembering its own try.
+	async function step<T>(name: string, fallback: T, fn: () => Promise<T>): Promise<T> {
+		try {
+			return await fn();
+		} catch (err) {
+			const msg = `${name} failed: ${(err as Error).message}`;
+			console.error(msg);
+			errors.push(msg);
+			return fallback;
+		}
+	}
+
+	const online = await step('Lock health check', null, () => checkDeviceHealth(errors));
+	const cleaned = await step('Cleanup', 0, () => cleanupPreviousDayAccess(errors));
+	const provisioned = await step('Provisioning', 0, () => provisionDailyAccess(errors));
+	const confirmed =
+		(await step('Sync reconciliation', 0, () => reconcileSyncState(errors))) +
+		(await step('Member code sync', 0, () => reconcileMemberCodeSync(errors)));
+	const fallback = await step('Fallback code', { active: null, rotated: false }, () =>
+		maintainFallbackCode(errors)
+	);
 
 	const summary: LockJobSummary = {
 		provisioned,
