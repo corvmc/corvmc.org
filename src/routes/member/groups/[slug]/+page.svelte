@@ -38,6 +38,7 @@
 	import GroupSelfEditAction from '$lib/components/groups/GroupSelfEditAction.svelte';
 	import CommitteeApplicationsCard from '$lib/components/groups/CommitteeApplicationsCard.svelte';
 	import EditSessionAction from '$lib/components/groups/EditSessionAction.svelte';
+	import ProjectStatusAction from './ProjectStatusAction.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -99,10 +100,8 @@
 	const isMember = $derived(data.role !== 'staff');
 
 	/**
-	 * A committee's own work, and the answer to giving one a window onto it
-	 * without handing over the whole staff panel — the failure mode
-	 * `admin-vs-staff-spec.md` was written about. Read-only: acting on a project
-	 * from here waits on the capability work that spec designs.
+	 * A committee's own work, without handing over the whole staff panel. Any
+	 * member can move a project's status; budget and burn stay on the staff page.
 	 */
 	const projects = $derived(data.projects);
 
@@ -211,6 +210,7 @@
 						<th>Project</th>
 						<th>Status</th>
 						<th>Dates</th>
+						{#if isMember}<th><span class="sr-only">Actions</span></th>{/if}
 					{/snippet}
 					{#each projects as project (project.id)}
 						<tr>
@@ -226,6 +226,9 @@
 									—
 								{/if}
 							</td>
+							{#if isMember}
+								<td class="text-right"><ProjectStatusAction {project} /></td>
+							{/if}
 						</tr>
 					{/each}
 				</Table>

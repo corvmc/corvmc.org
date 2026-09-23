@@ -161,6 +161,12 @@ consequence of there being one door.
 > authority over events, inventory or money needs the same guard resolving the committee from
 > _the thing being acted on_ rather than from a slug in the request. `requireCommitteeReviewer`
 > is the pattern; the rest is applying it.
+>
+> ⏫ **2026-09-23: the general guard exists.** `requireCommitteeMember(groupId, cover)` takes the
+> committee from the row being acted on and admits any active member of it, or `cover` for
+> staff. Its first resource is a project's status, from the committee page. Any member, not only
+> the chair, because a chair is first among equals (#607). Events, inventory and money are
+> still to be applied.
 
 **This document does not solve it, and the structure it describes requires it solved.**
 Committee members are to be **empowered to act within their own domain** — that is the settled
