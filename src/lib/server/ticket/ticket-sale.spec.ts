@@ -35,6 +35,12 @@ describe('saveTicketSale', () => {
 		expect(update).not.toContain('"group_id"');
 	});
 
+	it('names a band as the seller when given one', () => {
+		const { sql, params } = render(saveTicketSale('evt-1', { enabled: true, groupId: 'band-1' }));
+		expect(sql.slice(sql.indexOf('do update'))).toContain('"group_id"');
+		expect(params).toContain('band-1');
+	});
+
 	it('returns nothing when there is nothing to write', () => {
 		expect(saveTicketSale('evt-1', {})).toBeNull();
 	});

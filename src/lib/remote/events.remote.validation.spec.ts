@@ -123,6 +123,12 @@ vi.mock('$lib/server/feature-flags', () => ({
 	requireFeature: vi.fn(async () => undefined)
 }));
 vi.mock('$lib/server/db', () => ({ db: {} }));
+// Who sells is `ticket-seller`'s question; these specs are about a CMC show.
+vi.mock('$lib/server/ticket/ticket-seller', () => ({
+	sellerFor: vi.fn(async (e: { source: string; ticketingEnabled: boolean }) =>
+		e.ticketingEnabled && e.source === 'cmc' ? { kind: 'collective', shareBps: 3000 } : null
+	)
+}));
 
 // Guest submission — no logged-in account to fall back on for name/email.
 vi.mock('$app/server', () => ({
