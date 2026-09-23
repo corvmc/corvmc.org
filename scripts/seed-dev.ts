@@ -90,6 +90,7 @@ import { seedProjects } from './seed/projects';
 import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
 import { seedPacking } from './seed/packing';
+import { seedEventRecaps } from './seed/event-recaps';
 
 async function main() {
 	// The one room's ledger, shared by every seeder that books it. Reset here
@@ -160,6 +161,7 @@ async function main() {
 	const bandEvents = await seedBandEvents(bands, allUsers, usage ? [usage.band] : []);
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
+	const recapPhotos = await seedEventRecaps(events, adminUser.id);
 	// After the bill, because a production is the ops record for a night that
 	// already has acts on it — and the index shows the two side by side.
 	const productions = await seedProductions(events, allUsers);
@@ -302,6 +304,7 @@ async function main() {
 	console.log(`  ${payments.length} payment records`);
 	console.log(`  ${financialEntries.length} financial entries`);
 	console.log(`  ${tickets.length} tickets`);
+	console.log(`  ${recapPhotos} recap photos on past shows`);
 	console.log(`  ${rsvps.length} RSVPs`);
 	console.log(`  ${notifications.length} notifications`);
 	console.log(`  ${preferences.length} notification preferences`);
