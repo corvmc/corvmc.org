@@ -243,7 +243,8 @@
 					{ value: 'show', label: 'Show' },
 					{ value: 'work_party', label: 'Work party' },
 					{ value: 'meeting', label: 'Meeting' },
-					{ value: 'class', label: 'Class' }
+					{ value: 'class', label: 'Class' },
+					{ value: 'market', label: 'Market' }
 				]}
 				description="Only shows reach the homepage posters. Anything published still appears on the public calendar."
 			/>

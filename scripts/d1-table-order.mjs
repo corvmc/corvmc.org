@@ -65,6 +65,10 @@ export const tableOrder = [
 	// Since band chat it also references `group` (nullable owner, null = CorvMC),
 	// which is already well above this line.
 	'inbox_thread',
+	// Both reference event_listing; market_vendor also references inbox_thread
+	// and user, so they sit after all three.
+	'market_day',
+	'market_vendor',
 	'help_categories',
 	'subscriber',
 	'roles',

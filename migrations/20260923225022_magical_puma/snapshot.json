@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "72a16741-81d9-4b8a-b1a0-3b3a187090f1",
+  "id": "5c88b83c-901a-440e-bef1-b00e5ebdecdf",
   "prevIds": [
-    "a604d8c5-202c-4541-ab33-23774235ece4"
+    "72a16741-81d9-4b8a-b1a0-3b3a187090f1"
   ],
   "ddl": [
     {
@@ -420,6 +420,14 @@
     },
     {
       "name": "audit_log",
+      "entityType": "tables"
+    },
+    {
+      "name": "market_day",
+      "entityType": "tables"
+    },
+    {
+      "name": "market_vendor",
       "entityType": "tables"
     },
     {
@@ -11833,6 +11841,206 @@
       "table": "audit_log"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "market_day"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "applications_close_at",
+      "entityType": "columns",
+      "table": "market_day"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "table_count",
+      "entityType": "columns",
+      "table": "market_day"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "market_day"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "market_day"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "thread_id",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "business_name",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "offering",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "website",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "1",
+      "generated": null,
+      "name": "tables_requested",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "needs_power",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'applied'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "table_label",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "decided_by_user_id",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "decided_at",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -14834,6 +15042,66 @@
     },
     {
       "columns": [
+        "event_id"
+      ],
+      "tableTo": "event_listing",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_market_day_event_id_event_listing_id_fk",
+      "entityType": "fks",
+      "table": "market_day"
+    },
+    {
+      "columns": [
+        "event_id"
+      ],
+      "tableTo": "event_listing",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_market_vendor_event_id_event_listing_id_fk",
+      "entityType": "fks",
+      "table": "market_vendor"
+    },
+    {
+      "columns": [
+        "thread_id"
+      ],
+      "tableTo": "inbox_thread",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_market_vendor_thread_id_inbox_thread_id_fk",
+      "entityType": "fks",
+      "table": "market_vendor"
+    },
+    {
+      "columns": [
+        "decided_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_market_vendor_decided_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "market_vendor"
+    },
+    {
+      "columns": [
         "role_id",
         "user_id"
       ],
@@ -15761,6 +16029,24 @@
       "nameExplicit": false,
       "name": "audit_log_pk",
       "table": "audit_log",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "event_id"
+      ],
+      "nameExplicit": false,
+      "name": "market_day_pk",
+      "table": "market_day",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "market_vendor_pk",
+      "table": "market_vendor",
       "entityType": "pks"
     },
     {
@@ -19352,6 +19638,24 @@
       "name": "audit_log_created_idx",
       "entityType": "indexes",
       "table": "audit_log"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        },
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_market_vendor_event_status",
+      "entityType": "indexes",
+      "table": "market_vendor"
     },
     {
       "columns": [

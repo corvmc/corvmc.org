@@ -34,7 +34,7 @@ vi.mock('$lib/server/finance/community-stats', () => ({
 }));
 vi.mock('$lib/server/event/event-report-service', () => ({
 	getEventTotals: vi.fn(async () => ({
-		cmcByKind: { show: 3, work_party: 1, meeting: 0, class: 0 },
+		cmcByKind: { show: 3, work_party: 1, meeting: 0, class: 0, market: 0 },
 		cmcTotal: 4,
 		bandListings: 2,
 		communityListings: 1,
