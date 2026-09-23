@@ -34,6 +34,22 @@ function wranglerCrons(): string[] {
 	return [...block.matchAll(/^\s*"([^"]+)"/gm)].map((m) => m[1]);
 }
 
+/** Cells of each body row of the markdown table whose header starts `| <first column>`. */
+function docTable(doc: string, firstColumn: string): string[][] {
+	const md = readFileSync(new URL(`../../../../docs/architecture/${doc}`, import.meta.url), 'utf8');
+	const lines = md.split('\n');
+	const start = lines.findIndex((l) => new RegExp(`^\\|\\s*${firstColumn}\\s*\\|`).test(l));
+	const rows: string[][] = [];
+	if (start === -1) return rows;
+	for (const line of lines.slice(start + 2)) {
+		if (!line.startsWith('|')) break;
+		rows.push(line.split('|').slice(1, -1));
+	}
+	return rows;
+}
+
+const ticked = (cell: string) => [...cell.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+
 describe('CRON_SCHEDULE', () => {
 	it('has exactly the triggers wrangler.toml registers', () => {
 		const crons = wranglerCrons();
@@ -68,6 +84,23 @@ describe('CRON_SCHEDULE', () => {
 			// downstream reads its result.
 			'/api/cron/sweep-media'
 		]);
+	});
+
+	it('matches the operations manual table, row for row and in order', () => {
+		const rows = docTable('operations-manual.md', 'Cron \\(UTC\\)');
+		expect(rows.length).toBeGreaterThan(0);
+		const table = Object.fromEntries(rows.map(([cron, paths]) => [ticked(cron)[0], ticked(paths)]));
+		expect(table).toEqual(CRON_SCHEDULE);
+	});
+
+	it('matches the architecture overview table, endpoint for endpoint', () => {
+		const rows = docTable('overview.md', 'Endpoint');
+		expect(rows.length).toBeGreaterThan(0);
+		const table = rows.map(([path, , cron]) => `${ticked(cron)[0]} ${ticked(path)[0]}`);
+		const schedule = Object.entries(CRON_SCHEDULE).flatMap(([cron, paths]) =>
+			paths.map((path) => `${cron} ${path}`)
+		);
+		expect(table.toSorted()).toEqual(schedule.toSorted());
 	});
 
 	it('drains reminders after complete-shifts, which decides what is owed', () => {
