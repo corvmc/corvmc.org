@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '$lib/server/authorization';
+import { requireCommitteeMember } from '$lib/server/group/group-context';
+import { getMemberGroup } from '$lib/remote/groups.remote';
 import { mapDomainError } from '$lib/server/errors';
 import { projectStatuses, DEFAULT_TIMEZONE } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -23,13 +25,11 @@ import {
 } from '$lib/server/project/project-service';
 
 /**
- * Projects — staff-only, every surface.
+ * Projects — staff surfaces, plus one committee write.
  *
- * The member-facing half of this feature is one read-only line on a suggestion
- * the member wrote, and it lives in the suggestions module rather than here.
- * Deciding what the collective spends money on is staff work; a committee
- * window onto its own projects is a later phase, and it reads `group_member`
- * rather than a role.
+ * Deciding what the collective spends money on is staff work. A committee
+ * moves its own projects along from `/member/groups/{slug}`, through
+ * `requireCommitteeMember`, which reads `group_member` rather than a position.
  */
 
 // ---------------------------------------------------------------------------
@@ -194,6 +194,29 @@ export const setProjectStatusForm = form(
 			await setProjectStatus(id, status);
 			void getProjectDetail(id).refresh();
 			void getProjectsPage().refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * A committee member moves their own committee's project along.
+ *
+ * Its own form rather than a second door on `setProjectStatusForm`: that one
+ * refreshes two `project.read` queries a committee member cannot run.
+ */
+export const setCommitteeProjectStatusForm = form(
+	z.object({ id: z.uuid(), status: z.enum(projectStatuses) }),
+	async (raw) => {
+		requireUser();
+		const { id, status } = raw as { id: string; status: (typeof projectStatuses)[number] };
+		try {
+			const current = await getProjectById(id);
+			const { group } = await requireCommitteeMember(current.groupId, 'project.manage');
+			await setProjectStatus(id, status);
+			if (group) void getMemberGroup(group.slug).refresh();
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
