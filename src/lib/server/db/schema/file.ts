@@ -56,8 +56,8 @@ export const file = sqliteTable(
 		/** The quota's unit. Summed per group where `deletedAt IS NULL`. */
 		sizeBytes: integer('size_bytes').notNull(),
 		description: text('description'),
-		// Nullable and SET NULL, as `announcement.authorId` is: who uploaded it is
-		// history, and the document outlives their account.
+		// Nullable and SET NULL: who uploaded it is history, and the document
+		// outlives their account.
 		uploadedById: text('uploaded_by_id').references(() => user.id, { onDelete: 'set null' }),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()

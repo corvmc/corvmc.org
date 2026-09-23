@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "e428ee88-76f3-4506-851b-184a3bedbb47",
+  "id": "dc4f8c91-0205-44e6-8cc1-166280551e18",
   "prevIds": [
-    "2a2755da-e21b-4e78-ae53-9bf6afecea50"
+    "94c0dd30-4892-4a1f-942d-b695d06eb5ed"
   ],
   "ddl": [
     {
@@ -196,10 +196,6 @@
     },
     {
       "name": "group_invite",
-      "entityType": "tables"
-    },
-    {
-      "name": "announcement",
       "entityType": "tables"
     },
     {
@@ -5877,126 +5873,6 @@
       "name": "accepted_at",
       "entityType": "columns",
       "table": "group_invite"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "announcement"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "group_id",
-      "entityType": "columns",
-      "table": "announcement"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "author_id",
-      "entityType": "columns",
-      "table": "announcement"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "title",
-      "entityType": "columns",
-      "table": "announcement"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "body",
-      "entityType": "columns",
-      "table": "announcement"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "false",
-      "generated": null,
-      "name": "pinned",
-      "entityType": "columns",
-      "table": "announcement"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "published_at",
-      "entityType": "columns",
-      "table": "announcement"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "notified_at",
-      "entityType": "columns",
-      "table": "announcement"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "recipient_count",
-      "entityType": "columns",
-      "table": "announcement"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "announcement"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "announcement"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "deleted_at",
-      "entityType": "columns",
-      "table": "announcement"
     },
     {
       "type": "text",
@@ -13509,36 +13385,6 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
-      "name": "fk_announcement_group_id_group_id_fk",
-      "entityType": "fks",
-      "table": "announcement"
-    },
-    {
-      "columns": [
-        "author_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_announcement_author_id_user_id_fk",
-      "entityType": "fks",
-      "table": "announcement"
-    },
-    {
-      "columns": [
-        "group_id"
-      ],
-      "tableTo": "group",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
       "name": "fk_file_group_id_group_id_fk",
       "entityType": "fks",
       "table": "file"
@@ -15823,15 +15669,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "announcement_pk",
-      "table": "announcement",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "file_pk",
       "table": "file",
       "entityType": "pks"
@@ -17951,42 +17788,6 @@
       "name": "idx_group_invite_pending",
       "entityType": "indexes",
       "table": "group_invite"
-    },
-    {
-      "columns": [
-        {
-          "value": "group_id",
-          "isExpression": false
-        },
-        {
-          "value": "pinned",
-          "isExpression": false
-        },
-        {
-          "value": "published_at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_announcement_group",
-      "entityType": "indexes",
-      "table": "announcement"
-    },
-    {
-      "columns": [
-        {
-          "value": "notified_at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_announcement_notified",
-      "entityType": "indexes",
-      "table": "announcement"
     },
     {
       "columns": [

@@ -576,6 +576,7 @@ async function processEventSeries(
 			ticketingEnabled: prototype.ticketingEnabled,
 			ticketPrice: prototype.ticketPrice,
 			ticketQuantity: prototype.ticketQuantity,
+			ticketPriceFloorCents: prototype.ticketPriceFloorCents,
 			// Inherited, all five. `location` matters for the same reason as the
 			// rest: an occurrence that lost it reads as being held somewhere it is
 			// not. `kind` matters most of all — a monthly deep clean is a recurring

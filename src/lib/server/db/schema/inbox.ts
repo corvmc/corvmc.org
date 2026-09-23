@@ -119,8 +119,7 @@ export const inboxThread = sqliteTable(
 		pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
 		/**
 		 * Null while a draft. Nothing reaches a reader before it is stamped, and
-		 * stamping is what emits the notification — the same contract
-		 * `announcement.publishedAt` has today.
+		 * stamping is what emits the notification.
 		 *
 		 * Deliberately not a `status` value: `open | resolved | snoozed` is about
 		 * whether a conversation needs answering, which is an orthogonal question
@@ -175,9 +174,8 @@ export const inboxThread = sqliteTable(
 		index('idx_inbox_thread_contact_ext').on(t.channel, t.contactExternalId),
 		// The band inbox's only list query: one group's threads, newest activity first.
 		index('idx_inbox_thread_group').on(t.groupId, t.status, t.lastMessageAt),
-		// The announcement list's shape, once they are threads: one group's
-		// posts, pinned first, newest first — what `idx_announcement_group`
-		// covers today (#1304).
+		// The announcement list's shape: one group's posts, pinned first,
+		// newest first.
 		index('idx_inbox_thread_group_pinned').on(t.groupId, t.pinned, t.publishedAt),
 		// The fan-out cursor: unsent published rows, across every group.
 		index('idx_inbox_thread_notified').on(t.notifiedAt)
