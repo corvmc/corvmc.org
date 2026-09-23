@@ -284,9 +284,12 @@
 	{:else}
 		<p class="mb-3 text-muted">
 			Deactivating signs this member out, hides them from the directory, cancels all of their future
-			reservations, and cancels their membership subscription. Reactivating restores their access,
-			but <strong>the cancelled reservations and subscription are not restored</strong> — they would have
-			to be rebooked and resubscribed.
+			reservations, and cancels their membership subscription at the end of its current period.
+			Reactivating restores their access, but <strong
+				>the cancelled reservations are not restored</strong
+			>
+			— they would have to be rebooked. The subscription resumes if they are reactivated before the period
+			ends; after that it needs a new checkout.
 		</p>
 		<div class="flex gap-2">
 			<Action
@@ -300,8 +303,9 @@
 				{#snippet form()}
 					<input {...deactivateFields.id.as('hidden', id)} />
 					<p class="py-4">
-						Deactivate this account? All future reservations and their membership subscription will
-						be cancelled, and reactivating will not bring them back.
+						Deactivate this account? All future reservations will be cancelled, and reactivating
+						will not bring them back. Their membership subscription ends with its current period
+						unless the account is reactivated first.
 					</p>
 				{/snippet}
 			</Action>

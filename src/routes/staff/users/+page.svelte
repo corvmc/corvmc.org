@@ -151,8 +151,9 @@
 					<input {...bulkFields.ids.as('hidden', JSON.stringify([...selected]))} />
 					<p class="py-2">
 						Deactivate {selected.size} selected user{selected.size === 1 ? '' : 's'}? Their future
-						personal reservations and membership subscriptions will be cancelled, and reactivating
-						will not bring them back. Your own account is skipped.
+						personal reservations will be cancelled, and reactivating will not bring them back.
+						Membership subscriptions end with their current period unless reactivated first. Your
+						own account is skipped.
 					</p>
 				{/snippet}
 			</Action>
