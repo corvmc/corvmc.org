@@ -128,8 +128,6 @@ export const tableOrder = [
 	// Shared advertising: references event and group, so it wipes before either.
 	'event_group',
 	'group_invite',
-	// Child of group and user, and nothing is a child of it.
-	'announcement',
 	// Group documents: child of group and user, nothing is a child of it.
 	'file',
 	// The tech rider, three deep: `rider` is a child of group and user,
