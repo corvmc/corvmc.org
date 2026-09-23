@@ -12,6 +12,8 @@ export const auditActions = [
 	'user.deactivated',
 	'user.reactivated',
 	'user.purged',
+	'user.banned',
+	'user.unbanned',
 	'credits.adjusted'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
@@ -34,6 +36,9 @@ export interface AuditDetailsByAction {
 	};
 	'user.reactivated': { subscription: 'resumed' | 'active' | 'lapsed' | 'none' };
 	'user.purged': { name: string; email: string };
+	/** A ban also writes `user.deactivated`, which carries what the offboarding took. */
+	'user.banned': { reason: string };
+	'user.unbanned': Record<string, never>;
 	'credits.adjusted': {
 		creditType: 'free_hours' | 'equipment_credits';
 		delta: number;

@@ -338,6 +338,20 @@ describe('banUser', () => {
 		expect(JSON.stringify(sendSuspendedMock.mock.calls)).not.toContain('Threatened');
 	});
 
+	it('writes a user.banned entry carrying the reason', async () => {
+		updateResult = [
+			{ id: 'u1', name: 'Jordan', deletedAt: new Date('2026-01-01'), stripeId: null }
+		];
+
+		await banUser('u1', { actorId: 'staff-1', reason: 'Threatened another member' });
+
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'user.banned',
+			subject: { type: 'user', id: 'u1', label: 'Jordan' },
+			details: { reason: 'Threatened another member' }
+		});
+	});
+
 	it('refuses to let staff ban themselves', async () => {
 		await expect(banUser('u1', { actorId: 'u1', reason: 'x' })).rejects.toBeInstanceOf(
 			CannotBanSelfError
@@ -381,6 +395,22 @@ describe('unbanUser', () => {
 		await unbanUser('u1');
 
 		expect(sendRestoredMock).toHaveBeenCalledWith({ toEmail: 'maya@example.com', name: 'Maya' });
+	});
+
+	it('writes a user.unbanned entry before restoring the account', async () => {
+		updateResult = [{ id: 'u1', name: 'Jordan', stripeId: null, deletedAt: null }];
+
+		await unbanUser('u1');
+
+		expect(recordAuditEntry.mock.calls.map(([e]) => (e as { action: string }).action)).toEqual([
+			'user.unbanned',
+			'user.reactivated'
+		]);
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'user.unbanned',
+			subject: { type: 'user', id: 'u1', label: 'Jordan' },
+			details: {}
+		});
 	});
 
 	it('throws UserNotFoundError when the account is not banned', async () => {
