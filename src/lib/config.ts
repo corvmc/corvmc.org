@@ -100,6 +100,15 @@ export const creditTypeConfig: Record<CreditType, { maxBalance: number | null }>
 	equipment_credits: { maxBalance: 25000 }
 };
 
+/**
+ * The most one `credit.comp` adjustment may add, per credit type. Anything
+ * above it, any deduction, and any type at 0 needs `credit.adjust`.
+ */
+export const creditCompCeiling: Record<CreditType, number> = {
+	free_hours: 4, // 2 hours
+	equipment_credits: 0
+};
+
 // ---------------------------------------------------------------------------
 // Reservations
 // ---------------------------------------------------------------------------
@@ -703,6 +712,7 @@ export const creditSourceLabels: Record<string, string> = {
 	refund: 'Refund',
 	cancelled: 'Cancelled',
 	admin_adjustment: 'Admin adjustment',
+	staff_comp: 'Staff comp',
 	reservation: 'Reservation'
 };
 
@@ -1719,7 +1729,7 @@ export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
  */
 export const capabilities = {
 	user: ['list', 'read', 'update', 'setRole', 'deactivate', 'ban', 'purge'],
-	credit: ['read', 'adjust'],
+	credit: ['read', 'adjust', 'comp'],
 	finance: ['read', 'refund'],
 	settings: ['read', 'update'],
 	directory: ['readContact', 'shareContactSheet'],

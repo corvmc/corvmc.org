@@ -113,6 +113,12 @@ describe('grantsCapability', () => {
 		expect(grantsCapability(positions.treasurer, 'credit.adjust')).toBe(false);
 	});
 
+	it('gives staff the bounded comp and keeps the unbounded adjust admin-only (#579)', () => {
+		expect(grantsCapability(positions.staff, 'credit.comp')).toBe(true);
+		expect(grantsCapability(positions.staff, 'credit.adjust')).toBe(false);
+		expect(grantsCapability(positions.treasurer, 'credit.comp')).toBe(false);
+	});
+
 	it('lets the treasurer read a production, and no more than read it', () => {
 		// The settlement is on the production console, behind `event.read`. A
 		// treasurer who cannot open it cannot see where the night's money went

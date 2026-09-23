@@ -585,6 +585,80 @@ describe('adjustCredits surfaces staff mistakes on the amount field', () => {
 	});
 });
 
+describe('adjustCredits under credit.comp alone (#579)', () => {
+	const COMP = {
+		userId: 'member-1',
+		creditType: 'free_hours' as const,
+		description: 'Session interrupted by the fire alarm'
+	};
+
+	beforeEach(() => {
+		held = new Set(['credit.comp', 'credit.read']);
+		requireCapability.mockImplementation(async (cap: string) => {
+			if (!held.has(cap)) throw new Error('403: Not permitted');
+			return { id: 'acting-staff' };
+		});
+	});
+
+	it('adds up to the ceiling, recorded as a staff comp', async () => {
+		await users.adjustCredits({ ...COMP, amount: '4' });
+		expect(addCredits).toHaveBeenCalledWith(
+			'member-1',
+			'free_hours',
+			4,
+			'staff_comp',
+			undefined,
+			COMP.description
+		);
+	});
+
+	it('refuses more than the ceiling on the amount field, in hours', async () => {
+		await expectFieldIssue(
+			() => users.adjustCredits({ ...COMP, amount: '5' }),
+			'amount',
+			'Up to 2 hrs'
+		);
+		expect(addCredits).not.toHaveBeenCalled();
+	});
+
+	it('refuses a deduction', async () => {
+		await expectFieldIssue(
+			() => users.adjustCredits({ ...COMP, amount: '-1' }),
+			'amount',
+			'An admin'
+		);
+		expect(deductCredits).not.toHaveBeenCalled();
+	});
+
+	it('refuses a credit type whose ceiling is zero', async () => {
+		await expectFieldIssue(
+			() => users.adjustCredits({ ...COMP, creditType: 'equipment_credits', amount: '1' }),
+			'amount',
+			'An admin'
+		);
+		expect(addCredits).not.toHaveBeenCalled();
+	});
+
+	it('rejects a caller holding neither capability', async () => {
+		held = new Set(['credit.read']);
+		await expect(users.adjustCredits({ ...COMP, amount: '1' })).rejects.toThrow('403');
+		expect(addCredits).not.toHaveBeenCalled();
+	});
+
+	it('leaves a full adjuster unbounded and records an admin adjustment', async () => {
+		held = new Set(['credit.adjust', 'credit.read']);
+		await users.adjustCredits({ ...COMP, amount: '50' });
+		expect(addCredits).toHaveBeenCalledWith(
+			'member-1',
+			'free_hours',
+			50,
+			'admin_adjustment',
+			undefined,
+			COMP.description
+		);
+	});
+});
+
 // ---------------------------------------------------------------------------
 // updateUser: the profile / role-set split.
 //
