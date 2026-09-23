@@ -74,16 +74,16 @@ gallery and the strip both render locally.
 
 Filed as `agent-filed` Task issues for review, each titled as the decision:
 
-- **Only `event.manage` holders upload recap photos.** Not bands, not the Documentation role, not
+- **Only `event.manage` holders upload recap photos** (#1398). Not bands, not the Documentation role, not
   attendees.
-- **Recap photos publish without a review queue.** Staff-only uploads need no moderation step.
-- **Consent is handled by takedown, not by a release on file per photo.** A person who asks is
+- **Recap photos publish without a review queue** (#1399). Staff-only uploads need no moderation step.
+- **Consent is handled by takedown, not by a release on file per photo** (#1400). A person who asks is
   removed by staff detaching the photo.
 
 ## Not in this spec
 
 - A written recap (a paragraph about the night). It needs a column on `event_listing`, and the
-  poster work under #852 is changing that table's neighbourhood now. Follow-up once that settles.
+  poster work under #852 is changing that table's neighbourhood now. Follow-up: #1401.
 - Band or member uploads, and the moderation they would need.
 - The per-event shot list and same-week handoff that `committees-and-roles-spec.md` marks 🆕.
 - Photos on a band's own page or site. The event link is the shareable unit for now.
