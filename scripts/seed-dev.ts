@@ -70,6 +70,7 @@ import { seedDirectMessages } from './seed/direct-messages';
 import { seedBandEnquiries } from './seed/band-enquiries';
 import { seedGroupChats } from './seed/group-chats';
 import { seedContentFlags } from './seed/content-flags';
+import { seedAuditLog } from './seed/audit';
 import { seedContractors } from './seed/contractors';
 import { seedDutyLists } from './seed/duty-lists';
 import { seedOrientation } from './seed/orientation';
@@ -181,6 +182,8 @@ async function main() {
 	const notifications = await seedNotifications(allUsers);
 	const preferences = await seedNotificationPreferences(allUsers);
 	await seedCreditTransactions(allUsers);
+	// After credits so the adjustments it records sit beside real ledger rows.
+	const audit = await seedAuditLog(users, adminUser);
 	// The upcoming show the event-scoped blast is about (#857).
 	const upcomingShow = events.find((e) => e.status === 'published' && e.startsAt >= new Date());
 	const marketing = await seedMarketing(allUsers, upcomingShow?.id);
@@ -302,6 +305,7 @@ async function main() {
 	console.log(`  ${pageConfigs.length} band page configs with EPK data`);
 	console.log(`  ${series.length} recurring series`);
 	console.log(`  ${payments.length} payment records`);
+	console.log(`  ${audit.entries} audit log entries (one purged account)`);
 	console.log(`  ${financialEntries.length} financial entries`);
 	console.log(`  ${tickets.length} tickets`);
 	console.log(`  ${rsvps.length} RSVPs`);

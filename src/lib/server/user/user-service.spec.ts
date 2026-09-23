@@ -61,6 +61,11 @@ vi.mock('$lib/server/lock/member-code-service', () => ({
 
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
+const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (entry: unknown) => recordAuditEntry(entry)
+}));
+
 import {
 	deactivateUser,
 	deactivateUsers,
@@ -90,6 +95,7 @@ beforeEach(() => {
 	revokeMemberCodeMock.mockResolvedValue(undefined);
 	deleteWhere.mockClear();
 	updateSet.mockClear();
+	recordAuditEntry.mockClear();
 });
 
 // ---------------------------------------------------------------------------
@@ -398,6 +404,95 @@ describe('purgeUser', () => {
 	it('throws UserNotFoundError when the user does not exist', async () => {
 		selectResultQueue = [[]];
 		await expect(purgeUser('u1')).rejects.toBeInstanceOf(UserNotFoundError);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Audit trail. Recorded here rather than in each remote, because a member
+// closing their own account and staff closing it run the same function.
+// ---------------------------------------------------------------------------
+
+describe('audit entries', () => {
+	it('records a deactivation with what it cancelled', async () => {
+		updateResult = [{ id: 'u1', name: 'Jordan', stripeId: 'cus_1', deletedAt: new Date() }];
+		selectResultQueue = [[], [{ id: 'r1' }, { id: 'r2' }]];
+
+		await deactivateUser('u1', { actor: 'staff' });
+
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'user.deactivated',
+			subject: { type: 'user', id: 'u1', label: 'Jordan' },
+			details: { reservationsCancelled: 2, subscriptionCancelled: true, bulk: false }
+		});
+	});
+
+	it('does not claim a subscription was cancelled when Stripe refused', async () => {
+		updateResult = [{ id: 'u1', name: 'Jordan', stripeId: 'cus_1', deletedAt: new Date() }];
+		selectResultQueue = [[], []];
+		subCancelMock.mockRejectedValueOnce(new Error('no such subscription'));
+
+		await deactivateUser('u1', { actor: 'staff' });
+
+		expect(recordAuditEntry).toHaveBeenCalledWith(
+			expect.objectContaining({
+				details: expect.objectContaining({ subscriptionCancelled: false })
+			})
+		);
+	});
+
+	it('writes one row per member in a bulk deactivation, sharing a batch id', async () => {
+		updateResult = [{ id: 'x', name: 'X', deletedAt: new Date() }];
+		selectResultQueue = [[], [], [], []];
+
+		await deactivateUsers(['u1', 'u2']);
+
+		expect(recordAuditEntry).toHaveBeenCalledTimes(2);
+		const [a, b] = recordAuditEntry.mock.calls.map(
+			([e]) => (e as { details: { bulk: boolean; batchId?: string } }).details
+		);
+		expect(a.bulk).toBe(true);
+		expect(a.batchId).toBeTruthy();
+		expect(b.batchId).toBe(a.batchId);
+	});
+
+	it('records nothing when the deactivation found no account', async () => {
+		updateResult = [];
+		await expect(deactivateUser('u1', { actor: 'staff' })).rejects.toThrow();
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+
+	it('records a reactivation with the subscription outcome', async () => {
+		updateResult = [{ id: 'u1', name: 'Jordan', stripeId: 'cus_1', deletedAt: null }];
+		getSubscriptionMock.mockResolvedValueOnce(null);
+
+		await reactivateUser('u1');
+
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'user.reactivated',
+			subject: { type: 'user', id: 'u1', label: 'Jordan' },
+			details: { subscription: 'lapsed' }
+		});
+	});
+
+	it('records a purge with the name and email, since nothing else survives it', async () => {
+		selectResultQueue = [
+			[{ id: 'u1', name: 'Jordan', email: 'j@example.com', deletedAt: new Date() }],
+			[{ value: 0 }]
+		];
+
+		await purgeUser('u1');
+
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'user.purged',
+			subject: { type: 'user', id: 'u1', label: 'Jordan' },
+			details: { name: 'Jordan', email: 'j@example.com' }
+		});
+	});
+
+	it('records no purge that was refused', async () => {
+		selectResultQueue = [[{ id: 'u1', name: 'J', email: 'j@x', deletedAt: null }]];
+		await expect(purgeUser('u1')).rejects.toThrow();
+		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 });
 

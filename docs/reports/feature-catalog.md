@@ -233,13 +233,13 @@ confirmation-reminders → reservation-reminders in order.
 Services fire typed domain events via `emittery`. Listeners handle side effects (notifications,
 cross-module reactions), registered explicitly at startup in `hooks.server.ts`.
 
-| Concern               | Status                    | Notes                                                                                           |
-| --------------------- | ------------------------- | ----------------------------------------------------------------------------------------------- |
-| Event bus             | ✅ `emittery`             | Typed event map, async-native, single emitter instance                                          |
-| Checkout fan-out      | ✅ Via emittery           | Migrated from callback registry to the domain event bus                                         |
-| Notification dispatch | ✅ Dispatcher + listeners | Listeners check user preferences, route to email (Postmark) and in-app channels                 |
-| Activity logging      | —                         | Not built. The closest designed thing is `docs/specs/audit-log-spec.md` (staff account actions) |
-| Lock code management  | ✅ Cron-based             | Cron provisions across the confirmation window, plus best-effort on confirm                     |
+| Concern               | Status                    | Notes                                                                                                                                                                                  |
+| --------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Event bus             | ✅ `emittery`             | Typed event map, async-native, single emitter instance                                                                                                                                 |
+| Checkout fan-out      | ✅ Via emittery           | Migrated from callback registry to the domain event bus                                                                                                                                |
+| Notification dispatch | ✅ Dispatcher + listeners | Listeners check user preferences, route to email (Postmark) and in-app channels                                                                                                        |
+| Activity logging      | 🔧 Staff audit log        | `audit_log` records staff changes to a member's roles, profile, credits and account; History card on `/staff/users/[id]`. Global view, reservations/bands and retention remain (#1131) |
+| Lock code management  | ✅ Cron-based             | Cron provisions across the confirmation window, plus best-effort on confirm                                                                                                            |
 
 ### Background processing
 

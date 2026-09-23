@@ -1377,6 +1377,44 @@ between the two features: walking through the easy door furnishes the rider on t
   null means "nobody has this"; a member leaving nulls it via `on delete set null`, which is
   the state the count should then show.
 
+## 16. The staff audit log: who changed a member's account
+
+Spec: [specs/audit-log-spec.md](../specs/audit-log-spec.md) (first phase shipped; the rest is
+tracked on #1131)
+
+### The story
+
+Several people share staff access, so a member asking "who took my free hours?" or "who
+closed my account?" needs an answer that the current value of a row cannot give. Each
+change to a member's authority, money or account existence appends one row naming the
+action, the actor and a small payload. Staff read the latest twenty on the member's
+**Account** tab, in the **History** card.
+
+### Code path
+
+- **Write:** `recordAuditEntry` in `src/lib/server/audit/audit-service.ts`. It takes the actor
+  from `locals.user`, or records "System" outside a request. It never throws: a failed write
+  goes to Sentry, because the action it describes has already happened.
+- **Roles, profile, credits:** `updateUser` and `adjustCredits` in `users.remote.ts`, after the
+  write succeeds. A profile edit records field names only.
+- **Deactivate, reactivate, purge:** inside `deactivateUser` / `reactivateUser` / `purgeUser`
+  in `user-service.ts`, so a member closing their own account is recorded too, and a bulk
+  deactivation writes one row per member sharing `details.batchId`.
+- **Read:** `getUserHistory` (`user.read`) → `listAuditEntriesForSubject`, rendered by
+  `summarizeAuditEntry` in `src/lib/utils/audit-display.ts`.
+
+### Data touched
+
+- `audit_log` — append-only. `actor_user_id` is `set null` on delete, and the actor's name and
+  email are copied in. `subject_id` is not a foreign key, so a purge's own row survives it.
+
+### Where it breaks
+
+- **A change shows no History row.** Look for the write in Sentry first; the action went
+  through by design even when the insert failed.
+- **A payload over 4 KB is dropped, not truncated.** The only free-text field is a credit
+  adjustment's description.
+
 ## Cross-cutting patterns worth internalizing
 
 - **Everything money-related converges on two Stripe entry points:** `checkout()` in
