@@ -12,7 +12,7 @@ import { user } from './authentication';
 //
 // What a position may DO is not here. It is the capability matrix in
 // src/lib/config.ts, checked by requireCapability() in
-// src/lib/server/authorization.ts. See docs/specs/admin-vs-staff-spec.md.
+// src/lib/server/authorization.ts. See docs/specs/shipped/admin-vs-staff-spec.md.
 //
 // The three spatie permission tables that used to sit alongside these —
 // `permissions`, `model_has_permissions`, `role_has_permissions` — were dropped

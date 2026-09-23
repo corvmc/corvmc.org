@@ -151,7 +151,7 @@ export const getProjectDetail = query(z.string(), async (id) => {
 // ---------------------------------------------------------------------------
 
 export const createProjectForm = form(z.object(projectFields), async (raw) => {
-	// `requireStaff` returns the caller, so the guard and the author are one call.
+	// `requireCapability` returns the caller, so the guard and the author are one call.
 	const user = await requireCapability('project.manage');
 	try {
 		const row = await createProject({

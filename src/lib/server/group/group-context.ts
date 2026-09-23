@@ -41,8 +41,8 @@ const HIERARCHY: Record<GroupRole, number> = { owner: 0, admin: 1, member: 2 };
  * `role: 'staff'`. It bypasses `minRole` rather than being ranked against it:
  * passing it IS the decision that staff may do this thing.
  *
- * `isElevated`, not `hasAnyRole(['admin','staff'])` — the same predicate
- * `requireStaff()` uses. A narrower predicate here than the one admitting
+ * `isElevated`, not a role-name match — the same predicate `getBandLayout`
+ * uses. A narrower predicate here than the one admitting
  * people to the panel is what gave a `volunteer_coordinator` a group surface
  * on which every card 403'd.
  *

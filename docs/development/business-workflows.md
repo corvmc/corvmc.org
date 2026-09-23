@@ -307,7 +307,7 @@ premium subscription that unlocks a public band microsite.
   `src/routes/band-site/[slug]/`, gated on the band's tier alone since the launch, with
   member-editable page config in `bandPageConfig` — custom CSS passes through `css-sanitizer.ts`.
 - **Staff moderation:** `staff/bands` pages → the staff forms in `bands.remote.ts`
-  (`deactivateBand`, `reactivateBand`, `updateStaffBand`, ...), all `requireStaff()`-guarded.
+  (`deactivateBand`, `reactivateBand`, `updateStaffBand`, ...), each guarded on a `band.*` capability.
 
 ### Data touched
 

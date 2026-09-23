@@ -116,7 +116,7 @@ enforced by a custom ESLint rule):
 ```ts
 // src/lib/remote/reservations.remote.ts — a short staff mutation
 export const createReservation = form(staffCreateSchema, async (data, _issue) => {
-	await requireStaff();
+	await requireCapability('reservation.manage');
 	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
 	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
 
@@ -201,8 +201,9 @@ Laravel app). Priority order, from `primaryRoleFor()` in `src/lib/server/authori
 admin > staff > sustaining > member
 ```
 
-- `admin` / `staff` — can use the `/staff` console; checked together everywhere
-  (`hasAnyRole(userId, ['admin', 'staff'])`).
+- `admin`, `staff` and the named positions — each grants a set of capabilities from the
+  matrix in `src/lib/config.ts`; guards name the capability, never the role. See
+  [admin-vs-staff-spec.md](../specs/shipped/admin-vs-staff-spec.md).
 - `sustaining` — paying member (monthly Stripe subscription). Note that most sustaining
   checks actually look at the `user.subscription` JSON column, not the role — see
   `isSustainingMember` in `src/lib/server/finance/subscription-service.ts`.
@@ -216,14 +217,14 @@ stored on the `bandMember` table.
 There are **no `+layout.server.ts` guards and no route middleware**. Every protected remote
 function starts with a guard call. The guards:
 
-| Guard                                  | Defined in                              | What it does                                                                                                                                                                                                                                                           |
-| -------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `requireUser()`                        | `src/lib/server/authorization.ts`       | 401 unless logged in; returns the user                                                                                                                                                                                                                                 |
-| `requireStaff()`                       | `src/lib/server/authorization.ts`       | 401/403 unless the user has `admin` or `staff` role                                                                                                                                                                                                                    |
-| `requireStaffOrOwner(userId, ownerId)` | `src/lib/server/authorization.ts`       | Allows the resource owner or staff; returns which one matched                                                                                                                                                                                                          |
-| `requireStaffRole(userId)`             | `src/lib/server/authorization.ts`       | Staff check for plain API route handlers (where `locals.user` is passed in)                                                                                                                                                                                            |
-| `requireGroupRole(ref, min, opts?)`    | `src/lib/server/group/group-context.ts` | Resolves a group from an **explicit** `{ slug }` or `{ id }` ref — never `params` — and requires the caller holds at least `min` (`owner > admin > member`); returns `{ user, group, role }`. `{ allowStaff: true }` admits a non-member staff user as `role: 'staff'` |
-| `requireFeature(flag)`                 | `src/lib/server/feature-flags.ts`       | 404 unless the feature flag is enabled (see Configuration below)                                                                                                                                                                                                       |
+| Guard                                    | Defined in                              | What it does                                                                                                                                                                                                                                                           |
+| ---------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `requireUser()`                          | `src/lib/server/authorization.ts`       | 401 unless logged in; returns the user                                                                                                                                                                                                                                 |
+| `requireCapability(cap)`                 | `src/lib/server/authorization.ts`       | 401/403 unless one of the caller's positions grants `cap`; returns the user                                                                                                                                                                                            |
+| `requireCapabilityOrOwner(cap, ownerId)` | `src/lib/server/authorization.ts`       | Allows the resource owner or a holder of `cap`; returns which one matched                                                                                                                                                                                              |
+| `can(cap)`                               | `src/lib/server/authorization.ts`       | The same test without throwing, for a branch inside a handler                                                                                                                                                                                                          |
+| `requireGroupRole(ref, min, opts?)`      | `src/lib/server/group/group-context.ts` | Resolves a group from an **explicit** `{ slug }` or `{ id }` ref — never `params` — and requires the caller holds at least `min` (`owner > admin > member`); returns `{ user, group, role }`. `{ allowStaff: true }` admits a non-member staff user as `role: 'staff'` |
+| `requireFeature(flag)`                   | `src/lib/server/feature-flags.ts`       | 404 unless the feature flag is enabled (see Configuration below)                                                                                                                                                                                                       |
 
 Each of the three logged-in areas also has a **layout guard remote** in
 `src/lib/remote/layout.remote.ts` that the layout component awaits: `getMemberLayout()`
@@ -433,7 +434,7 @@ retired in favour of feature branches, see
 
 A flag gates the **member, band and public** surfaces only. The staff panel ignores flags
 entirely — `getStaffLayout` does not read them, the staff nav is unconditional, and staff
-remote functions are guarded by `requireStaff()` rather than `requireFeature()` — so a
+remote functions are guarded by `requireCapability()` rather than `requireFeature()` — so a
 feature can be configured and run by staff before (and after) it is switched on for
 everyone else.
 

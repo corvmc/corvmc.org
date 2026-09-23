@@ -26,7 +26,7 @@
 >
 > **Not built yet:** the deal shape and generate-on-close recurring work. Committee surfaces are read-only; acting on
 > a project from one waits on the capability work in
-> [admin-vs-staff-spec.md](admin-vs-staff-spec.md).
+> [admin-vs-staff-spec.md](shipped/admin-vs-staff-spec.md).
 
 ## Purpose
 
@@ -135,7 +135,7 @@ The schema anticipated this before there was anywhere to put it. From `duty_list
 
 [committees-and-roles-spec.md](committees-and-roles-spec.md) establishes a committee as
 a `group` row with `joinPolicy = 'by_application'` — six committees, each with a chair.
-[admin-vs-staff-spec.md](admin-vs-staff-spec.md) states the guard mechanism outright:
+[admin-vs-staff-spec.md](shipped/admin-vs-staff-spec.md) states the guard mechanism outright:
 
 > A committee guard reads `group_member`, not the role table, and the two are
 > independent.

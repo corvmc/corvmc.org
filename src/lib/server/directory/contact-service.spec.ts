@@ -72,11 +72,6 @@ vi.mock('$lib/server/authorization', async () => {
 	const { error } = await import('@sveltejs/kit');
 	const config = await import('$lib/config');
 	return {
-		requireStaff: async () => {
-			guard('requireStaff');
-			if (heldPositions.length === 0) throw error(403, 'Staff access required');
-			return { id: 'staff-1' };
-		},
 		requireCapability: async (cap: Capability) => {
 			guard(cap);
 			if (!heldPositions.some((p) => config.grantsCapability(config.positions[p], cap)))
@@ -153,16 +148,34 @@ describe('the guard travels with the data', () => {
 		expect(narrowed).toHaveLength(7);
 	});
 
-	// The write keeps "any position" until #1404 names its capability.
-	it('upsertContact still admits any position, and no one without', async () => {
+	it('upsertContact requires directory.shareContactSheet itself', async () => {
 		await upsertContact('de-1', {}, 'staff_entered');
-		expect(guard.mock.calls).toEqual([['requireStaff']]);
-		heldPositions = ['treasurer'];
-		await expect(upsertContact('de-1', {}, 'staff_entered')).resolves.toBeUndefined();
-		heldPositions = [];
+		expect(guard.mock.calls).toEqual([['directory.shareContactSheet']]);
+	});
+
+	it('upsertContact refuses a volunteer coordinator, who can read but not write', async () => {
+		heldPositions = ['volunteer_coordinator'];
 		await expect(upsertContact('de-1', {}, 'staff_entered')).rejects.toMatchObject({
 			status: 403
 		});
+		expect(rowsFor('contact')).toEqual([]);
+	});
+
+	// Before: any position. After: admin and staff, per #1404.
+	it('upsertContact admits exactly the shareContactSheet holders', async () => {
+		const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
+			positionOrder.filter((_, i) => mask & (1 << i))
+		);
+		for (const held of subsets) {
+			heldPositions = held;
+			const allowed = await upsertContact('de-1', {}, 'staff_entered').then(
+				() => true,
+				() => false
+			);
+			expect(allowed, held.join('+') || '(none)').toBe(
+				held.includes('admin') || held.includes('staff')
+			);
+		}
 	});
 
 	/**
