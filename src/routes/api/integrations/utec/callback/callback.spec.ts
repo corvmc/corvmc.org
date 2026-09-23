@@ -1,14 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { positionOrder, type Capability, type Position } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Mocks (the authorize module is imported transitively for STATE_COOKIE, so
 // its deps must be mocked too).
 // ---------------------------------------------------------------------------
 
-const mockRequireStaff = vi.fn().mockResolvedValue({ id: 'staff-1' });
-vi.mock('$lib/server/authorization', () => ({
-	requireStaff: () => mockRequireStaff()
-}));
+// Simulated against the real matrix, so the tables below exercise what the
+// positions actually grant.
+let heldPositions: Position[] = ['staff'];
+const requested: string[] = [];
+vi.mock('$lib/server/authorization', async () => {
+	const { error } = await import('@sveltejs/kit');
+	const config = await import('$lib/config');
+	const holds = (cap: Capability) =>
+		heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
+	return {
+		can: async (cap: Capability) => holds(cap),
+		requireCapability: async (cap: Capability) => {
+			requested.push(cap);
+			if (!holds(cap)) throw error(403, 'Not permitted');
+			return { id: 'staff-1' };
+		}
+	};
+});
 
 const mockExchange = vi.fn();
 vi.mock('$lib/server/lock/ultraloc-client', () => ({
@@ -23,6 +38,12 @@ vi.mock('$lib/server/site-config/site-config-service', () => ({
 }));
 
 const { GET } = await import('./+server');
+const { GET: AUTHORIZE } = await import('../authorize/+server');
+
+// Every combination of the six positions, including none.
+const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
+	positionOrder.filter((_, i) => mask & (1 << i))
+);
 
 async function callGET(search: string, cookieValue: string | undefined) {
 	const url = new URL(`http://localhost/api/integrations/utec/callback${search}`);
@@ -38,7 +59,8 @@ async function callGET(search: string, cookieValue: string | undefined) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	mockRequireStaff.mockResolvedValue({ id: 'staff-1' });
+	heldPositions = ['staff'];
+	requested.length = 0;
 });
 
 describe('U-tec OAuth callback', () => {
@@ -81,5 +103,46 @@ describe('U-tec OAuth callback', () => {
 		expect(mockUpdateSiteConfig).not.toHaveBeenCalled();
 
 		consoleSpy.mockRestore();
+	});
+});
+
+describe('the U-tec connection guard', () => {
+	async function callAuthorize() {
+		const url = new URL('http://localhost/api/integrations/utec/authorize');
+		const cookies = { set: vi.fn() };
+		try {
+			await AUTHORIZE({ url, cookies } as never);
+			return { status: 0, cookies };
+		} catch (e) {
+			return { status: (e as { status: number }).status, cookies };
+		}
+	}
+
+	it('names lock.manage on both legs', async () => {
+		await callAuthorize();
+		await callGET('?code=abc&state=s1', 's1');
+		expect(requested).toEqual(['lock.manage', 'lock.manage']);
+	});
+
+	it('refuses a treasurer with 403, setting no state and exchanging nothing', async () => {
+		heldPositions = ['treasurer'];
+		const authorize = await callAuthorize();
+		expect(authorize.status).toBe(403);
+		expect(authorize.cookies.set).not.toHaveBeenCalled();
+		expect((await callGET('?code=abc&state=s1', 's1'))?.status).toBe(403);
+		expect(mockExchange).not.toHaveBeenCalled();
+		expect(mockUpdateSiteConfig).not.toHaveBeenCalled();
+	});
+
+	// Before: any position. After: `lock.manage`, which is admin, staff and the
+	// technology coordinator, the same people who manage the lock in settings.
+	it('admits exactly the lock.manage holders', async () => {
+		for (const held of subsets) {
+			heldPositions = held;
+			const locksmith = held.some((p) => ['admin', 'staff', 'technology_coordinator'].includes(p));
+			const label = held.join('+') || '(none)';
+			expect((await callAuthorize()).status === 403, label).toBe(!locksmith);
+			expect((await callGET('?code=abc&state=s1', 's1'))?.status === 403, label).toBe(!locksmith);
+		}
 	});
 });
