@@ -433,21 +433,11 @@ export const staffNavSections: StaffNavSection[] = [
 			// second is the sales the collective takes a share of. The takedown
 			// controls ride along because they act on the same rows.
 			//
-			// `finance.read`, the same capability as the rows either side of it.
-			// There is no music capability to name, and leaving this one ungated
-			// was not the neutral choice it looked like: an ungated row inside a
-			// gated section keeps the whole section alive, so every position with
-			// neither finance nor credits would have started seeing a "Money"
-			// heading with one row under it.
-			//
-			// Sitting in Money is the argument for the capability. The page's own
-			// guard is still `requireStaff()` on every export of
-			// `staff-music.remote.ts`, so this widens nobody's access and narrows
-			// nobody's — it only decides who is offered the link. Worth revisiting
-			// if takedowns ever need to reach a moderator who handles no money.
+			// `music.read`: the treasurer for the sales, the site moderator for the
+			// takedowns.
 			{
 				key: 'music',
-				capability: 'finance.read',
+				capability: 'music.read',
 				label: 'Releases',
 				href: resolve('/staff/music')
 			},

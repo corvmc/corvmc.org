@@ -22,9 +22,18 @@
 	import { resolve } from '$app/paths';
 	import { IconRadio } from '@tabler/icons-svelte';
 
-	const { releases, pool, sales, purchases, radioEnabled, audioEnabled, now, recent } = $derived(
-		await getStaffMusicPage()
-	);
+	const {
+		releases,
+		pool,
+		sales,
+		purchases,
+		radioEnabled,
+		audioEnabled,
+		now,
+		recent,
+		canModerate,
+		canRefund
+	} = $derived(await getStaffMusicPage());
 
 	/**
 	 * The launch question, as one sentence.
@@ -172,87 +181,89 @@
 							</td>
 							<td class="tabular-nums">{release.salesCount}</td>
 							<td class="flex flex-wrap gap-1">
-								{#if release.status === 'withheld'}
-									<Action
-										action={restoreReleaseForm.for(release.id)}
-										label="Restore"
-										variant="ghost"
-										size="sm"
-										modalTitle="Restore release"
-										submitLabel="Restore"
-										successToast="Restored"
-									>
-										{#snippet form()}
-											{@const fields = restoreReleaseForm.for(release.id).fields}
-											<input {...fields.releaseId.as('hidden', release.id)} />
-											<p>
-												Hand <strong>{release.title}</strong> back to {release.bandName} as a draft? They
-												decide whether to publish it again.
-											</p>
-										{/snippet}
-									</Action>
-								{:else}
-									<Action
-										action={withholdReleaseForm.for(release.id)}
-										label="Withhold"
-										variant="ghost"
-										size="sm"
-										submitVariant="error"
-										modalTitle="Withhold release"
-										submitLabel="Withhold"
-										successToast="Withheld"
-									>
-										{#snippet form()}
-											{@const fields = withholdReleaseForm.for(release.id).fields}
-											<div class="space-y-3">
+								{#if canModerate}
+									{#if release.status === 'withheld'}
+										<Action
+											action={restoreReleaseForm.for(release.id)}
+											label="Restore"
+											variant="ghost"
+											size="sm"
+											modalTitle="Restore release"
+											submitLabel="Restore"
+											successToast="Restored"
+										>
+											{#snippet form()}
+												{@const fields = restoreReleaseForm.for(release.id).fields}
 												<input {...fields.releaseId.as('hidden', release.id)} />
 												<p>
-													Take <strong>{release.title}</strong> down. It stops being public and the band
-													cannot republish it themselves.
+													Hand <strong>{release.title}</strong> back to {release.bandName} as a draft?
+													They decide whether to publish it again.
 												</p>
-												<FormField
-													field={fields.reason}
-													label="Reason"
-													description="The band sees this on their release page — a takedown they can't see the cause of is one they can't fix."
-													required
-												/>
-											</div>
-										{/snippet}
-									</Action>
-								{/if}
+											{/snippet}
+										</Action>
+									{:else}
+										<Action
+											action={withholdReleaseForm.for(release.id)}
+											label="Withhold"
+											variant="ghost"
+											size="sm"
+											submitVariant="error"
+											modalTitle="Withhold release"
+											submitLabel="Withhold"
+											successToast="Withheld"
+										>
+											{#snippet form()}
+												{@const fields = withholdReleaseForm.for(release.id).fields}
+												<div class="space-y-3">
+													<input {...fields.releaseId.as('hidden', release.id)} />
+													<p>
+														Take <strong>{release.title}</strong> down. It stops being public and the
+														band cannot republish it themselves.
+													</p>
+													<FormField
+														field={fields.reason}
+														label="Reason"
+														description="The band sees this on their release page — a takedown they can't see the cause of is one they can't fix."
+														required
+													/>
+												</div>
+											{/snippet}
+										</Action>
+									{/if}
 
-								{#if release.radioOptIn}
-									<Action
-										action={setRadioExclusionForm.for(release.id)}
-										label={release.radioExcluded ? 'Put back on air' : 'Pull from radio'}
-										variant="ghost"
-										size="sm"
-										modalTitle={release.radioExcluded ? 'Put back on air' : 'Pull from radio'}
-										submitLabel="Save"
-										successToast="Rotation updated"
-									>
-										{#snippet form()}
-											{@const fields = setRadioExclusionForm.for(release.id).fields}
-											<div class="space-y-3">
-												<input {...fields.releaseId.as('hidden', release.id)} />
-												<input
-													{...fields.excluded.as('checkbox', !release.radioExcluded)}
-													type="hidden"
-												/>
-												{#if release.radioExcluded}
-													<p>
-														Put <strong>{release.title}</strong> back in the rotation? The band's own
-														opt-in still applies.
-													</p>
-												{:else}
-													<p>
-														Take <strong>{release.title}</strong> off the air without unpublishing it.
-													</p>
-													<FormField field={fields.reason} label="Reason (shown to the band)" />
-												{/if}
-											</div>
-										{/snippet}
-									</Action>
+									{#if release.radioOptIn}
+										<Action
+											action={setRadioExclusionForm.for(release.id)}
+											label={release.radioExcluded ? 'Put back on air' : 'Pull from radio'}
+											variant="ghost"
+											size="sm"
+											modalTitle={release.radioExcluded ? 'Put back on air' : 'Pull from radio'}
+											submitLabel="Save"
+											successToast="Rotation updated"
+										>
+											{#snippet form()}
+												{@const fields = setRadioExclusionForm.for(release.id).fields}
+												<div class="space-y-3">
+													<input {...fields.releaseId.as('hidden', release.id)} />
+													<input
+														{...fields.excluded.as('checkbox', !release.radioExcluded)}
+														type="hidden"
+													/>
+													{#if release.radioExcluded}
+														<p>
+															Put <strong>{release.title}</strong> back in the rotation? The band's own
+															opt-in still applies.
+														</p>
+													{:else}
+														<p>
+															Take <strong>{release.title}</strong> off the air without unpublishing it.
+														</p>
+														<FormField field={fields.reason} label="Reason (shown to the band)" />
+													{/if}
+												</div>
+											{/snippet}
+										</Action>
+									{/if}
 								{/if}
 							</td>
 						</tr>
@@ -317,7 +328,7 @@
 								{/if}
 							</td>
 							<td class="text-right">
-								{#if purchase.refundable}
+								{#if canRefund && purchase.refundable}
 									<Action
 										action={refundPurchaseForm.for(purchase.purchaseId)}
 										label="Refund"
