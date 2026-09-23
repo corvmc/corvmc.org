@@ -63,6 +63,11 @@ describe('AdjustCreditsAction', () => {
 		expect(hidden.value).toBe('user-1');
 	});
 
+	it('tells a comp-only staffer their ceiling under the amount (#579)', async () => {
+		const dialog = await open({ amountHint: 'Up to 2 hrs of free hours. An admin can add more.' });
+		await expect.element(dialog.getByText('Up to 2 hrs of free hours')).toBeVisible();
+	});
+
 	// The same branch-order bug that left `type="select"` fields rendering their
 	// options as loose text: no `<select>`, nothing submitted, no error either.
 	it('offers both credit types inside a real select', async () => {

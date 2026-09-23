@@ -13,6 +13,7 @@
 		outline = true,
 		class: className = '',
 		onsuccess,
+		amountHint,
 		...rest
 	}: {
 		userId: string;
@@ -21,6 +22,8 @@
 		outline?: boolean;
 		class?: string;
 		onsuccess?: () => void;
+		/** Under Amount: what a comp-only caller may add. */
+		amountHint?: string;
 		[key: string]: unknown;
 	} = $props();
 
@@ -58,7 +61,7 @@
 					<option value="equipment_credits">Equipment Credits</option>
 				</Select>
 			</FormField>
-			<FormField field={fields.amount} label="Amount">
+			<FormField field={fields.amount} label="Amount" description={amountHint}>
 				<input
 					{...fields.amount.as('text')}
 					type="number"

@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { titleCase } from '$lib/utils/format';
-import { CONFIRMATION_WINDOW_DAYS, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
+import {
+	CONFIRMATION_WINDOW_DAYS,
+	LONG_TEXT_MAX,
+	SHORT_TEXT_MAX,
+	creditCompCeiling,
+	creditsToHours
+} from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
@@ -495,6 +501,13 @@ function overdrawn(type: CreditType, available: number, requested: number): stri
 	return `${titleCase(type)} balance is ${available} — cannot deduct ${requested}.`;
 }
 
+/** What a comp-only staffer reads when an adjustment is beyond them. */
+function compRefusal(type: CreditType, ceiling: number): string {
+	if (ceiling === 0) return `An admin adjusts ${titleCase(type).toLowerCase()}.`;
+	const limit = type === 'free_hours' ? `${creditsToHours(ceiling)} hrs` : `${ceiling}`;
+	return `Up to ${limit} of ${titleCase(type).toLowerCase()} can be added here. An admin can do more, or deduct.`;
+}
+
 export const adjustCredits = form(
 	z.object({
 		userId: z.string(),
@@ -503,7 +516,9 @@ export const adjustCredits = form(
 		description: z.string().min(1)
 	}),
 	async (data, issue) => {
-		await requireCapability('credit.adjust');
+		// `credit.comp` alone is bounded by `creditCompCeiling`; see below.
+		const unbounded = await can('credit.adjust');
+		if (!unbounded) await requireCapability('credit.comp');
 
 		const userId = data.userId as string;
 		const type = data.creditType as CreditType;
@@ -518,7 +533,11 @@ export const adjustCredits = form(
 		if (amount === 0) invalid(issue.amount('Enter an amount above or below zero.'));
 
 		let balanceAfter: number;
-		if (amount > 0) {
+		if (!unbounded) {
+			const ceiling = creditCompCeiling[type];
+			if (amount < 0 || amount > ceiling) invalid(issue.amount(compRefusal(type, ceiling)));
+			balanceAfter = await addCredits(userId, type, amount, 'staff_comp', undefined, description);
+		} else if (amount > 0) {
 			balanceAfter = await addCredits(
 				userId,
 				type,
