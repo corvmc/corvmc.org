@@ -5,7 +5,7 @@ import { join } from 'node:path';
 /**
  * The `contact` table has exactly one access path, and this is what proves it.
  *
- * `contact-service.ts` guards every export with `requireStaff()` itself, but
+ * `contact-service.ts` guards every export itself, but
  * that only helps if nothing else can reach the table. The ESLint rule
  * `custom/no-contact-schema-imports` is what makes that true, and a rule is the
  * only mechanism that can police a file nobody has written yet.
@@ -83,7 +83,7 @@ describe('the contact table has one access path', () => {
 		const unguarded = exports.filter((name) => {
 			const body = src.slice(src.indexOf(`export async function ${name}`));
 			const end = body.indexOf('\n}\n');
-			return !body.slice(0, end).includes('requireStaff()');
+			return !/requireCapability\('directory\.\w+'\)|requireStaff\(\)/.test(body.slice(0, end));
 		});
 
 		// The two deliberate exceptions, each named so that using one looks like

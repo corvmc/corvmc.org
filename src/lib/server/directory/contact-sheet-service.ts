@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { directoryEntryLink } from '$lib/server/db/schema/directory-link';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { and, eq, isNull } from 'drizzle-orm';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { DomainError } from '$lib/server/domain-error';
 import { sanitizeBio } from '$lib/utils/markdown';
 import { writeContactUnguarded, type ContactData } from './contact-service';
@@ -12,8 +12,8 @@ import type { ProfileLink } from '$lib/server/db/schema/authentication';
  * The contact-sheet link, and the only surface an external act can reach.
  *
  * Everything here is either staff-guarded or token-authorized, and the two never
- * mix: `issueContactSheetLink` and `revokeContactSheetLink` call
- * `requireStaff()`; `resolveContactSheetToken` and `saveContactSheet` take a
+ * mix: `issueContactSheetLink` and `revokeContactSheetLink` require
+ * `directory.shareContactSheet`; `resolveContactSheetToken` and `saveContactSheet` take a
  * token and touch no session at all.
  *
  * **The token is not authentication.** It authorizes editing exactly one entry
@@ -49,7 +49,7 @@ export async function issueContactSheetLink(
 	email: string,
 	actorId: string
 ): Promise<{ token: string }> {
-	await requireStaff();
+	await requireCapability('directory.shareContactSheet');
 
 	await db
 		.update(directoryEntryLink)
@@ -70,7 +70,7 @@ export async function issueContactSheetLink(
 }
 
 export async function revokeContactSheetLink(entryId: string): Promise<void> {
-	await requireStaff();
+	await requireCapability('directory.shareContactSheet');
 
 	await db
 		.update(directoryEntryLink)

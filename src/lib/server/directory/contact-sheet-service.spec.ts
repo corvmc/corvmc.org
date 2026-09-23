@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { positionOrder, type Capability, type Position } from '$lib/config';
 
 /**
  * The contact-sheet token — the only thing standing between a URL and one act's
@@ -55,10 +56,26 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-const requireStaff = vi.fn(async () => ({ id: 'staff-1' }));
-vi.mock('$lib/server/authorization', () => ({
-	requireStaff: (...a: unknown[]) => requireStaff(...(a as []))
-}));
+// Guards are simulated against the real matrix. `guard` records which one ran.
+let heldPositions: Position[] = ['staff'];
+const guard = vi.fn((_name: string) => {});
+vi.mock('$lib/server/authorization', async () => {
+	const { error } = await import('@sveltejs/kit');
+	const config = await import('$lib/config');
+	return {
+		requireStaff: async () => {
+			guard('requireStaff');
+			if (heldPositions.length === 0) throw error(403, 'Staff access required');
+			return { id: 'staff-1' };
+		},
+		requireCapability: async (cap: Capability) => {
+			guard(cap);
+			if (!heldPositions.some((p) => config.grantsCapability(config.positions[p], cap)))
+				throw error(403, 'Not permitted');
+			return { id: 'staff-1' };
+		}
+	};
+});
 
 const writeContactUnguarded = vi.fn(async () => {});
 vi.mock('./contact-service', () => ({
@@ -94,7 +111,7 @@ beforeEach(() => {
 	updates = [];
 	inserts = [];
 	selectQueue = [];
-	requireStaff.mockResolvedValue({ id: 'staff-1' });
+	heldPositions = ['staff'];
 });
 
 // ---------------------------------------------------------------------------
@@ -124,7 +141,7 @@ describe('resolving a token', () => {
 		await resolveContactSheetToken('tok');
 		// The act has no account. A staff guard here would refuse the only caller
 		// this exists for.
-		expect(requireStaff).not.toHaveBeenCalled();
+		expect(guard).not.toHaveBeenCalled();
 	});
 });
 
@@ -182,13 +199,35 @@ describe('saving a sheet', () => {
 });
 
 describe('issuing and revoking', () => {
-	it('is staff-only in both directions', async () => {
+	it('requires directory.shareContactSheet in both directions', async () => {
 		await issueContactSheetLink('de-1', 'a@b.test', 'staff-1');
-		expect(requireStaff).toHaveBeenCalled();
-
-		requireStaff.mockClear();
 		await revokeContactSheetLink('de-1');
-		expect(requireStaff).toHaveBeenCalled();
+		expect(guard.mock.calls).toEqual([
+			['directory.shareContactSheet'],
+			['directory.shareContactSheet']
+		]);
+	});
+
+	// The only caller, `contact-sheet.remote.ts`, already names this capability,
+	// so every combination of positions gets what it got before this guard moved.
+	it('admits exactly the shareContactSheet holders, and refuses the rest with 403', async () => {
+		const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
+			positionOrder.filter((_, i) => mask & (1 << i))
+		);
+		for (const held of subsets) {
+			heldPositions = held;
+			const sharer = held.includes('admin') || held.includes('staff');
+			for (const run of [
+				() => issueContactSheetLink('de-1', 'a@b.test', 'staff-1'),
+				() => revokeContactSheetLink('de-1')
+			]) {
+				const outcome = await run().then(
+					() => 'allowed',
+					(e: { status: number }) => e.status
+				);
+				expect(outcome, held.join('+')).toBe(sharer ? 'allowed' : 403);
+			}
+		}
 	});
 
 	/**

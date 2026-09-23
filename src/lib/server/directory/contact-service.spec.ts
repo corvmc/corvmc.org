@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { positionOrder, type Capability, type Position } from '$lib/config';
 
 /**
  * The private contact table's guarantees.
@@ -7,8 +8,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * manager's phone number, a settlement reference. Three rules protect it, and
  * each is asserted here rather than trusted:
  *
- *   1. every export guards with `requireStaff()` *itself*, so the guard travels
- *      with the data instead of belonging to whoever calls it;
+ *   1. every export guards *itself*, so the guard travels with the data
+ *      instead of belonging to whoever calls it;
  *   2. writing a contact registers the address in the consent ledger and
  *      **never** enrols it in an audience;
  *   3. claiming an act archives the contact rather than inheriting it.
@@ -64,10 +65,26 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-const requireStaff = vi.fn(async () => ({ id: 'staff-1' }));
-vi.mock('$lib/server/authorization', () => ({
-	requireStaff: (...a: unknown[]) => requireStaff(...(a as []))
-}));
+// Guards are simulated against the real matrix. `guard` records which one ran.
+let heldPositions: Position[] = ['staff'];
+const guard = vi.fn((_name: string) => {});
+vi.mock('$lib/server/authorization', async () => {
+	const { error } = await import('@sveltejs/kit');
+	const config = await import('$lib/config');
+	return {
+		requireStaff: async () => {
+			guard('requireStaff');
+			if (heldPositions.length === 0) throw error(403, 'Staff access required');
+			return { id: 'staff-1' };
+		},
+		requireCapability: async (cap: Capability) => {
+			guard(cap);
+			if (!heldPositions.some((p) => config.grantsCapability(config.positions[p], cap)))
+				throw error(403, 'Not permitted');
+			return { id: 'staff-1' };
+		}
+	};
+});
 
 const {
 	getContact,
@@ -87,7 +104,7 @@ beforeEach(() => {
 	inserts = [];
 	updates = [];
 	selectQueue = [];
-	requireStaff.mockResolvedValue({ id: 'staff-1' });
+	heldPositions = ['staff'];
 });
 
 // ---------------------------------------------------------------------------
@@ -98,31 +115,66 @@ describe('the guard travels with the data', () => {
 	 * guard a new caller can forget, and this is the table where forgetting it
 	 * means publishing somebody's phone number.
 	 */
-	it.each([
+	const READS = [
 		['getContact', () => getContact('de-1')],
-		['upsertContact', () => upsertContact('de-1', {}, 'staff_entered')],
 		['listExpiredContacts', () => listExpiredContacts()],
 		['hasContact', () => hasContact('de-1')]
-	])('%s calls requireStaff itself', async (_name, run) => {
+	] as const;
+
+	it.each(READS)('%s requires directory.readContact itself', async (_name, run) => {
 		await run();
-		expect(requireStaff).toHaveBeenCalled();
+		expect(guard.mock.calls).toEqual([['directory.readContact']]);
 	});
 
-	it('refuses to read when the staff guard throws', async () => {
-		requireStaff.mockRejectedValue(new Error('403'));
-		await expect(getContact('de-1')).rejects.toThrow('403');
+	it.each(READS)('%s refuses a treasurer with 403', async (_name, run) => {
+		heldPositions = ['treasurer'];
+		await expect(run()).rejects.toMatchObject({ status: 403 });
+	});
+
+	// Before: `requireStaff`, any position. After: the holders of
+	// `directory.readContact` (admin, staff, volunteer coordinator), as #1390
+	// intends. Every combination of the six positions, including none.
+	it.each(READS)('%s admits exactly the readContact holders', async (_name, run) => {
+		const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
+			positionOrder.filter((_, i) => mask & (1 << i))
+		);
+		const narrowed: string[] = [];
+		for (const held of subsets) {
+			heldPositions = held;
+			const allowed = await run().then(
+				() => true,
+				() => false
+			);
+			const reader = held.some((p) => ['admin', 'staff', 'volunteer_coordinator'].includes(p));
+			expect(allowed, held.join('+')).toBe(reader);
+			if (held.length > 0 && !allowed) narrowed.push(held.join('+'));
+		}
+		// Every non-empty mix of technology coordinator, site moderator, treasurer.
+		expect(narrowed).toHaveLength(7);
+	});
+
+	// The write keeps "any position" until #1404 names its capability.
+	it('upsertContact still admits any position, and no one without', async () => {
+		await upsertContact('de-1', {}, 'staff_entered');
+		expect(guard.mock.calls).toEqual([['requireStaff']]);
+		heldPositions = ['treasurer'];
+		await expect(upsertContact('de-1', {}, 'staff_entered')).resolves.toBeUndefined();
+		heldPositions = [];
+		await expect(upsertContact('de-1', {}, 'staff_entered')).rejects.toMatchObject({
+			status: 403
+		});
 	});
 
 	/**
 	 * The one deliberate exception, and it is named so that reaching for it looks
 	 * like what it is. `/act/{token}` is authorized by a token rather than a
 	 * session — the act filling in its own sheet has no account, and
-	 * `requireStaff()` would refuse the acquisition path the spec calls the
+	 * a session guard would refuse the acquisition path the spec calls the
 	 * privacy-best one.
 	 */
 	it('exempts only the token path, and says so in its name', async () => {
 		await writeContactUnguarded('de-1', { bookingName: 'A Manager' }, 'self_entered');
-		expect(requireStaff).not.toHaveBeenCalled();
+		expect(guard).not.toHaveBeenCalled();
 		expect(rowsFor('contact')[0]).toMatchObject({ source: 'self_entered' });
 	});
 });
@@ -195,6 +247,6 @@ describe('archiving on claim', () => {
 	 */
 	it('does not re-guard inside an already-guarded claim', async () => {
 		await archiveContactForClaim('de-1');
-		expect(requireStaff).not.toHaveBeenCalled();
+		expect(guard).not.toHaveBeenCalled();
 	});
 });
