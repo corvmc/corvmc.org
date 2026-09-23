@@ -30,7 +30,7 @@
 	const removeFields = removeLocalResourceForm.fields;
 </script>
 
-<PageHeader title={r.name} subtitle="Local Resource" backHref="/staff/local-resources">
+<PageHeader width="3xl" title={r.name} subtitle="Local Resource" backHref="/staff/local-resources">
 	<StatusBadge status={r.status} label />
 	<Action
 		action={updateLocalResourceForm}

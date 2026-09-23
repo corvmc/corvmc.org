@@ -38,7 +38,7 @@
 	</Action>
 </PageHeader>
 
-<PageContent width="3xl">
+<PageContent>
 	{#if categories.length === 0}
 		<EmptyState
 			title="No categories yet"
