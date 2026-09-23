@@ -94,6 +94,32 @@
 		</Table>
 	{/if}
 
+	{#if data.sources.length > 0}
+		<h2 class="mt-8 mb-3 font-medium">By supplier</h2>
+		<Table>
+			{#snippet head()}
+				<th>Supplier</th>
+				<th class="col-support cell-num">Purchases</th>
+				<th class="cell-num">Spend</th>
+				<th class="col-support cell-num">Share</th>
+			{/snippet}
+			{#each data.sources as row (row.sourceName ?? '')}
+				<tr class="hover">
+					<td class="cell-primary">
+						{#if row.sourceName}
+							{row.sourceName}
+						{:else}
+							<span class="text-subtle">Not recorded</span>
+						{/if}
+					</td>
+					<td class="col-support cell-num">{row.acquisitionCount}</td>
+					<td class="cell-num">{formatCents(row.totalCents)}</td>
+					<td class="col-support cell-num">{Math.round(row.share * 100)}%</td>
+				</tr>
+			{/each}
+		</Table>
+	{/if}
+
 	<!--
 		Services are a second block rather than more rows in the table above. They
 		come from `contractor_job`, not from the acquisition ledger, because a

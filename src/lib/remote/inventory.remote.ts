@@ -54,6 +54,7 @@ import {
 	recordAcquisition,
 	recordAcquisitionBulk,
 	spendByCategory,
+	spendBySource,
 	updateAcquisition
 } from '$lib/server/inventory/acquisition-service';
 import {
@@ -1333,8 +1334,9 @@ export const getSpendReport = query(spendRange, async (range) => {
 	// invoice arrives as nothing, has no line and belongs to no equipment
 	// category. Two blocks on one page is honest; one source that has quietly
 	// learned to mean two things is not.
-	const [rows, services] = await Promise.all([
+	const [rows, sources, services] = await Promise.all([
 		spendByCategory(from, to),
+		spendBySource(from, to),
 		contractorSpend(from, to)
 	]);
 	const totalCents = rows.reduce((sum, r) => sum + Number(r.totalCents), 0);
@@ -1352,6 +1354,12 @@ export const getSpendReport = query(spendRange, async (range) => {
 			share: totalCents > 0 ? Number(r.totalCents) / totalCents : 0
 		})),
 		totalCents,
+		sources: sources.map((r) => ({
+			sourceName: r.sourceName,
+			acquisitionCount: Number(r.acquisitionCount),
+			totalCents: Number(r.totalCents),
+			share: totalCents > 0 ? Number(r.totalCents) / totalCents : 0
+		})),
 		services: services.map((r) => ({
 			trade: r.trade,
 			jobCount: Number(r.jobCount),

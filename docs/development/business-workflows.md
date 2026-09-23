@@ -483,8 +483,9 @@ reorder quantity where one is set, otherwise enough to reach the point) and an
 whole list at `/staff/inventory/restock`, grouped by category with a Receive
 action per row so a shop trip can be recorded from the list it came off.
 
-`/staff/inventory/spend` reports purchase spend per category over a window
-(default: the current calendar year) via `spendByCategory()`. **Donations and
+`/staff/inventory/spend` reports purchase spend over a window (default: the
+current calendar year), per category via `spendByCategory()` and per supplier via
+`spendBySource()`. **Donations and
 grants are excluded** — a gift is not spend, and counting one would overstate the
 budget by exactly what was given. `inKindContributions()` exists for the
 gifts-in-kind disclosure and still has no screen: ASU 2020-07 binds the financial

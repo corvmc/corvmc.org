@@ -533,7 +533,7 @@ the member surface.
 **Staff** — `/staff/inventory` (items, filterable by kind and low stock),
 `/staff/inventory/restock` (everything at or below its reorder point, grouped by
 category, with the quantity to buy and a Receive action per row),
-`/staff/inventory/spend` (purchase spend per category over a window),
+`/staff/inventory/spend` (purchase spend per category and per supplier over a window),
 `/staff/inventory/acquisitions` and `/staff/inventory/acquisitions/[id]` (what
 arrived, from whom, for how much; the disclosure paperwork, receipts, and who is
 owed for it), `/staff/inventory/compliance` (the Form 8282 queue),
@@ -591,8 +591,10 @@ on purpose:
 
 - **The `supplier` table.** It would normalise `acquisition.sourceName` to give
   vendor-level spend. The collective buys from a handful of shops, so free text
-  plus a `GROUP BY` answers that. **Revisit when free text actually fragments** —
-  that is the whole condition.
+  plus a `GROUP BY` answers that, and the spend page now renders it:
+  `spendBySource()` groups purchases on `lower(trim(sourceName))`, so case and
+  stray spaces do not split a vendor (#605). **Revisit when free text actually
+  fragments** beyond that — that is the whole condition.
 
   This entry used to add a second reason: that the same _local business_ entity
   was wanted by the Local Resources Directory. It is not. A supplier is who CMC
