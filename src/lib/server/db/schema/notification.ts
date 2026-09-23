@@ -144,6 +144,15 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'door_code_ready',
+		category: 'practice-space',
+		label: 'Door code ready',
+		description: 'Your door code, once the lock has confirmed it',
+		defaults: { email: true, inApp: true, sms: false },
+		// Mandatory: it is how a member without a standing code gets in.
+		mandatory: true
+	},
+	{
 		key: 'confirmation_reminder',
 		category: 'practice-space',
 		label: 'Confirmation reminder',
