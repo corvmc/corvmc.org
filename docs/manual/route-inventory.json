@@ -528,6 +528,18 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/local-resources",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/local-resources/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/local-resources/categories",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/marketing/audiences",
 		"panel": "staff"
 	},

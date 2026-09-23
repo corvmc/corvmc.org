@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "72a16741-81d9-4b8a-b1a0-3b3a187090f1",
+  "id": "2a2755da-e21b-4e78-ae53-9bf6afecea50",
   "prevIds": [
-    "a604d8c5-202c-4541-ab33-23774235ece4"
+    "72a16741-81d9-4b8a-b1a0-3b3a187090f1"
   ],
   "ddl": [
     {
@@ -420,6 +420,14 @@
     },
     {
       "name": "audit_log",
+      "entityType": "tables"
+    },
+    {
+      "name": "local_resource",
+      "entityType": "tables"
+    },
+    {
+      "name": "local_resource_category",
       "entityType": "tables"
     },
     {
@@ -11833,6 +11841,226 @@
       "table": "audit_log"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "category_id",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "description",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "website",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "phone",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "address_line",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'pending'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "submitted_by_user_id",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "submitter_email",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "staff_note",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reviewed_by_user_id",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reviewed_at",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "display_order",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "table": "local_resource"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "local_resource_category"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "local_resource_category"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "display_order",
+      "entityType": "columns",
+      "table": "local_resource_category"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "local_resource_category"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "local_resource_category"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -14834,6 +15062,51 @@
     },
     {
       "columns": [
+        "category_id"
+      ],
+      "tableTo": "local_resource_category",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "nameExplicit": false,
+      "name": "fk_local_resource_category_id_local_resource_category_id_fk",
+      "entityType": "fks",
+      "table": "local_resource"
+    },
+    {
+      "columns": [
+        "submitted_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_local_resource_submitted_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "local_resource"
+    },
+    {
+      "columns": [
+        "reviewed_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_local_resource_reviewed_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "local_resource"
+    },
+    {
+      "columns": [
         "role_id",
         "user_id"
       ],
@@ -15761,6 +16034,24 @@
       "nameExplicit": false,
       "name": "audit_log_pk",
       "table": "audit_log",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "local_resource_pk",
+      "table": "local_resource",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "local_resource_category_pk",
+      "table": "local_resource_category",
       "entityType": "pks"
     },
     {
@@ -19355,6 +19646,38 @@
     },
     {
       "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "category_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_local_resource_public",
+      "entityType": "indexes",
+      "table": "local_resource"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_local_resource_status",
+      "entityType": "indexes",
+      "table": "local_resource"
+    },
+    {
+      "columns": [
         "name",
         "guard_name"
       ],
@@ -19623,6 +19946,15 @@
       "name": "instructor_user_id_unique",
       "entityType": "uniques",
       "table": "instructor"
+    },
+    {
+      "columns": [
+        "name"
+      ],
+      "nameExplicit": false,
+      "name": "local_resource_category_name_unique",
+      "entityType": "uniques",
+      "table": "local_resource_category"
     },
     {
       "value": "ends_at > starts_at",

@@ -72,6 +72,7 @@ import { seedGroupChats } from './seed/group-chats';
 import { seedContentFlags } from './seed/content-flags';
 import { seedAuditLog } from './seed/audit';
 import { seedContractors } from './seed/contractors';
+import { seedLocalResources } from './seed/local-resources';
 import { seedEquipmentReports } from './seed/equipment-reports';
 import { seedDutyLists } from './seed/duty-lists';
 import { seedOrientation } from './seed/orientation';
@@ -203,6 +204,7 @@ async function main() {
 	const help = await seedHelp();
 	const itemArticles = await seedItemArticles();
 	const contractors = await seedContractors(adminUser.id);
+	const localResources = await seedLocalResources(adminUser.id);
 	const inbox = await seedInbox(adminUser, users[0]);
 	const dmCast =
 		usage && directoryPersonas.seeker && directoryPersonas.leader && directoryPersonas.undecided
@@ -332,6 +334,9 @@ async function main() {
 	);
 	console.log(
 		`  ${contractors.contractors} contractors, ${contractors.jobs} contractor jobs (1 overdue, 1 unit at the shop, 1 lapsed certificate)`
+	);
+	console.log(
+		`  ${localResources.categories} local resource categories, ${localResources.resources} listings (1 pending, 1 returned, 1 removed)`
 	);
 	console.log(
 		`  ${equipmentReports.reports} equipment reports in every triage stage, ${equipmentReports.workOrders} work order raised from them`
