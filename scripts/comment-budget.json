@@ -177,7 +177,6 @@
 	"src/lib/components/radio/RadioPlayer.svelte",
 	"src/lib/components/radio/RadioPlayer.svelte.spec.ts",
 	"src/lib/components/radio/radio-dismiss.ts",
-	"src/lib/components/reservations/ConflictWarnings.svelte",
 	"src/lib/components/rider/RiderCorner.svelte",
 	"src/lib/components/rider/RiderElementsEditor.svelte",
 	"src/lib/components/rider/RiderUploads.svelte",
