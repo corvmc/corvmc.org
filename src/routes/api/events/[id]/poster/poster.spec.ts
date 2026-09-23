@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { positionOrder, type Capability, type Position } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -18,9 +19,24 @@ vi.mock('$lib/server/storage', async () => {
 	};
 });
 
-vi.mock('$lib/server/authorization', () => ({
-	hasAnyRole: vi.fn().mockResolvedValue(true)
-}));
+// The guard is simulated against the real matrix, so the table test below
+// exercises what `positions` actually grants rather than a stubbed answer.
+let heldPositions: Position[] = ['staff'];
+let signedIn = true;
+const requestedCapabilities: string[] = [];
+vi.mock('$lib/server/authorization', async () => {
+	const { error } = await import('@sveltejs/kit');
+	const config = await import('$lib/config');
+	return {
+		requireCapability: async (cap: Capability) => {
+			requestedCapabilities.push(cap);
+			if (!signedIn) throw error(401, 'Not authenticated');
+			const ok = heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
+			if (!ok) throw error(403, 'Not permitted');
+			return { id: 'user-1' };
+		}
+	};
+});
 
 const mockReplaceSlot = vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' });
 const mockDetachSlot = vi.fn();
@@ -45,6 +61,9 @@ vi.mock('$lib/server/db/schema/event', () => ({ eventListing: {} }));
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	heldPositions = ['staff'];
+	signedIn = true;
+	requestedCapabilities.length = 0;
 	mockGetById.mockResolvedValue({
 		id: 'evt-1',
 		status: 'published',
@@ -83,7 +102,11 @@ function bytes(size: number): string {
 // sits at module scope so the cold Vite transform of the whole module graph is
 // paid once, during file evaluation — not inside a test or hook, where it would
 // race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
-const { POST } = await import('./+server');
+const { POST, DELETE } = await import('./+server');
+
+function del() {
+	return { params: { id: 'evt-1' }, locals: { user: { id: 'user-1' } } } as any;
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -129,4 +152,47 @@ describe('POST /api/events/[id]/poster', () => {
 		expect(mockUploadFile).toHaveBeenCalledOnce();
 		expect(whereSpy).toHaveBeenCalled();
 	});
+});
+
+describe('the poster guard', () => {
+	it('asks for event.manage on both verbs', async () => {
+		const ok = new File([bytes(1024)], 'poster.png', { type: 'image/png' });
+		await POST(req(ok));
+		await DELETE(del());
+		expect(requestedCapabilities).toEqual(['event.manage', 'event.manage']);
+	});
+
+	it('refuses a signed-out caller with 401 before touching anything', async () => {
+		signedIn = false;
+		await expect(DELETE(del())).rejects.toMatchObject({ status: 401 });
+		expect(mockGetById).not.toHaveBeenCalled();
+	});
+
+	it('refuses a position without event.manage with 403, uploading nothing', async () => {
+		heldPositions = ['treasurer'];
+		const ok = new File([bytes(1024)], 'poster.png', { type: 'image/png' });
+		await expect(POST(req(ok))).rejects.toMatchObject({ status: 403 });
+		await expect(DELETE(del())).rejects.toMatchObject({ status: 403 });
+		expect(mockUploadFile).not.toHaveBeenCalled();
+		expect(mockDetachSlot).not.toHaveBeenCalled();
+	});
+
+	// Every combination of positions a person could hold, including none. The
+	// guard used to be `hasAnyRole(['admin', 'staff'])`; this pins that the
+	// capability admits exactly the same people, so the swap moves no one.
+	const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
+		positionOrder.filter((_, i) => mask & (1 << i))
+	);
+	it.each(subsets.map((held) => [held.join('+') || '(none)', held] as const))(
+		'admits %s exactly as the role check did',
+		async (_, held) => {
+			heldPositions = held;
+			const before = held.includes('admin') || held.includes('staff');
+			const outcome = await DELETE(del()).then(
+				() => 'allowed',
+				(e: { status: number }) => e.status
+			);
+			expect(outcome).toBe(before ? 'allowed' : 403);
+		}
+	);
 });
