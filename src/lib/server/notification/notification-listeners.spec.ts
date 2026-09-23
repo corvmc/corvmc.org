@@ -140,6 +140,7 @@ describe('registerAllNotificationListeners', () => {
 			'equipment.checked_out',
 			'equipment.loan_due',
 			'equipment.returned',
+			'equipment.report_resolved',
 			'contact.form_submitted',
 			'volunteer.hours_submitted',
 			'volunteer.hours_approved',
@@ -714,6 +715,29 @@ describe('equipment.returned handler', () => {
 		const model = mockDispatch.mock.calls[0][0].email;
 		expect(detailLabels(model)).not.toContain('Total charge');
 		expect(detailText(model)).toContain('1 day');
+	});
+});
+
+describe('equipment.report_resolved handler', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	it('tells the reporter the unit is fixed and links back to it', async () => {
+		await emit('equipment.report_resolved', {
+			workOrderId: 'wo-1',
+			assetId: 'as-1',
+			userId: 'user-1',
+			userName: 'Bob',
+			userEmail: 'user@test.com',
+			equipmentName: 'Fender Twin (AMP-3)'
+		});
+
+		const params = mockDispatch.mock.calls[0][0];
+		expect(params.type).toBe('equipment_report_resolved');
+		expect(params.userId).toBe('user-1');
+		expect(params.title).toContain('Fender Twin (AMP-3)');
+		expect(params.href).toBe('/member/equipment/assets/as-1');
+		expect(params.email.recipientName).toBe('Bob');
+		expect(paragraphText(params.email)).toContain('report');
 	});
 });
 

@@ -339,6 +339,19 @@ export interface EquipmentReturnedEvent {
 	daysBorrowed: number;
 }
 
+/**
+ * A report somebody filed against a unit was closed because the work that
+ * answered it finished. One per reporter, however many times they reported it.
+ */
+export interface EquipmentReportResolvedEvent {
+	workOrderId: string;
+	assetId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	equipmentName: string;
+}
+
 export interface AnnouncementPublishedEvent {
 	announcementId: string;
 	groupId: string;
@@ -745,6 +758,7 @@ export type DomainEvents = {
 	'equipment.loan_due': EquipmentLoanDueEvent;
 	'equipment.checked_out': EquipmentCheckedOutEvent;
 	'equipment.returned': EquipmentReturnedEvent;
+	'equipment.report_resolved': EquipmentReportResolvedEvent;
 	'group_invite.created': GroupInviteCreatedEvent;
 	'announcement.published': AnnouncementPublishedEvent;
 	'inbox.message_received': InboxMessageReceivedEvent;

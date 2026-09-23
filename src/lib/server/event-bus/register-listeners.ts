@@ -44,6 +44,9 @@ export function registerListeners(): void {
 	// --- A member's first booking raises an orientation shift ---
 	registerOrientationGroup();
 
+	// --- Scheduled work that finished closes the equipment reports it answered ---
+	registerWorkRequestGroup();
+
 	// --- A confirmed booking gets its door code now, not the morning of ---
 	registerLockListeners();
 
@@ -66,6 +69,12 @@ async function registerLockListeners(): Promise<void> {
 	domainEvents.on('reservation.confirmed', async ({ data: event }) => {
 		await provisionOnConfirm(event.reservationId);
 	});
+}
+
+async function registerWorkRequestGroup(): Promise<void> {
+	const { registerWorkRequestListeners } =
+		await import('$lib/server/inventory/work-request-listener');
+	registerWorkRequestListeners();
 }
 
 /**

@@ -8,6 +8,7 @@ import { toGenericRef } from '$lib/server/entity/refs';
 import { AssetNotFoundError, setAssetStatus } from './asset-service';
 import type { EquipmentCondition } from '$lib/config';
 import { DomainError } from '$lib/server/domain-error';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 
 /**
  * Flags: what somebody noticed about one unit.
@@ -209,11 +210,10 @@ export async function dismissFlag(id: string, staffUserId: string, notes?: strin
 }
 
 /**
- * Close every flag a work order answered.
+ * Close every flag a work order answered, and tell each reporter once.
  *
- * Returns the reporters, deduped, so the caller can tell them it is fixed — the
- * thing that never happened before and the reason anybody reports a second time.
- * A null reporter is a deleted account, not a bug.
+ * Returns the reporters, deduped. A null reporter is a deleted account, not a
+ * bug. A failed notice never undoes the close: the reports are already shut.
  */
 export async function resolveFlagsForWorkOrder(
 	workOrderId: string,
@@ -233,9 +233,43 @@ export async function resolveFlagsForWorkOrder(
 		.where(and(eq(workRequest.workOrderId, workOrderId), eq(workRequest.status, 'pending')))
 		.returning();
 
-	return [
+	const reporters = [
 		...new Set(rows.map((r) => r.reportedByUserId).filter((id): id is string => id !== null))
 	];
+	if (rows.length > 0) await announceResolved(workOrderId, rows[0].assetId, reporters);
+	return reporters;
+}
+
+/** `sendToWorkOrder` only attaches reports on the work order's own unit, so one asset. */
+async function announceResolved(workOrderId: string, assetId: string, reporters: string[]) {
+	const [unit] = await db
+		.select({ name: inventoryItem.name, assetTag: inventoryAsset.assetTag })
+		.from(inventoryAsset)
+		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
+		.where(eq(inventoryAsset.id, assetId))
+		.limit(1);
+	if (!unit || reporters.length === 0) return;
+
+	const people = await db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(user)
+		.where(inArray(user.id, reporters));
+	const equipmentName = unit.assetTag ? `${unit.name} (${unit.assetTag})` : unit.name;
+
+	for (const person of people) {
+		try {
+			await domainEvents.emit('equipment.report_resolved', {
+				workOrderId,
+				assetId,
+				userId: person.id,
+				userName: person.name,
+				userEmail: person.email,
+				equipmentName
+			});
+		} catch (err) {
+			console.error(`[work-request] fixed notice failed for ${person.id}:`, err);
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------
