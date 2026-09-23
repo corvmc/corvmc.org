@@ -549,13 +549,17 @@ of their own — help articles already carry publish state, `minRole`, a categor
 and a sync path. The member view filters to published, so a draft imported by
 `help:sync` cannot leak to whoever scanned the amp.
 
-A damage report is a **ledger entry, not a report table**:
-`reportDamage()` in `resources-service.ts` changes the unit's condition and
-writes a `repair_out` movement carrying the note and the reporter. There is no
-queue because the movement history already is one. It takes the unit out of
-service immediately on a member's say-so — the cost of a wrong report is a
-staffer clicking it back, the cost of leaving a broken amp bookable is the next
-member's session, and `actorId` makes a pattern attributable.
+A damage report is a **`work_request` row**: `reportDamage()` in
+`resources-service.ts` calls `raiseFlag()`, which records the note, the reporter and
+whether the unit is still usable, and takes an in-service unit out of service only when
+the reporter says it is not. A second report on the same unit is a second row — three
+people noticing one crackle is the signal.
+
+Staff triage them on the flags surface, `/staff/flags/equipment` (#552), behind
+`inventory.manageAssets`: dismiss, or send to a work order — an open one on the same unit
+or a new one — and every other untriaged report on that unit goes with it
+(`sendToWorkOrder`). Resolving the work order closes every report attached to it
+(`resolveWorkOrder` → `resolveFlagsForWorkOrder`).
 
 **Where it breaks** — a report appears to do nothing: check the form validated.
 A select's empty option submits `''`, which `z.enum([...]).optional()` rejects,

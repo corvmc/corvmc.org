@@ -35,7 +35,12 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
+vi.mock('../inventory/work-request-service', () => ({
+	resolveFlagsForWorkOrder: vi.fn().mockResolvedValue([])
+}));
+
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import { resolveFlagsForWorkOrder } from '../inventory/work-request-service';
 import type { SQL } from 'drizzle-orm';
 import {
 	cancelShift,
@@ -351,6 +356,14 @@ describe('work orders', () => {
 		const sets = chainCalls.filter((c) => c.method === 'set').map((c) => c.args[0]);
 		expect(sets.some((v: any) => v.status === 'completed')).toBe(true);
 		expect(sets.some((v: any) => v.resolvedAt instanceof Date)).toBe(true);
+	});
+
+	it('closes the equipment reports it answered', async () => {
+		selectResult = [shiftRow({ startsAt: null, endsAt: null, resolvedAt: null })];
+
+		await resolveWorkOrder('shift-1', { resolvedByUserId: 'staff-1', notes: 'New jack fitted' });
+
+		expect(resolveFlagsForWorkOrder).toHaveBeenCalledWith('shift-1', 'staff-1', 'New jack fitted');
 	});
 
 	it('refuses to close the same work twice', async () => {

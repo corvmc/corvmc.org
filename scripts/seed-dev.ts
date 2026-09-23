@@ -71,6 +71,7 @@ import { seedBandEnquiries } from './seed/band-enquiries';
 import { seedGroupChats } from './seed/group-chats';
 import { seedContentFlags } from './seed/content-flags';
 import { seedContractors } from './seed/contractors';
+import { seedEquipmentReports } from './seed/equipment-reports';
 import { seedDutyLists } from './seed/duty-lists';
 import { seedOrientation } from './seed/orientation';
 import {
@@ -230,6 +231,11 @@ async function main() {
 	const volunteerInterests = await seedVolunteerInterests(activeVolunteers, volunteerRoles);
 	const certifications = await seedCertifications(allUsers, volunteerRoles);
 	const workOrders = await seedWorkOrders(activeVolunteers, volunteerRoles, events);
+	const equipmentReports = await seedEquipmentReports(
+		users.slice(1, 4),
+		adminUser.id,
+		(volunteerRoles.find((r) => /repair/i.test(r.name)) ?? volunteerRoles[0])?.id
+	);
 	// After the shifts, which is new: half the completed signups get an hour log
 	// pointing back at the shift that earned them.
 	const volunteerHours = await seedVolunteerHours(
@@ -319,6 +325,9 @@ async function main() {
 	);
 	console.log(
 		`  ${contractors.contractors} contractors, ${contractors.jobs} contractor jobs (1 overdue, 1 unit at the shop, 1 lapsed certificate)`
+	);
+	console.log(
+		`  ${equipmentReports.reports} equipment reports in every triage stage, ${equipmentReports.workOrders} work order raised from them`
 	);
 	console.log(`  ${directory.entries} directory entries, ${directory.tags} directory tags`);
 	console.log(`  ${directoryPersonas.users} directory matching demo personas`);
