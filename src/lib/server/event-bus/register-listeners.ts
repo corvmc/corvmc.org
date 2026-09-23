@@ -46,6 +46,14 @@ export function registerListeners(): void {
 
 	// --- A confirmed booking gets its door code now, not the morning of ---
 	registerLockListeners();
+
+	// --- Staff actions that surface as domain events, into the audit log ---
+	registerAuditGroup();
+}
+
+async function registerAuditGroup(): Promise<void> {
+	const { registerAuditListeners } = await import('$lib/server/audit/audit-listeners');
+	registerAuditListeners();
 }
 
 /**

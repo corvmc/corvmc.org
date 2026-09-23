@@ -313,6 +313,12 @@ export async function banUser(userId: string, opts: { actorId: string; reason: s
 
 	if (!row) throw new UserNotFoundError();
 
+	await recordAuditEntry({
+		action: 'user.banned',
+		subject: { type: 'user', id: userId, label: row.name },
+		details: { reason: opts.reason }
+	});
+
 	if (!row.deletedAt) await deactivateUser(userId, { actor: 'staff' });
 
 	await sendAccountSuspendedEmail({ toEmail: row.email, name: row.name });
@@ -332,6 +338,12 @@ export async function unbanUser(userId: string) {
 		.returning();
 
 	if (!row) throw new UserNotFoundError();
+
+	await recordAuditEntry({
+		action: 'user.unbanned',
+		subject: { type: 'user', id: userId, label: row.name },
+		details: {}
+	});
 
 	const restored = await reactivateUser(userId);
 	await sendAccountRestoredEmail({ toEmail: row.email, name: row.name });
