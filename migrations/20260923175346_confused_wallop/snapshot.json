@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "44b6220f-1245-4c8a-ba12-d467c95f7101",
+  "id": "023727f3-e732-46cc-8dc3-9de16b3ed603",
   "prevIds": [
-    "cb80684a-3ba7-416e-aefa-3a81c9b09483"
+    "44b6220f-1245-4c8a-ba12-d467c95f7101"
   ],
   "ddl": [
     {
@@ -445,16 +445,6 @@
       "default": null,
       "generated": null,
       "name": "provider_id",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'local:credential'",
-      "generated": null,
-      "name": "issuer",
       "entityType": "columns",
       "table": "account"
     },
