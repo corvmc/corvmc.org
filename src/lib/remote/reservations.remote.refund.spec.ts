@@ -39,7 +39,7 @@ const requireCapability = vi.fn(async () => undefined);
 vi.mock('$lib/server/authorization', () => ({
 	requireUser: () => staffUser,
 	requireCapability,
-	isStaff: vi.fn(async () => true),
+	can: vi.fn(async () => true),
 	requireCapabilityOrOwner: vi.fn(async () => 'staff'),
 	topPositionFor: vi.fn()
 }));
