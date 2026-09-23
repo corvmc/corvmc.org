@@ -135,7 +135,8 @@ const {
 	getLastLockJobRun,
 	issueLockSelfTest,
 	revokeLockSelfTest,
-	syncAccessWindow
+	syncAccessWindow,
+	provisionOnConfirm
 } = await import('./lock-service');
 
 // ---------------------------------------------------------------------------
@@ -409,13 +410,32 @@ describe('syncAccessWindow', () => {
 		expect(updateCalls[0]).toMatchObject({ lockCode: '4242' });
 	});
 
-	it('leaves a codeless booking on another day to the cron', async () => {
+	// The cron has already passed over anything inside its window, not only today.
+	it('provisions a codeless booking moved into the confirmation window', async () => {
 		selectResults.push([
 			{
 				id: 'res-1',
 				status: 'confirmed',
 				startsAt: tomorrowAt('19:00'),
 				endsAt: tomorrowAt('21:00'),
+				lockCode: null,
+				memberName: 'Alice'
+			}
+		]);
+
+		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
+
+		expect(result.synced).toBe(true);
+		expect(mockCreateTemporaryUser).toHaveBeenCalledOnce();
+	});
+
+	it('leaves a codeless booking beyond the confirmation window to the cron', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				status: 'confirmed',
+				startsAt: new Date(`${appDay(10)}T19:00:00Z`),
+				endsAt: new Date(`${appDay(10)}T21:00:00Z`),
 				lockCode: null,
 				memberName: 'Alice'
 			}
@@ -719,6 +739,89 @@ describe('provisioning window', () => {
 		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
 			expect.objectContaining({ name: 'Jordan' })
 		);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// provisionOnConfirm — the member has their code when they confirm (#821)
+// ---------------------------------------------------------------------------
+
+describe('provisionOnConfirm', () => {
+	const inWindow = (days: number) => new Date(Date.now() + days * 24 * 60 * 60_000);
+	const confirmedRow = (overrides: Record<string, unknown> = {}) => ({
+		id: 'res-1',
+		status: 'confirmed',
+		startsAt: inWindow(1),
+		endsAt: new Date(inWindow(1).getTime() + 3_600_000),
+		lockCode: null,
+		createdByUserId: 'user-1',
+		memberName: 'Jordan',
+		...overrides
+	});
+
+	it('mints a code for a booking confirmed inside the window', async () => {
+		selectResults.push([confirmedRow()]);
+
+		await expect(provisionOnConfirm('res-1')).resolves.toBe(true);
+
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
+			expect.objectContaining({ name: 'Jordan', code: 4242 })
+		);
+		expect(updateCalls).toContainEqual(expect.objectContaining({ lockCode: '4242' }));
+	});
+
+	// A Stripe charge confirms weeks ahead; minting then would load the lock's
+	// finite user table with codes nobody needs yet.
+	it('leaves a booking beyond the window to the daily job', async () => {
+		selectResults.push([confirmedRow({ startsAt: inWindow(10), endsAt: inWindow(10.1) })]);
+
+		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+	});
+
+	it('does not mint a second code for a booking that already has one', async () => {
+		selectResults.push([confirmedRow({ lockCode: '1111' })]);
+
+		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+	});
+
+	it('ignores a booking that is not confirmed', async () => {
+		selectResults.push([confirmedRow({ status: 'scheduled' })]);
+
+		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+	});
+
+	it('skips a member who already holds a standing code', async () => {
+		selectResults.push([confirmedRow()]);
+		mockHasActiveMemberCode.mockResolvedValue(true);
+
+		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
+		expect(mockHasActiveMemberCode).toHaveBeenCalledWith('user-1');
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+	});
+
+	// The member is waiting on the confirm; the daily job is the backstop.
+	it('never throws when the lock API fails', async () => {
+		selectResults.push([confirmedRow()]);
+		mockCreateTemporaryUser.mockRejectedValueOnce(new Error('U-tec 503'));
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
+		expect(updateCalls).toHaveLength(0);
+
+		consoleSpy.mockRestore();
+	});
+
+	it('never throws when the member-code check fails', async () => {
+		selectResults.push([confirmedRow()]);
+		mockHasActiveMemberCode.mockRejectedValueOnce(new Error('D1 unavailable'));
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
+
+		consoleSpy.mockRestore();
 	});
 });
 

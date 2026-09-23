@@ -55,6 +55,12 @@ vi.mock('$lib/server/reservation/waitlist-service', () => ({
 	promoteNextWaitlisted: (...args: unknown[]) => mockPromoteNextWaitlisted(...args)
 }));
 
+// Best-effort by contract: it never throws, so the listener needs no guard.
+const mockProvisionOnConfirm = vi.fn().mockResolvedValue(true);
+vi.mock('$lib/server/lock/lock-service', () => ({
+	provisionOnConfirm: (...args: unknown[]) => mockProvisionOnConfirm(...args)
+}));
+
 // The waitlist listener reads the cancelled reservation's time range back out of
 // the database. One row, whatever it is asked for.
 const cancelledRow = {
@@ -255,5 +261,20 @@ describe('reservation.cancelled — waitlist promotion', () => {
 		await fire({ ...cancellation, cancelledBy: 'system', cause: 'waitlist_expired' });
 
 		expect(mockPromoteNextWaitlisted).not.toHaveBeenCalled();
+	});
+});
+
+describe('reservation.confirmed — door code', () => {
+	it('mints the door code for the booking that was just confirmed', async () => {
+		const { registerListeners } = await import('./register-listeners');
+		registerListeners();
+		await vi.dynamicImportSettled();
+
+		await registeredHandlers['reservation.confirmed'][0]({
+			name: 'reservation.confirmed',
+			data: { reservationId: 'res-1', userId: 'user-1' }
+		});
+
+		expect(mockProvisionOnConfirm).toHaveBeenCalledWith('res-1');
 	});
 });

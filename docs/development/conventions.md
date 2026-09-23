@@ -88,7 +88,7 @@ So when a feature lands, do three things in the same PR:
 2. **Move the spec to `docs/specs/shipped/`** and fix the links that pointed at it. What
    survives there is the design rationale — the options weighed and rejected — which is the
    half no manual article ever carries.
-3. **If only part of it shipped, split it.** `specs/reservation-confirmation-window.md` is
+3. **If only part of it shipped, split it.** `specs/shipped/reservation-confirmation-window.md` was
    the worked example: the shipped phases became prose in business-workflows §1 and the file
    was rewritten down to the one phase that was never built.
 
