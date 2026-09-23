@@ -12,6 +12,9 @@
 	import AddressCard from '$lib/components/ui/AddressCard.svelte';
 	import { canonicalAddress } from '$lib/utils/canonical-address';
 	import PressKitCard from './PressKitCard.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { getPressKitProgress } from '$lib/remote/press-kit.remote';
+	import { retryQuery } from '$lib/utils/retry-query';
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
@@ -41,6 +44,12 @@
 	{#if isOwnerOrAdmin}
 		<svelte:boundary>
 			<PressKitCard slug={band.slug} />
+
+			{#snippet failed(_error, reset)}
+				<Alert type="warning" reset={() => retryQuery(getPressKitProgress(band.slug), reset)}>
+					Your press kit progress didn't load. The rest of the dashboard is up to date.
+				</Alert>
+			{/snippet}
 		</svelte:boundary>
 	{/if}
 

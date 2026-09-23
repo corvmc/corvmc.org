@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import { errorMessage } from '$lib/error-message';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -874,6 +875,12 @@
 								<span class="loading loading-md loading-spinner"></span>
 							</CardBody>
 						</Card>
+					{/snippet}
+
+					{#snippet failed(error, reset)}
+						<Alert type="warning" {reset}>
+							Could not load the edit form: {errorMessage(error)}
+						</Alert>
 					{/snippet}
 				</svelte:boundary>
 			{/if}

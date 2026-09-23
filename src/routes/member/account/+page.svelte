@@ -9,6 +9,8 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import { retryQuery } from '$lib/utils/retry-query';
+	import { getMyMessagingSettings } from '$lib/remote/direct-messages.remote';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -174,7 +176,15 @@
 	</InfoCard>
 
 	<!-- Direct messaging -->
-	<DirectMessagesSection />
+	<svelte:boundary>
+		<DirectMessagesSection />
+
+		{#snippet failed(_error, reset)}
+			<Alert type="warning" reset={() => retryQuery(getMyMessagingSettings(), reset)}>
+				Your direct message settings didn't load. The rest of your account is up to date.
+			</Alert>
+		{/snippet}
+	</svelte:boundary>
 
 	<EmailSubscriptionsSection />
 

@@ -5,6 +5,9 @@
 	import Table from '$lib/components/ui/Table.svelte';
 	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { errorMessage } from '$lib/error-message';
+	import { retryQuery } from '$lib/utils/retry-query';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
@@ -141,5 +144,11 @@
 				</InfoCard>
 			{/if}
 		{/await}
+
+		{#snippet failed(error, reset)}
+			<Alert type="warning" reset={() => retryQuery(instructors, reset)}>
+				Could not load instructors: {errorMessage(error)}
+			</Alert>
+		{/snippet}
 	</svelte:boundary>
 </PageContent>
