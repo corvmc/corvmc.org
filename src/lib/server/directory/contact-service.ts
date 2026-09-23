@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { contact, type ContactSource } from '$lib/server/db/schema/contact';
 import { subscriber } from '$lib/server/db/schema/marketing';
 import { and, eq, isNull, lte } from 'drizzle-orm';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability, requireStaff } from '$lib/server/authorization';
 
 /**
  * The **only** module permitted to touch the `contact` table.
@@ -13,9 +13,9 @@ import { requireStaff } from '$lib/server/authorization';
  * public query touches is one refactor away from being serialized. Reaching this
  * data has to be an explicit act, and this is the only place it can happen.
  *
- * Every export here calls `requireStaff()` **itself**, rather than trusting the
- * caller to have done it. A guard the caller owns is a guard a new caller can
- * forget; a guard the data owns cannot be.
+ * Every export here guards **itself** (reads on `directory.readContact`),
+ * rather than trusting the caller to have done it. A guard the caller owns is a
+ * guard a new caller can forget; a guard the data owns cannot be.
  *
  * Nothing here returns a shape that reaches a client unshaped — the remote layer
  * picks fields explicitly.
@@ -62,9 +62,9 @@ async function linkSubscriber(email: string | null | undefined): Promise<string 
 	return row.id;
 }
 
-/** The contact for one party. Staff-only, and the whole row. */
+/** The contact for one party. Needs `directory.readContact`, and the whole row. */
 export async function getContact(entryId: string) {
-	await requireStaff();
+	await requireCapability('directory.readContact');
 
 	const [row] = await db.select().from(contact).where(eq(contact.entryId, entryId)).limit(1);
 
@@ -84,6 +84,7 @@ export async function upsertContact(
 	data: ContactData,
 	source: ContactSource
 ): Promise<void> {
+	// Still any position: no capability names a staff-entered write yet (#1404).
 	await requireStaff();
 	await writeContact(entryId, data, source);
 }
@@ -93,7 +94,7 @@ export async function upsertContact(
  *
  * Exists for `/act/{token}`, which is authorized by a token rather than a
  * session — the act filling in its own contact sheet has no account, and
- * `requireStaff()` would refuse the one caller the spec calls the privacy-best
+ * a session guard would refuse the one caller the spec calls the privacy-best
  * acquisition path. Not exported beyond this module's own callers by accident:
  * it is exported deliberately and named so that reaching for it looks like what
  * it is.
@@ -168,7 +169,7 @@ export async function archiveContactForClaim(entryId: string): Promise<void> {
  * a horizon that is recorded and one that is enforced.
  */
 export async function listExpiredContacts(now: Date = new Date()) {
-	await requireStaff();
+	await requireCapability('directory.readContact');
 
 	return db
 		.select({
@@ -183,7 +184,7 @@ export async function listExpiredContacts(now: Date = new Date()) {
 
 /** Whether a party has any contact on file, for a staff list. No details. */
 export async function hasContact(entryId: string): Promise<boolean> {
-	await requireStaff();
+	await requireCapability('directory.readContact');
 
 	const [row] = await db
 		.select({ id: contact.id })
