@@ -121,6 +121,8 @@ export interface ReservationCancelledEvent {
 	startTime: string;
 	endTime: string;
 	cancelledBy: 'member' | 'staff' | 'owner' | 'system';
+	/** The free-text reason `cancel()` was given, when there was one. */
+	reason?: string;
 	/**
 	 * Why the cancellation happened, on the paths where the member has already
 	 * been told about it by a more specific event. Today only the waitlist

@@ -18,6 +18,31 @@ function entry<E extends AuditEntry>(action: E['action'], details: E['details'])
 }
 
 describe('summarizeAuditEntry', () => {
+	it('dates a staff cancellation and quotes its reason', () => {
+		const d = {
+			reservationId: 'r1',
+			date: 'Thu, May 21',
+			startTime: '10:00 AM',
+			endTime: '11:00 AM'
+		};
+		expect(
+			summarizeAuditEntry(entry('reservation.cancelled_by_staff', { ...d, reason: 'Flooded' }))
+		).toBe('Cancelled the Thu, May 21 10:00 AM–11:00 AM reservation: “Flooded”');
+		expect(
+			summarizeAuditEntry(entry('reservation.cancelled_by_staff', { ...d, reason: null }))
+		).toBe('Cancelled the Thu, May 21 10:00 AM–11:00 AM reservation');
+	});
+
+	it('names the band deactivated or reactivated', () => {
+		const d = { bandId: 'b1', bandName: 'The Velvet Underground' };
+		expect(summarizeAuditEntry(entry('band.deactivated', d))).toBe(
+			'Deactivated The Velvet Underground'
+		);
+		expect(summarizeAuditEntry(entry('band.reactivated', d))).toBe(
+			'Reactivated The Velvet Underground'
+		);
+	});
+
 	it('names roles granted and removed', () => {
 		expect(
 			summarizeAuditEntry(entry('user.roles_changed', { added: ['admin'], removed: ['member'] }))

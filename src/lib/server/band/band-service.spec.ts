@@ -141,6 +141,11 @@ vi.mock('$lib/server/private-storage', () => ({
 	deletePrivateObject: vi.fn().mockResolvedValue(undefined)
 }));
 
+const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (entry: unknown) => recordAuditEntry(entry)
+}));
+
 /** Keys `deleteBand` finds for the group it is about to cascade away. */
 let documentKeys: { id: string; key: string }[] = [];
 
@@ -159,6 +164,7 @@ import {
 	update,
 	deleteBand,
 	deactivate,
+	reactivate,
 	invite,
 	acceptInvitation,
 	declineInvitation,
@@ -516,6 +522,43 @@ describe('BandService', () => {
 				'Band deactivated',
 				expect.objectContaining({ actor: 'staff' })
 			);
+		});
+
+		it('writes a band.deactivated audit entry with the band as subject', async () => {
+			recordAuditEntry.mockClear();
+			vi.mocked(db.batch).mockResolvedValueOnce([[mockBand], []] as any);
+			selectResultQueue = [[]];
+
+			await deactivate('band-1');
+
+			expect(recordAuditEntry).toHaveBeenCalledWith({
+				action: 'band.deactivated',
+				subject: { type: 'band', id: 'band-1', label: 'The Velvet Underground' },
+				details: { bandId: 'band-1', bandName: 'The Velvet Underground' }
+			});
+		});
+	});
+
+	describe('reactivate', () => {
+		it('writes a band.reactivated audit entry', async () => {
+			recordAuditEntry.mockClear();
+			vi.mocked(db.batch).mockResolvedValueOnce([[mockBand], []] as any);
+
+			await reactivate('band-1');
+
+			expect(recordAuditEntry).toHaveBeenCalledWith({
+				action: 'band.reactivated',
+				subject: { type: 'band', id: 'band-1', label: 'The Velvet Underground' },
+				details: { bandId: 'band-1', bandName: 'The Velvet Underground' }
+			});
+		});
+
+		it('writes nothing when the band was not deactivated', async () => {
+			recordAuditEntry.mockClear();
+			vi.mocked(db.batch).mockResolvedValueOnce([[], []] as any);
+
+			await expect(reactivate('band-1')).rejects.toBeInstanceOf(BandNotFoundError);
+			expect(recordAuditEntry).not.toHaveBeenCalled();
 		});
 	});
 

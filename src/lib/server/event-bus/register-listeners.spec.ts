@@ -61,6 +61,12 @@ vi.mock('$lib/server/lock/lock-service', () => ({
 	provisionOnConfirm: (...args: unknown[]) => mockProvisionOnConfirm(...args)
 }));
 
+// Tested in its own spec; mocked so the waitlist handler stays the only one.
+const mockRegisterAuditListeners = vi.fn();
+vi.mock('$lib/server/audit/audit-listeners', () => ({
+	registerAuditListeners: () => mockRegisterAuditListeners()
+}));
+
 // The waitlist listener reads the cancelled reservation's time range back out of
 // the database. One row, whatever it is asked for.
 const cancelledRow = {
@@ -121,6 +127,14 @@ describe('registerListeners', () => {
 		// (#825), last on purpose: the four above have already given the member
 		// what they paid for by the time either runs.
 		expect(registeredHandlers['checkout.completed'].length).toBe(6);
+	});
+
+	it('registers the audit log listeners', async () => {
+		const { registerListeners } = await import('./register-listeners');
+		registerListeners();
+		await vi.dynamicImportSettled();
+
+		expect(mockRegisterAuditListeners).toHaveBeenCalledOnce();
 	});
 
 	it('invokes handleReservationCheckout with stripe session', async () => {
