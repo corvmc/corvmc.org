@@ -3,6 +3,8 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { retryQuery } from '$lib/utils/retry-query';
 	import Button from '$lib/components/ui/Button.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import InstructorCard from '$lib/components/directory/InstructorCard.svelte';
@@ -122,5 +124,11 @@
 				</div>
 			{/if}
 		{/await}
+
+		{#snippet failed(_error, reset)}
+			<Alert type="warning" reset={() => retryQuery(instructors, reset)}>
+				The list of teachers didn't load just now.
+			</Alert>
+		{/snippet}
 	</svelte:boundary>
 </PageContent>

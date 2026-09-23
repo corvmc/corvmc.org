@@ -2,6 +2,8 @@
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import { SubscribeAction, UnsubscribeAction } from '$lib/components/actions';
 	import { getMyEmailSubscriptions } from '$lib/remote/account.remote';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { retryQuery } from '$lib/utils/retry-query';
 
 	/**
 	 * The account page's Email Subscriptions card, owning its own query. See DirectMessagesSection.
@@ -57,4 +59,10 @@
 			<p class="text-sm text-error">Failed to load subscriptions.</p>
 		{/await}
 	</InfoCard>
+
+	{#snippet failed(_error, reset)}
+		<Alert type="warning" reset={() => retryQuery(lists, reset)}>
+			Your email subscriptions didn't load. The rest of your account is up to date.
+		</Alert>
+	{/snippet}
 </svelte:boundary>

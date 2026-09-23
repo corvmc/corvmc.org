@@ -320,7 +320,6 @@
 	"src/lib/server/audio/staff-audio-service.ts",
 	"src/lib/server/auth-emails.ts",
 	"src/lib/server/auth-fields.ts",
-	"src/lib/server/auth.account-issuer.spec.ts",
 	"src/lib/server/auth.additional-fields.spec.ts",
 	"src/lib/server/auth.ts",
 	"src/lib/server/authorization.spec.ts",

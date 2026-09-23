@@ -405,11 +405,8 @@ export async function confirm(reservationId: string): Promise<void> {
  *
  * The alternative — cancel the row and create a replacement — loses everything
  * the row carries that is not in the caller's hands, and the expensive one is
- * `lockCode`. Door codes are minted by a once-daily cron that only looks at
- * `confirmed` rows with a null code starting today (`lock/lock-service.ts`), so
- * a replacement created after that cron has run is a booking nobody can open
- * the door for, and the code already issued keeps working against a cancelled
- * row until its original window ends.
+ * `lockCode`. A replacement would be minted a second code, and the code already
+ * issued keeps working against a cancelled row until its original window ends.
  *
  * Same row, same status, same code. The caller is responsible for re-syncing
  * the lock's own window — that is `lock-service.syncAccessWindow`, and it is

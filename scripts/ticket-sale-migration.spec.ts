@@ -16,7 +16,7 @@ const COPY = readFileSync(
 	join(
 		import.meta.dirname,
 		'..',
-		'migrations/20260923183048_ticket_sale_from_listing/migration.sql'
+		'migrations/20260923184313_ticket_sale_from_listing/migration.sql'
 	),
 	'utf8'
 );

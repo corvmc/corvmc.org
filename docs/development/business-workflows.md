@@ -16,7 +16,7 @@ and reconcile deliberately.
 ## 1. Reservation booking, confirmation, and payment
 
 Spec: [specs/reservation-system-spec.md](../specs/shipped/reservation-system-spec.md) ·
-[specs/reservation-confirmation-window.md](../specs/reservation-confirmation-window.md) ·
+[specs/reservation-confirmation-window.md](../specs/shipped/reservation-confirmation-window.md) ·
 [specs/staff-reservations-spec.md](../specs/shipped/staff-reservations-spec.md)
 
 ### The story
@@ -67,6 +67,16 @@ Stripe → POST /api/stripe/webhook            src/routes/api/stripe/webhook/+se
 The listener is idempotent (only transitions `scheduled`/`confirmed` rows), and the webhook
 route returns 500 on handler failure so Stripe re-delivers.
 
+**Door code.** Every confirm path above ends in `announceConfirmed()`, which emits
+`reservation.confirmed`; a listener registered in
+`src/lib/server/event-bus/register-listeners.ts` calls `provisionOnConfirm()` in
+`src/lib/server/lock/lock-service.ts`. That mints the code on the lock straight away if the
+booking starts inside the confirmation window, has no code yet, and its member holds no standing
+code. It is best-effort and never throws — a U-tec failure must not fail a confirm — and
+the daily lock job (`runDailyLockJob()`, which provisions across the same window) picks up
+anything it missed. A booking confirmed further ahead by a Stripe charge gets its code from the
+daily job once the window reaches it.
+
 **The other half of the lifecycle — cron.** Four endpoints under `src/routes/api/cron/`
 (all `POST` with `Authorization: Bearer <CRON_SECRET>`, invoked by the Worker's own
 `scheduled` handler on native Cloudflare cron triggers — see the operations manual):
@@ -109,6 +119,9 @@ only stamps `refundedAt`, which `reservationPaymentState` reads ahead of `paidAt
   (created by an event) is holding the slot.
 - **Confirm button rejected with the window message** → expected outside 3 days before
   start; only a Stripe charge (or staff) commits earlier.
+- **Confirmed inside the window but no door code** → the confirm-time mint failed; look for
+  `Failed to provision lock access on confirm` in the logs. The next daily lock job (or Run now
+  in Staff Settings, or re-issue on the staff reservation page) mints it.
 - **Double-deducted credits** → shouldn't happen: `commitReservationCredits` is idempotent
   (keyed on the reservation). If suspected, read the `creditTransaction` ledger for the
   reservation id.

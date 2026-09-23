@@ -25,7 +25,8 @@ crons = [
   "0 16 * * *",   # daily batch, 8am PST / 9am PDT, in order:
                   #   generate-recurring-reservations, lock-access,
                   #   cancel-stale-tickets, sweep-audio-purchases, sweep-media
-  "0 17 * * 1",   # reconcile-ledger, Mondays 9am PST / 10am PDT
+  "0 17 * * MON", # reconcile-ledger, Mondays 9am PST / 10am PDT. Name weekdays:
+                  #   Cloudflare numbers them 1 = Sunday, Sentry 1 = Monday.
 ]
 
 # ---------------------------------------------------------------------------

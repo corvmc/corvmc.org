@@ -54,6 +54,24 @@ export class UserNotDeactivatedError extends DomainError {
 	}
 }
 
+export class UserBannedError extends DomainError {
+	readonly httpStatus = 409;
+
+	constructor() {
+		super('This account is banned; lift the ban to restore it');
+		this.name = 'UserBannedError';
+	}
+}
+
+export class CannotBanSelfError extends DomainError {
+	readonly httpStatus = 409;
+
+	constructor() {
+		super('You cannot ban your own account');
+		this.name = 'CannotBanSelfError';
+	}
+}
+
 export class UserHasLinkedRecordsError extends DomainError {
 	readonly httpStatus = 409;
 
@@ -213,10 +231,17 @@ export async function reactivateUser(userId: string) {
 	const [row] = await db
 		.update(user)
 		.set({ deletedAt: null, updatedAt: new Date() })
-		.where(and(eq(user.id, userId), isNotNull(user.deletedAt)))
+		.where(and(eq(user.id, userId), isNotNull(user.deletedAt), isNull(user.bannedAt)))
 		.returning();
 
-	if (!row) throw new UserNotFoundError();
+	if (!row) {
+		const [existing] = await db
+			.select({ bannedAt: user.bannedAt })
+			.from(user)
+			.where(eq(user.id, userId));
+		if (existing?.bannedAt) throw new UserBannedError();
+		throw new UserNotFoundError();
+	}
 
 	let subscription: 'resumed' | 'active' | 'lapsed' | 'none' = 'none';
 
@@ -240,6 +265,48 @@ export async function reactivateUser(userId: string) {
 	}
 
 	return { ...row, subscription };
+}
+
+/**
+ * Ban a member: record who decided and why, then deactivate the account.
+ *
+ * Enforcement is deactivation's, unchanged — sessions, door codes, future
+ * bookings and the subscription all go the same way, and nothing is deleted.
+ * What a ban adds is the record, and that `reactivateUser` refuses the account
+ * until `unbanUser` lifts it. An account the member already closed is banned
+ * without re-running offboarding, so they cannot quietly come back.
+ */
+export async function banUser(userId: string, opts: { actorId: string; reason: string }) {
+	if (userId === opts.actorId) throw new CannotBanSelfError();
+
+	const now = new Date();
+	const [row] = await db
+		.update(user)
+		.set({ bannedAt: now, bannedById: opts.actorId, banReason: opts.reason, updatedAt: now })
+		.where(and(eq(user.id, userId), isNull(user.bannedAt)))
+		.returning();
+
+	if (!row) throw new UserNotFoundError();
+
+	if (!row.deletedAt) await deactivateUser(userId, { actor: 'staff' });
+
+	return row;
+}
+
+/**
+ * Lift a ban and restore the account. The one way back from a ban, and the
+ * entry point a successful appeal would call.
+ */
+export async function unbanUser(userId: string) {
+	const [row] = await db
+		.update(user)
+		.set({ bannedAt: null, bannedById: null, banReason: null, updatedAt: new Date() })
+		.where(and(eq(user.id, userId), isNotNull(user.bannedAt)))
+		.returning();
+
+	if (!row) throw new UserNotFoundError();
+
+	return reactivateUser(userId);
 }
 
 /**

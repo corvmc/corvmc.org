@@ -244,14 +244,7 @@ async function reconcileSyncState(errors: string[]): Promise<number> {
  * especially now a member holding a standing code is skipped entirely.
  */
 async function provisionDailyAccess(errors: string[]): Promise<number> {
-	const tz = DEFAULT_TIMEZONE;
-	const now = new Date();
-	const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
-
-	const dayStart = buildDateInTz(todayStr, '00:00', tz);
-	const windowEnd = new Date(
-		buildDateInTz(todayStr, '23:59', tz).getTime() + CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000
-	);
+	const { start: dayStart, end: windowEnd } = provisioningWindow();
 
 	const rows = await db
 		.select({
@@ -291,6 +284,64 @@ async function provisionDailyAccess(errors: string[]): Promise<number> {
 	}
 
 	return count;
+}
+
+/**
+ * Bookings starting in here should already hold a code: from the start of today
+ * in club time through `CONFIRMATION_WINDOW_DAYS` past the end of it. Shared by
+ * the daily job and every path that mints outside it, so they cannot disagree.
+ */
+function provisioningWindow(now = new Date()): { start: Date; end: Date } {
+	const tz = DEFAULT_TIMEZONE;
+	const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
+	return {
+		start: buildDateInTz(todayStr, '00:00', tz),
+		end: new Date(
+			buildDateInTz(todayStr, '23:59', tz).getTime() + CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60_000
+		)
+	};
+}
+
+/**
+ * Mint the door code for a booking the moment it is confirmed.
+ *
+ * Best-effort, and never throws: the member is waiting on the confirm, U-tec is
+ * a third party, and the daily job picks up anything missed here. Applies the
+ * daily job's own rules — inside the window, no code yet, no standing code — so
+ * confirming early changes when a code appears, never how many exist.
+ */
+export async function provisionOnConfirm(reservationId: string): Promise<boolean> {
+	try {
+		const [row] = await db
+			.select({
+				id: reservation.id,
+				status: reservation.status,
+				startsAt: reservation.startsAt,
+				endsAt: reservation.endsAt,
+				lockCode: reservation.lockCode,
+				createdByUserId: reservation.createdByUserId,
+				memberName: user.name
+			})
+			.from(reservation)
+			.innerJoin(user, eq(reservation.createdByUserId, user.id))
+			.where(eq(reservation.id, reservationId))
+			.limit(1);
+
+		if (!row || row.status !== 'confirmed' || row.lockCode) return false;
+
+		const { start, end } = provisioningWindow();
+		if (row.startsAt < start || row.startsAt >= end) return false;
+
+		if (await hasActiveMemberCode(row.createdByUserId)) return false;
+
+		await provisionAccessFor(row);
+		return true;
+	} catch (err) {
+		console.error(
+			`Failed to provision lock access on confirm for reservation ${reservationId}: ${(err as Error).message}`
+		);
+		return false;
+	}
 }
 
 /**
@@ -357,9 +408,9 @@ async function provisionAccessFor(row: {
  *
  * Two cases, and the daily cron covers neither:
  *
- * - **No code yet, and the booking now starts today.** `provisionDailyAccess`
- *   runs once, in the morning. A show re-timed — or moved onto today — after
- *   that has already been passed over, so mint here or nobody gets in.
+ * - **No code yet, and the booking now starts inside the window.**
+ *   `provisionDailyAccess` runs once, in the morning. A show moved into the
+ *   window after that has already been passed over, so mint here.
  * - **A code already issued, and the window moved.** The lock enforces access
  *   through the temporary user's `daterange`, which still pins the old window:
  *   push a show later and the code stops working at the old end time. Re-point
@@ -379,7 +430,6 @@ export async function syncAccessWindow(
 	previousEndsAt: Date
 ): Promise<{ synced: boolean; errors: string[] }> {
 	const errors: string[] = [];
-	const tz = DEFAULT_TIMEZONE;
 
 	const [row] = await db
 		.select({
@@ -404,14 +454,9 @@ export async function syncAccessWindow(
 
 	// --- Nothing provisioned yet -------------------------------------------
 	if (!row.lockCode) {
-		const now = new Date();
-		const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
-		const startsToday =
-			row.startsAt >= buildDateInTz(todayStr, '00:00', tz) &&
-			row.startsAt < buildDateInTz(todayStr, '23:59', tz);
-
-		// Tomorrow's cron will pick it up; only today's has already gone past.
-		if (!startsToday) return { synced: false, errors };
+		// Beyond the window, a later run of the daily job picks it up.
+		const { start, end } = provisioningWindow();
+		if (row.startsAt < start || row.startsAt >= end) return { synced: false, errors };
 
 		try {
 			await provisionAccessFor(row);

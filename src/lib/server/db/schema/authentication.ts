@@ -113,7 +113,17 @@ export const user = sqliteTable(
 		 * a different question and carries a guardian process; that answer goes
 		 * stale on a birthday and this does not.
 		 */
-		dateOfBirth: integer('date_of_birth', { mode: 'timestamp' })
+		dateOfBirth: integer('date_of_birth', { mode: 'timestamp' }),
+		/**
+		 * A ban: staff removed this account on purpose, and it stays removed until
+		 * staff lift it. Always paired with `deletedAt`, which does the enforcing;
+		 * these columns are the record of who decided and why. `bannedById` is not
+		 * an FK so the record survives the acting staffer's account being purged.
+		 * Names follow better-auth's admin plugin (`banned`, `banReason`).
+		 */
+		bannedAt: integer('banned_at', { mode: 'timestamp' }),
+		bannedById: text('banned_by_id'),
+		banReason: text('ban_reason')
 	},
 	(t) => [uniqueIndex('user_member_number_unique').on(t.memberNumber)]
 );
@@ -140,17 +150,10 @@ export const account = sqliteTable('account', {
 	accountId: text('account_id').notNull(),
 	providerId: text('provider_id').notNull(),
 	/**
-	 * Load-bearing on the version we run, inert on the next one.
-	 *
-	 * better-auth 1.7 scoped account identity by issuer and matched on it during
-	 * credential sign-in, so a row without one authenticates nobody and the route
-	 * answers "User not found" — #272. **1.7.3 reverted that**, back to
-	 * `(providerId, accountId)`. We are on 1.7.2, so it still matters here; the
-	 * column comes out with the bump past 1.7.3, not before (#1164).
-	 *
-	 * Every row is `local:credential` because we are credential-only, which is
-	 * what lets it be a default — and the default is what covers the seed and
-	 * the e2e fixtures, which insert accounts directly.
+	 * Inert: better-auth >=1.7.3 identifies accounts by `(providerId, accountId)`
+	 * and neither reads nor writes this. It stays until a deploy of this version
+	 * has landed, because the Worker running before that one declares it. The
+	 * constant default fills it on every insert. Dropped in the follow-up to #1164.
 	 */
 	issuer: text('issuer').notNull().default('local:credential'),
 	userId: text('user_id')

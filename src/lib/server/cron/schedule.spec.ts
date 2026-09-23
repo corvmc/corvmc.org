@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { CRON_SCHEDULE, runScheduledJobs } from './schedule';
 import type { CronCheckIn } from './sentry-check-in';
 
@@ -27,7 +28,31 @@ function okFetcher() {
 	);
 }
 
+function wranglerCrons(): string[] {
+	const toml = readFileSync(new URL('../../../../wrangler.toml', import.meta.url), 'utf8');
+	const block = /^crons\s*=\s*\[([\s\S]*?)^\]/m.exec(toml)?.[1] ?? '';
+	return [...block.matchAll(/^\s*"([^"]+)"/gm)].map((m) => m[1]);
+}
+
 describe('CRON_SCHEDULE', () => {
+	it('has exactly the triggers wrangler.toml registers', () => {
+		const crons = wranglerCrons();
+		expect(crons.length).toBeGreaterThan(0);
+		expect(crons.toSorted()).toEqual(Object.keys(CRON_SCHEDULE).toSorted());
+	});
+
+	// Cloudflare numbers weekdays 1 = Sunday; Sentry, which receives the same
+	// string as the monitor schedule, numbers them 1 = Monday. A name means one
+	// day to both (#1328).
+	it.each(Object.keys(CRON_SCHEDULE))('names its weekday rather than numbering it: %s', (cron) => {
+		const dayOfWeek = cron.split(/\s+/)[4];
+		expect(dayOfWeek).not.toMatch(/\d/);
+	});
+
+	it('reconciles the ledger on Mondays', () => {
+		expect(CRON_SCHEDULE['0 17 * * MON']).toEqual(['/api/cron/reconcile-ledger']);
+	});
+
 	it('covers every cron endpoint exactly once', () => {
 		const scheduled = Object.values(CRON_SCHEDULE).flat();
 		expect(scheduled.toSorted()).toEqual(ALL_ENDPOINTS.toSorted());

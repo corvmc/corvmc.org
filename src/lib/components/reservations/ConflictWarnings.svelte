@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { formatSlotTime, toLocalTime } from '$lib/utils/format';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { errorMessage } from '$lib/error-message';
 
 	type Conflict = {
 		type: 'reservation' | 'closure';
@@ -105,5 +107,12 @@
 			<span class="loading loading-xs loading-spinner"></span>
 			<span class="text-subtle">Checking conflicts...</span>
 		</div>
+	{/snippet}
+
+	<!-- No `data-conflicts` here: the check never settled, so nothing may read it as clear. -->
+	{#snippet failed(error, reset)}
+		<Alert type="warning" {reset}>
+			Could not check this time for conflicts: {errorMessage(error)}
+		</Alert>
 	{/snippet}
 </svelte:boundary>
