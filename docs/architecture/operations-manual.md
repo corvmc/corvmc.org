@@ -428,12 +428,12 @@ Cron expressions are **UTC only** (no DST handling), so the Pacific wall-clock t
 shift an hour when DST flips. Weekdays are **named** (`MON`, never `1`): Cloudflare numbers
 them 1 = Sunday, while the Sentry monitor that receives the same string numbers them 1 = Monday.
 
-| Cron (UTC)     | Endpoints, in order                                                                                                                                                                                | Pacific                     |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| `*/5 * * * *`  | `/api/cron/send-campaigns`                                                                                                                                                                         | every 5 min                 |
-| `*/15 * * * *` | `/api/cron/auto-complete`, `/api/cron/complete-shifts`, `/api/cron/cancel-unconfirmed`, `/api/cron/expire-waitlisted`, `/api/cron/wake-snoozed`, `/api/cron/reminders`, `/api/cron/schedule-radio` | every 15 min                |
-| `0 16 * * *`   | `/api/cron/generate-recurring-reservations`, `/api/cron/lock-access`, `/api/cron/cancel-stale-tickets`, `/api/cron/sweep-audio-purchases`, `/api/cron/sweep-media`                                 | daily, 8am PST / 9am PDT    |
-| `0 17 * * MON` | `/api/cron/reconcile-ledger`                                                                                                                                                                       | Mondays, 9am PST / 10am PDT |
+| Cron (UTC)     | Endpoints, in order                                                                                                                                                                                                       | Pacific                     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `*/5 * * * *`  | `/api/cron/send-campaigns`                                                                                                                                                                                                | every 5 min                 |
+| `*/15 * * * *` | `/api/cron/auto-complete`, `/api/cron/complete-shifts`, `/api/cron/cancel-unconfirmed`, `/api/cron/expire-waitlisted`, `/api/cron/wake-snoozed`, `/api/cron/lock-sync`, `/api/cron/reminders`, `/api/cron/schedule-radio` | every 15 min                |
+| `0 16 * * *`   | `/api/cron/generate-recurring-reservations`, `/api/cron/lock-access`, `/api/cron/cancel-stale-tickets`, `/api/cron/sweep-audio-purchases`, `/api/cron/sweep-media`                                                        | daily, 8am PST / 9am PDT    |
+| `0 17 * * MON` | `/api/cron/reconcile-ledger`                                                                                                                                                                                              | Mondays, 9am PST / 10am PDT |
 
 Each trigger runs its jobs sequentially in the order listed. The daily batch generates
 first, so freshly generated occurrences are visible to lock provisioning. Reminders are not
