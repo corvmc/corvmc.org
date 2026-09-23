@@ -81,6 +81,10 @@ PUBLIC_SITE_URL = "https://corvmc.org"
 # opt-in lives here rather than the opt-out living in every dev checkout.
 PAYMENTS_DRIVER = "stripe"
 EMAIL_FROM_NAME = "CorvMC"
+# Mirrors the Workers Builds build variable that `pnpm ci:migrate` reads (#1358,
+# #1384). Recorded here for visibility only: [vars] reach the deployed Worker,
+# not the build shell, so the dashboard variable is what turns it on.
+CMC_MIGRATE_AFTER_PUBLISH = "1"
 EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
 STAFF_CONTACT_EMAIL = "contact@corvmc.org"
 # Postmark message streams. Custom streams, not Postmark's defaults
