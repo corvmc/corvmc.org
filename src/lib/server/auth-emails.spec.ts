@@ -14,10 +14,15 @@ vi.mock('$lib/server/sentry', () => ({
 import {
 	RESET_PASSWORD_TOKEN_TTL_SECONDS,
 	VERIFY_EMAIL_TOKEN_TTL_SECONDS,
+	STAFF_CONTACT_EMAIL,
+	buildAccountRestoredModel,
+	buildAccountSuspendedModel,
 	buildPasswordChangedModel,
 	buildResetPasswordModel,
 	buildVerifyEmailModel,
 	formatExpiry,
+	sendAccountRestoredEmail,
+	sendAccountSuspendedEmail,
 	sendPasswordChangedEmail,
 	sendPasswordResetEmail,
 	sendVerifyEmail
@@ -190,6 +195,47 @@ describe('sendVerifyEmail', () => {
 
 		await expect(
 			sendVerifyEmail({ toEmail: 'maya@example.com', verifyUrl: VERIFY_URL })
+		).resolves.toBeUndefined();
+		expect(captureException).toHaveBeenCalled();
+	});
+});
+
+describe('account suspension notices', () => {
+	it('tells a suspended member who to contact, and nothing about why', () => {
+		const model = buildAccountSuspendedModel({ name: 'Maya' });
+
+		expect(model.greeting).toBe('Hi Maya,');
+		expect(JSON.stringify(model)).toContain(STAFF_CONTACT_EMAIL);
+		expect(model.transactional_only).toBe(true);
+		expect(model.subject).toMatch(/suspended/i);
+	});
+
+	it('tells a restored member they can sign in again', () => {
+		const model = buildAccountRestoredModel({ name: null });
+
+		expect(model.greeting).toBeUndefined();
+		expect(model.subject).toMatch(/restored/i);
+		expect(model.transactional_only).toBe(true);
+	});
+
+	it('sends both on the generic notification template', async () => {
+		await sendAccountSuspendedEmail({ toEmail: 'maya@example.com', name: 'Maya' });
+		await sendAccountRestoredEmail({ toEmail: 'maya@example.com', name: 'Maya' });
+
+		expect(dispatchEmailOnly).toHaveBeenCalledWith(
+			expect.objectContaining({ type: 'account_suspended', templateAlias: 'notification' })
+		);
+		expect(dispatchEmailOnly).toHaveBeenCalledWith(
+			expect.objectContaining({ type: 'account_restored', templateAlias: 'notification' })
+		);
+	});
+
+	// A ban must land even when Postmark does not.
+	it('reports a send failure rather than raising it', async () => {
+		dispatchEmailOnly.mockRejectedValueOnce(new Error('Postmark is down'));
+
+		await expect(
+			sendAccountSuspendedEmail({ toEmail: 'maya@example.com' })
 		).resolves.toBeUndefined();
 		expect(captureException).toHaveBeenCalled();
 	});

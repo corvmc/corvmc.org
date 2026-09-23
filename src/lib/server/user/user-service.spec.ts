@@ -65,6 +65,12 @@ const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
 vi.mock('$lib/server/audit/audit-service', () => ({
 	recordAuditEntry: (entry: unknown) => recordAuditEntry(entry)
 }));
+const sendSuspendedMock = vi.fn().mockResolvedValue(undefined);
+const sendRestoredMock = vi.fn().mockResolvedValue(undefined);
+vi.mock('$lib/server/auth-emails', () => ({
+	sendAccountSuspendedEmail: (...args: unknown[]) => sendSuspendedMock(...args),
+	sendAccountRestoredEmail: (...args: unknown[]) => sendRestoredMock(...args)
+}));
 
 import {
 	deactivateUser,
@@ -96,6 +102,8 @@ beforeEach(() => {
 	deleteWhere.mockClear();
 	updateSet.mockClear();
 	recordAuditEntry.mockClear();
+	sendSuspendedMock.mockClear();
+	sendRestoredMock.mockClear();
 });
 
 // ---------------------------------------------------------------------------
@@ -318,6 +326,18 @@ describe('banUser', () => {
 		expect(cancelMock).not.toHaveBeenCalled();
 	});
 
+	// The notice states the fact; the reason is a staff record and stays one.
+	it('emails the member that the account is suspended, without the reason', async () => {
+		updateResult = [
+			{ id: 'u1', email: 'maya@example.com', name: 'Maya', deletedAt: new Date(), stripeId: null }
+		];
+
+		await banUser('u1', { actorId: 'staff-1', reason: 'Threatened another member' });
+
+		expect(sendSuspendedMock).toHaveBeenCalledWith({ toEmail: 'maya@example.com', name: 'Maya' });
+		expect(JSON.stringify(sendSuspendedMock.mock.calls)).not.toContain('Threatened');
+	});
+
 	it('refuses to let staff ban themselves', async () => {
 		await expect(banUser('u1', { actorId: 'u1', reason: 'x' })).rejects.toBeInstanceOf(
 			CannotBanSelfError
@@ -355,9 +375,18 @@ describe('unbanUser', () => {
 		expect(row.subscription).toBe('resumed');
 	});
 
+	it('emails the member that the account is restored', async () => {
+		updateResult = [{ id: 'u1', email: 'maya@example.com', name: 'Maya', stripeId: null }];
+
+		await unbanUser('u1');
+
+		expect(sendRestoredMock).toHaveBeenCalledWith({ toEmail: 'maya@example.com', name: 'Maya' });
+	});
+
 	it('throws UserNotFoundError when the account is not banned', async () => {
 		updateResult = [];
 		await expect(unbanUser('u1')).rejects.toBeInstanceOf(UserNotFoundError);
+		expect(sendRestoredMock).not.toHaveBeenCalled();
 	});
 });
 

@@ -13,6 +13,7 @@ import {
 import { revokeMemberCode } from '$lib/server/lock/member-code-service';
 import { captureException } from '$lib/server/sentry';
 import { recordAuditEntry } from '$lib/server/audit/audit-service';
+import { sendAccountRestoredEmail, sendAccountSuspendedEmail } from '$lib/server/auth-emails';
 import { isValidPhone, normalizePhone } from '$lib/utils/phone';
 
 // ---------------------------------------------------------------------------
@@ -314,6 +315,8 @@ export async function banUser(userId: string, opts: { actorId: string; reason: s
 
 	if (!row.deletedAt) await deactivateUser(userId, { actor: 'staff' });
 
+	await sendAccountSuspendedEmail({ toEmail: row.email, name: row.name });
+
 	return row;
 }
 
@@ -330,7 +333,9 @@ export async function unbanUser(userId: string) {
 
 	if (!row) throw new UserNotFoundError();
 
-	return reactivateUser(userId);
+	const restored = await reactivateUser(userId);
+	await sendAccountRestoredEmail({ toEmail: row.email, name: row.name });
+	return restored;
 }
 
 /**
