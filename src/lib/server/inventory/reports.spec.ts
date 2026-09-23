@@ -37,7 +37,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('$lib/server/db', () => ({ db: testDb }));
 
-const { spendByCategory, inKindContributions } = await import('./acquisition-service');
+const { spendByCategory, spendBySource, inKindContributions } =
+	await import('./acquisition-service');
 const { listForm8282Obligations } = await import('./asset-service');
 
 const secs = (d: Date) => Math.floor(d.getTime() / 1000);
@@ -189,6 +190,73 @@ describe('spendByCategory', () => {
 
 	it('is empty rather than throwing when nothing was bought', async () => {
 		expect(await spendByCategory(YEAR_START, YEAR_END)).toEqual([]);
+	});
+});
+
+/**
+ * Vendor-level spend from the free-text source, which is what #605's `supplier`
+ * table was for. Case and stray whitespace are folded because they are the
+ * cheapest way free text fragments; anything beyond that is the table's job.
+ */
+describe('spendBySource', () => {
+	it('rolls purchases up per source, counting acquisitions and cents', async () => {
+		acquisition('a1', 'purchase', JAN, { sourceName: 'Sweetwater' });
+		line('l1', 'a1', 'it-strings', 12, 700); // 8400
+		line('l2', 'a1', 'it-amp', 1, 94_100);
+		acquisition('a2', 'purchase', JUN, { sourceName: 'Sweetwater' });
+		line('l3', 'a2', 'it-sticks', 10, 1100); // 11000
+		acquisition('a3', 'purchase', JUN, { sourceName: 'Corvallis Hardware' });
+		line('l4', 'a3', 'it-strings', 1, 500);
+
+		const rows = await spendBySource(YEAR_START, YEAR_END);
+
+		expect(rows.map((r) => r.sourceName)).toEqual(['Sweetwater', 'Corvallis Hardware']);
+		expect(Number(rows[0].totalCents)).toBe(8400 + 94_100 + 11_000);
+		expect(Number(rows[0].acquisitionCount)).toBe(2);
+		expect(Number(rows[1].totalCents)).toBe(500);
+		expect(Number(rows[1].acquisitionCount)).toBe(1);
+	});
+
+	it('folds case and surrounding whitespace into one source', async () => {
+		acquisition('a1', 'purchase', JAN, { sourceName: 'Sweetwater' });
+		line('l1', 'a1', 'it-strings', 1, 100);
+		acquisition('a2', 'purchase', JUN, { sourceName: ' sweetwater ' });
+		line('l2', 'a2', 'it-strings', 1, 200);
+
+		const rows = await spendBySource(YEAR_START, YEAR_END);
+		expect(rows).toHaveLength(1);
+		expect(Number(rows[0].totalCents)).toBe(300);
+		expect(Number(rows[0].acquisitionCount)).toBe(2);
+	});
+
+	/** A purchase nobody named still cost money; dropping it would make the
+	 *  vendor table disagree with the category table on the same page. */
+	it('keeps an unnamed source as its own null row', async () => {
+		acquisition('a1', 'purchase', JAN);
+		line('l1', 'a1', 'it-strings', 2, 100);
+		acquisition('a2', 'purchase', JAN, { sourceName: '   ' });
+		line('l2', 'a2', 'it-strings', 1, 100);
+
+		const rows = await spendBySource(YEAR_START, YEAR_END);
+		expect(rows).toHaveLength(1);
+		expect(rows[0].sourceName).toBeNull();
+		expect(Number(rows[0].totalCents)).toBe(300);
+	});
+
+	it('counts only purchases inside the window', async () => {
+		acquisition('a1', 'purchase', JAN, { sourceName: 'Sweetwater' });
+		line('l1', 'a1', 'it-strings', 1, 100);
+		acquisition('a2', 'donation', JAN, { sourceName: 'Sweetwater' });
+		line('l2', 'a2', 'it-strings', 1, 50_000);
+		acquisition('a3', 'purchase', NEXT_YEAR, { sourceName: 'Sweetwater' });
+		line('l3', 'a3', 'it-strings', 1, 70_000);
+
+		const rows = await spendBySource(YEAR_START, YEAR_END);
+		expect(Number(rows[0].totalCents)).toBe(100);
+	});
+
+	it('is empty rather than throwing when nothing was bought', async () => {
+		expect(await spendBySource(YEAR_START, YEAR_END)).toEqual([]);
 	});
 });
 

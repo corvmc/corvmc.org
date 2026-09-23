@@ -280,6 +280,7 @@ test.describe('inventory', () => {
 			// read "Total spend" is now "Stock", which is a copy change the row
 			// does not care about.
 			await expect(page.getByRole('cell', { name: 'E2E Test Gear' })).toBeVisible();
+			await expect(page.getByRole('cell', { name: 'E2E Supplier', exact: true })).toBeVisible();
 		});
 
 		test('a window with no purchases reports nothing rather than erroring', async ({ page }) => {
