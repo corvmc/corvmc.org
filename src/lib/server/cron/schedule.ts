@@ -41,8 +41,10 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		'/api/cron/sweep-media'
 	],
 	// Monday, after the daily batch. Reads a closed week and writes nothing, so
-	// it has no ordering relationship with anything above it.
-	'0 17 * * 1': ['/api/cron/reconcile-ledger']
+	// it has no ordering relationship with anything above it. Weekdays are
+	// named: this string is also the Sentry monitor's schedule, and Cloudflare
+	// (1 = Sunday) and Sentry (1 = Monday) disagree about numbers.
+	'0 17 * * MON': ['/api/cron/reconcile-ledger']
 };
 
 export interface CronEnv {
