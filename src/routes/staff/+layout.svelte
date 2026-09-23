@@ -98,6 +98,7 @@
 		equipment: IconTool,
 		'inventory-intake': IconTruckDelivery,
 		'inventory-tagging': IconTag,
+		'equipment-reports': IconFlag,
 		'equipment-loans': IconPackage,
 		'inventory-acquisitions': IconReceipt,
 		'inventory-restock': IconShoppingCart,

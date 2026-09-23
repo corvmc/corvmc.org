@@ -52,6 +52,7 @@ export type StaffNavKey =
 	| 'equipment-loans'
 	| 'inventory-intake'
 	| 'inventory-tagging'
+	| 'equipment-reports'
 	| 'inventory-acquisitions'
 	| 'inventory-restock'
 	| 'inventory-orders'
@@ -258,6 +259,14 @@ export const staffNavSections: StaffNavSection[] = [
 						capability: 'inventory.manageAssets',
 						label: 'Needs tagging',
 						href: resolve('/staff/inventory/tagging')
+					},
+					{
+						// Lives on the flags surface (#552); listed here too because
+						// whoever fixes the gear reads Inventory, not Moderation.
+						key: 'equipment-reports',
+						capability: 'inventory.manageAssets',
+						label: 'Reports',
+						href: resolve('/staff/flags/equipment')
 					},
 					{
 						key: 'equipment-loans',
