@@ -284,7 +284,6 @@
 	"src/lib/remote/password-reset.remote.ts",
 	"src/lib/remote/press-kit.remote.ts",
 	"src/lib/remote/productions.remote.ts",
-	"src/lib/remote/projects.remote.ts",
 	"src/lib/remote/radio.remote.ts",
 	"src/lib/remote/reservations.remote.available-dates.spec.ts",
 	"src/lib/remote/reservations.remote.for-user.spec.ts",
