@@ -188,7 +188,7 @@ describe('the poster guard', () => {
 		async (_, held) => {
 			heldPositions = held;
 			const before = held.includes('admin') || held.includes('staff');
-			const outcome = await DELETE(del()).then(
+			const outcome = await Promise.resolve(DELETE(del())).then(
 				() => 'allowed',
 				(e: { status: number }) => e.status
 			);
