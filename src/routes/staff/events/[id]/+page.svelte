@@ -25,6 +25,7 @@
 	import { getStaffEventPage, updateEvent, setStaffEventLineup } from '$lib/remote/events.remote';
 	import { rejectListing, searchBandsForListing } from '$lib/remote/community-events.remote';
 	import { rowLink } from '$lib/actions/row-link';
+	import RecapPhotos from './RecapPhotos.svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import { formatTime, fullDate, toLocalDate, toLocalTime } from '$lib/utils/format';
 
@@ -428,6 +429,10 @@
 			</div>
 		{/if}
 	</InfoCard>
+
+	{#if !data.recap.closedReason || data.recap.photos.length > 0}
+		<RecapPhotos eventId={evt.id} eventTitle={evt.title} recap={data.recap} />
+	{/if}
 
 	<!--
 		Two people posting one gig is the characteristic failure of a community
