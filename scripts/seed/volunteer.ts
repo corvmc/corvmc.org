@@ -14,6 +14,7 @@ import { batchInsert, db } from './db';
 import { type SeedEvent, type SeedUser } from './types';
 import { pick, pickN, ptDate, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
+import { RECAP_PHOTOGRAPHER_CERTIFICATION } from '../../src/lib/config';
 
 // `defaultDurationMinutes` / `defaultCapacity` are what the New Shift form starts
 // with, so they are only set on the roles that really are scheduled as shifts —
@@ -380,9 +381,40 @@ export async function seedCertifications(users: any[], roles: any[]) {
 		})
 	);
 
+	// The recap photographer (#1398): matched by name, so it must be exactly
+	// RECAP_PHOTOGRAPHER_CERTIFICATION. One holder, no draw, so later seeding is
+	// unchanged.
+	const [photoCert] = await batchInsert(volunteerCertification, [
+		{
+			id: randomUUID(),
+			name: RECAP_PHOTOGRAPHER_CERTIFICATION,
+			description: 'Cleared to upload recap photos to past event pages.',
+			issuedBy: null,
+			validityMonths: null,
+			displayOrder: 40
+		}
+	]);
+	if (holders[0]) {
+		await batchInsert(memberCertification, [
+			{
+				id: randomUUID(),
+				userId: holders[0].id,
+				certificationId: photoCert.id,
+				grantedAt: new Date(now.getTime() - 60 * day),
+				expiresAt: null
+			}
+		]);
+	}
+
 	// The certification rows travel out, not just their count: `seedVolunteerPersonas`
 	// grants against these two by id.
-	return { certs: 3, held: held.length, deskCert, foodCert, orientationCert };
+	return {
+		certs: 4,
+		held: held.length + (holders[0] ? 1 : 0),
+		deskCert,
+		foodCert,
+		orientationCert
+	};
 }
 
 /**
