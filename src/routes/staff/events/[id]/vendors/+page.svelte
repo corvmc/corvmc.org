@@ -195,7 +195,7 @@
 						</td>
 						<td>{row.tableLabel ?? '—'}</td>
 						<td>
-							<div class="flex justify-end gap-1">
+							<div class="flex w-max justify-end gap-1">
 								{#if row.status !== 'accepted' && row.status !== 'withdrawn'}
 									<Action
 										action={decideVendorForm.for(`accept-${row.id}`)}
