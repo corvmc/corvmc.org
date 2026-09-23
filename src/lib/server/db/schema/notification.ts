@@ -257,6 +257,15 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'equipment_report_resolved',
+		category: 'practice-space',
+		label: 'Something you reported was fixed',
+		// Email on: the reporter is rarely looking at the unit's page, and hearing
+		// back is what makes the next report worth filing.
+		description: 'Notification when the equipment you reported a problem with has been seen to',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'reservation_confirmed',
 		category: 'practice-space',
 		label: 'Reservation confirmed',

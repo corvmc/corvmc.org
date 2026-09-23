@@ -623,6 +623,30 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- A report the member filed was closed by finished work ---
+	// Staff resolution notes stay out: they are written for the next staffer.
+	domainEvents.on('equipment.report_resolved', async ({ data: event }) => {
+		await dispatch({
+			type: 'equipment_report_resolved',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `Fixed: ${event.equipmentName}`,
+			body: 'The problem you reported has been seen to.',
+			href: `/member/equipment/assets/${event.assetId}`,
+			email: {
+				recipientName: event.userName,
+				subject: `Fixed: ${event.equipmentName}`,
+				heading: 'Thanks for the report',
+				paragraphs: [
+					{
+						text: `The problem you reported with ${event.equipmentName} has been seen to. If it is still not right, report it again from the same page.`
+					}
+				],
+				cta: { label: 'View the equipment' }
+			}
+		});
+	});
+
 	// --- Equipment due back, then late ---
 	// One notification type across all four stages: a member who silenced the
 	// courtesy silenced the nags, which is the same rule the confirmation

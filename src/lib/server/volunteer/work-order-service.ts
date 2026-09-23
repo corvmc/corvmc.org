@@ -531,7 +531,7 @@ export async function scheduleWorkOrder(
  * `completeFinishedShifts` promotes a signup once the clock runs out; a session
  * can end with the amp still broken, so closure lives on the work row. That cron
  * keys on `ends_at` and can never reach an unscheduled row, so resolving has to
- * complete the signups itself. Does not touch the asset or its flags.
+ * complete the signups itself. Does not touch the asset.
  */
 export async function resolveWorkOrder(
 	id: string,
