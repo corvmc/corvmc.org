@@ -566,6 +566,15 @@ or a new one — and every other untriaged report on that unit goes with it
 A select's empty option submits `''`, which `z.enum([...]).optional()` rejects,
 and a remote `form()` that fails validation runs no handler at all.
 
+### The donation wishlist
+
+`/contribute` shows **What We Need**: `getPublicWishlist` (unguarded, in
+`inventory.remote.ts`) → `getDonationWishlist()` in `wishlist-service.ts`, which
+projects `listPlannedGear()` (`planned` only — `in_progress` is already being
+got) and `listLowStock()` (minus anything an open order already covers). Names
+only, because the page is public. Staff maintain it by doing what they already
+do: marking a gear suggestion planned, and setting reorder points.
+
 ### Form 8282
 
 Disposing of donated property within three years of receipt can oblige the

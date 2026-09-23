@@ -547,6 +547,13 @@ an earlier draft of this section said otherwise, and `entity-href.ts` and
 `nav-items.spec.ts` have always agreed with the route rather than with the
 prose.
 
+**Public** — the **donation wishlist** (#604) is a "What we need" section on
+`/contribute`, not a table: gear suggestions staff marked `planned` (title only —
+never the author, the description or the vote count), and bulk items at or below
+their reorder point that are not already covered by an open order (name only).
+Nothing is claimable; the call to action is the contact form, as the Donate Gear
+tile already was. The section does not render when both lists are empty.
+
 **Member** — `/member/equipment` keeps its URL, and the unit page reached by
 scanning a tag is new. **The Equipment row appears once there is something to
 lend** — `hasLoanableItems()` on the member layout query, surfaced as

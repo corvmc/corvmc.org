@@ -14,6 +14,7 @@
 	import type { Icon } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { getPublicCommittees } from '$lib/remote/committees.remote';
+	import WishlistSection from './WishlistSection.svelte';
 
 	type VolunteerGroup = {
 		icon: Icon;
@@ -100,7 +101,7 @@
 			title: 'Donate Gear',
 			desc: 'Working amps, drums, mics, or instruments find a new home in our lending library.',
 			href: '/contact',
-			cta: 'Get in Touch'
+			cta: 'Offer Gear'
 		},
 		{
 			icon: IconMicrophone,
@@ -193,6 +194,15 @@
 		<Button href="/membership" variant="default" size="lg">Explore Membership</Button>
 	</div>
 </section>
+
+<!--
+	Its own boundary: the wishlist is not the page's load-bearing query, and a
+	failure there should drop the section, not the page.
+-->
+<svelte:boundary>
+	<WishlistSection />
+	{#snippet failed()}{/snippet}
+</svelte:boundary>
 
 <!-- Other Ways to Contribute -->
 <Section tint="warning">
