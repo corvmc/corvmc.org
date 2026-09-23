@@ -210,8 +210,9 @@
 										<input class="checkbox checkbox-sm" {...fields.unpublishEvent.as('checkbox')} />
 										<span class="fieldset-legend text-wrap">
 											{#if flag.eventContext?.source === 'community'}
-												Also unpublish this listing (removes it from the public gig guide and
-												deletes its poster; the member is notified with your note)
+												Also unpublish this listing (removes it from the public gig guide and takes
+												its poster offline until it is republished; the member is notified with your
+												note)
 											{:else}
 												Also unpublish this event (removes it from the public gig guide; the band's
 												admins are notified with your note)
