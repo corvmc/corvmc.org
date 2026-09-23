@@ -294,7 +294,6 @@
 	"src/lib/remote/staff-music.remote.spec.ts",
 	"src/lib/remote/staff-music.remote.ts",
 	"src/lib/remote/staff-user-context.remote.spec.ts",
-	"src/lib/remote/standing.remote.ts",
 	"src/lib/remote/suggestions.remote.ts",
 	"src/lib/remote/users.remote.spec.ts",
 	"src/lib/remote/users.remote.ts",

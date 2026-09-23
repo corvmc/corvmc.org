@@ -129,7 +129,7 @@ describe('bookInstructorReservation', () => {
 	});
 
 	it('books a recurring series with no sustaining membership', async () => {
-		// The absence is the point. `bookMemberReservation` throws 403 here because
+		// The absence is the point. `bookAndPayReservation` throws 403 here because
 		// recurring rehearsal time is a membership benefit; teaching time is a
 		// rental CMC granted directly, so requiring a subscription on top of a
 		// staff grant would mean staff granting something the member cannot use.

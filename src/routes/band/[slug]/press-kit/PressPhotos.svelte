@@ -2,7 +2,10 @@
 	import { toast } from 'svelte-sonner';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import { getPressKitEditor } from '$lib/remote/press-kit.remote';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { getPressKitEditor, savePhotoDetails } from '$lib/remote/press-kit.remote';
 	import { imageSrc } from '$lib/utils/images';
 	import type { getBandLayout } from '$lib/remote/layout.remote';
 
@@ -105,6 +108,7 @@
 	{#if photos.length > 0}
 		<div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
 			{#each photos as photo (photo.id)}
+				{@const details = savePhotoDetails.for(photo.id)}
 				<figure class="space-y-2">
 					{#if photo.url}
 						{@const shot = imageSrc(photo.url, 'gallery')}
@@ -116,6 +120,18 @@
 							class="aspect-square w-full rounded object-cover"
 						/>
 					{/if}
+					<Form remote={details} successToast="Photo details saved" class="space-y-2">
+						<input {...details.fields.slug.as('hidden', band.slug)} />
+						<input {...details.fields.attachmentId.as('hidden', photo.id)} />
+						<FormField
+							field={details.fields.altText}
+							label="Alt text"
+							value={photo.altText ?? ''}
+							description="What the photo shows, for someone who cannot see it."
+						/>
+						<FormField field={details.fields.caption} label="Caption" value={photo.caption ?? ''} />
+						<SubmitButton label="Save" size="sm" />
+					</Form>
 					<Button
 						type="button"
 						variant="ghost"

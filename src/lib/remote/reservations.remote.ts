@@ -1256,82 +1256,6 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 	return { reservationId: res.id };
 });
 
-/** Member: book a reservation (optionally recurring). */
-const memberBookingSchema = createReservationSchema.extend({
-	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
-	monthlyMode: z.enum(['weekday', 'monthday']).optional()
-});
-
-export const bookMemberReservation = form(memberBookingSchema, async (data, issue) => {
-	const { locals } = getRequestEvent();
-	if (!locals.user) throw error(401, 'Not authenticated');
-
-	// Before anything is written: a reservation staff can't call about is the
-	// problem this guard exists to prevent.
-	if (!(await ensureContactPhone(locals.user.id, data.phone))) {
-		invalid(issue.phone(PHONE_REQUIRED_MESSAGE));
-	}
-
-	const recurringFrequency = data.recurring || undefined;
-	const isRecurring = recurringFrequency != null;
-
-	if (isRecurring) {
-		const [row] = await db
-			.select({ subscription: user.subscription })
-			.from(user)
-			.where(eq(user.id, locals.user.id))
-			.limit(1);
-		if (!row?.subscription) {
-			throw error(403, 'Recurring reservations require a sustaining membership');
-		}
-	}
-
-	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
-	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
-
-	let res;
-	let waitlisted = false;
-
-	try {
-		res = await create({
-			userId: locals.user.id,
-			bookerType: 'user',
-			bookerId: locals.user.id,
-			startsAt,
-			endsAt,
-			notes: data.notes
-		});
-	} catch (err) {
-		if (isRecurring && err instanceof ReservationConflictError) {
-			res = await createWaitlisted({
-				userId: locals.user.id,
-				bookerType: 'user',
-				bookerId: locals.user.id,
-				startsAt,
-				endsAt,
-				notes: data.notes
-			});
-			waitlisted = true;
-		} else {
-			// Non-wizard form: map domain errors to proper HTTP responses
-			// (conflict → 409, out-of-window/bad-time → 400) so the caller sees a
-			// real status and message instead of a generic 500.
-			mapDomainError(err);
-		}
-	}
-
-	if (isRecurring && recurringFrequency) {
-		await createSeries({
-			prototypeReservationId: res.id,
-			frequency: recurringFrequency as RecurringFrequency,
-			prototypeStartsAt: startsAt,
-			monthlyMode: data.monthlyMode
-		});
-	}
-
-	return { reservationId: res.id, waitlisted };
-});
-
 const CONFIRM_WINDOW_MSG = `Confirmation opens ${CONFIRMATION_WINDOW_DAYS} days before your reservation — pay now to lock it in earlier.`;
 
 /** Whether the member's free-hour balance fully covers the reservation (nothing to charge). */
@@ -1627,7 +1551,7 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	// wrote is the answer, not an error. This threw a 400 the member never saw,
 	// over a `scheduled` row that survived it: they were left owning a booking
 	// they had been told nothing about, which `cancel-unconfirmed` then killed at
-	// its start time. The row is exactly what `bookMemberReservation` produces;
+	// its start time. The row is an ordinary unconfirmed booking;
 	// report it as the hold it is.
 	if (
 		outsideWindow &&
@@ -1745,7 +1669,7 @@ const instructorBookingSchema = createReservationSchema.extend({
  * which is what admits a half-hour lesson and a booking a term out.
  *
  * **No sustaining-membership gate on the recurring branch, and its absence is
- * the decision.** `bookMemberReservation` requires one because recurring
+ * the decision.** `bookAndPayReservation` requires one because recurring
  * rehearsal time is a membership *benefit* — the subscription is what buys it.
  * Teaching time is a rental at a rate CMC granted directly, so requiring a
  * membership on top of a staff grant would mean staff granting something the
