@@ -118,6 +118,8 @@ export const tableOrder = [
 	'committee_application',
 	'committee_application_choice',
 	'payment_cache',
+	// References event_listing and group.
+	'ticket_sale',
 	'ticket',
 	'event_rsvp',
 	// The bill: references event and band, so it wipes before either.

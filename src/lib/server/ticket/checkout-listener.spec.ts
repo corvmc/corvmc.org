@@ -36,7 +36,8 @@ vi.mock('$lib/server/db/schema/event', () => ({
 // `media_attachment` — at import time.
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn(),
-	sql: vi.fn(),
+	// `.mapWith` because `event-columns` decodes one fragment at import.
+	sql: vi.fn(() => ({ mapWith: vi.fn() })),
 	getTableColumns: vi.fn(() => ({}))
 }));
 

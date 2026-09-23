@@ -1,4 +1,5 @@
 import { eventListing, eventGroup } from '../../src/lib/server/db/schema/event';
+import { ticketSale } from '../../src/lib/server/db/schema/ticket';
 import { db } from './db';
 import { seedLineup } from './lineups';
 import {
@@ -37,10 +38,10 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[], alsoInclu
 					groupId: veteran.id,
 					source: 'band',
 					location: pick(BAND_EVENT_LOCATIONS),
-					ticketPrice: random() > 0.35 ? pick([500, 1000, 1200, 1500]) : null,
 					createdByUserId: veteran.ownerId
 				})
 				.returning();
+			await seedDoorPrice(e.id);
 
 			// Half the archive has no end time — a band backfilling old gigs
 			// rarely remembers when the night finished, which is why the column
@@ -86,11 +87,11 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[], alsoInclu
 					location: pick(BAND_EVENT_LOCATIONS),
 					externalTicketUrl:
 						random() > 0.5 ? `https://eventbrite.com/e/${randomInt(100000, 999999)}` : null,
-					// Gigs are priced at the door or by the venue — never sold by us.
-					ticketPrice: random() > 0.35 ? pick([500, 1000, 1200, 1500]) : null,
 					createdByUserId: b.ownerId
 				})
 				.returning();
+			// Gigs are priced at the door or by the venue — never sold by us.
+			await seedDoorPrice(e.id);
 
 			// Roughly a third of gigs get support. Mostly off-platform names; the
 			// first band on the list also gets a real CMC band so the invitation
@@ -128,4 +129,10 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[], alsoInclu
 	}
 
 	return rows;
+}
+
+/** A gig's door price, advertised on the listing; our checkout stays shut. */
+async function seedDoorPrice(eventListingId: string) {
+	if (random() <= 0.35) return;
+	await db.insert(ticketSale).values({ eventListingId, priceCents: pick([500, 1000, 1200, 1500]) });
 }

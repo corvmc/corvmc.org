@@ -1,10 +1,10 @@
 {
+  "id": "070360f9-3452-461f-a9d6-cb57ede0cee9",
+  "prevIds": [
+    "eca32111-1a75-42ff-9bdd-89afb3c554dd"
+  ],
   "version": "7",
   "dialect": "sqlite",
-  "id": "a604d8c5-202c-4541-ab33-23774235ece4",
-  "prevIds": [
-    "44b6220f-1245-4c8a-ba12-d467c95f7101"
-  ],
   "ddl": [
     {
       "name": "account",
@@ -84,6 +84,10 @@
     },
     {
       "name": "ticket",
+      "entityType": "tables"
+    },
+    {
+      "name": "ticket_sale",
       "entityType": "tables"
     },
     {
@@ -3037,6 +3041,96 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "ticket"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "ticket_sale"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_listing_id",
+      "entityType": "columns",
+      "table": "ticket_sale"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "ticket_sale"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "enabled",
+      "entityType": "columns",
+      "table": "ticket_sale"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "price_cents",
+      "entityType": "columns",
+      "table": "ticket_sale"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "price_floor_cents",
+      "entityType": "columns",
+      "table": "ticket_sale"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "quantity",
+      "entityType": "columns",
+      "table": "ticket_sale"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "ticket_sale"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "ticket_sale"
     },
     {
       "type": "text",
@@ -12255,6 +12349,36 @@
     },
     {
       "columns": [
+        "event_listing_id"
+      ],
+      "tableTo": "event_listing",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ticket_sale_event_listing_id_event_listing_id_fk",
+      "entityType": "fks",
+      "table": "ticket_sale"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ticket_sale_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "ticket_sale"
+    },
+    {
+      "columns": [
         "event_id"
       ],
       "tableTo": "event_listing",
@@ -14929,6 +15053,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "ticket_sale_pk",
+      "table": "ticket_sale",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "event_rsvp_pk",
       "table": "event_rsvp",
       "entityType": "pks"
@@ -16302,6 +16435,34 @@
       "name": "idx_ticket_event_status",
       "entityType": "indexes",
       "table": "ticket"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_listing_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_ticket_sale_event",
+      "entityType": "indexes",
+      "table": "ticket_sale"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_ticket_sale_group",
+      "entityType": "indexes",
+      "table": "ticket_sale"
     },
     {
       "columns": [

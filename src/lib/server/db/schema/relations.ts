@@ -75,6 +75,7 @@ export const relations = defineRelations(schema, (t) => ({
 		group: t.one.group({ from: t.eventListing.groupId, to: t.group.id }),
 		project: t.one.project({ from: t.eventListing.projectId, to: t.project.id }),
 		lineup: t.many.eventBand(),
+		ticketSale: t.one.ticketSale({ from: t.eventListing.id, to: t.ticketSale.eventListingId }),
 		media: t.many.mediaAttachment({
 			from: t.eventListing.id,
 			to: t.mediaAttachment.attachableId,
@@ -223,6 +224,11 @@ export const relations = defineRelations(schema, (t) => ({
 		// No `workOrder` relation: `workOrderId` carries no FK, so that the
 		// inventory and volunteer schema modules do not import each other. The
 		// service joins it explicitly.
+	},
+	ticketSale: {
+		event: t.one.eventListing({ from: t.ticketSale.eventListingId, to: t.eventListing.id }),
+		/** The seller. Null is the collective. */
+		group: t.one.group({ from: t.ticketSale.groupId, to: t.group.id })
 	},
 	ticket: {
 		event: t.one.eventListing({ from: t.ticket.eventId, to: t.eventListing.id }),

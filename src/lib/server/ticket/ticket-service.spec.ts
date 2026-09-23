@@ -98,13 +98,16 @@ vi.mock('$lib/server/db/schema/ticket', () => ({
 		checkedInByUserId: 'checked_in_by_user_id',
 		createdAt: 'created_at',
 		updatedAt: 'updated_at'
+	},
+	ticketSale: {
+		eventListingId: 'event_listing_id',
+		quantity: 'quantity'
 	}
 }));
 
 vi.mock('$lib/server/db/schema/event', () => ({
 	eventListing: {
 		id: 'id',
-		ticketQuantity: 'ticket_quantity',
 		title: 'title',
 		startsAt: 'starts_at',
 		endsAt: 'ends_at'
@@ -120,7 +123,8 @@ vi.mock('drizzle-orm', () => ({
 	and: vi.fn((...args: unknown[]) => ['and', ...args]),
 	inArray: vi.fn((...args: unknown[]) => ['inArray', ...args]),
 	lt: vi.fn((...args: unknown[]) => ['lt', ...args]),
-	sql: vi.fn(),
+	// `.mapWith` because `event-columns` decodes one fragment at import.
+	sql: vi.fn(() => ({ mapWith: vi.fn() })),
 	asc: vi.fn((col: unknown) => ['asc', col]),
 	desc: vi.fn((col: unknown) => ['desc', col]),
 	// `purchased-event` pulls in `event-columns`, which builds its listing column
@@ -412,8 +416,8 @@ describe('getTicketsSold', () => {
 
 describe('getTicketsRemaining', () => {
 	it('returns null for unlimited capacity', async () => {
-		// First select: event query returns null ticketQuantity
-		selectResultQueue = [[{ ticketQuantity: null }]];
+		// First select: the sale's capacity is null
+		selectResultQueue = [[{ quantity: null }]];
 		const remaining = await getTicketsRemaining('event-1');
 		expect(remaining).toBeNull();
 	});
@@ -425,20 +429,20 @@ describe('getTicketsRemaining', () => {
 	});
 
 	it('returns remaining count for limited capacity', async () => {
-		// First select: event query, second select: sold count
-		selectResultQueue = [[{ ticketQuantity: 50 }], [{ count: 12 }]];
+		// First select: the sale's capacity, second select: sold count
+		selectResultQueue = [[{ quantity: 50 }], [{ count: 12 }]];
 		const remaining = await getTicketsRemaining('event-1');
 		expect(remaining).toBe(38);
 	});
 
 	it('returns 0 when sold out', async () => {
-		selectResultQueue = [[{ ticketQuantity: 10 }], [{ count: 10 }]];
+		selectResultQueue = [[{ quantity: 10 }], [{ count: 10 }]];
 		const remaining = await getTicketsRemaining('event-1');
 		expect(remaining).toBe(0);
 	});
 
 	it('returns 0 when oversold', async () => {
-		selectResultQueue = [[{ ticketQuantity: 10 }], [{ count: 12 }]];
+		selectResultQueue = [[{ quantity: 10 }], [{ count: 12 }]];
 		const remaining = await getTicketsRemaining('event-1');
 		expect(remaining).toBe(0);
 	});
