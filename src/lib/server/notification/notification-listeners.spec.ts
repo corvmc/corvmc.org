@@ -357,6 +357,29 @@ describe('ticket.purchased handler (dedicated template)', () => {
 	});
 });
 
+describe('door code ready', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	it('tells the member the code, now that the lock has it', async () => {
+		await emit('reservation.door_code_ready', {
+			reservationId: 'res-1',
+			code: '482913',
+			userId: 'user-1',
+			userEmail: 'user@test.com',
+			userName: 'Bob',
+			date: 'May 21',
+			startTime: '10:00 AM',
+			endTime: '11:00 AM'
+		});
+
+		const params = mockDispatch.mock.calls[0][0];
+		expect(params.type).toBe('door_code_ready');
+		expect(params.userId).toBe('user-1');
+		expect(detailText(params.email)).toContain('Door code: 482913');
+		expect(params.href).toBe('/member/reservations');
+	});
+});
+
 describe('collapsed listeners use the generic template', () => {
 	beforeEach(() => registerAllNotificationListeners());
 
