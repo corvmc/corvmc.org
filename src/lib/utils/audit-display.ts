@@ -48,6 +48,10 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 				: 'Reactivated the account';
 		case 'user.purged':
 			return `Permanently deleted ${entry.details.name} (${entry.details.email})`;
+		case 'user.banned':
+			return `Banned the account: “${entry.details.reason}”`;
+		case 'user.unbanned':
+			return 'Lifted the ban';
 		case 'credits.adjusted': {
 			const d = entry.details;
 			const verb = d.delta < 0 ? 'Deducted' : 'Added';

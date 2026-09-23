@@ -52,6 +52,13 @@ describe('summarizeAuditEntry', () => {
 		).toBe('Removed staff');
 	});
 
+	it('quotes the reason a ban was given, and names an unban plainly', () => {
+		expect(summarizeAuditEntry(entry('user.banned', { reason: 'Threatened another member' }))).toBe(
+			'Banned the account: “Threatened another member”'
+		);
+		expect(summarizeAuditEntry(entry('user.unbanned', {}))).toBe('Lifted the ban');
+	});
+
 	it('names the edited profile fields in words, not column names', () => {
 		expect(
 			summarizeAuditEntry(entry('user.profile_updated', { fields: ['phone', 'dateOfBirth'] }))
