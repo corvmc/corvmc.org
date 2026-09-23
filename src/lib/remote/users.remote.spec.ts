@@ -155,6 +155,7 @@ vi.mock('$lib/server/finance/subscription-service', () => ({
 // extends Error would be re-thrown as a 500 and the test would assert nothing
 // about the mapping it exists to cover.
 const purgeUserService = vi.fn<(id: string) => Promise<void>>(async () => undefined);
+const banUserService = vi.fn(async (..._a: unknown[]) => undefined);
 class UserNotFoundError extends DomainError {
 	readonly httpStatus = 404;
 }
@@ -178,6 +179,8 @@ vi.mock('$lib/server/user/user-service', () => ({
 	deactivateUsers: vi.fn(async () => ({ deactivated: [], skipped: [] })),
 	reactivateUser: vi.fn(async () => ({ subscription: 'none' as const })),
 	purgeUser: purgeUserService,
+	banUser: banUserService,
+	unbanUser: vi.fn(async () => ({ subscription: 'none' as const })),
 	UserNotFoundError,
 	UserNotDeactivatedError,
 	UserHasOwnedBandsError,
@@ -437,6 +440,27 @@ describe('users.remote lockout guards', () => {
 		otherAdminCount = 1;
 		await users.updateUser({ ...VALID_UPDATE, id: 'victim-user', roles: ['3'] });
 		expect(dbBatch).toHaveBeenCalled();
+	});
+});
+
+describe('users.remote bans', () => {
+	for (const name of ['banUser', 'unbanUser']) {
+		it(`${name} requires user.ban`, async () => {
+			await expect(users[name]({ id: 'victim-user', reason: 'x' })).rejects.toThrow(
+				'Staff access required'
+			);
+			expect(requireCapability).toHaveBeenCalledWith('user.ban');
+			expect(banUserService).not.toHaveBeenCalled();
+		});
+	}
+
+	it('banUser records the acting staffer, not a caller-supplied one', async () => {
+		requireCapability.mockResolvedValue({ id: 'acting-staff' });
+		await users.banUser({ id: 'victim-user', reason: 'Threatened a member' });
+		expect(banUserService).toHaveBeenCalledWith('victim-user', {
+			actorId: 'acting-staff',
+			reason: 'Threatened a member'
+		});
 	});
 });
 

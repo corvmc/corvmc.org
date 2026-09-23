@@ -6,7 +6,9 @@
 		getUserSessions,
 		deactivateUser,
 		reactivateUser,
-		purgeUser
+		purgeUser,
+		banUser,
+		unbanUser
 	} from '$lib/remote/users.remote';
 	import { getUserDirectoryProfile } from '$lib/remote/directory.remote';
 	import StaffUserForm from '../StaffUserForm.svelte';
@@ -19,6 +21,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
@@ -29,6 +32,8 @@
 	const { fields: deactivateFields } = deactivateUser;
 	const { fields: reactivateFields } = reactivateUser;
 	const { fields: purgeFields } = purgeUser;
+	const { fields: banFields } = banUser;
+	const { fields: unbanFields } = unbanUser;
 
 	// Deactivating cancels bookings and the subscription, so the scoreboard and
 	// the needs-attention list are both wrong until the overview is re-read.
@@ -180,11 +185,67 @@
 		{#if member.deletedAt}
 			<Fact label="Deactivated">{new Date(member.deletedAt).toLocaleString()}</Fact>
 		{/if}
+
+		{#if member.bannedAt}
+			<Fact label="Banned">
+				{new Date(member.bannedAt).toLocaleString()} by {member.bannedByName ?? 'a removed account'}
+			</Fact>
+			<Fact label="Ban reason" class="whitespace-pre-line">{member.banReason}</Fact>
+		{/if}
 	</DefinitionList>
 </InfoCard>
 
+{#snippet banAction()}
+	<Action
+		action={banUser}
+		label="Ban"
+		modalTitle="Ban {member.name}"
+		submitLabel="Ban"
+		successToast="Member banned"
+		variant="error"
+		size="sm"
+		onsuccess={refreshAccount}
+	>
+		{#snippet form()}
+			<input {...banFields.id.as('hidden', id)} />
+			<p class="pb-4">
+				A ban deactivates the account the same way, and records who banned them and why. It stays
+				deactivated until a staffer lifts the ban.
+			</p>
+			<FormField
+				field={banFields.reason}
+				type="textarea"
+				label="Reason"
+				description="Staff-only. What they did, for whoever reviews this later."
+				required
+			/>
+		{/snippet}
+	</Action>
+{/snippet}
+
 <InfoCard title="Danger Zone" class="mt-6 border border-error/30 bg-error/5 shadow-none">
-	{#if member.deletedAt}
+	{#if member.bannedAt}
+		<p class="mb-3 text-muted">
+			This account is banned. Lifting the ban restores access; the reason above is cleared with it.
+		</p>
+		<div class="flex gap-2">
+			<Action
+				action={unbanUser}
+				label="Lift ban"
+				successToast="Ban lifted"
+				variant="success"
+				size="sm"
+				onsuccess={onReactivated}
+			>
+				{#snippet form()}
+					<input {...unbanFields.id.as('hidden', id)} />
+					<p class="py-4">
+						Lift the ban on <strong>{member.name}</strong> and restore their access?
+					</p>
+				{/snippet}
+			</Action>
+		</div>
+	{:else if member.deletedAt}
 		<p class="mb-3 text-muted">
 			This account is deactivated. Reactivate it to restore access, or permanently delete it.
 		</p>
@@ -218,6 +279,7 @@
 					</p>
 				{/snippet}
 			</Action>
+			{@render banAction()}
 		</div>
 	{:else}
 		<p class="mb-3 text-muted">
@@ -226,21 +288,24 @@
 			but <strong>the cancelled reservations and subscription are not restored</strong> — they would have
 			to be rebooked and resubscribed.
 		</p>
-		<Action
-			action={deactivateUser}
-			label="Deactivate"
-			successToast="Account deactivated"
-			variant="error"
-			size="sm"
-			onsuccess={refreshAccount}
-		>
-			{#snippet form()}
-				<input {...deactivateFields.id.as('hidden', id)} />
-				<p class="py-4">
-					Deactivate this account? All future reservations and their membership subscription will be
-					cancelled, and reactivating will not bring them back.
-				</p>
-			{/snippet}
-		</Action>
+		<div class="flex gap-2">
+			<Action
+				action={deactivateUser}
+				label="Deactivate"
+				successToast="Account deactivated"
+				variant="error"
+				size="sm"
+				onsuccess={refreshAccount}
+			>
+				{#snippet form()}
+					<input {...deactivateFields.id.as('hidden', id)} />
+					<p class="py-4">
+						Deactivate this account? All future reservations and their membership subscription will
+						be cancelled, and reactivating will not bring them back.
+					</p>
+				{/snippet}
+			</Action>
+			{@render banAction()}
+		</div>
 	{/if}
 </InfoCard>

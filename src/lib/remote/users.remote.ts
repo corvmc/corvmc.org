@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { titleCase } from '$lib/utils/format';
-import { CONFIRMATION_WINDOW_DAYS, SHORT_TEXT_MAX } from '$lib/config';
+import { CONFIRMATION_WINDOW_DAYS, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
@@ -60,7 +60,9 @@ import {
 	deactivateUser as deactivateUserService,
 	deactivateUsers as deactivateUsersService,
 	reactivateUser as reactivateUserService,
-	purgeUser as purgeUserService
+	purgeUser as purgeUserService,
+	banUser as banUserService,
+	unbanUser as unbanUserService
 } from '$lib/server/user/user-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { findMatchesFor, isProfileComplete } from '$lib/server/directory/directory-service';
@@ -257,7 +259,10 @@ export const getUser = query(z.string(), async (id) => {
 			stripeId: user.stripeId,
 			subscription: user.subscription,
 			createdAt: user.createdAt,
-			deletedAt: user.deletedAt
+			deletedAt: user.deletedAt,
+			bannedAt: user.bannedAt,
+			bannedById: user.bannedById,
+			banReason: user.banReason
 		})
 		.from(user)
 		// LEFT: staff must be able to open any account, including one whose
@@ -271,6 +276,11 @@ export const getUser = query(z.string(), async (id) => {
 
 	const roles = await getUserRoles(id);
 
+	// Not an FK, so the staffer may since have been purged; the name is then null.
+	const [bannedBy] = found.bannedById
+		? await db.select({ name: user.name }).from(user).where(eq(user.id, found.bannedById))
+		: [];
+
 	// `subscription` is a stored JSON blob that only staff-side code reads for
 	// its presence. It is reduced to a boolean here rather than shipped: the
 	// blob carries a Stripe subscription id, and the identity header only ever
@@ -279,6 +289,7 @@ export const getUser = query(z.string(), async (id) => {
 
 	return {
 		...rest,
+		bannedByName: bannedBy?.name ?? null,
 		// Matches the default `ensureUserEntry` creates an entry with, so a staff
 		// page never renders a blank where a visibility should be.
 		directoryVisibility: directoryVisibility ?? 'members',
@@ -546,6 +557,41 @@ export const reactivateUser = form(
 		void getUserPage(data.id).refresh();
 		// `lapsed` is the one outcome staff have to act on: the membership needs a
 		// fresh checkout rather than the resume the other cases got.
+		return { success: true, subscription };
+	}
+);
+
+/** The actor is the caller, never a field: the ban record is attribution. */
+export const banUser = form(
+	z.object({
+		id: z.string().min(1),
+		reason: z.string().trim().min(1, 'Say why, for the record').max(LONG_TEXT_MAX)
+	}),
+	async (data) => {
+		const me = await requireCapability('user.ban');
+		try {
+			await banUserService(data.id, { actorId: me.id, reason: data.reason });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getUserPage(data.id).refresh();
+		return { success: true };
+	}
+);
+
+export const unbanUser = form(
+	z.object({
+		id: z.string().min(1)
+	}),
+	async (data) => {
+		await requireCapability('user.ban');
+		let subscription: 'resumed' | 'active' | 'lapsed' | 'none' = 'none';
+		try {
+			({ subscription } = await unbanUserService(data.id));
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getUserPage(data.id).refresh();
 		return { success: true, subscription };
 	}
 );

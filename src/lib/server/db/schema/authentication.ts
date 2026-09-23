@@ -113,7 +113,17 @@ export const user = sqliteTable(
 		 * a different question and carries a guardian process; that answer goes
 		 * stale on a birthday and this does not.
 		 */
-		dateOfBirth: integer('date_of_birth', { mode: 'timestamp' })
+		dateOfBirth: integer('date_of_birth', { mode: 'timestamp' }),
+		/**
+		 * A ban: staff removed this account on purpose, and it stays removed until
+		 * staff lift it. Always paired with `deletedAt`, which does the enforcing;
+		 * these columns are the record of who decided and why. `bannedById` is not
+		 * an FK so the record survives the acting staffer's account being purged.
+		 * Names follow better-auth's admin plugin (`banned`, `banReason`).
+		 */
+		bannedAt: integer('banned_at', { mode: 'timestamp' }),
+		bannedById: text('banned_by_id'),
+		banReason: text('ban_reason')
 	},
 	(t) => [uniqueIndex('user_member_number_unique').on(t.memberNumber)]
 );

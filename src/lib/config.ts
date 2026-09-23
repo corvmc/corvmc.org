@@ -1718,7 +1718,7 @@ export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
  * one.
  */
 export const capabilities = {
-	user: ['list', 'read', 'update', 'setRole', 'deactivate', 'purge'],
+	user: ['list', 'read', 'update', 'setRole', 'deactivate', 'ban', 'purge'],
 	credit: ['read', 'adjust'],
 	finance: ['read', 'refund'],
 	settings: ['read', 'update'],
