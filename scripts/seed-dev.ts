@@ -94,6 +94,7 @@ import { seedProjects } from './seed/projects';
 import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
 import { seedPacking } from './seed/packing';
+import { seedBandTicketSale } from './seed/band-ticket-sale';
 import { seedEventRecaps } from './seed/event-recaps';
 
 async function main() {
@@ -275,6 +276,8 @@ async function main() {
 	// Straight after the rider, whose band and logins it reuses: one account
 	// reaches both features, and the promote path has a real rider to aim at.
 	const packing = await seedPacking(riders.structuredBandId);
+	// After `seedAudio`, whose Connect accounts decide which band may sell (#1203).
+	const bandSale = await seedBandTicketSale();
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -388,6 +391,11 @@ async function main() {
 	);
 	console.log(
 		`  ${packing.items} packing rows on the same band — ${packing.packed} already in the van, ${packing.unassigned} nobody has yet, ${packing.settled} already on the rider`
+	);
+	console.log(
+		bandSale
+			? `  1 band gig on sale through the collective — ${bandSale.bandName}, /events/${bandSale.eventId}/tickets`
+			: '  no band gig on sale — no premium band with payouts has an upcoming published gig'
 	);
 	console.log('\n  Tech rider demo logins (all `password`):');
 	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');
