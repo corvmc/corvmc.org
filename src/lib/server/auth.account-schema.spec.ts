@@ -29,9 +29,4 @@ describe('better-auth account schema', () => {
 	it('does not expect an issuer field', () => {
 		expect(Object.keys(accountSchema.shape)).not.toContain('issuer');
 	});
-
-	// Nothing writes issuer any more, so every insert depends on this default until the drop.
-	it('issuer keeps its constant default while the column remains', () => {
-		expect(getTableColumns(account).issuer.default).toBe('local:credential');
-	});
 });

@@ -149,13 +149,6 @@ export const account = sqliteTable('account', {
 	id: text('id').primaryKey(),
 	accountId: text('account_id').notNull(),
 	providerId: text('provider_id').notNull(),
-	/**
-	 * Inert: better-auth >=1.7.3 identifies accounts by `(providerId, accountId)`
-	 * and neither reads nor writes this. It stays until a deploy of this version
-	 * has landed, because the Worker running before that one declares it. The
-	 * constant default fills it on every insert. Dropped in the follow-up to #1164.
-	 */
-	issuer: text('issuer').notNull().default('local:credential'),
 	userId: text('user_id')
 		.notNull()
 		.references(() => user.id, { onDelete: 'cascade' }),
