@@ -1454,6 +1454,44 @@ the row.
   restricts on them too.
 - A website that is not http(s) is refused, since it is rendered as a public link.
 
+## 18. Market vendors: applications for a market day CMC hosts
+
+Tracking: #609. Open decisions: #1502 (fees), #1503 (who approves), #1504 (what the public sees).
+
+### The story
+
+Staff make a listing a market day on `/staff/events/[id]/vendors`, setting when applications
+close and how many tables there are. The public event page then shows **Apply for a table**.
+A vendor with no account fills in `/events/[id]/vendors/apply`, and staff accept each vendor
+with a table label, or decline. Either way a message goes to the vendor by email. Accepted
+vendors are listed on the event page.
+
+### Code path
+
+- **Open:** `openMarketDayForm` → `openMarketDay` upserts `market_day` and sets the listing's
+  `kind` to `market`.
+- **Apply:** `submitVendorApplicationForm` checks Turnstile, then `submitApplication` refuses
+  with `MarketClosedError` unless the listing is published, not started and before
+  `applications_close_at`. It opens a `web` inbox thread, posts the application as its first
+  message, and inserts `market_vendor`.
+- **Decide:** `decideVendorForm` → `decideApplication` (`event.manage`) moves the status and
+  sends the staff-written message through `addOutboundMessage`. `withdrawn` is final.
+- **Public list:** `getPublicMarket` → `listPublicVendors`, which names its columns and
+  returns accepted rows only.
+
+### Data touched
+
+- `market_day`: one row per market listing.
+- `market_vendor`: one row per application. It has no contact columns. The name, email and
+  phone live on the linked `inbox_thread`.
+
+### Where it breaks
+
+- **A vendor was never told.** The decision is recorded even if the thread was deleted
+  (`thread_id` set null). In that case no message is sent.
+- **Applications are open but nobody can apply.** Check that the listing is `published`. A
+  draft market returns 404 on the apply page.
+
 ## Cross-cutting patterns worth internalizing
 
 - **Everything money-related converges on two Stripe entry points:** `checkout()` in
