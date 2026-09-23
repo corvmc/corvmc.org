@@ -201,6 +201,19 @@ describe('updateMemberProfile', () => {
 		]);
 	});
 
+	it('writes skills under their own kind, so saving them never touches instruments', async () => {
+		selectResults.push([{ id: 'entry-1' }]);
+
+		await updateMemberProfile('user-1', { skills: ['Sound Engineer', ' photographer '] });
+
+		expect(insertedRows).toEqual([
+			[
+				{ entryId: 'entry-1', kind: 'skill', value: 'sound engineer' },
+				{ entryId: 'entry-1', kind: 'skill', value: 'photographer' }
+			]
+		]);
+	});
+
 	it('truncates bio to 2000 chars', async () => {
 		selectResults.push([{ id: 'entry-1' }]);
 		const longBio = 'x'.repeat(3000);
@@ -267,7 +280,8 @@ describe('getMemberProfileForEdit', () => {
 			{ kind: 'instrument', value: 'guitar' },
 			{ kind: 'instrument', value: 'drums' },
 			{ kind: 'genre', value: 'rock' },
-			{ kind: 'seeking_instrument', value: 'bass' }
+			{ kind: 'seeking_instrument', value: 'bass' },
+			{ kind: 'skill', value: 'promoter' }
 		]);
 
 		const result = await getMemberProfileForEdit('user-1');
@@ -283,7 +297,8 @@ describe('getMemberProfileForEdit', () => {
 			directoryVisibility: 'public',
 			directoryContact: null,
 			instruments: ['guitar', 'drums'],
-			genres: ['rock']
+			genres: ['rock'],
+			skills: ['promoter']
 		});
 		expect(result).not.toHaveProperty('id');
 	});

@@ -16,6 +16,7 @@ import {
 	MEMBER_BIOS,
 	PRONOUNS,
 	SAMPLE_LINKS,
+	SKILLS,
 	TAGLINES
 } from './pools';
 import { type SeedRole, type SeedUser } from './types';
@@ -113,6 +114,10 @@ export async function seedUsers(count: number): Promise<SeedUser[]> {
 		}
 		for (const value of memberGenres) {
 			pendingTags.push({ subjectId: id, kind: 'genre', value });
+		}
+		// By index, not `random()`: a new draw here would shift every later one.
+		if (hasProfile && i % 3 === 0) {
+			pendingTags.push({ subjectId: id, kind: 'skill', value: SKILLS[i % SKILLS.length] });
 		}
 
 		users.push({ ...u, email });

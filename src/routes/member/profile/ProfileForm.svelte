@@ -25,11 +25,13 @@
 	let {
 		profile,
 		instrumentSuggestions,
-		genreSuggestions
+		genreSuggestions,
+		skillSuggestions
 	}: {
 		profile: Awaited<ReturnType<typeof getMemberProfile>>;
 		instrumentSuggestions: string[];
 		genreSuggestions: string[];
+		skillSuggestions: string[];
 	} = $props();
 
 	const { fields } = saveMemberProfile;
@@ -49,6 +51,7 @@
 	let instruments = $state<string[]>(initial?.instruments ?? []);
 	let seekingInstruments = $state<string[]>(initial?.seekingInstruments ?? []);
 	let genres = $state<string[]>(initial?.genres ?? []);
+	let skills = $state<string[]>(initial?.skills ?? []);
 	let links = $state<ProfileLink[]>((initial?.links as ProfileLink[] | null) ?? []);
 	// The column, not the old boolean — 'members' is the direction a member
 	// assembling a band points, and this form had no way to say it.
@@ -86,6 +89,7 @@
 	<input {...fields.instruments.as('hidden', JSON.stringify(instruments))} />
 	<input {...fields.seekingInstruments.as('hidden', JSON.stringify(seekingInstruments))} />
 	<input {...fields.genres.as('hidden', JSON.stringify(genres))} />
+	<input {...fields.skills.as('hidden', JSON.stringify(skills))} />
 
 	<!-- About You: identity, photo, and bio -->
 	<InfoCard title="About You">
@@ -140,6 +144,20 @@
 					bind:value={genres}
 					suggestions={genreSuggestions}
 					placeholder="e.g. jazz, funk, rock..."
+				/>
+			</FormField>
+		</div>
+
+		<div class="mt-4">
+			<FormField
+				field={fields.skills}
+				label="Skills"
+				description="What you can help with besides playing — members and staff search for these."
+			>
+				<FreeformTagInput
+					bind:value={skills}
+					suggestions={skillSuggestions}
+					placeholder="e.g. sound engineer, photographer, promoter..."
 				/>
 			</FormField>
 		</div>

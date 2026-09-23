@@ -99,6 +99,7 @@
 		{#snippet side()}
 			<CrossRefList label="Acts" items={bandRefs} note={`${bandRefs.length} active`} />
 			<TagCloud label="Plays · Genres" {tags} />
+			<TagCloud label="Skills" tags={member.skills ?? []} />
 			<LinksBox links={member.links} />
 			<ContactBox label="Contact" {contact} />
 		{/snippet}

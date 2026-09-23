@@ -20,6 +20,7 @@ export type MemberFilters = {
 	search?: string;
 	instruments?: string[];
 	genres?: string[];
+	skills?: string[];
 	lookingForBand?: boolean;
 	availableForHire?: boolean;
 	teachesLessons?: boolean;
@@ -123,6 +124,10 @@ function memberWhereConditions(
 		conditions.push(tagCondition<MemberWhere>('genre', filters.genres));
 	}
 
+	if (filters?.skills?.length) {
+		conditions.push(tagCondition<MemberWhere>('skill', filters.skills));
+	}
+
 	if (filters?.lookingForBand) {
 		conditions.push({ lookingFor: 'band' });
 	}
@@ -186,6 +191,7 @@ function mapMemberRow<
 		createdAt: subject.createdAt,
 		instruments: tags.filter((t) => t.kind === 'instrument').map((t) => t.value),
 		genres: tags.filter((t) => t.kind === 'genre').map((t) => t.value),
+		skills: tags.filter((t) => t.kind === 'skill').map((t) => t.value),
 		lookingForBand: lookingFor === 'band',
 		directoryContact: contact,
 		bands: (subject.groupMembers ?? [])
@@ -812,4 +818,8 @@ export async function suggestInstruments(prefix: string) {
 
 export async function suggestGenres(prefix: string) {
 	return suggestTags('genre', prefix);
+}
+
+export async function suggestSkills(prefix: string) {
+	return suggestTags('skill', prefix);
 }
