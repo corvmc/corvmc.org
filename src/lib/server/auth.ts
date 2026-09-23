@@ -17,6 +17,7 @@ import { assignMemberNumber } from '$lib/server/user/member-number-service';
 import { linkExistingSubscriberToUser } from '$lib/server/marketing/subscriber-service';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import {
+	ACCOUNT_SUSPENDED_MESSAGE,
 	RESET_PASSWORD_TOKEN_TTL_SECONDS,
 	VERIFY_EMAIL_TOKEN_TTL_SECONDS,
 	sendPasswordChangedEmail,
@@ -331,6 +332,23 @@ export function isDeactivated(deletedAt: Date | null | undefined): boolean {
 	return deletedAt != null;
 }
 
+/** The `code` a suspended member's sign-in refusal carries, for the login page to key on. */
+export const ACCOUNT_SUSPENDED_CODE = 'ACCOUNT_SUSPENDED';
+
+/**
+ * Why a sign-in is refused before better-auth runs, or null to let it run.
+ * A ban is named only once the password matches, so the answer tells nothing
+ * to someone without it; any other closed account reads as a wrong password.
+ */
+export async function signInRefusal(
+	row: { deletedAt: Date | null; bannedAt: Date | null } | undefined,
+	passwordMatches: () => Promise<boolean>
+): Promise<'suspended' | 'invalid' | null> {
+	if (!row) return null;
+	if (row.bannedAt) return (await passwordMatches()) ? 'suspended' : 'invalid';
+	return isDeactivated(row.deletedAt) ? 'invalid' : null;
+}
+
 /** Normalize a raw sign-in email body field, or null when not a usable string. */
 function normalizeEmail(rawEmail: unknown): string | null {
 	if (typeof rawEmail !== 'string') return null;
@@ -606,17 +624,31 @@ function createAuth() {
 
 				if (ctx.path !== '/sign-in/email') return;
 
-				// Reject deactivated accounts before credentials are even checked.
-				// Uses the same generic message as a bad password so a deactivated
-				// account is indistinguishable from a wrong one (no enumeration).
-				// Kept outside the diagnostics try/catch below, which swallows throws.
-				const signInEmail = normalizeEmail((ctx.body as { email?: unknown } | undefined)?.email);
+				// Closed accounts are refused here, before better-auth would sign them
+				// in. Kept outside the diagnostics try/catch below, which swallows throws.
+				const body = ctx.body as { email?: unknown; password?: unknown } | undefined;
+				const signInEmail = normalizeEmail(body?.email);
 				if (signInEmail) {
 					const [row] = await db
-						.select({ deletedAt: user.deletedAt })
+						.select({ id: user.id, deletedAt: user.deletedAt, bannedAt: user.bannedAt })
 						.from(user)
 						.where(eq(user.email, signInEmail));
-					if (isDeactivated(row?.deletedAt)) {
+					const refusal = await signInRefusal(row, async () => {
+						if (!row || typeof body?.password !== 'string') return false;
+						const [cred] = await db
+							.select({ password: account.password })
+							.from(account)
+							.where(and(eq(account.userId, row.id), eq(account.providerId, 'credential')));
+						if (!cred?.password) return false;
+						return ctx.context.password.verify({ hash: cred.password, password: body.password });
+					});
+					if (refusal === 'suspended') {
+						throw new APIError('FORBIDDEN', {
+							message: ACCOUNT_SUSPENDED_MESSAGE,
+							code: ACCOUNT_SUSPENDED_CODE
+						});
+					}
+					if (refusal === 'invalid') {
 						throw new APIError('UNAUTHORIZED', { message: 'Invalid email or password' });
 					}
 				}
