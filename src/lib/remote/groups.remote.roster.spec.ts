@@ -45,7 +45,7 @@ vi.mock('$app/server', () => ({
 
 vi.mock('$lib/server/authorization', () => ({
 	requireUser: () => ({ id: 'user-1' }),
-	requireStaff: vi.fn(async () => ({ id: 'staff-1' })),
+	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
 	isElevated: vi.fn(async () => false)
 }));
 
