@@ -40,7 +40,8 @@
 		IconListDetails,
 		IconCalendarWeek,
 		IconCalendarMonth,
-		IconMapPin
+		IconMapPin,
+		IconContract
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
@@ -118,6 +119,7 @@
 		reports: IconReportAnalytics,
 		payments: IconCash,
 		credits: IconCoins,
+		agreements: IconContract,
 		settings: IconSettings
 	};
 

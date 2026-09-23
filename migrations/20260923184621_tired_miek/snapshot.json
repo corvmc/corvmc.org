@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "a604d8c5-202c-4541-ab33-23774235ece4",
+  "id": "a8deeb81-0fb3-45ab-a4d0-a23919c77342",
   "prevIds": [
-    "44b6220f-1245-4c8a-ba12-d467c95f7101"
+    "a604d8c5-202c-4541-ab33-23774235ece4"
   ],
   "ddl": [
     {
@@ -416,6 +416,10 @@
     },
     {
       "name": "reminder_sent",
+      "entityType": "tables"
+    },
+    {
+      "name": "agreement",
       "entityType": "tables"
     },
     {
@@ -11729,6 +11733,166 @@
       "table": "reminder_sent"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "counterparty",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'prospect'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount_cents",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tier",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "contact_name",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "contact_email",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "apply_by",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "starts_on",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ends_on",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "report_due_on",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "agreement"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -15637,6 +15801,15 @@
     },
     {
       "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "agreement_pk",
+      "table": "agreement",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
         {
           "value": "member_number",
           "isExpression": false
@@ -19170,6 +19343,20 @@
       "name": "reminder_sent_at_idx",
       "entityType": "indexes",
       "table": "reminder_sent"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "agreement_status_idx",
+      "entityType": "indexes",
+      "table": "agreement"
     },
     {
       "columns": [

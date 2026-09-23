@@ -80,6 +80,12 @@ export const moneyColumns = {
 		writer: 'src/lib/server/finance/production-expense-entries.ts'
 	},
 
+	// -------------------------------------------------------------- agreement
+	'agreement.amount_cents': {
+		notAccounting:
+			'the amount asked or awarded. The cheque itself is a manual `grant` entry when it arrives'
+	},
+
 	// ------------------------------------------------------------- contractor
 	'contractor_job.quoted_cents': {
 		notAccounting: 'what they said it would cost, before the invoice'

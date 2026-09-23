@@ -1377,6 +1377,39 @@ between the two features: walking through the easy door furnishes the rider on t
   null means "nobody has this"; a member leaving nulls it via `on delete set null`, which is
   the state the count should then show.
 
+## 16. Grants and sponsorships: what comes due next
+
+Spec: [specs/development-agreements-spec.md](../specs/development-agreements-spec.md)
+
+### The story
+
+The Development committee applies for grants and signs sponsors. Both are an agreement with a
+counterparty and dates that come due: apply by, report by, the term ending. Staff record each one
+at `/staff/agreements` and read the list soonest-deadline first. Status moves by hand through the
+edit form, and no transition has a side effect.
+
+### Code path
+
+- **Read:** `getAgreements` / `getAgreementDetail` in `agreements.remote.ts`, guarded by
+  `agreement.read`. Both pass `clubToday()` to `listAgreements` / `nextDeadline` in
+  `agreement-service.ts`. `nextDeadline` is pure: apply-by for a prospect, the earlier of report
+  and end for an active one, nothing otherwise.
+- **Write:** `createAgreement` / `updateAgreement` / `deleteAgreement`, guarded by
+  `agreement.manage`. A blank optional field is stored as null, never as an empty string.
+
+### Data touched
+
+- `agreement`: dates are `YYYY-MM-DD` text, compared as strings. `amount_cents` is
+  `notAccounting` in `money-map.ts`. An award arrives outside the app, as a manual `grant` entry.
+
+### Where it breaks
+
+- **A deadline shows a day early or late.** Something parsed a date column as a `Date`.
+  `new Date('2026-10-01')` is UTC midnight, the day before in Corvallis. The pages read it at
+  `T12:00:00` for display, and comparisons stay on the strings.
+- **The list shows an agreement nobody can find overdue.** "Today" came from UTC rather than
+  `clubToday()`, which is tomorrow from 5pm Pacific.
+
 ## Cross-cutting patterns worth internalizing
 
 - **Everything money-related converges on two Stripe entry points:** `checkout()` in

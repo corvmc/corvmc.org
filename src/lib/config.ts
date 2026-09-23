@@ -687,6 +687,53 @@ export const contractorJobStatusBadge = {
 } as const satisfies Record<ContractorJobStatus, string>;
 
 // ---------------------------------------------------------------------------
+// Development agreements: grants and sponsorships
+// ---------------------------------------------------------------------------
+
+export const agreementKinds = ['grant', 'sponsorship'] as const;
+export type AgreementKind = (typeof agreementKinds)[number];
+
+export const agreementKindLabels: Record<AgreementKind, string> = {
+	grant: 'Grant',
+	sponsorship: 'Sponsorship'
+};
+
+/** The order is advice, not a guard: no transition has a side effect. */
+export const agreementStatuses = ['prospect', 'applied', 'active', 'declined', 'ended'] as const;
+export type AgreementStatus = (typeof agreementStatuses)[number];
+
+/** What the list shows by default; the rest sit behind "Show closed". */
+export const openAgreementStatuses = [
+	'prospect',
+	'applied',
+	'active'
+] as const satisfies readonly AgreementStatus[];
+
+export const agreementStatusLabels: Record<AgreementStatus, string> = {
+	prospect: 'Prospect',
+	applied: 'Applied',
+	active: 'Active',
+	declined: 'Declined',
+	ended: 'Ended'
+};
+
+export type AgreementDeadlineKind = 'apply' | 'report' | 'end';
+
+export const agreementDeadlineLabels: Record<AgreementDeadlineKind, string> = {
+	apply: 'Apply by',
+	report: 'Report due',
+	end: 'Ends'
+};
+
+export const agreementStatusBadge = {
+	prospect: 'outline',
+	applied: 'info',
+	active: 'success',
+	declined: 'ghost',
+	ended: 'ghost'
+} as const satisfies Record<AgreementStatus, string>;
+
+// ---------------------------------------------------------------------------
 // Credit transaction sources
 // ---------------------------------------------------------------------------
 
@@ -1758,6 +1805,7 @@ export const capabilities = {
 	],
 	instructor: ['read', 'review'],
 	contractor: ['read', 'manage', 'recordInvoice'],
+	agreement: ['read', 'manage'],
 	project: ['read', 'manage'],
 	inbox: ['read', 'reply', 'assign', 'dispose', 'manageChannels'],
 	marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send'],
@@ -1915,6 +1963,7 @@ export const positions: Record<Position, Grants> = {
 		// Read, not adjust: see `adminOnlyCapabilities`.
 		credit: ['read'],
 		contractor: ['read', 'recordInvoice'],
+		agreement: ['read'],
 		inventory: ['read', 'manageAcquisitions', 'report'],
 		reservation: ['read', 'comp'],
 		// A show's settlement is on the production console, behind `event.read`

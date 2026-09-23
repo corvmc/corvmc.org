@@ -62,6 +62,8 @@ describe('activeNavKey', () => {
 		['/staff/events/abc/check-in', 'calendar'],
 		['/staff/events/abc/production', 'calendar'],
 		['/staff/productions', 'productions'],
+		['/staff/agreements', 'agreements'],
+		['/staff/agreements/abc', 'agreements'],
 		['/staff/inventory', 'equipment'],
 		['/staff/inventory/abc', 'equipment'],
 		['/staff/inventory/restock', 'inventory-restock'],

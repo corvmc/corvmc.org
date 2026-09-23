@@ -51,6 +51,7 @@ import { seedBcryptSignin } from './fixtures/seed-bcrypt-signin';
 import { seedInventory } from './fixtures/seed-inventory';
 import { seedStaffEvent } from './fixtures/seed-staff-event';
 import { seedVenues } from './fixtures/seed-venues';
+import { seedAgreements } from './fixtures/seed-agreements';
 import { seedProductions } from './fixtures/seed-productions';
 import { seedTicketPurchase } from './fixtures/seed-ticket-purchase';
 import { seedReservationPayments } from './fixtures/seed-reservation-payments';
@@ -159,6 +160,8 @@ await seedVenues();
 // After `seedVenues`, and pointedly not before it: this fixture's events name the
 // off-site venue, and the backfill above claims every event with a null one.
 await seedProductions();
+
+await seedAgreements();
 
 // Last, once every seed's miniflare has exited: leave no file with a WAL for the
 // preview server to recover. workerd opens its SQLite on the first *request*, by

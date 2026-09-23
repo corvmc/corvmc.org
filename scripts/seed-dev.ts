@@ -32,6 +32,7 @@ import { seedReservations, seedClosures, seedLockAccess } from './seed/reservati
 import { seedEvents } from './seed/events';
 import { findRoomConflicts, resetRoom } from './seed/room';
 import { seedVenues } from './seed/venues';
+import { seedAgreements } from './seed/agreements';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
@@ -118,6 +119,7 @@ async function main() {
 	// After the events, because it backfills every one of them into the room —
 	// which is where they all were, there being nowhere else until this table.
 	const venues = await seedVenues(events);
+	const agreements = await seedAgreements();
 	const bands = await seedBands(allUsers);
 	// Appended rather than folded into `seedBands`: it brings its own persona and
 	// login, and every downstream band seeder either maps over the whole array —
@@ -274,6 +276,7 @@ async function main() {
 	console.log(`  ${reservations.length} reservations`);
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${venues.venues} venues, one of them ours`);
+	console.log(`  ${agreements.agreements} grants and sponsorships`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(

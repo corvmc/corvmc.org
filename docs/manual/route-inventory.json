@@ -356,6 +356,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/agreements",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/agreements/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/bands",
 		"panel": "staff"
 	},
