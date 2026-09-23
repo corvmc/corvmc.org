@@ -15,7 +15,7 @@
 import { inArray } from 'drizzle-orm';
 import { withPlatformDb } from './platform-db';
 import { eventListing } from '../../src/lib/server/db/schema/event';
-import { ticket } from '../../src/lib/server/db/schema/ticket';
+import { ticket, ticketSale } from '../../src/lib/server/db/schema/ticket';
 import { SEED_STAFF_ID } from './seed-staff-user';
 
 export const SEED_TP_EVENT_ID = 'e2e-tp-ticketed';
@@ -64,11 +64,6 @@ export async function seedTicketPurchase(): Promise<void> {
 			status: 'published',
 			publishedAt: new Date(),
 			source: 'cmc',
-			ticketingEnabled: true,
-			ticketPrice: SEED_TP_PRICE_CENTS,
-			// The scale runs all the way to free: this is the NOTAFLOF show.
-			ticketPriceFloorCents: 0,
-			ticketQuantity: 50,
 			createdByUserId: SEED_STAFF_ID
 		});
 
@@ -81,11 +76,25 @@ export async function seedTicketPurchase(): Promise<void> {
 			status: 'published',
 			publishedAt: new Date(),
 			source: 'cmc',
-			ticketingEnabled: true,
-			ticketPrice: SEED_TP_PRICE_CENTS,
-			ticketPriceFloorCents: SEED_TP_FLOOR_CENTS,
-			ticketQuantity: 50,
 			createdByUserId: SEED_STAFF_ID
 		});
+
+		await db.insert(ticketSale).values([
+			{
+				eventListingId: SEED_TP_EVENT_ID,
+				enabled: true,
+				priceCents: SEED_TP_PRICE_CENTS,
+				// The scale runs all the way to free: this is the NOTAFLOF show.
+				priceFloorCents: 0,
+				quantity: 50
+			},
+			{
+				eventListingId: SEED_TP_FLOOR_EVENT_ID,
+				enabled: true,
+				priceCents: SEED_TP_PRICE_CENTS,
+				priceFloorCents: SEED_TP_FLOOR_CENTS,
+				quantity: 50
+			}
+		]);
 	});
 }

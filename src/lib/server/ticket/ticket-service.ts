@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { ticket, type TicketStatus } from '$lib/server/db/schema/ticket';
+import { ticket, ticketSale, type TicketStatus } from '$lib/server/db/schema/ticket';
 import { eventListing } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, inArray, lt, sql, asc, desc } from 'drizzle-orm';
@@ -447,16 +447,16 @@ export async function getTicketsSold(eventId: string): Promise<number> {
 }
 
 export async function getTicketsRemaining(eventId: string): Promise<number | null> {
-	const [ev] = await db
-		.select({ ticketQuantity: eventListing.ticketQuantity })
-		.from(eventListing)
-		.where(eq(eventListing.id, eventId))
+	const [sale] = await db
+		.select({ quantity: ticketSale.quantity })
+		.from(ticketSale)
+		.where(eq(ticketSale.eventListingId, eventId))
 		.limit(1);
 
-	if (!ev || ev.ticketQuantity == null) return null;
+	if (!sale || sale.quantity == null) return null;
 
 	const sold = await getTicketsSold(eventId);
-	return Math.max(0, ev.ticketQuantity - sold);
+	return Math.max(0, sale.quantity - sold);
 }
 
 export async function getUserTickets(userId: string) {

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import { drizzle } from 'drizzle-orm/d1';
+import { eventListing } from '$lib/server/db/schema/event';
 import { eventPosterKeySql, eventListingColumns, shortOfActsSql } from './event-columns';
 
 /**
@@ -67,5 +69,50 @@ describe('shortOfActsSql', () => {
 	it('has no COALESCE that would make an unset target read as zero', () => {
 		expect(short.toLowerCase()).not.toContain('coalesce');
 		expect(short.toLowerCase()).not.toContain('ifnull');
+	});
+});
+
+describe('eventListingColumns: the sale terms', () => {
+	// A bare drizzle instance renders SQL with no binding.
+	const sql = drizzle({} as never)
+		.select(eventListingColumns)
+		.from(eventListing)
+		.toSQL()
+		.sql.toLowerCase();
+
+	it('reads every term from ticket_sale, correlated on the OUTER listing', () => {
+		for (const column of ['enabled', 'price_cents', 'price_floor_cents', 'quantity']) {
+			expect(sql).toContain(`"ticket_sale"."${column}"`);
+		}
+		expect(sql).toContain('"ticket_sale"."event_listing_id" = "event_listing"."id"');
+	});
+
+	it('never selects the retired event_listing columns', () => {
+		// A single-table select renders its own columns unqualified.
+		for (const column of [
+			'ticketing_enabled',
+			'ticket_price',
+			'ticket_price_floor_cents',
+			'ticket_quantity'
+		]) {
+			expect(sql).not.toContain(`"${column}"`);
+		}
+		expect(eventListingColumns).not.toHaveProperty('legacyTicketingEnabled');
+	});
+
+	it('keeps the row shape its readers already use', () => {
+		for (const name of [
+			'ticketingEnabled',
+			'ticketPrice',
+			'ticketPriceFloorCents',
+			'ticketQuantity'
+		]) {
+			expect(eventListingColumns).toHaveProperty(name);
+		}
+	});
+
+	it('reads a listing with no sale row as not on sale, with a floor of zero', () => {
+		expect(sql).toMatch(/coalesce\(\(select "ticket_sale"."enabled"/);
+		expect(sql).toMatch(/coalesce\(\(select "ticket_sale"."price_floor_cents"/);
 	});
 });

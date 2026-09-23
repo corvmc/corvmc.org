@@ -5,6 +5,7 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { closure } from '$lib/server/db/schema/reservation';
 import { eventListing, eventBand } from '$lib/server/db/schema/event';
 import { eventListingColumns } from '$lib/server/event/event-columns';
+import { saveTicketSale } from '$lib/server/ticket/ticket-sale';
 import { group } from '$lib/server/db/schema/group';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { linkManagingGroup } from '$lib/server/event/event-service';
@@ -573,9 +574,6 @@ async function processEventSeries(
 			endsAt: occEnd,
 			doorsAt: occDoors,
 			tags: prototype.tags,
-			ticketingEnabled: prototype.ticketingEnabled,
-			ticketPrice: prototype.ticketPrice,
-			ticketQuantity: prototype.ticketQuantity,
 			// Inherited, all five. `location` matters for the same reason as the
 			// rest: an occurrence that lost it reads as being held somewhere it is
 			// not. `kind` matters most of all — a monthly deep clean is a recurring
@@ -592,6 +590,13 @@ async function processEventSeries(
 			recurringSeriesId: series.id
 		});
 		created++;
+
+		// The night is sold on the series' terms, when it has any.
+		await saveTicketSale(newEventId, {
+			enabled: prototype.ticketingEnabled || undefined,
+			priceCents: prototype.ticketPrice ?? undefined,
+			quantity: prototype.ticketQuantity ?? undefined
+		});
 
 		// After the listing, which already names it: the occurrence's back-of-house
 		// exists from the moment the night does, rather than waiting for somebody

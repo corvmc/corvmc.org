@@ -1,9 +1,10 @@
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { eventRsvp } from '../../src/lib/server/db/schema/event-rsvp';
+import { ticketSale } from '../../src/lib/server/db/schema/ticket';
 import { db } from './db';
 import { type SeedUser } from './types';
 import { pickN, randomInt } from './util';
-import { eq } from 'drizzle-orm';
+import { eq, isNull, or } from 'drizzle-orm';
 
 export async function seedRsvps(users: SeedUser[]) {
 	console.log('Seeding RSVPs...');
@@ -13,7 +14,8 @@ export async function seedRsvps(users: SeedUser[]) {
 	const nonTicketedEvents = await db
 		.select({ id: eventListing.id })
 		.from(eventListing)
-		.where(eq(eventListing.ticketingEnabled, false));
+		.leftJoin(ticketSale, eq(ticketSale.eventListingId, eventListing.id))
+		.where(or(isNull(ticketSale.enabled), eq(ticketSale.enabled, false)));
 
 	for (const evt of nonTicketedEvents) {
 		// A random, distinct subset of members RSVP (unique per event_id, user_id).

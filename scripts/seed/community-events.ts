@@ -1,4 +1,5 @@
 import { eventListing } from '../../src/lib/server/db/schema/event';
+import { ticketSale } from '../../src/lib/server/db/schema/ticket';
 import { memberStanding } from '../../src/lib/server/db/schema/standing';
 import { db } from './db';
 import { type SeedUser } from './types';
@@ -57,12 +58,15 @@ export async function seedCommunityEvents(members: SeedUser[], staffUser: SeedUs
 				status: 'published',
 				publishedAt: new Date(),
 				tags: pick(['all ages', 'punk, all ages', 'jazz', 'folk']),
-				// A door price, an off-site link, or free — never CMC checkout.
-				ticketPrice: pick([null, 500, 1000, 1500]),
 				externalTicketUrl: i === 0 ? 'https://www.eventbrite.com/e/example' : null,
 				createdByUserId: trusted.id
 			})
 			.returning();
+		// A door price, an off-site link, or free — never CMC checkout.
+		const doorPrice = pick([null, 500, 1000, 1500]);
+		if (doorPrice != null) {
+			await db.insert(ticketSale).values({ eventListingId: e.id, priceCents: doorPrice });
+		}
 		rows.push(e);
 	}
 
