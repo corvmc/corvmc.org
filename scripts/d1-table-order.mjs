@@ -185,7 +185,11 @@ export const tableOrder = [
 	'audio_track',
 	'radio_play',
 	// References audio_release and user, so it clears before either.
-	'release_purchase'
+	'release_purchase',
+	// A root: references nothing. Parent of local_resource.
+	'local_resource_category',
+	// References local_resource_category and user.
+	'local_resource'
 ];
 
 /**

@@ -116,6 +116,7 @@
 		campaigns: IconMail,
 		audiences: IconMailbox,
 		help: IconBook,
+		'local-resources': IconMapPin,
 		reports: IconReportAnalytics,
 		payments: IconCash,
 		credits: IconCoins,

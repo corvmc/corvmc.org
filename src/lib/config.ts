@@ -660,6 +660,10 @@ export const contractorTradeLabels: Record<ContractorTrade, string> = {
 	other: 'Other'
 };
 
+/** A local resource listing. `rejected` is a return state, not terminal. */
+export const localResourceStatuses = ['pending', 'published', 'rejected'] as const;
+export type LocalResourceStatus = (typeof localResourceStatuses)[number];
+
 /**
  * A job's lifecycle. Four states, matching `orderStatuses` in shape because the
  * shape is the same one: something is agreed, then it is committed to, then it
@@ -1767,7 +1771,9 @@ export const capabilities = {
 	// The staff music tools. Refunding a sale is `finance.refund`, not a music
 	// action: it moves money, and the treasurer is who does that.
 	music: ['read', 'moderate'],
-	help: ['read', 'manage']
+	help: ['read', 'manage'],
+	// The public local resources directory: categories and listings.
+	localResource: ['manage']
 } as const;
 
 export type Capabilities = typeof capabilities;

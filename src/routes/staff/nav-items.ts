@@ -69,6 +69,7 @@ export type StaffNavKey =
 	| 'campaigns'
 	| 'audiences'
 	| 'help'
+	| 'local-resources'
 	| 'payments'
 	| 'credits'
 	| 'reports'
@@ -410,7 +411,18 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Audiences',
 				href: resolve('/staff/marketing/audiences')
 			},
-			{ key: 'help', capability: 'help.read', label: 'Help Articles', href: resolve('/staff/help') }
+			{
+				key: 'help',
+				capability: 'help.read',
+				label: 'Help Articles',
+				href: resolve('/staff/help')
+			},
+			{
+				key: 'local-resources',
+				capability: 'localResource.manage',
+				label: 'Local Resources',
+				href: resolve('/staff/local-resources')
+			}
 		]
 	},
 	{
