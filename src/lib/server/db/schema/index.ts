@@ -39,4 +39,5 @@ export * from './artifact-request';
 export * from './committee-application';
 export * from './reminder';
 export * from './audit';
+export * from './local-resource';
 export * from './market';

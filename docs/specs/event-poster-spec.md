@@ -38,7 +38,8 @@ with no art is publishable exactly when Communications decides to run on the tem
 - `/act/{token}` shows a **Poster art** card for each live `poster_art` request against that entry:
   the event's title, date, venue and bill, and the due date. That card is the info packet.
 - Upload posts to `/api/acts/{token}/poster-art` with the request id. The route re-resolves the
-  token and refuses a request that is not this entry's, or is cancelled. JPEG or PNG, 15 MB.
+  token and refuses a request that is not this entry's, or is cancelled. JPEG or PNG, 10 MB, the
+  bucket's upload limit.
 - The file is attached to the **request** — `attachableType: 'artifact_request'`, slot `poster` —
   never to the event. A token authorizes one entry's own record, and an event's public poster is
   not that. A re-upload replaces the previous one.
@@ -66,16 +67,16 @@ One function, `renderFlyer(event, art?)`, returns a 1080×1350 PNG.
   order, and the ticket price or "free", on the brand palette.
 - **With art:** the art fills the frame above a branded footer carrying the same details.
 
-Rendering is `@cf-wasm/og` — satori to lay out, resvg to rasterize, built for workerd. Verified
-under `wrangler dev` (38–102 ms per render) and through this repo's production bundle: Vite leaves
-it external and wrangler resolves its `workerd` export with both wasm modules. It adds about
-750 KiB gzipped to a Worker that was about 2.7 MB, against the paid plan's 10 MB.
+Rendering is `@cf-wasm/og` — satori to lay out, resvg to rasterize, built for workerd. Vite leaves
+it external and wrangler resolves its `workerd` export with both wasm modules. The renderer ran in
+this repo's production build under `wrangler dev` at 82–169 ms per flyer. The Worker grows by about
+850 KiB gzipped, to about 3.6 MB, and the paid plan allows 10 MB.
 
-- Fonts are passed as bytes, fetched from `static/fonts/` through `event.fetch`. The library's
-  default fetches from Google Fonts at render time, which is a third-party dependency in a request
-  path.
-- Art is read at 1080 px wide through the zone's image transformations (`R2_TRANSFORM_URL`), so an
-  artist's 15 MB original is never decoded inside the Worker.
+- Lexend 400 and 700 and the speaker mark are bundled into the renderer with `?inline`, so a
+  render makes no network request. The library's default font comes from Google Fonts at render
+  time.
+- Art is read from the bucket through the R2 binding. Image transformations were the first choice,
+  but `format=auto` can answer AVIF, and resvg cannot decode AVIF.
 
 ### Where it is used
 

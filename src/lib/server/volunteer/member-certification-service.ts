@@ -284,6 +284,32 @@ export async function heldCertificationIds(userId: string, at = new Date()): Pro
 	return new Set(rows.map((r) => r.id));
 }
 
+/** Whether the member holds, in force now, the active certification of this name. */
+export async function holdsCertificationNamed(
+	userId: string,
+	name: string,
+	at = new Date()
+): Promise<boolean> {
+	const [row] = await db
+		.select({ id: memberCertification.id })
+		.from(memberCertification)
+		.innerJoin(
+			volunteerCertification,
+			eq(volunteerCertification.id, memberCertification.certificationId)
+		)
+		.where(
+			and(
+				eq(memberCertification.userId, userId),
+				eq(volunteerCertification.name, name),
+				eq(volunteerCertification.isActive, true),
+				heldOnSql(at)
+			)
+		)
+		.limit(1);
+
+	return !!row;
+}
+
 export interface HeldForGate {
 	certificationId: string;
 	grantedAt: Date;

@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { requireUser, isElevated, can } from '$lib/server/authorization';
 import type { GroupRole } from '$lib/server/db/schema/group';
+import type { Capability } from '$lib/config';
 import { getBySlug, getByIdActive, getUserRole } from '$lib/server/band/band-service';
 
 /**
@@ -41,8 +42,8 @@ const HIERARCHY: Record<GroupRole, number> = { owner: 0, admin: 1, member: 2 };
  * `role: 'staff'`. It bypasses `minRole` rather than being ranked against it:
  * passing it IS the decision that staff may do this thing.
  *
- * `isElevated`, not `hasAnyRole(['admin','staff'])` — the same predicate
- * `requireStaff()` uses. A narrower predicate here than the one admitting
+ * `isElevated`, not a role-name match — the same predicate `getBandLayout`
+ * uses. A narrower predicate here than the one admitting
  * people to the panel is what gave a `volunteer_coordinator` a group surface
  * on which every card 403'd.
  *
@@ -91,6 +92,33 @@ export async function requireCommitteeReviewer(ref: GroupRef): Promise<GroupCont
 	}
 
 	throw error(403, 'Not a chair of this committee');
+}
+
+/**
+ * Act on a row a committee owns: any active member of that committee, or a
+ * holder of `cover`, because staff must always be able to act.
+ *
+ * `groupId` is read off the row being acted on, never off the request. A null
+ * owner, a deleted group, or a band or club roster leaves only `cover`.
+ */
+export async function requireCommitteeMember(
+	groupId: string | null,
+	cover: Capability
+): Promise<{
+	user: GroupContext['user'];
+	group: ResolvedGroup | null;
+	role: GroupContext['role'];
+}> {
+	const user = requireUser();
+	const group = groupId ? await getByIdActive(groupId) : null;
+
+	if (group?.kind === 'committee') {
+		const role = await getUserRole(group.id, user.id);
+		if (role) return { user, group, role };
+	}
+
+	if (await can(cover)) return { user, group, role: 'staff' };
+	throw error(403, 'Not a member of the committee that owns this');
 }
 
 /**

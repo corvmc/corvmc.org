@@ -42,6 +42,7 @@ export const transactionSources = [
 	'refund',
 	'cancelled',
 	'admin_adjustment',
+	'staff_comp',
 	'reservation'
 ] as const;
 

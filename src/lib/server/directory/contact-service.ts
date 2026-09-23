@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { contact, type ContactSource } from '$lib/server/db/schema/contact';
 import { subscriber } from '$lib/server/db/schema/marketing';
 import { and, eq, isNull, lte } from 'drizzle-orm';
-import { requireCapability, requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 
 /**
  * The **only** module permitted to touch the `contact` table.
@@ -84,8 +84,8 @@ export async function upsertContact(
 	data: ContactData,
 	source: ContactSource
 ): Promise<void> {
-	// Still any position: no capability names a staff-entered write yet (#1404).
-	await requireStaff();
+	// The same people who send the act its own sheet, the other route in (#1404).
+	await requireCapability('directory.shareContactSheet');
 	await writeContact(entryId, data, source);
 }
 

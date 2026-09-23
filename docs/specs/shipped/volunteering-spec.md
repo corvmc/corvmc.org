@@ -1022,7 +1022,7 @@ the one thing that would let a blocked minor clear themselves.
 ### On the existing `volunteer` auth role
 
 `scripts/seed-dev.ts` seeds a `volunteer` auth role and grants it to six users.
-It is read by **zero** code paths. `docs/specs/admin-vs-staff-spec.md` open
+It is read by **zero** code paths. `docs/specs/shipped/admin-vs-staff-spec.md` open
 question 3 asks whether it means anything or is dead weight.
 
 This module does not revive it, and recommends deleting it:

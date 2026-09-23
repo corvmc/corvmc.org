@@ -69,6 +69,12 @@ vi.mock('$lib/server/production/artifact-request-service', () => ({
 	promotePosterArt: (...a: unknown[]) => artifacts.promotePosterArt(...a)
 }));
 
+const flyers = { useTemplateFlyer: vi.fn(), useArtWithFooter: vi.fn() };
+vi.mock('$lib/server/poster/flyer-service', () => ({
+	useTemplateFlyer: (...a: unknown[]) => flyers.useTemplateFlyer(...a),
+	useArtWithFooter: (...a: unknown[]) => flyers.useArtWithFooter(...a)
+}));
+
 const refresh = vi.fn();
 vi.mock('./events.remote', () => ({
 	getStaffEventPage: () => ({ refresh }),
@@ -152,6 +158,8 @@ const WRITES: { name: keyof typeof productions; args: unknown[]; capability?: st
 	},
 	{ name: 'dropArtifactRequest', args: [{ id: 'req-1', eventId: 'evt-1' }] },
 	{ name: 'usePosterArt', args: [{ requestId: 'req-1', eventId: 'evt-1' }] },
+	{ name: 'usePosterArtWithFooter', args: [{ requestId: 'req-1', eventId: 'evt-1' }] },
+	{ name: 'useTemplateFlyerAsPoster', args: [{ eventId: 'evt-1' }] },
 	{
 		name: 'recordActPayout',
 		args: [{ ...SLOT, amountCents: 1000 }],
@@ -187,6 +195,7 @@ describe('productions.remote guards', () => {
 				...service,
 				...runOfShow,
 				...artifacts,
+				...flyers,
 				...settlement,
 				...expenses
 			})) {

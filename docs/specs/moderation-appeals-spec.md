@@ -264,7 +264,7 @@ scope entirely.
 ### The staffer who made the call cannot ratify it — but may overturn it
 
 `admin` and `staff` are the same authorization everywhere in this app
-(`docs/specs/admin-vs-staff-spec.md`), so "a second staffer" cannot be a role
+(`docs/specs/shipped/admin-vs-staff-spec.md`), so "a second staffer" cannot be a role
 check. It is an **identity** check against `contentFlag.resolvedByUserId`.
 
 A hard block with no override raises the obvious objection: with a small

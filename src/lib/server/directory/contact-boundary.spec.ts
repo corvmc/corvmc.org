@@ -83,7 +83,7 @@ describe('the contact table has one access path', () => {
 		const unguarded = exports.filter((name) => {
 			const body = src.slice(src.indexOf(`export async function ${name}`));
 			const end = body.indexOf('\n}\n');
-			return !/requireCapability\('directory\.\w+'\)|requireStaff\(\)/.test(body.slice(0, end));
+			return !/requireCapability\('directory\.\w+'\)/.test(body.slice(0, end));
 		});
 
 		// The two deliberate exceptions, each named so that using one looks like

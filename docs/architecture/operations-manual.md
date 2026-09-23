@@ -151,7 +151,7 @@ Notes:
 ### Break-glass: acting when no admin is reachable
 
 `admin` is now the only position holding `user.setRole`, `user.purge` and `credit.adjust`
-(see [admin-vs-staff-spec.md](../specs/admin-vs-staff-spec.md) and the matrix in
+(see [admin-vs-staff-spec.md](../specs/shipped/admin-vs-staff-spec.md) and the matrix in
 `src/lib/config.ts`). Two people hold it. If both are unavailable and a role genuinely has
 to change, this is the way in — **not** a second shared admin account.
 
@@ -439,7 +439,7 @@ Each trigger runs its jobs sequentially in the order listed. The daily batch gen
 first, so freshly generated occurrences are visible to lock provisioning. Reminders are not
 a daily sweep: `/api/cron/reminders` drains a registry every 15 minutes, after
 `complete-shifts`. `CRON_SCHEDULE` in `src/lib/server/cron/schedule.ts` is the source; the
-schedule spec pins `wrangler.toml [triggers]` against it, but nothing pins this table.
+schedule spec pins both `wrangler.toml [triggers]` and this table against it.
 
 Manual invocation (safe — every job is idempotent and returns a JSON summary):
 

@@ -12,8 +12,8 @@
  * true, by making the JOIN impossible to write anywhere but the one module that
  * guards it.
  *
- * `contact-service.ts` is that module. Every export in it calls `requireStaff()`
- * itself rather than trusting its caller, so the guard travels with the data.
+ * `contact-service.ts` is that module. Every export in it guards itself rather
+ * than trusting its caller, so the guard travels with the data.
  *
  * **Why this matches the symbol and not just the module path.** The table has to
  * be re-exported from `schema/index.ts` or `drizzle-kit` cannot see it and
@@ -40,11 +40,11 @@ export default {
 		type: 'problem',
 		docs: {
 			description:
-				'Only contact-service.ts may import the `contact` schema. Every other reader goes through that service, which guards with requireStaff() itself.'
+				'Only contact-service.ts may import the `contact` schema. Every other reader goes through that service, which guards itself.'
 		},
 		messages: {
 			contactImport:
-				"'{{name}}' is the private contact table. Import from '$lib/server/directory/contact-service' instead — it is the one access path, and it calls requireStaff() itself so the guard travels with the data."
+				"'{{name}}' is the private contact table. Import from '$lib/server/directory/contact-service' instead — it is the one access path, and it guards itself so the guard travels with the data."
 		}
 	},
 	create(context) {

@@ -628,7 +628,7 @@ export async function searchMembers(query: string, bandId: string) {
  * Band lookup by name, for the lineup editor.
  *
  * Deliberately not the staff `searchBands` in reservations.remote, which is
- * `requireStaff()` and returns owner contact details. This is the band-facing
+ * capability-guarded and returns owner contact details. This is the band-facing
  * shape: just enough to render a chip and store an id.
  */
 /** Bands only — a club is not an act that can be credited on a bill. */

@@ -143,6 +143,11 @@ export interface ReservationReminderDueEvent {
 	endTime: string;
 }
 
+/** The lock has reported a booking's code as synced, so the member may be told it. */
+export interface DoorCodeReadyEvent extends ReservationReminderDueEvent {
+	code: string;
+}
+
 export interface ConfirmationReminderDueEvent {
 	/**
 	 * Which reminder this is. `window_open` is the day confirming becomes
@@ -714,6 +719,7 @@ export type DomainEvents = {
 	'reservation.cancelled': ReservationCancelledEvent;
 	'reservation.reminder_due': ReservationReminderDueEvent;
 	'reservation.confirmation_reminder_due': ConfirmationReminderDueEvent;
+	'reservation.door_code_ready': DoorCodeReadyEvent;
 	'ticket.purchased': TicketPurchasedEvent;
 	'audio.purchased': AudioPurchasedEvent;
 	// The four moments a sustaining membership touches somebody's money. All

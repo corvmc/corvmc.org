@@ -2,6 +2,8 @@
 // an inline .ics data URL from an event. Both emit UTC timestamps (YYYYMMDDTHHMMSSZ), the
 // format Google and the iCalendar spec expect.
 
+import { htmlToPlainText } from './html';
+
 export interface CalendarEvent {
 	/**
 	 * The event's own id. Becomes the VEVENT's `UID`, which is how a calendar
@@ -55,7 +57,7 @@ export function googleCalendarUrl(evt: CalendarEvent): string {
 		text: evt.title,
 		dates: `${toICSDate(evt.startsAt)}/${toICSDate(endsForExport(evt))}`
 	});
-	if (evt.description) params.set('details', evt.description);
+	if (evt.description) params.set('details', htmlToPlainText(evt.description));
 	if (evt.location) params.set('location', evt.location);
 	return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
@@ -121,7 +123,7 @@ export function icsDataUrl(evt: CalendarEvent, now: Date = new Date()): string {
 		`DTEND:${toICSDate(endsForExport(evt))}`,
 		`SUMMARY:${escapeICS(evt.title)}`
 	];
-	if (evt.description) lines.push(`DESCRIPTION:${escapeICS(evt.description)}`);
+	if (evt.description) lines.push(`DESCRIPTION:${escapeICS(htmlToPlainText(evt.description))}`);
 	if (evt.location) lines.push(`LOCATION:${escapeICS(evt.location)}`);
 	lines.push('END:VEVENT', 'END:VCALENDAR');
 

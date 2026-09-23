@@ -344,6 +344,33 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Door code ready (the lock has confirmed it) ---
+	domainEvents.on('reservation.door_code_ready', async ({ data: event }) => {
+		await dispatch({
+			type: 'door_code_ready',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Your door code is ready',
+			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
+			href: '/member/reservations',
+			email: {
+				recipientName: event.userName,
+				subject: `Your door code for ${event.date}`,
+				preview_text: `The lock has your code for ${event.date}.`,
+				heading: 'Your door code is ready',
+				paragraphs: [
+					{ text: 'The door lock has confirmed your code. Enter it on the keypad to get in.' }
+				],
+				details: [
+					{ label: 'Door code', value: event.code },
+					...whenDetails(event.date, event.startTime, event.endTime)
+				],
+				footnote: 'It works from your start time until shortly after your booking ends.',
+				cta: { label: 'View my reservations' }
+			}
+		});
+	});
+
 	// --- Confirmation reminder ---
 	domainEvents.on('reservation.confirmation_reminder_due', async ({ data: event }) => {
 		// The first reminder is an invitation and the second is a deadline. Same

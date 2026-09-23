@@ -98,7 +98,7 @@ association, not independent parties that transact with it.
 ## Role 3 — Governance
 
 **Ours.** Committees exist as `group` rows; `by_application` and `requested` both exist.
-[`admin-vs-staff-spec.md`](../specs/admin-vs-staff-spec.md) designs capabilities-not-tiers
+[`admin-vs-staff-spec.md`](../specs/shipped/admin-vs-staff-spec.md) designs capabilities-not-tiers
 and states the guard: "a committee guard reads `group_member`, not the role table, and the
 two are independent." Announcements and files are phases 5+. **Designed, largely unbuilt.**
 

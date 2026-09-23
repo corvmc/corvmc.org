@@ -23,7 +23,7 @@ export type ContactSource = (typeof contactSources)[number];
  * schema's shape alone:
  *
  * 1. **One access path.** Every read goes through `contact-service.ts`, which
- *    calls `requireStaff()` itself. `custom/no-contact-schema-imports` bans
+ *    guards itself. `custom/no-contact-schema-imports` bans
  *    importing this module anywhere else.
  * 2. **Never in a client DTO.** Remote functions return a shaped object; these
  *    fields appear in exactly one staff-facing query.

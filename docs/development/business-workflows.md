@@ -307,7 +307,7 @@ premium subscription that unlocks a public band microsite.
   `src/routes/band-site/[slug]/`, gated on the band's tier alone since the launch, with
   member-editable page config in `bandPageConfig` — custom CSS passes through `css-sanitizer.ts`.
 - **Staff moderation:** `staff/bands` pages → the staff forms in `bands.remote.ts`
-  (`deactivateBand`, `reactivateBand`, `updateStaffBand`, ...), all `requireStaff()`-guarded.
+  (`deactivateBand`, `reactivateBand`, `updateStaffBand`, ...), each guarded on a `band.*` capability.
 
 ### Data touched
 
@@ -1428,6 +1428,31 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
   through by design even when the insert failed.
 - **A payload over 4 KB is dropped, not truncated.** The only free-text field is a credit
   adjustment's description.
+
+## 17. The local resources directory
+
+Spec: [specs/local-resources-spec.md](../specs/local-resources-spec.md)
+
+### The story
+
+Staff keep a public list of music businesses around Corvallis. They define categories, add
+listings, which publish on save, and review anything pending. A listing that is not right is
+returned with a note and can be published later. Removing one takes it off the page and keeps
+the row.
+
+### Code path
+
+- **Public:** `getLocalResourceDirectory` (unguarded) → `listPublishedByCategory()`, which filters
+  `status = 'published'` and `deleted_at is null` in SQL and groups rows in category order.
+  Rendered by `ResourceDirectory.svelte` inside its own boundary above the tip form.
+- **Staff:** `local-resources.remote.ts` behind `localResource.manage`, over
+  `src/lib/server/local-resource/local-resource-service.ts`.
+
+### Where it breaks
+
+- A category with listings cannot be deleted, including removed ones, because the foreign key
+  restricts on them too.
+- A website that is not http(s) is refused, since it is rendered as a public link.
 
 ## Cross-cutting patterns worth internalizing
 

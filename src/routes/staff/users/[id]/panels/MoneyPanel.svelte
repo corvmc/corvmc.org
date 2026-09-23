@@ -19,7 +19,8 @@
 	import { AdjustCreditsAction } from '$lib/components/actions';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { creditsToHours } from '$lib/config';
+	import { creditsToHours, creditCompCeiling, hasCapability } from '$lib/config';
+	import { getStaffLayout } from '$lib/remote/layout.remote';
 	import { formatCents, formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
 
 	let { id }: { id: string } = $props();
@@ -34,6 +35,12 @@
 		void getUserCreditHistory({ userId: id, page: creditPage }).refresh();
 		void getUserPage(id).refresh();
 	}
+
+	// The staff layout has already fetched this; the call dedupes to it.
+	const caps = $derived((await getStaffLayout()).capabilities);
+	const canAdjust = $derived(hasCapability(caps, 'credit.adjust'));
+	const canComp = $derived(hasCapability(caps, 'credit.comp'));
+	const compHint = `Up to ${creditsToHours(creditCompCeiling.free_hours)} hrs of free hours. An admin can add more.`;
 </script>
 
 <RelatedList title="Membership" result={getUserMembership(id)}>
@@ -79,7 +86,13 @@
 				<p class="text-muted">Equipment Credits</p>
 			</div>
 		</div>
-		<AdjustCreditsAction userId={id} onsuccess={refreshCredits} />
+		{#if canAdjust || canComp}
+			<AdjustCreditsAction
+				userId={id}
+				onsuccess={refreshCredits}
+				amountHint={canAdjust ? undefined : compHint}
+			/>
+		{/if}
 	{/snippet}
 </RelatedList>
 

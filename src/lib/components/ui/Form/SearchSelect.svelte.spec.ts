@@ -3,6 +3,7 @@ import { render } from 'vitest-browser-svelte';
 import { userEvent } from 'vitest/browser';
 import SearchSelect from './SearchSelect.svelte';
 import Harness from './SearchSelect.test.svelte';
+import OuterBoundary from '../OuterBoundary.test.svelte';
 
 /**
  * A mouse could pick a recipient and a keyboard could not: the list appeared,
@@ -111,5 +112,23 @@ describe('SearchSelect posting into a remote form', () => {
 
 		await vi.waitFor(() => expect(hidden()).not.toBeNull());
 		expect(hidden()!.name).toBe('leaderId');
+	});
+});
+
+describe('SearchSelect when the search rejects', () => {
+	it('shows its own failure inside the field, rather than the caller losing its content', async () => {
+		const failing = async (): Promise<typeof PEOPLE> => {
+			throw new Error('search service down');
+		};
+		await render(OuterBoundary, { inner: SearchSelect as never, innerProps: { search: failing } });
+
+		await vi.waitFor(() => expect(input()).not.toBeNull());
+		await userEvent.click(input());
+		await userEvent.type(input(), 'Ada');
+
+		await vi.waitFor(() => {
+			expect(document.body.textContent).toContain('Search is not answering');
+		});
+		expect(document.querySelector('[data-outer-failed]')).toBeNull();
 	});
 });
