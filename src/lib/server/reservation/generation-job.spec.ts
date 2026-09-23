@@ -649,7 +649,7 @@ describe('generateRecurringEvents', () => {
 			recurringSeriesId: EVENT_SERIES.id
 		});
 		// The night is sold on the series' terms, written to `ticket_sale`.
-		expect(mockSaveTicketSale).toHaveBeenCalledWith(listings[0].row.id, {
+		expect(mockSaveTicketSale).toHaveBeenCalledWith((listings[0].row as { id: string }).id, {
 			enabled: true,
 			priceCents: 1000,
 			quantity: 40
