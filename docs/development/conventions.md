@@ -679,41 +679,41 @@ instead, where a human sees it.
 
 Every script in `package.json`:
 
-| Script                          | What it does                                                                                   |
-| ------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `dev`                           | Vite dev server on :5173 (a worktree gets its own port — `scripts/lib/checkout-ports.ts`)      |
-| `build`                         | `vite build` (output: `.svelte-kit/cloudflare/`)                                               |
-| `preview`                       | Serve the production build on :4173 (a worktree gets its own port)                             |
-| `prepare`                       | (auto on install) svelte-kit sync + lefthook install                                           |
-| `check` / `check:watch`         | svelte-check type checking                                                                     |
-| `test:unit`                     | Vitest (watch mode; `--run` for one-shot, which queues behind any other full suite)            |
-| `test:components`               | One-shot client (browser) + storybook vitest projects                                          |
-| `test:e2e`                      | Migrate + seed a local D1, then run Playwright `e2e/**/*.e2e.ts`                               |
-| `test:e2e:prepare`              | Just the migrate + seed half (CI runs it as its own step)                                      |
-| `test:e2e:run`                  | Just the Playwright half — takes its flags, e.g. `-- --workers=1`                              |
-| `test`                          | Full suite: unit one-shot + e2e (what CI runs)                                                 |
-| `test:report`                   | Vitest with JSON output → `test-results.json`                                                  |
-| `lint`                          | prettier `--check` + eslint over everything                                                    |
-| `lint:changed`                  | Lint only files changed vs `BASE_REF` (default `origin/main`; PR CI passes the PR's base)      |
-| `format`                        | prettier `--write` everything                                                                  |
-| `db:generate`                   | drizzle-kit: generate a migration from schema changes, then make any table rebuild D1-safe     |
-| `db:fix-migrations`             | Rewrite unsafe table rebuilds (run automatically by `db:generate`)                             |
-| `db:check-migrations`           | Fail if any migration has an unsafe table rebuild (runs in CI)                                 |
-| `db:migrate`                    | drizzle-kit: apply pending migrations to **remote** D1                                         |
-| `db:migrate:local`              | Apply pending migrations to the local D1 (tracked; a no-op when current)                       |
-| `db:seed`                       | Run `scripts/seed-dev.ts` against local D1                                                     |
-| `volunteer:seed-roles`          | Seed the volunteer role catalogue (`scripts/seed-volunteer-roles.ts`)                          |
-| `db:reset`                      | Wipe local D1 + migrate + seed                                                                 |
-| `db:studio`                     | drizzle-kit studio GUI (**remote** D1 — needs `CLOUDFLARE_*` vars)                             |
-| `ci:migrate`                    | Remote migrate, but only on `main` — prepended to `pnpm build` by the Cloudflare build command |
-| `storybook` / `build-storybook` | Storybook on :6006 / static build                                                              |
-| `stripe:sync-webhooks`          | Sync the Stripe webhook endpoint's event list to the code registry                             |
-| `help:sync`                     | Upsert `src/content/help/**` articles into the D1 help tables                                  |
-| `docs:routes`                   | Regenerate the route snapshot `docs/manual/route-inventory.json`                               |
-| `docs:check`                    | Docs integrity + route-drift check (CI gate)                                                   |
-| `email:push` / `email:pull`     | Sync Postmark transactional templates repo ↔ Postmark                                          |
-| `email:preview`                 | Render the templates to `.email-preview/` for eyeballing                                       |
-| `email:validate`                | Check template syntax and required variables                                                   |
+| Script                          | What it does                                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------------------- |
+| `dev`                           | Vite dev server on :5173 (a worktree gets its own port — `scripts/lib/checkout-ports.ts`)   |
+| `build`                         | `vite build` (output: `.svelte-kit/cloudflare/`)                                            |
+| `preview`                       | Serve the production build on :4173 (a worktree gets its own port)                          |
+| `prepare`                       | (auto on install) svelte-kit sync + lefthook install                                        |
+| `check` / `check:watch`         | svelte-check type checking                                                                  |
+| `test:unit`                     | Vitest (watch mode; `--run` for one-shot, which queues behind any other full suite)         |
+| `test:components`               | One-shot client (browser) + storybook vitest projects                                       |
+| `test:e2e`                      | Migrate + seed a local D1, then run Playwright `e2e/**/*.e2e.ts`                            |
+| `test:e2e:prepare`              | Just the migrate + seed half (CI runs it as its own step)                                   |
+| `test:e2e:run`                  | Just the Playwright half — takes its flags, e.g. `-- --workers=1`                           |
+| `test`                          | Full suite: unit one-shot + e2e (what CI runs)                                              |
+| `test:report`                   | Vitest with JSON output → `test-results.json`                                               |
+| `lint`                          | prettier `--check` + eslint over everything                                                 |
+| `lint:changed`                  | Lint only files changed vs `BASE_REF` (default `origin/main`; PR CI passes the PR's base)   |
+| `format`                        | prettier `--write` everything                                                               |
+| `db:generate`                   | drizzle-kit: generate a migration from schema changes, then make any table rebuild D1-safe  |
+| `db:fix-migrations`             | Rewrite unsafe table rebuilds (run automatically by `db:generate`)                          |
+| `db:check-migrations`           | Fail if any migration has an unsafe table rebuild (runs in CI)                              |
+| `db:migrate`                    | drizzle-kit: apply pending migrations to **remote** D1                                      |
+| `db:migrate:local`              | Apply pending migrations to the local D1 (tracked; a no-op when current)                    |
+| `db:seed`                       | Run `scripts/seed-dev.ts` against local D1                                                  |
+| `volunteer:seed-roles`          | Seed the volunteer role catalogue (`scripts/seed-volunteer-roles.ts`)                       |
+| `db:reset`                      | Wipe local D1 + migrate + seed                                                              |
+| `db:studio`                     | drizzle-kit studio GUI (**remote** D1 — needs `CLOUDFLARE_*` vars)                          |
+| `ci:migrate`                    | Remote migrate on `main` only; drop-only batches wait for `--after-publish` (ops manual §1) |
+| `storybook` / `build-storybook` | Storybook on :6006 / static build                                                           |
+| `stripe:sync-webhooks`          | Sync the Stripe webhook endpoint's event list to the code registry                          |
+| `help:sync`                     | Upsert `src/content/help/**` articles into the D1 help tables                               |
+| `docs:routes`                   | Regenerate the route snapshot `docs/manual/route-inventory.json`                            |
+| `docs:check`                    | Docs integrity + route-drift check (CI gate)                                                |
+| `email:push` / `email:pull`     | Sync Postmark transactional templates repo ↔ Postmark                                       |
+| `email:preview`                 | Render the templates to `.email-preview/` for eyeballing                                    |
+| `email:validate`                | Check template syntax and required variables                                                |
 
 ## Docs workflow (when you change routes or help content)
 
