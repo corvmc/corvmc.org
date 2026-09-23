@@ -102,6 +102,7 @@ import {
 	DEFAULT_TIMEZONE
 } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { getDonationWishlist } from '$lib/server/inventory/wishlist-service';
 
 /**
  * A calendar date the operator typed, as an instant.
@@ -1829,3 +1830,9 @@ export const getMemberEquipmentPage = query(memberEquipmentFilters, async (filte
 	]);
 	return { equipment, meta };
 });
+
+/**
+ * The donation wishlist on `/contribute`. **Unguarded on purpose** — it is a
+ * public page — so the service returns names only.
+ */
+export const getPublicWishlist = query(async () => getDonationWishlist());

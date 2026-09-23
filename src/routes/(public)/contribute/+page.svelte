@@ -14,6 +14,7 @@
 	import type { Icon } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { getPublicCommittees } from '$lib/remote/committees.remote';
+	import { getPublicWishlist } from '$lib/remote/inventory.remote';
 
 	type VolunteerGroup = {
 		icon: Icon;
@@ -48,7 +49,9 @@
 	// The committees are `group` rows with a staff-editable `bio`, and that bio
 	// is the canonical remit — the literal list here went stale within a week
 	// of #1149 renaming one of them by hand (#1167).
-	const committees = $derived(await getPublicCommittees());
+	const [committees, wishlist] = $derived(
+		await Promise.all([getPublicCommittees(), getPublicWishlist()])
+	);
 
 	const volunteerGroups: VolunteerGroup[] = $derived([
 		{
@@ -100,7 +103,7 @@
 			title: 'Donate Gear',
 			desc: 'Working amps, drums, mics, or instruments find a new home in our lending library.',
 			href: '/contact',
-			cta: 'Get in Touch'
+			cta: 'Offer Gear'
 		},
 		{
 			icon: IconMicrophone,
@@ -193,6 +196,46 @@
 		<Button href="/membership" variant="default" size="lg">Explore Membership</Button>
 	</div>
 </section>
+
+<!--
+	The wishlist (#604): a projection of planned gear suggestions and low
+	consumables, names only. Absent entirely when there is nothing to ask for.
+-->
+{#if wishlist.gear.length > 0 || wishlist.supplies.length > 0}
+	<Section tint="info">
+		<SectionHeading title="What We Need">
+			Gear and supplies the space is short of right now. Have one to give? Get in touch and we'll
+			arrange a drop-off.
+		</SectionHeading>
+		<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+			{#if wishlist.gear.length > 0}
+				<Tile fill="raised" align="stack">
+					<h3 class="text-lg font-bold">Gear members have asked for</h3>
+					<ul class="flex flex-col gap-2">
+						{#each wishlist.gear as g, i (i)}
+							<li class="leading-relaxed">{g.title}</li>
+						{/each}
+					</ul>
+				</Tile>
+			{/if}
+			{#if wishlist.supplies.length > 0}
+				<Tile fill="raised" align="stack">
+					<h3 class="text-lg font-bold">Supplies running low</h3>
+					<ul class="flex flex-col gap-2">
+						{#each wishlist.supplies as item, i (i)}
+							<li class="leading-relaxed">
+								{item.name}{#if item.isOut}<span class="text-fg-3"> — out</span>{/if}
+							</li>
+						{/each}
+					</ul>
+				</Tile>
+			{/if}
+		</div>
+		<div class="measure-center mt-8">
+			<Button href="/contact" variant="default" size="lg">Offer an Item</Button>
+		</div>
+	</Section>
+{/if}
 
 <!-- Other Ways to Contribute -->
 <Section tint="warning">
