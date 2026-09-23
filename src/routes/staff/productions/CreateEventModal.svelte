@@ -44,6 +44,7 @@
 	let doorsTime = $state('');
 	let tags = $state('');
 	let venueId = $state('');
+	let addressLine = $state('');
 	let reserveSpace = $state(false);
 	let reservationStartTime = $state('');
 	let reservationEndTime = $state('');
@@ -206,6 +207,7 @@
 		ticketQuantity = '';
 		reserveSpace = false;
 		venueId = '';
+		addressLine = '';
 		reservationStartTime = '';
 		reservationEndTime = '';
 		lastEventStartTime = '';
@@ -321,6 +323,13 @@
 					description="Leave it on the room unless the show is somewhere else."
 				/>
 			{/if}
+			<Field
+				name="location"
+				type="text"
+				label="Address line"
+				bind:value={addressLine}
+				description="The line the gig guide prints under the venue. Optional."
+			/>
 
 			<!--
 				A show somewhere else has no space here to hold, so the toggle goes away
