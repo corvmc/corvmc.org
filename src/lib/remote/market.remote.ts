@@ -48,6 +48,13 @@ const website = z
 /** Whether a market is taking applications. Null for anything not a public market. */
 export const getMarketApplicationInfo = query(eventId, async (id) => getApplicationWindow(id));
 
+/** The application page's header; 404 for anything not a public market. */
+export const getVendorApplyPage = query(eventId, async (id) => {
+	const info = await getApplicationWindow(id);
+	if (!info) error(404, 'Not found');
+	return info;
+});
+
 /** Accepted vendors, as the event page lists them. Never a contact detail. */
 export const getPublicVendors = query(eventId, async (id) => listPublicVendors(id));
 

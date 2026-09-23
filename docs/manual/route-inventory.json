@@ -148,6 +148,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/events/[id]/vendors/apply",
+		"panel": "public"
+	},
+	{
 		"route": "/forgot-password",
 		"panel": "public"
 	},
@@ -413,6 +417,10 @@
 	},
 	{
 		"route": "/staff/events/[id]/production",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/events/[id]/vendors",
 		"panel": "staff"
 	},
 	{
