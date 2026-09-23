@@ -1476,7 +1476,7 @@ vendors are listed on the event page.
   message, and inserts `market_vendor`.
 - **Decide:** `decideVendorForm` → `decideApplication` (`event.manage`) moves the status and
   sends the staff-written message through `addOutboundMessage`. `withdrawn` is final.
-- **Public list:** `getPublicVendors` → `listPublicVendors`, which names its columns and
+- **Public list:** `getPublicMarket` → `listPublicVendors`, which names its columns and
   returns accepted rows only.
 
 ### Data touched

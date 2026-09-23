@@ -3,7 +3,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 	import { formatDateTime } from '$lib/utils/format';
-	import { getMarketApplicationInfo, getPublicVendors } from '$lib/remote/market.remote';
+	import { getPublicMarket } from '$lib/remote/market.remote';
 
 	/**
 	 * A market day's vendors, and the way in for new ones.
@@ -13,11 +13,9 @@
 	 */
 	let { eventId }: { eventId: string } = $props();
 
-	const market = $derived(
-		await Promise.all([getMarketApplicationInfo(eventId), getPublicVendors(eventId)])
-	);
-	const info = $derived(market[0]);
-	const vendors = $derived(market[1]);
+	const market = $derived(await getPublicMarket(eventId));
+	const info = $derived(market?.info);
+	const vendors = $derived(market?.vendors ?? []);
 </script>
 
 {#if info}

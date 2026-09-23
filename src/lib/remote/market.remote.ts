@@ -45,9 +45,6 @@ const website = z
 // Public
 // ---------------------------------------------------------------------------
 
-/** Whether a market is taking applications. Null for anything not a public market. */
-export const getMarketApplicationInfo = query(eventId, async (id) => getApplicationWindow(id));
-
 /** The application page's header; 404 for anything not a public market. */
 export const getVendorApplyPage = query(eventId, async (id) => {
 	const info = await getApplicationWindow(id);
@@ -55,8 +52,14 @@ export const getVendorApplyPage = query(eventId, async (id) => {
 	return info;
 });
 
-/** Accepted vendors, as the event page lists them. Never a contact detail. */
-export const getPublicVendors = query(eventId, async (id) => listPublicVendors(id));
+/**
+ * A market's section on its event page: whether it takes applications, and
+ * the accepted vendors. Null for anything not a public market. Never a contact.
+ */
+export const getPublicMarket = query(eventId, async (id) => {
+	const [info, vendors] = await Promise.all([getApplicationWindow(id), listPublicVendors(id)]);
+	return info ? { info, vendors } : null;
+});
 
 export const submitVendorApplicationForm = form(
 	z.object({
