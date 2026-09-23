@@ -281,8 +281,10 @@ export async function deliverPosterArt(input: {
 	});
 }
 
-/** Point the event's poster at the delivered art — the same object, not a copy. */
-export async function promotePosterArt(requestId: string): Promise<{ eventId: string }> {
+/** The art delivered against a request, and the show it is for. */
+export async function deliveredPosterArt(
+	requestId: string
+): Promise<{ eventId: string; key: string }> {
 	const [req] = await db
 		.select({ eventId: artifactRequest.eventId })
 		.from(artifactRequest)
@@ -290,7 +292,12 @@ export async function promotePosterArt(requestId: string): Promise<{ eventId: st
 		.limit(1);
 	const key = req ? (await deliveredKeys([requestId])).get(requestId) : undefined;
 	if (!req || !key) throw new PosterRequestNotFoundError();
+	return { eventId: req.eventId, key };
+}
 
-	await attachExisting('event_listing', req.eventId, 'poster', key);
-	return { eventId: req.eventId };
+/** Point the event's poster at the delivered art — the same object, not a copy. */
+export async function promotePosterArt(requestId: string): Promise<{ eventId: string }> {
+	const { eventId, key } = await deliveredPosterArt(requestId);
+	await attachExisting('event_listing', eventId, 'poster', key);
+	return { eventId };
 }

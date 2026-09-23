@@ -18,7 +18,8 @@
 	import {
 		askForArtifact,
 		dropArtifactRequest,
-		usePosterArt
+		usePosterArt,
+		usePosterArtWithFooter
 	} from '$lib/remote/productions.remote';
 	import { searchAskableListings } from '$lib/remote/external-acts.remote';
 	import type { OutstandingRequest } from '$lib/types/artifact-request';
@@ -178,6 +179,26 @@
 									<input type="hidden" name="eventId" value={eventId} />
 									<p class="text-sm">
 										The art from {req.actName ?? 'the artist'} replaces the event's current poster.
+									</p>
+								{/snippet}
+							</Action>
+							<Action
+								action={usePosterArtWithFooter}
+								label="Use with a details footer"
+								variant="ghost"
+								size="sm"
+								modalTitle="Add the show details under this art?"
+								submitLabel="Make the poster"
+								successToast="Poster updated"
+								onsuccess={onchange}
+							>
+								{#snippet form()}
+									<input type="hidden" name="requestId" value={req.id} />
+									<input type="hidden" name="eventId" value={eventId} />
+									<p class="text-sm">
+										The art sits above a footer with the date, doors, venue and price, and the
+										result replaces the current poster. It is a snapshot: after editing the event,
+										run this again.
 									</p>
 								{/snippet}
 							</Action>
