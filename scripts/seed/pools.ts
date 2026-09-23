@@ -154,6 +154,18 @@ export const INSTRUMENTS = [
 	'percussion'
 ];
 
+/** What a member can do besides play — the `skill` directory tag. */
+export const SKILLS = [
+	'sound engineer',
+	'photographer',
+	'promoter',
+	'graphic design',
+	'videographer',
+	'booking',
+	'stage lighting',
+	'guitar tech'
+];
+
 export const GENRES = [
 	'jazz',
 	'rock',

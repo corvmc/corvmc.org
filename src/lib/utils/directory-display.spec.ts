@@ -139,6 +139,7 @@ describe('toPublicMemberProfile', () => {
 		hometown: null,
 		instruments: ['guitar'],
 		genres: ['rock'],
+		skills: ['promoter'],
 		lookingForBand: false,
 		availableForHire: false,
 		teachesLessons: false,
@@ -174,6 +175,11 @@ describe('toPublicMemberProfile', () => {
 			directoryContact: { email: 'book@jeff.com', visibility: 'public' }
 		});
 		expect(dto.directoryContact).toEqual({ email: 'book@jeff.com', visibility: 'public' });
+	});
+
+	it('carries skills, which a member lists to be found for them', () => {
+		const dto = toPublicMemberProfile({ ...member, directoryContact: null });
+		expect(dto.skills).toEqual(['promoter']);
 	});
 
 	it('whitelists fields — non-public columns like memberNumber never appear', () => {

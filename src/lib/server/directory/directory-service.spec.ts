@@ -104,6 +104,42 @@ describe('member filters', () => {
 		expect(rendered.params).toContain('bass');
 	});
 
+	it('scopes a skill filter to skill tags', async () => {
+		// Skills share `directory_tag` with instruments, so "sound engineer" must
+		// not be answered by somebody's instrument or genre of the same spelling.
+		await listMembers({ skills: ['sound engineer'] });
+		const raw = whereConditions(entryFindMany).find((c) => 'RAW' in c) as
+			{ RAW: (t: unknown, o: unknown) => SQL } | undefined;
+		expect(raw).toBeDefined();
+
+		const rendered = new SQLiteSyncDialect().sqlToQuery(
+			raw!.RAW({ id: sql`"directory_entry"."id"` }, {})
+		);
+		expect(rendered.params).toContain('skill');
+		expect(rendered.params).toContain('sound engineer');
+	});
+
+	it('returns skills apart from instruments and genres on each member', async () => {
+		entryFindMany.mockResolvedValue([
+			{
+				userId: 'u1',
+				name: 'Sam',
+				lookingFor: null,
+				contact: null,
+				tags: [
+					{ kind: 'instrument', value: 'bass' },
+					{ kind: 'skill', value: 'photographer' }
+				],
+				user: { createdAt: new Date(0), groupMembers: [] }
+			}
+		]);
+
+		const [member] = await listMembers();
+
+		expect(member.skills).toEqual(['photographer']);
+		expect(member.instruments).toEqual(['bass']);
+	});
+
 	it('omits flag conditions that are not set', async () => {
 		await listMembers({ lookingForBand: true });
 		const conds = whereConditions(entryFindMany);

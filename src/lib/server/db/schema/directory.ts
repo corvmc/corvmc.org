@@ -42,11 +42,14 @@ export type LookingFor = (typeof lookingForValues)[number];
  * three tables this one replaced, so before this a band could say it wanted
  * members but not what for, and genre was all a match had to aim at.
  *
+ * `skill` is what a member can do besides play: sound engineer, photographer,
+ * promoter. Members only — a band's needs are `seeking_instrument`.
+ *
  * A drizzle `text({ enum })` is a TypeScript constraint and emits no SQL, so a
  * new value here costs no migration — verified against `pnpm db:generate`
  * rather than assumed.
  */
-export const directoryTagKinds = ['genre', 'instrument', 'seeking_instrument'] as const;
+export const directoryTagKinds = ['genre', 'instrument', 'seeking_instrument', 'skill'] as const;
 export type DirectoryTagKind = (typeof directoryTagKinds)[number];
 
 // ---------------------------------------------------------------------------

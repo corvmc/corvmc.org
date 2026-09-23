@@ -14,6 +14,7 @@ import {
 	getMemberProfile as getMemberProfileService,
 	suggestInstruments,
 	suggestGenres,
+	suggestSkills,
 	isProfileComplete
 } from '$lib/server/directory/directory-service';
 import {
@@ -92,6 +93,7 @@ const filtersSchema = z.object({
 	search: z.string().optional(),
 	instruments: arrayFilter,
 	genres: arrayFilter,
+	skills: arrayFilter,
 	lookingForBand: z
 		.string()
 		.optional()
@@ -132,30 +134,38 @@ export const getMemberDirectory = query(filtersSchema, async (filters) => {
 	// `.transform()` steps, so a query's parsed output is not its own input type and handing one
 	// straight to the other does not compile. The two stay exported for nothing in particular —
 	// this page is their only caller — but re-deriving the list logic here would be worse.
-	const [members, rawBands, instructors, instrumentSuggestions, genreSuggestions] =
-		await Promise.all([
-			listMembers({
-				search: filters.search,
-				instruments: filters.instruments,
-				genres: filters.genres,
-				lookingForBand: filters.lookingForBand,
-				availableForHire: filters.availableForHire,
-				teachesLessons: filters.teachesLessons,
-				openToCollaboration: filters.openToCollaboration
-			}),
-			listBands({
-				search: filters.search,
-				genres: filters.genres,
-				lookingForMembers: filters.lookingForMembers
-			}),
-			// Only for the tab count. Teachers are a sibling route, so the tab bar
-			// had a number on two of its three tabs and nothing on the third, which
-			// reads as zero rather than as "not loaded" (#1238). The search applies
-			// so the count matches what the tab leads to.
-			listInstructors('members', filters.search ? { search: filters.search } : undefined),
-			getInstrumentSuggestions(),
-			getGenreSuggestions()
-		]);
+	const [
+		members,
+		rawBands,
+		instructors,
+		instrumentSuggestions,
+		genreSuggestions,
+		skillSuggestions
+	] = await Promise.all([
+		listMembers({
+			search: filters.search,
+			instruments: filters.instruments,
+			genres: filters.genres,
+			skills: filters.skills,
+			lookingForBand: filters.lookingForBand,
+			availableForHire: filters.availableForHire,
+			teachesLessons: filters.teachesLessons,
+			openToCollaboration: filters.openToCollaboration
+		}),
+		listBands({
+			search: filters.search,
+			genres: filters.genres,
+			lookingForMembers: filters.lookingForMembers
+		}),
+		// Only for the tab count. Teachers are a sibling route, so the tab bar
+		// had a number on two of its three tabs and nothing on the third, which
+		// reads as zero rather than as "not loaded" (#1238). The search applies
+		// so the count matches what the tab leads to.
+		listInstructors('members', filters.search ? { search: filters.search } : undefined),
+		getInstrumentSuggestions(),
+		getGenreSuggestions(),
+		getSkillSuggestions()
+	]);
 
 	const bands = rawBands.map((b) => ({ ...b, avatarUrl: resolveImageUrl(b.avatarKey) }));
 
@@ -164,7 +174,8 @@ export const getMemberDirectory = query(filtersSchema, async (filters) => {
 		bands,
 		instructorCount: instructors.length,
 		instrumentSuggestions,
-		genreSuggestions
+		genreSuggestions,
+		skillSuggestions
 	};
 });
 
@@ -174,6 +185,7 @@ export const getDirectoryMembers = query(filtersSchema, async (filters) => {
 		search: filters.search,
 		instruments: filters.instruments,
 		genres: filters.genres,
+		skills: filters.skills,
 		lookingForBand: filters.lookingForBand,
 		availableForHire: filters.availableForHire,
 		teachesLessons: filters.teachesLessons,
@@ -565,6 +577,11 @@ export const getGenreSuggestions = query(z.void(), async () => {
 	return suggestGenres('');
 });
 
+export const getSkillSuggestions = query(z.void(), async () => {
+	requireUser();
+	return suggestSkills('');
+});
+
 // ---------------------------------------------------------------------------
 // Member profile queries & forms
 // ---------------------------------------------------------------------------
@@ -583,6 +600,7 @@ const memberProfileSchema = z.object({
 	instruments: tagsField('Invalid instruments'),
 	seekingInstruments: tagsField('Invalid instruments'),
 	genres: tagsField('Invalid genres'),
+	skills: tagsField('Invalid skills'),
 	// The column itself, not a boolean: a member can point it either way, and
 	// "putting a band together" is the direction that was previously unreachable
 	// from this form — the whole `members` half of matching depended on it.
@@ -621,6 +639,7 @@ export const saveMemberProfile = form(memberProfileSchema, async (data) => {
 		instruments: data.instruments,
 		seekingInstruments: data.seekingInstruments,
 		genres: data.genres,
+		skills: data.skills,
 		lookingFor: data.lookingFor || null,
 		availableForHire: data.availableForHire,
 		teachesLessons: data.teachesLessons,
@@ -654,19 +673,27 @@ export const getMemberProfileEditor = query(z.void(), async () => {
 	// remote queries out at once, and it is right to: past kit 2.64 that shape
 	// renders as `effect_update_depth_exceeded`. Assembling on the server is what
 	// the rule asks for, and it is one round trip instead of three.
-	const [profile, instrumentSuggestions, genreSuggestions, instructor, contactStatus] =
-		await Promise.all([
-			getMemberProfile(),
-			getInstrumentSuggestions(),
-			getGenreSuggestions(),
-			getInstructorByUserId(currentUser.id),
-			publicContactStatus(currentUser.id)
-		]);
+	const [
+		profile,
+		instrumentSuggestions,
+		genreSuggestions,
+		skillSuggestions,
+		instructor,
+		contactStatus
+	] = await Promise.all([
+		getMemberProfile(),
+		getInstrumentSuggestions(),
+		getGenreSuggestions(),
+		getSkillSuggestions(),
+		getInstructorByUserId(currentUser.id),
+		publicContactStatus(currentUser.id)
+	]);
 
 	return {
 		profile,
 		instrumentSuggestions,
 		genreSuggestions,
+		skillSuggestions,
 		teaching: {
 			instructor,
 			hasPublicContact: contactStatus.hasPublicContact,
