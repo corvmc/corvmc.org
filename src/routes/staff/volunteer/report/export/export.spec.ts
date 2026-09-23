@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { positionOrder, type Capability, type Position } from '$lib/config';
 
 /**
  * The volunteer hours CSV.
@@ -9,10 +10,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * the guard is *not* the remote-function boundary.
  */
 
-const requireStaff = vi.fn(async () => undefined);
-vi.mock('$lib/server/authorization', () => ({
-	requireStaff: () => requireStaff()
-}));
+// Simulated against the real matrix, so the tables below exercise what the
+// positions actually grant.
+let heldPositions: Position[] = ['staff'];
+const requested: string[] = [];
+vi.mock('$lib/server/authorization', async () => {
+	const { error } = await import('@sveltejs/kit');
+	const config = await import('$lib/config');
+	const holds = (cap: Capability) =>
+		heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
+	return {
+		can: async (cap: Capability) => holds(cap),
+		requireCapability: async (cap: Capability) => {
+			requested.push(cap);
+			if (!holds(cap)) throw error(403, 'Not permitted');
+			return { id: 'staff-1' };
+		}
+	};
+});
 
 let exportRows: unknown[] = [];
 const listApprovedHoursForExport = vi.fn(async () => exportRows);
@@ -27,6 +42,11 @@ vi.mock('$lib/server/volunteer/hour-value', () => ({
 }));
 
 import { GET } from './+server';
+
+// Every combination of the six positions, including none.
+const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
+	positionOrder.filter((_, i) => mask & (1 << i))
+);
 
 function row(over: Record<string, unknown> = {}) {
 	return {
@@ -51,16 +71,35 @@ async function body(query = '') {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	requireStaff.mockResolvedValue(undefined);
+	heldPositions = ['staff'];
+	requested.length = 0;
 	exportRows = [];
 });
 
 describe('the volunteer hours export', () => {
-	it('guards before reading anything', async () => {
-		requireStaff.mockRejectedValue(new Error('403: Staff access required'));
+	it('names volunteer.report', async () => {
+		await call();
+		expect(requested).toEqual(['volunteer.report']);
+	});
 
-		await expect(call()).rejects.toThrow('Staff access required');
+	it('refuses a treasurer with 403 before reading anything', async () => {
+		// The report page's own query already refused them; the CSV did not.
+		heldPositions = ['treasurer'];
+		await expect(call()).rejects.toMatchObject({ status: 403 });
 		expect(listApprovedHoursForExport).not.toHaveBeenCalled();
+	});
+
+	// Before: any position. After: admin, staff and the volunteer coordinator.
+	it('admits exactly the volunteer.report holders', async () => {
+		for (const held of subsets) {
+			heldPositions = held;
+			const reporter = held.some((p) => ['admin', 'staff', 'volunteer_coordinator'].includes(p));
+			const allowed = await call().then(
+				() => true,
+				() => false
+			);
+			expect(allowed, held.join('+') || '(none)').toBe(reporter);
+		}
 	});
 
 	it('passes the range through, and omits absent bounds', async () => {
