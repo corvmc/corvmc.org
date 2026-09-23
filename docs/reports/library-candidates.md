@@ -110,7 +110,7 @@ Areas where the npm ecosystem is thin — worth revisiting periodically.
 - **Shift Scheduling UI** — no standalone package; build on top of a calendar component
 - **Authorization** — nothing new is needed. `better-auth` already ships `createAccessControl`
   (statements of resource → actions, roles composed from them, assignment in the DB), which is
-  the shape `docs/specs/admin-vs-staff-spec.md` settles on. The heavyweight tier — OpenFGA and
+  the shape `docs/specs/shipped/admin-vs-staff-spec.md` settles on. The heavyweight tier — OpenFGA and
   SpiceDB for Zanzibar-style ReBAC, Cedar/Casbin/Oso as embedded policy languages — pays off
   past roughly twenty roles or when resource sharing is a product feature. This is eight
   positions and one relationship type, inside a Worker where an external check is a network hop.

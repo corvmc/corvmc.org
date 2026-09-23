@@ -205,3 +205,84 @@ export async function sendPasswordChangedEmail(params: {
 		captureException(err, { event: 'auth.password_changed', stage: 'send' });
 	}
 }
+
+/** Where a suspended member is sent; the sign-in refusal and both notices name it. */
+export const STAFF_CONTACT_EMAIL = 'staff@corvmc.org';
+
+/** What a banned member sees at sign-in, once their password has matched. */
+export const ACCOUNT_SUSPENDED_MESSAGE = `This account has been suspended. Contact ${STAFF_CONTACT_EMAIL} with any questions.`;
+
+/**
+ * The ban notice. It states the fact and who to contact, never the reason:
+ * that is a staff record.
+ */
+export function buildAccountSuspendedModel(params: {
+	name?: string | null;
+}): NotificationEmailModel & { transactional_only: true } {
+	return {
+		subject: 'Your CorvMC account has been suspended',
+		preview_text: 'You can no longer sign in to your CorvMC account.',
+		heading: 'Your account has been suspended',
+		greeting: greeting(params.name),
+		paragraphs: [
+			{
+				text: 'Staff have suspended your Corvallis Music Collective account. You have been signed out, you can no longer sign in, and any upcoming reservations have been cancelled.'
+			}
+		],
+		footnote: `If you have questions, or want to ask for this to be reconsidered, email ${STAFF_CONTACT_EMAIL}.`,
+		transactional_only: true
+	};
+}
+
+/** The notice that a ban was lifted. */
+export function buildAccountRestoredModel(params: {
+	name?: string | null;
+}): NotificationEmailModel & { transactional_only: true } {
+	return {
+		subject: 'Your CorvMC account has been restored',
+		preview_text: 'You can sign in to your CorvMC account again.',
+		heading: 'Your account has been restored',
+		greeting: greeting(params.name),
+		paragraphs: [
+			{
+				text: 'The suspension on your Corvallis Music Collective account has been lifted, and you can sign in again.'
+			}
+		],
+		footnote: `Questions? Email ${STAFF_CONTACT_EMAIL}.`,
+		transactional_only: true
+	};
+}
+
+/** A ban must land even when Postmark does not, so a send failure is captured, not thrown. */
+export async function sendAccountSuspendedEmail(params: {
+	toEmail: string;
+	name?: string | null;
+}): Promise<void> {
+	try {
+		await dispatchEmailOnly({
+			type: 'account_suspended',
+			toEmail: params.toEmail,
+			templateAlias: 'notification',
+			model: buildAccountSuspendedModel(params) as unknown as Record<string, unknown>
+		});
+	} catch (err) {
+		captureException(err, { event: 'user.ban', stage: 'send' });
+	}
+}
+
+/** Same failure treatment as the ban notice. */
+export async function sendAccountRestoredEmail(params: {
+	toEmail: string;
+	name?: string | null;
+}): Promise<void> {
+	try {
+		await dispatchEmailOnly({
+			type: 'account_restored',
+			toEmail: params.toEmail,
+			templateAlias: 'notification',
+			model: buildAccountRestoredModel(params) as unknown as Record<string, unknown>
+		});
+	} catch (err) {
+		captureException(err, { event: 'user.unban', stage: 'send' });
+	}
+}

@@ -14,6 +14,7 @@ import {
 	deriveSignInAnomaly,
 	isDeactivated,
 	pbkdf2Hash,
+	signInRefusal,
 	pbkdf2Verify,
 	PBKDF2_ITERATIONS,
 	scryptHash,
@@ -140,6 +141,29 @@ describe('isDeactivated', () => {
 
 	it('is true when deletedAt is a date', () => {
 		expect(isDeactivated(new Date('2026-01-01'))).toBe(true);
+	});
+});
+
+describe('signInRefusal', () => {
+	const matches = vi.fn(async () => true);
+	const wrong = vi.fn(async () => false);
+
+	it('leaves an unknown or active account to better-auth', async () => {
+		expect(await signInRefusal(undefined, matches)).toBeNull();
+		expect(await signInRefusal({ deletedAt: null, bannedAt: null }, matches)).toBeNull();
+	});
+
+	it('answers a deactivated account generically, without checking the password', async () => {
+		matches.mockClear();
+		expect(await signInRefusal({ deletedAt: new Date(), bannedAt: null }, matches)).toBe('invalid');
+		expect(matches).not.toHaveBeenCalled();
+	});
+
+	// Only someone holding the password learns the account is suspended.
+	it('names a suspension only after the password matches', async () => {
+		const banned = { deletedAt: new Date(), bannedAt: new Date() };
+		expect(await signInRefusal(banned, matches)).toBe('suspended');
+		expect(await signInRefusal(banned, wrong)).toBe('invalid');
 	});
 });
 

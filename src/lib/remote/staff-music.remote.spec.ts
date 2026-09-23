@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { positionOrder, type Capability, type Position } from '$lib/config';
 
 /**
  * Staff music tools are a moderation surface over every band's records, so the
@@ -12,15 +13,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 let currentUser: { id: string } | null = { id: 'u-staff' };
-let isStaff = true;
+let heldPositions: Position[] = ['staff'];
+const requested: string[] = [];
 
-vi.mock('$lib/server/authorization', () => ({
-	requireStaff: async () => {
-		if (!currentUser) throw new Error('401: Not authenticated');
-		if (!isStaff) throw new Error('403: Staff access required');
-		return currentUser;
-	}
-}));
+// Simulated against the real matrix, so the table below shows what the
+// positions actually grant.
+vi.mock('$lib/server/authorization', async () => {
+	const config = await import('$lib/config');
+	const holds = (cap: Capability) =>
+		heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
+	return {
+		can: async (cap: Capability) => currentUser !== null && holds(cap),
+		requireCapability: async (cap: Capability) => {
+			requested.push(cap);
+			if (!currentUser) throw new Error('401: Not authenticated');
+			if (!holds(cap)) throw new Error('403: Not permitted');
+			return currentUser;
+		}
+	};
+});
 
 // Every flag reads true here, so a spec that passes cannot be passing *because*
 // something was switched off.
@@ -104,7 +115,8 @@ function noWrites() {
 beforeEach(() => {
 	vi.clearAllMocks();
 	currentUser = { id: 'u-staff' };
-	isStaff = true;
+	heldPositions = ['staff'];
+	requested.length = 0;
 	isFeatureEnabled.mockResolvedValue(true);
 });
 
@@ -119,16 +131,96 @@ describe('staff music — guards', () => {
 		noWrites();
 	});
 
-	it('rejects a signed-in non-staff member', async () => {
+	it('rejects a signed-in member who holds no position', async () => {
 		// Nothing here is band-scoped: an ordinary member reaching this would be
 		// reading every band's sales and able to take any record down.
-		isStaff = false;
+		heldPositions = [];
 		await expect(remote.getStaffMusicPage()).rejects.toThrow(/403/);
 		for (const [name, payload] of MUTATIONS) {
 			await expect(remote[name](payload), name).rejects.toThrow(/403/);
 		}
 		expect(svc.listAllReleases).not.toHaveBeenCalled();
 		noWrites();
+	});
+});
+
+describe('staff music — capabilities', () => {
+	const EXPORTS: Array<[string, unknown, Capability]> = [
+		['getStaffMusicPage', undefined, 'music.read'],
+		['withholdReleaseForm', MUTATIONS[0][1], 'music.moderate'],
+		['restoreReleaseForm', MUTATIONS[1][1], 'music.moderate'],
+		['setRadioExclusionForm', MUTATIONS[2][1], 'music.moderate'],
+		['refundPurchaseForm', MUTATIONS[3][1], 'finance.refund']
+	];
+
+	// First, because a form's `refresh()` re-runs the page query behind it.
+	it.each(EXPORTS.map(([n, p, c]) => [n, c, p] as const))(
+		'%s names %s first',
+		async (name, cap, payload) => {
+			await remote[name](payload);
+			expect(requested[0]).toBe(cap);
+		}
+	);
+
+	it('refuses a technology coordinator everything, writing nothing', async () => {
+		heldPositions = ['technology_coordinator'];
+		for (const [name, payload] of EXPORTS) {
+			await expect(remote[name](payload), name).rejects.toThrow(/403/);
+		}
+		noWrites();
+	});
+
+	it('lets a treasurer read and refund, but not take a release down', async () => {
+		heldPositions = ['treasurer'];
+		await remote.getStaffMusicPage();
+		await remote.refundPurchaseForm({ purchaseId: 'p-1' });
+		await expect(remote.withholdReleaseForm(MUTATIONS[0][1])).rejects.toThrow(/403/);
+		expect(svc.withholdRelease).not.toHaveBeenCalled();
+	});
+
+	it('lets a site moderator read and take down, but not refund', async () => {
+		heldPositions = ['site_moderator'];
+		await remote.getStaffMusicPage();
+		await remote.withholdReleaseForm(MUTATIONS[0][1]);
+		await expect(remote.refundPurchaseForm({ purchaseId: 'p-1' })).rejects.toThrow(/403/);
+		expect(purchases.refundPurchase).not.toHaveBeenCalled();
+	});
+
+	// Before: `requireStaff`, so any position passed every export. After: the
+	// matrix #1391 settles on. Every combination of the six, including none.
+	it('admits exactly the intended holders of each export', async () => {
+		const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
+			positionOrder.filter((_, i) => mask & (1 << i))
+		);
+		const intended: Record<Capability, Position[]> = {
+			'music.read': ['admin', 'staff', 'site_moderator', 'treasurer'],
+			'music.moderate': ['admin', 'staff', 'site_moderator'],
+			'finance.refund': ['admin', 'staff', 'treasurer']
+		} as Record<Capability, Position[]>;
+		for (const held of subsets) {
+			heldPositions = held;
+			for (const [name, payload, cap] of EXPORTS) {
+				const allowed = await remote[name](payload).then(
+					() => true,
+					() => false
+				);
+				const label = `${held.join('+') || '(none)'} ${name}`;
+				expect(allowed, label).toBe(held.some((p) => intended[cap].includes(p)));
+			}
+		}
+	});
+
+	it('tells the page which controls to offer', async () => {
+		heldPositions = ['treasurer'];
+		expect(await remote.getStaffMusicPage()).toMatchObject({
+			canModerate: false,
+			canRefund: true
+		});
+		heldPositions = ['site_moderator'];
+		expect(await remote.getStaffMusicPage()).toMatchObject({
+			canModerate: true,
+			canRefund: false
+		});
 	});
 });
 

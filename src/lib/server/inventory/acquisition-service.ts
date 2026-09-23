@@ -834,6 +834,35 @@ export async function spendByCategory(from: Date, to: Date, kind: AcquisitionKin
 }
 
 /**
+ * Purchase spend per free-text source over a window, biggest first.
+ *
+ * Grouped on `lower(trim(source_name))` so case and stray spaces do not split a
+ * vendor; a blank source is the one null row. Counted on the same lines as
+ * `spendByCategory`, so the two tables on the spend page total the same.
+ */
+export async function spendBySource(from: Date, to: Date) {
+	const key = sql`NULLIF(LOWER(TRIM(${acquisition.sourceName})), '')`;
+	const totalCents = sql<number>`COALESCE(SUM(${acquisitionLine.quantity} * COALESCE(${acquisitionLine.unitValueCents}, 0)), 0)`;
+	return db
+		.select({
+			sourceName: sql<string | null>`NULLIF(MIN(TRIM(${acquisition.sourceName})), '')`,
+			acquisitionCount: sql<number>`COUNT(DISTINCT ${acquisition.id})`,
+			totalCents
+		})
+		.from(acquisitionLine)
+		.innerJoin(acquisition, eq(acquisitionLine.acquisitionId, acquisition.id))
+		.where(
+			and(
+				eq(acquisition.kind, 'purchase'),
+				gte(acquisition.occurredAt, from),
+				lte(acquisition.occurredAt, to)
+			)
+		)
+		.groupBy(key)
+		.orderBy(desc(totalCents), key);
+}
+
+/**
  * Contributed nonfinancial assets, disaggregated by category.
  *
  * The shape FASB ASU 2020-07 asks for: gifts-in-kind as their own line, broken

@@ -25,7 +25,7 @@
 	// One query, not three. `custom/no-concurrent-remote-queries` refuses a page
 	// that fans several out at once, so the teaching card's data is assembled
 	// server-side in `getMemberProfileEditor` and arrives with everything else.
-	const { profile, instrumentSuggestions, genreSuggestions, teaching } =
+	const { profile, instrumentSuggestions, genreSuggestions, skillSuggestions, teaching } =
 		await getMemberProfileEditor();
 
 	// Plain const rather than `$derived`: everything after the await above is
@@ -55,7 +55,7 @@
 	{/if}
 
 	<div class="mt-6">
-		<ProfileForm {profile} {instrumentSuggestions} {genreSuggestions} />
+		<ProfileForm {profile} {instrumentSuggestions} {genreSuggestions} {skillSuggestions} />
 	</div>
 
 	<div class="mt-8">

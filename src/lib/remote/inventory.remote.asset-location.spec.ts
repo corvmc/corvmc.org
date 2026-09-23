@@ -64,6 +64,7 @@ vi.mock('$lib/server/inventory/acquisition-service', () => ({
 	markReimbursed: vi.fn(),
 	recordAcquisition: vi.fn(),
 	spendByCategory: vi.fn(),
+	spendBySource: vi.fn(),
 	updateAcquisition: vi.fn()
 }));
 

@@ -69,6 +69,8 @@ export type MemberProfileData = {
 	 */
 	seekingInstruments?: string[];
 	genres?: string[];
+	/** What a member can do besides play — sound engineer, photographer, promoter. */
+	skills?: string[];
 	/**
 	 * The whole two-directional column rather than the boolean this used to be.
 	 * A member can now point it either way — "I want a band" or "I want members"
@@ -138,6 +140,10 @@ export async function updateMemberProfile(userId: string, data: MemberProfileDat
 		queries.push(...replaceTags(entryId, 'genre', validateTags(data.genres)));
 	}
 
+	if (data.skills !== undefined) {
+		queries.push(...replaceTags(entryId, 'skill', validateTags(data.skills)));
+	}
+
 	await db.batch(queries as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
 }
 
@@ -188,7 +194,8 @@ export async function getMemberProfileForEdit(userId: string) {
 		directoryContact: contact,
 		instruments: tags.filter((t) => t.kind === 'instrument').map((t) => t.value),
 		seekingInstruments: tags.filter((t) => t.kind === 'seeking_instrument').map((t) => t.value),
-		genres: tags.filter((t) => t.kind === 'genre').map((t) => t.value)
+		genres: tags.filter((t) => t.kind === 'genre').map((t) => t.value),
+		skills: tags.filter((t) => t.kind === 'skill').map((t) => t.value)
 	};
 }
 

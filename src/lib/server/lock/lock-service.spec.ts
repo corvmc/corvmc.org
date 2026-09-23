@@ -429,6 +429,28 @@ describe('syncAccessWindow', () => {
 		expect(mockCreateTemporaryUser).toHaveBeenCalledOnce();
 	});
 
+	// The lock's user table is finite; a standing code already opens the door.
+	it('does not mint for a member who already holds a standing code', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				status: 'confirmed',
+				startsAt: tomorrowAt('19:00'),
+				endsAt: tomorrowAt('21:00'),
+				lockCode: null,
+				createdByUserId: 'user-1',
+				memberName: 'Alice'
+			}
+		]);
+		mockHasActiveMemberCode.mockResolvedValue(true);
+
+		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
+
+		expect(result.synced).toBe(false);
+		expect(mockHasActiveMemberCode).toHaveBeenCalledWith('user-1');
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+	});
+
 	it('leaves a codeless booking beyond the confirmation window to the cron', async () => {
 		selectResults.push([
 			{

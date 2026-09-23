@@ -167,6 +167,9 @@ export const tableOrder = [
 	// member their standing, in whichever scope. One table where there were three
 	// (community_event_standing, messaging_standing, suggestion_standing).
 	'member_standing',
+	// References user (the actor) and nothing else: `subject_id` is deliberately
+	// not a foreign key, so the row survives the purge it records.
+	'audit_log',
 	'user_block',
 	'suggestion_vote',
 	'suggestion_edit',
@@ -184,7 +187,11 @@ export const tableOrder = [
 	'audio_track',
 	'radio_play',
 	// References audio_release and user, so it clears before either.
-	'release_purchase'
+	'release_purchase',
+	// A root: references nothing. Parent of local_resource.
+	'local_resource_category',
+	// References local_resource_category and user.
+	'local_resource'
 ];
 
 /**

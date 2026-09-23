@@ -99,7 +99,7 @@ Elsewhere: `'suggestion'` added to `flagEntityTypes` in `schema/flag.ts` — tha
 
 `getSuggestionDetail` 404s — not 403s — when a non-author asks for a non-visible suggestion. A 403 would confirm the suggestion exists, which turns reporting into an enumeration oracle.
 
-`admin` and `staff` are the same authorization here, as everywhere else in the app (`docs/specs/admin-vs-staff-spec.md`). Nothing in this feature depends on the distinction.
+`admin` and `staff` are the same authorization here, as everywhere else in the app (`docs/specs/shipped/admin-vs-staff-spec.md`). Nothing in this feature depends on the distinction.
 
 ## Surfaces
 

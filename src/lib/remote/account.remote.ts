@@ -7,7 +7,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { auth } from '$lib/server/auth';
 import { eq } from 'drizzle-orm';
 import { parseBirthDateInput } from '$lib/utils/age';
-import { requireUser, hasAnyRole } from '$lib/server/authorization';
+import { requireUser, isElevated } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { deactivateUser } from '$lib/server/user/user-service';
 import {
@@ -44,7 +44,7 @@ export const getMemberAccount = query(async () => {
 			.from(user)
 			.where(eq(user.id, currentUser.id))
 			.then((rows) => rows[0]),
-		hasAnyRole(currentUser.id, ['admin', 'staff'])
+		isElevated(currentUser.id)
 	]);
 
 	if (!row) throw error(404, 'User not found');
@@ -146,8 +146,8 @@ export const deleteAccount = form(
 		const currentUser = requireUser();
 		const event = getRequestEvent();
 
-		// Staff and admin accounts cannot be self-deleted
-		if (await hasAnyRole(currentUser.id, ['admin', 'staff'])) {
+		// An account holding any position cannot be self-deleted.
+		if (await isElevated(currentUser.id)) {
 			throw error(403, 'Staff and admin accounts cannot be deleted this way');
 		}
 

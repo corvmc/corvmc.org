@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { exchangeAuthorizationCode } from '$lib/server/lock/ultraloc-client';
 import { updateSiteConfig } from '$lib/server/site-config/site-config-service';
 import { STATE_COOKIE } from '$lib/server/lock/utec-oauth';
@@ -8,7 +8,7 @@ import { STATE_COOKIE } from '$lib/server/lock/utec-oauth';
 // Completes the U-tec OAuth flow: validates the CSRF state, exchanges the code
 // for tokens, and persists the refresh token so the lock client can use it.
 export const GET: RequestHandler = async ({ url, cookies }) => {
-	await requireStaff();
+	await requireCapability('lock.manage');
 
 	const expectedState = cookies.get(STATE_COOKIE);
 	cookies.delete(STATE_COOKIE, { path: '/' });

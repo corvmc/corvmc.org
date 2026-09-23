@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { hasAnyRole } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { uploadFile, validateUpload } from '$lib/server/storage';
 import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
 import { mediaKey } from '$lib/server/storage-keys';
@@ -10,10 +10,8 @@ import { eventListing } from '$lib/server/db/schema/event';
 import { eq } from 'drizzle-orm';
 
 /** Upload or replace an event poster image. */
-export const POST: RequestHandler = async ({ params, request, locals }) => {
-	if (!locals.user) throw error(401, 'Not authenticated');
-	const allowed = await hasAnyRole(locals.user.id, ['admin', 'staff']);
-	if (!allowed) throw error(403, 'Staff access required');
+export const POST: RequestHandler = async ({ params, request }) => {
+	const user = await requireCapability('event.manage');
 
 	const existing = await getById(params.id);
 	if (!existing) throw error(404, 'Event not found');
@@ -44,7 +42,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		contentType,
 		byteSize: buffer.byteLength,
 		filename: file.name,
-		uploadedByUserId: locals.user.id
+		uploadedByUserId: user.id
 	});
 
 	await db
@@ -56,10 +54,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 };
 
 /** Delete an event poster. */
-export const DELETE: RequestHandler = async ({ params, locals }) => {
-	if (!locals.user) throw error(401, 'Not authenticated');
-	const allowed = await hasAnyRole(locals.user.id, ['admin', 'staff']);
-	if (!allowed) throw error(403, 'Staff access required');
+export const DELETE: RequestHandler = async ({ params }) => {
+	await requireCapability('event.manage');
 
 	const existing = await getById(params.id);
 	if (!existing) throw error(404, 'Event not found');

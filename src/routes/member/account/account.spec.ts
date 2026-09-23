@@ -49,8 +49,7 @@ vi.mock('$lib/server/auth', () => ({
 
 vi.mock('$lib/server/authorization', () => ({
 	requireUser: vi.fn(() => ({ id: 'user-1', name: 'Test User' })),
-	hasRole: vi.fn().mockResolvedValue(false),
-	hasAnyRole: vi.fn().mockResolvedValue(false),
+	isElevated: vi.fn().mockResolvedValue(false),
 	getUserRoles: vi.fn().mockResolvedValue([])
 }));
 
@@ -112,7 +111,7 @@ vi.mock('$app/server', () => ({
 }));
 
 import { auth } from '$lib/server/auth';
-import { requireUser, hasAnyRole } from '$lib/server/authorization';
+import { requireUser, isElevated } from '$lib/server/authorization';
 import { deactivateUser } from '$lib/server/user/user-service';
 import {
 	getSubscriptionsForUser,
@@ -335,10 +334,10 @@ describe('deleteAccount', () => {
 		expect(auth.api.signOut).toHaveBeenCalled();
 	});
 
-	it('rejects deletion for staff/admin accounts without deactivating', async () => {
-		vi.mocked(hasAnyRole).mockResolvedValueOnce(true);
+	it('rejects deletion for an account holding any position, without deactivating', async () => {
+		vi.mocked(isElevated).mockResolvedValueOnce(true);
 
-		await expect(deleteAccount({ password: 'any' })).rejects.toThrow();
+		await expect(deleteAccount({ password: 'any' })).rejects.toMatchObject({ status: 403 });
 		expect(deactivateUser).not.toHaveBeenCalled();
 	});
 

@@ -34,3 +34,18 @@ export function unescapeHtml(str: string): string {
 export function escapeHtmlWithBreaks(str: string): string {
 	return escapeHtml(str).replace(/\r?\n/g, '<br />');
 }
+
+/** Tags whose end is a visible break, so flattening must not join across them. */
+const BLOCK_END = /<\/(?:p|h[1-6]|li|blockquote|div|pre)>|<br\s*\/?>/gi;
+
+/**
+ * Flatten rich-text HTML to plain text for surfaces that render text only,
+ * such as a calendar entry: block ends become line breaks, tags are dropped
+ * and entities decoded. Not a sanitizer; the result must still be escaped.
+ */
+export function htmlToPlainText(html: string): string {
+	return unescapeHtml(html.replace(BLOCK_END, '\n').replace(/<[^>]*>/g, ''))
+		.replace(/[ \t]*\n[ \t]*/g, '\n')
+		.replace(/\n{3,}/g, '\n\n')
+		.trim();
+}

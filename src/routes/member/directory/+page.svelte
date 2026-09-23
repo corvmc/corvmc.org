@@ -38,6 +38,7 @@
 	let search = $state('');
 	let filterInstruments = $state<string[]>([]);
 	let filterGenres = $state<string[]>([]);
+	let filterSkills = $state<string[]>([]);
 	let lookingForBand = $state(false);
 	let availableForHire = $state(false);
 	let teachesLessons = $state(false);
@@ -48,6 +49,8 @@
 		search: search || undefined,
 		instruments: filterInstruments.length > 0 ? JSON.stringify(filterInstruments) : undefined,
 		genres: filterGenres.length > 0 ? JSON.stringify(filterGenres) : undefined,
+		// Members only; the bands tab never reads it.
+		skills: filterSkills.length > 0 ? JSON.stringify(filterSkills) : undefined,
 		lookingForBand: lookingForBand ? 'true' : undefined,
 		availableForHire: availableForHire ? 'true' : undefined,
 		teachesLessons: teachesLessons ? 'true' : undefined,
@@ -61,6 +64,7 @@
 		search = '';
 		filterInstruments = [];
 		filterGenres = [];
+		filterSkills = [];
 		lookingForBand = false;
 		availableForHire = false;
 		teachesLessons = false;
@@ -77,6 +81,7 @@
 	const instructorCount = $derived(directory.instructorCount);
 	const instrumentSuggestions = $derived(directory.instrumentSuggestions);
 	const genreSuggestions = $derived(directory.genreSuggestions);
+	const skillSuggestions = $derived(directory.skillSuggestions);
 
 	// The "Show more" window collapses whenever the listed set changes. Derived
 	// off a key rather than reset from an effect, so it can't lag the filters by
@@ -178,6 +183,14 @@
 						bind:value={filterInstruments}
 						suggestions={instrumentSuggestions}
 						placeholder="Filter by instrument..."
+					/>
+				</div>
+				<div class="directory-filters__tag-field">
+					<p class="directory-filters__label">Skills</p>
+					<FreeformTagInput
+						bind:value={filterSkills}
+						suggestions={skillSuggestions}
+						placeholder="Filter by skill..."
 					/>
 				</div>
 			{/if}

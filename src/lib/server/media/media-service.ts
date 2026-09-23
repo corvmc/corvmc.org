@@ -137,6 +137,7 @@ export async function replaceSlot(input: {
 	byteSize: number;
 	filename?: string | null;
 	altText?: string | null;
+	caption?: string | null;
 	uploadedByUserId?: string | null;
 }): Promise<{ mediaId: string; attachmentId: string }> {
 	await detachSlot(input.attachableType, input.attachableId, input.slot);
@@ -147,6 +148,7 @@ export async function replaceSlot(input: {
 		byteSize: input.byteSize,
 		filename: input.filename ?? null,
 		altText: input.altText ?? null,
+		caption: input.caption ?? null,
 		uploadedByUserId: input.uploadedByUserId ?? null
 	});
 

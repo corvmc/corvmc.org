@@ -69,6 +69,8 @@ describe('activeNavKey', () => {
 		['/staff/inventory/compliance', 'inventory-compliance'],
 		['/staff/inventory/loans', 'equipment-loans'],
 		['/staff/inventory/loans/abc', 'equipment-loans'],
+		['/staff/flags/equipment', 'equipment-reports'],
+		['/staff/flags/equipment/abc', 'equipment-reports'],
 		['/staff/contractors', 'contractors'],
 		['/staff/contractors/abc', 'contractors'],
 		['/staff/contractors/jobs', 'contractor-jobs'],
@@ -76,6 +78,8 @@ describe('activeNavKey', () => {
 		['/staff/marketing/campaigns/new', 'campaigns'],
 		['/staff/marketing/campaigns/abc/edit', 'campaigns'],
 		['/staff/help/create', 'help'],
+		['/staff/local-resources', 'local-resources'],
+		['/staff/local-resources/categories', 'local-resources'],
 		['/staff/settings', 'settings']
 	];
 
@@ -159,6 +163,7 @@ describe('route coverage', () => {
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Inventory, beside Categories; `backHref` points there
+		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
 		// Reached from Bands, which links to it in its header. Not its own row on
 		// purpose: an external act is the same staff job as a band — who is
 		// playing here — and one of them can turn into the other, so splitting

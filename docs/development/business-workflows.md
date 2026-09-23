@@ -307,7 +307,7 @@ premium subscription that unlocks a public band microsite.
   `src/routes/band-site/[slug]/`, gated on the band's tier alone since the launch, with
   member-editable page config in `bandPageConfig` — custom CSS passes through `css-sanitizer.ts`.
 - **Staff moderation:** `staff/bands` pages → the staff forms in `bands.remote.ts`
-  (`deactivateBand`, `reactivateBand`, `updateStaffBand`, ...), all `requireStaff()`-guarded.
+  (`deactivateBand`, `reactivateBand`, `updateStaffBand`, ...), each guarded on a `band.*` capability.
 
 ### Data touched
 
@@ -496,8 +496,9 @@ reorder quantity where one is set, otherwise enough to reach the point) and an
 whole list at `/staff/inventory/restock`, grouped by category with a Receive
 action per row so a shop trip can be recorded from the list it came off.
 
-`/staff/inventory/spend` reports purchase spend per category over a window
-(default: the current calendar year) via `spendByCategory()`. **Donations and
+`/staff/inventory/spend` reports purchase spend over a window (default: the
+current calendar year), per category via `spendByCategory()` and per supplier via
+`spendBySource()`. **Donations and
 grants are excluded** — a gift is not spend, and counting one would overstate the
 budget by exactly what was given. `inKindContributions()` exists for the
 gifts-in-kind disclosure and still has no screen: ASU 2020-07 binds the financial
@@ -549,17 +550,30 @@ of their own — help articles already carry publish state, `minRole`, a categor
 and a sync path. The member view filters to published, so a draft imported by
 `help:sync` cannot leak to whoever scanned the amp.
 
-A damage report is a **ledger entry, not a report table**:
-`reportDamage()` in `resources-service.ts` changes the unit's condition and
-writes a `repair_out` movement carrying the note and the reporter. There is no
-queue because the movement history already is one. It takes the unit out of
-service immediately on a member's say-so — the cost of a wrong report is a
-staffer clicking it back, the cost of leaving a broken amp bookable is the next
-member's session, and `actorId` makes a pattern attributable.
+A damage report is a **`work_request` row**: `reportDamage()` in
+`resources-service.ts` calls `raiseFlag()`, which records the note, the reporter and
+whether the unit is still usable, and takes an in-service unit out of service only when
+the reporter says it is not. A second report on the same unit is a second row — three
+people noticing one crackle is the signal.
+
+Staff triage them on the flags surface, `/staff/flags/equipment` (#552), behind
+`inventory.manageAssets`: dismiss, or send to a work order — an open one on the same unit
+or a new one — and every other untriaged report on that unit goes with it
+(`sendToWorkOrder`). Resolving the work order closes every report attached to it
+(`resolveWorkOrder` → `resolveFlagsForWorkOrder`).
 
 **Where it breaks** — a report appears to do nothing: check the form validated.
 A select's empty option submits `''`, which `z.enum([...]).optional()` rejects,
 and a remote `form()` that fails validation runs no handler at all.
+
+### The donation wishlist
+
+`/contribute` shows **What We Need**: `getPublicWishlist` (unguarded, in
+`inventory.remote.ts`) → `getDonationWishlist()` in `wishlist-service.ts`, which
+projects `listPlannedGear()` (`planned` only — `in_progress` is already being
+got) and `listLowStock()` (minus anything an open order already covers). Names
+only, because the page is public. Staff maintain it by doing what they already
+do: marking a gear suggestion planned, and setting reorder points.
 
 ### Form 8282
 
@@ -1376,6 +1390,69 @@ between the two features: walking through the easy door furnishes the rider on t
 - **The unassigned count reads zero on a list that plainly has gaps.** `assigned_user_id`
   null means "nobody has this"; a member leaving nulls it via `on delete set null`, which is
   the state the count should then show.
+
+## 16. The staff audit log: who changed a member's account
+
+Spec: [specs/audit-log-spec.md](../specs/audit-log-spec.md) (first phase shipped; the rest is
+tracked on #1131)
+
+### The story
+
+Several people share staff access, so a member asking "who took my free hours?" or "who
+closed my account?" needs an answer that the current value of a row cannot give. Each
+change to a member's authority, money or account existence appends one row naming the
+action, the actor and a small payload. Staff read the latest twenty on the member's
+**Account** tab, in the **History** card.
+
+### Code path
+
+- **Write:** `recordAuditEntry` in `src/lib/server/audit/audit-service.ts`. It takes the actor
+  from `locals.user`, or records "System" outside a request. It never throws: a failed write
+  goes to Sentry, because the action it describes has already happened.
+- **Roles, profile, credits:** `updateUser` and `adjustCredits` in `users.remote.ts`, after the
+  write succeeds. A profile edit records field names only.
+- **Deactivate, reactivate, purge:** inside `deactivateUser` / `reactivateUser` / `purgeUser`
+  in `user-service.ts`, so a member closing their own account is recorded too, and a bulk
+  deactivation writes one row per member sharing `details.batchId`.
+- **Read:** `getUserHistory` (`user.read`) → `listAuditEntriesForSubject`, rendered by
+  `summarizeAuditEntry` in `src/lib/utils/audit-display.ts`.
+
+### Data touched
+
+- `audit_log` — append-only. `actor_user_id` is `set null` on delete, and the actor's name and
+  email are copied in. `subject_id` is not a foreign key, so a purge's own row survives it.
+
+### Where it breaks
+
+- **A change shows no History row.** Look for the write in Sentry first; the action went
+  through by design even when the insert failed.
+- **A payload over 4 KB is dropped, not truncated.** The only free-text field is a credit
+  adjustment's description.
+
+## 17. The local resources directory
+
+Spec: [specs/local-resources-spec.md](../specs/local-resources-spec.md)
+
+### The story
+
+Staff keep a public list of music businesses around Corvallis. They define categories, add
+listings, which publish on save, and review anything pending. A listing that is not right is
+returned with a note and can be published later. Removing one takes it off the page and keeps
+the row.
+
+### Code path
+
+- **Public:** `getLocalResourceDirectory` (unguarded) → `listPublishedByCategory()`, which filters
+  `status = 'published'` and `deleted_at is null` in SQL and groups rows in category order.
+  Rendered by `ResourceDirectory.svelte` inside its own boundary above the tip form.
+- **Staff:** `local-resources.remote.ts` behind `localResource.manage`, over
+  `src/lib/server/local-resource/local-resource-service.ts`.
+
+### Where it breaks
+
+- A category with listings cannot be deleted, including removed ones, because the foreign key
+  restricts on them too.
+- A website that is not http(s) is refused, since it is rendered as a public link.
 
 ## Cross-cutting patterns worth internalizing
 

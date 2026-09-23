@@ -211,6 +211,16 @@ export async function seedEquipment(users: SeedUser[]) {
 		totalCents: 21_400,
 		recordedByUserId: staffId
 	};
+	/** A second order from the same shop, so vendor-level spend adds something up. */
+	const restockEarlier = {
+		id: randomUUID(),
+		kind: 'purchase' as const,
+		occurredAt: new Date(now.getTime() - 75 * day),
+		sourceName: 'Sweetwater',
+		reference: 'SW-4402215',
+		totalCents: 0,
+		recordedByUserId: staffId
+	};
 	const grant = {
 		id: randomUUID(),
 		kind: 'grant' as const,
@@ -299,6 +309,7 @@ export async function seedEquipment(users: SeedUser[]) {
 		purchase,
 		donation,
 		restock,
+		restockEarlier,
 		grant,
 		unackedGift,
 		fronted,
@@ -412,6 +423,10 @@ export async function seedEquipment(users: SeedUser[]) {
 		locationId: locByName['Supply shelf']
 	});
 	received(restock, '9V Batteries', 6, 1_400, { locationId: locByName['Supply shelf'] });
+	received(restockEarlier, 'Boom Mic Stand', 1, 3_500, { locationId: locByName['Storage closet'] });
+	received(restockEarlier, "D'Addario EXL110 Strings", 6, 700, {
+		locationId: locByName['Supply shelf']
+	});
 	// The unsigned gift, and a unit off it that gets disposed of below. Same
 	// three-year window as CMC-000110, but with no Form 8283 on record — so it
 	// lands in the compliance page's *count* rather than its queue, which is the

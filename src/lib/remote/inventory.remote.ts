@@ -54,6 +54,7 @@ import {
 	recordAcquisition,
 	recordAcquisitionBulk,
 	spendByCategory,
+	spendBySource,
 	updateAcquisition
 } from '$lib/server/inventory/acquisition-service';
 import {
@@ -102,6 +103,7 @@ import {
 	DEFAULT_TIMEZONE
 } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { getDonationWishlist } from '$lib/server/inventory/wishlist-service';
 
 /**
  * A calendar date the operator typed, as an instant.
@@ -1333,8 +1335,9 @@ export const getSpendReport = query(spendRange, async (range) => {
 	// invoice arrives as nothing, has no line and belongs to no equipment
 	// category. Two blocks on one page is honest; one source that has quietly
 	// learned to mean two things is not.
-	const [rows, services] = await Promise.all([
+	const [rows, sources, services] = await Promise.all([
 		spendByCategory(from, to),
+		spendBySource(from, to),
 		contractorSpend(from, to)
 	]);
 	const totalCents = rows.reduce((sum, r) => sum + Number(r.totalCents), 0);
@@ -1352,6 +1355,12 @@ export const getSpendReport = query(spendRange, async (range) => {
 			share: totalCents > 0 ? Number(r.totalCents) / totalCents : 0
 		})),
 		totalCents,
+		sources: sources.map((r) => ({
+			sourceName: r.sourceName,
+			acquisitionCount: Number(r.acquisitionCount),
+			totalCents: Number(r.totalCents),
+			share: totalCents > 0 ? Number(r.totalCents) / totalCents : 0
+		})),
 		services: services.map((r) => ({
 			trade: r.trade,
 			jobCount: Number(r.jobCount),
@@ -1719,7 +1728,7 @@ export const unlinkItemArticle = form(
 /**
  * A member reporting a broken unit.
  *
- * `requireUser` and not `requireStaff` deliberately — whoever finds a cracked
+ * `requireUser` and not a capability, deliberately — whoever finds a cracked
  * cabinet is usually the person who just picked it up. The service takes the
  * unit out of service on their say-so; the trade is argued there.
  */
@@ -1829,3 +1838,9 @@ export const getMemberEquipmentPage = query(memberEquipmentFilters, async (filte
 	]);
 	return { equipment, meta };
 });
+
+/**
+ * The donation wishlist on `/contribute`. **Unguarded on purpose** — it is a
+ * public page — so the service returns names only.
+ */
+export const getPublicWishlist = query(async () => getDonationWishlist());

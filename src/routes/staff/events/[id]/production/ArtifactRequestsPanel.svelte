@@ -12,10 +12,22 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
 	import { formatDateShort } from '$lib/utils/format';
 	import { requestableArtifacts, requestableArtifactLabels } from '$lib/config';
-	import { askForArtifact, dropArtifactRequest } from '$lib/remote/productions.remote';
+	import {
+		askForArtifact,
+		dropArtifactRequest,
+		usePosterArt,
+		usePosterArtWithFooter
+	} from '$lib/remote/productions.remote';
+	import { searchAskableListings } from '$lib/remote/external-acts.remote';
 	import type { OutstandingRequest } from '$lib/types/artifact-request';
+
+	// The picker writes a plain hidden input; the Action's form is not a `<Form>`.
+	const artistField = {
+		as: (_type: 'hidden', value: string) => ({ type: 'hidden', name: 'entryId', value })
+	};
 
 	let {
 		eventId,
@@ -82,6 +94,38 @@
 						{/snippet}
 					</Action>
 				{/if}
+				<!-- An artist is never on the bill, so this searches every listing. -->
+				<Action
+					action={askForArtifact}
+					label="Commission poster art"
+					variant="ghost"
+					size="sm"
+					modalTitle="Commission poster art for {eventTitle}"
+					submitLabel="Ask"
+					successToast="Asked"
+					onsuccess={onchange}
+				>
+					{#snippet form()}
+						<input type="hidden" name="eventId" value={eventId} />
+						<input type="hidden" name="artifact" value="poster_art" />
+						<MemberPicker
+							field={artistField}
+							label="Artist"
+							placeholder="Search listings by name..."
+							search={(q) => searchAskableListings(q)}
+						/>
+						<FormField
+							name="dueDate"
+							label="Due"
+							type="date"
+							description="When the art has to be in. Past it, the request reads overdue and the template flyer is the fallback."
+						/>
+						<p class="text-subtle text-sm">
+							The artist uploads on their contact-sheet page. Send them its link from the listing if
+							they do not have it.
+						</p>
+					{/snippet}
+				</Action>
 			</div>
 		</div>
 	{/snippet}
@@ -111,7 +155,54 @@
 							no deadline
 						{/if}
 					</span>
-					<div class="ml-auto">
+					<div class="ml-auto flex items-center gap-1">
+						{#if req.deliveredUrl}
+							<a href={req.deliveredUrl} target="_blank" rel="external noreferrer">
+								<img
+									src={req.deliveredUrl}
+									alt="Poster art from {req.actName ?? 'the artist'}"
+									class="h-12 w-auto rounded"
+								/>
+							</a>
+							<Action
+								action={usePosterArt}
+								label="Use as poster"
+								variant="ghost"
+								size="sm"
+								modalTitle="Make this the poster?"
+								submitLabel="Use as poster"
+								successToast="Poster updated"
+								onsuccess={onchange}
+							>
+								{#snippet form()}
+									<input type="hidden" name="requestId" value={req.id} />
+									<input type="hidden" name="eventId" value={eventId} />
+									<p class="text-sm">
+										The art from {req.actName ?? 'the artist'} replaces the event's current poster.
+									</p>
+								{/snippet}
+							</Action>
+							<Action
+								action={usePosterArtWithFooter}
+								label="Use with a details footer"
+								variant="ghost"
+								size="sm"
+								modalTitle="Add the show details under this art?"
+								submitLabel="Make the poster"
+								successToast="Poster updated"
+								onsuccess={onchange}
+							>
+								{#snippet form()}
+									<input type="hidden" name="requestId" value={req.id} />
+									<input type="hidden" name="eventId" value={eventId} />
+									<p class="text-sm">
+										The art sits above a footer with the date, doors, venue and price, and the
+										result replaces the current poster. It is a snapshot: after editing the event,
+										run this again.
+									</p>
+								{/snippet}
+							</Action>
+						{/if}
 						<Action
 							action={dropArtifactRequest}
 							label="Cancel"

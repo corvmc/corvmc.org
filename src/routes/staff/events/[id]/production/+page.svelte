@@ -51,7 +51,7 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
 	import { createShift } from '$lib/remote/volunteer.remote';
-	import { createProduction } from '$lib/remote/productions.remote';
+	import { createProduction, useTemplateFlyerAsPoster } from '$lib/remote/productions.remote';
 	import { listActInDirectory } from '$lib/remote/external-acts.remote';
 	import { applyDutyList } from '$lib/remote/duty-lists.remote';
 	import {
@@ -1074,13 +1074,33 @@
 				{/if}
 
 				{#if evt.status !== 'cancelled'}
-					<div class="mt-3">
+					<div class="mt-3 flex flex-wrap items-center gap-2">
 						<input
 							type="file"
 							accept="image/jpeg,image/png,image/webp"
 							onchange={handlePosterUpload}
 							class="file-input file-input-sm"
 						/>
+						<!-- The fallback when no art arrives: a real poster, so it passes the publish gate. -->
+						<Action
+							action={useTemplateFlyerAsPoster}
+							label="Use the template flyer"
+							variant="ghost"
+							size="sm"
+							modalTitle="Use the template flyer?"
+							submitLabel="Make the poster"
+							successToast="Poster updated"
+							onsuccess={() => getStaffEventProduction(id).refresh()}
+						>
+							{#snippet form()}
+								<input type="hidden" name="eventId" value={evt.id} />
+								<p class="text-sm">
+									A flyer is drawn from the title, date, doors, venue, bill and price, and it
+									replaces the current poster. It is a snapshot: after editing the event, run this
+									again.
+								</p>
+							{/snippet}
+						</Action>
 					</div>
 				{/if}
 			</InfoCard>

@@ -182,6 +182,9 @@ export async function seedDirectoryPersonas(roles: SeedRole[]) {
 	});
 	pendingTags.push({ subjectId: UNDECIDED.id, kind: 'instrument', value: 'keys' });
 	pendingTags.push({ subjectId: UNDECIDED.id, kind: 'genre', value: 'indie' });
+	// Somebody the directory's skill filter finds without matching on anything else.
+	pendingTags.push({ subjectId: UNDECIDED.id, kind: 'skill', value: 'sound engineer' });
+	pendingTags.push({ subjectId: UNDECIDED.id, kind: 'skill', value: 'photographer' });
 
 	// The cast rides back out because these three are the natural senders and
 	// recipients of a direct message — one recruiting, one being recruited, one

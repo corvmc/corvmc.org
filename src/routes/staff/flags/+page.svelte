@@ -5,14 +5,11 @@
 	import DataList from '$lib/components/ui/DataList.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { rowLink } from '$lib/actions/row-link';
 	import { entityLabels } from '$lib/config';
 	import { resolve } from '$app/paths';
-	import { relativeDay } from '$lib/utils/format';
 	import { getFlagsQueue } from '$lib/remote/flags.remote';
+	import TriageTable from './TriageTable.svelte';
+	import TriageTabs from './TriageTabs.svelte';
 
 	const flagStatuses = ['pending', 'resolved', 'dismissed'] as const;
 
@@ -45,6 +42,7 @@
 
 <PageHeader title="Content Flags" />
 <PageContent>
+	<TriageTabs active="content" />
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
@@ -72,37 +70,23 @@
 		</Select>
 	</FilterBar>
 
-	<!--
-		A table: the reason is capped at 100 characters (`FLAG_REASON_MAX`) and the
-		queue has no row actions, so it passes none of the four card tests
-		(ui-patterns.md, "A table, unless the row earns a card"). The old comment
-		here claimed unbounded prose, which is what #1034 was about.
-	-->
 	<DataList {result} empty="No flags found" onpage={(p) => (page = p)}>
 		{#snippet children(flags)}
-			<Table>
-				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th class="col-support">Type</th>
-					<th>Flagged</th>
-					<th class="cell-primary">Reason</th>
-					<th class="col-support">Reported by</th>
-					<th class="col-support">When</th>
-				{/snippet}
-				{#each flags as f (f.id)}
-					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/flags/${f.id}`)}>
-						<td class="w-px"><StatusBadge status={f.status} label /></td>
-						<!-- Its own column, not a glyph: `ref.type` is `flag` for every row
-						     (flag-service.ts), so the registry glyph marks nothing and what
-						     was flagged is only in `target.type`. -->
-						<td class="col-support whitespace-nowrap">{entityLabels[f.target.type].one}</td>
-						<td class="whitespace-nowrap"><EntityIdentity ref={f.ref} /></td>
-						<td class="cell-primary truncate">{f.reason}</td>
-						<td class="col-support truncate">{f.reportedByName ?? 'Anonymous visitor'}</td>
-						<td class="col-support whitespace-nowrap">{relativeDay(f.createdAt)}</td>
-					</tr>
-				{/each}
-			</Table>
+			<!-- `ref.type` is `flag` for every row, so what was flagged is the
+			     type column, read from `target.type`. -->
+			<TriageTable
+				subjectLabel="Flagged"
+				rows={flags.map((f) => ({
+					id: f.id,
+					href: resolve(`/staff/flags/${f.id}`),
+					status: f.status,
+					kind: entityLabels[f.target.type].one,
+					subject: f.ref,
+					text: f.reason,
+					reporter: f.reportedByName ?? 'Anonymous visitor',
+					createdAt: f.createdAt
+				}))}
+			/>
 		{/snippet}
 	</DataList>
 </PageContent>

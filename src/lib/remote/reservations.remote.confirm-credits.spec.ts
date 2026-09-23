@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockUser } from '$lib/server/db/test-factory';
 import { error } from '@sveltejs/kit';
-import { isStaff } from '$lib/server/authorization';
+import { can } from '$lib/server/authorization';
 
 // Regression: staff confirming/pricing a reservation on a member's behalf must key
 // free hours to the reservation OWNER, never the acting staff user. The staff
@@ -45,9 +45,11 @@ vi.mock('$lib/server/authorization', async () => {
 	return {
 		requireUser: () => staffUser,
 		requireCapability: vi.fn(async () => undefined),
-		isStaff: isStaffMock,
+		// Drives both the pricing view's `can('reservation.read')` and the staff
+		// arm of `requireCapabilityOrOwner` below.
+		can: isStaffMock,
 		// Mirrors the real helper: owner short-circuits, otherwise defer to
-		// isStaff so the staff/member cases below still drive this the same way
+		// `can` so the staff/member cases below still drive this the same way
 		// they drive every other authorisation check in this file.
 		requireCapabilityOrOwner: vi.fn(async (_cap: string, ownerUserId?: string) => {
 			// Mirrors the real guard, which now reads the acting user from the
@@ -130,12 +132,12 @@ const { confirmReservation, getReservationPricing } =
 	(await import('$lib/remote/reservations.remote')) as any;
 
 beforeEach(() => {
-	// requireCapabilityOrOwner short-circuits on ownership without consulting isStaff,
+	// requireCapabilityOrOwner short-circuits on ownership without consulting `can`,
 	// so a `mockResolvedValueOnce(false)` queued by an owner-path test is never
 	// consumed and would otherwise leak into the next test's staff case. Reset to
 	// the suite default rather than letting one-shots accumulate.
-	vi.mocked(isStaff).mockReset();
-	vi.mocked(isStaff).mockResolvedValue(true);
+	vi.mocked(can).mockReset();
+	vi.mocked(can).mockResolvedValue(true);
 	commitReservationCredits.mockClear();
 	confirm.mockClear();
 	getBalance.mockClear();
@@ -182,7 +184,7 @@ describe('confirmation window gating', () => {
 	}
 
 	it('blocks a member confirming more than 3 days out', async () => {
-		vi.mocked(isStaff).mockResolvedValueOnce(false);
+		vi.mocked(can).mockResolvedValueOnce(false);
 		selectResults.push([scheduledRow(new Date(Date.now() + 10 * DAY))]);
 
 		await expect(confirmReservation({ id: 'res-w' }, undefined)).rejects.toMatchObject({
@@ -192,7 +194,7 @@ describe('confirmation window gating', () => {
 	});
 
 	it('allows a member confirming within 3 days', async () => {
-		vi.mocked(isStaff).mockResolvedValueOnce(false);
+		vi.mocked(can).mockResolvedValueOnce(false);
 		selectResults.push(
 			[scheduledRow(new Date(Date.now() + 2 * DAY))],
 			[{ email: 'member@example.com', name: 'Test Member' }]
@@ -203,7 +205,7 @@ describe('confirmation window gating', () => {
 	});
 
 	it('lets staff confirm outside the window', async () => {
-		// isStaff defaults to true in this suite.
+		// `can` defaults to true in this suite.
 		selectResults.push(
 			[{ ...scheduledRow(new Date(Date.now() + 10 * DAY)), createdByUserId: ownerId }],
 			[{ email: 'member@example.com', name: 'Test Member' }]
@@ -236,7 +238,7 @@ describe('staff comp choice on confirm', () => {
 	});
 
 	it('rejects comp from a non-staff owner', async () => {
-		vi.mocked(isStaff).mockResolvedValueOnce(false);
+		vi.mocked(can).mockResolvedValueOnce(false);
 		// Owned by the acting (non-staff) user, within the confirmation window.
 		selectResults.push([
 			{ ...scheduledRow(), createdByUserId: staffUser.id, startsAt: new Date(Date.now() + 60_000) }

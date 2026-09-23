@@ -439,6 +439,7 @@ export async function syncAccessWindow(
 			endsAt: reservation.endsAt,
 			lockCode: reservation.lockCode,
 			lockAccessId: reservation.lockAccessId,
+			createdByUserId: reservation.createdByUserId,
 			memberName: user.name
 		})
 		.from(reservation)
@@ -459,6 +460,8 @@ export async function syncAccessWindow(
 		if (row.startsAt < start || row.startsAt >= end) return { synced: false, errors };
 
 		try {
+			// A standing member code already opens the door, as in the other mint paths.
+			if (await hasActiveMemberCode(row.createdByUserId)) return { synced: false, errors };
 			await provisionAccessFor(row);
 			return { synced: true, errors };
 		} catch (err) {

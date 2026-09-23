@@ -31,6 +31,7 @@ vi.mock('$lib/server/band/band-service', () => ({
 
 import {
 	requireBandRole,
+	requireCommitteeMember,
 	requireCommitteeReviewer,
 	requireGroupRole,
 	requireProgramRole
@@ -347,5 +348,50 @@ describe('requireCommitteeReviewer', () => {
 		getBySlug.mockResolvedValue(GROUP);
 		can.mockResolvedValue(true);
 		expect(await statusOf(() => requireCommitteeReviewer({ slug: 'our-band' }))).toBe(404);
+	});
+});
+
+describe('requireCommitteeMember', () => {
+	const COMMITTEE = { id: 'group-3', slug: 'production', name: 'Production', kind: 'committee' };
+	const call = (groupId: string | null = 'group-3') =>
+		requireCommitteeMember(groupId, 'project.manage');
+
+	beforeEach(() => getByIdActive.mockResolvedValue(COMMITTEE));
+
+	it('admits a plain member of the committee that owns the row', async () => {
+		getUserRole.mockResolvedValue('member');
+		await expect(call()).resolves.toMatchObject({ role: 'member', group: COMMITTEE });
+		expect(getByIdActive).toHaveBeenCalledWith('group-3');
+		expect(can).not.toHaveBeenCalled();
+	});
+
+	it('refuses a member of some other committee', async () => {
+		expect(await statusOf(() => call())).toBe(403);
+	});
+
+	it('admits the cover capability, so staff can always act', async () => {
+		can.mockResolvedValue(true);
+		await expect(call()).resolves.toMatchObject({ role: 'staff' });
+		expect(can).toHaveBeenCalledWith('project.manage');
+	});
+
+	/** A club's roster owns nothing a committee does, so membership must not reach sideways. */
+	it('does not let a club or band roster stand in for a committee', async () => {
+		getByIdActive.mockResolvedValue(CLUB);
+		getUserRole.mockResolvedValue('owner');
+		expect(await statusOf(() => call('group-2'))).toBe(403);
+	});
+
+	it('leaves an unowned row to the cover capability alone', async () => {
+		expect(await statusOf(() => call(null))).toBe(403);
+		expect(getByIdActive).not.toHaveBeenCalled();
+		can.mockResolvedValue(true);
+		await expect(call(null)).resolves.toMatchObject({ role: 'staff', group: null });
+	});
+
+	it('treats a deleted committee as unowned', async () => {
+		getByIdActive.mockResolvedValue(null);
+		getUserRole.mockResolvedValue('member');
+		expect(await statusOf(() => call())).toBe(403);
 	});
 });

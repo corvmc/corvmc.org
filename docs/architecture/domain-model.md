@@ -184,8 +184,10 @@ industry-standard **work request → work order** pattern; `work_request` is the
 
 `content_flag` is the same lifecycle in social, where the "work" is a moderation decision
 rather than a repair — which is why `work_request` shares `flagStatuses` verbatim and
-copies six columns. **They stay separate tables** (see below); the triage queue, detail
-page, resolve/dismiss action and don't-re-notify-on-repeat rule are what could be shared.
+copies six columns. **They stay separate tables** (see below) with separate guards; the
+triage queue is shared — `/staff/flags` and `/staff/flags/equipment` render one table
+component over both. The repeat-report rule is deliberately **not** shared: a repeat flag
+collapses without re-notifying, a repeat equipment report is kept as its own row.
 
 ### 3. Template → instance `[projects, assets]`
 

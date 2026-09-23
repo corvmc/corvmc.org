@@ -101,9 +101,9 @@ vi.mock('$lib/server/feature-flags', () => ({
 	requireFeature: vi.fn(async () => undefined)
 }));
 
-const isStaff = vi.fn(async () => false);
+const can = vi.fn(async (_cap: string) => false);
 vi.mock('$lib/server/authorization', () => ({
-	isStaff: (...a: unknown[]) => isStaff(...(a as [])),
+	can: (...a: unknown[]) => can(...(a as [string])),
 	requireCapability: vi.fn(async () => testUser),
 	requireCapabilityOrOwner: vi.fn(),
 	requireUser: () => testUser
@@ -187,7 +187,7 @@ const { bookAndPayReservation, bookMemberReservation } =
 beforeEach(() => {
 	vi.clearAllMocks();
 	ensureContactPhone.mockResolvedValue(true);
-	isStaff.mockResolvedValue(false);
+	can.mockResolvedValue(false);
 	selectResult = [];
 	reservationServiceMock.create.mockImplementation(async () => {
 		throw new ReservationConflictError();
@@ -367,9 +367,10 @@ describe('bookAndPayReservation before the confirmation window opens', () => {
 		expect(await tookTheHold(tomorrow)).toBe(false);
 	});
 
-	it('lets staff confirm outside the window', async () => {
-		isStaff.mockResolvedValue(true);
+	it('lets a reservation.comp holder confirm outside the window', async () => {
+		can.mockImplementation(async (cap) => cap === 'reservation.comp');
 
 		expect(await tookTheHold(farOutDate())).toBe(false);
+		expect(can).toHaveBeenCalledWith('reservation.comp');
 	});
 });

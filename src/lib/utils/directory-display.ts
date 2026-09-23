@@ -122,6 +122,7 @@ export function toPublicMemberProfile<B>(member: {
 	hometown: string | null;
 	instruments: string[];
 	genres: string[];
+	skills: string[];
 	lookingForBand: boolean;
 	availableForHire: boolean;
 	teachesLessons: boolean;
@@ -140,6 +141,7 @@ export function toPublicMemberProfile<B>(member: {
 		hometown: member.hometown,
 		instruments: member.instruments,
 		genres: member.genres,
+		skills: member.skills,
 		lookingForBand: member.lookingForBand,
 		availableForHire: member.availableForHire,
 		teachesLessons: member.teachesLessons,

@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 import { mockUser } from '$lib/server/db/test-factory';
-import { isStaff } from '$lib/server/authorization';
+import { can } from '$lib/server/authorization';
+import { positionOrder, type Capability, type Position } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Regression: `getReservations({ forUser })` rejected staff along with
@@ -13,7 +14,7 @@ import { isStaff } from '$lib/server/authorization';
 // `additionalField` — so it was always `undefined` and the staff arm of the
 // check could never be taken. It typechecked silently because better-auth's
 // `User` is loose, and it is the only staff check in reservations.remote.ts
-// that does not resolve the role (the other five all `await isStaff(id)`).
+// that did not resolve the role. It now asks `can('reservation.read')`.
 //
 // The failure is a closed guard, not an open one: nobody could see another
 // member's reservations, staff included. These tests pin all three arms.
@@ -40,13 +41,20 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({
-	isStaff: vi.fn(async () => false),
-	requireCapability: vi.fn(async () => actingUser),
-	requireUser: () => actingUser,
-	requireCapabilityOrOwner: vi.fn(),
-	primaryRoleFor: vi.fn()
-}));
+// `can` is simulated against the real matrix for whatever `heldPositions` says.
+let heldPositions: Position[] = [];
+vi.mock('$lib/server/authorization', async () => {
+	const config = await import('$lib/config');
+	return {
+		can: vi.fn(async (cap: Capability) =>
+			heldPositions.some((p) => config.grantsCapability(config.positions[p], cap))
+		),
+		requireCapability: vi.fn(async () => actingUser),
+		requireUser: () => actingUser,
+		requireCapabilityOrOwner: vi.fn(),
+		primaryRoleFor: vi.fn()
+	};
+});
 
 vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
 	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
@@ -82,17 +90,40 @@ const { getReservations } = (await import('$lib/remote/reservations.remote')) as
 beforeEach(() => {
 	rows.length = 0;
 	orderByArgs.length = 0;
-	vi.mocked(isStaff).mockReset();
-	vi.mocked(isStaff).mockResolvedValue(false);
+	vi.mocked(can).mockClear();
+	heldPositions = [];
 });
 
 describe('getReservations({ forUser })', () => {
 	it('lets staff list another member’s reservations', async () => {
 		// The regression. Before the fix this threw 403, because the staff arm
 		// read an undefined property instead of resolving the role.
-		vi.mocked(isStaff).mockResolvedValue(true);
+		heldPositions = ['staff'];
 		await expect(getReservations({ forUser: 'someone-else' })).resolves.toEqual([]);
-		expect(isStaff).toHaveBeenCalledWith(actingUser.id);
+		expect(can).toHaveBeenCalledWith('reservation.read');
+	});
+
+	it('refuses a site moderator, who holds a position but not reservation.read', async () => {
+		heldPositions = ['site_moderator'];
+		await expect(getReservations({ forUser: 'someone-else' })).rejects.toMatchObject({
+			status: 403
+		});
+	});
+
+	// Before: any position. After: admin, staff and treasurer.
+	it('admits exactly the reservation.read holders, across every combination', async () => {
+		const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
+			positionOrder.filter((_, i) => mask & (1 << i))
+		);
+		for (const held of subsets) {
+			heldPositions = held;
+			const allowed = await getReservations({ forUser: 'someone-else' }).then(
+				() => true,
+				() => false
+			);
+			const reader = held.some((p) => ['admin', 'staff', 'treasurer'].includes(p));
+			expect(allowed, held.join('+') || '(none)').toBe(reader);
+		}
 	});
 
 	it('refuses a non-staff member asking for someone else', async () => {
@@ -104,12 +135,12 @@ describe('getReservations({ forUser })', () => {
 	it('lets any member ask for their own, without consulting the role', async () => {
 		// Ownership short-circuits: asking for yourself must not cost a DB read.
 		await expect(getReservations({ forUser: actingUser.id })).resolves.toEqual([]);
-		expect(isStaff).not.toHaveBeenCalled();
+		expect(can).not.toHaveBeenCalled();
 	});
 
 	it('needs no forUser to list your own', async () => {
 		await expect(getReservations()).resolves.toEqual([]);
-		expect(isStaff).not.toHaveBeenCalled();
+		expect(can).not.toHaveBeenCalled();
 	});
 });
 

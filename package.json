@@ -109,6 +109,7 @@
 		"zod4-mock": "^0.13.0"
 	},
 	"dependencies": {
+		"@cf-wasm/og": "0.5.0",
 		"@internationalized/date": "^3.12.3",
 		"@sentry/cloudflare": "^10.72.0",
 		"@sentry/sveltekit": "^10",

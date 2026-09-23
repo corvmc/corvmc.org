@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ConflictWarnings from './ConflictWarnings.svelte';
+import OuterBoundary from '$lib/components/ui/OuterBoundary.test.svelte';
 
 /**
  * The distinction this component exists to draw.
@@ -97,5 +98,20 @@ describe('ConflictWarnings', () => {
 		});
 
 		expect(check).not.toHaveBeenCalled();
+	});
+
+	it('shows its own failure when the check rejects, rather than the caller losing its content', async () => {
+		const checkConflicts = vi.fn(async () => {
+			throw new Error('conflict service down');
+		});
+		await render(OuterBoundary, {
+			inner: ConflictWarnings as never,
+			innerProps: { ...TIMES, checkConflicts }
+		});
+
+		await vi.waitFor(() => {
+			expect(document.body.textContent).toContain('Could not check this time for conflicts');
+		});
+		expect(document.querySelector('[data-outer-failed]')).toBeNull();
 	});
 });

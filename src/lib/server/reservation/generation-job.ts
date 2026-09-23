@@ -595,6 +595,7 @@ async function processEventSeries(
 		await saveTicketSale(newEventId, {
 			enabled: prototype.ticketingEnabled || undefined,
 			priceCents: prototype.ticketPrice ?? undefined,
+			priceFloorCents: prototype.ticketPriceFloorCents || undefined,
 			quantity: prototype.ticketQuantity ?? undefined
 		});
 

@@ -100,6 +100,15 @@ export const creditTypeConfig: Record<CreditType, { maxBalance: number | null }>
 	equipment_credits: { maxBalance: 25000 }
 };
 
+/**
+ * The most one `credit.comp` adjustment may add, per credit type. Anything
+ * above it, any deduction, and any type at 0 needs `credit.adjust`.
+ */
+export const creditCompCeiling: Record<CreditType, number> = {
+	free_hours: 4, // 2 hours
+	equipment_credits: 0
+};
+
 // ---------------------------------------------------------------------------
 // Reservations
 // ---------------------------------------------------------------------------
@@ -669,6 +678,10 @@ export const contractorTradeLabels: Record<ContractorTrade, string> = {
 	other: 'Other'
 };
 
+/** A local resource listing. `rejected` is a return state, not terminal. */
+export const localResourceStatuses = ['pending', 'published', 'rejected'] as const;
+export type LocalResourceStatus = (typeof localResourceStatuses)[number];
+
 /**
  * A job's lifecycle. Four states, matching `orderStatuses` in shape because the
  * shape is the same one: something is agreed, then it is committed to, then it
@@ -712,6 +725,7 @@ export const creditSourceLabels: Record<string, string> = {
 	refund: 'Refund',
 	cancelled: 'Cancelled',
 	admin_adjustment: 'Admin adjustment',
+	staff_comp: 'Staff comp',
 	reservation: 'Reservation'
 };
 
@@ -1701,7 +1715,7 @@ export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
 // A **capability** is what a guard names. A **position** is what a person
 // holds. The matrix below is the association between them; assignment — who
 // holds which position — stays in `model_has_roles`, because that is the part
-// that genuinely changes at runtime. See docs/specs/admin-vs-staff-spec.md.
+// that genuinely changes at runtime. See docs/specs/shipped/admin-vs-staff-spec.md.
 //
 // Guards name capabilities rather than roles so that re-answering "who may do
 // this" is an edit to one file instead of a hunt through several hundred call
@@ -1728,7 +1742,7 @@ export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
  */
 export const capabilities = {
 	user: ['list', 'read', 'update', 'setRole', 'deactivate', 'ban', 'purge'],
-	credit: ['read', 'adjust'],
+	credit: ['read', 'adjust', 'comp'],
 	finance: ['read', 'refund'],
 	settings: ['read', 'update'],
 	directory: ['readContact', 'shareContactSheet'],
@@ -1738,7 +1752,9 @@ export const capabilities = {
 	// it. A chair does this through `group_member.role = 'admin'`; this is the
 	// other door, and a headless committee has only this one.
 	committee: ['reviewApplications'],
-	event: ['read', 'manage', 'publish', 'manageTickets'],
+	// `uploadRecap` is also held, outside this matrix, by anyone with a current
+	// RECAP_PHOTOGRAPHER_CERTIFICATION: volunteer photographers hold no position.
+	event: ['read', 'manage', 'publish', 'manageTickets', 'uploadRecap'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
 	// Door access: granting and revoking standing member codes, adopting the
 	// hand-made ones already on the lock, re-provisioning a booking, rotating the
@@ -1773,8 +1789,19 @@ export const capabilities = {
 	moderation: ['reviewFlags', 'setStanding'],
 	suggestion: ['read', 'respond', 'review'],
 	listing: ['review'],
-	help: ['read', 'manage']
+	// The staff music tools. Refunding a sale is `finance.refund`, not a music
+	// action: it moves money, and the treasurer is who does that.
+	music: ['read', 'moderate'],
+	help: ['read', 'manage'],
+	// The public local resources directory: categories and listings.
+	localResource: ['manage']
 } as const;
+
+/**
+ * The volunteer certification that lets a member upload event recap photos.
+ * Matched by name, so renaming the certification withdraws the grant.
+ */
+export const RECAP_PHOTOGRAPHER_CERTIFICATION = 'Photographer';
 
 export type Capabilities = typeof capabilities;
 export type Resource = keyof Capabilities;
@@ -1916,6 +1943,8 @@ export const positions: Record<Position, Grants> = {
 		moderation: ['reviewFlags', 'setStanding'],
 		suggestion: ['read', 'respond', 'review'],
 		listing: ['review'],
+		// Withholding a release, or pulling it off the air, is a takedown.
+		music: ['read', 'moderate'],
 		inbox: ['read', 'reply', 'assign', 'dispose'],
 		user: ['list', 'read', 'deactivate']
 	},
@@ -1926,6 +1955,8 @@ export const positions: Record<Position, Grants> = {
 		contractor: ['read', 'recordInvoice'],
 		inventory: ['read', 'manageAcquisitions', 'report'],
 		reservation: ['read', 'comp'],
+		// Read only: enough to reach the music page's sales and refund one.
+		music: ['read'],
 		// A show's settlement is on the production console, behind `event.read`
 		// like everything else on that page, so the one person whose job is the
 		// money could not see where it went. Read only — the advance, the lineup
@@ -2057,7 +2088,13 @@ export const attachableTypes = [
 	 * `group_id` and an external act has no group, so a file is the only tech
 	 * rider it can ever hand over (#863).
 	 */
-	'directory_entry'
+	'directory_entry',
+	/**
+	 * What an artist delivered against an ask, in `poster`. On the request rather
+	 * than the event: the `/act` token authorizes the artist's own record, and
+	 * the event's public poster is not that until staff promote it.
+	 */
+	'artifact_request'
 ] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 
@@ -2257,7 +2294,7 @@ export const RADIO_MAX_TRACK_MS = 15 * 60 * 1000;
  * against each other, which meant the set of readable tiers was derived from
  * a closed table of roles — so a user holding a role that table had never
  * heard of scored below `member` and lost every article, including the ones
- * everybody can read. Positions (see docs/specs/admin-vs-staff-spec.md) are
+ * everybody can read. Positions (see docs/specs/shipped/admin-vs-staff-spec.md) are
  * unranked and open-ended, so they can never be ranked here again.
  *
  * `resolveHelpAudience` maps a person onto exactly one of these; a reader sees

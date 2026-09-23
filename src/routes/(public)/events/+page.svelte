@@ -5,6 +5,7 @@
 	import PosterCard from '$lib/components/events/PosterCard.svelte';
 	import MiniCalendar from '$lib/components/public/calendar/MiniCalendar.svelte';
 	import GigList from '$lib/components/events/GigList.svelte';
+	import RecentRecaps from './RecentRecaps.svelte';
 	import { getPublicEventsPage } from '$lib/remote/events.remote';
 	// Still needed on its own for the lazy "show more" pager below, which is not a fan-out.
 	import { getPublicGigGuide } from '$lib/remote/calendar.remote';
@@ -23,6 +24,7 @@
 	const pageData = $derived(await getPublicEventsPage(from));
 	const { upcoming } = $derived(pageData.events);
 	const guide = $derived(pageData.guide);
+	const recaps = $derived(pageData.recaps);
 
 	// "Show more" appends pages client-side; reset when the anchor changes.
 	let extra: CalendarEntry[] = $state([]);
@@ -139,6 +141,10 @@
 			{/if}
 		</div>
 	</div>
+
+	{#if recaps.length > 0}
+		<RecentRecaps {recaps} />
+	{/if}
 </Section>
 
 <style>

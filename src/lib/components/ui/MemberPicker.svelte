@@ -18,7 +18,8 @@
 		label = 'Member',
 		placeholder = 'Search by name or email...',
 		value = $bindable(''),
-		name = $bindable('')
+		name = $bindable(''),
+		search: searchFn
 	}: {
 		/** The remote form field whose value is the selected user's id. */
 		field: { as: (type: 'hidden', value: string) => Record<string, unknown> };
@@ -28,14 +29,20 @@
 		value?: string;
 		/** The selected user's display name, for the chip. */
 		name?: string;
+		/** Another population to pick from. Defaults to members, over `/api/users/search`. */
+		search?: (q: string) => Promise<{ id: string; name: string; email?: string }[]>;
 	} = $props();
 
 	let query = $state('');
-	let results = $state<{ id: string; name: string; email: string }[]>([]);
+	let results = $state<{ id: string; name: string; email?: string }[]>([]);
 
 	async function search() {
 		if (query.length < 2) {
 			results = [];
+			return;
+		}
+		if (searchFn) {
+			results = await searchFn(query);
 			return;
 		}
 		const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
@@ -78,7 +85,7 @@
 					onclick={() => select(u)}
 				>
 					<span class="font-medium">{u.name}</span>
-					<span class="ml-1 opacity-60">{u.email}</span>
+					{#if u.email}<span class="ml-1 opacity-60">{u.email}</span>{/if}
 				</button>
 			{/each}
 		</div>

@@ -14,6 +14,14 @@ import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venue-service';
 import { getProductionByEvent } from '$lib/server/production/production-service';
+import {
+	listEventPhotos,
+	listRecentRecaps,
+	recapClosedReason,
+	MAX_PHOTOS_PER_EVENT,
+	MAX_PHOTOS_PER_UPLOAD
+} from '$lib/server/event/event-photo-service';
+import { recapUploadAccess } from '$lib/server/event/recap-access';
 import { getPublicSetTimes, getRunOfShow } from '$lib/server/production/run-of-show-service';
 import { getSettlement } from '$lib/server/production/settlement-service';
 import { getHostShift } from '$lib/server/production/host-service';
@@ -333,6 +341,16 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	const isSustainingMember = locals.user ? await checkSustainingMember(locals.user.id) : false;
 
 	const isPast = hasEventEnded(evt.startsAt, evt.endsAt);
+	const photos = await listEventPhotos(id);
+	// Only a photographer needs the uploader here; staff have the console's.
+	const recapUpload =
+		(await recapUploadAccess(locals.user?.id)) === 'photographer'
+			? {
+					closedReason: recapClosedReason(evt),
+					remaining: Math.max(0, MAX_PHOTOS_PER_EVENT - photos.length),
+					maxPerUpload: MAX_PHOTOS_PER_UPLOAD
+				}
+			: null;
 
 	// "More shows" tail: other upcoming events, excluding this one.
 	const upcomingRows = await listUpcoming();
@@ -406,6 +424,13 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		// the moderation spec closed.
 		canReport: evt.status === 'published',
 		collectiveShareBps: seller?.shareBps ?? TICKET_COLLECTIVE_SHARE_BPS,
+		recapUpload,
+		photos: photos.map((p) => ({
+			id: p.attachmentId,
+			url: p.url,
+			altText: p.altText,
+			caption: p.caption
+		})),
 		upcoming
 	};
 });
@@ -1094,19 +1119,26 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 	await requireCapability('event.read');
 
 	const detail = await getStaffEventDetail(id);
-	const [nearby, venues, production] = await Promise.all([
+	const [nearby, venues, production, photos] = await Promise.all([
 		listEventsNear(detail.event.startsAt, { excludeEventId: id }),
 		venuePickerOptions(),
 		// The header's one entry reads this to name itself, and the production
 		// card renders its status, producer and load-in. Everything else about
 		// the record is worked on in the console.
-		getProductionByEvent(id)
+		getProductionByEvent(id),
+		listEventPhotos(id)
 	]);
 
 	return {
 		detail,
 		venues,
 		production,
+		recap: {
+			photos,
+			closedReason: recapClosedReason(detail.event),
+			maxPhotos: MAX_PHOTOS_PER_EVENT,
+			maxPerUpload: MAX_PHOTOS_PER_UPLOAD
+		},
 		nearby: nearby.map((e) => ({
 			id: e.id,
 			startsAt: e.startsAt,
@@ -1961,11 +1993,12 @@ export const getMemberEventDetailPage = query(z.string(), async (id) => {
 
 /** The public events page's one load-bearing query. Neither half has a refresh site. */
 export const getPublicEventsPage = query(z.string().optional(), async (from) => {
-	const [events, guide] = await Promise.all([
+	const [events, guide, recaps] = await Promise.all([
 		getPublicEvents(),
-		getPublicGigGuide({ from, offset: 0 })
+		getPublicGigGuide({ from, offset: 0 }),
+		listRecentRecaps()
 	]);
-	return { events, guide };
+	return { events, guide, recaps };
 });
 
 /**

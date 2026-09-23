@@ -18,7 +18,7 @@ import {
 // Capabilities
 //
 // Guards name a capability; the matrix in `$lib/config` says who holds it.
-// See docs/specs/admin-vs-staff-spec.md.
+// See docs/specs/shipped/admin-vs-staff-spec.md.
 //
 // The access controller is built HERE rather than in config.ts because
 // `createAccessControl` is a better-auth import and config.ts is imported by
@@ -131,7 +131,7 @@ export async function can(cap: Capability): Promise<boolean> {
 
 /**
  * Assert the caller holds `cap`. The first statement of a remote function.
- * Returns the authenticated user, as `requireStaff()` does.
+ * Returns the authenticated user.
  */
 export async function requireCapability(cap: Capability) {
 	const { locals } = getRequestEvent();
@@ -234,45 +234,6 @@ export function topPositionFor(userIdCol: AnyColumn) {
 }
 
 /**
- * Check whether a user has a specific role.
- */
-export async function hasRole(userId: string, roleName: string): Promise<boolean> {
-	const result = await db
-		.select({ roleId: role.id })
-		.from(role)
-		.innerJoin(modelHasRole, eq(modelHasRole.roleId, role.id))
-		.where(and(eq(role.name, roleName), eq(modelHasRole.userId, userId)))
-		.limit(1);
-
-	return result.length > 0;
-}
-
-/**
- * Check whether a user has any of the given roles.
- */
-export async function hasAnyRole(userId: string, roleNames: string[]): Promise<boolean> {
-	const result = await db
-		.select({ roleId: role.id })
-		.from(role)
-		.innerJoin(modelHasRole, eq(modelHasRole.roleId, role.id))
-		.where(and(inArray(role.name, roleNames), eq(modelHasRole.userId, userId)))
-		.limit(1);
-	return result.length > 0;
-}
-
-/**
- * Assert the current request is from an authenticated user with a staff or admin role.
- * Throws 401/403 via SvelteKit error() if not.
- * Returns the authenticated user for convenience.
- */
-export async function requireStaff() {
-	const { locals } = getRequestEvent();
-	if (!locals.user) throw error(401, 'Not authenticated');
-	if ((await currentPositions()).length === 0) throw error(403, 'Staff access required');
-	return locals.user;
-}
-
-/**
  * Assert the current request is from an authenticated user.
  * Throws 401 via SvelteKit error() if not.
  * Returns the authenticated user for convenience.
@@ -329,13 +290,6 @@ export async function removeRole(userId: string, roleName: string): Promise<void
 	await db
 		.delete(modelHasRole)
 		.where(and(eq(modelHasRole.roleId, found.id), eq(modelHasRole.userId, userId)));
-}
-
-/**
- * Check if a user is staff/admin. Returns true/false without throwing.
- */
-export async function isStaff(userId: string): Promise<boolean> {
-	return isElevated(userId);
 }
 
 /**
