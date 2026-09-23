@@ -1,6 +1,7 @@
 # Local resources
 
-> **Status: 📋 designed, not built.** Tracking issue: #575.
+> **Status: 🔧 phases 1–3 shipped; phase 4 (the structured tip form) is #1498.** Tracking
+> issue: #575.
 >
 > A public, staff-curated list of music-related businesses and services around Corvallis —
 > instrument shops, venues, record stores, rehearsal studios, repair techs. It positions the
@@ -8,15 +9,11 @@
 
 ## What exists today
 
-`/local-resources` is live and lists nothing. It is a hero, four decorative category tiles built
-from a hardcoded array, and a Turnstile-guarded contact form that files a free-text message into the
-staff inbox. Its only `<h2>` is "Suggest a Resource".
-
-That is the collection form for a directory that was never built, which is a reasonable first move
-and is why #575 was closed as shipped in error — the route existed, the feature did not. There is no
-`local_resource` table, no query, and no staff surface.
-
-**The page keeps its job and gains the list above it.** Nothing here throws away what is there.
+`/local-resources` lists published resources grouped by category above the original tip form,
+which still files free text into the staff inbox. Staff curate at `/staff/local-resources` and
+`/staff/local-resources/categories`, behind `localResource.manage`. Staff-authored listings
+publish on save; `rejected` (shown as "Returned") carries a note and can be published later.
+Removing a listing stamps `deletedAt`. Phase 4 below is what remains.
 
 ## A local resource is not a supplier
 

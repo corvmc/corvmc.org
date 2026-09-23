@@ -562,6 +562,8 @@ const EVENT_PROTO = {
 	ticketingEnabled: true,
 	ticketPrice: 1000,
 	ticketQuantity: 40,
+	// A fixed-price show: the sliding scale opens at the price.
+	ticketPriceFloorCents: 1000,
 	source: 'cmc',
 	// `notNull` on the real table, and what decides each occurrence's booker: a
 	// show's night is its own production's (#855).
@@ -652,6 +654,7 @@ describe('generateRecurringEvents', () => {
 		expect(mockSaveTicketSale).toHaveBeenCalledWith((listings[0].row as { id: string }).id, {
 			enabled: true,
 			priceCents: 1000,
+			priceFloorCents: 1000,
 			quantity: 40
 		});
 

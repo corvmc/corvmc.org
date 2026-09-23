@@ -79,9 +79,13 @@ let otherAdminCount = 1;
 // Any db access on a rejected call is a failure — the guard tests assert these
 // spies stay clean. On the authorized path db.select serves the two reads
 // updateUser makes: all role rows, then a count of admins other than the target.
+// The target's profile as it stood before the edit, which updateUser diffs to
+// name the fields it changed.
+let currentProfile = { name: 'Renamed', pronouns: null, phone: '555', dateOfBirth: null };
 const dbSelect = vi.fn((shape?: Record<string, unknown>) => {
 	const isCount = !!shape && 'value' in shape;
-	const rows = isCount ? [{ value: otherAdminCount }] : ROLE_ROWS;
+	const isProfile = !!shape && 'pronouns' in shape && !('email' in shape);
+	const rows = isCount ? [{ value: otherAdminCount }] : isProfile ? [currentProfile] : ROLE_ROWS;
 	const result = {
 		from: () => result,
 		// `getUser` left-joins `directory_entry` for the member's directory
@@ -188,6 +192,13 @@ vi.mock('$lib/server/user/user-service', () => ({
 	UserHasPublishedListingsError
 }));
 
+const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
+const listAuditEntriesForSubject = vi.fn(async (..._a: unknown[]) => []);
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (entry: unknown) => recordAuditEntry(entry),
+	listAuditEntriesForSubject: (...a: unknown[]) => listAuditEntriesForSubject(...a)
+}));
+
 vi.mock('$lib/server/event/event-service', () => ({ listUpcoming: vi.fn(async () => []) }));
 
 // The staff user record's own services. Spied rather than stubbed inline so the
@@ -272,6 +283,7 @@ beforeEach(() => {
 	]);
 	getUserRoles.mockResolvedValue(['member']);
 	otherAdminCount = 1;
+	currentProfile = { name: 'Renamed', pronouns: null, phone: '555', dateOfBirth: null };
 	currentParams = { id: 'victim-user' };
 	for (const fn of Object.values(users)) {
 		if (typeof fn === 'function') fn.refresh = () => undefined;
@@ -301,7 +313,8 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	{ name: 'getUserReservations', args: ['victim-user'] },
 	{ name: 'getUserMembership', args: ['victim-user'] },
 	{ name: 'getUserCreditHistory', args: [{ userId: 'victim-user', page: 1 }] },
-	{ name: 'getUserSessions', args: ['victim-user'] }
+	{ name: 'getUserSessions', args: ['victim-user'] },
+	{ name: 'getUserHistory', args: ['victim-user'] }
 ];
 
 // The target of every one of these is the argument, never `params.id`. Pinned
@@ -572,6 +585,80 @@ describe('adjustCredits surfaces staff mistakes on the amount field', () => {
 	});
 });
 
+describe('adjustCredits under credit.comp alone (#579)', () => {
+	const COMP = {
+		userId: 'member-1',
+		creditType: 'free_hours' as const,
+		description: 'Session interrupted by the fire alarm'
+	};
+
+	beforeEach(() => {
+		held = new Set(['credit.comp', 'credit.read']);
+		requireCapability.mockImplementation(async (cap: string) => {
+			if (!held.has(cap)) throw new Error('403: Not permitted');
+			return { id: 'acting-staff' };
+		});
+	});
+
+	it('adds up to the ceiling, recorded as a staff comp', async () => {
+		await users.adjustCredits({ ...COMP, amount: '4' });
+		expect(addCredits).toHaveBeenCalledWith(
+			'member-1',
+			'free_hours',
+			4,
+			'staff_comp',
+			undefined,
+			COMP.description
+		);
+	});
+
+	it('refuses more than the ceiling on the amount field, in hours', async () => {
+		await expectFieldIssue(
+			() => users.adjustCredits({ ...COMP, amount: '5' }),
+			'amount',
+			'Up to 2 hrs'
+		);
+		expect(addCredits).not.toHaveBeenCalled();
+	});
+
+	it('refuses a deduction', async () => {
+		await expectFieldIssue(
+			() => users.adjustCredits({ ...COMP, amount: '-1' }),
+			'amount',
+			'An admin'
+		);
+		expect(deductCredits).not.toHaveBeenCalled();
+	});
+
+	it('refuses a credit type whose ceiling is zero', async () => {
+		await expectFieldIssue(
+			() => users.adjustCredits({ ...COMP, creditType: 'equipment_credits', amount: '1' }),
+			'amount',
+			'An admin'
+		);
+		expect(addCredits).not.toHaveBeenCalled();
+	});
+
+	it('rejects a caller holding neither capability', async () => {
+		held = new Set(['credit.read']);
+		await expect(users.adjustCredits({ ...COMP, amount: '1' })).rejects.toThrow('403');
+		expect(addCredits).not.toHaveBeenCalled();
+	});
+
+	it('leaves a full adjuster unbounded and records an admin adjustment', async () => {
+		held = new Set(['credit.adjust', 'credit.read']);
+		await users.adjustCredits({ ...COMP, amount: '50' });
+		expect(addCredits).toHaveBeenCalledWith(
+			'member-1',
+			'free_hours',
+			50,
+			'admin_adjustment',
+			undefined,
+			COMP.description
+		);
+	});
+});
+
 // ---------------------------------------------------------------------------
 // updateUser: the profile / role-set split.
 //
@@ -642,5 +729,83 @@ describe('updateUser role-set split', () => {
 		await users.updateUser({ ...PROFILE_ONLY, roles: ['2'] });
 		expect(dbDelete).toHaveBeenCalled();
 		expect(dbInsert).toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Audit trail: who changed a member's roles, profile or credits.
+// ---------------------------------------------------------------------------
+describe('staff edits leave an audit entry', () => {
+	const PROFILE = { id: 'victim-user', name: 'Renamed', pronouns: '', phone: '555' };
+
+	beforeEach(() => {
+		requireCapability.mockResolvedValue({ id: 'acting-staff' });
+	});
+
+	it('getUserHistory reads the member named in its argument, not params.id', async () => {
+		currentParams = { id: 'someone-else' };
+		await users.getUserHistory('victim-user');
+		expect(listAuditEntriesForSubject).toHaveBeenCalledWith('user', 'victim-user', { limit: 20 });
+	});
+
+	it('records roles added and removed by name', async () => {
+		getUserRoles.mockResolvedValue(['member']);
+		await users.updateUser({ ...PROFILE, roles: ['2'] });
+
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'user.roles_changed',
+			subject: { type: 'user', id: 'victim-user', label: 'Renamed' },
+			details: { added: ['staff'], removed: ['member'] }
+		});
+	});
+
+	it('records the names of changed profile fields, never their values', async () => {
+		await users.updateUser({ ...PROFILE, phone: '541-555-0100', pronouns: 'they/them' });
+
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'user.profile_updated',
+			subject: { type: 'user', id: 'victim-user', label: 'Renamed' },
+			details: { fields: ['pronouns', 'phone'] }
+		});
+		expect(JSON.stringify(recordAuditEntry.mock.calls)).not.toContain('541-555-0100');
+	});
+
+	it('records nothing for a save that changed nothing', async () => {
+		await users.updateUser({ ...PROFILE, roles: ['3'] });
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+
+	it('records a credit adjustment with its sign and the balance after', async () => {
+		deductCredits.mockResolvedValueOnce(50 as never);
+		await users.adjustCredits({
+			userId: 'member-1',
+			creditType: 'free_hours',
+			amount: '-150',
+			description: 'Double booking'
+		});
+
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'credits.adjusted',
+			subject: { type: 'user', id: 'member-1' },
+			details: {
+				creditType: 'free_hours',
+				delta: -150,
+				balanceAfter: 50,
+				description: 'Double booking'
+			}
+		});
+	});
+
+	it('records no adjustment the balance refused', async () => {
+		getBalance.mockResolvedValue(10);
+		await expect(
+			users.adjustCredits({
+				userId: 'member-1',
+				creditType: 'free_hours',
+				amount: '-150',
+				description: 'x'
+			})
+		).rejects.toBeTruthy();
+		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 });

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { listApprovedHoursForExport } from '$lib/server/volunteer/volunteer-report-service';
 import { getHourValueCents, getHourValueSource } from '$lib/server/volunteer/hour-value';
 import { toCsv, csvResponse } from '$lib/server/report/csv';
@@ -32,7 +32,7 @@ const COLUMNS = [
  * **A `+server.ts` rather than a remote function**, because a download needs a
  * `Content-Disposition` header and a `query()` returns a value rather than a
  * response. That makes this one of the few places in the app where the guard is
- * not the remote-function boundary, so `requireStaff()` is the first statement
+ * not the remote-function boundary, so `volunteer.report` is the first statement
  * here and the range is parsed with a schema exactly as a `form()` would.
  *
  * **Two value columns and no total row.** The impact figure covers every hour;
@@ -43,7 +43,7 @@ const COLUMNS = [
  * across them.
  */
 export const GET: RequestHandler = async ({ url }) => {
-	await requireStaff();
+	await requireCapability('volunteer.report');
 
 	const range = rangeSchema.parse({
 		from: url.searchParams.get('from') ?? undefined,

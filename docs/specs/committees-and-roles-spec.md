@@ -124,7 +124,7 @@ The state of authorization, as of this writing:
 
 - `requireStaff()` is `hasAnyRole(userId, ['admin', 'staff'])`
   ([src/lib/server/authorization.ts](../../src/lib/server/authorization.ts)). Holding `admin`
-  conveys nothing `staff` does not — see [admin-vs-staff-spec.md](admin-vs-staff-spec.md),
+  conveys nothing `staff` does not — see [admin-vs-staff-spec.md](shipped/admin-vs-staff-spec.md),
   which opens on exactly this.
 - The `permissions`, `model_has_permissions` and `role_has_permissions` tables are inert,
   carried over from a deleted Postgres ETL and read by no application code. The schema file
@@ -161,12 +161,18 @@ consequence of there being one door.
 > authority over events, inventory or money needs the same guard resolving the committee from
 > _the thing being acted on_ rather than from a slug in the request. `requireCommitteeReviewer`
 > is the pattern; the rest is applying it.
+>
+> ⏫ **2026-09-23: the general guard exists.** `requireCommitteeMember(groupId, cover)` takes the
+> committee from the row being acted on and admits any active member of it, or `cover` for
+> staff. Its first resource is a project's status, from the committee page. Any member, not only
+> the chair, because a chair is first among equals (#607). Events, inventory and money are
+> still to be applied.
 
 **This document does not solve it, and the structure it describes requires it solved.**
 Committee members are to be **empowered to act within their own domain** — that is the settled
 intent, not an assumption this document made for convenience.
 
-An earlier draft of this section called [admin-vs-staff-spec.md](admin-vs-staff-spec.md) a hard
+An earlier draft of this section called [admin-vs-staff-spec.md](shipped/admin-vs-staff-spec.md) a hard
 prerequisite. **That was wrong**, and the correction matters: a committee guard reads
 `group_member`, not the role table, so the two are independent. The true relationship is more
 useful — committees _relieve_ the pressure that motivated that spec, because they stop panel
@@ -944,7 +950,7 @@ None. Every question this document opened across three rounds has been answered,
 answers are recorded above.
 
 What is left is not a question but a sequence. Committee-scoped authority does not need
-[admin-vs-staff-spec.md](admin-vs-staff-spec.md) settled first — they are independent — but the
+[admin-vs-staff-spec.md](shipped/admin-vs-staff-spec.md) settled first — they are independent — but the
 two now share a design: guards name capabilities, and a committee guard resolves the committee
 from the resource. The application flow needs phase 5 of
 [groups-spec.md](shipped/groups-spec.md), and carries the status-blind roster reads with it. The first

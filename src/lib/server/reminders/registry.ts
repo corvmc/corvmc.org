@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, ne, and, gte, lt } from 'drizzle-orm';
+import { eq, ne, and, gt, gte, lt, isNotNull } from 'drizzle-orm';
 import { formatDateFull, formatTimeSimple } from '$lib/server/reservation/timezone';
 import { CONFIRMATION_WINDOW_DAYS, DEFAULT_TIMEZONE } from '$lib/config';
 import {
@@ -158,6 +158,50 @@ export const reminders: ReminderDefinition[] = [
 				subjectId: row.id,
 				payload: {
 					reservationId: row.id,
+					userId: row.userId,
+					userName: row.userName,
+					userEmail: row.userEmail,
+					...when(row)
+				}
+			}));
+		}
+	}),
+
+	// Owed once `reconcileSyncState` stamps lockSyncedAt: a code U-tec only
+	// queued may not open the door yet. The one-day floor keeps the first drain
+	// from mailing every code already on the lock, and still retries a failure.
+	defineReminder({
+		key: 'door_code_ready',
+		subjectType: 'reservation',
+		event: 'reservation.door_code_ready',
+		async due(now) {
+			const rows = await db
+				.select({
+					id: reservation.id,
+					lockCode: reservation.lockCode,
+					startsAt: reservation.startsAt,
+					endsAt: reservation.endsAt,
+					userId: reservation.createdByUserId,
+					userName: user.name,
+					userEmail: user.email
+				})
+				.from(reservation)
+				.innerJoin(user, eq(user.id, reservation.createdByUserId))
+				.where(
+					and(
+						eq(reservation.status, 'confirmed'),
+						isNotNull(reservation.lockCode),
+						isNotNull(reservation.lockSyncedAt),
+						gte(reservation.lockSyncedAt, new Date(now.getTime() - DAY)),
+						gt(reservation.endsAt, now)
+					)
+				)
+				.limit(500);
+			return rows.map((row) => ({
+				subjectId: row.id,
+				payload: {
+					reservationId: row.id,
+					code: row.lockCode!,
 					userId: row.userId,
 					userName: row.userName,
 					userEmail: row.userEmail,

@@ -4,7 +4,7 @@ import { uploadFile } from '$lib/server/storage';
 import { putPrivateObject } from '$lib/server/private-storage';
 import { mediaKey, RECEIPT_KEY_PREFIX } from '$lib/server/storage-keys';
 import { attach, record } from '$lib/server/media/media-service';
-import { isStaff } from '$lib/server/authorization';
+import { can } from '$lib/server/authorization';
 import type { MediaSlot } from '$lib/server/db/schema/media';
 
 /**
@@ -34,23 +34,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!attachableId) error(400, 'No target');
 
 	// The slot decides both who may write and what may be written. A manual is
-	// documentation staff publish; damage evidence is something any member can
-	// add, because the person who finds a broken amp is rarely a staffer.
+	// documentation (`inventory.manageItems`); damage evidence is something any
+	// member can add, because the person who finds a broken amp is rarely a staffer.
 	let attachableType: 'inventory_item' | 'inventory_asset' | 'acquisition';
 	let allowed: string[];
 
 	if (slot === 'manual') {
-		if (!(await isStaff(locals.user.id))) error(403, 'Staff only');
+		if (!(await can('inventory.manageItems'))) error(403, 'Not permitted');
 		attachableType = 'inventory_item';
 		allowed = MANUAL_TYPES;
 	} else if (slot === 'damage') {
 		attachableType = 'inventory_asset';
 		allowed = IMAGE_TYPES;
 	} else if (slot === 'receipt') {
-		// What was paid, against the row that records it. Staff-only because an
-		// acquisition is an accounting record, not something a member touches —
+		// What was paid, against the row that records it. `manageAcquisitions`
+		// because an acquisition is an accounting record, not something a member touches —
 		// and usually a phone photo of a till receipt rather than a PDF.
-		if (!(await isStaff(locals.user.id))) error(403, 'Staff only');
+		if (!(await can('inventory.manageAcquisitions'))) error(403, 'Not permitted');
 		attachableType = 'acquisition';
 		allowed = MANUAL_TYPES;
 	} else {

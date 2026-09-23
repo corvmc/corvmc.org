@@ -12,6 +12,7 @@ import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { audioRelease } from '$lib/server/db/schema/audio';
 import { directoryEntry } from '$lib/server/db/schema/directory';
+import { artifactRequest } from '$lib/server/db/schema/artifact-request';
 import { deleteObject } from '$lib/server/storage';
 import { deletePrivateObject } from '$lib/server/private-storage';
 import { isWithheldPosterKey } from '$lib/server/storage-keys';
@@ -49,7 +50,10 @@ const PARENT_TABLES = {
 	audio_release: audioRelease,
 	// An external act's tech rider. The entry outlives the show, so this only
 	// fires when staff delete the listing itself.
-	directory_entry: directoryEntry
+	directory_entry: directoryEntry,
+	// Delivered poster art. A request cascades with its event, and a promoted
+	// poster is a second attachment, so reaping this one frees nothing in use.
+	artifact_request: artifactRequest
 } as const satisfies Record<AttachableType, unknown>;
 
 export type SweepResult = {

@@ -104,10 +104,15 @@
 
 		if (!res.ok) {
 			if (mode === 'register') resetTurnstile?.();
-			const body = (await res.json().catch(() => null)) as { message?: string } | null;
+			const body = (await res.json().catch(() => null)) as {
+				message?: string;
+				code?: string;
+			} | null;
+			// ACCOUNT_SUSPENDED_CODE in $lib/server/auth; sent only once the password matched.
+			const suspended = body?.code === 'ACCOUNT_SUSPENDED' && body.message;
 			error =
 				mode === 'login'
-					? 'Invalid email or password.'
+					? suspended || 'Invalid email or password.'
 					: (body?.message ?? 'Registration failed. Please try again.');
 			// Throw so the Form shows its error state, but carry the HTTP status so
 			// `reportError`'s `isExpected` check drops these 4xx auth failures instead

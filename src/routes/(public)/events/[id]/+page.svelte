@@ -16,6 +16,8 @@
 	import { getPublicEventDetail } from '$lib/remote/events.remote';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import ShareButton from '$lib/components/ui/ShareButton.svelte';
+	import EventPhotos from './EventPhotos.svelte';
+	import RecapUpload from './RecapUpload.svelte';
 
 	let data = $derived(await getPublicEventDetail(page.params.id!));
 
@@ -373,6 +375,14 @@
 				</div>
 			</div>
 		</div>
+
+		{#if data.photos.length > 0}
+			<EventPhotos eventTitle={evt.title} photos={data.photos} />
+		{/if}
+
+		{#if data.recapUpload}
+			<RecapUpload eventId={evt.id} recap={data.recapUpload} />
+		{/if}
 
 		{#if data.upcoming.length > 0}
 			<section class="edet__more">

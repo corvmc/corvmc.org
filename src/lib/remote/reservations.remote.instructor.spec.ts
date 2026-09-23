@@ -18,7 +18,7 @@ const requireInstructor = vi.fn(async () => ({
 vi.mock('$lib/server/authorization', () => ({
 	requireUser,
 	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
-	isStaff: vi.fn(async () => false)
+	can: vi.fn(async () => false)
 }));
 vi.mock('$lib/server/instructor/instructor-context', () => ({ requireInstructor }));
 

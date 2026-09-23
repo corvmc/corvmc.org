@@ -23,8 +23,10 @@ import {
 import { openHostShift as openHost } from '$lib/server/production/host-service';
 import {
 	requestArtifact,
-	cancelArtifactRequest
+	cancelArtifactRequest,
+	promotePosterArt
 } from '$lib/server/production/artifact-request-service';
+import { useArtWithFooter, useTemplateFlyer } from '$lib/server/poster/flyer-service';
 import { PERCENTAGE_BPS_MAX } from '$lib/production/terms';
 import { getStaffEventPage, getStaffEventProduction, getStaffEvents } from './events.remote';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -546,6 +548,51 @@ export const dropArtifactRequest = form(
 		await requireCapability('event.manage');
 		try {
 			await cancelArtifactRequest(data.id);
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/** Delivered art above a details footer, rendered and made the poster. */
+export const usePosterArtWithFooter = form(
+	z.object({ requestId: z.string().min(1), eventId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await useArtWithFooter(data.requestId);
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/** The template flyer, rendered from the event's details, as its poster. */
+export const useTemplateFlyerAsPoster = form(
+	z.object({ eventId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await useTemplateFlyer(data.eventId);
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/** Make delivered poster art the event's poster. The same object, re-pointed. */
+export const usePosterArt = form(
+	z.object({ requestId: z.string().min(1), eventId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await promotePosterArt(data.requestId);
 			await getStaffEventProduction(data.eventId).refresh();
 			return { success: true };
 		} catch (err) {

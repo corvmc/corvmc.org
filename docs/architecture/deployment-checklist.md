@@ -309,7 +309,15 @@ touch prod). Wire it into the deploy:
    **Account → D1 → Edit**). `CLOUDFLARE_DATABASE_ID` is not needed — `drizzle.config.ts`
    falls back to the `database_id` in `wrangler.toml`.
 
-If migrate fails, the build fails and nothing is published — schema can never lag code.
+3. **Workers Builds → Settings → Deploy command:** `npx wrangler deploy && pnpm ci:migrate --after-publish`,
+   and the build variable `CMC_MIGRATE_AFTER_PUBLISH=1`. A batch of pending migrations that
+   only drops then runs after publish instead of before it; see
+   [operations manual §1](operations-manual.md#1-how-deploys-work).
+
+If the build-step migrate fails, the build fails and nothing is published. A failed
+`--after-publish` leaves the new Worker live over a table that still has the dropped column,
+which it does not read. Apply it by hand with `pnpm db:migrate`: until then, the next build
+that carries an add is refused as a mixed batch.
 
 ### B. Data refresh from Postgres — removed
 

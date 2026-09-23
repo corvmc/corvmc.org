@@ -143,6 +143,10 @@ export const relations = defineRelations(schema, (t) => ({
 			to: t.contentFlag.id
 		})
 	},
+	// Actor only: the subject is polymorphic and deliberately not a foreign key.
+	auditLog: {
+		actor: t.one.user({ from: t.auditLog.actorUserId, to: t.user.id })
+	},
 	// Two FKs to user (blocker and blocked), so both need an alias.
 	userBlock: {
 		blocker: t.one.user({

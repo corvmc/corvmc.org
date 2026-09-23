@@ -4,7 +4,7 @@ import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupJoinPolicies } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
-import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '$lib/server/authorization';
 import { requireGroupRole, requireProgramRole } from '$lib/server/group/group-context';
 import { listForCommittee } from '$lib/server/group/committee-application-service';
 import { directoryVisibilities } from '$lib/server/db/schema/directory';
@@ -60,14 +60,10 @@ import {
 /**
  * `/staff/groups` — the only place a club or committee comes into existence.
  *
- * Staff-guarded throughout, and flag-gated on `groups`. Bands are deliberately
+ * Reads name `group.read` and writes `group.manage`. Bands are deliberately
  * absent from every export here: they are member self-service and have their own
  * staff surface at `/staff/bands`. See docs/specs/shipped/groups-spec.md.
  */
-
-async function requireGroupsStaff() {
-	return requireStaff();
-}
 
 const staffKind = z.enum(STAFF_GROUP_KINDS);
 
@@ -83,7 +79,7 @@ const staffGroupFilters = z.object({
 });
 
 export const getStaffGroups = query(staffGroupFilters, async (filters) => {
-	await requireGroupsStaff();
+	await requireCapability('group.read');
 	// Never bands. `/staff/bands` is that surface, and the two lists answer
 	// different questions: one is a member's own project, the other is a
 	// sanctioned CMC program.
@@ -105,7 +101,7 @@ export const getStaffGroups = query(staffGroupFilters, async (filters) => {
  * `'requested'` exists to prevent.
  */
 export const getStaffGroupPage = query(z.string(), async (id) => {
-	await requireGroupsStaff();
+	await requireCapability('group.read');
 
 	const [group, roster] = await Promise.all([getGroupDetail(id), getMembers(id)]);
 	if (!group) error(404, 'Group not found');
@@ -133,7 +129,7 @@ export const createStaffGroup = form(
 		visibility: z.enum(directoryVisibilities)
 	}),
 	async (data) => {
-		await requireGroupsStaff();
+		await requireCapability('group.manage');
 		try {
 			const created = await createGroup({
 				kind: data.kind,
@@ -159,7 +155,7 @@ export const updateStaffGroup = form(
 		visibility: z.enum(directoryVisibilities)
 	}),
 	async (data) => {
-		await requireGroupsStaff();
+		await requireCapability('group.manage');
 		try {
 			await updateGroupSettings(data.groupId, {
 				joinPolicy: data.joinPolicy,
@@ -184,7 +180,7 @@ export const updateStaffGroup = form(
 export const assignGroupLeader = form(
 	z.object({ groupId: z.string().min(1), userId: z.string().min(1, 'Pick a member') }),
 	async (data) => {
-		await requireGroupsStaff();
+		await requireCapability('group.manage');
 		try {
 			await assignLeader(data.groupId, data.userId);
 			return { success: true };
@@ -195,7 +191,7 @@ export const assignGroupLeader = form(
 );
 
 export const deactivateGroup = form(z.object({ groupId: z.string().min(1) }), async (data) => {
-	await requireGroupsStaff();
+	await requireCapability('group.manage');
 	try {
 		await deactivate(data.groupId);
 		return { success: true };
@@ -205,7 +201,7 @@ export const deactivateGroup = form(z.object({ groupId: z.string().min(1) }), as
 });
 
 export const reactivateGroup = form(z.object({ groupId: z.string().min(1) }), async (data) => {
-	await requireGroupsStaff();
+	await requireCapability('group.manage');
 	try {
 		await reactivate(data.groupId);
 		return { success: true };

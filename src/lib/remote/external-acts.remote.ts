@@ -10,6 +10,16 @@ import {
 	listExternalActs
 } from '$lib/server/directory/entry-service';
 import { listCreditInDirectory } from '$lib/server/event/event-service';
+import { searchAskableEntries } from '$lib/server/production/artifact-request-service';
+
+/**
+ * Any listing by name, including hidden external ones, for commissioning an
+ * artist who is not on the bill.
+ */
+export const searchAskableListings = query(z.string().max(SHORT_TEXT_MAX), async (q) => {
+	await requireCapability('event.manage');
+	return searchAskableEntries(q);
+});
 
 /**
  * External acts — parties CMC has booked that are not members of anything here.

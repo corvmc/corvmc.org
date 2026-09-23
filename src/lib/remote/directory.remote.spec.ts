@@ -31,7 +31,8 @@ vi.mock('$lib/server/directory/directory-service', () => ({
 	getPublicDirectory: vi.fn(),
 	getMemberProfile: vi.fn(),
 	suggestInstruments: vi.fn(),
-	suggestGenres: vi.fn()
+	suggestGenres: vi.fn(),
+	suggestSkills: vi.fn()
 }));
 
 vi.mock('$lib/server/authorization', () => ({
@@ -194,6 +195,7 @@ const VALID_MEMBER = {
 	instruments: '["guitar","bass"]',
 	seekingInstruments: '[]',
 	genres: '["rock"]',
+	skills: '["sound engineer"]',
 	// The column, not a boolean — the form can now point it either way.
 	lookingFor: '' as const,
 	availableForHire: false,
@@ -230,7 +232,11 @@ describe('saveMemberProfile', () => {
 
 		expect(updateMemberProfile).toHaveBeenCalledWith(
 			'user-1',
-			expect.objectContaining({ instruments: ['guitar', 'bass'], genres: ['rock'] })
+			expect.objectContaining({
+				instruments: ['guitar', 'bass'],
+				genres: ['rock'],
+				skills: ['sound engineer']
+			})
 		);
 	});
 
@@ -254,7 +260,7 @@ describe('saveMemberProfile', () => {
 		);
 	});
 
-	for (const field of ['instruments', 'seekingInstruments', 'genres', 'links'] as const) {
+	for (const field of ['instruments', 'seekingInstruments', 'genres', 'skills', 'links'] as const) {
 		it(`rejects malformed ${field} instead of silently clearing it`, async () => {
 			await expect(
 				directory.saveMemberProfile({ ...VALID_MEMBER, [field]: 'not-json' })

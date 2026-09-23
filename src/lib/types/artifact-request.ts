@@ -17,4 +17,17 @@ export interface OutstandingRequest {
 	/** Derived from the artifact itself. */
 	fulfilled: boolean;
 	overdue: boolean;
+	/** Poster art the artist has sent, not yet necessarily the poster. */
+	deliveredUrl: string | null;
+}
+
+/** A live poster-art ask, as the artist sees it on `/act/{token}`. */
+export interface PosterAsk {
+	id: string;
+	eventTitle: string;
+	startsAt: Date;
+	venue: string | null;
+	bill: string[];
+	dueAt: Date | null;
+	deliveredUrl: string | null;
 }

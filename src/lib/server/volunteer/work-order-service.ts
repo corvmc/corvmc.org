@@ -565,6 +565,11 @@ export async function resolveWorkOrder(
 		.where(eq(workOrder.id, id))
 		.returning();
 
+	// The equipment reports this work answered close with it. Dynamic, like the
+	// orientation import below, so the two domains do not import each other.
+	const { resolveFlagsForWorkOrder } = await import('../inventory/work-request-service');
+	await resolveFlagsForWorkOrder(id, opts.resolvedByUserId, opts.notes ?? undefined);
+
 	// Staff closing an orientation by hand is the other way one gets finished.
 	// The cron path emits `volunteer.shift_completed` per signup and a listener
 	// picks it up there; this path emits nothing, because the shift's clock may

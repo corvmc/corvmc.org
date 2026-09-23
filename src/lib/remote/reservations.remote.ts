@@ -44,7 +44,7 @@ import { eventListing } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
 import {
-	isStaff,
+	can,
 	requireCapability,
 	requireCapabilityOrOwner,
 	requireUser
@@ -806,8 +806,7 @@ export const getReservationPricing = query(
 				.limit(1);
 			if (!res) throw error(404, 'Reservation not found');
 			const isOwner = locals.user?.id === res.createdByUserId;
-			const staff = locals.user ? await isStaff(locals.user.id) : false;
-			if (!isOwner && !staff) throw error(403, 'Not authorized');
+			if (!isOwner && !(await can('reservation.read'))) throw error(403, 'Not authorized');
 			targetUserId = res.createdByUserId;
 		}
 
@@ -1618,11 +1617,11 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
-	// Only a real Stripe charge (or staff) commits a reservation outside the
-	// confirmation window: free hours are spent at confirmation, and confirmation
-	// opens CONFIRMATION_WINDOW_DAYS out.
-	const staff = await isStaff(locals.user.id);
-	const outsideWindow = !staff && !withinConfirmationWindow(startsAt);
+	// Only a real Stripe charge (or `reservation.comp`, see #1434) commits a
+	// reservation outside the confirmation window: free hours are spent at
+	// confirmation, and confirmation opens CONFIRMATION_WINDOW_DAYS out.
+	const waivesWindow = await can('reservation.comp');
+	const outsideWindow = !waivesWindow && !withinConfirmationWindow(startsAt);
 
 	// Nothing to charge and too early to commit — so the booking `create()` just
 	// wrote is the answer, not an error. This threw a 400 the member never saw,
@@ -1977,12 +1976,12 @@ export const payForReservation = form(
 		if (row.status !== 'scheduled' && row.status !== 'confirmed')
 			throw error(400, 'Not eligible for payment');
 
-		const staff = await isStaff(currentUser.id);
+		const waivesWindow = await can('reservation.comp');
 		const reservationConfig = await getReservationConfig();
 		const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
 		const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 		const totalCents = Math.round(durationHours * hourlyRateCents);
-		const outsideWindow = !staff && !withinConfirmationWindow(row.startsAt);
+		const outsideWindow = !waivesWindow && !withinConfirmationWindow(row.startsAt);
 
 		if (data.skipPayment === 'on') {
 			// Confirm: commit free hours; settle if fully covered, else cash at door.
@@ -2045,8 +2044,8 @@ export const payReservation = form(
 
 		// Outside the confirmation window a fully credit-covered "payment" is just a
 		// credit confirmation — only a real Stripe charge confirms early.
-		const staff = await isStaff(currentUser.id);
-		if (!staff && !withinConfirmationWindow(row.startsAt)) {
+		const waivesWindow = await can('reservation.comp');
+		if (!waivesWindow && !withinConfirmationWindow(row.startsAt)) {
 			const reservationConfig = await getReservationConfig();
 			const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
 			const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
@@ -2157,9 +2156,9 @@ export const cancelReservation = form(
 	}),
 	async (data, _issue) => {
 		const currentUser = requireUser();
-		const staff = await isStaff(currentUser.id);
+		const staffOverride = await can('reservation.manage');
 		try {
-			await cancel(data.id, currentUser.id, data.reason, { staffOverride: staff });
+			await cancel(data.id, currentUser.id, data.reason, { staffOverride });
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -2430,11 +2429,7 @@ export const getReservations = query(
 		const { locals } = getRequestEvent();
 
 		if (!locals.user) throw error(401, 'Not authenticated');
-		// `locals.user.isStaff` is not a field on the better-auth user — see
-		// auth-fields.ts, which declares no such additionalField — so this read
-		// was always undefined and the guard rejected staff along with everyone
-		// else. Every other staff check in this file already resolves the role.
-		if (forUser && forUser !== locals.user.id && !(await isStaff(locals.user.id))) {
+		if (forUser && forUser !== locals.user.id && !(await can('reservation.read'))) {
 			throw error(403, "Not authorized to view other users' reservations");
 		}
 

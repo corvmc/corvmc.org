@@ -12,6 +12,8 @@ import {
 } from '$lib/server/finance/subscription-service';
 import { revokeMemberCode } from '$lib/server/lock/member-code-service';
 import { captureException } from '$lib/server/sentry';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
+import { sendAccountRestoredEmail, sendAccountSuspendedEmail } from '$lib/server/auth-emails';
 import { isValidPhone, normalizePhone } from '$lib/utils/phone';
 
 // ---------------------------------------------------------------------------
@@ -95,7 +97,10 @@ export class UserHasLinkedRecordsError extends DomainError {
  * resumes the subscription but restores neither the reservations nor the door
  * code — a withdrawn code is re-granted by staff, not silently reinstated.
  */
-export async function deactivateUser(userId: string, opts: { actor: 'member' | 'staff' }) {
+export async function deactivateUser(
+	userId: string,
+	opts: { actor: 'member' | 'staff'; batchId?: string }
+) {
 	const [row] = await db
 		.update(user)
 		.set({ deletedAt: new Date(), updatedAt: new Date() })
@@ -172,13 +177,26 @@ export async function deactivateUser(userId: string, opts: { actor: 'member' | '
 
 	// Cancel the Stripe subscription if one exists. The subscription may already
 	// be gone, so failures here are non-fatal to the deactivation.
+	let subscriptionCancelled = false;
 	if (row.stripeId) {
 		try {
 			await cancelSubscription(row.stripeId);
+			subscriptionCancelled = true;
 		} catch {
 			// Subscription may not exist — that's fine.
 		}
 	}
+
+	await recordAuditEntry({
+		action: 'user.deactivated',
+		subject: { type: 'user', id: userId, label: row.name },
+		details: {
+			reservationsCancelled: futureReservations.length,
+			subscriptionCancelled,
+			bulk: opts.batchId !== undefined,
+			...(opts.batchId ? { batchId: opts.batchId } : {})
+		}
+	});
 
 	return row;
 }
@@ -197,6 +215,7 @@ export async function deactivateUsers(
 ): Promise<{ deactivated: string[]; skipped: string[] }> {
 	const deactivated: string[] = [];
 	const skipped: string[] = [];
+	const batchId = crypto.randomUUID();
 
 	for (const id of userIds) {
 		if (id === opts.skipUserId) {
@@ -204,7 +223,7 @@ export async function deactivateUsers(
 			continue;
 		}
 		try {
-			await deactivateUser(id, { actor: 'staff' });
+			await deactivateUser(id, { actor: 'staff', batchId });
 			deactivated.push(id);
 		} catch (err) {
 			if (err instanceof UserNotFoundError) {
@@ -264,6 +283,12 @@ export async function reactivateUser(userId: string) {
 		}
 	}
 
+	await recordAuditEntry({
+		action: 'user.reactivated',
+		subject: { type: 'user', id: userId, label: row.name },
+		details: { subscription }
+	});
+
 	return { ...row, subscription };
 }
 
@@ -290,6 +315,8 @@ export async function banUser(userId: string, opts: { actorId: string; reason: s
 
 	if (!row.deletedAt) await deactivateUser(userId, { actor: 'staff' });
 
+	await sendAccountSuspendedEmail({ toEmail: row.email, name: row.name });
+
 	return row;
 }
 
@@ -306,7 +333,9 @@ export async function unbanUser(userId: string) {
 
 	if (!row) throw new UserNotFoundError();
 
-	return reactivateUser(userId);
+	const restored = await reactivateUser(userId);
+	await sendAccountRestoredEmail({ toEmail: row.email, name: row.name });
+	return restored;
 }
 
 /**
@@ -318,7 +347,7 @@ export async function unbanUser(userId: string) {
  */
 export async function purgeUser(userId: string) {
 	const [target] = await db
-		.select({ id: user.id, deletedAt: user.deletedAt })
+		.select({ id: user.id, name: user.name, email: user.email, deletedAt: user.deletedAt })
 		.from(user)
 		.where(eq(user.id, userId))
 		.limit(1);
@@ -362,6 +391,12 @@ export async function purgeUser(userId: string) {
 		}
 		throw err;
 	}
+
+	await recordAuditEntry({
+		action: 'user.purged',
+		subject: { type: 'user', id: userId, label: target.name },
+		details: { name: target.name, email: target.email }
+	});
 }
 
 // ---------------------------------------------------------------------------

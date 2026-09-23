@@ -88,3 +88,19 @@ describe('icsDataUrl', () => {
 		expect(decoded.replace(/\r\n /g, '')).toContain(`DESCRIPTION:${'🎸'.repeat(60)}`);
 	});
 });
+
+// Descriptions are rich text, and a calendar renders DESCRIPTION and Google's
+// `details` as plain text, so markup would show as literal tags.
+describe('rich-text descriptions', () => {
+	const rich = { ...evt, description: '<p>Doors at <strong>7</strong></p><p>Bring R&amp;B</p>' };
+
+	it('flattens HTML in the .ics DESCRIPTION', () => {
+		expect(ics(rich)).toContain('DESCRIPTION:Doors at 7\\nBring R&B');
+	});
+
+	it('flattens HTML in the Google Calendar details', () => {
+		expect(new URL(googleCalendarUrl(rich)).searchParams.get('details')).toBe(
+			'Doors at 7\nBring R&B'
+		);
+	});
+});

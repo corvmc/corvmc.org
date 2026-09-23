@@ -38,7 +38,7 @@ was a **position**, and `staff` is what got shipped instead because naming them 
 work than the moment justified.
 
 **The committee structure arrived and needs the same thing from the other direction.** See
-[committees-and-roles-spec.md](committees-and-roles-spec.md): committee members are to act
+[committees-and-roles-spec.md](../committees-and-roles-spec.md): committee members are to act
 within their own domain, which means granting authority to people who should never hold the
 whole panel. That document originally called this spec a hard prerequisite. **It is not** — a
 committee guard reads `group_member`, not the role table, and the two are independent. What is
@@ -156,7 +156,7 @@ plus relationship checks for per-resource permissions. That is exactly what this
 already half has: named positions are the RBAC half, and `group_member` — committee and band
 membership — is the relationship half. It is **one** relationship type, which is why it stays a
 hand-rolled guard (`requireGroupRole`, already designed in
-[groups-spec.md](shipped/groups-spec.md)) rather than a policy engine.
+[groups-spec.md](groups-spec.md)) rather than a policy engine.
 
 ---
 
@@ -166,7 +166,7 @@ hand-rolled guard (`requireGroupRole`, already designed in
   decides who may. This is the change that makes every later question cheap.
 - **Positions come from the org chart, not from the codebase.** A named role exists when a real
   person holds that title —
-  [committees-and-roles-spec.md](committees-and-roles-spec.md) and the CMC Committees and Roles
+  [committees-and-roles-spec.md](../committees-and-roles-spec.md) and the CMC Committees and Roles
   proposal are the registry. This is the rule that keeps the list at eight rather than eighty,
   and it is the rule whose absence produced `staff`.
 - **A committee is not a position.** Committee membership is plural, rotating and domain-scoped,
@@ -241,9 +241,9 @@ Three entries from the first draft of this table did not survive contact with th
   admin-only set is the complement of every position's domain) beats the table, so settings
   leaves it. `config.spec.ts` asserts no named position holds an admin-only capability, which is
   how the contradiction surfaced.
-- **`audit.read` and `user.setEmail` are not in the vocabulary at all.** There is no audit-log
-  table ([audit-log-spec.md](audit-log-spec.md) is unbuilt) and no email-change path
-  ([staff-email-change-spec.md](staff-email-change-spec.md) is unbuilt), so shipping either
+- **`audit.read` and `user.setEmail` are not in the vocabulary at all.** There is no global audit
+  view to guard yet ([audit-log-spec.md](../audit-log-spec.md), #1374) and no email-change path
+  ([staff-email-change-spec.md](../staff-email-change-spec.md) is unbuilt), so shipping either
   would be config describing a guard that does not exist — the exact failure this spec cites the
   spatie tables for. Each of those specs adds its capability when it builds its guard, and
   `config.spec.ts` fails on any capability no position grants.
@@ -411,7 +411,7 @@ Timing seals it. Schema mapping is supported (`modelName`, `fields`, `additional
 pointing `member` at `group_member` is mechanically possible — but `group_member` carries
 `status`, `position`, `alias`, `notifyAnnouncements` and a partial unique owner index that
 better-auth's `member` does not, several of them load-bearing in
-[groups-spec.md](shipped/groups-spec.md). _Corrected: that spec's migration is now **complete** — all
+[groups-spec.md](groups-spec.md). _Corrected: that spec's migration is now **complete** — all
 eleven phases shipped, and `requireGroupRole` has existed since phase 4
 (`src/lib/server/group/group-context.ts`). The original objection was that retargeting those
 tables mid-rename would put group bugs and migration bugs in one diff; that particular hazard is

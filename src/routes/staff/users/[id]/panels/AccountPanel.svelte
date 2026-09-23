@@ -4,6 +4,7 @@
 		getRoleCatalog,
 		getUserPage,
 		getUserSessions,
+		getUserHistory,
 		deactivateUser,
 		reactivateUser,
 		purgeUser,
@@ -25,6 +26,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
+	import { summarizeAuditEntry } from '$lib/utils/audit-display';
 	import { toast } from 'svelte-sonner';
 
 	let { id, member }: { id: string; member: Awaited<ReturnType<typeof getUser>> } = $props();
@@ -162,6 +164,34 @@
 	{/snippet}
 </RelatedList>
 
+<!-- Staff changes to this account, newest first. Reads only; nothing here edits the log. -->
+<RelatedList title="History" result={getUserHistory(id)}>
+	{#snippet children(entries)}
+		{#if entries.length === 0}
+			<EmptyState
+				title="No recorded changes"
+				description="Role, profile, credit and account changes made by staff show up here."
+			/>
+		{:else}
+			<Table>
+				{#snippet head()}
+					<th>Change</th>
+				{/snippet}
+				{#each entries as entry (entry.id)}
+					<tr>
+						<td class="cell-primary">
+							<div>{summarizeAuditEntry(entry)}</div>
+							<div class="text-muted">
+								{entry.actorName} · {formatDateTimeShort(entry.createdAt)}
+							</div>
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/if}
+	{/snippet}
+</RelatedList>
+
 <InfoCard title="Details" class="bg-base-200 shadow-none">
 	<DefinitionList>
 		<Fact label="User ID" mono>{member.id}</Fact>
@@ -284,9 +314,12 @@
 	{:else}
 		<p class="mb-3 text-muted">
 			Deactivating signs this member out, hides them from the directory, cancels all of their future
-			reservations, and cancels their membership subscription. Reactivating restores their access,
-			but <strong>the cancelled reservations and subscription are not restored</strong> — they would have
-			to be rebooked and resubscribed.
+			reservations, and cancels their membership subscription at the end of its current period.
+			Reactivating restores their access, but <strong
+				>the cancelled reservations are not restored</strong
+			>
+			— they would have to be rebooked. The subscription resumes if they are reactivated before the period
+			ends; after that it needs a new checkout.
 		</p>
 		<div class="flex gap-2">
 			<Action
@@ -300,8 +333,9 @@
 				{#snippet form()}
 					<input {...deactivateFields.id.as('hidden', id)} />
 					<p class="py-4">
-						Deactivate this account? All future reservations and their membership subscription will
-						be cancelled, and reactivating will not bring them back.
+						Deactivate this account? All future reservations will be cancelled, and reactivating
+						will not bring them back. Their membership subscription ends with its current period
+						unless the account is reactivated first.
 					</p>
 				{/snippet}
 			</Action>

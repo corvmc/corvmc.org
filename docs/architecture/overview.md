@@ -116,7 +116,7 @@ enforced by a custom ESLint rule):
 ```ts
 // src/lib/remote/reservations.remote.ts — a short staff mutation
 export const createReservation = form(staffCreateSchema, async (data, _issue) => {
-	await requireStaff();
+	await requireCapability('reservation.manage');
 	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
 	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
 
@@ -201,8 +201,9 @@ Laravel app). Priority order, from `primaryRoleFor()` in `src/lib/server/authori
 admin > staff > sustaining > member
 ```
 
-- `admin` / `staff` — can use the `/staff` console; checked together everywhere
-  (`hasAnyRole(userId, ['admin', 'staff'])`).
+- `admin`, `staff` and the named positions — each grants a set of capabilities from the
+  matrix in `src/lib/config.ts`; guards name the capability, never the role. See
+  [admin-vs-staff-spec.md](../specs/shipped/admin-vs-staff-spec.md).
 - `sustaining` — paying member (monthly Stripe subscription). Note that most sustaining
   checks actually look at the `user.subscription` JSON column, not the role — see
   `isSustainingMember` in `src/lib/server/finance/subscription-service.ts`.
@@ -216,14 +217,14 @@ stored on the `bandMember` table.
 There are **no `+layout.server.ts` guards and no route middleware**. Every protected remote
 function starts with a guard call. The guards:
 
-| Guard                                  | Defined in                              | What it does                                                                                                                                                                                                                                                           |
-| -------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `requireUser()`                        | `src/lib/server/authorization.ts`       | 401 unless logged in; returns the user                                                                                                                                                                                                                                 |
-| `requireStaff()`                       | `src/lib/server/authorization.ts`       | 401/403 unless the user has `admin` or `staff` role                                                                                                                                                                                                                    |
-| `requireStaffOrOwner(userId, ownerId)` | `src/lib/server/authorization.ts`       | Allows the resource owner or staff; returns which one matched                                                                                                                                                                                                          |
-| `requireStaffRole(userId)`             | `src/lib/server/authorization.ts`       | Staff check for plain API route handlers (where `locals.user` is passed in)                                                                                                                                                                                            |
-| `requireGroupRole(ref, min, opts?)`    | `src/lib/server/group/group-context.ts` | Resolves a group from an **explicit** `{ slug }` or `{ id }` ref — never `params` — and requires the caller holds at least `min` (`owner > admin > member`); returns `{ user, group, role }`. `{ allowStaff: true }` admits a non-member staff user as `role: 'staff'` |
-| `requireFeature(flag)`                 | `src/lib/server/feature-flags.ts`       | 404 unless the feature flag is enabled (see Configuration below)                                                                                                                                                                                                       |
+| Guard                                    | Defined in                              | What it does                                                                                                                                                                                                                                                           |
+| ---------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `requireUser()`                          | `src/lib/server/authorization.ts`       | 401 unless logged in; returns the user                                                                                                                                                                                                                                 |
+| `requireCapability(cap)`                 | `src/lib/server/authorization.ts`       | 401/403 unless one of the caller's positions grants `cap`; returns the user                                                                                                                                                                                            |
+| `requireCapabilityOrOwner(cap, ownerId)` | `src/lib/server/authorization.ts`       | Allows the resource owner or a holder of `cap`; returns which one matched                                                                                                                                                                                              |
+| `can(cap)`                               | `src/lib/server/authorization.ts`       | The same test without throwing, for a branch inside a handler                                                                                                                                                                                                          |
+| `requireGroupRole(ref, min, opts?)`      | `src/lib/server/group/group-context.ts` | Resolves a group from an **explicit** `{ slug }` or `{ id }` ref — never `params` — and requires the caller holds at least `min` (`owner > admin > member`); returns `{ user, group, role }`. `{ allowStaff: true }` admits a non-member staff user as `role: 'staff'` |
+| `requireFeature(flag)`                   | `src/lib/server/feature-flags.ts`       | 404 unless the feature flag is enabled (see Configuration below)                                                                                                                                                                                                       |
 
 Each of the three logged-in areas also has a **layout guard remote** in
 `src/lib/remote/layout.remote.ts` that the layout component awaits: `getMemberLayout()`
@@ -329,7 +330,7 @@ the pattern: write, re-check for a race, back out if one landed.
 ## Scheduled work (cron)
 
 Scheduled work runs on **native Cloudflare cron triggers**. The `[triggers]` block in
-`wrangler.toml` defines three cron expressions; the `scheduled` handler in `worker.js`
+`wrangler.toml` defines four cron expressions; the `scheduled` handler in `worker.js`
 (the wrangler `main` entry, a thin wrapper around the adapter-generated SvelteKit worker)
 maps each firing to plain HTTP endpoints under `src/routes/api/cron/*/+server.ts` via
 `CRON_SCHEDULE` in `src/lib/server/cron/schedule.ts`, and calls them **in-process**
@@ -341,23 +342,29 @@ POST /api/cron/<name>
 Authorization: Bearer <CRON_SECRET>
 ```
 
-The eight endpoints and their schedule (cron expressions are UTC — Pacific wall-clock
-times shift an hour with DST):
+The endpoints and their schedule (cron expressions are UTC — Pacific wall-clock times shift
+an hour with DST). The schedule spec pins this table to `CRON_SCHEDULE`:
 
 | Endpoint                                    | Purpose                                                                               | Cron (UTC)     |
 | ------------------------------------------- | ------------------------------------------------------------------------------------- | -------------- |
+| `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived                                 | `*/5 * * * *`  |
 | `/api/cron/auto-complete`                   | Mark paid reservations past their end time as `completed`                             | `*/15 * * * *` |
+| `/api/cron/complete-shifts`                 | Complete confirmed volunteer signups for shifts that have ended                       | `*/15 * * * *` |
 | `/api/cron/cancel-unconfirmed`              | Cancel `scheduled` (never confirmed) reservations at their start time; frees the slot | `*/15 * * * *` |
 | `/api/cron/expire-waitlisted`               | Expire waitlist offers past their 24h window; promotes the next in line               | `*/15 * * * *` |
-| `/api/cron/confirmation-reminders`          | Emit confirmation-reminder events for unconfirmed reservations starting within 24h    | `0 16 * * *`   |
-| `/api/cron/reservation-reminders`           | Emit reminder events for confirmed reservations starting within 24h                   | `0 16 * * *`   |
+| `/api/cron/wake-snoozed`                    | Return snoozed and long-awaiting-reply inbox threads to the open queue                | `*/15 * * * *` |
+| `/api/cron/reminders`                       | Send every reminder the registry says is owed (`src/lib/server/reminders/`)           | `*/15 * * * *` |
+| `/api/cron/schedule-radio`                  | Fill the CMC Radio timetable 45 minutes ahead; no-op while `cmcRadio` is off          | `*/15 * * * *` |
 | `/api/cron/generate-recurring-reservations` | Expand active recurring series into concrete reservation/event rows (2.5-week window) | `0 16 * * *`   |
 | `/api/cron/lock-access`                     | Provision/clean up U-Tec door lock access for the day's reservations                  | `0 16 * * *`   |
-| `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived                                 | `*/5 * * * *`  |
+| `/api/cron/cancel-stale-tickets`            | Cancel `pending` tickets whose Stripe Checkout was abandoned                          | `0 16 * * *`   |
+| `/api/cron/sweep-audio-purchases`           | Clear `pending` music purchases whose checkout was never completed                    | `0 16 * * *`   |
+| `/api/cron/sweep-media`                     | Reclaim R2 objects nothing points at any more                                         | `0 16 * * *`   |
+| `/api/cron/reconcile-ledger`                | Compare last week's ledger against the Stripe balance                                 | `0 17 * * MON` |
 
-The `0 16 * * *` batch (8am PST / 9am PDT) runs its four jobs sequentially, generation
-first, so freshly generated occurrences are visible to lock provisioning and the reminder
-sweeps. Each job is bracketed with Sentry Crons check-ins (plain HTTP,
+Each trigger runs its jobs sequentially. The `0 16 * * *` batch (8am PST / 9am PDT) runs
+generation first, so freshly generated occurrences are visible to lock provisioning. Each
+job is bracketed with Sentry Crons check-ins (plain HTTP,
 `src/lib/server/cron/sentry-check-in.ts`), so Sentry alerts on failed and missed runs.
 See the cron section of the [operations manual](operations-manual.md) for the runbook.
 
@@ -433,7 +440,7 @@ retired in favour of feature branches, see
 
 A flag gates the **member, band and public** surfaces only. The staff panel ignores flags
 entirely — `getStaffLayout` does not read them, the staff nav is unconditional, and staff
-remote functions are guarded by `requireStaff()` rather than `requireFeature()` — so a
+remote functions are guarded by `requireCapability()` rather than `requireFeature()` — so a
 feature can be configured and run by staff before (and after) it is switched on for
 everyone else.
 

@@ -70,7 +70,10 @@ import { seedDirectMessages } from './seed/direct-messages';
 import { seedBandEnquiries } from './seed/band-enquiries';
 import { seedGroupChats } from './seed/group-chats';
 import { seedContentFlags } from './seed/content-flags';
+import { seedAuditLog } from './seed/audit';
 import { seedContractors } from './seed/contractors';
+import { seedLocalResources } from './seed/local-resources';
+import { seedEquipmentReports } from './seed/equipment-reports';
 import { seedDutyLists } from './seed/duty-lists';
 import { seedOrientation } from './seed/orientation';
 import {
@@ -91,6 +94,7 @@ import { seedProjects } from './seed/projects';
 import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
 import { seedPacking } from './seed/packing';
+import { seedEventRecaps } from './seed/event-recaps';
 
 async function main() {
 	// The one room's ledger, shared by every seeder that books it. Reset here
@@ -161,6 +165,7 @@ async function main() {
 	const bandEvents = await seedBandEvents(bands, allUsers, usage ? [usage.band] : []);
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
+	const recapPhotos = await seedEventRecaps(events, adminUser.id);
 	// After the bill, because a production is the ops record for a night that
 	// already has acts on it — and the index shows the two side by side.
 	const productions = await seedProductions(events, allUsers);
@@ -181,6 +186,8 @@ async function main() {
 	const notifications = await seedNotifications(allUsers);
 	const preferences = await seedNotificationPreferences(allUsers);
 	await seedCreditTransactions(allUsers);
+	// After credits so the adjustments it records sit beside real ledger rows.
+	const audit = await seedAuditLog(users, adminUser);
 	// The upcoming show the event-scoped blast is about (#857).
 	const upcomingShow = events.find((e) => e.status === 'published' && e.startsAt >= new Date());
 	const marketing = await seedMarketing(allUsers, upcomingShow?.id);
@@ -197,6 +204,7 @@ async function main() {
 	const help = await seedHelp();
 	const itemArticles = await seedItemArticles();
 	const contractors = await seedContractors(adminUser.id);
+	const localResources = await seedLocalResources(adminUser.id);
 	const inbox = await seedInbox(adminUser, users[0]);
 	const dmCast =
 		usage && directoryPersonas.seeker && directoryPersonas.leader && directoryPersonas.undecided
@@ -230,6 +238,11 @@ async function main() {
 	const volunteerInterests = await seedVolunteerInterests(activeVolunteers, volunteerRoles);
 	const certifications = await seedCertifications(allUsers, volunteerRoles);
 	const workOrders = await seedWorkOrders(activeVolunteers, volunteerRoles, events);
+	const equipmentReports = await seedEquipmentReports(
+		users.slice(1, 4),
+		adminUser.id,
+		(volunteerRoles.find((r) => /repair/i.test(r.name)) ?? volunteerRoles[0])?.id
+	);
 	// After the shifts, which is new: half the completed signups get an hour log
 	// pointing back at the shift that earned them.
 	const volunteerHours = await seedVolunteerHours(
@@ -302,8 +315,10 @@ async function main() {
 	console.log(`  ${pageConfigs.length} band page configs with EPK data`);
 	console.log(`  ${series.length} recurring series`);
 	console.log(`  ${payments.length} payment records`);
+	console.log(`  ${audit.entries} audit log entries (one purged account)`);
 	console.log(`  ${financialEntries.length} financial entries`);
 	console.log(`  ${tickets.length} tickets`);
+	console.log(`  ${recapPhotos} recap photos on past shows`);
 	console.log(`  ${rsvps.length} RSVPs`);
 	console.log(`  ${notifications.length} notifications`);
 	console.log(`  ${preferences.length} notification preferences`);
@@ -319,6 +334,12 @@ async function main() {
 	);
 	console.log(
 		`  ${contractors.contractors} contractors, ${contractors.jobs} contractor jobs (1 overdue, 1 unit at the shop, 1 lapsed certificate)`
+	);
+	console.log(
+		`  ${localResources.categories} local resource categories, ${localResources.resources} listings (1 pending, 1 returned, 1 removed)`
+	);
+	console.log(
+		`  ${equipmentReports.reports} equipment reports in every triage stage, ${equipmentReports.workOrders} work order raised from them`
 	);
 	console.log(`  ${directory.entries} directory entries, ${directory.tags} directory tags`);
 	console.log(`  ${directoryPersonas.users} directory matching demo personas`);
@@ -355,7 +376,7 @@ async function main() {
 		`  ${runOfShow.slots} run-of-show sets — ${runOfShow.uncredited} on no poster, ${runOfShow.withoutTimes} with no downbeat yet`
 	);
 	console.log(
-		`  ${artifactRequests.requests} artifact requests across the bills, half of them overdue`
+		`  ${artifactRequests.requests} artifact requests, half overdue, two of them poster art from Maren Holt`
 	);
 	console.log(
 		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +

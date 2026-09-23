@@ -35,6 +35,21 @@ pnpm build`: `build` is `vite build` and does **not** migrate, so the dashboard 
    the migration fails, the whole build fails and **nothing is published** — the old Worker
    keeps serving.
 
+   **Drops run after publish.** A migration that only drops columns or tables (`contract`)
+   cannot run before publish: the live Worker still selects what it removes, and fails with
+   `no such column` until the new one is out (#1350). With `CMC_MIGRATE_AFTER_PUBLISH=1` in the
+   build environment, the build step reads which migrations production has not applied and:
+   - applies them before publish if none is a drop, as always;
+   - leaves them if all of them are drops, for `pnpm ci:migrate --after-publish` in the deploy
+     command to apply once `wrangler deploy` has returned;
+   - **fails the build** if the batch needs both sides — an add and a drop in one PR, or one
+     migration that does both. `drizzle-kit migrate` applies every pending migration at once, so
+     such a batch cannot be split. Ship the drop in a PR of its own.
+
+   Without that variable every migration runs before publish, exactly as before. So a drop is
+   safe unattended only while both dashboard fields below are set; if the deploy command loses
+   its `--after-publish` half, drops pile up unapplied until the next add fails the build.
+
    The queue branch counts as production because Cloudflare builds and publishes it, then
    does **not** build again when the queue fast-forwards `main` onto that same SHA — the
    queue build is the only one a queued PR ever gets. #241 landed before this was true and
@@ -52,6 +67,11 @@ pnpm build`: `build` is `vite build` and does **not** migrate, so the dashboard 
 
 The load-bearing configuration lives in the Cloudflare dashboard, not the repo:
 
+- the **deploy command**, `npx wrangler deploy && pnpm ci:migrate --after-publish`, together
+  with the build variable `CMC_MIGRATE_AFTER_PUBLISH=1`. Set both or neither. If the merge
+  queue's branch is built as a non-production branch, the same applies to the
+  **non-production branch deploy command**; `ci-migrate.mjs` does its own branch check, so the
+  suffix is harmless on a preview build;
 - two **build environment variables** used by `drizzle.config.ts` for the remote migrate:
   `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_D1_TOKEN` (an API token scoped Account → D1 → Edit).
   `CLOUDFLARE_DATABASE_ID` is no longer among them — `drizzle.config.ts` reads the id from
@@ -131,7 +151,7 @@ Notes:
 ### Break-glass: acting when no admin is reachable
 
 `admin` is now the only position holding `user.setRole`, `user.purge` and `credit.adjust`
-(see [admin-vs-staff-spec.md](../specs/admin-vs-staff-spec.md) and the matrix in
+(see [admin-vs-staff-spec.md](../specs/shipped/admin-vs-staff-spec.md) and the matrix in
 `src/lib/config.ts`). Two people hold it. If both are unavailable and a role genuinely has
 to change, this is the way in — **not** a second shared admin account.
 
@@ -408,17 +428,18 @@ Cron expressions are **UTC only** (no DST handling), so the Pacific wall-clock t
 shift an hour when DST flips. Weekdays are **named** (`MON`, never `1`): Cloudflare numbers
 them 1 = Sunday, while the Sentry monitor that receives the same string numbers them 1 = Monday.
 
-| Cron (UTC)     | Endpoints, in order                                                                                                                                                           | Pacific                     |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| `*/5 * * * *`  | `/api/cron/send-campaigns`                                                                                                                                                    | every 5 min                 |
-| `*/15 * * * *` | `/api/cron/auto-complete`, `/api/cron/cancel-unconfirmed`, `/api/cron/expire-waitlisted`                                                                                      | every 15 min                |
-| `0 16 * * *`   | `/api/cron/generate-recurring-reservations`, `/api/cron/lock-access`, `/api/cron/confirmation-reminders`, `/api/cron/reservation-reminders`, `/api/cron/cancel-stale-tickets` | daily, 8am PST / 9am PDT    |
-| `0 17 * * MON` | `/api/cron/reconcile-ledger`                                                                                                                                                  | Mondays, 9am PST / 10am PDT |
+| Cron (UTC)     | Endpoints, in order                                                                                                                                                                                | Pacific                     |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `*/5 * * * *`  | `/api/cron/send-campaigns`                                                                                                                                                                         | every 5 min                 |
+| `*/15 * * * *` | `/api/cron/auto-complete`, `/api/cron/complete-shifts`, `/api/cron/cancel-unconfirmed`, `/api/cron/expire-waitlisted`, `/api/cron/wake-snoozed`, `/api/cron/reminders`, `/api/cron/schedule-radio` | every 15 min                |
+| `0 16 * * *`   | `/api/cron/generate-recurring-reservations`, `/api/cron/lock-access`, `/api/cron/cancel-stale-tickets`, `/api/cron/sweep-audio-purchases`, `/api/cron/sweep-media`                                 | daily, 8am PST / 9am PDT    |
+| `0 17 * * MON` | `/api/cron/reconcile-ledger`                                                                                                                                                                       | Mondays, 9am PST / 10am PDT |
 
-The daily batch runs its jobs sequentially in the order listed — generation first, so
-freshly generated occurrences are visible to lock provisioning and the reminder sweeps.
-Keep the table above, `wrangler.toml [triggers]`, and `CRON_SCHEDULE` in
-`src/lib/server/cron/schedule.ts` in sync (the schedule spec pins the map).
+Each trigger runs its jobs sequentially in the order listed. The daily batch generates
+first, so freshly generated occurrences are visible to lock provisioning. Reminders are not
+a daily sweep: `/api/cron/reminders` drains a registry every 15 minutes, after
+`complete-shifts`. `CRON_SCHEDULE` in `src/lib/server/cron/schedule.ts` is the source; the
+schedule spec pins both `wrangler.toml [triggers]` and this table against it.
 
 Manual invocation (safe — every job is idempotent and returns a JSON summary):
 
