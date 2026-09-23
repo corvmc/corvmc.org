@@ -1764,6 +1764,9 @@ export const capabilities = {
 	moderation: ['reviewFlags', 'setStanding'],
 	suggestion: ['read', 'respond', 'review'],
 	listing: ['review'],
+	// The staff music tools. Refunding a sale is `finance.refund`, not a music
+	// action: it moves money, and the treasurer is who does that.
+	music: ['read', 'moderate'],
 	help: ['read', 'manage']
 } as const;
 
@@ -1907,6 +1910,8 @@ export const positions: Record<Position, Grants> = {
 		moderation: ['reviewFlags', 'setStanding'],
 		suggestion: ['read', 'respond', 'review'],
 		listing: ['review'],
+		// Withholding a release, or pulling it off the air, is a takedown.
+		music: ['read', 'moderate'],
 		inbox: ['read', 'reply', 'assign', 'dispose'],
 		user: ['list', 'read', 'deactivate']
 	},
@@ -1917,6 +1922,8 @@ export const positions: Record<Position, Grants> = {
 		contractor: ['read', 'recordInvoice'],
 		inventory: ['read', 'manageAcquisitions', 'report'],
 		reservation: ['read', 'comp'],
+		// Read only: enough to reach the music page's sales and refund one.
+		music: ['read'],
 		// A show's settlement is on the production console, behind `event.read`
 		// like everything else on that page, so the one person whose job is the
 		// money could not see where it went. Read only — the advance, the lineup

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireStaff } from '$lib/server/authorization';
+import { can, requireCapability } from '$lib/server/authorization';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import {
 	listAllReleases,
@@ -25,26 +25,51 @@ import { LONG_TEXT_MAX } from '$lib/config';
  * answered from a screen that works while it is off. Gating this page behind the
  * flag would mean turning the feature on to find out whether to turn it on.
  *
- * `requireStaff()` is the whole guard, on every export.
+ * The page reads on `music.read`. Takedowns and radio exclusion are
+ * `music.moderate`, and a refund is `finance.refund`.
  */
 
 /** The one load-bearing query for /staff/music. */
 export const getStaffMusicPage = query(async () => {
-	await requireStaff();
+	await requireCapability('music.read');
 
-	const [releases, pool, sales, purchases, radioEnabled, audioEnabled, now, recent] =
-		await Promise.all([
-			listAllReleases(),
-			radioPoolStats(),
-			salesTotals(),
-			recentSales(),
-			isFeatureEnabled('cmcRadio'),
-			isFeatureEnabled('bandAudio'),
-			getRadioNow(),
-			getRecentlyPlayed(15)
-		]);
+	const [
+		releases,
+		pool,
+		sales,
+		purchases,
+		radioEnabled,
+		audioEnabled,
+		now,
+		recent,
+		canModerate,
+		canRefund
+	] = await Promise.all([
+		listAllReleases(),
+		radioPoolStats(),
+		salesTotals(),
+		recentSales(),
+		isFeatureEnabled('cmcRadio'),
+		isFeatureEnabled('bandAudio'),
+		getRadioNow(),
+		getRecentlyPlayed(15),
+		// UI only: which controls to offer. The forms below are the guards.
+		can('music.moderate'),
+		can('finance.refund')
+	]);
 
-	return { releases, pool, sales, purchases, radioEnabled, audioEnabled, now, recent };
+	return {
+		releases,
+		pool,
+		sales,
+		purchases,
+		radioEnabled,
+		audioEnabled,
+		now,
+		recent,
+		canModerate,
+		canRefund
+	};
 });
 
 /**
@@ -60,7 +85,7 @@ export const withholdReleaseForm = form(
 		reason: z.string().trim().min(1, 'Say why — the band sees this').max(LONG_TEXT_MAX)
 	}),
 	async ({ releaseId, reason }) => {
-		await requireStaff();
+		await requireCapability('music.moderate');
 		try {
 			await withholdRelease(releaseId, reason);
 		} catch (err) {
@@ -75,7 +100,7 @@ export const withholdReleaseForm = form(
 export const restoreReleaseForm = form(
 	z.object({ releaseId: z.string().min(1) }),
 	async ({ releaseId }) => {
-		await requireStaff();
+		await requireCapability('music.moderate');
 		try {
 			await restoreRelease(releaseId);
 		} catch (err) {
@@ -100,7 +125,7 @@ export const setRadioExclusionForm = form(
 		reason: z.string().trim().max(LONG_TEXT_MAX).optional()
 	}),
 	async ({ releaseId, excluded, reason }) => {
-		await requireStaff();
+		await requireCapability('music.moderate');
 		try {
 			await setRadioExclusion(releaseId, excluded, reason);
 		} catch (err) {
@@ -125,7 +150,7 @@ export const setRadioExclusionForm = form(
 export const refundPurchaseForm = form(
 	z.object({ purchaseId: z.string().min(1) }),
 	async ({ purchaseId }) => {
-		await requireStaff();
+		await requireCapability('finance.refund');
 		try {
 			await refundPurchase(purchaseId);
 		} catch (err) {
