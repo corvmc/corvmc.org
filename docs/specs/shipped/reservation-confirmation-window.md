@@ -1,10 +1,9 @@
 # Door-code timing — Spec
 
-**Phase 3 of the reservation confirmation window.** Phases 1 and 2 shipped in #125 and are
-no longer design intent: they describe how the app behaves today, and that description now
-lives in
-[development/business-workflows.md §1](../development/business-workflows.md#1-reservation-booking-confirmation-and-payment).
-What is left here is the one phase that was never built.
+**Phase 3 of the reservation confirmation window. Shipped (#821).** Phases 1 and 2 shipped in
+#125. How all three behave today is in
+[development/business-workflows.md §1](../../development/business-workflows.md#1-reservation-booking-confirmation-and-payment);
+what follows is the design as it stood before the build.
 
 ## The policy, for context
 

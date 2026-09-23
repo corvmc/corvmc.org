@@ -43,6 +43,21 @@ export function registerListeners(): void {
 
 	// --- A member's first booking raises an orientation shift ---
 	registerOrientationGroup();
+
+	// --- A confirmed booking gets its door code now, not the morning of ---
+	registerLockListeners();
+}
+
+/**
+ * `provisionOnConfirm` never throws: emittery runs listeners together, so one
+ * that rejected would also reject the confirmation email's emit.
+ */
+async function registerLockListeners(): Promise<void> {
+	const { provisionOnConfirm } = await import('$lib/server/lock/lock-service');
+
+	domainEvents.on('reservation.confirmed', async ({ data: event }) => {
+		await provisionOnConfirm(event.reservationId);
+	});
 }
 
 /**
