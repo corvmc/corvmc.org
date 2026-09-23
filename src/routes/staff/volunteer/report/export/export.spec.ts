@@ -94,7 +94,7 @@ describe('the volunteer hours export', () => {
 		for (const held of subsets) {
 			heldPositions = held;
 			const reporter = held.some((p) => ['admin', 'staff', 'volunteer_coordinator'].includes(p));
-			const allowed = await call().then(
+			const allowed = await Promise.resolve(call()).then(
 				() => true,
 				() => false
 			);
