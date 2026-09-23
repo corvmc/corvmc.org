@@ -1728,7 +1728,7 @@ export const unlinkItemArticle = form(
 /**
  * A member reporting a broken unit.
  *
- * `requireUser` and not `requireStaff` deliberately — whoever finds a cracked
+ * `requireUser` and not a capability, deliberately — whoever finds a cracked
  * cabinet is usually the person who just picked it up. The service takes the
  * unit out of service on their say-so; the trade is argued there.
  */

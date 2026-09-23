@@ -191,6 +191,28 @@ export default defineConfig(
 		rules: { 'custom/no-domain-imports-in-ui': 'error' }
 	},
 	{
+		// "Holds any position" and "has this role name" are not guards: a guard
+		// names a capability, and the matrix in `$lib/config` says who holds it.
+		// These helpers are deleted; this stops one coming back under its old name.
+		files: ['src/**/*.{ts,svelte}'],
+		ignores: ['**/*.spec.ts'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					paths: [
+						{
+							name: '$lib/server/authorization',
+							importNames: ['requireStaff', 'isStaff', 'hasRole', 'hasAnyRole'],
+							message:
+								'Guard on a capability: requireCapability(cap), or can(cap) for a branch. See docs/specs/shipped/admin-vs-staff-spec.md.'
+						}
+					]
+				}
+			]
+		}
+	},
+	{
 		// config.ts is the shared client/server vocabulary: 206 files import it
 		// and 88 of them are `.svelte`, so anything it pulls in lands in the
 		// browser bundle. The capability matrix lives there; the access

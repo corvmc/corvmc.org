@@ -63,11 +63,6 @@ vi.mock('$lib/server/authorization', async () => {
 	const { error } = await import('@sveltejs/kit');
 	const config = await import('$lib/config');
 	return {
-		requireStaff: async () => {
-			guard('requireStaff');
-			if (heldPositions.length === 0) throw error(403, 'Staff access required');
-			return { id: 'staff-1' };
-		},
 		requireCapability: async (cap: Capability) => {
 			guard(cap);
 			if (!heldPositions.some((p) => config.grantsCapability(config.positions[p], cap)))

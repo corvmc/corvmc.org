@@ -255,12 +255,12 @@ a queue — not before.
 
 ### Authorization
 
-| Concern                | Status                             | Notes                                                                                                                                                                                                                   |
-| ---------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Role/permission tables | ✅ Drizzle schema (roles only)     | Only `role` + `model_has_role` are live; `permission`, `model_has_permission` and `role_has_permission` are populated by the Postgres migrator and read by nothing                                                      |
-| Role checking          | ✅ hasRole/hasAnyRole/requireStaff | Utility functions in `authorization.ts`. `admin` and `staff` are currently interchangeable — `requireStaff()` accepts either and nothing distinguishes them; a split is designed in `docs/specs/admin-vs-staff-spec.md` |
-| Policies               | —                                  | No formal policy layer; checks are inline in remote functions                                                                                                                                                           |
-| Route-level guards     | Ad-hoc                             | Each remote function calls `requireStaff()` or checks roles manually — remote functions are the security boundary, not routes or layouts                                                                                |
+| Concern                | Status                         | Notes                                                                                                                                                              |
+| ---------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Role/permission tables | ✅ Drizzle schema (roles only) | Only `role` + `model_has_role` are live; `permission`, `model_has_permission` and `role_has_permission` are populated by the Postgres migrator and read by nothing |
+| Role checking          | ✅ requireCapability/can       | Guards name a capability; the matrix in `src/lib/config.ts` maps positions to capabilities. See `docs/specs/shipped/admin-vs-staff-spec.md`                        |
+| Policies               | —                              | No formal policy layer; checks are inline in remote functions                                                                                                      |
+| Route-level guards     | Ad-hoc                         | Each remote function calls `requireStaff()` or checks roles manually — remote functions are the security boundary, not routes or layouts                           |
 
 ### Observers / model hooks
 

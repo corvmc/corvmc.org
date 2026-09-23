@@ -1692,7 +1692,7 @@ export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
 // A **capability** is what a guard names. A **position** is what a person
 // holds. The matrix below is the association between them; assignment — who
 // holds which position — stays in `model_has_roles`, because that is the part
-// that genuinely changes at runtime. See docs/specs/admin-vs-staff-spec.md.
+// that genuinely changes at runtime. See docs/specs/shipped/admin-vs-staff-spec.md.
 //
 // Guards name capabilities rather than roles so that re-answering "who may do
 // this" is an edit to one file instead of a hunt through several hundred call
@@ -2261,7 +2261,7 @@ export const RADIO_MAX_TRACK_MS = 15 * 60 * 1000;
  * against each other, which meant the set of readable tiers was derived from
  * a closed table of roles — so a user holding a role that table had never
  * heard of scored below `member` and lost every article, including the ones
- * everybody can read. Positions (see docs/specs/admin-vs-staff-spec.md) are
+ * everybody can read. Positions (see docs/specs/shipped/admin-vs-staff-spec.md) are
  * unranked and open-ended, so they can never be ranked here again.
  *
  * `resolveHelpAudience` maps a person onto exactly one of these; a reader sees
