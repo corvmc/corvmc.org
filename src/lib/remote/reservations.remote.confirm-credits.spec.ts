@@ -46,6 +46,8 @@ vi.mock('$lib/server/authorization', async () => {
 		requireUser: () => staffUser,
 		requireCapability: vi.fn(async () => undefined),
 		isStaff: isStaffMock,
+		// The pricing view of someone else's booking asks `can('reservation.read')`.
+		can: vi.fn(async () => isStaffMock()),
 		// Mirrors the real helper: owner short-circuits, otherwise defer to
 		// isStaff so the staff/member cases below still drive this the same way
 		// they drive every other authorisation check in this file.
