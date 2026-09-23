@@ -195,6 +195,15 @@ export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
 export const TICKET_COLLECTIVE_SHARE_BPS = 3000;
 
 /**
+ * Where the split bar opens on a band's own gig sold through us (#1470).
+ *
+ * The collective books no room and runs no door there, so it asks what it asks
+ * of a record sale rather than a show's 30%. A default, not a rake: the buyer
+ * may drag it to zero, and processing comes off the top either way.
+ */
+export const BAND_TICKET_PLATFORM_FEE_BPS = 1000;
+
+/**
  * A ticket is free, or it costs at least this. Nothing in between: Stripe's own
  * charge minimum is 50¢ and its 30¢ fixed fee is a third of a $1 sale, so the
  * amounts this excludes are the ones where almost nothing reaches the acts.

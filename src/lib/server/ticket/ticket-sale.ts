@@ -7,6 +7,8 @@ export interface TicketSaleTerms {
 	priceCents: number | null;
 	priceFloorCents: number;
 	quantity: number | null;
+	/** The selling band; null is the collective. */
+	groupId: string | null;
 }
 
 /**
@@ -15,11 +17,11 @@ export interface TicketSaleTerms {
  * Only the terms given are touched on an existing row, so an edit that names
  * the price leaves capacity alone. Returns the unawaited statement, so it can
  * ride in a `db.batch`; null when there is nothing to write. The seller is left
- * as it is: every writer today sells for the collective.
+ * as it is unless `groupId` is given.
  */
 export function saveTicketSale(eventListingId: string, terms: Partial<TicketSaleTerms>) {
 	const set: Partial<TicketSaleTerms> = {};
-	for (const key of ['enabled', 'priceCents', 'priceFloorCents', 'quantity'] as const) {
+	for (const key of ['enabled', 'priceCents', 'priceFloorCents', 'quantity', 'groupId'] as const) {
 		if (terms[key] !== undefined) Object.assign(set, { [key]: terms[key] });
 	}
 	if (Object.keys(set).length === 0) return null;

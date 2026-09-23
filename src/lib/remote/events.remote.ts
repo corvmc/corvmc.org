@@ -1,5 +1,6 @@
 import { captureException } from '$lib/server/sentry';
 import { recordFreeTicketSale } from '$lib/server/finance/ticket-entries';
+import { sellerFor } from '$lib/server/ticket/ticket-seller';
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
@@ -202,10 +203,11 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 	const { locals } = getRequestEvent();
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
-	const [remaining, lineup, isSustainingMember] = await Promise.all([
+	const [remaining, lineup, isSustainingMember, seller] = await Promise.all([
 		evt.ticketingEnabled ? getTicketsRemaining(id) : Promise.resolve(null),
 		getEventLineup(id),
-		locals.user ? checkSustainingMember(locals.user.id) : Promise.resolve(false)
+		locals.user ? checkSustainingMember(locals.user.id) : Promise.resolve(false),
+		sellerFor(evt)
 	]);
 
 	// Sold is derived from remaining only when the event is both ticketed and capped;
@@ -247,7 +249,9 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 			location: evt.location,
 			tags: evt.tags as string | null,
 			posterUrl: resolveImageUrl(evt.posterKey),
-			ticketingEnabled: evt.ticketingEnabled,
+			// On sale only while somebody may sell it: a band whose payouts
+			// lapsed keeps its terms but must not link to a dead ticket page.
+			ticketingEnabled: seller !== null,
 			ticketPrice: evt.ticketPrice,
 			ticketPriceFloorCents: evt.ticketPriceFloorCents,
 			ticketQuantity: evt.ticketQuantity,
@@ -259,7 +263,8 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 		// Display names only — the split bar labels one side with them, and a
 		// touring act usually has no `directory_entry` to point at.
 		acts: lineup.filter((a) => a.status !== 'declined').map((a) => a.name),
-		collectiveShareBps: TICKET_COLLECTIVE_SHARE_BPS,
+		collectiveShareBps: seller?.shareBps ?? TICKET_COLLECTIVE_SHARE_BPS,
+		soldByBand: seller?.kind === 'band',
 		remaining,
 		sold,
 		isSustainingMember,
@@ -316,6 +321,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	// are not one — so the branch keeps a round trip off most detail views. The
 	// rest of the gate (a confirmed production, a downbeat, a credit) is in SQL.
 	const setTimes = evt.source === 'cmc' ? await getPublicSetTimes(id) : [];
+	const seller = await sellerFor(evt);
 	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
 	const sold =
 		evt.ticketQuantity != null && remaining != null ? evt.ticketQuantity - remaining : null;
@@ -357,7 +363,9 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			location: evt.location,
 			tags: evt.tags as string | null,
 			posterUrl: resolveImageUrl(evt.posterKey),
-			ticketingEnabled: evt.ticketingEnabled,
+			// On sale only while somebody may sell it: a band whose payouts
+			// lapsed keeps its terms but must not link to a dead ticket page.
+			ticketingEnabled: seller !== null,
 			ticketPrice: evt.ticketPrice,
 			ticketPriceFloorCents: evt.ticketPriceFloorCents,
 			ticketQuantity: evt.ticketQuantity,
@@ -397,7 +405,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		// off the guide, so opening them up only widens the id-probing surface
 		// the moderation spec closed.
 		canReport: evt.status === 'published',
-		collectiveShareBps: TICKET_COLLECTIVE_SHARE_BPS,
+		collectiveShareBps: seller?.shareBps ?? TICKET_COLLECTIVE_SHARE_BPS,
 		upcoming
 	};
 });
@@ -407,13 +415,11 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
-	if (!evt.ticketingEnabled) throw error(404, 'Tickets not available for this event');
-	// CMC only sells shows CMC produces (see `update()` in event-service): a
-	// band's gig or a member's community listing would put money in CMC's Stripe
-	// account with no payout path back to whoever is actually putting it on.
-	// Checked on source so a row written before the rule still cannot reach
-	// checkout.
-	if (evt.source !== 'cmc') throw error(404, 'Tickets not available for this event');
+	// The collective sells its own shows; a premium band sells its own gig into
+	// its own account (#1203). Anything else, including a band whose payouts
+	// have lapsed, has no seller and so no ticket page.
+	const seller = await sellerFor(evt);
+	if (!seller) throw error(404, 'Tickets not available for this event');
 
 	const [remaining, lineup] = await Promise.all([getTicketsRemaining(id), getEventLineup(id)]);
 
@@ -436,7 +442,8 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 		// Display names only, deliberately — a touring act usually has no
 		// `directory_entry` to point at, and the split bar still has to name it.
 		acts: lineup.filter((a) => a.status !== 'declined').map((a) => a.name),
-		collectiveShareBps: TICKET_COLLECTIVE_SHARE_BPS,
+		collectiveShareBps: seller.shareBps,
+		soldByBand: seller.kind === 'band',
 		remaining,
 		posterUrl,
 		isAuthenticated: !!locals.user
@@ -1747,7 +1754,8 @@ export const purchaseTickets = form(
 		if (!evt.ticketingEnabled || !evt.ticketPrice) throw error(400, 'Tickets not available');
 		// Mirrors getPublicTicketPage. This is the endpoint that actually takes
 		// money, so it repeats the check rather than trusting the page guard.
-		if (evt.source !== 'cmc') throw error(400, 'Tickets not available');
+		const seller = await sellerFor(evt);
+		if (!seller) throw error(400, 'Tickets not available');
 
 		// Nothing the client posted is trusted, including the arithmetic — these
 		// numbers become what the acts are owed. The event's own suggested price
@@ -1759,7 +1767,8 @@ export const purchaseTickets = form(
 			collectiveCents: data.collectiveCents,
 			coverFees: data.coverFees,
 			suggestedUnitCents: evt.ticketPrice,
-			floorCents: evt.ticketPriceFloorCents
+			floorCents: evt.ticketPriceFloorCents,
+			shareBps: seller.shareBps
 		});
 		// Under the amount field rather than as a toast: the buyer's next move is
 		// to change that number, and a toast does not say which number.
@@ -1844,8 +1853,16 @@ export const purchaseTickets = form(
 			mode: 'payment',
 			lineItems,
 			coverFees: data.coverFees,
+			// A band's gig pays the band by destination charge (#1471): its share
+			// is transferred at the sale and the collective keeps the rest, which
+			// is its share plus the processing Stripe bills the platform for.
+			...(seller.kind === 'band' && {
+				destinationAccountId: seller.destinationAccountId,
+				applicationFeeCents: split.chargeCents - split.actsCents
+			}),
 			metadata: {
 				type: 'ticket',
+				...(seller.kind === 'band' && { ticket_seller_group_id: seller.groupId }),
 				purchase_id: purchaseId,
 				event_id: evt.id,
 				ticket_quantity: String(data.quantity),
