@@ -95,6 +95,7 @@ import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
 import { seedPacking } from './seed/packing';
 import { seedEventRecaps } from './seed/event-recaps';
+import { seedMarket } from './seed/market';
 
 async function main() {
 	// The one room's ledger, shared by every seeder that books it. Reset here
@@ -275,6 +276,7 @@ async function main() {
 	// Straight after the rider, whose band and logins it reuses: one account
 	// reaches both features, and the promote path has a real rider to aim at.
 	const packing = await seedPacking(riders.structuredBandId);
+	const market = await seedMarket(adminUser);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -388,6 +390,9 @@ async function main() {
 	);
 	console.log(
 		`  ${packing.items} packing rows on the same band — ${packing.packed} already in the van, ${packing.unassigned} nobody has yet, ${packing.settled} already on the rider`
+	);
+	console.log(
+		`  ${market.markets} market day taking applications, ${market.vendors} vendors in every status`
 	);
 	console.log('\n  Tech rider demo logins (all `password`):');
 	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');

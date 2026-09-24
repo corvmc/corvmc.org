@@ -138,6 +138,9 @@
 		// Platform invites
 		accepted: 'badge-success',
 		revoked: 'badge-error',
+		// Market vendor applications; `accepted` and `declined` are shared.
+		applied: 'badge-warning',
+		withdrawn: 'badge-ghost',
 		// Orientation. `pending`, `scheduled` and `completed` are all mapped
 		// already and mean here what they mean elsewhere; only a waiver is new,
 		// and it is ghost because it is an absence rather than an outcome.
@@ -247,6 +250,9 @@
 		// Platform invite statuses
 		accepted: { icon: IconCircleCheck, color: 'text-success' },
 		revoked: { icon: IconBan, color: 'text-error' },
+		// Market vendor applications
+		applied: { icon: IconClock, color: 'text-warning' },
+		withdrawn: { icon: IconArrowBackUp, color: 'text-base-content' },
 
 		// Orientation. `pending`, `scheduled` and `completed` are already mapped
 		// above and mean here what they mean there.

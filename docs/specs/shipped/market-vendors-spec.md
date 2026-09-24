@@ -1,5 +1,8 @@
 # Market Vendors — applications for a market day CMC hosts
 
+> **Shipped** (#609). How it behaves now is in
+> [business-workflows §18](../../development/business-workflows.md). This file keeps the design.
+
 Tracking issue: #609. Decisions left open: #1502 (table fees), #1503 (who approves), #1504 (what
 the public sees). Deferred: #1505 (day-of check-in, no-shows, invite-back).
 
