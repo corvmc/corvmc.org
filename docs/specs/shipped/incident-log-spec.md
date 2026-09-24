@@ -23,7 +23,7 @@
 
 - **Nothing is edited away.** The original account is written once. Corrections and new facts are
   follow-up notes, so the record reads the way it happened — which is what an insurer or a lawyer
-  will ask for. There is no delete path in the application.
+  will ask for. Staff cannot delete a record; only the retention sweep does (below).
 - **Every row carries its author's name as written at the time**, beside the user FK (`set null`).
   Purging a staff account must not turn their reports anonymous. The same reasoning as
   `audit_log` (`docs/specs/audit-log-spec.md`); the incident tables are their own trail, so they
@@ -35,6 +35,13 @@
   site moderator and the volunteer coordinator (#1466). `incident.record` (recording, notes,
   resolving) stays with `admin` and `staff`. A report naming a member is not visible to that
   member.
+
+- **Kept seven years, unless marked `retain`** (#1468). The daily cron
+  `/api/cron/sweep-incidents` deletes every incident whose `occurredAt` is more than seven years
+  ago and whose `retain` is false; notes go by FK cascade. Each deletion writes an
+  `incident.deleted` row to `audit_log` (actor System, the summary as the subject label), which is
+  then the only trace it existed. Staff mark or release `retain` on the detail page, with a reason
+  kept as a note. It is the same horizon the audit-log retention question (#1376) is asked against.
 
 ## Schema
 
@@ -56,6 +63,7 @@
 | `status`                          | `reported` · `open` · `resolved`                         |
 | `resolution`                      | text, set on resolve                                     |
 | `resolvedByUserId` / `resolvedAt` |                                                          |
+| `retain`                          | boolean, default false — exempt from the 7-year sweep    |
 | `createdAt` / `updatedAt`         |                                                          |
 
 Indexes: `(status, occurredAt)` for the queue, `(category, occurredAt)` for read-back,
@@ -63,8 +71,7 @@ Indexes: `(status, occurredAt)` for the queue, `(category, occurredAt)` for read
 
 ### `incident_note`
 
-Append-only. `incidentId` (cascade — there is no delete path, so this only matters to a manual
-repair), `authorUserId` (`set null`), `authorName`, `body` (≤ 2000), `createdAt`.
+Append-only. `incidentId` (cascade — the retention sweep deletes an incident's notes with it), `authorUserId` (`set null`), `authorName`, `body` (≤ 2000), `createdAt`.
 
 ## Surfaces
 
@@ -86,5 +93,5 @@ show, and nothing else from the log: no staff notes, no other filings.
 
 - #1466 — reversed: the site moderator and volunteer coordinator also hold `incident.read`.
 - #1467 — a member cannot see a report naming them, and it changes nothing on their account.
-- #1468 — no delete path, kept indefinitely; purging a member only unlinks them.
+- #1468 — reversed: deleted after seven years unless marked `retain`; each deletion is audited.
 - #1469 — reversed: crew of a show file incidents for it as `reported`; filers see only their own.
