@@ -1,0 +1,18 @@
+{
+	"name": "corvmc-door-app",
+	"private": true,
+	"description": "The Tap to Pay door phone: a Capacitor shell around corvmc.org (#612). Not part of the web app's workspace; see docs/development/door-app.md.",
+	"scripts": {
+		"sync": "cap sync android",
+		"build:debug": "cap sync android && cd android && ./gradlew assembleDebug",
+		"install:phone": "adb install -r android/app/build/outputs/apk/debug/app-debug.apk"
+	},
+	"dependencies": {
+		"@capacitor/android": "8.5.2",
+		"@capacitor/core": "8.5.2",
+		"@capgo/capacitor-stripe-terminal": "8.0.4"
+	},
+	"devDependencies": {
+		"@capacitor/cli": "8.5.2"
+	}
+}
