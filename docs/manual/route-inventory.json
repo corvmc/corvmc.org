@@ -272,6 +272,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/groups/[slug]/markets/[eventId]/check-in",
+		"panel": "member"
+	},
+	{
 		"route": "/member/help",
 		"panel": "member"
 	},
@@ -457,6 +461,10 @@
 	},
 	{
 		"route": "/staff/events/[id]/vendors",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/events/[id]/vendors/check-in",
 		"panel": "staff"
 	},
 	{

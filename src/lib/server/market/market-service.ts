@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from 'drizzle-orm';
 import { eventListing, publicEventStatuses } from '$lib/server/db/schema/event';
 import { inboxThread } from '$lib/server/db/schema/inbox';
 import { project } from '$lib/server/db/schema/project';
@@ -40,12 +40,16 @@ export class VendorTransitionError extends DomainError {
 	}
 }
 
-/** Where each status may go. `withdrawn` is the vendor's call and is final. */
+/**
+ * Where a decision or withdrawal may move each status. `withdrawn` is the
+ * vendor's call and is final. `no_show` moves only through `markVendorNoShow`.
+ */
 const transitions: Record<MarketVendorStatus, readonly MarketVendorStatus[]> = {
 	applied: ['accepted', 'declined', 'withdrawn'],
 	accepted: ['declined', 'withdrawn'],
 	declined: ['accepted', 'withdrawn'],
-	withdrawn: []
+	withdrawn: [],
+	no_show: []
 };
 
 export interface MarketSetup {
@@ -227,7 +231,7 @@ export async function submitApplication(
 
 /** Every application for a market, with the contact joined from its thread. Staff only. */
 export async function listApplications(eventId: string) {
-	return db
+	const rows = await db
 		.select({
 			id: marketVendor.id,
 			threadId: marketVendor.threadId,
@@ -254,6 +258,150 @@ export async function listApplications(eventId: string) {
 		.leftJoin(inboxThread, eq(inboxThread.id, marketVendor.threadId))
 		.where(eq(marketVendor.eventId, eventId))
 		.orderBy(asc(marketVendor.createdAt), asc(marketVendor.businessName));
+	const previous = await previousRecords(
+		eventId,
+		rows.map((r) => r.contactEmail)
+	);
+	return rows.map((r) => ({
+		...r,
+		previous: (r.contactEmail && previous.get(r.contactEmail.toLowerCase())) || null
+	}));
+}
+
+export interface PreviousMarketRecord {
+	eventTitle: string;
+	startsAt: Date;
+	status: MarketVendorStatus;
+	inviteBack: boolean;
+	note: string | null;
+}
+
+/**
+ * The newest invite-back record from an earlier market, per contact email
+ * (#1505). Email is the only identity a vendor has: there is no vendor table.
+ */
+async function previousRecords(
+	eventId: string,
+	emails: (string | null)[]
+): Promise<Map<string, PreviousMarketRecord>> {
+	const wanted = [...new Set(emails.filter((e): e is string => !!e).map((e) => e.toLowerCase()))];
+	const found = new Map<string, PreviousMarketRecord>();
+	if (wanted.length === 0) return found;
+
+	const [current] = await db
+		.select({ startsAt: eventListing.startsAt })
+		.from(eventListing)
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
+	if (!current) return found;
+
+	const email = sql<string>`lower(${inboxThread.contactEmail})`;
+	const rows = await db
+		.select({
+			email,
+			eventTitle: eventListing.title,
+			startsAt: eventListing.startsAt,
+			status: marketVendor.status,
+			inviteBack: marketVendor.inviteBack,
+			note: marketVendor.inviteBackNote
+		})
+		.from(marketVendor)
+		.innerJoin(inboxThread, eq(inboxThread.id, marketVendor.threadId))
+		.innerJoin(eventListing, eq(eventListing.id, marketVendor.eventId))
+		.where(
+			and(
+				ne(marketVendor.eventId, eventId),
+				isNotNull(marketVendor.inviteBack),
+				lt(eventListing.startsAt, current.startsAt),
+				inArray(email, wanted)
+			)
+		)
+		.orderBy(desc(eventListing.startsAt));
+	for (const { email: key, inviteBack, ...rest } of rows) {
+		if (!found.has(key)) found.set(key, { ...rest, inviteBack: inviteBack === true });
+	}
+	return found;
+}
+
+/**
+ * The day-of list: accepted vendors and no-shows, by table then name. No
+ * contact detail, so the owning committee can work the door with it.
+ */
+export async function listMarketDayVendors(eventId: string) {
+	return db
+		.select({
+			id: marketVendor.id,
+			businessName: marketVendor.businessName,
+			offering: marketVendor.offering,
+			tablesRequested: marketVendor.tablesRequested,
+			needsPower: marketVendor.needsPower,
+			status: marketVendor.status,
+			tableLabel: marketVendor.tableLabel,
+			checkedInAt: marketVendor.checkedInAt,
+			inviteBack: marketVendor.inviteBack,
+			inviteBackNote: marketVendor.inviteBackNote
+		})
+		.from(marketVendor)
+		.where(
+			and(eq(marketVendor.eventId, eventId), inArray(marketVendor.status, ['accepted', 'no_show']))
+		)
+		.orderBy(asc(marketVendor.tableLabel), asc(marketVendor.businessName));
+}
+
+export type MarketDayVendor = Awaited<ReturnType<typeof listMarketDayVendors>>[number];
+
+/** Mark an accepted vendor arrived, or undo it. */
+export async function checkInVendor(
+	vendorId: string,
+	arrived: boolean,
+	now: Date = new Date()
+): Promise<{ eventId: string }> {
+	const vendor = await loadVendor(vendorId);
+	if (vendor.status !== 'accepted') throw new VendorTransitionError(vendor.status, 'checked in');
+	await db
+		.update(marketVendor)
+		.set({ checkedInAt: arrived ? now : null, updatedAt: new Date() })
+		.where(eq(marketVendor.id, vendorId));
+	return { eventId: vendor.eventId };
+}
+
+/** An accepted vendor who never arrived, or the correction back to accepted. */
+export async function markVendorNoShow(
+	vendorId: string,
+	noShow: boolean
+): Promise<{ eventId: string }> {
+	const vendor = await loadVendor(vendorId);
+	const [from, to] = noShow
+		? (['accepted', 'no_show'] as const)
+		: (['no_show', 'accepted'] as const);
+	if (vendor.status !== from || (noShow && vendor.checkedInAt)) {
+		throw new VendorTransitionError(vendor.status, to);
+	}
+	await db
+		.update(marketVendor)
+		.set({ status: to, updatedAt: new Date() })
+		.where(eq(marketVendor.id, vendorId));
+	return { eventId: vendor.eventId };
+}
+
+/** Whether to ask this vendor again, for a vendor who was booked for the day. */
+export async function recordInviteBack(
+	vendorId: string,
+	record: { inviteBack: boolean; note: string }
+): Promise<{ eventId: string }> {
+	const vendor = await loadVendor(vendorId);
+	if (vendor.status !== 'accepted' && vendor.status !== 'no_show') {
+		throw new VendorTransitionError(vendor.status, 'rated');
+	}
+	await db
+		.update(marketVendor)
+		.set({
+			inviteBack: record.inviteBack,
+			inviteBackNote: record.note.trim() || null,
+			updatedAt: new Date()
+		})
+		.where(eq(marketVendor.id, vendorId));
+	return { eventId: vendor.eventId };
 }
 
 export type VendorApplication = Awaited<ReturnType<typeof listApplications>>[number];

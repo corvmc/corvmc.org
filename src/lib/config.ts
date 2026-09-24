@@ -2467,9 +2467,23 @@ export const eventKindLabels = {
 
 /**
  * Where a market vendor's application stands. `withdrawn` is terminal; a
- * decision can be reversed, a vendor's own withdrawal cannot.
+ * decision can be reversed, a vendor's own withdrawal cannot. `no_show` is an
+ * accepted vendor who never arrived, set on the day and undone only to `accepted`.
  */
-export const marketVendorStatuses = ['applied', 'accepted', 'declined', 'withdrawn'] as const;
+export const marketVendorStatuses = [
+	'applied',
+	'accepted',
+	'declined',
+	'withdrawn',
+	'no_show'
+] as const;
+export const marketVendorStatusLabels: Record<(typeof marketVendorStatuses)[number], string> = {
+	applied: 'Applied',
+	accepted: 'Accepted',
+	declined: 'Declined',
+	withdrawn: 'Withdrawn',
+	no_show: 'No-show'
+};
 export type MarketVendorStatus = (typeof marketVendorStatuses)[number];
 
 /** A vendor may ask for up to this many tables on one application. */

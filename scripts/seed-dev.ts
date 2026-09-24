@@ -430,7 +430,7 @@ async function main() {
 		`  ${packing.items} packing rows on the same band — ${packing.packed} already in the van, ${packing.unassigned} nobody has yet, ${packing.settled} already on the rider`
 	);
 	console.log(
-		`  ${market.markets} market day taking applications, ${market.vendors} vendors in every status`
+		`  ${market.markets} market days (one taking applications, one done), ${market.vendors} vendors in every status`
 	);
 	console.log(
 		bandSale
