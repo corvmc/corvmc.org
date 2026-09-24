@@ -10,7 +10,8 @@ import { eventListing } from '$lib/server/db/schema/event';
 import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
 import type { InboxMessageDirection } from '$lib/server/db/schema/inbox';
 import { suggestion } from '$lib/server/db/schema/suggestion';
-import { eq, ne, and, desc, count, like, inArray, getTableColumns, asc } from 'drizzle-orm';
+import { eq, ne, and, desc, count, inArray, getTableColumns, asc } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
@@ -347,7 +348,7 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	const conditions = [];
 	if (filters.status) conditions.push(eq(contentFlag.status, filters.status));
 	if (filters.search?.trim()) {
-		conditions.push(like(contentFlag.reason, `%${filters.search.trim()}%`));
+		conditions.push(containsLiteral(contentFlag.reason, filters.search.trim()));
 	}
 	if (filters.entityType) conditions.push(eq(contentFlag.entityType, filters.entityType));
 	if (filters.entityId) conditions.push(eq(contentFlag.entityId, filters.entityId));

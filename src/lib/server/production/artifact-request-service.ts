@@ -4,7 +4,8 @@ import { directoryEntry } from '$lib/server/db/schema/directory';
 import { eventBand, eventListing } from '$lib/server/db/schema/event';
 import { media, mediaAttachment } from '$lib/server/db/schema/media';
 import { venue } from '$lib/server/db/schema/venue';
-import { and, asc, eq, inArray, isNull, like } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { getEventRiderSummaries } from '$lib/server/band/rider-service';
 import { attachExisting, listAttachedEntries, replaceSlot } from '$lib/server/media/media-service';
 import { resolveImageUrl, uploadFile } from '$lib/server/storage';
@@ -170,7 +171,7 @@ export async function searchAskableEntries(q: string): Promise<{ id: string; nam
 	return db
 		.select({ id: directoryEntry.id, name: directoryEntry.name })
 		.from(directoryEntry)
-		.where(and(like(directoryEntry.name, `%${q.trim()}%`), isNull(directoryEntry.deletedAt)))
+		.where(and(containsLiteral(directoryEntry.name, q.trim()), isNull(directoryEntry.deletedAt)))
 		.orderBy(asc(directoryEntry.name))
 		.limit(SEARCH_LIMIT);
 }

@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db';
 import { volunteerRole, volunteerRoleInterest } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, count, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { DomainError } from '$lib/server/errors';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
@@ -223,7 +224,7 @@ export async function listInterestedMembers(
 		: sql<number>`min(${volunteerRoleInterest.createdAt})`;
 
 	const matchesSearch = filters.search
-		? or(like(user.name, `%${filters.search}%`), like(user.email, `%${filters.search}%`))
+		? or(containsLiteral(user.name, filters.search), containsLiteral(user.email, filters.search))
 		: undefined;
 
 	// Deleted accounts keep their interest rows via the FK, but nobody should be

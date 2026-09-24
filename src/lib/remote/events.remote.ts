@@ -113,7 +113,8 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { venue } from '$lib/server/db/schema/venue';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, like, not, inArray, notInArray, sql } from 'drizzle-orm';
+import { eq, and, not, inArray, notInArray, sql } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import {
 	eventListing,
 	createEventSchema,
@@ -689,13 +690,12 @@ export const searchEvents = query(z.string(), async (q) => {
 	await requireCapability('event.read');
 	if (!q || q.length < 2) return [];
 
-	const pattern = `%${q}%`;
 	const rows = await db
 		.select({ id: eventListing.id, title: eventListing.title, startsAt: eventListing.startsAt })
 		.from(eventListing)
 		.where(
 			and(
-				like(eventListing.title, pattern),
+				containsLiteral(eventListing.title, q),
 				notInArray(eventListing.status, ['cancelled', 'rejected']),
 				not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
 			)

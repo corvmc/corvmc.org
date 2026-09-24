@@ -94,6 +94,7 @@ import {
 	createGroup,
 	joinGroup,
 	leaveGroup,
+	listGroups,
 	updateGroupProfile,
 	updateGroupSettings,
 	AlreadyOnRosterError,
@@ -423,5 +424,14 @@ describe('leaveGroup', () => {
 	it('404s somebody who is not on the roster', async () => {
 		selectResultQueue = [[]];
 		await expect(leaveGroup('group-1', 'stranger')).rejects.toBeInstanceOf(GroupNotFoundError);
+	});
+});
+
+describe('listGroups', () => {
+	it('searches names with _ and % matched literally', async () => {
+		await listGroups({ search: '50%_off' });
+		const rendered = new SQLiteSyncDialect().sqlToQuery(whereClauses[0] as SQL);
+		expect(rendered.sql).toContain(`"group"."name" like ? escape '\\'`);
+		expect(rendered.params).toContain('%50\\%\\_off%');
 	});
 });

@@ -8,21 +8,8 @@ import {
 	volunteerShiftFeedback
 } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import {
-	and,
-	asc,
-	count,
-	desc,
-	eq,
-	gte,
-	inArray,
-	isNull,
-	like,
-	lt,
-	ne,
-	or,
-	sql
-} from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { DomainError } from '$lib/server/errors';
 import { requireActiveVolunteer } from './volunteer-profile-service';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
@@ -1068,7 +1055,9 @@ export async function listShiftCandidates(
 				// The desk case: somebody walks up and offers, and they are not on
 				// any shortlist because they never ticked a box. Without this the
 				// column can only offer the five people it already thought of.
-				search ? or(like(user.name, `%${search}%`), like(user.email, `%${search}%`)) : undefined
+				search
+					? or(containsLiteral(user.name, search), containsLiteral(user.email, search))
+					: undefined
 			)
 		)
 		// Most-relevant first within the scope: somebody who has worked this role

@@ -9,3 +9,8 @@ export function escapeLike(input: string): string {
 export function containsLiteral(column: SQLWrapper, term: string): SQL {
 	return sql`${column} like ${`%${escapeLike(term)}%`} escape '\\'`;
 }
+
+/** Prefix form of `containsLiteral`. */
+export function startsWithLiteral(column: SQLWrapper, prefix: string): SQL {
+	return sql`${column} like ${`${escapeLike(prefix)}%`} escape '\\'`;
+}

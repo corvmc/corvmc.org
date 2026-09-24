@@ -10,7 +10,8 @@ import {
 	type SuggestionVisibility
 } from '$lib/server/db/schema/suggestion';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, or, asc, desc, count, like, inArray, isNull, sql } from 'drizzle-orm';
+import { eq, and, or, asc, desc, count, inArray, isNull, sql } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { DomainError } from '$lib/server/errors';
@@ -845,8 +846,12 @@ export async function listSuggestions(
 	if (filters.status) conditions.push(eq(suggestion.status, filters.status));
 	if (filters.category) conditions.push(eq(suggestion.category, filters.category));
 	if (filters.search?.trim()) {
-		const term = `%${filters.search.trim()}%`;
-		conditions.push(or(like(suggestion.title, term), like(suggestion.body, term)));
+		conditions.push(
+			or(
+				containsLiteral(suggestion.title, filters.search.trim()),
+				containsLiteral(suggestion.body, filters.search.trim())
+			)
+		);
 	}
 	const where = and(...conditions);
 

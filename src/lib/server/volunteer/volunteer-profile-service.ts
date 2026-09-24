@@ -5,7 +5,8 @@ import {
 	volunteerRoleInterest
 } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, count, eq, isNull, like, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, isNull, or, sql } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { DomainError } from '$lib/server/errors';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
@@ -412,7 +413,7 @@ export async function listVolunteers(
 		: undefined;
 
 	const matchesSearch = filters.search
-		? or(like(user.name, `%${filters.search}%`), like(user.email, `%${filters.search}%`))
+		? or(containsLiteral(user.name, filters.search), containsLiteral(user.email, filters.search))
 		: undefined;
 
 	const matchesStatus = filters.status ? eq(volunteerProfile.status, filters.status) : undefined;

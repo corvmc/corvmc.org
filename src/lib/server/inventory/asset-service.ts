@@ -6,7 +6,8 @@ import {
 	inventoryItem,
 	inventoryLocation
 } from '$lib/server/db/schema/inventory';
-import { and, asc, eq, isNotNull, isNull, like, notInArray, or } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, notInArray, or } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { user } from '$lib/server/db/schema/authentication';
 import { form8282Status, needsAttention } from './form-8282';
 import { movementStatement, recordMovement } from './stock-service';
@@ -387,8 +388,8 @@ export async function listAssets(opts: { itemId?: string; status?: AssetStatus; 
 	if (opts.search) {
 		conditions.push(
 			or(
-				like(inventoryAsset.assetTag, `%${opts.search}%`),
-				like(inventoryAsset.serialNumber, `%${opts.search}%`)
+				containsLiteral(inventoryAsset.assetTag, opts.search),
+				containsLiteral(inventoryAsset.serialNumber, opts.search)
 			)
 		);
 	}

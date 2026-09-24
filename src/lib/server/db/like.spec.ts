@@ -6,7 +6,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
 import { sqliteTable, text, SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
-import { containsLiteral } from './like';
+import { containsLiteral, startsWithLiteral } from './like';
 
 const person = sqliteTable('person', { email: text('email').notNull() });
 const dialect = new SQLiteSyncDialect();
@@ -48,5 +48,13 @@ describe('containsLiteral', () => {
 
 	it('still matches a plain substring, case-insensitively', () => {
 		expect(matching('SMITH')).toEqual(['joXsmith@example.com', 'jo_smith@example.com']);
+	});
+});
+
+describe('startsWithLiteral', () => {
+	it('matches a prefix with an underscore literally', () => {
+		const { sql, params } = dialect.sqlToQuery(startsWithLiteral(person.email, 'jo_'));
+		const rows = db.prepare(`SELECT email FROM person WHERE ${sql}`).all(...(params as string[]));
+		expect(rows.map((r) => String(r.email))).toEqual(['jo_smith@example.com']);
 	});
 });

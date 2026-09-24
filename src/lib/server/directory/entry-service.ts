@@ -7,7 +7,8 @@ import {
 } from '$lib/server/db/schema/directory';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, count, desc, eq, isNull, like } from 'drizzle-orm';
+import { and, count, desc, eq, isNull } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { groupMember, groupSlugHistory } from '$lib/server/db/schema/group';
@@ -233,7 +234,7 @@ export async function createExternalAct(data: CreateExternalActData): Promise<st
 export async function listExternalActs(search?: string, pagination: PaginationInput = {}) {
 	const conditions = [isNull(directoryEntry.userId), isNull(directoryEntry.groupId)];
 	if (search?.trim()) {
-		conditions.push(like(directoryEntry.name, `%${search.trim()}%`));
+		conditions.push(containsLiteral(directoryEntry.name, search.trim()));
 	}
 	const where = and(...conditions);
 

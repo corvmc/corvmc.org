@@ -148,9 +148,17 @@ describe('member filters', () => {
 		expect(conds).not.toContainEqual({ openToCollaboration: true });
 	});
 
-	it('turns a search term into a name LIKE condition', async () => {
-		await listMembers({ search: 'jeff' });
-		expect(whereConditions(entryFindMany)).toContainEqual({ name: { like: '%jeff%' } });
+	it('turns a search term into a name LIKE that matches _ and % literally', async () => {
+		await listMembers({ search: 'jo_smith%' });
+		const raw = whereConditions(entryFindMany).find((c) => 'RAW' in c) as
+			{ RAW: (t: unknown, o: unknown) => SQL } | undefined;
+		expect(raw).toBeDefined();
+
+		const rendered = new SQLiteSyncDialect().sqlToQuery(
+			raw!.RAW({ name: sql`"directory_entry"."name"` }, {})
+		);
+		expect(rendered.sql).toContain(`"directory_entry"."name" like ? escape '\\'`);
+		expect(rendered.params).toEqual(['%jo\\_smith\\%%']);
 	});
 });
 
@@ -164,7 +172,9 @@ describe('band filters', () => {
 		await listBands({ lookingForMembers: true, search: 'trio' });
 		const conds = whereConditions(entryFindMany);
 		expect(conds).toContainEqual({ lookingFor: 'members' });
-		expect(conds).toContainEqual({ name: { like: '%trio%' } });
+		const raw = conds.find((c) => 'RAW' in c) as { RAW: (t: unknown, o: unknown) => SQL };
+		const rendered = new SQLiteSyncDialect().sqlToQuery(raw.RAW({ name: sql`"name"` }, {}));
+		expect(rendered.params).toEqual(['%trio%']);
 	});
 
 	it('lists only entries attached to a band, and only live ones', async () => {

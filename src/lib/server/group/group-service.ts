@@ -1,4 +1,5 @@
-import { and, eq, inArray, isNotNull, isNull, like, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { db } from '$lib/server/db';
 import { group, groupMember } from '$lib/server/db/schema/group';
@@ -162,7 +163,7 @@ export async function listGroups(
 ) {
 	const conditions = [inArray(group.kind, [...(opts?.kinds ?? STAFF_GROUP_KINDS)])];
 
-	if (opts?.search) conditions.push(like(group.name, `%${opts.search}%`));
+	if (opts?.search) conditions.push(containsLiteral(group.name, opts.search));
 	if (opts?.status === 'active') conditions.push(isNull(group.deletedAt));
 	else if (opts?.status === 'deactivated') conditions.push(isNotNull(group.deletedAt));
 

@@ -26,7 +26,6 @@ import {
 	gt,
 	sql,
 	or,
-	like,
 	inArray,
 	isNull,
 	isNotNull,
@@ -34,6 +33,7 @@ import {
 	exists,
 	type SQL
 } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
@@ -607,13 +607,12 @@ export async function getMembers(bandId: string) {
 }
 
 export async function searchMembers(query: string, bandId: string) {
-	const pattern = `%${query}%`;
 	return db
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
 		.where(
 			and(
-				or(like(user.name, pattern), like(user.email, pattern)),
+				or(containsLiteral(user.name, query), containsLiteral(user.email, query)),
 				isNull(user.deletedAt),
 				sql`NOT EXISTS (
 					SELECT 1 FROM ${groupMember}
@@ -637,7 +636,7 @@ export async function searchBandsByName(query: string) {
 	return db
 		.select({ id: group.id, name: group.name, slug: group.slug, avatarKey: group.avatarKey })
 		.from(group)
-		.where(and(eq(group.kind, 'band'), like(group.name, `%${query}%`), isNull(group.deletedAt)))
+		.where(and(eq(group.kind, 'band'), containsLiteral(group.name, query), isNull(group.deletedAt)))
 		.orderBy(group.name)
 		.limit(10);
 }
@@ -966,7 +965,7 @@ export async function listAll(
 	const conditions = [eq(group.kind, 'band')];
 
 	if (opts?.search) {
-		conditions.push(like(group.name, `%${opts.search}%`));
+		conditions.push(containsLiteral(group.name, opts.search));
 	}
 	if (opts?.status === 'active') {
 		conditions.push(isNull(group.deletedAt));
