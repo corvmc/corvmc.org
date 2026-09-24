@@ -85,7 +85,8 @@ import {
 	resolveFlag,
 	FlagTargetNotFoundError,
 	FlagNotFoundError,
-	FlagAlreadyResolvedError
+	FlagAlreadyResolvedError,
+	StaffActionReasonRequiredError
 } from './flag-service';
 
 beforeEach(() => {
@@ -133,6 +134,14 @@ describe('fileStaffAction', () => {
 		await Promise.resolve();
 		expect(emitMock).not.toHaveBeenCalled();
 		expect(withholdMock).not.toHaveBeenCalled();
+	});
+
+	it('refuses a staff action with no reason, since the member is shown it (#1421)', async () => {
+		vi.mocked(db.insert).mockClear();
+		await expect(
+			fileStaffAction({ entityType: 'suggestion', entityId: 's1', staffId: 'staff1', reason: '  ' })
+		).rejects.toBeInstanceOf(StaffActionReasonRequiredError);
+		expect(db.insert).not.toHaveBeenCalled();
 	});
 
 	it('rejects a target that does not exist', async () => {

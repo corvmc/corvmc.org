@@ -354,6 +354,8 @@ export interface SetVisibilityParams {
 	note?: string | null;
 	/** Null when the system moved it rather than a person. */
 	staffId: string | null;
+	/** A staffer acting outside the flag queue: a hide files the report an appeal attaches to. */
+	staffAction?: boolean;
 }
 
 export async function setVisibility(
@@ -365,6 +367,21 @@ export async function setVisibility(
 	if (existing.visibility === params.visibility) return;
 
 	const note = params.note ? trimTo(params.note, SUGGESTION_NOTE_MAX) : null;
+
+	if (
+		params.staffAction &&
+		params.staffId &&
+		params.visibility === 'hidden' &&
+		existing.authorUserId
+	) {
+		const { fileStaffAction } = await import('$lib/server/flag/flag-service');
+		await fileStaffAction({
+			entityType: 'suggestion',
+			entityId: suggestionId,
+			staffId: params.staffId,
+			reason: note ?? ''
+		});
+	}
 
 	await db
 		.update(suggestion)

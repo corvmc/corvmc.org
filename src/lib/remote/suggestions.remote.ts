@@ -372,7 +372,8 @@ export const setSuggestionVisibility = form(
 			await setVisibility(data.suggestionId, {
 				visibility: data.visibility,
 				note: data.note,
-				staffId: staff.id
+				staffId: staff.id,
+				staffAction: true
 			});
 		} catch (err) {
 			mapDomainError(err);

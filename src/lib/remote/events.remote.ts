@@ -1455,11 +1455,11 @@ export const unpublishEvent = form(
 		notes: z.string().trim().max(1000).optional()
 	}),
 	async (data) => {
-		await requireCapability('event.publish');
+		const staff = await requireCapability('event.publish');
 		// Band-sourced events notify the band's admins — pulling a gig silently is
 		// the one unpublish that needs a word back to whoever posted it.
 		try {
-			await unpublishWithNotice(data.id, { notes: data.notes });
+			await unpublishWithNotice(data.id, { notes: data.notes, staffActionBy: staff.id });
 		} catch (err) {
 			mapDomainError(err);
 		}

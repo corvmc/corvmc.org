@@ -89,8 +89,14 @@ vi.mock('$lib/server/moderation/standing-service', () => ({
 	getStanding: (...a: unknown[]) => getStandingMock(...(a as []))
 }));
 
+const { fileStaffActionMock } = vi.hoisted(() => ({ fileStaffActionMock: vi.fn() }));
+vi.mock('$lib/server/flag/flag-service', () => ({
+	fileStaffAction: (...a: unknown[]) => fileStaffActionMock(...(a as []))
+}));
+
 import {
 	createSuggestion,
+	setVisibility,
 	toggleVote,
 	mergeSuggestions,
 	respondToSuggestion,
@@ -204,6 +210,68 @@ describe('toggleVote', () => {
 	it('refuses a vote on a merged suggestion', async () => {
 		selectResultQueue = [[{ id: 's1', visibility: 'visible', mergedIntoId: 's2' }]];
 		await expect(toggleVote('s1', 'u1')).rejects.toThrow(SuggestionClosedError);
+	});
+});
+
+// #1421: a hide outside the flag queue still leaves the author a report to appeal.
+describe('setVisibility as a direct staff action', () => {
+	const memberRow = {
+		id: 's1',
+		title: 'T',
+		authorUserId: 'u1',
+		authorName: 'Ada',
+		authorEmail: 'ada@example.com',
+		visibility: 'visible'
+	};
+
+	it("files a staff_action report before hiding a member's suggestion", async () => {
+		selectResultQueue = [[memberRow]];
+		fileStaffActionMock.mockImplementation(async () => {
+			calls.push('fileStaffAction');
+			return { id: 'f9' };
+		});
+		await setVisibility('s1', {
+			visibility: 'hidden',
+			note: 'Off-topic',
+			staffId: 'staff-1',
+			staffAction: true
+		});
+
+		expect(fileStaffActionMock).toHaveBeenCalledWith({
+			entityType: 'suggestion',
+			entityId: 's1',
+			staffId: 'staff-1',
+			reason: 'Off-topic'
+		});
+		expect(calls).toEqual(['fileStaffAction', 'update']);
+	});
+
+	it('leaves the suggestion up when the report cannot be filed', async () => {
+		selectResultQueue = [[memberRow]];
+		fileStaffActionMock.mockRejectedValue(new Error('reason required'));
+		await expect(
+			setVisibility('s1', { visibility: 'hidden', staffId: 'staff-1', staffAction: true })
+		).rejects.toThrow('reason required');
+		expect(updateSet).not.toHaveBeenCalled();
+	});
+
+	it("files nothing when putting a suggestion back, or for the flag queue's own calls", async () => {
+		selectResultQueue = [[{ ...memberRow, visibility: 'hidden' }], [memberRow]];
+		await setVisibility('s1', { visibility: 'visible', staffId: 'staff-1', staffAction: true });
+		await setVisibility('s1', { visibility: 'hidden', note: 'x', staffId: 'staff-1' });
+		expect(fileStaffActionMock).not.toHaveBeenCalled();
+	});
+
+	it('files nothing for a suggestion with no author left to appeal', async () => {
+		selectResultQueue = [[{ ...memberRow, authorUserId: null }]];
+		await setVisibility('s1', {
+			visibility: 'hidden',
+			note: 'Spam',
+			staffId: 'staff-1',
+			staffAction: true
+		});
+		expect(fileStaffActionMock).not.toHaveBeenCalled();
+		expect(updateSet).toHaveBeenCalled();
 	});
 });
 

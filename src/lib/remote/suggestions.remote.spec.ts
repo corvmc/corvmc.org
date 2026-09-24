@@ -315,6 +315,21 @@ describe('staff endpoints accept staff', () => {
 		expect(result).toEqual({ targetId: 's2' });
 	});
 
+	it('files a direct hide as a staff action the author can appeal (#1421)', async () => {
+		currentUser = staff;
+		isStaff = true;
+		await remote.setSuggestionVisibility({
+			suggestionId: 's1',
+			visibility: 'hidden',
+			note: 'Spam'
+		});
+
+		expect(svc.setVisibility).toHaveBeenCalledWith(
+			's1',
+			expect.objectContaining({ visibility: 'hidden', staffId: staff.id, staffAction: true })
+		);
+	});
+
 	it('attributes a response to the staff member who wrote it', async () => {
 		currentUser = staff;
 		isStaff = true;

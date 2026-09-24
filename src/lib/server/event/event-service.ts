@@ -945,7 +945,8 @@ export async function unpublish(eventId: string): Promise<void> {
  */
 export async function unpublishWithNotice(
 	eventId: string,
-	opts: { notes?: string } = {}
+	/** `staffActionBy`: a staffer acting outside the flag queue, which files the report an appeal needs. */
+	opts: { notes?: string; staffActionBy?: string } = {}
 ): Promise<void> {
 	const [row] = await db
 		.select({
@@ -964,6 +965,16 @@ export async function unpublishWithNotice(
 		.limit(1);
 
 	if (!row || row.status !== 'published') return;
+
+	if (opts.staffActionBy && row.source === 'community' && row.createdByUserId) {
+		const { fileStaffAction } = await import('$lib/server/flag/flag-service');
+		await fileStaffAction({
+			entityType: 'event',
+			entityId: eventId,
+			staffId: opts.staffActionBy,
+			reason: opts.notes ?? ''
+		});
+	}
 
 	await unpublish(eventId);
 
