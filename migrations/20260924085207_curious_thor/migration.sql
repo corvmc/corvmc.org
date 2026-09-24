@@ -1,0 +1,1 @@
+ALTER TABLE `volunteer_role` ADD `skill_matches` text DEFAULT '[]' NOT NULL;

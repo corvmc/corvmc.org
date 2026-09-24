@@ -62,7 +62,7 @@
 	 *
 	 * Order is the whole point: a missing clearance is a refusal the service
 	 * will make anyway, so it outranks a warning, which outranks a hint about
-	 * the day, which outranks the ordinary case.
+	 * the day, which outranks a skill match, which outranks the ordinary case.
 	 */
 	function flag(row: Row): { tone: string; text: string; blocked: boolean } {
 		if (row.missing.length > 0) {
@@ -80,6 +80,14 @@
 		}
 		if (row.dayMismatch) {
 			return { tone: 'text-warning', text: 'Day may not suit — read their note', blocked: false };
+		}
+		// Why they ranked where they did (#1445), set on the role's page.
+		if (row.matchedSkills.length > 0) {
+			return {
+				tone: 'text-subtle',
+				text: `Skills: ${row.matchedSkills.join(', ')}`,
+				blocked: false
+			};
 		}
 		if (row.cleared.length > 0) {
 			return {

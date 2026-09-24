@@ -29,6 +29,8 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 	defaultCapacity?: number;
 	isSpecializedSkill?: boolean;
 	marketRateCents?: number;
+	/** Member skill tags (from `SKILLS`) that rank a candidate up on the shortlist. */
+	skillMatches?: string[];
 }> = [
 	{
 		name: 'Sound Engineering',
@@ -42,7 +44,8 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		// donated live sound is a contributed service the collective would
 		// otherwise have bought.
 		isSpecializedSkill: true,
-		marketRateCents: 6500
+		marketRateCents: 6500,
+		skillMatches: ['sound engineer']
 	},
 	{
 		name: 'Show Host',
@@ -114,7 +117,8 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		group: 'away-from-shows' as const,
 		description:
 			'Represent CMC at the farmers market, campus events, and other venues. Hand out info, talk to musicians, sign people up.',
-		displayOrder: 60
+		displayOrder: 60,
+		skillMatches: ['promoter', 'booking']
 	},
 	{
 		// Was filed under a `committee` bucket that retired with the committees

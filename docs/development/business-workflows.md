@@ -1034,7 +1034,10 @@ So:
 - **"Who to ask" sits beside the shift**, not on the role's page, and is judged as of the
   shift's own date. Three scopes — interested, has worked it, everybody — and one flag line
   per candidate, resolved in priority order: missing clearance blocks, a lapsing one warns, a
-  day their availability argues against warns, otherwise what they have done before.
+  day their availability argues against warns, a skill tag on the role's `skillMatches` list
+  shows as "Skills: …", otherwise what they have done before. Within a scope, candidates rank
+  by times worked on this role, then by how many of their skill tags are on that list (#1445).
+  Staff set the list on the role's page. It ranks and never gates.
 
 ### Code path
 

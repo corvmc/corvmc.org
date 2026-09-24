@@ -12,6 +12,8 @@ import {
 	listSignupsForUser
 } from '$lib/server/volunteer/volunteer-signup-service';
 import { mapDomainError } from '$lib/server/errors';
+import { jsonArrayField } from '$lib/utils/zod-json';
+import { suggestSkills } from '$lib/server/directory/directory-service';
 import { listMyPrograms } from '$lib/server/group/group-service';
 import { renderMarkdown } from '$lib/utils/markdown';
 import {
@@ -1070,7 +1072,11 @@ export const createVolunteerRole = form(roleFormSchema, async (data) => {
 });
 
 export const updateVolunteerRole = form(
-	roleFormSchema.extend({ id: z.string().min(1) }),
+	roleFormSchema.extend({
+		id: z.string().min(1),
+		/** JSON, written by the tag input on the role page. Absent leaves the list alone. */
+		skillMatches: jsonArrayField(z.string().max(50), 'Invalid skills').optional()
+	}),
 	async (data) => {
 		await requireCapability('volunteer.manageRoles');
 
@@ -1086,7 +1092,8 @@ export const updateVolunteerRole = form(
 				defaultDurationMinutes: optionalCount(data.defaultDurationMinutes),
 				defaultCapacity: optionalCount(data.defaultCapacity),
 				isSpecializedSkill: data.isSpecializedSkill,
-				marketRateCents: rateToCents(data.marketRate)
+				marketRateCents: rateToCents(data.marketRate),
+				skillMatches: data.skillMatches
 			});
 		} catch (err) {
 			mapDomainError(err);
@@ -2190,13 +2197,16 @@ export const getVolunteerInterestsPage = query(z.void(), async () => {
  * not be named from either. Those two lists own their queries in their own components instead.
  */
 export const getStaffVolunteerRolePage = query(z.string(), async (id) => {
-	const [role, requirements, feedback] = await Promise.all([
+	await requireCapability('volunteer.read');
+	const [role, requirements, feedback, skillSuggestions] = await Promise.all([
 		getVolunteerRoleDetail(id),
 		getRoleRequirements(id),
-		getFeedbackByRole()
+		getFeedbackByRole(),
+		// Skill tags members already use, so the role's list is written in their words.
+		suggestSkills('')
 	]);
 
-	return { role, requirements, feedback };
+	return { role, requirements, feedback, skillSuggestions };
 });
 
 /** The shift detail page's one load-bearing query. Both halves are keyed by the shift id. */

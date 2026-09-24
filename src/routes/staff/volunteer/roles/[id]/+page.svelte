@@ -14,6 +14,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
 	import { volunteerRoleGroups, volunteerRoleGroupLabels } from '$lib/config';
 	import { IconArchive, IconArchiveOff, IconTrash, IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
@@ -41,6 +42,10 @@
 	// the clock would mint a new key on every re-evaluation and the refresh after creating a shift
 	// would miss its query. RoleShiftsCard owns the query; the anchor stays here so it is stable.
 	const from = new Date().toISOString();
+
+	/** Seeded once, then owned by the tag input. */
+	// svelte-ignore state_referenced_locally
+	let skillMatches = $state<string[]>(role.skillMatches ?? []);
 
 	const groupOptions = volunteerRoleGroups.map((g) => ({
 		value: g,
@@ -227,6 +232,19 @@
 						/>
 					</div>
 				</fieldset>
+
+				<input {...fields.skillMatches.as('hidden', JSON.stringify(skillMatches))} />
+				<FormField
+					field={fields.skillMatches}
+					label="Skills that suit this role"
+					description="Member skill tags, as members write them. A member with one of these ranks higher on a shift's Who to ask list. It never stops anyone being asked."
+				>
+					<FreeformTagInput
+						bind:value={skillMatches}
+						suggestions={pageData.skillSuggestions}
+						placeholder="e.g. sound engineer, live sound..."
+					/>
+				</FormField>
 
 				<div class="mt-2 flex justify-end">
 					<SubmitButton shortcut="mod+s">
