@@ -67,6 +67,9 @@ function notFound(resource: string, id: string): never {
 	throw err;
 }
 
+/** The one Location the fake knows: what the door uses when no real one is configured. */
+export const FAKE_TERMINAL_LOCATION_ID = 'tml_fake_door';
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -376,7 +379,31 @@ export function createFakeGateway(): PaymentGateway {
 			retrieve: async (id: string) => {
 				const intent = store.paymentIntents.get(id);
 				return intent ? respond(intent) : notFound('payment_intent', id);
-			}
+			},
+			// Only the door creates an intent directly; everything online goes
+			// through a Checkout Session. It waits for a tap, as a real one does.
+			create: async (params) => {
+				const id = fakeId('pi');
+				const intent = fakePaymentIntent({
+					id,
+					amount: params.amount,
+					currency: params.currency,
+					status: 'requires_payment_method',
+					payment_method_types: params.payment_method_types ?? ['card'],
+					capture_method: params.capture_method ?? 'automatic',
+					client_secret: `${id}_secret_fake`,
+					metadata: (params.metadata as Record<string, string>) ?? {}
+				});
+				store.paymentIntents.set(id, intent);
+				return respond(intent);
+			},
+			cancel: (async (id: string) => {
+				const intent = store.paymentIntents.get(id);
+				if (!intent) return notFound('payment_intent', id);
+				const cancelled: Stripe.PaymentIntent = { ...intent, status: 'canceled' };
+				store.paymentIntents.set(id, cancelled);
+				return respond(cancelled);
+			}) as PaymentGateway['paymentIntents']['cancel']
 		},
 
 		paymentMethods: {
@@ -512,6 +539,32 @@ export function createFakeGateway(): PaymentGateway {
 				if (!intent) notFound('setup intent', String(id));
 				return respond(intent);
 			}) as PaymentGateway['setupIntents']['retrieve']
+		},
+
+		terminal: {
+			connectionTokens: {
+				create: async (params) =>
+					respond({
+						object: 'terminal.connection_token',
+						secret: `pst_test_${fakeId('tok')}`,
+						location: params?.location
+					} as Stripe.Terminal.ConnectionToken)
+			},
+			locations: {
+				retrieve: (async (id: string) =>
+					id === FAKE_TERMINAL_LOCATION_ID
+						? respond({
+								id,
+								object: 'terminal.location',
+								display_name: 'Corvallis Music Collective',
+								livemode: false,
+								metadata: {}
+							} as unknown as Stripe.Terminal.Location)
+						: notFound(
+								'terminal location',
+								id
+							)) as PaymentGateway['terminal']['locations']['retrieve']
+			}
 		},
 
 		subscriptions: {
