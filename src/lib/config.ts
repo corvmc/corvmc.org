@@ -2001,8 +2001,8 @@ export const capabilities = {
 	// it. A chair does this through `group_member.role = 'admin'`; this is the
 	// other door, and a headless committee has only this one.
 	committee: ['reviewApplications'],
-	// `uploadRecap` is also held, outside this matrix, by anyone with a current
-	// RECAP_PHOTOGRAPHER_CERTIFICATION: volunteer photographers hold no position.
+	// `uploadRecap` is also held, for one event only, by whoever is confirmed on
+	// that event's SHOW_DOCUMENTATION_ROLE_ID work order (#1500).
 	event: ['read', 'manage', 'publish', 'manageTickets', 'uploadRecap'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
 	// Door access: granting and revoking standing member codes, adopting the
@@ -2055,10 +2055,12 @@ export const capabilities = {
 } as const;
 
 /**
- * The volunteer certification that lets a member upload event recap photos.
- * Matched by name, so renaming the certification withdraws the grant.
+ * The "Show Documentation" volunteer role (#1500). A member confirmed on an
+ * event's work order for this role may upload that event's recap photos. Keyed
+ * by id, so renaming the role changes nothing; the row comes from
+ * `scripts/db/backfill/show-documentation-role.sql` and the dev seed.
  */
-export const RECAP_PHOTOGRAPHER_CERTIFICATION = 'Photographer';
+export const SHOW_DOCUMENTATION_ROLE_ID = 'bd3734c3-fbbf-40bc-b277-886a8a01fd77';
 
 export type Capabilities = typeof capabilities;
 export type Resource = keyof Capabilities;

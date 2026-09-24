@@ -76,6 +76,9 @@ Filed as `agent-filed` Task issues for review, each titled as the decision:
 
 - **Only `event.manage` holders upload recap photos** (#1398). Not bands, not the Documentation role, not
   attendees.
+  ⏫ Superseded by #1500. `event.uploadRecap` holders can upload to any event. A member confirmed on
+  an event's work order for the Show Documentation role (`SHOW_DOCUMENTATION_ROLE_ID`) can upload to
+  that event only. The interim "Photographer" certification is gone.
 - **Recap photos publish without a review queue** (#1399). Staff-only uploads need no moderation step.
 - **Consent is handled by takedown, not by a release on file per photo** (#1400). A person who asks is
   removed by staff detaching the photo.

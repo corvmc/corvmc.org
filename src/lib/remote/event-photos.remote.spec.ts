@@ -19,10 +19,11 @@ const requireUser = vi.fn(() => {
 });
 vi.mock('$lib/server/authorization', () => ({ requireCapability, can, requireUser }));
 
-const holdsCertificationNamed = vi.fn(async () => photographer);
-vi.mock('$lib/server/volunteer/member-certification-service', () => ({
-	holdsCertificationNamed
-}));
+// The per-event lookup itself is pinned in recap-access.spec.ts.
+const recapUploadAccess = vi.fn(async (_userId: string | undefined, _eventId: string) =>
+	canUploadRecap ? 'capability' : photographer ? 'photographer' : null
+);
+vi.mock('$lib/server/event/recap-access', () => ({ recapUploadAccess }));
 
 vi.mock('@sveltejs/kit', () => ({
 	error: (status: number, message: string) => {
@@ -93,17 +94,18 @@ describe('event-photos.remote', () => {
 	it('uploads for a holder of event.uploadRecap, refreshing both pages', async () => {
 		canUploadRecap = true;
 		await remote.uploadEventPhotos({ eventId: 'e1', photos: [photo] });
-		expect(can).toHaveBeenCalledWith('event.uploadRecap');
+		expect(recapUploadAccess).toHaveBeenCalledWith('staff-1', 'e1');
 		expect(svc.addEventPhotos).toHaveBeenCalledWith('e1', 'staff-1', [photo]);
 		expect(refreshPublic).toHaveBeenCalled();
 		expect(refresh).toHaveBeenCalled();
 	});
 
-	// #1398: a volunteer photographer holds a certification, not a position.
-	it('uploads for a member holding the photographer certification', async () => {
+	// #1500: a volunteer photographer is whoever is confirmed on this show's
+	// documentation work order, so the check is asked about this event.
+	it("uploads for the member confirmed on this event's documentation work order", async () => {
 		photographer = true;
 		await remote.uploadEventPhotos({ eventId: 'e1', photos: [photo] });
-		expect(holdsCertificationNamed).toHaveBeenCalledWith('member-1', 'Photographer');
+		expect(recapUploadAccess).toHaveBeenCalledWith('member-1', 'e1');
 		expect(svc.addEventPhotos).toHaveBeenCalledWith('e1', 'member-1', [photo]);
 		expect(refreshPublic).toHaveBeenCalled();
 		// They cannot read the staff console, so it is not theirs to refresh.

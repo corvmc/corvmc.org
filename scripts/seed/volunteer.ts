@@ -14,12 +14,14 @@ import { batchInsert, db } from './db';
 import { type SeedEvent, type SeedUser } from './types';
 import { pick, pickN, ptDate, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
-import { RECAP_PHOTOGRAPHER_CERTIFICATION } from '../../src/lib/config';
+import { SHOW_DOCUMENTATION_ROLE_ID } from '../../src/lib/config';
 
 // `defaultDurationMinutes` / `defaultCapacity` are what the New Shift form starts
 // with, so they are only set on the roles that really are scheduled as shifts —
 // leaving the last two blank exercises the fallback path too.
 export const VOLUNTEER_ROLE_SEEDS: Array<{
+	/** Only for a role the code keys on by id; the rest take a random one. */
+	id?: string;
 	name: string;
 	description: string;
 	group: 'at-shows' | 'away-from-shows';
@@ -128,6 +130,18 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		description:
 			'Behind-the-scenes work: data entry, grant paperwork, scheduling, and answering the inbox.',
 		displayOrder: 70
+	},
+	{
+		// #1500: a confirmed signup on a show's work order for this role lets the
+		// member upload that show's recap photos. Keyed by id, as production is.
+		id: SHOW_DOCUMENTATION_ROLE_ID,
+		name: 'Show Documentation',
+		group: 'at-shows' as const,
+		description:
+			"Photograph a show for its recap. Staff confirming you on the shift lets you add photos to that show's page.",
+		displayOrder: 45,
+		defaultDurationMinutes: 240,
+		defaultCapacity: 1
 	},
 	{
 		// What replaced the six per-committee roles: one role, and the log names
@@ -385,36 +399,11 @@ export async function seedCertifications(users: any[], roles: any[]) {
 		})
 	);
 
-	// The recap photographer (#1398): matched by name, so it must be exactly
-	// RECAP_PHOTOGRAPHER_CERTIFICATION. One holder, no draw, so later seeding is
-	// unchanged.
-	const [photoCert] = await batchInsert(volunteerCertification, [
-		{
-			id: randomUUID(),
-			name: RECAP_PHOTOGRAPHER_CERTIFICATION,
-			description: 'Cleared to upload recap photos to past event pages.',
-			issuedBy: null,
-			validityMonths: null,
-			displayOrder: 40
-		}
-	]);
-	if (holders[0]) {
-		await batchInsert(memberCertification, [
-			{
-				id: randomUUID(),
-				userId: holders[0].id,
-				certificationId: photoCert.id,
-				grantedAt: new Date(now.getTime() - 60 * day),
-				expiresAt: null
-			}
-		]);
-	}
-
 	// The certification rows travel out, not just their count: `seedVolunteerPersonas`
 	// grants against these two by id.
 	return {
-		certs: 4,
-		held: held.length + (holders[0] ? 1 : 0),
+		certs: 3,
+		held: held.length,
 		deskCert,
 		foodCert,
 		orientationCert
@@ -628,11 +617,41 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 		}
 	}
 
+	// The recap photographer (#1500): a completed Show Documentation shift on a
+	// past show, so that show's page offers its volunteer the uploader. Added
+	// last and without a draw, so every row above seeds as it did.
+	const documented = pastShows.at(-1);
+	let docShifts = 0;
+	if (documented && users[0]) {
+		docShifts = 1;
+		const [docShift] = await batchInsert(workOrder, [
+			{
+				id: randomUUID(),
+				volunteerRoleId: SHOW_DOCUMENTATION_ROLE_ID,
+				eventId: documented.id,
+				title: null,
+				startsAt: new Date(documented.startsAt.getTime() - 30 * 60_000),
+				endsAt: documented.endsAt ?? new Date(documented.startsAt.getTime() + 4 * 3_600_000),
+				capacity: 1,
+				notes: null
+			}
+		]);
+		signupRows.push({
+			id: randomUUID(),
+			shiftId: docShift.id,
+			userId: users[0].id,
+			status: 'completed',
+			claimedAt: new Date(documented.startsAt.getTime() - 5 * day),
+			confirmedAt: new Date(documented.startsAt.getTime() - 4 * day),
+			completedAt: docShift.endsAt
+		});
+	}
+
 	const signups = await batchInsert(volunteerSignup, signupRows, 8);
 	const feedback = await batchInsert(volunteerShiftFeedback, feedbackRows, 8);
 
 	return {
-		shifts: shiftRows.length,
+		shifts: shiftRows.length + docShifts,
 		signups: signups.length,
 		feedback: feedback.length,
 		completions
