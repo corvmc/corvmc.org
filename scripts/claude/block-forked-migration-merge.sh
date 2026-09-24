@@ -46,17 +46,26 @@ note() { printf 'block-forked-migration-merge: %s\n' "$1" >&2; }
 
 payload=$(cat)
 
-command=$(printf '%s' "$payload" | node -e '
-	let raw = "";
-	process.stdin.on("data", (c) => (raw += c));
-	process.stdin.on("end", () => {
-		try {
-			process.stdout.write(JSON.parse(raw).tool_input?.command ?? "");
-		} catch {
-			process.stdout.write("");
-		}
-	});
-' 2>/dev/null)
+parse_command() {
+	printf '%s' "$payload" | node -e '
+		let raw = "";
+		process.stdin.on("data", (c) => (raw += c));
+		process.stdin.on("end", () => {
+			try {
+				process.stdout.write(JSON.parse(raw).tool_input?.command ?? "");
+			} catch {
+				process.exit(3);
+			}
+		});
+	' 2>/dev/null
+}
+
+# A failed parse is not "no command": it must not share that path's silent exit.
+# One retry, because the observed failure (#1601) was a spawn under CI load.
+if ! command=$(parse_command) && ! command=$(parse_command); then
+	note 'not evaluated: could not parse the hook payload.'
+	exit 0
+fi
 
 [ -n "$command" ] || exit 0
 

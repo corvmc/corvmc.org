@@ -156,6 +156,46 @@ describe('block-forked-migration-merge', () => {
 		}
 	});
 
+	it('says on stderr when the payload is not JSON it can read', () => {
+		// #1601: an unparseable payload took the "nothing to evaluate" exit in silence.
+		const result = spawnSync('bash', [script], { cwd: repo, input: '{not json', encoding: 'utf8' });
+		expect(result.status).toBe(0);
+		expect(result.stderr).toContain('could not parse the hook payload');
+	});
+
+	it('says on stderr when the parser itself could not run', () => {
+		// What a `node` spawn that dies under CI load looks like from the script.
+		const shims = mkdtempSync(join(tmpdir(), 'fork-merge-guard-shims-'));
+		try {
+			writeFileSync(join(shims, 'node'), '#!/usr/bin/env bash\nexit 137\n');
+			chmodSync(join(shims, 'node'), 0o755);
+			const result = spawnSync('bash', [script], {
+				cwd: repo,
+				input: JSON.stringify({ tool_input: { command: 'gh pr merge 123 --auto' } }),
+				env: {
+					...process.env,
+					DRIZZLE_KIT_BIN: forkingCheck,
+					PATH: `${shims}:${process.env.PATH}`
+				},
+				encoding: 'utf8'
+			});
+			expect(result.status).toBe(0);
+			expect(result.stderr).toContain('could not parse the hook payload');
+		} finally {
+			rmSync(shims, { recursive: true, force: true });
+		}
+	});
+
+	it('stays quiet on a payload that simply has no command', () => {
+		const result = spawnSync('bash', [script], {
+			cwd: repo,
+			input: JSON.stringify({ tool_input: { file_path: 'x' } }),
+			encoding: 'utf8'
+		});
+		expect(result.status).toBe(0);
+		expect(result.stderr).toBe('');
+	});
+
 	it('fails open outside a git repository', () => {
 		const bare = mkdtempSync(join(tmpdir(), 'fork-merge-guard-bare-'));
 		try {
