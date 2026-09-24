@@ -32,6 +32,7 @@ import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 import {
 	createMaintenanceSchedule,
+	getScheduleGroupId,
 	listMaintenanceSchedules,
 	nextDueAt,
 	nextOccurrenceInsert,
@@ -138,6 +139,18 @@ describe('createMaintenanceSchedule', () => {
 		expect(valuesCalls()[0].assetId).toBeNull();
 	});
 
+	it('records the committee that owns it (#1512)', async () => {
+		selectQueue = [[{ id: 'role-1', isActive: true }]];
+		await createMaintenanceSchedule({ ...input, groupId: 'grp-booking' });
+		expect(valuesCalls()[0].groupId).toBe('grp-booking');
+	});
+
+	it('leaves a staff schedule with no committee', async () => {
+		selectQueue = [[{ id: 'role-1', isActive: true }]];
+		await createMaintenanceSchedule(input);
+		expect(valuesCalls()[0].groupId).toBeNull();
+	});
+
 	it('refuses an interval under a day', async () => {
 		selectQueue = [[{ id: 'role-1', isActive: true }]];
 		await expect(createMaintenanceSchedule({ ...input, intervalDays: 0 })).rejects.toThrow(
@@ -196,5 +209,29 @@ describe('listMaintenanceSchedules', () => {
 		const rendered = new SQLiteSyncDialect().sqlToQuery(select.assignees as SQL).sql;
 		expect(rendered).toContain('"volunteer_signup"');
 		expect(rendered).toContain("'claimed', 'confirmed', 'completed'");
+	});
+});
+
+// #1512: a committee reads and retires only its own recurring work.
+describe('committee-owned schedules', () => {
+	it('narrows the list to one committee when asked', async () => {
+		selectQueue = [[]];
+		await listMaintenanceSchedules({ groupId: 'grp-booking' });
+		const where = chainCalls.find((c) => c.method === 'where')!.args[0] as SQL;
+		const q = new SQLiteSyncDialect().sqlToQuery(where);
+		expect(q.sql).toContain('"group_id"');
+		expect(q.params).toContain('grp-booking');
+	});
+
+	it('lists every schedule for staff', async () => {
+		selectQueue = [[]];
+		await listMaintenanceSchedules();
+		expect(chainCalls.find((c) => c.method === 'where')?.args[0]).toBeUndefined();
+	});
+
+	it('reads the owning committee from the row, and 404s on an unknown schedule', async () => {
+		selectQueue = [[{ groupId: 'grp-booking' }], []];
+		expect(await getScheduleGroupId('ms-1')).toBe('grp-booking');
+		await expect(getScheduleGroupId('nope')).rejects.toThrow('Recurring work not found');
 	});
 });

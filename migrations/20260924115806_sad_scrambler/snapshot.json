@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "2e53e586-8d3d-4068-9e2d-abab2f9ab8d2",
+  "id": "c704b796-8b63-42a8-b9ab-b3794d6906a2",
   "prevIds": [
-    "b871e8d0-5ddb-4bc1-8b4e-dce90a4ee7cc"
+    "2e53e586-8d3d-4068-9e2d-abab2f9ab8d2"
   ],
   "ddl": [
     {
@@ -8666,6 +8666,16 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "maintenance_schedule"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "notes",
       "entityType": "columns",
       "table": "maintenance_schedule"
@@ -15812,6 +15822,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_maintenance_schedule_asset_id_inventory_asset_id_fk",
+      "entityType": "fks",
+      "table": "maintenance_schedule"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_maintenance_schedule_group_id_group_id_fk",
       "entityType": "fks",
       "table": "maintenance_schedule"
     },

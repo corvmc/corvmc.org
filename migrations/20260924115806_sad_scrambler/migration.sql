@@ -1,0 +1,1 @@
+ALTER TABLE `maintenance_schedule` ADD `group_id` text REFERENCES `group`(id) ON DELETE SET NULL;

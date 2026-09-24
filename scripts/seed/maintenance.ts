@@ -5,6 +5,7 @@ import {
 	workOrder
 } from '../../src/lib/server/db/schema/volunteer';
 import { inventoryAsset, inventoryItem } from '../../src/lib/server/db/schema/inventory';
+import { group } from '../../src/lib/server/db/schema/group';
 import { batchInsert, db } from './db';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
@@ -111,5 +112,25 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 		]);
 	}
 
-	return { schedules: 4 };
+	// A committee's own standing checklist (#1512), shown on its Projects tab.
+	const [booking] = await db
+		.select({ id: group.id })
+		.from(group)
+		.where(eq(group.slug, 'booking-committee'))
+		.limit(1);
+	if (!booking) return { schedules: 4 };
+	const holds = {
+		id: randomUUID(),
+		name: 'Weekly holds review',
+		intervalDays: 7,
+		groupId: booking.id
+	};
+	await batchInsert(maintenanceSchedule, [
+		{ ...holds, volunteerRoleId: role.id, capacity: 1, createdByUserId: staffId }
+	]);
+	await batchInsert(workOrder, [
+		{ id: randomUUID(), ...base, maintenanceScheduleId: holds.id, title: holds.name, dueAt: at(4) }
+	]);
+
+	return { schedules: 5 };
 }
