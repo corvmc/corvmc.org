@@ -51,12 +51,20 @@ function declaredProps(file: string): Set<string> {
 
 type Usage = { component: string; file: string; line: number; attr: string };
 
-/** Every attribute passed to any of `components`, across `files`, in one parse pass. */
-function usagesOf(components: Set<string>, files: string[]): Usage[] {
+/**
+ * Every `.svelte` file under `src`, parsed once at module scope. That runs during
+ * collection rather than inside an `it`, so a growing tree cannot push a test past
+ * vitest's per-test timeout, and both suites below share the one pass.
+ */
+const parsedTree = svelteFiles(src).map((file) => {
+	const source = fs.readFileSync(file, 'utf8');
+	return { file, source, ast: parse(source, { modern: true, filename: file }) };
+});
+
+/** Every attribute passed to any of `components`, anywhere under `src`. */
+function usagesOf(components: Set<string>): Usage[] {
 	const found: Usage[] = [];
-	for (const file of files) {
-		const source = fs.readFileSync(file, 'utf8');
-		const ast = parse(source, { modern: true, filename: file });
+	for (const { file, source, ast } of parsedTree) {
 		const visit = (node: unknown): void => {
 			if (!node || typeof node !== 'object') return;
 			if (Array.isArray(node)) return node.forEach(visit);
@@ -87,7 +95,7 @@ const actionProps = declaredProps(path.join(src, 'lib/components/ui/Action.svelt
 
 describe('Action call sites', () => {
 	it('pass no prop Action does not declare', () => {
-		const stray = usagesOf(new Set(['Action']), svelteFiles(src)).filter(
+		const stray = usagesOf(new Set(['Action'])).filter(
 			(u) => !actionProps.has(u.attr) && !HTML_PASSTHROUGH.test(u.attr)
 		);
 
@@ -116,7 +124,7 @@ describe('actions/* call sites', () => {
 			accepted.set(name, new Set([...declaredProps(file), ...actionProps]));
 		}
 
-		const stray = usagesOf(new Set(accepted.keys()), svelteFiles(src)).filter(
+		const stray = usagesOf(new Set(accepted.keys())).filter(
 			(u) => !accepted.get(u.component)!.has(u.attr) && !HTML_PASSTHROUGH.test(u.attr)
 		);
 
