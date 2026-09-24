@@ -25,6 +25,20 @@ const service = {
 };
 vi.mock('$lib/server/sponsor/sponsor-service', () => service);
 
+const credits = {
+	listPlacementsForSponsor: vi.fn(async () => []),
+	sponsorLogoKey: vi.fn(async () => null),
+	placeSponsorship: vi.fn(async () => undefined),
+	removePlacement: vi.fn(async () => undefined),
+	setSponsorLogo: vi.fn(async () => undefined),
+	removeSponsorLogo: vi.fn(async () => undefined)
+};
+vi.mock('$lib/server/sponsor/credit-service', () => credits);
+vi.mock('$lib/server/storage', () => ({
+	validateUpload: () => null,
+	resolveImageUrl: (k: string | null) => (k ? `https://img/${k}` : null)
+}));
+
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: {} }),
 	query: (...args: unknown[]) => {
@@ -47,6 +61,12 @@ vi.mock('$app/server', () => ({
 	},
 	command: (h: unknown) => h
 }));
+vi.mock('@sveltejs/kit', async (orig) => ({
+	...(await orig<object>()),
+	invalid: (msg: unknown) => {
+		throw new Error(`invalid: ${String(msg)}`);
+	}
+}));
 
 const remote = (await import('./sponsors.remote')) as unknown as Record<
 	string,
@@ -55,6 +75,14 @@ const remote = (await import('./sponsors.remote')) as unknown as Record<
 
 const SPONSOR = { name: 'Troubadour Music' };
 const SHIP = { sponsorId: 's1', title: 'Season', status: 'active' };
+const PLACE = {
+	sponsorId: 's1',
+	sponsorshipId: 'p1',
+	eventId: 'e1',
+	onEventPage: true,
+	inCampaign: false
+};
+const LOGO = { sponsorId: 's1', logo: new File(['x'], 'logo.png', { type: 'image/png' }) };
 
 const CASES: Array<{ name: string; cap: string; arg?: unknown; spy: ReturnType<typeof vi.fn> }> = [
 	{ name: 'getSponsors', cap: 'sponsor.read', arg: undefined, spy: service.listSponsors },
@@ -79,6 +107,20 @@ const CASES: Array<{ name: string; cap: string; arg?: unknown; spy: ReturnType<t
 		cap: 'sponsor.manage',
 		arg: { id: 'p1', sponsorId: 's1' },
 		spy: service.deleteSponsorship
+	},
+	{ name: 'placeSponsorship', cap: 'sponsor.manage', arg: PLACE, spy: credits.placeSponsorship },
+	{
+		name: 'removePlacement',
+		cap: 'sponsor.manage',
+		arg: { id: 'x1', sponsorId: 's1' },
+		spy: credits.removePlacement
+	},
+	{ name: 'setSponsorLogo', cap: 'sponsor.manage', arg: LOGO, spy: credits.setSponsorLogo },
+	{
+		name: 'removeSponsorLogo',
+		cap: 'sponsor.manage',
+		arg: { sponsorId: 's1' },
+		spy: credits.removeSponsorLogo
 	}
 ];
 
@@ -114,5 +156,15 @@ describe('sponsor input', () => {
 		expect(service.createSponsorship).toHaveBeenCalledWith(
 			expect.objectContaining({ tier: null, endsOn: null, amountCents: null })
 		);
+	});
+});
+
+describe('sponsor detail', () => {
+	it("carries the sponsor's placements and a public logo URL", async () => {
+		held = new Set(['sponsor.read']);
+		credits.sponsorLogoKey.mockResolvedValueOnce('sponsors/logos/s1.png' as never);
+		const detail = (await remote.getSponsorDetail('s1')) as Record<string, unknown>;
+		expect(detail.logoUrl).toBe('https://img/sponsors/logos/s1.png');
+		expect(detail.placements).toEqual([]);
 	});
 });

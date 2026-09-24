@@ -12,16 +12,22 @@
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import SponsorFields from '$lib/components/sponsor/SponsorFields.svelte';
 	import SponsorshipFields from './SponsorshipFields.svelte';
+	import PlacementFields from './PlacementFields.svelte';
+	import { Field } from '$lib/components/ui/Form';
 	import {
 		getSponsorDetail,
 		updateSponsor,
 		deleteSponsor,
 		createSponsorship,
 		updateSponsorship,
-		deleteSponsorship
+		deleteSponsorship,
+		placeSponsorship,
+		removePlacement,
+		setSponsorLogo,
+		removeSponsorLogo
 	} from '$lib/remote/sponsors.remote';
 	import { sponsorshipStatusLabels, sponsorshipStatusBadge } from '$lib/config';
-	import { formatCents } from '$lib/utils/format';
+	import { formatCents, formatDateShortYear } from '$lib/utils/format';
 	import { formatIsoDay } from '$lib/utils/deadline';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -68,6 +74,54 @@
 				<Fact label="Notes" wrap>{sponsor.notes}</Fact>
 			{/if}
 		</DefinitionList>
+	</InfoCard>
+
+	<InfoCard title="Logo">
+		{#snippet action()}
+			<Action
+				action={setSponsorLogo}
+				label={sponsor.logoUrl ? 'Replace' : 'Upload'}
+				variant="ghost"
+				size="sm"
+				modalTitle="{sponsor.name} logo"
+				submitLabel="Upload"
+				successToast="Logo saved"
+			>
+				{#snippet form()}
+					<input type="hidden" name="sponsorId" value={sponsor.id} />
+					<Field
+						field={setSponsorLogo.fields.logo}
+						type="file"
+						label="Logo"
+						accept="image/jpeg,image/png,image/webp"
+						description="Shown beside their credit on event pages."
+					/>
+				{/snippet}
+			</Action>
+		{/snippet}
+		{#if sponsor.logoUrl}
+			<div class="flex items-center gap-4">
+				<img src={sponsor.logoUrl} alt="{sponsor.name} logo" class="h-16 w-auto" />
+				<Action
+					action={removeSponsorLogo}
+					label="Remove"
+					variant="ghost"
+					size="sm"
+					class="text-error"
+					modalTitle="Remove the logo?"
+					submitLabel="Remove"
+					submitVariant="error"
+					successToast="Logo removed"
+				>
+					{#snippet form()}
+						<input type="hidden" name="sponsorId" value={sponsor.id} />
+						<p class="text-sm">Their credits show the name alone until a new one is uploaded.</p>
+					{/snippet}
+				</Action>
+			</div>
+		{:else}
+			<p class="text-muted">No logo. Credits show the name alone.</p>
+		{/if}
 	</InfoCard>
 
 	<InfoCard title="Sponsorships">
@@ -118,6 +172,23 @@
 							{s.amountCents != null ? formatCents(s.amountCents) : '—'}
 						</td>
 						<td class="w-px whitespace-nowrap">
+							{#if s.status !== 'declined'}
+								<Action
+									action={placeSponsorship.for(s.id)}
+									label="Place"
+									variant="ghost"
+									size="sm"
+									modalTitle="Credit {s.title} on a show"
+									submitLabel="Place"
+									successToast="Placed"
+								>
+									{#snippet form()}
+										<input type="hidden" name="sponsorId" value={sponsor.id} />
+										<input type="hidden" name="sponsorshipId" value={s.id} />
+										<PlacementFields fields={placeSponsorship.for(s.id).fields} />
+									{/snippet}
+								</Action>
+							{/if}
 							<Action
 								action={edit}
 								label="Edit"
@@ -150,6 +221,58 @@
 									<p class="text-sm">
 										For a row that should never have existed. A term that ran its course is Ended.
 									</p>
+								{/snippet}
+							</Action>
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/if}
+	</InfoCard>
+
+	<InfoCard title="Event placements">
+		{#if sponsor.placements.length === 0}
+			<EmptyState
+				title="Not placed on any show"
+				description="Place a sponsorship to credit them on an event page or in its emails."
+			/>
+		{:else}
+			<Table>
+				{#snippet head()}
+					<th>Show</th>
+					<th class="col-support">Sponsorship</th>
+					<th>Credited</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
+				{/snippet}
+				{#each sponsor.placements as p (p.id)}
+					<tr>
+						<td class="cell-primary">
+							<a class="link font-medium" href={resolve(`/staff/events/${p.eventId}`)}>
+								{p.eventTitle}
+							</a>
+							<div class="text-muted">{formatDateShortYear(p.startsAt)}</div>
+						</td>
+						<td class="col-support">{p.sponsorshipTitle}</td>
+						<td class="whitespace-nowrap">
+							{#if p.onEventPage}<Badge variant="outline" size="sm">Event page</Badge>{/if}
+							{#if p.inCampaign}<Badge variant="outline" size="sm">Email</Badge>{/if}
+						</td>
+						<td class="w-px">
+							<Action
+								action={removePlacement.for(p.id)}
+								label="Remove"
+								variant="ghost"
+								size="sm"
+								class="text-error"
+								modalTitle="Stop crediting them on {p.eventTitle}?"
+								submitLabel="Remove"
+								submitVariant="error"
+								successToast="Removed"
+							>
+								{#snippet form()}
+									<input type="hidden" name="id" value={p.id} />
+									<input type="hidden" name="sponsorId" value={sponsor.id} />
+									<p class="text-sm">Emails already sent keep the credit they went out with.</p>
 								{/snippet}
 							</Action>
 						</td>

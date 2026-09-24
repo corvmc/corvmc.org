@@ -1,9 +1,11 @@
 import {
 	sponsor,
 	sponsorship,
+	sponsorPlacement,
 	type NewSponsor,
 	type NewSponsorship
 } from '../../src/lib/server/db/schema/sponsor';
+import type { SeedEvent } from './types';
 import { batchInsert } from './db';
 import { ptDate } from './util';
 
@@ -14,9 +16,11 @@ function day(offset: number): string {
 
 /**
  * Four sponsors: one running, one whose term has lapsed unrenewed, one being
- * pitched, and one whose only term ended. Dated relative to today.
+ * pitched, and one whose only term ended. Dated relative to today. The running
+ * term is placed on the next two published shows; the pitch on one more, where
+ * it stays invisible until it is active.
  */
-export async function seedSponsors() {
+export async function seedSponsors(events: SeedEvent[]) {
 	console.log('Seeding sponsors...');
 
 	const sponsors: NewSponsor[] = [
@@ -34,6 +38,7 @@ export async function seedSponsors() {
 
 	const ships: NewSponsorship[] = [
 		{
+			id: 'seed-sponsorship-troubadour-season',
 			sponsorId: 'seed-sponsor-troubadour',
 			title: 'Season sponsor',
 			tier: 'Gold',
@@ -61,6 +66,7 @@ export async function seedSponsors() {
 			endsOn: day(-6)
 		},
 		{
+			id: 'seed-sponsorship-credit-union-pitch',
 			sponsorId: 'seed-sponsor-credit-union',
 			title: 'All-ages shows',
 			status: 'prospect',
@@ -78,5 +84,25 @@ export async function seedSponsors() {
 
 	await batchInsert(sponsor, sponsors);
 	await batchInsert(sponsorship, ships);
-	return { sponsors: sponsors.length };
+
+	const now = new Date();
+	const upcoming = events
+		.filter((e) => e.status === 'published' && e.startsAt > now)
+		.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+	const placements = [
+		...upcoming.slice(0, 2).map((e) => ({
+			sponsorshipId: 'seed-sponsorship-troubadour-season',
+			eventId: e.id,
+			onEventPage: true,
+			inCampaign: true
+		})),
+		...upcoming.slice(2, 3).map((e) => ({
+			sponsorshipId: 'seed-sponsorship-credit-union-pitch',
+			eventId: e.id,
+			onEventPage: true,
+			inCampaign: false
+		}))
+	];
+	if (placements.length > 0) await batchInsert(sponsorPlacement, placements);
+	return { sponsors: sponsors.length, placements: placements.length };
 }

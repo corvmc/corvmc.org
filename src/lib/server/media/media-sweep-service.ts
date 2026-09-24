@@ -13,6 +13,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { audioRelease } from '$lib/server/db/schema/audio';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { artifactRequest } from '$lib/server/db/schema/artifact-request';
+import { sponsor } from '$lib/server/db/schema/sponsor';
 import { deleteObject } from '$lib/server/storage';
 import { deletePrivateObject } from '$lib/server/private-storage';
 import { isWithheldPosterKey } from '$lib/server/storage-keys';
@@ -53,7 +54,10 @@ const PARENT_TABLES = {
 	directory_entry: directoryEntry,
 	// Delivered poster art. A request cascades with its event, and a promoted
 	// poster is a second attachment, so reaping this one frees nothing in use.
-	artifact_request: artifactRequest
+	artifact_request: artifactRequest,
+	// A sponsor's logo. Sponsors are refused deletion while they have terms, so
+	// this reaps only the logo of one deleted before it ever sponsored.
+	sponsor
 } as const satisfies Record<AttachableType, unknown>;
 
 export type SweepResult = {

@@ -61,6 +61,8 @@ export const tableOrder = [
 	'production_expense',
 	// References event_listing and directory_entry, so it clears before both.
 	'artifact_request',
+	// References sponsorship and event_listing, so it follows both.
+	'sponsor_placement',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
 	// (docs/specs/shipped/media-spec.md), so it constrains nothing else in this order.

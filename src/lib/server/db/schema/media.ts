@@ -30,7 +30,9 @@ export const mediaSlots = [
 	 * A release's cover. Not `poster` or `hero`: it is square, it is the thing a
 	 * radio widget shows at 40px, and a release has exactly one.
 	 */
-	'cover'
+	'cover',
+	/** A sponsor's mark, beside its credit on an event page. */
+	'logo'
 ] as const;
 export type MediaSlot = (typeof mediaSlots)[number];
 
