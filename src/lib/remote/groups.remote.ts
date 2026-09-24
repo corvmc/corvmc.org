@@ -5,6 +5,7 @@ import { form } from './_remote';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupJoinPolicies } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { setCommitteeCapabilityGrants } from '$lib/server/capability/capability-grant-service';
+import { allowlisted } from '$lib/server/capability/grant-rules';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { requireGroupRole, requireProgramRole } from '$lib/server/group/group-context';
 import { listForCommittee } from '$lib/server/group/committee-application-service';
@@ -357,6 +358,10 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		},
 		role,
 		canManage,
+		// What this committee's members may do on its records; the page hides the
+		// rest, and `requireCommitteeMember` refuses it anyway.
+		grants:
+			group.kind === 'committee' ? allowlisted(group.capabilityGrants ?? [], 'committee') : [],
 		// The roster renders a self-edit on this row and nothing else reads it.
 		// A staff non-member has no row, so it simply matches nobody.
 		viewerId: ctx.user.id,

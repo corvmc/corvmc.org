@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import { requireUser, isElevated, can } from '$lib/server/authorization';
 import type { GroupRole } from '$lib/server/db/schema/group';
 import type { Capability } from '$lib/config';
+import { allowlisted, committeeAllows } from '$lib/server/capability/grant-rules';
 import { getBySlug, getByIdActive, getUserRole } from '$lib/server/band/band-service';
 
 /**
@@ -95,8 +96,8 @@ export async function requireCommitteeReviewer(ref: GroupRef): Promise<GroupCont
 }
 
 /**
- * Act on a row a committee owns: any active member of that committee, or a
- * holder of `cover`, because staff must always be able to act.
+ * Act on a row a committee owns: an active member of that committee whose grant
+ * list carries `cover`, or a holder of `cover` itself, so staff can always act.
  *
  * `groupId` is read off the row being acted on, never off the request. A null
  * owner, a deleted group, or a band or club roster leaves only `cover`.
@@ -112,13 +113,22 @@ export async function requireCommitteeMember(
 	const user = requireUser();
 	const group = groupId ? await getByIdActive(groupId) : null;
 
-	if (group?.kind === 'committee') {
+	if (group?.kind === 'committee' && committeeCarries(group, cover)) {
 		const role = await getUserRole(group.id, user.id);
 		if (role) return { user, group, role };
 	}
 
 	if (await can(cover)) return { user, group, role: 'staff' };
 	throw error(403, 'Not a member of the committee that owns this');
+}
+
+/** Does this committee's own grant list let its members do `cap` on its records? */
+export function committeeCarries(
+	group: { id: string; capabilityGrants?: string[] | null },
+	cap: Capability
+): boolean {
+	const capabilities = allowlisted(group.capabilityGrants ?? [], 'committee');
+	return committeeAllows([{ groupId: group.id, capabilities }], cap, { groupId: group.id });
 }
 
 /**
