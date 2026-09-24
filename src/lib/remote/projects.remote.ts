@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { can, requireCapability, requireUser } from '$lib/server/authorization';
@@ -14,6 +15,7 @@ import {
 	attachToProject,
 	createProject,
 	detachFromProject,
+	getEventOwningCommittee,
 	getProjectBurn,
 	getProjectById,
 	listProjectAttachments,
@@ -25,6 +27,7 @@ import {
 } from '$lib/server/project/project-service';
 import { applyDutyList, listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { createWorkOrder } from '$lib/server/volunteer/work-order-service';
+import { publish as publishEvent } from '$lib/server/event/event-service';
 
 /**
  * Projects — staff surfaces, plus one committee write.
@@ -262,6 +265,30 @@ export const createCommitteeProjectWorkOrderForm = form(
 				notes: notes?.trim() || null,
 				createdByUserId: user.id
 			});
+			if (group) void getMemberGroup(group.slug).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * Booking publishes an event on one of its own projects.
+ *
+ * An event has no owning committee, so it is resolved through the project the
+ * event points at. `event.publish` is the staff cover, as on the staff page.
+ */
+export const publishCommitteeProjectEventForm = form(
+	z.object({ id: z.string().min(1) }),
+	async (raw) => {
+		requireUser();
+		const { id } = raw as { id: string };
+		try {
+			const owner = await getEventOwningCommittee(id);
+			if (!owner) error(404, 'Event not found');
+			const { group } = await requireCommitteeMember(owner.groupId, 'event.publish');
+			await publishEvent(id);
 			if (group) void getMemberGroup(group.slug).refresh();
 			return { success: true };
 		} catch (err) {

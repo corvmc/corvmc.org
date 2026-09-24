@@ -455,3 +455,37 @@ export async function listProjectAttachments(projectId: string) {
 
 	return { workOrders, jobs, orders, acquisitions, events };
 }
+
+/**
+ * Who owns an event, for a committee guard: the committee of the project it
+ * points at. An event has no owner column of its own, so an event on no project,
+ * or on an unowned one, answers a null `groupId`. Null for no such event.
+ */
+export async function getEventOwningCommittee(
+	eventId: string
+): Promise<{ groupId: string | null } | null> {
+	const [row] = await db
+		.select({ groupId: project.groupId })
+		.from(eventListing)
+		.leftJoin(project, eq(project.id, eventListing.projectId))
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
+	return row ? { groupId: row.groupId ?? null } : null;
+}
+
+/** The events on a committee's projects, for its own page. Title, time and status only. */
+export async function listCommitteeProjectEvents(groupId: string) {
+	return db
+		.select({
+			id: eventListing.id,
+			title: eventListing.title,
+			startsAt: eventListing.startsAt,
+			status: eventListing.status,
+			projectId: project.id,
+			projectName: project.name
+		})
+		.from(eventListing)
+		.innerJoin(project, eq(project.id, eventListing.projectId))
+		.where(eq(project.groupId, groupId))
+		.orderBy(asc(eventListing.startsAt));
+}
