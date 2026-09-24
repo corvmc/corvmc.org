@@ -53,6 +53,10 @@
 		}
 	}
 
+	// webcal: hands the feed to the visitor's calendar app as a subscription,
+	// where an https link would download a one-off copy.
+	const webcalHref = $derived(`webcal://${page.url.host}/events/calendar.ics`);
+
 	let dismissed = $state(false);
 	let showNotice = $derived(
 		page.url.searchParams.get('notice') === 'no-show-tonight' && !dismissed
@@ -69,6 +73,12 @@
 	<meta
 		property="og:description"
 		content="Shows at the Collective and gigs from our member acts around the region."
+	/>
+	<link
+		rel="alternate"
+		type="application/rss+xml"
+		title="CMC Gig Guide"
+		href="{page.url.origin}/events/feed.xml"
 	/>
 </svelte:head>
 
@@ -121,6 +131,10 @@
 			{#if from !== today}
 				<Button href="/events" variant="ghost" size="sm" class="mt-3">← Back to today</Button>
 			{/if}
+			<p class="mt-6 text-sm text-fg-2">
+				<a class="link" href={webcalHref} rel="external">Subscribe in your calendar</a>
+				· <a class="link" href="/events/feed.xml" rel="external">RSS</a>
+			</p>
 		</aside>
 		<div class="guide__main">
 			{#if allEvents.length === 0}

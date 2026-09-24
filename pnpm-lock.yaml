@@ -79,9 +79,15 @@ importers:
       emittery:
         specifier: ^2.0.0
         version: 2.0.0
+      feed:
+        specifier: ^6.0.0
+        version: 6.0.0
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
+      ical-generator:
+        specifier: ^11.1.1
+        version: 11.1.1(@types/node@26.4.0)(dayjs@1.11.23)
       marked:
         specifier: ^18.0.11
         version: 18.0.11
@@ -3768,6 +3774,10 @@ packages:
       picomatch:
         optional: true
 
+  feed@6.0.0:
+    resolution: {integrity: sha512-rvFOF1POce0ijAKy3tZN5T8PuprgIit/VbMyXJWcoYwcMOTSIJ7NqZb8DTLPJr77yiEO27kidm/fw0kcSIV+ww==}
+    engines: {node: '>=20', pnpm: '>=10'}
+
   fflate@0.7.5:
     resolution: {integrity: sha512-QieYf//cis6ywHNi5qW1+PXPQ4bC+XVJAtS4AXIML8P76GroEiOxm/oQtn1f02UkJY1+KsXMJcC+R2v/Eg4G3g==}
 
@@ -3970,6 +3980,39 @@ packages:
   https-proxy-agent@5.0.1:
     resolution: {integrity: sha512-dFcAjpTQFgoLMzC2VwU+C/CbS7uRL0lWmxDITmqm7C+7F0Odmj6s9l6alZc6AELXhrnggM2CeWSXHGOdX2YtwA==}
     engines: {node: '>= 6'}
+
+  ical-generator@11.1.1:
+    resolution: {integrity: sha512-1m50e+BOMzxtE3lFXlFiOKvze4Mmiiq2+QoEMw7w7EDtWSq8OxWrdN6mmQdaymBVjmkP1pg0BAPUesBL1ZHQMQ==}
+    engines: {node: 22 || >=24.0.0}
+    peerDependencies:
+      '@touch4it/ical-timezones': '>=1.6.0'
+      '@types/luxon': '>= 1.26.0'
+      '@types/mocha': '>= 8.2.1'
+      '@types/node': '*'
+      dayjs: '>= 1.10.0'
+      luxon: '>= 1.26.0'
+      moment: '>= 2.29.0'
+      moment-timezone: '>= 0.5.33'
+      rrule: '>= 2.6.8'
+    peerDependenciesMeta:
+      '@touch4it/ical-timezones':
+        optional: true
+      '@types/luxon':
+        optional: true
+      '@types/mocha':
+        optional: true
+      '@types/node':
+        optional: true
+      dayjs:
+        optional: true
+      luxon:
+        optional: true
+      moment:
+        optional: true
+      moment-timezone:
+        optional: true
+      rrule:
+        optional: true
 
   iconv-lite@0.4.24:
     resolution: {integrity: sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==}
@@ -5163,6 +5206,10 @@ packages:
     resolution: {integrity: sha512-WwYeCWKjxfXvk7SsLSLTJhcPOrB2HCxbptqGIiYor0yqaPu3xA5uMTQ/4Dan5mxClhhk2Wn9ZE1pLGIlGdUxFQ==}
     engines: {node: '>=16'}
 
+  sax@1.6.1:
+    resolution: {integrity: sha512-42tBVwLWnaQvW5zc4HbZrTuWccECCZfBi92FDuwtqxasH+JbPB3/FOKb1m222K42R4WxuxzzMsTswfzgtSu64Q==}
+    engines: {node: '>=11.0.0'}
+
   saxes@6.0.0:
     resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
     engines: {node: '>=v12.22.7'}
@@ -5927,6 +5974,10 @@ packages:
   wsl-utils@0.1.0:
     resolution: {integrity: sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw==}
     engines: {node: '>=18'}
+
+  xml-js@1.6.11:
+    resolution: {integrity: sha512-7rVi2KMfwfWFl+GpPg6m80IVMWXLRjO+PxTq7V2CDhoGak0wzYzFgUY2m4XJ47OGdXd8eLE8EmwfAmdjw7lC1g==}
+    hasBin: true
 
   xml-name-validator@5.0.0:
     resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}
@@ -9160,6 +9211,10 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.7
 
+  feed@6.0.0:
+    dependencies:
+      xml-js: 1.6.11
+
   fflate@0.7.5: {}
 
   fflate@0.8.3: {}
@@ -9379,6 +9434,11 @@ snapshots:
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
+
+  ical-generator@11.1.1(@types/node@26.4.0)(dayjs@1.11.23):
+    optionalDependencies:
+      '@types/node': 26.4.0
+      dayjs: 1.11.23
 
   iconv-lite@0.4.24:
     dependencies:
@@ -10586,6 +10646,8 @@ snapshots:
       postcss-value-parser: 4.2.0
       yoga-layout: 3.2.1
 
+  sax@1.6.1: {}
+
   saxes@6.0.0:
     dependencies:
       xmlchars: 2.2.0
@@ -11444,6 +11506,10 @@ snapshots:
   wsl-utils@0.1.0:
     dependencies:
       is-wsl: 3.1.1
+
+  xml-js@1.6.11:
+    dependencies:
+      sax: 1.6.1
 
   xml-name-validator@5.0.0:
     optional: true
