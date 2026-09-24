@@ -148,7 +148,11 @@ async function main() {
 			group: role.group,
 			displayOrder: offset + i++,
 			isActive: true,
-			capabilityGrants: role.capabilityGrants ?? []
+			// Show crew may file an incident for the show they work (#1469).
+			capabilityGrants: [
+				...(role.capabilityGrants ?? []),
+				...(role.group === 'at-shows' ? ['incident.file'] : [])
+			]
 		});
 	}
 

@@ -4,7 +4,6 @@ import { form } from './_remote';
 import { can, requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { DEFAULT_TIMEZONE, incidentCategories, incidentStatusFilters } from '$lib/config';
-import { requireShowCrew } from '$lib/server/volunteer/show-crew';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	acceptIncident,
@@ -122,12 +121,13 @@ export const reopenIncidentForm = form(
 
 /**
  * Crew of a show file from their shift (#1469). The filing lands `reported`;
- * staff accept or complete it. The guard is holding a shift on this event.
+ * staff accept or complete it. The guard is `incident.file` for this event,
+ * which a confirmed signup in a role carrying that grant holds.
  */
 export const fileShowIncidentForm = form(
 	z.object({ ...accountFields, eventId: z.string().min(1) }),
 	async (data) => {
-		const filer = await requireShowCrew(data.eventId);
+		const filer = await requireCapability('incident.file', { eventId: data.eventId });
 		try {
 			await fileShowIncident(
 				{
