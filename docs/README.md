@@ -161,6 +161,7 @@ the way it is, and the workflow guide to find out **what** it does today.
 | ---------------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [inventory-spec.md](specs/inventory-spec.md)                     | 🔧     | split     | Phases 1, 2 and 4 shipped — one append-only ledger, serialized units, acquisitions with disclosure and reimbursement, `/a/[tag]` scans, restock list, spend report, manuals and damage reports. Phase 3 shipped bar Schedule M; the in-kind disclosure screen is deliberately unbuilt |
 | [contractor-work-spec.md](specs/shipped/contractor-work-spec.md) | ✅     | archived  | Paid outside work — an instrument tech, an electrician: `contractor` + `contractor_job`. The other of the two places a broken thing gets fixed, and the first service expense the app records                                                                                         |
+| [incident-log-spec.md](specs/shipped/incident-log-spec.md)       | ✅     | archived  | Staff incident & safety log: `incident` + append-only `incident_note`, no delete path, authors kept by name so a purge cannot anonymise a report                                                                                                                                      |
 
 ### Staff platform
 

@@ -476,6 +476,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/incidents",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/incidents/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/instructors",
 		"panel": "staff"
 	},

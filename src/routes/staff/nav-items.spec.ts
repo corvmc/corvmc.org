@@ -75,6 +75,8 @@ describe('activeNavKey', () => {
 		['/staff/contractors/abc', 'contractors'],
 		['/staff/contractors/jobs', 'contractor-jobs'],
 		['/staff/contractors/jobs/abc', 'contractor-jobs'],
+		['/staff/incidents', 'incidents'],
+		['/staff/incidents/abc', 'incidents'],
 		['/staff/marketing/campaigns/new', 'campaigns'],
 		['/staff/marketing/campaigns/abc/edit', 'campaigns'],
 		['/staff/help/create', 'help'],

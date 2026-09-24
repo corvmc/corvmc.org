@@ -673,6 +673,31 @@ export const contractorTradeLabels: Record<ContractorTrade, string> = {
 export const localResourceStatuses = ['pending', 'published', 'rejected'] as const;
 export type LocalResourceStatus = (typeof localResourceStatuses)[number];
 
+/** What kind of thing went wrong. docs/specs/incident-log-spec.md */
+export const incidentCategories = [
+	'noise_complaint',
+	'injury',
+	'safety_hazard',
+	'conduct',
+	'property_damage',
+	'theft',
+	'other'
+] as const;
+export type IncidentCategory = (typeof incidentCategories)[number];
+
+export const incidentCategoryLabels: Record<IncidentCategory, string> = {
+	noise_complaint: 'Noise complaint',
+	injury: 'Injury or medical',
+	safety_hazard: 'Safety hazard',
+	conduct: 'Conduct',
+	property_damage: 'Property damage',
+	theft: 'Theft',
+	other: 'Other'
+};
+
+export const incidentStatuses = ['open', 'resolved'] as const;
+export type IncidentStatus = (typeof incidentStatuses)[number];
+
 /**
  * A job's lifecycle. Four states, matching `orderStatuses` in shape because the
  * shape is the same one: something is agreed, then it is committed to, then it
@@ -1809,6 +1834,9 @@ export const capabilities = {
 	],
 	instructor: ['read', 'review'],
 	contractor: ['read', 'manage', 'recordInvoice'],
+	// Its own resource, not `moderation`: an incident report can name a member,
+	// and who may read one is a decision separate from who reviews flags.
+	incident: ['read', 'record'],
 	project: ['read', 'manage'],
 	inbox: ['read', 'reply', 'assign', 'dispose', 'manageChannels'],
 	marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send'],
