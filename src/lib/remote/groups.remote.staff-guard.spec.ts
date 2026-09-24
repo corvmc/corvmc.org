@@ -49,7 +49,11 @@ const svc = vi.hoisted(() => ({
 	updateGroupSettings: vi.fn(),
 	assignLeader: vi.fn(),
 	deactivate: vi.fn(),
-	reactivate: vi.fn()
+	reactivate: vi.fn(),
+	setCommitteeCapabilityGrants: vi.fn()
+}));
+vi.mock('$lib/server/capability/capability-grant-service', () => ({
+	setCommitteeCapabilityGrants: svc.setCommitteeCapabilityGrants
 }));
 vi.mock('$lib/server/group/group-service', () => ({
 	STAFF_GROUP_KINDS: ['club', 'committee'],
@@ -140,7 +144,13 @@ const EXPORTS = [
 	],
 	['assignGroupLeader', { groupId: 'group-1', userId: 'user-9' }, 'group.manage', svc.assignLeader],
 	['deactivateGroup', { groupId: 'group-1' }, 'group.manage', svc.deactivate],
-	['reactivateGroup', { groupId: 'group-1' }, 'group.manage', svc.reactivate]
+	['reactivateGroup', { groupId: 'group-1' }, 'group.manage', svc.reactivate],
+	[
+		'setCommitteeGrants',
+		{ groupId: 'group-1', capabilities: ['sponsor.manage'] },
+		'group.manage',
+		svc.setCommitteeCapabilityGrants
+	]
 ] as const;
 
 const outcome = (name: string, input: unknown) =>

@@ -18,6 +18,7 @@
 	import { getStaffGroupPage, deactivateGroup, reactivateGroup } from '$lib/remote/groups.remote';
 	import GroupSettingsForm from './GroupSettingsForm.svelte';
 	import AssignLeaderAction from './AssignLeaderAction.svelte';
+	import CommitteeGrantsCard from './CommitteeGrantsCard.svelte';
 
 	// Above the awaited query: a declaration that follows a top-level await is
 	// async-gated, which would compile every `fields.X.as()` below into an async
@@ -84,6 +85,10 @@
 		joinInstructions={group.joinInstructions}
 		visibility={group.visibility}
 	/>
+
+	{#if group.kind === 'committee'}
+		<CommitteeGrantsCard groupId={id} name={group.name} held={group.capabilityGrants ?? []} />
+	{/if}
 
 	<InfoCard title="Roster">
 		{#if members.requested.length > 0}

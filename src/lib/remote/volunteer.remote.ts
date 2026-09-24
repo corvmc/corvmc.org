@@ -5,6 +5,7 @@ import { error, redirect } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { requireCapability, requireUser } from '$lib/server/authorization';
+import { setRoleCapabilityGrants } from '$lib/server/capability/capability-grant-service';
 import { toEventRef } from '$lib/server/entity/refs';
 import { getStaffLayout } from './layout.remote';
 import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
@@ -1367,6 +1368,28 @@ export const setRoleCertifications = form(
 		// them through its own composed query.
 		void getVolunteerRoles().refresh();
 		void getStaffVolunteerSetupPage().refresh();
+		return { success: true };
+	}
+);
+
+/**
+ * What a confirmed signup in this role may do for its shift's event. An editor
+ * may add only capabilities their own position holds, so a grant never widens
+ * what its author could already do.
+ */
+export const setVolunteerRoleGrants = form(
+	z.object({
+		roleId: z.string().min(1),
+		capabilities: z.array(z.string().min(1)).max(20).default([])
+	}),
+	async (data) => {
+		const user = await requireCapability('volunteer.manageRoles');
+		try {
+			await setRoleCapabilityGrants(data.roleId, data.capabilities, { editorId: user.id });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getStaffVolunteerRolePage(data.roleId).refresh();
 		return { success: true };
 	}
 );
