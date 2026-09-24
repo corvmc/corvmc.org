@@ -1,6 +1,7 @@
 import {
 	maintenanceSchedule,
 	volunteerRole,
+	volunteerSignup,
 	workOrder
 } from '../../src/lib/server/db/schema/volunteer';
 import { batchInsert, db } from './db';
@@ -10,9 +11,10 @@ import { eq } from 'drizzle-orm';
 /**
  * Recurring facility work, in the three states `/staff/volunteer/recurring` renders:
  * a live schedule with history and a next one due, a live one whose open work
- * order is overdue, and a retired one whose last occurrence was closed.
+ * order is overdue, and a retired one whose last occurrence was closed. The
+ * weekly bathroom clean has somebody on its open occurrence (#1483).
  */
-export async function seedMaintenanceSchedules(staffId: string) {
+export async function seedMaintenanceSchedules(staffId: string, cleanerId?: string) {
 	console.log('Seeding recurring work...');
 
 	const [role] = await db
@@ -29,10 +31,11 @@ export async function seedMaintenanceSchedules(staffId: string) {
 	const clean = { id: randomUUID(), name: 'Monthly deep clean', intervalDays: 30 };
 	const pa = { id: randomUUID(), name: 'Quarterly PA check', intervalDays: 91 };
 	const filters = { id: randomUUID(), name: 'HVAC filter swap', intervalDays: 60 };
+	const bathroom = { id: randomUUID(), name: 'Weekly bathroom clean', intervalDays: 7 };
 
 	await batchInsert(
 		maintenanceSchedule,
-		[clean, pa, filters].map((s) => ({
+		[clean, pa, filters, bathroom].map((s) => ({
 			...s,
 			volunteerRoleId: role.id,
 			capacity: 1,
@@ -59,5 +62,37 @@ export async function seedMaintenanceSchedules(staffId: string) {
 		}))
 	);
 
-	return { schedules: 3 };
+	// Last week's is done; this week's is due in two days and already has its cleaner.
+	const bathroomOpen = randomUUID();
+	await batchInsert(workOrder, [
+		{
+			id: randomUUID(),
+			...base,
+			maintenanceScheduleId: bathroom.id,
+			title: bathroom.name,
+			dueAt: at(-7),
+			resolvedAt: at(-5),
+			resolvedByUserId: staffId
+		},
+		{
+			id: bathroomOpen,
+			...base,
+			maintenanceScheduleId: bathroom.id,
+			title: bathroom.name,
+			dueAt: at(2)
+		}
+	]);
+	if (cleanerId) {
+		await batchInsert(volunteerSignup, [
+			{
+				shiftId: bathroomOpen,
+				userId: cleanerId,
+				status: 'confirmed',
+				claimedAt: at(-4),
+				confirmedAt: at(-3)
+			}
+		]);
+	}
+
+	return { schedules: 4 };
 }

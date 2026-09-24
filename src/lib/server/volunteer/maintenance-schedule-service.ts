@@ -184,6 +184,8 @@ export interface MaintenanceScheduleRow {
 	projectName: string | null;
 	openWorkOrderId: string | null;
 	openDueAt: Date | null;
+	/** Who holds a place on the open occurrence — the person it is assigned to. */
+	assignees: string[];
 	lastClosedAt: Date | null;
 }
 
@@ -201,6 +203,13 @@ export async function listMaintenanceSchedules(): Promise<MaintenanceScheduleRow
 			projectName: project.name,
 			openWorkOrderId: workOrder.id,
 			openDueAt: workOrder.dueAt,
+			// Newline-separated: a name can hold a comma, not a line break.
+			assignees: sql<string | null>`(
+				select group_concat(u."name", char(10)) from "volunteer_signup" vs
+				join "user" u on u."id" = vs."user_id"
+				where vs."shift_id" = ${workOrder.id}
+					and vs."status" in ('claimed', 'confirmed', 'completed')
+			)`,
 			lastClosedAt: sql<number | null>`(
 				select max(coalesce(wo."resolved_at", wo."cancelled_at")) from "work_order" wo
 				where wo."maintenance_schedule_id" = ${maintenanceSchedule.id}
@@ -225,6 +234,7 @@ export async function listMaintenanceSchedules(): Promise<MaintenanceScheduleRow
 
 	return rows.map((r) => ({
 		...r,
+		assignees: r.assignees ? r.assignees.split('\n') : [],
 		lastClosedAt: r.lastClosedAt == null ? null : new Date(Number(r.lastClosedAt) * 1000)
 	}));
 }

@@ -32,6 +32,7 @@ import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 import {
 	createMaintenanceSchedule,
+	listMaintenanceSchedules,
 	nextDueAt,
 	nextOccurrenceInsert,
 	retireMaintenanceSchedule,
@@ -145,5 +146,33 @@ describe('retireMaintenanceSchedule', () => {
 		expect(set.retiredAt).toBeInstanceOf(Date);
 		const where = chainCalls.find((c) => c.method === 'where')!.args[0] as SQL;
 		expect(new SQLiteSyncDialect().sqlToQuery(where).sql).toContain('"retired_at" is null');
+	});
+});
+
+// #1483: a cleaning schedule shows who is on the job now.
+describe('listMaintenanceSchedules', () => {
+	it('names who holds a place on the open occurrence, and nobody when it is empty', async () => {
+		selectQueue = [
+			[
+				{
+					id: 'ms-1',
+					name: 'Weekly bathroom clean',
+					assignees: 'Ada Lovelace\nBo Diddley',
+					lastClosedAt: null
+				},
+				{ id: 'ms-2', name: 'Monthly deep clean', assignees: null, lastClosedAt: null }
+			]
+		];
+		const rows = await listMaintenanceSchedules();
+		expect(rows.map((r) => r.assignees)).toEqual([['Ada Lovelace', 'Bo Diddley'], []]);
+	});
+
+	it('counts only places still held, and only on the open occurrence', async () => {
+		selectQueue = [[]];
+		await listMaintenanceSchedules();
+		const select = vi.mocked((await import('$lib/server/db')).db.select).mock.calls[0][0] as any;
+		const rendered = new SQLiteSyncDialect().sqlToQuery(select.assignees as SQL).sql;
+		expect(rendered).toContain('"volunteer_signup"');
+		expect(rendered).toContain("'claimed', 'confirmed', 'completed'");
 	});
 });
