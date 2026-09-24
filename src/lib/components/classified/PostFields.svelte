@@ -1,9 +1,11 @@
 <script lang="ts">
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import {
 		classifiedKindOptions,
 		classifiedCategoryOptions,
+		CLASSIFIED_GEAR_DISCLAIMER,
 		type ClassifiedTagKind
 	} from '$lib/config';
 
@@ -34,13 +36,15 @@
 	let instruments = $state(tagsOf('instrument'));
 	let genres = $state(tagsOf('genre'));
 	let skills = $state(tagsOf('skill'));
+	let category = $state(initial?.category ?? 'musician');
 </script>
 
 <div class="grid gap-3 sm:grid-cols-2">
 	<FormField
 		name="kind"
 		type="select"
-		label="Wanted or offered"
+		label="Wanted, offered or trade"
+		description="Trade is for gear only. An offered gear post shows as for sale."
 		value={initial?.kind ?? 'wanted'}
 		options={classifiedKindOptions}
 	/>
@@ -48,10 +52,15 @@
 		name="category"
 		type="select"
 		label="Category"
-		value={initial?.category ?? 'musician'}
+		bind:value={category}
 		options={classifiedCategoryOptions}
 	/>
 </div>
+{#if category === 'gear'}
+	<Alert type="warning">
+		{CLASSIFIED_GEAR_DISCLAIMER} Replies come to your inbox; do not post payment details.
+	</Alert>
+{/if}
 <FormField name="title" type="text" label="Title" value={initial?.title ?? ''} />
 <FormField name="body" type="textarea" label="Details" value={initial?.body ?? ''} />
 {#if bands.length > 0}

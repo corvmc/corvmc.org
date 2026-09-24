@@ -6,11 +6,12 @@
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { EntityChip } from '$lib/components/ui/entity';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import { formatDate, formatDateTime } from '$lib/utils/format';
 	import {
-		classifiedKindLabels,
+		classifiedKindLabel,
 		classifiedCategoryLabels,
-		type ClassifiedKind,
+		CLASSIFIED_GEAR_DISCLAIMER,
 		type ClassifiedCategory,
 		type ClassifiedTagKind
 	} from '$lib/config';
@@ -39,7 +40,11 @@
 	}
 </script>
 
-<InfoCard title={classifiedKindLabels[post.kind as ClassifiedKind] ?? post.kind}>
+{#if post.category === 'gear'}
+	<Alert type="warning">{CLASSIFIED_GEAR_DISCLAIMER}</Alert>
+{/if}
+
+<InfoCard title={classifiedKindLabel(post.kind, post.category)}>
 	<p class="whitespace-pre-wrap">{post.body}</p>
 </InfoCard>
 

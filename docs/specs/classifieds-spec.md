@@ -55,8 +55,8 @@ own words, and it expires. Those are two different things.
 | `id`                                                                        | uuid                                                                  |
 | `author_user_id`                                                            | → `user`, cascade. The post belongs to the account.                   |
 | `group_id`                                                                  | → `group`, set null. Only a group the author is owner or admin of.    |
-| `kind`                                                                      | `wanted` \| `offered`                                                 |
-| `category`                                                                  | `musician` \| `jam` \| `service` \| `other`                           |
+| `kind`                                                                      | `wanted` \| `offered` \| `trade` (gear only)                          |
+| `category`                                                                  | `musician` \| `jam` \| `service` \| `gear` \| `other`                 |
 | `title`, `body`                                                             | ≤ 120 and ≤ 2000 characters                                           |
 | `status`                                                                    | `open` \| `closed`. Closing is what the author does when it is filled |
 | `visibility`                                                                | `visible` \| `pending_review` \| `under_review` \| `hidden`           |
@@ -113,6 +113,5 @@ its pending flag.
 
 ## Not in this build
 
-- **Gear buy, sell and trade.** Excluded pending the owner's decision in #1488.
 - Expiry reminders, a dashboard "posts for you" match, and notifications when staff hide or
   approve a post. The note on the post is what the author reads.

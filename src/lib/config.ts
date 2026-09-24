@@ -1477,11 +1477,12 @@ export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
 // Classifieds
 // ---------------------------------------------------------------------------
 
-export const classifiedKinds = ['wanted', 'offered'] as const;
+/** `trade` is gear-only; the service refuses it in any other category. */
+export const classifiedKinds = ['wanted', 'offered', 'trade'] as const;
 export type ClassifiedKind = (typeof classifiedKinds)[number];
 
-/** No `gear`: buying and selling is the owner's decision, #1488. */
-export const classifiedCategories = ['musician', 'jam', 'service', 'other'] as const;
+/** `gear` is buy, sell or trade between members, #1488. Contact is by DM; no money moves in-app. */
+export const classifiedCategories = ['musician', 'jam', 'service', 'gear', 'other'] as const;
 export type ClassifiedCategory = (typeof classifiedCategories)[number];
 
 /** The same four states as `suggestionVisibilities`, for the same reasons. */
@@ -1506,13 +1507,25 @@ export const MAX_OPEN_CLASSIFIEDS = 5;
 
 export const classifiedKindLabels: Record<ClassifiedKind, string> = {
 	wanted: 'Wanted',
-	offered: 'Offered'
+	offered: 'Offered',
+	trade: 'Trade'
 };
+
+/** An offered gear post is a sale, and reads that way. */
+export function classifiedKindLabel(kind: string, category: string): string {
+	if (kind === 'offered' && category === 'gear') return 'For sale';
+	return classifiedKindLabels[kind as ClassifiedKind] ?? kind;
+}
+
+/** Shown wherever a gear post is read or written. */
+export const CLASSIFIED_GEAR_DISCLAIMER =
+	'CMC is not party to any sale, trade or swap. Arrange it directly with the other member: CMC does not handle payments, check gear, or settle disputes.';
 
 export const classifiedCategoryLabels: Record<ClassifiedCategory, string> = {
 	musician: 'Musicians',
 	jam: 'Jams',
 	service: 'Services',
+	gear: 'Gear',
 	other: 'Other'
 };
 

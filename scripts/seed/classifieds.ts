@@ -1,6 +1,7 @@
 import { classifiedPost, classifiedPostTag } from '../../src/lib/server/db/schema/classified';
 import { contentFlag } from '../../src/lib/server/db/schema/flag';
 import { memberStanding } from '../../src/lib/server/db/schema/standing';
+import type { ClassifiedCategory, ClassifiedKind } from '../../src/lib/config';
 import { batchInsert, db } from './db';
 
 const DAY = 86_400_000;
@@ -8,8 +9,8 @@ const DAY = 86_400_000;
 type Tag = { kind: 'instrument' | 'genre' | 'skill'; value: string };
 
 interface Seed {
-	kind: 'wanted' | 'offered';
-	category: 'musician' | 'jam' | 'service' | 'other';
+	kind: ClassifiedKind;
+	category: ClassifiedCategory;
 	title: string;
 	body: string;
 	tags: Tag[];
@@ -70,6 +71,22 @@ const SEEDS: Seed[] = [
 		body: 'I am in Albany most evenings and happy to split gas with anyone heading to the space.',
 		tags: [],
 		ageDays: 1
+	},
+	{
+		kind: 'offered',
+		category: 'gear',
+		title: 'Fender Hot Rod Deluxe, $450',
+		body: 'Works fine, new tubes last spring. Try it in room A before you decide. Message me.',
+		tags: [{ kind: 'instrument', value: 'guitar' }],
+		ageDays: 3
+	},
+	{
+		kind: 'trade',
+		category: 'gear',
+		title: 'Swap: fuzz pedal for a delay',
+		body: 'Big Muff in good shape. Looking for any analog delay in return.',
+		tags: [{ kind: 'instrument', value: 'guitar' }],
+		ageDays: 4
 	},
 	{
 		kind: 'wanted',

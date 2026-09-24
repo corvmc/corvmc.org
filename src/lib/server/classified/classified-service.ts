@@ -164,10 +164,17 @@ export interface PostInput {
 	groupId?: string | null;
 }
 
+function validateKind(kind: ClassifiedKind, category: ClassifiedCategory) {
+	if (kind === 'trade' && category !== 'gear') {
+		throw new ClassifiedValidationError('Only gear posts can be trades');
+	}
+}
+
 export async function createPost(
 	params: PostInput & { authorUserId: string },
 	now: Date = new Date()
 ) {
+	validateKind(params.kind, params.category);
 	const { title, body } = validateText(params.title, params.body);
 	if (params.groupId) await assertRunsGroup(params.authorUserId, params.groupId);
 
@@ -221,6 +228,7 @@ export async function updatePost(
 	now: Date = new Date()
 ) {
 	const existing = await loadOwned(postId, userId);
+	validateKind(params.kind, params.category);
 	const { title, body } = validateText(params.title, params.body);
 	if (params.groupId && params.groupId !== existing.groupId) {
 		await assertRunsGroup(userId, params.groupId);

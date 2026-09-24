@@ -18,14 +18,34 @@ now, in their own words.
 
 ## Posting
 
-Press **New post**, choose Wanted or Offered and a category, then write a title and
-the details.
+Press **New post**, choose Wanted, Offered or Trade and a category, then write a
+title and the details.
 
 - **Tags** for instruments, genres and skills make your post easier to find.
   Anyone who clicks a tag sees every post that shares it.
 - **Post as** appears if you own or run a band. The post then shows the band as
   well as you.
 - You can have up to five open posts at a time.
+
+## Gear
+
+The **Gear** category is for instruments and equipment you want to sell, buy or
+swap with another member.
+
+- Choose **Offered** to sell (the post shows as **For sale**), **Wanted** to buy,
+  or **Trade** to swap. Trade is only available for gear.
+- Put a price in the details if you have one in mind.
+- All contact goes through **Message**, into your inbox. Do not put payment
+  details, bank details or a phone number in the post.
+- There are no payments in the app. You and the other member arrange payment
+  and handover yourselves.
+
+**CMC is not party to any sale, trade or swap.** CMC does not handle payments,
+check the condition of gear, or settle disputes between members. Meet somewhere
+public, or at the space during staffed hours, and try gear before you pay.
+
+Gear posts follow the same rules as every other post. A misleading or suspicious
+listing can be reported with the flag, and staff review it the same way.
 
 ## How long a post lasts
 
