@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
+import { eventListing } from './event';
 import { incidentCategories, incidentStatuses } from '../../../config';
 
 /**
@@ -24,6 +25,9 @@ export const incident = sqliteTable(
 		location: text('location'),
 		summary: text('summary').notNull(),
 		description: text('description').notNull(),
+
+		// The show it happened during, when a crew member filed it from their shift.
+		eventId: text('event_id').references(() => eventListing.id, { onDelete: 'set null' }),
 
 		involvedUserId: text('involved_user_id').references(() => user.id, {
 			onDelete: 'set null'
@@ -51,7 +55,8 @@ export const incident = sqliteTable(
 	(t) => [
 		index('idx_incident_status').on(t.status, t.occurredAt),
 		index('idx_incident_category').on(t.category, t.occurredAt),
-		index('idx_incident_involved').on(t.involvedUserId)
+		index('idx_incident_involved').on(t.involvedUserId),
+		index('idx_incident_filer').on(t.reportedByUserId, t.eventId)
 	]
 );
 

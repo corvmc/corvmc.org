@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { isShowCrew } from '$lib/server/volunteer/show-crew';
+import { listIncidentsFiledBy } from '$lib/server/incident/incident-service';
 import { error, redirect } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
@@ -2459,9 +2461,11 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 	const shift = await getSignupForUser(signupId, currentUser.id);
 	if (!shift) throw error(404, 'Shift not found');
 
-	const [tasks, event] = await Promise.all([
+	const [tasks, event, crew, filedIncidents] = await Promise.all([
 		listWorkTasks(shift.shiftId),
-		shift.eventId ? getById(shift.eventId) : Promise.resolve(null)
+		shift.eventId ? getById(shift.eventId) : Promise.resolve(null),
+		shift.eventId ? isShowCrew(currentUser.id, shift.eventId) : Promise.resolve(false),
+		shift.eventId ? listIncidentsFiledBy(currentUser.id, shift.eventId) : Promise.resolve([])
 	]);
 
 	return {
@@ -2480,7 +2484,10 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 		checkIn:
 			event && event.ticketingEnabled && !shift.cancelledAt && !shift.shiftCancelledAt
 				? { eventId: event.id, eventTitle: event.title }
-				: null
+				: null,
+		// Crew of a show can file an incident for it, and see only what they filed.
+		incidentEventId: crew ? shift.eventId : null,
+		filedIncidents
 	};
 });
 

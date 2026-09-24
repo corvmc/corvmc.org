@@ -68,6 +68,7 @@
 		// "Pending review" reads as a state; the humanised enum ("Pending_review")
 		// does not.
 		pending_review: 'In review',
+		reported: 'Awaiting review',
 		// Same problem, and "Snooze expired" is the phrase the queue uses.
 		snooze_expired: 'Snooze expired'
 	};
@@ -172,6 +173,8 @@
 		// reports get dismissed.
 		under_review: 'badge-warning',
 		hidden: 'badge-ghost',
+		// Incidents: a crew member's filing, waiting on staff.
+		reported: 'badge-warning',
 		// Generic
 		active: 'badge-success',
 		deactivated: 'badge-ghost',
@@ -207,6 +210,7 @@
 		// Inbox statuses. `awaiting_reply` is derived, not stored — see
 		// threadDisplayStatus() in components/inbox/thread-status.ts.
 		open: { icon: IconClock, color: 'text-info' },
+		reported: { icon: IconClockPause, color: 'text-warning' },
 		awaiting_reply: { icon: IconSend, color: 'text-base-content' },
 		resolved: { icon: IconInboxOff, color: 'text-success' },
 		dismissed: { icon: IconCircleX, color: 'text-base-content' },

@@ -13,6 +13,7 @@
 	import { incidentCategoryLabels } from '$lib/config';
 	import {
 		getIncidentDetail,
+		acceptIncidentForm,
 		addIncidentNoteForm,
 		resolveIncidentForm,
 		reopenIncidentForm
@@ -22,6 +23,7 @@
 	let incident = $derived(await getIncidentDetail(id));
 	const canRecord = $derived(incident.canRecord);
 
+	const acceptFields = acceptIncidentForm.fields;
 	const noteFields = addIncidentNoteForm.fields;
 	const resolveFields = resolveIncidentForm.fields;
 	const reopenFields = reopenIncidentForm.fields;
@@ -34,6 +36,21 @@
 	backHref="/staff/incidents"
 >
 	<StatusBadge status={incident.status} label />
+	{#if incident.status === 'reported'}
+		<Action
+			action={acceptIncidentForm}
+			label="Accept"
+			modalTitle="Accept this report"
+			confirm="It joins the log as an open incident. You can resolve it straight away instead."
+			successToast="Accepted"
+			variant="primary"
+			size="sm"
+		>
+			{#snippet form()}
+				<input {...acceptFields.incidentId.as('hidden', id)} />
+			{/snippet}
+		</Action>
+	{/if}
 </PageHeader>
 <PageContent width="3xl">
 	<div class="grid gap-6">
@@ -48,6 +65,13 @@
 					<Fact label="Member involved">
 						<a class="link" href={resolve(`/staff/users/${incident.involvedUserId}`)}>
 							{incident.involvedName ?? 'Member'}
+						</a>
+					</Fact>
+				{/if}
+				{#if incident.eventId}
+					<Fact label="Show">
+						<a class="link" href={resolve(`/staff/events/${incident.eventId}`)}>
+							{incident.eventTitle ?? 'Event'}
 						</a>
 					</Fact>
 				{/if}
@@ -89,9 +113,9 @@
 		</InfoCard>
 
 		<InfoCard title="Resolution" class="bg-base-200 shadow-none">
-			{#if incident.status === 'open' && !canRecord}
+			{#if incident.status !== 'resolved' && !canRecord}
 				<p class="text-muted">Not resolved yet.</p>
-			{:else if incident.status === 'open'}
+			{:else if incident.status !== 'resolved'}
 				<Action
 					action={resolveIncidentForm}
 					label="Resolve"

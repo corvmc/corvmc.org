@@ -1,11 +1,12 @@
 import { db } from '$lib/server/db';
 import { incident, incidentNote } from '$lib/server/db/schema/incident';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, count, desc, eq, or } from 'drizzle-orm';
+import { eventListing } from '$lib/server/db/schema/event';
+import { and, asc, count, desc, eq, ne, or } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { DomainError } from '$lib/server/domain-error';
-import type { IncidentCategory, IncidentStatus } from '$lib/config';
+import type { IncidentCategory, IncidentStatusFilter } from '$lib/config';
 
 /**
  * The incident & safety log. docs/specs/incident-log-spec.md
@@ -70,7 +71,7 @@ function requireText(value: string, max: number, what: string): string {
 	return trimmed;
 }
 
-export async function recordIncident(input: RecordIncidentInput, reporter: Actor) {
+function validated(input: RecordIncidentInput) {
 	if (Number.isNaN(input.occurredAt.getTime())) {
 		throw new IncidentValidationError('Say when it happened.');
 	}
@@ -83,17 +84,22 @@ export async function recordIncident(input: RecordIncidentInput, reporter: Actor
 			`Keep the location under ${INCIDENT_LOCATION_MAX} characters.`
 		);
 	}
+	return {
+		occurredAt: input.occurredAt,
+		category: input.category,
+		location,
+		summary: requireText(input.summary, INCIDENT_SUMMARY_MAX, 'a summary'),
+		description: requireText(input.description, INCIDENT_DESCRIPTION_MAX, 'what happened'),
+		involvedUserId: input.involvedUserId || null
+	};
+}
 
+export async function recordIncident(input: RecordIncidentInput, reporter: Actor) {
 	const now = new Date();
 	const [row] = await db
 		.insert(incident)
 		.values({
-			occurredAt: input.occurredAt,
-			category: input.category,
-			location,
-			summary: requireText(input.summary, INCIDENT_SUMMARY_MAX, 'a summary'),
-			description: requireText(input.description, INCIDENT_DESCRIPTION_MAX, 'what happened'),
-			involvedUserId: input.involvedUserId || null,
+			...validated(input),
 			reportedByUserId: reporter.id,
 			reportedByName: reporter.name,
 			status: 'open',
@@ -102,6 +108,60 @@ export async function recordIncident(input: RecordIncidentInput, reporter: Actor
 		})
 		.returning();
 	return row;
+}
+
+/**
+ * A crew member's filing from their shift. It lands `reported` for staff to
+ * accept or complete; the caller has already checked the filer is crew.
+ */
+export async function fileShowIncident(
+	input: RecordIncidentInput & { eventId: string },
+	filer: Actor
+) {
+	const now = new Date();
+	const [row] = await db
+		.insert(incident)
+		.values({
+			...validated(input),
+			eventId: input.eventId,
+			reportedByUserId: filer.id,
+			reportedByName: filer.name,
+			status: 'reported',
+			createdAt: now,
+			updatedAt: now
+		})
+		.returning();
+	return row;
+}
+
+/** Staff take a crew filing onto the log as an open incident. */
+export async function acceptIncident(id: string) {
+	const [row] = await db
+		.update(incident)
+		.set({ status: 'open', updatedAt: new Date() })
+		.where(and(eq(incident.id, id), eq(incident.status, 'reported')))
+		.returning();
+	if (row) return row;
+
+	await loadStatus(id);
+	throw new IncidentStateError('That incident is not awaiting review.');
+}
+
+/** What this member filed for this show: their own account, never staff notes. */
+export async function listIncidentsFiledBy(userId: string, eventId: string) {
+	return db
+		.select({
+			id: incident.id,
+			occurredAt: incident.occurredAt,
+			category: incident.category,
+			summary: incident.summary,
+			description: incident.description,
+			status: incident.status,
+			createdAt: incident.createdAt
+		})
+		.from(incident)
+		.where(and(eq(incident.reportedByUserId, userId), eq(incident.eventId, eventId)))
+		.orderBy(desc(incident.createdAt), desc(incident.id));
 }
 
 async function loadStatus(id: string) {
@@ -138,7 +198,7 @@ export async function resolveIncident(id: string, resolution: string, staff: Act
 			resolvedAt: now,
 			updatedAt: now
 		})
-		.where(and(eq(incident.id, id), eq(incident.status, 'open')))
+		.where(and(eq(incident.id, id), ne(incident.status, 'resolved')))
 		.returning();
 	if (row) return row;
 
@@ -182,9 +242,10 @@ export async function reopenIncident(id: string, staff: Actor) {
 
 export async function getIncident(id: string) {
 	const [row] = await db
-		.select({ incident, involvedName: user.name })
+		.select({ incident, involvedName: user.name, eventTitle: eventListing.title })
 		.from(incident)
 		.leftJoin(user, eq(user.id, incident.involvedUserId))
+		.leftJoin(eventListing, eq(eventListing.id, incident.eventId))
 		.where(eq(incident.id, id))
 		.limit(1);
 	if (!row) throw new IncidentNotFoundError();
@@ -195,11 +256,11 @@ export async function getIncident(id: string) {
 		.where(eq(incidentNote.incidentId, id))
 		.orderBy(asc(incidentNote.createdAt), asc(incidentNote.id));
 
-	return { ...row.incident, involvedName: row.involvedName, notes };
+	return { ...row.incident, involvedName: row.involvedName, eventTitle: row.eventTitle, notes };
 }
 
 export interface IncidentFilters {
-	status?: IncidentStatus;
+	status?: IncidentStatusFilter;
 	category?: IncidentCategory;
 	search?: string;
 	involvedUserId?: string;
@@ -209,7 +270,11 @@ export interface IncidentFilters {
 export async function listIncidents(filters: IncidentFilters, pagination: PaginationInput) {
 	const term = filters.search?.trim();
 	const where = and(
-		filters.status ? eq(incident.status, filters.status) : undefined,
+		filters.status === 'unresolved'
+			? ne(incident.status, 'resolved')
+			: filters.status
+				? eq(incident.status, filters.status)
+				: undefined,
 		filters.category ? eq(incident.category, filters.category) : undefined,
 		filters.involvedUserId ? eq(incident.involvedUserId, filters.involvedUserId) : undefined,
 		term

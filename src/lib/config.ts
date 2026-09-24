@@ -732,8 +732,12 @@ export const incidentCategoryLabels: Record<IncidentCategory, string> = {
 	other: 'Other'
 };
 
-export const incidentStatuses = ['open', 'resolved'] as const;
+/** `reported` is a crew member's filing, waiting for staff to accept or complete it (#1469). */
+export const incidentStatuses = ['reported', 'open', 'resolved'] as const;
 export type IncidentStatus = (typeof incidentStatuses)[number];
+/** The log's filter: a stored status, or `unresolved` for everything not yet resolved. */
+export const incidentStatusFilters = [...incidentStatuses, 'unresolved'] as const;
+export type IncidentStatusFilter = (typeof incidentStatusFilters)[number];
 
 /**
  * A job's lifecycle. Four states, matching `orderStatuses` in shape because the

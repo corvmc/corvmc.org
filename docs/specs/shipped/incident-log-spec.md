@@ -8,8 +8,9 @@
 
 ## The workflow
 
-1. **Something happens.** Whoever was in charge that night tells staff: at close-out, by message,
-   or the next morning.
+1. **Something happens.** Anyone on the crew of that show (holding a volunteer shift for it) can
+   file it from their shift page, where it lands `reported` for staff to review (#1469). Otherwise
+   whoever was in charge tells staff: at close-out, by message, or the next morning.
 2. **A staffer records it** — when, where, what kind, and what happened, in their own words. If a
    member was involved they are linked, so the record can be found from the member's side later.
 3. **Follow-ups accumulate.** The neighbour calls back; the insurer asks for a photo; the member is
@@ -49,15 +50,16 @@
 | `location`                        | free text, nullable — "main room", "the alley"           |
 | `summary`                         | not null, ≤ 200 — the one line the list shows            |
 | `description`                     | not null, ≤ 5000 — the account, written once             |
+| `eventId`                         | → `event_listing`, `set null` — the show a crew filed at |
 | `involvedUserId`                  | → `user`, `set null`, nullable                           |
 | `reportedByUserId` / `…Name`      | FK `set null` plus the name as written                   |
-| `status`                          | `open` · `resolved`                                      |
+| `status`                          | `reported` · `open` · `resolved`                         |
 | `resolution`                      | text, set on resolve                                     |
 | `resolvedByUserId` / `resolvedAt` |                                                          |
 | `createdAt` / `updatedAt`         |                                                          |
 
 Indexes: `(status, occurredAt)` for the queue, `(category, occurredAt)` for read-back,
-`involvedUserId`.
+`involvedUserId`, `(reportedByUserId, eventId)` for a filer's own list.
 
 ### `incident_note`
 
@@ -71,11 +73,18 @@ repair), `authorUserId` (`set null`), `authorName`, `body` (≤ 2000), `createdA
 | `/staff/incidents`      | Table, newest first; status (default open), category and text filters |
 | `/staff/incidents/[id]` | The account, the notes in order, add a note, resolve / reopen         |
 
-Recording is a modal on the list page. Nav: under **Space**, beside Contractors.
+Recording is a modal on the list page. Nav: under **Space**, beside Contractors. The list's
+default filter is "Not resolved", which includes `reported` filings; staff accept one (to `open`)
+or resolve it directly.
+
+Crew file from `/member/volunteer/shifts/[signupId]`, guarded by `requireShowCrew(eventId)`
+(`src/lib/server/volunteer/show-crew.ts`): a `claimed`, `confirmed` or `completed` signup on a
+shift of that event that was not called off. The same page lists what that member filed for the
+show, and nothing else from the log: no staff notes, no other filings.
 
 ## Decisions filed
 
 - #1466 — reversed: the site moderator and volunteer coordinator also hold `incident.read`.
 - #1467 — a member cannot see a report naming them, and it changes nothing on their account.
 - #1468 — no delete path, kept indefinitely; purging a member only unlinks them.
-- #1469 — only staff record; volunteers report to staff. Linking to a show is unbuilt.
+- #1469 — reversed: crew of a show file incidents for it as `reported`; filers see only their own.
