@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { getUserPage } from '$lib/remote/users.remote';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -57,7 +58,7 @@
 	// wants. The address bar is all this needs to reach: `tab` is read back out of
 	// `page.url` only on mount, so a reload or a copied link still lands right.
 	$effect(() => {
-		const href = `${resolve(`/staff/users/${id}`)}${tab === 'overview' ? '' : `?tab=${tab}`}`;
+		const href = withQuery(resolve(`/staff/users/${id}`), tab === 'overview' ? '' : `tab=${tab}`);
 		if (location.pathname + location.search !== href) {
 			replaceState(href, {});
 		}

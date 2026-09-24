@@ -7,6 +7,7 @@
 	import Table from '$lib/components/ui/Table.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
 	import CreateEventModal from './CreateEventModal.svelte';
@@ -59,7 +60,7 @@
 		if (page > 1) pairs.push(['page', String(page)]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = `${resolve('/staff/productions')}${search ? `?${search}` : ''}`;
+		const href = withQuery(resolve('/staff/productions'), search);
 		if (location.pathname + location.search !== href) {
 			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
 		}

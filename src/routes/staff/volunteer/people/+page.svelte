@@ -35,6 +35,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import { formatDateShort } from '$lib/utils/format';
 	import {
 		formatVolunteerHours,
@@ -85,7 +86,7 @@
 		if (pageNumber > 1) pairs.push(['page', String(pageNumber)]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = `${resolve('/staff/volunteer/people')}${search ? `?${search}` : ''}`;
+		const href = withQuery(resolve('/staff/volunteer/people'), search);
 		if (location.pathname + location.search !== href) {
 			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
 		}
@@ -235,7 +236,7 @@
 					{#each volunteers as volunteer (volunteer.userId)}
 						<!-- The staff user record's Volunteer panel is the detail view for one of
 						     these rows, so this index needs no [id] route of its own. -->
-						{@const href = `${resolve(`/staff/users/${volunteer.userId}`)}?tab=volunteer`}
+						{@const href = withQuery(resolve(`/staff/users/${volunteer.userId}`), 'tab=volunteer')}
 						{@const line = subline(volunteer)}
 						<tr class="hover cursor-pointer" use:rowLink={href}>
 							<td class="w-px">

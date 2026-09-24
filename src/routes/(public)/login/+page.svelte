@@ -4,6 +4,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import { page } from '$app/state';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { pageTitle } from '$lib/config';
@@ -60,7 +61,7 @@
 		const rest = params.toString();
 		const query =
 			target === 'register' ? (rest ? `?register&${rest}` : '?register') : rest ? `?${rest}` : '';
-		return `${resolve('/login')}${query}`;
+		return withQuery(resolve('/login'), query);
 	}
 
 	function toggleMode() {

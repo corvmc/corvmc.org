@@ -1,12 +1,13 @@
 <script lang="ts">
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 
 	interface Props {
 		href?: string;
 	}
 
-	let { href = `${resolve('/login')}?register` }: Props = $props();
+	let { href = withQuery(resolve('/login'), 'register') }: Props = $props();
 </script>
 
 <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- href defaults to a resolve()d internal path with a query string; the rule can't trace it through the prop default -->
