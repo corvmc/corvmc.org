@@ -5,7 +5,7 @@ import { sponsorshipStatuses } from '../../../config';
 /**
  * A business that sponsors, or might sponsor, the collective. The row outlives
  * any one term, so its history and its contact stay in one place.
- * See docs/specs/development-sponsors-and-grants-spec.md.
+ * See docs/specs/shipped/development-agreements-spec.md.
  */
 export const sponsor = sqliteTable('sponsor', {
 	id: text('id')

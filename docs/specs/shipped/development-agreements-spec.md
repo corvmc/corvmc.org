@@ -119,10 +119,12 @@ delete. `/staff/grants/funders`: funders with create, edit and, while unused, de
 
 ## Not in this slice
 
-- Sponsor logos and placement preferences (poster, event blast, event page): #1476. The poster
-  needs #606.
+Each of these is tracked on its own:
+
+- Sponsor logos and per-event placement on the event page and in event blasts: #583 and #1476,
+  built on `feature/sponsored-event-placement`. The poster logo still needs #606.
 - Deadline reminders through the reminder sweep registry (#1186), plus a staff dashboard panel:
-  #1477. Both modules expose a pure deadline function for it.
-- Permits, licenses and insurance renewals: #1478. With the ledger split, this is a third module of
-  its own rather than a third `kind`.
+  #1477.
+- Permits, licenses and insurance renewals: #1478. #1597 decided they become a small module of
+  their own, not a kind of recurring work order.
 - Taking money. Anything that moves money waits for the payment seam (#522).
