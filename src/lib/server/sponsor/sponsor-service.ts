@@ -7,7 +7,7 @@ import {
 	type Sponsor,
 	type Sponsorship
 } from '$lib/server/db/schema/sponsor';
-import { count, eq } from 'drizzle-orm';
+import { and, count, eq, gte, lte } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { byDeadline, due, type Deadline } from '$lib/utils/deadline';
 
@@ -45,6 +45,36 @@ export function sponsorshipDeadline(
 	today: string
 ): SponsorshipDeadline | null {
 	return s.status === 'active' && s.endsOn ? due('end', s.endsOn, today) : null;
+}
+
+/** Every active term ending on a day in `[from, to]`, one subject per term. */
+export async function listSponsorshipDeadlinesBetween(from: string, to: string) {
+	const rows = await db
+		.select({
+			id: sponsorship.id,
+			title: sponsorship.title,
+			endsOn: sponsorship.endsOn,
+			sponsorId: sponsorship.sponsorId,
+			sponsorName: sponsor.name
+		})
+		.from(sponsorship)
+		.innerJoin(sponsor, eq(sponsor.id, sponsorship.sponsorId))
+		.where(
+			and(
+				eq(sponsorship.status, 'active'),
+				gte(sponsorship.endsOn, from),
+				lte(sponsorship.endsOn, to)
+			)
+		);
+	return rows.map((r) => ({
+		kind: 'end' as const,
+		on: r.endsOn!,
+		subjectId: `sponsorship:${r.id}`,
+		title: 'Sponsorship ends',
+		parentId: r.sponsorId,
+		parentTitle: r.title,
+		counterparty: r.sponsorName
+	}));
 }
 
 type ShipSummary = Pick<

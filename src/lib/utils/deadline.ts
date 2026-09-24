@@ -19,6 +19,13 @@ export function due<K extends string>(kind: K, on: string, today: string): Deadl
 	return { kind, on, overdue: on < today };
 }
 
+/** The calendar day `n` days after `iso`. Arithmetic in UTC, so DST cannot shift it. */
+export function addIsoDays(iso: string, n: number): string {
+	const d = new Date(`${iso}T00:00:00Z`);
+	d.setUTCDate(d.getUTCDate() + n);
+	return d.toISOString().slice(0, 10);
+}
+
 /** The soonest of the given deadlines, skipping missing ones. */
 export function earliest<K extends string>(
 	...deadlines: (Deadline<K> | null)[]

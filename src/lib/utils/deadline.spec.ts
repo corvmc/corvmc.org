@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { due, earliest, byDeadline, formatIsoDay } from './deadline';
+import { addIsoDays, due, earliest, byDeadline, formatIsoDay } from './deadline';
 
 const TODAY = '2026-09-23';
 
@@ -41,5 +41,13 @@ describe('formatIsoDay', () => {
 	it('reads the calendar day, not UTC midnight', () => {
 		expect(formatIsoDay('2026-10-01')).toMatch(/Oct 1/);
 		expect(formatIsoDay(null)).toBe('—');
+	});
+});
+
+describe('addIsoDays', () => {
+	it('moves a calendar day, across a month and a DST change', () => {
+		expect(addIsoDays('2026-09-23', 14)).toBe('2026-10-07');
+		expect(addIsoDays('2026-10-31', 3)).toBe('2026-11-03');
+		expect(addIsoDays('2026-03-07', 1)).toBe('2026-03-08');
 	});
 });

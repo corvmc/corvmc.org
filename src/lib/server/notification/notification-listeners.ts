@@ -13,6 +13,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, inArray } from 'drizzle-orm';
 import { shiftLabel } from '$lib/utils/shift-label';
+import { formatIsoDay } from '$lib/utils/deadline';
 import type {
 	NotificationEmailCtaSpec,
 	NotificationEmailDetail,
@@ -686,6 +687,46 @@ export function registerAllNotificationListeners(): void {
 				cta: { label: 'View my loans' }
 			}
 		});
+	});
+
+	// Development deadlines (#1477). Fanned out over whoever manages the module
+	// the deadline belongs to; a committee-scoped recipient waits on #607.
+	domainEvents.on('development.deadline_due', async ({ data: event }) => {
+		const grant = event.module === 'grant';
+		const staff = await listUsersWithCapability(grant ? 'grant.manage' : 'sponsor.manage');
+		const date = formatIsoDay(event.on);
+		const soon = event.stage === '3d' ? 'in three days or less' : 'in the next two weeks';
+		const title = `${event.title}: ${event.parentTitle}`;
+		for (const member of staff) {
+			try {
+				await dispatch({
+					type: 'development_deadline',
+					userId: member.id,
+					userEmail: member.email,
+					title,
+					body: `${event.counterparty} · ${date}`,
+					href: grant ? `/staff/grants/${event.parentId}` : `/staff/sponsors/${event.parentId}`,
+					email: {
+						recipientName: member.name,
+						subject: `${event.counterparty}: ${event.title}, ${date}`,
+						preview_text: `${event.title} ${soon}`,
+						heading: title,
+						paragraphs: [
+							{
+								text: `${event.title} for ${event.parentTitle} (${event.counterparty}) falls on ${date}, ${soon}.`
+							}
+						],
+						details: [
+							{ label: grant ? 'Funder' : 'Sponsor', value: event.counterparty },
+							{ label: 'Date', value: date }
+						],
+						cta: { label: grant ? 'Open the grant' : 'Open the sponsor' }
+					}
+				});
+			} catch (err) {
+				captureException(err, { event: 'notification.development_deadline', to: member.email });
+			}
+		}
 	});
 
 	// --- Equipment returned (notify member) ---

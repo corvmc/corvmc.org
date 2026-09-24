@@ -3,7 +3,9 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, ne, and, gt, gte, lt, isNotNull } from 'drizzle-orm';
 import { formatDateFull, formatTimeSimple } from '$lib/server/reservation/timezone';
-import { CONFIRMATION_WINDOW_DAYS, DEFAULT_TIMEZONE } from '$lib/config';
+import { CONFIRMATION_WINDOW_DAYS, DEFAULT_TIMEZONE, clubToday } from '$lib/config';
+import { addIsoDays } from '$lib/utils/deadline';
+import { listDevelopmentDeadlinesBetween } from '$lib/server/development/deadline-service';
 import {
 	listSignupsStartingBetween,
 	listCompletionsAwaitingFeedback
@@ -49,6 +51,31 @@ function overdueLoans({ days, until }: { days: number; until: number }) {
 					equipmentName: row.equipmentName,
 					dueDate: formatDateFull(row.dueDate, TZ)
 				}
+			}));
+		}
+	});
+}
+
+/**
+ * One stage of Development's deadline reminders (#1477): every grant and
+ * sponsorship deadline between `from` and `until` days from today. The subject
+ * carries the date, so a deadline moved later is owed its reminders again.
+ */
+function developmentDeadlines(stage: '14d' | '3d', from: number, until: number) {
+	return defineReminder({
+		key: `development_deadline_${stage}`,
+		subjectType: 'development_deadline',
+		event: 'development.deadline_due' as const,
+		async due(now: Date) {
+			const today = clubToday(now);
+			const [start, end] = [addIsoDays(today, from), addIsoDays(today, until)];
+			const deadlines = await listDevelopmentDeadlinesBetween(start, end, {
+				grants: true,
+				sponsors: true
+			});
+			return deadlines.map(({ subjectId, ...d }) => ({
+				subjectId: `${d.module}:${subjectId}:${d.on}`,
+				payload: { stage, ...d }
 			}));
 		}
 	});
@@ -291,5 +318,11 @@ export const reminders: ReminderDefinition[] = [
 		}
 	}),
 
-	...OVERDUE_BANDS.map(overdueLoans)
+	...OVERDUE_BANDS.map(overdueLoans),
+
+	// Non-overlapping bands, so one drain sends one stage: a deadline first seen
+	// inside three days gets only the last reminder. Past deadlines get none;
+	// the lists show those in red.
+	developmentDeadlines('14d', 4, 14),
+	developmentDeadlines('3d', 0, 3)
 ];

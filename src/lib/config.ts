@@ -1456,9 +1456,9 @@ export const SHIFT_FEEDBACK_COMMENT_MAX = 2000;
  * a day the service rejects as being in the future. Client-safe: `$lib/config`
  * carries no server imports.
  */
-export function clubToday(): string {
+export function clubToday(now: Date = new Date()): string {
 	// en-CA formats as YYYY-MM-DD, which is also what <input type="date"> wants.
-	return new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(new Date());
+	return new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(now);
 }
 
 /** Minutes → display hours. 180 → "3 hrs", 90 → "1.5 hrs", 60 → "1 hr". */

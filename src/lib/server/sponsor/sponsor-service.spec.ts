@@ -32,6 +32,7 @@ vi.mock('$lib/server/db', () => ({
 const {
 	sponsorshipDeadline,
 	summarizeSponsors,
+	listSponsorshipDeadlinesBetween,
 	getSponsor,
 	deleteSponsor,
 	SponsorNotFoundError,
@@ -64,6 +65,33 @@ describe('sponsorshipDeadline', () => {
 		for (const status of ['prospect', 'declined', 'ended'] as const) {
 			expect(sponsorshipDeadline({ status, endsOn: '2026-12-31' }, TODAY)).toBeNull();
 		}
+	});
+});
+
+describe('listSponsorshipDeadlinesBetween', () => {
+	it("names each active term's end as its own subject, dated in the range", async () => {
+		selectResult = [
+			{
+				id: 'p1',
+				title: 'Season sponsor',
+				endsOn: '2026-10-01',
+				sponsorId: 's1',
+				sponsorName: 'Troubadour Music'
+			}
+		];
+		const items = await listSponsorshipDeadlinesBetween('2026-09-23', '2026-10-07');
+		expect(items).toEqual([
+			{
+				kind: 'end',
+				on: '2026-10-01',
+				subjectId: 'sponsorship:p1',
+				title: 'Sponsorship ends',
+				parentId: 's1',
+				parentTitle: 'Season sponsor',
+				counterparty: 'Troubadour Music'
+			}
+		]);
+		expect(chainCalls.some((c) => c.method === 'where')).toBe(true);
 	});
 });
 

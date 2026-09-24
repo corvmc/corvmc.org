@@ -1627,6 +1627,15 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
   counts after the grant is closed. Writes are guarded by `grant.manage`; a funder with
   applications cannot be deleted, and an application's reports cascade with it.
 - The sort and date display are shared, in `src/lib/utils/deadline.ts`.
+- **Reminders (#1477):** `development_deadline_14d` and `development_deadline_3d` in
+  `src/lib/server/reminders/registry.ts` read `listDevelopmentDeadlinesBetween` (in
+  `src/lib/server/development/deadline-service.ts`) over every open deadline: a prospect's
+  apply-by, each unsubmitted report, an award's end, and an active sponsorship's end. The first
+  stage covers 4 to 14 days out and the second 0 to 3, so one drain sends one stage and a
+  past deadline gets none. The subject is `<module>:<deadline>:<date>`, so a moved date is
+  reminded again. `development.deadline_due` fans out to holders of `grant.manage` or
+  `sponsor.manage` as `development_deadline`. The staff dashboard lists the same deadlines
+  through the next 30 days, overdue ones included, to whoever holds the matching `read`.
 
 ### Data touched
 
@@ -1641,6 +1650,8 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
   `formatIsoDay`, and comparisons stay on the strings.
 - **An award reads as done while a report is owed.** The report has no `submittedOn`; the list
   keeps a closed grant visible for exactly this.
+- **Nobody was reminded.** Nobody holds `grant.manage` or `sponsor.manage` through a position.
+  The fan-out goes to capability holders, not to the Development committee (#607).
 
 ## Cross-cutting patterns worth internalizing
 
