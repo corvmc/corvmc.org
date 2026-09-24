@@ -660,6 +660,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/renewals",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/renewals/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/reports",
 		"panel": "staff"
 	},

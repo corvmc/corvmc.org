@@ -1,5 +1,5 @@
 import Emittery from 'emittery';
-import type { BookerType, GroupKind, ThreadNotifyPolicy } from '$lib/config';
+import type { BookerType, GroupKind, RenewalKind, ThreadNotifyPolicy } from '$lib/config';
 
 export interface VolunteerShiftEvent {
 	signupId: string;
@@ -775,6 +775,20 @@ export interface MembershipLifecycleEvent {
 	endsAt: string | null;
 }
 
+/** A permit, license or policy of CMC's own is about to expire (#1478). */
+export interface RenewalExpiryDueEvent {
+	stage: '60d' | '14d';
+	renewalId: string;
+	name: string;
+	kind: RenewalKind;
+	issuer: string | null;
+	reference: string | null;
+	/** `YYYY-MM-DD` */
+	expiresOn: string;
+	/** Told alone when named; otherwise every holder of `renewal.manage` is. */
+	responsible: { id: string; name: string; email: string } | null;
+}
+
 export type DomainEvents = {
 	'checkout.completed': CheckoutCompletedEvent;
 	'reservation.created': ReservationCreatedEvent;
@@ -853,6 +867,7 @@ export type DomainEvents = {
 	'volunteer.shift_reminder_due': VolunteerShiftEvent;
 	'volunteer.shift_completed': VolunteerShiftEvent;
 	'volunteer.shift_feedback_due': VolunteerShiftEvent;
+	'renewal.expiry_due': RenewalExpiryDueEvent;
 };
 
 // ---------------------------------------------------------------------------

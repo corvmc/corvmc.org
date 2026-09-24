@@ -78,6 +78,7 @@ export type StaffNavKey =
 	| 'credits'
 	| 'sponsors'
 	| 'grants'
+	| 'renewals'
 	| 'reports'
 	| 'settings'
 	| 'audit';
@@ -525,6 +526,14 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'settings.read',
 				label: 'Settings',
 				href: resolve('/staff/settings')
+			},
+			// System, not Money (#1597): nothing here is money coming in, and the
+			// premium is already an expense in the books.
+			{
+				key: 'renewals',
+				capability: 'renewal.read',
+				label: 'Renewals',
+				href: resolve('/staff/renewals')
 			},
 			{ key: 'audit', capability: 'audit.read', label: 'Audit Log', href: resolve('/staff/audit') }
 		]

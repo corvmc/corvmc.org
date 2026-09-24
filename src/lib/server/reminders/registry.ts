@@ -11,6 +11,7 @@ import {
 	listCompletionsAwaitingFeedback
 } from '$lib/server/volunteer/volunteer-signup-service';
 import { listLoansDueBetween } from '$lib/server/inventory/loan-service';
+import { listRenewalsExpiringBetween } from '$lib/server/renewal/renewal-service';
 import { defineReminder, type ReminderDefinition } from './types';
 
 const TZ = DEFAULT_TIMEZONE;
@@ -76,6 +77,46 @@ function developmentDeadlines(stage: '14d' | '3d', from: number, until: number) 
 			return deadlines.map(({ subjectId, ...d }) => ({
 				subjectId: `${d.module}:${subjectId}:${d.on}`,
 				payload: { stage, ...d }
+			}));
+		}
+	});
+}
+
+/**
+ * One stage of the renewal reminders (#1478): every renewal expiring between
+ * `from` and `until` days from today. The subject carries the date, so a
+ * renewal moved forward is owed its reminders again.
+ */
+function renewalExpiry(stage: '60d' | '14d', from: number, until: number) {
+	return defineReminder({
+		key: `renewal_expiry_${stage}`,
+		subjectType: 'renewal',
+		event: 'renewal.expiry_due' as const,
+		async due(now: Date) {
+			const today = clubToday(now);
+			const rows = await listRenewalsExpiringBetween(
+				addIsoDays(today, from),
+				addIsoDays(today, until)
+			);
+			return rows.map((r) => ({
+				subjectId: `${r.id}:${r.expiresOn}`,
+				payload: {
+					stage,
+					renewalId: r.id,
+					name: r.name,
+					kind: r.kind,
+					issuer: r.issuer,
+					reference: r.reference,
+					expiresOn: r.expiresOn,
+					responsible:
+						r.responsibleUserId && r.responsibleEmail
+							? {
+									id: r.responsibleUserId,
+									name: r.responsibleName ?? '',
+									email: r.responsibleEmail
+								}
+							: null
+				}
 			}));
 		}
 	});
@@ -324,5 +365,10 @@ export const reminders: ReminderDefinition[] = [
 	// inside three days gets only the last reminder. Past deadlines get none;
 	// the lists show those in red.
 	developmentDeadlines('14d', 4, 14),
-	developmentDeadlines('3d', 0, 3)
+	developmentDeadlines('3d', 0, 3),
+	// Non-overlapping bands, so one drain sends one stage: a renewal first
+	// entered inside two weeks gets only the last one. A lapsed one gets none;
+	// the list shows it in red.
+	renewalExpiry('60d', 15, 60),
+	renewalExpiry('14d', 0, 14)
 ];

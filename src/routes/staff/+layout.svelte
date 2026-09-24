@@ -46,7 +46,8 @@
 		IconMapPin,
 		IconKey,
 		IconBuildingStore,
-		IconContract
+		IconContract,
+		IconCertificate
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
@@ -132,6 +133,7 @@
 		credits: IconCoins,
 		sponsors: IconBuildingStore,
 		grants: IconContract,
+		renewals: IconCertificate,
 		settings: IconSettings,
 		audit: IconHistory
 	};

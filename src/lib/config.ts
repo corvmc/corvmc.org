@@ -794,6 +794,20 @@ export const sponsorshipStatusBadge = {
 } as const satisfies Record<SponsorshipStatus, string>;
 
 // ---------------------------------------------------------------------------
+// Renewals: CMC's own permits, licenses and insurance policies (#1478)
+// ---------------------------------------------------------------------------
+
+export const renewalKinds = ['permit', 'license', 'insurance', 'other'] as const;
+export type RenewalKind = (typeof renewalKinds)[number];
+
+export const renewalKindLabels: Record<RenewalKind, string> = {
+	permit: 'Permit',
+	license: 'License',
+	insurance: 'Insurance',
+	other: 'Other'
+};
+
+// ---------------------------------------------------------------------------
 // Grants: funders, applications, awards and the reports they require
 // ---------------------------------------------------------------------------
 
@@ -2023,6 +2037,9 @@ export const capabilities = {
 	incident: ['read', 'record'],
 	sponsor: ['read', 'manage'],
 	grant: ['read', 'manage'],
+	// CMC's own permits, licenses and policies. Not `contractor`: a contractor's
+	// certificate is theirs, and it stays on their record.
+	renewal: ['read', 'manage'],
 	project: ['read', 'manage'],
 	inbox: ['read', 'reply', 'assign', 'dispose', 'manageChannels'],
 	marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send'],
@@ -2342,7 +2359,9 @@ export const attachableTypes = [
 	 */
 	'artifact_request',
 	/** A sponsor's `logo`, shown beside its credit on an event (#583). */
-	'sponsor'
+	'sponsor',
+	/** A permit, license or policy of CMC's own: its certificate, privately. */
+	'renewal'
 ] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 
@@ -2550,7 +2569,7 @@ export const RADIO_MAX_TRACK_MS = 15 * 60 * 1000;
 
 /**
  * What a band attests before a release can go on CMC Radio. The station holds no
- * webcast licence, so it plays only music no PRO collects on. `version` is stored
+ * webcast license, so it plays only music no PRO collects on. `version` is stored
  * with each attestation; changing `text` means changing `version`, and every
  * release then needs a fresh attestation before it plays again.
  */

@@ -31,6 +31,8 @@ export const tableOrder = [
 	'funder',
 	'grant_application',
 	'grant_report',
+	// References user (the responsible staffer), set null.
+	'renewal',
 	'equipment_category',
 	'inventory_location',
 	'inventory_item',

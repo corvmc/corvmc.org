@@ -127,6 +127,18 @@ export function isReceiptKey(key: string | null | undefined): boolean {
 	return !!key && key.startsWith(RECEIPT_KEY_PREFIX);
 }
 
+/** Every renewal certificate is under this prefix, in the **private** bucket. */
+export const RENEWAL_DOCUMENT_KEY_PREFIX = 'renewals/';
+
+/** The key for one renewal document. The filename goes nowhere near it. */
+export function renewalDocumentKey(renewalId: string, contentType: string): string {
+	return `${RENEWAL_DOCUMENT_KEY_PREFIX}${renewalId}/${crypto.randomUUID()}.${extensionForType(contentType)}`;
+}
+
+export function isRenewalDocumentKey(key: string | null | undefined): boolean {
+	return !!key && key.startsWith(RENEWAL_DOCUMENT_KEY_PREFIX);
+}
+
 export function sanitizeFilename(name: string): string {
 	const flattened = name
 		// eslint-disable-next-line no-control-regex -- the point is to remove them

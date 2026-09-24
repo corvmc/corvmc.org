@@ -1,5 +1,5 @@
 import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE } from '$lib/config';
+import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE, renewalKindLabels } from '$lib/config';
 import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
 import { fanOutAnnouncement, fanOutGroupRoom } from '$lib/server/group/announcement-fanout';
@@ -1867,5 +1867,49 @@ export function registerAllNotificationListeners(): void {
 				cta: { label: 'View suggestion' }
 			}
 		});
+	});
+
+	// CMC's own permits, licenses and policies (#1478). The responsible staffer
+	// alone when one is named, so a reminder has an owner rather than an audience.
+	domainEvents.on('renewal.expiry_due', async ({ data: event }) => {
+		const recipients = event.responsible
+			? [event.responsible]
+			: await listUsersWithCapability('renewal.manage');
+		const date = formatIsoDay(event.expiresOn);
+		const soon = event.stage === '14d' ? 'in two weeks or less' : 'in the next two months';
+		const kind = renewalKindLabels[event.kind];
+		const details: NotificationEmailDetail[] = [
+			{ label: 'Kind', value: kind },
+			...(event.issuer ? [{ label: 'Issued by', value: event.issuer }] : []),
+			...(event.reference ? [{ label: 'Reference', value: event.reference }] : []),
+			{ label: 'Expires', value: date }
+		];
+		for (const member of recipients) {
+			try {
+				await dispatch({
+					type: 'renewal_expiry',
+					userId: member.id,
+					userEmail: member.email,
+					title: `${event.name} expires ${date}`,
+					body: event.issuer ?? kind,
+					href: `/staff/renewals/${event.renewalId}`,
+					email: {
+						recipientName: member.name,
+						subject: `${event.name} expires ${date}`,
+						preview_text: `${event.name} expires ${soon}`,
+						heading: `${event.name} expires ${date}`,
+						paragraphs: [
+							{
+								text: `${event.name} expires on ${date}, ${soon}. Once it is renewed, move the expiry date forward and attach the new certificate.`
+							}
+						],
+						details,
+						cta: { label: 'Open the renewal' }
+					}
+				});
+			} catch (err) {
+				captureException(err, { event: 'notification.renewal_expiry', to: member.email });
+			}
+		}
 	});
 }

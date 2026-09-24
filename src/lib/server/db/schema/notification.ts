@@ -624,6 +624,14 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// of six groups needs to silence one without silencing all.
 		description: 'Posts from bands, clubs, and committees you belong to',
 		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'renewal_expiry',
+		category: 'membership',
+		label: 'Permit, license or insurance expiring',
+		description: "Sixty and fourteen days before one of CMC's own renewals expires",
+		defaults: { email: true, inApp: true, sms: false },
+		staffOnly: true
 	}
 ];
 

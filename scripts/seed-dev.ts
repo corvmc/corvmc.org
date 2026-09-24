@@ -34,6 +34,7 @@ import { findRoomConflicts, resetRoom } from './seed/room';
 import { seedVenues } from './seed/venues';
 import { seedSponsors } from './seed/sponsors';
 import { seedGrants } from './seed/grants';
+import { seedRenewals } from './seed/renewals';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
@@ -133,6 +134,7 @@ async function main() {
 	const venues = await seedVenues(events);
 	const sponsors = await seedSponsors(events);
 	const grants = await seedGrants();
+	const renewals = await seedRenewals(adminUser.id);
 	const bands = await seedBands(allUsers);
 	// Appended rather than folded into `seedBands`: it brings its own persona and
 	// login, and every downstream band seeder either maps over the whole array —
@@ -315,6 +317,7 @@ async function main() {
 	console.log(`  ${venues.venues} venues, one of them ours`);
 	console.log(`  ${sponsors.sponsors} sponsors, ${sponsors.placements} event placements`);
 	console.log(`  ${grants.applications} grant applications to ${grants.funders} funders`);
+	console.log(`  ${renewals.renewals} permits, licenses and policies`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(

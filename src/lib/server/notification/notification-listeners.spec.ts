@@ -1311,3 +1311,42 @@ describe('development deadline due (#1477)', () => {
 		expect(call.href).toBe('/staff/sponsors/s1');
 	});
 });
+
+describe('renewal expiry due (#1478)', () => {
+	beforeEach(() => {
+		registerAllNotificationListeners();
+	});
+
+	const policy = {
+		stage: '60d',
+		renewalId: 'r1',
+		name: 'General liability',
+		kind: 'insurance',
+		issuer: 'Acme Mutual',
+		reference: 'GL-123',
+		expiresOn: '2026-11-01',
+		responsible: { id: 'u9', name: 'Cy', email: 'cy@test.com' }
+	};
+
+	const renewalCalls = () =>
+		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'renewal_expiry');
+
+	it('tells the responsible staffer alone, linking to the renewal', async () => {
+		await emit('renewal.expiry_due', policy);
+
+		expect(mockStaffUsers).not.toHaveBeenCalled();
+		const calls = renewalCalls();
+		expect(calls.map((c) => c.userId)).toEqual(['u9']);
+		expect(calls[0].href).toBe('/staff/renewals/r1');
+		expect(calls[0].title).toContain('General liability');
+		expect(calls[0].email.subject).toContain('General liability');
+		expect(detailText(calls[0].email)).toContain('GL-123');
+	});
+
+	it('tells every renewal manager when nobody is responsible', async () => {
+		await emit('renewal.expiry_due', { ...policy, responsible: null });
+
+		expect(mockStaffUsers).toHaveBeenCalledWith('renewal.manage');
+		expect(new Set(renewalCalls().map((c) => c.userId))).toEqual(new Set(['staff-1', 'staff-2']));
+	});
+});
