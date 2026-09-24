@@ -5,7 +5,8 @@ import {
 	LONG_TEXT_MAX,
 	SHORT_TEXT_MAX,
 	creditCompCeiling,
-	creditsToHours
+	creditsToHours,
+	hoursToCredits
 } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
@@ -498,7 +499,9 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
  * enum into something a staff member reads.
  */
 function overdrawn(type: CreditType, available: number, requested: number): string {
-	return `${titleCase(type)} balance is ${available} — cannot deduct ${requested}.`;
+	const show = (credits: number) =>
+		type === 'free_hours' ? `${creditsToHours(credits)} hrs` : `${credits}`;
+	return `${titleCase(type)} balance is ${show(available)} — cannot deduct ${show(requested)}.`;
 }
 
 /** What a comp-only staffer reads when an adjustment is beyond them. */
@@ -522,15 +525,22 @@ export const adjustCredits = form(
 
 		const userId = data.userId as string;
 		const type = data.creditType as CreditType;
-		const amount = Number(data.amount);
+		const entered = Number(data.amount);
 		const description = data.description as string;
 
 		// Everything a staffer can get wrong here is a field they can see and fix,
 		// so all of it resolves to an issue on `amount` rather than a thrown
 		// status. A thrown error tears the modal down through the error boundary
 		// and takes the description they already typed with it.
-		if (!Number.isFinite(amount)) invalid(issue.amount('Enter a number.'));
-		if (amount === 0) invalid(issue.amount('Enter an amount above or below zero.'));
+		if (!Number.isFinite(entered)) invalid(issue.amount('Enter a number.'));
+		if (entered === 0) invalid(issue.amount('Enter an amount above or below zero.'));
+
+		// Free hours are entered in hours, as the panel shows them, and stored as
+		// 30-minute credits; a fraction that does not convert exactly is refused.
+		const amount = type === 'free_hours' ? hoursToCredits(entered) : entered;
+		if (type === 'free_hours' && creditsToHours(amount) !== entered) {
+			invalid(issue.amount('Enter hours in half-hour steps.'));
+		}
 
 		let balanceAfter: number;
 		if (!unbounded) {

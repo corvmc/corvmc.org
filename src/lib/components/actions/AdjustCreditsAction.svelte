@@ -61,10 +61,15 @@
 					<option value="equipment_credits">Equipment Credits</option>
 				</Select>
 			</FormField>
-			<FormField field={fields.amount} label="Amount" description={amountHint}>
+			<FormField
+				field={fields.amount}
+				label={creditType === 'free_hours' ? 'Hours' : 'Credits'}
+				description={amountHint}
+			>
 				<input
 					{...fields.amount.as('text')}
 					type="number"
+					step={creditType === 'free_hours' ? 0.5 : 1}
 					class="input w-full"
 					bind:value={amount}
 					placeholder="Positive to add, negative to deduct"
