@@ -19,13 +19,13 @@ describe('sponsorCreditMarkdown', () => {
 
 	it('links a sponsor with a website and names one without', () => {
 		expect(sponsorCreditMarkdown([troubadour, brewery])).toBe(
-			'*Presented with support from [Troubadour Music](https://troubadour.example) and Block 15.*'
+			'*Sponsored by [Troubadour Music](https://troubadour.example) and Block 15.*'
 		);
 	});
 
 	it('does not let a name or a URL become markup', () => {
 		const line = sponsorCreditMarkdown([{ name: 'A*B [x](y)', website: 'javascript:alert(1)' }]);
-		expect(line).toBe('*Presented with support from A\\*B \\[x\\]\\(y\\).*');
+		expect(line).toBe('*Sponsored by A\\*B \\[x\\]\\(y\\).*');
 	});
 });
 
@@ -36,7 +36,7 @@ describe('withSponsorCredit', () => {
 
 	it('appends the credit after a rule, below everything staff wrote', () => {
 		expect(withSponsorCredit('# Show\n\n', [brewery])).toBe(
-			'# Show\n\n---\n\n*Presented with support from Block 15.*\n'
+			'# Show\n\n---\n\n*Sponsored by Block 15.*\n'
 		);
 	});
 });
