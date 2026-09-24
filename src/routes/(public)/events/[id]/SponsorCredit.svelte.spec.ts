@@ -14,7 +14,7 @@ describe('SponsorCredit', () => {
 				{ name: 'Block 15', website: null, logoUrl: null }
 			]
 		});
-		await expect.element(page.getByText(/Presented with support from/)).toBeVisible();
+		await expect.element(page.getByText(/Sponsored by/)).toBeVisible();
 		const link = page.getByRole('link', { name: 'Troubadour Music' });
 		await expect.element(link).toHaveAttribute('href', 'https://troubadour.example');
 		await expect.element(link).toHaveAttribute('rel', expect.stringContaining('sponsored'));

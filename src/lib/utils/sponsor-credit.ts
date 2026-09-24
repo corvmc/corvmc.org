@@ -2,7 +2,7 @@
  * How a sponsored placement is disclosed (#583): the event page and the blasts
  * about a show say the same words, so a sponsor reads as a sponsor everywhere.
  */
-export const SPONSOR_CREDIT_LEAD = 'Presented with support from';
+export const SPONSOR_CREDIT_LEAD = 'Sponsored by';
 
 type Credited = { name: string; website: string | null };
 

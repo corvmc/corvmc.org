@@ -33,7 +33,7 @@ mark it Ended or add the renewal.
 On the sponsor's page, choose **Place** beside a sponsorship. Pick the show, then choose where to
 credit the sponsor:
 
-- **Event page:** the public event page shows "Presented with support from" and the sponsor's
+- **Event page:** the public event page shows "Sponsored by" and the sponsor's
   logo or name, linked to their website.
 - **Email:** every campaign about that show ends with the same line.
 

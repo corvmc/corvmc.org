@@ -305,9 +305,7 @@ describe('campaign-service', () => {
 				eventId: 'evt-1'
 			});
 
-			expect(vi.mocked(renderCampaignPreview).mock.calls[0][0]).toContain(
-				'Presented with support from Block 15.'
-			);
+			expect(vi.mocked(renderCampaignPreview).mock.calls[0][0]).toContain('Sponsored by Block 15.');
 		});
 
 		it('inserts campaign row then audience links, returns created row', async () => {
@@ -525,7 +523,7 @@ describe('campaign-service', () => {
 			expect(creditsForEvent).toHaveBeenCalledWith('evt-1', 'campaign');
 			const [markdown] = vi.mocked(renderCampaignForSend).mock.calls[0];
 			expect(markdown).toContain('# Hello');
-			expect(markdown).toContain('Presented with support from Troubadour Music.');
+			expect(markdown).toContain('Sponsored by Troubadour Music.');
 		});
 
 		it('looks up no sponsors for a blast about no show', async () => {
