@@ -51,6 +51,7 @@ describe('activeNavKey', () => {
 		['/staff/inbox/abc', 'inbox'],
 		['/staff/users', 'users'],
 		['/staff/users/abc', 'users'],
+		['/staff/ballots/abc', 'ballots'],
 		['/staff/volunteer', 'volunteer'],
 		['/staff/volunteer/people', 'volunteer-people'],
 		// Shift detail lost its own row when the catalog folded into Schedule; it

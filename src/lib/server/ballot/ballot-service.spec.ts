@@ -494,3 +494,17 @@ describe('cancelling', () => {
 		);
 	});
 });
+
+describe('committee rosters for choosing a certifier', () => {
+	it('lists only committees the member administers, with active members only', async () => {
+		const mine = await svc.listCommitteeRosters({ adminUserId: CHAIR });
+		expect(mine.map((c) => c.id)).toEqual([COMMITTEE]);
+		expect(mine[0].members.map((m) => m.id).sort()).toEqual([CHAIR, NEWCOMER, VETERAN].sort());
+		expect(await svc.listCommitteeRosters({ adminUserId: VETERAN })).toEqual([]);
+	});
+
+	it('lists every committee, and never a band, for staff', async () => {
+		const all = await svc.listCommitteeRosters();
+		expect(all.map((c) => c.id)).toEqual([COMMITTEE]);
+	});
+});

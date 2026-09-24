@@ -351,6 +351,51 @@ export async function listAllBallots(opts: { now?: Date } = {}): Promise<BallotS
 	return rows.map((r) => toSummary(r.ballot, r.groupName, now, null, false, false));
 }
 
+export interface CommitteeRoster {
+	id: string;
+	name: string;
+	members: Array<{ id: string; name: string }>;
+}
+
+/**
+ * Committees with their active rosters, for choosing a certifier. With
+ * `adminUserId`, only committees that member owns or administers.
+ */
+export async function listCommitteeRosters(
+	opts: { adminUserId?: string } = {}
+): Promise<CommitteeRoster[]> {
+	const admin = opts.adminUserId
+		? exists(
+				db
+					.select({ x: sql`1` })
+					.from(groupMember)
+					.where(
+						and(
+							eq(groupMember.groupId, group.id),
+							eq(groupMember.userId, opts.adminUserId),
+							eq(groupMember.status, 'active'),
+							inArray(groupMember.role, ['owner', 'admin'])
+						)
+					)
+			)
+		: undefined;
+	const rows = await db
+		.select({ id: group.id, name: group.name, userId: user.id, userName: user.name })
+		.from(group)
+		.leftJoin(groupMember, and(eq(groupMember.groupId, group.id), eq(groupMember.status, 'active')))
+		.leftJoin(user, and(eq(user.id, groupMember.userId), activeAccount))
+		.where(and(eq(group.kind, 'committee'), isNull(group.deletedAt), admin))
+		.orderBy(asc(group.name), asc(group.id), asc(user.name), asc(user.id));
+
+	const byId = new Map<string, CommitteeRoster>();
+	for (const r of rows) {
+		const entry = byId.get(r.id) ?? { id: r.id, name: r.name, members: [] };
+		if (r.userId && r.userName) entry.members.push({ id: r.userId, name: r.userName });
+		byId.set(r.id, entry);
+	}
+	return [...byId.values()];
+}
+
 export async function listOverrides(ballotId: string) {
 	return db
 		.select({
