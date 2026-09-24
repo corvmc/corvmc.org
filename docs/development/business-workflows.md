@@ -575,6 +575,13 @@ got) and `listLowStock()` (minus anything an open order already covers). Names
 only, because the page is public. Staff maintain it by doing what they already
 do: marking a gear suggestion planned, and setting reorder points.
 
+A signed-in member can claim an entry (`pledgeWishlistItem` → `pledge-service.ts`,
+a `wishlist_pledge` row). It holds for 30 days; an open row past `expiresAt`
+simply stops counting, with no sweep. Other viewers see only "someone is
+bringing this"; the pledger sees their own and can release it. Intake lists open
+pledges, and `recordIntake` closes them: every pledge on the linked gear
+request, and supply pledges by the named donor on a donation carrying the item.
+
 ### Form 8282
 
 Disposing of donated property within three years of receipt can oblige the

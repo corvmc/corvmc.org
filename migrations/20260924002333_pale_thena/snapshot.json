@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "649d6064-9169-405c-a381-97993a00b062",
+  "id": "fd5f5246-dab7-4f08-a2be-d7685271dcb1",
   "prevIds": [
-    "94c0dd30-4892-4a1f-942d-b695d06eb5ed"
+    "649d6064-9169-405c-a381-97993a00b062"
   ],
   "ddl": [
     {
@@ -164,6 +164,10 @@
     },
     {
       "name": "stock_movement",
+      "entityType": "tables"
+    },
+    {
+      "name": "wishlist_pledge",
       "entityType": "tables"
     },
     {
@@ -4965,6 +4969,86 @@
       "name": "created_at",
       "entityType": "columns",
       "table": "stock_movement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "wishlist_pledge"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "wishlist_pledge"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_type",
+      "entityType": "columns",
+      "table": "wishlist_pledge"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_id",
+      "entityType": "columns",
+      "table": "wishlist_pledge"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'open'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "wishlist_pledge"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "table": "wishlist_pledge"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "closed_at",
+      "entityType": "columns",
+      "table": "wishlist_pledge"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "wishlist_pledge"
     },
     {
       "type": "text",
@@ -12948,6 +13032,21 @@
     },
     {
       "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_wishlist_pledge_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "wishlist_pledge"
+    },
+    {
+      "columns": [
         "asset_id"
       ],
       "tableTo": "inventory_asset",
@@ -15328,6 +15427,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "wishlist_pledge_pk",
+      "table": "wishlist_pledge",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "asset_flag_pk",
       "table": "work_request",
       "entityType": "pks"
@@ -17190,6 +17298,38 @@
       "name": "idx_movement_acquisition",
       "entityType": "indexes",
       "table": "stock_movement"
+    },
+    {
+      "columns": [
+        {
+          "value": "subject_type",
+          "isExpression": false
+        },
+        {
+          "value": "subject_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_wishlist_pledge_subject",
+      "entityType": "indexes",
+      "table": "wishlist_pledge"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_wishlist_pledge_user",
+      "entityType": "indexes",
+      "table": "wishlist_pledge"
     },
     {
       "columns": [

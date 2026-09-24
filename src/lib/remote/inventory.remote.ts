@@ -92,6 +92,7 @@ import {
 	LONG_TEXT_MAX,
 	SHORT_TEXT_MAX,
 	acquisitionKinds,
+	wishlistPledgeSubjects,
 	assetStatuses,
 	equipmentConditions,
 	itemKinds,
@@ -103,7 +104,13 @@ import {
 	DEFAULT_TIMEZONE
 } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { getDonationWishlist } from '$lib/server/inventory/wishlist-service';
+import { getDonationWishlist, isOnWishlist } from '$lib/server/inventory/wishlist-service';
+import {
+	fulfilPledges,
+	listOpenPledgesForStaff,
+	pledgeEntry,
+	releasePledge
+} from '$lib/server/inventory/pledge-service';
 
 /**
  * A calendar date the operator typed, as an instant.
@@ -679,10 +686,11 @@ export const getIntakePage = query(z.object({ orderId: z.string().optional() }),
 	// queries in flight from one component is what `no-concurrent-remote-queries`
 	// forbids — and past kit 2.64 it renders the error boundary instead of the
 	// page. Composed on the server, these are two local database hops.
-	const [{ rows }, order, plannedGear] = await Promise.all([
+	const [{ rows }, order, plannedGear, pledges] = await Promise.all([
 		listItems({}, { pageSize: 1000 }),
 		input.orderId ? getOrderById(input.orderId) : Promise.resolve(null),
-		listPlannedGear()
+		listPlannedGear(),
+		listOpenPledgesForStaff()
 	]);
 
 	return {
@@ -704,7 +712,9 @@ export const getIntakePage = query(z.object({ orderId: z.string().optional() }),
 		},
 		// The gear members asked for and staff agreed to buy. Recording the
 		// arrival against one is what finally tells the member it is here (#603).
-		plannedGear
+		plannedGear,
+		// Who said they would bring what (#1492), so the arrival can close it.
+		pledges
 	};
 });
 
@@ -857,6 +867,12 @@ export const recordIntake = form(
 			if (data.suggestionId) {
 				await fulfilSuggestion(data.suggestionId, { staffId: currentUser.id });
 			}
+			await fulfilPledges({
+				suggestionId: data.suggestionId || undefined,
+				itemIds: lines.map((l) => l.itemId),
+				donorUserId: data.kind === 'donation' ? data.donorUserId || undefined : undefined
+			});
+			void getPublicWishlist().refresh();
 
 			// Everything this touched: the catalog's on-hand numbers, the tagging
 			// backlog it just added to, and the register the receipt now appears in.
@@ -1841,6 +1857,45 @@ export const getMemberEquipmentPage = query(memberEquipmentFilters, async (filte
 
 /**
  * The donation wishlist on `/contribute`. **Unguarded on purpose** — it is a
- * public page — so the service returns names only.
+ * public page — so the service returns names and a claimed flag only. A
+ * signed-in viewer additionally learns which pledge is their own.
  */
-export const getPublicWishlist = query(async () => getDonationWishlist());
+export const getPublicWishlist = query(async () => {
+	const { locals } = getRequestEvent();
+	return {
+		...(await getDonationWishlist(locals.user?.id)),
+		signedIn: Boolean(locals.user)
+	};
+});
+
+/** "I'll bring it" (#1492). Members only, so staff know whom to expect. */
+export const pledgeWishlistItem = form(
+	z.object({ subjectType: z.enum(wishlistPledgeSubjects), subjectId: z.string().min(1).max(64) }),
+	async (data) => {
+		const currentUser = requireUser();
+		if (!(await isOnWishlist(data.subjectType, data.subjectId))) {
+			error(404, 'That is no longer on the wishlist.');
+		}
+		try {
+			await pledgeEntry({ userId: currentUser.id, ...data });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getPublicWishlist().refresh();
+		return { success: true };
+	}
+);
+
+export const releaseWishlistPledge = form(
+	z.object({ pledgeId: z.string().min(1).max(64) }),
+	async (data) => {
+		const currentUser = requireUser();
+		try {
+			await releasePledge({ userId: currentUser.id, pledgeId: data.pledgeId });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getPublicWishlist().refresh();
+		return { success: true };
+	}
+);

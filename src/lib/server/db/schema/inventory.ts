@@ -13,7 +13,9 @@ import {
 	orderStatuses,
 	pricingTiers,
 	stockReasons,
-	unitsOfMeasure
+	unitsOfMeasure,
+	wishlistPledgeStatuses,
+	wishlistPledgeSubjects
 } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -722,3 +724,33 @@ export type StockMovement = typeof stockMovement.$inferSelect;
 export type Acquisition = typeof acquisition.$inferSelect;
 export type AcquisitionLine = typeof acquisitionLine.$inferSelect;
 export type InventoryLoan = typeof inventoryLoan.$inferSelect;
+
+/**
+ * "I'll bring the bass amp" (#1492), so two donors don't buy one. `subjectId`
+ * is bare text for the same reason as `acquisition.suggestionId`: it points at
+ * a suggestion or an item depending on `subjectType`. Intake closes a pledge
+ * as `fulfilled`; the pledger can release it, and an expired one reads as free.
+ */
+export const wishlistPledge = sqliteTable(
+	'wishlist_pledge',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		subjectType: text('subject_type', { enum: wishlistPledgeSubjects }).notNull(),
+		subjectId: text('subject_id').notNull(),
+		status: text('status', { enum: wishlistPledgeStatuses }).notNull().default('open'),
+		expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+		closedAt: integer('closed_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('idx_wishlist_pledge_subject').on(t.subjectType, t.subjectId),
+		index('idx_wishlist_pledge_user').on(t.userId)
+	]
+);

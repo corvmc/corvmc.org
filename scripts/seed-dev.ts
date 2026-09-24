@@ -90,6 +90,7 @@ import { seedBannedPersona } from './seed/banned-persona';
 import { USAGE_PERSONAS, seedUsagePersonaLife, seedUsagePersonas } from './seed/usage-personas';
 import { STYLE_PERSONAS, seedStylePersonaHistory, seedStylePersonas } from './seed/style-personas';
 import { seedSuggestions } from './seed/suggestions';
+import { seedWishlistPledges } from './seed/wishlist-pledges';
 import { seedProjects } from './seed/projects';
 import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
@@ -262,6 +263,8 @@ async function main() {
 	const sustainingPersonas = await seedSustainingPersonas(roles);
 	const bannedPersona = await seedBannedPersona(roles, adminUser);
 	const suggestions = await seedSuggestions(allUsers, adminUser, eq.restockAcquisitionId);
+	// Reads back the planned gear above and the low supplies the equipment seed set.
+	const pledges = await seedWishlistPledges(allUsers.slice(-3));
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
@@ -366,6 +369,7 @@ async function main() {
 	console.log(
 		`  ${suggestions.total} suggestions (${suggestions.votes} votes, ${suggestions.pendingEdits} edit awaiting review)`
 	);
+	console.log(`  ${pledges.pledges} wishlist pledges (2 open, 1 expired, 1 released, 1 fulfilled)`);
 	console.log(
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
 	);

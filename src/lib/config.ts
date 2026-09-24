@@ -571,6 +571,15 @@ export const acquisitionKindLabels: Record<AcquisitionKind, string> = {
 };
 
 /**
+ * A donor's "I'll bring it" against a wishlist entry (#1492). `suggestion` is a
+ * planned gear request, `item` a low consumable — the two lists the wishlist
+ * projects. An open pledge past its expiry counts as released without a sweep.
+ */
+export const wishlistPledgeSubjects = ['suggestion', 'item'] as const;
+export type WishlistPledgeSubject = (typeof wishlistPledgeSubjects)[number];
+export const wishlistPledgeStatuses = ['open', 'fulfilled', 'released'] as const;
+
+/**
  * Where a purchase order is in its life.
  *
  * Deliberately *not* a column on `acquisition`. The spec's central rule is that

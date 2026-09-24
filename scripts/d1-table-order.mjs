@@ -187,7 +187,9 @@ export const tableOrder = [
 	// A root: references nothing. Parent of local_resource.
 	'local_resource_category',
 	// References local_resource_category and user.
-	'local_resource'
+	'local_resource',
+	// References user only; its subject id is bare text.
+	'wishlist_pledge'
 ];
 
 /**
