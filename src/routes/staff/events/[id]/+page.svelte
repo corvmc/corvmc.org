@@ -124,6 +124,12 @@
 			<Button href="/staff/events/{evt.id}/check-in" variant="ghost" size="sm">Check-in</Button>
 		{/if}
 
+		{#if evt.kind === 'market'}
+			<Button href={resolve(`/staff/events/${id}/vendors`)} variant="ghost" size="sm"
+				>Vendors</Button
+			>
+		{/if}
+
 		{#if evt.status !== 'cancelled' && !editing}
 			<Button variant="ghost" size="sm" onclick={startEditing}>Edit</Button>
 		{/if}
@@ -347,7 +353,8 @@
 							{ value: 'show', label: 'Show' },
 							{ value: 'work_party', label: 'Work party' },
 							{ value: 'meeting', label: 'Meeting' },
-							{ value: 'class', label: 'Class' }
+							{ value: 'class', label: 'Class' },
+							{ value: 'market', label: 'Market' }
 						]}
 						description="Only shows reach the homepage posters. Anything published still appears on the public calendar."
 					/>

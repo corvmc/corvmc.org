@@ -2135,8 +2135,19 @@ export const eventKindLabels = {
 	show: 'Shows',
 	work_party: 'Work parties',
 	meeting: 'Meetings',
-	class: 'Classes'
+	class: 'Classes',
+	market: 'Markets'
 } as const;
+
+/**
+ * Where a market vendor's application stands. `withdrawn` is terminal; a
+ * decision can be reversed, a vendor's own withdrawal cannot.
+ */
+export const marketVendorStatuses = ['applied', 'accepted', 'declined', 'withdrawn'] as const;
+export type MarketVendorStatus = (typeof marketVendorStatuses)[number];
+
+/** A vendor may ask for up to this many tables on one application. */
+export const MARKET_MAX_TABLES_REQUESTED = 4;
 export type EventSource = (typeof eventSources)[number];
 
 /** The member kinds `memberSubtype()` can report. */

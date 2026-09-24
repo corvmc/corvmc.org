@@ -381,6 +381,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			ticketPriceFloorCents: evt.ticketPriceFloorCents,
 			ticketQuantity: evt.ticketQuantity,
 			source: evt.source,
+			kind: evt.kind,
 			status: evt.status,
 			externalTicketUrl: evt.externalTicketUrl,
 			bandName: bandInfo?.name ?? null,

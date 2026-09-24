@@ -18,6 +18,7 @@
 	import ShareButton from '$lib/components/ui/ShareButton.svelte';
 	import EventPhotos from './EventPhotos.svelte';
 	import RecapUpload from './RecapUpload.svelte';
+	import MarketVendors from './MarketVendors.svelte';
 
 	let data = $derived(await getPublicEventDetail(page.params.id!));
 
@@ -375,6 +376,10 @@
 				</div>
 			</div>
 		</div>
+
+		{#if evt.kind === 'market'}
+			<MarketVendors eventId={evt.id} />
+		{/if}
 
 		{#if data.photos.length > 0}
 			<EventPhotos eventTitle={evt.title} photos={data.photos} />

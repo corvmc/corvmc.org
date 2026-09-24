@@ -42,7 +42,7 @@ const report = {
 	},
 	membership: { sustainingMemberCount: 12, totalFreeHoursAllocated: 48, participationPercent: 30 },
 	events: {
-		cmcByKind: { show: 3, work_party: 1, meeting: 0, class: 0 },
+		cmcByKind: { show: 3, work_party: 1, meeting: 0, class: 0, market: 0 },
 		cmcTotal: 4,
 		bandListings: 2,
 		communityListings: 1,
