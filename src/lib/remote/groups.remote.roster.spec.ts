@@ -55,7 +55,8 @@ vi.mock('$lib/server/authorization', () => ({
  */
 const GROUPS: Record<string, { id: string; slug: string; kind: string }> = {
 	'real-book-club': { id: 'group-1', slug: 'real-book-club', kind: 'club' },
-	'wren-halloway': { id: 'band-1', slug: 'wren-halloway', kind: 'band' }
+	'wren-halloway': { id: 'band-1', slug: 'wren-halloway', kind: 'band' },
+	'facilities-committee': { id: 'committee-1', slug: 'facilities-committee', kind: 'committee' }
 };
 const RANK = { owner: 0, admin: 1, member: 2 } as const;
 let callerRole: 'owner' | 'admin' | 'member' = 'admin';
@@ -158,8 +159,10 @@ vi.mock('$lib/server/group/announcement-service', () => ({
 vi.mock('$lib/server/group/committee-application-service', () => ({
 	listForCommittee: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/event/event-service', () => ({ listGroupSessions: vi.fn() }));
-vi.mock('$lib/server/project/project-service', () => ({ listProjects: vi.fn() }));
+vi.mock('$lib/server/event/event-service', () => ({ listGroupSessions: vi.fn(async () => []) }));
+vi.mock('$lib/server/project/project-service', () => ({ listProjects: vi.fn(async () => []) }));
+const listDutyLists = vi.hoisted(() => vi.fn());
+vi.mock('$lib/server/volunteer/duty-list-service', () => ({ listDutyLists }));
 vi.mock('$lib/server/group/file-service', () => ({ list: vi.fn(), getUsage: vi.fn() }));
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v }));
 vi.mock('$lib/server/errors', () => ({
@@ -398,5 +401,29 @@ describe('answering an invitation', () => {
 			success: false,
 			reason: 'not_found'
 		});
+	});
+});
+
+describe('getMemberGroup offers a committee its project duty lists', () => {
+	beforeEach(() => {
+		listDutyLists.mockResolvedValue([
+			{ id: 'dl-1', name: 'Work Party Kickoff', itemCount: 3 },
+			{ id: 'dl-2', name: 'Empty draft', itemCount: 0 }
+		]);
+	});
+
+	it('lists the project lists that have items, for a committee member', async () => {
+		callerRole = 'member';
+		const page = (await groups.getMemberGroup('facilities-committee')) as {
+			projectDutyLists: unknown;
+		};
+		expect(listDutyLists).toHaveBeenCalledWith({ subject: 'project' });
+		expect(page.projectDutyLists).toEqual([{ id: 'dl-1', name: 'Work Party Kickoff' }]);
+	});
+
+	it('reads none for a club, which owns no projects', async () => {
+		const page = (await groups.getMemberGroup(SLUG)) as { projectDutyLists: unknown };
+		expect(listDutyLists).not.toHaveBeenCalled();
+		expect(page.projectDutyLists).toEqual([]);
 	});
 });
