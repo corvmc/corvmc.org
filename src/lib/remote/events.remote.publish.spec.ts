@@ -161,6 +161,16 @@ describe('event mutations surface their domain errors', () => {
 		});
 	});
 
+	it('unpublishEvent records the staffer, so a community listing gets an appealable report (#1421)', async () => {
+		unpublishWithNotice.mockResolvedValueOnce(undefined);
+		await events.unpublishEvent({ id: 'evt-1', notes: 'No venue' });
+
+		expect(unpublishWithNotice).toHaveBeenCalledWith('evt-1', {
+			notes: 'No venue',
+			staffActionBy: 'staff-1'
+		});
+	});
+
 	it('cancelEvent keeps its state error', async () => {
 		cancel.mockRejectedValueOnce(new DomainError('Event is already cancelled', 409));
 

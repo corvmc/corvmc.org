@@ -45,7 +45,7 @@
 			name="notes"
 			type="textarea"
 			label="Reason"
-			description="Sent to whoever posted this and kept on the listing. Leave blank for CMC events, which notify nobody."
+			description="Sent to whoever posted this and kept on the listing. Required for a community listing, which the poster can appeal. Leave blank for CMC events, which notify nobody."
 		/>
 	{/snippet}
 </Action>

@@ -37,6 +37,16 @@ export class FlagNotFoundError extends DomainError {
 	}
 }
 
+/** A staff action is an upheld report the member is shown and can appeal, so it needs a reason. */
+export class StaffActionReasonRequiredError extends DomainError {
+	readonly httpStatus = 400;
+
+	constructor() {
+		super('Give a reason: the member is shown it and can appeal the decision');
+		this.name = 'StaffActionReasonRequiredError';
+	}
+}
+
 export class FlagTargetNotFoundError extends DomainError {
 	readonly httpStatus = 404;
 
@@ -220,6 +230,7 @@ export async function fileStaffAction(params: {
 	staffId: string;
 	reason: string;
 }) {
+	if (!params.reason.trim()) throw new StaffActionReasonRequiredError();
 	const entityLabel = await resolveEntityLabel(params.entityType, params.entityId);
 	if (entityLabel === null) throw new FlagTargetNotFoundError();
 

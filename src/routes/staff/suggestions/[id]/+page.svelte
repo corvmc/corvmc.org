@@ -365,7 +365,11 @@
 							)}
 						/>
 						<label class="fieldset w-full">
-							<span class="fieldset-legend">Reason (shown to the member)</span>
+							<span class="fieldset-legend">
+								{s.visibility === 'hidden'
+									? 'Reason (shown to the member)'
+									: 'Reason (required: the member is shown it and can appeal)'}
+							</span>
 							<textarea
 								class="textarea w-full"
 								rows="3"

@@ -180,6 +180,11 @@ vi.mock('$lib/server/media/media-service', () => ({
 	isKeyReferenced: vi.fn().mockResolvedValue(false)
 }));
 
+const mockFileStaffAction = vi.fn().mockResolvedValue({ id: 'flag-staff' });
+vi.mock('$lib/server/flag/flag-service', () => ({
+	fileStaffAction: (...args: unknown[]) => mockFileStaffAction(...args)
+}));
+
 const mockTicketsSold = vi.fn().mockResolvedValue(0);
 vi.mock('$lib/server/ticket/ticket-service', () => ({
 	getTicketsSold: (...args: unknown[]) => mockTicketsSold(...args)
@@ -1291,6 +1296,61 @@ describe('EventService', () => {
 			posterKey: 'events/posters/evt-1.jpg',
 			createdByUserId: 'member-1'
 		};
+
+		// #1421: a takedown outside the flag queue still leaves the member a report to appeal.
+		it('files a staff_action report before a staffer pulls a community listing directly', async () => {
+			mockFileStaffAction.mockClear();
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1', { notes: 'No venue given', staffActionBy: 'staff-1' });
+
+			expect(mockFileStaffAction).toHaveBeenCalledWith({
+				entityType: 'event',
+				entityId: 'evt-1',
+				staffId: 'staff-1',
+				reason: 'No venue given'
+			});
+			expect(lastUpdateSet).toMatchObject({ reviewNotes: 'No venue given' });
+		});
+
+		it('leaves the listing up when the staff_action report cannot be filed', async () => {
+			mockFileStaffAction.mockRejectedValueOnce(new Error('reason required'));
+			selectResultQueue = [[publishedCommunityListing]];
+
+			await expect(unpublishWithNotice('evt-1', { staffActionBy: 'staff-1' })).rejects.toThrow(
+				'reason required'
+			);
+			expect(lastUpdateSet).toBeNull();
+		});
+
+		it('files nothing from the flag queue, which already has its upheld report', async () => {
+			mockFileStaffAction.mockClear();
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1', { notes: 'No venue given' });
+
+			expect(mockFileStaffAction).not.toHaveBeenCalled();
+		});
+
+		it('files nothing for a CMC event pulled by staff, which no member can appeal', async () => {
+			mockFileStaffAction.mockClear();
+			selectResultQueue = [
+				[{ ...publishedBandEvent, source: 'cmc', groupId: null, bandName: null }],
+				[{ ...mockEventRow, status: 'published' }]
+			];
+
+			await unpublishWithNotice('evt-1', { staffActionBy: 'staff-1' });
+
+			expect(mockFileStaffAction).not.toHaveBeenCalled();
+		});
 
 		// The poster has to stop being fetchable — that is the whole control — but
 		// a takedown is a moderation decision, not a reason to destroy the member's
