@@ -123,7 +123,8 @@
 								<div class="font-medium">{s.name}</div>
 							{/if}
 							<div class="text-sm text-base-content/60">
-								{s.roleName}{#if s.projectName}
+								{s.roleName}{#if s.groupName}
+									· {s.groupName}{/if}{#if s.projectName}
 									· {s.projectName}{/if}{#if s.assetId && s.assetName}
 									·
 									<a class="link" href={resolve('/staff/inventory/assets/[id]', { id: s.assetId })}

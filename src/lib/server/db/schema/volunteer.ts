@@ -1121,6 +1121,8 @@ export const maintenanceSchedule = sqliteTable(
 		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
 		/** The unit this work is about, copied onto every occurrence. */
 		assetId: text('asset_id').references(() => inventoryAsset.id, { onDelete: 'set null' }),
+		/** The committee that keeps this as its own standing work. Null is staff's. */
+		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
 		notes: text('notes'),
 		capacity: integer('capacity').notNull().default(1),
 		intervalDays: integer('interval_days').notNull(),

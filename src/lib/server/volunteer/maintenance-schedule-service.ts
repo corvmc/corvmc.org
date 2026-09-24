@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { maintenanceSchedule, volunteerRole, workOrder } from '$lib/server/db/schema/volunteer';
 import { project } from '$lib/server/db/schema/project';
+import { group } from '$lib/server/db/schema/group';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
 import {
@@ -125,6 +126,8 @@ export async function createMaintenanceSchedule(data: {
 	firstDueAt: Date;
 	projectId?: string | null;
 	assetId?: string | null;
+	/** A committee keeping this as its own work; the caller has already guarded it. */
+	groupId?: string | null;
 	notes?: string | null;
 	capacity?: number;
 	createdByUserId: string;
@@ -150,6 +153,7 @@ export async function createMaintenanceSchedule(data: {
 		volunteerRoleId: data.volunteerRoleId,
 		projectId: data.projectId || null,
 		assetId: data.assetId || null,
+		groupId: data.groupId || null,
 		notes,
 		capacity,
 		intervalDays,
@@ -176,6 +180,17 @@ export async function retireMaintenanceSchedule(id: string): Promise<void> {
 	if (rows.length === 0) throw new MaintenanceScheduleNotFoundError();
 }
 
+/** The committee a schedule belongs to, for a guard that must not trust the client. */
+export async function getScheduleGroupId(id: string): Promise<string | null> {
+	const [row] = await db
+		.select({ groupId: maintenanceSchedule.groupId })
+		.from(maintenanceSchedule)
+		.where(eq(maintenanceSchedule.id, id))
+		.limit(1);
+	if (!row) throw new MaintenanceScheduleNotFoundError();
+	return row.groupId;
+}
+
 export interface MaintenanceScheduleRow {
 	id: string;
 	name: string;
@@ -187,6 +202,8 @@ export interface MaintenanceScheduleRow {
 	projectName: string | null;
 	assetId: string | null;
 	assetName: string | null;
+	groupId: string | null;
+	groupName: string | null;
 	openWorkOrderId: string | null;
 	openDueAt: Date | null;
 	/** Who holds a place on the open occurrence — the person it is assigned to. */
@@ -194,8 +211,10 @@ export interface MaintenanceScheduleRow {
 	lastClosedAt: Date | null;
 }
 
-/** Every schedule with its open occurrence, live ones first. */
-export async function listMaintenanceSchedules(): Promise<MaintenanceScheduleRow[]> {
+/** Every schedule with its open occurrence, live ones first; one committee's when asked. */
+export async function listMaintenanceSchedules(
+	filters: { groupId?: string } = {}
+): Promise<MaintenanceScheduleRow[]> {
 	const rows = await db
 		.select({
 			id: maintenanceSchedule.id,
@@ -212,6 +231,8 @@ export async function listMaintenanceSchedules(): Promise<MaintenanceScheduleRow
 				join "inventory_item" ii on ii."id" = ia."item_id"
 				where ia."id" = ${maintenanceSchedule.assetId}
 			)`,
+			groupId: maintenanceSchedule.groupId,
+			groupName: group.name,
 			openWorkOrderId: workOrder.id,
 			openDueAt: workOrder.dueAt,
 			// Newline-separated: a name can hold a comma, not a line break.
@@ -229,6 +250,7 @@ export async function listMaintenanceSchedules(): Promise<MaintenanceScheduleRow
 		.from(maintenanceSchedule)
 		.innerJoin(volunteerRole, eq(volunteerRole.id, maintenanceSchedule.volunteerRoleId))
 		.leftJoin(project, eq(project.id, maintenanceSchedule.projectId))
+		.leftJoin(group, eq(group.id, maintenanceSchedule.groupId))
 		.leftJoin(
 			workOrder,
 			and(
@@ -237,6 +259,7 @@ export async function listMaintenanceSchedules(): Promise<MaintenanceScheduleRow
 				isNull(workOrder.cancelledAt)
 			)
 		)
+		.where(filters.groupId ? eq(maintenanceSchedule.groupId, filters.groupId) : undefined)
 		.orderBy(
 			sql`${maintenanceSchedule.retiredAt} is not null`,
 			asc(workOrder.dueAt),

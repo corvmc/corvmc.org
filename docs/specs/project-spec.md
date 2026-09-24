@@ -282,6 +282,9 @@ window-materializer like `recurring_series` can.
 >
 > A schedule may name one inventory unit (`asset_id`, #1423), which every occurrence
 > copies; the shift form carries the same picker, so any work order can name one.
+>
+> A committee keeps its own schedules (`group_id`, #1512) from the Projects tab of
+> `/member/groups/[slug]`, guarded by `requireCommitteeMember(…, 'volunteer.manageShifts')`.
 
 ## Vocabulary
 

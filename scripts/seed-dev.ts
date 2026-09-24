@@ -400,7 +400,7 @@ async function main() {
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
 	);
 	console.log(
-		`  ${maintenance.schedules} recurring work schedules (1 overdue, 1 retired, 1 assigned)`
+		`  ${maintenance.schedules} recurring work schedules (1 overdue, 1 retired, 1 assigned, 1 a committee's)`
 	);
 	console.log(
 		`  ${productions.productions} productions covering every status, ${productions.withoutProduction} CMC shows deliberately without one`

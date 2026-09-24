@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { requireCapability } from '$lib/server/authorization';
+import { requireCommitteeMember } from '$lib/server/group/group-context';
 import { mapDomainError } from '$lib/server/errors';
 import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -9,11 +10,13 @@ import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service
 import { listProjects } from '$lib/server/project/project-service';
 import {
 	createMaintenanceSchedule as createService,
+	getScheduleGroupId,
 	listMaintenanceSchedules,
 	retireMaintenanceSchedule as retireService
 } from '$lib/server/volunteer/maintenance-schedule-service';
 import { searchAssetOptions } from '$lib/server/inventory/asset-service';
 import { getVolunteerWorklist } from './volunteer.remote';
+import { getMemberGroup } from './groups.remote';
 
 /**
  * Recurring facility work — staff-only. Members meet it only as the ordinary
@@ -46,18 +49,22 @@ export const searchWorkAssets = query(z.string(), async (q) => {
 	return searchAssetOptions(q);
 });
 
+const recurringFields = {
+	name: z.string().min(1, 'Name is required'),
+	volunteerRoleId: z.string().min(1, 'Pick a role'),
+	intervalDays: z.string().min(1, 'How often does it repeat?'),
+	// `YYYY-MM-DD`; anchored at noon club time, like every calendar date here.
+	firstDueOn: z.string().min(1, 'When is the first one due?'),
+	capacity: z.string().optional(),
+	notes: z.string().max(VOLUNTEER_SHIFT_NOTES_MAX).optional()
+};
+
 export const createRecurringWork = form(
 	z.object({
-		name: z.string().min(1, 'Name is required'),
-		volunteerRoleId: z.string().min(1, 'Pick a role'),
-		intervalDays: z.string().min(1, 'How often does it repeat?'),
-		// `YYYY-MM-DD`; anchored at noon club time, like every calendar date here.
-		firstDueOn: z.string().min(1, 'When is the first one due?'),
+		...recurringFields,
 		// A cleared select posts '', which `.optional()` alone would reject.
 		projectId: z.union([z.literal(''), z.uuid()]).optional(),
-		assetId: z.string().optional(),
-		capacity: z.string().optional(),
-		notes: z.string().max(VOLUNTEER_SHIFT_NOTES_MAX).optional()
+		assetId: z.string().optional()
 	}),
 	async (data) => {
 		const staff = await requireCapability('volunteer.manageShifts');
@@ -91,3 +98,45 @@ export const retireRecurringWork = form(z.object({ id: z.string().min(1) }), asy
 	await getRecurringWorkPage().refresh();
 	return { success: true };
 });
+
+/**
+ * A committee's own standing checklist: Booking's weekly holds, Facilities'
+ * monthly walk-through. Its members keep it; staff cover it through
+ * `volunteer.manageShifts`, as they do every other work order.
+ */
+export const createCommitteeRecurringWork = form(
+	z.object({ ...recurringFields, groupId: z.string().min(1) }),
+	async (data) => {
+		const { user, group } = await requireCommitteeMember(data.groupId, 'volunteer.manageShifts');
+		try {
+			await createService({
+				name: data.name,
+				volunteerRoleId: data.volunteerRoleId,
+				intervalDays: parseInt(data.intervalDays, 10),
+				firstDueAt: buildDateInTz(data.firstDueOn, '12:00', DEFAULT_TIMEZONE),
+				groupId: data.groupId,
+				capacity: data.capacity ? parseInt(data.capacity, 10) : 1,
+				notes: data.notes,
+				createdByUserId: user.id
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		if (group) void getMemberGroup(group.slug).refresh();
+		return { success: true };
+	}
+);
+
+/** Retire one of a committee's schedules. The committee comes from the row, not the form. */
+export const retireCommitteeRecurringWork = form(
+	z.object({ id: z.string().min(1) }),
+	async (data) => {
+		const { group } = await requireCommitteeMember(
+			await getScheduleGroupId(data.id),
+			'volunteer.manageShifts'
+		);
+		await retireService(data.id);
+		if (group) void getMemberGroup(group.slug).refresh();
+		return { success: true };
+	}
+);

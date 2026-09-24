@@ -38,6 +38,7 @@ import { listGroupSessions } from '$lib/server/event/event-service';
 import { listCommitteeProjectEvents, listProjects } from '$lib/server/project/project-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
+import { listMaintenanceSchedules } from '$lib/server/volunteer/maintenance-schedule-service';
 import { list as listFiles, getUsage as getDocumentUsage } from '$lib/server/group/file-service';
 import {
 	STAFF_GROUP_KINDS,
@@ -288,7 +289,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		committeeApplications,
 		projectLists,
 		volunteerRoles,
-		projectEvents
+		projectEvents,
+		recurringWork
 	] = await Promise.all([
 		getMembers(group.id).then(partitionByStatus),
 		canManage ? listForManager(group.id) : listPublished(group.id),
@@ -317,7 +319,11 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		// The role picker for opening a work order on one of the committee's projects.
 		group.kind === 'committee' ? listVolunteerRoles() : Promise.resolve([]),
 		// The events on those projects, which is how Booking reaches its own shows.
-		group.kind === 'committee' ? listCommitteeProjectEvents(group.id) : Promise.resolve([])
+		group.kind === 'committee' ? listCommitteeProjectEvents(group.id) : Promise.resolve([]),
+		// The committee's own standing checklist (#1512).
+		group.kind === 'committee'
+			? listMaintenanceSchedules({ groupId: group.id })
+			: Promise.resolve([])
 	]);
 
 	return {
@@ -374,6 +380,16 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			.filter((l) => l.itemCount > 0)
 			.map((l) => ({ id: l.id, name: l.name })),
 		workOrderRoles: volunteerRoles.map((r) => ({ value: r.id, label: r.name })),
+		recurringWork: recurringWork.map((s) => ({
+			id: s.id,
+			name: s.name,
+			intervalDays: s.intervalDays,
+			roleName: s.roleName,
+			retiredAt: s.retiredAt,
+			openWorkOrderId: s.openWorkOrderId,
+			openDueAt: s.openDueAt,
+			lastClosedAt: s.lastClosedAt
+		})),
 		projectEvents,
 		emailInvites,
 		committeeApplications,

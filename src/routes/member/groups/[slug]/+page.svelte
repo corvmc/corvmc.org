@@ -44,6 +44,7 @@
 	import ProjectWorkOrderAction from './ProjectWorkOrderAction.svelte';
 	import ProjectEventPublishAction from './ProjectEventPublishAction.svelte';
 	import CommitteeMarkets from './CommitteeMarkets.svelte';
+	import CommitteeRecurringWork from './CommitteeRecurringWork.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -284,6 +285,12 @@
 		{#if isMember && group.kind === 'committee'}
 			<CommitteeMarkets groupId={group.id} {slug} />
 		{/if}
+		<CommitteeRecurringWork
+			groupId={group.id}
+			schedules={data.recurringWork}
+			roles={data.workOrderRoles}
+			canEdit={isMember}
+		/>
 	{:else if tab === 'numbers'}
 		<CommitteeNumbers groupId={group.id} />
 	{:else if tab === 'documents'}
