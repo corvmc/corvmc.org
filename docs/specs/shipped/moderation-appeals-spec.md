@@ -5,7 +5,9 @@
 > reason whichever way it goes; and a standing counts as in force for an appeal only while it still
 > names this report as `triggeringFlagId` — a later upheld report owns the standing and its own
 > appeal decides it. There is no staff form for `setMemberStanding` today; the remote files the
-> `staff_action` report either way.
+> `staff_action` report either way. The decision's reason stays internal (#1430): the member's
+> email, notification and notice state the verdict only, so every mention below of the member
+> seeing `decisionNotes` is superseded.
 
 ## Purpose
 
@@ -449,7 +451,7 @@ because nothing behaves differently about a reopened appeal — it is pending.
 | `body`                     | the member's argument, `APPEAL_BODY_MAX`                                                 |
 | `contentOutcome`           | `restored` / `upheld` / `not_applicable`; null while pending                             |
 | `standingOutcome`          | `restored` / `upheld` / `not_applicable`; null while pending                             |
-| `decisionNotes`            | the staffer's reasoning, shown to the member                                             |
+| `decisionNotes`            | the staffer's reasoning, staff only (#1430)                                              |
 | `decidedByUserId` → `user` | `set null`                                                                               |
 | `decidedAt`                | **null ⟺ pending**                                                                       |
 | `createdAt`                |                                                                                          |

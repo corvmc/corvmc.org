@@ -77,7 +77,7 @@ export const decideAppeal = form(
 		flagId: z.string().min(1),
 		restoreContent: z.boolean().default(false),
 		restoreStanding: z.boolean().default(false),
-		notes: z.string().trim().min(1, 'Tell the member why').max(APPEAL_BODY_MAX)
+		notes: z.string().trim().min(1, 'Give a reason').max(APPEAL_BODY_MAX)
 	}),
 	async (data) => {
 		const staff = await requireCapability('moderation.reviewFlags');

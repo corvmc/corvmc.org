@@ -87,6 +87,7 @@ const {
 	fileAppeal,
 	decideAppeal,
 	reopenAppeal,
+	getMemberAppeal,
 	AppealNotFoundError,
 	AppealAlreadyFiledError,
 	AppealAlreadyDecidedError,
@@ -350,7 +351,7 @@ describe('decideAppeal', () => {
 		).rejects.toThrow(AppealAlreadyDecidedError);
 	});
 
-	it('tells the member, with the notes', async () => {
+	it('tells the member the verdict, and keeps the staff reason out of the event', async () => {
 		queueDecision({});
 		await decideAppeal({
 			flagId: 'f1',
@@ -361,12 +362,36 @@ describe('decideAppeal', () => {
 		});
 		expect(emitMock).toHaveBeenCalledWith(
 			'moderation.appeal_decided',
-			expect.objectContaining({
-				appellantUserId: 'm1',
-				verdict: 'denied',
-				notes: 'Still off-topic'
-			})
+			expect.objectContaining({ appellantUserId: 'm1', verdict: 'denied' })
 		);
+		const [, payload] = emitMock.mock.calls.find(([name]) => name === 'moderation.appeal_decided')!;
+		expect(JSON.stringify(payload)).not.toContain('Still off-topic');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// getMemberAppeal
+// ---------------------------------------------------------------------------
+
+describe('getMemberAppeal', () => {
+	it('shows the member the verdict of a decided appeal but not the staff reason', async () => {
+		selectResultQueue = [
+			[{ authorUserId: 'm1' }],
+			[FLAG],
+			[
+				{
+					body: 'Unfair',
+					createdAt: new Date('2026-09-02'),
+					contentOutcome: 'upheld',
+					standingOutcome: 'not_applicable',
+					decisionNotes: 'Internal: repeat poster',
+					decidedAt: new Date('2026-09-03')
+				}
+			]
+		];
+		const view = await getMemberAppeal('m1', { kind: 'suggestion', suggestionId: 's1' });
+		expect(view?.appeal?.decision?.verdict).toBe('denied');
+		expect(JSON.stringify(view)).not.toContain('Internal: repeat poster');
 	});
 });
 

@@ -510,7 +510,6 @@ export interface ModerationAppealDecidedEvent {
 	appellantName: string;
 	appellantEmail: string;
 	verdict: 'granted' | 'partly_granted' | 'denied';
-	notes: string;
 	href: string;
 }
 

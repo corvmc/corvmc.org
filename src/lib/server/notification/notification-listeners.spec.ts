@@ -1226,3 +1226,26 @@ describe('membership notifications', () => {
 		expect(call.email.footnote).toContain('recurring bookings');
 	});
 });
+
+describe('appeal decided', () => {
+	beforeEach(() => {
+		registerAllNotificationListeners();
+	});
+
+	it('states the verdict only, so a staff reason on the payload never reaches the member', async () => {
+		await emit('moderation.appeal_decided', {
+			flagId: 'f1',
+			appellantUserId: 'm1',
+			appellantName: 'Sam',
+			appellantEmail: 'sam@example.com',
+			verdict: 'denied',
+			notes: 'Internal: repeat poster',
+			href: '/member/suggestions'
+		});
+
+		const call = mockDispatch.mock.calls.find(([p]) => p.type === 'moderation_appeal_decided')?.[0];
+		expect(call.email.subject).toBe('Your appeal was not granted');
+		expect(call.email.quote).toBeUndefined();
+		expect(JSON.stringify(call)).not.toContain('Internal: repeat poster');
+	});
+});
