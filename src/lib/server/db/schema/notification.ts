@@ -250,6 +250,14 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'development_deadline',
+		category: 'membership',
+		label: 'Grant or sponsorship deadline',
+		description: 'Two weeks and three days before a grant or sponsorship deadline you manage',
+		defaults: { email: true, inApp: true, sms: false },
+		staffOnly: true
+	},
+	{
 		key: 'equipment_returned',
 		category: 'practice-space',
 		label: 'Equipment returned',

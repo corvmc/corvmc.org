@@ -8,9 +8,14 @@ import {
 	type NewGrantApplication,
 	type NewGrantReport
 } from '$lib/server/db/schema/grant';
-import { asc, eq, isNull } from 'drizzle-orm';
+import { asc, eq, inArray, isNull } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
-import { openGrantStatuses, type GrantDeadlineKind, type GrantStatus } from '$lib/config';
+import {
+	grantDeadlineLabels,
+	openGrantStatuses,
+	type GrantDeadlineKind,
+	type GrantStatus
+} from '$lib/config';
 import { byDeadline, due, earliest, type Deadline } from '$lib/utils/deadline';
 
 export class GrantNotFoundError extends DomainError {
@@ -31,25 +36,87 @@ export type GrantDeadline = Deadline<GrantDeadlineKind>;
 
 type ReportDates = Pick<GrantReport, 'dueOn' | 'submittedOn'>;
 
+type GrantDates = Pick<GrantApplication, 'status' | 'applyBy' | 'endsOn'>;
+
 /**
- * What comes due next. A prospect has its application deadline; an award has
- * the earlier of its first outstanding report and the end of the award period.
- * An outstanding report keeps a closed grant on the list, since a final report
- * usually falls due after the money is spent.
+ * Every deadline still open on an application. A prospect owes its application;
+ * an award owes each outstanding report and the end of the award period. An
+ * outstanding report stays owed after the grant is closed, since a final
+ * report usually falls due after the money is spent.
  */
+function openDeadlines<R extends ReportDates>(g: GrantDates, reports: R[]) {
+	type Open = { kind: GrantDeadlineKind; on: string; report?: R };
+	if (g.status === 'prospect') return g.applyBy ? [{ kind: 'apply', on: g.applyBy } as Open] : [];
+	if (g.status !== 'awarded' && g.status !== 'closed') return [];
+
+	const open: Open[] = reports
+		.filter((r) => !r.submittedOn)
+		.map((r) => ({ kind: 'report', on: r.dueOn, report: r }));
+	if (g.status === 'awarded' && g.endsOn) open.push({ kind: 'end', on: g.endsOn });
+	return open;
+}
+
+/** What comes due next: the soonest of `openDeadlines`. */
 export function grantDeadline(
-	g: Pick<GrantApplication, 'status' | 'applyBy' | 'endsOn'>,
+	g: GrantDates,
 	reports: ReportDates[],
 	today: string
 ): GrantDeadline | null {
-	if (g.status === 'prospect') return g.applyBy ? due('apply', g.applyBy, today) : null;
-	if (g.status !== 'awarded' && g.status !== 'closed') return null;
+	return earliest<GrantDeadlineKind>(
+		...openDeadlines(g, reports).map((d) => due(d.kind, d.on, today))
+	);
+}
 
-	const outstanding = reports
-		.filter((r) => !r.submittedOn)
-		.map((r) => due<GrantDeadlineKind>('report', r.dueOn, today));
-	const end = g.status === 'awarded' && g.endsOn ? due('end', g.endsOn, today) : null;
-	return earliest<GrantDeadlineKind>(...outstanding, end);
+/**
+ * Each open deadline with a subject id of its own, so a reminder about one
+ * report is not also the reminder about the next.
+ */
+export function grantDeadlineItems(
+	g: GrantDates & { id: string },
+	reports: (ReportDates & { id: string; title: string })[]
+) {
+	return openDeadlines(g, reports).map((d) => ({
+		kind: d.kind,
+		on: d.on,
+		subjectId: d.report ? `report:${d.report.id}` : `${d.kind}:${g.id}`,
+		title: d.report ? d.report.title : grantDeadlineLabels[d.kind]
+	}));
+}
+
+/** Every open grant deadline falling on a day in `[from, to]`. */
+export async function listGrantDeadlinesBetween(from: string, to: string) {
+	const [apps, reports] = await Promise.all([
+		db
+			.select({
+				id: grantApplication.id,
+				title: grantApplication.title,
+				status: grantApplication.status,
+				applyBy: grantApplication.applyBy,
+				endsOn: grantApplication.endsOn,
+				funderName: funder.name
+			})
+			.from(grantApplication)
+			.innerJoin(funder, eq(funder.id, grantApplication.funderId))
+			.where(inArray(grantApplication.status, ['prospect', 'awarded', 'closed'])),
+		db
+			.select({
+				id: grantReport.id,
+				grantApplicationId: grantReport.grantApplicationId,
+				title: grantReport.title,
+				dueOn: grantReport.dueOn,
+				submittedOn: grantReport.submittedOn
+			})
+			.from(grantReport)
+			.where(isNull(grantReport.submittedOn))
+	]);
+	return apps.flatMap((g) =>
+		grantDeadlineItems(
+			g,
+			reports.filter((r) => r.grantApplicationId === g.id)
+		)
+			.filter((d) => d.on >= from && d.on <= to)
+			.map((d) => ({ ...d, parentId: g.id, parentTitle: g.title, counterparty: g.funderName }))
+	);
 }
 
 /** Attach each application's deadline and sort soonest first, undated last. */

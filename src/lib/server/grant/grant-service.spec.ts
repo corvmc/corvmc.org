@@ -29,7 +29,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-const { grantDeadline, withDeadlines, getGrant, GrantNotFoundError } =
+const { grantDeadline, grantDeadlineItems, withDeadlines, getGrant, GrantNotFoundError } =
 	await import('./grant-service');
 const { deleteFunder, FunderInUseError } = await import('./funder-service');
 
@@ -99,6 +99,48 @@ describe('grantDeadline', () => {
 		expect(grantDeadline({ ...base, status: 'declined', applyBy: '2026-10-01' }, [], TODAY)).toBe(
 			null
 		);
+	});
+});
+
+describe('grantDeadlineItems', () => {
+	const r = (id: string, dueOn: string, submittedOn: string | null = null) => ({
+		id,
+		title: `Report ${id}`,
+		dueOn,
+		submittedOn
+	});
+
+	it('names every deadline an award owes, not just the soonest', () => {
+		const items = grantDeadlineItems(
+			{ ...base, id: 'g1', status: 'awarded', endsOn: '2027-06-30' },
+			[r('r1', '2026-12-01'), r('r2', '2027-07-15'), r('r3', '2026-10-01', '2026-09-30')]
+		);
+		expect(items).toEqual([
+			{ kind: 'report', on: '2026-12-01', subjectId: 'report:r1', title: 'Report r1' },
+			{ kind: 'report', on: '2027-07-15', subjectId: 'report:r2', title: 'Report r2' },
+			{ kind: 'end', on: '2027-06-30', subjectId: 'end:g1', title: 'Award ends' }
+		]);
+	});
+
+	it('keeps only outstanding reports once closed, and only apply-by for a prospect', () => {
+		expect(
+			grantDeadlineItems({ ...base, id: 'g1', status: 'closed', endsOn: '2026-06-30' }, [
+				r('r1', '2026-10-01')
+			]).map((d) => d.kind)
+		).toEqual(['report']);
+		expect(
+			grantDeadlineItems({ ...base, id: 'g1', applyBy: '2026-11-01' }, [r('r1', '2026-10-01')])
+		).toEqual([{ kind: 'apply', on: '2026-11-01', subjectId: 'apply:g1', title: 'Apply by' }]);
+	});
+
+	it('owes nothing while applied or after a refusal', () => {
+		for (const status of ['applied', 'declined'] as const) {
+			expect(
+				grantDeadlineItems({ ...base, id: 'g1', status, applyBy: '2026-11-01' }, [
+					r('r1', '2026-10-01')
+				])
+			).toEqual([]);
+		}
 	});
 });
 

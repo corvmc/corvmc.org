@@ -47,7 +47,17 @@ Open an awarded grant to add each **report** the funder requires, with its due d
 one, edit it and fill in **Submitted**. A report that is past due shows in red until it has a
 submitted date, even after the grant is closed.
 
+## Reminders
+
+Anyone who manages grants or sponsors is notified two weeks before a deadline and again three days
+before. That covers an application's apply-by date, each report not yet submitted, the end of an
+award, and the end of an active sponsorship. The staff dashboard lists deadlines in the next 30
+days, and overdue ones in red.
+
+If you change a deadline's date, the reminders go out again for the new date. Turn the email off
+under your notification settings, as **Grant or sponsorship deadline**.
+
 ## What this does not do
 
-It does not send reminders, and it does not take or record money. A cheque that arrives is entered
+It does not take or record money. A cheque that arrives is entered
 in the books the usual way.

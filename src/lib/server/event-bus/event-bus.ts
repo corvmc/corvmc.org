@@ -310,6 +310,22 @@ export interface EquipmentLoanDueEvent {
 	dueDate: string;
 }
 
+/** A grant or sponsorship deadline coming up (#1477), for whoever manages that module. */
+export interface DevelopmentDeadlineDueEvent {
+	stage: '14d' | '3d';
+	module: 'grant' | 'sponsor';
+	kind: 'apply' | 'report' | 'end';
+	/** `YYYY-MM-DD` */
+	on: string;
+	/** What is due: "Interim report", "Apply by", "Sponsorship ends". */
+	title: string;
+	/** The grant application or the sponsor, which is where the link goes. */
+	parentId: string;
+	parentTitle: string;
+	/** The funder or the business. */
+	counterparty: string;
+}
+
 export interface EquipmentLoanScheduledEvent {
 	loanId: string;
 	userId: string;
@@ -789,6 +805,7 @@ export type DomainEvents = {
 	'equipment.loan_requested': EquipmentLoanRequestedEvent;
 	'equipment.loan_scheduled': EquipmentLoanScheduledEvent;
 	'equipment.loan_due': EquipmentLoanDueEvent;
+	'development.deadline_due': DevelopmentDeadlineDueEvent;
 	'equipment.checked_out': EquipmentCheckedOutEvent;
 	'equipment.returned': EquipmentReturnedEvent;
 	'equipment.report_resolved': EquipmentReportResolvedEvent;

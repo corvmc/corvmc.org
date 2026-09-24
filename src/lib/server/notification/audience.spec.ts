@@ -57,6 +57,7 @@ describe('notification audience', () => {
 			[
 				'community_event_submitted',
 				'contact_form',
+				'development_deadline',
 				'content_flagged',
 				'equipment_loan_requested',
 				'event_recurring_reservation_skipped',

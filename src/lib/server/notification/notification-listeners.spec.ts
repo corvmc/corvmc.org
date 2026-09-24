@@ -17,12 +17,12 @@ vi.mock('./dispatcher', () => ({
 
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
-const mockStaffUsers = vi.fn(async () => [
+const mockStaffUsers = vi.fn(async (_cap?: string) => [
 	{ id: 'staff-1', name: 'Ada', email: 'ada@test.com' },
 	{ id: 'staff-2', name: 'Bo', email: 'bo@test.com' }
 ]);
 vi.mock('$lib/server/authorization', () => ({
-	listUsersWithCapability: () => mockStaffUsers()
+	listUsersWithCapability: (cap: string) => mockStaffUsers(cap)
 }));
 
 // Returns null when INBOX_REPLY_ADDRESS is unconfigured, which is a supported
@@ -1262,5 +1262,52 @@ describe('appeal decided', () => {
 		expect(call.email.subject).toBe('Your appeal was not granted');
 		expect(call.email.quote).toBeUndefined();
 		expect(JSON.stringify(call)).not.toContain('Internal: repeat poster');
+	});
+});
+
+describe('development deadline due (#1477)', () => {
+	beforeEach(() => {
+		registerAllNotificationListeners();
+	});
+
+	const grantReport = {
+		stage: '14d',
+		module: 'grant',
+		kind: 'report',
+		on: '2026-10-01',
+		title: 'Interim report',
+		parentId: 'g1',
+		parentTitle: '2027 operating support',
+		counterparty: 'Oregon Arts Commission'
+	};
+
+	it('tells every grant manager, linking to the application', async () => {
+		await emit('development.deadline_due', grantReport);
+
+		expect(mockStaffUsers).toHaveBeenCalledWith('grant.manage');
+		const calls = mockDispatch.mock.calls
+			.map(([p]) => p)
+			.filter((p) => p.type === 'development_deadline');
+		expect(new Set(calls.map((c) => c.userId))).toEqual(new Set(['staff-1', 'staff-2']));
+		expect(calls[0].href).toBe('/staff/grants/g1');
+		expect(calls[0].title).toContain('Interim report');
+		expect(calls[0].email.subject).toContain('Oregon Arts Commission');
+	});
+
+	it("tells sponsor managers about a term's end, linking to the sponsor", async () => {
+		await emit('development.deadline_due', {
+			...grantReport,
+			stage: '3d',
+			module: 'sponsor',
+			kind: 'end',
+			title: 'Sponsorship ends',
+			parentId: 's1',
+			parentTitle: 'Season sponsor',
+			counterparty: 'Troubadour Music'
+		});
+
+		expect(mockStaffUsers).toHaveBeenCalledWith('sponsor.manage');
+		const call = mockDispatch.mock.calls.find(([p]) => p.type === 'development_deadline')?.[0];
+		expect(call.href).toBe('/staff/sponsors/s1');
 	});
 });

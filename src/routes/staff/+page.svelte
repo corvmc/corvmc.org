@@ -12,6 +12,7 @@
 	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import { formatIsoDay } from '$lib/utils/deadline';
 
 	let data = $derived(await getStaffDashboard());
 </script>
@@ -58,6 +59,37 @@
 					: 'Open the volunteering worklist'}
 			</Button>
 		</div>
+	{/if}
+
+	{#if data.deadlines.length > 0}
+		<SectionLabel label="Grant and sponsor deadlines" />
+		<Table>
+			{#snippet head()}
+				<th class="whitespace-nowrap">Due</th>
+				<th>What</th>
+				<th class="col-support">Funder or sponsor</th>
+			{/snippet}
+			{#each data.deadlines as d (d.module + d.subjectId)}
+				<tr
+					class="hover cursor-pointer"
+					use:rowLink={d.module === 'grant'
+						? resolve(`/staff/grants/${d.parentId}`)
+						: resolve(`/staff/sponsors/${d.parentId}`)}
+				>
+					<td class="whitespace-nowrap" class:text-error={d.overdue}>{formatIsoDay(d.on)}</td>
+					<td class="cell-primary">
+						{d.title}
+						<div class="text-muted">{d.parentTitle}</div>
+					</td>
+					<td class="col-support truncate">{d.counterparty}</td>
+				</tr>
+			{/each}
+		</Table>
+		{#if data.deadlineCount > data.deadlines.length}
+			<p class="mt-2 text-muted">
+				{data.deadlineCount - data.deadlines.length} more in Grants and Sponsors.
+			</p>
+		{/if}
 	{/if}
 
 	{#if data.lowStock.length > 0}
