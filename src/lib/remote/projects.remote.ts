@@ -23,6 +23,7 @@ import {
 	startProjectFromSuggestion,
 	updateProject
 } from '$lib/server/project/project-service';
+import { applyDutyList, listDutyLists } from '$lib/server/volunteer/duty-list-service';
 
 /**
  * Projects — staff surfaces, plus one committee write.
@@ -133,14 +134,16 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 export const getProjectDetail = query(z.string(), async (id) => {
 	await requireCapability('project.read');
 	try {
-		const [project, burn, attachments, committees, suggestions] = await Promise.all([
+		const [project, burn, attachments, committees, suggestions, lists] = await Promise.all([
 			getProjectById(id),
 			getProjectBurn(id),
 			listProjectAttachments(id),
 			listCommittees(),
-			listUnansweredSuggestions()
+			listUnansweredSuggestions(),
+			listDutyLists({ subject: 'project' })
 		]);
-		return { project, burn, attachments, committees, suggestions };
+		const dutyLists = lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
+		return { project, burn, attachments, committees, suggestions, dutyLists };
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -276,6 +279,22 @@ export const attachToProjectForm = form(
 			void getProjectDetail(projectId).refresh();
 			void getProjectsPage().refresh();
 			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/** Stamp a project-anchored duty list's work orders onto this project. */
+export const applyDutyListToProjectForm = form(
+	z.object({ projectId: z.uuid(), dutyListId: z.string().min(1) }),
+	async (raw) => {
+		const user = await requireCapability('volunteer.manageShifts');
+		const { projectId, dutyListId } = raw as { projectId: string; dutyListId: string };
+		try {
+			const result = await applyDutyList(dutyListId, { kind: 'project', id: projectId }, user.id);
+			void getProjectDetail(projectId).refresh();
+			return { workOrders: result.workOrderIds.length, tasks: result.taskCount };
 		} catch (err) {
 			mapDomainError(err);
 		}

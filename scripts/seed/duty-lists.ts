@@ -45,6 +45,16 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
 				'Hands for the part of the night that happens before anybody is watching. Anchored to the production’s load-in, so it moves when the producer moves it.',
 			anchor: 'load_in' as const,
 			createdByUserId: 'seed-vol-coordinator'
+		},
+		{
+			// Left unapplied, so a seeded project with a start date offers it.
+			id: 'seed-duty-project-kickoff',
+			name: 'Work Party Kickoff',
+			description:
+				'The first two weekends of a facility project: clear the room, then put it back. Measured from the project’s start date.',
+			anchor: 'project_start' as const,
+			subject: 'project' as const,
+			createdByUserId: 'seed-vol-coordinator'
 		}
 	]);
 
@@ -68,6 +78,26 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
 			capacity: 2,
 			sortOrder: 20,
 			tasks: ['Stage cleared', 'Gear back to storage', 'Room reset for tomorrow']
+		},
+		{
+			id: 'seed-duty-item-kickoff-clear',
+			dutyListId: 'seed-duty-project-kickoff',
+			volunteerRoleId: setup.id,
+			offsetMinutes: 0,
+			durationMinutes: 240,
+			capacity: 4,
+			sortOrder: 10,
+			tasks: ['Gear out to storage', 'Walls and floor bare']
+		},
+		{
+			id: 'seed-duty-item-kickoff-reset',
+			dutyListId: 'seed-duty-project-kickoff',
+			volunteerRoleId: teardown.id,
+			offsetMinutes: 10_080,
+			durationMinutes: 240,
+			capacity: 4,
+			sortOrder: 20,
+			tasks: ['Gear back to its marks', 'Room reset']
 		}
 	]);
 
@@ -139,7 +169,7 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
 	const show = events.find(
 		(e: any) => e.status === 'published' && e.kind === 'show' && e.endsAt && e.startsAt > new Date()
 	);
-	if (!show) return { lists: 2, workOrders: 0 };
+	if (!show) return { lists: 3, workOrders: 0 };
 
 	const anchor: Date = show.doorsAt ?? show.startsAt;
 	const at = (minutes: number) => new Date(anchor.getTime() + minutes * 60_000);
@@ -180,5 +210,5 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
 	);
 	await batchInsert(workTask, tasks, 12);
 
-	return { lists: 2, workOrders: workOrders.length };
+	return { lists: 3, workOrders: workOrders.length };
 }

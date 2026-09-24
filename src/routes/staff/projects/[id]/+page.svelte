@@ -16,7 +16,8 @@
 		updateProjectForm,
 		setProjectStatusForm,
 		attachToProjectForm,
-		detachFromProjectForm
+		detachFromProjectForm,
+		applyDutyListToProjectForm
 	} from '$lib/remote/projects.remote';
 	import { projectStatusOptions } from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
@@ -40,6 +41,8 @@
 	const statusFields = setProjectStatusForm.fields;
 	const attachFields = attachToProjectForm.fields;
 	const detachFields = detachFromProjectForm.fields;
+	const applyFields = applyDutyListToProjectForm.fields;
+	const dutyListOptions = $derived(data.dutyLists.map((l) => ({ value: l.id, label: l.name })));
 
 	const committeeOptions = $derived(data.committees.map((c) => ({ value: c.id, label: c.name })));
 	const suggestionOptions = $derived(
@@ -101,6 +104,34 @@
 			/>
 		{/snippet}
 	</Action>
+
+	{#if dutyListOptions.length > 0}
+		<Action
+			action={applyDutyListToProjectForm}
+			label="Apply duty list"
+			size="sm"
+			modalTitle="Apply a duty list to {project.name}"
+			submitLabel="Apply"
+			successToast="Work orders created"
+		>
+			{#snippet form()}
+				<input {...applyFields.projectId.as('hidden', project.id)} />
+				{#if project.startsAt}
+					<Field
+						field={applyFields.dutyListId}
+						type="select"
+						label="Duty list"
+						options={dutyListOptions}
+						description="Creates every work order the list describes, timed from the project's start date. Applying the same list twice is refused."
+					/>
+				{:else}
+					<Alert type="warning">
+						This project has no start date. Set one under Edit before applying a duty list.
+					</Alert>
+				{/if}
+			{/snippet}
+		</Action>
+	{/if}
 
 	<Action
 		action={updateProjectForm}
