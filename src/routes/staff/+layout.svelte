@@ -6,6 +6,7 @@
 	import Nav from '$lib/components/layout/Nav';
 	import {
 		IconDisc,
+		IconNfc,
 		IconMapPinPlus,
 		IconSchool,
 		IconBulb,
@@ -120,6 +121,7 @@
 		keys: IconKey,
 		projects: IconFolders,
 		productions: IconCalendarEvent,
+		door: IconNfc,
 		venues: IconMapPin,
 		calendar: IconCalendarMonth,
 		flags: IconFlag,

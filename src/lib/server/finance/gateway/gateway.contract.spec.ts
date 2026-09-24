@@ -11,7 +11,8 @@ const {
 	resetFakeGateway,
 	completeFakeCheckout,
 	outcomeForCard,
-	FAKE_TERMINAL_LOCATION_ID
+	FAKE_TERMINAL_LOCATION_ID,
+	completeFakeTerminalPayment
 } = await import('./fake-gateway');
 const { createStripeGateway } = await import('./stripe-gateway');
 
@@ -441,6 +442,15 @@ describe('fake gateway behaviour', () => {
 
 		const again = await gateway.paymentIntents.retrieve(intent.id);
 		expect(again.metadata).toEqual({ type: 'door_ticket' });
+	});
+
+	it('lands a tap as a succeeded intent with a captured charge', async () => {
+		const intent = await gateway.paymentIntents.create({ amount: 1500, currency: 'usd' });
+		const paid = completeFakeTerminalPayment(intent.id);
+		expect(paid.status).toBe('succeeded');
+		expect((await gateway.paymentIntents.retrieve(intent.id)).latest_charge).toMatchObject({
+			amount_captured: 1500
+		});
 	});
 
 	it('cancels an intent nobody tapped', async () => {

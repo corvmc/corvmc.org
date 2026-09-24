@@ -10,6 +10,7 @@ import { buildMemberSubscriptionState } from './subscription-service';
 import { syncCardFromSubscription } from './billing-service';
 import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
 import { recordBandPremiumInvoice } from './band-premium-entries';
+import { fulfillDoorSale } from '$lib/server/ticket/door-sale';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { getStripeProductId } from './product-config-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -56,7 +57,8 @@ export const webhookHandlerMap: WebhookHandlerMap = {
 	'customer.subscription.updated': handleSubscriptionUpdated,
 	'customer.subscription.deleted': handleSubscriptionDeleted,
 	'invoice.payment_failed': handleInvoicePaymentFailed,
-	'charge.refunded': handleChargeRefunded
+	'charge.refunded': handleChargeRefunded,
+	'payment_intent.succeeded': fulfillDoorSale
 };
 
 // ---------------------------------------------------------------------------

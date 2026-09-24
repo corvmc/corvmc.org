@@ -48,6 +48,11 @@ vi.mock('./subscription-service', () => ({
 }));
 
 const mockGetStripeProductId = vi.fn().mockResolvedValue('prod_fee');
+const fulfillDoorSale = vi.fn(async () => undefined);
+vi.mock('$lib/server/ticket/door-sale', () => ({
+	fulfillDoorSale: (...a: unknown[]) => fulfillDoorSale(...(a as []))
+}));
+
 vi.mock('./product-config-service', () => ({
 	getStripeProductId: (...args: unknown[]) => mockGetStripeProductId(...args)
 }));
@@ -400,6 +405,14 @@ describe('registeredEvents', () => {
 		// reaches the local record.
 		expect(registeredEvents).toContain('invoice.payment_failed');
 		expect(registeredEvents).toContain('charge.refunded');
+	});
+
+	it('hands a landed tap at the door to the door sale', async () => {
+		const { webhookHandlerMap } = await import('./webhook-handlers');
+		expect(registeredEvents).toContain('payment_intent.succeeded');
+		const intent = { id: 'pi_door', metadata: { type: 'door_ticket' } };
+		await webhookHandlerMap['payment_intent.succeeded'](intent as never);
+		expect(fulfillDoorSale).toHaveBeenCalledWith(intent);
 	});
 
 	it('has a handler for every event it subscribes', async () => {

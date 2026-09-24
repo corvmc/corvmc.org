@@ -711,3 +711,20 @@ export function completeFakeCheckout(sessionId: string): Stripe.Checkout.Session
 	store.sessions.set(sessionId, completed);
 	return completed;
 }
+
+/**
+ * A tap, landed: what the Terminal SDK's `confirmPaymentIntent` does on the
+ * phone. The caller hands the result to `fulfillDoorSale`, as the webhook
+ * would, so the production path stays the only path to the ticket rows.
+ */
+export function completeFakeTerminalPayment(paymentIntentId: string): Stripe.PaymentIntent {
+	const intent = store.paymentIntents.get(paymentIntentId);
+	if (!intent) notFound('payment_intent', paymentIntentId);
+	const paid: Stripe.PaymentIntent = {
+		...intent,
+		status: 'succeeded',
+		latest_charge: fakeCharge({ amount: intent.amount, amount_captured: intent.amount })
+	};
+	store.paymentIntents.set(paymentIntentId, paid);
+	return paid;
+}
