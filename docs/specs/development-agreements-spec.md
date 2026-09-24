@@ -1,75 +1,128 @@
-# Development agreements — grants and sponsorships, and when they come due
+# Development: sponsors and grants, as two modules
 
-Tracking: #595 (Grant & Fundraising Tracker) and #574 (Sponsor Management), built together as one
-mechanism.
+Tracking: #574 (Sponsor Management) and #595 (Grant & Fundraising Tracker). Decision: #1479.
+
+**Amended 2026-09-23.** This spec first described one `agreement` ledger shared by grants and
+sponsorships (#1458, built as #1457). The owner reversed that in #1479: sponsors and grants are
+separate modules, each with its own tables, service and pages. #1457 was closed unmerged. What the
+two modules still share is one small helper, `src/lib/utils/deadline.ts`.
 
 ## Purpose
 
 `committees-and-roles-spec.md` gives the Development committee this story: "track grant
 applications and their reporting deadlines, and maintain business sponsorships". It marks both
-halves 🆕. Nothing in the app records either one: `git grep -i sponsor` over `src/` finds
-nothing, and no table holds a grant.
+halves 🆕. Before this, nothing in the app recorded either one.
 
-The two issues describe the same thing. Each is an **agreement with a counterparty**, with dates
-that come due (apply by, report by, renew by) and something owed afterwards. Sponsor placement
-(#583, closed by #1411 "until #574 has a real agreement") also needs a sponsorship row to hang on,
-and nothing can be placed until one exists.
+## Why two modules
 
-## What gets built
+The two differ where it matters for the record:
 
-**One table, `agreement`**, staff-only.
+- **A sponsor is a relationship that renews.** The same business sponsors season after season, so
+  the business is a row (`sponsor`) and each term of support is a child row (`sponsorship`). The
+  question staff ask is "whose term ends next".
+- **A grant is an application with obligations after the award.** A funder can be applied to many
+  times; each application has a requested and an awarded amount, and an award usually owes more
+  than one report (interim and final). The question is "what is due next: an application, a
+  report, or the end of the award period".
 
-| Column                     | Notes                                                                  |
-| -------------------------- | ---------------------------------------------------------------------- |
-| `kind`                     | `grant` \| `sponsorship`                                               |
-| `counterparty`             | Free text: "Oregon Arts Commission", "Troubadour Music". Required      |
-| `title`                    | "2027 operating support", "Season sponsor". Required                   |
-| `status`                   | `prospect` → `applied` → `active` → `ended`; `declined` from `applied` |
-| `amountCents`              | Asked while prospect or applied, awarded once active. Nullable         |
-| `tier`                     | Sponsorship tier as free text ("Gold"). Nullable                       |
-| `contactName/contactEmail` | The program officer or the sponsor's contact. Nullable                 |
-| `applyBy`                  | `YYYY-MM-DD`. The application deadline                                 |
-| `startsOn` / `endsOn`      | `YYYY-MM-DD`. The award period or sponsorship term                     |
-| `reportDueOn`              | `YYYY-MM-DD`. The reporting obligation                                 |
-| `notes`                    | Free text                                                              |
+## Sponsor module
 
-The dates are ISO date strings, not timestamps. A deadline is a calendar day in Corvallis with no
-time of day, so a string sorts correctly and cannot drift across a timezone boundary. Today's date
-comes from `formatDateInTz(now, DEFAULT_TIMEZONE)`.
+**Tables.**
 
-Status moves through the edit form's select, not a state machine. No transition has a side
-effect, and the order above is advice, not a guard.
+| `sponsor`                  | Notes     |
+| -------------------------- | --------- |
+| `name`                     | Required  |
+| `website`                  | Nullable  |
+| `contactName/contactEmail` | Nullable  |
+| `notes`                    | Free text |
 
-**One derived value, the next deadline.** It is a pure function of the row and today's date:
+| `sponsorship`         | Notes                                                              |
+| --------------------- | ------------------------------------------------------------------ |
+| `sponsorId`           | FK `sponsor`, `on delete restrict`                                 |
+| `title`               | "2027 season". Required                                            |
+| `tier`                | Free text ("Gold", "In kind"). Nullable                            |
+| `status`              | `prospect` (pitched) → `active` → `ended`; `declined` from pitched |
+| `amountCents`         | What was agreed. Nullable                                          |
+| `startsOn` / `endsOn` | `YYYY-MM-DD`. The term                                             |
+| `notes`               | Free text                                                          |
 
-- `prospect`: `applyBy`, labelled "Apply by".
-- `applied`: no deadline; the list shows "Awaiting decision".
-- `active`: the earlier of `reportDueOn` ("Report due") and `endsOn` ("Ends"). A report date that
-  has passed stays the deadline and reads as overdue until someone moves the status on.
-- `declined`, `ended`: none.
+**Deadline.** An `active` sponsorship's `endsOn`, overdue once passed until someone marks it
+ended or adds the renewal. Nothing else has one.
 
-**One capability resource, `agreement: ['read', 'manage']`.** `staff` holds both through the
-derived matrix. The treasurer gets `read`, since an award is money coming in. No position gets
-`manage`, because Development is a committee, not a position.
+**Pages.** `/staff/sponsors`: every sponsor with its current sponsorship (a running term beats a
+pitch), soonest-ending first, idle sponsors last. `/staff/sponsors/[id]`: contact facts, a lapsed
+term called out, and the sponsorship history with add, edit and delete in modals. A sponsor with
+sponsorships cannot be deleted.
 
-**Two pages under Money**, in the staff nav as "Grants & sponsors":
+**Capability.** `sponsor: ['read', 'manage']`.
 
-- `/staff/agreements`: a table of open agreements (prospect, applied, active), sorted by next
-  deadline with undated rows last. A "Show closed" toggle adds declined and ended rows. Create
-  opens in a modal on this page.
-- `/staff/agreements/[id]`: the record as a `DefinitionList`, with Edit (modal) and Delete.
+## Grant module
 
-**Seed:** five agreements covering every status and both kinds, including one report that is
-overdue.
+**Tables.**
+
+| `funder`                   | Notes               |
+| -------------------------- | ------------------- |
+| `name`                     | Required            |
+| `website`                  | Nullable            |
+| `contactName/contactEmail` | The program officer |
+| `notes`                    | Free text           |
+
+| `grant_application`    | Notes                                                     |
+| ---------------------- | --------------------------------------------------------- |
+| `funderId`             | FK `funder`, `on delete restrict`                         |
+| `title`                | "2027 operating support". Required                        |
+| `status`               | `prospect` → `applied` → `awarded` → `closed`; `declined` |
+| `amountRequestedCents` | Nullable                                                  |
+| `amountAwardedCents`   | Nullable; funders routinely award less than was asked     |
+| `applyBy`              | `YYYY-MM-DD`. The application deadline                    |
+| `startsOn` / `endsOn`  | `YYYY-MM-DD`. The award period                            |
+| `notes`                | Free text                                                 |
+
+| `grant_report`       | Notes                                       |
+| -------------------- | ------------------------------------------- |
+| `grantApplicationId` | FK `grant_application`, `on delete cascade` |
+| `title`              | "Interim report". Required                  |
+| `dueOn`              | `YYYY-MM-DD`. Required                      |
+| `submittedOn`        | `YYYY-MM-DD`. Outstanding while null        |
+| `notes`              | Free text                                   |
+
+**Deadline.** Pure, from the application, its reports and today:
+
+- `prospect`: `applyBy` ("Apply by").
+- `applied`: none; the list shows "Awaiting decision".
+- `awarded`: the earliest of every unsubmitted report ("Report due") and `endsOn` ("Award ends").
+- `closed`: the earliest unsubmitted report, if any. A final report usually falls due after the
+  money is spent, so closing an award does not hide one that is still owed.
+- `declined`: none.
+
+**Pages.** `/staff/grants`: open applications (plus any closed one still owing a report), sorted by
+deadline with undated rows last; "Show closed" adds the rest. `/staff/grants/[id]`: the application
+as a `DefinitionList`, an overdue Alert, and its reports with add, edit (marking submitted) and
+delete. `/staff/grants/funders`: funders with create, edit and, while unused, delete.
+
+**Capability.** `grant: ['read', 'manage']`.
+
+## Shared
+
+- Dates are ISO day strings, not timestamps. A deadline is a calendar day in Corvallis with no time
+  of day, so a string sorts correctly and cannot drift across a timezone boundary. Today is
+  `clubToday()`.
+- `src/lib/utils/deadline.ts` holds `due`, `earliest`, `byDeadline` and `formatIsoDay`. Nothing
+  else is shared: no counterparty table spans both modules.
+- Status moves through each edit form's select, not a state machine. No transition has a side
+  effect.
+- `staff` holds `manage` on both through the derived matrix. The treasurer gets `read` on both,
+  since both are money coming in. No position gets `manage`: Development is a committee.
+- Both sit under Money in the staff nav, as "Sponsors" and "Grants".
+- No amount here is accounting. An award arrives by cheque and is a manual `grant` ledger entry;
+  the amount columns are declared `notAccounting` in `money-map.ts`.
 
 ## Not in this slice
 
-Each is filed as a sub-issue of #574 or #595:
-
-- Sponsor logos and placement preferences (poster, event blast, event page). The poster needs #606.
-- Deadline reminders through the reminder sweep registry (#1186), plus a panel on the staff
-  dashboard.
-- Permits, licenses and insurance renewals as a third `kind`. Same shape; nobody has asked.
-
-What is not planned at all: taking money here. An award arrives by cheque or transfer and a
-sponsorship by invoice, and anything that moves money waits for the payment seam (#522).
+- Sponsor logos and placement preferences (poster, event blast, event page): #1476. The poster
+  needs #606.
+- Deadline reminders through the reminder sweep registry (#1186), plus a staff dashboard panel:
+  #1477. Both modules expose a pure deadline function for it.
+- Permits, licenses and insurance renewals: #1478. With the ledger split, this is a third module of
+  its own rather than a third `kind`.
+- Taking money. Anything that moves money waits for the payment seam (#522).

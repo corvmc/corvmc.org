@@ -25,6 +25,12 @@ export const tableOrder = [
 	// References nothing; `event.venue_id` references it, so it must precede
 	// `event`. Sits with the other rootless tables rather than beside it.
 	'venue',
+	// Roots, each ahead of the children that reference it.
+	'sponsor',
+	'sponsorship',
+	'funder',
+	'grant_application',
+	'grant_report',
 	'equipment_category',
 	'inventory_location',
 	'inventory_item',

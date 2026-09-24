@@ -62,6 +62,11 @@ describe('activeNavKey', () => {
 		['/staff/events/abc/check-in', 'calendar'],
 		['/staff/events/abc/production', 'calendar'],
 		['/staff/productions', 'productions'],
+		['/staff/sponsors', 'sponsors'],
+		['/staff/sponsors/abc', 'sponsors'],
+		['/staff/grants', 'grants'],
+		['/staff/grants/abc', 'grants'],
+		['/staff/grants/funders', 'grants'],
 		['/staff/inventory', 'equipment'],
 		['/staff/inventory/abc', 'equipment'],
 		['/staff/inventory/restock', 'inventory-restock'],
@@ -168,6 +173,7 @@ describe('route coverage', () => {
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Inventory, beside Categories; `backHref` points there
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
+		'/staff/grants/funders', // reached from Grants' header; `backHref` points there
 		// Reached from Bands, which links to it in its header. Not its own row on
 		// purpose: an external act is the same staff job as a band — who is
 		// playing here — and one of them can turn into the other, so splitting

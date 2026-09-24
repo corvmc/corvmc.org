@@ -1604,6 +1604,44 @@ comes back. Reading back is the list's status, kind and text filters.
 - Nothing acts on the member linked. Enforcement is the moderation surfaces' job.
 - There is no delete path in the application, by design.
 
+## 21. Sponsors and grants: what comes due next
+
+Spec: [specs/development-agreements-spec.md](../specs/development-agreements-spec.md)
+
+### The story
+
+The Development committee signs sponsors and applies for grants. They are two modules. A sponsor
+is a business with a history of terms; staff read `/staff/sponsors` soonest-ending first. A grant
+is an application to a funder that, once awarded, owes reports; staff read `/staff/grants`
+soonest-deadline first. Status moves by hand through each edit form, with no side effects.
+
+### Code path
+
+- **Sponsors:** `getSponsors` / `getSponsorDetail` in `sponsors.remote.ts`, guarded by
+  `sponsor.read`, call `listSponsors` / `getSponsor` in `sponsor-service.ts` with `clubToday()`.
+  `sponsorshipDeadline` is pure: an active term's end, nothing otherwise. Writes are guarded by
+  `sponsor.manage`; a sponsor with sponsorships cannot be deleted.
+- **Grants:** `getGrants` / `getGrantDetail` / `getFunders` in `grants.remote.ts`, guarded by
+  `grant.read`. `grantDeadline` in `grant-service.ts` is pure: apply-by for a prospect, the
+  earliest unsubmitted report or the award's end once awarded, and an unsubmitted report still
+  counts after the grant is closed. Writes are guarded by `grant.manage`; a funder with
+  applications cannot be deleted, and an application's reports cascade with it.
+- The sort and date display are shared, in `src/lib/utils/deadline.ts`.
+
+### Data touched
+
+- `sponsor`, `sponsorship`, `funder`, `grant_application`, `grant_report`. Dates are
+  `YYYY-MM-DD` text, compared as strings. The amount columns are `notAccounting` in
+  `money-map.ts`; an award arrives outside the app, as a manual `grant` entry.
+
+### Where it breaks
+
+- **A deadline shows a day early or late.** Something parsed a date column as a `Date`.
+  `new Date('2026-10-01')` is UTC midnight, the day before in Corvallis. Display goes through
+  `formatIsoDay`, and comparisons stay on the strings.
+- **An award reads as done while a report is owed.** The report has no `submittedOn`; the list
+  keeps a closed grant visible for exactly this.
+
 ## Cross-cutting patterns worth internalizing
 
 - **Everything money-related converges on two Stripe entry points:** `checkout()` in

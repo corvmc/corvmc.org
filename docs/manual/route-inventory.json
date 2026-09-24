@@ -468,6 +468,18 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/grants",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/grants/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/grants/funders",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/groups",
 		"panel": "staff"
 	},
@@ -653,6 +665,14 @@
 	},
 	{
 		"route": "/staff/settings",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/sponsors",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/sponsors/[id]",
 		"panel": "staff"
 	},
 	{
