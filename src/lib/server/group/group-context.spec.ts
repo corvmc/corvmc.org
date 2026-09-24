@@ -352,7 +352,13 @@ describe('requireCommitteeReviewer', () => {
 });
 
 describe('requireCommitteeMember', () => {
-	const COMMITTEE = { id: 'group-3', slug: 'production', name: 'Production', kind: 'committee' };
+	const COMMITTEE = {
+		id: 'group-3',
+		slug: 'production',
+		name: 'Production',
+		kind: 'committee',
+		capabilityGrants: ['project.manage']
+	};
 	const call = (groupId: string | null = 'group-3') =>
 		requireCommitteeMember(groupId, 'project.manage');
 
@@ -393,5 +399,73 @@ describe('requireCommitteeMember', () => {
 		getByIdActive.mockResolvedValue(null);
 		getUserRole.mockResolvedValue('member');
 		expect(await statusOf(() => call())).toBe(403);
+	});
+
+	it("refuses a member when their committee's grants do not carry the capability", async () => {
+		getByIdActive.mockResolvedValue({ ...COMMITTEE, capabilityGrants: ['finance.read'] });
+		getUserRole.mockResolvedValue('owner');
+		expect(await statusOf(() => call())).toBe(403);
+		expect(can).toHaveBeenCalledWith('project.manage');
+	});
+
+	it('ignores a stored grant that is off the allowlist', async () => {
+		getByIdActive.mockResolvedValue({ ...COMMITTEE, capabilityGrants: ['user.ban'] });
+		getUserRole.mockResolvedValue('member');
+		expect(await statusOf(() => requireCommitteeMember('group-3', 'user.ban'))).toBe(403);
+	});
+});
+
+/**
+ * #1564, seeded: Booking publishes its projects' events and keeps its recurring
+ * work; Facilities has the baseline only; Production opens work orders. Each
+ * guard names the capability that is both the staff cover and the grant.
+ */
+describe('committee project powers, per committee', () => {
+	const BASE = ['finance.read', 'project.manage'];
+	const COMMITTEES: Record<string, string[]> = {
+		booking: [...BASE, 'event.publish', 'volunteer.manageShifts'],
+		facilities: BASE,
+		production: [...BASE, 'volunteer.manageShifts'],
+		market: [...BASE, 'event.manage']
+	};
+	const CAPS = [
+		'project.manage',
+		'finance.read',
+		'event.publish',
+		'volunteer.manageShifts',
+		'event.manage'
+	] as const;
+
+	for (const [name, grants] of Object.entries(COMMITTEES)) {
+		for (const cap of CAPS) {
+			const allowed = grants.includes(cap);
+			it(`${allowed ? 'admits' : 'refuses'} a ${name} member to ${cap} on its own record`, async () => {
+				getByIdActive.mockResolvedValue({
+					id: name,
+					slug: name,
+					name,
+					kind: 'committee',
+					capabilityGrants: grants
+				});
+				getUserRole.mockResolvedValue('member');
+				if (allowed) {
+					await expect(requireCommitteeMember(name, cap)).resolves.toMatchObject({
+						role: 'member'
+					});
+				} else {
+					expect(await statusOf(() => requireCommitteeMember(name, cap))).toBe(403);
+				}
+			});
+		}
+	}
+
+	it("refuses a Booking member on another committee's record", async () => {
+		getByIdActive.mockResolvedValue({
+			id: 'facilities',
+			kind: 'committee',
+			capabilityGrants: COMMITTEES.booking
+		});
+		getUserRole.mockResolvedValue(null);
+		expect(await statusOf(() => requireCommitteeMember('facilities', 'event.publish'))).toBe(403);
 	});
 });

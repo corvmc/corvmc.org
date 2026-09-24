@@ -583,7 +583,7 @@ are.
 This amends Option A above rather than reversing it. The scope argument is optional, and
 `capabilitySet()` still answers "could this person ever do this". An event-scoped role grant
 never reaches the nav, because a nav row is never about one event.
-`requireCommitteeMember` keeps ownership scoping for records that a committee owns.
+`requireCommitteeMember(groupId, cap)` keeps ownership scoping for records that a committee owns, and also requires that committee's own grant list to carry `cap` with `'owned'` reach. So a committee acts only on its own records, and only in the ways its grants allow. `cap` is still the staff cover.
 
 Grant edits are audited as `capability.grants_changed`, with the capabilities added and removed.
 
