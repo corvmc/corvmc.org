@@ -217,7 +217,15 @@ export const tableOrder = [
 	'incident',
 	'incident_note',
 	// References user only; its subject id is bare text.
-	'wishlist_pledge'
+	'wishlist_pledge',
+	// References user and group; the rest reference ballot, and two ballot_option.
+	'ballot',
+	'ballot_option',
+	'ballot_elector',
+	'ballot_elector_override',
+	'ballot_participation',
+	'ballot_choice',
+	'ballot_recorded_vote'
 ];
 
 /**

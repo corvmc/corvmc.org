@@ -20,7 +20,8 @@ export const auditActions = [
 	'user.email_change_requested',
 	'user.email_changed',
 	'credits.adjusted',
-	'incident.deleted'
+	'incident.deleted',
+	'ballot.elector_overridden'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -67,6 +68,13 @@ export interface AuditDetailsByAction {
 	};
 	/** The retention sweep's deletion (#1468). The row is gone, so this is the record it existed. */
 	'incident.deleted': { category: string; occurredAt: string; retentionYears: number };
+	/** The subject is the member put on or taken off a member-wide ballot's roll. */
+	'ballot.elector_overridden': {
+		ballotId: string;
+		ballotTitle: string;
+		include: boolean;
+		reason: string;
+	};
 }
 
 /** One row as the read side sees it, `details` narrowed by `action`. */
