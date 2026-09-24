@@ -123,6 +123,7 @@ the way it is, and the workflow guide to find out **what** it does today.
 | [membership-page-spec.md](specs/shipped/membership-page-spec.md)       | ✅     | archived  | Sustaining membership UI, credit balance, Stripe portal                                                  |
 | [member-dashboard-spec.md](specs/shipped/member-dashboard-spec.md)     | ✅     | archived  | Member landing page                                                                                      |
 | [member-skill-tags-spec.md](specs/shipped/member-skill-tags-spec.md)   | ✅     | archived  | A `skill` directory tag: set on the profile, filterable                                                  |
+| [classifieds-spec.md](specs/classifieds-spec.md)                       | 📋     | spec      | Members-only wanted/offered posts that expire; reported via `content_flag`, answered by DM               |
 | [local-resources-spec.md](specs/local-resources-spec.md)               | 🔧     | split     | Public staff-curated list of local music businesses. Phases 1–3 shipped; the structured tip form is left |
 
 ### Money & messaging
