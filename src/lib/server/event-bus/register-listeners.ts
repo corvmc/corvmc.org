@@ -55,6 +55,14 @@ export function registerListeners(): void {
 
 	// --- Local resources tips: staff hear of one, the submitter hears the outcome ---
 	registerLocalResourceGroup();
+
+	// --- Market vendor fees are refunded when CMC cancels the market ---
+	registerMarketGroup();
+}
+
+async function registerMarketGroup(): Promise<void> {
+	const { registerMarketListeners } = await import('$lib/server/market/market-listeners');
+	registerMarketListeners();
 }
 
 async function registerLocalResourceGroup(): Promise<void> {
@@ -165,6 +173,7 @@ async function registerCheckoutListeners(): Promise<void> {
 	const { handleTicketCheckout } = await import('$lib/server/ticket/checkout-listener');
 	const { handleBandPremiumCheckout } = await import('$lib/server/band/band-checkout-listener');
 	const { handleAudioCheckout } = await import('$lib/server/audio/checkout-listener');
+	const { recordVendorFeePaid } = await import('$lib/server/market/vendor-fee-service');
 	const { handleCheckoutCache } = await import('$lib/server/finance/checkout-cache-listener');
 	const { handleCheckoutEntries } = await import('$lib/server/finance/checkout-entries-listener');
 
@@ -182,6 +191,10 @@ async function registerCheckoutListeners(): Promise<void> {
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleAudioCheckout(event.stripeSession);
+	});
+
+	domainEvents.on('checkout.completed', async ({ data: event }) => {
+		await recordVendorFeePaid(event.stripeSession);
 	});
 
 	// Last, and best-effort inside: the domain handlers above have already given

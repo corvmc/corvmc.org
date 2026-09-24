@@ -110,7 +110,7 @@ beforeAll(async () => {
 }, 60_000);
 
 describe('registerListeners', () => {
-	it('registers checkout.completed listeners for the four purchasables, the cache and the record', async () => {
+	it('registers checkout.completed listeners for the five purchasables, the cache and the record', async () => {
 		const { registerListeners } = await import('./register-listeners');
 		registerListeners();
 
@@ -123,10 +123,10 @@ describe('registerListeners', () => {
 		// so the count is the whole contract — a listener that failed to register
 		// would simply never fulfil, silently.
 		//
-		// Five and six are the payment cache (#824) and the financial record
-		// (#825), last on purpose: the four above have already given the member
+		// The last two are the payment cache (#824) and the financial record
+		// (#825), last on purpose: the five above have already given the buyer
 		// what they paid for by the time either runs.
-		expect(registeredHandlers['checkout.completed'].length).toBe(6);
+		expect(registeredHandlers['checkout.completed'].length).toBe(7);
 	});
 
 	it('registers the audit log listeners', async () => {

@@ -1547,7 +1547,7 @@ password from there.
 
 ## 19. Market vendors: applications for a market day CMC hosts
 
-Spec: [specs/shipped/market-vendors-spec.md](../specs/shipped/market-vendors-spec.md) (#609). Open decisions: #1502 (fees), #1504 (what the public sees).
+Spec: [specs/shipped/market-vendors-spec.md](../specs/shipped/market-vendors-spec.md) (#609). Open decision: #1504 (what the public sees).
 
 ### The story
 
@@ -1573,12 +1573,23 @@ vendors are listed on the event page.
   the group's Projects tab; that view (`getCommitteeMarketVendors`) carries no contact details.
 - **Public list:** `getPublicMarket` → `listPublicVendors`, which names its columns and
   returns accepted rows only.
+- **Table fee (#1502):** the market's setup carries a per-table fee and an opt-in sliding scale
+  with a per-table floor. Accepting fixes `fee_cents` / `fee_floor_cents` on the vendor (times
+  their tables) and appends a link to `/market/pay/[vendorId]` to the message. That page
+  (`getVendorFeePage`, `payVendorFeeForm`, no account; the vendor id is the key) starts a
+  `checkout()` with metadata `type: market_vendor_fee`. `recordVendorFeePaid` marks it paid from
+  `checkout.completed`, and the checkout entries listener writes `market_fees` plus the card fee.
+- **Refunds:** CMC cancelling refunds through `refund()` — declining an accepted vendor who
+  paid, or `event.cancelled` for the market (`refundMarketFees`). A vendor who withdraws is
+  not refunded.
 
 ### Data touched
 
-- `market_day`: one row per market listing.
+- `market_day`: one row per market listing, with the fee setup.
 - `market_vendor`: one row per application. It has no contact columns. The name, email and
-  phone live on the linked `inbox_thread`.
+  phone live on the linked `inbox_thread`. Fee columns: `fee_cents`, `fee_floor_cents`,
+  `paid_cents`, `paid_at`, `stripe_payment_record_id`, `refunded_at`.
+- `financial_entry`: `market_fees` earned and `card_fees` spent, subject `market_vendor`.
 
 ### Where it breaks
 

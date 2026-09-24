@@ -180,6 +180,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/market/pay/[vendorId]",
+		"panel": "public"
+	},
+	{
 		"route": "/member",
 		"panel": "member"
 	},

@@ -18,6 +18,12 @@ export const marketDay = sqliteTable('market_day', {
 	/** Null means applications stay open until the market starts. */
 	applicationsCloseAt: integer('applications_close_at', { mode: 'timestamp' }),
 	tableCount: integer('table_count'),
+	/** Per table, charged on acceptance through the payments seam. Zero is a free market (#1502). */
+	tableFeeCents: integer('table_fee_cents').notNull().default(0),
+	/** Pay-what-you-can: a vendor may pay any amount from the floor up to the fee. */
+	slidingScale: integer('sliding_scale', { mode: 'boolean' }).notNull().default(false),
+	/** Per table. Read only while `sliding_scale` is on. */
+	slidingScaleFloorCents: integer('sliding_scale_floor_cents').notNull().default(0),
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
 		.default(sql`(unixepoch())`),
@@ -59,6 +65,18 @@ export const marketVendor = sqliteTable(
 			onDelete: 'set null'
 		}),
 		decidedAt: integer('decided_at', { mode: 'timestamp' }),
+		/**
+		 * What acceptance asked for, fixed then so a later change to the market's
+		 * fee cannot move it. `fee_floor_cents` equals the fee unless the market
+		 * runs a sliding scale. Zero owes nothing.
+		 */
+		feeCents: integer('fee_cents').notNull().default(0),
+		feeFloorCents: integer('fee_floor_cents').notNull().default(0),
+		paidCents: integer('paid_cents'),
+		paidAt: integer('paid_at', { mode: 'timestamp' }),
+		/** The payment intent: what a refund names. */
+		stripePaymentRecordId: text('stripe_payment_record_id'),
+		refundedAt: integer('refunded_at', { mode: 'timestamp' }),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),

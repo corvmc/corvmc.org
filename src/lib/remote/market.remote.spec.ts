@@ -7,7 +7,11 @@ import type { z } from 'zod';
  */
 
 vi.mock('$app/server', () => ({
-	getRequestEvent: () => ({ request: new Request('http://x/'), locals: {} }),
+	getRequestEvent: () => ({
+		request: new Request('http://x/'),
+		url: new URL('https://corvmc.org/market/pay/v-1'),
+		locals: {}
+	}),
 	query: (schema: z.ZodType, handler: (a: unknown) => unknown) =>
 		// Lazy, like kit's: a query that is only refreshed never runs its handler.
 		Object.assign(
@@ -88,6 +92,12 @@ const svc = vi.hoisted(() => ({
 	listCommitteeMarkets: vi.fn(async () => [])
 }));
 vi.mock('$lib/server/market/market-service', () => svc);
+
+const fees = vi.hoisted(() => ({
+	getVendorFee: vi.fn(async (): Promise<unknown> => null),
+	startVendorFeeCheckout: vi.fn(async () => ({ checkoutUrl: '/checkout/cs_1' }))
+}));
+vi.mock('$lib/server/market/vendor-fee-service', () => fees);
 
 const remote = await import('./market.remote');
 
@@ -235,5 +245,48 @@ describe('the committee view of a market', () => {
 		await remote.getCommitteeMarkets('grp-dev');
 		expect(guardedOn).toEqual([['grp-dev', 'event.manage']]);
 		expect(svc.listCommitteeMarkets).toHaveBeenCalledWith('grp-dev');
+	});
+});
+
+describe('the market fee (#1502)', () => {
+	it('is set with the market, in cents', async () => {
+		signedIn = true;
+		await submit(remote.openMarketDayForm, {
+			eventId: 'evt-1',
+			tableFeeCents: 2500,
+			slidingScale: true,
+			slidingScaleFloorCents: 1000
+		});
+		expect(svc.openMarketDay).toHaveBeenCalledWith(
+			'evt-1',
+			expect.objectContaining({
+				tableFeeCents: 2500,
+				slidingScale: true,
+				slidingScaleFloorCents: 1000
+			})
+		);
+	});
+
+	it('leaves a free market free', async () => {
+		signedIn = true;
+		await submit(remote.openMarketDayForm, { eventId: 'evt-1' });
+		expect(svc.openMarketDay).toHaveBeenCalledWith(
+			'evt-1',
+			expect.objectContaining({ tableFeeCents: 0, slidingScale: false })
+		);
+	});
+});
+
+describe('paying the fee, with no account', () => {
+	it('shows the fee page for a vendor id, and 404s one that names nothing', async () => {
+		await expect(remote.getVendorFeePage('v-404')).rejects.toMatchObject({ status: 404 });
+		fees.getVendorFee.mockResolvedValueOnce({ vendorId: 'v-1', due: true });
+		await expect(remote.getVendorFeePage('v-1')).resolves.toMatchObject({ vendorId: 'v-1' });
+	});
+
+	it('starts a checkout for the chosen amount, back to this site', async () => {
+		const result = await submit(remote.payVendorFeeForm, { vendorId: 'v-1', amountCents: 1500 });
+		expect(fees.startVendorFeeCheckout).toHaveBeenCalledWith('v-1', 1500, 'https://corvmc.org');
+		expect(result).toEqual({ redirectUrl: '/checkout/cs_1' });
 	});
 });

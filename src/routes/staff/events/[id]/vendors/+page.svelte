@@ -14,8 +14,9 @@
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
 	import { IconCheck, IconX, IconArrowBackUp, IconTable } from '@tabler/icons-svelte';
-	import { formatDateTime, toLocalDateTime } from '$lib/utils/format';
+	import { formatCents, formatDateTime, toLocalDateTime } from '$lib/utils/format';
 	import { marketVendorStatuses, type MarketVendorStatus } from '$lib/config';
 	import {
 		decideVendorForm,
@@ -72,6 +73,34 @@
 	}
 </script>
 
+{#snippet feeFields(
+	market: {
+		tableFeeCents: number;
+		slidingScale: boolean;
+		slidingScaleFloorCents: number;
+	} | null
+)}
+	<MoneyField
+		field={setupFields.tableFeeCents}
+		label="Table fee"
+		description="Per table, charged when a vendor is accepted. Blank means no fee."
+		value={market?.tableFeeCents || undefined}
+	/>
+	<FormField
+		field={setupFields.slidingScale}
+		type="checkbox"
+		label="Sliding scale"
+		description="Let vendors pay what they can, down to the floor below."
+		value={market?.slidingScale ?? false}
+	/>
+	<MoneyField
+		field={setupFields.slidingScaleFloorCents}
+		label="Sliding-scale floor"
+		description="Per table. Only used with the sliding scale."
+		value={market?.slidingScaleFloorCents || undefined}
+	/>
+{/snippet}
+
 <PageHeader title="Vendors: {data.event.title}" backHref="/staff/events/{data.event.id}">
 	{#if data.market}
 		<Action
@@ -99,6 +128,7 @@
 					label="Tables available"
 					value={data.market?.tableCount ?? undefined}
 				/>
+				{@render feeFields(data.market)}
 			{/snippet}
 		</Action>
 	{/if}
@@ -125,6 +155,7 @@
 						/>
 						<FormField field={setupFields.tableCount} type="number" label="Tables available" />
 					</div>
+					{@render feeFields(null)}
 					<SubmitButton label="Open for applications" />
 				</Form>
 			</CardBody>
@@ -171,6 +202,7 @@
 					<th class="col-support">Needs</th>
 					<th class="col-support">Contact</th>
 					<th>Table</th>
+					<th class="col-support">Fee</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
 				{#each rows as row (row.id)}
@@ -194,6 +226,17 @@
 							{/if}
 						</td>
 						<td>{row.tableLabel ?? '—'}</td>
+						<td class="col-support">
+							{#if row.feeCents === 0}
+								<span class="text-muted">—</span>
+							{:else if row.refundedAt}
+								Refunded
+							{:else if row.paidAt}
+								Paid {formatCents(row.paidCents ?? 0)}
+							{:else}
+								{formatCents(row.feeCents)} due
+							{/if}
+						</td>
 						<td>
 							<div class="flex w-max justify-end gap-1">
 								{#if row.status !== 'accepted' && row.status !== 'withdrawn'}
@@ -215,7 +258,9 @@
 												field={decideFields.message}
 												type="textarea"
 												label="Message to the vendor"
-												description="Sent by email on their inbox thread."
+												description={data.market?.tableFeeCents
+													? 'Sent by email on their inbox thread, with a link to pay the table fee.'
+													: 'Sent by email on their inbox thread.'}
 												value={acceptMessage(row.businessName)}
 											/>
 										{/snippet}

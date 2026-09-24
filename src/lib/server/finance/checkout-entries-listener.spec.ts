@@ -144,6 +144,25 @@ describe('a reservation', () => {
 	});
 });
 
+describe('a market vendor table fee', () => {
+	it('records the fee as earned against the vendor, less the card', async () => {
+		await handleCheckoutEntries({
+			id: 'cs_4',
+			payment_intent: 'pi_4',
+			amount_total: 2500,
+			metadata: { type: 'market_vendor_fee', vendor_id: 'v-1', event_id: 'evt-1' }
+		} as never);
+
+		expect(of('earned', 'market_fees')[0]).toMatchObject({
+			amountCents: 2500,
+			subjectType: 'market_vendor',
+			subjectId: 'v-1',
+			stripePaymentRecordId: 'pi_4'
+		});
+		expect(of('spent', 'card_fees')[0]).toMatchObject({ amountCents: -103 });
+	});
+});
+
 describe('a checkout it does not recognise', () => {
 	it('writes nothing rather than guessing', async () => {
 		await handleCheckoutEntries({

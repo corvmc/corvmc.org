@@ -181,6 +181,20 @@ export const moneyColumns = {
 	'project.budget_cents': { notAccounting: 'a plan, not a movement' },
 	'volunteer_role.market_rate_cents': {
 		notAccounting: 'a rate the in-kind listener multiplies by the hours approved'
+	},
+
+	// ---------------------------------------------------------- market vendors
+	'market_day.table_fee_cents': { notAccounting: 'a price per table, fixed on each vendor' },
+	'market_day.sliding_scale_floor_cents': {
+		notAccounting: 'a price the vendor may not go below, not an amount that moved'
+	},
+	'market_vendor.fee_cents': { notAccounting: 'what acceptance asked for, before it is paid' },
+	'market_vendor.fee_floor_cents': {
+		notAccounting: 'a price the vendor may not go below, not an amount that moved'
+	},
+	'market_vendor.paid_cents': {
+		movement: 'market_vendor_fee',
+		writer: 'src/lib/server/finance/checkout-entries-listener.ts'
 	}
 } satisfies Record<string, MoneyColumn>;
 
