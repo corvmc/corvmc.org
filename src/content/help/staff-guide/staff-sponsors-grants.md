@@ -28,6 +28,22 @@ new sponsorship on the same sponsor.
 When an active term's end date passes, it shows in red and the sponsor's page says so until you
 mark it Ended or add the renewal.
 
+### Crediting a sponsor on a show
+
+On the sponsor's page, choose **Place** beside a sponsorship. Pick the show, then choose where to
+credit the sponsor:
+
+- **Event page:** the public event page shows "Presented with support from" and the sponsor's
+  logo or name, linked to their website.
+- **Email:** every campaign about that show ends with the same line.
+
+Only an Active or Ended sponsorship is credited. You can place a pitch ahead of signing, and it
+appears once you mark it Active. Upload the sponsor's **Logo** on the same page. Without one,
+credits show the name.
+
+Removing a placement takes the credit off the event page right away. Emails that were already
+sent keep their credit.
+
 ## Grants
 
 **Grants** lists applications, with whatever comes due soonest at the top. Add the funder first
@@ -49,5 +65,6 @@ submitted date, even after the grant is closed.
 
 ## What this does not do
 
-It does not send reminders, and it does not take or record money. A cheque that arrives is entered
+It does not send reminders, it does not put logos on posters, and it does not take or record
+money. A cheque that arrives is entered
 in the books the usual way.
