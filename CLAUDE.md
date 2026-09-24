@@ -52,7 +52,7 @@ local run you did not do. Triage of a red or rejected run is the `qc` role's job
 ## Rules
 
 - **Remote functions are the security boundary.** Data access is `query()`/`form()` in
-  `src/lib/remote/`: guard first (`requireUser`, `requireStaff`, `requireBandMember`,
+  `src/lib/remote/`: guard first (`requireUser`, `requireCapability`, `requireBandMember`,
   `requireFeature`, …), Zod schema second, then orchestrate. They bypass route and layout loads and
   take their params from a client header — a guard in a layout guards nothing. Components never
   import from `$lib/server/`.
