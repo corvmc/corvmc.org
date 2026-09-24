@@ -252,6 +252,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/groups/[slug]/markets/[eventId]",
+		"panel": "member"
+	},
+	{
 		"route": "/member/help",
 		"panel": "member"
 	},

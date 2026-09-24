@@ -43,6 +43,7 @@
 	import CommitteeNumbers from './CommitteeNumbers.svelte';
 	import ProjectWorkOrderAction from './ProjectWorkOrderAction.svelte';
 	import ProjectEventPublishAction from './ProjectEventPublishAction.svelte';
+	import CommitteeMarkets from './CommitteeMarkets.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -279,6 +280,9 @@
 					{/each}
 				</Table>
 			</InfoCard>
+		{/if}
+		{#if isMember && group.kind === 'committee'}
+			<CommitteeMarkets groupId={group.id} {slug} />
 		{/if}
 	{:else if tab === 'numbers'}
 		<CommitteeNumbers groupId={group.id} />

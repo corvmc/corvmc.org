@@ -219,7 +219,10 @@ describe('route coverage', () => {
 		'/member/groups/[slug]/chat',
 		// And one topic inside it, reached from the topic list on the line
 		// above. There is no "the topic" to navigate to either (#1301).
-		'/member/groups/[slug]/chat/[threadId]'
+		'/member/groups/[slug]/chat/[threadId]',
+		// One market's vendor applications, reached from the committee page's
+		// markets card. There is no "the market" without a committee named.
+		'/member/groups/[slug]/markets/[eventId]'
 	]);
 
 	it('lights a row for every page that has one', () => {
