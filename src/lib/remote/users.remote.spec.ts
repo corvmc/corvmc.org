@@ -527,7 +527,7 @@ describe('adjustCredits surfaces staff mistakes on the amount field', () => {
 		await expectFieldIssue(
 			() => users.adjustCredits({ ...VALID, amount: '-300' }),
 			'amount',
-			'balance is 200'
+			'balance is 100 hrs'
 		);
 		expect(deductCredits).not.toHaveBeenCalled();
 	});
@@ -560,7 +560,7 @@ describe('adjustCredits surfaces staff mistakes on the amount field', () => {
 	});
 
 	it('allows a deduction within the balance', async () => {
-		await users.adjustCredits({ ...VALID, amount: '-150' });
+		await users.adjustCredits({ ...VALID, amount: '-50' });
 		expect(deductCredits).toHaveBeenCalled();
 	});
 
@@ -578,9 +578,73 @@ describe('adjustCredits surfaces staff mistakes on the amount field', () => {
 		deductCredits.mockRejectedValueOnce(new InsufficientCreditsError('raced'));
 
 		await expectFieldIssue(
-			() => users.adjustCredits({ ...VALID, amount: '-150' }),
+			() => users.adjustCredits({ ...VALID, amount: '-50' }),
 			'amount',
-			'balance is 10'
+			'balance is 5 hrs'
+		);
+	});
+});
+
+// The panel shows free hours in hours, so the field takes hours too; the
+// ledger stores 30-minute credits. Equipment credits have no conversion.
+describe('adjustCredits takes free hours in hours', () => {
+	const VALID = { userId: 'member-1', description: 'Goodwill adjustment' };
+
+	beforeEach(() => {
+		requireCapability.mockResolvedValue({ id: 'acting-staff' });
+		getBalance.mockResolvedValue(200);
+	});
+
+	it('adds two hours as four credits', async () => {
+		await users.adjustCredits({ ...VALID, creditType: 'free_hours', amount: '2' });
+		expect(addCredits).toHaveBeenCalledWith(
+			'member-1',
+			'free_hours',
+			4,
+			'admin_adjustment',
+			undefined,
+			'Goodwill adjustment'
+		);
+	});
+
+	it('deducts one and a half hours as three credits', async () => {
+		await users.adjustCredits({ ...VALID, creditType: 'free_hours', amount: '-1.5' });
+		expect(deductCredits).toHaveBeenCalledWith(
+			'member-1',
+			'free_hours',
+			3,
+			'admin_adjustment',
+			undefined,
+			'Goodwill adjustment'
+		);
+	});
+
+	it('rejects hours that are not whole half-hours', async () => {
+		await expectFieldIssue(
+			() => users.adjustCredits({ ...VALID, creditType: 'free_hours', amount: '0.2' }),
+			'amount',
+			'half-hour'
+		);
+		expect(addCredits).not.toHaveBeenCalled();
+	});
+
+	it('quotes an over-deduction in hours', async () => {
+		await expectFieldIssue(
+			() => users.adjustCredits({ ...VALID, creditType: 'free_hours', amount: '-150' }),
+			'amount',
+			'balance is 100 hrs — cannot deduct 150 hrs'
+		);
+	});
+
+	it('passes equipment credits through unchanged', async () => {
+		await users.adjustCredits({ ...VALID, creditType: 'equipment_credits', amount: '2' });
+		expect(addCredits).toHaveBeenCalledWith(
+			'member-1',
+			'equipment_credits',
+			2,
+			'admin_adjustment',
+			undefined,
+			'Goodwill adjustment'
 		);
 	});
 });
@@ -601,7 +665,7 @@ describe('adjustCredits under credit.comp alone (#579)', () => {
 	});
 
 	it('adds up to the ceiling, recorded as a staff comp', async () => {
-		await users.adjustCredits({ ...COMP, amount: '4' });
+		await users.adjustCredits({ ...COMP, amount: '2' });
 		expect(addCredits).toHaveBeenCalledWith(
 			'member-1',
 			'free_hours',
@@ -614,7 +678,7 @@ describe('adjustCredits under credit.comp alone (#579)', () => {
 
 	it('refuses more than the ceiling on the amount field, in hours', async () => {
 		await expectFieldIssue(
-			() => users.adjustCredits({ ...COMP, amount: '5' }),
+			() => users.adjustCredits({ ...COMP, amount: '2.5' }),
 			'amount',
 			'Up to 2 hrs'
 		);
@@ -647,7 +711,7 @@ describe('adjustCredits under credit.comp alone (#579)', () => {
 
 	it('leaves a full adjuster unbounded and records an admin adjustment', async () => {
 		held = new Set(['credit.adjust', 'credit.read']);
-		await users.adjustCredits({ ...COMP, amount: '50' });
+		await users.adjustCredits({ ...COMP, amount: '25' });
 		expect(addCredits).toHaveBeenCalledWith(
 			'member-1',
 			'free_hours',
@@ -780,7 +844,7 @@ describe('staff edits leave an audit entry', () => {
 		await users.adjustCredits({
 			userId: 'member-1',
 			creditType: 'free_hours',
-			amount: '-150',
+			amount: '-75',
 			description: 'Double booking'
 		});
 

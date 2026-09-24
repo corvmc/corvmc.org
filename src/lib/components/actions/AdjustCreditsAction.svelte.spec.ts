@@ -107,7 +107,7 @@ describe('AdjustCreditsAction', () => {
 	it('labels every field it submits', async () => {
 		await open();
 
-		for (const label of ['Credit Type', 'Amount', 'Reason']) {
+		for (const label of ['Credit Type', 'Hours', 'Reason']) {
 			await expect.element(page.getByText(label, { exact: true })).toBeVisible();
 		}
 	});
