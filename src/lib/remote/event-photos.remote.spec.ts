@@ -146,7 +146,7 @@ describe('event-photos.remote', () => {
 
 	// A photographer may upload, but the paragraph is staff's to write.
 	it('refuses the written recap to a photographer without event.manage', async () => {
-		photographer = true;
+		crewEvent = 'e1';
 		await expect(remote.saveEventRecapText({ eventId: 'e1', recapText: 'Mine' })).rejects.toThrow(
 			'403: event.manage'
 		);
