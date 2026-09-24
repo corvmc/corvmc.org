@@ -10,7 +10,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
-import { bookerTypes } from '../../../config';
+import { accessHoldingKinds, bookerTypes } from '../../../config';
 import { recurringSeries } from './recurring';
 
 // ---------------------------------------------------------------------------
@@ -213,6 +213,44 @@ export const lockMemberCode = sqliteTable(
 	]
 );
 
+/**
+ * One issue of a physical key or an alarm code, closed by its return. Rows are
+ * never edited or deleted otherwise, so the table is the issue/return log.
+ *
+ * `holderName` is required and `holderUserId` is not: a landlord or a
+ * contractor can hold a key without an account. `label` names the thing
+ * ("Front door key 3", "Alarm user 12"), never the code itself.
+ */
+export const accessHolding = sqliteTable(
+	'access_holding',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		kind: text('kind', { enum: accessHoldingKinds }).notNull(),
+		label: text('label').notNull(),
+		holderUserId: text('holder_user_id').references(() => user.id, { onDelete: 'set null' }),
+		holderName: text('holder_name').notNull(),
+		issuedAt: integer('issued_at', { mode: 'timestamp' }).notNull(),
+		issuedByUserId: text('issued_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		notes: text('notes'),
+		returnedAt: integer('returned_at', { mode: 'timestamp' }),
+		returnedByUserId: text('returned_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		returnNotes: text('return_notes'),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('idx_access_holding_open').on(t.returnedAt, t.issuedAt),
+		index('idx_access_holding_holder').on(t.holderUserId)
+	]
+);
+
 // ---------------------------------------------------------------------------
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
@@ -221,3 +259,4 @@ export type Reservation = typeof reservation.$inferSelect;
 export type Closure = typeof closure.$inferSelect;
 export type LockFallbackCode = typeof lockFallbackCode.$inferSelect;
 export type LockMemberCode = typeof lockMemberCode.$inferSelect;
+export type AccessHolding = typeof accessHolding.$inferSelect;

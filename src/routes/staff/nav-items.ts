@@ -62,6 +62,7 @@ export type StaffNavKey =
 	| 'contractors'
 	| 'contractor-jobs'
 	| 'incidents'
+	| 'keys'
 	| 'projects'
 	| 'productions'
 	| 'venues'
@@ -340,6 +341,14 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'incident.read',
 				label: 'Incidents',
 				href: resolve('/staff/incidents')
+			},
+			{
+				// Standing access to the building. Door codes are managed in Settings;
+				// this lists them beside the keys and alarm codes nothing else records.
+				key: 'keys',
+				capability: 'lock.manage',
+				label: 'Key Holders',
+				href: resolve('/staff/keys')
 			},
 			{
 				// Beside Contractors rather than under Events: a project is as

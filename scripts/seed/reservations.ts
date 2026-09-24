@@ -3,7 +3,8 @@ import {
 	closure,
 	reservation,
 	lockFallbackCode,
-	lockMemberCode
+	lockMemberCode,
+	accessHolding
 } from '../../src/lib/server/db/schema/reservation';
 import { db } from './db';
 import { CLOSURE_REASONS } from './pools';
@@ -271,6 +272,55 @@ export async function seedLockAccess(users: SeedUser[]) {
 						lockAccessId: String(randomInt(100000, 999999)),
 						code: String(randomInt(10000000, 99999999)),
 						label: pending.name
+					}
+				]
+			: [])
+	]);
+
+	// The key holder register: two keys out, an alarm code held by somebody with
+	// no account, and one key back — so both tabs have rows.
+	const [, , , keyHolder, keyReturner] = users;
+	await db.insert(accessHolding).values([
+		{
+			kind: 'key',
+			label: 'Front door key 1',
+			holderUserId: holder.id,
+			holderName: holder.name,
+			issuedAt: ptDate(-400, 12),
+			issuedByUserId: holder.id
+		},
+		{
+			kind: 'alarm_code',
+			label: 'Alarm user 4',
+			holderName: 'Landlord',
+			issuedAt: ptDate(-700, 12),
+			issuedByUserId: holder.id,
+			notes: 'Building owner — needs it for inspections'
+		},
+		...(keyHolder
+			? [
+					{
+						kind: 'key' as const,
+						label: 'Front door key 2',
+						holderUserId: keyHolder.id,
+						holderName: keyHolder.name,
+						issuedAt: ptDate(-120, 12),
+						issuedByUserId: holder.id
+					}
+				]
+			: []),
+		...(keyReturner
+			? [
+					{
+						kind: 'key' as const,
+						label: 'Back door key 1',
+						holderUserId: keyReturner.id,
+						holderName: keyReturner.name,
+						issuedAt: ptDate(-300, 12),
+						issuedByUserId: holder.id,
+						returnedAt: ptDate(-30, 12),
+						returnedByUserId: holder.id,
+						returnNotes: 'Stepped back from the board'
 					}
 				]
 			: [])

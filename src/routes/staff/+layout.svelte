@@ -43,7 +43,8 @@
 		IconListDetails,
 		IconCalendarWeek,
 		IconCalendarMonth,
-		IconMapPin
+		IconMapPin,
+		IconKey
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
@@ -112,6 +113,7 @@
 		contractors: IconHammer,
 		'contractor-jobs': IconClipboardList,
 		incidents: IconAlertTriangle,
+		keys: IconKey,
 		projects: IconFolders,
 		productions: IconCalendarEvent,
 		venues: IconMapPin,

@@ -669,6 +669,19 @@ export const contractorTradeLabels: Record<ContractorTrade, string> = {
 	other: 'Other'
 };
 
+/**
+ * Standing building access recorded by hand: things the app cannot issue or
+ * revoke itself. Standing lock codes are not here — `lock_member_code` already
+ * records who holds one, and the register reads it rather than copying it.
+ */
+export const accessHoldingKinds = ['key', 'alarm_code'] as const;
+export type AccessHoldingKind = (typeof accessHoldingKinds)[number];
+
+export const accessHoldingKindLabels: Record<AccessHoldingKind, string> = {
+	key: 'Key',
+	alarm_code: 'Alarm code'
+};
+
 /** A local resource listing. `rejected` is a return state, not terminal. */
 export const localResourceStatuses = ['pending', 'published', 'rejected'] as const;
 export type LocalResourceStatus = (typeof localResourceStatuses)[number];

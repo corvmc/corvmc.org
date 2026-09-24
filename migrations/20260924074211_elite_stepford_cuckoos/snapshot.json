@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "6dd9fc1b-6bd4-4e00-ba74-3387e032809d",
+  "id": "82555a8a-c148-4cdf-b5a2-51dc07377600",
   "prevIds": [
-    "48f9e9b6-390f-4e94-9fe4-c4b0b55ddd1d"
+    "6dd9fc1b-6bd4-4e00-ba74-3387e032809d"
   ],
   "ddl": [
     {
@@ -36,6 +36,10 @@
     },
     {
       "name": "payment_cache",
+      "entityType": "tables"
+    },
+    {
+      "name": "access_holding",
       "entityType": "tables"
     },
     {
@@ -1237,6 +1241,126 @@
       "name": "created_at",
       "entityType": "columns",
       "table": "payment_cache"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "access_holding"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "access_holding"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "label",
+      "entityType": "columns",
+      "table": "access_holding"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "holder_user_id",
+      "entityType": "columns",
+      "table": "access_holding"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "holder_name",
+      "entityType": "columns",
+      "table": "access_holding"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "issued_at",
+      "entityType": "columns",
+      "table": "access_holding"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "issued_by_user_id",
+      "entityType": "columns",
+      "table": "access_holding"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "access_holding"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "returned_at",
+      "entityType": "columns",
+      "table": "access_holding"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "returned_by_user_id",
+      "entityType": "columns",
+      "table": "access_holding"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "return_notes",
+      "entityType": "columns",
+      "table": "access_holding"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "access_holding"
     },
     {
       "type": "text",
@@ -12895,6 +13019,51 @@
     },
     {
       "columns": [
+        "holder_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_access_holding_holder_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "access_holding"
+    },
+    {
+      "columns": [
+        "issued_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_access_holding_issued_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "access_holding"
+    },
+    {
+      "columns": [
+        "returned_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_access_holding_returned_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "access_holding"
+    },
+    {
+      "columns": [
         "user_id"
       ],
       "tableTo": "user",
@@ -16211,6 +16380,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "access_holding_pk",
+      "table": "access_holding",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "closure_pk",
       "table": "closure",
       "entityType": "pks"
@@ -17207,6 +17385,38 @@
       "name": "idx_payment_record_paid_at",
       "entityType": "indexes",
       "table": "payment_cache"
+    },
+    {
+      "columns": [
+        {
+          "value": "returned_at",
+          "isExpression": false
+        },
+        {
+          "value": "issued_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_access_holding_open",
+      "entityType": "indexes",
+      "table": "access_holding"
+    },
+    {
+      "columns": [
+        {
+          "value": "holder_user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_access_holding_holder",
+      "entityType": "indexes",
+      "table": "access_holding"
     },
     {
       "columns": [

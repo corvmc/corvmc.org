@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
-import { command } from './_remote';
+import { command, form } from './_remote';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
@@ -24,6 +24,14 @@ import {
 	revokeMemberCode,
 	listMemberCodes
 } from '$lib/server/lock/member-code-service';
+import {
+	issueHolding,
+	listAccessRegister,
+	returnHolding
+} from '$lib/server/lock/access-register-service';
+import { mapDomainError } from '$lib/server/errors';
+import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { accessHoldingKinds, DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Door access
@@ -167,5 +175,69 @@ export const revokeStandingCode = command(
 		await requireCapability('lock.manage');
 		await revokeMemberCode(id, reason);
 		return { revoked: true };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Key holder register
+// ---------------------------------------------------------------------------
+// Same guard as the codes above: who may see who can get into the building is
+// the same question as who may hand out a way in.
+// ---------------------------------------------------------------------------
+
+/** Keys, alarm codes and standing lock codes — what is held, or the whole history. */
+export const getAccessRegister = query(z.boolean(), async (includeReturned) => {
+	await requireCapability('lock.manage');
+	return listAccessRegister({ includeReturned });
+});
+
+function refreshRegister() {
+	void getAccessRegister(false).refresh();
+	void getAccessRegister(true).refresh();
+}
+
+export const issueAccessForm = form(
+	z.object({
+		kind: z.enum(accessHoldingKinds),
+		label: z.string().trim().min(1, 'Say which key or code this is').max(200),
+		holderUserId: z.string().optional(),
+		holderName: z.string().max(200).optional(),
+		issuedOn: z.string().optional(),
+		notes: z.string().max(2000).optional()
+	}),
+	async (data) => {
+		const staff = await requireCapability('lock.manage');
+		try {
+			await issueHolding({
+				kind: data.kind,
+				label: data.label,
+				holderUserId: data.holderUserId || null,
+				holderName: data.holderName || null,
+				issuedByUserId: staff.id,
+				// Noon, so a calendar day never lands on the previous one.
+				issuedAt: data.issuedOn
+					? buildDateInTz(data.issuedOn, '12:00', DEFAULT_TIMEZONE)
+					: undefined,
+				notes: data.notes || null
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		refreshRegister();
+		return { success: true };
+	}
+);
+
+export const returnAccessForm = form(
+	z.object({ id: z.string().min(1), notes: z.string().max(2000).optional() }),
+	async ({ id, notes }) => {
+		const staff = await requireCapability('lock.manage');
+		try {
+			await returnHolding(id, { returnedByUserId: staff.id, notes: notes || null });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		refreshRegister();
+		return { success: true };
 	}
 );
