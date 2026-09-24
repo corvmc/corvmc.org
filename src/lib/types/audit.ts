@@ -17,6 +17,8 @@ export const auditActions = [
 	'user.purged',
 	'user.banned',
 	'user.unbanned',
+	'user.email_change_requested',
+	'user.email_changed',
 	'credits.adjusted'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
@@ -52,6 +54,10 @@ export interface AuditDetailsByAction {
 	/** A ban also writes `user.deactivated`, which carries what the offboarding took. */
 	'user.banned': { reason: string };
 	'user.unbanned': Record<string, never>;
+	/** Written by the staffer who proposed it; the address is not the login until confirmed. */
+	'user.email_change_requested': { email: string };
+	/** The actor is the member, who confirmed from the new mailbox. Kept so staff can reverse it. */
+	'user.email_changed': { previousEmail: string; newEmail: string };
 	'credits.adjusted': {
 		creditType: 'free_hours' | 'equipment_credits';
 		delta: number;

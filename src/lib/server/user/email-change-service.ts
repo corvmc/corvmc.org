@@ -6,8 +6,13 @@ import { and, eq, gt } from 'drizzle-orm';
 import { DomainError } from '../domain-error';
 import { allowRateLimited } from '$lib/server/rate-limit';
 import { dispatchEmailOnly } from '$lib/server/notification/dispatcher';
-import { linkExistingSubscriberToUser } from '$lib/server/marketing/subscriber-service';
+import {
+	linkExistingSubscriberToUser,
+	moveLinkedSubscriberEmail
+} from '$lib/server/marketing/subscriber-service';
 import { captureException } from '$lib/server/sentry';
+import { stripe } from '$lib/server/stripe';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 
 // ---------------------------------------------------------------------------
 // Staff-proposed, mailbox-confirmed email change (docs/specs/staff-email-change-spec.md)
@@ -193,6 +198,12 @@ export async function requestEmailChange(
 		})
 	]);
 
+	await recordAuditEntry({
+		action: 'user.email_change_requested',
+		subject: { type: 'user', id: userId, label: member.name },
+		details: { email }
+	});
+
 	await dispatchEmailOnly({
 		type: 'email_change_confirm',
 		toEmail: email,
@@ -235,7 +246,7 @@ export async function confirmEmailChange(token: string): Promise<ConfirmEmailCha
 	if (!found) return { status: 'invalid' };
 
 	const [member] = await db
-		.select({ name: user.name, email: user.email })
+		.select({ name: user.name, email: user.email, stripeId: user.stripeId })
 		.from(user)
 		.where(eq(user.id, found.userId))
 		.limit(1);
@@ -265,12 +276,33 @@ export async function confirmEmailChange(token: string): Promise<ConfirmEmailCha
 		throw err;
 	}
 
-	// The same claim a signup verification makes: the address is now proven.
+	// Everything after the batch is best-effort: the login has already moved, and
+	// a failure here must not tell the member it did not. The subscriber row is
+	// moved before the claim, so an unclaimed row at the new address is merged
+	// into rather than left beside the old one.
+	try {
+		await moveLinkedSubscriberEmail(found.userId, member.email, found.email);
+	} catch (err) {
+		captureException(err);
+	}
 	try {
 		await linkExistingSubscriberToUser(found.userId, found.email);
 	} catch (err) {
 		captureException(err);
 	}
+	if (member.stripeId) {
+		try {
+			await stripe.customers.update(member.stripeId, { email: found.email });
+		} catch (err) {
+			captureException(err);
+		}
+	}
+	await recordAuditEntry({
+		action: 'user.email_changed',
+		subject: { type: 'user', id: found.userId, label: member.name },
+		details: { previousEmail: member.email, newEmail: found.email },
+		actor: { id: found.userId, name: member.name, email: found.email }
+	});
 
 	// A notice, not a veto: nothing here undoes the change. Reversal is a staff
 	// action, so the notice's one button is a message to staff asking for it.

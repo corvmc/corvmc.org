@@ -52,6 +52,10 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Banned the account: “${entry.details.reason}”`;
 		case 'user.unbanned':
 			return 'Lifted the ban';
+		case 'user.email_change_requested':
+			return `Asked to change the login email to ${entry.details.email}`;
+		case 'user.email_changed':
+			return `Changed the login email from ${entry.details.previousEmail} to ${entry.details.newEmail}`;
 		case 'credits.adjusted': {
 			const d = entry.details;
 			const verb = d.delta < 0 ? 'Deducted' : 'Added';

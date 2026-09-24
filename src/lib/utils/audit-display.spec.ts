@@ -59,6 +59,17 @@ describe('summarizeAuditEntry', () => {
 		expect(summarizeAuditEntry(entry('user.unbanned', {}))).toBe('Lifted the ban');
 	});
 
+	it('names both addresses of an email change', () => {
+		expect(
+			summarizeAuditEntry(entry('user.email_change_requested', { email: 'j@example.com' }))
+		).toBe('Asked to change the login email to j@example.com');
+		expect(
+			summarizeAuditEntry(
+				entry('user.email_changed', { previousEmail: 'j@exmaple.com', newEmail: 'j@example.com' })
+			)
+		).toBe('Changed the login email from j@exmaple.com to j@example.com');
+	});
+
 	it('names the edited profile fields in words, not column names', () => {
 		expect(
 			summarizeAuditEntry(entry('user.profile_updated', { fields: ['phone', 'dateOfBirth'] }))

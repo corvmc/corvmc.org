@@ -34,8 +34,20 @@ vi.mock('$lib/server/notification/dispatcher', () => ({
 }));
 
 const linkExistingSubscriberToUser = vi.fn(async () => null);
+const moveLinkedSubscriberEmail = vi.fn(async () => 'none');
 vi.mock('$lib/server/marketing/subscriber-service', () => ({
-	linkExistingSubscriberToUser: (...a: unknown[]) => linkExistingSubscriberToUser(...(a as []))
+	linkExistingSubscriberToUser: (...a: unknown[]) => linkExistingSubscriberToUser(...(a as [])),
+	moveLinkedSubscriberEmail: (...a: unknown[]) => moveLinkedSubscriberEmail(...(a as []))
+}));
+
+const updateCustomer = vi.fn(async () => ({}));
+vi.mock('$lib/server/stripe', () => ({
+	stripe: { customers: { update: (...a: unknown[]) => updateCustomer(...(a as [])) } }
+}));
+
+const recordAuditEntry = vi.fn(async () => undefined);
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...(a as []))
 }));
 
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
@@ -63,9 +75,18 @@ beforeEach(async () => {
 	allowRateLimited.mockReset().mockResolvedValue(true);
 	dispatchEmailOnly.mockClear();
 	linkExistingSubscriberToUser.mockClear();
+	moveLinkedSubscriberEmail.mockReset().mockResolvedValue('none');
+	updateCustomer.mockReset().mockResolvedValue({});
+	recordAuditEntry.mockClear();
 	for (const t of ['verification', 'session', 'user']) sqlite.exec(`delete from ${t}`);
 	await testDb.insert(user).values([
-		{ id: MEMBER, name: 'Jordan', email: 'jordan@exmaple.com', emailVerified: false },
+		{
+			id: MEMBER,
+			name: 'Jordan',
+			email: 'jordan@exmaple.com',
+			emailVerified: false,
+			stripeId: 'cus_jordan'
+		},
 		{ id: OTHER, name: 'Other', email: 'taken@example.com', emailVerified: true }
 	] as never);
 	await testDb.insert(session).values({
@@ -151,6 +172,51 @@ describe('confirmEmailChange', () => {
 		expect(url.searchParams.get('subject')).toMatch(/reverse/i);
 		expect(notice.email.cta!.label).toMatch(/reverse/i);
 		expect(notice.email.paragraphs.map((p) => p.text).join(' ')).toMatch(/change it back/i);
+	});
+
+	it('moves the Stripe customer and the linked subscriber row to the new address', async () => {
+		await svc.requestEmailChange(MEMBER, 'jordan@example.com');
+		await svc.confirmEmailChange(lastToken());
+
+		expect(updateCustomer).toHaveBeenCalledWith('cus_jordan', { email: 'jordan@example.com' });
+		expect(moveLinkedSubscriberEmail).toHaveBeenCalledWith(
+			MEMBER,
+			'jordan@exmaple.com',
+			'jordan@example.com'
+		);
+	});
+
+	it('still applies the change when Stripe refuses the update', async () => {
+		updateCustomer.mockRejectedValue(new Error('Stripe is down'));
+		await svc.requestEmailChange(MEMBER, 'jordan@example.com');
+
+		expect(await svc.confirmEmailChange(lastToken())).toMatchObject({ status: 'changed' });
+		expect((await memberRow()).email).toBe('jordan@example.com');
+	});
+
+	it('skips Stripe for a member who has no customer', async () => {
+		await testDb.update(user).set({ stripeId: null }).where(eq(user.id, MEMBER));
+		await svc.requestEmailChange(MEMBER, 'jordan@example.com');
+		await svc.confirmEmailChange(lastToken());
+
+		expect(updateCustomer).not.toHaveBeenCalled();
+	});
+
+	it('audits the request and the applied change', async () => {
+		await svc.requestEmailChange(MEMBER, 'jordan@example.com');
+		expect(recordAuditEntry).toHaveBeenLastCalledWith({
+			action: 'user.email_change_requested',
+			subject: { type: 'user', id: MEMBER, label: 'Jordan' },
+			details: { email: 'jordan@example.com' }
+		});
+
+		await svc.confirmEmailChange(lastToken());
+		expect(recordAuditEntry).toHaveBeenLastCalledWith({
+			action: 'user.email_changed',
+			subject: { type: 'user', id: MEMBER, label: 'Jordan' },
+			details: { previousEmail: 'jordan@exmaple.com', newEmail: 'jordan@example.com' },
+			actor: { id: MEMBER, name: 'Jordan', email: 'jordan@example.com' }
+		});
 	});
 
 	it('works once', async () => {
