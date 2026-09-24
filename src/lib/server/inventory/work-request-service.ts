@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { workRequest, inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
 import { user } from '$lib/server/db/schema/authentication';
 import { workOrder, volunteerRole } from '$lib/server/db/schema/volunteer';
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, or } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { toGenericRef } from '$lib/server/entity/refs';
@@ -278,6 +278,57 @@ export async function resolveFlagsForWorkOrder(
 	];
 	if (rows.length > 0) await announceResolved(workOrderId, rows, reporters);
 	return reporters;
+}
+
+/**
+ * The clock-out path. Closes the reports only when staff flagged the work order
+ * "close reports on completion"; otherwise it stays for the coordinator to confirm.
+ */
+export async function resolveFlagsOnCompletion(
+	workOrderId: string,
+	userId: string,
+	notes?: string
+): Promise<string[]> {
+	const [order] = await db
+		.select({ closeReportsOnCompletion: workOrder.closeReportsOnCompletion })
+		.from(workOrder)
+		.where(eq(workOrder.id, workOrderId))
+		.limit(1);
+	if (!order?.closeReportsOnCompletion) return [];
+	return resolveFlagsForWorkOrder(workOrderId, userId, notes);
+}
+
+/**
+ * Unflagged work orders whose window has passed with reports still attached and
+ * open: "finished: confirm fixed?" on the coordinator's Today worklist.
+ */
+export async function listFinishedWorkToConfirm(now = new Date()) {
+	return db
+		.select({
+			id: workOrder.id,
+			title: workOrder.title,
+			roleName: volunteerRole.name,
+			endsAt: workOrder.endsAt,
+			unitName: inventoryItem.name,
+			assetTag: inventoryAsset.assetTag,
+			reports: count(workRequest.id)
+		})
+		.from(workOrder)
+		.innerJoin(workRequest, eq(workRequest.workOrderId, workOrder.id))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.leftJoin(inventoryAsset, eq(inventoryAsset.id, workOrder.assetId))
+		.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
+		.where(
+			and(
+				eq(workOrder.closeReportsOnCompletion, false),
+				isNull(workOrder.resolvedAt),
+				isNull(workOrder.cancelledAt),
+				lt(workOrder.endsAt, now),
+				eq(workRequest.status, 'pending')
+			)
+		)
+		.groupBy(workOrder.id)
+		.orderBy(asc(workOrder.endsAt), asc(workOrder.id));
 }
 
 /**

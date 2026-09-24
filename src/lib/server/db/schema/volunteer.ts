@@ -393,6 +393,13 @@ export const workOrder = sqliteTable(
 		}),
 		resolutionNotes: text('resolution_notes'),
 
+		// Staff's call, made when scheduling: does the clock running out mean the
+		// attached equipment reports are fixed? Off, a finished work order waits on
+		// the coordinator's Today worklist to be confirmed instead (#1544).
+		closeReportsOnCompletion: integer('close_reports_on_completion', { mode: 'boolean' })
+			.notNull()
+			.default(false),
+
 		createdByUserId: text('created_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),

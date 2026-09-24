@@ -75,6 +75,7 @@ import {
 	setRoleRequirements
 } from '$lib/server/volunteer/volunteer-certification-service';
 import { listWorkTasks, setWorkTaskDoneAsAssignee } from '$lib/server/volunteer/duty-list-service';
+import { listFinishedWorkToConfirm } from '$lib/server/inventory/work-request-service';
 import { getById } from '$lib/server/event/event-service';
 import {
 	checkIn as checkInTicketService,
@@ -1684,13 +1685,18 @@ export const scheduleWorkOrder = form(
 	z.object({
 		id: z.string().min(1),
 		startsAt: z.string().min(1, 'Pick when it starts'),
-		endsAt: z.string().min(1, 'Pick when it ends')
+		endsAt: z.string().min(1, 'Pick when it ends'),
+		closeReportsOnCompletion: z.boolean().default(false)
 	}),
 	async (data) => {
 		await requireCapability('volunteer.manageShifts');
 
 		try {
-			await scheduleWorkOrderService(data.id, { startsAt: data.startsAt, endsAt: data.endsAt });
+			await scheduleWorkOrderService(data.id, {
+				startsAt: data.startsAt,
+				endsAt: data.endsAt,
+				closeReportsOnCompletion: data.closeReportsOnCompletion
+			});
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -2357,39 +2363,51 @@ export const getVolunteerWorklist = query(async () => {
 	const horizon = new Date(now.getTime() + WORKLIST_HORIZON_DAYS * DAY_MS);
 	const lookback = new Date(now.getTime() - CLOSE_OUT_LOOKBACK_DAYS * DAY_MS);
 
-	const [claims, unclosed, upcoming, hours, counts, blocked, lapsing, unscheduled, waitingCount] =
-		await Promise.all([
-			listOutstandingClaims({}, now),
-			listUnclosedSignups({ since: lookback }, now),
-			listShifts({ from: now, to: horizon }),
-			listHourLogs({ status: 'pending' }, { page: 1, pageSize: WORKLIST_HOURS_PREVIEW }).then(
-				// Flagged the same way the full queue flags them, so the advisory warning does
-				// not appear only on the page somebody was already going to visit.
-				async (result) => {
-					const uncleared = await flagUnclearedLogs(
-						result.rows.map((r) => ({
-							id: r.id,
-							userId: r.userId,
-							volunteerRoleId: r.volunteerRoleId,
-							workedOn: r.workedOn
-						}))
-					);
-					return result.rows.map((r) => ({ ...r, uncleared: uncleared.has(r.id) }));
-				}
-			),
-			getStatusCounts(),
-			listBlockedVolunteers(),
-			listLapsingBeforeRosteredShift(now),
-			// Work with no time on it — the advance half of a duty list, and anything
-			// a coordinator raised without a window. Every other query on this layer
-			// filters `starts_at >= now`, and `NULL >= x` is NULL, so before this card
-			// these rows were created and then invisible in the whole product.
-			listWorkOrders(),
-			// The same call the sidebar badge makes, rather than a sum of the arrays above:
-			// one source means the number on the nav and the rows on this page cannot
-			// disagree.
-			countVolunteerWorkWaiting(now)
-		]);
+	const [
+		claims,
+		unclosed,
+		upcoming,
+		hours,
+		counts,
+		blocked,
+		lapsing,
+		unscheduled,
+		toConfirm,
+		waitingCount
+	] = await Promise.all([
+		listOutstandingClaims({}, now),
+		listUnclosedSignups({ since: lookback }, now),
+		listShifts({ from: now, to: horizon }),
+		listHourLogs({ status: 'pending' }, { page: 1, pageSize: WORKLIST_HOURS_PREVIEW }).then(
+			// Flagged the same way the full queue flags them, so the advisory warning does
+			// not appear only on the page somebody was already going to visit.
+			async (result) => {
+				const uncleared = await flagUnclearedLogs(
+					result.rows.map((r) => ({
+						id: r.id,
+						userId: r.userId,
+						volunteerRoleId: r.volunteerRoleId,
+						workedOn: r.workedOn
+					}))
+				);
+				return result.rows.map((r) => ({ ...r, uncleared: uncleared.has(r.id) }));
+			}
+		),
+		getStatusCounts(),
+		listBlockedVolunteers(),
+		listLapsingBeforeRosteredShift(now),
+		// Work with no time on it — the advance half of a duty list, and anything
+		// a coordinator raised without a window. Every other query on this layer
+		// filters `starts_at >= now`, and `NULL >= x` is NULL, so before this card
+		// these rows were created and then invisible in the whole product.
+		listWorkOrders(),
+		// Finished work orders staff did not flag to close their reports (#1544).
+		listFinishedWorkToConfirm(now),
+		// The same call the sidebar badge makes, rather than a sum of the arrays above:
+		// one source means the number on the nav and the rows on this page cannot
+		// disagree.
+		countVolunteerWorkWaiting(now)
+	]);
 
 	// Computed here rather than asked of the database: `listShifts` already returns both
 	// counts per row, so "which of these is short" is a filter over rows we already hold
@@ -2429,6 +2447,9 @@ export const getVolunteerWorklist = query(async () => {
 		/** Work orders waiting for a window, oldest first. */
 		unscheduled: unscheduled.slice(0, WORKLIST_PREVIEW),
 		unscheduledTotal: unscheduled.length,
+		/** Finished work with reports still open: "confirm fixed?", oldest finish first. */
+		toConfirm: toConfirm.slice(0, WORKLIST_PREVIEW),
+		toConfirmTotal: toConfirm.length,
 		/** What the sidebar badge counts — the same call, so the two always agree. */
 		waitingCount
 	};

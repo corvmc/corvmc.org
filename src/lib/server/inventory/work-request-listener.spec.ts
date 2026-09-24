@@ -15,8 +15,8 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({
 	}
 }));
 
-const resolveFlagsForWorkOrder = vi.fn().mockResolvedValue([]);
-vi.mock('./work-request-service', () => ({ resolveFlagsForWorkOrder }));
+const resolveFlagsOnCompletion = vi.fn().mockResolvedValue([]);
+vi.mock('./work-request-service', () => ({ resolveFlagsOnCompletion }));
 
 const { registerWorkRequestListeners, SCHEDULED_WORK_CLOSE_NOTE } =
 	await import('./work-request-listener');
@@ -44,10 +44,10 @@ beforeEach(() => {
 });
 
 describe('volunteer.shift_completed', () => {
-	it('closes the reports the finished work order answered, credited to the volunteer', async () => {
+	it('asks to close the reports, which only happens when the work order is flagged', async () => {
 		await fire(completed);
 
-		expect(resolveFlagsForWorkOrder).toHaveBeenCalledWith(
+		expect(resolveFlagsOnCompletion).toHaveBeenCalledWith(
 			'wo-1',
 			'vol-1',
 			SCHEDULED_WORK_CLOSE_NOTE
@@ -55,7 +55,7 @@ describe('volunteer.shift_completed', () => {
 	});
 
 	it('does not reject the emit when closing fails', async () => {
-		resolveFlagsForWorkOrder.mockRejectedValueOnce(new Error('d1 down'));
+		resolveFlagsOnCompletion.mockRejectedValueOnce(new Error('d1 down'));
 		const err = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		await expect(fire(completed)).resolves.toBeDefined();

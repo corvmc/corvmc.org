@@ -27,6 +27,7 @@
 	import PendingReviewCard from './PendingReviewCard.svelte';
 	import CloseOutCard from './CloseOutCard.svelte';
 	import NeedsSchedulingCard from './NeedsSchedulingCard.svelte';
+	import ConfirmFixedCard from './ConfirmFixedCard.svelte';
 	import LapsingCard from './LapsingCard.svelte';
 	import NewShiftAction from './NewShiftAction.svelte';
 	import NewWorkOrderAction from './NewWorkOrderAction.svelte';
@@ -102,6 +103,10 @@
 
 	{#if work.unscheduled.length > 0}
 		<NeedsSchedulingCard orders={work.unscheduled} total={work.unscheduledTotal} />
+	{/if}
+
+	{#if work.toConfirm.length > 0}
+		<ConfirmFixedCard orders={work.toConfirm} total={work.toConfirmTotal} />
 	{/if}
 
 	{#if work.closeOut.length > 0}

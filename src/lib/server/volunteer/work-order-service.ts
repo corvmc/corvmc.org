@@ -228,6 +228,7 @@ export async function updateShift(
 		endsAt?: string;
 		capacity?: number;
 		notes?: string | null;
+		closeReportsOnCompletion?: boolean;
 	}
 ): Promise<WorkOrder> {
 	const existing = await getShiftById(id);
@@ -269,6 +270,9 @@ export async function updateShift(
 			endsAt,
 			...(data.capacity !== undefined ? { capacity: data.capacity } : {}),
 			...(data.notes !== undefined ? { notes: validateNotes(data.notes) } : {}),
+			...(data.closeReportsOnCompletion !== undefined
+				? { closeReportsOnCompletion: data.closeReportsOnCompletion }
+				: {}),
 			updatedAt: new Date()
 		})
 		.where(eq(workOrder.id, id))
@@ -544,14 +548,18 @@ export async function createWorkOrder(data: {
  */
 export async function scheduleWorkOrder(
 	id: string,
-	times: { startsAt: string; endsAt: string }
+	times: { startsAt: string; endsAt: string; closeReportsOnCompletion?: boolean }
 ): Promise<WorkOrder> {
 	const existing = await getShiftById(id);
 	if (!existing) throw new ShiftNotFoundError();
 	if (existing.startsAt) {
 		throw new ShiftValidationError('That is already scheduled — edit it instead.');
 	}
-	return updateShift(id, { startsAt: times.startsAt, endsAt: times.endsAt });
+	return updateShift(id, {
+		startsAt: times.startsAt,
+		endsAt: times.endsAt,
+		closeReportsOnCompletion: times.closeReportsOnCompletion ?? false
+	});
 }
 
 /**
