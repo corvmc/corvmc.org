@@ -15,7 +15,7 @@ paths:
 and they take their params from a client-supplied header. A guard in `+layout.server.ts` guards
 nothing here.
 
-- Guard first (`requireUser`, `requireStaff`, `requireFeature`, … from
+- Guard first (`requireUser`, `requireCapability`, `requireFeature`, … from
   `src/lib/server/authorization.ts`; `requireGroupRole` from
   `src/lib/server/group/group-context.ts`), then validate with a Zod schema, then orchestrate.
   Never key a mutation on a route param.
