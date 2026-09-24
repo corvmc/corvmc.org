@@ -4,6 +4,7 @@ import {
 	volunteerSignup,
 	workOrder
 } from '../../src/lib/server/db/schema/volunteer';
+import { inventoryAsset, inventoryItem } from '../../src/lib/server/db/schema/inventory';
 import { batchInsert, db } from './db';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
@@ -24,6 +25,15 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 		.limit(1);
 	if (!role) return { schedules: 0 };
 
+	// The PA check is about one unit, so it links to a seeded speaker (#1423).
+	const [speaker] = await db
+		.select({ id: inventoryAsset.id })
+		.from(inventoryAsset)
+		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
+		.where(eq(inventoryItem.name, 'QSC K12.2 Powered Speaker'))
+		.limit(1);
+	const paAssetId = speaker?.id ?? null;
+
 	const now = Date.now();
 	const day = 86_400_000;
 	const at = (offsetDays: number) => new Date(now + offsetDays * day);
@@ -40,6 +50,7 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 			volunteerRoleId: role.id,
 			capacity: 1,
 			createdByUserId: staffId,
+			assetId: s === pa ? paAssetId : null,
 			retiredAt: s === filters ? at(-5) : null
 		}))
 	);
@@ -52,7 +63,13 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 			{ ...base, maintenanceScheduleId: clean.id, title: clean.name, dueAt: at(-25) },
 			{ ...base, maintenanceScheduleId: clean.id, title: clean.name, dueAt: at(10) },
 			// Nobody has closed this one, and it is three days late.
-			{ ...base, maintenanceScheduleId: pa.id, title: pa.name, dueAt: at(-3) },
+			{
+				...base,
+				maintenanceScheduleId: pa.id,
+				title: pa.name,
+				assetId: paAssetId,
+				dueAt: at(-3)
+			},
 			{ ...base, maintenanceScheduleId: filters.id, title: filters.name, dueAt: at(-12) }
 		].map((row, i) => ({
 			id: randomUUID(),

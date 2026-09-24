@@ -49,6 +49,7 @@ import type { SQL } from 'drizzle-orm';
 import {
 	cancelShift,
 	countUnfilledByRole,
+	createShift,
 	createWorkOrder,
 	listShifts,
 	listWorkOrders,
@@ -213,6 +214,49 @@ describe('updateShift and the event link', () => {
 		await updateShift('shift-1', { capacity: 3 });
 
 		expect('eventId' in updatedColumns()).toBe(false);
+	});
+});
+
+// #1423: a work order names the inventory unit it is about, with the event link's contract.
+describe('createShift and the asset link', () => {
+	it('links a new shift to the picked asset, and a blank pick to none', async () => {
+		const base = {
+			volunteerRoleId: 'role-1',
+			startsAt: '2099-06-01T18:00',
+			endsAt: '2099-06-01T20:00',
+			capacity: 1,
+			createdByUserId: 'staff-1'
+		};
+		selectResult = [{ id: 'role-1', isActive: true }];
+		await createShift({ ...base, assetId: 'asset-pa' });
+		await createShift({ ...base, assetId: '' });
+
+		const values = chainCalls.filter((c) => c.method === 'values').map((c) => c.args[0] as any);
+		expect(values[0].assetId).toBe('asset-pa');
+		expect(values[1].assetId).toBeNull();
+	});
+});
+
+describe('updateShift and the asset link', () => {
+	beforeEach(() => {
+		selectResult = [shiftRow()];
+	});
+
+	it('attaches an asset', async () => {
+		await updateShift('shift-1', { assetId: 'asset-pa' });
+		expect(updatedColumns().assetId).toBe('asset-pa');
+	});
+
+	it('detaches the asset when the field arrives empty', async () => {
+		await updateShift('shift-1', { assetId: '' });
+		const set = updatedColumns();
+		expect('assetId' in set).toBe(true);
+		expect(set.assetId).toBeNull();
+	});
+
+	it('leaves the asset alone when the field is absent', async () => {
+		await updateShift('shift-1', { capacity: 3 });
+		expect('assetId' in updatedColumns()).toBe(false);
 	});
 });
 

@@ -8,13 +8,19 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import { formatDate } from '$lib/utils/format';
 	import {
 		getRecurringWorkPage,
 		createRecurringWork,
-		retireRecurringWork
+		retireRecurringWork,
+		searchWorkAssets
 	} from '$lib/remote/maintenance-schedules.remote';
+
+	// Above the await: a declaration after it is async-gated.
+	const assetField = createRecurringWork.fields.assetId;
+	let asset = $state<{ id: string; name: string; detail: string | null } | null>(null);
 
 	const page = $derived(await getRecurringWorkPage());
 	const roleOptions = $derived(page.roles.map((r) => ({ value: r.id, label: r.name })));
@@ -62,6 +68,20 @@
 				<FormField name="firstDueOn" label="First one due" type="date" value={defaultFirstDue} />
 				<FormField name="capacity" label="How many people" type="number" value="1" />
 				<FormField name="projectId" label="Project" type="select" options={projectOptions} />
+				<FormField
+					name="assetId"
+					label="Equipment"
+					description="Optional: the unit this work is about. Every work order it writes links to it."
+				>
+					<SearchSelect
+						search={(q) => searchWorkAssets(q)}
+						bind:value={asset}
+						field={assetField}
+						labelKey="name"
+						descriptionKey="detail"
+						placeholder="Search by item, tag or serial..."
+					/>
+				</FormField>
 				<FormField name="notes" label="Notes" type="textarea" />
 			{/snippet}
 		</Action>
@@ -104,7 +124,11 @@
 							{/if}
 							<div class="text-sm text-base-content/60">
 								{s.roleName}{#if s.projectName}
-									· {s.projectName}{/if}
+									· {s.projectName}{/if}{#if s.assetId && s.assetName}
+									·
+									<a class="link" href={resolve('/staff/inventory/assets/[id]', { id: s.assetId })}
+										>{s.assetName}</a
+									>{/if}
 							</div>
 						</td>
 						<td class="whitespace-nowrap">{every(s.intervalDays)}</td>

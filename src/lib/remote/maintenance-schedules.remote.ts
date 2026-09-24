@@ -12,6 +12,7 @@ import {
 	listMaintenanceSchedules,
 	retireMaintenanceSchedule as retireService
 } from '$lib/server/volunteer/maintenance-schedule-service';
+import { searchAssetOptions } from '$lib/server/inventory/asset-service';
 import { getVolunteerWorklist } from './volunteer.remote';
 
 /**
@@ -36,6 +37,15 @@ export const getRecurringWorkPage = query(async () => {
 	};
 });
 
+/**
+ * The asset picker behind recurring work and the shift form. Guarded like those
+ * forms: a volunteer coordinator has no `inventory.read`.
+ */
+export const searchWorkAssets = query(z.string(), async (q) => {
+	await requireCapability('volunteer.manageShifts');
+	return searchAssetOptions(q);
+});
+
 export const createRecurringWork = form(
 	z.object({
 		name: z.string().min(1, 'Name is required'),
@@ -45,6 +55,7 @@ export const createRecurringWork = form(
 		firstDueOn: z.string().min(1, 'When is the first one due?'),
 		// A cleared select posts '', which `.optional()` alone would reject.
 		projectId: z.union([z.literal(''), z.uuid()]).optional(),
+		assetId: z.string().optional(),
 		capacity: z.string().optional(),
 		notes: z.string().max(VOLUNTEER_SHIFT_NOTES_MAX).optional()
 	}),
@@ -57,6 +68,7 @@ export const createRecurringWork = form(
 				intervalDays: parseInt(data.intervalDays, 10),
 				firstDueAt: buildDateInTz(data.firstDueOn, '12:00', DEFAULT_TIMEZONE),
 				projectId: data.projectId || null,
+				assetId: data.assetId || null,
 				capacity: data.capacity ? parseInt(data.capacity, 10) : 1,
 				notes: data.notes,
 				createdByUserId: staff.id

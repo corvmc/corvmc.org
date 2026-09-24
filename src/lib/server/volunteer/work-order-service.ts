@@ -102,6 +102,8 @@ function validateNotes(notes?: string | null): string | null {
 export async function createShift(data: {
 	volunteerRoleId: string;
 	eventId?: string | null;
+	/** The inventory unit the work is about. Blank means none. */
+	assetId?: string | null;
 	/** What to call it, where the event does not. Blank falls back to the role. */
 	title?: string | null;
 	/** `YYYY-MM-DDTHH:mm`, club time. */
@@ -129,6 +131,7 @@ export async function createShift(data: {
 		.values({
 			volunteerRoleId: data.volunteerRoleId,
 			eventId: data.eventId || null,
+			assetId: data.assetId || null,
 			title: validateTitle(data.title),
 			startsAt: times.startsAt,
 			endsAt: times.endsAt,
@@ -202,6 +205,7 @@ export async function duplicateShift(
 			// slot with no event is exactly what gets duplicated forward, and it is
 			// the name that tells the two apart on the board.
 			title: original.title,
+			assetId: original.assetId,
 			startsAt,
 			endsAt,
 			capacity: original.capacity,
@@ -218,6 +222,7 @@ export async function updateShift(
 	data: {
 		volunteerRoleId?: string;
 		eventId?: string | null;
+		assetId?: string | null;
 		title?: string | null;
 		startsAt?: string;
 		endsAt?: string;
@@ -258,6 +263,7 @@ export async function updateShift(
 		.set({
 			...(data.volunteerRoleId ? { volunteerRoleId: data.volunteerRoleId } : {}),
 			...(data.eventId !== undefined ? { eventId: data.eventId || null } : {}),
+			...(data.assetId !== undefined ? { assetId: data.assetId || null } : {}),
 			...(data.title !== undefined ? { title: validateTitle(data.title) } : {}),
 			startsAt,
 			endsAt,
@@ -335,6 +341,8 @@ export interface ShiftWithCounts extends WorkOrder {
 	roleName: string;
 	roleGroup: VolunteerRoleGroup;
 	eventTitle: string | null;
+	/** The linked inventory unit as a label: item name, plus its tag. */
+	assetName?: string | null;
 	/** Places taken: claimed + confirmed + completed. */
 	claimed: number;
 	/**
@@ -358,6 +366,7 @@ function withCounts(
 		roleName: string;
 		roleGroup: VolunteerRoleGroup;
 		eventTitle: string | null;
+		assetName: string | null;
 		claimed: number;
 		confirmed: number;
 		unnotified: number;
@@ -368,6 +377,7 @@ function withCounts(
 		roleName: r.roleName,
 		roleGroup: r.roleGroup,
 		eventTitle: r.eventTitle,
+		assetName: r.assetName,
 		claimed: Number(r.claimed),
 		confirmed: Number(r.confirmed),
 		unnotified: Number(r.unnotified)
@@ -428,6 +438,11 @@ function shiftRowsQuery() {
 			roleName: volunteerRole.name,
 			roleGroup: volunteerRole.group,
 			eventTitle: eventListing.title,
+			assetName: sql<string | null>`(
+				select ii."name" || coalesce(' · ' || ia."asset_tag", '') from "inventory_asset" ia
+				join "inventory_item" ii on ii."id" = ia."item_id"
+				where ia."id" = ${workOrder.assetId}
+			)`,
 			claimed: sql<number>`(
 				select count(*) from "volunteer_signup" vs
 				where vs."shift_id" = ${workOrder.id}

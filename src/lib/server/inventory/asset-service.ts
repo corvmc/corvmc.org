@@ -436,3 +436,44 @@ export async function listUntaggedAssets(opts: { itemId?: string } = {}) {
 export async function listAvailableAssets(itemId: string) {
 	return listAssets({ itemId, status: 'in_service' });
 }
+
+export interface AssetOption {
+	id: string;
+	/** Item name, plus the tag when the unit has one. */
+	name: string;
+	detail: string | null;
+}
+
+/** Units that can still need work, for a picker. Retired and lost ones are left out. */
+export async function searchAssetOptions(q: string, limit = 20): Promise<AssetOption[]> {
+	const term = q.trim();
+	if (term.length < 2) return [];
+	const rows = await db
+		.select({
+			id: inventoryAsset.id,
+			itemName: inventoryItem.name,
+			assetTag: inventoryAsset.assetTag,
+			serial: inventoryAsset.serialNumber,
+			location: inventoryLocation.name
+		})
+		.from(inventoryAsset)
+		.innerJoin(inventoryItem, eq(inventoryAsset.itemId, inventoryItem.id))
+		.leftJoin(inventoryLocation, eq(inventoryAsset.locationId, inventoryLocation.id))
+		.where(
+			and(
+				notInArray(inventoryAsset.status, ['retired', 'lost']),
+				or(
+					containsLiteral(inventoryItem.name, term),
+					containsLiteral(inventoryAsset.assetTag, term),
+					containsLiteral(inventoryAsset.serialNumber, term)
+				)
+			)
+		)
+		.orderBy(asc(inventoryItem.name), asc(inventoryAsset.assetTag))
+		.limit(limit);
+	return rows.map((r) => ({
+		id: r.id,
+		name: r.assetTag ? `${r.itemName} · ${r.assetTag}` : r.itemName,
+		detail: r.serial ?? r.location ?? null
+	}));
+}

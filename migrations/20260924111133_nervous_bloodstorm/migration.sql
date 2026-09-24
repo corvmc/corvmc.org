@@ -1,0 +1,1 @@
+ALTER TABLE `maintenance_schedule` ADD `asset_id` text REFERENCES inventory_asset(id) ON DELETE SET NULL;

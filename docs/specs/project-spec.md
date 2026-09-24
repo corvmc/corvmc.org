@@ -279,6 +279,9 @@ window-materializer like `recurring_series` can.
 > order _is_ the schedule's state. The interval counts from the close, so a late
 > clean pushes the next one back rather than stacking it, and calling one off is a
 > close like any other. Retiring a schedule leaves its open occurrence in the queue.
+>
+> A schedule may name one inventory unit (`asset_id`, #1423), which every occurrence
+> copies; the shift form carries the same picker, so any work order can name one.
 
 ## Vocabulary
 
