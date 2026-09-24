@@ -690,7 +690,7 @@ and to flag when we cannot cover our work with the people we have.
 report service exactly as [reporting-spec.md](shipped/reporting-spec.md) proposed, so the board
 reads one document over any date range. What it is **not** is committee-scoped: it is one
 organization-wide page behind `finance.read`, not a chair's view of their own committee's
-numbers. That scoping is the `requireCommitteeRole` guard, not a second report. `/staff/volunteer/report` is both the precedent for the shape (a date
+numbers. That scoping is the `requireCommitteeRole` guard, not a second report. ⏫ **✅ 2026-09-23 (#1511):** the Numbers tab on `/member/groups/{slug}` is that cut — the committee's projects' budget and burn, its tagged ledger lines and its hours, for every roster member (#1562). `/staff/volunteer/report` is both the precedent for the shape (a date
 range, tables, no charts, not cached) and one of the services the rollup would call.
 
 Noticing that a duty has gone unstaffed is **deliberately not a feature**. It would need
