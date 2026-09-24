@@ -156,7 +156,7 @@ Opening a ballot also notifies its electors in-app (`ballot_opened`), with the s
 | Read a closed result                              | electors and managers; after certification, every member                              |
 
 `ballot.manage` is a new capability. Which positions hold it is a gut call, filed as its own
-decision issue: `admin` and `staff` hold it, and no named position does. The committee
+decision issue (#1635): `admin` and `staff` hold it, and no named position does. The committee
 capability-grant system (#1625) was not on `main` when this was built, so group ballots use
 `requireGroupRole` directly. Once #1625 lands, `ballot.manage` could become a grantable capability for
 a governance committee.
