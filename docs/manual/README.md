@@ -117,6 +117,7 @@ auto-creates any missing).
 ### suggestions
 
 - [x] `[P]` The suggestion board (`/member/suggestions`) — posting, voting, statuses and staff responses, editing, duplicates, reporting
+- [x] `[H]` Ballots (`/member/ballots`) — committee and member-wide votes, who is on the roll, secrecy, certification
 
 ## C. Band panel → `src/content/help/`
 

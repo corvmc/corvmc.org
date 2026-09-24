@@ -37,7 +37,7 @@ import {
 } from '$lib/server/ballot/ballot-service';
 
 /**
- * Ballots. See docs/specs/formal-balloting-spec.md for who may do what.
+ * Ballots. See docs/specs/shipped/formal-balloting-spec.md for who may do what.
  *
  * A member-wide ballot is managed only through `ballot.manage`. A committee
  * ballot is managed by that committee's owner or admin, or through

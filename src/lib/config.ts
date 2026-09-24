@@ -1510,7 +1510,7 @@ export function formatVolunteerHours(minutes: number): string {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Ballots — see docs/specs/formal-balloting-spec.md
+// Ballots — see docs/specs/shipped/formal-balloting-spec.md
 // ---------------------------------------------------------------------------
 
 /** `group`: a committee's roster, recorded. `member`: members of record, secret. */

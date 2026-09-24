@@ -20,7 +20,7 @@ export interface BallotCertifiedResult {
 }
 
 /**
- * One question, one choice per elector. See docs/specs/formal-balloting-spec.md.
+ * One question, one choice per elector. See docs/specs/shipped/formal-balloting-spec.md.
  *
  * Lifecycle is derived from timestamps: draft until `opened_at`, closed once
  * `closes_at` passes, final once `certified_at` or `cancelled_at` is set.

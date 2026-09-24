@@ -1,12 +1,8 @@
 /**
- * Two member-wide ballots for `ballots.e2e.ts`, both with the staff operator on
- * the roll and named as certifier:
- *
- *  - one open, nobody has voted, so the test can cast the secret vote;
- *  - one closed and uncertified, with two votes already counted, so the test
- *    can certify it and read the published result.
- *
- * Run after `seedStaffUser`, whose operator and role target it reuses.
+ * Two member-wide ballots for `ballots.e2e.ts`, the staff operator on each roll
+ * and named certifier: one open with no votes (to cast the secret vote), one
+ * closed with two votes counted (to certify). Run after `seedStaffUser`, whose
+ * operator and role target it reuses.
  */
 import { eq, inArray, sql } from 'drizzle-orm';
 import {
