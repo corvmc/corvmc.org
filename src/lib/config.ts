@@ -1786,13 +1786,14 @@ export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
  *
  * A capability exists when a guard names it. Adding one here without a call
  * site is how the spatie tables rotted, so `config.spec.ts` fails on a
- * capability no position grants. `audit.read`, from the spec's illustrative
- * matrix, is deliberately absent: there is no audit-log table, so it would be
- * config describing a guard that does not exist. Its spec adds it when it
- * builds one.
+ * capability no position grants.
+ *
+ * `audit.read` guards only the cross-member log; one member's History card is
+ * part of their record and stays on `user.read`.
  */
 export const capabilities = {
 	user: ['list', 'read', 'update', 'setRole', 'setEmail', 'deactivate', 'ban', 'purge'],
+	audit: ['read'],
 	credit: ['read', 'adjust', 'comp'],
 	finance: ['read', 'refund'],
 	settings: ['read', 'update'],

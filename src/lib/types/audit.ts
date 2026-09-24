@@ -81,3 +81,19 @@ export type AuditEntry = {
 		createdAt: Date;
 	};
 }[AuditAction];
+
+export interface AuditActor {
+	id: string | null;
+	name: string;
+	email: string;
+}
+
+export type AuditEntryInput = {
+	[A in AuditAction]: {
+		action: A;
+		subject: { type: AuditSubjectType; id: string; label?: string | null };
+		details: AuditDetailsByAction[A];
+		/** Defaults to the signed-in user, or "System" when there is none. */
+		actor?: AuditActor;
+	};
+}[AuditAction];

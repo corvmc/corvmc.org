@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { summarizeAuditEntry } from './audit-display';
+import { auditActionLabel, summarizeAuditEntry } from './audit-display';
 import type { AuditEntry } from '$lib/types/audit';
 
 function entry<E extends AuditEntry>(action: E['action'], details: E['details']): AuditEntry {
@@ -143,5 +143,12 @@ describe('summarizeAuditEntry', () => {
 				})
 			)
 		).toBe('Added 2 equipment credits (balance 2): “Goodwill”');
+	});
+});
+
+describe('auditActionLabel', () => {
+	it('reads an action key as words, for the filter', () => {
+		expect(auditActionLabel('user.roles_changed')).toBe('User roles changed');
+		expect(auditActionLabel('credits.adjusted')).toBe('Credits adjusted');
 	});
 });

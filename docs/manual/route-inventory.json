@@ -368,6 +368,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/audit",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/bands",
 		"panel": "staff"
 	},

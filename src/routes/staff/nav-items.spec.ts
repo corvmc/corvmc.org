@@ -82,7 +82,8 @@ describe('activeNavKey', () => {
 		['/staff/help/create', 'help'],
 		['/staff/local-resources', 'local-resources'],
 		['/staff/local-resources/categories', 'local-resources'],
-		['/staff/settings', 'settings']
+		['/staff/settings', 'settings'],
+		['/staff/audit', 'audit']
 	];
 
 	it.each(cases)('lights exactly one row for %s', (path, key) => {

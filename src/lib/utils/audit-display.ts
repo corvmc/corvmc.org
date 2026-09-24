@@ -1,4 +1,10 @@
-import type { AuditEntry, AuditProfileField } from '$lib/types/audit';
+import type { AuditAction, AuditEntry, AuditProfileField } from '$lib/types/audit';
+
+/** `user.roles_changed` → "User roles changed". Derived, so a new action needs no label entry. */
+export function auditActionLabel(action: AuditAction): string {
+	const words = action.replace('.', ' ').replaceAll('_', ' ');
+	return words.charAt(0).toUpperCase() + words.slice(1);
+}
 
 const FIELD_LABELS: Record<AuditProfileField, string> = {
 	name: 'name',
