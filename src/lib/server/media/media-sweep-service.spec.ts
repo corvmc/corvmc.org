@@ -65,8 +65,15 @@ const deleteObjectMock = vi.fn(async (key: string) => {
 	journal.push(`r2:${key}`);
 });
 
+/** Which bucket holds which key; `null` means every key is present there. */
+let publicKeys: Set<string> | null = null;
+let privateKeys: Set<string> | null = null;
+const objectExistsMock = vi.fn(async (key: string) => publicKeys?.has(key) ?? true);
+const privateObjectExistsMock = vi.fn(async (key: string) => privateKeys?.has(key) ?? true);
+
 vi.mock('$lib/server/storage', () => ({
-	deleteObject: (key: string) => deleteObjectMock(key)
+	deleteObject: (key: string) => deleteObjectMock(key),
+	objectExists: (key: string) => objectExistsMock(key)
 }));
 
 const deletePrivateObjectMock = vi.fn(async (key: string) => {
@@ -74,7 +81,8 @@ const deletePrivateObjectMock = vi.fn(async (key: string) => {
 });
 
 vi.mock('$lib/server/private-storage', () => ({
-	deletePrivateObject: (key: string) => deletePrivateObjectMock(key)
+	deletePrivateObject: (key: string) => deletePrivateObjectMock(key),
+	privateObjectExists: (key: string) => privateObjectExistsMock(key)
 }));
 
 const { sweepMedia } = await import('./media-sweep-service');
@@ -87,6 +95,8 @@ beforeEach(() => {
 	attachmentDeleteReturns = [];
 	journal = [];
 	deletedRowIds.length = 0;
+	publicKeys = null;
+	privateKeys = null;
 	deleteObjectMock.mockReset();
 	deleteObjectMock.mockImplementation(async (key: string) => {
 		journal.push(`r2:${key}`);
@@ -191,6 +201,68 @@ describe('sweepMedia — unreferenced media', () => {
 		expect(deleteObjectMock).not.toHaveBeenCalled();
 		expect(result.reapedMedia).toBe(1);
 		expect(journal.indexOf(`r2-private:${withheld}`)).toBeLessThan(journal.indexOf('delete:media'));
+	});
+
+	it('deletes a receipt from the private bucket, where receipts now live', async () => {
+		const receipt = 'inventory/receipts/acq-1/aaaaaaaa.pdf';
+		mediaCandidates = [{ id: 'm1', key: receipt }];
+
+		const result = await sweepMedia(NOW);
+
+		expect(deletePrivateObjectMock).toHaveBeenCalledWith(receipt);
+		expect(deleteObjectMock).not.toHaveBeenCalled();
+		expect(result.reapedMedia).toBe(1);
+	});
+
+	it('deletes a renewal certificate from the private bucket', async () => {
+		const cert = 'renewals/r1/0f0f0f0f-0000-4000-8000-000000000000.pdf';
+		mediaCandidates = [{ id: 'm1', key: cert }];
+
+		await sweepMedia(NOW);
+
+		expect(deletePrivateObjectMock).toHaveBeenCalledWith(cert);
+		expect(deleteObjectMock).not.toHaveBeenCalled();
+	});
+
+	/**
+	 * A receipt uploaded before receipts moved can still sit in the public
+	 * bucket. The sweep cannot assume a backfill ran, so it has to look.
+	 */
+	it('deletes a legacy receipt from the public bucket when the private one lacks it', async () => {
+		const receipt = 'inventory/receipts/acq-1/bbbbbbbb.jpg';
+		mediaCandidates = [{ id: 'm1', key: receipt }];
+		privateKeys = new Set();
+		publicKeys = new Set([receipt]);
+
+		const result = await sweepMedia(NOW);
+
+		expect(deleteObjectMock).toHaveBeenCalledWith(receipt);
+		expect(deletePrivateObjectMock).not.toHaveBeenCalled();
+		expect(result.reapedMedia).toBe(1);
+		expect(journal.indexOf(`r2:${receipt}`)).toBeLessThan(journal.indexOf('delete:media'));
+	});
+
+	it('drops the row of an object absent from both buckets, deleting nothing', async () => {
+		mediaCandidates = [{ id: 'm1', key: 'inventory/receipts/acq-1/cccccccc.pdf' }];
+		privateKeys = new Set();
+		publicKeys = new Set();
+
+		const result = await sweepMedia(NOW);
+
+		expect(deleteObjectMock).not.toHaveBeenCalled();
+		expect(deletePrivateObjectMock).not.toHaveBeenCalled();
+		expect(result.reapedMedia).toBe(1);
+		expect(journal).toContain('delete:media');
+	});
+
+	it('keeps the row when it cannot tell which bucket holds the object', async () => {
+		mediaCandidates = [{ id: 'm1', key: 'inventory/receipts/acq-1/dddddddd.pdf' }];
+		privateObjectExistsMock.mockRejectedValueOnce(new Error('R2 down'));
+
+		const result = await sweepMedia(NOW);
+
+		expect(result.failedDeletes).toBe(1);
+		expect(journal).not.toContain('delete:media');
 	});
 
 	it('keeps the row when the private bucket refuses', async () => {

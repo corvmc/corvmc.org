@@ -13,9 +13,9 @@ import { user } from '$lib/server/db/schema/authentication';
 import { audioRelease } from '$lib/server/db/schema/audio';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { artifactRequest } from '$lib/server/db/schema/artifact-request';
-import { deleteObject } from '$lib/server/storage';
-import { deletePrivateObject } from '$lib/server/private-storage';
-import { isWithheldPosterKey } from '$lib/server/storage-keys';
+import { deleteObject, objectExists } from '$lib/server/storage';
+import { deletePrivateObject, privateObjectExists } from '$lib/server/private-storage';
+import { isReceiptKey, isWithheldPosterKey } from '$lib/server/storage-keys';
 import { MEDIA_SWEEP_GRACE_MS } from '$lib/config';
 import { and, eq, lt, sql, notExists, inArray, type SQLWrapper } from 'drizzle-orm';
 
@@ -103,6 +103,31 @@ async function reapOrphanedAttachments(): Promise<number> {
 	return deleted;
 }
 
+const PUBLIC_BUCKET = { exists: objectExists, remove: deleteObject };
+const PRIVATE_BUCKET = { exists: privateObjectExists, remove: deletePrivateObject };
+
+/**
+ * Keys whose bytes belong in R2_PRIVATE. `media` records no bucket, so the key
+ * shape is the only hint; `renewals/` matches #1600's `isRenewalDocumentKey`.
+ */
+function belongsInPrivate(key: string): boolean {
+	return isWithheldPosterKey(key) || isReceiptKey(key) || key.startsWith('renewals/');
+}
+
+/**
+ * Delete `key` from whichever bucket holds it, checking the expected one first.
+ * A receipt can predate the private bucket, and R2 reports a delete of a missing
+ * key as success, so only a found object or one absent from both clears the row.
+ */
+async function deleteFromHoldingBucket(key: string): Promise<void> {
+	const order = belongsInPrivate(key)
+		? [PRIVATE_BUCKET, PUBLIC_BUCKET]
+		: [PUBLIC_BUCKET, PRIVATE_BUCKET];
+	for (const bucket of order) {
+		if (await bucket.exists(key)) return bucket.remove(key);
+	}
+}
+
 /**
  * Pass 2 — delete the object, then its row, for every `media` nothing points at.
  *
@@ -135,11 +160,7 @@ async function reapUnreferencedMedia(now: Date): Promise<{ reaped: number; faile
 
 	for (const row of candidates) {
 		try {
-			// The key says which bucket holds it. A withheld poster's bytes were moved
-			// to R2_PRIVATE by a takedown, and `deleteObject` on the public bucket
-			// would succeed against nothing — dropping the row that is the only record
-			// of the key, and leaving the object billed forever.
-			await (isWithheldPosterKey(row.key) ? deletePrivateObject(row.key) : deleteObject(row.key));
+			await deleteFromHoldingBucket(row.key);
 			deletedIds.push(row.id);
 		} catch (err) {
 			// Keep the row. Losing the key is the one unrecoverable outcome here.
