@@ -6,7 +6,12 @@ import { requireGroupRole } from '$lib/server/group/group-context';
 import { mapDomainError } from '$lib/server/errors';
 import { getById, openBandTicketSale, closeBandTicketSale } from '$lib/server/event/event-service';
 import { bandSaleBlocker } from '$lib/server/ticket/ticket-seller';
-import { getTicketsSold } from '$lib/server/ticket/ticket-service';
+import {
+	checkIn,
+	getEventTickets,
+	getTicketById,
+	getTicketsSold
+} from '$lib/server/ticket/ticket-service';
 import { dollarsToCents } from '$lib/utils/event-ticketing';
 
 /**
@@ -89,3 +94,48 @@ export const closeBandTicketSaleForm = form(ref, async ({ slug, eventId }) => {
 	}
 	return { success: true };
 });
+
+/** The band admin's gig, or 404: another band's gig is a wrong address. */
+async function requireOwnGig(slug: string, eventId: string) {
+	const ctx = await requireGroupRole({ slug }, 'admin');
+	const evt = await getById(eventId);
+	if (!evt || evt.groupId !== ctx.group.id) throw error(404, 'Event not found');
+	return ctx;
+}
+
+/**
+ * The door list for the band's own gig (#1543): name and code, no email.
+ * Staff keep their own door at `/staff/events/[id]/check-in`.
+ */
+export const getBandDoorList = query(ref, async ({ slug, eventId }) => {
+	await requireOwnGig(slug, eventId);
+	const live = (await getEventTickets(eventId)).filter(
+		(t) => t.status === 'valid' || t.status === 'checked_in'
+	);
+	return {
+		tickets: live.map((t) => ({
+			id: t.id,
+			code: t.code,
+			attendeeName: t.attendeeName,
+			status: t.status
+		})),
+		checkedIn: live.filter((t) => t.status === 'checked_in').length
+	};
+});
+
+/** The staff door's `checkIn`, scoped to a ticket for this band's own gig. */
+export const checkInBandTicket = form(
+	ref.extend({ ticketId: z.string().min(1) }),
+	async ({ slug, eventId, ticketId }) => {
+		const { user } = await requireOwnGig(slug, eventId);
+		const ticket = await getTicketById(ticketId);
+		if (!ticket || ticket.eventId !== eventId) throw error(404, 'Ticket not found');
+		try {
+			const result = await checkIn(ticketId, user.id);
+			return { success: true, ...result };
+		} catch (err) {
+			mapDomainError(err);
+		}
+		return { success: true };
+	}
+);

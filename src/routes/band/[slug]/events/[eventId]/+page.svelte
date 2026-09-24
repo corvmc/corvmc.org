@@ -13,6 +13,7 @@
 	} from '$lib/components/actions';
 	import EventFields from '../EventFields.svelte';
 	import TicketSaleCard from './TicketSaleCard.svelte';
+	import DoorListCard from './DoorListCard.svelte';
 	import { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { getBandEventDetail, updateBandEventForm } from '$lib/remote/band-events.remote';
@@ -126,5 +127,6 @@
 {#if canEdit}
 	<PageContent width="2xl">
 		<TicketSaleCard slug={band.slug} eventId={evt.id} />
+		<DoorListCard slug={band.slug} eventId={evt.id} />
 	</PageContent>
 {/if}
