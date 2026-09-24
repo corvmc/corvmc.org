@@ -5,7 +5,7 @@ import { can, requireCapability, requireUser } from '$lib/server/authorization';
 import { requireCommitteeMember } from '$lib/server/group/group-context';
 import { getMemberGroup } from '$lib/remote/groups.remote';
 import { mapDomainError } from '$lib/server/errors';
-import { projectStatuses, DEFAULT_TIMEZONE } from '$lib/config';
+import { projectStatuses, DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { db } from '$lib/server/db';
 import { suggestion } from '$lib/server/db/schema/suggestion';
@@ -24,6 +24,7 @@ import {
 	updateProject
 } from '$lib/server/project/project-service';
 import { applyDutyList, listDutyLists } from '$lib/server/volunteer/duty-list-service';
+import { createWorkOrder } from '$lib/server/volunteer/work-order-service';
 
 /**
  * Projects — staff surfaces, plus one committee write.
@@ -219,6 +220,48 @@ export const setCommitteeProjectStatusForm = form(
 			const current = await getProjectById(id);
 			const { group } = await requireCommitteeMember(current.groupId, 'project.manage');
 			await setProjectStatus(id, status);
+			if (group) void getMemberGroup(group.slug).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * A committee member opens a work order on their committee's own project.
+ *
+ * `volunteer.manageShifts` is the cover because it is what staff need to open a
+ * work order anywhere else. The row is unscheduled; a coordinator finds it a time.
+ */
+export const createCommitteeProjectWorkOrderForm = form(
+	z.object({
+		projectId: z.uuid(),
+		volunteerRoleId: z.string().min(1, 'Pick a role'),
+		dueAt: optionalDate,
+		notes: z.string().max(VOLUNTEER_SHIFT_NOTES_MAX).optional()
+	}),
+	async (raw) => {
+		requireUser();
+		const { projectId, volunteerRoleId, dueAt, notes } = raw as {
+			projectId: string;
+			volunteerRoleId: string;
+			dueAt?: string;
+			notes?: string;
+		};
+		try {
+			const current = await getProjectById(projectId);
+			const { user, group } = await requireCommitteeMember(
+				current.groupId,
+				'volunteer.manageShifts'
+			);
+			await createWorkOrder({
+				volunteerRoleId,
+				projectId,
+				dueAt: calendarDate(dueAt) ?? null,
+				notes: notes?.trim() || null,
+				createdByUserId: user.id
+			});
 			if (group) void getMemberGroup(group.slug).refresh();
 			return { success: true };
 		} catch (err) {

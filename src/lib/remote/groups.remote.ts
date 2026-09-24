@@ -37,6 +37,7 @@ import {
 import { listGroupSessions } from '$lib/server/event/event-service';
 import { listProjects } from '$lib/server/project/project-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
+import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
 import { list as listFiles, getUsage as getDocumentUsage } from '$lib/server/group/file-service';
 import {
 	STAFF_GROUP_KINDS,
@@ -285,7 +286,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		projects,
 		emailInvites,
 		committeeApplications,
-		projectLists
+		projectLists,
+		volunteerRoles
 	] = await Promise.all([
 		getMembers(group.id).then(partitionByStatus),
 		canManage ? listForManager(group.id) : listPublished(group.id),
@@ -310,7 +312,9 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		// its applications are their own entity and never reach `roster.requested`.
 		group.kind === 'committee' && canManage ? listForCommittee(group.id) : Promise.resolve([]),
 		// A committee applies duty lists to its own projects.
-		group.kind === 'committee' ? listDutyLists({ subject: 'project' }) : Promise.resolve([])
+		group.kind === 'committee' ? listDutyLists({ subject: 'project' }) : Promise.resolve([]),
+		// The role picker for opening a work order on one of the committee's projects.
+		group.kind === 'committee' ? listVolunteerRoles() : Promise.resolve([])
 	]);
 
 	return {
@@ -366,6 +370,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		projectDutyLists: projectLists
 			.filter((l) => l.itemCount > 0)
 			.map((l) => ({ id: l.id, name: l.name })),
+		workOrderRoles: volunteerRoles.map((r) => ({ value: r.id, label: r.name })),
 		emailInvites,
 		committeeApplications,
 		members: {

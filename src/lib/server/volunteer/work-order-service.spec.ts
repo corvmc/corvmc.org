@@ -290,6 +290,22 @@ describe('work orders', () => {
 		expect(values).toMatchObject({ startsAt: null, endsAt: null, assetId: 'as-1' });
 	});
 
+	it('anchors a work order to a project when given one, and to none otherwise', async () => {
+		selectResult = [{ id: 'role-1', isActive: true }];
+		await createWorkOrder({
+			volunteerRoleId: 'role-1',
+			projectId: 'proj-1',
+			createdByUserId: 'member-1'
+		});
+		await createWorkOrder({ volunteerRoleId: 'role-1', createdByUserId: 'staff-1' });
+
+		const [withProject, without] = chainCalls
+			.filter((c) => c.method === 'values')
+			.map((c) => c.args[0] as Record<string, unknown>);
+		expect(withProject).toMatchObject({ projectId: 'proj-1' });
+		expect(without).toMatchObject({ projectId: null });
+	});
+
 	it('refuses an archived role, like scheduling one does', async () => {
 		selectResult = [{ id: 'role-1', isActive: false }];
 

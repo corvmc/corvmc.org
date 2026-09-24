@@ -41,6 +41,7 @@
 	import ProjectStatusAction from './ProjectStatusAction.svelte';
 	import ProjectDutyListAction from './ProjectDutyListAction.svelte';
 	import CommitteeNumbers from './CommitteeNumbers.svelte';
+	import ProjectWorkOrderAction from './ProjectWorkOrderAction.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -240,6 +241,9 @@
 										<ProjectDutyListAction {project} dutyLists={data.projectDutyLists} />
 									{/if}
 									<ProjectStatusAction {project} />
+									{#if data.workOrderRoles.length > 0}
+										<ProjectWorkOrderAction {project} roles={data.workOrderRoles} />
+									{/if}
 								</td>
 							{/if}
 						</tr>
