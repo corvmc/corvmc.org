@@ -87,6 +87,17 @@ export const audioRelease = sqliteTable(
 		radioOptIn: integer('radio_opt_in', { mode: 'boolean' }).notNull().default(false),
 
 		/**
+		 * The not-a-PRO-member attestation behind `radioOptIn`: who gave it, when,
+		 * and to which wording of `RADIO_PRO_ATTESTATION`. A release plays only
+		 * while the version matches the current one.
+		 */
+		radioAttestedAt: integer('radio_attested_at', { mode: 'timestamp' }),
+		radioAttestedByUserId: text('radio_attested_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		radioAttestationVersion: text('radio_attestation_version'),
+
+		/**
 		 * The staff veto, as a timestamp rather than a boolean so "pulled from the
 		 * rotation" carries when. Deliberately separate from `radioOptIn`: staff
 		 * pulling a record must not read as the band withdrawing consent, and

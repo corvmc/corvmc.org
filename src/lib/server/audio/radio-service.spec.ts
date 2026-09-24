@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { RADIO_PRO_ATTESTATION } from '$lib/config';
 
 /**
  * The station's programming rules, asserted without a database.
@@ -15,7 +16,8 @@ type Row = Record<string, unknown>;
 const state = {
 	results: [] as unknown[][],
 	inserted: [] as Row[][],
-	deletes: 0
+	deletes: 0,
+	wheres: [] as string[]
 };
 
 function queue(...results: unknown[][]) {
@@ -24,9 +26,13 @@ function queue(...results: unknown[][]) {
 
 function chain(rows: unknown[]) {
 	const self: Record<string, unknown> = {};
-	for (const key of ['from', 'where', 'orderBy', 'limit', 'innerJoin', 'leftJoin']) {
+	for (const key of ['from', 'orderBy', 'limit', 'innerJoin', 'leftJoin']) {
 		self[key] = () => self;
 	}
+	self.where = (w: unknown) => {
+		state.wheres.push(String(w));
+		return self;
+	};
 	self.then = (resolve: (v: unknown) => void) => resolve(rows);
 	return self;
 }
@@ -85,6 +91,15 @@ beforeEach(() => {
 	state.results = [];
 	state.inserted = [];
 	state.deletes = 0;
+	state.wheres = [];
+});
+
+describe('listEligibleTracks', () => {
+	it('plays only releases attested to the current PRO wording', async () => {
+		queue([]);
+		await radio.listEligibleTracks();
+		expect(state.wheres[0]).toContain(`,${RADIO_PRO_ATTESTATION.version})`);
+	});
 });
 
 describe('pickNextTrack', () => {

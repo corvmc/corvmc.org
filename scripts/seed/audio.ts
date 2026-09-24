@@ -26,7 +26,8 @@ import { computeSplit, suggestedShareCents } from '../../src/lib/finance/split';
 import {
 	AUDIO_PLATFORM_FEE_BPS,
 	RADIO_MIN_TRACK_MS,
-	RADIO_MAX_TRACK_MS
+	RADIO_MAX_TRACK_MS,
+	RADIO_PRO_ATTESTATION
 } from '../../src/lib/config';
 import { buildSchedule } from '../../src/lib/server/audio/radio-rotation';
 import { batchInsert, env } from './db';
@@ -150,6 +151,8 @@ export async function seedAudio(bands: any[], users: any[], alsoInclude: any[] =
 		// One record is pulled by staff, so the rotation screen and the "why is my
 		// record not on the air" path both have something to show.
 		const vetoed = i === 2;
+		// The live record opted in but never attested, so it shows as off the air.
+		const attested = shape.radioOptIn && shape.kind !== 'live';
 
 		releaseRows.push({
 			id: releaseId,
@@ -163,6 +166,9 @@ export async function seedAudio(bands: any[], users: any[], alsoInclude: any[] =
 			priceMinCents: shape.priceMinCents,
 			allowPayMore: shape.priceMinCents > 0,
 			radioOptIn: shape.radioOptIn,
+			radioAttestedAt: attested ? new Date(Date.now() - 7 * 86400000) : null,
+			radioAttestedByUserId: attested ? (band.ownerId ?? null) : null,
+			radioAttestationVersion: attested ? RADIO_PRO_ATTESTATION.version : null,
 			radioExcludedAt: vetoed ? new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) : null,
 			radioExcludedReason: vetoed ? 'Uncleared sample in track 2 — band notified.' : null,
 			publishedAt: published ? new Date(Date.now() - randomInt(1, 60) * 86400000) : null,
@@ -391,6 +397,7 @@ export async function seedAudio(bands: any[], users: any[], alsoInclude: any[] =
 			return (
 				release?.status === 'published' &&
 				release.radioOptIn &&
+				release.radioAttestationVersion === RADIO_PRO_ATTESTATION.version &&
 				!release.radioExcludedAt &&
 				!t.radioExcludedAt &&
 				t.durationMs >= RADIO_MIN_TRACK_MS &&

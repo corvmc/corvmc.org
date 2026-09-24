@@ -38,7 +38,8 @@
 		releaseKinds,
 		releaseKindLabels,
 		RADIO_MIN_TRACK_MS,
-		RADIO_MAX_TRACK_MS
+		RADIO_MAX_TRACK_MS,
+		RADIO_PRO_ATTESTATION
 	} from '$lib/config';
 	import { formatTrackSummary, formatRuntime } from '$lib/utils/audio';
 	import { toLocalDate } from '$lib/utils/format';
@@ -155,7 +156,11 @@
 						{#if release.radioExcluded}
 							Pulled by staff
 						{:else}
-							{release.radioOptIn ? 'In the rotation' : 'Not in the rotation'}
+							{release.radioOptIn
+								? release.radioAttested
+									? 'In the rotation'
+									: 'Waiting on the PRO attestation'
+								: 'Not in the rotation'}
 						{/if}
 					</Fact>
 				</DefinitionList>
@@ -313,6 +318,24 @@
 						checkboxLabel="On the air"
 						value={release.radioOptIn}
 					/>
+					{#if release.radioAttested && release.radioAttestedAt}
+						<p class="text-muted text-sm">
+							Attested on {formatDate(release.radioAttestedAt)}: {RADIO_PRO_ATTESTATION.text}
+						</p>
+					{:else}
+						{#if release.radioOptIn}
+							<Alert type="warning">
+								This release is off the air until someone confirms the statement below.
+							</Alert>
+						{/if}
+						<FormField
+							field={fields.attestNotPro}
+							type="checkbox"
+							label="Performing rights"
+							checkboxLabel={RADIO_PRO_ATTESTATION.text}
+							description="Required to go on the air. CMC Radio holds no licence to play music a performing-rights organisation collects on."
+						/>
+					{/if}
 					<SubmitButton>Save</SubmitButton>
 				</Form>
 

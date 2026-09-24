@@ -18,6 +18,7 @@ import { audioRelease, audioTrack } from '../../src/lib/server/db/schema/audio';
 import { synthesizeTrack } from '../../scripts/seed/audio-fixtures';
 import { withPlatformEnv } from './platform-db';
 import { SEED_PUBLIC_BAND_ID } from './seed-band-onboarding';
+import { RADIO_PRO_ATTESTATION } from '../../src/lib/config';
 
 /** Read-only: the panel list, the tracklist, and the stream endpoint. */
 export const SEED_AUDIO_RELEASE_ID = 'e2e-release-published';
@@ -68,6 +69,8 @@ export async function seedBandAudio(): Promise<void> {
 				priceMinCents: 1000,
 				allowPayMore: true,
 				radioOptIn: true,
+				radioAttestedAt: now,
+				radioAttestationVersion: RADIO_PRO_ATTESTATION.version,
 				publishedAt: now,
 				releasedAt: now,
 				createdAt: now,

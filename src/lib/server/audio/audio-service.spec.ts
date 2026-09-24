@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { RADIO_PRO_ATTESTATION } from '$lib/config';
 
 /**
  * The parts of the service worth pinning without a database: the track
@@ -325,5 +326,61 @@ describe('deleteRelease', () => {
 		// the sweep decides whether the object survives.
 		expect(detachSlot).toHaveBeenCalledWith('audio_release', 'rel-1', 'cover');
 		expect(state.deletes).toHaveLength(1);
+	});
+});
+
+describe('setRadioOptIn — PRO attestation', () => {
+	const release = { id: 'rel-1', status: 'published', title: 'A', slug: 'a', groupId: 'g' };
+
+	it('refuses to opt in without the attestation', async () => {
+		queue([{ ...release, radioAttestationVersion: null }]);
+		await expect(
+			service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: false, userId: 'u-1' })
+		).rejects.toBeInstanceOf(service.RadioAttestationRequiredError);
+		expect(state.updates).toHaveLength(0);
+	});
+
+	it('records who attested, when, and to which wording', async () => {
+		queue([{ ...release, radioAttestationVersion: null }], [{ id: 'rel-1' }]);
+		await service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: true, userId: 'u-1' });
+		expect(state.updates[0].set).toMatchObject({
+			radioOptIn: true,
+			radioAttestedByUserId: 'u-1',
+			radioAttestationVersion: RADIO_PRO_ATTESTATION.version
+		});
+		expect(state.updates[0].set.radioAttestedAt).toBeInstanceOf(Date);
+	});
+
+	it('refuses an attestation to an older wording', async () => {
+		queue([{ ...release, radioAttestationVersion: 'superseded' }]);
+		await expect(
+			service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: false, userId: 'u-1' })
+		).rejects.toBeInstanceOf(service.RadioAttestationRequiredError);
+	});
+
+	it('keeps a current attestation when the band saves again without re-ticking it', async () => {
+		queue(
+			[{ ...release, radioAttestationVersion: RADIO_PRO_ATTESTATION.version }],
+			[{ id: 'rel-1' }]
+		);
+		await service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: false, userId: 'u-2' });
+		expect(state.updates[0].set).toMatchObject({ radioOptIn: true });
+		expect(state.updates[0].set).not.toHaveProperty('radioAttestedByUserId');
+	});
+
+	it('opts out without an attestation, and keeps the record of an old one', async () => {
+		queue([{ ...release, radioAttestationVersion: null }], [{ id: 'rel-1' }]);
+		await service.setRadioOptIn('rel-1', { optIn: false, attestedNotPro: false, userId: 'u-1' });
+		expect(state.updates[0].set).toMatchObject({ radioOptIn: false });
+		expect(state.updates[0].set).not.toHaveProperty('radioAttestationVersion');
+	});
+});
+
+describe('radioAttested', () => {
+	it('is true only for the current wording', () => {
+		const current = RADIO_PRO_ATTESTATION.version;
+		expect(service.radioAttested({ radioAttestationVersion: current })).toBe(true);
+		expect(service.radioAttested({ radioAttestationVersion: 'superseded' })).toBe(false);
+		expect(service.radioAttested({ radioAttestationVersion: null })).toBe(false);
 	});
 });

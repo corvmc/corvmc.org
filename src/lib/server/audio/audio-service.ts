@@ -19,7 +19,7 @@ import { DomainError } from '$lib/server/domain-error';
 import { deleteAudioObject } from './audio-storage';
 import { detachSlot } from '$lib/server/media/media-service';
 import { resolveImageUrl } from '$lib/server/storage';
-import { AUDIO_MIN_PRICE_CENTS, type ReleaseKind } from '$lib/config';
+import { AUDIO_MIN_PRICE_CENTS, RADIO_PRO_ATTESTATION, type ReleaseKind } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -61,6 +61,14 @@ export class ReleaseWithheldError extends DomainError {
 	readonly httpStatus = 403;
 	constructor() {
 		super('This release was withheld by CMC staff. Reply to their message to sort it out.');
+	}
+}
+
+/** Radio consent without the not-a-PRO-member attestation to the current wording. */
+export class RadioAttestationRequiredError extends DomainError {
+	readonly httpStatus = 400;
+	constructor() {
+		super('Confirm that nobody on this release is a member of a performing-rights organisation.');
 	}
 }
 
@@ -142,6 +150,8 @@ export type ReleaseSummary = {
 	priceMinCents: number;
 	allowPayMore: boolean;
 	radioOptIn: boolean;
+	/** Attested to the current `RADIO_PRO_ATTESTATION`; without it an opt-in does not play. */
+	radioAttested: boolean;
 	radioExcluded: boolean;
 	radioExcludedReason: string | null;
 	releasedAt: Date | null;
@@ -172,6 +182,7 @@ export async function listReleasesForBand(groupId: string): Promise<ReleaseSumma
 			priceMinCents: audioRelease.priceMinCents,
 			allowPayMore: audioRelease.allowPayMore,
 			radioOptIn: audioRelease.radioOptIn,
+			radioAttestationVersion: audioRelease.radioAttestationVersion,
 			radioExcludedAt: audioRelease.radioExcludedAt,
 			radioExcludedReason: audioRelease.radioExcludedReason,
 			releasedAt: audioRelease.releasedAt,
@@ -195,6 +206,7 @@ export async function listReleasesForBand(groupId: string): Promise<ReleaseSumma
 		priceMinCents: r.priceMinCents,
 		allowPayMore: r.allowPayMore,
 		radioOptIn: r.radioOptIn,
+		radioAttested: radioAttested(r),
 		radioExcluded: r.radioExcludedAt !== null,
 		radioExcludedReason: r.radioExcludedReason,
 		releasedAt: r.releasedAt,
@@ -353,7 +365,6 @@ export type UpdateReleaseData = {
 	releasedAt?: Date | null;
 	priceMinCents?: number;
 	allowPayMore?: boolean;
-	radioOptIn?: boolean;
 };
 
 export async function updateRelease(releaseId: string, data: UpdateReleaseData) {
@@ -372,6 +383,43 @@ export async function updateRelease(releaseId: string, data: UpdateReleaseData) 
 	const [row] = await db
 		.update(audioRelease)
 		.set({ ...data, slug, updatedAt: new Date() })
+		.where(eq(audioRelease.id, releaseId))
+		.returning();
+	return row;
+}
+
+/** Whether a release's attestation is to the wording in force today. */
+export function radioAttested(r: { radioAttestationVersion: string | null }): boolean {
+	return r.radioAttestationVersion === RADIO_PRO_ATTESTATION.version;
+}
+
+/**
+ * Radio consent, and the attestation that has to come with it. Opting in needs
+ * either a fresh attestation or one already on file to the current wording.
+ * Opting out leaves the old record alone: it says who attested, and when.
+ */
+export async function setRadioOptIn(
+	releaseId: string,
+	opts: { optIn: boolean; attestedNotPro: boolean; userId: string }
+) {
+	const existing = await getReleaseById(releaseId);
+	if (!existing) throw new ReleaseNotFoundError();
+
+	let set: Partial<typeof audioRelease.$inferInsert> = { radioOptIn: opts.optIn };
+	if (opts.optIn && opts.attestedNotPro) {
+		set = {
+			...set,
+			radioAttestedAt: new Date(),
+			radioAttestedByUserId: opts.userId,
+			radioAttestationVersion: RADIO_PRO_ATTESTATION.version
+		};
+	} else if (opts.optIn && !radioAttested(existing)) {
+		throw new RadioAttestationRequiredError();
+	}
+
+	const [row] = await db
+		.update(audioRelease)
+		.set({ ...set, updatedAt: new Date() })
 		.where(eq(audioRelease.id, releaseId))
 		.returning();
 	return row;
