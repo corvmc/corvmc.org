@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync, globSync } from 'node:fs';
+import { posix } from 'node:path';
 
 /**
  * Every field a `form()` accepts must be reachable from a control. A schema key
@@ -45,6 +46,30 @@ const CONTEXT = /^(id|.*Id|.*Ids|slug|token|intent|turnstileToken)$/;
 
 const GRANDFATHERED: string[] = JSON.parse(readFileSync('src/form-coverage.json', 'utf8'));
 
+/** The `.svelte` files a component imports, as repo-relative paths. */
+function svelteImports(file: string, source: string): string[] {
+	return [...source.matchAll(/from\s+['"]([^'"]+\.svelte)['"]/g)].map(([, spec]) =>
+		spec.startsWith('$lib/')
+			? posix.join('src/lib', spec.slice(5))
+			: posix.join(posix.dirname(file), spec)
+	);
+}
+
+/** The text of a form's hosts and of every component they import. */
+function renderScope(hosts: string[], files: Map<string, string>): string {
+	const paths = new Set(hosts.flatMap((h) => [h, ...svelteImports(h, files.get(h) ?? '')]));
+	return [...paths].map((p) => files.get(p) ?? '').join('\n');
+}
+
+/**
+ * Whether a host, or a component a host imports, declares
+ * `${key}: RemoteFormField<…>`. Scoped so one field set cannot cover a field
+ * of the same name on a form it never renders (#1499).
+ */
+function declaresFieldSet(key: string, hosts: string[], files: Map<string, string>): boolean {
+	return new RegExp(`^\\s*${key}\\s*:\\s*RemoteFormField`, 'm').test(renderScope(hosts, files));
+}
+
 /** Every exported `form()`, by name, with its schema's keys. */
 async function remoteForms() {
 	const byName = new Map<string, string[]>();
@@ -66,31 +91,53 @@ async function remoteForms() {
 
 async function uncoveredFields() {
 	const byName = await remoteForms();
-	const svelte = globSync('src/{routes,lib/components}/**/*.svelte').map((p) =>
-		readFileSync(p, 'utf8')
+	const files = new Map(
+		globSync('src/{routes,lib/components}/**/*.svelte').map((p) => [p, readFileSync(p, 'utf8')])
 	);
-	const all = svelte.join('\n');
 
 	const out: string[] = [];
 	for (const [name, keys] of byName) {
 		if (!keys.length) continue;
-		const hosts = svelte.filter((s) => new RegExp(`\\b${name}\\b`).test(s));
+		const hosts = [...files.keys()].filter((p) => new RegExp(`\\b${name}\\b`).test(files.get(p)!));
 		if (!hosts.length) continue;
-		const scoped = hosts.join('\n');
+		const scoped = hosts.map((p) => files.get(p)).join('\n');
 		for (const k of keys) {
 			if (CONTEXT.test(k)) continue;
-			if (new RegExp(`name="${k}"`).test(scoped)) continue;
+			// A named control in a host or in a step component a host imports.
+			if (new RegExp(`name="${k}"`).test(renderScope(hosts, files))) continue;
 			// Any `<something>.${k}` in a file hosting this form. Loose on purpose:
 			// field objects get aliased, passed as snippet parameters and spread into
 			// child sets, and chasing every binding shape costs more than it catches.
 			if (new RegExp(`\\.${k}\\b`).test(scoped)) continue;
 			// A field set declaring `${k}: RemoteFormField<…>` renders it.
-			if (new RegExp(`^\\s*${k}\\s*:\\s*RemoteFormField`, 'm').test(all)) continue;
+			if (declaresFieldSet(k, hosts, files)) continue;
 			out.push(`${name}.${k}`);
 		}
 	}
 	return out;
 }
+
+describe('the field-set escape hatch', () => {
+	const files = new Map([
+		['src/routes/a/+page.svelte', "import Fields from './Fields.svelte';\n<Fields />"],
+		[
+			'src/routes/a/Fields.svelte',
+			'let { f }: {\n\taddress: RemoteFormField<string>;\n} = $props();'
+		],
+		[
+			'src/routes/b/Other.svelte',
+			'let { f }: {\n\twebsite: RemoteFormField<string>;\n} = $props();'
+		]
+	]);
+
+	it('counts a field set the hosting page imports', () => {
+		expect(declaresFieldSet('address', ['src/routes/a/+page.svelte'], files)).toBe(true);
+	});
+
+	it('ignores a field set declared by a component the host never imports', () => {
+		expect(declaresFieldSet('website', ['src/routes/a/+page.svelte'], files)).toBe(false);
+	});
+});
 
 describe('form field coverage', () => {
 	// It reads every `form()` in the tree and every component that might render
