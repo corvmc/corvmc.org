@@ -600,6 +600,21 @@ export interface CommunityEventReviewedEvent {
 	notes: string | null;
 }
 
+/** A public tip for the local resources directory, filed as pending (#1498). */
+export interface LocalResourceSubmittedEvent {
+	resourceId: string;
+	name: string;
+}
+
+/** Staff published or returned a tipped listing whose submitter left an email. */
+export interface LocalResourceReviewedEvent {
+	resourceId: string;
+	name: string;
+	submitterEmail: string;
+	published: boolean;
+	staffNote: string | null;
+}
+
 /** Staff pulled a published community listing off the guide. */
 export interface CommunityEventUnpublishedEvent {
 	eventId: string;
@@ -772,6 +787,8 @@ export type DomainEvents = {
 	'event.unpublished_by_staff': EventUnpublishedByStaffEvent;
 	'community_event.submitted': CommunityEventSubmittedEvent;
 	'community_event.reviewed': CommunityEventReviewedEvent;
+	'local_resource.submitted': LocalResourceSubmittedEvent;
+	'local_resource.reviewed': LocalResourceReviewedEvent;
 	'instructor.application_submitted': InstructorApplicationSubmittedEvent;
 	'instructor.application_reviewed': InstructorApplicationReviewedEvent;
 	'community_event.unpublished': CommunityEventUnpublishedEvent;

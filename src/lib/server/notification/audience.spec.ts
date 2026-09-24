@@ -10,13 +10,14 @@ import { NOTIFICATION_TYPES, preferenceTypesFor } from '$lib/server/db/schema/no
  * fans out over a capability rather than over subscribers (#899).
  */
 
-// Three files dispatch, not one: most types come from the listener registry,
-// the inbox's two from the remote that assigns a thread. Read all three, so a
+// Several files dispatch, not one: most types come from the listener registry,
+// the inbox's two from the remote that assigns a thread. Read them all, so a
 // type that moves does not quietly stop being checked.
 const dispatchSites = [
 	'src/lib/server/notification/notification-listeners.ts',
 	'src/lib/server/event-bus/register-listeners.ts',
-	'src/lib/remote/inbox.remote.ts'
+	'src/lib/remote/inbox.remote.ts',
+	'src/lib/server/local-resource/local-resource-listener.ts'
 ]
 	.map((f) => readFileSync(f, 'utf8'))
 	.join('\n');
@@ -61,6 +62,7 @@ describe('notification audience', () => {
 				'event_recurring_reservation_skipped',
 				'inbox_assigned',
 				'inbox_message_received',
+				'local_resource_submitted',
 				'volunteer_hours_submitted',
 				'volunteer_shift_claimed',
 				'volunteer_shift_declined',

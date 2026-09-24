@@ -607,7 +607,7 @@ on purpose:
   was wanted by the Local Resources Directory. It is not. A supplier is who CMC
   buys from — internal, operational, mostly not a music business. A local
   resource is who CMC points the community at. See
-  [local-resources-spec.md](local-resources-spec.md#a-local-resource-is-not-a-supplier);
+  [local-resources-spec.md](shipped/local-resources-spec.md#a-local-resource-is-not-a-supplier);
   that feature does not gate this one.
 
 - **A stored link from a suggestion to the item it became.** See

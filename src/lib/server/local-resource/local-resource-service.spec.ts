@@ -58,6 +58,9 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
+const emit = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('$lib/server/event-bus', () => ({ domainEvents: { emit } }));
+
 const svc = await import('./local-resource-service');
 
 beforeEach(() => {
@@ -66,6 +69,80 @@ beforeEach(() => {
 	insertValues = [];
 	deleteCalls = 0;
 	whereArgs = [];
+	emit.mockClear();
+});
+
+describe('submitTip (#1498)', () => {
+	const tip = { categoryId: 'c-1', name: 'Amp Doctor', website: 'ampdoctor.example' };
+
+	it('files a public tip as a pending listing with the submitter email', async () => {
+		selectResults = [[{ id: 'c-1' }]];
+
+		await svc.submitTip(tip, { submitterEmail: ' Tipper@Example.com ' });
+
+		expect(insertValues[0]).toMatchObject({
+			name: 'Amp Doctor',
+			website: 'https://ampdoctor.example/',
+			status: 'pending',
+			submitterEmail: 'tipper@example.com',
+			submittedByUserId: null
+		});
+		expect(insertValues[0].reviewedAt).toBeUndefined();
+		expect(emit).toHaveBeenCalledWith('local_resource.submitted', {
+			resourceId: 'lr-1',
+			name: 'Amp Doctor'
+		});
+	});
+
+	it('refuses a category that does not exist', async () => {
+		selectResults = [[]];
+		await expect(svc.submitTip(tip, { submitterEmail: 'a@b.example' })).rejects.toThrow(
+			svc.LocalResourceValidationError
+		);
+		expect(insertValues).toHaveLength(0);
+	});
+});
+
+describe('telling the submitter the outcome (#1498)', () => {
+	it('announces a publish to a tip that left an email', async () => {
+		selectResults = [
+			[{ id: 'lr-1', status: 'pending', name: 'Amp Doctor', submitterEmail: 't@x.example' }]
+		];
+
+		await svc.publishResource('lr-1', 'staff-1');
+
+		expect(emit).toHaveBeenCalledWith('local_resource.reviewed', {
+			resourceId: 'lr-1',
+			name: 'Amp Doctor',
+			submitterEmail: 't@x.example',
+			published: true,
+			staffNote: null
+		});
+	});
+
+	it('announces a return with the note', async () => {
+		selectResults = [
+			[{ id: 'lr-1', status: 'pending', name: 'Amp Doctor', submitterEmail: 't@x.example' }]
+		];
+
+		await svc.rejectResource('lr-1', 'Needs a website', 'staff-1');
+
+		expect(emit).toHaveBeenCalledWith(
+			'local_resource.reviewed',
+			expect.objectContaining({ published: false, staffNote: 'Needs a website' })
+		);
+	});
+
+	it('stays quiet for a staff-authored listing, and for a re-publish', async () => {
+		selectResults = [[{ id: 'lr-1', status: 'pending', name: 'X', submitterEmail: null }]];
+		await svc.publishResource('lr-1', 'staff-1');
+		selectResults = [
+			[{ id: 'lr-1', status: 'published', name: 'X', submitterEmail: 't@x.example' }]
+		];
+		await svc.publishResource('lr-1', 'staff-1');
+
+		expect(emit).not.toHaveBeenCalled();
+	});
 });
 
 describe('listPublishedByCategory', () => {

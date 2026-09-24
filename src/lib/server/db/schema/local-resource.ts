@@ -5,7 +5,7 @@ import { localResourceStatuses } from '../../../config';
 
 /**
  * A staff-managed vocabulary for the local resources directory, shaped like
- * `equipment_category`: a label with an order. docs/specs/local-resources-spec.md
+ * `equipment_category`: a label with an order. docs/specs/shipped/local-resources-spec.md
  */
 export const localResourceCategory = sqliteTable('local_resource_category', {
 	id: text('id')

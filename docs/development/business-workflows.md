@@ -1432,7 +1432,7 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
 
 ## 17. The local resources directory
 
-Spec: [specs/local-resources-spec.md](../specs/local-resources-spec.md)
+Spec: [specs/local-resources-spec.md](../specs/shipped/local-resources-spec.md)
 
 ### The story
 
@@ -1448,8 +1448,17 @@ the row.
   Rendered by `ResourceDirectory.svelte` inside its own boundary above the tip form.
 - **Staff:** `local-resources.remote.ts` behind `localResource.manage`, over
   `src/lib/server/local-resource/local-resource-service.ts`.
+- **Tips:** `TipForm.svelte` → `submitLocalResourceTip` (Turnstile, unguarded) → `submitTip()`,
+  which inserts a `pending` row with `submitterEmail` and emits `local_resource.submitted`. The
+  listener in `local-resource-listener.ts` notifies holders of `localResource.manage` in-app.
+  Publishing or returning a row that has a `submitterEmail` emits `local_resource.reviewed`, which
+  emails the submitter (`dispatchEmailOnly`), quoting the `staffNote` on a return. A re-publish
+  sends nothing.
 
 ### Where it breaks
+
+- A tip that "did nothing": read `turnstileFailureMessage` first. `onfailure` suppresses Form's
+  fallback toast, and the Turnstile token has no field to show its error in (#803).
 
 - A category with listings cannot be deleted, including removed ones, because the foreign key
   restricts on them too.

@@ -3,10 +3,12 @@ import { localResource, localResourceCategory } from '$lib/server/db/schema/loca
 import { and, asc, count, eq, isNull, ne, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import type { LocalResourceStatus } from '$lib/config';
+import { domainEvents, type DomainEvents } from '$lib/server/event-bus';
+import { captureException } from '$lib/server/sentry';
 
 /**
  * The local resources directory: a public, staff-curated list of music
- * businesses and services. docs/specs/local-resources-spec.md
+ * businesses and services. docs/specs/shipped/local-resources-spec.md
  */
 
 export const LOCAL_RESOURCE_NAME_MAX = 120;
@@ -177,6 +179,54 @@ export async function getResource(id: string) {
 	return row;
 }
 
+/** Fire-and-forget: a listener failing must not fail the write that raised it. */
+function announce<K extends 'local_resource.submitted' | 'local_resource.reviewed'>(
+	name: K,
+	payload: DomainEvents[K]
+) {
+	void domainEvents.emit(name, payload).catch((err) => captureException(err, { event: name }));
+}
+
+/** A public tip (#1498): pending until staff publish or return it. */
+export async function submitTip(
+	input: Omit<LocalResourceInput, 'displayOrder'>,
+	from: { submitterEmail: string; submittedByUserId?: string | null }
+) {
+	const [category] = await db
+		.select({ id: localResourceCategory.id })
+		.from(localResourceCategory)
+		.where(eq(localResourceCategory.id, input.categoryId))
+		.limit(1);
+	if (!category) throw new LocalResourceValidationError('Pick one of the categories listed.');
+
+	const [row] = await db
+		.insert(localResource)
+		.values({
+			...clean(input),
+			status: 'pending',
+			submitterEmail: from.submitterEmail.trim().toLowerCase(),
+			submittedByUserId: from.submittedByUserId ?? null
+		})
+		.returning();
+	announce('local_resource.submitted', { resourceId: row.id, name: row.name });
+	return row;
+}
+
+function announceReview(
+	before: { id: string; name: string; submitterEmail: string | null },
+	published: boolean,
+	staffNote: string | null
+) {
+	if (!before.submitterEmail) return;
+	announce('local_resource.reviewed', {
+		resourceId: before.id,
+		name: before.name,
+		submitterEmail: before.submitterEmail,
+		published,
+		staffNote
+	});
+}
+
 /** Staff write the list themselves, so their listings are reviewed as they are saved. */
 export async function createResource(input: LocalResourceInput, staffUserId: string) {
 	const now = new Date();
@@ -205,7 +255,7 @@ export async function updateResource(id: string, input: LocalResourceInput) {
 }
 
 export async function publishResource(id: string, staffUserId: string) {
-	await getResource(id);
+	const before = await getResource(id);
 	const now = new Date();
 	const [row] = await db
 		.update(localResource)
@@ -218,6 +268,7 @@ export async function publishResource(id: string, staffUserId: string) {
 		})
 		.where(eq(localResource.id, id))
 		.returning();
+	if (before.status !== 'published') announceReview(before, true, null);
 	return row;
 }
 
@@ -225,19 +276,21 @@ export async function publishResource(id: string, staffUserId: string) {
 export async function rejectResource(id: string, note: string, staffUserId: string) {
 	const reason = note.trim();
 	if (!reason) throw new LocalResourceValidationError('Say why, so it can be fixed.');
-	await getResource(id);
+	const before = await getResource(id);
 	const now = new Date();
+	const staffNote = optional(reason, LOCAL_RESOURCE_DESCRIPTION_MAX, 'reason');
 	const [row] = await db
 		.update(localResource)
 		.set({
 			status: 'rejected',
-			staffNote: optional(reason, LOCAL_RESOURCE_DESCRIPTION_MAX, 'reason'),
+			staffNote,
 			reviewedByUserId: staffUserId,
 			reviewedAt: now,
 			updatedAt: now
 		})
 		.where(eq(localResource.id, id))
 		.returning();
+	announceReview(before, false, staffNote);
 	return row;
 }
 

@@ -1,7 +1,7 @@
 # Local resources
 
-> **Status: 🔧 phases 1–3 shipped; phase 4 (the structured tip form) is #1498.** Tracking
-> issue: #575.
+> **Status: ✅ shipped, all four phases** (phase 4, the structured tip form, was #1498). Live
+> behaviour is in `docs/development/business-workflows.md` §17. Tracking issue: #575.
 >
 > A public, staff-curated list of music-related businesses and services around Corvallis —
 > instrument shops, venues, record stores, rehearsal studios, repair techs. It positions the
@@ -9,11 +9,12 @@
 
 ## What exists today
 
-`/local-resources` lists published resources grouped by category above the original tip form,
-which still files free text into the staff inbox. Staff curate at `/staff/local-resources` and
+`/local-resources` lists published resources grouped by category above a structured tip form that
+files a `pending` listing. Staff curate at `/staff/local-resources` and
 `/staff/local-resources/categories`, behind `localResource.manage`. Staff-authored listings
 publish on save; `rejected` (shown as "Returned") carries a note and can be published later.
-Removing a listing stamps `deletedAt`. Phase 4 below is what remains.
+Removing a listing stamps `deletedAt`. A tip's submitter is emailed when it is published or
+returned.
 
 ## A local resource is not a supplier
 

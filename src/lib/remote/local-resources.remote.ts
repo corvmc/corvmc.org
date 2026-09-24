@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { query } from '$app/server';
+import { invalid } from '@sveltejs/kit';
+import { query, getRequestEvent } from '$app/server';
+import { verifyTurnstile } from '$lib/server/turnstile';
 import { form } from './_remote';
 import { requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
@@ -15,6 +17,7 @@ import {
 	publishResource,
 	rejectResource,
 	removeResource,
+	submitTip,
 	updateCategory,
 	updateResource,
 	LOCAL_RESOURCE_DESCRIPTION_MAX,
@@ -28,6 +31,40 @@ import {
  */
 
 export const getLocalResourceDirectory = query(async () => listPublishedByCategory());
+
+/** The tip form's category picker. Public, so names and ids only. */
+export const getLocalResourceTipCategories = query(async () =>
+	(await listCategories()).map((c) => ({ value: c.id, label: c.name }))
+);
+
+/**
+ * A public tip (#1498): Turnstile first, then a pending listing. Anyone may
+ * send one; a signed-in sender is recorded as the submitter too.
+ */
+export const submitLocalResourceTip = form(
+	z.object({
+		categoryId: z.string().min(1, 'Pick a category'),
+		name: z.string().trim().min(1, 'Give it a name').max(LOCAL_RESOURCE_NAME_MAX),
+		website: z.string().max(LOCAL_RESOURCE_FIELD_MAX).optional(),
+		phone: z.string().max(40).optional(),
+		addressLine: z.string().max(LOCAL_RESOURCE_FIELD_MAX).optional(),
+		description: z.string().max(LOCAL_RESOURCE_DESCRIPTION_MAX).optional(),
+		submitterEmail: z.string().trim().email('We need an email to tell you the outcome').max(320),
+		turnstileToken: z.string().min(1)
+	}),
+	async ({ turnstileToken, submitterEmail, ...data }, issue) => {
+		const { request, locals } = getRequestEvent();
+		if (!(await verifyTurnstile(turnstileToken, request.headers.get('CF-Connecting-IP')))) {
+			invalid(issue.turnstileToken('Verification failed. Please try again.'));
+		}
+		try {
+			await submitTip(data, { submitterEmail, submittedByUserId: locals.user?.id ?? null });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		return { success: true };
+	}
+);
 
 export const getStaffLocalResources = query(
 	z.object({ status: z.enum(localResourceStatuses).optional() }),
