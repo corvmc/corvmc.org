@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ee43463f-5d73-488a-b1bc-2b31ba008212",
+  "id": "74a8ef90-dd46-4bac-8ea9-fd1933a33003",
   "prevIds": [
-    "81dd9495-4421-48bd-885c-19f2532ab4c2"
+    "ee43463f-5d73-488a-b1bc-2b31ba008212"
   ],
   "ddl": [
     {
@@ -468,6 +468,10 @@
     },
     {
       "name": "sponsor",
+      "entityType": "tables"
+    },
+    {
+      "name": "sponsor_placement",
       "entityType": "tables"
     },
     {
@@ -13134,6 +13138,66 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "sponsor_placement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "sponsorship_id",
+      "entityType": "columns",
+      "table": "sponsor_placement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "sponsor_placement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "true",
+      "generated": null,
+      "name": "on_event_page",
+      "entityType": "columns",
+      "table": "sponsor_placement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "true",
+      "generated": null,
+      "name": "in_campaign",
+      "entityType": "columns",
+      "table": "sponsor_placement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "sponsor_placement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "sponsorship"
     },
     {
@@ -16908,6 +16972,36 @@
     },
     {
       "columns": [
+        "sponsorship_id"
+      ],
+      "tableTo": "sponsorship",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_sponsor_placement_sponsorship_id_sponsorship_id_fk",
+      "entityType": "fks",
+      "table": "sponsor_placement"
+    },
+    {
+      "columns": [
+        "event_id"
+      ],
+      "tableTo": "event_listing",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_sponsor_placement_event_id_event_listing_id_fk",
+      "entityType": "fks",
+      "table": "sponsor_placement"
+    },
+    {
+      "columns": [
         "sponsor_id"
       ],
       "tableTo": "sponsor",
@@ -17979,6 +18073,15 @@
       "nameExplicit": false,
       "name": "sponsor_pk",
       "table": "sponsor",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "sponsor_placement_pk",
+      "table": "sponsor_placement",
       "entityType": "pks"
     },
     {
@@ -21872,6 +21975,38 @@
       "name": "idx_incident_note_incident",
       "entityType": "indexes",
       "table": "incident_note"
+    },
+    {
+      "columns": [
+        {
+          "value": "sponsorship_id",
+          "isExpression": false
+        },
+        {
+          "value": "event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "sponsor_placement_term_event_idx",
+      "entityType": "indexes",
+      "table": "sponsor_placement"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "sponsor_placement_event_idx",
+      "entityType": "indexes",
+      "table": "sponsor_placement"
     },
     {
       "columns": [

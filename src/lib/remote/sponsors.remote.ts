@@ -3,7 +3,10 @@ import { query } from '$app/server';
 import { form } from './_remote';
 import { requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
+import { invalid } from '@sveltejs/kit';
 import * as service from '$lib/server/sponsor/sponsor-service';
+import * as credits from '$lib/server/sponsor/credit-service';
+import { resolveImageUrl, validateUpload } from '$lib/server/storage';
 import { clubToday, LONG_TEXT_MAX, SHORT_TEXT_MAX, sponsorshipStatuses } from '$lib/config';
 
 /** An `<input type="date">` value, or blank for "no date". */
@@ -62,7 +65,12 @@ export const getSponsors = query(async () => {
 export const getSponsorDetail = query(z.string(), async (id) => {
 	await requireCapability('sponsor.read');
 	try {
-		return await service.getSponsor(id, clubToday());
+		const [detail, placements, logoKey] = await Promise.all([
+			service.getSponsor(id, clubToday()),
+			credits.listPlacementsForSponsor(id),
+			credits.sponsorLogoKey(id)
+		]);
+		return { ...detail, placements, logoUrl: resolveImageUrl(logoKey) };
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -119,3 +127,61 @@ export const deleteSponsorship = form(
 		return { success: true };
 	}
 );
+
+export const placeSponsorship = form(
+	z.object({
+		sponsorId: z.string().min(1),
+		sponsorshipId: z.string().min(1),
+		eventId: z.string().min(1, 'Pick a show'),
+		onEventPage: z.boolean().default(false),
+		inCampaign: z.boolean().default(false)
+	}),
+	async (data) => {
+		await requireCapability('sponsor.manage');
+		await credits.placeSponsorship({
+			sponsorshipId: data.sponsorshipId,
+			eventId: data.eventId,
+			onEventPage: data.onEventPage,
+			inCampaign: data.inCampaign
+		});
+		await getSponsorDetail(data.sponsorId).refresh();
+		return { success: true };
+	}
+);
+
+export const removePlacement = form(
+	z.object({ id: z.string().min(1), sponsorId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('sponsor.manage');
+		await credits.removePlacement(data.id);
+		await getSponsorDetail(data.sponsorId).refresh();
+		return { success: true };
+	}
+);
+
+export const setSponsorLogo = form(
+	z.object({ sponsorId: z.string().min(1), logo: z.instanceof(File) }),
+	async (data, issue) => {
+		const user = await requireCapability('sponsor.manage');
+		const reason = validateUpload(data.logo);
+		if (reason) invalid(issue.logo(reason));
+		await credits.setSponsorLogo(
+			data.sponsorId,
+			{
+				buffer: await data.logo.arrayBuffer(),
+				contentType: data.logo.type,
+				filename: data.logo.name || null
+			},
+			user.id
+		);
+		await getSponsorDetail(data.sponsorId).refresh();
+		return { success: true };
+	}
+);
+
+export const removeSponsorLogo = form(z.object({ sponsorId: z.string().min(1) }), async (data) => {
+	await requireCapability('sponsor.manage');
+	await credits.removeSponsorLogo(data.sponsorId);
+	await getSponsorDetail(data.sponsorId).refresh();
+	return { success: true };
+});

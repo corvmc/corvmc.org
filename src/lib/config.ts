@@ -763,6 +763,12 @@ export const sponsorshipStatusLabels: Record<SponsorshipStatus, string> = {
 	declined: 'Declined'
 };
 
+/** A term whose placements are shown publicly: the deal happened. */
+export const creditedSponsorshipStatuses = [
+	'active',
+	'ended'
+] as const satisfies readonly SponsorshipStatus[];
+
 export const sponsorshipStatusBadge = {
 	prospect: 'outline',
 	active: 'success',
@@ -2317,7 +2323,9 @@ export const attachableTypes = [
 	 * than the event: the `/act` token authorizes the artist's own record, and
 	 * the event's public poster is not that until staff promote it.
 	 */
-	'artifact_request'
+	'artifact_request',
+	/** A sponsor's `logo`, shown beside its credit on an event (#583). */
+	'sponsor'
 ] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 

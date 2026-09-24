@@ -1,6 +1,7 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { sponsorshipStatuses } from '../../../config';
+import { eventListing } from './event';
 
 /**
  * A business that sponsors, or might sponsor, the collective. The row outlives
@@ -54,7 +55,37 @@ export const sponsorship = sqliteTable(
 	(t) => [index('sponsorship_sponsor_idx').on(t.sponsorId)]
 );
 
+/**
+ * A sponsorship credited on one event (#583): on its public page, in the blasts
+ * about it, or both. Only an active or finished term is ever shown; a pitch can
+ * be placed ahead of signing and stays invisible until it is active.
+ */
+export const sponsorPlacement = sqliteTable(
+	'sponsor_placement',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		sponsorshipId: text('sponsorship_id')
+			.notNull()
+			.references(() => sponsorship.id, { onDelete: 'cascade' }),
+		eventId: text('event_id')
+			.notNull()
+			.references(() => eventListing.id, { onDelete: 'cascade' }),
+		onEventPage: integer('on_event_page', { mode: 'boolean' }).notNull().default(true),
+		inCampaign: integer('in_campaign', { mode: 'boolean' }).notNull().default(true),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		uniqueIndex('sponsor_placement_term_event_idx').on(t.sponsorshipId, t.eventId),
+		index('sponsor_placement_event_idx').on(t.eventId)
+	]
+);
+
 export type Sponsor = typeof sponsor.$inferSelect;
 export type NewSponsor = typeof sponsor.$inferInsert;
 export type Sponsorship = typeof sponsorship.$inferSelect;
 export type NewSponsorship = typeof sponsorship.$inferInsert;
+export type SponsorPlacement = typeof sponsorPlacement.$inferSelect;
