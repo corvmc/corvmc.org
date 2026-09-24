@@ -17,6 +17,8 @@
 	import {
 		getSponsorDetail,
 		updateSponsor,
+		archiveSponsor,
+		restoreSponsor,
 		deleteSponsor,
 		createSponsorship,
 		updateSponsorship,
@@ -59,6 +61,29 @@
 </PageHeader>
 
 <PageContent>
+	{#if sponsor.deletedAt}
+		<Alert type="warning">
+			<div class="flex flex-wrap items-center justify-between gap-3">
+				<span>
+					<span class="font-medium">Archived.</span> Off the sponsor list, with every sponsorship and
+					credit kept.
+				</span>
+				<Action
+					action={restoreSponsor.for(sponsor.id)}
+					label="Restore"
+					variant="ghost"
+					size="xs"
+					successToast="Restored"
+					noFooter
+				>
+					{#snippet form()}
+						<input type="hidden" name="id" value={sponsor.id} />
+					{/snippet}
+				</Action>
+			</div>
+		</Alert>
+	{/if}
+
 	{#if lapsed}
 		<Alert type="warning">
 			{lapsed.title} ended {formatIsoDay(lapsed.endsOn)}. Renew it with a new sponsorship, or mark
@@ -283,22 +308,43 @@
 	</InfoCard>
 
 	<div class="flex flex-wrap gap-2">
-		<Action
-			action={deleteSponsor.for(sponsor.id)}
-			label="Delete sponsor"
-			variant="ghost"
-			size="sm"
-			class="text-error"
-			modalTitle="Delete {sponsor.name}?"
-			submitLabel="Delete"
-			submitVariant="error"
-			successToast="Deleted"
-			onsuccess={() => goto(resolve('/staff/sponsors'))}
-		>
-			{#snippet form()}
-				<input type="hidden" name="id" value={sponsor.id} />
-				<p class="text-sm">Only a sponsor with no sponsorships can be deleted.</p>
-			{/snippet}
-		</Action>
+		{#if !sponsor.deletedAt}
+			<Action
+				action={archiveSponsor.for(sponsor.id)}
+				label="Archive sponsor"
+				variant="ghost"
+				size="sm"
+				modalTitle="Archive {sponsor.name}?"
+				submitLabel="Archive"
+				successToast="Archived"
+			>
+				{#snippet form()}
+					<input type="hidden" name="id" value={sponsor.id} />
+					<p class="text-sm">
+						It comes off the sponsor list. Its sponsorships and event credits stay, and it can be
+						restored.
+					</p>
+				{/snippet}
+			</Action>
+		{/if}
+		{#if sponsor.sponsorships.length === 0}
+			<Action
+				action={deleteSponsor.for(sponsor.id)}
+				label="Delete sponsor"
+				variant="ghost"
+				size="sm"
+				class="text-error"
+				modalTitle="Delete {sponsor.name}?"
+				submitLabel="Delete"
+				submitVariant="error"
+				successToast="Deleted"
+				onsuccess={() => goto(resolve('/staff/sponsors'))}
+			>
+				{#snippet form()}
+					<input type="hidden" name="id" value={sponsor.id} />
+					<p class="text-sm">For a row that should never have existed. It has no sponsorships.</p>
+				{/snippet}
+			</Action>
+		{/if}
 	</div>
 </PageContent>

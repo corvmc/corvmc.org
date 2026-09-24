@@ -15,6 +15,8 @@ export const funder = sqliteTable('funder', {
 	contactName: text('contact_name'),
 	contactEmail: text('contact_email'),
 	notes: text('notes'),
+	/** Archived: off the active list, with every application kept. Null is live. */
+	deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
 		.default(sql`(unixepoch())`),

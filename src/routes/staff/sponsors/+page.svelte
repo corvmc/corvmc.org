@@ -14,8 +14,18 @@
 	import { formatIsoDay } from '$lib/utils/deadline';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 
-	const sponsors = $derived(await getSponsors());
+	const includeArchived = $derived(page.url.searchParams.get('archived') === '1');
+	const sponsors = $derived(await getSponsors({ includeArchived }));
+
+	function setArchived(on: boolean) {
+		const url = new URL(page.url);
+		if (on) url.searchParams.set('archived', '1');
+		else url.searchParams.delete('archived');
+		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+	}
 </script>
 
 <PageHeader title="Sponsors" subtitle="Money">
@@ -33,6 +43,18 @@
 </PageHeader>
 
 <PageContent>
+	<div class="flex justify-end">
+		<label class="label cursor-pointer gap-2 text-sm">
+			<input
+				type="checkbox"
+				class="checkbox checkbox-sm"
+				checked={includeArchived}
+				onchange={(e) => setArchived(e.currentTarget.checked)}
+			/>
+			Show archived
+		</label>
+	</div>
+
 	{#if sponsors.length === 0}
 		<EmptyState
 			title="No sponsors yet"
@@ -48,7 +70,11 @@
 				<th class="col-extra">Tier</th>
 			{/snippet}
 			{#each sponsors as s (s.id)}
-				<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/sponsors/${s.id}`)}>
+				<tr
+					class="hover cursor-pointer"
+					class:opacity-60={s.deletedAt}
+					use:rowLink={resolve(`/staff/sponsors/${s.id}`)}
+				>
 					<td class="w-px">
 						{#if s.current}
 							<Badge variant={sponsorshipStatusBadge[s.current.status]} size="sm">
@@ -58,6 +84,9 @@
 					</td>
 					<td class="cell-primary">
 						<a class="link font-medium" href={resolve(`/staff/sponsors/${s.id}`)}>{s.name}</a>
+						{#if s.deletedAt}
+							<Badge variant="ghost" size="sm" class="ml-2">Archived</Badge>
+						{/if}
 						<div class="truncate text-muted">
 							{s.current?.title ?? (s.sponsorships ? 'No current sponsorship' : 'Never sponsored')}
 						</div>
