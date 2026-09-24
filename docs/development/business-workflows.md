@@ -1662,10 +1662,18 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
   reminded again. `development.deadline_due` fans out to holders of `grant.manage` or
   `sponsor.manage` as `development_deadline`. The staff dashboard lists the same deadlines
   through the next 30 days, overdue ones included, to whoever holds the matching `read`.
+- **Sponsored placement (#583):** `placeSponsorship` puts one sponsorship on one event, crediting
+  it on the public event page, in blasts about that event, or both. `creditsForEvent` in
+  `credit-service.ts` reads it, and `toCredits` credits only an `active` or `ended` term, naming
+  each sponsor once. `getPublicEventDetail` renders the result through `SponsorCredit.svelte`.
+  `executeSend` and the stored preview append `withSponsorCredit` below the body of any
+  campaign with an `eventId`. Both use `SPONSOR_CREDIT_LEAD` from `src/lib/utils/sponsor-credit.ts`.
+  The credit is read when the campaign renders, so a placement added after drafting still goes out.
+- A sponsor's logo is a `media_attachment` (`sponsor`, slot `logo`), swept like any other.
 
 ### Data touched
 
-- `sponsor`, `sponsorship`, `funder`, `grant_application`, `grant_report`. Dates are
+- `sponsor`, `sponsorship`, `sponsor_placement`, `funder`, `grant_application`, `grant_report`. Dates are
   `YYYY-MM-DD` text, compared as strings. The amount columns are `notAccounting` in
   `money-map.ts`; an award arrives outside the app, as a manual `grant` entry.
 
@@ -1678,6 +1686,8 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
   keeps a closed grant visible for exactly this.
 - **Nobody was reminded.** Nobody holds `grant.manage` or `sponsor.manage` through a position.
   The fan-out goes to capability holders, not to the Development committee (#607).
+- **A placed sponsor does not show.** Its sponsorship is still Pitched. Pitches and declined terms
+  are never credited publicly.
 
 ## Cross-cutting patterns worth internalizing
 

@@ -131,7 +131,7 @@ async function main() {
 	// After the events, because it backfills every one of them into the room —
 	// which is where they all were, there being nowhere else until this table.
 	const venues = await seedVenues(events);
-	const sponsors = await seedSponsors();
+	const sponsors = await seedSponsors(events);
 	const grants = await seedGrants();
 	const bands = await seedBands(allUsers);
 	// Appended rather than folded into `seedBands`: it brings its own persona and
@@ -313,7 +313,7 @@ async function main() {
 	console.log(`  ${reservations.length} reservations`);
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${venues.venues} venues, one of them ours`);
-	console.log(`  ${sponsors.sponsors} sponsors`);
+	console.log(`  ${sponsors.sponsors} sponsors, ${sponsors.placements} event placements`);
 	console.log(`  ${grants.applications} grant applications to ${grants.funders} funders`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
