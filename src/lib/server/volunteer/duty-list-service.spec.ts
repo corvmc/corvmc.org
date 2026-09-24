@@ -48,10 +48,11 @@ const LOAD_OUT = Math.floor(new Date('2026-10-10T08:00:00Z').getTime() / 1000);
 let applyDutyList: typeof import('./duty-list-service').applyDutyList;
 let DutyListAlreadyAppliedError: typeof import('./duty-list-service').DutyListAlreadyAppliedError;
 let DutyListValidationError: typeof import('./duty-list-service').DutyListValidationError;
+let createDutyList: typeof import('./duty-list-service').createDutyList;
 
 beforeAll(async () => {
 	migrate(base, { migrationsFolder: MIGRATIONS_FOLDER });
-	({ applyDutyList, DutyListAlreadyAppliedError, DutyListValidationError } =
+	({ applyDutyList, createDutyList, DutyListAlreadyAppliedError, DutyListValidationError } =
 		await import('./duty-list-service'));
 }, 30_000);
 
@@ -65,7 +66,8 @@ beforeEach(() => {
 		'production_slot',
 		'production',
 		'event_listing',
-		'reservation'
+		'reservation',
+		'project'
 	]) {
 		sqlite.exec(`DELETE FROM ${t}`);
 	}
@@ -419,5 +421,136 @@ describe('applyDutyList — reservation subject', () => {
 		await expect(
 			applyDutyList('dl-res', { kind: 'reservation', id: 'gone' }, null)
 		).rejects.toThrow(/no longer exists/i);
+	});
+});
+
+describe('applyDutyList — project subject', () => {
+	/** Week one of a renovation, which is a date and not a show. */
+	const PROJECT_START = Math.floor(new Date('2026-11-02T17:00:00Z').getTime() / 1000);
+
+	beforeEach(() => {
+		sqlite.exec(
+			`INSERT INTO project (id, name, starts_at) VALUES ('proj-1','Live room refresh', ${PROJECT_START})`
+		);
+		sqlite.exec(`INSERT INTO project (id, name) VALUES ('proj-ongoing','Ongoing upkeep')`);
+		sqlite.exec(
+			`INSERT INTO duty_list (id, name, anchor, subject)
+			 VALUES ('dl-proj','Renovation','project_start','project')`
+		);
+	});
+
+	function projItem(id: string, cols: string, vals: string) {
+		sqlite.exec(
+			`INSERT INTO duty_list_item (id, duty_list_id, volunteer_role_id, ${cols})
+			 VALUES ('${id}','dl-proj','role-1', ${vals})`
+		);
+	}
+
+	it('measures offsets from the project start, and carries project_id alone', async () => {
+		projItem('i1', 'offset_minutes, duration_minutes', '0, 240');
+		projItem('i2', 'offset_minutes, duration_minutes', '10080, 240');
+
+		const result = await applyDutyList('dl-proj', { kind: 'project', id: 'proj-1' }, 'u1');
+		expect(result.workOrderIds).toHaveLength(2);
+
+		const rows = sqlite
+			.prepare(
+				`SELECT starts_at, project_id, event_id, reservation_id FROM work_order ORDER BY starts_at`
+			)
+			.all() as {
+			starts_at: number;
+			project_id: string | null;
+			event_id: string | null;
+			reservation_id: string | null;
+		}[];
+		expect(rows.map((r) => r.starts_at)).toEqual([PROJECT_START, PROJECT_START + 10080 * 60]);
+		for (const r of rows) {
+			expect(r.project_id).toBe('proj-1');
+			expect(r.event_id).toBeNull();
+			expect(r.reservation_id).toBeNull();
+		}
+	});
+
+	it('refuses a project with no start date, by name', async () => {
+		projItem('i1', 'offset_minutes, duration_minutes', '0, 240');
+
+		await expect(
+			applyDutyList('dl-proj', { kind: 'project', id: 'proj-ongoing' }, 'u1')
+		).rejects.toThrow(/no start date/i);
+		expect(shifts()).toHaveLength(0);
+	});
+
+	it('refuses a second apply per project', async () => {
+		projItem('i1', 'due_offset_minutes', '1440');
+
+		await applyDutyList('dl-proj', { kind: 'project', id: 'proj-1' }, 'u1');
+		await expect(applyDutyList('dl-proj', { kind: 'project', id: 'proj-1' }, 'u1')).rejects.toThrow(
+			DutyListAlreadyAppliedError
+		);
+		expect(shifts()).toHaveLength(1);
+	});
+
+	it('refuses an event list on a project, and a project list on an event', async () => {
+		addItem('i1', 'offset_minutes, duration_minutes', '-180, 120');
+		projItem('i2', 'offset_minutes, duration_minutes', '0, 240');
+
+		await expect(applyDutyList('dl-1', { kind: 'project', id: 'proj-1' }, 'u1')).rejects.toThrow(
+			DutyListValidationError
+		);
+		await expect(applyDutyList('dl-proj', { kind: 'event', id: 'evt-1' }, 'u1')).rejects.toThrow(
+			DutyListValidationError
+		);
+		expect(shifts()).toHaveLength(0);
+	});
+
+	it('refuses a project that no longer exists', async () => {
+		projItem('i1', 'offset_minutes, duration_minutes', '0, 240');
+
+		await expect(applyDutyList('dl-proj', { kind: 'project', id: 'gone' }, 'u1')).rejects.toThrow(
+			/no longer exists/i
+		);
+	});
+
+	it('saves only the project start anchor for a project, and never for a show or booking', async () => {
+		await expect(
+			createDutyList({
+				name: 'P ok',
+				anchor: 'project_start',
+				subject: 'project',
+				createdByUserId: 'u1'
+			})
+		).resolves.toBeTruthy();
+		await expect(
+			createDutyList({
+				name: 'P doors',
+				anchor: 'doors',
+				subject: 'project',
+				createdByUserId: 'u1'
+			})
+		).rejects.toThrow(DutyListValidationError);
+		await expect(
+			createDutyList({
+				name: 'P start',
+				anchor: 'start',
+				subject: 'project',
+				createdByUserId: 'u1'
+			})
+		).rejects.toThrow(DutyListValidationError);
+		await expect(
+			createDutyList({
+				name: 'E ps',
+				anchor: 'project_start',
+				subject: 'event',
+				createdByUserId: 'u1'
+			})
+		).rejects.toThrow(DutyListValidationError);
+		await expect(
+			createDutyList({
+				name: 'R ps',
+				anchor: 'project_start',
+				subject: 'reservation',
+				createdByUserId: 'u1'
+			})
+		).rejects.toThrow(DutyListValidationError);
 	});
 });

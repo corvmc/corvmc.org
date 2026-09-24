@@ -13,6 +13,7 @@ import {
 import { eventListing } from '$lib/server/db/schema/event';
 import { production } from '$lib/server/db/schema/production';
 import { reservation } from '$lib/server/db/schema/reservation';
+import { project } from '$lib/server/db/schema/project';
 import {
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_MAX_MINUTES,
@@ -30,8 +31,8 @@ import { chunk, chunkSize } from '$lib/server/utils/chunk';
  *
  * Applying one writes ordinary `work_order` rows carrying `dutyListId` for
  * provenance and nothing else — editing a list afterwards must not reach into
- * work people have already claimed. The subject is a show or a rehearsal
- * booking: both are a window, which is all an offset needs, so they share an apply.
+ * work people have already claimed. The subject is a show, a rehearsal booking
+ * or a project: each has a time to offset from, which is all an apply needs.
  */
 
 // ---------------------------------------------------------------------------
@@ -478,7 +479,7 @@ export interface ApplyDutyListResult {
  * What a duty list is stamped onto. A union rather than two loose ids, so a
  * caller cannot hand an event id to the reservation branch.
  */
-export type DutySubject = { kind: 'event'; id: string } | { kind: 'reservation'; id: string };
+export type DutySubject = { kind: DutyListSubject; id: string };
 
 /** Both subjects, in the only shape an offset actually needs. */
 interface TimedSubject {
@@ -495,6 +496,17 @@ interface TimedSubject {
 	loadOutBy: Date | null;
 	hasProduction: boolean;
 }
+
+/** Every show-only time, absent. */
+const emptyClock = {
+	endsAt: null,
+	doorsAt: null,
+	loadInAt: null,
+	firstSetAt: null,
+	curfewAt: null,
+	loadOutBy: null,
+	hasProduction: false
+} as const;
 
 async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
 	if (subject.kind === 'event') {
@@ -532,6 +544,23 @@ async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
 			: null;
 	}
 
+	if (subject.kind === 'project') {
+		const [row] = await db
+			.select({ id: project.id, startsAt: project.startsAt })
+			.from(project)
+			.where(eq(project.id, subject.id))
+			.limit(1);
+		if (!row) return null;
+		// Ongoing work has no start, and there is nothing honest to fall back to.
+		if (!row.startsAt) {
+			throw new DutyListValidationError(
+				'This project has no start date — set one before applying a duty list.',
+				'projectId'
+			);
+		}
+		return { ...emptyClock, kind: 'project', id: row.id, startsAt: row.startsAt };
+	}
+
 	const [row] = await db
 		.select({
 			id: reservation.id,
@@ -564,6 +593,19 @@ async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
  * "before the booking" and read as correct everywhere. Refuse it at save time.
  */
 function assertAnchorFitsSubject(anchor: DutyListAnchor, subject: DutyListSubject): void {
+	if (subject === 'project') {
+		if (anchor === 'project_start') return;
+		throw new DutyListValidationError(
+			'A project has only a start date — anchor this list to the project start.',
+			'anchor'
+		);
+	}
+	if (anchor === 'project_start') {
+		throw new DutyListValidationError(
+			`${dutyListSubjectLabels[subject]} is not a project — anchor this list to one of its own times.`,
+			'anchor'
+		);
+	}
 	if (subject === 'event') return;
 
 	if (anchor === 'doors') {
@@ -635,8 +677,8 @@ export async function applyDutyList(
 	const subj = await loadSubject(subject);
 	if (!subj) {
 		throw new DutyListValidationError(
-			`That ${subject.kind === 'event' ? 'event' : 'booking'} no longer exists.`,
-			subject.kind === 'event' ? 'eventId' : 'reservationId'
+			`That ${subjectNoun[subject.kind]} no longer exists.`,
+			`${subject.kind}Id`
 		);
 	}
 
@@ -647,7 +689,11 @@ export async function applyDutyList(
 	// domain event lands here and is refused by name, so the machinery that stops
 	// a coordinator double-clicking Apply is the machinery that stops a
 	// re-delivered event doubling somebody's orientation.
-	const anchorColumn = subject.kind === 'event' ? workOrder.eventId : workOrder.reservationId;
+	const anchorColumn = {
+		event: workOrder.eventId,
+		reservation: workOrder.reservationId,
+		project: workOrder.projectId
+	}[subject.kind];
 	const [{ existing }] = await db
 		.select({ existing: count() })
 		.from(workOrder)
@@ -679,6 +725,7 @@ export async function applyDutyList(
 			// stamps out one subject's worth of work.
 			eventId: subject.kind === 'event' ? subject.id : null,
 			reservationId: subject.kind === 'reservation' ? subject.id : null,
+			projectId: subject.kind === 'project' ? subject.id : null,
 			startsAt,
 			endsAt: scheduled ? addMinutes(startsAt!, item.durationMinutes!) : null,
 			dueAt: item.dueOffsetMinutes !== null ? addMinutes(anchor, item.dueOffsetMinutes) : null,
@@ -712,29 +759,34 @@ export async function applyDutyList(
 	return { workOrderIds: shiftRows.map((r) => r.id!), taskCount: taskRows.length };
 }
 
+const subjectNoun: Record<DutyListSubject, string> = {
+	event: 'event',
+	reservation: 'booking',
+	project: 'project'
+};
+
 function resolveAnchor(anchor: DutyListAnchor, subj: TimedSubject): Date {
+	// Save-time validation guards the pair already; this catches a row that went
+	// round the service, such as a hand-written seed.
+	assertAnchorFitsSubject(anchor, subj.kind);
 	switch (anchor) {
+		case 'project_start':
+			return subj.startsAt;
 		case 'doors':
 			// Mirrors the production page's shift modal, which prefills from
 			// `doorsAt ?? startsAt` for the same reason: not every show sets doors.
-			// `assertAnchorFitsSubject` has already refused a non-event subject, so
-			// the fallback can never stand in for a doors time that does not exist
-			// as a concept.
-			assertAnchorFitsSubject(anchor, subj.kind);
+			// A non-event subject was refused above, so the fallback never stands in
+			// for a doors time that does not exist as a concept.
 			return subj.doorsAt ?? subj.startsAt;
 		case 'start':
 			return subj.startsAt;
 		case 'load_in':
-			assertAnchorFitsSubject(anchor, subj.kind);
 			return productionTime(subj, anchor, subj.loadInAt);
 		case 'first_set':
-			assertAnchorFitsSubject(anchor, subj.kind);
 			return productionTime(subj, anchor, subj.firstSetAt);
 		case 'curfew':
-			assertAnchorFitsSubject(anchor, subj.kind);
 			return productionTime(subj, anchor, subj.curfewAt);
 		case 'load_out':
-			assertAnchorFitsSubject(anchor, subj.kind);
 			return productionTime(subj, anchor, subj.loadOutBy);
 		case 'end':
 			// Only reachable for an event: `reservation.ends_at` is NOT NULL.

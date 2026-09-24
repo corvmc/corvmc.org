@@ -1198,7 +1198,7 @@ async function venuePickerOptions() {
 
 /** Active duty lists that actually have items on them — the apply picker. */
 async function listApplicableDutyLists() {
-	const lists = await listDutyLists();
+	const lists = await listDutyLists({ subject: 'event' });
 	return lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
 }
 

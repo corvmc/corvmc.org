@@ -1094,7 +1094,8 @@ export const dutyListAnchors = [
 	'load_in',
 	'first_set',
 	'curfew',
-	'load_out'
+	'load_out',
+	'project_start'
 ] as const;
 export type DutyListAnchor = (typeof dutyListAnchors)[number];
 
@@ -1115,7 +1116,8 @@ export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
 	load_in: 'Load-in',
 	first_set: 'First set',
 	curfew: 'Curfew',
-	load_out: 'Load-out'
+	load_out: 'Load-out',
+	project_start: 'Project start'
 };
 
 /**
@@ -1124,14 +1126,16 @@ export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
  * The anchor enum does not need a member per subject: `start` and `end` already
  * resolve for both, because `reservation.starts_at` and `ends_at` are NOT NULL.
  * Only `doors` is show-shaped, so the illegal combination is the *pair*
- * `(reservation, doors)` — validated in the service, not in SQL.
+ * `(reservation, doors)` — validated in the service, not in SQL. A project has
+ * one date and no window, so it pairs with `project_start` and nothing else.
  */
-export const dutyListSubjects = ['event', 'reservation'] as const;
+export const dutyListSubjects = ['event', 'reservation', 'project'] as const;
 export type DutyListSubject = (typeof dutyListSubjects)[number];
 
 export const dutyListSubjectLabels: Record<DutyListSubject, string> = {
 	event: 'An event',
-	reservation: 'A rehearsal booking'
+	reservation: 'A rehearsal booking',
+	project: 'A project'
 };
 
 /**

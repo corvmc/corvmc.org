@@ -47,7 +47,7 @@
 				label="Applies to"
 				type="select"
 				options={subjectOptions}
-				description="What this list gets stamped onto. A booking has no doors time, so anchor those to the start or the end."
+				description="What this list gets stamped onto. A booking has no doors time, so anchor those to the start or the end. A project anchors to its start date."
 			/>
 			<FormField
 				name="anchor"

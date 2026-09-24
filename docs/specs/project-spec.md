@@ -248,6 +248,10 @@ the rendered deal memo (document generation, separable from the numbers).
 more `dutyListAnchors` value, not a new model**, since `duty_list_item` already carries
 both a window and a `dueOffsetMinutes` deadline.
 
+✅ Built (#1418): `project` is a third `dutyListSubjects` value and `project_start` its only
+anchor, validated as a pair in `duty-list-service.ts`. Apply is on `/staff/projects/[id]`,
+refuses a project with no start date, and stamps work orders carrying `projectId`.
+
 Separately, recurring facility work needs a shape the app does not have. The decision
 rule, now three-way:
 
