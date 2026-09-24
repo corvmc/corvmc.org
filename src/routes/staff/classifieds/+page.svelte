@@ -12,7 +12,7 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import { relativeDay } from '$lib/utils/format';
 	import {
-		classifiedKindLabels,
+		classifiedKindLabel,
 		classifiedCategoryLabels,
 		classifiedVisibilityLabels,
 		type ClassifiedVisibility
@@ -89,7 +89,7 @@
 						<td class="cell-primary">
 							<EntityIdentity ref={r.ref}>
 								{#snippet subtitle()}
-									{classifiedKindLabels[r.kind]} · {classifiedCategoryLabels[r.category]}
+									{classifiedKindLabel(r.kind, r.category)} · {classifiedCategoryLabels[r.category]}
 								{/snippet}
 							</EntityIdentity>
 						</td>

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { ClassifiedKind, ClassifiedCategory } from '$lib/config';
 
 /**
  * Classifieds, against a real SQLite. The rules worth pinning are `WHERE`
@@ -71,8 +72,8 @@ beforeEach(async () => {
 
 const base: {
 	authorUserId: string;
-	kind: 'wanted' | 'offered';
-	category: 'musician' | 'jam' | 'service' | 'other';
+	kind: ClassifiedKind;
+	category: ClassifiedCategory;
 	title: string;
 	body: string;
 	tags: { kind: 'instrument' | 'genre' | 'skill'; value: string }[];
@@ -168,6 +169,34 @@ describe('the board', () => {
 		expect(await board({ kind: 'offered' })).toEqual([jam.id]);
 		expect(await board({ category: 'musician' })).toEqual([drums.id]);
 		expect(await board({ tag: { kind: 'instrument', value: 'Drums' } })).toEqual([drums.id]);
+	});
+});
+
+describe('gear posts', () => {
+	it('lists gear for sale, wanted or for trade under the gear category', async () => {
+		const sale = await post({ kind: 'offered', category: 'gear', title: 'Fender Twin' });
+		const trade = await post({ kind: 'trade', category: 'gear', title: 'Swap: fuzz for delay' });
+		await post();
+
+		expect((await board({ category: 'gear' })).sort()).toEqual([sale.id, trade.id].sort());
+		expect(await board({ kind: 'trade' })).toEqual([trade.id]);
+	});
+
+	it('refuses a trade outside the gear category, on create and on edit', async () => {
+		await expect(post({ kind: 'trade', category: 'service' })).rejects.toThrow(
+			svc.ClassifiedValidationError
+		);
+		const row = await post({ kind: 'trade', category: 'gear' });
+		await expect(
+			svc.updatePost(row.id, AUTHOR, { ...base, kind: 'trade', category: 'musician' })
+		).rejects.toThrow(svc.ClassifiedValidationError);
+	});
+
+	it('goes through the same report path as any other post', async () => {
+		const row = await post({ kind: 'offered', category: 'gear' });
+		await svc.withholdForReview(row.id);
+		expect((await svc.getPostForModeration(row.id))?.visibility).toBe('under_review');
+		expect(await board({ category: 'gear' })).toEqual([]);
 	});
 });
 

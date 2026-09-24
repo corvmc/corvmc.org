@@ -11,6 +11,7 @@
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
 	import { rowLink } from '$lib/actions/row-link';
 	import { formatDate, relativeDay } from '$lib/utils/format';
@@ -19,6 +20,8 @@
 		classifiedCategories,
 		classifiedTagKinds,
 		classifiedKindLabels,
+		classifiedKindLabel,
+		CLASSIFIED_GEAR_DISCLAIMER,
 		classifiedCategoryLabels,
 		type ClassifiedKind,
 		type ClassifiedCategory,
@@ -102,14 +105,14 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Wanted or offered"
+			aria-label="Post type"
 			value={kindFilter}
 			onchange={(e: Event) => {
 				kindFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">Wanted and offered</option>
+			<option value="">Any type</option>
 			{#each classifiedKinds as k (k)}
 				<option value={k}>{classifiedKindLabels[k]}</option>
 			{/each}
@@ -133,6 +136,10 @@
 		{/if}
 	</FilterBar>
 
+	{#if categoryFilter === 'gear'}
+		<Alert type="warning">{CLASSIFIED_GEAR_DISCLAIMER}</Alert>
+	{/if}
+
 	<DataList
 		{result}
 		empty={tab === 'mine' ? 'You have not posted anything yet' : 'Nothing on the board right now'}
@@ -153,7 +160,7 @@
 						<td class="cell-primary">
 							<EntityIdentity ref={r.ref}>
 								{#snippet subtitle()}
-									{classifiedKindLabels[r.kind]} · {classifiedCategoryLabels[r.category]}
+									{classifiedKindLabel(r.kind, r.category)} · {classifiedCategoryLabels[r.category]}
 								{/snippet}
 							</EntityIdentity>
 						</td>

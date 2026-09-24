@@ -13,7 +13,8 @@ import {
 	positionsGranting,
 	hasCapability,
 	type Capability,
-	type Resource
+	type Resource,
+	classifiedKindLabel
 } from './config';
 
 // Every capability, as the flat "resource.action" strings a guard names.
@@ -166,5 +167,13 @@ describe('committeeApplicationQuestions', () => {
 		expect(Object.keys(committeeApplicationStatusLabels).sort()).toEqual(
 			[...committeeApplicationStatuses].sort()
 		);
+	});
+});
+
+describe('classifiedKindLabel', () => {
+	it('reads an offered gear post as for sale, and leaves other categories alone', () => {
+		expect(classifiedKindLabel('offered', 'gear')).toBe('For sale');
+		expect(classifiedKindLabel('offered', 'service')).toBe('Offered');
+		expect(classifiedKindLabel('trade', 'gear')).toBe('Trade');
 	});
 });
