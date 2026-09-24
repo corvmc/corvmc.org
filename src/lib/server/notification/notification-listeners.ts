@@ -3,6 +3,7 @@ import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE, renewalKindLabels } fro
 import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
 import { fanOutAnnouncement, fanOutGroupRoom } from '$lib/server/group/announcement-fanout';
+import { fanOutBallotNotice } from '$lib/server/ballot/ballot-fanout';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '$lib/server/sentry';
@@ -468,6 +469,14 @@ export function registerAllNotificationListeners(): void {
 	// delegates to a module that batches. See `announcement-fanout.ts`.
 	domainEvents.on('announcement.published', async ({ data: event }) => {
 		await fanOutAnnouncement(event, siteUrl);
+	});
+
+	// --- Ballots (fan-out): the roll when one opens, everyone when one is certified ---
+	domainEvents.on('ballot.opened', async ({ data: event }) => {
+		await fanOutBallotNotice('ballot_opened', event, siteUrl);
+	});
+	domainEvents.on('ballot.certified', async ({ data: event }) => {
+		await fanOutBallotNotice('ballot_result', event, siteUrl);
 	});
 
 	// --- Group invite (non-user) ---

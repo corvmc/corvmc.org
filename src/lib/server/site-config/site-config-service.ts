@@ -68,6 +68,11 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// Zero disables the check rather than failing every rider.
 	'venue.consoleChannels': 16,
 
+	// Days an account must exist before a member-wide ballot opens for it to be
+	// on the roll (#1451). Membership is free, so this is what stops a vote
+	// being won by accounts registered the week it opened.
+	'ballot.memberOfRecordDays': 60,
+
 	// Only keys something reads live here. The org's name, short name, contact
 	// email and timezone were staff-editable and read by nothing: `$lib/config`
 	// holds SITE_NAME and DEFAULT_TIMEZONE, and the staff contact address is the

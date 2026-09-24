@@ -14,7 +14,8 @@
 		IconHeartHandshake,
 		IconUsersGroup,
 		IconBulb,
-		IconSpeakerphone
+		IconSpeakerphone,
+		IconCheckbox
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/layout/AppShell.svelte';
 	import Nav from '$lib/components/layout/Nav';
@@ -68,6 +69,7 @@
 		volunteer: IconHeartHandshake,
 		'volunteer-committees': IconUsersGroup,
 		suggestions: IconBulb,
+		ballots: IconCheckbox,
 		help: IconHelp
 	};
 

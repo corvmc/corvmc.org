@@ -6,6 +6,7 @@
 	import Nav from '$lib/components/layout/Nav';
 	import {
 		IconDisc,
+		IconCheckbox,
 		IconMapPinPlus,
 		IconSchool,
 		IconBulb,
@@ -93,6 +94,7 @@
 		music: IconDisc,
 		groups: IconUsersGroup,
 		committees: IconClipboardList,
+		ballots: IconCheckbox,
 		volunteer: IconHeartHandshake,
 		'volunteer-schedule': IconCalendarWeek,
 		'volunteer-people': IconUsersGroup,
