@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { getMemberStandings } from '$lib/remote/standing.remote';
+	import { getMemberStandings, restoreMemberStanding } from '$lib/remote/standing.remote';
+	import Action from '$lib/components/ui/Action.svelte';
 	import { getFlagsAgainstUser, getFlagsByUser } from '$lib/remote/flags.remote';
 	import { RelatedList } from '$lib/components/ui/entity';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -28,10 +29,9 @@
 </script>
 
 <!--
-	Read-only, and deliberately so. A standing is applied by the system when a
-	report is upheld (`flag-service` calls `restrictStanding`), and it is lifted
-	through the appeal workflow — setting one by hand from a member's record is a
-	non-goal, so this panel reports state rather than offering a switch.
+	A standing is applied by the system when a report is upheld (`flag-service`
+	calls `restrictStanding`); setting one by hand is a non-goal. Lifting one is
+	the only write here, one scope at a time.
 
 	The two scopes render only when they are bad. A "standing: fine" card on every
 	member would be noise, and the point of these is that they appear when
@@ -65,6 +65,22 @@
 					</a>
 				</p>
 			{/if}
+			<div class="mt-2">
+				<Action
+					action={restoreMemberStanding.for(scope)}
+					label="Restore"
+					variant="ghost"
+					size="sm"
+					confirm="Stop holding this member's posts here for review?"
+					successToast="Standing restored"
+				>
+					{#snippet form()}
+						{@const f = restoreMemberStanding.for(scope).fields}
+						<input {...f.userId.as('hidden', id)} />
+						<input {...f.scope.as('hidden', scope)} />
+					{/snippet}
+				</Action>
+			</div>
 		</InfoCard>
 	{/each}
 {/await}

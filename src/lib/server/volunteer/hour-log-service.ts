@@ -1,21 +1,9 @@
 import { db } from '$lib/server/db';
+import { containsLiteral } from '$lib/server/db/like';
 import { volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
 import { group, groupMember } from '$lib/server/db/schema/group';
-import {
-	eq,
-	and,
-	or,
-	inArray,
-	isNull,
-	like,
-	gte,
-	lte,
-	desc,
-	count,
-	sql,
-	type SQL
-} from 'drizzle-orm';
+import { eq, and, or, inArray, isNull, gte, lte, desc, count, sql, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { memberRefColumns, toMemberRef, type MemberRefRow } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
@@ -568,10 +556,6 @@ export interface HourLogRow {
 	createdAt: Date;
 }
 
-function escapeLike(input: string): string {
-	return input.replace(/[%_\\]/g, (ch) => `\\${ch}`);
-}
-
 function buildFilters(filters: HourLogFilters): SQL[] {
 	const conditions: SQL[] = [];
 
@@ -587,8 +571,9 @@ function buildFilters(filters: HourLogFilters): SQL[] {
 		conditions.push(lte(volunteerHourLog.workedOn, buildDateInTz(filters.to, '23:59', TZ)));
 	}
 	if (filters.search) {
-		const escaped = escapeLike(filters.search);
-		conditions.push(or(like(user.name, `%${escaped}%`), like(user.email, `%${escaped}%`))!);
+		conditions.push(
+			or(containsLiteral(user.name, filters.search), containsLiteral(user.email, filters.search))!
+		);
 	}
 
 	return conditions;

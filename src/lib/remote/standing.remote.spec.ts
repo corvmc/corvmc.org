@@ -84,16 +84,6 @@ const cases: [string, () => Promise<unknown>][] = [
 	[
 		'restoreMemberStanding',
 		() => remote.restoreMemberStanding({ userId: 'user-9', scope: 'suggestion' })
-	],
-	[
-		'setMemberStanding',
-		() =>
-			remote.setMemberStanding({
-				userId: 'user-9',
-				scope: 'messaging',
-				status: 'disabled',
-				reason: 'Continued messaging after being asked to stop'
-			})
 	]
 ];
 
@@ -131,33 +121,5 @@ describe('staff', () => {
 			scope: 'suggestion',
 			staffId: 'staff-1'
 		});
-	});
-
-	// The acting staffer comes from the guard, never from the request body —
-	// otherwise the audit trail is whatever the caller typed.
-	it('attributes the change to the signed-in staffer', async () => {
-		await remote.setMemberStanding({
-			userId: 'user-9',
-			scope: 'messaging',
-			status: 'disabled',
-			reason: 'Continued messaging after being asked to stop'
-		});
-		expect(svc.setStanding).toHaveBeenCalledWith({
-			userId: 'user-9',
-			scope: 'messaging',
-			status: 'disabled',
-			reason: 'Continued messaging after being asked to stop',
-			staffId: 'staff-1'
-		});
-	});
-
-	it('normalizes an empty reason to null rather than storing a blank note', async () => {
-		await remote.setMemberStanding({
-			userId: 'user-9',
-			scope: 'messaging',
-			status: 'disabled',
-			reason: ''
-		});
-		expect(svc.setStanding).toHaveBeenCalledWith(expect.objectContaining({ reason: null }));
 	});
 });

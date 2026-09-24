@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db';
+import { containsLiteral } from '$lib/server/db/like';
 import { paymentCache } from '$lib/server/db/schema/finance';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, desc, and, gte, lte, like, or, count, type SQL } from 'drizzle-orm';
+import { eq, desc, and, gte, lte, or, count, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { memberRefColumns, toMemberRef, type MemberRefRow } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
@@ -58,17 +59,13 @@ const baseSelect = () => ({
 	createdAt: paymentCache.createdAt
 });
 
-/** Escape LIKE/ILIKE wildcards so user input is treated literally. */
-function escapeLike(input: string): string {
-	return input.replace(/[%_\\]/g, (ch) => `\\${ch}`);
-}
-
 function buildFilters(filters: PaymentCacheFilters): SQL[] {
 	const conditions: SQL[] = [];
 
 	if (filters.search) {
-		const escaped = escapeLike(filters.search);
-		conditions.push(or(like(user.name, `%${escaped}%`), like(user.email, `%${escaped}%`))!);
+		conditions.push(
+			or(containsLiteral(user.name, filters.search), containsLiteral(user.email, filters.search))!
+		);
 	}
 
 	if (filters.method) {

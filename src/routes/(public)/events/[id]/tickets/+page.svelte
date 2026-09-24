@@ -147,6 +147,13 @@
 						<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
 					{/if}
 
+					{#if data.soldByBand}
+						<!-- #1203: a band's own gig. Its share is paid to it at the sale. -->
+						<p class="text-muted text-sm">
+							The band sells this gig through the collective. Their share goes straight to them.
+						</p>
+					{/if}
+
 					<!-- The amount, the split bar and the submit button all come from
 					     here: only this component knows what the card is charged, and
 					     the button's label is that number. -->

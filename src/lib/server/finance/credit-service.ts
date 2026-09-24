@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db';
+import { containsLiteral } from '$lib/server/db/like';
 import { user } from '$lib/server/db/schema/authentication';
 import { creditTransaction } from '$lib/server/db/schema/finance';
-import { eq, and, sql, gt, gte, lte, desc, like, or, count, type SQL } from 'drizzle-orm';
+import { eq, and, sql, gt, gte, lte, desc, or, count, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
@@ -343,10 +344,6 @@ export interface CreditTransactionFilters {
 	to?: string;
 }
 
-function escapeLike(input: string): string {
-	return input.replace(/[%_\\]/g, (ch) => `\\${ch}`);
-}
-
 function buildTransactionFilters(filters: CreditTransactionFilters): SQL[] {
 	const conditions: SQL[] = [];
 
@@ -355,8 +352,9 @@ function buildTransactionFilters(filters: CreditTransactionFilters): SQL[] {
 	}
 
 	if (filters.search) {
-		const escaped = escapeLike(filters.search);
-		conditions.push(or(like(user.name, `%${escaped}%`), like(user.email, `%${escaped}%`))!);
+		conditions.push(
+			or(containsLiteral(user.name, filters.search), containsLiteral(user.email, filters.search))!
+		);
 	}
 
 	if (filters.creditType) {
