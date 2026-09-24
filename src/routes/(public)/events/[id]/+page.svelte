@@ -19,6 +19,7 @@
 	import EventPhotos from './EventPhotos.svelte';
 	import RecapUpload from './RecapUpload.svelte';
 	import MarketVendors from './MarketVendors.svelte';
+	import SponsorCredit from './SponsorCredit.svelte';
 
 	let data = $derived(await getPublicEventDetail(page.params.id!));
 
@@ -374,6 +375,8 @@
 						{/if}
 					{/if}
 				</div>
+
+				<SponsorCredit sponsors={data.sponsors} />
 			</div>
 		</div>
 

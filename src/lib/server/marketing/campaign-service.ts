@@ -9,6 +9,8 @@ import {
 import { eq, and, sql, isNull, lte, inArray } from 'drizzle-orm';
 import { isSystemAudienceKey, resolveSystemAudienceRecipients } from './system-audiences';
 import { renderCampaignPreview, renderCampaignForSend } from './campaign-render';
+import { creditsForEvent } from '$lib/server/sponsor/credit-service';
+import { withSponsorCredit } from '$lib/utils/sponsor-credit';
 import { signUnsubscribeToken } from './unsubscribe';
 import { sendBroadcastBatch, type BroadcastMessage } from '$lib/server/notification/email';
 import { env } from '$env/dynamic/private';
@@ -71,6 +73,15 @@ export function deriveCampaignStatus(
 // CRUD
 // ---------------------------------------------------------------------------
 
+/**
+ * The body with a credit for the show's sponsors (#583), read when it renders:
+ * a placement added after drafting still reaches the send.
+ */
+async function credited(markdown: string, eventId: string | null | undefined) {
+	if (!eventId) return markdown;
+	return withSponsorCredit(markdown, await creditsForEvent(eventId, 'campaign'));
+}
+
 export async function createCampaign(data: {
 	subject: string;
 	markdownBody: string;
@@ -85,7 +96,7 @@ export async function createCampaign(data: {
 	if (data.audienceIds.length > 20)
 		throw new CampaignValidationError('Too many audiences (max 20)');
 
-	const htmlBody = renderCampaignPreview(data.markdownBody);
+	const htmlBody = renderCampaignPreview(await credited(data.markdownBody, data.eventId));
 
 	const [created] = await db
 		.insert(campaign)
@@ -135,11 +146,16 @@ export async function updateCampaign(
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (data.subject !== undefined) updates.subject = data.subject;
-	if (data.markdownBody !== undefined) {
-		updates.markdownBody = data.markdownBody;
-		updates.htmlBody = renderCampaignPreview(data.markdownBody);
-	}
+	if (data.markdownBody !== undefined) updates.markdownBody = data.markdownBody;
 	if (data.eventId !== undefined) updates.eventId = data.eventId;
+	if (data.markdownBody !== undefined || data.eventId !== undefined) {
+		updates.htmlBody = renderCampaignPreview(
+			await credited(
+				data.markdownBody ?? existing.markdownBody,
+				data.eventId !== undefined ? data.eventId : existing.eventId
+			)
+		);
+	}
 
 	const [updated] = await db.update(campaign).set(updates).where(eq(campaign.id, id)).returning();
 
@@ -396,10 +412,11 @@ export async function executeSend(campaignId: string): Promise<number> {
 	// 8058 List-Unsubscribe header have to point at the environment actually
 	// sending the mail, or a staging send hands recipients production links.
 	const baseUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
+	const markdown = await credited(row.markdownBody, row.eventId);
 
 	const messages: BroadcastMessage[] = recipients.map((r) => {
 		const unsubscribeUrl = `${baseUrl}/unsubscribe/${signUnsubscribeToken(r.subscriberId, r.audienceId)}`;
-		const htmlBody = renderCampaignForSend(row.markdownBody, r.name, unsubscribeUrl);
+		const htmlBody = renderCampaignForSend(markdown, r.name, unsubscribeUrl);
 		return {
 			to: r.email,
 			subject: row.subject,
