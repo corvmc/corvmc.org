@@ -13,7 +13,8 @@ Open a member from **Staff → Users** to see and manage their account.
 
 ## What you can do
 
-- **Edit details** — Name, pronouns, and phone. (The sign-in email is read-only.)
+- **Edit details** — Name, pronouns, and phone. The sign-in email is not typed over here;
+  see below.
 - **Manage roles** — Assign or remove roles via the role selector.
 - **Adjust credits** — Change a member's free practice hours or equipment credits
   with the _Adjust credits_ action.
@@ -22,6 +23,17 @@ Open a member from **Staff → Users** to see and manage their account.
 
 You'll also see reference details: user ID, Stripe ID, join date, and deletion date
 if applicable.
+
+## Correct a member's email
+
+On the **Account** tab, the _Login email_ card has **Change email**. Enter the right
+address and we email a confirmation link to it. Nothing changes until the member clicks the
+link and presses **Confirm**. Then the new address becomes their login (their password stays
+the same), they are signed out everywhere, and the old address gets a notice.
+
+While the request is waiting, the card shows it with **Resend** (a fresh link; the old one
+stops working) and **Cancel request**. Links last 24 hours and work once. An address that
+already belongs to another account is refused.
 
 ## Related
 

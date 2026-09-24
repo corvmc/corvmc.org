@@ -54,7 +54,7 @@ is wired to this page.
 1. **Header strip** — name, pronouns, Deactivated badge, membership tier badge
    (Admin / Staff / Sustaining / Member), join date. At-a-glance identity.
 2. **Account Info** (existing) — the edit form. Unchanged apart from the email
-   change entry point (see `staff-email-change-spec.md`).
+   change entry point (see `staff-email-change-spec.md`, now a Login email card beside it).
 3. **Membership & subscription** _(new)_ — sustaining status, subscription
    status from `getMemberSubscription`, current period end, and the Stripe
    subscription id as a `CopyableId`. Empty state: "No membership subscription."

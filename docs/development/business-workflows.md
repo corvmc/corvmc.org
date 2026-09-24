@@ -1455,6 +1455,58 @@ the row.
   restricts on them too.
 - A website that is not http(s) is refused, since it is rendered as a public link.
 
+## 18. Staff email change
+
+Spec: [specs/shipped/staff-email-change-spec.md](../specs/shipped/staff-email-change-spec.md)
+
+### The story
+
+A member typed their address wrong at signup and cannot sign in. Staff open their record,
+**Account** tab, **Login email** card, and enter the right address. Nothing changes yet: a
+confirmation link goes to the new address, and the card shows the pending request with
+**Resend** and **Cancel request**. When the member clicks the link and presses **Confirm**, the
+address is swapped and marked verified, every session is signed out, and the old address gets
+a notice naming the new one, masked. The password is untouched.
+
+Staff never move the login on their own say-so. The address is the credential, and a panel
+that could set it directly could point any account at a mailbox staff control and reset the
+password from there.
+
+### Code path
+
+- Card: `src/routes/staff/users/[id]/EmailChangeCard.svelte`, mounted by `AccountPanel`.
+- Remotes: `src/lib/remote/email-change.remote.ts`. `requestEmailChange` and
+  `cancelEmailChange` require `user.setEmail`; `getPendingEmailChange` requires `user.read` and
+  returns `canChange` so the card hides its buttons from viewers without it.
+- Service: `src/lib/server/user/email-change-service.ts`. `requestEmailChange` checks the
+  address is new and unused, spends one of five daily sends (`allowRateLimited`), replaces any
+  earlier request, and mails the link through the generic `notification` template.
+- Landing page: `src/routes/(public)/confirm-email/[token]/+page.svelte`.
+  `getEmailChangeRequest` only reads, so a mail client prefetching the link changes nothing;
+  `confirmEmailChange` is the POST that applies it.
+
+### Data touched
+
+- `verification`: one row per pending request, `identifier = email-change:{userId}`, `value` =
+  the new address, 24-hour `expires_at`. The link is an HMAC (`BETTER_AUTH_SECRET`) over
+  `{userId}:{row id}` and works only while that row lives, so Cancel and a newer request
+  both revoke it, and confirming deletes it.
+- `user.email`, `user.email_verified`; `session` rows for the member are deleted.
+- An unclaimed `subscriber` row at the new address is claimed, as on signup verification.
+- **Not touched:** the Stripe customer's email and any `subscriber` row already linked under
+  the old address.
+
+### Where it breaks
+
+- **"This link has expired or has already been used."** Also what a cancelled or superseded
+  request shows. Check the card for a newer pending request before resending.
+- **"That address now belongs to another account."** Someone took the address between the
+  request and the click. Merging two accounts is out of scope.
+- **The member still looks signed in for up to a minute** after confirming: `cookieCache`
+  trusts the signed cookie for 60s, as it does after deactivation.
+- **Resend refuses with "Too many confirmation emails".** Five sends per member per rolling
+  day, counted in KV.
+
 ## Cross-cutting patterns worth internalizing
 
 - **Everything money-related converges on two Stripe entry points:** `checkout()` in

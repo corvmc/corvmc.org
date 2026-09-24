@@ -1,4 +1,4 @@
-import { account, user } from '../../src/lib/server/db/schema/authentication';
+import { account, user, verification } from '../../src/lib/server/db/schema/authentication';
 import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { db } from './db';
 import { scryptHash } from './hash';
@@ -185,6 +185,16 @@ export async function seedDirectoryPersonas(roles: SeedRole[]) {
 	// Somebody the directory's skill filter finds without matching on anything else.
 	pendingTags.push({ subjectId: UNDECIDED.id, kind: 'skill', value: 'sound engineer' });
 	pendingTags.push({ subjectId: UNDECIDED.id, kind: 'skill', value: 'photographer' });
+
+	// A pending staff email change, so the Login email card's pending line and its
+	// Resend / Cancel buttons render. No link reaches the address; Resend mails one.
+	await db.insert(verification).values({
+		id: randomUUID(),
+		identifier: `email-change:${UNDECIDED.id}`,
+		value: 'kit.alvarez@corvallismusic.org',
+		expiresAt: new Date(Date.now() + 20 * 3600 * 1000),
+		createdAt: new Date(Date.now() - 4 * 3600 * 1000)
+	});
 
 	// The cast rides back out because these three are the natural senders and
 	// recipients of a direct message — one recruiting, one being recruited, one
