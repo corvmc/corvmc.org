@@ -29,7 +29,7 @@ export interface PaymentGateway {
 		sessions: Pick<Stripe['checkout']['sessions'], 'create' | 'retrieve' | 'list'>;
 	};
 	readonly coupons: Pick<Stripe['coupons'], 'create' | 'del'>;
-	readonly customers: Pick<Stripe['customers'], 'create'>;
+	readonly customers: Pick<Stripe['customers'], 'create' | 'update'>;
 	readonly invoices: Pick<Stripe['invoices'], 'list'>;
 	readonly paymentIntents: Pick<Stripe['paymentIntents'], 'retrieve'>;
 	readonly paymentMethods: Pick<Stripe['paymentMethods'], 'list' | 'detach' | 'update'>;

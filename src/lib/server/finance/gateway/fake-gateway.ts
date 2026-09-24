@@ -335,7 +335,21 @@ export function createFakeGateway(): PaymentGateway {
 				});
 				store.customers.set(customer.id, customer);
 				return respond(customer);
-			}
+			},
+			// A `cus_seed_…` id is a customer the seed says exists, so it updates
+			// rather than 404ing the way an id nothing minted does.
+			update: (async (id: string, params?: Stripe.CustomerUpdateParams) => {
+				const existing =
+					store.customers.get(id) ??
+					(id.startsWith('cus_seed') ? fakeCustomer({ id }) : notFound('customer', id));
+				const updated = {
+					...existing,
+					...(params?.email !== undefined && { email: params.email || null }),
+					...(params?.name !== undefined && { name: params.name || null })
+				};
+				store.customers.set(id, updated);
+				return respond(updated);
+			}) as PaymentGateway['customers']['update']
 		},
 
 		// Nothing seeds a balance transaction, so the fake reconciles a window to

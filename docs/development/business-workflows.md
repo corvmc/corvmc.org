@@ -1508,8 +1508,13 @@ password from there.
   both revoke it, and confirming deletes it.
 - `user.email`, `user.email_verified`; `session` rows for the member are deleted.
 - An unclaimed `subscriber` row at the new address is claimed, as on signup verification.
-- **Not touched:** the Stripe customer's email and any `subscriber` row already linked under
-  the old address.
+- The member's `subscriber` row under the old address moves to the new one, or merges into an
+  unclaimed row already there (audiences move across; an unsubscribe travels, a bounce does
+  not). A row another account holds is left alone.
+- The Stripe customer's email, via `customers.update`. Best-effort: a Stripe failure goes to
+  Sentry and the change still applies.
+- `audit_log`: `user.email_change_requested` (actor: the staffer) when proposed, and
+  `user.email_changed` (actor: the member, with both addresses) when applied.
 
 ### Where it breaks
 

@@ -1,5 +1,9 @@
 import { db } from '$lib/server/db';
-import { subscriber, type SuppressionReason } from '$lib/server/db/schema/marketing';
+import {
+	subscriber,
+	audienceMember,
+	type SuppressionReason
+} from '$lib/server/db/schema/marketing';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 
@@ -197,4 +201,68 @@ export async function linkSubscriberToExistingUser(
 		.where(and(eq(subscriber.id, subscriberId), isNull(subscriber.userId)));
 
 	return owner.id;
+}
+
+/**
+ * Carry a member's linked subscriber row from their old address to their new
+ * one after a confirmed email change. When a row already holds the new address
+ * (unclaimed, or claimed by this member) the two merge into it: audiences move
+ * across without duplicating, and an unsubscribe travels with the person while
+ * a bounce or complaint stays with the address it was about. A row another
+ * account holds is never touched.
+ */
+export async function moveLinkedSubscriberEmail(
+	userId: string,
+	fromEmail: string,
+	toEmail: string
+): Promise<'moved' | 'merged' | 'none'> {
+	const from = fromEmail.toLowerCase().trim();
+	const to = toEmail.toLowerCase().trim();
+
+	const [old] = await db
+		.select({ id: subscriber.id, suppressionReason: subscriber.suppressionReason })
+		.from(subscriber)
+		.where(and(eq(subscriber.email, from), eq(subscriber.userId, userId)))
+		.limit(1);
+	if (!old) return 'none';
+
+	const [target] = await db
+		.select({
+			id: subscriber.id,
+			userId: subscriber.userId,
+			suppressedAt: subscriber.suppressedAt
+		})
+		.from(subscriber)
+		.where(eq(subscriber.email, to))
+		.limit(1);
+
+	if (!target) {
+		await db.update(subscriber).set({ email: to }).where(eq(subscriber.id, old.id));
+		return 'moved';
+	}
+	if (target.userId && target.userId !== userId) return 'none';
+
+	const carryUnsubscribe = old.suppressionReason === 'unsubscribe' && !target.suppressedAt;
+	await db.batch([
+		db
+			.update(subscriber)
+			.set({
+				userId,
+				...(carryUnsubscribe
+					? { suppressedAt: new Date(), suppressionReason: 'unsubscribe' as const }
+					: {})
+			})
+			.where(eq(subscriber.id, target.id)),
+		db
+			.update(audienceMember)
+			.set({ subscriberId: target.id })
+			.where(
+				and(
+					eq(audienceMember.subscriberId, old.id),
+					sql`${audienceMember.audienceId} not in (select ${audienceMember.audienceId} from ${audienceMember} where ${audienceMember.subscriberId} = ${target.id})`
+				)
+			),
+		db.delete(subscriber).where(eq(subscriber.id, old.id))
+	]);
+	return 'merged';
 }

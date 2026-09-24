@@ -24,7 +24,7 @@ const PORT_SURFACE: ReadonlyArray<readonly [keyof PaymentGateway, readonly strin
 	['accountLinks', ['create']],
 	['accounts', ['create', 'retrieve', 'createLoginLink']],
 	['coupons', ['create', 'del']],
-	['customers', ['create']],
+	['customers', ['create', 'update']],
 	['invoices', ['list']],
 	['paymentIntents', ['retrieve']],
 	['paymentMethods', ['list', 'detach', 'update']],
@@ -321,6 +321,17 @@ describe('fake gateway behaviour', () => {
 
 		expect(customer.id).toMatch(/^cus_fake_/);
 		expect((await gateway.paymentMethods.list({ customer: customer.id })).data).toHaveLength(0);
+	});
+
+	it('updates a customer it minted, and 404s one nothing minted', async () => {
+		const customer = await gateway.customers.create({ email: 'old@example.test' });
+
+		const updated = await gateway.customers.update(customer.id, { email: 'new@example.test' });
+
+		expect(updated.email).toBe('new@example.test');
+		await expect(
+			gateway.customers.update('cus_nobody', { email: 'x@example.test' })
+		).rejects.toThrow(/No such customer/);
 	});
 
 	it('finds a session by its payment_intent, which is how refunds recover the breakdown', async () => {
