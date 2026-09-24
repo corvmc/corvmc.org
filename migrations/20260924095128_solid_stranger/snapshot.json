@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ee43463f-5d73-488a-b1bc-2b31ba008212",
+  "id": "eaf811d1-e7a0-4bf7-9a17-f3d07b70627d",
   "prevIds": [
-    "81dd9495-4421-48bd-885c-19f2532ab4c2"
+    "ee43463f-5d73-488a-b1bc-2b31ba008212"
   ],
   "ddl": [
     {
@@ -10842,6 +10842,36 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "radio_attested_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "radio_attested_by_user_id",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "radio_attestation_version",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "radio_excluded_at",
       "entityType": "columns",
       "table": "audio_release"
@@ -16273,6 +16303,21 @@
       "onDelete": "CASCADE",
       "nameExplicit": false,
       "name": "fk_audio_release_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "audio_release"
+    },
+    {
+      "columns": [
+        "radio_attested_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_audio_release_radio_attested_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "audio_release"
     },

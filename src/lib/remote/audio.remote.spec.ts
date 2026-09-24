@@ -48,6 +48,8 @@ const svc = {
 	getReleaseById: vi.fn(async () => ({ id: 'rel-1', groupId: BAND.id }) as unknown),
 	createRelease: vi.fn(async () => ({ id: 'rel-new' })),
 	updateRelease: vi.fn(async () => ({ id: 'rel-1' })),
+	setRadioOptIn: vi.fn(async () => ({ id: 'rel-1' })),
+	radioAttested: vi.fn(() => false),
 	publishRelease: vi.fn(async () => ({ id: 'rel-1' })),
 	unpublishRelease: vi.fn(async () => ({ id: 'rel-1' })),
 	deleteRelease: vi.fn(async () => 'deleted' as const),
@@ -168,6 +170,7 @@ async function rejectsWith(promise: Promise<unknown>, status: number, label?: st
 function noServiceWrites() {
 	expect(svc.createRelease).not.toHaveBeenCalled();
 	expect(svc.updateRelease).not.toHaveBeenCalled();
+	expect(svc.setRadioOptIn).not.toHaveBeenCalled();
 	expect(svc.publishRelease).not.toHaveBeenCalled();
 	expect(svc.unpublishRelease).not.toHaveBeenCalled();
 	expect(svc.deleteRelease).not.toHaveBeenCalled();
@@ -397,5 +400,30 @@ describe('audio remote — pricing', () => {
 			{ priceMinCents: number }
 		];
 		expect(patch.priceMinCents).toBe(0);
+	});
+});
+
+describe('audio remote — radio opt-in', () => {
+	it('hands the attestation and the caller to the service', async () => {
+		await remote.setRadioOptInForm({
+			slug: BAND.slug,
+			releaseId: 'rel-1',
+			radioOptIn: true,
+			attestNotPro: true
+		});
+		expect(svc.setRadioOptIn).toHaveBeenCalledWith('rel-1', {
+			optIn: true,
+			attestedNotPro: true,
+			userId: 'u-1'
+		});
+		expect(svc.updateRelease).not.toHaveBeenCalled();
+	});
+
+	it('treats an unticked attestation as not given', async () => {
+		await remote.setRadioOptInForm({ slug: BAND.slug, releaseId: 'rel-1', radioOptIn: true });
+		expect(svc.setRadioOptIn).toHaveBeenCalledWith(
+			'rel-1',
+			expect.objectContaining({ attestedNotPro: false })
+		);
 	});
 });

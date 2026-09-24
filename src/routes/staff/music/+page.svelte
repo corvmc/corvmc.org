@@ -173,8 +173,10 @@
 							<td>
 								{#if release.radioExcluded}
 									<Badge size="sm" variant="warning">Pulled</Badge>
-								{:else if release.radioOptIn}
+								{:else if release.radioOptIn && release.radioAttested}
 									<Badge size="sm" variant="info">Opted in</Badge>
+								{:else if release.radioOptIn}
+									<Badge size="sm" variant="warning">Not attested</Badge>
 								{:else}
 									<span class="text-subtle">—</span>
 								{/if}

@@ -32,6 +32,7 @@
 			priceMinCents: number;
 			allowPayMore: boolean;
 			radioOptIn: boolean;
+			radioAttested: boolean;
 			radioExcluded: boolean;
 			radioExcludedReason: string | null;
 			salesCount: number;
@@ -70,9 +71,15 @@
 						<Badge size="sm" variant="error">Withheld</Badge>
 					{/if}
 					{#if release.radioOptIn && !release.radioExcluded}
-						<Badge size="sm" variant="info">
-							<IconRadio size={12} /> Radio
-						</Badge>
+						{#if release.radioAttested}
+							<Badge size="sm" variant="info">
+								<IconRadio size={12} /> Radio
+							</Badge>
+						{:else}
+							<Badge size="sm" variant="warning">
+								<IconRadio size={12} /> Needs attestation
+							</Badge>
+						{/if}
 					{/if}
 				</div>
 

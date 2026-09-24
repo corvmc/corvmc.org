@@ -2520,6 +2520,17 @@ export const AUDIO_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
  */
 export const RADIO_MIN_TRACK_MS = 30 * 1000;
 export const RADIO_MAX_TRACK_MS = 15 * 60 * 1000;
+
+/**
+ * What a band attests before a release can go on CMC Radio. The station holds no
+ * webcast licence, so it plays only music no PRO collects on. `version` is stored
+ * with each attestation; changing `text` means changing `version`, and every
+ * release then needs a fresh attestation before it plays again.
+ */
+export const RADIO_PRO_ATTESTATION = {
+	version: '2026-09-23',
+	text: 'No one in this band, and no one who wrote a song on this release, is a member of a performing-rights organisation (ASCAP, BMI, SESAC, GMR, or any other).'
+} as const;
 // Help audiences
 // ---------------------------------------------------------------------------
 

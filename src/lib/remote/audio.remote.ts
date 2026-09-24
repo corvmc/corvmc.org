@@ -15,8 +15,10 @@ import {
 	listReleasesForBand,
 	listTracks,
 	publishRelease,
+	radioAttested,
 	renameTrack,
 	reorderTracks,
+	setRadioOptIn,
 	unpublishRelease,
 	updateRelease
 } from '$lib/server/audio/audio-service';
@@ -112,6 +114,8 @@ export const getBandRelease = query(
 				priceMinCents: release.priceMinCents,
 				allowPayMore: release.allowPayMore,
 				radioOptIn: release.radioOptIn,
+				radioAttested: radioAttested(release),
+				radioAttestedAt: release.radioAttestedAt,
 				radioExcluded: release.radioExcludedAt !== null,
 				radioExcludedReason: release.radioExcludedReason
 			},
@@ -229,13 +233,18 @@ export const setRadioOptInForm = form(
 	z.object({
 		slug: z.string().min(1),
 		releaseId: z.string().min(1),
-		radioOptIn: z.boolean().optional().default(false)
+		radioOptIn: z.boolean().optional().default(false),
+		attestNotPro: z.boolean().optional().default(false)
 	}),
-	async ({ slug, releaseId, radioOptIn }) => {
+	async ({ slug, releaseId, radioOptIn, attestNotPro }) => {
 		await requireFeature('bandAudio');
-		await requireReleaseAdmin(slug, releaseId);
+		const { user } = await requireReleaseAdmin(slug, releaseId);
 		try {
-			await updateRelease(releaseId, { radioOptIn });
+			await setRadioOptIn(releaseId, {
+				optIn: radioOptIn,
+				attestedNotPro: attestNotPro === true,
+				userId: user.id
+			});
 		} catch (err) {
 			mapDomainError(err);
 		}
