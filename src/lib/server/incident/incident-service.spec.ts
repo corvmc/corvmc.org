@@ -58,6 +58,9 @@ vi.mock('$lib/server/db', () => ({
 
 const {
 	recordIncident,
+	fileShowIncident,
+	acceptIncident,
+	listIncidentsFiledBy,
 	addIncidentNote,
 	resolveIncident,
 	reopenIncident,
@@ -123,6 +126,77 @@ describe('recordIncident', () => {
 	});
 });
 
+describe('fileShowIncident', () => {
+	it('lands as reported, tied to the show, with the filer named (#1469)', async () => {
+		await fileShowIncident(
+			{
+				eventId: 'event-1',
+				occurredAt: yesterday,
+				category: 'conduct',
+				summary: 'Heckler at the front',
+				description: 'Asked to leave at 9:15pm.'
+			},
+			{ id: 'vol-1', name: 'Vi Volunteer' }
+		);
+
+		expect(insertValues[0]).toMatchObject({
+			status: 'reported',
+			eventId: 'event-1',
+			reportedByUserId: 'vol-1',
+			reportedByName: 'Vi Volunteer'
+		});
+	});
+
+	it('validates like a staff record', async () => {
+		await expect(
+			fileShowIncident(
+				{
+					eventId: 'event-1',
+					occurredAt: yesterday,
+					category: 'other',
+					summary: ' ',
+					description: 'y'
+				},
+				{ id: 'vol-1', name: 'Vi Volunteer' }
+			)
+		).rejects.toThrow(IncidentValidationError);
+	});
+});
+
+describe('acceptIncident', () => {
+	it('moves a reported incident to open', async () => {
+		updateResults = [[{ id: 'inc-1', status: 'open' }]];
+
+		await acceptIncident('inc-1');
+
+		expect(updateValues[0]).toMatchObject({ status: 'open' });
+		const { sql, params } = renderWhere(0);
+		expect(sql).toContain('"status" = ?');
+		expect(params).toContain('reported');
+	});
+
+	it('refuses one that is not awaiting review', async () => {
+		updateResults = [[]];
+		selectResults = [[{ id: 'inc-1', status: 'open' }]];
+
+		await expect(acceptIncident('inc-1')).rejects.toThrow(IncidentStateError);
+	});
+});
+
+describe('listIncidentsFiledBy', () => {
+	it('returns only what this member filed, for this show', async () => {
+		selectResults = [[{ id: 'inc-1' }]];
+
+		const rows = await listIncidentsFiledBy('vol-1', 'event-1');
+
+		expect(rows).toEqual([{ id: 'inc-1' }]);
+		const { sql, params } = renderWhere(0);
+		expect(sql).toContain('"incident"."reported_by_user_id" = ?');
+		expect(sql).toContain('"incident"."event_id" = ?');
+		expect(params).toEqual(['vol-1', 'event-1']);
+	});
+});
+
 describe('addIncidentNote', () => {
 	it('appends under the incident with the author named', async () => {
 		selectResults = [[{ id: 'inc-1', status: 'open' }]];
@@ -156,7 +230,17 @@ describe('resolveIncident', () => {
 			resolvedByUserId: 'staff-1'
 		});
 		expect(updateValues[0].resolvedAt).toBeInstanceOf(Date);
-		expect(renderWhere(0).sql).toContain('"status" = ?');
+		expect(renderWhere(0).sql).toContain('"status" <> ?');
+	});
+
+	it('completes a reported incident directly, not only an open one', async () => {
+		updateResults = [[{ id: 'inc-1', status: 'resolved' }]];
+
+		await resolveIncident('inc-1', 'Reviewed; nothing further', staff);
+
+		const { sql, params } = renderWhere(0);
+		expect(sql).toContain('"status" <> ?');
+		expect(params).toContain('resolved');
 	});
 
 	it('says so when it was already resolved', async () => {
@@ -226,5 +310,15 @@ describe('listIncidents', () => {
 		expect(sql).toContain('"incident"."category" = ?');
 		expect(sql).toContain('"incident"."description" like ?');
 		expect(params).toEqual(expect.arrayContaining(['open', 'injury', '%stairs%']));
+	});
+
+	it('reads "unresolved" as open or awaiting review', async () => {
+		selectResults = [[], [{ count: 0 }]];
+
+		await listIncidents({ status: 'unresolved' }, { page: 1, pageSize: 25 });
+
+		const { sql, params } = renderWhere(0);
+		expect(sql).toContain('"incident"."status" <> ?');
+		expect(params).toEqual(['resolved']);
 	});
 });

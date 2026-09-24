@@ -18,12 +18,15 @@
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import Action from '$lib/components/ui/Action.svelte';
 	import ShiftProgress from '$lib/components/volunteer/ShiftProgress.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import FileIncidentAction from './FileIncidentAction.svelte';
 	import { goto } from '$app/navigation';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { formatDateLong, formatTimeRange } from '$lib/utils/format';
+	import { formatDateLong, formatDateTime, formatTimeRange } from '$lib/utils/format';
+	import { incidentCategoryLabels } from '$lib/config';
 	import { getMyShift, setMyWorkTaskDone, cancelMySignup } from '$lib/remote/volunteer.remote';
 
 	const signupId = $derived(page.params.signupId!);
@@ -139,6 +142,31 @@
 			</ul>
 		{/if}
 	</InfoCard>
+
+	{#if data.incidentEventId}
+		<InfoCard title="Incidents" state={data.filedIncidents.length}>
+			{#snippet action()}
+				<FileIncidentAction eventId={data.incidentEventId!} {signupId} />
+			{/snippet}
+			{#if data.filedIncidents.length === 0}
+				<p class="text-muted">If something goes wrong on the night, report it here for staff.</p>
+			{:else}
+				<ul class="flex flex-col gap-3">
+					{#each data.filedIncidents as i (i.id)}
+						<li>
+							<div class="flex items-center gap-2">
+								<StatusBadge status={i.status} label />
+								<span class="font-medium">{i.summary}</span>
+							</div>
+							<div class="text-subtle">
+								{incidentCategoryLabels[i.category]} · {formatDateTime(i.occurredAt)}
+							</div>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</InfoCard>
+	{/if}
 
 	<!-- Both of these were on the card and absent here. A page you open to work
 	     a shift from should be able to do what the row that linked to it could

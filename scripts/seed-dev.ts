@@ -76,7 +76,7 @@ import { seedAuditLog } from './seed/audit';
 import { seedContractors } from './seed/contractors';
 import { seedLocalResources } from './seed/local-resources';
 import { seedEquipmentReports } from './seed/equipment-reports';
-import { seedIncidents } from './seed/incidents';
+import { seedCrewIncidentFiling, seedIncidents } from './seed/incidents';
 import { seedDutyLists } from './seed/duty-lists';
 import { seedOrientation } from './seed/orientation';
 import {
@@ -257,6 +257,10 @@ async function main() {
 	);
 	// After the shifts, which is new: half the completed signups get an hour log
 	// pointing back at the shift that earned them.
+	const crewIncidents = await seedCrewIncidentFiling(
+		workOrders.completions ?? [],
+		new Map(activeVolunteers.map((u: { id: string; name: string }) => [u.id, u.name]))
+	);
 	const volunteerHours = await seedVolunteerHours(
 		activeVolunteers,
 		volunteerRoles,
@@ -366,7 +370,7 @@ async function main() {
 		`  ${equipmentReports.reports} equipment reports in every triage stage, ${equipmentReports.workOrders} work order raised from them`
 	);
 	console.log(
-		`  ${incidents.incidents} incidents, ${incidents.notes} incident notes (1 member linked, 1 reopened)`
+		`  ${incidents.incidents} incidents, ${incidents.notes} incident notes (1 member linked, 1 reopened), ${crewIncidents.filings} crew filing awaiting review`
 	);
 	console.log(`  ${directory.entries} directory entries, ${directory.tags} directory tags`);
 	console.log(`  ${directoryPersonas.users} directory matching demo personas`);

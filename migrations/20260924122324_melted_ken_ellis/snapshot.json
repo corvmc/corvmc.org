@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "c704b796-8b63-42a8-b9ab-b3794d6906a2",
+  "id": "a30df816-1079-4f1f-a3e3-c84d501f1f3c",
   "prevIds": [
-    "2e53e586-8d3d-4068-9e2d-abab2f9ab8d2"
+    "c704b796-8b63-42a8-b9ab-b3794d6906a2"
   ],
   "ddl": [
     {
@@ -13156,6 +13156,16 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "incident"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "involved_user_id",
       "entityType": "columns",
       "table": "incident"
@@ -17144,6 +17154,21 @@
       "name": "fk_market_vendor_decided_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "market_vendor"
+    },
+    {
+      "columns": [
+        "event_id"
+      ],
+      "tableTo": "event_listing",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_incident_event_id_event_listing_id_fk",
+      "entityType": "fks",
+      "table": "incident"
     },
     {
       "columns": [
@@ -22221,6 +22246,24 @@
       "where": null,
       "origin": "manual",
       "name": "idx_incident_involved",
+      "entityType": "indexes",
+      "table": "incident"
+    },
+    {
+      "columns": [
+        {
+          "value": "reported_by_user_id",
+          "isExpression": false
+        },
+        {
+          "value": "event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_incident_filer",
       "entityType": "indexes",
       "table": "incident"
     },

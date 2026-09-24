@@ -14,14 +14,14 @@
 		incidentCategories,
 		incidentCategoryLabels,
 		type IncidentCategory,
-		type IncidentStatus
+		type IncidentStatusFilter
 	} from '$lib/config';
 	import { getIncidentLog } from '$lib/remote/incidents.remote';
 	import RecordIncidentAction from './RecordIncidentAction.svelte';
 
 	let searchText = $state('');
 	let searchDebounced = $state('');
-	let statusFilter = $state<IncidentStatus | ''>('open');
+	let statusFilter = $state<IncidentStatusFilter | ''>('unresolved');
 	let categoryFilter = $state<IncidentCategory | ''>('');
 	let page = $state(1);
 
@@ -37,13 +37,13 @@
 	const canRecord = $derived(result.current?.canRecord ?? false);
 
 	const activeFilterCount = $derived(
-		(searchDebounced ? 1 : 0) + (statusFilter === 'open' ? 0 : 1) + (categoryFilter ? 1 : 0)
+		(searchDebounced ? 1 : 0) + (statusFilter === 'unresolved' ? 0 : 1) + (categoryFilter ? 1 : 0)
 	);
 
 	function clearFilters() {
 		searchText = '';
 		searchDebounced = '';
-		statusFilter = 'open';
+		statusFilter = 'unresolved';
 		categoryFilter = '';
 		page = 1;
 	}
@@ -76,6 +76,8 @@
 			}}
 		>
 			<option value="">All statuses</option>
+			<option value="unresolved">Not resolved</option>
+			<option value="reported">Awaiting review</option>
 			<option value="open">Open</option>
 			<option value="resolved">Resolved</option>
 		</Select>

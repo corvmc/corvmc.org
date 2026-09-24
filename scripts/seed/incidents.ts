@@ -130,3 +130,29 @@ export async function seedIncidents(
 
 	return { incidents: incidents.length, notes: notes.length };
 }
+
+/**
+ * A crew member's filing from a show they worked, still awaiting staff review,
+ * so the staff log and the volunteer's shift page both have one to show.
+ */
+export async function seedCrewIncidentFiling(
+	completions: { userId: string; eventId: string | null; endsAt: Date }[],
+	names: Map<string, string>
+) {
+	const worked = completions.find((c) => c.eventId && names.has(c.userId));
+	if (!worked?.eventId) return { filings: 0 };
+	await batchInsert(incident, [
+		{
+			occurredAt: new Date(worked.endsAt.getTime() - 3_600_000),
+			category: 'safety_hazard',
+			location: 'Side stage',
+			summary: 'Cable run across the side-stage steps',
+			description: 'Taped it down during the changeover. Worth a proper cable ramp.',
+			eventId: worked.eventId,
+			reportedByUserId: worked.userId,
+			reportedByName: names.get(worked.userId)!,
+			status: 'reported' as const
+		}
+	]);
+	return { filings: 1 };
+}

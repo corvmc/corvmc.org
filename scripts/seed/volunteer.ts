@@ -506,6 +506,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 		shiftId: string;
 		userId: string;
 		volunteerRoleId: string;
+		eventId: string | null;
 		startsAt: Date;
 		endsAt: Date;
 	}[] = [];
@@ -575,6 +576,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 					shiftId: shift.id,
 					userId: u.id,
 					volunteerRoleId: shift.volunteerRoleId,
+					eventId: shift.eventId,
 					startsAt: shift.startsAt,
 					endsAt: shift.endsAt
 				});
