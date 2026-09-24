@@ -167,8 +167,9 @@ state machine, credit settlement, a cancel.
 
 Satellites line up too: `closure` ≡ `assetStatus='maintenance'` (the resource is
 unavailable and it is not a booking), `recurring_series` ≡ a standing loan, the lock code
-≡ checkout, `reservation.bookerType` ≡ the loan's borrower. "Late" is derived identically
-in all three and stored in none.
+≡ checkout, `reservation.bookerType` ≡ the loan's borrower. "Late" is stored in none, but
+it is not derived alike: a JS predicate for loans, a SQL condition for contractor jobs, and
+not at all for reservations (#1559).
 
 What does _not_ unify: the room has capacity 1 and a calendar, gear has units and a tag.
 Availability genuinely differs. The state machine and the settlement do not.
