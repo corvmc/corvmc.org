@@ -1,5 +1,13 @@
 # Staff Email Change — Spec
 
+> **Shipped (#820).** How it behaves now is in
+> [business-workflows.md](../../development/business-workflows.md#18-staff-email-change). Where
+> the build departs from this document: the link is an HMAC over `{userId}:{requestId}` rather
+> than over the address, so a newer request revokes an older link; the guard is a new
+> `user.setEmail` capability; sends are capped at five per member per day; the Stripe customer
+> and any marketing `subscriber` row keep the old address; and there is no audit entry, because
+> there is no audit log yet. The decisions are filed as Tasks linked from the PR.
+
 ## Purpose
 
 A member types their email wrong at signup and cannot log in. Today staff have

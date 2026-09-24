@@ -106,9 +106,9 @@ address", is not the actual hole. The actual hole is a second address, and no
 blocklist closes that.
 
 The same accident cuts the other way: a member who left and wants to come back
-under a fresh account is also stuck, because the app has **no email-change path
-at all** (`staff-email-change-spec.md` is unbuilt) and purge is the only thing
-that frees an address. Neither half of that behaviour was decided; both are
+under a fresh account is also stuck: the only things that free an address are
+purge and a staff email change (`shipped/staff-email-change-spec.md`), which
+needs a second mailbox to confirm. Neither half of that behaviour was decided; both are
 properties of a `UNIQUE` column.
 
 ## How it works

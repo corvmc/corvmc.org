@@ -108,6 +108,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/confirm-email/[token]",
+		"panel": "public"
+	},
+	{
 		"route": "/contact",
 		"panel": "public"
 	},

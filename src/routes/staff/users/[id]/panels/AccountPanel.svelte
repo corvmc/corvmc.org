@@ -13,6 +13,7 @@
 	} from '$lib/remote/users.remote';
 	import { getUserDirectoryProfile } from '$lib/remote/directory.remote';
 	import StaffUserForm from '../StaffUserForm.svelte';
+	import EmailChangeCard from '../EmailChangeCard.svelte';
 	import { RelatedList } from '$lib/components/ui/entity';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -70,6 +71,8 @@
 		.map((r) => String(r.id))}
 	<StaffUserForm {member} {roleOptions} {initialRoles} {id} canSetRole={catalog.canSetRole} />
 {/await}
+
+<EmailChangeCard {id} email={member.email} />
 
 <RelatedList title="Directory profile" result={getUserDirectoryProfile(id)}>
 	{#snippet children(data)}
