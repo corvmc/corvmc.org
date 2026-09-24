@@ -31,7 +31,7 @@ export interface PaymentGateway {
 	readonly coupons: Pick<Stripe['coupons'], 'create' | 'del'>;
 	readonly customers: Pick<Stripe['customers'], 'create' | 'update'>;
 	readonly invoices: Pick<Stripe['invoices'], 'list'>;
-	readonly paymentIntents: Pick<Stripe['paymentIntents'], 'retrieve'>;
+	readonly paymentIntents: Pick<Stripe['paymentIntents'], 'retrieve' | 'create' | 'cancel'>;
 	readonly paymentMethods: Pick<Stripe['paymentMethods'], 'list' | 'detach' | 'update'>;
 	readonly paymentRecords: Pick<
 		Stripe['paymentRecords'],
@@ -42,6 +42,15 @@ export interface PaymentGateway {
 	readonly refunds: Pick<Stripe['refunds'], 'create'>;
 	readonly setupIntents: Pick<Stripe['setupIntents'], 'create' | 'retrieve'>;
 	readonly subscriptions: Pick<Stripe['subscriptions'], 'list' | 'update' | 'retrieve'>;
+	/**
+	 * Tap to Pay at the door (#612). The phone is the reader, bound to a Location
+	 * at connect time, so there is nothing to register: a token scoped to the
+	 * Location, and the Location itself to confirm it exists.
+	 */
+	readonly terminal: {
+		connectionTokens: Pick<Stripe['terminal']['connectionTokens'], 'create'>;
+		locations: Pick<Stripe['terminal']['locations'], 'retrieve'>;
+	};
 }
 
 /**

@@ -1992,7 +1992,10 @@ export const capabilities = {
 	user: ['list', 'read', 'update', 'setRole', 'setEmail', 'deactivate', 'ban', 'purge'],
 	audit: ['read'],
 	credit: ['read', 'adjust', 'comp'],
-	finance: ['read', 'refund'],
+	// `collect` is taking a card at the door (#612). It is not `refund`: taking
+	// money and giving it back are different authorities, and the door is the
+	// least supervised place in the building.
+	finance: ['read', 'refund', 'collect'],
 	settings: ['read', 'update'],
 	directory: ['readContact', 'shareContactSheet'],
 	band: ['read', 'manage', 'manageMembers', 'setTier'],
