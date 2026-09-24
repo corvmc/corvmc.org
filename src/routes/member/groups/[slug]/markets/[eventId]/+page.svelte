@@ -8,10 +8,16 @@
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
 	import { formatDateTime } from '$lib/utils/format';
-	import { marketVendorStatuses, type MarketVendorStatus } from '$lib/config';
+	import {
+		marketVendorStatuses,
+		marketVendorStatusLabels,
+		type MarketVendorStatus
+	} from '$lib/config';
+	import PreviousMarketNote from '$lib/components/market/PreviousMarketNote.svelte';
 	import { decideVendorForm, getCommitteeMarketVendors } from '$lib/remote/market.remote';
 
 	/**
@@ -33,7 +39,7 @@
 	const tabs = $derived([
 		...marketVendorStatuses.map((s) => ({
 			key: s,
-			label: s[0].toUpperCase() + s.slice(1),
+			label: marketVendorStatusLabels[s],
 			badge: counts[s]
 		})),
 		{ key: 'all', label: 'All', badge: data.applications.length }
@@ -55,7 +61,15 @@
 	title="Vendors: {data.event.title}"
 	subtitle={when}
 	backHref={resolve(`/member/groups/${slug}?tab=projects`)}
-/>
+>
+	<Button
+		href={resolve(`/member/groups/${slug}/markets/${eventId}/check-in`)}
+		variant="ghost"
+		size="sm"
+	>
+		Market day
+	</Button>
+</PageHeader>
 
 <PageContent>
 	<TabBar {tabs} active={tab} onchange={(key) => (tab = key as Tab)} collapse />
@@ -82,6 +96,7 @@
 					<td class="cell-primary">
 						<div class="font-medium">{row.businessName}</div>
 						<div class="line-clamp-1 text-muted text-sm">{row.offering}</div>
+						<PreviousMarketNote previous={row.previous} />
 					</td>
 					<td class="col-support">
 						{row.tablesRequested}
@@ -90,7 +105,7 @@
 					<td>{row.tableLabel ?? '—'}</td>
 					<td>
 						<div class="flex w-max justify-end gap-1">
-							{#if row.status !== 'accepted' && row.status !== 'withdrawn'}
+							{#if row.status === 'applied' || row.status === 'declined'}
 								<Action
 									action={decideVendorForm.for(`accept-${row.id}`)}
 									label="Accept"
