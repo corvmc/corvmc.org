@@ -78,5 +78,6 @@ const sample: Record<EntityType, { title: string; subtitle?: string; [k: string]
 	shift: { title: 'Door · Loud Night', subtitle: 'Fri, Mar 14 · 7:30–11:00 PM' },
 	role: { title: 'Sound engineer', subtitle: 'At shows · 6 volunteers' },
 	recurring: { title: 'Every Tuesday, 6:00–8:00 PM', subtitle: 'Until Jun 30' },
-	help: { title: 'How to book the practice space', subtitle: 'Getting started', slug: 'booking' }
+	help: { title: 'How to book the practice space', subtitle: 'Getting started', slug: 'booking' },
+	classified: { title: 'Drummer wanted for a surf trio', subtitle: 'Wanted · Musicians' }
 };

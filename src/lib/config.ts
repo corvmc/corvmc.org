@@ -977,12 +977,12 @@ export function isStaffInboxChannel(channel: string): channel is StaffInboxChann
 
 /**
  * The privileges a member can be put on probation for, one per domain that
- * reads standing. Exactly three, and each one has a code path that consults it
+ * reads standing. Each one has a code path that consults it
  * — a scope nothing reads is a column that lies. `member_profile` and
  * `band_profile` reports cost nobody anything on uphold today, so they get no
  * scope; `scopeForFlag` maps them to null.
  */
-export const standingScopes = ['community_event', 'suggestion', 'messaging'] as const;
+export const standingScopes = ['community_event', 'suggestion', 'messaging', 'classified'] as const;
 export type StandingScope = (typeof standingScopes)[number];
 
 /**
@@ -1018,7 +1018,8 @@ export const standingScopeConfig: Record<
 > = {
 	community_event: { statuses: ['none', 'restricted'], label: 'Community listings' },
 	suggestion: { statuses: ['none', 'restricted'], label: 'Suggestions' },
-	messaging: { statuses: ['none', 'restricted', 'disabled'], label: 'Direct messages' }
+	messaging: { statuses: ['none', 'restricted', 'disabled'], label: 'Direct messages' },
+	classified: { statuses: ['none', 'restricted'], label: 'Classifieds' }
 };
 
 /**
@@ -1457,6 +1458,67 @@ export const suggestionCategoryOptions = suggestionCategories.map((value) => ({
 export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
 	value,
 	label: suggestionStatusLabels[value]
+}));
+
+// ---------------------------------------------------------------------------
+// Classifieds
+// ---------------------------------------------------------------------------
+
+export const classifiedKinds = ['wanted', 'offered'] as const;
+export type ClassifiedKind = (typeof classifiedKinds)[number];
+
+/** No `gear`: buying and selling is the owner's decision, #1488. */
+export const classifiedCategories = ['musician', 'jam', 'service', 'other'] as const;
+export type ClassifiedCategory = (typeof classifiedCategories)[number];
+
+/** The same four states as `suggestionVisibilities`, for the same reasons. */
+export const classifiedVisibilities = suggestionVisibilities;
+export type ClassifiedVisibility = (typeof classifiedVisibilities)[number];
+
+export const classifiedStatuses = ['open', 'closed'] as const;
+export type ClassifiedStatus = (typeof classifiedStatuses)[number];
+
+/** `directory_tag`'s vocabulary plus `skill` (#1440), so post and profile tags compare equal. */
+export const classifiedTagKinds = ['instrument', 'genre', 'skill'] as const;
+export type ClassifiedTagKind = (typeof classifiedTagKinds)[number];
+
+export const CLASSIFIED_TITLE_MAX = 120;
+export const CLASSIFIED_BODY_MAX = 2000;
+export const CLASSIFIED_NOTE_MAX = 500;
+export const CLASSIFIED_TAGS_MAX = 10;
+export const CLASSIFIED_TAG_MAX = 50;
+export const CLASSIFIED_LIFETIME_DAYS = 30;
+/** Open, unexpired posts one member may hold at once. */
+export const MAX_OPEN_CLASSIFIEDS = 5;
+
+export const classifiedKindLabels: Record<ClassifiedKind, string> = {
+	wanted: 'Wanted',
+	offered: 'Offered'
+};
+
+export const classifiedCategoryLabels: Record<ClassifiedCategory, string> = {
+	musician: 'Musicians',
+	jam: 'Jams',
+	service: 'Services',
+	other: 'Other'
+};
+
+export const classifiedTagKindLabels: Record<ClassifiedTagKind, string> = {
+	instrument: 'Instruments',
+	genre: 'Genres',
+	skill: 'Skills'
+};
+
+export const classifiedVisibilityLabels = suggestionVisibilityLabels;
+
+export const classifiedKindOptions = classifiedKinds.map((value) => ({
+	value,
+	label: classifiedKindLabels[value]
+}));
+
+export const classifiedCategoryOptions = classifiedCategories.map((value) => ({
+	value,
+	label: classifiedCategoryLabels[value]
 }));
 
 // ---------------------------------------------------------------------------
@@ -2256,7 +2318,8 @@ export const entityTypes = [
 	'shift',
 	'role',
 	'recurring',
-	'help'
+	'help',
+	'classified'
 ] as const;
 export type EntityType = (typeof entityTypes)[number];
 
@@ -2282,7 +2345,8 @@ export const entityLabels: Record<EntityType, { one: string; many: string }> = {
 	shift: { one: 'Shift', many: 'Shifts' },
 	role: { one: 'Volunteer role', many: 'Volunteer roles' },
 	recurring: { one: 'Recurring series', many: 'Recurring series' },
-	help: { one: 'Help article', many: 'Help articles' }
+	help: { one: 'Help article', many: 'Help articles' },
+	classified: { one: 'Classified', many: 'Classifieds' }
 };
 
 /**
@@ -2300,7 +2364,8 @@ export const flagEntityTypeToEntity: Record<string, EntityType> = {
 	band_profile: 'band',
 	event: 'event',
 	suggestion: 'suggestion',
-	inbox_thread: 'thread'
+	inbox_thread: 'thread',
+	classified_post: 'classified'
 };
 
 // ---------------------------------------------------------------------------

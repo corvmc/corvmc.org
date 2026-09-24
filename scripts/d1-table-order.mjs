@@ -176,6 +176,9 @@ export const tableOrder = [
 	'moderation_appeal',
 	'user_block',
 	'suggestion_vote',
+	// References user and group; parent of classified_post_tag.
+	'classified_post',
+	'classified_post_tag',
 	'suggestion_edit',
 	'volunteer_hour_log',
 	'volunteer_profile',

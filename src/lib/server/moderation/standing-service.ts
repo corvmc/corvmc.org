@@ -224,6 +224,8 @@ export function scopeForFlag(
 			return 'suggestion';
 		case 'inbox_thread':
 			return 'messaging';
+		case 'classified_post':
+			return 'classified';
 		// `member_profile` and `band_profile` cost nobody anything on uphold —
 		// staff act on the profile itself. Giving them a scope would mean a column
 		// no code reads.

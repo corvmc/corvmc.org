@@ -68,6 +68,7 @@ export type StaffNavKey =
 	| 'calendar'
 	| 'flags'
 	| 'suggestions'
+	| 'classifieds'
 	| 'campaigns'
 	| 'audiences'
 	| 'help'
@@ -408,6 +409,12 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Suggestions',
 				href: resolve('/staff/suggestions'),
 				badgeKey: 'suggestionsAwaiting'
+			},
+			{
+				key: 'classifieds',
+				capability: 'listing.review',
+				label: 'Classifieds',
+				href: resolve('/staff/classifieds')
 			}
 		]
 	},

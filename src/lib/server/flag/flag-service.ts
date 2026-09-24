@@ -11,6 +11,7 @@ import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/sche
 import type { InboxMessageDirection } from '$lib/server/db/schema/inbox';
 import { suggestion } from '$lib/server/db/schema/suggestion';
 import { moderationAppeal } from '$lib/server/db/schema/moderation';
+import { classifiedPost } from '$lib/server/db/schema/classified';
 import { eq, ne, and, desc, count, inArray, isNull, getTableColumns, asc } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
@@ -89,6 +90,8 @@ function entityHref(entityType: FlagEntityType, entityId: string, flagId?: strin
 			return `/events/${entityId}`;
 		case 'suggestion':
 			return `/staff/suggestions/${entityId}`;
+		case 'classified_post':
+			return `/staff/classifieds/${entityId}`;
 		default:
 			return `/staff/users/${entityId}`;
 	}
@@ -120,6 +123,14 @@ async function resolveEntityLabel(
 			.select({ title: suggestion.title })
 			.from(suggestion)
 			.where(eq(suggestion.id, entityId))
+			.limit(1);
+		return row?.title ?? null;
+	}
+	if (entityType === 'classified_post') {
+		const [row] = await db
+			.select({ title: classifiedPost.title })
+			.from(classifiedPost)
+			.where(eq(classifiedPost.id, entityId))
 			.limit(1);
 		return row?.title ?? null;
 	}
@@ -195,6 +206,10 @@ export async function createFlag(params: CreateFlagParams) {
 	if (params.entityType === 'suggestion') {
 		const { withholdForReview } = await import('$lib/server/suggestion/suggestion-service');
 		await withholdForReview(params.entityId, { flagId: flag.id });
+	}
+	if (params.entityType === 'classified_post') {
+		const { withholdForReview } = await import('$lib/server/classified/classified-service');
+		await withholdForReview(params.entityId);
 	}
 
 	// Fire-and-forget: notify staff without blocking the reporter's request.
@@ -343,6 +358,17 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 		}
 	}
 
+	// Same rule as suggestions: the report already withheld the post, so dismissal restores it.
+	if (existing.entityType === 'classified_post') {
+		const { setVisibility } = await import('$lib/server/classified/classified-service');
+		const upheld = params.resolution === 'resolved';
+		await setVisibility(existing.entityId, {
+			visibility: upheld ? 'hidden' : 'visible',
+			note: upheld ? params.notes : null,
+			staffId: params.staffId
+		});
+	}
+
 	// An *upheld* report is the only thing that costs a member their standing. A
 	// dismissed one deliberately does nothing: event reports are public and
 	// anonymous, so letting a bare accusation trip probation would hand any
@@ -443,6 +469,9 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	const bandIds = rows.filter((r) => r.entityType === 'band_profile').map((r) => r.entityId);
 	const eventIds = rows.filter((r) => r.entityType === 'event').map((r) => r.entityId);
 	const suggestionIds = rows.filter((r) => r.entityType === 'suggestion').map((r) => r.entityId);
+	const classifiedIds = rows
+		.filter((r) => r.entityType === 'classified_post')
+		.map((r) => r.entityId);
 
 	const memberNames = memberIds.length
 		? await db
@@ -468,12 +497,19 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 				.from(suggestion)
 				.where(inArray(suggestion.id, suggestionIds))
 		: [];
+	const classifiedTitles = classifiedIds.length
+		? await db
+				.select({ id: classifiedPost.id, title: classifiedPost.title })
+				.from(classifiedPost)
+				.where(inArray(classifiedPost.id, classifiedIds))
+		: [];
 
 	const labelMap = new Map<string, string>();
 	for (const m of memberNames) labelMap.set(`member_profile:${m.id}`, m.name);
 	for (const b of bandNames) labelMap.set(`band_profile:${b.id}`, b.name);
 	for (const e of eventTitles) labelMap.set(`event:${e.id}`, e.title);
 	for (const sg of suggestionTitles) labelMap.set(`suggestion:${sg.id}`, sg.title);
+	for (const c of classifiedTitles) labelMap.set(`classified_post:${c.id}`, c.title);
 	// Conversations get the same content-free label, with no lookup: there is
 	// nothing about a private thread that belongs in a queue listing.
 	for (const r of rows) {
@@ -541,6 +577,12 @@ async function standingSubjectOf(
 			// Null when the author has deleted their account: there is nobody left
 			// to put on review, and the post is hidden either way.
 			return target?.authorUserId && scope ? { userId: target.authorUserId, scope } : null;
+		}
+		case 'classified_post': {
+			const { getPostForModeration } = await import('$lib/server/classified/classified-service');
+			const target = await getPostForModeration(entityId);
+			const scope = scopeForFlag('classified_post');
+			return target && scope ? { userId: target.authorUserId, scope } : null;
 		}
 		case 'inbox_thread': {
 			const reported = await reportedPartyOf(entityId, context.reporterUserId);
