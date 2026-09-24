@@ -113,6 +113,11 @@ export async function deletePrivateObject(key: string): Promise<void> {
 	await getPrivateBucket().delete(key);
 }
 
+/** Whether this bucket holds `key`. A delete cannot say, since a miss succeeds. */
+export async function privateObjectExists(key: string): Promise<boolean> {
+	return (await getPrivateBucket().head(key)) !== null;
+}
+
 /**
  * Move bytes into this bucket from the public one, or null when the source is
  * already gone. Returns the destination **key**, never a URL — the rule at the

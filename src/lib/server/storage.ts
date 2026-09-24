@@ -92,6 +92,11 @@ export async function deleteObject(key: string): Promise<void> {
 	await getBucket().delete(key);
 }
 
+/** Whether the public bucket holds `key`. A delete cannot say, since a miss succeeds. */
+export async function objectExists(key: string): Promise<boolean> {
+	return (await getBucket().head(key)) !== null;
+}
+
 /**
  * Formats Cloudflare Image Transformations can actually decode. Non-image
  * uploads — rider and stage-plot PDFs from the band media endpoint — must fall
