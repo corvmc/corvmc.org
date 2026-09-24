@@ -46,6 +46,7 @@ import { seedMembershipBilling } from './fixtures/seed-membership-billing';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
 import { seedBandAudio } from './fixtures/seed-band-audio';
 import { seedStaffUser } from './fixtures/seed-staff-user';
+import { seedBallots } from './fixtures/seed-ballots';
 import { seedPasswordReset } from './fixtures/seed-password-reset';
 import { seedBcryptSignin } from './fixtures/seed-bcrypt-signin';
 import { seedInventory } from './fixtures/seed-inventory';
@@ -132,6 +133,8 @@ await seedInboxAwaiting();
 // After the staff fixture: both programs are led by the staff user, and the
 // committee's applicant is its role target.
 await seedGroups();
+// After the staff fixture: its operator votes on one ballot and certifies the other.
+await seedBallots();
 await seedFeatureFlags();
 // Before the sweep, not after. It writes its own `directory_entry` rows — one
 // public, one members-only — and the sweep only claims users that have none, as

@@ -11,7 +11,8 @@ import {
 	suggestionStatuses,
 	suggestionVisibilities,
 	marketVendorStatuses,
-	incidentStatuses
+	incidentStatuses,
+	ballotStatuses
 } from '$lib/config';
 import { ticketStatuses } from '$lib/server/db/schema/ticket';
 import { reservationStatuses } from '$lib/server/db/schema/reservation';
@@ -83,6 +84,8 @@ const vocabularies: Record<string, readonly string[]> = {
 	production: productionStatuses,
 	marketVendor: marketVendorStatuses,
 	incident: incidentStatuses,
+	// Derived from the ballot's timestamps by `ballotStatusOf`, never stored.
+	ballot: ballotStatuses,
 	// `visible` is intentionally absent: an on-the-board suggestion shows no badge.
 	suggestionVisibility: suggestionVisibilities.filter((v) => v !== 'visible'),
 	...derivedStatuses
