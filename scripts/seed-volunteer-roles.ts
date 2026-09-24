@@ -24,6 +24,8 @@ interface RoleSeed {
 	name: string;
 	group: Group;
 	description: string;
+	/** Only applied when the role is created; an existing role keeps what staff ticked. */
+	capabilityGrants?: string[];
 }
 
 // Wording follows the volunteer interest form these came from — members
@@ -48,7 +50,9 @@ const ROLES: RoleSeed[] = [
 	{
 		name: 'Photos or Video',
 		group: 'at-shows',
-		description: 'Document the show with photography or video, using your own equipment.'
+		description: 'Document the show with photography or video, using your own equipment.',
+		// The show's documentation crew may upload its recap photos (#1500).
+		capabilityGrants: ['event.uploadRecap']
 	},
 
 	{ name: 'Street Team', group: 'away-from-shows', description: 'Put up posters around town.' },
@@ -143,7 +147,8 @@ async function main() {
 			description: role.description,
 			group: role.group,
 			displayOrder: offset + i++,
-			isActive: true
+			isActive: true,
+			capabilityGrants: role.capabilityGrants ?? []
 		});
 	}
 

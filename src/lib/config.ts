@@ -2001,8 +2001,8 @@ export const capabilities = {
 	// it. A chair does this through `group_member.role = 'admin'`; this is the
 	// other door, and a headless committee has only this one.
 	committee: ['reviewApplications'],
-	// `uploadRecap` is also held, outside this matrix, by anyone with a current
-	// RECAP_PHOTOGRAPHER_CERTIFICATION: volunteer photographers hold no position.
+	// `uploadRecap` is also held for one show by that show's documentation crew,
+	// through a volunteer-role grant: see `grantableCapabilities`.
 	event: ['read', 'manage', 'publish', 'manageTickets', 'uploadRecap'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
 	// Door access: granting and revoking standing member codes, adopting the
@@ -2053,12 +2053,6 @@ export const capabilities = {
 	// The public local resources directory: categories and listings.
 	localResource: ['manage']
 } as const;
-
-/**
- * The volunteer certification that lets a member upload event recap photos.
- * Matched by name, so renaming the certification withdraws the grant.
- */
-export const RECAP_PHOTOGRAPHER_CERTIFICATION = 'Photographer';
 
 export type Capabilities = typeof capabilities;
 export type Resource = keyof Capabilities;

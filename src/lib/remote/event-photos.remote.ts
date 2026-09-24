@@ -17,9 +17,9 @@ import { getPublicEventDetail, getStaffEventPage } from '$lib/remote/events.remo
  * is open to volunteer photographers; editing and removing stay `event.manage`.
  */
 
-async function requireRecapUploader() {
+async function requireRecapUploader(eventId: string) {
 	const user = requireUser();
-	const access = await recapUploadAccess(user.id);
+	const access = await recapUploadAccess(user.id, eventId);
 	if (!access) error(403, 'Not permitted');
 	return { user, staff: access === 'capability' };
 }
@@ -30,7 +30,7 @@ export const uploadEventPhotos = form(
 		photos: z.array(z.instanceof(File)).default([])
 	}),
 	async (data) => {
-		const { user, staff } = await requireRecapUploader();
+		const { user, staff } = await requireRecapUploader(data.eventId);
 		// An untouched file input still posts one zero-byte File.
 		const files = data.photos.filter((f) => f.size > 0);
 		await addEventPhotos(data.eventId, user.id, files);
