@@ -107,6 +107,13 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 			break;
 		}
 
+		case 'classified': {
+			if (can('listing.review'))
+				out.push({ panel: 'staff', href: resolve(`/staff/classifieds/${id}`) });
+			if (signedIn) out.push({ panel: 'member', href: resolve(`/member/classifieds/${id}`) });
+			break;
+		}
+
 		case 'thread': {
 			if (can('inbox.read')) out.push({ panel: 'staff', href: resolve(`/staff/inbox/${id}`) });
 			if (signedIn) out.push({ panel: 'member', href: resolve(`/member/messages/${id}`) });

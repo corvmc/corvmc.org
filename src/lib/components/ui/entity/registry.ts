@@ -37,7 +37,8 @@ import {
 	IconHeart,
 	IconMusic,
 	IconSchool,
-	IconBuildingCommunity
+	IconBuildingCommunity,
+	IconSpeakerphone
 } from '@tabler/icons-svelte';
 import { entityTypes, entityLabels, type EntityType, type EntitySubtypeKey } from '$lib/config';
 import type { EntityRef } from '$lib/types/entity';
@@ -141,7 +142,8 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 	shift: { icon: IconClock, shape: 'none' },
 	role: { icon: IconHeartHandshake, shape: 'none' },
 	recurring: { icon: IconRepeat, shape: 'none' },
-	help: { icon: IconHelp, shape: 'none' }
+	help: { icon: IconHelp, shape: 'none' },
+	classified: { icon: IconSpeakerphone, shape: 'none' }
 };
 
 /** Declaration order, for gallery stories and exhaustiveness checks. */

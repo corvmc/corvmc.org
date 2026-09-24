@@ -36,6 +36,7 @@ export type MemberNavKey =
 	| 'events'
 	| 'events-submit'
 	| 'directory'
+	| 'classifieds'
 	| 'equipment'
 	| 'equipment-loans'
 	| 'volunteer'
@@ -84,7 +85,8 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 				{ key: 'events-submit', label: 'Add a Show', href: resolve('/member/events/submit') }
 			]
 		},
-		{ key: 'directory', label: 'Directory', href: resolve('/member/directory') }
+		{ key: 'directory', label: 'Directory', href: resolve('/member/directory') },
+		{ key: 'classifieds', label: 'Classifieds', href: resolve('/member/classifieds') }
 	];
 
 	// Between Directory and Volunteering: it belongs with the things you do in

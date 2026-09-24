@@ -188,6 +188,14 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/classifieds",
+		"panel": "member"
+	},
+	{
+		"route": "/member/classifieds/[id]",
+		"panel": "member"
+	},
+	{
 		"route": "/member/directory",
 		"panel": "member"
 	},
@@ -373,6 +381,14 @@
 	},
 	{
 		"route": "/staff/bands/acts",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/classifieds",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/classifieds/[id]",
 		"panel": "staff"
 	},
 	{

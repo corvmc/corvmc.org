@@ -25,6 +25,7 @@ export * from './flag';
 export * from './moderation';
 export * from './standing';
 export * from './suggestion';
+export * from './classified';
 export * from './volunteer';
 export * from './instructor';
 export * from './media';

@@ -92,6 +92,7 @@ import { USAGE_PERSONAS, seedUsagePersonaLife, seedUsagePersonas } from './seed/
 import { STYLE_PERSONAS, seedStylePersonaHistory, seedStylePersonas } from './seed/style-personas';
 import { seedSuggestions } from './seed/suggestions';
 import { seedModerationAppeals } from './seed/moderation-appeals';
+import { seedClassifieds } from './seed/classifieds';
 import { seedProjects } from './seed/projects';
 import { seedMaintenanceSchedules } from './seed/maintenance';
 import { seedAudio } from './seed/audio';
@@ -269,6 +270,8 @@ async function main() {
 	const suggestions = await seedSuggestions(allUsers, adminUser, eq.restockAcquisitionId);
 	// After the suggestions and community listings, whose upheld reports it appeals.
 	const appeals = await seedModerationAppeals(allUsers, adminUser);
+	// Needs the bands (one posts as itself) and the admin who hid one post.
+	const classifieds = await seedClassifieds(allUsers, bands, adminUser);
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
@@ -379,6 +382,7 @@ async function main() {
 	console.log(
 		`  ${suggestions.total} suggestions (${suggestions.votes} votes, ${suggestions.pendingEdits} edit awaiting review)`
 	);
+	console.log(`  ${classifieds.posts} classifieds (every state, one posted as a band)`);
 	console.log(
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
 	);

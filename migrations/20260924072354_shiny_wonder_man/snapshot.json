@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "48f9e9b6-390f-4e94-9fe4-c4b0b55ddd1d",
+  "id": "6dd9fc1b-6bd4-4e00-ba74-3387e032809d",
   "prevIds": [
-    "85cfab98-b756-4d19-af7c-8e8a10aed8e4"
+    "48f9e9b6-390f-4e94-9fe4-c4b0b55ddd1d"
   ],
   "ddl": [
     {
@@ -276,6 +276,14 @@
     },
     {
       "name": "suggestion_vote",
+      "entityType": "tables"
+    },
+    {
+      "name": "classified_post",
+      "entityType": "tables"
+    },
+    {
+      "name": "classified_post_tag",
       "entityType": "tables"
     },
     {
@@ -7838,6 +7846,196 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "author_user_id",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "category",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'open'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'visible'",
+      "generated": null,
+      "name": "visibility",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "visibility_note",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "visibility_changed_at",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "visibility_changed_by_user_id",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "closed_at",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "classified_post"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "post_id",
+      "entityType": "columns",
+      "table": "classified_post_tag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "classified_post_tag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "value",
+      "entityType": "columns",
+      "table": "classified_post_tag"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "duty_list"
     },
     {
@@ -14407,6 +14605,66 @@
     },
     {
       "columns": [
+        "author_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_classified_post_author_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "classified_post"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_classified_post_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "classified_post"
+    },
+    {
+      "columns": [
+        "visibility_changed_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_classified_post_visibility_changed_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "classified_post"
+    },
+    {
+      "columns": [
+        "post_id"
+      ],
+      "tableTo": "classified_post",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_classified_post_tag_post_id_classified_post_id_fk",
+      "entityType": "fks",
+      "table": "classified_post_tag"
+    },
+    {
+      "columns": [
         "created_by_user_id"
       ],
       "tableTo": "user",
@@ -16459,6 +16717,15 @@
       "nameExplicit": false,
       "name": "suggestion_vote_pk",
       "table": "suggestion_vote",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "classified_post_pk",
+      "table": "classified_post",
       "entityType": "pks"
     },
     {
@@ -19226,6 +19493,74 @@
     {
       "columns": [
         {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "visibility",
+          "isExpression": false
+        },
+        {
+          "value": "expires_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "classified_post_board_idx",
+      "entityType": "indexes",
+      "table": "classified_post"
+    },
+    {
+      "columns": [
+        {
+          "value": "author_user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "classified_post_author_idx",
+      "entityType": "indexes",
+      "table": "classified_post"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "classified_post_group_idx",
+      "entityType": "indexes",
+      "table": "classified_post"
+    },
+    {
+      "columns": [
+        {
+          "value": "kind",
+          "isExpression": false
+        },
+        {
+          "value": "value",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_classified_post_tag_kind_value",
+      "entityType": "indexes",
+      "table": "classified_post_tag"
+    },
+    {
+      "columns": [
+        {
           "value": "is_active",
           "isExpression": false
         },
@@ -20654,6 +20989,17 @@
       "name": "help_categories_slug_unique",
       "entityType": "uniques",
       "table": "help_categories"
+    },
+    {
+      "columns": [
+        "post_id",
+        "kind",
+        "value"
+      ],
+      "nameExplicit": true,
+      "name": "classified_post_tag_post_kind_value_unique",
+      "entityType": "uniques",
+      "table": "classified_post_tag"
     },
     {
       "columns": [

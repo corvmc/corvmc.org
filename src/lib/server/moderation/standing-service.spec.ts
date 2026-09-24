@@ -161,7 +161,12 @@ describe('getStandings', () => {
 
 		const all = await getStandings('u1');
 
-		expect(Object.keys(all).sort()).toEqual(['community_event', 'messaging', 'suggestion']);
+		expect(Object.keys(all).sort()).toEqual([
+			'classified',
+			'community_event',
+			'messaging',
+			'suggestion'
+		]);
 		expect(all.suggestion.status).toBe('restricted');
 		expect(all.community_event.status).toBe('none');
 		expect(all.messaging.status).toBe('none');

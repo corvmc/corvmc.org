@@ -78,6 +78,15 @@ vi.mock('$lib/server/suggestion/suggestion-service', () => ({
 	getSuggestionForModeration: (...args: unknown[]) => getSuggestionForModerationMock(...args)
 }));
 
+const classifiedWithholdMock = vi.fn().mockResolvedValue(undefined);
+const classifiedSetVisibilityMock = vi.fn().mockResolvedValue(undefined);
+const getPostForModerationMock = vi.fn().mockResolvedValue(null);
+vi.mock('$lib/server/classified/classified-service', () => ({
+	withholdForReview: (...args: unknown[]) => classifiedWithholdMock(...args),
+	setVisibility: (...args: unknown[]) => classifiedSetVisibilityMock(...args),
+	getPostForModeration: (...args: unknown[]) => getPostForModerationMock(...args)
+}));
+
 import { db } from '$lib/server/db';
 import {
 	createFlag,
@@ -99,6 +108,8 @@ beforeEach(() => {
 	getByIdMock.mockReset();
 	getByIdMock.mockResolvedValue(null);
 	withholdMock.mockClear();
+	classifiedWithholdMock.mockClear();
+	classifiedSetVisibilityMock.mockClear();
 	setVisibilityMock.mockClear();
 	getSuggestionForModerationMock.mockReset();
 	getSuggestionForModerationMock.mockResolvedValue(null);
@@ -488,5 +499,51 @@ describe('suggestion reports', () => {
 			resolveFlag('f1', { resolution: 'dismissed', staffId: 's1' })
 		).rejects.toBeInstanceOf(FlagAlreadyResolvedError);
 		expect(setVisibilityMock).not.toHaveBeenCalled();
+	});
+});
+
+describe('classified reports', () => {
+	it('pulls the post off the board as soon as it is reported', async () => {
+		selectResultQueue = [[{ title: 'Drummer wanted' }]];
+		insertResult = [{ id: 'f1', entityType: 'classified_post', entityId: 'cp1', reason: 'spam' }];
+
+		await createFlag({
+			entityType: 'classified_post',
+			entityId: 'cp1',
+			reportedByUserId: 'u1',
+			reportedByName: 'Reporter',
+			reason: 'spam'
+		});
+
+		expect(classifiedWithholdMock).toHaveBeenCalledWith('cp1');
+	});
+
+	it('upholding hides the post and restricts the author in the classified scope', async () => {
+		selectResultQueue = [[{ status: 'pending', entityType: 'classified_post', entityId: 'cp1' }]];
+		updateResult = [{ id: 'f1', status: 'resolved' }];
+		getPostForModerationMock.mockResolvedValue({ id: 'cp1', authorUserId: 'member-1' });
+
+		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1', notes: 'Scam' });
+
+		expect(classifiedSetVisibilityMock).toHaveBeenCalledWith(
+			'cp1',
+			expect.objectContaining({ visibility: 'hidden', note: 'Scam' })
+		);
+		expect(restrictStandingMock).toHaveBeenCalledWith(
+			expect.objectContaining({ userId: 'member-1', scope: 'classified', flagId: 'f1' })
+		);
+	});
+
+	it('dismissing puts the post back on the board and leaves standing alone', async () => {
+		selectResultQueue = [[{ status: 'pending', entityType: 'classified_post', entityId: 'cp1' }]];
+		updateResult = [{ id: 'f1', status: 'dismissed' }];
+
+		await resolveFlag('f1', { resolution: 'dismissed', staffId: 's1' });
+
+		expect(classifiedSetVisibilityMock).toHaveBeenCalledWith(
+			'cp1',
+			expect.objectContaining({ visibility: 'visible' })
+		);
+		expect(restrictStandingMock).not.toHaveBeenCalled();
 	});
 });

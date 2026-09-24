@@ -13,7 +13,8 @@
 		IconMetronome,
 		IconHeartHandshake,
 		IconUsersGroup,
-		IconBulb
+		IconBulb,
+		IconSpeakerphone
 	} from '@tabler/icons-svelte';
 	import AppShell from '$lib/components/layout/AppShell.svelte';
 	import Nav from '$lib/components/layout/Nav';
@@ -59,6 +60,7 @@
 		events: IconCalendarEvent,
 		'events-submit': IconPlus,
 		directory: IconAddressBook,
+		classifieds: IconSpeakerphone,
 		// Matches the staff panel's Inventory glyph, so the same thing looks the
 		// same on both sides.
 		equipment: IconTool,

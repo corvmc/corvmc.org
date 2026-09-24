@@ -5,7 +5,7 @@
 	import { canonicalAddress } from '$lib/utils/canonical-address';
 	import { getDirectoryMember, getMemberPastShows } from '$lib/remote/directory.remote';
 	import { ReportContentAction } from '$lib/components/actions';
-	import MessageMemberAction from './MessageMemberAction.svelte';
+	import MessageMemberAction from '$lib/components/actions/MessageMemberAction.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { pageTitle } from '$lib/config';
 	import Alert from '$lib/components/ui/Alert.svelte';

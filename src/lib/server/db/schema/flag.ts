@@ -11,7 +11,8 @@ export const flagEntityTypes = [
 	'band_profile',
 	'event',
 	'suggestion',
-	'inbox_thread'
+	'inbox_thread',
+	'classified_post'
 ] as const;
 export type FlagEntityType = (typeof flagEntityTypes)[number];
 
