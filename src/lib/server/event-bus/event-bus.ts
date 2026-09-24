@@ -789,6 +789,18 @@ export interface RenewalExpiryDueEvent {
 	responsible: { id: string; name: string; email: string } | null;
 }
 
+/** A release's yearly radio attestation is about to lapse (#1516). */
+export interface RadioAttestationDueEvent {
+	stage: '30d' | '7d';
+	releaseId: string;
+	releaseTitle: string;
+	bandName: string;
+	bandSlug: string;
+	/** `YYYY-MM-DD` */
+	expiresOn: string;
+	bandAdmins: Array<{ userId: string; userName: string; userEmail: string }>;
+}
+
 export type DomainEvents = {
 	'checkout.completed': CheckoutCompletedEvent;
 	'reservation.created': ReservationCreatedEvent;
@@ -800,6 +812,7 @@ export type DomainEvents = {
 	'reservation.door_code_ready': DoorCodeReadyEvent;
 	'ticket.purchased': TicketPurchasedEvent;
 	'audio.purchased': AudioPurchasedEvent;
+	'audio.radio_attestation_due': RadioAttestationDueEvent;
 	// The four moments a sustaining membership touches somebody's money. All
 	// emitted from src/lib/server/finance/webhook-handlers.ts.
 	'membership.started': MembershipPaymentEvent;

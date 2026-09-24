@@ -159,7 +159,7 @@
 							{release.radioOptIn
 								? release.radioAttested
 									? 'In the rotation'
-									: 'Waiting on the PRO attestation'
+									: 'Waiting on the attestation'
 								: 'Not in the rotation'}
 						{/if}
 					</Fact>
@@ -294,6 +294,12 @@
 					Put this record in the rotation of the station that plays across the site. Independent of
 					selling — a free release can be on the air, and no Stripe account is needed.
 				</p>
+				<p class="text-muted text-sm">
+					The station pays no licence fees, so it can only play original songs written entirely by
+					band members who don’t belong to a performing-rights organisation. Covers, and songs with
+					anyone else’s material in them, would need licences from the PROs and SoundExchange, so
+					they can’t go on the air.
+				</p>
 
 				{#if release.radioExcluded}
 					<Alert type="warning">
@@ -318,22 +324,25 @@
 						checkboxLabel="On the air"
 						value={release.radioOptIn}
 					/>
-					{#if release.radioAttested && release.radioAttestedAt}
+					{#if release.radioAttested && release.radioAttestedAt && release.radioAttestationExpiresAt}
 						<p class="text-muted text-sm">
-							Attested on {formatDate(release.radioAttestedAt)}: {RADIO_PRO_ATTESTATION.text}
+							Attested on {formatDate(release.radioAttestedAt)}, good until
+							{formatDate(release.radioAttestationExpiresAt)}: {RADIO_PRO_ATTESTATION.text}
 						</p>
-					{:else}
-						{#if release.radioOptIn}
-							<Alert type="warning">
-								This release is off the air until someone confirms the statement below.
-							</Alert>
-						{/if}
+					{:else if release.radioOptIn}
+						<Alert type="warning">
+							{release.radioAttestedAt
+								? 'The attestation for this release has run out or its wording has changed, so it is off the air until someone confirms the statement below.'
+								: 'This release is off the air until someone confirms the statement below.'}
+						</Alert>
+					{/if}
+					{#if !release.radioAttested || release.radioAttestationRenewable}
 						<FormField
 							field={fields.attestNotPro}
 							type="checkbox"
 							label="Performing rights"
 							checkboxLabel={RADIO_PRO_ATTESTATION.text}
-							description="Required to go on the air. CMC Radio holds no licence to play music a performing-rights organisation collects on."
+							description="Required to go on the air, and again every year. CMC Radio holds no performing-rights licence, so it plays only original songs by writers who are not members of a performing-rights organisation."
 						/>
 					{/if}
 					<SubmitButton>Save</SubmitButton>

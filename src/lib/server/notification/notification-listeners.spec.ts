@@ -1350,3 +1350,35 @@ describe('renewal expiry due (#1478)', () => {
 		expect(new Set(renewalCalls().map((c) => c.userId))).toEqual(new Set(['staff-1', 'staff-2']));
 	});
 });
+
+describe('radio attestation due (#1516)', () => {
+	beforeEach(() => {
+		registerAllNotificationListeners();
+	});
+
+	const due = {
+		stage: '30d',
+		releaseId: 'rel-1',
+		releaseTitle: 'Night Swim',
+		bandName: 'The Tidepools',
+		bandSlug: 'tidepools',
+		expiresOn: '2026-10-20',
+		bandAdmins: [
+			{ userId: 'u1', userName: 'Ada', userEmail: 'ada@test.com' },
+			{ userId: 'u2', userName: 'Bo', userEmail: 'bo@test.com' }
+		]
+	};
+
+	it("tells each of the band's admins, linking to the release", async () => {
+		await emit('audio.radio_attestation_due', due);
+
+		const calls = mockDispatch.mock.calls
+			.map(([p]) => p)
+			.filter((p) => p.type === 'radio_attestation_expiring');
+		expect(calls.map((c) => c.userId)).toEqual(['u1', 'u2']);
+		expect(calls[0].href).toBe('/band/tidepools/music/rel-1');
+		expect(calls[0].title).toContain('Night Swim');
+		expect(calls[0].email.subject).toContain('Night Swim');
+		expect(paragraphText(calls[0].email)).toContain('off the air');
+	});
+});

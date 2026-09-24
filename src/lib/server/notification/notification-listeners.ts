@@ -1871,6 +1871,45 @@ export function registerAllNotificationListeners(): void {
 
 	// CMC's own permits, licenses and policies (#1478). The responsible staffer
 	// alone when one is named, so a reminder has an owner rather than an audience.
+	// A release's yearly radio attestation (#1516), for whoever can renew it.
+	domainEvents.on('audio.radio_attestation_due', async ({ data: event }) => {
+		const date = formatIsoDay(event.expiresOn);
+		const title = `Renew the radio attestation for ${event.releaseTitle}`;
+		for (const admin of event.bandAdmins) {
+			try {
+				await dispatch({
+					type: 'radio_attestation_expiring',
+					userId: admin.userId,
+					userEmail: admin.userEmail,
+					title,
+					body: `${event.bandName} · runs out ${date}`,
+					href: `/band/${event.bandSlug}/music/${event.releaseId}`,
+					email: {
+						recipientName: admin.userName,
+						subject: `${event.releaseTitle}: radio attestation runs out ${date}`,
+						preview_text: `Confirm it again to stay on CMC Radio`,
+						heading: title,
+						paragraphs: [
+							{
+								text: `The statement ${event.bandName} gave to put ${event.releaseTitle} on CMC Radio runs out on ${date}. Attestations last a year. If nobody confirms it again by then, the release goes off the air until someone does.`
+							}
+						],
+						details: [
+							{ label: 'Release', value: event.releaseTitle },
+							{ label: 'Runs out', value: date }
+						],
+						cta: { label: 'Open the release' }
+					}
+				});
+			} catch (err) {
+				captureException(err, {
+					event: 'notification.radio_attestation_expiring',
+					to: admin.userEmail
+				});
+			}
+		}
+	});
+
 	domainEvents.on('renewal.expiry_due', async ({ data: event }) => {
 		const recipients = event.responsible
 			? [event.responsible]

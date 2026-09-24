@@ -153,6 +153,9 @@ export async function seedAudio(bands: any[], users: any[], alsoInclude: any[] =
 		const vetoed = i === 2;
 		// The live record opted in but never attested, so it shows as off the air.
 		const attested = shape.radioOptIn && shape.kind !== 'live';
+		// One attestation is inside its last month, so the renewal prompt and the
+		// reminder both have something to show.
+		const attestedDaysAgo = i === 1 ? 345 : 7;
 
 		releaseRows.push({
 			id: releaseId,
@@ -166,7 +169,7 @@ export async function seedAudio(bands: any[], users: any[], alsoInclude: any[] =
 			priceMinCents: shape.priceMinCents,
 			allowPayMore: shape.priceMinCents > 0,
 			radioOptIn: shape.radioOptIn,
-			radioAttestedAt: attested ? new Date(Date.now() - 7 * 86400000) : null,
+			radioAttestedAt: attested ? new Date(Date.now() - attestedDaysAgo * 86400000) : null,
 			radioAttestedByUserId: attested ? (band.ownerId ?? null) : null,
 			radioAttestationVersion: attested ? RADIO_PRO_ATTESTATION.version : null,
 			radioExcludedAt: vetoed ? new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) : null,

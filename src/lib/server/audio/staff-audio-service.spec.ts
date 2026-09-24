@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { vi } from 'vitest';
 import { computeSplit, suggestedShareCents } from '$lib/finance/split';
-import { AUDIO_PLATFORM_FEE_BPS } from '$lib/config';
+import { AUDIO_PLATFORM_FEE_BPS, RADIO_PRO_ATTESTATION } from '$lib/config';
 
 /**
  * The collective's own sales report, and the one thing it must never get wrong.
@@ -21,13 +21,17 @@ import { AUDIO_PLATFORM_FEE_BPS } from '$lib/config';
  */
 type Row = Record<string, unknown>;
 
-const state = { results: [] as unknown[][] };
+const state = { results: [] as unknown[][], wheres: [] as string[] };
 
 function chain(rows: unknown[]) {
 	const self: Record<string, unknown> = {};
-	for (const key of ['from', 'where', 'orderBy', 'limit', 'innerJoin', 'leftJoin', 'groupBy']) {
+	for (const key of ['from', 'orderBy', 'limit', 'innerJoin', 'leftJoin', 'groupBy']) {
 		self[key] = () => self;
 	}
+	self.where = (w: unknown) => {
+		state.wheres.push(String(w));
+		return self;
+	};
 	self.then = (resolve: (v: unknown) => void) => resolve(rows);
 	return self;
 }
@@ -41,6 +45,7 @@ vi.mock('drizzle-orm', () => ({
 	count: () => 'count()',
 	desc: (a: unknown) => `desc(${String(a)})`,
 	eq: (a: unknown, b: unknown) => `eq(${String(a)},${String(b)})`,
+	gt: (a: unknown, b: unknown) => `gt(${String(a)},${String(b)})`,
 	isNull: (a: unknown) => `isNull(${String(a)})`,
 	sql: Object.assign(
 		(strings: TemplateStringsArray, ...values: unknown[]) =>
@@ -141,5 +146,46 @@ describe('salesTotals', () => {
 		expect(t.freeSales).toBe(1);
 		expect(t.sales).toBe(2);
 		expect(t.toBandsCents + t.toCollectiveCents + t.feesCents).toBe(t.grossCents);
+	});
+});
+
+describe('the radio readiness panel (#1516)', () => {
+	const NOW = new Date('2026-09-24T12:00:00Z');
+	const yearAgo = String(new Date('2025-09-24T12:00:00Z'));
+
+	it('counts only releases whose attestation is under a year old', async () => {
+		vi.useFakeTimers({ now: NOW });
+		state.wheres = [];
+		state.results = [[{ tracks: 0, bands: 0, outOfRange: 0 }], [{ value: 0 }]];
+		try {
+			await service.radioPoolStats();
+		} finally {
+			vi.useRealTimers();
+		}
+		expect(state.wheres).toHaveLength(2);
+		for (const where of state.wheres) expect(where).toContain(`,${yearAgo})`);
+	});
+
+	it('marks a release with a lapsed attestation as not attested', async () => {
+		vi.useFakeTimers({ now: NOW });
+		state.results = [
+			[
+				{
+					id: 'r1',
+					radioOptIn: true,
+					radioAttestationVersion: RADIO_PRO_ATTESTATION.version,
+					radioAttestedAt: new Date('2025-09-01T00:00:00Z'),
+					radioExcludedAt: null,
+					trackCount: 1,
+					salesCount: 0
+				}
+			]
+		];
+		try {
+			const [row] = await service.listAllReleases();
+			expect(row.radioAttested).toBe(false);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });

@@ -2627,14 +2627,16 @@ export const RADIO_MIN_TRACK_MS = 30 * 1000;
 export const RADIO_MAX_TRACK_MS = 15 * 60 * 1000;
 
 /**
- * What a band attests before a release can go on CMC Radio. The station holds no
- * webcast license, so it plays only music no PRO collects on. `version` is stored
- * with each attestation; changing `text` means changing `version`, and every
- * release then needs a fresh attestation before it plays again.
+ * What a band attests, per release, before it can go on CMC Radio. The station
+ * holds no performing-rights or webcast license, so it plays only originals by
+ * writers no PRO collects for. `version` is stored with each attestation;
+ * changing `text` means changing `version`, and every release then needs a fresh
+ * attestation before it plays again. One lasts `termMonths` from when it is given.
  */
 export const RADIO_PRO_ATTESTATION = {
-	version: '2026-09-23',
-	text: 'No one in this band, and no one who wrote a song on this release, is a member of a performing-rights organisation (ASCAP, BMI, SESAC, GMR, or any other).'
+	version: '2026-09-24',
+	termMonths: 12,
+	text: 'Every song on this release was written only by members of this band; none of them is a member of a performing-rights organisation (ASCAP, BMI, SESAC, GMR or a foreign equivalent); and no song is a cover or includes material written by anyone else.'
 } as const;
 // Help audiences
 // ---------------------------------------------------------------------------

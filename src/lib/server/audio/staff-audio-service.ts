@@ -11,7 +11,8 @@ import { audioRelease, audioTrack, releasePurchase } from '$lib/server/db/schema
 import { group } from '$lib/server/db/schema/group';
 import { and, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
-import { RADIO_MIN_TRACK_MS, RADIO_MAX_TRACK_MS, RADIO_PRO_ATTESTATION } from '$lib/config';
+import { RADIO_MIN_TRACK_MS, RADIO_MAX_TRACK_MS } from '$lib/config';
+import { currentRadioAttestation, radioAttested } from './radio-attestation';
 import { releaseAggregates } from './audio-service';
 import { calculateProcessingFee } from '$lib/finance/fees';
 
@@ -52,6 +53,7 @@ export async function listAllReleases(): Promise<StaffReleaseRow[]> {
 			priceMinCents: audioRelease.priceMinCents,
 			radioOptIn: audioRelease.radioOptIn,
 			radioAttestationVersion: audioRelease.radioAttestationVersion,
+			radioAttestedAt: audioRelease.radioAttestedAt,
 			radioExcludedAt: audioRelease.radioExcludedAt,
 			radioExcludedReason: audioRelease.radioExcludedReason,
 			publishedAt: audioRelease.publishedAt,
@@ -77,7 +79,7 @@ export async function listAllReleases(): Promise<StaffReleaseRow[]> {
 		bandSlug: r.bandSlug,
 		priceMinCents: r.priceMinCents,
 		radioOptIn: r.radioOptIn,
-		radioAttested: r.radioAttestationVersion === RADIO_PRO_ATTESTATION.version,
+		radioAttested: radioAttested(r),
 		radioExcluded: r.radioExcludedAt !== null,
 		radioExcludedReason: r.radioExcludedReason,
 		trackCount: Number(r.trackCount),
@@ -104,7 +106,7 @@ export async function radioPoolStats(): Promise<{
 	const eligible = and(
 		eq(audioRelease.status, 'published'),
 		eq(audioRelease.radioOptIn, true),
-		eq(audioRelease.radioAttestationVersion, RADIO_PRO_ATTESTATION.version),
+		currentRadioAttestation(),
 		isNull(audioRelease.radioExcludedAt),
 		isNull(audioRelease.deletedAt),
 		isNull(audioTrack.radioExcludedAt),
@@ -133,7 +135,7 @@ export async function radioPoolStats(): Promise<{
 			and(
 				eq(audioRelease.status, 'published'),
 				eq(audioRelease.radioOptIn, true),
-				eq(audioRelease.radioAttestationVersion, RADIO_PRO_ATTESTATION.version),
+				currentRadioAttestation(),
 				isNull(audioRelease.radioExcludedAt),
 				isNull(audioRelease.deletedAt),
 				isNull(group.deletedAt)
