@@ -51,29 +51,6 @@ export const noSaleTerms: ListingSaleTerms = {
 	ticketQuantity: null
 };
 
-type LegacySaleKey =
-	| 'legacyTicketingEnabled'
-	| 'legacyTicketPrice'
-	| 'legacyTicketPriceFloorCents'
-	| 'legacyTicketQuantity';
-
-/**
- * A listing row, or its column map, less the retired sale terms. For
- * `.returning()`, which cannot carry the subqueries above.
- */
-export function withoutLegacySaleTerms<T extends Record<LegacySaleKey, unknown>>(
-	row: T
-): Omit<T, LegacySaleKey> {
-	const {
-		legacyTicketingEnabled: _enabled,
-		legacyTicketPrice: _price,
-		legacyTicketPriceFloorCents: _floor,
-		legacyTicketQuantity: _quantity,
-		...rest
-	} = row;
-	return rest;
-}
-
 /**
  * Every column of `event_listing`, with `posterKey` resolved from the
  * attachment instead of the column of the same name.
@@ -83,7 +60,7 @@ export function withoutLegacySaleTerms<T extends Record<LegacySaleKey, unknown>>
  * shape, so its consumers need no change at all.
  */
 export const eventListingColumns = {
-	...withoutLegacySaleTerms(getTableColumns(eventListing)),
+	...getTableColumns(eventListing),
 	posterKey: eventPosterKeySql,
 	...ticketSaleColumns
 };

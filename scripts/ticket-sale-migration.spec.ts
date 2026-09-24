@@ -1,25 +1,30 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { applyMigrations } from './db/migrate-local';
+import { applyMigrations, MIGRATIONS_FOLDER } from './db/migrate-local';
 
 /**
  * The copy of `event_listing`'s sale terms into `ticket_sale` (#1203).
  *
  * Prod D1 is canonical, so the copy has to be lossless. Run for real against a
- * scratch database migrated to head, with listings written the way the old
- * columns held them, then the copy re-run over them.
+ * scratch database migrated to just before it, since later migrations drop the
+ * old columns the listings are written through (#1454).
  */
-const COPY = readFileSync(
-	join(
-		import.meta.dirname,
-		'..',
-		'migrations/20260924082909_ticket_sale_from_listing/migration.sql'
-	),
-	'utf8'
-);
+const COPY_TAG = '20260924082909_ticket_sale_from_listing';
+const COPY = readFileSync(join(MIGRATIONS_FOLDER, COPY_TAG, 'migration.sql'), 'utf8');
+
+/** A migrations folder holding only what ran before the copy. */
+function migrationsBeforeCopy(): string {
+	const dir = mkdtempSync(join(tmpdir(), 'corvmc-ticket-sale-migrations-'));
+	for (const tag of readdirSync(MIGRATIONS_FOLDER)) {
+		if (/^\d{14}_/.test(tag) && tag < COPY_TAG) {
+			cpSync(join(MIGRATIONS_FOLDER, tag), join(dir, tag), { recursive: true });
+		}
+	}
+	return dir;
+}
 
 type SaleRow = {
 	id: string;
@@ -36,7 +41,7 @@ describe('ticket_sale_from_listing', () => {
 
 	beforeAll(() => {
 		const file = join(mkdtempSync(join(tmpdir(), 'corvmc-ticket-sale-')), 'd1.sqlite');
-		applyMigrations(file);
+		applyMigrations(file, migrationsBeforeCopy());
 		db = new DatabaseSync(file);
 		db.exec('PRAGMA foreign_keys = OFF');
 		const insert = db.prepare(`INSERT INTO event_listing

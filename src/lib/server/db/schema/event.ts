@@ -81,15 +81,6 @@ export const eventListing = sqliteTable(
 		announceAt: integer('announce_at', { mode: 'timestamp' }),
 		reservationId: text('reservation_id').references(() => reservation.id),
 		tags: text('tags'),
-		// Retired: the sale terms live on `ticket_sale`, which the migration copied
-		// these into. Neither read nor written — kept only so the Worker still
-		// running during a deploy finds them; the drop is a later migration.
-		legacyTicketingEnabled: integer('ticketing_enabled', { mode: 'boolean' })
-			.notNull()
-			.default(false),
-		legacyTicketPrice: integer('ticket_price'),
-		legacyTicketPriceFloorCents: integer('ticket_price_floor_cents').notNull().default(0),
-		legacyTicketQuantity: integer('ticket_quantity'),
 		// The group that OWNS this event — whose panel or page it lives in, and the
 		// only group that may edit, publish or cancel it. Null for CMC-produced
 		// events. This is authority, not billing, and it is not the bill either:

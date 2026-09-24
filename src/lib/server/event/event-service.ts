@@ -15,7 +15,6 @@ import {
 	shortOfActsSql,
 	ticketSaleColumns,
 	noSaleTerms,
-	withoutLegacySaleTerms,
 	type ListingSaleTerms
 } from './event-columns';
 import { saveTicketSale, type TicketSaleTerms } from '$lib/server/ticket/ticket-sale';
@@ -215,7 +214,7 @@ async function readBackFor(
 
 /** A just-written listing row, completed with what `RETURNING` cannot carry. */
 async function readBack(row: typeof eventListing.$inferSelect): Promise<EventRow> {
-	return { ...withoutLegacySaleTerms(row), ...(await readBackFor(row.id)) };
+	return { ...row, ...(await readBackFor(row.id)) };
 }
 
 export interface EventRow {
@@ -396,7 +395,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 			.returning();
 		// A listing one statement old has no attachment yet; the poster block
 		// below writes one and sets this.
-		row = { ...withoutLegacySaleTerms(inserted), posterKey: null, ...noSaleTerms };
+		row = { ...inserted, posterKey: null, ...noSaleTerms };
 	} catch (err) {
 		// Compensating writes: the listing never persisted, so neither the hold nor
 		// the production it would have announced has anything pointing at it.
@@ -2250,7 +2249,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 	// writes one and sets this.
 	await saveTicketSale(inserted.id, { priceCents: ticketPrice ?? undefined });
 	const row: EventRow = {
-		...withoutLegacySaleTerms(inserted),
+		...inserted,
 		posterKey: null,
 		...noSaleTerms,
 		ticketPrice: ticketPrice ?? null
@@ -2467,7 +2466,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 		// A listing one statement old has no attachment yet; the poster block
 		// below writes one and sets this.
 		row = {
-			...withoutLegacySaleTerms(inserted),
+			...inserted,
 			posterKey: null,
 			...noSaleTerms,
 			ticketPrice: ticketPrice ?? null

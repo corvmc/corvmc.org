@@ -49,9 +49,6 @@ export const moneyColumns = {
 		movement: 'ticket_sale',
 		writer: 'src/lib/server/finance/checkout-entries-listener.ts'
 	},
-	'event_listing.ticket_price_floor_cents': {
-		notAccounting: 'retired: copied to ticket_sale, neither read nor written'
-	},
 	'ticket_sale.price_cents': {
 		notAccounting: 'the suggested price a sale opens at, not an amount that moved'
 	},
