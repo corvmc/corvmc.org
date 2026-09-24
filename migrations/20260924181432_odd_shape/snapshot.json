@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ee334ba3-1d1a-47b2-8c38-e66c88db21a2",
+  "id": "0ae6413c-d2fc-4854-806a-1841e99f7dd0",
   "prevIds": [
-    "a8129b4d-890f-4f77-89d2-b80a60ce163b"
+    "ee334ba3-1d1a-47b2-8c38-e66c88db21a2"
   ],
   "ddl": [
     {
@@ -9925,6 +9925,16 @@
       "default": null,
       "generated": null,
       "name": "resolution_notes",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "close_reports_on_completion",
       "entityType": "columns",
       "table": "work_order"
     },

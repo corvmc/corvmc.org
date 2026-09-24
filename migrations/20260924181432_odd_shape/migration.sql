@@ -1,0 +1,1 @@
+ALTER TABLE `work_order` ADD `close_reports_on_completion` integer DEFAULT false NOT NULL;

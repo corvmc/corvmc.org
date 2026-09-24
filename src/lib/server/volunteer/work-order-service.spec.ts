@@ -437,6 +437,23 @@ describe('work orders', () => {
 		await expect(resolveWorkOrder('shift-1', { resolvedByUserId: 'staff-1' })).rejects.toThrow();
 	});
 
+	it('records whether finishing should close its reports, off unless staff say so', async () => {
+		selectResult = [shiftRow({ startsAt: null, endsAt: null })];
+		await scheduleWorkOrder('shift-1', {
+			startsAt: '2026-06-02T18:00',
+			endsAt: '2026-06-02T20:00'
+		});
+		expect(updatedColumns().closeReportsOnCompletion).toBe(false);
+
+		chainCalls = [];
+		await scheduleWorkOrder('shift-1', {
+			startsAt: '2026-06-02T18:00',
+			endsAt: '2026-06-02T20:00',
+			closeReportsOnCompletion: true
+		});
+		expect(updatedColumns().closeReportsOnCompletion).toBe(true);
+	});
+
 	it('refuses to schedule something that already has a window', async () => {
 		selectResult = [shiftRow()];
 

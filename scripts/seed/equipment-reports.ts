@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm';
  * Member reports against units, in every triage stage: two untriaged on one unit
  * (the collapse case), one untriaged and still usable, one sent to an open work
  * order, one resolved and one dismissed — plus two building problems with no
- * unit, one untriaged and one in a work order. Without these the Equipment tab of the
+ * unit, one untriaged and one in a finished work order. Without these the Equipment tab of the
  * flags surface only ever renders empty.
  */
 export async function seedEquipmentReports(
@@ -40,10 +40,15 @@ export async function seedEquipmentReports(
 			createdByUserId: staffId,
 			createdAt: ago(4)
 		},
+		// Scheduled, finished yesterday, not flagged to close its report: it sits on
+		// Today as "finished: confirm fixed?" (#1544).
 		{
 			id: buildingOrderId,
 			volunteerRoleId: roleId,
 			assetId: null,
+			startsAt: ago(1),
+			endsAt: new Date(ago(1).getTime() + 2 * 3600_000),
+			closeReportsOnCompletion: false,
 			notes: 'Room B: Ceiling light flickers',
 			capacity: 1,
 			createdByUserId: staffId,

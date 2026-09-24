@@ -134,6 +134,12 @@
 									type="datetime-local"
 									value={defaultEnd(order.dueAt)}
 								/>
+								<FormField
+									name="closeReportsOnCompletion"
+									type="checkbox"
+									checkboxLabel="Close reports on completion"
+									description="When the window ends, close any equipment reports on this and tell the reporters it was fixed. Off, it waits on Today for you to confirm."
+								/>
 							{/snippet}
 						</Action>
 

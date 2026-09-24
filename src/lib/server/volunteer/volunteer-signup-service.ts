@@ -8,7 +8,22 @@ import {
 	volunteerShiftFeedback
 } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, count, desc, eq, gte, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	countDistinct,
+	desc,
+	eq,
+	gte,
+	inArray,
+	isNull,
+	lt,
+	ne,
+	or,
+	sql
+} from 'drizzle-orm';
+import { workRequest } from '$lib/server/db/schema/inventory';
 import { containsLiteral } from '$lib/server/db/like';
 import { DomainError } from '$lib/server/errors';
 import { requireActiveVolunteer } from './volunteer-profile-service';
@@ -884,7 +899,7 @@ export async function listUnclosedSignups(
 export async function countVolunteerWorkWaiting(now = new Date()): Promise<number> {
 	const lookback = new Date(now.getTime() - CLOSE_OUT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
 
-	const [pendingHours, claims, blocked, unclosed, unscheduled] = await Promise.all([
+	const [pendingHours, claims, blocked, unclosed, unscheduled, toConfirm] = await Promise.all([
 		db.select({ n: count() }).from(volunteerHourLog).where(eq(volunteerHourLog.status, 'pending')),
 		db
 			.select({ n: count() })
@@ -919,6 +934,21 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 			.from(workOrder)
 			.where(
 				and(isNull(workOrder.startsAt), isNull(workOrder.resolvedAt), isNull(workOrder.cancelledAt))
+			),
+		// Finished work nobody confirmed fixed: the same predicate as
+		// `listFinishedWorkToConfirm`, counted per work order.
+		db
+			.select({ n: countDistinct(workOrder.id) })
+			.from(workOrder)
+			.innerJoin(workRequest, eq(workRequest.workOrderId, workOrder.id))
+			.where(
+				and(
+					eq(workOrder.closeReportsOnCompletion, false),
+					isNull(workOrder.resolvedAt),
+					isNull(workOrder.cancelledAt),
+					lt(workOrder.endsAt, now),
+					eq(workRequest.status, 'pending')
+				)
 			)
 	]);
 
@@ -927,7 +957,8 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 		Number(claims[0]?.n ?? 0) +
 		Number(blocked[0]?.n ?? 0) +
 		Number(unclosed[0]?.n ?? 0) +
-		Number(unscheduled[0]?.n ?? 0)
+		Number(unscheduled[0]?.n ?? 0) +
+		Number(toConfirm[0]?.n ?? 0)
 	);
 }
 
