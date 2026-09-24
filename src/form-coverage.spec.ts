@@ -45,7 +45,8 @@ const CONTEXT = /^(id|.*Id|.*Ids|slug|token|intent|turnstileToken)$/;
 
 const GRANDFATHERED: string[] = JSON.parse(readFileSync('src/form-coverage.json', 'utf8'));
 
-async function uncoveredFields() {
+/** Every exported `form()`, by name, with its schema's keys. */
+async function remoteForms() {
 	const byName = new Map<string, string[]>();
 	for (const m of globSync('src/lib/remote/*.remote.ts')) {
 		const mod: Record<string, { __?: { type?: string; i?: number } }> = await import(
@@ -54,12 +55,17 @@ async function uncoveredFields() {
 		for (const [name, v] of Object.entries(mod)) {
 			const i = v?.__?.i;
 			if (v?.__?.type !== 'form' || typeof i !== 'number') continue;
-			const schema = CAP[i] as { shape?: Record<string, unknown> } | null;
-			const keys = Object.keys(schema?.shape ?? {});
-			if (keys.length) byName.set(name, keys);
+			// `null` is what `query`/`command` push, so it marks a non-form.
+			if (CAP[i] === null) continue;
+			const schema = CAP[i] as { shape?: Record<string, unknown> };
+			byName.set(name, Object.keys(schema?.shape ?? {}));
 		}
 	}
+	return byName;
+}
 
+async function uncoveredFields() {
+	const byName = await remoteForms();
 	const svelte = globSync('src/{routes,lib/components}/**/*.svelte').map((p) =>
 		readFileSync(p, 'utf8')
 	);
@@ -67,6 +73,7 @@ async function uncoveredFields() {
 
 	const out: string[] = [];
 	for (const [name, keys] of byName) {
+		if (!keys.length) continue;
 		const hosts = svelte.filter((s) => new RegExp(`\\b${name}\\b`).test(s));
 		if (!hosts.length) continue;
 		const scoped = hosts.join('\n');
@@ -100,6 +107,26 @@ describe('form field coverage', () => {
 				`nobody can set them. Add the control, drop the field, or — if the control ` +
 				`exists and this could not see it — add the entry to src/form-coverage.json ` +
 				`with a note on the PR:\n${offenders.map((f) => `  ${f}`).join('\n')}\n`
+		).toEqual([]);
+	});
+
+	// Rendered by an open PR (#1526). Delete the entry once it lands.
+	const HOSTLESS_IN_FLIGHT = new Set(['createWorkOrder']);
+
+	// The field check above skips a form nothing names, so a whole form with no
+	// page slipped past it (#1426, #1528).
+	it('names every form() from some component', { timeout: 30_000 }, async () => {
+		const svelte = globSync('src/{routes,lib/components}/**/*.svelte')
+			.map((p) => readFileSync(p, 'utf8'))
+			.join('\n');
+		const hostless = [...(await remoteForms()).keys()].filter(
+			(name) => !HOSTLESS_IN_FLIGHT.has(name) && !new RegExp(`\\b${name}\\b`).test(svelte)
+		);
+
+		expect(
+			hostless,
+			`No component names these forms, so no page can submit them. Render ` +
+				`each one, or delete it:\n${hostless.map((f) => `  ${f}`).join('\n')}\n`
 		).toEqual([]);
 	});
 

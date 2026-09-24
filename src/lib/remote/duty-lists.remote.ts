@@ -15,8 +15,7 @@ import {
 	listDutyLists,
 	removeDutyListItem as removeItemService,
 	setWorkTaskDone as setTaskService,
-	updateDutyList as updateService,
-	updateDutyListItem as updateItemService
+	updateDutyList as updateService
 } from '$lib/server/volunteer/duty-list-service';
 import { getStaffShiftPage, getVolunteerWorklist } from './volunteer.remote';
 
@@ -224,20 +223,6 @@ export const addDutyListItem = form(
 		try {
 			await addItemService(data.dutyListId, itemInput(data));
 			await Promise.all([getDutyListPage(data.dutyListId).refresh(), getDutyLists().refresh()]);
-			return { success: true };
-		} catch (err) {
-			mapDomainError(err);
-		}
-	}
-);
-
-export const updateDutyListItem = form(
-	z.object({ id: z.string().min(1), dutyListId: z.string().min(1), ...itemShape }),
-	async (data) => {
-		await requireCapability('volunteer.manageRoles');
-		try {
-			await updateItemService(data.id, itemInput(data));
-			await getDutyListPage(data.dutyListId).refresh();
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);

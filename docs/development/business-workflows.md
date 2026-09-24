@@ -951,10 +951,11 @@ later suggestions through review first.
 - **A restriction that seems not to apply** → check the _scope_. Restricted at
   `community_event` does nothing to suggestions or messaging, by design.
 - **A staff-imposed restriction with no report behind it** → `setStanding` takes `flagId` as
-  optional today, and `setMemberStanding` is a staff form that restricts with no report at
-  all. It is the least-reviewed moderation path there is;
-  [specs/moderation-appeals-spec.md](../specs/moderation-appeals-spec.md) is the design that
-  closes it and is **not built**.
+  optional today, though no form calls it without one since `setMemberStanding` was deleted
+  (#1528). [specs/moderation-appeals-spec.md](../specs/moderation-appeals-spec.md) is the
+  design that makes `flagId` required and is **not built**.
+- **A restriction staff need to lift** → the Restore action on the member's Moderation panel
+  (`/staff/users/[id]`), one scope at a time.
 - **A reported suggestion nobody can see** → reporting takes it off the board immediately,
   so this queue is time-sensitive in a way the flag queue is not.
 
