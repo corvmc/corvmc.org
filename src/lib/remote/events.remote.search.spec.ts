@@ -31,8 +31,12 @@ function chainable() {
 
 vi.mock('$lib/server/db', () => ({ db: { select: () => chainable() } }));
 
+let held: string[] | null = null;
 vi.mock('$lib/server/authorization', () => ({
-	requireCapability: vi.fn(async () => mockUser({ id: 'staff-1' })),
+	requireCapability: vi.fn(async (cap: string) => {
+		if (held && !held.includes(cap)) throw Object.assign(new Error('403'), { status: 403 });
+		return mockUser({ id: 'staff-1' });
+	}),
 	requireUser: vi.fn(() => mockUser({ id: 'staff-1' }))
 }));
 
@@ -67,7 +71,8 @@ vi.mock('$app/server', () => ({
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 
-const { searchEvents } = (await import('$lib/remote/events.remote')) as any;
+const { searchEvents, searchEventsForPlacement } =
+	(await import('$lib/remote/events.remote')) as any;
 
 function rendered() {
 	const where = chainCalls.find((c) => c.method === 'where');
@@ -79,6 +84,23 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	selectResult = [];
 	chainCalls = [];
+	held = null;
+});
+
+describe('searchEventsForPlacement (#1618)', () => {
+	it('answers a sponsor manager who cannot read the staff event list', async () => {
+		held = ['sponsor.manage'];
+		selectResult = [{ id: 'e1', title: 'Fall Showcase', startsAt: new Date('2026-10-01') }];
+		const rows = await searchEventsForPlacement('fall');
+		expect(rows).toEqual([expect.objectContaining({ id: 'e1', title: 'Fall Showcase' })]);
+		await expect(searchEvents('fall')).rejects.toMatchObject({ status: 403 });
+	});
+
+	it('refuses someone who cannot manage sponsors, before any read', async () => {
+		held = ['event.read', 'sponsor.read'];
+		await expect(searchEventsForPlacement('fall')).rejects.toMatchObject({ status: 403 });
+		expect(chainCalls).toHaveLength(0);
+	});
 });
 
 describe('searchEvents', () => {

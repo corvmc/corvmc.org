@@ -17,6 +17,8 @@ import {
 import {
 	committeeAllows,
 	committeeGrantsFor,
+	listCommitteeHolders,
+	orgWideCapabilities,
 	roleGrantAllows,
 	type CapabilityScope,
 	type CommitteeGrant
@@ -198,6 +200,11 @@ export async function userHasCapability(
 	return grantedBeyondPositions(userId, cap, scope, () => committeeGrantsFor(userId));
 }
 
+/** What this user's committee seats grant everywhere: nav rows and the staff panel gate. */
+export async function committeeCapabilitiesFor(userId: string): Promise<Capability[]> {
+	return orgWideCapabilities(await committeeGrantsFor(userId));
+}
+
 /** Does this user's position alone grant `cap`? For "you cannot grant what you do not hold". */
 export async function positionsGrant(userId: string, cap: Capability): Promise<boolean> {
 	return authorizerFor(await positionsFor(userId)).authorize(requestFor(cap)).success;
@@ -224,20 +231,27 @@ export async function isElevated(userId: string): Promise<boolean> {
 }
 
 /**
- * Everyone who could act on `cap`. The referent that replaces
+ * Everyone who could act on `cap`: position holders, plus members of a
+ * committee that grants it org-wide. The referent that replaces
  * `listStaffUsers()` for notifications.
  */
 export async function listUsersWithCapability(
 	cap: Capability
 ): Promise<Array<{ id: string; name: string; email: string }>> {
 	const names = positionsGranting(cap);
-	if (names.length === 0) return [];
-	const rows = await db
-		.select({ id: user.id, name: user.name, email: user.email })
-		.from(user)
-		.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
-		.innerJoin(role, eq(role.id, modelHasRole.roleId))
-		.where(inArray(role.name, names));
+	const [byPosition, bySeat] = await Promise.all([
+		names.length === 0
+			? []
+			: db
+					.select({ id: user.id, name: user.name, email: user.email })
+					.from(user)
+					.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
+					.innerJoin(role, eq(role.id, modelHasRole.roleId))
+					.where(inArray(role.name, names)),
+		// An org-wide committee grant makes its members holders too (#1578, #1602).
+		listCommitteeHolders(cap)
+	]);
+	const rows = [...byPosition, ...bySeat];
 
 	// De-duplicated in JS rather than with groupBy: the specs in this directory
 	// mock `drizzle-orm` export by export, so importing one more operator here

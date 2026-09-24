@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { group, groupMember } from '$lib/server/db/schema/group';
+import { user } from '$lib/server/db/schema/authentication';
 import { eventListing } from '$lib/server/db/schema/event';
 import { volunteerRole, volunteerSignup, workOrder } from '$lib/server/db/schema/volunteer';
 import { grantRuleFor, type Capability } from '$lib/config';
@@ -61,6 +62,38 @@ export function committeeAllows(
 	return seats.some(
 		(s) => s.capabilities.includes(cap) && (reach === 'org' || s.groupId === scope?.groupId)
 	);
+}
+
+/**
+ * What these seats hold everywhere, for the nav and the panel gate: `'org'`
+ * grants only. An `'owned'` grant needs a record in hand, which a nav row never has.
+ */
+export function orgWideCapabilities(seats: readonly CommitteeGrant[]): Capability[] {
+	const caps = seats.flatMap((s) => s.capabilities);
+	return [...new Set(caps)].filter((c) => grantRuleFor(c)?.committee === 'org') as Capability[];
+}
+
+/** Active members of every live committee that grants `cap` org-wide, for fan-out. */
+export async function listCommitteeHolders(
+	cap: Capability
+): Promise<Array<{ id: string; name: string; email: string }>> {
+	if (grantRuleFor(cap)?.committee !== 'org') return [];
+	const rows = await db
+		.select({ id: user.id, name: user.name, email: user.email, grants: group.capabilityGrants })
+		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
+		.innerJoin(user, eq(user.id, groupMember.userId))
+		.where(
+			and(
+				eq(groupMember.status, 'active'),
+				eq(group.kind, 'committee'),
+				isNull(group.deletedAt),
+				isNull(user.deletedAt)
+			)
+		);
+	return rows
+		.filter((r) => (r.grants ?? []).includes(cap))
+		.map(({ id, name, email }) => ({ id, name, email }));
 }
 
 type ShiftWindowRow = {

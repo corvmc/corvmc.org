@@ -586,3 +586,9 @@ never reaches the nav, because a nav row is never about one event.
 `requireCommitteeMember` keeps ownership scoping for records that a committee owns.
 
 Grant edits are audited as `capability.grants_changed`, with the capabilities added and removed.
+
+**Reachability.** A committee member who holds no position, but whose committee grants a
+capability org-wide, can open the staff panel. `getStaffLayout` and `getMemberLayout` add the
+committee's org-wide grants to the capability list, so the nav offers only those rows, and
+`/staff` lists them in place of the `user.list` dashboard. `listUsersWithCapability` counts that
+committee's members as holders, so reminders and assignee pickers include them.

@@ -11,6 +11,10 @@ sortOrder: 21
 current: insurance policies, city permits, liquor and performance licenses. A contractor's
 insurance certificate is not here; it stays on the contractor's record.
 
+Staff can read and change renewals, and so can members of any committee whose grants include them.
+The Development Committee has them to start with. To move renewals to another committee, edit
+the **Grants** on each committee's page under **Staff → People → Groups**.
+
 ## Adding one
 
 Choose **New renewal** and fill in:
@@ -31,7 +35,7 @@ When a renewal comes through, open it, choose **Edit**, and move **Expires** to 
 use **Attach document** to add the new certificate. There is one entry per permit or policy, not
 one per year, so you do not need to add a new one.
 
-Documents are private. They can only be opened by staff who can see this list.
+Documents are private. They can only be opened by people who can see this list.
 
 ## Reminders
 

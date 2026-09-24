@@ -703,6 +703,19 @@ export const getStaffCalendar = query(
  */
 export const searchEvents = query(z.string(), async (q) => {
 	await requireCapability('event.read');
+	return searchEventRows(q);
+});
+
+/**
+ * The same picker for placing a sponsorship on a show (#1618). A sponsor manager
+ * may hold no `event.read`, and needs the title and date of a show, not the staff list.
+ */
+export const searchEventsForPlacement = query(z.string(), async (q) => {
+	await requireCapability('sponsor.manage');
+	return searchEventRows(q);
+});
+
+async function searchEventRows(q: string) {
 	if (!q || q.length < 2) return [];
 
 	const rows = await db
@@ -722,7 +735,7 @@ export const searchEvents = query(z.string(), async (q) => {
 	// field verbatim — and it is formatted here so it lands in club time rather
 	// than whatever timezone the staffer's laptop is set to.
 	return rows.map((e) => ({ id: e.id, title: e.title, when: formatDateShortYear(e.startsAt) }));
-});
+}
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
 	await requireCapability('event.read');

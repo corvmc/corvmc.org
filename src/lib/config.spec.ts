@@ -25,16 +25,10 @@ const everyCapability = Object.entries(capabilities).flatMap(([r, actions]) =>
 );
 
 describe('the grantable-capability allowlist', () => {
-	// Resources whose every action is admin work or moves money. A volunteer
-	// role or a committee seat must never carry one, whatever staff tick.
-	const neverGrantable: readonly string[] = [
-		'user',
-		'audit',
-		'credit',
-		'finance',
-		'settings',
-		'lock'
-	];
+	// Resources whose every action is admin work or moves money, plus the one
+	// money-moving action elsewhere. A role or a committee must never carry one.
+	const neverGrantable: readonly string[] = ['user', 'audit', 'credit', 'settings', 'lock'];
+	const neverGrantableActions: readonly string[] = ['finance.refund'];
 
 	it('names only real capabilities', () => {
 		for (const cap of Object.keys(grantableCapabilities)) {
@@ -46,6 +40,7 @@ describe('the grantable-capability allowlist', () => {
 		for (const cap of Object.keys(grantableCapabilities)) {
 			expect(adminOnlyCapabilities as readonly string[], cap).not.toContain(cap);
 			expect(neverGrantable, cap).not.toContain(cap.split('.')[0]);
+			expect(neverGrantableActions, cap).not.toContain(cap);
 		}
 		expect(Object.keys(grantableCapabilities)).not.toContain('finance.refund');
 		expect(Object.keys(grantableCapabilities)).not.toContain('user.ban');
@@ -56,6 +51,14 @@ describe('the grantable-capability allowlist', () => {
 			const r = rule as { role?: { graceDays: number }; committee?: string };
 			expect(r.role || r.committee, `${cap} has no carrier`).toBeTruthy();
 			if (r.role) expect(r.role.graceDays, cap).toBeGreaterThanOrEqual(0);
+		}
+	});
+
+	it('lets finance reach a committee only for records it owns', () => {
+		for (const [cap, rule] of Object.entries(grantableCapabilities)) {
+			if (!cap.startsWith('finance.')) continue;
+			expect(rule, cap).toMatchObject({ committee: 'owned' });
+			expect(rule, cap).not.toHaveProperty('role');
 		}
 	});
 

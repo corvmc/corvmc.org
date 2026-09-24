@@ -2298,7 +2298,17 @@ export const grantableCapabilities = {
 	'grant.read': { label: 'See grants', committee: 'org' },
 	'grant.manage': { label: 'Manage grants', committee: 'org' },
 	'renewal.read': { label: 'See renewals', committee: 'org' },
-	'renewal.manage': { label: 'Manage renewals', committee: 'org' }
+	'renewal.manage': { label: 'Manage renewals', committee: 'org' },
+	// Powers over records a committee owns (projects, its markets, its schedules).
+	// `requireCommitteeMember` asks for these with the owning committee named.
+	'project.manage': { label: 'Move its projects along and apply duty lists', committee: 'owned' },
+	'volunteer.manageShifts': {
+		label: 'Open work orders and recurring work on its projects',
+		committee: 'owned'
+	},
+	'event.publish': { label: "Publish its projects' draft events", committee: 'owned' },
+	'event.manage': { label: 'Decide vendor applications for its markets', committee: 'owned' },
+	'finance.read': { label: 'See its own numbers', committee: 'owned' }
 } as const satisfies { readonly [C in Capability]?: GrantRule };
 
 export type GrantableCapability = keyof typeof grantableCapabilities;
