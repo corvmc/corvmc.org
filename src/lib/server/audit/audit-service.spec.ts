@@ -24,7 +24,8 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { recordAuditEntry, listAuditEntriesForSubject } = await import('./audit-service');
+const { recordAuditEntry, listAuditEntriesForSubject, listAuditEntries } =
+	await import('./audit-service');
 
 function insertUser(id: string, name: string) {
 	sqlite
@@ -161,5 +162,100 @@ describe('listAuditEntriesForSubject', () => {
 
 		const rows = await listAuditEntriesForSubject('user', 'member-1', { limit: 2 });
 		expect(rows.map((r) => r.details)).toMatchObject([{ delta: 3 }, { delta: 2 }]);
+	});
+});
+
+describe('listAuditEntries', () => {
+	/** Pacific noon on the given day, so the date filters have no edge to fall off. */
+	function at(id: string, isoDay: string) {
+		sqlite
+			.prepare(`update audit_log set created_at = ? where id = ?`)
+			.run(Math.floor(new Date(`${isoDay}T19:00:00Z`).getTime() / 1000), id);
+	}
+
+	async function seed() {
+		insertUser('staff-2', 'Riley Admin');
+		await recordAuditEntry({
+			action: 'user.reactivated',
+			subject: { type: 'user', id: 'member-1', label: 'Jordan Member' },
+			details: { subscription: 'none' }
+		});
+		requestUser = { id: 'staff-2', name: 'Riley Admin', email: 'riley@example.com' };
+		await recordAuditEntry({
+			action: 'credits.adjusted',
+			subject: { type: 'user', id: 'gone-1', label: 'Purged Person' },
+			details: { creditType: 'free_hours', delta: 2, balanceAfter: 2, description: 'x' }
+		});
+		const ids = sqlite.prepare(`select id, action from audit_log`).all() as {
+			id: string;
+			action: string;
+		}[];
+		at(ids.find((r) => r.action === 'user.reactivated')!.id, '2026-09-01');
+		at(ids.find((r) => r.action === 'credits.adjusted')!.id, '2026-09-10');
+	}
+
+	it('lists every subject newest first, with a true total', async () => {
+		await seed();
+		const { rows, pagination } = await listAuditEntries({});
+		expect(rows.map((r) => r.action)).toEqual(['credits.adjusted', 'user.reactivated']);
+		expect(pagination.total).toBe(2);
+	});
+
+	it('filters by action', async () => {
+		await seed();
+		const { rows } = await listAuditEntries({ action: 'user.reactivated' });
+		expect(rows.map((r) => r.action)).toEqual(['user.reactivated']);
+	});
+
+	it('searches the actor by name or email, including a staffer since purged', async () => {
+		await seed();
+		expect((await listAuditEntries({ actor: 'riley@' })).rows).toHaveLength(1);
+		sqlite.exec(`delete from user where id = 'staff-1'`);
+		const { rows } = await listAuditEntries({ actor: 'Sam' });
+		expect(rows.map((r) => r.actorName)).toEqual(['Sam Staff']);
+	});
+
+	it('bounds by whole local days, inclusive', async () => {
+		await seed();
+		expect((await listAuditEntries({ from: '2026-09-10' })).rows).toHaveLength(1);
+		expect((await listAuditEntries({ to: '2026-09-01' })).rows).toHaveLength(1);
+		expect((await listAuditEntries({ from: '2026-09-02', to: '2026-09-09' })).rows).toEqual([]);
+	});
+
+	it('paginates server-side', async () => {
+		await seed();
+		const { rows, pagination } = await listAuditEntries({}, { page: 2, pageSize: 1 });
+		expect(rows.map((r) => r.action)).toEqual(['user.reactivated']);
+		expect(pagination).toMatchObject({ page: 2, totalPages: 2 });
+	});
+
+	it('links a live subject and actor, and falls back to stored labels when either is gone', async () => {
+		await seed();
+		const [purged, live] = (await listAuditEntries({})).rows;
+		expect(live.subject).toMatchObject({ type: 'member', id: 'member-1', title: 'Jordan Member' });
+		expect(live.actor).toMatchObject({ type: 'member', id: 'staff-1', title: 'Sam Staff' });
+		expect(purged.subject).toMatchObject({ id: null, title: 'Purged Person' });
+	});
+
+	it('gives a band subject a band ref, not a member one', async () => {
+		sqlite.exec(`insert into "group" (id, name, slug) values ('band-1', 'The Velvets', 'velvets')`);
+		sqlite.exec(
+			`insert into audit_log (id, action, actor_name, actor_email, subject_type, subject_id, subject_label, details)
+			 values ('a-band', 'user.purged', 'Sam Staff', '', 'band', 'band-1', 'The Velvets', '{}')`
+		);
+		const [row] = (await listAuditEntries({})).rows;
+		expect(row.subject).toMatchObject({ type: 'band', id: 'band-1', title: 'The Velvets' });
+		sqlite.exec(`delete from "group" where id = 'band-1'`);
+	});
+
+	it('names System as the actor when nobody was signed in', async () => {
+		outsideRequest = true;
+		await recordAuditEntry({
+			action: 'user.reactivated',
+			subject: { type: 'user', id: 'member-1' },
+			details: { subscription: 'none' }
+		});
+		const [row] = (await listAuditEntries({})).rows;
+		expect(row.actor).toMatchObject({ id: null, title: 'System' });
 	});
 });

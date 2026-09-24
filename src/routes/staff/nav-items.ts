@@ -74,7 +74,8 @@ export type StaffNavKey =
 	| 'payments'
 	| 'credits'
 	| 'reports'
-	| 'settings';
+	| 'settings'
+	| 'audit';
 
 export type StaffNavSectionKey =
 	'people' | 'space' | 'events' | 'moderation' | 'outreach' | 'money' | 'system';
@@ -487,7 +488,8 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'settings.read',
 				label: 'Settings',
 				href: resolve('/staff/settings')
-			}
+			},
+			{ key: 'audit', capability: 'audit.read', label: 'Audit Log', href: resolve('/staff/audit') }
 		]
 	}
 ];

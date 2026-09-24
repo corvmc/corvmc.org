@@ -1,5 +1,5 @@
 import { auditLog } from '../../src/lib/server/db/schema/audit';
-import type { AuditEntryInput } from '../../src/lib/server/audit/audit-service';
+import type { AuditEntryInput } from '../../src/lib/types/audit';
 import { db } from './db';
 import type { SeedUser } from './types';
 

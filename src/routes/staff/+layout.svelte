@@ -15,6 +15,7 @@
 		IconCalendarEvent,
 		IconBan,
 		IconSettings,
+		IconHistory,
 		IconCash,
 		IconCoins,
 		IconRepeat,
@@ -121,7 +122,8 @@
 		reports: IconReportAnalytics,
 		payments: IconCash,
 		credits: IconCoins,
-		settings: IconSettings
+		settings: IconSettings,
+		audit: IconHistory
 	};
 
 	let badges = $derived({
