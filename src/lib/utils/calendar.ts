@@ -29,7 +29,7 @@ export interface CalendarEvent {
  */
 const ASSUMED_DURATION_MS = 2 * 60 * 60 * 1000;
 
-function endsForExport(evt: CalendarEvent): Date {
+export function endsForExport(evt: CalendarEvent): Date {
 	return evt.endsAt ?? new Date(evt.startsAt.getTime() + ASSUMED_DURATION_MS);
 }
 
@@ -69,7 +69,7 @@ export function googleCalendarUrl(evt: CalendarEvent): string {
  * changes when a config value changes silently duplicates every event already
  * in an attendee's calendar.
  */
-const UID_DOMAIN = 'corvmc.org';
+export const UID_DOMAIN = 'corvmc.org';
 
 /**
  * Fold a content line to RFC 5545's 75-**octet** limit.

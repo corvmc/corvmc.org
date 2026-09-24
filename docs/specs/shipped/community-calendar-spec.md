@@ -130,3 +130,20 @@ Two statements above no longer describe the code:
 Seeded band events (`seedBandEvents` in scripts/seed-dev.ts) include published
 rows with off-site locations, so they show up in the gig guide straight after a
 seed — no flag to enable.
+
+## Syndication (#596)
+
+The guide is published outward as two feeds, both over the same public statuses the guide shows:
+
+- **`/events/calendar.ics`**: an iCalendar subscription. The window runs from 30 days back to a
+  year ahead, because a client deletes any event missing from a refresh and a show someone went to
+  last week should stay in their calendar. A cancelled listing is kept and marked
+  `STATUS:CANCELLED`. Each UID is `<event id>@corvmc.org`, the same as the per-event download's, so
+  a show added by hand and then picked up by a subscription appears once.
+- **`/events/feed.xml`**: RSS 2.0, the next 100 upcoming listings. Item dates are the listing's
+  last change, since that is what readers sort by; the show's own date is in the title.
+
+`/events` links the calendar as a `webcal:` URL, which opens a subscription rather than downloading
+a copy, and advertises the RSS feed with `<link rel="alternate">`.
+
+Importing partner venues' calendars is not built; it waits on a named partner with a feed.
