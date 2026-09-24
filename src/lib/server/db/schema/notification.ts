@@ -534,6 +534,14 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		staffOnly: true
 	},
 	{
+		key: 'local_resource_submitted',
+		category: 'people',
+		label: 'Local resource tip needs review',
+		description: 'Notification when someone suggests a listing for the Local Resources page',
+		defaults: { email: false, inApp: true, sms: false },
+		staffOnly: true
+	},
+	{
 		key: 'community_event_reviewed',
 		category: 'shows',
 		label: 'Your community listing was reviewed',

@@ -52,6 +52,15 @@ export function registerListeners(): void {
 
 	// --- Staff actions that surface as domain events, into the audit log ---
 	registerAuditGroup();
+
+	// --- Local resources tips: staff hear of one, the submitter hears the outcome ---
+	registerLocalResourceGroup();
+}
+
+async function registerLocalResourceGroup(): Promise<void> {
+	const { registerLocalResourceListeners } =
+		await import('$lib/server/local-resource/local-resource-listener');
+	registerLocalResourceListeners();
 }
 
 async function registerAuditGroup(): Promise<void> {
