@@ -20,6 +20,7 @@ import {
 	INCIDENT_NOTE_MAX,
 	INCIDENT_SUMMARY_MAX
 } from '$lib/server/incident/incident-service';
+import { setIncidentRetain } from '$lib/server/incident/incident-retention';
 
 /**
  * The incident & safety log — every surface staff-only, behind `incident.*`.
@@ -152,6 +153,28 @@ export const acceptIncidentForm = form(
 		await requireCapability('incident.record');
 		try {
 			await acceptIncident(data.incidentId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getIncidentDetail(data.incidentId).refresh();
+		return { success: true };
+	}
+);
+
+/** Exempt the record from the seven-year deletion, or release it (#1468). */
+export const setIncidentRetainForm = form(
+	z.object({
+		incidentId: z.string().min(1),
+		retain: z.enum(['true', 'false']),
+		reason: z.string().trim().min(1, 'Say why').max(INCIDENT_NOTE_MAX)
+	}),
+	async (data) => {
+		const staff = await requireCapability('incident.record');
+		try {
+			await setIncidentRetain(data.incidentId, data.retain === 'true', data.reason, {
+				id: staff.id,
+				name: staff.name
+			});
 		} catch (err) {
 			mapDomainError(err);
 		}

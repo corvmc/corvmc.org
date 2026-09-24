@@ -91,6 +91,8 @@ export async function seedIncidents(
 			location: 'Merch table',
 			summary: 'Cash box short $40 after close',
 			description: 'Counted twice at close. No sign of forced entry.',
+			// The one retention hold, so the detail page renders both states.
+			retain: true,
 			...by
 		},
 		{

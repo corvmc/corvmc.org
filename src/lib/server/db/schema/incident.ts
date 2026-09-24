@@ -45,6 +45,9 @@ export const incident = sqliteTable(
 		}),
 		resolvedAt: integer('resolved_at', { mode: 'timestamp' }),
 
+		// Exempt from the seven-year retention sweep, e.g. while a claim is open.
+		retain: integer('retain', { mode: 'boolean' }).notNull().default(false),
+
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),
@@ -56,7 +59,8 @@ export const incident = sqliteTable(
 		index('idx_incident_status').on(t.status, t.occurredAt),
 		index('idx_incident_category').on(t.category, t.occurredAt),
 		index('idx_incident_involved').on(t.involvedUserId),
-		index('idx_incident_filer').on(t.reportedByUserId, t.eventId)
+		index('idx_incident_filer').on(t.reportedByUserId, t.eventId),
+		index('idx_incident_retention').on(t.retain, t.occurredAt)
 	]
 );
 

@@ -20,6 +20,7 @@ const ALL_ENDPOINTS = [
 	'/api/cron/sweep-media',
 	'/api/cron/schedule-radio',
 	'/api/cron/sweep-audio-purchases',
+	'/api/cron/sweep-incidents',
 	'/api/cron/reconcile-ledger'
 ];
 
@@ -81,6 +82,8 @@ describe('CRON_SCHEDULE', () => {
 			'/api/cron/lock-access',
 			'/api/cron/cancel-stale-tickets',
 			'/api/cron/sweep-audio-purchases',
+			// Seven-year incident retention (#1468). Owns no media.
+			'/api/cron/sweep-incidents',
 			// Last: it reaps what every job above may have deleted, and nothing
 			// downstream reads its result.
 			'/api/cron/sweep-media'

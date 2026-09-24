@@ -2442,7 +2442,8 @@ export const entityTypes = [
 	'role',
 	'recurring',
 	'help',
-	'classified'
+	'classified',
+	'incident'
 ] as const;
 export type EntityType = (typeof entityTypes)[number];
 
@@ -2469,7 +2470,8 @@ export const entityLabels: Record<EntityType, { one: string; many: string }> = {
 	role: { one: 'Volunteer role', many: 'Volunteer roles' },
 	recurring: { one: 'Recurring series', many: 'Recurring series' },
 	help: { one: 'Help article', many: 'Help articles' },
-	classified: { one: 'Classified', many: 'Classifieds' }
+	classified: { one: 'Classified', many: 'Classifieds' },
+	incident: { one: 'Incident', many: 'Incidents' }
 };
 
 /**

@@ -16,7 +16,8 @@
 		acceptIncidentForm,
 		addIncidentNoteForm,
 		resolveIncidentForm,
-		reopenIncidentForm
+		reopenIncidentForm,
+		setIncidentRetainForm
 	} from '$lib/remote/incidents.remote';
 
 	let id = $derived(page.params.id!);
@@ -24,6 +25,7 @@
 	const canRecord = $derived(incident.canRecord);
 
 	const acceptFields = acceptIncidentForm.fields;
+	const retainFields = setIncidentRetainForm.fields;
 	const noteFields = addIncidentNoteForm.fields;
 	const resolveFields = resolveIncidentForm.fields;
 	const reopenFields = reopenIncidentForm.fields;
@@ -153,6 +155,34 @@
 					</div>
 				{/if}
 			{/if}
+		</InfoCard>
+
+		<InfoCard title="Retention" class="bg-base-200 shadow-none">
+			<p class="text-muted text-wrap">
+				{incident.retain
+					? 'Marked retain: kept past the seven-year deletion until the hold is released.'
+					: 'Deleted seven years after it happened, unless marked retain.'}
+			</p>
+			<div class="mt-3">
+				<Action
+					action={setIncidentRetainForm}
+					label={incident.retain ? 'Release hold' : 'Mark retain'}
+					modalTitle={incident.retain ? 'Release the retention hold' : 'Keep this record'}
+					successToast={incident.retain ? 'Hold released' : 'Marked retain'}
+					size="sm"
+				>
+					{#snippet form()}
+						<input {...retainFields.incidentId.as('hidden', id)} />
+						<input {...retainFields.retain.as('hidden', incident.retain ? 'false' : 'true')} />
+						<Field
+							field={retainFields.reason}
+							type="text"
+							label="Why"
+							description="Kept on the record as a note, e.g. an open insurance claim."
+						/>
+					{/snippet}
+				</Action>
+			</div>
 		</InfoCard>
 	</div>
 </PageContent>

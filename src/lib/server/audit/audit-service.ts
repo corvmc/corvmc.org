@@ -155,7 +155,10 @@ export async function listAuditEntries(
 				subject:
 					entry.subjectType === 'user'
 						? toMemberRef(subjectUser?.id ? subjectUser : stored)
-						: toBandRef(subjectBand?.id ? subjectBand : stored),
+						: entry.subjectType === 'incident'
+							? // A deleted record: its stored label, unlinked.
+								({ type: 'incident', id: null, title: stored.name } as const)
+							: toBandRef(subjectBand?.id ? subjectBand : stored),
 				actor: toMemberRef(actorUser?.id ? actorUser : { id: null, name: entry.actorName })
 			};
 		})

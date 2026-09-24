@@ -19,11 +19,12 @@ export const auditActions = [
 	'user.unbanned',
 	'user.email_change_requested',
 	'user.email_changed',
-	'credits.adjusted'
+	'credits.adjusted',
+	'incident.deleted'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
-export const auditSubjectTypes = ['user', 'band'] as const;
+export const auditSubjectTypes = ['user', 'band', 'incident'] as const;
 export type AuditSubjectType = (typeof auditSubjectTypes)[number];
 
 /** Profile field names only — never values, which would copy phone numbers into a second table. */
@@ -64,6 +65,8 @@ export interface AuditDetailsByAction {
 		balanceAfter: number;
 		description: string;
 	};
+	/** The retention sweep's deletion (#1468). The row is gone, so this is the record it existed. */
+	'incident.deleted': { category: string; occurredAt: string; retentionYears: number };
 }
 
 /** One row as the read side sees it, `details` narrowed by `action`. */

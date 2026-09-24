@@ -67,5 +67,7 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const verb = d.delta < 0 ? 'Deducted' : 'Added';
 			return `${verb} ${Math.abs(d.delta)} ${CREDIT_LABELS[d.creditType]} (balance ${d.balanceAfter}): “${d.description}”`;
 		}
+		case 'incident.deleted':
+			return `Deleted after ${entry.details.retentionYears} years (occurred ${entry.details.occurredAt.slice(0, 10)})`;
 	}
 }

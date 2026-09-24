@@ -39,6 +39,8 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		// The same job for music: a row written pending before the buyer left for
 		// Stripe, whose checkout was never completed.
 		'/api/cron/sweep-audio-purchases',
+		// Seven-year incident retention (#1468). Owns no media.
+		'/api/cron/sweep-incidents',
 		// Last in the batch: it reads what every job above may have deleted, and
 		// nothing downstream depends on its result.
 		'/api/cron/sweep-media'

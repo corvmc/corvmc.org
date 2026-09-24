@@ -360,6 +360,7 @@ an hour with DST). The schedule spec pins this table to `CRON_SCHEDULE`:
 | `/api/cron/lock-access`                     | Provision/clean up U-Tec door lock access for the day's reservations                  | `0 16 * * *`   |
 | `/api/cron/cancel-stale-tickets`            | Cancel `pending` tickets whose Stripe Checkout was abandoned                          | `0 16 * * *`   |
 | `/api/cron/sweep-audio-purchases`           | Clear `pending` music purchases whose checkout was never completed                    | `0 16 * * *`   |
+| `/api/cron/sweep-incidents`                 | Delete incidents over seven years old not marked `retain`; audit each deletion        | `0 16 * * *`   |
 | `/api/cron/sweep-media`                     | Reclaim R2 objects nothing points at any more                                         | `0 16 * * *`   |
 | `/api/cron/reconcile-ledger`                | Compare last week's ledger against the Stripe balance                                 | `0 17 * * MON` |
 
