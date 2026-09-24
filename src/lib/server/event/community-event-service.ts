@@ -4,8 +4,7 @@ import {
 	eventListingColumns,
 	eventPosterKeySql,
 	noSaleTerms,
-	ticketSaleColumns,
-	withoutLegacySaleTerms
+	ticketSaleColumns
 } from './event-columns';
 import { saveTicketSale } from '$lib/server/ticket/ticket-sale';
 import { user } from '$lib/server/db/schema/authentication';
@@ -253,7 +252,7 @@ export async function createCommunityEvent(params: CreateCommunityEventParams): 
 	await saveTicketSale(inserted.id, { priceCents: params.ticketPrice ?? undefined });
 	// A listing one statement old has no attachment yet.
 	const row: EventRow = {
-		...withoutLegacySaleTerms(inserted),
+		...inserted,
 		posterKey: null,
 		...noSaleTerms,
 		ticketPrice: params.ticketPrice ?? null
@@ -361,7 +360,7 @@ export async function updateCommunityEvent(
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
 	const row: EventRow = {
-		...withoutLegacySaleTerms(updated),
+		...updated,
 		...noSaleTerms,
 		...resolved,
 		posterKey: resolved?.posterKey ?? null

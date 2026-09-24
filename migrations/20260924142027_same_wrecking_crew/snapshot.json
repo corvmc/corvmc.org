@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "1cad1182-d963-41e0-aea7-877f90cbd954",
+  "id": "a8129b4d-890f-4f77-89d2-b80a60ce163b",
   "prevIds": [
-    "f05931d3-9116-4877-b2fc-64f470f80f2a"
+    "1cad1182-d963-41e0-aea7-877f90cbd954"
   ],
   "ddl": [
     {
@@ -2285,46 +2285,6 @@
       "default": null,
       "generated": null,
       "name": "tags",
-      "entityType": "columns",
-      "table": "event_listing"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "false",
-      "generated": null,
-      "name": "ticketing_enabled",
-      "entityType": "columns",
-      "table": "event_listing"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "ticket_price",
-      "entityType": "columns",
-      "table": "event_listing"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "ticket_price_floor_cents",
-      "entityType": "columns",
-      "table": "event_listing"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "ticket_quantity",
       "entityType": "columns",
       "table": "event_listing"
     },

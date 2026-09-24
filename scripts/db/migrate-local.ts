@@ -38,7 +38,7 @@ import { migrate } from 'drizzle-orm/node-sqlite/migrator';
 import { d1File, hasD1File } from '../lib/d1-file';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const MIGRATIONS_FOLDER = join(REPO_ROOT, 'migrations');
+export const MIGRATIONS_FOLDER = join(REPO_ROOT, 'migrations');
 
 /** The state root, as `wrangler --persist-to` takes it. */
 export function persistRoot(env: NodeJS.ProcessEnv = process.env): string {
@@ -71,10 +71,10 @@ async function createD1File(persistPath: string): Promise<void> {
  * everything below this line is drizzle and `node:sqlite`, with no miniflare in
  * it, which is what makes `migrate-local.spec.ts` fast and deterministic.
  */
-export function applyMigrations(file: string): void {
+export function applyMigrations(file: string, migrationsFolder = MIGRATIONS_FOLDER): void {
 	const client = new DatabaseSync(file, { timeout: 5_000 });
 	try {
-		migrate(drizzle({ client }), { migrationsFolder: MIGRATIONS_FOLDER });
+		migrate(drizzle({ client }), { migrationsFolder });
 		// Fold the WAL back into the database before letting go of it.
 		//
 		// The whole migration set lands in one transaction (drizzle's migrator
