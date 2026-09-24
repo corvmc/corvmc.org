@@ -24,8 +24,17 @@
 > `/staff/events/[id]/production`. Its run of show, deal, settlement and close-out
 > are milestone 2.0.
 >
-> **Not built yet:** the deal shape and generate-on-close recurring work. Committee surfaces are read-only; acting on
-> a project from one waits on the capability work in
+> **The deal shape shipped** on `production_slot` (see the amendment below), with
+> `setSlotTerms` and the settlement panel reading it.
+>
+> **Generate-on-close recurring work shipped** as `maintenance_schedule` and
+> `/staff/volunteer/recurring`: resolving or calling off an occurrence writes the
+> next one in the same `db.batch`, due `interval_days` after the close, and a
+> partial unique index holds each schedule to one open work order.
+>
+> **Not built yet:** the project-anchored duty-list template (an anchor on
+> `project.startsAt`). Committee surfaces are read-only; acting on a project from
+> one waits on the capability work in
 > [admin-vs-staff-spec.md](shipped/admin-vs-staff-spec.md).
 
 ## Purpose
@@ -265,6 +274,11 @@ rule, now three-way:
 
 Generate-on-close cannot drift and cannot pile up unclosed duplicates, which a
 window-materializer like `recurring_series` can.
+
+> **Shipped.** Nothing is stored ahead and nothing runs on a clock: the open work
+> order _is_ the schedule's state. The interval counts from the close, so a late
+> clean pushes the next one back rather than stacking it, and calling one off is a
+> close like any other. Retiring a schedule leaves its open occurrence in the queue.
 
 ## Vocabulary
 

@@ -664,6 +664,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/volunteer/recurring",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/volunteer/report",
 		"panel": "staff"
 	},

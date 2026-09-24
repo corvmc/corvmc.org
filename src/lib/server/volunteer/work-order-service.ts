@@ -14,6 +14,8 @@ import {
 } from '$lib/config';
 import type { WorkOrder, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
 
+import { getLiveSchedule, nextOccurrenceInsert } from './maintenance-schedule-service';
+
 export { isScheduled } from './scheduled';
 import { isScheduled } from './scheduled';
 
@@ -21,7 +23,8 @@ import { isScheduled } from './scheduled';
 // Shifts
 // ---------------------------------------------------------------------------
 // A dated, time-bounded need for a role. Staff create them; members claim them.
-// No recurrence — a standing weekly slot is made by duplicating last week's.
+// A standing weekly slot is made by duplicating last week's; recurring
+// facility work is `maintenance-schedule-service.ts`.
 // ---------------------------------------------------------------------------
 
 const TZ = DEFAULT_TIMEZONE;
@@ -277,18 +280,27 @@ export async function updateShift(
  * invent a user, but every staff path passes one.
  */
 export async function cancelShift(id: string, cancelledByUserId?: string): Promise<WorkOrder> {
-	const [row] = await db
+	const now = new Date();
+	const cancel = db
 		.update(workOrder)
-		.set({
-			cancelledAt: new Date(),
-			cancelledByUserId: cancelledByUserId ?? null,
-			updatedAt: new Date()
-		})
+		.set({ cancelledAt: now, cancelledByUserId: cancelledByUserId ?? null, updatedAt: now })
 		.where(and(eq(workOrder.id, id), isNull(workOrder.cancelledAt)))
 		.returning();
 
+	// Calling off a recurring occurrence is still a close: the next one is owed.
+	const schedule = await liveScheduleOf(await getShiftById(id));
+	const [row] = schedule
+		? (await db.batch([cancel, nextOccurrenceInsert(schedule, now)]))[0]
+		: await cancel;
+
 	if (!row) throw new ShiftNotFoundError();
 	return row;
+}
+
+/** The schedule to write a next occurrence for, when closing this row owes one. */
+async function liveScheduleOf(row: WorkOrder | null) {
+	if (!row?.maintenanceScheduleId || row.resolvedAt || row.cancelledAt) return null;
+	return getLiveSchedule(row.maintenanceScheduleId);
 }
 
 // ---------------------------------------------------------------------------
@@ -544,7 +556,7 @@ export async function resolveWorkOrder(
 
 	const now = new Date();
 
-	await db
+	const completeSignups = db
 		.update(volunteerSignup)
 		.set({ status: 'completed', completedAt: now, updatedAt: now })
 		.where(
@@ -554,7 +566,7 @@ export async function resolveWorkOrder(
 			)
 		);
 
-	const [row] = await db
+	const close = db
 		.update(workOrder)
 		.set({
 			resolvedAt: now,
@@ -564,6 +576,15 @@ export async function resolveWorkOrder(
 		})
 		.where(eq(workOrder.id, id))
 		.returning();
+
+	const schedule = await liveScheduleOf(existing);
+	let row: WorkOrder;
+	if (schedule) {
+		[, [row]] = await db.batch([completeSignups, close, nextOccurrenceInsert(schedule, now)]);
+	} else {
+		await completeSignups;
+		[row] = await close;
+	}
 
 	// The equipment reports this work answered close with it. Dynamic, like the
 	// orientation import below, so the two domains do not import each other.
