@@ -1,7 +1,8 @@
 # Tap to Pay at the door
 
-**Status:** 📋 Spec — nothing built. Android only, one sideloaded handset, no app store. Phase 0 is
-one Stripe Location and an afternoon. The code is sequenced behind #522.
+**Status:** 🔧 Building on `feature/tap-to-pay` (owner ruling, 2026-09-24). Android only, one
+sideloaded handset, no app store. #522's payment gateway seam is on `main`. Phase 0 still needs the
+owner's phone and a Stripe Location; see [Owner setup](#owner-setup).
 
 [#612](https://github.com/corvmc/corvmc.org/issues/612) asked for "a registered-device concept for a
 terminal in the space — check-in, door access, or a walk-up booking screen", inherited from a
@@ -23,6 +24,44 @@ Stripe Location and a phone that meets a checklist. An earlier draft of this spe
 procurement phase that blocked everything and could not be hurried. That phase is gone. Nothing here
 waits on a third party's queue.
 
+## What changed when #522 landed
+
+This spec was written while the gateway seam lived on `feature/in-house-checkout`. It is now on
+`main`, and so are band ticketing (#1203, #1556) and the financial ledger (#1183). Reread against
+them, seven decisions changed. The rest of the document has been updated to match.
+
+1. **Terminal is not a third driver file.** `PaymentGateway` (`src/lib/server/finance/gateway/types.ts`)
+   is `Pick`ed off Stripe's own SDK types, so the live driver _is_ the Stripe client and needs no
+   code to gain a resource. Terminal is three port members instead:
+   `terminal.connectionTokens.create`, `terminal.locations.retrieve` and `paymentIntents.create`.
+   `fake-gateway.ts` implements them and `gateway.contract.spec.ts` sweeps both drivers.
+2. **Door sales cover collective-sold shows only.** A band's gig (a `ticket_sale.groupId`) is a
+   Connect destination charge into the band's own account. A card-present PaymentIntent can carry
+   the same `transfer_data`, and the plugin's `connectReader` takes `onBehalfOf`, so this is
+   reachable later, but whether CMC works a band's door at all is a product question: #1629. The
+   door screen lists an event only when the collective sells it: a `cmc` listing with no
+   `groupId`.
+3. **No `ticket.paymentMethod` column, and so no migration.** `purchaseId` already records where a
+   purchase came from (`comp-`, `rsvp-`, `free-`), and online purchases are bare UUIDs. A door
+   purchase's id is its PaymentIntent id, so `pi_…` means "paid at the door by card", and a free
+   door ticket is `door-<uuid>`. That answers "door or online" with no schema change, which also
+   keeps the feature branch out of `main`'s migration lineage.
+4. **The ledger is the settlement source.** #593 closed. `financial_entry` is what settlement and
+   the weekly Stripe reconciliation read now. The door writer records the same rows an online
+   collective ticket does (`ticket_sales`, `act_payout`, `card_fees`), keyed on the `purchaseId`,
+   from the webhook.
+5. **The connection token is a remote function, not a route.** `@capgo/capacitor-stripe-terminal`
+   8.x, initialised with no `tokenProviderEndpoint`, emits `RequestedConnectionToken` and waits for
+   `setConnectionToken({ token })`. The guarded remote mints it, so no public `+server.ts` is added.
+   Old Open item 3 is settled.
+6. **The capability is `finance.collect`.** It is new, granted to `admin` and `staff` (the matrix
+   derives `staff`), and to no other position. Volunteers check tickets in today through a
+   shift-scoped path with no capability (`checkInAsVolunteer`), so whether a rostered door
+   volunteer may also take money is #1630. Old Open item 2 is settled pending that.
+7. **Door rows have no attendee.** `ticket.attendeeName` and `attendeeEmail` are `NOT NULL`, so a
+   door ticket is written as `'Door sale'` with an empty email, and no `ticket.purchased` receipt is
+   sent. There is nobody to send it to.
+
 ## The thing this settles first
 
 Every one of #612's three original uses is _unattended_: a device left on a stand doing its job
@@ -40,10 +79,8 @@ screen. See [Deliberately out](#deliberately-out) and [Open](#open).
 
 Three homes look right, and each is rejected by something structural rather than by taste.
 
-**Not the `/checkout/[id]` Payment Element page.** First, a correction to anyone reaching for it:
-that page does not exist on `main`. It is #522's, on `feature/in-house-checkout`, along with
-everything else under `src/lib/server/finance/gateway/`. Second, and decisively, the Payment Element
-is **card-not-present**. A Terminal payment is card-present: its PaymentIntent is created with
+**Not the `/checkout/[id]` Payment Element page.** It landed with #522, and it is still the wrong
+place, because the Payment Element is **card-not-present**. A Terminal payment is card-present: its PaymentIntent is created with
 `payment_method_types: ['card_present']` and confirmed by the SDK on the device, not by
 `stripe.confirmPayment` in a browser, and the Element cannot render a card-present method at all.
 There is nothing to reuse but the route shape — and the route shape is wrong too. `/checkout/[id]`
@@ -64,11 +101,9 @@ navigation decision, not a reason to share a model.
 **Not a new payment product.** `ProductKey` in `product-config-service.ts` is a closed union —
 `contribution | fee_coverage | ticket | ticket_contribution | band_premium | audio_release` — and
 adding `'door_ticket'` to it mints a **second Stripe product for the same revenue**. One show's
-ticket money would then split across two products in Stripe's own reporting, and #593's settlement
-worksheet would have to know to add them back together, forever. The distinction the schema already
-has a column for is not product but **method**: `payment_cache.paymentMethod` is free text and
-already carries `'Cash'`, `'Credits'` and a Checkout display name. Tap to Pay is a new value in that
-column, not a new entry in that union.
+ticket money would then split across two products in Stripe's own reporting, and settlement
+would have to add them back together, forever. The distinction is not product but **method**, and
+it is recorded where the repo already records provenance: the `purchaseId` prefix.
 
 ## There is no device registry
 
@@ -230,8 +265,8 @@ makes this easy to comply with by accident; state it so nobody reaches for a dra
 ## Model
 
 The schema question reduces to one thing: where a door payment gets recorded. The answer this spec
-lands on is **one additive nullable column and no new table**, which is not where it started; the
-options are walked below because the obvious one is wrong for a reason worth writing down.
+lands on is **no new column and no new table**, which is not where it started. The options are
+walked below because the obvious one is wrong for a reason worth writing down.
 
 ### `payment_cache.userId` is `NOT NULL`, and a door sale has no account
 
@@ -264,9 +299,10 @@ it. Solves the problem cleanly and is the obvious answer.
 
 **Recommend (d),** and the reason is not that it is less code.
 
-**It is the only option that adds no new source to settlement.** #593 is designed to read ticket
-revenue from `ticket` + `payment_cache`. A door ticket paid by tap writes a `ticket` row with
-`stripePaymentRecordId` set — a source that worksheet was **already** going to read. Option (c)
+**It is the only option that adds no new source to settlement.** Ticket revenue is read from
+`ticket` and the `financial_entry` rows keyed on its `purchaseId`. A door ticket paid by tap writes
+a `ticket` row with `stripePaymentRecordId` set, plus the same ledger rows an online sale writes,
+which are sources settlement **already** reads. Option (c)
 takes settlement to three sources permanently; option (b) takes it to two with a filter that has to
 be remembered in every place a member count or an audience is derived; (a) takes it to two, one of
 which silently drops the rows in question. Only (d) leaves settlement at exactly the two sources it
@@ -290,17 +326,13 @@ already walking in. Seller and check-in-er are the same staffer in the same gest
 coincidence of the surface rather than a column doing double duty, and it is worth saying out loud
 so nobody later assumes it generalises to donations.
 
-**One additive column is needed:** `ticket.paymentMethod`, nullable `text`, mirroring
-`payment_cache.paymentMethod`'s existing free-text vocabulary. Without it, "door versus online" —
-which is exactly the split #593 wants — has no local answer, and the `pi_` prefix cannot supply one
-because the online path can produce a PaymentIntent id too. Nullable with no default, so it is a
-plain `ADD COLUMN` with no table rebuild and no backfill. A column is not a new source.
-
-**It is a down payment, not a permanent answer.** When donations force the payment table, this
-column is retired into it and `ticket` stops carrying a payment method. Otherwise phase 4 is the
-moment payment method starts being recorded in two places at once — the exact fragmentation
-`inventory-spec.md` is warning about, arriving by the same forcing function. Same trigger, same
-migration, resolved together.
+**No column is needed either.** An earlier draft added `ticket.paymentMethod`, reasoning that a
+`pi_` in `stripePaymentRecordId` cannot tell a door sale from an online one. That is true of
+`stripePaymentRecordId`, but not of `purchaseId`. Online purchases are bare UUIDs, and the
+repo already marks non-checkout purchases by prefix (`comp-`, `rsvp-`, `free-`). A door purchase's
+id is its PaymentIntent id, `pi_…`, and a free door ticket is `door-<uuid>`. So "door or online"
+is a prefix test on a column that exists. The ledger rows the door writes also say
+`'Door, card present'` in their description.
 
 ### Why not (c), stated as the repo states it
 
@@ -446,27 +478,31 @@ nobody re-derives it.)_
 `initialize()` takes a connection-token source. The token is a bearer for the Stripe account, so who
 may mint one is a capability question, not a configuration question.
 
-- **Preferred:** the webview calls a guarded remote `query`, which checks a capability and returns
-  the secret, and the JS hands it to the plugin. The boundary stays where the repo puts it and no
-  new public route exists.
-- **Fallback**, if the plugin insists on fetching a URL itself: a `+server.ts` endpoint. Note before
-  choosing this that **a native HTTP client does not share the webview's cookie jar**, so such an
-  endpoint could not be guarded by the session at all. It would need its own credential, and the
-  only precedent in the repo is the `CRON_SECRET` bearer pattern under `src/routes/api/cron/` — a
-  shared static secret, which is a poor fit for a phone carried around a venue.
+**Settled: a guarded remote `command`.** The webview calls it, it checks `finance.collect`, and it
+returns a secret scoped to the configured Location. The JS then passes that secret to the plugin
+with `setConnectionToken`. This works because the plugin's `TokenProvider.kt`, when `initialize()`
+is given no `tokenProviderEndpoint`, fires `RequestedConnectionToken` and waits. The boundary stays
+where the repo puts it, and no public route exists.
 
-Which of the two the plugin supports is [Open](#open) and should be settled before phase 2 starts.
+The rejected alternative was a `+server.ts` endpoint fetched by the native side. **A native HTTP
+client does not share the webview's cookie jar**, so that endpoint could not be guarded by the
+session at all.
+
+A connection token is short-lived and single-use, so it is never cached on the server or stored in
+the page. The SDK asks again when it needs one.
 
 ### Where the code goes
 
 - The Capacitor project is a new top-level directory, and `scripts/coverage.spec.ts` fails on any
   source file that no tsconfig project compiles. It must be added to `tsconfig.tooling.json` in the
   same PR that creates it.
-- **Terminal is a third `PaymentGateway` driver**, beside `stripe-gateway.ts` and `fake-gateway.ts`.
-  Verified: nothing exists under `src/lib/server/finance/gateway/` on `main` — the port,
-  `gateway.contract.spec.ts` and `PAYMENTS_DRIVER` are all on `feature/in-house-checkout` (PR #522,
-  still draft). **This work is sequenced behind #522 landing.** Built against `main` instead, it
-  becomes a fourth hand-rolled Stripe call site that has to be rewritten the week #522 merges.
+- **Terminal is port members, not a driver.** `terminal.connectionTokens.create`,
+  `terminal.locations.retrieve`, and `paymentIntents.create` / `cancel` are added to
+  `PaymentGateway`. The fake implements them, and the live driver gets them from the SDK for free.
+  `PAYMENTS_DRIVER` defaults to `fake`, so no environment but production ever reaches Stripe.
+- **The Location is configuration:** `STRIPE_TERMINAL_LOCATION_ID`, a `tml_…` id, read server-side
+  and handed to the app alongside the token. No Location set means the door screen says so and
+  offers the card-not-present path. It does not guess.
 - The door screen is a `<domain>/` component folder — it imports remote functions, so it cannot live
   in `ui/`. Forms use `$lib/components/ui/Form/`. No gradients.
 
@@ -474,7 +510,7 @@ Which of the two the plugin supports is [Open](#open) and should be settled befo
 
 **First: door tickets.** The money already has a model (`ticket`, `purchaseId`, `unitPriceCents` and
 the split columns), the sliding-scale UI is being built anyway, the surface it belongs beside
-already exists, and **#593 needs it** — door revenue is precisely the number the settlement
+already exists, and **settlement needs it** — door revenue is precisely the number the settlement
 worksheet is missing, and today it is a paper tally somebody types in later or does not.
 
 The rest follow rather than lead, and for different reasons:
@@ -531,16 +567,20 @@ same latency.
    control returns to the app. That return is the merchant's proof of payment, and it is what the
    door screen shows. **Admission is settled here, with no webhook involved** — a staffer is
    physically present and admission is their judgement, not a scan.
-2. Stripe's **`payment_intent.succeeded` webhook is the only writer.** It mints the `ticket` rows
-   under `purchaseId = <the pi_… id>`, with `stripePaymentRecordId` set to the same id,
-   `paymentMethod` set, and `checkedInAt` / `checkedInByUserId` stamped from the intent's metadata.
-   Several row inserts, no read between them, so `db.batch([...])`; never `db.transaction()`.
-3. The webview then calls a guarded remote `query` with the PaymentIntent id. **It is a read, not a
-   second writer** — it returns the tickets for that `purchaseId` once they exist. The app is never
-   trusted to assert to the server that a payment succeeded; it only asks whether the record has
+2. **Rows are minted `pending` when the PaymentIntent is created**, under
+   `purchaseId = <the pi_… id>`. This is the online flow's shape (`createTickets` then
+   `fulfillPurchase`), and it holds the seats while the card is being tapped.
+3. Stripe's **`payment_intent.succeeded` webhook is the only thing that flips them.** It runs one
+   conditional `UPDATE … WHERE purchase_id = ? AND status = 'pending'` to `checked_in`, setting
+   `stripePaymentRecordId`, `checkedInAt`, and `checkedInByUserId` from the intent's metadata. A
+   redelivered event matches zero rows and writes nothing, so it is idempotent without a lookup. The
+   ledger rows are written only when that update returned rows.
+4. The webview then calls a guarded remote `query` with the PaymentIntent id. **It is a read, not a
+   second writer.** It returns the tickets for that `purchaseId` once they are checked in. The app
+   is never trusted to tell the server that a payment succeeded. It only asks whether the record has
    landed.
-4. #593's settlement worksheet reads `ticket` + `payment_cache`, exactly as designed. Door sales are
-   distinguished by `ticket.paymentMethod`.
+5. An abandoned tap leaves `pending` rows, which the existing `cancelStalePendingTickets` sweep
+   already cancels. A cancel on the door screen cancels the intent and the rows at once.
 
 **One writer is right, not a compromise.** Letting the app write too would put two writers on rows
 sharing a `purchaseId` with nothing to conflict on: D1 gives no read-your-write inside a `batch`,
@@ -604,28 +644,60 @@ by export and one new operator breaks a sibling.
 
 ## Phases
 
-**Phase 0 — the assumption test, then a Location.** Half a day, no code, and it is the gate on
-everything else. Install a trivial Capacitor build on the actual phone, disable Developer options,
-and call `connectReader` against a simulated reader. If that succeeds, sideloading works and the
-plan holds; if it fails, [Open](#open) item 1 has been answered the hard way and the whole approach
-needs rethinking before anything is scheduled. Then create a Stripe **Location** with a
-customer-facing `display_name`, and confirm the handset against
+All of this lands on `feature/tap-to-pay`, one squash-merged PR per phase. `main` sees it once, in
+a landing PR that waits on the owner's phone (see [Owner setup](#owner-setup)). The owner started
+the build on 2026-09-24 without waiting for phase 0, since phases 1 to 3 need no phone.
+
+**Phase 0: the assumption test, on the owner's phone.** Install the phase 3 debug build, disable
+Developer options, and call `connectReader` against the simulated reader. If that succeeds,
+sideloading works and the plan holds. If it fails, [Open](#open) item 1 has been answered the hard
+way, and the landing PR does not open. **This gates the landing PR, not the branch.**
+
+**Phase 1: gateway and token.** The Terminal port members plus the fake, `finance.collect`, the
+Location config, and the guarded connection-token remote. Everything here can be automated.
+
+**Phase 2: the door screen.** Pick a collective-sold event, choose a quantity and a price per
+ticket, then take the payment. Rows are minted `pending` on intent creation and flipped to
+`checked_in` by the `payment_intent.succeeded` handler, which also writes the ledger rows. Free
+and below-minimum sales mint `checked_in` at once. A browser without the plugin gets the same
+screen with the tap disabled and the card-not-present path offered. Extend `scripts/seed-dev.ts`,
+and add the row to `docs/reports/feature-catalog.md`.
+
+**Phase 3: the Android shell.** The Capacitor project in its own top-level directory, with
+`server.url`, the plugin, `setTapToPayUxConfiguration` in the CMC palette, and the build and
+sideload procedure in `docs/development/`.
+
+**Later: the reconciliation sweep, then donations.** The sweep lists card-present intents for the
+Location and flags any with no `checked_in` rows. It is worth building only once real traffic
+exists. Donations remain the cheapest second surface.
+
+## Owner setup
+
+CI cannot hold a phone, so nothing below can be automated. The landing PR opens only when all of
+it is done.
+
+**Stripe Dashboard, in test mode first and then live:**
+
+1. Confirm Terminal is enabled on the account (Dashboard, More, Terminal). Tap to Pay on Android
+   needs no separate application in the US.
+2. Create a **Location** with CMC's street address and the display name "Corvallis Music
+   Collective". Copy its `tml_…` id.
+3. Add `payment_intent.succeeded` to the webhook endpoint's events (`scripts/sync-webhooks.ts`
+   reads `webhook-events.ts`, so running it does this).
+4. Confirm the card-present rate on the account's pricing page against the constants in
+   `src/lib/finance/fees.ts`.
+
+**Worker secrets:** `STRIPE_TERMINAL_LOCATION_ID` for test and for production. The existing
+`STRIPE_SECRET_KEY` mints the tokens, so no new key is needed. Never use the live key before
+phase 0 has passed in test mode.
+
+**The phone:** Android 13 or later, not rooted, bootloader locked, stock OS, a security patch less
+than 12 months old, Google Play Store installed, NFC on, and a screen lock set. See
 [the checklist](#what-the-phone-has-to-be).
 
-**Phase 1 — the driver.** Behind #522. Terminal as a third `PaymentGateway`; the additive
-`ticket.paymentMethod` column; the webhook writer; the reconciliation sweep. No app work yet, no new
-table, and all of it automatable.
-
-**Phase 2 — the shell.** Capacitor project, `server.url`, the connection-token path, the plugin
-bridge, `setTapToPayUxConfiguration` with the CMC palette, and the install procedure written down
-where whoever holds the phone will find it.
-
-**Phase 3 — the door screen.** Sliding-scale controls, mint-and-charge, checked in on mint, sitting
-beside `/staff/events/[id]/check-in`. Extend `scripts/seed-dev.ts` so the screen has realistic local
-data, and add the row to `docs/reports/feature-catalog.md`.
-
-**Phase 4 — donations.** The cheapest second surface, and the one that proves the model generalises
-past tickets.
+**Sideload, every install:** enable Developer options and USB debugging, run
+`adb install -r app-debug.apk`, **disable Developer options**, reboot, sign in to corvmc.org in the
+app, and take one simulated test payment before the doors open.
 
 ## Deliberately out
 
@@ -636,7 +708,7 @@ past tickets.
 - **A device registry.** See [above](#there-is-no-device-registry). One phone, one Location, one
   operator: no table and no column.
 - **A payments table.** No `terminal_payment`, no row per card-present take. `ticket` already carries
-  a door sale, and adding a table would take #593's settlement from the two sources it was designed
+  a door sale, and adding a table would take settlement from the two sources it was designed
   for to three. Donations are what would force one; they get it when they are designed.
 - **iOS.** Not a hedge — a decision. It reintroduces two Apple entitlements, a business Apple ID,
   Apple's Terms and Conditions acceptance, an instructional overlay required before review, and an
@@ -663,23 +735,14 @@ past tickets.
    phase 0's test: install on the real phone, disable Developer options, call `connectReader`
    against a simulated reader. It is cheap, it takes an afternoon, and **nothing else should be
    scheduled until it has been done.**
-2. **Which capability gates taking a payment.** `finance` currently holds `read` and `refund`; there
-   is no `finance.collect`. Adding one is a line in `src/lib/config.ts` plus a matrix decision about
-   which positions hold it. It should not be `event.manageTickets` — that capability is about the
-   show, not about the money.
-3. **Can `@capgo/capacitor-stripe-terminal` be handed a connection token directly**, or does it
-   insist on fetching an endpoint? Decides whether a new public `+server.ts` route exists at all,
-   and therefore whether the security boundary stays in one place.
-4. **Whose phone is it, and what happens when that person is not working?** One handset means one
-   point of failure, and the accessibility-service constraint above means it cannot simply be
-   whoever's phone is nearest. A second qualifying device kept in the building is the obvious answer
-   and is also the trigger for revisiting the device registry.
-5. **When donations force the payment table, does `ticket.paymentMethod` retire into it cleanly?**
-   The intent is that it does and that both land in one migration. Worth confirming against the
-   donations design when it exists rather than assuming, because a column with rows in it is harder
-   to move than a column that was never added.
-6. **Does CMC want an S700 for the unattended cases?** Everything #612 originally described needs
-   one, and this spec deliberately serves none of it. The real question is whether those cases are
-   live wants or an artefact of a Laravel resource nobody documented. "No" closes #612 outright when
-   this ships; "yes" is a second spec, a hardware purchase, and the tipping question coming back
-   with it.
+2. **Who may take a payment.** Settled for the build as `finance.collect`, held by `admin` and
+   `staff`. Whether rostered door volunteers get it is #1630.
+3. **Can the plugin be handed a token directly?** Settled: yes, through `setConnectionToken`. See
+   [The connection token](#the-connection-token).
+4. **Whose phone is it, and is there a backup?** #1632.
+5. **Door sales for band-sold gigs.** #1629. Until it is answered, only collective-sold shows are
+   offered.
+6. **Does a door sale count against capacity?** #1631. Until it is answered, the door refuses a
+   sale above `ticket_sale.quantity`.
+7. **Does CMC want an S700 for the unattended cases?** #1632. "No" closes #612 outright when this
+   ships. "Yes" means a second spec, a hardware purchase, and the tipping question coming back.
