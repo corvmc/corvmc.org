@@ -32,7 +32,9 @@ export const mediaSlots = [
 	 */
 	'cover',
 	/** A sponsor's mark, beside its credit on an event page. */
-	'logo'
+	'logo',
+	/** A permit, license or insurance certificate. Private bucket only. */
+	'certificate'
 ] as const;
 export type MediaSlot = (typeof mediaSlots)[number];
 

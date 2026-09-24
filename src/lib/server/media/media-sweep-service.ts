@@ -14,9 +14,10 @@ import { audioRelease } from '$lib/server/db/schema/audio';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { artifactRequest } from '$lib/server/db/schema/artifact-request';
 import { sponsor } from '$lib/server/db/schema/sponsor';
+import { renewal } from '$lib/server/db/schema/renewal';
 import { deleteObject, objectExists } from '$lib/server/storage';
 import { deletePrivateObject, privateObjectExists } from '$lib/server/private-storage';
-import { isReceiptKey, isWithheldPosterKey } from '$lib/server/storage-keys';
+import { isReceiptKey, isRenewalDocumentKey, isWithheldPosterKey } from '$lib/server/storage-keys';
 import { MEDIA_SWEEP_GRACE_MS } from '$lib/config';
 import { and, eq, lt, sql, notExists, inArray, type SQLWrapper } from 'drizzle-orm';
 
@@ -57,7 +58,9 @@ const PARENT_TABLES = {
 	artifact_request: artifactRequest,
 	// A sponsor's logo. Sponsors are refused deletion while they have terms, so
 	// this reaps only the logo of one deleted before it ever sponsored.
-	sponsor
+	sponsor,
+	// A certificate, in the private bucket; pass 2 deletes it from there.
+	renewal
 } as const satisfies Record<AttachableType, unknown>;
 
 export type SweepResult = {
@@ -112,10 +115,10 @@ const PRIVATE_BUCKET = { exists: privateObjectExists, remove: deletePrivateObjec
 
 /**
  * Keys whose bytes belong in R2_PRIVATE. `media` records no bucket, so the key
- * shape is the only hint; `renewals/` matches #1600's `isRenewalDocumentKey`.
+ * shape is the only hint.
  */
 function belongsInPrivate(key: string): boolean {
-	return isWithheldPosterKey(key) || isReceiptKey(key) || key.startsWith('renewals/');
+	return isWithheldPosterKey(key) || isReceiptKey(key) || isRenewalDocumentKey(key);
 }
 
 /**

@@ -71,7 +71,7 @@
 		// The path is resolved; the query is built above from this page's own
 		// filters. `resolve()` cannot check an arbitrary suffix, so the join is
 		// asserted here rather than the whole expression being left untyped.
-		const base = resolve('/directory');
+		const base: string = resolve('/directory');
 		return (search ? `${base}?${search}` : base) as ResolvedPathname;
 	}
 

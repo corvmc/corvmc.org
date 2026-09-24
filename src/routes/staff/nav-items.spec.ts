@@ -66,6 +66,8 @@ describe('activeNavKey', () => {
 		['/staff/sponsors/abc', 'sponsors'],
 		['/staff/grants', 'grants'],
 		['/staff/grants/abc', 'grants'],
+		['/staff/renewals', 'renewals'],
+		['/staff/renewals/abc', 'renewals'],
 		['/staff/grants/funders', 'grants'],
 		['/staff/inventory', 'equipment'],
 		['/staff/inventory/abc', 'equipment'],

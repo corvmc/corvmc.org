@@ -1689,6 +1689,51 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
 - **A placed sponsor does not show.** Its sponsorship is still Pitched. Pitches and declined terms
   are never credited publicly.
 
+## 22. Renewals: CMC's own permits, licenses and insurance
+
+Decision: [#1597](https://github.com/corvmc/corvmc.org/issues/1597). Issue: #1478.
+
+### The story
+
+The collective holds things that expire: a liability policy, a sound permit, an OLCC license.
+Staff keep one row per obligation at `/staff/renewals` (under System), sorted by next expiry,
+with the issuer, the reference number, the person responsible and the certificate. Renewing
+moves `expiresOn` forward on the same row; there is no row per term. Reminders go out sixty and
+fourteen days ahead.
+
+### Code path
+
+- **Reads:** `getRenewals` / `getRenewalDetail` in `renewals.remote.ts`, guarded by
+  `renewal.read`, call `listRenewals` / `getRenewal` in `src/lib/server/renewal/renewal-service.ts`
+  with `clubToday()`. The deadline and sort reuse `due` and `byDeadline` from
+  `src/lib/utils/deadline.ts`. Both queries also return the assignee list: holders of
+  `renewal.manage`, names only.
+- **Writes:** `createRenewal` / `updateRenewal` / `deleteRenewal` and the two document forms, all
+  guarded by `renewal.manage`.
+- **Documents:** `uploadRenewalDocument` writes to the private bucket under `renewals/<id>/`
+  (`renewalDocumentKey`) and records a `media` row plus a `media_attachment`
+  (`attachableType: 'renewal'`, slot `certificate`). `GET /api/renewals/documents/[id]` streams it
+  back by attachment id behind `renewal.read`; the key never reaches the browser. Removing a
+  document or deleting the renewal only drops attachments; `sweepMedia` reaps the object, from
+  the private bucket because `isRenewalDocumentKey` says so.
+- **Reminders:** `renewal_expiry_60d` (15 to 60 days out) and `renewal_expiry_14d` (0 to 14) in
+  `src/lib/server/reminders/registry.ts` read `listRenewalsExpiringBetween`. The subject is
+  `<id>:<expiresOn>`, so moving the date forward re-arms both. `renewal.expiry_due` goes to the
+  responsible staffer alone, or to every `renewal.manage` holder when nobody is named, as
+  `renewal_expiry`.
+
+### Data touched
+
+- `renewal` (`expires_on` is `YYYY-MM-DD` text; `responsible_user_id` is set null when the user
+  goes), `media`, `media_attachment`, `reminder_sent`.
+
+### Where it breaks
+
+- **Nobody was reminded.** Nobody is named and nobody holds `renewal.manage` through a position
+  other than `admin` / `staff`.
+- **A reminder went to someone who left.** The named staffer still has an account but no
+  position; the reminder does not check that they can open the page.
+
 ## Cross-cutting patterns worth internalizing
 
 - **Everything money-related converges on two Stripe entry points:** `checkout()` in

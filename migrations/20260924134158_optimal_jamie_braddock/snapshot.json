@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "f05931d3-9116-4877-b2fc-64f470f80f2a",
+  "id": "1cad1182-d963-41e0-aea7-877f90cbd954",
   "prevIds": [
-    "0a1f6212-5b3a-4eb6-9bc1-2a0f87569bc9"
+    "f05931d3-9116-4877-b2fc-64f470f80f2a"
   ],
   "ddl": [
     {
@@ -492,6 +492,10 @@
     },
     {
       "name": "grant_report",
+      "entityType": "tables"
+    },
+    {
+      "name": "renewal",
       "entityType": "tables"
     },
     {
@@ -13855,6 +13859,106 @@
       "table": "grant_report"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "renewal"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "renewal"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "renewal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "issuer",
+      "entityType": "columns",
+      "table": "renewal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reference",
+      "entityType": "columns",
+      "table": "renewal"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "expires_on",
+      "entityType": "columns",
+      "table": "renewal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "responsible_user_id",
+      "entityType": "columns",
+      "table": "renewal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "renewal"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "renewal"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "renewal"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -17396,6 +17500,21 @@
     },
     {
       "columns": [
+        "responsible_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_renewal_responsible_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "renewal"
+    },
+    {
+      "columns": [
         "role_id",
         "user_id"
       ],
@@ -18476,6 +18595,15 @@
       "nameExplicit": false,
       "name": "grant_report_pk",
       "table": "grant_report",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "renewal_pk",
+      "table": "renewal",
       "entityType": "pks"
     },
     {
@@ -22503,6 +22631,20 @@
       "name": "grant_report_application_idx",
       "entityType": "indexes",
       "table": "grant_report"
+    },
+    {
+      "columns": [
+        {
+          "value": "expires_on",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "renewal_expires_on_idx",
+      "entityType": "indexes",
+      "table": "renewal"
     },
     {
       "columns": [
