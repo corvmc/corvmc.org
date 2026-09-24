@@ -15,6 +15,7 @@
 	import { formatDateTime } from '$lib/utils/format';
 	import { entityLabels } from '$lib/config';
 	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
+	import AppealCard from './AppealCard.svelte';
 
 	let id = $derived(page.params.id!);
 	let flag = $derived(await getFlagDetail(id));
@@ -75,7 +76,7 @@
 					<Fact label="Details" wrap>{flag.description}</Fact>
 				{/if}
 
-				<Fact label="Reported by">
+				<Fact label={flag.origin === 'staff_action' ? 'Staff action by' : 'Reported by'}>
 					{#if flag.reportedByName}
 						{flag.reportedByName} <span class="opacity-60">({flag.reportedByEmail})</span>
 					{:else}
@@ -241,5 +242,9 @@
 				</div>
 			{/if}
 		</InfoCard>
+
+		{#if flag.appeal}
+			<AppealCard flagId={id} appeal={flag.appeal} />
+		{/if}
 	</div>
 </PageContent>

@@ -6,6 +6,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
@@ -104,6 +105,7 @@
 				<strong>Staff took this listing off the calendar.</strong>
 				<p class="mt-1">"{listing.reviewNotes}"</p>
 				<p class="mt-1">Fix it and publish again when you're ready.</p>
+				<AppealPanel target={{ kind: 'listing', eventId: listing.id }} />
 			</Alert>
 		{:else if requiresReview && listing.status === 'draft'}
 			<Alert type="info">
@@ -113,6 +115,7 @@
 				{:else}
 					Staff check your listings before they go on the calendar.
 				{/if}
+				<AppealPanel target={{ kind: 'standing', scope: 'community_event' }} />
 			</Alert>
 		{:else if listing.status === 'cancelled'}
 			<Alert type="info">

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "6ca56388-dcc5-4513-ac4a-0bc3f88b7b40",
+  "id": "b09fe92e-e906-43f8-8508-1c634c07e028",
   "prevIds": [
-    "649d6064-9169-405c-a381-97993a00b062"
+    "6ca56388-dcc5-4513-ac4a-0bc3f88b7b40"
   ],
   "ddl": [
     {
@@ -252,6 +252,10 @@
     },
     {
       "name": "content_flag",
+      "entityType": "tables"
+    },
+    {
+      "name": "moderation_appeal",
       "entityType": "tables"
     },
     {
@@ -7158,6 +7162,16 @@
       "type": "text",
       "notNull": true,
       "autoincrement": false,
+      "default": "'report'",
+      "generated": null,
+      "name": "origin",
+      "entityType": "columns",
+      "table": "content_flag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
       "default": "'pending'",
       "generated": null,
       "name": "status",
@@ -7213,6 +7227,106 @@
       "name": "resolved_at",
       "entityType": "columns",
       "table": "content_flag"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "moderation_appeal"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "flag_id",
+      "entityType": "columns",
+      "table": "moderation_appeal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "appellant_user_id",
+      "entityType": "columns",
+      "table": "moderation_appeal"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "moderation_appeal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "content_outcome",
+      "entityType": "columns",
+      "table": "moderation_appeal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "standing_outcome",
+      "entityType": "columns",
+      "table": "moderation_appeal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "decision_notes",
+      "entityType": "columns",
+      "table": "moderation_appeal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "decided_by_user_id",
+      "entityType": "columns",
+      "table": "moderation_appeal"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "decided_at",
+      "entityType": "columns",
+      "table": "moderation_appeal"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "moderation_appeal"
     },
     {
       "type": "text",
@@ -13696,6 +13810,51 @@
     },
     {
       "columns": [
+        "flag_id"
+      ],
+      "tableTo": "content_flag",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_moderation_appeal_flag_id_content_flag_id_fk",
+      "entityType": "fks",
+      "table": "moderation_appeal"
+    },
+    {
+      "columns": [
+        "appellant_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_moderation_appeal_appellant_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "moderation_appeal"
+    },
+    {
+      "columns": [
+        "decided_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_moderation_appeal_decided_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "moderation_appeal"
+    },
+    {
+      "columns": [
         "blocker_user_id"
       ],
       "tableTo": "user",
@@ -15778,6 +15937,15 @@
       "nameExplicit": false,
       "name": "content_flag_pk",
       "table": "content_flag",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "moderation_appeal_pk",
+      "table": "moderation_appeal",
       "entityType": "pks"
     },
     {
@@ -18300,6 +18468,48 @@
       "name": "content_flag_entity_idx",
       "entityType": "indexes",
       "table": "content_flag"
+    },
+    {
+      "columns": [
+        {
+          "value": "flag_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_moderation_appeal_flag",
+      "entityType": "indexes",
+      "table": "moderation_appeal"
+    },
+    {
+      "columns": [
+        {
+          "value": "decided_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_moderation_appeal_decided_at",
+      "entityType": "indexes",
+      "table": "moderation_appeal"
+    },
+    {
+      "columns": [
+        {
+          "value": "appellant_user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_moderation_appeal_appellant",
+      "entityType": "indexes",
+      "table": "moderation_appeal"
     },
     {
       "columns": [

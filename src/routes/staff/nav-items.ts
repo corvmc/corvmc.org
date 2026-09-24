@@ -85,7 +85,7 @@ export type StaffNavSectionKey =
  * would churn every `{#each}` for nothing.
  */
 export type StaffNavBadgeKey =
-	'inboxUnread' | 'suggestionsAwaiting' | 'volunteerPending' | 'listingsPending';
+	'inboxUnread' | 'suggestionsAwaiting' | 'volunteerPending' | 'listingsPending' | 'appealsPending';
 
 export interface StaffNavItem extends NavNode<StaffNavKey> {
 	label: string;
@@ -384,7 +384,8 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'flags',
 				capability: 'moderation.reviewFlags',
 				label: 'Content Flags',
-				href: resolve('/staff/flags')
+				href: resolve('/staff/flags'),
+				badgeKey: 'appealsPending'
 			},
 			{
 				key: 'suggestions',

@@ -30,7 +30,7 @@ on every request and treats a member with `deletedAt` set as anonymous, and
 and this spec does not touch it. What is missing is **the record and the
 gradations**.
 
-This is the spec `docs/specs/moderation-appeals-spec.md` defers to. That spec
+This is the spec `docs/specs/shipped/moderation-appeals-spec.md` defers to. That spec
 excludes account deactivation from appeals explicitly, on the grounds that
 "designing an appeal against a mechanism nobody has designed would produce a bad
 version of both", and says that when this spec lands it "should route through

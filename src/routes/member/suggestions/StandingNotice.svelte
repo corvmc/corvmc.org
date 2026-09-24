@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
 	import { getMySuggestionStanding } from '$lib/remote/suggestions.remote';
 
 	/**
@@ -24,5 +25,6 @@
 				Staff's note: <span class="italic">{standing.reason}</span>
 			{/if}
 		</p>
+		<AppealPanel target={{ kind: 'standing', scope: 'suggestion' }} />
 	</Alert>
 {/if}

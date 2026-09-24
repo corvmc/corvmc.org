@@ -29,6 +29,9 @@ const svc = {
 };
 vi.mock('$lib/server/moderation/standing-service', () => svc);
 
+const flagSvc = { fileStaffAction: vi.fn(async () => ({ id: 'flag-staff-1' })) };
+vi.mock('$lib/server/flag/flag-service', () => flagSvc);
+
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: currentUser },
@@ -68,7 +71,7 @@ const remote = (await import('./standing.remote')) as unknown as Record<
 >;
 
 function noServiceCalls() {
-	for (const [name, spy] of Object.entries(svc)) {
+	for (const [name, spy] of Object.entries({ ...svc, ...flagSvc })) {
 		expect(spy, `${name} should not have been called`).not.toHaveBeenCalled();
 	}
 }

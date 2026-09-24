@@ -78,8 +78,10 @@ vi.mock('$lib/server/suggestion/suggestion-service', () => ({
 	getSuggestionForModeration: (...args: unknown[]) => getSuggestionForModerationMock(...args)
 }));
 
+import { db } from '$lib/server/db';
 import {
 	createFlag,
+	fileStaffAction,
 	resolveFlag,
 	FlagTargetNotFoundError,
 	FlagNotFoundError,
@@ -99,6 +101,51 @@ beforeEach(() => {
 	setVisibilityMock.mockClear();
 	getSuggestionForModerationMock.mockReset();
 	getSuggestionForModerationMock.mockResolvedValue(null);
+});
+
+// ---------------------------------------------------------------------------
+// fileStaffAction
+// ---------------------------------------------------------------------------
+
+describe('fileStaffAction', () => {
+	// A staffer acting on their own initiative still files a report, so there is
+	// a decision with a reason for the member to see and appeal.
+	it('files a report already upheld, attributed to the staffer, and alerts nobody', async () => {
+		selectResultQueue = [[{ name: 'Jordan' }]];
+		insertResult = [{ id: 'f7' }];
+
+		const flag = await fileStaffAction({
+			entityType: 'member_profile',
+			entityId: 'u2',
+			staffId: 'staff1',
+			reason: 'Abusive replies'
+		});
+
+		expect(flag).toMatchObject({ id: 'f7' });
+		const values = vi.mocked(db.insert).mock.results.at(-1)!.value.values.mock.calls[0][0];
+		expect(values).toMatchObject({
+			origin: 'staff_action',
+			status: 'resolved',
+			reportedByUserId: 'staff1',
+			resolvedByUserId: 'staff1',
+			resolutionNotes: 'Abusive replies'
+		});
+		await Promise.resolve();
+		expect(emitMock).not.toHaveBeenCalled();
+		expect(withholdMock).not.toHaveBeenCalled();
+	});
+
+	it('rejects a target that does not exist', async () => {
+		selectResultQueue = [[]];
+		await expect(
+			fileStaffAction({
+				entityType: 'member_profile',
+				entityId: 'gone',
+				staffId: 'staff1',
+				reason: 'x'
+			})
+		).rejects.toBeInstanceOf(FlagTargetNotFoundError);
+	});
 });
 
 // ---------------------------------------------------------------------------

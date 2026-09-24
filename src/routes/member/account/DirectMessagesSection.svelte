@@ -1,6 +1,7 @@
 <script lang="ts">
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
 	import { ADULT_AGE_YEARS } from '$lib/utils/age';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -46,7 +47,11 @@
 			{#if messaging.standing.reason}
 				<span class="mt-1 block opacity-80">{messaging.standing.reason}</span>
 			{/if}
-			<span class="mt-1 block text-muted"> Contact staff if you think this is a mistake. </span>
+			<AppealPanel target={{ kind: 'standing', scope: 'messaging' }}>
+				{#snippet fallback()}
+					<span class="mt-1 block text-muted"> Contact staff if you think this is a mistake. </span>
+				{/snippet}
+			</AppealPanel>
 		</Alert>
 	{/if}
 	<p class="mt-3 mb-3 text-muted">

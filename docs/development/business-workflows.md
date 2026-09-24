@@ -950,10 +950,14 @@ later suggestions through review first.
 
 - **A restriction that seems not to apply** → check the _scope_. Restricted at
   `community_event` does nothing to suggestions or messaging, by design.
-- **A staff-imposed restriction with no report behind it** → `setStanding` takes `flagId` as
-  optional today, though no form calls it without one since `setMemberStanding` was deleted
-  (#1528). [specs/moderation-appeals-spec.md](../specs/moderation-appeals-spec.md) is the
-  design that makes `flagId` required and is **not built**.
+- **A member says they cannot appeal** → an appeal needs an upheld (`resolved`) report
+  that is theirs. Standing rows written before `setStanding` required a `flagId` have no
+  `triggeringFlagId`, so there is nothing to hang an appeal on; the member sees the old
+  "contact staff" line instead. No staff form restricts directly since `setMemberStanding`
+  was deleted (#1528); `fileStaffAction` files the `staff_action` report such a form would need.
+- **An appeal the staffer cannot deny** → by design: whoever resolved the report may grant
+  but not deny (`SelfReviewError`). A second staffer answers it. See
+  [specs/shipped/moderation-appeals-spec.md](../specs/shipped/moderation-appeals-spec.md).
 - **A restriction staff need to lift** → the Restore action on the member's Moderation panel
   (`/staff/users/[id]`), one scope at a time.
 - **A reported suggestion nobody can see** → reporting takes it off the board immediately,

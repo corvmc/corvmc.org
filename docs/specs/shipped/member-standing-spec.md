@@ -33,7 +33,7 @@ that is most of what follows.
 
 **Out:**
 
-- Appeals. `docs/specs/moderation-appeals-spec.md` (PR #217) designs an appeal
+- Appeals. `docs/specs/shipped/moderation-appeals-spec.md` (PR #217) designs an appeal
   against a standing decision and proposes a facade shaped like this table. That
   draft argues the rule-of-three trigger has **not** fired, which this change
   makes false — **it needs revising once this lands.** Nothing here builds an

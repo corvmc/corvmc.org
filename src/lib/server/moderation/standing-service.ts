@@ -30,6 +30,18 @@ export class StandingStatusNotAllowedError extends DomainError {
 	}
 }
 
+/**
+ * A standing with no upheld report behind it. Every moderation action is a
+ * report, so there is always a decision the member can be shown and appeal.
+ */
+export class StandingWithoutReportError extends DomainError {
+	readonly httpStatus = 422;
+	constructor() {
+		super('A standing needs the upheld report that caused it');
+		this.name = 'StandingWithoutReportError';
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Reads
 // ---------------------------------------------------------------------------
@@ -113,8 +125,8 @@ export interface SetStandingParams {
 	 */
 	staffId: string;
 	reason?: string | null;
-	/** The upheld report, when a report is what caused this. */
-	flagId?: string | null;
+	/** The upheld report that caused this — a `staff_action` one when staff acted directly. */
+	flagId: string;
 }
 
 /**
@@ -122,6 +134,7 @@ export interface SetStandingParams {
  * report simply restates it with the newer reason.
  */
 export async function setStanding(params: SetStandingParams): Promise<void> {
+	if (!params.flagId) throw new StandingWithoutReportError();
 	if (!standingScopeConfig[params.scope].statuses.includes(params.status)) {
 		throw new StandingStatusNotAllowedError(params.scope, params.status);
 	}
@@ -129,7 +142,7 @@ export async function setStanding(params: SetStandingParams): Promise<void> {
 	const values = {
 		status: params.status,
 		reason: params.reason ? params.reason.slice(0, STANDING_REASON_MAX) : null,
-		triggeringFlagId: params.flagId ?? null,
+		triggeringFlagId: params.flagId,
 		updatedByUserId: params.staffId,
 		updatedAt: new Date()
 	};

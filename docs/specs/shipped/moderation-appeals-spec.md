@@ -1,5 +1,12 @@
 # Moderation Appeals — contesting a moderation decision
 
+> **Shipped (#578).** Differences from the design below: `/staff/users/[id]` does not yet mark a
+> standing card "appeal pending" (the report link on the card leads to it); a decision requires a
+> reason whichever way it goes; and a standing counts as in force for an appeal only while it still
+> names this report as `triggeringFlagId` — a later upheld report owns the standing and its own
+> appeal decides it. There is no staff form for `setMemberStanding` today; the remote files the
+> `staff_action` report either way.
+
 ## Purpose
 
 When staff moderate a member — take their post down, put their future posts

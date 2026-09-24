@@ -127,7 +127,8 @@
 		inboxUnread: layout.inboxUnread,
 		suggestionsAwaiting: layout.suggestionsAwaiting,
 		volunteerPending: layout.volunteerPending,
-		listingsPending: layout.listingsPending
+		listingsPending: layout.listingsPending,
+		appealsPending: layout.appealsPending
 	} satisfies Record<StaffNavBadgeKey, number>);
 
 	let activeKey = $derived(activeNavKey(page.url.pathname));

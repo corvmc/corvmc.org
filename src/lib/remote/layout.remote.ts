@@ -1,3 +1,4 @@
+import { countPendingAppeals } from '$lib/server/moderation/appeal-service';
 import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
@@ -180,24 +181,33 @@ export const getStaffLayout = query(async () => {
 	// member/band/public surfaces only, so staff can administer a feature
 	// before (and after) it is switched on for everyone else.
 	const user = locals.user;
-	const [userBands, inboxUnread, volunteerPending, listingsPending, suggestionsAwaiting, chrome] =
-		await Promise.all([
-			listForUser(user.id, ['band']).catch(() => []),
-			getUnresolvedCount().catch(() => 0),
-			// Everything waiting on a coordinator, not just the hour logs. The badge used
-			// to count pending hours alone, so under-18 approvals, unconfirmed claims and
-			// shifts that finished without being closed out were all invisible from the
-			// nav (docs/reports/volunteer-workflow-findings.md#d1). The dashboard sums it,
-			// so the number and the rows it stands for cannot disagree.
-			countVolunteerWorkWaiting().catch(() => 0),
-			countPendingSubmissions().catch(() => 0),
-			// Moderation leads the badge: everything in that bucket is invisible to
-			// members while it waits, which is the cost of hiding on a single report.
-			Promise.all([countAwaitingModeration(), countAwaitingResponse(), countPendingEdits()])
-				.then(([m, r, e]) => m + r + e)
-				.catch(() => 0),
-			appChrome(user)
-		]);
+	const [
+		userBands,
+		inboxUnread,
+		volunteerPending,
+		listingsPending,
+		suggestionsAwaiting,
+		appealsPending,
+		chrome
+	] = await Promise.all([
+		listForUser(user.id, ['band']).catch(() => []),
+		getUnresolvedCount().catch(() => 0),
+		// Everything waiting on a coordinator, not just the hour logs. The badge used
+		// to count pending hours alone, so under-18 approvals, unconfirmed claims and
+		// shifts that finished without being closed out were all invisible from the
+		// nav (docs/reports/volunteer-workflow-findings.md#d1). The dashboard sums it,
+		// so the number and the rows it stands for cannot disagree.
+		countVolunteerWorkWaiting().catch(() => 0),
+		countPendingSubmissions().catch(() => 0),
+		// Moderation leads the badge: everything in that bucket is invisible to
+		// members while it waits, which is the cost of hiding on a single report.
+		Promise.all([countAwaitingModeration(), countAwaitingResponse(), countPendingEdits()])
+			.then(([m, r, e]) => m + r + e)
+			.catch(() => 0),
+		// Appeals, not reports: an appeal is someone waiting on an answer they were promised.
+		countPendingAppeals().catch(() => 0),
+		appChrome(user)
+	]);
 
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
@@ -212,7 +222,8 @@ export const getStaffLayout = query(async () => {
 		// Nothing renders this yet — the staff sidebar has no listings row. Either
 		// wire it to a Moderation badge or drop it along with the query above.
 		listingsPending,
-		suggestionsAwaiting
+		suggestionsAwaiting,
+		appealsPending
 	};
 });
 

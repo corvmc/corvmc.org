@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -23,7 +24,8 @@
 
 	{#if mine.standing.status !== 'none'}
 		<Alert type="info" class="mb-4">
-			Staff check your listings before they go on the public calendar.
+			<p>Staff check your listings before they go on the public calendar.</p>
+			<AppealPanel target={{ kind: 'standing', scope: 'community_event' }} />
 		</Alert>
 	{/if}
 

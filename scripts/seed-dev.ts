@@ -90,6 +90,7 @@ import { seedBannedPersona } from './seed/banned-persona';
 import { USAGE_PERSONAS, seedUsagePersonaLife, seedUsagePersonas } from './seed/usage-personas';
 import { STYLE_PERSONAS, seedStylePersonaHistory, seedStylePersonas } from './seed/style-personas';
 import { seedSuggestions } from './seed/suggestions';
+import { seedModerationAppeals } from './seed/moderation-appeals';
 import { seedProjects } from './seed/projects';
 import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
@@ -263,6 +264,8 @@ async function main() {
 	const sustainingPersonas = await seedSustainingPersonas(roles);
 	const bannedPersona = await seedBannedPersona(roles, adminUser);
 	const suggestions = await seedSuggestions(allUsers, adminUser, eq.restockAcquisitionId);
+	// After the suggestions and community listings, whose upheld reports it appeals.
+	const appeals = await seedModerationAppeals(allUsers, adminUser);
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
@@ -356,6 +359,7 @@ async function main() {
 		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings, 1 member-set messaging preference`
 	);
 	console.log(`  ${flags.length} content flags`);
+	console.log(`  ${appeals.pending} pending moderation appeals, ${appeals.decided} decided`);
 	console.log(
 		`  ${volunteerRoles.length} volunteer roles, ${volunteerProfiles.rows.length} volunteer profiles (${volunteerProfiles.blocked} awaiting review), ${volunteerHours.length} volunteer hour logs, ${volunteerInterests.length} role interests`
 	);

@@ -40,6 +40,13 @@ export type MemberReportableEntityType = (typeof memberReportableEntityTypes)[nu
 export const flagStatuses = ['pending', 'resolved', 'dismissed'] as const;
 export type FlagStatus = (typeof flagStatuses)[number];
 
+/**
+ * `staff_action` is a staffer recording why they acted on their own initiative:
+ * filed already resolved, so it never enters the queue or notifies anyone.
+ */
+export const flagOrigins = ['report', 'staff_action'] as const;
+export type FlagOrigin = (typeof flagOrigins)[number];
+
 // ---------------------------------------------------------------------------
 // Tables
 // ---------------------------------------------------------------------------
@@ -65,6 +72,7 @@ export const contentFlag = sqliteTable(
 		reason: text('reason').notNull(),
 		description: text('description'),
 
+		origin: text('origin', { enum: flagOrigins }).notNull().default('report'),
 		status: text('status', { enum: flagStatuses }).notNull().default('pending'),
 		resolvedByUserId: text('resolved_by_user_id').references(() => user.id, {
 			onDelete: 'set null'

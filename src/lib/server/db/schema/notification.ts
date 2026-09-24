@@ -568,6 +568,23 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'moderation_appeal_filed',
+		category: 'people',
+		label: 'Moderation appeal filed',
+		// In-app only: a queue item, not news. The Content Flags badge counts them.
+		description: 'Notification when a member appeals an upheld report',
+		defaults: { email: false, inApp: true, sms: false },
+		staffOnly: true
+	},
+	{
+		key: 'moderation_appeal_decided',
+		category: 'people',
+		label: 'Your appeal was decided',
+		// Email on: the member asked and is waiting, and silence reads as being ignored.
+		description: 'Notification when staff answer an appeal you filed',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'suggestion_edit_reviewed',
 		category: 'volunteering',
 		label: 'Your edit was reviewed',
