@@ -80,8 +80,8 @@ Filed as `agent-filed` Task issues for review, each titled as the decision:
 - **A written recap** (#1401): `event_listing.recap_text`, nullable markdown. Staff with
   `event.manage` write it on `/staff/events/[id]` once the event has started, and can clear it at
   any time. The public page renders it above the photos, and each Recent recaps card shows a
-  plain-text excerpt. `event.uploadRecap` holders cannot write it yet: that waits on a
-  per-event `can(cap, { eventId })` resolver.
+  plain-text excerpt. `event.uploadRecap` holders cannot write it yet. Opening it to them through
+  the event-scoped `can(cap, { eventId })` grant (#1625) belongs to the role-grants work.
 - **Consent is handled by takedown, not by a release on file per photo** (#1400). A person who asks is
   removed by staff detaching the photo.
 
