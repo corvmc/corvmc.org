@@ -35,7 +35,7 @@ import {
 	listPublished
 } from '$lib/server/group/announcement-service';
 import { listGroupSessions } from '$lib/server/event/event-service';
-import { listProjects } from '$lib/server/project/project-service';
+import { listCommitteeProjectEvents, listProjects } from '$lib/server/project/project-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
 import { list as listFiles, getUsage as getDocumentUsage } from '$lib/server/group/file-service';
@@ -287,7 +287,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		emailInvites,
 		committeeApplications,
 		projectLists,
-		volunteerRoles
+		volunteerRoles,
+		projectEvents
 	] = await Promise.all([
 		getMembers(group.id).then(partitionByStatus),
 		canManage ? listForManager(group.id) : listPublished(group.id),
@@ -314,7 +315,9 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		// A committee applies duty lists to its own projects.
 		group.kind === 'committee' ? listDutyLists({ subject: 'project' }) : Promise.resolve([]),
 		// The role picker for opening a work order on one of the committee's projects.
-		group.kind === 'committee' ? listVolunteerRoles() : Promise.resolve([])
+		group.kind === 'committee' ? listVolunteerRoles() : Promise.resolve([]),
+		// The events on those projects, which is how Booking reaches its own shows.
+		group.kind === 'committee' ? listCommitteeProjectEvents(group.id) : Promise.resolve([])
 	]);
 
 	return {
@@ -371,6 +374,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			.filter((l) => l.itemCount > 0)
 			.map((l) => ({ id: l.id, name: l.name })),
 		workOrderRoles: volunteerRoles.map((r) => ({ value: r.id, label: r.name })),
+		projectEvents,
 		emailInvites,
 		committeeApplications,
 		members: {

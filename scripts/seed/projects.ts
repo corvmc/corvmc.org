@@ -216,6 +216,9 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		.filter((e) => e.status === 'published' && e.startsAt >= now)
 		.slice(0, 2)
 		.map((e) => e.id);
+	// A third night still in draft, so Booking has something to publish from its own page.
+	const draft = events.find((e) => e.status === 'draft' && e.startsAt >= now);
+	if (draft) upcoming.push(draft.id);
 	for (const id of upcoming) {
 		await db.update(eventListing).set({ projectId: ids.festival }).where(eq(eventListing.id, id));
 	}

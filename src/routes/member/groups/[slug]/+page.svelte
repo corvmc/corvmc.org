@@ -42,6 +42,7 @@
 	import ProjectDutyListAction from './ProjectDutyListAction.svelte';
 	import CommitteeNumbers from './CommitteeNumbers.svelte';
 	import ProjectWorkOrderAction from './ProjectWorkOrderAction.svelte';
+	import ProjectEventPublishAction from './ProjectEventPublishAction.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -251,6 +252,34 @@
 				</Table>
 			{/if}
 		</InfoCard>
+		{#if data.projectEvents.length > 0}
+			<InfoCard title="Events on these projects">
+				<Table>
+					{#snippet head()}
+						<th>Event</th>
+						<th>Project</th>
+						<th>Status</th>
+						<th>When</th>
+						{#if isMember}<th><span class="sr-only">Actions</span></th>{/if}
+					{/snippet}
+					{#each data.projectEvents as event (event.id)}
+						<tr>
+							<td class="cell-primary">{event.title}</td>
+							<td>{event.projectName}</td>
+							<td><StatusBadge status={event.status} label /></td>
+							<td>{formatDateTimeShort(event.startsAt)}</td>
+							{#if isMember}
+								<td class="text-right">
+									{#if event.status === 'draft' || event.status === 'pending_review'}
+										<ProjectEventPublishAction {event} />
+									{/if}
+								</td>
+							{/if}
+						</tr>
+					{/each}
+				</Table>
+			</InfoCard>
+		{/if}
 	{:else if tab === 'numbers'}
 		<CommitteeNumbers groupId={group.id} />
 	{:else if tab === 'documents'}

@@ -74,6 +74,7 @@ const {
 	detachFromProject,
 	getProjectBurn,
 	getProjectForSuggestion,
+	getEventOwningCommittee,
 	startProjectFromSuggestion,
 	ProjectNotFoundError,
 	ProjectOwnerError,
@@ -346,5 +347,22 @@ describe('the suggestion loop', () => {
 		// A member is told their idea became work; what it costs is a staff
 		// question, so the shape itself withholds it.
 		expect(row).toEqual({ id: 'proj-1', name: 'Soundproofing', status: 'planned' });
+	});
+});
+
+describe('getEventOwningCommittee', () => {
+	it('resolves the committee through the project the event points at', async () => {
+		selectResults = [[{ groupId: 'committee-1' }]];
+		expect(await getEventOwningCommittee('evt-1')).toEqual({ groupId: 'committee-1' });
+	});
+
+	it('answers a null owner for an event on no project, so only cover gets in', async () => {
+		selectResults = [[{ groupId: null }]];
+		expect(await getEventOwningCommittee('evt-1')).toEqual({ groupId: null });
+	});
+
+	it('returns null for an event that does not exist', async () => {
+		selectResults = [[]];
+		expect(await getEventOwningCommittee('gone')).toBeNull();
 	});
 });

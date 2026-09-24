@@ -160,11 +160,14 @@ vi.mock('$lib/server/group/committee-application-service', () => ({
 	listForCommittee: vi.fn(async () => [])
 }));
 vi.mock('$lib/server/event/event-service', () => ({ listGroupSessions: vi.fn(async () => []) }));
-vi.mock('$lib/server/project/project-service', () => ({ listProjects: vi.fn(async () => []) }));
 const listDutyLists = vi.hoisted(() => vi.fn());
 vi.mock('$lib/server/volunteer/duty-list-service', () => ({ listDutyLists }));
 vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({
 	listVolunteerRoles: vi.fn(async () => [])
+}));
+vi.mock('$lib/server/project/project-service', () => ({
+	listProjects: vi.fn(async () => []),
+	listCommitteeProjectEvents: vi.fn(async () => [])
 }));
 vi.mock('$lib/server/group/file-service', () => ({ list: vi.fn(), getUsage: vi.fn() }));
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v }));

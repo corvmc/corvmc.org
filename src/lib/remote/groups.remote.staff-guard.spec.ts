@@ -95,10 +95,13 @@ vi.mock('$lib/server/group/announcement-service', () => ({
 }));
 vi.mock('$lib/server/group/committee-application-service', () => ({ listForCommittee: vi.fn() }));
 vi.mock('$lib/server/event/event-service', () => ({ listGroupSessions: vi.fn() }));
-vi.mock('$lib/server/project/project-service', () => ({ listProjects: vi.fn() }));
 vi.mock('$lib/server/volunteer/duty-list-service', () => ({ listDutyLists: vi.fn() }));
 vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({
 	listVolunteerRoles: vi.fn(async () => [])
+}));
+vi.mock('$lib/server/project/project-service', () => ({
+	listProjects: vi.fn(),
+	listCommitteeProjectEvents: vi.fn(async () => [])
 }));
 vi.mock('$lib/server/group/file-service', () => ({ list: vi.fn(), getUsage: vi.fn() }));
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v }));
