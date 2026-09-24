@@ -2054,7 +2054,9 @@ export const positions: Record<Position, Grants> = {
 		// The coordinator is who people reach when they want to get involved, and
 		// a committee with no chair yet has nobody else to answer. Not a seat on
 		// any committee — they review and decide, they do not attend.
-		committee: ['reviewApplications']
+		committee: ['reviewApplications'],
+		// Read only: recording, notes and resolution stay with staff.
+		incident: ['read']
 	},
 	site_moderator: {
 		moderation: ['reviewFlags', 'setStanding'],
@@ -2063,7 +2065,8 @@ export const positions: Record<Position, Grants> = {
 		// Withholding a release, or pulling it off the air, is a takedown.
 		music: ['read', 'moderate'],
 		inbox: ['read', 'reply', 'assign', 'dispose'],
-		user: ['list', 'read', 'deactivate']
+		user: ['list', 'read', 'deactivate'],
+		incident: ['read']
 	},
 	treasurer: {
 		finance: ['read', 'refund'],

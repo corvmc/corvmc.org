@@ -34,6 +34,8 @@
 		})
 	);
 
+	const canRecord = $derived(result.current?.canRecord ?? false);
+
 	const activeFilterCount = $derived(
 		(searchDebounced ? 1 : 0) + (statusFilter === 'open' ? 0 : 1) + (categoryFilter ? 1 : 0)
 	);
@@ -48,7 +50,9 @@
 </script>
 
 <PageHeader title="Incidents" subtitle="Space">
-	<RecordIncidentAction />
+	{#if canRecord}
+		<RecordIncidentAction />
+	{/if}
 </PageHeader>
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
