@@ -2251,7 +2251,11 @@ export const committeeGrants: ReadonlyArray<{ committeeId: string; grants: Grant
 	{
 		committeeId: COMMITTEE_IDS.development,
 		grants: { sponsor: ['read', 'manage'], grant: ['read', 'manage'] }
-	}
+	},
+	// #1602: renewals belong to a committee. committees-and-roles-spec.md gives
+	// permits, licenses and insurance to Development; re-point this one line to
+	// move them.
+	{ committeeId: COMMITTEE_IDS.development, grants: { renewal: ['read', 'manage'] } }
 ];
 
 /**

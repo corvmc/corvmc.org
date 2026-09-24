@@ -9,12 +9,22 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!held.has(cap)) throw new Error(`403: ${cap}`);
 	return { id: 'acting-staff' };
 });
-const listUsersWithCapability = vi.fn(async (_cap: string) => [
+const listCapabilityHolders = vi.fn(async (_cap: string) => [
 	{ id: 'u1', name: 'Ada', email: 'ada@example.com' }
 ]);
 vi.mock('$lib/server/authorization', () => ({
-	requireCapability: (cap: string) => requireCapability(cap),
-	listUsersWithCapability: (cap: string) => listUsersWithCapability(cap)
+	requireCapability: (cap: string) => requireCapability(cap)
+}));
+
+// The real guard is pinned in group-context.spec.ts; this one stands for
+// "the renewals committee seat, or the capability" (#1602).
+let onCommittee = false;
+vi.mock('$lib/server/group/group-context', () => ({
+	requireCommitteeCapability: async (cap: string) =>
+		onCommittee
+			? { user: { id: 'committee-member' }, group: null, role: 'member' }
+			: { user: await requireCapability(cap), group: null, role: 'staff' },
+	listCapabilityHolders: (cap: string) => listCapabilityHolders(cap)
 }));
 
 const service = {
@@ -86,10 +96,18 @@ const CASES: Array<{ name: string; cap: string; arg?: unknown; spy: ReturnType<t
 beforeEach(() => {
 	vi.clearAllMocks();
 	held = new Set();
+	onCommittee = false;
 });
 
 describe('renewals.remote guards', () => {
 	for (const { name, cap, arg, spy } of CASES) {
+		it(`${name} admits a committee member holding no position`, async () => {
+			onCommittee = true;
+			await remote[name](arg);
+			expect(spy).toHaveBeenCalled();
+			expect(requireCapability).not.toHaveBeenCalled();
+		});
+
 		it(`${name} refuses a caller without ${cap} before the service`, async () => {
 			held = new Set(cap === 'renewal.manage' ? ['renewal.read'] : []);
 			await expect(remote[name](arg)).rejects.toThrow('403');
@@ -118,10 +136,10 @@ describe('renewal input', () => {
 		);
 	});
 
-	it('offers only renewal managers as the responsible staffer', async () => {
+	it('offers only renewal managers, seat included, as the responsible person', async () => {
 		held = new Set(['renewal.read']);
 		const out = (await remote.getRenewals()) as { assignees: unknown[] };
-		expect(listUsersWithCapability).toHaveBeenCalledWith('renewal.manage');
+		expect(listCapabilityHolders).toHaveBeenCalledWith('renewal.manage');
 		expect(out.assignees).toEqual([{ id: 'u1', name: 'Ada' }]);
 	});
 });

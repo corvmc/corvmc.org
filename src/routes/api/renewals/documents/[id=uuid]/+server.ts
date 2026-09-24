@@ -1,5 +1,5 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { requireCapability } from '$lib/server/authorization';
+import { requireCommitteeCapability } from '$lib/server/group/group-context';
 import { getRenewalDocument } from '$lib/server/renewal/renewal-service';
 import { getPrivateObject } from '$lib/server/private-storage';
 import { contentDispositionAttachment } from '$lib/server/storage-keys';
@@ -10,7 +10,7 @@ import { contentDispositionAttachment } from '$lib/server/storage-keys';
  * outlive the permission behind it.
  */
 export const GET: RequestHandler = async ({ params }) => {
-	await requireCapability('renewal.read');
+	await requireCommitteeCapability('renewal.read');
 
 	const doc = await getRenewalDocument(params.id ?? '');
 	if (!doc) error(404, 'Not found');

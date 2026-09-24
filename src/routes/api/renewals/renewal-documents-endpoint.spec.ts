@@ -12,6 +12,15 @@ vi.mock('$lib/server/authorization', () => ({
 	requireCapability: (cap: string) => requireCapability(cap)
 }));
 
+// Stands for the real committee guard, which group-context.spec.ts pins (#1602).
+let onCommittee = false;
+vi.mock('$lib/server/group/group-context', () => ({
+	requireCommitteeCapability: async (cap: string) =>
+		onCommittee
+			? { user: { id: 'committee-member' }, group: null, role: 'member' }
+			: { user: await requireCapability(cap), group: null, role: 'staff' }
+}));
+
 const getRenewalDocument = vi.fn(async (_id: string) => null as unknown);
 vi.mock('$lib/server/renewal/renewal-service', () => ({
 	getRenewalDocument: (id: string) => getRenewalDocument(id)
@@ -28,6 +37,7 @@ const { GET } = await import('./documents/[id=uuid]/+server');
 beforeEach(() => {
 	vi.clearAllMocks();
 	held = new Set();
+	onCommittee = false;
 });
 
 describe('GET /api/renewals/documents/[id]', () => {
@@ -35,6 +45,15 @@ describe('GET /api/renewals/documents/[id]', () => {
 		await expect(GET({ params: { id: 'att-1' } } as never)).rejects.toThrow('403');
 		expect(getRenewalDocument).not.toHaveBeenCalled();
 		expect(getPrivateObject).not.toHaveBeenCalled();
+	});
+
+	it('lets a renewals committee member read a document without a position', async () => {
+		onCommittee = true;
+		await expect(GET({ params: { id: 'att-1' } } as never)).rejects.toMatchObject({
+			status: 404
+		});
+		expect(getRenewalDocument).toHaveBeenCalledWith('att-1');
+		expect(requireCapability).not.toHaveBeenCalled();
 	});
 
 	it('404s an attachment that is not a renewal document', async () => {

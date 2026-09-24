@@ -469,6 +469,8 @@ direction of money, and a different lifecycle.
 **As Development**, I want permits, licenses and insurance to tell me before they expire.
 🆕 No renewal calendar. The nearest built thing is certification expiry, which is derived from
 dates rather than stored as a status — the same treatment would work here.
+⏫ Shipped at `/staff/renewals` (#1478). A Development committee seat manages it through
+`committeeGrants` and receives the reminders when nobody is named (#1602).
 
 ---
 

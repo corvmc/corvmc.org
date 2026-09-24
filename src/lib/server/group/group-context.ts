@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { requireUser, isElevated, can } from '$lib/server/authorization';
+import { requireUser, isElevated, can, listUsersWithCapability } from '$lib/server/authorization';
 import type { GroupRole } from '$lib/server/db/schema/group';
 import { committeeGrants, grantsCapability, type Capability } from '$lib/config';
 import {
@@ -163,6 +163,16 @@ export async function listCommitteeHolders(
 	const group = await getByIdActive(committeeId);
 	if (group?.kind !== 'committee') return [];
 	return listActiveMembers(group.id);
+}
+
+/** Holders of `cap` by position, plus its committee seat, once each. */
+export async function listCapabilityHolders(cap: Capability) {
+	const [staff, seat] = await Promise.all([
+		listUsersWithCapability(cap),
+		listCommitteeHolders(cap)
+	]);
+	const seen = new Set<string>();
+	return [...staff, ...seat].filter((u) => !seen.has(u.id) && !!seen.add(u.id));
 }
 
 /**

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { query } from '$app/server';
 import { invalid } from '@sveltejs/kit';
 import { form } from './_remote';
-import { listUsersWithCapability, requireCapability } from '$lib/server/authorization';
+import { listCapabilityHolders, requireCommitteeCapability } from '$lib/server/group/group-context';
 import { mapDomainError } from '$lib/server/errors';
 import * as service from '$lib/server/renewal/renewal-service';
 import { clubToday, LONG_TEXT_MAX, SHORT_TEXT_MAX, renewalKinds } from '$lib/config';
@@ -33,13 +33,13 @@ function renewalInput(d: z.infer<z.ZodObject<typeof renewalFields>>) {
 
 /** Who may be made responsible: whoever manages renewals. Names only. */
 async function assigneeOptions() {
-	const managers = await listUsersWithCapability('renewal.manage');
+	const managers = await listCapabilityHolders('renewal.manage');
 	return managers.map((u) => ({ id: u.id, name: u.name }));
 }
 
 /** Every renewal, soonest expiry first, and who may be made responsible for one. */
 export const getRenewals = query(async () => {
-	await requireCapability('renewal.read');
+	await requireCommitteeCapability('renewal.read');
 	const [renewals, assignees] = await Promise.all([
 		service.listRenewals(clubToday()),
 		assigneeOptions()
@@ -49,7 +49,7 @@ export const getRenewals = query(async () => {
 
 /** One renewal, and the same assignee list, so the edit form needs no second query. */
 export const getRenewalDetail = query(z.string(), async (id) => {
-	await requireCapability('renewal.read');
+	await requireCommitteeCapability('renewal.read');
 	try {
 		const [renewal, assignees] = await Promise.all([
 			service.getRenewal(id, clubToday()),
@@ -62,7 +62,7 @@ export const getRenewalDetail = query(z.string(), async (id) => {
 });
 
 export const createRenewal = form(z.object(renewalFields), async (data) => {
-	await requireCapability('renewal.manage');
+	await requireCommitteeCapability('renewal.manage');
 	const row = await service.createRenewal(renewalInput(data));
 	return { id: row.id };
 });
@@ -70,7 +70,7 @@ export const createRenewal = form(z.object(renewalFields), async (data) => {
 export const updateRenewal = form(
 	z.object({ id: z.string().min(1), ...renewalFields }),
 	async (data) => {
-		await requireCapability('renewal.manage');
+		await requireCommitteeCapability('renewal.manage');
 		try {
 			await service.updateRenewal(data.id, renewalInput(data));
 		} catch (err) {
@@ -82,7 +82,7 @@ export const updateRenewal = form(
 );
 
 export const deleteRenewal = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('renewal.manage');
+	await requireCommitteeCapability('renewal.manage');
 	try {
 		await service.deleteRenewal(data.id);
 	} catch (err) {
@@ -94,7 +94,7 @@ export const deleteRenewal = form(z.object({ id: z.string().min(1) }), async (da
 export const removeRenewalDocument = form(
 	z.object({ id: z.string().min(1), attachmentId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('renewal.manage');
+		await requireCommitteeCapability('renewal.manage');
 		try {
 			await service.removeRenewalDocument(data.id, data.attachmentId);
 		} catch (err) {
@@ -108,7 +108,7 @@ export const removeRenewalDocument = form(
 export const uploadRenewalDocument = form(
 	z.object({ id: z.string().min(1), file: z.instanceof(File) }),
 	async (data, issue) => {
-		const staff = await requireCapability('renewal.manage');
+		const { user: staff } = await requireCommitteeCapability('renewal.manage');
 		// An empty file input still posts a zero-byte `File`.
 		if (!data.file || data.file.size === 0) invalid(issue.file('Choose a file to upload.'));
 		try {

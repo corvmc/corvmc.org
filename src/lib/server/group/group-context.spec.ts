@@ -11,7 +11,11 @@ const requireUser = vi.fn(() => ({ id: 'user-1' }));
 const isElevated = vi.fn(async () => false);
 const hasAnyRole = vi.fn(async () => false);
 const can = vi.fn(async () => false);
+const listUsersWithCapability = vi.fn(
+	async (_cap?: unknown): Promise<Array<{ id: string; name: string; email: string }>> => []
+);
 vi.mock('$lib/server/authorization', () => ({
+	listUsersWithCapability: (cap: unknown) => listUsersWithCapability(cap),
 	requireUser: () => requireUser(),
 	isElevated: (...a: unknown[]) => isElevated(...(a as [])),
 	hasAnyRole: (...a: unknown[]) => hasAnyRole(...(a as [])),
@@ -34,6 +38,7 @@ vi.mock('$lib/server/band/band-service', () => ({
 import { COMMITTEE_IDS } from '$lib/config';
 import {
 	committeeCapabilitiesFor,
+	listCapabilityHolders,
 	listCommitteeHolders,
 	requireBandRole,
 	requireCommitteeCapability,
@@ -491,5 +496,50 @@ describe('listCommitteeHolders (#1578)', () => {
 	it('returns nobody when the committee row is gone', async () => {
 		expect(await listCommitteeHolders('sponsor.manage')).toEqual([]);
 		expect(listActiveMembers).not.toHaveBeenCalled();
+	});
+});
+
+describe('renewals are a committee seat too (#1602)', () => {
+	beforeEach(() =>
+		getByIdActive.mockResolvedValue({ id: COMMITTEE_IDS.development, kind: 'committee' })
+	);
+
+	for (const cap of ['renewal.read', 'renewal.manage'] as const) {
+		it(`admits a seated member to ${cap}`, async () => {
+			getUserRole.mockResolvedValue('member');
+			await expect(requireCommitteeCapability(cap)).resolves.toMatchObject({ role: 'member' });
+		});
+
+		it(`refuses ${cap} to someone with neither a seat nor a position`, async () => {
+			expect(await statusOf(() => requireCommitteeCapability(cap))).toBe(403);
+		});
+
+		it(`admits staff to ${cap}`, async () => {
+			can.mockResolvedValue(true);
+			await expect(requireCommitteeCapability(cap)).resolves.toMatchObject({ role: 'staff' });
+		});
+	}
+
+	it('lists the seat among its capabilities', async () => {
+		getUserRole.mockResolvedValue('member');
+		expect(await committeeCapabilitiesFor('user-1')).toEqual(
+			expect.arrayContaining(['renewal.read', 'renewal.manage'])
+		);
+	});
+});
+
+describe('listCapabilityHolders', () => {
+	it('unions position holders with the seat, once each', async () => {
+		getByIdActive.mockResolvedValue({ id: COMMITTEE_IDS.development, kind: 'committee' });
+		listUsersWithCapability.mockResolvedValue([
+			{ id: 'u1', name: 'Ada', email: 'ada@x' },
+			{ id: 'u2', name: 'Bo', email: 'bo@x' }
+		]);
+		listActiveMembers.mockResolvedValue([
+			{ id: 'u2', name: 'Bo', email: 'bo@x' },
+			{ id: 'u3', name: 'Cy', email: 'cy@x' }
+		]);
+		const ids = (await listCapabilityHolders('renewal.manage')).map((u) => u.id);
+		expect(ids).toEqual(['u1', 'u2', 'u3']);
 	});
 });

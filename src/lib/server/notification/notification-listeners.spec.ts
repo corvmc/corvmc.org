@@ -28,8 +28,12 @@ vi.mock('$lib/server/authorization', () => ({
 const mockCommitteeHolders = vi.fn(
 	async (_cap?: string): Promise<Array<{ id: string; name: string; email: string }>> => []
 );
+// The union and its de-duplication are pinned in group-context.spec.ts.
 vi.mock('$lib/server/group/group-context', () => ({
-	listCommitteeHolders: (cap: string) => mockCommitteeHolders(cap)
+	listCapabilityHolders: async (cap: string) => [
+		...(await mockStaffUsers(cap)),
+		...(await mockCommitteeHolders(cap))
+	]
 }));
 
 // Returns null when INBOX_REPLY_ADDRESS is unconfigured, which is a supported
@@ -1318,11 +1322,8 @@ describe('development deadline due (#1477)', () => {
 		expect(call.href).toBe('/staff/sponsors/s1');
 	});
 
-	it('also tells the Development committee, once each (#1578)', async () => {
-		mockCommitteeHolders.mockResolvedValueOnce([
-			{ id: 'staff-1', name: 'Ada', email: 'ada@test.com' },
-			{ id: 'dev-1', name: 'Cy', email: 'cy@test.com' }
-		]);
+	it('also tells the Development committee (#1578)', async () => {
+		mockCommitteeHolders.mockResolvedValueOnce([{ id: 'dev-1', name: 'Cy', email: 'cy@test.com' }]);
 		await emit('development.deadline_due', grantReport);
 
 		expect(mockCommitteeHolders).toHaveBeenCalledWith('grant.manage');
@@ -1370,5 +1371,15 @@ describe('renewal expiry due (#1478)', () => {
 
 		expect(mockStaffUsers).toHaveBeenCalledWith('renewal.manage');
 		expect(new Set(renewalCalls().map((c) => c.userId))).toEqual(new Set(['staff-1', 'staff-2']));
+	});
+
+	it('also tells the renewals committee when nobody is responsible (#1602)', async () => {
+		mockCommitteeHolders.mockResolvedValueOnce([{ id: 'dev-1', name: 'Cy', email: 'cy@test.com' }]);
+		await emit('renewal.expiry_due', { ...policy, responsible: null });
+
+		expect(mockCommitteeHolders).toHaveBeenCalledWith('renewal.manage');
+		expect(new Set(renewalCalls().map((c) => c.userId))).toEqual(
+			new Set(['staff-1', 'staff-2', 'dev-1'])
+		);
 	});
 });
