@@ -74,6 +74,7 @@ import { seedAuditLog } from './seed/audit';
 import { seedContractors } from './seed/contractors';
 import { seedLocalResources } from './seed/local-resources';
 import { seedEquipmentReports } from './seed/equipment-reports';
+import { seedIncidents } from './seed/incidents';
 import { seedDutyLists } from './seed/duty-lists';
 import { seedOrientation } from './seed/orientation';
 import {
@@ -208,6 +209,7 @@ async function main() {
 	const itemArticles = await seedItemArticles();
 	const contractors = await seedContractors(adminUser.id);
 	const localResources = await seedLocalResources(adminUser.id);
+	const incidents = await seedIncidents(adminUser, users[0]);
 	const inbox = await seedInbox(adminUser, users[0]);
 	const dmCast =
 		usage && directoryPersonas.seeker && directoryPersonas.leader && directoryPersonas.undecided
@@ -347,6 +349,9 @@ async function main() {
 	);
 	console.log(
 		`  ${equipmentReports.reports} equipment reports in every triage stage, ${equipmentReports.workOrders} work order raised from them`
+	);
+	console.log(
+		`  ${incidents.incidents} incidents, ${incidents.notes} incident notes (1 member linked, 1 reopened)`
 	);
 	console.log(`  ${directory.entries} directory entries, ${directory.tags} directory tags`);
 	console.log(`  ${directoryPersonas.users} directory matching demo personas`);

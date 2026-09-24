@@ -40,3 +40,4 @@ export * from './reminder';
 export * from './audit';
 export * from './local-resource';
 export * from './market';
+export * from './incident';

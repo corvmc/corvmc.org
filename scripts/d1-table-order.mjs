@@ -195,7 +195,10 @@ export const tableOrder = [
 	// A root: references nothing. Parent of local_resource.
 	'local_resource_category',
 	// References local_resource_category and user.
-	'local_resource'
+	'local_resource',
+	// References user only; parent of incident_note.
+	'incident',
+	'incident_note'
 ];
 
 /**

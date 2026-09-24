@@ -1565,6 +1565,38 @@ vendors are listed on the event page.
 - **Applications are open but nobody can apply.** Check that the listing is `published`. A
   draft market returns 404 on the apply page.
 
+## 20. The incident & safety log
+
+Spec: [specs/shipped/incident-log-spec.md](../specs/shipped/incident-log-spec.md)
+
+### The story
+
+Whoever ran the night tells staff something went wrong — a neighbour called, a drummer fell on
+the stairs, the lobby window was found cracked. A staffer records it at `/staff/incidents`: when,
+where, what kind, a one-line summary and the account, optionally linking a member who was
+involved. Follow-ups are notes under it. Staff resolve it with a resolution, and reopen it if it
+comes back. Reading back is the list's status, kind and text filters.
+
+### Code path
+
+- **Read:** `getIncidentLog` and `getIncidentDetail` in `incidents.remote.ts`, behind
+  `incident.read`.
+- **Write:** `recordIncidentForm`, `addIncidentNoteForm`, `resolveIncidentForm`,
+  `reopenIncidentForm`, behind `incident.record`, over `src/lib/server/incident/incident-service.ts`.
+- **Resolve** is a conditional update on `status = 'open'`; **reopen** writes the old resolution
+  as a note before clearing it.
+
+### Data touched
+
+- `incident` — the account, written once. Author and resolver FKs are `set null`; the reporter's
+  name is copied beside the FK.
+- `incident_note` — append-only follow-ups, each with the author's name as written.
+
+### Where it breaks
+
+- Nothing acts on the member linked. Enforcement is the moderation surfaces' job.
+- There is no delete path in the application, by design.
+
 ## Cross-cutting patterns worth internalizing
 
 - **Everything money-related converges on two Stripe entry points:** `checkout()` in

@@ -61,6 +61,7 @@ export type StaffNavKey =
 	| 'inventory-compliance'
 	| 'contractors'
 	| 'contractor-jobs'
+	| 'incidents'
 	| 'projects'
 	| 'productions'
 	| 'venues'
@@ -331,6 +332,12 @@ export const staffNavSections: StaffNavSection[] = [
 						href: resolve('/staff/contractors/jobs')
 					}
 				]
+			},
+			{
+				key: 'incidents',
+				capability: 'incident.read',
+				label: 'Incidents',
+				href: resolve('/staff/incidents')
 			},
 			{
 				// Beside Contractors rather than under Events: a project is as
