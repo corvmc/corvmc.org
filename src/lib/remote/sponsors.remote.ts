@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
+import { requireCommitteeCapability } from '$lib/server/group/group-context';
 import { mapDomainError } from '$lib/server/errors';
 import { invalid } from '@sveltejs/kit';
 import * as service from '$lib/server/sponsor/sponsor-service';
@@ -58,12 +58,12 @@ function sponsorshipInput(d: z.infer<z.ZodObject<typeof sponsorshipFields>>) {
 }
 
 export const getSponsors = query(async () => {
-	await requireCapability('sponsor.read');
+	await requireCommitteeCapability('sponsor.read');
 	return service.listSponsors(clubToday());
 });
 
 export const getSponsorDetail = query(z.string(), async (id) => {
-	await requireCapability('sponsor.read');
+	await requireCommitteeCapability('sponsor.read');
 	try {
 		const [detail, placements, logoKey] = await Promise.all([
 			service.getSponsor(id, clubToday()),
@@ -77,7 +77,7 @@ export const getSponsorDetail = query(z.string(), async (id) => {
 });
 
 export const createSponsor = form(z.object(sponsorFields), async (data) => {
-	await requireCapability('sponsor.manage');
+	await requireCommitteeCapability('sponsor.manage');
 	const row = await service.createSponsor(sponsorInput(data));
 	return { id: row.id };
 });
@@ -85,7 +85,7 @@ export const createSponsor = form(z.object(sponsorFields), async (data) => {
 export const updateSponsor = form(
 	z.object({ id: z.string().min(1), ...sponsorFields }),
 	async (data) => {
-		await requireCapability('sponsor.manage');
+		await requireCommitteeCapability('sponsor.manage');
 		await service.updateSponsor(data.id, sponsorInput(data));
 		await getSponsorDetail(data.id).refresh();
 		return { success: true };
@@ -93,7 +93,7 @@ export const updateSponsor = form(
 );
 
 export const deleteSponsor = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('sponsor.manage');
+	await requireCommitteeCapability('sponsor.manage');
 	await service.deleteSponsor(data.id);
 	return { success: true };
 });
@@ -101,7 +101,7 @@ export const deleteSponsor = form(z.object({ id: z.string().min(1) }), async (da
 export const createSponsorship = form(
 	z.object({ sponsorId: z.string().min(1), ...sponsorshipFields }),
 	async (data) => {
-		await requireCapability('sponsor.manage');
+		await requireCommitteeCapability('sponsor.manage');
 		await service.createSponsorship({ sponsorId: data.sponsorId, ...sponsorshipInput(data) });
 		await getSponsorDetail(data.sponsorId).refresh();
 		return { success: true };
@@ -111,7 +111,7 @@ export const createSponsorship = form(
 export const updateSponsorship = form(
 	z.object({ id: z.string().min(1), sponsorId: z.string().min(1), ...sponsorshipFields }),
 	async (data) => {
-		await requireCapability('sponsor.manage');
+		await requireCommitteeCapability('sponsor.manage');
 		await service.updateSponsorship(data.id, sponsorshipInput(data));
 		await getSponsorDetail(data.sponsorId).refresh();
 		return { success: true };
@@ -121,7 +121,7 @@ export const updateSponsorship = form(
 export const deleteSponsorship = form(
 	z.object({ id: z.string().min(1), sponsorId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('sponsor.manage');
+		await requireCommitteeCapability('sponsor.manage');
 		await service.deleteSponsorship(data.id);
 		await getSponsorDetail(data.sponsorId).refresh();
 		return { success: true };
@@ -137,7 +137,7 @@ export const placeSponsorship = form(
 		inCampaign: z.boolean().default(false)
 	}),
 	async (data) => {
-		await requireCapability('sponsor.manage');
+		await requireCommitteeCapability('sponsor.manage');
 		await credits.placeSponsorship({
 			sponsorshipId: data.sponsorshipId,
 			eventId: data.eventId,
@@ -152,7 +152,7 @@ export const placeSponsorship = form(
 export const removePlacement = form(
 	z.object({ id: z.string().min(1), sponsorId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('sponsor.manage');
+		await requireCommitteeCapability('sponsor.manage');
 		await credits.removePlacement(data.id);
 		await getSponsorDetail(data.sponsorId).refresh();
 		return { success: true };
@@ -162,7 +162,7 @@ export const removePlacement = form(
 export const setSponsorLogo = form(
 	z.object({ sponsorId: z.string().min(1), logo: z.instanceof(File) }),
 	async (data, issue) => {
-		const user = await requireCapability('sponsor.manage');
+		const { user } = await requireCommitteeCapability('sponsor.manage');
 		const reason = validateUpload(data.logo);
 		if (reason) invalid(issue.logo(reason));
 		await credits.setSponsorLogo(
@@ -180,7 +180,7 @@ export const setSponsorLogo = form(
 );
 
 export const removeSponsorLogo = form(z.object({ sponsorId: z.string().min(1) }), async (data) => {
-	await requireCapability('sponsor.manage');
+	await requireCommitteeCapability('sponsor.manage');
 	await credits.removeSponsorLogo(data.sponsorId);
 	await getSponsorDetail(data.sponsorId).refresh();
 	return { success: true };

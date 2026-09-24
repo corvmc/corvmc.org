@@ -444,6 +444,8 @@ history, appeal tracking and year-end statements have nothing behind them.
 maintain business sponsorships.
 🆕 `Grant & Fundraising Tracker` and `Sponsor Management` in [the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement), both
 unbuilt.
+⏫ Both shipped at `/staff/sponsors` and `/staff/grants`. A Development committee seat manages
+them through `requireCommitteeCapability` and `committeeGrants` in `src/lib/config.ts` (#1578).
 
 **As Development**, I want a record per venue of the terms we negotiated and the checklist we
 walk every time.

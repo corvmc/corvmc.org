@@ -9,6 +9,10 @@ sortOrder: 20
 
 Both live under **Staff → Money**, as two separate lists.
 
+Staff and members of the Development Committee can add and change both. The treasurer can read
+them. A Development Committee member who holds no staff position still gets a **Staff** tab,
+which opens on these two lists, and receives the deadline reminders.
+
 ## Sponsors
 
 **Sponsors** lists every business that sponsors the collective, with whichever term ends soonest

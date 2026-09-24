@@ -7,6 +7,8 @@ import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '$lib/server/sentry';
 import { listUsersWithCapability } from '$lib/server/authorization';
+import { listCommitteeHolders } from '$lib/server/group/group-context';
+import type { Capability } from '$lib/config';
 import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
@@ -85,6 +87,16 @@ function whenDetails(date: string, startTime: string, endTime: string): Notifica
 		{ label: 'Date', value: date },
 		{ label: 'Time', value: `${startTime} – ${endTime}` }
 	];
+}
+
+/** Holders of `cap` by position, plus the committee `committeeGrants` gives it to, once each. */
+async function listManagers(cap: Capability) {
+	const [staff, committee] = await Promise.all([
+		listUsersWithCapability(cap),
+		listCommitteeHolders(cap)
+	]);
+	const seen = new Set<string>();
+	return [...staff, ...committee].filter((u) => !seen.has(u.id) && !!seen.add(u.id));
 }
 
 export function registerAllNotificationListeners(): void {
@@ -690,10 +702,10 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// Development deadlines (#1477). Fanned out over whoever manages the module
-	// the deadline belongs to; a committee-scoped recipient waits on #607.
+	// the deadline belongs to: its position holders and its committee (#1578).
 	domainEvents.on('development.deadline_due', async ({ data: event }) => {
 		const grant = event.module === 'grant';
-		const staff = await listUsersWithCapability(grant ? 'grant.manage' : 'sponsor.manage');
+		const staff = await listManagers(grant ? 'grant.manage' : 'sponsor.manage');
 		const date = formatIsoDay(event.on);
 		const soon = event.stage === '3d' ? 'in three days or less' : 'in the next two weeks';
 		const title = `${event.title}: ${event.parentTitle}`;

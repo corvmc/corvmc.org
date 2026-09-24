@@ -1,5 +1,6 @@
 import { inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
 import { groupMember } from '../../src/lib/server/db/schema/group';
+import { COMMITTEE_IDS } from '../../src/lib/config';
 import { insertBandWithOwner } from './bands';
 import { db } from './db';
 import { GROUP_INVITEE_PERSONA, GROUP_LEADER_PERSONAS } from './group-leaders';
@@ -90,6 +91,19 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			// Deliberately none: a group with nothing posted is the empty state,
 			// and it has to be reachable locally.
 			announcements: []
+		},
+		{
+			// Production's id, so its seat grants sponsors and grants here too (#1578).
+			id: COMMITTEE_IDS.development,
+			kind: 'committee' as const,
+			name: 'Development Committee',
+			slug: 'development-committee',
+			bio: 'Raise funds, reach out to potential sponsors, and improve and deliver membership benefits.',
+			joinPolicy: 'invite_only' as const,
+			joinInstructions: null,
+			positions: ['Chair', 'Member'],
+			memberCount: 2,
+			announcements: []
 		}
 	];
 
@@ -104,6 +118,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 
 		const g = await insertBandWithOwner(
 			{
+				...(d.id ? { id: d.id } : {}),
 				kind: d.kind,
 				name: d.name,
 				slug: d.slug,

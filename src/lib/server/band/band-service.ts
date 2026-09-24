@@ -567,6 +567,23 @@ export async function listBandAdmins(
 	return rows.map((r) => ({ userId: r.id, userName: r.name, userEmail: r.email }));
 }
 
+/** `listBandAdmins` at every role: the whole active roster, as recipients. */
+export async function listActiveMembers(
+	groupId: string
+): Promise<Array<{ id: string; name: string; email: string }>> {
+	return db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(groupMember)
+		.innerJoin(user, eq(user.id, groupMember.userId))
+		.where(
+			and(
+				eq(groupMember.groupId, groupId),
+				eq(groupMember.status, 'active'),
+				isNull(user.deletedAt)
+			)
+		);
+}
+
 export async function getMembers(bandId: string) {
 	const rows = await db
 		.select({

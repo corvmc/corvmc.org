@@ -23,14 +23,20 @@ vi.mock('$lib/server/authorization', () => ({
 const getBySlug = vi.fn(async (_slug: unknown) => null as unknown);
 const getByIdActive = vi.fn(async (_id: unknown) => null as unknown);
 const getUserRole = vi.fn(async () => null as unknown);
+const listActiveMembers = vi.fn(async (_id: unknown) => [] as unknown[]);
 vi.mock('$lib/server/band/band-service', () => ({
+	listActiveMembers: (id: unknown) => listActiveMembers(id),
 	getBySlug: (slug: unknown) => getBySlug(slug),
 	getByIdActive: (id: unknown) => getByIdActive(id),
 	getUserRole: (...a: unknown[]) => getUserRole(...(a as []))
 }));
 
+import { COMMITTEE_IDS } from '$lib/config';
 import {
+	committeeCapabilitiesFor,
+	listCommitteeHolders,
 	requireBandRole,
+	requireCommitteeCapability,
 	requireCommitteeMember,
 	requireCommitteeReviewer,
 	requireGroupRole,
@@ -41,11 +47,20 @@ const GROUP = { id: 'group-1', slug: 'our-band', name: 'Our Band', kind: 'band' 
 const CLUB = { id: 'group-2', slug: 'real-book-club', name: 'Real Book Club', kind: 'club' };
 
 beforeEach(() => {
-	for (const m of [getBySlug, getByIdActive, getUserRole, isElevated, hasAnyRole, can])
+	for (const m of [
+		getBySlug,
+		getByIdActive,
+		getUserRole,
+		listActiveMembers,
+		isElevated,
+		hasAnyRole,
+		can
+	])
 		m.mockReset();
 	getBySlug.mockResolvedValue(null);
 	getByIdActive.mockResolvedValue(null);
 	getUserRole.mockResolvedValue(null);
+	listActiveMembers.mockResolvedValue([]);
 	isElevated.mockResolvedValue(false);
 	can.mockResolvedValue(false);
 	hasAnyRole.mockResolvedValue(false);
@@ -393,5 +408,88 @@ describe('requireCommitteeMember', () => {
 		getByIdActive.mockResolvedValue(null);
 		getUserRole.mockResolvedValue('member');
 		expect(await statusOf(() => call())).toBe(403);
+	});
+});
+
+describe('requireCommitteeCapability (#1578)', () => {
+	const DEVELOPMENT = {
+		id: COMMITTEE_IDS.development,
+		slug: 'development-committee',
+		name: 'Development Committee',
+		kind: 'committee'
+	};
+
+	beforeEach(() => getByIdActive.mockResolvedValue(DEVELOPMENT));
+
+	for (const cap of ['sponsor.read', 'sponsor.manage', 'grant.read', 'grant.manage'] as const) {
+		it(`admits a Development committee member to ${cap}`, async () => {
+			getUserRole.mockResolvedValue('member');
+			await expect(requireCommitteeCapability(cap)).resolves.toMatchObject({ role: 'member' });
+			expect(getByIdActive).toHaveBeenCalledWith(COMMITTEE_IDS.development);
+		});
+
+		it(`refuses ${cap} to someone on no committee and holding no position`, async () => {
+			expect(await statusOf(() => requireCommitteeCapability(cap))).toBe(403);
+		});
+	}
+
+	it('admits staff through the capability itself', async () => {
+		can.mockResolvedValue(true);
+		await expect(requireCommitteeCapability('grant.manage')).resolves.toMatchObject({
+			role: 'staff'
+		});
+		expect(can).toHaveBeenCalledWith('grant.manage');
+	});
+
+	it('lets the treasurer read without letting them manage', async () => {
+		can.mockImplementation(async (...a: unknown[]) => a[0] === 'sponsor.read');
+		await expect(requireCommitteeCapability('sponsor.read')).resolves.toMatchObject({
+			role: 'staff'
+		});
+		expect(await statusOf(() => requireCommitteeCapability('sponsor.manage'))).toBe(403);
+	});
+
+	it('gives a Development committee seat nothing outside its grant', async () => {
+		getUserRole.mockResolvedValue('owner');
+		expect(await statusOf(() => requireCommitteeCapability('project.manage'))).toBe(403);
+		expect(getByIdActive).not.toHaveBeenCalled();
+	});
+});
+
+describe('committeeCapabilitiesFor (#1578)', () => {
+	beforeEach(() =>
+		getByIdActive.mockResolvedValue({ id: COMMITTEE_IDS.development, kind: 'committee' })
+	);
+
+	it("lists a Development committee member's grant", async () => {
+		getUserRole.mockResolvedValue('member');
+		expect(await committeeCapabilitiesFor('user-1')).toEqual(
+			expect.arrayContaining(['sponsor.read', 'sponsor.manage', 'grant.read', 'grant.manage'])
+		);
+	});
+
+	it('lists nothing for someone on no committee', async () => {
+		expect(await committeeCapabilitiesFor('user-1')).toEqual([]);
+	});
+});
+
+describe('listCommitteeHolders (#1578)', () => {
+	it('returns the active roster of the committee that grants the capability', async () => {
+		getByIdActive.mockResolvedValue({ id: COMMITTEE_IDS.development, kind: 'committee' });
+		listActiveMembers.mockResolvedValue([{ id: 'u1', name: 'Ada', email: 'ada@x' }]);
+		expect(await listCommitteeHolders('grant.manage')).toEqual([
+			{ id: 'u1', name: 'Ada', email: 'ada@x' }
+		]);
+		expect(listActiveMembers).toHaveBeenCalledWith(COMMITTEE_IDS.development);
+	});
+
+	it('returns nobody for a capability no committee grants', async () => {
+		expect(await listCommitteeHolders('project.manage')).toEqual([]);
+		expect(listActiveMembers).not.toHaveBeenCalled();
+	});
+
+	it('returns nobody when the committee row is gone', async () => {
+		expect(await listCommitteeHolders('sponsor.manage')).toEqual([]);
+		expect(listActiveMembers).not.toHaveBeenCalled();
 	});
 });

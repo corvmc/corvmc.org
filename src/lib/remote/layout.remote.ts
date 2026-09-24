@@ -5,6 +5,7 @@ import { query, getRequestEvent } from '$app/server';
 import { listForUser, getBySlug, getUserRole } from '$lib/server/band/band-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { capabilitySet, isElevated, positionsFor } from '$lib/server/authorization';
+import { committeeCapabilitiesFor } from '$lib/server/group/group-context';
 import { hasLoanableItems } from '$lib/server/inventory/item-service';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
@@ -73,6 +74,11 @@ async function countUnifiedUnreadFor(userId: string): Promise<number> {
 	});
 }
 
+/** A position's capabilities plus a committee seat's, once each. */
+function withSeat<C extends string>(fromPositions: C[], fromSeat: C[]): C[] {
+	return [...new Set([...fromPositions, ...fromSeat])];
+}
+
 async function appChrome(user: SignedInUser) {
 	const [items, unreadCount, messagesUnread] = await Promise.all([
 		getForUser(user.id, { limit: 10 }).catch(() => []),
@@ -108,6 +114,7 @@ export const getMemberLayout = query(async () => {
 		userBands,
 		userGroups,
 		positions,
+		seat,
 		features,
 		pendingRequests,
 		acceptsDirect,
@@ -120,6 +127,7 @@ export const getMemberLayout = query(async () => {
 		// group beside it, because the two indexes answer different questions.
 		listForUser(user.id, ['club', 'committee']).catch(() => []),
 		positionsFor(user.id),
+		committeeCapabilitiesFor(user.id).catch(() => []),
 		getAllFeatureFlags(),
 		countPendingRequests(user.id).catch(() => 0),
 		// The member's own switch, not the feature flag beside it. An inbox that
@@ -158,8 +166,9 @@ export const getMemberLayout = query(async () => {
 		// The viewer's capabilities, not a boolean. `isStaff` is derived from it
 		// (holding any position at all), so the panel switcher keeps working while
 		// entity links and nav rows can ask the sharper question.
-		capabilities: capabilitySet(positions),
-		isStaff: positions.length > 0,
+		capabilities: withSeat(capabilitySet(positions), seat),
+		// A seat that grants a staff module is a way into the panel (#1578).
+		isStaff: positions.length > 0 || seat.length > 0,
 		features,
 		hasLoanableEquipment,
 		pendingRequests,
@@ -174,8 +183,13 @@ export const getStaffLayout = query(async () => {
 	// "May you open the panel at all" is not a capability — it is holding any
 	// position — so this stays a position check. The capability set below is what
 	// decides which rows you are offered once you are inside.
-	const positions = await positionsFor(locals.user.id);
-	if (positions.length === 0) throw redirect(302, '/');
+	// A committee seat that grants a staff module (#1578) opens the panel too;
+	// its guards admit the seat, so the pages behind them have to be reachable.
+	const [positions, seat] = await Promise.all([
+		positionsFor(locals.user.id),
+		committeeCapabilitiesFor(locals.user.id).catch(() => [])
+	]);
+	if (positions.length === 0 && seat.length === 0) throw redirect(302, '/');
 
 	// The staff panel deliberately ignores feature flags — flags gate the
 	// member/band/public surfaces only, so staff can administer a feature
@@ -215,7 +229,7 @@ export const getStaffLayout = query(async () => {
 		chrome,
 		// Which rows this viewer is offered. The redirect above only settled that
 		// they may open the panel at all.
-		capabilities: capabilitySet(positions),
+		capabilities: withSeat(capabilitySet(positions), seat),
 		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
 		inboxUnread,
 		volunteerPending,

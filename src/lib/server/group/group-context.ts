@@ -1,8 +1,13 @@
 import { error } from '@sveltejs/kit';
 import { requireUser, isElevated, can } from '$lib/server/authorization';
 import type { GroupRole } from '$lib/server/db/schema/group';
-import type { Capability } from '$lib/config';
-import { getBySlug, getByIdActive, getUserRole } from '$lib/server/band/band-service';
+import { committeeGrants, grantsCapability, type Capability } from '$lib/config';
+import {
+	getBySlug,
+	getByIdActive,
+	getUserRole,
+	listActiveMembers
+} from '$lib/server/band/band-service';
 
 /**
  * How a caller names the group it is acting on.
@@ -119,6 +124,45 @@ export async function requireCommitteeMember(
 
 	if (await can(cover)) return { user, group, role: 'staff' };
 	throw error(403, 'Not a member of the committee that owns this');
+}
+
+/** The committee whose seat grants `cap` under `committeeGrants`, if any. */
+function committeeGranting(cap: Capability): string | null {
+	return committeeGrants.find((c) => grantsCapability(c.grants, cap))?.committeeId ?? null;
+}
+
+/**
+ * `requireCommitteeMember` for a whole module rather than one row: the
+ * committee is the one `committeeGrants` names for `cap`, and `cap` itself is
+ * the cover, so every position that already held it still does.
+ */
+export async function requireCommitteeCapability(cap: Capability) {
+	return requireCommitteeMember(committeeGranting(cap), cap);
+}
+
+/** Every capability this user's active committee seats grant. */
+export async function committeeCapabilitiesFor(userId: string): Promise<Capability[]> {
+	const held = await Promise.all(
+		committeeGrants.map(async ({ committeeId, grants }) => {
+			const group = await getByIdActive(committeeId);
+			if (group?.kind !== 'committee' || !(await getUserRole(group.id, userId))) return [];
+			return Object.entries(grants).flatMap(([resource, actions]) =>
+				(actions ?? []).map((action) => `${resource}.${action}` as Capability)
+			);
+		})
+	);
+	return [...new Set(held.flat())];
+}
+
+/** Active members of the committee that `cap` is granted to, for fan-out. */
+export async function listCommitteeHolders(
+	cap: Capability
+): Promise<Array<{ id: string; name: string; email: string }>> {
+	const committeeId = committeeGranting(cap);
+	if (!committeeId) return [];
+	const group = await getByIdActive(committeeId);
+	if (group?.kind !== 'committee') return [];
+	return listActiveMembers(group.id);
 }
 
 /**

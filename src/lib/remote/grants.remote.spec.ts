@@ -13,6 +13,16 @@ vi.mock('$lib/server/authorization', () => ({
 	requireCapability: (cap: string) => requireCapability(cap)
 }));
 
+// The real guard is pinned in group-context.spec.ts; this one stands for
+// "a Development committee seat, or the capability" (#1578).
+let onCommittee = false;
+vi.mock('$lib/server/group/group-context', () => ({
+	requireCommitteeCapability: async (cap: string) =>
+		onCommittee
+			? { user: { id: 'committee-member' }, group: null, role: 'member' }
+			: { user: await requireCapability(cap), group: null, role: 'staff' }
+}));
+
 const grants = {
 	listGrants: vi.fn(async () => []),
 	getGrant: vi.fn(async () => ({ id: 'g1' })),
@@ -104,10 +114,18 @@ const CASES: Case[] = [
 beforeEach(() => {
 	vi.clearAllMocks();
 	held = new Set();
+	onCommittee = false;
 });
 
 describe('grants.remote guards', () => {
 	for (const { name, cap, arg, spy } of CASES) {
+		it(`${name} admits a Development committee member holding no position`, async () => {
+			onCommittee = true;
+			await remote[name](arg);
+			expect(spy).toHaveBeenCalled();
+			expect(requireCapability).not.toHaveBeenCalled();
+		});
+
 		it(`${name} refuses a caller without ${cap} before the service`, async () => {
 			held = new Set(cap === 'grant.manage' ? ['grant.read'] : []);
 			await expect(remote[name](arg)).rejects.toThrow('403');

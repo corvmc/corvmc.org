@@ -25,6 +25,13 @@ vi.mock('$lib/server/authorization', () => ({
 	listUsersWithCapability: (cap: string) => mockStaffUsers(cap)
 }));
 
+const mockCommitteeHolders = vi.fn(
+	async (_cap?: string): Promise<Array<{ id: string; name: string; email: string }>> => []
+);
+vi.mock('$lib/server/group/group-context', () => ({
+	listCommitteeHolders: (cap: string) => mockCommitteeHolders(cap)
+}));
+
 // Returns null when INBOX_REPLY_ADDRESS is unconfigured, which is a supported
 // production state — both branches are exercised below.
 const mockBuildReplyToAddress = vi.fn((threadId: string) => `reply+${threadId}.sig@replies.test`);
@@ -1309,6 +1316,21 @@ describe('development deadline due (#1477)', () => {
 		expect(mockStaffUsers).toHaveBeenCalledWith('sponsor.manage');
 		const call = mockDispatch.mock.calls.find(([p]) => p.type === 'development_deadline')?.[0];
 		expect(call.href).toBe('/staff/sponsors/s1');
+	});
+
+	it('also tells the Development committee, once each (#1578)', async () => {
+		mockCommitteeHolders.mockResolvedValueOnce([
+			{ id: 'staff-1', name: 'Ada', email: 'ada@test.com' },
+			{ id: 'dev-1', name: 'Cy', email: 'cy@test.com' }
+		]);
+		await emit('development.deadline_due', grantReport);
+
+		expect(mockCommitteeHolders).toHaveBeenCalledWith('grant.manage');
+		const ids = mockDispatch.mock.calls
+			.map(([p]) => p)
+			.filter((p) => p.type === 'development_deadline')
+			.map((c) => c.userId);
+		expect(ids.sort()).toEqual(['dev-1', 'staff-1', 'staff-2']);
 	});
 });
 

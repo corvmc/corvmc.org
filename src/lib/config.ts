@@ -2233,6 +2233,28 @@ export const positions: Record<Position, Grants> = {
 };
 
 /**
+ * The six committees' ids, as `scripts/db/backfill/committees.sql` wrote them
+ * in production. The dev seed reuses them, so a lookup here finds the same row
+ * in both.
+ */
+export const COMMITTEE_IDS = {
+	development: 'e95a832d-cf6c-4fd9-8570-e08868c1a691'
+} as const;
+
+/**
+ * What an active seat on a committee grants, on top of any position. Only the
+ * guards in `group/group-context.ts` read this; `can()` does not, so a seat
+ * never widens a capability check that did not ask for it.
+ */
+export const committeeGrants: ReadonlyArray<{ committeeId: string; grants: Grants }> = [
+	// #1578: Development runs sponsors and grants; the treasurer keeps read.
+	{
+		committeeId: COMMITTEE_IDS.development,
+		grants: { sponsor: ['read', 'manage'], grant: ['read', 'manage'] }
+	}
+];
+
+/**
  * Does this grant set contain this capability? Pure, synchronous, client-safe.
  *
  * Duplicates what better-auth's `authorize()` decides, on purpose: this side of

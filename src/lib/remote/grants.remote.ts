@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
+import { requireCommitteeCapability } from '$lib/server/group/group-context';
 import { mapDomainError } from '$lib/server/errors';
 import * as grants from '$lib/server/grant/grant-service';
 import * as funders from '$lib/server/grant/funder-service';
@@ -37,12 +37,12 @@ function funderInput(d: z.infer<z.ZodObject<typeof funderFields>>) {
 }
 
 export const getFunders = query(async () => {
-	await requireCapability('grant.read');
+	await requireCommitteeCapability('grant.read');
 	return funders.listFunders();
 });
 
 export const createFunder = form(z.object(funderFields), async (data) => {
-	await requireCapability('grant.manage');
+	await requireCommitteeCapability('grant.manage');
 	const row = await funders.createFunder(funderInput(data));
 	return { id: row.id };
 });
@@ -50,14 +50,14 @@ export const createFunder = form(z.object(funderFields), async (data) => {
 export const updateFunder = form(
 	z.object({ id: z.string().min(1), ...funderFields }),
 	async (data) => {
-		await requireCapability('grant.manage');
+		await requireCommitteeCapability('grant.manage');
 		await funders.updateFunder(data.id, funderInput(data));
 		return { success: true };
 	}
 );
 
 export const deleteFunder = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('grant.manage');
+	await requireCommitteeCapability('grant.manage');
 	await funders.deleteFunder(data.id);
 	return { success: true };
 });
@@ -93,7 +93,7 @@ function grantInput(d: z.infer<z.ZodObject<typeof grantFields>>) {
 export const getGrants = query(
 	z.object({ includeClosed: z.boolean().optional() }),
 	async ({ includeClosed }) => {
-		await requireCapability('grant.read');
+		await requireCommitteeCapability('grant.read');
 		// The funders ride along for the create form: one load-bearing query per page.
 		const [rows, funderRows] = await Promise.all([
 			grants.listGrants({ today: clubToday(), includeClosed }),
@@ -104,7 +104,7 @@ export const getGrants = query(
 );
 
 export const getGrantDetail = query(z.string(), async (id) => {
-	await requireCapability('grant.read');
+	await requireCommitteeCapability('grant.read');
 	try {
 		const [grant, funderRows] = await Promise.all([
 			grants.getGrant(id, clubToday()),
@@ -117,7 +117,7 @@ export const getGrantDetail = query(z.string(), async (id) => {
 });
 
 export const createGrant = form(z.object(grantFields), async (data) => {
-	await requireCapability('grant.manage');
+	await requireCommitteeCapability('grant.manage');
 	const row = await grants.createGrant(grantInput(data));
 	return { id: row.id };
 });
@@ -125,7 +125,7 @@ export const createGrant = form(z.object(grantFields), async (data) => {
 export const updateGrant = form(
 	z.object({ id: z.string().min(1), ...grantFields }),
 	async (data) => {
-		await requireCapability('grant.manage');
+		await requireCommitteeCapability('grant.manage');
 		await grants.updateGrant(data.id, grantInput(data));
 		await getGrantDetail(data.id).refresh();
 		return { success: true };
@@ -133,7 +133,7 @@ export const updateGrant = form(
 );
 
 export const deleteGrant = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('grant.manage');
+	await requireCommitteeCapability('grant.manage');
 	await grants.deleteGrant(data.id);
 	return { success: true };
 });
@@ -158,7 +158,7 @@ function reportInput(d: z.infer<z.ZodObject<typeof reportFields>>) {
 }
 
 export const addGrantReport = form(z.object(reportFields), async (data) => {
-	await requireCapability('grant.manage');
+	await requireCommitteeCapability('grant.manage');
 	await grants.addGrantReport({
 		grantApplicationId: data.grantApplicationId,
 		...reportInput(data)
@@ -170,7 +170,7 @@ export const addGrantReport = form(z.object(reportFields), async (data) => {
 export const updateGrantReport = form(
 	z.object({ id: z.string().min(1), ...reportFields }),
 	async (data) => {
-		await requireCapability('grant.manage');
+		await requireCommitteeCapability('grant.manage');
 		await grants.updateGrantReport(data.id, reportInput(data));
 		await getGrantDetail(data.grantApplicationId).refresh();
 		return { success: true };
@@ -180,7 +180,7 @@ export const updateGrantReport = form(
 export const deleteGrantReport = form(
 	z.object({ id: z.string().min(1), grantApplicationId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('grant.manage');
+		await requireCommitteeCapability('grant.manage');
 		await grants.deleteGrantReport(data.id);
 		await getGrantDetail(data.grantApplicationId).refresh();
 		return { success: true };
