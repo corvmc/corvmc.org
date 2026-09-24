@@ -251,6 +251,8 @@ both a window and a `dueOffsetMinutes` deadline.
 ✅ Built (#1418): `project` is a third `dutyListSubjects` value and `project_start` its only
 anchor, validated as a pair in `duty-list-service.ts`. Apply is on `/staff/projects/[id]`,
 refuses a project with no start date, and stamps work orders carrying `projectId`.
+Members of the owning committee apply lists from `/member/groups/[slug]`; the guard is
+`requireCommitteeMember(project.groupId, 'project.manage')`, so staff cover it (#1552).
 
 Separately, recurring facility work needs a shape the app does not have. The decision
 rule, now three-way:

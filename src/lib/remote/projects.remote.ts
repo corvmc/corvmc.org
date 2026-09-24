@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
+import { can, requireCapability, requireUser } from '$lib/server/authorization';
 import { requireCommitteeMember } from '$lib/server/group/group-context';
 import { getMemberGroup } from '$lib/remote/groups.remote';
 import { mapDomainError } from '$lib/server/errors';
@@ -286,14 +286,21 @@ export const attachToProjectForm = form(
 );
 
 /** Stamp a project-anchored duty list's work orders onto this project. */
+/**
+ * Stamp a duty list onto a project. The owning committee knows its own work, so
+ * its members apply lists; `project.manage` is the staff cover.
+ */
 export const applyDutyListToProjectForm = form(
 	z.object({ projectId: z.uuid(), dutyListId: z.string().min(1) }),
 	async (raw) => {
-		const user = await requireCapability('volunteer.manageShifts');
+		requireUser();
 		const { projectId, dutyListId } = raw as { projectId: string; dutyListId: string };
 		try {
+			const current = await getProjectById(projectId);
+			const { user } = await requireCommitteeMember(current.groupId, 'project.manage');
 			const result = await applyDutyList(dutyListId, { kind: 'project', id: projectId }, user.id);
-			void getProjectDetail(projectId).refresh();
+			// The committee page lists no work orders; only the staff detail shows them.
+			if (await can('project.read')) void getProjectDetail(projectId).refresh();
 			return { workOrders: result.workOrderIds.length, tasks: result.taskCount };
 		} catch (err) {
 			mapDomainError(err);

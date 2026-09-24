@@ -36,6 +36,7 @@ import {
 } from '$lib/server/group/announcement-service';
 import { listGroupSessions } from '$lib/server/event/event-service';
 import { listProjects } from '$lib/server/project/project-service';
+import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { list as listFiles, getUsage as getDocumentUsage } from '$lib/server/group/file-service';
 import {
 	STAFF_GROUP_KINDS,
@@ -283,7 +284,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		documentUsage,
 		projects,
 		emailInvites,
-		committeeApplications
+		committeeApplications,
+		projectLists
 	] = await Promise.all([
 		getMembers(group.id).then(partitionByStatus),
 		canManage ? listForManager(group.id) : listPublished(group.id),
@@ -306,7 +308,9 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		// Folded in rather than given a query of its own, per
 		// `custom/no-concurrent-remote-queries`. A committee is invite-only, so
 		// its applications are their own entity and never reach `roster.requested`.
-		group.kind === 'committee' && canManage ? listForCommittee(group.id) : Promise.resolve([])
+		group.kind === 'committee' && canManage ? listForCommittee(group.id) : Promise.resolve([]),
+		// A committee applies duty lists to its own projects.
+		group.kind === 'committee' ? listDutyLists({ subject: 'project' }) : Promise.resolve([])
 	]);
 
 	return {
@@ -359,6 +363,9 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			startsAt: project.startsAt,
 			endsAt: project.endsAt
 		})),
+		projectDutyLists: projectLists
+			.filter((l) => l.itemCount > 0)
+			.map((l) => ({ id: l.id, name: l.name })),
 		emailInvites,
 		committeeApplications,
 		members: {

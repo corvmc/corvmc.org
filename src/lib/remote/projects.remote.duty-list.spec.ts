@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
 import { positionOrder, type Capability, type Position } from '$lib/config';
 
-// Pins the guard on applying a duty list to a project against the real
-// capability matrix, so a position gaining or losing it shows up here.
+// Applying a duty list to a project belongs to the committee that owns it, with
+// `project.manage` as the staff cover. The fake guard reads the real matrix.
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: { id: 'user-1' } }, url: new URL('http://x/') }),
@@ -26,28 +26,42 @@ vi.mock('$app/server', () => ({
 }));
 
 let heldPositions: Position[] = [];
+let committeeOf: string[] = [];
 let signedIn = true;
+
+async function holds(cap: Capability) {
+	const config = await import('$lib/config');
+	return heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
+}
+
 vi.mock('$lib/server/authorization', async () => {
 	const { error } = await import('@sveltejs/kit');
-	const config = await import('$lib/config');
 	return {
-		requireUser: () => ({ id: 'user-1' }),
+		requireUser: () => {
+			if (!signedIn) throw error(401, 'Not authenticated');
+			return { id: 'user-1' };
+		},
+		can: holds,
 		requireCapability: async (cap: Capability) => {
 			if (!signedIn) throw error(401, 'Not authenticated');
-			if (!heldPositions.some((p) => config.grantsCapability(config.positions[p], cap)))
-				throw error(403, 'Not permitted');
+			if (!(await holds(cap))) throw error(403, 'Not permitted');
 			return { id: 'user-1' };
 		}
 	};
 });
+
+const requireCommitteeMember = vi.hoisted(() => vi.fn());
+vi.mock('$lib/server/group/group-context', () => ({ requireCommitteeMember }));
 
 const applyDutyList = vi.hoisted(() => vi.fn());
 vi.mock('$lib/server/volunteer/duty-list-service', () => ({
 	applyDutyList,
 	listDutyLists: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/project/project-service', () => ({}));
-vi.mock('$lib/server/group/group-context', () => ({ requireCommitteeMember: vi.fn() }));
+const COMMITTEE = 'committee-1';
+vi.mock('$lib/server/project/project-service', () => ({
+	getProjectById: vi.fn(async (id: string) => ({ id, groupId: COMMITTEE }))
+}));
 vi.mock('$lib/remote/groups.remote', () => ({ getMemberGroup: vi.fn() }));
 vi.mock('$lib/server/db', () => ({ db: {} }));
 
@@ -60,31 +74,58 @@ const PROJECT = '00000000-0000-4000-8000-000000000001';
 const input = { projectId: PROJECT, dutyListId: 'dl-1' };
 
 const { grantsCapability, positions } = await import('$lib/config');
-const holders = positionOrder.filter((p) =>
-	grantsCapability(positions[p], 'volunteer.manageShifts')
-);
-const others = positionOrder.filter(
-	(p) => !grantsCapability(positions[p], 'volunteer.manageShifts')
-);
+const staffCover = positionOrder.filter((p) => grantsCapability(positions[p], 'project.manage'));
+const others = positionOrder.filter((p) => !grantsCapability(positions[p], 'project.manage'));
 
 describe('applyDutyListToProjectForm', () => {
-	beforeEach(() => {
+	beforeEach(async () => {
 		signedIn = true;
 		heldPositions = [];
+		committeeOf = [];
 		applyDutyList.mockReset();
 		applyDutyList.mockResolvedValue({ workOrderIds: ['wo-1', 'wo-2'], taskCount: 3 });
+		const { error } = await import('@sveltejs/kit');
+		requireCommitteeMember.mockReset();
+		requireCommitteeMember.mockImplementation(async (groupId: string, cover: Capability) => {
+			if (!signedIn) throw error(401, 'Not authenticated');
+			if (committeeOf.includes(groupId))
+				return { user: { id: 'user-1' }, group: null, role: 'member' };
+			if (await holds(cover)) return { user: { id: 'user-1' }, group: null, role: 'staff' };
+			throw error(403, 'Not a member of the committee that owns this');
+		});
 	});
 
-	it('stamps the list onto the project for a holder of volunteer.manageShifts', async () => {
-		expect(holders.length).toBeGreaterThan(0);
-		heldPositions = [holders[0]];
+	it('guards on the committee that owns the project, with project.manage as cover', async () => {
+		committeeOf = [COMMITTEE];
+		await applyDutyListToProjectForm(input);
+		expect(requireCommitteeMember).toHaveBeenCalledWith(COMMITTEE, 'project.manage');
+	});
+
+	it('lets a member of the owning committee apply a list, holding no position', async () => {
+		committeeOf = [COMMITTEE];
 
 		await expect(applyDutyListToProjectForm(input)).resolves.toEqual({ workOrders: 2, tasks: 3 });
 		expect(applyDutyList).toHaveBeenCalledWith('dl-1', { kind: 'project', id: PROJECT }, 'user-1');
 	});
 
-	it.each(others)('refuses %s, which does not hold volunteer.manageShifts', async (position) => {
+	it.each(staffCover)('lets %s apply a list as staff cover', async (position) => {
 		heldPositions = [position];
+		await expect(applyDutyListToProjectForm(input)).resolves.toEqual({ workOrders: 2, tasks: 3 });
+	});
+
+	it.each(others)('refuses %s outside the owning committee', async (position) => {
+		heldPositions = [position];
+		await expect(applyDutyListToProjectForm(input)).rejects.toMatchObject({ status: 403 });
+		expect(applyDutyList).not.toHaveBeenCalled();
+	});
+
+	it('refuses the volunteer coordinator, who holds volunteer.manageShifts', async () => {
+		heldPositions = ['volunteer_coordinator'];
+		await expect(applyDutyListToProjectForm(input)).rejects.toMatchObject({ status: 403 });
+	});
+
+	it('refuses a member of a different committee', async () => {
+		committeeOf = ['committee-2'];
 		await expect(applyDutyListToProjectForm(input)).rejects.toMatchObject({ status: 403 });
 		expect(applyDutyList).not.toHaveBeenCalled();
 	});

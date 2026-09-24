@@ -39,6 +39,7 @@
 	import CommitteeApplicationsCard from '$lib/components/groups/CommitteeApplicationsCard.svelte';
 	import EditSessionAction from '$lib/components/groups/EditSessionAction.svelte';
 	import ProjectStatusAction from './ProjectStatusAction.svelte';
+	import ProjectDutyListAction from './ProjectDutyListAction.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -227,7 +228,12 @@
 								{/if}
 							</td>
 							{#if isMember}
-								<td class="text-right"><ProjectStatusAction {project} /></td>
+								<td class="text-right">
+									{#if data.projectDutyLists.length > 0}
+										<ProjectDutyListAction {project} dutyLists={data.projectDutyLists} />
+									{/if}
+									<ProjectStatusAction {project} />
+								</td>
 							{/if}
 						</tr>
 					{/each}
