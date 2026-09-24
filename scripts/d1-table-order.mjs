@@ -95,6 +95,8 @@ export const tableOrder = [
 	'lock_fallback_code',
 	// References user twice (holder + granting staff), so it follows `user`.
 	'lock_member_code',
+	// References user three times (holder, issuer, receiver).
+	'access_holding',
 	'inbox_channel_config',
 	'verification',
 	// leaves

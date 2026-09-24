@@ -572,6 +572,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/keys",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/local-resources",
 		"panel": "staff"
 	},
