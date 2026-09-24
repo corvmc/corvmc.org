@@ -1528,6 +1528,7 @@ export const getUnloggedShifts = query(async () => {
 const shiftFormSchema = z.object({
 	volunteerRoleId: z.string().min(1, 'Pick a role'),
 	eventId: z.string().optional(),
+	assetId: z.string().optional(),
 	title: z
 		.string()
 		.trim()
@@ -1549,6 +1550,7 @@ export const createShift = form(shiftFormSchema, async (data) => {
 		await createShiftService({
 			volunteerRoleId: data.volunteerRoleId,
 			eventId: data.eventId,
+			assetId: data.assetId,
 			title: data.title,
 			startsAt: data.startsAt,
 			endsAt: data.endsAt,
@@ -1572,6 +1574,7 @@ export const updateShift = form(
 			await updateShiftService(data.id, {
 				volunteerRoleId: data.volunteerRoleId,
 				eventId: data.eventId,
+				assetId: data.assetId,
 				title: data.title,
 				startsAt: data.startsAt,
 				endsAt: data.endsAt,

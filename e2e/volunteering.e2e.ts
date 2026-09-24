@@ -748,7 +748,7 @@ test.describe('volunteering — shifts and events', () => {
 		await expect(dialog).toBeVisible();
 		// The event is already known here, so it is locked rather than offered —
 		// there is no picker to fill in.
-		await expect(dialog.locator('input[role="combobox"]')).toHaveCount(0);
+		await expect(dialog.getByPlaceholder('Search events by title...')).toHaveCount(0);
 		await dialog.locator('select[name="volunteerRoleId"]').selectOption({
 			label: SEED_VOL_ROLE_NAME
 		});
@@ -792,7 +792,7 @@ test.describe('volunteering — shifts and events', () => {
 		// Typed, not filled. `fill()` sets the value and fires one input event;
 		// bits-ui's Combobox opens its listbox off the keystrokes, so a filled
 		// field searches into a popover that never appears.
-		const search = reopened.locator('input[role="combobox"]');
+		const search = reopened.getByPlaceholder('Search events by title...');
 		await search.click();
 		await search.pressSequentially('E2E Sludge');
 		await reopened.getByRole('option', { name: SEED_VOL_EVENT_TITLE }).click();

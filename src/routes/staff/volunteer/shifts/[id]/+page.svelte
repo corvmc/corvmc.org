@@ -113,6 +113,12 @@
 			{:else}
 				not tied to an event
 			{/if}
+			{#if shift.assetId && shift.assetName}
+				·
+				<a href={resolve(`/staff/inventory/assets/${shift.assetId}`)} class="link link-primary">
+					{shift.assetName}
+				</a>
+			{/if}
 		</p>
 
 		{#if calledOff}
@@ -414,6 +420,9 @@
 									roleId={shift.volunteerRoleId}
 									initialEvent={shift.eventId && shift.eventTitle
 										? { id: shift.eventId, title: shift.eventTitle }
+										: null}
+									initialAsset={shift.assetId && shift.assetName
+										? { id: shift.assetId, name: shift.assetName }
 										: null}
 									startsAt={shift.startsAt ? toLocalDateTime(shift.startsAt) : ''}
 									endsAt={shift.endsAt ? toLocalDateTime(shift.endsAt) : ''}

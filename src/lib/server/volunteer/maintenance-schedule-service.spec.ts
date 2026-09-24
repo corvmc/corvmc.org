@@ -50,6 +50,7 @@ const schedule = {
 	name: 'Monthly deep clean',
 	volunteerRoleId: 'role-1',
 	projectId: 'proj-1',
+	assetId: null as string | null,
 	notes: 'Mop under the stage',
 	capacity: 2,
 	intervalDays: 30,
@@ -87,6 +88,11 @@ describe('nextOccurrenceInsert', () => {
 		});
 	});
 
+	it("carries the schedule's asset onto every occurrence (#1423)", () => {
+		nextOccurrenceInsert({ ...schedule, assetId: 'asset-pa' }, new Date());
+		expect(valuesCalls()[0]).toMatchObject({ assetId: 'asset-pa' });
+	});
+
 	// The partial unique index is what refuses a second open occurrence; this is
 	// what turns that refusal into a no-op rather than a failed close.
 	it('does nothing when an open occurrence already exists', () => {
@@ -114,6 +120,22 @@ describe('createMaintenanceSchedule', () => {
 		const [scheduleValues, occurrence] = valuesCalls();
 		expect(occurrence.maintenanceScheduleId).toBe(scheduleValues.id);
 		expect(occurrence).toMatchObject({ title: 'Quarterly PA check', dueAt: input.firstDueAt });
+	});
+
+	it('links the schedule and its first occurrence to the picked asset (#1423)', async () => {
+		selectQueue = [[{ id: 'role-1', isActive: true }]];
+
+		await createMaintenanceSchedule({ ...input, assetId: 'asset-pa' });
+
+		const [scheduleValues, occurrence] = valuesCalls();
+		expect(scheduleValues.assetId).toBe('asset-pa');
+		expect(occurrence.assetId).toBe('asset-pa');
+	});
+
+	it('stores no asset when none was picked', async () => {
+		selectQueue = [[{ id: 'role-1', isActive: true }]];
+		await createMaintenanceSchedule({ ...input, assetId: '' });
+		expect(valuesCalls()[0].assetId).toBeNull();
 	});
 
 	it('refuses an interval under a day', async () => {

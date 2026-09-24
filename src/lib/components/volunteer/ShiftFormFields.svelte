@@ -4,10 +4,12 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
 	import { searchEvents } from '$lib/remote/events.remote';
+	import { searchWorkAssets } from '$lib/remote/maintenance-schedules.remote';
 	import { VOLUNTEER_SHIFT_TITLE_MAX, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
 
 	/** The shape SearchSelect hands back, and the shape an edit form seeds it with. */
 	type ShiftEvent = { id: string; title: string; when?: string };
+	type ShiftAsset = { id: string; name: string; detail?: string | null };
 
 	let {
 		form,
@@ -15,6 +17,7 @@
 		roleId = $bindable(''),
 		lockedEvent,
 		initialEvent = null,
+		initialAsset = null,
 		startsAt,
 		endsAt,
 		capacity,
@@ -48,6 +51,8 @@
 		lockedEvent?: { id: string; title: string };
 		/** The event already attached, for an edit form. */
 		initialEvent?: ShiftEvent | null;
+		/** The inventory unit already linked, for an edit form. */
+		initialAsset?: ShiftAsset | null;
 		startsAt: string;
 		endsAt: string;
 		capacity: string;
@@ -60,6 +65,7 @@
 	// `initialEvent` is where this shift's event *was* when the form opened, not a
 	// value the form should keep snapping back to while somebody edits it.
 	let selectedEvent = $state<ShiftEvent | null>(untrack(() => initialEvent));
+	let selectedAsset = $state<ShiftAsset | null>(untrack(() => initialAsset));
 </script>
 
 {#if roles}
@@ -107,6 +113,22 @@
 		/>
 	</FormField>
 {/if}
+
+<!-- Always rendered, like the event's: an empty value is how a link is removed. -->
+<input {...form.fields.assetId.as('hidden', selectedAsset?.id ?? '')} />
+<FormField
+	name="assetId"
+	label="Equipment"
+	description="Optional: the unit this work is about, such as the PA it checks."
+>
+	<SearchSelect
+		search={(q) => searchWorkAssets(q)}
+		bind:value={selectedAsset}
+		labelKey="name"
+		descriptionKey="detail"
+		placeholder="Search by item, tag or serial..."
+	/>
+</FormField>
 
 <!--
 	Under the event picker, because the two answer the same question and the

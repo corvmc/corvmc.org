@@ -59,6 +59,7 @@ import {
 	NotSerializedError,
 	bindAssetTag,
 	createAsset,
+	searchAssetOptions,
 	setAssetStatus
 } from './asset-service';
 import { movementStatement, recordMovement } from './stock-service';
@@ -197,5 +198,31 @@ describe('setAssetStatus', () => {
 		await setAssetStatus('as-1', 'in_service');
 		expect(movementStatement).not.toHaveBeenCalled();
 		expect(updatedValues).toHaveLength(0);
+	});
+});
+
+// #1423: the picker that links recurring work and work orders to one unit.
+describe('searchAssetOptions', () => {
+	it('asks nothing of the database for a query under two characters', async () => {
+		expect(await searchAssetOptions('a')).toEqual([]);
+	});
+
+	it('labels each unit by its item and tag, and describes it by serial or location', async () => {
+		selectResultQueue = [
+			[
+				{
+					id: 'as-1',
+					itemName: 'PA speaker',
+					assetTag: 'CMC-0042',
+					serial: 'SN9',
+					location: 'Stage'
+				},
+				{ id: 'as-2', itemName: 'PA speaker', assetTag: null, serial: null, location: 'Closet' }
+			]
+		];
+		expect(await searchAssetOptions('pa')).toEqual([
+			{ id: 'as-1', name: 'PA speaker · CMC-0042', detail: 'SN9' },
+			{ id: 'as-2', name: 'PA speaker', detail: 'Closet' }
+		]);
 	});
 });

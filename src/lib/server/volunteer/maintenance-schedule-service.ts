@@ -38,7 +38,7 @@ export function nextDueAt(closedAt: Date, intervalDays: number): Date {
 
 type OccurrenceSource = Pick<
 	MaintenanceSchedule,
-	'id' | 'name' | 'volunteerRoleId' | 'projectId' | 'notes' | 'capacity'
+	'id' | 'name' | 'volunteerRoleId' | 'projectId' | 'assetId' | 'notes' | 'capacity'
 >;
 
 function occurrenceValues(s: OccurrenceSource, dueAt: Date) {
@@ -47,6 +47,7 @@ function occurrenceValues(s: OccurrenceSource, dueAt: Date) {
 		title: s.name,
 		volunteerRoleId: s.volunteerRoleId,
 		projectId: s.projectId,
+		assetId: s.assetId,
 		notes: s.notes,
 		capacity: s.capacity,
 		startsAt: null,
@@ -123,6 +124,7 @@ export async function createMaintenanceSchedule(data: {
 	intervalDays: number;
 	firstDueAt: Date;
 	projectId?: string | null;
+	assetId?: string | null;
 	notes?: string | null;
 	capacity?: number;
 	createdByUserId: string;
@@ -147,6 +149,7 @@ export async function createMaintenanceSchedule(data: {
 		name,
 		volunteerRoleId: data.volunteerRoleId,
 		projectId: data.projectId || null,
+		assetId: data.assetId || null,
 		notes,
 		capacity,
 		intervalDays,
@@ -182,6 +185,8 @@ export interface MaintenanceScheduleRow {
 	roleName: string;
 	projectId: string | null;
 	projectName: string | null;
+	assetId: string | null;
+	assetName: string | null;
 	openWorkOrderId: string | null;
 	openDueAt: Date | null;
 	/** Who holds a place on the open occurrence — the person it is assigned to. */
@@ -201,6 +206,12 @@ export async function listMaintenanceSchedules(): Promise<MaintenanceScheduleRow
 			roleName: volunteerRole.name,
 			projectId: maintenanceSchedule.projectId,
 			projectName: project.name,
+			assetId: maintenanceSchedule.assetId,
+			assetName: sql<string | null>`(
+				select ii."name" || coalesce(' · ' || ia."asset_tag", '') from "inventory_asset" ia
+				join "inventory_item" ii on ii."id" = ia."item_id"
+				where ia."id" = ${maintenanceSchedule.assetId}
+			)`,
 			openWorkOrderId: workOrder.id,
 			openDueAt: workOrder.dueAt,
 			// Newline-separated: a name can hold a comma, not a line break.
