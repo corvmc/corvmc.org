@@ -16,6 +16,7 @@
 		createLocalResourceForm
 	} from '$lib/remote/local-resources.remote';
 	import ResourceFields from './ResourceFields.svelte';
+	import ResourceTabs from './ResourceTabs.svelte';
 
 	let status = $state<LocalResourceStatus | ''>('');
 	const data = $derived(await getStaffLocalResources({ status: status || undefined }));
@@ -39,6 +40,8 @@
 </PageHeader>
 
 <PageContent>
+	<ResourceTabs active="listings" tipCount={data.tipCount} />
+
 	<FilterBar activeCount={status ? 1 : 0} onclear={() => (status = '')}>
 		<Select
 			size="sm"

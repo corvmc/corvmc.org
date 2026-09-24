@@ -13,6 +13,7 @@ import { countPendingRequests } from '$lib/server/inbox/direct-service';
 import { acceptsDirectMessages } from '$lib/server/moderation/moderation-service';
 import { countVolunteerWorkWaiting } from '$lib/server/volunteer/volunteer-signup-service';
 import { countPendingSubmissions } from '$lib/server/event/community-event-service';
+import { countPendingTips } from '$lib/server/local-resource/local-resource-service';
 import {
 	countAwaitingModeration,
 	countAwaitingResponse,
@@ -188,6 +189,7 @@ export const getStaffLayout = query(async () => {
 		listingsPending,
 		suggestionsAwaiting,
 		appealsPending,
+		resourceTipsPending,
 		chrome
 	] = await Promise.all([
 		listForUser(user.id, ['band']).catch(() => []),
@@ -206,6 +208,8 @@ export const getStaffLayout = query(async () => {
 			.catch(() => 0),
 		// Appeals, not reports: an appeal is someone waiting on an answer they were promised.
 		countPendingAppeals().catch(() => 0),
+		// Public tips waiting on a decision (#1566); the row sits beside Inbox.
+		countPendingTips().catch(() => 0),
 		appChrome(user)
 	]);
 
@@ -223,7 +227,8 @@ export const getStaffLayout = query(async () => {
 		// wire it to a Moderation badge or drop it along with the query above.
 		listingsPending,
 		suggestionsAwaiting,
-		appealsPending
+		appealsPending,
+		resourceTipsPending
 	};
 });
 

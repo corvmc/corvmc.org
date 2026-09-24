@@ -608,6 +608,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/local-resources/tips",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/marketing/audiences",
 		"panel": "staff"
 	},

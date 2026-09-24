@@ -6,6 +6,7 @@
 	import Nav from '$lib/components/layout/Nav';
 	import {
 		IconDisc,
+		IconMapPinPlus,
 		IconSchool,
 		IconBulb,
 		IconSpeakerphone,
@@ -128,6 +129,7 @@
 		audiences: IconMailbox,
 		help: IconBook,
 		'local-resources': IconMapPin,
+		'resource-tips': IconMapPinPlus,
 		reports: IconReportAnalytics,
 		payments: IconCash,
 		credits: IconCoins,
@@ -140,6 +142,7 @@
 
 	let badges = $derived({
 		inboxUnread: layout.inboxUnread,
+		resourceTipsPending: layout.resourceTipsPending,
 		suggestionsAwaiting: layout.suggestionsAwaiting,
 		volunteerPending: layout.volunteerPending,
 		listingsPending: layout.listingsPending,

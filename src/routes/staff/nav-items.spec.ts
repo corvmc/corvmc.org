@@ -151,6 +151,19 @@ describe('the nav tree', () => {
 		}
 	});
 
+	it('puts the resource tips queue beside Inbox, with its pending count (#1566)', () => {
+		const keys = staffNavTop.map((i) => i.key);
+		expect(keys.indexOf('resource-tips')).toBe(keys.indexOf('inbox') + 1);
+		const tips = staffNavTop.find((i) => i.key === 'resource-tips');
+		expect(tips).toMatchObject({
+			href: '/staff/local-resources/tips',
+			badgeKey: 'resourceTipsPending',
+			capability: 'localResource.manage'
+		});
+		expect(activeNavKey('/staff/local-resources/tips')).toBe('resource-tips');
+		expect(activeNavKey('/staff/local-resources')).toBe('local-resources');
+	});
+
 	it('finds the owning section for every row', () => {
 		for (const item of allStaffNavItems()) {
 			if (staffNavTop.some((t) => t.key === item.key)) continue;
