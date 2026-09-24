@@ -1632,7 +1632,7 @@ comes back. Reading back is the list's status, kind and text filters.
 
 ## 21. Sponsors and grants: what comes due next
 
-Spec: [specs/development-agreements-spec.md](../specs/development-agreements-spec.md)
+Spec: [specs/shipped/development-agreements-spec.md](../specs/shipped/development-agreements-spec.md)
 
 ### The story
 
