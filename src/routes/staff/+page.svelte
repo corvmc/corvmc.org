@@ -8,8 +8,6 @@
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { getStaffDashboard } from '$lib/remote/users.remote';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
-	import { hasCapability } from '$lib/config';
 	import { filterNavSections, staffNavSections } from './nav-items';
 	import { resolve } from '$app/paths';
 	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
@@ -17,19 +15,16 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { formatIsoDay } from '$lib/utils/deadline';
 
-	// A committee seat opens the panel without `user.list` (#1578), and the
-	// dashboard is guarded by it; that viewer gets the rows they can open instead.
-	let layout = $derived(await getStaffLayout());
-	let full = $derived(hasCapability(layout.capabilities, 'user.list'));
-	let data = $derived(full ? await getStaffDashboard() : null);
+	let data = $derived(await getStaffDashboard());
+	// A committee seat (#1578) gets the rows it can open instead of the data.
 	let areas = $derived(
-		filterNavSections(staffNavSections, layout.capabilities).flatMap((s) => s.items)
+		data.seat ? filterNavSections(staffNavSections, data.seat).flatMap((s) => s.items) : []
 	);
 </script>
 
 <PageHeader title="Dashboard" />
 <PageContent>
-	{#if !data}
+	{#if data.seat !== null}
 		<SectionLabel label="Your areas" />
 		<div class="flex flex-wrap gap-2">
 			{#each areas as area (area.key)}

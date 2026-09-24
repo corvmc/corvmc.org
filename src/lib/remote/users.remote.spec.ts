@@ -260,6 +260,11 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
+const committeeCapabilitiesFor = vi.fn(async (_id: string) => [] as string[]);
+vi.mock('$lib/server/group/group-context', () => ({
+	committeeCapabilitiesFor: (id: string) => committeeCapabilitiesFor(id)
+}));
+
 const users = (await import('./users.remote')) as unknown as Record<
 	string,
 	((...args: unknown[]) => Promise<unknown>) & { refresh?: () => void }
@@ -871,5 +876,22 @@ describe('staff edits leave an audit entry', () => {
 			})
 		).rejects.toBeTruthy();
 		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+});
+
+describe('getStaffDashboard for a committee seat (#1578)', () => {
+	it('hands a seat without user.list the capabilities its rows are filtered by, and no data', async () => {
+		held = new Set();
+		committeeCapabilitiesFor.mockResolvedValueOnce(['sponsor.read', 'grant.read']);
+		await expect(users.getStaffDashboard()).resolves.toEqual({
+			seat: ['sponsor.read', 'grant.read']
+		});
+		expect(dbSelect).not.toHaveBeenCalled();
+	});
+
+	it('refuses a caller with neither user.list nor a seat', async () => {
+		held = new Set();
+		await expect(users.getStaffDashboard()).rejects.toThrow('403');
+		expect(dbSelect).not.toHaveBeenCalled();
 	});
 });
