@@ -57,10 +57,15 @@ function sponsorshipInput(d: z.infer<z.ZodObject<typeof sponsorshipFields>>) {
 	};
 }
 
-export const getSponsors = query(async () => {
-	await requireCapability('sponsor.read');
-	return service.listSponsors(clubToday());
-});
+export const getSponsors = query(
+	z.object({ includeArchived: z.boolean().optional() }).optional(),
+	async (filters) => {
+		await requireCapability('sponsor.read');
+		return service.listSponsors(clubToday(), {
+			includeArchived: filters?.includeArchived ?? false
+		});
+	}
+);
 
 export const getSponsorDetail = query(z.string(), async (id) => {
 	await requireCapability('sponsor.read');
@@ -92,10 +97,36 @@ export const updateSponsor = form(
 	}
 );
 
+export const archiveSponsor = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireCapability('sponsor.manage');
+	try {
+		await service.archiveSponsor(data.id);
+		await getSponsorDetail(data.id).refresh();
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+export const restoreSponsor = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireCapability('sponsor.manage');
+	try {
+		await service.restoreSponsor(data.id);
+		await getSponsorDetail(data.id).refresh();
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
 export const deleteSponsor = form(z.object({ id: z.string().min(1) }), async (data) => {
 	await requireCapability('sponsor.manage');
-	await service.deleteSponsor(data.id);
-	return { success: true };
+	try {
+		await service.deleteSponsor(data.id);
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
 });
 
 export const createSponsorship = form(

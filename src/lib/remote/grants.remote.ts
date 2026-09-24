@@ -36,10 +36,13 @@ function funderInput(d: z.infer<z.ZodObject<typeof funderFields>>) {
 	};
 }
 
-export const getFunders = query(async () => {
-	await requireCapability('grant.read');
-	return funders.listFunders();
-});
+export const getFunders = query(
+	z.object({ includeArchived: z.boolean().optional() }).optional(),
+	async (filters) => {
+		await requireCapability('grant.read');
+		return funders.listFunders({ includeArchived: filters?.includeArchived ?? false });
+	}
+);
 
 export const createFunder = form(z.object(funderFields), async (data) => {
 	await requireCapability('grant.manage');
@@ -56,10 +59,34 @@ export const updateFunder = form(
 	}
 );
 
+export const archiveFunder = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireCapability('grant.manage');
+	try {
+		await funders.archiveFunder(data.id);
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+export const restoreFunder = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireCapability('grant.manage');
+	try {
+		await funders.restoreFunder(data.id);
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
 export const deleteFunder = form(z.object({ id: z.string().min(1) }), async (data) => {
 	await requireCapability('grant.manage');
-	await funders.deleteFunder(data.id);
-	return { success: true };
+	try {
+		await funders.deleteFunder(data.id);
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
 });
 
 // ------------------------------------------------------------- applications
@@ -108,9 +135,11 @@ export const getGrantDetail = query(z.string(), async (id) => {
 	try {
 		const [grant, funderRows] = await Promise.all([
 			grants.getGrant(id, clubToday()),
-			funders.listFunders()
+			funders.listFunders({ includeArchived: true })
 		]);
-		return { ...grant, funders: funderRows.map((f) => ({ id: f.id, name: f.name })) };
+		// An archived funder stays pickable on the application that already names it.
+		const pickable = funderRows.filter((f) => !f.deletedAt || f.id === grant.funderId);
+		return { ...grant, funders: pickable.map((f) => ({ id: f.id, name: f.name })) };
 	} catch (err) {
 		mapDomainError(err);
 	}

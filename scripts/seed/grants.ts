@@ -30,7 +30,8 @@ export async function seedGrants() {
 		},
 		{ id: 'seed-funder-community-fund', name: 'Benton County Community Fund' },
 		{ id: 'seed-funder-cultural-trust', name: 'Oregon Cultural Trust' },
-		{ id: 'seed-funder-collins', name: 'Collins Foundation' }
+		// Archived: off the list and the picker, its declined application kept.
+		{ id: 'seed-funder-collins', name: 'Collins Foundation', deletedAt: new Date() }
 	];
 
 	const apps: NewGrantApplication[] = [

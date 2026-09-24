@@ -35,6 +35,7 @@ The two differ where it matters for the record:
 | `website`                  | Nullable  |
 | `contactName/contactEmail` | Nullable  |
 | `notes`                    | Free text |
+| `deletedAt`                | Archived  |
 
 | `sponsorship`         | Notes                                                              |
 | --------------------- | ------------------------------------------------------------------ |
@@ -52,7 +53,9 @@ ended or adds the renewal. Nothing else has one.
 **Pages.** `/staff/sponsors`: every sponsor with its current sponsorship (a running term beats a
 pitch), soonest-ending first, idle sponsors last. `/staff/sponsors/[id]`: contact facts, a lapsed
 term called out, and the sponsorship history with add, edit and delete in modals. A sponsor with
-sponsorships cannot be deleted.
+sponsorships is archived rather than deleted (#1577): it drops off the list, keeps every
+sponsorship and credit, shows again under "Show archived", and can be restored. Delete is only for
+a sponsor with none.
 
 **Capability.** `sponsor: ['read', 'manage']`.
 
@@ -66,6 +69,7 @@ sponsorships cannot be deleted.
 | `website`                  | Nullable            |
 | `contactName/contactEmail` | The program officer |
 | `notes`                    | Free text           |
+| `deletedAt`                | Archived            |
 
 | `grant_application`    | Notes                                                     |
 | ---------------------- | --------------------------------------------------------- |
@@ -98,7 +102,9 @@ sponsorships cannot be deleted.
 **Pages.** `/staff/grants`: open applications (plus any closed one still owing a report), sorted by
 deadline with undated rows last; "Show closed" adds the rest. `/staff/grants/[id]`: the application
 as a `DefinitionList`, an overdue Alert, and its reports with add, edit (marking submitted) and
-delete. `/staff/grants/funders`: funders with create, edit and, while unused, delete.
+delete. `/staff/grants/funders`: funders with create, edit, archive and restore, and, while
+unused, delete. An archived funder is off the list (until "Show archived") and off the picker for
+new applications, but stays pickable on an application that already names it (#1577).
 
 **Capability.** `grant: ['read', 'manage']`.
 

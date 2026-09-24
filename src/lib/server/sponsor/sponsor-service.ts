@@ -7,7 +7,7 @@ import {
 	type Sponsor,
 	type Sponsorship
 } from '$lib/server/db/schema/sponsor';
-import { and, count, eq, gte, lte } from 'drizzle-orm';
+import { and, count, eq, gte, isNull, lte } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { byDeadline, due, type Deadline } from '$lib/utils/deadline';
 
@@ -29,7 +29,7 @@ export class SponsorInUseError extends DomainError {
 	readonly httpStatus = 409;
 	constructor(n: number) {
 		super(
-			`${n} ${n === 1 ? 'sponsorship names' : 'sponsorships name'} this sponsor. Delete ${n === 1 ? 'it' : 'them'} first.`
+			`${n} ${n === 1 ? 'sponsorship names' : 'sponsorships name'} this sponsor. Archive it instead.`
 		);
 	}
 }
@@ -110,9 +110,15 @@ export function summarizeSponsors<S extends Pick<Sponsor, 'id' | 'name'>, T exte
 		.sort(byDeadline((r) => r.name));
 }
 
-export async function listSponsors(today: string) {
+export async function listSponsors(
+	today: string,
+	{ includeArchived = false }: { includeArchived?: boolean } = {}
+) {
 	const [sponsors, ships] = await Promise.all([
-		db.select().from(sponsor),
+		db
+			.select()
+			.from(sponsor)
+			.where(includeArchived ? undefined : isNull(sponsor.deletedAt)),
 		db.select().from(sponsorship)
 	]);
 	return summarizeSponsors(sponsors, ships, today);
@@ -131,7 +137,7 @@ export async function getSponsor(id: string, today: string) {
 	};
 }
 
-export type SponsorInput = Omit<NewSponsor, 'id' | 'createdAt' | 'updatedAt'>;
+export type SponsorInput = Omit<NewSponsor, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>;
 
 export async function createSponsor(input: SponsorInput): Promise<Sponsor> {
 	const [row] = await db.insert(sponsor).values(input).returning();
@@ -147,7 +153,25 @@ export async function updateSponsor(id: string, input: SponsorInput): Promise<vo
 	if (rows.length === 0) throw new SponsorNotFoundError();
 }
 
-/** Refused while any sponsorship names it: the history is the point. */
+async function setSponsorArchived(id: string, deletedAt: Date | null): Promise<void> {
+	const rows = await db
+		.update(sponsor)
+		.set({ deletedAt, updatedAt: new Date() })
+		.where(eq(sponsor.id, id))
+		.returning({ id: sponsor.id });
+	if (rows.length === 0) throw new SponsorNotFoundError();
+}
+
+/** Off the active list; its sponsorships, placements and logo all stay. */
+export function archiveSponsor(id: string): Promise<void> {
+	return setSponsorArchived(id, new Date());
+}
+
+export function restoreSponsor(id: string): Promise<void> {
+	return setSponsorArchived(id, null);
+}
+
+/** Only for a row that should never have existed. Refused once a sponsorship names it. */
 export async function deleteSponsor(id: string): Promise<void> {
 	const [used] = await db
 		.select({ n: count() })

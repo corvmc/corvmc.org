@@ -33,7 +33,13 @@ export async function seedSponsors(events: SeedEvent[]) {
 		},
 		{ id: 'seed-sponsor-brewery', name: 'Block 15 Brewing' },
 		{ id: 'seed-sponsor-credit-union', name: 'Corvallis Community Credit Union' },
-		{ id: 'seed-sponsor-print', name: 'Valley Print Shop', notes: 'Printed posters at cost.' }
+		{
+			id: 'seed-sponsor-print',
+			name: 'Valley Print Shop',
+			notes: 'Printed posters at cost.',
+			// Archived: off the list until "Show archived", its ended term kept.
+			deletedAt: new Date()
+		}
 	];
 
 	const ships: NewSponsorship[] = [
