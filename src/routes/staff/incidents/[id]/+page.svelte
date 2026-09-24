@@ -20,6 +20,7 @@
 
 	let id = $derived(page.params.id!);
 	let incident = $derived(await getIncidentDetail(id));
+	const canRecord = $derived(incident.canRecord);
 
 	const noteFields = addIncidentNoteForm.fields;
 	const resolveFields = resolveIncidentForm.fields;
@@ -58,18 +59,20 @@
 
 		<InfoCard title="Notes" state={incident.notes.length}>
 			{#snippet action()}
-				<Action
-					action={addIncidentNoteForm}
-					label="Add note"
-					modalTitle="Add a note"
-					successToast="Note added"
-					size="sm"
-				>
-					{#snippet form()}
-						<input {...noteFields.incidentId.as('hidden', id)} />
-						<Field field={noteFields.body} type="textarea" label="Note" />
-					{/snippet}
-				</Action>
+				{#if canRecord}
+					<Action
+						action={addIncidentNoteForm}
+						label="Add note"
+						modalTitle="Add a note"
+						successToast="Note added"
+						size="sm"
+					>
+						{#snippet form()}
+							<input {...noteFields.incidentId.as('hidden', id)} />
+							<Field field={noteFields.body} type="textarea" label="Note" />
+						{/snippet}
+					</Action>
+				{/if}
 			{/snippet}
 			{#if incident.notes.length === 0}
 				<p class="text-muted">No follow-ups yet.</p>
@@ -86,7 +89,9 @@
 		</InfoCard>
 
 		<InfoCard title="Resolution" class="bg-base-200 shadow-none">
-			{#if incident.status === 'open'}
+			{#if incident.status === 'open' && !canRecord}
+				<p class="text-muted">Not resolved yet.</p>
+			{:else if incident.status === 'open'}
 				<Action
 					action={resolveIncidentForm}
 					label="Resolve"
@@ -107,20 +112,22 @@
 						<Fact label="Resolved">{formatDateTime(incident.resolvedAt)}</Fact>
 					{/if}
 				</DefinitionList>
-				<div class="mt-3">
-					<Action
-						action={reopenIncidentForm}
-						label="Reopen"
-						modalTitle="Reopen this incident"
-						confirm="The current resolution is kept as a note."
-						successToast="Incident reopened"
-						size="sm"
-					>
-						{#snippet form()}
-							<input {...reopenFields.incidentId.as('hidden', id)} />
-						{/snippet}
-					</Action>
-				</div>
+				{#if canRecord}
+					<div class="mt-3">
+						<Action
+							action={reopenIncidentForm}
+							label="Reopen"
+							modalTitle="Reopen this incident"
+							confirm="The current resolution is kept as a note."
+							successToast="Incident reopened"
+							size="sm"
+						>
+							{#snippet form()}
+								<input {...reopenFields.incidentId.as('hidden', id)} />
+							{/snippet}
+						</Action>
+					</div>
+				{/if}
 			{/if}
 		</InfoCard>
 	</div>

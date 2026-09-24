@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
+import { can, requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { DEFAULT_TIMEZONE, incidentCategories, incidentStatuses } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -32,16 +32,21 @@ const filtersSchema = z.object({
 
 export const getIncidentLog = query(filtersSchema, async (filters) => {
 	await requireCapability('incident.read');
-	return listIncidents(
-		{ status: filters.status, category: filters.category, search: filters.search },
-		{ page: filters.page ?? 1, pageSize: 25 }
-	);
+	const [result, canRecord] = await Promise.all([
+		listIncidents(
+			{ status: filters.status, category: filters.category, search: filters.search },
+			{ page: filters.page ?? 1, pageSize: 25 }
+		),
+		can('incident.record')
+	]);
+	return { ...result, canRecord };
 });
 
 export const getIncidentDetail = query(z.string(), async (id) => {
 	await requireCapability('incident.read');
 	try {
-		return await getIncident(id);
+		const [incident, canRecord] = await Promise.all([getIncident(id), can('incident.record')]);
+		return { ...incident, canRecord };
 	} catch (err) {
 		mapDomainError(err);
 	}

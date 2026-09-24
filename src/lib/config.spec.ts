@@ -119,6 +119,20 @@ describe('grantsCapability', () => {
 		expect(grantsCapability(positions.treasurer, 'credit.comp')).toBe(false);
 	});
 
+	it('lets exactly admin, staff, the site moderator and volunteer coordinator read incidents (#1466)', () => {
+		expect(positionsGranting('incident.read').sort()).toEqual(
+			['admin', 'site_moderator', 'staff', 'volunteer_coordinator'].sort()
+		);
+		expect(grantsCapability(positions.technology_coordinator, 'incident.read')).toBe(false);
+		expect(grantsCapability(positions.treasurer, 'incident.read')).toBe(false);
+	});
+
+	it('keeps recording an incident with admin and staff (#1466)', () => {
+		expect(positionsGranting('incident.record').sort()).toEqual(['admin', 'staff']);
+		expect(grantsCapability(positions.site_moderator, 'incident.record')).toBe(false);
+		expect(grantsCapability(positions.volunteer_coordinator, 'incident.record')).toBe(false);
+	});
+
 	it('lets the treasurer read a production, and no more than read it', () => {
 		// The settlement is on the production console, behind `event.read`. A
 		// treasurer who cannot open it cannot see where the night's money went

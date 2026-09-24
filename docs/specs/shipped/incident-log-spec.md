@@ -30,9 +30,10 @@
 - **Recording an incident does nothing to a member.** It is a record, not an enforcement action:
   no standing change, no notification, no hidden content. Anything that does act on a member goes
   through the moderation surfaces, which have their own appeal path.
-- **Staff-only, behind its own capability.** `incident.read` and `incident.record`. No named
-  position holds them yet, so today they are `admin` and `staff`. A report naming a member is not
-  visible to that member.
+- **Staff-only, behind its own capability.** `incident.read` is held by `admin`, `staff`, the
+  site moderator and the volunteer coordinator (#1466). `incident.record` (recording, notes,
+  resolving) stays with `admin` and `staff`. A report naming a member is not visible to that
+  member.
 
 ## Schema
 
@@ -74,7 +75,7 @@ Recording is a modal on the list page. Nav: under **Space**, beside Contractors.
 
 ## Decisions filed
 
-- #1466 — readable by admin and staff only; no named position holds `incident.read`.
+- #1466 — reversed: the site moderator and volunteer coordinator also hold `incident.read`.
 - #1467 — a member cannot see a report naming them, and it changes nothing on their account.
 - #1468 — no delete path, kept indefinitely; purging a member only unlinks them.
 - #1469 — only staff record; volunteers report to staff. Linking to a show is unbuilt.
