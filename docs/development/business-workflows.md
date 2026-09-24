@@ -1738,6 +1738,61 @@ fourteen days ahead.
 - **A reminder went to someone who left.** The named staffer still has an account but no
   position; the reminder does not check that they can open the page.
 
+## 23. Formal ballots: a frozen roll, a secret or recorded vote, a certified result
+
+Spec: [specs/shipped/formal-balloting-spec.md](../specs/shipped/formal-balloting-spec.md)
+
+### The story
+
+A committee chair, or staff for a member-wide question, drafts a ballot: the question, 2 to 10
+choices, the closing day and a named certifier. **Open** freezes the roll. For a committee ballot,
+that is the committee's active roster; for a member-wide ballot, it is members of record plus staff
+overrides. Electors are notified.
+
+Electors vote from `/member/ballots/[id]`:
+
+- a committee vote is recorded and can be changed until the close;
+- a member-wide vote is secret and final.
+
+Nobody sees a tally until the close. After it, the certifier certifies the result, and every member
+is told.
+
+### Code path
+
+- **Remote:** `src/lib/remote/ballots.remote.ts`.
+  - A member-wide ballot is managed only through `ballot.manage`.
+  - A committee ballot is managed through `requireGroupRole({ id: ballot.groupId }, 'admin')`, or
+    `ballot.manage`.
+  - `getBallotPage` 404s a draft for non-managers, and an open or closed ballot for anyone not
+    involved.
+- **Service:** `src/lib/server/ballot/ballot-service.ts`.
+  - `openBallot` is one `db.batch`: the conditional stamp, `INSERT … SELECT` of the roll,
+    zeroed counters, and the roll size.
+  - `castVote` for a secret ballot batches the participation insert, then `votes = votes + 1`.
+  - `getTally` refuses until `closes_at`.
+  - `certifyBallot` snapshots `certified_result`.
+  - `setElectorOverride` audits `ballot.elector_overridden`.
+- **Fan-out:** `ballot-fanout.ts`, from the `ballot.opened` and `ballot.certified` events.
+
+### Data touched
+
+- `ballot`, `ballot_option`, `ballot_elector`, `ballot_elector_override`.
+- **Secret ballots:**
+  - `ballot_participation` records who voted: no option, no timestamp.
+  - `ballot_choice` is a per-option counter: no user and no timestamp.
+  - `ballot-secrecy.spec.ts` fails if a join path between them appears.
+- **Recorded ballots:** `ballot_recorded_vote`.
+- `notification` rows (`ballot_opened`, `ballot_result`) and `audit_log`.
+
+### Where it breaks
+
+- Secrecy is from the app, not from Cloudflare account holders. D1 Time Travel can diff the database
+  between two votes. The spec states this limit.
+- A member purged before certification drops out of the participation count but not the counter.
+  The certified snapshot is taken from the live tables at that moment.
+- The member-of-record age is `ballot.memberOfRecordDays` in site config (default 60). It is read at
+  open, so changing it moves only ballots not yet opened.
+
 ## Cross-cutting patterns worth internalizing
 
 - **Everything money-related converges on two Stripe entry points:** `checkout()` in

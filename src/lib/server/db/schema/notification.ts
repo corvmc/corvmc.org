@@ -626,6 +626,23 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'ballot_opened',
+		category: 'membership',
+		label: 'A ballot you can vote on opened',
+		// Email on: it goes only to the roll, and a vote missed is not recoverable.
+		description: 'When a committee or member-wide ballot opens and you are on its roll',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'ballot_result',
+		category: 'membership',
+		label: 'Ballot results',
+		// In-app only by default: this reaches every member, and a whole-membership
+		// email belongs on the broadcast stream, not the transactional one.
+		description: 'When the result of a ballot is certified',
+		defaults: { email: false, inApp: true, sms: false }
+	},
+	{
 		key: 'renewal_expiry',
 		category: 'membership',
 		label: 'Permit, license or insurance expiring',

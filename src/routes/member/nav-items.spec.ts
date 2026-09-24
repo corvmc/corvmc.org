@@ -93,13 +93,13 @@ describe('flag gating', () => {
 	// which is why they share the foot of the sidebar rather than sitting among
 	// the things you do in the space.
 	it('keeps Suggestions and Help together at the foot', () => {
-		expect(memberNavFooter(ALL_ON).map((i) => i.key)).toEqual(['suggestions', 'help']);
+		expect(memberNavFooter(ALL_ON).map((i) => i.key)).toEqual(['suggestions', 'ballots', 'help']);
 	});
 
 	it('never lets a flag disturb the bottom cluster order', () => {
 		// Identical for both inputs: no footer row is conditional on anything.
 		for (const input of [ALL_OFF, ALL_ON]) {
-			expect(memberNavFooter(input).map((i) => i.key)).toEqual(['suggestions', 'help']);
+			expect(memberNavFooter(input).map((i) => i.key)).toEqual(['suggestions', 'ballots', 'help']);
 		}
 	});
 
@@ -159,6 +159,7 @@ describe('activeMemberNavKey', () => {
 		['/member/directory/members/abc', 'directory'],
 		['/member/directory/bands/some-band', 'directory'],
 		['/member/suggestions/abc', 'suggestions'],
+		['/member/ballots/abc', 'ballots'],
 		['/member/volunteer/start', 'volunteer'],
 		['/member/volunteer/feedback/abc', 'volunteer'],
 		['/member/equipment', 'equipment'],

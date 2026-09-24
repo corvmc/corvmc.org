@@ -38,6 +38,7 @@ export type StaffNavKey =
 	| 'music'
 	| 'groups'
 	| 'committees'
+	| 'ballots'
 	| 'volunteer'
 	| 'volunteer-schedule'
 	| 'volunteer-people'
@@ -166,6 +167,12 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'committee.reviewApplications',
 				label: 'Committee Applications',
 				href: resolve('/staff/committees')
+			},
+			{
+				key: 'ballots',
+				capability: 'ballot.manage',
+				label: 'Ballots',
+				href: resolve('/staff/ballots')
 			},
 			{
 				// The parent row is a dashboard, not an index — see

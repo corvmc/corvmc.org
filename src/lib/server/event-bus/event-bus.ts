@@ -868,7 +868,15 @@ export type DomainEvents = {
 	'volunteer.shift_completed': VolunteerShiftEvent;
 	'volunteer.shift_feedback_due': VolunteerShiftEvent;
 	'renewal.expiry_due': RenewalExpiryDueEvent;
+	'ballot.opened': BallotEvent;
+	'ballot.certified': BallotEvent;
 };
+
+/** A ballot opened (electors hear) or was certified (every member hears). */
+export interface BallotEvent {
+	ballotId: string;
+	title: string;
+}
 
 // ---------------------------------------------------------------------------
 // Singleton emitter

@@ -117,14 +117,15 @@ the way it is, and the workflow guide to find out **what** it does today.
 
 ### Members & directory
 
-| Doc                                                                    | Status | Lifecycle | Notes                                                                                      |
-| ---------------------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------ |
-| [directory-profiles-spec.md](specs/shipped/directory-profiles-spec.md) | ✅     | archived  | Member/band profiles, instruments, genres, visibility                                      |
-| [membership-page-spec.md](specs/shipped/membership-page-spec.md)       | ✅     | archived  | Sustaining membership UI, credit balance, Stripe portal                                    |
-| [member-dashboard-spec.md](specs/shipped/member-dashboard-spec.md)     | ✅     | archived  | Member landing page                                                                        |
-| [member-skill-tags-spec.md](specs/shipped/member-skill-tags-spec.md)   | ✅     | archived  | A `skill` directory tag: set on the profile, filterable                                    |
-| [classifieds-spec.md](specs/classifieds-spec.md)                       | 📋     | spec      | Members-only wanted/offered posts that expire; reported via `content_flag`, answered by DM |
-| [local-resources-spec.md](specs/shipped/local-resources-spec.md)       | ✅     | archived  | Public staff-curated list of local music businesses, with a structured public tip form     |
+| Doc                                                                    | Status | Lifecycle | Notes                                                                                                                                                                                                                                             |
+| ---------------------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [directory-profiles-spec.md](specs/shipped/directory-profiles-spec.md) | ✅     | archived  | Member/band profiles, instruments, genres, visibility                                                                                                                                                                                             |
+| [membership-page-spec.md](specs/shipped/membership-page-spec.md)       | ✅     | archived  | Sustaining membership UI, credit balance, Stripe portal                                                                                                                                                                                           |
+| [member-dashboard-spec.md](specs/shipped/member-dashboard-spec.md)     | ✅     | archived  | Member landing page                                                                                                                                                                                                                               |
+| [member-skill-tags-spec.md](specs/shipped/member-skill-tags-spec.md)   | ✅     | archived  | A `skill` directory tag: set on the profile, filterable                                                                                                                                                                                           |
+| [formal-balloting-spec.md](specs/shipped/formal-balloting-spec.md)     | ✅     | archived  | Group ballots (committee roster, recorded) and member-wide ballots (members of record, secret but auditable: participation and a per-option counter, no joinable link). Tallies hidden until close; a named certifier publishes the result (#577) |
+| [classifieds-spec.md](specs/classifieds-spec.md)                       | 📋     | spec      | Members-only wanted/offered posts that expire; reported via `content_flag`, answered by DM                                                                                                                                                        |
+| [local-resources-spec.md](specs/shipped/local-resources-spec.md)       | ✅     | archived  | Public staff-curated list of local music businesses, with a structured public tip form                                                                                                                                                            |
 
 ### Money & messaging
 

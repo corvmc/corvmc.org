@@ -21,7 +21,8 @@ export const auditActions = [
 	'user.email_changed',
 	'credits.adjusted',
 	'incident.deleted',
-	'capability.grants_changed'
+	'capability.grants_changed',
+	'ballot.elector_overridden'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -71,6 +72,13 @@ export interface AuditDetailsByAction {
 	'incident.deleted': { category: string; occurredAt: string; retentionYears: number };
 	/** A volunteer role's (`role`) or a committee's (`group`) grant list was edited. */
 	'capability.grants_changed': { added: string[]; removed: string[] };
+	/** The subject is the member put on or taken off a member-wide ballot's roll. */
+	'ballot.elector_overridden': {
+		ballotId: string;
+		ballotTitle: string;
+		include: boolean;
+		reason: string;
+	};
 }
 
 /** One row as the read side sees it, `details` narrowed by `action`. */
