@@ -22,11 +22,12 @@ export type { ReportRange };
  * evening here, and moves a day's work across the boundary of every report that
  * reimplements it.
  */
-function approvedIn(range: ReportRange): SQL {
+function approvedIn(range: ReportRange, groupId?: string): SQL {
 	const window = rangeCondition(volunteerHourLog.workedOn, range);
 	const approved = eq(volunteerHourLog.status, 'approved');
+	const program = groupId ? eq(volunteerHourLog.groupId, groupId) : undefined;
 
-	return window ? and(approved, window)! : approved;
+	return and(approved, window, program)!;
 }
 
 const sumMinutes = sql<number>`coalesce(sum(${volunteerHourLog.minutes}), 0)`;
@@ -52,7 +53,11 @@ export interface VolunteerTotals {
 	logCount: number;
 }
 
-export async function getVolunteerTotals(range: ReportRange = {}): Promise<VolunteerTotals> {
+/** `groupId` narrows to hours attributed to one committee or club. */
+export async function getVolunteerTotals(
+	range: ReportRange = {},
+	opts: { groupId?: string } = {}
+): Promise<VolunteerTotals> {
 	const [row] = await db
 		.select({
 			totalMinutes: sumMinutes,
@@ -60,7 +65,7 @@ export async function getVolunteerTotals(range: ReportRange = {}): Promise<Volun
 			logCount: count()
 		})
 		.from(volunteerHourLog)
-		.where(approvedIn(range));
+		.where(approvedIn(range, opts.groupId));
 
 	return {
 		totalMinutes: Number(row?.totalMinutes ?? 0),

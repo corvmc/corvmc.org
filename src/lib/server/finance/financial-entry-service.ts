@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { financialEntry, type FinancialEntry } from '$lib/server/db/schema/financial';
-import { and, asc, eq, gte, lte, sql, sum } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, lte, sql, sum } from 'drizzle-orm';
 import { captureException } from '$lib/server/sentry';
 import type {
 	FinancialCategory,
@@ -256,8 +256,11 @@ export async function listForSubject(subjectType: FinancialSubject, subjectId: s
  * wrong failure to leave available.
  */
 export async function totalsByKindAndCategory(
-	range: RangeFilter
+	range: RangeFilter,
+	opts: { projectIds?: string[] } = {}
 ): Promise<{ kind: FinancialEntryKind; category: FinancialCategory; totalCents: number }[]> {
+	// An empty list is an owner with no projects, whose ledger is empty.
+	if (opts.projectIds?.length === 0) return [];
 	const rows = await db
 		.select({
 			kind: financialEntry.kind,
@@ -265,7 +268,12 @@ export async function totalsByKindAndCategory(
 			total: sum(financialEntry.amountCents)
 		})
 		.from(financialEntry)
-		.where(inRange(range))
+		.where(
+			and(
+				inRange(range),
+				opts.projectIds ? inArray(financialEntry.projectId, opts.projectIds) : undefined
+			)
+		)
 		.groupBy(financialEntry.kind, financialEntry.category);
 	return rows.map((r) => ({ kind: r.kind, category: r.category, totalCents: asCents(r.total) }));
 }

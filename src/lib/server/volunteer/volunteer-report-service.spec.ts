@@ -121,6 +121,15 @@ describe('VolunteerReportService', () => {
 			// status + from + to
 			expect(conditionText(whereCalls[0]).match(/worked_on/g)?.length).toBe(2);
 		});
+
+		it('narrows to one program when given a group', async () => {
+			selectResult = [{ totalMinutes: 0, volunteerCount: 0, logCount: 0 }];
+			await getVolunteerTotals({}, { groupId: 'g-booking' });
+			const text = conditionText(whereCalls[0]);
+			expect(text).toContain('group_id');
+			expect(text).toContain('g-booking');
+			expect(text).toContain('approved');
+		});
 	});
 
 	describe('getHoursByMember', () => {

@@ -268,6 +268,23 @@ describe('the annual rollup\u2019s one query', () => {
 			{ kind: 'earned', category: 'ticket_sales', totalCents: 300 }
 		]);
 	});
+
+	it('narrows to the projects asked for', async () => {
+		await recordEntries([
+			ticketSale({ projectId: 'p-mine' }),
+			ticketSale({ projectId: 'p-other', subjectId: 'tkt-2', amountCents: 900 }),
+			ticketSale({ subjectId: 'tkt-3', amountCents: 5000 })
+		]);
+		expect(await totalsByKindAndCategory(YEAR, { projectIds: ['p-mine'] })).toEqual([
+			{ kind: 'earned', category: 'ticket_sales', totalCents: 300 }
+		]);
+	});
+
+	// An empty list is a committee with no projects, not "no filter".
+	it('returns nothing for an empty project list', async () => {
+		await recordEntries([ticketSale({ projectId: 'p-mine' })]);
+		expect(await totalsByKindAndCategory(YEAR, { projectIds: [] })).toEqual([]);
+	});
 });
 
 describe('where the record begins', () => {

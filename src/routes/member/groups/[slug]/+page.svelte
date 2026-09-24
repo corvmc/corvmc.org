@@ -40,6 +40,7 @@
 	import EditSessionAction from '$lib/components/groups/EditSessionAction.svelte';
 	import ProjectStatusAction from './ProjectStatusAction.svelte';
 	import ProjectDutyListAction from './ProjectDutyListAction.svelte';
+	import CommitteeNumbers from './CommitteeNumbers.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -68,7 +69,8 @@
 	const publishSessionFields = publishGroupSession.fields;
 	const unpublishSessionFields = unpublishGroupSession.fields;
 
-	type Tab = 'announcements' | 'documents' | 'overview' | 'projects' | 'sessions' | 'roster';
+	type Tab =
+		'announcements' | 'documents' | 'overview' | 'projects' | 'numbers' | 'sessions' | 'roster';
 
 	let slug = $derived(page.params.slug!);
 	const data = $derived(await getMemberGroup(slug));
@@ -88,6 +90,7 @@
 		if (requested === 'overview') return 'overview';
 		if (requested === 'sessions') return 'sessions';
 		if (requested === 'projects') return 'projects';
+		if (requested === 'numbers') return 'numbers';
 		if (requested === 'documents') return 'documents';
 		if (requested === 'announcements') return 'announcements';
 		return defaultTab;
@@ -102,7 +105,7 @@
 
 	/**
 	 * A committee's own work, without handing over the whole staff panel. Any
-	 * member can move a project's status; budget and burn stay on the staff page.
+	 * member can move a project's status; budget and burn are on the Numbers tab.
 	 */
 	const projects = $derived(data.projects);
 
@@ -188,6 +191,10 @@
 						}
 					]
 				: []),
+			// Its roster only (#1562); staff read the whole report on `/staff/reports`.
+			...(group.kind === 'committee' && isMember
+				? [{ key: 'numbers', label: 'Numbers', href: tabHref('numbers') }]
+				: []),
 			{ key: 'sessions', label: 'Sessions', href: tabHref('sessions') },
 			{ key: 'roster', label: 'Roster', badge: members.active.length, href: tabHref('roster') },
 			{ key: 'overview', label: 'Overview', href: tabHref('overview') }
@@ -240,6 +247,8 @@
 				</Table>
 			{/if}
 		</InfoCard>
+	{:else if tab === 'numbers'}
+		<CommitteeNumbers groupId={group.id} />
 	{:else if tab === 'documents'}
 		<DocumentList
 			groupId={group.id}

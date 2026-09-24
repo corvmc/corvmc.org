@@ -1,4 +1,4 @@
-import { rangeInstants, type ReportRange } from './range';
+import type { ReportRange } from './range';
 import {
 	ledgerStartsAt,
 	totalsByKindAndCategory
@@ -15,7 +15,9 @@ import {
 	getRoomUseTotals,
 	type RoomUseTotals
 } from '$lib/server/reservation/reservation-report-service';
-import { financialEntryKinds, type FinancialCategory, type FinancialEntryKind } from '$lib/config';
+import { ledgerWindow, toMoneySection, type MoneySection } from './money';
+
+export type { CategoryLine, MoneySection } from './money';
 
 /**
  * The annual rollup: one call, every module's own report service.
@@ -24,18 +26,6 @@ import { financialEntryKinds, type FinancialCategory, type FinancialEntryKind } 
  * the module page it came from would be a second implementation drifting, and
  * the board packet is the worst place to discover one.
  */
-
-export interface CategoryLine {
-	category: FinancialCategory;
-	totalCents: number;
-}
-
-export interface MoneySection {
-	byKind: Record<FinancialEntryKind, CategoryLine[]>;
-	totalsByKind: Record<FinancialEntryKind, number>;
-	/** Earned less spent. Excludes in-kind and pass-through, which are not income. */
-	netCents: number;
-}
 
 /**
  * What the record can and cannot answer for the range asked for.
@@ -64,25 +54,6 @@ export interface AnnualReport {
 	room: RoomUseTotals;
 }
 
-/**
- * Both ends resolved, because the ledger's filter is bounded on both sides.
- *
- * An open-ended report is still a real request — "everything so far" — so the
- * ends are filled rather than refused. The far past is the epoch; the far
- * future is now, since a report cannot include what has not happened.
- */
-function ledgerWindow(range: ReportRange): { from: Date; to: Date } {
-	const { from, to } = rangeInstants(range);
-	return { from: from ?? new Date(0), to: to ?? new Date() };
-}
-
-function emptyByKind<T>(value: () => T): Record<FinancialEntryKind, T> {
-	return Object.fromEntries(financialEntryKinds.map((k) => [k, value()])) as Record<
-		FinancialEntryKind,
-		T
-	>;
-}
-
 export async function getAnnualReport(range: ReportRange = {}): Promise<AnnualReport> {
 	const window = ledgerWindow(range);
 
@@ -96,30 +67,13 @@ export async function getAnnualReport(range: ReportRange = {}): Promise<AnnualRe
 		getRoomUseTotals(range)
 	]);
 
-	const byKind = emptyByKind<CategoryLine[]>(() => []);
-	const totalsByKind = emptyByKind<number>(() => 0);
-	for (const entry of entries) {
-		byKind[entry.kind].push({ category: entry.category, totalCents: entry.totalCents });
-		totalsByKind[entry.kind] += entry.totalCents;
-	}
-	for (const kind of financialEntryKinds) {
-		byKind[kind].sort((a, b) => b.totalCents - a.totalCents);
-	}
-
 	return {
 		range,
 		coverage: {
 			startsAt,
 			complete: startsAt === null || window.from >= startsAt
 		},
-		money: {
-			byKind,
-			totalsByKind,
-			// A sum, not a difference: `financialEntry.amountCents` is signed
-			// ("positive into the collective, negative out"), so a `spent` total is
-			// already negative and subtracting it added the spend instead (#1235).
-			netCents: totalsByKind.earned + totalsByKind.spent
-		},
+		money: toMoneySection(entries),
 		volunteering: { totals, contributed },
 		membership,
 		events,
