@@ -61,7 +61,9 @@ applied directly.
   does not exist and the notice bounces harmlessly; for a real hijack attempt it
   is the member's early warning. It is a notification, not a confirmation step —
   requiring the old mailbox to approve would defeat the entire purpose, since
-  the old address is exactly the one that does not work.
+  the old address is exactly the one that does not work. Its one button is a
+  `mailto:contact@corvmc.org` asking staff to reverse the change (#1370);
+  reversing it is a staff action, not a link.
 - **The token is short-lived and single-use.** 24 hours, consumed on first
   successful use, and invalidated if a second pending change is created for the
   same user. Unlike the unsubscribe token (deliberately eternal, unsigned

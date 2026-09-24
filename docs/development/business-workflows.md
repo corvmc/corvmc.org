@@ -1475,7 +1475,9 @@ A member typed their address wrong at signup and cannot sign in. Staff open thei
 confirmation link goes to the new address, and the card shows the pending request with
 **Resend** and **Cancel request**. When the member clicks the link and presses **Confirm**, the
 address is swapped and marked verified, every session is signed out, and the old address gets
-a notice naming the new one, masked. The password is untouched.
+a notice naming the new one, masked, with a button that emails contact@corvmc.org asking staff
+to reverse the change. There is no one-click undo: a reversal is staff proposing the old address
+again through the same card. The password is untouched.
 
 Staff never move the login on their own say-so. The address is the credential, and a panel
 that could set it directly could point any account at a mailbox staff control and reset the
