@@ -37,6 +37,8 @@ const READERS: Record<string, string> = {
 
 	'venue.consoleChannels': 'src/lib/remote/rider.remote.ts',
 
+	'ballot.memberOfRecordDays': 'src/lib/server/ballot/ballot-service.ts',
+
 	// The footer and /contact, via `getConfigsByPrefix('org')`.
 	'org.addressStreet': 'src/lib/remote/settings.remote.ts',
 	'org.addressCity': 'src/lib/remote/settings.remote.ts',

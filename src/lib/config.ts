@@ -1509,6 +1509,38 @@ export function formatVolunteerHours(minutes: number): string {
 // Suggestions
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Ballots — see docs/specs/formal-balloting-spec.md
+// ---------------------------------------------------------------------------
+
+/** `group`: a committee's roster, recorded. `member`: members of record, secret. */
+export const ballotKinds = ['group', 'member'] as const;
+export type BallotKind = (typeof ballotKinds)[number];
+
+export const ballotKindLabels: Record<BallotKind, string> = {
+	group: 'Committee ballot',
+	member: 'Member-wide ballot'
+};
+
+/** Derived from timestamps by `ballotStatusOf`; never stored. */
+export const ballotStatuses = ['draft', 'open', 'closed', 'certified', 'cancelled'] as const;
+export type BallotStatus = (typeof ballotStatuses)[number];
+
+export const ballotStatusLabels: Record<BallotStatus, string> = {
+	draft: 'Draft',
+	open: 'Open',
+	closed: 'Awaiting certification',
+	certified: 'Certified',
+	cancelled: 'Cancelled'
+};
+
+export const BALLOT_TITLE_MAX = 200;
+export const BALLOT_DESCRIPTION_MAX = 4000;
+export const BALLOT_OPTION_LABEL_MAX = 200;
+export const BALLOT_OPTIONS_MIN = 2;
+export const BALLOT_OPTIONS_MAX = 10;
+export const BALLOT_REASON_MAX = 500;
+
 export const suggestionCategories = [
 	'website_tools',
 	'gear_equipment',
@@ -2045,6 +2077,8 @@ export const capabilities = {
 	marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send'],
 	moderation: ['reviewFlags', 'setStanding'],
 	suggestion: ['read', 'respond', 'review'],
+	// Member-wide ballots, and the staff fallback on committee ballots (#1635).
+	ballot: ['manage'],
 	listing: ['review'],
 	// The staff music tools. Refunding a sale is `finance.refund`, not a music
 	// action: it moves money, and the treasurer is who does that.

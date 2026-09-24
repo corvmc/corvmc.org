@@ -69,5 +69,10 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 		}
 		case 'incident.deleted':
 			return `Deleted after ${entry.details.retentionYears} years (occurred ${entry.details.occurredAt.slice(0, 10)})`;
+		case 'ballot.elector_overridden': {
+			const d = entry.details;
+			const verb = d.include ? 'Added to' : 'Removed from';
+			return `${verb} the roll for “${d.ballotTitle}”: “${d.reason}”`;
+		}
 	}
 }

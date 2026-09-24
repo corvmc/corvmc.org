@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "0ae6413c-d2fc-4854-806a-1841e99f7dd0",
+  "id": "c2b0e867-76f1-410f-894d-1835660aeb02",
   "prevIds": [
-    "ee334ba3-1d1a-47b2-8c38-e66c88db21a2"
+    "0ae6413c-d2fc-4854-806a-1841e99f7dd0"
   ],
   "ddl": [
     {
@@ -496,6 +496,34 @@
     },
     {
       "name": "renewal",
+      "entityType": "tables"
+    },
+    {
+      "name": "ballot",
+      "entityType": "tables"
+    },
+    {
+      "name": "ballot_choice",
+      "entityType": "tables"
+    },
+    {
+      "name": "ballot_elector",
+      "entityType": "tables"
+    },
+    {
+      "name": "ballot_elector_override",
+      "entityType": "tables"
+    },
+    {
+      "name": "ballot_option",
+      "entityType": "tables"
+    },
+    {
+      "name": "ballot_participation",
+      "entityType": "tables"
+    },
+    {
+      "name": "ballot_recorded_vote",
       "entityType": "tables"
     },
     {
@@ -13949,6 +13977,416 @@
       "table": "renewal"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "description",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "closes_at",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "certifier_id",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_id",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "opened_at",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "electorate_size",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_at",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancel_reason",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "certified_at",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "certified_by_id",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "certified_result",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "result_published_at",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "open_notice_sent_at",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ballot_id",
+      "entityType": "columns",
+      "table": "ballot_choice"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "option_id",
+      "entityType": "columns",
+      "table": "ballot_choice"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "votes",
+      "entityType": "columns",
+      "table": "ballot_choice"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ballot_id",
+      "entityType": "columns",
+      "table": "ballot_elector"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "ballot_elector"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "ballot_elector_override"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ballot_id",
+      "entityType": "columns",
+      "table": "ballot_elector_override"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "ballot_elector_override"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "include",
+      "entityType": "columns",
+      "table": "ballot_elector_override"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reason",
+      "entityType": "columns",
+      "table": "ballot_elector_override"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_id",
+      "entityType": "columns",
+      "table": "ballot_elector_override"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "ballot_elector_override"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "ballot_option"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ballot_id",
+      "entityType": "columns",
+      "table": "ballot_option"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "label",
+      "entityType": "columns",
+      "table": "ballot_option"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "position",
+      "entityType": "columns",
+      "table": "ballot_option"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ballot_id",
+      "entityType": "columns",
+      "table": "ballot_participation"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "ballot_participation"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ballot_id",
+      "entityType": "columns",
+      "table": "ballot_recorded_vote"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "ballot_recorded_vote"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "option_id",
+      "entityType": "columns",
+      "table": "ballot_recorded_vote"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "ballot_recorded_vote"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -17505,6 +17943,261 @@
     },
     {
       "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "ballot"
+    },
+    {
+      "columns": [
+        "certifier_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_ballot_certifier_id_user_id_fk",
+      "entityType": "fks",
+      "table": "ballot"
+    },
+    {
+      "columns": [
+        "created_by_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_ballot_created_by_id_user_id_fk",
+      "entityType": "fks",
+      "table": "ballot"
+    },
+    {
+      "columns": [
+        "certified_by_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_ballot_certified_by_id_user_id_fk",
+      "entityType": "fks",
+      "table": "ballot"
+    },
+    {
+      "columns": [
+        "ballot_id"
+      ],
+      "tableTo": "ballot",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_choice_ballot_id_ballot_id_fk",
+      "entityType": "fks",
+      "table": "ballot_choice"
+    },
+    {
+      "columns": [
+        "option_id"
+      ],
+      "tableTo": "ballot_option",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_choice_option_id_ballot_option_id_fk",
+      "entityType": "fks",
+      "table": "ballot_choice"
+    },
+    {
+      "columns": [
+        "ballot_id"
+      ],
+      "tableTo": "ballot",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_elector_ballot_id_ballot_id_fk",
+      "entityType": "fks",
+      "table": "ballot_elector"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_elector_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "ballot_elector"
+    },
+    {
+      "columns": [
+        "ballot_id"
+      ],
+      "tableTo": "ballot",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_elector_override_ballot_id_ballot_id_fk",
+      "entityType": "fks",
+      "table": "ballot_elector_override"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_elector_override_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "ballot_elector_override"
+    },
+    {
+      "columns": [
+        "created_by_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_ballot_elector_override_created_by_id_user_id_fk",
+      "entityType": "fks",
+      "table": "ballot_elector_override"
+    },
+    {
+      "columns": [
+        "ballot_id"
+      ],
+      "tableTo": "ballot",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_option_ballot_id_ballot_id_fk",
+      "entityType": "fks",
+      "table": "ballot_option"
+    },
+    {
+      "columns": [
+        "ballot_id"
+      ],
+      "tableTo": "ballot",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_participation_ballot_id_ballot_id_fk",
+      "entityType": "fks",
+      "table": "ballot_participation"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_participation_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "ballot_participation"
+    },
+    {
+      "columns": [
+        "ballot_id"
+      ],
+      "tableTo": "ballot",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_recorded_vote_ballot_id_ballot_id_fk",
+      "entityType": "fks",
+      "table": "ballot_recorded_vote"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_recorded_vote_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "ballot_recorded_vote"
+    },
+    {
+      "columns": [
+        "option_id"
+      ],
+      "tableTo": "ballot_option",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_ballot_recorded_vote_option_id_ballot_option_id_fk",
+      "entityType": "fks",
+      "table": "ballot_recorded_vote"
+    },
+    {
+      "columns": [
         "role_id",
         "user_id"
       ],
@@ -17542,6 +18235,46 @@
       "name": "volunteer_role_certification_pk",
       "entityType": "pks",
       "table": "volunteer_role_certification"
+    },
+    {
+      "columns": [
+        "ballot_id",
+        "option_id"
+      ],
+      "nameExplicit": false,
+      "name": "ballot_choice_pk",
+      "entityType": "pks",
+      "table": "ballot_choice"
+    },
+    {
+      "columns": [
+        "ballot_id",
+        "user_id"
+      ],
+      "nameExplicit": false,
+      "name": "ballot_elector_pk",
+      "entityType": "pks",
+      "table": "ballot_elector"
+    },
+    {
+      "columns": [
+        "ballot_id",
+        "user_id"
+      ],
+      "nameExplicit": false,
+      "name": "ballot_participation_pk",
+      "entityType": "pks",
+      "table": "ballot_participation"
+    },
+    {
+      "columns": [
+        "ballot_id",
+        "user_id"
+      ],
+      "nameExplicit": false,
+      "name": "ballot_recorded_vote_pk",
+      "entityType": "pks",
+      "table": "ballot_recorded_vote"
     },
     {
       "columns": [
@@ -18594,6 +19327,33 @@
       "nameExplicit": false,
       "name": "renewal_pk",
       "table": "renewal",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "ballot_pk",
+      "table": "ballot",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "ballot_elector_override_pk",
+      "table": "ballot_elector_override",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "ballot_option_pk",
+      "table": "ballot_option",
       "entityType": "pks"
     },
     {
@@ -22638,6 +23398,84 @@
     },
     {
       "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "ballot_group_idx",
+      "entityType": "indexes",
+      "table": "ballot"
+    },
+    {
+      "columns": [
+        {
+          "value": "closes_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "ballot_closes_at_idx",
+      "entityType": "indexes",
+      "table": "ballot"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "ballot_elector_user_idx",
+      "entityType": "indexes",
+      "table": "ballot_elector"
+    },
+    {
+      "columns": [
+        {
+          "value": "ballot_id",
+          "isExpression": false
+        },
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "ballot_elector_override_uq",
+      "entityType": "indexes",
+      "table": "ballot_elector_override"
+    },
+    {
+      "columns": [
+        {
+          "value": "ballot_id",
+          "isExpression": false
+        },
+        {
+          "value": "position",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "ballot_option_position_uq",
+      "entityType": "indexes",
+      "table": "ballot_option"
+    },
+    {
+      "columns": [
         "name",
         "guard_name"
       ],
@@ -23142,6 +23980,24 @@
       "name": "packing_item_quantity_bounded",
       "entityType": "checks",
       "table": "packing_item"
+    },
+    {
+      "value": "(kind = 'group') = (group_id is not null)",
+      "name": "ballot_group_iff_group_kind",
+      "entityType": "checks",
+      "table": "ballot"
+    },
+    {
+      "value": "(cancelled_at is null) = (cancel_reason is null)",
+      "name": "ballot_cancel_has_reason",
+      "entityType": "checks",
+      "table": "ballot"
+    },
+    {
+      "value": "votes >= 0",
+      "name": "ballot_choice_votes_nonnegative",
+      "entityType": "checks",
+      "table": "ballot_choice"
     }
   ],
   "renames": []
