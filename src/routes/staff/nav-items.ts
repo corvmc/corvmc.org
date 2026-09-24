@@ -43,6 +43,7 @@ export type StaffNavKey =
 	| 'volunteer-people'
 	| 'volunteer-setup'
 	| 'volunteer-duty-lists'
+	| 'volunteer-recurring'
 	| 'volunteer-report'
 	| 'reservations'
 	| 'recurring'
@@ -192,6 +193,12 @@ export const staffNavSections: StaffNavSection[] = [
 						capability: 'volunteer.read',
 						label: 'Duty Lists',
 						href: resolve('/staff/volunteer/duty-lists')
+					},
+					{
+						key: 'volunteer-recurring',
+						capability: 'volunteer.read',
+						label: 'Recurring Work',
+						href: resolve('/staff/volunteer/recurring')
 					},
 					{
 						key: 'volunteer-report',

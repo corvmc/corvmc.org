@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "b09fe92e-e906-43f8-8508-1c634c07e028",
+  "id": "85cfab98-b756-4d19-af7c-8e8a10aed8e4",
   "prevIds": [
-    "6ca56388-dcc5-4513-ac4a-0bc3f88b7b40"
+    "b09fe92e-e906-43f8-8508-1c634c07e028"
   ],
   "ddl": [
     {
@@ -284,6 +284,10 @@
     },
     {
       "name": "duty_list_item",
+      "entityType": "tables"
+    },
+    {
+      "name": "maintenance_schedule",
       "entityType": "tables"
     },
     {
@@ -8046,6 +8050,116 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "maintenance_schedule"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "maintenance_schedule"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "volunteer_role_id",
+      "entityType": "columns",
+      "table": "maintenance_schedule"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "maintenance_schedule"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "maintenance_schedule"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "1",
+      "generated": null,
+      "name": "capacity",
+      "entityType": "columns",
+      "table": "maintenance_schedule"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "interval_days",
+      "entityType": "columns",
+      "table": "maintenance_schedule"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "retired_at",
+      "entityType": "columns",
+      "table": "maintenance_schedule"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "maintenance_schedule"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "maintenance_schedule"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "maintenance_schedule"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "member_certification"
     },
     {
@@ -9165,6 +9279,16 @@
       "default": null,
       "generated": null,
       "name": "duty_list_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "maintenance_schedule_id",
       "entityType": "columns",
       "table": "work_order"
     },
@@ -14110,6 +14234,51 @@
     },
     {
       "columns": [
+        "volunteer_role_id"
+      ],
+      "tableTo": "volunteer_role",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "nameExplicit": false,
+      "name": "fk_maintenance_schedule_volunteer_role_id_volunteer_role_id_fk",
+      "entityType": "fks",
+      "table": "maintenance_schedule"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_maintenance_schedule_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "maintenance_schedule"
+    },
+    {
+      "columns": [
+        "created_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_maintenance_schedule_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "maintenance_schedule"
+    },
+    {
+      "columns": [
         "user_id"
       ],
       "tableTo": "user",
@@ -14555,6 +14724,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_volunteer_shift_duty_list_id_duty_list_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        "maintenance_schedule_id"
+      ],
+      "tableTo": "maintenance_schedule",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_work_order_maintenance_schedule_id_maintenance_schedule_id_fk",
       "entityType": "fks",
       "table": "work_order"
     },
@@ -16000,6 +16184,15 @@
       "nameExplicit": false,
       "name": "duty_list_item_pk",
       "table": "duty_list_item",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "maintenance_schedule_pk",
+      "table": "maintenance_schedule",
       "entityType": "pks"
     },
     {
@@ -19058,6 +19251,20 @@
     {
       "columns": [
         {
+          "value": "maintenance_schedule_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "maintenance_schedule_id is not null and resolved_at is null and cancelled_at is null",
+      "origin": "manual",
+      "name": "uq_work_order_open_occurrence",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
           "value": "reservation_id",
           "isExpression": false
         }
@@ -20368,6 +20575,18 @@
       "name": "duty_list_item_capacity_positive",
       "entityType": "checks",
       "table": "duty_list_item"
+    },
+    {
+      "value": "interval_days > 0",
+      "name": "maintenance_schedule_interval_positive",
+      "entityType": "checks",
+      "table": "maintenance_schedule"
+    },
+    {
+      "value": "capacity > 0",
+      "name": "maintenance_schedule_capacity_positive",
+      "entityType": "checks",
+      "table": "maintenance_schedule"
     },
     {
       "value": "(revoked_at IS NULL) = (revoked_reason IS NULL)",

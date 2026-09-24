@@ -263,9 +263,9 @@ export const volunteerRole = sqliteTable('volunteer_role', {
  * decided to do about it — or work nobody requested at all. Its scheduled
  * state is a **shift**: where an interest says someone *would* do a job, a
  * shift is the job on a particular evening, and member-facing copy keeps that
- * word. Staff create them; members claim them. There is no recurrence: a
- * standing weekly slot is made by duplicating last week's, which keeps the
- * table free of series bookkeeping until something actually needs it.
+ * word. Staff create them; members claim them. A standing weekly slot is
+ * made by duplicating last week's; recurring facility work is a
+ * `maintenanceSchedule`, which writes one occurrence at a time.
  *
  * Renamed from `volunteer_shift`. Index and check names keep the old prefix:
  * SQLite carries them through `RENAME TO` for free, and renaming them would
@@ -345,6 +345,13 @@ export const workOrder = sqliteTable(
 		// copy has "no link back".
 		dutyListId: text('duty_list_id').references(() => dutyList.id, { onDelete: 'set null' }),
 
+		// The recurring schedule this occurrence belongs to. Closing it — resolved
+		// or called off — is what writes the next one; see `maintenanceSchedule`.
+		maintenanceScheduleId: text('maintenance_schedule_id').references(
+			() => maintenanceSchedule.id,
+			{ onDelete: 'set null' }
+		),
+
 		/** How many people are needed. Claims beyond this are refused. */
 		capacity: integer('capacity').notNull().default(1),
 
@@ -397,6 +404,13 @@ export const workOrder = sqliteTable(
 		index('volunteer_shift_event_idx').on(t.eventId),
 		index('volunteer_shift_asset_idx').on(t.assetId),
 		index('work_order_project_idx').on(t.projectId),
+		// At most one open occurrence per schedule, stated by the database: this is
+		// what makes generate-on-close unable to pile up duplicates.
+		uniqueIndex('uq_work_order_open_occurrence')
+			.on(t.maintenanceScheduleId)
+			.where(
+				sql`maintenance_schedule_id is not null and resolved_at is null and cancelled_at is null`
+			),
 		// The orientation cascade: "which live work orders staff this booking".
 		index('work_order_reservation_idx').on(t.reservationId),
 		// The coordinator's queue: work that needs somebody on it.
@@ -1076,6 +1090,47 @@ export const dutyListItem = sqliteTable(
 );
 
 /**
+ * Recurring facility work — a monthly deep clean, a quarterly PA check.
+ *
+ * **Generate-on-close**, not a window materializer: the next work order is
+ * written only when the open one is resolved or called off, due `intervalDays`
+ * after that close. Nothing is scheduled ahead, so it cannot drift or pile up
+ * unclosed duplicates. See docs/specs/project-spec.md#recurring-work.
+ */
+export const maintenanceSchedule = sqliteTable(
+	'maintenance_schedule',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		/** Also the title of every work order it writes. */
+		name: text('name').notNull(),
+		volunteerRoleId: text('volunteer_role_id')
+			.notNull()
+			.references(() => volunteerRole.id, { onDelete: 'restrict' }),
+		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
+		notes: text('notes'),
+		capacity: integer('capacity').notNull().default(1),
+		intervalDays: integer('interval_days').notNull(),
+		/** Retired writes nothing further; the open occurrence stays as real work. */
+		retiredAt: integer('retired_at', { mode: 'timestamp' }),
+		createdByUserId: text('created_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	() => [
+		check('maintenance_schedule_interval_positive', sql`interval_days > 0`),
+		check('maintenance_schedule_capacity_positive', sql`capacity > 0`)
+	]
+);
+
+/**
  * Whether a member has been shown around the space, and when.
  *
  * **Timestamps, not a status column** — the state is derived by `stateOf()` in
@@ -1176,4 +1231,5 @@ export type MemberCertification = typeof memberCertification.$inferSelect;
 export type WorkTask = typeof workTask.$inferSelect;
 export type DutyList = typeof dutyList.$inferSelect;
 export type DutyListItem = typeof dutyListItem.$inferSelect;
+export type MaintenanceSchedule = typeof maintenanceSchedule.$inferSelect;
 export type MemberOrientation = typeof memberOrientation.$inferSelect;

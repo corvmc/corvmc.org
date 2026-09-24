@@ -92,6 +92,7 @@ import { STYLE_PERSONAS, seedStylePersonaHistory, seedStylePersonas } from './se
 import { seedSuggestions } from './seed/suggestions';
 import { seedModerationAppeals } from './seed/moderation-appeals';
 import { seedProjects } from './seed/projects';
+import { seedMaintenanceSchedules } from './seed/maintenance';
 import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
 import { seedPacking } from './seed/packing';
@@ -269,6 +270,7 @@ async function main() {
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
+	const maintenance = await seedMaintenanceSchedules(adminUser.id);
 	// Needs the bands and somebody to have bought something. Writes real audio
 	// into the local private bucket, so it is the one seeder that does I/O
 	// outside D1 — see its header for why rows alone are not enough.
@@ -375,6 +377,7 @@ async function main() {
 	console.log(
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
 	);
+	console.log(`  ${maintenance.schedules} recurring work schedules (1 overdue, 1 retired)`);
 	console.log(
 		`  ${productions.productions} productions covering every status, ${productions.withoutProduction} CMC shows deliberately without one`
 	);

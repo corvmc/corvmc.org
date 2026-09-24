@@ -79,6 +79,8 @@ export const tableOrder = [
 	'duty_list',
 	// References duty_list and volunteer_role.
 	'duty_list_item',
+	// References volunteer_role, project and user; work_order points back at it.
+	'maintenance_schedule',
 	// references volunteer_role + event + duty_list + reservation, and is
 	// referenced by volunteer_signup, volunteer_hour_log, work_task and
 	// member_orientation, so it sits between them.

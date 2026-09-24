@@ -1274,6 +1274,8 @@ export const VOLUNTEER_SHIFT_MAX_CAPACITY = 50;
 export const VOLUNTEER_SHIFT_NOTES_MAX = 1000;
 /** A shift's own name, for one that hangs off no event. Short: it is a heading. */
 export const VOLUNTEER_SHIFT_TITLE_MAX = 100;
+/** The longest a recurring work order may wait between occurrences: a year and a day. */
+export const MAINTENANCE_INTERVAL_MAX_DAYS = 366;
 
 // ---------------------------------------------------------------------------
 // Orientation

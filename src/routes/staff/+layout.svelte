@@ -90,6 +90,7 @@
 		'volunteer-people': IconUsersGroup,
 		'volunteer-setup': IconListDetails,
 		'volunteer-duty-lists': IconClipboardList,
+		'volunteer-recurring': IconRepeat,
 		'volunteer-report': IconReportAnalytics,
 		reservations: IconClipboardCheck,
 		recurring: IconRepeat,

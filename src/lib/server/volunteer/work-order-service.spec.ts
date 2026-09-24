@@ -9,13 +9,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 let selectResult: unknown[] = [];
+// Per-await results, consumed first; `selectResult` answers once it is empty.
+let selectQueue: unknown[][] = [];
+const batch = vi.fn(async (stmts: unknown[]) => stmts.map(() => [{ id: 'shift-1' }]));
 let chainCalls: { method: string; args: unknown[] }[] = [];
 
 function chainable() {
 	const proxy: any = new Proxy(() => proxy, {
 		get(_, prop) {
 			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => resolve(selectResult);
+				return (resolve: (v: unknown[]) => void) => resolve(selectQueue.shift() ?? selectResult);
 			}
 			return (...args: unknown[]) => {
 				chainCalls.push({ method: String(prop), args });
@@ -31,7 +34,8 @@ vi.mock('$lib/server/db', () => ({
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => chainable()),
 		update: vi.fn(() => chainable()),
-		delete: vi.fn(() => chainable())
+		delete: vi.fn(() => chainable()),
+		batch: (stmts: unknown[]) => batch(stmts)
 	}
 }));
 
@@ -84,6 +88,7 @@ function shiftRow(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
 	vi.clearAllMocks();
 	selectResult = [];
+	selectQueue = [];
 	chainCalls = [];
 });
 
@@ -381,5 +386,76 @@ describe('work orders', () => {
 				endsAt: '2026-06-02T22:00'
 			})
 		).rejects.toThrow();
+	});
+});
+
+describe('closing a recurring occurrence', () => {
+	const schedule = {
+		id: 'ms-1',
+		name: 'Monthly deep clean',
+		volunteerRoleId: 'role-1',
+		projectId: null,
+		notes: null,
+		capacity: 1,
+		intervalDays: 30,
+		retiredAt: null
+	};
+	const DAY = 86_400_000;
+
+	function nextOccurrence() {
+		return chainCalls
+			.filter((c) => c.method === 'values')
+			.map((c) => c.args[0] as Record<string, unknown>)
+			.find((v) => v.maintenanceScheduleId === 'ms-1');
+	}
+
+	it('writes the next one in the same batch as the resolve, due one interval later', async () => {
+		selectQueue = [
+			[shiftRow({ startsAt: null, endsAt: null, resolvedAt: null, maintenanceScheduleId: 'ms-1' })],
+			[schedule]
+		];
+
+		await resolveWorkOrder('shift-1', { resolvedByUserId: 'staff-1' });
+
+		expect(batch).toHaveBeenCalledTimes(1);
+		const resolvedAt = chainCalls
+			.filter((c) => c.method === 'set')
+			.map((c) => c.args[0] as Record<string, unknown>)
+			.find((v) => v.resolvedAt)!.resolvedAt as Date;
+		expect(nextOccurrence()).toMatchObject({
+			title: 'Monthly deep clean',
+			dueAt: new Date(resolvedAt.getTime() + 30 * DAY)
+		});
+	});
+
+	it('writes nothing further once the schedule is retired', async () => {
+		selectQueue = [
+			[shiftRow({ startsAt: null, endsAt: null, resolvedAt: null, maintenanceScheduleId: 'ms-1' })],
+			[]
+		];
+
+		await resolveWorkOrder('shift-1', { resolvedByUserId: 'staff-1' });
+
+		expect(nextOccurrence()).toBeUndefined();
+	});
+
+	// Skipping this month is still a close: the next one is owed from today.
+	it('writes the next one when the occurrence is called off', async () => {
+		selectQueue = [[shiftRow({ maintenanceScheduleId: 'ms-1' })], [schedule]];
+
+		await cancelShift('shift-1', 'staff-1');
+
+		expect(batch).toHaveBeenCalledTimes(1);
+		expect(nextOccurrence()).toMatchObject({ maintenanceScheduleId: 'ms-1' });
+	});
+
+	it('leaves an ordinary shift out of it', async () => {
+		selectQueue = [[shiftRow()]];
+		selectResult = [{ id: 'shift-1' }];
+
+		await cancelShift('shift-1', 'staff-1');
+
+		expect(batch).not.toHaveBeenCalled();
+		expect(nextOccurrence()).toBeUndefined();
 	});
 });
