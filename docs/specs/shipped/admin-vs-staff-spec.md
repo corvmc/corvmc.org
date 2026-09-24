@@ -242,7 +242,7 @@ Three entries from the first draft of this table did not survive contact with th
   leaves it. `config.spec.ts` asserts no named position holds an admin-only capability, which is
   how the contradiction surfaced.
 - **`audit.read` and `user.setEmail` were not in the vocabulary at first.** There was no global
-  audit view to guard yet ([audit-log-spec.md](../audit-log-spec.md), #1374) and no email-change path
+  audit view to guard yet ([audit-log-spec.md](audit-log-spec.md), #1374) and no email-change path
   ([staff-email-change-spec.md](staff-email-change-spec.md) has since shipped, adding
   `user.setEmail`), so shipping either early would have been config describing a guard that did not exist — the exact failure this spec cites the
   spatie tables for. Each of those specs adds its capability when it builds its guard, and

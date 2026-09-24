@@ -1,11 +1,10 @@
 # Staff Audit Log — Spec
 
-> **Status: first phase shipped (#1351).** Built: the `audit_log` table, `recordAuditEntry`,
-> `listAuditEntriesForSubject`, the `user.*` and `credits.adjusted` writes, and the History
-> card on `/staff/users/[id]`. Behavior now lives in business-workflows §16. Not yet built:
-> the global `/staff/audit` view (#1374), reservation and band actions (#1375), retention
-> (#1376), and ban/unban (#1377). Open questions 2–4 were answered in #1380, and by recording
-> successes only and using a "System" actor.
+> **Status: shipped (#1131).** The table, `recordAuditEntry`, the History card on
+> `/staff/users/[id]` (#1351), the global `/staff/audit` view (#1374), reservation and band
+> actions (#1375), ban/unban (#1377) and the retention sweep (#1376). Behavior lives in
+> business-workflows §16. Open question 1 was ruled on 2026-09-24 (#1376); 2–4 were answered in
+> #1380, and by recording successes only and using a "System" actor.
 
 ## Purpose
 
@@ -161,14 +160,17 @@ Rendering the summary line is pure display logic and belongs in
 - Pruning runs from the existing scheduled-job path, deleting non-purge entries
   older than the window in batches. It is the only code permitted to delete from
   `audit_log`.
+- **Once past the window, a `user.purged` row loses `details.name`,
+  `details.email` and its subject label** (owner ruling on #1376). The row stays
+  as evidence that a deletion happened; who was deleted does not.
 
 ## Open questions
 
 1. **Does an erasure request cover the audit log?** A member asking to be
    deleted arguably wants the `user.purged` row gone too, but that row is the
    evidence the deletion happened. Likely answer: keep the row, drop the
-   `details` payload's name/email after the retention window. Needs a decision
-   before the retention job is written.
+   `details` payload's name/email after the retention window. **Decided
+   (#1376): exactly that.**
 2. **Bulk actions: one row or N?** `bulkDeactivateUsers` over 20 users could
    write 20 rows (queryable per subject) or 1 (readable as an operator action).
    Leaning N rows with a shared `details.batchId` so both views are possible,

@@ -1099,7 +1099,7 @@ mostly produces a ritual — reopen, fix, re-settle — that records less than s
 the edit would, because the intermediate states are gone by the end of it. A correction two
 days later is normal here, not an exception to be gated.
 
-So settlement edits are appended to the [staff audit log](audit-log-spec.md): actor,
+So settlement edits are appended to the [staff audit log](shipped/audit-log-spec.md): actor,
 timestamp, field, before, after. That gives the thing the freeze was actually protecting —
 an answer to "who changed the band pool, and from what" — without the ceremony. The
 production keeps its original `settledAt` / `settledByUserId`; the log carries everything
@@ -1505,7 +1505,7 @@ nothing at all, since they have no panel; their terms travel by email as they do
    time.
 2. **No `createdBy` on `band_profile`.** Staff create touring-act records, so "who stubbed
    this?" has a narrow enough answer set that a dedicated column is not worth carrying.
-   When it does need answering, it belongs in the [staff audit log](audit-log-spec.md)
+   When it does need answering, it belongs in the [staff audit log](shipped/audit-log-spec.md)
    alongside every other staff action, not as a one-off column on one table. This also
    keeps the `band_profile` rebuild smaller.
 3. **`venue.isPrimary` stays a column.** A KV config key naming the primary venue id would

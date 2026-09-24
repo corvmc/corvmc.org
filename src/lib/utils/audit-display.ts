@@ -53,7 +53,9 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 				? 'Reactivated the account — membership had lapsed'
 				: 'Reactivated the account';
 		case 'user.purged':
-			return `Permanently deleted ${entry.details.name} (${entry.details.email})`;
+			return entry.details.name === undefined
+				? 'Permanently deleted an account (name and email removed after 24 months)'
+				: `Permanently deleted ${entry.details.name} (${entry.details.email})`;
 		case 'user.banned':
 			return `Banned the account: “${entry.details.reason}”`;
 		case 'user.unbanned':
