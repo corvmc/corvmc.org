@@ -481,6 +481,7 @@ function shiftRowsQuery() {
 export async function createWorkOrder(data: {
 	volunteerRoleId: string;
 	assetId?: string | null;
+	projectId?: string | null;
 	notes?: string | null;
 	/** A deadline, not a window. */
 	dueAt?: Date | null;
@@ -503,6 +504,7 @@ export async function createWorkOrder(data: {
 		.values({
 			volunteerRoleId: data.volunteerRoleId,
 			assetId: data.assetId || null,
+			projectId: data.projectId || null,
 			// Both null: the CHECK requires either a whole window or none, and this
 			// is the "none" case by definition.
 			startsAt: null,
