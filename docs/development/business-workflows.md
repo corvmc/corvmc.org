@@ -1416,8 +1416,7 @@ between the two features: walking through the easy door furnishes the rider on t
 
 ## 16. The staff audit log: who changed a member's account
 
-Spec: [specs/audit-log-spec.md](../specs/audit-log-spec.md) (first phase shipped; the rest is
-tracked on #1131)
+Spec: [specs/audit-log-spec.md](../specs/shipped/audit-log-spec.md)
 
 ### The story
 
@@ -1444,6 +1443,11 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
 
 - `audit_log` — append-only. `actor_user_id` is `set null` on delete, and the actor's name and
   email are copied in. `subject_id` is not a foreign key, so a purge's own row survives it.
+- **Retention:** `/api/cron/sweep-audit-log`, in the daily batch, runs `sweepAuditLog` in
+  `src/lib/server/audit/audit-retention.ts`. It deletes rows older than 24 months in batches of
+  500, except `user.purged`. Those rows are kept, but lose `details.name`, `details.email` and
+  the subject label once they are past the window. No other code deletes from the table, and a
+  spec beside the sweep fails on any code that does.
 
 ### Where it breaks
 

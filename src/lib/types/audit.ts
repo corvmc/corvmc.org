@@ -52,7 +52,8 @@ export interface AuditDetailsByAction {
 		batchId?: string;
 	};
 	'user.reactivated': { subscription: 'resumed' | 'active' | 'lapsed' | 'none' };
-	'user.purged': { name: string; email: string };
+	/** Both are stripped once the row is past the 24-month retention window (#1376). */
+	'user.purged': { name?: string; email?: string };
 	/** A ban also writes `user.deactivated`, which carries what the offboarding took. */
 	'user.banned': { reason: string };
 	'user.unbanned': Record<string, never>;

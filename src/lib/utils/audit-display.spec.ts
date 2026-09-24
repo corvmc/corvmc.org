@@ -122,6 +122,13 @@ describe('summarizeAuditEntry', () => {
 		).toBe('Permanently deleted Jordan (j@example.com)');
 	});
 
+	// The retention sweep strips both after 24 months (#1376); the row stays.
+	it('still says an account was purged once its name and email are stripped', () => {
+		expect(summarizeAuditEntry(entry('user.purged', {}))).toBe(
+			'Permanently deleted an account (name and email removed after 24 months)'
+		);
+	});
+
 	it('signs a credit adjustment and quotes the reason', () => {
 		expect(
 			summarizeAuditEntry(
