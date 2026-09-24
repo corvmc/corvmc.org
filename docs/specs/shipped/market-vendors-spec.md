@@ -3,7 +3,7 @@
 > **Shipped** (#609). How it behaves now is in
 > [business-workflows §18](../../development/business-workflows.md). This file keeps the design.
 
-Tracking issue: #609. Decisions left open: #1502 (table fees), #1503 (who approves), #1504 (what
+Tracking issue: #609. Decisions left open: #1503 (who approves), #1504 (what
 the public sees). Deferred: #1505 (day-of check-in, no-shows, invite-back).
 
 ## Purpose
@@ -135,7 +135,7 @@ On a feature branch, `feature/market-vendors`, because the public form is the fe
 
 ## Not in this spec
 
-- Table fees and payment: #1502.
+- Table fees and payment: built in #1502 (see business-workflows §19).
 - Check-in, no-shows, reassignment on the day, and the invite-back record: #1505.
 - A table map or floor plan. `table_label` is free text.
 - A vendor-facing token page. The email thread is the vendor's channel.

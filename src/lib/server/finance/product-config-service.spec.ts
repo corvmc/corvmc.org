@@ -89,7 +89,8 @@ describe('getAllProductConfigs', () => {
 			'ticket',
 			'ticket_contribution',
 			'band_premium',
-			'audio_release'
+			'audio_release',
+			'market_table'
 		]);
 	});
 });

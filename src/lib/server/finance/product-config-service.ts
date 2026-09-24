@@ -25,7 +25,8 @@ export type ProductKey =
 	| 'ticket'
 	| 'ticket_contribution'
 	| 'band_premium'
-	| 'audio_release';
+	| 'audio_release'
+	| 'market_table';
 
 interface ProductDefault {
 	name: string;
@@ -83,6 +84,13 @@ const DEFAULTS: Record<ProductKey, ProductDefault> = {
 		// product per release.
 		unitAmountCents: 0,
 		unitLabel: 'per release'
+	},
+	// Priced per market day by staff (#1502), so this amount is never used either.
+	market_table: {
+		name: 'Market Vendor Table',
+		description: 'A vendor table at a Corvallis Music Collective market day',
+		unitAmountCents: 0,
+		unitLabel: 'per vendor'
 	}
 };
 

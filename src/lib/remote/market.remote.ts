@@ -27,6 +27,12 @@ import {
 	submitApplication,
 	withdrawApplication
 } from '$lib/server/market/market-service';
+import {
+	getVendorFee,
+	startVendorFeeCheckout,
+	VendorFeeAmountError
+} from '$lib/server/market/vendor-fee-service';
+import { mapDomainError } from '$lib/server/errors';
 
 /**
  * Market vendor applications. docs/specs/shipped/market-vendors-spec.md.
@@ -105,6 +111,34 @@ export const submitVendorApplicationForm = form(
 	}
 );
 
+/** The table-fee page an accepted vendor is sent. The vendor id is the bearer (#1502). */
+export const getVendorFeePage = query(z.string().min(1), async (vendorId) => {
+	const fee = await getVendorFee(vendorId);
+	if (!fee) error(404, 'Not found');
+	return fee;
+});
+
+export const payVendorFeeForm = form(
+	z.object({
+		vendorId: z.string().min(1),
+		/** Only a sliding scale asks; left out, the whole fee is charged. */
+		amountCents: z.number().int().min(1, 'Enter an amount').max(1_000_000).optional()
+	}),
+	async (data, issue) => {
+		try {
+			const { checkoutUrl } = await startVendorFeeCheckout(
+				data.vendorId,
+				data.amountCents ?? null,
+				getRequestEvent().url.origin
+			);
+			return { redirectUrl: checkoutUrl };
+		} catch (err) {
+			if (err instanceof VendorFeeAmountError) invalid(issue.amountCents(err.message));
+			mapDomainError(err);
+		}
+	}
+);
+
 // ---------------------------------------------------------------------------
 // Staff
 // ---------------------------------------------------------------------------
@@ -132,13 +166,20 @@ export const openMarketDayForm = form(
 			.regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Pick a date and time')
 			.optional()
 			.or(z.literal('')),
-		tableCount: z.number().int().min(1).max(500).optional()
+		tableCount: z.number().int().min(1).max(500).optional(),
+		/** Per table, in cents. `MoneyField` drops a cleared box, which is a free market. */
+		tableFeeCents: z.number().int().min(0).max(100_000).optional(),
+		slidingScale: z.boolean().optional(),
+		slidingScaleFloorCents: z.number().int().min(0).max(100_000).optional()
 	}),
 	async (data) => {
 		await requireCapability('event.manage');
 		await openMarketDay(data.eventId, {
 			applicationsCloseAt: parseLocalDateTime(data.applicationsCloseAt || undefined),
-			tableCount: data.tableCount ?? null
+			tableCount: data.tableCount ?? null,
+			tableFeeCents: data.tableFeeCents ?? 0,
+			slidingScale: data.slidingScale ?? false,
+			slidingScaleFloorCents: data.slidingScaleFloorCents ?? 0
 		});
 		void getStaffMarketVendors(data.eventId).refresh();
 		return { success: true };

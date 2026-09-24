@@ -1,3 +1,4 @@
+import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { eventListing, publicEventStatuses } from '$lib/server/db/schema/event';
@@ -8,6 +9,7 @@ import { findOrCreateThread } from '$lib/server/inbox/thread-service';
 import { addInboundMessage, addOutboundMessage } from '$lib/server/inbox/message-service';
 import { DomainError } from '$lib/server/domain-error';
 import { marketVendorStatuses, type MarketVendorStatus } from '$lib/config';
+import { refundVendorFee, vendorPayPath } from './vendor-fee-service';
 
 /**
  * Vendor applications for a market day CMC hosts. docs/specs/shipped/market-vendors-spec.md.
@@ -49,6 +51,10 @@ const transitions: Record<MarketVendorStatus, readonly MarketVendorStatus[]> = {
 export interface MarketSetup {
 	applicationsCloseAt: Date | null;
 	tableCount: number | null;
+	/** Per table. Left out, an existing market keeps its fee and a new one is free. */
+	tableFeeCents?: number;
+	slidingScale?: boolean;
+	slidingScaleFloorCents?: number;
 }
 
 function accepting(
@@ -82,6 +88,9 @@ async function loadMarket(eventId: string) {
 			eventId: marketDay.eventId,
 			applicationsCloseAt: marketDay.applicationsCloseAt,
 			tableCount: marketDay.tableCount,
+			tableFeeCents: marketDay.tableFeeCents,
+			slidingScale: marketDay.slidingScale,
+			slidingScaleFloorCents: marketDay.slidingScaleFloorCents,
 			title: eventListing.title,
 			startsAt: eventListing.startsAt,
 			status: eventListing.status
@@ -128,6 +137,9 @@ export async function getMarketDay(eventId: string, now: Date = new Date()) {
 		eventId,
 		applicationsCloseAt: market.applicationsCloseAt,
 		tableCount: market.tableCount,
+		tableFeeCents: market.tableFeeCents,
+		slidingScale: market.slidingScale,
+		slidingScaleFloorCents: market.slidingScaleFloorCents,
 		accepting: accepting(market, market.applicationsCloseAt, now),
 		counts
 	};
@@ -229,6 +241,10 @@ export async function listApplications(eventId: string) {
 			tableLabel: marketVendor.tableLabel,
 			decidedByUserId: marketVendor.decidedByUserId,
 			decidedAt: marketVendor.decidedAt,
+			feeCents: marketVendor.feeCents,
+			paidCents: marketVendor.paidCents,
+			paidAt: marketVendor.paidAt,
+			refundedAt: marketVendor.refundedAt,
 			createdAt: marketVendor.createdAt,
 			contactName: inboxThread.contactName,
 			contactEmail: inboxThread.contactEmail,
@@ -259,7 +275,34 @@ export interface VendorDecision {
 	message: string;
 }
 
-/** Accept or decline, and tell the vendor. Returns the event id, for refreshes. */
+/** What acceptance asks of a vendor: the market's per-table fee and floor, times their tables. */
+async function feeOnAcceptance(vendor: MarketVendor) {
+	const [day] = await db
+		.select({
+			fee: marketDay.tableFeeCents,
+			sliding: marketDay.slidingScale,
+			floor: marketDay.slidingScaleFloorCents
+		})
+		.from(marketDay)
+		.where(eq(marketDay.eventId, vendor.eventId))
+		.limit(1);
+	const feeCents = (day?.fee ?? 0) * vendor.tablesRequested;
+	const floor = day?.sliding ? Math.min(day.floor, day.fee) * vendor.tablesRequested : feeCents;
+	// A refunded fee is spent; accepting again asks for it afresh.
+	return {
+		feeCents,
+		feeFloorCents: floor,
+		...(vendor.refundedAt
+			? { paidCents: null, paidAt: null, stripePaymentRecordId: null, refundedAt: null }
+			: {})
+	};
+}
+
+/**
+ * Accept or decline, and tell the vendor. Returns the event id, for refreshes.
+ * Accepting fixes the fee and adds the pay link to the message; declining a
+ * vendor who paid refunds them first, since CMC is the one cancelling (#1502).
+ */
 export async function decideApplication(
 	vendorId: string,
 	decision: VendorDecision,
@@ -268,21 +311,30 @@ export async function decideApplication(
 	const vendor = await loadVendor(vendorId);
 	assertTransition(vendor.status, decision.decision);
 
+	const accepted = decision.decision === 'accepted';
+	const fee = accepted ? await feeOnAcceptance(vendor) : null;
+	if (!accepted) await refundVendorFee(vendorId);
+
 	await db
 		.update(marketVendor)
 		.set({
 			status: decision.decision,
-			tableLabel: decision.decision === 'accepted' ? decision.tableLabel || null : null,
+			tableLabel: accepted ? decision.tableLabel || null : null,
 			decidedByUserId: actor.id,
 			decidedAt: new Date(),
-			updatedAt: new Date()
+			updatedAt: new Date(),
+			...fee
 		})
 		.where(eq(marketVendor.id, vendorId));
 
+	const payLine =
+		fee && fee.feeCents > 0
+			? `\n\nPay your table fee here: ${env.PUBLIC_SITE_URL ?? 'https://corvmc.org'}${vendorPayPath(vendorId)}`
+			: '';
 	if (vendor.threadId && decision.message.trim()) {
 		await addOutboundMessage({
 			threadId: vendor.threadId,
-			body: decision.message.trim(),
+			body: decision.message.trim() + payLine,
 			authorUserId: actor.id,
 			authorName: actor.name
 		});

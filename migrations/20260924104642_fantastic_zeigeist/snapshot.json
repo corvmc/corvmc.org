@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "50a5aa1e-fd93-45db-bf12-f6cd4b4f4434",
+  "id": "b871e8d0-5ddb-4bc1-8b4e-dce90a4ee7cc",
   "prevIds": [
-    "eaf811d1-e7a0-4bf7-9a17-f3d07b70627d"
+    "50a5aa1e-fd93-45db-bf12-f6cd4b4f4434"
   ],
   "ddl": [
     {
@@ -12814,6 +12814,36 @@
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "table_fee_cents",
+      "entityType": "columns",
+      "table": "market_day"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "sliding_scale",
+      "entityType": "columns",
+      "table": "market_day"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "sliding_scale_floor_cents",
+      "entityType": "columns",
+      "table": "market_day"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
       "default": "(unixepoch())",
       "generated": null,
       "name": "created_at",
@@ -12957,6 +12987,66 @@
       "default": null,
       "generated": null,
       "name": "decided_at",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "fee_cents",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "fee_floor_cents",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "paid_cents",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "paid_at",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stripe_payment_record_id",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "refunded_at",
       "entityType": "columns",
       "table": "market_vendor"
     },

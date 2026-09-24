@@ -118,6 +118,26 @@ export async function handleCheckoutEntries(session: Stripe.Checkout.Session): P
 				description: 'Card processing'
 			});
 		}
+	} else if (meta.type === 'market_vendor_fee' && meta.vendor_id) {
+		if (chargeCents > 0) {
+			const subject = { subjectType: 'market_vendor' as const, subjectId: meta.vendor_id };
+			entries.push({
+				...base,
+				...subject,
+				amountCents: chargeCents,
+				kind: 'earned',
+				category: 'market_fees',
+				description: 'Market vendor table fee'
+			});
+			entries.push({
+				...base,
+				...subject,
+				amountCents: -feeCents,
+				kind: 'spent',
+				category: 'card_fees',
+				description: 'Card processing'
+			});
+		}
 	} else if (meta.reservation_id) {
 		const net = chargeCents - feeCents;
 		if (net > 0) {

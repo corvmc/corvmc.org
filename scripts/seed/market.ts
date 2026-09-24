@@ -13,6 +13,9 @@ import type { SeedUser } from './types';
  * plus the awkward ones: no website, two tables with power. Each has the web
  * thread its application opened, and a decided one has the staff reply.
  */
+// $25 a table on a sliding scale down to $10 (#1502): one accepted vendor paid, one owes.
+const TABLE_FEE_CENTS = 2500;
+const FLOOR_CENTS = 1000;
 const vendors: {
 	business: string;
 	contact: string;
@@ -22,6 +25,7 @@ const vendors: {
 	power: boolean;
 	status: MarketVendorStatus;
 	table?: string;
+	paidCents?: number;
 }[] = [
 	{
 		business: 'Willamette Honey Co.',
@@ -31,7 +35,8 @@ const vendors: {
 		tables: 1,
 		power: false,
 		status: 'accepted',
-		table: 'A1'
+		table: 'A1',
+		paidCents: 1500
 	},
 	{
 		business: 'Second Spin Records',
@@ -105,7 +110,10 @@ export async function seedMarket(adminUser: SeedUser) {
 	await db.insert(marketDay).values({
 		eventId: event.id,
 		applicationsCloseAt: new Date(startsAt.getTime() - 7 * day),
-		tableCount: 16
+		tableCount: 16,
+		tableFeeCents: TABLE_FEE_CENTS,
+		slidingScale: true,
+		slidingScaleFloorCents: FLOOR_CENTS
 	});
 
 	const threads = vendors.map((v, i) => ({
@@ -158,7 +166,12 @@ export async function seedMarket(adminUser: SeedUser) {
 			status: v.status,
 			tableLabel: v.table ?? null,
 			decidedByUserId: v.status === 'accepted' || v.status === 'declined' ? adminUser.id : null,
-			decidedAt: v.status === 'accepted' || v.status === 'declined' ? new Date() : null
+			decidedAt: v.status === 'accepted' || v.status === 'declined' ? new Date() : null,
+			feeCents: v.status === 'accepted' ? TABLE_FEE_CENTS * v.tables : 0,
+			feeFloorCents: v.status === 'accepted' ? FLOOR_CENTS * v.tables : 0,
+			paidCents: v.paidCents ?? null,
+			paidAt: v.paidCents ? new Date() : null,
+			stripePaymentRecordId: v.paidCents ? `pi_seed_market_${i}` : null
 		}))
 	);
 
