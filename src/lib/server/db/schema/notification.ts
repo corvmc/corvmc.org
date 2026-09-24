@@ -400,6 +400,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'radio_attestation_expiring',
+		category: 'shows',
+		label: 'Radio attestation expiring',
+		description: 'A month and a week before a release’s yearly CMC Radio attestation runs out',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'band_event_unpublished',
 		category: 'shows',
 		label: 'Event unlisted by staff',

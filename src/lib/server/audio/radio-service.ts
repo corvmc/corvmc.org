@@ -18,7 +18,8 @@ import { group } from '$lib/server/db/schema/group';
 import { media, mediaAttachment } from '$lib/server/db/schema/media';
 import { and, asc, desc, eq, gt, isNull, lt, lte, sql } from 'drizzle-orm';
 import { resolveImageUrl } from '$lib/server/storage';
-import { RADIO_MIN_TRACK_MS, RADIO_MAX_TRACK_MS, RADIO_PRO_ATTESTATION } from '$lib/config';
+import { RADIO_MIN_TRACK_MS, RADIO_MAX_TRACK_MS } from '$lib/config';
+import { currentRadioAttestation } from './radio-attestation';
 import { buildSchedule, type EligibleTrack } from './radio-rotation';
 
 // Re-exported so callers have one import for the station. The rules themselves
@@ -60,7 +61,7 @@ export async function listEligibleTracks(): Promise<EligibleTrack[]> {
 			and(
 				eq(audioRelease.status, 'published'),
 				eq(audioRelease.radioOptIn, true),
-				eq(audioRelease.radioAttestationVersion, RADIO_PRO_ATTESTATION.version),
+				currentRadioAttestation(),
 				isNull(audioRelease.radioExcludedAt),
 				isNull(audioRelease.deletedAt),
 				isNull(audioTrack.radioExcludedAt),

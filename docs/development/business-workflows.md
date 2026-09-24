@@ -1263,7 +1263,11 @@ connection resumes.
 **The radio.** `/api/cron/schedule-radio` every 15 minutes fills `radio_play` 45
 minutes ahead (three passes of slack). `getRadioState()` returns the current
 entry, the next three, and the **server's clock**; the widget in the root layout
-seeks to `serverNow − startsAt`.
+seeks to `serverNow − startsAt`. A release plays only while its attestation is
+current: given to today's wording of `RADIO_PRO_ATTESTATION` (originals only, by
+band members who belong to no PRO) and under a year old. The reminder registry
+tells the band's admins 30 and 7 days before it lapses; see
+[band-audio-spec.md](../specs/shipped/band-audio-spec.md#the-radio-plays-only-what-costs-nothing-to-license).
 
 ### Data touched
 

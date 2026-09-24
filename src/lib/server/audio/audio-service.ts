@@ -20,6 +20,9 @@ import { deleteAudioObject } from './audio-storage';
 import { detachSlot } from '$lib/server/media/media-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { AUDIO_MIN_PRICE_CENTS, RADIO_PRO_ATTESTATION, type ReleaseKind } from '$lib/config';
+import { radioAttested } from './radio-attestation';
+
+export { radioAttested, radioAttestationExpiresAt } from './radio-attestation';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -150,7 +153,7 @@ export type ReleaseSummary = {
 	priceMinCents: number;
 	allowPayMore: boolean;
 	radioOptIn: boolean;
-	/** Attested to the current `RADIO_PRO_ATTESTATION`; without it an opt-in does not play. */
+	/** Attested to the current wording within the year; without it an opt-in does not play. */
 	radioAttested: boolean;
 	radioExcluded: boolean;
 	radioExcludedReason: string | null;
@@ -183,6 +186,7 @@ export async function listReleasesForBand(groupId: string): Promise<ReleaseSumma
 			allowPayMore: audioRelease.allowPayMore,
 			radioOptIn: audioRelease.radioOptIn,
 			radioAttestationVersion: audioRelease.radioAttestationVersion,
+			radioAttestedAt: audioRelease.radioAttestedAt,
 			radioExcludedAt: audioRelease.radioExcludedAt,
 			radioExcludedReason: audioRelease.radioExcludedReason,
 			releasedAt: audioRelease.releasedAt,
@@ -388,14 +392,10 @@ export async function updateRelease(releaseId: string, data: UpdateReleaseData) 
 	return row;
 }
 
-/** Whether a release's attestation is to the wording in force today. */
-export function radioAttested(r: { radioAttestationVersion: string | null }): boolean {
-	return r.radioAttestationVersion === RADIO_PRO_ATTESTATION.version;
-}
-
 /**
  * Radio consent, and the attestation that has to come with it. Opting in needs
- * either a fresh attestation or one already on file to the current wording.
+ * either a fresh attestation or one on file to the current wording and under a
+ * year old; a fresh one restarts the year.
  * Opting out leaves the old record alone: it says who attested, and when.
  */
 export async function setRadioOptIn(
