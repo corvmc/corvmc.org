@@ -61,7 +61,11 @@ interface RoleInput {
 	isSpecializedSkill?: boolean;
 	/** What the skill costs to buy, per hour. `null` is "nobody has priced it". */
 	marketRateCents?: number | null;
+	/** Member skill tags that suit the role, for ranking the shortlist. */
+	skillMatches?: string[];
 }
+
+const MAX_SKILL_MATCHES = 20;
 
 // A day. Long enough for anything the club actually schedules, short enough
 // that a mistyped "480" hours can't produce a shift ending next year.
@@ -119,6 +123,14 @@ function normalize(data: RoleInput) {
 
 	if (data.isSpecializedSkill !== undefined) {
 		normalized.isSpecializedSkill = data.isSpecializedSkill;
+	}
+
+	// Same normalization as `validateTags` in profile-service, or nothing matches.
+	if (data.skillMatches !== undefined) {
+		const cleaned = data.skillMatches
+			.map((s) => s.trim().toLowerCase().slice(0, 50))
+			.filter((s) => s.length > 0);
+		normalized.skillMatches = [...new Set(cleaned)].slice(0, MAX_SKILL_MATCHES);
 	}
 
 	if (data.marketRateCents !== undefined) {

@@ -1,10 +1,10 @@
 {
-  "id": "61b3bf95-d920-4710-b94a-f87488d656df",
-  "prevIds": [
-    "9c8ad55a-e761-4347-a45c-8e5fd991d582"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "81dd9495-4421-48bd-885c-19f2532ab4c2",
+  "prevIds": [
+    "61b3bf95-d920-4710-b94a-f87488d656df"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -9303,6 +9303,16 @@
       "default": null,
       "generated": null,
       "name": "market_rate_cents",
+      "entityType": "columns",
+      "table": "volunteer_role"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'[]'",
+      "generated": null,
+      "name": "skill_matches",
       "entityType": "columns",
       "table": "volunteer_role"
     },

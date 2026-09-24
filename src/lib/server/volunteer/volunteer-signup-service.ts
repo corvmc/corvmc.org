@@ -950,6 +950,8 @@ export interface ShiftCandidate {
 	approvedMinutes: number;
 	/** Completed signups on this role — "N of these before". */
 	workedThisRole: number;
+	/** Their skill tags that are on the role's list. Empty when none are. */
+	matchedSkills: string[];
 }
 
 const WEEKDAY_WORDS: readonly (readonly string[])[] = [
@@ -1026,6 +1028,16 @@ export async function listShiftCandidates(
 			and vsh."volunteer_role_id" = ${roleId}
 	)`;
 
+	// The candidate's skill tags that appear on the role's own list (#1445).
+	const skillMatchFrom = sql`from "directory_tag" dt
+		join "directory_entry" de on de."id" = dt."entry_id"
+		where de."user_id" = ${user.id} and dt."kind" = ${'skill'}
+			and dt."value" in (
+				select je."value" from "volunteer_role" vr, json_each(vr."skill_matches") je
+				where vr."id" = ${roleId}
+			)`;
+	const skillMatchCountSql = sql<number>`(select count(*) ${skillMatchFrom})`;
+
 	const scopeFilter =
 		scope === 'interested'
 			? isInterested
@@ -1042,7 +1054,8 @@ export async function listShiftCandidates(
 				select coalesce(sum(vhl."minutes"), 0) from "volunteer_hour_log" vhl
 				where vhl."user_id" = ${user.id} and vhl."status" = 'approved'
 			)`,
-			workedThisRole: workedThisRoleSql
+			workedThisRole: workedThisRoleSql,
+			matchedSkills: sql<string | null>`(select group_concat(dt."value", '|') ${skillMatchFrom})`
 		})
 		.from(volunteerProfile)
 		.innerJoin(user, eq(user.id, volunteerProfile.userId))
@@ -1061,8 +1074,9 @@ export async function listShiftCandidates(
 			)
 		)
 		// Most-relevant first within the scope: somebody who has worked this role
-		// before is a better ask than somebody who merely ticked it.
-		.orderBy(desc(workedThisRoleSql), asc(user.name))
+		// before is a better ask than somebody who merely ticked it, and a member
+		// whose skills suit the role is a better ask than one who did neither.
+		.orderBy(desc(workedThisRoleSql), desc(skillMatchCountSql), asc(user.name))
 		.limit(limit);
 
 	return rows.map((r) => ({
@@ -1070,7 +1084,8 @@ export async function listShiftCandidates(
 		member: toMemberRef(r.member),
 		availability: r.availability,
 		approvedMinutes: Number(r.approvedMinutes),
-		workedThisRole: Number(r.workedThisRole)
+		workedThisRole: Number(r.workedThisRole),
+		matchedSkills: r.matchedSkills ? r.matchedSkills.split('|') : []
 	}));
 }
 

@@ -246,6 +246,16 @@ export const volunteerRole = sqliteTable('volunteer_role', {
 	 */
 	marketRateCents: integer('market_rate_cents'),
 
+	/**
+	 * Member skill tags that suit this role (#1445), stored the way the tags are
+	 * (trimmed, lower case), so the shortlist can match them exactly. The mapping
+	 * from staff wording to member wording is staff's to own. Ranks, never gates.
+	 */
+	skillMatches: text('skill_matches', { mode: 'json' })
+		.$type<string[]>()
+		.notNull()
+		.default(sql`'[]'`),
+
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
 		.default(sql`(unixepoch())`),

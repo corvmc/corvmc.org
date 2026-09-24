@@ -282,3 +282,24 @@ describe('specialized skill', () => {
 		);
 	});
 });
+
+describe('skill matches (#1445)', () => {
+	beforeEach(() => {
+		updateSets = [];
+		updateResult = [ROLE];
+	});
+
+	it('stores them the way member skill tags are stored, so they compare equal', async () => {
+		await updateVolunteerRole(ROLE.id, {
+			skillMatches: ['  Sound Engineer ', 'sound engineer', '', 'Live Sound']
+		});
+
+		expect(updateSets.at(-1)).toMatchObject({ skillMatches: ['sound engineer', 'live sound'] });
+	});
+
+	it('leaves them alone when the form did not send any', async () => {
+		await updateVolunteerRole(ROLE.id, { name: 'Sound / FOH' });
+
+		expect(updateSets.at(-1)).not.toHaveProperty('skillMatches');
+	});
+});
