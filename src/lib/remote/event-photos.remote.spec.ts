@@ -6,23 +6,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 let allowed = false;
 let canUploadRecap = false;
-let photographer = false;
+/** The one event a live volunteer-role grant covers, or null once the window closes. */
+let crewEvent: string | null = null;
 let signedIn = true;
 const requireCapability = vi.fn(async (cap: string) => {
 	if (!allowed) throw new Error(`403: ${cap}`);
 	return { id: 'staff-1' };
 });
-const can = vi.fn(async () => canUploadRecap);
+const can = vi.fn(async (_cap: string, scope?: { eventId?: string }) =>
+	scope?.eventId ? scope.eventId === crewEvent : canUploadRecap
+);
 const requireUser = vi.fn(() => {
 	if (!signedIn) throw new Error('401');
 	return { id: canUploadRecap ? 'staff-1' : 'member-1' };
 });
 vi.mock('$lib/server/authorization', () => ({ requireCapability, can, requireUser }));
-
-const holdsCertificationNamed = vi.fn(async () => photographer);
-vi.mock('$lib/server/volunteer/member-certification-service', () => ({
-	holdsCertificationNamed
-}));
 
 vi.mock('@sveltejs/kit', () => ({
 	error: (status: number, message: string) => {
@@ -60,7 +58,7 @@ const remote = (await import('./event-photos.remote')) as unknown as Record<
 beforeEach(() => {
 	allowed = false;
 	canUploadRecap = false;
-	photographer = false;
+	crewEvent = null;
 	signedIn = true;
 	vi.clearAllMocks();
 });
@@ -101,15 +99,33 @@ describe('event-photos.remote', () => {
 		expect(refresh).toHaveBeenCalled();
 	});
 
-	// #1398: a volunteer photographer holds a certification, not a position.
-	it('uploads for a member holding the photographer certification', async () => {
-		photographer = true;
+	// #1500: the show's photographer holds a volunteer-role grant for that show alone.
+	it("uploads for a member on this event's documentation crew", async () => {
+		crewEvent = 'e1';
 		await remote.uploadEventPhotos({ eventId: 'e1', photos: [photo] });
-		expect(holdsCertificationNamed).toHaveBeenCalledWith('member-1', 'Photographer');
+		expect(can).toHaveBeenCalledWith('event.uploadRecap', { eventId: 'e1' });
 		expect(svc.addEventPhotos).toHaveBeenCalledWith('e1', 'member-1', [photo]);
 		expect(refreshPublic).toHaveBeenCalled();
 		// They cannot read the staff console, so it is not theirs to refresh.
 		expect(refresh).not.toHaveBeenCalled();
+	});
+
+	it("refuses the crew of another event: the grant names the form's event, not the member", async () => {
+		crewEvent = 'e2';
+		await expect(remote.uploadEventPhotos({ eventId: 'e1', photos: [photo] })).rejects.toThrow(
+			'403'
+		);
+		expect(svc.addEventPhotos).not.toHaveBeenCalled();
+	});
+
+	it('refuses the crew once the grace window has closed', async () => {
+		// The resolver answers false after the window; capability-grants.spec pins when.
+		crewEvent = null;
+		await expect(remote.uploadEventPhotos({ eventId: 'e1', photos: [photo] })).rejects.toThrow(
+			'403'
+		);
+		expect(can).toHaveBeenCalledWith('event.uploadRecap', { eventId: 'e1' });
+		expect(svc.addEventPhotos).not.toHaveBeenCalled();
 	});
 
 	it('drops empty file inputs rather than uploading zero-byte files', async () => {

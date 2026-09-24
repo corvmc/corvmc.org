@@ -346,9 +346,9 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	const isPast = hasEventEnded(evt.startsAt, evt.endsAt);
 	const photos = await listEventPhotos(id);
 	const sponsors = await creditsForEvent(id, 'eventPage');
-	// Only a photographer needs the uploader here; staff have the console's.
+	// Only this show's photographer needs the uploader here; staff have the console's.
 	const recapUpload =
-		(await recapUploadAccess(locals.user?.id)) === 'photographer'
+		(await recapUploadAccess(locals.user?.id, id)) === 'photographer'
 			? {
 					closedReason: recapClosedReason(evt),
 					remaining: Math.max(0, MAX_PHOTOS_PER_EVENT - photos.length),

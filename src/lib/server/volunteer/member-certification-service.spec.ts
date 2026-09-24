@@ -45,8 +45,7 @@ import {
 	grantCertification,
 	missingRequirements,
 	missingFrom,
-	listHeldForGateMany,
-	holdsCertificationNamed
+	listHeldForGateMany
 } from './member-certification-service';
 import { CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -421,17 +420,5 @@ describe('auditClearances', () => {
 
 		expect(gaps.size).toBe(0);
 		expect(getRequirementsForRoles).not.toHaveBeenCalled();
-	});
-});
-
-describe('holdsCertificationNamed', () => {
-	it('is true when a certification of that name is in force', async () => {
-		selectResultQueue = [[{ id: 'mc-1' }]];
-		expect(await holdsCertificationNamed('u1', 'Photographer')).toBe(true);
-	});
-
-	it('is false when none is', async () => {
-		selectResultQueue = [[]];
-		expect(await holdsCertificationNamed('u1', 'Photographer')).toBe(false);
 	});
 });

@@ -14,7 +14,6 @@ import { batchInsert, db } from './db';
 import { type SeedEvent, type SeedUser } from './types';
 import { pick, pickN, ptDate, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
-import { RECAP_PHOTOGRAPHER_CERTIFICATION } from '../../src/lib/config';
 
 // `defaultDurationMinutes` / `defaultCapacity` are what the New Shift form starts
 // with, so they are only set on the roles that really are scheduled as shifts —
@@ -31,6 +30,8 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 	marketRateCents?: number;
 	/** Member skill tags (from `SKILLS`) that rank a candidate up on the shortlist. */
 	skillMatches?: string[];
+	/** Capabilities a confirmed signup carries for its shift's event; see `grantableCapabilities`. */
+	capabilityGrants?: string[];
 }> = [
 	{
 		name: 'Sound Engineering',
@@ -137,6 +138,19 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		description:
 			'Committee meetings and club sessions — the work of running a program. Name the committee or club on the log.',
 		displayOrder: 75
+	},
+	{
+		// The show's documentation crew (#1500): a confirmed signup here may upload
+		// that show's recap photos until a week after it. Same name as the canonical
+		// role in `seed-volunteer-roles.ts`, so a grant ticked in production matches.
+		name: 'Photos or Video',
+		group: 'at-shows' as const,
+		description: 'Document the show with photography or video, using your own equipment.',
+		displayOrder: 45,
+		defaultDurationMinutes: 240,
+		defaultCapacity: 1,
+		skillMatches: ['photographer'],
+		capabilityGrants: ['event.uploadRecap']
 	},
 	{
 		// Archived so the restore path and the "archived roles still resolve in
@@ -385,36 +399,11 @@ export async function seedCertifications(users: any[], roles: any[]) {
 		})
 	);
 
-	// The recap photographer (#1398): matched by name, so it must be exactly
-	// RECAP_PHOTOGRAPHER_CERTIFICATION. One holder, no draw, so later seeding is
-	// unchanged.
-	const [photoCert] = await batchInsert(volunteerCertification, [
-		{
-			id: randomUUID(),
-			name: RECAP_PHOTOGRAPHER_CERTIFICATION,
-			description: 'Cleared to upload recap photos to past event pages.',
-			issuedBy: null,
-			validityMonths: null,
-			displayOrder: 40
-		}
-	]);
-	if (holders[0]) {
-		await batchInsert(memberCertification, [
-			{
-				id: randomUUID(),
-				userId: holders[0].id,
-				certificationId: photoCert.id,
-				grantedAt: new Date(now.getTime() - 60 * day),
-				expiresAt: null
-			}
-		]);
-	}
-
 	// The certification rows travel out, not just their count: `seedVolunteerPersonas`
 	// grants against these two by id.
 	return {
-		certs: 4,
-		held: held.length + (holders[0] ? 1 : 0),
+		certs: 3,
+		held: held.length,
 		deskCert,
 		foodCert,
 		orientationCert
@@ -628,11 +617,42 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 		}
 	}
 
+	// The last show's documentation crew (#1500): one completed signup, so its
+	// photographer can upload recap photos from the public event page while the
+	// role's grant window is open.
+	const docRole = roles.find((r: any) => r.name === 'Photos or Video');
+	const lastShow = [...pastShows].sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0];
+	const photographer = users.find((u) => !signupRows.some((r) => r.userId === u.id)) ?? users[0];
+	let docShifts = 0;
+	if (docRole && lastShow) {
+		const endsAt = lastShow.endsAt ?? new Date(lastShow.startsAt.getTime() + 4 * 3_600_000);
+		const [docShift] = await batchInsert(workOrder, [
+			{
+				id: randomUUID(),
+				volunteerRoleId: docRole.id,
+				eventId: lastShow.id,
+				startsAt: lastShow.startsAt,
+				endsAt,
+				capacity: 1
+			}
+		]);
+		signupRows.push({
+			id: randomUUID(),
+			shiftId: docShift.id,
+			userId: photographer.id,
+			status: 'completed',
+			claimedAt: new Date(lastShow.startsAt.getTime() - 5 * day),
+			confirmedAt: new Date(lastShow.startsAt.getTime() - 4 * day),
+			completedAt: endsAt
+		});
+		docShifts = 1;
+	}
+
 	const signups = await batchInsert(volunteerSignup, signupRows, 8);
 	const feedback = await batchInsert(volunteerShiftFeedback, feedbackRows, 8);
 
 	return {
-		shifts: shiftRows.length,
+		shifts: shiftRows.length + docShifts,
 		signups: signups.length,
 		feedback: feedback.length,
 		completions
