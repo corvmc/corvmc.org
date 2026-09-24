@@ -384,6 +384,14 @@
 			<MarketVendors eventId={evt.id} />
 		{/if}
 
+		{#if data.recapHtml}
+			<section class="edet__recap">
+				<SectionLabel label="Recap" />
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized markdown (renderMarkdown) -->
+				<div class="edet__recap-body">{@html data.recapHtml}</div>
+			</section>
+		{/if}
+
 		{#if data.photos.length > 0}
 			<EventPhotos eventTitle={evt.title} photos={data.photos} />
 		{/if}
@@ -486,6 +494,19 @@
 
 	.edet__more {
 		margin-top: 3rem;
+	}
+
+	.edet__recap {
+		margin-top: 3rem;
+		max-width: 65ch;
+	}
+
+	.edet__recap-body :global(p + p) {
+		margin-top: 0.75rem;
+	}
+
+	.edet__recap-body :global(a) {
+		text-decoration: underline;
 	}
 
 	.edet__more-grid {

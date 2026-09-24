@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "04456890-fc94-425c-90e5-2f4ab765c61d",
+  "id": "672c20fb-3f89-4920-a89a-f83b94e0a714",
   "prevIds": [
-    "0ae6413c-d2fc-4854-806a-1841e99f7dd0"
+    "04456890-fc94-425c-90e5-2f4ab765c61d"
   ],
   "ddl": [
     {
@@ -2205,6 +2205,16 @@
       "default": null,
       "generated": null,
       "name": "description",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "recap_text",
       "entityType": "columns",
       "table": "event_listing"
     },

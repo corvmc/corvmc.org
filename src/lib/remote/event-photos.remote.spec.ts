@@ -33,7 +33,8 @@ vi.mock('@sveltejs/kit', () => ({
 const svc = {
 	addEventPhotos: vi.fn(async () => undefined),
 	removeEventPhoto: vi.fn(async () => undefined),
-	describeEventPhoto: vi.fn(async () => undefined)
+	describeEventPhoto: vi.fn(async () => undefined),
+	setEventRecapText: vi.fn(async () => undefined)
 };
 vi.mock('$lib/server/event/event-photo-service', () => svc);
 
@@ -69,7 +70,8 @@ const photo = new File([new Uint8Array(4)], 'a.jpg', { type: 'image/jpeg' });
 describe('event-photos.remote', () => {
 	it.each([
 		['removeEventPhoto', { eventId: 'e1', attachmentId: 'a1' }],
-		['describeEventPhoto', { eventId: 'e1', attachmentId: 'a1', altText: 'x', caption: '' }]
+		['describeEventPhoto', { eventId: 'e1', attachmentId: 'a1', altText: 'x', caption: '' }],
+		['saveEventRecapText', { eventId: 'e1', recapText: 'A good night' }]
 	])('%s refuses a caller without event.manage before any service call', async (name, data) => {
 		await expect(remote[name](data)).rejects.toThrow('403: event.manage');
 		for (const fn of Object.values(svc)) expect(fn).not.toHaveBeenCalled();
@@ -115,6 +117,24 @@ describe('event-photos.remote', () => {
 		const empty = new File([], '', { type: 'application/octet-stream' });
 		await remote.uploadEventPhotos({ eventId: 'e1', photos: [empty, photo] });
 		expect(svc.addEventPhotos).toHaveBeenCalledWith('e1', 'staff-1', [photo]);
+	});
+
+	it('saves the written recap for event.manage and refreshes both pages (#1401)', async () => {
+		allowed = true;
+		await remote.saveEventRecapText({ eventId: 'e1', recapText: 'A good night' });
+		expect(requireCapability).toHaveBeenCalledWith('event.manage');
+		expect(svc.setEventRecapText).toHaveBeenCalledWith('e1', 'A good night');
+		expect(refresh).toHaveBeenCalled();
+		expect(refreshPublic).toHaveBeenCalled();
+	});
+
+	// A photographer may upload, but the paragraph is staff's to write.
+	it('refuses the written recap to a photographer without event.manage', async () => {
+		photographer = true;
+		await expect(remote.saveEventRecapText({ eventId: 'e1', recapText: 'Mine' })).rejects.toThrow(
+			'403: event.manage'
+		);
+		expect(svc.setEventRecapText).not.toHaveBeenCalled();
 	});
 
 	it('scopes removal and description to the event', async () => {

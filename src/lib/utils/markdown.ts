@@ -103,6 +103,31 @@ export function renderMarkdown(content: string): string {
 	return sanitizeHtml(marked.parse(content) as string);
 }
 
+type TextToken = { type: string; text?: string; raw?: string; tokens?: TextToken[] };
+
+function plainText(tokens: TextToken[]): string[] {
+	return tokens.flatMap((t) => {
+		if (t.tokens?.length) return plainText(t.tokens);
+		if (t.type === 'text' || t.type === 'codespan' || t.type === 'escape') return [t.text ?? ''];
+		return t.type === 'space' || t.type === 'br' ? [' '] : [];
+	});
+}
+
+/** Markdown reduced to its words, cut at a word boundary. Null when empty. */
+export function markdownExcerpt(content: string | null | undefined, max = 160): string | null {
+	if (!content?.trim()) return null;
+	const words = plainText(marked.lexer(content) as TextToken[])
+		.join(' ')
+		.replace(/\s+/g, ' ')
+		.replace(/\s+([.,;:!?])/g, '$1')
+		.trim();
+	if (!words) return null;
+	if (words.length <= max) return words;
+	const cut = words.slice(0, max - 1);
+	const space = words[max - 1] === ' ' ? cut.length : cut.lastIndexOf(' ');
+	return `${(space > 0 ? cut.slice(0, space) : cut).trimEnd()}…`;
+}
+
 export function extractHeadings(content: string): Heading[] {
 	const headings: Heading[] = [];
 	const tokens = marked.lexer(content);
