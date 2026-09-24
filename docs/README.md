@@ -223,6 +223,7 @@ content is either shipped (git history is the record) or was filed as an issue w
 | [feature-analysis.md](development/feature-analysis.md)         | ✅     | How to work out what to build — verify the premise, map handoffs, date the drift    |
 | [working-with-claude.md](development/working-with-claude.md)   | ✅     | Agent-instruction surface: CLAUDE.md vs rules vs skills vs hooks, verification loop |
 | [cloud-sessions.md](development/cloud-sessions.md)             | ✅     | Running Claude Code on claude.ai/code: environment allowlist, setup script, limits  |
+| [door-app.md](development/door-app.md)                         | ✅     | Building and sideloading the Tap to Pay door phone's Capacitor shell (#612)         |
 | [ui-patterns.md](development/ui-patterns.md)                   | ✅     | **Read before touching any page** — shared components & composition                 |
 | [component-testing.md](development/component-testing.md)       | ✅     | Stories vs specs, fixtures, mocking the server                                      |
 | [template-audit.md](development/template-audit.md)             | 🔧     | Class-soup census + phased migration to a component-based design system             |
