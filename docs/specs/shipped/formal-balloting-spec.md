@@ -141,7 +141,9 @@ do not have to be an elector. Certifying:
 A certified result is readable by every signed-in member at `/member/ballots/[id]`. For a recorded
 ballot, that includes the roll call.
 
-Opening a ballot also notifies its electors in-app (`ballot_opened`), with the same fan-out.
+Opening a ballot also notifies its electors (`ballot_opened`), with the same fan-out, latched on
+`ballot.open_notice_sent_at`. That notice goes out by email as well as in-app by default: it reaches
+only the roll, and a missed vote cannot be recovered. The result notice defaults to in-app only.
 
 ## Who can do what
 
@@ -167,7 +169,7 @@ a governance committee.
 ballot                  id, kind, group_id?, title, description?, closes_at, certifier_id,
                         created_by_id, opened_at?, electorate_size?, cancelled_at?,
                         cancel_reason?, certified_at?, certified_by_id?, certified_result?,
-                        result_published_at?, created_at, updated_at
+                        result_published_at?, open_notice_sent_at?, created_at, updated_at
 ballot_option           id, ballot_id, label, position
 ballot_elector          ballot_id, user_id                      unique(ballot_id, user_id)
 ballot_elector_override ballot_id, user_id, include, reason, created_by_id, created_at
@@ -194,9 +196,11 @@ A ballot has between 2 and 10 options, and each option label is at most 200 char
   the result after close, and the Certify action for the certifier. For managers, the same page also
   has draft editing, Open, Cancel and turnout.
 - `/staff/ballots`: every ballot, plus Create (member-wide or group).
-  `/staff/ballots/[id]`: management plus the electorate override card.
-- Committee admins create a group ballot from `/member/ballots` ("New ballot", limited to committees
-  where they are an owner or admin).
+  `/staff/ballots/[id]`: the same detail component. The electorate override card appears there, and on
+  the member page, for holders of `ballot.manage`.
+- Committee admins create a group ballot from `/member/ballots` ("New committee ballot", limited to
+  committees where they are an owner or admin). A ballot closes at 23:59 on the day chosen, in the
+  collective's time zone.
 
 ## Out of scope
 
@@ -211,8 +215,11 @@ A ballot has between 2 and 10 options, and each option label is at most 200 char
 ## Phases
 
 1. This spec.
-2. Schema, migration, services with specs (including `ballot-secrecy.spec.ts`), and the seed: one
-   ballot of each kind.
-3. Remote functions, member and staff surfaces, and notifications.
-4. Documentation: a business-workflows section, a help article, a feature-catalog row, and moving this
-   spec to `shipped/`. Then the landing PR into `main`.
+2. Schema, migration, services with specs (including `ballot-secrecy.spec.ts`), fan-out, and the
+   seed: an open committee ballot, an open member-wide ballot, and a certified member-wide result.
+   The seeded member-wide rolls use account age alone, because the dev seed orients only a handful
+   of members. A draft's preview applies the full rule.
+3. Remote functions, the member and staff surfaces, an e2e round trip, and the documentation. This
+   merged together with phase 2, because the feature branch requires every PR to be up to date.
+
+Behaviour now lives in business-workflows §23 and the help article `ballots`.

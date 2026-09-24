@@ -299,6 +299,8 @@ export const ordinaryStatuses: ReadonlySet<string> = new Set([
 	'cleared',
 	'done',
 	'active',
+	// A certified ballot result is final and published: the expected end state.
+	'certified',
 	// A settled production has been paid out. `closed` is deliberately absent:
 	// it is ghost-toned, like `retired` and `dismissed`, and those are marked.
 	'settled',

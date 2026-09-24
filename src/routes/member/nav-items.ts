@@ -42,6 +42,7 @@ export type MemberNavKey =
 	| 'volunteer'
 	| 'volunteer-committees'
 	| 'suggestions'
+	| 'ballots'
 	| 'profile'
 	| 'account'
 	| 'help'
@@ -141,6 +142,7 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 export function memberNavFooter(_input: MemberNavInput): MemberNavItem[] {
 	return [
 		{ key: 'suggestions', label: 'Suggestions', href: resolve('/member/suggestions') },
+		{ key: 'ballots', label: 'Ballots', href: resolve('/member/ballots') },
 		{ key: 'help', label: 'Help', href: resolve('/member/help') }
 	];
 }

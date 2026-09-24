@@ -136,6 +136,8 @@
 		// Campaigns
 		sending: 'badge-info',
 		sent: 'badge-success',
+		// Ballots: a certified result is final and published.
+		certified: 'badge-success',
 		// Platform invites
 		accepted: 'badge-success',
 		revoked: 'badge-error',
@@ -250,6 +252,7 @@
 		// Campaign statuses
 		sending: { icon: IconSend, color: 'text-info' },
 		sent: { icon: IconMailCheck, color: 'text-success' },
+		certified: { icon: IconCircleCheckFilled, color: 'text-success' },
 
 		// Platform invite statuses
 		accepted: { icon: IconCircleCheck, color: 'text-success' },
