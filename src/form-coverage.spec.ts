@@ -157,9 +157,6 @@ describe('form field coverage', () => {
 		).toEqual([]);
 	});
 
-	// Rendered by an open PR (#1526). Delete the entry once it lands.
-	const HOSTLESS_IN_FLIGHT = new Set(['createWorkOrder']);
-
 	// The field check above skips a form nothing names, so a whole form with no
 	// page slipped past it (#1426, #1528).
 	it('names every form() from some component', { timeout: 30_000 }, async () => {
@@ -167,7 +164,7 @@ describe('form field coverage', () => {
 			.map((p) => readFileSync(p, 'utf8'))
 			.join('\n');
 		const hostless = [...(await remoteForms()).keys()].filter(
-			(name) => !HOSTLESS_IN_FLIGHT.has(name) && !new RegExp(`\\b${name}\\b`).test(svelte)
+			(name) => !new RegExp(`\\b${name}\\b`).test(svelte)
 		);
 
 		expect(

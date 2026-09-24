@@ -29,6 +29,7 @@
 	import NeedsSchedulingCard from './NeedsSchedulingCard.svelte';
 	import LapsingCard from './LapsingCard.svelte';
 	import NewShiftAction from './NewShiftAction.svelte';
+	import NewWorkOrderAction from './NewWorkOrderAction.svelte';
 	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
 	import { toLocalDateTime } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -55,6 +56,7 @@
 <PageHeader width="5xl" title="Today" subtitle="Volunteering">
 	<LogHoursForMemberAction />
 	<NewShiftAction {defaultStart} />
+	<NewWorkOrderAction />
 </PageHeader>
 
 <PageContent width="5xl">
