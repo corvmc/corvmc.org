@@ -350,13 +350,13 @@
 					{#snippet head()}
 						<th>Member</th>
 						<th>Override</th>
-						<th class="col-support">Reason</th>
+						<th>Reason</th>
 					{/snippet}
 					{#each data.overrides as o (o.userId)}
 						<tr>
 							<td class="cell-primary">{o.name}</td>
 							<td class="whitespace-nowrap">{o.include ? 'Added' : 'Removed'}</td>
-							<td class="col-support">{o.reason}</td>
+							<td>{o.reason}</td>
 						</tr>
 					{/each}
 				</Table>
