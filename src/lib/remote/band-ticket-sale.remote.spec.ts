@@ -35,8 +35,14 @@ vi.mock('$lib/server/ticket/ticket-seller', () => ({
 	bandSaleBlocker: (...a: unknown[]) => bandSaleBlocker(...(a as []))
 }));
 const getTicketsSold = vi.fn();
+const getEventTickets = vi.fn();
+const getTicketById = vi.fn();
+const checkIn = vi.fn();
 vi.mock('$lib/server/ticket/ticket-service', () => ({
-	getTicketsSold: (...a: unknown[]) => getTicketsSold(...(a as []))
+	getTicketsSold: (...a: unknown[]) => getTicketsSold(...(a as [])),
+	getEventTickets: (...a: unknown[]) => getEventTickets(...(a as [])),
+	getTicketById: (...a: unknown[]) => getTicketById(...(a as [])),
+	checkIn: (...a: unknown[]) => checkIn(...(a as []))
 }));
 
 const remote = (await import('./band-ticket-sale.remote')) as unknown as Record<
@@ -60,11 +66,26 @@ const gig = {
 	ticketQuantity: 100
 };
 
+const doorTickets = [
+	{ id: 'tkt-1', code: 'AAA-111', attendeeName: 'Ana', attendeeEmail: 'a@x.org', status: 'valid' },
+	{
+		id: 'tkt-2',
+		code: 'BBB-222',
+		attendeeName: 'Bo',
+		attendeeEmail: 'b@x.org',
+		status: 'checked_in'
+	},
+	{ id: 'tkt-3', code: 'CCC-333', attendeeName: 'Cy', attendeeEmail: 'c@x.org', status: 'refunded' }
+];
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	getById.mockResolvedValue(gig);
 	bandSaleBlocker.mockResolvedValue(null);
 	getTicketsSold.mockResolvedValue(12);
+	getEventTickets.mockResolvedValue(doorTickets);
+	getTicketById.mockResolvedValue({ id: 'tkt-1', eventId: 'evt-1', status: 'valid' });
+	checkIn.mockResolvedValue({ alreadyIn: false, checkedInAt: new Date(0) });
 });
 
 describe('getBandTicketSale', () => {
@@ -144,5 +165,68 @@ describe('closeBandTicketSaleForm', () => {
 	it('closes the sale for the band the guard resolved', async () => {
 		await remote.closeBandTicketSaleForm({ slug: 'our-band', eventId: 'evt-1' }, issue);
 		expect(closeBandTicketSale).toHaveBeenCalledWith('evt-1', 'band-1');
+	});
+});
+
+describe('getBandDoorList', () => {
+	it("lists the band's own gig's live tickets by name and code, with a count in", async () => {
+		expect(await remote.getBandDoorList({ slug: 'our-band', eventId: 'evt-1' })).toEqual({
+			tickets: [
+				{ id: 'tkt-1', code: 'AAA-111', attendeeName: 'Ana', status: 'valid' },
+				{ id: 'tkt-2', code: 'BBB-222', attendeeName: 'Bo', status: 'checked_in' }
+			],
+			checkedIn: 1
+		});
+		expect(requireGroupRole).toHaveBeenCalledWith({ slug: 'our-band' }, 'admin');
+		expect(getEventTickets).toHaveBeenCalledWith('evt-1');
+	});
+
+	it('404s a gig another band owns, without reading its tickets', async () => {
+		getById.mockResolvedValue({ ...gig, groupId: 'band-2' });
+		await expect(
+			remote.getBandDoorList({ slug: 'our-band', eventId: 'evt-1' })
+		).rejects.toMatchObject({ status: 404 });
+		expect(getEventTickets).not.toHaveBeenCalled();
+	});
+
+	it('refuses a caller with no admin role on the band named', async () => {
+		await expect(remote.getBandDoorList({ slug: 'their-band', eventId: 'evt-1' })).rejects.toThrow(
+			/not a member/i
+		);
+		expect(getEventTickets).not.toHaveBeenCalled();
+	});
+});
+
+describe('checkInBandTicket', () => {
+	const data = { slug: 'our-band', eventId: 'evt-1', ticketId: 'tkt-1' };
+
+	it("checks a ticket for the band's own gig in, as the caller", async () => {
+		expect(await remote.checkInBandTicket(data, issue)).toMatchObject({
+			success: true,
+			alreadyIn: false
+		});
+		expect(requireGroupRole).toHaveBeenCalledWith({ slug: 'our-band' }, 'admin');
+		expect(checkIn).toHaveBeenCalledWith('tkt-1', 'user-1');
+	});
+
+	it('refuses a caller with no admin role on the band named', async () => {
+		await expect(remote.checkInBandTicket({ ...data, slug: 'their-band' }, issue)).rejects.toThrow(
+			/not a member/i
+		);
+		expect(checkIn).not.toHaveBeenCalled();
+	});
+
+	it('404s a gig another band owns', async () => {
+		getById.mockResolvedValue({ ...gig, groupId: 'band-2' });
+		await expect(remote.checkInBandTicket(data, issue)).rejects.toMatchObject({ status: 404 });
+		expect(checkIn).not.toHaveBeenCalled();
+	});
+
+	it("refuses a ticket for some other show, even with the band's own gig named", async () => {
+		getTicketById.mockResolvedValue({ id: 'tkt-9', eventId: 'evt-other', status: 'valid' });
+		await expect(
+			remote.checkInBandTicket({ ...data, ticketId: 'tkt-9' }, issue)
+		).rejects.toMatchObject({ status: 404 });
+		expect(checkIn).not.toHaveBeenCalled();
 	});
 });
