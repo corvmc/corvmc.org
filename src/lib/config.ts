@@ -749,6 +749,67 @@ export const contractorJobStatusBadge = {
 } as const satisfies Record<ContractorJobStatus, string>;
 
 // ---------------------------------------------------------------------------
+// Sponsors: businesses and their sponsorship terms
+// ---------------------------------------------------------------------------
+
+/** The order is advice, not a guard: no transition has a side effect. */
+export const sponsorshipStatuses = ['prospect', 'active', 'ended', 'declined'] as const;
+export type SponsorshipStatus = (typeof sponsorshipStatuses)[number];
+
+export const sponsorshipStatusLabels: Record<SponsorshipStatus, string> = {
+	prospect: 'Pitched',
+	active: 'Active',
+	ended: 'Ended',
+	declined: 'Declined'
+};
+
+export const sponsorshipStatusBadge = {
+	prospect: 'outline',
+	active: 'success',
+	ended: 'ghost',
+	declined: 'ghost'
+} as const satisfies Record<SponsorshipStatus, string>;
+
+// ---------------------------------------------------------------------------
+// Grants: funders, applications, awards and the reports they require
+// ---------------------------------------------------------------------------
+
+/** The order is advice, not a guard: no transition has a side effect. */
+export const grantStatuses = ['prospect', 'applied', 'awarded', 'declined', 'closed'] as const;
+export type GrantStatus = (typeof grantStatuses)[number];
+
+/** What the list shows by default; the rest sit behind "Show closed". */
+export const openGrantStatuses = [
+	'prospect',
+	'applied',
+	'awarded'
+] as const satisfies readonly GrantStatus[];
+
+export const grantStatusLabels: Record<GrantStatus, string> = {
+	prospect: 'Prospect',
+	applied: 'Applied',
+	awarded: 'Awarded',
+	declined: 'Declined',
+	closed: 'Closed'
+};
+
+export const grantStatusBadge = {
+	prospect: 'outline',
+	applied: 'info',
+	awarded: 'success',
+	declined: 'ghost',
+	closed: 'ghost'
+} as const satisfies Record<GrantStatus, string>;
+
+export type GrantDeadlineKind = 'apply' | 'report' | 'end';
+
+export const grantDeadlineLabels: Record<GrantDeadlineKind, string> = {
+	apply: 'Apply by',
+	report: 'Report due',
+	end: 'Award ends'
+};
+
+// ---------------------------------------------------------------------------
 // Credit transaction sources
 // ---------------------------------------------------------------------------
 
@@ -1937,6 +1998,8 @@ export const capabilities = {
 	// Its own resource, not `moderation`: an incident report can name a member,
 	// and who may read one is a decision separate from who reviews flags.
 	incident: ['read', 'record'],
+	sponsor: ['read', 'manage'],
+	grant: ['read', 'manage'],
 	project: ['read', 'manage'],
 	inbox: ['read', 'reply', 'assign', 'dispose', 'manageChannels'],
 	marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send'],
@@ -2110,6 +2173,9 @@ export const positions: Record<Position, Grants> = {
 		// Read, not adjust: see `adminOnlyCapabilities`.
 		credit: ['read'],
 		contractor: ['read', 'recordInvoice'],
+		// Read only: an award or a sponsorship is money coming in.
+		sponsor: ['read'],
+		grant: ['read'],
 		inventory: ['read', 'manageAcquisitions', 'report'],
 		reservation: ['read', 'comp'],
 		// Read only: enough to reach the music page's sales and refund one.

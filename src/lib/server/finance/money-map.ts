@@ -86,6 +86,18 @@ export const moneyColumns = {
 		writer: 'src/lib/server/finance/production-expense-entries.ts'
 	},
 
+	// ---------------------------------------------------------- sponsor, grant
+	'sponsorship.amount_cents': {
+		notAccounting: 'the amount a sponsor agreed to. Their payment is booked when it arrives'
+	},
+	'grant_application.amount_requested_cents': {
+		notAccounting: 'what the application asked for'
+	},
+	'grant_application.amount_awarded_cents': {
+		notAccounting:
+			'what the funder awarded. The cheque itself is a manual `grant` entry when it arrives'
+	},
+
 	// ------------------------------------------------------------- contractor
 	'contractor_job.quoted_cents': {
 		notAccounting: 'what they said it would cost, before the invoice'

@@ -44,7 +44,9 @@
 		IconCalendarWeek,
 		IconCalendarMonth,
 		IconMapPin,
-		IconKey
+		IconKey,
+		IconBuildingStore,
+		IconContract
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
@@ -128,6 +130,8 @@
 		reports: IconReportAnalytics,
 		payments: IconCash,
 		credits: IconCoins,
+		sponsors: IconBuildingStore,
+		grants: IconContract,
 		settings: IconSettings,
 		audit: IconHistory
 	};

@@ -76,6 +76,8 @@ export type StaffNavKey =
 	| 'local-resources'
 	| 'payments'
 	| 'credits'
+	| 'sponsors'
+	| 'grants'
 	| 'reports'
 	| 'settings'
 	| 'audit';
@@ -499,6 +501,18 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'credit.read',
 				label: 'Credits',
 				href: resolve('/staff/credits')
+			},
+			{
+				key: 'sponsors',
+				capability: 'sponsor.read',
+				label: 'Sponsors',
+				href: resolve('/staff/sponsors')
+			},
+			{
+				key: 'grants',
+				capability: 'grant.read',
+				label: 'Grants',
+				href: resolve('/staff/grants')
 			}
 		]
 	},
