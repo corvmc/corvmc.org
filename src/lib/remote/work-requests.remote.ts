@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { query } from '$app/server';
 import { invalid } from '@sveltejs/kit';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -10,6 +10,7 @@ import {
 	dismissFlag,
 	getWorkRequestDetail,
 	listWorkRequests,
+	reportBuildingProblem,
 	sendToWorkOrder,
 	workRequestStages
 } from '$lib/server/inventory/work-request-service';
@@ -90,5 +91,27 @@ export const sendEquipmentReportToWorkOrder = form(
 		}
 		void getEquipmentReport(data.id).refresh();
 		return { success: true, ...result };
+	}
+);
+
+/**
+ * A member reporting a problem with the building rather than a unit.
+ *
+ * `requireUser`, like `reportAssetDamage`: whoever finds the running toilet is
+ * whoever is standing in the bathroom. It changes nothing but the queue.
+ */
+export const reportBuildingProblemForm = form(
+	z.object({
+		location: z.string().trim().min(1, 'Say where').max(200),
+		note: z.string().trim().min(1, "Say what's wrong").max(1000)
+	}),
+	async (data) => {
+		const member = requireUser();
+		try {
+			await reportBuildingProblem({ ...data, reportedByUserId: member.id });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		return { success: true };
 	}
 );

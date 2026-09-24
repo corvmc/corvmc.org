@@ -641,13 +641,12 @@ export const workRequest = sqliteTable(
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
 
-		// The subject is always one unit, so this is a real FK rather than the
-		// polymorphic entityType/entityId `content_flag` needs. Cascade: a flag
-		// about a row that no longer exists is noise, not history — the history
-		// lives in the ledger, which outlives the asset by design.
-		assetId: text('asset_id')
-			.notNull()
-			.references(() => inventoryAsset.id, { onDelete: 'cascade' }),
+		// One unit, or none: a building problem (a running toilet, a dead light)
+		// names a `location` instead. Cascade: a flag about a unit that no longer
+		// exists is noise, not history — the ledger outlives the asset by design.
+		assetId: text('asset_id').references(() => inventoryAsset.id, { onDelete: 'cascade' }),
+		/** Where in the building, in the reporter's words. Set when there is no unit. */
+		location: text('location'),
 
 		// set-null, matching contentFlag.reportedByUserId: a deleted account must
 		// not take the report with it.
@@ -704,7 +703,8 @@ export const workRequest = sqliteTable(
 			.where(sql`status = 'pending' and blocks_use = 1`),
 		index('idx_asset_flag_work_order')
 			.on(t.workOrderId)
-			.where(sql`work_order_id is not null`)
+			.where(sql`work_order_id is not null`),
+		check('work_request_has_subject', sql`asset_id is not null or location is not null`)
 	]
 );
 

@@ -49,7 +49,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search note or item..."
+				placeholder="Search note, item or place..."
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -75,14 +75,14 @@
 	<DataList {result} empty="No equipment reports" onpage={(p) => (page = p)}>
 		{#snippet children(reports)}
 			<TriageTable
-				subjectLabel="Unit"
+				subjectLabel="Unit or place"
 				rows={reports.map((r) => ({
 					id: r.id,
 					href: resolve(`/staff/flags/equipment/${r.id}`),
 					// Sent to a work order is still `pending` in the table; say what it means.
 					status: r.stage === 'in_work_order' ? 'in_progress' : r.status,
-					kind: r.blocksUse ? 'Out of use' : entityLabels.asset.one,
-					subject: r.asset,
+					kind: r.blocksUse ? 'Out of use' : r.asset ? entityLabels.asset.one : 'Building',
+					subject: r.asset ?? r.location ?? 'Building',
 					text: r.note,
 					reporter: r.reportedByName ?? 'Deleted account',
 					createdAt: r.createdAt

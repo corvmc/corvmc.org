@@ -626,23 +626,26 @@ export function registerAllNotificationListeners(): void {
 	// --- A report the member filed was closed by finished work ---
 	// Staff resolution notes stay out: they are written for the next staffer.
 	domainEvents.on('equipment.report_resolved', async ({ data: event }) => {
+		const unit = event.assetId !== null;
 		await dispatch({
 			type: 'equipment_report_resolved',
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: `Fixed: ${event.equipmentName}`,
 			body: 'The problem you reported has been seen to.',
-			href: `/member/equipment/assets/${event.assetId}`,
+			href: unit ? `/member/equipment/assets/${event.assetId}` : '/member',
 			email: {
 				recipientName: event.userName,
 				subject: `Fixed: ${event.equipmentName}`,
 				heading: 'Thanks for the report',
 				paragraphs: [
 					{
-						text: `The problem you reported with ${event.equipmentName} has been seen to. If it is still not right, report it again from the same page.`
+						text: unit
+							? `The problem you reported with ${event.equipmentName} has been seen to. If it is still not right, report it again from the same page.`
+							: `The problem you reported in ${event.equipmentName} has been seen to. If it is still not right, report it again from your dashboard.`
 					}
 				],
-				cta: { label: 'View the equipment' }
+				cta: { label: unit ? 'View the equipment' : 'Go to your dashboard' }
 			}
 		});
 	});

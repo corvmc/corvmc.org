@@ -128,6 +128,45 @@ export async function raiseFlag(input: RaiseFlagInput) {
 	return flag;
 }
 
+export class WorkRequestValidationError extends DomainError {
+	readonly httpStatus = 422;
+	constructor(message: string) {
+		super(message);
+		this.name = 'WorkRequestValidationError';
+	}
+}
+
+/**
+ * A problem with the building rather than a unit — a running toilet, a dead
+ * light. Nothing goes out of service: there is no unit, and closing a room is a
+ * staff call made from the closures page.
+ */
+export async function reportBuildingProblem(input: {
+	location: string;
+	note: string;
+	reportedByUserId: string;
+}) {
+	const location = input.location.trim();
+	const note = input.note.trim();
+	if (!location) throw new WorkRequestValidationError('Say where the problem is.');
+	if (!note) throw new WorkRequestValidationError('Say what is wrong.');
+
+	const now = new Date();
+	const [flag] = await db
+		.insert(workRequest)
+		.values({
+			assetId: null,
+			location,
+			note,
+			reportedByUserId: input.reportedByUserId,
+			blocksUse: false,
+			createdAt: now,
+			updatedAt: now
+		})
+		.returning();
+	return flag;
+}
+
 /** Whether anything open says this unit must not go out. */
 export async function hasBlockingFlag(assetId: string): Promise<boolean> {
 	const [row] = await db
@@ -237,27 +276,42 @@ export async function resolveFlagsForWorkOrder(
 	const reporters = [
 		...new Set(rows.map((r) => r.reportedByUserId).filter((id): id is string => id !== null))
 	];
-	if (rows.length > 0) await announceResolved(workOrderId, rows[0].assetId, reporters);
+	if (rows.length > 0) await announceResolved(workOrderId, rows, reporters);
 	return reporters;
 }
 
-/** `sendToWorkOrder` only attaches reports on the work order's own unit, so one asset. */
-async function announceResolved(workOrderId: string, assetId: string, reporters: string[]) {
-	const [unit] = await db
-		.select({ name: inventoryItem.name, assetTag: inventoryAsset.assetTag })
-		.from(inventoryAsset)
-		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
-		.where(eq(inventoryAsset.id, assetId))
-		.limit(1);
-	if (!unit || reporters.length === 0) return;
+/**
+ * `sendToWorkOrder` only attaches reports on the work order's own unit, so one
+ * asset — or none, for building problems, where each reporter hears about the
+ * place they named.
+ */
+async function announceResolved(
+	workOrderId: string,
+	rows: { assetId: string | null; location: string | null; reportedByUserId: string | null }[],
+	reporters: string[]
+) {
+	if (reporters.length === 0) return;
+	const assetId = rows[0].assetId;
+
+	let unitName: string | null = null;
+	if (assetId) {
+		const [unit] = await db
+			.select({ name: inventoryItem.name, assetTag: inventoryAsset.assetTag })
+			.from(inventoryAsset)
+			.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
+			.where(eq(inventoryAsset.id, assetId))
+			.limit(1);
+		if (!unit) return;
+		unitName = unit.assetTag ? `${unit.name} (${unit.assetTag})` : unit.name;
+	}
 
 	const people = await db
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
 		.where(inArray(user.id, reporters));
-	const equipmentName = unit.assetTag ? `${unit.name} (${unit.assetTag})` : unit.name;
 
 	for (const person of people) {
+		const place = rows.find((r) => r.reportedByUserId === person.id)?.location;
 		try {
 			await domainEvents.emit('equipment.report_resolved', {
 				workOrderId,
@@ -265,7 +319,7 @@ async function announceResolved(workOrderId: string, assetId: string, reporters:
 				userId: person.id,
 				userName: person.name,
 				userEmail: person.email,
-				equipmentName
+				equipmentName: unitName ?? place ?? 'the building'
 			});
 		} catch (err) {
 			console.error(`[work-request] fixed notice failed for ${person.id}:`, err);
@@ -313,10 +367,15 @@ export async function listWorkRequests(
 	const where = and(
 		stageWhere(filters.stage),
 		term
-			? or(containsLiteral(workRequest.note, term), containsLiteral(inventoryItem.name, term))
+			? or(
+					containsLiteral(workRequest.note, term),
+					containsLiteral(inventoryItem.name, term),
+					containsLiteral(workRequest.location, term)
+				)
 			: undefined
 	);
 
+	// Left joins: a building problem has no unit, and still belongs in the queue.
 	const dataQ = db
 		.select({
 			id: workRequest.id,
@@ -328,11 +387,12 @@ export async function listWorkRequests(
 			assetId: inventoryAsset.id,
 			assetTag: inventoryAsset.assetTag,
 			itemName: inventoryItem.name,
+			location: workRequest.location,
 			reportedByName: user.name
 		})
 		.from(workRequest)
-		.innerJoin(inventoryAsset, eq(inventoryAsset.id, workRequest.assetId))
-		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
+		.leftJoin(inventoryAsset, eq(inventoryAsset.id, workRequest.assetId))
+		.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
 		.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
 		.where(where)
 		.orderBy(asc(workRequest.createdAt), asc(workRequest.id))
@@ -341,8 +401,8 @@ export async function listWorkRequests(
 	const countQ = db
 		.select({ count: count() })
 		.from(workRequest)
-		.innerJoin(inventoryAsset, eq(inventoryAsset.id, workRequest.assetId))
-		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
+		.leftJoin(inventoryAsset, eq(inventoryAsset.id, workRequest.assetId))
+		.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
 		.where(where);
 
 	const { rows, pagination: pageInfo } = await paginate(dataQ, countQ, pagination);
@@ -355,7 +415,14 @@ export async function listWorkRequests(
 			blocksUse: r.blocksUse,
 			createdAt: r.createdAt,
 			reportedByName: r.reportedByName,
-			asset: toGenericRef('asset', { id: r.assetId, title: r.itemName, subtitle: r.assetTag })
+			location: r.location,
+			asset: r.assetId
+				? toGenericRef('asset', {
+						id: r.assetId,
+						title: r.itemName ?? 'Unit',
+						subtitle: r.assetTag
+					})
+				: null
 		})),
 		pagination: pageInfo
 	};
@@ -372,12 +439,49 @@ export async function getWorkRequestDetail(id: string) {
 			reporterEmail: user.email
 		})
 		.from(workRequest)
-		.innerJoin(inventoryAsset, eq(inventoryAsset.id, workRequest.assetId))
-		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
+		.leftJoin(inventoryAsset, eq(inventoryAsset.id, workRequest.assetId))
+		.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
 		.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
 		.where(eq(workRequest.id, id))
 		.limit(1);
 	if (!row) throw new WorkRequestNotFoundError();
+
+	const openWorkOrderFields = {
+		id: workOrder.id,
+		notes: workOrder.notes,
+		dueAt: workOrder.dueAt,
+		startsAt: workOrder.startsAt,
+		roleName: volunteerRole.name
+	};
+
+	if (!row.asset) {
+		// Only work orders other building reports already went to: an open work
+		// order with no unit is otherwise any volunteer shift at all.
+		const openWork = await db
+			.selectDistinct(openWorkOrderFields)
+			.from(workOrder)
+			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.innerJoin(workRequest, eq(workRequest.workOrderId, workOrder.id))
+			.where(
+				and(
+					isNull(workRequest.assetId),
+					isNull(workOrder.assetId),
+					isNull(workOrder.resolvedAt),
+					isNull(workOrder.cancelledAt)
+				)
+			)
+			.orderBy(asc(workOrder.createdAt), asc(workOrder.id));
+		return {
+			...row.request,
+			stage: stageOf(row.request),
+			reporterName: row.reporterName,
+			reporterEmail: row.reporterEmail,
+			asset: null,
+			otherPending: [],
+			openWorkOrders: openWork
+		};
+	}
+	const asset = row.asset;
 
 	const [others, openWork] = await Promise.all([
 		db
@@ -389,21 +493,15 @@ export async function getWorkRequestDetail(id: string) {
 			})
 			.from(workRequest)
 			.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
-			.where(and(eq(workRequest.assetId, row.asset.id), eq(workRequest.status, 'pending')))
+			.where(and(eq(workRequest.assetId, asset.id), eq(workRequest.status, 'pending')))
 			.orderBy(asc(workRequest.createdAt), asc(workRequest.id)),
 		db
-			.select({
-				id: workOrder.id,
-				notes: workOrder.notes,
-				dueAt: workOrder.dueAt,
-				startsAt: workOrder.startsAt,
-				roleName: volunteerRole.name
-			})
+			.select(openWorkOrderFields)
 			.from(workOrder)
 			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 			.where(
 				and(
-					eq(workOrder.assetId, row.asset.id),
+					eq(workOrder.assetId, asset.id),
 					isNull(workOrder.resolvedAt),
 					isNull(workOrder.cancelledAt)
 				)
@@ -417,10 +515,10 @@ export async function getWorkRequestDetail(id: string) {
 		reporterName: row.reporterName,
 		reporterEmail: row.reporterEmail,
 		asset: toGenericRef('asset', {
-			id: row.asset.id,
-			title: row.itemName,
-			subtitle: row.asset.assetTag,
-			status: row.asset.status
+			id: asset.id,
+			title: row.itemName ?? 'Unit',
+			subtitle: asset.assetTag,
+			status: asset.status
 		}),
 		otherPending: others.filter((o) => o.id !== id),
 		openWorkOrders: openWork
@@ -433,7 +531,8 @@ export type WorkOrderTarget =
 
 /**
  * Hand a report to the work that will fix it — an open work order on the same
- * unit, or a new one. Every other untriaged report on the unit goes with it.
+ * unit (or, for a building problem, one with no unit), or a new one. Every other
+ * untriaged report on the unit goes with it.
  */
 export async function sendToWorkOrder(
 	requestId: string,
@@ -463,7 +562,11 @@ export async function sendToWorkOrder(
 			.where(eq(workOrder.id, target.workOrderId))
 			.limit(1);
 		if (!order || order.assetId !== request.assetId) {
-			throw new WorkRequestTriageError('That work order is not for this unit.');
+			throw new WorkRequestTriageError(
+				request.assetId
+					? 'That work order is not for this unit.'
+					: 'That work order is for a unit, not the building.'
+			);
 		}
 		if (order.resolvedAt || order.cancelledAt) {
 			throw new WorkRequestTriageError('That work order is already closed.');
@@ -474,23 +577,29 @@ export async function sendToWorkOrder(
 		const order = await createWorkOrder({
 			volunteerRoleId: target.newOrder.volunteerRoleId,
 			assetId: request.assetId,
-			notes: target.newOrder.notes || request.note,
+			notes:
+				target.newOrder.notes ||
+				(request.location ? `${request.location}: ${request.note}` : request.note),
 			dueAt: target.newOrder.dueAt ?? null,
 			createdByUserId: staffUserId
 		});
 		workOrderId = order.id;
 	}
 
-	const untriaged = await db
-		.select({ id: workRequest.id })
-		.from(workRequest)
-		.where(
-			and(
-				eq(workRequest.assetId, request.assetId),
-				eq(workRequest.status, 'pending'),
-				isNull(workRequest.workOrderId)
-			)
-		);
+	// A building problem sweeps nothing: two reports about "the bathroom" may be
+	// two different faults, and staff can send the second one to this order.
+	const untriaged = request.assetId
+		? await db
+				.select({ id: workRequest.id })
+				.from(workRequest)
+				.where(
+					and(
+						eq(workRequest.assetId, request.assetId),
+						eq(workRequest.status, 'pending'),
+						isNull(workRequest.workOrderId)
+					)
+				)
+		: [];
 	const ids = [...new Set([requestId, ...untriaged.map((r) => r.id)])];
 	await attachFlagsToWorkOrder(ids, workOrderId);
 
