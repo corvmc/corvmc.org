@@ -7,7 +7,8 @@ import { eq } from 'drizzle-orm';
 /**
  * Member reports against units, in every triage stage: two untriaged on one unit
  * (the collapse case), one untriaged and still usable, one sent to an open work
- * order, one resolved and one dismissed. Without these the Equipment tab of the
+ * order, one resolved and one dismissed — plus two building problems with no
+ * unit, one untriaged and one in a work order. Without these the Equipment tab of the
  * flags surface only ever renders empty.
  */
 export async function seedEquipmentReports(
@@ -28,6 +29,7 @@ export async function seedEquipmentReports(
 	const [m1, m2, m3] = members;
 
 	const orderId = randomUUID();
+	const buildingOrderId = randomUUID();
 	await batchInsert(workOrder, [
 		{
 			id: orderId,
@@ -37,6 +39,15 @@ export async function seedEquipmentReports(
 			capacity: 1,
 			createdByUserId: staffId,
 			createdAt: ago(4)
+		},
+		{
+			id: buildingOrderId,
+			volunteerRoleId: roleId,
+			assetId: null,
+			notes: 'Room B: Ceiling light flickers',
+			capacity: 1,
+			createdByUserId: staffId,
+			createdAt: ago(3)
 		}
 	]);
 
@@ -91,8 +102,24 @@ export async function seedEquipmentReports(
 			resolutionNotes: 'It was in the case pocket.',
 			resolvedAt: ago(12),
 			createdAt: ago(13)
+		},
+		// Building problems: a place instead of a unit.
+		{
+			assetId: null,
+			location: 'Downstairs bathroom',
+			reportedByUserId: m3.id,
+			note: 'Toilet keeps running after flushing',
+			createdAt: ago(1)
+		},
+		{
+			assetId: null,
+			location: 'Room B',
+			reportedByUserId: m2.id,
+			note: 'Ceiling light flickers',
+			workOrderId: buildingOrderId,
+			createdAt: ago(3)
 		}
 	]);
 
-	return { reports: reports.length, workOrders: 1 };
+	return { reports: reports.length, workOrders: 2 };
 }

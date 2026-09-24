@@ -739,6 +739,21 @@ describe('equipment.report_resolved handler', () => {
 		expect(params.email.recipientName).toBe('Bob');
 		expect(paragraphText(params.email)).toContain('report');
 	});
+
+	it('sends a building problem back to the dashboard it was reported from', async () => {
+		await emit('equipment.report_resolved', {
+			workOrderId: 'wo-2',
+			assetId: null,
+			userId: 'user-2',
+			userName: 'Cy',
+			userEmail: 'cy@test.com',
+			equipmentName: 'Downstairs bathroom'
+		});
+
+		const params = mockDispatch.mock.calls[0][0];
+		expect(params.href).toBe('/member');
+		expect(paragraphText(params.email)).toContain('in Downstairs bathroom');
+	});
 });
 
 describe('equipment.loan_due handler', () => {

@@ -83,6 +83,22 @@ describe('resolveFlagsForWorkOrder', () => {
 		});
 	});
 
+	it('names the place for a building problem, which has no unit', async () => {
+		updateReturning = [{ ...flag('wr-8', 'u-3'), assetId: null, location: 'Downstairs bathroom' }];
+		selectResults = [[{ id: 'u-3', name: 'Cy', email: 'cy@test.com' }]];
+
+		await resolveFlagsForWorkOrder('wo-1', 'staff-1');
+
+		expect(emit).toHaveBeenCalledWith(
+			'equipment.report_resolved',
+			expect.objectContaining({
+				assetId: null,
+				userId: 'u-3',
+				equipmentName: 'Downstairs bathroom'
+			})
+		);
+	});
+
 	it('tells nobody when there was nothing open to close', async () => {
 		updateReturning = [];
 

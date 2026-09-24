@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "82555a8a-c148-4cdf-b5a2-51dc07377600",
+  "id": "3b408d3d-1e0f-4982-909c-167c49703b33",
   "prevIds": [
-    "6dd9fc1b-6bd4-4e00-ba74-3387e032809d"
+    "82555a8a-c148-4cdf-b5a2-51dc07377600"
   ],
   "ddl": [
     {
@@ -5134,11 +5134,21 @@
     },
     {
       "type": "text",
-      "notNull": true,
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
       "name": "asset_id",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "location",
       "entityType": "columns",
       "table": "work_request"
     },
@@ -21486,6 +21496,12 @@
       "name": "movement_qty_nonzero",
       "entityType": "checks",
       "table": "stock_movement"
+    },
+    {
+      "value": "asset_id is not null or location is not null",
+      "name": "work_request_has_subject",
+      "entityType": "checks",
+      "table": "work_request"
     },
     {
       "value": "(offset_minutes is null) = (duration_minutes is null)",

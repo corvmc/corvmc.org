@@ -345,10 +345,12 @@ export interface EquipmentReturnedEvent {
  */
 export interface EquipmentReportResolvedEvent {
 	workOrderId: string;
-	assetId: string;
+	/** Null for a building problem, which names a place instead of a unit. */
+	assetId: string | null;
 	userId: string;
 	userName: string;
 	userEmail: string;
+	/** The unit's name, or the place the reporter named. */
 	equipmentName: string;
 }
 

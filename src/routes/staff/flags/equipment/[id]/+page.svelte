@@ -32,7 +32,7 @@
 <PageHeader
 	width="3xl"
 	subtitle="Equipment Report"
-	title={report.asset.title}
+	title={report.asset?.title ?? report.location ?? 'Building problem'}
 	backHref="/staff/flags/equipment"
 >
 	<StatusBadge status={report.stage === 'in_work_order' ? 'in_progress' : report.status} label />
@@ -41,7 +41,11 @@
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
 		<InfoCard title="Report">
 			<DefinitionList>
-				<Fact label="Unit"><EntityChip ref={report.asset} /></Fact>
+				{#if report.asset}
+					<Fact label="Unit"><EntityChip ref={report.asset} /></Fact>
+				{:else}
+					<Fact label="Where">{report.location}</Fact>
+				{/if}
 				<Fact label="Note" wrap>{report.note}</Fact>
 				<Fact label="Still usable?">{report.blocksUse ? 'No — out of use' : 'Yes'}</Fact>
 				{#if report.condition}
@@ -58,22 +62,24 @@
 			</DefinitionList>
 		</InfoCard>
 
-		<InfoCard title="Other open reports on this unit" state={report.otherPending.length}>
-			{#if report.otherPending.length === 0}
-				<p class="text-muted">None. Sending this to a work order takes any that arrive first.</p>
-			{:else}
-				<ul class="space-y-2">
-					{#each report.otherPending as o (o.id)}
-						<li>
-							<a class="link" href={resolve(`/staff/flags/equipment/${o.id}`)}>{o.note}</a>
-							<div class="text-subtle">
-								{o.reporterName ?? 'Deleted account'} · {formatDateShort(o.createdAt)}
-							</div>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</InfoCard>
+		{#if report.asset}
+			<InfoCard title="Other open reports on this unit" state={report.otherPending.length}>
+				{#if report.otherPending.length === 0}
+					<p class="text-muted">None. Sending this to a work order takes any that arrive first.</p>
+				{:else}
+					<ul class="space-y-2">
+						{#each report.otherPending as o (o.id)}
+							<li>
+								<a class="link" href={resolve(`/staff/flags/equipment/${o.id}`)}>{o.note}</a>
+								<div class="text-subtle">
+									{o.reporterName ?? 'Deleted account'} · {formatDateShort(o.createdAt)}
+								</div>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</InfoCard>
+		{/if}
 
 		<InfoCard title="Triage" class="bg-base-200 shadow-none">
 			{#if report.stage === 'untriaged'}
@@ -118,8 +124,9 @@
 								/>
 							{/if}
 							<p class="text-muted text-wrap">
-								Every other open report on this unit goes with it, and all of them close when the
-								work order is resolved.
+								{report.asset
+									? 'Every other open report on this unit goes with it, and all of them close when the work order is resolved.'
+									: 'It closes when the work order is resolved.'}
 							</p>
 						{/snippet}
 					</Action>

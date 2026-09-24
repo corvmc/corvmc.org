@@ -10,7 +10,8 @@
 		status: string;
 		/** What kind of thing was reported — the type column. */
 		kind: string;
-		subject: EntityRef;
+		/** A record, or plain text where there is none — a building problem's place. */
+		subject: EntityRef | string;
 		text: string;
 		reporter: string;
 		createdAt: Date;
@@ -48,7 +49,9 @@
 		<tr class="hover cursor-pointer" use:rowLink={r.href}>
 			<td class="w-px"><StatusBadge status={r.status} label /></td>
 			<td class="col-support whitespace-nowrap">{r.kind}</td>
-			<td class="whitespace-nowrap"><EntityIdentity ref={r.subject} /></td>
+			<td class="whitespace-nowrap">
+				{#if typeof r.subject === 'string'}{r.subject}{:else}<EntityIdentity ref={r.subject} />{/if}
+			</td>
 			<td class="cell-primary truncate">
 				{#if r.appealed}
 					<Badge variant="warning" size="sm" class="mr-1">Appealed</Badge>
