@@ -74,6 +74,7 @@ export type StaffNavKey =
 	| 'audiences'
 	| 'help'
 	| 'local-resources'
+	| 'resource-tips'
 	| 'payments'
 	| 'credits'
 	| 'sponsors'
@@ -93,7 +94,12 @@ export type StaffNavSectionKey =
  * would churn every `{#each}` for nothing.
  */
 export type StaffNavBadgeKey =
-	'inboxUnread' | 'suggestionsAwaiting' | 'volunteerPending' | 'listingsPending' | 'appealsPending';
+	| 'inboxUnread'
+	| 'resourceTipsPending'
+	| 'suggestionsAwaiting'
+	| 'volunteerPending'
+	| 'listingsPending'
+	| 'appealsPending';
 
 export interface StaffNavItem extends NavNode<StaffNavKey> {
 	label: string;
@@ -128,6 +134,15 @@ export const staffNavTop: StaffNavItem[] = [
 		label: 'Inbox',
 		href: resolve('/staff/inbox'),
 		badgeKey: 'inboxUnread'
+	},
+	// Beside Inbox because a tip is someone outside waiting on an answer (#1566);
+	// the page itself sits with the listings, under Local Resources.
+	{
+		key: 'resource-tips',
+		capability: 'localResource.manage',
+		label: 'Resource Tips',
+		href: resolve('/staff/local-resources/tips'),
+		badgeKey: 'resourceTipsPending'
 	}
 ];
 

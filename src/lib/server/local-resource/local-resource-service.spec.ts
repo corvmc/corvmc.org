@@ -173,6 +173,38 @@ describe('listPublishedByCategory', () => {
 	});
 });
 
+describe('the tips queue (#1566)', () => {
+	it('lists pending, undeleted tips with who sent them', async () => {
+		const tip = {
+			id: 'lr-9',
+			name: 'Fret Shop',
+			categoryName: 'Shops',
+			website: null,
+			submitterEmail: 'fan@example.com',
+			createdAt: new Date('2026-09-20T12:00:00Z')
+		};
+		selectResults = [[tip]];
+
+		expect(await svc.listTips()).toEqual([tip]);
+
+		const { sql, params } = renderWhere(0);
+		expect(sql).toContain('"local_resource"."status" = ?');
+		expect(sql).toContain('"local_resource"."deleted_at" is null');
+		expect(params).toEqual(['pending']);
+	});
+
+	it('counts the same rows the queue lists', async () => {
+		selectResults = [[{ value: 3 }]];
+
+		expect(await svc.countPendingTips()).toBe(3);
+
+		const { sql, params } = renderWhere(0);
+		expect(sql).toContain('"local_resource"."status" = ?');
+		expect(sql).toContain('"local_resource"."deleted_at" is null');
+		expect(params).toEqual(['pending']);
+	});
+});
+
 describe('createResource', () => {
 	it('publishes a staff-authored listing on save', async () => {
 		await svc.createResource({ categoryId: 'c-1', name: 'Amp Shop' }, 'staff-1');

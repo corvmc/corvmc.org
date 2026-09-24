@@ -169,6 +169,31 @@ export async function listResourcesForStaff(filters: { status?: LocalResourceSta
 		);
 }
 
+/** Only a public tip is ever `pending`: staff listings publish as they save. */
+const pendingTip = () => and(eq(localResource.status, 'pending'), isNull(localResource.deletedAt));
+
+/** The tips queue (#1566): oldest first, so nothing waits behind newer tips. */
+export async function listTips() {
+	return db
+		.select({
+			id: localResource.id,
+			name: localResource.name,
+			categoryName: localResourceCategory.name,
+			website: localResource.website,
+			submitterEmail: localResource.submitterEmail,
+			createdAt: localResource.createdAt
+		})
+		.from(localResource)
+		.innerJoin(localResourceCategory, eq(localResourceCategory.id, localResource.categoryId))
+		.where(pendingTip())
+		.orderBy(asc(localResource.createdAt), asc(localResource.id));
+}
+
+export async function countPendingTips(): Promise<number> {
+	const [row] = await db.select({ value: count() }).from(localResource).where(pendingTip());
+	return row?.value ?? 0;
+}
+
 export async function getResource(id: string) {
 	const [row] = await db
 		.select()
