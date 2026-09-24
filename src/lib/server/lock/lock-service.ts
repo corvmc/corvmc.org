@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, eq, isNull, isNotNull, gte, lt } from 'drizzle-orm';
+import { and, asc, eq, isNull, isNotNull, gt, gte, lt } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	createTemporaryUser,
@@ -195,19 +195,32 @@ async function notifyStaffLockOffline(health: LockDeviceHealth): Promise<void> {
  * `sync_status` on the user itself says the code is on the device — that is
  * what `lockSyncedAt` records, and what the member-facing surfaces key on.
  */
-async function reconcileSyncState(errors: string[]): Promise<number> {
+async function reconcileSyncState(
+	errors: string[],
+	upcoming?: { now: Date; limit: number }
+): Promise<number> {
 	let count = 0;
 
-	const rows = await db
+	const outstanding = and(
+		eq(reservation.status, 'confirmed'),
+		isNotNull(reservation.lockAccessId),
+		isNull(reservation.lockSyncedAt)
+	);
+	const select = db
 		.select({ id: reservation.id, lockAccessId: reservation.lockAccessId })
-		.from(reservation)
-		.where(
-			and(
-				eq(reservation.status, 'confirmed'),
-				isNotNull(reservation.lockAccessId),
-				isNull(reservation.lockSyncedAt)
-			)
-		);
+		.from(reservation);
+	const rows = upcoming
+		? await select
+				.where(
+					and(
+						outstanding,
+						lt(reservation.startsAt, provisioningWindow(upcoming.now).end),
+						gt(reservation.endsAt, upcoming.now)
+					)
+				)
+				.orderBy(asc(reservation.startsAt))
+				.limit(upcoming.limit)
+		: await select.where(outstanding);
 
 	for (const row of rows) {
 		try {
@@ -227,6 +240,31 @@ async function reconcileSyncState(errors: string[]): Promise<number> {
 	}
 
 	return count;
+}
+
+/**
+ * U-tec reads per 15-minute pass. Soonest-first, so a cap that bites defers the
+ * bookings with the most time to spare; the daily pass stays unbounded.
+ */
+export const UPCOMING_SYNC_CAP = 25;
+
+/**
+ * The 15-minute pass of `reconcileSyncState`: only bookings inside the
+ * confirmation window that have not ended. `door_code_ready` keys on the
+ * `lockSyncedAt` this stamps. Never throws, so it cannot fail its batch.
+ */
+export async function reconcileUpcomingSync(
+	now = new Date()
+): Promise<{ confirmed: number; errors: string[] }> {
+	const errors: string[] = [];
+	try {
+		const confirmed = await reconcileSyncState(errors, { now, limit: UPCOMING_SYNC_CAP });
+		return { confirmed, errors };
+	} catch (err) {
+		const msg = `Sync reconciliation failed: ${(err as Error).message}`;
+		console.error(msg);
+		return { confirmed: 0, errors: [...errors, msg] };
+	}
 }
 
 /**

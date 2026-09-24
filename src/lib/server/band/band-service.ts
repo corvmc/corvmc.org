@@ -38,6 +38,7 @@ import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { detachSlot } from '$lib/server/media/media-service';
 import { deletePrivateObject } from '$lib/server/private-storage';
@@ -1117,6 +1118,12 @@ export async function deactivate(bandId: string) {
 		});
 	}
 
+	await recordAuditEntry({
+		action: 'band.deactivated',
+		subject: { type: 'band', id: bandId, label: row.name },
+		details: { bandId, bandName: row.name }
+	});
+
 	return row;
 }
 
@@ -1135,6 +1142,13 @@ export async function reactivate(bandId: string) {
 	]);
 
 	if (!row) throw new BandNotFoundError();
+
+	await recordAuditEntry({
+		action: 'band.reactivated',
+		subject: { type: 'band', id: bandId, label: row.name },
+		details: { bandId, bandName: row.name }
+	});
+
 	return row;
 }
 

@@ -604,7 +604,8 @@ export async function cancel(
 		date: formatDateInTz(row.startsAt, TZ),
 		startTime: formatTimeInTz(row.startsAt, TZ),
 		endTime: formatTimeInTz(row.endsAt, TZ),
-		cancelledBy: options?.actor ?? (options?.staffOverride ? 'staff' : 'member')
+		cancelledBy: options?.actor ?? (options?.staffOverride ? 'staff' : 'member'),
+		reason
 	});
 
 	// Cancellation is complete and consistent; the refund is not. Surface it so

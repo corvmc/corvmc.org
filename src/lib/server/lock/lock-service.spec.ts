@@ -8,6 +8,8 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 let selectResults: unknown[][] = [];
 let selectCallIndex = 0;
 const updateCalls: unknown[] = [];
+/** Every builder method called on a select chain, e.g. `['limit', [25]]`. */
+const chainCalls: [string, unknown[]][] = [];
 
 function buildChain() {
 	const proxy: any = new Proxy(() => proxy, {
@@ -17,7 +19,10 @@ function buildChain() {
 				selectCallIndex++;
 				return (resolve: (v: unknown[]) => void) => resolve(result);
 			}
-			return () => proxy;
+			return (...args: unknown[]) => {
+				chainCalls.push([String(prop), args]);
+				return proxy;
+			};
 		}
 	});
 	return proxy;
@@ -66,8 +71,10 @@ vi.mock('drizzle-orm', () => ({
 	and: vi.fn(),
 	isNull: vi.fn(),
 	isNotNull: vi.fn(),
+	gt: vi.fn(),
 	gte: vi.fn(),
-	lt: vi.fn()
+	lt: vi.fn(),
+	asc: vi.fn()
 }));
 
 vi.mock('$lib/server/reservation/timezone', () => ({
@@ -136,8 +143,11 @@ const {
 	issueLockSelfTest,
 	revokeLockSelfTest,
 	syncAccessWindow,
-	provisionOnConfirm
+	provisionOnConfirm,
+	reconcileUpcomingSync,
+	UPCOMING_SYNC_CAP
 } = await import('./lock-service');
+const { lt, gt } = await import('drizzle-orm');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -170,6 +180,7 @@ beforeEach(() => {
 	selectResults = [];
 	selectCallIndex = 0;
 	updateCalls.length = 0;
+	chainCalls.length = 0;
 	mockCreateTemporaryUser.mockResolvedValue(null);
 	mockAddLockUser.mockResolvedValue(null);
 	mockRemoveTemporaryUser.mockResolvedValue(undefined);
@@ -713,6 +724,59 @@ describe('sync reconciliation', () => {
 
 		expect(result.confirmed).toBe(0);
 		expect(result.errors).toHaveLength(0);
+	});
+});
+
+// The daily pass is too slow for a booking confirmed after it ran for later
+// that day: the door_code_ready notice keys on lockSyncedAt (#1495).
+describe('reconcileUpcomingSync', () => {
+	it('promotes codes the lock reports synced, and nothing else', async () => {
+		selectResults.push([
+			{ id: 'res-synced', lockAccessId: '111' },
+			{ id: 'res-queued', lockAccessId: '222' }
+		]);
+		mockGetLockUser.mockImplementation(async (id: number) =>
+			id === 111 ? { id: 111, type: 2, syncStatus: 1 } : { id: 222, type: 2, syncStatus: 0 }
+		);
+
+		const result = await reconcileUpcomingSync();
+
+		expect(result).toEqual({ confirmed: 1, errors: [] });
+		expect(updateCalls).toEqual([expect.objectContaining({ lockSyncedAt: expect.any(Date) })]);
+		expect(mockQueryDeviceHealth).not.toHaveBeenCalled();
+		expect(mockListLockUsers).not.toHaveBeenCalled();
+		expect(mockMaintainFallbackCode).not.toHaveBeenCalled();
+		expect(mockReconcileMemberCodeSync).not.toHaveBeenCalled();
+	});
+
+	it('reads only bookings inside the confirmation window that have not ended, soonest first, capped', async () => {
+		await reconcileUpcomingSync();
+
+		expect(vi.mocked(lt)).toHaveBeenCalledWith('starts_at', expect.any(Date));
+		expect(vi.mocked(gt)).toHaveBeenCalledWith('ends_at', expect.any(Date));
+		expect(chainCalls).toContainEqual(['orderBy', [undefined]]);
+		expect(chainCalls).toContainEqual(['limit', [UPCOMING_SYNC_CAP]]);
+		expect(UPCOMING_SYNC_CAP).toBeGreaterThan(0);
+		expect(UPCOMING_SYNC_CAP).toBeLessThanOrEqual(50);
+	});
+
+	it('reports a failed read instead of throwing', async () => {
+		mockGetLockUser.mockRejectedValue(new Error('rate limited'));
+		selectResults.push([{ id: 'res-1', lockAccessId: '111' }]);
+
+		const result = await reconcileUpcomingSync();
+
+		expect(result.confirmed).toBe(0);
+		expect(result.errors).toEqual([expect.stringContaining('rate limited')]);
+	});
+
+	it('leaves the daily backstop unbounded', async () => {
+		selectResults.push([]); // provision
+		selectResults.push([]); // reconcile
+
+		await runDailyLockJob();
+
+		expect(chainCalls.some(([m]) => m === 'limit')).toBe(false);
 	});
 });
 

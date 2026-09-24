@@ -20,6 +20,9 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		'/api/cron/cancel-unconfirmed',
 		'/api/cron/expire-waitlisted',
 		'/api/cron/wake-snoozed',
+		// Before reminders: door_code_ready keys on the lockSyncedAt this stamps,
+		// so a same-day booking hears on the tick its code lands. Capped per run.
+		'/api/cron/lock-sync',
 		// Last of the 15-minute jobs: complete-shifts above decides what the
 		// feedback ask is owed, so running after it asks a day sooner rather than
 		// a day later. Firing once is `reminder_sent`'s job, not the cadence's.
