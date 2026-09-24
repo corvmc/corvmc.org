@@ -59,7 +59,7 @@
 				<Fact label="Content">{outcomeLabels[appeal.decision.contentOutcome]}</Fact>
 				<Fact label="Standing">{outcomeLabels[appeal.decision.standingOutcome]}</Fact>
 				{#if appeal.decision.notes}
-					<Fact label="Told the member" wrap>{appeal.decision.notes}</Fact>
+					<Fact label="Reason (staff only)" wrap>{appeal.decision.notes}</Fact>
 				{/if}
 				<Fact label="Decided">{formatDateTime(appeal.decision.decidedAt)}</Fact>
 			</DefinitionList>
@@ -127,7 +127,9 @@
 							</p>
 						{/if}
 						<label class="fieldset w-full">
-							<span class="fieldset-legend">Reason (the member is shown this)</span>
+							<span class="fieldset-legend"
+								>Reason (staff only; the member is told the verdict)</span
+							>
 							<textarea class="textarea w-full" rows="3" {...fields.notes.as('text')}></textarea>
 						</label>
 					</div>

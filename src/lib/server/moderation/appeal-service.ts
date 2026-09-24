@@ -174,10 +174,20 @@ export interface AppealDecision {
 	decidedAt: Date;
 }
 
+/** The member sees the verdict only; the staffer's reason stays internal (#1430). */
+export type MemberAppealDecision = Omit<AppealDecision, 'notes'>;
+
 export interface MemberAppealView {
 	/** The decision being contested, as the member was told it. */
 	upheld: { notes: string | null; resolvedAt: Date | null; byStaff: boolean };
-	appeal: { body: string; createdAt: Date; decision: AppealDecision | null } | null;
+	appeal: { body: string; createdAt: Date; decision: MemberAppealDecision | null } | null;
+}
+
+function memberDecisionOf(row: Parameters<typeof decisionOf>[0]): MemberAppealDecision | null {
+	const decision = decisionOf(row);
+	if (!decision) return null;
+	const { contentOutcome, standingOutcome, verdict, decidedAt } = decision;
+	return { contentOutcome, standingOutcome, verdict, decidedAt };
 }
 
 function decisionOf(row: {
@@ -219,7 +229,7 @@ export async function getMemberAppeal(
 			byStaff: flag.origin === 'staff_action'
 		},
 		appeal: appeal
-			? { body: appeal.body, createdAt: appeal.createdAt, decision: decisionOf(appeal) }
+			? { body: appeal.body, createdAt: appeal.createdAt, decision: memberDecisionOf(appeal) }
 			: null
 	};
 }
@@ -465,7 +475,7 @@ export async function decideAppeal(
 		})
 		.where(and(eq(moderationAppeal.id, appeal.id), isNull(moderationAppeal.decidedAt)));
 
-	await notifyAppellant(appeal.appellantUserId, flag, consequences, verdict, notes);
+	await notifyAppellant(appeal.appellantUserId, flag, consequences, verdict);
 
 	return { contentOutcome, standingOutcome };
 }
@@ -488,8 +498,7 @@ async function notifyAppellant(
 	appellantUserId: string | null,
 	flag: AppealableFlag,
 	consequences: Consequences,
-	verdict: AppealVerdict,
-	notes: string
+	verdict: AppealVerdict
 ): Promise<void> {
 	if (!appellantUserId) return;
 	try {
@@ -505,7 +514,6 @@ async function notifyAppellant(
 			appellantName: member.name,
 			appellantEmail: member.email,
 			verdict,
-			notes,
 			href: memberHrefFor(flag, consequences)
 		});
 	} catch (err) {

@@ -80,9 +80,6 @@
 					>Appeal {appealVerdictLabels[view.appeal.decision.verdict].toLowerCase()}</span
 				>
 				on {formatDate(view.appeal.decision.decidedAt)}.
-				{#if view.appeal.decision.notes}
-					Staff's answer: <span class="italic">{view.appeal.decision.notes}</span>
-				{/if}
 			</p>
 		{/if}
 	</div>

@@ -1759,7 +1759,7 @@ export function registerAllNotificationListeners(): void {
 		}
 	});
 
-	// --- Staff answered an appeal (notify the member, with the reasoning) ---
+	// --- Staff answered an appeal (notify the member of the verdict; the reason stays internal) ---
 	domainEvents.on('moderation.appeal_decided', async ({ data: event }) => {
 		const copy = {
 			granted: {
@@ -1781,14 +1781,13 @@ export function registerAllNotificationListeners(): void {
 			userId: event.appellantUserId,
 			userEmail: event.appellantEmail,
 			title: copy.title,
-			body: event.notes,
+			body: copy.text,
 			href: event.href,
 			email: {
 				recipientName: event.appellantName,
 				subject: copy.title,
 				heading: copy.title,
 				paragraphs: [{ text: copy.text }],
-				quote: event.notes,
 				cta: { label: 'See the details' }
 			}
 		});
