@@ -82,6 +82,7 @@
 					<th>Name</th>
 					<th>Repeats</th>
 					<th>Next due</th>
+					<th>On it</th>
 					<th>Last closed</th>
 					<th><span class="sr-only">Actions</span></th>
 				{/snippet}
@@ -110,6 +111,20 @@
 						<td class="whitespace-nowrap">
 							{#if s.openDueAt}
 								<span class:text-error={s.openDueAt.getTime() < now}>{formatDate(s.openDueAt)}</span
+								>
+							{:else}
+								<span class="text-subtle">—</span>
+							{/if}
+						</td>
+						<td>
+							{#if s.assignees.length > 0}
+								{s.assignees.join(', ')}
+							{:else if s.openWorkOrderId}
+								<!-- The open occurrence's page is where somebody gets invited. -->
+								<a
+									class="link text-subtle"
+									href={resolve('/staff/volunteer/shifts/[id]', { id: s.openWorkOrderId })}
+									>Nobody yet</a
 								>
 							{:else}
 								<span class="text-subtle">—</span>
