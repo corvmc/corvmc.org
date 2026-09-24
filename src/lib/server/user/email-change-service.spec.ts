@@ -138,6 +138,21 @@ describe('confirmEmailChange', () => {
 		expect(await svc.getPendingEmailChange(MEMBER)).toBeNull();
 	});
 
+	it('gives the old address a button that asks staff to reverse the change', async () => {
+		await svc.requestEmailChange(MEMBER, 'jordan@example.com');
+		await svc.confirmEmailChange(lastToken());
+
+		const [[notice]] = dispatchEmailOnly.mock.calls.slice(-1) as unknown as [
+			{ email: { cta?: { url: string; label: string }; paragraphs: { text: string }[] } }
+		][];
+		const url = new URL(notice.email.cta!.url);
+		expect(url.protocol).toBe('mailto:');
+		expect(url.pathname).toBe('contact@corvmc.org');
+		expect(url.searchParams.get('subject')).toMatch(/reverse/i);
+		expect(notice.email.cta!.label).toMatch(/reverse/i);
+		expect(notice.email.paragraphs.map((p) => p.text).join(' ')).toMatch(/change it back/i);
+	});
+
 	it('works once', async () => {
 		await svc.requestEmailChange(MEMBER, 'jordan@example.com');
 		const token = lastToken();
