@@ -13,6 +13,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 
 	/**
 	 * Everything the collective has taken in, and what it cost.
@@ -53,7 +54,7 @@
 		if (owed) parts.push('owed=1');
 		if (pageNo > 1) parts.push(`page=${pageNo}`);
 		const qs = parts.length > 0 ? `?${parts.join('&')}` : '';
-		goto(`${resolve('/staff/inventory/acquisitions')}${qs}`, {
+		goto(withQuery(resolve('/staff/inventory/acquisitions'), qs), {
 			replaceState: true,
 			keepFocus: true,
 			noScroll: true

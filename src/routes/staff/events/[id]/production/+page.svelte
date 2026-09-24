@@ -3,6 +3,7 @@
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { errorMessage } from '$lib/error-message';
@@ -399,9 +400,10 @@
 	// page. Shallow routing rewrites the address bar and nothing else, which is
 	// all mirroring local state wants.
 	$effect(() => {
-		const href = `${resolve(`/staff/events/${id}/production`)}${
-			tab === 'overview' ? '' : `?tab=${tab}`
-		}`;
+		const href = withQuery(
+			resolve(`/staff/events/${id}/production`),
+			tab === 'overview' ? '' : `tab=${tab}`
+		);
 		if (location.pathname + location.search !== href) {
 			replaceState(href, {});
 		}

@@ -24,6 +24,7 @@
 	import { shiftLabel } from '$lib/utils/shift-label';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
@@ -72,7 +73,7 @@
 		if (shortOnly) pairs.push(['short', '1']);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = `${resolve('/staff/volunteer/schedule')}${search ? `?${search}` : ''}`;
+		const href = withQuery(resolve('/staff/volunteer/schedule'), search);
 		if (location.pathname + location.search !== href) {
 			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
 		}

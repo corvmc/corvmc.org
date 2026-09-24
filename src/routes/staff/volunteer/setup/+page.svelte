@@ -16,6 +16,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -62,7 +63,7 @@
 	// `goto(..., { replaceState })`, not `replaceState()`: the latter only rewrites
 	// the address bar and the router overwrites that entry on the next navigation.
 	$effect(() => {
-		const href = `${resolve('/staff/volunteer/setup')}${showRetired ? '?retired=1' : ''}`;
+		const href = withQuery(resolve('/staff/volunteer/setup'), showRetired ? 'retired=1' : '');
 		if (location.pathname + location.search !== href) {
 			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
 		}

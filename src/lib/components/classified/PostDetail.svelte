@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -36,7 +37,7 @@
 
 	function tagHref(t: { kind: ClassifiedTagKind; value: string }) {
 		const q = new URLSearchParams({ tagKind: t.kind, tagValue: t.value });
-		return `${resolve('/member/classifieds')}?${q}`;
+		return withQuery(resolve('/member/classifieds'), q);
 	}
 </script>
 

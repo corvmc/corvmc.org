@@ -103,6 +103,16 @@ export default defineConfig(
 			'svelte/no-navigation-without-resolve': [
 				'error',
 				{ ignoreGoto: true, ignoreReplaceState: true }
+			],
+			// A template literal over `resolve()` makes TypeScript expand the whole
+			// typed-route union, which sits at its complexity limit (#1610).
+			'no-restricted-syntax': [
+				'error',
+				{
+					selector: "TemplateLiteral > CallExpression[callee.name='resolve']",
+					message:
+						'Append a query with withQuery() from $lib/utils/with-query, not a template literal over resolve().'
+				}
 			]
 		}
 	},

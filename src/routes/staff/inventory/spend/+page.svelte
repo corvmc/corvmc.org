@@ -13,6 +13,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 
 	/**
 	 * What the collective spent on stock, per category, over a window.
@@ -41,7 +42,7 @@
 		if (from) parts.push(`from=${encodeURIComponent(from)}`);
 		if (to) parts.push(`to=${encodeURIComponent(to)}`);
 		const qs = parts.length > 0 ? `?${parts.join('&')}` : '';
-		goto(`${resolve('/staff/inventory/spend')}${qs}`, {
+		goto(withQuery(resolve('/staff/inventory/spend'), qs), {
 			replaceState: true,
 			keepFocus: true,
 			noScroll: true

@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -68,11 +69,7 @@
 		if (g) pairs.push(['genre', g]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		// The path is resolved; the query is built above from this page's own
-		// filters. `resolve()` cannot check an arbitrary suffix, so the join is
-		// asserted here rather than the whole expression being left untyped.
-		const base: string = resolve('/directory');
-		return (search ? `${base}?${search}` : base) as ResolvedPathname;
+		return withQuery(resolve('/directory'), search);
 	}
 
 	// Writes the URL, never state — `searchText` and `genre` stay the source of
