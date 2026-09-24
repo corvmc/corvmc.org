@@ -15,7 +15,6 @@ import {
 	asc,
 	desc,
 	count,
-	like,
 	or,
 	inArray,
 	isNull,
@@ -24,6 +23,7 @@ import {
 	notInArray,
 	sql
 } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import type { SQL } from 'drizzle-orm';
 import type { InboxChannel, InboxThreadStatus } from '$lib/server/db/schema/inbox';
 import type { PaginationInput } from '$lib/server/db/paginate';
@@ -327,13 +327,12 @@ function threadConditions(
 		conditions.push(lte(waitingSince, sql`unixepoch() - ${filters.waitingAtLeastDays * 86_400}`));
 	}
 	if (filters.search) {
-		const pattern = `%${filters.search}%`;
 		conditions.push(
 			or(
-				like(inboxThread.contactName, pattern),
-				like(inboxThread.contactEmail, pattern),
-				like(inboxThread.subject, pattern),
-				like(inboxThread.preview, pattern)
+				containsLiteral(inboxThread.contactName, filters.search),
+				containsLiteral(inboxThread.contactEmail, filters.search),
+				containsLiteral(inboxThread.subject, filters.search),
+				containsLiteral(inboxThread.preview, filters.search)
 			)
 		);
 	}

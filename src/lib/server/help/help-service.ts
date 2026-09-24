@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { helpCategory, helpArticle } from '$lib/server/db/schema/help';
-import { eq, and, like, or, sql, inArray, asc, exists } from 'drizzle-orm';
+import { eq, and, or, sql, inArray, asc, exists } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { SEARCH_LIMIT, helpAudiences, type HelpAudience } from '$lib/config';
 import { getUserRoles } from '$lib/server/authorization';
 import { isSustainingMember } from '$lib/server/finance/subscription-service';
@@ -168,7 +169,6 @@ export async function getArticleBySlug(slug: string, audience: HelpAudience) {
 
 export async function searchArticles(query: string, audience: HelpAudience) {
 	const audiences = accessibleAudiences(audience);
-	const pattern = `%${query}%`;
 	return db
 		.select({
 			id: helpArticle.id,
@@ -183,14 +183,14 @@ export async function searchArticles(query: string, audience: HelpAudience) {
 				eq(helpArticle.published, true),
 				inArray(helpArticle.minRole, audiences),
 				or(
-					like(helpArticle.title, pattern),
-					like(helpArticle.summary, pattern),
-					like(helpArticle.content, pattern)
+					containsLiteral(helpArticle.title, query),
+					containsLiteral(helpArticle.summary, query),
+					containsLiteral(helpArticle.content, query)
 				)
 			)
 		)
 		.orderBy(
-			sql`case when ${helpArticle.title} like ${pattern} then 0 else 1 end`,
+			sql`case when ${containsLiteral(helpArticle.title, query)} then 0 else 1 end`,
 			asc(helpArticle.title)
 		)
 		.limit(SEARCH_LIMIT);

@@ -5,7 +5,8 @@ import {
 	inventoryItem,
 	inventoryLocation
 } from '$lib/server/db/schema/inventory';
-import { and, count, eq, isNull, like, or, sql } from 'drizzle-orm';
+import { and, count, eq, isNull, or, sql } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { getAvailableQuantity, getOnHandMany } from './stock-service';
 import type { ItemKind, PricingTier, UnitOfMeasure } from '$lib/config';
@@ -359,9 +360,9 @@ export async function listItems(opts: ListItemsOptions = {}, pagination: Paginat
 	if (opts.search) {
 		conditions.push(
 			or(
-				like(inventoryItem.name, `%${opts.search}%`),
-				like(inventoryItem.gtin, `%${opts.search}%`),
-				like(inventoryItem.resourceId, `%${opts.search}%`)
+				containsLiteral(inventoryItem.name, opts.search),
+				containsLiteral(inventoryItem.gtin, opts.search),
+				containsLiteral(inventoryItem.resourceId, opts.search)
 			)
 		);
 	}

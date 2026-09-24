@@ -2,7 +2,8 @@ import { db } from '$lib/server/db';
 import { workRequest, inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
 import { user } from '$lib/server/db/schema/authentication';
 import { workOrder, volunteerRole } from '$lib/server/db/schema/volunteer';
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, like, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { toGenericRef } from '$lib/server/entity/refs';
 import { AssetNotFoundError, setAssetStatus } from './asset-service';
@@ -312,7 +313,7 @@ export async function listWorkRequests(
 	const where = and(
 		stageWhere(filters.stage),
 		term
-			? or(like(workRequest.note, `%${term}%`), like(inventoryItem.name, `%${term}%`))
+			? or(containsLiteral(workRequest.note, term), containsLiteral(inventoryItem.name, term))
 			: undefined
 	);
 

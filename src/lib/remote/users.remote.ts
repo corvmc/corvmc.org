@@ -30,7 +30,6 @@ import { group } from '$lib/server/db/schema/group';
 import {
 	eq,
 	or,
-	like,
 	isNull,
 	isNotNull,
 	count,
@@ -42,6 +41,7 @@ import {
 	sql,
 	and
 } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { getUserRoles } from '$lib/server/authorization';
 import { memberRefColumns, toMemberRef, toEventRef } from '$lib/server/entity/refs';
 import { paginate } from '$lib/server/db/paginate';
@@ -147,7 +147,7 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 
 	const search = filters.search?.trim();
 	const searchCondition = search
-		? or(like(user.name, `%${search}%`), like(user.email, `%${search}%`))
+		? or(containsLiteral(user.name, search), containsLiteral(user.email, search))
 		: undefined;
 	const status = filters.status ?? 'active';
 	const statusCondition =

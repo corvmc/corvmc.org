@@ -5,7 +5,8 @@ import {
 	type LookingFor
 } from '$lib/server/db/schema/directory';
 import { groupMember } from '$lib/server/db/schema/group';
-import { and, asc, eq, like, sql } from 'drizzle-orm';
+import { and, asc, eq, sql, type SQLWrapper } from 'drizzle-orm';
+import { containsLiteral, startsWithLiteral } from '$lib/server/db/like';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
 import { blockExistsBetween } from '$lib/server/moderation/moderation-service';
@@ -84,7 +85,10 @@ function listingConditions<W>(visibility: 'members' | 'public', search?: string)
 			? { visibility: 'public' }
 			: { visibility: { in: ['members', 'public'] } }) as W
 	];
-	if (search) conditions.push({ name: { like: `%${search}%` } } as W);
+	if (search)
+		conditions.push({
+			RAW: (table: { name: SQLWrapper }, _ops: unknown) => containsLiteral(table.name, search)
+		} as W);
 	return conditions;
 }
 
@@ -805,7 +809,7 @@ async function suggestTags(kind: DirectoryTagKind, prefix: string) {
 	const rows = await db
 		.selectDistinct({ tag: directoryTag.value })
 		.from(directoryTag)
-		.where(and(eq(directoryTag.kind, kind), like(directoryTag.value, `${prefix}%`)))
+		.where(and(eq(directoryTag.kind, kind), startsWithLiteral(directoryTag.value, prefix)))
 		.orderBy(asc(directoryTag.value))
 		.limit(10);
 

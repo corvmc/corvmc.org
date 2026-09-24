@@ -16,7 +16,6 @@ import {
 } from '$lib/server/db/schema/reservation';
 import { createReservationSchema } from '$lib/server/db/schema/reservation';
 import {
-	like,
 	or,
 	eq,
 	ne,
@@ -34,6 +33,7 @@ import {
 	count,
 	type SQL
 } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { getById as getBandById } from '$lib/server/band/band-service';
 import { group, groupMember } from '$lib/server/db/schema/group';
 import { alias } from 'drizzle-orm/sqlite-core';
@@ -585,11 +585,10 @@ export const searchMembers = query(z.string(), async (q) => {
 	await requireCapability('reservation.read');
 	if (!q || q.length < 2) return [];
 
-	const pattern = `%${q}%`;
 	const results = await db
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
-		.where(or(like(user.name, pattern), like(user.email, pattern)))
+		.where(or(containsLiteral(user.name, q), containsLiteral(user.email, q)))
 		.limit(SEARCH_LIMIT);
 
 	return results;
@@ -600,7 +599,6 @@ export const searchBands = query(z.string(), async (q) => {
 	await requireCapability('reservation.read');
 	if (!q || q.length < 2) return [];
 
-	const pattern = `%${q}%`;
 	return (
 		db
 			.select({
@@ -622,7 +620,7 @@ export const searchBands = query(z.string(), async (q) => {
 				)
 			)
 			.leftJoin(user, eq(user.id, ownerMember.userId))
-			.where(and(isNull(group.deletedAt), like(group.name, pattern)))
+			.where(and(isNull(group.deletedAt), containsLiteral(group.name, q)))
 			.limit(SEARCH_LIMIT)
 	);
 });
@@ -1045,13 +1043,12 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 	}
 
 	if (filters.search) {
-		const pattern = `%${filters.search}%`;
 		conditions.push(
 			or(
-				like(user.name, pattern),
-				like(user.email, pattern),
-				like(group.name, pattern),
-				like(eventListing.title, pattern)
+				containsLiteral(user.name, filters.search),
+				containsLiteral(user.email, filters.search),
+				containsLiteral(group.name, filters.search),
+				containsLiteral(eventListing.title, filters.search)
 			)
 		);
 	}

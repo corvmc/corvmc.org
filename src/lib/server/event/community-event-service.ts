@@ -2,7 +2,8 @@ import { db } from '$lib/server/db';
 import { eventListing, type LineupEntry } from '$lib/server/db/schema/event';
 import { eventListingColumns, eventPosterKeySql } from './event-columns';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, count, eq, getTableColumns, gte, inArray, like, ne } from 'drizzle-orm';
+import { and, asc, count, eq, getTableColumns, gte, inArray, ne } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { uploadFile } from '$lib/server/storage';
 import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
@@ -184,7 +185,7 @@ export async function checkForDuplicate(params: {
 			and(
 				eq(eventListing.status, 'published'),
 				gte(eventListing.startsAt, dayStart),
-				like(eventListing.title, `%${stem}%`)
+				containsLiteral(eventListing.title, stem)
 			)
 		)
 		.limit(5);

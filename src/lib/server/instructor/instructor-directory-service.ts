@@ -1,4 +1,5 @@
 import { and, asc, eq, isNull, inArray, sql } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { db } from '$lib/server/db';
 import { instructor } from '$lib/server/db/schema/instructor';
 import { user } from '$lib/server/db/schema/authentication';
@@ -104,7 +105,7 @@ export async function listInstructors(
 	];
 
 	if (filters?.search) {
-		conditions.push(sql`lower(${user.name}) like ${'%' + filters.search.toLowerCase() + '%'}`);
+		conditions.push(containsLiteral(user.name, filters.search));
 	}
 
 	if (filters?.instrument) {

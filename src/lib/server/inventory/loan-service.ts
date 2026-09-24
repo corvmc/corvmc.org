@@ -6,20 +6,8 @@ import {
 	inventoryLoan
 } from '$lib/server/db/schema/inventory';
 import { user } from '$lib/server/db/schema/authentication';
-import {
-	eq,
-	and,
-	sql,
-	like,
-	or,
-	desc,
-	count,
-	inArray,
-	isNull,
-	isNotNull,
-	gte,
-	lt
-} from 'drizzle-orm';
+import { eq, and, sql, or, desc, count, inArray, isNull, isNotNull, gte, lt } from 'drizzle-orm';
+import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { memberRefColumns, toGenericRef, toMemberRef } from '$lib/server/entity/refs';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -678,7 +666,9 @@ export async function listLoans(opts: ListLoansOptions = {}, pagination: Paginat
 	if (opts.userId) conditions.push(eq(inventoryLoan.userId, opts.userId));
 	if (opts.itemId) conditions.push(eq(inventoryLoan.itemId, opts.itemId));
 	if (opts.search) {
-		conditions.push(or(like(user.name, `%${opts.search}%`), like(user.email, `%${opts.search}%`)));
+		conditions.push(
+			or(containsLiteral(user.name, opts.search), containsLiteral(user.email, opts.search))
+		);
 	}
 
 	const where = conditions.length > 0 ? and(...conditions) : undefined;
