@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeHtml, sanitizeBio, renderMarkdown, extractHeadings } from './markdown';
+import {
+	sanitizeHtml,
+	sanitizeBio,
+	renderMarkdown,
+	extractHeadings,
+	markdownExcerpt
+} from './markdown';
 
 // Regression guard: the previous DOMPurify + linkedom setup silently returned
 // input UNCHANGED (DOMPurify no-ops on unsupported DOM implementations), so
@@ -59,5 +65,22 @@ describe('extractHeadings', () => {
 			{ id: 'one', text: 'One', level: 1 },
 			{ id: 'two-words', text: 'Two Words', level: 2 }
 		]);
+	});
+});
+
+describe('markdownExcerpt', () => {
+	it('reduces markdown to its plain words', () => {
+		expect(
+			markdownExcerpt('## The night\n\nA **packed** room & [three bands](https://x.test).')
+		).toBe('The night A packed room & three bands.');
+	});
+
+	it('cuts at a word boundary and marks the cut', () => {
+		expect(markdownExcerpt('one two three four five six', 14)).toBe('one two three…');
+	});
+
+	it('returns null when there is nothing to show', () => {
+		expect(markdownExcerpt(null)).toBeNull();
+		expect(markdownExcerpt('   ')).toBeNull();
 	});
 });

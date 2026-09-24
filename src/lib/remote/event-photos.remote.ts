@@ -5,7 +5,8 @@ import { requireCapability, requireUser } from '$lib/server/authorization';
 import {
 	addEventPhotos,
 	describeEventPhoto as describePhoto,
-	removeEventPhoto as removePhoto
+	removeEventPhoto as removePhoto,
+	setEventRecapText
 } from '$lib/server/event/event-photo-service';
 import { recapUploadAccess } from '$lib/server/event/recap-access';
 import { getPublicEventDetail, getStaffEventPage } from '$lib/remote/events.remote';
@@ -45,6 +46,21 @@ export const removeEventPhoto = form(
 		await requireCapability('event.manage');
 		await removePhoto(data.eventId, data.attachmentId);
 		void getStaffEventPage(data.eventId).refresh();
+		return { success: true };
+	}
+);
+
+/** The written recap (#1401): markdown, and a blank submission clears it. */
+export const saveEventRecapText = form(
+	z.object({
+		eventId: z.string().min(1),
+		recapText: z.string().max(5000).default('')
+	}),
+	async (data) => {
+		await requireCapability('event.manage');
+		await setEventRecapText(data.eventId, data.recapText);
+		void getStaffEventPage(data.eventId).refresh();
+		void getPublicEventDetail(data.eventId).refresh();
 		return { success: true };
 	}
 );

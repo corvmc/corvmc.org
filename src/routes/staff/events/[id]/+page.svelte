@@ -30,6 +30,7 @@
 	} from '$lib/remote/community-events.remote';
 	import { rowLink } from '$lib/actions/row-link';
 	import RecapPhotos from './RecapPhotos.svelte';
+	import RecapText from './RecapText.svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import { formatTime, fullDate, toLocalDate, toLocalTime } from '$lib/utils/format';
 
@@ -451,6 +452,10 @@
 			</div>
 		{/if}
 	</InfoCard>
+
+	{#if !data.recap.closedReason || evt.recapText}
+		<RecapText eventId={evt.id} text={evt.recapText} closedReason={data.recap.closedReason} />
+	{/if}
 
 	{#if !data.recap.closedReason || data.recap.photos.length > 0}
 		<RecapPhotos eventId={evt.id} eventTitle={evt.title} recap={data.recap} />

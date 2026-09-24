@@ -129,6 +129,7 @@ import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
 import { formatDateShortYear } from '$lib/utils/format';
+import { renderMarkdown } from '$lib/utils/markdown';
 import { getShifts, getVolunteerRoles } from './volunteer.remote';
 import { getPublicGigGuide } from './calendar.remote';
 
@@ -429,6 +430,8 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		canReport: evt.status === 'published',
 		collectiveShareBps: seller?.shareBps ?? TICKET_COLLECTIVE_SHARE_BPS,
 		recapUpload,
+		// Sanitized on the way out: `renderMarkdown` runs the allowlist filter.
+		recapHtml: evt.recapText ? renderMarkdown(evt.recapText) : null,
 		photos: photos.map((p) => ({
 			id: p.attachmentId,
 			url: p.url,
@@ -845,6 +848,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			id: evt.id,
 			title: evt.title,
 			description: evt.description,
+			recapText: evt.recapText,
 			startsAt: evt.startsAt,
 			endsAt: evt.endsAt,
 			doorsAt: evt.doorsAt,
