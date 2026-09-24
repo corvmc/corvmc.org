@@ -2267,6 +2267,55 @@ export function positionsGranting(cap: Capability): Position[] {
 export function hasCapability(held: readonly string[], cap: Capability): boolean {
 	return held.includes(cap);
 }
+
+// ---------------------------------------------------------------------------
+// Capability grants: volunteer roles and committees
+// ---------------------------------------------------------------------------
+
+/**
+ * How a grantable capability may be carried.
+ *
+ * `role`: a confirmed signup on a shift in that role grants it for the shift's
+ * event only, from the shift's start until `graceDays` after it ends.
+ * `committee`: `'org'` means active members hold it everywhere; `'owned'` means
+ * only on records the committee owns, so a guard must name the committee.
+ */
+export type GrantRule = {
+	readonly label: string;
+	readonly role?: { readonly graceDays: number };
+	readonly committee?: 'org' | 'owned';
+};
+
+/**
+ * The allowlist: the only capabilities a volunteer role or a committee may
+ * carry. Admin-only and money-moving capabilities never go here; `config.spec.ts`
+ * fails on one, and the grant service refuses anything missing from this list.
+ */
+export const grantableCapabilities = {
+	'event.uploadRecap': { label: 'Upload recap photos', role: { graceDays: 7 } },
+	'sponsor.read': { label: 'See sponsors', committee: 'org' },
+	'sponsor.manage': { label: 'Manage sponsors', committee: 'org' },
+	'grant.read': { label: 'See grants', committee: 'org' },
+	'grant.manage': { label: 'Manage grants', committee: 'org' },
+	'renewal.read': { label: 'See renewals', committee: 'org' },
+	'renewal.manage': { label: 'Manage renewals', committee: 'org' }
+} as const satisfies { readonly [C in Capability]?: GrantRule };
+
+export type GrantableCapability = keyof typeof grantableCapabilities;
+export type GrantCarrier = 'role' | 'committee';
+
+/** The rule for `cap`, or undefined when nothing may grant it. */
+export function grantRuleFor(cap: string): GrantRule | undefined {
+	if (!Object.hasOwn(grantableCapabilities, cap)) return undefined;
+	return (grantableCapabilities as Record<string, GrantRule>)[cap];
+}
+
+/** Which capabilities a volunteer role, or a committee, may carry. */
+export function grantableBy(carrier: GrantCarrier): GrantableCapability[] {
+	return (Object.keys(grantableCapabilities) as GrantableCapability[]).filter(
+		(cap) => grantRuleFor(cap)?.[carrier] !== undefined
+	);
+}
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // Table-name discriminators

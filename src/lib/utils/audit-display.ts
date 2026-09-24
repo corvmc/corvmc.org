@@ -67,6 +67,13 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const verb = d.delta < 0 ? 'Deducted' : 'Added';
 			return `${verb} ${Math.abs(d.delta)} ${CREDIT_LABELS[d.creditType]} (balance ${d.balanceAfter}): “${d.description}”`;
 		}
+		case 'capability.grants_changed': {
+			const parts: string[] = [];
+			if (entry.details.added.length) parts.push(`granted ${entry.details.added.join(', ')}`);
+			if (entry.details.removed.length) parts.push(`removed ${entry.details.removed.join(', ')}`);
+			const line = parts.join('; ') || 'saved grants unchanged';
+			return line.charAt(0).toUpperCase() + line.slice(1);
+		}
 		case 'incident.deleted':
 			return `Deleted after ${entry.details.retentionYears} years (occurred ${entry.details.occurredAt.slice(0, 10)})`;
 	}

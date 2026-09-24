@@ -1,5 +1,6 @@
 import type { User, Session } from 'better-auth/minimal';
 import type { Position } from '$lib/config';
+import type { CommitteeGrant } from '$lib/server/capability/capability-grants';
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
@@ -25,6 +26,8 @@ declare global {
 			 * instead of each starting their own.
 			 */
 			positions?: Promise<Position[]>;
+			/** The caller's committee grants, memoised the same way. See `capability-grants.ts`. */
+			committeeGrants?: Promise<CommitteeGrant[]>;
 		}
 
 		// interface Error {}

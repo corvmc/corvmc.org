@@ -256,6 +256,16 @@ export const volunteerRole = sqliteTable('volunteer_role', {
 		.notNull()
 		.default(sql`'[]'`),
 
+	/**
+	 * Capabilities a confirmed signup in this role carries, for that shift's
+	 * event only. Entries must be on `grantableCapabilities`; the resolver ignores
+	 * any that have left the list since.
+	 */
+	capabilityGrants: text('capability_grants', { mode: 'json' })
+		.$type<string[]>()
+		.notNull()
+		.default(sql`'[]'`),
+
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
 		.default(sql`(unixepoch())`),

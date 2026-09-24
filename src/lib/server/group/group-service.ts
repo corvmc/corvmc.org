@@ -109,6 +109,7 @@ export async function getGroupDetail(groupId: string) {
 			avatarKey: group.avatarKey,
 			joinPolicy: group.joinPolicy,
 			joinInstructions: group.joinInstructions,
+			capabilityGrants: group.capabilityGrants,
 			visibility: directoryEntry.visibility,
 			ownerId: ownerMember.userId,
 			owner: memberRefColumns(),
@@ -244,6 +245,7 @@ export async function listMemberGroups(userId: string) {
 			avatarKey: group.avatarKey,
 			joinPolicy: group.joinPolicy,
 			joinInstructions: group.joinInstructions,
+			capabilityGrants: group.capabilityGrants,
 			visibility: directoryEntry.visibility,
 			myRole: mine.role,
 			myStatus: mine.status,
@@ -303,6 +305,7 @@ export async function listPublicGroups(kinds?: readonly StaffGroupKind[]) {
 			avatarKey: group.avatarKey,
 			joinPolicy: group.joinPolicy,
 			joinInstructions: group.joinInstructions,
+			capabilityGrants: group.capabilityGrants,
 			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`
 		})
 		.from(group)
@@ -345,6 +348,7 @@ export async function getPublicGroup(slug: string) {
 			avatarKey: group.avatarKey,
 			joinPolicy: group.joinPolicy,
 			joinInstructions: group.joinInstructions,
+			capabilityGrants: group.capabilityGrants,
 			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`
 		})
 		.from(group)
