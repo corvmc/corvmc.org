@@ -53,10 +53,12 @@ vi.mock('$app/server', () => ({ getRequestEvent: () => ({ locals }) }));
 // The grant resolver has its own spec; here only the order and the scoping matter.
 const committeeGrantsFor = vi.fn(async (_userId: string) => [] as unknown[]);
 const roleGrantAllows = vi.fn(async (..._args: unknown[]) => false);
+const listCommitteeHolders = vi.fn(async (_cap: string) => [] as unknown[]);
 vi.mock('$lib/server/capability/capability-grants', async (orig) => ({
 	...(await orig<typeof import('$lib/server/capability/capability-grants')>()),
 	committeeGrantsFor,
-	roleGrantAllows
+	roleGrantAllows,
+	listCommitteeHolders
 }));
 
 // Import after mocking
@@ -70,7 +72,8 @@ const {
 	requireCapabilityOrOwner,
 	userHasCapability,
 	isElevated,
-	listUsersWithCapability
+	listUsersWithCapability,
+	committeeCapabilitiesFor
 } = await import('./authorization');
 
 // drizzle and the schema are real, so the predicate the service builds can be
@@ -165,6 +168,7 @@ beforeEach(() => {
 	locals = {};
 	committeeGrantsFor.mockReset().mockResolvedValue([]);
 	roleGrantAllows.mockReset().mockResolvedValue(false);
+	listCommitteeHolders.mockReset().mockResolvedValue([]);
 });
 
 describe('positionsFor', () => {
@@ -435,6 +439,75 @@ describe('listUsersWithCapability', () => {
 		// inversion is pure config, so the lookup stays one round trip.
 		const sql = renderWhere(whereClauses.length - 1);
 		expect(sql).toContain('in');
+	});
+});
+
+describe('sponsors, grants and renewals through a committee seat (#1578, #1602)', () => {
+	const DEVELOPMENT = [
+		{
+			groupId: 'dev',
+			capabilities: [
+				'sponsor.read',
+				'sponsor.manage',
+				'grant.read',
+				'grant.manage',
+				'renewal.read',
+				'renewal.manage'
+			]
+		}
+	];
+	const CAPS = [
+		'sponsor.read',
+		'sponsor.manage',
+		'grant.read',
+		'grant.manage',
+		'renewal.read',
+		'renewal.manage'
+	] as const;
+
+	for (const cap of CAPS) {
+		it(`admits a member of a committee granting ${cap}, holding no position`, async () => {
+			asUser('dev-1');
+			committeeGrantsFor.mockResolvedValue(DEVELOPMENT);
+			await expect(requireCapability(cap)).resolves.toMatchObject({ id: 'dev-1' });
+		});
+
+		it(`refuses ${cap} to someone with neither a seat nor a position`, async () => {
+			asUser();
+			await expect(requireCapability(cap)).rejects.toMatchObject({ status: 403 });
+		});
+	}
+
+	it('lets the treasurer read sponsors and grants without managing them', async () => {
+		asUser();
+		queryResults = [{ name: 'treasurer' }];
+		expect(await can('sponsor.read')).toBe(true);
+		expect(await can('grant.read')).toBe(true);
+		expect(await can('sponsor.manage')).toBe(false);
+		expect(await can('renewal.read')).toBe(false);
+	});
+
+	it('gives a seat nothing its committee does not carry', async () => {
+		asUser();
+		committeeGrantsFor.mockResolvedValue([{ groupId: 'dev', capabilities: ['sponsor.read'] }]);
+		expect(await can('sponsor.manage')).toBe(false);
+		expect(await can('project.manage')).toBe(false);
+	});
+
+	it('lists the seat among the capabilities the nav is built from', async () => {
+		committeeGrantsFor.mockResolvedValue(DEVELOPMENT);
+		expect(await committeeCapabilitiesFor('dev-1')).toEqual(expect.arrayContaining([...CAPS]));
+	});
+
+	it('counts committee members among the holders, once each', async () => {
+		queryResults = [{ id: 'u-1', name: 'A', email: 'a@x' }];
+		listCommitteeHolders.mockResolvedValue([
+			{ id: 'u-1', name: 'A', email: 'a@x' },
+			{ id: 'dev-1', name: 'D', email: 'd@x' }
+		]);
+		const rows = await listUsersWithCapability('renewal.manage');
+		expect(rows.map((r) => r.id)).toEqual(['u-1', 'dev-1']);
+		expect(listCommitteeHolders).toHaveBeenCalledWith('renewal.manage');
 	});
 });
 

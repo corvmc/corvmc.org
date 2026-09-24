@@ -25,8 +25,15 @@ function chainable() {
 
 vi.mock('$lib/server/db', () => ({ db: { select: vi.fn(() => chainable()) } }));
 
-const { committeeAllows, committeeGrantsFor, grantWindow, roleGrantAllows, allowlisted } =
-	await import('./capability-grants');
+const {
+	committeeAllows,
+	committeeGrantsFor,
+	grantWindow,
+	roleGrantAllows,
+	allowlisted,
+	orgWideCapabilities,
+	listCommitteeHolders
+} = await import('./capability-grants');
 
 const dialect = new SQLiteSyncDialect();
 const rendered = (i: number) => dialect.sqlToQuery(whereClauses[i] as SQL);
@@ -152,6 +159,39 @@ describe('roleGrantAllows', () => {
 
 	it('never reads for a capability no role may grant', async () => {
 		expect(await roleGrantAllows('u-1', 'sponsor.manage', 'ev-1', showEnd)).toBe(false);
+		expect(whereClauses).toHaveLength(0);
+	});
+});
+
+describe('orgWideCapabilities', () => {
+	it('flattens org-wide grants once each, for the nav', () => {
+		const seats = [
+			{ groupId: 'dev', capabilities: ['sponsor.manage', 'grant.read'] },
+			{ groupId: 'fin', capabilities: ['grant.read'] }
+		];
+		expect(orgWideCapabilities(seats).sort()).toEqual(['grant.read', 'sponsor.manage']);
+	});
+});
+
+describe('listCommitteeHolders', () => {
+	it('returns active members of committees whose list carries the capability', async () => {
+		selectResults = [
+			[
+				{ id: 'u1', name: 'Ada', email: 'a@x', grants: ['renewal.manage'] },
+				{ id: 'u2', name: 'Bo', email: 'b@x', grants: ['sponsor.read'] }
+			]
+		];
+		expect(await listCommitteeHolders('renewal.manage')).toEqual([
+			{ id: 'u1', name: 'Ada', email: 'a@x' }
+		]);
+		const { sql } = rendered(0);
+		expect(sql).toContain('"group"."kind" = ?');
+		expect(sql).toContain('"user"."deleted_at" is null');
+	});
+
+	it('never reads for a capability no committee may hold org-wide', async () => {
+		expect(await listCommitteeHolders('event.uploadRecap')).toEqual([]);
+		expect(await listCommitteeHolders('user.list')).toEqual([]);
 		expect(whereClauses).toHaveLength(0);
 	});
 });

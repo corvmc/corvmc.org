@@ -444,6 +444,9 @@ history, appeal tracking and year-end statements have nothing behind them.
 maintain business sponsorships.
 🆕 `Grant & Fundraising Tracker` and `Sponsor Management` in [the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement), both
 unbuilt.
+⏫ Both shipped at `/staff/sponsors` and `/staff/grants`. A committee's grant list gives its
+active members `sponsor.*` and `grant.*`. The seed gives these to Development, and staff edit them
+on the group page (#1578).
 
 **As Development**, I want a record per venue of the terms we negotiated and the checklist we
 walk every time.
@@ -467,6 +470,8 @@ direction of money, and a different lifecycle.
 **As Development**, I want permits, licenses and insurance to tell me before they expire.
 🆕 No renewal calendar. The nearest built thing is certification expiry, which is derived from
 dates rather than stored as a status — the same treatment would work here.
+⏫ Shipped at `/staff/renewals` (#1478). A committee holding `renewal.*` in its grant list manages
+it and receives the reminders when nobody is named on a renewal (#1602).
 
 ---
 

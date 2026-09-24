@@ -39,7 +39,13 @@ async function dashboardDeadlines() {
 	});
 	return rows.map((d) => ({ ...d, overdue: d.on < today }));
 }
-import { requireCapability, can, isPosition, requireUser } from '$lib/server/authorization';
+import {
+	requireCapability,
+	can,
+	isPosition,
+	requireUser,
+	committeeCapabilitiesFor
+} from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { directoryEntry } from '$lib/server/db/schema/directory';
@@ -104,7 +110,13 @@ import { parseBirthDateInput } from '$lib/utils/age';
 // ---------------------------------------------------------------------------
 
 export const getStaffDashboard = query(async () => {
-	await requireCapability('user.list');
+	// A committee seat opens the panel without `user.list` (#1578). It gets the
+	// capabilities the page offers links by, and none of the data below.
+	if (!(await can('user.list'))) {
+		const seat = await committeeCapabilitiesFor(requireUser().id);
+		if (seat.length === 0) await requireCapability('user.list');
+		return { seat };
+	}
 	const startOfMonth = new Date();
 	startOfMonth.setDate(1);
 	startOfMonth.setHours(0, 0, 0, 0);
@@ -142,6 +154,7 @@ export const getStaffDashboard = query(async () => {
 	]);
 
 	return {
+		seat: null,
 		stats: {
 			totalUsers: totalUsersResult[0].value,
 			totalRoles: totalRolesResult[0].value,

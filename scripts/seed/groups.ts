@@ -243,5 +243,49 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 		}
 	}
 
+	groups.push(await seedDevelopmentCommittee(users, leaders));
 	return groups;
+}
+
+/**
+ * The Development Committee, carrying the grants the owner gave it (#1578,
+ * #1602). Staff can re-point any of them on the group page. The open club's host
+ * sits on it with no position, so a login exists for the seat-only staff panel.
+ */
+async function seedDevelopmentCommittee(users: SeedUser[], leaders: SeedUser[]) {
+	const leaderIds = new Set(leaders.map((l) => l.id));
+	const [chair, member] = pickN(
+		users.filter((u) => !leaderIds.has(u.id)),
+		2
+	);
+	const dev = await insertBandWithOwner(
+		{
+			kind: 'committee',
+			name: 'Development Committee',
+			slug: 'development-committee',
+			bio: 'Raises funds, looks after sponsors and grants, and keeps our permits and insurance current.',
+			joinPolicy: 'invite_only',
+			capabilityGrants: [
+				'grant.manage',
+				'grant.read',
+				'renewal.manage',
+				'renewal.read',
+				'sponsor.manage',
+				'sponsor.read'
+			]
+		},
+		chair.id,
+		'Chair'
+	);
+	const host = leaders.find((l) => l.id === 'seed-group-leader-open');
+	for (const u of [member, host].filter((x): x is SeedUser => !!x)) {
+		await db.insert(groupMember).values({
+			groupId: dev.id,
+			userId: u.id,
+			role: 'member',
+			position: 'Member',
+			status: 'active'
+		});
+	}
+	return dev;
 }
