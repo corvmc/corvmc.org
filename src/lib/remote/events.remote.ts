@@ -2,6 +2,7 @@ import { captureException } from '$lib/server/sentry';
 import { recordFreeTicketSale } from '$lib/server/finance/ticket-entries';
 import { sellerFor } from '$lib/server/ticket/ticket-seller';
 import { z } from 'zod';
+import { creditsForEvent } from '$lib/server/sponsor/credit-service';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
@@ -343,6 +344,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 
 	const isPast = hasEventEnded(evt.startsAt, evt.endsAt);
 	const photos = await listEventPhotos(id);
+	const sponsors = await creditsForEvent(id, 'eventPage');
 	// Only a photographer needs the uploader here; staff have the console's.
 	const recapUpload =
 		(await recapUploadAccess(locals.user?.id)) === 'photographer'
@@ -432,6 +434,11 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			url: p.url,
 			altText: p.altText,
 			caption: p.caption
+		})),
+		sponsors: sponsors.map((c) => ({
+			name: c.name,
+			website: c.website,
+			logoUrl: resolveImageUrl(c.logoKey)
 		})),
 		upcoming
 	};

@@ -1627,10 +1627,18 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
   counts after the grant is closed. Writes are guarded by `grant.manage`; a funder with
   applications cannot be deleted, and an application's reports cascade with it.
 - The sort and date display are shared, in `src/lib/utils/deadline.ts`.
+- **Sponsored placement (#583):** `placeSponsorship` puts one sponsorship on one event, crediting
+  it on the public event page, in blasts about that event, or both. `creditsForEvent` in
+  `credit-service.ts` reads it, and `toCredits` credits only an `active` or `ended` term, naming
+  each sponsor once. `getPublicEventDetail` renders the result through `SponsorCredit.svelte`.
+  `executeSend` and the stored preview append `withSponsorCredit` below the body of any
+  campaign with an `eventId`. Both use `SPONSOR_CREDIT_LEAD` from `src/lib/utils/sponsor-credit.ts`.
+  The credit is read when the campaign renders, so a placement added after drafting still goes out.
+- A sponsor's logo is a `media_attachment` (`sponsor`, slot `logo`), swept like any other.
 
 ### Data touched
 
-- `sponsor`, `sponsorship`, `funder`, `grant_application`, `grant_report`. Dates are
+- `sponsor`, `sponsorship`, `sponsor_placement`, `funder`, `grant_application`, `grant_report`. Dates are
   `YYYY-MM-DD` text, compared as strings. The amount columns are `notAccounting` in
   `money-map.ts`; an award arrives outside the app, as a manual `grant` entry.
 
@@ -1641,6 +1649,8 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
   `formatIsoDay`, and comparisons stay on the strings.
 - **An award reads as done while a report is owed.** The report has no `submittedOn`; the list
   keeps a closed grant visible for exactly this.
+- **A placed sponsor does not show.** Its sponsorship is still Pitched. Pitches and declined terms
+  are never credited publicly.
 
 ## Cross-cutting patterns worth internalizing
 

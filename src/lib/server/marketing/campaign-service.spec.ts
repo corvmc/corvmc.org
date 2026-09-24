@@ -59,6 +59,10 @@ vi.mock('./campaign-render', () => ({
 	renderCampaignForSend: vi.fn(() => '<html>send</html>')
 }));
 
+vi.mock('$lib/server/sponsor/credit-service', () => ({
+	creditsForEvent: vi.fn(async () => [])
+}));
+
 vi.mock('./unsubscribe', () => ({
 	signUnsubscribeToken: vi.fn(() => 'unsub-token')
 }));
@@ -78,7 +82,8 @@ vi.mock('$env/dynamic/private', () => ({
 import { db } from '$lib/server/db';
 import { isNull } from 'drizzle-orm';
 import { sendBroadcastBatch } from '$lib/server/notification/email';
-import { renderCampaignForSend } from './campaign-render';
+import { creditsForEvent } from '$lib/server/sponsor/credit-service';
+import { renderCampaignForSend, renderCampaignPreview } from './campaign-render';
 import { signUnsubscribeToken } from './unsubscribe';
 import { resolveSystemAudienceRecipients } from './system-audiences';
 import {
@@ -286,6 +291,25 @@ describe('campaign-service', () => {
 			).rejects.toThrow(CampaignValidationError);
 		});
 
+		it("previews the credit for a show's sponsors", async () => {
+			vi.mocked(creditsForEvent).mockResolvedValueOnce([
+				{ sponsorId: 's1', name: 'Block 15', website: null, logoKey: null }
+			]);
+			selectResults = [[{ ...mockCampaign, id: 'camp-new' }]];
+
+			await createCampaign({
+				subject: 'Hello',
+				markdownBody: '# Hi',
+				audienceIds: ['aud-1'],
+				sentById: 'user-1',
+				eventId: 'evt-1'
+			});
+
+			expect(vi.mocked(renderCampaignPreview).mock.calls[0][0]).toContain(
+				'Presented with support from Block 15.'
+			);
+		});
+
 		it('inserts campaign row then audience links, returns created row', async () => {
 			const created = { ...mockCampaign, id: 'camp-new' };
 			selectResults = [[created]]; // consumed by insert().values().returning()
@@ -483,6 +507,39 @@ describe('campaign-service', () => {
 			expect(db.update).toHaveBeenCalled();
 			const setCall = updatedSets[0] as { recipientCount: number };
 			expect(setCall.recipientCount).toBe(0);
+		});
+
+		it("credits the show's sponsors below the body it sends (#583)", async () => {
+			vi.mocked(creditsForEvent).mockResolvedValueOnce([
+				{ sponsorId: 's1', name: 'Troubadour Music', website: null, logoKey: null }
+			]);
+			selectResults = [
+				[{ ...mockCampaign, eventId: 'evt-1' }],
+				[{ eventId: 'evt-1' }],
+				[{ audienceId: 'aud-1' }],
+				[mockRecipient]
+			];
+
+			await executeSend('camp-1');
+
+			expect(creditsForEvent).toHaveBeenCalledWith('evt-1', 'campaign');
+			const [markdown] = vi.mocked(renderCampaignForSend).mock.calls[0];
+			expect(markdown).toContain('# Hello');
+			expect(markdown).toContain('Presented with support from Troubadour Music.');
+		});
+
+		it('looks up no sponsors for a blast about no show', async () => {
+			selectResults = [
+				[{ ...mockCampaign, eventId: null }],
+				[{ eventId: null }],
+				[{ audienceId: 'aud-1' }],
+				[mockRecipient]
+			];
+
+			await executeSend('camp-1');
+
+			expect(creditsForEvent).not.toHaveBeenCalled();
+			expect(vi.mocked(renderCampaignForSend).mock.calls[0][0]).toBe('# Hello');
 		});
 
 		it('calls sendBroadcastBatch with one message per recipient', async () => {
