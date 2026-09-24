@@ -497,6 +497,23 @@ export interface SuggestionModeratedEvent {
 	flagId?: string;
 }
 
+/** A member contested an upheld report. Staff answer it on the report's page. */
+export interface ModerationAppealFiledEvent {
+	flagId: string;
+	appellantName: string;
+}
+
+/** Staff answered an appeal; `href` is where the member sees the decision. */
+export interface ModerationAppealDecidedEvent {
+	flagId: string;
+	appellantUserId: string;
+	appellantName: string;
+	appellantEmail: string;
+	verdict: 'granted' | 'partly_granted' | 'denied';
+	notes: string;
+	href: string;
+}
+
 /** Staff approved or turned down a proposed edit to a member's suggestion. */
 export interface SuggestionEditReviewedEvent {
 	suggestionId: string;
@@ -784,6 +801,8 @@ export type DomainEvents = {
 	'suggestion.responded': SuggestionRespondedEvent;
 	'suggestion.moderated': SuggestionModeratedEvent;
 	'suggestion.edit_reviewed': SuggestionEditReviewedEvent;
+	'moderation.appeal_filed': ModerationAppealFiledEvent;
+	'moderation.appeal_decided': ModerationAppealDecidedEvent;
 	'event.unpublished_by_staff': EventUnpublishedByStaffEvent;
 	'community_event.submitted': CommunityEventSubmittedEvent;
 	'community_event.reviewed': CommunityEventReviewedEvent;

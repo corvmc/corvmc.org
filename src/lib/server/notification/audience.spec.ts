@@ -63,6 +63,7 @@ describe('notification audience', () => {
 				'inbox_assigned',
 				'inbox_message_received',
 				'local_resource_submitted',
+				'moderation_appeal_filed',
 				'volunteer_hours_submitted',
 				'volunteer_shift_claimed',
 				'volunteer_shift_declined',

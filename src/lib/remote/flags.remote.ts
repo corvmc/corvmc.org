@@ -15,6 +15,7 @@ import {
 	FLAG_REASON_MAX,
 	FLAG_DESCRIPTION_MAX
 } from '$lib/server/flag/flag-service';
+import { getAppealForFlag } from '$lib/server/moderation/appeal-service';
 
 // ---------------------------------------------------------------------------
 // Queries (staff)
@@ -23,21 +24,24 @@ import {
 const flagFiltersSchema = z.object({
 	status: z.enum(flagStatuses).optional(),
 	search: z.string().optional(),
+	appealPending: z.boolean().optional(),
 	page: z.number().optional()
 });
 
 export const getFlagsQueue = query(flagFiltersSchema, async (filters) => {
 	await requireCapability('moderation.reviewFlags');
 	return listFlags(
-		{ status: filters.status, search: filters.search },
+		{ status: filters.status, search: filters.search, appealPending: filters.appealPending },
 		{ page: filters.page ?? 1, pageSize: 25 }
 	);
 });
 
+/** The report and any appeal against it, so staff read both top to bottom in one query. */
 export const getFlagDetail = query(z.string(), async (flagId) => {
-	await requireCapability('moderation.reviewFlags');
+	const staff = await requireCapability('moderation.reviewFlags');
 	try {
-		return await getFlag(flagId);
+		const [flag, appeal] = await Promise.all([getFlag(flagId), getAppealForFlag(flagId, staff.id)]);
+		return { ...flag, appeal };
 	} catch (err) {
 		mapDomainError(err);
 	}

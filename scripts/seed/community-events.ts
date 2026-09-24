@@ -1,5 +1,6 @@
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { memberStanding } from '../../src/lib/server/db/schema/standing';
+import { contentFlag } from '../../src/lib/server/db/schema/flag';
 import { db } from './db';
 import { type SeedUser } from './types';
 import { pick, ptDate, randomInt } from './util';
@@ -115,11 +116,31 @@ export async function seedCommunityEvents(members: SeedUser[], staffUser: SeedUs
 		.returning();
 	rows.push(rejected);
 
+	// Staff acted on their own initiative, so the restriction hangs off a
+	// `staff_action` report: every standing needs one, and it is what an appeal
+	// contests. The filing staffer is the resolver, so they cannot deny it.
+	const reason = 'Listed a private house party as a public show twice.';
+	const [staffAction] = await db
+		.insert(contentFlag)
+		.values({
+			entityType: 'member_profile',
+			entityId: onReview.id,
+			origin: 'staff_action',
+			reportedByUserId: staffUser.id,
+			reason,
+			status: 'resolved',
+			resolvedByUserId: staffUser.id,
+			resolutionNotes: reason,
+			resolvedAt: new Date()
+		})
+		.returning();
+
 	await db.insert(memberStanding).values({
 		userId: onReview.id,
 		scope: 'community_event',
 		status: 'restricted',
-		reason: 'A report about an earlier listing was upheld.',
+		reason,
+		triggeringFlagId: staffAction.id,
 		updatedByUserId: staffUser.id,
 		updatedAt: new Date()
 	});

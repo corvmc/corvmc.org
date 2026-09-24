@@ -97,7 +97,8 @@ const {
 	restrictStanding,
 	restoreStanding,
 	scopeForFlag,
-	StandingStatusNotAllowedError
+	StandingStatusNotAllowedError,
+	StandingWithoutReportError
 } = await import('./standing-service');
 
 beforeEach(() => {
@@ -203,7 +204,13 @@ describe('setStanding', () => {
 	// value in the column that no reader knows how to interpret.
 	it('refuses a status the scope has no meaning for', async () => {
 		await expect(
-			setStanding({ userId: 'u1', scope: 'suggestion', status: 'disabled', staffId: 'staff1' })
+			setStanding({
+				userId: 'u1',
+				scope: 'suggestion',
+				status: 'disabled',
+				staffId: 'staff1',
+				flagId: 'f1'
+			})
 		).rejects.toBeInstanceOf(StandingStatusNotAllowedError);
 		expect(inserted).toHaveLength(0);
 	});
@@ -212,7 +219,13 @@ describe('setStanding', () => {
 	// escalation past reply-only `restricted`; it used to double as the
 	// under-18 switch-off, which #556 moved to `user.date_of_birth`.
 	it('allows disabled for messaging — the escalation past reply-only', async () => {
-		await setStanding({ userId: 'u1', scope: 'messaging', status: 'disabled', staffId: 'staff1' });
+		await setStanding({
+			userId: 'u1',
+			scope: 'messaging',
+			status: 'disabled',
+			staffId: 'staff1',
+			flagId: 'f1'
+		});
 		expect(inserted[0].values).toMatchObject({ scope: 'messaging', status: 'disabled' });
 	});
 
@@ -222,9 +235,25 @@ describe('setStanding', () => {
 			scope: 'messaging',
 			status: 'restricted',
 			staffId: 'staff1',
-			reason: 'x'.repeat(900)
+			reason: 'x'.repeat(900),
+			flagId: 'f1'
 		});
 		expect((inserted[0].values as { reason: string }).reason).toHaveLength(500);
+	});
+
+	// Every moderation action is an upheld report. This is the test that stops a
+	// flagless path growing back: with no report there is nothing to appeal.
+	it('rejects a standing with no report behind it', async () => {
+		await expect(
+			setStanding({
+				userId: 'u1',
+				scope: 'messaging',
+				status: 'restricted',
+				staffId: 'staff1',
+				flagId: undefined as unknown as string
+			})
+		).rejects.toBeInstanceOf(StandingWithoutReportError);
+		expect(inserted).toHaveLength(0);
 	});
 });
 

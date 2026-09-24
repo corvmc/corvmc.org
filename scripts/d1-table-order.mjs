@@ -170,6 +170,8 @@ export const tableOrder = [
 	// References user (the actor) and nothing else: `subject_id` is deliberately
 	// not a foreign key, so the row survives the purge it records.
 	'audit_log',
+	// References content_flag (one appeal per upheld report) and user.
+	'moderation_appeal',
 	'user_block',
 	'suggestion_vote',
 	'suggestion_edit',

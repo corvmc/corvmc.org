@@ -93,9 +93,22 @@ Restricting a member without a report behind it is the least reviewed thing in
 here: no reporter, no triage, one staffer deciding alone. Write the reason as if
 somebody will ask you to justify it, because at some point somebody will.
 
-There is a design for making every moderation action an appealable, filed report
-— `docs/specs/moderation-appeals-spec.md` — but it is not built, so today the
-discipline is yours.
+Every restriction you impose files a report in your name, already upheld, with
+your reason on it — and the member can appeal it. Someone else will read that
+reason next to their objection.
+
+## Appeals
+
+A member can appeal any upheld report against their own post or standing, once.
+The appeal appears on the report's page under the decision, and the **Content
+Flags** badge counts appeals waiting for an answer. Nothing changes while one is
+pending: the post stays down and the restriction stays on.
+
+Deciding is two questions — does the content go back up, and does the member come
+off review — and ticking a box applies it immediately. Your reason is emailed to
+the member. If you upheld the report yourself you can grant the appeal but not
+deny it; a different staffer has to. A decided appeal can be reopened if
+something new turns up.
 
 ## Related
 

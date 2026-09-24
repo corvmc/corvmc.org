@@ -1004,6 +1004,36 @@ export const standingScopeConfig: Record<
 export const STANDING_REASON_MAX = 500;
 
 // ---------------------------------------------------------------------------
+// Moderation appeals
+// ---------------------------------------------------------------------------
+
+/**
+ * What an appeal decided about one consequence of an upheld report.
+ * `not_applicable` is written by the service from actual state — the report
+ * never took the content down, or never cost standing — and is not offered.
+ */
+export const appealOutcomes = ['restored', 'upheld', 'not_applicable'] as const;
+export type AppealOutcome = (typeof appealOutcomes)[number];
+
+export const APPEAL_BODY_MAX = 2000;
+
+export type AppealVerdict = 'granted' | 'partly_granted' | 'denied';
+
+/** The label a human reads, derived from the two outcomes and never stored. */
+export function appealVerdict(content: AppealOutcome, standing: AppealOutcome): AppealVerdict {
+	const applicable = [content, standing].filter((o) => o !== 'not_applicable');
+	const restored = applicable.filter((o) => o === 'restored').length;
+	if (applicable.length > 0 && restored === applicable.length) return 'granted';
+	return restored > 0 ? 'partly_granted' : 'denied';
+}
+
+export const appealVerdictLabels: Record<AppealVerdict, string> = {
+	granted: 'Granted',
+	partly_granted: 'Partly granted',
+	denied: 'Denied'
+};
+
+// ---------------------------------------------------------------------------
 // Volunteering
 // ---------------------------------------------------------------------------
 

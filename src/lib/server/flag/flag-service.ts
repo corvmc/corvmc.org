@@ -10,7 +10,8 @@ import { eventListing } from '$lib/server/db/schema/event';
 import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
 import type { InboxMessageDirection } from '$lib/server/db/schema/inbox';
 import { suggestion } from '$lib/server/db/schema/suggestion';
-import { eq, ne, and, desc, count, inArray, getTableColumns, asc } from 'drizzle-orm';
+import { moderationAppeal } from '$lib/server/db/schema/moderation';
+import { eq, ne, and, desc, count, inArray, isNull, getTableColumns, asc } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -209,6 +210,38 @@ export async function createFlag(params: CreateFlagParams) {
 }
 
 /**
+ * A staffer recording why they acted on their own initiative: a report filed
+ * already upheld. It skips the queue and the staff alert, and deliberately has
+ * none of `resolveFlag`'s side effects — the caller applies the one it meant.
+ */
+export async function fileStaffAction(params: {
+	entityType: FlagEntityType;
+	entityId: string;
+	staffId: string;
+	reason: string;
+}) {
+	const entityLabel = await resolveEntityLabel(params.entityType, params.entityId);
+	if (entityLabel === null) throw new FlagTargetNotFoundError();
+
+	const now = new Date();
+	const [flag] = await db
+		.insert(contentFlag)
+		.values({
+			entityType: params.entityType,
+			entityId: params.entityId,
+			origin: 'staff_action',
+			reportedByUserId: params.staffId,
+			reason: params.reason.slice(0, FLAG_REASON_MAX),
+			status: 'resolved',
+			resolvedByUserId: params.staffId,
+			resolutionNotes: params.reason.slice(0, FLAG_DESCRIPTION_MAX),
+			resolvedAt: now
+		})
+		.returning();
+	return flag;
+}
+
+/**
  * How many of this member's reports are still sitting unresolved in the queue.
  *
  * The exact, self-clearing half of the anti-spam pair — the same shape as
@@ -342,6 +375,8 @@ export interface FlagFilters {
 	entityId?: string;
 	/** Flags this user filed, as opposed to flags filed against them. */
 	reportedByUserId?: string;
+	/** Only flags with an appeal waiting on an answer. */
+	appealPending?: boolean;
 }
 
 export async function listFlags(filters: FlagFilters, pagination: PaginationInput) {
@@ -355,6 +390,17 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	if (filters.reportedByUserId) {
 		conditions.push(eq(contentFlag.reportedByUserId, filters.reportedByUserId));
 	}
+	if (filters.appealPending) {
+		conditions.push(
+			inArray(
+				contentFlag.id,
+				db
+					.select({ id: moderationAppeal.flagId })
+					.from(moderationAppeal)
+					.where(isNull(moderationAppeal.decidedAt))
+			)
+		);
+	}
 	const where = conditions.length ? and(...conditions) : undefined;
 
 	const dataQ = db
@@ -365,10 +411,14 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 			reason: contentFlag.reason,
 			status: contentFlag.status,
 			createdAt: contentFlag.createdAt,
-			reportedByName: user.name
+			reportedByName: user.name,
+			appealId: moderationAppeal.id,
+			appealDecidedAt: moderationAppeal.decidedAt
 		})
 		.from(contentFlag)
 		.leftJoin(user, eq(user.id, contentFlag.reportedByUserId))
+		// One appeal per flag at most, so this join never multiplies rows.
+		.leftJoin(moderationAppeal, eq(moderationAppeal.flagId, contentFlag.id))
 		.where(where)
 		.orderBy(desc(contentFlag.createdAt), desc(contentFlag.id))
 		.$dynamic();
@@ -422,10 +472,11 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	}
 
 	return {
-		rows: rows.map((r) => {
+		rows: rows.map(({ appealId, appealDecidedAt, ...r }) => {
 			const label = labelMap.get(`${r.entityType}:${r.entityId}`) ?? null;
 			return {
 				...r,
+				appeal: appealId ? (appealDecidedAt ? ('decided' as const) : ('pending' as const)) : null,
 				entityLabel: label ?? '(deleted)',
 				entityHref: entityHref(r.entityType, r.entityId, r.id),
 				// The queue row *is* the report, and it opens the report — so the

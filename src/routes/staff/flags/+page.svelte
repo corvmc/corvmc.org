@@ -16,13 +16,18 @@
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
 	let searchText = $state('');
-	let statusFilter = $state<'pending' | 'resolved' | 'dismissed' | ''>('pending');
+	let statusFilter = $state<'pending' | 'resolved' | 'dismissed' | 'appealed' | ''>('pending');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
 	let filters = $derived({
 		search: searchDebounced || undefined,
-		status: (statusFilter || undefined) as (typeof flagStatuses)[number] | undefined,
+		// "Appealed" is not a flag status — an appeal hangs off a resolved flag.
+		status:
+			statusFilter === 'appealed'
+				? undefined
+				: ((statusFilter || undefined) as (typeof flagStatuses)[number] | undefined),
+		appealPending: statusFilter === 'appealed' || undefined,
 		page
 	});
 
@@ -67,6 +72,7 @@
 			{#each flagStatuses as s (s)}
 				<option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
 			{/each}
+			<option value="appealed">Appeal waiting</option>
 		</Select>
 	</FilterBar>
 
@@ -83,6 +89,7 @@
 					kind: entityLabels[f.target.type].one,
 					subject: f.ref,
 					text: f.reason,
+					appealed: f.appeal === 'pending',
 					reporter: f.reportedByName ?? 'Anonymous visitor',
 					createdAt: f.createdAt
 				}))}

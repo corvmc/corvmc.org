@@ -14,11 +14,14 @@
 		text: string;
 		reporter: string;
 		createdAt: Date;
+		/** A member has appealed the upheld report and staff have not decided it. */
+		appealed?: boolean;
 	}
 </script>
 
 <script lang="ts">
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { rowLink } from '$lib/actions/row-link';
@@ -47,6 +50,9 @@
 			<td class="col-support whitespace-nowrap">{r.kind}</td>
 			<td class="whitespace-nowrap"><EntityIdentity ref={r.subject} /></td>
 			<td class="cell-primary truncate">
+				{#if r.appealed}
+					<Badge variant="warning" size="sm" class="mr-1">Appealed</Badge>
+				{/if}
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- `href` is typed ResolvedPathname; the caller resolved it -->
 				<a class="link-hover" href={r.href}>{r.text}</a>
 			</td>

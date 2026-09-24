@@ -7,6 +7,7 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -78,6 +79,9 @@
 					Staff's note: <span class="italic">{s.visibilityNote}</span>
 				{/if}
 			</p>
+			{#if isMine && s.visibility === 'hidden'}
+				<AppealPanel target={{ kind: 'suggestion', suggestionId: s.id }} />
+			{/if}
 		</Alert>
 	{/if}
 

@@ -1740,6 +1740,60 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- A member appealed an upheld report (notify moderators) ---
+	domainEvents.on('moderation.appeal_filed', async ({ data: event }) => {
+		const staff = await listUsersWithCapability('moderation.reviewFlags');
+		for (const member of staff) {
+			try {
+				await dispatch({
+					type: 'moderation_appeal_filed',
+					userId: member.id,
+					userEmail: member.email,
+					title: `${event.appellantName} appealed a moderation decision`,
+					body: 'An appeal is waiting for a second look',
+					href: `/staff/flags/${event.flagId}`
+				});
+			} catch (err) {
+				captureException(err, { event: 'notification.moderation_appeal_filed', to: member.email });
+			}
+		}
+	});
+
+	// --- Staff answered an appeal (notify the member, with the reasoning) ---
+	domainEvents.on('moderation.appeal_decided', async ({ data: event }) => {
+		const copy = {
+			granted: {
+				title: 'Your appeal was granted',
+				text: 'Staff took a second look and agreed with you. The decision has been reversed.'
+			},
+			partly_granted: {
+				title: 'Your appeal was partly granted',
+				text: 'Staff took a second look and reversed part of the decision.'
+			},
+			denied: {
+				title: 'Your appeal was not granted',
+				text: 'Staff took a second look and the decision stands.'
+			}
+		}[event.verdict];
+
+		await dispatch({
+			type: 'moderation_appeal_decided',
+			userId: event.appellantUserId,
+			userEmail: event.appellantEmail,
+			title: copy.title,
+			body: event.notes,
+			href: event.href,
+			email: {
+				recipientName: event.appellantName,
+				subject: copy.title,
+				heading: copy.title,
+				paragraphs: [{ text: copy.text }],
+				quote: event.notes,
+				cta: { label: 'See the details' }
+			}
+		});
+	});
+
 	// --- Staff decided on a proposed edit (notify its author) ---
 	domainEvents.on('suggestion.edit_reviewed', async ({ data: event }) => {
 		const href = `/member/suggestions/${event.suggestionId}`;

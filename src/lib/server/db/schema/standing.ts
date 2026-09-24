@@ -45,7 +45,7 @@ export const memberStanding = sqliteTable(
 		status: text('status', { enum: standingStatuses }).notNull(),
 		/** The staff note, shown to the member so they know why. */
 		reason: text('reason'),
-		/** The report that cost them standing. Null when staff acted directly. */
+		/** The report that cost them standing. Null only on rows written before every standing needed one. */
 		triggeringFlagId: text('triggering_flag_id').references(() => contentFlag.id, {
 			onDelete: 'set null'
 		}),
