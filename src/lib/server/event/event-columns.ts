@@ -19,6 +19,62 @@ export const eventPosterKeySql = sql<string | null>`(SELECT "media"."key"
 	LIMIT 1)`;
 
 /**
+ * A listing's sale terms from `ticket_sale` (#1203), under the names the
+ * listing row has always carried them by. No sale row reads as not on sale,
+ * free, with a floor of zero — what the retired columns defaulted to.
+ * Identifiers are spelled out, as above.
+ */
+export const ticketSaleColumns = {
+	ticketingEnabled: sql<boolean>`COALESCE((SELECT "ticket_sale"."enabled" FROM "ticket_sale"
+	WHERE "ticket_sale"."event_listing_id" = "event_listing"."id"), 0)`.mapWith(Boolean),
+	ticketPrice: sql<number | null>`(SELECT "ticket_sale"."price_cents" FROM "ticket_sale"
+	WHERE "ticket_sale"."event_listing_id" = "event_listing"."id")`,
+	ticketPriceFloorCents: sql<number>`COALESCE((SELECT "ticket_sale"."price_floor_cents" FROM "ticket_sale"
+	WHERE "ticket_sale"."event_listing_id" = "event_listing"."id"), 0)`,
+	ticketQuantity: sql<number | null>`(SELECT "ticket_sale"."quantity" FROM "ticket_sale"
+	WHERE "ticket_sale"."event_listing_id" = "event_listing"."id")`
+};
+
+/** A listing's sale terms as its row carries them. */
+export interface ListingSaleTerms {
+	ticketingEnabled: boolean;
+	ticketPrice: number | null;
+	ticketPriceFloorCents: number;
+	ticketQuantity: number | null;
+}
+
+/** What a listing with no `ticket_sale` row reads as. */
+export const noSaleTerms: ListingSaleTerms = {
+	ticketingEnabled: false,
+	ticketPrice: null,
+	ticketPriceFloorCents: 0,
+	ticketQuantity: null
+};
+
+type LegacySaleKey =
+	| 'legacyTicketingEnabled'
+	| 'legacyTicketPrice'
+	| 'legacyTicketPriceFloorCents'
+	| 'legacyTicketQuantity';
+
+/**
+ * A listing row, or its column map, less the retired sale terms. For
+ * `.returning()`, which cannot carry the subqueries above.
+ */
+export function withoutLegacySaleTerms<T extends Record<LegacySaleKey, unknown>>(
+	row: T
+): Omit<T, LegacySaleKey> {
+	const {
+		legacyTicketingEnabled: _enabled,
+		legacyTicketPrice: _price,
+		legacyTicketPriceFloorCents: _floor,
+		legacyTicketQuantity: _quantity,
+		...rest
+	} = row;
+	return rest;
+}
+
+/**
  * Every column of `event_listing`, with `posterKey` resolved from the
  * attachment instead of the column of the same name.
  *
@@ -27,8 +83,9 @@ export const eventPosterKeySql = sql<string | null>`(SELECT "media"."key"
  * shape, so its consumers need no change at all.
  */
 export const eventListingColumns = {
-	...getTableColumns(eventListing),
-	posterKey: eventPosterKeySql
+	...withoutLegacySaleTerms(getTableColumns(eventListing)),
+	posterKey: eventPosterKeySql,
+	...ticketSaleColumns
 };
 
 /**

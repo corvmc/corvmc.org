@@ -33,7 +33,38 @@ export async function handleCheckoutEntries(session: Stripe.Checkout.Session): P
 		userId
 	};
 
-	if (meta.type === 'ticket') {
+	if (meta.type === 'ticket' && meta.ticket_seller_group_id) {
+		// A band's own gig (#1203) is a destination charge, on the pattern of
+		// `audio-entries.ts`: the band's share goes to its own account at the sale
+		// and is never the collective's, so it is not entered at all. What the
+		// collective earns is the application fee, and Stripe's fee comes out of it.
+		const ticketId = meta.purchase_id ?? session.id;
+		const applicationFeeCents = chargeCents - cents('ticket_acts_cents');
+		const bandBase = {
+			...base,
+			subjectType: 'ticket' as const,
+			subjectId: ticketId,
+			metadata: { eventId: meta.event_id ?? null, groupId: meta.ticket_seller_group_id }
+		};
+		if (applicationFeeCents > 0) {
+			entries.push({
+				...bandBase,
+				amountCents: applicationFeeCents,
+				kind: 'earned',
+				category: 'band_ticket_sales',
+				description: 'Band ticket sale, the collective share'
+			});
+		}
+		if (feeCents > 0) {
+			entries.push({
+				...bandBase,
+				amountCents: -feeCents,
+				kind: 'spent',
+				category: 'card_fees',
+				description: 'Card processing'
+			});
+		}
+	} else if (meta.type === 'ticket') {
 		const eventId = meta.event_id ?? null;
 		const ticketId = meta.purchase_id ?? session.id;
 		const actsCents = cents('ticket_acts_cents');

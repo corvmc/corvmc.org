@@ -12,6 +12,7 @@
 		RemoveEventPosterAction
 	} from '$lib/components/actions';
 	import EventFields from '../EventFields.svelte';
+	import TicketSaleCard from './TicketSaleCard.svelte';
 	import { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { getBandEventDetail, updateBandEventForm } from '$lib/remote/band-events.remote';
@@ -121,3 +122,9 @@
 		</InfoCard>
 	</PageContent>
 </Form>
+
+{#if canEdit}
+	<PageContent width="2xl">
+		<TicketSaleCard slug={band.slug} eventId={evt.id} />
+	</PageContent>
+{/if}

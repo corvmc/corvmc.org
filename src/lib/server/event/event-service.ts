@@ -9,7 +9,17 @@ import {
 	type EventBandStatus,
 	type LineupEntry
 } from '$lib/server/db/schema/event';
-import { eventListingColumns, eventPosterKeySql, shortOfActsSql } from './event-columns';
+import {
+	eventListingColumns,
+	eventPosterKeySql,
+	shortOfActsSql,
+	ticketSaleColumns,
+	noSaleTerms,
+	withoutLegacySaleTerms,
+	type ListingSaleTerms
+} from './event-columns';
+import { saveTicketSale, type TicketSaleTerms } from '$lib/server/ticket/ticket-sale';
+import { bandSaleBlocker, refundBandTicketSale } from '$lib/server/ticket/ticket-seller';
 import type { EventSource } from '$lib/config';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
@@ -135,6 +145,19 @@ export class EventHasTicketsError extends DomainError {
 	}
 }
 
+/** A band that may not sell through us right now: not premium, or no payouts. */
+export class BandTicketSaleUnavailableError extends DomainError {
+	readonly httpStatus = 403;
+
+	constructor(readonly reason: 'not_premium' | 'no_payouts') {
+		super(
+			reason === 'not_premium'
+				? 'Selling tickets through the collective is part of the premium plan.'
+				: 'Finish setting up payouts before putting tickets on sale.'
+		);
+	}
+}
+
 // ---------------------------------------------------------------------------
 // EventService — create, update, publish, cancel events
 // ---------------------------------------------------------------------------
@@ -167,19 +190,32 @@ export async function linkManagingGroup(
 }
 
 /**
- * The poster key a row resolves to now.
+ * The poster key and sale terms a row resolves to now.
  *
- * `RETURNING` cannot carry it: SQLite forbids a subquery there, and the key
- * comes from `media_attachment` since `event_listing.poster_key` was dropped
- * (#808). One indexed read on the write paths that hand a row back.
+ * `RETURNING` cannot carry them: SQLite forbids a subquery there, and they
+ * live in `media_attachment` (#808) and `ticket_sale` (#1203). One indexed
+ * read on the write paths that hand a row back.
  */
-async function posterKeyFor(eventId: string): Promise<string | null> {
+async function readBackFor(
+	eventId: string
+): Promise<{ posterKey: string | null } & ListingSaleTerms> {
 	const [row] = await db
-		.select({ posterKey: eventPosterKeySql })
+		.select({ posterKey: eventPosterKeySql, ...ticketSaleColumns })
 		.from(eventListing)
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
-	return row?.posterKey ?? null;
+	return {
+		posterKey: row?.posterKey ?? null,
+		ticketingEnabled: row?.ticketingEnabled ?? noSaleTerms.ticketingEnabled,
+		ticketPrice: row?.ticketPrice ?? null,
+		ticketPriceFloorCents: row?.ticketPriceFloorCents ?? noSaleTerms.ticketPriceFloorCents,
+		ticketQuantity: row?.ticketQuantity ?? null
+	};
+}
+
+/** A just-written listing row, completed with what `RETURNING` cannot carry. */
+async function readBack(row: typeof eventListing.$inferSelect): Promise<EventRow> {
+	return { ...withoutLegacySaleTerms(row), ...(await readBackFor(row.id)) };
 }
 
 export interface EventRow {
@@ -350,10 +386,6 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				doorsAt: doorsAt ?? null,
 				tags: tags ?? null,
 				kind,
-				ticketingEnabled,
-				ticketPrice: ticketPrice ?? null,
-				// Capacity is only meaningful while we're the ones counting.
-				ticketQuantity: ticketingEnabled ? (ticketQuantity ?? null) : null,
 				venueId: venueId ?? null,
 				location: location ?? null,
 				groupId: groupId ?? null,
@@ -364,7 +396,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 			.returning();
 		// A listing one statement old has no attachment yet; the poster block
 		// below writes one and sets this.
-		row = { ...inserted, posterKey: null };
+		row = { ...withoutLegacySaleTerms(inserted), posterKey: null, ...noSaleTerms };
 	} catch (err) {
 		// Compensating writes: the listing never persisted, so neither the hold nor
 		// the production it would have announced has anything pointing at it.
@@ -383,6 +415,22 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 			}
 		}
 		throw err;
+	}
+
+	// The sale terms, when there are any. The price stands without our checkout —
+	// it is what the door or an outside seller charges. Capacity does not: it is
+	// only meaningful while we are the ones counting.
+	const saleTerms = {
+		enabled: ticketingEnabled || undefined,
+		priceCents: ticketPrice ?? undefined,
+		quantity: ticketingEnabled ? (ticketQuantity ?? undefined) : undefined
+	};
+	const sale = saveTicketSale(row.id, saleTerms);
+	if (sale) {
+		await sale;
+		row.ticketingEnabled = ticketingEnabled;
+		row.ticketPrice = ticketPrice ?? null;
+		row.ticketQuantity = saleTerms.quantity ?? null;
 	}
 
 	// The invariant `linkManagingGroup` documents: a write that sets
@@ -614,9 +662,10 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	// toggle — switching our checkout off doesn't make the show free, it just
 	// means somebody else (or the door) takes the money. Capacity does not: it's
 	// only enforceable while we're selling.
+	const sale: Partial<TicketSaleTerms> = {};
 	if (params.ticketPrice !== undefined) {
 		assertValidTicketPrice(params.ticketPrice);
-		updates.ticketPrice = params.ticketPrice;
+		sale.priceCents = params.ticketPrice;
 	}
 
 	// Checked against whichever price this update lands on, not the stored one:
@@ -633,12 +682,12 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 			assertValidTicketFloor(floor, price);
 		}
 		if (params.ticketPriceFloorCents !== undefined) {
-			updates.ticketPriceFloorCents = params.ticketPriceFloorCents;
+			sale.priceFloorCents = params.ticketPriceFloorCents;
 		}
 	}
 
 	if (params.ticketingEnabled !== undefined) {
-		updates.ticketingEnabled = params.ticketingEnabled;
+		sale.enabled = params.ticketingEnabled;
 		if (params.ticketingEnabled) {
 			const price = params.ticketPrice === undefined ? existing.ticketPrice : params.ticketPrice;
 			if (price == null) {
@@ -647,12 +696,12 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 					'ticketPrice'
 				);
 			}
-			updates.ticketQuantity = params.ticketQuantity ?? null;
+			sale.quantity = params.ticketQuantity ?? null;
 		} else {
-			updates.ticketQuantity = null;
+			sale.quantity = null;
 		}
 	} else if (params.ticketQuantity !== undefined) {
-		updates.ticketQuantity = params.ticketQuantity;
+		sale.quantity = params.ticketQuantity;
 	}
 
 	// Hold the space, or move an existing hold. Both live here because an event
@@ -726,13 +775,16 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		await writeEventPoster(eventId, params.posterFile);
 	}
 
+	const saleWrite = saveTicketSale(eventId, sale);
+	if (saleWrite) await saleWrite;
+
 	const [updated] = await db
 		.update(eventListing)
 		.set(updates)
 		.where(eq(eventListing.id, eventId))
 		.returning();
 
-	return { ...updated, posterKey: await posterKeyFor(eventId) };
+	return readBack(updated);
 }
 
 // ---------------------------------------------------------------------------
@@ -2187,7 +2239,6 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 			tags: tags ?? null,
 			location: location ?? null,
 			externalTicketUrl: externalTicketUrl ?? null,
-			ticketPrice: ticketPrice ?? null,
 			// The event's owner. The `bandId` on the lineup row below is a different
 			// column with a different meaning — a credit, not authority.
 			groupId: bandId,
@@ -2197,7 +2248,13 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 		.returning();
 	// A listing one statement old has no attachment yet; the poster block below
 	// writes one and sets this.
-	const row: EventRow = { ...inserted, posterKey: null };
+	await saveTicketSale(inserted.id, { priceCents: ticketPrice ?? undefined });
+	const row: EventRow = {
+		...withoutLegacySaleTerms(inserted),
+		posterKey: null,
+		...noSaleTerms,
+		ticketPrice: ticketPrice ?? null
+	};
 
 	await linkManagingGroup([{ eventId: row.id, groupId: bandId }]);
 
@@ -2395,7 +2452,6 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 				doorsAt: doorsAt ?? null,
 				tags: tags ?? null,
 				externalTicketUrl: externalTicketUrl ?? null,
-				ticketPrice: ticketPrice ?? null,
 				groupId,
 				source: 'group',
 				// Published, matching `processEventSeries` — a club's weekly series
@@ -2410,7 +2466,12 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 			.returning();
 		// A listing one statement old has no attachment yet; the poster block
 		// below writes one and sets this.
-		row = { ...inserted, posterKey: null };
+		row = {
+			...withoutLegacySaleTerms(inserted),
+			posterKey: null,
+			...noSaleTerms,
+			ticketPrice: ticketPrice ?? null
+		};
 	} catch (err) {
 		// Compensating write: the event never persisted, so remove the orphan
 		// reservation made for it.
@@ -2428,6 +2489,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 	}
 
 	await linkManagingGroup([{ eventId: row.id, groupId }]);
+	await saveTicketSale(row.id, { priceCents: ticketPrice ?? undefined });
 
 	// No `event_band` credit, unlike a band event. A club's jam has no bill —
 	// nobody's name is on a poster — and writing the group in as its own act
@@ -2551,7 +2613,6 @@ export async function updateGroupSession(
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.externalTicketUrl !== undefined) updates.externalTicketUrl = params.externalTicketUrl;
-	if (params.ticketPrice !== undefined) updates.ticketPrice = params.ticketPrice;
 
 	// Written after the row, matching `createGroupEvent`: `writeEventPoster`
 	// needs the event to exist to key the object against it.
@@ -2559,13 +2620,15 @@ export async function updateGroupSession(
 		await writeEventPoster(eventId, params.posterFile);
 	}
 
+	await saveTicketSale(eventId, { priceCents: params.ticketPrice ?? undefined });
+
 	const [updated] = await db
 		.update(eventListing)
 		.set(updates)
 		.where(eq(eventListing.id, eventId))
 		.returning();
 
-	return { ...updated, posterKey: await posterKeyFor(eventId) };
+	return readBack(updated);
 }
 
 /**
@@ -2667,14 +2730,13 @@ export async function updateBandEvent(
 	if (params.location !== undefined) updates.location = params.location;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.externalTicketUrl !== undefined) updates.externalTicketUrl = params.externalTicketUrl;
-	if (params.ticketPrice !== undefined) {
-		assertValidTicketPrice(params.ticketPrice);
-		updates.ticketPrice = params.ticketPrice;
-	}
+	if (params.ticketPrice !== undefined) assertValidTicketPrice(params.ticketPrice);
 
 	if (params.posterFile) {
 		await writeEventPoster(eventId, params.posterFile);
 	}
+
+	await saveTicketSale(eventId, { priceCents: params.ticketPrice ?? undefined });
 
 	const [updated] = await db
 		.update(eventListing)
@@ -2682,7 +2744,7 @@ export async function updateBandEvent(
 		.where(eq(eventListing.id, eventId))
 		.returning();
 
-	return { ...updated, posterKey: await posterKeyFor(eventId) };
+	return readBack(updated);
 }
 
 export async function cancelBandEvent(eventId: string, bandId: string): Promise<void> {
@@ -2696,7 +2758,71 @@ export async function cancelBandEvent(eventId: string, bandId: string): Promise<
 		.set({ status: 'cancelled', updatedAt: new Date() })
 		.where(eq(eventListing.id, eventId));
 
+	// A band cannot cancel and keep the money (#1472): checkout closes first, so
+	// nobody buys into the refund, then every paid ticket is given back, even one
+	// sold before the band closed its checkout.
+	if (existing.ticketingEnabled) await saveTicketSale(eventId, { enabled: false, quantity: null });
+	await refundBandTicketSale(eventId);
+
 	await detachSlot('event_listing', eventId, 'poster');
+}
+
+/** The terms a band puts its own gig on sale at. */
+export interface BandTicketSaleTerms {
+	priceCents: number;
+	priceFloorCents: number;
+	quantity: number | null;
+}
+
+/** A band's own gig, for the band that owns it, or a thrown reason why not. */
+async function ownBandGig(eventId: string, bandId: string): Promise<EventRow> {
+	const existing = await getById(eventId);
+	if (!existing) throw new EventNotFoundError();
+	if (existing.groupId !== bandId || existing.source !== 'band') {
+		throw new EventValidationError('Only the band that owns a gig can sell it', 'groupId');
+	}
+	if (existing.status === 'cancelled') throw new EventStateError('This gig is cancelled');
+	return existing;
+}
+
+/**
+ * Put a band's own gig on sale through the collective, with the band as the
+ * seller (#1203). Only a premium band whose Stripe account takes charges may
+ * (#1471); the money reaches it by destination charge at checkout.
+ */
+export async function openBandTicketSale(
+	eventId: string,
+	bandId: string,
+	terms: BandTicketSaleTerms
+): Promise<void> {
+	await ownBandGig(eventId, bandId);
+	if (!Number.isInteger(terms.priceCents) || terms.priceCents <= 0) {
+		throw new EventValidationError(
+			'Ticket price is required when ticketing is enabled',
+			'ticketPrice'
+		);
+	}
+	assertValidTicketFloor(terms.priceFloorCents, terms.priceCents);
+	if (terms.quantity != null && (!Number.isInteger(terms.quantity) || terms.quantity < 1)) {
+		throw new EventValidationError('Capacity must be a whole number of tickets', 'ticketQuantity');
+	}
+
+	const blocker = await bandSaleBlocker(bandId);
+	if (blocker) throw new BandTicketSaleUnavailableError(blocker);
+
+	await saveTicketSale(eventId, {
+		enabled: true,
+		priceCents: terms.priceCents,
+		priceFloorCents: terms.priceFloorCents,
+		quantity: terms.quantity,
+		groupId: bandId
+	});
+}
+
+/** Close a band's checkout. Tickets already sold stay valid; the price stays as the door price. */
+export async function closeBandTicketSale(eventId: string, bandId: string): Promise<void> {
+	await ownBandGig(eventId, bandId);
+	await saveTicketSale(eventId, { enabled: false, quantity: null });
 }
 
 /** Remove a gig's poster. Owner-only, like every other edit. */

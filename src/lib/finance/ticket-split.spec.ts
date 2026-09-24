@@ -312,3 +312,24 @@ describe('the acts are paid off the base rate', () => {
 		});
 	});
 });
+
+describe('a band selling its own show', () => {
+	// #1470: the collective's share opens at 10% rather than the show split's 30%,
+	// so the band's guarantee, and the collective's ceiling, move with it.
+	const order = {
+		unitPriceCents: 2000,
+		quantity: 1,
+		coverFees: false,
+		suggestedUnitCents: 2000,
+		floorCents: 0
+	};
+
+	it('holds the collective under the band rate, where the show rate would allow more', () => {
+		expect(validateTicketSplit({ ...order, collectiveCents: 400 }).ok).toBe(true);
+		expect(validateTicketSplit({ ...order, collectiveCents: 400, shareBps: 1000 }).ok).toBe(false);
+	});
+
+	it('lets a buyer give the collective nothing', () => {
+		expect(validateTicketSplit({ ...order, collectiveCents: 0, shareBps: 1000 }).ok).toBe(true);
+	});
+});

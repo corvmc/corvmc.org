@@ -33,6 +33,8 @@ vi.mock('$lib/server/event/rsvp-service', () => ({
 type CheckoutArgs = {
 	lineItems: Array<{ key: string; unitAmountCents: number; quantity: number }>;
 	metadata: Record<string, string>;
+	destinationAccountId?: string;
+	applicationFeeCents?: number;
 };
 const checkout = vi.fn(async (_opts: CheckoutArgs) => ({
 	paid: false,
@@ -109,6 +111,12 @@ vi.mock('$lib/server/feature-flags', () => ({
 	requireFeature: vi.fn(async () => undefined)
 }));
 vi.mock('$lib/server/db', () => ({ db: {} }));
+// Who sells is `ticket-seller`'s question; these specs are about a CMC show.
+vi.mock('$lib/server/ticket/ticket-seller', () => ({
+	sellerFor: vi.fn(async (e: { source: string; ticketingEnabled: boolean }) =>
+		e.ticketingEnabled && e.source === 'cmc' ? { kind: 'collective', shareBps: 3000 } : null
+	)
+}));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
@@ -132,6 +140,8 @@ const events = (await import('./events.remote')) as unknown as Record<
 	string,
 	(data: unknown, issue: unknown) => Promise<unknown>
 >;
+
+const { sellerFor } = await import('$lib/server/ticket/ticket-seller');
 
 function makeIssue() {
 	return new Proxy(
@@ -303,5 +313,48 @@ describe('purchaseTickets at zero', () => {
 		await purchase({ quantity: 2, unitPriceCents: 0, collectiveCents: 0 });
 
 		expect(issueFreeTickets).toHaveBeenCalled();
+	});
+});
+
+describe('purchaseTickets, for a band selling its own gig (#1203)', () => {
+	it('pays the band by destination charge, and keeps the rest as the collective fee', async () => {
+		vi.mocked(sellerFor).mockResolvedValueOnce({
+			kind: 'band',
+			groupId: 'band-1',
+			destinationAccountId: 'acct_band',
+			shareBps: 1000
+		});
+		getById.mockResolvedValueOnce({
+			id: 'evt-1',
+			title: 'Band gig',
+			status: 'published',
+			ticketingEnabled: true,
+			ticketPrice: 1500,
+			ticketPriceFloorCents: 0,
+			source: 'band'
+		});
+
+		await purchase({ unitPriceCents: 1500, collectiveCents: 0 });
+
+		const args = lineItems();
+		expect(args.destinationAccountId).toBe('acct_band');
+		// The charge is exactly the band's transfer plus the application fee.
+		expect(args.applicationFeeCents).toBe(1500 - (ticketArgs().actsCents as number));
+		expect(args.metadata.ticket_seller_group_id).toBe('band-1');
+	});
+
+	it('refuses a band gig nobody may sell', async () => {
+		getById.mockResolvedValueOnce({
+			id: 'evt-1',
+			title: 'Band gig',
+			status: 'published',
+			ticketingEnabled: true,
+			ticketPrice: 1500,
+			ticketPriceFloorCents: 0,
+			source: 'band'
+		});
+
+		await expect(purchase({ unitPriceCents: 1500, collectiveCents: 0 })).rejects.toBeDefined();
+		expect(checkout).not.toHaveBeenCalled();
 	});
 });

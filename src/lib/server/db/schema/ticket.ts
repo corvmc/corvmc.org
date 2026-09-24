@@ -1,7 +1,50 @@
-import { sqliteTable, text, index, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, index, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
 import { eventListing } from './event';
+import { group } from './group';
+
+/**
+ * What is on sale for a listing, and whose money it is (#1203).
+ *
+ * The announcement says a show exists; this says we are selling it. One row per
+ * listing, and no row reads as "not on sale, free, floor of zero".
+ * `groupId` null means the collective is the seller — every sale before band
+ * ticketing — and otherwise names the band that is.
+ */
+export const ticketSale = sqliteTable(
+	'ticket_sale',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		eventListingId: text('event_listing_id')
+			.notNull()
+			.references(() => eventListing.id, { onDelete: 'cascade' }),
+		// A band's sale cannot outlive the band: without it there is nobody to pay.
+		groupId: text('group_id').references(() => group.id, { onDelete: 'cascade' }),
+		// Whether our checkout is open. Off, the price is only what the listing
+		// advertises for the door or an outside seller.
+		enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
+		// The SUGGESTED price: where the sliding scale opens. Null is free.
+		priceCents: integer('price_cents'),
+		// The least a buyer may pay. 0 runs the scale to free; equal to the price
+		// for a fixed-price show.
+		priceFloorCents: integer('price_floor_cents').notNull().default(0),
+		// Capacity, counted only while our checkout is open. Null is unlimited.
+		quantity: integer('quantity'),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		uniqueIndex('uq_ticket_sale_event').on(t.eventListingId),
+		index('idx_ticket_sale_group').on(t.groupId)
+	]
+);
 
 export const ticketStatuses = ['pending', 'valid', 'checked_in', 'cancelled'] as const;
 export type TicketStatus = (typeof ticketStatuses)[number];

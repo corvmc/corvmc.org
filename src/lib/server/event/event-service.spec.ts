@@ -99,6 +99,36 @@ const eventInsert = vi.fn(() => ({ values: insertValues }));
 const deleteWhere = vi.fn(() => Promise.resolve());
 const eventDelete = vi.fn(() => ({ where: deleteWhere }));
 
+// The sale terms live on `ticket_sale` (#1203). Recorded under the names the
+// listing row reads them by, so an assertion says what the listing will show.
+let lastSaleSet: Record<string, unknown> = {};
+const saleNames: Record<string, string> = {
+	enabled: 'ticketingEnabled',
+	priceCents: 'ticketPrice',
+	priceFloorCents: 'ticketPriceFloorCents',
+	quantity: 'ticketQuantity',
+	groupId: 'groupId'
+};
+vi.mock('$lib/server/ticket/ticket-sale', () => ({
+	saveTicketSale: vi.fn((_id: string, terms: Record<string, unknown>) => {
+		const set = Object.fromEntries(
+			Object.entries(terms)
+				.filter(([, v]) => v !== undefined)
+				.map(([k, v]) => [saleNames[k], v])
+		);
+		if (Object.keys(set).length === 0) return null;
+		lastSaleSet = set;
+		return Promise.resolve();
+	})
+}));
+
+const bandSaleBlocker = vi.fn();
+const refundBandTicketSale = vi.fn();
+vi.mock('$lib/server/ticket/ticket-seller', () => ({
+	bandSaleBlocker: (...a: unknown[]) => bandSaleBlocker(...(a as [])),
+	refundBandTicketSale: (...a: unknown[]) => refundBandTicketSale(...(a as []))
+}));
+
 vi.mock('$lib/server/db', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('$lib/server/db')>();
 	return {
@@ -216,6 +246,10 @@ import {
 	listCreditInDirectory,
 	listPublicUpcomingEvents,
 	remove,
+	openBandTicketSale,
+	closeBandTicketSale,
+	cancelBandEvent,
+	BandTicketSaleUnavailableError,
 	EventNotFoundError,
 	EventValidationError,
 	EventStateError,
@@ -244,6 +278,7 @@ describe('EventService', () => {
 		updateRowCount = 1;
 		lastInsertedValues = null;
 		lastUpdateSet = null;
+		lastSaleSet = {};
 		insertShouldThrow = false;
 	});
 
@@ -407,21 +442,18 @@ describe('EventService', () => {
 				ticketQuantity: 50
 			});
 
-			expect(lastInsertedValues).toMatchObject({
+			expect(lastSaleSet).toEqual({
 				ticketingEnabled: true,
 				ticketPrice: 1500,
 				ticketQuantity: 50
 			});
+			expect(lastInsertedValues).not.toHaveProperty('ticketingEnabled');
 		});
 
-		it('stores null price and quantity when ticketing is disabled and neither is given', async () => {
+		it('writes no sale terms when ticketing is off and there is no price', async () => {
 			await create(baseParams);
 
-			expect(lastInsertedValues).toMatchObject({
-				ticketingEnabled: false,
-				ticketPrice: null,
-				ticketQuantity: null
-			});
+			expect(lastSaleSet).toEqual({});
 		});
 
 		// The price is what an attendee pays, wherever they buy — an off-site
@@ -435,11 +467,7 @@ describe('EventService', () => {
 				ticketQuantity: 50
 			});
 
-			expect(lastInsertedValues).toMatchObject({
-				ticketingEnabled: false,
-				ticketPrice: 1800,
-				ticketQuantity: null
-			});
+			expect(lastSaleSet).toEqual({ ticketPrice: 1800 });
 		});
 
 		it('rejects a zero or negative display price', async () => {
@@ -467,11 +495,7 @@ describe('EventService', () => {
 				ticketPrice: 1000
 			});
 
-			expect(lastInsertedValues).toMatchObject({
-				ticketingEnabled: true,
-				ticketPrice: 1000,
-				ticketQuantity: null
-			});
+			expect(lastSaleSet).toEqual({ ticketingEnabled: true, ticketPrice: 1000 });
 		});
 	});
 
@@ -1780,8 +1804,8 @@ describe('EventService', () => {
 
 			await update('evt-1', { ticketPrice: 2000 });
 
-			expect(lastUpdateSet).toMatchObject({ ticketPrice: 2000 });
-			expect(lastUpdateSet).not.toHaveProperty('ticketingEnabled');
+			expect(lastSaleSet).toMatchObject({ ticketPrice: 2000 });
+			expect(lastSaleSet).not.toHaveProperty('ticketingEnabled');
 		});
 
 		it('allows a door price on a band event', async () => {
@@ -1791,8 +1815,8 @@ describe('EventService', () => {
 
 			await update('evt-1', { ticketPrice: 2000 });
 
-			expect(lastUpdateSet).toMatchObject({ ticketPrice: 2000 });
-			expect(lastUpdateSet).not.toHaveProperty('ticketingEnabled');
+			expect(lastSaleSet).toMatchObject({ ticketPrice: 2000 });
+			expect(lastSaleSet).not.toHaveProperty('ticketingEnabled');
 		});
 
 		it('allows an external ticket link on a band event', async () => {
@@ -1813,7 +1837,7 @@ describe('EventService', () => {
 
 			await update('evt-1', { ticketingEnabled: false });
 
-			expect(lastUpdateSet).toMatchObject({
+			expect(lastSaleSet).toMatchObject({
 				ticketingEnabled: false,
 				ticketQuantity: null
 			});
@@ -1832,7 +1856,7 @@ describe('EventService', () => {
 
 			await update('evt-1', { ticketingEnabled: true, ticketPrice: 2000 });
 
-			expect(lastUpdateSet).toMatchObject({ ticketingEnabled: true, ticketPrice: 2000 });
+			expect(lastSaleSet).toMatchObject({ ticketingEnabled: true, ticketPrice: 2000 });
 		});
 	});
 
@@ -1846,7 +1870,7 @@ describe('EventService', () => {
 				ticketQuantity: 100
 			});
 
-			expect(lastUpdateSet).toMatchObject({
+			expect(lastSaleSet).toMatchObject({
 				ticketingEnabled: true,
 				ticketPrice: 2000,
 				ticketQuantity: 100
@@ -1870,11 +1894,11 @@ describe('EventService', () => {
 				ticketingEnabled: false
 			});
 
-			expect(lastUpdateSet).toMatchObject({
+			expect(lastSaleSet).toMatchObject({
 				ticketingEnabled: false,
 				ticketQuantity: null
 			});
-			expect(lastUpdateSet).not.toHaveProperty('ticketPrice');
+			expect(lastSaleSet).not.toHaveProperty('ticketPrice');
 		});
 
 		it('sets a display price alongside disabling ticketing', async () => {
@@ -1890,7 +1914,7 @@ describe('EventService', () => {
 
 			await update('evt-1', { ticketingEnabled: false, ticketPrice: 1800 });
 
-			expect(lastUpdateSet).toMatchObject({
+			expect(lastSaleSet).toMatchObject({
 				ticketingEnabled: false,
 				ticketPrice: 1800,
 				ticketQuantity: null
@@ -1904,7 +1928,7 @@ describe('EventService', () => {
 
 			await update('evt-1', { ticketingEnabled: false, ticketPrice: null });
 
-			expect(lastUpdateSet).toMatchObject({ ticketingEnabled: false, ticketPrice: null });
+			expect(lastSaleSet).toMatchObject({ ticketingEnabled: false, ticketPrice: null });
 		});
 
 		it('throws when enabling ticketing without price', async () => {
@@ -1939,8 +1963,8 @@ describe('EventService', () => {
 
 			await update('evt-1', { ticketPrice: 2500 });
 
-			expect(lastUpdateSet).toMatchObject({ ticketPrice: 2500 });
-			expect(lastUpdateSet).not.toHaveProperty('ticketingEnabled');
+			expect(lastSaleSet).toMatchObject({ ticketPrice: 2500 });
+			expect(lastSaleSet).not.toHaveProperty('ticketingEnabled');
 		});
 
 		it('rejects update on cancelled event', async () => {
@@ -1968,7 +1992,7 @@ describe('EventService', () => {
 			selectResult = scaled();
 
 			return update('evt-1', { ticketPriceFloorCents: 0 }).then(() => {
-				expect(lastUpdateSet).toMatchObject({ ticketPriceFloorCents: 0 });
+				expect(lastSaleSet).toMatchObject({ ticketPriceFloorCents: 0 });
 			});
 		});
 
@@ -1977,7 +2001,7 @@ describe('EventService', () => {
 
 			await update('evt-1', { ticketPriceFloorCents: 1500 });
 
-			expect(lastUpdateSet).toMatchObject({ ticketPriceFloorCents: 1500 });
+			expect(lastSaleSet).toMatchObject({ ticketPriceFloorCents: 1500 });
 		});
 
 		it('refuses a floor above the suggested price', async () => {
@@ -2023,7 +2047,79 @@ describe('EventService', () => {
 
 			await update('evt-1', { title: 'Renamed' });
 
-			expect(lastUpdateSet).not.toHaveProperty('ticketPriceFloorCents');
+			expect(lastSaleSet).toEqual({});
 		});
+	});
+});
+
+describe('a band selling its own gig (#1203)', () => {
+	const bandGig = { ...mockEventRow, status: 'published', source: 'band', groupId: 'band-1' };
+	const terms = { priceCents: 1500, priceFloorCents: 0, quantity: 100 };
+
+	beforeEach(() => {
+		bandSaleBlocker.mockReset().mockResolvedValue(null);
+		refundBandTicketSale.mockReset().mockResolvedValue({ refunded: 0 });
+		lastSaleSet = {};
+	});
+
+	it('puts the gig on sale with the band as the seller', async () => {
+		selectResult = [bandGig];
+
+		await openBandTicketSale('evt-1', 'band-1', terms);
+
+		expect(lastSaleSet).toEqual({
+			ticketingEnabled: true,
+			ticketPrice: 1500,
+			ticketPriceFloorCents: 0,
+			ticketQuantity: 100,
+			groupId: 'band-1'
+		});
+	});
+
+	it('refuses a band that does not own the gig', async () => {
+		selectResult = [bandGig];
+		await expect(openBandTicketSale('evt-1', 'band-2', terms)).rejects.toThrow();
+		expect(lastSaleSet).toEqual({});
+	});
+
+	it('refuses a CMC show, which the collective sells', async () => {
+		selectResult = [{ ...bandGig, source: 'cmc' }];
+		await expect(openBandTicketSale('evt-1', 'band-1', terms)).rejects.toThrow();
+	});
+
+	it.each(['not_premium', 'no_payouts'])('refuses while the band is %s', async (blocker) => {
+		selectResult = [bandGig];
+		bandSaleBlocker.mockResolvedValue(blocker);
+		await expect(openBandTicketSale('evt-1', 'band-1', terms)).rejects.toThrow(
+			BandTicketSaleUnavailableError
+		);
+		expect(lastSaleSet).toEqual({});
+	});
+
+	it('holds a band to the same price rules as a CMC show', async () => {
+		selectResult = [bandGig];
+		await expect(
+			openBandTicketSale('evt-1', 'band-1', { ...terms, priceCents: 0 })
+		).rejects.toThrow(EventValidationError);
+		await expect(
+			openBandTicketSale('evt-1', 'band-1', { ...terms, priceFloorCents: 2000 })
+		).rejects.toThrow(EventValidationError);
+	});
+
+	it('takes the gig off sale, keeping the price as the door price', async () => {
+		selectResult = [bandGig];
+
+		await closeBandTicketSale('evt-1', 'band-1');
+
+		expect(lastSaleSet).toEqual({ ticketingEnabled: false, ticketQuantity: null });
+	});
+
+	it('refunds every buyer when the band cancels (#1472)', async () => {
+		selectResult = [{ ...bandGig, ticketingEnabled: true }];
+
+		await cancelBandEvent('evt-1', 'band-1');
+
+		expect(lastSaleSet).toMatchObject({ ticketingEnabled: false });
+		expect(refundBandTicketSale).toHaveBeenCalledWith('evt-1');
 	});
 });

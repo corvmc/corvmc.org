@@ -30,6 +30,9 @@ const dbMock = {
 
 vi.mock('$lib/server/db', () => ({ db: dbMock }));
 
+const mockSaveTicketSale = vi.fn();
+vi.mock('$lib/server/ticket/ticket-sale', () => ({ saveTicketSale: mockSaveTicketSale }));
+
 // Schema refs — just need to be truthy objects used in eq/and calls
 vi.mock('$lib/server/db/schema/recurring', () => ({
 	recurringSeries: {
@@ -155,7 +158,8 @@ vi.mock('drizzle-orm', () => ({
 	lte: vi.fn(),
 	ne: vi.fn(),
 	notInArray: vi.fn(),
-	sql: vi.fn(() => 'sql'),
+	// `.mapWith` because `event-columns` decodes one fragment at import.
+	sql: vi.fn(() => ({ mapWith: () => 'sql' })),
 	getTableColumns: vi.fn(() => ({}))
 }));
 
@@ -642,13 +646,16 @@ describe('generateRecurringEvents', () => {
 			startsAt: OCC1,
 			endsAt: OCC1_END,
 			doorsAt: new Date(OCC1.getTime() - 30 * 60 * 1000),
-			ticketingEnabled: true,
-			ticketPrice: 1000,
-			ticketQuantity: 40,
-			ticketPriceFloorCents: 1000,
 			source: 'cmc',
 			status: 'draft',
 			recurringSeriesId: EVENT_SERIES.id
+		});
+		// The night is sold on the series' terms, written to `ticket_sale`.
+		expect(mockSaveTicketSale).toHaveBeenCalledWith((listings[0].row as { id: string }).id, {
+			enabled: true,
+			priceCents: 1000,
+			priceFloorCents: 1000,
+			quantity: 40
 		});
 
 		// Space reserved for this occurrence (30m lead/tail preserved)

@@ -199,10 +199,19 @@ export function validateTicketSplit(
 	input: TicketSplitInput & {
 		/** `event.ticketPriceFloorCents`. 0 lets the scale run to free. */
 		floorCents: number;
+		/** The collective's suggested share; a band's own gig asks less (#1470). */
+		shareBps?: number;
 	}
 ): TicketSplitValidation {
-	const { unitPriceCents, quantity, collectiveCents, coverFees, suggestedUnitCents, floorCents } =
-		input;
+	const {
+		unitPriceCents,
+		quantity,
+		collectiveCents,
+		coverFees,
+		suggestedUnitCents,
+		floorCents,
+		shareBps
+	} = input;
 
 	if (!Number.isInteger(quantity) || quantity < 1) {
 		return { ok: false, reason: 'Choose how many tickets you need.' };
@@ -223,7 +232,8 @@ export function validateTicketSplit(
 		otherMinCents: actsMinCents({
 			baseCents: suggestedUnitCents * quantity,
 			grossPaidCents: unitPriceCents * quantity,
-			coverFees
+			coverFees,
+			bps: shareBps
 		}),
 		messages: {
 			belowFloor: `The least you can pay for this show is $${(floorCents / 100).toFixed(2)} a ticket.`,

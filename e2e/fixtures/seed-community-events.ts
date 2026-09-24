@@ -26,7 +26,7 @@ import { readLocalDb, withPlatformDb } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { memberStanding } from '../../src/lib/server/db/schema/standing';
-import { ticket } from '../../src/lib/server/db/schema/ticket';
+import { ticket, ticketSale } from '../../src/lib/server/db/schema/ticket';
 import { scryptHash } from './seed-pay-reservation';
 
 export const SEED_CE_PASSWORD = 'e2e-password-123';
@@ -209,8 +209,6 @@ export async function seedCommunityEvents(): Promise<void> {
 				source: 'cmc',
 				status: 'published',
 				publishedAt: now,
-				ticketingEnabled: true,
-				ticketPrice: 1000,
 				createdByUserId: SEED_CE_TRUSTED_ID,
 				createdAt: now,
 				updatedAt: now
@@ -229,6 +227,12 @@ export async function seedCommunityEvents(): Promise<void> {
 				updatedAt: now
 			}
 		]);
+
+		await db.insert(ticketSale).values({
+			eventListingId: SEED_CE_TICKETED_ID,
+			enabled: true,
+			priceCents: 1000
+		});
 
 		await db.insert(ticket).values({
 			id: 'e2e-ce-ticket',

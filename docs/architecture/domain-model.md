@@ -59,10 +59,13 @@ Three layers, not two:
 | `project`       | A body of work with a budget and an owner                       | 0, 1 or many listings     |
 | `event_listing` | The public advertisement: one entry on the calendar             | The common case           |
 | `production`    | A show's back-of-house — the room hold, run of show, settlement | Only `source='cmc'` shows |
+| `ticket_sale`   | What is on sale for a listing, and whose money it is            | Listings with sale terms  |
 
-Doors and ticketing stay on the listing: a community submission has doors and can never
-have a production, and a band gig will sell tickets without one (#1203). Doors is the one
-time the public needs; load-in, soundcheck, first set, curfew and load-out are internal.
+Doors stay on the listing: a community submission has doors and can never have a
+production. Doors is the one time the public needs; load-in, soundcheck, first set, curfew
+and load-out are internal. Ticketing is neither announcement nor back-of-house, so it is
+its own row, `ticket_sale`, keyed to the listing: a band gig will sell tickets without a
+production (#1203). A null `group_id` means the collective is the seller.
 
 The listing names the production it announces (`event_listing.production_id`), not the
 other way round: the advertisement is downstream of the show. A production with no

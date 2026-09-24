@@ -1,5 +1,6 @@
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { production } from '../../src/lib/server/db/schema/production';
+import { ticketSale } from '../../src/lib/server/db/schema/ticket';
 import { claimRoom } from './room';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { recurringSeries } from '../../src/lib/server/db/schema/recurring';
@@ -200,15 +201,20 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				tags,
 				reservationId: held?.reservationId,
 				productionId: held?.productionId,
-				ticketingEnabled: config.ticketingEnabled,
-				ticketPrice: config.ticketPrice,
-				ticketPriceFloorCents: config.ticketPriceFloorCents ?? 0,
-				ticketQuantity: config.ticketQuantity,
 				externalTicketUrl: config.externalTicketUrl ?? null,
 				createdByUserId: creator.id
 			})
 			.returning();
 		rows.push(e);
+		if (config.ticketingEnabled || config.ticketPrice != null) {
+			await db.insert(ticketSale).values({
+				eventListingId: eventId,
+				enabled: config.ticketingEnabled,
+				priceCents: config.ticketPrice,
+				priceFloorCents: config.ticketPriceFloorCents ?? 0,
+				quantity: config.ticketQuantity
+			});
+		}
 	}
 
 	for (let i = 0; i < 2; i++) {
