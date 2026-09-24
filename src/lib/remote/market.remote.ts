@@ -4,6 +4,7 @@ import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { requireCapability } from '$lib/server/authorization';
+import { requireCommitteeMember } from '$lib/server/group/group-context';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	DEFAULT_TIMEZONE,
@@ -16,7 +17,10 @@ import {
 	getApplicationWindow,
 	getMarketDay,
 	getMarketEvent,
+	getMarketOwnerGroupId,
+	getVendorEventId,
 	listApplications,
+	listCommitteeMarkets,
 	listPublicVendors,
 	openMarketDay,
 	setTableLabel,
@@ -27,9 +31,15 @@ import {
 /**
  * Market vendor applications. docs/specs/shipped/market-vendors-spec.md.
  *
- * The public half takes no session: the application form is for people with
- * no account. Every staff export guards on `event.manage` (#1503).
+ * The public half takes no session. Setup, seating and withdrawals guard on
+ * `event.manage`; accept and decline also belong to the committee that owns
+ * the market's project (#1503), whose id is read off the row, never the request.
  */
+
+/** Members of the market's owning committee, or staff holding `event.manage`. */
+async function requireMarketDecider(eventId: string) {
+	return requireCommitteeMember(await getMarketOwnerGroupId(eventId), 'event.manage');
+}
 
 const eventId = z.string().min(1);
 const shortText = z.string().trim().max(SHORT_TEXT_MAX);
@@ -135,6 +145,32 @@ export const openMarketDayForm = form(
 	}
 );
 
+/**
+ * The owning committee's view of a market: the applications, with no contact
+ * detail. Those live on the inbox thread, which is staff-only, and the decision
+ * message reaches the vendor through it all the same.
+ */
+export const getCommitteeMarketVendors = query(eventId, async (id) => {
+	await requireMarketDecider(id);
+	const event = await getMarketEvent(id);
+	if (!event) error(404, 'Event not found');
+	const [market, applications] = await Promise.all([getMarketDay(id), listApplications(id)]);
+	if (!market) error(404, 'Not a market');
+	return {
+		event,
+		market,
+		applications: applications.map(
+			({ threadId: _t, contactName: _n, contactEmail: _e, contactPhone: _p, ...rest }) => rest
+		)
+	};
+});
+
+/** A committee's market days, for its projects tab. */
+export const getCommitteeMarkets = query(z.string().min(1), async (groupId) => {
+	await requireCommitteeMember(groupId, 'event.manage');
+	return listCommitteeMarkets(groupId);
+});
+
 export const decideVendorForm = form(
 	z.object({
 		vendorId: z.string().min(1),
@@ -143,13 +179,14 @@ export const decideVendorForm = form(
 		message: z.string().trim().min(1, 'Write the vendor a message').max(LONG_TEXT_MAX)
 	}),
 	async (data) => {
-		const staff = await requireCapability('event.manage');
+		const { user } = await requireMarketDecider(await getVendorEventId(data.vendorId));
 		const { eventId: id } = await decideApplication(
 			data.vendorId,
 			{ decision: data.decision, tableLabel: data.tableLabel, message: data.message },
-			{ id: staff.id, name: staff.name }
+			{ id: user.id, name: user.name }
 		);
 		void getStaffMarketVendors(id).refresh();
+		void getCommitteeMarketVendors(id).refresh();
 		return { success: true };
 	}
 );

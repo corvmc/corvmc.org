@@ -1529,7 +1529,7 @@ password from there.
 
 ## 19. Market vendors: applications for a market day CMC hosts
 
-Spec: [specs/shipped/market-vendors-spec.md](../specs/shipped/market-vendors-spec.md) (#609). Open decisions: #1502 (fees), #1503 (who approves), #1504 (what the public sees).
+Spec: [specs/shipped/market-vendors-spec.md](../specs/shipped/market-vendors-spec.md) (#609). Open decisions: #1502 (fees), #1504 (what the public sees).
 
 ### The story
 
@@ -1547,8 +1547,12 @@ vendors are listed on the event page.
   with `MarketClosedError` unless the listing is published, not started and before
   `applications_close_at`. It opens a `web` inbox thread, posts the application as its first
   message, and inserts `market_vendor`.
-- **Decide:** `decideVendorForm` → `decideApplication` (`event.manage`) moves the status and
-  sends the staff-written message through `addOutboundMessage`. `withdrawn` is final.
+- **Decide:** `decideVendorForm` → `decideApplication` moves the status and sends the written
+  message through `addOutboundMessage`. `withdrawn` is final. The guard is
+  `requireCommitteeMember` on the committee that owns the listing's project
+  (`getMarketOwnerGroupId`, read off the vendor's row), with `event.manage` as staff cover
+  (#1503). Committee members decide from `/member/groups/[slug]/markets/[eventId]`, reached from
+  the group's Projects tab; that view (`getCommitteeMarketVendors`) carries no contact details.
 - **Public list:** `getPublicMarket` → `listPublicVendors`, which names its columns and
   returns accepted rows only.
 

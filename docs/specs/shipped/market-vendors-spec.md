@@ -93,8 +93,11 @@ Input limits use `SHORT_TEXT_MAX` / `LONG_TEXT_MAX`.
 - Public: `getMarketApplicationInfo(eventId)` (event title, date, open or closed, closing date),
   `getPublicVendors(eventId)`, and `submitVendorApplicationForm` (Turnstile, then Zod, then the
   service).
-- Staff, all `requireCapability('event.manage')` (#1503): `getMarketVendorsAdmin(eventId)`,
-  `openMarketDayForm`, `decideVendorForm`, `setTableLabelForm` and `withdrawVendorForm`.
+- Staff, all `requireCapability('event.manage')`: `getMarketVendorsAdmin(eventId)`,
+  `openMarketDayForm`, `setTableLabelForm` and `withdrawVendorForm`.
+- `decideVendorForm`, `getCommitteeMarketVendors` and `getCommitteeMarkets`:
+  `requireCommitteeMember` on the committee owning the listing's project, `event.manage` as
+  cover (#1503).
 
 ### Staff surface: `/staff/events/[id]/vendors`
 

@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { eventListing, publicEventStatuses } from '$lib/server/db/schema/event';
 import { inboxThread } from '$lib/server/db/schema/inbox';
+import { project } from '$lib/server/db/schema/project';
 import { marketDay, marketVendor, type MarketVendor } from '$lib/server/db/schema/market';
 import { findOrCreateThread } from '$lib/server/inbox/thread-service';
 import { addInboundMessage, addOutboundMessage } from '$lib/server/inbox/message-service';
@@ -287,6 +288,43 @@ export async function decideApplication(
 		});
 	}
 	return { eventId: vendor.eventId };
+}
+
+/** A vendor's market, read off the row: what a guard on a vendor id checks against. */
+export async function getVendorEventId(vendorId: string): Promise<string> {
+	return (await loadVendor(vendorId)).eventId;
+}
+
+/**
+ * The committee that owns a market day: the owning group of its listing's
+ * project. Null when there is no project or no owner, which leaves the
+ * decision to staff alone (#1503).
+ */
+export async function getMarketOwnerGroupId(eventId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ groupId: project.groupId })
+		.from(eventListing)
+		.innerJoin(project, eq(project.id, eventListing.projectId))
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
+	return row?.groupId ?? null;
+}
+
+/** A committee's market days, soonest first, with how many applications wait on a decision. */
+export async function listCommitteeMarkets(groupId: string) {
+	const rows = await db
+		.select({
+			eventId: marketDay.eventId,
+			title: eventListing.title,
+			startsAt: eventListing.startsAt,
+			toReview: sql<number>`(select count(*) from ${marketVendor} where ${marketVendor.eventId} = ${marketDay.eventId} and ${marketVendor.status} = 'applied')`
+		})
+		.from(marketDay)
+		.innerJoin(eventListing, eq(eventListing.id, marketDay.eventId))
+		.innerJoin(project, eq(project.id, eventListing.projectId))
+		.where(eq(project.groupId, groupId))
+		.orderBy(asc(eventListing.startsAt));
+	return rows.map((r) => ({ ...r, toReview: Number(r.toReview) }));
 }
 
 /** Move an accepted vendor's table. */

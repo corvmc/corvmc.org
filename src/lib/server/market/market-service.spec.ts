@@ -31,6 +31,9 @@ const {
 	setTableLabel,
 	withdrawApplication,
 	listPublicVendors,
+	getMarketOwnerGroupId,
+	getVendorEventId,
+	listCommitteeMarkets,
 	MarketClosedError,
 	VendorTransitionError
 } = await import('./market-service');
@@ -66,7 +69,8 @@ beforeEach(() => {
 		'market_day',
 		'inbox_message',
 		'inbox_thread',
-		'event_listing'
+		'event_listing',
+		'project'
 	]) {
 		sqlite.exec(`delete from ${t}`);
 	}
@@ -281,5 +285,50 @@ describe('the public vendor list', () => {
 			'tableLabel',
 			'website'
 		]);
+	});
+});
+
+describe('the committee that owns a market', () => {
+	const COMMITTEE = 'grp-dev';
+
+	function ownEventBy(groupId: string | null) {
+		sqlite.exec(
+			`insert into project (id, name, status, group_id) values ('prj-1', 'Autumn Market', 'open', ${
+				groupId ? `'${groupId}'` : 'null'
+			})`
+		);
+		sqlite.exec(`update event_listing set project_id = 'prj-1' where id = '${EVENT}'`);
+	}
+
+	it("is the owning group of the listing's project", async () => {
+		insertEvent();
+		ownEventBy(COMMITTEE);
+		expect(await getMarketOwnerGroupId(EVENT)).toBe(COMMITTEE);
+	});
+
+	it('is null for a listing with no project, or a project with no owner', async () => {
+		insertEvent();
+		expect(await getMarketOwnerGroupId(EVENT)).toBeNull();
+		ownEventBy(null);
+		expect(await getMarketOwnerGroupId(EVENT)).toBeNull();
+	});
+
+	it("reads a vendor's market from the row", async () => {
+		insertEvent();
+		await openMarketDay(EVENT, { applicationsCloseAt: null, tableCount: null });
+		const { id } = await submitApplication(EVENT, application, NOW);
+		expect(await getVendorEventId(id)).toBe(EVENT);
+	});
+
+	it("lists the committee's market days with how many wait on a decision", async () => {
+		insertEvent();
+		ownEventBy(COMMITTEE);
+		await openMarketDay(EVENT, { applicationsCloseAt: null, tableCount: null });
+		await submitApplication(EVENT, application, NOW);
+
+		expect(await listCommitteeMarkets(COMMITTEE)).toEqual([
+			{ eventId: EVENT, title: 'Autumn Market', startsAt: STARTS, toReview: 1 }
+		]);
+		expect(await listCommitteeMarkets('grp-other')).toEqual([]);
 	});
 });
