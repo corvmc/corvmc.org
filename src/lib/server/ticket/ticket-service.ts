@@ -56,6 +56,8 @@ export interface CreateTicketsOptions {
 	actsCents?: number;
 	collectiveCents?: number;
 	feeCoveredCents?: number;
+	/** A door sale is checked in as it is minted, by the staffer who sold it. */
+	checkedInByUserId?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -111,7 +113,8 @@ export async function createTickets(options: CreateTicketsOptions) {
 		discountWaived = false,
 		actsCents = 0,
 		collectiveCents = 0,
-		feeCoveredCents = 0
+		feeCoveredCents = 0,
+		checkedInByUserId = null
 	} = options;
 
 	const codes = await generateUniqueCodes(quantity);
@@ -132,7 +135,8 @@ export async function createTickets(options: CreateTicketsOptions) {
 		actsCents: i === 0 ? actsCents : 0,
 		collectiveCents: i === 0 ? collectiveCents : 0,
 		feeCoveredCents: i === 0 ? feeCoveredCents : 0,
-		discountWaived
+		discountWaived,
+		...(checkedInByUserId ? { checkedInByUserId, checkedInAt: new Date() } : {})
 	}));
 
 	const created = await db.insert(ticket).values(rows).returning();

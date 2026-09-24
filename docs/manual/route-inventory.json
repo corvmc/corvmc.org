@@ -436,6 +436,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/door",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/events",
 		"panel": "staff"
 	},

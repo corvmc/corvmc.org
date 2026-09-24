@@ -103,6 +103,7 @@ import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
 import { seedPacking } from './seed/packing';
 import { seedBandTicketSale } from './seed/band-ticket-sale';
+import { seedDoorSales } from './seed/door-sales';
 import { seedEventRecaps } from './seed/event-recaps';
 import { seedMarket } from './seed/market';
 
@@ -303,6 +304,7 @@ async function main() {
 	const market = await seedMarket(adminUser);
 	// After `seedAudio`, whose Connect accounts decide which band may sell (#1203).
 	const bandSale = await seedBandTicketSale();
+	const doorSales = await seedDoorSales(adminUser.id);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -436,6 +438,9 @@ async function main() {
 		bandSale
 			? `  1 band gig on sale through the collective — ${bandSale.bandName}, /events/${bandSale.eventId}/tickets`
 			: '  no band gig on sale — no premium band with payouts has an upcoming published gig'
+	);
+	console.log(
+		`  1 show at the door tonight, 2 door sales in — /staff/door (event ${doorSales.eventId})`
 	);
 	console.log('\n  Tech rider demo logins (all `password`):');
 	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');
