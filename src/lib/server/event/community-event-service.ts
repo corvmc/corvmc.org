@@ -1,6 +1,13 @@
 import { db } from '$lib/server/db';
 import { eventListing, type LineupEntry } from '$lib/server/db/schema/event';
-import { eventListingColumns, eventPosterKeySql } from './event-columns';
+import {
+	eventListingColumns,
+	eventPosterKeySql,
+	noSaleTerms,
+	ticketSaleColumns,
+	withoutLegacySaleTerms
+} from './event-columns';
+import { saveTicketSale } from '$lib/server/ticket/ticket-sale';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, getTableColumns, gte, inArray, ne } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
@@ -238,14 +245,19 @@ export async function createCommunityEvent(params: CreateCommunityEventParams): 
 			location: params.location ?? null,
 			tags: params.tags ?? null,
 			externalTicketUrl: params.externalTicketUrl ?? null,
-			ticketPrice: params.ticketPrice ?? null,
 			source: 'community',
 			status: 'draft',
 			createdByUserId: params.createdByUserId
 		})
 		.returning();
+	await saveTicketSale(inserted.id, { priceCents: params.ticketPrice ?? undefined });
 	// A listing one statement old has no attachment yet.
-	const row: EventRow = { ...inserted, posterKey: null };
+	const row: EventRow = {
+		...withoutLegacySaleTerms(inserted),
+		posterKey: null,
+		...noSaleTerms,
+		ticketPrice: params.ticketPrice ?? null
+	};
 
 	if (params.lineup?.length) {
 		await setEventLineup(row.id, params.lineup);
@@ -307,10 +319,7 @@ export async function updateCommunityEvent(
 	if (params.externalTicketUrl !== undefined) {
 		updates.externalTicketUrl = params.externalTicketUrl;
 	}
-	if (params.ticketPrice !== undefined) {
-		assertValidTicketPrice(params.ticketPrice);
-		updates.ticketPrice = params.ticketPrice;
-	}
+	if (params.ticketPrice !== undefined) assertValidTicketPrice(params.ticketPrice);
 
 	// A review-required member's edit to something already public sends it back
 	// to the queue; the listing stays up in the meantime, because yanking it for
@@ -329,6 +338,8 @@ export async function updateCommunityEvent(
 		await uploadPosterKey(eventId, params.posterFile);
 	}
 
+	await saveTicketSale(eventId, { priceCents: params.ticketPrice ?? undefined });
+
 	const [updated] = await db
 		.update(eventListing)
 		.set(updates)
@@ -342,14 +353,19 @@ export async function updateCommunityEvent(
 		await setEventLineup(eventId, params.lineup);
 	}
 
-	// `RETURNING` cannot carry the poster key — SQLite forbids a subquery there
-	// — so the row is completed from the attachment (#808).
+	// `RETURNING` cannot carry the poster key or the sale terms — SQLite forbids
+	// a subquery there — so the row is completed from them (#808, #1203).
 	const [resolved] = await db
-		.select({ posterKey: eventPosterKeySql })
+		.select({ posterKey: eventPosterKeySql, ...ticketSaleColumns })
 		.from(eventListing)
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
-	const row: EventRow = { ...updated, posterKey: resolved?.posterKey ?? null };
+	const row: EventRow = {
+		...withoutLegacySaleTerms(updated),
+		...noSaleTerms,
+		...resolved,
+		posterKey: resolved?.posterKey ?? null
+	};
 
 	if (requeued) await emitSubmitted(row, userId);
 

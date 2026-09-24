@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { eventBand, eventListing } from '$lib/server/db/schema/event';
 import { venue } from '$lib/server/db/schema/venue';
+import { ticketSaleColumns } from '$lib/server/event/event-columns';
 import { asc, eq } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { getObject, uploadFile } from '$lib/server/storage';
@@ -33,9 +34,10 @@ async function flyerSource(eventId: string): Promise<FlyerSource> {
 			doorsAt: eventListing.doorsAt,
 			venueName: venue.name,
 			location: eventListing.location,
-			ticketingEnabled: eventListing.ticketingEnabled,
-			ticketPrice: eventListing.ticketPrice,
-			ticketPriceFloorCents: eventListing.ticketPriceFloorCents,
+			// The sale terms live on `ticket_sale` (#1203).
+			ticketingEnabled: ticketSaleColumns.ticketingEnabled,
+			ticketPrice: ticketSaleColumns.ticketPrice,
+			ticketPriceFloorCents: ticketSaleColumns.ticketPriceFloorCents,
 			externalTicketUrl: eventListing.externalTicketUrl
 		})
 		.from(eventListing)

@@ -98,6 +98,7 @@ import { seedMaintenanceSchedules } from './seed/maintenance';
 import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
 import { seedPacking } from './seed/packing';
+import { seedBandTicketSale } from './seed/band-ticket-sale';
 import { seedEventRecaps } from './seed/event-recaps';
 import { seedMarket } from './seed/market';
 
@@ -287,6 +288,8 @@ async function main() {
 	// reaches both features, and the promote path has a real rider to aim at.
 	const packing = await seedPacking(riders.structuredBandId);
 	const market = await seedMarket(adminUser);
+	// After `seedAudio`, whose Connect accounts decide which band may sell (#1203).
+	const bandSale = await seedBandTicketSale();
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -411,6 +414,11 @@ async function main() {
 	);
 	console.log(
 		`  ${market.markets} market day taking applications, ${market.vendors} vendors in every status`
+	);
+	console.log(
+		bandSale
+			? `  1 band gig on sale through the collective — ${bandSale.bandName}, /events/${bandSale.eventId}/tickets`
+			: '  no band gig on sale — no premium band with payouts has an upcoming published gig'
 	);
 	console.log('\n  Tech rider demo logins (all `password`):');
 	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');

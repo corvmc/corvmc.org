@@ -196,10 +196,11 @@ describe('createCommunityEvent', () => {
 			ticketPrice: 1000
 		});
 
-		const values = insertValues.mock.calls[0][0];
-		expect(values).not.toHaveProperty('ticketingEnabled');
+		// The listing, then its sale terms on `ticket_sale`.
+		const sale = insertValues.mock.calls[1][0];
+		expect(sale).not.toHaveProperty('enabled');
 		// A door / off-site price is fine — it describes where someone else sells.
-		expect(values.ticketPrice).toBe(1000);
+		expect(sale.priceCents).toBe(1000);
 	});
 
 	it('rejects a backwards time range before it reaches the CHECK constraint', async () => {

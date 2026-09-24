@@ -11,6 +11,7 @@ import {
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
 import { eventListing } from '../../src/lib/server/db/schema/event';
+import { ticketSale } from '../../src/lib/server/db/schema/ticket';
 import { and, eq, gt } from 'drizzle-orm';
 import { batchInsert, db } from './db';
 import { scryptHash } from './hash';
@@ -243,7 +244,8 @@ export async function seedVolunteerPersonas(
 	const [doorEvent] = await db
 		.select({ id: eventListing.id })
 		.from(eventListing)
-		.where(and(eq(eventListing.ticketingEnabled, true), gt(eventListing.startsAt, now)))
+		.innerJoin(ticketSale, eq(ticketSale.eventListingId, eventListing.id))
+		.where(and(eq(ticketSale.enabled, true), gt(eventListing.startsAt, now)))
 		.limit(1);
 
 	const doorShift = doorEvent

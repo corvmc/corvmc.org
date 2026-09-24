@@ -98,7 +98,8 @@ vi.mock('drizzle-orm', () => ({
 	notInArray: (col: unknown, vals: unknown[]) => ({ op: 'notInArray', col, vals }),
 	// Needed because the mapper pulls in the finance schema, which uses sql`` for
 	// column defaults at module load.
-	sql: (..._args: unknown[]) => ({ op: 'sql' })
+	// `.mapWith` because `event-columns` decodes one fragment at import.
+	sql: (..._args: unknown[]) => ({ op: 'sql', mapWith: () => ({ op: 'sql' }) })
 }));
 
 vi.mock('$lib/server/db', () => {

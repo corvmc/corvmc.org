@@ -73,7 +73,8 @@ vi.mock('drizzle-orm', () => ({
 	like: vi.fn(),
 	or: vi.fn(),
 	count: vi.fn(),
-	sql: vi.fn()
+	// `.mapWith` because `event-columns` decodes one fragment at import.
+	sql: vi.fn(() => ({ mapWith: vi.fn() }))
 }));
 
 // Import after mocking
