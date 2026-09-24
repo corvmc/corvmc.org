@@ -15,6 +15,7 @@
 	import { page } from '$app/state';
 	import { acquisitionKinds, acquisitionKindLabels, clubToday } from '$lib/config';
 	import { toast } from 'svelte-sonner';
+	import { formatDate } from '$lib/utils/format';
 
 	/**
 	 * Entering a whole arrival in one sitting.
@@ -96,6 +97,21 @@
 			One trip, one receipt, however many things came off it. Everything here lands on a single
 			acquisition, so the provenance stays together.
 		</Alert>
+	{/if}
+
+	{#if data.pledges.length > 0}
+		<!-- Who said they would bring what. Linking the gear request, or naming
+		     the donor on a donation that includes the item, closes the pledge. -->
+		<InfoCard title="Promised by donors" class="mb-6">
+			<ul class="flex flex-col gap-2">
+				{#each data.pledges as p (p.id)}
+					<li class="flex flex-wrap justify-between gap-2">
+						<span><strong>{p.entryName}</strong> — {p.donorName}</span>
+						<span class="text-subtle">until {formatDate(p.expiresAt)}</span>
+					</li>
+				{/each}
+			</ul>
+		</InfoCard>
 	{/if}
 
 	<Form

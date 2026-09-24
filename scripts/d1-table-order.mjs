@@ -211,7 +211,9 @@ export const tableOrder = [
 	'local_resource',
 	// References user only; parent of incident_note.
 	'incident',
-	'incident_note'
+	'incident_note',
+	// References user only; its subject id is bare text.
+	'wishlist_pledge'
 ];
 
 /**

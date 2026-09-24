@@ -120,6 +120,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/contribute/pledge/[token]",
+		"panel": "public"
+	},
+	{
 		"route": "/directory",
 		"panel": "public"
 	},
