@@ -65,22 +65,20 @@ test.describe.serial('band booking enquiries', () => {
 		// and the reason it is the only thing to assert on here.
 		await expect(page.locator('body')).not.toContainText('@example.com');
 
-		await page.locator('input[name="name"]').fill(enquirer);
-		await page.locator('input[name="email"]').fill(ENQUIRER_EMAIL);
-		await page.locator('textarea[name="message"]').fill(MESSAGE);
-
-		// Wait for Cloudflare's widget to write its token before submitting. The
-		// input does not exist until the challenge script has loaded and rendered
-		// — it is created by `window.turnstile.render`, not by the markup — so a
-		// click before then submits without it. That is a real thing a user can do
-		// and the form now says so, but it is not what this test is about.
+		// The token input is created by `window.turnstile.render` on mount, so a
+		// non-empty token proves hydration too: a fill before it is wiped from the
+		// name and email inputs, and Send then stops on the empty `required` fields.
 		//
-		// The field name is `TURNSTILE_RESPONSE_FIELD` from `src/lib/turnstile.ts`,
-		// spelled out rather than imported: that module reads `$env/dynamic/public`,
-		// which does not resolve outside the SvelteKit build.
+		// The name is `TURNSTILE_RESPONSE_FIELD` from `src/lib/turnstile.ts`, spelled
+		// out because that module reads `$env/dynamic/public`, which does not
+		// resolve outside the SvelteKit build.
 		await expect(page.locator('input[name="turnstileToken"]')).not.toHaveValue('', {
 			timeout: 30000
 		});
+
+		await page.locator('input[name="name"]').fill(enquirer);
+		await page.locator('input[name="email"]').fill(ENQUIRER_EMAIL);
+		await page.locator('textarea[name="message"]').fill(MESSAGE);
 
 		await page.getByRole('button', { name: 'Send' }).click();
 
