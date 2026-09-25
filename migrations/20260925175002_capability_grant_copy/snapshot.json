@@ -1,7 +1,7 @@
 {
-  "id": "3b29fe64-7036-437b-b339-ed319374bebd",
+  "id": "fc2121fd-9348-4595-bfb2-b665f69bd2ec",
   "prevIds": [
-    "2ae80b73-83ec-454e-8e85-8d28403210cb"
+    "1f52e4d5-200c-437d-b98e-06e98e036c61"
   ],
   "version": "7",
   "dialect": "sqlite",
@@ -187,6 +187,10 @@
       "entityType": "tables"
     },
     {
+      "name": "group_capability",
+      "entityType": "tables"
+    },
+    {
       "name": "group_member",
       "entityType": "tables"
     },
@@ -332,6 +336,10 @@
     },
     {
       "name": "volunteer_role",
+      "entityType": "tables"
+    },
+    {
+      "name": "volunteer_role_capability",
       "entityType": "tables"
     },
     {
@@ -5628,6 +5636,36 @@
     },
     {
       "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "group_capability"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "capability",
+      "entityType": "columns",
+      "table": "group_capability"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "group_capability"
+    },
+    {
+      "type": "text",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -9515,6 +9553,36 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "volunteer_role"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "volunteer_role_id",
+      "entityType": "columns",
+      "table": "volunteer_role_capability"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "capability",
+      "entityType": "columns",
+      "table": "volunteer_role_capability"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "volunteer_role_capability"
     },
     {
       "type": "text",
@@ -15597,6 +15665,21 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_group_capability_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "group_capability"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_band_member_band_id_band_id_fk",
       "entityType": "fks",
       "table": "group_member"
@@ -16740,6 +16823,21 @@
       "name": "fk_volunteer_profile_approved_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "volunteer_profile"
+    },
+    {
+      "columns": [
+        "volunteer_role_id"
+      ],
+      "tableTo": "volunteer_role",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_volunteer_role_capability_volunteer_role_id_volunteer_role_id_fk",
+      "entityType": "fks",
+      "table": "volunteer_role_capability"
     },
     {
       "columns": [
@@ -18248,6 +18346,16 @@
     },
     {
       "columns": [
+        "group_id",
+        "capability"
+      ],
+      "nameExplicit": false,
+      "name": "group_capability_pk",
+      "entityType": "pks",
+      "table": "group_capability"
+    },
+    {
+      "columns": [
         "user_id",
         "scope"
       ],
@@ -18255,6 +18363,16 @@
       "name": "member_standing_pk",
       "entityType": "pks",
       "table": "member_standing"
+    },
+    {
+      "columns": [
+        "volunteer_role_id",
+        "capability"
+      ],
+      "nameExplicit": false,
+      "name": "volunteer_role_capability_pk",
+      "entityType": "pks",
+      "table": "volunteer_role_capability"
     },
     {
       "columns": [
