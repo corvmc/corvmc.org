@@ -5,13 +5,24 @@
  */
 import { describe, expect, it, beforeAll } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { applyMigrations, MIGRATIONS_FOLDER } from './migrate-local';
 
 const dir = readdirSync(MIGRATIONS_FOLDER).find((n) => n.endsWith('_capability_grant_backfill'));
 const BACKFILL = readFileSync(join(MIGRATIONS_FOLDER, dir ?? 'missing', 'migration.sql'), 'utf8');
+
+/** Migrations through this backfill only: later ones drop the JSON columns it writes (#1624). */
+function migrationsThroughBackfill(): string {
+	const out = mkdtempSync(join(tmpdir(), 'corvmc-backfill-migrations-'));
+	for (const tag of readdirSync(MIGRATIONS_FOLDER)) {
+		if (/^\d{14}_/.test(tag) && dir && tag <= dir) {
+			cpSync(join(MIGRATIONS_FOLDER, tag), join(out, tag), { recursive: true });
+		}
+	}
+	return out;
+}
 
 function runBackfill(db: DatabaseSync) {
 	for (const statement of BACKFILL.split('--> statement-breakpoint')) db.exec(statement);
@@ -36,7 +47,7 @@ describe('capability grant backfill', () => {
 
 	beforeAll(() => {
 		const file = join(mkdtempSync(join(tmpdir(), 'corvmc-backfill-')), 'd1.sqlite');
-		applyMigrations(file);
+		applyMigrations(file, migrationsThroughBackfill());
 		db = new DatabaseSync(file);
 		db.exec(`
 			INSERT INTO "user" (id, name, email) VALUES ('u1', 'Staff', 'staff@example.com');

@@ -55,12 +55,6 @@ export const group = sqliteTable(
 		/** Prose shown beside the Join button: "third Thursday, bring a horn, charts provided". */
 		joinInstructions: text('join_instructions'),
 
-		/** Superseded by `group_capability` (#1624); unread, and dropped next. */
-		capabilityGrants: text('capability_grants', { mode: 'json' })
-			.$type<string[]>()
-			.notNull()
-			.default(sql`'[]'`),
-
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),

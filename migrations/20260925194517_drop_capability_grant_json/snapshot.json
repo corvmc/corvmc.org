@@ -1,10 +1,10 @@
 {
-  "id": "60bf3aa9-d1c9-47ad-b2f7-bebbd746f44a",
-  "prevIds": [
-    "fc2121fd-9348-4595-bfb2-b665f69bd2ec"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "13a73fd5-03c8-49a5-b7e2-522f5f9fe684",
+  "prevIds": [
+    "60bf3aa9-d1c9-47ad-b2f7-bebbd746f44a"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -5595,16 +5595,6 @@
       "table": "group"
     },
     {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'[]'",
-      "generated": null,
-      "name": "capability_grants",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -9521,16 +9511,6 @@
       "default": "'[]'",
       "generated": null,
       "name": "skill_matches",
-      "entityType": "columns",
-      "table": "volunteer_role"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'[]'",
-      "generated": null,
-      "name": "capability_grants",
       "entityType": "columns",
       "table": "volunteer_role"
     },

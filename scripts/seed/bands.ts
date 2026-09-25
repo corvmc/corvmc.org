@@ -33,10 +33,7 @@ import { randomUUID } from 'crypto';
  * production drift that `scripts/backfill-band-owners.ts` had to repair.
  */
 export async function insertBandWithOwner(
-	{
-		capabilityGrants = [],
-		...values
-	}: Omit<typeof group.$inferInsert, 'capabilityGrants'> & { capabilityGrants?: string[] },
+	{ capabilityGrants = [], ...values }: typeof group.$inferInsert & { capabilityGrants?: string[] },
 	ownerId: string,
 	position?: string
 ) {
