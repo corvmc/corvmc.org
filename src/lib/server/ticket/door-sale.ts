@@ -30,7 +30,7 @@ export interface DoorEvent {
 	/** Where the scale opens. 0 when the show is free. */
 	suggestedCents: number;
 	floorCents: number;
-	/** Null is unlimited. */
+	/** Null is unlimited. Negative once the door has sold past capacity (#1631). */
 	remaining: number | null;
 	/** Whether a buyer can pay on their own phone instead of tapping. */
 	onlineSales: boolean;
@@ -68,8 +68,7 @@ function doorEvents(now: Date) {
 type DoorEventRow = Awaited<ReturnType<typeof doorEvents>>[number];
 
 async function toDoorEvent(row: DoorEventRow): Promise<DoorEvent> {
-	const remaining =
-		row.quantity == null ? null : Math.max(0, row.quantity - (await getTicketsSold(row.id)));
+	const remaining = row.quantity == null ? null : row.quantity - (await getTicketsSold(row.id));
 	return {
 		id: row.id,
 		title: row.title,
@@ -110,9 +109,6 @@ export async function startDoorSale(input: {
 
 	if (unitPriceCents < event.floorCents) {
 		throw new DoorSaleError(`Each ticket is at least $${(event.floorCents / 100).toFixed(2)}`);
-	}
-	if (event.remaining !== null && quantity > event.remaining) {
-		throw new DoorSaleError(`Only ${event.remaining} left for this show`);
 	}
 
 	const split = doorTicketSplit({
