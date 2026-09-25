@@ -111,4 +111,15 @@ describe('capability grants: JSON columns to join tables', () => {
 		}
 		after.close();
 	});
+
+	it('leaves the tables as the only copy once the JSON columns are dropped', () => {
+		const after = new DatabaseSync(file);
+		const columns = (table: string) =>
+			(after.prepare(`PRAGMA table_info("${table}")`).all() as Array<{ name: string }>).map(
+				(c) => c.name
+			);
+		expect(columns('group')).not.toContain('capability_grants');
+		expect(columns('volunteer_role')).not.toContain('capability_grants');
+		after.close();
+	});
 });

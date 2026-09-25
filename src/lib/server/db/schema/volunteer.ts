@@ -256,12 +256,6 @@ export const volunteerRole = sqliteTable('volunteer_role', {
 		.notNull()
 		.default(sql`'[]'`),
 
-	/** Superseded by `volunteer_role_capability` (#1624); unread, and dropped next. */
-	capabilityGrants: text('capability_grants', { mode: 'json' })
-		.$type<string[]>()
-		.notNull()
-		.default(sql`'[]'`),
-
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
 		.default(sql`(unixepoch())`),
