@@ -491,10 +491,13 @@ interface TimedSubject {
 	doorsAt: Date | null;
 	/** The show's own clock. Null for a reservation, and for a show with no production. */
 	loadInAt: Date | null;
+	soundcheckAt: Date | null;
 	firstSetAt: Date | null;
 	curfewAt: Date | null;
 	loadOutBy: Date | null;
 	hasProduction: boolean;
+	/** The show's project, which its work orders are stamped with too. */
+	projectId: string | null;
 }
 
 /** Every show-only time, absent. */
@@ -502,10 +505,12 @@ const emptyClock = {
 	endsAt: null,
 	doorsAt: null,
 	loadInAt: null,
+	soundcheckAt: null,
 	firstSetAt: null,
 	curfewAt: null,
 	loadOutBy: null,
-	hasProduction: false
+	hasProduction: false,
+	projectId: null
 } as const;
 
 async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
@@ -519,7 +524,9 @@ async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
 				endsAt: eventListing.endsAt,
 				doorsAt: eventListing.doorsAt,
 				productionId: production.id,
+				projectId: eventListing.projectId,
 				loadInAt: production.loadInAt,
+				soundcheckAt: production.soundcheckAt,
 				firstSetAt: production.firstSetAt,
 				curfewAt: production.curfewAt,
 				loadOutBy: production.loadOutBy
@@ -536,10 +543,12 @@ async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
 					endsAt: row.endsAt,
 					doorsAt: row.doorsAt,
 					loadInAt: row.loadInAt,
+					soundcheckAt: row.soundcheckAt,
 					firstSetAt: row.firstSetAt,
 					curfewAt: row.curfewAt,
 					loadOutBy: row.loadOutBy,
-					hasProduction: row.productionId !== null
+					hasProduction: row.productionId !== null,
+					projectId: row.projectId
 				}
 			: null;
 	}
@@ -572,14 +581,9 @@ async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
 		.limit(1);
 	return row
 		? {
+				...emptyClock,
 				kind: 'reservation',
-				...row,
-				doorsAt: null,
-				loadInAt: null,
-				firstSetAt: null,
-				curfewAt: null,
-				loadOutBy: null,
-				hasProduction: false
+				...row
 			}
 		: null;
 }
@@ -725,7 +729,8 @@ export async function applyDutyList(
 			// stamps out one subject's worth of work.
 			eventId: subject.kind === 'event' ? subject.id : null,
 			reservationId: subject.kind === 'reservation' ? subject.id : null,
-			projectId: subject.kind === 'project' ? subject.id : null,
+			// A show's crew also counts toward its project's labour.
+			projectId: subject.kind === 'project' ? subject.id : subj.projectId,
 			startsAt,
 			endsAt: scheduled ? addMinutes(startsAt!, item.durationMinutes!) : null,
 			dueAt: item.dueOffsetMinutes !== null ? addMinutes(anchor, item.dueOffsetMinutes) : null,
@@ -782,6 +787,8 @@ function resolveAnchor(anchor: DutyListAnchor, subj: TimedSubject): Date {
 			return subj.startsAt;
 		case 'load_in':
 			return productionTime(subj, anchor, subj.loadInAt);
+		case 'soundcheck':
+			return productionTime(subj, anchor, subj.soundcheckAt);
 		case 'first_set':
 			return productionTime(subj, anchor, subj.firstSetAt);
 		case 'curfew':

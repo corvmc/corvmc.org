@@ -35,8 +35,20 @@ vi.mock('$lib/server/event/event-service', () => ({
 }));
 
 vi.mock('$lib/server/authorization', () => ({
+	can: vi.fn(async () => true),
 	requireCapability: vi.fn(async () => mockUser({ id: 'staff-1' })),
 	requireUser: vi.fn(() => mockUser({ id: 'staff-1' }))
+}));
+
+// A show's bill is guarded through its project; the guard itself has its own spec.
+vi.mock('$lib/server/production/production-scope', () => ({
+	projectOfEvent: vi.fn(async () => ({
+		projectId: eventRow?.source === 'cmc' ? 'proj-1' : null,
+		productionId: eventRow?.source === 'cmc' ? 'prod-1' : null
+	}))
+}));
+vi.mock('$lib/server/group/group-context', () => ({
+	requireProjectCommittee: vi.fn(async () => ({ user: mockUser({ id: 'staff-1' }), groups: [] }))
 }));
 
 vi.mock('$lib/server/feature-flags', () => ({

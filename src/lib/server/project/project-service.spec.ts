@@ -74,7 +74,7 @@ const {
 	detachFromProject,
 	getProjectBurn,
 	getProjectForSuggestion,
-	getEventOwningCommittee,
+	getEventProject,
 	startProjectFromSuggestion,
 	ProjectNotFoundError,
 	ProjectOwnerError,
@@ -368,19 +368,19 @@ describe('the suggestion loop', () => {
 	});
 });
 
-describe('getEventOwningCommittee', () => {
-	it('resolves the committee through the project the event points at', async () => {
-		selectResults = [[{ groupId: 'committee-1' }]];
-		expect(await getEventOwningCommittee('evt-1')).toEqual({ groupId: 'committee-1' });
+describe('getEventProject', () => {
+	it('resolves the project the event points at, whose committees may act', async () => {
+		selectResults = [[{ projectId: 'proj-1' }]];
+		expect(await getEventProject('evt-1')).toEqual({ projectId: 'proj-1' });
 	});
 
-	it('answers a null owner for an event on no project, so only cover gets in', async () => {
-		selectResults = [[{ groupId: null }]];
-		expect(await getEventOwningCommittee('evt-1')).toEqual({ groupId: null });
+	it('answers a null project for an event on none, so only cover gets in', async () => {
+		selectResults = [[{ projectId: null }]];
+		expect(await getEventProject('evt-1')).toEqual({ projectId: null });
 	});
 
 	it('returns null for an event that does not exist', async () => {
 		selectResults = [[]];
-		expect(await getEventOwningCommittee('gone')).toBeNull();
+		expect(await getEventProject('gone')).toBeNull();
 	});
 });

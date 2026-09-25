@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { requireCommitteeMember } from '$lib/server/group/group-context';
+import { requireProjectCommittee } from '$lib/server/group/group-context';
 import { getMemberGroup } from '$lib/remote/groups.remote';
 import { mapDomainError } from '$lib/server/errors';
 import { projectStatuses, DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
@@ -15,7 +15,7 @@ import {
 	attachToProject,
 	createProject,
 	detachFromProject,
-	getEventOwningCommittee,
+	getEventProject,
 	getProjectBurn,
 	getProjectById,
 	listProjectAttachments,
@@ -33,8 +33,9 @@ import { publish as publishEvent } from '$lib/server/event/event-service';
  * Projects — staff surfaces, plus one committee write.
  *
  * Deciding what the collective spends money on is staff work. A committee
- * moves its own projects along from `/member/groups/{slug}`, through
- * `requireCommitteeMember`, which reads `group_member` rather than a position.
+ * moves the projects it takes part in along from `/member/groups/{slug}`,
+ * through `requireProjectCommittee`, which reads `project_committee` and
+ * `group_member` rather than a position.
  */
 
 // ---------------------------------------------------------------------------
@@ -220,10 +221,10 @@ export const setCommitteeProjectStatusForm = form(
 		requireUser();
 		const { id, status } = raw as { id: string; status: (typeof projectStatuses)[number] };
 		try {
-			const current = await getProjectById(id);
-			const { group } = await requireCommitteeMember(current.groupId, 'project.manage');
+			await getProjectById(id);
+			const { groups } = await requireProjectCommittee(id, 'project.manage');
 			await setProjectStatus(id, status);
-			if (group) void getMemberGroup(group.slug).refresh();
+			for (const g of groups) void getMemberGroup(g.slug).refresh();
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
@@ -253,11 +254,8 @@ export const createCommitteeProjectWorkOrderForm = form(
 			notes?: string;
 		};
 		try {
-			const current = await getProjectById(projectId);
-			const { user, group } = await requireCommitteeMember(
-				current.groupId,
-				'volunteer.manageShifts'
-			);
+			await getProjectById(projectId);
+			const { user, groups } = await requireProjectCommittee(projectId, 'volunteer.manageShifts');
 			await createWorkOrder({
 				volunteerRoleId,
 				projectId,
@@ -265,7 +263,7 @@ export const createCommitteeProjectWorkOrderForm = form(
 				notes: notes?.trim() || null,
 				createdByUserId: user.id
 			});
-			if (group) void getMemberGroup(group.slug).refresh();
+			for (const g of groups) void getMemberGroup(g.slug).refresh();
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
@@ -285,11 +283,11 @@ export const publishCommitteeProjectEventForm = form(
 		requireUser();
 		const { id } = raw as { id: string };
 		try {
-			const owner = await getEventOwningCommittee(id);
+			const owner = await getEventProject(id);
 			if (!owner) error(404, 'Event not found');
-			const { group } = await requireCommitteeMember(owner.groupId, 'event.publish');
+			const { groups } = await requireProjectCommittee(owner.projectId, 'event.publish');
 			await publishEvent(id);
-			if (group) void getMemberGroup(group.slug).refresh();
+			for (const g of groups) void getMemberGroup(g.slug).refresh();
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
@@ -366,8 +364,8 @@ export const applyDutyListToProjectForm = form(
 		requireUser();
 		const { projectId, dutyListId } = raw as { projectId: string; dutyListId: string };
 		try {
-			const current = await getProjectById(projectId);
-			const { user } = await requireCommitteeMember(current.groupId, 'project.manage');
+			await getProjectById(projectId);
+			const { user } = await requireProjectCommittee(projectId, 'project.manage');
 			const result = await applyDutyList(dutyListId, { kind: 'project', id: projectId }, user.id);
 			// The committee page lists no work orders; only the staff detail shows them.
 			if (await can('project.read')) void getProjectDetail(projectId).refresh();

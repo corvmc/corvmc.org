@@ -56,7 +56,13 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 			select: vi.fn(() => chainable('select')),
 			insert: vi.fn(() => chainable('insert')),
 			update: vi.fn(() => chainable('update')),
-			delete: vi.fn(() => chainable('delete'))
+			delete: vi.fn(() => chainable('delete')),
+			// In order, like D1's: each item is one of the recording proxies above.
+			batch: vi.fn(async (items: PromiseLike<unknown>[]) => {
+				const out = [];
+				for (const item of items) out.push(await item);
+				return out;
+			})
 		}
 	};
 });
@@ -94,9 +100,12 @@ import { db } from '$lib/server/db';
 
 const dialect = new SQLiteSyncDialect();
 
-/** The parameters of the last `where(...)` a given operation built. */
+/**
+ * The parameters of the first `where(...)` a given operation built: the
+ * production's own write, ahead of the project update that follows it.
+ */
 function whereParams(op: string) {
-	const call = [...calls].reverse().find((c) => c.op === op && c.method === 'where');
+	const call = calls.find((c) => c.op === op && c.method === 'where');
 	if (!call) throw new Error(`no ${op} where() recorded`);
 	return dialect.sqlToQuery(call.args[0] as SQL).params;
 }
@@ -378,10 +387,13 @@ describe('cancelProductionsForEvent', () => {
 		expect(params).not.toContain('closed');
 	});
 
-	it('is a single conditional update, not a read and a branch', async () => {
+	it('is one batch of conditional updates, not a read and a branch', async () => {
 		await cancelProductionsForEvent('evt-1');
 
-		expect(db.select).not.toHaveBeenCalled();
-		expect(db.update).toHaveBeenCalledTimes(1);
+		// The production, then its project following it to `declined`.
+		expect(db.batch).toHaveBeenCalledTimes(1);
+		expect(db.update).toHaveBeenCalledTimes(2);
+		const sets = calls.filter((c) => c.op === 'update' && c.method === 'set').map((c) => c.args[0]);
+		expect(sets[1]).toMatchObject({ status: 'declined' });
 	});
 });

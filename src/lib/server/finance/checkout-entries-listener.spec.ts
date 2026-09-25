@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const recorded: unknown[][] = [];
+// A show's ledger rows name its project (production-projects-spec.md); resolving
+// one is a read with its own home, so here it is a fixed answer.
+vi.mock('./show-project', () => ({
+	showProjectIdForEvent: async (eventId: string | null) => (eventId ? 'proj-show' : null),
+	showProjectIdForProduction: async () => 'proj-show'
+}));
 vi.mock('./financial-entry-service', () => ({
 	recordEntriesBestEffort: async (rows: unknown[]) => {
 		recorded.push(rows);
@@ -41,6 +47,11 @@ describe('a ticket sale', () => {
 		expect(of('spent', 'card_fees')[0]).toMatchObject({ amountCents: -59 });
 		// $9.41 reaches the balance, which is the charge less the fee.
 		expect(rows().reduce((s, r) => s + (r.amountCents as number), 0)).toBe(941);
+	});
+
+	it("files every leg of a show's sale under the show's project", async () => {
+		await handleCheckoutEntries(ticketSession());
+		expect(rows().every((r) => r.projectId === 'proj-show')).toBe(true);
 	});
 
 	it('keys the pool on the show, not the ticket', async () => {

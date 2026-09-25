@@ -11,6 +11,10 @@ import { DomainError } from '$lib/server/domain-error';
 import type { Production, ProductionStatus } from '$lib/server/db/schema/production';
 import { recomputeSetTimes } from './run-of-show-service';
 import { createShowProject, deleteShowProject } from './production-project';
+import { shiftAnchoredWorkOrders } from '$lib/server/volunteer/retime-work-orders';
+import type { BatchItem } from 'drizzle-orm/batch';
+import type { DutyListAnchor, ProjectStatus } from '$lib/config';
+import { project } from '$lib/server/db/schema/project';
 
 /**
  * The ops half of a show.
@@ -253,6 +257,17 @@ export async function createProduction(
 	return row;
 }
 
+type Batch = [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]];
+
+/** Each production time, the duty-list anchor measured from it, and its column. */
+const SHOW_CLOCK = [
+	['loadInAt', 'load_in', production.loadInAt],
+	['soundcheckAt', 'soundcheck', production.soundcheckAt],
+	['firstSetAt', 'first_set', production.firstSetAt],
+	['curfewAt', 'curfew', production.curfewAt],
+	['loadOutBy', 'load_out', production.loadOutBy]
+] as const satisfies readonly (readonly [keyof ProductionDetailsInput, DutyListAnchor, unknown])[];
+
 /**
  * The times, the producer and the three notes. **Not** status — status only
  * moves through `transitionProduction`, which is the only place the legal edges
@@ -262,11 +277,33 @@ export async function updateProductionDetails(
 	id: string,
 	data: ProductionDetailsInput
 ): Promise<Production> {
-	const [row] = await db
+	const update = db
 		.update(production)
 		.set({ ...data, updatedAt: new Date() })
 		.where(eq(production.id, id))
 		.returning();
+
+	// Shifts anchored to a time that moves, moved by the same amount. Each shift
+	// reads the old time in the batch, before the update writes the new one.
+	const [listing] = await db
+		.select({ id: eventListing.id })
+		.from(eventListing)
+		.where(eq(eventListing.productionId, id))
+		.limit(1);
+	const shifts = listing
+		? SHOW_CLOCK.flatMap(([key, anchor, column]) => {
+				const next = data[key];
+				if (!(next instanceof Date)) return [];
+				const seconds = Math.floor(next.getTime() / 1000);
+				const delta = sql`${seconds} - (select ${column} from ${production} where ${production.id} = ${id})`;
+				return [shiftAnchoredWorkOrders(listing.id, [anchor], delta)];
+			})
+		: [];
+
+	const [row] =
+		shifts.length > 0
+			? ((await db.batch([...shifts, update] as unknown as Batch)).at(-1) as Production[])
+			: await update;
 
 	if (!row) throw new ProductionNotFoundError();
 
@@ -327,10 +364,14 @@ export async function transitionProduction(
 	const closing =
 		to === 'closed' ? { closedAt: new Date(), closedByUserId: actorUserId ?? null } : {};
 
-	const result = await db
+	const move = db
 		.update(production)
 		.set({ status: to, updatedAt: new Date(), ...closing })
 		.where(and(eq(production.id, id), inArray(production.status, [...from])));
+	const projectStatus = PROJECT_STATUS_ON[to];
+	const result = projectStatus
+		? (await db.batch([move, followProject(eq(production.id, id), to, projectStatus)]))[0]
+		: await move;
 
 	if (getRowCount(result) === 0) {
 		// Zero rows is either "no such production" or "wrong status"; say which.
@@ -370,12 +411,40 @@ export async function transitionProduction(
  * index would show `confirmed` productions against cancelled shows on day one.
  */
 export async function cancelProductionsForEvent(eventId: string): Promise<number> {
-	const result = await db
-		.update(production)
-		.set({ status: 'cancelled', updatedAt: new Date() })
-		.where(and(announcedBy(eventId), inArray(production.status, [...PRE_COMPLETED])));
+	const [result] = await db.batch([
+		db
+			.update(production)
+			.set({ status: 'cancelled', updatedAt: new Date() })
+			.where(and(announcedBy(eventId), inArray(production.status, [...PRE_COMPLETED]))),
+		followProject(announcedBy(eventId), 'cancelled', 'declined')
+	]);
 
 	return getRowCount(result);
+}
+
+/**
+ * A finished show's project is done, and a cancelled show's is declined. The
+ * project follows the show and never the reverse.
+ */
+const PROJECT_STATUS_ON: Partial<Record<ProductionStatus, ProjectStatus>> = {
+	completed: 'done',
+	cancelled: 'declined'
+};
+
+/** Move the project of the productions matching `which`, once they reached `reached`. */
+function followProject(which: SQL, reached: ProductionStatus, status: ProjectStatus) {
+	return db
+		.update(project)
+		.set({ status, updatedAt: new Date() })
+		.where(
+			inArray(
+				project.id,
+				db
+					.select({ id: production.projectId })
+					.from(production)
+					.where(and(which, eq(production.status, reached)))
+			)
+		);
 }
 
 export type { Production, ProductionStatus };

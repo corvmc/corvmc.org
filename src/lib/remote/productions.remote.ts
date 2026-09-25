@@ -1,11 +1,21 @@
 import { z } from 'zod';
 import { form } from './_remote';
 import { getRequestEvent } from '$app/server';
+import { error } from '@sveltejs/kit';
 import { requireCapability } from '$lib/server/authorization';
+import { requireProjectCommittee } from '$lib/server/group/group-context';
+import {
+	currentProduction,
+	projectOfArtifactRequest,
+	projectOfEvent,
+	projectOfExpense,
+	projectOfProduction,
+	projectOfSlot
+} from '$lib/server/production/production-scope';
 import { mapDomainError } from '$lib/server/errors';
 import { recordSlotPayout } from '$lib/server/production/settlement-service';
 import { addExpense, removeExpense } from '$lib/server/production/expense-service';
-import { productionStatuses } from '$lib/server/db/schema/production';
+import { productionStatuses, type ProductionStatus } from '$lib/server/db/schema/production';
 import {
 	createProduction as createService,
 	updateProductionDetails as updateService,
@@ -33,20 +43,59 @@ import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE, productionExpenseCategories, requestableArtifacts } from '$lib/config';
 
 /**
- * Productions are guarded as events, not on a `production.*` set of their own.
- *
- * A production is the ops half of one show, and the person who decides its
- * load-in is the person who manages the show — the same argument the venue
- * remotes carry, and a stronger one here, because a production cannot exist
- * without the listing it hangs off. A capability exists when a guard names it;
- * a `production` resource would be one no position's job description mentions,
- * and `config.spec.ts` would accept it only because `staffCapabilities` is
- * derived, which is a technicality rather than a real holder.
- *
- * The one visible consequence: `volunteer_coordinator` holds `event.read` and
- * can therefore read a production. That is already true of the whole console —
- * the advance work lives there — and it is correct.
+ * Productions are guarded on the two halves of a show
+ * (docs/specs/production-projects-spec.md): `production.book` for acts, offers,
+ * deals and billing, `production.run` for the run of show, the advance, crew,
+ * the door and settlement. A committee taking part in the show's project holds
+ * them through its grants; staff hold both. The project is always read off the
+ * record being written, never off the `eventId` a form carries for refreshing.
  */
+
+/** Which half of the show moves a production to each status. */
+const STATUS_OWNER: Record<ProductionStatus, 'production.book' | 'production.run'> = {
+	draft: 'production.book',
+	offered: 'production.book',
+	confirmed: 'production.book',
+	cancelled: 'production.book',
+	completed: 'production.run',
+	settled: 'production.run',
+	closed: 'production.run'
+};
+
+const BOOK_FIELDS = ['actsWanted', 'billingNotes'] as const;
+const RUN_FIELDS = [
+	'loadInAt',
+	'soundcheckAt',
+	'firstSetAt',
+	'curfewAt',
+	'loadOutBy',
+	'hospitalityNotes',
+	'internalNotes'
+] as const;
+type DetailField = (typeof BOOK_FIELDS)[number] | (typeof RUN_FIELDS)[number];
+
+function same(a: unknown, b: unknown): boolean {
+	if (a instanceof Date || b instanceof Date) {
+		return a instanceof Date && b instanceof Date && a.getTime() === b.getTime();
+	}
+	return (a ?? null) === (b ?? null);
+}
+
+/**
+ * The details form posts every field, each carrying its current value, so a
+ * field equal to the stored row is untouched. Ask for the half that changed,
+ * or both; an unchanged save still needs one of them.
+ */
+async function guardDetails(productionId: string, next: Partial<Record<DetailField, unknown>>) {
+	const projectId = await projectOfProduction(productionId);
+	const current = projectId ? await currentProduction(productionId) : null;
+	const changed = (fields: readonly DetailField[]) =>
+		fields.some((f) => next[f] !== undefined && !same(next[f], current?.[f]));
+	const book = changed(BOOK_FIELDS);
+	const run = changed(RUN_FIELDS);
+	if (book) await requireProjectCommittee(projectId, 'production.book');
+	if (run || !book) await requireProjectCommittee(projectId, 'production.run');
+}
 
 /** A cleared datetime-local field arrives as '' rather than null. */
 function optionalMoment(date?: string, time?: string): Date | null {
@@ -70,7 +119,8 @@ const momentFields = {
 export const createProduction = form(
 	z.object({ eventId: z.string().min(1) }),
 	async ({ eventId }) => {
-		await requireCapability('event.manage');
+		// No project exists until this runs, so no committee can reach it yet.
+		await requireCapability('production.book');
 		const { locals } = getRequestEvent();
 		try {
 			const row = await createService(eventId, { createdByUserId: locals.user?.id });
@@ -105,24 +155,25 @@ export const updateProduction = form(
 		...momentFields
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		const next = {
+			loadInAt: optionalMoment(data.loadInDate, data.loadInTime),
+			soundcheckAt: optionalMoment(data.soundcheckDate, data.soundcheckTime),
+			firstSetAt: optionalMoment(data.firstSetDate, data.firstSetTime),
+			curfewAt: optionalMoment(data.curfewDate, data.curfewTime),
+			loadOutBy: optionalMoment(data.loadOutDate, data.loadOutTime),
+			actsWanted:
+				data.actsWanted === undefined
+					? undefined
+					: data.actsWanted
+						? Number(data.actsWanted)
+						: null,
+			billingNotes: data.billingNotes || null,
+			hospitalityNotes: data.hospitalityNotes || null,
+			internalNotes: data.internalNotes || null
+		};
+		await guardDetails(data.id, next);
 		try {
-			await updateService(data.id, {
-				loadInAt: optionalMoment(data.loadInDate, data.loadInTime),
-				soundcheckAt: optionalMoment(data.soundcheckDate, data.soundcheckTime),
-				firstSetAt: optionalMoment(data.firstSetDate, data.firstSetTime),
-				curfewAt: optionalMoment(data.curfewDate, data.curfewTime),
-				loadOutBy: optionalMoment(data.loadOutDate, data.loadOutTime),
-				actsWanted:
-					data.actsWanted === undefined
-						? undefined
-						: data.actsWanted
-							? Number(data.actsWanted)
-							: null,
-				billingNotes: data.billingNotes || null,
-				hospitalityNotes: data.hospitalityNotes || null,
-				internalNotes: data.internalNotes || null
-			});
+			await updateService(data.id, next);
 			await getStaffEventProduction(data.eventId).refresh();
 			return { success: true };
 		} catch (err) {
@@ -147,7 +198,7 @@ export const setProductionProducer = form(
 		producer: z.enum(['me', 'none'])
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(await projectOfProduction(data.id), 'production.run');
 		const { locals } = getRequestEvent();
 		try {
 			await updateService(data.id, {
@@ -176,7 +227,7 @@ export const markSlotTiming = form(
 		action: z.enum(['now', 'clear'])
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(await projectOfSlot(data.slotId), 'production.run');
 		try {
 			const value = data.action === 'now' ? new Date() : null;
 			await markTiming(
@@ -210,7 +261,7 @@ export const recordDoorTake = form(
 		splitActsPercent: z.number().int().min(0).max(100).optional()
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(await projectOfProduction(data.id), 'production.run');
 		try {
 			// `undefined` is an empty box, not an untouched one: the form renders
 			// every existing value into its field, so one that arrives missing is
@@ -239,7 +290,10 @@ export const recordDoorTake = form(
  * confirmation and the hours that follow (#932).
  */
 export const openHostShift = form(z.object({ eventId: z.string().min(1) }), async (data) => {
-	await requireCapability('event.manage');
+	await requireProjectCommittee(
+		(await projectOfEvent(data.eventId))?.projectId ?? null,
+		'production.run'
+	);
 	try {
 		await openHost(data.eventId);
 		await getStaffEventProduction(data.eventId).refresh();
@@ -257,7 +311,7 @@ export const advanceProduction = form(
 	}),
 	async (data) => {
 		const { locals } = getRequestEvent();
-		await requireCapability('event.manage');
+		await requireProjectCommittee(await projectOfProduction(data.id), STATUS_OWNER[data.status]);
 		try {
 			await transitionService(data.id, data.status, locals.user?.id ?? null);
 			await Promise.all([
@@ -301,7 +355,7 @@ export const addRunOfShowSlot = form(
 		changeoverMinutes: changeover.optional()
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(await projectOfProduction(data.productionId), 'production.run');
 		try {
 			await addSlot(data.productionId, {
 				eventBandId: data.eventBandId || null,
@@ -331,7 +385,7 @@ export const updateRunOfShowSlot = form(
 		contactPhone: z.string().max(50).optional()
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(await projectOfSlot(data.slotId), 'production.run');
 		try {
 			await updateSlot(data.slotId, {
 				setLengthMinutes: data.setLengthMinutes,
@@ -355,7 +409,7 @@ export const updateRunOfShowSlot = form(
 export const moveRunOfShowSlot = form(
 	z.object({ ...slotRef, direction: z.enum(['up', 'down']) }),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(await projectOfSlot(data.slotId), 'production.run');
 		try {
 			await moveSlot(data.slotId, data.direction);
 		} catch (err) {
@@ -367,7 +421,7 @@ export const moveRunOfShowSlot = form(
 );
 
 export const removeRunOfShowSlot = form(z.object(slotRef), async (data) => {
-	await requireCapability('event.manage');
+	await requireProjectCommittee(await projectOfSlot(data.slotId), 'production.run');
 	try {
 		await removeSlot(data.slotId);
 	} catch (err) {
@@ -381,7 +435,10 @@ export const removeRunOfShowSlot = form(z.object(slotRef), async (data) => {
 export const buildRunOfShowFromLineup = form(
 	z.object({ eventId: z.string().min(1), productionId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('event.manage');
+		// The lineup is read off `eventId`, so it must be the listing announcing this production.
+		const listing = await projectOfEvent(data.eventId);
+		if (listing?.productionId !== data.productionId) error(404, 'Production not found');
+		await requireProjectCommittee(await projectOfProduction(data.productionId), 'production.run');
 		try {
 			await buildSlotsFromLineup(data.productionId, data.eventId);
 		} catch (err) {
@@ -413,7 +470,7 @@ export const setRunOfShowTerms = form(
 		contributed: z.boolean().optional().default(false)
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(await projectOfSlot(data.slotId), 'production.book');
 		try {
 			await setSlotTerms(data.slotId, {
 				// A cleared number field is dropped from the payload rather than sent
@@ -435,8 +492,8 @@ export const setRunOfShowTerms = form(
 /**
  * What an act was actually handed.
  *
- * `finance.refund` rather than `event.manage`, which every other control on
- * this console uses: the rest of the page arranges a night, and this one moves
+ * `finance.refund` rather than a `production.*` half, which every other control
+ * on this console uses: the rest of the page arranges a night, and this one moves
  * money out of the till and writes the ledger. A producer runs the show; a
  * treasurer says what was paid.
  */
@@ -460,7 +517,7 @@ export const recordActPayout = form(
 /**
  * What the night cost, line by line.
  *
- * `event.manage`, not the payout's `finance.refund`: booking the engineer and
+ * `production.run`, not the payout's `finance.refund`: booking the engineer and
  * buying the hospitality is the producer's own work, and writing down what it
  * cost is part of it. Nothing leaves the till here — the line is a cost sheet
  * entry, and `deductible` is what an `againstNet` deal divides against.
@@ -476,7 +533,10 @@ export const addProductionExpense = form(
 		paidTo: z.string().max(120).optional()
 	}),
 	async (data) => {
-		const staff = await requireCapability('event.manage');
+		const { user: staff } = await requireProjectCommittee(
+			await projectOfProduction(data.productionId),
+			'production.run'
+		);
 		try {
 			await addExpense({
 				productionId: data.productionId,
@@ -498,7 +558,7 @@ export const addProductionExpense = form(
 export const removeProductionExpense = form(
 	z.object({ eventId: z.string().min(1), expenseId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(await projectOfExpense(data.expenseId), 'production.run');
 		try {
 			await removeExpense(data.expenseId);
 		} catch (err) {
@@ -524,7 +584,10 @@ export const askForArtifact = form(
 		dueDate: z.string().optional()
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(
+			(await projectOfEvent(data.eventId))?.projectId ?? null,
+			'production.run'
+		);
 		const { locals } = getRequestEvent();
 		try {
 			await requestArtifact({
@@ -545,7 +608,7 @@ export const askForArtifact = form(
 export const dropArtifactRequest = form(
 	z.object({ id: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(await projectOfArtifactRequest(data.id), 'production.run');
 		try {
 			await cancelArtifactRequest(data.id);
 			await getStaffEventProduction(data.eventId).refresh();
@@ -560,7 +623,10 @@ export const dropArtifactRequest = form(
 export const usePosterArtWithFooter = form(
 	z.object({ requestId: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(
+			await projectOfArtifactRequest(data.requestId),
+			'production.book'
+		);
 		try {
 			await useArtWithFooter(data.requestId);
 			await getStaffEventProduction(data.eventId).refresh();
@@ -575,7 +641,10 @@ export const usePosterArtWithFooter = form(
 export const useTemplateFlyerAsPoster = form(
 	z.object({ eventId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(
+			(await projectOfEvent(data.eventId))?.projectId ?? null,
+			'production.book'
+		);
 		try {
 			await useTemplateFlyer(data.eventId);
 			await getStaffEventProduction(data.eventId).refresh();
@@ -590,7 +659,10 @@ export const useTemplateFlyerAsPoster = form(
 export const usePosterArt = form(
 	z.object({ requestId: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireProjectCommittee(
+			await projectOfArtifactRequest(data.requestId),
+			'production.book'
+		);
 		try {
 			await promotePosterArt(data.requestId);
 			await getStaffEventProduction(data.eventId).refresh();

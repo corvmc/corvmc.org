@@ -4,6 +4,7 @@ import {
 	reverseEntriesForSubject,
 	type RecordEntryInput
 } from './financial-entry-service';
+import { showProjectIdForEvent } from './show-project';
 
 /**
  * A free ticket, recorded as the $0 sale it is.
@@ -29,6 +30,7 @@ export async function recordFreeTicketSale(params: {
 		settlement: 'none',
 		subjectType: 'ticket',
 		subjectId: params.purchaseId,
+		projectId: await showProjectIdForEvent(params.eventId),
 		userId: params.userId ?? null,
 		description: `${params.quantity} free ticket${params.quantity === 1 ? '' : 's'}`,
 		metadata: { eventId: params.eventId, quantity: params.quantity }
@@ -65,7 +67,8 @@ export async function recordDoorTicketSale(params: {
 		stripePaymentRecordId: params.purchaseId,
 		userId: null,
 		subjectType: 'ticket' as const,
-		subjectId: params.purchaseId
+		subjectId: params.purchaseId,
+		projectId: await showProjectIdForEvent(params.eventId)
 	};
 	const entries: RecordEntryInput[] = [];
 	if (params.collectiveCents > 0) {
