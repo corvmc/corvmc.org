@@ -241,3 +241,28 @@ describe('the reviewer queue', () => {
 		expect(await svc.listOpenByCommittee()).toEqual([]);
 	});
 });
+
+describe('the staff list badge', () => {
+	async function counts() {
+		const { group } = await import('$lib/server/db/schema/group');
+		const rows = await testDb
+			.select({ id: group.id, open: svc.openApplicationCount(group.id) })
+			.from(group);
+		return Object.fromEntries(rows.map((r) => [r.id, Number(r.open)]));
+	}
+
+	it('counts each committee’s open choices, as the card lists them', async () => {
+		await svc.submitApplication(APPLICANT, { groupIds: [BOOKING, FACILITY], answers });
+		const [choice] = await svc.listForCommittee(FACILITY);
+		await svc.acceptApplication(choice.choiceId, FACILITY, CHAIR);
+
+		expect(await counts()).toEqual({ [BOOKING]: 1, [FACILITY]: 0, [A_BAND]: 0 });
+	});
+
+	it('leaves out a withdrawn application', async () => {
+		const id = await svc.submitApplication(APPLICANT, { groupIds: [BOOKING], answers });
+		await svc.withdrawApplication(id, APPLICANT);
+
+		expect((await counts())[BOOKING]).toBe(0);
+	});
+});

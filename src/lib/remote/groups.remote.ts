@@ -6,7 +6,7 @@ import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupJoinPolicies } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { setCommitteeCapabilityGrants } from '$lib/server/capability/capability-grant-service';
 import { allowlisted } from '$lib/server/capability/grant-rules';
-import { requireCapability, requireUser } from '$lib/server/authorization';
+import { can, requireCapability, requireUser } from '$lib/server/authorization';
 import { requireGroupRole, requireProgramRole } from '$lib/server/group/group-context';
 import { listForCommittee } from '$lib/server/group/committee-application-service';
 import { directoryVisibilities } from '$lib/server/db/schema/directory';
@@ -103,15 +103,20 @@ export const getStaffGroups = query(staffGroupFilters, async (filters) => {
  *
  * The roster comes back partitioned rather than flat: a `by_application` group
  * has applicants, and rendering them mixed into the member list is exactly what
- * `'requested'` exists to prevent.
+ * `'requested'` exists to prevent. `canReviewApplications` gates the committee
+ * applications card, whose own query a `group.read` holder may not pass.
  */
 export const getStaffGroupPage = query(z.string(), async (id) => {
 	await requireCapability('group.read');
 
-	const [group, roster] = await Promise.all([getGroupDetail(id), getMembers(id)]);
+	const [group, roster, canReviewApplications] = await Promise.all([
+		getGroupDetail(id),
+		getMembers(id),
+		can('committee.reviewApplications')
+	]);
 	if (!group) error(404, 'Group not found');
 
-	return { group, members: partitionByStatus(roster) };
+	return { group, members: partitionByStatus(roster), canReviewApplications };
 });
 
 // ---------------------------------------------------------------------------

@@ -19,6 +19,7 @@
 	import GroupSettingsForm from './GroupSettingsForm.svelte';
 	import AssignLeaderAction from './AssignLeaderAction.svelte';
 	import CommitteeGrantsCard from './CommitteeGrantsCard.svelte';
+	import CommitteeApplicationsSection from './CommitteeApplicationsSection.svelte';
 
 	// Above the awaited query: a declaration that follows a top-level await is
 	// async-gated, which would compile every `fields.X.as()` below into an async
@@ -88,6 +89,10 @@
 
 	{#if group.kind === 'committee'}
 		<CommitteeGrantsCard groupId={id} name={group.name} held={group.capabilityGrants ?? []} />
+	{/if}
+
+	{#if group.kind === 'committee' && data.canReviewApplications}
+		<CommitteeApplicationsSection groupId={id} />
 	{/if}
 
 	<InfoCard title="Roster">
