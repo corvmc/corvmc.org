@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
-import { groupGrantsColumn } from './grant-columns';
+import { groupGrantsColumn, parseGrantList } from './grant-columns';
 
 describe('groupGrantsColumn', () => {
 	it('reads the join table for the outer query’s group row', () => {
@@ -12,11 +12,7 @@ describe('groupGrantsColumn', () => {
 	});
 
 	it('decodes the JSON array SQLite returns, including an empty one', () => {
-		const column = groupGrantsColumn();
-		expect(column.decoder.mapFromDriverValue('["sponsor.read","grant.read"]')).toEqual([
-			'sponsor.read',
-			'grant.read'
-		]);
-		expect(column.decoder.mapFromDriverValue('[]')).toEqual([]);
+		expect(parseGrantList('["sponsor.read","grant.read"]')).toEqual(['sponsor.read', 'grant.read']);
+		expect(parseGrantList('[]')).toEqual([]);
 	});
 });
