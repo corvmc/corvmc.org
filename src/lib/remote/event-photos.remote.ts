@@ -5,7 +5,8 @@ import { requireCapability, requireUser } from '$lib/server/authorization';
 import {
 	addEventPhotos,
 	describeEventPhoto as describePhoto,
-	removeEventPhoto as removePhoto
+	removeEventPhoto as removePhoto,
+	setEventRecapText
 } from '$lib/server/event/event-photo-service';
 import { recapUploadAccess } from '$lib/server/event/recap-access';
 import { getPublicEventDetail, getStaffEventPage } from '$lib/remote/events.remote';
@@ -16,9 +17,9 @@ import { getPublicEventDetail, getStaffEventPage } from '$lib/remote/events.remo
  * is open to volunteer photographers; editing and removing stay `event.manage`.
  */
 
-async function requireRecapUploader() {
+async function requireRecapUploader(eventId: string) {
 	const user = requireUser();
-	const access = await recapUploadAccess(user.id);
+	const access = await recapUploadAccess(user.id, eventId);
 	if (!access) error(403, 'Not permitted');
 	return { user, staff: access === 'capability' };
 }
@@ -29,7 +30,7 @@ export const uploadEventPhotos = form(
 		photos: z.array(z.instanceof(File)).default([])
 	}),
 	async (data) => {
-		const { user, staff } = await requireRecapUploader();
+		const { user, staff } = await requireRecapUploader(data.eventId);
 		// An untouched file input still posts one zero-byte File.
 		const files = data.photos.filter((f) => f.size > 0);
 		await addEventPhotos(data.eventId, user.id, files);
@@ -45,6 +46,21 @@ export const removeEventPhoto = form(
 		await requireCapability('event.manage');
 		await removePhoto(data.eventId, data.attachmentId);
 		void getStaffEventPage(data.eventId).refresh();
+		return { success: true };
+	}
+);
+
+/** The written recap (#1401): markdown, and a blank submission clears it. */
+export const saveEventRecapText = form(
+	z.object({
+		eventId: z.string().min(1),
+		recapText: z.string().max(5000).default('')
+	}),
+	async (data) => {
+		await requireCapability('event.manage');
+		await setEventRecapText(data.eventId, data.recapText);
+		void getStaffEventPage(data.eventId).refresh();
+		void getPublicEventDetail(data.eventId).refresh();
 		return { success: true };
 	}
 );

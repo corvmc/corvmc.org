@@ -27,7 +27,9 @@ const {
 	MAX_PHOTOS_PER_EVENT,
 	RecapClosedError,
 	RecapPhotoLimitError,
-	RecapPhotoNotFoundError
+	RecapPhotoNotFoundError,
+	RecapEventNotFoundError,
+	setEventRecapText
 } = await import('./event-photo-service');
 const { eventListing } = await import('$lib/server/db/schema/event');
 
@@ -154,5 +156,55 @@ describe('listRecentRecaps', () => {
 		expect(recaps.map((r) => r.id)).toEqual(['new', 'old']);
 		const [first] = await listEventPhotos('new');
 		expect(recaps[0]).toMatchObject({ photoCount: 2, coverUrl: first.url });
+	});
+
+	it('carries a plain-text excerpt of the written recap, or null', async () => {
+		await listing('told', { recapText: 'A **sold-out** night.' });
+		await listing('untold', { startsAt: new Date(NOW.getTime() - 100 * HOUR) });
+		await addEventPhotos('told', 'usr-1', [jpeg()], NOW);
+		await addEventPhotos('untold', 'usr-1', [jpeg()], NOW);
+
+		const recaps = await listRecentRecaps(6, NOW);
+		expect(recaps.map((r) => [r.id, r.excerpt])).toEqual([
+			['told', 'A sold-out night.'],
+			['untold', null]
+		]);
+	});
+});
+
+describe('setEventRecapText (#1401)', () => {
+	const stored = () =>
+		sqlite.prepare(`select recap_text as t from event_listing where id = 'e1'`).get() as {
+			t: string | null;
+		};
+
+	it('saves the markdown trimmed, and clears it when blank', async () => {
+		await listing('e1');
+		await setEventRecapText('e1', '  What a *night*.\n', NOW);
+		expect(stored().t).toBe('What a *night*.');
+
+		await setEventRecapText('e1', '   ', NOW);
+		expect(stored().t).toBeNull();
+	});
+
+	it('refuses to write a recap for an event that has not started or was cancelled', async () => {
+		await listing('e1', {
+			startsAt: new Date(NOW.getTime() + HOUR),
+			endsAt: new Date(NOW.getTime() + 3 * HOUR)
+		});
+		await expect(setEventRecapText('e1', 'Too soon', NOW)).rejects.toBeInstanceOf(RecapClosedError);
+		sqlite.exec(
+			`update event_listing set status = 'cancelled', recap_text = 'Old' where id = 'e1'`
+		);
+		await expect(setEventRecapText('e1', 'Still no', NOW)).rejects.toBeInstanceOf(RecapClosedError);
+		// Clearing is always allowed.
+		await setEventRecapText('e1', '', NOW);
+		expect(stored().t).toBeNull();
+	});
+
+	it('404s an unknown event', async () => {
+		await expect(setEventRecapText('nope', 'Hi', NOW)).rejects.toBeInstanceOf(
+			RecapEventNotFoundError
+		);
 	});
 });

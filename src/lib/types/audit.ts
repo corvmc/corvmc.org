@@ -20,11 +20,13 @@ export const auditActions = [
 	'user.email_change_requested',
 	'user.email_changed',
 	'credits.adjusted',
-	'incident.deleted'
+	'incident.deleted',
+	'capability.grants_changed',
+	'ballot.elector_overridden'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
-export const auditSubjectTypes = ['user', 'band', 'incident'] as const;
+export const auditSubjectTypes = ['user', 'band', 'incident', 'role', 'group'] as const;
 export type AuditSubjectType = (typeof auditSubjectTypes)[number];
 
 /** Profile field names only — never values, which would copy phone numbers into a second table. */
@@ -51,7 +53,8 @@ export interface AuditDetailsByAction {
 		batchId?: string;
 	};
 	'user.reactivated': { subscription: 'resumed' | 'active' | 'lapsed' | 'none' };
-	'user.purged': { name: string; email: string };
+	/** Both are stripped once the row is past the 24-month retention window (#1376). */
+	'user.purged': { name?: string; email?: string };
 	/** A ban also writes `user.deactivated`, which carries what the offboarding took. */
 	'user.banned': { reason: string };
 	'user.unbanned': Record<string, never>;
@@ -67,6 +70,15 @@ export interface AuditDetailsByAction {
 	};
 	/** The retention sweep's deletion (#1468). The row is gone, so this is the record it existed. */
 	'incident.deleted': { category: string; occurredAt: string; retentionYears: number };
+	/** A volunteer role's (`role`) or a committee's (`group`) grant list was edited. */
+	'capability.grants_changed': { added: string[]; removed: string[] };
+	/** The subject is the member put on or taken off a member-wide ballot's roll. */
+	'ballot.elector_overridden': {
+		ballotId: string;
+		ballotTitle: string;
+		include: boolean;
+		reason: string;
+	};
 }
 
 /** One row as the read side sees it, `details` narrowed by `action`. */

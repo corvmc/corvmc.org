@@ -26,7 +26,7 @@
   will ask for. Staff cannot delete a record; only the retention sweep does (below).
 - **Every row carries its author's name as written at the time**, beside the user FK (`set null`).
   Purging a staff account must not turn their reports anonymous. The same reasoning as
-  `audit_log` (`docs/specs/audit-log-spec.md`); the incident tables are their own trail, so they
+  `audit_log` (`docs/specs/shipped/audit-log-spec.md`); the incident tables are their own trail, so they
   do not also write `audit_log` rows.
 - **Recording an incident does nothing to a member.** It is a record, not an enforcement action:
   no standing change, no notification, no hidden content. Anything that does act on a member goes

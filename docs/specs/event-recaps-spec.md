@@ -75,15 +75,22 @@ gallery and the strip both render locally.
 Filed as `agent-filed` Task issues for review, each titled as the decision:
 
 - **Only `event.manage` holders upload recap photos** (#1398). Not bands, not the Documentation role, not
-  attendees.
+  attendees. **Superseded by #1500:** `event.uploadRecap` guards the upload, and a volunteer role
+  can grant it for one show. A confirmed signup on that show's work order, in a role that carries
+  the grant (seeded on `Photos or Video`), may upload from the public event page. The grant runs
+  from the shift's start until 7 days after it ends. Captions, alt text and removal stay with
+  `event.manage`.
 - **Recap photos publish without a review queue** (#1399). Staff-only uploads need no moderation step.
+- **A written recap** (#1401): `event_listing.recap_text`, nullable markdown. Staff with
+  `event.manage` write it on `/staff/events/[id]` once the event has started, and can clear it at
+  any time. The public page renders it above the photos, and each Recent recaps card shows a
+  plain-text excerpt. `event.uploadRecap` holders cannot write it yet. Opening it to them through
+  the event-scoped `can(cap, { eventId })` grant (#1625) belongs to the role-grants work.
 - **Consent is handled by takedown, not by a release on file per photo** (#1400). A person who asks is
   removed by staff detaching the photo.
 
 ## Not in this spec
 
-- A written recap (a paragraph about the night). It needs a column on `event_listing`, and the
-  poster work under #852 is changing that table's neighbourhood now. Follow-up: #1401.
 - Band or member uploads, and the moderation they would need.
 - The per-event shot list and same-week handoff that `committees-and-roles-spec.md` marks 🆕.
 - Photos on a band's own page or site. The event link is the shareable unit for now.

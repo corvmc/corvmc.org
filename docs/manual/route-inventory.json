@@ -192,6 +192,14 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/ballots",
+		"panel": "member"
+	},
+	{
+		"route": "/member/ballots/[id]",
+		"panel": "member"
+	},
+	{
 		"route": "/member/bands",
 		"panel": "member"
 	},
@@ -385,6 +393,14 @@
 	},
 	{
 		"route": "/staff/audit",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/ballots",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/ballots/[id]",
 		"panel": "staff"
 	},
 	{

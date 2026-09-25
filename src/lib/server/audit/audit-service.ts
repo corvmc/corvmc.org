@@ -158,7 +158,12 @@ export async function listAuditEntries(
 						: entry.subjectType === 'incident'
 							? // A deleted record: its stored label, unlinked.
 								({ type: 'incident', id: null, title: stored.name } as const)
-							: toBandRef(subjectBand?.id ? subjectBand : stored),
+							: entry.subjectType === 'role'
+								? ({ type: 'role', id: entry.subjectId, title: stored.name } as const)
+								: entry.subjectType === 'group'
+									? // A club or committee has no band page, so it renders unlinked.
+										toBandRef(stored)
+									: toBandRef(subjectBand?.id ? subjectBand : stored),
 				actor: toMemberRef(actorUser?.id ? actorUser : { id: null, name: entry.actorName })
 			};
 		})

@@ -173,6 +173,9 @@ vi.mock('$lib/server/project/project-service', () => ({
 	listCommitteeProjectEvents: vi.fn(async () => [])
 }));
 vi.mock('$lib/server/group/file-service', () => ({ list: vi.fn(), getUsage: vi.fn() }));
+vi.mock('$lib/server/capability/capability-grant-service', () => ({
+	setCommitteeCapabilityGrants: vi.fn()
+}));
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v }));
 vi.mock('$lib/server/errors', () => ({
 	mapDomainError: (err: unknown) => {

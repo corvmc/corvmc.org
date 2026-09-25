@@ -41,6 +41,8 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		'/api/cron/sweep-audio-purchases',
 		// Seven-year incident retention (#1468). Owns no media.
 		'/api/cron/sweep-incidents',
+		// 24-month audit retention (#1376), after the sweep that writes audit rows.
+		'/api/cron/sweep-audit-log',
 		// Last in the batch: it reads what every job above may have deleted, and
 		// nothing downstream depends on its result.
 		'/api/cron/sweep-media'

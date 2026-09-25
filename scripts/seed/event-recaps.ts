@@ -1,3 +1,5 @@
+import { eq } from 'drizzle-orm';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { db } from './db';
 import { type SeedEvent } from './types';
@@ -10,10 +12,15 @@ const CAPTIONS = [
 	'Everyone on stage for the last one'
 ];
 
+const RECAP_TEXT = `A full room from the first chord. The opener played **two new songs** nobody had heard yet, and the headliner closed with everyone on stage.
+
+Thanks to the door and sound volunteers who stayed to strike the room. [See what is coming up](/events).`;
+
 /**
  * Recap photos on the two most recent past published shows, five and three,
  * so the event gallery and the /events recaps strip both render. Captions and
  * alt text on some but not all: the undescribed fallbacks must stay reachable.
+ * Only the newer show gets a written recap (#1401), so both strip cards render.
  * The keys name no real object, as every seeded media key does.
  */
 export async function seedEventRecaps(
@@ -25,6 +32,13 @@ export async function seedEventRecaps(
 		.filter((e) => e.status === 'published' && e.startsAt.getTime() < now)
 		.sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())
 		.slice(0, 2);
+
+	if (past[0]) {
+		await db
+			.update(eventListing)
+			.set({ recapText: RECAP_TEXT })
+			.where(eq(eventListing.id, past[0].id));
+	}
 
 	let count = 0;
 	for (const [i, evt] of past.entries()) {

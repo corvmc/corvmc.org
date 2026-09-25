@@ -37,6 +37,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			joinInstructions: 'Third Thursday, 7pm. Bring a horn; charts provided.',
 			positions: ['Host', 'Chart librarian', 'Piano'],
 			memberCount: 5,
+			capabilityGrants: [] as string[],
 			announcements: [
 				{
 					title: 'August jam moved to the 27th',
@@ -69,6 +70,15 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 				'Tell us what you want to see programmed and roughly how much time you can give.',
 			positions: ['Chair', 'Secretary', 'Member'],
 			memberCount: 3,
+			// Every committee's baseline (project status and duty lists, its own
+			// numbers), plus #1564's publish. Work orders ride along because its
+			// weekly holds are recurring work, which shares that capability.
+			capabilityGrants: [
+				'event.publish',
+				'finance.read',
+				'project.manage',
+				'volunteer.manageShifts'
+			],
 			announcements: [
 				{
 					title: 'Minutes from the 12 August meeting',
@@ -87,6 +97,8 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			joinInstructions: null,
 			positions: ['Chair', 'Member'],
 			memberCount: 2,
+			// The baseline only: under #1564 opening work orders is Production's.
+			capabilityGrants: ['finance.read', 'project.manage'],
 			// Deliberately none: a group with nothing posted is the empty state,
 			// and it has to be reachable locally.
 			announcements: []
@@ -109,7 +121,8 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 				slug: d.slug,
 				bio: d.bio,
 				joinPolicy: d.joinPolicy,
-				joinInstructions: d.joinInstructions
+				joinInstructions: d.joinInstructions,
+				capabilityGrants: d.capabilityGrants
 			},
 			leader.id,
 			d.positions[0]
@@ -243,5 +256,51 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 		}
 	}
 
+	groups.push(await seedDevelopmentCommittee(users, leaders));
 	return groups;
+}
+
+/**
+ * The Development Committee, carrying the grants the owner gave it (#1578,
+ * #1602). Staff can re-point any of them on the group page. The open club's host
+ * sits on it with no position, so a login exists for the seat-only staff panel.
+ */
+async function seedDevelopmentCommittee(users: SeedUser[], leaders: SeedUser[]) {
+	const leaderIds = new Set(leaders.map((l) => l.id));
+	const [chair, member] = pickN(
+		users.filter((u) => !leaderIds.has(u.id)),
+		2
+	);
+	const dev = await insertBandWithOwner(
+		{
+			kind: 'committee',
+			name: 'Development Committee',
+			slug: 'development-committee',
+			bio: 'Raises funds, looks after sponsors and grants, and keeps our permits and insurance current.',
+			joinPolicy: 'invite_only',
+			capabilityGrants: [
+				'finance.read',
+				'grant.manage',
+				'grant.read',
+				'project.manage',
+				'renewal.manage',
+				'renewal.read',
+				'sponsor.manage',
+				'sponsor.read'
+			]
+		},
+		chair.id,
+		'Chair'
+	);
+	const host = leaders.find((l) => l.id === 'seed-group-leader-open');
+	for (const u of [member, host].filter((x): x is SeedUser => !!x)) {
+		await db.insert(groupMember).values({
+			groupId: dev.id,
+			userId: u.id,
+			role: 'member',
+			position: 'Member',
+			status: 'active'
+		});
+	}
+	return dev;
 }

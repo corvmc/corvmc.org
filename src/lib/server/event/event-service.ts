@@ -221,6 +221,8 @@ export interface EventRow {
 	id: string;
 	title: string;
 	description: string | null;
+	/** Markdown: the written recap of a past event (#1401). */
+	recapText: string | null;
 	startsAt: Date;
 	/** Null when unknown — see the column comment on `event.endsAt`. */
 	endsAt: Date | null;

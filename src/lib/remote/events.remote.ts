@@ -129,6 +129,7 @@ import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
 import { formatDateShortYear } from '$lib/utils/format';
+import { renderMarkdown } from '$lib/utils/markdown';
 import { getShifts, getVolunteerRoles } from './volunteer.remote';
 import { getPublicGigGuide } from './calendar.remote';
 
@@ -345,9 +346,9 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	const isPast = hasEventEnded(evt.startsAt, evt.endsAt);
 	const photos = await listEventPhotos(id);
 	const sponsors = await creditsForEvent(id, 'eventPage');
-	// Only a photographer needs the uploader here; staff have the console's.
+	// Only this show's photographer needs the uploader here; staff have the console's.
 	const recapUpload =
-		(await recapUploadAccess(locals.user?.id)) === 'photographer'
+		(await recapUploadAccess(locals.user?.id, id)) === 'photographer'
 			? {
 					closedReason: recapClosedReason(evt),
 					remaining: Math.max(0, MAX_PHOTOS_PER_EVENT - photos.length),
@@ -429,6 +430,8 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		canReport: evt.status === 'published',
 		collectiveShareBps: seller?.shareBps ?? TICKET_COLLECTIVE_SHARE_BPS,
 		recapUpload,
+		// Sanitized on the way out: `renderMarkdown` runs the allowlist filter.
+		recapHtml: evt.recapText ? renderMarkdown(evt.recapText) : null,
 		photos: photos.map((p) => ({
 			id: p.attachmentId,
 			url: p.url,
@@ -703,6 +706,19 @@ export const getStaffCalendar = query(
  */
 export const searchEvents = query(z.string(), async (q) => {
 	await requireCapability('event.read');
+	return searchEventRows(q);
+});
+
+/**
+ * The same picker for placing a sponsorship on a show (#1618). A sponsor manager
+ * may hold no `event.read`, and needs the title and date of a show, not the staff list.
+ */
+export const searchEventsForPlacement = query(z.string(), async (q) => {
+	await requireCapability('sponsor.manage');
+	return searchEventRows(q);
+});
+
+async function searchEventRows(q: string) {
 	if (!q || q.length < 2) return [];
 
 	const rows = await db
@@ -722,7 +738,7 @@ export const searchEvents = query(z.string(), async (q) => {
 	// field verbatim — and it is formatted here so it lands in club time rather
 	// than whatever timezone the staffer's laptop is set to.
 	return rows.map((e) => ({ id: e.id, title: e.title, when: formatDateShortYear(e.startsAt) }));
-});
+}
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
 	await requireCapability('event.read');
@@ -845,6 +861,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			id: evt.id,
 			title: evt.title,
 			description: evt.description,
+			recapText: evt.recapText,
 			startsAt: evt.startsAt,
 			endsAt: evt.endsAt,
 			doorsAt: evt.doorsAt,

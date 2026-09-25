@@ -360,12 +360,50 @@ describe('setRadioOptIn — PRO attestation', () => {
 
 	it('keeps a current attestation when the band saves again without re-ticking it', async () => {
 		queue(
-			[{ ...release, radioAttestationVersion: RADIO_PRO_ATTESTATION.version }],
+			[
+				{
+					...release,
+					radioAttestationVersion: RADIO_PRO_ATTESTATION.version,
+					radioAttestedAt: new Date()
+				}
+			],
 			[{ id: 'rel-1' }]
 		);
 		await service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: false, userId: 'u-2' });
 		expect(state.updates[0].set).toMatchObject({ radioOptIn: true });
 		expect(state.updates[0].set).not.toHaveProperty('radioAttestedByUserId');
+	});
+
+	it('refuses to keep a release on the air once its attestation is a year old', async () => {
+		const lapsed = new Date(Date.now() - 366 * 86_400_000);
+		queue([
+			{
+				...release,
+				radioAttestationVersion: RADIO_PRO_ATTESTATION.version,
+				radioAttestedAt: lapsed
+			}
+		]);
+		await expect(
+			service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: false, userId: 'u-1' })
+		).rejects.toBeInstanceOf(service.RadioAttestationRequiredError);
+	});
+
+	it('renews a lapsed attestation when it is given again', async () => {
+		const lapsed = new Date(Date.now() - 366 * 86_400_000);
+		queue(
+			[
+				{
+					...release,
+					radioAttestationVersion: RADIO_PRO_ATTESTATION.version,
+					radioAttestedAt: lapsed
+				}
+			],
+			[{ id: 'rel-1' }]
+		);
+		await service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: true, userId: 'u-1' });
+		expect((state.updates[0].set.radioAttestedAt as Date).getTime()).toBeGreaterThan(
+			Date.now() - 60_000
+		);
 	});
 
 	it('opts out without an attestation, and keeps the record of an old one', async () => {
@@ -377,10 +415,17 @@ describe('setRadioOptIn — PRO attestation', () => {
 });
 
 describe('radioAttested', () => {
-	it('is true only for the current wording', () => {
+	it('is true only for the current wording, given within the year', () => {
 		const current = RADIO_PRO_ATTESTATION.version;
-		expect(service.radioAttested({ radioAttestationVersion: current })).toBe(true);
-		expect(service.radioAttested({ radioAttestationVersion: 'superseded' })).toBe(false);
-		expect(service.radioAttested({ radioAttestationVersion: null })).toBe(false);
+		const at = new Date();
+		expect(service.radioAttested({ radioAttestationVersion: current, radioAttestedAt: at })).toBe(
+			true
+		);
+		expect(
+			service.radioAttested({ radioAttestationVersion: 'superseded', radioAttestedAt: at })
+		).toBe(false);
+		expect(service.radioAttested({ radioAttestationVersion: null, radioAttestedAt: null })).toBe(
+			false
+		);
 	});
 });

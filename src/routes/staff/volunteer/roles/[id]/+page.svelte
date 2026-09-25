@@ -2,6 +2,7 @@
 	import RoleRequirementsCard from './RoleRequirementsCard.svelte';
 	import RoleShiftsCard from './RoleShiftsCard.svelte';
 	import RoleInterestedCard from './RoleInterestedCard.svelte';
+	import RoleGrantsCard from './RoleGrantsCard.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -261,7 +262,10 @@
 			they post an array to a different remote, and folding them in would mean
 			one form writing to two services.
 		-->
-		<RoleRequirementsCard {role} held={requirementsList} />
+		<div class="flex flex-col gap-6">
+			<RoleRequirementsCard {role} held={requirementsList} />
+			<RoleGrantsCard {role} />
+		</div>
 	</div>
 
 	<RoleShiftsCard {role} {from} />

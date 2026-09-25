@@ -65,8 +65,10 @@ vi.mock('$lib/server/authorization', () => ({
 	can: (...args: unknown[]) => can(...(args as [string])),
 	isPosition: (n: string) => POSITIONS.includes(n),
 	requireUser: () => ({ id: 'acting-staff', name: 'Acting', email: 'acting@example.com' }),
-	getUserRoles: (...args: unknown[]) => getUserRoles(...(args as []))
+	getUserRoles: (...args: unknown[]) => getUserRoles(...(args as [])),
+	committeeCapabilitiesFor: (id: string) => committeeCapabilitiesFor(id)
 }));
+const committeeCapabilitiesFor = vi.fn(async (_id: string) => [] as string[]);
 
 // Role rows and the remaining-admin count the authorized-path tests read back.
 const ROLE_ROWS = [
@@ -871,5 +873,22 @@ describe('staff edits leave an audit entry', () => {
 			})
 		).rejects.toBeTruthy();
 		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+});
+
+describe('getStaffDashboard for a committee seat (#1578)', () => {
+	it('hands a seat without user.list the capabilities its links are filtered by, and no data', async () => {
+		held = new Set();
+		committeeCapabilitiesFor.mockResolvedValueOnce(['sponsor.read', 'grant.read']);
+		await expect(users.getStaffDashboard()).resolves.toEqual({
+			seat: ['sponsor.read', 'grant.read']
+		});
+		expect(dbSelect).not.toHaveBeenCalled();
+	});
+
+	it('refuses a caller with neither user.list nor a seat', async () => {
+		held = new Set();
+		await expect(users.getStaffDashboard()).rejects.toThrow('403');
+		expect(dbSelect).not.toHaveBeenCalled();
 	});
 });

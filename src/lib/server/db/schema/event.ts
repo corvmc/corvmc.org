@@ -62,6 +62,8 @@ export const eventListing = sqliteTable(
 			.$defaultFn(() => crypto.randomUUID()),
 		title: text('title').notNull(),
 		description: text('description'),
+		// Markdown: staff's paragraph about the night, shown above the recap photos.
+		recapText: text('recap_text'),
 		startsAt: integer('starts_at', { mode: 'timestamp' }).notNull(),
 		// Nullable: a band backfilling old gigs rarely knows when the night ended,
 		// and a member listing someone else's upcoming show usually doesn't either;

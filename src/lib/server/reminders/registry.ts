@@ -12,6 +12,7 @@ import {
 } from '$lib/server/volunteer/volunteer-signup-service';
 import { listLoansDueBetween } from '$lib/server/inventory/loan-service';
 import { listRenewalsExpiringBetween } from '$lib/server/renewal/renewal-service';
+import { listRadioAttestationsExpiringBetween } from '$lib/server/audio/radio-attestation';
 import { defineReminder, type ReminderDefinition } from './types';
 
 const TZ = DEFAULT_TIMEZONE;
@@ -77,6 +78,37 @@ function developmentDeadlines(stage: '14d' | '3d', from: number, until: number) 
 			return deadlines.map(({ subjectId, ...d }) => ({
 				subjectId: `${d.module}:${subjectId}:${d.on}`,
 				payload: { stage, ...d }
+			}));
+		}
+	});
+}
+
+/**
+ * One stage of the radio attestation reminders (#1516): every on-air release
+ * whose attestation lapses between `from` and `until` days from now. The subject
+ * carries when it was given, so next year's attestation is reminded afresh.
+ */
+function radioAttestationExpiry(stage: '30d' | '7d', from: number, until: number) {
+	return defineReminder({
+		key: `radio_attestation_${stage}`,
+		subjectType: 'radio_attestation',
+		event: 'audio.radio_attestation_due' as const,
+		async due(now: Date) {
+			const rows = await listRadioAttestationsExpiringBetween(
+				new Date(now.getTime() + from * DAY),
+				new Date(now.getTime() + until * DAY)
+			);
+			return rows.map((r) => ({
+				subjectId: `${r.releaseId}:${r.attestedAt.toISOString()}`,
+				payload: {
+					stage,
+					releaseId: r.releaseId,
+					releaseTitle: r.releaseTitle,
+					bandName: r.bandName,
+					bandSlug: r.bandSlug,
+					expiresOn: clubToday(r.expiresAt),
+					bandAdmins: r.bandAdmins
+				}
 			}));
 		}
 	});
@@ -370,5 +402,9 @@ export const reminders: ReminderDefinition[] = [
 	// entered inside two weeks gets only the last one. A lapsed one gets none;
 	// the list shows it in red.
 	renewalExpiry('60d', 15, 60),
-	renewalExpiry('14d', 0, 14)
+	renewalExpiry('14d', 0, 14),
+	// Non-overlapping, as above. A lapsed attestation gets no reminder: the
+	// release is already off the air and the band's music page says so.
+	radioAttestationExpiry('30d', 8, 30),
+	radioAttestationExpiry('7d', 0, 7)
 ];

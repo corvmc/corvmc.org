@@ -12,6 +12,8 @@ import {
 	grantsCapability,
 	positionsGranting,
 	hasCapability,
+	grantableCapabilities,
+	grantableBy,
 	type Capability,
 	type Resource,
 	classifiedKindLabel
@@ -21,6 +23,52 @@ import {
 const everyCapability = Object.entries(capabilities).flatMap(([r, actions]) =>
 	(actions as readonly string[]).map((a) => `${r}.${a}` as Capability)
 );
+
+describe('the grantable-capability allowlist', () => {
+	// Resources whose every action is admin work or moves money, plus the one
+	// money-moving action elsewhere. A role or a committee must never carry one.
+	const neverGrantable: readonly string[] = ['user', 'audit', 'credit', 'settings', 'lock'];
+	const neverGrantableActions: readonly string[] = ['finance.refund'];
+
+	it('names only real capabilities', () => {
+		for (const cap of Object.keys(grantableCapabilities)) {
+			expect(everyCapability, `${cap} is not a real capability`).toContain(cap);
+		}
+	});
+
+	it('holds nothing admin-only or money-moving', () => {
+		for (const cap of Object.keys(grantableCapabilities)) {
+			expect(adminOnlyCapabilities as readonly string[], cap).not.toContain(cap);
+			expect(neverGrantable, cap).not.toContain(cap.split('.')[0]);
+			expect(neverGrantableActions, cap).not.toContain(cap);
+		}
+		expect(Object.keys(grantableCapabilities)).not.toContain('finance.refund');
+		expect(Object.keys(grantableCapabilities)).not.toContain('user.ban');
+	});
+
+	it('says how every entry is carried, with a non-negative grace for roles', () => {
+		for (const [cap, rule] of Object.entries(grantableCapabilities)) {
+			const r = rule as { role?: { graceDays: number }; committee?: string };
+			expect(r.role || r.committee, `${cap} has no carrier`).toBeTruthy();
+			if (r.role) expect(r.role.graceDays, cap).toBeGreaterThanOrEqual(0);
+		}
+	});
+
+	it('lets finance reach a committee only for records it owns', () => {
+		for (const [cap, rule] of Object.entries(grantableCapabilities)) {
+			if (!cap.startsWith('finance.')) continue;
+			expect(rule, cap).toMatchObject({ committee: 'owned' });
+			expect(rule, cap).not.toHaveProperty('role');
+		}
+	});
+
+	it('splits the list by carrier', () => {
+		expect(grantableBy('role')).toContain('event.uploadRecap');
+		expect(grantableBy('role')).not.toContain('sponsor.manage');
+		expect(grantableBy('committee')).toContain('sponsor.manage');
+		expect(grantableBy('committee')).not.toContain('event.uploadRecap');
+	});
+});
 
 describe('the capability matrix', () => {
 	it('grants only capabilities that exist', () => {

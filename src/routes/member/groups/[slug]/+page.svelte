@@ -106,6 +106,8 @@
 	// Staff read this page without being on the roster, so there is nothing for
 	// them to leave.
 	const isMember = $derived(data.role !== 'staff');
+	/** A roster member whose committee's grants carry `cap`; staff use the staff pages. */
+	const may = (cap: string) => isMember && data.grants.includes(cap);
 
 	/**
 	 * A committee's own work, without handing over the whole staff panel. Any
@@ -196,7 +198,7 @@
 					]
 				: []),
 			// Its roster only (#1562); staff read the whole report on `/staff/reports`.
-			...(group.kind === 'committee' && isMember
+			...(group.kind === 'committee' && may('finance.read')
 				? [{ key: 'numbers', label: 'Numbers', href: tabHref('numbers') }]
 				: []),
 			{ key: 'sessions', label: 'Sessions', href: tabHref('sessions') },
@@ -240,11 +242,13 @@
 							</td>
 							{#if isMember}
 								<td class="text-right">
-									{#if data.projectDutyLists.length > 0}
+									{#if may('project.manage') && data.projectDutyLists.length > 0}
 										<ProjectDutyListAction {project} dutyLists={data.projectDutyLists} />
 									{/if}
-									<ProjectStatusAction {project} />
-									{#if data.workOrderRoles.length > 0}
+									{#if may('project.manage')}
+										<ProjectStatusAction {project} />
+									{/if}
+									{#if may('volunteer.manageShifts') && data.workOrderRoles.length > 0}
 										<ProjectWorkOrderAction {project} roles={data.workOrderRoles} />
 									{/if}
 								</td>
@@ -272,7 +276,7 @@
 							<td>{formatDateTimeShort(event.startsAt)}</td>
 							{#if isMember}
 								<td class="text-right">
-									{#if event.status === 'draft' || event.status === 'pending_review'}
+									{#if may('event.publish') && (event.status === 'draft' || event.status === 'pending_review')}
 										<ProjectEventPublishAction {event} />
 									{/if}
 								</td>
@@ -282,16 +286,16 @@
 				</Table>
 			</InfoCard>
 		{/if}
-		{#if isMember && group.kind === 'committee'}
+		{#if group.kind === 'committee' && may('event.manage')}
 			<CommitteeMarkets groupId={group.id} {slug} />
 		{/if}
 		<CommitteeRecurringWork
 			groupId={group.id}
 			schedules={data.recurringWork}
 			roles={data.workOrderRoles}
-			canEdit={isMember}
+			canEdit={may('volunteer.manageShifts')}
 		/>
-	{:else if tab === 'numbers'}
+	{:else if tab === 'numbers' && may('finance.read')}
 		<CommitteeNumbers groupId={group.id} />
 	{:else if tab === 'documents'}
 		<DocumentList

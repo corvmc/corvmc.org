@@ -6,6 +6,7 @@ import { DomainError } from '$lib/server/domain-error';
 import { attach, detach, listFor, record, setDescription } from '$lib/server/media/media-service';
 import { resolveImageUrl, uploadFile, validateUpload } from '$lib/server/storage';
 import { mediaKey } from '$lib/server/storage-keys';
+import { markdownExcerpt } from '$lib/utils/markdown';
 
 /**
  * Recap photos: an event's `gallery` slot on `media_attachment`.
@@ -37,6 +38,14 @@ export class RecapPhotoNotFoundError extends DomainError {
 
 export class RecapUploadError extends DomainError {
 	readonly httpStatus = 400;
+}
+
+export class RecapEventNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+
+	constructor() {
+		super('Event not found');
+	}
 }
 
 export type EventPhoto = {
@@ -157,12 +166,37 @@ export async function describeEventPhoto(
 	await setDescription(await scopedMediaId(eventId, attachmentId), input);
 }
 
+/**
+ * The written recap (#1401): markdown, blank clears it. Writing follows the
+ * photo gate; clearing is always allowed, so a cancelled event can shed one.
+ */
+export async function setEventRecapText(
+	eventId: string,
+	text: string,
+	now: Date = new Date()
+): Promise<void> {
+	const [evt] = await db
+		.select({ status: eventListing.status, startsAt: eventListing.startsAt })
+		.from(eventListing)
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
+	if (!evt) throw new RecapEventNotFoundError();
+
+	const recapText = text.trim() || null;
+	const closed = recapClosedReason(evt, now);
+	if (recapText && closed) throw new RecapClosedError(closed);
+
+	await db.update(eventListing).set({ recapText }).where(eq(eventListing.id, eventId));
+}
+
 export type RecapCard = {
 	id: string;
 	title: string;
 	startsAt: Date;
 	coverUrl: string | null;
 	photoCount: number;
+	/** Plain text from the written recap, for the strip; null when none was written. */
+	excerpt: string | null;
 };
 
 /**
@@ -176,6 +210,7 @@ export async function listRecentRecaps(limit = 6, now: Date = new Date()): Promi
 			id: eventListing.id,
 			title: eventListing.title,
 			startsAt: eventListing.startsAt,
+			recapText: eventListing.recapText,
 			firstOrder: sql<number>`min(${mediaAttachment.sortOrder})`,
 			coverKey: media.key,
 			photoCount: sql<number>`count(*)`
@@ -200,6 +235,7 @@ export async function listRecentRecaps(limit = 6, now: Date = new Date()): Promi
 		title: r.title,
 		startsAt: r.startsAt,
 		coverUrl: resolveImageUrl(r.coverKey),
-		photoCount: Number(r.photoCount)
+		photoCount: Number(r.photoCount),
+		excerpt: markdownExcerpt(r.recapText)
 	}));
 }

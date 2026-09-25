@@ -424,6 +424,8 @@ async function selectGroupContext(where: SQL | undefined) {
 			bio: group.bio,
 			joinPolicy: group.joinPolicy,
 			joinInstructions: group.joinInstructions,
+			// What a committee's members may do on its own records (see requireCommitteeMember).
+			capabilityGrants: group.capabilityGrants,
 			ownerId: ownerMember.userId,
 			avatarKey: group.avatarKey,
 			// From the site row since phase 3b. LEFT, with `?? 'free'` applied by

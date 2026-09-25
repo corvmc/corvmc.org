@@ -2,7 +2,7 @@
 	/** Which show a sponsorship is credited on, and where. */
 	import { Field } from '$lib/components/ui/Form';
 	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { searchEvents } from '$lib/remote/events.remote';
+	import { searchEventsForPlacement } from '$lib/remote/events.remote';
 	import type { placeSponsorship } from '$lib/remote/sponsors.remote';
 
 	type EventOption = { id: string; title: string; when: string };
@@ -19,7 +19,7 @@
 		labelKey="title"
 		descriptionKey="when"
 		placeholder="Search shows by name…"
-		search={(q) => searchEvents(q)}
+		search={(q) => searchEventsForPlacement(q)}
 	/>
 </Field>
 <Field

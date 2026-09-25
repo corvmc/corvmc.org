@@ -10,9 +10,21 @@ import {
 	positions,
 	positionOrder,
 	positionsGranting,
+	grantRuleFor,
 	type Capability,
 	type Position
 } from '$lib/config';
+import {
+	committeeAllows,
+	committeeGrantsFor,
+	listCommitteeHolders,
+	orgWideCapabilities,
+	roleGrantAllows,
+	type CapabilityScope,
+	type CommitteeGrant
+} from '$lib/server/capability/capability-grants';
+
+export type { CapabilityScope } from '$lib/server/capability/capability-grants';
 
 // ---------------------------------------------------------------------------
 // Capabilities
@@ -122,21 +134,53 @@ function currentPositions(): Promise<Position[]> {
 	return (locals.positions ??= positionsFor(locals.user.id));
 }
 
-/** Does the caller hold this capability? Never throws — for UI gating and branches. */
-export async function can(cap: Capability): Promise<boolean> {
+/** The caller's committee seats, memoised per request like `currentPositions`. */
+function currentCommitteeGrants(userId: string): Promise<CommitteeGrant[]> {
+	const { locals } = getRequestEvent();
+	return (locals.committeeGrants ??= committeeGrantsFor(userId));
+}
+
+/**
+ * Grants beyond the position matrix: an event-scoped volunteer-role grant when
+ * `scope.eventId` is given, then committee seats. A capability off the allowlist
+ * returns before any read, so only allowlisted checks pay for one.
+ */
+async function grantedBeyondPositions(
+	userId: string,
+	cap: Capability,
+	scope: CapabilityScope | undefined,
+	seats: () => Promise<CommitteeGrant[]>
+): Promise<boolean> {
+	const rule = grantRuleFor(cap);
+	if (!rule) return false;
+	if (rule.role && scope?.eventId && (await roleGrantAllows(userId, cap, scope.eventId))) {
+		return true;
+	}
+	return rule.committee ? committeeAllows(await seats(), cap, scope) : false;
+}
+
+/**
+ * Does the caller hold this capability? Never throws — for UI gating and branches.
+ *
+ * Positions first, then grants (see `grantedBeyondPositions`). With no scope only
+ * `'org'` committee grants can add to the matrix.
+ */
+export async function can(cap: Capability, scope?: CapabilityScope): Promise<boolean> {
 	const { locals } = getRequestEvent();
 	if (!locals.user) return false;
-	return authorizerFor(await currentPositions()).authorize(requestFor(cap)).success;
+	if (authorizerFor(await currentPositions()).authorize(requestFor(cap)).success) return true;
+	const userId = locals.user.id;
+	return grantedBeyondPositions(userId, cap, scope, () => currentCommitteeGrants(userId));
 }
 
 /**
  * Assert the caller holds `cap`. The first statement of a remote function.
  * Returns the authenticated user.
  */
-export async function requireCapability(cap: Capability) {
+export async function requireCapability(cap: Capability, scope?: CapabilityScope) {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
-	if (!(await can(cap))) throw error(403, 'Not permitted');
+	if (!(await can(cap, scope))) throw error(403, 'Not permitted');
 	return locals.user;
 }
 
@@ -147,7 +191,22 @@ export async function requireCapability(cap: Capability) {
  * a listener failure is swallowed by `captureException`, so it would fail
  * silently.
  */
-export async function userHasCapability(userId: string, cap: Capability): Promise<boolean> {
+export async function userHasCapability(
+	userId: string,
+	cap: Capability,
+	scope?: CapabilityScope
+): Promise<boolean> {
+	if (authorizerFor(await positionsFor(userId)).authorize(requestFor(cap)).success) return true;
+	return grantedBeyondPositions(userId, cap, scope, () => committeeGrantsFor(userId));
+}
+
+/** What this user's committee seats grant everywhere: nav rows and the staff panel gate. */
+export async function committeeCapabilitiesFor(userId: string): Promise<Capability[]> {
+	return orgWideCapabilities(await committeeGrantsFor(userId));
+}
+
+/** Does this user's position alone grant `cap`? For "you cannot grant what you do not hold". */
+export async function positionsGrant(userId: string, cap: Capability): Promise<boolean> {
 	return authorizerFor(await positionsFor(userId)).authorize(requestFor(cap)).success;
 }
 
@@ -172,20 +231,27 @@ export async function isElevated(userId: string): Promise<boolean> {
 }
 
 /**
- * Everyone who could act on `cap`. The referent that replaces
+ * Everyone who could act on `cap`: position holders, plus members of a
+ * committee that grants it org-wide. The referent that replaces
  * `listStaffUsers()` for notifications.
  */
 export async function listUsersWithCapability(
 	cap: Capability
 ): Promise<Array<{ id: string; name: string; email: string }>> {
 	const names = positionsGranting(cap);
-	if (names.length === 0) return [];
-	const rows = await db
-		.select({ id: user.id, name: user.name, email: user.email })
-		.from(user)
-		.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
-		.innerJoin(role, eq(role.id, modelHasRole.roleId))
-		.where(inArray(role.name, names));
+	const [byPosition, bySeat] = await Promise.all([
+		names.length === 0
+			? []
+			: db
+					.select({ id: user.id, name: user.name, email: user.email })
+					.from(user)
+					.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
+					.innerJoin(role, eq(role.id, modelHasRole.roleId))
+					.where(inArray(role.name, names)),
+		// An org-wide committee grant makes its members holders too (#1578, #1602).
+		listCommitteeHolders(cap)
+	]);
+	const rows = [...byPosition, ...bySeat];
 
 	// De-duplicated in JS rather than with groupBy: the specs in this directory
 	// mock `drizzle-orm` export by export, so importing one more operator here

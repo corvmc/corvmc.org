@@ -242,7 +242,7 @@ Three entries from the first draft of this table did not survive contact with th
   leaves it. `config.spec.ts` asserts no named position holds an admin-only capability, which is
   how the contradiction surfaced.
 - **`audit.read` and `user.setEmail` were not in the vocabulary at first.** There was no global
-  audit view to guard yet ([audit-log-spec.md](../audit-log-spec.md), #1374) and no email-change path
+  audit view to guard yet ([audit-log-spec.md](audit-log-spec.md), #1374) and no email-change path
   ([staff-email-change-spec.md](staff-email-change-spec.md) has since shipped, adding
   `user.setEmail`), so shipping either early would have been config describing a guard that did not exist — the exact failure this spec cites the
   spatie tables for. Each of those specs adds its capability when it builds its guard, and
@@ -548,3 +548,47 @@ The thing to verify before building it: whether any surface needs a nav row gate
 _committee membership_ rather than on capability. If one does, that is a third question — what
 the client is told about scope — and it is better answered by shipping the committee's own
 panel than by widening the capability list the layout returns.
+
+---
+
+## Grants beyond positions (owner decision, 2026-09-24)
+
+Positions still answer "may this person ever do this". Two more carriers now add to that answer.
+Both are data that staff edit. Neither is a name or a config id that has to match a row.
+
+- **A volunteer role** carries a grant list (`volunteer_role.capability_grants`). A signup that is
+  `confirmed` or `completed`, on a live work order for event X, in a role that grants C, holds C
+  **for event X only**. The grant runs from the shift's start until the capability's grace period
+  after the shift ends. `event.uploadRecap` has a grace period of 7 days. Staff edit the list on
+  the role's page. An editor can only add a capability that their own position holds.
+- **A committee** carries a grant list (`group.capability_grants`, read only when `kind` is
+  `committee`). Every active member holds those capabilities. An `'org'` grant counts everywhere.
+  An `'owned'` grant counts only on records that the committee owns, so the guard has to name the
+  committee. Staff (`group.manage`) edit the list on the group's page.
+
+**The allowlist.** `grantableCapabilities` in `src/lib/config.ts` lists every capability either
+carrier may hold, and says how: a role grace period, a committee reach, or both. Nothing
+admin-only or money-moving can go on it; `config.spec.ts` fails if it does. The grant service
+refuses a capability that is not on the list. The resolver also drops any stored entry that has
+since left the list, so removing a capability from the list withdraws it everywhere, with no data
+migration.
+
+**The guard.** `requireCapability(cap, { eventId?, groupId? })` and `can(cap, scope?)` check
+positions first. With `eventId` they then check the caller's role grants for that event. Last,
+they check committee grants. A call with no scope behaves as it did before, plus any `'org'`
+committee grant. A capability that is not on the allowlist returns before any extra read, so
+most checks cost nothing more. Committee seats are memoised per request, the same way positions
+are.
+
+This amends Option A above rather than reversing it. The scope argument is optional, and
+`capabilitySet()` still answers "could this person ever do this". An event-scoped role grant
+never reaches the nav, because a nav row is never about one event.
+`requireCommitteeMember(groupId, cap)` keeps ownership scoping for records that a committee owns, and also requires that committee's own grant list to carry `cap` with `'owned'` reach. So a committee acts only on its own records, and only in the ways its grants allow. `cap` is still the staff cover.
+
+Grant edits are audited as `capability.grants_changed`, with the capabilities added and removed.
+
+**Reachability.** A committee member who holds no position, but whose committee grants a
+capability org-wide, can open the staff panel. `getStaffLayout` and `getMemberLayout` add the
+committee's org-wide grants to the capability list, so the nav offers only those rows, and
+`/staff` lists them in place of the `user.list` dashboard. `listUsersWithCapability` counts that
+committee's members as holders, so reminders and assignee pickers include them.

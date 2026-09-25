@@ -38,6 +38,7 @@ import { seedRenewals } from './seed/renewals';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
+import { seedBallots } from './seed/ballots';
 import {
 	GROUP_INVITEE_PERSONA,
 	GROUP_LEADER_PERSONAS,
@@ -305,6 +306,8 @@ async function main() {
 	// After `seedAudio`, whose Connect accounts decide which band may sell (#1203).
 	const bandSale = await seedBandTicketSale();
 	const doorSales = await seedDoorSales(adminUser.id);
+	// After orientation and groups: the member-wide roll reads both.
+	const ballots = await seedBallots(groups, adminUser);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -433,6 +436,9 @@ async function main() {
 	);
 	console.log(
 		`  ${market.markets} market day taking applications, ${market.vendors} vendors in every status`
+	);
+	console.log(
+		`  ${ballots.ballots} ballots (committee open, member-wide open with the admin on by override, one certified)`
 	);
 	console.log(
 		bandSale

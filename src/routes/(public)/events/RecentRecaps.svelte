@@ -13,6 +13,7 @@
 			startsAt: Date;
 			coverUrl: string | null;
 			photoCount: number;
+			excerpt: string | null;
 		}[];
 	} = $props();
 </script>
@@ -30,6 +31,7 @@
 						{fullDate(recap.startsAt)} · {recap.photoCount}
 						{recap.photoCount === 1 ? 'photo' : 'photos'}
 					</span>
+					{#if recap.excerpt}<span class="recaps__excerpt">{recap.excerpt}</span>{/if}
 				</a>
 			</li>
 		{/each}
@@ -77,5 +79,14 @@
 	.recaps__meta {
 		font-size: 0.85rem;
 		color: var(--fg-2);
+	}
+
+	.recaps__excerpt {
+		display: -webkit-box;
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		font-size: 0.9rem;
 	}
 </style>

@@ -1263,7 +1263,11 @@ connection resumes.
 **The radio.** `/api/cron/schedule-radio` every 15 minutes fills `radio_play` 45
 minutes ahead (three passes of slack). `getRadioState()` returns the current
 entry, the next three, and the **server's clock**; the widget in the root layout
-seeks to `serverNow − startsAt`.
+seeks to `serverNow − startsAt`. A release plays only while its attestation is
+current: given to today's wording of `RADIO_PRO_ATTESTATION` (originals only, by
+band members who belong to no PRO) and under a year old. The reminder registry
+tells the band's admins 30 and 7 days before it lapses; see
+[band-audio-spec.md](../specs/shipped/band-audio-spec.md#the-radio-plays-only-what-costs-nothing-to-license).
 
 ### Data touched
 
@@ -1416,8 +1420,7 @@ between the two features: walking through the easy door furnishes the rider on t
 
 ## 16. The staff audit log: who changed a member's account
 
-Spec: [specs/audit-log-spec.md](../specs/audit-log-spec.md) (first phase shipped; the rest is
-tracked on #1131)
+Spec: [specs/audit-log-spec.md](../specs/shipped/audit-log-spec.md)
 
 ### The story
 
@@ -1444,6 +1447,11 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
 
 - `audit_log` — append-only. `actor_user_id` is `set null` on delete, and the actor's name and
   email are copied in. `subject_id` is not a foreign key, so a purge's own row survives it.
+- **Retention:** `/api/cron/sweep-audit-log`, in the daily batch, runs `sweepAuditLog` in
+  `src/lib/server/audit/audit-retention.ts`. It deletes rows older than 24 months in batches of
+  500, except `user.purged`. Those rows are kept, but lose `details.name`, `details.email` and
+  the subject label once they are past the window. No other code deletes from the table, and a
+  spec beside the sweep fails on any code that does.
 
 ### Where it breaks
 
@@ -1733,6 +1741,61 @@ fourteen days ahead.
   other than `admin` / `staff`.
 - **A reminder went to someone who left.** The named staffer still has an account but no
   position; the reminder does not check that they can open the page.
+
+## 23. Formal ballots: a frozen roll, a secret or recorded vote, a certified result
+
+Spec: [specs/shipped/formal-balloting-spec.md](../specs/shipped/formal-balloting-spec.md)
+
+### The story
+
+A committee chair, or staff for a member-wide question, drafts a ballot: the question, 2 to 10
+choices, the closing day and a named certifier. **Open** freezes the roll. For a committee ballot,
+that is the committee's active roster; for a member-wide ballot, it is members of record plus staff
+overrides. Electors are notified.
+
+Electors vote from `/member/ballots/[id]`:
+
+- a committee vote is recorded and can be changed until the close;
+- a member-wide vote is secret and final.
+
+Nobody sees a tally until the close. After it, the certifier certifies the result, and every member
+is told.
+
+### Code path
+
+- **Remote:** `src/lib/remote/ballots.remote.ts`.
+  - A member-wide ballot is managed only through `ballot.manage`.
+  - A committee ballot is managed through `requireGroupRole({ id: ballot.groupId }, 'admin')`, or
+    `ballot.manage`.
+  - `getBallotPage` 404s a draft for non-managers, and an open or closed ballot for anyone not
+    involved.
+- **Service:** `src/lib/server/ballot/ballot-service.ts`.
+  - `openBallot` is one `db.batch`: the conditional stamp, `INSERT … SELECT` of the roll,
+    zeroed counters, and the roll size.
+  - `castVote` for a secret ballot batches the participation insert, then `votes = votes + 1`.
+  - `getTally` refuses until `closes_at`.
+  - `certifyBallot` snapshots `certified_result`.
+  - `setElectorOverride` audits `ballot.elector_overridden`.
+- **Fan-out:** `ballot-fanout.ts`, from the `ballot.opened` and `ballot.certified` events.
+
+### Data touched
+
+- `ballot`, `ballot_option`, `ballot_elector`, `ballot_elector_override`.
+- **Secret ballots:**
+  - `ballot_participation` records who voted: no option, no timestamp.
+  - `ballot_choice` is a per-option counter: no user and no timestamp.
+  - `ballot-secrecy.spec.ts` fails if a join path between them appears.
+- **Recorded ballots:** `ballot_recorded_vote`.
+- `notification` rows (`ballot_opened`, `ballot_result`) and `audit_log`.
+
+### Where it breaks
+
+- Secrecy is from the app, not from Cloudflare account holders. D1 Time Travel can diff the database
+  between two votes. The spec states this limit.
+- A member purged before certification drops out of the participation count but not the counter.
+  The certified snapshot is taken from the live tables at that moment.
+- The member-of-record age is `ballot.memberOfRecordDays` in site config (default 60). It is read at
+  open, so changing it moves only ballots not yet opened.
 
 ## Cross-cutting patterns worth internalizing
 

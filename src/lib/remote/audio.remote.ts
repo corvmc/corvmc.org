@@ -16,6 +16,7 @@ import {
 	listTracks,
 	publishRelease,
 	radioAttested,
+	radioAttestationExpiresAt,
 	renameTrack,
 	reorderTracks,
 	setRadioOptIn,
@@ -100,6 +101,11 @@ export const getBandRelease = query(
 			salesCountFor(releaseId)
 		]);
 
+		const attestationExpiresAt = release.radioAttestedAt
+			? radioAttestationExpiresAt(release.radioAttestedAt)
+			: null;
+		const attested = radioAttested(release);
+
 		return {
 			release: {
 				id: release.id,
@@ -114,8 +120,14 @@ export const getBandRelease = query(
 				priceMinCents: release.priceMinCents,
 				allowPayMore: release.allowPayMore,
 				radioOptIn: release.radioOptIn,
-				radioAttested: radioAttested(release),
+				radioAttested: attested,
 				radioAttestedAt: release.radioAttestedAt,
+				radioAttestationExpiresAt: attestationExpiresAt,
+				// Inside the reminder window, so the band can renew before it lapses.
+				radioAttestationRenewable:
+					attested &&
+					attestationExpiresAt !== null &&
+					attestationExpiresAt.getTime() - Date.now() < 30 * 86_400_000,
 				radioExcluded: release.radioExcludedAt !== null,
 				radioExcludedReason: release.radioExcludedReason
 			},

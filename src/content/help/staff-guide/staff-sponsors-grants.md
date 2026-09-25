@@ -9,6 +9,14 @@ sortOrder: 20
 
 Both live under **Staff → Money**, as two separate lists.
 
+Staff can add and change both, and so can members of any committee whose grants include them.
+The Development Committee has them to start with. The treasurer can read both. A committee member
+who holds no staff position still gets a **Staff** tab, which opens on the lists their committee
+can use, and they receive the deadline reminders.
+
+To change which committee manages these, open the committee under **Staff → People → Groups**
+and edit its **Grants**.
+
 ## Sponsors
 
 **Sponsors** lists every business that sponsors the collective, with whichever term ends soonest

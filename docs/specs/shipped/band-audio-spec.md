@@ -114,6 +114,33 @@ real rules by relative path: the seed runs under plain tsx with no `$lib` alias
 map. The alternative was a second copy of the programming rules drifting until
 local data stopped behaving like production.
 
+### The radio plays only what costs nothing to license
+
+CMC Radio holds no performing-rights or webcast licence, and the lane that needs
+none is narrow: **original songs, written only by members of the band, none of
+whom belongs to a PRO** (ASCAP, BMI, SESAC, GMR or a foreign equivalent). A cover,
+or a song with anyone else's material in it, would need PRO licences plus
+SoundExchange for the recording — or a licensed streaming host in place of our own
+— so it cannot go on the air at all.
+
+So opting a release in takes an attestation, **per release**, to exactly that
+(`RADIO_PRO_ATTESTATION` in `$lib/config`). Each one records who gave it, when,
+and to which wording, and counts only while both hold:
+
+- **The wording is current.** Changing the text bumps `version`, and every release
+  attested to the old one is off the air until someone attests again.
+- **It is under a year old.** An attestation lasts `termMonths` (12). The reminder
+  registry tells the band's owner and admins 30 and 7 days ahead
+  (`radio_attestation_30d` / `_7d`, keyed by release and attestation time, so next
+  year's is owed afresh). Once it lapses the release drops out of the rotation, the
+  readiness panel on `/staff/music` stops counting it, and the band's release page
+  shows it as off the air until renewed. A band can renew from the release page
+  during the last 30 days.
+
+All three read one predicate (`currentRadioAttestation` in
+`src/lib/server/audio/radio-attestation.ts`), so an attestation cannot lapse in one
+view and not the others.
+
 ### Free releases are a first-class path
 
 A free release never touches Stripe — its charge minimum is 50¢, so a $0 checkout

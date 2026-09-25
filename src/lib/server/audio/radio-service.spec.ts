@@ -100,6 +100,17 @@ describe('listEligibleTracks', () => {
 		await radio.listEligibleTracks();
 		expect(state.wheres[0]).toContain(`,${RADIO_PRO_ATTESTATION.version})`);
 	});
+
+	it('drops a release once its attestation is a year old', async () => {
+		vi.useFakeTimers({ now: new Date('2026-09-24T12:00:00Z') });
+		try {
+			queue([]);
+			await radio.listEligibleTracks();
+		} finally {
+			vi.useRealTimers();
+		}
+		expect(state.wheres[0]).toContain(`,${String(new Date('2025-09-24T12:00:00Z'))})`);
+	});
 });
 
 describe('pickNextTrack', () => {

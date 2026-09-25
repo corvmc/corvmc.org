@@ -50,6 +50,7 @@ const svc = {
 	updateRelease: vi.fn(async () => ({ id: 'rel-1' })),
 	setRadioOptIn: vi.fn(async () => ({ id: 'rel-1' })),
 	radioAttested: vi.fn(() => false),
+	radioAttestationExpiresAt: vi.fn(() => new Date()),
 	publishRelease: vi.fn(async () => ({ id: 'rel-1' })),
 	unpublishRelease: vi.fn(async () => ({ id: 'rel-1' })),
 	deleteRelease: vi.fn(async () => 'deleted' as const),

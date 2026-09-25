@@ -1509,6 +1509,38 @@ export function formatVolunteerHours(minutes: number): string {
 // Suggestions
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Ballots — see docs/specs/shipped/formal-balloting-spec.md
+// ---------------------------------------------------------------------------
+
+/** `group`: a committee's roster, recorded. `member`: members of record, secret. */
+export const ballotKinds = ['group', 'member'] as const;
+export type BallotKind = (typeof ballotKinds)[number];
+
+export const ballotKindLabels: Record<BallotKind, string> = {
+	group: 'Committee ballot',
+	member: 'Member-wide ballot'
+};
+
+/** Derived from timestamps by `ballotStatusOf`; never stored. */
+export const ballotStatuses = ['draft', 'open', 'closed', 'certified', 'cancelled'] as const;
+export type BallotStatus = (typeof ballotStatuses)[number];
+
+export const ballotStatusLabels: Record<BallotStatus, string> = {
+	draft: 'Draft',
+	open: 'Open',
+	closed: 'Awaiting certification',
+	certified: 'Certified',
+	cancelled: 'Cancelled'
+};
+
+export const BALLOT_TITLE_MAX = 200;
+export const BALLOT_DESCRIPTION_MAX = 4000;
+export const BALLOT_OPTION_LABEL_MAX = 200;
+export const BALLOT_OPTIONS_MIN = 2;
+export const BALLOT_OPTIONS_MAX = 10;
+export const BALLOT_REASON_MAX = 500;
+
 export const suggestionCategories = [
 	'website_tools',
 	'gear_equipment',
@@ -2004,8 +2036,8 @@ export const capabilities = {
 	// it. A chair does this through `group_member.role = 'admin'`; this is the
 	// other door, and a headless committee has only this one.
 	committee: ['reviewApplications'],
-	// `uploadRecap` is also held, outside this matrix, by anyone with a current
-	// RECAP_PHOTOGRAPHER_CERTIFICATION: volunteer photographers hold no position.
+	// `uploadRecap` is also held for one show by that show's documentation crew,
+	// through a volunteer-role grant: see `grantableCapabilities`.
 	event: ['read', 'manage', 'publish', 'manageTickets', 'uploadRecap'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
 	// Door access: granting and revoking standing member codes, adopting the
@@ -2048,6 +2080,8 @@ export const capabilities = {
 	marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send'],
 	moderation: ['reviewFlags', 'setStanding'],
 	suggestion: ['read', 'respond', 'review'],
+	// Member-wide ballots, and the staff fallback on committee ballots (#1635).
+	ballot: ['manage'],
 	listing: ['review'],
 	// The staff music tools. Refunding a sale is `finance.refund`, not a music
 	// action: it moves money, and the treasurer is who does that.
@@ -2056,12 +2090,6 @@ export const capabilities = {
 	// The public local resources directory: categories and listings.
 	localResource: ['manage']
 } as const;
-
-/**
- * The volunteer certification that lets a member upload event recap photos.
- * Matched by name, so renaming the certification withdraws the grant.
- */
-export const RECAP_PHOTOGRAPHER_CERTIFICATION = 'Photographer';
 
 export type Capabilities = typeof capabilities;
 export type Resource = keyof Capabilities;
@@ -2269,6 +2297,65 @@ export function positionsGranting(cap: Capability): Position[] {
  */
 export function hasCapability(held: readonly string[], cap: Capability): boolean {
 	return held.includes(cap);
+}
+
+// ---------------------------------------------------------------------------
+// Capability grants: volunteer roles and committees
+// ---------------------------------------------------------------------------
+
+/**
+ * How a grantable capability may be carried.
+ *
+ * `role`: a confirmed signup on a shift in that role grants it for the shift's
+ * event only, from the shift's start until `graceDays` after it ends.
+ * `committee`: `'org'` means active members hold it everywhere; `'owned'` means
+ * only on records the committee owns, so a guard must name the committee.
+ */
+export type GrantRule = {
+	readonly label: string;
+	readonly role?: { readonly graceDays: number };
+	readonly committee?: 'org' | 'owned';
+};
+
+/**
+ * The allowlist: the only capabilities a volunteer role or a committee may
+ * carry. Admin-only and money-moving capabilities never go here; `config.spec.ts`
+ * fails on one, and the grant service refuses anything missing from this list.
+ */
+export const grantableCapabilities = {
+	'event.uploadRecap': { label: 'Upload recap photos', role: { graceDays: 7 } },
+	'sponsor.read': { label: 'See sponsors', committee: 'org' },
+	'sponsor.manage': { label: 'Manage sponsors', committee: 'org' },
+	'grant.read': { label: 'See grants', committee: 'org' },
+	'grant.manage': { label: 'Manage grants', committee: 'org' },
+	'renewal.read': { label: 'See renewals', committee: 'org' },
+	'renewal.manage': { label: 'Manage renewals', committee: 'org' },
+	// Powers over records a committee owns (projects, its markets, its schedules).
+	// `requireCommitteeMember` asks for these with the owning committee named.
+	'project.manage': { label: 'Move its projects along and apply duty lists', committee: 'owned' },
+	'volunteer.manageShifts': {
+		label: 'Open work orders and recurring work on its projects',
+		committee: 'owned'
+	},
+	'event.publish': { label: "Publish its projects' draft events", committee: 'owned' },
+	'event.manage': { label: 'Decide vendor applications for its markets', committee: 'owned' },
+	'finance.read': { label: 'See its own numbers', committee: 'owned' }
+} as const satisfies { readonly [C in Capability]?: GrantRule };
+
+export type GrantableCapability = keyof typeof grantableCapabilities;
+export type GrantCarrier = 'role' | 'committee';
+
+/** The rule for `cap`, or undefined when nothing may grant it. */
+export function grantRuleFor(cap: string): GrantRule | undefined {
+	if (!Object.hasOwn(grantableCapabilities, cap)) return undefined;
+	return (grantableCapabilities as Record<string, GrantRule>)[cap];
+}
+
+/** Which capabilities a volunteer role, or a committee, may carry. */
+export function grantableBy(carrier: GrantCarrier): GrantableCapability[] {
+	return (Object.keys(grantableCapabilities) as GrantableCapability[]).filter(
+		(cap) => grantRuleFor(cap)?.[carrier] !== undefined
+	);
 }
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -2571,14 +2658,16 @@ export const RADIO_MIN_TRACK_MS = 30 * 1000;
 export const RADIO_MAX_TRACK_MS = 15 * 60 * 1000;
 
 /**
- * What a band attests before a release can go on CMC Radio. The station holds no
- * webcast license, so it plays only music no PRO collects on. `version` is stored
- * with each attestation; changing `text` means changing `version`, and every
- * release then needs a fresh attestation before it plays again.
+ * What a band attests, per release, before it can go on CMC Radio. The station
+ * holds no performing-rights or webcast license, so it plays only originals by
+ * writers no PRO collects for. `version` is stored with each attestation;
+ * changing `text` means changing `version`, and every release then needs a fresh
+ * attestation before it plays again. One lasts `termMonths` from when it is given.
  */
 export const RADIO_PRO_ATTESTATION = {
-	version: '2026-09-23',
-	text: 'No one in this band, and no one who wrote a song on this release, is a member of a performing-rights organisation (ASCAP, BMI, SESAC, GMR, or any other).'
+	version: '2026-09-24',
+	termMonths: 12,
+	text: 'Every song on this release was written only by members of this band; none of them is a member of a performing-rights organisation (ASCAP, BMI, SESAC, GMR or a foreign equivalent); and no song is a cover or includes material written by anyone else.'
 } as const;
 // Help audiences
 // ---------------------------------------------------------------------------

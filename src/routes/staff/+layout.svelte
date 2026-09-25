@@ -7,6 +7,7 @@
 	import {
 		IconDisc,
 		IconNfc,
+		IconCheckbox,
 		IconMapPinPlus,
 		IconSchool,
 		IconBulb,
@@ -94,6 +95,7 @@
 		music: IconDisc,
 		groups: IconUsersGroup,
 		committees: IconClipboardList,
+		ballots: IconCheckbox,
 		volunteer: IconHeartHandshake,
 		'volunteer-schedule': IconCalendarWeek,
 		'volunteer-people': IconUsersGroup,
