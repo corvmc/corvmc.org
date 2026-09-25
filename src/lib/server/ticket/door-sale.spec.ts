@@ -26,6 +26,7 @@ const {
 	fulfillDoorSale,
 	cancelDoorSale,
 	getDoorSale,
+	doorSaleEventId,
 	DoorSaleError
 } = await import('./door-sale');
 
@@ -166,6 +167,26 @@ describe('starting a door sale', () => {
 		await fulfillDoorSale(completeFakeTerminalPayment(result.paymentIntentId));
 		const capped = (await listDoorEvents(NOW)).find((e) => e.id === 'capped');
 		expect(capped?.remaining).toBe(-2);
+	});
+});
+
+describe("a door sale's show", () => {
+	it('is the show its tickets were minted for, which the start also reports', async () => {
+		const result = await startDoorSale({
+			eventId: 'tonight',
+			quantity: 1,
+			unitPriceCents: 1500,
+			staffUserId: 'staff-1',
+			now: NOW
+		});
+		if (result.kind !== 'card') throw new Error('expected a card sale');
+		expect(result.eventId).toBe('tonight');
+		expect(await doorSaleEventId(result.paymentIntentId)).toBe('tonight');
+	});
+
+	it('is null for an id that is not a door card sale', async () => {
+		expect(await doorSaleEventId('pi_unknown')).toBeNull();
+		expect(await doorSaleEventId('0b8e1c0a-online-purchase')).toBeNull();
 	});
 });
 

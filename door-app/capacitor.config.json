@@ -3,7 +3,7 @@
 	"appName": "CMC Door",
 	"webDir": "www",
 	"server": {
-		"url": "https://corvmc.org/staff/door",
+		"url": "https://corvmc.org/member/volunteer/door",
 		"cleartext": false
 	},
 	"android": {

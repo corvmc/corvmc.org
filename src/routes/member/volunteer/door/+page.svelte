@@ -39,7 +39,12 @@
 	// which is null at hydration, so the two renders cannot disagree.
 	const bridge: TapToPayBridge | null = $derived(browser ? tapToPayBridge() : null);
 
-	type CardSale = { paymentIntentId: string; clientSecret: string; chargeCents: number };
+	type CardSale = {
+		eventId: string;
+		paymentIntentId: string;
+		clientSecret: string;
+		chargeCents: number;
+	};
 	let sale = $state<CardSale | null>(null);
 	let tapped = $state(false);
 	let busy = $state(false);
@@ -73,7 +78,8 @@
 		busy = true;
 		tapError = null;
 		try {
-			await connectDoorReader(bridge, () => getTerminalConnection());
+			const eventId = sale.eventId;
+			await connectDoorReader(bridge, () => getTerminalConnection(eventId));
 			await takeTap(bridge, sale.clientSecret);
 			tapped = true;
 		} catch (err) {
