@@ -2077,7 +2077,8 @@ export const capabilities = {
 	marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send'],
 	moderation: ['reviewFlags', 'setStanding'],
 	suggestion: ['read', 'respond', 'review'],
-	// Member-wide ballots, and the staff fallback on committee ballots (#1635).
+	// Member-wide ballots, and the staff fallback on committee ballots. Also
+	// grantable to a committee, org-wide: see `grantableCapabilities`.
 	ballot: ['manage'],
 	listing: ['review'],
 	// The staff music tools. Refunding a sale is `finance.refund`, not a music
@@ -2336,7 +2337,10 @@ export const grantableCapabilities = {
 	},
 	'event.publish': { label: "Publish its projects' draft events", committee: 'owned' },
 	'event.manage': { label: 'Decide vendor applications for its markets', committee: 'owned' },
-	'finance.read': { label: 'See its own numbers', committee: 'owned' }
+	'finance.read': { label: 'See its own numbers', committee: 'owned' },
+	// Org-wide: a member-wide ballot belongs to no committee, so `'owned'` could
+	// never reach one. Every active member of the holding committee runs them.
+	'ballot.manage': { label: 'Run member-wide ballots', committee: 'org' }
 } as const satisfies { readonly [C in Capability]?: GrantRule };
 
 export type GrantableCapability = keyof typeof grantableCapabilities;

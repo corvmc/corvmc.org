@@ -157,11 +157,12 @@ only the roll, and a missed vote cannot be recovered. The result notice defaults
 | Certify                                           | the named certifier only                                                              |
 | Read a closed result                              | electors and managers; after certification, every member                              |
 
-`ballot.manage` is a new capability. Which positions hold it is a gut call, filed as its own
-decision issue (#1635): `admin` and `staff` hold it, and no named position does. The committee
-capability-grant system (#1625) was not on `main` when this was built, so group ballots use
-`requireGroupRole` directly. Once #1625 lands, `ballot.manage` could become a grantable capability for
-a governance committee.
+`ballot.manage` is held by `admin` and `staff`, and by no named position. It is also on the
+committee grant allowlist with `'org'` reach (#1635), so staff can give it to a board or governance
+committee on the group's page. Every active member of that committee then holds it everywhere: they
+run member-wide ballots, override the electorate, and cover any committee's ballot, as staff do.
+Group ballots still use `requireGroupRole` for the committee's own owner and admins, and a member
+below admin cannot create a ballot.
 
 ## Schema
 
