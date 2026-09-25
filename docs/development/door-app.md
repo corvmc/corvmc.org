@@ -1,7 +1,7 @@
 # The door app
 
 The Tap to Pay door phone (#612) runs a Capacitor shell, `door-app/`, which loads
-`https://corvmc.org/staff/door` in a webview. The phone's own NFC is the card reader. Everything
+`https://corvmc.org/member/volunteer/door` in a webview. The phone's own NFC is the card reader. Everything
 the staffer sees is the web app, so a fix to the door screen is a deploy, not a reinstall. The
 native binary changes only when Capacitor or the Stripe Terminal SDK does.
 

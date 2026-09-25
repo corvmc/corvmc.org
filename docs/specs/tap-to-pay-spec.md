@@ -55,9 +55,13 @@ them, seven decisions changed. The rest of the document has been updated to matc
    `setConnectionToken({ token })`. The guarded remote mints it, so no public `+server.ts` is added.
    Old Open item 3 is settled.
 6. **The capability is `finance.collect`.** It is new, granted to `admin` and `staff` (the matrix
-   derives `staff`), and to no other position. Volunteers check tickets in today through a
-   shift-scoped path with no capability (`checkInAsVolunteer`), so whether a rostered door
-   volunteer may also take money is #1630. Old Open item 2 is settled pending that.
+   derives `staff`), and to no other position. It is also a **grantable, event-scoped role
+   grant** (#1630, owner, 2026-09-25), like `event.uploadRecap`: the Door volunteer role carries
+   it, so a member **confirmed** on a show's door shift can mint a connection token and take card
+   payments for **that show**, from the shift's start to its end, with no grace after. Every door
+   remote asks the grant resolver with the show's `eventId`; a sale's show comes from its tickets,
+   never from the client. Refunds stay on `finance.refund`, which no role or committee may carry.
+   The door screen lives at `/member/volunteer/door` so a volunteer with no position can reach it.
 7. **Door rows have no attendee.** `ticket.attendeeName` and `attendeeEmail` are `NOT NULL`, so a
    door ticket is written as `'Door sale'` with an empty email, and no `ticket.purchased` receipt is
    sent. There is nobody to send it to.
@@ -736,8 +740,11 @@ app, and take one simulated test payment before the doors open.
    phase 0's test: install on the real phone, disable Developer options, call `connectReader`
    against a simulated reader. It is cheap, it takes an afternoon, and **nothing else should be
    scheduled until it has been done.**
-2. **Who may take a payment.** Settled for the build as `finance.collect`, held by `admin` and
-   `staff`. Whether rostered door volunteers get it is #1630.
+2. **Who may take a payment.** Settled by #1630 (owner, 2026-09-25): `finance.collect`, held by
+   `admin` and `staff` everywhere and by a confirmed door volunteer for their own show during the
+   shift. **Landing step:** production's Door role only carries the grant once ticked, so the
+   landing PR ships a preserve-behaviour data backfill that adds `finance.collect` to the `Door`
+   role's `capability_grants` (as #1651 did for `event.uploadRecap`).
 3. **Can the plugin be handed a token directly?** Settled: yes, through `setConnectionToken`. See
    [The connection token](#the-connection-token).
 4. **Whose phone is it, and is there a backup?** #1632.
