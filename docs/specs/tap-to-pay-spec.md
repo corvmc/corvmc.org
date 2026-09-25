@@ -132,7 +132,8 @@ real device gate is the one **Stripe already enforces** in `connectReader` — s
 to be](#what-the-phone-has-to-be) — and it checks things an allowlist of ours could not, like
 whether the bootloader is locked.
 
-**So: no table, no column.** The device is not modelled at all. The trigger to revisit is a _second_
+**So: no table, no column.** The door phone is **one CMC-owned handset, kept on site** (owner,
+2026-09-25, #1632). The device is not modelled at all. The trigger to revisit is a _second_
 phone, at which point the question stops having a constant answer and a `deviceLabel` column becomes
 the cheapest thing that answers it; an allowlist table is only worth it the day CMC wants to
 **refuse** an unregistered handset, which is a different feature with a registration gesture and a
@@ -709,7 +710,7 @@ app, and take one simulated test payment before the doors open.
 - **The unattended kiosk** — check-in, door access, a walk-up booking screen. All three are things a
   device does while nobody is holding it, and the reader disconnects the moment the app backgrounds.
   A hardware conclusion, not a scope preference, and the single most important thing this spec
-  settles. Those cases need a smart reader (S700 / WisePOS E).
+  settles. Those cases need a smart reader (S700 / WisePOS E), specced separately as #1659.
 - **A device registry.** See [above](#there-is-no-device-registry). One phone, one Location, one
   operator: no table and no column.
 - **A payments table.** No `terminal_payment`, no row per card-present take. `ticket` already carries
@@ -747,12 +748,15 @@ app, and take one simulated test payment before the doors open.
    role's `capability_grants` (as #1651 did for `event.uploadRecap`).
 3. **Can the plugin be handed a token directly?** Settled: yes, through `setConnectionToken`. See
    [The connection token](#the-connection-token).
-4. **Whose phone is it, and is there a backup?** #1632.
+4. **Whose phone is it, and is there a backup?** Settled by #1632 (owner, 2026-09-25): one
+   CMC-owned phone, kept on site, and no device table. A second handset is the trigger to revisit;
+   see [There is no device registry](#there-is-no-device-registry).
 5. **Door sales for band-sold gigs.** #1629. Until it is answered, only collective-sold shows are
    offered.
 6. **Does a door sale count against capacity?** Settled by #1631 (owner, 2026-09-25): it counts,
    and it only warns. The door screen shows the tickets remaining under `ticket_sale.quantity`;
    past zero it warns "over capacity by N" and still takes the sale, because the person at the door
    decides. There is no separate door allocation and no schema change.
-7. **Does CMC want an S700 for the unattended cases?** #1632. "No" closes #612 outright when this
-   ships. "Yes" means a second spec, a hardware purchase, and the tipping question coming back.
+7. **Does CMC want an S700 for the unattended cases?** Settled by #1632 (owner, 2026-09-25): yes,
+   later. A smart reader for check-in, door access and walk-up booking is its own spec and a later
+   hardware purchase, #1659. It does not block this one, and #612 closes when the landing PR merges.
