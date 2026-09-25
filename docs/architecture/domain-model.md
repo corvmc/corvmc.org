@@ -4,7 +4,7 @@ What the app is made of, above the level of individual features. Read
 [overview.md](overview.md) for how the system is wired — remote functions, auth, the
 event bus, cron; this document is about what the tables _mean_ and which shapes recur.
 
-## Three verticals over two horizontals
+## Three verticals over three horizontals
 
 **Verticals** — a thing the collective does, with its own screens and its own lifecycle:
 
@@ -18,10 +18,17 @@ event bus, cron; this document is about what the tables _mean_ and which shapes 
 
 - **Comms** — `inbox`, `notification`, `marketing`, direct messages, `announcement`
 - **Money** — `finance`, Stripe, `credit_transaction`, `payment_cache`
+- **Publishing** — what faces the public: the gig guide (`event_listing`), `band_site`,
+  the directory, local resources, recaps, posters, radio, the help manual; with `media`,
+  public-content moderation and page composition as its shared tools
 
 Money is horizontal for the same reason comms is: credits settle both room bookings and
 gear loans (assets), ticket revenue comes off shows (projects), and dues come off
 membership (social). No vertical owns it.
+
+Publishing is horizontal the same way. A closure notice (assets), a produced show
+(projects) and a band's page (social) all reach the public through the same upload,
+image, moderation and page machinery; none of the three verticals owns the public site.
 
 ### Two things the taxonomy makes obvious
 
@@ -152,7 +159,7 @@ legal, being a program whose leader stepped down, which is why every query for a
 LEFT joins. The second copy drifted once: five of sixteen production bands had no usable
 owner row behind it.
 
-## Seven models that recur
+## Eight models that recur
 
 Naming these is the point of the document: each is implemented more than once, and
 knowing which is which stops the next implementation being one more.
@@ -276,6 +283,19 @@ three of which band chat now demonstrates rather than promises:
   and unsubscribe are per-`subscriber` and a band's list is not the collective's list, so
   the compliance question changes rather than scaling. Inventory and volunteering are weak
   fits for the same reason — they describe things the collective owns.
+
+### 8. Idea → decision → work `[social → projects]`
+
+A member raises an idea, the collective decides, and the decision becomes owned, budgeted
+work. `suggestion` (the idea, voted up by members) → a ballot or a committee's call (the
+decision) → `project` (the work). The link already exists at both ends: starting a project
+from a suggestion moves both to planned in one write, and committees own projects and run
+their own ballots.
+
+This is a flow across two verticals, not a third: suggestions and ballots are social,
+projects are project management, and committees are social containers that hold powers
+over work. The staff nav still groups them as **Planning**, because staff work the flow
+together; a nav section follows the work, this document follows the data.
 
 ## Duplications to leave alone
 
