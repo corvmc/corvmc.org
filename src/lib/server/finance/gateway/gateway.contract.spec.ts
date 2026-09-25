@@ -6,8 +6,14 @@ vi.mock('$env/dynamic/private', () => ({
 	env: { STRIPE_SECRET_KEY: 'sk_test_contract_spec' }
 }));
 
-const { createFakeGateway, resetFakeGateway, completeFakeCheckout, outcomeForCard } =
-	await import('./fake-gateway');
+const {
+	createFakeGateway,
+	resetFakeGateway,
+	completeFakeCheckout,
+	outcomeForCard,
+	FAKE_TERMINAL_LOCATION_ID,
+	completeFakeTerminalPayment
+} = await import('./fake-gateway');
 const { createStripeGateway } = await import('./stripe-gateway');
 
 /**
@@ -26,7 +32,7 @@ const PORT_SURFACE: ReadonlyArray<readonly [keyof PaymentGateway, readonly strin
 	['coupons', ['create', 'del']],
 	['customers', ['create', 'update']],
 	['invoices', ['list']],
-	['paymentIntents', ['retrieve']],
+	['paymentIntents', ['retrieve', 'create', 'cancel']],
 	['paymentMethods', ['list', 'detach', 'update']],
 	['paymentRecords', ['reportPayment', 'reportRefund', 'retrieve']],
 	['prices', ['retrieve']],
@@ -36,7 +42,11 @@ const PORT_SURFACE: ReadonlyArray<readonly [keyof PaymentGateway, readonly strin
 	['subscriptions', ['list', 'update', 'retrieve']]
 ];
 
-const NESTED_SURFACE = [['checkout', 'sessions', ['create', 'retrieve', 'list']]] as const;
+const NESTED_SURFACE = [
+	['checkout', 'sessions', ['create', 'retrieve', 'list']],
+	['terminal', 'connectionTokens', ['create']],
+	['terminal', 'locations', ['retrieve']]
+] as const;
 
 describe('PaymentGateway contract', () => {
 	beforeEach(() => {
@@ -402,6 +412,52 @@ describe('fake gateway behaviour', () => {
 		const matching = listed.data.filter((p) => p.metadata?.corvmc_key === 'contribution');
 
 		expect(matching.map((p) => p.id)).toEqual([created.id]);
+	});
+
+	it('mints a connection token scoped to the Location it was asked for', async () => {
+		const token = await gateway.terminal.connectionTokens.create({
+			location: FAKE_TERMINAL_LOCATION_ID
+		});
+		expect(token.secret).toMatch(/^pst_test_/);
+		expect(token.location).toBe(FAKE_TERMINAL_LOCATION_ID);
+	});
+
+	it('knows its own Location and 404s any other', async () => {
+		const location = await gateway.terminal.locations.retrieve(FAKE_TERMINAL_LOCATION_ID);
+		expect(location).toMatchObject({ id: FAKE_TERMINAL_LOCATION_ID, object: 'terminal.location' });
+		await expect(gateway.terminal.locations.retrieve('tml_nope')).rejects.toThrow(/No such/);
+	});
+
+	it('creates a card-present intent that waits for a tap, retrievable by id', async () => {
+		const intent = await gateway.paymentIntents.create({
+			amount: 1500,
+			currency: 'usd',
+			payment_method_types: ['card_present'],
+			capture_method: 'automatic',
+			metadata: { type: 'door_ticket' }
+		});
+		expect(intent.status).toBe('requires_payment_method');
+		expect(intent.payment_method_types).toEqual(['card_present']);
+		expect(intent.client_secret).toMatch(new RegExp(`^${intent.id}_secret_`));
+
+		const again = await gateway.paymentIntents.retrieve(intent.id);
+		expect(again.metadata).toEqual({ type: 'door_ticket' });
+	});
+
+	it('lands a tap as a succeeded intent with a captured charge', async () => {
+		const intent = await gateway.paymentIntents.create({ amount: 1500, currency: 'usd' });
+		const paid = completeFakeTerminalPayment(intent.id);
+		expect(paid.status).toBe('succeeded');
+		expect((await gateway.paymentIntents.retrieve(intent.id)).latest_charge).toMatchObject({
+			amount_captured: 1500
+		});
+	});
+
+	it('cancels an intent nobody tapped', async () => {
+		const intent = await gateway.paymentIntents.create({ amount: 900, currency: 'usd' });
+		const cancelled = await gateway.paymentIntents.cancel(intent.id);
+		expect(cancelled.status).toBe('canceled');
+		await expect(gateway.paymentIntents.cancel('pi_nope')).rejects.toThrow(/No such/);
 	});
 
 	it('iterates a list with for-await, which the sync sweep relies on', async () => {

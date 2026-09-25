@@ -1,0 +1,12 @@
+{
+	"appId": "org.corvallismusic.door",
+	"appName": "CMC Door",
+	"webDir": "www",
+	"server": {
+		"url": "https://corvmc.org/member/volunteer/door",
+		"cleartext": false
+	},
+	"android": {
+		"webContentsDebuggingEnabled": false
+	}
+}

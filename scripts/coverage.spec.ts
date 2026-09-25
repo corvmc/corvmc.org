@@ -39,7 +39,10 @@ const IGNORED = [
 	'storybook-static/**',
 	// Vitest browser mode names a failure screenshot's directory after the spec
 	// that failed, so this tree is full of directories called `*.spec.ts`.
-	'test-results/**'
+	'test-results/**',
+	// `cap sync` copies Capacitor's own bridge scripts here. Gitignored by the
+	// shell's Android project, and the door app has no source of its own.
+	'door-app/android/app/src/main/assets/**'
 ];
 
 /**

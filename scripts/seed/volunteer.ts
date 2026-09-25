@@ -154,6 +154,17 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		capabilityGrants: ['event.uploadRecap']
 	},
 	{
+		// The door shift (#1630): a confirmed signup may take card payments for its
+		// show during the shift. Named like the canonical role in `seed-volunteer-roles.ts`.
+		name: 'Door',
+		group: 'at-shows' as const,
+		description: 'Handle the entry fee, welcome audience members, and keep an eye on the space.',
+		displayOrder: 47,
+		defaultDurationMinutes: 240,
+		defaultCapacity: 1,
+		capabilityGrants: ['finance.collect']
+	},
+	{
 		// Archived so the restore path and the "archived roles still resolve in
 		// reports" behaviour both have coverage on a fresh seed.
 		name: 'Zine & Print',

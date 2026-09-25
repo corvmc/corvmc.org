@@ -340,6 +340,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/volunteer/door",
+		"panel": "member"
+	},
+	{
 		"route": "/member/volunteer/feedback/[signupId]",
 		"panel": "member"
 	},

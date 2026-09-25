@@ -103,9 +103,10 @@ describe('capability grants: JSON columns to join tables', () => {
 		for (const [id, grants] of Object.entries(GROUPS)) {
 			expect(rowsOf(after, 'group_capability', 'group_id', id), id).toEqual([...grants].sort());
 		}
+		// A superset: later backfills may add a role grant (the door role gains finance.collect).
 		for (const [id, grants] of Object.entries(ROLES)) {
 			expect(rowsOf(after, 'volunteer_role_capability', 'volunteer_role_id', id), id).toEqual(
-				[...grants].sort()
+				expect.arrayContaining([...grants])
 			);
 		}
 		after.close();
