@@ -821,3 +821,17 @@ Label and colour maps for these values live in `StatusBadge.svelte` (`labels`, `
 `variants`), and `StatusBadge.spec.ts` asserts every enum value is covered. Domain-specific wording
 — "Waiting on DNS" rather than a generic "Pending" — belongs at the call site, not in the shared
 registry.
+
+## Sending something back is not rejecting it
+
+Where staff review a submission, declining it returns it rather than ending it:
+
+- The status is `rejected` with a required `reviewNotes` reason. Nothing is deleted.
+- The submitter sees the reason, edits, and resubmits into the same queue.
+- A repeat submission is the same row, not a new one.
+
+It is a policy, not a data model, so it lives here rather than in the domain model. It
+applies to instructor applications, community listings, volunteer hours, suggestion edits,
+resource tips and market vendor applications. The queue, approve, send-back and resubmit
+screens are hand-rolled in each; a shared review-queue component is the obvious next step,
+and a new queue should start from an existing one rather than a blank page.
