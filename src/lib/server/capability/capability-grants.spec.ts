@@ -168,9 +168,9 @@ describe('roleGrantAllows', () => {
 	it('lets crew file an incident for 7 days after the shift, and not on the 8th', async () => {
 		const sixDaysOn = new Date(showEnd.getTime() + 6 * day);
 		const eightDaysOn = new Date(showEnd.getTime() + 8 * day);
-		selectResults = [[shift(['incident.file'])]];
+		selectResults = [[shift()]];
 		expect(await roleGrantAllows('u-1', 'incident.file', 'ev-1', sixDaysOn)).toBe(true);
-		selectResults = [[shift(['incident.file'])]];
+		selectResults = [[shift()]];
 		expect(await roleGrantAllows('u-1', 'incident.file', 'ev-1', eightDaysOn)).toBe(false);
 	});
 
