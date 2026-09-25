@@ -4,7 +4,10 @@ import { error, redirect } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { setRoleCapabilityGrants } from '$lib/server/capability/capability-grant-service';
+import {
+	listRoleGrants,
+	setRoleCapabilityGrants
+} from '$lib/server/capability/capability-grant-service';
 import { toEventRef } from '$lib/server/entity/refs';
 import { getStaffLayout } from './layout.remote';
 import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
@@ -2231,15 +2234,16 @@ export const getVolunteerInterestsPage = query(z.void(), async () => {
  */
 export const getStaffVolunteerRolePage = query(z.string(), async (id) => {
 	await requireCapability('volunteer.read');
-	const [role, requirements, feedback, skillSuggestions] = await Promise.all([
+	const [role, requirements, feedback, skillSuggestions, grants] = await Promise.all([
 		getVolunteerRoleDetail(id),
 		getRoleRequirements(id),
 		getFeedbackByRole(),
 		// Skill tags members already use, so the role's list is written in their words.
-		suggestSkills('')
+		suggestSkills(''),
+		listRoleGrants(id)
 	]);
 
-	return { role, requirements, feedback, skillSuggestions };
+	return { role, requirements, feedback, skillSuggestions, grants };
 });
 
 /** The shift detail page's one load-bearing query. Both halves are keyed by the shift id. */

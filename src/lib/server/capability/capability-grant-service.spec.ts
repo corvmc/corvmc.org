@@ -1,17 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 let selectResults: unknown[][] = [];
-const updates: unknown[] = [];
+// Every write the service makes, tagged, in the order it built them.
+const writes: Array<{ op: string; value?: unknown }> = [];
+const batches: unknown[][] = [];
 
-function chainable(onSet?: (v: unknown) => void) {
+function chainable(op?: string) {
 	const proxy: any = new Proxy(() => proxy, {
 		get(_, prop) {
 			if (prop === 'then') {
 				return (resolve: (v: unknown[]) => void) => resolve(selectResults.shift() ?? []);
 			}
-			if (prop === 'set' && onSet) {
-				return (v: unknown) => {
-					onSet(v);
+			if (op && (prop === 'set' || prop === 'values')) {
+				return (value: unknown) => {
+					writes.push({ op, value });
 					return proxy;
 				};
 			}
@@ -24,9 +26,20 @@ function chainable(onSet?: (v: unknown) => void) {
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
-		update: vi.fn(() => chainable((v) => updates.push(v)))
+		update: vi.fn(() => chainable('update')),
+		insert: vi.fn(() => chainable('insert')),
+		delete: vi.fn(() => {
+			writes.push({ op: 'delete' });
+			return chainable();
+		}),
+		batch: vi.fn(async (items: unknown[]) => {
+			batches.push(items);
+			return [];
+		})
 	}
 }));
+
+const inserted = () => writes.find((w) => w.op === 'insert')?.value;
 
 const recordAuditEntry = vi.fn();
 vi.mock('$lib/server/audit/audit-service', () => ({ recordAuditEntry }));
@@ -46,7 +59,8 @@ const {
 beforeEach(() => {
 	vi.clearAllMocks();
 	selectResults = [];
-	updates.length = 0;
+	writes.length = 0;
+	batches.length = 0;
 	editorHolds = true;
 });
 
@@ -79,11 +93,14 @@ describe('validateGrants', () => {
 
 describe('setRoleCapabilityGrants', () => {
 	it('writes the list and audits what changed', async () => {
-		selectResults = [[{ name: 'Photos or Video', grants: [] }]];
+		selectResults = [[{ name: 'Photos or Video' }], []];
 		const change = await setRoleCapabilityGrants('role-1', ['event.uploadRecap'], editor);
 
 		expect(change).toEqual({ added: ['event.uploadRecap'], removed: [] });
-		expect(updates[0]).toMatchObject({ capabilityGrants: ['event.uploadRecap'] });
+		expect(batches).toHaveLength(1);
+		expect(batches[0]).toHaveLength(3);
+		expect(writes.map((w) => w.op)).toEqual(['update', 'delete', 'insert']);
+		expect(inserted()).toEqual([{ volunteerRoleId: 'role-1', capability: 'event.uploadRecap' }]);
 		expect(recordAuditEntry).toHaveBeenCalledWith({
 			action: 'capability.grants_changed',
 			subject: { type: 'role', id: 'role-1', label: 'Photos or Video' },
@@ -92,7 +109,7 @@ describe('setRoleCapabilityGrants', () => {
 	});
 
 	it('does not audit a save that changed nothing', async () => {
-		selectResults = [[{ name: 'Door', grants: ['event.uploadRecap'] }]];
+		selectResults = [[{ name: 'Door' }], [{ capability: 'event.uploadRecap' }]];
 		await setRoleCapabilityGrants('role-1', ['event.uploadRecap'], editor);
 		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
@@ -101,25 +118,29 @@ describe('setRoleCapabilityGrants', () => {
 		await expect(setRoleCapabilityGrants('role-1', ['user.purge'], editor)).rejects.toBeInstanceOf(
 			UngrantableCapabilityError
 		);
-		expect(updates).toHaveLength(0);
+		expect(writes).toHaveLength(0);
 	});
 
 	it('refuses to add a capability the editor does not hold, writing nothing', async () => {
 		editorHolds = false;
-		selectResults = [[{ name: 'Door', grants: [] }]];
+		selectResults = [[{ name: 'Door' }], []];
 		await expect(
 			setRoleCapabilityGrants('role-1', ['event.uploadRecap'], editor)
 		).rejects.toBeInstanceOf(GrantBeyondEditorError);
-		expect(updates).toHaveLength(0);
+		expect(writes).toHaveLength(0);
+		expect(batches).toHaveLength(0);
 	});
 
 	it('lets an editor remove a grant they do not hold', async () => {
 		editorHolds = false;
-		selectResults = [[{ name: 'Door', grants: ['event.uploadRecap'] }]];
+		selectResults = [[{ name: 'Door' }], [{ capability: 'event.uploadRecap' }]];
 		await expect(setRoleCapabilityGrants('role-1', [], editor)).resolves.toEqual({
 			added: [],
 			removed: ['event.uploadRecap']
 		});
+		// An emptied list is a delete with nothing to insert.
+		expect(writes.map((w) => w.op)).toEqual(['update', 'delete']);
+		expect(batches[0]).toHaveLength(2);
 	});
 
 	it('404s for a missing role', async () => {
@@ -132,20 +153,23 @@ describe('setRoleCapabilityGrants', () => {
 
 describe('setCommitteeCapabilityGrants', () => {
 	it('writes the list and audits removals as well as additions', async () => {
-		selectResults = [[{ name: 'Development', kind: 'committee', grants: ['grant.read'] }]];
+		selectResults = [[{ name: 'Development', kind: 'committee' }], [{ capability: 'grant.read' }]];
 		const change = await setCommitteeCapabilityGrants('dev', ['sponsor.manage']);
 
 		expect(change).toEqual({ added: ['sponsor.manage'], removed: ['grant.read'] });
+		expect(writes.map((w) => w.op)).toEqual(['update', 'delete', 'insert']);
+		expect(inserted()).toEqual([{ groupId: 'dev', capability: 'sponsor.manage' }]);
 		expect(recordAuditEntry).toHaveBeenCalledWith(
 			expect.objectContaining({ subject: { type: 'group', id: 'dev', label: 'Development' } })
 		);
 	});
 
 	it('404s for a band or a club, which carry no grants', async () => {
-		selectResults = [[{ name: 'The Band', kind: 'band', grants: [] }]];
+		selectResults = [[{ name: 'The Band', kind: 'band' }]];
 		await expect(setCommitteeCapabilityGrants('b-1', ['sponsor.read'])).rejects.toBeInstanceOf(
 			GrantCarrierNotFoundError
 		);
-		expect(updates).toHaveLength(0);
+		expect(writes).toHaveLength(0);
+		expect(batches).toHaveLength(0);
 	});
 });

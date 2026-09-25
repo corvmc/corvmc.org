@@ -10,6 +10,7 @@ import { create as createGroupRow, deactivate, reactivate } from '$lib/server/ba
 import { sanitizeBio } from '$lib/utils/markdown';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { DomainError } from '$lib/server/domain-error';
+import { groupGrantsColumn } from '$lib/server/capability/grant-columns';
 import type { GroupKind, GroupJoinPolicy } from '$lib/config';
 import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
 
@@ -109,7 +110,7 @@ export async function getGroupDetail(groupId: string) {
 			avatarKey: group.avatarKey,
 			joinPolicy: group.joinPolicy,
 			joinInstructions: group.joinInstructions,
-			capabilityGrants: group.capabilityGrants,
+			capabilityGrants: groupGrantsColumn(),
 			visibility: directoryEntry.visibility,
 			ownerId: ownerMember.userId,
 			owner: memberRefColumns(),
@@ -245,7 +246,6 @@ export async function listMemberGroups(userId: string) {
 			avatarKey: group.avatarKey,
 			joinPolicy: group.joinPolicy,
 			joinInstructions: group.joinInstructions,
-			capabilityGrants: group.capabilityGrants,
 			visibility: directoryEntry.visibility,
 			myRole: mine.role,
 			myStatus: mine.status,
@@ -305,7 +305,6 @@ export async function listPublicGroups(kinds?: readonly StaffGroupKind[]) {
 			avatarKey: group.avatarKey,
 			joinPolicy: group.joinPolicy,
 			joinInstructions: group.joinInstructions,
-			capabilityGrants: group.capabilityGrants,
 			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`
 		})
 		.from(group)
@@ -348,7 +347,6 @@ export async function getPublicGroup(slug: string) {
 			avatarKey: group.avatarKey,
 			joinPolicy: group.joinPolicy,
 			joinInstructions: group.joinInstructions,
-			capabilityGrants: group.capabilityGrants,
 			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`
 		})
 		.from(group)

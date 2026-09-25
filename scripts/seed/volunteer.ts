@@ -4,6 +4,7 @@ import {
 	volunteerHourLog,
 	volunteerProfile,
 	volunteerRole,
+	volunteerRoleCapability,
 	volunteerRoleCertification,
 	volunteerRoleInterest,
 	workOrder,
@@ -189,14 +190,19 @@ export async function seedVolunteerRoles() {
 	console.log('Seeding volunteer roles...');
 	// Anyone on a show's crew may file an incident for it (#1469); staff can
 	// untick the grant per role.
-	return batchInsert(
+	const roles = await batchInsert(
 		volunteerRole,
-		VOLUNTEER_ROLE_SEEDS.map((r) =>
-			r.group === 'at-shows'
-				? { ...r, capabilityGrants: [...(r.capabilityGrants ?? []), 'incident.file'] }
-				: r
+		VOLUNTEER_ROLE_SEEDS.map(({ capabilityGrants: _, ...r }) => r)
+	);
+	await batchInsert(
+		volunteerRoleCapability,
+		VOLUNTEER_ROLE_SEEDS.flatMap((r, i) =>
+			[...(r.capabilityGrants ?? []), ...(r.group === 'at-shows' ? ['incident.file'] : [])].map(
+				(capability) => ({ volunteerRoleId: roles[i].id, capability })
+			)
 		)
 	);
+	return roles;
 }
 
 export const VOLUNTEER_AVAILABILITY = [

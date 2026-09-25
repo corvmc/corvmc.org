@@ -264,7 +264,7 @@
 		-->
 		<div class="flex flex-col gap-6">
 			<RoleRequirementsCard {role} held={requirementsList} />
-			<RoleGrantsCard {role} />
+			<RoleGrantsCard {role} held={pageData.grants} />
 		</div>
 	</div>
 

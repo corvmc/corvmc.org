@@ -38,6 +38,7 @@ import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
+import { groupGrantsColumn } from '$lib/server/capability/grant-columns';
 import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { detachSlot } from '$lib/server/media/media-service';
@@ -425,7 +426,7 @@ async function selectGroupContext(where: SQL | undefined) {
 			joinPolicy: group.joinPolicy,
 			joinInstructions: group.joinInstructions,
 			// What a committee's members may do on its own records (see requireCommitteeMember).
-			capabilityGrants: group.capabilityGrants,
+			capabilityGrants: groupGrantsColumn(),
 			ownerId: ownerMember.userId,
 			avatarKey: group.avatarKey,
 			// From the site row since phase 3b. LEFT, with `?? 'free'` applied by

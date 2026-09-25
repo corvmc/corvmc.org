@@ -7,10 +7,7 @@
 	import { setVolunteerRoleGrants } from '$lib/remote/volunteer.remote';
 
 	/** What a confirmed signup in this role may do for its shift's event. */
-	let { role }: { role: { id: string; name: string; capabilityGrants: string[] | null } } =
-		$props();
-
-	const held = $derived(role.capabilityGrants ?? []);
+	let { role, held }: { role: { id: string; name: string }; held: string[] } = $props();
 
 	function span(cap: string): string {
 		const days = grantRuleFor(cap)?.role?.graceDays ?? 0;

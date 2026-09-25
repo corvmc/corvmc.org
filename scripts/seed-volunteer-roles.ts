@@ -16,7 +16,7 @@
 import 'dotenv/config';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
-import { volunteerRole } from '../src/lib/server/db/schema/volunteer';
+import { volunteerRole, volunteerRoleCapability } from '../src/lib/server/db/schema/volunteer';
 
 type Group = 'at-shows' | 'away-from-shows';
 
@@ -142,18 +142,26 @@ async function main() {
 	const offset = existing.length;
 	let i = 0;
 	for (const role of missing) {
-		await db.insert(volunteerRole).values({
-			name: role.name,
-			description: role.description,
-			group: role.group,
-			displayOrder: offset + i++,
-			isActive: true,
-			// Show crew may file an incident for the show they work (#1469).
-			capabilityGrants: [
-				...(role.capabilityGrants ?? []),
-				...(role.group === 'at-shows' ? ['incident.file'] : [])
-			]
-		});
+		const [row] = await db
+			.insert(volunteerRole)
+			.values({
+				name: role.name,
+				description: role.description,
+				group: role.group,
+				displayOrder: offset + i++,
+				isActive: true
+			})
+			.returning({ id: volunteerRole.id });
+		// Show crew may file an incident for the show they work (#1469).
+		const grants = [
+			...(role.capabilityGrants ?? []),
+			...(role.group === 'at-shows' ? ['incident.file'] : [])
+		];
+		if (grants.length > 0) {
+			await db
+				.insert(volunteerRoleCapability)
+				.values(grants.map((capability) => ({ volunteerRoleId: row.id, capability })));
+		}
 	}
 
 	console.log(`Added ${missing.length} role(s).\n`);

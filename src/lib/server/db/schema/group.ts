@@ -1,4 +1,12 @@
-import { sqliteTable, text, integer, index, uniqueIndex, unique } from 'drizzle-orm/sqlite-core';
+import {
+	sqliteTable,
+	text,
+	integer,
+	index,
+	uniqueIndex,
+	unique,
+	primaryKey
+} from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
 import { groupKinds, groupJoinPolicies } from '../../../config';
@@ -47,10 +55,7 @@ export const group = sqliteTable(
 		/** Prose shown beside the Join button: "third Thursday, bring a horn, charts provided". */
 		joinInstructions: text('join_instructions'),
 
-		/**
-		 * Capabilities a committee's active members hold, from
-		 * `grantableCapabilities`. Empty, and ignored, on a band or a club.
-		 */
+		/** Superseded by `group_capability` (#1624); unread, and dropped next. */
 		capabilityGrants: text('capability_grants', { mode: 'json' })
 			.$type<string[]>()
 			.notNull()
@@ -220,3 +225,22 @@ export const groupSlugHistory = sqliteTable(
 
 export type GroupMember = typeof groupMember.$inferSelect;
 export type GroupSlugHistory = typeof groupSlugHistory.$inferSelect;
+
+/**
+ * A capability a committee's active members hold, from `grantableCapabilities`.
+ * Ignored on a band or a club; the resolver also drops any entry that has left
+ * the allowlist since it was written.
+ */
+export const groupCapability = sqliteTable(
+	'group_capability',
+	{
+		groupId: text('group_id')
+			.notNull()
+			.references(() => group.id, { onDelete: 'cascade' }),
+		capability: text('capability').notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [primaryKey({ columns: [t.groupId, t.capability] })]
+);
