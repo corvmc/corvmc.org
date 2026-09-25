@@ -27,3 +27,6 @@ worker-configuration.d.ts
 # does not read .gitignore, so it has to be named here or `pnpm lint` fails on
 # whatever the tool last wrote.
 .claude/settings.local.json
+
+# The door app's generated Android project (Gradle, XML, a wrapper jar). Owned by Capacitor.
+/door-app/android/

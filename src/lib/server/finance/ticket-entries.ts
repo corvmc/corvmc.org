@@ -1,4 +1,9 @@
-import { recordEntry, reverseEntriesForSubject } from './financial-entry-service';
+import {
+	recordEntries,
+	recordEntry,
+	reverseEntriesForSubject,
+	type RecordEntryInput
+} from './financial-entry-service';
 
 /**
  * A free ticket, recorded as the $0 sale it is.
@@ -38,4 +43,58 @@ export async function recordFreeTicketSale(params: {
  */
 export async function recordBandTicketRefund(purchaseId: string): Promise<void> {
 	await reverseEntriesForSubject('ticket', purchaseId);
+}
+
+/**
+ * A card-present sale at the door (#612): the rows an online collective ticket
+ * writes, keyed on the PaymentIntent that is also the `purchaseId`. There is
+ * no buyer account, and no fee coverage at the door.
+ */
+export async function recordDoorTicketSale(params: {
+	purchaseId: string;
+	eventId: string;
+	chargeCents: number;
+	actsCents: number;
+	collectiveCents: number;
+	feeCents: number;
+	occurredAt: Date;
+}): Promise<void> {
+	const base = {
+		occurredAt: params.occurredAt,
+		settlement: 'stripe' as const,
+		stripePaymentRecordId: params.purchaseId,
+		userId: null,
+		subjectType: 'ticket' as const,
+		subjectId: params.purchaseId
+	};
+	const entries: RecordEntryInput[] = [];
+	if (params.collectiveCents > 0) {
+		entries.push({
+			...base,
+			amountCents: params.collectiveCents,
+			kind: 'earned',
+			category: 'ticket_sales',
+			description: 'Ticket sale, door, card present'
+		});
+	}
+	if (params.actsCents > 0) {
+		entries.push({
+			...base,
+			amountCents: params.actsCents,
+			kind: 'pass_through',
+			category: 'act_payout',
+			settlementGroup: params.eventId,
+			description: 'Door, designated to the acts'
+		});
+	}
+	if (params.feeCents > 0) {
+		entries.push({
+			...base,
+			amountCents: -params.feeCents,
+			kind: 'spent',
+			category: 'card_fees',
+			description: 'Card processing, in person'
+		});
+	}
+	await recordEntries(entries);
 }

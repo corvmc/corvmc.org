@@ -40,3 +40,17 @@ export function calculateTotalWithFeeCoverage(baseCents: number): {
 
 	return { totalCents, feeCents };
 }
+
+/**
+ * Stripe's in-person (card-present) rate, for a Tap to Pay sale at the door.
+ * US Terminal pricing at the time of writing; confirm it against the account's
+ * pricing page before the first live sale, since it is what the ledger's
+ * `card_fees` row and the door screen's split both assume.
+ */
+const CARD_PRESENT_PERCENT = 0.027;
+const CARD_PRESENT_FIXED_CENTS = 5;
+
+export function calculateCardPresentFee(amountCents: number): number {
+	if (amountCents <= 0) return 0;
+	return Math.ceil(amountCents * CARD_PRESENT_PERCENT + CARD_PRESENT_FIXED_CENTS);
+}

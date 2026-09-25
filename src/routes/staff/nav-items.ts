@@ -66,6 +66,7 @@ export type StaffNavKey =
 	| 'keys'
 	| 'projects'
 	| 'productions'
+	| 'door'
 	| 'venues'
 	| 'calendar'
 	| 'flags'
@@ -414,6 +415,15 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'event.manage',
 				label: 'Productions',
 				href: resolve('/staff/productions')
+			},
+			// Taking money at the door (#612). Beside the show rather than under
+			// Money: it is worked from the door, on the night. It lives under
+			// /member so a door volunteer, who holds no position, can reach it (#1630).
+			{
+				key: 'door',
+				capability: 'finance.collect',
+				label: 'Door Sales',
+				href: resolve('/member/volunteer/door')
 			},
 			// Reference rather than a queue, so it sits last. Guarded as an event
 			// because that is what a venue is a fact about — there is no job here

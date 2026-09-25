@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { calculateProcessingFee, calculateTotalWithFeeCoverage } from './fees';
+import {
+	calculateCardPresentFee,
+	calculateProcessingFee,
+	calculateTotalWithFeeCoverage
+} from './fees';
 
 describe('calculateProcessingFee', () => {
 	it('calculates fee for a $25 charge', () => {
@@ -47,5 +51,17 @@ describe('calculateTotalWithFeeCoverage', () => {
 
 	it('returns zeros for negative base', () => {
 		expect(calculateTotalWithFeeCoverage(-100)).toEqual({ totalCents: 0, feeCents: 0 });
+	});
+});
+
+describe('calculateCardPresentFee', () => {
+	it('charges the in-person rate, not the online one', () => {
+		// 2.7% + 5¢ on $20 is 59¢, where online would be 88¢.
+		expect(calculateCardPresentFee(2000)).toBe(59);
+		expect(calculateCardPresentFee(2000)).toBeLessThan(calculateProcessingFee(2000));
+	});
+
+	it('charges nothing on nothing', () => {
+		expect(calculateCardPresentFee(0)).toBe(0);
 	});
 });

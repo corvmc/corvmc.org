@@ -42,6 +42,7 @@ import {
 	type Split
 } from './split';
 import { TICKET_COLLECTIVE_SHARE_BPS, TICKET_MIN_CHARGE_CENTS } from '$lib/config';
+import { calculateCardPresentFee } from './fees';
 
 export type TicketSplitInput = {
 	/** What the buyer chose to pay per ticket. May be 0 on a floor-0 show. */
@@ -263,5 +264,55 @@ export function validateTicketSplit(
 			feeCoveredCents: result.split.feeCoveredCents,
 			...lines(unitPriceCents, quantity, suggestedUnitCents)
 		}
+	};
+}
+
+export type DoorTicketSplit = {
+	/** What the tap charges. 0 means the reader is never engaged. */
+	chargeCents: number;
+	feeCents: number;
+	actsCents: number;
+	collectiveCents: number;
+	ticketLineUnitCents: number;
+	contributionCents: number;
+};
+
+/**
+ * A door sale (#612): the online rules with the in-person fee, and no bar.
+ *
+ * The staffer sets one number and the acts get their guarantee, the way the
+ * bar opens online; the collective is the residual. Below the charge minimum
+ * the sale is free, because a quarter offered at the door is not a decline.
+ */
+export function doorTicketSplit(input: {
+	unitPriceCents: number;
+	quantity: number;
+	suggestedUnitCents: number;
+}): DoorTicketSplit {
+	const { unitPriceCents, quantity, suggestedUnitCents } = input;
+	const gross = unitPriceCents * quantity;
+	if (gross < TICKET_MIN_CHARGE_CENTS) {
+		return {
+			chargeCents: 0,
+			feeCents: 0,
+			actsCents: 0,
+			collectiveCents: 0,
+			ticketLineUnitCents: 0,
+			contributionCents: 0
+		};
+	}
+	const feeCents = calculateCardPresentFee(gross);
+	const actsCents = otherTakeCents({
+		baseCents: suggestedUnitCents * quantity,
+		grossPaidCents: gross,
+		shareBps: TICKET_COLLECTIVE_SHARE_BPS,
+		divisibleCents: gross - feeCents
+	});
+	return {
+		chargeCents: gross,
+		feeCents,
+		actsCents,
+		collectiveCents: gross - feeCents - actsCents,
+		...lines(unitPriceCents, quantity, suggestedUnitCents)
 	};
 }

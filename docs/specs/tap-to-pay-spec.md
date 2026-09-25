@@ -55,9 +55,13 @@ them, seven decisions changed. The rest of the document has been updated to matc
    `setConnectionToken({ token })`. The guarded remote mints it, so no public `+server.ts` is added.
    Old Open item 3 is settled.
 6. **The capability is `finance.collect`.** It is new, granted to `admin` and `staff` (the matrix
-   derives `staff`), and to no other position. Volunteers check tickets in today through a
-   shift-scoped path with no capability (`checkInAsVolunteer`), so whether a rostered door
-   volunteer may also take money is #1630. Old Open item 2 is settled pending that.
+   derives `staff`), and to no other position. It is also a **grantable, event-scoped role
+   grant** (#1630, owner, 2026-09-25), like `event.uploadRecap`: the Door volunteer role carries
+   it, so a member **confirmed** on a show's door shift can mint a connection token and take card
+   payments for **that show**, from the shift's start to its end, with no grace after. Every door
+   remote asks the grant resolver with the show's `eventId`; a sale's show comes from its tickets,
+   never from the client. Refunds stay on `finance.refund`, which no role or committee may carry.
+   The door screen lives at `/member/volunteer/door` so a volunteer with no position can reach it.
 7. **Door rows have no attendee.** `ticket.attendeeName` and `attendeeEmail` are `NOT NULL`, so a
    door ticket is written as `'Door sale'` with an empty email, and no `ticket.purchased` receipt is
    sent. There is nobody to send it to.
@@ -128,7 +132,8 @@ real device gate is the one **Stripe already enforces** in `connectReader` — s
 to be](#what-the-phone-has-to-be) — and it checks things an allowlist of ours could not, like
 whether the bootloader is locked.
 
-**So: no table, no column.** The device is not modelled at all. The trigger to revisit is a _second_
+**So: no table, no column.** The door phone is **one CMC-owned handset, kept on site** (owner,
+2026-09-25, #1632). The device is not modelled at all. The trigger to revisit is a _second_
 phone, at which point the question stops having a constant answer and a `deviceLabel` column becomes
 the cheapest thing that answers it; an allowlist table is only worth it the day CMC wants to
 **refuse** an unregistered handset, which is a different feature with a registration gesture and a
@@ -657,7 +662,8 @@ way, and the landing PR does not open. **This gates the landing PR, not the bran
 Location config, and the guarded connection-token remote. Everything here can be automated.
 
 **Phase 2: the door screen.** Pick a collective-sold event, choose a quantity and a price per
-ticket, then take the payment. Rows are minted `pending` on intent creation and flipped to
+ticket, then take the payment. The screen shows the tickets remaining and warns, without refusing,
+when a sale goes past capacity (#1631). Rows are minted `pending` on intent creation and flipped to
 `checked_in` by the `payment_intent.succeeded` handler, which also writes the ledger rows. Free
 and below-minimum sales mint `checked_in` at once. A browser without the plugin gets the same
 screen with the tap disabled and the card-not-present path offered. Extend `scripts/seed-dev.ts`,
@@ -704,7 +710,7 @@ app, and take one simulated test payment before the doors open.
 - **The unattended kiosk** — check-in, door access, a walk-up booking screen. All three are things a
   device does while nobody is holding it, and the reader disconnects the moment the app backgrounds.
   A hardware conclusion, not a scope preference, and the single most important thing this spec
-  settles. Those cases need a smart reader (S700 / WisePOS E).
+  settles. Those cases need a smart reader (S700 / WisePOS E), specced separately as #1659.
 - **A device registry.** See [above](#there-is-no-device-registry). One phone, one Location, one
   operator: no table and no column.
 - **A payments table.** No `terminal_payment`, no row per card-present take. `ticket` already carries
@@ -735,14 +741,22 @@ app, and take one simulated test payment before the doors open.
    phase 0's test: install on the real phone, disable Developer options, call `connectReader`
    against a simulated reader. It is cheap, it takes an afternoon, and **nothing else should be
    scheduled until it has been done.**
-2. **Who may take a payment.** Settled for the build as `finance.collect`, held by `admin` and
-   `staff`. Whether rostered door volunteers get it is #1630.
+2. **Who may take a payment.** Settled by #1630 (owner, 2026-09-25): `finance.collect`, held by
+   `admin` and `staff` everywhere and by a confirmed door volunteer for their own show during the
+   shift. **Landing step:** production's Door role only carries the grant once ticked, so the
+   landing PR ships a preserve-behaviour data backfill that adds `finance.collect` to the `Door`
+   role's `capability_grants` (as #1651 did for `event.uploadRecap`).
 3. **Can the plugin be handed a token directly?** Settled: yes, through `setConnectionToken`. See
    [The connection token](#the-connection-token).
-4. **Whose phone is it, and is there a backup?** #1632.
+4. **Whose phone is it, and is there a backup?** Settled by #1632 (owner, 2026-09-25): one
+   CMC-owned phone, kept on site, and no device table. A second handset is the trigger to revisit;
+   see [There is no device registry](#there-is-no-device-registry).
 5. **Door sales for band-sold gigs.** #1629. Until it is answered, only collective-sold shows are
    offered.
-6. **Does a door sale count against capacity?** #1631. Until it is answered, the door refuses a
-   sale above `ticket_sale.quantity`.
-7. **Does CMC want an S700 for the unattended cases?** #1632. "No" closes #612 outright when this
-   ships. "Yes" means a second spec, a hardware purchase, and the tipping question coming back.
+6. **Does a door sale count against capacity?** Settled by #1631 (owner, 2026-09-25): it counts,
+   and it only warns. The door screen shows the tickets remaining under `ticket_sale.quantity`;
+   past zero it warns "over capacity by N" and still takes the sale, because the person at the door
+   decides. There is no separate door allocation and no schema change.
+7. **Does CMC want an S700 for the unattended cases?** Settled by #1632 (owner, 2026-09-25): yes,
+   later. A smart reader for check-in, door access and walk-up booking is its own spec and a later
+   hardware purchase, #1659. It does not block this one, and #612 closes when the landing PR merges.

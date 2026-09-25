@@ -56,7 +56,7 @@ describe('the grantable-capability allowlist', () => {
 
 	it('lets finance reach a committee only for records it owns', () => {
 		for (const [cap, rule] of Object.entries(grantableCapabilities)) {
-			if (!cap.startsWith('finance.')) continue;
+			if (!cap.startsWith('finance.') || cap === 'finance.collect') continue;
 			expect(rule, cap).toMatchObject({ committee: 'owned' });
 			expect(rule, cap).not.toHaveProperty('role');
 		}
@@ -79,6 +79,15 @@ describe('the grantable-capability allowlist', () => {
 			label: expect.any(String),
 			role: { graceDays: 7 }
 		});
+	});
+
+	it('lets a door shift take payments for its show during the shift, and nothing wider', () => {
+		// #1630: collecting is a role grant only, with no grace after the shift.
+		expect(grantableCapabilities).toHaveProperty('finance.collect', {
+			label: expect.any(String),
+			role: { graceDays: 0 }
+		});
+		expect(grantableBy('committee')).not.toContain('finance.collect');
 	});
 
 	it('splits the list by carrier', () => {

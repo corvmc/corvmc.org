@@ -16,7 +16,10 @@ export const registeredEvents = [
 	'invoice.payment_failed',
 	// A refund issued from the Stripe dashboard never reached the app, so the
 	// local payment row stood as if the money had stayed.
-	'charge.refunded'
+	'charge.refunded',
+	// A tap at the door (#612). Card-present intents never have a Checkout
+	// Session, so this is the only event that says the money landed.
+	'payment_intent.succeeded'
 ] as const;
 
 export type RegisteredEvent = (typeof registeredEvents)[number];

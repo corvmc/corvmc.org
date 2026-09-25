@@ -2,10 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
 	actsAnchoredCollectiveCents,
 	computeTicketSplit,
+	doorTicketSplit,
 	suggestedCollectiveCents,
 	validateTicketSplit
 } from './ticket-split';
-import { calculateTotalWithFeeCoverage } from './fees';
+import { calculateCardPresentFee, calculateTotalWithFeeCoverage } from './fees';
 import { TICKET_MIN_CHARGE_CENTS } from '$lib/config';
 
 /**
@@ -331,5 +332,40 @@ describe('a band selling its own show', () => {
 
 	it('lets a buyer give the collective nothing', () => {
 		expect(validateTicketSplit({ ...order, collectiveCents: 0, shareBps: 1000 }).ok).toBe(true);
+	});
+});
+
+describe('doorTicketSplit', () => {
+	it('reconciles: acts, collective and the in-person fee add to the charge', () => {
+		const split = doorTicketSplit({ unitPriceCents: 1500, quantity: 2, suggestedUnitCents: 1500 });
+		expect(split.chargeCents).toBe(3000);
+		expect(split.feeCents).toBe(calculateCardPresentFee(3000));
+		expect(split.actsCents + split.collectiveCents + split.feeCents).toBe(3000);
+	});
+
+	it('guarantees the acts their share of the suggestion, as online does', () => {
+		const split = doorTicketSplit({ unitPriceCents: 1000, quantity: 1, suggestedUnitCents: 1000 });
+		expect(split.actsCents).toBe(700);
+	});
+
+	it('lets the collective absorb a sale under the suggestion', () => {
+		const split = doorTicketSplit({ unitPriceCents: 700, quantity: 1, suggestedUnitCents: 1000 });
+		expect(split.collectiveCents).toBe(0);
+		expect(split.actsCents).toBe(700 - split.feeCents);
+	});
+
+	it('books anything above the suggestion as a contribution, once per order', () => {
+		const split = doorTicketSplit({ unitPriceCents: 2000, quantity: 3, suggestedUnitCents: 1500 });
+		expect(split.ticketLineUnitCents).toBe(1500);
+		expect(split.contributionCents).toBe(1500);
+	});
+
+	it('is free below the charge minimum', () => {
+		const split = doorTicketSplit({
+			unitPriceCents: TICKET_MIN_CHARGE_CENTS - 1,
+			quantity: 1,
+			suggestedUnitCents: 0
+		});
+		expect(split).toMatchObject({ chargeCents: 0, feeCents: 0, actsCents: 0, collectiveCents: 0 });
 	});
 });
