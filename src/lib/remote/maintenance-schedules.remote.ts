@@ -67,7 +67,7 @@ export const createRecurringWork = form(
 		assetId: z.string().optional()
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability('volunteer.manageRecurring');
 		try {
 			await createService({
 				name: data.name,
@@ -89,7 +89,7 @@ export const createRecurringWork = form(
 );
 
 export const retireRecurringWork = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageShifts');
+	await requireCapability('volunteer.manageRecurring');
 	try {
 		await retireService(data.id);
 	} catch (err) {
@@ -102,12 +102,12 @@ export const retireRecurringWork = form(z.object({ id: z.string().min(1) }), asy
 /**
  * A committee's own standing checklist: Booking's weekly holds, Facilities'
  * monthly walk-through. Its members keep it; staff cover it through
- * `volunteer.manageShifts`, as they do every other work order.
+ * `volunteer.manageRecurring`, as they do every other schedule.
  */
 export const createCommitteeRecurringWork = form(
 	z.object({ ...recurringFields, groupId: z.string().min(1) }),
 	async (data) => {
-		const { user, group } = await requireCommitteeMember(data.groupId, 'volunteer.manageShifts');
+		const { user, group } = await requireCommitteeMember(data.groupId, 'volunteer.manageRecurring');
 		try {
 			await createService({
 				name: data.name,
@@ -133,7 +133,7 @@ export const retireCommitteeRecurringWork = form(
 	async (data) => {
 		const { group } = await requireCommitteeMember(
 			await getScheduleGroupId(data.id),
-			'volunteer.manageShifts'
+			'volunteer.manageRecurring'
 		);
 		await retireService(data.id);
 		if (group) void getMemberGroup(group.slug).refresh();

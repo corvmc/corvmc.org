@@ -416,14 +416,14 @@ describe('requireCommitteeMember', () => {
 });
 
 /**
- * #1564, seeded: Booking publishes its projects' events and keeps its recurring
- * work; Facilities has the baseline only; Production opens work orders. Each
- * guard names the capability that is both the staff cover and the grant.
+ * #1564 and #1642: Booking publishes its projects' events and keeps its
+ * recurring work; Facilities has the baseline only; Production opens work
+ * orders. Each guard names the capability that is both the staff cover and the grant.
  */
 describe('committee project powers, per committee', () => {
 	const BASE = ['finance.read', 'project.manage'];
 	const COMMITTEES: Record<string, string[]> = {
-		booking: [...BASE, 'event.publish', 'volunteer.manageShifts'],
+		booking: [...BASE, 'event.publish', 'volunteer.manageRecurring'],
 		facilities: BASE,
 		production: [...BASE, 'volunteer.manageShifts'],
 		market: [...BASE, 'event.manage']
@@ -433,6 +433,7 @@ describe('committee project powers, per committee', () => {
 		'finance.read',
 		'event.publish',
 		'volunteer.manageShifts',
+		'volunteer.manageRecurring',
 		'event.manage'
 	] as const;
 

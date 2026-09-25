@@ -2043,9 +2043,12 @@ export const capabilities = {
 	// nearest thing to hand — these are member-affecting acts on a physical door,
 	// not configuration.
 	lock: ['manage'],
+	// `manageRecurring` is standing work (maintenance schedules, a committee's
+	// checklists); `manageShifts` is one-off work orders and the schedule.
 	volunteer: [
 		'read',
 		'manageShifts',
+		'manageRecurring',
 		'reviewHours',
 		'manageRoster',
 		'manageRoles',
@@ -2213,6 +2216,7 @@ export const positions: Record<Position, Grants> = {
 		volunteer: [
 			'read',
 			'manageShifts',
+			'manageRecurring',
 			'reviewHours',
 			'manageRoster',
 			'manageRoles',
@@ -2334,10 +2338,8 @@ export const grantableCapabilities = {
 	// Powers over records a committee owns (projects, its markets, its schedules).
 	// `requireCommitteeMember` asks for these with the owning committee named.
 	'project.manage': { label: 'Move its projects along and apply duty lists', committee: 'owned' },
-	'volunteer.manageShifts': {
-		label: 'Open work orders and recurring work on its projects',
-		committee: 'owned'
-	},
+	'volunteer.manageRecurring': { label: 'Keep its recurring work', committee: 'owned' },
+	'volunteer.manageShifts': { label: 'Open work orders on its projects', committee: 'owned' },
 	'event.publish': { label: "Publish its projects' draft events", committee: 'owned' },
 	'event.manage': { label: 'Decide vendor applications for its markets', committee: 'owned' },
 	'finance.read': { label: 'See its own numbers', committee: 'owned' },

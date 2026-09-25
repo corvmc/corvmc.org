@@ -78,9 +78,9 @@ const input = {
 };
 
 describe('createCommitteeRecurringWork', () => {
-	it('guards on the committee with volunteer.manageShifts as the staff cover', async () => {
+	it('guards on the committee with volunteer.manageRecurring as the staff cover', async () => {
 		await create(input);
-		expect(requireCommitteeMember).toHaveBeenCalledWith('grp-own', 'volunteer.manageShifts');
+		expect(requireCommitteeMember).toHaveBeenCalledWith('grp-own', 'volunteer.manageRecurring');
 		expect(createService).toHaveBeenCalledWith(
 			expect.objectContaining({ groupId: 'grp-own', createdByUserId: 'u-1' })
 		);
@@ -97,7 +97,7 @@ describe('retireCommitteeRecurringWork', () => {
 	it("guards on the schedule's own committee", async () => {
 		await retire({ id: 'ms-1' });
 		expect(getScheduleGroupId).toHaveBeenCalledWith('ms-1');
-		expect(requireCommitteeMember).toHaveBeenCalledWith('grp-own', 'volunteer.manageShifts');
+		expect(requireCommitteeMember).toHaveBeenCalledWith('grp-own', 'volunteer.manageRecurring');
 		expect(retireService).toHaveBeenCalledWith('ms-1');
 	});
 

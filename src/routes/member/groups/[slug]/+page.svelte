@@ -293,7 +293,7 @@
 			groupId={group.id}
 			schedules={data.recurringWork}
 			roles={data.workOrderRoles}
-			canEdit={may('volunteer.manageShifts')}
+			canEdit={may('volunteer.manageRecurring')}
 		/>
 	{:else if tab === 'numbers' && may('finance.read')}
 		<CommitteeNumbers groupId={group.id} />

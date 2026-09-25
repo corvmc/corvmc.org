@@ -96,4 +96,20 @@ describe('createRecurringWork', () => {
 		await createRecurringWork({ ...base, assetId: '' });
 		expect(createService).toHaveBeenCalledWith(expect.objectContaining({ assetId: null }));
 	});
+
+	it('guards on volunteer.manageRecurring, not work orders, before writing (#1642)', async () => {
+		allowed = false;
+		await expect(createRecurringWork(base)).rejects.toThrow(/403/);
+		expect(requireCapability).toHaveBeenCalledWith('volunteer.manageRecurring');
+		expect(createService).not.toHaveBeenCalled();
+	});
+});
+
+describe('retireRecurringWork', () => {
+	it('guards on volunteer.manageRecurring', async () => {
+		allowed = false;
+		const retire = remote.retireRecurringWork as unknown as (d: unknown) => Promise<unknown>;
+		await expect(retire({ id: 'ms-1' })).rejects.toThrow(/403/);
+		expect(requireCapability).toHaveBeenCalledWith('volunteer.manageRecurring');
+	});
 });

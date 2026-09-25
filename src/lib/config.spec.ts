@@ -62,6 +62,18 @@ describe('the grantable-capability allowlist', () => {
 		}
 	});
 
+	it('splits recurring work from work orders, both owned by a committee (#1642)', () => {
+		expect(grantableCapabilities['volunteer.manageRecurring']).toMatchObject({
+			committee: 'owned'
+		});
+		expect(grantableCapabilities['volunteer.manageShifts']).toMatchObject({ committee: 'owned' });
+		expect(grantableBy('role')).not.toContain('volunteer.manageRecurring');
+		expect(positionsGranting('volunteer.manageRecurring').sort()).toEqual(
+			['admin', 'staff', 'volunteer_coordinator'].sort()
+		);
+		expect(positionsGranting('volunteer.manageShifts')).toContain('volunteer_coordinator');
+	});
+
 	it('splits the list by carrier', () => {
 		expect(grantableBy('role')).toContain('event.uploadRecap');
 		expect(grantableBy('role')).not.toContain('sponsor.manage');
