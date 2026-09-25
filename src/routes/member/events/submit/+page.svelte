@@ -103,7 +103,7 @@
 			<LineupEditor bind:value={lineup} search={searchBandsForListing} />
 		</FormField>
 
-		<FormField name="posterFile" label="Poster">
+		<FormField name="posterFile" label="Poster" description="JPEG, PNG or WebP, up to 10 MB.">
 			<input
 				{...fields.posterFile.as('file')}
 				accept="image/jpeg,image/png,image/webp"

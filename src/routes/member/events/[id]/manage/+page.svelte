@@ -292,7 +292,11 @@
 				<LineupEditor bind:value={lineup} search={searchBandsForListing} />
 			</FormField>
 
-			<FormField name="posterFile" label="Replace poster">
+			<FormField
+				name="posterFile"
+				label="Replace poster"
+				description="JPEG, PNG or WebP, up to 10 MB."
+			>
 				{#if listing.posterUrl}
 					{@const current = imageSrc(listing.posterUrl, 'thumb')}
 					<img
