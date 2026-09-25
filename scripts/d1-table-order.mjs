@@ -131,6 +131,8 @@ export const tableOrder = [
 	'notification',
 	'account',
 	'group_member',
+	// Grant rows: each references only its carrier, and nothing references them.
+	'group_capability',
 	// References only `user`; its choices reference it and `group`, so the pair
 	// sits together and after both.
 	'committee_application',
@@ -200,6 +202,7 @@ export const tableOrder = [
 	'volunteer_shift_feedback',
 	'member_certification',
 	'volunteer_role_certification',
+	'volunteer_role_capability',
 	// A band's Stripe Connect account. Child of group, parent of nothing.
 	'band_stripe_account',
 	// The audio chain, and it is a chain: release → track → radio_play, each

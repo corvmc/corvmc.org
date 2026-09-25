@@ -41,8 +41,8 @@ const rendered = (i: number) => dialect.sqlToQuery(whereClauses[i] as SQL);
 const day = 86_400_000;
 const showStart = new Date('2026-09-01T02:00:00Z');
 const showEnd = new Date('2026-09-01T06:00:00Z');
-const shift = (grants: string[]) => ({
-	grants,
+// A row the query returns: the role's grant is already matched in SQL.
+const shift = () => ({
 	startsAt: showStart,
 	endsAt: showEnd,
 	eventStartsAt: showStart,
@@ -67,9 +67,16 @@ describe('allowlisted', () => {
 
 describe('committeeGrantsFor', () => {
 	it('reads active seats on live committees and filters each list to the allowlist', async () => {
-		selectResults = [[{ groupId: 'dev', grants: ['sponsor.manage', 'user.ban'] }]];
+		selectResults = [
+			[
+				{ groupId: 'dev', capability: 'sponsor.manage' },
+				{ groupId: 'dev', capability: 'user.ban' },
+				{ groupId: 'fin', capability: 'grant.read' }
+			]
+		];
 		expect(await committeeGrantsFor('u-1')).toEqual([
-			{ groupId: 'dev', capabilities: ['sponsor.manage'] }
+			{ groupId: 'dev', capabilities: ['sponsor.manage'] },
+			{ groupId: 'fin', capabilities: ['grant.read'] }
 		]);
 		const { sql, params } = rendered(0);
 		expect(sql).toContain('"group_member"."status" = ?');
@@ -102,14 +109,14 @@ describe('committeeAllows', () => {
 
 describe('grantWindow', () => {
 	it('runs from the shift start to the grace period after its end', () => {
-		expect(grantWindow(shift([]), 7)).toEqual({
+		expect(grantWindow(shift(), 7)).toEqual({
 			from: showStart,
 			until: new Date(showEnd.getTime() + 7 * day)
 		});
 	});
 
 	it('borrows the event times for an unscheduled work order', () => {
-		const row = { ...shift([]), startsAt: null, endsAt: null, eventEndsAt: null };
+		const row = { ...shift(), startsAt: null, endsAt: null, eventEndsAt: null };
 		expect(grantWindow(row, 1)).toEqual({
 			from: showStart,
 			until: new Date(showStart.getTime() + day)
@@ -119,30 +126,30 @@ describe('grantWindow', () => {
 
 describe('roleGrantAllows', () => {
 	it('allows during the shift', async () => {
-		selectResults = [[shift(['event.uploadRecap'])]];
+		selectResults = [[shift()]];
 		expect(await roleGrantAllows('u-1', 'event.uploadRecap', 'ev-1', showEnd)).toBe(true);
 	});
 
 	it('allows inside the grace period after the shift ends', async () => {
-		selectResults = [[shift(['event.uploadRecap'])]];
+		selectResults = [[shift()]];
 		const sixDaysOn = new Date(showEnd.getTime() + 6 * day);
 		expect(await roleGrantAllows('u-1', 'event.uploadRecap', 'ev-1', sixDaysOn)).toBe(true);
 	});
 
 	it('denies once the grace period has expired', async () => {
-		selectResults = [[shift(['event.uploadRecap'])]];
+		selectResults = [[shift()]];
 		const eightDaysOn = new Date(showEnd.getTime() + 8 * day);
 		expect(await roleGrantAllows('u-1', 'event.uploadRecap', 'ev-1', eightDaysOn)).toBe(false);
 	});
 
 	it('denies before the shift starts', async () => {
-		selectResults = [[shift(['event.uploadRecap'])]];
+		selectResults = [[shift()]];
 		const dayBefore = new Date(showStart.getTime() - day);
 		expect(await roleGrantAllows('u-1', 'event.uploadRecap', 'ev-1', dayBefore)).toBe(false);
 	});
 
-	it('denies when the role does not carry the capability', async () => {
-		selectResults = [[shift([])]];
+	it('denies when no role on the shift carries the capability', async () => {
+		selectResults = [[]];
 		expect(await roleGrantAllows('u-1', 'event.uploadRecap', 'ev-1', showEnd)).toBe(false);
 	});
 
@@ -150,11 +157,12 @@ describe('roleGrantAllows', () => {
 		selectResults = [[]];
 		await roleGrantAllows('u-1', 'event.uploadRecap', 'ev-1', showEnd);
 		const { sql, params } = rendered(0);
+		expect(sql).toContain('"volunteer_role_capability"."capability" = ?');
 		expect(sql).toContain('"volunteer_signup"."user_id" = ?');
 		expect(sql).toContain('"work_order"."event_id" = ?');
 		expect(sql).toContain('"volunteer_signup"."status" in (?, ?)');
 		expect(sql).toContain('"work_order"."cancelled_at" is null');
-		expect(params).toEqual(['u-1', 'ev-1', 'confirmed', 'completed']);
+		expect(params).toEqual(['event.uploadRecap', 'u-1', 'ev-1', 'confirmed', 'completed']);
 	});
 
 	it('never reads for a capability no role may grant', async () => {
@@ -175,16 +183,13 @@ describe('orgWideCapabilities', () => {
 
 describe('listCommitteeHolders', () => {
 	it('returns active members of committees whose list carries the capability', async () => {
-		selectResults = [
-			[
-				{ id: 'u1', name: 'Ada', email: 'a@x', grants: ['renewal.manage'] },
-				{ id: 'u2', name: 'Bo', email: 'b@x', grants: ['sponsor.read'] }
-			]
-		];
+		selectResults = [[{ id: 'u1', name: 'Ada', email: 'a@x' }]];
 		expect(await listCommitteeHolders('renewal.manage')).toEqual([
 			{ id: 'u1', name: 'Ada', email: 'a@x' }
 		]);
-		const { sql } = rendered(0);
+		const { sql, params } = rendered(0);
+		expect(sql).toContain('"group_capability"."capability" = ?');
+		expect(params).toContain('renewal.manage');
 		expect(sql).toContain('"group"."kind" = ?');
 		expect(sql).toContain('"user"."deleted_at" is null');
 	});

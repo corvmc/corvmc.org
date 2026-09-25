@@ -556,13 +556,14 @@ panel than by widening the capability list the layout returns.
 Positions still answer "may this person ever do this". Two more carriers now add to that answer.
 Both are data that staff edit. Neither is a name or a config id that has to match a row.
 
-- **A volunteer role** carries a grant list (`volunteer_role.capability_grants`). A signup that is
+- **A volunteer role** carries a grant list, one `volunteer_role_capability` row per
+  capability (#1624). A signup that is
   `confirmed` or `completed`, on a live work order for event X, in a role that grants C, holds C
   **for event X only**. The grant runs from the shift's start until the capability's grace period
   after the shift ends. `event.uploadRecap` has a grace period of 7 days. Staff edit the list on
   the role's page. An editor can only add a capability that their own position holds.
-- **A committee** carries a grant list (`group.capability_grants`, read only when `kind` is
-  `committee`). Every active member holds those capabilities. An `'org'` grant counts everywhere.
+- **A committee** carries a grant list, one `group_capability` row per capability, read only
+  when `kind` is `committee`. Every active member holds those capabilities. An `'org'` grant counts everywhere.
   An `'owned'` grant counts only on records that the committee owns, so the guard has to name the
   committee. Staff (`group.manage`) edit the list on the group's page.
 

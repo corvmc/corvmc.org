@@ -1,5 +1,10 @@
 import { type DirectoryVisibility } from '../../src/lib/server/db/schema/authentication';
-import { group, groupMember, groupSlugHistory } from '../../src/lib/server/db/schema/group';
+import {
+	group,
+	groupCapability,
+	groupMember,
+	groupSlugHistory
+} from '../../src/lib/server/db/schema/group';
 import { groupInvite } from '../../src/lib/server/db/schema/group-invite';
 import { db } from './db';
 import { pendingEntries, pendingSites, pendingTags } from './pending';
@@ -28,11 +33,19 @@ import { randomUUID } from 'crypto';
  * production drift that `scripts/backfill-band-owners.ts` had to repair.
  */
 export async function insertBandWithOwner(
-	values: typeof group.$inferInsert,
+	{
+		capabilityGrants = [],
+		...values
+	}: Omit<typeof group.$inferInsert, 'capabilityGrants'> & { capabilityGrants?: string[] },
 	ownerId: string,
 	position?: string
 ) {
 	const [b] = await db.insert(group).values(values).returning();
+	if (capabilityGrants.length > 0) {
+		await db
+			.insert(groupCapability)
+			.values(capabilityGrants.map((capability) => ({ groupId: b.id, capability })));
+	}
 	await db.insert(groupMember).values({
 		groupId: b.id,
 		userId: ownerId,

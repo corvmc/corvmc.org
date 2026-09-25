@@ -256,11 +256,7 @@ export const volunteerRole = sqliteTable('volunteer_role', {
 		.notNull()
 		.default(sql`'[]'`),
 
-	/**
-	 * Capabilities a confirmed signup in this role carries, for that shift's
-	 * event only. Entries must be on `grantableCapabilities`; the resolver ignores
-	 * any that have left the list since.
-	 */
+	/** Superseded by `volunteer_role_capability` (#1624); unread, and dropped next. */
 	capabilityGrants: text('capability_grants', { mode: 'json' })
 		.$type<string[]>()
 		.notNull()
@@ -273,6 +269,25 @@ export const volunteerRole = sqliteTable('volunteer_role', {
 		.notNull()
 		.default(sql`(unixepoch())`)
 });
+
+/**
+ * A capability a confirmed signup in this role carries, for that shift's event
+ * only. Must be on `grantableCapabilities`; the resolver ignores any that have
+ * left the list since.
+ */
+export const volunteerRoleCapability = sqliteTable(
+	'volunteer_role_capability',
+	{
+		volunteerRoleId: text('volunteer_role_id')
+			.notNull()
+			.references(() => volunteerRole.id, { onDelete: 'cascade' }),
+		capability: text('capability').notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [primaryKey({ columns: [t.volunteerRoleId, t.capability] })]
+);
 
 /**
  * A **work order**: a triaged, scoped piece of work for a role — "two Front
