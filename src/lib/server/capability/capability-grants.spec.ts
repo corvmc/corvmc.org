@@ -165,6 +165,15 @@ describe('roleGrantAllows', () => {
 		expect(params).toEqual(['event.uploadRecap', 'u-1', 'ev-1', 'confirmed', 'completed']);
 	});
 
+	it('lets crew file an incident for 7 days after the shift, and not on the 8th', async () => {
+		const sixDaysOn = new Date(showEnd.getTime() + 6 * day);
+		const eightDaysOn = new Date(showEnd.getTime() + 8 * day);
+		selectResults = [[shift()]];
+		expect(await roleGrantAllows('u-1', 'incident.file', 'ev-1', sixDaysOn)).toBe(true);
+		selectResults = [[shift()]];
+		expect(await roleGrantAllows('u-1', 'incident.file', 'ev-1', eightDaysOn)).toBe(false);
+	});
+
 	it('never reads for a capability no role may grant', async () => {
 		expect(await roleGrantAllows('u-1', 'sponsor.manage', 'ev-1', showEnd)).toBe(false);
 		expect(whereClauses).toHaveLength(0);
