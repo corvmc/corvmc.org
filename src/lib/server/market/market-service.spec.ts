@@ -34,6 +34,10 @@ const {
 	getMarketOwnerGroupId,
 	getVendorEventId,
 	listCommitteeMarkets,
+	listMarketDayVendors,
+	checkInVendor,
+	markVendorNoShow,
+	recordInviteBack,
 	MarketClosedError,
 	VendorTransitionError
 } = await import('./market-service');
@@ -258,7 +262,8 @@ describe('deciding', () => {
 			applied: 1,
 			accepted: 1,
 			declined: 0,
-			withdrawn: 0
+			withdrawn: 0,
+			no_show: 0
 		});
 	});
 });
@@ -330,5 +335,118 @@ describe('the committee that owns a market', () => {
 			{ eventId: EVENT, title: 'Autumn Market', startsAt: STARTS, toReview: 1 }
 		]);
 		expect(await listCommitteeMarkets('grp-other')).toEqual([]);
+	});
+});
+
+describe('market day: check-in, no-shows and invite-back (#1505)', () => {
+	let vendorId: string;
+	beforeEach(async () => {
+		insertEvent();
+		await openMarketDay(EVENT, { applicationsCloseAt: null, tableCount: 20 });
+		({ id: vendorId } = await submitApplication(EVENT, application, NOW));
+	});
+
+	const accept = () =>
+		decideApplication(vendorId, { decision: 'accepted', tableLabel: 'A1', message: 'In.' }, ACTOR);
+
+	it('checks in an accepted vendor, and can undo it', async () => {
+		await accept();
+		const at = new Date('2026-10-20T16:05:00Z');
+		expect(await checkInVendor(vendorId, true, at)).toEqual({ eventId: EVENT });
+		let [row] = await listMarketDayVendors(EVENT);
+		expect(row).toMatchObject({ status: 'accepted', tableLabel: 'A1', checkedInAt: at });
+
+		await checkInVendor(vendorId, false);
+		[row] = await listMarketDayVendors(EVENT);
+		expect(row.checkedInAt).toBeNull();
+	});
+
+	it('refuses to check in a vendor who was never accepted', async () => {
+		await expect(checkInVendor(vendorId, true)).rejects.toBeInstanceOf(VendorTransitionError);
+	});
+
+	it('marks an accepted vendor who never arrived a no-show, and back', async () => {
+		await accept();
+		await markVendorNoShow(vendorId, true);
+		expect((await listApplications(EVENT))[0].status).toBe('no_show');
+		expect(await listPublicVendors(EVENT)).toEqual([]);
+		expect((await getMarketDay(EVENT, NOW))?.counts.no_show).toBe(1);
+
+		await markVendorNoShow(vendorId, false);
+		expect((await listApplications(EVENT))[0].status).toBe('accepted');
+	});
+
+	it('will not call a vendor who checked in a no-show', async () => {
+		await accept();
+		await checkInVendor(vendorId, true);
+		await expect(markVendorNoShow(vendorId, true)).rejects.toBeInstanceOf(VendorTransitionError);
+	});
+
+	it('does not let a decision move a no-show', async () => {
+		await accept();
+		await markVendorNoShow(vendorId, true);
+		await expect(
+			decideApplication(vendorId, { decision: 'accepted', message: 'In.' }, ACTOR)
+		).rejects.toBeInstanceOf(VendorTransitionError);
+		expect(sent).toHaveBeenCalledTimes(1);
+	});
+
+	it('lists only accepted vendors and no-shows for the day, without contact detail', async () => {
+		await submitApplication(EVENT, { ...application, businessName: 'Pending Co' }, NOW);
+		await accept();
+		const rows = await listMarketDayVendors(EVENT);
+		expect(rows.map((r) => r.businessName)).toEqual(['Rosa Ceramics']);
+		expect(Object.keys(rows[0])).not.toContain('contactEmail');
+		expect(Object.keys(rows[0])).not.toContain('threadId');
+	});
+
+	it('records whether to invite a vendor back, with a note', async () => {
+		await accept();
+		await recordInviteBack(vendorId, { inviteBack: true, note: '  Sold out by two.  ' });
+		expect((await listMarketDayVendors(EVENT))[0]).toMatchObject({
+			inviteBack: true,
+			inviteBackNote: 'Sold out by two.'
+		});
+	});
+
+	it('refuses an invite-back record for a vendor who was not at the market', async () => {
+		await expect(
+			recordInviteBack(vendorId, { inviteBack: false, note: '' })
+		).rejects.toBeInstanceOf(VendorTransitionError);
+	});
+
+	it("shows the last market's invite-back record on the vendor's next application", async () => {
+		const LATER = 'evt-market-2';
+		const s = Math.floor(new Date('2026-12-05T17:00:00Z').getTime() / 1000);
+		sqlite.exec(
+			`insert into event_listing (id, title, starts_at, ends_at, status, source, kind, created_by_user_id)
+			 values ('${LATER}', 'Winter Market', ${s}, ${s + 3600}, 'published', 'cmc', 'show', 'staff-1')`
+		);
+		await openMarketDay(LATER, { applicationsCloseAt: null, tableCount: 20 });
+
+		await accept();
+		await markVendorNoShow(vendorId, true);
+		await recordInviteBack(vendorId, { inviteBack: false, note: 'Never came, never called.' });
+
+		// Same person, different capitalisation; and a stranger with no history.
+		const applyAt = new Date('2026-11-01T12:00:00Z');
+		await submitApplication(LATER, { ...application, contactEmail: 'Rosa@Example.com' }, applyAt);
+		await submitApplication(
+			LATER,
+			{ ...application, businessName: 'New Co', contactEmail: 'new@example.com' },
+			applyAt
+		);
+
+		const later = await listApplications(LATER);
+		expect(later.find((a) => a.businessName === 'Rosa Ceramics')?.previous).toEqual({
+			eventTitle: 'Autumn Market',
+			startsAt: STARTS,
+			status: 'no_show',
+			inviteBack: false,
+			note: 'Never came, never called.'
+		});
+		expect(later.find((a) => a.businessName === 'New Co')?.previous).toBeNull();
+		// The earlier market does not look forward.
+		expect((await listApplications(EVENT))[0].previous).toBeNull();
 	});
 });

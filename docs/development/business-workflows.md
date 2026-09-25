@@ -1590,19 +1590,34 @@ vendors are listed on the event page.
 - **Refunds:** CMC cancelling refunds through `refund()` — declining an accepted vendor who
   paid, or `event.cancelled` for the market (`refundMarketFees`). A vendor who withdraws is
   not refunded.
+- **Market day (#1505):** `/staff/events/[id]/vendors/check-in` and
+  `/member/groups/[slug]/markets/[eventId]/check-in` both render
+  `src/lib/components/market/VendorCheckIn.svelte` over `getMarketDayCheckIn`, which lists
+  accepted vendors and no-shows with no contact detail. `checkInVendorForm` stamps
+  `checked_in_at` on an accepted vendor, or clears it. `markNoShowForm` moves `accepted` to
+  `no_show` for a vendor not checked in, or back. No decision or withdrawal moves a no-show, and
+  its fee is kept. `inviteBackForm` records `invite_back` and a note on an accepted vendor or a
+  no-show. All three use the committee guard above, with staff as cover. Tables still move on
+  the staff vendors page (`setTableLabelForm`).
+- **Invite back on the next application:** `listApplications` attaches `previous`: the newest
+  invite-back record from a market that started earlier, matched on the thread's contact email,
+  ignoring case. Both applications views show it under the vendor.
 
 ### Data touched
 
 - `market_day`: one row per market listing, with the fee setup.
 - `market_vendor`: one row per application. It has no contact columns. The name, email and
   phone live on the linked `inbox_thread`. Fee columns: `fee_cents`, `fee_floor_cents`,
-  `paid_cents`, `paid_at`, `stripe_payment_record_id`, `refunded_at`.
+  `paid_cents`, `paid_at`, `stripe_payment_record_id`, `refunded_at`. Day-of columns:
+  `checked_in_at`, `invite_back` (null until someone says), `invite_back_note`.
 - `financial_entry`: `market_fees` earned and `card_fees` spent, subject `market_vendor`.
 
 ### Where it breaks
 
 - **A vendor was never told.** The decision is recorded even if the thread was deleted
   (`thread_id` set null). In that case no message is sent.
+- **A returning vendor shows no invite-back record.** The match is on email. A vendor who
+  applied from a different address looks new.
 - **Applications are open but nobody can apply.** Check that the listing is `published`. A
   draft market returns 404 on the apply page.
 

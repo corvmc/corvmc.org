@@ -11,7 +11,8 @@ import type { SeedUser } from './types';
  *
  * A vendor in every status, so each tab of /staff/events/[id]/vendors has rows,
  * plus the awkward ones: no website, two tables with power. Each has the web
- * thread its application opened, and a decided one has the staff reply.
+ * thread its application opened, and a decided one has the staff reply. A
+ * finished market before it carries invite-back records for two of them.
  */
 // $25 a table on a sliding scale down to $10 (#1502): one accepted vendor paid, one owes.
 const TABLE_FEE_CENTS = 2500;
@@ -122,7 +123,7 @@ export async function seedMarket(adminUser: SeedUser) {
 		status: 'open' as const,
 		subject: `Vendor application: ${v.business} — ${event.title}`,
 		contactName: v.contact,
-		contactEmail: `${v.contact.split(' ')[0].toLowerCase()}@example.com`,
+		contactEmail: email(v.contact),
 		preview: v.offering,
 		messageCount: v.status === 'accepted' || v.status === 'declined' ? 2 : 1,
 		lastMessageAt: new Date(Date.now() - (i + 1) * 3600_000)
@@ -175,5 +176,86 @@ export async function seedMarket(adminUser: SeedUser) {
 		}))
 	);
 
-	return { markets: 1, vendors: vendors.length };
+	const past = await seedPastMarket(adminUser);
+	return { markets: 2, vendors: vendors.length + past };
+}
+
+const email = (contact: string) => `${contact.split(' ')[0].toLowerCase()}@example.com`;
+
+/**
+ * Last summer's market, done (#1505): two vendors who applied to the fall one
+ * have an invite-back record here, one each way, so its applications tab shows
+ * both. Matched by email, which is why these reuse the fall contacts.
+ */
+async function seedPastMarket(adminUser: SeedUser): Promise<number> {
+	const startsAt = new Date(Date.now() - 70 * 24 * 3600_000);
+	startsAt.setUTCHours(17, 0, 0, 0);
+	const [event] = await db
+		.insert(eventListing)
+		.values({
+			title: 'Summer Makers Market',
+			startsAt,
+			endsAt: new Date(startsAt.getTime() + 5 * 3600_000),
+			status: 'published',
+			publishedAt: new Date(startsAt.getTime() - 30 * 24 * 3600_000),
+			source: 'cmc',
+			kind: 'market',
+			createdByUserId: adminUser.id
+		})
+		.returning({ id: eventListing.id, title: eventListing.title });
+	await db.insert(marketDay).values({ eventId: event.id, tableCount: 12 });
+
+	const past = [
+		{
+			v: vendors[2],
+			status: 'accepted',
+			table: 'A2',
+			arrived: true,
+			invite: true,
+			note: 'Sold out of mugs by two. Give them a corner.'
+		},
+		{
+			v: vendors[3],
+			status: 'no_show',
+			table: 'C1',
+			arrived: false,
+			invite: false,
+			note: 'Never arrived and never called.'
+		},
+		{ v: vendors[0], status: 'accepted', table: 'A1', arrived: true, invite: null, note: null }
+	] as const;
+
+	const threads = past.map(({ v }) => ({
+		id: randomUUID(),
+		channel: 'web' as const,
+		status: 'resolved' as const,
+		subject: `Vendor application: ${v.business} — ${event.title}`,
+		contactName: v.contact,
+		contactEmail: email(v.contact),
+		preview: v.offering,
+		messageCount: 1,
+		lastMessageAt: new Date(startsAt.getTime() - 20 * 24 * 3600_000)
+	}));
+	await batchInsert(inboxThread, threads);
+
+	await batchInsert(
+		marketVendor,
+		past.map((p, i) => ({
+			eventId: event.id,
+			threadId: threads[i].id,
+			businessName: p.v.business,
+			offering: p.v.offering,
+			website: p.v.website,
+			tablesRequested: p.v.tables,
+			needsPower: p.v.power,
+			status: p.status,
+			tableLabel: p.table,
+			decidedByUserId: adminUser.id,
+			decidedAt: new Date(startsAt.getTime() - 14 * 24 * 3600_000),
+			checkedInAt: p.arrived ? new Date(startsAt.getTime() - 30 * 60_000) : null,
+			inviteBack: p.invite,
+			inviteBackNote: p.note
+		}))
+	);
+	return past.length;
 }

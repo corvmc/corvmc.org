@@ -19,9 +19,13 @@ import {
 	getMarketEvent,
 	getMarketOwnerGroupId,
 	getVendorEventId,
+	checkInVendor,
 	listApplications,
 	listCommitteeMarkets,
+	listMarketDayVendors,
 	listPublicVendors,
+	markVendorNoShow,
+	recordInviteBack,
 	openMarketDay,
 	setTableLabel,
 	submitApplication,
@@ -248,3 +252,66 @@ export const withdrawVendorForm = form(z.object({ vendorId: z.string().min(1) })
 	void getStaffMarketVendors(id).refresh();
 	return { success: true };
 });
+
+// ---------------------------------------------------------------------------
+// Market day (#1505): the owning committee, or staff, work the door
+// ---------------------------------------------------------------------------
+
+/** The check-in page: accepted vendors and no-shows, with no contact detail. */
+export const getMarketDayCheckIn = query(eventId, async (id) => {
+	await requireMarketDecider(id);
+	const event = await getMarketEvent(id);
+	if (!event) error(404, 'Event not found');
+	const [market, vendors] = await Promise.all([getMarketDay(id), listMarketDayVendors(id)]);
+	if (!market) error(404, 'Not a market');
+	return { event, vendors };
+});
+
+const yesNo = z.enum(['yes', 'no']);
+
+async function requireVendorMarketDecider(vendorId: string) {
+	return requireMarketDecider(await getVendorEventId(vendorId));
+}
+
+function refreshMarket(id: string) {
+	void getMarketDayCheckIn(id).refresh();
+	void getStaffMarketVendors(id).refresh();
+	void getCommitteeMarketVendors(id).refresh();
+}
+
+export const checkInVendorForm = form(
+	z.object({ vendorId: z.string().min(1), arrived: yesNo }),
+	async (data) => {
+		await requireVendorMarketDecider(data.vendorId);
+		const { eventId: id } = await checkInVendor(data.vendorId, data.arrived === 'yes');
+		refreshMarket(id);
+		return { success: true };
+	}
+);
+
+export const markNoShowForm = form(
+	z.object({ vendorId: z.string().min(1), noShow: yesNo }),
+	async (data) => {
+		await requireVendorMarketDecider(data.vendorId);
+		const { eventId: id } = await markVendorNoShow(data.vendorId, data.noShow === 'yes');
+		refreshMarket(id);
+		return { success: true };
+	}
+);
+
+export const inviteBackForm = form(
+	z.object({
+		vendorId: z.string().min(1),
+		inviteBack: yesNo,
+		note: z.string().trim().max(LONG_TEXT_MAX).optional()
+	}),
+	async (data) => {
+		await requireVendorMarketDecider(data.vendorId);
+		const { eventId: id } = await recordInviteBack(data.vendorId, {
+			inviteBack: data.inviteBack === 'yes',
+			note: data.note ?? ''
+		});
+		refreshMarket(id);
+		return { success: true };
+	}
+);
