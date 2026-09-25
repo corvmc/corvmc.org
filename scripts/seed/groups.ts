@@ -71,13 +71,13 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			positions: ['Chair', 'Secretary', 'Member'],
 			memberCount: 3,
 			// Every committee's baseline (project status and duty lists, its own
-			// numbers), plus #1564's publish. Work orders ride along because its
-			// weekly holds are recurring work, which shares that capability.
+			// numbers), plus #1564's publish and its weekly holds as recurring work.
+			// Opening work orders is Production's, so Booking does not carry it.
 			capabilityGrants: [
 				'event.publish',
 				'finance.read',
 				'project.manage',
-				'volunteer.manageShifts'
+				'volunteer.manageRecurring'
 			],
 			announcements: [
 				{

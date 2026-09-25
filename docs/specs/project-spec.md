@@ -284,7 +284,8 @@ window-materializer like `recurring_series` can.
 > copies; the shift form carries the same picker, so any work order can name one.
 >
 > A committee keeps its own schedules (`group_id`, #1512) from the Projects tab of
-> `/member/groups/[slug]`, guarded by `requireCommitteeMember(…, 'volunteer.manageShifts')`.
+> `/member/groups/[slug]`, guarded by `requireCommitteeMember(…, 'volunteer.manageRecurring')`. Opening a one-off
+> work order stays on `volunteer.manageShifts` (#1642).
 
 ## Vocabulary
 
