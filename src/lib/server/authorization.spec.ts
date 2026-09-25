@@ -301,6 +301,24 @@ describe('grants beyond positions', () => {
 		).rejects.toMatchObject({ status: 403 });
 	});
 
+	it('lets a seat on a committee granted ballot.manage run member-wide ballots', async () => {
+		asUser('gov-1');
+		committeeGrantsFor.mockResolvedValue([{ groupId: 'gov', capabilities: ['ballot.manage'] }]);
+		await expect(requireCapability('ballot.manage')).resolves.toMatchObject({ id: 'gov-1' });
+		expect(await committeeCapabilitiesFor('gov-1')).toContain('ballot.manage');
+	});
+
+	it('refuses ballot.manage to a seat, or a role grant, that does not carry it', async () => {
+		asUser();
+		committeeGrantsFor.mockResolvedValue(devSeat);
+		roleGrantAllows.mockResolvedValue(true);
+		await expect(requireCapability('ballot.manage')).rejects.toMatchObject({ status: 403 });
+		await expect(requireCapability('ballot.manage', { eventId: 'ev-1' })).rejects.toMatchObject({
+			status: 403
+		});
+		expect(roleGrantAllows).not.toHaveBeenCalled();
+	});
+
 	it('extends userHasCapability the same way, without a request', async () => {
 		queryResults = [];
 		committeeGrantsFor.mockResolvedValue(devSeat);

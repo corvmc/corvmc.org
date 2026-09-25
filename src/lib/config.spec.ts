@@ -68,6 +68,12 @@ describe('the grantable-capability allowlist', () => {
 		expect(grantableBy('committee')).toContain('sponsor.manage');
 		expect(grantableBy('committee')).not.toContain('event.uploadRecap');
 	});
+
+	it('lets a committee, and never a volunteer role, run member-wide ballots', () => {
+		expect(grantableCapabilities['ballot.manage']).toMatchObject({ committee: 'org' });
+		expect(grantableBy('committee')).toContain('ballot.manage');
+		expect(grantableBy('role')).not.toContain('ballot.manage');
+	});
 });
 
 describe('the capability matrix', () => {
