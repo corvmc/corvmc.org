@@ -1,5 +1,5 @@
 import { eventListing } from '../../src/lib/server/db/schema/event';
-import { production } from '../../src/lib/server/db/schema/production';
+import { insertShowProductions, syncShowProjects } from './show-project';
 import { ticketSale } from '../../src/lib/server/db/schema/ticket';
 import { claimRoom } from './room';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
@@ -67,7 +67,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		// The show holds its own room (#855). Minted here so the hold can name it
 		// before either row exists, the ordering event-service.create() uses.
 		const productionId = crypto.randomUUID();
-		await db.insert(production).values({ id: productionId, createdByUserId });
+		await insertShowProductions([{ id: productionId, createdByUserId }]);
 
 		const [r] = await db
 			.insert(reservation)
@@ -431,6 +431,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		where booker_type = 'event_listing'
 			and exists (select 1 from event_listing where event_listing.reservation_id = reservation.id)
 	`);
+	await syncShowProjects();
 
 	return rows;
 }

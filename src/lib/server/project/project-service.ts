@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { project } from '$lib/server/db/schema/project';
+import { project, projectCommittee } from '$lib/server/db/schema/project';
 import { group } from '$lib/server/db/schema/group';
 import { suggestion } from '$lib/server/db/schema/suggestion';
 import { workOrder, volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
@@ -106,8 +106,25 @@ export async function createProject(data: CreateProjectInput) {
 	if (data.groupId) await assertCommittee(data.groupId);
 	if (data.suggestionId) await assertClaimableSuggestion(data.suggestionId);
 
-	const [row] = await db.insert(project).values(data).returning();
-	return row;
+	const id = crypto.randomUUID();
+	const insert = db.insert(project).values({ ...data, id });
+	if (data.groupId) {
+		await db.batch([insert, ownerRow(id, data.groupId)]);
+	} else {
+		await insert;
+	}
+	return getProjectById(id);
+}
+
+/** `project.group_id`'s twin in `project_committee`, kept in step until the column goes. */
+function ownerRow(projectId: string, groupId: string) {
+	return db
+		.insert(projectCommittee)
+		.values({ projectId, groupId, role: 'owner' })
+		.onConflictDoUpdate({
+			target: [projectCommittee.projectId, projectCommittee.groupId],
+			set: { role: 'owner' }
+		});
 }
 
 export async function updateProject(id: string, data: Partial<CreateProjectInput>) {
@@ -115,12 +132,21 @@ export async function updateProject(id: string, data: Partial<CreateProjectInput
 	if (data.groupId) await assertCommittee(data.groupId);
 	if (data.suggestionId) await assertClaimableSuggestion(data.suggestionId, id);
 
-	const [row] = await db
+	const update = db
 		.update(project)
 		.set({ ...data, updatedAt: new Date() })
-		.where(eq(project.id, id))
-		.returning();
-	return row;
+		.where(eq(project.id, id));
+	if (data.groupId !== undefined) {
+		const dropOwner = db
+			.delete(projectCommittee)
+			.where(and(eq(projectCommittee.projectId, id), eq(projectCommittee.role, 'owner')));
+		await db.batch(
+			data.groupId ? [update, dropOwner, ownerRow(id, data.groupId)] : [update, dropOwner]
+		);
+	} else {
+		await update;
+	}
+	return getProjectById(id);
 }
 
 /**

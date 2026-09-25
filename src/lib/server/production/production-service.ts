@@ -10,6 +10,7 @@ import { dutyList, workOrder, workTask } from '$lib/server/db/schema/volunteer';
 import { DomainError } from '$lib/server/domain-error';
 import type { Production, ProductionStatus } from '$lib/server/db/schema/production';
 import { recomputeSetTimes } from './run-of-show-service';
+import { createShowProject, deleteShowProject } from './production-project';
 
 /**
  * The ops half of a show.
@@ -212,34 +213,43 @@ export async function createProduction(
 	opts?: { createdByUserId?: string; id?: string }
 ): Promise<Production> {
 	const [listing] = await db
-		.select({ source: eventListing.source })
+		.select({
+			source: eventListing.source,
+			title: eventListing.title,
+			startsAt: eventListing.startsAt,
+			endsAt: eventListing.endsAt
+		})
 		.from(eventListing)
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
 	if (!listing) throw new ListingNotFoundError();
 	if (listing.source !== 'cmc') throw new NotACmcListingError(listing.source);
 
-	const [row] = await db
-		.insert(production)
-		.values({
-			...(opts?.id ? { id: opts.id } : {}),
-			createdByUserId: opts?.createdByUserId ?? null
-		})
-		.returning();
+	const productionId = opts?.id ?? crypto.randomUUID();
+	const projectId = crypto.randomUUID();
+	await createShowProject({
+		productionId,
+		projectId,
+		name: listing.title,
+		startsAt: listing.startsAt,
+		endsAt: listing.endsAt,
+		createdByUserId: opts?.createdByUserId ?? null
+	});
 
 	// The listing names what it announces, so claiming it is the write that can
-	// lose. If it does, the production just written has nothing announcing it and
-	// is removed rather than left as a shell nothing can reach.
+	// lose. If it does, the rows just written have nothing announcing them and are
+	// removed rather than left as a shell nothing can reach.
 	const claimed = await db
 		.update(eventListing)
-		.set({ productionId: row.id, updatedAt: new Date() })
+		.set({ productionId, projectId, updatedAt: new Date() })
 		.where(and(eq(eventListing.id, eventId), isNull(eventListing.productionId)));
 
 	if (getRowCount(claimed) === 0) {
-		await db.delete(production).where(eq(production.id, row.id));
+		await deleteShowProject(productionId);
 		throw new ProductionExistsError();
 	}
 
+	const [row] = await db.select().from(production).where(eq(production.id, productionId));
 	return row;
 }
 

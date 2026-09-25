@@ -178,9 +178,10 @@ describe('applyDutyList', () => {
 				load_out_by: LOAD_OUT
 			};
 			const names = cols.split(',').map((c) => c.trim());
+			sqlite.exec(`INSERT INTO project (id, name, kind) VALUES ('proj-1', 'Show', 'production')`);
 			sqlite.exec(
-				`INSERT INTO production (id, status, ${names.join(', ')})
-				 VALUES ('prod-1','confirmed', ${names.map((n) => vals[n as keyof typeof vals]).join(', ')})`
+				`INSERT INTO production (id, status, project_id, ${names.join(', ')})
+				 VALUES ('prod-1','confirmed', 'proj-1', ${names.map((n) => vals[n as keyof typeof vals]).join(', ')})`
 			);
 			// The listing names what it announces (#1202).
 			sqlite.exec(`UPDATE event_listing SET production_id = 'prod-1' WHERE id = 'evt-1'`);

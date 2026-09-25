@@ -69,6 +69,14 @@ vi.mock('./run-of-show-service', () => ({
 	recomputeSetTimes: (id: string) => recomputeSetTimes(id)
 }));
 
+// The show's project is its own module's business, with its own spec.
+const createShowProject = vi.fn();
+const deleteShowProject = vi.fn();
+vi.mock('./production-project', () => ({
+	createShowProject: (input: unknown) => createShowProject(input),
+	deleteShowProject: (id: string) => deleteShowProject(id)
+}));
+
 import {
 	createProduction,
 	getProductionByEvent,
@@ -117,18 +125,17 @@ describe('createProduction', () => {
 		returningRows = [{ id: 'prod-1', status: 'draft' }];
 		updateRowCount = 1;
 
-		await createProduction('evt-1', { createdByUserId: 'staff-1' });
+		await createProduction('evt-1', { createdByUserId: 'staff-1', id: 'prod-1' });
 
-		const values = calls.find((c) => c.method === 'values')?.args[0] as Record<string, unknown>;
-		expect(values).toMatchObject({ createdByUserId: 'staff-1' });
-		// Status is the column default, not something the service restates. The
-		// event id is not here at all any more: the listing names the production
-		// it announces, not the reverse (#1202).
-		expect(values).not.toHaveProperty('status');
-		expect(values).not.toHaveProperty('eventId');
+		// Every production is a project: both, and the committees, in one batch.
+		expect(createShowProject).toHaveBeenCalledWith(
+			expect.objectContaining({ productionId: 'prod-1', createdByUserId: 'staff-1' })
+		);
+		const { projectId } = createShowProject.mock.calls[0][0] as { projectId: string };
 
+		// The listing names the production it announces and the project it belongs to.
 		const set = calls.find((c) => c.op === 'update' && c.method === 'set')?.args[0];
-		expect(set).toMatchObject({ productionId: 'prod-1' });
+		expect(set).toMatchObject({ productionId: 'prod-1', projectId });
 	});
 
 	// The 1:1 is held by the conditional update — the listing takes a production
@@ -149,8 +156,10 @@ describe('createProduction', () => {
 		returningRows = [{ id: 'prod-2', status: 'draft' }];
 		updateRowCount = 0;
 
-		await expect(createProduction('evt-1')).rejects.toThrow(ProductionExistsError);
-		expect(calls.some((c) => c.op === 'delete')).toBe(true);
+		await expect(createProduction('evt-1', { id: 'prod-2' })).rejects.toThrow(
+			ProductionExistsError
+		);
+		expect(deleteShowProject).toHaveBeenCalledWith('prod-2');
 	});
 
 	// A production is the ops record for a show CMC puts on. Roughly nine in ten
@@ -162,14 +171,14 @@ describe('createProduction', () => {
 		selectQueue = listingSource(source);
 
 		await expect(createProduction('evt-1')).rejects.toThrow(NotACmcListingError);
-		expect(db.insert).not.toHaveBeenCalled();
+		expect(createShowProject).not.toHaveBeenCalled();
 	});
 
 	it('reports a listing that does not exist as not found', async () => {
 		selectQueue = [[]];
 
 		await expect(createProduction('evt-1')).rejects.toThrow(ListingNotFoundError);
-		expect(db.insert).not.toHaveBeenCalled();
+		expect(createShowProject).not.toHaveBeenCalled();
 	});
 });
 

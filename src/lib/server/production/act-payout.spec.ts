@@ -56,7 +56,11 @@ async function seed(opts: { poolCents?: number; guaranteeCents?: number | null }
 		// The listing names the production it announces (#1202).
 		productionId: PROD
 	} as never);
-	await testDb.insert(production).values({ id: PROD, status: 'completed' } as never);
+	const { project } = await import('$lib/server/db/schema/project');
+	await testDb.insert(project).values({ id: 'proj-1', name: 'A show', kind: 'production' });
+	await testDb
+		.insert(production)
+		.values({ id: PROD, status: 'completed', projectId: 'proj-1' } as never);
 	await testDb.insert(productionSlot).values({
 		id: SLOT,
 		productionId: PROD,
@@ -82,7 +86,14 @@ async function seed(opts: { poolCents?: number; guaranteeCents?: number | null }
 }
 
 beforeEach(async () => {
-	for (const t of ['financial_entry', 'production_slot', 'production', 'event_listing', 'user']) {
+	for (const t of [
+		'financial_entry',
+		'production_slot',
+		'production',
+		'project',
+		'event_listing',
+		'user'
+	]) {
 		sqlite.exec(`delete from ${t}`);
 	}
 });

@@ -1,9 +1,17 @@
-import { sqliteTable, text, integer, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
+import {
+	sqliteTable,
+	text,
+	integer,
+	index,
+	uniqueIndex,
+	check,
+	primaryKey
+} from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
 import { group } from './group';
 import { suggestion } from './suggestion';
-import { projectStatuses } from '../../../config';
+import { projectCommitteeRoles, projectKinds, projectStatuses } from '../../../config';
 
 /**
  * A **project**: a body of work with a budget and an owner —
@@ -38,6 +46,9 @@ export const project = sqliteTable(
 		description: text('description'),
 
 		status: text('status', { enum: projectStatuses }).notNull().default('open'),
+
+		/** `'production'` when a `production` row specialises this one. Never changes after. */
+		kind: text('kind', { enum: projectKinds }).notNull().default('general'),
 
 		/**
 		 * The owning committee: a `group` with `kind = 'committee'`, enforced by
@@ -74,6 +85,7 @@ export const project = sqliteTable(
 	(t) => [
 		index('idx_project_group').on(t.groupId),
 		index('idx_project_status').on(t.status),
+		index('idx_project_kind').on(t.kind),
 		// Partial, and in the table config rather than `.unique()` on the column:
 		// a nullable `.unique()` emits no constraint at all on this drizzle, and
 		// the partial form is what lets many projects have no suggestion while one
@@ -93,3 +105,34 @@ export const project = sqliteTable(
 
 export type Project = typeof project.$inferSelect;
 export type NewProject = typeof project.$inferInsert;
+
+/**
+ * The committees taking part in a project, and why. Replaces the single owner
+ * in `project.group_id`: a show has Booking and Production both.
+ *
+ * A committee grant with `'owned'` reach resolves against every project its
+ * committee has a row here for. `role` records why it is there and grants
+ * nothing. `group_id` must be a committee, checked by the service.
+ */
+export const projectCommittee = sqliteTable(
+	'project_committee',
+	{
+		projectId: text('project_id')
+			.notNull()
+			.references(() => project.id, { onDelete: 'cascade' }),
+		groupId: text('group_id')
+			.notNull()
+			.references(() => group.id, { onDelete: 'cascade' }),
+		role: text('role', { enum: projectCommitteeRoles }).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		primaryKey({ columns: [t.projectId, t.groupId] }),
+		index('idx_project_committee_group').on(t.groupId)
+	]
+);
+
+export type ProjectCommittee = typeof projectCommittee.$inferSelect;
+export type NewProjectCommittee = typeof projectCommittee.$inferInsert;

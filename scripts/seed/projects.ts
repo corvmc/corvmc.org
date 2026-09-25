@@ -11,7 +11,7 @@ import { acquisition, purchaseOrder } from '../../src/lib/server/db/schema/inven
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { batchInsert, db } from './db';
 import { randomUUID } from 'crypto';
-import { asc, eq, sql } from 'drizzle-orm';
+import { asc, eq, isNull, sql } from 'drizzle-orm';
 import type { SeedEvent } from './types';
 
 /**
@@ -212,12 +212,21 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 
 	// --- The festival's two nights -------------------------------------------
 
+	// Only listings with no production: a show's listing names its own project
+	// (production-projects-spec.md), and a festival over shows is deferred.
+	const free = await db
+		.select({ id: eventListing.id })
+		.from(eventListing)
+		.where(isNull(eventListing.productionId));
+	const unproduced = new Set(free.map((r) => r.id));
 	const upcoming = events
-		.filter((e) => e.status === 'published' && e.startsAt >= now)
+		.filter((e) => e.status === 'published' && e.startsAt >= now && unproduced.has(e.id))
 		.slice(0, 2)
 		.map((e) => e.id);
 	// A third night still in draft, so Booking has something to publish from its own page.
-	const draft = events.find((e) => e.status === 'draft' && e.startsAt >= now);
+	const draft = events.find(
+		(e) => e.status === 'draft' && e.startsAt >= now && unproduced.has(e.id)
+	);
 	if (draft) upcoming.push(draft.id);
 	for (const id of upcoming) {
 		await db.update(eventListing).set({ projectId: ids.festival }).where(eq(eventListing.id, id));
