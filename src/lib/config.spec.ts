@@ -74,6 +74,13 @@ describe('the grantable-capability allowlist', () => {
 		expect(positionsGranting('volunteer.manageShifts')).toContain('volunteer_coordinator');
 	});
 
+	it('keeps crew incident filing open for a week after the shift (#1641)', () => {
+		expect(grantableCapabilities['incident.file']).toEqual({
+			label: expect.any(String),
+			role: { graceDays: 7 }
+		});
+	});
+
 	it('splits the list by carrier', () => {
 		expect(grantableBy('role')).toContain('event.uploadRecap');
 		expect(grantableBy('role')).not.toContain('sponsor.manage');

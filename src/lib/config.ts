@@ -2328,7 +2328,7 @@ export type GrantRule = {
  */
 export const grantableCapabilities = {
 	'event.uploadRecap': { label: 'Upload recap photos', role: { graceDays: 7 } },
-	'incident.file': { label: 'File an incident report for the show', role: { graceDays: 2 } },
+	'incident.file': { label: 'File an incident report for the show', role: { graceDays: 7 } },
 	'sponsor.read': { label: 'See sponsors', committee: 'org' },
 	'sponsor.manage': { label: 'Manage sponsors', committee: 'org' },
 	'grant.read': { label: 'See grants', committee: 'org' },
