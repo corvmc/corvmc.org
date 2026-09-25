@@ -26,6 +26,7 @@
 		tapToPayBridge,
 		type TapToPayBridge
 	} from '$lib/door/tap-to-pay';
+	import { capacityNote } from '$lib/door/capacity';
 	import DoorSaleStatus from './DoorSaleStatus.svelte';
 
 	/**
@@ -44,6 +45,8 @@
 	let busy = $state(false);
 	let tapError = $state<string | null>(null);
 	let freeLetIn = $state<number | null>(null);
+	let chosenEventId = $state<string | undefined>();
+	let quantity = $state<number | undefined>(1);
 
 	function reset() {
 		sale = null;
@@ -107,6 +110,9 @@
 	const eventOptions = $derived(
 		door.events.map((e) => ({ value: e.id, label: `${e.title} · ${formatTime(e.startsAt)}` }))
 	);
+	// Capacity only warns (#1631): past zero the person at the door decides.
+	const chosen = $derived(door.events.find((e) => e.id === chosenEventId) ?? door.events[0]);
+	const capacity = $derived(chosen ? capacityNote(chosen.remaining, quantity || 1) : null);
 </script>
 
 <svelte:head>
@@ -167,9 +173,19 @@
 				label="Show"
 				type="select"
 				options={eventOptions}
+				bind:value={chosenEventId}
 				required
 			/>
-			<FormField field={fields.quantity} label="How many" type="number" value={1} required />
+			<FormField
+				field={fields.quantity}
+				label="How many"
+				type="number"
+				bind:value={quantity}
+				required
+			/>
+			{#if capacity}
+				<Alert type={capacity.level}>{capacity.text}</Alert>
+			{/if}
 			<MoneyField
 				field={fields.unitPriceCents}
 				label="Each ticket"
@@ -189,7 +205,11 @@
 				<p class="text-muted">
 					{event.title}: suggested {formatCents(event.suggestedCents)}{event.floorCents
 						? `, floor ${formatCents(event.floorCents)}`
-						: ''}{event.remaining !== null ? `, ${event.remaining} left` : ''}.
+						: ''}{event.remaining !== null && event.remaining >= 0
+						? `, ${event.remaining} left`
+						: ''}{event.remaining !== null && event.remaining < 0
+						? `, over capacity by ${-event.remaining}`
+						: ''}.
 					{#if event.onlineSales}
 						They can buy on their own phone at
 						<a class="link" href={resolve(`/events/${event.id}`)}>corvmc.org/events/{event.id}</a>.

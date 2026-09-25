@@ -158,10 +158,14 @@ describe('starting a door sale', () => {
 		await expect(start({ eventId: 'floored', unitPriceCents: 900 })).rejects.toThrow(/at least/);
 	});
 
-	it('refuses more than capacity has left', async () => {
+	it('sells past capacity, and the door then reads how far over it is', async () => {
 		listing('capped', 'cmc', at(1));
 		sale('capped', { price: 1000, qty: 1 });
-		await expect(start({ eventId: 'capped', quantity: 2 })).rejects.toThrow(/left/);
+		const result = await start({ eventId: 'capped', quantity: 3, unitPriceCents: 1000 });
+		if (result.kind !== 'card') throw new Error('expected a card sale');
+		await fulfillDoorSale(completeFakeTerminalPayment(result.paymentIntentId));
+		const capped = (await listDoorEvents(NOW)).find((e) => e.id === 'capped');
+		expect(capped?.remaining).toBe(-2);
 	});
 });
 

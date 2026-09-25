@@ -657,7 +657,8 @@ way, and the landing PR does not open. **This gates the landing PR, not the bran
 Location config, and the guarded connection-token remote. Everything here can be automated.
 
 **Phase 2: the door screen.** Pick a collective-sold event, choose a quantity and a price per
-ticket, then take the payment. Rows are minted `pending` on intent creation and flipped to
+ticket, then take the payment. The screen shows the tickets remaining and warns, without refusing,
+when a sale goes past capacity (#1631). Rows are minted `pending` on intent creation and flipped to
 `checked_in` by the `payment_intent.succeeded` handler, which also writes the ledger rows. Free
 and below-minimum sales mint `checked_in` at once. A browser without the plugin gets the same
 screen with the tap disabled and the card-not-present path offered. Extend `scripts/seed-dev.ts`,
@@ -742,7 +743,9 @@ app, and take one simulated test payment before the doors open.
 4. **Whose phone is it, and is there a backup?** #1632.
 5. **Door sales for band-sold gigs.** #1629. Until it is answered, only collective-sold shows are
    offered.
-6. **Does a door sale count against capacity?** #1631. Until it is answered, the door refuses a
-   sale above `ticket_sale.quantity`.
+6. **Does a door sale count against capacity?** Settled by #1631 (owner, 2026-09-25): it counts,
+   and it only warns. The door screen shows the tickets remaining under `ticket_sale.quantity`;
+   past zero it warns "over capacity by N" and still takes the sale, because the person at the door
+   decides. There is no separate door allocation and no schema change.
 7. **Does CMC want an S700 for the unattended cases?** #1632. "No" closes #612 outright when this
    ships. "Yes" means a second spec, a hardware purchase, and the tipping question coming back.
