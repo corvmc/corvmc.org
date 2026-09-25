@@ -15,6 +15,8 @@ export const tableOrder = [
 	// References user, group and suggestion. Must precede everything that carries
 	// `project_id`: work_order, contractor_job, purchase_order, acquisition, event.
 	'project',
+	// References project and group.
+	'project_committee',
 	// References user and group; parent of directory_tag.
 	'directory_entry',
 	// References group.

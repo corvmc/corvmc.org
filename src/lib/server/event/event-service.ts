@@ -56,6 +56,7 @@ import { memberRefColumns } from '$lib/server/entity/refs';
 import type { EventStatus } from '$lib/server/db/schema/event';
 import { staffCreate, adjustWindow } from '$lib/server/reservation/reservation-service';
 import { createProduction, getProductionByEvent } from '$lib/server/production/production-service';
+import { createShowProject, deleteShowProject } from '$lib/server/production/production-project';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { captureException } from '$lib/server/sentry';
@@ -333,6 +334,8 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	// id is minted here rather than by `createProduction` because the room is
 	// booked before the listing exists, and the booker has to name the show.
 	const productionId = kind === 'show' ? crypto.randomUUID() : null;
+	// Every production is a project, and the listing names it too.
+	const showProjectId = productionId ? crypto.randomUUID() : null;
 
 	let reservationId: string | null = null;
 	if (reservationParams) {
@@ -370,8 +373,15 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	//
 	// Every CMC show gets one, room or no room: the back-of-house is what a show
 	// is, and leaving it to a button is why every show before 2026-09-04 has none.
-	if (productionId) {
-		await db.insert(production).values({ id: productionId, createdByUserId });
+	if (productionId && showProjectId) {
+		await createShowProject({
+			productionId,
+			projectId: showProjectId,
+			name: title,
+			startsAt,
+			endsAt,
+			createdByUserId
+		});
 	}
 
 	let row: EventRow;
@@ -391,6 +401,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				location: location ?? null,
 				groupId: groupId ?? null,
 				productionId,
+				...(showProjectId ? { projectId: showProjectId } : {}),
 				reservationId,
 				createdByUserId
 			})
@@ -410,7 +421,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		}
 		if (productionId) {
 			try {
-				await db.delete(production).where(eq(production.id, productionId));
+				await deleteShowProject(productionId);
 			} catch (cleanupErr) {
 				captureException(cleanupErr, { event: 'event.create.compensate', productionId });
 			}

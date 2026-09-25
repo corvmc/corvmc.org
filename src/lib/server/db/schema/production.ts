@@ -10,6 +10,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { eventBand } from './event';
 import { user } from './authentication';
+import { project } from './project';
 import { productionExpenseCategories } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -75,6 +76,17 @@ export const production = sqliteTable(
 		 * that should never have existed.
 		 */
 		status: text('status', { enum: productionStatuses }).notNull().default('draft'),
+
+		/**
+		 * The project this production specialises (`project.kind = 'production'`):
+		 * budget, burn, dates and committees live there. Written in the same batch
+		 * as this row. Restrict: a show's project is not deleted out from under it.
+		 *
+		 * Required by the `production_project_required` triggers rather than NOT
+		 * NULL: tightening the column is a rebuild that drags fourteen cascade
+		 * children, `ticket` and `work_order` among them, through D1.
+		 */
+		projectId: text('project_id').references(() => project.id, { onDelete: 'restrict' }),
 
 		/** Who is running the night. Not a capability — the matrix names no such position. */
 		producerUserId: text('producer_user_id').references(() => user.id, { onDelete: 'set null' }),
@@ -158,6 +170,7 @@ export const production = sqliteTable(
 		// The 1:1, stated by the database rather than by the service remembering.
 		// It also serves the join the productions index does on every page load.
 
+		uniqueIndex('uq_production_project').on(t.projectId),
 		index('idx_production_status').on(t.status),
 		index('idx_production_producer').on(t.producerUserId),
 		// Passes on NULL, like every other CHECK here — most productions carry

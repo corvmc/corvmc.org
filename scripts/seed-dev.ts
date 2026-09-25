@@ -99,6 +99,7 @@ import { seedModerationAppeals } from './seed/moderation-appeals';
 import { seedClassifieds } from './seed/classifieds';
 import { seedWishlistPledges } from './seed/wishlist-pledges';
 import { seedProjects } from './seed/projects';
+import { seedProjectCommittees } from './seed/show-project';
 import { seedMaintenanceSchedules } from './seed/maintenance';
 import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
@@ -291,6 +292,8 @@ async function main() {
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
+	// After the committees and every show exist: owners, and Booking and Production on each show.
+	const projectCommittees = await seedProjectCommittees();
 	const maintenance = await seedMaintenanceSchedules(adminUser.id, users[0]?.id);
 	// Needs the bands and somebody to have bought something. Writes real audio
 	// into the local private bucket, so it is the one seeder that does I/O
@@ -411,6 +414,9 @@ async function main() {
 	console.log(`  ${pledges.pledges} wishlist pledges (2 open, 1 expired, 1 released, 1 fulfilled)`);
 	console.log(
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
+	);
+	console.log(
+		`  ${projectCommittees} project committee rows (owners, and Booking and Production on each show)`
 	);
 	console.log(
 		`  ${maintenance.schedules} recurring work schedules (1 overdue, 1 retired, 1 assigned, 1 a committee's)`

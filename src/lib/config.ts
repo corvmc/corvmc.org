@@ -1709,6 +1709,38 @@ export type ProjectStatus = (typeof projectStatuses)[number];
 export const projectStatusLabels = suggestionStatusLabels;
 export const projectStatusOptions = suggestionStatusOptions;
 
+/**
+ * A `'production'` project is the generic half of a show: its production row
+ * carries the show layer and points back here, one to one.
+ * See docs/specs/production-projects-spec.md.
+ */
+export const projectKinds = ['general', 'production'] as const;
+export type ProjectKind = (typeof projectKinds)[number];
+
+export const projectKindLabels: Record<ProjectKind, string> = {
+	general: 'General',
+	production: 'Production'
+};
+
+/**
+ * Why a committee takes part in a project. A label only: what its members may
+ * do there is the committee's own grant list, whatever the role.
+ */
+export const projectCommitteeRoles = ['owner', 'booking', 'production'] as const;
+export type ProjectCommitteeRole = (typeof projectCommitteeRoles)[number];
+
+export const projectCommitteeRoleLabels: Record<ProjectCommitteeRole, string> = {
+	owner: 'Owner',
+	booking: 'Booking',
+	production: 'Production'
+};
+
+/** The committees every show is created with, by slug. A missing one is skipped. */
+export const showCommitteeSlugs = {
+	booking: 'booking-committee',
+	production: 'production-committee'
+} as const satisfies Partial<Record<ProjectCommitteeRole, string>>;
+
 // ---------------------------------------------------------------------------
 // Tech riders
 // ---------------------------------------------------------------------------
