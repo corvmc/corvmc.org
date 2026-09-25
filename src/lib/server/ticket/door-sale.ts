@@ -86,7 +86,13 @@ export async function listDoorEvents(now = new Date()): Promise<DoorEvent[]> {
 
 export type DoorSaleStart =
 	| { kind: 'free'; purchaseId: string; quantity: number }
-	| { kind: 'card'; paymentIntentId: string; clientSecret: string; chargeCents: number };
+	| {
+			kind: 'card';
+			eventId: string;
+			paymentIntentId: string;
+			clientSecret: string;
+			chargeCents: number;
+	  };
 
 /**
  * Price a door sale and either let them in free or open a card-present intent.
@@ -158,6 +164,7 @@ export async function startDoorSale(input: {
 	await createTickets({ ...tickets, purchaseId: intent.id, status: 'pending' });
 	return {
 		kind: 'card',
+		eventId,
 		paymentIntentId: intent.id,
 		clientSecret: intent.client_secret ?? '',
 		chargeCents: split.chargeCents
@@ -205,6 +212,16 @@ export async function cancelDoorSale(paymentIntentId: string): Promise<void> {
 	if (intent.status === 'succeeded') throw new DoorSaleError('That card has already been charged');
 	if (intent.status !== 'canceled') await stripe.paymentIntents.cancel(paymentIntentId);
 	await cancelPurchase(paymentIntentId);
+}
+
+/**
+ * The show a door sale was for, which decides who may act on it: null when the
+ * id is not a door purchase. Online purchase ids are bare UUIDs, never `pi_`.
+ */
+export async function doorSaleEventId(purchaseId: string): Promise<string | null> {
+	if (!purchaseId.startsWith('pi_')) return null;
+	const [row] = await getTicketsByPurchase(purchaseId);
+	return row?.eventId ?? null;
 }
 
 export type DoorSaleStatus = 'pending' | 'paid' | 'cancelled';

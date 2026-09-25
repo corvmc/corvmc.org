@@ -2319,11 +2319,13 @@ export type GrantRule = {
 
 /**
  * The allowlist: the only capabilities a volunteer role or a committee may
- * carry. Admin-only and money-moving capabilities never go here; `config.spec.ts`
+ * carry. Admin-only capabilities and refunds never go here; `config.spec.ts`
  * fails on one, and the grant service refuses anything missing from this list.
  */
 export const grantableCapabilities = {
 	'event.uploadRecap': { label: 'Upload recap photos', role: { graceDays: 7 } },
+	// The door shift takes card payments for its own show, during the shift (#1630).
+	'finance.collect': { label: 'Take card payments at the door', role: { graceDays: 0 } },
 	'sponsor.read': { label: 'See sponsors', committee: 'org' },
 	'sponsor.manage': { label: 'Manage sponsors', committee: 'org' },
 	'grant.read': { label: 'See grants', committee: 'org' },
