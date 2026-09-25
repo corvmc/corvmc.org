@@ -2066,7 +2066,9 @@ export const capabilities = {
 	contractor: ['read', 'manage', 'recordInvoice'],
 	// Its own resource, not `moderation`: an incident report can name a member,
 	// and who may read one is a decision separate from who reviews flags.
-	incident: ['read', 'record'],
+	// `file` is the crew's own report from a show (#1469): held for one event
+	// through a volunteer-role grant, never as a position's standing power.
+	incident: ['read', 'record', 'file'],
 	sponsor: ['read', 'manage'],
 	grant: ['read', 'manage'],
 	// CMC's own permits, licenses and policies. Not `contractor`: a contractor's
@@ -2321,6 +2323,7 @@ export type GrantRule = {
  */
 export const grantableCapabilities = {
 	'event.uploadRecap': { label: 'Upload recap photos', role: { graceDays: 7 } },
+	'incident.file': { label: 'File an incident report for the show', role: { graceDays: 2 } },
 	'sponsor.read': { label: 'See sponsors', committee: 'org' },
 	'sponsor.manage': { label: 'Manage sponsors', committee: 'org' },
 	'grant.read': { label: 'See grants', committee: 'org' },

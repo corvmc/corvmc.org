@@ -1,10 +1,9 @@
 import { z } from 'zod';
-import { isShowCrew } from '$lib/server/volunteer/show-crew';
 import { listIncidentsFiledBy } from '$lib/server/incident/incident-service';
 import { error, redirect } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
+import { can, requireCapability, requireUser } from '$lib/server/authorization';
 import { setRoleCapabilityGrants } from '$lib/server/capability/capability-grant-service';
 import { toEventRef } from '$lib/server/entity/refs';
 import { getStaffLayout } from './layout.remote';
@@ -2508,7 +2507,7 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 	const [tasks, event, crew, filedIncidents] = await Promise.all([
 		listWorkTasks(shift.shiftId),
 		shift.eventId ? getById(shift.eventId) : Promise.resolve(null),
-		shift.eventId ? isShowCrew(currentUser.id, shift.eventId) : Promise.resolve(false),
+		shift.eventId ? can('incident.file', { eventId: shift.eventId }) : Promise.resolve(false),
 		shift.eventId ? listIncidentsFiledBy(currentUser.id, shift.eventId) : Promise.resolve([])
 	]);
 

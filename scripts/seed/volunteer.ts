@@ -187,7 +187,16 @@ export const VOLUNTEER_REJECT_NOTES = [
 
 export async function seedVolunteerRoles() {
 	console.log('Seeding volunteer roles...');
-	return batchInsert(volunteerRole, VOLUNTEER_ROLE_SEEDS);
+	// Anyone on a show's crew may file an incident for it (#1469); staff can
+	// untick the grant per role.
+	return batchInsert(
+		volunteerRole,
+		VOLUNTEER_ROLE_SEEDS.map((r) =>
+			r.group === 'at-shows'
+				? { ...r, capabilityGrants: [...(r.capabilityGrants ?? []), 'incident.file'] }
+				: r
+		)
+	);
 }
 
 export const VOLUNTEER_AVAILABILITY = [

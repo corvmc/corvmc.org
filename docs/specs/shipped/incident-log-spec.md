@@ -84,10 +84,13 @@ Recording is a modal on the list page. Nav: under **Space**, beside Contractors.
 default filter is "Not resolved", which includes `reported` filings; staff accept one (to `open`)
 or resolve it directly.
 
-Crew file from `/member/volunteer/shifts/[signupId]`, guarded by `requireShowCrew(eventId)`
-(`src/lib/server/volunteer/show-crew.ts`): a `claimed`, `confirmed` or `completed` signup on a
-shift of that event that was not called off. The same page lists what that member filed for the
-show, and nothing else from the log: no staff notes, no other filings.
+Crew file from `/member/volunteer/shifts/[signupId]`, guarded by
+`requireCapability('incident.file', { eventId })`. That is a volunteer-role grant: a `confirmed`
+or `completed` signup on a shift of that event that was not called off, in a role whose grants
+include `incident.file`, from the shift's start until 2 days after it ends. The seed gives every
+at-shows role the grant, and staff can untick it per role. A `claimed` signup no longer counts,
+because staff have not accepted it yet. The same page lists what that member filed for the show,
+and nothing else from the log: no staff notes, no other filings.
 
 ## Decisions filed
 
