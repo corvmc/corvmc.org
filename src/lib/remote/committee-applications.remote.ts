@@ -1,16 +1,19 @@
 import { z } from 'zod';
+import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { mapDomainError } from '$lib/server/errors';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { requireCommitteeReviewer } from '$lib/server/group/group-context';
 import { getMemberGroup } from '$lib/remote/groups.remote';
+import { getByIdActive } from '$lib/server/band/band-service';
 import { COMMITTEE_ANSWER_MAX, committeeApplicationQuestions } from '$lib/config';
 import {
 	acceptApplication,
 	declineApplication,
 	listCommittees,
 	listForApplicant,
+	listForCommittee,
 	listOpenByCommittee,
 	markContacted,
 	submitApplication,
@@ -84,14 +87,30 @@ export const withdrawCommitteeApplication = form(
 /**
  * The queue a reviewer works who holds no committee seat.
  *
- * Its own page rather than a panel on `/staff/groups/[id]`: that surface wants
- * `group.read`, which the volunteer coordinator does not hold and should not
- * gain just to answer an application.
+ * The volunteer coordinator holds `committee.reviewApplications` and not
+ * `group.read`, so the per-committee card on `/staff/groups/[id]` is out of
+ * their reach; this lists every committee with something waiting.
  */
 export const getCommitteeApplicationQueue = query(async () => {
 	await requireCapability('committee.reviewApplications');
 	return { committees: await listOpenByCommittee() };
 });
+
+/**
+ * One committee's open applications, for its staff group page.
+ *
+ * Staff read these beside the roster; a chair reads their own on the member
+ * group page. The kind check keeps the capability from reading a club's rows.
+ */
+export const getCommitteeApplicationsFor = query(
+	z.object({ groupId: z.string().min(1) }),
+	async ({ groupId }) => {
+		await requireCapability('committee.reviewApplications');
+		const group = await getByIdActive(groupId);
+		if (!group || group.kind !== 'committee') error(404, 'Committee not found');
+		return { slug: group.slug, applications: await listForCommittee(group.id) };
+	}
+);
 
 const chairRef = z.object({ slug: z.string().min(1) });
 const choiceRef = chairRef.extend({ choiceId: z.string().min(1) });
@@ -113,7 +132,8 @@ export const markApplicantContacted = form(choiceRef, async (data) => {
 		await markContacted(data.choiceId, group.id, user.id);
 		await Promise.all([
 			getMemberGroup(data.slug).refresh(),
-			getCommitteeApplicationQueue().refresh()
+			getCommitteeApplicationQueue().refresh(),
+			getCommitteeApplicationsFor({ groupId: group.id }).refresh()
 		]);
 		return { success: true };
 	} catch (err) {
@@ -127,7 +147,8 @@ export const acceptCommitteeApplication = form(choiceRef, async (data) => {
 		await acceptApplication(data.choiceId, group.id, user.id);
 		await Promise.all([
 			getMemberGroup(data.slug).refresh(),
-			getCommitteeApplicationQueue().refresh()
+			getCommitteeApplicationQueue().refresh(),
+			getCommitteeApplicationsFor({ groupId: group.id }).refresh()
 		]);
 		return { success: true };
 	} catch (err) {
@@ -143,7 +164,8 @@ export const declineCommitteeApplication = form(
 			await declineApplication(data.choiceId, group.id, user.id, data.reviewNotes ?? null);
 			await Promise.all([
 				getMemberGroup(data.slug).refresh(),
-				getCommitteeApplicationQueue().refresh()
+				getCommitteeApplicationQueue().refresh(),
+				getCommitteeApplicationsFor({ groupId: group.id }).refresh()
 			]);
 			return { success: true };
 		} catch (err) {

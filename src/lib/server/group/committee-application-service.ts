@@ -1,5 +1,6 @@
 import { db } from '$lib/server/db';
 import { and, desc, eq, inArray, isNull, sql, asc } from 'drizzle-orm';
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { DomainError } from '$lib/server/domain-error';
 import { getRowCount } from '$lib/server/db';
 import {
@@ -329,6 +330,30 @@ export async function declineApplication(
 			updatedAt: now
 		})
 		.where(eq(committeeApplicationChoice.id, choiceId));
+}
+
+/**
+ * A correlated count of `groupIdColumn`'s open choices, for a select over groups.
+ * Same filters as `listForCommittee`, so a badge matches the card it links to.
+ */
+export function openApplicationCount(groupIdColumn: SQLiteColumn) {
+	const counted = db
+		.select({ total: sql<number>`count(*)` })
+		.from(committeeApplicationChoice)
+		.innerJoin(
+			committeeApplication,
+			eq(committeeApplication.id, committeeApplicationChoice.applicationId)
+		)
+		.innerJoin(user, eq(user.id, committeeApplication.userId))
+		.where(
+			and(
+				eq(committeeApplicationChoice.groupId, groupIdColumn),
+				isNull(committeeApplication.withdrawnAt),
+				isNull(user.deletedAt),
+				inArray(committeeApplicationChoice.status, [...OPEN_STATUSES])
+			)
+		);
+	return sql<number>`(${counted})`;
 }
 
 /** The badge on a chair's nav row. */

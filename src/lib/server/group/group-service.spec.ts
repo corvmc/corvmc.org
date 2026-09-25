@@ -430,7 +430,11 @@ describe('leaveGroup', () => {
 describe('listGroups', () => {
 	it('searches names with _ and % matched literally', async () => {
 		await listGroups({ search: '50%_off' });
-		const rendered = new SQLiteSyncDialect().sqlToQuery(whereClauses[0] as SQL);
+		// The list's own WHERE, not the open-applications subquery built before it.
+		const dialect = new SQLiteSyncDialect();
+		const rendered = whereClauses
+			.map((c) => dialect.sqlToQuery(c as SQL))
+			.find((q) => q.sql.includes('"group"."name"'))!;
 		expect(rendered.sql).toContain(`"group"."name" like ? escape '\\'`);
 		expect(rendered.params).toContain('%50\\%\\_off%');
 	});
