@@ -67,7 +67,7 @@ export interface CreateProjectInput {
  * committee-scoped view reads, and a band or a club appearing in that list
  * would be a group whose members are not the people doing the work.
  */
-async function assertCommittee(groupId: string) {
+export async function assertCommittee(groupId: string) {
 	const [row] = await db
 		.select({ kind: group.kind, deletedAt: group.deletedAt })
 		.from(group)

@@ -31,6 +31,8 @@
 	import MergeCandidateOptions from './MergeCandidateOptions.svelte';
 	import { startProjectFromSuggestionForm } from '$lib/remote/projects.remote';
 	import { Field, MoneyField } from '$lib/components/ui/Form';
+	import BallotLine from '$lib/components/ballot/BallotLine.svelte';
+	import CreateBallotAction from '$lib/components/ballot/CreateBallotAction.svelte';
 
 	let id = $derived(page.params.id!);
 
@@ -47,6 +49,9 @@
 	const pendingEdit = $derived(data.pendingEdit);
 	const project = $derived(data.project);
 	const fulfilledBy = $derived(data.fulfilledBy);
+	const ballots = $derived(data.ballots);
+	const ballotCommittees = $derived(data.ballotCommittees);
+	const liveBallot = $derived(ballots.some((b) => b.status === 'open' || b.status === 'closed'));
 	// Only gear can be answered by something arriving on a shelf.
 	const isGear = $derived(s.category === 'gear_equipment');
 	const committeeOptions = $derived(data.committees.map((c) => ({ value: c.id, label: c.name })));
@@ -120,12 +125,43 @@
 			Answered by <span class="font-medium">{project.name}</span>. Its status drives this
 			suggestion's from now on.
 		</Alert>
-	{:else if !isMerged && s.status !== 'declined'}
-		<InfoCard title="Start a project" class="bg-base-200 shadow-none">
+	{/if}
+
+	{#if ballots.length > 0}
+		<InfoCard title={ballots.length === 1 ? 'Ballot' : 'Ballots'}>
+			<ul class="space-y-2">
+				{#each ballots as b (b.id)}
+					<li><BallotLine ballot={b} href={resolve(`/staff/ballots/${b.id}`)} /></li>
+				{/each}
+			</ul>
+		</InfoCard>
+	{/if}
+
+	{#if !project && !isMerged && s.status !== 'declined'}
+		<InfoCard title="Decide" class="bg-base-200 shadow-none">
 			<p class="mb-3 text-muted">
-				Commit to this idea: the project groups the work that answers it, and this suggestion
-				follows its status from now on. Both move to Planned.
+				Commit to this idea directly: the project groups the work that answers it, and this
+				suggestion follows its status from now on. Both move to Planned. If it needs a vote first,
+				put it to a ballot: it reads In ballot while voting is open, and a passing result offers
+				Start project on the ballot's page.
 			</p>
+			{#if ballotCommittees && !liveBallot}
+				<div class="mb-3 flex flex-wrap gap-2">
+					<CreateBallotAction
+						kind="member"
+						panel="staff"
+						decides={{ suggestionId: s.id, title: s.title }}
+					/>
+					{#if ballotCommittees.length > 0}
+						<CreateBallotAction
+							kind="group"
+							panel="staff"
+							committees={ballotCommittees}
+							decides={{ suggestionId: s.id, title: s.title }}
+						/>
+					{/if}
+				</div>
+			{/if}
 			<Action
 				action={startProjectFromSuggestionForm}
 				label="Start a project"

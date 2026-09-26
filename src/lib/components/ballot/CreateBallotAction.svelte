@@ -15,13 +15,26 @@
 
 	type Committee = { id: string; name: string; members: { id: string; name: string }[] };
 
+	/** What the ballot decides. A linked ballot is phrased as the thing to do: "Yes" comes first. */
+	type Decides = { suggestionId?: string; projectId?: string; title: string };
+
 	let {
 		kind,
 		panel,
-		committees = []
-	}: { kind: 'member' | 'group'; panel: 'member' | 'staff'; committees?: Committee[] } = $props();
+		committees = [],
+		decides
+	}: {
+		kind: 'member' | 'group';
+		panel: 'member' | 'staff';
+		committees?: Committee[];
+		decides?: Decides;
+	} = $props();
 
-	const action = $derived(createBallot.for(kind));
+	const action = $derived(
+		createBallot.for(decides ? `${kind}-${decides.suggestionId ?? decides.projectId}` : kind)
+	);
+	const noun = $derived(kind === 'member' ? 'member-wide ballot' : 'committee ballot');
+	const label = $derived(decides ? `Put to a ${noun}` : `New ${noun}`);
 
 	let certifierId = $state('');
 	let certifierName = $state('');
@@ -35,8 +48,8 @@
 
 <Action
 	{action}
-	label={kind === 'member' ? 'New member-wide ballot' : 'New committee ballot'}
-	modalTitle={kind === 'member' ? 'New member-wide ballot' : 'New committee ballot'}
+	{label}
+	modalTitle={label}
 	submitLabel="Save draft"
 	successToast="Draft saved. Open it when it is ready."
 	size="sm"
@@ -52,6 +65,12 @@
 	{#snippet icon()}<IconPlus size={16} />{/snippet}
 	{#snippet form()}
 		<input {...action.fields.kind.as('hidden', kind)} />
+		{#if decides?.suggestionId}
+			<input {...action.fields.suggestionId.as('hidden', decides.suggestionId)} />
+		{/if}
+		{#if decides?.projectId}
+			<input {...action.fields.projectId.as('hidden', decides.projectId)} />
+		{/if}
 		{#if kind === 'group'}
 			<FormField
 				field={action.fields.groupId}
@@ -60,13 +79,21 @@
 				options={committees.map((c) => ({ value: c.id, label: c.name }))}
 			/>
 		{/if}
-		<FormField field={action.fields.title} type="text" label="Question" />
+		<FormField
+			field={action.fields.title}
+			type="text"
+			label="Question"
+			value={decides ? `${decides.title}?` : undefined}
+		/>
 		<FormField field={action.fields.description} type="textarea" label="Background (optional)" />
 		<FormField
 			field={action.fields.options}
 			type="textarea"
 			label="Choices"
-			description="One per line, between 2 and 10."
+			description={decides
+				? 'One per line. The first choice is the one that authorises the work, and it must win outright.'
+				: 'One per line, between 2 and 10.'}
+			value={decides ? 'Yes\nNo' : undefined}
 		/>
 		<FormField field={action.fields.closesOn} type="date" label="Voting closes at the end of" />
 		{#if kind === 'group'}

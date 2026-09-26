@@ -439,7 +439,7 @@ async function main() {
 		`  ${market.markets} market day taking applications, ${market.vendors} vendors in every status`
 	);
 	console.log(
-		`  ${ballots.ballots} ballots (committee open, member-wide open with the admin on by override, one certified)`
+		`  ${ballots.ballots} ballots (committee open, member-wide open with the admin on by override, two certified, one of them suggestion → ballot → project)`
 	);
 	console.log(
 		bandSale
