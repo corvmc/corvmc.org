@@ -11,6 +11,8 @@ import {
 } from '../../src/lib/server/db/schema/ballot';
 import { groupMember } from '../../src/lib/server/db/schema/group';
 import { auditLog } from '../../src/lib/server/db/schema/audit';
+import { suggestion } from '../../src/lib/server/db/schema/suggestion';
+import { project } from '../../src/lib/server/db/schema/project';
 import { GROUP_LEADER_PERSONAS } from './group-leaders';
 import type { SeedUser } from './types';
 
@@ -32,7 +34,9 @@ const memberOfRecord = (cutoff: Date) => sql`
  * - the Booking Committee's recorded ballot, open, which its chair can vote on,
  *   change, and certify once it closes;
  * - an open member-wide ballot the admin is on through an audited override;
- * - last spring's certified member-wide result, which every member can read.
+ * - last spring's certified member-wide result, which every member can read;
+ * - one whole idea → decision → work chain: a suggestion, the certified ballot
+ *   that passed it, and the project that result authorised.
  */
 export async function seedBallots(
 	groups: { id: string; slug: string; kind: string }[],
@@ -44,6 +48,17 @@ export async function seedBallots(
 	const committee = groups.find((g) => g.slug === 'booking-committee');
 
 	let count = 0;
+
+	const chainSuggestionId = 'seed-suggestion-back-room-pa';
+	await db.insert(suggestion).values({
+		id: chainSuggestionId,
+		authorUserId: chairId,
+		title: 'A PA for the back room',
+		body: 'The back room has no sound of its own, so every workshop borrows the main PA.',
+		category: 'gear_equipment',
+		status: 'planned',
+		createdAt: new Date(now.getTime() - 60 * DAY)
+	});
 
 	if (committee) {
 		const id = 'seed-ballot-committee';
@@ -109,11 +124,22 @@ export async function seedBallots(
 			closesAt: new Date(now.getTime() - 166 * DAY),
 			options: ['Jordan Ames', 'Kim Osei'],
 			certified: true
+		},
+		{
+			id: 'seed-ballot-member-chain',
+			title: 'Buy a PA for the back room?',
+			description: 'Put to the members from the suggestion board.',
+			openedAt: new Date(now.getTime() - 40 * DAY),
+			closesAt: new Date(now.getTime() - 26 * DAY),
+			options: ['Yes', 'No'],
+			certified: true,
+			suggestionId: chainSuggestionId
 		}
 	]) {
 		await db.insert(ballot).values({
 			id: spec.id,
 			kind: 'member',
+			suggestionId: 'suggestionId' in spec ? spec.suggestionId : null,
 			title: spec.title,
 			description: spec.description,
 			closesAt: spec.closesAt,
@@ -205,6 +231,17 @@ export async function seedBallots(
 			.where(eq(ballot.id, spec.id));
 		count++;
 	}
+
+	await db.insert(project).values({
+		id: 'seed-project-back-room-pa',
+		name: 'Back room PA',
+		description: 'Authorised by the members; see Why this exists.',
+		status: 'planned',
+		suggestionId: chainSuggestionId,
+		ballotId: 'seed-ballot-member-chain',
+		budgetCents: 180_000,
+		createdByUserId: adminUser.id
+	});
 
 	return { ballots: count };
 }

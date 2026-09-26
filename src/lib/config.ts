@@ -1550,8 +1550,18 @@ export const suggestionCategories = [
 	'other'
 ] as const;
 
-/** Editorial lifecycle — what staff have decided about the idea. */
-export const suggestionStatuses = ['open', 'planned', 'in_progress', 'done', 'declined'] as const;
+/**
+ * Editorial lifecycle — what has been decided about the idea. `in_ballot` is
+ * set only by a linked ballot opening, and undone by its cancellation.
+ */
+export const suggestionStatuses = [
+	'open',
+	'in_ballot',
+	'planned',
+	'in_progress',
+	'done',
+	'declined'
+] as const;
 
 /**
  * Whether the suggestion is on the board at all — a separate axis from status,
@@ -1590,6 +1600,7 @@ export const suggestionCategoryLabels: Record<(typeof suggestionCategories)[numb
 /** Only `in_progress` needs help; the rest humanise fine on their own. */
 export const suggestionStatusLabels: Record<(typeof suggestionStatuses)[number], string> = {
 	open: 'Open',
+	in_ballot: 'In ballot',
 	planned: 'Planned',
 	in_progress: 'In progress',
 	done: 'Done',
@@ -1693,21 +1704,24 @@ export const classifiedCategoryOptions = classifiedCategories.map((value) => ({
 // ---------------------------------------------------------------------------
 
 /**
- * A project's lifecycle — **the same values as `suggestionStatuses`, reused
- * rather than copied.**
- *
- * `docs/specs/project-spec.md` argues the two are one machine: a member
- * suggests, staff commit, work orders get it done, and the project's status is
- * what the suggestion reports back. Two identical lists would drift the first
- * time either grew a value. If a project ever needs a state a suggestion cannot
- * have, that is the moment to split them, and the alias is what makes the split
- * a one-line change.
+ * A project's lifecycle: the suggestion's, less `in_ballot`. A project exists
+ * only once something is decided, and its status is what the suggestion it
+ * answers reports back (docs/specs/project-spec.md).
  */
-export const projectStatuses = suggestionStatuses;
+export const projectStatuses = [
+	'open',
+	'planned',
+	'in_progress',
+	'done',
+	'declined'
+] as const satisfies readonly (typeof suggestionStatuses)[number][];
 export type ProjectStatus = (typeof projectStatuses)[number];
 
-export const projectStatusLabels = suggestionStatusLabels;
-export const projectStatusOptions = suggestionStatusOptions;
+export const projectStatusLabels: Record<ProjectStatus, string> = suggestionStatusLabels;
+export const projectStatusOptions = projectStatuses.map((value) => ({
+	value,
+	label: projectStatusLabels[value]
+}));
 
 // ---------------------------------------------------------------------------
 // Tech riders
