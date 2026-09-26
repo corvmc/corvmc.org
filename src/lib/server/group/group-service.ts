@@ -11,6 +11,7 @@ import { sanitizeBio } from '$lib/utils/markdown';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { DomainError } from '$lib/server/domain-error';
 import { groupGrantsColumn } from '$lib/server/capability/grant-columns';
+import { openApplicationCount } from '$lib/server/group/committee-application-service';
 import type { GroupKind, GroupJoinPolicy } from '$lib/config';
 import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
 
@@ -183,7 +184,9 @@ export async function listGroups(
 			owner: memberRefColumns(),
 			createdAt: group.createdAt,
 			deletedAt: group.deletedAt,
-			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`
+			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`,
+			// Zero for a club, which has no application rows.
+			openApplications: openApplicationCount(group.id)
 		})
 		.from(group)
 		// LEFT, like the band list's: a program with an empty owner seat is legal,
@@ -210,7 +213,11 @@ export async function listGroups(
 
 	const { rows, pagination: page } = await paginate(dataQ, countQ, pagination);
 	return {
-		rows: rows.map((r) => ({ ...r, owner: toMemberRef(r.owner) })),
+		rows: rows.map((r) => ({
+			...r,
+			owner: toMemberRef(r.owner),
+			openApplications: Number(r.openApplications ?? 0)
+		})),
 		pagination: page
 	};
 }

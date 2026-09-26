@@ -136,15 +136,6 @@ export const staffNavTop: StaffNavItem[] = [
 		label: 'Inbox',
 		href: resolve('/staff/inbox'),
 		badgeKey: 'inboxUnread'
-	},
-	// Beside Inbox because a tip is someone outside waiting on an answer (#1566);
-	// the page itself sits with the listings, under Local Resources.
-	{
-		key: 'resource-tips',
-		capability: 'localResource.manage',
-		label: 'Resource Tips',
-		href: resolve('/staff/local-resources/tips'),
-		badgeKey: 'resourceTipsPending'
 	}
 ];
 
@@ -488,7 +479,18 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'local-resources',
 				capability: 'localResource.manage',
 				label: 'Local Resources',
-				href: resolve('/staff/local-resources')
+				href: resolve('/staff/local-resources'),
+				// The count sits on the parent too, so it shows while collapsed.
+				badgeKey: 'resourceTipsPending',
+				children: [
+					{
+						key: 'resource-tips',
+						capability: 'localResource.manage',
+						label: 'Tips',
+						href: resolve('/staff/local-resources/tips'),
+						badgeKey: 'resourceTipsPending'
+					}
+				]
 			}
 		]
 	},

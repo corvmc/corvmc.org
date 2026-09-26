@@ -115,7 +115,15 @@
 						     canonical page for its own type, and there is no group type —
 						     handing it a band ref sent staff to `/staff/bands/{id}` for a
 						     club. The row itself is the link. -->
-						<td class="cell-primary">{g.name}</td>
+						<td class="cell-primary">
+							{g.name}
+							{#if g.openApplications > 0}
+								<Badge variant="info">
+									{g.openApplications}
+									{g.openApplications === 1 ? 'application' : 'applications'}
+								</Badge>
+							{/if}
+						</td>
 						<td class="col-support"><Badge variant="ghost">{g.kind}</Badge></td>
 						<!-- An empty seat is legal — a leader stepped down and nobody has
 						     been appointed yet — and this list is where staff are meant to

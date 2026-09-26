@@ -32,6 +32,8 @@ vi.mock('$lib/server/authorization', async () => {
 	return {
 		requireUser: () => ({ id: 'user-1' }),
 		isElevated: vi.fn(async () => false),
+		can: async (cap: Capability) =>
+			heldPositions.some((p) => config.grantsCapability(config.positions[p], cap)),
 		requireCapability: async (cap: Capability) => {
 			requested.push(cap);
 			if (!signedIn) throw error(401, 'Not authenticated');
@@ -169,6 +171,17 @@ beforeEach(() => {
 });
 
 // Every combination of the six positions, including none.
+describe('getStaffGroupPage canReviewApplications', () => {
+	it.each([
+		[['staff'], true],
+		[['admin'], true]
+	] as const)('is %s → %s for a group.read holder', async (held, expected) => {
+		heldPositions = [...held];
+		const page = (await groups.getStaffGroupPage('group-1')) as { canReviewApplications: boolean };
+		expect(page.canReviewApplications).toBe(expected);
+	});
+});
+
 const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
 	positionOrder.filter((_, i) => mask & (1 << i))
 );

@@ -152,10 +152,11 @@ describe('the nav tree', () => {
 		}
 	});
 
-	it('puts the resource tips queue beside Inbox, with its pending count (#1566)', () => {
-		const keys = staffNavTop.map((i) => i.key);
-		expect(keys.indexOf('resource-tips')).toBe(keys.indexOf('inbox') + 1);
-		const tips = staffNavTop.find((i) => i.key === 'resource-tips');
+	it('puts the resource tips queue under Local Resources, with its pending count', () => {
+		expect(staffNavTop.map((i) => i.key)).not.toContain('resource-tips');
+		const parent = allStaffNavItems().find((i) => i.key === 'local-resources');
+		expect(parent?.badgeKey).toBe('resourceTipsPending');
+		const tips = parent?.children?.find((i) => i.key === 'resource-tips');
 		expect(tips).toMatchObject({
 			href: '/staff/local-resources/tips',
 			badgeKey: 'resourceTipsPending',
