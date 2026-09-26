@@ -4,7 +4,7 @@ What the app is made of, above the level of individual features. Read
 [overview.md](overview.md) for how the system is wired — remote functions, auth, the
 event bus, cron; this document is about what the tables _mean_ and which shapes recur.
 
-## Three verticals over two horizontals
+## Three verticals over three horizontals
 
 **Verticals** — a thing the collective does, with its own screens and its own lifecycle:
 
@@ -18,10 +18,17 @@ event bus, cron; this document is about what the tables _mean_ and which shapes 
 
 - **Comms** — `inbox`, `notification`, `marketing`, direct messages, `announcement`
 - **Money** — `finance`, Stripe, `credit_transaction`, `payment_cache`
+- **Publishing** — what faces the public: the gig guide (`event_listing`), `band_site`,
+  the directory, local resources, recaps, posters, radio, the help manual; with `media`,
+  public-content moderation and page composition as its shared tools
 
 Money is horizontal for the same reason comms is: credits settle both room bookings and
 gear loans (assets), ticket revenue comes off shows (projects), and dues come off
 membership (social). No vertical owns it.
+
+Publishing is horizontal the same way. A closure notice (assets), a produced show
+(projects) and a band's page (social) all reach the public through the same upload,
+image, moderation and page machinery; none of the three verticals owns the public site.
 
 ### Two things the taxonomy makes obvious
 
@@ -200,21 +207,13 @@ Three mechanics, and choosing between them has a rule:
 | Prototype row         | Instances are not edited after the fact                    | Recurring events — nobody edits a past show |
 | **Generate-on-close** | The next occurrence should not exist until this one closes | Monthly deep clean, quarterly PA check      |
 
-The first two exist. The third does not yet — `recurring_series` materializes 2.5 weeks
-ahead, which can drift and can pile up unclosed duplicates.
+All three exist. Generate-on-close is `maintenance_schedule` (#1385): resolving or calling
+off an occurrence writes the next in the same `db.batch`, due an interval after the close,
+with a partial unique index allowing one open occurrence per schedule. Cleaning schedules
+and committee checklists run on it. `recurring_series` still materializes 2.5 weeks ahead,
+which suits bookings, where the future slots must be held.
 
-### 4. The review return `[social, projects]`
-
-Four implementations of "sent back is not a rejection", each with the same
-`status='rejected'` + `reviewNotes` pair, and each hand-rolling a queue, an approve, a
-send-back with a required reason, and an edit-and-resubmit that deletes nothing:
-
-`instructor` (the application _is_ the draft listing) · `event.reviewNotes` (community
-listings) · `volunteer_hour_log` · `suggestion_edit` (approve against a before/after).
-
-The duplication that hurts is the service and the UI, not the columns.
-
-### 5. The append-only ledger `[one per vertical, plus money]`
+### 4. The append-only ledger `[one per vertical, plus money]`
 
 `stock_movement` (assets) · `volunteer_hour_log` (projects) · `credit_transaction` and
 `payment_cache` (money). Four ledgers, four sum-to-a-balance reads, four
@@ -223,7 +222,7 @@ taxonomy.
 
 **Derived balances, never stored counters.** Project burn is a `sum()` across these.
 
-### 6. Container membership `[social, projects, comms]`
+### 5. Container membership `[social, projects, comms]`
 
 `group_member` · `volunteer_signup` · `audience_member` · `inbox_participant` ·
 `event_rsvp` · `member_certification`. All are (container, person, status, joined_at).
@@ -232,7 +231,15 @@ The repeated hard part is the per-membership notification preference:
 `group_member.notifyAnnouncements` exists precisely because the global
 `notification_preference` cannot express it, and the next container hits the same wall.
 
-### 7. A staff tool is a group tool with the group hardcoded `[all three verticals]`
+**Membership is also how permission flows.** Two containers grant capabilities as data,
+checked against an allowlist (`grantableCapabilities`): a committee's grants
+(`group_capability`) apply to its active members, and a volunteer role's grants
+(`volunteer_role_capability`) apply to a member with a confirmed signup, scoped to that
+event and to a window around the shift (recap uploads, incident filing, door payments).
+Positions stay the org-wide layer underneath. A new "who may do X here" question should
+start from a membership plus a grant, not a new role check.
+
+### 6. A staff tool is a group tool with the group hardcoded `[all three verticals]`
 
 **The staff panel is the CMC group's panel.** Most of what lives under `/staff` is not
 privileged by nature — it is a tool scoped to an organization, where the organization
@@ -245,7 +252,9 @@ This is not speculative; it has already happened twice, and the schema says why:
   posting to its roster and a committee posting to its members are the same act."
 - **`event_group`** — which groups' pages an event appears on, distinct from
   `event_band`'s credit on the bill.
-- **`project.groupId`** is the next one, and ships in that table's first migration.
+- **Projects** followed: first a single owning committee (`project.groupId`), and now
+  several committees taking part in one project, each with a role, as productions become
+  projects (Booking and Production both work a show).
 
 **The inbox was the clearest remaining case, and it has now happened.** `inbox_thread` had
 **no owner column at all** — `channel` records how a message arrived (contact form, portal,
@@ -276,6 +285,19 @@ three of which band chat now demonstrates rather than promises:
   and unsubscribe are per-`subscriber` and a band's list is not the collective's list, so
   the compliance question changes rather than scaling. Inventory and volunteering are weak
   fits for the same reason — they describe things the collective owns.
+
+### 7. Idea → decision → work `[social → projects]`
+
+A member raises an idea, the collective decides, and the decision becomes owned, budgeted
+work. `suggestion` (the idea, voted up by members) → a ballot or a committee's call (the
+decision) → `project` (the work). The link already exists at both ends: starting a project
+from a suggestion moves both to planned in one write, and committees own projects and run
+their own ballots.
+
+This is a flow across two verticals, not a third: suggestions and ballots are social,
+projects are project management, and committees are social containers that hold powers
+over work. The staff nav still groups them as **Planning**, because staff work the flow
+together; a nav section follows the work, this document follows the data.
 
 ## Duplications to leave alone
 
