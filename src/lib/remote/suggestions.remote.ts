@@ -3,7 +3,7 @@ import { toGenericRef, toMemberRef } from '$lib/server/entity/refs';
 import { error, invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
+import { can, requireCapability, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { getStanding } from '$lib/server/moderation/standing-service';
 import { allowRateLimited } from '$lib/server/rate-limit';
@@ -37,6 +37,8 @@ import {
 } from '$lib/server/suggestion/suggestion-service';
 import { createFlag, FLAG_REASON_MAX, FLAG_DESCRIPTION_MAX } from '$lib/server/flag/flag-service';
 import { getProjectForSuggestion, listCommittees } from '$lib/server/project/project-service';
+import { getSuggestionChain } from '$lib/server/project/decision-chain';
+import { listCommitteeRosters } from '$lib/server/ballot/ballot-service';
 import { getAcquisitionForSuggestion } from '$lib/server/inventory/acquisition-service';
 
 const BOARD_PAGE_SIZE = 20;
@@ -432,13 +434,15 @@ export const reviewSuggestionEdit = form(
 export const getMemberSuggestionDetailPage = query(z.string(), async (id) => {
 	// The author sees the work their idea became — the payoff the board never had
 	// — and nothing more: a name and a status, never a budget.
-	const [suggestion, standing, editState, project] = await Promise.all([
+	const [suggestion, standing, editState, project, chain] = await Promise.all([
 		getSuggestionDetail(id),
 		getMySuggestionStanding(),
 		getSuggestionEditState(id),
-		getProjectForSuggestion(id)
+		getProjectForSuggestion(id),
+		getSuggestionChain(id)
 	]);
-	return { suggestion, standing, editState, project };
+	// A certified result only: an open or closed ballot's tally is its electors' alone.
+	return { suggestion, standing, editState, project, ballots: chain.ballots };
 });
 
 /**
@@ -452,17 +456,28 @@ export const getStaffSuggestionDetailPage = query(z.string(), async (id) => {
 	// `project` rides along rather than being its own query: it is one line on
 	// this page, and a second awaited remote query in the component is a serial
 	// round trip that also stops the page rendering past kit 2.64.
-	const [suggestion, pendingEdit, project, committees, fulfilledBy] = await Promise.all([
-		getStaffSuggestionDetail(id),
-		getSuggestionPendingEdit(id),
-		getProjectForSuggestion(id),
-		listCommittees(),
-		// The arrival that answered a gear request. Same reason as `project`: one
-		// line on this page, and a second awaited query in the component is a
-		// serial round trip.
-		getAcquisitionForSuggestion(id)
-	]);
-	return { suggestion, pendingEdit, project, committees, fulfilledBy };
+	const [suggestion, pendingEdit, project, committees, fulfilledBy, chain, ballotManager] =
+		await Promise.all([
+			getStaffSuggestionDetail(id),
+			getSuggestionPendingEdit(id),
+			getProjectForSuggestion(id),
+			listCommittees(),
+			// The arrival that answered a gear request. Same reason as `project`: one
+			// line on this page, and a second awaited query in the component is a
+			// serial round trip.
+			getAcquisitionForSuggestion(id),
+			getSuggestionChain(id),
+			can('ballot.manage')
+		]);
+	return {
+		suggestion,
+		pendingEdit,
+		project,
+		committees,
+		fulfilledBy,
+		ballots: chain.ballots,
+		ballotCommittees: ballotManager ? await listCommitteeRosters() : null
+	};
 });
 
 /**

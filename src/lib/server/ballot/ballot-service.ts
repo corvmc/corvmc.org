@@ -26,6 +26,8 @@ import {
 	type BallotCertifiedResult
 } from '$lib/server/db/schema/ballot';
 import { user } from '$lib/server/db/schema/authentication';
+import { suggestion } from '$lib/server/db/schema/suggestion';
+import { project } from '$lib/server/db/schema/project';
 import { group, groupMember } from '$lib/server/db/schema/group';
 import { memberOrientation } from '$lib/server/db/schema/volunteer';
 import { config } from '$lib/server/site-config/site-config-service';
@@ -101,6 +103,17 @@ export function ballotStatusOf(b: StatusFields, now: Date = new Date()): BallotS
 	if (b.certifiedAt) return 'certified';
 	if (!b.openedAt) return 'draft';
 	return now.getTime() < b.closesAt.getTime() ? 'open' : 'closed';
+}
+
+/**
+ * Whether a certified result authorises the work: the first choice strictly
+ * ahead of every other. A ballot put from a suggestion is created with "Yes"
+ * first, so the question is always phrased as the thing to do.
+ */
+export function ballotPassed(result: BallotCertifiedResult | null | undefined): boolean {
+	const [first, ...rest] = result?.options ?? [];
+	if (!first || first.votes === 0) return false;
+	return rest.every((o) => o.votes < first.votes);
 }
 
 // ---------------------------------------------------------------------------
@@ -489,6 +502,9 @@ export interface BallotInput {
 	options: string[];
 	closesAt: Date;
 	certifierId: string;
+	/** What the ballot decides. Either, both or neither. */
+	suggestionId?: string | null;
+	projectId?: string | null;
 }
 
 type Ctx = { actorId: string; now?: Date };
@@ -541,12 +557,16 @@ export async function createBallot(input: BallotInput, ctx: Ctx): Promise<string
 		groupId = g.id;
 	}
 
+	await validateLinks(input);
+
 	const id = crypto.randomUUID();
 	await db.batch([
 		db.insert(ballot).values({
 			id,
 			kind: input.kind,
 			groupId,
+			suggestionId: input.suggestionId || null,
+			projectId: input.projectId || null,
 			title: clean.title,
 			description: clean.description,
 			closesAt: clean.closesAt,
@@ -558,6 +578,30 @@ export async function createBallot(input: BallotInput, ctx: Ctx): Promise<string
 			.values(clean.options.map((label, position) => ({ ballotId: id, label, position })))
 	]);
 	return id;
+}
+
+/** A decided suggestion is answered by its project already; there is nothing left to vote on. */
+async function validateLinks(input: Pick<BallotInput, 'suggestionId' | 'projectId'>) {
+	if (input.suggestionId) {
+		const [row] = await db
+			.select({ mergedIntoId: suggestion.mergedIntoId, projectId: project.id })
+			.from(suggestion)
+			.leftJoin(project, eq(project.suggestionId, suggestion.id))
+			.where(eq(suggestion.id, input.suggestionId))
+			.limit(1);
+		if (!row || row.mergedIntoId) throw new BallotValidationError('That suggestion does not exist');
+		if (row.projectId) {
+			throw new BallotValidationError('A project already answers that suggestion');
+		}
+	}
+	if (input.projectId) {
+		const [row] = await db
+			.select({ id: project.id })
+			.from(project)
+			.where(eq(project.id, input.projectId))
+			.limit(1);
+		if (!row) throw new BallotValidationError('That project does not exist');
+	}
 }
 
 function requireStatus(b: Ballot, now: Date, allowed: BallotStatus[], message: string) {
@@ -661,10 +705,24 @@ export async function openBallot(ballotId: string, ctx: { now?: Date } = {}): Pr
 		...(b.kind === 'member'
 			? [db.insert(ballotChoice).values(options.map((o) => ({ ballotId, optionId: o.id })))]
 			: []),
-		refreshElectorateSize(ballotId)
+		refreshElectorateSize(ballotId),
+		...(b.suggestionId ? [moveSuggestion(b.suggestionId, 'open', 'in_ballot', now)] : [])
 	]);
 
 	await domainEvents.emit('ballot.opened', { ballotId, title: b.title });
+}
+
+/** Conditional, so a ballot never drags a suggestion back from `planned` or later. */
+function moveSuggestion(
+	suggestionId: string,
+	from: 'open' | 'in_ballot',
+	to: 'open' | 'in_ballot',
+	now: Date
+) {
+	return db
+		.update(suggestion)
+		.set({ status: to, updatedAt: now })
+		.where(and(eq(suggestion.id, suggestionId), eq(suggestion.status, from)));
 }
 
 function refreshElectorateSize(ballotId: string) {
@@ -836,8 +894,11 @@ export async function cancelBallot(
 	if (!clean || clean.length > BALLOT_REASON_MAX) {
 		throw new BallotValidationError('Say why, in up to 500 characters');
 	}
-	await db
-		.update(ballot)
-		.set({ cancelledAt: now, cancelReason: clean, updatedAt: now })
-		.where(and(eq(ballot.id, ballotId), isNull(ballot.certifiedAt), isNull(ballot.cancelledAt)));
+	await db.batch([
+		db
+			.update(ballot)
+			.set({ cancelledAt: now, cancelReason: clean, updatedAt: now })
+			.where(and(eq(ballot.id, ballotId), isNull(ballot.certifiedAt), isNull(ballot.cancelledAt))),
+		...(b.suggestionId ? [moveSuggestion(b.suggestionId, 'in_ballot', 'open', now)] : [])
+	]);
 }

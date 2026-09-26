@@ -1761,6 +1761,13 @@ Electors vote from `/member/ballots/[id]`:
 Nobody sees a tally until the close. After it, the certifier certifies the result, and every member
 is told.
 
+A ballot can decide something. Staff put a suggestion to a ballot from its staff page, and the
+suggestion reads **In ballot** once voting opens (back to Open if the ballot is cancelled). When a
+certified result passes, meaning the first choice is strictly ahead, the ballot's page offers
+**Start project** to holders of `project.manage`. That creates the project linked to the ballot and
+the suggestion, and moves the suggestion to Planned. The project's staff page shows the chain under
+"Why this exists".
+
 ### Code path
 
 - **Remote:** `src/lib/remote/ballots.remote.ts`.
@@ -1777,10 +1784,14 @@ is told.
   - `certifyBallot` snapshots `certified_result`.
   - `setElectorOverride` audits `ballot.elector_overridden`.
 - **Fan-out:** `ballot-fanout.ts`, from the `ballot.opened` and `ballot.certified` events.
+- **The chain:** `src/lib/server/project/decision-chain.ts` (`startProjectFromBallot`,
+  `getProjectOrigin`, `getSuggestionChain`, `getBallotChain`), with the form in `projects.remote.ts`.
 
 ### Data touched
 
-- `ballot`, `ballot_option`, `ballot_elector`, `ballot_elector_override`.
+- `ballot` (with `suggestion_id` and `project_id` for what it decides), `ballot_option`,
+  `ballot_elector`, `ballot_elector_override`.
+- `suggestion.status` (`in_ballot`, then `planned`) and `project.ballot_id`.
 - **Secret ballots:**
   - `ballot_participation` records who voted: no option, no timestamp.
   - `ballot_choice` is a per-option counter: no user and no timestamp.

@@ -10,6 +10,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
 import { group } from './group';
+import { suggestion } from './suggestion';
 import { ballotKinds } from '../../../config';
 
 /** Frozen at certification, so a later account purge cannot move a published result. */
@@ -36,6 +37,14 @@ export const ballot = sqliteTable(
 		groupId: text('group_id').references(() => group.id, { onDelete: 'cascade' }),
 		title: text('title').notNull(),
 		description: text('description'),
+		/** The suggestion this ballot decides. Set-null: a purged suggestion leaves the vote standing. */
+		suggestionId: text('suggestion_id').references(() => suggestion.id, { onDelete: 'set null' }),
+		/**
+		 * An existing project this ballot decides. No FK: `project.ballot_id` points
+		 * the other way, and scripts/d1-table-order.mjs cannot order a cycle. The
+		 * service validates the target instead, as for `suggestion.merged_into_id`.
+		 */
+		projectId: text('project_id'),
 		closesAt: integer('closes_at', { mode: 'timestamp' }).notNull(),
 		/** The one account that may certify. Null only after that account is purged. */
 		certifierId: text('certifier_id').references(() => user.id, { onDelete: 'set null' }),
@@ -64,6 +73,8 @@ export const ballot = sqliteTable(
 	},
 	(t) => [
 		index('ballot_group_idx').on(t.groupId),
+		index('ballot_suggestion_idx').on(t.suggestionId),
+		index('ballot_project_idx').on(t.projectId),
 		index('ballot_closes_at_idx').on(t.closesAt),
 		check('ballot_group_iff_group_kind', sql`(kind = 'group') = (group_id is not null)`),
 		check('ballot_cancel_has_reason', sql`(cancelled_at is null) = (cancel_reason is null)`)
