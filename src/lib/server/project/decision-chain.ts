@@ -115,7 +115,11 @@ export async function getProjectOrigin(projectId: string, ctx: Now = {}) {
 			? db.select(suggestionLink).from(suggestion).where(eq(suggestion.id, p.suggestionId))
 			: [],
 		p.ballotId ? db.select().from(ballot).where(eq(ballot.id, p.ballotId)) : [],
-		db.select().from(ballot).where(eq(ballot.projectId, projectId)).orderBy(desc(ballot.createdAt))
+		db
+			.select()
+			.from(ballot)
+			.where(eq(ballot.projectId, projectId))
+			.orderBy(desc(ballot.createdAt), desc(ballot.id))
 	]);
 
 	return {
@@ -133,7 +137,7 @@ export async function getSuggestionChain(suggestionId: string, ctx: Now = {}) {
 			.select()
 			.from(ballot)
 			.where(and(eq(ballot.suggestionId, suggestionId), isNotNull(ballot.openedAt)))
-			.orderBy(desc(ballot.createdAt)),
+			.orderBy(desc(ballot.createdAt), desc(ballot.id)),
 		db.select(projectLink).from(project).where(eq(project.suggestionId, suggestionId)).limit(1)
 	]);
 	return { ballots: rows.map((b) => ballotLink(b, now)), project: answered[0] ?? null };

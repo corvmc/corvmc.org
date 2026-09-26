@@ -20,6 +20,7 @@
 
 <span class="inline-flex flex-wrap items-center gap-2">
 	{#if href}
+		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- callers pass a resolved path -->
 		<a class="link" {href}>{ballot.title}</a>
 	{:else}
 		<span>{ballot.title}</span>
