@@ -137,6 +137,12 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 			// import, before these module-level consts initialize.
 			insert: (...args: unknown[]) => eventInsert(...(args as [])),
 			delete: (...args: unknown[]) => eventDelete(...(args as [])),
+			// In order, like D1's.
+			batch: async (items: PromiseLike<unknown>[]) => {
+				const out = [];
+				for (const item of items) out.push(await item);
+				return out;
+			},
 			update: vi.fn(() => ({
 				set: vi.fn((vals: Record<string, unknown>) => {
 					lastUpdateSet = vals;

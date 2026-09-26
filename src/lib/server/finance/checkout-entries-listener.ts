@@ -1,5 +1,6 @@
 import { calculateProcessingFee } from '$lib/finance/fees';
 import { recordEntriesBestEffort, type RecordEntryInput } from './financial-entry-service';
+import { showProjectIdForEvent } from './show-project';
 import type Stripe from 'stripe';
 
 /**
@@ -67,6 +68,8 @@ export async function handleCheckoutEntries(session: Stripe.Checkout.Session): P
 	} else if (meta.type === 'ticket') {
 		const eventId = meta.event_id ?? null;
 		const ticketId = meta.purchase_id ?? session.id;
+		// Every leg of a show's sale counts toward its project's burn.
+		const projectId = await showProjectIdForEvent(eventId);
 		const actsCents = cents('ticket_acts_cents');
 		const collectiveCents = cents('ticket_collective_cents');
 		const feeCoveredCents = cents('ticket_fee_covered_cents');
@@ -79,6 +82,7 @@ export async function handleCheckoutEntries(session: Stripe.Checkout.Session): P
 				category: 'ticket_sales',
 				subjectType: 'ticket',
 				subjectId: ticketId,
+				projectId,
 				description: 'Ticket sale'
 			});
 		}
@@ -93,6 +97,7 @@ export async function handleCheckoutEntries(session: Stripe.Checkout.Session): P
 				settlementGroup: eventId,
 				subjectType: 'ticket',
 				subjectId: ticketId,
+				projectId,
 				description: 'Door, designated to the acts'
 			});
 		}
@@ -104,6 +109,7 @@ export async function handleCheckoutEntries(session: Stripe.Checkout.Session): P
 				category: 'fee_coverage',
 				subjectType: 'ticket',
 				subjectId: ticketId,
+				projectId,
 				description: 'Buyer covered card processing'
 			});
 		}
@@ -115,6 +121,7 @@ export async function handleCheckoutEntries(session: Stripe.Checkout.Session): P
 				category: 'card_fees',
 				subjectType: 'ticket',
 				subjectId: ticketId,
+				projectId,
 				description: 'Card processing'
 			});
 		}

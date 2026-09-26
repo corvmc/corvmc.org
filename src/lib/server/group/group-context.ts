@@ -1,7 +1,8 @@
 import { error } from '@sveltejs/kit';
 import { requireUser, isElevated, can } from '$lib/server/authorization';
 import type { GroupRole } from '$lib/server/db/schema/group';
-import type { Capability } from '$lib/config';
+import { grantRuleFor, type Capability } from '$lib/config';
+import { projectCommitteeGrantsFor } from '$lib/server/capability/capability-grants';
 import { allowlisted, committeeAllows } from '$lib/server/capability/grant-rules';
 import { getBySlug, getByIdActive, getUserRole } from '$lib/server/band/band-service';
 
@@ -120,6 +121,38 @@ export async function requireCommitteeMember(
 
 	if (await can(cover)) return { user, group, role: 'staff' };
 	throw error(403, 'Not a member of the committee that owns this');
+}
+
+/**
+ * A committee taking part in the project, whose grants carry `cover`, or staff.
+ *
+ * The project comes from the record being acted on, never from the request.
+ * `groups` is every seat that passed, so the caller can refresh each committee's
+ * page; it is empty when the pass was staff's.
+ */
+export async function requireProjectCommittee(
+	projectId: string | null,
+	cover: Capability
+): Promise<{
+	user: GroupContext['user'];
+	groups: { id: string; slug: string }[];
+	via: 'committee' | 'staff';
+}> {
+	const user = requireUser();
+	if (projectId && grantRuleFor(cover)?.committee) {
+		const seats = (await projectCommitteeGrantsFor(user.id, projectId)).filter((s) =>
+			s.capabilities.includes(cover)
+		);
+		if (seats.length > 0) {
+			return {
+				user,
+				groups: seats.map((s) => ({ id: s.groupId, slug: s.slug })),
+				via: 'committee'
+			};
+		}
+	}
+	if (await can(cover)) return { user, groups: [], via: 'staff' };
+	throw error(403, 'Not on a committee taking part in this project');
 }
 
 /** Does this committee's own grant list let its members do `cap` on its records? */

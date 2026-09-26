@@ -9,7 +9,9 @@ import { form, command } from './_remote';
 import { getEventRiderSummaries } from '$lib/server/band/rider-service';
 import { getBillInputList } from '$lib/server/band/bill-input-list-service';
 import { config } from '$lib/server/site-config/site-config-service';
-import { requireCapability, requireUser } from '$lib/server/authorization';
+import { can, requireCapability, requireUser } from '$lib/server/authorization';
+import { requireProjectCommittee } from '$lib/server/group/group-context';
+import { projectOfEvent } from '$lib/server/production/production-scope';
 import { mapDomainError } from '$lib/server/errors';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
@@ -1204,7 +1206,11 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 export const setStaffEventLineup = form(
 	z.object({ eventId: z.string().min(1), lineup: z.string().optional() }),
 	async (data) => {
-		await requireCapability('event.manage');
+		// A show's bill is Booking's (`production.book`, through the show's
+		// project); any other listing's is still `event.manage`.
+		const show = await projectOfEvent(data.eventId);
+		if (show?.productionId) await requireProjectCommittee(show.projectId, 'production.book');
+		else await requireCapability('event.manage');
 		const evt = await getById(data.eventId);
 		if (!evt) error(404, 'Event not found');
 
@@ -1222,6 +1228,19 @@ export const setStaffEventLineup = form(
 	}
 );
 
+/**
+ * The production console reads on `event.read`, or on either half of the show
+ * held through the committees taking part in its project.
+ */
+async function requireShowReader(eventId: string) {
+	requireUser();
+	if (await can('event.read')) return;
+	const projectId = (await projectOfEvent(eventId))?.projectId ?? null;
+	if (projectId && (await can('production.book', { projectId }))) return;
+	if (projectId && (await can('production.run', { projectId }))) return;
+	error(403, 'Not permitted');
+}
+
 /** Live venues, shaped for the venue picker on the two staff edit forms. */
 async function venuePickerOptions() {
 	const rows = await listLiveVenues();
@@ -1235,7 +1254,7 @@ async function listApplicableDutyLists() {
 }
 
 export const getStaffEventProduction = query(z.string(), async (id) => {
-	await requireCapability('event.read');
+	await requireShowReader(id);
 
 	// Duty lists ride along in the page's one load-bearing query rather than
 	// being fetched beside it: awaited remote queries are serial round trips, and

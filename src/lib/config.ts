@@ -1270,6 +1270,7 @@ export const dutyListAnchors = [
 	'start',
 	'end',
 	'load_in',
+	'soundcheck',
 	'first_set',
 	'curfew',
 	'load_out',
@@ -1278,12 +1279,18 @@ export const dutyListAnchors = [
 export type DutyListAnchor = (typeof dutyListAnchors)[number];
 
 /**
- * The four production anchors are the show's own clock rather than the
- * listing's. Staffing a show from `doorsAt` alone puts every shift against the
- * one time the run of show does not turn on: a sound tech is wanted at load-in,
- * a stage hand at the first set, and a lock-up at load-out.
+ * The production anchors are the show's own clock rather than the listing's.
+ * Staffing a show from `doorsAt` alone puts every shift against the one time
+ * the run of show does not turn on: a sound tech is wanted at load-in, a stage
+ * hand at the first set, and a lock-up at load-out.
  */
-export const productionDutyListAnchors = ['load_in', 'first_set', 'curfew', 'load_out'] as const;
+export const productionDutyListAnchors = [
+	'load_in',
+	'soundcheck',
+	'first_set',
+	'curfew',
+	'load_out'
+] as const;
 
 // Generic nouns for the first three, because `start` and `end` resolve for a
 // rehearsal booking as well as a show.
@@ -1292,6 +1299,7 @@ export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
 	start: 'Start',
 	end: 'End',
 	load_in: 'Load-in',
+	soundcheck: 'Soundcheck',
 	first_set: 'First set',
 	curfew: 'Curfew',
 	load_out: 'Load-out',
@@ -2113,6 +2121,10 @@ export const capabilities = {
 	// certificate is theirs, and it stays on their record.
 	renewal: ['read', 'manage'],
 	project: ['read', 'manage'],
+	// The two halves of a show (docs/specs/production-projects-spec.md). `book`
+	// is acts, offers, deals and billing; `run` is the run of show, the advance,
+	// crew, the door and settlement. Held by committees through a show's project.
+	production: ['book', 'run'],
 	inbox: ['read', 'reply', 'assign', 'dispose', 'manageChannels'],
 	marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send'],
 	moderation: ['reviewFlags', 'setStanding'],
@@ -2372,14 +2384,23 @@ export const grantableCapabilities = {
 	'grant.manage': { label: 'Manage grants', committee: 'org' },
 	'renewal.read': { label: 'See renewals', committee: 'org' },
 	'renewal.manage': { label: 'Manage renewals', committee: 'org' },
-	// Powers over records a committee owns (projects, its markets, its schedules).
-	// `requireCommitteeMember` asks for these with the owning committee named.
+	// Powers over records a committee owns or takes part in (projects, its
+	// markets, its schedules). The guard names the record; the resolver finds the
+	// committees on it.
 	'project.manage': { label: 'Move its projects along and apply duty lists', committee: 'owned' },
 	'volunteer.manageRecurring': { label: 'Keep its recurring work', committee: 'owned' },
 	'volunteer.manageShifts': { label: 'Open work orders on its projects', committee: 'owned' },
 	'event.publish': { label: "Publish its projects' draft events", committee: 'owned' },
 	'event.manage': { label: 'Decide vendor applications for its markets', committee: 'owned' },
 	'finance.read': { label: 'See its own numbers', committee: 'owned' },
+	'production.book': {
+		label: 'Book its shows: acts, offers, deals and billing',
+		committee: 'owned'
+	},
+	'production.run': {
+		label: 'Run its shows: run of show, advance, crew, door and settlement',
+		committee: 'owned'
+	},
 	// Org-wide: a member-wide ballot belongs to no committee, so `'owned'` could
 	// never reach one. Every active member of the holding committee runs them.
 	'ballot.manage': { label: 'Run member-wide ballots', committee: 'org' }

@@ -6,10 +6,12 @@ import { workOrder, volunteerHourLog, volunteerRole } from '$lib/server/db/schem
 import { contractorJob } from '$lib/server/db/schema/contractor';
 import { acquisition, purchaseOrder, purchaseOrderLine } from '$lib/server/db/schema/inventory';
 import { eventListing } from '$lib/server/db/schema/event';
+import { financialEntry } from '$lib/server/db/schema/financial';
+import { production, productionExpense } from '$lib/server/db/schema/production';
 import { eventListingColumns } from '$lib/server/event/event-columns';
-import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, inArray, isNull, notExists, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
-import { valueOfMinutesCents, type ProjectStatus } from '$lib/config';
+import { valueOfMinutesCents, type ProjectKind, type ProjectStatus } from '$lib/config';
 import { getHourValueCents } from '$lib/server/volunteer/hour-value';
 
 /**
@@ -203,8 +205,22 @@ export async function listCommittees() {
 		.orderBy(asc(group.name));
 }
 
+/** Does a committee take part in the project? Correlated, so it filters any project query. */
+function takesPart(groupId: string) {
+	return exists(
+		db
+			.select({ one: sql`1` })
+			.from(projectCommittee)
+			.where(and(eq(projectCommittee.projectId, project.id), eq(projectCommittee.groupId, groupId)))
+	);
+}
+
+/**
+ * `groupId` is every project that committee takes part in, in any role;
+ * `unowned` is a project no committee takes part in.
+ */
 export async function listProjects(
-	opts: { status?: ProjectStatus; groupId?: string; unowned?: boolean } = {}
+	opts: { status?: ProjectStatus; groupId?: string; unowned?: boolean; kind?: ProjectKind } = {}
 ) {
 	return db
 		.select()
@@ -212,8 +228,16 @@ export async function listProjects(
 		.where(
 			and(
 				opts.status ? eq(project.status, opts.status) : undefined,
-				opts.groupId ? eq(project.groupId, opts.groupId) : undefined,
-				opts.unowned ? isNull(project.groupId) : undefined
+				opts.kind ? eq(project.kind, opts.kind) : undefined,
+				opts.groupId ? takesPart(opts.groupId) : undefined,
+				opts.unowned
+					? notExists(
+							db
+								.select({ one: sql`1` })
+								.from(projectCommittee)
+								.where(eq(projectCommittee.projectId, project.id))
+						)
+					: undefined
 			)
 		)
 		.orderBy(desc(project.createdAt), desc(project.id));
@@ -345,7 +369,20 @@ export interface ProjectBurn {
 		contractorCents: number;
 		purchaseOrderCents: number;
 		acquisitionCents: number;
+		/** A show's cost sheet and the collective's guarantee top-ups. Zero off a show. */
+		showCents: number;
 		totalCents: number;
+	};
+	/**
+	 * A show's own money, from the ledger rows filed under this project. The acts'
+	 * pool passes through and is never spend; it is here so the page can show it.
+	 */
+	show: {
+		ticketRevenueCents: number;
+		actsPoolInCents: number;
+		actPayoutsCents: number;
+		guaranteeTopUpCents: number;
+		expensesCents: number;
 	};
 	contributed: {
 		volunteerMinutes: number;
@@ -423,18 +460,50 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 		.innerJoin(volunteerRole, eq(volunteerHourLog.volunteerRoleId, volunteerRole.id))
 		.where(and(eq(workOrder.projectId, projectId), eq(volunteerHourLog.status, 'approved')));
 
+	// A show's ledger rows. Expenses are read from the cost sheet itself, as
+	// orders are counted when placed: committed when written, not at settlement.
+	const [ledger] = await db
+		.select({
+			ticketRevenueCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'ticket' and ${financialEntry.kind} = 'earned' then ${financialEntry.amountCents} else 0 end), 0)`,
+			actsPoolInCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'ticket' and ${financialEntry.kind} = 'pass_through' then ${financialEntry.amountCents} else 0 end), 0)`,
+			actPayoutsCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'production' then -${financialEntry.amountCents} else 0 end), 0)`,
+			guaranteeTopUpCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'production' and ${financialEntry.kind} = 'spent' then -${financialEntry.amountCents} else 0 end), 0)`
+		})
+		.from(financialEntry)
+		.where(
+			and(
+				eq(financialEntry.projectId, projectId),
+				inArray(financialEntry.subjectType, ['ticket', 'production'])
+			)
+		);
+	const [costSheet] = await db
+		.select({ cents: sql<number>`coalesce(sum(${productionExpense.amountCents}), 0)` })
+		.from(productionExpense)
+		.innerJoin(production, eq(production.id, productionExpense.productionId))
+		.where(eq(production.projectId, projectId));
+
 	const hourValueCents = await getHourValueCents();
+
+	const show = {
+		ticketRevenueCents: Number(ledger?.ticketRevenueCents ?? 0),
+		actsPoolInCents: Number(ledger?.actsPoolInCents ?? 0),
+		actPayoutsCents: Number(ledger?.actPayoutsCents ?? 0),
+		guaranteeTopUpCents: Number(ledger?.guaranteeTopUpCents ?? 0),
+		expensesCents: Number(costSheet?.cents ?? 0)
+	};
 
 	const contractorCents = Number(contractorSpend?.cents ?? 0);
 	const purchaseOrderCents = Number(orders?.cents ?? 0);
 	const acquisitionCents = Number(acquired?.paidCents ?? 0);
-	const totalCents = contractorCents + purchaseOrderCents + acquisitionCents;
+	const showCents = show.expensesCents + show.guaranteeTopUpCents;
+	const totalCents = contractorCents + purchaseOrderCents + acquisitionCents + showCents;
 
 	const volunteerMinutes = Number(labour?.minutes ?? 0);
 
 	return {
 		budgetCents: proj.budgetCents,
-		cash: { contractorCents, purchaseOrderCents, acquisitionCents, totalCents },
+		cash: { contractorCents, purchaseOrderCents, acquisitionCents, showCents, totalCents },
+		show,
 		contributed: {
 			volunteerMinutes,
 			specializedVolunteerMinutes: Number(labour?.specializedMinutes ?? 0),
@@ -483,23 +552,22 @@ export async function listProjectAttachments(projectId: string) {
 }
 
 /**
- * Who owns an event, for a committee guard: the committee of the project it
- * points at. An event has no owner column of its own, so an event on no project,
- * or on an unowned one, answers a null `groupId`. Null for no such event.
+ * The project an event points at, for a committee guard: the committees taking
+ * part in it are who may act. Null `projectId` for an event on no project; null
+ * for no such event.
  */
-export async function getEventOwningCommittee(
+export async function getEventProject(
 	eventId: string
-): Promise<{ groupId: string | null } | null> {
+): Promise<{ projectId: string | null } | null> {
 	const [row] = await db
-		.select({ groupId: project.groupId })
+		.select({ projectId: eventListing.projectId })
 		.from(eventListing)
-		.leftJoin(project, eq(project.id, eventListing.projectId))
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
-	return row ? { groupId: row.groupId ?? null } : null;
+	return row ? { projectId: row.projectId ?? null } : null;
 }
 
-/** The events on a committee's projects, for its own page. Title, time and status only. */
+/** The events on projects a committee takes part in, for its own page. */
 export async function listCommitteeProjectEvents(groupId: string) {
 	return db
 		.select({
@@ -512,6 +580,6 @@ export async function listCommitteeProjectEvents(groupId: string) {
 		})
 		.from(eventListing)
 		.innerJoin(project, eq(project.id, eventListing.projectId))
-		.where(eq(project.groupId, groupId))
-		.orderBy(asc(eventListing.startsAt));
+		.where(takesPart(groupId))
+		.orderBy(asc(eventListing.startsAt), asc(eventListing.id));
 }

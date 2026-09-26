@@ -37,13 +37,13 @@ vi.mock('$lib/server/authorization', async () => {
 });
 
 const mocks = vi.hoisted(() => ({
-	requireCommitteeMember: vi.fn(),
+	requireProjectCommittee: vi.fn(),
 	getProjectById: vi.fn(),
 	createWorkOrder: vi.fn(),
 	refreshMemberGroup: vi.fn()
 }));
 vi.mock('$lib/server/group/group-context', () => ({
-	requireCommitteeMember: mocks.requireCommitteeMember
+	requireProjectCommittee: mocks.requireProjectCommittee
 }));
 vi.mock('$lib/server/project/project-service', () => ({ getProjectById: mocks.getProjectById }));
 vi.mock('$lib/server/volunteer/work-order-service', () => ({
@@ -72,18 +72,15 @@ describe('createCommitteeProjectWorkOrderForm', () => {
 		mocks.createWorkOrder.mockResolvedValue({ id: 'wo-1' });
 	});
 
-	it('opens a work order on the project for a member of the committee that owns it', async () => {
-		mocks.requireCommitteeMember.mockResolvedValue({
+	it('opens a work order on the project for a member of a committee taking part', async () => {
+		mocks.requireProjectCommittee.mockResolvedValue({
 			user: { id: 'user-1' },
-			group: { slug: 'facilities' },
-			role: 'member'
+			groups: [{ id: 'committee-1', slug: 'facilities' }],
+			via: 'committee'
 		});
 
 		await expect(submit(input)).resolves.toEqual({ success: true });
-		expect(mocks.requireCommitteeMember).toHaveBeenCalledWith(
-			'committee-1',
-			'volunteer.manageShifts'
-		);
+		expect(mocks.requireProjectCommittee).toHaveBeenCalledWith(PROJECT, 'volunteer.manageShifts');
 		expect(mocks.createWorkOrder).toHaveBeenCalledWith(
 			expect.objectContaining({
 				volunteerRoleId: 'role-1',
@@ -97,7 +94,7 @@ describe('createCommitteeProjectWorkOrderForm', () => {
 
 	it('refuses someone outside the committee, and writes nothing', async () => {
 		const { error } = await import('@sveltejs/kit');
-		mocks.requireCommitteeMember.mockImplementation(async () => {
+		mocks.requireProjectCommittee.mockImplementation(async () => {
 			throw error(403, 'Not a member of the committee that owns this');
 		});
 
@@ -107,18 +104,15 @@ describe('createCommitteeProjectWorkOrderForm', () => {
 
 	it('takes the committee from the project, not from a groupId in the request', async () => {
 		const { error } = await import('@sveltejs/kit');
-		mocks.requireCommitteeMember.mockImplementation(async (groupId: string) => {
-			if (groupId !== 'my-committee') throw error(403, 'Not a member');
-			return { user: { id: 'user-1' }, group: null, role: 'member' };
+		mocks.requireProjectCommittee.mockImplementation(async (projectId: string) => {
+			if (projectId !== 'my-committee') throw error(403, 'Not a member');
+			return { user: { id: 'user-1' }, groups: [], via: 'committee' };
 		});
 
 		await expect(submit({ ...input, groupId: 'my-committee' })).rejects.toMatchObject({
 			status: 403
 		});
-		expect(mocks.requireCommitteeMember).toHaveBeenCalledWith(
-			'committee-1',
-			'volunteer.manageShifts'
-		);
+		expect(mocks.requireProjectCommittee).toHaveBeenCalledWith(PROJECT, 'volunteer.manageShifts');
 		expect(mocks.createWorkOrder).not.toHaveBeenCalled();
 	});
 
