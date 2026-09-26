@@ -29,14 +29,11 @@ const memberOfRecord = (cutoff: Date) => sql`
 	  and created_at <= ${Math.floor(cutoff.getTime() / 1000)}`;
 
 /**
- * One ballot of each kind that a login can act on, plus a certified result:
- *
- * - the Booking Committee's recorded ballot, open, which its chair can vote on,
- *   change, and certify once it closes;
- * - an open member-wide ballot the admin is on through an audited override;
- * - last spring's certified member-wide result, which every member can read;
- * - one whole idea → decision → work chain: a suggestion, the certified ballot
- *   that passed it, and the project that result authorised.
+ * One ballot of each kind that a login can act on, plus two certified results:
+ * the Booking Committee's open recorded ballot (its chair votes and certifies),
+ * an open member-wide ballot the admin is on through an audited override, last
+ * spring's certified election, and one whole idea → decision → work chain — a
+ * suggestion, the certified ballot that passed it, and the project it authorised.
  */
 export async function seedBallots(
 	groups: { id: string; slug: string; kind: string }[],
