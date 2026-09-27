@@ -1250,6 +1250,12 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 		hourlyRateCents
 	});
 
+	// Required: without an explicit refresh Kit invalidates the whole page, and
+	// the modal's conflict check, still mounted, re-runs over this window and
+	// reports the new row as a double-booking (#1669). This is the page the
+	// modal navigates to next.
+	void getStaffReservationDetail(res.id).refresh();
+
 	return { reservationId: res.id };
 });
 

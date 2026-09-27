@@ -132,18 +132,34 @@ vi.mock('$app/server', () => ({
 		(fn as any).for = () => fn;
 		return fn;
 	},
+	// A query call is a thenable with `refresh()`, as on the server, so a
+	// handler's single-flight refreshes can be read back.
 	query: (...args: unknown[]) => {
-		const handler = typeof args[0] === 'function' ? args[0] : args[1];
-		const fn = handler as (...args: any[]) => any;
-		(fn as any).__ = { type: 'query' };
+		const handler = (typeof args[0] === 'function' ? args[0] : args[1]) as (a?: unknown) => any;
+		const fn: any = (arg?: unknown) => ({
+			then: (res: any, rej: any) =>
+				Promise.resolve()
+					.then(() => handler(arg))
+					.then(res, rej),
+			refresh: async () => {
+				refreshed.push({ query: fn, arg });
+			}
+		});
+		fn.__ = { type: 'query' };
 		return fn;
 	}
 }));
 
-const { createReservation } = (await import('$lib/remote/reservations.remote')) as any;
+const { refreshed } = vi.hoisted(() => ({
+	refreshed: [] as Array<{ query: unknown; arg: unknown }>
+}));
+
+const { createReservation, getStaffReservationDetail } =
+	(await import('$lib/remote/reservations.remote')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	refreshed.length = 0;
 	selectResult = [{ name: 'staff' }];
 });
 
@@ -182,6 +198,16 @@ describe('createReservation (staff)', () => {
 			durationHours: 2,
 			hourlyRateCents: 1500
 		});
+	});
+
+	// #1669. With no explicit refresh, Kit answers a form submit with
+	// invalidateAll(), which re-runs the modal's still-mounted conflict check
+	// for the window just booked. It finds the new row and shows a
+	// double-booking warning for a slot that was free.
+	it('refreshes the booking it created, so the client does not invalidate the page', async () => {
+		await createReservation(input);
+
+		expect(refreshed).toEqual([{ query: getStaffReservationDetail, arg: 'res-staff-1' }]);
 	});
 
 	it('books for a member with no phone on file — staff creation is exempt', async () => {
