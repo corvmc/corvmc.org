@@ -111,6 +111,19 @@ describe('expireWaitlisted', () => {
 		});
 	});
 
+	it('records the row as cancelled automatically, by nobody', async () => {
+		await expireWaitlisted();
+
+		const row = client
+			.prepare(
+				`SELECT cancelled_by, cancelled_by_user_id, cancelled_at FROM reservation WHERE id = 'res-expired'`
+			)
+			.get() as { cancelled_by: string; cancelled_by_user_id: string | null; cancelled_at: number };
+		expect(row.cancelled_by).toBe('system');
+		expect(row.cancelled_by_user_id).toBeNull();
+		expect(row.cancelled_at).toBeGreaterThan(0);
+	});
+
 	it('still emits the expiry event the member hears about', async () => {
 		// Guards the change above from being made by swapping one event for the
 		// other: `waitlist_expired` carries the wording that fits this path.

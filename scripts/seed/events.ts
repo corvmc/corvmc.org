@@ -79,7 +79,10 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				startsAt,
 				endsAt,
 				notes: 'Event space reservation',
-				cancellationReason: reservationStatus === 'cancelled' ? 'Event cancelled' : null
+				cancellationReason: reservationStatus === 'cancelled' ? 'Event cancelled' : null,
+				cancelledBy: reservationStatus === 'cancelled' ? 'staff' : null,
+				cancelledAt:
+					reservationStatus === 'cancelled' ? new Date(startsAt.getTime() - 86_400_000) : null
 			})
 			.returning();
 		return { reservationId: r.id, productionId };

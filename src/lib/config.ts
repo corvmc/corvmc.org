@@ -2434,6 +2434,22 @@ export function isBookerType(value: string): value is BookerType {
 }
 
 /**
+ * Who cancelled a reservation. `member` is the booking's own side (the member,
+ * or a band admin acting for the band), `owner` a band owner deleting the band,
+ * and `system` a scheduled job — the reason then says which one.
+ */
+export const reservationCancellers = ['member', 'owner', 'staff', 'system'] as const;
+export type ReservationCanceller = (typeof reservationCancellers)[number];
+
+/** Completes "Cancelled …". */
+export const reservationCancellerLabels: Record<ReservationCanceller, string> = {
+	member: 'by member',
+	owner: 'by band owner',
+	staff: 'by staff',
+	system: 'automatically'
+};
+
+/**
  * What a `media_attachment` can hang off. Extending this emits **zero SQL** —
  * drizzle's SQLite dialect treats a text enum as a TypeScript-only constraint —
  * which is the property that makes adding `production` later free.

@@ -171,7 +171,9 @@ export async function deactivateUser(
 	for (const r of futureReservations) {
 		await cancelReservation(r.id, userId, 'Account deactivated', {
 			staffOverride: true,
-			actor: opts.actor
+			actor: opts.actor,
+			// `userId` is the account being closed, not the staffer closing it.
+			actorUserId: opts.actor === 'member' ? userId : null
 		});
 	}
 

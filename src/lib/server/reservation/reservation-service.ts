@@ -29,7 +29,7 @@ import { group } from '$lib/server/db/schema/group';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { DEFAULT_TIMEZONE, withinConfirmationWindow } from '$lib/config';
 import type { ReservationStatus } from '$lib/server/db/schema/reservation';
-import type { BookerType } from '$lib/config';
+import type { BookerType, ReservationCanceller } from '$lib/config';
 import { captureException } from '$lib/server/sentry';
 import { DomainError } from '$lib/server/domain-error';
 
@@ -508,9 +508,13 @@ export async function cancel(
 		 * past-start checks, which a job needs, but it is not evidence that a
 		 * person acted — and the member's email says which.
 		 */
-		actor?: 'member' | 'staff' | 'owner' | 'system';
+		actor?: ReservationCanceller;
+		/** Recorded as the canceller when `userId` is not the person acting; null for nobody. */
+		actorUserId?: string | null;
 	}
 ): Promise<void> {
+	const actor: ReservationCanceller =
+		options?.actor ?? (options?.staffOverride ? 'staff' : 'member');
 	// Read current state to check authorization and determine refund eligibility
 	const [row] = await db
 		.select()
@@ -536,6 +540,10 @@ export async function cancel(
 		throw new ReservationStateError('Cannot cancel a reservation that has already started');
 	}
 
+	// A job passes '' as `userId`; nobody is recorded for it.
+	const cancelledByUserId =
+		options?.actorUserId !== undefined ? options.actorUserId : userId || null;
+
 	// Atomic conditional update — only cancels if status hasn't changed since read
 	const cancellable: ReservationStatus[] = ['scheduled', 'confirmed', 'waitlisted'];
 	const result = await db
@@ -543,6 +551,9 @@ export async function cancel(
 		.set({
 			status: 'cancelled',
 			cancellationReason: reason ?? null,
+			cancelledBy: actor,
+			cancelledByUserId: actor === 'system' ? null : cancelledByUserId,
+			cancelledAt: new Date(),
 			// Clear the credit-commit marker: credits are reversed below, so a stale
 			// cashDueCents/creditsUsed must not survive into any later path
 			// (commitReservationCredits treats non-null cashDueCents as committed).
@@ -604,7 +615,7 @@ export async function cancel(
 		date: formatDateInTz(row.startsAt, TZ),
 		startTime: formatTimeInTz(row.startsAt, TZ),
 		endTime: formatTimeInTz(row.endsAt, TZ),
-		cancelledBy: options?.actor ?? (options?.staffOverride ? 'staff' : 'member'),
+		cancelledBy: actor,
 		reason
 	});
 

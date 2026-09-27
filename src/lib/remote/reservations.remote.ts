@@ -465,16 +465,20 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 
 	if (!rows[0]) throw error(404, 'Reservation not found');
 
-	// Audit: who at the front desk created this booking, if it wasn't the member.
-	let createdByStaffName: string | null = null;
-	if (rows[0].reservation.createdByStaffId) {
-		const [staffRow] = await db
+	// Audit: who at the front desk created this booking, and who cancelled it.
+	const nameOf = async (userId: string | null) => {
+		if (!userId) return null;
+		const [nameRow] = await db
 			.select({ name: user.name })
 			.from(user)
-			.where(eq(user.id, rows[0].reservation.createdByStaffId))
+			.where(eq(user.id, userId))
 			.limit(1);
-		createdByStaffName = staffRow?.name ?? null;
-	}
+		return nameRow?.name ?? null;
+	};
+	const [createdByStaffName, cancelledByName] = await Promise.all([
+		nameOf(rows[0].reservation.createdByStaffId),
+		nameOf(rows[0].reservation.cancelledByUserId)
+	]);
 
 	const row = {
 		...rows[0].reservation,
@@ -501,7 +505,8 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			band: { id: rows[0].bandId, name: rows[0].bandName, slug: rows[0].bandSlug },
 			event: { id: rows[0].eventId, title: rows[0].eventTitle }
 		}),
-		createdByStaffName
+		createdByStaffName,
+		cancelledByName
 	};
 
 	const tz = DEFAULT_TIMEZONE;
