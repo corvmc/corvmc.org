@@ -85,6 +85,9 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 					endsAt,
 					notes: random() > 0.7 ? 'Band practice' : null,
 					cancellationReason: status === 'cancelled' ? 'Schedule conflict' : null,
+					cancelledBy: status === 'cancelled' ? 'member' : null,
+					cancelledByUserId: status === 'cancelled' ? member.id : null,
+					cancelledAt: status === 'cancelled' ? new Date(startsAt.getTime() - 86_400_000) : null,
 					creditsUsed,
 					cashDueCents,
 					// A fully covered booking is settled by the credits themselves —
@@ -194,7 +197,45 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 		.returning();
 	rows.push(firstEver);
 
+	rows.push(...(await seedCancellationKinds(users)));
+
 	return rows;
+}
+
+/**
+ * One cancelled booking per way a booking gets cancelled, so the staff detail
+ * page's "Cancelled by …" line can be seen for each. Fixed rather than rolled:
+ * the loops above only sometimes cancel, and always as the member. A cancelled
+ * row holds no room, so these need no slot.
+ */
+async function seedCancellationKinds(users: SeedUser[]): Promise<SeedReservation[]> {
+	const [staff, member] = users;
+	const kinds = [
+		{ cancelledBy: 'member', byUserId: member.id, reason: 'Drummer is sick' },
+		{ cancelledBy: 'staff', byUserId: staff.id, reason: null },
+		{ cancelledBy: 'owner', byUserId: member.id, reason: 'Band deleted' },
+		{ cancelledBy: 'system', byUserId: null, reason: 'Not confirmed before start' },
+		{ cancelledBy: 'system', byUserId: null, reason: 'Waitlist expired' },
+		// A row from before anyone recorded who cancelled.
+		{ cancelledBy: null, byUserId: null, reason: null }
+	] as const;
+	return db
+		.insert(reservation)
+		.values(
+			kinds.map((k, i) => ({
+				bookerType: 'user' as const,
+				bookerId: member.id,
+				createdByUserId: member.id,
+				status: 'cancelled' as const,
+				startsAt: ptDate(-3 + i, 10),
+				endsAt: ptDate(-3 + i, 12),
+				cancellationReason: k.reason,
+				cancelledBy: k.cancelledBy,
+				cancelledByUserId: k.byUserId,
+				cancelledAt: k.cancelledBy ? ptDate(-5 + i, 16) : null
+			}))
+		)
+		.returning();
 }
 
 export async function seedClosures() {

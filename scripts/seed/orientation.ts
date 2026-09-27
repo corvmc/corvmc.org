@@ -171,7 +171,10 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 				status: 'cancelled',
 				startsAt: ptDate(4, 19),
 				endsAt: ptDate(4, 21),
-				cancellationReason: 'Changed plans'
+				cancellationReason: 'Changed plans',
+				cancelledBy: 'member',
+				cancelledByUserId: dropped.id,
+				cancelledAt: new Date()
 			})
 			.returning();
 

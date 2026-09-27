@@ -10,7 +10,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
-import { accessHoldingKinds, bookerTypes } from '../../../config';
+import { accessHoldingKinds, bookerTypes, reservationCancellers } from '../../../config';
 import { recurringSeries } from './recurring';
 
 // ---------------------------------------------------------------------------
@@ -76,6 +76,13 @@ export const reservation = sqliteTable(
 		hardHold: integer('hard_hold', { mode: 'boolean' }).notNull().default(false),
 		notes: text('notes'),
 		cancellationReason: text('cancellation_reason'),
+		// Null on a cancelled row means nobody recorded who: it predates the
+		// columns and the backfill found no evidence. `system` has no user.
+		cancelledBy: text('cancelled_by', { enum: reservationCancellers }),
+		cancelledByUserId: text('cancelled_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		cancelledAt: integer('cancelled_at', { mode: 'timestamp' }),
 		stripePaymentRecordId: text('stripe_payment_record_id'),
 		paidAt: integer('paid_at', { mode: 'timestamp' }),
 		refundedAt: integer('refunded_at', { mode: 'timestamp' }),

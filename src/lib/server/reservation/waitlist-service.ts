@@ -156,6 +156,8 @@ export async function expireWaitlisted(): Promise<{ expired: number; rePromoted:
 			.set({
 				status: 'cancelled',
 				cancellationReason: 'Waitlist expired',
+				cancelledBy: 'system',
+				cancelledAt: now,
 				waitlistNotifiedAt: null,
 				waitlistExpiresAt: null,
 				updatedAt: now

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "c23162a2-587a-43d3-8e42-43789488ed49",
+  "id": "feb43c0e-1156-4289-84aa-f6ea34301d68",
   "prevIds": [
-    "13a73fd5-03c8-49a5-b7e2-522f5f9fe684"
+    "c23162a2-587a-43d3-8e42-43789488ed49"
   ],
   "ddl": [
     {
@@ -1761,6 +1761,36 @@
       "default": null,
       "generated": null,
       "name": "cancellation_reason",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_by",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_by_user_id",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_at",
       "entityType": "columns",
       "table": "reservation"
     },
@@ -14701,6 +14731,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_reservation_created_by_staff_id_user_id_fk",
+      "entityType": "fks",
+      "table": "reservation"
+    },
+    {
+      "columns": [
+        "cancelled_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_reservation_cancelled_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "reservation"
     },

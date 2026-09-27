@@ -38,6 +38,7 @@
 		overlappingReservations
 	} from '$lib/utils/reservation-actions';
 	import { getStaffReservationDetail } from '$lib/remote/reservations.remote';
+	import { describeCancellation } from '$lib/utils/reservation-cancellation';
 	import { reprovisionReservationAccess } from '$lib/remote/lock.remote';
 	import { page } from '$app/state';
 
@@ -353,7 +354,7 @@
 		<!-- An alert rather than a card: a cancellation is a state the reader has
 		     to notice, and the body is one line either way. -->
 		<Alert type="error">
-			<strong>Cancelled.</strong>
+			<strong>{describeCancellation(r)}</strong>
 			{r.cancellationReason ?? 'No reason given.'}
 		</Alert>
 	{/if}

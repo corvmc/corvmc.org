@@ -348,6 +348,53 @@ describe('ReservationService', () => {
 			expect(refund).not.toHaveBeenCalled();
 		});
 
+		// The staff reservation page reads these columns to say who cancelled.
+		describe('records who cancelled', () => {
+			const row = {
+				id: 'res-1',
+				createdByUserId: 'user-1',
+				status: 'scheduled',
+				stripePaymentRecordId: null,
+				startsAt: future,
+				endsAt: futureEnd
+			};
+
+			it.each([
+				['the member, on their own booking', 'user-1', undefined, 'member', 'user-1'],
+				['staff, with the staffer', 'staff-1', { staffOverride: true }, 'staff', 'staff-1'],
+				[
+					'a band admin, as the member side',
+					'admin-1',
+					{ authorizedActor: true },
+					'member',
+					'admin-1'
+				],
+				['a band owner', 'owner-1', { staffOverride: true, actor: 'owner' }, 'owner', 'owner-1'],
+				['staff with no id to name', '', { staffOverride: true, actor: 'staff' }, 'staff', null],
+				['a job, with nobody', 'user-1', { staffOverride: true, actor: 'system' }, 'system', null],
+				[
+					'staff when the id passed is the subject, not the actor',
+					'user-1',
+					{ staffOverride: true, actor: 'staff', actorUserId: null },
+					'staff',
+					null
+				]
+			] as const)('as %s', async (_label, userId, options, cancelledBy, cancelledByUserId) => {
+				setupSelectMock(row);
+				const set = setupUpdateMock(1);
+
+				await cancel('res-1', userId, undefined, options);
+
+				expect(set).toHaveBeenCalledWith(
+					expect.objectContaining({ cancelledBy, cancelledByUserId, cancelledAt: expect.any(Date) })
+				);
+				expect(emit).toHaveBeenCalledWith(
+					'reservation.cancelled',
+					expect.objectContaining({ cancelledBy })
+				);
+			});
+		});
+
 		it('rejects cancellation of a past reservation by the owner', async () => {
 			setupSelectMock({
 				id: 'res-1',
@@ -929,10 +976,13 @@ describe('ReservationService', () => {
 				startsAt: past,
 				endsAt: pastEnd
 			});
-			setupUpdateMock(1);
+			const set = setupUpdateMock(1);
 
 			await cancelUnconfirmedReservations(new Date());
 
+			expect(set).toHaveBeenCalledWith(
+				expect.objectContaining({ cancelledBy: 'system', cancelledByUserId: null })
+			);
 			expect(emit).toHaveBeenCalledWith(
 				'reservation.cancelled',
 				expect.objectContaining({ cancelledBy: 'system' })
