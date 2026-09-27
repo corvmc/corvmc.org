@@ -12,7 +12,9 @@ export const tableOrder = [
 	// Moved up from beside its votes and edits: it references only `user`, and
 	// `project` references it. Position here is semantic, not cosmetic.
 	'suggestion',
-	// References user, group and suggestion. Must precede everything that carries
+	// References user, group and suggestion; `project.ballot_id` points back at it.
+	'ballot',
+	// References user, group, suggestion and ballot. Must precede everything that carries
 	// `project_id`: work_order, contractor_job, purchase_order, acquisition, event.
 	'project',
 	// References user and group; parent of directory_tag.
@@ -221,8 +223,7 @@ export const tableOrder = [
 	'incident_note',
 	// References user only; its subject id is bare text.
 	'wishlist_pledge',
-	// References user and group; the rest reference ballot, and two ballot_option.
-	'ballot',
+	// These reference ballot, which sits beside suggestion above; two reference ballot_option.
 	'ballot_option',
 	'ballot_elector',
 	'ballot_elector_override',

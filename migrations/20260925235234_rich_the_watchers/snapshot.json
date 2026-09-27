@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "13a73fd5-03c8-49a5-b7e2-522f5f9fe684",
+  "id": "c23162a2-587a-43d3-8e42-43789488ed49",
   "prevIds": [
-    "60bf3aa9-d1c9-47ad-b2f7-bebbd746f44a"
+    "13a73fd5-03c8-49a5-b7e2-522f5f9fe684"
   ],
   "ddl": [
     {
@@ -10885,6 +10885,16 @@
       "table": "project"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ballot_id",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -14105,6 +14115,26 @@
       "table": "ballot"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "suggestion_id",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -17271,6 +17301,21 @@
     },
     {
       "columns": [
+        "ballot_id"
+      ],
+      "tableTo": "ballot",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_project_ballot_id_ballot_id_fk",
+      "entityType": "fks",
+      "table": "project"
+    },
+    {
+      "columns": [
         "created_by_user_id"
       ],
       "tableTo": "user",
@@ -18061,6 +18106,21 @@
       "onDelete": "CASCADE",
       "nameExplicit": false,
       "name": "fk_ballot_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "ballot"
+    },
+    {
+      "columns": [
+        "suggestion_id"
+      ],
+      "tableTo": "suggestion",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_ballot_suggestion_id_suggestion_id_fk",
       "entityType": "fks",
       "table": "ballot"
     },
@@ -22663,6 +22723,20 @@
     {
       "columns": [
         {
+          "value": "ballot_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "ballot_id is not null",
+      "origin": "manual",
+      "name": "uq_project_ballot",
+      "entityType": "indexes",
+      "table": "project"
+    },
+    {
+      "columns": [
+        {
           "value": "group_id",
           "isExpression": false
         },
@@ -23535,6 +23609,34 @@
       "where": null,
       "origin": "manual",
       "name": "ballot_group_idx",
+      "entityType": "indexes",
+      "table": "ballot"
+    },
+    {
+      "columns": [
+        {
+          "value": "suggestion_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "ballot_suggestion_idx",
+      "entityType": "indexes",
+      "table": "ballot"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "ballot_project_idx",
       "entityType": "indexes",
       "table": "ballot"
     },

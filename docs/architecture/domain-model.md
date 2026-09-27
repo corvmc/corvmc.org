@@ -239,65 +239,74 @@ event and to a window around the shift (recap uploads, incident filing, door pay
 Positions stay the org-wide layer underneath. A new "who may do X here" question should
 start from a membership plus a grant, not a new role check.
 
-### 6. A staff tool is a group tool with the group hardcoded `[all three verticals]`
+### 6. Group ownership: an empty owner means the collective `[all three verticals]`
 
-**The staff panel is the CMC group's panel.** Most of what lives under `/staff` is not
-privileged by nature — it is a tool scoped to an organization, where the organization
-happens to be the collective and is therefore implicit. Once a tool is genuinely
-group-scoped, a band, a club and a committee can all have one.
+One shape: a **nullable owner column**, where a group id means that group's and null means
+the collective's. Nothing else marks a row as CMC's, so there is no second column to drift.
 
-This is not speculative; it has already happened twice, and the schema says why:
+| Column                     | Null means                                               |
+| -------------------------- | -------------------------------------------------------- |
+| `inbox_thread.group_id`    | the thread is in the staff inbox                         |
+| `directory_entry.group_id` | with `user_id` null too, a staff-kept external act       |
+| `project.group_id`         | no committee owns the project yet, so staff do           |
+| `ballot.group_id`          | a member-wide ballot, where set it is a committee ballot |
 
-- **`announcement`** — "One table for bands, clubs and committees alike, because a band
-  posting to its roster and a committee posting to its members are the same act."
-- **`event_group`** — which groups' pages an event appears on, distinct from
-  `event_band`'s credit on the bill.
-- **Projects** followed: first a single owning committee (`project.groupId`), and now
-  several committees taking part in one project, each with a role, as productions become
-  projects (Booking and Production both work a show).
+Projects are moving from one owning committee to several taking part, each with a role, as
+productions become projects; an empty set there will mean the same thing.
 
-**The inbox was the clearest remaining case, and it has now happened.** `inbox_thread` had
-**no owner column at all** — `channel` records how a message arrived (contact form, portal,
-email, SMS, Instagram, Messenger), never whose queue it belongs in, so every thread was
-implicitly CMC's. Meanwhile `submitBandContactForm`
-([band-contact.remote.ts](../../src/lib/remote/band-contact.remote.ts)) delivered booking
-enquiries "to the band's booking contact, falling back to the band owner" — as email. Bands
-received that traffic into a personal mailbox, unthreaded, with no status, no awaiting-reply
-marker and no record that anyone answered.
+`announcement` and `event_group` are the same idea without the null: a band posting to its
+roster and a committee posting to its members are the same act on one table. Because the
+null is the collective, every query for an owner LEFT joins, and a guard reads the column
+off the row, never off the request.
 
-`inbox_thread.group_id` is that column: nullable, null meaning CMC, the same shape
-`directory_entry` uses for its two nullable owners. It turned one inbox into many, and
-`docs/specs/shipped/band-chat-spec.md` is what it turned into — including the answer to the
-question groups-spec left open about whether group membership is snapshotted at send time or
-resolved live. It is resolved live, which is why the per-reader cursor moved off
-`inbox_participant` into `inbox_group_read`.
+**When to group-scope a tool.** Most of `/staff` is a tool scoped to an organization that
+happens to be the collective. Once a tool is genuinely group-scoped, a band, a club and a
+committee can all have one; the inbox was the clearest case, and
+`docs/specs/shipped/band-chat-spec.md` is what it became. Three conditions, all of which
+band chat demonstrates:
 
-Three things this pattern has to respect, all of which already had working precedent, and all
-three of which band chat now demonstrates rather than promises:
-
-- **Internal notes must not leak.** `/member/messages` is member↔staff on these same
-  tables and internal notes are never exposed there, so the isolation is proven in
-  production rather than hypothetical.
-- **Participants are people.** `inbox_participant.userId` is a user FK, which is how DMs
-  scope. A group cannot be a participant, so ownership and participation are two different
-  questions and need two different columns.
-- **Not every tool generalizes.** Marketing is the counter-example: consent, suppression
-  and unsubscribe are per-`subscriber` and a band's list is not the collective's list, so
-  the compliance question changes rather than scaling. Inventory and volunteering are weak
-  fits for the same reason — they describe things the collective owns.
+- **Internal notes must not leak.** `/member/messages` runs member↔staff on the same
+  tables and never exposes a note.
+- **Participants are people.** `inbox_participant.userId` is a user FK. A group cannot be a
+  participant, so ownership and participation are two columns.
+- **Not every tool generalizes.** Marketing's consent, suppression and unsubscribe are
+  per-`subscriber`, and a band's list is not the collective's, so the compliance question
+  changes rather than scaling. Inventory and volunteering describe things the collective
+  owns, and fit poorly for the same reason.
 
 ### 7. Idea → decision → work `[social → projects]`
 
 A member raises an idea, the collective decides, and the decision becomes owned, budgeted
-work. `suggestion` (the idea, voted up by members) → a ballot or a committee's call (the
-decision) → `project` (the work). The link already exists at both ends: starting a project
-from a suggestion moves both to planned in one write, and committees own projects and run
-their own ballots.
+work. Each step is a row, and each link is a nullable column, so a project can exist with
+neither and a ballot can stand alone:
+
+| Column                  | Says                                                                     |
+| ----------------------- | ------------------------------------------------------------------------ |
+| `ballot.suggestion_id`  | the suggestion this ballot decides                                       |
+| `ballot.project_id`     | an existing project this ballot decides (no FK; the service checks)      |
+| `project.suggestion_id` | the suggestion the project answers; one project per suggestion           |
+| `project.ballot_id`     | the ballot whose certified, passing result authorised it; one per ballot |
+
+The path is predictable because the suggestion's status follows the links. Opening a ballot
+from a suggestion moves it from `open` to `in_ballot`; cancelling that ballot moves it back.
+A certified result passes when its first choice is strictly ahead of every other, and a
+ballot put from a suggestion starts with "Yes" first. A passing ballot's page offers **Start
+project**, which writes the project with both links and moves the suggestion to `planned`
+in one `db.batch`, as the direct suggestion → project path already did for decisions that
+need no vote. From there the project's status is what the suggestion reports. A failed
+ballot leaves the suggestion at `in_ballot` for staff to decline with a response.
+`src/lib/server/project/decision-chain.ts` holds the writes and the reads.
+
+Each page shows the chain under its own visibility rules: a project's staff page has "Why
+this exists" (suggestion → ballot → project), a suggestion's page lists its non-draft
+ballots and its project, and a ballot's page says what it decides. A ballot appears on
+another page as its question and status and, once certified, its published counts; a live
+tally, and anything about who chose what, never leaves the ballot's own page.
 
 This is a flow across two verticals, not a third: suggestions and ballots are social,
 projects are project management, and committees are social containers that hold powers
-over work. The staff nav still groups them as **Planning**, because staff work the flow
-together; a nav section follows the work, this document follows the data.
+over work. The staff nav groups them as **Planning** because staff work the flow together;
+a nav section follows the work, this document follows the data.
 
 ## Duplications to leave alone
 

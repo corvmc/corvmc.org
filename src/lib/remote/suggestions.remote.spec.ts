@@ -11,6 +11,7 @@ let currentUser: { id: string; name: string; email: string } | null = null;
 let isStaff = false;
 
 vi.mock('$lib/server/authorization', () => ({
+	can: async () => isStaff,
 	requireCapability: async () => {
 		if (!currentUser) throw new Error('401: Not authenticated');
 		if (!isStaff) throw new Error('403: Staff access required');
@@ -64,6 +65,14 @@ vi.mock('$lib/server/project/project-service', () => projectSvc);
 // that answered a gear request (#603).
 const acquisitionSvc = { getAcquisitionForSuggestion: vi.fn(async () => null) };
 vi.mock('$lib/server/inventory/acquisition-service', () => acquisitionSvc);
+
+// And again for the decision chain: both detail pages read the ballots a
+// suggestion went to, and the staff one reads committee rosters when the viewer
+// may open a ballot.
+const chainSvc = { getSuggestionChain: vi.fn(async () => ({ ballots: [] })) };
+vi.mock('$lib/server/project/decision-chain', () => chainSvc);
+const ballotSvc = { listCommitteeRosters: vi.fn(async () => []) };
+vi.mock('$lib/server/ballot/ballot-service', () => ballotSvc);
 
 // Standing moved out of the domain services into one shared one. It stays a
 // spy here for the same reason the others are: a guard that runs late would

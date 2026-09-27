@@ -28,6 +28,7 @@ let electorIds = new Set<string>();
 const svc = {
 	getBallotDetail: vi.fn(async () => ballot),
 	ballotStatusOf: vi.fn(() => ballot.__status),
+	ballotPassed: vi.fn(() => false),
 	isElector: vi.fn(async (_b: string, u: string) => electorIds.has(u)),
 	getMyVote: vi.fn(async () => ({ voted: false, optionId: null })),
 	getTurnout: vi.fn(async () => ({ voted: 0, electorateSize: 0 })),
@@ -47,6 +48,10 @@ const svc = {
 	setElectorOverride: vi.fn(async () => undefined)
 };
 vi.mock('$lib/server/ballot/ballot-service', () => svc);
+vi.mock('$lib/server/project/decision-chain', () => ({
+	getBallotChain: vi.fn(async () => ({ suggestion: null, project: null, authorised: null }))
+}));
+vi.mock('$lib/server/project/project-service', () => ({ listCommittees: vi.fn(async () => []) }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: ME } }),

@@ -13,7 +13,10 @@ import {
 	BALLOT_TITLE_MAX,
 	DEFAULT_TIMEZONE
 } from '$lib/config';
+import { getBallotChain } from '$lib/server/project/decision-chain';
+import { listCommittees } from '$lib/server/project/project-service';
 import {
+	ballotPassed,
 	ballotStatusOf,
 	cancelBallot,
 	castVote,
@@ -135,7 +138,12 @@ export const getBallotPage = query(z.string().min(1), async (ballotId) => {
 	if (status !== 'certified' && !involved) error(404, 'Ballot not found');
 
 	const tallyVisible = status === 'certified' || (status === 'closed' && involved);
-	const staff = await can('ballot.manage');
+	const [staff, suggestionStaff, projectReader, projectManager] = await Promise.all([
+		can('ballot.manage'),
+		can('suggestion.read'),
+		can('project.read'),
+		can('project.manage')
+	]);
 
 	try {
 		const [myVote, tally, turnout, previewSize, overrides] = await Promise.all([
@@ -148,6 +156,18 @@ export const getBallotPage = query(z.string().min(1), async (ballotId) => {
 		const committee =
 			manager && b.kind === 'group'
 				? ((await listCommitteeRosters()).find((c) => c.id === b.groupId) ?? null)
+				: null;
+		const links = await getBallotChain(ballotId);
+		const passed = status === 'certified' ? ballotPassed(b.certifiedResult) : null;
+		const canStartProject = projectManager && passed === true && !b.projectId && !links.authorised;
+		// A suggestion off the board stays unnamed to members, as its own page 404s for them.
+		const decidedSuggestion =
+			links.suggestion && (suggestionStaff || links.suggestion.visibility === 'visible')
+				? {
+						id: links.suggestion.id,
+						title: links.suggestion.title,
+						status: links.suggestion.status
+					}
 				: null;
 
 		return {
@@ -166,7 +186,20 @@ export const getBallotPage = query(z.string().min(1), async (ballotId) => {
 				group: b.group,
 				certifier: b.certifier
 			},
-			viewer: { isManager: manager, isElector: elector, isCertifier: certifier, isStaff: staff },
+			viewer: {
+				isManager: manager,
+				isElector: elector,
+				isCertifier: certifier,
+				isStaff: staff,
+				canReadProjects: projectReader,
+				canReadSuggestions: suggestionStaff
+			},
+			decides: { suggestion: decidedSuggestion, project: links.project },
+			authorised: links.authorised,
+			passed,
+			startProject: canStartProject
+				? { committees: await listCommittees(), name: decidedSuggestion?.title ?? b.title }
+				: null,
 			myVote,
 			tally,
 			turnout,
@@ -187,6 +220,8 @@ export const createBallot = form(
 	z.object({
 		kind: z.enum(ballotKinds),
 		groupId: z.string().optional(),
+		suggestionId: z.string().optional(),
+		projectId: z.string().optional(),
 		...draftFields
 	}),
 	async (data) => {
@@ -205,7 +240,9 @@ export const createBallot = form(
 				description: data.description,
 				options: choices(data.options),
 				closesAt: closesAt(data.closesOn),
-				certifierId: data.certifierId
+				certifierId: data.certifierId,
+				suggestionId: data.suggestionId || null,
+				projectId: data.projectId || null
 			},
 			{ actorId: me.id }
 		);

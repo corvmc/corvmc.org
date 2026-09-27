@@ -25,6 +25,7 @@ import {
 	startProjectFromSuggestion,
 	updateProject
 } from '$lib/server/project/project-service';
+import { getProjectOrigin, startProjectFromBallot } from '$lib/server/project/decision-chain';
 import { applyDutyList, listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { createWorkOrder } from '$lib/server/volunteer/work-order-service';
 import { publish as publishEvent } from '$lib/server/event/event-service';
@@ -138,16 +139,28 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 export const getProjectDetail = query(z.string(), async (id) => {
 	await requireCapability('project.read');
 	try {
-		const [project, burn, attachments, committees, suggestions, lists] = await Promise.all([
-			getProjectById(id),
-			getProjectBurn(id),
-			listProjectAttachments(id),
-			listCommittees(),
-			listUnansweredSuggestions(),
-			listDutyLists({ subject: 'project' })
-		]);
+		const [project, burn, attachments, committees, suggestions, lists, origin, ballotManager] =
+			await Promise.all([
+				getProjectById(id),
+				getProjectBurn(id),
+				listProjectAttachments(id),
+				listCommittees(),
+				listUnansweredSuggestions(),
+				listDutyLists({ subject: 'project' }),
+				getProjectOrigin(id),
+				can('ballot.manage')
+			]);
 		const dutyLists = lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
-		return { project, burn, attachments, committees, suggestions, dutyLists };
+		return {
+			project,
+			burn,
+			attachments,
+			committees,
+			suggestions,
+			dutyLists,
+			origin,
+			canCreateBallot: ballotManager
+		};
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -332,6 +345,37 @@ export const startProjectFromSuggestionForm = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
+	}
+);
+
+/**
+ * Start the work a certified, passing ballot authorised. The project is linked
+ * to the ballot and to the suggestion the ballot decided, which moves to
+ * `planned` with it.
+ */
+export const startProjectFromBallotForm = form(
+	z.object({
+		ballotId: z.uuid(),
+		name: z.string().min(1).max(200),
+		groupId: optionalId,
+		budgetCents: optionalMoney
+	}),
+	async (raw) => {
+		const user = await requireCapability('project.manage');
+		const { ballotId, name, groupId, budgetCents } = raw as {
+			ballotId: string;
+			name: string;
+			groupId?: string;
+			budgetCents?: number;
+		};
+		const row = await startProjectFromBallot(ballotId, {
+			name,
+			groupId: groupId || null,
+			budgetCents: budgetCents ?? null,
+			createdByUserId: user.id
+		});
+		void getProjectsPage().refresh();
+		return { success: true, id: row.id };
 	}
 );
 
