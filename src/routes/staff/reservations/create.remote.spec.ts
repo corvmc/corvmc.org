@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { isValidationError } from '@sveltejs/kit';
 import { mockUser } from '$lib/server/db/test-factory';
 
 // ---------------------------------------------------------------------------
@@ -91,6 +92,16 @@ vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
+// Only the conflict read is faked; the db mock below answers every select with
+// a role row, which the real query would read as a double-booking.
+const { getConflictDetails } = vi.hoisted(() => ({
+	getConflictDetails: vi.fn(async (): Promise<unknown[]> => [])
+}));
+vi.mock('$lib/server/reservation/conflict-service', async (importOriginal) => ({
+	...(await importOriginal<typeof import('$lib/server/reservation/conflict-service')>()),
+	getConflictDetails
+}));
+
 vi.mock('$lib/server/reservation/recurring-series-service', () => ({
 	create: vi.fn(async () => ({ id: 'series-1' }))
 }));
@@ -157,8 +168,15 @@ const { refreshed } = vi.hoisted(() => ({
 const { createReservation, getStaffReservationDetail } =
 	(await import('$lib/remote/reservations.remote')) as any;
 
+// Mirrors SvelteKit's `issue` helper: it only builds the issue; `invalid()` throws.
+const issue: any = new Proxy(
+	{},
+	{ get: (_t, field: string) => (message: string) => ({ message, path: [field] }) }
+);
+
 beforeEach(() => {
 	vi.clearAllMocks();
+	getConflictDetails.mockResolvedValue([]);
 	refreshed.length = 0;
 	selectResult = [{ name: 'staff' }];
 });
@@ -215,6 +233,43 @@ describe('createReservation (staff)', () => {
 		// can book a walk-in without stopping to collect contact details.
 		await expect(createReservation(input)).resolves.toMatchObject({
 			reservationId: 'res-staff-1'
+		});
+	});
+
+	// #1688. The modal showed the double-booking warning but nothing stopped the
+	// submit, and the remote never checked, so staff double-booked the room with
+	// no deliberate step. Overriding is allowed; skipping the override is not.
+	describe('over a conflicting booking or closure', () => {
+		const booked = {
+			type: 'reservation',
+			id: 'res-other',
+			startsAt: new Date('2026-08-01T18:00:00'),
+			endsAt: new Date('2026-08-01T20:00:00'),
+			label: 'Someone Else'
+		};
+
+		it('refuses without an explicit override', async () => {
+			getConflictDetails.mockResolvedValue([booked]);
+
+			let thrown: unknown;
+			try {
+				await createReservation(input, issue);
+			} catch (e) {
+				thrown = e;
+			}
+
+			expect(isValidationError(thrown)).toBe(true);
+			const issues = (thrown as { issues: Array<{ path?: string[] }> }).issues;
+			expect(issues.some((i) => i.path?.includes('overrideConflicts'))).toBe(true);
+			expect(reservationServiceMock.staffCreate).not.toHaveBeenCalled();
+		});
+
+		it('books it when staff override', async () => {
+			getConflictDetails.mockResolvedValue([booked]);
+
+			await expect(
+				createReservation({ ...input, overrideConflicts: true }, issue)
+			).resolves.toMatchObject({ reservationId: 'res-staff-1' });
 		});
 	});
 });
