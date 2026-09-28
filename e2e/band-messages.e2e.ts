@@ -55,6 +55,38 @@ async function navBadgeCount(page: Page, slug: string): Promise<number> {
 	return Number((await badge.first().innerText()).trim());
 }
 
+/**
+ * Holding the entry chunk back gives a fill that lands before hydration, which a
+ * slow phone produces on its own. The remote field spreads `value: ''` onto its
+ * input, so hydration used to wipe name and email and keep only the textarea.
+ */
+test('what a visitor types before the form hydrates survives it', async ({ page }) => {
+	let held = 0;
+	await page.route('**/_app/immutable/entry/*.js', async (route) => {
+		held++;
+		await new Promise((r) => setTimeout(r, 1500));
+		await route.continue();
+	});
+
+	await page.goto(`/directory/bands/${SEED_PUBLIC_BAND_SLUG}`);
+	const name = page.locator('input[name="name"]');
+	const email = page.locator('input[name="email"]');
+	const message = page.locator('textarea[name="message"]');
+	await name.fill('Early Typist');
+	await email.fill(ENQUIRER_EMAIL);
+	await message.fill(MESSAGE);
+
+	// The token input appears only once the client has mounted.
+	await expect(page.locator('input[name="turnstileToken"]')).not.toHaveValue('', {
+		timeout: 30000
+	});
+	expect(held, 'the entry chunk was never intercepted, so nothing was delayed').toBeGreaterThan(0);
+
+	await expect(name).toHaveValue('Early Typist');
+	await expect(email).toHaveValue(ENQUIRER_EMAIL);
+	await expect(message).toHaveValue(MESSAGE);
+});
+
 test.describe.serial('band booking enquiries', () => {
 	test('a stranger’s enquiry reaches the band’s inbox', async ({ page }, testInfo) => {
 		const enquirer = enquirerFor(testInfo.retry);
