@@ -2594,8 +2594,11 @@ export async function updateGroupSession(
 	if (holdsNow && !holdWanted) {
 		// Cancelled, not deleted, and the listing stays up: giving the room back
 		// is not calling the session off. `cancelGroupSession` is that.
+		// `actor: 'member'`: the leader acts for the group that holds the booking,
+		// so this is the booking's own side calling it off, not staff (#1690).
 		await cancelReservation(existing.reservationId!, userId, 'Session no longer holds the room', {
-			staffOverride: true
+			staffOverride: true,
+			actor: 'member'
 		});
 		reservationId = null;
 	}
@@ -2656,8 +2659,10 @@ export async function cancelGroupSession(
 
 	if (existing.reservationId) {
 		try {
+			// A member cancellation for the same reason as `updateGroupSession`'s.
 			await cancelReservation(existing.reservationId, userId, 'Session cancelled', {
-				staffOverride: true
+				staffOverride: true,
+				actor: 'member'
 			});
 		} catch {
 			// Already cancelled is not a failure — the listing is what the leader

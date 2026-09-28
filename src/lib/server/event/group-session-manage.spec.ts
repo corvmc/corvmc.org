@@ -166,7 +166,8 @@ describe('updateGroupSession — taking and releasing the room', () => {
 			'res-1',
 			ACTOR,
 			expect.any(String),
-			expect.objectContaining({ staffOverride: true })
+			// The leader is the booking's own side, not staff (#1690).
+			expect.objectContaining({ staffOverride: true, actor: 'member' })
 		);
 		expect(listingWrites().at(-1)?.values).toMatchObject({ reservationId: null });
 		// The listing survives — giving the room back is not calling the jam off.
@@ -270,7 +271,7 @@ describe('cancelGroupSession', () => {
 			'res-1',
 			'user-1',
 			'Session cancelled',
-			expect.objectContaining({ staffOverride: true })
+			expect.objectContaining({ staffOverride: true, actor: 'member' })
 		);
 	});
 
