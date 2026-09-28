@@ -1279,8 +1279,12 @@ export async function remove(eventId: string, userId: string): Promise<void> {
 
 	if (existing.reservationId) {
 		try {
+			// Explicitly staff: this is a staff action on the event's room even
+			// when the staffer made the booking, which the default would call member.
 			await cancelReservation(existing.reservationId, userId, 'Event deleted', {
-				staffOverride: true
+				staffOverride: true,
+				actor: 'staff',
+				actorUserId: userId
 			});
 		} catch {
 			// Already cancelled, or gone — either way the room is free.
@@ -1317,8 +1321,11 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 	// Cancel linked reservation if present
 	if (existing.reservationId) {
 		try {
+			// Explicitly staff, for the same reason as in `remove`.
 			await cancelReservation(existing.reservationId, userId, 'Event cancelled', {
-				staffOverride: true
+				staffOverride: true,
+				actor: 'staff',
+				actorUserId: userId
 			});
 		} catch {
 			// Reservation may already be cancelled — ignore

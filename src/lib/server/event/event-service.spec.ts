@@ -710,8 +710,11 @@ describe('EventService', () => {
 
 			await cancel('evt-1', 'staff-1');
 
+			// Explicitly staff, even when the staffer created the booking (#1690).
 			expect(cancelReservation).toHaveBeenCalledWith('res-1', 'staff-1', 'Event cancelled', {
-				staffOverride: true
+				staffOverride: true,
+				actor: 'staff',
+				actorUserId: 'staff-1'
 			});
 		});
 
@@ -1697,8 +1700,11 @@ describe('EventService', () => {
 			// on event.reservationId), and for a recurring instance the generation
 			// job — which dedupes on reservation rows, not events — would quietly
 			// recreate the event on its next run.
+			// Explicitly staff, even when the staffer created the booking (#1690).
 			expect(cancelReservation).toHaveBeenCalledWith('res-1', 'staff-1', 'Event deleted', {
-				staffOverride: true
+				staffOverride: true,
+				actor: 'staff',
+				actorUserId: 'staff-1'
 			});
 		});
 
