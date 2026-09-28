@@ -4,6 +4,7 @@ slug: staff-renewals
 category: staff-guide
 summary: Keep the collective's own permits, licenses and insurance policies in one list, sorted by what expires next, with reminders before each one lapses.
 minRole: staff
+capabilities: renewal.read
 sortOrder: 21
 ---
 

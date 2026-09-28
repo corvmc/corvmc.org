@@ -39,6 +39,11 @@ export const helpArticle = sqliteTable(
 		content: text('content').notNull(),
 		source: text('source').notNull().default('dynamic'),
 		minRole: text('min_role').notNull().default('member'),
+		/**
+		 * Capabilities that admit a reader below `minRole`: holding any one is enough.
+		 * For a staff article documenting a page a committee can be granted (#1638).
+		 */
+		capabilities: text('capabilities', { mode: 'json' }).$type<string[]>(),
 		published: integer('published', { mode: 'boolean' }).notNull().default(false),
 		sortOrder: integer('sort_order').notNull().default(0),
 		createdByUserId: text('created_by_user_id').references(() => user.id, {

@@ -1,9 +1,9 @@
 import { db } from '$lib/server/db';
 import { helpCategory, helpArticle } from '$lib/server/db/schema/help';
-import { eq, and, or, sql, inArray, asc, exists } from 'drizzle-orm';
+import { eq, and, or, sql, inArray, asc, exists, type SQL } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { SEARCH_LIMIT, helpAudiences, type HelpAudience } from '$lib/config';
-import { getUserRoles } from '$lib/server/authorization';
+import { committeeCapabilitiesFor, getUserRoles } from '$lib/server/authorization';
 import { isSustainingMember } from '$lib/server/finance/subscription-service';
 
 /**
@@ -43,9 +43,8 @@ export function normalizeAudience(value: string | null | undefined): HelpAudienc
  * Every audience value a reader at `audience` may see: their own tier, every
  * tier below it, and any legacy value that maps into those.
  *
- * Returned as a flat string list so the six call sites keep their
- * `inArray(minRole, …)` shape and the `(published, min_role)` index still
- * applies.
+ * Returned as a flat string list so callers keep an `inArray(minRole, …)`
+ * shape and the `(published, min_role)` index still applies.
  */
 function accessibleAudiences(audience: HelpAudience): string[] {
 	const ceiling = helpAudiences.indexOf(audience);
@@ -68,6 +67,40 @@ export async function resolveHelpAudience(userId: string): Promise<HelpAudience>
 	if (roles.some((r) => !NON_ELEVATED_ROLES.has(r))) return 'staff';
 	if (await isSustainingMember(userId)) return 'sustaining';
 	return 'member';
+}
+
+/** A reader's tier, plus the capabilities that can admit them past it (see `helpArticle.capabilities`). */
+export interface HelpReader {
+	audience: HelpAudience;
+	capabilities: readonly string[];
+}
+
+/**
+ * The reader for `userId`. Staff already read every tier, so only a reader below
+ * it pays for the committee lookup. Takes a user id, not the request, so the
+ * `/api/help` endpoints resolve it the same way the remote functions do.
+ */
+export async function resolveHelpReader(userId: string): Promise<HelpReader> {
+	const audience = await resolveHelpAudience(userId);
+	if (audience === 'staff') return { audience, capabilities: [] };
+	return { audience, capabilities: await committeeCapabilitiesFor(userId) };
+}
+
+/** Articles admitted by a capability the reader holds, whatever their tier. */
+function admittedByCapability(reader: HelpReader): SQL | undefined {
+	if (reader.capabilities.length === 0) return undefined;
+	const held = sql.join(
+		reader.capabilities.map((c) => sql`${c}`),
+		sql`, `
+	);
+	return sql`exists (select 1 from json_each(${helpArticle.capabilities}) where value in (${held}))`;
+}
+
+/** The article rows this reader may open, published or not. */
+function articleVisibleTo(reader: HelpReader): SQL {
+	const byTier = inArray(helpArticle.minRole, accessibleAudiences(reader.audience));
+	const byCapability = admittedByCapability(reader);
+	return byCapability ? or(byTier, byCapability)! : byTier;
 }
 
 // ---------------------------------------------------------------------------
@@ -96,26 +129,27 @@ export async function listCategories(audience: HelpAudience) {
  * reading "No articles yet" — which looks broken mid-review, and advertises
  * categories (like Staff Guide) the caller can't read.
  */
-export async function listNonEmptyCategories(audience: HelpAudience) {
-	const audiences = accessibleAudiences(audience);
+export async function listNonEmptyCategories(reader: HelpReader) {
+	const audiences = accessibleAudiences(reader.audience);
+	const hasArticle = (visible: SQL) =>
+		exists(
+			db
+				.select({ one: sql`1` })
+				.from(helpArticle)
+				.where(
+					and(eq(helpArticle.categoryId, helpCategory.id), eq(helpArticle.published, true), visible)
+				)
+		);
+	// A category above the reader's tier is still listed when a capability admits
+	// them to an article in it; its other articles stay hidden by `articleVisibleTo`.
+	const byCapability = admittedByCapability(reader);
 	return db
 		.select()
 		.from(helpCategory)
 		.where(
-			and(
-				inArray(helpCategory.minRole, audiences),
-				exists(
-					db
-						.select({ one: sql`1` })
-						.from(helpArticle)
-						.where(
-							and(
-								eq(helpArticle.categoryId, helpCategory.id),
-								eq(helpArticle.published, true),
-								inArray(helpArticle.minRole, audiences)
-							)
-						)
-				)
+			or(
+				and(inArray(helpCategory.minRole, audiences), hasArticle(articleVisibleTo(reader))),
+				byCapability ? hasArticle(byCapability) : undefined
 			)
 		)
 		.orderBy(asc(helpCategory.sortOrder), asc(helpCategory.name));
@@ -130,8 +164,7 @@ export async function getCategoryBySlug(slug: string) {
 // Article Queries
 // ---------------------------------------------------------------------------
 
-export async function listArticlesByCategory(categoryId: string, audience: HelpAudience) {
-	const audiences = accessibleAudiences(audience);
+export async function listArticlesByCategory(categoryId: string, reader: HelpReader) {
 	return db
 		.select({
 			id: helpArticle.id,
@@ -145,30 +178,24 @@ export async function listArticlesByCategory(categoryId: string, audience: HelpA
 			and(
 				eq(helpArticle.categoryId, categoryId),
 				eq(helpArticle.published, true),
-				inArray(helpArticle.minRole, audiences)
+				articleVisibleTo(reader)
 			)
 		)
 		.orderBy(asc(helpArticle.sortOrder), asc(helpArticle.title));
 }
 
-export async function getArticleBySlug(slug: string, audience: HelpAudience) {
-	const audiences = accessibleAudiences(audience);
+export async function getArticleBySlug(slug: string, reader: HelpReader) {
 	const [article] = await db
 		.select()
 		.from(helpArticle)
 		.where(
-			and(
-				eq(helpArticle.slug, slug),
-				eq(helpArticle.published, true),
-				inArray(helpArticle.minRole, audiences)
-			)
+			and(eq(helpArticle.slug, slug), eq(helpArticle.published, true), articleVisibleTo(reader))
 		)
 		.limit(1);
 	return article ?? null;
 }
 
-export async function searchArticles(query: string, audience: HelpAudience) {
-	const audiences = accessibleAudiences(audience);
+export async function searchArticles(query: string, reader: HelpReader) {
 	return db
 		.select({
 			id: helpArticle.id,
@@ -181,7 +208,7 @@ export async function searchArticles(query: string, audience: HelpAudience) {
 		.where(
 			and(
 				eq(helpArticle.published, true),
-				inArray(helpArticle.minRole, audiences),
+				articleVisibleTo(reader),
 				or(
 					containsLiteral(helpArticle.title, query),
 					containsLiteral(helpArticle.summary, query),
