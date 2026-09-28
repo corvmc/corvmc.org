@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { type Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import type { RemoteFormFieldValue, RemoteFormField, RemoteFormIssue } from '@sveltejs/kit';
 	import TagSelect from './TagSelect.svelte';
 	import CalendarSelect from './CalendarSelect.svelte';
@@ -162,6 +162,24 @@
 				field.as(asType as any)
 			: // eslint-disable-next-line @typescript-eslint/no-explicit-any
 				field.as(asType as any, value);
+	});
+
+	// Hydration would assign the spread's `value` to an input a visitor already
+	// typed into, so it and `defaultValue` are held back until mount. Typed text
+	// then differs from the server-rendered default, and an `input` event hands it
+	// to the remote form.
+	let hydrated = $state(false);
+	let fieldInput = $state<HTMLInputElement>();
+	let spreadAttrs = $derived.by(() => {
+		if (!fieldAttrs || hydrated) return fieldAttrs;
+		const { value: _value, defaultValue: _default, ...attrs } = fieldAttrs;
+		return attrs;
+	});
+	onMount(() => {
+		if (fieldInput && fieldInput.value !== fieldInput.defaultValue) {
+			fieldInput.dispatchEvent(new Event('input', { bubbles: true }));
+		}
+		hydrated = true;
 	});
 
 	// When field is provided, `fieldAttrs.name` already carries the `b:` prefix. For
@@ -376,12 +394,13 @@
 			replaceLabel={rest.replaceLabel}
 			disabled={pending || readonly}
 		/>
-	{:else if field && fieldAttrs}
+	{:else if field && spreadAttrs}
 		<input
+			bind:this={fieldInput}
 			class="input w-full"
 			class:ghost={readonly}
 			{...rest}
-			{...fieldAttrs}
+			{...spreadAttrs}
 			id={resolvedId}
 			disabled={pending || readonly}
 		/>
