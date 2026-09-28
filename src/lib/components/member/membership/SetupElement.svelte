@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { loadStripe } from '@stripe/stripe-js';
 	import type { Stripe, StripeElements, StripePaymentElement, Appearance } from '@stripe/stripe-js';
-	import { STRIPE_PUBLISHABLE_KEY } from '$lib/stripe';
+	import { loadStripeOrReport, PAYMENTS_UNAVAILABLE } from '$lib/stripe';
+	import { reportError } from '$lib/report-error';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { finishAddCard } from '$lib/remote/billing.remote';
@@ -51,9 +51,9 @@
 		let element: StripePaymentElement | undefined;
 
 		(async () => {
-			stripe = (await loadStripe(STRIPE_PUBLISHABLE_KEY)) ?? undefined;
+			stripe = (await loadStripeOrReport('add-card')) ?? undefined;
 			if (!stripe) {
-				errorMessage = 'Payments are unavailable right now. Please try again shortly.';
+				errorMessage = PAYMENTS_UNAVAILABLE;
 				return;
 			}
 
@@ -62,8 +62,8 @@
 			element.mount(mountNode);
 			ready = true;
 		})().catch((err) => {
-			console.error('[billing] Failed to initialise the Setup Element:', err);
-			errorMessage = 'Payments are unavailable right now. Please try again shortly.';
+			reportError(err, { surface: 'add-card' });
+			errorMessage = PAYMENTS_UNAVAILABLE;
 		});
 
 		return () => element?.unmount();
