@@ -1212,10 +1212,11 @@ const staffCreateSchema = z.object({
 	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
 	startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
 	endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
-	notes: z.string().optional()
+	notes: z.string().optional(),
+	overrideConflicts: z.boolean().default(false)
 });
 
-export const createReservation = form(staffCreateSchema, async (data, _issue) => {
+export const createReservation = form(staffCreateSchema, async (data, issue) => {
 	const staffUser = await requireCapability('reservation.manage');
 	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
 	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
@@ -1223,6 +1224,16 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 	if (data.bandId) {
 		const bookingBand = await getBandById(data.bandId);
 		if (!bookingBand) error(404, 'Band not found');
+	}
+
+	// staffCreate skips conflict checks so staff can double-book on purpose, which
+	// makes this the only gate: overriding must be a deliberate, submitted choice.
+	if (!data.overrideConflicts && (await getConflictDetails(startsAt, endsAt)).length > 0) {
+		invalid(
+			issue.overrideConflicts(
+				'This double-books the space. Tick "Book it anyway" to book it regardless.'
+			)
+		);
 	}
 
 	const res = await staffCreate({
