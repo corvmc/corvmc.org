@@ -362,6 +362,16 @@ describe('ReservationService', () => {
 			it.each([
 				['the member, on their own booking', 'user-1', undefined, 'member', 'user-1'],
 				['staff, with the staffer', 'staff-1', { staffOverride: true }, 'staff', 'staff-1'],
+				// Relationship, not role: staff cancelling their own booking (#1690).
+				['staff, on their own booking', 'user-1', { staffOverride: true }, 'member', 'user-1'],
+				// An event's room booking: staff, even though the staffer booked it.
+				[
+					'staff, explicitly, on their own booking',
+					'user-1',
+					{ staffOverride: true, actor: 'staff', actorUserId: 'user-1' },
+					'staff',
+					'user-1'
+				],
 				[
 					'a band admin, as the member side',
 					'admin-1',

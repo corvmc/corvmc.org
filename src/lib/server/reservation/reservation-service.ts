@@ -489,7 +489,8 @@ export async function cancel(
 	options?: {
 		/**
 		 * Staff acting on someone else's booking. Skips the ownership check AND
-		 * the already-started check, and records the cancellation as staff-made.
+		 * the already-started check, and records the cancellation as staff-made
+		 * unless the person acting is the one who booked it.
 		 */
 		staffOverride?: boolean;
 		/**
@@ -513,8 +514,6 @@ export async function cancel(
 		actorUserId?: string | null;
 	}
 ): Promise<void> {
-	const actor: ReservationCanceller =
-		options?.actor ?? (options?.staffOverride ? 'staff' : 'member');
 	// Read current state to check authorization and determine refund eligibility
 	const [row] = await db
 		.select()
@@ -543,6 +542,11 @@ export async function cancel(
 	// A job passes '' as `userId`; nobody is recorded for it.
 	const cancelledByUserId =
 		options?.actorUserId !== undefined ? options.actorUserId : userId || null;
+	// Decided by relationship, not role: staff cancelling their own booking is a
+	// member cancellation, so it is neither emailed nor audited as staff's (#1690).
+	const actor: ReservationCanceller =
+		options?.actor ??
+		(options?.staffOverride && cancelledByUserId !== row.createdByUserId ? 'staff' : 'member');
 
 	// Atomic conditional update — only cancels if status hasn't changed since read
 	const cancellable: ReservationStatus[] = ['scheduled', 'confirmed', 'waitlisted'];
