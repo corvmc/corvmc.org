@@ -22,9 +22,15 @@ test that asserts nothing fails.
 - **Don't merge sibling `.test.ts` and `.spec.ts` files** to share imports. Their preambles are
   fixtures: unioning the `vi.mock` calls silently stubs out the very thing the other file was
   testing for real.
-- Test SQL without a database by rendering drizzle fragments through `SQLiteSyncDialect` (see
-  `src/lib/server/authorization.spec.ts`). `better-sqlite3` isn't built in CI, so mock only
-  `$lib/server/db`.
+- **A spec whose answer depends on SQL runs against a real database.** A mocked `db` agrees with a
+  `WHERE` whether or not it is there, so predicates, aggregates, joins, migrations and backfills
+  use `migratedSqlite()` from `$lib/server/testing/migrated-sqlite` — an in-memory SQLite with
+  every committed migration replayed — and point `vi.mock('$lib/server/db')` at its `testDb` (see
+  `src/lib/server/reservation/program-hold.spec.ts`). It works in CI: `better-sqlite3` ships
+  prebuilt binaries, so nothing needs compiling.
+- A spec of orchestration — which service is called, what is thrown, what is returned — mocks
+  `$lib/server/db` outright. To assert only a fragment's shape, render it through
+  `SQLiteSyncDialect` (see `src/lib/server/authorization.spec.ts`).
 - **Both browser-mode projects get a port of their own** — `client` via `browserPort()` and
   `storybook` via `storybookPort()`, from the same helper. vitest's default is the fixed constant
   63315, so without this every checkout asks for the same number _and_ the two projects ask for it
