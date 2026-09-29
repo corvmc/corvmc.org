@@ -182,9 +182,10 @@ user-management audit by writing a spec for each. None has been built since.
 
 ### Platform
 
-| Doc                                          | Status | Lifecycle | Notes                                                                                               |
-| -------------------------------------------- | ------ | --------- | --------------------------------------------------------------------------------------------------- |
-| [media-spec.md](specs/shipped/media-spec.md) | ✅     | archived  | `media` + `media_attachment` over R2: one object shared by many entities, detach-and-sweep deletion |
+| Doc                                                                  | Status | Lifecycle | Notes                                                                                                                                                                                                                                          |
+| -------------------------------------------------------------------- | ------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [media-spec.md](specs/shipped/media-spec.md)                         | ✅     | archived  | `media` + `media_attachment` over R2: one object shared by many entities, detach-and-sweep deletion                                                                                                                                            |
+| [cron-monitor-manifest-spec.md](specs/cron-monitor-manifest-spec.md) | 📋     | spec      | `CRON_MONITORS` beside `CRON_SCHEDULE`: every slug that ever had a Sentry monitor, live or retired, and a spec that fails when a scheduled job disappears without a tombstone. Disabling the monitor stays a manual Sentry step (#1327, #1717) |
 
 Cross-cutting rather than owned by one panel. All six phases shipped; what survives in the spec is
 the design rationale — why the parent link carries no foreign key, and why `file` and `media` are
