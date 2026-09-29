@@ -214,14 +214,12 @@ describe('starting a project from a ballot', () => {
 	});
 
 	it('writes the owning committee as its project_committee row', async () => {
-		await testDb
-			.insert(group)
-			.values({
-				id: 'grp-fac',
-				name: 'Facilities',
-				slug: 'facilities',
-				kind: 'committee'
-			} as never);
+		await testDb.insert(group).values({
+			id: 'grp-fac',
+			name: 'Facilities',
+			slug: 'facilities',
+			kind: 'committee'
+		} as never);
 		const id = await certified(2);
 		const p = await chain.startProjectFromBallot(
 			id,
