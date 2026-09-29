@@ -1,7 +1,7 @@
 {
-  "id": "37408700-a4f1-44ce-8cd8-3572ba7476aa",
+  "id": "3e97d6af-a5bf-4d62-a5a3-cb0bced107be",
   "prevIds": [
-    "424da54f-91e0-4558-8edf-82e344cbf8ac"
+    "dd94fda5-e792-4fda-9591-a5991bce6532"
   ],
   "version": "7",
   "dialect": "sqlite",
@@ -1765,6 +1765,36 @@
       "default": null,
       "generated": null,
       "name": "cancellation_reason",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_by",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_by_user_id",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_at",
       "entityType": "columns",
       "table": "reservation"
     },
@@ -6709,6 +6739,16 @@
       "table": "help_articles"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "capabilities",
+      "entityType": "columns",
+      "table": "help_articles"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -10909,6 +10949,16 @@
       "table": "project"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ballot_id",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -14169,6 +14219,26 @@
       "table": "ballot"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "suggestion_id",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "ballot"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -14735,6 +14805,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_reservation_created_by_staff_id_user_id_fk",
+      "entityType": "fks",
+      "table": "reservation"
+    },
+    {
+      "columns": [
+        "cancelled_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_reservation_cancelled_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "reservation"
     },
@@ -17350,6 +17435,21 @@
     },
     {
       "columns": [
+        "ballot_id"
+      ],
+      "tableTo": "ballot",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_project_ballot_id_ballot_id_fk",
+      "entityType": "fks",
+      "table": "project"
+    },
+    {
+      "columns": [
         "created_by_user_id"
       ],
       "tableTo": "user",
@@ -18170,6 +18270,21 @@
       "onDelete": "CASCADE",
       "nameExplicit": false,
       "name": "fk_ballot_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "ballot"
+    },
+    {
+      "columns": [
+        "suggestion_id"
+      ],
+      "tableTo": "suggestion",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_ballot_suggestion_id_suggestion_id_fk",
       "entityType": "fks",
       "table": "ballot"
     },
@@ -22810,6 +22925,20 @@
     {
       "columns": [
         {
+          "value": "ballot_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "ballot_id is not null",
+      "origin": "manual",
+      "name": "uq_project_ballot",
+      "entityType": "indexes",
+      "table": "project"
+    },
+    {
+      "columns": [
+        {
           "value": "group_id",
           "isExpression": false
         }
@@ -23696,6 +23825,34 @@
       "where": null,
       "origin": "manual",
       "name": "ballot_group_idx",
+      "entityType": "indexes",
+      "table": "ballot"
+    },
+    {
+      "columns": [
+        {
+          "value": "suggestion_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "ballot_suggestion_idx",
+      "entityType": "indexes",
+      "table": "ballot"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "ballot_project_idx",
       "entityType": "indexes",
       "table": "ballot"
     },
