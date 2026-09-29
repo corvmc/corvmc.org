@@ -62,6 +62,8 @@ pnpm build`: `build` is `vite build` and does **not** migrate, so the dashboard 
    until it lands. The whole feature's migrations then apply in a single queue build when its PR
    merges.
 
+   The last of those two steps also syncs `src/content/help` into production (§7).
+
 4. `pnpm build` compiles the MJML email layout (`scripts/compile-email-layouts.ts`) and
    then runs `vite build`; the Worker is published from `.svelte-kit/cloudflare/`.
 
@@ -558,18 +560,31 @@ When you add, move, or remove a route:
 2. Regenerate the route snapshot: `pnpm docs:routes` (commits the updated
    `route-inventory.json`).
 3. `pnpm docs:check` — must come back clean.
-4. Sync articles into the D1 database: `pnpm help:sync`
-   (`scripts/sync-help-articles.ts` — upserts `source='static'` articles and deletes
-   orphaned static rows). It connects through wrangler's `getPlatformProxy()`, i.e. the
-   **local** D1 state; getting the content into production means running the sync against
-   the production database (verify your wrangler remote-binding setup before assuming this
-   — the script itself has no `--remote` flag).
+4. Sync articles into your local D1: `pnpm help:sync` (`scripts/sync-help-articles.ts` —
+   upserts `source='static'` articles and deletes orphaned static rows). It connects through
+   wrangler's `getPlatformProxy()`, i.e. the **local** D1 state.
 
-There is no automation behind this — the procedure above is the whole mechanism. A
-`nightly-docs-sync.yml` workflow used to run a detector and have Claude draft a docs-only
-PR from it; it was removed in August 2026, having failed on every scheduled run because
-the `ANTHROPIC_API_KEY` secret it needs was never added. `pnpm docs:check` in CI remains
-the only automatic gate, and it checks integrity, not staleness.
+Production syncs itself. Every production deploy runs `pnpm help:sync --remote` from
+`ci:migrate`, over the D1 HTTP API with the same `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_D1_TOKEN`
+the migrate uses, and after the migrations so any new help column exists (#1698):
+
+- with `CMC_MIGRATE_AFTER_PUBLISH=1`, in the deploy command's `ci:migrate --after-publish`,
+  once the new Worker is live;
+- without it, in the build command's `ci:migrate`, right after the migrate and before publish.
+
+The sync is idempotent, so running it on every deploy is safe. It never publishes: a **new**
+article lands in production as a draft for staff to publish from Staff → Help, and an update
+leaves `published` alone. A failed sync exits non-zero like a failed migrate. Before publish
+that fails the build and nothing ships; after publish the Worker is already live, so a red
+deploy step whose log ends in `help:sync` means only the help content is stale. Re-run it
+with `CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_D1_TOKEN=… pnpm help:sync --remote`, or let the
+next deploy retry it.
+
+No other automation exists. A `nightly-docs-sync.yml` workflow used to run a detector and
+have Claude draft a docs-only PR from it; it was removed in August 2026, having failed on
+every scheduled run because the `ANTHROPIC_API_KEY` secret it needs was never added.
+`pnpm docs:check` in CI remains the only automatic gate on the content itself, and it checks
+integrity, not staleness.
 
 Also keep current as you change things:
 

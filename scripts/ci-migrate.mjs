@@ -174,6 +174,14 @@ function migrate() {
 	execFileSync('pnpm', ['exec', 'drizzle-kit', 'migrate'], { stdio: 'inherit' });
 }
 
+// Upserts src/content/help into production (#1698). It runs in the last step that touches the
+// database, so its columns exist; a failure exits non-zero like a failed migrate, but after
+// publish the new Worker is already live, so a red deploy step means only the help content lags.
+function syncHelp() {
+	console.log('ci:migrate — syncing help articles to remote D1…');
+	execFileSync('pnpm', ['help:sync', '--remote'], { stdio: 'inherit' });
+}
+
 async function main() {
 	// Workers Builds exposes the branch as WORKERS_CI_BRANCH; older Pages builds use CF_PAGES_BRANCH.
 	const branch = process.env.WORKERS_CI_BRANCH ?? process.env.CF_PAGES_BRANCH ?? '';
@@ -190,21 +198,25 @@ async function main() {
 	if (afterPublish) {
 		// Whatever the build step left pending is contract-only by construction.
 		console.log(`ci:migrate — applying deferred D1 migrations after publish (${kind})…`);
-		return migrate();
+		migrate();
+		return syncHelp();
 	}
 
 	if (process.env[AFTER_PUBLISH_FLAG] !== '1') {
 		console.log(`ci:migrate — ${AFTER_PUBLISH_FLAG} unset, so every migration runs now.`);
-	} else {
-		const plan = await planFromRemote();
-		if (plan.when === 'refuse') {
-			console.error(`ci:migrate — refusing to deploy. ${plan.reason}`);
-			process.exit(1);
-		}
-		if (plan.when === 'none') return console.log('ci:migrate — nothing pending.');
-		if (plan.when === 'after') {
-			return console.log('ci:migrate — contract-only batch, deferred to --after-publish.');
-		}
+		console.log(`ci:migrate — applying D1 migrations to remote (${kind}, branch "${branch}")…`);
+		migrate();
+		// No --after-publish step follows, so this is the last chance.
+		return syncHelp();
+	}
+	const plan = await planFromRemote();
+	if (plan.when === 'refuse') {
+		console.error(`ci:migrate — refusing to deploy. ${plan.reason}`);
+		process.exit(1);
+	}
+	if (plan.when === 'none') return console.log('ci:migrate — nothing pending.');
+	if (plan.when === 'after') {
+		return console.log('ci:migrate — contract-only batch, deferred to --after-publish.');
 	}
 	console.log(`ci:migrate — applying D1 migrations to remote (${kind}, branch "${branch}")…`);
 	migrate();
