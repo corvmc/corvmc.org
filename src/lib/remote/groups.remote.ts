@@ -1,3 +1,4 @@
+import { countCommitteeUnfinished } from '$lib/server/volunteer/deliverables-service';
 import { z } from 'zod';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
@@ -408,7 +409,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		projectLists,
 		volunteerRoles,
 		projectEvents,
-		recurringWork
+		recurringWork,
+		unfinishedItems
 	] = await Promise.all([
 		getMembers(group.id).then(partitionByStatus),
 		canManage ? listForManager(group.id) : listPublished(group.id),
@@ -439,7 +441,9 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		// The committee's own standing checklist (#1512).
 		group.kind === 'committee'
 			? listMaintenanceSchedules({ groupId: group.id })
-			: Promise.resolve([])
+			: Promise.resolve([]),
+		// Only whether the Open items tab shows; the tab reads its own rows.
+		group.kind === 'committee' ? countCommitteeUnfinished(group.id) : Promise.resolve(0)
 	]);
 
 	return {
@@ -511,6 +515,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			lastClosedAt: s.lastClosedAt
 		})),
 		projectEvents,
+		hasOpenItems: unfinishedItems > 0,
 		emailInvites,
 		applications,
 		members: {
