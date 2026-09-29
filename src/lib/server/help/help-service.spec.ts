@@ -20,7 +20,10 @@ vi.mock('$lib/server/db', () => ({ db: {} }));
 const getUserRoles = vi.fn<(userId: string) => Promise<string[]>>();
 const isSustainingMember = vi.fn<(userId: string) => Promise<boolean>>();
 
-vi.mock('$lib/server/authorization', () => ({ getUserRoles: (id: string) => getUserRoles(id) }));
+vi.mock('$lib/server/authorization', () => ({
+	getUserRoles: (id: string) => getUserRoles(id),
+	committeeCapabilitiesFor: async () => []
+}));
 vi.mock('$lib/server/finance/subscription-service', () => ({
 	isSustainingMember: (id: string) => isSustainingMember(id)
 }));

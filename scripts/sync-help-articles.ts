@@ -14,7 +14,7 @@ import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
 import { eq, and, notInArray } from 'drizzle-orm';
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
-import { helpAudiences } from '../src/lib/config';
+import { grantRuleFor, helpAudiences } from '../src/lib/config';
 
 const CONTENT_DIR = join(import.meta.dirname, '../src/content/help');
 
@@ -24,6 +24,8 @@ interface ArticleFrontmatter {
 	category: string;
 	summary?: string;
 	minRole?: string;
+	/** Comma-separated; any one admits a reader below `minRole`. */
+	capabilities?: string;
 	sortOrder?: number;
 }
 
@@ -59,6 +61,23 @@ const audienceOf = (a?: string) => {
 	return (helpAudiences as readonly string[]).includes(v) ? v : 'staff';
 };
 
+/**
+ * A capability here admits a reader who holds it through a committee, so one no
+ * committee can hold org-wide would admit nobody: a typo, and it fails the sync.
+ */
+function capabilitiesOf(file: string, raw?: string): string[] | null {
+	const caps = (raw ?? '')
+		.split(',')
+		.map((c) => c.trim())
+		.filter(Boolean);
+	for (const c of caps) {
+		if (grantRuleFor(c)?.committee !== 'org') {
+			throw new Error(`${file}: capability "${c}" is not one a committee can hold org-wide`);
+		}
+	}
+	return caps.length > 0 ? caps : null;
+}
+
 function findMarkdownFiles(dir: string): string[] {
 	const files: string[] = [];
 	for (const entry of readdirSync(dir)) {
@@ -83,13 +102,18 @@ async function main() {
 
 	// Ensure categories exist
 	const categorySlugs = new Set<string>();
-	const articles: { meta: ArticleFrontmatter; body: string; file: string }[] = [];
+	const articles: {
+		meta: ArticleFrontmatter;
+		body: string;
+		capabilities: string[] | null;
+	}[] = [];
 
 	for (const file of files) {
 		const raw = readFileSync(file, 'utf-8');
 		const { meta, body } = parseFrontmatter(raw);
 		categorySlugs.add(meta.category);
-		articles.push({ meta, body, file: relative(CONTENT_DIR, file) });
+		const capabilities = capabilitiesOf(relative(CONTENT_DIR, file), meta.capabilities);
+		articles.push({ meta, body, capabilities });
 	}
 
 	// A category is only as restricted as its most permissive article: a
@@ -141,7 +165,7 @@ async function main() {
 	// member unpublished, nor silently publish a draft the moment its markdown
 	// changes.
 	const syncedSlugs: string[] = [];
-	for (const { meta, body } of articles) {
+	for (const { meta, body, capabilities } of articles) {
 		const categoryId = categoryIdMap.get(meta.category)!;
 		syncedSlugs.push(meta.slug);
 
@@ -160,6 +184,7 @@ async function main() {
 					summary: meta.summary ?? null,
 					content: body,
 					minRole: audienceOf(meta.minRole),
+					capabilities,
 					sortOrder: meta.sortOrder ?? 0,
 					updatedAt: new Date()
 				})
@@ -174,6 +199,7 @@ async function main() {
 				content: body,
 				source: 'static',
 				minRole: audienceOf(meta.minRole),
+				capabilities,
 				published: false,
 				sortOrder: meta.sortOrder ?? 0
 			});

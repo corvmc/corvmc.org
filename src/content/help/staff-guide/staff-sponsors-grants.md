@@ -4,6 +4,7 @@ slug: staff-sponsors-grants
 category: staff-guide
 summary: Keep sponsors and their terms, and grant applications and the reports they owe, sorted by what comes due next.
 minRole: staff
+capabilities: sponsor.read, grant.read
 sortOrder: 20
 ---
 

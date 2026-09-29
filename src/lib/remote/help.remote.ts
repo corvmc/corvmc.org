@@ -12,7 +12,7 @@ import {
 	listArticlesByCategory,
 	getArticleBySlug,
 	listAllArticles,
-	resolveHelpAudience,
+	resolveHelpReader,
 	createArticle as createArticleSvc,
 	updateArticle as updateArticleSvc,
 	deleteArticle as deleteArticleSvc,
@@ -32,11 +32,10 @@ import {
 // slug; the static article sync carries its own slugs in frontmatter.
 const slugify = generateSlug;
 
-async function requireUserWithAudience() {
+async function requireReader() {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
-	const audience = await resolveHelpAudience(locals.user.id);
-	return { user: locals.user, audience };
+	return resolveHelpReader(locals.user.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -44,13 +43,13 @@ async function requireUserWithAudience() {
 // ---------------------------------------------------------------------------
 
 export const getMemberCategories = query(z.void(), async () => {
-	const { audience } = await requireUserWithAudience();
-	const categories = await listNonEmptyCategories(audience);
+	const reader = await requireReader();
+	const categories = await listNonEmptyCategories(reader);
 
 	const categoriesWithArticles = await Promise.all(
 		categories.map(async (cat) => ({
 			...cat,
-			articles: await listArticlesByCategory(cat.id, audience)
+			articles: await listArticlesByCategory(cat.id, reader)
 		}))
 	);
 
@@ -58,8 +57,8 @@ export const getMemberCategories = query(z.void(), async () => {
 });
 
 export const getMemberArticle = query(z.string(), async (slug) => {
-	const { audience } = await requireUserWithAudience();
-	const article = await getArticleBySlug(slug, audience);
+	const reader = await requireReader();
+	const article = await getArticleBySlug(slug, reader);
 	if (!article) throw error(404, 'Article not found');
 	return article;
 });
