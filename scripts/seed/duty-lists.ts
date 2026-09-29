@@ -162,14 +162,10 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[], groups
 		id: `seed-duty-wo-${n}`,
 		volunteerRoleId: item.volunteerRoleId,
 		eventId: show.id,
-		startsAt: item.offsetMinutes !== undefined ? at(item.offsetMinutes) : null,
-		endsAt:
-			item.offsetMinutes !== undefined
-				? at(item.offsetMinutes + (item.durationMinutes ?? 0))
-				: null,
-		dueAt: item.dueOffsetMinutes !== undefined ? at(item.dueOffsetMinutes) : null,
+		// Every item on the crew list is a window; the deadlines are deliverables now.
+		startsAt: at(item.offsetMinutes),
+		endsAt: at(item.offsetMinutes + item.durationMinutes),
 		capacity: item.capacity,
-		notes: item.notes ?? null,
 		dutyListId: 'seed-duty-standard-show',
 		createdByUserId: 'seed-vol-coordinator'
 	}));
