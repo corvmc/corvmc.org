@@ -269,6 +269,17 @@
 					<td>Acquisitions</td>
 					<td class="cell-num">{formatCents(burn.cash.acquisitionCents)}</td>
 				</tr>
+				{#if project.kind === 'production' || burn.cash.showCents > 0}
+					<tr>
+						<td>
+							Show costs
+							<span class="block text-subtle text-xs">
+								The cost sheet and guarantee top-ups; the acts' pool passes through
+							</span>
+						</td>
+						<td class="cell-num">{formatCents(burn.cash.showCents)}</td>
+					</tr>
+				{/if}
 				<tr class="font-medium">
 					<td>Spent</td>
 					<td class="cell-num">{formatCents(burn.cash.totalCents)}</td>

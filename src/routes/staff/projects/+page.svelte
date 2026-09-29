@@ -10,7 +10,14 @@
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { Field, MoneyField } from '$lib/components/ui/Form';
 	import { getProjectsPage, createProjectForm } from '$lib/remote/projects.remote';
-	import { projectStatuses, projectStatusLabels, type ProjectStatus } from '$lib/config';
+	import {
+		projectKinds,
+		projectKindLabels,
+		projectStatuses,
+		projectStatusLabels,
+		type ProjectKind,
+		type ProjectStatus
+	} from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
 	import { resolve } from '$app/paths';
 
@@ -24,21 +31,26 @@
 	 */
 	let statusFilter = $state<ProjectStatus | ''>('');
 	let committeeFilter = $state('');
+	let kindFilter = $state<ProjectKind | ''>('');
 
 	const filters = $derived({
 		status: (statusFilter || undefined) as ProjectStatus | undefined,
-		groupId: committeeFilter || undefined
+		groupId: committeeFilter || undefined,
+		kind: (kindFilter || undefined) as ProjectKind | undefined
 	});
 
 	const data = $derived(await getProjectsPage(filters));
 	const { fields } = createProjectForm;
 
 	const committeeOptions = $derived(data.committees.map((c) => ({ value: c.id, label: c.name })));
-	const activeFilterCount = $derived((statusFilter ? 1 : 0) + (committeeFilter ? 1 : 0));
+	const activeFilterCount = $derived(
+		(statusFilter ? 1 : 0) + (committeeFilter ? 1 : 0) + (kindFilter ? 1 : 0)
+	);
 
 	function clearFilters() {
 		statusFilter = '';
 		committeeFilter = '';
+		kindFilter = '';
 	}
 </script>
 
@@ -99,6 +111,19 @@
 				<option value={c.id}>{c.name}</option>
 			{/each}
 		</Select>
+		<Select
+			size="sm"
+			aria-label="Kind"
+			value={kindFilter}
+			onchange={(e: Event) => {
+				kindFilter = (e.currentTarget as HTMLSelectElement).value as ProjectKind | '';
+			}}
+		>
+			<option value="">All kinds</option>
+			{#each projectKinds as k (k)}
+				<option value={k}>{projectKindLabels[k]}</option>
+			{/each}
+		</Select>
 	</FilterBar>
 
 	{#if data.projects.length === 0}
@@ -122,6 +147,9 @@
 						<a class="link font-medium" href={resolve(`/staff/projects/${row.project.id}`)}>
 							{row.project.name}
 						</a>
+						{#if row.project.kind !== 'general'}
+							<div class="text-subtle">{projectKindLabels[row.project.kind]}</div>
+						{/if}
 						{#if row.burn.contributed.volunteerMinutes > 0}
 							<div class="text-subtle">
 								{Math.round(row.burn.contributed.volunteerMinutes / 60)} volunteer hours

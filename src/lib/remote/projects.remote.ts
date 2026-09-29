@@ -6,7 +6,12 @@ import { can, requireCapability, requireUser } from '$lib/server/authorization';
 import { requireProjectCommittee } from '$lib/server/group/group-context';
 import { getMemberGroup } from '$lib/remote/groups.remote';
 import { mapDomainError } from '$lib/server/errors';
-import { projectStatuses, DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
+import {
+	projectKinds,
+	projectStatuses,
+	DEFAULT_TIMEZONE,
+	VOLUNTEER_SHIFT_NOTES_MAX
+} from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { db } from '$lib/server/db';
 import { suggestion } from '$lib/server/db/schema/suggestion';
@@ -107,7 +112,8 @@ async function listUnansweredSuggestions() {
 const projectFilters = z
 	.object({
 		status: z.enum(projectStatuses).optional(),
-		groupId: z.uuid().optional()
+		groupId: z.uuid().optional(),
+		kind: z.enum(projectKinds).optional()
 	})
 	.optional();
 

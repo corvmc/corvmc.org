@@ -618,7 +618,7 @@ function assertAnchorFitsSubject(anchor: DutyListAnchor, subject: DutyListSubjec
 			'anchor'
 		);
 	}
-	// The four production anchors are the show's own clock, and a rehearsal
+	// The five production anchors are the show's own clock, and a rehearsal
 	// booking has no run of show to hang them off — same reasoning as `doors`.
 	if ((productionDutyListAnchors as readonly string[]).includes(anchor)) {
 		throw new DutyListValidationError(
