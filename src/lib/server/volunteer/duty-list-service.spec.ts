@@ -41,6 +41,7 @@ const STARTS = Math.floor(new Date('2026-10-10T03:00:00Z').getTime() / 1000);
 const ENDS = Math.floor(new Date('2026-10-10T07:00:00Z').getTime() / 1000);
 /** The show's own clock, which is not the listing's. */
 const LOAD_IN = Math.floor(new Date('2026-10-10T00:00:00Z').getTime() / 1000);
+const SOUNDCHECK = Math.floor(new Date('2026-10-10T01:30:00Z').getTime() / 1000);
 const FIRST_SET = Math.floor(new Date('2026-10-10T03:30:00Z').getTime() / 1000);
 const CURFEW = Math.floor(new Date('2026-10-10T06:00:00Z').getTime() / 1000);
 const LOAD_OUT = Math.floor(new Date('2026-10-10T08:00:00Z').getTime() / 1000);
@@ -168,11 +169,14 @@ describe('applyDutyList', () => {
 	});
 
 	// Staffing a show from `doorsAt` alone puts every shift against the one time
-	// the run of show does not turn on. These four are the show's own clock.
+	// the run of show does not turn on. These five are the show's own clock.
 	describe('production anchors', () => {
-		function withProduction(cols = 'load_in_at, first_set_at, curfew_at, load_out_by') {
+		function withProduction(
+			cols = 'load_in_at, soundcheck_at, first_set_at, curfew_at, load_out_by'
+		) {
 			const vals = {
 				load_in_at: LOAD_IN,
+				soundcheck_at: SOUNDCHECK,
 				first_set_at: FIRST_SET,
 				curfew_at: CURFEW,
 				load_out_by: LOAD_OUT
@@ -189,6 +193,7 @@ describe('applyDutyList', () => {
 
 		it.each([
 			['load_in', LOAD_IN],
+			['soundcheck', SOUNDCHECK],
 			['first_set', FIRST_SET],
 			['curfew', CURFEW],
 			['load_out', LOAD_OUT]
@@ -219,6 +224,16 @@ describe('applyDutyList', () => {
 
 			await expect(applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1')).rejects.toThrow(
 				/no load-in time set/i
+			);
+		});
+
+		it('says soundcheck is unset rather than borrowing load-in', async () => {
+			withProduction('load_in_at');
+			sqlite.exec(`UPDATE duty_list SET anchor = 'soundcheck' WHERE id = 'dl-1'`);
+			addItem('i1', 'offset_minutes, duration_minutes', '0, 60');
+
+			await expect(applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1')).rejects.toThrow(
+				/no soundcheck time set/i
 			);
 		});
 

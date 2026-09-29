@@ -432,7 +432,19 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/clubs",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/clubs/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/committees",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/committees/[id]",
 		"panel": "staff"
 	},
 	{
@@ -505,14 +517,6 @@
 	},
 	{
 		"route": "/staff/grants/funders",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/groups",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/groups/[id]",
 		"panel": "staff"
 	},
 	{

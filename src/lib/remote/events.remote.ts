@@ -12,6 +12,7 @@ import { config } from '$lib/server/site-config/site-config-service';
 import { can, requireCapability, requireUser } from '$lib/server/authorization';
 import { requireProjectCommittee } from '$lib/server/group/group-context';
 import { projectOfEvent } from '$lib/server/production/production-scope';
+import { getProjectBurn } from '$lib/server/project/project-service';
 import { mapDomainError } from '$lib/server/errors';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
@@ -1310,8 +1311,14 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		// this is the roster's answer and not the production's (#932).
 		getHostShift(id)
 	]);
+	// The show's budget and burn are its project's (production-projects-spec.md).
+	// Keyed off the production, not the listing: a listing's project is only the
+	// show's when it announces one.
+	const projectId = production?.projectId ?? null;
+	const budget = projectId ? { projectId, burn: await getProjectBurn(projectId) } : null;
 
 	return {
+		budget,
 		detail,
 		recurringSeries,
 		shifts,

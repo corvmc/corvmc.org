@@ -19,6 +19,9 @@
 	// holds the awaited query.
 	const fields = createStaffGroup.fields;
 
+	/** Which kind the form starts on: the page it is opened from. */
+	let { kind = 'club' }: { kind?: 'club' | 'committee' } = $props();
+
 	let leader = $state<{ id: string; name: string; email: string } | null>(null);
 
 	const kindOptions = [
@@ -50,8 +53,13 @@
 	successToast="Group created"
 	size="sm"
 	onsuccess={(result) => {
-		const id = (result as { id?: string } | undefined)?.id;
-		if (id) goto(resolve(`/staff/groups/${id}`));
+		const made = result as { id?: string; kind?: string } | undefined;
+		if (!made?.id) return;
+		goto(
+			made.kind === 'committee'
+				? resolve(`/staff/committees/${made.id}`)
+				: resolve(`/staff/clubs/${made.id}`)
+		);
 	}}
 >
 	{#snippet form()}
@@ -60,7 +68,7 @@
 				field={fields.kind}
 				type="select"
 				label="Kind"
-				value="club"
+				value={kind}
 				options={kindOptions}
 				description="A club is a program members drop into; a committee does the Collective's work."
 				required

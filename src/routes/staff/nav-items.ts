@@ -36,7 +36,7 @@ export type StaffNavKey =
 	| 'users'
 	| 'bands'
 	| 'music'
-	| 'groups'
+	| 'clubs'
 	| 'committees'
 	| 'ballots'
 	| 'volunteer'
@@ -79,6 +79,7 @@ export type StaffNavKey =
 	| 'resource-tips'
 	| 'payments'
 	| 'credits'
+	| 'agreements'
 	| 'sponsors'
 	| 'grants'
 	| 'renewals'
@@ -87,7 +88,7 @@ export type StaffNavKey =
 	| 'audit';
 
 export type StaffNavSectionKey =
-	'people' | 'space' | 'events' | 'moderation' | 'outreach' | 'money' | 'system';
+	'people' | 'planning' | 'space' | 'events' | 'moderation' | 'outreach' | 'money' | 'system';
 
 /**
  * Field names on `getStaffLayout()`'s return. Items name a count rather than
@@ -146,26 +147,9 @@ export const staffNavSections: StaffNavSection[] = [
 		items: [
 			{ key: 'users', capability: 'user.list', label: 'Users', href: resolve('/staff/users') },
 			{ key: 'bands', capability: 'band.read', label: 'Bands', href: resolve('/staff/bands') },
-			// Clubs and committees, separate from Bands on purpose: a band is a
-			// member's own project and a program is a sanctioned CMC one, and this
-			// is the only place a program comes into existence.
-			{ key: 'groups', capability: 'group.read', label: 'Groups', href: resolve('/staff/groups') },
-			// Its own row rather than a panel on a group's page: the volunteer
-			// coordinator holds `committee.reviewApplications` and not
-			// `group.read`, so the row above is invisible to them — and a headless
-			// committee has no chair to read its applications anywhere else.
-			{
-				key: 'committees',
-				capability: 'committee.reviewApplications',
-				label: 'Committee Applications',
-				href: resolve('/staff/committees')
-			},
-			{
-				key: 'ballots',
-				capability: 'ballot.manage',
-				label: 'Ballots',
-				href: resolve('/staff/ballots')
-			},
+			// Separate from Bands on purpose: a band is a member's own project and a
+			// club is a sanctioned CMC one. Committees are under Planning.
+			{ key: 'clubs', capability: 'group.read', label: 'Clubs', href: resolve('/staff/clubs') },
 			{
 				// The parent row is a dashboard, not an index — see
 				// docs/development/ui-patterns.md#section-dashboards. It keeps its own href
@@ -228,6 +212,79 @@ export const staffNavSections: StaffNavSection[] = [
 						href: resolve('/staff/volunteer/report')
 					}
 				]
+			}
+		]
+	},
+	{
+		// What the Collective decides to do and has promised: who works on it,
+		// what members asked for, what was voted, the work, the agreements behind
+		// it, and the year's account (production-projects-spec.md).
+		key: 'planning',
+		title: 'Planning',
+		items: [
+			// Each committee with its open applications counted; its applications
+			// are on its own page (#1671). Every `group.read` holder also holds
+			// `committee.reviewApplications`, so this gate admits the coordinator too.
+			{
+				key: 'committees',
+				capability: 'committee.reviewApplications',
+				label: 'Committees',
+				href: resolve('/staff/committees')
+			},
+			{
+				key: 'suggestions',
+				capability: 'suggestion.read',
+				label: 'Suggestions',
+				href: resolve('/staff/suggestions'),
+				badgeKey: 'suggestionsAwaiting'
+			},
+			{
+				key: 'ballots',
+				capability: 'ballot.manage',
+				label: 'Ballots',
+				href: resolve('/staff/ballots')
+			},
+			{
+				key: 'projects',
+				capability: 'project.read',
+				label: 'Projects',
+				href: resolve('/staff/projects')
+			},
+			{
+				// A grouping, not a page: `/staff/agreements` redirects to Sponsors.
+				// `sponsor.read` is held by everyone who holds any of the three.
+				key: 'agreements',
+				capability: 'sponsor.read',
+				label: 'Agreements',
+				href: resolve('/staff/agreements'),
+				children: [
+					{
+						key: 'sponsors',
+						capability: 'sponsor.read',
+						label: 'Sponsors',
+						href: resolve('/staff/sponsors')
+					},
+					{
+						key: 'grants',
+						capability: 'grant.read',
+						label: 'Grants',
+						href: resolve('/staff/grants')
+					},
+					{
+						key: 'renewals',
+						capability: 'renewal.read',
+						label: 'Renewals',
+						href: resolve('/staff/renewals')
+					}
+				]
+			},
+			// `finance.read` rather than a report capability of its own: the money
+			// lines are what decides who may open it.
+			{
+				key: 'reports',
+				capability: 'finance.read',
+				label: 'Annual Report',
+				href: resolve('/staff/reports')
 			}
 		]
 	},
@@ -366,16 +423,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'lock.manage',
 				label: 'Key Holders',
 				href: resolve('/staff/keys')
-			},
-			{
-				// Beside Contractors rather than under Events: a project is as
-				// often a facility improvement with no event at all as it is a
-				// festival, and filing it under the calendar would hide the half
-				// this table exists for.
-				key: 'projects',
-				capability: 'project.read',
-				label: 'Projects',
-				href: resolve('/staff/projects')
 			}
 		]
 	},
@@ -439,13 +486,6 @@ export const staffNavSections: StaffNavSection[] = [
 				badgeKey: 'appealsPending'
 			},
 			{
-				key: 'suggestions',
-				capability: 'suggestion.read',
-				label: 'Suggestions',
-				href: resolve('/staff/suggestions'),
-				badgeKey: 'suggestionsAwaiting'
-			},
-			{
 				key: 'classifieds',
 				capability: 'listing.review',
 				label: 'Classifieds',
@@ -498,20 +538,6 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'money',
 		title: 'Money',
 		items: [
-			// First in the section because it is the summary the other rows feed:
-			// every figure on it is readable on the page it came from, and this is
-			// where you go when the question is the year rather than the record.
-			//
-			// `finance.read` rather than a report capability of its own. The page
-			// also carries volunteering, events and room-use counts, but those are
-			// aggregate and already public-ish; the money lines are what decides
-			// who may open it.
-			{
-				key: 'reports',
-				capability: 'finance.read',
-				label: 'Annual Report',
-				href: resolve('/staff/reports')
-			},
 			{
 				key: 'payments',
 				capability: 'finance.read',
@@ -536,18 +562,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'credit.read',
 				label: 'Credits',
 				href: resolve('/staff/credits')
-			},
-			{
-				key: 'sponsors',
-				capability: 'sponsor.read',
-				label: 'Sponsors',
-				href: resolve('/staff/sponsors')
-			},
-			{
-				key: 'grants',
-				capability: 'grant.read',
-				label: 'Grants',
-				href: resolve('/staff/grants')
 			}
 		]
 	},
@@ -560,14 +574,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'settings.read',
 				label: 'Settings',
 				href: resolve('/staff/settings')
-			},
-			// System, not Money (#1597): nothing here is money coming in, and the
-			// premium is already an expense in the books.
-			{
-				key: 'renewals',
-				capability: 'renewal.read',
-				label: 'Renewals',
-				href: resolve('/staff/renewals')
 			},
 			{ key: 'audit', capability: 'audit.read', label: 'Audit Log', href: resolve('/staff/audit') }
 		]
