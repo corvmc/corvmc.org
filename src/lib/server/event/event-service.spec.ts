@@ -235,6 +235,11 @@ vi.mock('$lib/server/production/production-service', () => ({
 	getProductionByEvent: () => mockGetProductionByEvent()
 }));
 
+const mockCancelShifts = vi.fn(async (..._args: unknown[]) => 0);
+vi.mock('$lib/server/volunteer/show-cancellation', () => ({
+	cancelShiftsForEvent: (...args: unknown[]) => mockCancelShifts(...args)
+}));
+
 import {
 	create,
 	publish,
@@ -726,6 +731,21 @@ describe('EventService', () => {
 			await cancel('evt-1', 'staff-1');
 
 			expect(mockCancelProductions).toHaveBeenCalledWith('evt-1');
+		});
+
+		it('calls off the show’s crew shifts, naming who cancelled it (#1705)', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published' }];
+
+			await cancel('evt-1', 'staff-1');
+
+			expect(mockCancelShifts).toHaveBeenCalledWith('evt-1', 'staff-1');
+		});
+
+		it('still cancels the show when the shift cascade fails', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published' }];
+			mockCancelShifts.mockRejectedValueOnce(new Error('D1 down'));
+
+			await expect(cancel('evt-1', 'staff-1')).resolves.toBeUndefined();
 		});
 
 		it('releases the poster slot without deleting the object', async () => {
@@ -1706,6 +1726,18 @@ describe('EventService', () => {
 				actor: 'staff',
 				actorUserId: 'staff-1'
 			});
+		});
+
+		// The delete nulls `work_order.event_id`, so this has to come first.
+		it('calls off the crew shifts before deleting the listing (#1705)', async () => {
+			selectResultQueue = [[deletableEvent], [{ value: 0 }]];
+
+			await remove('evt-1', 'staff-1');
+
+			expect(mockCancelShifts).toHaveBeenCalledWith('evt-1', 'staff-1');
+			expect(mockCancelShifts.mock.invocationCallOrder[0]).toBeLessThan(
+				eventDelete.mock.invocationCallOrder[0]
+			);
 		});
 
 		it('releases the poster rather than deleting it', async () => {

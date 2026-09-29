@@ -30,7 +30,7 @@ import { requireActiveVolunteer } from './volunteer-profile-service';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
-import { getShiftById } from './work-order-service';
+import { getShiftById, notOnCancelledListing } from './work-order-service';
 import { missingRequirements } from './member-certification-service';
 import { isScheduled } from './scheduled';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -599,6 +599,7 @@ export async function listSignupsStartingBetween(from: Date, to: Date): Promise<
 			and(
 				eq(volunteerSignup.status, 'confirmed'),
 				isNull(workOrder.cancelledAt),
+				notOnCancelledListing(),
 				sql`${workOrder.startsAt} >= ${Math.floor(from.getTime() / 1000)}`,
 				sql`${workOrder.startsAt} < ${Math.floor(to.getTime() / 1000)}`
 			)

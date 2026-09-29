@@ -322,6 +322,17 @@ export async function getShiftById(id: string): Promise<WorkOrder | null> {
 	return row ?? null;
 }
 
+/**
+ * Not on a cancelled listing. A backstop behind the cascade in `show-cancellation`,
+ * for work orders on a show that was cancelled before the cascade existed.
+ */
+export function notOnCancelledListing() {
+	return sql`not exists (
+		select 1 from "event_listing" e
+		where e."id" = ${workOrder.eventId} and e."status" = 'cancelled'
+	)`;
+}
+
 /** Claims that still hold a place — cancelled and no-show ones free their slot. */
 const ACTIVE_SIGNUP_STATUSES = ['claimed', 'confirmed', 'completed'] as const;
 
@@ -811,7 +822,9 @@ export async function listOpenShiftsForMember(
 		.from(workOrder)
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
-		.where(and(isNull(workOrder.cancelledAt), gte(workOrder.startsAt, now)))
+		.where(
+			and(isNull(workOrder.cancelledAt), gte(workOrder.startsAt, now), notOnCancelledListing())
+		)
 		.orderBy(asc(rankSql), asc(workOrder.startsAt))
 		.limit(opts.limit ?? 50);
 
