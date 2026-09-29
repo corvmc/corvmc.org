@@ -112,6 +112,7 @@ otherwise 403.
 | Remote function                                                              | Today            | Becomes                                                           |
 | ---------------------------------------------------------------------------- | ---------------- | ----------------------------------------------------------------- |
 | `createProduction`                                                           | `event.manage`   | `production.create`, org-wide — no project yet (#1675)            |
+| `createShow` (a new draft listing, its production and project)               | —                | `production.create`, org-wide (#1675)                             |
 | `setStaffEventLineup` on a listing with a production                         | `event.manage`   | `production.book`                                                 |
 | `setRunOfShowTerms` (the deal)                                               | `event.manage`   | `production.book`                                                 |
 | `usePosterArt`, `usePosterArtWithFooter`, `useTemplateFlyerAsPoster`         | `event.manage`   | `production.book`                                                 |
@@ -129,6 +130,12 @@ otherwise 403.
 `updateProduction` guards on **what changed**, not on the form: it compares each submitted field
 with the stored row and asks for `production.book`, `production.run` or both. The form renders
 every current value into its field, so a field that arrives equal to the row is untouched.
+
+**Booking opens its own shows.** A committee holding `production.create` gets a **New show**
+action on its Projects tab (`/member/groups/[slug]?tab=projects`). It takes a name, a date and
+two times, runs `createShow`, and lands on the show's console, which Booking reads through the
+project it was just attached to. Booking is not given `event.read`; the committee page links
+each show on its projects to the same console.
 
 **Cancelling tells Production.** A show moved to `cancelled` — by `advanceProduction`, or by
 cancelling its listing — notifies the active members of every live committee taking part as
