@@ -314,6 +314,11 @@ detach → rebuild → reattach: each cascade child is rebuilt with its FK demot
 are restored with their actions intact. `defer_foreign_keys` holds the transient violation
 until commit.
 
+Dropping a table also drops its triggers, and the snapshot does not record triggers. So the script
+replays every migration into an in-memory SQLite database, finds each trigger the new migration
+drops without naming it in a `DROP TRIGGER`, and appends its `CREATE TRIGGER` to the end of the
+migration. `pnpm db:check-migrations` fails on a migration that loses one.
+
 What this means in practice:
 
 - **Review the rewritten SQL.** It's longer than drizzle's output and rebuilds tables your
