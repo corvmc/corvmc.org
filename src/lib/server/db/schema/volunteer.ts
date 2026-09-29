@@ -44,7 +44,8 @@ import {
 	ORIENTATION_WAIVED_REASON_MAX,
 	dutyListAnchors,
 	dutyListAutoApplyTriggers,
-	dutyListSubjects
+	dutyListSubjects,
+	workDoneConditions
 } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -419,6 +420,16 @@ export const workOrder = sqliteTable(
 			.notNull()
 			.default(false),
 
+		// The committee answerable for this work (#1701). Null is staff's, as it
+		// always was. Set-null like `maintenance_schedule.group_id`: a disbanded
+		// committee's items fall back to staff. Responsibility only — it grants
+		// nothing and narrows nothing.
+		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
+
+		// Which fact about the show says it is done, evaluated in code by
+		// `done-conditions.ts`. Never stored as true: the state is derived.
+		doneWhen: text('done_when', { enum: workDoneConditions }),
+
 		createdByUserId: text('created_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
@@ -449,6 +460,10 @@ export const workOrder = sqliteTable(
 			),
 		// The orientation cascade: "which live work orders staff this booking".
 		index('work_order_reservation_idx').on(t.reservationId),
+		// A committee's Open items queue.
+		index('work_order_group_open_idx')
+			.on(t.groupId, t.dueAt)
+			.where(sql`group_id is not null and resolved_at is null and cancelled_at is null`),
 		// The coordinator's queue: work that needs somebody on it.
 		index('volunteer_shift_unscheduled_idx')
 			.on(t.createdAt)
@@ -1092,6 +1107,13 @@ export const dutyListItem = sqliteTable(
 		notes: text('notes'),
 		sortOrder: integer('sort_order').notNull().default(0),
 		tasks: text('tasks', { mode: 'json' }).$type<string[]>().notNull().default([]),
+
+		// Copied onto the work order at apply time, like everything above: editing
+		// the template never reaches a show's items. `title` exists because three
+		// Booking Lead items would otherwise all read "Booking Lead".
+		title: text('title'),
+		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
+		doneWhen: text('done_when', { enum: workDoneConditions }),
 
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()

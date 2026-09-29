@@ -14,15 +14,22 @@ import { eventListing } from '$lib/server/db/schema/event';
 import { production } from '$lib/server/db/schema/production';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { project } from '$lib/server/db/schema/project';
+import { group } from '$lib/server/db/schema/group';
 import {
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_MAX_MINUTES,
 	VOLUNTEER_SHIFT_NOTES_MAX,
+	VOLUNTEER_SHIFT_TITLE_MAX,
 	dutyListAnchorLabels,
 	dutyListSubjectLabels,
 	productionDutyListAnchors
 } from '$lib/config';
-import type { DutyListAnchor, DutyListAutoApplyTrigger, DutyListSubject } from '$lib/config';
+import type {
+	DutyListAnchor,
+	DutyListAutoApplyTrigger,
+	DutyListSubject,
+	WorkDoneCondition
+} from '$lib/config';
 import type { DutyList, DutyListItem } from '$lib/server/db/schema/volunteer';
 import { chunk, chunkSize } from '$lib/server/utils/chunk';
 
@@ -136,6 +143,37 @@ function validateNotes(notes?: string | null): string | null {
 	return trimmed;
 }
 
+function validateTitle(title?: string | null): string | null {
+	const trimmed = title?.trim();
+	if (!trimmed) return null;
+	if (trimmed.length > VOLUNTEER_SHIFT_TITLE_MAX) {
+		throw new DutyListValidationError(
+			`Keep the title under ${VOLUNTEER_SHIFT_TITLE_MAX} characters.`,
+			'title'
+		);
+	}
+	return trimmed;
+}
+
+/**
+ * An owner has to be a live committee, as `maintenance_schedule` and
+ * `project_committee` require: a band or a club answers for no show work.
+ */
+export async function assertOwningCommittee(
+	groupId: string | null | undefined
+): Promise<string | null> {
+	if (!groupId) return null;
+	const [row] = await db
+		.select({ kind: group.kind, deletedAt: group.deletedAt })
+		.from(group)
+		.where(eq(group.id, groupId))
+		.limit(1);
+	if (!row || row.deletedAt || row.kind !== 'committee') {
+		throw new DutyListValidationError('Only a committee can own this.', 'groupId');
+	}
+	return groupId;
+}
+
 function validateTasks(tasks: string[]): string[] {
 	const cleaned = tasks.map((t) => t.trim()).filter(Boolean);
 	for (const t of cleaned) {
@@ -231,6 +269,8 @@ export async function listDutyLists(
 
 export interface DutyListItemRow extends DutyListItem {
 	roleName: string;
+	/** The owning committee's name, or null for staff's. */
+	groupName: string | null;
 	/** The role as a record, so the item can link to it. */
 	role: import('$lib/types/entity').GenericRef;
 }
@@ -245,9 +285,15 @@ export async function getDutyListDetail(id: string): Promise<DutyListDetail | nu
 	if (!list) return null;
 
 	const rows = await db
-		.select({ item: dutyListItem, roleName: volunteerRole.name, roleId: volunteerRole.id })
+		.select({
+			item: dutyListItem,
+			roleName: volunteerRole.name,
+			roleId: volunteerRole.id,
+			groupName: group.name
+		})
 		.from(dutyListItem)
 		.innerJoin(volunteerRole, eq(volunteerRole.id, dutyListItem.volunteerRoleId))
+		.leftJoin(group, eq(group.id, dutyListItem.groupId))
 		.where(eq(dutyListItem.dutyListId, id))
 		.orderBy(asc(dutyListItem.sortOrder));
 
@@ -256,6 +302,7 @@ export async function getDutyListDetail(id: string): Promise<DutyListDetail | nu
 		items: rows.map((r) => ({
 			...r.item,
 			roleName: r.roleName,
+			groupName: r.groupName,
 			// A duty list item *is* a role at an offset, and the role was a bare
 			// string with no way to reach it.
 			role: toGenericRef('role', { id: r.roleId, title: r.roleName })
@@ -372,6 +419,10 @@ export interface DutyListItemInput {
 	notes?: string | null;
 	sortOrder?: number;
 	tasks?: string[];
+	title?: string | null;
+	/** The owning committee. Null leaves the item staff's. */
+	groupId?: string | null;
+	doneWhen?: WorkDoneCondition | null;
 }
 
 export async function addDutyListItem(
@@ -409,7 +460,10 @@ export async function addDutyListItem(
 			capacity: validateCapacity(input.capacity),
 			notes: validateNotes(input.notes),
 			sortOrder: input.sortOrder ?? 0,
-			tasks: validateTasks(input.tasks ?? [])
+			tasks: validateTasks(input.tasks ?? []),
+			title: validateTitle(input.title),
+			groupId: await assertOwningCommittee(input.groupId),
+			doneWhen: input.doneWhen ?? null
 		})
 		.returning();
 
@@ -439,6 +493,9 @@ export async function updateDutyListItem(
 	if (input.notes !== undefined) updates.notes = validateNotes(input.notes);
 	if (input.sortOrder !== undefined) updates.sortOrder = input.sortOrder;
 	if (input.tasks !== undefined) updates.tasks = validateTasks(input.tasks);
+	if (input.title !== undefined) updates.title = validateTitle(input.title);
+	if (input.groupId !== undefined) updates.groupId = await assertOwningCommittee(input.groupId);
+	if (input.doneWhen !== undefined) updates.doneWhen = input.doneWhen;
 
 	const [row] = await db
 		.update(dutyListItem)
@@ -736,6 +793,10 @@ export async function applyDutyList(
 			dueAt: item.dueOffsetMinutes !== null ? addMinutes(anchor, item.dueOffsetMinutes) : null,
 			capacity: item.capacity,
 			notes: item.notes,
+			// A copy, like the rest: re-owning the template leaves this show alone.
+			title: item.title,
+			groupId: item.groupId,
+			doneWhen: item.doneWhen,
 			dutyListId,
 			createdByUserId
 		});
