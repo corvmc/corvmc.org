@@ -229,10 +229,9 @@ describe('BandService', () => {
 	// -----------------------------------------------------------------------
 	// listForUser / partitionByStatus
 	//
-	// The two roster reads that were status- and kind-blind. Both had to grow an
-	// answer before `'requested'` and the first club existed, because neither
-	// would have failed — one would have dropped applicants into no bucket at
-	// all, the other would have put a club in the My Bands sidebar.
+	// The two roster reads that were status- and kind-blind. Neither would have
+	// failed on its own — one could drop a new status into no bucket at all, the
+	// other would have put a club in the My Bands sidebar.
 	// -----------------------------------------------------------------------
 
 	describe('listForUser', () => {
@@ -332,29 +331,27 @@ describe('BandService', () => {
 	});
 
 	describe('partitionByStatus', () => {
-		it('gives every status a bucket, including ones nothing renders yet', () => {
+		it('gives every status a bucket', () => {
 			const buckets = partitionByStatus([
 				{ id: 'a', status: 'active' as const },
-				{ id: 'p', status: 'pending' as const },
-				{ id: 'r', status: 'requested' as const }
+				{ id: 'p', status: 'pending' as const }
 			]);
 
 			expect(buckets.active.map((r) => r.id)).toEqual(['a']);
 			expect(buckets.pending.map((r) => r.id)).toEqual(['p']);
-			expect(buckets.requested.map((r) => r.id)).toEqual(['r']);
+			// #1700: asking to join is an application now, not a roster status.
+			expect(Object.keys(buckets).sort()).toEqual(['active', 'pending']);
 		});
 
 		/**
-		 * The failure this exists to prevent: the hand-written pair of filters it
-		 * replaced would have dropped a `'requested'` row into neither bucket, and
-		 * nothing — no type error, no failing test, nothing in the diff — would
-		 * have said so.
+		 * The failure this exists to prevent: hand-written filters drop a status
+		 * nobody named into neither bucket, and nothing says so.
 		 */
 		it('loses nothing, whatever the mix', () => {
 			const rows = [
-				{ id: '1', status: 'requested' as const },
+				{ id: '1', status: 'pending' as const },
 				{ id: '2', status: 'active' as const },
-				{ id: '3', status: 'requested' as const }
+				{ id: '3', status: 'pending' as const }
 			];
 			const buckets = partitionByStatus(rows);
 			const total = Object.values(buckets).reduce((n, b) => n + b.length, 0);
@@ -364,7 +361,6 @@ describe('BandService', () => {
 		it('returns an empty bucket rather than omitting the key', () => {
 			const buckets = partitionByStatus([{ id: 'a', status: 'active' as const }]);
 			expect(buckets.pending).toEqual([]);
-			expect(buckets.requested).toEqual([]);
 		});
 	});
 

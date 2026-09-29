@@ -192,12 +192,7 @@ export const getBandMembersList = query(z.string(), async (bandId) => {
 	const members = partitionByStatus(await getMembers(bandId));
 	return {
 		active: members.active,
-		pending: members.pending,
-		// Applications, which only a `by_application` group can have. Returned
-		// rather than dropped: `getMembers` is the whole roster, so filtering to
-		// two buckets is what would have rendered applicants mixed into the member
-		// list — or, here, nowhere at all.
-		requested: members.requested
+		pending: members.pending
 	};
 });
 
@@ -255,10 +250,6 @@ export const getMemberBands = query(async () => {
 	return {
 		pending: byStatus.pending.map(serialize),
 		active: byStatus.active.map(serialize),
-		// Always empty for a band, which is `invite_only` by construction — but it
-		// is the shape the data can take, and leaving it out is how the club
-		// mount of this list would lose its applicants.
-		requested: byStatus.requested.map(serialize),
 		emailInvites: invites
 			.filter((i) => i.groupKind === 'band')
 			.map((i) => ({

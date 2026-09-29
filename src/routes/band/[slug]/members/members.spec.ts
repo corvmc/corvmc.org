@@ -31,8 +31,7 @@ const bandServiceMock = {
 	// having the roster silently lose a row.
 	partitionByStatus: <T extends { status: string }>(rows: T[]) => ({
 		pending: rows.filter((r) => r.status === 'pending'),
-		active: rows.filter((r) => r.status === 'active'),
-		requested: rows.filter((r) => r.status === 'requested')
+		active: rows.filter((r) => r.status === 'active')
 	}),
 	invite: vi.fn(async () => ({
 		id: 'member-new',

@@ -1847,7 +1847,7 @@ the suggestion, and moves the suggestion to Planned. The project's staff page sh
 
 ## 24. Group applications: applying to a club or a committee
 
-Spec: [specs/group-applications-spec.md](../specs/group-applications-spec.md) (#1700; decisions
+Spec: [specs/group-applications-spec.md](../specs/shipped/group-applications-spec.md) (#1700; decisions
 #1727–#1730)
 
 ### The story
@@ -1898,7 +1898,8 @@ nothing is open for that group.
 - `group_member` is written only when an application is accepted, as a `pending` invitation.
 - The migration `*_group_application_backfill` copied `committee_application*` across and turned
   every `requested` roster row into an application. It deleted those rows and set every committee
-  to `by_application`.
+  to `by_application`. `*_group_application_recopy` repeated the copy for stragglers, and the next
+  migration dropped the old tables. `'requested'` is no longer a roster status.
 
 ### Where it breaks
 
@@ -1906,8 +1907,6 @@ nothing is open for that group.
   and `submitApplication` refuses it. Open choices stay answerable.
 - **`group.manage` alone cannot decide an application.** A staffer who is not the group's owner or
   admin sees no card. On a committee they need `committee.reviewApplications`.
-- `committee_application*` and `group_member.status = 'requested'` are still in the schema until
-  the contract migration. Nothing reads them.
 
 ## Cross-cutting patterns worth internalizing
 

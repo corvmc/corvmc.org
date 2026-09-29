@@ -12,6 +12,13 @@ import { applyMigrations, MIGRATIONS_FOLDER } from './migrate-local';
 
 const dir = readdirSync(MIGRATIONS_FOLDER).find((n) => n.endsWith('_group_application_backfill'));
 const BACKFILL = readFileSync(join(MIGRATIONS_FOLDER, dir ?? 'missing', 'migration.sql'), 'utf8');
+const recopyDir = readdirSync(MIGRATIONS_FOLDER).find((n) =>
+	n.endsWith('_group_application_recopy')
+);
+const RECOPY = readFileSync(
+	join(MIGRATIONS_FOLDER, recopyDir ?? 'missing', 'migration.sql'),
+	'utf8'
+);
 
 /** Migrations up to, not including, the backfill: the state it meets in production. */
 function migrationsBeforeBackfill(): string {
@@ -24,9 +31,10 @@ function migrationsBeforeBackfill(): string {
 	return out;
 }
 
-function runBackfill(db: DatabaseSync) {
-	for (const statement of BACKFILL.split('--> statement-breakpoint')) db.exec(statement);
+function run(db: DatabaseSync, sql: string) {
+	for (const statement of sql.split('--> statement-breakpoint')) db.exec(statement);
 }
+const runBackfill = (db: DatabaseSync) => run(db, BACKFILL);
 
 const all = (db: DatabaseSync, sql: string) => db.prepare(sql).all() as Record<string, unknown>[];
 const count = (db: DatabaseSync, table: string) =>
@@ -168,5 +176,33 @@ describe('group application backfill', () => {
 		runBackfill(db);
 		expect([count(db, 'group_application'), count(db, 'group_application_choice')]).toEqual(before);
 		expect(before).toEqual([4, 5]);
+	});
+
+	/**
+	 * The contract's re-copy: rows the previous Worker wrote to the old shapes
+	 * after the switch migrated, before it published. It must not re-open a
+	 * committee staff have since closed.
+	 */
+	it('re-copies stragglers once, and leaves join policies alone', () => {
+		db.exec(`
+			UPDATE "group" SET join_policy = 'invite_only' WHERE id = 'facility';
+			INSERT INTO committee_application (id, user_id, answers) VALUES ('ca-late', 'cy', '{}');
+			INSERT INTO committee_application_choice (id, application_id, group_id, status)
+				VALUES ('cc-late', 'ca-late', 'booking', 'submitted');
+			INSERT INTO group_member (id, group_id, user_id, role, status, created_at)
+				VALUES ('gm-late', 'jazz', 'ada', 'member', 'requested', 1785000000);
+		`);
+		const before = [count(db, 'group_application'), count(db, 'group_application_choice')];
+		run(db, RECOPY);
+		run(db, RECOPY);
+
+		expect([count(db, 'group_application'), count(db, 'group_application_choice')]).toEqual([
+			before[0] + 2,
+			before[1] + 2
+		]);
+		expect(all(db, `SELECT id FROM group_member WHERE status = 'requested'`)).toEqual([]);
+		expect(all(db, `SELECT join_policy FROM "group" WHERE id = 'facility'`)).toEqual([
+			{ join_policy: 'invite_only' }
+		]);
 	});
 });

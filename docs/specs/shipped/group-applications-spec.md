@@ -2,9 +2,8 @@
 
 > ## Status
 >
-> 🔧 Tracked by #1700. **Phase 1, the switch, is built**: its behaviour is described in
-> `docs/development/business-workflows.md` §24. Phase 2, the contract, is not, and must reach `main`
-> only after the switch has deployed. The choices an agent made are for the owner to confirm: #1727 (one mechanism, and the
+> 📦 Built (#1700): behaviour is in `docs/development/business-workflows.md` §24. What survives
+> here is the design and the options weighed. The choices an agent made are for the owner to confirm: #1727 (one mechanism, and the
 > migration), #1728 (questions per kind), #1729 (accepting invites) and #1730 (who reviews).
 
 ## Purpose
