@@ -313,8 +313,6 @@ export const relations = defineRelations(schema, (t) => ({
 		createdBy: t.one.user({ from: t.purchaseOrder.createdByUserId, to: t.user.id })
 	},
 	project: {
-		/** The owning committee — a `group` with `kind = 'committee'`. */
-		group: t.one.group({ from: t.project.groupId, to: t.group.id }),
 		suggestion: t.one.suggestion({ from: t.project.suggestionId, to: t.suggestion.id }),
 		createdBy: t.one.user({ from: t.project.createdByUserId, to: t.user.id }),
 		// The four ledgers burn is summed over, plus the events. No `stockMovement`

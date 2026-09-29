@@ -1,4 +1,4 @@
-import { project } from '../../src/lib/server/db/schema/project';
+import { project, projectCommittee } from '../../src/lib/server/db/schema/project';
 import { group } from '../../src/lib/server/db/schema/group';
 import { suggestion } from '../../src/lib/server/db/schema/suggestion';
 import {
@@ -72,7 +72,6 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 				description:
 					'Repaint, rewire the stage subpanel, and replace the worst of the cabling. Runs through the autumn.',
 				status: 'in_progress' as const,
-				groupId: facilities?.id ?? null,
 				// Set just under what the attached ledgers come to, so the over-budget
 				// rendering is reachable locally without editing anything — and only
 				// just under, because a burn bar at 400% tests nothing a bar at 110%
@@ -88,7 +87,6 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 				description:
 					'Acoustic panels on the shared wall, plus a door sweep. Came off the suggestion board.',
 				status: 'planned' as const,
-				groupId: facilities?.id ?? null,
 				suggestionId: soundproofing?.id ?? null,
 				budgetCents: 120_000,
 				createdByUserId: staffId
@@ -98,7 +96,6 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 				name: 'Winter showcase',
 				description: 'Two nights in December. One budget, one backlog, two shows.',
 				status: 'open' as const,
-				groupId: programming?.id ?? null,
 				// Deliberately null: "no budget set" is a different rendering from
 				// zero, and nothing else in the seed exercises it.
 				budgetCents: null,
@@ -108,6 +105,13 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		],
 		10
 	);
+
+	const owners = [
+		{ projectId: ids.facility, groupId: facilities?.id },
+		{ projectId: ids.suggested, groupId: facilities?.id },
+		{ projectId: ids.festival, groupId: programming?.id }
+	].flatMap((o) => (o.groupId ? [{ ...o, groupId: o.groupId, role: 'owner' as const }] : []));
+	if (owners.length) await db.insert(projectCommittee).values(owners);
 
 	// --- Attach real rows to the facility project, one per burn line ----------
 

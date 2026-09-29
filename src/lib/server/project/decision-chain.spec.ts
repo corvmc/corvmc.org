@@ -40,7 +40,8 @@ const { startProjectFromSuggestion } = await import('./project-service');
 const { user } = await import('$lib/server/db/schema/authentication');
 const { memberOrientation } = await import('$lib/server/db/schema/volunteer');
 const { suggestion } = await import('$lib/server/db/schema/suggestion');
-const { project } = await import('$lib/server/db/schema/project');
+const { project, projectCommittee } = await import('$lib/server/db/schema/project');
+const { group } = await import('$lib/server/db/schema/group');
 const { eq } = await import('drizzle-orm');
 
 const DAY = 86_400_000;
@@ -61,6 +62,7 @@ beforeEach(async () => {
 		'ballot_option',
 		'project',
 		'ballot',
+		'"group"',
 		'suggestion',
 		'member_orientation',
 		'user'
@@ -209,6 +211,27 @@ describe('starting a project from a ballot', () => {
 		expect(p.suggestionId).toBe(IDEA);
 		expect(p.status).toBe('planned');
 		expect(await suggestionStatus()).toBe('planned');
+	});
+
+	it('writes the owning committee as its project_committee row', async () => {
+		await testDb.insert(group).values({
+			id: 'grp-fac',
+			name: 'Facilities',
+			slug: 'facilities',
+			kind: 'committee'
+		} as never);
+		const id = await certified(2);
+		const p = await chain.startProjectFromBallot(
+			id,
+			{ name: 'Back room PA', groupId: 'grp-fac' },
+			{ now: AFTER_CLOSE }
+		);
+
+		const rows = await testDb
+			.select({ groupId: projectCommittee.groupId, role: projectCommittee.role })
+			.from(projectCommittee)
+			.where(eq(projectCommittee.projectId, p.id));
+		expect(rows).toEqual([{ groupId: 'grp-fac', role: 'owner' }]);
 	});
 
 	it('is refused when the result did not pass', async () => {

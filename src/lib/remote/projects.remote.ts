@@ -25,6 +25,7 @@ import {
 	getProjectById,
 	listProjectAttachments,
 	listCommittees,
+	listProjectCommittees,
 	listProjects,
 	setProjectStatus,
 	startProjectFromSuggestion,
@@ -129,15 +130,17 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 
 	const [projects, committees] = await Promise.all([listProjects(filters ?? {}), listCommittees()]);
 
-	const burns = await Promise.all(projects.map((p) => getProjectBurn(p.id)));
-	const byName = new Map(committees.map((c) => [c.id, c.name]));
+	const [burns, taking] = await Promise.all([
+		Promise.all(projects.map((p) => getProjectBurn(p.id))),
+		listProjectCommittees(projects.map((p) => p.id))
+	]);
 
 	return {
 		committees,
 		projects: projects.map((project, i) => ({
 			project,
 			burn: burns[i],
-			committeeName: project.groupId ? (byName.get(project.groupId) ?? null) : null
+			committeeNames: taking.filter((c) => c.projectId === project.id).map((c) => c.name)
 		}))
 	};
 });
@@ -146,17 +149,27 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 export const getProjectDetail = query(z.string(), async (id) => {
 	await requireCapability('project.read');
 	try {
-		const [project, burn, attachments, committees, suggestions, lists, origin, ballotManager] =
-			await Promise.all([
-				getProjectById(id),
-				getProjectBurn(id),
-				listProjectAttachments(id),
-				listCommittees(),
-				listUnansweredSuggestions(),
-				listDutyLists({ subject: 'project' }),
-				getProjectOrigin(id),
-				can('ballot.manage')
-			]);
+		const [
+			project,
+			burn,
+			attachments,
+			committees,
+			suggestions,
+			lists,
+			origin,
+			ballotManager,
+			taking
+		] = await Promise.all([
+			getProjectById(id),
+			getProjectBurn(id),
+			listProjectAttachments(id),
+			listCommittees(),
+			listUnansweredSuggestions(),
+			listDutyLists({ subject: 'project' }),
+			getProjectOrigin(id),
+			can('ballot.manage'),
+			listProjectCommittees([id])
+		]);
 		const dutyLists = lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
 		return {
 			project,
@@ -166,7 +179,9 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			suggestions,
 			dutyLists,
 			origin,
-			canCreateBallot: ballotManager
+			canCreateBallot: ballotManager,
+			/** Every committee taking part, owner first. */
+			projectCommittees: taking
 		};
 	} catch (err) {
 		mapDomainError(err);

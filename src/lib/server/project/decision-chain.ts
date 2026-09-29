@@ -5,7 +5,12 @@ import { suggestion } from '$lib/server/db/schema/suggestion';
 import { project } from '$lib/server/db/schema/project';
 import { ballot, type Ballot } from '$lib/server/db/schema/ballot';
 import { ballotPassed, ballotStatusOf, getBallot } from '$lib/server/ballot/ballot-service';
-import { assertCommittee, getProjectById, type CreateProjectInput } from './project-service';
+import {
+	assertCommittee,
+	getProjectById,
+	ownerRow,
+	type CreateProjectInput
+} from './project-service';
 
 /**
  * Idea → decision → work, read and written as rows: `ballot.suggestion_id` and
@@ -85,9 +90,10 @@ export async function startProjectFromBallot(
 	if (data.groupId) await assertCommittee(data.groupId);
 
 	const id = crypto.randomUUID();
+	const { groupId, ...fields } = data;
 	await db.batch([
 		db.insert(project).values({
-			...data,
+			...fields,
 			id,
 			ballotId,
 			suggestionId: b.suggestionId,
@@ -100,7 +106,8 @@ export async function startProjectFromBallot(
 						.set({ status: 'planned', updatedAt: now })
 						.where(eq(suggestion.id, b.suggestionId))
 				]
-			: [])
+			: []),
+		...(groupId ? [ownerRow(id, groupId)] : [])
 	]);
 	return getProjectById(id);
 }

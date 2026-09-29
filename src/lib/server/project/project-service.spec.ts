@@ -112,14 +112,13 @@ describe('createProject', () => {
 	});
 
 	it('accepts a committee owner', async () => {
-		selectResults = [COMMITTEE, PROJECT({ name: 'Rewire the panel', groupId: 'g-1' })];
+		selectResults = [COMMITTEE, PROJECT({ name: 'Rewire the panel' })];
 
-		const row = await createProject({ name: 'Rewire the panel', groupId: 'g-1' });
+		await createProject({ name: 'Rewire the panel', groupId: 'g-1' });
 
-		expect(row).toMatchObject({ name: 'Rewire the panel', groupId: 'g-1' });
-		// The owner is written twice until `group_id` goes: the column and its
-		// `project_committee` row, in one batch.
+		// The owner is its `project_committee` row alone; `project` has no column for it.
 		expect(batchCalls).toHaveLength(1);
+		expect(insertValues[0]).not.toHaveProperty('groupId');
 		expect(insertValues).toContainEqual(expect.objectContaining({ groupId: 'g-1', role: 'owner' }));
 	});
 
@@ -332,6 +331,16 @@ describe('the suggestion loop', () => {
 		expect(batchCalls[0]).toHaveLength(2);
 		expect(insertValues.at(-1)).toMatchObject({ suggestionId: 's-1', status: 'planned' });
 		expect(updateValues.at(-1)).toMatchObject({ status: 'planned' });
+	});
+
+	it('writes the owner as a committee row in the same batch', async () => {
+		selectResults = [[{ id: 's-1' }], [], COMMITTEE, PROJECT({ status: 'planned' })];
+
+		await startProjectFromSuggestion('s-1', { name: 'Soundproofing', groupId: 'g-1' });
+
+		expect(batchCalls[0]).toHaveLength(3);
+		expect(insertValues[0]).not.toHaveProperty('groupId');
+		expect(insertValues).toContainEqual(expect.objectContaining({ groupId: 'g-1', role: 'owner' }));
 	});
 
 	it('refuses a suggestion another project already answers', async () => {
