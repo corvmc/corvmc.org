@@ -172,7 +172,9 @@
 	let fieldInput = $state<HTMLInputElement>();
 	let spreadAttrs = $derived.by(() => {
 		if (!fieldAttrs || hydrated) return fieldAttrs;
-		const { value: _value, defaultValue: _default, ...attrs } = fieldAttrs;
+		// Annotated wider so members without the keys (file, select) destructure too.
+		const wide: typeof fieldAttrs & { value?: unknown; defaultValue?: unknown } = fieldAttrs;
+		const { value: _value, defaultValue: _default, ...attrs } = wide;
 		return attrs;
 	});
 	onMount(() => {
