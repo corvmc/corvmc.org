@@ -2,18 +2,28 @@ import { z } from 'zod';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupJoinPolicies } from '$lib/config';
+import {
+	LONG_TEXT_MAX,
+	SHORT_TEXT_MAX,
+	groupJoinPolicies,
+	type GroupApplicationStatus
+} from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { setCommitteeCapabilityGrants } from '$lib/server/capability/capability-grant-service';
 import { allowlisted } from '$lib/server/capability/grant-rules';
 import { can, requireCapability, requireUser } from '$lib/server/authorization';
 import { requireGroupRole, requireProgramRole } from '$lib/server/group/group-context';
-import { listForCommittee } from '$lib/server/group/committee-application-service';
+import {
+	hasOpenApplication,
+	listForApplicant,
+	listForGroup
+} from '$lib/server/group/application-service';
 import { directoryVisibilities } from '$lib/server/db/schema/directory';
 import {
 	acceptInvitation,
 	declineInvitation,
 	getMembers,
+	getUserRole,
 	invite,
 	partitionByStatus,
 	removeMember as removeMemberService,
@@ -47,8 +57,6 @@ import {
 	assignLeader,
 	createGroup,
 	deactivate,
-	approveApplication,
-	declineApplication,
 	getGroupDetail,
 	joinGroup,
 	leaveGroup,
@@ -101,22 +109,31 @@ export const getStaffGroups = query(staffGroupFilters, async (filters) => {
 /**
  * The staff group detail page's one load-bearing query.
  *
- * The roster comes back partitioned rather than flat: a `by_application` group
- * has applicants, and rendering them mixed into the member list is exactly what
- * `'requested'` exists to prevent. `canReviewApplications` gates the committee
- * applications card, whose own query a `group.read` holder may not pass.
+ * `applications` only for a viewer `requireApplicationReviewer` would admit:
+ * an owner or admin of this group, or the capability holder on a committee.
+ * `group.read` alone reads the roster, not who applied (#1730).
  */
 export const getStaffGroupPage = query(z.string(), async (id) => {
-	await requireCapability('group.read');
+	const user = await requireCapability('group.read');
 
-	const [group, roster, canReviewApplications] = await Promise.all([
+	const [group, roster, coordinator, role] = await Promise.all([
 		getGroupDetail(id),
 		getMembers(id),
-		can('committee.reviewApplications')
+		can('committee.reviewApplications'),
+		getUserRole(id, user.id)
 	]);
 	if (!group) error(404, 'Group not found');
 
-	return { group, members: partitionByStatus(roster), canReviewApplications };
+	const canReviewApplications =
+		role === 'owner' || role === 'admin' || (group.kind === 'committee' && coordinator);
+	const applications = canReviewApplications ? await listForGroup(group.id) : [];
+
+	return {
+		group,
+		members: partitionByStatus(roster),
+		canReviewApplications,
+		applications
+	};
 });
 
 /**
@@ -146,7 +163,7 @@ export const getStaffCommitteePage = query(z.string().min(1), async (id) => {
 		error(404, 'Committee not found');
 	}
 	const [applications, roster] = await Promise.all([
-		group.deletedAt ? [] : listForCommittee(group.id),
+		group.deletedAt ? [] : listForGroup(group.id),
 		canManage ? getMembers(id) : null
 	]);
 	return {
@@ -278,22 +295,58 @@ export const reactivateGroup = form(z.object({ groupId: z.string().min(1) }), as
 // Member — /member/groups
 // ---------------------------------------------------------------------------
 
+interface AppliedRow {
+	applicationId: string;
+	groupId: string;
+	name: string;
+	kind: string;
+	status: GroupApplicationStatus;
+	reviewNotes: string | null;
+	open: boolean;
+	sharedWith: number;
+}
+
 /**
- * The member index's one load-bearing query: your programs, and the ones you
- * could join, in a single round trip. See `listMemberGroups`.
+ * The member index's one load-bearing query: your programs, the ones you
+ * applied to, and the ones you could join, in a single round trip.
  */
 export const getMemberGroups = query(async () => {
 	const user = requireUser();
 	// An emailed invitation is a `group_invite` row, not a pending roster row, so
 	// none of them reached this page — a member who was invited by email and did
 	// not follow the link had no way to learn it existed or that it lapsed (#906).
-	const [groups, invites] = await Promise.all([
+	const [groups, invites, applications] = await Promise.all([
 		listMemberGroups(user.id),
-		listInvitesForEmail(user.email)
+		listInvitesForEmail(user.email),
+		listForApplicant(user.id)
 	]);
+
+	// Each group's latest choice on a live application, unless it was accepted:
+	// that one is an invitation now, and the invitation row says so.
+	const applied = new Map<string, AppliedRow>();
+	for (const app of applications) {
+		if (app.withdrawnAt) continue;
+		for (const g of app.groups) {
+			if (applied.has(g.id) || g.status === 'accepted') continue;
+			applied.set(g.id, {
+				applicationId: app.id,
+				groupId: g.id,
+				name: g.name,
+				kind: g.kind,
+				status: g.status,
+				reviewNotes: g.reviewNotes,
+				open: g.status === 'submitted' || g.status === 'contacted',
+				// Withdrawing takes back every group the application named.
+				sharedWith: app.groups.length - 1
+			});
+		}
+	}
+	const openIds = new Set([...applied.values()].filter((a) => a.open).map((a) => a.groupId));
 
 	return {
 		...groups,
+		byApplication: groups.byApplication.filter((g) => !openIds.has(g.id)),
+		applied: [...applied.values()],
 		emailInvites: invites
 			.filter((i) => i.groupKind !== 'band')
 			.map((i) => ({
@@ -318,8 +371,8 @@ export const getMemberGroups = query(async () => {
  * phase 4 set out to end.
  */
 export const getMemberGroup = query(z.string(), async (slug) => {
-	// A non-member — including someone whose application is still `'requested'`,
-	// which `requireGroupRole` resolves nothing for — is sent back to the index
+	// A non-member — including an applicant or someone still invited, neither
+	// of whom `requireGroupRole` resolves — is sent back to the index
 	// rather than shown an empty shell or an error boundary. A 404 still 404s:
 	// "you cannot see this" and "this does not exist" are different answers and
 	// collapsing them would send people to a list for a slug that never existed.
@@ -333,6 +386,10 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 	const { group, role } = ctx;
 
 	const canManage = role === 'owner' || role === 'admin';
+	// `requireApplicationReviewer`'s rule, so the card shows exactly when its writes pass.
+	const canReviewApplications =
+		canManage ||
+		(group.kind === 'committee' && role === 'staff' && (await can('committee.reviewApplications')));
 
 	// One round trip, per the custom/no-concurrent-remote-queries rule. Announcements
 	// belong here rather than in a query of the tab's own: a club is small by
@@ -347,7 +404,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		documentUsage,
 		projects,
 		emailInvites,
-		committeeApplications,
+		applications,
 		projectLists,
 		volunteerRoles,
 		projectEvents,
@@ -368,13 +425,11 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		// list and never shows the tab.
 		group.kind === 'committee' ? listProjects({ groupId: group.id }) : Promise.resolve([]),
 		// Invitations to an address rather than to an account. Withheld from a
-		// plain member for the same reason `requested` is: who was asked is a
-		// manager's business.
+		// plain member: who was asked is a manager's business.
 		canManage ? listEmailInvites(group.id) : Promise.resolve([]),
 		// Folded in rather than given a query of its own, per
-		// `custom/no-concurrent-remote-queries`. A committee is invite-only, so
-		// its applications are their own entity and never reach `roster.requested`.
-		group.kind === 'committee' && canManage ? listForCommittee(group.id) : Promise.resolve([]),
+		// `custom/no-concurrent-remote-queries`. Withheld from anyone who cannot answer them.
+		canReviewApplications ? listForGroup(group.id) : Promise.resolve([]),
 		// A committee applies duty lists to its own projects.
 		group.kind === 'committee' ? listDutyLists({ subject: 'project' }) : Promise.resolve([]),
 		// The role picker for opening a work order on one of the committee's projects.
@@ -457,14 +512,10 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		})),
 		projectEvents,
 		emailInvites,
-		committeeApplications,
+		applications,
 		members: {
 			active: roster.active,
-			pending: roster.pending,
-			// Only an owner or admin answers these, and only a `by_application`
-			// group has any. Withheld rather than hidden client-side: a plain
-			// member has no business reading who applied.
-			requested: canManage ? roster.requested : []
+			pending: roster.pending
 		}
 	};
 });
@@ -474,13 +525,11 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 // ---------------------------------------------------------------------------
 
 /**
- * Join, or apply to join.
+ * Join an `open` group. Applying is `applyToGroups`.
  *
- * One form for both doors, because which one it is belongs to the group rather
- * than to the request: the service re-reads `joinPolicy` from the resolved group
- * and the caller cannot say how they should be let in. Guarded by `requireUser`
- * rather than `requireGroupRole` for the obvious reason — someone joining holds
- * no role yet.
+ * The service re-reads `joinPolicy` from the resolved group, so the caller
+ * cannot say how they should be let in. Guarded by `requireUser` rather than
+ * `requireGroupRole` — someone joining holds no role yet.
  */
 export const joinGroupForm = form(z.object({ groupId: z.string().min(1) }), async (data) => {
 	const user = requireUser();
@@ -492,38 +541,11 @@ export const joinGroupForm = form(z.object({ groupId: z.string().min(1) }), asyn
 	}
 });
 
-/** Leave a program, or withdraw an application to one. Your own row, always. */
+/** Leave a program. Your own row, always. Withdrawing an application is its own form. */
 export const leaveGroupForm = form(z.object({ groupId: z.string().min(1) }), async (data) => {
 	const user = requireUser();
 	try {
 		await leaveGroup(data.groupId, user.id);
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
-
-const applicationSchema = z.object({
-	slug: z.string().min(1),
-	memberId: z.string().min(1)
-});
-
-export const approveApplicationForm = form(applicationSchema, async (data) => {
-	// Admin, and the group comes from the ref rather than from the member id:
-	// the id is the client's, and an admin's authority stops at their own group.
-	const { group } = await requireGroupRole({ slug: data.slug }, 'admin');
-	try {
-		await approveApplication(data.memberId, group.id);
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
-
-export const declineApplicationForm = form(applicationSchema, async (data) => {
-	const { group } = await requireGroupRole({ slug: data.slug }, 'admin');
-	try {
-		await declineApplication(data.memberId, group.id);
 		return { success: true };
 	} catch (err) {
 		mapDomainError(err);
@@ -819,7 +841,12 @@ export const getPublicGroupPage = query(z.string(), async (slug) => {
 	if (!group) error(404, 'Group not found');
 
 	const { locals } = getRequestEvent();
-	const viewerStatus = locals.user ? await getUserGroupStatus(group.id, locals.user.id) : null;
+	const [viewerStatus, applied] = locals.user
+		? await Promise.all([
+				getUserGroupStatus(group.id, locals.user.id),
+				hasOpenApplication(group.id, locals.user.id)
+			])
+		: [null, false];
 
-	return { group, signedIn: !!locals.user, viewerStatus };
+	return { group, signedIn: !!locals.user, viewerStatus, applied };
 });

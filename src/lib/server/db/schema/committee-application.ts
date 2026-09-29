@@ -2,17 +2,14 @@ import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-co
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
 import { group } from './group';
-import { committeeApplicationStatuses } from '../../../config';
+import { groupApplicationStatuses } from '../../../config';
 
 /**
- * Somebody asking to join one or more committees.
- *
- * **Its own entity rather than `group_member.status = 'requested'`**: that row
- * is designed to carry no content, which is why `declineApplication()` deletes
- * it, and `unique(groupId, userId)` would let nobody apply twice.
+ * RETIRING: superseded by `group_application` (#1700). Nothing in the app reads
+ * or writes this pair any more; they stay only so the Worker still live during
+ * a deploy's migrate-then-publish window has somewhere to write, and the
+ * contract migration copies stragglers across before dropping both.
  */
-// Membership stays the outcome. Committees remain `invite_only`; accepting an
-// application invites, and the roster goes on meaning who is on the committee.
 export const committeeApplication = sqliteTable(
 	'committee_application',
 	{
@@ -23,7 +20,7 @@ export const committeeApplication = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		/**
-		 * Answers keyed by `committeeApplicationQuestions[].id`.
+		 * Answers keyed by `groupApplicationQuestions.committee[].id`.
 		 *
 		 * JSON rather than a column each: the questions are board policy and the
 		 * board rewords them, which should not be a migration. Keying by id keeps
@@ -64,7 +61,7 @@ export const committeeApplicationChoice = sqliteTable(
 		groupId: text('group_id')
 			.notNull()
 			.references(() => group.id, { onDelete: 'cascade' }),
-		status: text('status', { enum: committeeApplicationStatuses }).notNull().default('submitted'),
+		status: text('status', { enum: groupApplicationStatuses }).notNull().default('submitted'),
 		/**
 		 * Why, in the chair's words. Stored rather than only emailed, following
 		 * `event.reviewNotes`, `volunteer_hour_log.reviewNotes` and
