@@ -39,7 +39,8 @@ import {
 import { useArtWithFooter, useTemplateFlyer } from '$lib/server/poster/flyer-service';
 import { PERCENTAGE_BPS_MAX } from '$lib/production/terms';
 import { getStaffEventPage, getStaffEventProduction, getStaffEvents } from './events.remote';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
+import { create as createEventListing } from '$lib/server/event/event-service';
 import { DEFAULT_TIMEZONE, productionExpenseCategories, requestableArtifacts } from '$lib/config';
 
 /**
@@ -130,6 +131,43 @@ export const createProduction = form(
 				getStaffEventProduction(eventId).refresh()
 			]);
 			return { id: row.id };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * Open a show from nothing: a draft listing, its production, and its project
+ * with Booking and Production attached. Guarded on `production.create` alone,
+ * so Booking opens its own shows without the event pages' `event.read` (#1675).
+ */
+export const createShow = form(
+	z.object({
+		title: z.string().trim().min(1, 'Name the show').max(200),
+		eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick a date'),
+		eventStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'Pick a start time'),
+		eventEndTime: z.string().regex(/^\d{2}:\d{2}$/, 'Pick an end time')
+	}),
+	async ({ title, eventDate, eventStartTime, eventEndTime }) => {
+		const user = await requireCapability('production.create');
+		// An end before the start is a show that runs past midnight.
+		const { startsAt, endsAt } = buildTimeRangeInTz(
+			eventDate,
+			eventStartTime,
+			eventEndTime,
+			DEFAULT_TIMEZONE
+		);
+		try {
+			const row = await createEventListing({
+				title,
+				startsAt,
+				endsAt,
+				kind: 'show',
+				groupId: null,
+				createdByUserId: user.id
+			});
+			return { eventId: row.id };
 		} catch (err) {
 			mapDomainError(err);
 		}
