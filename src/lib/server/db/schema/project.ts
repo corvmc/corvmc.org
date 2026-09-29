@@ -51,6 +51,13 @@ export const project = sqliteTable(
 		/** `'production'` when a `production` row specialises this one. Never changes after. */
 		kind: text('kind', { enum: projectKinds }).notNull().default('general'),
 
+		/**
+		 * Unread and unwritten: ownership is the `owner` row in `project_committee`.
+		 * Kept until it can be dropped without rebuilding `production` and losing its
+		 * triggers (#1686). Do not read it; it is null on every new project.
+		 */
+		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
+
 		/** The suggestion this answers, when a member asked for it. One project per suggestion. */
 		suggestionId: text('suggestion_id').references(() => suggestion.id, { onDelete: 'set null' }),
 
@@ -76,6 +83,7 @@ export const project = sqliteTable(
 			.default(sql`(unixepoch())`)
 	},
 	(t) => [
+		index('idx_project_group').on(t.groupId),
 		index('idx_project_status').on(t.status),
 		index('idx_project_kind').on(t.kind),
 		// Partial, and in the table config rather than `.unique()` on the column:

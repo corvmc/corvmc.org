@@ -250,8 +250,9 @@ the collective's. Nothing else marks a row as CMC's, so there is no second colum
 | `directory_entry.group_id` | with `user_id` null too, a staff-kept external act       |
 | `ballot.group_id`          | a member-wide ballot, where set it is a committee ballot |
 
-A project has no owner column. The committees taking part are rows in `project_committee`, each
-with a role, and a project with none is staff's, the same as a null above.
+A project's committees are rows in `project_committee`, each with a role, and a project with none
+is staff's, the same as a null above. `project.group_id` is still in the table, unread, until #1686
+drops it.
 
 `announcement` and `event_group` are the same idea without the null: a band posting to its
 roster and a committee posting to its members are the same act on one table. Because the
