@@ -138,6 +138,7 @@ export type BookingRejection =
 	| 'SLOT_BOUNDARY'
 	| 'BEFORE_OPENING'
 	| 'AFTER_CLOSING'
+	| 'TOO_SOON'
 	| 'TOO_FAR_AHEAD';
 
 export interface ValidationResult {
@@ -227,6 +228,16 @@ export async function validateBooking(
 			valid: false,
 			code: 'AFTER_CLOSING',
 			error: `Cannot end after ${config.operatingHoursEnd}`
+		};
+	}
+
+	// The near end of the window, which the slot picker also applies. A past start
+	// falls inside it too. Staff paths use `staffCreate`, which never calls this.
+	if (startsAt.getTime() < Date.now() + config.minAdvanceMinutes * 60 * 1000) {
+		return {
+			valid: false,
+			code: 'TOO_SOON',
+			error: `Bookings must start at least ${config.minAdvanceMinutes} minutes from now`
 		};
 	}
 

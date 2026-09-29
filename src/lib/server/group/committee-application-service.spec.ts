@@ -31,6 +31,11 @@ vi.mock('$lib/server/band/band-service', () => ({
 	invite: (...a: unknown[]) => invite(...(a as []))
 }));
 
+const emit = vi.fn(async (..._a: unknown[]) => undefined);
+vi.mock('$lib/server/event-bus/event-bus', () => ({
+	domainEvents: { emit: (...a: unknown[]) => emit(...a) }
+}));
+
 const svc = await import('./committee-application-service');
 
 const BOOKING = 'grp-booking';
@@ -55,6 +60,7 @@ async function seed() {
 
 beforeEach(async () => {
 	invite.mockClear();
+	emit.mockClear();
 	for (const t of [
 		'committee_application_choice',
 		'committee_application',
@@ -80,6 +86,18 @@ describe('submitting', () => {
 		expect(mine[0].committees.map((c) => c.name).sort()).toEqual([
 			'Booking Committee',
 			'Facility Committee'
+		]);
+	});
+
+	// #1726: an application nobody hears about waits on a chair opening the page.
+	it('announces each committee it actually lands on, not the ones it dropped', async () => {
+		await svc.submitApplication(APPLICANT, { groupIds: [BOOKING], answers });
+		emit.mockClear();
+
+		await svc.submitApplication(APPLICANT, { groupIds: [BOOKING, FACILITY], answers });
+
+		expect(emit.mock.calls).toEqual([
+			['group.application_submitted', { groupId: FACILITY, applicantUserId: APPLICANT }]
 		]);
 	});
 

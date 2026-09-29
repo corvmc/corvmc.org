@@ -11,6 +11,7 @@ import { group, groupMember } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import { invite } from '$lib/server/band/band-service';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import type { CommitteeApplicationStatus } from '$lib/config';
 
 /**
@@ -121,6 +122,11 @@ export async function submitApplication(
 	await db
 		.insert(committeeApplicationChoice)
 		.values(wanted.map((groupId) => ({ applicationId: application.id, groupId })));
+
+	// One per committee, since each has its own chair. The listener catches its own failures.
+	for (const groupId of wanted) {
+		await domainEvents.emit('group.application_submitted', { groupId, applicantUserId: userId });
+	}
 
 	return application.id;
 }

@@ -8,6 +8,7 @@ import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '$lib/server/sentry';
 import { listUsersWithCapability } from '$lib/server/authorization';
+import { applicationNotice } from '$lib/server/group/application-reviewers';
 import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
@@ -1647,6 +1648,43 @@ export function registerAllNotificationListeners(): void {
 				captureException(err, {
 					event: 'notification.instructor_application_submitted',
 					to: member.email
+				});
+			}
+		}
+	});
+
+	// --- Group or committee application submitted (notify whoever answers it) ---
+	domainEvents.on('group.application_submitted', async ({ data: event }) => {
+		const notice = await applicationNotice(event.groupId, event.applicantUserId).catch((err) => {
+			captureException(err, { event: 'notification.group_application_submitted' });
+			return null;
+		});
+		if (!notice) return;
+		const { groupName, applicantName } = notice;
+		for (const reviewer of notice.reviewers) {
+			try {
+				await dispatch({
+					type: 'group_application_submitted',
+					userId: reviewer.id,
+					userEmail: reviewer.email,
+					title: `${applicantName} applied to join ${groupName}`,
+					body: 'An application is waiting for your answer',
+					href: reviewer.href,
+					email: {
+						recipientName: reviewer.name,
+						subject: `${applicantName} applied to join ${groupName}`,
+						heading: 'A new application',
+						paragraphs: [
+							{ text: `${applicantName} has applied to join ${groupName}.` },
+							{ text: 'Open it to read their answers and accept or decline.' }
+						],
+						cta: { label: 'Review application' }
+					}
+				});
+			} catch (err) {
+				captureException(err, {
+					event: 'notification.group_application_submitted',
+					to: reviewer.email
 				});
 			}
 		}

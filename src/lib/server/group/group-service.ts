@@ -10,6 +10,7 @@ import { create as createGroupRow, deactivate, reactivate } from '$lib/server/ba
 import { sanitizeBio } from '$lib/utils/markdown';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { DomainError } from '$lib/server/domain-error';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { groupGrantsColumn } from '$lib/server/capability/grant-columns';
 import { openApplicationCount } from '$lib/server/group/committee-application-service';
 import type { GroupKind, GroupJoinPolicy } from '$lib/config';
@@ -615,6 +616,10 @@ export async function joinGroup(groupId: string, userId: string) {
 		// application apart when both are waiting.
 		invitedById: null
 	});
+
+	if (status === 'requested') {
+		await domainEvents.emit('group.application_submitted', { groupId, applicantUserId: userId });
+	}
 
 	return { status };
 }

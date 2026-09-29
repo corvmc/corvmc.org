@@ -63,6 +63,18 @@ vi.mock('$lib/server/volunteer/orientation-service', () => ({
 	orientationOwnerOf: (id: string) => mockOrientationOwnerOf(id)
 }));
 
+const mockApplicationNotice = vi.fn(async (_groupId: string, _applicantUserId: string) => ({
+	groupName: 'Booking Committee',
+	applicantName: 'Ada',
+	reviewers: [
+		{ id: 'chair-1', name: 'Cy', email: 'cy@test.com', href: '/member/groups/booking' },
+		{ id: 'chair-2', name: 'Di', email: 'di@test.com', href: '/member/groups/booking' }
+	]
+}));
+vi.mock('$lib/server/group/application-reviewers', () => ({
+	applicationNotice: (g: string, u: string) => mockApplicationNotice(g, u)
+}));
+
 const { registerAllNotificationListeners } = await import('./notification-listeners');
 
 // Emittery wraps emitted payloads as `{ name, data }` before invoking
@@ -1433,5 +1445,37 @@ describe('show cancelled, to the Production committee (#1675)', () => {
 		await emit('production.cancelled', cancelled);
 
 		expect(mockDispatch).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('group application submitted (#1726)', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const submitted = { groupId: 'grp-1', applicantUserId: 'usr-ada' };
+
+	it('tells each reviewer, linking to where they answer it', async () => {
+		await emit('group.application_submitted', submitted);
+
+		expect(mockApplicationNotice).toHaveBeenCalledWith('grp-1', 'usr-ada');
+		const calls = mockDispatch.mock.calls
+			.map(([p]) => p)
+			.filter((p) => p.type === 'group_application_submitted');
+		expect(calls.map((c) => c.userId)).toEqual(['chair-1', 'chair-2']);
+		expect(calls[0].href).toBe('/member/groups/booking');
+		expect(calls[0].title).toBe('Ada applied to join Booking Committee');
+		expect(calls[0].email.subject).toContain('Booking Committee');
+		expect(calls[0].email.recipientName).toBe('Cy');
+	});
+
+	it('keeps going past a reviewer whose dispatch fails', async () => {
+		mockDispatch.mockRejectedValueOnce(new Error('down'));
+		await emit('group.application_submitted', submitted);
+		expect(mockDispatch).toHaveBeenCalledTimes(2);
+	});
+
+	it('sends nothing for a group that is gone', async () => {
+		mockApplicationNotice.mockResolvedValueOnce(null as never);
+		await emit('group.application_submitted', submitted);
+		expect(mockDispatch).not.toHaveBeenCalled();
 	});
 });

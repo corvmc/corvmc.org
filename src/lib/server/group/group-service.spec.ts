@@ -81,6 +81,11 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
+const emit = vi.fn(async (..._a: unknown[]) => undefined);
+vi.mock('$lib/server/event-bus/event-bus', () => ({
+	domainEvents: { emit: (...a: unknown[]) => emit(...a) }
+}));
+
 const bandServiceCreate = vi.fn(async () => ({ id: 'group-1', slug: 'real-book-club' }));
 vi.mock('$lib/server/band/band-service', () => ({
 	create: (...a: unknown[]) => bandServiceCreate(...(a as [])),
@@ -350,6 +355,17 @@ describe('joinGroup', () => {
 
 		expect(result.status).toBe('requested');
 		expect(writes[0].values).toMatchObject({ status: 'requested' });
+		// #1726: the owner and admins are told, or the request waits unseen.
+		expect(emit).toHaveBeenCalledWith('group.application_submitted', {
+			groupId: 'group-1',
+			applicantUserId: 'user-2'
+		});
+	});
+
+	it('announces nothing for an `open` join, which has nobody to approve it', async () => {
+		selectResultQueue = [[{ joinPolicy: 'open', kind: 'club' }], []];
+		await joinGroup('group-1', 'user-2');
+		expect(emit).not.toHaveBeenCalled();
 	});
 
 	it('refuses an invite-only group', async () => {

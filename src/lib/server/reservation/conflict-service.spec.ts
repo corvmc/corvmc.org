@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -51,6 +51,7 @@ vi.mock('$lib/server/site-config/site-config-service', () => ({
 		maxDurationHours: 8,
 		timeSlotMinutes: 30,
 		bufferMinutes: 0,
+		minAdvanceMinutes: 60,
 		maxAdvanceDaysOneoff: 14,
 		maxAdvanceDaysRecurring: 17.5,
 		teachingMinDurationHours: 0.5,
@@ -87,6 +88,42 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('validateBooking', () => {
+	// `date` is fixed, so the clock is too: five days before it, which keeps every
+	// fixed-date case clear of the minimum notice and inside the advance window.
+	beforeEach(() => {
+		vi.useFakeTimers({ toFake: ['Date'] });
+		vi.setSystemTime(new Date('2025-07-10T12:00:00-07:00'));
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	describe('minimum notice (#1721)', () => {
+		// 09:40 on the booking day: a 10:00 start is 20 minutes out, 11:00 is 80.
+		beforeEach(() => vi.setSystemTime(new Date(`${date}T09:40:00-07:00`)));
+
+		it('rejects a start inside the notice window, for every self-service booker', async () => {
+			for (const bookerType of ['user', 'group', 'instructor'] as const) {
+				const result = await validateBooking(makeDate(date, '10:00'), makeDate(date, '11:00'), {
+					bookerType
+				});
+				expect(result.code, bookerType).toBe('TOO_SOON');
+			}
+		});
+
+		it('rejects a start in the past', async () => {
+			const result = await validateBooking(makeDate(date, '09:00'), makeDate(date, '10:00'));
+			expect(result.valid).toBe(false);
+			expect(result.code).toBe('TOO_SOON');
+		});
+
+		it('accepts a start at or beyond the notice', async () => {
+			vi.setSystemTime(new Date(`${date}T10:00:00-07:00`));
+			const result = await validateBooking(makeDate(date, '11:00'), makeDate(date, '12:00'));
+			expect(result).toEqual({ valid: true });
+		});
+	});
+
 	it('accepts a valid 1-hour booking within operating hours', async () => {
 		const result = await validateBooking(makeDate(date, '10:00'), makeDate(date, '11:00'));
 		expect(result).toEqual({ valid: true });

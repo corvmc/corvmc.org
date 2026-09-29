@@ -174,6 +174,15 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'group_application_submitted',
+		category: 'people',
+		label: 'Group application',
+		description: 'When someone applies to join a club or committee you run',
+		// Not staff-only: a chair is a member. Email on, because the applicant is
+		// waiting and the chair has no other reason to open the page.
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'band_enquiry_received',
 		category: 'people',
 		label: 'Booking enquiry',
