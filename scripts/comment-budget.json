@@ -154,7 +154,6 @@
 	"src/lib/components/groups/DocumentList.svelte",
 	"src/lib/components/groups/DocumentUploadAction.svelte",
 	"src/lib/components/groups/GroupSettingsForm.svelte",
-	"src/lib/components/groups/JoinGroupAction.svelte",
 	"src/lib/components/groups/MuteAnnouncementsAction.svelte",
 	"src/lib/components/inbox/DispositionBar.svelte",
 	"src/lib/components/inbox/DispositionBar.svelte.spec.ts",

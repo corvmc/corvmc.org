@@ -13,12 +13,10 @@
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShort } from '$lib/utils/format';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import {
 		getMemberGroup,
 		leaveGroupForm,
-		approveApplicationForm,
-		declineApplicationForm,
 		removeGroupMember,
 		revokeGroupInvitation,
 		revokeGroupEmailInvite,
@@ -36,7 +34,7 @@
 	import InviteGroupMemberAction from '$lib/components/groups/InviteGroupMemberAction.svelte';
 	import GroupMemberEditAction from '$lib/components/groups/GroupMemberEditAction.svelte';
 	import GroupSelfEditAction from '$lib/components/groups/GroupSelfEditAction.svelte';
-	import CommitteeApplicationsCard from '$lib/components/groups/CommitteeApplicationsCard.svelte';
+	import ApplicationsCard from '$lib/components/groups/ApplicationsCard.svelte';
 	import EditSessionAction from '$lib/components/groups/EditSessionAction.svelte';
 	import ProjectStatusAction from './ProjectStatusAction.svelte';
 	import ProjectDutyListAction from './ProjectDutyListAction.svelte';
@@ -64,8 +62,6 @@
 	 * derived. Pinned by `src/async-effect-shape.spec.ts`.
 	 */
 	const leaveFields = leaveGroupForm.fields;
-	const approveFields = approveApplicationForm.fields;
-	const declineFields = declineApplicationForm.fields;
 	const removeFields = removeGroupMember.fields;
 	const revokeFields = revokeGroupInvitation.fields;
 	const revokeEmailFields = revokeGroupEmailInvite.fields;
@@ -453,58 +449,12 @@
 			</InfoCard>
 		{/if}
 	{:else}
-		{#if data.canManage && members.requested.length > 0}
-			<!-- Applications lead the roster under `by_application`: they are the
-			     only rows here waiting on somebody. -->
-			<InfoCard title="Requests">
-				<Table>
-					{#snippet head()}
-						<th>Member</th>
-						<th class="w-px"><span class="sr-only">Actions</span></th>
-					{/snippet}
-					{#each members.requested as m (m.id)}
-						<tr>
-							<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
-							<td class="w-px">
-								<div class="flex w-max gap-2">
-									<Action
-										action={approveApplicationForm.for(m.id)}
-										label="Approve"
-										variant="primary"
-										size="xs"
-										successToast="Approved"
-										onsuccess={() => invalidateAll()}
-									>
-										{#snippet form()}
-											<input {...approveFields.slug.as('hidden', slug)} />
-											<input {...approveFields.memberId.as('hidden', m.id)} />
-										{/snippet}
-									</Action>
-									<Action
-										action={declineApplicationForm.for(m.id)}
-										label="Decline"
-										variant="ghost"
-										size="xs"
-										successToast="Declined"
-										onsuccess={() => invalidateAll()}
-									>
-										{#snippet form()}
-											<input {...declineFields.slug.as('hidden', slug)} />
-											<input {...declineFields.memberId.as('hidden', m.id)} />
-										{/snippet}
-									</Action>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</Table>
-			</InfoCard>
-		{/if}
-
-		<!-- A committee is invite-only, so its applications are their own entity and
-		     never reach `members.requested`. Above the roster for the same reason
-		     Requests is: they are the rows waiting on somebody. -->
-		<CommitteeApplicationsCard {slug} applications={data.committeeApplications} />
+		<!-- Above the roster: applications are the rows waiting on somebody. -->
+		<ApplicationsCard
+			{slug}
+			kind={group.kind === 'committee' ? 'committee' : 'club'}
+			applications={data.applications}
+		/>
 
 		{#if data.canManage}
 			<div class="flex justify-end">

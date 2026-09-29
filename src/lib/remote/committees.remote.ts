@@ -1,5 +1,5 @@
 import { query } from '$app/server';
-import { listCommittees } from '$lib/server/group/committee-application-service';
+import { listCommittees } from '$lib/server/group/application-service';
 
 /**
  * The committees, for the public pages that describe them.

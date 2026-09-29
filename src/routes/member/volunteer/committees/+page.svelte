@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -12,23 +13,26 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import { formatDate } from '$lib/utils/format';
 	import {
-		committeeApplicationQuestions,
-		committeeApplicationStatusLabels,
-		COMMITTEE_ANSWER_MAX
+		groupApplicationQuestions,
+		groupApplicationStatusLabels,
+		APPLICATION_ANSWER_MAX
 	} from '$lib/config';
 	import {
-		applyToCommittees,
+		applyToGroups,
 		getCommitteeApplyPage,
-		withdrawCommitteeApplication
-	} from '$lib/remote/committee-applications.remote';
+		withdrawGroupApplication
+	} from '$lib/remote/group-applications.remote';
 
-	const fields = applyToCommittees.fields;
-	const { fields: withdrawFields } = withdrawCommitteeApplication;
+	const fields = applyToGroups.fields;
+	const { fields: withdrawFields } = withdrawGroupApplication;
 
 	const pageData = $derived(getCommitteeApplyPage());
 
+	// A committee's own Apply button links here with `?committee=<slug>` ticked.
+	const preselected = $derived(page.url.searchParams.get('committee'));
+
 	const questionPrompt = (id: string) =>
-		committeeApplicationQuestions.find((q) => q.id === id)?.prompt ?? id;
+		groupApplicationQuestions.committee.find((q) => q.id === id)?.prompt ?? id;
 
 	const statusVariant: Record<string, 'ghost' | 'info' | 'success' | 'error'> = {
 		submitted: 'ghost',
@@ -59,16 +63,16 @@
 							</div>
 
 							<div class="flex flex-wrap gap-2">
-								{#each application.committees as choice (choice.slug)}
+								{#each application.groups as choice (choice.slug)}
 									<Badge variant={statusVariant[choice.status] ?? 'ghost'}>
-										{choice.name} — {committeeApplicationStatusLabels[choice.status]}
+										{choice.name} — {groupApplicationStatusLabels[choice.status]}
 									</Badge>
 								{/each}
 							</div>
 
 							<!-- The chair's reason, where they left one. Shown because a decision
 							     you cannot see is one you cannot ask about. -->
-							{#each application.committees.filter((c) => c.reviewNotes) as choice (choice.slug)}
+							{#each application.groups.filter((c) => c.reviewNotes) as choice (choice.slug)}
 								<p class="mt-2 text-subtle text-sm">
 									<strong>{choice.name}:</strong>
 									{choice.reviewNotes}
@@ -78,7 +82,7 @@
 							{#if !application.withdrawnAt}
 								<div class="mt-3">
 									<Action
-										action={withdrawCommitteeApplication.for(application.id)}
+										action={withdrawGroupApplication.for(application.id)}
 										label="Withdraw"
 										variant="ghost"
 										size="xs"
@@ -101,7 +105,7 @@
 			<EmptyState description="No committees are open to applications right now." />
 		{:else}
 			<InfoCard title="Apply">
-				<Form remote={applyToCommittees} successToast="Application sent" class="space-y-6">
+				<Form remote={applyToGroups} successToast="Application sent" class="space-y-6">
 					<CheckboxGroup
 						field={fields.groupIds}
 						legend="Which committee or committees are you applying to?"
@@ -110,6 +114,7 @@
 							label: c.name,
 							description: c.bio
 						}))}
+						selected={data.committees.filter((c) => c.slug === preselected).map((c) => c.id)}
 					/>
 
 					<!-- Named rather than looped: `fields` is typed per key, so an index
@@ -118,13 +123,13 @@
 						field={fields.experience}
 						type="textarea"
 						label={questionPrompt('experience')}
-						maxlength={String(COMMITTEE_ANSWER_MAX)}
+						maxlength={String(APPLICATION_ANSWER_MAX)}
 					/>
 					<FormField
 						field={fields.vision}
 						type="textarea"
 						label={questionPrompt('vision')}
-						maxlength={String(COMMITTEE_ANSWER_MAX)}
+						maxlength={String(APPLICATION_ANSWER_MAX)}
 					/>
 
 					<Alert type="info">

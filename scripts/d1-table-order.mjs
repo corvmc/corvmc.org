@@ -141,6 +141,9 @@ export const tableOrder = [
 	// sits together and after both.
 	'committee_application',
 	'committee_application_choice',
+	// The same shape for every kind; the committee pair above retires after it.
+	'group_application',
+	'group_application_choice',
 	'payment_cache',
 	// References event_listing and group.
 	'ticket_sale',

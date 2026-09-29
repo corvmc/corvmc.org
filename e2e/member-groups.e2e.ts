@@ -6,12 +6,17 @@ import {
 	SEED_PUBLIC_BAND_NAME
 } from './fixtures/seed-band-onboarding';
 import {
+	SEED_APPLY_CLUB_INSTRUCTIONS,
+	SEED_APPLY_CLUB_NAME,
+	SEED_APPLY_CLUB_SLUG,
 	SEED_APPLY_NAME,
+	SEED_APPLY_SLUG,
 	SEED_CLUB_SLUG,
 	SEED_JOINABLE_INSTRUCTIONS,
 	SEED_HIDDEN_SLUG,
 	SEED_JOINABLE_NAME,
 	SEED_JOINABLE_SLUG,
+	readApplication,
 	readMemberStatus
 } from './fixtures/seed-groups';
 
@@ -24,10 +29,10 @@ const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
  *
  * What is worth a browser here is the pair of self-service doors. Both write,
  * both are one click from a page anyone can reach, and the difference between
- * them is a status value that looks identical in a diff: `open` lands you
- * active with no approval, `by_application` parks you at `'requested'` and you
- * are *not* a member until somebody says so. A unit test can prove the service
- * writes the right row; only this can prove the right button reached it.
+ * them is invisible in a diff: `open` lands you active with no approval, while
+ * `by_application` writes an application and you are *not* a member until a
+ * reviewer invites you. A unit test can prove the service writes the right
+ * row; only this can prove the right button reached it.
  */
 
 async function loginAsMember(page: Page) {
@@ -85,7 +90,7 @@ test.describe('member groups index', () => {
 		// "My Groups" sidebar picks it up.
 		//
 		// The row read is the strictest of the three — it distinguishes
-		// `'pending'` from `'requested'` rather than just excluding both — and the
+		// `'active'` from `'pending'` rather than just excluding both — and the
 		// sidebar is kept beside it because it is the launched surface: it lists
 		// active rows only, so its absence would mean the join landed in a waiting
 		// state even though the page said otherwise.
@@ -103,18 +108,50 @@ test.describe('member groups index', () => {
 		await expect(page.getByRole('heading', { name: SEED_JOINABLE_NAME })).toBeVisible();
 	});
 
-	test('applying leaves you waiting, not a member', async ({ page }) => {
+	// A committee applies on the committee page, where one application can name
+	// several; its Apply button arrives there with that committee ticked.
+	test('applying to a committee leaves you waiting, not a member', async ({ page }) => {
 		await loginAsMember(page);
 		await page.goto('/member/groups');
 
-		await page.getByRole('button', { name: `Apply to ${SEED_APPLY_NAME}` }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Send application' }).click();
+		await page.getByRole('link', { name: `Apply to ${SEED_APPLY_NAME}` }).click();
+		await page.waitForURL(`**/member/volunteer/committees?committee=${SEED_APPLY_SLUG}`);
+		await expect(page.getByRole('checkbox', { name: SEED_APPLY_NAME })).toBeChecked();
+		await page.getByRole('button', { name: 'Send application' }).click();
 
-		// Applying is not membership: the Apply button is withdrawn rather than
-		// replaced by a members-only surface.
-		await expect(page.getByRole('button', { name: `Apply to ${SEED_APPLY_NAME}` })).toHaveCount(0, {
-			timeout: 15000
-		});
+		await expect
+			.poll(async () => (await readApplication(SEED_APPLY_SLUG, SEED_BANDMATE_ID))?.status, DB_POLL)
+			.toBe('submitted');
+		expect(await readMemberStatus(SEED_APPLY_SLUG, SEED_BANDMATE_ID)).toBeNull();
+
+		// Back on the index it is listed as yours to withdraw, and no longer offered.
+		await page.goto('/member/groups');
+		await expect(
+			page.getByRole('button', { name: `Withdraw your application to ${SEED_APPLY_NAME}` })
+		).toBeVisible();
+		await expect(page.getByRole('link', { name: `Apply to ${SEED_APPLY_NAME}` })).toHaveCount(0);
+	});
+
+	test('applying to a club answers its question in a dialog', async ({ page }) => {
+		await loginAsMember(page);
+		await page.goto('/member/groups');
+
+		await page.getByRole('button', { name: `Apply to ${SEED_APPLY_CLUB_NAME}` }).click();
+		const dialog = page.getByRole('dialog');
+		// The club's own words sit over the box they prompt.
+		await expect(dialog.getByText(SEED_APPLY_CLUB_INSTRUCTIONS)).toBeVisible();
+		await dialog.getByLabel('Anything the leaders should know?').fill('Folk songs, mostly.');
+		await dialog.getByRole('button', { name: 'Send application' }).click();
+
+		await expect
+			.poll(
+				async () => (await readApplication(SEED_APPLY_CLUB_SLUG, SEED_BANDMATE_ID))?.answers,
+				DB_POLL
+			)
+			.toEqual({ note: 'Folk songs, mostly.' });
+		await expect(
+			page.getByRole('button', { name: `Apply to ${SEED_APPLY_CLUB_NAME}` })
+		).toHaveCount(0, { timeout: 15000 });
 	});
 });
 
