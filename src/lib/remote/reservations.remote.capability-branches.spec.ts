@@ -87,7 +87,11 @@ vi.mock('$app/server', () => ({
 		(handler as any).__ = { type: 'query' };
 		return handler;
 	},
-	command: (...args: any[]) => (typeof args[0] === 'function' ? args[0] : args[1])
+	command: (...args: any[]) => {
+		const handler = (typeof args[0] === 'function' ? args[0] : args[1]) as (...a: any[]) => any;
+		(handler as any).__ = { type: 'command' };
+		return handler;
+	}
 }));
 
 const remote = (await import('$lib/remote/reservations.remote')) as any;

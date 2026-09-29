@@ -1,4 +1,5 @@
-import { recordEntry } from './financial-entry-service';
+import { calculateCardPresentFee } from '$lib/finance/fees';
+import { recordEntriesBestEffort, recordEntry } from './financial-entry-service';
 
 /**
  * What a reservation earned, split by how it settled.
@@ -50,4 +51,43 @@ export async function recordReservationCash(params: {
 		userId: params.userId,
 		description: 'Practice room — cash at the desk'
 	});
+}
+
+/**
+ * A booking paid by card at the smart reader: the rows the online checkout
+ * writes, with the in-person fee. Best-effort, since the booking is already
+ * settled when this runs and a retried webhook would not reach it again.
+ */
+export async function recordReservationCardPresent(params: {
+	reservationId: string;
+	userId: string;
+	amountCents: number;
+	stripePaymentRecordId: string;
+	occurredAt: Date;
+}): Promise<void> {
+	if (params.amountCents <= 0) return;
+	const base = {
+		occurredAt: params.occurredAt,
+		settlement: 'stripe' as const,
+		stripePaymentRecordId: params.stripePaymentRecordId,
+		subjectType: 'reservation' as const,
+		subjectId: params.reservationId,
+		userId: params.userId
+	};
+	await recordEntriesBestEffort([
+		{
+			...base,
+			amountCents: params.amountCents,
+			kind: 'earned',
+			category: 'reservation',
+			description: 'Practice room, card at the reader'
+		},
+		{
+			...base,
+			amountCents: -calculateCardPresentFee(params.amountCents),
+			kind: 'spent',
+			category: 'card_fees',
+			description: 'Card processing, in person'
+		}
+	]);
 }

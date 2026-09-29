@@ -70,6 +70,20 @@ function notFound(resource: string, id: string): never {
 /** The one Location the fake knows: what the door uses when no real one is configured. */
 export const FAKE_TERMINAL_LOCATION_ID = 'tml_fake_door';
 
+/** The one smart reader the fake knows, standing in for the practice room's S700. */
+export const FAKE_TERMINAL_READER_ID = 'tmr_fake_practice_room';
+
+/** A Stripe API error carries a machine `code`; the reader errors are told apart by it. */
+function stripeError(code: string, message: string): never {
+	const err = Object.assign(new Error(message), {
+		name: 'StripeInvalidRequestError',
+		type: 'invalid_request_error',
+		code,
+		statusCode: 400
+	});
+	throw err;
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -89,6 +103,9 @@ interface FakeStore {
 	accounts: Map<string, Stripe.Account>;
 	paymentMethods: Map<string, Stripe.PaymentMethod>;
 	setupIntents: Map<string, Stripe.SetupIntent>;
+	readers: Map<string, Stripe.Terminal.Reader>;
+	/** Idempotency key → the intent it first created, as Stripe replays a repeated key. */
+	intentKeys: Map<string, string>;
 }
 
 const store: FakeStore = {
@@ -104,7 +121,9 @@ const store: FakeStore = {
 	coupons: new Map(),
 	accounts: new Map(),
 	paymentMethods: new Map(),
-	setupIntents: new Map()
+	setupIntents: new Map(),
+	readers: new Map(),
+	intentKeys: new Map()
 };
 
 /** Customers whose seeded card and history have already been materialised. */
@@ -211,6 +230,81 @@ function materialiseSeedCustomer(customerId: string | undefined): void {
 			} as Partial<Stripe.Invoice>)
 		);
 	}
+}
+
+// ---------------------------------------------------------------------------
+// The smart reader
+// ---------------------------------------------------------------------------
+
+/** Online and idle until something is put on it, as the S700 sits on its dock. */
+function reader(id: string): Stripe.Terminal.Reader {
+	const existing = store.readers.get(id);
+	if (existing) return existing;
+	if (id !== FAKE_TERMINAL_READER_ID) notFound('terminal reader', id);
+	const fresh = {
+		id,
+		object: 'terminal.reader',
+		action: null,
+		device_type: 'simulated_stripe_s700',
+		label: 'Practice room',
+		location: FAKE_TERMINAL_LOCATION_ID,
+		livemode: false,
+		metadata: {},
+		serial_number: 'fake-s700',
+		status: 'online',
+		ip_address: null,
+		last_seen_at: Date.now(),
+		device_sw_version: null
+	} as unknown as Stripe.Terminal.Reader;
+	store.readers.set(id, fresh);
+	return fresh;
+}
+
+function setAction(id: string, action: Partial<Stripe.Terminal.Reader.Action> | null) {
+	const current = reader(id);
+	const updated = {
+		...current,
+		action: action && {
+			api_error: null,
+			failure_code: null,
+			failure_message: null,
+			type: 'process_payment_intent',
+			status: 'in_progress',
+			...current.action,
+			...action
+		}
+	} as Stripe.Terminal.Reader;
+	store.readers.set(id, updated);
+	return updated;
+}
+
+/** What `presentPaymentMethod` does to the waiting intent: pay it, or decline it. */
+function presentCard(readerId: string, number: string | undefined): Stripe.Terminal.Reader {
+	const action = reader(readerId).action;
+	const pending = action?.status === 'in_progress' ? action.process_payment_intent : undefined;
+	if (!pending) stripeError('terminal_reader_no_action', 'The reader has nothing to pay');
+	const intentId =
+		typeof pending.payment_intent === 'string' ? pending.payment_intent : pending.payment_intent.id;
+
+	if (number && outcomeForCard(number) !== 'succeed') {
+		const intent = store.paymentIntents.get(intentId) ?? notFound('payment_intent', intentId);
+		store.paymentIntents.set(intentId, {
+			...intent,
+			status: 'requires_payment_method',
+			last_payment_error: {
+				type: 'card_error',
+				code: 'card_declined',
+				message: 'Your card was declined.'
+			} as Stripe.PaymentIntent.LastPaymentError
+		});
+		return setAction(readerId, {
+			status: 'failed',
+			failure_code: 'card_declined',
+			failure_message: 'Your card was declined.'
+		});
+	}
+	completeFakeTerminalPayment(intentId);
+	return setAction(readerId, { status: 'succeeded' });
 }
 
 // ---------------------------------------------------------------------------
@@ -380,10 +474,15 @@ export function createFakeGateway(): PaymentGateway {
 				const intent = store.paymentIntents.get(id);
 				return intent ? respond(intent) : notFound('payment_intent', id);
 			},
-			// Only the door creates an intent directly; everything online goes
-			// through a Checkout Session. It waits for a tap, as a real one does.
-			create: async (params) => {
+			// Only the door and the reader create an intent directly; everything
+			// online goes through a Checkout Session. It waits for a tap, as a real
+			// one does, and a repeated idempotency key returns the first intent.
+			create: async (params, options) => {
+				const key = options?.idempotencyKey;
+				const replay = key ? store.intentKeys.get(key) : undefined;
+				if (replay) return respond(store.paymentIntents.get(replay)!);
 				const id = fakeId('pi');
+				if (key) store.intentKeys.set(key, id);
 				const intent = fakePaymentIntent({
 					id,
 					amount: params.amount,
@@ -564,6 +663,54 @@ export function createFakeGateway(): PaymentGateway {
 								'terminal location',
 								id
 							)) as PaymentGateway['terminal']['locations']['retrieve']
+			},
+			readers: {
+				retrieve: (async (id: string) =>
+					respond(reader(id))) as PaymentGateway['terminal']['readers']['retrieve'],
+				processPaymentIntent: async (id, params) => {
+					const current = reader(id);
+					if (current.status === 'offline') {
+						stripeError('terminal_reader_offline', 'The reader is offline');
+					}
+					if (!store.paymentIntents.has(params.payment_intent)) {
+						notFound('payment_intent', params.payment_intent);
+					}
+					if (current.action?.status === 'in_progress') {
+						stripeError('terminal_reader_busy', 'The reader is busy');
+					}
+					return respond(
+						setAction(id, {
+							type: 'process_payment_intent',
+							status: 'in_progress',
+							failure_code: null,
+							failure_message: null,
+							process_payment_intent: {
+								payment_intent: params.payment_intent,
+								process_config: params.process_config
+							} as Stripe.Terminal.Reader.Action.ProcessPaymentIntent
+						})
+					);
+				},
+				cancelAction: (async (id: string) => {
+					const current = reader(id);
+					if (current.action?.status !== 'in_progress') return respond(current);
+					return respond(
+						setAction(id, {
+							status: 'failed',
+							failure_code: 'canceled',
+							failure_message: 'The action was canceled'
+						})
+					);
+				}) as PaymentGateway['terminal']['readers']['cancelAction']
+			}
+		},
+
+		testHelpers: {
+			terminal: {
+				readers: {
+					presentPaymentMethod: async (id, params) =>
+						respond(presentCard(id, params?.card_present?.number))
+				}
 			}
 		},
 

@@ -52,6 +52,10 @@ const fulfillDoorSale = vi.fn(async () => undefined);
 vi.mock('$lib/server/ticket/door-sale', () => ({
 	fulfillDoorSale: (...a: unknown[]) => fulfillDoorSale(...(a as []))
 }));
+const settleReservationAtReader = vi.fn(async () => undefined);
+vi.mock('$lib/server/reservation/reader-payment', () => ({
+	settleReservationAtReader: (...a: unknown[]) => settleReservationAtReader(...(a as []))
+}));
 
 vi.mock('./product-config-service', () => ({
 	getStripeProductId: (...args: unknown[]) => mockGetStripeProductId(...args)
@@ -407,12 +411,34 @@ describe('registeredEvents', () => {
 		expect(registeredEvents).toContain('charge.refunded');
 	});
 
-	it('hands a landed tap at the door to the door sale', async () => {
+	it('hands a landed tap at the door to the door sale, and only there', async () => {
 		const { webhookHandlerMap } = await import('./webhook-handlers');
 		expect(registeredEvents).toContain('payment_intent.succeeded');
+		fulfillDoorSale.mockClear();
+		settleReservationAtReader.mockClear();
 		const intent = { id: 'pi_door', metadata: { type: 'door_ticket' } };
 		await webhookHandlerMap['payment_intent.succeeded'](intent as never);
 		expect(fulfillDoorSale).toHaveBeenCalledWith(intent);
+		expect(settleReservationAtReader).not.toHaveBeenCalled();
+	});
+
+	it('hands a reader payment for a booking to the reservation settlement', async () => {
+		const { webhookHandlerMap } = await import('./webhook-handlers');
+		fulfillDoorSale.mockClear();
+		settleReservationAtReader.mockClear();
+		const intent = { id: 'pi_reader', metadata: { type: 'reader_reservation' } };
+		await webhookHandlerMap['payment_intent.succeeded'](intent as never);
+		expect(settleReservationAtReader).toHaveBeenCalledWith(intent);
+		expect(fulfillDoorSale).not.toHaveBeenCalled();
+	});
+
+	it('ignores an intent nothing here created', async () => {
+		const { webhookHandlerMap } = await import('./webhook-handlers');
+		fulfillDoorSale.mockClear();
+		settleReservationAtReader.mockClear();
+		await webhookHandlerMap['payment_intent.succeeded']({ id: 'pi_x', metadata: {} } as never);
+		expect(fulfillDoorSale).not.toHaveBeenCalled();
+		expect(settleReservationAtReader).not.toHaveBeenCalled();
 	});
 
 	it('has a handler for every event it subscribes', async () => {

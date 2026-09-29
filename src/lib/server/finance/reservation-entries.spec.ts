@@ -7,12 +7,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const recordEntry = vi.fn(async () => undefined);
+const recordEntriesBestEffort = vi.fn(async () => undefined);
 vi.mock('./financial-entry-service', () => ({
 	recordEntry: (...a: unknown[]) => recordEntry(...(a as [])),
-	recordEntries: vi.fn()
+	recordEntries: vi.fn(),
+	recordEntriesBestEffort: (...a: unknown[]) => recordEntriesBestEffort(...(a as []))
 }));
 
-const { recordReservationCredit, recordReservationCash } = await import('./reservation-entries');
+const { recordReservationCredit, recordReservationCash, recordReservationCardPresent } =
+	await import('./reservation-entries');
 
 const OCCURRED = new Date('2026-09-13T19:00:00Z');
 beforeEach(() => vi.clearAllMocks());
@@ -74,5 +77,27 @@ describe('reservation settlement entries', () => {
 		});
 
 		expect(recordEntry).not.toHaveBeenCalled();
+	});
+
+	it('records a reader payment as card income, less the in-person fee', async () => {
+		await recordReservationCardPresent({
+			reservationId: 'res-1',
+			userId: 'user-1',
+			amountCents: 1500,
+			stripePaymentRecordId: 'pi_1',
+			occurredAt: OCCURRED
+		});
+
+		expect(recordEntriesBestEffort).toHaveBeenCalledWith([
+			expect.objectContaining({
+				amountCents: 1500,
+				kind: 'earned',
+				category: 'reservation',
+				settlement: 'stripe',
+				stripePaymentRecordId: 'pi_1',
+				subjectId: 'res-1'
+			}),
+			expect.objectContaining({ amountCents: -46, kind: 'spent', category: 'card_fees' })
+		]);
 	});
 });

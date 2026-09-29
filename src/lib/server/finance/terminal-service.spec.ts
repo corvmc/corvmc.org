@@ -4,10 +4,15 @@ const env: Record<string, string | undefined> = {};
 vi.mock('$env/dynamic/private', () => ({ env }));
 
 const { initStripe } = await import('$lib/server/stripe');
-const { createFakeGateway, resetFakeGateway, FAKE_TERMINAL_LOCATION_ID } =
+const { createFakeGateway, resetFakeGateway, FAKE_TERMINAL_LOCATION_ID, FAKE_TERMINAL_READER_ID } =
 	await import('./gateway/fake-gateway');
-const { terminalLocationId, mintConnectionToken, TerminalNotConfiguredError } =
-	await import('./terminal-service');
+const {
+	terminalLocationId,
+	terminalReaderId,
+	readerTapCanBeSimulated,
+	mintConnectionToken,
+	TerminalNotConfiguredError
+} = await import('./terminal-service');
 
 describe('terminal service', () => {
 	beforeEach(() => {
@@ -53,5 +58,26 @@ describe('terminal service', () => {
 	it('refuses to mint without a Location rather than an unscoped token', async () => {
 		env.PAYMENTS_DRIVER = 'stripe';
 		await expect(mintConnectionToken()).rejects.toBeInstanceOf(TerminalNotConfiguredError);
+	});
+
+	it('uses the fake reader under the fake driver, whatever the env names', () => {
+		env.STRIPE_TERMINAL_READER_ID = 'tmr_real';
+		expect(terminalReaderId()).toBe(FAKE_TERMINAL_READER_ID);
+	});
+
+	it('uses the configured reader under the live driver, and none until one is set', () => {
+		env.PAYMENTS_DRIVER = 'stripe';
+		expect(terminalReaderId()).toBeNull();
+		env.STRIPE_TERMINAL_READER_ID = 'tmr_real';
+		expect(terminalReaderId()).toBe('tmr_real');
+	});
+
+	it('simulates a reader tap under the fake or a test key, never on a live key', () => {
+		expect(readerTapCanBeSimulated()).toBe(true);
+		env.PAYMENTS_DRIVER = 'stripe';
+		env.STRIPE_SECRET_KEY = 'sk_test_x';
+		expect(readerTapCanBeSimulated()).toBe(true);
+		env.STRIPE_SECRET_KEY = 'rk_live_x';
+		expect(readerTapCanBeSimulated()).toBe(false);
 	});
 });

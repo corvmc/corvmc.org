@@ -167,6 +167,10 @@ vi.mock('$app/server', () => ({
 		url: new URL('http://localhost/member/reservations'),
 		request: { headers: new Headers() }
 	}),
+	command: (_schema: unknown, handler: (...args: any[]) => any) => {
+		(handler as any).__ = { type: 'command' };
+		return handler;
+	},
 	form: (_schema: unknown, handler: (...args: any[]) => any) => {
 		const fn = (data: unknown) => handler(data, issueProxy);
 		(fn as any).__ = { type: 'form' };

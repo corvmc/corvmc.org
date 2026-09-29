@@ -29,6 +29,23 @@ Some balances can be settled in person — staff can record a cash payment when 
 arrive. If you're unsure what's owed, the reservation detail always shows the
 current amount due.
 
+### Paying at the card reader
+
+When the space has a card reader by the practice room door, you can pay for your
+session there yourself, from two hours before it starts until it ends.
+
+1. Open the reservation on your phone. The sticker on the reader links to
+   **Reservations**.
+2. Choose **Pay at the reader**. Your free hours are applied first, and the reader
+   shows what is left to pay.
+3. Tap, insert or swipe your card on the reader.
+4. Your phone shows **Paid** once the payment has gone through, and the booking is
+   confirmed.
+
+Changed your mind before tapping? Choose **Cancel** on your phone. If a card is
+declined, choose **Try again** and use the same card or another one. If the reader
+is busy with someone else's payment, wait a minute and try again.
+
 ## Related
 
 - [Understand practice credits & free hours](/member/help/practice-credits)

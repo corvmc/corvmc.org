@@ -1,7 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { paymentDriver, stripe } from '$lib/server/stripe';
 import { DomainError } from '$lib/server/domain-error';
-import { FAKE_TERMINAL_LOCATION_ID } from './gateway/fake-gateway';
+import { FAKE_TERMINAL_LOCATION_ID, FAKE_TERMINAL_READER_ID } from './gateway/fake-gateway';
 
 /** No Stripe Location is configured, so the door phone has nowhere to bind. */
 export class TerminalNotConfiguredError extends DomainError {
@@ -27,6 +27,20 @@ export function terminalLocationId(): string | null {
 function isLiveKey(): boolean {
 	const key = env.STRIPE_SECRET_KEY ?? '';
 	return paymentDriver() === 'stripe' && /^(sk|rk)_live_/.test(key);
+}
+
+/**
+ * The practice room's smart reader (`tmr_…`), or null while none is configured,
+ * which hides "Pay at the reader". The fake driver always answers with its own.
+ */
+export function terminalReaderId(): string | null {
+	if (paymentDriver() === 'fake') return FAKE_TERMINAL_READER_ID;
+	return env.STRIPE_TERMINAL_READER_ID || null;
+}
+
+/** A card can be presented to the reader from the phone only where it moves no money. */
+export function readerTapCanBeSimulated(): boolean {
+	return !isLiveKey();
 }
 
 export interface TerminalConnection {
