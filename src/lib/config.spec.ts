@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
-	committeeApplicationQuestions,
-	committeeApplicationStatuses,
-	committeeApplicationStatusLabels,
+	groupApplicationQuestions,
+	groupApplicationStatuses,
+	groupApplicationStatusLabels,
 	capabilities,
 	positions,
 	positionOrder,
@@ -241,27 +241,28 @@ describe('hasCapability', () => {
 	});
 });
 
-describe('committeeApplicationQuestions', () => {
+describe('groupApplicationQuestions', () => {
 	/**
-	 * The Zod schema in `committee-applications.remote.ts` spells its answer
-	 * fields out, because a schema built in a loop infers as `{}` and every
-	 * field loses its type. This is what stops the two lists drifting: add a
-	 * question here and the schema, the form and the chair's view all still
-	 * have to learn about it, and this test is where they are told.
+	 * The Zod schema in `group-applications.remote.ts` spells its answer fields
+	 * out, because a schema built in a loop infers as `{}` and every field loses
+	 * its type. This is what stops the lists drifting: add a question here and
+	 * the schema, the forms and the reviewer's card all still have to learn
+	 * about it, and this test is where they are told.
 	 */
-	it('declares exactly the ids the apply form has fields for', () => {
-		expect(committeeApplicationQuestions.map((q) => q.id)).toEqual(['experience', 'vision']);
+	it('declares exactly the ids the apply forms have fields for', () => {
+		expect(groupApplicationQuestions.committee.map((q) => q.id)).toEqual(['experience', 'vision']);
+		expect(groupApplicationQuestions.club.map((q) => q.id)).toEqual(['note']);
 	});
 
 	it('gives every question a prompt, since the prompt is the label', () => {
-		for (const question of committeeApplicationQuestions) {
+		for (const question of Object.values(groupApplicationQuestions).flat()) {
 			expect(question.prompt.trim().length).toBeGreaterThan(0);
 		}
 	});
 
 	it('labels every status, so a badge never renders a raw enum', () => {
-		expect(Object.keys(committeeApplicationStatusLabels).sort()).toEqual(
-			[...committeeApplicationStatuses].sort()
+		expect(Object.keys(groupApplicationStatusLabels).sort()).toEqual(
+			[...groupApplicationStatuses].sort()
 		);
 	});
 });
