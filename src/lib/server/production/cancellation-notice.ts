@@ -37,6 +37,7 @@ export async function announceShowsCancelled(
 		]);
 
 		for (const show of shows) {
+			if (!show.projectId) continue;
 			const recipients = await productionSeats(show.projectId, actorUserId);
 			if (recipients.length === 0) continue;
 			await domainEvents.emit('production.cancelled', {
