@@ -320,7 +320,7 @@ describe('runScheduledJobs', () => {
 	it('brackets each job with paired in_progress → ok check-ins', async () => {
 		const fetcher = okFetcher();
 		let n = 0;
-		const checkIn = vi.fn(async ({ status }: { status: string }) =>
+		const checkIn = vi.fn(async ({ status }: { slug: string; status: string }) =>
 			status === 'in_progress' ? `ci-${++n}` : undefined
 		);
 
