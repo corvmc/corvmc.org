@@ -1431,7 +1431,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 	// column lying on the day it shipped. Only pre-completed rows move: a
 	// production that already happened is history, and cancelling the
 	// advertisement afterwards does not un-happen it.
-	await cancelProductionsForEvent(eventId);
+	await cancelProductionsForEvent(eventId, userId);
 
 	await detachSlot('event_listing', eventId, 'poster');
 

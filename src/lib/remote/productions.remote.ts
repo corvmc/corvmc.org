@@ -119,8 +119,9 @@ const momentFields = {
 export const createProduction = form(
 	z.object({ eventId: z.string().min(1) }),
 	async ({ eventId }) => {
-		// No project exists until this runs, so no committee can reach it yet.
-		await requireCapability('production.book');
+		// No project exists until this runs, so the grant is org-wide: Booking
+		// opens its own shows (#1675), and creation attaches Booking and Production.
+		await requireCapability('production.create');
 		const { locals } = getRequestEvent();
 		try {
 			const row = await createService(eventId, { createdByUserId: locals.user?.id });

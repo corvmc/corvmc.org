@@ -72,11 +72,13 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			memberCount: 3,
 			// Every committee's baseline (project status and duty lists, its own
 			// numbers), plus #1564's publish and its weekly holds as recurring work.
-			// Opening work orders is Production's, so Booking does not carry it.
+			// Opening work orders is Production's, so Booking does not carry it; opening
+			// a show is Booking's (#1675).
 			capabilityGrants: [
 				'event.publish',
 				'finance.read',
 				'production.book',
+				'production.create',
 				'project.manage',
 				'volunteer.manageRecurring'
 			],

@@ -26,14 +26,30 @@ const POSITION_GRANTS: Record<Persona, string[]> = {
 	production: [],
 	otherShow: [],
 	treasurer: ['finance.refund'],
-	staff: ['production.book', 'production.run', 'finance.refund', 'event.manage']
+	staff: [
+		'production.book',
+		'production.run',
+		'production.create',
+		'finance.refund',
+		'event.manage'
+	]
 };
+/** What each persona's committee grants org-wide, with no record in hand (#1675). */
+const ORG_GRANTS: Record<Persona, string[]> = {
+	booking: ['production.create'],
+	production: [],
+	otherShow: [],
+	treasurer: [],
+	staff: []
+};
+const holds = (who: Persona, cap: string) =>
+	POSITION_GRANTS[who].includes(cap) || ORG_GRANTS[who].includes(cap);
 let persona: Persona = 'staff';
 
 const denied = () => Object.assign(new Error('403: Not permitted'), { status: 403 });
 
 const requireCapability = vi.fn(async (cap: string) => {
-	if (!POSITION_GRANTS[persona].includes(cap)) throw denied();
+	if (!holds(persona, cap)) throw denied();
 	return { id: `${persona}-1` };
 });
 vi.mock('$lib/server/authorization', () => ({
@@ -48,7 +64,7 @@ const requireProjectCommittee = vi.fn(async (projectId: string | null, cap: stri
 			via: 'committee'
 		};
 	}
-	if (POSITION_GRANTS[persona].includes(cap)) {
+	if (holds(persona, cap)) {
 		return { user: { id: `${persona}-1` }, groups: [], via: 'staff' };
 	}
 	throw denied();
@@ -181,13 +197,13 @@ const submit = (fn: unknown, data: unknown) => (fn as (d: unknown) => Promise<un
 
 /**
  * Every write in the module, with the half of the show it must name.
- * `positionOnly`: no committee can reach it — no project exists yet, or it is
- * the treasurer's.
+ * `positionOnly`: no committee on the show reaches it — no project exists yet,
+ * or it is the treasurer's. An org-wide committee grant still can.
  */
 type Write = {
 	name: keyof typeof productions;
 	args: unknown[];
-	capability: 'production.book' | 'production.run' | 'finance.refund';
+	capability: 'production.book' | 'production.run' | 'production.create' | 'finance.refund';
 	positionOnly?: boolean;
 };
 const BOOK = 'production.book' as const;
@@ -196,7 +212,7 @@ const WRITES: Write[] = [
 	{
 		name: 'createProduction',
 		args: [{ eventId: 'evt-1' }],
-		capability: BOOK,
+		capability: 'production.create',
 		positionOnly: true
 	},
 	{
@@ -301,7 +317,7 @@ const WRITES: Write[] = [
 const PERSONAS: Persona[] = ['booking', 'production', 'otherShow', 'treasurer', 'staff'];
 
 function allowed(who: Persona, write: Write): boolean {
-	if (POSITION_GRANTS[who].includes(write.capability)) return true;
+	if (holds(who, write.capability)) return true;
 	return !write.positionOnly && COMMITTEE_GRANTS[who].includes(write.capability);
 }
 
@@ -342,6 +358,19 @@ describe('the production matrix', () => {
 			});
 		}
 	}
+
+	it('lets Booking open a production, and refuses Production', async () => {
+		persona = 'booking';
+		service.createProduction.mockResolvedValueOnce({ id: 'prod-new' });
+		await submit(productions.createProduction, { eventId: 'evt-1' });
+		expect(requireCapability).toHaveBeenCalledWith('production.create');
+		expect(service.createProduction).toHaveBeenCalledTimes(1);
+		persona = 'production';
+		await expect(submit(productions.createProduction, { eventId: 'evt-1' })).rejects.toMatchObject({
+			status: 403
+		});
+		expect(service.createProduction).toHaveBeenCalledTimes(1);
+	});
 
 	it('refuses Booking on a slot of a show its committee is not part of', async () => {
 		persona = 'booking';

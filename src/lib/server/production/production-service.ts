@@ -11,6 +11,7 @@ import { DomainError } from '$lib/server/domain-error';
 import type { Production, ProductionStatus } from '$lib/server/db/schema/production';
 import { recomputeSetTimes } from './run-of-show-service';
 import { createShowProject, deleteShowProject } from './production-project';
+import { announceShowsCancelled } from './cancellation-notice';
 import { shiftAnchoredWorkOrders } from '$lib/server/volunteer/retime-work-orders';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { DutyListAnchor, ProjectStatus } from '$lib/config';
@@ -398,6 +399,7 @@ export async function transitionProduction(
 			.limit(1);
 		if (listing) await postProductionExpenses(id, listing.id);
 	}
+	if (to === 'cancelled') await announceShowsCancelled([id], actorUserId ?? null);
 
 	return settled;
 }
@@ -410,7 +412,14 @@ export async function transitionProduction(
  * and cancelling the listing afterwards does not un-happen it. Without this the
  * index would show `confirmed` productions against cancelled shows on day one.
  */
-export async function cancelProductionsForEvent(eventId: string): Promise<number> {
+export async function cancelProductionsForEvent(
+	eventId: string,
+	actorUserId: string | null = null
+): Promise<number> {
+	const moving = await db
+		.select({ id: production.id })
+		.from(production)
+		.where(and(announcedBy(eventId), inArray(production.status, [...PRE_COMPLETED])));
 	const [result] = await db.batch([
 		db
 			.update(production)
@@ -419,7 +428,14 @@ export async function cancelProductionsForEvent(eventId: string): Promise<number
 		followProject(announcedBy(eventId), 'cancelled', 'declined')
 	]);
 
-	return getRowCount(result);
+	const moved = getRowCount(result);
+	if (moved > 0) {
+		await announceShowsCancelled(
+			moving.map((m) => m.id),
+			actorUserId
+		);
+	}
+	return moved;
 }
 
 /**

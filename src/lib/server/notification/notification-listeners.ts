@@ -1190,6 +1190,46 @@ export function registerAllNotificationListeners(): void {
 		}
 	});
 
+	// --- Show cancelled (notify the Production committee on it, #1675) ---
+	domainEvents.on('production.cancelled', async ({ data: event }) => {
+		const by = event.cancelledByName;
+		const line = by
+			? `${by} cancelled "${event.eventTitle}" on ${formatWorkedOn(event.startsAt)}.`
+			: `"${event.eventTitle}" on ${formatWorkedOn(event.startsAt)} was cancelled.`;
+		for (const member of event.recipients) {
+			try {
+				await dispatch({
+					type: 'production_cancelled',
+					userId: member.userId,
+					userEmail: member.userEmail,
+					title: `${event.eventTitle} was cancelled`,
+					body: line,
+					href: `/member/groups/${member.committeeSlug}`,
+					email: {
+						recipientName: member.userName,
+						subject: `Show cancelled: ${event.eventTitle}`,
+						heading: 'Show cancelled',
+						paragraphs: [
+							{ text: line },
+							{ text: 'Any crew, load-in or advance work planned for it can stand down.' }
+						],
+						details: [
+							{ label: 'Show', value: event.eventTitle },
+							{ label: 'Date', value: formatWorkedOn(event.startsAt) },
+							...(by ? [{ label: 'Cancelled by', value: by }] : [])
+						],
+						cta: { label: 'Open the committee' }
+					}
+				});
+			} catch (err) {
+				captureException(err, {
+					event: 'notification.production_cancelled',
+					to: member.userEmail
+				});
+			}
+		}
+	});
+
 	domainEvents.on('event.unpublished_by_staff', async ({ data: event }) => {
 		for (const admin of event.bandAdmins) {
 			try {
