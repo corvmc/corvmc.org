@@ -7,4 +7,4 @@
 	const data = $derived(await getBallotPage(page.params.id!));
 </script>
 
-<BallotDetail {data} backHref={resolve('/staff/ballots')} />
+<BallotDetail {data} backHref={resolve('/staff/ballots')} panel="staff" />

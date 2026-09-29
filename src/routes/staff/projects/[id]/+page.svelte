@@ -11,6 +11,8 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { Field, MoneyField } from '$lib/components/ui/Form';
+	import BallotLine from '$lib/components/ballot/BallotLine.svelte';
+	import CreateBallotAction from '$lib/components/ballot/CreateBallotAction.svelte';
 	import {
 		getProjectDetail,
 		updateProjectForm,
@@ -36,6 +38,7 @@
 	const data = $derived(await getProjectDetail(page.params.id!));
 	const project = $derived(data.project);
 	const burn = $derived(data.burn);
+	const origin = $derived(data.origin);
 
 	const editFields = updateProjectForm.fields;
 	const statusFields = setProjectStatusForm.fields;
@@ -199,6 +202,47 @@
 			<Fact label="About">{project.description}</Fact>
 		{/if}
 	</DefinitionList>
+
+	<!-- Suggestion → ballot → this project, each a link. Either may be missing:
+	     a failed breaker panel is a project nobody suggested or voted on. -->
+	<InfoCard title="Why this exists">
+		{#if !origin.suggestion && !origin.ballot && origin.decidedBy.length === 0}
+			<p class="text-muted">Staff started this directly: no suggestion or ballot led to it.</p>
+		{:else}
+			<DefinitionList>
+				{#if origin.suggestion}
+					<Fact label="Suggested">
+						<a class="link" href={resolve(`/staff/suggestions/${origin.suggestion.id}`)}>
+							{origin.suggestion.title}
+						</a>
+					</Fact>
+				{/if}
+				{#if origin.ballot}
+					<Fact label="Authorised by">
+						<BallotLine
+							ballot={origin.ballot}
+							href={resolve(`/staff/ballots/${origin.ballot.id}`)}
+						/>
+					</Fact>
+				{/if}
+				{#each origin.decidedBy as b (b.id)}
+					<Fact label="Put to a ballot">
+						<BallotLine ballot={b} href={resolve(`/staff/ballots/${b.id}`)} />
+					</Fact>
+				{/each}
+				<Fact label="Became">{project.name}</Fact>
+			</DefinitionList>
+		{/if}
+		{#if data.canCreateBallot}
+			<div class="mt-3">
+				<CreateBallotAction
+					kind="member"
+					panel="staff"
+					decides={{ projectId: project.id, title: project.name }}
+				/>
+			</div>
+		{/if}
+	</InfoCard>
 
 	{#if overBudget}
 		<Alert type="warning">

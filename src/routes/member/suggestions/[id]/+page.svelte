@@ -12,6 +12,7 @@
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import BallotLine from '$lib/components/ballot/BallotLine.svelte';
 	import { IconFlag, IconCaretUpFilled, IconPencil } from '@tabler/icons-svelte';
 	import { formatDateTime } from '$lib/utils/format';
 	import { suggestionCategories, suggestionCategoryLabels } from '$lib/config';
@@ -29,6 +30,7 @@
 	const standing = $derived(data.standing);
 	const editState = $derived(data.editState);
 	const project = $derived(data.project);
+	const ballots = $derived(data.ballots);
 
 	const isMine = $derived(s.authorUserId === standing.viewerUserId);
 	let vote = $derived(toggleSuggestionVote.for(s.id));
@@ -64,6 +66,27 @@
 		<Alert type="success">
 			Staff started work on this: <span class="font-medium">{project.name}</span>.
 		</Alert>
+	{/if}
+
+	<!-- A certified result is every member's to read; before that the ballot's
+	     own page is its electors', so the link waits for certification. -->
+	{#if ballots.length > 0}
+		<InfoCard title={ballots.length === 1 ? 'Ballot' : 'Ballots'}>
+			<ul class="space-y-2">
+				{#each ballots as b (b.id)}
+					<li>
+						<BallotLine
+							ballot={b}
+							href={b.status === 'certified'
+								? resolve(`/member/ballots/${b.id}`)
+								: b.status === 'open'
+									? resolve('/member/ballots')
+									: null}
+						/>
+					</li>
+				{/each}
+			</ul>
+		</InfoCard>
 	{/if}
 
 	{#if s.mergedIntoId}

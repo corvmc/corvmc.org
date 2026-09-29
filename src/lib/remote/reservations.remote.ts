@@ -465,16 +465,20 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 
 	if (!rows[0]) throw error(404, 'Reservation not found');
 
-	// Audit: who at the front desk created this booking, if it wasn't the member.
-	let createdByStaffName: string | null = null;
-	if (rows[0].reservation.createdByStaffId) {
-		const [staffRow] = await db
+	// Audit: who at the front desk created this booking, and who cancelled it.
+	const nameOf = async (userId: string | null) => {
+		if (!userId) return null;
+		const [nameRow] = await db
 			.select({ name: user.name })
 			.from(user)
-			.where(eq(user.id, rows[0].reservation.createdByStaffId))
+			.where(eq(user.id, userId))
 			.limit(1);
-		createdByStaffName = staffRow?.name ?? null;
-	}
+		return nameRow?.name ?? null;
+	};
+	const [createdByStaffName, cancelledByName] = await Promise.all([
+		nameOf(rows[0].reservation.createdByStaffId),
+		nameOf(rows[0].reservation.cancelledByUserId)
+	]);
 
 	const row = {
 		...rows[0].reservation,
@@ -501,7 +505,8 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			band: { id: rows[0].bandId, name: rows[0].bandName, slug: rows[0].bandSlug },
 			event: { id: rows[0].eventId, title: rows[0].eventTitle }
 		}),
-		createdByStaffName
+		createdByStaffName,
+		cancelledByName
 	};
 
 	const tz = DEFAULT_TIMEZONE;
@@ -1207,10 +1212,11 @@ const staffCreateSchema = z.object({
 	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
 	startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
 	endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
-	notes: z.string().optional()
+	notes: z.string().optional(),
+	overrideConflicts: z.boolean().default(false)
 });
 
-export const createReservation = form(staffCreateSchema, async (data, _issue) => {
+export const createReservation = form(staffCreateSchema, async (data, issue) => {
 	const staffUser = await requireCapability('reservation.manage');
 	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
 	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
@@ -1218,6 +1224,16 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 	if (data.bandId) {
 		const bookingBand = await getBandById(data.bandId);
 		if (!bookingBand) error(404, 'Band not found');
+	}
+
+	// staffCreate skips conflict checks so staff can double-book on purpose, which
+	// makes this the only gate: overriding must be a deliberate, submitted choice.
+	if (!data.overrideConflicts && (await getConflictDetails(startsAt, endsAt)).length > 0) {
+		invalid(
+			issue.overrideConflicts(
+				'This double-books the space. Tick "Book it anyway" to book it regardless.'
+			)
+		);
 	}
 
 	const res = await staffCreate({
@@ -1249,6 +1265,12 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 		durationHours,
 		hourlyRateCents
 	});
+
+	// Required: without an explicit refresh Kit invalidates the whole page, and
+	// the modal's conflict check, still mounted, re-runs over this window and
+	// reports the new row as a double-booking (#1669). This is the page the
+	// modal navigates to next.
+	void getStaffReservationDetail(res.id).refresh();
 
 	return { reservationId: res.id };
 });

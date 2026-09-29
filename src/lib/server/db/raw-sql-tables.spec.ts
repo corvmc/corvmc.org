@@ -57,17 +57,26 @@ function withoutComments(text: string): string {
 	return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
 }
 
+/**
+ * Names after FROM or JOIN in one SQL string. A name followed by `(` is a
+ * table-valued function such as `json_each(...)`, not a table, so it is skipped.
+ */
+function tableRefsIn(sqlText: string): string[] {
+	// Both quoting styles: drizzle emits `"user"`, and hand-written fragments
+	// use bare names or backticks. A regex that missed one would give a
+	// false pass on exactly the kind of literal this exists to catch.
+	const pattern = /\b(?:FROM|JOIN)\s+["`]?([a-z_][a-z0-9_]*)\b["`]?(?!\s*\()/gi;
+	return [...sqlText.matchAll(pattern)].map((ref) => ref[1].toLowerCase());
+}
+
 /** Tables named after FROM or JOIN inside a `sql` template literal. */
 function rawSqlTableRefs(): { table: string; file: string }[] {
 	const refs: { table: string; file: string }[] = [];
 	for (const file of tsFilesUnder(SERVER_DIR)) {
 		const text = withoutComments(readFileSync(file, 'utf8'));
 		for (const template of text.matchAll(/sql`([^`]*)`/gs)) {
-			// Both quoting styles: drizzle emits `"user"`, and hand-written fragments
-			// use bare names or backticks. A regex that missed one would give a
-			// false pass on exactly the kind of literal this exists to catch.
-			for (const ref of template[1].matchAll(/\b(?:FROM|JOIN)\s+["`]?([a-z_][a-z0-9_]*)["`]?/gi)) {
-				refs.push({ table: ref[1].toLowerCase(), file: file.slice(process.cwd().length + 1) });
+			for (const table of tableRefsIn(template[1])) {
+				refs.push({ table, file: file.slice(process.cwd().length + 1) });
 			}
 		}
 	}
@@ -75,6 +84,12 @@ function rawSqlTableRefs(): { table: string; file: string }[] {
 }
 
 describe('hand-written SQL', () => {
+	it('reads a table-valued function as a function, not a table', () => {
+		expect(tableRefsIn('select 1 from json_each(${x}) where value in (1)')).toEqual([]);
+		expect(tableRefsIn('from json_tree (x) join "user" on 1')).toEqual(['user']);
+		expect(tableRefsIn('from `band` join member_standing')).toEqual(['band', 'member_standing']);
+	});
+
 	it('names only tables the schema declares', () => {
 		const tables = declaredTables();
 		// A guard on the guard: if the schema scan ever stops matching, every

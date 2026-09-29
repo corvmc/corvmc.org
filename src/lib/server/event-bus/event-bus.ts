@@ -1,5 +1,11 @@
 import Emittery from 'emittery';
-import type { BookerType, GroupKind, RenewalKind, ThreadNotifyPolicy } from '$lib/config';
+import type {
+	BookerType,
+	GroupKind,
+	RenewalKind,
+	ReservationCanceller,
+	ThreadNotifyPolicy
+} from '$lib/config';
 
 export interface VolunteerShiftEvent {
 	signupId: string;
@@ -120,7 +126,7 @@ export interface ReservationCancelledEvent {
 	date: string;
 	startTime: string;
 	endTime: string;
-	cancelledBy: 'member' | 'staff' | 'owner' | 'system';
+	cancelledBy: ReservationCanceller;
 	/** The free-text reason `cancel()` was given, when there was one. */
 	reason?: string;
 	/**

@@ -118,7 +118,7 @@ PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADkKhGrOdNGAT-pY"
 # Publishable Stripe key for the Payment Element on /checkout/<session>. Non-secret
 # by design — it is in the client bundle. The matching STRIPE_SECRET_KEY is a
 # Worker secret, and PAYMENTS_DRIVER above is what decides whether either is used.
-PUBLIC_STRIPE_PUBLISHABLE_KEY = ""
+PUBLIC_STRIPE_PUBLISHABLE_KEY = "pk_live_51QLrWlFKJl9xVtz8NXY8098xBF26wWzdF4o5pTfxRkroUIt6OajQEW1U9E6cVOhSwamsPxnu6zBWYsxghWDoG8qM00ScRIjQ13"
 # Legacy Laravel app (Forge-hosted, currently served at corvmc.org) — used for
 # bcrypt password verification during the migration window; drops out after cutover.
 LARAVEL_URL = "https://corvmcorg-x68glzpd.on-forge.com"

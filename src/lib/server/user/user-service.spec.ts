@@ -121,7 +121,8 @@ describe('deactivateUser', () => {
 		expect(cancelMock).toHaveBeenCalledTimes(2);
 		expect(cancelMock).toHaveBeenCalledWith('r1', 'u1', 'Account deactivated', {
 			staffOverride: true,
-			actor: 'staff'
+			actor: 'staff',
+			actorUserId: null
 		});
 	});
 
@@ -141,7 +142,8 @@ describe('deactivateUser', () => {
 			'res-1',
 			'u1',
 			'Account deactivated',
-			expect.objectContaining({ actor: 'member' })
+			// The member closed it themselves, so they are the canceller on record.
+			expect.objectContaining({ actor: 'member', actorUserId: 'u1' })
 		);
 	});
 
@@ -155,7 +157,8 @@ describe('deactivateUser', () => {
 			'res-1',
 			'u1',
 			'Account deactivated',
-			expect.objectContaining({ actor: 'staff' })
+			// `u1` is the account being closed; the staffer's id is not in hand.
+			expect.objectContaining({ actor: 'staff', actorUserId: null })
 		);
 	});
 
@@ -312,7 +315,8 @@ describe('banUser', () => {
 		);
 		expect(cancelMock).toHaveBeenCalledWith('r1', 'u1', 'Account deactivated', {
 			staffOverride: true,
-			actor: 'staff'
+			actor: 'staff',
+			actorUserId: null
 		});
 	});
 

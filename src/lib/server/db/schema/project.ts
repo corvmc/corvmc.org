@@ -11,6 +11,7 @@ import { sql } from 'drizzle-orm';
 import { user } from './authentication';
 import { group } from './group';
 import { suggestion } from './suggestion';
+import { ballot } from './ballot';
 import { projectCommitteeRoles, projectKinds, projectStatuses } from '../../../config';
 
 /**
@@ -64,6 +65,9 @@ export const project = sqliteTable(
 		/** The suggestion this answers, when a member asked for it. One project per suggestion. */
 		suggestionId: text('suggestion_id').references(() => suggestion.id, { onDelete: 'set null' }),
 
+		/** The ballot whose certified, passing result authorised this. One project per ballot. */
+		ballotId: text('ballot_id').references(() => ballot.id, { onDelete: 'set null' }),
+
 		/** The ceiling. Null is "no budget set", not zero. */
 		budgetCents: integer('budget_cents'),
 
@@ -93,6 +97,9 @@ export const project = sqliteTable(
 		uniqueIndex('uq_project_suggestion')
 			.on(t.suggestionId)
 			.where(sql`suggestion_id is not null`),
+		uniqueIndex('uq_project_ballot')
+			.on(t.ballotId)
+			.where(sql`ballot_id is not null`),
 		// `not (x < 0)` so a null budget passes rather than nulling the check —
 		// the same shape as `contractor_job_cost_nonneg`.
 		check('project_budget_nonneg', sql`not (budget_cents < 0)`),

@@ -18,6 +18,10 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
+	import { Field, MoneyField } from '$lib/components/ui/Form';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { startProjectFromBallotForm } from '$lib/remote/projects.remote';
 	import { ballotKindLabels, ballotStatusLabels, DEFAULT_TIMEZONE } from '$lib/config';
 	import { formatDateTime, formatDateShortYear } from '$lib/utils/format';
 	import {
@@ -33,7 +37,11 @@
 
 	type Page = Awaited<ReturnType<typeof getBallotPage>>;
 
-	let { data, backHref }: { data: Page; backHref: string } = $props();
+	let { data, backHref, panel }: { data: Page; backHref: string; panel: 'member' | 'staff' } =
+		$props();
+
+	// Above anything async-gated, as on the staff suggestion page.
+	const startFields = startProjectFromBallotForm.fields;
 
 	const b = $derived(data.ballot);
 	const viewer = $derived(data.viewer);
@@ -53,6 +61,17 @@
 	let overrideUserName = $state('');
 	let certifierId = $state('');
 	let certifierName = $state('');
+
+	const decides = $derived(data.decides);
+	const suggestionHref = $derived(
+		decides.suggestion
+			? panel === 'staff' && viewer.canReadSuggestions
+				? resolve(`/staff/suggestions/${decides.suggestion.id}`)
+				: resolve(`/member/suggestions/${decides.suggestion.id}`)
+			: null
+	);
+	const projectHref = (id: string) =>
+		viewer.canReadProjects ? resolve(`/staff/projects/${id}`) : null;
 
 	function share(votes: number, turnout: number) {
 		return turnout === 0 ? '—' : `${Math.round((votes / turnout) * 100)}%`;
@@ -208,6 +227,74 @@
 </PageHeader>
 
 <PageContent width="3xl">
+	{#if decides.suggestion || decides.project || data.authorised || data.startProject}
+		<InfoCard title="What this decides">
+			<DefinitionList>
+				{#if decides.suggestion}
+					<Fact label="Suggestion">
+						<a class="link" href={suggestionHref}>{decides.suggestion.title}</a>
+						<StatusBadge status={decides.suggestion.status} label />
+					</Fact>
+				{/if}
+				{#if decides.project}
+					{@const href = projectHref(decides.project.id)}
+					<Fact label="Project">
+						{#if href}<a class="link" {href}>{decides.project.name}</a>{:else}{decides.project
+								.name}{/if}
+					</Fact>
+				{/if}
+				{#if data.passed !== null}
+					<Fact label="Outcome" value={data.passed ? 'Passed' : 'Did not pass'} />
+				{/if}
+				{#if data.authorised}
+					{@const href = projectHref(data.authorised.id)}
+					<Fact label="Became the project">
+						{#if href}<a class="link" {href}>{data.authorised.name}</a>{:else}{data.authorised
+								.name}{/if}
+						<StatusBadge status={data.authorised.status} label />
+					</Fact>
+				{/if}
+			</DefinitionList>
+			{#if data.startProject}
+				{@const start = data.startProject}
+				<div class="mt-3">
+					<Action
+						action={startProjectFromBallotForm}
+						label="Start project"
+						modalTitle="Start the project this ballot authorised"
+						submitLabel="Start"
+						successToast="Project started"
+						variant="primary"
+						size="sm"
+						onsuccess={(r) => {
+							if (r && typeof r === 'object' && 'id' in r) {
+								void goto(resolve(`/staff/projects/${r.id as string}`));
+							}
+						}}
+					>
+						{#snippet form()}
+							<input {...startFields.ballotId.as('hidden', b.id)} />
+							<p class="mb-3 text-muted">
+								The project is linked to this ballot{decides.suggestion
+									? ' and to the suggestion it decided, which moves to Planned with it'
+									: ''}.
+							</p>
+							<Field field={startFields.name} type="text" label="Project name" value={start.name} />
+							<Field
+								field={startFields.groupId}
+								type="select"
+								label="Owning committee"
+								options={start.committees.map((c) => ({ value: c.id, label: c.name }))}
+								description="Only a committee can own a project. Leave blank to decide later."
+							/>
+							<MoneyField field={startFields.budgetCents} label="Budget" />
+						{/snippet}
+					</Action>
+				</div>
+			{/if}
+		</InfoCard>
+	{/if}
+
 	{#if b.status === 'cancelled'}
 		<Alert type="warning">This ballot was cancelled: {b.cancelReason}</Alert>
 	{:else if b.status === 'certified' && b.certifiedAt}

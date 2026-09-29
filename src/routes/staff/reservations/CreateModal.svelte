@@ -33,6 +33,13 @@
 	let startTime = $state('');
 	let endTime = $state('');
 	let notes = $state('');
+	let hasBlockingConflict = $state(false);
+	let overrideConflicts = $state(false);
+
+	// An override ticked for one window must not carry over to the next one.
+	$effect(() => {
+		if (!hasBlockingConflict) overrideConflicts = false;
+	});
 
 	// One query for the day, two derivations off it. Two async deriveds each calling
 	// `getStaffSlots(date)` deduped to a single request, but they were still two remote queries in
@@ -105,6 +112,8 @@
 		startTime = '';
 		endTime = '';
 		notes = '';
+		hasBlockingConflict = false;
+		overrideConflicts = false;
 	}
 </script>
 
@@ -116,6 +125,7 @@
 	variant="primary"
 	size="sm"
 	maxWidth="max-w-md"
+	canSubmit={!hasBlockingConflict || overrideConflicts}
 	onsuccess={async (result) => {
 		resetForm();
 		const r = result as { reservationId?: string };
@@ -190,7 +200,19 @@
 				</Select>
 			</fieldset>
 
-			<ConflictWarnings {date} {startTime} {endTime} {checkConflicts} />
+			<ConflictWarnings {date} {startTime} {endTime} {checkConflicts} bind:hasBlockingConflict />
+
+			<!-- A deliberate second action, as on the event forms (#665). The server
+			     refuses the booking unless this was ticked and submitted. -->
+			{#if hasBlockingConflict}
+				<Field
+					field={fields.overrideConflicts}
+					type="checkbox"
+					label="Override"
+					checkboxLabel="Book it anyway — I know this double-books the space"
+					bind:value={overrideConflicts}
+				/>
+			{/if}
 
 			<Field name="notes" type="textarea" label="Notes" bind:value={notes} />
 

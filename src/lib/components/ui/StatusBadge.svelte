@@ -165,6 +165,8 @@
 		uncleared: 'badge-warning',
 		// Suggestions. `open` and `pending_review` are shared with the inbox and
 		// event vocabularies above and already carry the right weight.
+		// A vote is under way on it: the answer is owed by the electorate.
+		in_ballot: 'badge-warning',
 		planned: 'badge-info',
 		in_progress: 'badge-warning',
 		done: 'badge-success',
@@ -267,6 +269,7 @@
 
 		// Suggestion statuses. `open` (inbox) and `pending_review` (events) are
 		// already mapped above and mean the same thing here.
+		in_ballot: { icon: IconClockPause, color: 'text-warning' },
 		planned: { icon: IconCalendarEvent, color: 'text-info' },
 		in_progress: { icon: IconTool, color: 'text-warning' },
 		done: { icon: IconCircleCheckFilled, color: 'text-success' },
