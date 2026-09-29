@@ -98,6 +98,11 @@ vi.mock('$lib/server/production/production-service', () => ({
 	transitionProduction: (...a: unknown[]) => service.transitionProduction(...a)
 }));
 
+const listings = { create: vi.fn() };
+vi.mock('$lib/server/event/event-service', () => ({
+	create: (...a: unknown[]) => listings.create(...a)
+}));
+
 const runOfShow = {
 	addSlot: vi.fn(),
 	updateSlot: vi.fn(),
@@ -208,7 +213,19 @@ type Write = {
 };
 const BOOK = 'production.book' as const;
 const RUN = 'production.run' as const;
+const NEW_SHOW = {
+	title: 'Friday Night',
+	eventDate: '2026-11-06',
+	eventStartTime: '19:00',
+	eventEndTime: '23:00'
+};
 const WRITES: Write[] = [
+	{
+		name: 'createShow',
+		args: [NEW_SHOW],
+		capability: 'production.create',
+		positionOnly: true
+	},
 	{
 		name: 'createProduction',
 		args: [{ eventId: 'evt-1' }],
@@ -324,6 +341,7 @@ function allowed(who: Persona, write: Write): boolean {
 const allSpies = () =>
 	Object.values({
 		...service,
+		...listings,
 		...runOfShow,
 		...artifacts,
 		...flyers,
@@ -370,6 +388,39 @@ describe('the production matrix', () => {
 			status: 403
 		});
 		expect(service.createProduction).toHaveBeenCalledTimes(1);
+	});
+
+	it('lets production.create alone open a show, as a show, authored by the caller', async () => {
+		persona = 'booking';
+		listings.create.mockResolvedValueOnce({ id: 'evt-new' });
+		await expect(submit(productions.createShow, NEW_SHOW)).resolves.toEqual({
+			eventId: 'evt-new'
+		});
+		expect(requireCapability).toHaveBeenCalledWith('production.create');
+		expect(requireCapability).not.toHaveBeenCalledWith('event.read');
+		expect(requireCapability).not.toHaveBeenCalledWith('event.manage');
+		expect(listings.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				title: 'Friday Night',
+				kind: 'show',
+				groupId: null,
+				createdByUserId: 'booking-1'
+			})
+		);
+		const [{ startsAt, endsAt }] = listings.create.mock.calls[0] as [
+			{ startsAt: Date; endsAt: Date }
+		];
+		expect(endsAt.getTime() - startsAt.getTime()).toBe(4 * 60 * 60 * 1000);
+	});
+
+	it('refuses to open a show without production.create', async () => {
+		for (const who of ['production', 'otherShow', 'treasurer'] as const) {
+			persona = who;
+			await expect(submit(productions.createShow, NEW_SHOW)).rejects.toMatchObject({
+				status: 403
+			});
+		}
+		expect(listings.create).not.toHaveBeenCalled();
 	});
 
 	it('refuses Booking on a slot of a show its committee is not part of', async () => {

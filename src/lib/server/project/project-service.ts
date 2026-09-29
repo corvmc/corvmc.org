@@ -575,6 +575,7 @@ export async function listCommitteeProjectEvents(groupId: string) {
 			title: eventListing.title,
 			startsAt: eventListing.startsAt,
 			status: eventListing.status,
+			productionId: eventListing.productionId,
 			projectId: project.id,
 			projectName: project.name
 		})
