@@ -42,6 +42,8 @@ beforeEach(() => {
 		'work_task',
 		'work_order',
 		'event_listing',
+		// The deliverables migration's list items restrict the roles they name.
+		'duty_list_item',
 		'volunteer_role',
 		'user'
 	]) {

@@ -72,15 +72,16 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			memberCount: 3,
 			// Every committee's baseline (project status and duty lists, its own
 			// numbers), plus #1564's publish and its weekly holds as recurring work.
-			// Opening work orders is Production's, so Booking does not carry it; opening
-			// a show is Booking's (#1675).
+			// Opening a show is Booking's (#1675); keeping its own deliverables is
+			// `volunteer.manageShifts` (#1701).
 			capabilityGrants: [
 				'event.publish',
 				'finance.read',
 				'production.book',
 				'production.create',
 				'project.manage',
-				'volunteer.manageRecurring'
+				'volunteer.manageRecurring',
+				'volunteer.manageShifts'
 			],
 			announcements: [
 				{
@@ -137,7 +138,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			joinInstructions: null,
 			positions: ['Chair', 'Member'],
 			memberCount: 2,
-			capabilityGrants: ['finance.read', 'project.manage'],
+			capabilityGrants: ['finance.read', 'project.manage', 'volunteer.manageShifts'],
 			announcements: [],
 			leaderFromPool: true
 		},
@@ -150,7 +151,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			joinInstructions: null,
 			positions: ['Chair', 'Member'],
 			memberCount: 2,
-			capabilityGrants: ['finance.read', 'project.manage'],
+			capabilityGrants: ['finance.read', 'project.manage', 'volunteer.manageShifts'],
 			announcements: [],
 			leaderFromPool: true
 		}

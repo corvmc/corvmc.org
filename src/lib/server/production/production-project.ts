@@ -5,6 +5,8 @@ import { group } from '$lib/server/db/schema/group';
 import { production } from '$lib/server/db/schema/production';
 import { project, projectCommittee } from '$lib/server/db/schema/project';
 import { showCommitteeSlugs, type ProjectCommitteeRole } from '$lib/config';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { captureException } from '$lib/server/sentry';
 
 /**
  * Every production is a project, specialised — docs/specs/production-projects-spec.md.
@@ -105,4 +107,20 @@ export async function deleteShowProject(productionId: string): Promise<void> {
 	];
 	if (row.projectId) writes.push(db.delete(project).where(eq(project.id, row.projectId)));
 	await db.batch(writes);
+}
+
+/**
+ * Say a show exists, once its listing names the production. Listeners stamp
+ * the show's default deliverables; a failure there must not undo the show.
+ */
+export async function announceProductionCreated(
+	productionId: string,
+	eventId: string,
+	createdByUserId: string | null
+): Promise<void> {
+	try {
+		await domainEvents.emit('production.created', { productionId, eventId, createdByUserId });
+	} catch (err) {
+		captureException(err, { event: 'production.created', productionId, eventId });
+	}
 }

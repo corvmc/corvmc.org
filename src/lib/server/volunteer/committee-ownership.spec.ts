@@ -132,3 +132,17 @@ describe('applying a list with owned items', () => {
 		expect(plan.map((p) => p.detail).join(' ')).toContain('work_order_group_open_idx');
 	});
 });
+
+describe("the coordinator's queue", () => {
+	it('leaves out committee-owned work unless asked about one show', async () => {
+		const { listWorkOrders } = await import('./work-order-service');
+		exec(`insert into work_order (id, volunteer_role_id, event_id, group_id)
+			values ('owned', 'role-lead', 'evt', 'g-book'), ('staffs', 'role-lead', 'evt', null)`);
+
+		expect((await listWorkOrders()).map((w) => w.id)).toEqual(['staffs']);
+		expect((await listWorkOrders({ eventId: 'evt' })).map((w) => w.id).sort()).toEqual([
+			'owned',
+			'staffs'
+		]);
+	});
+});

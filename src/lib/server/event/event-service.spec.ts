@@ -238,7 +238,8 @@ const mockCreateShowProject = vi.fn(async (_input: unknown) => undefined);
 const mockDeleteShowProject = vi.fn(async (_id: string) => undefined);
 vi.mock('$lib/server/production/production-project', () => ({
 	createShowProject: (input: unknown) => mockCreateShowProject(input),
-	deleteShowProject: (id: string) => mockDeleteShowProject(id)
+	deleteShowProject: (id: string) => mockDeleteShowProject(id),
+	announceProductionCreated: async () => undefined
 }));
 vi.mock('$lib/server/production/production-service', () => ({
 	cancelProductionsForEvent: (...args: unknown[]) => mockCancelProductions(...args),
