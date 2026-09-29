@@ -1,0 +1,30 @@
+name: Install dependencies
+description: pnpm + Node 22 + `pnpm install --frozen-lockfile`, with a store cache only main writes.
+
+# Every ref may read the store cache; only main writes it. A PR or merge-queue
+# run saving its own ~260 MB copy pushed the repo past GitHub's 10 GB cache cap,
+# and queue refs are deleted minutes later, so those copies were never read
+# again while the eviction they caused could drop main's own entries.
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v6
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 22
+    - id: store
+      shell: bash
+      run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+    - id: restore
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ steps.store.outputs.path }}
+        key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: pnpm-store-${{ runner.os }}-
+    - shell: bash
+      run: pnpm install --frozen-lockfile
+    - if: github.ref == 'refs/heads/main' && steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ steps.store.outputs.path }}
+        key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}

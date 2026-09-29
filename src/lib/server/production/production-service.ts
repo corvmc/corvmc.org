@@ -16,6 +16,8 @@ import { shiftAnchoredWorkOrders } from '$lib/server/volunteer/retime-work-order
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { DutyListAnchor, ProjectStatus } from '$lib/config';
 import { project } from '$lib/server/db/schema/project';
+import { cancelShiftsForProduction } from '$lib/server/volunteer/show-cancellation';
+import { captureException } from '$lib/server/sentry';
 
 /**
  * The ops half of a show.
@@ -384,6 +386,16 @@ export async function transitionProduction(
 
 		if (!row) throw new ProductionNotFoundError();
 		throw new InvalidProductionTransitionError(row.status, to);
+	}
+
+	// The crew shifts go with the show (#1705). Reported rather than thrown: the
+	// status has moved, and a retry would be refused as an invalid transition.
+	if (to === 'cancelled') {
+		try {
+			await cancelShiftsForProduction(id, actorUserId);
+		} catch (err) {
+			captureException(err, { event: 'production.cancel.shifts', productionId: id });
+		}
 	}
 
 	const settled = await getProduction(id);

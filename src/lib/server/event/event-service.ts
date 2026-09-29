@@ -32,6 +32,7 @@ import { contentFlag } from '$lib/server/db/schema/flag';
 import { venue } from '$lib/server/db/schema/venue';
 import { production } from '$lib/server/db/schema/production';
 import { cancelProductionsForEvent } from '$lib/server/production/production-service';
+import { cancelShiftsForEvent } from '$lib/server/volunteer/show-cancellation';
 import { requireProgramGroup } from '$lib/server/group/group-kind';
 import {
 	eq,
@@ -1385,6 +1386,9 @@ export async function remove(eventId: string, userId: string): Promise<void> {
 		}
 	}
 
+	// Before the delete, which would null `work_order.event_id` and strand them.
+	await callOffShifts(eventId, userId);
+
 	// Detach, not delete. A recurring series' occurrences share one poster
 	// object, so removing one occurrence must not take the others' image with it.
 	await detachSlot('event_listing', eventId, 'poster');
@@ -1399,6 +1403,19 @@ export async function remove(eventId: string, userId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 // cancel()
 // ---------------------------------------------------------------------------
+
+/**
+ * The show's crew shifts are off too, and whoever claimed one is told (#1705).
+ * A failure is reported, not thrown: by now the listing or its room has already
+ * changed, and a retry of `cancel()` is refused as already cancelled.
+ */
+async function callOffShifts(eventId: string, userId: string): Promise<void> {
+	try {
+		await cancelShiftsForEvent(eventId, userId);
+	} catch (err) {
+		captureException(err, { event: 'event.cancel.shifts', eventId });
+	}
+}
 
 export async function cancel(eventId: string, userId: string): Promise<void> {
 	const existing = await getById(eventId);
@@ -1432,6 +1449,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 	// production that already happened is history, and cancelling the
 	// advertisement afterwards does not un-happen it.
 	await cancelProductionsForEvent(eventId, userId);
+	await callOffShifts(eventId, userId);
 
 	await detachSlot('event_listing', eventId, 'poster');
 

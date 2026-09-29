@@ -83,6 +83,17 @@ vi.mock('./production-project', () => ({
 	deleteShowProject: (id: string) => deleteShowProject(id)
 }));
 
+// The cascade's predicates have their own spec against real SQLite; here the
+// question is only which transition reaches it.
+const cancelShiftsForProduction = vi.fn(async (..._args: unknown[]) => 0);
+vi.mock('$lib/server/volunteer/show-cancellation', () => ({
+	cancelShiftsForProduction: (...args: unknown[]) => cancelShiftsForProduction(...args)
+}));
+const captureException = vi.fn();
+vi.mock('$lib/server/sentry', () => ({
+	captureException: (...args: unknown[]) => captureException(...args)
+}));
+
 import {
 	createProduction,
 	getProductionByEvent,
@@ -327,6 +338,30 @@ describe('transitionProduction', () => {
 		>;
 		expect(set.closedByUserId).toBeNull();
 		expect(set.closedAt).toBeInstanceOf(Date);
+	});
+
+	it('calls off the show’s crew shifts when it is cancelled, naming who did (#1705)', async () => {
+		selectQueue = [[productionRow({ status: 'cancelled' })]];
+		await transitionProduction('prod-1', 'cancelled', 'u-staff');
+
+		expect(cancelShiftsForProduction).toHaveBeenCalledWith('prod-1', 'u-staff');
+	});
+
+	it('leaves the shifts alone on every other transition', async () => {
+		selectQueue = [[productionRow({ status: 'confirmed' })]];
+		await transitionProduction('prod-1', 'confirmed', 'u-staff');
+
+		expect(cancelShiftsForProduction).not.toHaveBeenCalled();
+	});
+
+	it('still cancels the production when the shift cascade fails, and reports it', async () => {
+		cancelShiftsForProduction.mockRejectedValueOnce(new Error('D1 down'));
+		selectQueue = [[productionRow({ status: 'cancelled' })]];
+
+		await expect(transitionProduction('prod-1', 'cancelled')).resolves.toMatchObject({
+			status: 'cancelled'
+		});
+		expect(captureException).toHaveBeenCalled();
 	});
 
 	it('names the actual status when the transition is illegal', async () => {
