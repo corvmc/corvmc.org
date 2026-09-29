@@ -229,7 +229,7 @@ describe('appliedMigrationNames', () => {
 		);
 		await expect(tableColumns(creds, 'note', fetch)).resolves.toEqual(['id', 'body']);
 		const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
-		expect(JSON.parse(String(init.body)).sql).toBe("SELECT name FROM pragma_table_info('note')");
+		expect(JSON.parse(String(init.body)).sql).toBe('PRAGMA table_info(`note`)');
 		const empty = vi.fn(async () => Response.json({ success: true, result: [{ results: [] }] }));
 		await expect(tableColumns(creds, 'note', empty)).resolves.toBeUndefined();
 	});

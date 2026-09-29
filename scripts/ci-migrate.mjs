@@ -232,11 +232,7 @@ export async function appliedMigrationNames(creds, fetchImpl = fetch) {
  */
 export async function tableColumns(creds, table, fetchImpl = fetch) {
 	if (!/^\w+$/.test(table)) throw new Error(`Not a table name: ${table}`);
-	const rows = await queryRemote(
-		creds,
-		`SELECT name FROM pragma_table_info('${table}')`,
-		fetchImpl
-	);
+	const rows = await queryRemote(creds, `PRAGMA table_info(\`${table}\`)`, fetchImpl);
 	const names = rows.flatMap((r) => (typeof r.name === 'string' ? [r.name] : []));
 	return names.length ? names : undefined;
 }
