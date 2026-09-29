@@ -2,17 +2,21 @@
  * Sync static help articles from src/content/help/ into the database.
  *
  * Usage:
- *   pnpm help:sync
+ *   pnpm help:sync            local D1, through wrangler's platform proxy
+ *   pnpm help:sync --remote   production D1, over the D1 HTTP API
  *
- * Reads markdown files with frontmatter, upserts them as help articles
- * with source='static', and removes orphaned static rows.
+ * `--remote` needs CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_D1_TOKEN, the same pair
+ * `ci:migrate` uses; `ci:migrate` runs it on every production deploy.
  */
 import 'dotenv/config';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
-import { getPlatformProxy } from 'wrangler';
+import { pathToFileURL } from 'url';
 import { drizzle } from 'drizzle-orm/d1';
+import { drizzle as drizzleProxy, type AsyncRemoteCallback } from 'drizzle-orm/sqlite-proxy';
+import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { eq, and, notInArray } from 'drizzle-orm';
+import { databaseIdFromWrangler } from '../drizzle.config';
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
 import { grantRuleFor, helpAudiences } from '../src/lib/config';
 
@@ -91,30 +95,59 @@ function findMarkdownFiles(dir: string): string[] {
 	return files;
 }
 
-async function main() {
-	// `src/app.d.ts` is where this project's bindings are named; without the
-	// type argument `env` is `unknown` and `env.DB` is unchecked.
-	const { env, dispose } = await getPlatformProxy<NonNullable<App.Platform['env']>>();
-	const db = drizzle(env.DB);
+export interface StaticArticle {
+	meta: ArticleFrontmatter;
+	body: string;
+	capabilities: string[] | null;
+}
 
-	const files = findMarkdownFiles(CONTENT_DIR);
-	console.log(`Found ${files.length} markdown file(s) in ${CONTENT_DIR}`);
+export function readArticles(dir = CONTENT_DIR): StaticArticle[] {
+	const files = findMarkdownFiles(dir);
+	console.log(`Found ${files.length} markdown file(s) in ${dir}`);
+	return files.map((file) => {
+		const { meta, body } = parseFrontmatter(readFileSync(file, 'utf-8'));
+		return { meta, body, capabilities: capabilitiesOf(relative(dir, file), meta.capabilities) };
+	});
+}
 
-	// Ensure categories exist
-	const categorySlugs = new Set<string>();
-	const articles: {
-		meta: ArticleFrontmatter;
-		body: string;
-		capabilities: string[] | null;
-	}[] = [];
+export interface D1HttpCredentials {
+	accountId: string;
+	databaseId: string;
+	token: string;
+}
 
-	for (const file of files) {
-		const raw = readFileSync(file, 'utf-8');
-		const { meta, body } = parseFrontmatter(raw);
-		categorySlugs.add(meta.category);
-		const capabilities = capabilitiesOf(relative(CONTENT_DIR, file), meta.capabilities);
-		articles.push({ meta, body, capabilities });
-	}
+/**
+ * A sqlite-proxy client over the D1 HTTP API, the transport drizzle-kit's
+ * `d1-http` driver uses for `ci:migrate`. Reads go to `/raw`, because the
+ * proxy maps selected fields from positional rows, not objects.
+ */
+export function d1HttpClient(
+	creds: D1HttpCredentials,
+	fetchImpl: typeof fetch = fetch
+): AsyncRemoteCallback {
+	const base = `https://api.cloudflare.com/client/v4/accounts/${creds.accountId}/d1/database/${creds.databaseId}`;
+	return async (sql, params, method) => {
+		const res = await fetchImpl(`${base}/${method === 'run' ? 'query' : 'raw'}`, {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${creds.token}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({ sql, params })
+		});
+		const body = (await res.json()) as {
+			success: boolean;
+			errors?: unknown;
+			result?: { results?: { rows?: unknown[][] } }[];
+		};
+		if (!body.success) throw new Error(`D1 query failed: ${JSON.stringify(body.errors)}\n${sql}`);
+		if (method === 'run') return { rows: [] };
+		const rows = body.result?.[0]?.results?.rows ?? [];
+		return { rows: method === 'get' ? (rows[0] ?? []) : rows };
+	};
+}
+
+export type HelpSyncDb = BaseSQLiteDatabase<'async', unknown>;
+
+export async function syncHelpArticles(db: HelpSyncDb, articles: StaticArticle[]) {
+	const categorySlugs = new Set(articles.map((a) => a.meta.category));
 
 	// A category is only as restricted as its most permissive article: a
 	// staff-only category (every article minRole=staff) must not be listed to
@@ -216,10 +249,39 @@ async function main() {
 	}
 
 	console.log('Done.');
-	await dispose();
 }
 
-main().catch((err) => {
-	console.error(err);
-	process.exit(1);
-});
+function remoteCredentials(): D1HttpCredentials {
+	const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+	const token = process.env.CLOUDFLARE_D1_TOKEN;
+	const databaseId = process.env.CLOUDFLARE_DATABASE_ID ?? databaseIdFromWrangler();
+	if (!accountId || !token || !databaseId) {
+		throw new Error('--remote needs CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_D1_TOKEN');
+	}
+	return { accountId, databaseId, token };
+}
+
+async function main() {
+	const articles = readArticles();
+	if (process.argv.includes('--remote')) {
+		console.log('help:sync — writing to the remote (production) D1');
+		return syncHelpArticles(drizzleProxy(d1HttpClient(remoteCredentials())), articles);
+	}
+	// Imported here: loading wrangler at the top breaks the spec's module graph.
+	const { getPlatformProxy } = await import('wrangler');
+	// `src/app.d.ts` is where this project's bindings are named; without the
+	// type argument `env` is `unknown` and `env.DB` is unchecked.
+	const { env, dispose } = await getPlatformProxy<NonNullable<App.Platform['env']>>();
+	try {
+		await syncHelpArticles(drizzle(env.DB), articles);
+	} finally {
+		await dispose();
+	}
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+	main().catch((err) => {
+		console.error(err);
+		process.exit(1);
+	});
+}
