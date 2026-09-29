@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 /**
  * A cancelled show's shifts, against a real SQLite (#1705).
@@ -22,7 +22,8 @@ const emit = vi.fn(async (..._args: unknown[]) => undefined);
 vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit } }));
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
-const { cancelShiftsForEvent, cancelShiftsForProduction } = await import('./show-cancellation');
+const { cancelShiftsForEvent, cancelShiftsForProduction, cancelDeliverablesForEvent } =
+	await import('./show-cancellation');
 const { listOpenShiftsForMember, getShiftById } = await import('./work-order-service');
 const { listSignupsStartingBetween } = await import('./volunteer-signup-service');
 
@@ -166,6 +167,31 @@ describe('cancelling a show', () => {
 		expect(await cancelShiftsForProduction(PROD, STAFF)).toBe(3);
 		expect(await cancelled('door')).not.toBeNull();
 		expect(await cancelled('other-door')).toBeNull();
+	});
+});
+
+describe("a committee's items on the show (#1709)", () => {
+	beforeEach(() => {
+		sqlite.exec(
+			`insert into "group" (id, name, slug, kind) values ('g', 'Art', 'art', 'committee')`
+		);
+		sqlite.exec(`insert into work_order (id, volunteer_role_id, event_id, group_id)
+			values ('poster', '${ROLE}', '${SHOW}', 'g')`);
+	});
+	afterEach(() => {
+		sqlite.exec(`delete from work_order where id = 'poster'`);
+		sqlite.exec(`delete from "group"`);
+	});
+
+	it('are left to the cancellation notice, which tells the committee', async () => {
+		expect(await cancelShiftsForEvent(SHOW, STAFF)).toBe(3);
+		expect(await cancelled('poster')).toBeNull();
+	});
+
+	it('are called off quietly when the show is deleted outright', async () => {
+		await cancelDeliverablesForEvent(SHOW, STAFF);
+		expect((await getShiftById('poster'))?.cancelledByUserId).toBe(STAFF);
+		expect(await cancelled('door')).toBeNull();
 	});
 });
 

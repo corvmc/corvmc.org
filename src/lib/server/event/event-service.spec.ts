@@ -248,7 +248,11 @@ vi.mock('$lib/server/production/production-service', () => ({
 }));
 
 const mockCancelShifts = vi.fn(async (..._args: unknown[]) => 0);
+vi.mock('$lib/server/production/cancellation-notice', () => ({
+	openDeliverablesOnListing: async () => []
+}));
 vi.mock('$lib/server/volunteer/show-cancellation', () => ({
+	cancelDeliverablesForEvent: async () => undefined,
 	cancelShiftsForEvent: (...args: unknown[]) => mockCancelShifts(...args)
 }));
 
@@ -744,7 +748,7 @@ describe('EventService', () => {
 			await cancel('evt-1', 'staff-1');
 
 			// The canceller travels with it, so Production is told who cancelled (#1675).
-			expect(mockCancelProductions).toHaveBeenCalledWith('evt-1', 'staff-1');
+			expect(mockCancelProductions).toHaveBeenCalledWith('evt-1', 'staff-1', []);
 		});
 
 		it('calls off the show’s crew shifts, naming who cancelled it (#1705)', async () => {

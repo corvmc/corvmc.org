@@ -599,13 +599,31 @@ export interface ProductionCancelledEvent {
 	startsAt: string;
 	/** Null when no person did it. */
 	cancelledByName: string | null;
-	/** Active seats on the show's live Production committees, less whoever cancelled. */
+	/**
+	 * Active seats on every committee that had an open item on the show, less
+	 * whoever cancelled, one per person, each with the items it had (#1709).
+	 */
 	recipients: Array<{
 		userId: string;
 		userName: string;
 		userEmail: string;
 		committeeSlug: string;
+		items: string[];
 	}>;
+}
+
+/** A committee deliverable is due soon, or late (#1709). */
+export interface DeliverableDueEvent {
+	stage: 'due_3d' | 'overdue';
+	workOrderId: string;
+	title: string;
+	eventTitle: string | null;
+	/** ISO string — payload dates cross the bus serialized. */
+	dueAt: string;
+	groupName: string;
+	groupSlug: string;
+	/** Its live assignees, or the owning committee's active members when nobody has it. */
+	recipients: Array<{ userId: string; userName: string; userEmail: string }>;
 }
 
 export interface EventUnpublishedByStaffEvent {
@@ -902,6 +920,7 @@ export type DomainEvents = {
 	'event.lineup_invited': EventLineupInvitedEvent;
 	'production.created': ProductionCreatedEvent;
 	'production.cancelled': ProductionCancelledEvent;
+	'volunteer.deliverable_due': DeliverableDueEvent;
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
 	'volunteer.hours_approved': VolunteerHoursReviewedEvent;
 	'volunteer.hours_rejected': VolunteerHoursReviewedEvent;
