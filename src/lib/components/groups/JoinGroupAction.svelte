@@ -7,6 +7,7 @@
 	import { groupApplicationQuestions } from '$lib/config';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 
 	/**
 	 * One control for both self-service doors, mounted on the member index and
@@ -65,7 +66,10 @@
 	</Action>
 {:else if kind === 'committee'}
 	<Button
-		href={`${resolve('/member/volunteer/committees')}?committee=${encodeURIComponent(slug)}`}
+		href={withQuery(
+			resolve('/member/volunteer/committees'),
+			new URLSearchParams({ committee: slug })
+		)}
 		variant="primary"
 		size="sm"
 		aria-label={`Apply to ${groupName}`}
