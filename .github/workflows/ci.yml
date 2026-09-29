@@ -11,10 +11,11 @@ on:
   merge_group:
 
 # A new push supersedes the run already in flight for the same ref, so stale runs
-# stop burning runner capacity that the replacement run then has to queue for.
+# stop burning runner capacity. Not on main: its runs are the only ones that write
+# the caches, and a cancelled job skips its save steps.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 # Every job sets `timeout-minutes`. Without it a job inherits GitHub's default of
 # 360, so anything that wedges — a preview server that never binds, a browser
@@ -37,12 +38,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/install
       # Prettier only. `eslint --cache` is not usable here: caching makes ESLint
       # serialize its config, and svelte.config.js sets `compilerOptions.runes` to a
       # function (it exempts node_modules, .md/.svx and src/lib/layouts/prose.svelte
@@ -79,12 +75,7 @@ jobs:
         with:
           fetch-depth: 0
       - run: git fetch origin "$BASE_BRANCH"
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/install
       - run: pnpm lint:changed
 
   check:
@@ -93,12 +84,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/install
       # Two svelte-check passes: `src`, which the generated tsconfig includes, and
       # then everything else through `tsconfig.tooling.json` — `scripts/`, `e2e/`,
       # `eslint-rules/`, `.storybook/` and the root configs, none of which the
@@ -114,23 +100,24 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/install
       # The `client` and `storybook` vitest projects run in real chromium.
       - name: Resolve Playwright version
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v6
+      - uses: actions/cache/restore@v6
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
           key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
       # No `--with-deps` — see the note in the e2e job below.
       - run: pnpm exec playwright install chromium
+      # Same rule as the pnpm store in .github/actions/install: only main writes.
+      - if: github.ref == 'refs/heads/main' && steps.pw-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
       - run: pnpm run test:unit -- --run
 
   e2e:
@@ -139,16 +126,11 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/install
       - name: Resolve Playwright version
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v6
+      - uses: actions/cache/restore@v6
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
@@ -170,6 +152,12 @@ jobs:
       #
       # which pays it when the Playwright version bumps, not on every push.
       - run: pnpm exec playwright install chromium
+      # Same rule as the pnpm store in .github/actions/install: only main writes.
+      - if: github.ref == 'refs/heads/main' && steps.pw-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
       # Two steps rather than `pnpm test:e2e`, so the setup and the tests show up
       # separately in the step timings. As one opaque block, a migrate that had
       # grown to 64s went unnoticed for months.
@@ -198,12 +186,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/install
       # `check` catches migration collisions (two branches generating from the same
       # snapshot); `generate` diffs schema files against the committed snapshots, so
       # neither needs the CLOUDFLARE_* credentials that drizzle.config.ts references.
