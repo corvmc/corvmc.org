@@ -104,6 +104,10 @@ async function registerOrientationGroup(): Promise<void> {
 	const { registerOrientationListeners } =
 		await import('$lib/server/volunteer/orientation-listener');
 	registerOrientationListeners();
+	// The same shape one level up: a new show is stamped with its deliverables.
+	const { registerDeliverablesListeners } =
+		await import('$lib/server/volunteer/deliverables-listener');
+	registerDeliverablesListeners();
 }
 
 // ---------------------------------------------------------------------------

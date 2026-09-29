@@ -10,7 +10,11 @@ import { dutyList, workOrder, workTask } from '$lib/server/db/schema/volunteer';
 import { DomainError } from '$lib/server/domain-error';
 import type { Production, ProductionStatus } from '$lib/server/db/schema/production';
 import { recomputeSetTimes } from './run-of-show-service';
-import { createShowProject, deleteShowProject } from './production-project';
+import {
+	announceProductionCreated,
+	createShowProject,
+	deleteShowProject
+} from './production-project';
 import { announceShowsCancelled } from './cancellation-notice';
 import { shiftAnchoredWorkOrders } from '$lib/server/volunteer/retime-work-orders';
 import type { BatchItem } from 'drizzle-orm/batch';
@@ -257,6 +261,7 @@ export async function createProduction(
 	}
 
 	const [row] = await db.select().from(production).where(eq(production.id, productionId));
+	await announceProductionCreated(productionId, eventId, opts?.createdByUserId ?? null);
 	return row;
 }
 
@@ -329,8 +334,21 @@ export async function updateProductionDetails(
  * `production-service` warns against finishing.
  */
 export async function outstandingCloseOutTasks(productionId: string): Promise<string[]> {
-	const rows = await db
-		.select({ label: workTask.label })
+	return (await closeOutTasksOwed([productionId])).map((r) => r.label);
+}
+
+/**
+ * The same question for many shows at once, for a deliverable's `close_out_done`
+ * condition. One predicate, so the `closed` gate and the deliverable agree.
+ */
+export async function productionsOwingCloseOut(productionIds: string[]): Promise<Set<string>> {
+	if (productionIds.length === 0) return new Set();
+	return new Set((await closeOutTasksOwed(productionIds)).map((r) => r.productionId));
+}
+
+function closeOutTasksOwed(productionIds: string[]) {
+	return db
+		.select({ productionId: production.id, label: workTask.label })
 		.from(workTask)
 		.innerJoin(workOrder, eq(workOrder.id, workTask.workOrderId))
 		.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
@@ -338,13 +356,12 @@ export async function outstandingCloseOutTasks(productionId: string): Promise<st
 		.innerJoin(dutyList, eq(dutyList.id, workOrder.dutyListId))
 		.where(
 			and(
-				eq(production.id, productionId),
+				inArray(production.id, productionIds),
 				eq(dutyList.anchor, 'load_out'),
 				eq(workTask.done, false),
 				isNull(workOrder.cancelledAt)
 			)
 		);
-	return rows.map((r) => r.label);
 }
 
 export async function transitionProduction(

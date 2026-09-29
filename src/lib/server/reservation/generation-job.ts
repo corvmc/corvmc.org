@@ -1,5 +1,8 @@
 import { db } from '$lib/server/db';
-import { createShowProject } from '$lib/server/production/production-project';
+import {
+	announceProductionCreated,
+	createShowProject
+} from '$lib/server/production/production-project';
 import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { closure } from '$lib/server/db/schema/reservation';
@@ -604,6 +607,7 @@ async function processEventSeries(
 			recurringSeriesId: series.id
 		});
 		created++;
+		if (occProductionId) await announceProductionCreated(occProductionId, newEventId, null);
 
 		// The night is sold on the series' terms, when it has any.
 		await saveTicketSale(newEventId, {

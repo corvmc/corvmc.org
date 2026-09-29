@@ -151,15 +151,56 @@ export async function outstandingCount(eventId: string, now = new Date()): Promi
 export async function requestableActs(
 	eventId: string
 ): Promise<{ entryId: string; name: string }[]> {
+	return (await requestableActsByEvent([eventId])).get(eventId) ?? [];
+}
+
+/** `requestableActs` for several shows in one read, keyed by event. */
+export async function requestableActsByEvent(
+	eventIds: string[]
+): Promise<Map<string, { entryId: string; name: string }[]>> {
+	const byEvent = new Map<string, { entryId: string; name: string }[]>();
+	if (eventIds.length === 0) return byEvent;
 	const rows = await db
-		.select({ entryId: eventBand.directoryEntryId, name: eventBand.name })
+		.select({
+			eventId: eventBand.eventId,
+			entryId: eventBand.directoryEntryId,
+			name: eventBand.name
+		})
 		.from(eventBand)
-		.where(eq(eventBand.eventId, eventId))
+		.where(inArray(eventBand.eventId, eventIds))
 		.orderBy(asc(eventBand.billingOrder));
 
-	return rows
-		.filter((r): r is { entryId: string; name: string } => r.entryId !== null)
-		.map((r) => ({ entryId: r.entryId, name: r.name }));
+	for (const r of rows) {
+		if (r.entryId === null) continue;
+		const acts = byEvent.get(r.eventId) ?? [];
+		acts.push({ entryId: r.entryId, name: r.name });
+		byEvent.set(r.eventId, acts);
+	}
+	return byEvent;
+}
+
+/**
+ * The shows on which every requestable act has at least one live ask. A bill
+ * with nobody on it to ask has not been asked, so it is not among them.
+ */
+export async function eventsWithEveryActAsked(eventIds: string[]): Promise<Set<string>> {
+	const [acts, asks] = await Promise.all([
+		requestableActsByEvent(eventIds),
+		eventIds.length === 0
+			? Promise.resolve([])
+			: db
+					.select({ eventId: artifactRequest.eventId, entryId: artifactRequest.entryId })
+					.from(artifactRequest)
+					.where(
+						and(inArray(artifactRequest.eventId, eventIds), isNull(artifactRequest.cancelledAt))
+					)
+	]);
+	const asked = new Set(asks.map((a) => `${a.eventId}:${a.entryId}`));
+	return new Set(
+		[...acts]
+			.filter(([eventId, bill]) => bill.every((act) => asked.has(`${eventId}:${act.entryId}`)))
+			.map(([id]) => id)
+	);
 }
 
 /**

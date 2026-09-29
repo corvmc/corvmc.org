@@ -80,7 +80,8 @@ const createShowProject = vi.fn();
 const deleteShowProject = vi.fn();
 vi.mock('./production-project', () => ({
 	createShowProject: (input: unknown) => createShowProject(input),
-	deleteShowProject: (id: string) => deleteShowProject(id)
+	deleteShowProject: (id: string) => deleteShowProject(id),
+	announceProductionCreated: async () => undefined
 }));
 
 // The cascade's predicates have their own spec against real SQLite; here the

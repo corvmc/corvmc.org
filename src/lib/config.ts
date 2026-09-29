@@ -2436,7 +2436,7 @@ export const grantableCapabilities = {
 	// committees on it.
 	'project.manage': { label: 'Move its projects along and apply duty lists', committee: 'owned' },
 	'volunteer.manageRecurring': { label: 'Keep its recurring work', committee: 'owned' },
-	'volunteer.manageShifts': { label: 'Open work orders on its projects', committee: 'owned' },
+	'volunteer.manageShifts': { label: 'Open and keep its work orders', committee: 'owned' },
 	'event.publish': { label: "Publish its projects' draft events", committee: 'owned' },
 	'event.manage': { label: 'Decide vendor applications for its markets', committee: 'owned' },
 	'finance.read': { label: 'See its own numbers', committee: 'owned' },
