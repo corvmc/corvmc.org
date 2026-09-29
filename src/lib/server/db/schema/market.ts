@@ -77,6 +77,11 @@ export const marketVendor = sqliteTable(
 		/** The payment intent: what a refund names. */
 		stripePaymentRecordId: text('stripe_payment_record_id'),
 		refundedAt: integer('refunded_at', { mode: 'timestamp' }),
+		/** Arrival on the day (#1505). Only an `accepted` vendor carries one. */
+		checkedInAt: integer('checked_in_at', { mode: 'timestamp' }),
+		/** Null until someone says. Shown on this vendor's next application, matched by email. */
+		inviteBack: integer('invite_back', { mode: 'boolean' }),
+		inviteBackNote: text('invite_back_note'),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),

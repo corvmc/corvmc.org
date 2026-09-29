@@ -223,7 +223,9 @@ describe('route coverage', () => {
 		'/member/groups/[slug]/chat/[threadId]',
 		// One market's vendor applications, reached from the committee page's
 		// markets card. There is no "the market" without a committee named.
-		'/member/groups/[slug]/markets/[eventId]'
+		'/member/groups/[slug]/markets/[eventId]',
+		// Its market-day check-in, reached from that page's "Market day" link.
+		'/member/groups/[slug]/markets/[eventId]/check-in'
 	]);
 
 	it('lights a row for every page that has one', () => {

@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
+import { isHttpError } from '@sveltejs/kit';
+import { DomainError } from '$lib/server/domain-error';
 
 /**
  * The market remotes' two boundaries: the public form checks Turnstile before
@@ -100,7 +102,11 @@ const svc = vi.hoisted(() => ({
 	withdrawApplication: vi.fn(async () => ({ eventId: 'evt-1' })),
 	getMarketProjectId: vi.fn(async () => 'proj-dev'),
 	getVendorEventId: vi.fn(async () => 'evt-1'),
-	listCommitteeMarkets: vi.fn(async () => [])
+	listCommitteeMarkets: vi.fn(async () => []),
+	listMarketDayVendors: vi.fn(async () => []),
+	checkInVendor: vi.fn(async () => ({ eventId: 'evt-1' })),
+	markVendorNoShow: vi.fn(async () => ({ eventId: 'evt-1' })),
+	recordInviteBack: vi.fn(async () => ({ eventId: 'evt-1' }))
 }));
 vi.mock('$lib/server/market/market-service', () => svc);
 
@@ -299,5 +305,70 @@ describe('paying the fee, with no account', () => {
 		const result = await submit(remote.payVendorFeeForm, { vendorId: 'v-1', amountCents: 1500 });
 		expect(fees.startVendorFeeCheckout).toHaveBeenCalledWith('v-1', 1500, 'https://corvmc.org');
 		expect(result).toEqual({ redirectUrl: '/checkout/cs_1' });
+	});
+});
+
+describe('market day: check-in, no-shows and invite-back (#1505)', () => {
+	const writes: [string, () => Promise<unknown>, string, unknown[]][] = [
+		[
+			'checkInVendorForm',
+			() => submit(remote.checkInVendorForm, { vendorId: 'v-1', arrived: 'yes' }),
+			'checkInVendor',
+			['v-1', true]
+		],
+		[
+			'markNoShowForm',
+			() => submit(remote.markNoShowForm, { vendorId: 'v-1', noShow: 'no' }),
+			'markVendorNoShow',
+			['v-1', false]
+		],
+		[
+			'inviteBackForm',
+			() => submit(remote.inviteBackForm, { vendorId: 'v-1', inviteBack: 'yes', note: 'Sold out' }),
+			'recordInviteBack',
+			['v-1', { inviteBack: true, note: 'Sold out' }]
+		]
+	];
+
+	it.each(writes)(
+		"%s guards on the committees of the vendor's market project, with event.manage as cover",
+		async (_name, call, fn, args) => {
+			committeeOf = ['proj-dev'];
+			await call();
+			expect(svc.getVendorEventId).toHaveBeenCalledWith('v-1');
+			expect(guardedOn).toEqual([['proj-dev', 'event.manage']]);
+			expect(svc[fn as keyof typeof svc]).toHaveBeenCalledWith(...args);
+		}
+	);
+
+	it.each(writes)('%s refuses an outsider who is not staff', async (_name, call, fn) => {
+		signedIn = true;
+		staff = false;
+		await expect(call()).rejects.toMatchObject({ status: 403 });
+		expect(svc[fn as keyof typeof svc]).not.toHaveBeenCalled();
+	});
+
+	it.each(writes)("%s answers a refused move with the rule's own status", async (_n, call, fn) => {
+		class Refused extends DomainError {
+			readonly httpStatus = 409;
+		}
+		committeeOf = ['proj-dev'];
+		svc[fn as 'checkInVendor'].mockRejectedValueOnce(new Refused('A no_show cannot'));
+		const thrown = await call().catch((e: unknown) => e);
+		expect(isHttpError(thrown, 409), 'a kit 409, not the raw rule').toBe(true);
+		expect(thrown).toMatchObject({ body: { message: 'A no_show cannot' } });
+	});
+
+	it('shows the day-of list to the committees on the market, and to staff', async () => {
+		committeeOf = ['proj-dev'];
+		svc.getMarketDay.mockResolvedValueOnce({ eventId: 'evt-1' } as never);
+		await remote.getMarketDayCheckIn('evt-1');
+		expect(guardedOn).toEqual([['proj-dev', 'event.manage']]);
+		expect(svc.listMarketDayVendors).toHaveBeenCalledWith('evt-1');
+
+		signedIn = true;
+		staff = false;
+		committeeOf = [];
+		await expect(remote.getMarketDayCheckIn('evt-1')).rejects.toMatchObject({ status: 403 });
 	});
 });
