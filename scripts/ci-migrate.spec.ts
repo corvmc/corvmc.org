@@ -5,7 +5,9 @@ import {
 	classifyMigration,
 	isProductionBranch,
 	pendingMigrations,
-	planMigrate
+	planMigrate,
+	rebuiltTables,
+	tableColumns
 } from './ci-migrate.mjs';
 
 // `build` no longer runs this script — it is `vite build`, and the migrate is invoked
@@ -100,6 +102,73 @@ describe('classifyMigration', () => {
 	});
 });
 
+// A rebuild's DROP TABLE is not a removal, but the rebuild itself can be one: SQLite cannot
+// `DROP COLUMN` a column with a table-level FOREIGN KEY, so drizzle drops it by rebuilding (#1747).
+// The file never names the old columns, so the classifier is handed them.
+describe('classifyMigration on a table rebuild', () => {
+	const B = '--> statement-breakpoint\n';
+	const list = (cols: string[]) => cols.map((c) => `\`${c}\``).join(', ');
+	const rebuild = (cols: string[]) =>
+		[
+			'PRAGMA foreign_keys=OFF;',
+			`CREATE TABLE \`__new_note\` (\n${cols.map((c) => `\t\`${c}\` text`).join(',\n')},\n\tCONSTRAINT \`fk_note\` FOREIGN KEY (\`id\`) REFERENCES \`x\`(\`id\`)\n);`,
+			`INSERT INTO \`__new_note\`(${list(cols)}) SELECT ${list(cols)} FROM \`note\`;`,
+			'DROP TABLE `note`;',
+			'ALTER TABLE `__new_note` RENAME TO `note`;',
+			'CREATE INDEX `idx_note_body` ON `note` (`body`);',
+			'PRAGMA foreign_keys=ON;'
+		].join(B);
+	const columns = new Map([['note', ['id', 'body', 'group_id']]]);
+
+	it('calls a rebuild that only loses a column contract', () => {
+		expect(classifyMigration(rebuild(['id', 'body']), columns)).toBe('contract');
+	});
+
+	it('calls a rebuild that only gains a column expand', () => {
+		expect(classifyMigration(rebuild(['id', 'body', 'group_id', 'title']), columns)).toBe('expand');
+	});
+
+	it('calls a rebuild that loses one column and gains another mixed', () => {
+		expect(classifyMigration(rebuild(['id', 'body', 'title']), columns)).toBe('mixed');
+	});
+
+	it('calls a rebuild that keeps its columns expand, as before', () => {
+		expect(classifyMigration(rebuild(['id', 'body', 'group_id']), columns)).toBe('expand');
+	});
+
+	// d1-safe-rebuild wraps the drop in detach/reattach rebuilds of every child and restores
+	// their triggers. None of that changes a column, so none of it may read as expand.
+	it("still calls the drop contract inside d1-safe-rebuild's detach, reattach and trigger restore", () => {
+		const child = (tmp: string) => [
+			`CREATE TABLE \`${tmp}_child\` (\n\t\`id\` text,\n\t\`note_id\` text\n);`,
+			`INSERT INTO \`${tmp}_child\`(\`id\`, \`note_id\`) SELECT \`id\`, \`note_id\` FROM \`child\`;`,
+			'DROP TABLE `child`;',
+			`ALTER TABLE \`${tmp}_child\` RENAME TO \`child\`;`,
+			'CREATE UNIQUE INDEX `uq_child_note` ON `child` (`note_id`);'
+		];
+		const sql = [
+			'-- d1-safe-rebuild: rewritten for Cloudflare D1.\nPRAGMA defer_foreign_keys=ON;',
+			...child('__detach'),
+			rebuild(['id', 'body']),
+			...child('__reattach'),
+			'PRAGMA defer_foreign_keys=OFF;',
+			"-- restore trigger `child_note_required`\nCREATE TRIGGER `child_note_required`\nBEFORE INSERT ON `child`\nWHEN NEW.note_id IS NULL\nBEGIN\n\tSELECT RAISE(ABORT, 'child.note_id is required');\nEND;"
+		].join(B);
+		expect(classifyMigration(sql, columns)).toBe('contract');
+	});
+
+	it('reads a new trigger on a table nothing rebuilds as expand', () => {
+		expect(
+			classifyMigration(
+				"CREATE TRIGGER `t` BEFORE INSERT ON `note` BEGIN SELECT RAISE(ABORT, 'no'); END;"
+			)
+		).toBe('expand');
+	});
+
+	it('names only the tables drizzle rebuilt, not the detached children', () => {
+		expect(rebuiltTables(rebuild(['id']))).toEqual(['note']);
+	});
+});
 describe('pendingMigrations', () => {
 	it('is every local folder whose name the database has not recorded, in order', () => {
 		expect(pendingMigrations(['b', 'a', 'c'], ['a'])).toEqual(['b', 'c']);
@@ -151,6 +220,19 @@ describe('appliedMigrationNames', () => {
 		expect(JSON.parse(String(init.body)).sql).toMatch(/SELECT name FROM __drizzle_migrations/);
 	});
 
+	it("reads a table's columns from production, and none for a table it lacks", async () => {
+		const fetch = vi.fn(async () =>
+			Response.json({
+				success: true,
+				result: [{ results: [{ name: 'id' }, { name: 'body' }] }]
+			})
+		);
+		await expect(tableColumns(creds, 'note', fetch)).resolves.toEqual(['id', 'body']);
+		const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+		expect(JSON.parse(String(init.body)).sql).toBe("SELECT name FROM pragma_table_info('note')");
+		const empty = vi.fn(async () => Response.json({ success: true, result: [{ results: [] }] }));
+		await expect(tableColumns(creds, 'note', empty)).resolves.toBeUndefined();
+	});
 	it('throws when D1 reports failure, so the build stops rather than guessing', async () => {
 		const fetch = vi.fn(async () =>
 			Response.json({ success: false, errors: [{ message: 'no such table' }] }, { status: 400 })
