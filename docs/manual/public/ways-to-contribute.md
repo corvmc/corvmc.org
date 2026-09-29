@@ -19,7 +19,7 @@ The page lists the roles you can sign up for, grouped three ways:
   gear repair, and audio engineering.
 - **Committees** — listed with their remits on the page itself, and on
   `/about`. Both read the committee `group` rows, so whatever staff write as a
-  committee's bio in `/staff/groups/[id]` is what the public sees. Committees
+  committee's bio in `/staff/committees/[id]` is what the public sees. Committees
   meet monthly to guide the organization. A committee is not a shift you sign
   up for: you **apply** at `/member/volunteer/committees`, ticking as many as
   you like and answering two questions, and a chair contacts you to talk it

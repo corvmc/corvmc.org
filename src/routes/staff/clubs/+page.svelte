@@ -11,46 +11,43 @@
 	import { EntityChip } from '$lib/components/ui/entity';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
-	import CreateGroupAction from './CreateGroupAction.svelte';
+	import CreateGroupAction from '$lib/components/groups/CreateGroupAction.svelte';
 	import { getStaffGroups } from '$lib/remote/groups.remote';
 	import { formatDateShortYear } from '$lib/utils/format';
 
 	/**
-	 * Clubs and committees. Bands are not here and never will be — they are a
-	 * member's own project with their own staff surface at `/staff/bands`, and
-	 * this page exists because a program is the opposite: staff created it and
-	 * staff appointed whoever runs it.
+	 * Clubs. Committees have their own list at `/staff/committees`, and bands are
+	 * a member's own project with their own surface at `/staff/bands`. A club is
+	 * the opposite of a band: staff created it and staff appointed who runs it.
 	 */
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
 	let searchText = $state('');
 	let status = $state<'active' | 'deactivated' | ''>('');
-	let kind = $state<'club' | 'committee' | ''>('');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		status: status || undefined,
-		kind: kind || undefined,
+		kind: 'club' as const,
 		page
 	});
 
 	let result = $derived(getStaffGroups(filters));
 
-	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + (status ? 1 : 0) + (kind ? 1 : 0));
+	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + (status ? 1 : 0));
 
 	function clearFilters() {
 		searchText = '';
 		searchDebounced = '';
 		status = '';
-		kind = '';
 		page = 1;
 	}
 </script>
 
-<PageHeader title="Groups" subtitle="Clubs and committees">
+<PageHeader title="Clubs" subtitle="Programs members drop into">
 	<CreateGroupAction />
 </PageHeader>
 <PageContent>
@@ -67,19 +64,6 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Kind"
-			value={kind}
-			onchange={(e: Event) => {
-				kind = (e.currentTarget as HTMLSelectElement).value as typeof kind;
-				page = 1;
-			}}
-		>
-			<option value="">All kinds</option>
-			<option value="club">Clubs</option>
-			<option value="committee">Committees</option>
-		</Select>
-		<Select
-			size="sm"
 			aria-label="Status"
 			value={status}
 			onchange={(e: Event) => {
@@ -93,20 +77,19 @@
 		</Select>
 	</FilterBar>
 
-	<DataList {result} empty="No groups yet" onpage={(p) => (page = p)}>
+	<DataList {result} empty="No clubs yet" onpage={(p) => (page = p)}>
 		{#snippet children(groups)}
 			<Table>
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Group</th>
-					<th class="col-support">Kind</th>
+					<th>Club</th>
 					<th>Leader</th>
 					<th class="col-support cell-num">Members</th>
 					<th class="col-extra whitespace-nowrap">Created</th>
 				{/snippet}
 
 				{#each groups as g (g.id)}
-					{@const href = resolve(`/staff/groups/${g.id}`)}
+					{@const href = resolve(`/staff/clubs/${g.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px">
 							<StatusBadge status={g.deletedAt ? 'deactivated' : 'active'} />
@@ -115,16 +98,7 @@
 						     canonical page for its own type, and there is no group type —
 						     handing it a band ref sent staff to `/staff/bands/{id}` for a
 						     club. The row itself is the link. -->
-						<td class="cell-primary">
-							{g.name}
-							{#if g.openApplications > 0}
-								<Badge variant="info">
-									{g.openApplications}
-									{g.openApplications === 1 ? 'application' : 'applications'}
-								</Badge>
-							{/if}
-						</td>
-						<td class="col-support"><Badge variant="ghost">{g.kind}</Badge></td>
+						<td class="cell-primary">{g.name}</td>
 						<!-- An empty seat is legal — a leader stepped down and nobody has
 						     been appointed yet — and this list is where staff are meant to
 						     see it, which is why the join is LEFT. -->

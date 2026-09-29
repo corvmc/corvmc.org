@@ -64,6 +64,7 @@
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
 	import SettlementPanel from './SettlementPanel.svelte';
+	import ShowBudgetCard from './ShowBudgetCard.svelte';
 	import ArtifactRequestsPanel from './ArtifactRequestsPanel.svelte';
 	import { TAB_KEYS, TAB_LABELS, parseTab, type TabKey } from './tabs';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -108,6 +109,7 @@
 	const hostShift = $derived(loaded.hostShift);
 	const runOfShow = $derived(loaded.runOfShow);
 	const settlement = $derived(loaded.settlement);
+	const budget = $derived(loaded.budget);
 	/** The advance question: who has told us nothing at all. */
 	const ridersMissing = $derived(riders.filter((r) => r.empty).length);
 
@@ -1561,6 +1563,9 @@
 			class="space-y-6"
 			class:hidden={tab !== 'settlement'}
 		>
+			{#if budget}
+				<ShowBudgetCard projectId={budget.projectId} burn={budget.burn} />
+			{/if}
 			<SettlementPanel {settlement} eventId={evt.id} />
 		</div>
 	{/if}

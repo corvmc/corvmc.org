@@ -58,7 +58,7 @@ export interface CreateBandData {
 	name: string;
 	bio?: string;
 	/**
-	 * Staff's to set, and only at creation from `/staff/groups`. Omitted — which
+	 * Staff's to set, and only at creation from `/staff/clubs`. Omitted — which
 	 * is every band, since a band is self-created — leaves the column defaults:
 	 * `invite_only` and a `public` listing.
 	 */
@@ -195,7 +195,7 @@ export class NotAnActiveBandMemberError extends DomainError {
  *
  * `docs/specs/shipped/groups-spec.md:818` is the one place the role table differs by
  * kind: an appointed program leader runs the program, they do not own it, and
- * ending a CMC program is a staff decision made in `/staff/groups`.
+ * ending a CMC program is a staff decision made in `/staff/clubs`.
  */
 export class CannotDeleteProgramError extends DomainError {
 	readonly httpStatus = 403;
@@ -956,7 +956,7 @@ export async function leaveBand(bandId: string, userId: string) {
  *
  * It was kind-blind, so it would have started listing every club the day the
  * first one was created — a club with a tier column, a premium filter and a link
- * to a band page it does not have. `/staff/groups` has its own read in
+ * to a band page it does not have. `/staff/clubs` has its own read in
  * `group-service.ts` for exactly that reason: what these two lists select, and
  * where their rows link, differ enough that sharing one query means one of them
  * is always slightly wrong.
