@@ -521,14 +521,9 @@ export async function listForUser(
 /**
  * Split a roster by status, with one bucket per value of `groupMemberStatuses`.
  *
- * Built from the vocabulary rather than naming the buckets, which is the point:
- * every consumer that splits a roster used to write
- * `rows.filter((r) => r.status === 'active')` beside
- * `rows.filter((r) => r.status === 'pending')`, so adding `'requested'` would
- * have dropped those rows into neither bucket and shown nobody anything — a
- * fail-quiet with no failing test and nothing to see in a diff. Here a new
- * status gets a bucket automatically, and a consumer that forgets to render it
- * is at worst incomplete rather than silently lossy.
+ * Built from the vocabulary rather than naming the buckets: hand-written
+ * filters drop a new status into no bucket, a fail-quiet with no failing test.
+ * Here a new status gets a bucket automatically.
  */
 export function partitionByStatus<T extends { status: GroupMemberStatus }>(
 	rows: T[]

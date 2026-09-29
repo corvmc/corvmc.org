@@ -139,9 +139,6 @@ export const tableOrder = [
 	'group_capability',
 	// References only `user`; its choices reference it and `group`, so the pair
 	// sits together and after both.
-	'committee_application',
-	'committee_application_choice',
-	// The same shape for every kind; the committee pair above retires after it.
 	'group_application',
 	'group_application_choice',
 	'payment_cache',

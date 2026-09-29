@@ -76,7 +76,7 @@ const getUserRole = vi.hoisted(() => vi.fn(async (): Promise<string | null> => n
 vi.mock('$lib/server/band/band-service', () => ({
 	getMembers: vi.fn(async () => []),
 	getUserRole,
-	partitionByStatus: () => ({ active: [], pending: [], requested: [] }),
+	partitionByStatus: () => ({ active: [], pending: [] }),
 	acceptInvitation: vi.fn(),
 	declineInvitation: vi.fn(),
 	invite: vi.fn(),
