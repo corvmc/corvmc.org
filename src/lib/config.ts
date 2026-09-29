@@ -1334,11 +1334,43 @@ export const dutyListSubjectLabels: Record<DutyListSubject, string> = {
  * without a deploy, which is the same argument `duty_list` makes for being a
  * table rather than a config tuple.
  */
-export const dutyListAutoApplyTriggers = ['reservation.first'] as const;
+export const dutyListAutoApplyTriggers = ['reservation.first', 'production.created'] as const;
 export type DutyListAutoApplyTrigger = (typeof dutyListAutoApplyTriggers)[number];
 
 export const dutyListAutoApplyTriggerLabels: Record<DutyListAutoApplyTrigger, string> = {
-	'reservation.first': "A member's first rehearsal booking"
+	'reservation.first': "A member's first rehearsal booking",
+	'production.created': 'A new show'
+};
+
+/**
+ * The fact about a show that says a committee's work order is done
+ * (docs/specs/committee-deliverables-spec.md). Closed, because each member is a
+ * typed function in `volunteer/done-conditions.ts`; a template picks one. Adding
+ * a condition is one entry here and one in that registry.
+ */
+export const workDoneConditions = [
+	'production_confirmed',
+	'artifacts_requested',
+	'poster_set',
+	'description_set',
+	'event_published',
+	'shifts_filled',
+	'close_out_done',
+	'production_settled',
+	'tasks_ticked'
+] as const;
+export type WorkDoneCondition = (typeof workDoneConditions)[number];
+
+export const workDoneConditionLabels: Record<WorkDoneCondition, string> = {
+	production_confirmed: 'The production is confirmed',
+	artifacts_requested: 'Every act has been asked for its artifacts',
+	poster_set: 'The listing has a poster',
+	description_set: 'The listing has a description',
+	event_published: 'The listing is published',
+	shifts_filled: 'Every crew shift is filled',
+	close_out_done: 'The load-out checklist is done',
+	production_settled: 'The production is settled',
+	tasks_ticked: 'Its own tasks are ticked'
 };
 
 /**

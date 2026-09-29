@@ -4,7 +4,8 @@ import { query } from '$app/server';
 import { form } from './_remote';
 import { requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
-import { dutyListAnchors, dutyListSubjects } from '$lib/config';
+import { dutyListAnchors, dutyListSubjects, workDoneConditions } from '$lib/config';
+import { listCommittees } from '$lib/server/project/project-service';
 import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
 import {
 	addDutyListItem as addItemService,
@@ -15,7 +16,8 @@ import {
 	listDutyLists,
 	removeDutyListItem as removeItemService,
 	setWorkTaskDone as setTaskService,
-	updateDutyList as updateService
+	updateDutyList as updateService,
+	updateDutyListItem as updateItemService
 } from '$lib/server/volunteer/duty-list-service';
 import { getStaffShiftPage, getVolunteerWorklist } from './volunteer.remote';
 
@@ -88,12 +90,13 @@ export const getDutyListPage = query(z.string(), async (id) => {
 	const detail = await getDutyListDetail(id);
 	if (!detail) error(404, 'Duty list not found');
 
-	const roles = await listVolunteerRoles();
+	const [roles, committees] = await Promise.all([listVolunteerRoles(), listCommittees()]);
 
 	return {
 		list: detail.list,
 		items: detail.items,
-		roles: roles.filter((r) => r.isActive).map((r) => ({ id: r.id, name: r.name, group: r.group }))
+		roles: roles.filter((r) => r.isActive).map((r) => ({ id: r.id, name: r.name, group: r.group })),
+		committees
 	};
 });
 
@@ -171,6 +174,21 @@ export const deleteDutyList = form(z.object({ id: z.string().min(1) }), async (d
 // Item forms
 // ---------------------------------------------------------------------------
 
+/** Whose job the item is, and what fact says it is done. Blank owner is staff's. */
+const ownershipShape = {
+	title: z.string().optional(),
+	groupId: z.string().optional(),
+	doneWhen: z.enum(['', ...workDoneConditions]).optional()
+};
+
+function ownershipInput(data: { title?: string; groupId?: string; doneWhen?: string }) {
+	return {
+		title: data.title ?? null,
+		groupId: data.groupId || null,
+		doneWhen: (data.doneWhen || null) as (typeof workDoneConditions)[number] | null
+	};
+}
+
 const itemShape = {
 	volunteerRoleId: z.string().min(1, 'Pick a role'),
 	/** `scheduled` uses the offset and duration; `due` uses the offset alone. */
@@ -182,7 +200,8 @@ const itemShape = {
 	capacity: z.string().default('1'),
 	notes: z.string().optional(),
 	sortOrder: z.string().default('0'),
-	tasks: z.string().optional()
+	tasks: z.string().optional(),
+	...ownershipShape
 };
 
 function itemInput(data: {
@@ -196,6 +215,9 @@ function itemInput(data: {
 	notes?: string;
 	sortOrder: string;
 	tasks?: string;
+	title?: string;
+	groupId?: string;
+	doneWhen?: string;
 }) {
 	const offset = toMinutes(data.offsetAmount, data.offsetUnit, data.offsetDirection);
 	const scheduled = data.kind === 'scheduled';
@@ -212,7 +234,8 @@ function itemInput(data: {
 		capacity: parseInt(data.capacity, 10),
 		notes: data.notes,
 		sortOrder: parseInt(data.sortOrder, 10) || 0,
-		tasks: parseTasks(data.tasks)
+		tasks: parseTasks(data.tasks),
+		...ownershipInput(data)
 	};
 }
 
@@ -223,6 +246,21 @@ export const addDutyListItem = form(
 		try {
 			await addItemService(data.dutyListId, itemInput(data));
 			await Promise.all([getDutyListPage(data.dutyListId).refresh(), getDutyLists().refresh()]);
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/** Re-own an item, retitle it, or change what says it is done. Applied shows keep their copy. */
+export const updateDutyListItem = form(
+	z.object({ id: z.string().min(1), dutyListId: z.string().min(1), ...ownershipShape }),
+	async (data) => {
+		await requireCapability('volunteer.manageRoles');
+		try {
+			await updateItemService(data.id, ownershipInput(data));
+			await getDutyListPage(data.dutyListId).refresh();
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);

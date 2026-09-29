@@ -125,6 +125,34 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			announcements: [],
 			// The invite-only leader persona already chairs Facilities.
 			leaderFromPool: true
+		},
+		// The two committees a show's deliverables name besides Booking and
+		// Production (#1701), under the slugs production has them by.
+		{
+			kind: 'committee' as const,
+			name: 'Communications Committee',
+			slug: 'communications-committee',
+			bio: 'Coordinate show posters, announce on social media and with local press. Write and deliver the newsletter.',
+			joinPolicy: 'invite_only' as const,
+			joinInstructions: null,
+			positions: ['Chair', 'Member'],
+			memberCount: 2,
+			capabilityGrants: ['finance.read', 'project.manage'],
+			announcements: [],
+			leaderFromPool: true
+		},
+		{
+			kind: 'committee' as const,
+			name: 'Art and Merchandise Committee',
+			slug: 'art-and-merchandise-committee',
+			bio: 'Create and manage CMC merch, and work with local artists for poster art.',
+			joinPolicy: 'invite_only' as const,
+			joinInstructions: null,
+			positions: ['Chair', 'Member'],
+			memberCount: 2,
+			capabilityGrants: ['finance.read', 'project.manage'],
+			announcements: [],
+			leaderFromPool: true
 		}
 	];
 

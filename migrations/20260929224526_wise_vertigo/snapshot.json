@@ -1,10 +1,10 @@
 {
-  "id": "1091d23f-c8df-4e27-8e3b-555a15624f0f",
-  "prevIds": [
-    "5d47603b-8420-4eb9-b430-eda9ee04812a"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "c514a719-5fe3-4896-aca1-08f6f404fbcb",
+  "prevIds": [
+    "2ac77c77-8b9b-4fa0-aafb-6c2f7a2c0849"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -388,6 +388,10 @@
     },
     {
       "name": "project",
+      "entityType": "tables"
+    },
+    {
+      "name": "project_committee",
       "entityType": "tables"
     },
     {
@@ -2511,6 +2515,16 @@
       "default": "'draft'",
       "generated": null,
       "name": "status",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
       "entityType": "columns",
       "table": "production"
     },
@@ -8675,6 +8689,36 @@
       "table": "duty_list_item"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "duty_list_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "duty_list_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "done_when",
+      "entityType": "columns",
+      "table": "duty_list_item"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -10090,6 +10134,26 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "done_when",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "created_by_user_id",
       "entityType": "columns",
       "table": "work_order"
@@ -10906,6 +10970,16 @@
     },
     {
       "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'general'",
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -10993,6 +11067,46 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "project_committee"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "project_committee"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "role",
+      "entityType": "columns",
+      "table": "project_committee"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "project_committee"
     },
     {
       "type": "text",
@@ -14956,6 +15070,21 @@
     },
     {
       "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "nameExplicit": false,
+      "name": "fk_production_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "production"
+    },
+    {
+      "columns": [
         "producer_user_id"
       ],
       "tableTo": "user",
@@ -16576,6 +16705,21 @@
     },
     {
       "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_duty_list_item_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "duty_list_item"
+    },
+    {
+      "columns": [
         "volunteer_role_id"
       ],
       "tableTo": "volunteer_role",
@@ -17161,6 +17305,21 @@
     },
     {
       "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_work_order_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
         "created_by_user_id"
       ],
       "tableTo": "user",
@@ -17383,6 +17542,36 @@
       "name": "fk_project_created_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "project"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_project_committee_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "project_committee"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_project_committee_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "project_committee"
     },
     {
       "columns": [
@@ -18478,6 +18667,16 @@
       "name": "volunteer_role_certification_pk",
       "entityType": "pks",
       "table": "volunteer_role_certification"
+    },
+    {
+      "columns": [
+        "project_id",
+        "group_id"
+      ],
+      "nameExplicit": false,
+      "name": "project_committee_pk",
+      "entityType": "pks",
+      "table": "project_committee"
     },
     {
       "columns": [
@@ -20160,6 +20359,20 @@
       "name": "uq_event_recurring_instance",
       "entityType": "indexes",
       "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_production_project",
+      "entityType": "indexes",
+      "table": "production"
     },
     {
       "columns": [
@@ -22524,6 +22737,24 @@
     {
       "columns": [
         {
+          "value": "group_id",
+          "isExpression": false
+        },
+        {
+          "value": "due_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "group_id is not null and resolved_at is null and cancelled_at is null",
+      "origin": "manual",
+      "name": "work_order_group_open_idx",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
           "value": "created_at",
           "isExpression": false
         }
@@ -22764,6 +22995,20 @@
     {
       "columns": [
         {
+          "value": "kind",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_project_kind",
+      "entityType": "indexes",
+      "table": "project"
+    },
+    {
+      "columns": [
+        {
           "value": "suggestion_id",
           "isExpression": false
         }
@@ -22788,6 +23033,20 @@
       "name": "uq_project_ballot",
       "entityType": "indexes",
       "table": "project"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_project_committee_group",
+      "entityType": "indexes",
+      "table": "project_committee"
     },
     {
       "columns": [

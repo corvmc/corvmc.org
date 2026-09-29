@@ -274,7 +274,7 @@ async function main() {
 	// Last of the volunteer block — it grants against the certifications above and
 	// schedules against the role catalog.
 	const personas = await seedVolunteerPersonas(roles, volunteerRoles, certifications, adminUser);
-	const dutyLists = await seedDutyLists(volunteerRoles, events);
+	const dutyLists = await seedDutyLists(volunteerRoles, events, groups);
 	// After the duty lists and the reservations both: it seeds a list of its own
 	// and hangs work orders off bookings that already exist.
 	const orientation = await seedOrientation(volunteerRoles, allUsers);

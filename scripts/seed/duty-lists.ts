@@ -16,22 +16,21 @@ import { batchInsert } from './db';
  * and an unscheduled work order is invisible locally, which is the difference
  * the feature is about.
  */
-export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
+export async function seedDutyLists(volunteerRoles: any[], events: any[], groups: any[]) {
 	console.log('Seeding duty lists...');
 	const byName = new Map(volunteerRoles.map((r: any) => [r.name, r]));
-	const bookingLead = byName.get('Booking Lead');
 	const setup = byName.get('Event Setup');
 	const sound = byName.get('Sound Engineering');
 	const desk = byName.get('Front Desk');
 	const teardown = byName.get('Load-Out & Teardown');
-	if (!bookingLead || !setup || !sound || !desk || !teardown) return { lists: 0, workOrders: 0 };
+	if (!setup || !sound || !desk || !teardown) return { lists: 0, workOrders: 0 };
 
 	await batchInsert(dutyList, [
 		{
 			id: 'seed-duty-standard-show',
 			name: 'Standard Show',
 			description:
-				'What it takes to run an ordinary night: someone to advance it, someone to set the room, someone on the desk, someone on the board, and enough hands to put it all away.',
+				'The crew for an ordinary night: someone to set the room, someone on the desk, someone on the board, and enough hands to put it all away. The advance is a Production deliverable now.',
 			anchor: 'doors' as const,
 			createdByUserId: 'seed-vol-coordinator'
 		},
@@ -103,24 +102,6 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
 
 	const items = [
 		{
-			id: 'seed-duty-item-booking',
-			volunteerRoleId: bookingLead.id,
-			// A week before doors, and no window: the Booking Lead does this when
-			// they can, not between two times.
-			dueOffsetMinutes: -10_080,
-			capacity: 1,
-			notes: 'Everything that has to be true before the day of.',
-			sortOrder: 10,
-			tasks: [
-				'Confirm the lineup and set times with every act',
-				'Collect tech riders and stage plots',
-				'Confirm backline — what we supply, what they bring',
-				'Send load-in details and the door split',
-				'Poster to social and the mailing list',
-				'Ticket link live and tested'
-			]
-		},
-		{
 			id: 'seed-duty-item-setup',
 			volunteerRoleId: setup.id,
 			offsetMinutes: -180,
@@ -169,7 +150,10 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
 	const show = events.find(
 		(e: any) => e.status === 'published' && e.kind === 'show' && e.endsAt && e.startsAt > new Date()
 	);
-	if (!show) return { lists: 3, workOrders: 0 };
+	if (!show) {
+		await seedShowDeliverables(byName, groups, null);
+		return { lists: 4, workOrders: 0 };
+	}
 
 	const anchor: Date = show.doorsAt ?? show.startsAt;
 	const at = (minutes: number) => new Date(anchor.getTime() + minutes * 60_000);
@@ -178,31 +162,27 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
 		id: `seed-duty-wo-${n}`,
 		volunteerRoleId: item.volunteerRoleId,
 		eventId: show.id,
-		startsAt: item.offsetMinutes !== undefined ? at(item.offsetMinutes) : null,
-		endsAt:
-			item.offsetMinutes !== undefined
-				? at(item.offsetMinutes + (item.durationMinutes ?? 0))
-				: null,
-		dueAt: item.dueOffsetMinutes !== undefined ? at(item.dueOffsetMinutes) : null,
+		// Every item on the crew list is a window; the deadlines are deliverables now.
+		startsAt: at(item.offsetMinutes),
+		endsAt: at(item.offsetMinutes + item.durationMinutes),
 		capacity: item.capacity,
-		notes: item.notes ?? null,
 		dutyListId: 'seed-duty-standard-show',
 		createdByUserId: 'seed-vol-coordinator'
 	}));
 	await batchInsert(workOrder, workOrders, 8);
 
-	// Half of the Booking Lead's advance list already done, so the partly-worked
-	// state is rendered rather than only the empty and finished ones.
+	// The setup crew's list partly done, so the partly-worked state is rendered
+	// rather than only the empty and finished ones.
 	const tasks = items.flatMap((item, n) =>
 		item.tasks.map((label, i) => ({
 			id: `seed-duty-task-${n}-${i}`,
 			workOrderId: `seed-duty-wo-${n}`,
 			label,
 			sortOrder: i,
-			...(n === 0 && i < 3
+			...(n === 0 && i < 2
 				? {
 						done: true,
-						doneAt: new Date(Date.now() - (3 - i) * 86_400_000),
+						doneAt: new Date(Date.now() - (2 - i) * 86_400_000),
 						doneByUserId: 'seed-vol-coordinator'
 					}
 				: {})
@@ -210,5 +190,124 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
 	);
 	await batchInsert(workTask, tasks, 12);
 
-	return { lists: 3, workOrders: workOrders.length };
+	const deliverables = await seedShowDeliverables(byName, groups, show);
+
+	return { lists: 4, workOrders: workOrders.length + deliverables };
+}
+
+const DAY = 1440;
+
+/**
+ * A show's committee deliverables (#1701): the `Show deliverables` list, as the
+ * migration writes it for production, applied to the same upcoming show so a
+ * committee's Open items tab and the console's Deliverables card have rows.
+ */
+async function seedShowDeliverables(byName: Map<string, any>, groups: any[], show: any) {
+	const committee = (slug: string) => groups.find((g: any) => g.slug === slug)?.id ?? null;
+	const booking = committee('booking-committee');
+	const production = committee('production-committee');
+	const comms = committee('communications-committee');
+	const art = committee('art-and-merchandise-committee');
+	const role = (name: string) => byName.get(name)?.id;
+	const [lead, poster, promo, prodLead] = [
+		role('Booking Lead'),
+		role('Poster Art'),
+		role('Show Promotion'),
+		role('Production Lead')
+	];
+	if (!lead || !poster || !promo || !prodLead) return 0;
+
+	await batchInsert(dutyList, [
+		{
+			id: 'seed-duty-show-deliverables',
+			name: 'Show deliverables',
+			description:
+				'What each committee owes a show, and when. Stamped onto every new show; each item is done when the fact it names is true and its tasks are ticked.',
+			anchor: 'start' as const,
+			subject: 'event' as const,
+			autoApplyOn: 'production.created' as const,
+			createdByUserId: 'seed-vol-coordinator'
+		}
+	]);
+
+	const defs = [
+		['Lineup confirmed, deal agreed', booking, lead, -28 * DAY, 'production_confirmed', []],
+		['Act artifacts requested', booking, lead, -21 * DAY, 'artifacts_requested', []],
+		['Poster art made', art, poster, -21 * DAY, 'poster_set', []],
+		['Description written', booking, lead, -21 * DAY, 'description_set', []],
+		[
+			'Poster distributed; announced on social, press, newsletter',
+			comms,
+			promo,
+			-14 * DAY,
+			'event_published',
+			['Poster distributed', 'Announced on social', 'Sent to press', 'In the newsletter']
+		],
+		[
+			'Advance with the acts',
+			production,
+			prodLead,
+			-7 * DAY,
+			'tasks_ticked',
+			[
+				'Set times confirmed with every act',
+				'Riders and stage plots in',
+				'Backline agreed',
+				'Load-in details and door split sent'
+			]
+		],
+		['Crew shifts filled', production, prodLead, -3 * DAY, 'shifts_filled', []],
+		['Load-out and room reset', production, prodLead, 720, 'close_out_done', []],
+		['Settlement recorded', production, prodLead, 3 * DAY, 'production_settled', []]
+	] as const;
+
+	const items = defs.map(([title, groupId, volunteerRoleId, due, doneWhen, tasks], n) => ({
+		id: `seed-deliverable-item-${n}`,
+		dutyListId: 'seed-duty-show-deliverables',
+		volunteerRoleId,
+		title,
+		groupId,
+		doneWhen,
+		dueOffsetMinutes: due,
+		capacity: 1,
+		sortOrder: (n + 1) * 10,
+		tasks: [...tasks]
+	}));
+	await batchInsert(dutyListItem, items, 6);
+	if (!show) return 0;
+
+	const at = (minutes: number) => new Date(show.startsAt.getTime() + minutes * 60_000);
+	await batchInsert(
+		workOrder,
+		items.map((item, n) => ({
+			id: `seed-deliverable-wo-${n}`,
+			volunteerRoleId: item.volunteerRoleId,
+			eventId: show.id,
+			projectId: show.projectId ?? null,
+			title: item.title,
+			groupId: item.groupId,
+			doneWhen: item.doneWhen,
+			dueAt: at(item.dueOffsetMinutes),
+			dutyListId: 'seed-duty-show-deliverables',
+			createdByUserId: 'seed-vol-coordinator'
+		})),
+		6
+	);
+	// Half the advance ticked, so an item waiting on its last tasks renders.
+	await batchInsert(
+		workTask,
+		items.flatMap((item, n) =>
+			item.tasks.map((label, i) => ({
+				id: `seed-deliverable-task-${n}-${i}`,
+				workOrderId: `seed-deliverable-wo-${n}`,
+				label,
+				sortOrder: i,
+				...(item.title === 'Advance with the acts' && i < 2
+					? { done: true, doneAt: new Date(), doneByUserId: 'seed-vol-coordinator' }
+					: {})
+			}))
+		),
+		12
+	);
+	return items.length;
 }

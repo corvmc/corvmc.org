@@ -16,12 +16,15 @@
 		dutyListAnchors,
 		dutyListAnchorLabels,
 		dutyListSubjects,
-		dutyListSubjectLabels
+		dutyListSubjectLabels,
+		workDoneConditions,
+		workDoneConditionLabels
 	} from '$lib/config';
 	import {
 		getDutyListPage,
 		addDutyListItem,
 		updateDutyList,
+		updateDutyListItem,
 		removeDutyListItem,
 		deleteDutyList
 	} from '$lib/remote/duty-lists.remote';
@@ -45,6 +48,10 @@
 		{ value: 'hours', label: 'hours' },
 		{ value: 'days', label: 'days' }
 	];
+	const doneWhenOptions = [
+		{ value: '', label: 'Only when somebody marks it done' },
+		...workDoneConditions.map((c) => ({ value: c, label: workDoneConditionLabels[c] }))
+	];
 	const directionOptions = [
 		{ value: 'before', label: 'before' },
 		{ value: 'after', label: 'after' }
@@ -54,6 +61,10 @@
 {#await data then d}
 	{@const anchorLabel = dutyListAnchorLabels[d.list.anchor]}
 	{@const roleOptions = d.roles.map((r) => ({ value: r.id, label: r.name }))}
+	{@const ownerOptions = [
+		{ value: '', label: 'Staff' },
+		...d.committees.map((c) => ({ value: c.id, label: c.name }))
+	]}
 
 	<PageHeader title={d.list.name} subtitle="Duty list" backHref="/staff/volunteer/duty-lists">
 		<!-- The status its list row shows. It existed on this page only as a
@@ -113,6 +124,20 @@
 				<input type="hidden" name="dutyListId" value={d.list.id} />
 				<FormField name="volunteerRoleId" label="Role" type="select" options={roleOptions} />
 				<FormField
+					name="title"
+					label="Title"
+					type="text"
+					description="What the work order is called. Blank uses the role's name."
+				/>
+				<FormField name="groupId" label="Owner" type="select" options={ownerOptions} />
+				<FormField
+					name="doneWhen"
+					label="Done when"
+					type="select"
+					options={doneWhenOptions}
+					description="A fact about the show. Its tasks still have to be ticked as well."
+				/>
+				<FormField
 					name="kind"
 					label="Kind"
 					type="select"
@@ -171,6 +196,7 @@
 				<Table>
 					{#snippet head()}
 						<th>Role</th>
+						<th class="col-support">Owner</th>
 						<th>When</th>
 						<th class="col-support">For</th>
 						<th class="cell-num">People</th>
@@ -184,9 +210,20 @@
 								<!-- The role as the record it is. `EntityIdentity` at `sm` is the
 								     staff table's primary cell, which this was a hand-written
 								     copy of — name in bold, muted subline. -->
+								{#if item.title}
+									<div class="font-medium">{item.title}</div>
+								{/if}
 								<EntityIdentity ref={item.role} />
 								{#if item.notes}
 									<div class="line-clamp-1 text-sm text-base-content/60">{item.notes}</div>
+								{/if}
+							</td>
+							<td class="col-support">
+								{item.groupName ?? 'Staff'}
+								{#if item.doneWhen}
+									<div class="text-sm text-base-content/60">
+										{workDoneConditionLabels[item.doneWhen]}
+									</div>
 								{/if}
 							</td>
 							<td class="whitespace-nowrap">
@@ -203,20 +240,52 @@
 							</td>
 							<td class="cell-num">{item.capacity}</td>
 							<td class="col-support cell-num">{item.tasks.length}</td>
-							<td>
-								<Action
-									action={removeDutyListItem}
-									label="Remove"
-									variant="ghost"
-									size="sm"
-									confirm="Remove this item from the list? Work orders already created from it are not touched."
-									successToast="Item removed"
-								>
-									{#snippet form()}
-										<input type="hidden" name="id" value={item.id} />
-										<input type="hidden" name="dutyListId" value={d.list.id} />
-									{/snippet}
-								</Action>
+							<td class="w-px">
+								<div class="flex w-max justify-end gap-2">
+									<Action
+										action={updateDutyListItem.for(item.id)}
+										label="Edit"
+										aria-label={`Edit ${item.title ?? item.roleName}`}
+										variant="ghost"
+										size="sm"
+										modalTitle="Edit the item"
+										submitLabel="Save"
+										successToast="Saved"
+									>
+										{#snippet form()}
+											<input type="hidden" name="id" value={item.id} />
+											<input type="hidden" name="dutyListId" value={d.list.id} />
+											<FormField name="title" label="Title" type="text" value={item.title ?? ''} />
+											<FormField
+												name="groupId"
+												label="Owner"
+												type="select"
+												options={ownerOptions}
+												value={item.groupId ?? ''}
+											/>
+											<FormField
+												name="doneWhen"
+												label="Done when"
+												type="select"
+												options={doneWhenOptions}
+												value={item.doneWhen ?? ''}
+											/>
+										{/snippet}
+									</Action>
+									<Action
+										action={removeDutyListItem}
+										label="Remove"
+										variant="ghost"
+										size="sm"
+										confirm="Remove this item from the list? Work orders already created from it are not touched."
+										successToast="Item removed"
+									>
+										{#snippet form()}
+											<input type="hidden" name="id" value={item.id} />
+											<input type="hidden" name="dutyListId" value={d.list.id} />
+										{/snippet}
+									</Action>
+								</div>
 							</td>
 						</tr>
 					{/each}
