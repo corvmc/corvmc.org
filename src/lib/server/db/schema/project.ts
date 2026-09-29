@@ -51,17 +51,6 @@ export const project = sqliteTable(
 		/** `'production'` when a `production` row specialises this one. Never changes after. */
 		kind: text('kind', { enum: projectKinds }).notNull().default('general'),
 
-		/**
-		 * The owning committee: a `group` with `kind = 'committee'`, enforced by
-		 * the service rather than the schema (a CHECK cannot cross tables). In the
-		 * first migration deliberately — committee-scoped views are what make
-		 * projects usable by the people doing the work rather than another
-		 * staff-only queue, and ownership is far harder to retrofit than to start
-		 * with. Set-null: a disbanded committee leaves its projects unowned, not
-		 * deleted.
-		 */
-		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
-
 		/** The suggestion this answers, when a member asked for it. One project per suggestion. */
 		suggestionId: text('suggestion_id').references(() => suggestion.id, { onDelete: 'set null' }),
 
@@ -87,7 +76,6 @@ export const project = sqliteTable(
 			.default(sql`(unixepoch())`)
 	},
 	(t) => [
-		index('idx_project_group').on(t.groupId),
 		index('idx_project_status').on(t.status),
 		index('idx_project_kind').on(t.kind),
 		// Partial, and in the table config rather than `.unique()` on the column:
@@ -114,8 +102,8 @@ export type Project = typeof project.$inferSelect;
 export type NewProject = typeof project.$inferInsert;
 
 /**
- * The committees taking part in a project, and why. Replaces the single owner
- * in `project.group_id`: a show has Booking and Production both.
+ * The committees taking part in a project, and why: a show has Booking and
+ * Production both, and a general project's owner is its `owner` row.
  *
  * A committee grant with `'owned'` reach resolves against every project its
  * committee has a row here for. `role` records why it is there and grants

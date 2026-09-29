@@ -51,9 +51,8 @@
 	const suggestionOptions = $derived(
 		data.suggestions.map((s) => ({ value: s.id, label: s.title }))
 	);
-	const committeeName = $derived(
-		project.groupId ? (data.committees.find((c) => c.id === project.groupId)?.name ?? null) : null
-	);
+	const owner = $derived(data.projectCommittees.find((c) => c.role === 'owner') ?? null);
+	const committeeNames = $derived(data.projectCommittees.map((c) => c.name).join(', '));
 	const overBudget = $derived(burn.remainingCents !== null && burn.remainingCents < 0);
 
 	/**
@@ -83,7 +82,7 @@
 
 <PageHeader
 	title={project.name}
-	subtitle={committeeName ?? 'No committee owns this yet'}
+	subtitle={committeeNames || 'No committee owns this yet'}
 	backHref="/staff/projects"
 >
 	<Action
@@ -157,7 +156,7 @@
 				type="select"
 				label="Owning committee"
 				options={committeeOptions}
-				value={project.groupId ?? ''}
+				value={owner?.groupId ?? ''}
 			/>
 			<Field
 				field={editFields.suggestionId}

@@ -292,7 +292,7 @@ async function main() {
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
-	// After the committees and every show exist: owners, and Booking and Production on each show.
+	// After the committees and every show exist: Booking and Production on each show.
 	const projectCommittees = await seedProjectCommittees();
 	const maintenance = await seedMaintenanceSchedules(adminUser.id, users[0]?.id);
 	// Needs the bands and somebody to have bought something. Writes real audio
