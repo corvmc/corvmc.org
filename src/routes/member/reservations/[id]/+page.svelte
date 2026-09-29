@@ -13,13 +13,20 @@
 	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
 	import { EntityIdentity, EntityChip } from '$lib/components/ui/entity';
 	import { CancelReservationAction, ConfirmWaitlistedAction } from '$lib/components/actions';
+	import ReaderPayment from './ReaderPayment.svelte';
 
+	let paidAtReader = $state(false);
 	let data = $derived(await getReservationDetail(page.params.id!));
 
 	const res = $derived(data.reservation);
 	const isPast = $derived(res.startsAt.getTime() <= Date.now());
 
 	const refresh = () => getReservationDetail(page.params.id!).refresh();
+
+	function readerPaid() {
+		paidAtReader = true;
+		refresh();
+	}
 </script>
 
 <PageHeader width="md" title="Your Reservation" backHref="/member/reservations" />
@@ -45,6 +52,10 @@
 			<Fact label="Notes" wrap>{res.notes}</Fact>
 		{/if}
 	</DefinitionList>
+
+	{#if paidAtReader && res.status === 'confirmed'}
+		<Alert type="success">Paid. Your booking is confirmed.</Alert>
+	{/if}
 
 	{#if res.status === 'confirmed'}
 		<!-- A card only when there is a code to frame. Four of the five branches
@@ -102,6 +113,16 @@
 		<Button href="/member/reservations/{res.id}/pay" variant="primary" class="w-full">
 			Pay for this session
 		</Button>
+	{/if}
+
+	<!-- On the day, with a reader configured: the amount goes to the reader by
+	     the door and the member taps there. -->
+	{#if data.reader.payable}
+		<ReaderPayment
+			reservationId={res.id}
+			canSimulate={data.reader.canSimulate}
+			onpaid={readerPaid}
+		/>
 	{/if}
 
 	<!--

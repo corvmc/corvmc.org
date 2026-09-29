@@ -319,6 +319,11 @@ export async function seedUsagePersonaLife(
 	const tuesday = Object.fromEntries(
 		[-7, 0, 7].map((d) => [d, holdRoom(ptDate(d, 18), ptDate(d, 20), 'regular')])
 	);
+	// Running as the seed finishes and still owing, so "Pay at the reader" shows
+	// on its detail page against the fake reader for a few hours after a reset.
+	const halfHour = 30 * 60_000;
+	const walkUpStart = new Date(Math.floor(Date.now() / halfHour) * halfHour);
+	const walkUp = holdRoom(walkUpStart, new Date(walkUpStart.getTime() + 3 * 3_600_000), 'regular');
 
 	const reservations = await batchInsert(
 		reservation,
@@ -355,6 +360,16 @@ export async function seedUsagePersonaLife(
 				...tuesday[7],
 				notes: 'Drum practice',
 				creditsUsed: null,
+				cashDueCents: 2 * HOURLY_RATE_CENTS
+			},
+			{
+				bookerType: 'user' as const,
+				bookerId: regular.id,
+				createdByUserId: regular.id,
+				status: 'confirmed' as const,
+				...walkUp,
+				notes: 'Walk-up session',
+				creditsUsed: 1,
 				cashDueCents: 2 * HOURLY_RATE_CENTS
 			}
 		],

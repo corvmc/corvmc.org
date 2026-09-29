@@ -12,6 +12,7 @@ const {
 	completeFakeCheckout,
 	outcomeForCard,
 	FAKE_TERMINAL_LOCATION_ID,
+	FAKE_TERMINAL_READER_ID,
 	completeFakeTerminalPayment
 } = await import('./fake-gateway');
 const { createStripeGateway } = await import('./stripe-gateway');
@@ -45,7 +46,8 @@ const PORT_SURFACE: ReadonlyArray<readonly [keyof PaymentGateway, readonly strin
 const NESTED_SURFACE = [
 	['checkout', 'sessions', ['create', 'retrieve', 'list']],
 	['terminal', 'connectionTokens', ['create']],
-	['terminal', 'locations', ['retrieve']]
+	['terminal', 'locations', ['retrieve']],
+	['terminal', 'readers', ['retrieve', 'processPaymentIntent', 'cancelAction']]
 ] as const;
 
 describe('PaymentGateway contract', () => {
@@ -76,6 +78,10 @@ describe('PaymentGateway contract', () => {
 			for (const method of methods) {
 				expect(typeof target[method]).toBe('function');
 			}
+		});
+
+		it('exposes the simulated reader tap under testHelpers', () => {
+			expect(typeof gateway.testHelpers.terminal.readers.presentPaymentMethod).toBe('function');
 		});
 	});
 });
@@ -458,6 +464,92 @@ describe('fake gateway behaviour', () => {
 		const cancelled = await gateway.paymentIntents.cancel(intent.id);
 		expect(cancelled.status).toBe('canceled');
 		await expect(gateway.paymentIntents.cancel('pi_nope')).rejects.toThrow(/No such/);
+	});
+
+	describe('the smart reader', () => {
+		const readerIntent = () =>
+			gateway.paymentIntents.create({
+				amount: 1500,
+				currency: 'usd',
+				payment_method_types: ['card_present'],
+				metadata: { type: 'reader_reservation' }
+			});
+
+		it('knows its own reader, idle and online, and 404s any other', async () => {
+			const reader = await gateway.terminal.readers.retrieve(FAKE_TERMINAL_READER_ID);
+			expect(reader).toMatchObject({ id: FAKE_TERMINAL_READER_ID, status: 'online', action: null });
+			await expect(gateway.terminal.readers.retrieve('tmr_nope')).rejects.toThrow(/No such/);
+		});
+
+		it('puts an intent on the reader, and refuses a second while it waits', async () => {
+			const first = await readerIntent();
+			const reader = await gateway.terminal.readers.processPaymentIntent(FAKE_TERMINAL_READER_ID, {
+				payment_intent: first.id,
+				process_config: { skip_tipping: true }
+			});
+			expect(reader.action).toMatchObject({
+				type: 'process_payment_intent',
+				status: 'in_progress',
+				process_payment_intent: { payment_intent: first.id }
+			});
+
+			const second = await readerIntent();
+			await expect(
+				gateway.terminal.readers.processPaymentIntent(FAKE_TERMINAL_READER_ID, {
+					payment_intent: second.id
+				})
+			).rejects.toMatchObject({ code: 'terminal_reader_busy' });
+		});
+
+		it('lands a presented card as a succeeded intent', async () => {
+			const intent = await readerIntent();
+			await gateway.terminal.readers.processPaymentIntent(FAKE_TERMINAL_READER_ID, {
+				payment_intent: intent.id
+			});
+			const reader =
+				await gateway.testHelpers.terminal.readers.presentPaymentMethod(FAKE_TERMINAL_READER_ID);
+			expect(reader.action?.status).toBe('succeeded');
+			expect((await gateway.paymentIntents.retrieve(intent.id)).status).toBe('succeeded');
+		});
+
+		it('leaves the intent of a declined card waiting for another, with the reason', async () => {
+			const intent = await readerIntent();
+			await gateway.terminal.readers.processPaymentIntent(FAKE_TERMINAL_READER_ID, {
+				payment_intent: intent.id
+			});
+			const reader = await gateway.testHelpers.terminal.readers.presentPaymentMethod(
+				FAKE_TERMINAL_READER_ID,
+				{ card_present: { number: '4000000000000002' } }
+			);
+			expect(reader.action).toMatchObject({ status: 'failed', failure_code: 'card_declined' });
+			const after = await gateway.paymentIntents.retrieve(intent.id);
+			expect(after.status).toBe('requires_payment_method');
+			expect(after.last_payment_error?.code).toBe('card_declined');
+		});
+
+		it('clears a waiting action on cancel, freeing the reader', async () => {
+			const intent = await readerIntent();
+			await gateway.terminal.readers.processPaymentIntent(FAKE_TERMINAL_READER_ID, {
+				payment_intent: intent.id
+			});
+			const reader = await gateway.terminal.readers.cancelAction(FAKE_TERMINAL_READER_ID);
+			expect('action' in reader && reader.action?.status).not.toBe('in_progress');
+			const next = await readerIntent();
+			await expect(
+				gateway.terminal.readers.processPaymentIntent(FAKE_TERMINAL_READER_ID, {
+					payment_intent: next.id
+				})
+			).resolves.toBeDefined();
+		});
+
+		it('returns the same intent for a repeated idempotency key', async () => {
+			const params = { amount: 1500, currency: 'usd' };
+			const a = await gateway.paymentIntents.create(params, { idempotencyKey: 'reader-r1-1500' });
+			const b = await gateway.paymentIntents.create(params, { idempotencyKey: 'reader-r1-1500' });
+			const c = await gateway.paymentIntents.create(params, { idempotencyKey: 'reader-r1-1000' });
+			expect(b.id).toBe(a.id);
+			expect(c.id).not.toBe(a.id);
+		});
 	});
 
 	it('iterates a list with for-await, which the sync sweep relies on', async () => {

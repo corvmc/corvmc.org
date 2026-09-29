@@ -11,6 +11,7 @@ import { syncCardFromSubscription } from './billing-service';
 import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
 import { recordBandPremiumInvoice } from './band-premium-entries';
 import { fulfillDoorSale } from '$lib/server/ticket/door-sale';
+import { settleReservationAtReader } from '$lib/server/reservation/reader-payment';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { getStripeProductId } from './product-config-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -58,8 +59,22 @@ export const webhookHandlerMap: WebhookHandlerMap = {
 	'customer.subscription.deleted': handleSubscriptionDeleted,
 	'invoice.payment_failed': handleInvoicePaymentFailed,
 	'charge.refunded': handleChargeRefunded,
-	'payment_intent.succeeded': fulfillDoorSale
+	'payment_intent.succeeded': handlePaymentIntentSucceeded
 };
+
+// ---------------------------------------------------------------------------
+// payment_intent.succeeded — card-present payments, told apart by metadata
+// ---------------------------------------------------------------------------
+
+/** Online checkouts arrive as sessions; only the door and the reader create intents. */
+export async function handlePaymentIntentSucceeded(intent: Stripe.PaymentIntent): Promise<void> {
+	switch (intent.metadata?.type) {
+		case 'door_ticket':
+			return fulfillDoorSale(intent);
+		case 'reader_reservation':
+			return settleReservationAtReader(intent);
+	}
+}
 
 // ---------------------------------------------------------------------------
 // checkout.session.completed

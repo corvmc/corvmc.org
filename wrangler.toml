@@ -81,6 +81,10 @@ PUBLIC_SITE_URL = "https://corvmc.org"
 # treats every other value (and an unset one) as the in-memory fake, so the
 # opt-in lives here rather than the opt-out living in every dev checkout.
 PAYMENTS_DRIVER = "stripe"
+# The practice room's Stripe smart reader (`tmr_…`, #1659). Not a secret. Empty
+# until the S700 is registered to the Terminal Location; while empty, "Pay at
+# the reader" does not appear. See docs/specs/smart-reader-spec.md#owner-setup.
+STRIPE_TERMINAL_READER_ID = ""
 EMAIL_FROM_NAME = "CorvMC"
 # Mirrors the Workers Builds build variable that `pnpm ci:migrate` reads (#1358,
 # #1384). Recorded here for visibility only: [vars] reach the deployed Worker,

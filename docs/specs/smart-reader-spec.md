@@ -2,10 +2,11 @@
 
 > ## Status
 >
-> 📋 Spec, tracked by #1659. Nothing is built, and the hardware has not been bought. The software
-> can be built and tested in full against Stripe's simulated reader before the device arrives. The
-> choices an agent made are recorded for the owner to confirm: #1722 (hardware, integration, no
-> device table), #1724 (which use ships first) and #1723 (walk-up booking and the minimum notice).
+> 🔧 Phase 1 built (#1659): §2 to §6, against the fake driver and Stripe's simulated reader. The
+> hardware has not been bought, so the action stays hidden in production until
+> `STRIPE_TERMINAL_READER_ID` is set. The choices an agent made are recorded for the owner to
+> confirm: #1722 (hardware, integration, no device table), #1724 (which use ships first) and #1723
+> (walk-up booking and the minimum notice).
 
 ## Purpose
 
@@ -133,8 +134,9 @@ A second command, `cancelPayAtReader`, calls `cancelAction` and cancels the inte
 - Then `announceConfirmed`, which mints a door code if the booking is inside the window and has
   none.
 
-The phone polls `getReservationPayment` with a bounded retry until `paidAt` is set, in the same
-shape as the ticket success page (`RETRY_LIMIT` / `RETRY_MS`). It never tells the server that a
+The phone polls `getReaderPayment` with a bounded retry until `paidAt` is set, in the same shape
+as the ticket success page (`RETRY_LIMIT` / `RETRY_MS`). It is its own query because
+`getReservationPayment` refuses a booking once it is paid. It never tells the server that a
 payment succeeded.
 
 `terminal.reader.action_failed` is **not** subscribed to. A decline leaves the intent in
@@ -192,7 +194,8 @@ is not a rule at all.
 1. Buy an S700 from the Dashboard's Terminal shop, with whatever stand or dock keeps it powered.
 2. Register it to the existing Location with the code the reader displays, and label it "Practice
    room".
-3. Set `STRIPE_TERMINAL_READER_ID` as a Worker secret, for production and for test.
+3. Set `STRIPE_TERMINAL_READER_ID` under `[vars]` in `wrangler.toml` (it is not a secret), and in
+   `.env` for a sandbox with a simulated reader.
 4. Print the QR sticker for `/member/reservations`.
 
 ## Out of scope

@@ -50,6 +50,17 @@ export interface PaymentGateway {
 	readonly terminal: {
 		connectionTokens: Pick<Stripe['terminal']['connectionTokens'], 'create'>;
 		locations: Pick<Stripe['terminal']['locations'], 'retrieve'>;
+		/** The smart reader in the practice room (#1659), driven from the Worker. */
+		readers: Pick<
+			Stripe['terminal']['readers'],
+			'retrieve' | 'processPaymentIntent' | 'cancelAction'
+		>;
+	};
+	/** A card presented to a simulated reader. Test mode only; a live key refuses it. */
+	readonly testHelpers: {
+		terminal: {
+			readers: Pick<Stripe['testHelpers']['terminal']['readers'], 'presentPaymentMethod'>;
+		};
 	};
 }
 

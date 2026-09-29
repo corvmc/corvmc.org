@@ -5,7 +5,7 @@ import {
 import { z } from 'zod';
 import { error, redirect, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
-import { form } from './_remote';
+import { command, form } from './_remote';
 import { db } from '$lib/server/db';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
 import {
@@ -102,6 +102,14 @@ import {
 	reverseReservationCredits
 } from '$lib/server/reservation/reservation-credit-service';
 import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
+import { readerTapCanBeSimulated, terminalReaderId } from '$lib/server/finance/terminal-service';
+import {
+	cancelReaderPayment,
+	readerPayable,
+	readerPaymentStatus,
+	simulateReaderTap,
+	startReaderPayment
+} from '$lib/server/reservation/reader-payment';
 import { recurringSeries, type RecurringFrequency } from '$lib/server/db/schema/recurring';
 import { formatSlotTime } from '$lib/utils/format';
 import { buildRRule, getOccurrences } from '$lib/server/reservation/rrule-helpers';
@@ -218,7 +226,11 @@ export const getReservationDetail = query(z.string(), async (id) => {
 		// Whether they are at the door right now. Without it a booking with no
 		// working code reads "check back before your session" while they stand
 		// outside during it.
-		inAccessWindow: isInAccessWindow(row)
+		inAccessWindow: isInAccessWindow(row),
+		reader: {
+			payable: terminalReaderId() !== null && readerPayable(row),
+			canSimulate: readerTapCanBeSimulated()
+		}
 	};
 });
 
@@ -2546,3 +2558,78 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 	// member-facing DTO by construction rather than by remembering to omit it.
 	return { active, all, membership, contact, isInstructor: instructor?.status === 'active' };
 });
+
+// ===========================================================================
+// Paying at the smart reader (#1659)
+// ===========================================================================
+
+/** The caller's own booking, or a 404/403. Nothing a client sends names another. */
+async function requireOwnBooking(id: string) {
+	const currentUser = requireUser();
+	const [row] = await db.select().from(reservation).where(eq(reservation.id, id)).limit(1);
+	if (!row) error(404, 'Reservation not found');
+	if (row.createdByUserId !== currentUser.id) error(403, 'Not your reservation');
+	return { currentUser, row };
+}
+
+/**
+ * Put what the booking owes on the reader by the door. Credits are committed
+ * first, as confirm does, so a booking they cover settles without the reader.
+ */
+export const payAtReader = command(z.string().min(1), async (id) => {
+	const { currentUser, row } = await requireOwnBooking(id);
+	if (!terminalReaderId()) error(404, 'Not found');
+	if (!readerPayable(row)) error(400, 'This booking cannot be paid at the reader right now');
+
+	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
+	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+	const { remainingCents, settled } = await commitCreditsAndSettleIfCovered({
+		reservationId: id,
+		userId: currentUser.id,
+		email: currentUser.email,
+		name: currentUser.name ?? null,
+		durationHours,
+		totalCents: Math.round(durationHours * hourlyRateCents),
+		hourlyRateCents
+	});
+	if (settled) return { settled: true as const };
+
+	const { paymentIntentId } = await startReaderPayment({
+		reservationId: id,
+		userId: currentUser.id,
+		amountCents: remainingCents
+	});
+	return { settled: false as const, paymentIntentId };
+});
+
+const readerPaymentRef = z.object({
+	reservationId: z.string().min(1),
+	paymentIntentId: z.string().min(1)
+});
+
+/** Polled by the phone until the webhook has settled the booking. */
+export const getReaderPayment = query(
+	readerPaymentRef,
+	async ({ reservationId, paymentIntentId }) => {
+		await requireOwnBooking(reservationId);
+		return readerPaymentStatus(paymentIntentId, reservationId);
+	}
+);
+
+export const cancelPayAtReader = command(
+	readerPaymentRef,
+	async ({ reservationId, paymentIntentId }) => {
+		await requireOwnBooking(reservationId);
+		await cancelReaderPayment(paymentIntentId, reservationId);
+	}
+);
+
+/** A card presented without the hardware: the fake, or a simulated reader in test mode. */
+export const simulatePayAtReader = command(
+	readerPaymentRef.extend({ outcome: z.enum(['succeed', 'decline']) }),
+	async ({ reservationId, paymentIntentId, outcome }) => {
+		await requireOwnBooking(reservationId);
+		if (!readerTapCanBeSimulated()) error(404, 'Not found');
+		await simulateReaderTap(paymentIntentId, reservationId, outcome);
+	}
+);
