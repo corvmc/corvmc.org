@@ -35,9 +35,12 @@ item(sort_order, title, owner_key, role_name, due, done_when, tasks) AS (VALUES
 )
 INSERT INTO duty_list_item (id, duty_list_id, volunteer_role_id, due_offset_minutes, capacity, sort_order, tasks, title, group_id, done_when)
 SELECT lower(hex(randomblob(16))), dl.id, r.id, i.due, 1, i.sort_order, i.tasks, i.title,
-	(SELECT g.id FROM "group" g
-	 WHERE g.kind = 'committee' AND g.deleted_at IS NULL AND (g.slug = o.slug OR g.name = o.name)
-	 ORDER BY g.slug = o.slug DESC LIMIT 1),
+	COALESCE(
+		(SELECT g.id FROM "group" g
+		 WHERE g.kind = 'committee' AND g.deleted_at IS NULL AND g.slug = o.slug LIMIT 1),
+		(SELECT g.id FROM "group" g
+		 WHERE g.kind = 'committee' AND g.deleted_at IS NULL AND g.name = o.name LIMIT 1)
+	),
 	i.done_when
 FROM item i
 JOIN owner o ON o.key = i.owner_key
