@@ -36,12 +36,7 @@ jobs:
       POSTMARK_SERVER_TOKEN: ${{ secrets.POSTMARK_SERVER_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/install
 
       # Postmark's own Mustachio engine, which the local Handlebars renderer
       # only approximates. Runs on a PR so a broken template is caught before
