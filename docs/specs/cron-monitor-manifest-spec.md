@@ -2,8 +2,8 @@
 
 > ## Status
 >
-> 📋 Spec, tracked by #1327. Nothing is built, and it is one PR. The choice of a committed
-> manifest over a deploy-time reconcile is for the owner to confirm in #1717.
+> ✅ Built in #1732 (#1327). The choice of a committed manifest over a deploy-time reconcile
+> is for the owner to confirm in #1717.
 
 ## Purpose
 

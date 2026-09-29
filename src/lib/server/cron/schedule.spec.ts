@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { CRON_SCHEDULE, runScheduledJobs } from './schedule';
+import { CRON_MONITORS, CRON_SCHEDULE, monitorSlug, runScheduledJobs } from './schedule';
 import type { CronCheckIn } from './sentry-check-in';
 
 const env = { ORIGIN: 'https://corvmc.test', CRON_SECRET: 'test-secret' };
@@ -126,6 +126,112 @@ describe('CRON_SCHEDULE', () => {
 	});
 });
 
+const RETIRE_STEP = 'docs/architecture/operations-manual.md#retiring-a-cron-job';
+
+/** Every way `monitors` and `schedule` disagree, each phrased as the fix. */
+function monitorProblems(
+	schedule: Record<string, string[]>,
+	monitors: typeof CRON_MONITORS
+): string[] {
+	const problems: string[] = [];
+	const bySlug = new Map<string, string[]>();
+	for (const path of Object.values(schedule).flat()) {
+		const slug = monitorSlug(path);
+		bySlug.set(slug, [...(bySlug.get(slug) ?? []), path]);
+	}
+	for (const [slug, paths] of bySlug) {
+		const entry = monitors[slug];
+		if (paths.length > 1) {
+			problems.push(
+				`${paths.join(' and ')} share slug ${slug}: two jobs would report to one monitor`
+			);
+		}
+		if (entry === undefined) {
+			problems.push(`add '${slug}': 'live' to CRON_MONITORS`);
+		} else if (entry !== 'live') {
+			problems.push(
+				`${slug} was retired (${entry.ref}): a disabled monitor records no check-ins, so pick a new endpoint name`
+			);
+		}
+	}
+	for (const [slug, entry] of Object.entries(monitors)) {
+		if (entry === 'live' && !bySlug.has(slug)) {
+			problems.push(
+				`mark ${slug} retired in CRON_MONITORS, and disable its Sentry monitor (${RETIRE_STEP})`
+			);
+		}
+	}
+	return problems;
+}
+
+describe('CRON_MONITORS', () => {
+	it('agrees with CRON_SCHEDULE', () => {
+		expect(monitorProblems(CRON_SCHEDULE, CRON_MONITORS)).toEqual([]);
+	});
+
+	it('keeps the four monitors #1198 merged away as retired', () => {
+		for (const slug of [
+			'shift-feedback',
+			'reservation-reminders',
+			'shift-reminders',
+			'confirmation-reminders'
+		]) {
+			expect(CRON_MONITORS[slug]).toEqual({ retired: '2026-09-17', ref: '#1198' });
+		}
+	});
+
+	it.each(Object.entries(CRON_MONITORS).filter(([, entry]) => entry !== 'live'))(
+		'dates and cites the retirement of %s',
+		(_slug, entry) => {
+			expect(entry).toEqual({
+				retired: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+				ref: expect.stringMatching(/^#\d+$/)
+			});
+		}
+	);
+
+	it('fails a live slug removed from the schedule without retiring it', () => {
+		const problems = monitorProblems({ '* * * * *': ['/api/cron/a'] }, { a: 'live', b: 'live' });
+		expect(problems).toEqual([
+			`mark b retired in CRON_MONITORS, and disable its Sentry monitor (${RETIRE_STEP})`
+		]);
+	});
+
+	it('fails a scheduled slug missing from the manifest', () => {
+		const problems = monitorProblems(
+			{ '* * * * *': ['/api/cron/a', '/api/cron/new'] },
+			{ a: 'live' }
+		);
+		expect(problems).toEqual([`add 'new': 'live' to CRON_MONITORS`]);
+	});
+
+	it('fails two paths that share a slug', () => {
+		const problems = monitorProblems(
+			{ '* * * * *': ['/api/cron/a'], '0 * * * *': ['/api/other/a'] },
+			{ a: 'live' }
+		);
+		expect(problems).toEqual([
+			'/api/cron/a and /api/other/a share slug a: two jobs would report to one monitor'
+		]);
+	});
+
+	it('fails a retired slug that is scheduled again', () => {
+		const problems = monitorProblems(
+			{ '* * * * *': ['/api/cron/old'] },
+			{ old: { retired: '2026-01-01', ref: '#1' } }
+		);
+		expect(problems).toEqual([
+			'old was retired (#1): a disabled monitor records no check-ins, so pick a new endpoint name'
+		]);
+	});
+});
+
+describe('monitorSlug', () => {
+	it('is the endpoint basename', () => {
+		expect(monitorSlug('/api/cron/send-campaigns')).toBe('send-campaigns');
+	});
+});
+
 describe('runScheduledJobs', () => {
 	it('POSTs each mapped endpoint at ORIGIN with the bearer secret', async () => {
 		const fetcher = okFetcher();
@@ -220,6 +326,10 @@ describe('runScheduledJobs', () => {
 
 		await runScheduledJobs('*/15 * * * *', env, fetcher, checkIn);
 
+		const opened = checkIn.mock.calls.filter(([opts]) => opts.status === 'in_progress');
+		expect(opened.map(([opts]) => opts.slug)).toEqual(
+			CRON_SCHEDULE['*/15 * * * *'].map(monitorSlug)
+		);
 		expect(checkIn.mock.calls.map(([opts]) => opts)).toEqual([
 			{ slug: 'auto-complete', status: 'in_progress', cron: '*/15 * * * *' },
 			{ slug: 'auto-complete', status: 'ok', checkInId: 'ci-1' },

@@ -461,16 +461,40 @@ have unit tests.
 **Monitoring (Sentry Crons).** The `scheduled` handler brackets every job with
 `in_progress` → `ok`/`error` check-ins over Sentry's HTTP check-in API
 (`src/lib/server/cron/sentry-check-in.ts`), so Sentry alerts on failed **and missed**
-runs. One monitor per endpoint, slugged by basename (`auto-complete`, `send-campaigns`,
-…), visible under Sentry → Insights → Crons. Monitors are **upserted from the check-ins
-themselves** — schedule changes in `wrangler.toml [triggers]` propagate on the next run;
-nothing to configure in the Sentry dashboard. Check-ins go to the `production` monitor
+runs. One monitor per endpoint, slugged by `monitorSlug()` — the basename (`auto-complete`,
+`send-campaigns`, …) — visible under Sentry → Insights → Crons. Monitors are **upserted
+from the check-ins themselves**, so adding or rescheduling a job needs nothing in the Sentry
+dashboard: schedule changes in `wrangler.toml [triggers]` propagate on the next run.
+Removing or renaming one does need a step there — see
+[Retiring a cron job](#retiring-a-cron-job). Check-ins go to the `production` monitor
 environment by default; when testing locally, keep test noise out of production
 missed-run detection by passing a different environment:
 
 ```bash
 npx wrangler dev --test-scheduled --var CRON_SECRET:local-test --var SENTRY_ENVIRONMENT:development
 ```
+
+### Retiring a cron job
+
+Nothing removes a Sentry monitor, so a job that leaves `CRON_SCHEDULE` leaves a monitor that
+raises "missed check-in" every run. `CRON_MONITORS` in `src/lib/server/cron/schedule.ts` lists
+every slug that has ever had one, and `schedule.spec.ts` fails until the two agree.
+
+1. Mark the slug retired in `CRON_MONITORS` — `{ retired: 'YYYY-MM-DD', ref: '#<pr or issue>' }`.
+   Never delete the entry, and never schedule a retired slug again: a disabled monitor records
+   no check-ins, so the job would run unmonitored.
+2. In **Sentry → Insights → Crons →** the monitor, choose **Disable**, not Delete. Disabling
+   keeps the history and stops both check-ins and alerts. It needs a Sentry member with write
+   access to the `javascript-sveltekit` project, and no token. Name the slug in the PR body so
+   whoever holds that access knows it is owed.
+3. Resolve any open `Cron failure: <slug>` issue.
+
+Through the API instead, use a **user auth token or internal integration token with
+`alerts:write`** (`project:write` also works):
+`PUT /api/0/organizations/corvallis-music-collective/monitors/<slug>/` with
+`{"status": "disabled"}`. An organization auth token (`sntrys_…`, scope `org:ci`) cannot do this,
+and neither can the build plugin's `.env.sentry-build-plugin` token or the claude.ai Sentry
+connector.
 
 ## 6. The legacy Laravel bridge
 

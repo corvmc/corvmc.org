@@ -54,6 +54,44 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 	'0 17 * * MON': ['/api/cron/reconcile-ledger']
 };
 
+/** The Sentry Crons monitor slug a scheduled path checks in under: its basename. */
+export function monitorSlug(path: string): string {
+	return path.split('/').at(-1) ?? path;
+}
+
+export type RetiredMonitor = { retired: string; ref: string };
+
+/**
+ * Every slug that has ever had a Sentry monitor. A check-in creates a monitor
+ * and nothing removes one, so entries are never deleted: a retired entry
+ * records that its monitor still exists in Sentry, disabled. `retired` is
+ * YYYY-MM-DD and `ref` the PR or issue that retired it. Retiring a job is a
+ * manual Sentry step: docs/architecture/operations-manual.md#retiring-a-cron-job
+ */
+export const CRON_MONITORS: Record<string, 'live' | RetiredMonitor> = {
+	'send-campaigns': 'live',
+	'auto-complete': 'live',
+	'complete-shifts': 'live',
+	'cancel-unconfirmed': 'live',
+	'expire-waitlisted': 'live',
+	'wake-snoozed': 'live',
+	'lock-sync': 'live',
+	reminders: 'live',
+	'schedule-radio': 'live',
+	'generate-recurring-reservations': 'live',
+	'lock-access': 'live',
+	'cancel-stale-tickets': 'live',
+	'sweep-audio-purchases': 'live',
+	'sweep-incidents': 'live',
+	'sweep-audit-log': 'live',
+	'sweep-media': 'live',
+	'reconcile-ledger': 'live',
+	'shift-feedback': { retired: '2026-09-17', ref: '#1198' },
+	'reservation-reminders': { retired: '2026-09-17', ref: '#1198' },
+	'shift-reminders': { retired: '2026-09-17', ref: '#1198' },
+	'confirmation-reminders': { retired: '2026-09-17', ref: '#1198' }
+};
+
 export interface CronEnv {
 	ORIGIN: string;
 	CRON_SECRET?: string;
@@ -77,7 +115,7 @@ export interface CronJobResult {
  * When a `checkIn` reporter is provided (see sentry-check-in.ts), each job is
  * bracketed with Sentry Crons check-ins — in_progress before, ok/error after,
  * paired by the id the opening check-in returns — so Sentry can alert on
- * missed and failed runs. The monitor slug is the endpoint basename.
+ * missed and failed runs. The monitor slug is `monitorSlug(path)`.
  *
  * The request URL must use the real `env.ORIGIN`: the generated worker caches
  * its origin from the first request URL it sees, and on a cold start the
@@ -103,7 +141,7 @@ export async function runScheduledJobs(
 
 	const results: CronJobResult[] = [];
 	for (const path of paths) {
-		const slug = path.split('/').at(-1) ?? path;
+		const slug = monitorSlug(path);
 		const checkInId = await checkIn?.({ slug, status: 'in_progress', cron });
 		let result: CronJobResult | undefined;
 		try {
