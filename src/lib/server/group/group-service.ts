@@ -10,9 +10,8 @@ import { create as createGroupRow, deactivate, reactivate } from '$lib/server/ba
 import { sanitizeBio } from '$lib/utils/markdown';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { DomainError } from '$lib/server/domain-error';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { groupGrantsColumn } from '$lib/server/capability/grant-columns';
-import { openApplicationCount } from '$lib/server/group/committee-application-service';
+import { openApplicationCount } from '$lib/server/group/application-service';
 import type { GroupKind, GroupJoinPolicy } from '$lib/config';
 import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
 
@@ -66,6 +65,15 @@ export class NotJoinableError extends DomainError {
 	constructor(message: string) {
 		super(message);
 		this.name = 'NotJoinableError';
+	}
+}
+
+export class ApplyInsteadError extends DomainError {
+	readonly httpStatus = 422;
+
+	constructor() {
+		super('This group takes applications. Apply to join it instead.');
+		this.name = 'ApplyInsteadError';
 	}
 }
 
@@ -186,7 +194,7 @@ export async function listGroups(
 			createdAt: group.createdAt,
 			deletedAt: group.deletedAt,
 			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`,
-			// Zero for a club, which has no application rows.
+			// Open applications, whatever the kind.
 			openApplications: openApplicationCount(group.id)
 		})
 		.from(group)
@@ -566,12 +574,11 @@ export async function assignLeader(groupId: string, userId: string) {
 }
 
 /**
- * Join a group unaided, or ask to.
+ * Join an `open` group unaided.
  *
  * **The policy is re-read from the resolved group, never taken from the
- * request.** That is what makes three doors no riskier than two: which door is
- * open is the group's own fact, and a caller naming a group cannot also tell the
- * service how to let them in.
+ * request**: which door is open is the group's own fact, and a caller naming a
+ * group cannot also tell the service how to let them in.
  *
  * A self-join always produces `role: 'member'` — owners and admins cannot
  * self-assign — and the `unique(groupId, userId)` index makes a double-click
@@ -585,18 +592,10 @@ export async function joinGroup(groupId: string, userId: string) {
 		.limit(1);
 	if (!row) throw new GroupNotFoundError();
 
-	// The status the policy leads to. `open` lands you active with no approval —
-	// the whole point of a drop-in program; `by_application` parks you at
-	// `'requested'`, which is `'pending'`'s mirror and is why the two are
-	// separate values.
-	const status =
-		row.joinPolicy === 'open'
-			? ('active' as const)
-			: row.joinPolicy === 'by_application'
-				? ('requested' as const)
-				: null;
-
-	if (!status) {
+	// `by_application` is `submitApplication`'s door, with answers and a
+	// decision; the UI never posts one here.
+	if (row.joinPolicy === 'by_application') throw new ApplyInsteadError();
+	if (row.joinPolicy !== 'open') {
 		throw new NotJoinableError('This group is invite only — someone in it has to add you.');
 	}
 
@@ -607,58 +606,21 @@ export async function joinGroup(groupId: string, userId: string) {
 		.limit(1);
 	if (existing) throw new AlreadyOnRosterError();
 
+	const status = 'active' as const;
 	await db.insert(groupMember).values({
 		groupId,
 		userId,
 		role: 'member',
 		status,
-		// Nobody invited them. The column is what tells an invitation from an
-		// application apart when both are waiting.
+		// Nobody invited them.
 		invitedById: null
 	});
-
-	if (status === 'requested') {
-		await domainEvents.emit('group.application_submitted', { groupId, applicantUserId: userId });
-	}
 
 	return { status };
 }
 
 /**
- * An owner or admin answering an application.
- *
- * Approving is the same status flip `acceptInvite` performs, arriving from the
- * other direction; declining deletes the row, exactly as revoking an invitation
- * does. The `groupId` scope is not decoration: the member id comes from the
- * client, and an admin's authority stops at their own group.
- */
-export async function approveApplication(memberId: string, groupId: string) {
-	const scope = and(
-		eq(groupMember.id, memberId),
-		eq(groupMember.groupId, groupId),
-		eq(groupMember.status, 'requested')
-	);
-
-	const [row] = await db.select({ id: groupMember.id }).from(groupMember).where(scope).limit(1);
-	if (!row) throw new GroupNotFoundError();
-
-	await db.update(groupMember).set({ status: 'active', updatedAt: new Date() }).where(scope);
-}
-
-export async function declineApplication(memberId: string, groupId: string) {
-	await db
-		.delete(groupMember)
-		.where(
-			and(
-				eq(groupMember.id, memberId),
-				eq(groupMember.groupId, groupId),
-				eq(groupMember.status, 'requested')
-			)
-		);
-}
-
-/**
- * Leave a program, or withdraw an application to one.
+ * Leave a program.
  *
  * **A program leader may leave without naming a successor**, and this is the one
  * place programs and bands diverge on leaving. A band owner must transfer first,

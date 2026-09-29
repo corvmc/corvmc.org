@@ -135,7 +135,7 @@
 		<Table>
 			{#snippet head()}
 				<th>Project</th>
-				<th>Owner</th>
+				<th>Committees</th>
 				<th>Status</th>
 				<th>Dates</th>
 				<th class="cell-num">Budget</th>
@@ -156,7 +156,7 @@
 							</div>
 						{/if}
 					</td>
-					<td>{row.committeeName ?? 'Unowned'}</td>
+					<td>{row.committeeNames.join(', ') || 'Unowned'}</td>
 					<td><StatusBadge status={row.project.status} label /></td>
 					<td>
 						{#if row.project.startsAt}

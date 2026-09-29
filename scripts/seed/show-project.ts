@@ -45,17 +45,11 @@ export async function syncShowProjects(): Promise<void> {
 }
 
 /**
- * `project_committee` rows, once the committees exist: an owner row for every
- * `project.group_id`, and Booking and Production on every show. What the
- * phase 1 migration does in production, idempotently.
+ * Booking and Production on every show, once the committees exist. What the
+ * phase 1 migration does in production, idempotently. General projects write
+ * their own `owner` rows in `seedProjects`.
  */
 export async function seedProjectCommittees(): Promise<number> {
-	await db.run(sql`
-		insert or ignore into project_committee (project_id, group_id, role)
-		select pr.id, pr.group_id, 'owner'
-		from project pr join "group" g on g.id = pr.group_id
-		where g.kind = 'committee'
-	`);
 	await db.run(sql`
 		insert or ignore into project_committee (project_id, group_id, role)
 		select pr.id, g.id,

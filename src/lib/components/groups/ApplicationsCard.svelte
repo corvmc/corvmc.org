@@ -7,43 +7,47 @@
 	import type { MemberRef } from '$lib/types/entity';
 	import { formatDate } from '$lib/utils/format';
 	import {
-		committeeApplicationQuestions,
-		committeeApplicationStatusLabels,
-		COMMITTEE_ANSWER_MAX,
-		type CommitteeApplicationStatus
+		groupApplicationQuestions,
+		groupApplicationStatusLabels,
+		APPLICATION_ANSWER_MAX,
+		type ApplicationGroupKind,
+		type GroupApplicationStatus
 	} from '$lib/config';
 	import {
-		acceptCommitteeApplication,
-		declineCommitteeApplication,
+		acceptGroupApplication,
+		declineGroupApplication,
 		markApplicantContacted
-	} from '$lib/remote/committee-applications.remote';
+	} from '$lib/remote/group-applications.remote';
 
 	/**
-	 * A chair working through their committee's applications.
+	 * A reviewer working through one group's applications, whatever its kind.
 	 *
-	 * Accepting invites rather than seating: being offered a seat and taking one
-	 * are two acts, and the invitation is the surface that already says so.
+	 * Accepting invites rather than seating (#1729): being offered a seat and
+	 * taking one are two acts, and the invitation is the surface that says so.
 	 */
 	let {
 		slug,
+		kind,
 		title = 'Applications',
 		applications
 	}: {
 		slug: string;
-		/** Named when several committees stack on one page. */
+		kind: ApplicationGroupKind;
+		/** Named when several groups stack on one page. */
 		title?: string;
 		applications: {
 			choiceId: string;
-			status: CommitteeApplicationStatus;
+			status: GroupApplicationStatus;
 			submittedAt: Date;
 			answers: Record<string, string>;
 			applicant: MemberRef;
 		}[];
 	} = $props();
 
+	const questions = $derived(groupApplicationQuestions[kind]);
 	const { fields: contactFields } = markApplicantContacted;
-	const { fields: acceptFields } = acceptCommitteeApplication;
-	const { fields: declineFields } = declineCommitteeApplication;
+	const { fields: acceptFields } = acceptGroupApplication;
+	const { fields: declineFields } = declineGroupApplication;
 </script>
 
 {#if applications.length > 0}
@@ -53,7 +57,7 @@
 				<div class="flex flex-wrap items-center gap-3">
 					<EntityIdentity ref={application.applicant} />
 					<Badge variant={application.status === 'contacted' ? 'info' : 'ghost'}>
-						{committeeApplicationStatusLabels[application.status]}
+						{groupApplicationStatusLabels[application.status]}
 					</Badge>
 					<span class="ml-auto text-subtle text-sm">
 						{formatDate(application.submittedAt)}
@@ -61,12 +65,11 @@
 				</div>
 
 				<dl class="mt-3 space-y-3">
-					{#each committeeApplicationQuestions as question (question.id)}
+					{#each questions as question (question.id)}
 						<div>
 							<dt class="text-subtle text-sm font-medium">{question.prompt}</dt>
-							<!-- Blank is a real answer and says something. The nine applicants
-							     migrated from volunteer-role interest have both blank, because
-							     that table stored no answers to carry. -->
+							<!-- Blank is a real answer. Requests migrated from the old roster
+							     status carried none, so they read blank here. -->
 							<dd class="whitespace-pre-line">
 								{application.answers[question.id] || '—'}
 							</dd>
@@ -91,7 +94,7 @@
 						</Action>
 					{/if}
 					<Action
-						action={acceptCommitteeApplication.for(application.choiceId)}
+						action={acceptGroupApplication.for(application.choiceId)}
 						label="Accept"
 						aria-label={`Accept ${application.applicant.title}`}
 						variant="primary"
@@ -99,7 +102,7 @@
 						modalTitle="Accept {application.applicant.title}"
 						submitLabel="Accept and invite"
 						confirm="Accepting invites {application.applicant
-							.title} to this committee. They still have to accept the invitation."
+							.title} to join. They still have to accept the invitation."
 						successToast="Accepted — invitation sent"
 					>
 						{#snippet form()}
@@ -108,7 +111,7 @@
 						{/snippet}
 					</Action>
 					<Action
-						action={declineCommitteeApplication.for(application.choiceId)}
+						action={declineGroupApplication.for(application.choiceId)}
 						label="Decline"
 						aria-label={`Decline ${application.applicant.title}`}
 						variant="ghost"
@@ -124,7 +127,7 @@
 								field={declineFields.reviewNotes}
 								type="textarea"
 								label="Why (optional)"
-								maxlength={String(COMMITTEE_ANSWER_MAX)}
+								maxlength={String(APPLICATION_ANSWER_MAX)}
 								description="The applicant sees this. A decision they cannot see is one nobody can answer a question about later."
 							/>
 						{/snippet}

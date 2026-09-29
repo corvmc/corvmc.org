@@ -45,7 +45,7 @@ import {
 	seedGroupLeaders
 } from './seed/group-leaders';
 import { seedGroupDocuments } from './seed/group-documents';
-import { seedCommitteeApplications } from './seed/committee-applications';
+import { seedGroupApplications } from './seed/group-applications';
 import { seedDirectoryEntries } from './seed/directory';
 import { seedDirectoryPersonas } from './seed/directory-personas';
 import { seedInstructors } from './seed/instructors';
@@ -176,8 +176,8 @@ async function main() {
 	const externalActs = await seedExternalActs();
 	const groupSessions = await seedGroupSessions(groups);
 	const groupDocuments = await seedGroupDocuments(groups, allUsers);
-	// After the groups, whose Booking Committee these name.
-	const committeeApplications = await seedCommitteeApplications(groups, allUsers);
+	// After the groups, whose committees these name.
+	const groupApplications = await seedGroupApplications(groups, allUsers);
 	const bandEvents = await seedBandEvents(bands, allUsers, usage ? [usage.band] : []);
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
@@ -292,7 +292,7 @@ async function main() {
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
-	// After the committees and every show exist: owners, and Booking and Production on each show.
+	// After the committees and every show exist: Booking and Production on each show.
 	const projectCommittees = await seedProjectCommittees();
 	const maintenance = await seedMaintenanceSchedules(adminUser.id, users[0]?.id);
 	// Needs the bands and somebody to have bought something. Writes real audio
@@ -347,7 +347,7 @@ async function main() {
 		`  ${groupDocuments.length} group documents (${groupDocuments.filter((d) => d.deletedAt).length} removed)`
 	);
 	console.log(
-		`  ${committeeApplications.length} committee applications (1 new, 1 contacted, 1 declined)`
+		`  ${groupApplications.total} group applications (one per by_application group, plus committee: new, contacted, two-committee, declined, withdrawn)`
 	);
 	console.log(`  ${bandEvents.length} band events`);
 	console.log(`  ${bandReservations.length} band reservations`);
@@ -442,7 +442,7 @@ async function main() {
 		`  ${packing.items} packing rows on the same band — ${packing.packed} already in the van, ${packing.unassigned} nobody has yet, ${packing.settled} already on the rider`
 	);
 	console.log(
-		`  ${market.markets} market day taking applications, ${market.vendors} vendors in every status`
+		`  ${market.markets} market days (one taking applications, one done), ${market.vendors} vendors in every status`
 	);
 	console.log(
 		`  ${ballots.ballots} ballots (committee open, member-wide open with the admin on by override, two certified, one of them suggestion → ballot → project)`

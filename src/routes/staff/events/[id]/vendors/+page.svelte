@@ -11,13 +11,19 @@
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
 	import { IconCheck, IconX, IconArrowBackUp, IconTable } from '@tabler/icons-svelte';
 	import { formatCents, formatDateTime, toLocalDateTime } from '$lib/utils/format';
-	import { marketVendorStatuses, type MarketVendorStatus } from '$lib/config';
+	import {
+		marketVendorStatuses,
+		marketVendorStatusLabels,
+		type MarketVendorStatus
+	} from '$lib/config';
+	import PreviousMarketNote from '$lib/components/market/PreviousMarketNote.svelte';
 	import {
 		decideVendorForm,
 		getStaffMarketVendors,
@@ -48,7 +54,7 @@
 	const tabs = $derived([
 		...marketVendorStatuses.map((s) => ({
 			key: s,
-			label: s[0].toUpperCase() + s.slice(1),
+			label: marketVendorStatusLabels[s],
 			badge: counts?.[s] ?? 0
 		})),
 		{ key: 'all', label: 'All', badge: data.applications.length }
@@ -103,6 +109,13 @@
 
 <PageHeader title="Vendors: {data.event.title}" backHref="/staff/events/{data.event.id}">
 	{#if data.market}
+		<Button
+			href={resolve(`/staff/events/${data.event.id}/vendors/check-in`)}
+			variant="ghost"
+			size="sm"
+		>
+			Market day
+		</Button>
 		<Action
 			action={openMarketDayForm}
 			label="Edit setup"
@@ -211,6 +224,7 @@
 						<td class="cell-primary">
 							<div class="font-medium">{row.businessName}</div>
 							<div class="line-clamp-1 text-muted text-sm">{row.offering}</div>
+							<PreviousMarketNote previous={row.previous} />
 						</td>
 						<td class="col-support">
 							{row.tablesRequested}
@@ -239,7 +253,7 @@
 						</td>
 						<td>
 							<div class="flex w-max justify-end gap-1">
-								{#if row.status !== 'accepted' && row.status !== 'withdrawn'}
+								{#if row.status === 'applied' || row.status === 'declined'}
 									<Action
 										action={decideVendorForm.for(`accept-${row.id}`)}
 										label="Accept"
@@ -311,7 +325,7 @@
 										{/snippet}
 									</Action>
 								{/if}
-								{#if row.status !== 'withdrawn'}
+								{#if row.status !== 'withdrawn' && row.status !== 'no_show'}
 									<Action
 										action={withdrawVendorForm.for(row.id)}
 										label="Mark withdrawn"

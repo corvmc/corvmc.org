@@ -10,7 +10,7 @@ const requireUser = vi.fn(() => ({ id: 'user-1' }));
 // use the first, matching `requireStaff()`.
 const isElevated = vi.fn(async () => false);
 const hasAnyRole = vi.fn(async () => false);
-const can = vi.fn(async () => false);
+const can = vi.fn(async (_cap?: unknown) => false);
 vi.mock('$lib/server/authorization', () => ({
 	requireUser: () => requireUser(),
 	isElevated: (...a: unknown[]) => isElevated(...(a as [])),
@@ -32,7 +32,7 @@ vi.mock('$lib/server/band/band-service', () => ({
 import {
 	requireBandRole,
 	requireCommitteeMember,
-	requireCommitteeReviewer,
+	requireApplicationReviewer,
 	requireGroupRole,
 	requireProgramRole
 } from './group-context';
@@ -285,7 +285,7 @@ describe('requireProgramRole', () => {
 	});
 });
 
-describe('requireCommitteeReviewer', () => {
+describe('requireApplicationReviewer', () => {
 	const COMMITTEE = {
 		id: 'group-3',
 		slug: 'booking-committee',
@@ -293,7 +293,7 @@ describe('requireCommitteeReviewer', () => {
 		kind: 'committee'
 	};
 
-	const call = () => requireCommitteeReviewer({ slug: 'booking-committee' });
+	const call = (slug = 'booking-committee') => requireApplicationReviewer({ slug });
 	const statusOf = async (fn: () => Promise<unknown>) => {
 		try {
 			await fn();
@@ -305,49 +305,48 @@ describe('requireCommitteeReviewer', () => {
 
 	beforeEach(() => getBySlug.mockResolvedValue(COMMITTEE));
 
-	it('admits the chair, who holds an admin seat', async () => {
-		getUserRole.mockResolvedValue('admin');
-		await expect(call()).resolves.toMatchObject({ role: 'admin' });
-		// The seat is enough on its own; nothing asked for a capability.
+	it.each([
+		['committee', COMMITTEE],
+		['club', CLUB]
+	])('admits an owner or admin of a %s, without asking for a capability', async (_k, g) => {
+		getBySlug.mockResolvedValue(g);
+		for (const role of ['owner', 'admin'] as const) {
+			getUserRole.mockResolvedValue(role);
+			await expect(call(g.slug)).resolves.toMatchObject({ role, group: g });
+		}
 		expect(can).not.toHaveBeenCalled();
 	});
 
-	it('admits the owner, who outranks admin', async () => {
-		getUserRole.mockResolvedValue('owner');
-		await expect(call()).resolves.toMatchObject({ role: 'owner' });
-	});
-
-	it('refuses a plain member of the committee', async () => {
+	it('refuses a plain member', async () => {
 		getUserRole.mockResolvedValue('member');
-		expect(await statusOf(call)).toBe(403);
+		expect(await statusOf(() => call())).toBe(403);
 	});
 
-	/** The whole point: a headless committee has no chair, so this is the only door. */
-	it('admits a capability holder with no seat at all', async () => {
-		can.mockResolvedValue(true);
+	/** A headless committee has no chair, so this is its only door. */
+	it('admits a capability holder with no seat on a committee', async () => {
+		can.mockImplementation(async (cap: unknown) => cap === 'committee.reviewApplications');
 		await expect(call()).resolves.toMatchObject({ role: 'staff' });
 		expect(can).toHaveBeenCalledWith('committee.reviewApplications');
 	});
 
-	it('refuses somebody with neither', async () => {
-		expect(await statusOf(call)).toBe(403);
-	});
-
-	/**
-	 * 404 rather than 403, and checked before the role: a band and a club take
-	 * no applications, so naming one is a wrong address. It also stops the
-	 * capability reaching sideways into a club a coordinator has no business in.
-	 */
-	it('404s a club, even for a capability holder', async () => {
+	it('refuses the capability holder on a club — it never reaches club business', async () => {
 		getBySlug.mockResolvedValue(CLUB);
 		can.mockResolvedValue(true);
-		expect(await statusOf(() => requireCommitteeReviewer({ slug: 'real-book-club' }))).toBe(404);
+		expect(await statusOf(() => call(CLUB.slug))).toBe(403);
 	});
 
-	it('404s a band', async () => {
+	it('refuses a group.manage holder, and a staffer, who hold no seat', async () => {
+		can.mockImplementation(async (cap: unknown) => cap === 'group.manage');
+		isElevated.mockResolvedValue(true);
+		expect(await statusOf(() => call())).toBe(403);
+		getBySlug.mockResolvedValue(CLUB);
+		expect(await statusOf(() => call(CLUB.slug))).toBe(403);
+	});
+
+	it('404s a band, which takes no applications', async () => {
 		getBySlug.mockResolvedValue(GROUP);
-		can.mockResolvedValue(true);
-		expect(await statusOf(() => requireCommitteeReviewer({ slug: 'our-band' }))).toBe(404);
+		getUserRole.mockResolvedValue('owner');
+		expect(await statusOf(() => call('our-band'))).toBe(404);
 	});
 });
 

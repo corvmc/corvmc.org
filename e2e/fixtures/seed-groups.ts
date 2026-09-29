@@ -15,8 +15,12 @@
  * Idempotent: deletes and recreates its rows on every run.
  */
 import 'dotenv/config';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { group, groupMember } from '../../src/lib/server/db/schema/group';
+import {
+	groupApplication,
+	groupApplicationChoice
+} from '../../src/lib/server/db/schema/group-application';
 import { directoryEntry, directoryTag } from '../../src/lib/server/db/schema/directory';
 import { inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
 import { SEED_STAFF_ID, SEED_TARGET_ID } from './seed-staff-user';
@@ -75,11 +79,21 @@ export const SEED_APPLY_ID = 'e2e-group-apply';
 export const SEED_APPLY_SLUG = 'e2e-outreach-committee';
 export const SEED_APPLY_NAME = 'E2E Outreach Committee';
 
+/** A `by_application` club, which applies in a dialog rather than on the committee page. */
+export const SEED_APPLY_CLUB_ID = 'e2e-group-apply-club';
+export const SEED_APPLY_CLUB_SLUG = 'e2e-songwriters-circle';
+export const SEED_APPLY_CLUB_NAME = 'E2E Songwriters Circle';
+export const SEED_APPLY_CLUB_INSTRUCTIONS = 'Tell us what you write, and how often.';
+
+/** The staff committee's waiting application, answered by nobody in these specs. */
+const SEED_COMMITTEE_APPLICATION_ID = 'e2e-group-committee-application';
+
 const GROUP_IDS = [
 	SEED_CLUB_ID,
 	SEED_COMMITTEE_ID,
 	SEED_JOINABLE_ID,
 	SEED_APPLY_ID,
+	SEED_APPLY_CLUB_ID,
 	SEED_HIDDEN_ID,
 	SEED_LED_ID,
 	SEED_READER_ID
@@ -91,6 +105,7 @@ const NAMES: Record<string, string> = {
 	[SEED_COMMITTEE_ID]: SEED_COMMITTEE_NAME,
 	[SEED_JOINABLE_ID]: SEED_JOINABLE_NAME,
 	[SEED_APPLY_ID]: SEED_APPLY_NAME,
+	[SEED_APPLY_CLUB_ID]: SEED_APPLY_CLUB_NAME,
 	[SEED_HIDDEN_ID]: SEED_HIDDEN_NAME,
 	[SEED_LED_ID]: SEED_LED_NAME,
 	[SEED_READER_ID]: SEED_READER_NAME
@@ -100,6 +115,17 @@ export async function seedGroups(): Promise<void> {
 	await withPlatformEnv(async ({ db }) => {
 		// Clean slate. Delete explicitly, and tags before entries: local D1 may
 		// have foreign keys off, so no cascade can be relied on here.
+		const choices = await db
+			.select({ applicationId: groupApplicationChoice.applicationId })
+			.from(groupApplicationChoice)
+			.where(inArray(groupApplicationChoice.groupId, GROUP_IDS));
+		await db
+			.delete(groupApplicationChoice)
+			.where(inArray(groupApplicationChoice.groupId, GROUP_IDS));
+		const applicationIds = choices.map((c) => c.applicationId);
+		if (applicationIds.length > 0) {
+			await db.delete(groupApplication).where(inArray(groupApplication.id, applicationIds));
+		}
 		for (const groupId of GROUP_IDS) {
 			for (const suffix of ['-published', '-draft']) {
 				await db.delete(inboxMessage).where(eq(inboxMessage.threadId, `${groupId}${suffix}`));
@@ -174,6 +200,15 @@ export async function seedGroups(): Promise<void> {
 				bio: 'Takes the Collective out into the world.',
 				joinPolicy: 'by_application',
 				joinInstructions: 'Say what you would like to work on.'
+			},
+			{
+				id: SEED_APPLY_CLUB_ID,
+				kind: 'club',
+				name: SEED_APPLY_CLUB_NAME,
+				slug: SEED_APPLY_CLUB_SLUG,
+				bio: 'A circle for songs in progress.',
+				joinPolicy: 'by_application',
+				joinInstructions: SEED_APPLY_CLUB_INSTRUCTIONS
 			}
 		]);
 
@@ -205,16 +240,6 @@ export async function seedGroups(): Promise<void> {
 				role: 'owner',
 				status: 'active'
 			},
-			// The application the committee is waiting on. `'requested'`, not
-			// `'pending'`: same waiting state, opposite direction, and the roster
-			// has to render them apart.
-			{
-				id: `${SEED_COMMITTEE_ID}-applicant`,
-				groupId: SEED_COMMITTEE_ID,
-				userId: SEED_TARGET_ID,
-				role: 'member',
-				status: 'requested'
-			},
 			// The two the member specs write to get a leader as well, so their
 			// rosters are not empty and the pages have something to render either
 			// side of the change under test.
@@ -228,6 +253,13 @@ export async function seedGroups(): Promise<void> {
 			{
 				id: `${SEED_APPLY_ID}-owner`,
 				groupId: SEED_APPLY_ID,
+				userId: SEED_STAFF_ID,
+				role: 'owner',
+				status: 'active'
+			},
+			{
+				id: `${SEED_APPLY_CLUB_ID}-owner`,
+				groupId: SEED_APPLY_CLUB_ID,
 				userId: SEED_STAFF_ID,
 				role: 'owner',
 				status: 'active'
@@ -255,6 +287,19 @@ export async function seedGroups(): Promise<void> {
 				status: 'active'
 			}
 		]);
+
+		// The application the committee is waiting on: an application, not a
+		// roster row, so it renders on the review card and not in the roster.
+		await db.insert(groupApplication).values({
+			id: SEED_COMMITTEE_APPLICATION_ID,
+			userId: SEED_TARGET_ID,
+			answers: { experience: 'Booked a basement series for two years.' }
+		});
+		await db.insert(groupApplicationChoice).values({
+			id: `${SEED_COMMITTEE_APPLICATION_ID}-choice`,
+			applicationId: SEED_COMMITTEE_APPLICATION_ID,
+			groupId: SEED_COMMITTEE_ID
+		});
 
 		// One published post and one draft on each, so "a member sees the post but
 		// not the draft" and "a leader sees both" are the same fixture read twice.
@@ -311,9 +356,7 @@ export async function seedGroups(): Promise<void> {
 
 /**
  * A member's roster status on a group, for the assertion the UI can no longer
- * make. The "My Groups" sidebar used to be the strict proof that a join landed
- * `'active'` rather than `'pending'` or `'requested'`; the groups module is
- * unlinked from navigation now, so the row itself is read instead.
+ * make: that a join landed `'active'` rather than `'pending'`.
  */
 export async function readMemberStatus(groupSlug: string, userId: string): Promise<string | null> {
 	return readLocalDb(async (db) => {
@@ -324,5 +367,28 @@ export async function readMemberStatus(groupSlug: string, userId: string): Promi
 			.where(and(eq(group.slug, groupSlug), eq(groupMember.userId, userId)))
 			.limit(1);
 		return row?.status ?? null;
+	});
+}
+
+/** The status of this user's open (unwithdrawn) choice for a group, with its answers. */
+export async function readApplication(
+	groupSlug: string,
+	userId: string
+): Promise<{ status: string; answers: Record<string, string> } | null> {
+	return readLocalDb(async (db) => {
+		const [row] = await db
+			.select({ status: groupApplicationChoice.status, answers: groupApplication.answers })
+			.from(groupApplicationChoice)
+			.innerJoin(groupApplication, eq(groupApplication.id, groupApplicationChoice.applicationId))
+			.innerJoin(group, eq(group.id, groupApplicationChoice.groupId))
+			.where(
+				and(
+					eq(group.slug, groupSlug),
+					eq(groupApplication.userId, userId),
+					isNull(groupApplication.withdrawnAt)
+				)
+			)
+			.limit(1);
+		return row ?? null;
 	});
 }

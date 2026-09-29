@@ -104,6 +104,7 @@ const { BandMemberExistsError } = vi.hoisted(() => ({
 }));
 vi.mock('$lib/server/band/band-service', () => ({
 	getMembers: vi.fn(async () => []),
+	getUserRole: vi.fn(async () => null),
 	partitionByStatus: () => ({ active: [], pending: [], requested: [] }),
 	invite: (...a: unknown[]) => band.invite(...(a as [])),
 	removeMember: (...a: unknown[]) => band.removeMember(...(a as [])),
@@ -133,8 +134,6 @@ vi.mock('$lib/server/group/group-service', () => ({
 	assignLeader: vi.fn(),
 	createGroup: vi.fn(),
 	deactivate: vi.fn(),
-	approveApplication: vi.fn(),
-	declineApplication: vi.fn(),
 	getGroupDetail: vi.fn(),
 	joinGroup: vi.fn(),
 	leaveGroup: vi.fn(),
@@ -156,8 +155,11 @@ vi.mock('$lib/server/group/announcement-service', () => ({
 // `$lib/server/db`, which builds `relations.ts` against a schema index whose
 // `directory` module this file replaces — so the failure surfaces as
 // "Cannot read properties of undefined (reading 'userId')" in relations.
-vi.mock('$lib/server/group/committee-application-service', () => ({
-	listForCommittee: vi.fn(async () => [])
+const listForGroup = vi.hoisted(() => vi.fn(async () => [] as unknown[]));
+vi.mock('$lib/server/group/application-service', () => ({
+	listForGroup,
+	listForApplicant: vi.fn(async () => []),
+	hasOpenApplication: vi.fn(async () => false)
 }));
 vi.mock('$lib/server/event/event-service', () => ({ listGroupSessions: vi.fn(async () => []) }));
 const listDutyLists = vi.hoisted(() => vi.fn());
@@ -437,5 +439,25 @@ describe('getMemberGroup offers a committee its project duty lists', () => {
 		const page = (await groups.getMemberGroup(SLUG)) as { projectDutyLists: unknown };
 		expect(listDutyLists).not.toHaveBeenCalled();
 		expect(page.projectDutyLists).toEqual([]);
+	});
+});
+
+describe('getMemberGroup applications', () => {
+	it('returns a club’s applications to its admin, and no requested partition', async () => {
+		listForGroup.mockResolvedValue([{ choiceId: 'c-1' }]);
+		const page = (await groups.getMemberGroup(SLUG)) as {
+			applications: unknown[];
+			members: Record<string, unknown>;
+		};
+		expect(listForGroup).toHaveBeenCalled();
+		expect(page.applications).toEqual([{ choiceId: 'c-1' }]);
+		expect(Object.keys(page.members).sort()).toEqual(['active', 'pending']);
+	});
+
+	it('withholds them from a plain member', async () => {
+		callerRole = 'member';
+		const page = (await groups.getMemberGroup(SLUG)) as { applications: unknown[] };
+		expect(listForGroup).not.toHaveBeenCalled();
+		expect(page.applications).toEqual([]);
 	});
 });

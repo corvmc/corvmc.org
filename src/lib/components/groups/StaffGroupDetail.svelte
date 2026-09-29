@@ -29,7 +29,7 @@
 	/**
 	 * A club's or committee's staff page, shared by `/staff/clubs/[id]` and
 	 * `/staff/committees/[id]`. Each route runs its own one query and hands the
-	 * result here; `applications` is the committee page's own section.
+	 * result here; `applications` is each route's own review card.
 	 */
 	let {
 		group,
@@ -109,26 +109,6 @@
 	{@render applications?.()}
 
 	<InfoCard title="Roster">
-		{#if members.requested.length > 0}
-			<!-- Applications lead, because they are the only rows here that are
-			     waiting on somebody. A `by_application` group whose requests sat
-			     mixed into the member list is exactly what the separate
-			     `'requested'` status exists to prevent. -->
-			<h3 class="text-sm font-semibold">Applications</h3>
-			<Table>
-				{#snippet head()}
-					<th>Member</th>
-					<th class="whitespace-nowrap">Applied</th>
-				{/snippet}
-				{#each members.requested as m (m.id)}
-					<tr>
-						<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
-						<td class="whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
-					</tr>
-				{/each}
-			</Table>
-		{/if}
-
 		{#if members.active.length === 0 && members.pending.length === 0}
 			<EmptyState description="No members yet" />
 		{:else}

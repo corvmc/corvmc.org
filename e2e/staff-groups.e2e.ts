@@ -18,10 +18,9 @@ import { SEED_PUBLIC_BAND_NAME } from './fixtures/seed-band-onboarding';
  *    of the `kind` filter every group read now carries;
  *  - creating one appoints its leader in the same step, with no invitation for
  *    them to accept;
- *  - an application renders apart from the member list. A `by_application`
- *    group's requests mixed into the roster is precisely the fail-quiet that
- *    the separate `'requested'` status exists to prevent, and it is invisible in
- *    a diff.
+ *  - an application renders on its own card, apart from the member list, for
+ *    a viewer who may answer it. Mixed into the roster it would be a fail-quiet
+ *    that is invisible in a diff.
  */
 
 async function loginAsStaff(page: Page) {
@@ -103,8 +102,11 @@ test.describe('staff groups', () => {
 		// The fixture's own id, not a uuid — it is seeded rather than created.
 		await page.waitForURL(`**/staff/committees/${SEED_COMMITTEE_ID}`, { timeout: 15000 });
 
-		// The seeded committee is `by_application` and carries one requested row.
+		// The seeded committee is `by_application`, owned by this staffer, and
+		// carries one open application with an answer under the board's prompt.
 		await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible();
+		await expect(page.getByText('Booked a basement series for two years.')).toBeVisible();
+		await expect(page.getByRole('button', { name: `Accept ${SEED_TARGET_NAME}` })).toBeVisible();
 
 		await expect(page.locator('select[name="joinPolicy"]')).toHaveValue('by_application');
 	});

@@ -4,7 +4,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import StaffGroupDetail from '$lib/components/groups/StaffGroupDetail.svelte';
-	import CommitteeApplicationsCard from '$lib/components/groups/CommitteeApplicationsCard.svelte';
+	import ApplicationsCard from '$lib/components/groups/ApplicationsCard.svelte';
 	import { getStaffCommitteePage } from '$lib/remote/groups.remote';
 
 	/**
@@ -17,7 +17,7 @@
 </script>
 
 {#snippet applications()}
-	<CommitteeApplicationsCard slug={data.committee.slug} applications={data.applications} />
+	<ApplicationsCard slug={data.committee.slug} kind="committee" applications={data.applications} />
 {/snippet}
 
 {#if data.manage}

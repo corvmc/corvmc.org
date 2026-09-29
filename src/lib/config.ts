@@ -314,11 +314,10 @@ export const groupKindLabels: Record<GroupKind, string> = {
  *                 an active membership with no approval step. The point of a
  *                 drop-in program.
  *
- * `by_application` — you ask, and an owner or admin approves. The row waits at
- *                    `status: 'requested'`, which is `'pending'`'s exact mirror:
- *                    same waiting state, opposite direction. It is for the
- *                    program that wants everyone to be able to *find* it but not
- *                    everyone to be in it.
+ * `by_application` — you apply (`group_application`), and a reviewer's
+ *                    acceptance invites you. For the program that wants
+ *                    everyone to be able to *find* it but not everyone to be in
+ *                    it. Every committee is one.
  *
  * The policy governs self-service joining only. Invitations work identically
  * under all three. A band is always `invite_only` and the service refuses any
@@ -1205,39 +1204,39 @@ export const volunteerHourStatusLabels: Record<(typeof volunteerHourStatuses)[nu
  * as its own group rather than as more "away from shows".
  */
 /**
- * What CMC asks every committee applicant, in the order the paper form asks it.
+ * What a group asks its applicants, per kind, in the order the form asks it.
  *
- * A const rather than a table: the board settles these, not a chair, and the
- * two are the same for all six committees. Answers are stored keyed by `id`, so
- * rewording a prompt is a deploy and leaves old answers readable.
+ * Per kind rather than per group (#1728): a committee's two are the board's and
+ * the same for all six, which is what lets one application name several. A
+ * club's leaders say what they want to know in `joinInstructions`, shown above
+ * `note`. Answers are keyed by `id`, so rewording a prompt leaves them readable.
  */
-export const committeeApplicationQuestions = [
-	{ id: 'experience', prompt: 'Describe any relevant experience.' },
-	{ id: 'vision', prompt: 'What would you like your music community to look like?' }
-] as const;
+export const groupApplicationQuestions = {
+	committee: [
+		{ id: 'experience', prompt: 'Describe any relevant experience.' },
+		{ id: 'vision', prompt: 'What would you like your music community to look like?' }
+	],
+	club: [{ id: 'note', prompt: 'Anything the leaders should know?' }]
+} as const satisfies Record<'club' | 'committee', readonly { id: string; prompt: string }[]>;
 
-export type CommitteeApplicationQuestionId = (typeof committeeApplicationQuestions)[number]['id'];
+/** The kinds that take applications. A band is always `invite_only`. */
+export type ApplicationGroupKind = keyof typeof groupApplicationQuestions;
 
 /** How long an answer may be. Generous: the paper form gives three lines and a margin. */
-export const COMMITTEE_ANSWER_MAX = 2000;
+export const APPLICATION_ANSWER_MAX = 2000;
 
 /**
- * Where one committee's half of an application has got to.
+ * Where one group's half of an application has got to.
  *
- * Per committee, not per application: the paper form ticks several, and Booking
- * accepting you says nothing about what Facility decided. `contacted` is a real
- * state rather than a nicety — the form promises "a chair will contact you to
- * discuss it", and a chair needs to know which of those calls they have made.
+ * Per group, not per application: a committee application ticks several, and
+ * Booking accepting you says nothing about what Facility decided. `contacted`
+ * is a real state — the form promises "a chair will contact you to discuss
+ * it", and a chair needs to know which of those calls they have made.
  */
-export const committeeApplicationStatuses = [
-	'submitted',
-	'contacted',
-	'accepted',
-	'declined'
-] as const;
-export type CommitteeApplicationStatus = (typeof committeeApplicationStatuses)[number];
+export const groupApplicationStatuses = ['submitted', 'contacted', 'accepted', 'declined'] as const;
+export type GroupApplicationStatus = (typeof groupApplicationStatuses)[number];
 
-export const committeeApplicationStatusLabels: Record<CommitteeApplicationStatus, string> = {
+export const groupApplicationStatusLabels: Record<GroupApplicationStatus, string> = {
 	submitted: 'Submitted',
 	contacted: 'Contacted',
 	accepted: 'Accepted',
@@ -1245,7 +1244,7 @@ export const committeeApplicationStatusLabels: Record<CommitteeApplicationStatus
 };
 
 // `committee` retired 2026-09-14. A committee is a `group` and is applied to
-// through `committee_application`, not signed up for — see decision 2 of
+// through `group_application`, not signed up for — see decision 2 of
 // committees-and-roles-spec.md. The six roles that shadowed them are archived
 // in `away-from-shows` rather than deleted, because hour logs point at two.
 export const volunteerRoleGroups = ['at-shows', 'away-from-shows'] as const;
@@ -2634,9 +2633,23 @@ export const eventKindLabels = {
 
 /**
  * Where a market vendor's application stands. `withdrawn` is terminal; a
- * decision can be reversed, a vendor's own withdrawal cannot.
+ * decision can be reversed, a vendor's own withdrawal cannot. `no_show` is an
+ * accepted vendor who never arrived, set on the day and undone only to `accepted`.
  */
-export const marketVendorStatuses = ['applied', 'accepted', 'declined', 'withdrawn'] as const;
+export const marketVendorStatuses = [
+	'applied',
+	'accepted',
+	'declined',
+	'withdrawn',
+	'no_show'
+] as const;
+export const marketVendorStatusLabels: Record<(typeof marketVendorStatuses)[number], string> = {
+	applied: 'Applied',
+	accepted: 'Accepted',
+	declined: 'Declined',
+	withdrawn: 'Withdrawn',
+	no_show: 'No-show'
+};
 export type MarketVendorStatus = (typeof marketVendorStatuses)[number];
 
 /** A vendor may ask for up to this many tables on one application. */

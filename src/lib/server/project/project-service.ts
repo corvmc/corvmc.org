@@ -11,7 +11,12 @@ import { production, productionExpense } from '$lib/server/db/schema/production'
 import { eventListingColumns } from '$lib/server/event/event-columns';
 import { and, asc, desc, eq, exists, inArray, isNull, notExists, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
-import { valueOfMinutesCents, type ProjectKind, type ProjectStatus } from '$lib/config';
+import {
+	valueOfMinutesCents,
+	type ProjectCommitteeRole,
+	type ProjectKind,
+	type ProjectStatus
+} from '$lib/config';
 import { getHourValueCents } from '$lib/server/volunteer/hour-value';
 
 /**
@@ -51,7 +56,10 @@ export class ProjectOwnerError extends DomainError {
 export interface CreateProjectInput {
 	name: string;
 	description?: string | null;
-	/** The owning committee. A `group` with `kind = 'committee'`, checked here. */
+	/**
+	 * The owning committee, written as its `owner` row in `project_committee`.
+	 * A `group` with `kind = 'committee'`, checked here.
+	 */
 	groupId?: string | null;
 	/** The suggestion this answers. At most one project per suggestion. */
 	suggestionId?: string | null;
@@ -65,7 +73,7 @@ export interface CreateProjectInput {
 /**
  * A CHECK cannot cross tables, so "the owner is a committee" is enforced here.
  *
- * It is a real rule rather than a nicety: `project.groupId` is what a
+ * It is a real rule rather than a nicety: `project_committee` is what a
  * committee-scoped view reads, and a band or a club appearing in that list
  * would be a group whose members are not the people doing the work.
  */
@@ -109,17 +117,18 @@ export async function createProject(data: CreateProjectInput) {
 	if (data.suggestionId) await assertClaimableSuggestion(data.suggestionId);
 
 	const id = crypto.randomUUID();
-	const insert = db.insert(project).values({ ...data, id });
-	if (data.groupId) {
-		await db.batch([insert, ownerRow(id, data.groupId)]);
+	const { groupId, ...fields } = data;
+	const insert = db.insert(project).values({ ...fields, id });
+	if (groupId) {
+		await db.batch([insert, ownerRow(id, groupId)]);
 	} else {
 		await insert;
 	}
 	return getProjectById(id);
 }
 
-/** `project.group_id`'s twin in `project_committee`, kept in step until the column goes. */
-function ownerRow(projectId: string, groupId: string) {
+/** A project's owning committee, as its `owner` row. */
+export function ownerRow(projectId: string, groupId: string) {
 	return db
 		.insert(projectCommittee)
 		.values({ projectId, groupId, role: 'owner' })
@@ -134,17 +143,16 @@ export async function updateProject(id: string, data: Partial<CreateProjectInput
 	if (data.groupId) await assertCommittee(data.groupId);
 	if (data.suggestionId) await assertClaimableSuggestion(data.suggestionId, id);
 
+	const { groupId, ...fields } = data;
 	const update = db
 		.update(project)
-		.set({ ...data, updatedAt: new Date() })
+		.set({ ...fields, updatedAt: new Date() })
 		.where(eq(project.id, id));
-	if (data.groupId !== undefined) {
+	if (groupId !== undefined) {
 		const dropOwner = db
 			.delete(projectCommittee)
 			.where(and(eq(projectCommittee.projectId, id), eq(projectCommittee.role, 'owner')));
-		await db.batch(
-			data.groupId ? [update, dropOwner, ownerRow(id, data.groupId)] : [update, dropOwner]
-		);
+		await db.batch(groupId ? [update, dropOwner, ownerRow(id, groupId)] : [update, dropOwner]);
 	} else {
 		await update;
 	}
@@ -203,6 +211,30 @@ export async function listCommittees() {
 		.from(group)
 		.where(and(eq(group.kind, 'committee'), isNull(group.deletedAt)))
 		.orderBy(asc(group.name));
+}
+
+export interface ProjectCommitteeRow {
+	projectId: string;
+	groupId: string;
+	name: string;
+	role: ProjectCommitteeRole;
+}
+
+/** The committees taking part in each project, owner first. One query for any number. */
+export async function listProjectCommittees(projectIds: string[]): Promise<ProjectCommitteeRow[]> {
+	if (projectIds.length === 0) return [];
+	const rows = await db
+		.select({
+			projectId: projectCommittee.projectId,
+			groupId: projectCommittee.groupId,
+			name: group.name,
+			role: projectCommittee.role
+		})
+		.from(projectCommittee)
+		.innerJoin(group, eq(group.id, projectCommittee.groupId))
+		.where(inArray(projectCommittee.projectId, projectIds))
+		.orderBy(asc(group.name));
+	return rows.sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner'));
 }
 
 /** Does a committee take part in the project? Correlated, so it filters any project query. */
@@ -277,13 +309,15 @@ export async function startProjectFromSuggestion(
 
 	const id = crypto.randomUUID();
 	const now = new Date();
+	const { groupId, ...fields } = data;
 
 	await db.batch([
-		db.insert(project).values({ ...data, id, suggestionId, status: 'planned' }),
+		db.insert(project).values({ ...fields, id, suggestionId, status: 'planned' }),
 		db
 			.update(suggestion)
 			.set({ status: 'planned', updatedAt: now })
-			.where(eq(suggestion.id, suggestionId))
+			.where(eq(suggestion.id, suggestionId)),
+		...(groupId ? [ownerRow(id, groupId)] : [])
 	]);
 
 	return getProjectById(id);
