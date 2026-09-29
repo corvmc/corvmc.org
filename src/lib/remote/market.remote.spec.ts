@@ -331,12 +331,12 @@ describe('market day: check-in, no-shows and invite-back (#1505)', () => {
 	];
 
 	it.each(writes)(
-		"%s guards on the vendor's market committee, with event.manage as cover",
+		"%s guards on the committees of the vendor's market project, with event.manage as cover",
 		async (_name, call, fn, args) => {
-			committeeOf = ['grp-dev'];
+			committeeOf = ['proj-dev'];
 			await call();
 			expect(svc.getVendorEventId).toHaveBeenCalledWith('v-1');
-			expect(guardedOn).toEqual([['grp-dev', 'event.manage']]);
+			expect(guardedOn).toEqual([['proj-dev', 'event.manage']]);
 			expect(svc[fn as keyof typeof svc]).toHaveBeenCalledWith(...args);
 		}
 	);
@@ -352,18 +352,18 @@ describe('market day: check-in, no-shows and invite-back (#1505)', () => {
 		class Refused extends DomainError {
 			readonly httpStatus = 409;
 		}
-		committeeOf = ['grp-dev'];
+		committeeOf = ['proj-dev'];
 		svc[fn as 'checkInVendor'].mockRejectedValueOnce(new Refused('A no_show cannot'));
 		const thrown = await call().catch((e: unknown) => e);
 		expect(isHttpError(thrown, 409), 'a kit 409, not the raw rule').toBe(true);
 		expect(thrown).toMatchObject({ body: { message: 'A no_show cannot' } });
 	});
 
-	it('shows the day-of list to the owning committee, and to staff', async () => {
-		committeeOf = ['grp-dev'];
+	it('shows the day-of list to the committees on the market, and to staff', async () => {
+		committeeOf = ['proj-dev'];
 		svc.getMarketDay.mockResolvedValueOnce({ eventId: 'evt-1' } as never);
 		await remote.getMarketDayCheckIn('evt-1');
-		expect(guardedOn).toEqual([['grp-dev', 'event.manage']]);
+		expect(guardedOn).toEqual([['proj-dev', 'event.manage']]);
 		expect(svc.listMarketDayVendors).toHaveBeenCalledWith('evt-1');
 
 		signedIn = true;
