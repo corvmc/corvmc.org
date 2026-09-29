@@ -1,10 +1,10 @@
 {
-  "id": "1091d23f-c8df-4e27-8e3b-555a15624f0f",
-  "prevIds": [
-    "5d47603b-8420-4eb9-b430-eda9ee04812a"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "fed169f1-1e17-43bd-a2de-c95418c4cc41",
+  "prevIds": [
+    "1091d23f-c8df-4e27-8e3b-555a15624f0f"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -13201,6 +13201,36 @@
       "default": null,
       "generated": null,
       "name": "refunded_at",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "checked_in_at",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invite_back",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invite_back_note",
       "entityType": "columns",
       "table": "market_vendor"
     },

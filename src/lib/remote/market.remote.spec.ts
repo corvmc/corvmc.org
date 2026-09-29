@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
+import { isHttpError } from '@sveltejs/kit';
+import { DomainError } from '$lib/server/domain-error';
 
 /**
  * The market remotes' two boundaries: the public form checks Turnstile before
@@ -344,6 +346,17 @@ describe('market day: check-in, no-shows and invite-back (#1505)', () => {
 		staff = false;
 		await expect(call()).rejects.toMatchObject({ status: 403 });
 		expect(svc[fn as keyof typeof svc]).not.toHaveBeenCalled();
+	});
+
+	it.each(writes)("%s answers a refused move with the rule's own status", async (_n, call, fn) => {
+		class Refused extends DomainError {
+			readonly httpStatus = 409;
+		}
+		committeeOf = ['grp-dev'];
+		svc[fn as 'checkInVendor'].mockRejectedValueOnce(new Refused('A no_show cannot'));
+		const thrown = await call().catch((e: unknown) => e);
+		expect(isHttpError(thrown, 409), 'a kit 409, not the raw rule').toBe(true);
+		expect(thrown).toMatchObject({ body: { message: 'A no_show cannot' } });
 	});
 
 	it('shows the day-of list to the owning committee, and to staff', async () => {
