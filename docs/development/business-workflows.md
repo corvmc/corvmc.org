@@ -397,6 +397,28 @@ events use RSVP instead.
 - **RSVP / comps:** `event/rsvp-service.ts`; staff `compTickets` form creates valid
   tickets with no charge.
 
+### Door sales
+
+A card payment taken at the door on the CMC phone, which runs the `door-app/` shell over
+`/member/volunteer/door` ([door-app.md](door-app.md);
+design in [specs/shipped/tap-to-pay-spec.md](../specs/shipped/tap-to-pay-spec.md)).
+
+- **Who:** `finance.collect`, checked per show by every remote in `src/lib/remote/door.remote.ts`.
+  Staff hold it everywhere. A confirmed door volunteer holds it for their own show during the
+  shift. Only collective-sold shows are offered (#1629).
+- **Sale:** `startDoorSale` → `ticket/door-sale.ts`. It refuses a price below the show's floor. A
+  $0 sale mints `checked_in` tickets under a `door-…` purchase id and charges nothing. Anything
+  else opens a `card_present` PaymentIntent and mints `pending` tickets under the intent's `pi_…`
+  id. Capacity only warns, and the door can still sell past it.
+- **Fulfilment:** the `payment_intent.succeeded` webhook → `fulfillDoorSale` flips the purchase's
+  `pending` rows to `checked_in` and writes the ledger rows. A redelivered event matches no
+  `pending` row and writes nothing. The door screen polls `getDoorSale` and never reports a
+  payment itself.
+- **Where it breaks:** a sale that stays `pending` after a successful tap means the webhook did not
+  arrive. Nothing sweeps card-present intents yet, so it is found by hand in Stripe. A sale
+  abandoned before the tap is released by `cancelDoorSale`, or later by
+  `cancelStalePendingTickets`.
+
 ### Data touched
 
 `event_listing`, `ticket` (status: `pending → valid → checked_in`, or `cancelled`; plus the money the

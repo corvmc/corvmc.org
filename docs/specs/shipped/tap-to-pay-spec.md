@@ -1,8 +1,13 @@
 # Tap to Pay at the door
 
-**Status:** 🔧 Building on `feature/tap-to-pay` (owner ruling, 2026-09-24). Android only, one
-sideloaded handset, no app store. #522's payment gateway seam is on `main`. Phase 0 still needs the
-owner's phone and a Stripe Location; see [Owner setup](#owner-setup).
+> ## Status, 2026-09-29: shipped
+>
+> Phases 1 to 3, the door-shift grant and the capacity warning landed on `main` in #1663
+> (2026-09-25), which closed #612. That PR records the webhook event and the
+> `STRIPE_TERMINAL_LOCATION_ID` secret as set. It does not record phase 0's attestation test on the
+> phone. **Not built:** the reconciliation sweep and door donations, both deferred under
+> [Phases](#phases). Read the rest as the record of the decisions. How door sales behave now is in
+> [business-workflows](../../development/business-workflows.md#door-sales).
 
 [#612](https://github.com/corvmc/corvmc.org/issues/612) asked for "a registered-device concept for a
 terminal in the space — check-in, door access, or a walk-up booking screen", inherited from a
@@ -649,9 +654,9 @@ by export and one new operator breaks a sibling.
 
 ## Phases
 
-All of this lands on `feature/tap-to-pay`, one squash-merged PR per phase. `main` sees it once, in
-a landing PR that waits on the owner's phone (see [Owner setup](#owner-setup)). The owner started
-the build on 2026-09-24 without waiting for phase 0, since phases 1 to 3 need no phone.
+Phases 1 to 3 were built on `feature/tap-to-pay`, one squash-merged PR per phase, and reached
+`main` in one landing PR, #1663. The owner started the build on 2026-09-24 without waiting for
+phase 0, since phases 1 to 3 need no phone.
 
 **Phase 0: the assumption test, on the owner's phone.** Install the phase 3 debug build, disable
 Developer options, and call `connectReader` against the simulated reader. If that succeeds,
@@ -744,7 +749,7 @@ app, and take one simulated test payment before the doors open.
 2. **Who may take a payment.** Settled by #1630 (owner, 2026-09-25): `finance.collect`, held by
    `admin` and `staff` everywhere and by a confirmed door volunteer for their own show during the
    shift. **Landing step:** production's Door role only carries the grant once ticked, so the
-   landing PR ships a preserve-behaviour data backfill that adds `finance.collect` to the `Door`
+   landing PR ships (and #1663 did ship) a preserve-behaviour data backfill that adds `finance.collect` to the `Door`
    role's `capability_grants` (as #1651 did for `event.uploadRecap`).
 3. **Can the plugin be handed a token directly?** Settled: yes, through `setConnectionToken`. See
    [The connection token](#the-connection-token).
@@ -759,4 +764,4 @@ app, and take one simulated test payment before the doors open.
    decides. There is no separate door allocation and no schema change.
 7. **Does CMC want an S700 for the unattended cases?** Settled by #1632 (owner, 2026-09-25): yes,
    later. A smart reader for check-in, door access and walk-up booking is its own spec and a later
-   hardware purchase, #1659. It does not block this one, and #612 closes when the landing PR merges.
+   hardware purchase, #1659. It does not block this one, and #612 closed when the landing PR merged.

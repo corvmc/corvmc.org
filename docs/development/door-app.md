@@ -5,9 +5,9 @@ The Tap to Pay door phone (#612) runs a Capacitor shell, `door-app/`, which load
 the staffer sees is the web app, so a fix to the door screen is a deploy, not a reinstall. The
 native binary changes only when Capacitor or the Stripe Terminal SDK does.
 
-The design and its reasons are in [`docs/specs/tap-to-pay-spec.md`](../specs/tap-to-pay-spec.md).
+The design and its reasons are in [`docs/specs/shipped/tap-to-pay-spec.md`](../specs/shipped/tap-to-pay-spec.md).
 The owner's one-time setup (Stripe Location, secrets, webhook event) is its
-[Owner setup](../specs/tap-to-pay-spec.md#owner-setup) section.
+[Owner setup](../specs/shipped/tap-to-pay-spec.md#owner-setup) section.
 
 ## What is in `door-app/`
 
