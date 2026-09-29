@@ -1,10 +1,10 @@
 {
+  "id": "3bfdf958-8659-43df-a40a-abfcff3e830e",
+  "prevIds": [
+    "e049530a-e4a4-4375-bb90-ef93b8ace496"
+  ],
   "version": "7",
   "dialect": "sqlite",
-  "id": "c514a719-5fe3-4896-aca1-08f6f404fbcb",
-  "prevIds": [
-    "2ac77c77-8b9b-4fa0-aafb-6c2f7a2c0849"
-  ],
   "ddl": [
     {
       "name": "account",
@@ -8689,36 +8689,6 @@
       "table": "duty_list_item"
     },
     {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "title",
-      "entityType": "columns",
-      "table": "duty_list_item"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "group_id",
-      "entityType": "columns",
-      "table": "duty_list_item"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "done_when",
-      "entityType": "columns",
-      "table": "duty_list_item"
-    },
-    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -10125,26 +10095,6 @@
       "default": "false",
       "generated": null,
       "name": "close_reports_on_completion",
-      "entityType": "columns",
-      "table": "work_order"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "group_id",
-      "entityType": "columns",
-      "table": "work_order"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "done_when",
       "entityType": "columns",
       "table": "work_order"
     },
@@ -16705,21 +16655,6 @@
     },
     {
       "columns": [
-        "group_id"
-      ],
-      "tableTo": "group",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_duty_list_item_group_id_group_id_fk",
-      "entityType": "fks",
-      "table": "duty_list_item"
-    },
-    {
-      "columns": [
         "volunteer_role_id"
       ],
       "tableTo": "volunteer_role",
@@ -17300,21 +17235,6 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_volunteer_shift_resolved_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "work_order"
-    },
-    {
-      "columns": [
-        "group_id"
-      ],
-      "tableTo": "group",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_work_order_group_id_group_id_fk",
       "entityType": "fks",
       "table": "work_order"
     },
@@ -22731,24 +22651,6 @@
       "where": null,
       "origin": "manual",
       "name": "work_order_reservation_idx",
-      "entityType": "indexes",
-      "table": "work_order"
-    },
-    {
-      "columns": [
-        {
-          "value": "group_id",
-          "isExpression": false
-        },
-        {
-          "value": "due_at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": "group_id is not null and resolved_at is null and cancelled_at is null",
-      "origin": "manual",
-      "name": "work_order_group_open_idx",
       "entityType": "indexes",
       "table": "work_order"
     },
