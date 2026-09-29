@@ -616,6 +616,16 @@ export interface InstructorApplicationSubmittedEvent {
 	headline: string | null;
 }
 
+/**
+ * Somebody asked to join a group someone has to approve: a committee
+ * application, or a request to a `by_application` group. Ids only; the listener
+ * resolves the reviewers (`group/application-reviewers.ts`).
+ */
+export interface GroupApplicationSubmittedEvent {
+	groupId: string;
+	applicantUserId: string;
+}
+
 export interface InstructorApplicationReviewedEvent {
 	instructorId: string;
 	applicantUserId: string;
@@ -861,6 +871,7 @@ export type DomainEvents = {
 	'local_resource.reviewed': LocalResourceReviewedEvent;
 	'instructor.application_submitted': InstructorApplicationSubmittedEvent;
 	'instructor.application_reviewed': InstructorApplicationReviewedEvent;
+	'group.application_submitted': GroupApplicationSubmittedEvent;
 	'community_event.unpublished': CommunityEventUnpublishedEvent;
 	'event.lineup_invited': EventLineupInvitedEvent;
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
