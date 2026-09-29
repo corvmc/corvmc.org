@@ -1808,6 +1808,69 @@ the suggestion, and moves the suggestion to Planned. The project's staff page sh
 - The member-of-record age is `ballot.memberOfRecordDays` in site config (default 60). It is read at
   open, so changing it moves only ballots not yet opened.
 
+## 24. Group applications: applying to a club or a committee
+
+Spec: [specs/group-applications-spec.md](../specs/group-applications-spec.md) (#1700; decisions
+#1727–#1730)
+
+### The story
+
+A group decides how people get in with its `joinPolicy`. `open` groups take a join straight to an
+active membership. `invite_only` groups grow by invitation only. A `by_application` group takes
+**applications**, and every committee is one. A member applies to a club from its Apply dialog,
+which shows the club's `joinInstructions` above one optional question. A committee's Apply button
+opens `/member/volunteer/committees` with that committee ticked. One application there can name
+several committees and answers the board's two questions.
+
+A reviewer answers for each group separately. They can mark the applicant contacted, accept, or
+decline with a reason the applicant sees. The reviewers are the group's owner and admins, of any
+kind. For committees only, holders of `committee.reviewApplications` (the volunteer coordinator)
+can also review, from `/staff/committees`. Accepting **invites** the applicant, who then accepts
+the invitation like any other. The applicant sees each decision and its reason on
+`/member/groups`. They can withdraw while a choice is still open, and can apply again once
+nothing is open for that group.
+
+### The code path
+
+- **Apply:** `applyToGroups` in `src/lib/remote/group-applications.remote.ts` →
+  `submitApplication()` in `src/lib/server/group/application-service.ts`.
+  - The policy is read from each group row.
+  - Several groups are allowed only when all of them are committees.
+  - Answers are filtered to that kind's `groupApplicationQuestions`.
+  - Groups the applicant is already on, or has an open choice for, are dropped.
+  - It emits `group.application_submitted` once per group it lands on. The listener resolves
+    reviewers through `application-reviewers.ts` and notifies them (#1726).
+- **Review:** `markApplicantContacted`, `acceptGroupApplication` and `declineGroupApplication` →
+  `requireApplicationReviewer()` in `group-context.ts`, then `markContacted` /
+  `acceptApplication` (which calls `invite()`) / `declineApplication`. Each write re-scopes the
+  choice id to the group the guard resolved.
+- **Read:**
+  - `getMemberGroup` and `getStaffGroupPage` return `applications` to a viewer the guard would
+    admit, and `ApplicationsCard` renders them.
+  - `getMemberGroups` returns `applied`, the applicant's latest choice per group.
+  - `getCommitteeApplicationQueue` backs `/staff/committees`.
+- `joinGroupForm` / `joinGroup()` serve `open` groups only, and throw `ApplyInsteadError` for a
+  `by_application` group.
+
+### Data touched
+
+- `group_application`: who applied, the answers as JSON keyed by question id, and `withdrawn_at`.
+- `group_application_choice`: one row per group named, with `status`, `review_notes` and the
+  decider.
+- `group_member` is written only when an application is accepted, as a `pending` invitation.
+- The migration `*_group_application_backfill` copied `committee_application*` across and turned
+  every `requested` roster row into an application. It deleted those rows and set every committee
+  to `by_application`.
+
+### Where it breaks
+
+- **A committee set back to `invite_only` stops taking applications.** Its Apply button disappears
+  and `submitApplication` refuses it. Open choices stay answerable.
+- **`group.manage` alone cannot decide an application.** A staffer who is not the group's owner or
+  admin sees no card. On a committee they need `committee.reviewApplications`.
+- `committee_application*` and `group_member.status = 'requested'` are still in the schema until
+  the contract migration. Nothing reads them.
+
 ## Cross-cutting patterns worth internalizing
 
 - **Everything money-related converges on two Stripe entry points:** `checkout()` in

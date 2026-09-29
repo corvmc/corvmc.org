@@ -19,7 +19,7 @@
 	import GroupSettingsForm from './GroupSettingsForm.svelte';
 	import AssignLeaderAction from './AssignLeaderAction.svelte';
 	import CommitteeGrantsCard from './CommitteeGrantsCard.svelte';
-	import CommitteeApplicationsSection from './CommitteeApplicationsSection.svelte';
+	import ApplicationsCard from '$lib/components/groups/ApplicationsCard.svelte';
 
 	// Above the awaited query: a declaration that follows a top-level await is
 	// async-gated, which would compile every `fields.X.as()` below into an async
@@ -91,31 +91,11 @@
 		<CommitteeGrantsCard groupId={id} name={group.name} held={group.capabilityGrants ?? []} />
 	{/if}
 
-	{#if group.kind === 'committee' && data.canReviewApplications}
-		<CommitteeApplicationsSection groupId={id} />
+	{#if data.canReviewApplications && group.kind !== 'band'}
+		<ApplicationsCard slug={group.slug} kind={group.kind} applications={data.applications} />
 	{/if}
 
 	<InfoCard title="Roster">
-		{#if members.requested.length > 0}
-			<!-- Applications lead, because they are the only rows here that are
-			     waiting on somebody. A `by_application` group whose requests sat
-			     mixed into the member list is exactly what the separate
-			     `'requested'` status exists to prevent. -->
-			<h3 class="text-sm font-semibold">Applications</h3>
-			<Table>
-				{#snippet head()}
-					<th>Member</th>
-					<th class="whitespace-nowrap">Applied</th>
-				{/snippet}
-				{#each members.requested as m (m.id)}
-					<tr>
-						<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
-						<td class="whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
-					</tr>
-				{/each}
-			</Table>
-		{/if}
-
 		{#if members.active.length === 0 && members.pending.length === 0}
 			<EmptyState description="No members yet" />
 		{:else}

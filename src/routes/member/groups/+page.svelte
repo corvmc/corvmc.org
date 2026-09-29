@@ -5,13 +5,18 @@
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { resolve } from '$app/paths';
 	import JoinGroupAction from '$lib/components/groups/JoinGroupAction.svelte';
 	import AnswerGroupInviteAction from '$lib/components/groups/AnswerGroupInviteAction.svelte';
 	import EmailInviteCard from '$lib/components/groups/EmailInviteCard.svelte';
 	import { getMemberGroups } from '$lib/remote/groups.remote';
+	import { withdrawGroupApplication } from '$lib/remote/group-applications.remote';
+	import { groupApplicationStatusLabels } from '$lib/config';
+
+	// Above the awaited query, so `fields.X.as()` is not compiled async-gated.
+	const withdrawFields = withdrawGroupApplication.fields;
 
 	/**
 	 * Your programs, and the ones you could join, on one page.
@@ -30,11 +35,12 @@
 	const data = $derived(await getMemberGroups());
 
 	// Invitations received and applications sent are the same waiting state
-	// pointed opposite ways, and conflating them in the UI would reintroduce
-	// exactly the ambiguity the separate `'requested'` status prevents.
+	// pointed opposite ways, so they are listed apart.
 	const active = $derived(data.mine.filter((g) => g.myStatus === 'active'));
 	const invited = $derived(data.mine.filter((g) => g.myStatus === 'pending'));
-	const applied = $derived(data.mine.filter((g) => g.myStatus === 'requested'));
+	const applied = $derived(data.applied);
+
+	const statusVariant = { submitted: 'ghost', contacted: 'info', declined: 'error' } as const;
 
 	const kindLabel = (kind: string) => (kind === 'committee' ? 'Committee' : 'Club');
 </script>
@@ -75,14 +81,44 @@
 					<EmailInviteCard invite={inv} kindLabel={kindLabel(inv.kind)} />
 				{/each}
 
-				{#each applied as g (g.id)}
+				{#each applied as a (a.groupId)}
 					<Card>
 						<CardBody row class="py-4">
 							<div class="min-w-0">
-								<span class="font-semibold">{g.name}</span>
-								<p class="text-subtle">{kindLabel(g.kind)} · you asked to join</p>
+								<span class="font-semibold">{a.name}</span>
+								<p class="text-subtle">
+									{kindLabel(a.kind)} · {a.open ? 'you applied to join' : 'your application'}
+								</p>
+								<!-- The reviewer's reason, where they left one: a decision you
+								     cannot see is one you cannot ask about. -->
+								{#if a.reviewNotes}
+									<p class="mt-1 text-sm">{a.reviewNotes}</p>
+								{/if}
 							</div>
-							<StatusBadge status="requested" label />
+							<div class="flex shrink-0 items-center gap-2">
+								{#if a.status !== 'accepted'}
+									<Badge variant={statusVariant[a.status]}>
+										{groupApplicationStatusLabels[a.status]}
+									</Badge>
+								{/if}
+								{#if a.open}
+									<Action
+										action={withdrawGroupApplication.for(a.applicationId)}
+										label="Withdraw"
+										aria-label={`Withdraw your application to ${a.name}`}
+										variant="ghost"
+										size="xs"
+										confirm={a.sharedWith > 0
+											? `This application also names ${a.sharedWith} other ${a.sharedWith === 1 ? 'committee' : 'committees'}, and withdrawing takes it back from all of them. Anything already decided stays decided.`
+											: 'Withdraw this application?'}
+										successToast="Application withdrawn"
+									>
+										{#snippet form()}
+											<input {...withdrawFields.applicationId.as('hidden', a.applicationId)} />
+										{/snippet}
+									</Action>
+								{/if}
+							</div>
 						</CardBody>
 					</Card>
 				{/each}
@@ -103,6 +139,8 @@
 							<JoinGroupAction
 								groupId={g.id}
 								groupName={g.name}
+								slug={g.slug}
+								kind={g.kind}
 								policy="open"
 								instructions={g.joinInstructions}
 							/>
@@ -126,6 +164,8 @@
 							<JoinGroupAction
 								groupId={g.id}
 								groupName={g.name}
+								slug={g.slug}
+								kind={g.kind}
 								policy="by_application"
 								instructions={g.joinInstructions}
 							/>

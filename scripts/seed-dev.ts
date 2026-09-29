@@ -45,7 +45,7 @@ import {
 	seedGroupLeaders
 } from './seed/group-leaders';
 import { seedGroupDocuments } from './seed/group-documents';
-import { seedCommitteeApplications } from './seed/committee-applications';
+import { seedGroupApplications } from './seed/group-applications';
 import { seedDirectoryEntries } from './seed/directory';
 import { seedDirectoryPersonas } from './seed/directory-personas';
 import { seedInstructors } from './seed/instructors';
@@ -175,8 +175,8 @@ async function main() {
 	const externalActs = await seedExternalActs();
 	const groupSessions = await seedGroupSessions(groups);
 	const groupDocuments = await seedGroupDocuments(groups, allUsers);
-	// After the groups, whose Booking Committee these name.
-	const committeeApplications = await seedCommitteeApplications(groups, allUsers);
+	// After the groups, whose committees these name.
+	const groupApplications = await seedGroupApplications(groups, allUsers);
 	const bandEvents = await seedBandEvents(bands, allUsers, usage ? [usage.band] : []);
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
@@ -344,7 +344,7 @@ async function main() {
 		`  ${groupDocuments.length} group documents (${groupDocuments.filter((d) => d.deletedAt).length} removed)`
 	);
 	console.log(
-		`  ${committeeApplications.length} committee applications (1 new, 1 contacted, 1 declined)`
+		`  ${groupApplications.length + 2} group applications (committees: 2 new, contacted, two-committee, declined, withdrawn; 1 club)`
 	);
 	console.log(`  ${bandEvents.length} band events`);
 	console.log(`  ${bandReservations.length} band reservations`);

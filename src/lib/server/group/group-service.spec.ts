@@ -95,7 +95,6 @@ vi.mock('$lib/server/band/band-service', () => ({
 
 import {
 	assignLeader,
-	approveApplication,
 	createGroup,
 	joinGroup,
 	leaveGroup,
@@ -103,6 +102,7 @@ import {
 	updateGroupProfile,
 	updateGroupSettings,
 	AlreadyOnRosterError,
+	ApplyInsteadError,
 	GroupNotFoundError,
 	NotAStaffGroupError,
 	NotJoinableError
@@ -348,18 +348,13 @@ describe('joinGroup', () => {
 		});
 	});
 
-	it('parks a `by_application` group at requested', async () => {
-		selectResultQueue = [[{ joinPolicy: 'by_application', kind: 'committee' }], []];
+	// An application has answers and a decision; `submitApplication` is its door.
+	it('sends a `by_application` group to the application instead, writing nothing', async () => {
+		selectResultQueue = [[{ joinPolicy: 'by_application', kind: 'club' }], []];
 
-		const result = await joinGroup('group-1', 'user-2');
-
-		expect(result.status).toBe('requested');
-		expect(writes[0].values).toMatchObject({ status: 'requested' });
-		// #1726: the owner and admins are told, or the request waits unseen.
-		expect(emit).toHaveBeenCalledWith('group.application_submitted', {
-			groupId: 'group-1',
-			applicantUserId: 'user-2'
-		});
+		await expect(joinGroup('group-1', 'user-2')).rejects.toBeInstanceOf(ApplyInsteadError);
+		expect(writes).toEqual([]);
+		expect(emit).not.toHaveBeenCalled();
 	});
 
 	it('announces nothing for an `open` join, which has nobody to approve it', async () => {
@@ -396,30 +391,6 @@ describe('joinGroup', () => {
 		selectResultQueue = [[{ joinPolicy: 'open', kind: 'club' }], [{ id: 'member-1' }]];
 
 		await expect(joinGroup('group-1', 'user-2')).rejects.toBeInstanceOf(AlreadyOnRosterError);
-		expect(writes).toEqual([]);
-	});
-});
-
-describe('approveApplication', () => {
-	it('flips a requested row to active', async () => {
-		selectResultQueue = [[{ id: 'member-1' }]];
-
-		await approveApplication('member-1', 'group-1');
-
-		expect(writes[0]).toMatchObject({ op: 'update', values: { status: 'active' } });
-	});
-
-	/**
-	 * The member id comes from the client, so the scope is the whole guard: an
-	 * admin's authority stops at their own group, and a row that is not
-	 * `'requested'` is not an application to approve.
-	 */
-	it('does nothing for a row outside the group, or not applying', async () => {
-		selectResultQueue = [[]];
-
-		await expect(approveApplication('member-elsewhere', 'group-1')).rejects.toBeInstanceOf(
-			GroupNotFoundError
-		);
 		expect(writes).toEqual([]);
 	});
 });

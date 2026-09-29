@@ -21,9 +21,9 @@ export interface ApplicationNotice {
 /**
  * Who should hear that someone applied to a group, and where they answer it.
  *
- * The same doors `requireCommitteeReviewer` and `approveApplicationForm` check:
- * the group's active owner and admins, or for a committee with no chair, the
- * holders of `committee.reviewApplications`. Both submit paths share it (#1726).
+ * Drawn from the people `requireApplicationReviewer` admits: the group's active
+ * owner and admins, any kind. The committee capability holders are told only
+ * when a committee has no chair, since otherwise the chair answers (#1726).
  */
 export async function applicationNotice(
 	groupId: string,

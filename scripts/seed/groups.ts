@@ -1,5 +1,9 @@
 import { inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
 import { groupMember } from '../../src/lib/server/db/schema/group';
+import {
+	groupApplication,
+	groupApplicationChoice
+} from '../../src/lib/server/db/schema/group-application';
 import { insertBandWithOwner } from './bands';
 import { db } from './db';
 import { GROUP_INVITEE_PERSONA, GROUP_LEADER_PERSONAS } from './group-leaders';
@@ -17,7 +21,9 @@ import { pick, pickN } from './util';
  * Each of the three join policies gets a group, because the roster tab and the
  * member index lead with a different action under each and none of that can be
  * looked at locally without one of each. The Real Book Club is `open` because it
- * is the spec's driving case: a drop-in jazz jam anyone may join unaided.
+ * is the spec's driving case: a drop-in jazz jam anyone may join unaided. The
+ * Songwriters Circle is the one `by_application` club, so a club application
+ * and its `note` answer render somewhere.
  *
  * `leaders` are the loginable non-staff personas from `group-leaders.ts`, one
  * per join policy. Drawing a leader from `users` instead is what left the
@@ -102,6 +108,22 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			// Deliberately none: a group with nothing posted is the empty state,
 			// and it has to be reachable locally.
 			announcements: []
+		},
+		{
+			kind: 'club' as const,
+			name: 'Songwriters Circle',
+			slug: 'songwriters-circle',
+			bio: 'Bring a song in progress, play it for the room, and hear what is working.',
+			joinPolicy: 'by_application' as const,
+			joinInstructions:
+				'We keep the circle to about a dozen so everyone plays. Tell us what you write.',
+			positions: ['Host', 'Member'],
+			memberCount: 3,
+			capabilityGrants: [] as string[],
+			// Led by the open club's host, so a loginable club leader has an
+			// application to answer.
+			leaderPersonaId: 'seed-group-leader-open',
+			announcements: []
 		}
 	];
 
@@ -111,7 +133,10 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 		// offset-from-the-band-owners pick so the seeder still runs standalone. The
 		// offset is what keeps a leader from also fronting a band, which looks
 		// identical on a roster.
-		const persona = GROUP_LEADER_PERSONAS.find((p) => p.joinPolicy === d.joinPolicy);
+		const persona =
+			'leaderPersonaId' in d
+				? GROUP_LEADER_PERSONAS.find((p) => p.id === d.leaderPersonaId)
+				: GROUP_LEADER_PERSONAS.find((p) => p.joinPolicy === d.joinPolicy);
 		const leader = leaders.find((l) => l.id === persona?.id) ?? users[(i + 7) % users.length];
 
 		const g = await insertBandWithOwner(
@@ -150,11 +175,8 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			});
 		}
 
-		// One waiting row of each direction on the `by_application` committee: an
-		// application it received and an invitation it sent. They are the same
-		// shape and opposite meanings, which is the whole reason `'requested'` is
-		// a distinct status — and the only way to see the roster render them
-		// apart is to have both.
+		// One waiting thing of each direction on a `by_application` group: an
+		// application it received and an invitation it sent, which render apart.
 		// The invite-only committee gets one pending invitation, held by the
 		// loginable invitee persona. It is the only way in for that policy, and a
 		// bulk user has no `account`, so nobody could press Accept locally.
@@ -179,16 +201,29 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 				users.filter((u) => !taken.has(u.id)),
 				2
 			);
-			await db.insert(groupMember).values([
-				{ groupId: g.id, userId: applicant.id, role: 'member', status: 'requested' },
-				{
-					groupId: g.id,
-					userId: invitee.id,
-					role: 'member',
-					status: 'pending',
-					invitedById: leader.id
-				}
-			]);
+			await db.insert(groupMember).values({
+				groupId: g.id,
+				userId: invitee.id,
+				role: 'member',
+				status: 'pending',
+				invitedById: leader.id
+			});
+			const applicationId = `seed-group-app-${d.slug}`;
+			await db.insert(groupApplication).values({
+				id: applicationId,
+				userId: applicant.id,
+				answers:
+					d.kind === 'club'
+						? { note: 'Mostly folk, some country. I have about twenty half-finished songs.' }
+						: {
+								experience: 'Promoted a monthly all-ages night at the library for two years.',
+								vision: 'More weeknight shows that end before a school night gets late.'
+							},
+				createdAt: new Date(Date.now() - 2 * 86_400_000)
+			});
+			await db
+				.insert(groupApplicationChoice)
+				.values({ id: `${applicationId}-choice`, applicationId, groupId: g.id });
 		}
 
 		// The admin persona gets a manager seat on the first club, deterministically.
@@ -277,7 +312,9 @@ async function seedDevelopmentCommittee(users: SeedUser[], leaders: SeedUser[]) 
 			name: 'Development Committee',
 			slug: 'development-committee',
 			bio: 'Raises funds, looks after sponsors and grants, and keeps our permits and insurance current.',
-			joinPolicy: 'invite_only',
+			// Every committee takes applications (#1700), bar the one kept
+			// `invite_only` above so that policy has a committee to show it.
+			joinPolicy: 'by_application',
 			capabilityGrants: [
 				'finance.read',
 				'grant.manage',
