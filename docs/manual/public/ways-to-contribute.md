@@ -21,9 +21,12 @@ The page lists the roles you can sign up for, grouped three ways:
   `/about`. Both read the committee `group` rows, so whatever staff write as a
   committee's bio in `/staff/groups/[id]` is what the public sees. Committees
   meet monthly to guide the organization. A committee is not a shift you sign
-  up for: you **apply** at `/member/volunteer/committees`, ticking as many as
-  you like and answering two questions, and a chair contacts you to talk it
-  over.
+  up for: you **apply** at `/member/volunteer/committees` (or from a
+  committee's **Apply** button on `/member/groups`), ticking as many as you
+  like and answering two questions. A chair contacts you to talk it over, and
+  if they accept, you get an invitation to accept. You can see each decision,
+  and withdraw an application that is still open, on `/member/groups`. Clubs
+  that take applications have their own **Apply** button there.
 
 **Create a Free Account to Volunteer** goes to registration, and the first time
 you open your volunteering page it asks for a few details: your name, a phone

@@ -2,8 +2,8 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import CommitteeApplicationsCard from '$lib/components/groups/CommitteeApplicationsCard.svelte';
-	import { getCommitteeApplicationQueue } from '$lib/remote/committee-applications.remote';
+	import ApplicationsCard from '$lib/components/groups/ApplicationsCard.svelte';
+	import { getCommitteeApplicationQueue } from '$lib/remote/group-applications.remote';
 
 	const queue = $derived(getCommitteeApplicationQueue());
 </script>
@@ -21,7 +21,8 @@
 				committee, including the ones with no chair yet.
 			-->
 			{#each data.committees as committee (committee.id)}
-				<CommitteeApplicationsCard
+				<ApplicationsCard
+					kind="committee"
 					slug={committee.slug}
 					title={committee.name}
 					applications={committee.applications}

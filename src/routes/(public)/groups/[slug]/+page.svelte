@@ -16,10 +16,9 @@
 	 * session, so a signed-out visitor gets a sign-in prompt that returns them
 	 * here rather than a button that fails.
 	 *
-	 * Whether to offer it at all is decided on the server: `viewerStatus` carries
-	 * the two *waiting* states as well as membership, because somebody whose
-	 * application is still pending is not a member and must not be offered Apply
-	 * a second time.
+	 * Whether to offer it at all is decided on the server: `viewerStatus` is the
+	 * viewer's roster row, and `applied` says they already have an open
+	 * application, which must not be offered a second time.
 	 */
 	const data = $derived(await getPublicGroupPage(page.params.slug!));
 	const group = $derived(data.group);
@@ -66,7 +65,7 @@
 					</Button>
 				{/snippet}
 			</Alert>
-		{:else if status === 'requested'}
+		{:else if data.applied}
 			<Alert type="info">Your application is with this group's leaders.</Alert>
 		{:else if status === 'pending'}
 			<Alert type="info">You've been invited to this group — accept it from your groups page.</Alert
@@ -91,6 +90,8 @@
 				<JoinGroupAction
 					groupId={group.id}
 					groupName={group.name}
+					slug={group.slug}
+					kind={group.kind}
 					policy={group.joinPolicy === 'open' ? 'open' : 'by_application'}
 					instructions={group.joinInstructions}
 				/>

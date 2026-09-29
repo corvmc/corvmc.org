@@ -60,8 +60,6 @@ vi.mock('$lib/server/capability/capability-grant-service', () => ({
 vi.mock('$lib/server/group/group-service', () => ({
 	STAFF_GROUP_KINDS: ['club', 'committee'],
 	...svc,
-	approveApplication: vi.fn(),
-	declineApplication: vi.fn(),
 	joinGroup: vi.fn(),
 	leaveGroup: vi.fn(),
 	getPublicGroup: vi.fn(),
@@ -74,8 +72,10 @@ vi.mock('$lib/server/group/group-context', () => ({
 	requireGroupRole: vi.fn(),
 	requireProgramRole: vi.fn()
 }));
+const getUserRole = vi.hoisted(() => vi.fn(async (): Promise<string | null> => null));
 vi.mock('$lib/server/band/band-service', () => ({
 	getMembers: vi.fn(async () => []),
+	getUserRole,
 	partitionByStatus: () => ({ active: [], pending: [], requested: [] }),
 	acceptInvitation: vi.fn(),
 	declineInvitation: vi.fn(),
@@ -99,7 +99,11 @@ vi.mock('$lib/server/group/announcement-service', () => ({
 	listForManager: vi.fn(),
 	listPublished: vi.fn()
 }));
-vi.mock('$lib/server/group/committee-application-service', () => ({ listForCommittee: vi.fn() }));
+vi.mock('$lib/server/group/application-service', () => ({
+	listForGroup: vi.fn(async () => []),
+	listForApplicant: vi.fn(async () => []),
+	hasOpenApplication: vi.fn(async () => false)
+}));
 vi.mock('$lib/server/event/event-service', () => ({ listGroupSessions: vi.fn() }));
 vi.mock('$lib/server/volunteer/duty-list-service', () => ({ listDutyLists: vi.fn() }));
 vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({
@@ -166,19 +170,33 @@ beforeEach(() => {
 	heldPositions = ['staff'];
 	signedIn = true;
 	requested.length = 0;
+	getUserRole.mockResolvedValue(null);
 	svc.getGroupDetail.mockResolvedValue({ id: 'group-1' });
 	svc.createGroup.mockResolvedValue({ id: 'group-1', slug: 'book-club' });
 });
 
 // Every combination of the six positions, including none.
+// #1730: the capability answers committees only, and `group.read` alone answers nothing.
 describe('getStaffGroupPage canReviewApplications', () => {
-	it.each([
-		[['staff'], true],
-		[['admin'], true]
-	] as const)('is %s → %s for a group.read holder', async (held, expected) => {
-		heldPositions = [...held];
+	const review = async (kind: string) => {
+		svc.getGroupDetail.mockResolvedValue({ id: 'group-1', kind });
 		const page = (await groups.getStaffGroupPage('group-1')) as { canReviewApplications: boolean };
-		expect(page.canReviewApplications).toBe(expected);
+		return page.canReviewApplications;
+	};
+
+	it.each([
+		[['staff'], 'committee', true],
+		[['admin'], 'committee', true],
+		[['staff'], 'club', false],
+		[['admin'], 'club', false]
+	] as const)('is %s on a %s → %s', async (held, kind, expected) => {
+		heldPositions = [...held];
+		expect(await review(kind)).toBe(expected);
+	});
+
+	it('admits the club’s own owner or admin', async () => {
+		getUserRole.mockResolvedValue('admin');
+		expect(await review('club')).toBe(true);
 	});
 });
 

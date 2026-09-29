@@ -72,27 +72,25 @@ export async function requireGroupRole(
 }
 
 /**
- * Who may work a committee's applications: its chair, or the coordinator.
- *
- * Two doors on purpose. A chair reaches it through `group_member.role`;
- * `committee.reviewApplications` is the other, and a **headless committee has
- * only the second** — the state the six start life in.
+ * Who may answer a group's applications (#1730): its owner or an admin, for
+ * any kind, or — for a committee only — a holder of `committee.reviewApplications`,
+ * which is a headless committee's only door. `group.manage` alone does not
+ * qualify: staff do not decide who joins a club its leaders have not seen.
  */
-// 404, not 403, for a band or a club: neither takes applications, so naming
-// one here is a wrong address rather than a refusal.
-export async function requireCommitteeReviewer(ref: GroupRef): Promise<GroupContext> {
+// 404 for a band: it takes no applications, so naming one is a wrong address.
+export async function requireApplicationReviewer(ref: GroupRef): Promise<GroupContext> {
 	const user = requireUser();
 	const group = await resolveGroup(ref);
-	if (group.kind !== 'committee') throw error(404, 'Group not found');
+	if (group.kind === 'band') throw error(404, 'Group not found');
 
 	const role = await getUserRole(group.id, user.id);
 	if (role && HIERARCHY[role] <= HIERARCHY['admin']) return { user, group, role };
 
-	if (await can('committee.reviewApplications')) {
+	if (group.kind === 'committee' && (await can('committee.reviewApplications'))) {
 		return { user, group, role: 'staff' };
 	}
 
-	throw error(403, 'Not a chair of this committee');
+	throw error(403, 'Not a reviewer for this group');
 }
 
 /**
