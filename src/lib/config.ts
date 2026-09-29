@@ -2138,7 +2138,8 @@ export const capabilities = {
 	// The two halves of a show (docs/specs/production-projects-spec.md). `book`
 	// is acts, offers, deals and billing; `run` is the run of show, the advance,
 	// crew, the door and settlement. Held by committees through a show's project.
-	production: ['book', 'run'],
+	// `create` opens a production, before any project exists to reach (#1675).
+	production: ['book', 'run', 'create'],
 	inbox: ['read', 'reply', 'assign', 'dispose', 'manageChannels'],
 	marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send'],
 	moderation: ['reviewFlags', 'setStanding'],
@@ -2415,6 +2416,9 @@ export const grantableCapabilities = {
 		label: 'Run its shows: run of show, advance, crew, door and settlement',
 		committee: 'owned'
 	},
+	// Org-wide: no project exists until the production does, so `'owned'` could
+	// never reach the act of opening one.
+	'production.create': { label: 'Open a production for a show', committee: 'org' },
 	// Org-wide: a member-wide ballot belongs to no committee, so `'owned'` could
 	// never reach one. Every active member of the holding committee runs them.
 	'ballot.manage': { label: 'Run member-wide ballots', committee: 'org' }

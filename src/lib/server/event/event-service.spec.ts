@@ -737,7 +737,8 @@ describe('EventService', () => {
 
 			await cancel('evt-1', 'staff-1');
 
-			expect(mockCancelProductions).toHaveBeenCalledWith('evt-1');
+			// The canceller travels with it, so Production is told who cancelled (#1675).
+			expect(mockCancelProductions).toHaveBeenCalledWith('evt-1', 'staff-1');
 		});
 
 		it('releases the poster slot without deleting the object', async () => {

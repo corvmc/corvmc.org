@@ -86,20 +86,23 @@ holding `production.run` is what divides a show between them — not the role co
 landing PR has deployed. Until then the project service writes both, so a rollback between
 phases leaves ownership intact.
 
-### 3. Two new capabilities
+### 3. Three new capabilities
 
 ```ts
-production: ['book', 'run'];
+production: ['book', 'run', 'create'];
 ```
 
-Both are grantable to a committee with `'owned'` reach, and both are staff powers through the
-derived `staffCapabilities`, so **staff keep full access** with no matrix edit.
+`book` and `run` are grantable to a committee with `'owned'` reach. `create` is grantable with
+`'org'` reach, because no project exists to reach until the production does (#1675). All three
+are staff powers through the derived `staffCapabilities`, so **staff keep full access** with no
+matrix edit.
 
-| Capability        | Covers                                                 | Held by (seed and data migration) |
-| ----------------- | ------------------------------------------------------ | --------------------------------- |
-| `production.book` | Acts on the bill, offers, deals, billing, poster art   | Booking                           |
-| `production.run`  | Run of show, advance, crew, door, expenses, settlement | Production                        |
-| `event.publish`   | Publishing a project's draft listing (unchanged)       | Booking                           |
+| Capability          | Covers                                                 | Held by (seed and data migration) |
+| ------------------- | ------------------------------------------------------ | --------------------------------- |
+| `production.book`   | Acts on the bill, offers, deals, billing, poster art   | Booking                           |
+| `production.run`    | Run of show, advance, crew, door, expenses, settlement | Production                        |
+| `production.create` | Opening a production for a show (org-wide)             | Booking                           |
+| `event.publish`     | Publishing a project's draft listing (unchanged)       | Booking                           |
 
 Every production guard moves onto one of these, through a new
 `requireProjectCommittee(projectId, cap)`: an active member of a live committee that takes part
@@ -108,7 +111,7 @@ otherwise 403.
 
 | Remote function                                                              | Today            | Becomes                                                           |
 | ---------------------------------------------------------------------------- | ---------------- | ----------------------------------------------------------------- |
-| `createProduction`                                                           | `event.manage`   | `production.book` (position only — no project yet)                |
+| `createProduction`                                                           | `event.manage`   | `production.create`, org-wide — no project yet (#1675)            |
 | `setStaffEventLineup` on a listing with a production                         | `event.manage`   | `production.book`                                                 |
 | `setRunOfShowTerms` (the deal)                                               | `event.manage`   | `production.book`                                                 |
 | `usePosterArt`, `usePosterArtWithFooter`, `useTemplateFlyerAsPoster`         | `event.manage`   | `production.book`                                                 |
@@ -126,6 +129,11 @@ otherwise 403.
 `updateProduction` guards on **what changed**, not on the form: it compares each submitted field
 with the stored row and asks for `production.book`, `production.run` or both. The form renders
 every current value into its field, so a field that arrives equal to the row is untouched.
+
+**Cancelling tells Production.** A show moved to `cancelled` — by `advanceProduction`, or by
+cancelling its listing — notifies the active members of every live committee taking part as
+`'production'`, naming who cancelled it (`production_cancelled`, #1675). The canceller is left
+out of their own notice.
 
 **The named producer stays** as it is: a column saying who is running the night, claimed by
 someone who can already run the show. It is not a capability and grants nothing.

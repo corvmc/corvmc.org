@@ -407,6 +407,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'production_cancelled',
+		category: 'shows',
+		label: 'Show cancelled',
+		description: 'When a show your production committee is working is cancelled, and by whom',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'band_event_unpublished',
 		category: 'shows',
 		label: 'Event unlisted by staff',
