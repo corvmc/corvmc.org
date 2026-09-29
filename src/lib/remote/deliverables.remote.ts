@@ -24,7 +24,7 @@ import { setWorkTaskDone } from '$lib/server/volunteer/duty-list-service';
 import { getStaffEventProduction } from './events.remote';
 
 /**
- * A committee's deliverables (docs/specs/committee-deliverables-spec.md §4, §6).
+ * A committee's deliverables (docs/specs/shipped/committee-deliverables-spec.md §4, §6).
  *
  * Every write reads the owning committee off the work order, never off the
  * request, and passes it to `requireCommitteeMember` with

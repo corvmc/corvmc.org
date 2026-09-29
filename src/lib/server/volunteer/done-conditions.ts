@@ -16,7 +16,7 @@ import type { WorkDoneCondition } from '$lib/config';
 import { eventsShortOfCrew } from './work-order-service';
 
 /**
- * When a committee's work order is done (docs/specs/committee-deliverables-spec.md §2).
+ * When a committee's work order is done (docs/specs/shipped/committee-deliverables-spec.md §2).
  *
  * Each `done_when` names a fact about the work order's show, evaluated here by
  * a typed function over a batch of shows. Nothing is stored when a fact comes

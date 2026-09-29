@@ -1343,7 +1343,7 @@ export const dutyListAutoApplyTriggerLabels: Record<DutyListAutoApplyTrigger, st
 
 /**
  * The fact about a show that says a committee's work order is done
- * (docs/specs/committee-deliverables-spec.md). Closed, because each member is a
+ * (docs/specs/shipped/committee-deliverables-spec.md). Closed, because each member is a
  * typed function in `volunteer/done-conditions.ts`; a template picks one. Adding
  * a condition is one entry here and one in that registry.
  */
