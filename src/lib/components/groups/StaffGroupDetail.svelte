@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import type { Snippet } from 'svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -15,23 +15,38 @@
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
-	import { getStaffGroupPage, deactivateGroup, reactivateGroup } from '$lib/remote/groups.remote';
+	import {
+		deactivateGroup,
+		reactivateGroup,
+		type getStaffGroupPage
+	} from '$lib/remote/groups.remote';
 	import GroupSettingsForm from './GroupSettingsForm.svelte';
 	import AssignLeaderAction from './AssignLeaderAction.svelte';
 	import CommitteeGrantsCard from './CommitteeGrantsCard.svelte';
-	import CommitteeApplicationsSection from './CommitteeApplicationsSection.svelte';
 
-	// Above the awaited query: a declaration that follows a top-level await is
-	// async-gated, which would compile every `fields.X.as()` below into an async
-	// derived. Pinned by `src/async-effect-shape.spec.ts`.
+	type StaffGroupPage = Awaited<ReturnType<typeof getStaffGroupPage>>;
+
+	/**
+	 * A club's or committee's staff page, shared by `/staff/clubs/[id]` and
+	 * `/staff/committees/[id]`. Each route runs its own one query and hands the
+	 * result here; `applications` is the committee page's own section.
+	 */
+	let {
+		group,
+		members,
+		applications
+	}: {
+		group: StaffGroupPage['group'];
+		members: StaffGroupPage['members'];
+		applications?: Snippet;
+	} = $props();
+
 	const deactivateFields = deactivateGroup.fields;
 	const reactivateFields = reactivateGroup.fields;
 
-	let id = $derived(page.params.id!);
-	const data = $derived(await getStaffGroupPage(id));
-	const group = $derived(data.group);
-	const members = $derived(data.members);
+	const id = $derived(group.id);
 	const isDeactivated = $derived(!!group.deletedAt);
+	const backHref = $derived(group.kind === 'committee' ? '/staff/committees' : '/staff/clubs');
 </script>
 
 <!-- `backHref` because this was the only staff `[id]` page without one: the
@@ -42,7 +57,7 @@
 	width="3xl"
 	title={group.name}
 	subtitle={group.kind === 'committee' ? 'Committee' : 'Club'}
-	backHref="/staff/groups"
+	{backHref}
 >
 	<StatusBadge status={isDeactivated ? 'deactivated' : 'active'} />
 	<span class="text-muted">
@@ -91,9 +106,7 @@
 		<CommitteeGrantsCard groupId={id} name={group.name} held={group.capabilityGrants ?? []} />
 	{/if}
 
-	{#if group.kind === 'committee' && data.canReviewApplications}
-		<CommitteeApplicationsSection groupId={id} />
-	{/if}
+	{@render applications?.()}
 
 	<InfoCard title="Roster">
 		{#if members.requested.length > 0}

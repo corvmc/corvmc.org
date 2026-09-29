@@ -1314,9 +1314,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	// The show's budget and burn are its project's (production-projects-spec.md).
 	// Keyed off the production, not the listing: a listing's project is only the
 	// show's when it announces one.
-	const budget = production
-		? { projectId: production.projectId, burn: await getProjectBurn(production.projectId) }
-		: null;
+	const projectId = production?.projectId ?? null;
+	const budget = projectId ? { projectId, burn: await getProjectBurn(projectId) } : null;
 
 	return {
 		budget,

@@ -123,9 +123,8 @@ test('staff see a waiting application, and approving it clears the queue', async
 	await page.goto('/staff/instructors');
 
 	// Applications lead the page — the only rows on it waiting on staff. The
-	// *heading*, not the text: the staff sidebar has a "Committee Applications"
-	// row, so a bare `getByText` is two elements once the capability-filtered
-	// nav has rendered, and which of those wins is a race.
+	// *heading*, not the text, so nothing else on the page that says
+	// "Applications" can race it once the capability-filtered nav has rendered.
 	await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible({
 		timeout: 15000
 	});

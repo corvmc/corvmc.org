@@ -63,7 +63,7 @@ import {
 } from '$lib/server/group/group-service';
 
 /**
- * `/staff/groups` — the only place a club or committee comes into existence.
+ * `/staff/clubs` and `/staff/committees` — the only places a club or committee is made.
  *
  * Reads name `group.read` and writes `group.manage`. Bands are deliberately
  * absent from every export here: they are member self-service and have their own
@@ -119,6 +119,43 @@ export const getStaffGroupPage = query(z.string(), async (id) => {
 	return { group, members: partitionByStatus(roster), canReviewApplications };
 });
 
+/**
+ * `/staff/committees`: every committee, each with its open applications
+ * counted. `committee.reviewApplications` rather than `group.read`, because
+ * the volunteer coordinator works applications and holds no `group.read`.
+ */
+export const getStaffCommittees = query(async () => {
+	await requireCapability('committee.reviewApplications');
+	const [page, canManage] = await Promise.all([
+		listGroups({ kinds: ['committee'] }, { page: 1, pageSize: 50 }),
+		can('group.read')
+	]);
+	return { committees: page.rows, canManage };
+});
+
+/**
+ * One committee's staff page: its applications for every reviewer, and the
+ * settings, grants and roster for a `group.read` holder only. One query, so
+ * the page never waits on a second. A deactivated committee has nothing to
+ * review, so only a manager, who can reactivate it, reaches it at all.
+ */
+export const getStaffCommitteePage = query(z.string().min(1), async (id) => {
+	await requireCapability('committee.reviewApplications');
+	const [group, canManage] = await Promise.all([getGroupDetail(id), can('group.read')]);
+	if (!group || group.kind !== 'committee' || (group.deletedAt && !canManage)) {
+		error(404, 'Committee not found');
+	}
+	const [applications, roster] = await Promise.all([
+		group.deletedAt ? [] : listForCommittee(group.id),
+		canManage ? getMembers(id) : null
+	]);
+	return {
+		committee: { id: group.id, name: group.name, slug: group.slug },
+		applications,
+		manage: roster ? { group, members: partitionByStatus(roster) } : null
+	};
+});
+
 // ---------------------------------------------------------------------------
 // Forms
 // ---------------------------------------------------------------------------
@@ -150,7 +187,7 @@ export const createStaffGroup = form(
 				joinInstructions: data.joinInstructions || null,
 				visibility: data.visibility
 			});
-			return { success: true, id: created.id, slug: created.slug };
+			return { success: true, id: created.id, slug: created.slug, kind: data.kind };
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -734,7 +771,7 @@ export const updateGroupProfileForm = form(
 		joinInstructions: z.string().trim().max(LONG_TEXT_MAX).optional().default('')
 	}),
 	async (data) => {
-		// Admin and no `allowStaff`: a write, and staff have `/staff/groups`.
+		// Admin and no `allowStaff`: a write, and staff have `/staff/clubs`.
 		const { group } = await requireProgramRole({ slug: data.slug }, 'admin');
 		try {
 			await updateGroupProfile(group.id, {

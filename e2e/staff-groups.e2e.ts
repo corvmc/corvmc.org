@@ -8,7 +8,8 @@ import { SEED_CLUB_NAME, SEED_COMMITTEE_ID, SEED_COMMITTEE_NAME } from './fixtur
 import { SEED_PUBLIC_BAND_NAME } from './fixtures/seed-band-onboarding';
 
 /**
- * `/staff/groups` — the only place a club or committee comes into existence.
+ * `/staff/clubs` and `/staff/committees` — the only places a club or committee
+ * comes into existence. `/staff/groups` was both, and now redirects.
  *
  * Three things here are worth a browser rather than a unit test, because all
  * three are about what a page renders rather than what a service writes:
@@ -32,33 +33,38 @@ async function loginAsStaff(page: Page) {
 }
 
 test.describe('staff groups', () => {
-	test('lists clubs and committees, and never a band', async ({ page }) => {
+	test('lists clubs, and never a committee or a band', async ({ page }) => {
 		await loginAsStaff(page);
+		// The old address, which is also the proof that it still lands somewhere.
 		await page.goto('/staff/groups');
+		await page.waitForURL('**/staff/clubs', { timeout: 15000 });
 
 		const table = page.locator('table');
 		// `goto` resolves before an awaited remote query commits, so wait for a row
 		// rather than asserting on an empty <main>.
 		await expect(table.getByText(SEED_CLUB_NAME)).toBeVisible();
-		await expect(table.getByText(SEED_COMMITTEE_NAME)).toBeVisible();
+		await expect(table.getByText(SEED_COMMITTEE_NAME)).toHaveCount(0);
 
 		// A band the band fixtures seed. If the kind filter were missing, every
 		// band in the database would be on this page.
 		await expect(table.getByText(SEED_PUBLIC_BAND_NAME)).toHaveCount(0);
 	});
 
-	test('the Groups row is in the staff sidebar, beside Bands', async ({ page }) => {
+	test('Clubs sits beside Bands, and Committees under Planning', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/groups');
+		await page.goto('/staff/committees');
 
+		await expect(page.locator('table').getByText(SEED_COMMITTEE_NAME)).toBeVisible();
 		const nav = page.locator('aside ul.menu').first();
-		await expect(nav.getByRole('link', { name: 'Groups' })).toBeVisible();
+		await expect(nav.getByRole('link', { name: 'Clubs' })).toBeVisible();
 		await expect(nav.getByRole('link', { name: 'Bands' })).toBeVisible();
+		await expect(nav.getByRole('link', { name: 'Committees' })).toBeVisible();
+		await expect(nav.getByRole('link', { name: 'Groups' })).toHaveCount(0);
 	});
 
 	test('creates a club and appoints its leader in one step', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/groups');
+		await page.goto('/staff/clubs');
 
 		await page.getByRole('button', { name: 'New group' }).click();
 
@@ -84,22 +90,29 @@ test.describe('staff groups', () => {
 
 		// Straight to the new group's page, which is what carries the proof: the
 		// appointee is the owner already, with nothing to accept.
-		await page.waitForURL(/\/staff\/groups\/[0-9a-f-]{36}/, { timeout: 15000 });
+		await page.waitForURL(/\/staff\/clubs\/[0-9a-f-]{36}/, { timeout: 15000 });
 		await expect(page.getByRole('heading', { name })).toBeVisible();
 		await expect(page.getByText(SEED_TARGET_NAME).first()).toBeVisible();
 	});
 
 	test('shows an application apart from the member list', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/groups');
+		await page.goto('/staff/committees');
 		await page.locator('table').getByText(SEED_COMMITTEE_NAME).click();
 
 		// The fixture's own id, not a uuid — it is seeded rather than created.
-		await page.waitForURL(`**/staff/groups/${SEED_COMMITTEE_ID}`, { timeout: 15000 });
+		await page.waitForURL(`**/staff/committees/${SEED_COMMITTEE_ID}`, { timeout: 15000 });
 
 		// The seeded committee is `by_application` and carries one requested row.
 		await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible();
 
 		await expect(page.locator('select[name="joinPolicy"]')).toHaveValue('by_application');
+	});
+
+	test("sends a committee's old address to its committee page", async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto(`/staff/groups/${SEED_COMMITTEE_ID}`);
+		await page.waitForURL(`**/staff/committees/${SEED_COMMITTEE_ID}`, { timeout: 15000 });
+		await expect(page.getByRole('heading', { name: SEED_COMMITTEE_NAME })).toBeVisible();
 	});
 });

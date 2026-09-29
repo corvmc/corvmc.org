@@ -52,6 +52,11 @@ describe('activeNavKey', () => {
 		['/staff/users', 'users'],
 		['/staff/users/abc', 'users'],
 		['/staff/ballots/abc', 'ballots'],
+		['/staff/clubs', 'clubs'],
+		['/staff/clubs/abc', 'clubs'],
+		['/staff/committees', 'committees'],
+		['/staff/committees/abc', 'committees'],
+		['/staff/agreements', 'agreements'],
 		['/staff/volunteer', 'volunteer'],
 		['/staff/volunteer/people', 'volunteer-people'],
 		// Shift detail lost its own row when the catalog folded into Schedule; it
@@ -164,6 +169,26 @@ describe('the nav tree', () => {
 		});
 		expect(activeNavKey('/staff/local-resources/tips')).toBe('resource-tips');
 		expect(activeNavKey('/staff/local-resources')).toBe('local-resources');
+	});
+
+	// The restructure in production-projects-spec.md, "The staff nav".
+	it('gathers planning into its own section, and trims People and Moderation', () => {
+		const section = (key: string) => staffNavSections.find((s) => s.key === key)!;
+		const keys = (key: string) => section(key).items.map((i) => i.key);
+		expect(keys('planning')).toEqual([
+			'committees',
+			'suggestions',
+			'ballots',
+			'projects',
+			'agreements',
+			'reports'
+		]);
+		const agreements = section('planning').items.find((i) => i.key === 'agreements');
+		expect(agreements?.children?.map((c) => c.key)).toEqual(['sponsors', 'grants', 'renewals']);
+		expect(keys('people')).toContain('clubs');
+		expect(keys('people')).not.toContain('committees');
+		expect(keys('moderation')).toEqual(['flags', 'classifieds']);
+		expect(keys('events')).toContain('productions');
 	});
 
 	it('finds the owning section for every row', () => {
