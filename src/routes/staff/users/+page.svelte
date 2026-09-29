@@ -14,8 +14,11 @@
 	import { toast } from 'svelte-sonner';
 	import { resolve } from '$app/paths';
 	import { IconDots, IconEye, IconCopy, IconUserOff } from '@tabler/icons-svelte';
-	import { getStaffUsers, bulkDeactivateUsers } from '$lib/remote/users.remote';
+	import { getStaffUsers, getStaffUserTotals, bulkDeactivateUsers } from '$lib/remote/users.remote';
 	import { formatDateShortYear } from '$lib/utils/format';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { retryQuery } from '$lib/utils/retry-query';
+	import UserTotals from './UserTotals.svelte';
 
 	// Named `searchText`, not `search`: FilterBar's slot for the always-visible
 	// control is a snippet called `search`, and a snippet shadows a same-named
@@ -97,6 +100,15 @@
 
 <PageHeader title="Users" />
 <PageContent>
+	<svelte:boundary>
+		<UserTotals />
+		{#snippet failed(_error, reset)}
+			<Alert type="warning" reset={() => retryQuery(getStaffUserTotals(), reset)}>
+				The user totals didn't load. The table below is unaffected.
+			</Alert>
+		{/snippet}
+	</svelte:boundary>
+
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput

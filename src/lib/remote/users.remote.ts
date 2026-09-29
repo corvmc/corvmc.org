@@ -14,6 +14,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { listLowStock } from '$lib/server/inventory/stock-service';
+import { getUserTotals } from '$lib/server/user/user-totals-service';
 import { listShortStaffedShifts } from '$lib/server/volunteer/work-order-service';
 import { listDevelopmentDeadlinesBetween } from '$lib/server/development/deadline-service';
 import { addIsoDays } from '$lib/utils/deadline';
@@ -177,6 +178,12 @@ export const getStaffDashboard = query(async () => {
 			ref: toMemberRef(u.member)
 		}))
 	};
+});
+
+/** The totals strip above the staff Users table; org-wide, so it takes no filters. */
+export const getStaffUserTotals = query(async () => {
+	await requireCapability('user.list');
+	return getUserTotals();
 });
 
 const staffUsersFilters = z.object({

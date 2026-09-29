@@ -316,7 +316,8 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	{ name: 'getUserMembership', args: ['victim-user'] },
 	{ name: 'getUserCreditHistory', args: [{ userId: 'victim-user', page: 1 }] },
 	{ name: 'getUserSessions', args: ['victim-user'] },
-	{ name: 'getUserHistory', args: ['victim-user'] }
+	{ name: 'getUserHistory', args: ['victim-user'] },
+	{ name: 'getStaffUserTotals' }
 ];
 
 // The target of every one of these is the argument, never `params.id`. Pinned
