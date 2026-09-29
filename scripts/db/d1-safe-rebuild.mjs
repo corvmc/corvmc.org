@@ -33,6 +33,13 @@
 // https://www.brachkow.com/notes/d1-on-delete-cascade/ — this script automates
 // it and derives the FK graph from drizzle's own snapshot.
 //
+// TRIGGERS
+//
+// Dropping a table drops its triggers, and drizzle's snapshot has no triggers in it.
+// So every migration is replayed into an in-memory SQLite database, and a trigger the
+// new migration drops without a `DROP TRIGGER` is re-created at its end. The replay
+// has to parse the SQL, so `db:generate` runs `quote-reserved-refs` before this.
+//
 // USAGE
 //   node scripts/db/d1-safe-rebuild.mjs --check    # CI: fail on unsafe migrations
 //   node scripts/db/d1-safe-rebuild.mjs --write    # rewrite unsafe migrations in place
@@ -43,6 +50,7 @@
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import {
 	readSnapshot,
 	childGraph,
@@ -239,6 +247,81 @@ export function rewriteMigration(sql, snapshot) {
 	return out.join(`\n${BREAK}\n`) + '\n';
 }
 
+/** @typedef {{ name: string, tbl_name: string, sql: string }} Trigger */
+
+/** @param {DatabaseSync} db @returns {Map<string, Trigger>} */
+function triggersIn(db) {
+	const rows = /** @type {Trigger[]} */ (
+		db.prepare("SELECT name, tbl_name, sql FROM sqlite_master WHERE type = 'trigger'").all()
+	);
+	return new Map(rows.map((t) => [t.name, t]));
+}
+
+/**
+ * Triggers that applying `sql` to `db` deletes without the migration asking for it.
+ *
+ * SQLite drops a table's triggers with the table, so a rebuild or a detach loses them.
+ * drizzle's snapshot does not model triggers, so the database the earlier migrations
+ * built is the only record of them. A trigger `sql` drops by name, or whose table is
+ * gone afterwards, was meant to go. `db` is left as it was.
+ */
+/** @param {DatabaseSync} db @param {string} sql @returns {Trigger[]} */
+export function findLostTriggers(db, sql) {
+	const before = triggersIn(db);
+	if (!before.size) return [];
+	db.exec('SAVEPOINT d1_safe_rebuild_probe');
+	try {
+		db.exec(sql);
+		const after = triggersIn(db);
+		const tables = new Set(
+			/** @type {{ name: string }[]} */ (
+				db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all()
+			).map((r) => r.name)
+		);
+		return [...before.values()].filter(
+			(t) =>
+				!after.has(t.name) &&
+				tables.has(t.tbl_name) &&
+				!new RegExp(`DROP TRIGGER\\s+(?:IF EXISTS\\s+)?\`?${t.name}\`?`, 'i').test(sql)
+		);
+	} finally {
+		db.exec('ROLLBACK TO d1_safe_rebuild_probe');
+		db.exec('RELEASE d1_safe_rebuild_probe');
+	}
+}
+
+/** Append a CREATE TRIGGER for each lost trigger, after everything that dropped it. */
+/** @param {string} sql @param {Trigger[]} lost @returns {string} */
+export function restoreTriggers(sql, lost) {
+	if (!lost.length) return sql;
+	const restores = lost.map(
+		(t) => `-- restore trigger \`${t.name}\`: dropping \`${t.tbl_name}\` dropped it\n${t.sql};`
+	);
+	return [sql.trimEnd(), ...restores].join(`\n${BREAK}\n`) + '\n';
+}
+
+/** Apply one migration to a database from `replayDatabase()`. */
+/** @param {DatabaseSync} db @param {string} dir @param {string} sql */
+export function replay(db, dir, sql) {
+	try {
+		db.exec(sql);
+	} catch (e) {
+		throw new Error(
+			`migrations/${dir}/migration.sql does not apply: ${/** @type {Error} */ (e).message}`
+		);
+	}
+}
+
+/**
+ * An empty in-memory database with a transaction open, as D1 runs a migration inside one.
+ * That is what makes `PRAGMA foreign_keys` inert, here as there.
+ */
+export function replayDatabase() {
+	const db = new DatabaseSync(':memory:');
+	db.exec('BEGIN');
+	return db;
+}
+
 /**
  * Merge comment-only chunks into the statement that follows them.
  *
@@ -302,12 +385,20 @@ function main() {
 	const unsafeRebuilds = [];
 	const unsafeDrops = [];
 	const commentOnly = [];
+	/** @type {{ dir: string, names: string[] }[]} */
+	const lostTriggers = [];
 	let pruned = 0;
+	// Every migration is replayed, checked or not, so each one is checked against the
+	// triggers the ones before it left behind.
+	const db = replayDatabase();
 	for (const dir of migrationDirs()) {
-		if (GRANDFATHERED.has(dir)) continue;
 		const sqlPath = join(MIGRATIONS_DIR, dir, 'migration.sql');
 		const snapPath = join(MIGRATIONS_DIR, dir, 'snapshot.json');
 		if (!existsSync(sqlPath)) continue;
+		if (GRANDFATHERED.has(dir)) {
+			replay(db, dir, readFileSync(sqlPath, 'utf8'));
+			continue;
+		}
 		// No snapshot means `scripts/db/prune-snapshots.mjs` has been here, which it only does
 		// to a migration that is already on `origin/main`. That SQL is history: it has been
 		// applied, editing it would desynchronise the migration record, and there is nothing
@@ -315,6 +406,7 @@ function main() {
 		// that a *new* migration arriving without a snapshot still reads as wrong.
 		if (!existsSync(snapPath)) {
 			pruned++;
+			replay(db, dir, readFileSync(sqlPath, 'utf8'));
 			continue;
 		}
 
@@ -340,7 +432,16 @@ function main() {
 			commentOnly.push(dir);
 		}
 
+		const lost = findLostTriggers(db, repaired);
+		if (lost.length && write) {
+			repaired = restoreTriggers(repaired, lost);
+			console.log(`triggers restored after the rebuild: ${dir}`);
+		} else if (lost.length) {
+			lostTriggers.push({ dir, names: lost.map((t) => t.name) });
+		}
+
 		if (write && repaired !== sql) writeFileSync(sqlPath, repaired);
+		replay(db, dir, repaired);
 
 		// Checked against the post-rewrite SQL so the rewrite's own drops don't
 		// register. --write can't repair these, so they're reported in both modes.
@@ -383,7 +484,15 @@ function main() {
 		console.error('\nFix with:  pnpm db:fix-migrations');
 	}
 
-	if (unsafeRebuilds.length || unsafeDrops.length || commentOnly.length) {
+	if (lostTriggers.length) {
+		console.error('\nTriggers dropped with their table and never re-created:\n');
+		for (const { dir, names } of lostTriggers) {
+			console.error(`  migrations/${dir}/migration.sql -> ${names.join(', ')}`);
+		}
+		console.error('\nFix with:  pnpm db:fix-migrations');
+	}
+
+	if (unsafeRebuilds.length || unsafeDrops.length || commentOnly.length || lostTriggers.length) {
 		console.error('');
 		process.exit(1);
 	}
