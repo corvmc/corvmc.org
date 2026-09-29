@@ -75,6 +75,9 @@ test('what a visitor types before the form hydrates survives it', async ({ page 
 	await name.fill('Early Typist');
 	await email.fill(ENQUIRER_EMAIL);
 	await message.fill(MESSAGE);
+	// svelte-turnstile renders nothing until onMount, so an absent token input
+	// proves the fills landed before hydration and the test cannot pass vacuously.
+	await expect(page.locator('input[name="turnstileToken"]')).toHaveCount(0);
 
 	// The token input appears only once the client has mounted.
 	await expect(page.locator('input[name="turnstileToken"]')).not.toHaveValue('', {
