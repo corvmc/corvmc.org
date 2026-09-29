@@ -306,9 +306,7 @@ export function replay(db, dir, sql) {
 	try {
 		db.exec(sql);
 	} catch (e) {
-		throw new Error(
-			`migrations/${dir}/migration.sql does not apply: ${/** @type {Error} */ (e).message}`
-		);
+		throw new Error(`migrations/${dir}/migration.sql does not apply`, { cause: e });
 	}
 }
 
