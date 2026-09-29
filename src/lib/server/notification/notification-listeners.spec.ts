@@ -1395,6 +1395,59 @@ describe('radio attestation due (#1516)', () => {
 	});
 });
 
+describe('show cancelled, to the Production committee (#1675)', () => {
+	beforeEach(() => {
+		registerAllNotificationListeners();
+	});
+
+	const member = (userId: string, userName: string) => ({
+		userId,
+		userName,
+		userEmail: `${userId}@test.com`,
+		committeeSlug: 'production-committee'
+	});
+	const cancelled = {
+		productionId: 'prod-1',
+		eventId: 'evt-1',
+		eventTitle: 'Friday Night Fuzz',
+		startsAt: '2026-10-09T03:00:00.000Z',
+		cancelledByName: 'Ada Booker',
+		recipients: [member('u1', 'Cy'), member('u2', 'Di')]
+	};
+
+	const calls = () =>
+		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'production_cancelled');
+
+	it('tells each Production member which show, and who cancelled it', async () => {
+		await emit('production.cancelled', cancelled);
+
+		const sent = calls();
+		expect(sent.map((c) => c.userId)).toEqual(['u1', 'u2']);
+		expect(sent[0].href).toBe('/member/groups/production-committee');
+		expect(sent[0].title).toContain('Friday Night Fuzz');
+		expect(sent[0].body).toContain('Ada Booker');
+		expect(sent[0].email.subject).toContain('Friday Night Fuzz');
+		expect(paragraphText(sent[0].email)).toContain('Ada Booker');
+		expect(detailText(sent[0].email)).toContain('Cancelled by: Ada Booker');
+	});
+
+	it('still reads as a cancellation when nobody is named', async () => {
+		await emit('production.cancelled', { ...cancelled, cancelledByName: null });
+
+		const [first] = calls();
+		expect(first.body).not.toContain('null');
+		expect(detailLabels(first.email)).not.toContain('Cancelled by');
+		expect(paragraphText(first.email)).toContain('cancelled');
+	});
+
+	it('carries on to the next member when one dispatch fails', async () => {
+		mockDispatch.mockRejectedValueOnce(new Error('fail'));
+		await emit('production.cancelled', cancelled);
+
+		expect(mockDispatch).toHaveBeenCalledTimes(2);
+	});
+});
+
 describe('group application submitted (#1726)', () => {
 	beforeEach(() => registerAllNotificationListeners());
 

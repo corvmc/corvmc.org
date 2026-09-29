@@ -4,10 +4,16 @@ import { grantRuleFor, type Capability } from '$lib/config';
  * What a guard is acting on, when it is acting on something.
  *
  * `eventId` admits a volunteer-role grant for that event. `groupId` names the
- * committee that owns the record, which is what an `'owned'` committee grant
- * needs. Both come from the record being acted on, never from the request.
+ * committee that owns the record, and `projectId` the project whose committees
+ * an `'owned'` grant reaches. All come from the record being acted on, never
+ * from the request.
  */
-export type CapabilityScope = { eventId?: string | null; groupId?: string | null };
+export type CapabilityScope = {
+	eventId?: string | null;
+	groupId?: string | null;
+	/** Admits `'owned'` grants of every committee taking part in this project. */
+	projectId?: string | null;
+};
 
 /** One active committee seat and the allowlisted capabilities it carries. */
 export type CommitteeGrant = { groupId: string; capabilities: string[] };

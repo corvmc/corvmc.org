@@ -31,7 +31,7 @@ const {
 	setTableLabel,
 	withdrawApplication,
 	listPublicVendors,
-	getMarketOwnerGroupId,
+	getMarketProjectId,
 	getVendorEventId,
 	listCommitteeMarkets,
 	MarketClosedError,
@@ -70,6 +70,7 @@ beforeEach(() => {
 		'inbox_message',
 		'inbox_thread',
 		'event_listing',
+		'project_committee',
 		'project'
 	]) {
 		sqlite.exec(`delete from ${t}`);
@@ -288,29 +289,28 @@ describe('the public vendor list', () => {
 	});
 });
 
-describe('the committee that owns a market', () => {
+describe('the committees on a market', () => {
 	const COMMITTEE = 'grp-dev';
 
 	function ownEventBy(groupId: string | null) {
-		sqlite.exec(
-			`insert into project (id, name, status, group_id) values ('prj-1', 'Autumn Market', 'open', ${
-				groupId ? `'${groupId}'` : 'null'
-			})`
-		);
+		sqlite.exec(`insert into project (id, name, status) values ('prj-1', 'Autumn Market', 'open')`);
+		if (groupId) {
+			sqlite.exec(
+				`insert into project_committee (project_id, group_id, role) values ('prj-1', '${groupId}', 'owner')`
+			);
+		}
 		sqlite.exec(`update event_listing set project_id = 'prj-1' where id = '${EVENT}'`);
 	}
 
-	it("is the owning group of the listing's project", async () => {
+	it("is the listing's project, whose committees decide", async () => {
 		insertEvent();
 		ownEventBy(COMMITTEE);
-		expect(await getMarketOwnerGroupId(EVENT)).toBe(COMMITTEE);
+		expect(await getMarketProjectId(EVENT)).toBe('prj-1');
 	});
 
-	it('is null for a listing with no project, or a project with no owner', async () => {
+	it('is null for a listing with no project', async () => {
 		insertEvent();
-		expect(await getMarketOwnerGroupId(EVENT)).toBeNull();
-		ownEventBy(null);
-		expect(await getMarketOwnerGroupId(EVENT)).toBeNull();
+		expect(await getMarketProjectId(EVENT)).toBeNull();
 	});
 
 	it("reads a vendor's market from the row", async () => {

@@ -56,7 +56,13 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 			select: vi.fn(() => chainable('select')),
 			insert: vi.fn(() => chainable('insert')),
 			update: vi.fn(() => chainable('update')),
-			delete: vi.fn(() => chainable('delete'))
+			delete: vi.fn(() => chainable('delete')),
+			// In order, like D1's: each item is one of the recording proxies above.
+			batch: vi.fn(async (items: PromiseLike<unknown>[]) => {
+				const out = [];
+				for (const item of items) out.push(await item);
+				return out;
+			})
 		}
 	};
 });
@@ -67,6 +73,14 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 const recomputeSetTimes = vi.fn();
 vi.mock('./run-of-show-service', () => ({
 	recomputeSetTimes: (id: string) => recomputeSetTimes(id)
+}));
+
+// The show's project is its own module's business, with its own spec.
+const createShowProject = vi.fn();
+const deleteShowProject = vi.fn();
+vi.mock('./production-project', () => ({
+	createShowProject: (input: unknown) => createShowProject(input),
+	deleteShowProject: (id: string) => deleteShowProject(id)
 }));
 
 // The cascade's predicates have their own spec against real SQLite; here the
@@ -97,9 +111,12 @@ import { db } from '$lib/server/db';
 
 const dialect = new SQLiteSyncDialect();
 
-/** The parameters of the last `where(...)` a given operation built. */
+/**
+ * The parameters of the first `where(...)` a given operation built: the
+ * production's own write, ahead of the project update that follows it.
+ */
 function whereParams(op: string) {
-	const call = [...calls].reverse().find((c) => c.op === op && c.method === 'where');
+	const call = calls.find((c) => c.op === op && c.method === 'where');
 	if (!call) throw new Error(`no ${op} where() recorded`);
 	return dialect.sqlToQuery(call.args[0] as SQL).params;
 }
@@ -128,18 +145,17 @@ describe('createProduction', () => {
 		returningRows = [{ id: 'prod-1', status: 'draft' }];
 		updateRowCount = 1;
 
-		await createProduction('evt-1', { createdByUserId: 'staff-1' });
+		await createProduction('evt-1', { createdByUserId: 'staff-1', id: 'prod-1' });
 
-		const values = calls.find((c) => c.method === 'values')?.args[0] as Record<string, unknown>;
-		expect(values).toMatchObject({ createdByUserId: 'staff-1' });
-		// Status is the column default, not something the service restates. The
-		// event id is not here at all any more: the listing names the production
-		// it announces, not the reverse (#1202).
-		expect(values).not.toHaveProperty('status');
-		expect(values).not.toHaveProperty('eventId');
+		// Every production is a project: both, and the committees, in one batch.
+		expect(createShowProject).toHaveBeenCalledWith(
+			expect.objectContaining({ productionId: 'prod-1', createdByUserId: 'staff-1' })
+		);
+		const { projectId } = createShowProject.mock.calls[0][0] as { projectId: string };
 
+		// The listing names the production it announces and the project it belongs to.
 		const set = calls.find((c) => c.op === 'update' && c.method === 'set')?.args[0];
-		expect(set).toMatchObject({ productionId: 'prod-1' });
+		expect(set).toMatchObject({ productionId: 'prod-1', projectId });
 	});
 
 	// The 1:1 is held by the conditional update — the listing takes a production
@@ -160,8 +176,10 @@ describe('createProduction', () => {
 		returningRows = [{ id: 'prod-2', status: 'draft' }];
 		updateRowCount = 0;
 
-		await expect(createProduction('evt-1')).rejects.toThrow(ProductionExistsError);
-		expect(calls.some((c) => c.op === 'delete')).toBe(true);
+		await expect(createProduction('evt-1', { id: 'prod-2' })).rejects.toThrow(
+			ProductionExistsError
+		);
+		expect(deleteShowProject).toHaveBeenCalledWith('prod-2');
 	});
 
 	// A production is the ops record for a show CMC puts on. Roughly nine in ten
@@ -173,14 +191,14 @@ describe('createProduction', () => {
 		selectQueue = listingSource(source);
 
 		await expect(createProduction('evt-1')).rejects.toThrow(NotACmcListingError);
-		expect(db.insert).not.toHaveBeenCalled();
+		expect(createShowProject).not.toHaveBeenCalled();
 	});
 
 	it('reports a listing that does not exist as not found', async () => {
 		selectQueue = [[]];
 
 		await expect(createProduction('evt-1')).rejects.toThrow(ListingNotFoundError);
-		expect(db.insert).not.toHaveBeenCalled();
+		expect(createShowProject).not.toHaveBeenCalled();
 	});
 });
 
@@ -404,10 +422,13 @@ describe('cancelProductionsForEvent', () => {
 		expect(params).not.toContain('closed');
 	});
 
-	it('is a single conditional update, not a read and a branch', async () => {
+	it('is one batch of conditional updates, not a read and a branch', async () => {
 		await cancelProductionsForEvent('evt-1');
 
-		expect(db.select).not.toHaveBeenCalled();
-		expect(db.update).toHaveBeenCalledTimes(1);
+		// The production, then its project following it to `declined`.
+		expect(db.batch).toHaveBeenCalledTimes(1);
+		expect(db.update).toHaveBeenCalledTimes(2);
+		const sets = calls.filter((c) => c.op === 'update' && c.method === 'set').map((c) => c.args[0]);
+		expect(sets[1]).toMatchObject({ status: 'declined' });
 	});
 });

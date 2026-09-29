@@ -4,7 +4,7 @@ import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { requireCapability } from '$lib/server/authorization';
-import { requireCommitteeMember } from '$lib/server/group/group-context';
+import { requireCommitteeMember, requireProjectCommittee } from '$lib/server/group/group-context';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	DEFAULT_TIMEZONE,
@@ -17,7 +17,7 @@ import {
 	getApplicationWindow,
 	getMarketDay,
 	getMarketEvent,
-	getMarketOwnerGroupId,
+	getMarketProjectId,
 	getVendorEventId,
 	listApplications,
 	listCommitteeMarkets,
@@ -38,13 +38,13 @@ import { mapDomainError } from '$lib/server/errors';
  * Market vendor applications. docs/specs/shipped/market-vendors-spec.md.
  *
  * The public half takes no session. Setup, seating and withdrawals guard on
- * `event.manage`; accept and decline also belong to the committee that owns
- * the market's project (#1503), whose id is read off the row, never the request.
+ * `event.manage`; accept and decline also belong to the committees taking part
+ * in the market's project (#1503), read off the row, never the request.
  */
 
-/** Members of the market's owning committee, or staff holding `event.manage`. */
+/** Members of a committee on the market's project, or staff holding `event.manage`. */
 async function requireMarketDecider(eventId: string) {
-	return requireCommitteeMember(await getMarketOwnerGroupId(eventId), 'event.manage');
+	return requireProjectCommittee(await getMarketProjectId(eventId), 'event.manage');
 }
 
 const eventId = z.string().min(1);

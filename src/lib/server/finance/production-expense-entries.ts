@@ -5,6 +5,7 @@ import {
 	reverseEntriesForSubject,
 	type RecordEntryInput
 } from './financial-entry-service';
+import { showProjectIdForProduction } from './show-project';
 
 /**
  * A show's costs, posted to the ledger when the night is settled (#1173).
@@ -28,6 +29,7 @@ export async function postProductionExpenses(productionId: string, eventId: stri
 	if (lines.length === 0) return;
 
 	const occurredAt = new Date();
+	const projectId = await showProjectIdForProduction(productionId);
 	const entries: RecordEntryInput[] = [];
 
 	for (const line of lines) {
@@ -48,6 +50,7 @@ export async function postProductionExpenses(productionId: string, eventId: stri
 			settlement: 'cash',
 			subjectType: 'production_expense',
 			subjectId: line.id,
+			projectId,
 			// The show's group, so what a night cost and what it took net together.
 			// `getSettlement` still reads `production_expense` for its own figure
 			// and never these rows, so nothing is counted twice (#1170).

@@ -178,6 +178,11 @@ vi.mock('./timezone', () => ({
 
 const mockEmit = vi.fn().mockResolvedValue(undefined);
 
+const mockCreateShowProject = vi.fn().mockResolvedValue(undefined);
+vi.mock('$lib/server/production/production-project', () => ({
+	createShowProject: (...args: unknown[]) => mockCreateShowProject(...args)
+}));
+
 vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: { emit: (...args: unknown[]) => mockEmit(...args) }
 }));

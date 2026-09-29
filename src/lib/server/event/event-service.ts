@@ -36,6 +36,8 @@ import { cancelShiftsForEvent } from '$lib/server/volunteer/show-cancellation';
 import { requireProgramGroup } from '$lib/server/group/group-kind';
 import {
 	eq,
+	sql,
+	type SQL,
 	and,
 	gt,
 	gte,
@@ -57,6 +59,10 @@ import { memberRefColumns } from '$lib/server/entity/refs';
 import type { EventStatus } from '$lib/server/db/schema/event';
 import { staffCreate, adjustWindow } from '$lib/server/reservation/reservation-service';
 import { createProduction, getProductionByEvent } from '$lib/server/production/production-service';
+import { createShowProject, deleteShowProject } from '$lib/server/production/production-project';
+import { shiftAnchoredWorkOrders } from '$lib/server/volunteer/retime-work-orders';
+import type { BatchItem } from 'drizzle-orm/batch';
+import { project } from '$lib/server/db/schema/project';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { captureException } from '$lib/server/sentry';
@@ -334,6 +340,8 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	// id is minted here rather than by `createProduction` because the room is
 	// booked before the listing exists, and the booker has to name the show.
 	const productionId = kind === 'show' ? crypto.randomUUID() : null;
+	// Every production is a project, and the listing names it too.
+	const showProjectId = productionId ? crypto.randomUUID() : null;
 
 	let reservationId: string | null = null;
 	if (reservationParams) {
@@ -371,8 +379,15 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	//
 	// Every CMC show gets one, room or no room: the back-of-house is what a show
 	// is, and leaving it to a button is why every show before 2026-09-04 has none.
-	if (productionId) {
-		await db.insert(production).values({ id: productionId, createdByUserId });
+	if (productionId && showProjectId) {
+		await createShowProject({
+			productionId,
+			projectId: showProjectId,
+			name: title,
+			startsAt,
+			endsAt,
+			createdByUserId
+		});
 	}
 
 	let row: EventRow;
@@ -392,6 +407,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				location: location ?? null,
 				groupId: groupId ?? null,
 				productionId,
+				...(showProjectId ? { projectId: showProjectId } : {}),
 				reservationId,
 				createdByUserId
 			})
@@ -411,7 +427,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		}
 		if (productionId) {
 			try {
-				await db.delete(production).where(eq(production.id, productionId));
+				await deleteShowProject(productionId);
 			} catch (cleanupErr) {
 				captureException(cleanupErr, { event: 'event.create.compensate', productionId });
 			}
@@ -780,13 +796,91 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	const saleWrite = saveTicketSale(eventId, sale);
 	if (saleWrite) await saleWrite;
 
-	const [updated] = await db
+	const follow = listingClockWrites(eventId, params);
+	const write = db
 		.update(eventListing)
 		.set(updates)
 		.where(eq(eventListing.id, eventId))
 		.returning();
+	const [updated] =
+		follow.length > 0
+			? ((await db.batch([...follow, write] as unknown as Batch)).at(
+					-1
+				) as (typeof eventListing.$inferSelect)[])
+			: await write;
 
 	return readBack(updated);
+}
+
+type Batch = [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]];
+
+/**
+ * What moves with a listing's clock, run before the listing's own write so each
+ * statement still reads the old times: shifts anchored to doors, start or end,
+ * and a show's project, whose dates mirror its listing.
+ */
+function listingClockWrites(
+	eventId: string,
+	updates: { title?: string; startsAt?: Date; endsAt?: Date | null; doorsAt?: Date | null }
+) {
+	const secs = (d: Date | null) => (d ? Math.floor(d.getTime() / 1000) : null);
+	const current = (column: SQL) =>
+		sql`(select ${column} from ${eventListing} where ${eventListing.id} = ${eventId})`;
+	const next = (key: 'startsAt' | 'endsAt' | 'doorsAt', column: SQL) =>
+		updates[key] !== undefined ? sql`${secs(updates[key] ?? null)}` : current(column);
+	const start = next('startsAt', sql`starts_at`);
+	const end = next('endsAt', sql`ends_at`);
+	const doors = next('doorsAt', sql`doors_at`);
+
+	const writes = [];
+	if (updates.startsAt !== undefined) {
+		writes.push(
+			shiftAnchoredWorkOrders(eventId, ['start'], sql`${start} - ${current(sql`starts_at`)}`)
+		);
+	}
+	if (updates.endsAt !== undefined) {
+		writes.push(shiftAnchoredWorkOrders(eventId, ['end'], sql`${end} - ${current(sql`ends_at`)}`));
+	}
+	if (updates.startsAt !== undefined || updates.doorsAt !== undefined) {
+		// Doors falls back to the start, as `resolveAnchor` does.
+		writes.push(
+			shiftAnchoredWorkOrders(
+				eventId,
+				['doors'],
+				sql`coalesce(${doors}, ${start}) - ${current(sql`coalesce(doors_at, starts_at)`)}`
+			)
+		);
+	}
+	if (
+		updates.startsAt !== undefined ||
+		updates.endsAt !== undefined ||
+		updates.title !== undefined
+	) {
+		writes.push(
+			db
+				.update(project)
+				.set({
+					...(updates.title !== undefined ? { name: updates.title } : {}),
+					startsAt: sql`${start}`,
+					endsAt: sql`case when ${end} > ${start} then ${end} else null end`,
+					updatedAt: new Date()
+				})
+				.where(
+					and(
+						eq(project.kind, 'production'),
+						inArray(
+							project.id,
+							db
+								.select({ id: production.projectId })
+								.from(production)
+								.innerJoin(eventListing, eq(eventListing.productionId, production.id))
+								.where(eq(eventListing.id, eventId))
+						)
+					)
+				)
+		);
+	}
+	return writes;
 }
 
 // ---------------------------------------------------------------------------
@@ -1354,7 +1448,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 	// column lying on the day it shipped. Only pre-completed rows move: a
 	// production that already happened is history, and cancelling the
 	// advertisement afterwards does not un-happen it.
-	await cancelProductionsForEvent(eventId);
+	await cancelProductionsForEvent(eventId, userId);
 	await callOffShifts(eventId, userId);
 
 	await detachSlot('event_listing', eventId, 'poster');

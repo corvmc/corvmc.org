@@ -2,6 +2,7 @@ import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { group, groupCapability, groupMember } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
+import { projectCommittee } from '$lib/server/db/schema/project';
 import { eventListing } from '$lib/server/db/schema/event';
 import {
 	volunteerRoleCapability,
@@ -43,6 +44,43 @@ export async function committeeGrantsFor(userId: string): Promise<CommitteeGrant
 	return [...bySeat].map(([groupId, caps]) => ({
 		groupId,
 		capabilities: allowlisted(caps, 'committee')
+	}));
+}
+
+/**
+ * The caller's active seats on live committees taking part in `projectId`,
+ * each with what it grants. `'owned'` reach, resolved: a seat here may use its
+ * committee's grants on this project whatever role the committee plays.
+ */
+export async function projectCommitteeGrantsFor(
+	userId: string,
+	projectId: string
+): Promise<Array<CommitteeGrant & { slug: string }>> {
+	const rows = await db
+		.select({ groupId: group.id, slug: group.slug, capability: groupCapability.capability })
+		.from(projectCommittee)
+		.innerJoin(group, eq(group.id, projectCommittee.groupId))
+		.innerJoin(groupMember, eq(groupMember.groupId, group.id))
+		.innerJoin(groupCapability, eq(groupCapability.groupId, group.id))
+		.where(
+			and(
+				eq(projectCommittee.projectId, projectId),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'active'),
+				eq(group.kind, 'committee'),
+				isNull(group.deletedAt)
+			)
+		);
+	const bySeat = new Map<string, { slug: string; caps: string[] }>();
+	for (const r of rows) {
+		const seat = bySeat.get(r.groupId) ?? { slug: r.slug, caps: [] };
+		seat.caps.push(r.capability);
+		bySeat.set(r.groupId, seat);
+	}
+	return [...bySeat].map(([groupId, seat]) => ({
+		groupId,
+		slug: seat.slug,
+		capabilities: allowlisted(seat.caps, 'committee')
 	}));
 }
 

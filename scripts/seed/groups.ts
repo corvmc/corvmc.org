@@ -72,10 +72,13 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			memberCount: 3,
 			// Every committee's baseline (project status and duty lists, its own
 			// numbers), plus #1564's publish and its weekly holds as recurring work.
-			// Opening work orders is Production's, so Booking does not carry it.
+			// Opening work orders is Production's, so Booking does not carry it; opening
+			// a show is Booking's (#1675).
 			capabilityGrants: [
 				'event.publish',
 				'finance.read',
+				'production.book',
+				'production.create',
 				'project.manage',
 				'volunteer.manageRecurring'
 			],
@@ -102,6 +105,26 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			// Deliberately none: a group with nothing posted is the empty state,
 			// and it has to be reachable locally.
 			announcements: []
+		},
+		{
+			kind: 'committee' as const,
+			name: 'Production Committee',
+			slug: 'production-committee',
+			bio: 'Runs the shows Booking books: crew, sound, the run of show, the door and settling up.',
+			joinPolicy: 'invite_only' as const,
+			joinInstructions: null,
+			positions: ['Chair', 'Member'],
+			memberCount: 2,
+			// The show's running half (production-projects-spec.md), and #1564's work orders.
+			capabilityGrants: [
+				'finance.read',
+				'production.run',
+				'project.manage',
+				'volunteer.manageShifts'
+			],
+			announcements: [],
+			// The invite-only leader persona already chairs Facilities.
+			leaderFromPool: true
 		}
 	];
 
@@ -111,7 +134,10 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 		// offset-from-the-band-owners pick so the seeder still runs standalone. The
 		// offset is what keeps a leader from also fronting a band, which looks
 		// identical on a roster.
-		const persona = GROUP_LEADER_PERSONAS.find((p) => p.joinPolicy === d.joinPolicy);
+		const persona =
+			'leaderFromPool' in d
+				? undefined
+				: GROUP_LEADER_PERSONAS.find((p) => p.joinPolicy === d.joinPolicy);
 		const leader = leaders.find((l) => l.id === persona?.id) ?? users[(i + 7) % users.length];
 
 		const g = await insertBandWithOwner(

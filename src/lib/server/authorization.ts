@@ -19,6 +19,7 @@ import {
 	committeeGrantsFor,
 	listCommitteeHolders,
 	orgWideCapabilities,
+	projectCommitteeGrantsFor,
 	roleGrantAllows,
 	type CapabilityScope,
 	type CommitteeGrant
@@ -156,7 +157,11 @@ async function grantedBeyondPositions(
 	if (rule.role && scope?.eventId && (await roleGrantAllows(userId, cap, scope.eventId))) {
 		return true;
 	}
-	return rule.committee ? committeeAllows(await seats(), cap, scope) : false;
+	if (!rule.committee) return false;
+	if (committeeAllows(await seats(), cap, scope)) return true;
+	if (!scope?.projectId) return false;
+	const onProject = await projectCommitteeGrantsFor(userId, scope.projectId);
+	return onProject.some((s) => s.capabilities.includes(cap));
 }
 
 /**

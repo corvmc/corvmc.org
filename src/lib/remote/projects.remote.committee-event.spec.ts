@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
 
-// Booking acts on an event through the project it points at. The committee is
+// Booking acts on an event through the project it points at. The committees are
 // read off that project, never off the request, and a refusal writes nothing.
 
 vi.mock('$app/server', () => ({
@@ -37,16 +37,16 @@ vi.mock('$lib/server/authorization', async () => {
 });
 
 const mocks = vi.hoisted(() => ({
-	requireCommitteeMember: vi.fn(),
-	getEventOwningCommittee: vi.fn(),
+	requireProjectCommittee: vi.fn(),
+	getEventProject: vi.fn(),
 	publish: vi.fn(),
 	refreshMemberGroup: vi.fn()
 }));
 vi.mock('$lib/server/group/group-context', () => ({
-	requireCommitteeMember: mocks.requireCommitteeMember
+	requireProjectCommittee: mocks.requireProjectCommittee
 }));
 vi.mock('$lib/server/project/project-service', () => ({
-	getEventOwningCommittee: mocks.getEventOwningCommittee
+	getEventProject: mocks.getEventProject
 }));
 vi.mock('$lib/server/event/event-service', () => ({ publish: mocks.publish }));
 vi.mock('$lib/remote/groups.remote', () => ({
@@ -64,25 +64,25 @@ describe('publishCommitteeProjectEventForm', () => {
 	beforeEach(() => {
 		signedIn = true;
 		vi.clearAllMocks();
-		mocks.getEventOwningCommittee.mockResolvedValue({ groupId: 'booking' });
+		mocks.getEventProject.mockResolvedValue({ projectId: 'proj-1' });
 	});
 
-	it('publishes for a member of the committee that owns the project', async () => {
-		mocks.requireCommitteeMember.mockResolvedValue({
+	it('publishes for a member of a committee taking part in the project', async () => {
+		mocks.requireProjectCommittee.mockResolvedValue({
 			user: { id: 'user-1' },
-			group: { slug: 'booking' },
-			role: 'member'
+			groups: [{ id: 'booking', slug: 'booking' }],
+			via: 'committee'
 		});
 
 		await expect(submit({ id: 'evt-1' })).resolves.toEqual({ success: true });
-		expect(mocks.requireCommitteeMember).toHaveBeenCalledWith('booking', 'event.publish');
+		expect(mocks.requireProjectCommittee).toHaveBeenCalledWith('proj-1', 'event.publish');
 		expect(mocks.publish).toHaveBeenCalledWith('evt-1');
 		expect(mocks.refreshMemberGroup).toHaveBeenCalled();
 	});
 
 	it('refuses someone outside that committee, and publishes nothing', async () => {
 		const { error } = await import('@sveltejs/kit');
-		mocks.requireCommitteeMember.mockImplementation(async () => {
+		mocks.requireProjectCommittee.mockImplementation(async () => {
 			throw error(403, 'Not a member of the committee that owns this');
 		});
 
@@ -92,32 +92,32 @@ describe('publishCommitteeProjectEventForm', () => {
 
 	it('takes the committee from the project, not from a groupId in the request', async () => {
 		const { error } = await import('@sveltejs/kit');
-		mocks.requireCommitteeMember.mockImplementation(async (groupId: string) => {
-			if (groupId !== 'my-committee') throw error(403, 'Not a member');
-			return { user: { id: 'user-1' }, group: null, role: 'member' };
+		mocks.requireProjectCommittee.mockImplementation(async (projectId: string) => {
+			if (projectId !== 'my-committee') throw error(403, 'Not a member');
+			return { user: { id: 'user-1' }, groups: [], via: 'committee' };
 		});
 
 		await expect(submit({ id: 'evt-1', groupId: 'my-committee' })).rejects.toMatchObject({
 			status: 403
 		});
-		expect(mocks.requireCommitteeMember).toHaveBeenCalledWith('booking', 'event.publish');
+		expect(mocks.requireProjectCommittee).toHaveBeenCalledWith('proj-1', 'event.publish');
 		expect(mocks.publish).not.toHaveBeenCalled();
 	});
 
-	it('hands an event on no project to the guard with no owner, so only cover applies', async () => {
-		mocks.getEventOwningCommittee.mockResolvedValue({ groupId: null });
+	it('hands an event on no project to the guard with no project, so only cover applies', async () => {
+		mocks.getEventProject.mockResolvedValue({ projectId: null });
 		const { error } = await import('@sveltejs/kit');
-		mocks.requireCommitteeMember.mockImplementation(async () => {
+		mocks.requireProjectCommittee.mockImplementation(async () => {
 			throw error(403, 'Not permitted');
 		});
 
 		await expect(submit({ id: 'evt-1' })).rejects.toMatchObject({ status: 403 });
-		expect(mocks.requireCommitteeMember).toHaveBeenCalledWith(null, 'event.publish');
+		expect(mocks.requireProjectCommittee).toHaveBeenCalledWith(null, 'event.publish');
 		expect(mocks.publish).not.toHaveBeenCalled();
 	});
 
 	it('404s an event that does not exist, without consulting the guard', async () => {
-		mocks.getEventOwningCommittee.mockResolvedValue(null);
+		mocks.getEventProject.mockResolvedValue(null);
 
 		await expect(submit({ id: 'gone' })).rejects.toMatchObject({ status: 404 });
 		expect(mocks.publish).not.toHaveBeenCalled();
@@ -126,7 +126,7 @@ describe('publishCommitteeProjectEventForm', () => {
 	it('refuses a signed-out caller before reading anything', async () => {
 		signedIn = false;
 		await expect(submit({ id: 'evt-1' })).rejects.toMatchObject({ status: 401 });
-		expect(mocks.getEventOwningCommittee).not.toHaveBeenCalled();
+		expect(mocks.getEventProject).not.toHaveBeenCalled();
 		expect(mocks.publish).not.toHaveBeenCalled();
 	});
 });

@@ -43,6 +43,7 @@
 	import CommitteeNumbers from './CommitteeNumbers.svelte';
 	import ProjectWorkOrderAction from './ProjectWorkOrderAction.svelte';
 	import ProjectEventPublishAction from './ProjectEventPublishAction.svelte';
+	import NewShowAction from './NewShowAction.svelte';
 	import CommitteeMarkets from './CommitteeMarkets.svelte';
 	import CommitteeRecurringWork from './CommitteeRecurringWork.svelte';
 
@@ -187,7 +188,8 @@
 			},
 			// Committee-only, and hidden while empty: a club can never own a project,
 			// so the tab would be a permanent dead end on most of these pages.
-			...(projects.length > 0
+			// A committee that opens shows keeps the tab while empty: its button is here.
+			...(projects.length > 0 || may('production.create')
 				? [
 						{
 							key: 'projects',
@@ -216,6 +218,11 @@
 		/>
 	{:else if tab === 'projects'}
 		<InfoCard title="Projects">
+			{#snippet action()}
+				{#if may('production.create')}
+					<NewShowAction />
+				{/if}
+			{/snippet}
 			{#if projects.length === 0}
 				<EmptyState description="Nothing on the go right now." />
 			{:else}
@@ -270,7 +277,16 @@
 					{/snippet}
 					{#each data.projectEvents as event (event.id)}
 						<tr>
-							<td class="cell-primary">{event.title}</td>
+							<td class="cell-primary">
+								<!-- A show's console reads either half of it through the project. -->
+								{#if event.productionId && (may('production.book') || may('production.run'))}
+									<a class="link" href={resolve(`/staff/events/${event.id}/production`)}
+										>{event.title}</a
+									>
+								{:else}
+									{event.title}
+								{/if}
+							</td>
 							<td>{event.projectName}</td>
 							<td><StatusBadge status={event.status} label /></td>
 							<td>{formatDateTimeShort(event.startsAt)}</td>

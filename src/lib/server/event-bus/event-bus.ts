@@ -582,6 +582,24 @@ export interface EventLineupInvitedEvent {
 	}>;
 }
 
+/** A show was cancelled, for the Production committee taking part in it (#1675). */
+export interface ProductionCancelledEvent {
+	productionId: string;
+	eventId: string;
+	eventTitle: string;
+	/** ISO string — payload dates cross the bus serialized. */
+	startsAt: string;
+	/** Null when no person did it. */
+	cancelledByName: string | null;
+	/** Active seats on the show's live Production committees, less whoever cancelled. */
+	recipients: Array<{
+		userId: string;
+		userName: string;
+		userEmail: string;
+		committeeSlug: string;
+	}>;
+}
+
 export interface EventUnpublishedByStaffEvent {
 	eventId: string;
 	eventTitle: string;
@@ -874,6 +892,7 @@ export type DomainEvents = {
 	'group.application_submitted': GroupApplicationSubmittedEvent;
 	'community_event.unpublished': CommunityEventUnpublishedEvent;
 	'event.lineup_invited': EventLineupInvitedEvent;
+	'production.cancelled': ProductionCancelledEvent;
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
 	'volunteer.hours_approved': VolunteerHoursReviewedEvent;
 	'volunteer.hours_rejected': VolunteerHoursReviewedEvent;

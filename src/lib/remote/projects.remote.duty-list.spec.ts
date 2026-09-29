@@ -50,8 +50,8 @@ vi.mock('$lib/server/authorization', async () => {
 	};
 });
 
-const requireCommitteeMember = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/group/group-context', () => ({ requireCommitteeMember }));
+const requireProjectCommittee = vi.hoisted(() => vi.fn());
+vi.mock('$lib/server/group/group-context', () => ({ requireProjectCommittee }));
 
 const applyDutyList = vi.hoisted(() => vi.fn());
 vi.mock('$lib/server/volunteer/duty-list-service', () => ({
@@ -85,24 +85,24 @@ describe('applyDutyListToProjectForm', () => {
 		applyDutyList.mockReset();
 		applyDutyList.mockResolvedValue({ workOrderIds: ['wo-1', 'wo-2'], taskCount: 3 });
 		const { error } = await import('@sveltejs/kit');
-		requireCommitteeMember.mockReset();
-		requireCommitteeMember.mockImplementation(async (groupId: string, cover: Capability) => {
+		requireProjectCommittee.mockReset();
+		requireProjectCommittee.mockImplementation(async (projectId: string, cover: Capability) => {
 			if (!signedIn) throw error(401, 'Not authenticated');
-			if (committeeOf.includes(groupId))
-				return { user: { id: 'user-1' }, group: null, role: 'member' };
-			if (await holds(cover)) return { user: { id: 'user-1' }, group: null, role: 'staff' };
+			if (committeeOf.includes(projectId))
+				return { user: { id: 'user-1' }, groups: [], via: 'committee' };
+			if (await holds(cover)) return { user: { id: 'user-1' }, groups: [], via: 'staff' };
 			throw error(403, 'Not a member of the committee that owns this');
 		});
 	});
 
-	it('guards on the committee that owns the project, with project.manage as cover', async () => {
-		committeeOf = [COMMITTEE];
+	it('guards on the committees taking part in the project, with project.manage as cover', async () => {
+		committeeOf = [PROJECT];
 		await applyDutyListToProjectForm(input);
-		expect(requireCommitteeMember).toHaveBeenCalledWith(COMMITTEE, 'project.manage');
+		expect(requireProjectCommittee).toHaveBeenCalledWith(PROJECT, 'project.manage');
 	});
 
 	it('lets a member of the owning committee apply a list, holding no position', async () => {
-		committeeOf = [COMMITTEE];
+		committeeOf = [PROJECT];
 
 		await expect(applyDutyListToProjectForm(input)).resolves.toEqual({ workOrders: 2, tasks: 3 });
 		expect(applyDutyList).toHaveBeenCalledWith('dl-1', { kind: 'project', id: PROJECT }, 'user-1');

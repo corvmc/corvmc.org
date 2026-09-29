@@ -19,12 +19,14 @@ import { eq, inArray } from 'drizzle-orm';
 import { withPlatformDb } from './platform-db';
 import { eventListing, eventBand } from '../../src/lib/server/db/schema/event';
 import { production } from '../../src/lib/server/db/schema/production';
+import { project } from '../../src/lib/server/db/schema/project';
 import { SEED_STAFF_ID } from './seed-staff-user';
 import { SEED_VENUE_OFFSITE_ID } from './seed-venues';
 
 export const SEED_PRODUCTION_EVENT_ID = 'e2e-production-event';
 export const SEED_PRODUCTION_EVENT_TITLE = 'E2E Production Riverfront Night';
 export const SEED_PRODUCTION_ID = 'e2e-production-record';
+export const SEED_PRODUCTION_PROJECT_ID = 'e2e-production-project';
 
 /** The CMC show the open-a-production test uses. Mutated by that test. */
 export const SEED_PRODUCTION_BARE_EVENT_ID = 'e2e-production-bare-event';
@@ -54,6 +56,10 @@ export async function seedProductions(): Promise<void> {
 		// `production` and `event_band` both cascade from the listing, so deleting
 		// the events clears everything this fixture wrote.
 		await db.delete(eventListing).where(inArray(eventListing.id, EVENT_IDS));
+		// The listing names the production rather than owning it, and the project is
+		// restricted while a production points at it: production first.
+		await db.delete(production).where(eq(production.id, SEED_PRODUCTION_ID));
+		await db.delete(project).where(eq(project.id, SEED_PRODUCTION_PROJECT_ID));
 
 		const now = new Date();
 		// Far enough out that no other fixture's booking window collides, and in
@@ -113,9 +119,20 @@ export async function seedProductions(): Promise<void> {
 			createdAt: now
 		});
 
+		// Every production is a project, and the trigger refuses one without.
+		await db.insert(project).values({
+			id: SEED_PRODUCTION_PROJECT_ID,
+			name: 'E2E production',
+			kind: 'production',
+			createdByUserId: SEED_STAFF_ID,
+			createdAt: now,
+			updatedAt: now
+		});
+
 		// `draft`, so the advance path — offer, confirm — is walkable from the top.
 		await db.insert(production).values({
 			id: SEED_PRODUCTION_ID,
+			projectId: SEED_PRODUCTION_PROJECT_ID,
 			status: 'draft',
 			createdByUserId: SEED_STAFF_ID,
 			createdAt: now,
@@ -125,7 +142,7 @@ export async function seedProductions(): Promise<void> {
 		// The listing names what it announces (#1202).
 		await db
 			.update(eventListing)
-			.set({ productionId: SEED_PRODUCTION_ID })
+			.set({ productionId: SEED_PRODUCTION_ID, projectId: SEED_PRODUCTION_PROJECT_ID })
 			.where(eq(eventListing.id, SEED_PRODUCTION_EVENT_ID));
 	});
 }

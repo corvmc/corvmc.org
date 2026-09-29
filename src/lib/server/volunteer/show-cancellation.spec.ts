@@ -51,7 +51,11 @@ async function seed() {
 			emailVerified: false
 		})) as never
 	);
-	await testDb.insert(production).values({ id: PROD, status: 'confirmed' } as never);
+	const { project } = await import('$lib/server/db/schema/project');
+	await testDb.insert(project).values({ id: 'proj-show', name: 'A show', kind: 'production' });
+	await testDb
+		.insert(production)
+		.values({ id: PROD, status: 'confirmed', projectId: 'proj-show' } as never);
 	await testDb.insert(eventListing).values(
 		[
 			{ id: SHOW, productionId: PROD },
@@ -102,6 +106,7 @@ beforeEach(async () => {
 		sqlite.exec(`delete from ${t}`);
 	}
 	sqlite.exec('delete from production');
+	sqlite.exec('delete from project');
 	sqlite.exec('delete from user');
 	await seed();
 });

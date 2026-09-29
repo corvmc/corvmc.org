@@ -50,6 +50,7 @@
 		IconKey,
 		IconBuildingStore,
 		IconContract,
+		IconSignature,
 		IconCertificate
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
@@ -93,7 +94,7 @@
 		users: IconUsers,
 		bands: IconMusic,
 		music: IconDisc,
-		groups: IconUsersGroup,
+		clubs: IconUsersGroup,
 		committees: IconClipboardList,
 		ballots: IconCheckbox,
 		volunteer: IconHeartHandshake,
@@ -137,6 +138,7 @@
 		reports: IconReportAnalytics,
 		payments: IconCash,
 		credits: IconCoins,
+		agreements: IconSignature,
 		sponsors: IconBuildingStore,
 		grants: IconContract,
 		renewals: IconCertificate,

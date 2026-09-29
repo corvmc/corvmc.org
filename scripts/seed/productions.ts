@@ -1,6 +1,7 @@
 import { production, productionExpense } from '../../src/lib/server/db/schema/production';
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { batchInsert, db } from './db';
+import { insertShowProductions, syncShowProjects } from './show-project';
 import { eq } from 'drizzle-orm';
 import { type SeedEvent, type SeedUser } from './types';
 
@@ -114,7 +115,7 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 
 	// The rows come back because the run of show hangs off them: a slot needs the
 	// production id and the downbeat the set times are walked from.
-	const inserted = await batchInsert(production, rows);
+	const inserted = await insertShowProductions(rows);
 
 	// Point each listing at the production it announces.
 	for (const [i, row] of inserted.entries()) {
@@ -123,6 +124,7 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 			.set({ productionId: row.id })
 			.where(eq(eventListing.id, eventIds[i]));
 	}
+	await syncShowProjects();
 
 	/** What the downstream seeds ask for: the row plus the listing it announces. */
 	const withEvent = inserted.map((row, i) => ({ ...row, eventId: eventIds[i] }));

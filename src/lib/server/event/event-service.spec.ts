@@ -1,6 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getTableName } from 'drizzle-orm';
-import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -139,6 +137,12 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 			// import, before these module-level consts initialize.
 			insert: (...args: unknown[]) => eventInsert(...(args as [])),
 			delete: (...args: unknown[]) => eventDelete(...(args as [])),
+			// In order, like D1's.
+			batch: async (items: PromiseLike<unknown>[]) => {
+				const out = [];
+				for (const item of items) out.push(await item);
+				return out;
+			},
 			update: vi.fn(() => ({
 				set: vi.fn((vals: Record<string, unknown>) => {
 					lastUpdateSet = vals;
@@ -229,6 +233,13 @@ const mockCreateProduction = vi.fn(async (_eventId: string, opts?: { id?: string
 	id: opts?.id ?? 'prod-new'
 }));
 const mockGetProductionByEvent = vi.fn(async () => null);
+// A show's project, production and committees are one batch in their own module.
+const mockCreateShowProject = vi.fn(async (_input: unknown) => undefined);
+const mockDeleteShowProject = vi.fn(async (_id: string) => undefined);
+vi.mock('$lib/server/production/production-project', () => ({
+	createShowProject: (input: unknown) => mockCreateShowProject(input),
+	deleteShowProject: (id: string) => mockDeleteShowProject(id)
+}));
 vi.mock('$lib/server/production/production-service', () => ({
 	cancelProductionsForEvent: (...args: unknown[]) => mockCancelProductions(...args),
 	createProduction: (...a: unknown[]) => mockCreateProduction(...(a as [string, { id?: string }])),
@@ -389,10 +400,11 @@ describe('EventService', () => {
 			await expect(create(baseParams)).rejects.toThrow('insert failed');
 
 			expect(staffCreate).not.toHaveBeenCalled();
-			const deleted = (eventDelete.mock.calls as unknown as SQLiteTable[][]).map(([t]) =>
-				getTableName(t)
-			);
-			expect(deleted).toEqual(['production']);
+			const { productionId } = mockCreateShowProject.mock.calls[0][0] as {
+				productionId: string;
+			};
+			expect(mockDeleteShowProject).toHaveBeenCalledWith(productionId);
+			expect(eventDelete).not.toHaveBeenCalled();
 		});
 
 		it('skips conflict check when overrideConflicts is true', async () => {
@@ -730,7 +742,8 @@ describe('EventService', () => {
 
 			await cancel('evt-1', 'staff-1');
 
-			expect(mockCancelProductions).toHaveBeenCalledWith('evt-1');
+			// The canceller travels with it, so Production is told who cancelled (#1675).
+			expect(mockCancelProductions).toHaveBeenCalledWith('evt-1', 'staff-1');
 		});
 
 		it('calls off the show’s crew shifts, naming who cancelled it (#1705)', async () => {

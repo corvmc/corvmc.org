@@ -6,7 +6,7 @@ import { groupJoinPolicies, positionOrder, type Capability, type Position } from
 // Mocks
 // ---------------------------------------------------------------------------
 //
-// Pins which capability each `/staff/groups` export names, against the real
+// Pins which capability each staff group export names, against the real
 // matrix, so the table below shows who the swap from `requireStaff` moved.
 
 vi.mock('$app/server', () => ({
@@ -227,5 +227,79 @@ describe.each(EXPORTS)('%s', (name, input, cap, service) => {
 			'technology_coordinator+volunteer_coordinator+site_moderator+treasurer'
 		);
 		expect(narrowed).toHaveLength(15);
+	});
+});
+
+// `/staff/committees` is worked by the volunteer coordinator too, who reviews
+// applications and holds no `group.read`: they see the applications and none of
+// the settings, grants or roster.
+describe('the committee pages', () => {
+	const applications = [{ choiceId: 'c-1' }];
+	const committee = {
+		id: 'group-1',
+		kind: 'committee',
+		name: 'Booking',
+		slug: 'booking',
+		deletedAt: null
+	};
+
+	beforeEach(async () => {
+		const cas = await import('$lib/server/group/committee-application-service');
+		vi.mocked(cas.listForCommittee).mockResolvedValue(applications as never);
+		svc.listGroups.mockResolvedValue({ rows: [{ id: 'group-1', openApplications: 1 }] });
+		svc.getGroupDetail.mockResolvedValue(committee);
+	});
+
+	it.each([
+		[['volunteer_coordinator'], false],
+		[['staff'], true]
+	] as const)('lists committees for %s, managing: %s', async (held, canManage) => {
+		heldPositions = [...held];
+		expect(await groups.getStaffCommittees(undefined)).toEqual({
+			committees: [{ id: 'group-1', openApplications: 1 }],
+			canManage
+		});
+		expect(svc.listGroups).toHaveBeenCalledWith({ kinds: ['committee'] }, expect.anything());
+	});
+
+	it('gives the coordinator the applications and nothing to manage', async () => {
+		heldPositions = ['volunteer_coordinator'];
+		expect(await groups.getStaffCommitteePage('group-1')).toEqual({
+			committee: { id: 'group-1', name: 'Booking', slug: 'booking' },
+			applications,
+			manage: null
+		});
+	});
+
+	it('gives staff the roster and settings beside the applications', async () => {
+		const page = (await groups.getStaffCommitteePage('group-1')) as {
+			manage: { group: unknown } | null;
+		};
+		expect(page.manage?.group).toEqual(committee);
+	});
+
+	it('refuses a treasurer, and 404s a club', async () => {
+		heldPositions = ['treasurer'];
+		expect(await outcome('getStaffCommitteePage', 'group-1')).toBe(403);
+		expect(await outcome('getStaffCommittees', undefined)).toBe(403);
+		heldPositions = ['staff'];
+		svc.getGroupDetail.mockResolvedValue({ ...committee, kind: 'club' });
+		expect(await outcome('getStaffCommitteePage', 'group-1')).toBe(404);
+	});
+
+	it('401s a signed-out caller, reading nothing', async () => {
+		signedIn = false;
+		expect(await outcome('getStaffCommitteePage', 'group-1')).toBe(401);
+		expect(await outcome('getStaffCommittees', undefined)).toBe(401);
+		expect(svc.getGroupDetail).not.toHaveBeenCalled();
+		expect(svc.listGroups).not.toHaveBeenCalled();
+	});
+
+	it('lets only a manager reach a deactivated committee', async () => {
+		svc.getGroupDetail.mockResolvedValue({ ...committee, deletedAt: new Date() });
+		heldPositions = ['volunteer_coordinator'];
+		expect(await outcome('getStaffCommitteePage', 'group-1')).toBe(404);
+		heldPositions = ['staff'];
+		expect(await outcome('getStaffCommitteePage', 'group-1')).toBe('allowed');
 	});
 });

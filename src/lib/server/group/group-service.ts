@@ -25,7 +25,7 @@ import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
  *
  * | | `band` | `club`, `committee` |
  * | --- | --- | --- |
- * | Created by | any member, self-service | **staff only**, from `/staff/groups` |
+ * | Created by | any member, self-service | **staff only**, from `/staff/clubs` |
  * | Owner | the creator | **appointed by staff** |
  * | Deleted by | its owner | staff only |
  * | Join policy | always `invite_only` | any of the three |
@@ -665,7 +665,7 @@ export async function declineApplication(memberId: string, groupId: string) {
  * because nobody's job it is to pick up an orphaned band. A program leader was
  * *appointed*, and the body that appointed them is still there — so "find your
  * own replacement" would trap someone in a volunteer role they have already said
- * they are done with. The seat goes empty, `/staff/groups` flags it, and the
+ * they are done with. The seat goes empty, `/staff/clubs` flags it, and the
  * program keeps running: nothing about it depends on the owner row existing.
  */
 export async function leaveGroup(groupId: string, userId: string) {

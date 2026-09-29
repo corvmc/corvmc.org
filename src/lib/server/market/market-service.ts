@@ -3,7 +3,7 @@ import { db } from '$lib/server/db';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { eventListing, publicEventStatuses } from '$lib/server/db/schema/event';
 import { inboxThread } from '$lib/server/db/schema/inbox';
-import { project } from '$lib/server/db/schema/project';
+import { projectCommittee } from '$lib/server/db/schema/project';
 import { marketDay, marketVendor, type MarketVendor } from '$lib/server/db/schema/market';
 import { findOrCreateThread } from '$lib/server/inbox/thread-service';
 import { addInboundMessage, addOutboundMessage } from '$lib/server/inbox/message-service';
@@ -348,18 +348,17 @@ export async function getVendorEventId(vendorId: string): Promise<string> {
 }
 
 /**
- * The committee that owns a market day: the owning group of its listing's
- * project. Null when there is no project or no owner, which leaves the
- * decision to staff alone (#1503).
+ * The project a market day belongs to: its committees decide applications.
+ * Null when the listing is on no project, which leaves the decision to staff
+ * alone (#1503).
  */
-export async function getMarketOwnerGroupId(eventId: string): Promise<string | null> {
+export async function getMarketProjectId(eventId: string): Promise<string | null> {
 	const [row] = await db
-		.select({ groupId: project.groupId })
+		.select({ projectId: eventListing.projectId })
 		.from(eventListing)
-		.innerJoin(project, eq(project.id, eventListing.projectId))
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
-	return row?.groupId ?? null;
+	return row?.projectId ?? null;
 }
 
 /** A committee's market days, soonest first, with how many applications wait on a decision. */
@@ -373,9 +372,14 @@ export async function listCommitteeMarkets(groupId: string) {
 		})
 		.from(marketDay)
 		.innerJoin(eventListing, eq(eventListing.id, marketDay.eventId))
-		.innerJoin(project, eq(project.id, eventListing.projectId))
-		.where(eq(project.groupId, groupId))
-		.orderBy(asc(eventListing.startsAt));
+		.innerJoin(
+			projectCommittee,
+			and(
+				eq(projectCommittee.projectId, eventListing.projectId),
+				eq(projectCommittee.groupId, groupId)
+			)
+		)
+		.orderBy(asc(eventListing.startsAt), asc(eventListing.id));
 	return rows.map((r) => ({ ...r, toReview: Number(r.toReview) }));
 }
 

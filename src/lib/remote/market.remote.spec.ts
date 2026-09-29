@@ -71,6 +71,17 @@ vi.mock('$lib/server/group/group-context', async () => {
 			if (!signedIn) throw error(401, 'Not authenticated');
 			if (!staff) throw error(403, 'Not a member of the committee that owns this');
 			return { user: { id: 'staff-1', name: 'Sam Staff' }, group: null, role: 'staff' };
+		},
+		// Keyed by project: `committeeOf` names the projects the caller's committee is on.
+		requireProjectCommittee: async (projectId: string | null, cover: string) => {
+			guardedOn.push([projectId, cover]);
+			if (projectId && committeeOf.includes(projectId)) {
+				return { user: { id: 'member-1', name: 'Casey Committee' }, groups: [], via: 'committee' };
+			}
+			requested.push(cover);
+			if (!signedIn) throw error(401, 'Not authenticated');
+			if (!staff) throw error(403, 'Not on a committee taking part in this project');
+			return { user: { id: 'staff-1', name: 'Sam Staff' }, groups: [], via: 'staff' };
 		}
 	};
 });
@@ -87,7 +98,7 @@ const svc = vi.hoisted(() => ({
 	setTableLabel: vi.fn(async () => ({ eventId: 'evt-1' })),
 	submitApplication: vi.fn(async () => ({ id: 'v-1' })),
 	withdrawApplication: vi.fn(async () => ({ eventId: 'evt-1' })),
-	getMarketOwnerGroupId: vi.fn(async () => 'grp-dev'),
+	getMarketProjectId: vi.fn(async () => 'proj-dev'),
 	getVendorEventId: vi.fn(async () => 'evt-1'),
 	listCommitteeMarkets: vi.fn(async () => [])
 }));
@@ -168,18 +179,18 @@ describe('deciding an application (#1503)', () => {
 	const decide = (decision = 'accepted') =>
 		submit(remote.decideVendorForm, { vendorId: 'v-1', decision, message: 'In' });
 
-	it("guards on the committee that owns the vendor's market, with event.manage as cover", async () => {
-		committeeOf = ['grp-dev'];
+	it("guards on the committees on the vendor's market's project, with event.manage as cover", async () => {
+		committeeOf = ['grp-dev', 'proj-dev'];
 		await decide();
 		expect(svc.getVendorEventId).toHaveBeenCalledWith('v-1');
-		expect(svc.getMarketOwnerGroupId).toHaveBeenCalledWith('evt-1');
-		expect(guardedOn).toEqual([['grp-dev', 'event.manage']]);
+		expect(svc.getMarketProjectId).toHaveBeenCalledWith('evt-1');
+		expect(guardedOn).toEqual([['proj-dev', 'event.manage']]);
 	});
 
 	it.each(['accepted', 'declined'])(
 		'lets a member of the owning committee record %s, as themselves',
 		async (decision) => {
-			committeeOf = ['grp-dev'];
+			committeeOf = ['grp-dev', 'proj-dev'];
 			await decide(decision);
 			expect(svc.decideApplication).toHaveBeenCalledWith(
 				'v-1',
@@ -211,7 +222,7 @@ describe('deciding an application (#1503)', () => {
 
 describe('the committee view of a market', () => {
 	it('shows the owning committee its applications without any contact detail', async () => {
-		committeeOf = ['grp-dev'];
+		committeeOf = ['grp-dev', 'proj-dev'];
 		svc.getMarketDay.mockResolvedValueOnce({ eventId: 'evt-1' } as never);
 		svc.listApplications.mockResolvedValueOnce([
 			{
@@ -228,7 +239,7 @@ describe('the committee view of a market', () => {
 			applications: Record<string, unknown>[];
 		};
 
-		expect(guardedOn).toEqual([['grp-dev', 'event.manage']]);
+		expect(guardedOn).toEqual([['proj-dev', 'event.manage']]);
 		expect(view.applications).toEqual([{ id: 'v-1', businessName: 'Rosa Ceramics' }]);
 	});
 
@@ -241,7 +252,7 @@ describe('the committee view of a market', () => {
 	});
 
 	it("lists a committee's markets only to its members or staff", async () => {
-		committeeOf = ['grp-dev'];
+		committeeOf = ['grp-dev', 'proj-dev'];
 		await remote.getCommitteeMarkets('grp-dev');
 		expect(guardedOn).toEqual([['grp-dev', 'event.manage']]);
 		expect(svc.listCommitteeMarkets).toHaveBeenCalledWith('grp-dev');

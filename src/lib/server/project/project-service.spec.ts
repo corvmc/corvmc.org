@@ -74,7 +74,7 @@ const {
 	detachFromProject,
 	getProjectBurn,
 	getProjectForSuggestion,
-	getEventOwningCommittee,
+	getEventProject,
 	startProjectFromSuggestion,
 	ProjectNotFoundError,
 	ProjectOwnerError,
@@ -112,11 +112,24 @@ describe('createProject', () => {
 	});
 
 	it('accepts a committee owner', async () => {
-		selectResults = [COMMITTEE];
+		selectResults = [COMMITTEE, PROJECT({ name: 'Rewire the panel', groupId: 'g-1' })];
 
 		const row = await createProject({ name: 'Rewire the panel', groupId: 'g-1' });
 
 		expect(row).toMatchObject({ name: 'Rewire the panel', groupId: 'g-1' });
+		// The owner is written twice until `group_id` goes: the column and its
+		// `project_committee` row, in one batch.
+		expect(batchCalls).toHaveLength(1);
+		expect(insertValues).toContainEqual(expect.objectContaining({ groupId: 'g-1', role: 'owner' }));
+	});
+
+	it('writes no committee row for a project nobody owns', async () => {
+		selectResults = [PROJECT()];
+
+		await createProject({ name: 'Fix the breaker' });
+
+		expect(batchCalls).toHaveLength(0);
+		expect(insertValues).toHaveLength(1);
 	});
 
 	it('refuses a suggestion another project already answers', async () => {
@@ -129,7 +142,12 @@ describe('createProject', () => {
 	});
 
 	it('lets a project keep the suggestion it already answers', async () => {
-		selectResults = [PROJECT({ suggestionId: 's-1' }), [{ id: 's-1' }], [{ id: 'proj-1' }]];
+		selectResults = [
+			PROJECT({ suggestionId: 's-1' }),
+			[{ id: 's-1' }],
+			[{ id: 'proj-1' }],
+			PROJECT({ suggestionId: 's-1' })
+		];
 
 		await expect(updateProject('proj-1', { suggestionId: 's-1' })).resolves.toBeDefined();
 	});
@@ -350,19 +368,19 @@ describe('the suggestion loop', () => {
 	});
 });
 
-describe('getEventOwningCommittee', () => {
-	it('resolves the committee through the project the event points at', async () => {
-		selectResults = [[{ groupId: 'committee-1' }]];
-		expect(await getEventOwningCommittee('evt-1')).toEqual({ groupId: 'committee-1' });
+describe('getEventProject', () => {
+	it('resolves the project the event points at, whose committees may act', async () => {
+		selectResults = [[{ projectId: 'proj-1' }]];
+		expect(await getEventProject('evt-1')).toEqual({ projectId: 'proj-1' });
 	});
 
-	it('answers a null owner for an event on no project, so only cover gets in', async () => {
-		selectResults = [[{ groupId: null }]];
-		expect(await getEventOwningCommittee('evt-1')).toEqual({ groupId: null });
+	it('answers a null project for an event on none, so only cover gets in', async () => {
+		selectResults = [[{ projectId: null }]];
+		expect(await getEventProject('evt-1')).toEqual({ projectId: null });
 	});
 
 	it('returns null for an event that does not exist', async () => {
 		selectResults = [[]];
-		expect(await getEventOwningCommittee('gone')).toBeNull();
+		expect(await getEventProject('gone')).toBeNull();
 	});
 });

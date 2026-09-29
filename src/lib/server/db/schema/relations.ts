@@ -103,6 +103,7 @@ export const relations = defineRelations(schema, (t) => ({
 	// both name which one they follow.
 	production: {
 		event: t.one.eventListing({ from: t.production.id, to: t.eventListing.productionId }),
+		project: t.one.project({ from: t.production.projectId, to: t.project.id }),
 		producer: t.one.user({
 			from: t.production.producerUserId,
 			to: t.user.id,
@@ -323,7 +324,14 @@ export const relations = defineRelations(schema, (t) => ({
 		contractorJobs: t.many.contractorJob(),
 		purchaseOrders: t.many.purchaseOrder(),
 		acquisitions: t.many.acquisition(),
-		events: t.many.eventListing()
+		events: t.many.eventListing(),
+		committees: t.many.projectCommittee(),
+		/** Present when `kind = 'production'`. */
+		production: t.one.production({ from: t.project.id, to: t.production.projectId })
+	},
+	projectCommittee: {
+		project: t.one.project({ from: t.projectCommittee.projectId, to: t.project.id }),
+		group: t.one.group({ from: t.projectCommittee.groupId, to: t.group.id })
 	},
 	suggestionVote: {
 		suggestion: t.one.suggestion({ from: t.suggestionVote.suggestionId, to: t.suggestion.id }),

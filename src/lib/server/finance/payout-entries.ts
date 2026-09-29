@@ -1,5 +1,6 @@
 import { recordEntries } from './financial-entry-service';
 import { poolBalanceCents } from './financial-entry-service';
+import { showProjectIdForProduction } from './show-project';
 
 /**
  * Paying an act, in the ledger's terms.
@@ -43,6 +44,7 @@ export async function recordActPayout(params: RecordActPayoutParams): Promise<vo
 		settlement: 'cash' as const,
 		subjectType: 'production' as const,
 		subjectId: params.productionId,
+		projectId: await showProjectIdForProduction(params.productionId),
 		settlementGroup: params.eventId,
 		recordedByUserId: params.recordedByUserId,
 		metadata: { slotId: params.slotId, actName: params.actName }
