@@ -44,6 +44,7 @@
 	import NewShowAction from './NewShowAction.svelte';
 	import CommitteeMarkets from './CommitteeMarkets.svelte';
 	import CommitteeRecurringWork from './CommitteeRecurringWork.svelte';
+	import CommitteeOpenItems from './CommitteeOpenItems.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -71,7 +72,14 @@
 	const unpublishSessionFields = unpublishGroupSession.fields;
 
 	type Tab =
-		'announcements' | 'documents' | 'overview' | 'projects' | 'numbers' | 'sessions' | 'roster';
+		| 'announcements'
+		| 'documents'
+		| 'overview'
+		| 'projects'
+		| 'items'
+		| 'numbers'
+		| 'sessions'
+		| 'roster';
 
 	let slug = $derived(page.params.slug!);
 	const data = $derived(await getMemberGroup(slug));
@@ -91,6 +99,7 @@
 		if (requested === 'overview') return 'overview';
 		if (requested === 'sessions') return 'sessions';
 		if (requested === 'projects') return 'projects';
+		if (requested === 'items') return 'items';
 		if (requested === 'numbers') return 'numbers';
 		if (requested === 'documents') return 'documents';
 		if (requested === 'announcements') return 'announcements';
@@ -194,6 +203,11 @@
 							href: tabHref('projects')
 						}
 					]
+				: []),
+			// What the committee owes on its shows (#1701). Committee-only, and hidden
+			// while there is nothing unfinished, as Projects is.
+			...(group.kind === 'committee' && data.hasOpenItems
+				? [{ key: 'items', label: 'Open items', href: tabHref('items') }]
 				: []),
 			// Its roster only (#1562); staff read the whole report on `/staff/reports`.
 			...(group.kind === 'committee' && may('finance.read')
@@ -307,6 +321,8 @@
 			roles={data.workOrderRoles}
 			canEdit={may('volunteer.manageRecurring')}
 		/>
+	{:else if tab === 'items' && group.kind === 'committee'}
+		<CommitteeOpenItems {slug} />
 	{:else if tab === 'numbers' && may('finance.read')}
 		<CommitteeNumbers groupId={group.id} />
 	{:else if tab === 'documents'}

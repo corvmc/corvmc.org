@@ -12,7 +12,8 @@ import { config } from '$lib/server/site-config/site-config-service';
 import { can, requireCapability, requireUser } from '$lib/server/authorization';
 import { requireProjectCommittee } from '$lib/server/group/group-context';
 import { projectOfEvent } from '$lib/server/production/production-scope';
-import { getProjectBurn } from '$lib/server/project/project-service';
+import { getProjectBurn, listCommittees } from '$lib/server/project/project-service';
+import { listShowDeliverables } from '$lib/server/volunteer/deliverables-service';
 import { mapDomainError } from '$lib/server/errors';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
@@ -1274,7 +1275,9 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		settlement,
 		artifactRequests,
 		requestableActs,
-		hostShift
+		hostShift,
+		deliverables,
+		committees
 	] = await Promise.all([
 		getStaffEventDetail(id),
 		getEventRecurringSeries(id),
@@ -1309,7 +1312,10 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		listRequestableActs(id),
 		// Who is running the night. A volunteer shift rather than a column, so
 		// this is the roster's answer and not the production's (#932).
-		getHostShift(id)
+		getHostShift(id),
+		// Whose job each piece of the show is, and whether it is done (#1701).
+		listShowDeliverables(id),
+		listCommittees()
 	]);
 	// The show's budget and burn are its project's (production-projects-spec.md).
 	// Keyed off the production, not the listing: a listing's project is only the
@@ -1322,7 +1328,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		detail,
 		recurringSeries,
 		shifts,
-		advance,
+		// The deliverables have their own card; the advance card keeps the rest.
+		advance: advance.filter((w) => !w.groupId && !w.doneWhen),
 		volunteerRoles,
 		dutyLists,
 		venues,
@@ -1332,7 +1339,9 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		settlement,
 		artifactRequests,
 		requestableActs,
-		hostShift
+		hostShift,
+		deliverables,
+		deliverableCommittees: committees
 	};
 });
 
