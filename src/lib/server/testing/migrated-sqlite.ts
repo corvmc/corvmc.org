@@ -10,10 +10,17 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
  * `db:migrate:local` does, so it survives the renames, rebuilds and indexes
  * that lifting one table's `CREATE` does not. #847 has the three failures.
  */
-export function migratedSqlite(opts: { foreignKeys?: boolean } = {}) {
+export function migratedSqlite(opts: { foreignKeys?: boolean; through?: string } = {}) {
 	const sqlite = new Database(':memory:');
 
-	for (const file of globSync('migrations/*/migration.sql').sort()) {
+	// `through` stops after the migration so named, for a backfill whose columns a later one drops.
+	const files = globSync('migrations/*/migration.sql').sort();
+	const last = opts.through
+		? files.findLastIndex((f) => f.includes(`_${opts.through}/`))
+		: files.length - 1;
+	if (last < 0) throw new Error(`No migration named *_${opts.through}`);
+
+	for (const file of files.slice(0, last + 1)) {
 		for (const statement of readFileSync(file, 'utf8')
 			.split('--> statement-breakpoint')
 			.map((s) => s.trim())
