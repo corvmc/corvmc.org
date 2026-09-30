@@ -22,7 +22,8 @@ paths:
 ## Generating a migration
 
 `pnpm db:generate` runs `drizzle-kit generate`, then `scripts/db/d1-safe-rebuild.mjs`, which
-rewrites unsafe table rebuilds, then `scripts/db/prune-snapshots.mjs`, which deletes the
+rewrites unsafe table rebuilds and re-creates the triggers a rebuild drops, then
+`scripts/db/prune-snapshots.mjs`, which deletes the
 snapshots nothing will read again. Details and the reasoning are in
 `docs/development/conventions.md#table-rebuilds-on-d1` and
 `docs/development/conventions.md#snapshots-are-pruned`.

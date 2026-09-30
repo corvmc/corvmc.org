@@ -46,6 +46,11 @@ pnpm build`: `build` is `vite build` and does **not** migrate, so the dashboard 
      migration that does both. `drizzle-kit migrate` applies every pending migration at once, so
      such a batch cannot be split. Ship the drop in a PR of its own.
 
+   A table rebuild counts as a drop when it loses a column and gains none: SQLite cannot drop a
+   column with a table-level `FOREIGN KEY`, so drizzle drops it by rebuilding the table. The
+   build step reads each rebuilt table's columns from production to tell (#1747). A rebuild that
+   keeps every column changes a constraint instead, and runs before publish.
+
    Without that variable every migration runs before publish, exactly as before. So a drop is
    safe unattended only while both dashboard fields below are set; if the deploy command loses
    its `--after-publish` half, drops pile up unapplied until the next add fails the build.

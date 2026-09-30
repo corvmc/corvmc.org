@@ -335,12 +335,9 @@ export async function listPublicGroups(kinds?: readonly StaffGroupKind[]) {
 }
 
 /**
- * This viewer's row on this group, whatever its status — including the two
- * waiting ones, which `getUserRole` deliberately does not return.
- *
- * The public page needs the difference: somebody with a `'requested'` row is
- * not a member and `requireGroupRole` resolves nothing for them, but offering
- * them Apply again would be wrong. Null means no row at all.
+ * This viewer's row on this group, whatever its status — including a pending
+ * invitation, which `getUserRole` deliberately does not return. Null means no
+ * row at all; an open application is `hasOpenApplication`'s question.
  */
 export async function getUserGroupStatus(groupId: string, userId: string) {
 	const [row] = await db
