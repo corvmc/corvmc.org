@@ -251,8 +251,7 @@ the collective's. Nothing else marks a row as CMC's, so there is no second colum
 | `ballot.group_id`          | a member-wide ballot, where set it is a committee ballot |
 
 A project's committees are rows in `project_committee`, each with a role, and a project with none
-is staff's, the same as a null above. `project.group_id` is still in the table, unread, until #1686
-drops it.
+is staff's, the same as a null above. `project` itself has no committee column.
 
 `announcement` and `event_group` are the same idea without the null: a band posting to its
 roster and a committee posting to its members are the same act on one table. Because the
