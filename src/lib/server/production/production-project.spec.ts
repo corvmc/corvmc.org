@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync, globSync } from 'node:fs';
 
 /**
@@ -6,10 +6,18 @@ import { readFileSync, globSync } from 'node:fs';
  * committed migrations: the batch, the required-project triggers, and the
  * backfill that gave every existing production its project.
  */
-const { sqlite, testDb } = await vi.hoisted(async () => {
+const { sqlite, testDb, legacySqlite } = await vi.hoisted(async () => {
 	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
-	return migratedSqlite({ foreignKeys: true });
+	return {
+		...migratedSqlite({ foreignKeys: true }),
+		// The backfill reads `project.group_id`, which a later migration drops (#1686).
+		legacySqlite: migratedSqlite({ foreignKeys: true, through: 'production_project_backfill' })
+			.sqlite
+	};
 });
+
+/** The database the helpers below act on: the current schema, or the backfill's. */
+let db = sqlite;
 
 // better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
 vi.mock('$lib/server/db', () => ({
@@ -32,20 +40,18 @@ function runBackfill() {
 		.split('--> statement-breakpoint')
 		.map((s) => s.trim())
 		.filter(Boolean)) {
-		sqlite.exec(statement);
+		db.exec(statement);
 	}
 }
 
 function rows<T>(sql: string, ...params: unknown[]): T[] {
-	return sqlite.prepare(sql).all(...params) as T[];
+	return db.prepare(sql).all(...params) as T[];
 }
 
 function committee(id: string, slug: string, deleted = false) {
-	sqlite
-		.prepare(
-			`insert into "group" (id, name, slug, kind, deleted_at) values (?, ?, ?, 'committee', ?)`
-		)
-		.run(id, slug, slug, deleted ? 1 : null);
+	db.prepare(
+		`insert into "group" (id, name, slug, kind, deleted_at) values (?, ?, ?, 'committee', ?)`
+	).run(id, slug, slug, deleted ? 1 : null);
 }
 
 beforeEach(() => {
@@ -155,14 +161,33 @@ describe('production_project_required', () => {
 });
 
 describe('the backfill', () => {
+	beforeEach(() => {
+		db = legacySqlite;
+		db.pragma('foreign_keys = OFF');
+		for (const t of [
+			'financial_entry',
+			'project_committee',
+			'event_listing',
+			'production',
+			'project',
+			'"group"'
+		]) {
+			db.exec(`delete from ${t}`);
+		}
+		db.pragma('foreign_keys = ON');
+	});
+	afterEach(() => {
+		db = sqlite;
+	});
+
 	/** Rows as they stood before the migration: productions with no project. */
 	function legacy() {
-		sqlite.pragma('foreign_keys = OFF');
-		sqlite.exec(`drop trigger production_project_required_insert`);
+		db.pragma('foreign_keys = OFF');
+		db.exec(`drop trigger if exists production_project_required_insert`);
 		committee('g-book', 'booking-committee');
 		committee('g-prod', 'production-committee');
 		committee('g-fac', 'facility-committee');
-		sqlite.exec(`
+		db.exec(`
 			insert into production (id, status) values ('prod-a', 'completed'), ('prod-b', 'draft');
 			insert into project (id, name, group_id) values ('proj-owned', 'Renovation', 'g-fac');
 			insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, production_id, project_id)
@@ -175,7 +200,7 @@ describe('the backfill', () => {
 				       ('fe-other', 500, 'earned', 'ticket_sales', 1790000000, 'stripe', null, 'ticket', 'pur-9', 'unrelated');
 		`);
 		runBackfill();
-		sqlite.pragma('foreign_keys = ON');
+		db.pragma('foreign_keys = ON');
 	}
 
 	it('gives every production a project, adopting a listing project nobody else claims', () => {

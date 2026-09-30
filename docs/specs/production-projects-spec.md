@@ -2,8 +2,8 @@
 
 > ## Status
 >
-> **Approved by the owner on 2026-09-25; being built on `feature/production-projects`** (#1673).
-> Phase 0 is this document. The committee roles and the two capabilities are recorded as
+> **Approved by the owner on 2026-09-25; built** (#1673). Phase 4, the drop of
+> `project.group_id`, shipped in #1752. Phase 0 is this document. The committee roles and the two capabilities are recorded as
 > decisions for the owner to confirm in the issues linked from #1673.
 
 ## Purpose
