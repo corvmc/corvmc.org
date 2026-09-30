@@ -419,7 +419,16 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		key: 'production_cancelled',
 		category: 'shows',
 		label: 'Show cancelled',
-		description: 'When a show your production committee is working is cancelled, and by whom',
+		description:
+			'When a show your committee still owes something on is cancelled, what was called off, and by whom',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'deliverable_due',
+		category: 'shows',
+		label: 'Show work due',
+		description:
+			'Three days before one of your committee’s items on a show is due, and again once it is late',
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{

@@ -105,6 +105,31 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		displayOrder: 55,
 		defaultCapacity: 1
 	},
+	// A show's committee deliverables (#1701). Same text as the migration that
+	// adds them to production.
+	{
+		name: 'Poster Art',
+		group: 'away-from-shows' as const,
+		description: "Make a show's poster, working from the lineup and whatever art the acts send.",
+		displayOrder: 56,
+		defaultCapacity: 1
+	},
+	{
+		name: 'Show Promotion',
+		group: 'away-from-shows' as const,
+		description:
+			'Get a published show in front of people: the poster around town, social, press and the newsletter.',
+		displayOrder: 56,
+		defaultCapacity: 1
+	},
+	{
+		name: 'Production Lead',
+		group: 'away-from-shows' as const,
+		description:
+			'Answer for the running half of a show: the advance with the acts, the crew, the reset room and the settlement.',
+		displayOrder: 56,
+		defaultCapacity: 1
+	},
 	{
 		name: 'Rehearsal Orientation',
 		group: 'away-from-shows' as const,

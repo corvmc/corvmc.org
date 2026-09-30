@@ -1,10 +1,10 @@
 {
-  "id": "1091d23f-c8df-4e27-8e3b-555a15624f0f",
-  "prevIds": [
-    "5d47603b-8420-4eb9-b430-eda9ee04812a"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "c07edf71-5a93-4ff4-99c1-05460083cd09",
+  "prevIds": [
+    "080049bb-58a9-4d09-a08b-0a22750ba28f"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -391,6 +391,10 @@
       "entityType": "tables"
     },
     {
+      "name": "project_committee",
+      "entityType": "tables"
+    },
+    {
       "name": "audio_release",
       "entityType": "tables"
     },
@@ -436,14 +440,6 @@
     },
     {
       "name": "artifact_request",
-      "entityType": "tables"
-    },
-    {
-      "name": "committee_application",
-      "entityType": "tables"
-    },
-    {
-      "name": "committee_application_choice",
       "entityType": "tables"
     },
     {
@@ -532,6 +528,14 @@
     },
     {
       "name": "ballot_recorded_vote",
+      "entityType": "tables"
+    },
+    {
+      "name": "group_application",
+      "entityType": "tables"
+    },
+    {
+      "name": "group_application_choice",
       "entityType": "tables"
     },
     {
@@ -2511,6 +2515,16 @@
       "default": "'draft'",
       "generated": null,
       "name": "status",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
       "entityType": "columns",
       "table": "production"
     },
@@ -8675,6 +8689,36 @@
       "table": "duty_list_item"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "duty_list_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "duty_list_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "done_when",
+      "entityType": "columns",
+      "table": "duty_list_item"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -10090,6 +10134,26 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "done_when",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "created_by_user_id",
       "entityType": "columns",
       "table": "work_order"
@@ -10906,11 +10970,11 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
-      "default": null,
+      "default": "'general'",
       "generated": null,
-      "name": "group_id",
+      "name": "kind",
       "entityType": "columns",
       "table": "project"
     },
@@ -10993,6 +11057,46 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "project_committee"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "project_committee"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "role",
+      "entityType": "columns",
+      "table": "project_committee"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "project_committee"
     },
     {
       "type": "text",
@@ -12422,156 +12526,6 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
-      "table": "committee_application"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "user_id",
-      "entityType": "columns",
-      "table": "committee_application"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'{}'",
-      "generated": null,
-      "name": "answers",
-      "entityType": "columns",
-      "table": "committee_application"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "withdrawn_at",
-      "entityType": "columns",
-      "table": "committee_application"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "committee_application"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "committee_application"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "committee_application_choice"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "application_id",
-      "entityType": "columns",
-      "table": "committee_application_choice"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "group_id",
-      "entityType": "columns",
-      "table": "committee_application_choice"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'submitted'",
-      "generated": null,
-      "name": "status",
-      "entityType": "columns",
-      "table": "committee_application_choice"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "review_notes",
-      "entityType": "columns",
-      "table": "committee_application_choice"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "decided_by_user_id",
-      "entityType": "columns",
-      "table": "committee_application_choice"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "decided_at",
-      "entityType": "columns",
-      "table": "committee_application_choice"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "committee_application_choice"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "committee_application_choice"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
       "table": "reminder_sent"
     },
     {
@@ -13201,6 +13155,36 @@
       "default": null,
       "generated": null,
       "name": "refunded_at",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "checked_in_at",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invite_back",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invite_back_note",
       "entityType": "columns",
       "table": "market_vendor"
     },
@@ -14535,6 +14519,156 @@
       "table": "ballot_recorded_vote"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "group_application"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "group_application"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'{}'",
+      "generated": null,
+      "name": "answers",
+      "entityType": "columns",
+      "table": "group_application"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "withdrawn_at",
+      "entityType": "columns",
+      "table": "group_application"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "group_application"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "group_application"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "group_application_choice"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "application_id",
+      "entityType": "columns",
+      "table": "group_application_choice"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "group_application_choice"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'submitted'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "group_application_choice"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "review_notes",
+      "entityType": "columns",
+      "table": "group_application_choice"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "decided_by_user_id",
+      "entityType": "columns",
+      "table": "group_application_choice"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "decided_at",
+      "entityType": "columns",
+      "table": "group_application_choice"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "group_application_choice"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "group_application_choice"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -14953,6 +15087,21 @@
       "name": "fk_event_created_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "event_listing"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "nameExplicit": false,
+      "name": "fk_production_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "production"
     },
     {
       "columns": [
@@ -16576,6 +16725,21 @@
     },
     {
       "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_duty_list_item_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "duty_list_item"
+    },
+    {
+      "columns": [
         "volunteer_role_id"
       ],
       "tableTo": "volunteer_role",
@@ -17161,6 +17325,21 @@
     },
     {
       "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_work_order_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
         "created_by_user_id"
       ],
       "tableTo": "user",
@@ -17326,21 +17505,6 @@
     },
     {
       "columns": [
-        "group_id"
-      ],
-      "tableTo": "group",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_project_group_id_group_id_fk",
-      "entityType": "fks",
-      "table": "project"
-    },
-    {
-      "columns": [
         "suggestion_id"
       ],
       "tableTo": "suggestion",
@@ -17383,6 +17547,36 @@
       "name": "fk_project_created_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "project"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_project_committee_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "project_committee"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_project_committee_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "project_committee"
     },
     {
       "columns": [
@@ -17788,66 +17982,6 @@
       "name": "fk_artifact_request_requested_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "artifact_request"
-    },
-    {
-      "columns": [
-        "user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_committee_application_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "committee_application"
-    },
-    {
-      "columns": [
-        "application_id"
-      ],
-      "tableTo": "committee_application",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_committee_application_choice_application_id_committee_application_id_fk",
-      "entityType": "fks",
-      "table": "committee_application_choice"
-    },
-    {
-      "columns": [
-        "group_id"
-      ],
-      "tableTo": "group",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_committee_application_choice_group_id_group_id_fk",
-      "entityType": "fks",
-      "table": "committee_application_choice"
-    },
-    {
-      "columns": [
-        "decided_by_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_committee_application_choice_decided_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "committee_application_choice"
     },
     {
       "columns": [
@@ -18421,6 +18555,66 @@
     },
     {
       "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_group_application_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "group_application"
+    },
+    {
+      "columns": [
+        "application_id"
+      ],
+      "tableTo": "group_application",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_group_application_choice_application_id_group_application_id_fk",
+      "entityType": "fks",
+      "table": "group_application_choice"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_group_application_choice_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "group_application_choice"
+    },
+    {
+      "columns": [
+        "decided_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_group_application_choice_decided_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "group_application_choice"
+    },
+    {
+      "columns": [
         "role_id",
         "user_id"
       ],
@@ -18478,6 +18672,16 @@
       "name": "volunteer_role_certification_pk",
       "entityType": "pks",
       "table": "volunteer_role_certification"
+    },
+    {
+      "columns": [
+        "project_id",
+        "group_id"
+      ],
+      "nameExplicit": false,
+      "name": "project_committee_pk",
+      "entityType": "pks",
+      "table": "project_committee"
     },
     {
       "columns": [
@@ -19424,24 +19628,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "committee_application_pk",
-      "table": "committee_application",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "committee_application_choice_pk",
-      "table": "committee_application_choice",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "reminder_sent_pk",
       "table": "reminder_sent",
       "entityType": "pks"
@@ -19597,6 +19783,24 @@
       "nameExplicit": false,
       "name": "ballot_option_pk",
       "table": "ballot_option",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "group_application_pk",
+      "table": "group_application",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "group_application_choice_pk",
+      "table": "group_application_choice",
       "entityType": "pks"
     },
     {
@@ -20160,6 +20364,20 @@
       "name": "uq_event_recurring_instance",
       "entityType": "indexes",
       "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_production_project",
+      "entityType": "indexes",
+      "table": "production"
     },
     {
       "columns": [
@@ -22524,6 +22742,24 @@
     {
       "columns": [
         {
+          "value": "group_id",
+          "isExpression": false
+        },
+        {
+          "value": "due_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "group_id is not null and resolved_at is null and cancelled_at is null",
+      "origin": "manual",
+      "name": "work_order_group_open_idx",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
           "value": "created_at",
           "isExpression": false
         }
@@ -22736,20 +22972,6 @@
     {
       "columns": [
         {
-          "value": "group_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_project_group",
-      "entityType": "indexes",
-      "table": "project"
-    },
-    {
-      "columns": [
-        {
           "value": "status",
           "isExpression": false
         }
@@ -22758,6 +22980,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_project_status",
+      "entityType": "indexes",
+      "table": "project"
+    },
+    {
+      "columns": [
+        {
+          "value": "kind",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_project_kind",
       "entityType": "indexes",
       "table": "project"
     },
@@ -22788,6 +23024,20 @@
       "name": "uq_project_ballot",
       "entityType": "indexes",
       "table": "project"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_project_committee_group",
+      "entityType": "indexes",
+      "table": "project_committee"
     },
     {
       "columns": [
@@ -23282,38 +23532,6 @@
     {
       "columns": [
         {
-          "value": "user_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_committee_application_user",
-      "entityType": "indexes",
-      "table": "committee_application"
-    },
-    {
-      "columns": [
-        {
-          "value": "group_id",
-          "isExpression": false
-        },
-        {
-          "value": "status",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_committee_choice_group_status",
-      "entityType": "indexes",
-      "table": "committee_application_choice"
-    },
-    {
-      "columns": [
-        {
           "value": "reminder_key",
           "isExpression": false
         },
@@ -23761,6 +23979,38 @@
     },
     {
       "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_group_application_user",
+      "entityType": "indexes",
+      "table": "group_application"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        },
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_group_application_choice_group_status",
+      "entityType": "indexes",
+      "table": "group_application_choice"
+    },
+    {
+      "columns": [
         "name",
         "guard_name"
       ],
@@ -23884,9 +24134,9 @@
         "group_id"
       ],
       "nameExplicit": true,
-      "name": "committee_application_choice_unique",
+      "name": "group_application_choice_unique",
       "entityType": "uniques",
-      "table": "committee_application_choice"
+      "table": "group_application_choice"
     },
     {
       "columns": [

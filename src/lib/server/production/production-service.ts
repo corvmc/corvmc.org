@@ -10,8 +10,13 @@ import { dutyList, workOrder, workTask } from '$lib/server/db/schema/volunteer';
 import { DomainError } from '$lib/server/domain-error';
 import type { Production, ProductionStatus } from '$lib/server/db/schema/production';
 import { recomputeSetTimes } from './run-of-show-service';
-import { createShowProject, deleteShowProject } from './production-project';
-import { announceShowsCancelled } from './cancellation-notice';
+import {
+	announceProductionCreated,
+	createShowProject,
+	deleteShowProject
+} from './production-project';
+import { announceShowsCancelled, openDeliverablesOnProductions } from './cancellation-notice';
+import type { OpenOwnedItem } from '$lib/server/volunteer/deliverables-service';
 import { shiftAnchoredWorkOrders } from '$lib/server/volunteer/retime-work-orders';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { DutyListAnchor, ProjectStatus } from '$lib/config';
@@ -257,6 +262,7 @@ export async function createProduction(
 	}
 
 	const [row] = await db.select().from(production).where(eq(production.id, productionId));
+	await announceProductionCreated(productionId, eventId, opts?.createdByUserId ?? null);
 	return row;
 }
 
@@ -329,8 +335,21 @@ export async function updateProductionDetails(
  * `production-service` warns against finishing.
  */
 export async function outstandingCloseOutTasks(productionId: string): Promise<string[]> {
-	const rows = await db
-		.select({ label: workTask.label })
+	return (await closeOutTasksOwed([productionId])).map((r) => r.label);
+}
+
+/**
+ * The same question for many shows at once, for a deliverable's `close_out_done`
+ * condition. One predicate, so the `closed` gate and the deliverable agree.
+ */
+export async function productionsOwingCloseOut(productionIds: string[]): Promise<Set<string>> {
+	if (productionIds.length === 0) return new Set();
+	return new Set((await closeOutTasksOwed(productionIds)).map((r) => r.productionId));
+}
+
+function closeOutTasksOwed(productionIds: string[]) {
+	return db
+		.select({ productionId: production.id, label: workTask.label })
 		.from(workTask)
 		.innerJoin(workOrder, eq(workOrder.id, workTask.workOrderId))
 		.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
@@ -338,13 +357,12 @@ export async function outstandingCloseOutTasks(productionId: string): Promise<st
 		.innerJoin(dutyList, eq(dutyList.id, workOrder.dutyListId))
 		.where(
 			and(
-				eq(production.id, productionId),
+				inArray(production.id, productionIds),
 				eq(dutyList.anchor, 'load_out'),
 				eq(workTask.done, false),
 				isNull(workOrder.cancelledAt)
 			)
 		);
-	return rows.map((r) => r.label);
 }
 
 export async function transitionProduction(
@@ -366,6 +384,8 @@ export async function transitionProduction(
 	// moves again on the next write to the row.
 	const closing =
 		to === 'closed' ? { closedAt: new Date(), closedByUserId: actorUserId ?? null } : {};
+	// Before the move, which would make a confirmed lineup read as unconfirmed.
+	const openBefore = to === 'cancelled' ? await openDeliverablesOnProductions([id]) : [];
 
 	const move = db
 		.update(production)
@@ -411,7 +431,7 @@ export async function transitionProduction(
 			.limit(1);
 		if (listing) await postProductionExpenses(id, listing.id);
 	}
-	if (to === 'cancelled') await announceShowsCancelled([id], actorUserId ?? null);
+	if (to === 'cancelled') await announceShowsCancelled([id], actorUserId ?? null, openBefore);
 
 	return settled;
 }
@@ -426,12 +446,15 @@ export async function transitionProduction(
  */
 export async function cancelProductionsForEvent(
 	eventId: string,
-	actorUserId: string | null = null
+	actorUserId: string | null = null,
+	/** Read before the listing was cancelled, when the caller cancelled it first. */
+	openBefore?: readonly OpenOwnedItem[]
 ): Promise<number> {
 	const moving = await db
 		.select({ id: production.id })
 		.from(production)
 		.where(and(announcedBy(eventId), inArray(production.status, [...PRE_COMPLETED])));
+	const open = openBefore ?? (await openDeliverablesOnProductions(moving.map((m) => m.id)));
 	const [result] = await db.batch([
 		db
 			.update(production)
@@ -444,7 +467,8 @@ export async function cancelProductionsForEvent(
 	if (moved > 0) {
 		await announceShowsCancelled(
 			moving.map((m) => m.id),
-			actorUserId
+			actorUserId,
+			open
 		);
 	}
 	return moved;

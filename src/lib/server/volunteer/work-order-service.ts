@@ -400,6 +400,44 @@ function withCounts(
 }
 
 /**
+ * Places taken on the work order in scope. Built from ACTIVE_SIGNUP_STATUSES
+ * rather than spelled out, so a new status that holds a place can't quietly
+ * stop counting.
+ */
+function claimedSql() {
+	const holdsAPlace = sql.join(
+		ACTIVE_SIGNUP_STATUSES.map((status) => sql`${status}`),
+		sql`, `
+	);
+	return sql<number>`(
+		select count(*) from "volunteer_signup" vs
+		where vs."shift_id" = ${workOrder.id}
+			and vs."status" in (${holdsAPlace})
+	)`;
+}
+
+/**
+ * The shows among these with a live, scheduled crew shift still short of its
+ * capacity: what `shifts_filled` asks. Committee-owned work is not crew.
+ */
+export async function eventsShortOfCrew(eventIds: string[]): Promise<Set<string>> {
+	if (eventIds.length === 0) return new Set();
+	const rows = await db
+		.selectDistinct({ eventId: workOrder.eventId })
+		.from(workOrder)
+		.where(
+			and(
+				inArray(workOrder.eventId, eventIds),
+				isNull(workOrder.groupId),
+				isNotNull(workOrder.startsAt),
+				isNull(workOrder.cancelledAt),
+				sql`${claimedSql()} < ${workOrder.capacity}`
+			)
+		);
+	return new Set(rows.map((r) => r.eventId!));
+}
+
+/**
  * Upcoming shifts still short of capacity, per role — the "what needs attention"
  * column on the staff roles table.
  *
@@ -408,17 +446,7 @@ function withCounts(
  * fill, and counting them would leave every role permanently red.
  */
 export async function countUnfilledByRole(from = new Date()): Promise<Map<string, number>> {
-	// Built from ACTIVE_SIGNUP_STATUSES rather than spelled out, so a new status
-	// that holds a place can't quietly stop counting here.
-	const holdsAPlace = sql.join(
-		ACTIVE_SIGNUP_STATUSES.map((status) => sql`${status}`),
-		sql`, `
-	);
-	const claimed = sql<number>`(
-		select count(*) from "volunteer_signup" vs
-		where vs."shift_id" = ${workOrder.id}
-			and vs."status" in (${holdsAPlace})
-	)`;
+	const claimed = claimedSql();
 
 	const rows = await db
 		.select({
@@ -668,7 +696,10 @@ export async function listWorkOrders(
 					? eq(workOrder.volunteerRoleId, filters.volunteerRoleId)
 					: undefined,
 				filters.eventId ? eq(workOrder.eventId, filters.eventId) : undefined,
-				filters.projectId ? eq(workOrder.projectId, filters.projectId) : undefined
+				filters.projectId ? eq(workOrder.projectId, filters.projectId) : undefined,
+				// Unanchored, this is the coordinator's queue, and a committee's items
+				// are on that committee's queue instead: nine a show would bury it.
+				filters.eventId || filters.projectId ? undefined : isNull(workOrder.groupId)
 			)
 		)
 		.orderBy(asc(workOrder.createdAt), asc(workOrder.id));

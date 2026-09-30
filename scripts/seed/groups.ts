@@ -78,15 +78,16 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			memberCount: 3,
 			// Every committee's baseline (project status and duty lists, its own
 			// numbers), plus #1564's publish and its weekly holds as recurring work.
-			// Opening work orders is Production's, so Booking does not carry it; opening
-			// a show is Booking's (#1675).
+			// Opening a show is Booking's (#1675); keeping its own deliverables is
+			// `volunteer.manageShifts` (#1701).
 			capabilityGrants: [
 				'event.publish',
 				'finance.read',
 				'production.book',
 				'production.create',
 				'project.manage',
-				'volunteer.manageRecurring'
+				'volunteer.manageRecurring',
+				'volunteer.manageShifts'
 			],
 			announcements: [
 				{
@@ -130,6 +131,34 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			],
 			announcements: [],
 			// The invite-only leader persona already chairs Facilities.
+			leaderFromPool: true
+		},
+		// The two committees a show's deliverables name besides Booking and
+		// Production (#1701), under the slugs production has them by.
+		{
+			kind: 'committee' as const,
+			name: 'Communications Committee',
+			slug: 'communications-committee',
+			bio: 'Coordinate show posters, announce on social media and with local press. Write and deliver the newsletter.',
+			joinPolicy: 'invite_only' as const,
+			joinInstructions: null,
+			positions: ['Chair', 'Member'],
+			memberCount: 2,
+			capabilityGrants: ['finance.read', 'project.manage', 'volunteer.manageShifts'],
+			announcements: [],
+			leaderFromPool: true
+		},
+		{
+			kind: 'committee' as const,
+			name: 'Art and Merchandise Committee',
+			slug: 'art-and-merchandise-committee',
+			bio: 'Create and manage CMC merch, and work with local artists for poster art.',
+			joinPolicy: 'invite_only' as const,
+			joinInstructions: null,
+			positions: ['Chair', 'Member'],
+			memberCount: 2,
+			capabilityGrants: ['finance.read', 'project.manage', 'volunteer.manageShifts'],
+			announcements: [],
 			leaderFromPool: true
 		},
 		{

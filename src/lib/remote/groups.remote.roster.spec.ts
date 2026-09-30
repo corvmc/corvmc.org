@@ -167,6 +167,9 @@ vi.mock('$lib/server/volunteer/duty-list-service', () => ({ listDutyLists }));
 vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({
 	listVolunteerRoles: vi.fn(async () => [])
 }));
+vi.mock('$lib/server/volunteer/deliverables-service', () => ({
+	countCommitteeUnfinished: vi.fn(async () => 0)
+}));
 vi.mock('$lib/server/volunteer/maintenance-schedule-service', () => ({
 	listMaintenanceSchedules: vi.fn(async () => [])
 }));

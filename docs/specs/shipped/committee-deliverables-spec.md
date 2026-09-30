@@ -2,12 +2,14 @@
 
 > ## Status
 >
-> **The owner ruled on all four open questions on 2026-09-29** (#1701). This document implements
-> those rulings and does not reopen them. Phase 0 is this document. Nothing is built yet.
+> **Shipped.** Built on `feature/committee-deliverables` in phases 1 to 4, after
+> production-projects landed (#1738). The owner ruled on all four open questions on 2026-09-29
+> (#1701), and the choices made inside those rulings are the decision issues #1706, #1707, #1708
+> and #1709.
 >
-> Building starts **only once `feature/production-projects` has landed on `main`** (#1673); see
-> [Sequencing](#sequencing). The choices an agent made inside the rulings are recorded as
-> decision issues for the owner to confirm: #1706, #1707, #1708 and #1709.
+> The build settled two details. `artifacts_requested` does not hold on a bill with no listed
+> act. #1714's crew cascade leaves committee-owned items to the cancellation notice, which reads
+> them before the cancel moves anything.
 
 ## Purpose
 

@@ -65,6 +65,7 @@
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
 	import SettlementPanel from './SettlementPanel.svelte';
 	import ShowBudgetCard from './ShowBudgetCard.svelte';
+	import DeliverablesCard from './DeliverablesCard.svelte';
 	import ArtifactRequestsPanel from './ArtifactRequestsPanel.svelte';
 	import { TAB_KEYS, TAB_LABELS, parseTab, type TabKey } from './tabs';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -482,6 +483,12 @@
 					<p class="mt-3 text-muted">{evt.description}</p>
 				{/if}
 			</InfoCard>
+
+			<DeliverablesCard
+				eventId={evt.id}
+				items={loaded.deliverables}
+				committees={loaded.deliverableCommittees}
+			/>
 
 			<!-- Status -->
 			<div class="flex items-center gap-2">

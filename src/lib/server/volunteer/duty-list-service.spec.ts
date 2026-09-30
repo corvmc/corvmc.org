@@ -72,7 +72,8 @@ beforeEach(() => {
 	]) {
 		sqlite.exec(`DELETE FROM ${t}`);
 	}
-	sqlite.exec(`DELETE FROM volunteer_role WHERE id LIKE 'role-%'`);
+	// The deliverables migration writes a Booking Lead of its own.
+	sqlite.exec(`DELETE FROM volunteer_role WHERE id LIKE 'role-%' OR name = 'Booking Lead'`);
 	sqlite.exec(`DELETE FROM user WHERE id = 'u1'`);
 
 	sqlite.exec(

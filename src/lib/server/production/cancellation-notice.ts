@@ -1,29 +1,74 @@
-import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { eventListing } from '$lib/server/db/schema/event';
-import { group, groupMember } from '$lib/server/db/schema/group';
 import { production } from '$lib/server/db/schema/production';
-import { projectCommittee } from '$lib/server/db/schema/project';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
+import type { OpenOwnedItem } from '$lib/server/volunteer/deliverables-service';
 
 /**
- * Tell the Production committee on each of these shows that it was cancelled,
- * and by whom (#1675). Called after the cancel has been written; a failure here
- * is captured rather than thrown, because the show is already cancelled.
+ * A cancelled show calls off its committees' open deliverables and tells every
+ * committee that had one (#1709). Dynamic imports, like `resolveWorkOrder`'s,
+ * so the production and volunteer domains do not import each other.
+ */
+
+/**
+ * The open committee items on these productions' shows. Read it **before** the
+ * cancel writes: afterwards a production no longer reads as confirmed, nor a
+ * listing as published, and finished items would read as open again.
+ */
+export async function openDeliverablesOnProductions(
+	productionIds: readonly string[]
+): Promise<OpenOwnedItem[]> {
+	if (productionIds.length === 0) return [];
+	try {
+		const shows = await db
+			.select({ id: eventListing.id })
+			.from(eventListing)
+			.where(inArray(eventListing.productionId, [...productionIds]));
+		const { listOpenOwnedOnShows } = await import('$lib/server/volunteer/deliverables-service');
+		return await listOpenOwnedOnShows(shows.map((s) => s.id));
+	} catch (err) {
+		captureException(err, { event: 'production.cancelled.read', productionIds });
+		return [];
+	}
+}
+
+/** The same read for the production a listing announces, if it announces one. */
+export async function openDeliverablesOnListing(eventId: string): Promise<OpenOwnedItem[]> {
+	try {
+		const [row] = await db
+			.select({ productionId: eventListing.productionId })
+			.from(eventListing)
+			.where(eq(eventListing.id, eventId))
+			.limit(1);
+		return row?.productionId ? await openDeliverablesOnProductions([row.productionId]) : [];
+	} catch (err) {
+		captureException(err, { event: 'production.cancelled.read', eventId });
+		return [];
+	}
+}
+
+/**
+ * Called after the cancel has been written, with what `openDeliverablesOnProductions`
+ * read before it. A failure is captured rather than thrown: the show is already
+ * cancelled. The canceller is never told, and a committee with nothing open hears
+ * nothing.
  */
 export async function announceShowsCancelled(
 	productionIds: readonly string[],
-	actorUserId: string | null
+	actorUserId: string | null,
+	openBefore: readonly OpenOwnedItem[]
 ): Promise<void> {
-	if (productionIds.length === 0) return;
+	if (productionIds.length === 0 || openBefore.length === 0) return;
 	try {
-		const [shows, actor] = await Promise.all([
+		const { cancelDeliverables, committeeSeats } =
+			await import('$lib/server/volunteer/deliverables-service');
+		const [shows, actor, seats] = await Promise.all([
 			db
 				.select({
 					productionId: production.id,
-					projectId: production.projectId,
 					eventId: eventListing.id,
 					eventTitle: eventListing.title,
 					startsAt: eventListing.startsAt
@@ -33,20 +78,38 @@ export async function announceShowsCancelled(
 				.where(inArray(production.id, [...productionIds])),
 			actorUserId
 				? db.select({ name: user.name }).from(user).where(eq(user.id, actorUserId)).limit(1)
-				: Promise.resolve([])
+				: Promise.resolve([]),
+			committeeSeats([...new Set(openBefore.map((i) => i.groupId))])
 		]);
+		await cancelDeliverables(
+			openBefore.map((i) => i.id),
+			actorUserId
+		);
 
 		for (const show of shows) {
-			if (!show.projectId) continue;
-			const recipients = await productionSeats(show.projectId, actorUserId);
-			if (recipients.length === 0) continue;
+			const recipients = new Map<string, Recipient>();
+			for (const item of openBefore.filter((i) => i.eventId === show.eventId)) {
+				for (const seat of seats.get(item.groupId) ?? []) {
+					if (seat.userId === actorUserId) continue;
+					const r = recipients.get(seat.userId) ?? {
+						userId: seat.userId,
+						userName: seat.userName,
+						userEmail: seat.userEmail,
+						committeeSlug: seat.groupSlug,
+						items: []
+					};
+					if (!r.items.includes(item.title)) r.items.push(item.title);
+					recipients.set(seat.userId, r);
+				}
+			}
+			if (recipients.size === 0) continue;
 			await domainEvents.emit('production.cancelled', {
 				productionId: show.productionId,
 				eventId: show.eventId,
 				eventTitle: show.eventTitle,
 				startsAt: show.startsAt.toISOString(),
 				cancelledByName: actor[0]?.name ?? null,
-				recipients
+				recipients: [...recipients.values()]
 			});
 		}
 	} catch (err) {
@@ -54,31 +117,10 @@ export async function announceShowsCancelled(
 	}
 }
 
-/** Active seats on the live committees taking part as `'production'`, one per person. */
-async function productionSeats(projectId: string, actorUserId: string | null) {
-	const rows = await db
-		.select({
-			userId: user.id,
-			userName: user.name,
-			userEmail: user.email,
-			committeeSlug: group.slug
-		})
-		.from(projectCommittee)
-		.innerJoin(group, eq(group.id, projectCommittee.groupId))
-		.innerJoin(groupMember, eq(groupMember.groupId, group.id))
-		.innerJoin(user, eq(user.id, groupMember.userId))
-		.where(
-			and(
-				eq(projectCommittee.projectId, projectId),
-				eq(projectCommittee.role, 'production'),
-				eq(group.kind, 'committee'),
-				isNull(group.deletedAt),
-				eq(groupMember.status, 'active'),
-				isNull(user.deletedAt),
-				actorUserId ? ne(user.id, actorUserId) : undefined
-			)
-		)
-		.orderBy(asc(user.name), asc(user.id));
-	const seen = new Set<string>();
-	return rows.filter((r) => !seen.has(r.userId) && seen.add(r.userId));
+interface Recipient {
+	userId: string;
+	userName: string;
+	userEmail: string;
+	committeeSlug: string;
+	items: string[];
 }
