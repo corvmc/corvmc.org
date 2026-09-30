@@ -32,7 +32,11 @@ import { contentFlag } from '$lib/server/db/schema/flag';
 import { venue } from '$lib/server/db/schema/venue';
 import { production } from '$lib/server/db/schema/production';
 import { cancelProductionsForEvent } from '$lib/server/production/production-service';
-import { cancelShiftsForEvent } from '$lib/server/volunteer/show-cancellation';
+import { openDeliverablesOnListing } from '$lib/server/production/cancellation-notice';
+import {
+	cancelDeliverablesForEvent,
+	cancelShiftsForEvent
+} from '$lib/server/volunteer/show-cancellation';
 import { hasDescription, hasPoster, isProductionConfirmed } from './show-readiness';
 import { requireProgramGroup } from '$lib/server/group/group-kind';
 import {
@@ -1392,6 +1396,7 @@ export async function remove(eventId: string, userId: string): Promise<void> {
 
 	// Before the delete, which would null `work_order.event_id` and strand them.
 	await callOffShifts(eventId, userId);
+	await cancelDeliverablesForEvent(eventId, userId);
 
 	// Detach, not delete. A recurring series' occurrences share one poster
 	// object, so removing one occurrence must not take the others' image with it.
@@ -1426,6 +1431,9 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 	if (!existing) throw new EventNotFoundError();
 	if (existing.status === 'cancelled') throw new EventStateError('Event is already cancelled');
 
+	// Before the listing moves: a cancelled listing no longer reads as published.
+	const openBefore = await openDeliverablesOnListing(eventId);
+
 	const result = await db
 		.update(eventListing)
 		.set({ status: 'cancelled', updatedAt: new Date() })
@@ -1452,7 +1460,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 	// column lying on the day it shipped. Only pre-completed rows move: a
 	// production that already happened is history, and cancelling the
 	// advertisement afterwards does not un-happen it.
-	await cancelProductionsForEvent(eventId, userId);
+	await cancelProductionsForEvent(eventId, userId, openBefore);
 	await callOffShifts(eventId, userId);
 
 	await detachSlot('event_listing', eventId, 'poster');

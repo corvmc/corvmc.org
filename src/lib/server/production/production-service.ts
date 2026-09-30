@@ -15,7 +15,8 @@ import {
 	createShowProject,
 	deleteShowProject
 } from './production-project';
-import { announceShowsCancelled } from './cancellation-notice';
+import { announceShowsCancelled, openDeliverablesOnProductions } from './cancellation-notice';
+import type { OpenOwnedItem } from '$lib/server/volunteer/deliverables-service';
 import { shiftAnchoredWorkOrders } from '$lib/server/volunteer/retime-work-orders';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { DutyListAnchor, ProjectStatus } from '$lib/config';
@@ -383,6 +384,8 @@ export async function transitionProduction(
 	// moves again on the next write to the row.
 	const closing =
 		to === 'closed' ? { closedAt: new Date(), closedByUserId: actorUserId ?? null } : {};
+	// Before the move, which would make a confirmed lineup read as unconfirmed.
+	const openBefore = to === 'cancelled' ? await openDeliverablesOnProductions([id]) : [];
 
 	const move = db
 		.update(production)
@@ -428,7 +431,7 @@ export async function transitionProduction(
 			.limit(1);
 		if (listing) await postProductionExpenses(id, listing.id);
 	}
-	if (to === 'cancelled') await announceShowsCancelled([id], actorUserId ?? null);
+	if (to === 'cancelled') await announceShowsCancelled([id], actorUserId ?? null, openBefore);
 
 	return settled;
 }
@@ -443,12 +446,15 @@ export async function transitionProduction(
  */
 export async function cancelProductionsForEvent(
 	eventId: string,
-	actorUserId: string | null = null
+	actorUserId: string | null = null,
+	/** Read before the listing was cancelled, when the caller cancelled it first. */
+	openBefore?: readonly OpenOwnedItem[]
 ): Promise<number> {
 	const moving = await db
 		.select({ id: production.id })
 		.from(production)
 		.where(and(announcedBy(eventId), inArray(production.status, [...PRE_COMPLETED])));
+	const open = openBefore ?? (await openDeliverablesOnProductions(moving.map((m) => m.id)));
 	const [result] = await db.batch([
 		db
 			.update(production)
@@ -461,7 +467,8 @@ export async function cancelProductionsForEvent(
 	if (moved > 0) {
 		await announceShowsCancelled(
 			moving.map((m) => m.id),
-			actorUserId
+			actorUserId,
+			open
 		);
 	}
 	return moved;

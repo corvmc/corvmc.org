@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { workOrder } from '$lib/server/db/schema/volunteer';
 import { eventListing } from '$lib/server/db/schema/event';
-import { and, eq, gt, isNull, or, type SQL } from 'drizzle-orm';
+import { and, eq, gt, isNotNull, isNull, or, type SQL } from 'drizzle-orm';
 import { cancelShift } from './work-order-service';
 import { notifySignupsOfCancellation } from './volunteer-signup-service';
 
@@ -22,6 +22,9 @@ async function cancelLiveShifts(where: SQL, cancelledByUserId?: string | null): 
 		.where(
 			and(
 				where,
+				// A committee's deliverables go through the show's cancellation notice,
+				// which tells the committee rather than the claimant (#1709).
+				isNull(workOrder.groupId),
 				isNull(workOrder.cancelledAt),
 				isNull(workOrder.resolvedAt),
 				or(isNull(workOrder.endsAt), gt(workOrder.endsAt, now))
@@ -42,4 +45,27 @@ export function cancelShiftsForEvent(eventId: string, cancelledByUserId?: string
 /** Every listing announcing the production; the production itself holds no work orders. */
 export function cancelShiftsForProduction(productionId: string, cancelledByUserId?: string | null) {
 	return cancelLiveShifts(eq(eventListing.productionId, productionId), cancelledByUserId);
+}
+
+/**
+ * A deleted show's committee items, called off without a notice. The delete
+ * nulls their `event_id`, and an item with no show would sit on its
+ * committee's queue for good.
+ */
+export async function cancelDeliverablesForEvent(
+	eventId: string,
+	cancelledByUserId: string | null
+) {
+	const now = new Date();
+	await db
+		.update(workOrder)
+		.set({ cancelledAt: now, cancelledByUserId, updatedAt: now })
+		.where(
+			and(
+				eq(workOrder.eventId, eventId),
+				isNotNull(workOrder.groupId),
+				isNull(workOrder.cancelledAt),
+				isNull(workOrder.resolvedAt)
+			)
+		);
 }

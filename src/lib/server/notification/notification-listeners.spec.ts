@@ -1395,7 +1395,7 @@ describe('radio attestation due (#1516)', () => {
 	});
 });
 
-describe('show cancelled, to the Production committee (#1675)', () => {
+describe('show cancelled, to each committee with open items (#1709)', () => {
 	beforeEach(() => {
 		registerAllNotificationListeners();
 	});
@@ -1404,7 +1404,8 @@ describe('show cancelled, to the Production committee (#1675)', () => {
 		userId,
 		userName,
 		userEmail: `${userId}@test.com`,
-		committeeSlug: 'production-committee'
+		committeeSlug: 'production-committee',
+		items: ['Advance with the acts', 'Crew shifts filled']
 	});
 	const cancelled = {
 		productionId: 'prod-1',
@@ -1418,7 +1419,7 @@ describe('show cancelled, to the Production committee (#1675)', () => {
 	const calls = () =>
 		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'production_cancelled');
 
-	it('tells each Production member which show, and who cancelled it', async () => {
+	it('tells each member which show, who cancelled it, and what was called off', async () => {
 		await emit('production.cancelled', cancelled);
 
 		const sent = calls();
@@ -1429,6 +1430,8 @@ describe('show cancelled, to the Production committee (#1675)', () => {
 		expect(sent[0].email.subject).toContain('Friday Night Fuzz');
 		expect(paragraphText(sent[0].email)).toContain('Ada Booker');
 		expect(detailText(sent[0].email)).toContain('Cancelled by: Ada Booker');
+		expect(sent[0].body).toContain('Advance with the acts, Crew shifts filled');
+		expect(paragraphText(sent[0].email)).toContain('items on it are called off');
 	});
 
 	it('still reads as a cancellation when nobody is named', async () => {
@@ -1444,6 +1447,49 @@ describe('show cancelled, to the Production committee (#1675)', () => {
 		mockDispatch.mockRejectedValueOnce(new Error('fail'));
 		await emit('production.cancelled', cancelled);
 
+		expect(mockDispatch).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('committee show work due (#1709)', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const due = {
+		stage: 'due_3d' as const,
+		workOrderId: 'wo-1',
+		title: 'Poster art made',
+		eventTitle: 'Friday Night Fuzz',
+		dueAt: '2026-10-09T03:00:00.000Z',
+		groupName: 'Art and Merchandise Committee',
+		groupSlug: 'art-and-merchandise-committee',
+		recipients: [
+			{ userId: 'u1', userName: 'Cy', userEmail: 'u1@test.com' },
+			{ userId: 'u2', userName: 'Di', userEmail: 'u2@test.com' }
+		]
+	};
+	const calls = () =>
+		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'deliverable_due');
+
+	it('tells each recipient what is due and when, linking to the Open items tab', async () => {
+		await emit('volunteer.deliverable_due', due);
+		const sent = calls();
+		expect(sent.map((c) => c.userId)).toEqual(['u1', 'u2']);
+		expect(sent[0].href).toBe('/member/groups/art-and-merchandise-committee?tab=items');
+		expect(sent[0].title).toContain('Poster art made');
+		expect(paragraphText(sent[0].email)).toContain('Friday Night Fuzz');
+		expect(detailText(sent[0].email)).toContain('Committee: Art and Merchandise Committee');
+	});
+
+	it('says overdue once it is late', async () => {
+		await emit('volunteer.deliverable_due', { ...due, stage: 'overdue' });
+		const [first] = calls();
+		expect(first.title).toBe('Overdue: Poster art made');
+		expect(first.email.heading).toBe('Show work overdue');
+	});
+
+	it('keeps going past a recipient whose dispatch fails', async () => {
+		mockDispatch.mockRejectedValueOnce(new Error('down'));
+		await emit('volunteer.deliverable_due', due);
 		expect(mockDispatch).toHaveBeenCalledTimes(2);
 	});
 });

@@ -1191,20 +1191,21 @@ export function registerAllNotificationListeners(): void {
 		}
 	});
 
-	// --- Show cancelled (notify the Production committee on it, #1675) ---
+	// --- Show cancelled (every committee with open items on it, #1709) ---
 	domainEvents.on('production.cancelled', async ({ data: event }) => {
 		const by = event.cancelledByName;
 		const line = by
 			? `${by} cancelled "${event.eventTitle}" on ${formatWorkedOn(event.startsAt)}.`
 			: `"${event.eventTitle}" on ${formatWorkedOn(event.startsAt)} was cancelled.`;
 		for (const member of event.recipients) {
+			const items = member.items.join(', ');
 			try {
 				await dispatch({
 					type: 'production_cancelled',
 					userId: member.userId,
 					userEmail: member.userEmail,
 					title: `${event.eventTitle} was cancelled`,
-					body: line,
+					body: `${line} Called off: ${items}.`,
 					href: `/member/groups/${member.committeeSlug}`,
 					email: {
 						recipientName: member.userName,
@@ -1212,7 +1213,9 @@ export function registerAllNotificationListeners(): void {
 						heading: 'Show cancelled',
 						paragraphs: [
 							{ text: line },
-							{ text: 'Any crew, load-in or advance work planned for it can stand down.' }
+							{
+								text: `Your committee's open ${member.items.length === 1 ? 'item' : 'items'} on it ${member.items.length === 1 ? 'is' : 'are'} called off: ${items}.`
+							}
 						],
 						details: [
 							{ label: 'Show', value: event.eventTitle },
@@ -1227,6 +1230,49 @@ export function registerAllNotificationListeners(): void {
 					event: 'notification.production_cancelled',
 					to: member.userEmail
 				});
+			}
+		}
+	});
+
+	// --- A committee's show work, due in three days or late (#1709) ---
+	domainEvents.on('volunteer.deliverable_due', async ({ data: event }) => {
+		const due = formatWorkedOn(event.dueAt);
+		const late = event.stage === 'overdue';
+		const on = event.eventTitle ? ` for ${event.eventTitle}` : '';
+		const title = late ? `Overdue: ${event.title}` : `Due ${due}: ${event.title}`;
+		const line = late
+			? `"${event.title}"${on} was due ${due} and is not done yet.`
+			: `"${event.title}"${on} is due ${due}.`;
+		for (const person of event.recipients) {
+			try {
+				await dispatch({
+					type: 'deliverable_due',
+					userId: person.userId,
+					userEmail: person.userEmail,
+					title,
+					body: `${event.groupName} · ${line}`,
+					href: `/member/groups/${event.groupSlug}?tab=items`,
+					email: {
+						recipientName: person.userName,
+						subject: title,
+						heading: late ? 'Show work overdue' : 'Show work due soon',
+						paragraphs: [
+							{ text: line },
+							{
+								text: 'It is done once the show says so and its tasks are ticked. If it is done some other way, mark it done anyway.'
+							}
+						],
+						details: [
+							{ label: 'Item', value: event.title },
+							...(event.eventTitle ? [{ label: 'Show', value: event.eventTitle }] : []),
+							{ label: 'Due', value: due },
+							{ label: 'Committee', value: event.groupName }
+						],
+						cta: { label: 'Open the committee' }
+					}
+				});
+			} catch (err) {
+				captureException(err, { event: 'notification.deliverable_due', to: person.userEmail });
 			}
 		}
 	});

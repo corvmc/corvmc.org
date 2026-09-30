@@ -1,9 +1,22 @@
-import { and, asc, count, eq, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	eq,
+	gte,
+	inArray,
+	isNotNull,
+	isNull,
+	lte,
+	or,
+	sql,
+	type SQL
+} from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { artifactRequest } from '$lib/server/db/schema/artifact-request';
 import { eventListing } from '$lib/server/db/schema/event';
-import { group } from '$lib/server/db/schema/group';
+import { group, groupMember } from '$lib/server/db/schema/group';
 import { mediaAttachment } from '$lib/server/db/schema/media';
 import {
 	volunteerRole,
@@ -220,4 +233,134 @@ export async function reassignDeliverable(id: string, groupId: string | null): P
 		.where(and(eq(workOrder.id, id), live))
 		.returning({ id: workOrder.id });
 	if (result.length === 0) throw new DeliverableNotFoundError();
+}
+
+// ---------------------------------------------------------------------------
+// Cancellation and reminders
+// ---------------------------------------------------------------------------
+
+export interface OpenOwnedItem {
+	id: string;
+	eventId: string;
+	title: string;
+	groupId: string;
+}
+
+/**
+ * The committee-owned items still open or overdue on these shows. Read before a
+ * cancellation moves anything: a cancelled production no longer reads as
+ * confirmed, and a cancelled listing no longer reads as published.
+ */
+export async function listOpenOwnedOnShows(eventIds: string[]): Promise<OpenOwnedItem[]> {
+	if (eventIds.length === 0) return [];
+	const rows = await readDeliverables(
+		and(inArray(workOrder.eventId, eventIds), isNotNull(workOrder.groupId), live)!
+	);
+	return rows
+		.filter((r) => r.state === 'open' || r.state === 'overdue')
+		.map((r) => ({ id: r.id, eventId: r.eventId!, title: r.title, groupId: r.groupId! }));
+}
+
+/** Call these items off, by whoever cancelled the show. Already-closed ones are left alone. */
+export async function cancelDeliverables(
+	ids: string[],
+	cancelledByUserId: string | null
+): Promise<void> {
+	if (ids.length === 0) return;
+	const now = new Date();
+	await db
+		.update(workOrder)
+		.set({ cancelledAt: now, cancelledByUserId, updatedAt: now })
+		.where(and(inArray(workOrder.id, ids), live));
+}
+
+export interface Recipient {
+	userId: string;
+	userName: string;
+	userEmail: string;
+}
+
+/** Active seats on these live committees, keyed by committee, one row per seat. */
+export async function committeeSeats(
+	groupIds: string[]
+): Promise<Map<string, (Recipient & { groupSlug: string })[]>> {
+	const bySeat = new Map<string, (Recipient & { groupSlug: string })[]>();
+	if (groupIds.length === 0) return bySeat;
+	const rows = await db
+		.select({
+			groupId: group.id,
+			groupSlug: group.slug,
+			userId: user.id,
+			userName: user.name,
+			userEmail: user.email
+		})
+		.from(group)
+		.innerJoin(groupMember, eq(groupMember.groupId, group.id))
+		.innerJoin(user, eq(user.id, groupMember.userId))
+		.where(
+			and(
+				inArray(group.id, groupIds),
+				eq(group.kind, 'committee'),
+				isNull(group.deletedAt),
+				eq(groupMember.status, 'active'),
+				isNull(user.deletedAt)
+			)
+		)
+		.orderBy(asc(user.name), asc(user.id));
+	for (const { groupId, ...seat } of rows) {
+		bySeat.set(groupId, [...(bySeat.get(groupId) ?? []), seat]);
+	}
+	return bySeat;
+}
+
+export interface DueDeliverable {
+	id: string;
+	title: string;
+	dueAt: Date;
+	eventTitle: string | null;
+	groupName: string;
+	groupSlug: string;
+	/** Its live assignees, or the owning committee's active members when nobody has it. */
+	recipients: Recipient[];
+}
+
+/** Committee-owned items due in `[from, to]` that are not already done, and whom to tell. */
+export async function listDeliverablesDueBetween(from: Date, to: Date): Promise<DueDeliverable[]> {
+	const rows = await readDeliverables(
+		and(isNotNull(workOrder.groupId), live, gte(workOrder.dueAt, from), lte(workOrder.dueAt, to))!
+	);
+	const owed = rows.filter((r) => r.state === 'open' || r.state === 'overdue');
+	if (owed.length === 0) return [];
+
+	const assigneeIds = [...new Set(owed.flatMap((r) => r.assignees.map((a) => a.userId)))];
+	const groupIds = [...new Set(owed.map((r) => r.groupId!))];
+	const [people, slugs, seats] = await Promise.all([
+		assigneeIds.length
+			? db
+					.select({ userId: user.id, userName: user.name, userEmail: user.email })
+					.from(user)
+					.where(and(inArray(user.id, assigneeIds), isNull(user.deletedAt)))
+			: Promise.resolve([]),
+		db.select({ id: group.id, slug: group.slug }).from(group).where(inArray(group.id, groupIds)),
+		committeeSeats(groupIds)
+	]);
+	const person = new Map(people.map((p) => [p.userId, p]));
+	const slugOf = new Map(slugs.map((g) => [g.id, g.slug]));
+
+	return owed.map((r) => ({
+		id: r.id,
+		title: r.title,
+		dueAt: r.dueAt!,
+		eventTitle: r.eventTitle,
+		groupName: r.groupName ?? '',
+		groupSlug: slugOf.get(r.groupId!) ?? '',
+		recipients:
+			r.assignees.length > 0
+				? r.assignees.flatMap((a) => person.get(a.userId) ?? [])
+				: (seats.get(r.groupId!) ?? []).map(({ userId, userName, userEmail }) => ({
+						userId,
+						userName,
+						userEmail
+					}))
+	}));
 }

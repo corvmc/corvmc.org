@@ -87,6 +87,11 @@ vi.mock('./production-project', () => ({
 // The cascade's predicates have their own spec against real SQLite; here the
 // question is only which transition reaches it.
 const cancelShiftsForProduction = vi.fn(async (..._args: unknown[]) => 0);
+// The notice and the deliverables it calls off have their own spec against real SQLite.
+vi.mock('./cancellation-notice', () => ({
+	announceShowsCancelled: async () => undefined,
+	openDeliverablesOnProductions: async () => []
+}));
 vi.mock('$lib/server/volunteer/show-cancellation', () => ({
 	cancelShiftsForProduction: (...args: unknown[]) => cancelShiftsForProduction(...args)
 }));

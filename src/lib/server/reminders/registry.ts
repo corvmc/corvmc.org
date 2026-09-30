@@ -13,6 +13,7 @@ import {
 import { listLoansDueBetween } from '$lib/server/inventory/loan-service';
 import { listRenewalsExpiringBetween } from '$lib/server/renewal/renewal-service';
 import { listRadioAttestationsExpiringBetween } from '$lib/server/audio/radio-attestation';
+import { listDeliverablesDueBetween } from '$lib/server/volunteer/deliverables-service';
 import { defineReminder, type ReminderDefinition } from './types';
 
 const TZ = DEFAULT_TIMEZONE;
@@ -110,6 +111,40 @@ function radioAttestationExpiry(stage: '30d' | '7d', from: number, until: number
 					bandAdmins: r.bandAdmins
 				}
 			}));
+		}
+	});
+}
+
+/**
+ * One stage of a committee's show work (#1709): open items due between `from`
+ * and `until` days from now, done ones dropped. The subject carries the due
+ * date, so an item whose date moves is owed its reminders again.
+ */
+function deliverablesDue(stage: 'due_3d' | 'overdue', from: number, until: number) {
+	return defineReminder({
+		key: stage === 'due_3d' ? 'deliverable_due_3d' : 'deliverable_overdue',
+		subjectType: 'work_order',
+		event: 'volunteer.deliverable_due' as const,
+		async due(now: Date) {
+			const rows = await listDeliverablesDueBetween(
+				new Date(now.getTime() + from * DAY),
+				new Date(now.getTime() + until * DAY)
+			);
+			return rows
+				.filter((r) => r.recipients.length > 0)
+				.map((r) => ({
+					subjectId: `${r.id}:${r.dueAt.toISOString()}`,
+					payload: {
+						stage,
+						workOrderId: r.id,
+						title: r.title,
+						eventTitle: r.eventTitle,
+						dueAt: r.dueAt.toISOString(),
+						groupName: r.groupName,
+						groupSlug: r.groupSlug,
+						recipients: r.recipients
+					}
+				}));
 		}
 	});
 }
@@ -406,5 +441,9 @@ export const reminders: ReminderDefinition[] = [
 	// Non-overlapping, as above. A lapsed attestation gets no reminder: the
 	// release is already off the air and the band's music page says so.
 	radioAttestationExpiry('30d', 8, 30),
-	radioAttestationExpiry('7d', 0, 7)
+	radioAttestationExpiry('7d', 0, 7),
+	// Non-overlapping: due in the next three days, then late by one to fourteen.
+	// Past a fortnight late it gets no more; the committee's queue shows it red.
+	deliverablesDue('due_3d', 0, 3),
+	deliverablesDue('overdue', -14, -1)
 ];

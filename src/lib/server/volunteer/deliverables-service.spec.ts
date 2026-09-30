@@ -152,3 +152,37 @@ describe('reassignDeliverable', () => {
 		await expect(svc.reassignDeliverable('shut', 'book')).rejects.toThrow(/not open/);
 	});
 });
+
+describe('listDeliverablesDueBetween', () => {
+	const from = new Date((T0 - DAY) * 1000);
+	const to = new Date((T0 + DAY) * 1000);
+
+	beforeEach(() => {
+		exec(`insert or ignore into user (id, name, email, email_verified) values
+			('u2', 'Bo', 'b@x.test', 1), ('u3', 'Cy', 'c@x.test', 1)`);
+		exec(`insert into group_member (id, group_id, user_id, role, status) values
+			('m2', 'art', 'u2', 'member', 'active'), ('m3', 'art', 'u3', 'member', 'inactive')`);
+	});
+
+	it('tells the active committee when nobody has the item, and only its assignees once somebody does', async () => {
+		wo('free', { group_id: 'art', title: 'Nobody yet', due_at: T0 });
+		wo('held', { group_id: 'art', title: 'Taken', due_at: T0 });
+		exec(
+			`insert into volunteer_signup (id, shift_id, user_id, status) values ('s', 'held', 'u1', 'confirmed')`
+		);
+
+		const rows = await svc.listDeliverablesDueBetween(from, to);
+		const by = Object.fromEntries(rows.map((r) => [r.id, r.recipients.map((p) => p.userName)]));
+		expect(by).toEqual({ free: ['Bo'], held: ['Ada'] });
+		expect(rows[0]).toMatchObject({ groupSlug: 'art', groupName: 'Art and Merchandise Committee' });
+	});
+
+	it('leaves out what is done, staff’s own work, and anything outside the band', async () => {
+		wo('done', { group_id: 'art', done_when: 'description_set', due_at: T0 });
+		exec(`update event_listing set description = 'x'`);
+		wo('staffs', { group_id: null, due_at: T0 });
+		wo('later', { group_id: 'art', due_at: T0 + 2 * DAY });
+		wo('gone', { group_id: 'art', due_at: T0, cancelled_at: T0 });
+		expect(await svc.listDeliverablesDueBetween(from, to)).toEqual([]);
+	});
+});
