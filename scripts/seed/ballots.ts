@@ -29,11 +29,11 @@ const memberOfRecord = (cutoff: Date) => sql`
 	  and created_at <= ${Math.floor(cutoff.getTime() / 1000)}`;
 
 /**
- * One ballot of each kind that a login can act on, plus two certified results:
+ * One ballot of each kind that a login can act on, plus certified results:
  * the Booking Committee's open recorded ballot (its chair votes and certifies),
  * an open member-wide ballot the admin is on through an audited override, last
- * spring's certified election, and one whole idea → decision → work chain — a
- * suggestion, the certified ballot that passed it, and the project it authorised.
+ * spring's certified election, one whole idea → decision → work chain, and a
+ * suggestion whose ballot was certified not passed, so it sits declined.
  */
 export async function seedBallots(
 	groups: { id: string; slug: string; kind: string }[],
@@ -55,6 +55,17 @@ export async function seedBallots(
 		category: 'gear_equipment',
 		status: 'planned',
 		createdAt: new Date(now.getTime() - 60 * DAY)
+	});
+
+	const failedSuggestionId = 'seed-suggestion-livestream-rig';
+	await db.insert(suggestion).values({
+		id: failedSuggestionId,
+		authorUserId: chairId,
+		title: 'Livestream every showcase',
+		body: 'A camera and encoder so members who cannot make it can watch.',
+		category: 'gear_equipment',
+		status: 'in_ballot',
+		createdAt: new Date(now.getTime() - 50 * DAY)
 	});
 
 	if (committee) {
@@ -120,7 +131,8 @@ export async function seedBallots(
 			openedAt: new Date(now.getTime() - 180 * DAY),
 			closesAt: new Date(now.getTime() - 166 * DAY),
 			options: ['Jordan Ames', 'Kim Osei'],
-			certified: true
+			certified: true,
+			passed: true
 		},
 		{
 			id: 'seed-ballot-member-chain',
@@ -130,7 +142,19 @@ export async function seedBallots(
 			closesAt: new Date(now.getTime() - 26 * DAY),
 			options: ['Yes', 'No'],
 			certified: true,
+			passed: true,
 			suggestionId: chainSuggestionId
+		},
+		{
+			id: 'seed-ballot-member-not-passed',
+			title: 'Buy a livestream rig for showcases?',
+			description: 'Put to the members from the suggestion board.',
+			openedAt: new Date(now.getTime() - 35 * DAY),
+			closesAt: new Date(now.getTime() - 21 * DAY),
+			options: ['Yes', 'No'],
+			certified: true,
+			passed: false,
+			suggestionId: failedSuggestionId
 		}
 	]) {
 		await db.insert(ballot).values({
@@ -195,7 +219,10 @@ export async function seedBallots(
 				.values(voters.slice(i, i + 40).map((v) => ({ ballotId: spec.id, userId: v.userId })));
 		}
 		const first = Math.ceil(voters.length * 0.6);
-		const votes = [first, voters.length - first];
+		const votes =
+			'passed' in spec && spec.passed === false
+				? [voters.length - first, first]
+				: [first, voters.length - first];
 		await db.insert(ballotChoice).values(
 			spec.options.map((_, position) => ({
 				ballotId: spec.id,
@@ -204,14 +231,16 @@ export async function seedBallots(
 			}))
 		);
 
+		const certifiedAt = new Date(spec.closesAt.getTime() + 2 * DAY);
 		await db
 			.update(ballot)
 			.set({
 				electorateSize: roll.length,
 				...(spec.certified
 					? {
-							certifiedAt: new Date(spec.closesAt.getTime() + 2 * DAY),
+							certifiedAt,
 							certifiedById: adminUser.id,
+							passed: 'passed' in spec ? spec.passed : null,
 							resultPublishedAt: new Date(spec.closesAt.getTime() + 2 * DAY),
 							certifiedResult: {
 								options: spec.options.map((label, position) => ({
@@ -226,6 +255,19 @@ export async function seedBallots(
 					: {})
 			})
 			.where(eq(ballot.id, spec.id));
+		if ('passed' in spec && spec.passed === false && 'suggestionId' in spec && spec.suggestionId) {
+			// The decline certifyBallot writes: notPassedReason in ballot-service.
+			const tally = spec.options.map((label, i) => `${label} ${votes[i]}`).join(', ');
+			await db
+				.update(suggestion)
+				.set({
+					status: 'declined',
+					responseBody: `The ballot "${spec.title}" did not pass. Certified result: ${tally}; ${voters.length} of ${roll.length} electors voted.`,
+					responseByUserId: adminUser.id,
+					responseAt: certifiedAt
+				})
+				.where(eq(suggestion.id, spec.suggestionId));
+		}
 		count++;
 	}
 

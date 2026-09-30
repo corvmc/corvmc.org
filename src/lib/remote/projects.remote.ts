@@ -368,7 +368,7 @@ export const startProjectFromSuggestionForm = form(
 );
 
 /**
- * Start the work a certified, passing ballot authorised. The project is linked
+ * Start the work a ballot certified as passed authorised. The project is linked
  * to the ballot and to the suggestion the ballot decided, which moves to
  * `planned` with it.
  */

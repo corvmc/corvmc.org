@@ -48,6 +48,10 @@
 	const secret = $derived(b.kind === 'member');
 	const optionLabel = $derived(new Map(b.options.map((o) => [o.id, o.label])));
 	const voteOptions = $derived(b.options.map((o) => ({ value: o.id, label: o.label })));
+	const outcomeOptions = [
+		{ value: 'passed', label: 'Passed: it authorises the work' },
+		{ value: 'not_passed', label: 'Not passed' }
+	];
 	const certifierOptions = $derived(
 		(data.certifierChoices ?? []).map((m) => ({ value: m.id, label: m.name }))
 	);
@@ -206,21 +210,34 @@
 			{/snippet}
 		</Action>
 	{/if}
-	{#if viewer.isCertifier && b.status === 'closed'}
+	{#if viewer.isCertifier && (b.status === 'closed' || data.needsOutcome)}
 		<Action
 			action={certifyBallotForm}
-			label="Certify the result"
-			modalTitle="Certify the result"
-			submitLabel="Certify"
-			successToast="Result certified and published"
+			label={data.needsOutcome ? 'Record the outcome' : 'Certify the result'}
+			modalTitle={data.needsOutcome ? 'Record the outcome' : 'Certify the result'}
+			submitLabel={data.needsOutcome ? 'Record' : 'Certify'}
+			successToast={data.needsOutcome ? 'Outcome recorded' : 'Result certified and published'}
 			size="sm"
 		>
 			{#snippet form()}
 				<input {...certifyBallotForm.fields.ballotId.as('hidden', b.id)} />
-				<p>
-					Certifying fixes the result below as the official one and publishes it to every member. It
-					cannot be undone.
+				<p class="mb-3">
+					{#if data.needsOutcome}
+						This result was certified before the outcome was recorded. Say whether it authorises the
+						work. This cannot be changed afterwards.
+					{:else}
+						Certifying fixes the result below as the official one and publishes it to every member.
+						It cannot be undone.
+					{/if}
 				</p>
+				<FormField
+					field={certifyBallotForm.fields.outcome}
+					type="select"
+					label="Outcome"
+					placeholder="Choose one"
+					options={outcomeOptions}
+					description="Your call, not the leading choice. Not passed declines the suggestion this decides, with the result as the reason."
+				/>
 			{/snippet}
 		</Action>
 	{/if}
@@ -243,8 +260,15 @@
 								.name}{/if}
 					</Fact>
 				{/if}
-				{#if data.passed !== null}
-					<Fact label="Outcome" value={data.passed ? 'Passed' : 'Did not pass'} />
+				{#if b.status === 'certified'}
+					<Fact
+						label="Outcome"
+						value={data.passed === null
+							? 'Not recorded by the certifier'
+							: data.passed
+								? 'Passed'
+								: 'Did not pass'}
+					/>
 				{/if}
 				{#if data.authorised}
 					{@const href = projectHref(data.authorised.id)}

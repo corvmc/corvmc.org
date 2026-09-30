@@ -51,6 +51,11 @@ Nobody sees a running tally, including staff. Once voting closes, the electors c
 The certifier named on the ballot then **certifies** it, which fixes it as the official result and
 tells every member. A certified result is open to every member.
 
+When they certify, the certifier also says whether the result **passed**. That is their call, not
+whichever choice got the most votes, so a question like "which of three venues?" can pass too. A
+ballot that passed can start a project. If a ballot put from a suggestion did not pass, the
+suggestion is declined, and the certified result is the response its author sees.
+
 ## Running a committee ballot
 
 If you are an owner or admin of a committee, **New committee ballot** on the Ballots page starts a

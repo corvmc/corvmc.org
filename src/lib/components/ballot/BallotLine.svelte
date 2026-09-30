@@ -30,7 +30,7 @@
 {#if ballot.result}
 	<span class="block text-muted">
 		{ballot.result.options.map((o) => `${o.label} ${o.votes}`).join(' · ')}
-		— {ballot.passed ? 'passed' : 'did not pass'}
+		— {ballot.passed === null ? 'outcome not recorded' : ballot.passed ? 'passed' : 'did not pass'}
 	</span>
 {:else if ballot.status === 'open'}
 	<span class="block text-muted">Voting closes {formatDateShortYear(ballot.closesAt)}</span>

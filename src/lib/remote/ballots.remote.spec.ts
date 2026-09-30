@@ -28,7 +28,6 @@ let electorIds = new Set<string>();
 const svc = {
 	getBallotDetail: vi.fn(async () => ballot),
 	ballotStatusOf: vi.fn(() => ballot.__status),
-	ballotPassed: vi.fn(() => false),
 	isElector: vi.fn(async (_b: string, u: string) => electorIds.has(u)),
 	getMyVote: vi.fn(async () => ({ voted: false, optionId: null })),
 	getTurnout: vi.fn(async () => ({ voted: 0, electorateSize: 0 })),
@@ -204,8 +203,10 @@ describe('voting and certifying act as the signed-in member only', () => {
 		expect(svc.castVote).toHaveBeenCalledWith('bal-1', ME.id, 'opt-1');
 	});
 
-	it('certifies as the session user', async () => {
-		await remote.certifyBallotForm({ ballotId: 'bal-1' });
-		expect(svc.certifyBallot).toHaveBeenCalledWith('bal-1', ME.id);
+	it("certifies as the session user, with the certifier's call", async () => {
+		await remote.certifyBallotForm({ ballotId: 'bal-1', outcome: 'not_passed' });
+		expect(svc.certifyBallot).toHaveBeenCalledWith('bal-1', ME.id, false);
+		await remote.certifyBallotForm({ ballotId: 'bal-1', outcome: 'passed' });
+		expect(svc.certifyBallot).toHaveBeenLastCalledWith('bal-1', ME.id, true);
 	});
 });

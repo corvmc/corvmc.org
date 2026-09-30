@@ -54,7 +54,7 @@ export const project = sqliteTable(
 		/** The suggestion this answers, when a member asked for it. One project per suggestion. */
 		suggestionId: text('suggestion_id').references(() => suggestion.id, { onDelete: 'set null' }),
 
-		/** The ballot whose certified, passing result authorised this. One project per ballot. */
+		/** The ballot certified as passed that authorised this. One project per ballot. */
 		ballotId: text('ballot_id').references(() => ballot.id, { onDelete: 'set null' }),
 
 		/** The ceiling. Null is "no budget set", not zero. */

@@ -4,7 +4,7 @@ import { DomainError } from '$lib/server/domain-error';
 import { suggestion } from '$lib/server/db/schema/suggestion';
 import { project } from '$lib/server/db/schema/project';
 import { ballot, type Ballot } from '$lib/server/db/schema/ballot';
-import { ballotPassed, ballotStatusOf, getBallot } from '$lib/server/ballot/ballot-service';
+import { ballotStatusOf, getBallot } from '$lib/server/ballot/ballot-service';
 import {
 	assertCommittee,
 	getProjectById,
@@ -37,7 +37,7 @@ function ballotLink(b: Ballot, now: Date) {
 		closesAt: b.closesAt,
 		certifiedAt: b.certifiedAt,
 		result: certified ? b.certifiedResult : null,
-		passed: certified ? ballotPassed(b.certifiedResult) : null
+		passed: certified ? b.passed : null
 	};
 }
 
@@ -58,7 +58,7 @@ const suggestionLink = {
 };
 
 /**
- * Start the project a certified, passing ballot authorised, linked to the
+ * Start the project a ballot certified as passed authorised, linked to the
  * ballot and to the suggestion it decided. The suggestion moves to `planned`
  * in the same batch, as `startProjectFromSuggestion` does.
  */
@@ -69,8 +69,8 @@ export async function startProjectFromBallot(
 ) {
 	const now = ctx.now ?? new Date();
 	const b = await getBallot(ballotId);
-	if (ballotStatusOf(b, now) !== 'certified' || !ballotPassed(b.certifiedResult)) {
-		throw new DecisionChainError('Only a certified, passing ballot can start a project');
+	if (ballotStatusOf(b, now) !== 'certified' || b.passed !== true) {
+		throw new DecisionChainError('Only a ballot certified as passed can start a project');
 	}
 	if (b.projectId) {
 		throw new DecisionChainError('This ballot decided an existing project');

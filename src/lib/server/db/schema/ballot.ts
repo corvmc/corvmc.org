@@ -59,6 +59,12 @@ export const ballot = sqliteTable(
 		certifiedAt: integer('certified_at', { mode: 'timestamp' }),
 		certifiedById: text('certified_by_id').references(() => user.id, { onDelete: 'set null' }),
 		certifiedResult: text('certified_result', { mode: 'json' }).$type<BallotCertifiedResult>(),
+		/**
+		 * The certifier's call on whether the result authorises the work. Never
+		 * inferred from the tally: "which of three venues?" has no winning side.
+		 * Null before certification, and on a result certified before this existed.
+		 */
+		passed: integer('passed', { mode: 'boolean' }),
 		/** The fan-out latch: set by whichever delivery of `ballot.certified` notifies first. */
 		resultPublishedAt: integer('result_published_at', { mode: 'timestamp' }),
 		/** The same latch for the electors' "a ballot is open" notice. */

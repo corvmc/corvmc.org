@@ -35,6 +35,7 @@ vi.mock('$lib/server/audit/audit-service', () => ({
 }));
 
 const ballots = await import('$lib/server/ballot/ballot-service');
+const { domainEvents } = await import('$lib/server/event-bus/event-bus');
 const chain = await import('./decision-chain');
 const { startProjectFromSuggestion } = await import('./project-service');
 const { user } = await import('$lib/server/db/schema/authentication');
@@ -112,16 +113,24 @@ function ballotOnIdea(links: { suggestionId?: string | null; projectId?: string 
 	);
 }
 
-/** Open, vote `yes` of three, then certify. */
-async function certified(yes: number) {
+/** Open, vote `yes` of three, then certify with the certifier's call on whether it passed. */
+async function certified(yes: number, passed = yes >= 2) {
 	const id = await ballotOnIdea();
 	await ballots.openBallot(id, { now: NOW });
 	const [y, n] = (await ballots.getBallotDetail(id)).options;
 	for (const [i, voter] of VOTERS.entries()) {
 		await ballots.castVote(id, voter, (i < yes ? y : n).id, { now: NOW });
 	}
-	await ballots.certifyBallot(id, CERTIFIER, { now: AFTER_CLOSE });
+	await ballots.certifyBallot(id, CERTIFIER, passed, { now: AFTER_CLOSE });
 	return id;
+}
+
+async function suggestionResponse() {
+	const [row] = await testDb
+		.select({ body: suggestion.responseBody, by: suggestion.responseByUserId })
+		.from(suggestion)
+		.where(eq(suggestion.id, IDEA));
+	return row;
 }
 
 describe('a ballot names what it decides', () => {
@@ -182,19 +191,58 @@ describe('the suggestion follows its ballot', () => {
 	});
 });
 
-describe('a passing result', () => {
-	it('is the first choice strictly ahead of every other', () => {
-		const r = (votes: number[]) => ({
-			options: votes.map((v, i) => ({ optionId: `o${i}`, label: `o${i}`, votes: v })),
-			turnout: votes.reduce((a, b) => a + b, 0),
-			electorateSize: 10
-		});
-		expect(ballots.ballotPassed(r([2, 1]))).toBe(true);
-		expect(ballots.ballotPassed(r([1, 1]))).toBe(false);
-		expect(ballots.ballotPassed(r([1, 2]))).toBe(false);
-		expect(ballots.ballotPassed(r([0, 0]))).toBe(false);
-		expect(ballots.ballotPassed(r([3, 1, 2]))).toBe(true);
-		expect(ballots.ballotPassed(null)).toBe(false);
+describe("the certifier's call", () => {
+	it('is what passes a multi-option ballot, whichever choice led', async () => {
+		const id = await ballots.createBallot(
+			{
+				kind: 'member',
+				title: 'Which venue for the showcase?',
+				options: ['The Annex', 'Majestic', 'Whiteside'],
+				closesAt: LATER,
+				certifierId: CERTIFIER,
+				suggestionId: IDEA
+			},
+			{ actorId: STAFF, now: NOW }
+		);
+		await ballots.openBallot(id, { now: NOW });
+		const [, majestic, whiteside] = (await ballots.getBallotDetail(id)).options;
+		await ballots.castVote(id, VOTERS[0], majestic.id, { now: NOW });
+		await ballots.castVote(id, VOTERS[1], majestic.id, { now: NOW });
+		await ballots.castVote(id, VOTERS[2], whiteside.id, { now: NOW });
+		await ballots.certifyBallot(id, CERTIFIER, true, { now: AFTER_CLOSE });
+
+		const p = await chain.startProjectFromBallot(id, { name: 'Showcase' }, { now: AFTER_CLOSE });
+		expect(p.ballotId).toBe(id);
+	});
+
+	it('declines the suggestion when marked not passed, with the certified result as the reason', async () => {
+		vi.mocked(domainEvents.emit).mockClear();
+		await certified(2, false);
+
+		expect(await suggestionStatus()).toBe('declined');
+		const response = await suggestionResponse();
+		expect(response.by).toBe(CERTIFIER);
+		expect(response.body).toContain('did not pass');
+		expect(response.body).toContain('Yes 2');
+		expect(response.body).toContain('No 1');
+		expect(response.body).toContain('3 of 5');
+		expect(domainEvents.emit).toHaveBeenCalledWith(
+			'suggestion.responded',
+			expect.objectContaining({ suggestionId: IDEA, status: 'declined' })
+		);
+	});
+
+	it('leaves the suggestion in ballot when marked passed, for the project to move', async () => {
+		await certified(2, true);
+		expect(await suggestionStatus()).toBe('in_ballot');
+	});
+
+	it('does not pull a suggestion back from planned', async () => {
+		const id = await ballotOnIdea();
+		await ballots.openBallot(id, { now: NOW });
+		await testDb.update(suggestion).set({ status: 'planned' }).where(eq(suggestion.id, IDEA));
+		await ballots.certifyBallot(id, CERTIFIER, false, { now: AFTER_CLOSE });
+		expect(await suggestionStatus()).toBe('planned');
 	});
 });
 
@@ -234,11 +282,21 @@ describe('starting a project from a ballot', () => {
 		expect(rows).toEqual([{ groupId: 'grp-fac', role: 'owner' }]);
 	});
 
-	it('is refused when the result did not pass', async () => {
-		const id = await certified(1);
+	it('is refused when the certifier marked it not passed, even if the first choice won', async () => {
+		const id = await certified(3, false);
 		await expect(
 			chain.startProjectFromBallot(id, { name: 'Back room PA' }, { now: AFTER_CLOSE })
 		).rejects.toBeInstanceOf(chain.DecisionChainError);
+	});
+
+	it('is refused on a certified result with no outcome recorded', async () => {
+		const id = await certified(3, true);
+		sqlite.exec(`update ballot set passed = null where id = '${id}'`);
+		await expect(
+			chain.startProjectFromBallot(id, { name: 'Back room PA' }, { now: AFTER_CLOSE })
+		).rejects.toBeInstanceOf(chain.DecisionChainError);
+		const links = await chain.getSuggestionChain(IDEA, { now: AFTER_CLOSE });
+		expect(links.ballots[0].passed).toBeNull();
 	});
 
 	it('is refused before certification', async () => {
