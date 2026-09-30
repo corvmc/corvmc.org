@@ -91,7 +91,7 @@
 			type="textarea"
 			label="Choices"
 			description={decides
-				? 'One per line. The first choice is the one that authorises the work, and it must win outright.'
+				? 'One per line. The certifier says whether the result passed; any choice can be the one that does.'
 				: 'One per line, between 2 and 10.'}
 			value={decides ? 'Yes\nNo' : undefined}
 		/>

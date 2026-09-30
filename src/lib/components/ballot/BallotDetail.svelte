@@ -260,8 +260,15 @@
 								.name}{/if}
 					</Fact>
 				{/if}
-				{#if data.passed !== null}
-					<Fact label="Outcome" value={data.passed ? 'Passed' : 'Did not pass'} />
+				{#if b.status === 'certified'}
+					<Fact
+						label="Outcome"
+						value={data.passed === null
+							? 'Not recorded by the certifier'
+							: data.passed
+								? 'Passed'
+								: 'Did not pass'}
+					/>
 				{/if}
 				{#if data.authorised}
 					{@const href = projectHref(data.authorised.id)}

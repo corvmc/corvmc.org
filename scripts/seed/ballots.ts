@@ -255,7 +255,7 @@ export async function seedBallots(
 					: {})
 			})
 			.where(eq(ballot.id, spec.id));
-		if ('passed' in spec && spec.passed === false && 'suggestionId' in spec) {
+		if ('passed' in spec && spec.passed === false && 'suggestionId' in spec && spec.suggestionId) {
 			// The decline certifyBallot writes: notPassedReason in ballot-service.
 			const tally = spec.options.map((label, i) => `${label} ${votes[i]}`).join(', ');
 			await db

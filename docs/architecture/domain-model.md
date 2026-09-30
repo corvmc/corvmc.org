@@ -288,12 +288,13 @@ neither and a ballot can stand alone:
 
 The path is predictable because the suggestion's status follows the links. Opening a ballot
 from a suggestion moves it from `open` to `in_ballot`; cancelling that ballot moves it back.
-A certified result passes when its first choice is strictly ahead of every other, and a
-ballot put from a suggestion starts with "Yes" first. A passing ballot's page offers **Start
+Whether a certified result passed is the certifier's call, stored on `ballot.passed` at
+certification and never inferred from the tally. A ballot marked passed offers **Start
 project**, which writes the project with both links and moves the suggestion to `planned`
 in one `db.batch`, as the direct suggestion → project path already did for decisions that
-need no vote. From there the project's status is what the suggestion reports. A failed
-ballot leaves the suggestion at `in_ballot` for staff to decline with a response.
+need no vote. From there the project's status is what the suggestion reports. A ballot
+marked not passed declines a suggestion still `in_ballot`, with the certified result as the
+response.
 `src/lib/server/project/decision-chain.ts` holds the writes and the reads.
 
 Each page shows the chain under its own visibility rules: a project's staff page has "Why

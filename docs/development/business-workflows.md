@@ -1796,12 +1796,13 @@ Electors vote from `/member/ballots/[id]`:
 - a member-wide vote is secret and final.
 
 Nobody sees a tally until the close. After it, the certifier certifies the result, and every member
-is told.
+is told. Certifying includes the certifier's call on whether the result **passed**: the app never
+infers it from the tally, so "which of three venues?" can pass as well as "yes or no?".
 
 A ballot can decide something. Staff put a suggestion to a ballot from its staff page, and the
-suggestion reads **In ballot** once voting opens (back to Open if the ballot is cancelled). When a
-certified result passes, meaning the first choice is strictly ahead, the ballot's page offers
-**Start project** to holders of `project.manage`. That creates the project linked to the ballot and
+suggestion reads **In ballot** once voting opens (back to Open if the ballot is cancelled). A
+ballot certified as not passed declines that suggestion, with the certified result as the
+response. One certified as passed offers **Start project** to holders of `project.manage`. That creates the project linked to the ballot and
 the suggestion, and moves the suggestion to Planned. The project's staff page shows the chain under
 "Why this exists".
 

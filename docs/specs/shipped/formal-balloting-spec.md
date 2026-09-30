@@ -133,7 +133,8 @@ do not have to be an elector. Certifying:
 
 1. snapshots the result into `ballot.certified_result` (JSON: per-option counts, turnout, electorate
    size). The result stays fixed even if an account is later purged and cascades its rows away;
-2. stamps `certified_at` and `certified_by_id`;
+2. stamps `certified_at` and `certified_by_id`, and stores the certifier's call on whether the
+   result passed in `ballot.passed` (#1683);
 3. emits `ballot.certified`. A listener writes an in-app notification (`ballot_result`) to **every
    active account**, batched the way `announcement-fanout.ts` batches, and latched on
    `ballot.result_published_at` so an at-least-once redelivery does not notify twice.
