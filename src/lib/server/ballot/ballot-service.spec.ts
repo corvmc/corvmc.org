@@ -435,21 +435,21 @@ describe('certifying', () => {
 
 	it('is refused to anyone but the named certifier', async () => {
 		const { id } = await closedWithVotes();
-		await expect(svc.certifyBallot(id, STAFF, { now: AFTER_CLOSE })).rejects.toBeInstanceOf(
+		await expect(svc.certifyBallot(id, STAFF, true, { now: AFTER_CLOSE })).rejects.toBeInstanceOf(
 			svc.NotCertifierError
 		);
 	});
 
 	it('is refused before the close', async () => {
 		const { id } = await closedWithVotes();
-		await expect(svc.certifyBallot(id, CERTIFIER, { now: NOW })).rejects.toBeInstanceOf(
+		await expect(svc.certifyBallot(id, CERTIFIER, true, { now: NOW })).rejects.toBeInstanceOf(
 			svc.BallotStateError
 		);
 	});
 
 	it('snapshots the result, emits once, and cannot be repeated', async () => {
 		const { id, yes, no } = await closedWithVotes();
-		await svc.certifyBallot(id, CERTIFIER, { now: AFTER_CLOSE });
+		await svc.certifyBallot(id, CERTIFIER, true, { now: AFTER_CLOSE });
 
 		const b = await svc.getBallot(id);
 		expect(svc.ballotStatusOf(b, AFTER_CLOSE)).toBe('certified');
@@ -466,14 +466,41 @@ describe('certifying', () => {
 			expect.objectContaining({ ballotId: id })
 		);
 
-		await expect(svc.certifyBallot(id, CERTIFIER, { now: AFTER_CLOSE })).rejects.toBeInstanceOf(
-			svc.BallotStateError
+		await expect(
+			svc.certifyBallot(id, CERTIFIER, true, { now: AFTER_CLOSE })
+		).rejects.toBeInstanceOf(svc.BallotStateError);
+	});
+
+	it("stores the certifier's call, not the leading choice", async () => {
+		const { id } = await closedWithVotes();
+		await svc.certifyBallot(id, CERTIFIER, false, { now: AFTER_CLOSE });
+		expect((await svc.getBallot(id)).passed).toBe(false);
+	});
+
+	it('records the outcome of a result certified without one, once, leaving the result alone', async () => {
+		const { id } = await closedWithVotes();
+		await svc.certifyBallot(id, CERTIFIER, true, { now: AFTER_CLOSE });
+		sqlite.exec(`update ballot set passed = null where id = '${id}'`);
+		const before = await svc.getBallot(id);
+		emit.mockClear();
+
+		await expect(svc.certifyBallot(id, STAFF, true, { now: AFTER_CLOSE })).rejects.toBeInstanceOf(
+			svc.NotCertifierError
 		);
+		await svc.certifyBallot(id, CERTIFIER, true, { now: AFTER_CLOSE });
+		const after = await svc.getBallot(id);
+		expect(after.passed).toBe(true);
+		expect(after.certifiedResult).toEqual(before.certifiedResult);
+		expect(emit).not.toHaveBeenCalledWith('ballot.certified', expect.anything());
+
+		await expect(
+			svc.certifyBallot(id, CERTIFIER, false, { now: AFTER_CLOSE })
+		).rejects.toBeInstanceOf(svc.BallotStateError);
 	});
 
 	it('keeps the certified result when a voter is later purged', async () => {
 		const { id } = await closedWithVotes();
-		await svc.certifyBallot(id, CERTIFIER, { now: AFTER_CLOSE });
+		await svc.certifyBallot(id, CERTIFIER, true, { now: AFTER_CLOSE });
 		sqlite.exec(`delete from user where id = '${CHAIR}'`);
 		const tally = await svc.getTally(id, { now: AFTER_CLOSE });
 		expect(tally.turnout).toBe(3);

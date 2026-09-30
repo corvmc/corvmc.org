@@ -46,7 +46,9 @@ test('the certifier publishes a closed result', async ({ page }) => {
 	).toBeVisible();
 
 	await page.getByRole('button', { name: 'Certify the result' }).click();
-	await page.getByRole('dialog').getByRole('button', { name: 'Certify' }).click();
+	const dialog = page.getByRole('dialog');
+	await dialog.getByLabel('Outcome').selectOption('passed');
+	await dialog.getByRole('button', { name: 'Certify' }).click();
 	await expectSuccessToast(page);
 
 	await expect.poll(() => readCertifiedAt(SEED_BALLOT_CLOSED_ID), DB_POLL).not.toBeNull();

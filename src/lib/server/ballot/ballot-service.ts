@@ -33,6 +33,7 @@ import { memberOrientation } from '$lib/server/db/schema/volunteer';
 import { config } from '$lib/server/site-config/site-config-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { recordAuditEntry } from '$lib/server/audit/audit-service';
+import { getSuggestionBrief, respondToSuggestion } from '$lib/server/suggestion/suggestion-service';
 import {
 	BALLOT_DESCRIPTION_MAX,
 	BALLOT_OPTION_LABEL_MAX,
@@ -105,15 +106,10 @@ export function ballotStatusOf(b: StatusFields, now: Date = new Date()): BallotS
 	return now.getTime() < b.closesAt.getTime() ? 'open' : 'closed';
 }
 
-/**
- * Whether a certified result authorises the work: the first choice strictly
- * ahead of every other. A ballot put from a suggestion is created with "Yes"
- * first, so the question is always phrased as the thing to do.
- */
-export function ballotPassed(result: BallotCertifiedResult | null | undefined): boolean {
-	const [first, ...rest] = result?.options ?? [];
-	if (!first || first.votes === 0) return false;
-	return rest.every((o) => o.votes < first.votes);
+/** The reason a suggestion is declined with when its ballot is marked not passed. */
+export function notPassedReason(title: string, result: BallotCertifiedResult): string {
+	const tally = result.options.map((o) => `${o.label} ${o.votes}`).join(', ');
+	return `The ballot "${title}" did not pass. Certified result: ${tally}; ${result.turnout} of ${result.electorateSize} electors voted.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -860,26 +856,59 @@ export async function castVote(
 	}
 }
 
-/** Fix the result and publish it. Only the named certifier, only after the close. */
+/**
+ * Fix the result, record the certifier's call on whether it passed, and
+ * publish it. Only the named certifier, only after the close. A result
+ * certified before the call was recorded takes the call alone, once. Marked
+ * not passed, a suggestion still in ballot is declined with the result.
+ */
 export async function certifyBallot(
 	ballotId: string,
 	userId: string,
+	passed: boolean,
 	ctx: { now?: Date } = {}
 ): Promise<void> {
 	const now = ctx.now ?? new Date();
 	const b = await getBallot(ballotId);
-	requireStatus(b, now, ['closed'], 'Only a closed, uncertified ballot can be certified');
+	const recordOnly = ballotStatusOf(b, now) === 'certified' && b.passed === null;
+	if (!recordOnly) {
+		requireStatus(b, now, ['closed'], 'Only a closed, uncertified ballot can be certified');
+	}
 	if (b.certifierId !== userId) throw new NotCertifierError();
 
-	const result = await computeResult(b);
+	const result = recordOnly ? b.certifiedResult! : await computeResult(b);
 	const stamped = await db
 		.update(ballot)
-		.set({ certifiedAt: now, certifiedById: userId, certifiedResult: result, updatedAt: now })
-		.where(and(eq(ballot.id, ballotId), isNull(ballot.certifiedAt), isNull(ballot.cancelledAt)))
+		.set(
+			recordOnly
+				? { passed, updatedAt: now }
+				: {
+						certifiedAt: now,
+						certifiedById: userId,
+						certifiedResult: result,
+						passed,
+						updatedAt: now
+					}
+		)
+		.where(
+			recordOnly
+				? and(eq(ballot.id, ballotId), isNull(ballot.passed))
+				: and(eq(ballot.id, ballotId), isNull(ballot.certifiedAt), isNull(ballot.cancelledAt))
+		)
 		.returning({ id: ballot.id });
 	if (stamped.length === 0) throw new BallotStateError('This ballot has already been certified');
 
-	await domainEvents.emit('ballot.certified', { ballotId, title: b.title });
+	if (!passed && b.suggestionId) {
+		const s = await getSuggestionBrief(b.suggestionId);
+		if (s?.status === 'in_ballot') {
+			await respondToSuggestion(b.suggestionId, {
+				status: 'declined',
+				response: notPassedReason(b.title, result),
+				staffId: userId
+			});
+		}
+	}
+	if (!recordOnly) await domainEvents.emit('ballot.certified', { ballotId, title: b.title });
 }
 
 export async function cancelBallot(

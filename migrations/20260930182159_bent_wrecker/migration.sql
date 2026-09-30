@@ -1,0 +1,1 @@
+ALTER TABLE `ballot` ADD `passed` integer;

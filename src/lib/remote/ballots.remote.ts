@@ -16,7 +16,6 @@ import {
 import { getBallotChain } from '$lib/server/project/decision-chain';
 import { listCommittees } from '$lib/server/project/project-service';
 import {
-	ballotPassed,
 	ballotStatusOf,
 	cancelBallot,
 	castVote,
@@ -158,7 +157,7 @@ export const getBallotPage = query(z.string().min(1), async (ballotId) => {
 				? ((await listCommitteeRosters()).find((c) => c.id === b.groupId) ?? null)
 				: null;
 		const links = await getBallotChain(ballotId);
-		const passed = status === 'certified' ? ballotPassed(b.certifiedResult) : null;
+		const passed = status === 'certified' ? b.passed : null;
 		const canStartProject = projectManager && passed === true && !b.projectId && !links.authorised;
 		// A suggestion off the board stays unnamed to members, as its own page 404s for them.
 		const decidedSuggestion =
@@ -197,6 +196,7 @@ export const getBallotPage = query(z.string().min(1), async (ballotId) => {
 			decides: { suggestion: decidedSuggestion, project: links.project },
 			authorised: links.authorised,
 			passed,
+			needsOutcome: certifier && status === 'certified' && b.passed === null,
 			startProject: canStartProject
 				? { committees: await listCommittees(), name: decidedSuggestion?.title ?? b.title }
 				: null,
@@ -304,11 +304,17 @@ export const castBallotVote = form(
 	}
 );
 
-export const certifyBallotForm = form(ballotIdField, async ({ ballotId }) => {
-	const me = requireUser();
-	await certifyBallot(ballotId, me.id);
-	await getBallotPage(ballotId).refresh();
-});
+export const certifyBallotForm = form(
+	z.object({
+		ballotId: z.string().min(1),
+		outcome: z.enum(['passed', 'not_passed'], { message: 'Say whether it passed' })
+	}),
+	async ({ ballotId, outcome }) => {
+		const me = requireUser();
+		await certifyBallot(ballotId, me.id, outcome === 'passed');
+		await getBallotPage(ballotId).refresh();
+	}
+);
 
 export const setElectorOverrideForm = form(
 	z.object({
