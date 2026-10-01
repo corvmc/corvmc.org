@@ -41,6 +41,11 @@ import {
 	listInvitesForEmail,
 	revoke as revokeEmailInviteService
 } from '$lib/server/group/group-invite-service';
+import {
+	importRoster,
+	parseRosterImport,
+	RosterImportInputError
+} from '$lib/server/group/roster-import-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import {
 	getMuteState,
@@ -269,6 +274,37 @@ export const assignGroupLeader = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
+	}
+);
+
+/** A pasted list, a CSV, or both — at the size a Zeffy export of a few hundred rows is. */
+const ROSTER_CSV_MAX_BYTES = 2_000_000;
+
+/**
+ * Turn a mailing list into club or committee membership. Accounts are added
+ * active with no acceptance step, which is why this is `group.manage`'s alone
+ * and not a leader's: it puts people on a roster without asking them.
+ */
+export const importStaffGroupRoster = form(
+	z.object({
+		groupId: z.string().min(1),
+		emails: z.string().max(100_000).optional().default(''),
+		file: z.instanceof(File).optional()
+	}),
+	async (data, issue) => {
+		const user = await requireCapability('group.manage');
+		// An empty file input still posts a zero-byte `File`.
+		const file = data.file && data.file.size > 0 ? data.file : null;
+		if (file && file.size > ROSTER_CSV_MAX_BYTES) invalid(issue.file('That CSV is over 2 MB.'));
+		let parsed;
+		try {
+			parsed = parseRosterImport(data.emails, file ? await file.text() : null);
+		} catch (err) {
+			if (err instanceof RosterImportInputError) invalid(issue.emails(err.message));
+			throw err;
+		}
+		const result = await importRoster(data.groupId, parsed, { id: user.id, name: user.name });
+		return { success: true, ...result };
 	}
 );
 

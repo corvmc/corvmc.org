@@ -129,6 +129,12 @@ vi.mock('$lib/server/group/group-invite-service', () => ({
 	revoke: (...a: unknown[]) => invites.revoke(...(a as []))
 }));
 
+vi.mock('$lib/server/group/roster-import-service', () => ({
+	importRoster: vi.fn(),
+	parseRosterImport: vi.fn(),
+	RosterImportInputError: class extends Error {}
+}));
+
 vi.mock('$lib/server/group/group-service', () => ({
 	STAFF_GROUP_KINDS: ['club', 'committee'],
 	assignLeader: vi.fn(),

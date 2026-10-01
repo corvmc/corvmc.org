@@ -1,10 +1,10 @@
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { domainEvents, type GroupInviteCreatedEvent } from '$lib/server/event-bus/event-bus';
 import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE, renewalKindLabels } from '$lib/config';
 import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
 import { fanOutAnnouncement, fanOutGroupRoom } from '$lib/server/group/announcement-fanout';
 import { fanOutBallotNotice } from '$lib/server/ballot/ballot-fanout';
-import { dispatch, dispatchEmailOnly } from './dispatcher';
+import { dispatch, dispatchEmailOnly, dispatchEmailOnlyBatch } from './dispatcher';
 import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '$lib/server/sentry';
 import { listUsersWithCapability } from '$lib/server/authorization';
@@ -40,6 +40,32 @@ import type {
 // brand chrome belongs to one-way mail, and on a message someone is meant to
 // answer it buries the content and makes the reply feel like it goes to a robot.
 // ---------------------------------------------------------------------------
+
+/**
+ * The recipient has no account and no page open, so the copy has to say what
+ * they are being invited to. Shared by the single and the bulk invite.
+ */
+function groupInvitationEmail(
+	event: Omit<GroupInviteCreatedEvent, 'email' | 'token'>,
+	token: string
+): StandaloneEmailContent {
+	const kind = groupKindLabels[event.groupKind];
+	return {
+		subject: `${event.invitedByName} invited you to join ${event.groupName} on CorvMC`,
+		preview_text: `${event.invitedByName} wants you in ${event.groupName}. Your invite link is good for 7 days.`,
+		heading: `You've been invited to join ${event.groupName}`,
+		paragraphs: [
+			{
+				text: `${event.invitedByName} has invited you to join the ${kind} ${event.groupName} as a ${event.role} on CorvMC.`
+			},
+			{
+				text: 'CorvMC is a community music space where bands book rehearsals, manage equipment, and coordinate with their members.'
+			}
+		],
+		cta: { url: `/login?invite=${token}`, label: 'Create your account & join' },
+		footnote: `This invitation expires in ${INVITE_EXPIRY_DAYS} days.`
+	};
+}
 
 function formatPickupDate(value: string): string {
 	return new Date(value).toLocaleDateString('en-US', {
@@ -486,27 +512,19 @@ export function registerAllNotificationListeners(): void {
 	// they are being invited to. "Join a band" was true of every row while the
 	// table was `platform_invite`; a club invitation is now the same code path.
 	domainEvents.on('group_invite.created', async ({ data: event }) => {
-		const signupUrl = `/login?invite=${event.token}`;
-		const kind = groupKindLabels[event.groupKind];
 		await dispatchEmailOnly({
 			type: 'group_invitation',
 			toEmail: event.email,
-			email: {
-				subject: `${event.invitedByName} invited you to join ${event.groupName} on CorvMC`,
-				preview_text: `${event.invitedByName} wants you in ${event.groupName}. Your invite link is good for 7 days.`,
-				heading: `You've been invited to join ${event.groupName}`,
-				paragraphs: [
-					{
-						text: `${event.invitedByName} has invited you to join the ${kind} ${event.groupName} as a ${event.role} on CorvMC.`
-					},
-					{
-						text: 'CorvMC is a community music space where bands book rehearsals, manage equipment, and coordinate with their members.'
-					}
-				],
-				cta: { url: signupUrl, label: 'Create your account & join' },
-				footnote: `This invitation expires in ${INVITE_EXPIRY_DAYS} days.`
-			}
+			email: groupInvitationEmail(event, event.token)
 		});
+	});
+
+	// A staff roster import: the same email to each address, as one batch.
+	domainEvents.on('group_invite.bulk_created', async ({ data: event }) => {
+		await dispatchEmailOnlyBatch(
+			'group_invitation',
+			event.invites.map((i) => ({ toEmail: i.email, email: groupInvitationEmail(event, i.token) }))
+		);
 	});
 
 	// --- Recurring reservation skipped ---

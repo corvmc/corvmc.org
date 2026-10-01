@@ -1510,6 +1510,12 @@ export const CERT_EXPIRY_WARNING_DAYS = 60;
 /** How long a group invite stays valid. The invite email's footnote interpolates it. */
 export const INVITE_EXPIRY_DAYS = 7;
 
+/**
+ * Distinct addresses one staff roster import may carry. Postmark takes 500 per
+ * batch call, so the invitations go out as one subrequest.
+ */
+export const ROSTER_IMPORT_MAX = 500;
+
 export const CERT_NAME_MAX = 100;
 export const CERT_DESCRIPTION_MAX = 2000;
 export const CERT_REFERENCE_MAX = 100;

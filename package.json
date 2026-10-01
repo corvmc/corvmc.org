@@ -122,6 +122,7 @@
 		"bcrypt-ts": "^9.0.2",
 		"bits-ui": "^2.19.3",
 		"clsx": "^2.1.1",
+		"csv-parse": "^7.0.3",
 		"csv-stringify": "^6.8.3",
 		"daisyui": "^5.7.46",
 		"date-fns": "^4.4.0",

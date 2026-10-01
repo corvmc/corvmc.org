@@ -22,7 +22,8 @@ export const auditActions = [
 	'credits.adjusted',
 	'incident.deleted',
 	'capability.grants_changed',
-	'ballot.elector_overridden'
+	'ballot.elector_overridden',
+	'group.roster_imported'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -78,6 +79,14 @@ export interface AuditDetailsByAction {
 		ballotTitle: string;
 		include: boolean;
 		reason: string;
+	};
+	/** Counts only: the addresses themselves stay out of the log. */
+	'group.roster_imported': {
+		added: number;
+		invited: number;
+		alreadyMembers: number;
+		alreadyInvited: number;
+		invalid: number;
 	};
 }
 

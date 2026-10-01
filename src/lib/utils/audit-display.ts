@@ -83,5 +83,9 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const verb = d.include ? 'Added to' : 'Removed from';
 			return `${verb} the roll for “${d.ballotTitle}”: “${d.reason}”`;
 		}
+		case 'group.roster_imported': {
+			const d = entry.details;
+			return `Imported a roster list: ${plural(d.added, 'member')} added, ${plural(d.invited, 'invitation')} sent`;
+		}
 	}
 }
