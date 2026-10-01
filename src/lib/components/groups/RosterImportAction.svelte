@@ -15,6 +15,7 @@
 		$props();
 
 	const fields = importStaffGroupRoster.fields;
+	const PLACEHOLDER = ['ada@example.com', 'bo@example.com'].join('\n');
 </script>
 
 <Action
@@ -46,7 +47,7 @@
 						{...fields.emails.as('text')}
 						class="textarea w-full font-mono text-sm"
 						rows="6"
-						placeholder={'ada@example.com\nbo@example.com'}></textarea>
+						placeholder={PLACEHOLDER}></textarea>
 				{/snippet}
 			</FormField>
 			<FormField
