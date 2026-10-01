@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { migratedSqlite } from '../src/lib/server/testing/migrated-sqlite';
-import { d1HttpClient, syncHelpArticles, type StaticArticle } from './sync-help-articles';
+import {
+	d1HttpClient,
+	readArticles,
+	syncHelpArticles,
+	type StaticArticle
+} from './sync-help-articles';
 
 const creds = { accountId: 'acct', databaseId: 'db-id', token: 'tok' };
 
@@ -131,5 +136,13 @@ describe('d1HttpClient', () => {
 		await expect(
 			d1HttpClient(creds, fetchImpl as unknown as typeof fetch)('SELECT 1', [], 'all')
 		).rejects.toThrow(/no such table/);
+	});
+});
+
+// The production deploy runs this sync after publishing, so an article it rejects
+// stops every deploy until someone fixes the article (#1757's did exactly that).
+describe('the committed help content', () => {
+	it('parses, with every capability one a committee can hold org-wide', () => {
+		expect(() => readArticles()).not.toThrow();
 	});
 });
