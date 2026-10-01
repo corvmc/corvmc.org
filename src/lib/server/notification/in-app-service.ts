@@ -34,6 +34,30 @@ export async function createNotification(params: CreateNotificationParams) {
 	return row;
 }
 
+/** Seven bound columns a row: 12 rows is 84 parameters, under D1's 100. */
+const INSERT_CHUNK = 12;
+
+/** Many rows in as few statements as D1 allows, in one batch. No ids come back. */
+export async function createNotifications(rows: CreateNotificationParams[]): Promise<void> {
+	if (rows.length === 0) return;
+	const statements = [];
+	for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
+		statements.push(
+			db.insert(notification).values(
+				rows.slice(i, i + INSERT_CHUNK).map((p) => ({
+					userId: p.userId,
+					type: p.type,
+					title: p.title,
+					body: p.body ?? null,
+					href: p.href ?? null,
+					data: p.data ?? null
+				}))
+			)
+		);
+	}
+	await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
+}
+
 export async function getUnreadCount(userId: string): Promise<number> {
 	const [result] = await db
 		.select({ count: sql<number>`cast(count(*) as integer)` })

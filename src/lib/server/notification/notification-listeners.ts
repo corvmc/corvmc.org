@@ -4,7 +4,8 @@ import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
 import { fanOutAnnouncement, fanOutGroupRoom } from '$lib/server/group/announcement-fanout';
 import { fanOutBallotNotice } from '$lib/server/ballot/ballot-fanout';
-import { dispatch, dispatchEmailOnly, dispatchEmailOnlyBatch } from './dispatcher';
+import { dispatch, dispatchBatch, dispatchEmailOnly, dispatchEmailOnlyBatch } from './dispatcher';
+import { membersAddedNotice } from '$lib/server/group/roster-import-service';
 import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '$lib/server/sentry';
 import { listUsersWithCapability } from '$lib/server/authorization';
@@ -525,6 +526,33 @@ export function registerAllNotificationListeners(): void {
 			'group_invitation',
 			event.invites.map((i) => ({ toEmail: i.email, email: groupInvitationEmail(event, i.token) }))
 		);
+	});
+
+	// Staff put these members on a roster with nothing for them to accept, so
+	// this is how they find out. One batched send for a whole import.
+	domainEvents.on('group.members_added', async ({ data: event }) => {
+		const notice = await membersAddedNotice(event.groupId, event.addedById);
+		if (!notice) return;
+		const kind = groupKindLabels[notice.groupKind];
+		const title = `You've been added to ${notice.groupName}`;
+		await dispatchBatch({
+			type: 'group_member_added',
+			userIds: event.userIds,
+			title,
+			body: `${notice.addedByName} added you to the ${kind} ${notice.groupName}`,
+			href: `/member/groups/${notice.groupSlug}`,
+			data: { groupId: event.groupId },
+			email: {
+				subject: title,
+				heading: title,
+				paragraphs: [
+					{
+						text: `${notice.addedByName} added you to the ${kind} ${notice.groupName} on CorvMC. You're a member now; there is nothing to accept.`
+					}
+				],
+				cta: { label: `Open ${notice.groupName}` }
+			}
+		});
 	});
 
 	// --- Recurring reservation skipped ---

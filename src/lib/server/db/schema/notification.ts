@@ -174,6 +174,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'group_member_added',
+		category: 'people',
+		label: 'Added to a club or committee',
+		description: 'When staff add you to a club or committee roster',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'group_application_submitted',
 		category: 'people',
 		label: 'Group application',

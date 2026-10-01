@@ -351,3 +351,19 @@ export async function importRoster(
 
 	return result;
 }
+
+/** What the "you've been added" notification names: the group, and who added them. */
+export async function membersAddedNotice(groupId: string, addedById: string) {
+	const [row] = await db
+		.select({ groupName: group.name, groupSlug: group.slug, groupKind: group.kind })
+		.from(group)
+		.where(and(eq(group.id, groupId), isNull(group.deletedAt)))
+		.limit(1);
+	if (!row) return null;
+	const [adder] = await db
+		.select({ name: user.name })
+		.from(user)
+		.where(eq(user.id, addedById))
+		.limit(1);
+	return { ...row, addedByName: adder?.name ?? 'CorvMC staff' };
+}

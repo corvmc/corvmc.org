@@ -24,7 +24,8 @@ addresses; split a longer list.
 
 - **Has an account:** added to the roster straight away as a member. There is nothing for them
   to accept. An invitation or application they already had for this group is settled at the
-  same time.
+  same time. They are told: a "You've been added to …" notification goes to them in the app and
+  by email, following their notification settings, with a link to the group.
 - **No account:** emailed the usual invitation to create an account and join. The link is good
   for 7 days.
 
@@ -35,7 +36,7 @@ one of:
 
 - **Added**: had an account, now a member.
 - **Invited**: no account, invitation emailed.
-- **Already members**: left as they were.
+- **Already members**: left as they were, and not notified.
 - **Already invited**: their invitation is still live, so it was not sent again.
 - **Invalid**: not an email address, or the account is deactivated. Fix these lines and import
   them again.
