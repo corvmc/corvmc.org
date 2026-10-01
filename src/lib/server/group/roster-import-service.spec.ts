@@ -179,7 +179,9 @@ describe('importRoster', () => {
 	// Activated pending rows and accepted applications were added without their
 	// own action too, so they are told; an existing member is not.
 	it('announces everyone added directly in one event, and no one already a member', async () => {
-		await run(['mo@example.com', 'nia@example.com', 'pat@example.com', 'ada@example.com'].join('\n'));
+		await run(
+			['mo@example.com', 'nia@example.com', 'pat@example.com', 'ada@example.com'].join('\n')
+		);
 		const added = emit.mock.calls.filter(([name]) => name === 'group.members_added');
 		expect(added).toHaveLength(1);
 		expect(added[0][1]).toEqual({
