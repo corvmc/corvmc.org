@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getNotificationType } from '$lib/server/db/schema/notification';
 import { NOTIFICATION_CATEGORIES } from '$lib/email/notification-category';
 
-vi.mock('./email/postmark-client', () => ({ sendEmailWithTemplate: vi.fn() }));
+vi.mock('./email/postmark-client', () => ({
+	sendEmailWithTemplate: vi.fn(),
+	sendTemplateBatch: vi.fn()
+}));
 vi.mock('./in-app-service', () => ({ createNotification: vi.fn() }));
 vi.mock('./preference-service', () => ({ getPreference: vi.fn() }));
 vi.mock('./sse', () => ({ pushToUser: vi.fn() }));
@@ -51,12 +54,14 @@ const FAKE_ROW = {
 // timeout rather than a slow build. Same reason as commit 75fd70a. These are the
 // mocked modules, so the bindings are stable — `vi.resetAllMocks()` clears their
 // recorded calls without replacing the function objects.
-const { sendEmailWithTemplate } = (await import('./email/postmark-client')) as any;
+const { sendEmailWithTemplate, sendTemplateBatch } =
+	(await import('./email/postmark-client')) as any;
 const { createNotification } = (await import('./in-app-service')) as any;
 const { getPreference } = (await import('./preference-service')) as any;
 const { pushToUser } = (await import('./sse')) as any;
 const { isDeliverable } = (await import('./recipient')) as any;
-const { dispatch, dispatchEmailOnly } = (await import('./dispatcher')) as any;
+const { dispatch, dispatchEmailOnly, dispatchEmailOnlyBatch } =
+	(await import('./dispatcher')) as any;
 
 describe('dispatch', () => {
 	beforeEach(() => {
@@ -417,5 +422,30 @@ describe('emailOmitsUserContent', () => {
 		});
 		const model = sendEmailWithTemplate.mock.calls[0][0].model;
 		expect(model.quote).toBeUndefined();
+	});
+});
+
+describe('dispatchEmailOnlyBatch', () => {
+	beforeEach(() => vi.resetAllMocks());
+
+	it('sends every recipient in one batch call on the generic template', async () => {
+		const email = { subject: 'Join us', heading: 'Join us', cta: { url: '/x', label: 'Go' } };
+		await dispatchEmailOnlyBatch('group_invitation', [
+			{ toEmail: 'a@example.com', email },
+			{ toEmail: 'b@example.com', email }
+		]);
+
+		expect(sendTemplateBatch).toHaveBeenCalledTimes(1);
+		const [alias, messages, opts] = sendTemplateBatch.mock.calls[0];
+		expect(alias).toBe('notification');
+		expect(messages.map((m: { to: string }) => m.to)).toEqual(['a@example.com', 'b@example.com']);
+		expect(messages[0].model.subject).toBe('Join us');
+		expect(opts).toEqual({ tag: 'group_invitation' });
+		expect(sendEmailWithTemplate).not.toHaveBeenCalled();
+	});
+
+	it('sends nothing for no recipients', async () => {
+		await dispatchEmailOnlyBatch('group_invitation', []);
+		expect(sendTemplateBatch).not.toHaveBeenCalled();
 	});
 });

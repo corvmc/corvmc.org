@@ -400,6 +400,17 @@ export interface GroupInviteCreatedEvent {
 	invitedByName: string;
 }
 
+/**
+ * Many `group_invite.created` at once, from a staff roster import. One event so
+ * the listener can send them as one Postmark batch instead of one call each.
+ */
+export interface GroupInvitesBulkCreatedEvent extends Omit<
+	GroupInviteCreatedEvent,
+	'email' | 'token'
+> {
+	invites: { email: string; token: string }[];
+}
+
 export interface RecurringWaitlistedEvent {
 	seriesId: string;
 	userId: string;
@@ -897,6 +908,7 @@ export type DomainEvents = {
 	'equipment.returned': EquipmentReturnedEvent;
 	'equipment.report_resolved': EquipmentReportResolvedEvent;
 	'group_invite.created': GroupInviteCreatedEvent;
+	'group_invite.bulk_created': GroupInvitesBulkCreatedEvent;
 	'announcement.published': AnnouncementPublishedEvent;
 	'inbox.message_received': InboxMessageReceivedEvent;
 	'inbox.message_sent': InboxMessageSentEvent;

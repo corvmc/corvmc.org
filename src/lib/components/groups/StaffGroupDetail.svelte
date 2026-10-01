@@ -23,6 +23,9 @@
 	import GroupSettingsForm from './GroupSettingsForm.svelte';
 	import AssignLeaderAction from './AssignLeaderAction.svelte';
 	import CommitteeGrantsCard from './CommitteeGrantsCard.svelte';
+	import RosterImportAction from './RosterImportAction.svelte';
+	import RosterImportSummary from './RosterImportSummary.svelte';
+	import type { RosterImportResult } from '$lib/types/roster-import';
 
 	type StaffGroupPage = Awaited<ReturnType<typeof getStaffGroupPage>>;
 
@@ -47,6 +50,8 @@
 	const id = $derived(group.id);
 	const isDeactivated = $derived(!!group.deletedAt);
 	const backHref = $derived(group.kind === 'committee' ? '/staff/committees' : '/staff/clubs');
+
+	let importResult = $state<RosterImportResult | null>(null);
 </script>
 
 <!-- `backHref` because this was the only staff `[id]` page without one: the
@@ -108,7 +113,16 @@
 
 	{@render applications?.()}
 
+	{#if importResult}
+		<RosterImportSummary result={importResult} ondismiss={() => (importResult = null)} />
+	{/if}
+
 	<InfoCard title="Roster">
+		{#snippet action()}
+			{#if !isDeactivated}
+				<RosterImportAction groupId={id} onresult={(r) => (importResult = r)} />
+			{/if}
+		{/snippet}
 		{#if members.active.length === 0 && members.pending.length === 0}
 			<EmptyState description="No members yet" />
 		{:else}

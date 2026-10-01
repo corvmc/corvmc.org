@@ -9,10 +9,12 @@ import { normalizeNotificationModel } from './email/normalize-model';
 
 const mockDispatch = vi.fn().mockResolvedValue(undefined);
 const mockDispatchEmailOnly = vi.fn().mockResolvedValue(undefined);
+const mockDispatchEmailOnlyBatch = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('./dispatcher', () => ({
 	dispatch: (...args: unknown[]) => mockDispatch(...args),
-	dispatchEmailOnly: (...args: unknown[]) => mockDispatchEmailOnly(...args)
+	dispatchEmailOnly: (...args: unknown[]) => mockDispatchEmailOnly(...args),
+	dispatchEmailOnlyBatch: (...args: unknown[]) => mockDispatchEmailOnlyBatch(...args)
 }));
 
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
@@ -142,6 +144,7 @@ describe('registerAllNotificationListeners', () => {
 			'band.invitation_sent',
 			'band.invitation_accepted',
 			'group_invite.created',
+			'group_invite.bulk_created',
 			'announcement.published',
 			'reservation.recurring_skipped',
 			'reservation.recurring_waitlisted',
@@ -510,6 +513,31 @@ describe('collapsed listeners use the generic template', () => {
 		// A club must never be described as a band — the vocabulary follows groupKind.
 		expect(params.email.paragraphs[0].text).not.toContain('band');
 		expect(params.email.heading).toContain('Real Book Club');
+	});
+
+	// A staff roster import: one batch, each address carrying its own link.
+	it('group_invite.bulk_created → one batched send with a link per address', async () => {
+		await emit('group_invite.bulk_created', {
+			groupId: 'club-1',
+			groupName: 'Real Book Club',
+			groupKind: 'club',
+			role: 'member',
+			invitedByName: 'Alice',
+			invites: [
+				{ email: 'a@test.com', token: 'tok-a' },
+				{ email: 'b@test.com', token: 'tok-b' }
+			]
+		});
+
+		expect(mockDispatchEmailOnly).not.toHaveBeenCalled();
+		const [type, messages] = mockDispatchEmailOnlyBatch.mock.calls[0];
+		expect(type).toBe('group_invitation');
+		expect(messages.map((m: { toEmail: string }) => m.toEmail)).toEqual([
+			'a@test.com',
+			'b@test.com'
+		]);
+		expect(messages[1].email.cta.url).toBe('/login?invite=tok-b');
+		expect(messages[0].email.paragraphs[0].text).toContain('club Real Book Club');
 	});
 
 	const contactFormEvent = {

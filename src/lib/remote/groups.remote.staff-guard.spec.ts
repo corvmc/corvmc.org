@@ -52,7 +52,13 @@ const svc = vi.hoisted(() => ({
 	assignLeader: vi.fn(),
 	deactivate: vi.fn(),
 	reactivate: vi.fn(),
-	setCommitteeCapabilityGrants: vi.fn()
+	setCommitteeCapabilityGrants: vi.fn(),
+	importRoster: vi.fn()
+}));
+vi.mock('$lib/server/group/roster-import-service', () => ({
+	importRoster: svc.importRoster,
+	parseRosterImport: () => ({ emails: ['a@example.com'], invalid: [], duplicates: 0 }),
+	RosterImportInputError: class extends Error {}
 }));
 vi.mock('$lib/server/capability/capability-grant-service', () => ({
 	setCommitteeCapabilityGrants: svc.setCommitteeCapabilityGrants
@@ -154,6 +160,12 @@ const EXPORTS = [
 	['assignGroupLeader', { groupId: 'group-1', userId: 'user-9' }, 'group.manage', svc.assignLeader],
 	['deactivateGroup', { groupId: 'group-1' }, 'group.manage', svc.deactivate],
 	['reactivateGroup', { groupId: 'group-1' }, 'group.manage', svc.reactivate],
+	[
+		'importStaffGroupRoster',
+		{ groupId: 'group-1', emails: 'a@example.com' },
+		'group.manage',
+		svc.importRoster
+	],
 	[
 		'setCommitteeGrants',
 		{ groupId: 'group-1', capabilities: ['sponsor.manage'] },

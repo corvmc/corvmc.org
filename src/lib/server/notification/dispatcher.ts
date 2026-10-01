@@ -1,4 +1,4 @@
-import { sendEmailWithTemplate } from './email/postmark-client';
+import { sendEmailWithTemplate, sendTemplateBatch } from './email/postmark-client';
 import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
 import { NOTIFICATION_TYPES } from '$lib/server/db/schema/notification';
@@ -196,4 +196,22 @@ export async function dispatchEmailOnly(
 			}),
 		{ channel: 'email-only', type: params.type, to: params.toEmail }
 	);
+}
+
+/**
+ * `dispatchEmailOnly` for many recipients of one type, as Postmark batch calls
+ * of 500 rather than one subrequest each. Same generic template and per-type
+ * policy, so a message reads the same whichever path sent it.
+ */
+export async function dispatchEmailOnlyBatch(
+	type: string,
+	messages: { toEmail: string; email: StandaloneEmailContent }[]
+): Promise<void> {
+	if (messages.length === 0) return;
+	const batch = messages.map((m) => ({ to: m.toEmail, model: genericModel(m.email, type) }));
+	await afterResponse(() => sendTemplateBatch(GENERIC_ALIAS, batch, { tag: type }), {
+		channel: 'email-only-batch',
+		type,
+		recipients: batch.length
+	});
 }
