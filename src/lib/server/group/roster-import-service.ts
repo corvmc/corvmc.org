@@ -309,6 +309,17 @@ export async function importRoster(
 	if (statements.length > 0) {
 		// `db.batch`, never `db.transaction()`: the import lands whole or not at all.
 		const results = (await db.batch(statements as [Statement, ...Statement[]])) as unknown[];
+		if (addedUserIds.length > 0) {
+			try {
+				await domainEvents.emit('group.members_added', {
+					groupId,
+					userIds: addedUserIds,
+					addedById: actor.id
+				});
+			} catch (err) {
+				captureException(err, { event: 'group.members_added', groupId });
+			}
+		}
 		const invites = inviteIndex.flatMap((i) => results[i] as { email: string; token: string }[]);
 		if (invites.length > 0) {
 			try {

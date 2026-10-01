@@ -6,10 +6,10 @@ vi.mock('./email/postmark-client', () => ({
 	sendEmailWithTemplate: vi.fn(),
 	sendTemplateBatch: vi.fn()
 }));
-vi.mock('./in-app-service', () => ({ createNotification: vi.fn() }));
+vi.mock('./in-app-service', () => ({ createNotification: vi.fn(), createNotifications: vi.fn() }));
 vi.mock('./preference-service', () => ({ getPreference: vi.fn() }));
 vi.mock('./sse', () => ({ pushToUser: vi.fn() }));
-vi.mock('./recipient', () => ({ isDeliverable: vi.fn() }));
+vi.mock('./recipient', () => ({ isDeliverable: vi.fn(), listBatchRecipients: vi.fn() }));
 
 const EMAIL_CONTENT = {
 	recipientName: 'Ada',
@@ -56,11 +56,11 @@ const FAKE_ROW = {
 // recorded calls without replacing the function objects.
 const { sendEmailWithTemplate, sendTemplateBatch } =
 	(await import('./email/postmark-client')) as any;
-const { createNotification } = (await import('./in-app-service')) as any;
+const { createNotification, createNotifications } = (await import('./in-app-service')) as any;
 const { getPreference } = (await import('./preference-service')) as any;
 const { pushToUser } = (await import('./sse')) as any;
-const { isDeliverable } = (await import('./recipient')) as any;
-const { dispatch, dispatchEmailOnly, dispatchEmailOnlyBatch } =
+const { isDeliverable, listBatchRecipients } = (await import('./recipient')) as any;
+const { dispatch, dispatchBatch, dispatchEmailOnly, dispatchEmailOnlyBatch } =
 	(await import('./dispatcher')) as any;
 
 describe('dispatch', () => {
@@ -446,6 +446,63 @@ describe('dispatchEmailOnlyBatch', () => {
 
 	it('sends nothing for no recipients', async () => {
 		await dispatchEmailOnlyBatch('group_invitation', []);
+		expect(sendTemplateBatch).not.toHaveBeenCalled();
+	});
+});
+
+describe('dispatchBatch', () => {
+	beforeEach(() => vi.resetAllMocks());
+
+	const recipient = (userId: string, emailEnabled: boolean, inAppEnabled: boolean) => ({
+		userId,
+		name: `Name ${userId}`,
+		email: `${userId}@example.com`,
+		emailEnabled,
+		inAppEnabled
+	});
+	const params = {
+		type: 'group_member_added',
+		userIds: ['a', 'b', 'c'],
+		title: "You've been added to Jazz Club",
+		body: 'Sam added you',
+		href: '/member/groups/jazz-club',
+		email: { subject: 'Added', heading: 'Added', cta: { label: 'Open Jazz Club' } }
+	};
+
+	it('respects each member’s preferences: in-app rows and emails only where enabled', async () => {
+		listBatchRecipients.mockResolvedValue([
+			recipient('a', true, true),
+			recipient('b', false, true),
+			recipient('c', true, false)
+		]);
+
+		await dispatchBatch(params);
+
+		expect(listBatchRecipients).toHaveBeenCalledWith(['a', 'b', 'c'], 'group_member_added');
+		const rows = createNotifications.mock.calls[0][0];
+		expect(rows.map((r: { userId: string }) => r.userId)).toEqual(['a', 'b']);
+		expect(rows[0]).toMatchObject({
+			type: 'group_member_added',
+			title: params.title,
+			href: params.href
+		});
+		expect(pushToUser.mock.calls.map(([id]: [string]) => id)).toEqual(['a', 'b']);
+
+		expect(sendTemplateBatch).toHaveBeenCalledTimes(1);
+		const [alias, messages, opts] = sendTemplateBatch.mock.calls[0];
+		expect(alias).toBe('notification');
+		expect(messages.map((m: { to: string }) => m.to)).toEqual(['a@example.com', 'c@example.com']);
+		expect(messages[0].model.greeting).toContain('Name');
+		expect(JSON.stringify(messages[0].model)).toContain('/member/groups/jazz-club');
+		expect(opts).toEqual({ tag: 'group_member_added' });
+		expect(sendEmailWithTemplate).not.toHaveBeenCalled();
+		expect(createNotification).not.toHaveBeenCalled();
+	});
+
+	it('does nothing for nobody', async () => {
+		listBatchRecipients.mockResolvedValue([]);
+		await dispatchBatch({ ...params, userIds: [] });
+		expect(createNotifications).not.toHaveBeenCalled();
 		expect(sendTemplateBatch).not.toHaveBeenCalled();
 	});
 });

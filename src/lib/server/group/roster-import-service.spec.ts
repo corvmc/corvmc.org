@@ -168,7 +168,25 @@ describe('importRoster', () => {
 		const result = await run('NIA@example.com');
 		expect(result.added).toEqual(['nia@example.com']);
 		expect(roster()).toContainEqual({ user_id: 'usr-new', status: 'active' });
-		expect(emit).not.toHaveBeenCalled();
+		expect(emit).toHaveBeenCalledTimes(1);
+		expect(emit).toHaveBeenCalledWith('group.members_added', {
+			groupId: CLUB,
+			userIds: ['usr-new'],
+			addedById: STAFF.id
+		});
+	});
+
+	// Activated pending rows and accepted applications were added without their
+	// own action too, so they are told; an existing member is not.
+	it('announces everyone added directly in one event, and no one already a member', async () => {
+		await run(['mo@example.com', 'nia@example.com', 'pat@example.com', 'ada@example.com'].join('\n'));
+		const added = emit.mock.calls.filter(([name]) => name === 'group.members_added');
+		expect(added).toHaveLength(1);
+		expect(added[0][1]).toEqual({
+			groupId: CLUB,
+			userIds: ['usr-new', 'usr-pending', 'usr-applicant'],
+			addedById: STAFF.id
+		});
 	});
 
 	it('invites an unknown address, one batched event carrying its token', async () => {
@@ -211,7 +229,7 @@ describe('importRoster', () => {
 		});
 		expect(roster()).not.toContainEqual(expect.objectContaining({ user_id: 'usr-gone' }));
 		expect(invites().find((i) => i.email === 'live@example.com')?.token).toBe('tok-live');
-		expect(emit).not.toHaveBeenCalled();
+		expect(emit.mock.calls.map(([name]) => name)).toEqual(['group.members_added']);
 	});
 
 	it('refreshes an expired invitation in place and re-sends it, same token', async () => {
@@ -230,6 +248,7 @@ describe('importRoster', () => {
 
 	it('activates a pending roster row instead of adding a second', async () => {
 		expect((await run('pat@example.com')).added).toEqual(['pat@example.com']);
+		expect(emit).not.toHaveBeenCalledWith('group_invite.bulk_created', expect.anything());
 		expect(roster().filter((r) => r.user_id === 'usr-pending')).toEqual([
 			{ user_id: 'usr-pending', status: 'active' }
 		]);
@@ -260,8 +279,14 @@ describe('importRoster', () => {
 		const result = await run(many.join('\n'));
 		expect(result.added).toHaveLength(60);
 		expect(result.invited).toHaveLength(60);
-		const sent = emit.mock.calls[0][1] as { invites: unknown[] };
+		const sent = emit.mock.calls.find(([n]) => n === 'group_invite.bulk_created')![1] as {
+			invites: unknown[];
+		};
 		expect(sent.invites).toHaveLength(60);
+		const added = emit.mock.calls.find(([n]) => n === 'group.members_added')![1] as {
+			userIds: unknown[];
+		};
+		expect(added.userIds).toHaveLength(60);
 		expect(largestStatement.params).toBeGreaterThan(50);
 	});
 
@@ -272,6 +297,11 @@ describe('importRoster', () => {
 			subject: { type: 'group', id: CLUB, label: 'Jazz Club' },
 			details: { added: 1, invited: 1, alreadyMembers: 0, alreadyInvited: 0, invalid: 0 }
 		});
+	});
+
+	it('announces nothing when nobody was added', async () => {
+		await run('mo@example.com');
+		expect(emit).not.toHaveBeenCalled();
 	});
 
 	it('refuses a band', async () => {
