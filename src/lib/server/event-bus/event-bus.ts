@@ -411,6 +411,16 @@ export interface GroupInvitesBulkCreatedEvent extends Omit<
 	invites: { email: string; token: string }[];
 }
 
+/**
+ * Staff put these accounts on a club's or committee's roster directly, with no
+ * acceptance step on their side, so each of them is told. One event per import.
+ */
+export interface GroupMembersAddedEvent {
+	groupId: string;
+	userIds: string[];
+	addedById: string;
+}
+
 export interface RecurringWaitlistedEvent {
 	seriesId: string;
 	userId: string;
@@ -909,6 +919,7 @@ export type DomainEvents = {
 	'equipment.report_resolved': EquipmentReportResolvedEvent;
 	'group_invite.created': GroupInviteCreatedEvent;
 	'group_invite.bulk_created': GroupInvitesBulkCreatedEvent;
+	'group.members_added': GroupMembersAddedEvent;
 	'announcement.published': AnnouncementPublishedEvent;
 	'inbox.message_received': InboxMessageReceivedEvent;
 	'inbox.message_sent': InboxMessageSentEvent;

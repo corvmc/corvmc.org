@@ -3,9 +3,9 @@ import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
 import { NOTIFICATION_TYPES } from '$lib/server/db/schema/notification';
 import { NOTIFICATION_CATEGORIES } from '$lib/email/notification-category';
-import { createNotification } from './in-app-service';
+import { createNotification, createNotifications } from './in-app-service';
 import { getPreference } from './preference-service';
-import { isDeliverable } from './recipient';
+import { isDeliverable, listBatchRecipients } from './recipient';
 import { pushToUser } from './sse';
 import { captureException } from '$lib/server/sentry';
 import { afterResponse } from '$lib/server/after-response';
@@ -214,4 +214,68 @@ export async function dispatchEmailOnlyBatch(
 		type,
 		recipients: batch.length
 	});
+}
+
+/**
+ * `dispatch` for many members and one message: the same preference and
+ * removed-account rules, but one recipient query, batched in-app inserts and
+ * Postmark batch calls of 500, so a roster-sized send is a handful of
+ * subrequests rather than several per member.
+ */
+export async function dispatchBatch(params: {
+	type: string;
+	userIds: string[];
+	title: string;
+	body?: string;
+	href?: string;
+	data?: Record<string, unknown>;
+	/** Shared by every recipient; the greeting is added per member. */
+	email?: Omit<NotificationEmailContent, 'recipientName'>;
+}): Promise<void> {
+	if (params.userIds.length === 0) return;
+	const recipients = await listBatchRecipients(params.userIds, params.type);
+
+	const inApp = recipients.filter((r) => r.inAppEnabled);
+	if (inApp.length > 0) {
+		try {
+			await createNotifications(
+				inApp.map((r) => ({
+					userId: r.userId,
+					type: params.type,
+					title: params.title,
+					body: params.body,
+					href: params.href,
+					data: params.data
+				}))
+			);
+			// The rows carry no ids back; the bell re-fetches on any message.
+			const createdAt = new Date().toISOString();
+			for (const r of inApp) {
+				pushToUser(r.userId, {
+					id: `${params.type}:${r.userId}`,
+					type: params.type,
+					title: params.title,
+					body: params.body ?? null,
+					href: params.href ?? null,
+					createdAt
+				});
+			}
+		} catch (err) {
+			captureException(err, { channel: 'in-app-batch', type: params.type });
+		}
+	}
+
+	const content = params.email;
+	const byEmail = content ? recipients.filter((r) => r.emailEnabled) : [];
+	if (content && byEmail.length > 0) {
+		const batch = byEmail.map((r) => ({
+			to: r.email,
+			model: genericModel({ ...content, recipientName: r.name }, params.type, params.href)
+		}));
+		await afterResponse(() => sendTemplateBatch(GENERIC_ALIAS, batch, { tag: params.type }), {
+			channel: 'email-batch',
+			type: params.type,
+			recipients: batch.length
+		});
+	}
 }

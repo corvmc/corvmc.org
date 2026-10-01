@@ -10,11 +10,13 @@ import { normalizeNotificationModel } from './email/normalize-model';
 const mockDispatch = vi.fn().mockResolvedValue(undefined);
 const mockDispatchEmailOnly = vi.fn().mockResolvedValue(undefined);
 const mockDispatchEmailOnlyBatch = vi.fn().mockResolvedValue(undefined);
+const mockDispatchBatch = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('./dispatcher', () => ({
 	dispatch: (...args: unknown[]) => mockDispatch(...args),
 	dispatchEmailOnly: (...args: unknown[]) => mockDispatchEmailOnly(...args),
-	dispatchEmailOnlyBatch: (...args: unknown[]) => mockDispatchEmailOnlyBatch(...args)
+	dispatchEmailOnlyBatch: (...args: unknown[]) => mockDispatchEmailOnlyBatch(...args),
+	dispatchBatch: (...args: unknown[]) => mockDispatchBatch(...args)
 }));
 
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
@@ -75,6 +77,16 @@ const mockApplicationNotice = vi.fn(async (_groupId: string, _applicantUserId: s
 }));
 vi.mock('$lib/server/group/application-reviewers', () => ({
 	applicationNotice: (g: string, u: string) => mockApplicationNotice(g, u)
+}));
+
+const mockMembersAddedNotice = vi.fn(async (_groupId: string, _addedById: string) => ({
+	groupName: 'Real Book Club',
+	groupSlug: 'real-book-club',
+	groupKind: 'club' as const,
+	addedByName: 'Sam'
+}));
+vi.mock('$lib/server/group/roster-import-service', () => ({
+	membersAddedNotice: (g: string, a: string) => mockMembersAddedNotice(g, a)
 }));
 
 const { registerAllNotificationListeners } = await import('./notification-listeners');
@@ -145,6 +157,7 @@ describe('registerAllNotificationListeners', () => {
 			'band.invitation_accepted',
 			'group_invite.created',
 			'group_invite.bulk_created',
+			'group.members_added',
 			'announcement.published',
 			'reservation.recurring_skipped',
 			'reservation.recurring_waitlisted',
@@ -538,6 +551,32 @@ describe('collapsed listeners use the generic template', () => {
 		]);
 		expect(messages[1].email.cta.url).toBe('/login?invite=tok-b');
 		expect(messages[0].email.paragraphs[0].text).toContain('club Real Book Club');
+	});
+
+	// Added by staff with nothing to accept, so the member hears it from us.
+	it('group.members_added → one batched dispatch to every added member', async () => {
+		await emit('group.members_added', {
+			groupId: 'club-1',
+			userIds: ['u-1', 'u-2'],
+			addedById: 'staff-1'
+		});
+
+		expect(mockMembersAddedNotice).toHaveBeenCalledWith('club-1', 'staff-1');
+		expect(mockDispatchBatch).toHaveBeenCalledTimes(1);
+		expect(mockDispatch).not.toHaveBeenCalled();
+		const params = mockDispatchBatch.mock.calls[0][0];
+		expect(params.type).toBe('group_member_added');
+		expect(params.userIds).toEqual(['u-1', 'u-2']);
+		expect(params.title).toBe("You've been added to Real Book Club");
+		expect(params.href).toBe('/member/groups/real-book-club');
+		expect(params.email.subject).toContain('Real Book Club');
+		expect(params.email.paragraphs[0].text).toContain('Sam added you to the club Real Book Club');
+	});
+
+	it('group.members_added → nothing when the group is gone', async () => {
+		mockMembersAddedNotice.mockResolvedValueOnce(null as never);
+		await emit('group.members_added', { groupId: 'x', userIds: ['u-1'], addedById: 's' });
+		expect(mockDispatchBatch).not.toHaveBeenCalled();
 	});
 
 	const contactFormEvent = {

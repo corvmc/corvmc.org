@@ -309,6 +309,17 @@ export async function importRoster(
 	if (statements.length > 0) {
 		// `db.batch`, never `db.transaction()`: the import lands whole or not at all.
 		const results = (await db.batch(statements as [Statement, ...Statement[]])) as unknown[];
+		if (addedUserIds.length > 0) {
+			try {
+				await domainEvents.emit('group.members_added', {
+					groupId,
+					userIds: addedUserIds,
+					addedById: actor.id
+				});
+			} catch (err) {
+				captureException(err, { event: 'group.members_added', groupId });
+			}
+		}
 		const invites = inviteIndex.flatMap((i) => results[i] as { email: string; token: string }[]);
 		if (invites.length > 0) {
 			try {
@@ -339,4 +350,20 @@ export async function importRoster(
 	});
 
 	return result;
+}
+
+/** What the "you've been added" notification names: the group, and who added them. */
+export async function membersAddedNotice(groupId: string, addedById: string) {
+	const [row] = await db
+		.select({ groupName: group.name, groupSlug: group.slug, groupKind: group.kind })
+		.from(group)
+		.where(and(eq(group.id, groupId), isNull(group.deletedAt)))
+		.limit(1);
+	if (!row) return null;
+	const [adder] = await db
+		.select({ name: user.name })
+		.from(user)
+		.where(eq(user.id, addedById))
+		.limit(1);
+	return { ...row, addedByName: adder?.name ?? 'CorvMC staff' };
 }
