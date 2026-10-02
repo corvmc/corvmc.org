@@ -23,7 +23,8 @@ export const auditActions = [
 	'incident.deleted',
 	'capability.grants_changed',
 	'ballot.elector_overridden',
-	'group.roster_imported'
+	'group.roster_imported',
+	'group.role_changed'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -87,6 +88,13 @@ export interface AuditDetailsByAction {
 		alreadyMembers: number;
 		alreadyInvited: number;
 		invalid: number;
+	};
+	/** Staff making a program member a chair (`admin`) or not; `added` when they joined by it. */
+	'group.role_changed': {
+		userId: string;
+		memberName: string;
+		role: 'admin' | 'member';
+		added: boolean;
 	};
 }
 

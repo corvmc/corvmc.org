@@ -46,7 +46,8 @@ export async function insertBandWithOwner(
 	await db.insert(groupMember).values({
 		groupId: b.id,
 		userId: ownerId,
-		role: 'owner',
+		// A club or committee gets a chair (admin): programs never have an owner.
+		role: (values.kind ?? 'band') === 'band' ? 'owner' : 'admin',
 		position: position ?? null,
 		status: 'active'
 	});

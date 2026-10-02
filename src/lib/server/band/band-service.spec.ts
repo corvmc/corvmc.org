@@ -437,6 +437,20 @@ describe('BandService', () => {
 			expect(ownerRows[0].values.status).toBe('active');
 			expect(ownerRows[0].values.groupId).toBe(bandRows[0].values.id);
 		});
+
+		// A club or committee has chairs (admins), never an owner (#1760).
+		it.each(['club', 'committee'] as const)(
+			'writes a %s’s first member as an admin, not an owner',
+			async (kind) => {
+				selectResult = [{ ...mockBand, kind }];
+
+				await create('user-chair', { name: 'Real Book Club', kind });
+
+				const rows = writes.filter((w) => w.table === 'group_member' && w.op === 'insert');
+				expect(rows).toHaveLength(1);
+				expect(rows[0].values).toMatchObject({ userId: 'user-chair', role: 'admin' });
+			}
+		);
 	});
 
 	// -----------------------------------------------------------------------

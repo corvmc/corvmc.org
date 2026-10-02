@@ -149,7 +149,6 @@
 	"src/lib/components/directory/profile/ContactForm.svelte",
 	"src/lib/components/groups/AnnouncementComposer.svelte",
 	"src/lib/components/groups/AnnouncementList.svelte",
-	"src/lib/components/groups/AssignLeaderAction.svelte",
 	"src/lib/components/groups/CreateSessionAction.svelte",
 	"src/lib/components/groups/DocumentList.svelte",
 	"src/lib/components/groups/DocumentUploadAction.svelte",

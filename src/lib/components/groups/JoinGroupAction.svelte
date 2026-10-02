@@ -97,7 +97,7 @@
 				{/if}
 				<FormField field={applyForm.fields.note} type="textarea" label={notePrompt} />
 				<p class="text-subtle">
-					The group's leaders will see your application and answer it. You are not a member until
+					The group's chairs will see your application and answer it. You are not a member until
 					they invite you and you accept.
 				</p>
 			</div>

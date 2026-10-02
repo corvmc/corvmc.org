@@ -49,7 +49,7 @@ const svc = vi.hoisted(() => ({
 	getGroupDetail: vi.fn(),
 	createGroup: vi.fn(),
 	updateGroupSettings: vi.fn(),
-	assignLeader: vi.fn(),
+	setChairRole: vi.fn(),
 	deactivate: vi.fn(),
 	reactivate: vi.fn(),
 	setCommitteeCapabilityGrants: vi.fn(),
@@ -157,7 +157,12 @@ const EXPORTS = [
 		'group.manage',
 		svc.updateGroupSettings
 	],
-	['assignGroupLeader', { groupId: 'group-1', userId: 'user-9' }, 'group.manage', svc.assignLeader],
+	[
+		'setStaffGroupRole',
+		{ groupId: 'group-1', userId: 'user-9', role: 'admin' },
+		'group.manage',
+		svc.setChairRole
+	],
 	['deactivateGroup', { groupId: 'group-1' }, 'group.manage', svc.deactivate],
 	['reactivateGroup', { groupId: 'group-1' }, 'group.manage', svc.reactivate],
 	[
@@ -260,6 +265,24 @@ describe.each(EXPORTS)('%s', (name, input, cap, service) => {
 			'technology_coordinator+volunteer_coordinator+site_moderator+treasurer'
 		);
 		expect(narrowed).toHaveLength(15);
+	});
+});
+
+// Programs have chairs (admins), never an owner (#1760).
+describe('setStaffGroupRole', () => {
+	it.each(['admin', 'member'] as const)(
+		'hands %s to the service, scoped to the group',
+		async (role) => {
+			await groups.setStaffGroupRole({ groupId: 'group-1', userId: 'user-9', role });
+			expect(svc.setChairRole).toHaveBeenCalledWith('group-1', 'user-9', role);
+		}
+	);
+
+	it('refuses owner before reaching the service', async () => {
+		await expect(
+			groups.setStaffGroupRole({ groupId: 'group-1', userId: 'user-9', role: 'owner' })
+		).rejects.toThrow();
+		expect(svc.setChairRole).not.toHaveBeenCalled();
 	});
 });
 

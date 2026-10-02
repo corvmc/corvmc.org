@@ -87,5 +87,12 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const d = entry.details;
 			return `Imported a roster list: ${plural(d.added, 'member')} added, ${plural(d.invited, 'invitation')} sent`;
 		}
+		case 'group.role_changed': {
+			const d = entry.details;
+			if (d.role === 'member') return `Removed ${d.memberName} as a chair`;
+			return d.added
+				? `Added ${d.memberName} to the roster as a chair`
+				: `Made ${d.memberName} a chair`;
+		}
 	}
 }

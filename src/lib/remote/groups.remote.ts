@@ -30,7 +30,6 @@ import {
 	removeMember as removeMemberService,
 	revokeInvitation as revokeInvitationService,
 	searchMembers as searchMembersService,
-	transferOwnership as transferOwnershipService,
 	updateMember,
 	updateOwnMembership,
 	BandMemberExistsError
@@ -60,7 +59,6 @@ import { listMaintenanceSchedules } from '$lib/server/volunteer/maintenance-sche
 import { list as listFiles, getUsage as getDocumentUsage } from '$lib/server/group/file-service';
 import {
 	STAFF_GROUP_KINDS,
-	assignLeader,
 	createGroup,
 	deactivate,
 	getGroupDetail,
@@ -72,6 +70,7 @@ import {
 	listMemberGroups,
 	listPublicGroups,
 	reactivate,
+	setChairRole,
 	updateGroupProfile,
 	updateGroupSettings
 } from '$lib/server/group/group-service';
@@ -188,9 +187,8 @@ export const createStaffGroup = form(
 		kind: staffKind,
 		name: z.string().trim().min(1, 'Name is required').max(SHORT_TEXT_MAX),
 		bio: z.string().trim().max(LONG_TEXT_MAX).optional().default(''),
-		// Optional: a committee exists before the board appoints its chair, and an
-		// ownerless group is legal. `assignGroupLeader` fills the seat later.
-		leaderId: z.string().optional(),
+		// Optional: a program with no chair is legal. `setStaffGroupRole` adds one later.
+		chairId: z.string().optional(),
 		// Asked here rather than left to the column defaults. A group born
 		// `invite_only` with a `public` listing is advertised and unjoinable, and
 		// nothing said a second step was outstanding — #1106.
@@ -205,7 +203,7 @@ export const createStaffGroup = form(
 				kind: data.kind,
 				name: data.name,
 				bio: data.bio || undefined,
-				leaderId: data.leaderId || null,
+				chairId: data.chairId || null,
 				joinPolicy: data.joinPolicy,
 				joinInstructions: data.joinInstructions || null,
 				visibility: data.visibility
@@ -257,19 +255,20 @@ export const setCommitteeGrants = form(
 );
 
 /**
- * Appoint, or re-appoint, the member who runs this program.
- *
- * Distinct from a band's `transferOwner`: that is an owner handing their band
- * on, scoped to their own row. A program leader who has gone quiet cannot be the
- * one to name their replacement, so this needs no participation from whoever
- * holds the seat.
+ * Make a club or committee member a chair (`admin`), or take it away. Adding a
+ * chair who is not on the roster puts them on it, active. Programs have no
+ * owner, so `owner` is not a value this accepts.
  */
-export const assignGroupLeader = form(
-	z.object({ groupId: z.string().min(1), userId: z.string().min(1, 'Pick a member') }),
+export const setStaffGroupRole = form(
+	z.object({
+		groupId: z.string().min(1),
+		userId: z.string().min(1, 'Pick a member'),
+		role: z.enum(['admin', 'member'])
+	}),
 	async (data) => {
 		await requireCapability('group.manage');
 		try {
-			await assignLeader(data.groupId, data.userId);
+			await setChairRole(data.groupId, data.userId, data.role);
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
@@ -283,7 +282,7 @@ const ROSTER_CSV_MAX_BYTES = 2_000_000;
 /**
  * Turn a mailing list into club or committee membership. Accounts are added
  * active with no acceptance step, which is why this is `group.manage`'s alone
- * and not a leader's: it puts people on a roster without asking them.
+ * and not a chair's: it puts people on a roster without asking them.
  */
 export const importStaffGroupRoster = form(
 	z.object({
@@ -594,7 +593,7 @@ export const leaveGroupForm = form(z.object({ groupId: z.string().min(1) }), asy
 });
 
 // ---------------------------------------------------------------------------
-// Member — the roster a leader runs
+// Member — the roster a chair runs
 // ---------------------------------------------------------------------------
 //
 // The writes underneath are `band-service`'s and were already kind-agnostic —
@@ -661,7 +660,7 @@ export const inviteGroupByEmail = form(
 
 export const revokeGroupInvitation = form(memberRef, async (data) => {
 	// Scoped to the resolved group: the member id is the client's, and a
-	// leader's authority stops at their own roster.
+	// chair's authority stops at their own roster.
 	const { group } = await requireProgramRole({ slug: data.slug }, 'admin');
 	try {
 		await revokeInvitationService(data.memberId, group.id);
@@ -695,11 +694,11 @@ export const removeGroupMember = form(memberRef, async (data) => {
 });
 
 /**
- * A leader editing somebody else's row: their role, and the group's word for
+ * A chair editing somebody else's row: their role, and the group's word for
  * what they do.
  *
  * No `alias`, matching `updateMemberRemote`: a stage name is
- * self-identification, and a leader cannot rename someone.
+ * self-identification, and a chair cannot rename someone.
  */
 export const updateGroupMember = form(
 	memberRef.extend({
@@ -725,44 +724,20 @@ export const updateGroupMember = form(
 );
 
 /**
- * A member editing their own row: their stage name, and what they do here.
+ * A member editing their own row: their stage name, and nothing else.
  *
- * The counterpart to `updateGroupMember`, which cannot set `alias` — without
- * this the rule was enforced and the thing it protects did not exist. No
- * `memberId`: the row comes from the guard's unique `(group.id, user.id)`,
- * because keying a self-edit on a caller's id is how one member edits another.
+ * No `position`: in a program it is assigned by a chair (`updateGroupMember`)
+ * or staff, never self-set. No `memberId`: the row comes from the guard's
+ * unique `(group.id, user.id)`, so a caller cannot name someone else's row.
  */
 export const updateMyGroupMembership = form(
-	rosterRef.extend({
-		alias: z.string().trim().max(100).optional(),
-		position: z.string().trim().max(100).optional()
-	}),
+	rosterRef.extend({ alias: z.string().trim().max(100).optional() }),
 	async (data) => {
 		const { user, group } = await requireProgramRole({ slug: data.slug }, 'member');
 		try {
 			await updateOwnMembership(group.id, user.id, {
-				alias: data.alias !== undefined ? data.alias || null : undefined,
-				position: data.position !== undefined ? data.position || null : undefined
+				alias: data.alias !== undefined ? data.alias || null : undefined
 			});
-			return { success: true };
-		} catch (err) {
-			mapDomainError(err);
-		}
-	}
-);
-
-/**
- * A leader handing the program on, scoped to their own seat.
- *
- * Distinct from `assignGroupLeader`, which is staff appointing over the head of
- * whoever holds it. `owner`, because only the outgoing owner can do this.
- */
-export const transferGroupOwner = form(
-	rosterRef.extend({ newOwnerId: z.string().min(1) }),
-	async (data) => {
-		const { user, group } = await requireProgramRole({ slug: data.slug }, 'owner');
-		try {
-			await transferOwnershipService(group.id, data.newOwnerId, user.id);
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
@@ -801,7 +776,7 @@ export const declineGroupInvite = form(z.object({ groupId: z.string().min(1) }),
 // ---------------------------------------------------------------------------
 
 /**
- * The leader's editor: what a program's own owner or admin may change.
+ * The chairs' editor: what a program's own admins may change.
  *
  * `joinPolicy` and `visibility` come back read-only. They decide who may walk
  * in and whether the program is advertised, and the spec's argument for free

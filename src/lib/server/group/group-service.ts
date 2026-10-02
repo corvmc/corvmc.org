@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { db } from '$lib/server/db';
@@ -6,6 +6,8 @@ import { group, groupMember } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
+import type { MemberRef } from '$lib/types/entity';
 import { create as createGroupRow, deactivate, reactivate } from '$lib/server/band/band-service';
 import { sanitizeBio } from '$lib/utils/markdown';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
@@ -25,13 +27,13 @@ import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
  * | | `band` | `club`, `committee` |
  * | --- | --- | --- |
  * | Created by | any member, self-service | **staff only**, from `/staff/clubs` |
- * | Owner | the creator | **appointed by staff** |
+ * | Run by | one owner, the creator | **chairs**: any number of admins, staff-appointed |
  * | Deleted by | its owner | staff only |
  * | Join policy | always `invite_only` | any of the three |
  *
  * The existence of the row *is* the sanction: staff created it and staff
- * appointed whoever runs it. That is what makes free room time (phase 9) safe to
- * grant by kind — the abuse case, spin up a fake club and collect free room
+ * appoint its chairs; a program never has an `owner` row. That is what makes
+ * free room time (phase 9) safe to grant by kind — the abuse case, spin up a fake club and collect free room
  * time, is closed structurally rather than by a check someone has to remember.
  *
  * See docs/specs/shipped/groups-spec.md.
@@ -47,15 +49,6 @@ export class NotAStaffGroupError extends DomainError {
 	constructor() {
 		super('Bands are created by their own members, not from the staff panel.');
 		this.name = 'NotAStaffGroupError';
-	}
-}
-
-export class LeaderNotFoundError extends DomainError {
-	readonly httpStatus = 422;
-
-	constructor() {
-		super('Pick a member to lead this group.');
-		this.name = 'LeaderNotFoundError';
 	}
 }
 
@@ -95,7 +88,37 @@ export class GroupNotFoundError extends DomainError {
 	}
 }
 
-const ownerMember = alias(groupMember, 'group_owner_member');
+export class NotOnRosterError extends DomainError {
+	readonly httpStatus = 404;
+
+	constructor() {
+		super('That member is not on this roster.');
+		this.name = 'NotOnRosterError';
+	}
+}
+
+/**
+ * Each group's chairs: its active admins, by name. One read for a whole page
+ * of groups. A program with none is legal and maps to an empty list.
+ */
+async function chairsByGroup(groupIds: string[]): Promise<Map<string, MemberRef[]>> {
+	const chairs = new Map<string, MemberRef[]>(groupIds.map((id) => [id, []]));
+	if (groupIds.length === 0) return chairs;
+	const rows = await db
+		.select({ groupId: groupMember.groupId, chair: memberRefColumns() })
+		.from(groupMember)
+		.innerJoin(user, eq(user.id, groupMember.userId))
+		.where(
+			and(
+				inArray(groupMember.groupId, groupIds),
+				eq(groupMember.role, 'admin'),
+				eq(groupMember.status, 'active')
+			)
+		)
+		.orderBy(user.name, user.id);
+	for (const r of rows) chairs.get(r.groupId)?.push(toMemberRef(r.chair));
+	return chairs;
+}
 
 /**
  * The staff group detail read.
@@ -105,7 +128,7 @@ const ownerMember = alias(groupMember, 'group_owner_member');
  * pair that decides how the program is found and joined: `joinPolicy` from the
  * group, and `visibility` from its listing.
  *
- * Both joins are LEFT. An ownerless group is legal, and a group whose entry went
+ * The entry join is LEFT: a group whose entry went
  * missing is exactly the one staff need to be able to open — an inner join would
  * empty the page of a program that plainly exists.
  */
@@ -122,29 +145,19 @@ export async function getGroupDetail(groupId: string) {
 			joinInstructions: group.joinInstructions,
 			capabilityGrants: groupGrantsColumn(),
 			visibility: directoryEntry.visibility,
-			ownerId: ownerMember.userId,
-			owner: memberRefColumns(),
 			createdAt: group.createdAt,
 			updatedAt: group.updatedAt,
 			deletedAt: group.deletedAt,
 			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`
 		})
 		.from(group)
-		.leftJoin(
-			ownerMember,
-			and(
-				eq(ownerMember.groupId, group.id),
-				eq(ownerMember.role, 'owner'),
-				eq(ownerMember.status, 'active')
-			)
-		)
-		.leftJoin(user, eq(user.id, ownerMember.userId))
 		.leftJoin(directoryEntry, eq(directoryEntry.groupId, group.id))
 		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
 		.where(eq(group.id, groupId))
 		.groupBy(group.id);
 
 	if (!row) return null;
+	const chairs = await chairsByGroup([row.id]);
 	return {
 		...row,
 		// A group with no entry has no visibility to read. That should be
@@ -152,7 +165,7 @@ export async function getGroupDetail(groupId: string) {
 		// hidden is the safe direction: it withholds a listing rather than
 		// publishing one nobody chose to publish.
 		visibility: row.visibility ?? ('hidden' as const),
-		owner: toMemberRef(row.owner)
+		chairs: chairs.get(row.id) ?? []
 	};
 }
 
@@ -166,7 +179,7 @@ export async function getGroupDetail(groupId: string) {
  * would leave a band-shaped ref sitting in a group query's payload for the next
  * person to trust.
  *
- * So this selects what a program list needs — kind and leader, no tier — and the
+ * So this selects what a program list needs — kind and chairs, no tier — and the
  * page renders the name itself.
  */
 export async function listGroups(
@@ -189,8 +202,6 @@ export async function listGroups(
 			slug: group.slug,
 			avatarKey: group.avatarKey,
 			joinPolicy: group.joinPolicy,
-			ownerId: ownerMember.userId,
-			owner: memberRefColumns(),
 			createdAt: group.createdAt,
 			deletedAt: group.deletedAt,
 			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`,
@@ -198,17 +209,6 @@ export async function listGroups(
 			openApplications: openApplicationCount(group.id)
 		})
 		.from(group)
-		// LEFT, like the band list's: a program with an empty owner seat is legal,
-		// and this page is precisely where staff are meant to see one.
-		.leftJoin(
-			ownerMember,
-			and(
-				eq(ownerMember.groupId, group.id),
-				eq(ownerMember.role, 'owner'),
-				eq(ownerMember.status, 'active')
-			)
-		)
-		.leftJoin(user, eq(user.id, ownerMember.userId))
 		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
 		.where(where)
 		.groupBy(group.id)
@@ -221,10 +221,11 @@ export async function listGroups(
 		.where(where);
 
 	const { rows, pagination: page } = await paginate(dataQ, countQ, pagination);
+	const chairs = await chairsByGroup(rows.map((r) => r.id));
 	return {
 		rows: rows.map((r) => ({
 			...r,
-			owner: toMemberRef(r.owner),
+			chairs: chairs.get(r.id) ?? [],
 			openApplications: Number(r.openApplications ?? 0)
 		})),
 		pagination: page
@@ -389,10 +390,10 @@ export interface CreateGroupData {
 	name: string;
 	bio?: string;
 	/**
-	 * The member who will run it. Appointed, not invited — see `assignLeader`.
-	 * Omitted leaves the group headless, which is the committee case.
+	 * Its first chair, added as an active admin: appointed, not invited.
+	 * Omitted leaves it with no chair, which is legal; `setChairRole` adds one.
 	 */
-	leaderId?: string | null;
+	chairId?: string | null;
 	/**
 	 * Set at creation, so a program is never briefly listed and unjoinable. Both
 	 * stay staff's for its life — `updateGroupSettings` is the other writer.
@@ -402,27 +403,14 @@ export interface CreateGroupData {
 	visibility: DirectoryVisibility;
 }
 
-/**
- * Create a club or committee, with or without a leader.
- *
- * An appointed leader never had to opt in: staff are recording an arrangement
- * that already exists offline, so the owner row lands `active` with nothing to
- * accept. They can leave or hand off afterwards like any owner.
- */
-// Headless is legal and is the committee case: the six exist before the board
-// has appointed their chairs, and `assignLeader` fills the seat later — it
-// already treats an empty one as normal. A club should normally name its lead,
-// but nothing here enforces that; the form asks, and the model does not care.
+/** Create a club or committee, with or without a first chair. */
 export async function createGroup(data: CreateGroupData) {
 	if (!STAFF_GROUP_KINDS.includes(data.kind)) throw new NotAStaffGroupError();
 
-	// `create` writes the group, the owner row and the directory entry in one
-	// batch, and skips the `band_site` row for a non-band kind. The leader is the
-	// owner from the first write rather than a second one, so there is no window
-	// in which the group exists with an empty owner seat.
-	// `|| null`, not `??`: a blank form field arrives as an empty string, and
-	// `''` is a userId nothing matches rather than a headless group.
-	return createGroupRow(data.leaderId || null, {
+	// `create` writes the group, the first roster row and the directory entry in
+	// one batch; for a non-band kind that row is `admin`, never `owner`.
+	// `|| null`, not `??`: a blank form field arrives as an empty string.
+	return createGroupRow(data.chairId || null, {
 		kind: data.kind,
 		name: data.name,
 		bio: data.bio,
@@ -439,7 +427,7 @@ export interface UpdateGroupProfile {
 }
 
 /**
- * What a program's own leader may change about it.
+ * What a program's own chairs may change about it.
  *
  * Deliberately not `joinPolicy` or `visibility`: those decide who may walk in
  * and whether the program is advertised, and the spec's own argument for free
@@ -518,56 +506,52 @@ export async function updateGroupSettings(groupId: string, settings: UpdateGroup
 }
 
 /**
- * Move the owner seat, with no participation from whoever holds it.
- *
- * This is what makes it distinct from `transferOwnership`, which is an owner
- * handing the group on and is scoped to the acting owner's own row. A program
- * leader who has gone quiet cannot be the one to name their replacement, so the
- * staff path demotes whoever is there — if anyone is — and promotes the
- * appointee.
- *
- * The appointee may not be on the roster at all, so this inserts when they are
- * not. The partial unique index on `(groupId) WHERE role = 'owner'` is what
- * makes the demote-then-promote order load-bearing: promoting first would
- * momentarily give the group two owner rows and be refused.
+ * Staff make a program member a chair (`admin`) or take it away (`member`).
+ * Adding a chair who is not on the roster inserts them active: appointed, not
+ * invited. Demoting someone who is not on it is a 404. Never writes `owner`.
  */
-export async function assignLeader(groupId: string, userId: string) {
-	const [row] = await db.select({ id: group.id }).from(group).where(eq(group.id, groupId)).limit(1);
-	if (!row) throw new GroupNotFoundError();
+export async function setChairRole(groupId: string, userId: string, role: 'admin' | 'member') {
+	const [target] = await db
+		.select({ id: group.id, kind: group.kind, name: group.name })
+		.from(group)
+		.where(eq(group.id, groupId))
+		.limit(1);
+	if (!target) throw new GroupNotFoundError();
+	if (!(STAFF_GROUP_KINDS as readonly string[]).includes(target.kind)) {
+		throw new NotAStaffGroupError();
+	}
 
 	const [existing] = await db
-		.select({ id: groupMember.id, role: groupMember.role })
+		.select({ id: groupMember.id, role: groupMember.role, name: user.name })
 		.from(groupMember)
+		.innerJoin(user, eq(user.id, groupMember.userId))
 		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)))
 		.limit(1);
 
-	await db.batch([
-		// Demote the incumbent, if there is one. An ownerless group is legal — a
-		// program whose leader stepped down and whose replacement has not been
-		// appointed — so this matching nothing is a normal outcome, not a failure.
-		db
+	let memberName = existing?.name ?? null;
+	if (existing) {
+		if (existing.role === role) return;
+		await db
 			.update(groupMember)
-			.set({ role: 'admin', updatedAt: new Date() })
-			.where(
-				and(
-					eq(groupMember.groupId, groupId),
-					eq(groupMember.role, 'owner'),
-					ne(groupMember.userId, userId)
-				)
-			),
-		existing
-			? db
-					.update(groupMember)
-					.set({ role: 'owner', status: 'active', updatedAt: new Date() })
-					.where(eq(groupMember.id, existing.id))
-			: db.insert(groupMember).values({
-					groupId,
-					userId,
-					role: 'owner',
-					// Appointed, not invited: there is nothing for them to accept.
-					status: 'active'
-				})
-	]);
+			.set({ role, updatedAt: new Date() })
+			.where(eq(groupMember.id, existing.id));
+	} else {
+		if (role !== 'admin') throw new NotOnRosterError();
+		const [person] = await db
+			.select({ name: user.name })
+			.from(user)
+			.where(eq(user.id, userId))
+			.limit(1);
+		if (!person) throw new NotOnRosterError();
+		memberName = person.name;
+		await db.insert(groupMember).values({ groupId, userId, role, status: 'active' });
+	}
+
+	await recordAuditEntry({
+		action: 'group.role_changed',
+		subject: { type: 'group', id: groupId, label: target.name },
+		details: { userId, memberName: memberName ?? 'Unknown member', role, added: !existing }
+	});
 }
 
 /**
@@ -619,13 +603,13 @@ export async function joinGroup(groupId: string, userId: string) {
 /**
  * Leave a program.
  *
- * **A program leader may leave without naming a successor**, and this is the one
+ * **A program chair may leave without naming a successor**, and this is the one
  * place programs and bands diverge on leaving. A band owner must transfer first,
- * because nobody's job it is to pick up an orphaned band. A program leader was
+ * because nobody's job it is to pick up an orphaned band. A program chair was
  * *appointed*, and the body that appointed them is still there — so "find your
  * own replacement" would trap someone in a volunteer role they have already said
- * they are done with. The seat goes empty, `/staff/clubs` flags it, and the
- * program keeps running: nothing about it depends on the owner row existing.
+ * they are done with. The program keeps running with whatever chairs remain,
+ * none included: staff appoint more from its staff page.
  */
 export async function leaveGroup(groupId: string, userId: string) {
 	// No owner check, deliberately — see above. `leaveBand` has one and keeps it.
@@ -643,7 +627,7 @@ export async function leaveGroup(groupId: string, userId: string) {
 
 /**
  * Ending a program is staff's call, and it is a deactivation rather than a
- * delete. An appointed leader runs the program; they do not own it, which is the
+ * delete. An appointed chair runs the program; they do not own it, which is the
  * same reason they could not create it.
  *
  * Re-exported rather than reimplemented — a group's soft delete is the same

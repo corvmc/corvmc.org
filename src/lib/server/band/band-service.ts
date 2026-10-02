@@ -267,7 +267,8 @@ export async function create(ownerId: string | null, data: CreateBandData) {
 					db.insert(groupMember).values({
 						groupId: bandId,
 						userId: ownerId,
-						role: 'owner',
+						// A club or committee has chairs (admins) and never an owner.
+						role: kind === 'band' ? 'owner' : 'admin',
 						status: 'active'
 					})
 				]

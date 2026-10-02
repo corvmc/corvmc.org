@@ -4,23 +4,16 @@
 	import { updateMyGroupMembership } from '$lib/remote/groups.remote';
 
 	/**
-	 * A member editing their own row: their stage name, and what they do here.
-	 *
-	 * The counterpart to `GroupMemberEditAction`, which carries `role` and not
-	 * `alias` for the same reason this carries `alias` and not `role`.
+	 * A member editing their own row: their stage name only. Role and position
+	 * are a chair's to set, through `GroupMemberEditAction`.
 	 */
 	let {
 		slug,
 		alias,
-		position,
-		kindLabel,
 		onchanged
 	}: {
 		slug: string;
 		alias: string | null;
-		position: string | null;
-		/** `club` or `committee` — only the position placeholder reads it. */
-		kindLabel: string;
 		onchanged: () => void;
 	} = $props();
 
@@ -46,16 +39,7 @@
 				label="Display name"
 				value={alias ?? ''}
 				maxlength="100"
-				description="How you're credited on this roster. Leave blank to use your account name."
-			/>
-			<FormField
-				field={fields.position}
-				type="text"
-				label="Position"
-				value={position ?? ''}
-				maxlength="100"
-				placeholder="e.g. {kindLabel === 'committee' ? 'Secretary' : 'Chart librarian'}"
-				description="What you do here. A leader can change this too."
+				description="How you're credited on this roster. Leave blank to use your account name. A chair sets your position."
 			/>
 		</div>
 	{/snippet}

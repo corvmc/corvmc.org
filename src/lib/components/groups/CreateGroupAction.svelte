@@ -10,10 +10,9 @@
 	/**
 	 * The only door a club or committee comes through.
 	 *
-	 * A leader is picked here rather than invited: staff are recording an
-	 * arrangement that exists offline, so the owner row lands active with
-	 * nothing to accept. **Optional since #607** — a committee exists before the
-	 * board appoints a chair, and `assignGroupLeader` fills the seat later.
+	 * A first chair is picked here rather than invited: staff are recording an
+	 * arrangement that exists offline, so they land as an active admin with
+	 * nothing to accept. Optional: more chairs are added from the group's page.
 	 */
 	// Synchronous script: `fields` is read at module scope, and the page above
 	// holds the awaited query.
@@ -22,7 +21,7 @@
 	/** Which kind the form starts on: the page it is opened from. */
 	let { kind = 'club' }: { kind?: 'club' | 'committee' } = $props();
 
-	let leader = $state<{ id: string; name: string; email: string } | null>(null);
+	let chair = $state<{ id: string; name: string; email: string } | null>(null);
 
 	const kindOptions = [
 		{ value: 'club', label: 'Club' },
@@ -33,7 +32,7 @@
 	const policyOptions = [
 		{ value: 'invite_only', label: 'Invite only — someone adds you' },
 		{ value: 'open', label: 'Open — any member joins themselves' },
-		{ value: 'by_application', label: 'By application — you ask, a leader approves' }
+		{ value: 'by_application', label: 'By application — you ask, a chair approves' }
 	];
 
 	const visibilityOptions = [
@@ -107,7 +106,7 @@
 					type="textarea"
 					label="How it works"
 					placeholder="Third Thursday, 7pm. Bring a horn; charts provided."
-					description="Shown beside the Join button. The leader can change it later."
+					description="Shown beside the Join button. A chair can change it later."
 				/>
 			{/if}
 
@@ -122,18 +121,18 @@
 
 			<!-- `FormField` with the remote field, not a raw fieldset with a plain
 			     `name`: a remote form encodes its own field names, so the hidden
-			     input arrived as nothing and Zod rejected `leaderId` with no
+			     input arrived as nothing and Zod rejected the field with no
 			     control to render the issue against — a toast about highlighted
 			     fields, and nothing highlighted (#1019). -->
 			<FormField
-				name="leaderId"
-				label="Leader"
-				description="They become the owner immediately — there is nothing for them to accept. Leave it empty for a committee the board has not appointed a chair to yet; assign one later from the group's page."
+				name="chairId"
+				label="Chair"
+				description="They become a chair immediately — there is nothing for them to accept. Leave it empty if nobody is appointed yet; add chairs later from the group's page."
 			>
 				<SearchSelect
 					search={searchMembers}
-					bind:value={leader}
-					field={fields.leaderId}
+					bind:value={chair}
+					field={fields.chairId}
 					placeholder="Search by name or email..."
 				/>
 			</FormField>
