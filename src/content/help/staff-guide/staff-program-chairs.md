@@ -4,7 +4,6 @@ slug: staff-program-chairs
 category: staff-guide
 summary: Who runs a club or committee, and how staff add or remove its chairs.
 minRole: staff
-capabilities: group.manage
 sortOrder: 23
 ---
 
