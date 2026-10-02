@@ -2,10 +2,9 @@
 --
 -- Written as SQL rather than through `/staff/groups` because the same six rows
 -- have to land identically and a form filled in six times does not guarantee
--- that. It replicates `createGroup`'s batch exactly, minus the owner row:
+-- that. It replicates `createGroup`'s batch exactly, minus a first chair:
 -- the `group`, its `directory_entry`, and nothing else. `band_site` is bands
--- only and the owner row is what "headless" means -- `assignLeader` fills the
--- seat when the board appoints a chair.
+-- only; staff add chairs (admins) from the committee's page once appointed.
 --
 -- Idempotent on the slug, so a re-run writes nothing.
 --

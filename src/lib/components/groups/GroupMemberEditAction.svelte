@@ -4,10 +4,10 @@
 	import { updateGroupMember } from '$lib/remote/groups.remote';
 
 	/**
-	 * A leader editing another member's role and what they do here.
+	 * A chair editing another member's role and what they do here.
 	 *
 	 * No alias, matching the band side: a stage name is self-identification and
-	 * a leader cannot rename someone.
+	 * a chair cannot rename someone.
 	 */
 	let {
 		slug,

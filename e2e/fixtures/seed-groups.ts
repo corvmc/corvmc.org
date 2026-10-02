@@ -224,59 +224,59 @@ export async function seedGroups(): Promise<void> {
 		);
 
 		await db.insert(groupMember).values([
-			// The staff user leads the club, so the detail page has an owner to
-			// render and the "no leader" branch is not the only one exercised.
+			// The staff user chairs the club, so the detail page has a chair to
+			// render and the "No chairs" branch is not the only one exercised.
 			{
-				id: `${SEED_CLUB_ID}-owner`,
+				id: `${SEED_CLUB_ID}-chair`,
 				groupId: SEED_CLUB_ID,
 				userId: SEED_STAFF_ID,
-				role: 'owner',
+				role: 'admin',
 				status: 'active'
 			},
 			{
-				id: `${SEED_COMMITTEE_ID}-owner`,
+				id: `${SEED_COMMITTEE_ID}-chair`,
 				groupId: SEED_COMMITTEE_ID,
 				userId: SEED_STAFF_ID,
-				role: 'owner',
+				role: 'admin',
 				status: 'active'
 			},
-			// The two the member specs write to get a leader as well, so their
+			// The two the member specs write to get a chair as well, so their
 			// rosters are not empty and the pages have something to render either
 			// side of the change under test.
 			{
-				id: `${SEED_JOINABLE_ID}-owner`,
+				id: `${SEED_JOINABLE_ID}-chair`,
 				groupId: SEED_JOINABLE_ID,
 				userId: SEED_STAFF_ID,
-				role: 'owner',
+				role: 'admin',
 				status: 'active'
 			},
 			{
-				id: `${SEED_APPLY_ID}-owner`,
+				id: `${SEED_APPLY_ID}-chair`,
 				groupId: SEED_APPLY_ID,
 				userId: SEED_STAFF_ID,
-				role: 'owner',
+				role: 'admin',
 				status: 'active'
 			},
 			{
-				id: `${SEED_APPLY_CLUB_ID}-owner`,
+				id: `${SEED_APPLY_CLUB_ID}-chair`,
 				groupId: SEED_APPLY_CLUB_ID,
 				userId: SEED_STAFF_ID,
-				role: 'owner',
+				role: 'admin',
 				status: 'active'
 			},
 			// The two announcement groups, and the whole point is the role.
 			{
-				id: `${SEED_LED_ID}-owner`,
+				id: `${SEED_LED_ID}-chair`,
 				groupId: SEED_LED_ID,
 				userId: SEED_BANDMATE_ID,
-				role: 'owner',
+				role: 'admin',
 				status: 'active'
 			},
 			{
-				id: `${SEED_READER_ID}-owner`,
+				id: `${SEED_READER_ID}-chair`,
 				groupId: SEED_READER_ID,
 				userId: SEED_STAFF_ID,
-				role: 'owner',
+				role: 'admin',
 				status: 'active'
 			},
 			{

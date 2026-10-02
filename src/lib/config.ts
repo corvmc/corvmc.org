@@ -1208,7 +1208,7 @@ export const volunteerHourStatusLabels: Record<(typeof volunteerHourStatuses)[nu
  *
  * Per kind rather than per group (#1728): a committee's two are the board's and
  * the same for all six, which is what lets one application name several. A
- * club's leaders say what they want to know in `joinInstructions`, shown above
+ * club's chairs say what they want to know in `joinInstructions`, shown above
  * `note`. Answers are keyed by `id`, so rewording a prompt leaves them readable.
  */
 export const groupApplicationQuestions = {
@@ -1216,7 +1216,7 @@ export const groupApplicationQuestions = {
 		{ id: 'experience', prompt: 'Describe any relevant experience.' },
 		{ id: 'vision', prompt: 'What would you like your music community to look like?' }
 	],
-	club: [{ id: 'note', prompt: 'Anything the leaders should know?' }]
+	club: [{ id: 'note', prompt: 'Anything the chairs should know?' }]
 } as const satisfies Record<'club' | 'committee', readonly { id: string; prompt: string }[]>;
 
 /** The kinds that take applications. A band is always `invite_only`. */

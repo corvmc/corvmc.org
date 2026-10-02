@@ -167,9 +167,8 @@ export const groupMember = sqliteTable(
 		// at one owner so a `transferOwnership` whose demote matched nothing
 		// cannot silently produce two.
 		//
-		// It permits zero, deliberately. An ownerless group is legal — a program
-		// whose leader stepped down and whose replacement has not been appointed —
-		// which is why every query for an owner LEFT joins.
+		// It permits zero, deliberately: a club or committee never has an owner
+		// (its admins are its chairs), which is why every query for one LEFT joins.
 		uniqueIndex('idx_band_member_single_owner')
 			.on(t.groupId)
 			.where(sql`role = 'owner'`)

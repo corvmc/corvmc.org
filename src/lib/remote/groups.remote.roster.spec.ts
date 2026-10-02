@@ -137,7 +137,7 @@ vi.mock('$lib/server/group/roster-import-service', () => ({
 
 vi.mock('$lib/server/group/group-service', () => ({
 	STAFF_GROUP_KINDS: ['club', 'committee'],
-	assignLeader: vi.fn(),
+	setChairRole: vi.fn(),
 	createGroup: vi.fn(),
 	deactivate: vi.fn(),
 	getGroupDetail: vi.fn(),
@@ -225,7 +225,7 @@ beforeEach(() => {
 
 const SLUG = 'real-book-club';
 
-describe('the roster writes a leader reaches', () => {
+describe('the roster writes a chair reaches', () => {
 	/**
 	 * Every one of these takes a `memberId` or an `inviteId` from the client. The
 	 * group they are scoped to must come from the guard instead, or a leader of
@@ -315,17 +315,34 @@ describe('the roster writes a leader reaches', () => {
 
 describe('updateMyGroupMembership', () => {
 	/**
-	 * A member floor, not a leader one. `updateGroupMember` above cannot set
+	 * A member floor, not a chair one. `updateGroupMember` above cannot set
 	 * `alias` because a stage name is self-identification — before this form
 	 * existed, that meant nobody on a program could set one at all.
 	 */
 	it('lets a plain member set their own stage name', async () => {
 		callerRole = 'member';
-		await groups.updateMyGroupMembership({ slug: SLUG, alias: 'Doc', position: 'Piano' });
-		expect(band.updateOwnMembership).toHaveBeenCalledWith('group-1', 'user-1', {
-			alias: 'Doc',
-			position: 'Piano'
-		});
+		await groups.updateMyGroupMembership({ slug: SLUG, alias: 'Doc' });
+		expect(band.updateOwnMembership).toHaveBeenCalledWith('group-1', 'user-1', { alias: 'Doc' });
+	});
+
+	/** A program's chairs or staff assign positions; a member never sets their own. */
+	it.each([
+		['club', SLUG, 'group-1'],
+		['committee', 'facilities-committee', 'committee-1']
+	])('never writes a %s member’s own position', async (_kind, slug, groupId) => {
+		callerRole = 'member';
+		await groups.updateMyGroupMembership({ slug, alias: 'Doc', position: 'Treasurer' } as never);
+		expect(band.updateOwnMembership).toHaveBeenCalledWith(groupId, 'user-1', { alias: 'Doc' });
+	});
+
+	it('leaves a chair setting a position through `updateGroupMember`', async () => {
+		callerRole = 'admin';
+		await groups.updateGroupMember({ slug: SLUG, memberId: 'member-7', position: 'Treasurer' });
+		expect(band.updateMember).toHaveBeenCalledWith(
+			'member-7',
+			{ role: undefined, position: 'Treasurer' },
+			'group-1'
+		);
 	});
 
 	/**
@@ -345,19 +362,15 @@ describe('updateMyGroupMembership', () => {
 
 	it('clears a field spelled blank rather than leaving it set', async () => {
 		callerRole = 'member';
-		await groups.updateMyGroupMembership({ slug: SLUG, alias: '', position: '' });
-		expect(band.updateOwnMembership).toHaveBeenCalledWith('group-1', 'user-1', {
-			alias: null,
-			position: null
-		});
+		await groups.updateMyGroupMembership({ slug: SLUG, alias: '' });
+		expect(band.updateOwnMembership).toHaveBeenCalledWith('group-1', 'user-1', { alias: null });
 	});
 
 	it('leaves an omitted field alone', async () => {
 		callerRole = 'member';
-		await groups.updateMyGroupMembership({ slug: SLUG, alias: 'Doc' });
+		await groups.updateMyGroupMembership({ slug: SLUG });
 		expect(band.updateOwnMembership).toHaveBeenCalledWith('group-1', 'user-1', {
-			alias: 'Doc',
-			position: undefined
+			alias: undefined
 		});
 	});
 
@@ -370,24 +383,9 @@ describe('updateMyGroupMembership', () => {
 	});
 });
 
-describe('transferGroupOwner', () => {
-	/**
-	 * Owner, not admin: an admin promoting themselves would be the whole of the
-	 * escalation. Staff move the seat over a leader's head through
-	 * `assignGroupLeader` instead.
-	 */
-	it('is owner-only', async () => {
-		callerRole = 'admin';
-		expect(
-			await statusOf(() => groups.transferGroupOwner({ slug: SLUG, newOwnerId: 'user-9' }))
-		).toBe(403);
-	});
-
-	it('hands the seat on, naming the outgoing owner as the actor', async () => {
-		callerRole = 'owner';
-		await groups.transferGroupOwner({ slug: SLUG, newOwnerId: 'user-9' });
-		expect(band.transferOwnership).toHaveBeenCalledWith('group-1', 'user-9', 'user-1');
-	});
+// Programs have chairs, never an owner (#1760): no member-side seat transfer.
+it('has no program ownership transfer', () => {
+	expect(groups.transferGroupOwner).toBeUndefined();
 });
 
 describe('answering an invitation', () => {

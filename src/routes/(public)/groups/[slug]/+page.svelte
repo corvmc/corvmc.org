@@ -66,7 +66,7 @@
 				{/snippet}
 			</Alert>
 		{:else if data.applied}
-			<Alert type="info">Your application is with this group's leaders.</Alert>
+			<Alert type="info">Your application is with this group's chairs.</Alert>
 		{:else if status === 'pending'}
 			<Alert type="info">You've been invited to this group — accept it from your groups page.</Alert
 			>

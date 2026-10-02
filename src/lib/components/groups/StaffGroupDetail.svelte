@@ -11,17 +11,18 @@
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
 	import {
 		deactivateGroup,
 		reactivateGroup,
+		setStaffGroupRole,
 		type getStaffGroupPage
 	} from '$lib/remote/groups.remote';
 	import GroupSettingsForm from './GroupSettingsForm.svelte';
-	import AssignLeaderAction from './AssignLeaderAction.svelte';
+	import AddChairAction from './AddChairAction.svelte';
 	import CommitteeGrantsCard from './CommitteeGrantsCard.svelte';
 	import RosterImportAction from './RosterImportAction.svelte';
 	import RosterImportSummary from './RosterImportSummary.svelte';
@@ -46,6 +47,7 @@
 
 	const deactivateFields = deactivateGroup.fields;
 	const reactivateFields = reactivateGroup.fields;
+	const roleFields = setStaffGroupRole.fields;
 
 	const id = $derived(group.id);
 	const isDeactivated = $derived(!!group.deletedAt);
@@ -69,7 +71,9 @@
 		{group.memberCount}
 		{group.memberCount === 1 ? 'member' : 'members'} · since {formatDateShortYear(group.createdAt)}
 	</span>
-	<AssignLeaderAction groupId={id} hasLeader={!!group.ownerId} />
+	{#if !isDeactivated}
+		<AddChairAction groupId={id} />
+	{/if}
 </PageHeader>
 
 <PageContent width="3xl">
@@ -133,6 +137,7 @@
 					<th class="w-px">Role</th>
 					<th>Position</th>
 					<th class="whitespace-nowrap">Joined</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
 				{#each [...members.active, ...members.pending] as m (m.id)}
 					<tr>
@@ -141,14 +146,51 @@
 						<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
 						<td>{m.position ?? '—'}</td>
 						<td class="whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
+						<td class="w-px">
+							{#if !isDeactivated && m.role !== 'owner'}
+								{@const makeChair = m.role !== 'admin'}
+								<Action
+									action={setStaffGroupRole.for(m.id)}
+									label={makeChair ? 'Make chair' : 'Remove chair'}
+									aria-label={makeChair
+										? `Make ${m.member.title} a chair`
+										: `Remove ${m.member.title} as a chair`}
+									confirm={makeChair
+										? `Make ${m.member.title} a chair of ${group.name}?`
+										: `Remove ${m.member.title} as a chair? They stay on the roster.`}
+									successToast={makeChair ? 'Chair added' : 'Chair removed'}
+									variant="ghost"
+									size="xs"
+									onsuccess={() => invalidateAll()}
+								>
+									{#snippet form()}
+										<input {...roleFields.groupId.as('hidden', id)} />
+										<input {...roleFields.userId.as('hidden', m.userId)} />
+										<input {...roleFields.role.as('hidden', makeChair ? 'admin' : 'member')} />
+									{/snippet}
+								</Action>
+							{/if}
+						</td>
 					</tr>
 				{/each}
 			</Table>
 		{/if}
 	</InfoCard>
 
-	<!-- One line, so a labelled fact rather than a card of its own (#1078). -->
+	<!-- One line each, so labelled facts rather than cards of their own (#1078). -->
 	<DefinitionList>
+		<!-- No chairs is legal: the program runs, and staff add one when appointed. -->
+		<Fact label="Chairs">
+			{#if group.chairs.length === 0}
+				<span class="text-fg-2">No chairs</span>
+			{:else}
+				<span class="flex flex-wrap gap-2">
+					{#each group.chairs as chair (chair.id)}
+						<EntityChip ref={chair} icon={false} />
+					{/each}
+				</span>
+			{/if}
+		</Fact>
 		<Fact label="Public page">
 			{#if group.visibility === 'public'}
 				<a class="link link-primary" href={resolve(`/groups/${group.slug}`)}>/groups/{group.slug}</a

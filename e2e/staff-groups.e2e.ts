@@ -16,7 +16,7 @@ import { SEED_PUBLIC_BAND_NAME } from './fixtures/seed-band-onboarding';
  *
  *  - the list is clubs and committees and never bands, which is the whole point
  *    of the `kind` filter every group read now carries;
- *  - creating one appoints its leader in the same step, with no invitation for
+ *  - creating one appoints its first chair in the same step, with no invitation for
  *    them to accept;
  *  - an application renders on its own card, apart from the member list, for
  *    a viewer who may answer it. Mixed into the roster it would be a fail-quiet
@@ -61,7 +61,7 @@ test.describe('staff groups', () => {
 		await expect(nav.getByRole('link', { name: 'Groups' })).toHaveCount(0);
 	});
 
-	test('creates a club and appoints its leader in one step', async ({ page }) => {
+	test('creates a club and appoints its first chair in one step', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/clubs');
 
@@ -70,7 +70,7 @@ test.describe('staff groups', () => {
 		const name = `E2E Songwriter Circle ${Date.now()}`;
 		await page.locator('input[name="name"]').fill(name);
 
-		// The leader picker is a typeahead over every member, not a select.
+		// The chair picker is a typeahead over every member, not a select.
 		// `pressSequentially`, not `fill`: bits-ui's Combobox opens on real key
 		// events, and a programmatic value set leaves it closed with its results
 		// list unrendered.
@@ -88,7 +88,7 @@ test.describe('staff groups', () => {
 		await page.getByRole('button', { name: 'Create group' }).click();
 
 		// Straight to the new group's page, which is what carries the proof: the
-		// appointee is the owner already, with nothing to accept.
+		// appointee is a chair already, with nothing to accept.
 		await page.waitForURL(/\/staff\/clubs\/[0-9a-f-]{36}/, { timeout: 15000 });
 		await expect(page.getByRole('heading', { name })).toBeVisible();
 		await expect(page.getByText(SEED_TARGET_NAME).first()).toBeVisible();
@@ -102,7 +102,7 @@ test.describe('staff groups', () => {
 		// The fixture's own id, not a uuid — it is seeded rather than created.
 		await page.waitForURL(`**/staff/committees/${SEED_COMMITTEE_ID}`, { timeout: 15000 });
 
-		// The seeded committee is `by_application`, owned by this staffer, and
+		// The seeded committee is `by_application`, chaired by this staffer, and
 		// carries one open application with an answer under the board's prompt.
 		await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible();
 		await expect(page.getByText('Booked a basement series for two years.')).toBeVisible();

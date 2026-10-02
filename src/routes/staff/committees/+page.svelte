@@ -33,7 +33,7 @@
 			{#snippet head()}
 				<th class="w-px"><span class="sr-only">Status</span></th>
 				<th>Committee</th>
-				<th>Chair</th>
+				<th>Chairs</th>
 				<th class="col-support cell-num">Members</th>
 			{/snippet}
 			{#each committees as c (c.id)}
@@ -52,10 +52,14 @@
 						{/if}
 					</td>
 					<td class="min-w-0">
-						{#if c.owner.id}
-							<EntityChip ref={c.owner} icon={false} />
+						{#if c.chairs.length === 0}
+							<span class="text-fg-2">No chairs</span>
 						{:else}
-							<Badge variant="warning">No chair</Badge>
+							<span class="flex flex-wrap gap-1">
+								{#each c.chairs as chair (chair.id)}
+									<EntityChip ref={chair} icon={false} />
+								{/each}
+							</span>
 						{/if}
 					</td>
 					<td class="col-support cell-num">{c.memberCount}</td>

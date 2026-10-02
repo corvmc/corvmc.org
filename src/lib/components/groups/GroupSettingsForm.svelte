@@ -32,7 +32,7 @@
 	const policyOptions = [
 		{ value: 'invite_only', label: 'Invite only — someone adds you' },
 		{ value: 'open', label: 'Open — any member joins themselves' },
-		{ value: 'by_application', label: 'By application — you ask, a leader approves' }
+		{ value: 'by_application', label: 'By application — you ask, a chair approves' }
 	];
 
 	const visibilityOptions = [

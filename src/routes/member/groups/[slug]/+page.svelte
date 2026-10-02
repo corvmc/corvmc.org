@@ -19,8 +19,7 @@
 		leaveGroupForm,
 		removeGroupMember,
 		revokeGroupInvitation,
-		revokeGroupEmailInvite,
-		transferGroupOwner
+		revokeGroupEmailInvite
 	} from '$lib/remote/groups.remote';
 	import {
 		cancelGroupSession,
@@ -66,7 +65,6 @@
 	const removeFields = removeGroupMember.fields;
 	const revokeFields = revokeGroupInvitation.fields;
 	const revokeEmailFields = revokeGroupEmailInvite.fields;
-	const transferFields = transferGroupOwner.fields;
 	const cancelSessionFields = cancelGroupSession.fields;
 	const publishSessionFields = publishGroupSession.fields;
 	const unpublishSessionFields = unpublishGroupSession.fields;
@@ -121,12 +119,7 @@
 	 */
 	const projects = $derived(data.projects);
 
-	// Only the outgoing owner can hand the program on, and only to somebody
-	// already active on the roster — staff appoint over a leader's head through
-	// `assignGroupLeader` instead.
-	const isOwner = $derived(data.role === 'owner');
-
-	// The actions column exists for a leader, and for a plain member who has a
+	// The actions column exists for a chair, and for a plain member who has a
 	// row of their own to edit. A staff non-member matches neither.
 	const rosterActions = $derived(
 		data.canManage || members.active.some((m) => m.userId === data.viewerId)
@@ -508,13 +501,7 @@
 								<td class="w-px">
 									<div class="flex w-max justify-end gap-2">
 										{#if m.userId === data.viewerId && m.status === 'active'}
-											<GroupSelfEditAction
-												{slug}
-												alias={m.alias}
-												position={m.position}
-												kindLabel={group.kind}
-												onchanged={refreshRoster}
-											/>
+											<GroupSelfEditAction {slug} alias={m.alias} onchanged={refreshRoster} />
 										{/if}
 										{#if data.canManage && m.status === 'pending'}
 											<Action
@@ -542,27 +529,6 @@
 												kindLabel={group.kind}
 												onchanged={refreshRoster}
 											/>
-											{#if isOwner}
-												<!-- Owner only, and the seat moves rather than being shared:
-												     the partial unique index allows one owner per group. -->
-												<Action
-													action={transferGroupOwner.for(m.id)}
-													label="Make owner"
-													aria-label={`Make ${m.member.title} the owner`}
-													modalTitle="Hand {group.name} on"
-													submitLabel="Transfer"
-													confirm={`Make ${m.member.title} the owner of ${group.name}? You become an admin.`}
-													variant="ghost"
-													size="xs"
-													successToast="Ownership transferred"
-													onsuccess={refreshRoster}
-												>
-													{#snippet form()}
-														<input {...transferFields.slug.as('hidden', slug)} />
-														<input {...transferFields.newOwnerId.as('hidden', m.userId)} />
-													{/snippet}
-												</Action>
-											{/if}
 											<Action
 												action={removeGroupMember.for(m.id)}
 												label="Remove"

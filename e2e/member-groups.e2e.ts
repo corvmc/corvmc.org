@@ -140,7 +140,7 @@ test.describe('member groups index', () => {
 		const dialog = page.getByRole('dialog');
 		// The club's own words sit over the box they prompt.
 		await expect(dialog.getByText(SEED_APPLY_CLUB_INSTRUCTIONS)).toBeVisible();
-		await dialog.getByLabel('Anything the leaders should know?').fill('Folk songs, mostly.');
+		await dialog.getByLabel('Anything the chairs should know?').fill('Folk songs, mostly.');
 		await dialog.getByRole('button', { name: 'Send application' }).click();
 
 		await expect

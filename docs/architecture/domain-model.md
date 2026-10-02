@@ -154,10 +154,14 @@ a bug invisible on exactly the rows you test with.
 ### Ownership is a roster row
 
 `group.ownerId` was removed in phase 3c. The `group_member` row with `role = 'owner'` _is_
-the ownership, capped by a partial unique index that permits zero — an ownerless group is
-legal, being a program whose leader stepped down, which is why every query for an owner
-LEFT joins. The second copy drifted once: five of sixteen production bands had no usable
-owner row behind it.
+the ownership, capped by a partial unique index that permits zero. The second copy drifted
+once: five of sixteen production bands had no usable owner row behind it.
+
+Only a band has an owner. Programs (`club`, `committee`) are ownerless by design: they have
+zero or more `admin` rows, and those admins are the program's **chairs**. Staff add and
+remove chairs from the program's staff page (`setChairRole`); nothing on the program side
+writes an `owner` row, and a program with no chairs is legal. Positions on a program roster
+are set by its chairs or staff, never by the member themselves.
 
 ## Seven models that recur
 

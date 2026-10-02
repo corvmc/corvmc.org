@@ -93,8 +93,12 @@ vi.mock('$lib/server/band/band-service', () => ({
 	reactivate: vi.fn()
 }));
 
+const recordAuditEntry = vi.fn(async (..._a: unknown[]) => undefined);
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
+}));
+
 import {
-	assignLeader,
 	createGroup,
 	joinGroup,
 	leaveGroup,
@@ -105,7 +109,9 @@ import {
 	ApplyInsteadError,
 	GroupNotFoundError,
 	NotAStaffGroupError,
-	NotJoinableError
+	NotJoinableError,
+	NotOnRosterError,
+	setChairRole
 } from './group-service';
 
 beforeEach(() => {
@@ -124,7 +130,7 @@ const SETTINGS = { joinPolicy: 'invite_only' as const, visibility: 'public' as c
 
 describe('createGroup', () => {
 	it('creates a club through the shared group create', async () => {
-		await createGroup({ ...SETTINGS, kind: 'club', name: 'Real Book Club', leaderId: 'user-1' });
+		await createGroup({ ...SETTINGS, kind: 'club', name: 'Real Book Club', chairId: 'user-1' });
 
 		expect(bandServiceCreate).toHaveBeenCalledWith('user-1', {
 			kind: 'club',
@@ -143,7 +149,7 @@ describe('createGroup', () => {
 		await createGroup({
 			kind: 'club',
 			name: 'Real Book Club',
-			leaderId: 'user-1',
+			chairId: 'user-1',
 			joinPolicy: 'open',
 			joinInstructions: 'Third Thursday, 7pm.',
 			visibility: 'members'
@@ -166,19 +172,14 @@ describe('createGroup', () => {
 	 */
 	it('refuses to create a band', async () => {
 		await expect(
-			createGroup({ ...SETTINGS, kind: 'band' as never, name: 'Not A Band', leaderId: 'user-1' })
+			createGroup({ ...SETTINGS, kind: 'band' as never, name: 'Not A Band', chairId: 'user-1' })
 		).rejects.toBeInstanceOf(NotAStaffGroupError);
 		expect(bandServiceCreate).not.toHaveBeenCalled();
 	});
 
-	/**
-	 * Reversed 2026-09-14. An ownerless group is legal — the partial unique index
-	 * permits zero and `assignLeader` treats an empty seat as normal — and the
-	 * six committees exist before the board has appointed their chairs. The form
-	 * still asks; the model no longer insists.
-	 */
-	it('creates one with no leader, and writes no owner row', async () => {
-		await createGroup({ ...SETTINGS, kind: 'committee', name: 'Booking', leaderId: null });
+	/** A program with no chair is legal; staff add chairs from its page later. */
+	it('creates one with no chair, and writes no roster row', async () => {
+		await createGroup({ ...SETTINGS, kind: 'committee', name: 'Booking', chairId: null });
 		expect(bandServiceCreate).toHaveBeenCalledWith(
 			null,
 			expect.objectContaining({ name: 'Booking' })
@@ -186,54 +187,90 @@ describe('createGroup', () => {
 	});
 
 	it('treats an empty string the same as absent, since that is what a blank field sends', async () => {
-		await createGroup({ ...SETTINGS, kind: 'club', name: 'Leaderless', leaderId: '' });
+		await createGroup({ ...SETTINGS, kind: 'club', name: 'Chairless', chairId: '' });
 		expect(bandServiceCreate).toHaveBeenCalledWith(null, expect.anything());
 	});
 });
 
-describe('assignLeader', () => {
+// Programs have chairs (admins), never an owner (#1760).
+describe('setChairRole', () => {
+	const CLUB = { id: 'group-1', kind: 'club', name: 'Real Book Club' };
+	const COMMITTEE = { id: 'group-2', kind: 'committee', name: 'Booking' };
+
 	it('404s a group that does not exist', async () => {
 		selectResultQueue = [[]];
-		await expect(assignLeader('nope', 'user-2')).rejects.toBeInstanceOf(GroupNotFoundError);
+		await expect(setChairRole('nope', 'user-2', 'admin')).rejects.toBeInstanceOf(
+			GroupNotFoundError
+		);
 	});
 
-	/**
-	 * Demote then promote, in that order. The partial unique index on
-	 * `(groupId) WHERE role = 'owner'` is what makes the order load-bearing:
-	 * promoting first would momentarily give the group two owner rows and be
-	 * refused outright.
-	 */
-	it('demotes the incumbent before promoting the appointee', async () => {
-		selectResultQueue = [[{ id: 'group-1' }], [{ id: 'member-9', role: 'member' }]];
-
-		await assignLeader('group-1', 'user-2');
-
-		expect(writes.map((w) => w.values.role)).toEqual(['admin', 'owner']);
+	it('refuses a band, which keeps its one owner', async () => {
+		selectResultQueue = [[{ id: 'band-1', kind: 'band', name: 'Wren' }]];
+		await expect(setChairRole('band-1', 'user-2', 'admin')).rejects.toBeInstanceOf(
+			NotAStaffGroupError
+		);
+		expect(writes).toEqual([]);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 
-	/** The appointee may not be on the roster at all. */
-	it('inserts an owner row for someone who is not yet a member', async () => {
-		selectResultQueue = [[{ id: 'group-1' }], []];
+	it('makes a club member a chair, and audits it', async () => {
+		selectResultQueue = [[CLUB], [{ id: 'member-9', role: 'member', name: 'Nine' }]];
 
-		await assignLeader('group-1', 'user-new');
+		await setChairRole('group-1', 'user-9', 'admin');
 
-		const promote = writes.at(-1)!;
-		expect(promote.op).toBe('insert');
-		// Appointed, not invited — there is nothing for them to accept.
-		expect(promote.values).toMatchObject({ role: 'owner', status: 'active', userId: 'user-new' });
+		expect(writes).toEqual([
+			expect.objectContaining({
+				table: 'group_member',
+				op: 'update',
+				values: expect.objectContaining({ role: 'admin' })
+			})
+		]);
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'group.role_changed',
+			subject: { type: 'group', id: 'group-1', label: 'Real Book Club' },
+			details: { userId: 'user-9', memberName: 'Nine', role: 'admin', added: false }
+		});
 	});
 
-	/** Re-appointing the sitting leader must not demote them to admin. */
-	it('does not demote the person being appointed', async () => {
-		selectResultQueue = [[{ id: 'group-1' }], [{ id: 'member-1', role: 'owner' }]];
+	it('takes the chair away in a committee, leaving them on the roster', async () => {
+		selectResultQueue = [[COMMITTEE], [{ id: 'member-9', role: 'admin', name: 'Nine' }]];
 
-		await assignLeader('group-1', 'user-1');
+		await setChairRole('group-2', 'user-9', 'member');
 
-		const dialect = new SQLiteSyncDialect();
-		const demote = writes.find((w) => w.values.role === 'admin')!;
-		const rendered = dialect.sqlToQuery(demote.where as SQL);
-		expect(rendered.sql).toContain('<>');
-		expect(rendered.params).toContain('user-1');
+		expect(writes).toHaveLength(1);
+		expect(writes[0]).toMatchObject({ op: 'update', values: { role: 'member' } });
+	});
+
+	it('adds someone not on the roster as an active chair, never an owner', async () => {
+		selectResultQueue = [[CLUB], [], [{ name: 'New' }]];
+
+		await setChairRole('group-1', 'user-new', 'admin');
+
+		expect(writes).toEqual([
+			{
+				table: 'group_member',
+				op: 'insert',
+				values: { groupId: 'group-1', userId: 'user-new', role: 'admin', status: 'active' }
+			}
+		]);
+		expect(recordAuditEntry).toHaveBeenCalledWith(
+			expect.objectContaining({ details: expect.objectContaining({ added: true }) })
+		);
+	});
+
+	it('404s demoting someone who is not on the roster', async () => {
+		selectResultQueue = [[CLUB], []];
+		await expect(setChairRole('group-1', 'user-x', 'member')).rejects.toBeInstanceOf(
+			NotOnRosterError
+		);
+		expect(writes).toEqual([]);
+	});
+
+	it('writes and audits nothing when the role is already right', async () => {
+		selectResultQueue = [[CLUB], [{ id: 'member-9', role: 'admin', name: 'Nine' }]];
+		await setChairRole('group-1', 'user-9', 'admin');
+		expect(writes).toEqual([]);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 });
 

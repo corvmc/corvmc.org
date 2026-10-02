@@ -7,7 +7,6 @@
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
 	import { EntityChip } from '$lib/components/ui/entity';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
@@ -18,7 +17,7 @@
 	/**
 	 * Clubs. Committees have their own list at `/staff/committees`, and bands are
 	 * a member's own project with their own surface at `/staff/bands`. A club is
-	 * the opposite of a band: staff created it and staff appointed who runs it.
+	 * the opposite of a band: staff created it and staff appoint its chairs.
 	 */
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
@@ -83,7 +82,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Club</th>
-					<th>Leader</th>
+					<th>Chairs</th>
 					<th class="col-support cell-num">Members</th>
 					<th class="col-extra whitespace-nowrap">Created</th>
 				{/snippet}
@@ -99,14 +98,16 @@
 						     handing it a band ref sent staff to `/staff/bands/{id}` for a
 						     club. The row itself is the link. -->
 						<td class="cell-primary">{g.name}</td>
-						<!-- An empty seat is legal — a leader stepped down and nobody has
-						     been appointed yet — and this list is where staff are meant to
-						     see it, which is why the join is LEFT. -->
+						<!-- A club with no chairs is legal; it reads as a fact, not a fault. -->
 						<td class="min-w-0">
-							{#if g.owner.id}
-								<EntityChip ref={g.owner} icon={false} />
+							{#if g.chairs.length === 0}
+								<span class="text-fg-2">No chairs</span>
 							{:else}
-								<Badge variant="warning">No leader</Badge>
+								<span class="flex flex-wrap gap-1">
+									{#each g.chairs as chair (chair.id)}
+										<EntityChip ref={chair} icon={false} />
+									{/each}
+								</span>
 							{/if}
 						</td>
 						<td class="col-support cell-num">{g.memberCount}</td>
