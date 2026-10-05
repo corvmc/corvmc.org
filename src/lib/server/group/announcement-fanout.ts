@@ -4,7 +4,7 @@ import { normalizeNotificationModel } from '$lib/server/notification/email/norma
 import { sendTemplateBatch } from '$lib/server/notification/email';
 import { pushToUser } from '$lib/server/notification/sse';
 import { captureException } from '$lib/server/sentry';
-import { groupKindLabels } from '$lib/config';
+import { markdownExcerpt } from '$lib/utils/markdown';
 import type { NotificationEmailModel } from '$lib/types/notification-email';
 import { and, eq, isNull } from 'drizzle-orm';
 import { inboxMessage, inboxThread } from '$lib/server/db/schema/inbox';
@@ -60,13 +60,13 @@ const EMAIL_BATCH_SIZE = 500;
  */
 const LARGE_GROUP_THRESHOLD = 500;
 
-/** Enough of the post to be worth opening, without pasting the whole thing. */
+/** The in-app row's excerpt: enough of the post to be worth opening. */
 const EXCERPT_MAX = 400;
 
 function excerpt(body: string): string {
 	const flat = body
-		// Markdown, flattened rather than rendered: this lands in a plain-text
-		// paragraph and in an in-app notification body, neither of which parses it.
+		// Markdown, flattened rather than rendered: this lands in an in-app
+		// notification body, which does not parse it.
 		.replace(/[#*_`>]/g, '')
 		.replace(/\s+/g, ' ')
 		.trim();
@@ -81,21 +81,29 @@ export function announcementsHref(kind: string, slug: string): string {
 	return kind === 'band' ? `/band/${slug}/announcements` : `/member/groups/${slug}`;
 }
 
+/** How the post's body is written: an announcement is markdown, a room message is not. */
+type BodyFormat = 'markdown' | 'plain';
+
+/**
+ * The email is the chair's message itself, carried in full — it replaces the
+ * direct mail chairs used to send, so an excerpt and a link would be a step
+ * back. The in-app row keeps its excerpt.
+ */
 function emailModel(
 	event: AnnouncementPublishedEvent,
 	recipient: AnnouncementRecipient,
-	siteUrl: string
+	siteUrl: string,
+	format: BodyFormat
 ): Record<string, unknown> {
-	const kind = groupKindLabels[event.groupKind];
 	const href = announcementsHref(event.groupKind, event.groupSlug);
 	const model: NotificationEmailModel = {
 		subject: `${event.groupName}: ${event.title}`,
+		preview_text: markdownExcerpt(event.body, 140) ?? undefined,
 		heading: event.title,
+		byline: `From ${event.authorName}, ${event.groupName}`,
 		greeting: `Hi ${recipient.name.split(' ')[0]},`,
-		paragraphs: [{ text: `${event.authorName} posted to the ${kind} ${event.groupName}.` }],
-		// The post itself, escaped by `normalizeNotificationModel` because it is
-		// the field carrying member-written text.
-		quote: excerpt(event.body),
+		// Raw: `normalizeNotificationModel` renders and sanitizes it.
+		...(format === 'markdown' ? { body_markdown: event.body } : { body_plain: event.body }),
 		cta: { url: `${siteUrl}${href}`, label: `Open ${event.groupName}` },
 		// The mute link, and it is not optional decoration.
 		//
@@ -130,6 +138,7 @@ export async function fanOutAnnouncement(
 		claim: (id: string) => Promise<boolean>;
 		record: (id: string, count: number) => Promise<void>;
 		href?: string;
+		format?: BodyFormat;
 	} = { claim: claimForNotification, record: recordRecipientCount }
 ): Promise<void> {
 	// 1. Claim it. The bus delivers at least once, and a roster emailed twice is
@@ -211,7 +220,10 @@ export async function fanOutAnnouncement(
 		try {
 			await sendTemplateBatch(
 				GENERIC_ALIAS,
-				byEmail.map((r) => ({ to: r.email, model: emailModel(event, r, siteUrl) })),
+				byEmail.map((r) => ({
+					to: r.email,
+					model: emailModel(event, r, siteUrl, latch.format ?? 'markdown')
+				})),
 				{ tag: 'announcement' }
 			);
 		} catch (err) {
@@ -273,7 +285,9 @@ export async function fanOutGroupRoom(
 		{
 			claim: claimRoomForNotification,
 			record: recordRoomRecipientCount,
-			href: `/member/messages/${event.threadId}`
+			href: `/member/messages/${event.threadId}`,
+			// A room message is plain text shown with its line breaks kept.
+			format: 'plain'
 		}
 	);
 }

@@ -23,6 +23,8 @@ export interface NotificationEmailModel {
 	preview_text?: string;
 	/** Display headline at the top of the body */
 	heading: string;
+	/** Optional small line under the heading naming who wrote it. Plain text. */
+	byline?: string;
 	/** Optional greeting line, e.g. "Hi Ada," */
 	greeting?: string;
 	/** Body paragraphs, rendered in order. Plain text — the template escapes HTML. */
@@ -36,6 +38,14 @@ export interface NotificationEmailModel {
 	 * converts newlines to `<br />`, so callers cannot forget to escape it.
 	 */
 	quote?: string;
+	/**
+	 * Optional member-written message carried in full, as the body of the mail
+	 * rather than a callout. Pass the **raw** markdown; `normalizeNotificationModel`
+	 * renders it through the site's sanitizer into `body_html` and keeps the
+	 * source as `body_text`. `body_plain` is the same for text that is not markdown.
+	 */
+	body_markdown?: string;
+	body_plain?: string;
 	/** Optional call-to-action button */
 	cta?: NotificationEmailCta;
 	/** Optional small footnote below the body */
@@ -61,6 +71,10 @@ export interface NotificationEmailPayload extends NotificationEmailModel {
 	has_details?: boolean;
 	/** Plain-text counterpart of `quote`, for the text/plain part. */
 	quote_text?: string;
+	/** Sanitized HTML of `body_markdown` / `body_plain`. Never set by a caller. */
+	body_html?: string;
+	/** Plain-text counterpart of `body_html`, for the text/plain part. */
+	body_text?: string;
 	/**
 	 * The category bar, from the notification type's `category`. Never set by a
 	 * caller: which bucket a notification belongs to is a property of its type.

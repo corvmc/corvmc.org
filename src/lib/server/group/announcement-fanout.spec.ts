@@ -238,34 +238,87 @@ describe('the email', () => {
 		expect(String(messages[0].model.footnote)).toContain('/member/groups/real-book-club');
 	});
 
-	it('names the kind, so a club is not called a band', async () => {
+	it('reads as the message, with the author as a byline', async () => {
 		recipients = [member(1)];
 
 		await fanOutAnnouncement(event(), 'https://test.corvmc.org');
 
-		const [, messages] = mockSendBatch.mock.calls[0] as unknown as [
-			string,
-			{ model: Record<string, unknown> }[]
-		];
-		const paragraphs = messages[0].model.paragraphs as { text: string }[];
-		expect(paragraphs[0].text).toContain('club');
-		expect(paragraphs[0].text).not.toContain('band');
+		const model = firstModel();
+		expect(model.subject).toBe('Real Book Club: August jam moved');
+		expect(model.heading).toBe('August jam moved');
+		expect(model.byline).toBe('From Alice, Real Book Club');
+		expect(model).not.toHaveProperty('paragraphs');
+		expect(model).not.toHaveProperty('quote');
 	});
 
-	it('quotes the post rather than pasting a whole newsletter', async () => {
+	it('carries the whole post, however long', async () => {
 		recipients = [member(1)];
-		const long = 'x'.repeat(2000);
+		const long = `${'word '.repeat(300)}THE-END`;
 
 		await fanOutAnnouncement(event({ body: long }), 'https://test.corvmc.org');
 
-		const [, messages] = mockSendBatch.mock.calls[0] as unknown as [
-			string,
-			{ model: Record<string, unknown> }[]
-		];
-		// `quote` is escaped by the normalizer, so assert on length not identity.
-		expect(String(messages[0].model.quote).length).toBeLessThan(500);
+		const model = firstModel();
+		expect(String(model.body_html)).toContain('THE-END');
+		expect(String(model.body_text)).toContain('THE-END');
+		expect(String(model.body_text).length).toBeGreaterThan(400);
+	});
+
+	it('renders the markdown', async () => {
+		recipients = [member(1)];
+		const body =
+			'## Bring\n\n- a chart\n- a stand\n\nSee [the page](https://corvmc.org/x), *please*.';
+
+		await fanOutAnnouncement(event({ body }), 'https://test.corvmc.org');
+
+		const html = String(firstModel().body_html);
+		expect(html).toContain('<h2');
+		expect(html).toContain('<li>a chart</li>');
+		expect(html).toMatch(/<a href="https:\/\/corvmc.org\/x"[^>]*>the page<\/a>/);
+		expect(html).toContain('<em>please</em>');
+	});
+
+	it('sanitizes markup a member wrote into the post', async () => {
+		recipients = [member(1)];
+		const body =
+			'Hi <script>alert(1)</script><img src=x onerror="alert(2)"> [x](javascript:alert(3))';
+
+		await fanOutAnnouncement(event({ body }), 'https://test.corvmc.org');
+
+		const html = String(firstModel().body_html);
+		expect(html).not.toMatch(/<script|onerror|javascript:/i);
+	});
+
+	it('keeps a room message as plain text, line breaks and all', async () => {
+		recipients = [member(1)];
+
+		await fanOutAnnouncement(
+			event({ body: 'line one\n<b>line</b> two' }),
+			'https://test.corvmc.org',
+			{ claim: async () => true, record: async () => {}, format: 'plain' }
+		);
+
+		expect(firstModel().body_html).toBe('line one<br />&lt;b&gt;line&lt;/b&gt; two');
+	});
+
+	it('keeps the bell to an excerpt', async () => {
+		recipients = [member(1)];
+		const long = `${'word '.repeat(300)}THE-END`;
+
+		await fanOutAnnouncement(event({ body: long }), 'https://test.corvmc.org');
+
+		const [row] = insertedBatches.flat() as { body: string }[];
+		expect(row.body.length).toBeLessThanOrEqual(400);
+		expect(row.body).not.toContain('THE-END');
 	});
 });
+
+function firstModel(): Record<string, unknown> {
+	const [, messages] = mockSendBatch.mock.calls[0] as unknown as [
+		string,
+		{ model: Record<string, unknown> }[]
+	];
+	return messages[0].model;
+}
 
 describe('announcementsHref', () => {
 	/**

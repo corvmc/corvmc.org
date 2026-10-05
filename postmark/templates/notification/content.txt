@@ -2,11 +2,15 @@
 
 {{/category_label}}{{#heading}}{{{.}}}
 
-{{/heading}}{{#greeting}}{{{.}}}
+{{/heading}}{{#byline}}{{{.}}}
+
+{{/byline}}{{#greeting}}{{{.}}}
 
 {{/greeting}}{{#each paragraphs}}{{{text}}}
 
-{{/each}}{{#has_details}}{{#each ../details}}{{{label}}}: {{{value}}}
+{{/each}}{{#body_html}}{{{../body_text}}}
+
+{{/body_html}}{{#has_details}}{{#each ../details}}{{{label}}}: {{{value}}}
 {{/each}}
 {{/has_details}}{{#quote}}{{{../quote_text}}}
 
