@@ -111,7 +111,7 @@
 	"dependencies": {
 		"@cf-wasm/og": "0.5.0",
 		"@internationalized/date": "^3.12.4",
-		"@sentry/cloudflare": "^10.72.0",
+		"@sentry/cloudflare": "^11.2.0",
 		"@sentry/sveltekit": "^10",
 		"@stripe/stripe-js": "^9.17.0",
 		"@tabler/icons-svelte": "^3.48.0",
