@@ -7,10 +7,13 @@
 	 */
 	import { page } from '$app/state';
 	import GroupChat from '$lib/components/inbox/GroupChat.svelte';
+	import { getGroupChatTopic } from '$lib/remote/group-chat.remote';
 	import { getBandLayoutContext } from '../../../layout-context';
 
 	const bandLayout = getBandLayoutContext();
 	const threadId = $derived(page.params.threadId!);
+
+	const chat = $derived(await getGroupChatTopic(threadId));
 </script>
 
-<GroupChat {threadId} viewerUserId={bandLayout.current.user.id} />
+<GroupChat {chat} viewerUserId={bandLayout.current.user.id} />

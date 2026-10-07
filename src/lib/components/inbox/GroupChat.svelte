@@ -1,3 +1,9 @@
+<script lang="ts" module>
+	import type { getGroupChatTopic as topicQuery } from '$lib/remote/group-chat.remote';
+
+	export type GroupChatTopic = Awaited<ReturnType<typeof topicQuery>>;
+</script>
+
 <script lang="ts">
 	/**
 	 * One topic of a group's chat, whichever panel it is mounted in.
@@ -11,15 +17,15 @@
 	import MuteRoomAction from './MuteRoomAction.svelte';
 	import ThreadComposer from './ThreadComposer.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import {
-		getGroupChatTopic,
-		markGroupChatSeen,
-		postGroupChatMessage
-	} from '$lib/remote/group-chat.remote';
+	import { markGroupChatSeen, postGroupChatMessage } from '$lib/remote/group-chat.remote';
 
-	let { threadId, viewerUserId }: { threadId: string; viewerUserId: string } = $props();
+	// Handed in, never awaited here: on Messages the page's own query already
+	// carries the topic, and a second query in flight beside it is the
+	// suspected cause of #1776's effect_update_depth_exceeded loop.
+	let { chat, viewerUserId }: { chat: GroupChatTopic; viewerUserId: string } = $props();
 
-	const chat = $derived(await getGroupChatTopic(threadId));
+	// The id alone, so a refreshed topic (a new object) does not re-mark it.
+	const threadId = $derived(chat.id);
 
 	// Opening a topic is what clears its dot. Fire-and-forget: a failed mark is
 	// a dot that stays lit, which is not worth interrupting the reader for.

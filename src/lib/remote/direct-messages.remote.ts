@@ -151,7 +151,9 @@ export const getMyMessageThread = query(z.string(), async (id) => {
 		const { access } = await inboxesFor(user.id);
 
 		if (owner.channel === 'group' && access.memberOf.includes(owner.id)) {
-			const chat = await getGroupChat(owner.id);
+			// The topic this id names, with the reader's mute — the page hands it to
+			// `GroupChat` rather than awaiting `getGroupChatTopic` as well (#1776).
+			const chat = await getGroupChat(owner.id, id, user.id);
 			return {
 				kind: 'group' as const,
 				groupSlug: owner.slug,
