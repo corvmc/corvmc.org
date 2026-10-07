@@ -128,9 +128,8 @@ export function imageSrc(
 		};
 	}
 
-	// Fixed size: `src` is the 1x rung so the common (non-retina) case fetches
-	// once — bits-ui's Avatar preloads via `src` alone and would otherwise
-	// download a second copy.
+	// Fixed size: `src` is the 1x rung, so a reader of `src` alone and the
+	// srcset's 1x pick fetch the same URL.
 	return {
 		src: build(config.width),
 		srcset: config.dpr.map((d) => `${build(config.width * d)}${d === 1 ? '' : ` ${d}x`}`).join(', ')
