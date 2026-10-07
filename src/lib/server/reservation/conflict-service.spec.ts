@@ -63,10 +63,12 @@ vi.mock('$lib/server/site-config/site-config-service', () => ({
 import {
 	hasConflict,
 	getAvailableSlots,
+	getAvailableSlotsForDates,
 	validateBooking,
 	getConflictDetails,
 	getValidationWarnings
 } from './conflict-service';
+import { db } from '$lib/server/db';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -354,6 +356,28 @@ describe('getAvailableSlots', () => {
 		// Slot before closure should be available
 		const slot1330 = slots.find((s) => s.startTime === '13:30');
 		expect(slot1330?.available).toBe(true);
+	});
+});
+
+describe('getAvailableSlotsForDates', () => {
+	const day1 = new Date(Date.now() + 5 * 86_400_000).toLocaleDateString('en-CA', {
+		timeZone: 'America/Los_Angeles'
+	});
+	const day2 = new Date(Date.now() + 6 * 86_400_000).toLocaleDateString('en-CA', {
+		timeZone: 'America/Los_Angeles'
+	});
+
+	it('reads the range once and applies each row only to its own day', async () => {
+		vi.mocked(db.select).mockClear();
+		selectResultQueue = [
+			[{ startsAt: makeDate(day2, '10:00'), endsAt: makeDate(day2, '11:00') }],
+			[]
+		];
+		const byDate = await getAvailableSlotsForDates([day1, day2]);
+
+		expect(db.select).toHaveBeenCalledTimes(2);
+		expect(byDate.get(day1)?.find((s) => s.startTime === '10:00')?.available).toBe(true);
+		expect(byDate.get(day2)?.find((s) => s.startTime === '10:00')?.available).toBe(false);
 	});
 });
 

@@ -61,6 +61,7 @@ import {
 } from '$lib/server/entity/refs';
 import {
 	getAvailableSlots,
+	getAvailableSlotsForDates,
 	getConflictDetails,
 	getValidationWarnings
 } from '$lib/server/reservation/conflict-service';
@@ -677,15 +678,19 @@ export const getAvailableDates = query(async () => {
 	const tz = DEFAULT_TIMEZONE;
 	const todayStr = formatDateInTz(new Date(), tz);
 
-	const results: string[] = [];
 	// Offer today (i=0) through today + (days - 1). Stopping at `i < days` keeps the
 	// last offered day strictly inside the window, so every one of its slots validates.
-	for (let i = 0; i < days; i++) {
-		// Advance the calendar date by `i` days without relying on runtime-local
-		// Date math: anchor noon-LA of today, step in whole days, re-read in LA.
-		const anchor = buildDateInTz(todayStr, '12:00', tz);
-		const dateStr = formatDateInTz(new Date(anchor.getTime() + i * 86_400_000), tz);
-		const slots = await getAvailableSlots(dateStr);
+	// Each date is stepped from noon-LA of today in whole days and re-read in LA,
+	// so no runtime-local Date math is involved.
+	const anchor = buildDateInTz(todayStr, '12:00', tz);
+	const dateStrs = Array.from({ length: Math.max(days, 0) }, (_, i) =>
+		formatDateInTz(new Date(anchor.getTime() + i * 86_400_000), tz)
+	);
+	const slotsByDate = await getAvailableSlotsForDates(dateStrs);
+
+	const results: string[] = [];
+	for (const dateStr of dateStrs) {
+		const slots = slotsByDate.get(dateStr) ?? [];
 
 		let maxRun = 0;
 		let run = 0;
