@@ -52,74 +52,105 @@ export async function hasConflict(
 	return closureConflicts.length > 0;
 }
 
-/**
- * Generate all time slots for a given date and mark availability.
- * Returns slots within operating hours with their booked/blocked status.
- *
- * @param dateStr  Calendar day as "YYYY-MM-DD". The day is anchored directly to
- *   this string in {@link DEFAULT_TIMEZONE} — never re-derived from a `Date` — so
- *   the result is independent of the runtime timezone and stays consistent with
- *   the submit/validation path, which builds instants the same way.
- */
-export async function getAvailableSlots(dateStr: string): Promise<TimeSlot[]> {
-	const tz = DEFAULT_TIMEZONE;
-	const config = await getReservationConfig();
+/** A booked or closed interval, as the slot builder reads it. */
+export interface BusyInterval {
+	startsAt: Date;
+	endsAt: Date;
+}
 
-	// Build day boundaries from the literal date string in the configured timezone.
+type SlotConfig = Awaited<ReturnType<typeof getReservationConfig>>;
+
+/**
+ * One day's slots from rows already fetched. Pure: rows outside the day's
+ * operating window are ignored, so a caller may pass a whole range's rows.
+ */
+export function buildDaySlots(
+	dateStr: string,
+	config: SlotConfig,
+	reservations: BusyInterval[],
+	closures: BusyInterval[],
+	now: number = Date.now()
+): TimeSlot[] {
+	const tz = DEFAULT_TIMEZONE;
 	const dayStart = buildDateInTz(dateStr, config.operatingHoursStart, tz);
 	const dayEnd = buildDateInTz(dateStr, config.operatingHoursEnd, tz);
+	const overlapsDay = (r: BusyInterval) => r.startsAt < dayEnd && r.endsAt > dayStart;
+	const dayReservations = reservations.filter(overlapsDay);
+	const dayClosures = closures.filter(overlapsDay);
 
-	// Fetch all active reservations for this day (exclude cancelled and waitlisted)
-	const dayReservations = await db
-		.select({ startsAt: reservation.startsAt, endsAt: reservation.endsAt })
-		.from(reservation)
-		.where(
-			and(
-				notInArray(reservation.status, ['cancelled', 'waitlisted']),
-				lt(reservation.startsAt, dayEnd),
-				gt(reservation.endsAt, dayStart)
-			)
-		);
-
-	// Fetch closures overlapping this day
-	const dayClosures = await db
-		.select({ startsAt: closure.startsAt, endsAt: closure.endsAt })
-		.from(closure)
-		.where(and(lt(closure.startsAt, dayEnd), gt(closure.endsAt, dayStart)));
-
-	// Generate slots
 	const slots: TimeSlot[] = [];
 	const slotMs = config.timeSlotMinutes * 60 * 1000;
 	const bufferMs = config.bufferMinutes * 60 * 1000;
-	const earliestStart = new Date(Date.now() + config.minAdvanceMinutes * 60 * 1000);
+	const earliestStart = now + config.minAdvanceMinutes * 60 * 1000;
 
 	for (let time = dayStart.getTime(); time < dayEnd.getTime(); time += slotMs) {
-		const slotStart = new Date(time);
-		const slotEnd = new Date(time + slotMs);
+		const slotStart = time;
+		const slotEnd = time + slotMs;
 
-		const startTime = formatTimeInTz(slotStart, tz);
-		const endTime = formatTimeInTz(slotEnd, tz);
-
-		// Check if this slot overlaps any reservation (with buffer)
-		const blockedByReservation = dayReservations.some((r) => {
-			const rStart = r.startsAt.getTime() - bufferMs;
-			const rEnd = r.endsAt.getTime() + bufferMs;
-			return slotStart.getTime() < rEnd && slotEnd.getTime() > rStart;
-		});
-
-		// Check if this slot overlaps any closure
-		const blockedByClosure = dayClosures.some((c) => {
-			return slotStart.getTime() < c.endsAt.getTime() && slotEnd.getTime() > c.startsAt.getTime();
-		});
+		// Reservations block their buffer too; closures do not.
+		const blockedByReservation = dayReservations.some(
+			(r) => slotStart < r.endsAt.getTime() + bufferMs && slotEnd > r.startsAt.getTime() - bufferMs
+		);
+		const blockedByClosure = dayClosures.some(
+			(c) => slotStart < c.endsAt.getTime() && slotEnd > c.startsAt.getTime()
+		);
 
 		slots.push({
-			startTime,
-			endTime,
+			startTime: formatTimeInTz(new Date(slotStart), tz),
+			endTime: formatTimeInTz(new Date(slotEnd), tz),
 			available: !blockedByReservation && !blockedByClosure && slotStart >= earliestStart
 		});
 	}
 
 	return slots;
+}
+
+/**
+ * Slots for several days, keyed by date string, from one reservation query and
+ * one closure query spanning all of them.
+ *
+ * @param dateStrs  Calendar days as "YYYY-MM-DD", each anchored to the literal
+ *   string in {@link DEFAULT_TIMEZONE} — never re-derived from a `Date` — so
+ *   the result matches the submit/validation path whatever the runtime timezone.
+ */
+export async function getAvailableSlotsForDates(
+	dateStrs: string[]
+): Promise<Map<string, TimeSlot[]>> {
+	const result = new Map<string, TimeSlot[]>();
+	if (dateStrs.length === 0) return result;
+
+	const tz = DEFAULT_TIMEZONE;
+	const config = await getReservationConfig();
+	const starts = dateStrs.map((d) => buildDateInTz(d, config.operatingHoursStart, tz).getTime());
+	const ends = dateStrs.map((d) => buildDateInTz(d, config.operatingHoursEnd, tz).getTime());
+	const rangeStart = new Date(Math.min(...starts));
+	const rangeEnd = new Date(Math.max(...ends));
+
+	const [reservations, closures] = await Promise.all([
+		db
+			.select({ startsAt: reservation.startsAt, endsAt: reservation.endsAt })
+			.from(reservation)
+			.where(
+				and(
+					notInArray(reservation.status, ['cancelled', 'waitlisted']),
+					lt(reservation.startsAt, rangeEnd),
+					gt(reservation.endsAt, rangeStart)
+				)
+			),
+		db
+			.select({ startsAt: closure.startsAt, endsAt: closure.endsAt })
+			.from(closure)
+			.where(and(lt(closure.startsAt, rangeEnd), gt(closure.endsAt, rangeStart)))
+	]);
+
+	const now = Date.now();
+	for (const d of dateStrs) result.set(d, buildDaySlots(d, config, reservations, closures, now));
+	return result;
+}
+
+/** One day's slots within operating hours, marked available or not. */
+export async function getAvailableSlots(dateStr: string): Promise<TimeSlot[]> {
+	return (await getAvailableSlotsForDates([dateStr])).get(dateStr) ?? [];
 }
 
 // ---------------------------------------------------------------------------

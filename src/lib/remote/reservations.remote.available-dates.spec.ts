@@ -36,13 +36,17 @@ vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
 
 // Every day is fully available, so a day is dropped only by the window bound,
 // never by lack of slots.
+const openDay = [
+	{ startTime: '09:00', available: true },
+	{ startTime: '09:30', available: true },
+	{ startTime: '10:00', available: true },
+	{ startTime: '10:30', available: true }
+];
 vi.mock('$lib/server/reservation/conflict-service', () => ({
-	getAvailableSlots: vi.fn(async () => [
-		{ startTime: '09:00', available: true },
-		{ startTime: '09:30', available: true },
-		{ startTime: '10:00', available: true },
-		{ startTime: '10:30', available: true }
-	]),
+	getAvailableSlots: vi.fn(async () => openDay),
+	getAvailableSlotsForDates: vi.fn(
+		async (dates: string[]) => new Map(dates.map((d) => [d, openDay]))
+	),
 	getConflictDetails: vi.fn(),
 	getValidationWarnings: vi.fn()
 }));
