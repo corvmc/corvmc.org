@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Avatar } from 'bits-ui';
 	import { hashPattern } from '$lib/utils/patterns';
 	import { imageSrc, type ImagePreset } from '$lib/utils/images';
+	import { imageStatus, type ImageStatus } from './image-status';
 
 	const {
 		src,
@@ -35,20 +35,30 @@
 			.slice(0, 2)
 	);
 
+	let status = $state<ImageStatus>('loading');
+
 	const patternClass = $derived(`poster-gen--${hashPattern(name)}`);
 </script>
 
-<Avatar.Root {...rest} class="avatar relative overflow-hidden {radius} {rest.class}">
-	<Avatar.Fallback class="avatar-pattern poster-gen {patternClass}">
-		<span class="avatar-initials">{initials}</span>
-	</Avatar.Fallback>
-	<Avatar.Image
-		src={img.src}
-		srcset={img.srcset}
-		alt={name}
-		class="absolute inset-0 size-full object-cover"
-	/>
-</Avatar.Root>
+<div {...rest} class="avatar relative overflow-hidden {radius} {rest.class}">
+	{#if status !== 'loaded'}
+		<span class="avatar-pattern poster-gen {patternClass}">
+			<span class="avatar-initials">{initials}</span>
+		</span>
+	{/if}
+	{#if img.src}
+		{#key img.src}
+			<img
+				src={img.src}
+				srcset={img.srcset}
+				alt={name}
+				class="absolute inset-0 size-full object-cover"
+				style:display={status === 'loaded' ? undefined : 'none'}
+				{@attach imageStatus((s) => (status = s))}
+			/>
+		{/key}
+	{/if}
+</div>
 
 <style>
 	:global(.avatar) {

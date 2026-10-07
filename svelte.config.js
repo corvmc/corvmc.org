@@ -73,11 +73,12 @@ const config = {
 					'https://challenges.cloudflare.com',
 					'https://js.stripe.com'
 				],
-				// Every inline-handler violation in the report-only window came from an
-				// in-app browser or an extension injecting into the page; src/ has no
-				// on* attribute of its own. script-src already refuses them, because a
-				// nonce there makes the browser ignore 'unsafe-inline' — naming the
-				// directive keeps that true if script-src ever has to allow inline.
+				// SSR still emits onload/onerror="this.__e=event" on an img, link,
+				// iframe, script or style that has a spread, a `use:` or an inline
+				// load/error handler, so those elements must have none (see
+				// src/lib/components/ui/image-status.ts). script-src already refuses
+				// inline handlers, because its nonce makes the browser ignore
+				// 'unsafe-inline' — this keeps that true if script-src ever allows it.
 				'script-src-attr': ['none'],
 				'style-src': [
 					'self',

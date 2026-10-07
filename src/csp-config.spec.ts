@@ -69,11 +69,12 @@ describe('kit.csp', () => {
 		expect(csp?.directives?.['frame-ancestors']).toEqual(['self']);
 	});
 
-	// src/ has no inline on* attribute; every such violation in the report-only
-	// window was injected by an in-app browser or an extension. script-src covers
-	// this already, because Kit's nonce there makes the browser ignore any
-	// 'unsafe-inline' — this directive is what keeps it covered if script-src
-	// ever has to allow inline for something else.
+	// No source file writes an on* attribute, but Svelte's SSR does: a spread, a
+	// `use:` or a load/error handler on an img (or link, iframe, script, style)
+	// adds onload/onerror="this.__e=event", which this directive blocks.
+	// Avatar.ssr.spec.ts guards the avatars. script-src covers this already, as
+	// Kit's nonce makes the browser ignore 'unsafe-inline'; this directive keeps
+	// it covered if script-src ever has to allow inline for something else.
 	it('refuses inline event-handler attributes outright', () => {
 		expect(csp?.directives?.['script-src-attr']).toEqual(['none']);
 	});
