@@ -19,7 +19,7 @@ vi.mock('$lib/remote/events.remote', () => {
 	return {
 		publishEvent: {
 			enhance: () => ({ method: 'POST', action: '?/publishEvent' }),
-			fields: { id: field('id'), allIssues: () => null },
+			fields: { id: field('id'), reason: field('reason'), allIssues: () => null },
 			result: undefined
 		},
 		getEventPublishBlockers: vi.fn(async () => blockers)
@@ -63,16 +63,19 @@ describe('PublishEventAction', () => {
 	});
 
 	/**
-	 * Every blocker, not the first one: a staffer who fixes the poster and comes
+	 * Every warning, not the first one: a staffer who fixes the poster and comes
 	 * back to find the venue still missing has been sent round twice by the same
-	 * screen.
+	 * screen. Warnings do not refuse (#1787): a reason lets the publish through.
 	 */
-	it('lists what is missing and refuses the publish', async () => {
+	it('lists what is missing and offers to publish anyway with a reason', async () => {
 		await expect.element(await open(['No poster', 'No venue'])).toBeVisible();
 
 		await expect.element(page.getByText('Not ready to announce')).toBeVisible();
 		await expect.element(page.getByText('No poster')).toBeVisible();
 		await expect.element(page.getByText('No venue')).toBeVisible();
-		await expect.element(submit()).toBeDisabled();
+		await expect.element(page.getByLabelText('Why publish now?')).toBeVisible();
+		await expect
+			.element(page.getByRole('dialog').getByRole('button', { name: 'Publish anyway' }))
+			.toBeEnabled();
 	});
 });

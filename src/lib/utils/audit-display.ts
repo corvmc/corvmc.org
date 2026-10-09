@@ -98,6 +98,8 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Recorded a ${formatCents(entry.details.amountCents)} payout to ${entry.details.actName}`;
 		case 'production.payout_undone':
 			return `Undid the ${formatCents(entry.details.amountCents)} payout to ${entry.details.actName}`;
+		case 'event.published_over_warnings':
+			return `Published the event over ${plural(entry.details.warnings.length, 'warning')}: “${entry.details.reason}”`;
 		case 'group.role_changed': {
 			const d = entry.details;
 			if (d.role === 'member') return `Removed ${d.memberName} as a chair`;

@@ -165,12 +165,14 @@ export async function listAuditEntries(
 										id: (entry.details as { eventId?: string | null }).eventId ?? null,
 										title: stored.name
 									} as const)
-								: entry.subjectType === 'role'
-									? ({ type: 'role', id: entry.subjectId, title: stored.name } as const)
-									: entry.subjectType === 'group'
-										? // A club or committee has no band page, so it renders unlinked.
-											toBandRef(stored)
-										: toBandRef(subjectBand?.id ? subjectBand : stored),
+								: entry.subjectType === 'event'
+									? ({ type: 'event', id: entry.subjectId, title: stored.name } as const)
+									: entry.subjectType === 'role'
+										? ({ type: 'role', id: entry.subjectId, title: stored.name } as const)
+										: entry.subjectType === 'group'
+											? // A club or committee has no band page, so it renders unlinked.
+												toBandRef(stored)
+											: toBandRef(subjectBand?.id ? subjectBand : stored),
 				actor: toMemberRef(actorUser?.id ? actorUser : { id: null, name: entry.actorName })
 			};
 		})

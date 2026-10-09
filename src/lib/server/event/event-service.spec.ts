@@ -247,6 +247,11 @@ vi.mock('$lib/server/production/production-service', () => ({
 	getProductionByEvent: () => mockGetProductionByEvent()
 }));
 
+const mockRecordAudit = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (...args: unknown[]) => mockRecordAudit(...args)
+}));
+
 const mockCancelShifts = vi.fn(async (..._args: unknown[]) => 0);
 vi.mock('$lib/server/production/cancellation-notice', () => ({
 	openDeliverablesOnListing: async () => []
@@ -274,7 +279,7 @@ import {
 	EventNotFoundError,
 	EventValidationError,
 	EventStateError,
-	EventNotReadyError,
+	PublishReasonRequiredError,
 	EventHasTicketsError,
 	PosterRestoreError
 } from './event-service';
@@ -528,54 +533,89 @@ describe('EventService', () => {
 	describe('publish', () => {
 		it('publishes a draft event', async () => {
 			updateRowCount = 1;
-			await expect(publish('evt-1')).resolves.toBeUndefined();
+			await expect(publish('evt-1')).resolves.toEqual({ published: true, warnings: [] });
 		});
 
 		it('throws when event is not in draft status', async () => {
 			updateRowCount = 0;
-			// A poster, so the readiness gate passes and the status error is what
-			// surfaces. Without one the gate now refuses first, which is correct
-			// but not what this case is about.
+			// A poster, so the readiness check passes and the status error is what
+			// surfaces.
 			selectResult = [{ ...mockEventRow, status: 'published', posterKey: 'events/p.jpg' }];
 
 			await expect(publish('evt-1')).rejects.toThrow(EventStateError);
 		});
 
 		// -------------------------------------------------------------------
-		// The readiness gate
+		// Readiness warns, records and allows (#1787)
 		// -------------------------------------------------------------------
 		//
-		// `publish` used to check the listing's own status and nothing else, so a
-		// CMC show went public with no poster, no description and an unconfirmed
-		// lineup. Community listings stay exempt: a member posting somebody
-		// else's gig makes no promise on the collective's behalf.
+		// A CMC show with no poster, no description or an unconfirmed lineup is
+		// incomplete, not corrupt: under docs/development/conventions.md#workflow-gates
+		// that is a warning staff can publish over with a reason, which is
+		// audited. Community listings stay exempt.
 
-		it('refuses a CMC listing with no poster, and says so', async () => {
+		it('returns the warnings unmoved when they are not acknowledged', async () => {
 			selectResult = [{ ...mockEventRow, source: 'cmc', posterKey: null }];
 
-			await expect(publish('evt-1')).rejects.toThrow(EventNotReadyError);
-			await expect(publish('evt-1')).rejects.toThrow(/no poster/);
+			const outcome = await publish('evt-1');
+
+			expect(outcome.published).toBe(false);
+			expect(outcome.warnings.join()).toMatch(/no poster/);
+			expect(lastUpdateSet).toBeNull();
+			expect(mockRecordAudit).not.toHaveBeenCalled();
 		});
 
-		it('refuses a CMC listing with no description', async () => {
+		it('names every missing piece, the unconfirmed production included', async () => {
 			selectResult = [
-				{ ...mockEventRow, source: 'cmc', posterKey: 'events/p.jpg', description: '   ' }
+				{
+					...mockEventRow,
+					source: 'cmc',
+					posterKey: null,
+					description: '   ',
+					productionStatus: 'draft'
+				}
 			];
 
-			await expect(publish('evt-1')).rejects.toThrow(/no description/);
+			const { warnings } = await publish('evt-1');
+
+			expect(warnings.join()).toMatch(/not confirmed/);
+			expect(warnings.join()).toMatch(/no poster/);
+			expect(warnings.join()).toMatch(/no description/);
 		});
 
-		it('refuses while the production is not confirmed', async () => {
-			// Cancellation already cascades listing → production; this is the same
-			// coherence in the other direction.
-			selectResult = [
-				{ ...mockEventRow, source: 'cmc', posterKey: 'events/p.jpg', productionStatus: 'draft' }
-			];
+		it('publishes over acknowledged warnings and records the override', async () => {
+			updateRowCount = 1;
+			selectResult = [{ ...mockEventRow, source: 'cmc', posterKey: null }];
 
-			await expect(publish('evt-1')).rejects.toThrow(/not confirmed/);
+			const outcome = await publish('evt-1', {
+				acknowledged: true,
+				reason: 'Poster is at the printer'
+			});
+
+			expect(outcome.published).toBe(true);
+			expect(lastUpdateSet).toMatchObject({ status: 'published' });
+			expect(mockRecordAudit).toHaveBeenCalledWith(
+				expect.objectContaining({
+					action: 'event.published_over_warnings',
+					subject: expect.objectContaining({ type: 'event', id: 'evt-1' }),
+					details: {
+						warnings: outcome.warnings,
+						reason: 'Poster is at the printer'
+					}
+				})
+			);
 		});
 
-		it('publishes a CMC listing once it is ready', async () => {
+		it('refuses an acknowledged publish with no reason, so the log says why', async () => {
+			selectResult = [{ ...mockEventRow, source: 'cmc', posterKey: null }];
+
+			await expect(publish('evt-1', { acknowledged: true, reason: '  ' })).rejects.toThrow(
+				PublishReasonRequiredError
+			);
+			expect(lastUpdateSet).toBeNull();
+		});
+
+		it('publishes a CMC listing once it is ready, with nothing to record', async () => {
 			updateRowCount = 1;
 			selectResult = [
 				{
@@ -586,7 +626,8 @@ describe('EventService', () => {
 				}
 			];
 
-			await expect(publish('evt-1')).resolves.toBeUndefined();
+			await expect(publish('evt-1')).resolves.toEqual({ published: true, warnings: [] });
+			expect(mockRecordAudit).not.toHaveBeenCalled();
 		});
 
 		it('leaves a community listing alone', async () => {
@@ -595,7 +636,7 @@ describe('EventService', () => {
 			updateRowCount = 1;
 			selectResult = [{ ...mockEventRow, source: 'community', posterKey: null }];
 
-			await expect(publish('evt-1')).resolves.toBeUndefined();
+			await expect(publish('evt-1')).resolves.toEqual({ published: true, warnings: [] });
 		});
 
 		it('throws when event does not exist', async () => {
@@ -700,7 +741,7 @@ describe('EventService', () => {
 			vi.mocked(deletePrivateObject).mockRejectedValueOnce(new Error('R2 down'));
 			selectResult = [{ ...mockEventRow, status: 'draft', posterKey: WITHHELD }];
 
-			await expect(publish('evt-1')).resolves.toBeUndefined();
+			await expect(publish('evt-1')).resolves.toMatchObject({ published: true });
 		});
 
 		it('leaves the private copy alone when something still references it', async () => {

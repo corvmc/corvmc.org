@@ -1495,18 +1495,30 @@ export const updateEvent = form(
 	}
 );
 
-export const publishEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('event.publish');
-	try {
-		await publish(data.id);
-	} catch (err) {
-		// `EventNotReadyError` names what the listing is still missing. Unmapped it
-		// reached the staffer as a 500 whose message was the string "Internal
-		// Error", and Sentry as a crash.
-		mapDomainError(err);
+/**
+ * Readiness is a warning, not a refusal (#1787). The dialog shows the warnings
+ * up front and asks for a reason; the reason is the acknowledgement, and the
+ * service writes it to the audit log.
+ */
+export const publishEvent = form(
+	z.object({ id: z.string().min(1), reason: z.string().trim().max(1000).optional() }),
+	async (data) => {
+		await requireCapability('event.publish');
+		let outcome;
+		try {
+			outcome = await publish(data.id, { acknowledged: !!data.reason, reason: data.reason });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		if (!outcome.published) {
+			error(
+				422,
+				`Not ready to announce: ${outcome.warnings.join(', ')}. Give a reason to publish anyway.`
+			);
+		}
+		return { success: true };
 	}
-	return { success: true };
-});
+);
 
 export const unpublishEvent = form(
 	z.object({

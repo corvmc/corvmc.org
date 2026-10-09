@@ -12,7 +12,7 @@ import {
  * "Error" — the sentence naming what was missing never left the server.
  *
  * Only an e2e sees the whole chain: the query under the staff guard, the
- * blockers in the dialog, the submit gated on them. The component specs mock
+ * warnings in the dialog, the reason it asks for before publishing anyway. The component specs mock
  * the remote function.
  */
 
@@ -31,7 +31,7 @@ async function openEvent(page: Page, id: string, title: string) {
 	await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
 }
 
-test('the publish dialog names what the listing is missing, and will not submit', async ({
+test('the publish dialog names what the listing is missing, and asks why before publishing anyway', async ({
 	page
 }) => {
 	await loginAsStaff(page);
@@ -43,7 +43,8 @@ test('the publish dialog names what the listing is missing, and will not submit'
 	await expect(dialog.getByText('Not ready to announce:')).toBeVisible({ timeout: 15000 });
 	await expect(dialog.getByText('there is no poster')).toBeVisible();
 	await expect(dialog.getByText('there is no description')).toBeVisible();
-	await expect(dialog.getByRole('button', { name: 'Publish' })).toBeDisabled();
+	await expect(dialog.getByLabel('Why publish now?')).toBeVisible();
+	await expect(dialog.getByRole('button', { name: 'Publish anyway' })).toBeEnabled();
 });
 
 test('a ready listing gets the plain question and a live submit', async ({ page }) => {
