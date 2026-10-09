@@ -85,7 +85,7 @@
 					<td class="w-px"><StatusBadge status={r.status} label /></td>
 					<td class="cell-primary"><a class="font-medium link-hover" {href}>{r.name}</a></td>
 					<td class="col-support whitespace-nowrap">{r.categoryName}</td>
-					<td class="col-support truncate">{r.website ?? '—'}</td>
+					<td class="col-support cell-text truncate">{r.website ?? '—'}</td>
 				</tr>
 			{/each}
 		</Table>

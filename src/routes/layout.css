@@ -586,15 +586,21 @@ p {
 	white-space: nowrap;
 }
 
-/* The row's primary cell — the one that absorbs the slack and truncates.
-   Under `table-layout: auto` a column is sized to its content, so `truncate`
-   alone never shrinks a cell: long text just widens the table until the last
-   column is clipped. `max-width: 0` makes the browser ignore the intrinsic
-   width so the inner `truncate` can do its job, and `width: 100%` claims the
-   space every other column doesn't need. Exactly one cell per row gets this. */
+/* The row's primary cell: it absorbs the slack and truncates, one per row.
+   `max-width: 0` drops its intrinsic width so an inner `truncate` can work;
+   `width: 100%` claims what the other columns leave. `min-width` wins over
+   `max-width`, so the floor stops a nowrap cell elsewhere starving it to
+   nothing (#1797). `40cqw` keeps the floor inside a 327px phone column. */
 @utility cell-primary {
 	width: 100%;
 	max-width: 0;
+	min-width: min(10rem, 40cqw);
+}
+
+/* A secondary cell holding prose or a `truncate`: its width is capped, so its
+   whole sentence cannot claim the row the way an unbounded nowrap cell does. */
+@utility cell-text {
+	max-width: 24rem;
 }
 
 /* ---------------------------------------------------------------------------

@@ -199,7 +199,7 @@
 							{formatDate(evt.startsAt)} &middot; {formatEventTimeRange(evt.startsAt, evt.endsAt)}
 						</div>
 					</td>
-					<td class="col-support truncate">{evt.location ?? '—'}</td>
+					<td class="col-support cell-text truncate">{evt.location ?? '—'}</td>
 					<td class="col-extra">
 						{#if supportNames(evt.lineup).length}
 							<BadgeList items={supportNames(evt.lineup)} max={2} />

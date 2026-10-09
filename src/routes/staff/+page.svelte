@@ -60,7 +60,7 @@
 					>
 						<td class="whitespace-nowrap">{formatDateShort(shift.startsAt)}</td>
 						<td class="cell-primary">{shift.roleName}</td>
-						<td class="col-support truncate">{shift.eventTitle ?? ''}</td>
+						<td class="col-support cell-text truncate">{shift.eventTitle ?? ''}</td>
 						<td class="cell-num text-warning">{shift.capacity - shift.claimed}</td>
 					</tr>
 				{/each}
@@ -94,7 +94,7 @@
 							{d.title}
 							<div class="text-muted">{d.parentTitle}</div>
 						</td>
-						<td class="col-support truncate">{d.counterparty}</td>
+						<td class="col-support cell-text truncate">{d.counterparty}</td>
 					</tr>
 				{/each}
 			</Table>

@@ -133,7 +133,7 @@
 							{/if}
 						</td>
 						<td class="w-px"><Badge size="sm" variant="outline">{inv.role}</Badge></td>
-						<td class="col-extra truncate">{inv.invitedByName}</td>
+						<td class="col-extra cell-text truncate">{inv.invitedByName}</td>
 						<td class="w-px">
 							<RevokeEmailInviteAction inviteId={inv.id} email={inv.email} />
 						</td>
@@ -166,7 +166,7 @@
 								{formatTimeRange(r.startsAt, r.endsAt)}
 							</div>
 						</td>
-						<td class="col-support truncate">{r.bookedByName ?? '—'}</td>
+						<td class="col-support cell-text truncate">{r.bookedByName ?? '—'}</td>
 						<td class="col-extra max-w-xs truncate opacity-70">{r.notes ?? '—'}</td>
 					</tr>
 				{/each}
