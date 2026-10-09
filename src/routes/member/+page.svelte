@@ -52,11 +52,14 @@
 								<div class="flex items-center gap-3">
 									<BookerTypeIcon type={res.bookerType} size={18} class="opacity-60" />
 									<div>
-										<p class="text-sm font-medium">
+										<!-- Every row is named: the band, else the member's own note
+										     (the label the reservations page reads them by, #904),
+										     else what it is. A bare date read as unlabelled (#1821). -->
+										<p class="line-clamp-1 text-sm font-medium">
 											{formatDate(res.startsAt)}
-											{#if res.bandName}
-												<span class="opacity-60">· {res.bandName}</span>
-											{/if}
+											<span class="opacity-60"
+												>· {res.bandName ?? (res.notes?.trim() || 'Practice reservation')}</span
+											>
 										</p>
 										<p class="text-subtle">
 											{formatTimeRange(res.startsAt, res.endsAt)} · {formatDuration(
