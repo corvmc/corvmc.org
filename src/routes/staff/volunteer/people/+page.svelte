@@ -248,7 +248,9 @@
 								{/if}
 							</td>
 
-							<td class="cell-primary">
+							<!-- `min-w-48`: `cell-primary` takes only what is left over, and a
+							     long free-text answer elsewhere could leave it two letters. -->
+							<td class="cell-primary min-w-48">
 								<EntityIdentity ref={volunteer.member} avatar />
 								{#if line}
 									<div class="{line.tone} truncate text-xs">{line.text}</div>
@@ -268,7 +270,10 @@
 
 							<td class="col-support">
 								{#if volunteer.availability}
-									<div class="truncate" title={volunteer.availability}>
+									<!-- Wrapped and capped, not `truncate`: a nowrap sentence's
+									     intrinsic width is the whole answer, and auto layout gave it
+									     the width the name and Hours columns needed (#1789). -->
+									<div class="line-clamp-2 max-w-xs" title={volunteer.availability}>
 										{volunteer.availability}
 									</div>
 								{:else}
