@@ -56,7 +56,6 @@ describe('activeNavKey', () => {
 		['/staff/clubs/abc', 'clubs'],
 		['/staff/committees', 'committees'],
 		['/staff/committees/abc', 'committees'],
-		['/staff/agreements', 'agreements'],
 		['/staff/volunteer', 'volunteer'],
 		['/staff/volunteer/people', 'volunteer-people'],
 		// Shift detail lost its own row when the catalog folded into Schedule; it
@@ -90,6 +89,9 @@ describe('activeNavKey', () => {
 		['/staff/contractors/jobs/abc', 'contractor-jobs'],
 		['/staff/incidents', 'incidents'],
 		['/staff/incidents/abc', 'incidents'],
+		['/staff/volunteer/report', 'volunteer-report'],
+		['/staff/instructors', 'instructors'],
+		['/staff/help', 'help'],
 		['/staff/marketing/campaigns/new', 'campaigns'],
 		['/staff/marketing/campaigns/abc/edit', 'campaigns'],
 		['/staff/help/create', 'help'],
@@ -144,8 +146,7 @@ describe('the nav tree', () => {
 			'/staff/volunteer/people',
 			'/staff/volunteer/setup',
 			'/staff/volunteer/duty-lists',
-			'/staff/volunteer/recurring',
-			'/staff/volunteer/report'
+			'/staff/volunteer/recurring'
 		]);
 	});
 
@@ -171,23 +172,26 @@ describe('the nav tree', () => {
 		expect(activeNavKey('/staff/local-resources')).toBe('local-resources');
 	});
 
-	// The restructure in production-projects-spec.md, "The staff nav".
-	it('gathers planning into its own section, and trims People and Moderation', () => {
+	// The #1788 regrouping: each row in the section that owns what it is about.
+	it('groups rows by what they are about', () => {
 		const section = (key: string) => staffNavSections.find((s) => s.key === key)!;
 		const keys = (key: string) => section(key).items.map((i) => i.key);
-		expect(keys('planning')).toEqual([
+		expect(keys('people')).toEqual([
+			'users',
+			'bands',
+			'clubs',
 			'committees',
-			'suggestions',
-			'ballots',
-			'projects',
-			'agreements',
-			'reports'
+			'instructors',
+			'volunteer'
 		]);
-		const agreements = section('planning').items.find((i) => i.key === 'agreements');
-		expect(agreements?.children?.map((c) => c.key)).toEqual(['sponsors', 'grants', 'renewals']);
-		expect(keys('people')).toContain('clubs');
-		expect(keys('people')).not.toContain('committees');
-		expect(keys('moderation')).toEqual(['flags', 'classifieds']);
+		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'contractor-jobs']);
+		expect(keys('space')).toEqual(['reservations', 'equipment', 'renewals', 'keys']);
+		expect(keys('partners')).toEqual(['sponsors', 'venues', 'local-resources', 'contractors']);
+		expect(keys('moderation')).toEqual(['flags', 'classifieds', 'incidents']);
+		expect(keys('outreach')).toEqual(['campaigns', 'audiences']);
+		expect(keys('money')).toContain('grants');
+		expect(keys('reports')).toEqual(['reports', 'volunteer-report', 'inventory-spend']);
+		expect(keys('system')).toContain('help');
 		expect(keys('events')).toContain('productions');
 	});
 

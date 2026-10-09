@@ -1,8 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 
 /**
- * The Agreements nav row groups Sponsors, Grants and Renewals and has no page
- * of its own. Its first child is where it lands.
+ * Agreements was a nav grouping of Sponsors, Grants and Renewals, never a page.
+ * The rows now live in their own sections; this keeps old links landing.
  */
 export function load() {
 	redirect(307, '/staff/sponsors');
