@@ -258,7 +258,9 @@
 							repeated — the group header above carries it.
 						-->
 						<td class="cell-primary">
-							<div class="flex items-center gap-1">
+							<!-- `flex-wrap`: the icons give way, not the time. As one unwrapping
+							     row they overflowed into the Payment and action cells (#1835). -->
+							<div class="flex flex-wrap items-center gap-1">
 								<a {href} class="font-medium whitespace-nowrap hover:underline">
 									{formatTimeRange(r.startsAt, r.endsAt)}
 								</a>
