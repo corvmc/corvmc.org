@@ -2176,7 +2176,8 @@ export const capabilities = {
 	// is acts, offers, deals and billing; `run` is the run of show, the advance,
 	// crew, the door and settlement. Held by committees through a show's project.
 	// `create` opens a production, before any project exists to reach (#1675).
-	production: ['book', 'run', 'create'],
+	// `reopen` takes a closed or cancelled show back: admin-only, see below.
+	production: ['book', 'run', 'create', 'reopen'],
 	inbox: ['read', 'reply', 'assign', 'dispose', 'manageChannels'],
 	marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send'],
 	moderation: ['reviewFlags', 'setStanding'],
@@ -2262,7 +2263,10 @@ export const allCapabilities = Object.fromEntries(
 export const adminOnlyCapabilities = [
 	'user.setRole',
 	'user.purge',
-	'credit.adjust'
+	'credit.adjust',
+	// A terminal state is the past; leaving one is an audited admin act
+	// (docs/development/conventions.md#workflow-gates).
+	'production.reopen'
 ] as const satisfies readonly Capability[];
 
 /**

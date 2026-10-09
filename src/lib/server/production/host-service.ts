@@ -5,6 +5,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { HOST_VOLUNTEER_ROLE } from '$lib/config';
 import { production } from '$lib/server/db/schema/production';
 import { announcedBy } from './production-service';
+import { assertNotTerminal } from './production-scope';
 
 /**
  * Who is running a show tonight — a volunteer shift, not a column (#932).
@@ -89,6 +90,7 @@ export class NoHostRoleError extends Error {
  * the roster is what decides who ends up on it.
  */
 export async function openHostShift(eventId: string): Promise<string> {
+	await assertNotTerminal({ eventId });
 	const roleId = await hostRoleId();
 	if (!roleId) throw new NoHostRoleError();
 

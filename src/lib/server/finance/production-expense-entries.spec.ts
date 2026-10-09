@@ -73,13 +73,28 @@ describe('posting a settled show', () => {
 	it('posts a line once, so a later transition adds only what is new', async () => {
 		// `closed` runs this again after `settled`, which is how a line added in
 		// between is picked up rather than skipped.
-		posted = { 'exp-1': [{ id: 'entry-1' }] };
+		posted = { 'exp-1': [{ id: 'entry-1', amountCents: -15000 }] };
 		lines = [line(), line({ id: 'exp-2', label: 'Door staff', amountCents: 8000 })];
 
 		await postProductionExpenses('prod-1', 'evt-1');
 
 		expect(written()).toHaveLength(1);
 		expect(written()[0]).toMatchObject({ subjectId: 'exp-2' });
+	});
+
+	it('posts a line again once its posting was reversed', async () => {
+		// A show walked back below `settled` and settled again.
+		posted = {
+			'exp-1': [
+				{ id: 'entry-1', amountCents: -15000 },
+				{ id: 'entry-2', amountCents: 15000 }
+			]
+		};
+		lines = [line()];
+
+		await postProductionExpenses('prod-1', 'evt-1');
+
+		expect(written()).toHaveLength(1);
 	});
 
 	it('writes nothing for a show with no costs', async () => {

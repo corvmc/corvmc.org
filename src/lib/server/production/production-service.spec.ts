@@ -96,6 +96,12 @@ vi.mock('$lib/server/volunteer/show-cancellation', () => ({
 	cancelShiftsForProduction: (...args: unknown[]) => cancelShiftsForProduction(...args)
 }));
 const captureException = vi.fn();
+// Whether a show is still open, and the log of what moved, have their own specs.
+vi.mock('./production-scope', () => ({
+	assertNotTerminal: async () => undefined,
+	ProductionTerminalError: class extends Error {}
+}));
+vi.mock('$lib/server/audit/audit-service', () => ({ recordAuditEntry: async () => undefined }));
 vi.mock('$lib/server/sentry', () => ({
 	captureException: (...args: unknown[]) => captureException(...args)
 }));
@@ -108,8 +114,7 @@ import {
 	cancelProductionsForEvent,
 	ProductionNotFoundError,
 	ProductionExistsError,
-	InvalidProductionTransitionError,
-	CloseOutIncompleteError,
+	ProductionMovedError,
 	NotACmcListingError,
 	ListingNotFoundError
 } from './production-service';
@@ -250,166 +255,52 @@ describe('updateProductionDetails', () => {
 	});
 });
 
-describe('the close-out gate', () => {
-	it('refuses to close while a load-out task is open, and names it', async () => {
-		// The gate is the whole feature: a button that set `closed` without
-		// checking would be the one production-service warns against finishing.
-		selectQueue = [[{ label: 'Reset the room' }, { label: 'Gear back to storage' }]];
-
-		await expect(transitionProduction('prod-1', 'closed')).rejects.toThrow(CloseOutIncompleteError);
-		// It must not have written anything.
-		expect(() => whereParams('update')).toThrow();
-	});
-
-	it('names at most five, and says how many more there are', async () => {
-		selectQueue = [Array.from({ length: 8 }, (_, i) => ({ label: `Task ${i + 1}` }))];
-
-		await expect(transitionProduction('prod-1', 'closed')).rejects.toThrow(/and 3 more/);
-	});
-
-	it('lets a show with nothing outstanding close', async () => {
-		selectQueue = [[], [productionRow({ status: 'closed' })]];
-		await expect(transitionProduction('prod-1', 'closed')).resolves.toBeDefined();
-	});
-
-	it('checks nothing on any other transition', async () => {
-		// Only `closed` claims the room is reset, so only `closed` pays for the read.
-		selectQueue = [[productionRow({ status: 'settled' })]];
-		await expect(transitionProduction('prod-1', 'settled')).resolves.toBeDefined();
-	});
-});
-
+// The status rules themselves — warnings, overrides, terminal states, reopening
+// — run against real SQLite in `production-status.spec.ts`. What stays here is
+// which side effects a move reaches.
 describe('transitionProduction', () => {
-	// Every legal edge, asserted against the source list the UPDATE actually
-	// carries — the machine and the SQL cannot drift because they are one table.
-	const legal: [string, string[]][] = [
-		['draft', ['offered']],
-		['offered', ['draft']],
-		['confirmed', ['draft', 'offered']],
-		['completed', ['confirmed']],
-		['settled', ['completed']],
-		['closed', ['settled']],
-		['cancelled', ['draft', 'offered', 'confirmed']]
-	];
-
-	for (const [to, from] of legal) {
-		it(`reaches ${to} only from ${from.join(', ')}`, async () => {
-			// `closed` reads the close-out tasks first; an empty list is a show with
-			// nothing outstanding, which is the case this edge is about.
-			selectQueue =
-				to === 'closed' ? [[], [productionRow({ status: to })]] : [[productionRow({ status: to })]];
-
-			await transitionProduction('prod-1', to as never);
-
-			const params = whereParams('update');
-			expect(params).toContain('prod-1');
-			for (const source of from) expect(params).toContain(source);
-			// Nothing else may sneak into the list.
-			expect(params.filter((p) => typeof p === 'string' && p !== 'prod-1')).toHaveLength(
-				from.length
-			);
-		});
-	}
-
-	it('stamps who closed it and when, and only on closed', async () => {
-		// `updatedAt` is not a proxy for a close date: it moves again on the next
-		// write to the row, so a closed production would report the last edit.
-		selectQueue = [[], [productionRow({ status: 'closed' })]];
-		await transitionProduction('prod-1', 'closed', 'u-treasurer');
-
-		const closedSet = calls.find((c) => c.op === 'update' && c.method === 'set')?.args[0] as Record<
-			string,
-			unknown
-		>;
-		expect(closedSet.closedByUserId).toBe('u-treasurer');
-		expect(closedSet.closedAt).toBeInstanceOf(Date);
-
-		calls = [];
-		selectQueue = [[productionRow({ status: 'settled' })]];
-		await transitionProduction('prod-1', 'settled', 'u-treasurer');
-
-		const settledSet = calls.find((c) => c.op === 'update' && c.method === 'set')
-			?.args[0] as Record<string, unknown>;
-		expect(settledSet).not.toHaveProperty('closedAt');
-		expect(settledSet).not.toHaveProperty('closedByUserId');
-	});
-
-	it('closes without an actor rather than refusing, and records the absence', async () => {
-		selectQueue = [[], [productionRow({ status: 'closed' })]];
-		await transitionProduction('prod-1', 'closed');
-
-		const set = calls.find((c) => c.op === 'update' && c.method === 'set')?.args[0] as Record<
-			string,
-			unknown
-		>;
-		expect(set.closedByUserId).toBeNull();
-		expect(set.closedAt).toBeInstanceOf(Date);
-	});
+	/** What the move reads first: the status it will swap from, and the listing. */
+	const before = (status: string) => [{ status, eventId: 'evt-1', title: 'Friday' }];
 
 	it('calls off the show’s crew shifts when it is cancelled, naming who did (#1705)', async () => {
-		selectQueue = [[productionRow({ status: 'cancelled' })]];
-		await transitionProduction('prod-1', 'cancelled', 'u-staff');
+		selectQueue = [before('confirmed'), [productionRow({ status: 'cancelled' })]];
+		await transitionProduction('prod-1', 'cancelled', { actorUserId: 'u-staff' });
 
 		expect(cancelShiftsForProduction).toHaveBeenCalledWith('prod-1', 'u-staff');
 	});
 
 	it('leaves the shifts alone on every other transition', async () => {
-		selectQueue = [[productionRow({ status: 'confirmed' })]];
-		await transitionProduction('prod-1', 'confirmed', 'u-staff');
+		selectQueue = [before('offered'), [productionRow({ status: 'confirmed' })]];
+		await transitionProduction('prod-1', 'confirmed', { actorUserId: 'u-staff' });
 
 		expect(cancelShiftsForProduction).not.toHaveBeenCalled();
 	});
 
 	it('still cancels the production when the shift cascade fails, and reports it', async () => {
 		cancelShiftsForProduction.mockRejectedValueOnce(new Error('D1 down'));
-		selectQueue = [[productionRow({ status: 'cancelled' })]];
+		selectQueue = [before('draft'), [productionRow({ status: 'cancelled' })]];
 
 		await expect(transitionProduction('prod-1', 'cancelled')).resolves.toMatchObject({
-			status: 'cancelled'
+			moved: true,
+			production: { status: 'cancelled' }
 		});
 		expect(captureException).toHaveBeenCalled();
 	});
 
-	it('names the actual status when the transition is illegal', async () => {
+	it('swaps only from the status it read, and says so when somebody else moved it', async () => {
+		selectQueue = [before('offered')];
 		updateRowCount = 0;
-		// Two entries: the assertion below calls through twice, once for the class
-		// and once for the message, and each call re-reads the row.
-		selectQueue = [[{ status: 'completed' }], [{ status: 'completed' }]];
 
-		await expect(transitionProduction('prod-1', 'confirmed')).rejects.toThrow(
-			InvalidProductionTransitionError
-		);
-		// The message names the status it actually found, not the one the caller
-		// assumed — that difference is the whole diagnostic value of re-reading.
-		await expect(transitionProduction('prod-1', 'confirmed')).rejects.toThrow(
-			/from "completed" to "confirmed"/
-		);
+		await expect(transitionProduction('prod-1', 'confirmed')).rejects.toThrow(ProductionMovedError);
+		expect(whereParams('update')).toEqual(expect.arrayContaining(['prod-1', 'offered']));
 	});
 
-	it('distinguishes a missing production from a wrong status', async () => {
-		updateRowCount = 0;
+	it('distinguishes a missing production', async () => {
 		selectQueue = [[]];
 
 		await expect(transitionProduction('prod-999', 'confirmed')).rejects.toThrow(
 			ProductionNotFoundError
 		);
-	});
-
-	// `cancelled` and `closed` are terminal: they appear in no target's source
-	// list, so nothing reaches anything from them. `completed` and `settled` are
-	// not terminal — they still go forward — but neither walks back to a
-	// pre-show state, which is the other half of the same guarantee.
-	it('has no way out of cancelled or closed, and no way back from completed', async () => {
-		const everySource = legal.flatMap(([, from]) => from);
-		expect(everySource).not.toContain('cancelled');
-		expect(everySource).not.toContain('closed');
-
-		const preShow = ['draft', 'offered', 'confirmed'];
-		for (const [to, from] of legal) {
-			if (!preShow.includes(to)) continue;
-			expect(from).not.toContain('completed');
-			expect(from).not.toContain('settled');
-		}
 	});
 });
 

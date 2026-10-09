@@ -1,5 +1,12 @@
 import { db, getRowCount } from '$lib/server/db';
-import { postProductionExpenses } from '$lib/server/finance/production-expense-entries';
+import {
+	postProductionExpenses,
+	reverseProductionExpense
+} from '$lib/server/finance/production-expense-entries';
+import { expenseLines } from './expense-service';
+import { assertNotTerminal, ProductionTerminalError } from './production-scope';
+import { isTerminalProduction, transitionWarnings } from '$lib/production/status';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import { production } from '$lib/server/db/schema/production';
 import { and, eq, getTableColumns, inArray, isNull, sql, type SQL } from 'drizzle-orm';
@@ -27,11 +34,11 @@ import { captureException } from '$lib/server/sentry';
 /**
  * The ops half of a show.
  *
- * Thin except in one place: status. A production moves through the work of
- * putting a night on, and every move is an atomic conditional update rather
- * than a read followed by a write — D1 has no interactive transactions, so the
- * `WHERE … AND status IN (…)` + row-count check is the house pattern for this
- * (see `reservation-service.updateStatus`).
+ * Thin except in one place: status, which follows warn, record, allow
+ * (docs/development/conventions.md#workflow-gates). Every move is a
+ * compare-and-swap on the status its warnings were computed against — D1 has
+ * no interactive transactions, so `WHERE … AND status = ?` plus a row count
+ * is the house pattern (see `reservation-service.updateStatus`).
  */
 
 export class ProductionNotFoundError extends DomainError {
@@ -68,49 +75,34 @@ export class NotACmcListingError extends DomainError {
 	}
 }
 
-/** 422, matching `InvalidLoanTransitionError` — a stale button, not a fault. */
-export class InvalidProductionTransitionError extends DomainError {
+/** 422: an override names no reason, so the audit log would say nothing. */
+export class OverrideReasonRequiredError extends DomainError {
 	readonly httpStatus = 422;
-	constructor(from: ProductionStatus, to: ProductionStatus) {
-		super(`Cannot transition production from "${from}" to "${to}"`);
+	constructor() {
+		super('Give a reason for this change; it is written to the audit log.');
+		this.name = 'OverrideReasonRequiredError';
 	}
 }
 
-/**
- * Which statuses a target may be reached **from**.
- *
- * Keyed by target rather than by source because that is literally the `IN (…)`
- * list the atomic update needs: no second derivation step, and no way for the
- * table and the SQL to disagree.
- *
- * `settled` is #593's tab; `closed` is gated below on the load-out checklist
- * being finished.
- */
-const REACHABLE_FROM: Record<ProductionStatus, readonly ProductionStatus[]> = {
-	// Un-offer, because a mis-click needs a way back.
-	draft: ['offered'],
-	offered: ['draft'],
-	// A show can be booked outright without ever being offered.
-	confirmed: ['draft', 'offered'],
-	completed: ['confirmed'],
-	settled: ['completed'],
-	closed: ['settled'],
-	// Any pre-completed state. Once a night has happened it is history.
-	cancelled: ['draft', 'offered', 'confirmed']
-};
+/** 409: somebody else moved the show between the read and the write. */
+export class ProductionMovedError extends DomainError {
+	readonly httpStatus = 409;
+	constructor() {
+		super('This show changed status while you were looking at it. Reload and try again.');
+		this.name = 'ProductionMovedError';
+	}
+}
+
+/** 422: `reopenProduction` is for a terminal show, and to a non-terminal status. */
+export class InvalidReopenError extends DomainError {
+	readonly httpStatus = 422;
+	constructor(message: string) {
+		super(message);
+		this.name = 'InvalidReopenError';
+	}
+}
 
 /** The statuses a production can still be pulled out of when its event is cancelled. */
-export class CloseOutIncompleteError extends DomainError {
-	readonly httpStatus = 422;
-	constructor(readonly outstanding: string[]) {
-		super(
-			`Close-out is not finished: ${outstanding.slice(0, 5).join(', ')}` +
-				(outstanding.length > 5 ? ` and ${outstanding.length - 5} more` : '')
-		);
-		this.name = 'CloseOutIncompleteError';
-	}
-}
-
 const PRE_COMPLETED: readonly ProductionStatus[] = ['draft', 'offered', 'confirmed'];
 
 export interface ProductionDetailsInput {
@@ -279,13 +271,13 @@ const SHOW_CLOCK = [
 
 /**
  * The times, the producer and the three notes. **Not** status — status only
- * moves through `transitionProduction`, which is the only place the legal edges
- * are written down.
+ * moves through `transitionProduction` and `reopenProduction`.
  */
 export async function updateProductionDetails(
 	id: string,
 	data: ProductionDetailsInput
 ): Promise<Production> {
+	await assertNotTerminal({ productionId: id });
 	const update = db
 		.update(production)
 		.set({ ...data, updatedAt: new Date() })
@@ -331,8 +323,7 @@ export async function updateProductionDetails(
  *
  * Load-out work: tasks on a work order for this event whose duty list is
  * anchored at `load_out`. The room being reset is the thing `closed` claims,
- * and a button that claimed it without checking would be the button
- * `production-service` warns against finishing.
+ * so a close with any of these open warns and names them.
  */
 export async function outstandingCloseOutTasks(productionId: string): Promise<string[]> {
 	return (await closeOutTasksOwed([productionId])).map((r) => r.label);
@@ -340,7 +331,7 @@ export async function outstandingCloseOutTasks(productionId: string): Promise<st
 
 /**
  * The same question for many shows at once, for a deliverable's `close_out_done`
- * condition. One predicate, so the `closed` gate and the deliverable agree.
+ * condition. One predicate, so the `closed` warning and the deliverable agree.
  */
 export async function productionsOwingCloseOut(productionIds: string[]): Promise<Set<string>> {
 	if (productionIds.length === 0) return new Set();
@@ -365,77 +356,172 @@ function closeOutTasksOwed(productionIds: string[]) {
 		);
 }
 
+export interface TransitionOptions {
+	actorUserId?: string | null;
+	/** The caller has shown the warnings and the user went ahead. */
+	acknowledged?: boolean;
+	/** Required when the move has warnings; written to the audit log. */
+	reason?: string | null;
+}
+
+export type TransitionOutcome =
+	| { moved: true; production: Production; warnings: string[] }
+	| { moved: false; warnings: string[] };
+
+/**
+ * Move a show to any status, terminal ones included.
+ *
+ * Unacknowledged warnings come back unmoved so the console can show them; an
+ * acknowledged move needs a reason and is recorded as an override. A show
+ * already closed or cancelled refuses: that is `reopenProduction`.
+ */
 export async function transitionProduction(
 	id: string,
 	to: ProductionStatus,
-	actorUserId?: string | null
-): Promise<Production> {
-	const from = REACHABLE_FROM[to];
+	opts: TransitionOptions = {}
+): Promise<TransitionOutcome> {
+	const current = await readForMove(id);
+	if (isTerminalProduction(current.status)) throw new ProductionTerminalError(current.status);
+	const from = current.status;
 
-	// The gate is the whole feature: `closed` says the room is reset and the
-	// checklist is done, so it refuses while any of it is open and names what.
-	if (to === 'closed') {
-		const outstanding = await outstandingCloseOutTasks(id);
-		if (outstanding.length > 0) throw new CloseOutIncompleteError(outstanding);
+	const outstandingCloseOut = to === 'closed' ? await outstandingCloseOutTasks(id) : [];
+	const warnings = transitionWarnings(from, to, { outstandingCloseOut });
+	const reason = opts.reason?.trim() ?? '';
+	if (warnings.length > 0) {
+		if (!opts.acknowledged) return { moved: false, warnings };
+		if (!reason) throw new OverrideReasonRequiredError();
 	}
 
 	// Stamped in the same conditional update as the status, so a row can never
-	// read `closed` without saying when. `updatedAt` cannot stand in for it: it
-	// moves again on the next write to the row.
+	// read `closed` without saying when. `updatedAt` cannot stand in for it.
 	const closing =
-		to === 'closed' ? { closedAt: new Date(), closedByUserId: actorUserId ?? null } : {};
+		to === 'closed' ? { closedAt: new Date(), closedByUserId: opts.actorUserId ?? null } : {};
 	// Before the move, which would make a confirmed lineup read as unconfirmed.
 	const openBefore = to === 'cancelled' ? await openDeliverablesOnProductions([id]) : [];
 
-	const move = db
-		.update(production)
-		.set({ status: to, updatedAt: new Date(), ...closing })
-		.where(and(eq(production.id, id), inArray(production.status, [...from])));
-	const projectStatus = PROJECT_STATUS_ON[to];
-	const result = projectStatus
-		? (await db.batch([move, followProject(eq(production.id, id), to, projectStatus)]))[0]
-		: await move;
-
-	if (getRowCount(result) === 0) {
-		// Zero rows is either "no such production" or "wrong status"; say which.
-		const [row] = await db
-			.select({ status: production.status })
-			.from(production)
-			.where(eq(production.id, id))
-			.limit(1);
-
-		if (!row) throw new ProductionNotFoundError();
-		throw new InvalidProductionTransitionError(row.status, to);
-	}
+	await moveStatus(id, from, to, closing);
 
 	// The crew shifts go with the show (#1705). Reported rather than thrown: the
-	// status has moved, and a retry would be refused as an invalid transition.
+	// status has moved, and a retry would be refused as terminal.
 	if (to === 'cancelled') {
 		try {
-			await cancelShiftsForProduction(id, actorUserId);
+			await cancelShiftsForProduction(id, opts.actorUserId);
 		} catch (err) {
-			captureException(err, { event: 'production.cancel.shifts', productionId: id });
+			captureException(err, {
+				event: 'production.cancel.shifts',
+				productionId: id
+			});
 		}
 	}
-
-	const settled = await getProduction(id);
-
-	// Posted here rather than when a producer types a line: a cost sheet is a
-	// worksheet until the night is settled. Idempotent per line, so `closed`
-	// picks up anything added after `settled`.
-	if (to === 'settled' || to === 'closed') {
-		const [listing] = await db
-			.select({ id: eventListing.id })
-			.from(eventListing)
-			.where(eq(eventListing.productionId, id))
-			.limit(1);
-		if (listing) await postProductionExpenses(id, listing.id);
+	await followMoney(id, current.eventId, from, to);
+	if (to === 'cancelled') {
+		await announceShowsCancelled([id], opts.actorUserId ?? null, openBefore);
 	}
-	if (to === 'cancelled') await announceShowsCancelled([id], actorUserId ?? null, openBefore);
 
-	return settled;
+	const subject = { type: 'production' as const, id, label: current.title };
+	const move = { eventId: current.eventId, from, to };
+	await recordAuditEntry(
+		warnings.length > 0
+			? {
+					action: 'production.override',
+					subject,
+					details: { ...move, warnings, reason }
+				}
+			: { action: 'production.status_changed', subject, details: move }
+	);
+
+	return { moved: true, production: await getProduction(id), warnings };
 }
 
+/**
+ * Take a closed or cancelled show back to a working status.
+ *
+ * Its own act, behind the admin-only `production.reopen`, because a terminal
+ * state is the past. Clears the close-out stamp; the audit log keeps who
+ * closed it. Cancelled shifts and the cancellation notice are not undone.
+ */
+export async function reopenProduction(
+	id: string,
+	to: ProductionStatus,
+	reason: string
+): Promise<Production> {
+	const why = reason.trim();
+	if (!why) throw new OverrideReasonRequiredError();
+	if (isTerminalProduction(to)) {
+		throw new InvalidReopenError('Reopen to a working status, not to closed or cancelled.');
+	}
+	const current = await readForMove(id);
+	const from = current.status;
+	if (!isTerminalProduction(from)) {
+		throw new InvalidReopenError(`This show is ${from}, not closed or cancelled.`);
+	}
+
+	await moveStatus(id, from, to, { closedAt: null, closedByUserId: null });
+	await followMoney(id, current.eventId, from, to);
+	await recordAuditEntry({
+		action: 'production.reopened',
+		subject: { type: 'production', id, label: current.title },
+		details: { eventId: current.eventId, from, to, reason: why }
+	});
+	return getProduction(id);
+}
+
+async function readForMove(id: string) {
+	const [row] = await db
+		.select({
+			status: production.status,
+			eventId: eventListing.id,
+			title: eventListing.title
+		})
+		.from(production)
+		.leftJoin(eventListing, eq(eventListing.productionId, production.id))
+		.where(eq(production.id, id))
+		.limit(1);
+	if (!row) throw new ProductionNotFoundError();
+	return row;
+}
+
+/** The status, and the project with it, swapped only from the status the caller read. */
+async function moveStatus(
+	id: string,
+	from: ProductionStatus,
+	to: ProductionStatus,
+	extra: Partial<Pick<Production, 'closedAt' | 'closedByUserId'>>
+) {
+	const move = db
+		.update(production)
+		.set({ status: to, updatedAt: new Date(), ...extra })
+		.where(and(eq(production.id, id), eq(production.status, from)));
+	const before = projectStatusFor(from);
+	const after = projectStatusFor(to);
+	const follow = after
+		? followProject(eq(production.id, id), to, after)
+		: before
+			? reopenProject(id, to, before)
+			: null;
+	const result = follow && before !== after ? (await db.batch([move, follow]))[0] : await move;
+	if (getRowCount(result) === 0) throw new ProductionMovedError();
+}
+
+/**
+ * What a show's costs owe the ledger at its new status.
+ *
+ * Posted at `settled` and `closed` — a cost sheet is a worksheet until then —
+ * and reversed on a move back below `settled`. Both are idempotent per line,
+ * so any status may be revisited.
+ */
+async function followMoney(
+	id: string,
+	eventId: string | null,
+	from: ProductionStatus,
+	to: ProductionStatus
+) {
+	const posted = (s: ProductionStatus) => s === 'settled' || s === 'closed';
+	if (posted(to) && eventId) await postProductionExpenses(id, eventId);
+	if (posted(from) && !posted(to)) {
+		for (const line of await expenseLines(id)) await reverseProductionExpense(line.id);
+	}
+}
 /**
  * Follow an event that was cancelled.
  *
@@ -476,13 +562,31 @@ export async function cancelProductionsForEvent(
 
 /**
  * A finished show's project is done, and a cancelled show's is declined. The
- * project follows the show and never the reverse.
+ * project follows the show and never the reverse; null is a show still on.
  */
-const PROJECT_STATUS_ON: Partial<Record<ProductionStatus, ProjectStatus>> = {
-	completed: 'done',
-	cancelled: 'declined'
-};
+function projectStatusFor(status: ProductionStatus): ProjectStatus | null {
+	if (status === 'cancelled') return 'declined';
+	return status === 'completed' || status === 'settled' || status === 'closed' ? 'done' : null;
+}
 
+/** A show walked back before it happened: open its project again, if the show had closed it. */
+function reopenProject(id: string, reached: ProductionStatus, was: ProjectStatus) {
+	return db
+		.update(project)
+		.set({ status: 'open', updatedAt: new Date() })
+		.where(
+			and(
+				eq(project.status, was),
+				inArray(
+					project.id,
+					db
+						.select({ id: production.projectId })
+						.from(production)
+						.where(and(eq(production.id, id), eq(production.status, reached)))
+				)
+			)
+		);
+}
 /** Move the project of the productions matching `which`, once they reached `reached`. */
 function followProject(which: SQL, reached: ProductionStatus, status: ProjectStatus) {
 	return db

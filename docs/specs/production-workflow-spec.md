@@ -701,6 +701,17 @@ production_expense
 
 ## Status lifecycle
 
+> **Amended 2026-10-09** — status follows
+> [warn, record, allow](../development/conventions.md#workflow-gates). The diagram is the
+> usual path the console's buttons walk, not a table of legal edges: any non-terminal status
+> may move to any other once its warnings (a skipped step, a move back, open load-out tasks)
+> are acknowledged with a reason, recorded as `production.override`. `closed` and `cancelled`
+> are terminal and read-only; leaving one is `reopenProduction`, guarded by the admin-only
+> `production.reopen` and audited as `production.reopened`. `InvalidProductionTransitionError`
+> and `CloseOutIncompleteError` are gone: the close-out checklist is a warning. Moving back
+> below `settled` reverses the posted expense lines; a recorded payout is undone with reversing
+> ledger rows for that act alone, never edited.
+
 ```
 draft ──▶ offered ──▶ confirmed ──▶ completed ──▶ settled ──▶ closed
   │          │            │

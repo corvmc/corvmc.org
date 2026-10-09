@@ -73,6 +73,9 @@ vi.mock('$lib/server/db', () => ({
 	getRowCount: () => 0
 }));
 
+// Whether the show is still open is its own module's business, with its own spec.
+vi.mock('./production-scope', () => ({ assertNotTerminal: async () => undefined }));
+
 const { productionSlot } = await import('$lib/server/db/schema/production');
 const {
 	addSlot,
@@ -83,7 +86,6 @@ const {
 	getPublicSetTimes,
 	setSlotTerms,
 	listBandSlotTerms,
-	PoolOverAllocatedError,
 	SlotExistsError,
 	SlotNotFoundError,
 	TooManySlotsError,
@@ -283,9 +285,6 @@ describe('setSlotTerms', () => {
 	// want different confirmations, and the seam is where a settlement capability
 	// would guard one without splitting the other.
 	it('writes the five deal columns and nothing else', async () => {
-		// Two reads before the write since #832: the slot's own production, then
-		// its siblings' shares, because the pool has to fit in one pool.
-		selectResults = [[{ productionId: 'prod-1' }], [{ bps: 3000 }]];
 		writeResults = [[{ id: 'slot-a' }]];
 
 		await setSlotTerms('slot-a', {
@@ -302,32 +301,15 @@ describe('setSlotTerms', () => {
 		expect(written).not.toHaveProperty('scheduledStartAt');
 	});
 
-	it('refuses a share the acts\u2019 pool cannot hold', async () => {
-		// Three acts at 7000 each is enterable today and pays out 210% of a pool
-		// that holds 100% — the overspend coming out of the collective's own cut.
-		selectResults = [[{ productionId: 'prod-1' }], [{ bps: 7000 }, { bps: 7000 }]];
-
-		await expect(
-			setSlotTerms('slot-a', {
-				guaranteeCents: null,
-				percentageBps: 7000,
-				versus: false,
-				againstNet: false,
-				contributed: false
-			})
-		).rejects.toThrow(PoolOverAllocatedError);
-
-		expect(updatesTo(productionSlot)).toHaveLength(0);
-	});
-
-	it('does not read siblings when no share is being set', async () => {
-		// A guarantee-only deal touches no percentage, so the pool is not its
-		// business and the extra queries should not run.
+	// Warn, record, allow: an over-allocated bill is saved and flagged on the
+	// running order (`pool_over_allocated`), because the excess coming out of the
+	// collective's cut is a decision staff may make on purpose.
+	it('saves a share the acts\u2019 pool cannot hold, rather than refusing it', async () => {
 		writeResults = [[{ id: 'slot-a' }]];
 
 		await setSlotTerms('slot-a', {
-			guaranteeCents: 30000,
-			percentageBps: null,
+			guaranteeCents: null,
+			percentageBps: 7000,
 			versus: false,
 			againstNet: false,
 			contributed: false

@@ -1,4 +1,4 @@
-import { recordEntries } from './financial-entry-service';
+import { recordEntries, reverseEntriesForSubject } from './financial-entry-service';
 import { poolBalanceCents } from './financial-entry-service';
 import { showProjectIdForProduction } from './show-project';
 
@@ -74,4 +74,17 @@ export async function recordActPayout(params: RecordActPayoutParams): Promise<vo
 				]
 			: [])
 	]);
+}
+
+/**
+ * Undo one act's payout: reversing rows for that slot alone.
+ *
+ * Payouts are filed under the show, so the subject on its own would reverse
+ * every act's; `metadata.slotId` is what tells them apart.
+ */
+export async function reverseActPayout(productionId: string, slotId: string): Promise<number> {
+	return reverseEntriesForSubject('production', productionId, new Date(), {
+		metadata: { slotId },
+		label: 'Payout undone'
+	});
 }

@@ -23,8 +23,15 @@ vi.mock('$lib/server/db', () => ({
 	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
 }));
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('$app/server', () => ({
+	getRequestEvent: () => {
+		throw new Error('outside a request');
+	}
+}));
 
-const { recordSlotPayout, getSettlement, PayoutError } = await import('./settlement-service');
+const { recordSlotPayout, undoSlotPayout, getSettlement, PayoutError } =
+	await import('./settlement-service');
+const { ProductionTerminalError } = await import('./production-scope');
 const { poolBalanceCents, totalsByKindAndCategory } =
 	await import('$lib/server/finance/financial-entry-service');
 
@@ -87,6 +94,7 @@ async function seed(opts: { poolCents?: number; guaranteeCents?: number | null }
 
 beforeEach(async () => {
 	for (const t of [
+		'audit_log',
 		'financial_entry',
 		'production_slot',
 		'production',
@@ -191,18 +199,93 @@ describe('what it refuses', () => {
 		await expect(recordSlotPayout(SLOT, -100, STAFF)).rejects.toBeInstanceOf(PayoutError);
 	});
 
-	/** Closed is terminal; a correction is a reversing entry, not an edit. */
-	it('refuses once the show is closed', async () => {
+	/** Closed is terminal; reopening it is an admin's separate, audited act. */
+	it.each(['closed', 'cancelled'])('refuses once the show is %s', async (status) => {
 		await seed({ poolCents: 40_000 });
-		const { production } = await import('$lib/server/db/schema/production');
-		const { eq } = await import('drizzle-orm');
-		await testDb.update(production).set({ status: 'closed' }).where(eq(production.id, PROD));
+		sqlite.exec(`update production set status = '${status}' where id = '${PROD}'`);
 
-		await expect(recordSlotPayout(SLOT, 40_000, STAFF)).rejects.toBeInstanceOf(PayoutError);
+		await expect(recordSlotPayout(SLOT, 40_000, STAFF)).rejects.toBeInstanceOf(
+			ProductionTerminalError
+		);
 	});
 
 	it('refuses a slot that is no longer on the bill', async () => {
 		await seed({ poolCents: 40_000 });
 		await expect(recordSlotPayout('slot-gone', 100, STAFF)).rejects.toBeInstanceOf(PayoutError);
+	});
+});
+
+describe('undoing a payout', () => {
+	const SIBLING = 'slot-2';
+
+	async function withSibling() {
+		await seed({ poolCents: 70_000 });
+		sqlite.exec(`insert into production_slot (id, production_id, sort_order, set_length_minutes)
+			values ('${SIBLING}', '${PROD}', 2, 30)`);
+		await recordSlotPayout(SLOT, 30_000, STAFF);
+		await recordSlotPayout(SIBLING, 20_000, STAFF);
+	}
+
+	/** Payouts are filed under the production, so a subject-wide reversal would take both. */
+	it('reverses that act alone, and leaves the other act paid', async () => {
+		await withSibling();
+		expect(await poolBalanceCents(EVENT)).toBe(20_000);
+
+		await undoSlotPayout(SLOT);
+
+		expect(await poolBalanceCents(EVENT)).toBe(50_000);
+		const settlement = await getSettlement(EVENT);
+		expect(settlement?.acts.find((a) => a.slotId === SLOT)?.paidCents).toBeNull();
+		expect(settlement?.acts.find((a) => a.slotId === SIBLING)?.paidCents).toBe(20_000);
+	});
+
+	it('appends reversing rows rather than editing what was written', async () => {
+		await withSibling();
+		const before = sqlite.prepare(`select count(*) as n from financial_entry`).get() as {
+			n: number;
+		};
+
+		await undoSlotPayout(SLOT);
+
+		const after = sqlite.prepare(`select count(*) as n from financial_entry`).get() as {
+			n: number;
+		};
+		expect(after.n).toBe(before.n + 1);
+	});
+
+	it('lets the act be paid again, against the restored pool', async () => {
+		await withSibling();
+		await undoSlotPayout(SLOT);
+		await recordSlotPayout(SLOT, 25_000, STAFF);
+
+		expect(await poolBalanceCents(EVENT)).toBe(25_000);
+		expect((await getSettlement(EVENT))?.paidTotalCents).toBe(45_000);
+	});
+
+	it('records both the payout and its undo in the audit log', async () => {
+		await withSibling();
+		await undoSlotPayout(SLOT);
+
+		const actions = (
+			sqlite.prepare(`select action from audit_log order by rowid`).all() as { action: string }[]
+		).map((r) => r.action);
+		expect(actions).toEqual([
+			'production.payout_recorded',
+			'production.payout_recorded',
+			'production.payout_undone'
+		]);
+	});
+
+	it('refuses an act with nothing recorded', async () => {
+		await seed({ poolCents: 40_000 });
+		await expect(undoSlotPayout(SLOT)).rejects.toBeInstanceOf(PayoutError);
+	});
+
+	it('refuses on a closed show', async () => {
+		await withSibling();
+		sqlite.exec(`update production set status = 'closed' where id = '${PROD}'`);
+
+		await expect(undoSlotPayout(SLOT)).rejects.toBeInstanceOf(ProductionTerminalError);
+		expect(await poolBalanceCents(EVENT)).toBe(20_000);
 	});
 });

@@ -226,6 +226,14 @@ describe('grantsCapability', () => {
 		expect(grantsCapability(positions.treasurer, 'event.manageTickets')).toBe(false);
 	});
 
+	it('keeps reopening a closed or cancelled show with admins alone', () => {
+		// Terminal states are the past: leaving one is an admin's audited act, so
+		// no committee and no named position may carry it.
+		expect(adminOnlyCapabilities as readonly string[]).toContain('production.reopen');
+		expect(positionsGranting('production.reopen')).toEqual(['admin']);
+		expect(Object.keys(grantableCapabilities)).not.toContain('production.reopen');
+	});
+
 	it('round-trips against allCapabilities', () => {
 		for (const cap of everyCapability) {
 			expect(grantsCapability(allCapabilities, cap)).toBe(true);

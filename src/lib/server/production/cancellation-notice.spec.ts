@@ -128,7 +128,7 @@ beforeEach(() => {
 
 describe('cancelling a show', () => {
 	it('tells each committee with an open item what was called off, one notice per person', async () => {
-		await transitionProduction('prod-1', 'cancelled', 'u-book');
+		await transitionProduction('prod-1', 'cancelled', { actorUserId: 'u-book' });
 
 		const [notice] = cancellations();
 		expect(notice.cancelledByName).toBe('Ada Booker');
@@ -145,7 +145,7 @@ describe('cancelling a show', () => {
 	});
 
 	it('leaves a finished item alone, even one that only held while the show was on', async () => {
-		await transitionProduction('prod-1', 'cancelled', 'u-art');
+		await transitionProduction('prod-1', 'cancelled', { actorUserId: 'u-art' });
 		// The lineup was confirmed and the listing published: both were done. The
 		// crew shift goes through #1705's cascade, as it did before.
 		expect(cancelledIds()).toEqual(['wo-advance', 'wo-crew', 'wo-poster']);
@@ -154,7 +154,7 @@ describe('cancelling a show', () => {
 	});
 
 	it('records who cancelled the items, and never tells them', async () => {
-		await transitionProduction('prod-1', 'cancelled', 'u-prod');
+		await transitionProduction('prod-1', 'cancelled', { actorUserId: 'u-prod' });
 		const by = sqlite
 			.prepare(`select distinct cancelled_by_user_id as b from work_order where id = 'wo-advance'`)
 			.all();
@@ -168,14 +168,16 @@ describe('cancelling a show', () => {
 
 	it('says nothing when no committee has anything open', async () => {
 		exec(`update work_order set resolved_at = ${T0} where group_id is not null`);
-		await transitionProduction('prod-1', 'cancelled', 'u-book');
+		await transitionProduction('prod-1', 'cancelled', { actorUserId: 'u-book' });
 		expect(cancellations()).toEqual([]);
 	});
 
 	it('says nothing for a move that is not a cancellation, or one that was refused', async () => {
-		await transitionProduction('prod-1', 'completed', 'u-prod');
+		await transitionProduction('prod-1', 'completed', { actorUserId: 'u-prod' });
 		exec(`update production set status = 'closed'`);
-		await expect(transitionProduction('prod-1', 'cancelled', 'u-book')).rejects.toThrow();
+		await expect(
+			transitionProduction('prod-1', 'cancelled', { actorUserId: 'u-book' })
+		).rejects.toThrow();
 		expect(cancellations()).toEqual([]);
 		expect(cancelledIds()).toEqual([]);
 	});

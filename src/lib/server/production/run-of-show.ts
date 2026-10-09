@@ -72,6 +72,8 @@ export function computeSetTimes(
 export interface WarnableSlot extends SetTimeSlot {
 	name: string | null;
 	soundcheckAt: Date | null;
+	/** The act's share of the pool, in basis points. */
+	percentageBps?: number | null;
 }
 
 /**
@@ -106,6 +108,17 @@ export function runOfShowWarnings(input: {
 				message: `${slot.name ?? 'A set'} soundchecks after the first set starts.`
 			});
 		}
+	}
+
+	// Saved, not refused: the excess comes out of the collective's own cut,
+	// which is a call staff may make on purpose.
+	const allocated = slots.reduce((sum, s) => sum + (s.percentageBps ?? 0), 0);
+	if (allocated > POOL_BPS) {
+		warnings.push({
+			code: 'pool_over_allocated',
+			slotId: null,
+			message: `The acts\u2019 shares come to ${allocated / 100}% of their pool.`
+		});
 	}
 
 	if (!firstSetAt) return warnings;
@@ -163,7 +176,7 @@ export function equalPoolShares(count: number): number[] {
 /**
  * Whether a proposed share fits in what the pool has left.
  *
- * Only the overspend is refused: three acts at 7000 each pays out 210% of a
+ * Only the overspend is flagged: three acts at 7000 each pays out 210% of a
  * pool holding 100%, and the excess comes out of the collective's own cut. A
  * bill mid-edit legitimately sums low, which is unfinished rather than wrong.
  */

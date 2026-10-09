@@ -13,13 +13,14 @@ import {
 	projectOfSlot
 } from '$lib/server/production/production-scope';
 import { mapDomainError } from '$lib/server/errors';
-import { recordSlotPayout } from '$lib/server/production/settlement-service';
+import { recordSlotPayout, undoSlotPayout } from '$lib/server/production/settlement-service';
 import { addExpense, removeExpense } from '$lib/server/production/expense-service';
 import { productionStatuses, type ProductionStatus } from '$lib/server/db/schema/production';
 import {
 	createProduction as createService,
 	updateProductionDetails as updateService,
-	transitionProduction as transitionService
+	transitionProduction as transitionService,
+	reopenProduction as reopenService
 } from '$lib/server/production/production-service';
 import {
 	addSlot,
@@ -342,20 +343,59 @@ export const openHostShift = form(z.object({ eventId: z.string().min(1) }), asyn
 	}
 });
 
+/**
+ * Move a show's status. Warn, record, allow
+ * (docs/development/conventions.md#workflow-gates): a move with warnings comes
+ * back unmoved as `{ conflict, warnings }`, which keeps the dialog open to show
+ * them, and goes through once resubmitted acknowledged with a reason.
+ */
 export const advanceProduction = form(
 	z.object({
 		id: z.string().min(1),
 		eventId: z.string().min(1),
-		status: z.enum(productionStatuses)
+		status: z.enum(productionStatuses),
+		acknowledged: z.boolean().optional().default(false),
+		reason: z.string().trim().max(500).optional()
 	}),
 	async (data) => {
 		const { locals } = getRequestEvent();
 		await requireProjectCommittee(await projectOfProduction(data.id), STATUS_OWNER[data.status]);
 		try {
-			await transitionService(data.id, data.status, locals.user?.id ?? null);
+			const outcome = await transitionService(data.id, data.status, {
+				actorUserId: locals.user?.id ?? null,
+				acknowledged: data.acknowledged,
+				reason: data.reason ?? null
+			});
+			if (!outcome.moved) return { conflict: true, warnings: outcome.warnings };
 			await Promise.all([
 				getStaffEventProduction(data.eventId).refresh(),
 				// The index carries the status column now, so it goes stale here too.
+				getStaffEvents({ source: 'cmc' }).refresh()
+			]);
+			return { success: true, warnings: outcome.warnings };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * Take a closed or cancelled show back. Admin-only: a terminal state is the
+ * past, and leaving one is its own audited act rather than a status option.
+ */
+export const reopenProduction = form(
+	z.object({
+		id: z.string().min(1),
+		eventId: z.string().min(1),
+		status: z.enum(productionStatuses),
+		reason: z.string().trim().min(1, 'Say why it is being reopened').max(500)
+	}),
+	async (data) => {
+		await requireCapability('production.reopen');
+		try {
+			await reopenService(data.id, data.status, data.reason);
+			await Promise.all([
+				getStaffEventProduction(data.eventId).refresh(),
 				getStaffEvents({ source: 'cmc' }).refresh()
 			]);
 			return { success: true };
@@ -593,6 +633,21 @@ export const addProductionExpense = form(
 		return { success: true };
 	}
 );
+
+/**
+ * Take back a recorded payout, under the same `finance.refund` that recorded it.
+ * The ledger gets reversing rows for this act alone; nothing is edited in place.
+ */
+export const undoActPayout = form(z.object(slotRef), async (data) => {
+	await requireCapability('finance.refund');
+	try {
+		await undoSlotPayout(data.slotId);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	await getStaffEventProduction(data.eventId).refresh();
+	return { success: true };
+});
 
 export const removeProductionExpense = form(
 	z.object({ eventId: z.string().min(1), expenseId: z.string().min(1) }),
