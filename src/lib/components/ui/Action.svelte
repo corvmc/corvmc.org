@@ -43,7 +43,7 @@
 		maxWidth = 'max-w-lg',
 		flashDuration = 1500,
 		variant = 'primary',
-		size = 'md',
+		size,
 		shape,
 		outline = false,
 		class: className = '',

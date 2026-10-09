@@ -1,4 +1,6 @@
 <script lang="ts" module>
+	import { getContext, setContext } from 'svelte';
+
 	/** daisyUI colour modifiers. `default` emits none — the plain `btn` surface. */
 	const VARIANTS = {
 		default: '',
@@ -32,6 +34,17 @@
 	export type ButtonVariant = keyof typeof VARIANTS;
 	export type ButtonSize = keyof typeof SIZES;
 	export type ButtonShape = keyof typeof SHAPES;
+
+	const SIZE_KEY = Symbol('button-size');
+
+	/**
+	 * The size every unsized Button below the caller takes. PageHeader sets it so
+	 * header actions are one size whatever their caller omits; Modal resets it
+	 * with `undefined` so a dialog opened from the header keeps full-size buttons.
+	 */
+	export function setDefaultButtonSize(size: ButtonSize | undefined) {
+		setContext(SIZE_KEY, size);
+	}
 
 	/** Does an escape-hatch `class` already pick a colour? See the note below. */
 	const CARRIES_VARIANT = new RegExp(
@@ -72,7 +85,7 @@
 		title,
 		disabled = false,
 		variant,
-		size = 'md',
+		size,
 		shape,
 		outline = false,
 		class: className = '',
@@ -111,6 +124,9 @@
 	// happens — not on this hop, where the value has already been checked.
 	const passthrough = $derived(rest as Record<string, unknown>);
 
+	const inheritedSize = getContext<ButtonSize | undefined>(SIZE_KEY);
+	const resolvedSize = $derived(size ?? inheritedSize ?? 'md');
+
 	const resolvedVariant = $derived(
 		variant ?? (CARRIES_VARIANT.test(className) ? 'default' : 'primary')
 	);
@@ -123,7 +139,7 @@
 			// the outline on every row of the volunteer desk (#1226).
 			'btn whitespace-nowrap',
 			VARIANTS[resolvedVariant],
-			SIZES[size],
+			SIZES[resolvedSize],
 			shape && SHAPES[shape],
 			outline && 'btn-outline',
 			className

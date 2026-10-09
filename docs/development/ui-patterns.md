@@ -22,6 +22,10 @@ Every page under a panel layout (staff, member, or band) follows this shape:
 
 Always use `<PageHeader>` for the page title. Never write a bare `<h1>`.
 
+Header actions are one size. `PageHeader` makes `sm` the default for every `Button`, `Action` and
+`SubmitButton` in its actions slot, so leave `size` off there; a dialog an action opens gets its
+normal sizes back.
+
 ### PageContent
 
 Wraps the page body with consistent vertical spacing (`space-y-6`) and optional width constraint. PageHeader always sits **outside** PageContent so it keeps full-bleed behavior.

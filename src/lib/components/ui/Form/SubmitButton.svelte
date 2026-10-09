@@ -15,7 +15,7 @@
 		successLabel = 'Saved',
 		errorLabel = 'Error',
 		variant = 'primary',
-		size = 'md',
+		size,
 		class: className = '',
 		disabled = false,
 		...rest
