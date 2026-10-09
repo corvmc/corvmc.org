@@ -2,7 +2,11 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import { EntityCard } from '$lib/components/ui/entity';
 	import Table from '$lib/components/ui/Table.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -23,17 +27,18 @@
 	} from '$lib/remote/projects.remote';
 	import { projectStatusOptions } from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
+	import { rowLink } from '$lib/actions/row-link';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { IconSquare, IconSquareCheck, IconSquareX } from '@tabler/icons-svelte';
 
 	/**
-	 * One project: what it has cost, and what it is made of.
+	 * One project: the work it is made of first, then what it has cost.
 	 *
 	 * Cash and contributed value are two tables rather than two rows of one,
-	 * because they must never look addable. An electrician's invoice is money
-	 * that left the account; donated hours are worth reporting to a funder and
-	 * worth nothing against a budget, and a single column of figures invites
-	 * exactly the total nobody should compute.
+	 * because they must never look addable: donated hours are worth reporting to
+	 * a funder and worth nothing against a budget. Spent-of-budget is the only
+	 * figure that leads; the breakdown sits at the end (#1800).
 	 */
 	const data = $derived(await getProjectDetail(page.params.id!));
 	const project = $derived(data.project);
@@ -67,6 +72,50 @@
 	/** Specialized hours nobody has priced. Counted as zero, and said so. */
 	const unpricedHours = $derived(burn.contributed.unpricedSpecializedMinutes / 60);
 	const hrs = (h: number) => `${h.toFixed(h % 1 === 0 ? 0 : 1)} hrs`;
+
+	const workOrders = $derived(data.attachments.workOrders);
+	const doneCount = $derived(workOrders.filter((wo) => wo.resolvedAt && !wo.cancelledAt).length);
+	const cancelledCount = $derived(workOrders.filter((wo) => wo.cancelledAt).length);
+	/** Progress counts work orders, not tasks: they are what staff attach. Cancelled is not work. */
+	const liveCount = $derived(workOrders.length - cancelledCount);
+
+	/** Contractor jobs, orders and acquisitions share one table; the kind is the subline. */
+	const otherWork = $derived([
+		...data.attachments.jobs.map((job) => ({
+			kind: 'contractor_job',
+			kindLabel: 'Contractor job',
+			id: job.id,
+			label: job.summary,
+			href: resolve(`/staff/contractors/jobs/${job.id}`),
+			status: job.status as string | null,
+			date: job.completedAt ?? job.scheduledFor,
+			amount: job.costCents === null ? 'No invoice yet' : formatCents(job.costCents)
+		})),
+		...data.attachments.orders.map((order) => ({
+			kind: 'purchase_order',
+			kindLabel: order.reference ? `Purchase order ${order.reference}` : 'Purchase order',
+			id: order.id,
+			label: order.supplierName ?? 'Order',
+			href: resolve(`/staff/inventory/orders/${order.id}`),
+			status: order.status as string | null,
+			date: order.placedAt,
+			amount: '—'
+		})),
+		...data.attachments.acquisitions.map((acq) => ({
+			kind: 'acquisition',
+			kindLabel: 'Acquisition',
+			id: acq.id,
+			label: acq.sourceName ?? acq.kind,
+			href: resolve(`/staff/inventory/acquisitions/${acq.id}`),
+			status: null,
+			date: acq.occurredAt as Date | null,
+			amount: acq.totalCents
+				? formatCents(acq.totalCents)
+				: acq.fairValueCents
+					? `${formatCents(acq.fairValueCents)} donated`
+					: '—'
+		}))
+	]);
 
 	/** A date input wants `YYYY-MM-DD`, and a `Date` renders as a full timestamp. */
 	const asDateValue = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '');
@@ -184,6 +233,23 @@
 </PageHeader>
 
 <PageContent>
+	{#if data.attachments.events.length > 0}
+		<div class="grid gap-4 sm:grid-cols-2">
+			{#each data.attachments.events as ev (ev.id)}
+				<EntityCard ref={ev.ref} media="none">
+					{#snippet facts()}
+						<DefinitionList>
+							<Fact label="When">{formatDateShort(ev.startsAt)}</Fact>
+						</DefinitionList>
+					{/snippet}
+					{#snippet actions()}
+						{@render detach('event', ev.id, ev.title)}
+					{/snippet}
+				</EntityCard>
+			{/each}
+		</div>
+	{/if}
+
 	<!-- Labelled and in a list: the status, the dates and the description sat
 	     loose above the cards, in no box and with nothing naming them (#1080). -->
 	<DefinitionList>
@@ -201,6 +267,101 @@
 			<Fact label="About">{project.description}</Fact>
 		{/if}
 	</DefinitionList>
+
+	<Card>
+		<CardBody>
+			<div class="grid gap-6 sm:grid-cols-2">
+				<div class="space-y-2">
+					<SectionLabel label="Progress" />
+					{#if liveCount > 0}
+						<p class="text-2xl font-medium">
+							{doneCount}<span class="text-subtle text-base"> of {liveCount} work orders done</span>
+						</p>
+						<progress
+							class="progress w-full progress-success"
+							value={doneCount}
+							max={liveCount}
+							aria-label="Work orders done"
+						></progress>
+					{:else}
+						<p class="text-subtle">No work orders yet.</p>
+					{/if}
+					{#if cancelledCount > 0}
+						<p class="text-subtle text-sm">{cancelledCount} cancelled, not counted.</p>
+					{/if}
+				</div>
+				<div class="space-y-2">
+					<SectionLabel label="Budget" />
+					<p class="text-2xl font-medium">
+						{formatCents(burn.cash.totalCents)}<span class="text-subtle text-base">
+							{project.budgetCents === null
+								? ' spent'
+								: ` spent of ${formatCents(project.budgetCents)}`}</span
+						>
+					</p>
+					<p class="text-sm {overBudget ? 'text-error' : 'text-subtle'}">
+						{#if burn.remainingCents === null}
+							No budget set
+						{:else if overBudget}
+							Over budget by {formatCents(Math.abs(burn.remainingCents))}
+						{:else}
+							{formatCents(burn.remainingCents)} remaining
+						{/if}
+					</p>
+				</div>
+			</div>
+		</CardBody>
+	</Card>
+
+	<InfoCard
+		title="Work orders"
+		state={liveCount > 0 ? `${doneCount} of ${liveCount} done` : undefined}
+	>
+		{#if workOrders.length > 0}
+			<Table>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Done</span></th>
+					<th class="cell-primary">Work order</th>
+					<th class="col-support cell-num">Filled</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
+				{/snippet}
+				{#each workOrders as wo (wo.id)}
+					<tr
+						class="hover cursor-pointer"
+						use:rowLink={resolve(`/staff/volunteer/shifts/${wo.id}`)}
+					>
+						<td class="w-px">
+							{#if wo.cancelledAt}
+								<IconSquareX size={20} class="text-subtle" aria-label="Cancelled" />
+							{:else if wo.resolvedAt}
+								<IconSquareCheck size={20} class="text-success" aria-label="Done" />
+							{:else}
+								<IconSquare size={20} class="text-subtle" aria-label="Open" />
+							{/if}
+						</td>
+						<td class="cell-primary">
+							<a
+								class="block truncate font-medium {wo.cancelledAt
+									? 'text-subtle line-through'
+									: ''}"
+								href={resolve(`/staff/volunteer/shifts/${wo.id}`)}>{wo.title}</a
+							>
+							<div class="truncate text-subtle text-sm">
+								{wo.startsAt ? formatDateShort(wo.startsAt) : 'Not scheduled'}
+							</div>
+						</td>
+						<td class="col-support cell-num">{wo.claimed} / {wo.capacity}</td>
+						<td class="w-px">{@render detach('work_order', wo.id, wo.title)}</td>
+					</tr>
+				{/each}
+			</Table>
+		{:else}
+			<EmptyState
+				title="No work orders"
+				description="Apply a duty list, or attach a work order below."
+			/>
+		{/if}
+	</InfoCard>
 
 	<!-- Suggestion → ballot → this project, each a link. Either may be missing:
 	     a failed breaker panel is a project nobody suggested or voted on. -->
@@ -243,11 +404,64 @@
 		{/if}
 	</InfoCard>
 
-	{#if overBudget}
-		<Alert type="warning">
-			Over budget by {formatCents(Math.abs(burn.remainingCents ?? 0))}.
-		</Alert>
-	{/if}
+	<InfoCard title="Attached work">
+		{#snippet header(title)}
+			<div class="flex items-center justify-between gap-2">
+				<CardTitle level={2}>{title}</CardTitle>
+				<Action
+					action={attachToProjectForm}
+					label="Attach"
+					size="sm"
+					modalTitle="Attach to this project"
+					successToast="Attached"
+				>
+					{#snippet form()}
+						<input {...attachFields.projectId.as('hidden', project.id)} />
+						<Field field={attachFields.kind} type="select" label="What" options={attachKinds} />
+						<Field
+							field={attachFields.rowId}
+							type="text"
+							label="Id"
+							description="The row's id, copied from its own page."
+						/>
+					{/snippet}
+				</Action>
+			</div>
+		{/snippet}
+
+		{#if otherWork.length > 0}
+			<Table>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th class="cell-primary">Item</th>
+					<th class="col-support">Date</th>
+					<th class="cell-num">Amount</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
+				{/snippet}
+				{#each otherWork as row (row.id)}
+					<tr class="hover cursor-pointer" use:rowLink={row.href}>
+						<td class="w-px">
+							{#if row.status}<StatusBadge status={row.status} />{/if}
+						</td>
+						<td class="cell-primary">
+							<a class="block truncate font-medium" href={row.href}>{row.label}</a>
+							<div class="truncate text-subtle text-sm">{row.kindLabel}</div>
+						</td>
+						<td class="col-support whitespace-nowrap">
+							{row.date ? formatDateShort(row.date) : '—'}
+						</td>
+						<td class="cell-num">{row.amount}</td>
+						<td class="w-px">{@render detach(row.kind, row.id, row.label)}</td>
+					</tr>
+				{/each}
+			</Table>
+		{:else}
+			<EmptyState
+				title="No other work attached"
+				description="Attach a contractor job, an order or an acquisition, and its cost joins this project's burn."
+			/>
+		{/if}
+	</InfoCard>
 
 	<div class="grid gap-4 lg:grid-cols-2">
 		<InfoCard title="Cash">
@@ -342,115 +556,6 @@
 			</p>
 		</InfoCard>
 	</div>
-
-	<InfoCard title="Attached work">
-		{#snippet header(title)}
-			<div class="flex items-center justify-between gap-2">
-				<CardTitle level={2}>{title}</CardTitle>
-				<div class="flex gap-2">
-					<Action
-						action={attachToProjectForm}
-						label="Attach"
-						size="sm"
-						modalTitle="Attach to this project"
-						successToast="Attached"
-					>
-						{#snippet form()}
-							<input {...attachFields.projectId.as('hidden', project.id)} />
-							<Field field={attachFields.kind} type="select" label="What" options={attachKinds} />
-							<Field
-								field={attachFields.rowId}
-								type="text"
-								label="Id"
-								description="The row's id, copied from its own page."
-							/>
-						{/snippet}
-					</Action>
-				</div>
-			</div>
-		{/snippet}
-
-		{#if data.attachments.jobs.length > 0}
-			<h3 class="mt-2 font-medium">Contractor jobs</h3>
-			<ul class="list-disc pl-5">
-				{#each data.attachments.jobs as job (job.id)}
-					<li>
-						<a class="link" href={resolve(`/staff/contractors/jobs/${job.id}`)}>{job.summary}</a>
-						— {job.costCents === null ? 'no invoice yet' : formatCents(job.costCents)}
-						{@render detach('contractor_job', job.id, job.summary)}
-					</li>
-				{/each}
-			</ul>
-		{/if}
-
-		{#if data.attachments.workOrders.length > 0}
-			<h3 class="mt-3 font-medium">Work orders</h3>
-			<ul class="list-disc pl-5">
-				{#each data.attachments.workOrders as wo (wo.id)}
-					<li>
-						<!-- Linked: a project could not reach the work it attached. -->
-						<a class="link" href={resolve(`/staff/volunteer/shifts/${wo.id}`)}>
-							{wo.title}
-						</a>
-						{wo.startsAt ? ` — ${formatDateShort(wo.startsAt)}` : ' — not scheduled'}
-						{@render detach('work_order', wo.id, wo.title)}
-					</li>
-				{/each}
-			</ul>
-		{/if}
-
-		{#if data.attachments.orders.length > 0}
-			<h3 class="mt-3 font-medium">Purchase orders</h3>
-			<ul class="list-disc pl-5">
-				{#each data.attachments.orders as order (order.id)}
-					<li>
-						<!-- The order, not the index it sits on. -->
-						<a class="link" href={resolve(`/staff/inventory/orders/${order.id}`)}>
-							{order.supplierName ?? 'Order'}
-						</a>
-						{order.reference ? ` — ${order.reference}` : ''}
-						{@render detach('purchase_order', order.id, order.supplierName ?? 'this order')}
-					</li>
-				{/each}
-			</ul>
-		{/if}
-
-		{#if data.attachments.acquisitions.length > 0}
-			<h3 class="mt-3 font-medium">Acquisitions</h3>
-			<ul class="list-disc pl-5">
-				{#each data.attachments.acquisitions as acq (acq.id)}
-					<li>
-						<a class="link" href={resolve(`/staff/inventory/acquisitions/${acq.id}`)}>
-							{acq.sourceName ?? acq.kind}
-						</a>
-						{acq.totalCents ? ` — ${formatCents(acq.totalCents)}` : ''}
-						{acq.fairValueCents ? ` — ${formatCents(acq.fairValueCents)} donated` : ''}
-						{@render detach('acquisition', acq.id, acq.sourceName ?? acq.kind)}
-					</li>
-				{/each}
-			</ul>
-		{/if}
-
-		{#if data.attachments.events.length > 0}
-			<h3 class="mt-3 font-medium">Events</h3>
-			<ul class="list-disc pl-5">
-				{#each data.attachments.events as ev (ev.id)}
-					<li>
-						<a class="link" href={resolve(`/staff/events/${ev.id}`)}>{ev.title}</a>
-						— {formatDateShort(ev.startsAt)}
-						{@render detach('event', ev.id, ev.title)}
-					</li>
-				{/each}
-			</ul>
-		{/if}
-
-		{#if data.attachments.jobs.length === 0 && data.attachments.workOrders.length === 0 && data.attachments.orders.length === 0 && data.attachments.acquisitions.length === 0 && data.attachments.events.length === 0}
-			<EmptyState
-				title="Nothing attached"
-				description="Attach a work order, a contractor job, an order, an acquisition or an event, and its cost joins this project's burn."
-			/>
-		{/if}
-	</InfoCard>
 </PageContent>
 
 <!--

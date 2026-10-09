@@ -29,6 +29,8 @@ import {
 	type ProjectStatus
 } from '$lib/config';
 import { getHourValueCents } from '$lib/server/volunteer/hour-value';
+import { claimedSql } from '$lib/server/volunteer/work-order-service';
+import { toEventRef } from '$lib/server/entity/refs';
 
 /**
  * A body of work with a budget and an owner — docs/specs/project-spec.md.
@@ -571,7 +573,8 @@ export async function listProjectAttachments(projectId: string) {
 		db
 			.select({
 				...getTableColumns(workOrder),
-				title: sql<string>`coalesce(${workOrder.title}, ${eventListing.title}, ${volunteerRole.name})`
+				title: sql<string>`coalesce(${workOrder.title}, ${eventListing.title}, ${volunteerRole.name})`,
+				claimed: claimedSql().mapWith(Number)
 			})
 			.from(workOrder)
 			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
@@ -600,7 +603,13 @@ export async function listProjectAttachments(projectId: string) {
 			.orderBy(asc(eventListing.startsAt))
 	]);
 
-	return { workOrders, jobs, orders, acquisitions, events };
+	return {
+		workOrders,
+		jobs,
+		orders,
+		acquisitions,
+		events: events.map((ev) => ({ ...ev, ref: toEventRef({ ...ev, image: ev.posterKey }) }))
+	};
 }
 
 /**

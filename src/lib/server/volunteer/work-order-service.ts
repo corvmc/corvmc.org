@@ -404,7 +404,7 @@ function withCounts(
  * rather than spelled out, so a new status that holds a place can't quietly
  * stop counting.
  */
-function claimedSql() {
+export function claimedSql() {
 	const holdsAPlace = sql.join(
 		ACTIVE_SIGNUP_STATUSES.map((status) => sql`${status}`),
 		sql`, `
