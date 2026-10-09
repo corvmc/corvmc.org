@@ -61,12 +61,14 @@
 		<span>{formatMonthShortCased(startsAt)}</span>
 	</div>
 	<div class="flex min-w-0 flex-1 flex-col">
-		<!-- In flow beside the body, not floating over it: absolutely positioned
-		     with no reserved gutter the body's text ran under it, and reserving
-		     one wrapped every line at a single column (#1043). -->
-		<div class="flex items-start justify-between gap-2">
-			<div class="min-w-0 flex-1">{@render children()}</div>
-			<span class="shrink-0 pt-2 pr-2"><StatusBadge {status} label size={14} /></span>
+		<!-- Floated: the lines beside the badge wrap short of it, and those below
+		     run the body's full width. Absolute positioning let text run under it,
+		     and an in-flow column wrapped every line short (#1043, #1782). -->
+		<div class="flow-root min-w-0">
+			<span class="float-right pt-2 pr-2 pl-2">
+				<StatusBadge {status} label size={14} />
+			</span>
+			{@render children()}
 		</div>
 		{#if actions}
 			<!-- Zero-height on purpose: the row straddles the bottom border. -->
