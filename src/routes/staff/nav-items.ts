@@ -79,7 +79,6 @@ export type StaffNavKey =
 	| 'resource-tips'
 	| 'payments'
 	| 'credits'
-	| 'agreements'
 	| 'sponsors'
 	| 'grants'
 	| 'renewals'
@@ -88,7 +87,16 @@ export type StaffNavKey =
 	| 'audit';
 
 export type StaffNavSectionKey =
-	'people' | 'planning' | 'space' | 'events' | 'moderation' | 'outreach' | 'money' | 'system';
+	| 'people'
+	| 'planning'
+	| 'space'
+	| 'events'
+	| 'partners'
+	| 'moderation'
+	| 'outreach'
+	| 'money'
+	| 'reports'
+	| 'system';
 
 /**
  * Field names on `getStaffLayout()`'s return. Items name a count rather than
@@ -148,8 +156,23 @@ export const staffNavSections: StaffNavSection[] = [
 			{ key: 'users', capability: 'user.list', label: 'Users', href: resolve('/staff/users') },
 			{ key: 'bands', capability: 'band.read', label: 'Bands', href: resolve('/staff/bands') },
 			// Separate from Bands on purpose: a band is a member's own project and a
-			// club is a sanctioned CMC one. Committees are under Planning.
+			// club is a sanctioned CMC one.
 			{ key: 'clubs', capability: 'group.read', label: 'Clubs', href: resolve('/staff/clubs') },
+			// Each committee with its open applications counted; its applications
+			// are on its own page (#1671). Every `group.read` holder also holds
+			// `committee.reviewApplications`, so this gate admits the coordinator too.
+			{
+				key: 'committees',
+				capability: 'committee.reviewApplications',
+				label: 'Committees',
+				href: resolve('/staff/committees')
+			},
+			{
+				key: 'instructors',
+				capability: 'instructor.read',
+				label: 'Instructors',
+				href: resolve('/staff/instructors')
+			},
 			{
 				// The parent row is a dashboard, not an index — see
 				// docs/development/ui-patterns.md#section-dashboards. It keeps its own href
@@ -204,33 +227,17 @@ export const staffNavSections: StaffNavSection[] = [
 						capability: 'volunteer.read',
 						label: 'Recurring Work',
 						href: resolve('/staff/volunteer/recurring')
-					},
-					{
-						key: 'volunteer-report',
-						capability: 'volunteer.report',
-						label: 'Report',
-						href: resolve('/staff/volunteer/report')
 					}
 				]
 			}
 		]
 	},
 	{
-		// What the Collective decides to do and has promised: who works on it,
-		// what members asked for, what was voted, the work, the agreements behind
-		// it, and the year's account (production-projects-spec.md).
+		// What the Collective decides to do: what members asked for, what was
+		// voted, and the work (production-projects-spec.md).
 		key: 'planning',
 		title: 'Planning',
 		items: [
-			// Each committee with its open applications counted; its applications
-			// are on its own page (#1671). Every `group.read` holder also holds
-			// `committee.reviewApplications`, so this gate admits the coordinator too.
-			{
-				key: 'committees',
-				capability: 'committee.reviewApplications',
-				label: 'Committees',
-				href: resolve('/staff/committees')
-			},
 			{
 				key: 'suggestions',
 				capability: 'suggestion.read',
@@ -250,41 +257,12 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Projects',
 				href: resolve('/staff/projects')
 			},
+			// The work; the contractor directory is under Partners.
 			{
-				// A grouping, not a page: `/staff/agreements` redirects to Sponsors.
-				// `sponsor.read` is held by everyone who holds any of the three.
-				key: 'agreements',
-				capability: 'sponsor.read',
-				label: 'Agreements',
-				href: resolve('/staff/agreements'),
-				children: [
-					{
-						key: 'sponsors',
-						capability: 'sponsor.read',
-						label: 'Sponsors',
-						href: resolve('/staff/sponsors')
-					},
-					{
-						key: 'grants',
-						capability: 'grant.read',
-						label: 'Grants',
-						href: resolve('/staff/grants')
-					},
-					{
-						key: 'renewals',
-						capability: 'renewal.read',
-						label: 'Renewals',
-						href: resolve('/staff/renewals')
-					}
-				]
-			},
-			// `finance.read` rather than a report capability of its own: the money
-			// lines are what decides who may open it.
-			{
-				key: 'reports',
-				capability: 'finance.read',
-				label: 'Annual Report',
-				href: resolve('/staff/reports')
+				key: 'contractor-jobs',
+				capability: 'contractor.read',
+				label: 'Contractor Jobs',
+				href: resolve('/staff/contractors/jobs')
 			}
 		]
 	},
@@ -309,15 +287,6 @@ export const staffNavSections: StaffNavSection[] = [
 						capability: 'reservation.manageClosures',
 						label: 'Closures',
 						href: resolve('/staff/closures')
-					},
-					// Under Reservations rather than beside Users: teaching status is a
-					// right in the room, and what it grants is a rate and a booking
-					// window. Everything about the room is one place.
-					{
-						key: 'instructors',
-						capability: 'instructor.read',
-						label: 'Instructors',
-						href: resolve('/staff/instructors')
 					}
 				]
 			},
@@ -379,12 +348,6 @@ export const staffNavSections: StaffNavSection[] = [
 						href: resolve('/staff/inventory/orders')
 					},
 					{
-						key: 'inventory-spend',
-						capability: 'inventory.report',
-						label: 'Spend',
-						href: resolve('/staff/inventory/spend')
-					},
-					{
 						key: 'inventory-compliance',
 						capability: 'inventory.manageAcquisitions',
 						label: 'Compliance',
@@ -392,29 +355,12 @@ export const staffNavSections: StaffNavSection[] = [
 					}
 				]
 			},
+			// Permit, license and insurance renewals: compliance for the building.
 			{
-				// A sibling of Inventory rather than a child of it. Half of what a
-				// contractor does is to the building, which owns no inventory row —
-				// filing the electrician under the gear catalog would make the
-				// building half unfindable.
-				key: 'contractors',
-				capability: 'contractor.read',
-				label: 'Contractors',
-				href: resolve('/staff/contractors'),
-				children: [
-					{
-						key: 'contractor-jobs',
-						capability: 'contractor.read',
-						label: 'Jobs',
-						href: resolve('/staff/contractors/jobs')
-					}
-				]
-			},
-			{
-				key: 'incidents',
-				capability: 'incident.read',
-				label: 'Incidents',
-				href: resolve('/staff/incidents')
+				key: 'renewals',
+				capability: 'renewal.read',
+				label: 'Renewals',
+				href: resolve('/staff/renewals')
 			},
 			{
 				// Standing access to the building. Door codes are managed in Settings;
@@ -462,19 +408,56 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'finance.collect',
 				label: 'Door Sales',
 				href: resolve('/member/volunteer/door')
+			}
+		]
+	},
+	{
+		// The organisations the Collective deals with. Contractor jobs are work,
+		// so they sit beside Projects instead.
+		key: 'partners',
+		title: 'Partners',
+		items: [
+			{
+				key: 'sponsors',
+				capability: 'sponsor.read',
+				label: 'Sponsors',
+				href: resolve('/staff/sponsors')
 			},
-			// Reference rather than a queue, so it sits last. Guarded as an event
-			// because that is what a venue is a fact about — there is no job here
-			// that curates rooms without producing in them.
+			// Guarded as an event because that is what a venue is a fact about.
 			{
 				key: 'venues',
 				capability: 'event.read',
 				label: 'Venues',
 				href: resolve('/staff/venues')
+			},
+			{
+				key: 'local-resources',
+				capability: 'localResource.manage',
+				label: 'Local Resources',
+				href: resolve('/staff/local-resources'),
+				// The count sits on the parent too, so it shows while collapsed.
+				badgeKey: 'resourceTipsPending',
+				children: [
+					{
+						key: 'resource-tips',
+						capability: 'localResource.manage',
+						label: 'Tips',
+						href: resolve('/staff/local-resources/tips'),
+						badgeKey: 'resourceTipsPending'
+					}
+				]
+			},
+			{
+				key: 'contractors',
+				capability: 'contractor.read',
+				label: 'Contractors',
+				href: resolve('/staff/contractors')
 			}
 		]
 	},
 	{
+		// Online content and in-person conduct alike: an incident can be about a
+		// member or an off-site show, not only the building.
 		key: 'moderation',
 		title: 'Moderation',
 		items: [
@@ -490,6 +473,12 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'listing.review',
 				label: 'Classifieds',
 				href: resolve('/staff/classifieds')
+			},
+			{
+				key: 'incidents',
+				capability: 'incident.read',
+				label: 'Incidents',
+				href: resolve('/staff/incidents')
 			}
 		]
 	},
@@ -508,29 +497,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'marketing.manageAudiences',
 				label: 'Audiences',
 				href: resolve('/staff/marketing/audiences')
-			},
-			{
-				key: 'help',
-				capability: 'help.read',
-				label: 'Help Articles',
-				href: resolve('/staff/help')
-			},
-			{
-				key: 'local-resources',
-				capability: 'localResource.manage',
-				label: 'Local Resources',
-				href: resolve('/staff/local-resources'),
-				// The count sits on the parent too, so it shows while collapsed.
-				badgeKey: 'resourceTipsPending',
-				children: [
-					{
-						key: 'resource-tips',
-						capability: 'localResource.manage',
-						label: 'Tips',
-						href: resolve('/staff/local-resources/tips'),
-						badgeKey: 'resourceTipsPending'
-					}
-				]
 			}
 		]
 	},
@@ -562,6 +528,39 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'credit.read',
 				label: 'Credits',
 				href: resolve('/staff/credits')
+			},
+			{
+				key: 'grants',
+				capability: 'grant.read',
+				label: 'Grants',
+				href: resolve('/staff/grants')
+			}
+		]
+	},
+	{
+		// Every report in one place; each stays at its domain's URL.
+		key: 'reports',
+		title: 'Reports',
+		items: [
+			// `finance.read` rather than a report capability of its own: the money
+			// lines are what decides who may open it.
+			{
+				key: 'reports',
+				capability: 'finance.read',
+				label: 'Annual Report',
+				href: resolve('/staff/reports')
+			},
+			{
+				key: 'volunteer-report',
+				capability: 'volunteer.report',
+				label: 'Volunteering',
+				href: resolve('/staff/volunteer/report')
+			},
+			{
+				key: 'inventory-spend',
+				capability: 'inventory.report',
+				label: 'Inventory Spend',
+				href: resolve('/staff/inventory/spend')
 			}
 		]
 	},
@@ -574,6 +573,13 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'settings.read',
 				label: 'Settings',
 				href: resolve('/staff/settings')
+			},
+			// The app's own documentation for members and staff.
+			{
+				key: 'help',
+				capability: 'help.read',
+				label: 'Help Articles',
+				href: resolve('/staff/help')
 			},
 			{ key: 'audit', capability: 'audit.read', label: 'Audit Log', href: resolve('/staff/audit') }
 		]
