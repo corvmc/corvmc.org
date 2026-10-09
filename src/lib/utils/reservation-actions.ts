@@ -109,8 +109,11 @@ export function visibleActions(
 		actions.add('cancel');
 		if (now >= end) actions.add('complete');
 		if (now >= start) actions.add('noShow');
-		// Credits committed at Confirm, cash still owed → staff can record cash.
-		if (cashOwed) actions.add('cashReceived');
+		// Credits committed at Confirm, cash still owed → staff can record cash or waive it.
+		if (cashOwed) {
+			actions.add('cashReceived');
+			actions.add('comp');
+		}
 	}
 
 	// Two actions, because staff intent differs: cancelling the booking, or

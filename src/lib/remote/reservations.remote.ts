@@ -71,6 +71,7 @@ import {
 	createWaitlisted,
 	cancel,
 	confirm,
+	comp,
 	markComplete,
 	markNoShow,
 	recordCashAndComplete,
@@ -2210,14 +2211,14 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 	return { success: true };
 });
 
-/** Staff: comp a reservation (waive payment and confirm — no credits used). */
+/** Staff: comp a scheduled or confirmed reservation (waive payment — no credits used). */
 export const compReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
 	await requireCapability('reservation.comp');
-	await confirm(data.id);
-	await db
-		.update(reservation)
-		.set({ cashDueCents: 0, updatedAt: new Date() })
-		.where(eq(reservation.id, data.id));
+	try {
+		await comp(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
 	return { success: true };
 });
 

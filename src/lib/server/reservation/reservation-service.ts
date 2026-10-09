@@ -396,6 +396,28 @@ export async function confirm(reservationId: string): Promise<void> {
 	await announceConfirmed(reservationId);
 }
 
+/**
+ * Waive what a live booking owes. A scheduled one is confirmed first; a
+ * confirmed one keeps its status. `cashDueCents = 0` is also what retires the
+ * member's "Pay online" link, which `getReservationPayment` gates on.
+ */
+export async function comp(reservationId: string): Promise<void> {
+	const [row] = await db
+		.select({ status: reservation.status })
+		.from(reservation)
+		.where(eq(reservation.id, reservationId))
+		.limit(1);
+	if (!row) throw new ReservationNotFoundError();
+	if (row.status === 'scheduled') await confirm(reservationId);
+	else if (row.status !== 'confirmed')
+		throw new ReservationStateError(`Cannot comp a reservation with status "${row.status}"`);
+
+	await db
+		.update(reservation)
+		.set({ cashDueCents: 0, updatedAt: new Date() })
+		.where(and(eq(reservation.id, reservationId), eq(reservation.status, 'confirmed')));
+}
+
 // ---------------------------------------------------------------------------
 // adjustWindow() — re-time a booking without replacing it
 // ---------------------------------------------------------------------------

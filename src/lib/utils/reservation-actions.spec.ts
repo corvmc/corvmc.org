@@ -166,6 +166,32 @@ describe('visibleActions cash tracking', () => {
 	});
 });
 
+describe('visibleActions comp (#1818)', () => {
+	const past = new Date(Date.now() - 2 * 60 * 60 * 1000);
+	const pastEnd = new Date(Date.now() - 60 * 60 * 1000);
+
+	it('offers comp on a confirmed booking with cash still owed', () => {
+		for (const cashDueCents of [1500, null]) {
+			const actions = visibleActions('confirmed', past, pastEnd, null, new Date(), {
+				cashDueCents,
+				paidAt: null
+			});
+			expect(actions.has('comp')).toBe(true);
+		}
+	});
+
+	it('does not offer comp on a confirmed booking that owes nothing', () => {
+		for (const opts of [
+			{ cashDueCents: 0, paidAt: null },
+			{ cashDueCents: 1500, paidAt: new Date() }
+		]) {
+			expect(visibleActions('confirmed', past, pastEnd, null, new Date(), opts).has('comp')).toBe(
+				false
+			);
+		}
+	});
+});
+
 describe('visibleActions refund split (#669)', () => {
 	const past = new Date(Date.now() - 2 * 60 * 60 * 1000);
 	const pastEnd = new Date(Date.now() - 60 * 60 * 1000);
