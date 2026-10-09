@@ -20,6 +20,7 @@
 		type FinancialEntryKind
 	} from '$lib/config';
 	import { getAnnualReportPage } from '$lib/remote/reports.remote';
+	import { shownCents } from './display';
 	import { IconDownload } from '@tabler/icons-svelte';
 
 	// The calendar year, because that is the period a board packet and a Form 990
@@ -111,7 +112,10 @@
 
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			<StatCard title="Earned" value={formatCents(r.money.totalsByKind.earned)} />
-			<StatCard title="Spent" value={formatCents(r.money.totalsByKind.spent)} />
+			<StatCard
+				title="Spent"
+				value={formatCents(shownCents('spent', r.money.totalsByKind.spent))}
+			/>
 			<StatCard title="Net" value={formatCents(r.money.netCents)} />
 			<StatCard title="Given in kind" value={formatCents(r.money.totalsByKind.in_kind)} />
 		</div>
@@ -130,12 +134,16 @@
 						{#each r.money.byKind[kind] as line (line.category)}
 							<tr>
 								<td>{financialCategoryLabels[line.category]}</td>
-								<td class="text-right tabular-nums">{formatCents(line.totalCents)}</td>
+								<td class="text-right tabular-nums"
+									>{formatCents(shownCents(kind, line.totalCents))}</td
+								>
 							</tr>
 						{/each}
 						<tr class="font-semibold">
 							<td>Total</td>
-							<td class="text-right tabular-nums">{formatCents(r.money.totalsByKind[kind])}</td>
+							<td class="text-right tabular-nums"
+								>{formatCents(shownCents(kind, r.money.totalsByKind[kind]))}</td
+							>
 						</tr>
 					</Table>
 				{/if}
