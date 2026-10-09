@@ -20,8 +20,8 @@
 
 <Action
 	action={createSuggestion}
-	label="Suggest something"
-	modalTitle="Suggest something"
+	label="New suggestion"
+	modalTitle="New suggestion"
 	submitLabel="Post it"
 	successToast={standing.status !== 'none' ? 'Sent to staff for review' : 'Posted to the board'}
 	variant="primary"

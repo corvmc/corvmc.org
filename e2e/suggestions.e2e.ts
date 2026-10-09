@@ -238,7 +238,7 @@ test.describe('reporting a suggestion', () => {
 		await page.goto('/member/suggestions');
 		await expect(page.getByRole('alert')).toBeVisible();
 
-		await page.getByRole('button', { name: 'Suggest something' }).click();
+		await page.getByRole('button', { name: 'New suggestion' }).click();
 		await page.locator('input[name="title"]').fill('E2E Post While On Review');
 		await page.locator('textarea[name="body"]').fill('Should wait for staff before appearing.');
 		await page.getByRole('button', { name: 'Post it' }).click();

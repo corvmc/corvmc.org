@@ -316,6 +316,10 @@ form modal — use `Action`.
 
 A single component that handles four patterns depending on its props: direct async action, confirmation dialog, callback modal, or form modal. Detects the mode from the `action` prop and presence of `body`/`confirm`.
 
+**Labels and modal titles are definite**: a verb and its object ("Log hours", "New suggestion",
+"Ask an act"), never "someone", "something" or "anyone". The form inside says who or what.
+`custom/definite-action-labels` enforces it on literal labels.
+
 ### Direct action
 
 Runs an async callback on click. Same behavior as `AsyncButton`.
