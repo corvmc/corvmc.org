@@ -378,14 +378,14 @@
 				ui-patterns' card test 4. So no hover-only tooltips here — each flag
 				and the payment state say their word — and the actions are full-size.
 			-->
-			<ul class="narrow-only space-y-2">
+			<ul class="narrow-only">
 				{#each reservations as r, idx (r.id)}
 					{@const label = dayLabel(r)}
 					{#if label !== (idx > 0 ? dayLabel(reservations[idx - 1]) : null)}
 						<li class="rounded-sm cell-group">{label}</li>
 					{/if}
 					{@const actions = visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId)}
-					<li class="space-y-2 rounded-box border border-base-300 p-3">
+					<li class="space-y-2 border-b border-base-300 py-3">
 						<div class="flex items-start justify-between gap-2">
 							<a
 								href={resolve(`/staff/reservations/${r.id}`)}
