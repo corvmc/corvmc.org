@@ -17,7 +17,7 @@
 
 	/**
 	 * Teaching, on the member's own profile — one card with five states. Only the
-	 * first application has a page of its own (`/member/teaching/apply`); after
+	 * first application has a page of its own (`/member/profile/teaching/apply`); after
 	 * that the relationship is *book the room* and *keep my listing current*, and
 	 * neither is workspace-shaped.
 	 *
@@ -55,7 +55,7 @@
 
 		<!-- A link to its own page, not an embedded form: new members submitted
 		     the blank form while working down their profile (#1820). -->
-		<Button href={resolve('/member/teaching/apply')} size="sm">Apply to teach</Button>
+		<Button href={resolve('/member/profile/teaching/apply')} size="sm">Apply to teach</Button>
 	{:else}
 		<div class="mb-4 flex items-center gap-2">
 			<StatusBadge status={instructor.status} />
