@@ -63,7 +63,7 @@
 						label="Ask an act"
 						variant="ghost"
 						size="sm"
-						modalTitle="Ask for something for {eventTitle}"
+						modalTitle="Ask an act for {eventTitle}"
 						submitLabel="Ask"
 						successToast="Asked"
 						onsuccess={onchange}

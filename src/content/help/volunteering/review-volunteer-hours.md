@@ -53,7 +53,7 @@ keeps your view.
 ### Logging hours for somebody else
 
 Members have 90 days to log their own hours, and the app tells them to ask staff for
-anything older. **Log hours for someone** on this page is how you do that. It is also how
+anything older. **Log hours** on this page is how you do that. It is also how
 you record the volunteer who does not use the app at all — which matters, because the
 report only counts what is in here, and an hour nobody typed in is an hour the board never
 hears about.

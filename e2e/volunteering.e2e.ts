@@ -901,7 +901,7 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/hours');
 
-		await page.getByRole('button', { name: 'Log hours for someone' }).click();
+		await page.getByRole('button', { name: 'Log hours', exact: true }).click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible({ timeout: 15000 });
 

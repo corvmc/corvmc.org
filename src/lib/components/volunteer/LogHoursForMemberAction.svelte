@@ -29,7 +29,7 @@
 		 * case.
 		 */
 		presetUser = null,
-		label = 'Log hours for someone',
+		label = 'Log hours',
 		size = 'sm'
 	}: {
 		presetUser?: { id: string; name: string } | null;

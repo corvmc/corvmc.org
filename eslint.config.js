@@ -16,6 +16,7 @@ import noContactSchemaImports from './eslint-rules/no-contact-schema-imports.js'
 import noDirectFinancialEntryWrites from './eslint-rules/no-direct-financial-entry-writes.js';
 import noUnwrappedRemoteMutation from './eslint-rules/no-unwrapped-remote-mutation.js';
 import noClippedRowAction from './eslint-rules/no-clipped-row-action.js';
+import definiteActionLabels from './eslint-rules/definite-action-labels.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -50,7 +51,8 @@ const customPlugin = {
 		'no-contact-schema-imports': noContactSchemaImports,
 		'no-direct-financial-entry-writes': noDirectFinancialEntryWrites,
 		'no-unwrapped-remote-mutation': noUnwrappedRemoteMutation,
-		'no-clipped-row-action': noClippedRowAction
+		'no-clipped-row-action': noClippedRowAction,
+		'definite-action-labels': definiteActionLabels
 	}
 };
 
@@ -174,7 +176,8 @@ export default defineConfig(
 			'custom/no-clamped-tiered-table': 'error',
 			'custom/no-inline-alert-action': 'error',
 			'custom/page-header-width-matches-content': 'error',
-			'custom/no-concurrent-remote-queries': 'error'
+			'custom/no-concurrent-remote-queries': 'error',
+			'custom/definite-action-labels': 'error'
 		}
 	},
 	{
