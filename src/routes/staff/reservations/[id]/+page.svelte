@@ -226,7 +226,16 @@
 				{/if}
 				<!-- `link`, unlike a detail page's own strip: the record here is the
 				     booking, and the member is a different record with its own page. -->
-				<EntityIdentity ref={r.member} size="lg" link email={r.memberEmail} phone={r.memberPhone} />
+				<!-- `max-w-full`: a centred flex child wider than the card overflows
+				     both edges at once (#1816). -->
+				<EntityIdentity
+					ref={r.member}
+					size="lg"
+					link
+					email={r.memberEmail}
+					phone={r.memberPhone}
+					class="max-w-full"
+				/>
 			</div>
 		</InfoCard>
 

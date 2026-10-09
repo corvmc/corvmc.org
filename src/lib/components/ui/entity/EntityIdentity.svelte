@@ -234,9 +234,13 @@
 		{/if}
 		<div class="min-w-0 flex-1">
 			{@render titleRow()}
-			{#if hasSub}
+			{#if hasContact}
+				<!-- Wraps between email and phone rather than truncating the pair: a
+				     clipped phone number is no number at all (#1816). -->
+				<div class="flex flex-wrap gap-x-1 text-muted">{@render contact()}</div>
+			{:else if hasSub}
 				<div class="truncate text-muted">
-					{#if hasContact}{@render contact()}{:else if subtitle}{@render subtitle()}{:else}{ref.subtitle}{/if}
+					{#if subtitle}{@render subtitle()}{:else}{ref.subtitle}{/if}
 				</div>
 			{/if}
 		</div>
@@ -249,11 +253,11 @@
 {#snippet contact()}
 	{#if email}
 		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- mailto:, not an internal route -->
-		<a class="link" href="mailto:{email}">{email}</a>
+		<a class="max-w-full link truncate" href="mailto:{email}" title={email}>{email}</a>
 	{/if}
-	{#if email && phone}·{/if}
+	{#if email && phone}<span aria-hidden="true">·</span>{/if}
 	{#if phone}
 		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- tel:, not an internal route -->
-		<a class="link" href="tel:{phone}">{phone}</a>
+		<a class="link whitespace-nowrap" href="tel:{phone}">{phone}</a>
 	{/if}
 {/snippet}
