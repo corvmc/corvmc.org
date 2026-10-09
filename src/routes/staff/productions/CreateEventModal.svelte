@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Card from '$lib/components/ui/Card/Card.svelte';
-	import { untrack } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
@@ -124,34 +123,32 @@
 	}
 
 	// The reservation window is really setup and teardown padding around the show,
-	// so it rides along when the event is re-timed. Seeding it only while empty
-	// left a window still pointing at the times the event used to have — visible
-	// but easy to miss, and it books the wrong slot.
+	// so it rides along when the event is re-timed. This runs from the bindings'
+	// setters, not an effect: ConflictWarnings' await can hold an effect back past
+	// the user's next keystroke, and the late seed then overwrote it (#1866).
 	let lastEventStartTime = '';
 	let lastEventEndTime = '';
 
-	$effect(() => {
-		const start = eventStartTime;
-		const end = eventEndTime;
+	function carryReservationWindow() {
 		if (!reserveSpace) return;
-
-		untrack(() => {
-			if (start) {
-				reservationStartTime =
-					reservationStartTime && lastEventStartTime
-						? shiftTime(reservationStartTime, toMinutes(start) - toMinutes(lastEventStartTime))
-						: start;
-				lastEventStartTime = start;
-			}
-			if (end) {
-				reservationEndTime =
-					reservationEndTime && lastEventEndTime
-						? shiftTime(reservationEndTime, toMinutes(end) - toMinutes(lastEventEndTime))
-						: end;
-				lastEventEndTime = end;
-			}
-		});
-	});
+		if (eventStartTime) {
+			reservationStartTime =
+				reservationStartTime && lastEventStartTime
+					? shiftTime(
+							reservationStartTime,
+							toMinutes(eventStartTime) - toMinutes(lastEventStartTime)
+						)
+					: eventStartTime;
+			lastEventStartTime = eventStartTime;
+		}
+		if (eventEndTime) {
+			reservationEndTime =
+				reservationEndTime && lastEventEndTime
+					? shiftTime(reservationEndTime, toMinutes(eventEndTime) - toMinutes(lastEventEndTime))
+					: eventEndTime;
+			lastEventEndTime = eventEndTime;
+		}
+	}
 
 	// ConflictWarnings owns this flag but unmounts with the toggle, so a stale
 	// `true` would keep the hidden overrideConflicts input in the form and make
@@ -266,8 +263,30 @@
 			<Field name="eventDate" type="date" label="Date" bind:value={eventDate} />
 
 			<div class="grid grid-cols-2 gap-4">
-				<Field name="eventStartTime" type="time" label="Start time" bind:value={eventStartTime} />
-				<Field name="eventEndTime" type="time" label="End time" bind:value={eventEndTime} />
+				<Field
+					name="eventStartTime"
+					type="time"
+					label="Start time"
+					bind:value={
+						() => eventStartTime,
+						(v) => {
+							eventStartTime = v;
+							carryReservationWindow();
+						}
+					}
+				/>
+				<Field
+					name="eventEndTime"
+					type="time"
+					label="End time"
+					bind:value={
+						() => eventEndTime,
+						(v) => {
+							eventEndTime = v;
+							carryReservationWindow();
+						}
+					}
+				/>
 			</div>
 
 			<Field name="doorsTime" type="time" label="Doors time" bind:value={doorsTime} />
@@ -342,7 +361,13 @@
 				<Field
 					name="reserveSpace"
 					type="toggle"
-					bind:value={reserveSpace}
+					bind:value={
+						() => reserveSpace,
+						(v) => {
+							reserveSpace = v;
+							carryReservationWindow();
+						}
+					}
 					checkboxLabel="Reserve practice space"
 				/>
 			{/if}
