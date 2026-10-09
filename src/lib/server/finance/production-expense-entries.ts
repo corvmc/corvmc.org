@@ -37,8 +37,10 @@ export async function postProductionExpenses(productionId: string, eventId: stri
 		// Per line rather than per production, so a line removed after settlement
 		// reverses on its own and a line added between `settled` and `closed` is
 		// picked up by the next transition rather than skipped as already posted.
+		// Net rather than "any row": a show walked back below `settled` reversed
+		// the line, and settling it again has to post it again.
 		const already = await listForSubject('production_expense', line.id);
-		if (already.length > 0) continue;
+		if (already.reduce((t, e) => t + e.amountCents, 0) !== 0) continue;
 
 		entries.push({
 			amountCents: -line.amountCents,

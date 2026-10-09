@@ -1,12 +1,15 @@
-import { db } from '$lib/server/db';
+import { db, getRowCount } from '$lib/server/db';
 import { announcedBy } from './production-service';
 import { financialEntry } from '$lib/server/db/schema/financial';
 import { production, productionSlot } from '$lib/server/db/schema/production';
 import { eventBand, eventListing } from '$lib/server/db/schema/event';
-import { and, asc, eq, sum } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, sum } from 'drizzle-orm';
 import { DOOR_SPLIT_ACTS_PERCENT } from '$lib/config';
 import { expenseLines, type ProductionExpenseLine } from './expense-service';
-import { recordActPayout } from '$lib/server/finance/payout-entries';
+import { recordActPayout, reverseActPayout } from '$lib/server/finance/payout-entries';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
+import { isTerminalProduction } from '$lib/production/status';
+import { ProductionTerminalError } from './production-scope';
 import { DomainError } from '$lib/server/domain-error';
 
 /**
@@ -287,12 +290,77 @@ export async function recordSlotPayout(
 		throw new PayoutError('A payout is a whole number of cents, and not negative.');
 	}
 
+	const slot = await readSlotForPayout(slotId);
+	if (!slot) throw new PayoutError('That slot is no longer on the bill.');
+	if (isTerminalProduction(slot.status)) throw new ProductionTerminalError(slot.status);
+	// Money already moved is never edited in place: undo it, then record again.
+	if (slot.paidCents !== null) {
+		throw new PayoutError('That act is already marked paid. Undo the payout to change it.');
+	}
+
+	const now = new Date();
+	const claimed = await db
+		.update(productionSlot)
+		.set({ paidCents: amountCents, paidAt: now, paidByUserId: recordedByUserId, updatedAt: now })
+		.where(and(eq(productionSlot.id, slotId), isNull(productionSlot.paidCents)));
+	if (getRowCount(claimed) === 0) throw new PayoutError('That act is already marked paid.');
+
+	const actName = slot.actName ?? 'the act';
+	await recordActPayout({
+		eventId: slot.eventId,
+		productionId: slot.productionId,
+		slotId,
+		actName,
+		amountCents,
+		occurredAt: now,
+		recordedByUserId
+	});
+	await recordAuditEntry({
+		action: 'production.payout_recorded',
+		subject: { type: 'production', id: slot.productionId, label: slot.eventTitle },
+		details: { eventId: slot.eventId, slotId, actName, amountCents }
+	});
+}
+
+/**
+ * Take back a recorded payout: reversing ledger rows for this act alone, and
+ * the slot back to unpaid so it can be recorded again.
+ *
+ * The slot is claimed first, conditionally, so two undos cannot both reverse.
+ */
+export async function undoSlotPayout(slotId: string): Promise<void> {
+	const slot = await readSlotForPayout(slotId);
+	if (!slot) throw new PayoutError('That slot is no longer on the bill.');
+	if (isTerminalProduction(slot.status)) throw new ProductionTerminalError(slot.status);
+	if (slot.paidCents === null) throw new PayoutError('That act has no payout recorded.');
+
+	const released = await db
+		.update(productionSlot)
+		.set({ paidCents: null, paidAt: null, paidByUserId: null, updatedAt: new Date() })
+		.where(and(eq(productionSlot.id, slotId), isNotNull(productionSlot.paidCents)));
+	if (getRowCount(released) === 0) throw new PayoutError('That act has no payout recorded.');
+
+	await reverseActPayout(slot.productionId, slotId);
+	await recordAuditEntry({
+		action: 'production.payout_undone',
+		subject: { type: 'production', id: slot.productionId, label: slot.eventTitle },
+		details: {
+			eventId: slot.eventId,
+			slotId,
+			actName: slot.actName ?? 'the act',
+			amountCents: slot.paidCents
+		}
+	});
+}
+
+async function readSlotForPayout(slotId: string) {
 	const [slot] = await db
 		.select({
 			id: productionSlot.id,
 			paidCents: productionSlot.paidCents,
 			productionId: production.id,
 			eventId: eventListing.id,
+			eventTitle: eventListing.title,
 			status: production.status,
 			actName: eventBand.name
 		})
@@ -304,30 +372,5 @@ export async function recordSlotPayout(
 		.leftJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
 		.where(eq(productionSlot.id, slotId))
 		.limit(1);
-
-	if (!slot) throw new PayoutError('That slot is no longer on the bill.');
-	// Closed is terminal. Re-opening a settled night to change a number is a
-	// correction, and a correction is a reversing entry rather than an edit.
-	if (slot.status === 'closed') {
-		throw new PayoutError('This show is closed. Reopen it before changing what was paid.');
-	}
-	if (slot.paidCents !== null) {
-		throw new PayoutError('That act is already marked paid.');
-	}
-
-	const now = new Date();
-	await db
-		.update(productionSlot)
-		.set({ paidCents: amountCents, paidAt: now, paidByUserId: recordedByUserId, updatedAt: now })
-		.where(eq(productionSlot.id, slotId));
-
-	await recordActPayout({
-		eventId: slot.eventId,
-		productionId: slot.productionId,
-		slotId,
-		actName: slot.actName ?? 'the act',
-		amountCents,
-		occurredAt: now,
-		recordedByUserId
-	});
+	return slot ?? null;
 }

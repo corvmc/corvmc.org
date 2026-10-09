@@ -13,6 +13,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		recordActPayout,
+		undoActPayout,
 		recordDoorTake,
 		addProductionExpense,
 		removeProductionExpense
@@ -20,6 +21,8 @@
 	import { productionExpenseCategoryLabels, productionExpenseCategories } from '$lib/config';
 	import { IconTrash } from '@tabler/icons-svelte';
 	import type { Settlement } from '$lib/server/production/settlement-service';
+	import { isTerminalProduction } from '$lib/production/status';
+	import type { ProductionStatus } from '$lib/server/db/schema/production';
 
 	let { settlement, eventId }: { settlement: Settlement | null; eventId: string } = $props();
 
@@ -34,6 +37,10 @@
 	const acts = $derived(settlement?.acts ?? []);
 	const expenses = $derived(settlement?.expenses ?? []);
 	const topUpTotal = $derived(acts.reduce((t, a) => t + a.topUpCents, 0));
+	/** Closed or cancelled: the worksheet is the record now. The server refuses edits too. */
+	const locked = $derived(
+		settlement ? isTerminalProduction(settlement.status as ProductionStatus) : false
+	);
 </script>
 
 {#if !settlement}
@@ -105,9 +112,11 @@
 					min={0}
 					max={100}
 				/>
-				<div class="flex items-end">
-					<SubmitButton label="Record" size="sm" />
-				</div>
+				{#if !locked}
+					<div class="flex items-end">
+						<SubmitButton label="Record" size="sm" />
+					</div>
+				{/if}
 			</div>
 		</Form>
 
@@ -134,6 +143,7 @@
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<CardTitle>{title}</CardTitle>
 				<Action
+					disabled={locked}
 					action={addProductionExpense}
 					label="Add a cost"
 					variant="ghost"
@@ -204,6 +214,7 @@
 						<td class="text-right font-medium">{formatCents(expense.amountCents)}</td>
 						<td class="text-right">
 							<Action
+								disabled={locked}
 								action={drop}
 								label="Remove"
 								iconOnly
@@ -267,7 +278,35 @@
 						<td class="text-right font-medium">{formatCents(act.suggestedPayoutCents)}</td>
 						<td class="text-right">
 							{#if act.paidCents !== null}
-								<Badge variant="success" size="xs">{formatCents(act.paidCents)}</Badge>
+								{@const undo = undoActPayout.for(act.slotId)}
+								<span class="inline-flex items-center gap-1">
+									<Badge variant="success" size="xs">{formatCents(act.paidCents)}</Badge>
+									{#if !locked}
+										<!-- Money already moved is undone, never edited: reversing rows for
+										     this act alone, then it can be recorded again. -->
+										<Action
+											action={undo}
+											label="Undo"
+											variant="ghost"
+											size="xs"
+											modalTitle="Undo {act.actName ?? 'the act'}'s payout?"
+											submitLabel="Undo payout"
+											submitVariant="warning"
+											successToast="Payout undone"
+										>
+											{#snippet form()}
+												<input {...undo.fields.eventId.as('hidden', eventId)} />
+												<input {...undo.fields.slotId.as('hidden', act.slotId)} />
+												<p class="text-muted">
+													Writes reversing entries for the {formatCents(act.paidCents ?? 0)} in the financial
+													record and marks the act unpaid, so it can be recorded again.
+												</p>
+											{/snippet}
+										</Action>
+									{/if}
+								</span>
+							{:else if locked}
+								<span class="text-sm text-fg-2">Unpaid</span>
 							{:else}
 								<!-- The amount is staff's, not the worksheet's: a settlement is a
 								     conversation at the end of the night, and what changed hands is

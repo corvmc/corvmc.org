@@ -12,7 +12,11 @@ import type { ActTerms } from '$lib/production/terms';
 export type RunOfShowActStatus = 'unlinked' | 'pending' | 'confirmed' | 'declined';
 
 export type RunOfShowWarningCode =
-	'past_curfew' | 'before_doors' | 'set_too_long' | 'soundcheck_after_first_set';
+	| 'past_curfew'
+	| 'before_doors'
+	| 'set_too_long'
+	| 'soundcheck_after_first_set'
+	| 'pool_over_allocated';
 
 export interface RunOfShowWarning {
 	code: RunOfShowWarningCode;

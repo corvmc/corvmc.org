@@ -24,11 +24,23 @@ export const auditActions = [
 	'capability.grants_changed',
 	'ballot.elector_overridden',
 	'group.roster_imported',
-	'group.role_changed'
+	'group.role_changed',
+	'production.status_changed',
+	'production.override',
+	'production.reopened',
+	'production.payout_recorded',
+	'production.payout_undone'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
-export const auditSubjectTypes = ['user', 'band', 'incident', 'role', 'group'] as const;
+export const auditSubjectTypes = [
+	'user',
+	'band',
+	'incident',
+	'role',
+	'group',
+	'production'
+] as const;
 export type AuditSubjectType = (typeof auditSubjectTypes)[number];
 
 /** Profile field names only — never values, which would copy phone numbers into a second table. */
@@ -96,6 +108,29 @@ export interface AuditDetailsByAction {
 		role: 'admin' | 'member';
 		added: boolean;
 	};
+	/** The usual path: a move that tripped no warning. */
+	'production.status_changed': ProductionMove;
+	/** A move made over its warnings (docs/development/conventions.md#workflow-gates). */
+	'production.override': ProductionMove & { warnings: string[]; reason: string };
+	/** Out of a terminal state, by an admin. */
+	'production.reopened': ProductionMove & { reason: string };
+	'production.payout_recorded': ProductionPayout;
+	'production.payout_undone': ProductionPayout;
+}
+
+/** A show's status move. `eventId` is what the log links to; the production has no page. */
+interface ProductionMove {
+	eventId: string | null;
+	from: string;
+	to: string;
+}
+
+/** An act's payout, by slot. Amounts in cents. */
+interface ProductionPayout {
+	eventId: string | null;
+	slotId: string;
+	actName: string;
+	amountCents: number;
 }
 
 /** One row as the read side sees it, `details` narrowed by `action`. */

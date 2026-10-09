@@ -72,6 +72,9 @@ local run you did not do. Triage of a red or rejected run is the `qc` role's job
 - **Forms use `$lib/components/ui/Form/`** (`Form`, `FormField`, `SubmitButton`) — never a raw
   `<form>`, `<input>`, or `<select>`, not even inline.
 - **No gradients** in any interface.
+- **Workflow gates warn, record and allow.** Order and completeness are warnings a user overrides
+  with a reason, not refusals; only permission, integrity, money already moved and terminal states
+  refuse. See `docs/development/conventions.md#workflow-gates`.
 - **Comments cap at eight lines**, and state a constraint rather than the history of a decision.
   `scripts/comment-budget.spec.ts` enforces the length;
   `docs/development/conventions.md#comments` has the rest. Do not match the surrounding comment

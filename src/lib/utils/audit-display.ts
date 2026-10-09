@@ -1,4 +1,5 @@
 import type { AuditAction, AuditEntry, AuditProfileField } from '$lib/types/audit';
+import { formatCents } from '$lib/utils/format';
 
 /** `user.roles_changed` → "User roles changed". Derived, so a new action needs no label entry. */
 export function auditActionLabel(action: AuditAction): string {
@@ -87,6 +88,16 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const d = entry.details;
 			return `Imported a roster list: ${plural(d.added, 'member')} added, ${plural(d.invited, 'invitation')} sent`;
 		}
+		case 'production.status_changed':
+			return `Moved the show from ${entry.details.from} to ${entry.details.to}`;
+		case 'production.override':
+			return `Moved the show from ${entry.details.from} to ${entry.details.to} over ${plural(entry.details.warnings.length, 'warning')}: “${entry.details.reason}”`;
+		case 'production.reopened':
+			return `Reopened the show from ${entry.details.from} to ${entry.details.to}: “${entry.details.reason}”`;
+		case 'production.payout_recorded':
+			return `Recorded a ${formatCents(entry.details.amountCents)} payout to ${entry.details.actName}`;
+		case 'production.payout_undone':
+			return `Undid the ${formatCents(entry.details.amountCents)} payout to ${entry.details.actName}`;
 		case 'group.role_changed': {
 			const d = entry.details;
 			if (d.role === 'member') return `Removed ${d.memberName} as a chair`;

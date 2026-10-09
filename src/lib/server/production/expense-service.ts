@@ -3,6 +3,7 @@ import { productionExpense } from '$lib/server/db/schema/production';
 import { and, asc, eq, sum } from 'drizzle-orm';
 import type { ProductionExpenseCategory } from '$lib/config';
 import { reverseProductionExpense } from '$lib/server/finance/production-expense-entries';
+import { assertNotTerminal } from './production-scope';
 
 /**
  * What a show cost, and the denominator a percentage-of-net deal divides against.
@@ -24,6 +25,7 @@ export interface AddExpenseInput {
 }
 
 export async function addExpense(input: AddExpenseInput): Promise<string> {
+	await assertNotTerminal({ productionId: input.productionId });
 	const [row] = await db
 		.insert(productionExpense)
 		.values({
@@ -48,6 +50,7 @@ export async function addExpense(input: AddExpenseInput): Promise<string> {
  * is why removing a line while a show is being worked stays free.
  */
 export async function removeExpense(expenseId: string): Promise<void> {
+	await assertNotTerminal({ expenseId });
 	await reverseProductionExpense(expenseId);
 	await db.delete(productionExpense).where(eq(productionExpense.id, expenseId));
 }

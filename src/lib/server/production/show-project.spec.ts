@@ -185,9 +185,11 @@ describe("a show's project follows the show", () => {
 		});
 	});
 
-	it('is untouched when the transition was refused', async () => {
+	it('is untouched by a move that was only warned about', async () => {
 		exec(`insert into production (id, project_id, status) values ('prod-1', '${SHOW}', 'draft')`);
-		await expect(transitionProduction('prod-1', 'completed')).rejects.toThrow();
+		await expect(transitionProduction('prod-1', 'completed')).resolves.toMatchObject({
+			moved: false
+		});
 		expect(sqlite.prepare(`select status from project where id = ?`).get(SHOW)).toEqual({
 			status: 'open'
 		});

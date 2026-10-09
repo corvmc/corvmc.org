@@ -840,3 +840,33 @@ applies to instructor applications, community listings, volunteer hours, suggest
 resource tips and market vendor applications. The queue, approve, send-back and resubmit
 screens are hand-rolled in each; a shared review-queue component is the obvious next step,
 and a new queue should start from an existing one rather than a blank page.
+
+## Workflow gates
+
+**Warn, record, allow.** A workflow step is always available to whoever holds the capability for it.
+Ordering, completeness and "this step is done" are _warnings_, not refusals: the UI says what is
+off, the user confirms with a reason, and the override is written to the audit log.
+
+Only four things refuse outright:
+
+1. **Permission** — the capability guard in the remote function.
+2. **Integrity** — a write that would corrupt data: DB constraints, missing records, non-integer
+   money, malformed input (Zod).
+3. **Money already moved** — a recorded payout or a posted ledger entry is never edited in place. It
+   is undone by an explicit reversing action, and then recorded again.
+4. **Terminal states are the past.** A record in a terminal state (closed, cancelled, …) is
+   read-only, and leaving that state is a distinct **Reopen** action guarded by an admin-only
+   `<domain>.reopen` capability — never an option in the ordinary status menu. Reopening asks for a
+   reason and is audited. This is what keeps flexibility from rewriting history by accident.
+
+Between the first state and a terminal one, anything else that blocks is a bug against this rule.
+
+**The override is an escape hatch, not a feature.** The UI is designed for the usual path. Overrides
+live behind an overflow menu or a confirm step, never as a peer of the normal action, and nothing
+in the UI invites them. Because every non-terminal step can be repeated or walked back, a step's
+side effects must be idempotent, and reversible where they touch money.
+
+Productions are the first workflow brought in line: `src/lib/production/status.ts` computes the
+warnings, `transitionProduction` returns them unmoved until they are acknowledged with a reason,
+`reopenProduction` is behind `production.reopen`, and `assertNotTerminal` in
+`src/lib/server/production/production-scope.ts` is the one read every write path makes first.

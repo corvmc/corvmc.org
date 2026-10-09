@@ -122,7 +122,12 @@ export async function reverseEntriesForPaymentRecord(
 export async function reverseEntriesForSubject(
 	subjectType: FinancialSubject,
 	subjectId: string,
-	occurredAt: Date = new Date()
+	occurredAt: Date = new Date(),
+	/**
+	 * `metadata` narrows to the rows carrying those values — one act's payout of
+	 * the several filed under a show. `label` replaces "Refund" on the reversal.
+	 */
+	opts: { metadata?: Record<string, string>; label?: string } = {}
 ): Promise<number> {
 	const rows = await db
 		.select()
@@ -131,7 +136,12 @@ export async function reverseEntriesForSubject(
 			and(eq(financialEntry.subjectType, subjectType), eq(financialEntry.subjectId, subjectId))
 		);
 
-	return reverseAll(rows, occurredAt);
+	const want = Object.entries(opts.metadata ?? {});
+	const matching = rows.filter((r) => {
+		const meta = readMetadata(r.metadata);
+		return meta?.reversalOf || want.every(([k, v]) => meta?.[k] === v);
+	});
+	return reverseAll(matching, occurredAt, opts.label);
 }
 
 /**
@@ -141,7 +151,11 @@ export async function reverseEntriesForSubject(
  * `reversalOf` check a second pass negates both the sale and its reversal —
  * the total stays right and the rows become nonsense.
  */
-async function reverseAll(rows: FinancialEntry[], occurredAt: Date): Promise<number> {
+async function reverseAll(
+	rows: FinancialEntry[],
+	occurredAt: Date,
+	label = 'Refund'
+): Promise<number> {
 	const reversed = new Set<string>();
 	for (const r of rows) {
 		const of = readMetadata(r.metadata)?.reversalOf;
@@ -167,7 +181,7 @@ async function reverseAll(rows: FinancialEntry[], occurredAt: Date): Promise<num
 			subjectId: r.subjectId,
 			projectId: r.projectId,
 			userId: r.userId,
-			description: `Refund — ${r.description}`,
+			description: `${label} — ${r.description}`,
 			metadata: { reversalOf: r.id }
 		}))
 	);

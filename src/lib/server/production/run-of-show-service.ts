@@ -4,14 +4,13 @@ import { production, productionSlot } from '$lib/server/db/schema/production';
 import { eventBand, eventListing } from '$lib/server/db/schema/event';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { group } from '$lib/server/db/schema/group';
-import { and, asc, eq, inArray, isNotNull, ne, notInArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, notInArray } from 'drizzle-orm';
+import { assertNotTerminal } from './production-scope';
 import {
-	POOL_BPS,
 	SLOT_MAX,
 	computeSetTimes,
 	equalPoolShares,
 	orderSlots,
-	poolShareFits,
 	runOfShowWarnings
 } from './run-of-show';
 
@@ -71,18 +70,6 @@ export class SlotExistsError extends DomainError {
 	constructor() {
 		super('That act already has a set in the running order');
 		this.name = 'SlotExistsError';
-	}
-}
-
-export class PoolOverAllocatedError extends DomainError {
-	readonly httpStatus = 422;
-	constructor(remainingBps: number) {
-		super(
-			remainingBps <= 0
-				? 'The acts\u2019 pool is fully allocated. Lower another act\u2019s share first.'
-				: `That is more than the pool has left \u2014 ${(remainingBps / 100).toFixed(2)}% remains.`
-		);
-		this.name = 'PoolOverAllocatedError';
 	}
 }
 
@@ -254,7 +241,11 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 			firstSetAt: rows[0].firstSetAt,
 			curfewAt: rows[0].curfewAt,
 			doorsAt: rows[0].doorsAt,
-			slots: ordered.map((r) => ({ ...r, name: r.actName }))
+			slots: ordered.map((r) => ({
+				...r,
+				name: r.actName,
+				percentageBps: r.terms.percentageBps
+			}))
 		})
 	};
 }
@@ -405,6 +396,7 @@ export interface AddSlotInput {
 
 /** Append a set to the running order. */
 export async function addSlot(productionId: string, input: AddSlotInput): Promise<string> {
+	await assertNotTerminal({ productionId });
 	const slots = await readOrder(productionId);
 	if (slots.length >= SLOT_MAX) throw new TooManySlotsError();
 
@@ -455,6 +447,7 @@ export interface UpdateSlotInput {
  * cannot move a set time, and the guard keeps the common edit to one round trip.
  */
 export async function updateSlot(slotId: string, patch: UpdateSlotInput): Promise<void> {
+	await assertNotTerminal({ slotId });
 	const [row] = await db
 		.update(productionSlot)
 		.set({ ...patch, updatedAt: new Date() })
@@ -479,6 +472,7 @@ export async function markSlotTiming(
 	slotId: string,
 	patch: { actualStartAt?: Date | null; actualEndAt?: Date | null }
 ): Promise<void> {
+	await assertNotTerminal({ slotId });
 	const [row] = await db
 		.update(productionSlot)
 		.set({ ...patch, updatedAt: new Date() })
@@ -496,6 +490,7 @@ export async function markSlotTiming(
  * midpoint of its neighbours and nothing else is renumbered.
  */
 export async function moveSlot(slotId: string, direction: 'up' | 'down'): Promise<void> {
+	await assertNotTerminal({ slotId });
 	const [owner] = await db
 		.select({ productionId: productionSlot.productionId })
 		.from(productionSlot)
@@ -537,28 +532,9 @@ export async function moveSlot(slotId: string, direction: 'up' | 'down'): Promis
  * capability would guard without splitting a form that had already grown.
  */
 export async function setSlotTerms(slotId: string, terms: ActTerms): Promise<void> {
-	// `percentageBps` is basis points of the acts' pool, so the bill's shares have
-	// to fit inside one pool. Checked here rather than in the zod schema because
-	// the schema sees one act and the constraint spans the bill.
-	if (terms.percentageBps != null) {
-		const [self] = await db
-			.select({ productionId: productionSlot.productionId })
-			.from(productionSlot)
-			.where(eq(productionSlot.id, slotId))
-			.limit(1);
-		if (!self) throw new SlotNotFoundError();
-
-		const siblings = await db
-			.select({ bps: productionSlot.percentageBps })
-			.from(productionSlot)
-			.where(
-				and(eq(productionSlot.productionId, self.productionId), ne(productionSlot.id, slotId))
-			);
-		const others = siblings.map((r) => r.bps ?? 0);
-		if (!poolShareFits(others, terms.percentageBps)) {
-			throw new PoolOverAllocatedError(POOL_BPS - others.reduce((sum, bps) => sum + bps, 0));
-		}
-	}
+	// A bill whose shares overrun the pool is saved and flagged on the running
+	// order (`pool_over_allocated`), not refused: see run-of-show.ts.
+	await assertNotTerminal({ slotId });
 
 	const [row] = await db
 		.update(productionSlot)
@@ -578,6 +554,7 @@ export async function setSlotTerms(slotId: string, terms: ActTerms): Promise<voi
 
 /** Drop a set. The gap it leaves in `sortOrder` is correct — nothing renumbers. */
 export async function removeSlot(slotId: string): Promise<void> {
+	await assertNotTerminal({ slotId });
 	const [row] = await db
 		.delete(productionSlot)
 		.where(eq(productionSlot.id, slotId))
@@ -597,6 +574,7 @@ const DEFAULT_SET_MINUTES = 30;
  * case, and typing it in twice is the kind of work an app should not ask for.
  */
 export async function buildSlotsFromLineup(productionId: string, eventId: string): Promise<number> {
+	await assertNotTerminal({ productionId });
 	const existing = await readOrder(productionId);
 	if (existing.length >= SLOT_MAX) throw new TooManySlotsError();
 

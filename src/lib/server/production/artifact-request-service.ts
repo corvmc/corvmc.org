@@ -11,6 +11,7 @@ import { attachExisting, listAttachedEntries, replaceSlot } from '$lib/server/me
 import { resolveImageUrl, uploadFile } from '$lib/server/storage';
 import { mediaKey } from '$lib/server/storage-keys';
 import { DomainError } from '$lib/server/domain-error';
+import { assertNotTerminal } from './production-scope';
 import { SEARCH_LIMIT, type RequestableArtifact } from '$lib/config';
 import type { OutstandingRequest, PosterAsk } from '$lib/types/artifact-request';
 
@@ -40,6 +41,7 @@ export async function requestArtifact(input: {
 	dueAt?: Date | null;
 	requestedByUserId?: string | null;
 }): Promise<void> {
+	await assertNotTerminal({ eventId: input.eventId });
 	// Asking again is a reminder rather than a second request, so a repeat
 	// updates the deadline instead of adding a row the outstanding count would
 	// then double.
@@ -59,6 +61,12 @@ export async function requestArtifact(input: {
 }
 
 export async function cancelArtifactRequest(id: string): Promise<void> {
+	const [req] = await db
+		.select({ eventId: artifactRequest.eventId })
+		.from(artifactRequest)
+		.where(eq(artifactRequest.id, id))
+		.limit(1);
+	if (req) await assertNotTerminal({ eventId: req.eventId });
 	await db
 		.update(artifactRequest)
 		.set({ cancelledAt: new Date() })

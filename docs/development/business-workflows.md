@@ -1329,8 +1329,19 @@ rather than ten columns that would be NULL on the guide's hottest query.
 A staffer opens one from the event page, works on it in the console, and walks it
 forward as the night gets more real: **draft** (somebody is thinking about it) →
 **offered** (the offer is out, waiting on an act) → **confirmed** (it is happening) →
-**completed** (it happened). `settled` and `closed` are in the vocabulary but have no
-button yet; the settlement worksheet and the close-out are later phases.
+**completed** (it happened) → **settled** (the money is worked out) → **closed** (the
+room is reset and the books are done). Each has a button on the console.
+
+Status follows [warn, record, allow](conventions.md#workflow-gates). Any non-terminal
+status may move to any other: skipping a step, walking back, or closing with load-out
+tasks still open comes back as a warning, and goes through once the staffer gives a
+reason, which is written to the audit log as `production.override`. That path lives in
+the console's overflow menu ("Set status…"), not beside the usual buttons.
+
+`closed` and `cancelled` are terminal: the show is read-only, every write path refuses
+it, and leaving one is **Reopen…**, an admin-only (`production.reopen`) act with a
+reason, audited as `production.reopened`. Reopening clears `closedAt`; it does not
+restore crew shifts or retract a cancellation notice.
 
 ### Code path
 
@@ -1349,15 +1360,25 @@ button yet; the settlement worksheet and the close-out are later phases.
    `setProductionProducer` (who is running it — `'me'` resolves server-side, so the
    client never names a user id).
 4. `ProductionStatusAction` → `advanceProduction` →
-   `production-service.transitionProduction()`. Every move is
-   `UPDATE … WHERE id = ? AND status IN (…)` plus a `getRowCount` check: D1 has no
-   interactive transactions, so this is the house pattern. A zero row count re-reads
-   to tell "no such production" from "wrong status".
-5. `event-service.cancel()` → `cancelProductionsForEvent()`. One conditional update
+   `production-service.transitionProduction()`. It reads the status, computes
+   `transitionWarnings()` (`lib/production/status.ts`), and returns them unmoved unless
+   acknowledged with a reason. The move itself is `UPDATE … WHERE id = ? AND status = ?`
+   on the status it read, plus a `getRowCount` check: D1 has no interactive
+   transactions, so this is the house pattern, and a zero count is a 409 "it changed
+   under you". Side effects follow the move in both directions: expenses post at
+   `settled`/`closed` and reverse on a move back below `settled`; the show's project is
+   `done` from `completed` on, `declined` when cancelled, and `open` again if walked
+   back. `reopenProduction` (guard `production.reopen`) is the only way out of a
+   terminal state.
+5. **Settlement** tab → `recordActPayout` / `undoActPayout` (both `finance.refund`).
+   A payout is never edited: undo writes reversing ledger rows for that act alone
+   (`reverseActPayout`, matched on `metadata.slotId`) and marks it unpaid, and it is
+   recorded again. Both are audited.
+6. `event-service.cancel()` → `cancelProductionsForEvent()`. One conditional update
    over the three pre-completed statuses; a production that already `completed`
    describes a night that happened, and cancelling the advertisement does not
    un-happen it.
-6. `/staff/productions` reads everything through the one `getStaffEvents` query:
+7. `/staff/productions` reads everything through the one `getStaffEvents` query:
    `listAll()` left-joins `venue` and `production` (both 1:1, so no fan-out), and
    `getEventLineups()` — the batched helper — supplies the headliner and the count.
 
@@ -1377,11 +1398,13 @@ button yet; the settlement worksheet and the close-out are later phases.
   `cancel()` did not run — it is the only thing keeping the status column honest.
 - **"Add production" is missing on a CMC show that has none.** `getStaffEventPage`
   stopped returning `production`; the button is gated on it being null.
-- **A transition button does nothing.** The row moved underneath the page. The
-  conditional update matched zero rows and the error names the status it actually
-  found — read it rather than retrying.
-- **`settled` or `closed` appears with no way to reach it.** That is correct today.
-  Do not add a button for either until the work it names exists.
+- **A transition button does nothing.** The row moved underneath the page: the
+  conditional update matched zero rows and answered 409. Reload rather than retrying.
+- **An edit on a closed or cancelled show is refused (409).** That is the rule, not a
+  bug: an admin reopens it first, with a reason.
+- **A settled night's costs appear twice in the ledger.** `postProductionExpenses`
+  skips a line whose entries net to non-zero; a reversal that did not land would
+  re-post it on the next settle.
 
 ## 15. The packing list: what goes in the van, and who is bringing it
 

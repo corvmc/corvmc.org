@@ -119,6 +119,22 @@ describe('runOfShowWarnings', () => {
 		expect(warnings.map((w) => w.code)).toContain('past_curfew');
 	});
 
+	// A share over the pool is saved and flagged, not refused: the excess comes
+	// out of the collective's cut, which is a decision rather than a typo.
+	it('warns when the bill\u2019s shares come to more than the pool', () => {
+		expect(
+			codes({
+				slots: [
+					warnable({ id: 'a', sortOrder: 1, percentageBps: 7000 }),
+					warnable({ id: 'b', sortOrder: 2, percentageBps: 7000 })
+				]
+			})
+		).toContain('pool_over_allocated');
+		expect(
+			codes({ slots: [warnable({ id: 'a', sortOrder: 1, percentageBps: 10_000 })] })
+		).not.toContain('pool_over_allocated');
+	});
+
 	it('warns when the first set starts before doors', () => {
 		expect(codes({ doorsAt: new Date('2026-09-12T04:00:00Z') })).toContain('before_doors');
 	});

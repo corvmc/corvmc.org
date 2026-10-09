@@ -88,14 +88,16 @@ vi.mock('$lib/server/production/production-scope', () => scope);
 const service = {
 	createProduction: vi.fn(),
 	updateProductionDetails: vi.fn(),
-	transitionProduction: vi.fn()
+	transitionProduction: vi.fn(async () => ({ moved: true, warnings: [] as string[] })),
+	reopenProduction: vi.fn()
 };
 /** The stored row `updateProduction` compares a submission against. */
 let currentRow: Record<string, unknown> = {};
 vi.mock('$lib/server/production/production-service', () => ({
 	createProduction: (...a: unknown[]) => service.createProduction(...a),
 	updateProductionDetails: (...a: unknown[]) => service.updateProductionDetails(...a),
-	transitionProduction: (...a: unknown[]) => service.transitionProduction(...a)
+	transitionProduction: (...a: unknown[]) => service.transitionProduction(...(a as [])),
+	reopenProduction: (...a: unknown[]) => service.reopenProduction(...a)
 }));
 
 const listings = { create: vi.fn() };
@@ -125,9 +127,10 @@ vi.mock('$lib/server/production/run-of-show-service', () => ({
 	buildSlotsFromLineup: (...a: unknown[]) => runOfShow.buildSlotsFromLineup(...a)
 }));
 
-const settlement = { recordSlotPayout: vi.fn() };
+const settlement = { recordSlotPayout: vi.fn(), undoSlotPayout: vi.fn() };
 vi.mock('$lib/server/production/settlement-service', () => ({
-	recordSlotPayout: (...a: unknown[]) => settlement.recordSlotPayout(...(a as []))
+	recordSlotPayout: (...a: unknown[]) => settlement.recordSlotPayout(...(a as [])),
+	undoSlotPayout: (...a: unknown[]) => settlement.undoSlotPayout(...(a as []))
 }));
 
 const expenses = { addExpense: vi.fn(), removeExpense: vi.fn() };
@@ -208,7 +211,12 @@ const submit = (fn: unknown, data: unknown) => (fn as (d: unknown) => Promise<un
 type Write = {
 	name: keyof typeof productions;
 	args: unknown[];
-	capability: 'production.book' | 'production.run' | 'production.create' | 'finance.refund';
+	capability:
+		| 'production.book'
+		| 'production.run'
+		| 'production.create'
+		| 'production.reopen'
+		| 'finance.refund';
 	positionOnly?: boolean;
 };
 const BOOK = 'production.book' as const;
@@ -246,6 +254,12 @@ const WRITES: Write[] = [
 		name: 'advanceProduction',
 		args: [{ id: 'prod-1', eventId: 'evt-1', status: 'offered' }],
 		capability: BOOK
+	},
+	{
+		name: 'reopenProduction',
+		args: [{ id: 'prod-1', eventId: 'evt-1', status: 'confirmed', reason: 'Door count was wrong' }],
+		capability: 'production.reopen',
+		positionOnly: true
 	},
 	{
 		name: 'markSlotTiming',
@@ -308,6 +322,12 @@ const WRITES: Write[] = [
 	{
 		name: 'recordActPayout',
 		args: [{ ...SLOT, amountCents: 1000 }],
+		capability: 'finance.refund',
+		positionOnly: true
+	},
+	{
+		name: 'undoActPayout',
+		args: [SLOT],
 		capability: 'finance.refund',
 		positionOnly: true
 	},
@@ -491,6 +511,62 @@ describe('advancing a show', () => {
 			await expect(run).rejects.toMatchObject({ status: 403 });
 			expect(service.transitionProduction).not.toHaveBeenCalled();
 		}
+	});
+});
+
+describe('moving a show over its warnings', () => {
+	it('hands the warnings back unmoved, so the dialog can show them', async () => {
+		service.transitionProduction.mockResolvedValueOnce({
+			moved: false,
+			warnings: ['Skips confirmed.']
+		} as never);
+		await expect(
+			submit(productions.advanceProduction, { id: 'prod-1', eventId: 'evt-1', status: 'settled' })
+		).resolves.toEqual({ conflict: true, warnings: ['Skips confirmed.'] });
+		expect(refresh).not.toHaveBeenCalled();
+	});
+
+	it('passes the acknowledgement and the reason through', async () => {
+		await submit(productions.advanceProduction, {
+			id: 'prod-1',
+			eventId: 'evt-1',
+			status: 'settled',
+			acknowledged: true,
+			reason: 'Entered late'
+		});
+		expect(service.transitionProduction).toHaveBeenCalledWith('prod-1', 'settled', {
+			actorUserId: 'staff-1',
+			acknowledged: true,
+			reason: 'Entered late'
+		});
+	});
+});
+
+describe('reopening a show', () => {
+	// Staff hold everything but the admin-only complement, and this is in it.
+	it('is refused to staff, and reaches the service for an admin', async () => {
+		await expect(
+			submit(productions.reopenProduction, {
+				id: 'prod-1',
+				eventId: 'evt-1',
+				status: 'confirmed',
+				reason: 'x'
+			})
+		).rejects.toMatchObject({ status: 403 });
+
+		requireCapability.mockResolvedValueOnce({ id: 'admin-1' });
+		await submit(productions.reopenProduction, {
+			id: 'prod-1',
+			eventId: 'evt-1',
+			status: 'confirmed',
+			reason: 'Door count was wrong'
+		});
+		expect(requireCapability).toHaveBeenLastCalledWith('production.reopen');
+		expect(service.reopenProduction).toHaveBeenCalledWith(
+			'prod-1',
+			'confirmed',
+			'Door count was wrong'
+		);
 	});
 });
 

@@ -62,6 +62,7 @@
 	} from '$lib/remote/productions.remote';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
+	import { isTerminalProduction } from '$lib/production/status';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
 	import SettlementPanel from './SettlementPanel.svelte';
 	import ShowBudgetCard from './ShowBudgetCard.svelte';
@@ -107,6 +108,9 @@
 	const advance = $derived(loaded.advance);
 	const riders = $derived(loaded.riders);
 	const productionRecord = $derived(loaded.production);
+	const productionLocked = $derived(
+		productionRecord ? isTerminalProduction(productionRecord.status) : false
+	);
 	const hostShift = $derived(loaded.hostShift);
 	const runOfShow = $derived(loaded.runOfShow);
 	const settlement = $derived(loaded.settlement);
@@ -927,131 +931,140 @@
 								: ''}
 						</p>
 					{/if}
-					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-muted">Producer</span>
-						<!-- The person running the night, reachable. It was their name as
+					{#if productionLocked}
+						<p class="text-muted text-sm">
+							This show is {productionRecord.status}, so it is read-only.
+						</p>
+					{/if}
+					<!-- A terminal show is the past. Disabled here for clarity; the server refuses
+					     the writes either way. -->
+					<fieldset disabled={productionLocked} class="contents">
+						<div class="flex flex-wrap items-center gap-2">
+							<span class="text-muted">Producer</span>
+							<!-- The person running the night, reachable. It was their name as
 						     a bare string. -->
-						{#if productionRecord.producer}
-							<EntityChip ref={productionRecord.producer} />
-						{:else}
-							<span class="font-medium">Nobody yet</span>
-						{/if}
-						<Form remote={setProductionProducer} successToast="Producer updated">
-							<input {...producerFields.id.as('hidden', productionRecord.id)} />
-							<input {...producerFields.eventId.as('hidden', evt.id)} />
-							<input
-								{...producerFields.producer.as(
-									'hidden',
-									productionRecord.producerUserId ? 'none' : 'me'
-								)}
-							/>
-							<SubmitButton
-								label={productionRecord.producerUserId ? 'Hand it back' : 'I am producing this'}
-								variant="ghost"
-								size="xs"
-							/>
-						</Form>
-					</div>
+							{#if productionRecord.producer}
+								<EntityChip ref={productionRecord.producer} />
+							{:else}
+								<span class="font-medium">Nobody yet</span>
+							{/if}
+							<Form remote={setProductionProducer} successToast="Producer updated">
+								<input {...producerFields.id.as('hidden', productionRecord.id)} />
+								<input {...producerFields.eventId.as('hidden', evt.id)} />
+								<input
+									{...producerFields.producer.as(
+										'hidden',
+										productionRecord.producerUserId ? 'none' : 'me'
+									)}
+								/>
+								<SubmitButton
+									label={productionRecord.producerUserId ? 'Hand it back' : 'I am producing this'}
+									variant="ghost"
+									size="xs"
+								/>
+							</Form>
+						</div>
 
-					<!-- Who runs the night, which is not always who booked it. A shift
+						<!-- Who runs the night, which is not always who booked it. A shift
 					     rather than a field: the producer opens it, and a host claims
 					     it through the same pipeline as any other volunteer, so the
 					     handover carries confirmation and hours with it (#932). -->
-					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-muted">Host</span>
-						{#if hostShift && hostShift.hosts.length > 0}
-							{#each hostShift.hosts as host (host.signupId)}
-								<span class="font-medium">{host.name}</span>
-								<StatusBadge status={host.status} />
-							{/each}
-						{:else if hostShift}
-							<span class="font-medium">Shift open, nobody on it</span>
-							<a
-								class="link text-sm"
-								href={resolve(`/staff/volunteer/shifts/${hostShift.workOrderId}`)}
-							>
-								Find somebody
-							</a>
-						{:else}
-							<!-- "No host yet", not "Nobody yet": the Producer line above
+						<div class="flex flex-wrap items-center gap-2">
+							<span class="text-muted">Host</span>
+							{#if hostShift && hostShift.hosts.length > 0}
+								{#each hostShift.hosts as host (host.signupId)}
+									<span class="font-medium">{host.name}</span>
+									<StatusBadge status={host.status} />
+								{/each}
+							{:else if hostShift}
+								<span class="font-medium">Shift open, nobody on it</span>
+								<a
+									class="link text-sm"
+									href={resolve(`/staff/volunteer/shifts/${hostShift.workOrderId}`)}
+								>
+									Find somebody
+								</a>
+							{:else}
+								<!-- "No host yet", not "Nobody yet": the Producer line above
 							     already says that, and `productions.e2e.ts` reads it by
 							     text — two matches make its locator ambiguous. -->
-							<span class="font-medium">No host yet</span>
-							<Form remote={openHostShift} successToast="Host shift opened">
-								<input {...openHostShift.fields.eventId.as('hidden', evt.id)} />
-								<SubmitButton label="Open a host shift" variant="ghost" size="xs" />
-							</Form>
-						{/if}
-					</div>
+								<span class="font-medium">No host yet</span>
+								<Form remote={openHostShift} successToast="Host shift opened">
+									<input {...openHostShift.fields.eventId.as('hidden', evt.id)} />
+									<SubmitButton label="Open a host shift" variant="ghost" size="xs" />
+								</Form>
+							{/if}
+						</div>
 
-					<Form
-						remote={updateProduction}
-						guard
-						successToast="Production updated"
-						onsuccess={() => void getStaffEventProduction(id).refresh()}
-					>
-						<input {...productionFields.id.as('hidden', productionRecord.id)} />
-						<input {...productionFields.eventId.as('hidden', evt.id)} />
+						<Form
+							remote={updateProduction}
+							guard
+							successToast="Production updated"
+							onsuccess={() => void getStaffEventProduction(id).refresh()}
+						>
+							<input {...productionFields.id.as('hidden', productionRecord.id)} />
+							<input {...productionFields.eventId.as('hidden', evt.id)} />
 
-						<!--
+							<!--
 						One date, five times. A production runs inside one night — the
 						listing already refuses to span two dates — so repeating the date on
 						every field would be five chances to disagree with itself.
 					-->
-						<FormField
-							field={productionFields.loadInDate}
-							type="date"
-							label="Show date"
-							bind:value={productionDate}
-						/>
-						<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-							<FormField field={productionFields.loadInTime} type="time" label="Load-in" />
-							<FormField field={productionFields.soundcheckTime} type="time" label="Soundcheck" />
-							<FormField field={productionFields.firstSetTime} type="time" label="First set" />
-							<FormField field={productionFields.curfewTime} type="time" label="Curfew" />
-							<FormField field={productionFields.loadOutTime} type="time" label="Load-out by" />
-						</div>
-						<input {...productionFields.soundcheckDate.as('hidden', productionDate)} />
-						<input {...productionFields.firstSetDate.as('hidden', productionDate)} />
-						<input {...productionFields.curfewDate.as('hidden', productionDate)} />
-						<input {...productionFields.loadOutDate.as('hidden', productionDate)} />
+							<FormField
+								field={productionFields.loadInDate}
+								type="date"
+								label="Show date"
+								bind:value={productionDate}
+							/>
+							<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+								<FormField field={productionFields.loadInTime} type="time" label="Load-in" />
+								<FormField field={productionFields.soundcheckTime} type="time" label="Soundcheck" />
+								<FormField field={productionFields.firstSetTime} type="time" label="First set" />
+								<FormField field={productionFields.curfewTime} type="time" label="Curfew" />
+								<FormField field={productionFields.loadOutTime} type="time" label="Load-out by" />
+							</div>
+							<input {...productionFields.soundcheckDate.as('hidden', productionDate)} />
+							<input {...productionFields.firstSetDate.as('hidden', productionDate)} />
+							<input {...productionFields.curfewDate.as('hidden', productionDate)} />
+							<input {...productionFields.loadOutDate.as('hidden', productionDate)} />
 
-						<!-- What makes "still needs an opener" answerable. Until a target
+							<!-- What makes "still needs an opener" answerable. Until a target
 						     exists, a two-act bill nobody has finished looks exactly like
 						     a two-act bill that is done (#859). -->
-						<FormField
-							field={productionFields.actsWanted}
-							type="select"
-							label="Acts wanted"
-							value={productionRecord.actsWanted?.toString() ?? ''}
-							options={[
-								{ value: '', label: 'No target set' },
-								...Array.from({ length: 8 }, (_, i) => ({
-									value: String(i + 1),
-									label: `${i + 1} ${i === 0 ? 'act' : 'acts'}`
-								}))
-							]}
-							description="How many the bill should end up with. Leave it unset if nobody has decided."
-						/>
+							<FormField
+								field={productionFields.actsWanted}
+								type="select"
+								label="Acts wanted"
+								value={productionRecord.actsWanted?.toString() ?? ''}
+								options={[
+									{ value: '', label: 'No target set' },
+									...Array.from({ length: 8 }, (_, i) => ({
+										value: String(i + 1),
+										label: `${i + 1} ${i === 0 ? 'act' : 'acts'}`
+									}))
+								]}
+								description="How many the bill should end up with. Leave it unset if nobody has decided."
+							/>
 
-						<FormField
-							field={productionFields.billingNotes}
-							label="Billing"
-							description="What the acts were told about the money, in their words."
-						/>
-						<FormField
-							field={productionFields.hospitalityNotes}
-							label="Hospitality"
-							description="Green room, food, parking — what the advance promised."
-						/>
-						<FormField
-							field={productionFields.internalNotes}
-							label="Internal notes"
-							description="Staff only. Never shown to an act."
-						/>
+							<FormField
+								field={productionFields.billingNotes}
+								label="Billing"
+								description="What the acts were told about the money, in their words."
+							/>
+							<FormField
+								field={productionFields.hospitalityNotes}
+								label="Hospitality"
+								description="Green room, food, parking — what the advance promised."
+							/>
+							<FormField
+								field={productionFields.internalNotes}
+								label="Internal notes"
+								description="Staff only. Never shown to an act."
+							/>
 
-						<SubmitButton label="Save production" />
-					</Form>
+							<SubmitButton label="Save production" />
+						</Form>
+					</fieldset>
 				</InfoCard>
 			{:else}
 				<!-- The page that explains the thing is the page that makes it. This
@@ -1413,7 +1426,9 @@
 			class="space-y-6"
 			class:hidden={tab !== 'runOfShow'}
 		>
-			<RunOfShowPanel {runOfShow} eventId={id} showDate={productionDate} />
+			<fieldset disabled={productionLocked} class="contents">
+				<RunOfShowPanel {runOfShow} eventId={id} showDate={productionDate} />
+			</fieldset>
 		</div>
 	{/if}
 
