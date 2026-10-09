@@ -185,13 +185,13 @@ test.describe('volunteering — staff review queue', () => {
 });
 
 test.describe('volunteering — roles', () => {
-	/** Setup is navigation; role actions live on the detail page. */
+	/** Roles is navigation; role actions live on the detail page. */
 	async function openRole(page: Page, name: string) {
 		await page.getByRole('link', { name, exact: false }).first().click();
 		await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
 	}
 
-	/** A role on Setup is a card, not a table row. */
+	/** A role on Roles is a card, not a table row. */
 	function cardFor(page: Page, name: string) {
 		return page.locator('li').filter({ hasText: name });
 	}
@@ -200,7 +200,7 @@ test.describe('volunteering — roles', () => {
 		page
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/setup');
+		await page.goto('/staff/volunteer/roles');
 		await openRole(page, SEED_VOL_ROLE_NAME);
 
 		// Delete is offered only for a role nothing was logged against, so the
@@ -211,13 +211,13 @@ test.describe('volunteering — roles', () => {
 
 	test('an archived role stays visible to staff, behind the retired filter', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/setup');
+		await page.goto('/staff/volunteer/roles');
 
 		// Retired roles are off by default — a coordinator filling next week's
 		// shifts reads the live list.
 		await expect(cardFor(page, SEED_VOL_ARCHIVED_ROLE_NAME)).toHaveCount(0);
 
-		await page.goto('/staff/volunteer/setup?retired=1');
+		await page.goto('/staff/volunteer/roles?retired=1');
 
 		// But retiring a role must never hide the work done under it.
 		await expect(cardFor(page, SEED_VOL_ARCHIVED_ROLE_NAME).first()).toBeVisible();
@@ -229,7 +229,7 @@ test.describe('volunteering — roles', () => {
 		page
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/setup');
+		await page.goto('/staff/volunteer/roles');
 
 		// Ungated role: the member is simply on the list.
 		await openRole(page, SEED_VOL_ROLE_NAME);
@@ -237,7 +237,7 @@ test.describe('volunteering — roles', () => {
 
 		// Gated role: same member, but holding none of what it requires — the
 		// difference between "interested" and "can actually be rostered".
-		await page.goto('/staff/volunteer/setup');
+		await page.goto('/staff/volunteer/roles');
 		await openRole(page, SEED_VOL_GATED_ROLE_NAME);
 		await expect(page.getByText(SEED_VOL_MEMBER_NAME).first()).toBeVisible({ timeout: 15000 });
 		await expect(page.getByText(`needs ${SEED_VOL_CERT_NAME}`)).toBeVisible();
@@ -251,7 +251,7 @@ test.describe('volunteering — roles', () => {
 
 	test('roles are sectioned by group, with a short-staffed count', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/setup');
+		await page.goto('/staff/volunteer/roles');
 
 		// Group order comes from the enum, so "At shows" leads. It is a label
 		// rather than a heading on purpose — `getByRole('heading')` is how pages
@@ -268,7 +268,7 @@ test.describe('volunteering — roles', () => {
 
 	test('editing a role from its detail page saves', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/setup');
+		await page.goto('/staff/volunteer/roles');
 		await openRole(page, SEED_VOL_ROLE_NAME);
 
 		// The edit form moved off the list into this page, so the round trip is
@@ -291,7 +291,7 @@ test.describe('volunteering — roles', () => {
 	// survive the round trip as such.
 	test('a shift default can be cleared', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/setup');
+		await page.goto('/staff/volunteer/roles');
 		await openRole(page, SEED_VOL_ROLE_NAME);
 
 		await page.locator('input[name$="defaultCapacity"]').fill('');
@@ -319,7 +319,7 @@ test.describe('volunteering — roles', () => {
 	// them — so the whole path from role row to prefilled form is new.
 	test("a role's shift defaults prefill the New Shift form", async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/setup');
+		await page.goto('/staff/volunteer/roles');
 		await openRole(page, SEED_VOL_ROLE_NAME);
 
 		await page.getByRole('button', { name: 'New shift' }).click();

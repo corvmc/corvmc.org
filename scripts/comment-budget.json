@@ -674,10 +674,10 @@
 	"src/routes/staff/volunteer/NeedsSchedulingCard.svelte",
 	"src/routes/staff/volunteer/people/+page.svelte",
 	"src/routes/staff/volunteer/report/export/+server.ts",
+	"src/routes/staff/volunteer/roles/+page.svelte",
 	"src/routes/staff/volunteer/roles/[id]/RoleInterestedCard.svelte",
 	"src/routes/staff/volunteer/roles/[id]/RoleShiftsCard.svelte",
 	"src/routes/staff/volunteer/schedule/+page.svelte",
-	"src/routes/staff/volunteer/setup/+page.svelte",
 	"src/routes/staff/volunteer/shifts/[id]/+page.svelte",
 	"src/routes/staff/volunteer/shifts/[id]/CandidateColumn.svelte",
 	"src/routes/staff/volunteer/shifts/[id]/ShiftChecklist.svelte"

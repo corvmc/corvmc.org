@@ -21,6 +21,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import { resolve } from '$app/paths';
 	import NeedsConfirmingCard from './NeedsConfirmingCard.svelte';
 	import ShortStaffedCard from './ShortStaffedCard.svelte';
 	import HoursToReviewCard from './HoursToReviewCard.svelte';
@@ -55,6 +56,8 @@
 </script>
 
 <PageHeader width="5xl" title="Today" subtitle="Volunteering">
+	<!-- Not a sidebar row: roles are set up now and then, not worked daily (#1791). -->
+	<Button variant="ghost" size="sm" href={resolve('/staff/volunteer/roles')}>Roles</Button>
 	<LogHoursForMemberAction />
 	<NewShiftAction {defaultStart} />
 	<NewWorkOrderAction />

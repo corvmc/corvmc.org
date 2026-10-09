@@ -63,7 +63,7 @@
 	// `goto(..., { replaceState })`, not `replaceState()`: the latter only rewrites
 	// the address bar and the router overwrites that entry on the next navigation.
 	$effect(() => {
-		const href = withQuery(resolve('/staff/volunteer/setup'), showRetired ? 'retired=1' : '');
+		const href = withQuery(resolve('/staff/volunteer/roles'), showRetired ? 'retired=1' : '');
 		if (location.pathname + location.search !== href) {
 			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
 		}
@@ -98,7 +98,7 @@
 	}
 </script>
 
-<PageHeader title="Setup" subtitle="Volunteering" backHref="/staff/volunteer" />
+<PageHeader title="Roles" subtitle="Volunteering" backHref="/staff/volunteer" />
 
 <PageContent>
 	{#await data then { roles, certifications }}
