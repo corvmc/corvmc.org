@@ -390,10 +390,10 @@
 					<li>
 						<!-- Linked: a project could not reach the work it attached. -->
 						<a class="link" href={resolve(`/staff/volunteer/shifts/${wo.id}`)}>
-							{wo.notes ?? 'Unscheduled work order'}
+							{wo.title}
 						</a>
 						{wo.startsAt ? ` — ${formatDateShort(wo.startsAt)}` : ' — not scheduled'}
-						{@render detach('work_order', wo.id, wo.notes ?? 'this work order')}
+						{@render detach('work_order', wo.id, wo.title)}
 					</li>
 				{/each}
 			</ul>

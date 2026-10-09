@@ -9,7 +9,18 @@ import { eventListing } from '$lib/server/db/schema/event';
 import { financialEntry } from '$lib/server/db/schema/financial';
 import { production, productionExpense } from '$lib/server/db/schema/production';
 import { eventListingColumns } from '$lib/server/event/event-columns';
-import { and, asc, desc, eq, exists, inArray, isNull, notExists, sql } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	desc,
+	eq,
+	exists,
+	getTableColumns,
+	inArray,
+	isNull,
+	notExists,
+	sql
+} from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import {
 	valueOfMinutesCents,
@@ -555,9 +566,16 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 /** Everything hanging off the project, for its detail page. */
 export async function listProjectAttachments(projectId: string) {
 	const [workOrders, jobs, orders, acquisitions, events] = await Promise.all([
+		// `title` is the column's own rule: the work order's, else its event's, else
+		// its role's. The role is NOT NULL, so there is always a name to show.
 		db
-			.select()
+			.select({
+				...getTableColumns(workOrder),
+				title: sql<string>`coalesce(${workOrder.title}, ${eventListing.title}, ${volunteerRole.name})`
+			})
 			.from(workOrder)
+			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
 			.where(eq(workOrder.projectId, projectId))
 			.orderBy(asc(workOrder.startsAt)),
 		db
