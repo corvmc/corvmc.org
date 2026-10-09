@@ -308,6 +308,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/profile/teaching/apply",
+		"panel": "member"
+	},
+	{
 		"route": "/member/purchases",
 		"panel": "member"
 	},

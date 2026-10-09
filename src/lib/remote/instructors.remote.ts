@@ -143,6 +143,12 @@ const listingSchema = z.object({
 	applicationNote: z.string().trim().max(INSTRUCTOR_APPLICATION_NOTE_MAX).optional()
 });
 
+/** An application must say what is taught; the service refuses it otherwise (#1820). */
+const applicationSchema = listingSchema.extend({
+	headline: z.string().trim().min(1, 'Say what you teach').max(INSTRUCTOR_HEADLINE_MAX),
+	blurb: z.string().trim().min(1, 'Tell students about your teaching').max(INSTRUCTOR_BLURB_MAX)
+});
+
 /**
  * Apply to teach, or resubmit an application that was handed back.
  *
@@ -150,7 +156,7 @@ const listingSchema = z.object({
  * service refuses anyone who already holds a grant. What it must **not** take is
  * a user id from the client: the applicant is whoever is signed in.
  */
-export const applyToTeach = form(listingSchema, async (data) => {
+export const applyToTeach = form(applicationSchema, async (data) => {
 	const currentUser = requireUser();
 	try {
 		await instructorService.apply(currentUser.id, data);
