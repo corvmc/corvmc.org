@@ -1,3 +1,8 @@
+<script lang="ts" module>
+	// Literal class names: Tailwind only emits what it sees written out in full.
+	const SEARCH_WIDTHS = { fixed: '@lg:w-64', content: '@lg:w-auto' } as const;
+</script>
+
 <script lang="ts">
 	/**
 	 * Filter toolbar layout. Owns no filter state — pages keep their own `$state`
@@ -16,10 +21,16 @@
 		search,
 		children,
 		activeCount = 0,
-		onclear
+		onclear,
+		searchWidth = 'fixed'
 	}: {
 		/** Always visible; full width below `@lg`. */
 		search?: Snippet;
+		/**
+		 * `@lg` and up: `fixed` is 16rem, sized for one text input; `content`
+		 * fits what the snippet holds, for a control wider than that.
+		 */
+		searchWidth?: keyof typeof SEARCH_WIDTHS;
 		/** Selects, date ranges, etc. Collapsed on narrow containers. */
 		children?: Snippet;
 		/** Drives the count badge and whether Clear renders. */
@@ -32,7 +43,7 @@
 
 <div class="mb-4 flex flex-wrap items-end gap-2">
 	{#if search}
-		<div class="w-full @lg:w-64">{@render search()}</div>
+		<div class="w-full {SEARCH_WIDTHS[searchWidth]}">{@render search()}</div>
 	{/if}
 
 	{#if children}
