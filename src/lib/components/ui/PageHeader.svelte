@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button, { setDefaultButtonSize } from '$lib/components/ui/Button.svelte';
 	import { pageTitle } from '$lib/config';
 	import { PAGE_WIDTH, type PageWidth } from './page-width';
 
@@ -43,6 +43,9 @@
 		 */
 		flush?: boolean;
 	} = $props();
+
+	// Header actions are one size, whatever each caller passes or omits (#1831).
+	setDefaultButtonSize('sm');
 
 	const resolvedTitle = $derived(documentTitle === undefined ? title : documentTitle);
 </script>
