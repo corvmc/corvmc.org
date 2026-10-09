@@ -139,6 +139,27 @@ describe('event mutations surface their domain errors', () => {
 		});
 	});
 
+	// Warn, record, allow (#1787): a reason is the acknowledgement.
+	it('publishEvent answers unacknowledged warnings with a 422 that names them', async () => {
+		publish.mockResolvedValueOnce({ published: false, warnings: ['there is no poster'] });
+
+		const { status, message } = await statusAndMessage(() => events.publishEvent({ id: 'evt-1' }));
+		expect(status).toBe(422);
+		expect(message).toMatch(/there is no poster/);
+		expect(publish).toHaveBeenLastCalledWith('evt-1', { acknowledged: false, reason: undefined });
+	});
+
+	it('publishEvent passes a reason through as an acknowledged override', async () => {
+		publish.mockResolvedValueOnce({ published: true, warnings: ['there is no poster'] });
+
+		await events.publishEvent({ id: 'evt-1', reason: 'Poster is at the printer' });
+
+		expect(publish).toHaveBeenLastCalledWith('evt-1', {
+			acknowledged: true,
+			reason: 'Poster is at the printer'
+		});
+	});
+
 	it('publishEvent keeps a 409 state conflict', async () => {
 		publish.mockRejectedValueOnce(
 			new DomainError('Cannot publish an event with status "cancelled"', 409)

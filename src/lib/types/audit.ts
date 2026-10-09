@@ -29,7 +29,8 @@ export const auditActions = [
 	'production.override',
 	'production.reopened',
 	'production.payout_recorded',
-	'production.payout_undone'
+	'production.payout_undone',
+	'event.published_over_warnings'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -39,7 +40,8 @@ export const auditSubjectTypes = [
 	'incident',
 	'role',
 	'group',
-	'production'
+	'production',
+	'event'
 ] as const;
 export type AuditSubjectType = (typeof auditSubjectTypes)[number];
 
@@ -116,6 +118,8 @@ export interface AuditDetailsByAction {
 	'production.reopened': ProductionMove & { reason: string };
 	'production.payout_recorded': ProductionPayout;
 	'production.payout_undone': ProductionPayout;
+	/** A CMC listing published over its readiness warnings (#1787). */
+	'event.published_over_warnings': { warnings: string[]; reason: string };
 }
 
 /** A show's status move. `eventId` is what the log links to; the production has no page. */

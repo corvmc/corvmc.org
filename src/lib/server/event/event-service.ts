@@ -75,6 +75,7 @@ import { project } from '$lib/server/db/schema/project';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { captureException } from '$lib/server/sentry';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import { uploadFile, deleteObject } from '$lib/server/storage';
 import { copyToPrivate, copyFromPrivate, deletePrivateObject } from '$lib/server/private-storage';
 import {
@@ -136,13 +137,13 @@ export class EventStateError extends DomainError {
 	}
 }
 
-/** A CMC listing that is not ready to be seen, and what it is missing. */
-export class EventNotReadyError extends DomainError {
+/** 422: a publish over warnings names no reason, so the audit log would say nothing. */
+export class PublishReasonRequiredError extends DomainError {
 	readonly httpStatus = 422;
 
-	constructor(readonly blockers: string[]) {
-		super(`Not ready to announce: ${blockers.join(', ')}.`);
-		this.name = 'EventNotReadyError';
+	constructor() {
+		super('Give a reason for publishing anyway; it is written to the audit log.');
+		this.name = 'PublishReasonRequiredError';
 	}
 }
 
@@ -1011,15 +1012,21 @@ export async function unannouncedShows(withinDays = 21, now = new Date()) {
 }
 
 /**
- * What a CMC listing still needs before the public sees it.
+ * What a CMC listing is still missing before the public sees it. Warnings, not
+ * refusals (docs/development/conventions.md#workflow-gates): `publish` goes
+ * ahead over them once acknowledged with a reason.
  *
  * Community listings are exempt: a member posting somebody else's gig is not
- * making a promise on the collective's behalf, and gating them would break the
- * community calendar.
+ * making a promise on the collective's behalf.
  */
 export async function publishBlockers(eventId: string): Promise<string[]> {
+	return (await readiness(eventId)).warnings;
+}
+
+async function readiness(eventId: string): Promise<{ title: string | null; warnings: string[] }> {
 	const [row] = await db
 		.select({
+			title: eventListing.title,
 			source: eventListing.source,
 			description: eventListing.description,
 			posterKey: eventPosterKeySql,
@@ -1030,26 +1037,38 @@ export async function publishBlockers(eventId: string): Promise<string[]> {
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
 
-	if (!row || row.source !== 'cmc') return [];
+	if (!row || row.source !== 'cmc') return { title: row?.title ?? null, warnings: [] };
 
-	const blockers: string[] = [];
-	// Announcing a show whose lineup is not agreed is the promise the collective
-	// cannot keep. Cancellation already cascades listing → production; this is
-	// the same coherence in the other direction.
+	const warnings: string[] = [];
 	if (row.productionStatus && !isProductionConfirmed(row.productionStatus)) {
-		blockers.push('the production is not confirmed yet');
+		warnings.push('the production is not confirmed yet');
 	}
-	if (!hasPoster(row.posterKey)) blockers.push('there is no poster');
-	if (!hasDescription(row.description)) blockers.push('there is no description');
-	return blockers;
+	if (!hasPoster(row.posterKey)) warnings.push('there is no poster');
+	if (!hasDescription(row.description)) warnings.push('there is no description');
+	return { title: row.title, warnings };
 }
 
-export async function publish(eventId: string): Promise<void> {
-	// The readiness gate. A CMC show used to go public with no poster, no
-	// description and an unconfirmed lineup, because `publish` checked its own
-	// status and nothing else.
-	const blockers = await publishBlockers(eventId);
-	if (blockers.length > 0) throw new EventNotReadyError(blockers);
+export interface PublishOptions {
+	/** The caller has shown the warnings and the user went ahead. */
+	acknowledged?: boolean;
+	/** Required when there are warnings; written to the audit log. */
+	reason?: string | null;
+}
+
+export type PublishOutcome = { published: boolean; warnings: string[] };
+
+/**
+ * Publish a draft or pending listing. Unacknowledged warnings come back
+ * unpublished so the dialog can show them; an acknowledged publish needs a
+ * reason and is recorded as an override.
+ */
+export async function publish(eventId: string, opts: PublishOptions = {}): Promise<PublishOutcome> {
+	const { title, warnings } = await readiness(eventId);
+	const reason = opts.reason?.trim() ?? '';
+	if (warnings.length > 0) {
+		if (!opts.acknowledged) return { published: false, warnings };
+		if (!reason) throw new PublishReasonRequiredError();
+	}
 
 	await restoreWithheldPoster(eventId);
 
@@ -1065,6 +1084,15 @@ export async function publish(eventId: string): Promise<void> {
 		if (!existing) throw new EventNotFoundError();
 		throw new EventStateError(`Cannot publish an event with status "${existing.status}"`);
 	}
+
+	if (warnings.length > 0) {
+		await recordAuditEntry({
+			action: 'event.published_over_warnings',
+			subject: { type: 'event', id: eventId, label: title },
+			details: { warnings, reason }
+		});
+	}
+	return { published: true, warnings };
 }
 
 // ---------------------------------------------------------------------------

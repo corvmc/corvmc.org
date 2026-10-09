@@ -870,3 +870,7 @@ Productions are the first workflow brought in line: `src/lib/production/status.t
 warnings, `transitionProduction` returns them unmoved until they are acknowledged with a reason,
 `reopenProduction` is behind `production.reopen`, and `assertNotTerminal` in
 `src/lib/server/production/production-scope.ts` is the one read every write path makes first.
+
+Publishing a CMC event follows the same shape: `publish` in `src/lib/server/event/event-service.ts`
+returns its readiness warnings unpublished until acknowledged with a reason, and writes
+`event.published_over_warnings` when it goes ahead over them.
