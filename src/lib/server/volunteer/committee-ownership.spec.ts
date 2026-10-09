@@ -145,4 +145,13 @@ describe("the coordinator's queue", () => {
 			'staffs'
 		]);
 	});
+
+	it('counts on the badge only what the queue lists (#1828)', async () => {
+		const { listWorkOrders } = await import('./work-order-service');
+		const { countVolunteerWorkWaiting } = await import('./volunteer-signup-service');
+		exec(`insert into work_order (id, volunteer_role_id, event_id, group_id)
+			values ('owned', 'role-lead', 'evt', 'g-book'), ('staffs', 'role-lead', 'evt', null)`);
+
+		expect(await countVolunteerWorkWaiting()).toBe((await listWorkOrders()).length);
+	});
 });

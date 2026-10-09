@@ -669,6 +669,32 @@ export async function resolveWorkOrder(
 	return row;
 }
 
+export interface WorkOrderQueueFilters {
+	volunteerRoleId?: string;
+	eventId?: string;
+	projectId?: string;
+}
+
+/**
+ * Which work is waiting for a time. Shared with `countVolunteerWorkWaiting`, so
+ * the badge can only count rows this queue lists (#1828).
+ */
+export function unscheduledWorkWhere(filters: WorkOrderQueueFilters = {}) {
+	return and(
+		isNull(workOrder.startsAt),
+		isNull(workOrder.resolvedAt),
+		isNull(workOrder.cancelledAt),
+		// The same optional anchors `listShifts` takes: the advance half of a duty
+		// list lands here carrying the event it is for.
+		filters.volunteerRoleId ? eq(workOrder.volunteerRoleId, filters.volunteerRoleId) : undefined,
+		filters.eventId ? eq(workOrder.eventId, filters.eventId) : undefined,
+		filters.projectId ? eq(workOrder.projectId, filters.projectId) : undefined,
+		// Unanchored, this is the coordinator's queue, and a committee's items
+		// are on that committee's queue instead: nine a show would bury it.
+		filters.eventId || filters.projectId ? undefined : isNull(workOrder.groupId)
+	);
+}
+
 /**
  * The coordinator's queue: work nobody has found a time for.
  *
@@ -676,32 +702,10 @@ export async function resolveWorkOrder(
  * a fortnight is the one that has gone wrong.
  */
 export async function listWorkOrders(
-	filters: {
-		volunteerRoleId?: string;
-		eventId?: string;
-		projectId?: string;
-	} = {}
+	filters: WorkOrderQueueFilters = {}
 ): Promise<ShiftWithCounts[]> {
 	const rows = await shiftRowsQuery()
-		.where(
-			and(
-				isNull(workOrder.startsAt),
-				isNull(workOrder.resolvedAt),
-				isNull(workOrder.cancelledAt),
-				// The same optional anchors `listShifts` takes, for the same reason:
-				// the advance half of a duty list lands here carrying the event it is
-				// for, and a show that cannot be asked what it is waiting on shows
-				// nothing at all.
-				filters.volunteerRoleId
-					? eq(workOrder.volunteerRoleId, filters.volunteerRoleId)
-					: undefined,
-				filters.eventId ? eq(workOrder.eventId, filters.eventId) : undefined,
-				filters.projectId ? eq(workOrder.projectId, filters.projectId) : undefined,
-				// Unanchored, this is the coordinator's queue, and a committee's items
-				// are on that committee's queue instead: nine a show would bury it.
-				filters.eventId || filters.projectId ? undefined : isNull(workOrder.groupId)
-			)
-		)
+		.where(unscheduledWorkWhere(filters))
 		.orderBy(asc(workOrder.createdAt), asc(workOrder.id));
 
 	return withCounts(rows);
