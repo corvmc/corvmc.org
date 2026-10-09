@@ -158,6 +158,7 @@ export const setRoomMute = form(
 
 		const { user } = await requireGroupRole({ id: chatGroup.id }, 'member');
 		await setRoomMuteState(data.threadId, user.id, data.intent === 'mute');
+		await getGroupChatTopic(data.threadId).refresh();
 		await getMyMessageThread(data.threadId).refresh();
 		await getGroupChatTopics(chatGroup.slug).refresh();
 		return { success: true };

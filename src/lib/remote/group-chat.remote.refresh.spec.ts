@@ -69,4 +69,12 @@ describe('group chat mutations refresh the Messages pane', () => {
 
 		expect(refreshed).toContain('getMyMessageThread("topic-7")');
 	});
+
+	// The standalone chat routes read `muted` from getGroupChatTopic; a stale
+	// value makes the next click send the same intent again (#1781).
+	it('a mute refreshes the topic the standalone chat routes read', async () => {
+		await remote.setRoomMute({ threadId: 'topic-7', intent: 'mute' });
+
+		expect(refreshed).toContain('getGroupChatTopic("topic-7")');
+	});
 });
