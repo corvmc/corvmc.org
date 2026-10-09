@@ -2429,9 +2429,8 @@ export const getVolunteerWorklist = query(async () => {
 		listWorkOrders(),
 		// Finished work orders staff did not flag to close their reports (#1544).
 		listFinishedWorkToConfirm(now),
-		// The same call the sidebar badge makes, rather than a sum of the arrays above:
-		// one source means the number on the nav and the rows on this page cannot
-		// disagree.
+		// The same call the sidebar badge makes. It shares its predicates with the
+		// lists above (`unscheduledWorkWhere`), so it counts only what a card lists.
 		countVolunteerWorkWaiting(now)
 	]);
 

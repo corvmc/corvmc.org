@@ -30,7 +30,7 @@ import { requireActiveVolunteer } from './volunteer-profile-service';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
-import { getShiftById, notOnCancelledListing } from './work-order-service';
+import { getShiftById, notOnCancelledListing, unscheduledWorkWhere } from './work-order-service';
 import { missingRequirements } from './member-certification-service';
 import { isScheduled } from './scheduled';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -926,16 +926,9 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 					gte(workOrder.endsAt, lookback)
 				)
 			),
-		// Work with no time on it. `listShifts` filters these out by `starts_at`
-		// and every forward-looking query does the same, so before this they were
-		// waiting on a coordinator with nothing anywhere saying so — which is how
-		// the advance half of a duty list vanished the moment it was stamped.
-		db
-			.select({ n: count() })
-			.from(workOrder)
-			.where(
-				and(isNull(workOrder.startsAt), isNull(workOrder.resolvedAt), isNull(workOrder.cancelledAt))
-			),
+		// Work with no time on it, by the predicate the Needs Scheduling card
+		// lists with. Committee-owned work is on its committee's queue instead.
+		db.select({ n: count() }).from(workOrder).where(unscheduledWorkWhere()),
 		// Finished work nobody confirmed fixed: the same predicate as
 		// `listFinishedWorkToConfirm`, counted per work order.
 		db
