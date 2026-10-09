@@ -109,7 +109,6 @@
 		closures: IconBan,
 		instructors: IconSchool,
 		equipment: IconTool,
-		'inventory-intake': IconTruckDelivery,
 		'inventory-tagging': IconTag,
 		'equipment-reports': IconFlag,
 		'equipment-loans': IconPackage,

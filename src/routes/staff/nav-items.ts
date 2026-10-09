@@ -52,7 +52,6 @@ export type StaffNavKey =
 	| 'instructors'
 	| 'equipment'
 	| 'equipment-loans'
-	| 'inventory-intake'
 	| 'inventory-tagging'
 	| 'equipment-reports'
 	| 'inventory-acquisitions'
@@ -334,12 +333,6 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Inventory',
 				href: resolve('/staff/inventory'),
 				children: [
-					{
-						key: 'inventory-intake',
-						capability: 'inventory.manageStock',
-						label: 'Intake',
-						href: resolve('/staff/inventory/intake')
-					},
 					{
 						key: 'inventory-tagging',
 						capability: 'inventory.manageAssets',

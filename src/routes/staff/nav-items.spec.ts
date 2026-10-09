@@ -77,6 +77,7 @@ describe('activeNavKey', () => {
 		['/staff/grants/funders', 'grants'],
 		['/staff/inventory', 'equipment'],
 		['/staff/inventory/abc', 'equipment'],
+		['/staff/inventory/intake', 'equipment'],
 		['/staff/inventory/restock', 'inventory-restock'],
 		['/staff/inventory/spend', 'inventory-spend'],
 		['/staff/inventory/compliance', 'inventory-compliance'],
@@ -214,6 +215,7 @@ describe('route coverage', () => {
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Inventory, beside Categories; `backHref` points there
+		'/staff/inventory/intake', // a session started from Inventory's header, not a list (#1838)
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
 		'/staff/grants/funders', // reached from Grants' header; `backHref` points there
 		// Reached from Bands, which links to it in its header. Not its own row on
