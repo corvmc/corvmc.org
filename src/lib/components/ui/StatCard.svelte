@@ -12,7 +12,8 @@
 		value,
 		size = 'md',
 		class: extraClass = '',
-		valueClass = ''
+		valueClass = '',
+		bare = false
 	}: {
 		title: string;
 		value: string | number;
@@ -21,10 +22,12 @@
 		class?: string;
 		/** Extra classes on the value line, e.g. `capitalize`. */
 		valueClass?: string;
+		/** No card chrome, for a figure inside a section that is already a card. */
+		bare?: boolean;
 	} = $props();
 </script>
 
-<div class="stat rounded-box bg-base-100 shadow {extraClass}">
+<div class="stat {bare ? 'px-0' : 'rounded-box bg-base-100 shadow'} {extraClass}">
 	<div class="stat-title">{title}</div>
 	<div class="stat-value {size === 'sm' ? 'text-2xl' : ''} {valueClass}">{value}</div>
 </div>
