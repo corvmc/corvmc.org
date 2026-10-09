@@ -44,6 +44,7 @@ import {
 	adjustWindow,
 	announceWaitlistConfirmed,
 	confirm,
+	comp,
 	markComplete,
 	markNoShow,
 	recordCashAndComplete,
@@ -834,6 +835,48 @@ describe('ReservationService', () => {
 			setupUpdateMock(0, { status: 'completed' });
 
 			await expect(confirm('res-1')).rejects.toThrow(ReservationStateError);
+		});
+	});
+
+	describe('comp (#1818)', () => {
+		/** The status read, then every update's `set` payload in call order. */
+		function setup(status: string | null) {
+			const sets: Record<string, unknown>[] = [];
+			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: 1 } });
+			vi.mocked(db.update).mockReturnValue({
+				set: vi.fn((v: Record<string, unknown>) => {
+					sets.push(v);
+					return { where: updateWhere };
+				})
+			} as any);
+			const limit = vi.fn().mockResolvedValue(status ? [{ status }] : []);
+			const where = vi.fn().mockReturnValue({ limit });
+			vi.mocked(db.select).mockReturnValue({ from: vi.fn().mockReturnValue({ where }) } as any);
+			return sets;
+		}
+
+		it('waives a confirmed booking without re-confirming it', async () => {
+			const sets = setup('confirmed');
+			await comp('res-1');
+			expect(sets.some((s) => 'status' in s)).toBe(false);
+			expect(sets).toContainEqual(expect.objectContaining({ cashDueCents: 0 }));
+		});
+
+		it('confirms a scheduled booking, then waives it', async () => {
+			const sets = setup('scheduled');
+			await comp('res-1');
+			expect(sets[0]).toMatchObject({ status: 'confirmed' });
+			expect(sets.at(-1)).toMatchObject({ cashDueCents: 0 });
+		});
+
+		it('refuses a terminal booking', async () => {
+			setup('completed');
+			await expect(comp('res-1')).rejects.toThrow(ReservationStateError);
+		});
+
+		it('throws when the reservation does not exist', async () => {
+			setup(null);
+			await expect(comp('res-999')).rejects.toThrow(ReservationNotFoundError);
 		});
 	});
 
