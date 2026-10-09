@@ -1504,17 +1504,20 @@ export const publishEvent = form(
 	z.object({ id: z.string().min(1), reason: z.string().trim().max(1000).optional() }),
 	async (data) => {
 		await requireCapability('event.publish');
-		let outcome;
 		try {
-			outcome = await publish(data.id, { acknowledged: !!data.reason, reason: data.reason });
+			const outcome = await publish(data.id, {
+				acknowledged: !!data.reason,
+				reason: data.reason
+			});
+			if (!outcome.published) {
+				error(
+					422,
+					`Not ready to announce: ${outcome.warnings.join(', ')}. Give a reason to publish anyway.`
+				);
+			}
 		} catch (err) {
+			// Rethrows the 422 above untouched; maps a DomainError to its status.
 			mapDomainError(err);
-		}
-		if (!outcome.published) {
-			error(
-				422,
-				`Not ready to announce: ${outcome.warnings.join(', ')}. Give a reason to publish anyway.`
-			);
 		}
 		return { success: true };
 	}
