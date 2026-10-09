@@ -654,7 +654,6 @@
 	"src/routes/staff/music/+page.svelte",
 	"src/routes/staff/nav-items.ts",
 	"src/routes/staff/productions/+page.svelte",
-	"src/routes/staff/projects/[id]/+page.svelte",
 	"src/routes/staff/settings/feature-meta.ts",
 	"src/routes/staff/settings/inbox-channel-meta.spec.ts",
 	"src/routes/staff/settings/inbox-channel-meta.ts",
