@@ -240,7 +240,7 @@
 					{#if certifications.length === 0}
 						<EmptyState
 							title="No clearances yet"
-							description="A clearance gates the roles that require it, judged as of each shift's own date."
+							description="A clearance is something a volunteer must hold before they can take certain roles: a background check, a training, a sign-off. Create one with New Clearance, then open a role and mark that it requires it."
 						/>
 					{:else}
 						<ul class="flex flex-col gap-2">
