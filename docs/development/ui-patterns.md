@@ -1062,8 +1062,9 @@ above is stated, not a change to it.
 
 **A page can be both.** When its rows pass clause 4 only on a phone — the staff
 reservations list is worked at a desk, and checked at the door — render the
-table with `wide-only` and a card list with `narrow-only`. Both switch at the
-same `32rem` container width as `col-support`. The card list carries what the
+table with `wide-only` and a card list with `narrow-only`. Both switch at a
+`44rem` container width, where the reservations table stops being usable, which
+is wider than any `col-*` tier. The card list carries what the
 hidden columns held, payment state included, and no hover-only tooltips (#1837).
 
 Two rules hold whichever you pick:

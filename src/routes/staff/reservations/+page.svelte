@@ -420,34 +420,33 @@
 								</ul>
 							{/if}
 						</div>
-						{#if r.bookerType !== 'production'}
-							{#await hourlyRates then rates}
-								{@const state = reservationPaymentState(r)}
-								{@const ps = paymentStatus(state)}
-								<p class="flex flex-wrap items-center justify-end gap-1 text-sm">
-									<ps.icon size={16} class={ps.color} />
-									<span class="font-medium">{state === 'cash_due' ? 'Due' : ps.label}</span>
-									<span class="text-muted" class:line-through={state === 'comped'}>
-										{formatPaymentBreakdown(
-											r.startsAt,
-											r.endsAt,
-											rates[r.bookerType],
-											r.creditsUsed
-										)}
-									</span>
-								</p>
-							{/await}
-						{/if}
-						{#if actions.has('confirm') || actions.has('complete')}
-							<div class="flex gap-2">
-								{#if actions.has('confirm')}
-									<ConfirmReservationAction reservation={r} staff size="lg" class="flex-1" />
-								{/if}
-								{#if actions.has('complete')}
-									<CompleteReservationAction reservation={r} size="lg" class="flex-1" />
-								{/if}
-							</div>
-						{/if}
+						<div class="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+							{#if r.bookerType !== 'production'}
+								{#await hourlyRates then rates}
+									{@const state = reservationPaymentState(r)}
+									{@const ps = paymentStatus(state)}
+									{@const owed = state === 'cash_due' || state === 'unpaid'}
+									<p class="flex flex-wrap items-center gap-1 text-sm">
+										<ps.icon size={16} class={ps.color} />
+										<span class="font-medium">{owed ? 'Due' : ps.label}</span>
+										<span class="text-muted" class:line-through={state === 'comped'}>
+											{formatPaymentBreakdown(
+												r.startsAt,
+												r.endsAt,
+												rates[r.bookerType],
+												r.creditsUsed
+											)}
+										</span>
+									</p>
+								{/await}
+							{/if}
+							{#if actions.has('confirm')}
+								<ConfirmReservationAction reservation={r} staff size="sm" />
+							{/if}
+							{#if actions.has('complete')}
+								<CompleteReservationAction reservation={r} size="sm" />
+							{/if}
+						</div>
 					</li>
 				{/each}
 			</ul>
