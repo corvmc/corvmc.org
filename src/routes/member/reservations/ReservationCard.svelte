@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
-	import { formatDollars } from '$lib/utils/format';
 	import {
 		CancelReservationAction,
 		ConfirmReservationAction,
@@ -85,11 +84,8 @@
 					</Button>
 				{/if}
 			{:else if reservation.status === 'confirmed' && !reservation.paidAt && (reservation.cashDueCents == null || reservation.cashDueCents > 0)}
-				{#if (reservation.cashDueCents ?? 0) > 0}
-					<span class="text-xs font-medium"
-						>${formatDollars(reservation.cashDueCents ?? 0)} due at door</span
-					>
-				{/if}
+				<!-- Buttons only: this row straddles the border at zero height, and the
+				     amount owed is already the body's "$X · Due in N days" (#1783). -->
 				<Button
 					href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
 					variant="primary"
