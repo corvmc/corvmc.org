@@ -115,8 +115,8 @@
 						<td class="col-support whitespace-nowrap">{formatDateShort(r.occurredAt)}</td>
 						<td class="col-support whitespace-nowrap">{incidentCategoryLabels[r.category]}</td>
 						<td class="cell-primary truncate">{r.summary}</td>
-						<td class="col-support truncate">{r.involvedName ?? '—'}</td>
-						<td class="col-support truncate">{r.reportedByName}</td>
+						<td class="col-support cell-text truncate">{r.involvedName ?? '—'}</td>
+						<td class="col-support cell-text truncate">{r.reportedByName}</td>
 					</tr>
 				{/each}
 			</Table>

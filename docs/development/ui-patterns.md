@@ -1170,7 +1170,15 @@ and every one of its `<td>`s.
 `cell-primary` (`width: 100%; max-width: 0`) is what makes `truncate` work
 inside a cell: under `table-layout: auto` a column sizes to its content, so
 without it long text widens the table until the last column is clipped. Exactly
-one cell per row gets it.
+one cell per row gets it. It also carries a floor, `min-width: min(10rem, 40cqw)`,
+because the browser sizes every other column to its content first: a nowrap
+sentence in a secondary cell would otherwise take the row and leave the primary
+cell a few characters wide (#1797).
+
+**`truncate` or prose outside the primary cell needs `cell-text`.** It caps the
+cell at `24rem`, so its content width is bounded and cannot starve the row. Put
+it on any secondary `<td>` holding a description, notes, a name or availability.
+A secondary cell with neither is a single short fact and needs nothing.
 
 `cell-num` right-aligns, applies tabular figures, and prevents wrapping. Use it
 on every currency, count, quantity, and balance column.

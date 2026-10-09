@@ -59,7 +59,7 @@
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- `href` is typed ResolvedPathname; the caller resolved it -->
 				<a class="link-hover" href={r.href}>{r.text}</a>
 			</td>
-			<td class="col-support truncate">{r.reporter}</td>
+			<td class="col-support cell-text truncate">{r.reporter}</td>
 			<td class="col-support whitespace-nowrap">{relativeDay(r.createdAt)}</td>
 		</tr>
 	{/each}

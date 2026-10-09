@@ -36,7 +36,7 @@
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="cell-primary"><a class="font-medium link-hover" {href}>{tip.name}</a></td>
 					<td class="col-support whitespace-nowrap">{tip.categoryName}</td>
-					<td class="col-support truncate">{tip.submitterEmail ?? '—'}</td>
+					<td class="col-support cell-text truncate">{tip.submitterEmail ?? '—'}</td>
 					<td class="whitespace-nowrap">{formatDateShort(tip.createdAt)}</td>
 				</tr>
 			{/each}
