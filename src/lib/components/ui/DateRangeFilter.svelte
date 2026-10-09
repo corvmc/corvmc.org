@@ -54,25 +54,34 @@
 	}
 </script>
 
-<FilterBar activeCount={activeFilterCount} onclear={() => apply(defaultFrom, defaultTo)}>
+<FilterBar
+	activeCount={activeFilterCount}
+	onclear={() => apply(defaultFrom, defaultTo)}
+	searchWidth="content"
+>
 	{#snippet search()}
 		<div class="flex flex-wrap items-center gap-2">
-			<label class="text-muted" for="range-from-{uid}">From</label>
-			<input
-				id="range-from-{uid}"
-				type="date"
-				class="input input-sm"
-				value={from}
-				onchange={(e) => apply(e.currentTarget.value, to)}
-			/>
-			<label class="text-muted" for="range-to-{uid}">To</label>
-			<input
-				id="range-to-{uid}"
-				type="date"
-				class="input input-sm"
-				value={to}
-				onchange={(e) => apply(from, e.currentTarget.value)}
-			/>
+			<!-- Each label wraps with its own input, never apart from it. -->
+			<span class="flex items-center gap-2">
+				<label class="text-muted" for="range-from-{uid}">From</label>
+				<input
+					id="range-from-{uid}"
+					type="date"
+					class="input input-sm"
+					value={from}
+					onchange={(e) => apply(e.currentTarget.value, to)}
+				/>
+			</span>
+			<span class="flex items-center gap-2">
+				<label class="text-muted" for="range-to-{uid}">To</label>
+				<input
+					id="range-to-{uid}"
+					type="date"
+					class="input input-sm"
+					value={to}
+					onchange={(e) => apply(from, e.currentTarget.value)}
+				/>
+			</span>
 		</div>
 	{/snippet}
 
