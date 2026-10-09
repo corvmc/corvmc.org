@@ -13,3 +13,4 @@
 <Story name="Number" args={{ title: 'Hours this month', value: 12 }} />
 <Story name="Currency" args={{ title: 'Credit balance', value: '$45.00' }} />
 <Story name="Long label" args={{ title: 'Active bands you belong to', value: 3 }} />
+<Story name="Bare" args={{ title: 'Impact value', value: '$1,240.00', bare: true }} />

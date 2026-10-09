@@ -1239,6 +1239,10 @@ Use `size="sm"` rather than hand-rolling the raw `stat` markup — the default
 value size overflows a narrow panel column once three sit in a row, and that is
 exactly why two pages rebuilt the card by hand before the prop existed.
 
+**One layer of card.** A page commits to card sections or to stat cards, never one
+inside the other. A figure inside an `InfoCard` or `Card` is `<StatCard bare …/>`,
+which drops the card chrome and keeps the stat typography.
+
 ## ShareButton
 
 Copies the current page URL and flashes a checkmark.

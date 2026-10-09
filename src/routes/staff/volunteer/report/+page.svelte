@@ -139,13 +139,14 @@
 		<InfoCard title="What that time was worth">
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<div>
-					<StatCard title="Impact value" value={formatCents(r.contributed.impactValueCents)} />
+					<StatCard bare title="Impact value" value={formatCents(r.contributed.impactValueCents)} />
 					<p class="mt-1 text-subtle text-xs">
 						Every approved hour, at {formatCents(r.contributed.rateCents)}/hr
 					</p>
 				</div>
 				<div>
 					<StatCard
+						bare
 						title="Contributed services"
 						value={formatCents(r.contributed.recognizableServicesCents)}
 					/>
