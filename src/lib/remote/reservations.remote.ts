@@ -2161,13 +2161,20 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 	const hourlyRateCents = (await getBookingTerms(row.bookerType)).hourlyRateCents;
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
+	const [member] = await db
+		.select({ email: user.email, name: user.name })
+		.from(user)
+		.where(eq(user.id, row.createdByUserId))
+		.limit(1);
+	if (!member) throw error(404, 'Member not found');
+
 	// Commit the member's free hours (idempotent — already done if confirmed
 	// ahead of time), then collect only the cash remainder.
 	const { remainingCents } = await commitCreditsAndSettleIfCovered({
 		reservationId: data.id,
 		userId: row.createdByUserId,
-		email: '',
-		name: null,
+		email: member.email,
+		name: member.name,
 		durationHours,
 		totalCents,
 		hourlyRateCents
@@ -2175,16 +2182,17 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 
 	let paymentRecordId: string;
 	if (remainingCents > 0) {
-		const [member] = await db
-			.select({ stripeId: user.stripeId })
-			.from(user)
-			.where(eq(user.id, row.createdByUserId))
-			.limit(1);
-		if (!member?.stripeId) throw error(400, 'Member has no Stripe customer ID');
+		// Cash at the counter needs no prior online payment, so the customer the
+		// Stripe record hangs off is created here when the member has none.
+		const stripeCustomerId = await ensureStripeCustomer(
+			row.createdByUserId,
+			member.email,
+			member.name ?? undefined
+		);
 
 		({ paymentRecordId } = await recordCashPayment({
 			userId: row.createdByUserId,
-			stripeCustomerId: member.stripeId,
+			stripeCustomerId,
 			amountCents: remainingCents,
 			metadata: { reservation_id: data.id },
 			reference: data.id

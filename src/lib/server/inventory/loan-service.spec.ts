@@ -80,6 +80,10 @@ vi.mock('$lib/server/finance/payment-service', () => ({
 	recordCashPayment: vi.fn().mockResolvedValue(undefined)
 }));
 
+vi.mock('$lib/server/finance/stripe-customer-service', () => ({
+	ensureStripeCustomer: vi.fn()
+}));
+
 vi.mock('$lib/server/finance/subscription-service', () => ({
 	getSubscription: vi.fn().mockResolvedValue(null),
 	isSustainingMember: vi.fn().mockResolvedValue(false)
@@ -121,6 +125,7 @@ import {
 	InsufficientCreditsError
 } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
+import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import { setAssetStatus } from './asset-service';
 import { hasBlockingFlag, raiseFlag } from './work-request-service';
 
@@ -534,6 +539,33 @@ describe('LoanService lifecycle', () => {
 			expect(vi.mocked(deductCredits).mock.calls[1][2]).toBe(200);
 			expect(vi.mocked(recordCashPayment)).toHaveBeenCalledWith(
 				expect.objectContaining({ amountCents: 300 })
+			);
+		});
+
+		it('records cash for a member who has no Stripe customer yet', async () => {
+			const checkedOutAt = new Date(Date.now() - 12 * 60 * 60 * 1000);
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						itemId: 'eq-1',
+						userId: 'user-1',
+						dailyRateCents: 500,
+						checkedOutAt,
+						staffNotes: null
+					}
+				],
+				[{ name: 'Test User', email: 'test@example.com', stripeId: null }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'returned' }];
+			selectResultQueue.push([{ name: 'SM58' }]);
+			vi.mocked(ensureStripeCustomer).mockResolvedValueOnce('cus_new');
+
+			await returnLoan('loan-1');
+
+			expect(vi.mocked(recordCashPayment)).toHaveBeenCalledWith(
+				expect.objectContaining({ stripeCustomerId: 'cus_new', amountCents: 500 })
 			);
 		});
 

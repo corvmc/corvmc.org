@@ -14,6 +14,7 @@ import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { getBalance, deductCredits, addCredits } from '$lib/server/finance/credit-service';
 import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
+import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import { isSustainingMember } from '$lib/server/finance/subscription-service';
 import { getAvailableQuantity } from './stock-service';
 import { setAssetStatus } from './asset-service';
@@ -489,9 +490,17 @@ export async function returnLoan(
 		.where(eq(user.id, loan.userId))
 		.limit(1);
 
+	// Cash at the counter needs no prior online payment, so a member with no
+	// Stripe customer gets one rather than a return with no payment recorded.
+	const stripeCustomerId =
+		member?.stripeId ??
+		(member && totalCharge > 0
+			? await ensureStripeCustomer(loan.userId, member.email, member.name ?? undefined)
+			: null);
+
 	const { creditsCents, cashCents } = await settleReturn(
 		loan.userId,
-		member?.stripeId ?? null,
+		stripeCustomerId,
 		totalCharge,
 		loanId
 	);
