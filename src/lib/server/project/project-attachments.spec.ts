@@ -13,6 +13,7 @@ vi.mock('$lib/server/volunteer/hour-value', () => ({ getHourValueCents: vi.fn(as
 const { listProjectAttachments } = await import('./project-service');
 
 beforeEach(() => {
+	sqlite.exec('delete from volunteer_signup');
 	sqlite.exec('delete from work_order');
 	sqlite.exec('delete from event_listing');
 	sqlite.exec('delete from volunteer_role');
@@ -50,5 +51,27 @@ describe('attached work-order titles', () => {
 			'wo-ev': 'Spring Showcase',
 			'wo-role': 'Door'
 		});
+	});
+
+	it('counts the places taken, not cancelled claims', async () => {
+		sqlite.exec(
+			`insert into work_order (id, volunteer_role_id, project_id, capacity)
+				values ('wo-1', 'role-door', 'proj-1', 3)`
+		);
+		sqlite.exec(
+			`insert into volunteer_signup (id, shift_id, user_id, status) values
+				('s1', 'wo-1', 'u1', 'claimed'),
+				('s2', 'wo-1', 'u2', 'confirmed'),
+				('s3', 'wo-1', 'u3', 'cancelled')`
+		);
+		const [wo] = (await listProjectAttachments('proj-1')).workOrders;
+		expect(wo.claimed).toBe(2);
+	});
+});
+
+describe('attached events', () => {
+	it('carry a ref for the entity card', async () => {
+		const [ev] = (await listProjectAttachments('proj-1')).events;
+		expect(ev.ref).toMatchObject({ type: 'event', id: 'ev-1', title: 'Spring Showcase' });
 	});
 });
