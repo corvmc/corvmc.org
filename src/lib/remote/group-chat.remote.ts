@@ -14,6 +14,7 @@ import {
 import { error } from '@sveltejs/kit';
 import { DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
+import { getMyMessageThread } from './direct-messages.remote';
 
 /**
  * A group's shared thread — every active member reads and writes it.
@@ -110,8 +111,11 @@ export const postGroupChatMessage = form(
 				threadId: data.threadId,
 				isLeader: role === 'owner' || role === 'admin'
 			});
-			// Both: the topic the message landed in, and the list that badges it.
+			// The topic the message landed in, under both queries that carry it —
+			// Messages reads it through `getMyMessageThread` — and the list that
+			// badges it.
 			await getGroupChatTopic(data.threadId).refresh();
+			await getMyMessageThread(data.threadId).refresh();
 			await getGroupChatTopics(chatGroup.slug).refresh();
 			return { success: true };
 		} catch (err) {
@@ -154,6 +158,7 @@ export const setRoomMute = form(
 
 		const { user } = await requireGroupRole({ id: chatGroup.id }, 'member');
 		await setRoomMuteState(data.threadId, user.id, data.intent === 'mute');
+		await getMyMessageThread(data.threadId).refresh();
 		await getGroupChatTopics(chatGroup.slug).refresh();
 		return { success: true };
 	}
