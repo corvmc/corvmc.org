@@ -1052,6 +1052,12 @@ Clause 4 is what actually justifies the event check-in list, which the old rule
 justified by miscounting its actions. Clause 2 is how the art-directed exemption
 above is stated, not a change to it.
 
+**A page can be both.** When its rows pass clause 4 only on a phone — the staff
+reservations list is worked at a desk, and checked at the door — render the
+table with `wide-only` and a card list with `narrow-only`. Both switch at the
+same `32rem` container width as `col-support`. The card list carries what the
+hidden columns held, payment state included, and no hover-only tooltips (#1837).
+
 Two rules hold whichever you pick:
 
 - **A list states its true total, always.** It paginates when that total can

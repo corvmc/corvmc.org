@@ -218,8 +218,9 @@
 
 	<DataList {result} empty="No reservations found" onpage={(p) => (page = p)}>
 		{#snippet children(reservations)}
-			<!-- No zebra: the bg-base-200 day-group rows are the striping here. -->
-			<Table zebra={false}>
+			<!-- No zebra: the bg-base-200 day-group rows are the striping here.
+			     `wide-only` hides it below 32rem, where the cards below take over. -->
+			<Table zebra={false} class="wide-only">
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Booker</th>
@@ -369,6 +370,83 @@
 					</tr>
 				{/each}
 			</Table>
+
+			<!--
+				Phone widths: the desk checks the room standing at the door, which is
+				ui-patterns' card test 4. So no hover-only tooltips here — each flag
+				and the payment state say their word — and the actions are full-size.
+			-->
+			<ul class="narrow-only space-y-2">
+				{#each reservations as r, idx (r.id)}
+					{@const label = dayLabel(r)}
+					{#if label !== (idx > 0 ? dayLabel(reservations[idx - 1]) : null)}
+						<li class="rounded-sm cell-group">{label}</li>
+					{/if}
+					{@const actions = visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId)}
+					<li class="space-y-2 rounded-box border border-base-300 p-3">
+						<div class="flex items-start justify-between gap-2">
+							<a
+								href={resolve(`/staff/reservations/${r.id}`)}
+								class="text-lg font-medium hover:underline"
+							>
+								{formatTimeRange(r.startsAt, r.endsAt)}
+							</a>
+							<StatusBadge status={r.status} label />
+						</div>
+						<EntityChip ref={r.booker} />
+						{#if r.recurringSeriesId || r.bookerType === 'instructor' || r.isFirstReservation || r.notes}
+							<ul class="flex flex-wrap gap-x-3 gap-y-1 text-muted text-sm">
+								{#if r.recurringSeriesId}
+									<li class="flex items-center gap-1"><IconRepeat size={14} />Recurring</li>
+								{/if}
+								{#if r.bookerType === 'instructor'}
+									<li class="flex items-center gap-1">
+										<BookerTypeIcon type={r.bookerType} size={14} />Teaching
+									</li>
+								{/if}
+								{#if r.isFirstReservation}
+									<li class="flex items-center gap-1">
+										<IconUserPlus size={14} class="text-success" />First reservation
+									</li>
+								{/if}
+								{#if r.notes}
+									<li class="flex items-center gap-1">
+										<IconNote size={14} class="text-info" />Member left a note
+									</li>
+								{/if}
+							</ul>
+						{/if}
+						{#if r.bookerType !== 'production'}
+							{#await hourlyRates then rates}
+								{@const state = reservationPaymentState(r)}
+								{@const ps = paymentStatus(state)}
+								<p class="flex flex-wrap items-center gap-1 text-sm">
+									<ps.icon size={16} class={ps.color} />
+									<span class="font-medium">{ps.label}</span>
+									<span class="text-muted" class:line-through={state === 'comped'}>
+										{formatPaymentBreakdown(
+											r.startsAt,
+											r.endsAt,
+											rates[r.bookerType],
+											r.creditsUsed
+										)}
+									</span>
+								</p>
+							{/await}
+						{/if}
+						{#if actions.has('confirm') || actions.has('complete')}
+							<div class="flex gap-2">
+								{#if actions.has('confirm')}
+									<ConfirmReservationAction reservation={r} staff size="lg" class="flex-1" />
+								{/if}
+								{#if actions.has('complete')}
+									<CompleteReservationAction reservation={r} size="lg" class="flex-1" />
+								{/if}
+							</div>
+						{/if}
+					</li>
+				{/each}
+			</ul>
 		{/snippet}
 	</DataList>
 </PageContent>
