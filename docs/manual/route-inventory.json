@@ -332,6 +332,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/teaching/apply",
+		"panel": "member"
+	},
+	{
 		"route": "/member/volunteer",
 		"panel": "member"
 	},

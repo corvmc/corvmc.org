@@ -46,6 +46,7 @@ const { requireInstructor } = await import('./instructor-context');
 
 const USER = 'user-teacher';
 const STAFF = 'user-staff';
+const BLURB = 'Lessons for adults, at the studio or online.';
 
 function seedUsers() {
 	for (const [id, email] of [
@@ -74,7 +75,11 @@ afterAll(() => client.close());
 
 describe('applying', () => {
 	it('creates a requested row carrying the listing, which IS the application', async () => {
-		await svc.apply(USER, { headline: 'Guitar, beginners welcome', applicationNote: 'Ten years.' });
+		await svc.apply(USER, {
+			blurb: BLURB,
+			headline: 'Guitar, beginners welcome',
+			applicationNote: 'Ten years.'
+		});
 
 		const r = row();
 		expect(r?.status).toBe('requested');
@@ -85,9 +90,38 @@ describe('applying', () => {
 		expect(r?.granted_at).toBeNull();
 	});
 
+	// An application that says nothing cannot be reviewed; nine reached staff
+	// that way from new members submitting every card on their profile (#1820).
+	it('refuses an application that does not say what they teach', async () => {
+		await expect(svc.apply(USER, { blurb: BLURB })).rejects.toThrow(
+			svc.InstructorApplicationIncompleteError
+		);
+		await expect(svc.apply(USER, { headline: '   ', blurb: BLURB })).rejects.toThrow(
+			svc.InstructorApplicationIncompleteError
+		);
+		expect(row()).toBeUndefined();
+	});
+
+	it('refuses an application with no description of the teaching', async () => {
+		await expect(svc.apply(USER, { headline: 'Guitar' })).rejects.toThrow(
+			svc.InstructorApplicationIncompleteError
+		);
+		expect(row()).toBeUndefined();
+	});
+
+	it('refuses a resubmit that empties the application', async () => {
+		await svc.apply(USER, { headline: 'Guitar', blurb: BLURB });
+		await svc.sendBack(row()!.id as string, STAFF, 'Say which levels you teach.');
+
+		await expect(svc.apply(USER, { headline: '', blurb: '' })).rejects.toThrow(
+			svc.InstructorApplicationIncompleteError
+		);
+		expect(row()?.headline).toBe('Guitar');
+	});
+
 	it('refuses a second application from someone who already has a grant', async () => {
 		await svc.grant(USER, STAFF);
-		await expect(svc.apply(USER, { headline: 'again' })).rejects.toThrow(
+		await expect(svc.apply(USER, { blurb: BLURB, headline: 'again' })).rejects.toThrow(
 			svc.AlreadyAnInstructorError
 		);
 	});
@@ -95,14 +129,14 @@ describe('applying', () => {
 
 describe('the return state', () => {
 	it('hands an application back with a note and takes it forward again', async () => {
-		await svc.apply(USER, { headline: 'Guitar' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
 		const id = row()!.id as string;
 
 		await svc.sendBack(id, STAFF, 'Say which levels you teach.');
 		expect(row()?.status).toBe('rejected');
 		expect(row()?.review_notes).toBe('Say which levels you teach.');
 
-		await svc.apply(USER, { headline: 'Guitar — beginner to intermediate' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar — beginner to intermediate' });
 		expect(row()?.status).toBe('requested');
 		expect(row()?.headline).toBe('Guitar — beginner to intermediate');
 	});
@@ -111,11 +145,11 @@ describe('the return state', () => {
 		// Clearing on resubmit would delete the question at the moment the answer
 		// arrives — the reviewer would see a fresh application and no record of
 		// why it came back.
-		await svc.apply(USER, { headline: 'Guitar' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
 		const id = row()!.id as string;
 		await svc.sendBack(id, STAFF, 'Say which levels you teach.');
 
-		await svc.apply(USER, { headline: 'Guitar — beginner to intermediate' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar — beginner to intermediate' });
 		expect(row()?.review_notes).toBe('Say which levels you teach.');
 
 		await svc.approve(id, STAFF);
@@ -123,14 +157,14 @@ describe('the return state', () => {
 	});
 
 	it('requires a note — a return nobody can read is not a return', async () => {
-		await svc.apply(USER, { headline: 'Guitar' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
 		const id = row()!.id as string;
 		await expect(svc.sendBack(id, STAFF, '   ')).rejects.toThrow(svc.InstructorStateError);
 		expect(row()?.status).toBe('requested');
 	});
 
 	it('lets staff approve straight from rejected without asking for a resubmit', async () => {
-		await svc.apply(USER, { headline: 'Guitar' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
 		const id = row()!.id as string;
 		await svc.sendBack(id, STAFF, 'changes please');
 
@@ -198,7 +232,7 @@ describe('blocking a grant', () => {
 
 describe('the member cannot reach past their own row', () => {
 	it('scopes updateListing by userId, not by the id the client sent', async () => {
-		await svc.apply(USER, { headline: 'Guitar' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
 		await expect(svc.updateListing('someone-else', { headline: 'hijacked' })).rejects.toThrow(
 			svc.InstructorNotFoundError
 		);
@@ -206,7 +240,7 @@ describe('the member cannot reach past their own row', () => {
 	});
 
 	it('withdraws an open application but never an active grant', async () => {
-		await svc.apply(USER, { headline: 'Guitar' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
 		await svc.withdraw(USER);
 		expect(row()).toBeUndefined();
 
@@ -225,7 +259,7 @@ describe('the member cannot reach past their own row', () => {
 	});
 
 	it('refuses setAcceptingStudents while the application is still open', async () => {
-		await svc.apply(USER, { headline: 'Guitar' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
 		await expect(svc.setAcceptingStudents(USER, false)).rejects.toThrow(
 			svc.InstructorNotFoundError
 		);
@@ -239,7 +273,7 @@ describe('requireInstructor matches positively', () => {
 	});
 
 	it.each(['requested', 'rejected', 'paused', 'retired'])('refuses %s', async (status) => {
-		await svc.apply(USER, { headline: 'Guitar' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
 		client.exec(`UPDATE instructor SET status = '${status}' WHERE user_id = '${USER}'`);
 
 		await expect(requireInstructor(USER)).rejects.toThrow(svc.InstructorNotActiveError);
@@ -253,7 +287,7 @@ describe('requireInstructor matches positively', () => {
 		// The point of `!== 'active'` over `!== 'retired'`: a sixth value added
 		// tomorrow is refused without anyone revisiting this guard. Written as a
 		// negation of the terminal state, every new value would be admitted.
-		await svc.apply(USER, { headline: 'Guitar' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
 		client.exec(`UPDATE instructor SET status = 'sabbatical' WHERE user_id = '${USER}'`);
 
 		await expect(requireInstructor(USER)).rejects.toThrow(svc.InstructorNotActiveError);
@@ -279,7 +313,7 @@ describe('what gets announced', () => {
 
 	it('tells staff when an application arrives', async () => {
 		const seen = await captureEvents('instructor.application_submitted', () =>
-			svc.apply(USER, { headline: 'Guitar' })
+			svc.apply(USER, { blurb: BLURB, headline: 'Guitar' })
 		);
 		expect(seen).toHaveLength(1);
 		expect(seen[0]).toMatchObject({ applicantUserId: USER, headline: 'Guitar' });
@@ -288,12 +322,12 @@ describe('what gets announced', () => {
 	it('tells staff again when a returned application comes back', async () => {
 		// The resubmit is exactly when it needs looking at again; without this it
 		// would sit in the queue with nobody told.
-		await svc.apply(USER, { headline: 'Guitar' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
 		const id = row()!.id as string;
 		await svc.sendBack(id, STAFF, 'which levels?');
 
 		const seen = await captureEvents('instructor.application_submitted', () =>
-			svc.apply(USER, { headline: 'Guitar, beginner to intermediate' })
+			svc.apply(USER, { blurb: BLURB, headline: 'Guitar, beginner to intermediate' })
 		);
 		expect(seen).toHaveLength(1);
 	});
@@ -302,7 +336,7 @@ describe('what gets announced', () => {
 		// The load-bearing half of the return state: the member is not watching
 		// their profile, so a note nobody delivers is the failure it exists to
 		// prevent.
-		await svc.apply(USER, { headline: 'Guitar' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
 		const id = row()!.id as string;
 
 		const seen = await captureEvents('instructor.application_reviewed', () =>
@@ -316,7 +350,7 @@ describe('what gets announced', () => {
 	});
 
 	it('announces an approval with no note', async () => {
-		await svc.apply(USER, { headline: 'Guitar' });
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
 		const id = row()!.id as string;
 
 		const seen = await captureEvents('instructor.application_reviewed', () =>

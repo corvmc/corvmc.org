@@ -53,6 +53,16 @@ export class InstructorNotActiveError extends DomainError {
 	}
 }
 
+/** 422: staff cannot review an application that does not say what is taught. */
+export class InstructorApplicationIncompleteError extends DomainError {
+	readonly httpStatus = 422;
+
+	constructor() {
+		super('Say what you teach and a little about your teaching before you apply.');
+		this.name = 'InstructorApplicationIncompleteError';
+	}
+}
+
 export class AlreadyAnInstructorError extends DomainError {
 	readonly httpStatus = 409;
 
@@ -115,6 +125,9 @@ const APPLICATION_STATES = ['requested', 'rejected'] as const satisfies readonly
  * came back. Staff clear it when they act.
  */
 export async function apply(userId: string, listing: InstructorListingInput): Promise<void> {
+	if (!listing.headline?.trim() || !listing.blurb?.trim()) {
+		throw new InstructorApplicationIncompleteError();
+	}
 	const existing = await getByUserId(userId);
 
 	if (existing && !APPLICATION_STATES.includes(existing.status as 'requested' | 'rejected')) {
