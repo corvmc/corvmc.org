@@ -58,6 +58,7 @@ describe('activeNavKey', () => {
 		['/staff/committees/abc', 'committees'],
 		['/staff/volunteer', 'volunteer'],
 		['/staff/volunteer/people', 'volunteer-people'],
+		['/staff/volunteer/roles', 'volunteer'],
 		// Shift detail lost its own row when the catalog folded into Schedule; it
 		// falls back to the section parent like clearances does.
 		['/staff/volunteer/shifts/abc', 'volunteer'],
@@ -145,7 +146,6 @@ describe('the nav tree', () => {
 			'/staff/volunteer',
 			'/staff/volunteer/schedule',
 			'/staff/volunteer/people',
-			'/staff/volunteer/setup',
 			'/staff/volunteer/duty-lists',
 			'/staff/volunteer/recurring'
 		]);
@@ -216,6 +216,8 @@ describe('route coverage', () => {
 		// hours is something you arrive at from the worklist, not something you go
 		// and browse.
 		'/staff/volunteer/hours',
+		// Roles and clearances: reached from the Volunteering dashboard's header (#1791).
+		'/staff/volunteer/roles',
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Inventory, beside Categories; `backHref` points there
