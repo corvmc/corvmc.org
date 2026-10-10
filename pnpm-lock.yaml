@@ -219,8 +219,8 @@ importers:
         specifier: ^17.12.0
         version: 17.12.0
       handlebars:
-        specifier: ^4.7.9
-        version: 4.7.9
+        specifier: ^4.7.10
+        version: 4.7.10
       lefthook:
         specifier: ^2.1.14
         version: 2.1.14
@@ -232,7 +232,7 @@ importers:
         version: 1.63.0
       postmark-cli:
         specifier: ^1.5.0
-        version: 1.6.19(@babel/core@7.29.7)(handlebars@4.7.9)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 1.6.19(@babel/core@7.29.7)(handlebars@4.7.10)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       prettier:
         specifier: ^3.9.9
         version: 3.9.9
@@ -470,8 +470,8 @@ packages:
   '@blazediff/core@1.9.1':
     resolution: {integrity: sha512-ehg3jIkYKulZh+8om/O25vkvSsXXwC+skXmyA87FFx6A/45eqOkZsBltMw/TVteb0mloiGT8oGRTcjRAz66zaA==}
 
-  '@bramus/specificity@2.4.2':
-    resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
+  '@bramus/specificity@2.4.3':
+    resolution: {integrity: sha512-0GEz8qJWokkUVYQYRukmkSHIFNoBH8QTreeHrAFbvz1XFYc3Y+puhMs8PQ5x8GNugiC2l5jvDBXKLbBIByeSBw==}
     hasBin: true
 
   '@cacheable/memory@2.2.0':
@@ -2463,8 +2463,8 @@ packages:
   '@types/node@26.6.3':
     resolution: {integrity: sha512-dsqMQQoeTLqu9wynDD00q573mNzso3IdQOAfHRJqLCcmCFPoGo9A1bDpUcv/9tnKpErQWv9uKeGfl37EIS02Yg==}
 
-  '@types/node@26.6.4':
-    resolution: {integrity: sha512-ldVPDCzj7fsaGZrLB0NuHuTvJcsNasysBAqMolr/cgxrLd1xbqxIr3XJiPnHHJUCxj5sNF1vnRj9aWnrVh5Jcg==}
+  '@types/node@26.6.5':
+    resolution: {integrity: sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg==}
 
   '@types/pg@8.20.0':
     resolution: {integrity: sha512-bEPFOaMAHTEP1EzpvHTbmwR8UsFyHSKsRisLIHVMXnpNefSbGA1bD6CVy+qKjGSqmZqNqBDV2azOBo8TgkcVow==}
@@ -3889,8 +3889,8 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  handlebars@4.7.9:
-    resolution: {integrity: sha512-4E71E0rpOaQuJR2A3xDZ+GM1HyWYv1clR58tC8emQNeQe3RH7MAzSbat+V0wG78LQBo6m6bzSG/L4pBuCsgnUQ==}
+  handlebars@4.7.10:
+    resolution: {integrity: sha512-P5VJMVM7qgBn6vjXMw8WG9uVI+ncf2pi72j4de4yz5ZULLj2RGqLYaKOYGsgyrViQ0tePOVlN1tDCCXXtFqXKg==}
     engines: {node: '>=0.4.7'}
     hasBin: true
 
@@ -5555,11 +5555,11 @@ packages:
     resolution: {integrity: sha512-u8KszXvGfU68hVcZpRHKG28T0krMuv2G5nDhiHaMLen/gIuFEgIJhaJuO69qjnXg5paSrbPMFfx3brNuN8eVSg==}
     engines: {node: '>=14.0.0'}
 
-  tldts-core@7.4.16:
-    resolution: {integrity: sha512-MDolfaSJtlSK5Y0A1xl3277ekubZwobpBjugknDizI9O5Rm60a1m8k4ICK+MRsCDzPygT81mp3BBf5RKDlFRfA==}
+  tldts-core@7.4.18:
+    resolution: {integrity: sha512-KI2PKvCmvQI/xD6ypPqkU0i7oxNXR/O58RLRaHR4svsgVUQ2JE/XC8BtMbG6PSehD27I8sZJRcC1ASnCy6lp3g==}
 
-  tldts@7.4.16:
-    resolution: {integrity: sha512-QwBER5KMR86IIjpIiO7H/Z3IMJPsZ1A6RKPAqzTTgOyUQUSt9FdnKcqhTaJmkY6HVrgouZHZR0ncK5QxvmnQeg==}
+  tldts@7.4.18:
+    resolution: {integrity: sha512-somxA8xKAUzlAxl0TX/jMSYIbRNFIVGnI96pVGJPeMc5BsHmfVXn6mOJT6U++ELnl04eGfzpfcEuZe8WiASkXg==}
     hasBin: true
 
   tmp@0.2.7:
@@ -6286,7 +6286,7 @@ snapshots:
 
   '@blazediff/core@1.9.1': {}
 
-  '@bramus/specificity@2.4.2':
+  '@bramus/specificity@2.4.3':
     dependencies:
       css-tree: 3.2.1
     optional: true
@@ -7945,14 +7945,14 @@ snapshots:
     dependencies:
       undici-types: 8.9.0
 
-  '@types/node@26.6.4':
+  '@types/node@26.6.5':
     dependencies:
       undici-types: 8.9.0
     optional: true
 
   '@types/pg@8.20.0':
     dependencies:
-      '@types/node': 26.6.4
+      '@types/node': 26.6.5
       pg-protocol: 1.16.1
       pg-types: 2.2.0
     optional: true
@@ -8540,11 +8540,11 @@ snapshots:
 
   commander@2.20.3: {}
 
-  consolidate@1.0.4(@babel/core@7.29.7)(ejs@3.1.10)(handlebars@4.7.9)(lodash@4.18.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+  consolidate@1.0.4(@babel/core@7.29.7)(ejs@3.1.10)(handlebars@4.7.10)(lodash@4.18.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     optionalDependencies:
       '@babel/core': 7.29.7
       ejs: 3.1.10
-      handlebars: 4.7.9
+      handlebars: 4.7.10
       lodash: 4.18.1
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
@@ -9330,7 +9330,7 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  handlebars@4.7.9:
+  handlebars@4.7.10:
     dependencies:
       minimist: 1.2.8
       neo-async: 2.6.2
@@ -9611,7 +9611,7 @@ snapshots:
     dependencies:
       '@asamuzakjp/css-color': 5.1.11
       '@asamuzakjp/dom-selector': 7.1.1
-      '@bramus/specificity': 2.4.2
+      '@bramus/specificity': 2.4.3
       '@csstools/css-syntax-patches-for-csstree': 1.1.15(css-tree@3.2.1)
       '@exodus/bytes': 1.16.0(@noble/hashes@2.4.0)
       css-tree: 3.2.1
@@ -10268,11 +10268,11 @@ snapshots:
   postgres@3.4.9:
     optional: true
 
-  postmark-cli@1.6.19(@babel/core@7.29.7)(handlebars@4.7.9)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+  postmark-cli@1.6.19(@babel/core@7.29.7)(handlebars@4.7.10)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
       '@inquirer/prompts': 3.3.2
       chalk: 2.4.2
-      consolidate: 1.0.4(@babel/core@7.29.7)(ejs@3.1.10)(handlebars@4.7.9)(lodash@4.18.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      consolidate: 1.0.4(@babel/core@7.29.7)(ejs@3.1.10)(handlebars@4.7.10)(lodash@4.18.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       debug: 4.4.3
       directory-tree: 2.3.1
       ejs: 3.1.10
@@ -11080,12 +11080,12 @@ snapshots:
 
   tinyspy@4.0.6: {}
 
-  tldts-core@7.4.16:
+  tldts-core@7.4.18:
     optional: true
 
-  tldts@7.4.16:
+  tldts@7.4.18:
     dependencies:
-      tldts-core: 7.4.16
+      tldts-core: 7.4.18
     optional: true
 
   tmp@0.2.7: {}
@@ -11096,7 +11096,7 @@ snapshots:
 
   tough-cookie@6.0.2:
     dependencies:
-      tldts: 7.4.16
+      tldts: 7.4.18
     optional: true
 
   tr46@0.0.3: {}
