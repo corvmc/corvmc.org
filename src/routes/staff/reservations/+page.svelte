@@ -395,57 +395,58 @@
 							</a>
 							<StatusBadge status={r.status} label />
 						</div>
-						<EntityChip ref={r.booker} />
-						{#if r.recurringSeriesId || r.bookerType === 'instructor' || r.isFirstReservation || r.notes}
-							<ul class="flex flex-wrap gap-x-3 gap-y-1 text-muted text-sm">
-								{#if r.recurringSeriesId}
-									<li class="flex items-center gap-1"><IconRepeat size={14} />Recurring</li>
-								{/if}
-								{#if r.bookerType === 'instructor'}
-									<li class="flex items-center gap-1">
-										<BookerTypeIcon type={r.bookerType} size={14} />Teaching
-									</li>
-								{/if}
-								{#if r.isFirstReservation}
-									<li class="flex items-center gap-1">
-										<IconUserPlus size={14} class="text-success" />First reservation
-									</li>
-								{/if}
-								{#if r.notes}
-									<li class="flex items-center gap-1">
-										<IconNote size={14} class="text-info" />Member left a note
-									</li>
-								{/if}
-							</ul>
-						{/if}
-						{#if r.bookerType !== 'production'}
-							{#await hourlyRates then rates}
-								{@const state = reservationPaymentState(r)}
-								{@const ps = paymentStatus(state)}
-								<p class="flex flex-wrap items-center gap-1 text-sm">
-									<ps.icon size={16} class={ps.color} />
-									<span class="font-medium">{ps.label}</span>
-									<span class="text-muted" class:line-through={state === 'comped'}>
-										{formatPaymentBreakdown(
-											r.startsAt,
-											r.endsAt,
-											rates[r.bookerType],
-											r.creditsUsed
-										)}
-									</span>
-								</p>
-							{/await}
-						{/if}
-						{#if actions.has('confirm') || actions.has('complete')}
-							<div class="flex gap-2">
-								{#if actions.has('confirm')}
-									<ConfirmReservationAction reservation={r} staff size="lg" class="flex-1" />
-								{/if}
-								{#if actions.has('complete')}
-									<CompleteReservationAction reservation={r} size="lg" class="flex-1" />
-								{/if}
-							</div>
-						{/if}
+						<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+							<EntityChip ref={r.booker} />
+							{#if r.recurringSeriesId || r.bookerType === 'instructor' || r.isFirstReservation || r.notes}
+								<ul class="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted text-sm">
+									{#if r.recurringSeriesId}
+										<li class="flex items-center gap-1"><IconRepeat size={14} />Recurring</li>
+									{/if}
+									{#if r.bookerType === 'instructor'}
+										<li class="flex items-center gap-1">
+											<BookerTypeIcon type={r.bookerType} size={14} />Teaching
+										</li>
+									{/if}
+									{#if r.isFirstReservation}
+										<li class="flex items-center gap-1">
+											<IconUserPlus size={14} class="text-success" />First reservation
+										</li>
+									{/if}
+									{#if r.notes}
+										<li class="flex items-center gap-1">
+											<IconNote size={14} class="text-info" />Member left a note
+										</li>
+									{/if}
+								</ul>
+							{/if}
+						</div>
+						<div class="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+							{#if r.bookerType !== 'production'}
+								{#await hourlyRates then rates}
+									{@const state = reservationPaymentState(r)}
+									{@const ps = paymentStatus(state)}
+									{@const owed = state === 'cash_due' || state === 'unpaid'}
+									<p class="flex flex-wrap items-center gap-1 text-sm">
+										<ps.icon size={16} class={ps.color} />
+										<span class="font-medium">{owed ? 'Due' : ps.label}</span>
+										<span class="text-muted" class:line-through={state === 'comped'}>
+											{formatPaymentBreakdown(
+												r.startsAt,
+												r.endsAt,
+												rates[r.bookerType],
+												r.creditsUsed
+											)}
+										</span>
+									</p>
+								{/await}
+							{/if}
+							{#if actions.has('confirm')}
+								<ConfirmReservationAction reservation={r} staff size="sm" />
+							{/if}
+							{#if actions.has('complete')}
+								<CompleteReservationAction reservation={r} size="sm" />
+							{/if}
+						</div>
 					</li>
 				{/each}
 			</ul>

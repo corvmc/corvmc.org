@@ -565,17 +565,18 @@ p {
 	}
 }
 
-/* A list that is a table at desk widths and cards on a phone renders both and
-   lets the same 32rem line as `col-support` pick: `wide-only` on the table,
-   `narrow-only` on the card list. See ui-patterns.md, "A table, unless". */
+/* A list that is a table at desk widths and cards below them renders both and
+   lets a container query pick: `wide-only` on the table, `narrow-only` on the
+   card list. 44rem is where the reservations table stops being usable, not a
+   `col-*` tier. See ui-patterns.md, "A table, unless". */
 @utility wide-only {
-	@container (width < 32rem) {
+	@container (width < 44rem) {
 		display: none;
 	}
 }
 
 @utility narrow-only {
-	@container (width >= 32rem) {
+	@container (width >= 44rem) {
 		display: none;
 	}
 }
