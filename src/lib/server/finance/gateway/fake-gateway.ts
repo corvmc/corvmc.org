@@ -488,7 +488,7 @@ export function createFakeGateway(): PaymentGateway {
 					amount: params.amount,
 					currency: params.currency,
 					status: 'requires_payment_method',
-					payment_method_types: params.payment_method_types ?? ['card'],
+					payment_method_types: params.allowed_payment_method_types ?? ['card'],
 					capture_method: params.capture_method ?? 'automatic',
 					client_secret: `${id}_secret_fake`,
 					metadata: (params.metadata as Record<string, string>) ?? {}

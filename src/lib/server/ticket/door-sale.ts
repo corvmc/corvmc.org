@@ -148,7 +148,7 @@ export async function startDoorSale(input: {
 	const intent = await stripe.paymentIntents.create({
 		amount: split.chargeCents,
 		currency: 'usd',
-		payment_method_types: ['card_present'],
+		allowed_payment_method_types: ['card_present'],
 		capture_method: 'automatic',
 		description: `Door: ${quantity} × ${event.title}`,
 		metadata: {
