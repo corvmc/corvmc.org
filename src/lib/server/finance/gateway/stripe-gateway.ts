@@ -19,7 +19,7 @@ export function createStripeGateway(): PaymentGateway {
 		 * upgrading `stripe` fails `pnpm check` here until the pin moves
 		 * deliberately, which is what keeps the fake's fixtures honest.
 		 */
-		_stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-08-26.dahlia' });
+		_stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-09-30.endive' });
 	}
 	return _stripe;
 }

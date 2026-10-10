@@ -96,7 +96,7 @@ async function intentFor(reservationId: string, userId: string, amountCents: num
 	const params: Stripe.PaymentIntentCreateParams = {
 		amount: amountCents,
 		currency: 'usd',
-		payment_method_types: ['card_present'],
+		allowed_payment_method_types: ['card_present'],
 		capture_method: 'automatic',
 		description: 'Practice room',
 		metadata: { type: READER_PAYMENT_TYPE, reservation_id: reservationId, user_id: userId }
