@@ -385,42 +385,42 @@
 						<li class="rounded-sm cell-group">{label}</li>
 					{/if}
 					{@const actions = visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId)}
-					<li class="space-y-2 border-b border-base-300 py-3">
-						<div class="flex items-start justify-between gap-2">
+					<li class="flex items-start justify-between gap-3 border-b border-base-300 py-3">
+						<div class="min-w-0 space-y-2">
 							<a
 								href={resolve(`/staff/reservations/${r.id}`)}
 								class="text-lg font-medium hover:underline"
 							>
 								{formatTimeRange(r.startsAt, r.endsAt)}
 							</a>
+							<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+								<EntityChip ref={r.booker} />
+								{#if r.recurringSeriesId || r.bookerType === 'instructor' || r.isFirstReservation || r.notes}
+									<ul class="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted text-sm">
+										{#if r.recurringSeriesId}
+											<li class="flex items-center gap-1"><IconRepeat size={14} />Recurring</li>
+										{/if}
+										{#if r.bookerType === 'instructor'}
+											<li class="flex items-center gap-1">
+												<BookerTypeIcon type={r.bookerType} size={14} />Teaching
+											</li>
+										{/if}
+										{#if r.isFirstReservation}
+											<li class="flex items-center gap-1">
+												<IconUserPlus size={14} class="text-success" />First reservation
+											</li>
+										{/if}
+										{#if r.notes}
+											<li class="flex items-center gap-1">
+												<IconNote size={14} class="text-info" />Member left a note
+											</li>
+										{/if}
+									</ul>
+								{/if}
+							</div>
+						</div>
+						<div class="flex shrink-0 flex-col items-end gap-2">
 							<StatusBadge status={r.status} label />
-						</div>
-						<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-							<EntityChip ref={r.booker} />
-							{#if r.recurringSeriesId || r.bookerType === 'instructor' || r.isFirstReservation || r.notes}
-								<ul class="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted text-sm">
-									{#if r.recurringSeriesId}
-										<li class="flex items-center gap-1"><IconRepeat size={14} />Recurring</li>
-									{/if}
-									{#if r.bookerType === 'instructor'}
-										<li class="flex items-center gap-1">
-											<BookerTypeIcon type={r.bookerType} size={14} />Teaching
-										</li>
-									{/if}
-									{#if r.isFirstReservation}
-										<li class="flex items-center gap-1">
-											<IconUserPlus size={14} class="text-success" />First reservation
-										</li>
-									{/if}
-									{#if r.notes}
-										<li class="flex items-center gap-1">
-											<IconNote size={14} class="text-info" />Member left a note
-										</li>
-									{/if}
-								</ul>
-							{/if}
-						</div>
-						<div class="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
 							{#if r.bookerType !== 'production'}
 								{#await hourlyRates then rates}
 									{@const state = reservationPaymentState(r)}
