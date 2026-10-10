@@ -177,6 +177,53 @@ describe('notification — escaping', () => {
 	});
 });
 
+describe('notification — a post carried in full', () => {
+	const { html, text } = byName('notification-announcement');
+
+	it('renders the post as markup in the HTML part and as its source in the text part', () => {
+		expect(html).toContain('<h2 id="what-to-bring">What to bring</h2>');
+		expect(html).toContain('<strong>Saturday the 27th</strong>');
+		expect(text).toContain('## What to bring');
+		expect(text).toContain('- Your own stand — we are short on them');
+	});
+
+	it('puts the byline under the heading in both parts', () => {
+		expect(html.indexOf('From Alice Chen')).toBeGreaterThan(html.indexOf('August jam moved</h1>'));
+		expect(text).toContain('From Alice Chen, Real Book Club');
+	});
+
+	it('renders and sanitizes markdown through the normalizer', () => {
+		const model = normalizeNotificationModel({
+			subject: 's',
+			heading: 'h',
+			body_markdown: '**hi** <script>alert(1)</script><img src=x onerror=alert(1)>'
+		});
+		expect(model.body_html).toContain('<strong>hi</strong>');
+		expect(String(model.body_html)).not.toMatch(/<script|onerror/);
+		expect(model).not.toHaveProperty('body_markdown');
+	});
+
+	it('escapes a plain-text body and keeps its line breaks', () => {
+		const model = normalizeNotificationModel({
+			subject: 's',
+			heading: 'h',
+			body_plain: '<b>x</b>\nline2'
+		});
+		expect(model.body_html).toBe('&lt;b&gt;x&lt;/b&gt;<br />line2');
+		expect(model.body_text).toBe('<b>x</b>\nline2');
+	});
+
+	it('drops the body for a type that must not carry member-written text', () => {
+		const model = normalizeNotificationModel(
+			{ subject: 's', heading: 'h', body_markdown: 'secret' },
+			{ omitUserContent: true }
+		);
+		expect(model).not.toHaveProperty('body_html');
+		expect(model).not.toHaveProperty('body_text');
+		expect(model).not.toHaveProperty('body_markdown');
+	});
+});
+
 describe('ticket-confirmation', () => {
 	it('renders every ticket code', () => {
 		const { html, text } = byName('ticket-multiple');

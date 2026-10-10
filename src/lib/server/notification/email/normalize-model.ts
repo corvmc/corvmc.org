@@ -1,4 +1,5 @@
 import { escapeHtmlWithBreaks } from '$lib/utils/html';
+import { renderMarkdown } from '$lib/utils/markdown';
 import type { NotificationEmailPayload } from '$lib/types/notification-email';
 import type { NotificationCategory } from '$lib/email/notification-category';
 
@@ -14,7 +15,7 @@ import type { NotificationCategory } from '$lib/email/notification-category';
 //  2. `has_details` — the details card wrapper has to be guarded by something
 //     that is NOT the array itself: `{{#details}}` iterates in both Mustachio
 //     and Handlebars, which would repeat the whole card per row.
-//  3. `quote` escaping — the one field carrying user-generated text. Callers
+//  3. `quote` and `body_*` — the fields carrying user-generated text. Callers
 //     pass the raw string; escaping happens here so it cannot be forgotten.
 // ---------------------------------------------------------------------------
 
@@ -59,8 +60,8 @@ export interface NormalizeOptions {
 	 *
 	 * Set from the notification type's `emailOmitsUserContent`, not by the
 	 * caller. The point is that the ~23 hand-built email models across the
-	 * listeners cannot get this wrong: `quote` is the one field carrying
-	 * user-generated text, and this is already the one place that knows it.
+	 * listeners cannot get this wrong: `quote` and the body are the fields
+	 * carrying user-generated text, and this is already the one place that knows it.
 	 * Dropping it here is the same argument as escaping it here.
 	 */
 	omitUserContent?: boolean;
@@ -88,6 +89,8 @@ export function normalizeNotificationModel(
 		// the opening line into the inbox preview pane.
 		delete normalized.quote;
 		delete normalized.quote_text;
+		delete normalized.body_html;
+		delete normalized.body_text;
 		normalized.preview_text = model.preview_text?.trim() || '';
 	} else if (model.quote) {
 		// `quote` is the only field rendered unescaped ({{{quote}}}), because the
@@ -96,6 +99,19 @@ export function normalizeNotificationModel(
 		normalized.quote = escapeHtmlWithBreaks(model.quote);
 		normalized.quote_text = model.quote;
 	}
+
+	if (!options.omitUserContent && model.body_markdown?.trim()) {
+		// Rendered by the same allowlist sanitizer as the site's own copy of the
+		// post, so the mail never carries markup the page would not.
+		normalized.body_html = renderMarkdown(model.body_markdown);
+		normalized.body_text = model.body_markdown.trim();
+	} else if (!options.omitUserContent && model.body_plain?.trim()) {
+		normalized.body_html = escapeHtmlWithBreaks(model.body_plain.trim());
+		normalized.body_text = model.body_plain.trim();
+	}
+	// The inputs, never sent: re-normalizing keeps the derived fields as they are.
+	delete normalized.body_markdown;
+	delete normalized.body_plain;
 
 	if (options.category) {
 		normalized.category_label = options.category.label;

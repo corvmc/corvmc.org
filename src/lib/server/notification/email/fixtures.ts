@@ -86,6 +86,28 @@ export const FIXTURES: Fixture[] = [
 		}
 	},
 	{
+		name: 'notification-announcement',
+		alias: 'notification',
+		// A chair's announcement carried in full: the post is the body of the mail,
+		// rendered from markdown, with the author demoted to a byline.
+		model: {
+			subject: 'Real Book Club: August jam moved',
+			preview_text: 'The August jam moves to Saturday the 27th, same time (7 PM). What to bring…',
+			heading: 'August jam moved',
+			byline: 'From Alice Chen, Real Book Club',
+			greeting: 'Hi Maya,',
+			// Post-normalization shape: `body_html` is `renderMarkdown` output,
+			// `body_text` the markdown source.
+			body_html:
+				'<p>The August jam moves to <strong>Saturday the 27th</strong>, same time (7 PM).</p>\n<h2 id="what-to-bring">What to bring</h2><ul>\n<li>A chart for one standard you want to call</li>\n<li>Your own stand — we are short on them</li>\n<li>Snacks, if you are feeling <em>generous</em></li>\n</ul>\n<p>Parking on Monroe is closed for the street fair, so use the lot behind the library. Details are on the <a href="https://corvmc.org/events/jam-aug" target="_blank" rel="noopener noreferrer">event page</a>.</p>\n<blockquote>\n<p>Thanks to everyone who came out last month.</p>\n</blockquote>\n<p>— Alice</p>\n',
+			body_text:
+				'The August jam moves to **Saturday the 27th**, same time (7 PM).\n\n## What to bring\n\n- A chart for one standard you want to call\n- Your own stand — we are short on them\n- Snacks, if you are feeling *generous*\n\nParking on Monroe is closed for the street fair, so use the lot behind the library. Details are on the [event page](https://corvmc.org/events/jam-aug).\n\n> Thanks to everyone who came out last month.\n\n— Alice',
+			cta: { url: 'https://corvmc.org/member/groups/real-book-club', label: 'Open the group' },
+			footnote:
+				"Don't want these? Mute Real Book Club at https://corvmc.org/member/groups/real-book-club"
+		}
+	},
+	{
 		name: 'notification-volunteer-shift',
 		alias: 'notification',
 		// The fifth category, and the only one whose bar changes colour between

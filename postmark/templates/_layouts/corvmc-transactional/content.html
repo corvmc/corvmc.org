@@ -20,6 +20,18 @@
     img { -ms-interpolation-mode:bicubic; border:0; outline:none; text-decoration:none; max-width:100%; }
     body { margin:0 !important; padding:0 !important; width:100% !important; }
 
+    /* A member-written post, rendered from markdown with no inline styles. */
+    .post-body p, .post-body ul, .post-body ol, .post-body blockquote, .post-body pre { margin:0 0 14px; }
+    .post-body h1, .post-body h2, .post-body h3, .post-body h4 { margin:22px 0 10px; font-weight:700; line-height:1.25; color:#003b5c; }
+    .post-body h1 { font-size:24px !important; }
+    .post-body h2 { font-size:21px; }
+    .post-body h3, .post-body h4 { font-size:18px; }
+    .post-body li { margin:0 0 6px; }
+    .post-body a { color:#5a3d2b; text-decoration:underline; }
+    .post-body blockquote { padding:0 0 0 14px; border-left:3px solid #e5771e; color:#5a3d2b; }
+    .post-body code, .post-body pre { font-family:Menlo,Consolas,monospace; font-size:14px; }
+    .post-body img { height:auto; }
+
     @media screen and (max-width:600px) {
       .container { width:100% !important; }
       .px-32 { padding-left:22px !important; padding-right:22px !important; }
@@ -42,6 +54,9 @@
       .footer-fine { color:#b6b0a6 !important; }
       .teal-text { color:#3eb5ca !important; }
       .navy-text { color:#e6dcd0 !important; }
+      .post-body h1, .post-body h2, .post-body h3, .post-body h4 { color:#e6dcd0 !important; }
+      .post-body a { color:#ff8c42 !important; }
+      .post-body blockquote { color:#b6b0a6 !important; }
       .pass-card { background:#1d232c !important; border-color:#9c7355 !important; }
       .pass-card td { color:#e6dcd0 !important; }
       .pass-card .label { color:#ff8c42 !important; }
