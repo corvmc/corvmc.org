@@ -86,7 +86,7 @@
 		"eslint-plugin-storybook": "^10.6.0",
 		"eslint-plugin-svelte": "^3.23.0",
 		"globals": "^17.12.0",
-		"handlebars": "^4.7.9",
+		"handlebars": "^4.7.10",
 		"lefthook": "^2.1.14",
 		"mdsvex": "^0.12.8",
 		"playwright": "^1.63.0",
