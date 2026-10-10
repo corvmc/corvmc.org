@@ -133,7 +133,7 @@
 		"marked": "^18.0.14",
 		"postmark": "^5.1.0",
 		"qrcode-svg": "^1.1.0",
-		"stripe": "^22.6.2",
+		"stripe": "^23.0.0",
 		"svelte-dnd-action": "^0.9.79",
 		"svelte-sonner": "^1.2.1",
 		"svelte-turnstile": "^0.11.0",
