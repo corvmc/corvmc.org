@@ -15,6 +15,18 @@ updates:
     # job is the slow one. Ten at a time is about what the merge queue can chew
     # through in a week without starving real work of runners.
     open-pull-requests-limit: 10
+    ignore:
+      # rc.5 types nested column groups from union/generic table params as
+      # nullable (#1769, #1771). Take 1.0.0 stable instead; a `-<hash>` build
+      # suffix sorts above rc.6 in semver, so only a range this wide catches them.
+      - dependency-name: drizzle-orm
+        versions: ['>1.0.0-rc.3 <1.0.0']
+      - dependency-name: drizzle-kit
+        versions: ['>1.0.0-rc.3 <1.0.0']
+      # Moves with @sentry/sveltekit, which bundles its own copy; a lone major
+      # splits @sentry/core (#1768). Drop this when sveltekit goes to 11.
+      - dependency-name: '@sentry/cloudflare'
+        update-types: ['version-update:semver-major']
     groups:
       # One PR per ecosystem-shaped cluster rather than per package. These move
       # together in lockstep and a lone bump inside a group usually fails to
@@ -26,10 +38,18 @@ updates:
           - svelte-*
           - vite
           - '@vitejs/*'
+      # Named in full for the same reason as `testing` below: in #1763/#1767 the
+      # glob missed and the addons moved to 10.6.1 in minor-and-patch while core
+      # moved alone here, a skew that fails Unit tests on a missing export.
       storybook:
         patterns:
           - storybook
           - '@storybook/*'
+          - '@storybook/addon-a11y'
+          - '@storybook/addon-docs'
+          - '@storybook/addon-svelte-csf'
+          - '@storybook/addon-vitest'
+          - '@storybook/sveltekit'
           - eslint-plugin-storybook
       cloudflare:
         patterns:
