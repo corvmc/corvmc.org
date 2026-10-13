@@ -102,6 +102,39 @@ export type Project = typeof project.$inferSelect;
 export type NewProject = typeof project.$inferInsert;
 
 /**
+ * A heading on a project's task list — "Prep", "Electrical", "Close-out".
+ * Ordered by `sort_order`; may be empty. Its work orders point here through
+ * `work_order.section_id` and order themselves within it.
+ */
+export const projectSection = sqliteTable(
+	'project_section',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		projectId: text('project_id')
+			.notNull()
+			.references(() => project.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		sortOrder: integer('sort_order').notNull(),
+
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		// Applying a duty list reuses a section by name; two "Load-in"s cannot exist.
+		// Leads with project_id, so it is also the by-project index.
+		uniqueIndex('uq_project_section_name').on(t.projectId, t.name)
+	]
+);
+
+export type ProjectSection = typeof projectSection.$inferSelect;
+
+/**
  * The committees taking part in a project, and why: a show has Booking and
  * Production both, and a general project's owner is its `owner` row.
  *

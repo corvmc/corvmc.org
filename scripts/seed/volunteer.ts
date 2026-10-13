@@ -558,6 +558,8 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 		.sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0]?.id;
 
 	for (const [shiftIndex, shift] of shiftRows.entries()) {
+		const volunteerRoleId = shift.volunteerRoleId;
+		if (!volunteerRoleId) throw new Error('Every seeded shift is built with a role.');
 		const isPast = shift.startsAt < now;
 		// Deliberately one short on the roomiest upcoming shift, so the staff dashboard's
 		// short-staffed card and the `+N unconfirmed` badge both have real data. Every
@@ -615,7 +617,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 					signupId,
 					shiftId: shift.id,
 					userId: u.id,
-					volunteerRoleId: shift.volunteerRoleId,
+					volunteerRoleId,
 					eventId: shift.eventId,
 					startsAt: shift.startsAt,
 					endsAt: shift.endsAt

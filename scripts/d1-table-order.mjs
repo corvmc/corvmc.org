@@ -19,6 +19,8 @@ export const tableOrder = [
 	'project',
 	// References project and group.
 	'project_committee',
+	// References project; work_order.section_id points at it.
+	'project_section',
 	// References user and group; parent of directory_tag.
 	'directory_entry',
 	// References group.
@@ -49,9 +51,6 @@ export const tableOrder = [
 	'purchase_order',
 	// A root: references nothing. Parent of contractor_job.
 	'contractor',
-	// References contractor, inventory_asset and user, so it clears before none
-	// of them.
-	'contractor_job',
 	// References `project` and `user`, so it clears after both.
 	'financial_entry',
 	// A root: no foreign key at all. `subject_id` is polymorphic, so it names
@@ -99,6 +98,9 @@ export const tableOrder = [
 	// referenced by volunteer_signup, volunteer_hour_log, work_task and
 	// member_orientation, so it sits between them.
 	'work_order',
+	// References contractor, inventory_asset, user and work_order, so it follows
+	// all of them.
+	'contractor_job',
 	// The checklist inside one work order. References work_order and user.
 	'work_task',
 	// References user, work_order and reservation, so it follows all three.

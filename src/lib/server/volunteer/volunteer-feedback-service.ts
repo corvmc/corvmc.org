@@ -180,7 +180,7 @@ export interface RoleFeedbackSummary {
 export async function summarizeFeedbackByRole(): Promise<RoleFeedbackSummary[]> {
 	const rows = await db
 		.select({
-			volunteerRoleId: workOrder.volunteerRoleId,
+			volunteerRoleId: volunteerRole.id,
 			roleName: volunteerRole.name,
 			responses: count(),
 			averageRating: avg(volunteerShiftFeedback.rating),

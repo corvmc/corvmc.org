@@ -1,17 +1,19 @@
-import { project, projectCommittee } from '../../src/lib/server/db/schema/project';
+import { project, projectCommittee, projectSection } from '../../src/lib/server/db/schema/project';
 import { group } from '../../src/lib/server/db/schema/group';
 import { suggestion } from '../../src/lib/server/db/schema/suggestion';
 import {
 	workOrder,
 	volunteerHourLog,
-	volunteerRole
+	volunteerProfile,
+	volunteerRole,
+	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
 import { contractorJob } from '../../src/lib/server/db/schema/contractor';
 import { acquisition, purchaseOrder } from '../../src/lib/server/db/schema/inventory';
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { batchInsert, db } from './db';
 import { randomUUID } from 'crypto';
-import { asc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, notInArray, sql } from 'drizzle-orm';
 import type { SeedEvent } from './types';
 
 /**
@@ -115,29 +117,69 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 
 	// --- Attach real rows to the facility project, one per burn line ----------
 
+	// The facility project's task list: three sections with work in them and an
+	// empty one, because an empty section is a state the list has to render.
+	const section = {
+		prep: randomUUID(),
+		electrical: randomUUID(),
+		finish: randomUUID(),
+		closeOut: randomUUID()
+	};
+	await batchInsert(
+		projectSection,
+		[
+			{ id: section.prep, projectId: ids.facility, name: 'Prep', sortOrder: 0 },
+			{ id: section.electrical, projectId: ids.facility, name: 'Electrical', sortOrder: 1 },
+			{ id: section.finish, projectId: ids.facility, name: 'Finish', sortOrder: 2 },
+			{ id: section.closeOut, projectId: ids.facility, name: 'Close-out', sortOrder: 3 }
+		],
+		10
+	);
+
 	// The electrician's subpanel job — the building work whose orphan status is
-	// the reason this table exists.
+	// the reason this table exists. It answers its own work order: no role, no
+	// posting, done when the job was, which is what the Contractor mode reads.
 	const [subpanel] = await db
-		.select({ id: contractorJob.id })
+		.select({ id: contractorJob.id, completedAt: contractorJob.completedAt })
 		.from(contractorJob)
 		.where(sql`${contractorJob.summary} like 'Add a dedicated circuit%'`)
 		.limit(1);
 	if (subpanel) {
+		const circuitTask = randomUUID();
+		await db.insert(workOrder).values({
+			id: circuitTask,
+			title: 'Add a dedicated circuit for the stage subpanel',
+			projectId: ids.facility,
+			sectionId: section.electrical,
+			sortOrder: 0,
+			resolvedAt: subpanel.completedAt,
+			resolvedByUserId: subpanel.completedAt ? staffId : null,
+			createdByUserId: staffId
+		});
 		await db
 			.update(contractorJob)
-			.set({ projectId: ids.facility })
+			.set({ projectId: ids.facility, workOrderId: circuitTask })
 			.where(eq(contractorJob.id, subpanel.id));
 	}
+
+	// Unassigned: no role, no posting, nobody on it — a task just typed into the
+	// list, with only a deadline set.
+	await db.insert(workOrder).values({
+		title: 'Replace the worst of the XLR runs',
+		projectId: ids.facility,
+		sectionId: section.finish,
+		sortOrder: 0,
+		dueAt: new Date(now.getTime() + 21 * day),
+		createdByUserId: staffId
+	});
 
 	// The project's own work orders, and its own hour log against one of them.
 	//
 	// Borrowing existing rows looked simpler and was not reproducible: which
 	// shifts carry logged hours, how many minutes each carries, and which are
 	// approved are all randomised upstream in `seedVolunteerHours`, so the labour
-	// line read 3.5 hours on one seed, 7.5 on the next and 0 on a third. Ordering
-	// could not fix that — the variation is in the data, not in the order it comes
-	// back — and every unscheduled work order already carried a log. Writing our
-	// own rows is what makes the seeded burn the same number on every machine.
+	// line read 3.5 hours on one seed, 7.5 on the next and 0 on a third. Writing
+	// our own rows is what makes the seeded burn the same number on every machine.
 	//
 	// Unscheduled deliberately: a bare work order is work that needs doing with
 	// nobody booked to do it, which is what a project backlog looks like.
@@ -147,24 +189,58 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		.where(eq(volunteerRole.name, 'Facilities & Maintenance'))
 		.limit(1);
 
+	// Members mode: a role, not posted, and the people staff put on it.
+	let membersTaskId: string | null = null;
 	if (facilityRole) {
 		const backlog = [
 			{
 				id: randomUUID(),
+				title: 'Mask and prime the live room walls',
 				volunteerRoleId: facilityRole.id,
 				projectId: ids.facility,
+				sectionId: section.prep,
+				sortOrder: 0,
 				capacity: 2,
-				notes: 'Mask and prime the live room walls.'
+				notes: 'Mask and prime the live room walls.',
+				createdByUserId: staffId
 			},
+			// Open: posted to the claim board, so it sets `posted_at` itself — the
+			// backfill ran before the seed did.
 			{
 				id: randomUUID(),
+				title: 'Pull the old cable runs',
 				volunteerRoleId: facilityRole.id,
 				projectId: ids.facility,
+				sectionId: section.prep,
+				sortOrder: 1,
 				capacity: 1,
-				notes: 'Pull the old cable runs before the electrician comes back.'
+				notes: 'Pull the old cable runs before the electrician comes back.',
+				postedAt: now,
+				postedByUserId: staffId,
+				createdByUserId: staffId
 			}
 		];
 		await batchInsert(workOrder, backlog, 10);
+		membersTaskId = backlog[0].id;
+
+		// Ordered so the same two volunteers are assigned on every seed.
+		const assignees = await db
+			.select({ userId: volunteerProfile.userId })
+			.from(volunteerProfile)
+			.where(eq(volunteerProfile.status, 'active'))
+			.orderBy(asc(volunteerProfile.userId))
+			.limit(2);
+		if (assignees.length) {
+			await db.insert(volunteerSignup).values(
+				assignees.map((a) => ({
+					shiftId: backlog[0].id,
+					userId: a.userId,
+					status: 'confirmed' as const,
+					claimedAt: now,
+					confirmedAt: now
+				}))
+			);
+		}
 
 		await db.insert(volunteerHourLog).values({
 			userId: staffId,
@@ -244,6 +320,29 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 	return {
 		projects: rows.length,
 		events: upcoming.length,
-		workOrders: Number(attached ?? 0)
+		workOrders: Number(attached ?? 0),
+		sections: 4,
+		unpostedWorkOrderIds: membersTaskId ? [membersTaskId] : []
 	};
+}
+
+/**
+ * What the posted-at backfill migration did to production, done to the seed's
+ * own rows: every work order with a role is on the claim board. The migration
+ * ran before the seed wrote anything, so without this none of it would be.
+ * `keepUnposted` is the work deliberately staffed by assignment instead.
+ */
+export async function postSeededWorkOrders(keepUnposted: string[]) {
+	const posted = await db
+		.update(workOrder)
+		.set({ postedAt: sql`${workOrder.createdAt}` })
+		.where(
+			and(
+				isNull(workOrder.postedAt),
+				isNotNull(workOrder.volunteerRoleId),
+				keepUnposted.length ? notInArray(workOrder.id, keepUnposted) : undefined
+			)
+		)
+		.returning({ id: workOrder.id });
+	return posted.length;
 }

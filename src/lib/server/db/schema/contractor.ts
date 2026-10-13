@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { user } from './authentication';
 import { inventoryAsset } from './inventory';
 import { project } from './project';
+import { workOrder } from './volunteer';
 import { contractorJobStatuses, contractorTrades } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -157,6 +158,13 @@ export const contractorJob = sqliteTable(
 		 */
 		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
 
+		// The work order this engagement answers. Nullable until existing jobs are
+		// backfilled; NOT NULL after. Restrict: an engagement carries money and a
+		// ledger entry, so deleting its work order must fail loudly rather than
+		// orphan the spend (set-null) or erase it (cascade). Work orders are
+		// cancelled, not deleted, in every service path.
+		workOrderId: text('work_order_id').references(() => workOrder.id, { onDelete: 'restrict' }),
+
 		/** When they come, or when the unit went out to them. */
 		scheduledFor: integer('scheduled_for', { mode: 'timestamp' }),
 		/** When it is promised back. Drives the overdue list; nothing else reads it. */
@@ -221,6 +229,7 @@ export const contractorJob = sqliteTable(
 		index('idx_contractor_job_contractor').on(t.contractorId),
 		index('idx_contractor_job_asset').on(t.assetId),
 		index('idx_contractor_job_project').on(t.projectId),
+		index('idx_contractor_job_work_order').on(t.workOrderId),
 		index('idx_contractor_job_status').on(t.status),
 		// The overdue read: out with somebody, past its date. Partial so the
 		// closed pile — which is most of the table forever — is never scanned.

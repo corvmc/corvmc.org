@@ -353,6 +353,8 @@ export async function countActiveSignups(shiftId: string): Promise<number> {
 export type ScheduledShiftWithCounts = ShiftWithCounts & { startsAt: Date; endsAt: Date };
 
 export interface ShiftWithCounts extends WorkOrder {
+	/** Never null here: these rows are read through an inner join on the role. */
+	volunteerRoleId: string;
 	roleName: string;
 	roleGroup: VolunteerRoleGroup;
 	eventTitle: string | null;
@@ -378,6 +380,7 @@ export interface ShiftWithCounts extends WorkOrder {
 function withCounts(
 	rows: {
 		shift: WorkOrder;
+		roleId: string;
 		roleName: string;
 		roleGroup: VolunteerRoleGroup;
 		eventTitle: string | null;
@@ -389,6 +392,7 @@ function withCounts(
 ): ShiftWithCounts[] {
 	return rows.map((r) => ({
 		...r.shift,
+		volunteerRoleId: r.roleId,
 		roleName: r.roleName,
 		roleGroup: r.roleGroup,
 		eventTitle: r.eventTitle,
@@ -463,7 +467,10 @@ export async function countUnfilledByRole(from = new Date()): Promise<Map<string
 		)
 		.groupBy(workOrder.volunteerRoleId);
 
-	return new Map(rows.map((r) => [r.volunteerRoleId, Number(r.unfilled)]));
+	// Work with no role has no claimants to be short of; it belongs to no role's count.
+	return new Map(
+		rows.flatMap((r) => (r.volunteerRoleId ? [[r.volunteerRoleId, Number(r.unfilled)]] : []))
+	);
 }
 
 /**
@@ -478,6 +485,7 @@ function shiftRowsQuery() {
 	return db
 		.select({
 			shift: workOrder,
+			roleId: volunteerRole.id,
 			roleName: volunteerRole.name,
 			roleGroup: volunteerRole.group,
 			eventTitle: eventListing.title,
@@ -835,6 +843,7 @@ export async function listOpenShiftsForMember(
 	const rows = await db
 		.select({
 			shift: workOrder,
+			roleId: volunteerRole.id,
 			roleName: volunteerRole.name,
 			roleGroup: volunteerRole.group,
 			eventTitle: eventListing.title,
@@ -865,6 +874,7 @@ export async function listOpenShiftsForMember(
 
 	const open = rows.map((r) => ({
 		...r.shift,
+		volunteerRoleId: r.roleId,
 		roleName: r.roleName,
 		roleGroup: r.roleGroup,
 		eventTitle: r.eventTitle,

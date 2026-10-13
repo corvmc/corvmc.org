@@ -66,6 +66,22 @@ export class ShiftClosedError extends DomainError {
 	}
 }
 
+// Signups, invitations and hour logs all hang off a role: it is what hours are
+// counted against and what clearances are checked for. Work with none is a
+// contractor's or not yet assigned, and nobody can be put on it this way.
+export class NoVolunteerRoleError extends DomainError {
+	readonly httpStatus = 409;
+	constructor() {
+		super('This work order has no volunteer role, so nobody can sign up for it yet.');
+	}
+}
+
+/** The work order's role, or a refusal when it has none. */
+export function requireVolunteerRole(shift: { volunteerRoleId: string | null }): string {
+	if (shift.volunteerRoleId === null) throw new NoVolunteerRoleError();
+	return shift.volunteerRoleId;
+}
+
 export class NotClearedError extends DomainError {
 	readonly httpStatus = 403;
 	/** Kept on the error so a caller can reword the refusal for its own audience. */
@@ -162,6 +178,7 @@ export async function claimShift(
 	if (shift.cancelledAt) throw new ShiftClosedError('That shift was called off.');
 	if (shift.endsAt && shift.endsAt < new Date())
 		throw new ShiftClosedError('That shift has already happened.');
+	const roleId = requireVolunteerRole(shift);
 
 	// Clearance is checked against the shift's date, not today: a card that
 	// lapses next week doesn't cover a shift the week after.
@@ -171,11 +188,7 @@ export async function claimShift(
 	// again once a window exists, and the audit question -- was the card current
 	// on the night they worked -- is answered at hour-log review against
 	// `workedOn`, which is the only date that reflects reality.
-	const missing = await missingRequirements(
-		userId,
-		shift.volunteerRoleId,
-		shift.startsAt ?? new Date()
-	);
+	const missing = await missingRequirements(userId, roleId, shift.startsAt ?? new Date());
 	if (missing.length > 0) throw new NotClearedError(missing, assigned ? 'staff' : 'member');
 
 	const [existing] = await db
@@ -621,7 +634,7 @@ export async function listUnloggedCompletions(userId: string) {
 		.select({
 			signupId: volunteerSignup.id,
 			shiftId: workOrder.id,
-			volunteerRoleId: workOrder.volunteerRoleId,
+			volunteerRoleId: volunteerRole.id,
 			roleName: volunteerRole.name,
 			startsAt: workOrder.startsAt,
 			endsAt: workOrder.endsAt
@@ -1162,14 +1175,11 @@ export async function inviteToShift(
 	if (shift.cancelledAt) throw new ShiftClosedError('That shift was called off.');
 	if (shift.endsAt && shift.endsAt < new Date())
 		throw new ShiftClosedError('That shift has already happened.');
+	const roleId = requireVolunteerRole(shift);
 
 	// No room check. Chasing four people for two places is the normal case, and
 	// capacity gates claiming rather than asking.
-	const missing = await missingRequirements(
-		userId,
-		shift.volunteerRoleId,
-		shift.startsAt ?? new Date()
-	);
+	const missing = await missingRequirements(userId, roleId, shift.startsAt ?? new Date());
 
 	const [existing] = await db
 		.select({ id: volunteerSignup.id, status: volunteerSignup.status })

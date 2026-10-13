@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { user } from './authentication';
 import { eventListing } from './event';
 import { inventoryAsset } from './inventory';
-import { project } from './project';
+import { project, projectSection } from './project';
 import { reservation } from './reservation';
 import { group } from './group';
 import {
@@ -310,9 +310,21 @@ export const workOrder = sqliteTable(
 
 		// Restrict, like the hour log's: a worked shift is history, and deleting
 		// the role out from under it would rewrite the past.
-		volunteerRoleId: text('volunteer_role_id')
-			.notNull()
-			.references(() => volunteerRole.id, { onDelete: 'restrict' }),
+		//
+		// Null for work no volunteer does: a contractor's, or a task nobody has
+		// been put on yet. Anything posted to the claim board has one (the CHECK
+		// below), and a signup can only be made where one exists.
+		volunteerRoleId: text('volunteer_role_id').references(() => volunteerRole.id, {
+			onDelete: 'restrict'
+		}),
+
+		// When staff opened this to volunteers. The one assignment fact that
+		// cannot be derived from signups or engagements: it exists before anybody
+		// claims. Null is not on the claim board.
+		postedAt: integer('posted_at', { mode: 'timestamp' }),
+		postedByUserId: text('posted_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
 
 		// Optional. Most shifts hang off a show, but work parties and gear repair
 		// days don't, so this can't be required. Set-null rather than cascade —
@@ -364,6 +376,13 @@ export const workOrder = sqliteTable(
 
 		/** A deadline, which is not a window: "done by Friday" is not "happens Friday 6-8". */
 		dueAt: integer('due_at', { mode: 'timestamp' }),
+
+		// The heading this sits under on its project's task list. Set-null: a
+		// deleted section moves its work orders to the unlabelled group, never
+		// deletes them. Unused on a work order with no project.
+		sectionId: text('section_id').references(() => projectSection.id, { onDelete: 'set null' }),
+		/** Position within the section (or the unlabelled group). */
+		sortOrder: integer('sort_order').notNull().default(0),
 
 		// Provenance only: which duty list stamped this row out, so a work order can
 		// say "staffed from Standard Show", and so a second apply can be refused
@@ -480,7 +499,9 @@ export const workOrder = sqliteTable(
 			'volunteer_shift_ends_after_start',
 			sql`(starts_at is null) = (ends_at is null) and (ends_at is null or ends_at > starts_at)`
 		),
-		check('volunteer_shift_capacity_positive', sql`capacity > 0`)
+		check('volunteer_shift_capacity_positive', sql`capacity > 0`),
+		// Posting is what puts work on the claim board, and claiming needs a role.
+		check('work_order_posted_has_role', sql`posted_at is null or volunteer_role_id is not null`)
 	]
 );
 
@@ -1114,6 +1135,9 @@ export const dutyListItem = sqliteTable(
 		title: text('title'),
 		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
 		doneWhen: text('done_when', { enum: workDoneConditions }),
+		// The project section the stamped work order lands in, by name: applying
+		// creates or reuses a section with this name.
+		section: text('section'),
 
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
