@@ -297,8 +297,14 @@ what the panel leaves out: the roster (invites, confirmations, no-shows), hour
 approval, feedback, linked equipment reports, the engagements with their money, the
 cancellation history, and the task's own activity.
 
-- **One component, two homes.** Work orders with no project — event shifts, recurring
-  maintenance, a first rehearsal's orientation — keep `/staff/volunteer/shifts/[id]`.
+- **Show crew is project work.** A production is a project of kind `production`, and
+  a duty list applied to a show already stamps the production's `project_id` alongside
+  `event_id` ([production-projects-spec.md](production-projects-spec.md) §4). Event
+  shifts therefore land on this route and in their show's task list; the event anchor
+  stays for timing and re-timing.
+- **One component, two homes.** Only work that belongs to no project — recurring
+  maintenance, a first rehearsal's orientation, shifts on a listing with no production —
+  keeps `/staff/volunteer/shifts/[id]`.
   Both routes render the same work order view; the project route adds the project's
   breadcrumb and back link.
 - **The old URL redirects.** `/staff/volunteer/shifts/[id]` for a work order that has a
