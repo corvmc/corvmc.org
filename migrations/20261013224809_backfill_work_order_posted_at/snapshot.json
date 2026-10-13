@@ -1,7 +1,7 @@
 {
-  "id": "618ffbd5-dadf-413f-b417-ec2703ac25b1",
+  "id": "f7522572-8adc-462e-a739-43ad8e5a0878",
   "prevIds": [
-    "baa52019-5e5d-4db8-9f4d-6e608840abad"
+    "0f584eb5-76b8-4a48-aba0-dd89db9a2376"
   ],
   "version": "7",
   "dialect": "sqlite",
@@ -392,6 +392,10 @@
     },
     {
       "name": "project_committee",
+      "entityType": "tables"
+    },
+    {
+      "name": "project_section",
       "entityType": "tables"
     },
     {
@@ -8719,6 +8723,16 @@
       "table": "duty_list_item"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "section",
+      "entityType": "columns",
+      "table": "duty_list_item"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -9940,11 +9954,31 @@
     },
     {
       "type": "text",
-      "notNull": true,
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
       "name": "volunteer_role_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "posted_at",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "posted_by_user_id",
       "entityType": "columns",
       "table": "work_order"
     },
@@ -10025,6 +10059,26 @@
       "default": null,
       "generated": null,
       "name": "due_at",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "section_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "sort_order",
       "entityType": "columns",
       "table": "work_order"
     },
@@ -10789,6 +10843,16 @@
       "table": "contractor_job"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "work_order_id",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -11097,6 +11161,66 @@
       "name": "created_at",
       "entityType": "columns",
       "table": "project_committee"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "project_section"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "project_section"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "project_section"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "sort_order",
+      "entityType": "columns",
+      "table": "project_section"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "project_section"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "project_section"
     },
     {
       "type": "text",
@@ -17215,6 +17339,21 @@
     },
     {
       "columns": [
+        "posted_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_work_order_posted_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
         "event_id"
       ],
       "tableTo": "event_listing",
@@ -17270,6 +17409,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_work_order_reservation_id_reservation_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        "section_id"
+      ],
+      "tableTo": "project_section",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_work_order_section_id_project_section_id_fk",
       "entityType": "fks",
       "table": "work_order"
     },
@@ -17500,6 +17654,21 @@
     },
     {
       "columns": [
+        "work_order_id"
+      ],
+      "tableTo": "work_order",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "nameExplicit": false,
+      "name": "fk_contractor_job_work_order_id_work_order_id_fk",
+      "entityType": "fks",
+      "table": "contractor_job"
+    },
+    {
+      "columns": [
         "requested_by_user_id"
       ],
       "tableTo": "user",
@@ -17587,6 +17756,21 @@
       "name": "fk_project_committee_group_id_group_id_fk",
       "entityType": "fks",
       "table": "project_committee"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_project_section_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "project_section"
     },
     {
       "columns": [
@@ -19523,6 +19707,15 @@
       "nameExplicit": false,
       "name": "project_pk",
       "table": "project",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "project_section_pk",
+      "table": "project_section",
       "entityType": "pks"
     },
     {
@@ -22954,6 +23147,20 @@
     {
       "columns": [
         {
+          "value": "work_order_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contractor_job_work_order",
+      "entityType": "indexes",
+      "table": "contractor_job"
+    },
+    {
+      "columns": [
+        {
           "value": "status",
           "isExpression": false
         }
@@ -23048,6 +23255,24 @@
       "name": "idx_project_committee_group",
       "entityType": "indexes",
       "table": "project_committee"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        },
+        {
+          "value": "name",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_project_section_name",
+      "entityType": "indexes",
+      "table": "project_section"
     },
     {
       "columns": [
@@ -24469,6 +24694,12 @@
     {
       "value": "capacity > 0",
       "name": "volunteer_shift_capacity_positive",
+      "entityType": "checks",
+      "table": "work_order"
+    },
+    {
+      "value": "posted_at is null or volunteer_role_id is not null",
+      "name": "work_order_posted_has_role",
       "entityType": "checks",
       "table": "work_order"
     },

@@ -98,7 +98,7 @@ import { seedSuggestions } from './seed/suggestions';
 import { seedModerationAppeals } from './seed/moderation-appeals';
 import { seedClassifieds } from './seed/classifieds';
 import { seedWishlistPledges } from './seed/wishlist-pledges';
-import { seedProjects } from './seed/projects';
+import { postSeededWorkOrders, seedProjects } from './seed/projects';
 import { seedProjectCommittees } from './seed/show-project';
 import { seedMaintenanceSchedules } from './seed/maintenance';
 import { seedAudio } from './seed/audio';
@@ -312,6 +312,9 @@ async function main() {
 	const doorSales = await seedDoorSales(adminUser.id, 'seed-vol-active');
 	// After orientation and groups: the member-wide roll reads both.
 	const ballots = await seedBallots(groups, adminUser);
+	// Last of all: posts every work order the seeders above wrote, as the
+	// backfill migration did in production.
+	const postedWorkOrders = await postSeededWorkOrders(projects.unpostedWorkOrderIds);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -414,6 +417,9 @@ async function main() {
 	console.log(`  ${pledges.pledges} wishlist pledges (2 open, 1 expired, 1 released, 1 fulfilled)`);
 	console.log(
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
+	);
+	console.log(
+		`  ${projects.sections} task-list sections on the facility project (1 empty); ${postedWorkOrders} work orders posted to the claim board`
 	);
 	console.log(
 		`  ${projectCommittees} project committee rows (owners, and Booking and Production on each show)`

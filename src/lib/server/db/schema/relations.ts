@@ -304,7 +304,8 @@ export const relations = defineRelations(schema, (t) => ({
 		contractor: t.one.contractor({ from: t.contractorJob.contractorId, to: t.contractor.id }),
 		asset: t.one.inventoryAsset({ from: t.contractorJob.assetId, to: t.inventoryAsset.id }),
 		project: t.one.project({ from: t.contractorJob.projectId, to: t.project.id }),
-		requestedBy: t.one.user({ from: t.contractorJob.requestedByUserId, to: t.user.id })
+		requestedBy: t.one.user({ from: t.contractorJob.requestedByUserId, to: t.user.id }),
+		workOrder: t.one.workOrder({ from: t.contractorJob.workOrderId, to: t.workOrder.id })
 	},
 	purchaseOrder: {
 		// No `lines` arm: `purchase_order_line` has no block of its own, and adding
@@ -324,8 +325,13 @@ export const relations = defineRelations(schema, (t) => ({
 		acquisitions: t.many.acquisition(),
 		events: t.many.eventListing(),
 		committees: t.many.projectCommittee(),
+		sections: t.many.projectSection(),
 		/** Present when `kind = 'production'`. */
 		production: t.one.production({ from: t.project.id, to: t.production.projectId })
+	},
+	projectSection: {
+		project: t.one.project({ from: t.projectSection.projectId, to: t.project.id }),
+		workOrders: t.many.workOrder()
 	},
 	projectCommittee: {
 		project: t.one.project({ from: t.projectCommittee.projectId, to: t.project.id }),
@@ -393,11 +399,14 @@ export const relations = defineRelations(schema, (t) => ({
 		event: t.one.eventListing({ from: t.workOrder.eventId, to: t.eventListing.id }),
 		asset: t.one.inventoryAsset({ from: t.workOrder.assetId, to: t.inventoryAsset.id }),
 		project: t.one.project({ from: t.workOrder.projectId, to: t.project.id }),
+		section: t.one.projectSection({ from: t.workOrder.sectionId, to: t.projectSection.id }),
 		resolvedBy: t.one.user({
 			from: t.workOrder.resolvedByUserId,
 			to: t.user.id
 		}),
-		signups: t.many.volunteerSignup()
+		postedBy: t.one.user({ from: t.workOrder.postedByUserId, to: t.user.id }),
+		signups: t.many.volunteerSignup(),
+		contractorJobs: t.many.contractorJob()
 	},
 	volunteerSignup: {
 		shift: t.one.workOrder({ from: t.volunteerSignup.shiftId, to: t.workOrder.id }),

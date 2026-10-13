@@ -1,0 +1,2 @@
+ALTER TABLE `contractor_job` ADD `work_order_id` text REFERENCES work_order(id) ON DELETE RESTRICT;--> statement-breakpoint
+CREATE INDEX `idx_contractor_job_work_order` ON `contractor_job` (`work_order_id`);
