@@ -230,32 +230,30 @@ person's place on one.
   never `cost_cents`; `recordCompletedJob` writes the ledger entry. Project burn reads it
   through the work order's `project_id` instead of the job's.
 
-**Moved to the work order and later dropped from `contractor_job`:** `summary` (→
-`title`), `asset_id`, `project_id`, `completed_at` (→ `resolved_at` on completion).
+**Moved to the work order and dropped from `contractor_job`:** `summary` (→ `title`),
+`asset_id`, `project_id`. **`completed_at` stays:** it is when the contractor finished
+their engagement, which is not when the task was ticked — staff may tick the task
+first, the same reason `volunteer_signup` keeps its own `completed_at`.
 `requested_by_user_id` stays — it is who engaged them.
 
-### Migration of existing jobs
+### Reshaping the table
 
-Expand, backfill, contract, in separate PRs:
+Production has **no contractor jobs** — no contractors and no ledger entries for them
+either (read-only count against `corvmc-db`, 2026-10-13). So there is nothing to
+backfill and no reason to stage the change: once Phase 1 has added
+`contractor_job.work_order_id` as nullable, Phase 2 reshapes the table in one
+migration — `work_order_id` NOT NULL, `summary`, `asset_id` and `project_id` dropped,
+and the overdue partial index's condition moved from `'scheduled'` to `'booked'`.
 
-1. **Expand:** add `contractor_job.work_order_id` nullable.
-2. **Backfill** (a custom migration): for each job, insert a work order with
-   `title = summary`, `asset_id`, `project_id`, `posted_at = null`,
-   `volunteer_role_id = null`, `resolved_at = completed_at` when completed,
-   `cancelled_at = updated_at` when cancelled, `created_by_user_id =
-requested_by_user_id`; point the job at it; map the statuses.
-3. **Contract**, once nothing reads them: `work_order_id` NOT NULL; drop `summary`,
-   `asset_id`, `project_id`, `completed_at`.
-
-Verify with `pnpm db:reset` and a row count of jobs against work orders with no role,
-no posting and a live engagement. Production D1 is canonical — the backfill must be idempotent and checked
-against a read-only count before and after.
+The status rename is a code change with no rows to update. If a job is entered in
+production before Phase 2 ships, recount first; the reshape is only lossless while the
+table is empty.
 
 ## Null-role safety
 
 These inner-join `volunteer_role` on `work_order.volunteer_role_id` and would silently
-drop contractor and unassigned work orders. They become left joins, or filter to
-to work orders with a role where only volunteer work belongs:
+drop contractor and unassigned work orders. They become left joins, or filter to work orders
+with a role where only volunteer work belongs:
 
 - `shiftRowsQuery`, work-order-service.ts:515 — the staff list, queue and detail.
   **Must** become a left join.
@@ -380,8 +378,9 @@ All staff-facing, so each phase goes straight to `main`.
    `section_id`, `sort_order`,
    `duty_list_item.section`, `contractor_job.work_order_id`. Seed: sections on the
    facility project, one task per assignment mode, a contractor engagement on a task.
-2. **Engagement backfill.** The custom migration above, the status rename, and
-   `contractor-job-service` working through the work order.
+2. **Engagement reshape.** The one-step migration above, the status rename, and
+   `contractor-job-service`, the job pages, project burn and the seed reading through
+   the work order.
 3. **Services.** Assignment modes and switching, the claim-board filter and claim
    guard, null-role-safe queries, sections and ordering, inline create, progress, audit
    writes.
@@ -390,7 +389,6 @@ All staff-facing, so each phase goes straight to `main`.
    with `/staff/volunteer/shifts/[id]`, and the redirect between them.
 6. **Contractor Jobs view** and the job-detail redirect.
 7. **Activity tab.**
-8. **Contract.** Drop the moved `contractor_job` columns; `work_order_id` NOT NULL.
 
 ## Open questions
 
