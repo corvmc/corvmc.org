@@ -123,9 +123,50 @@ window), `due_at` (a deadline, which is not a window), `resolved_at` (done) and
 `cancelled_at`. They are independent — a work order can have a window and a due date
 both. Where the window ends after the due date, the list flags it.
 
-Ticking a task sets `resolved_at`. It does **not** complete a contractor engagement:
-"done" and "invoiced" are different facts, and the row reads "Awaiting invoice" until
-the engagement catches up. Completing the engagement does tick the task.
+Ticking a task sets `resolved_at` — except where the task has a `done_when`, below. It
+does **not** complete a contractor engagement: "done" and "invoiced" are different
+facts, and the row reads "Awaiting invoice" until the engagement catches up. Completing
+the engagement does tick the task.
+
+### Derived completion
+
+Committee deliverables (shipped in #1701,
+[committee-deliverables-spec.md](shipped/committee-deliverables-spec.md)) are work
+orders whose `done_when` names a fact about their show — the listing has a poster,
+every act was asked for its artifacts, every crew shift is filled. `evaluateDone`
+(done-conditions.ts:120) reads a task as done when `resolved_at` is set **or** the
+condition holds, and stores nothing when the condition comes true, so an item goes
+back to open if the fact goes away.
+
+On a show's task list these are ordinary rows, with three differences:
+
+- **The checkbox is the app's.** It is drawn as derived — filled when the condition
+  holds — and clicking it does not toggle. It opens what is missing instead.
+- **Ticking by hand is the override**, and it is what `resolved_at` already means for
+  these rows: done regardless of the fact. Warn, record, allow — the tick asks for a
+  reason, which goes in the existing `resolution_notes`, and the audit entry records it
+  as an override. Unticking a hand-ticked one clears `resolved_at` and hands the row
+  back to its condition.
+- **The panel shows the condition** as a property row — "Done when: the listing has a
+  poster" — and, while it does not hold, what is outstanding:
+  - `artifacts_requested`: the acts not yet asked, and those asked whose artifact has
+    not arrived, each linking to its `artifact_request`.
+  - `poster_set` / `description_set`: a link to the listing's slot.
+  - `shifts_filled`: the crew tasks still short, in this same list.
+  - `tasks_ticked`: its own duties, already shown below.
+
+Progress counts a derived-done task the same as a ticked one.
+
+**The output lives on its subject, never on the task.** A poster is the listing's, a
+rider is the act's, recap photos are the event's. The task reads its completion from
+that thing appearing; work orders do not become an attachable type, which would store
+the same file twice with nothing to say which copy is real. The one place a task
+grants file access is the Show Documentation role (#1500): a confirmed signup lets the
+member upload the event's recap photos.
+
+**Artifact requests stay what they are** — asks to outside acts, with their own token
+link and their own derived arrival. A show's list reaches them through its
+`artifacts_requested` deliverable, not as rows of their own.
 
 ### Sections and order
 
@@ -154,7 +195,8 @@ work_order
 
 ### Progress
 
-Done work orders over live ones — every mode counts, cancelled ones do not.
+Done work orders over live ones — every mode counts, cancelled ones do not, and "done"
+is `evaluateDone`'s answer (ticked, or its condition holding).
 This settles the progress question left open in [project-spec.md](project-spec.md).
 Duties do not count toward the project's figure; they show as `2/3` on their own row.
 
@@ -236,7 +278,8 @@ to work orders with a role where only volunteer work belongs:
 
 - Add subject types `project` and `work_order`, and actions `work_order.created`,
   `.assigned` (mode change, with the from/to in `details`), `.member_assigned`,
-  `.member_unassigned`, `.rescheduled`, `.resolved`, `.reopened`, `.cancelled`,
+  `.member_unassigned`, `.rescheduled`, `.resolved` (with `override: true` and the reason
+  when it has a `done_when`), `.reopened`, `.cancelled`,
   `.moved` (section), and `contractor_job.status_changed`, `.invoice_recorded`.
   Engagement entries are written against their work order's id, so one query reads a
   task's whole history.
@@ -278,7 +321,7 @@ budget, dates.
     [task page](#the-task-page).
   - property rows, each a click-to-edit value: **Assigned** (opens the picker),
     **Scheduled**, **Due**, **Committee** ("from the project" when inherited),
-    **Equipment**, **From** (duty list), then "+ Due date / Equipment / Event / Repeat"
+    **Equipment**, **From** (duty list), **Done when** (derived tasks only), then "+ Due date / Equipment / Event / Repeat"
     for anything unset. A contractor's quote, cost and invoice sit under Assigned.
   - duties, with add.
   - notes.
