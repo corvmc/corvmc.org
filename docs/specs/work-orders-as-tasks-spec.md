@@ -25,7 +25,8 @@ Each of these was argued out and settled; the reasoning is in the section that f
 1. **A work order is the task.** `work_task` stays what it is — the duties inside one —
    and is shown as subtasks.
 2. **Assignment is one field with three modes:** assigned members, open to volunteers,
-   or delegated to a contractor.
+   or delegated to a contractor. The mode is derived from the rows behind it; only
+   "posted to the claim board" is stored.
 3. **Assigning a member is a staff-made volunteer signup** — the same row a claim makes,
    without posting the work to the claim board.
 4. **A contractor job becomes the contractor's engagement on a work order**, shaped like
@@ -41,18 +42,36 @@ Each of these was argued out and settled; the reasoning is in the section that f
 
 ### Assignment
 
-`work_order.assignment`, a nullable enum:
+The mode is **derived, not stored**. The one fact that cannot be derived is whether
+staff opened the work to volunteers — a decision that exists before anyone signs up —
+so that is the only new column:
 
-| Value        | Meaning                                         | Who does it                                    |
-| ------------ | ----------------------------------------------- | ---------------------------------------------- |
-| `null`       | Not decided. A task typed into the list.        | Nobody yet                                     |
-| `members`    | Staff named the people. Not on the claim board. | `volunteer_signup` rows staff created          |
-| `open`       | Posted for volunteers to claim.                 | `volunteer_signup` rows members created        |
-| `contractor` | Delegated.                                      | `contractor_job` rows (engagements), see below |
+```text
+work_order
+  + posted_at            integer (timestamp)
+  + posted_by_user_id    text → user (set null)
+```
+
+A timestamp rather than a flag, matching `resolved_at` and `cancelled_at`, and it gives
+the Activity tab "posted Oct 3 by Nia" for free. The mode reads, in this order:
+
+| Mode           | When                                                                  | Who does it                             |
+| -------------- | --------------------------------------------------------------------- | --------------------------------------- |
+| **Contractor** | a live engagement exists (`contractor_job` not declined or cancelled) | the engagement, see below               |
+| **Open**       | `posted_at is not null`                                               | `volunteer_signup` rows members created |
+| **Members**    | live signups, not posted                                              | `volunteer_signup` rows staff created   |
+| **Unassigned** | none of the above — including a task just typed into the list         | nobody yet                              |
+
+Only one combination can disagree with itself — posted work with a live engagement —
+and the switching rules below forbid it: delegating clears `posted_at`, and posting
+refuses while an engagement is live. There is no stored mode to drift from the rows it
+describes.
 
 The UI shows one **Assigned** field. Its value is an avatar stack and `filled/capacity`
-for `members` and `open` (with "Open on the claim board" for `open`), the contractor's
-name and engagement status for `contractor`, and "Unassigned" for `null`.
+for Members and Open (with "Open on the claim board" for Open), the contractor's name
+and engagement status for Contractor, and "Unassigned" otherwise. The list's mode, its
+Unassigned filter and the panel all come from one query joining live signups and live
+engagements.
 
 - **Members.** Picking people calls `claimShift(id, userId, { assignedByStaff: true })`,
   which already lands a signup `confirmed` (volunteer-signup-service.ts:145). Hours are
@@ -65,30 +84,36 @@ name and engagement status for `contractor`, and "Unassigned" for `null`.
 **Who may be assigned:** staff, and members of the work order's committee — `group_id`,
 falling back to the owning committee of its project. The picker lists only them.
 
-**`volunteer_role_id` becomes nullable.** A role is required for `members` and `open`,
+**`volunteer_role_id` becomes nullable.** A role is required for Members and Open,
 because hours are logged per role and clearances are checked per role. It is meaningless
-for `contractor` and not yet known for `null`. A CHECK holds
-`assignment not in ('members','open') or volunteer_role_id is not null`.
+for Contractor and not yet known for Unassigned. A CHECK holds
+`posted_at is null or volunteer_role_id is not null`; Members, which has no column of
+its own, is enforced in the service — assigning the first person requires a role.
 
-**The claim board shows only `open`.** `listOpenShiftsForMember`
+**The claim board shows only posted work.** `listOpenShiftsForMember`
 (work-order-service.ts:801) filters on `cancelledAt` and `startsAt >= now` and nothing
-else, so a scheduled `members` work order would appear there. It gains
-`assignment = 'open'`. The member `claimShift` form (volunteer.remote.ts:1792) accepts
-any shift id today; it refuses anything not `open`.
+else, so a scheduled Members work order would appear there. It gains
+`posted_at is not null`. The member `claimShift` form (volunteer.remote.ts:1792)
+accepts any shift id today; it refuses unposted work.
 
-**Backfill:** every existing work order becomes `open`. That is what each of them is
-today — anything scheduled is on the board. Gating the board on a new column without
-the backfill would empty it (the "gate change needs backfill" rule).
+**Backfill:** every existing work order gets `posted_at = created_at`. That is what each
+of them is today — anything scheduled is on the board. Gating the board on a new column
+without the backfill would empty it (the "gate change needs backfill" rule).
 
 ### Switching modes
 
 Warn, record, allow — never delete.
 
-- **Away from `members` or `open`** with live signups: say how many people are on it,
-  then cancel their signups so they are notified the way a cancelled shift notifies them.
-- **Away from `contractor`** with a `booked` engagement: say so, then leave the
+- **Away from Members or Open** with live signups: say how many people are on it, then
+  cancel their signups so they are notified the way a cancelled shift notifies them.
+- **Open → Members** keeps the signups and clears `posted_at`: the people stay, the
+  board listing goes.
+- **Away from Contractor** with a `booked` engagement: say so, then leave the
   engagement as it is. Calling off a contractor is a phone call, and the engagement's
-  own Cancel records it; this switch does not do it silently.
+  own Cancel records it; this switch does not do it silently. Because a live engagement
+  _is_ the Contractor mode, switching away first asks to cancel or decline it — the
+  warning, then the engagement's own Cancel, in one step.
+- **To Contractor** clears `posted_at`.
 - Each switch writes an audit entry (below).
 
 ### Status
@@ -129,7 +154,7 @@ work_order
 
 ### Progress
 
-Done work orders over live ones — every assignment mode counts, cancelled ones do not.
+Done work orders over live ones — every mode counts, cancelled ones do not.
 This settles the progress question left open in [project-spec.md](project-spec.md).
 Duties do not count toward the project's figure; they show as `2/3` on their own row.
 
@@ -173,22 +198,22 @@ Expand, backfill, contract, in separate PRs:
 
 1. **Expand:** add `contractor_job.work_order_id` nullable.
 2. **Backfill** (a custom migration): for each job, insert a work order with
-   `title = summary`, `asset_id`, `project_id`, `assignment = 'contractor'`,
+   `title = summary`, `asset_id`, `project_id`, `posted_at = null`,
    `volunteer_role_id = null`, `resolved_at = completed_at` when completed,
    `cancelled_at = updated_at` when cancelled, `created_by_user_id =
 requested_by_user_id`; point the job at it; map the statuses.
 3. **Contract**, once nothing reads them: `work_order_id` NOT NULL; drop `summary`,
    `asset_id`, `project_id`, `completed_at`.
 
-Verify with `pnpm db:reset` and a row count of jobs against `assignment = 'contractor'`
-work orders. Production D1 is canonical — the backfill must be idempotent and checked
+Verify with `pnpm db:reset` and a row count of jobs against work orders with no role,
+no posting and a live engagement. Production D1 is canonical — the backfill must be idempotent and checked
 against a read-only count before and after.
 
 ## Null-role safety
 
 These inner-join `volunteer_role` on `work_order.volunteer_role_id` and would silently
 drop contractor and unassigned work orders. They become left joins, or filter to
-`assignment in ('members','open')` where only volunteer work belongs:
+to work orders with a role where only volunteer work belongs:
 
 - `shiftRowsQuery`, work-order-service.ts:515 — the staff list, queue and detail.
   **Must** become a left join.
@@ -271,14 +296,15 @@ filters Open (`asked`, `booked`), Late, Awaiting invoice (completed, no cost, no
 donated) and All, each row linking to its work order. `/staff/contractors/jobs/[id]`
 redirects to the work order page, which gains a Contractor card listing its
 engagements. Creating a job from the contractor page creates a work order with
-`assignment = 'contractor'` and its first engagement.
+no role, no posting, and its first engagement.
 
 ## Phases
 
 All staff-facing, so each phase goes straight to `main`.
 
-1. **Schema, expand.** Nullable `volunteer_role_id` and its CHECK, `assignment` with the
-   `open` backfill, `project_section`, `section_id`, `sort_order`,
+1. **Schema, expand.** Nullable `volunteer_role_id` and its CHECK, `posted_at` and
+   `posted_by_user_id` with the `posted_at = created_at` backfill, `project_section`,
+   `section_id`, `sort_order`,
    `duty_list_item.section`, `contractor_job.work_order_id`. Seed: sections on the
    facility project, one task per assignment mode, a contractor engagement on a task.
 2. **Engagement backfill.** The custom migration above, the status rename, and
