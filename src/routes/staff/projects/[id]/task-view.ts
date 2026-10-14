@@ -1,5 +1,8 @@
 import type { getProjectDetail } from '$lib/remote/projects.remote';
-import { contractorJobStatusLabels } from '$lib/config';
+import {
+	contractorJobStatusLabels,
+	contractorJobStatusesWithoutSpend as WITHOUT_SPEND
+} from '$lib/config';
 import { formatCents, formatDateShort, formatDateTimeShort, formatTime } from '$lib/utils/format';
 
 /** Pure reading of the task list, kept out of the components so it can be tested. */
@@ -89,7 +92,7 @@ export function whenOf(t: Pick<Task, 'startsAt' | 'endsAt' | 'dueAt'>): When {
 /** A contractor's money on the row: the invoice, else donated, else the quote. */
 export function costOf(t: Pick<Task, 'engagement'>): string {
 	const e = t.engagement;
-	if (!e || e.status === 'declined' || e.status === 'cancelled') return '';
+	if (!e || (WITHOUT_SPEND as readonly string[]).includes(e.status)) return '';
 	if (e.costCents !== null) return formatCents(e.costCents);
 	if (e.isDonated) return 'Donated';
 	if (e.quotedCents !== null) return `~${formatCents(e.quotedCents)}`;
