@@ -72,7 +72,8 @@ const contractorFields = {
 
 const jobFields = {
 	contractorId: z.uuid(),
-	summary: z.string().min(1).max(300),
+	/** The work order's title: a job made here creates its work order. */
+	title: z.string().min(1).max(300),
 	// `''` rather than a bare `.optional()`: the "Building work — no unit" option
 	// submits an empty string, and `.optional()` rejects that instead of
 	// ignoring it, which fails the whole submit rather than the one field.
@@ -227,17 +228,18 @@ export const archiveContractorForm = form(
 // ---------------------------------------------------------------------------
 
 export const createJobForm = form(z.object(jobFields), async (raw) => {
-	await requireCapability('contractor.manage');
+	const actor = await requireCapability('contractor.manage');
 	const data = raw as z.infer<z.ZodObject<typeof jobFields>>;
 	try {
 		const job = await createJob({
 			contractorId: data.contractorId,
-			summary: data.summary,
+			title: data.title,
 			assetId: data.assetId || null,
 			scheduledFor: calendarDate(data.scheduledFor) ?? null,
 			expectedBackAt: calendarDate(data.expectedBackAt) ?? null,
 			quotedCents: data.quotedCents ?? null,
-			notes: data.notes ?? null
+			notes: data.notes ?? null,
+			requestedByUserId: actor.id
 		});
 		void getJobsPage().refresh();
 		if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
@@ -254,12 +256,13 @@ export const scheduleJobForm = form(
 		expectedBackAt: optionalDate
 	}),
 	async (raw) => {
-		await requireCapability('contractor.manage');
+		const actor = await requireCapability('contractor.manage');
 		const data = raw as { id: string; scheduledFor?: string; expectedBackAt?: string };
 		try {
 			const job = await scheduleJob(data.id, {
 				scheduledFor: calendarDate(data.scheduledFor),
-				expectedBackAt: calendarDate(data.expectedBackAt)
+				expectedBackAt: calendarDate(data.expectedBackAt),
+				actorId: actor.id
 			});
 			void getJobDetail(data.id).refresh();
 			void getJobsPage().refresh();
@@ -288,7 +291,7 @@ export const completeJobForm = form(
 		fairValueBasis: optionalText
 	}),
 	async (raw) => {
-		await requireCapability('contractor.manage');
+		const actor = await requireCapability('contractor.manage');
 		const data = raw as {
 			id: string;
 			completedAt?: string;
@@ -307,7 +310,8 @@ export const completeJobForm = form(
 				returnToService: !data.leaveOutOfService,
 				isDonated: data.isDonated,
 				fairValueCents: data.fairValueCents ?? null,
-				fairValueBasis: data.fairValueBasis ?? null
+				fairValueBasis: data.fairValueBasis ?? null,
+				actorId: actor.id
 			});
 			void getJobDetail(data.id).refresh();
 			void getJobsPage().refresh();

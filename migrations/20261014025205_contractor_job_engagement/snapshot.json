@@ -1,10 +1,10 @@
 {
-  "id": "f7522572-8adc-462e-a739-43ad8e5a0878",
-  "prevIds": [
-    "0f584eb5-76b8-4a48-aba0-dd89db9a2376"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "40c2e8e3-da7d-45b2-87ee-0ee0405e4cd6",
+  "prevIds": [
+    "f7522572-8adc-462e-a739-43ad8e5a0878"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -10806,7 +10806,7 @@
       "type": "text",
       "notNull": true,
       "autoincrement": false,
-      "default": "'draft'",
+      "default": "'asked'",
       "generated": null,
       "name": "status",
       "entityType": "columns",
@@ -10815,36 +10815,6 @@
     {
       "type": "text",
       "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "summary",
-      "entityType": "columns",
-      "table": "contractor_job"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "asset_id",
-      "entityType": "columns",
-      "table": "contractor_job"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "project_id",
-      "entityType": "columns",
-      "table": "contractor_job"
-    },
-    {
-      "type": "text",
-      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -17624,36 +17594,6 @@
     },
     {
       "columns": [
-        "asset_id"
-      ],
-      "tableTo": "inventory_asset",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_contractor_job_asset_id_inventory_asset_id_fk",
-      "entityType": "fks",
-      "table": "contractor_job"
-    },
-    {
-      "columns": [
-        "project_id"
-      ],
-      "tableTo": "project",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_contractor_job_project_id_project_id_fk",
-      "entityType": "fks",
-      "table": "contractor_job"
-    },
-    {
-      "columns": [
         "work_order_id"
       ],
       "tableTo": "work_order",
@@ -23119,34 +23059,6 @@
     {
       "columns": [
         {
-          "value": "asset_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_contractor_job_asset",
-      "entityType": "indexes",
-      "table": "contractor_job"
-    },
-    {
-      "columns": [
-        {
-          "value": "project_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_contractor_job_project",
-      "entityType": "indexes",
-      "table": "contractor_job"
-    },
-    {
-      "columns": [
-        {
           "value": "work_order_id",
           "isExpression": false
         }
@@ -23180,7 +23092,7 @@
         }
       ],
       "isUnique": false,
-      "where": "status = 'scheduled'",
+      "where": "status = 'booked'",
       "origin": "manual",
       "name": "idx_contractor_job_overdue",
       "entityType": "indexes",

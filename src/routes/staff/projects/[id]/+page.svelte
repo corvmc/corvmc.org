@@ -81,11 +81,13 @@
 
 	/** Contractor jobs, orders and acquisitions share one table; the kind is the subline. */
 	const otherWork = $derived([
+		// A job is on the project through its work order, so detaching it detaches that.
 		...data.attachments.jobs.map((job) => ({
-			kind: 'contractor_job',
+			kind: 'work_order',
 			kindLabel: 'Contractor job',
 			id: job.id,
-			label: job.summary,
+			detachId: job.workOrderId,
+			label: job.title,
 			href: resolve(`/staff/contractors/jobs/${job.id}`),
 			status: job.status as string | null,
 			date: job.completedAt ?? job.scheduledFor,
@@ -95,6 +97,7 @@
 			kind: 'purchase_order',
 			kindLabel: order.reference ? `Purchase order ${order.reference}` : 'Purchase order',
 			id: order.id,
+			detachId: order.id,
 			label: order.supplierName ?? 'Order',
 			href: resolve(`/staff/inventory/orders/${order.id}`),
 			status: order.status as string | null,
@@ -105,6 +108,7 @@
 			kind: 'acquisition',
 			kindLabel: 'Acquisition',
 			id: acq.id,
+			detachId: acq.id,
 			label: acq.sourceName ?? acq.kind,
 			href: resolve(`/staff/inventory/acquisitions/${acq.id}`),
 			status: null,
@@ -122,7 +126,6 @@
 
 	const attachKinds = [
 		{ value: 'work_order', label: 'Work order' },
-		{ value: 'contractor_job', label: 'Contractor job' },
 		{ value: 'purchase_order', label: 'Purchase order' },
 		{ value: 'acquisition', label: 'Acquisition' },
 		{ value: 'event_listing', label: 'Event' }
@@ -451,14 +454,14 @@
 							{row.date ? formatDateShort(row.date) : '—'}
 						</td>
 						<td class="cell-num">{row.amount}</td>
-						<td class="w-px">{@render detach(row.kind, row.id, row.label)}</td>
+						<td class="w-px">{@render detach(row.kind, row.detachId, row.label)}</td>
 					</tr>
 				{/each}
 			</Table>
 		{:else}
 			<EmptyState
 				title="No other work attached"
-				description="Attach a contractor job, an order or an acquisition, and its cost joins this project's burn."
+				description="Attach an order or an acquisition, or a work order a contractor is engaged on, and its cost joins this project's burn."
 			/>
 		{/if}
 	</InfoCard>

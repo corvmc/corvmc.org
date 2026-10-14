@@ -2,8 +2,9 @@
 
 > ## Status
 >
-> **Not built.** Tracking issue #1806. Design settled in conversation with the owner on
-> 2026-10-13, against a canvas mockup of the project page. Nothing here is on `main` yet.
+> **In progress.** Tracking issue #1806. Design settled in conversation with the owner on
+> 2026-10-13, against a canvas mockup of the project page. Phase 1 (#1896) and Phase 2
+> (the engagement reshape) are built; Phases 3–7 are not.
 
 ## Purpose
 
@@ -126,7 +127,9 @@ both. Where the window ends after the due date, the list flags it.
 Ticking a task sets `resolved_at` — except where the task has a `done_when`, below. It
 does **not** complete a contractor engagement: "done" and "invoiced" are different
 facts, and the row reads "Awaiting invoice" until the engagement catches up. Completing
-the engagement does tick the task.
+the engagement does tick the task: `completeJob` calls `resolveWorkOrder`, so the
+equipment reports the task answered close with it. A task already ticked, or called
+off, is left as it is.
 
 ### Derived completion
 
@@ -224,11 +227,16 @@ person's place on one.
   e2e locators).
 - **Late** stays derived: `booked` and `expected_back_at < now`.
 - **Equipment side effects stay on the engagement.** Booking a repair takes the unit out
-  of service and completing it brings it back (`scheduleJob`/`completeJob`,
-  contractor-job-service.ts:72, :112). The asset now comes from the work order.
+  of service and completing it brings it back (`scheduleJob`/`completeJob` in
+  contractor-job-service.ts). The asset now comes from the work order.
 - **Money stays here and keeps its rules:** donated work carries `fair_value_cents` and
   never `cost_cents`; `recordCompletedJob` writes the ledger entry. Project burn reads it
-  through the work order's `project_id` instead of the job's.
+  through the work order's `project_id` instead of the job's, and leaves out `declined`
+  and `cancelled` engagements, whose quotes and costs are nobody's spend.
+- **Terminal:** `completed`, `cancelled`, `declined` and `no_show`. A contractor who
+  declined or did not show is asked again as a new engagement.
+- **Not attachable.** `contractor_job` left `attachToProject`'s map: it is on a project
+  only through its work order, and detaching it from one detaches the work order.
 
 **Moved to the work order and dropped from `contractor_job`:** `summary` (→ `title`),
 `asset_id`, `project_id`. **`completed_at` stays:** it is when the contractor finished

@@ -22,7 +22,7 @@
 	 * The work queue.
 	 *
 	 * Overdue is called out above the table rather than sorted to the top of it,
-	 * for the reason the table cannot express: late is derived — `scheduled` with
+	 * for the reason the table cannot express: late is derived — `booked` with
 	 * a date behind us — so there is no column to sort by that stays true without
 	 * something maintaining it.
 	 */
@@ -33,7 +33,7 @@
 	const now = new Date();
 
 	const isLate = (job: { status: string; expectedBackAt: Date | null }) =>
-		job.status === 'scheduled' && job.expectedBackAt != null && job.expectedBackAt < now;
+		job.status === 'booked' && job.expectedBackAt != null && job.expectedBackAt < now;
 </script>
 
 <PageHeader title="Contractor jobs" subtitle="Space" backHref="/staff/contractors">
@@ -47,7 +47,7 @@
 				options={contractorOptions}
 			/>
 			<Field
-				field={fields.summary}
+				field={fields.title}
 				type="text"
 				label="What needs doing"
 				description="One line — “Retube the Bassman”, “Replace the breaker panel”."
@@ -73,7 +73,7 @@
 			{#each data.overdue as row (row.job.id)}
 				<div>
 					<a class="link font-medium" href={resolve(`/staff/contractors/jobs/${row.job.id}`)}>
-						{row.job.summary}
+						{row.job.title}
 					</a>
 					— {row.contractor.name}, promised back
 					{row.job.expectedBackAt ? formatDateShort(row.job.expectedBackAt) : '—'}
@@ -100,7 +100,7 @@
 				<tr class="hover">
 					<td class="cell-primary">
 						<a class="link font-medium" href={resolve(`/staff/contractors/jobs/${row.job.id}`)}>
-							{row.job.summary}
+							{row.job.title}
 						</a>
 						<div class="text-subtle">
 							{#if row.itemName}

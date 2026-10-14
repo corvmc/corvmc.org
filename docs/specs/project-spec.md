@@ -121,7 +121,8 @@ pointing at `event.id`. No polymorphism is introduced.
 ### Nullable `projectId`, added to
 
 - `work_order` — work orders
-- `contractor_job` — the electrician, finally attached to something
+- `contractor_job` — the electrician, finally attached to something (since moved: a job
+  reaches a project through its work order, `work-orders-as-tasks-spec.md`)
 - `purchase_order` and `acquisition` — what the project spent
 - `event` — many-to-one; a band gig has none
 

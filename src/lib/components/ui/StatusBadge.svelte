@@ -138,6 +138,10 @@
 		sent: 'badge-success',
 		// Ballots: a certified result is final and published.
 		certified: 'badge-success',
+		// Contractor engagements; `declined`, `completed`, `cancelled` and
+		// `no_show` are shared. Asked is owed by the contractor.
+		asked: 'badge-warning',
+		booked: 'badge-info',
 		// Platform invites
 		accepted: 'badge-success',
 		revoked: 'badge-error',
@@ -255,6 +259,10 @@
 		sending: { icon: IconSend, color: 'text-info' },
 		sent: { icon: IconMailCheck, color: 'text-success' },
 		certified: { icon: IconCircleCheckFilled, color: 'text-success' },
+
+		// Contractor engagements; the other four are shared and mean the same.
+		asked: { icon: IconSend, color: 'text-warning' },
+		booked: { icon: IconCalendarEvent, color: 'text-info' },
 
 		// Platform invite statuses
 		accepted: { icon: IconCircleCheck, color: 'text-success' },

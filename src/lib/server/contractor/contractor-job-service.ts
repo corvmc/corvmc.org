@@ -1,16 +1,20 @@
 import { recordCompletedJob } from '$lib/server/finance/contractor-entries';
 import { db } from '$lib/server/db';
 import { contractor, contractorJob } from '$lib/server/db/schema/contractor';
+import type { ContractorJob } from '$lib/server/db/schema/contractor';
 import { inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
+import { volunteerRole, workOrder } from '$lib/server/db/schema/volunteer';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { setAssetStatus } from '$lib/server/inventory/asset-service';
+import { resolveWorkOrder } from '$lib/server/volunteer/work-order-service';
 import { getContractorById } from './contractor-service';
 import type { ContractorJobStatus } from '$lib/config';
 
 /**
- * One engagement with a contractor, from "we should call somebody" to the
- * invoice.
+ * One contractor's engagement on a work order, from "we asked them" to the
+ * invoice. What the work is — title, unit, project — is read off the work
+ * order; every read here returns it flattened onto the engagement.
  *
  * **Custody is never written here.** A unit going to the shop and coming back is
  * a change of asset status, and `setAssetStatus` is the single writer of the
@@ -34,13 +38,44 @@ export class ContractorJobStateError extends DomainError {
 	}
 }
 
-const TERMINAL: ContractorJobStatus[] = ['completed', 'cancelled'];
+/** Statuses an engagement does not leave. */
+const TERMINAL: ContractorJobStatus[] = ['completed', 'cancelled', 'declined', 'no_show'];
+
+/** The engagement with its work order's fields beside it, as every read returns it. */
+const engagementSelect = {
+	job: contractorJob,
+	// A work order's own title, else its role's: one made here always has a title.
+	title: sql<string>`coalesce(${workOrder.title}, ${volunteerRole.name}, 'Work order')`,
+	assetId: workOrder.assetId,
+	projectId: workOrder.projectId,
+	workOrderResolvedAt: workOrder.resolvedAt,
+	workOrderCancelledAt: workOrder.cancelledAt
+};
+
+interface EngagementRow {
+	job: ContractorJob;
+	title: string;
+	assetId: string | null;
+	projectId: string | null;
+	workOrderResolvedAt: Date | null;
+	workOrderCancelledAt: Date | null;
+}
+
+export type Engagement = ContractorJob & Omit<EngagementRow, 'job'>;
+
+function flatten({ job, ...wo }: EngagementRow): Engagement {
+	return { ...job, ...wo };
+}
 
 export interface CreateJobInput {
 	contractorId: string;
-	summary: string;
+	/** Engage them on work that already exists. Otherwise a work order is made. */
+	workOrderId?: string | null;
+	/** The new work order's title. Required when `workOrderId` is absent. */
+	title?: string | null;
 	/** The unit being worked on. Omitted for building work. */
 	assetId?: string | null;
+	projectId?: string | null;
 	scheduledFor?: Date | null;
 	expectedBackAt?: Date | null;
 	quotedCents?: number | null;
@@ -48,17 +83,66 @@ export interface CreateJobInput {
 	requestedByUserId?: string | null;
 }
 
-export async function createJob(data: CreateJobInput) {
-	// Validates the contractor exists, and refuses to hang a new job off someone
-	// who has been retired — archiving is meant to stop new work, not just tidy
-	// the picker.
+/**
+ * Engage a contractor. Without a `workOrderId` this also creates the work order
+ * — no role, not posted to the claim board — in the same batch, so there is
+ * never an engagement without its task or a task made for nobody.
+ */
+export async function createJob(data: CreateJobInput): Promise<Engagement> {
+	// Archiving is meant to stop new work, not just tidy the picker.
 	const who = await getContractorById(data.contractorId);
 	if (who.archivedAt) {
 		throw new ContractorJobStateError('That contractor has been archived');
 	}
 
-	const [row] = await db.insert(contractorJob).values(data).returning();
-	return row;
+	const engagement = {
+		contractorId: data.contractorId,
+		scheduledFor: data.scheduledFor ?? null,
+		expectedBackAt: data.expectedBackAt ?? null,
+		quotedCents: data.quotedCents ?? null,
+		notes: data.notes ?? null,
+		requestedByUserId: data.requestedByUserId ?? null
+	};
+
+	if (data.workOrderId) {
+		const [wo] = await db
+			.select({
+				id: workOrder.id,
+				resolvedAt: workOrder.resolvedAt,
+				cancelledAt: workOrder.cancelledAt
+			})
+			.from(workOrder)
+			.where(eq(workOrder.id, data.workOrderId))
+			.limit(1);
+		if (!wo) throw new ContractorJobStateError('That work order does not exist');
+		if (wo.cancelledAt) throw new ContractorJobStateError('That work order was called off');
+		if (wo.resolvedAt) throw new ContractorJobStateError('That work order is already done');
+
+		const [row] = await db
+			.insert(contractorJob)
+			.values({ ...engagement, workOrderId: wo.id })
+			.returning();
+		return getJobById(row.id);
+	}
+
+	const title = data.title?.trim();
+	if (!title) throw new ContractorJobStateError('Say what the work is');
+
+	const workOrderId = crypto.randomUUID();
+	const jobId = crypto.randomUUID();
+	await db.batch([
+		db.insert(workOrder).values({
+			id: workOrderId,
+			title,
+			assetId: data.assetId ?? null,
+			projectId: data.projectId ?? null,
+			volunteerRoleId: null,
+			postedAt: null,
+			createdByUserId: data.requestedByUserId ?? null
+		}),
+		db.insert(contractorJob).values({ ...engagement, id: jobId, workOrderId })
+	]);
+	return getJobById(jobId);
 }
 
 /**
@@ -75,13 +159,13 @@ export async function scheduleJob(
 ) {
 	const job = await getJobById(id);
 	if (TERMINAL.includes(job.status)) {
-		throw new ContractorJobStateError(`A ${job.status} job cannot be scheduled`);
+		throw new ContractorJobStateError(`A ${job.status} job cannot be booked`);
 	}
 
 	const [row] = await db
 		.update(contractorJob)
 		.set({
-			status: 'scheduled',
+			status: 'booked',
 			scheduledFor: opts.scheduledFor ?? job.scheduledFor,
 			expectedBackAt: opts.expectedBackAt ?? job.expectedBackAt,
 			updatedAt: new Date()
@@ -93,17 +177,22 @@ export async function scheduleJob(
 		const asset = await assetStatusOf(job.assetId);
 		if (asset === 'in_service') {
 			await setAssetStatus(job.assetId, 'maintenance', {
-				notes: `Out for repair: ${job.summary}`,
+				notes: `Out for repair: ${job.title}`,
 				actorId: opts.actorId
 			});
 		}
 	}
 
-	return row;
+	return { ...job, ...row };
 }
 
 /**
- * The work is done, and usually the invoice is in.
+ * The contractor's work is done, and usually the invoice is in.
+ *
+ * Completing the engagement resolves its work order, through
+ * `resolveWorkOrder` so the reports it answered close with it; resolving the
+ * work order never completes an engagement. A work order already resolved or
+ * called off is left as it is.
  *
  * Bringing the unit back is conditional on it still being in `maintenance`: if
  * somebody already put it back by hand, or it was retired as beyond repair while
@@ -122,8 +211,9 @@ export async function completeJob(
 		isDonated?: boolean;
 		fairValueCents?: number | null;
 		fairValueBasis?: string | null;
-		actorId?: string;
-	} = {}
+		/** Who recorded it. Also who resolved the work order, when this does. */
+		actorId: string;
+	}
 ) {
 	const job = await getJobById(id);
 	if (TERMINAL.includes(job.status)) {
@@ -163,8 +253,8 @@ export async function completeJob(
 
 	await recordCompletedJob({
 		jobId: row.id,
-		summary: job.summary,
-		projectId: row.projectId,
+		title: job.title,
+		projectId: job.projectId,
 		occurredAt: row.completedAt ?? now,
 		costCents: row.costCents,
 		isDonated: row.isDonated,
@@ -175,13 +265,17 @@ export async function completeJob(
 		const asset = await assetStatusOf(job.assetId);
 		if (asset === 'maintenance') {
 			await setAssetStatus(job.assetId, 'in_service', {
-				notes: `Back from repair: ${job.summary}`,
+				notes: `Back from repair: ${job.title}`,
 				actorId: opts.actorId
 			});
 		}
 	}
 
-	return row;
+	if (!job.workOrderResolvedAt && !job.workOrderCancelledAt) {
+		await resolveWorkOrder(job.workOrderId, { resolvedByUserId: opts.actorId });
+	}
+
+	return { ...job, ...row };
 }
 
 /**
@@ -204,7 +298,7 @@ export async function cancelJob(id: string) {
 		.where(eq(contractorJob.id, id))
 		.returning();
 
-	return row;
+	return { ...job, ...row };
 }
 
 /** The invoice, arriving after the work — the common order of events. */
@@ -229,75 +323,101 @@ export async function recordInvoice(
 		.where(eq(contractorJob.id, id))
 		.returning();
 
-	return row;
+	return { ...job, ...row };
 }
 
-export async function getJobById(id: string) {
-	const [row] = await db.select().from(contractorJob).where(eq(contractorJob.id, id)).limit(1);
+export async function getJobById(id: string): Promise<Engagement> {
+	const [row] = await db
+		.select(engagementSelect)
+		.from(contractorJob)
+		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
+		.leftJoin(volunteerRole, eq(workOrder.volunteerRoleId, volunteerRole.id))
+		.where(eq(contractorJob.id, id))
+		.limit(1);
 	if (!row) throw new ContractorJobNotFoundError();
-	return row;
+	return flatten(row);
 }
 
 // ---------------------------------------------------------------------------
 // Reads
 // ---------------------------------------------------------------------------
 
-/** One row per job, with the contractor and the unit it is about already joined on. */
+/** One row per engagement, with the contractor and the unit already joined on. */
 function jobRowQuery() {
 	return db
 		.select({
-			job: contractorJob,
+			...engagementSelect,
 			contractor,
 			assetTag: inventoryAsset.assetTag,
 			itemName: inventoryItem.name
 		})
 		.from(contractorJob)
+		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
+		.leftJoin(volunteerRole, eq(workOrder.volunteerRoleId, volunteerRole.id))
 		.innerJoin(contractor, eq(contractorJob.contractorId, contractor.id))
-		.leftJoin(inventoryAsset, eq(contractorJob.assetId, inventoryAsset.id))
+		.leftJoin(inventoryAsset, eq(workOrder.assetId, inventoryAsset.id))
 		.leftJoin(inventoryItem, eq(inventoryAsset.itemId, inventoryItem.id));
+}
+
+type JobRow = EngagementRow & {
+	contractor: typeof contractor.$inferSelect;
+	assetTag: string | null;
+	itemName: string | null;
+};
+
+function toJobRow({ contractor: who, assetTag, itemName, ...engagement }: JobRow) {
+	return { job: flatten(engagement), contractor: who, assetTag, itemName };
 }
 
 export async function listJobs(
 	opts: { status?: ContractorJobStatus; contractorId?: string; assetId?: string } = {}
 ) {
-	return jobRowQuery()
+	const rows = await jobRowQuery()
 		.where(
 			and(
 				opts.status ? eq(contractorJob.status, opts.status) : undefined,
 				opts.contractorId ? eq(contractorJob.contractorId, opts.contractorId) : undefined,
-				opts.assetId ? eq(contractorJob.assetId, opts.assetId) : undefined
+				opts.assetId ? eq(workOrder.assetId, opts.assetId) : undefined
 			)
 		)
 		.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id));
+	return rows.map(toJobRow);
 }
 
 /**
- * Out with somebody and past the date they promised.
+ * Booked and past the date they promised.
  *
- * Derived, not stored — the same call `listLateOrders` makes, and for the same
- * reason: an `overdue` status would need something to come along and set it, and
- * the day that something fails is the day the list quietly empties.
+ * Derived, not stored — the same call `listLateOrders` makes: an `overdue`
+ * status would need something to come along and set it, and the day that
+ * something fails is the day the list quietly empties.
  */
 export async function listOverdueJobs(now: Date = new Date()) {
-	return jobRowQuery()
+	const rows = await jobRowQuery()
 		.where(
 			and(
-				eq(contractorJob.status, 'scheduled'),
+				eq(contractorJob.status, 'booked'),
 				sql`${contractorJob.expectedBackAt} is not null`,
 				sql`${contractorJob.expectedBackAt} < ${Math.floor(now.getTime() / 1000)}`
 			)
 		)
 		.orderBy(asc(contractorJob.expectedBackAt));
+	return rows.map(toJobRow);
 }
 
 /** This unit's service history, newest first. Drives the asset page's panel. */
 export async function jobsForAsset(assetId: string) {
-	return db
-		.select({ job: contractorJob, contractor })
+	const rows = await db
+		.select({ ...engagementSelect, contractor })
 		.from(contractorJob)
+		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
+		.leftJoin(volunteerRole, eq(workOrder.volunteerRoleId, volunteerRole.id))
 		.innerJoin(contractor, eq(contractorJob.contractorId, contractor.id))
-		.where(eq(contractorJob.assetId, assetId))
+		.where(eq(workOrder.assetId, assetId))
 		.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id));
+	return rows.map(({ contractor: who, ...engagement }) => ({
+		job: flatten(engagement),
+		contractor: who
+	}));
 }
 
 /**

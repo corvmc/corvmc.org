@@ -38,20 +38,20 @@
 	const cancelFields = cancelJobForm.fields;
 	const invoiceFields = recordInvoiceForm.fields;
 
-	const open = $derived(job.status === 'draft' || job.status === 'scheduled');
+	const open = $derived(job.status === 'asked' || job.status === 'booked');
 	const contractorName = $derived(
 		data.contractors.find((c) => c.id === job.contractorId)?.name ?? 'Unknown'
 	);
 	const isLate = $derived(
-		job.status === 'scheduled' && job.expectedBackAt != null && job.expectedBackAt < new Date()
+		job.status === 'booked' && job.expectedBackAt != null && job.expectedBackAt < new Date()
 	);
 </script>
 
-<PageHeader title={job.summary} subtitle={contractorName} backHref="/staff/contractors/jobs">
+<PageHeader title={job.title} subtitle={contractorName} backHref="/staff/contractors/jobs">
 	{#if open}
 		<Action
 			action={scheduleJobForm}
-			label={job.status === 'scheduled' ? 'Reschedule' : 'Schedule'}
+			label={job.status === 'booked' ? 'Reschedule' : 'Schedule'}
 			size="sm"
 			modalTitle="Schedule"
 			successToast="Scheduled"
@@ -60,7 +60,7 @@
 				<input {...scheduleFields.id.as('hidden', job.id)} />
 				<Field field={scheduleFields.scheduledFor} type="date" label="When they come" />
 				<Field field={scheduleFields.expectedBackAt} type="date" label="Promised back" />
-				{#if job.assetId && job.status !== 'scheduled'}
+				{#if job.assetId && job.status !== 'booked'}
 					<p class="text-subtle text-sm">
 						This takes the unit out of service and writes a repair movement against it.
 					</p>
@@ -77,6 +77,9 @@
 		>
 			{#snippet form()}
 				<input {...completeFields.id.as('hidden', job.id)} />
+				{#if !job.workOrderResolvedAt && !job.workOrderCancelledAt}
+					<p class="text-subtle text-sm">This also marks the work order done.</p>
+				{/if}
 				<Field field={completeFields.completedAt} type="date" label="Finished" />
 				<MoneyField field={completeFields.costCents} label="Cost" value={job.costCents} />
 				<Field

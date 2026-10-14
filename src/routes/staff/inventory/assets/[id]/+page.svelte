@@ -230,7 +230,7 @@
 						</td>
 						<td class="cell-primary">
 							<a class="link" href={resolve(`/staff/contractors/jobs/${row.job.id}`)}>
-								{row.job.summary}
+								{row.job.title}
 							</a>
 							<Badge
 								variant={contractorJobStatusBadge[row.job.status as ContractorJobStatus]}

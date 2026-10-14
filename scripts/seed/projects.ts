@@ -137,29 +137,20 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 	);
 
 	// The electrician's subpanel job — the building work whose orphan status is
-	// the reason this table exists. It answers its own work order: no role, no
-	// posting, done when the job was, which is what the Contractor mode reads.
-	const [subpanel] = await db
-		.select({ id: contractorJob.id, completedAt: contractorJob.completedAt })
-		.from(contractorJob)
-		.where(sql`${contractorJob.summary} like 'Add a dedicated circuit%'`)
+	// the reason this table exists. `seedContractors` made its work order (no
+	// role, no posting, resolved when the job was); this files it under the
+	// project, which is what puts the job's cost in the burn.
+	const [circuitTask] = await db
+		.select({ id: workOrder.id })
+		.from(workOrder)
+		.innerJoin(contractorJob, eq(contractorJob.workOrderId, workOrder.id))
+		.where(sql`${workOrder.title} like 'Add a dedicated circuit%'`)
 		.limit(1);
-	if (subpanel) {
-		const circuitTask = randomUUID();
-		await db.insert(workOrder).values({
-			id: circuitTask,
-			title: 'Add a dedicated circuit for the stage subpanel',
-			projectId: ids.facility,
-			sectionId: section.electrical,
-			sortOrder: 0,
-			resolvedAt: subpanel.completedAt,
-			resolvedByUserId: subpanel.completedAt ? staffId : null,
-			createdByUserId: staffId
-		});
+	if (circuitTask) {
 		await db
-			.update(contractorJob)
-			.set({ projectId: ids.facility, workOrderId: circuitTask })
-			.where(eq(contractorJob.id, subpanel.id));
+			.update(workOrder)
+			.set({ projectId: ids.facility, sectionId: section.electrical, sortOrder: 0 })
+			.where(eq(workOrder.id, circuitTask.id));
 	}
 
 	// Unassigned: no role, no posting, nobody on it — a task just typed into the
