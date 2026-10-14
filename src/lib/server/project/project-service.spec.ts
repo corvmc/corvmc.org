@@ -65,6 +65,11 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
+const recordAuditEntry = vi.fn(async (..._a: unknown[]) => undefined);
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
+}));
+
 const {
 	createProject,
 	updateProject,
@@ -82,6 +87,7 @@ const {
 } = await import('./project-service');
 
 beforeEach(() => {
+	recordAuditEntry.mockClear();
 	selectResults = [];
 	updateValues = [];
 	insertValues = [];
@@ -393,5 +399,39 @@ describe('getEventProject', () => {
 	it('returns null for an event that does not exist', async () => {
 		selectResults = [[]];
 		expect(await getEventProject('gone')).toBeNull();
+	});
+});
+
+describe("the project's log", () => {
+	// Noon on Sep 14 in Corvallis; the form re-anchors a date at noon, so the same day is no edit.
+	const STARTS = new Date('2026-09-14T19:00:00Z');
+
+	it('names the fields an edit changed, and not a date moved within its day', async () => {
+		selectResults = [
+			PROJECT({ name: 'Old', startsAt: new Date('2026-09-14T16:00:00Z'), budgetCents: 100 }),
+			[],
+			PROJECT({ name: 'New' })
+		];
+
+		await updateProject('proj-1', { name: 'New', startsAt: STARTS, budgetCents: 100 });
+
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'project.edited',
+			subject: { type: 'project', id: 'proj-1', label: 'New' },
+			details: { fields: ['name'] }
+		});
+	});
+
+	it('records a status move, and whether the suggestion moved with it', async () => {
+		selectResults = [PROJECT({ suggestionId: 's-1', name: 'Paint' }), PROJECT({ status: 'done' })];
+
+		await setProjectStatus('proj-1', 'done');
+
+		expect(recordAuditEntry).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: 'project.status_changed',
+				details: { from: 'open', to: 'done', suggestionMoved: true }
+			})
+		);
 	});
 });

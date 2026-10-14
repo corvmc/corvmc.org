@@ -122,7 +122,7 @@ pointing at `event.id`. No polymorphism is introduced.
 
 - `work_order` — work orders
 - `contractor_job` — the electrician, finally attached to something (since moved: a job
-  reaches a project through its work order, `work-orders-as-tasks-spec.md`)
+  reaches a project through its work order, `shipped/work-orders-as-tasks-spec.md`)
 - `purchase_order` and `acquisition` — what the project spent
 - `event` — many-to-one; a band gig has none
 

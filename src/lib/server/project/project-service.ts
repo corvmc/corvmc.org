@@ -25,6 +25,7 @@ import {
 import { DomainError } from '$lib/server/domain-error';
 import {
 	contractorJobStatusesWithoutSpend,
+	DEFAULT_TIMEZONE,
 	valueOfMinutesCents,
 	type ProjectCommitteeRole,
 	type ProjectKind,
@@ -155,7 +156,9 @@ export function ownerRow(projectId: string, groupId: string) {
 		});
 }
 
-const time = (d: Date | null | undefined) => d?.getTime() ?? null;
+/** A project's dates are calendar days: the form re-anchors them at noon, which is not a change. */
+const day = (d: Date | null | undefined) =>
+	d ? new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(d) : null;
 
 /** The fields an edit changed, by name: values stay out of the log. */
 function changedFields(
@@ -171,8 +174,8 @@ function changedFields(
 	if (differs(data.suggestionId, before.suggestionId)) fields.push('suggestion');
 	if (differs(data.budgetCents, before.budgetCents)) fields.push('budget');
 	if (
-		differs(data.startsAt === undefined ? undefined : time(data.startsAt), time(before.startsAt)) ||
-		differs(data.endsAt === undefined ? undefined : time(data.endsAt), time(before.endsAt))
+		differs(data.startsAt === undefined ? undefined : day(data.startsAt), day(before.startsAt)) ||
+		differs(data.endsAt === undefined ? undefined : day(data.endsAt), day(before.endsAt))
 	)
 		fields.push('dates');
 	return fields;

@@ -13,7 +13,7 @@ import { contractorJobStatuses, contractorTrades } from '../../../config';
 // lives here rather than on `acquisition` or `purchase_order`.
 //
 // See `docs/specs/shipped/contractor-work-spec.md` and
-// `docs/specs/work-orders-as-tasks-spec.md`.
+// `docs/specs/shipped/work-orders-as-tasks-spec.md`.
 // ---------------------------------------------------------------------------
 
 /**
