@@ -46,10 +46,15 @@ test.describe('project task list', () => {
 	});
 
 	test('filters live in the URL', async ({ page }) => {
+		// Every seeded task is unassigned, so Contractors is the filter that hides them all.
+		await page.getByRole('tab', { name: 'Contractors' }).click();
+		await expect(page).toHaveURL(/show=contractors/);
+		await expect(page.getByRole('link', { name: SEED_TASK_UNASSIGNED })).toBeHidden();
+		await expect(page.getByText('Nothing here matches the filter.')).toBeVisible();
+
 		await page.getByRole('tab', { name: 'Unassigned' }).click();
 		await expect(page).toHaveURL(/show=unassigned/);
-		await expect(page.getByRole('link', { name: SEED_TASK_WITH_DUTIES })).toBeHidden();
-		await expect(page.getByRole('link', { name: SEED_TASK_UNASSIGNED })).toBeVisible();
+		await expect(page.getByRole('link', { name: SEED_TASK_WITH_DUTIES })).toBeVisible();
 
 		await page.getByRole('tab', { name: 'All' }).click();
 		await expect(page.getByRole('link', { name: SEED_TASK_DONE })).toBeVisible();
