@@ -321,6 +321,7 @@ describe('assigning members', () => {
 		vi.mocked(missingRequirements).mockResolvedValueOnce([{ id: 'c1', name: 'Forklift' }]);
 
 		const result = await tasks.assignMembers(PROJECT, 't', { userIds: [ADA] });
+		if (result.status !== 'done') throw new Error('expected an assignment, not a warning');
 
 		expect(result).toMatchObject({ assigned: [ADA], refused: [] });
 		expect(result.warned).toEqual([{ userId: ADA, warnings: [expect.stringMatching(/Forklift/)] }]);
