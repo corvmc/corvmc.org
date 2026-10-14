@@ -33,7 +33,6 @@
 		scope = $bindable('interested')
 	}: {
 		shiftId: string;
-		roleName: string;
 		/** Null for an unscheduled work order — clearance is judged as of today. */
 		startsAt: Date | null;
 		scope?: 'interested' | 'worked' | 'all';
