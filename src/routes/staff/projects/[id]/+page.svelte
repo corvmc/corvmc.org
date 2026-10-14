@@ -305,8 +305,7 @@
 		<ActivityCard
 			query={(limit) =>
 				getProjectActivity(limit ? { projectId: project.id, limit } : { projectId: project.id })}
-			taskHref={(taskId) =>
-				resolve('/staff/projects/[id]/tasks/[taskId]', { id: project.id, taskId })}
+			projectId={project.id}
 		/>
 	{:else}
 		<div class="flex items-start">

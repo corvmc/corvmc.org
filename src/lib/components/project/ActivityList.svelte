@@ -15,12 +15,12 @@
 	let {
 		query,
 		limit,
-		taskHref,
+		projectId,
 		onmore
 	}: {
 		query: (limit?: number) => RemoteQuery<ActivityPage>;
 		limit: number | undefined;
-		taskHref?: (taskId: string) => string;
+		projectId?: string;
 		onmore: (limit: number) => void;
 	} = $props();
 
@@ -52,8 +52,15 @@
 				</div>
 				<div class="text-muted text-xs">
 					{item.actorName} · {formatDateTimeShort(item.at)}
-					{#if item.task && taskHref}
-						· <a class="link" href={taskHref(item.task.id)}>{item.task.title}</a>
+					{#if item.task && projectId}
+						·
+						<a
+							class="link"
+							href={resolve('/staff/projects/[id]/tasks/[taskId]', {
+								id: projectId,
+								taskId: item.task.id
+							})}>{item.task.title}</a
+						>
 					{/if}
 				</div>
 			</li>

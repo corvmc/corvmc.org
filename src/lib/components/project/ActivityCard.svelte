@@ -13,12 +13,12 @@
 	 */
 	let {
 		query,
-		taskHref
+		projectId
 	}: {
 		/** The activity read; `limit` is left off for the first page so writes can refresh it. */
 		query: (limit?: number) => RemoteQuery<ActivityPage>;
-		/** Where an entry about one task links. Omitted on that task's own page. */
-		taskHref?: (taskId: string) => string;
+		/** Links an entry about one task to its page. Omitted on that task's own page. */
+		projectId?: string;
 	} = $props();
 
 	let limit = $state<number | undefined>(undefined);
@@ -26,7 +26,7 @@
 
 <InfoCard title="Activity">
 	<svelte:boundary>
-		<ActivityList {query} {limit} {taskHref} onmore={(next) => (limit = next)} />
+		<ActivityList {query} {limit} {projectId} onmore={(next) => (limit = next)} />
 
 		{#snippet pending()}
 			<div class="flex justify-center py-6">
