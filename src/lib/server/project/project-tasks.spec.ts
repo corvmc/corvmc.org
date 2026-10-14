@@ -166,6 +166,33 @@ describe('sections', () => {
 		);
 	});
 
+	it('compares names trimmed and case-insensitively', async () => {
+		await sections.createSection(PROJECT, 'Prep');
+		await expect(sections.createSection(PROJECT, 'prep')).rejects.toBeInstanceOf(
+			sections.SectionValidationError
+		);
+		expect(await sections.listSections(PROJECT)).toHaveLength(1);
+	});
+
+	it('refuses renaming onto another section, but not recasing its own name', async () => {
+		await sections.createSection(PROJECT, 'Prep');
+		const other = await sections.createSection(PROJECT, 'Wiring');
+		await expect(sections.renameSection(PROJECT, other.id, ' PREP')).rejects.toBeInstanceOf(
+			sections.SectionValidationError
+		);
+		expect((await sections.renameSection(PROJECT, other.id, 'wiring')).name).toBe('wiring');
+	});
+
+	it('reuses an existing section for a duty list naming it in another case', async () => {
+		const prep = await sections.createSection(PROJECT, 'Load-in');
+		const map = await sections.ensureSections(PROJECT, ['load-in', 'Strike']);
+		expect(map.get('load-in')).toBe(prep.id);
+		expect((await sections.listSections(PROJECT)).map((s) => s.name)).toEqual([
+			'Load-in',
+			'Strike'
+		]);
+	});
+
 	it('reorders only with every section named once', async () => {
 		const a = await sections.createSection(PROJECT, 'A');
 		const b = await sections.createSection(PROJECT, 'B');

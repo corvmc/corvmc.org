@@ -73,8 +73,9 @@ beforeEach(() => {
 	sqlite.exec(`insert into project (id, name) values ('${MINE}', 'Mine'), ('${THEIRS}', 'Theirs')`);
 	sqlite.exec(`insert into volunteer_role (id, name, is_active) values ('role-1', 'Door', 1)`);
 	sqlite.exec(
-		`insert into work_order (id, project_id, title, volunteer_role_id, capacity)
-			values ('wo-theirs', '${THEIRS}', 'Theirs', 'role-1', 1)`
+		`insert into work_order (id, project_id, title, volunteer_role_id, capacity, sort_order)
+			values ('wo-theirs', '${THEIRS}', 'Theirs', 'role-1', 1, 5),
+				('wo-first', '${THEIRS}', 'First', 'role-1', 1, 0)`
 	);
 });
 
@@ -88,28 +89,25 @@ const untouched = () =>
 
 const cases: [string, Record<string, unknown>][] = [
 	['getTaskAssignees', pair],
-	['moveTaskCommand', { ...pair, sectionId: null, index: 0 }],
-	['assignMembersForm', { ...pair, userIds: ['usr-staff'] }],
-	['unassignMemberForm', { ...pair, userId: 'usr-staff' }],
-	['openTaskForm', { ...pair, capacity: 2 }],
-	['unassignTaskForm', { ...pair, confirm: true }],
-	['resolveTaskForm', pair],
-	['reopenTaskForm', pair],
-	['rescheduleTaskForm', { ...pair, startsAt: '2030-01-01T18:00', endsAt: '2030-01-01T20:00' }],
-	['cancelTaskForm', pair]
+	['moveTaskCommand', { ...pair, sectionId: null, index: 0 }]
 ];
 
-describe('a work order named with a project it is not on', () => {
-	const before = { project_id: THEIRS, posted_at: null, resolved_at: null, cancelled_at: null };
+const before = { project_id: THEIRS, section_id: null, sort_order: 5 };
 
+describe('a work order named with a project it is not on', () => {
 	it.each(cases)('%s refuses it with a 404 and changes nothing', async (name, input) => {
 		await expect(remotes[name](input)).rejects.toMatchObject({ status: 404 });
 		expect(untouched()).toMatchObject(before);
 	});
 
 	it('is still reachable through its own project', async () => {
-		await remotes.openTaskForm({ projectId: THEIRS, workOrderId: 'wo-theirs', capacity: 2 });
-		expect(untouched()).toMatchObject({ project_id: THEIRS, posted_at: expect.any(Number) });
+		await remotes.moveTaskCommand({
+			projectId: THEIRS,
+			workOrderId: 'wo-theirs',
+			sectionId: null,
+			index: 0
+		});
+		expect(untouched()).toMatchObject({ project_id: THEIRS, sort_order: 0 });
 	});
 });
 
@@ -117,11 +115,14 @@ describe('the guard', () => {
 	it('runs on the project named, before the task is loaded', async () => {
 		requireProjectCommittee.mockRejectedValueOnce(Object.assign(new Error('no'), { status: 403 }));
 		await expect(
-			remotes.cancelTaskForm({ projectId: THEIRS, workOrderId: 'wo-theirs' })
-		).rejects.toMatchObject({
-			status: 403
-		});
+			remotes.moveTaskCommand({
+				projectId: THEIRS,
+				workOrderId: 'wo-theirs',
+				sectionId: null,
+				index: 0
+			})
+		).rejects.toMatchObject({ status: 403 });
 		expect(requireProjectCommittee).toHaveBeenCalledWith(THEIRS, 'project.manage');
-		expect(untouched()).toMatchObject({ cancelled_at: null });
+		expect(untouched()).toMatchObject(before);
 	});
 });

@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
+import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import { positions } from '$lib/config';
 import { user } from '$lib/server/db/schema/authentication';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
@@ -522,7 +523,7 @@ export async function reopenTask(projectId: string, workOrderId: string): Promis
 		return row;
 	} catch (err) {
 		// A recurring occurrence: closing it already wrote the next one.
-		if (err instanceof Error && /UNIQUE constraint failed/i.test(err.message)) {
+		if (isUniqueConstraintError(err)) {
 			throw new TaskConflictError('The next occurrence of this is already open. Work on that one.');
 		}
 		throw err;

@@ -1,5 +1,6 @@
-import { and, asc, eq, inArray, isNull, max, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, max, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
+import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import { projectSection, type ProjectSection } from '$lib/server/db/schema/project';
 import { workOrder } from '$lib/server/db/schema/volunteer';
 import { DomainError } from '$lib/server/domain-error';
@@ -40,8 +41,20 @@ function validName(name: string): string {
 	return trimmed;
 }
 
-const isUniqueViolation = (err: unknown) =>
-	err instanceof Error && /UNIQUE constraint failed/i.test(err.message);
+/** Names compare trimmed and case-insensitively: "Prep" and " prep " are one heading. */
+const nameKey = (name: string) => sectionNameKey(name).toLowerCase();
+
+function duplicate(name: string): SectionValidationError {
+	return new SectionValidationError(`This project already has a section called “${name}”.`);
+}
+
+/** Refuses a name another section of the project already has; `except` is the one being renamed. */
+async function assertNameFree(projectId: string, name: string, except?: string) {
+	const taken = (await listSections(projectId)).some(
+		(s) => s.id !== except && nameKey(s.name) === nameKey(name)
+	);
+	if (taken) throw duplicate(name);
+}
 
 export async function listSections(projectId: string): Promise<ProjectSection[]> {
 	return db
@@ -75,6 +88,7 @@ async function nextSectionOrder(projectId: string): Promise<number> {
 
 export async function createSection(projectId: string, name: string): Promise<ProjectSection> {
 	const clean = validName(name);
+	await assertNameFree(projectId, clean);
 	try {
 		const [row] = await db
 			.insert(projectSection)
@@ -82,9 +96,8 @@ export async function createSection(projectId: string, name: string): Promise<Pr
 			.returning();
 		return row;
 	} catch (err) {
-		if (isUniqueViolation(err)) {
-			throw new SectionValidationError(`This project already has a section called “${clean}”.`);
-		}
+		// The index is the backstop for two creates racing past the check above.
+		if (isUniqueConstraintError(err)) throw duplicate(clean);
 		throw err;
 	}
 }
@@ -96,6 +109,7 @@ export async function renameSection(
 ): Promise<ProjectSection> {
 	await requireSection(projectId, sectionId);
 	const clean = validName(name);
+	await assertNameFree(projectId, clean, sectionId);
 	try {
 		const [row] = await db
 			.update(projectSection)
@@ -104,9 +118,7 @@ export async function renameSection(
 			.returning();
 		return row;
 	} catch (err) {
-		if (isUniqueViolation(err)) {
-			throw new SectionValidationError(`This project already has a section called “${clean}”.`);
-		}
+		if (isUniqueConstraintError(err)) throw duplicate(clean);
 		throw err;
 	}
 }
@@ -167,7 +179,9 @@ export async function deleteSection(projectId: string, sectionId: string): Promi
 
 /**
  * The project's sections by name, creating any that do not exist yet: what
- * lets a duty list applied twice land in one "Load-in", not two.
+ * lets a duty list applied twice land in one "Load-in", not two. Matches the
+ * way `createSection` does, so "load-in" reuses "Load-in". Keyed by
+ * `sectionNameKey` of each name given.
  */
 export async function ensureSections(
 	projectId: string,
@@ -176,9 +190,11 @@ export async function ensureSections(
 	const wanted = [...new Set(names.map(sectionNameKey).filter(Boolean))];
 	if (wanted.length === 0) return new Map();
 	const existing = await listSections(projectId);
-	const have = new Set(existing.map((s) => s.name));
+	const have = new Set(existing.map((s) => nameKey(s.name)));
 	const base = existing.reduce((m, s) => Math.max(m, s.sortOrder), -1) + 1;
-	const missing = wanted.filter((n) => !have.has(n));
+	const missing = [
+		...new Map(wanted.filter((n) => !have.has(nameKey(n))).map((n) => [nameKey(n), n])).values()
+	];
 	if (missing.length > 0) {
 		await db.batch(
 			missing.map((name, i) =>
@@ -189,11 +205,10 @@ export async function ensureSections(
 			) as unknown as Parameters<typeof db.batch>[0]
 		);
 	}
-	const rows = await db
-		.select({ id: projectSection.id, name: projectSection.name })
-		.from(projectSection)
-		.where(and(eq(projectSection.projectId, projectId), inArray(projectSection.name, wanted)));
-	return new Map(rows.map((r) => [r.name, r.id]));
+	const byKey = new Map((await listSections(projectId)).map((s) => [nameKey(s.name), s.id]));
+	return new Map(
+		wanted.flatMap((n) => (byKey.has(nameKey(n)) ? [[n, byKey.get(nameKey(n))!]] : []))
+	);
 }
 
 /** The next free position in each section of the project; `null` keys the unlabelled group. */

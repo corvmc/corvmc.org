@@ -407,7 +407,11 @@ All staff-facing, so each phase goes straight to `main`.
    role, duty lists, maintenance occurrences, the host shift) posts what it creates, so
    gating the board changes nothing for them; only the task list makes unposted work.
    The services are `project-task-service.ts` and `project-section-service.ts`
-   (src/lib/server/project/), exposed by `tasks.remote.ts`. Members → Open keeps the
+   (src/lib/server/project/). `tasks.remote.ts` exposes the list and picker reads and
+   the drag-ordering commands; the forms for creating, assigning, ticking,
+   rescheduling and cancelling land with Phase 4's UI, since a form no component
+   submits is not shipped. Section names compare trimmed and case-insensitively, so
+   a duty list's "load-in" reuses "Load-in". Members → Open keeps the
    people already on it, as Open → Members does; only unassigning cancels signups.
    Every switch away from Contractor is refused while the engagement is live, until
    the engagement's own Cancel exists to pair with it. Audit entries are written on
