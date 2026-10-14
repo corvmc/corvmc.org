@@ -333,6 +333,14 @@ What this means in practice:
   -- d1-safe-rebuild: intentional drop `band`
   ```
 
+- **One migration can change a child and rebuild its parent.** The detach blocks run before
+  drizzle's statements, so they describe each child _without_ the columns the migration adds
+  with `ALTER TABLE ... ADD`, the FKs and indexes on those columns, and the indexes it creates;
+  the reattach blocks restore the full new shape. A child whose only FK to the rebuilt table is
+  one added here is not detached at all — every existing row holds `NULL` in it. Any other
+  `ALTER TABLE` on a child that needs detaching (a column rename or drop) cannot be modelled from
+  the snapshot, and `db:generate` stops with a message to split the migration: make that change
+  and generate, then make the rebuild and generate again.
 - **Never edit an applied migration.** The three pre-existing rebuilds are grandfathered in
   the script; that list is closed. Fix a new migration with `pnpm db:fix-migrations`.
 - **Verify against local D1** for anything touching a table with children:

@@ -174,6 +174,61 @@ function statements(sql) {
 		.filter((s) => !/^PRAGMA\s+foreign_keys\s*=/i.test(s));
 }
 
+/**
+ * The schema as it stands before `sql` runs, as far as a detach block needs it: `snap` minus the
+ * columns `sql` adds with `ALTER TABLE ... ADD`, the FKs and indexes on them, and the indexes
+ * `sql` creates. Any other `ALTER TABLE` is returned in `unmodelled`, since only drizzle's
+ * statements would say what the table looked like before it.
+ */
+/**
+ * @param {GroupedSnapshot} snap
+ * @param {string[]} stmts
+ * @returns {{ prior: GroupedSnapshot, unmodelled: Map<string, string> }}
+ */
+export function priorSchema(snap, stmts) {
+	/** @type {Map<string, Set<string>>} */
+	const added = new Map();
+	/** @type {Map<string, string>} */
+	const unmodelled = new Map();
+	const createdIndexes = new Set();
+	for (const s of stmts) {
+		const alter = s.match(/^ALTER TABLE\s+`([A-Za-z0-9_]+)`\s+([\s\S]*)$/i);
+		// `__new_x RENAME TO x` is drizzle's own rebuild, already accounted for.
+		if (alter && !alter[1].startsWith('__')) {
+			const [, table, rest] = alter;
+			const add = rest.match(/^ADD\s+(?:COLUMN\s+)?`([^`]+)`/i);
+			if (add) added.set(table, (added.get(table) ?? new Set()).add(add[1]));
+			else unmodelled.set(table, s);
+			const renamedTo = rest.match(/^RENAME\s+TO\s+`([^`]+)`/i);
+			if (renamedTo) unmodelled.set(renamedTo[1], s);
+		}
+		const idx = s.match(/^CREATE (?:UNIQUE )?INDEX (?:IF NOT EXISTS )?`([^`]+)`/i);
+		if (idx) createdIndexes.add(idx[1]);
+	}
+	/** @param {string} table @param {string[]} cols */
+	const isNew = (table, cols) => cols.some((c) => added.get(table)?.has(c));
+	/** @template {{ table: string }} E @param {Map<string, E[]>} m @param {(e: E) => boolean} keep */
+	const filter = (m, keep) => new Map([...m].map(([t, es]) => [t, es.filter(keep)]));
+	return {
+		prior: {
+			...snap,
+			columns: filter(snap.columns, (c) => !isNew(c.table, [c.name])),
+			fks: filter(snap.fks, (f) => !isNew(f.table, f.columns)),
+			uniques: filter(snap.uniques, (u) => !isNew(u.table, u.columns)),
+			indexes: filter(
+				snap.indexes,
+				(i) =>
+					!createdIndexes.has(i.name) &&
+					!isNew(
+						i.table,
+						i.columns.filter((c) => !c.isExpression).map((c) => c.value)
+					)
+			)
+		},
+		unmodelled
+	};
+}
+
 /** Rebuild `table` under a temporary name, then swap it in. */
 /**
  * @param {GroupedSnapshot} snap
@@ -207,7 +262,12 @@ export function rewriteMigration(sql, snapshot) {
 	if (!rebuilt.length) return null;
 
 	const snap = readSnapshot(snapshot);
-	const kids = childGraph(snap);
+	// Detach blocks run before drizzle's statements, so the graph and their DDL come from the
+	// schema before them. An FK column added here is NULL on every existing row (SQLite refuses
+	// a REFERENCES column with a non-NULL default), so it gives the parent's DROP nothing to
+	// cascade into, and a child reached only through one needs no detach.
+	const { prior, unmodelled } = priorSchema(snap, statements(sql));
+	const kids = childGraph(prior);
 
 	// Only descendants that aren't themselves being rebuilt need detaching —
 	// a table the migration already rebuilds gets its DDL from drizzle. Tables
@@ -225,6 +285,16 @@ export function rewriteMigration(sql, snapshot) {
 	}
 	if (!toDetach.length) return null; // nothing references these tables — drizzle's output is fine
 
+	const blocked = toDetach.filter((t) => unmodelled.has(t));
+	if (blocked.length) {
+		throw new Error(
+			`cannot detach ${blocked.join(', ')}: this migration also alters ` +
+				`${blocked.length > 1 ? 'them' : 'it'} (${blocked.map((t) => unmodelled.get(t)).join(' ')}), ` +
+				`and the snapshot only describes the table afterwards. Split the migration: ` +
+				`make that change and generate, then rebuild the parent and generate again.`
+		);
+	}
+
 	// Demote FKs pointing at anything that will be dropped: the rebuilt tables
 	// themselves, plus the detached children (which are dropped in turn).
 	const demote = new Set([...rebuilt, ...toDetach]);
@@ -236,8 +306,12 @@ export function rewriteMigration(sql, snapshot) {
 		`--   ${toDetach.join(', ')}`,
 		`-- Each is rebuilt with its FK demoted to NO ACTION, then restored below.`,
 		`PRAGMA defer_foreign_keys=ON;`,
-		...toDetach.flatMap((t) => [`-- detach ${t}`, ...rebuildBlock(snap, t, '__detach', demote)]),
-		...statements(sql),
+		...toDetach.flatMap((t) => [`-- detach ${t}`, ...rebuildBlock(prior, t, '__detach', demote)]),
+		// The detach already dropped any index the migration drops from a detached child, along
+		// with the old table, and the snapshot has no definition to recreate it from.
+		...statements(sql).map((s) =>
+			s.replace(/^DROP INDEX\s+(?!IF EXISTS)/i, 'DROP INDEX IF EXISTS ')
+		),
 		...toDetach
 			.slice()
 			.reverse() // reattach top-down: a parent must be restored before its own children
@@ -410,7 +484,13 @@ function main() {
 
 		const sql = readFileSync(sqlPath, 'utf8');
 		const snapshot = JSON.parse(readFileSync(snapPath, 'utf8'));
-		const rewritten = rewriteMigration(sql, snapshot);
+		let rewritten;
+		try {
+			rewritten = rewriteMigration(sql, snapshot);
+		} catch (e) {
+			console.error(`\nmigrations/${dir}/migration.sql: ${/** @type {Error} */ (e).message}\n`);
+			process.exit(1);
+		}
 
 		if (rewritten && write) {
 			console.log(`rewritten: ${dir}`);
