@@ -65,6 +65,7 @@ async function seed(capacity = 1) {
 		startsAt: inHours(48),
 		endsAt: inHours(52),
 		capacity,
+		postedAt: new Date(),
 		createdByUserId: COORDINATOR
 	} as never);
 }

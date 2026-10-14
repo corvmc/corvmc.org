@@ -53,7 +53,9 @@ function occurrenceValues(s: OccurrenceSource, dueAt: Date) {
 		capacity: s.capacity,
 		startsAt: null,
 		endsAt: null,
-		dueAt
+		dueAt,
+		// Recurring facility work is volunteers' to claim once it has a time.
+		postedAt: new Date()
 	};
 }
 

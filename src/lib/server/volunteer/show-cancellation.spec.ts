@@ -79,6 +79,7 @@ async function seed() {
 		startsAt: inHours(47),
 		endsAt: inHours(53),
 		capacity: 3,
+		postedAt: new Date(),
 		createdByUserId: STAFF,
 		...extra
 	});

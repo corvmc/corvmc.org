@@ -12,7 +12,9 @@ import {
 	VOLUNTEER_SHIFT_NOTES_MAX,
 	VOLUNTEER_SHIFT_TITLE_MAX
 } from '$lib/config';
+import type { ContractorJobStatus } from '$lib/config';
 import type { WorkOrder, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
+import { chunk } from '$lib/server/utils/chunk';
 
 import { getLiveSchedule, nextOccurrenceInsert } from './maintenance-schedule-service';
 
@@ -137,6 +139,9 @@ export async function createShift(data: {
 			endsAt: times.endsAt,
 			capacity: validateCapacity(data.capacity),
 			notes: validateNotes(data.notes),
+			// A shift made this way is open to volunteers: that is what the form is.
+			postedAt: new Date(),
+			postedByUserId: data.createdByUserId,
 			createdByUserId: data.createdByUserId
 		})
 		.returning();
@@ -210,6 +215,10 @@ export async function duplicateShift(
 			endsAt,
 			capacity: original.capacity,
 			notes: original.notes,
+			// Posting is a decision about this row; a copy forward of a Members
+			// slot stays assigned, a copy of an open one goes on the board.
+			postedAt: original.postedAt ? new Date() : null,
+			postedByUserId: original.postedAt ? createdByUserId : null,
 			createdByUserId
 		})
 		.returning();
@@ -353,10 +362,9 @@ export async function countActiveSignups(shiftId: string): Promise<number> {
 export type ScheduledShiftWithCounts = ShiftWithCounts & { startsAt: Date; endsAt: Date };
 
 export interface ShiftWithCounts extends WorkOrder {
-	/** Never null here: these rows are read through an inner join on the role. */
-	volunteerRoleId: string;
-	roleName: string;
-	roleGroup: VolunteerRoleGroup;
+	/** Null on a contractor's or not-yet-assigned work order: the role join is a left join. */
+	roleName: string | null;
+	roleGroup: VolunteerRoleGroup | null;
 	eventTitle: string | null;
 	/** The linked inventory unit as a label: item name, plus its tag. */
 	assetName?: string | null;
@@ -380,9 +388,8 @@ export interface ShiftWithCounts extends WorkOrder {
 function withCounts(
 	rows: {
 		shift: WorkOrder;
-		roleId: string;
-		roleName: string;
-		roleGroup: VolunteerRoleGroup;
+		roleName: string | null;
+		roleGroup: VolunteerRoleGroup | null;
 		eventTitle: string | null;
 		assetName: string | null;
 		claimed: number;
@@ -392,7 +399,6 @@ function withCounts(
 ): ShiftWithCounts[] {
 	return rows.map((r) => ({
 		...r.shift,
-		volunteerRoleId: r.roleId,
 		roleName: r.roleName,
 		roleGroup: r.roleGroup,
 		eventTitle: r.eventTitle,
@@ -477,15 +483,14 @@ export async function countUnfilledByRole(from = new Date()): Promise<Map<string
  * The shift row as every staff surface wants it: the role's name, the title of
  * the show it staffs (null for a work party), and how many places are taken.
  *
- * The event join is a `leftJoin` and has to stay one — `eventId` is nullable by
- * design, and an inner join would quietly drop every shift that isn't attached
- * to a show.
+ * Both joins are `leftJoin`s and have to stay so: `eventId` and
+ * `volunteerRoleId` are nullable by design, and an inner join would quietly
+ * drop every work order with no show, or a contractor's or unassigned one.
  */
 function shiftRowsQuery() {
 	return db
 		.select({
 			shift: workOrder,
-			roleId: volunteerRole.id,
 			roleName: volunteerRole.name,
 			roleGroup: volunteerRole.group,
 			eventTitle: eventListing.title,
@@ -520,7 +525,7 @@ function shiftRowsQuery() {
 			)`
 		})
 		.from(workOrder)
-		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId));
 }
 
@@ -578,6 +583,9 @@ export async function createWorkOrder(data: {
 			dueAt: data.dueAt ?? null,
 			capacity: validateCapacity(data.capacity ?? 1),
 			notes: data.notes ? validateNotes(data.notes) : null,
+			// Open to volunteers once it has a time, as queue work has always been.
+			postedAt: new Date(),
+			postedByUserId: data.createdByUserId,
 			createdByUserId: data.createdByUserId
 		})
 		.returning();
@@ -698,8 +706,11 @@ export function unscheduledWorkWhere(filters: WorkOrderQueueFilters = {}) {
 		filters.eventId ? eq(workOrder.eventId, filters.eventId) : undefined,
 		filters.projectId ? eq(workOrder.projectId, filters.projectId) : undefined,
 		// Unanchored, this is the coordinator's queue, and a committee's items
-		// are on that committee's queue instead: nine a show would bury it.
-		filters.eventId || filters.projectId ? undefined : isNull(workOrder.groupId)
+		// are on that committee's queue instead: nine a show would bury it. Work
+		// with no role is a contractor's or nobody's yet, not volunteer work to time.
+		filters.eventId || filters.projectId
+			? undefined
+			: and(isNull(workOrder.groupId), isNotNull(workOrder.volunteerRoleId))
 	);
 }
 
@@ -790,7 +801,14 @@ export type ScheduledOpenShift = OpenShift & { startsAt: Date; endsAt: Date };
  * before they can be one. Inheriting it would put a subquery on every row of the
  * member board to answer a question that is structurally zero there.
  */
-export interface OpenShift extends Omit<ShiftWithCounts, 'unnotified'> {
+export interface OpenShift extends Omit<
+	ShiftWithCounts,
+	'unnotified' | 'volunteerRoleId' | 'roleName' | 'roleGroup'
+> {
+	/** Never null here: only posted work is listed, and posting requires a role. */
+	volunteerRoleId: string;
+	roleName: string;
+	roleGroup: VolunteerRoleGroup;
 	/** This member's own claim, if they have a live one. */
 	myStatus: string | null;
 	mySignupId: string | null;
@@ -801,7 +819,7 @@ export interface OpenShift extends Omit<ShiftWithCounts, 'unnotified'> {
 }
 
 /**
- * What a member sees. Everything upcoming and live, including shifts they can't
+ * What a member sees: posted work, upcoming and live, including shifts they can't
  * take — a shift you're not cleared for is worth seeing precisely because the
  * reason tells you what to go and get. Ordered so roles they've expressed
  * interest in surface first, which is the payoff for the interest table.
@@ -867,7 +885,14 @@ export async function listOpenShiftsForMember(
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
 		.where(
-			and(isNull(workOrder.cancelledAt), gte(workOrder.startsAt, now), notOnCancelledListing())
+			and(
+				// Staff opened it to volunteers. A Members work order is scheduled
+				// too, but it is staffed by assignment and is not on the board.
+				isNotNull(workOrder.postedAt),
+				isNull(workOrder.cancelledAt),
+				gte(workOrder.startsAt, now),
+				notOnCancelledListing()
+			)
 		)
 		.orderBy(asc(rankSql), asc(workOrder.startsAt))
 		.limit(opts.limit ?? 50);
@@ -892,6 +917,88 @@ export async function listOpenShiftsForMember(
 	return open.filter(isScheduled);
 }
 
+// ---------------------------------------------------------------------------
+// Assignment mode
+// ---------------------------------------------------------------------------
+
+export type WorkOrderMode = 'contractor' | 'open' | 'members' | 'unassigned';
+
+/**
+ * Engagement statuses that no longer hold the work order. Every other status is a
+ * live engagement, which is what makes the work order a contractor's.
+ */
+export const NOT_LIVE_ENGAGEMENT_STATUSES = [
+	'cancelled'
+] as const satisfies readonly ContractorJobStatus[];
+
+/** The precedence on its own, so it reads (and is tested) apart from the query. */
+export function deriveMode(facts: {
+	engaged: boolean;
+	posted: boolean;
+	staffed: boolean;
+}): WorkOrderMode {
+	if (facts.engaged) return 'contractor';
+	if (facts.posted) return 'open';
+	if (facts.staffed) return 'members';
+	return 'unassigned';
+}
+
+/** Whether the work order in scope has a live engagement: what makes it a contractor's. */
+export function liveEngagementSql() {
+	const notLive = sql.join(
+		NOT_LIVE_ENGAGEMENT_STATUSES.map((status) => sql`${status}`),
+		sql`, `
+	);
+	return sql<number>`exists (
+		select 1 from "contractor_job" cj
+		where cj."work_order_id" = ${workOrder.id} and cj."status" not in (${notLive})
+	)`;
+}
+
+/** Ids per statement: D1 caps bound parameters at 100, and the statuses take some. */
+const MODE_CHUNK = 80;
+
+/**
+ * Each work order's assignment mode, derived from the rows behind it: one
+ * statement per 80 ids, never one per row. Unknown ids are absent from the map.
+ */
+export async function workOrderModes(ids: string[]): Promise<Map<string, WorkOrderMode>> {
+	const batches = await Promise.all(
+		chunk([...new Set(ids)], MODE_CHUNK).map((group) =>
+			db
+				.select({
+					id: workOrder.id,
+					posted: sql<number>`${workOrder.postedAt} is not null`,
+					// Wrapped: drizzle qualifies a column only inside a nested `sql`, and
+					// a bare "id" in the subquery would resolve to the engagement's own.
+					engaged: sql<number>`${liveEngagementSql()}`,
+					staffed: sql<number>`${claimedSql()} > 0`
+				})
+				.from(workOrder)
+				.where(inArray(workOrder.id, group))
+		)
+	);
+	return new Map(
+		batches
+			.flat()
+			.map((r) => [
+				r.id,
+				deriveMode({ engaged: !!r.engaged, posted: !!r.posted, staffed: !!r.staffed })
+			])
+	);
+}
+
+/** A shift row whose role is known: volunteer work, which is all that can be short of people. */
+export type RoledShift = ScheduledShiftWithCounts & {
+	volunteerRoleId: string;
+	roleName: string;
+	roleGroup: VolunteerRoleGroup;
+};
+
+export function isRoledShift(shift: ScheduledShiftWithCounts): shift is RoledShift {
+	return shift.volunteerRoleId !== null && shift.roleName !== null && shift.roleGroup !== null;
+}
+
 /**
  * Upcoming shifts still short of people, as rows rather than a per-role count.
  *
@@ -902,10 +1009,11 @@ export async function listOpenShiftsForMember(
 export async function listShortStaffedShifts(
 	withinDays: number,
 	from = new Date()
-): Promise<ScheduledShiftWithCounts[]> {
+): Promise<RoledShift[]> {
 	const to = new Date(from.getTime() + withinDays * 24 * 60 * 60 * 1000);
 	const rows = await listShifts({ from, to });
 	// A window was passed, so `listShifts` already dropped the undated rows —
 	// "which nights are short" is a question only a dated shift can answer.
-	return rows.filter((shift) => shift.claimed < shift.capacity);
+	// Work with no role is nobody's to fill, so it is never short of people.
+	return rows.filter(isRoledShift).filter((shift) => shift.claimed < shift.capacity);
 }

@@ -178,6 +178,10 @@ export async function claimShift(
 	if (shift.cancelledAt) throw new ShiftClosedError('That shift was called off.');
 	if (shift.endsAt && shift.endsAt < new Date())
 		throw new ShiftClosedError('That shift has already happened.');
+	// A member can only take what is on the claim board. Staff assign onto
+	// unposted work, which is what a Members work order is.
+	if (!assigned && !shift.postedAt)
+		throw new ShiftClosedError("This shift isn't open for sign-up.");
 	const roleId = requireVolunteerRole(shift);
 
 	// Clearance is checked against the shift's date, not today: a card that

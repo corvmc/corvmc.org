@@ -477,6 +477,8 @@ export async function seedVolunteering(): Promise<void> {
 			}
 		]);
 
+		// Every row is posted, as the backfill left production: the board lists
+		// only posted work, and the member claim refuses anything else.
 		await db.insert(workOrder).values([
 			{
 				id: SEED_VOL_SHIFT_OPEN_ID,
@@ -484,6 +486,7 @@ export async function seedVolunteering(): Promise<void> {
 				startsAt: daysFromNow(3, 2),
 				endsAt: daysFromNow(3, 6),
 				capacity: 1,
+				postedAt: now,
 				notes: SEED_VOL_SHIFT_OPEN_NOTE,
 				createdAt: now,
 				updatedAt: now
@@ -494,6 +497,7 @@ export async function seedVolunteering(): Promise<void> {
 				startsAt: daysFromNow(4, 2),
 				endsAt: daysFromNow(4, 6),
 				capacity: 1,
+				postedAt: now,
 				createdAt: now,
 				updatedAt: now
 			},
@@ -503,6 +507,7 @@ export async function seedVolunteering(): Promise<void> {
 				startsAt: daysFromNow(5, 2),
 				endsAt: daysFromNow(5, 6),
 				capacity: 1,
+				postedAt: now,
 				notes: SEED_VOL_SHIFT_FULL_NOTE,
 				createdAt: now,
 				updatedAt: now
@@ -514,6 +519,7 @@ export async function seedVolunteering(): Promise<void> {
 				startsAt: daysFromNow(7, 2),
 				endsAt: daysFromNow(7, 6),
 				capacity: 2,
+				postedAt: now,
 				notes: SEED_VOL_SHIFT_ASSIGN_NOTE,
 				createdAt: now,
 				updatedAt: now
@@ -525,6 +531,7 @@ export async function seedVolunteering(): Promise<void> {
 				startsAt: daysFromNow(8, 2),
 				endsAt: daysFromNow(8, 6),
 				capacity: 1,
+				postedAt: now,
 				createdAt: now,
 				updatedAt: now
 			}
@@ -554,6 +561,7 @@ export async function seedVolunteering(): Promise<void> {
 			startsAt: daysFromNow(6, 1),
 			endsAt: daysFromNow(6, 6),
 			capacity: 2,
+			postedAt: now,
 			createdAt: now,
 			updatedAt: now
 		});
@@ -580,6 +588,7 @@ export async function seedVolunteering(): Promise<void> {
 			endsAt: null,
 			dueAt: daysFromNow(2, 17),
 			capacity: 1,
+			postedAt: now,
 			dutyListId: SEED_VOL_DUTY_LIST_ID,
 			createdAt: now,
 			updatedAt: now
@@ -618,6 +627,7 @@ export async function seedVolunteering(): Promise<void> {
 			startsAt: workedOnDaysAgo(1),
 			endsAt: new Date(workedOnDaysAgo(1).getTime() + 4 * 3_600_000),
 			capacity: 1,
+			postedAt: now,
 			createdAt: now,
 			updatedAt: now
 		});

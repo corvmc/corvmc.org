@@ -127,6 +127,7 @@ function shift(over: Record<string, unknown> = {}) {
 		endsAt: LATER,
 		capacity: 2,
 		cancelledAt: null,
+		postedAt: new Date(),
 		...over
 	};
 }

@@ -303,32 +303,35 @@ export async function resolveFlagsOnCompletion(
  * open: "finished: confirm fixed?" on the coordinator's Today worklist.
  */
 export async function listFinishedWorkToConfirm(now = new Date()) {
-	return db
-		.select({
-			id: workOrder.id,
-			title: workOrder.title,
-			roleName: volunteerRole.name,
-			endsAt: workOrder.endsAt,
-			unitName: inventoryItem.name,
-			assetTag: inventoryAsset.assetTag,
-			reports: count(workRequest.id)
-		})
-		.from(workOrder)
-		.innerJoin(workRequest, eq(workRequest.workOrderId, workOrder.id))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-		.leftJoin(inventoryAsset, eq(inventoryAsset.id, workOrder.assetId))
-		.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
-		.where(
-			and(
-				eq(workOrder.closeReportsOnCompletion, false),
-				isNull(workOrder.resolvedAt),
-				isNull(workOrder.cancelledAt),
-				lt(workOrder.endsAt, now),
-				eq(workRequest.status, 'pending')
+	return (
+		db
+			.select({
+				id: workOrder.id,
+				title: workOrder.title,
+				roleName: volunteerRole.name,
+				endsAt: workOrder.endsAt,
+				unitName: inventoryItem.name,
+				assetTag: inventoryAsset.assetTag,
+				reports: count(workRequest.id)
+			})
+			.from(workOrder)
+			.innerJoin(workRequest, eq(workRequest.workOrderId, workOrder.id))
+			// Left: a contractor's repair has no role and still answers the reports.
+			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.leftJoin(inventoryAsset, eq(inventoryAsset.id, workOrder.assetId))
+			.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
+			.where(
+				and(
+					eq(workOrder.closeReportsOnCompletion, false),
+					isNull(workOrder.resolvedAt),
+					isNull(workOrder.cancelledAt),
+					lt(workOrder.endsAt, now),
+					eq(workRequest.status, 'pending')
+				)
 			)
-		)
-		.groupBy(workOrder.id)
-		.orderBy(asc(workOrder.endsAt), asc(workOrder.id));
+			.groupBy(workOrder.id)
+			.orderBy(asc(workOrder.endsAt), asc(workOrder.id))
+	);
 }
 
 /**
@@ -511,7 +514,7 @@ export async function getWorkRequestDetail(id: string) {
 		const openWork = await db
 			.selectDistinct(openWorkOrderFields)
 			.from(workOrder)
-			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 			.innerJoin(workRequest, eq(workRequest.workOrderId, workOrder.id))
 			.where(
 				and(
@@ -549,7 +552,7 @@ export async function getWorkRequestDetail(id: string) {
 		db
 			.select(openWorkOrderFields)
 			.from(workOrder)
-			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 			.where(
 				and(
 					eq(workOrder.assetId, asset.id),

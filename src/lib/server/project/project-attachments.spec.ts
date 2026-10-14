@@ -38,7 +38,7 @@ describe('attached work-order titles', () => {
 		expect(await titles()).toEqual([['wo-1', 'Hang posters']]);
 	});
 
-	it("falls back to the event's title, then the role's name — never a placeholder", async () => {
+	it("falls back to the event's title, then the role's name, before any placeholder", async () => {
 		sqlite.exec(
 			`insert into work_order (id, volunteer_role_id, project_id, event_id)
 				values ('wo-ev', 'role-door', 'proj-1', 'ev-1')`
@@ -50,6 +50,17 @@ describe('attached work-order titles', () => {
 		expect(Object.fromEntries(await titles())).toEqual({
 			'wo-ev': 'Spring Showcase',
 			'wo-role': 'Door'
+		});
+	});
+
+	it('lists a work order with no role, which a contractor or nobody yet answers', async () => {
+		sqlite.exec(
+			`insert into work_order (id, project_id, title) values ('wo-task', 'proj-1', 'Buy paint')`
+		);
+		sqlite.exec(`insert into work_order (id, project_id) values ('wo-bare', 'proj-1')`);
+		expect(Object.fromEntries(await titles())).toEqual({
+			'wo-task': 'Buy paint',
+			'wo-bare': 'Untitled task'
 		});
 	});
 

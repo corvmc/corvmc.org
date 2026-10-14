@@ -13,6 +13,7 @@
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import { formatDateShort, formatDateTime } from '$lib/utils/format';
+	import { NO_ROLE_LABEL } from '$lib/utils/shift-label';
 	import {
 		getEquipmentReport,
 		dismissEquipmentReport,
@@ -103,7 +104,9 @@
 								<Select class="w-full" name="workOrderId" bind:value={workOrderId}>
 									<option value="">Raise a new work order</option>
 									{#each report.openWorkOrders as w (w.id)}
-										<option value={w.id}>{w.roleName}: {w.notes ?? 'No notes'}</option>
+										<option value={w.id}
+											>{w.roleName ?? NO_ROLE_LABEL}: {w.notes ?? 'No notes'}</option
+										>
 									{/each}
 								</Select>
 							</label>

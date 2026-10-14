@@ -67,7 +67,7 @@ async function readDeliverables(where: SQL): Promise<DeliverableRow[]> {
 	const rows = await db
 		.select({
 			id: workOrder.id,
-			title: sql<string>`coalesce(${workOrder.title}, ${volunteerRole.name})`,
+			title: sql<string>`coalesce(${workOrder.title}, ${volunteerRole.name}, 'Untitled task')`,
 			eventId: workOrder.eventId,
 			eventTitle: eventListing.title,
 			eventStartsAt: eventListing.startsAt,
@@ -79,7 +79,8 @@ async function readDeliverables(where: SQL): Promise<DeliverableRow[]> {
 			cancelledAt: workOrder.cancelledAt
 		})
 		.from(workOrder)
-		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		// Left: a committee's task may not have a role yet, and is still its deliverable.
+		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
 		.leftJoin(group, eq(group.id, workOrder.groupId))
 		.where(where)

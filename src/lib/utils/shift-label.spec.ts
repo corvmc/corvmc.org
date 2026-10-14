@@ -36,3 +36,15 @@ describe('shiftRoleSuffix', () => {
 		expect(shiftRoleSuffix({ ...base, eventTitle: 'Open Mic' })).toBe('Work Parties');
 	});
 });
+
+describe('a work order with no role', () => {
+	it('is labelled by its title, and says it has no role beneath', () => {
+		const task = { roleName: null, title: 'Buy paint' };
+		expect(shiftLabel(task)).toBe('Buy paint');
+		expect(shiftRoleSuffix(task)).toBe('No role');
+	});
+
+	it('still has a label with nothing to name it by', () => {
+		expect(shiftLabel({ roleName: null })).toBe('Untitled task');
+	});
+});
