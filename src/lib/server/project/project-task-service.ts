@@ -12,6 +12,7 @@ import {
 	volunteerSignup,
 	dutyList,
 	workOrder,
+	workTask,
 	type WorkOrder
 } from '$lib/server/db/schema/volunteer';
 import { eventListing } from '$lib/server/db/schema/event';
@@ -32,6 +33,8 @@ import {
 	type WorkOrderMode
 } from '$lib/server/volunteer/work-order-service';
 import { claimShift, releaseSignup } from '$lib/server/volunteer/volunteer-signup-service';
+import { setWorkTaskDone } from '$lib/server/volunteer/duty-list-service';
+import { createJob } from '$lib/server/contractor/contractor-job-service';
 import {
 	listSections,
 	nextTaskOrders,
@@ -471,6 +474,116 @@ export async function unassignTask(
 	const mode = await modeOf(task.id);
 	await auditModeChange(task, from, mode, live.length);
 	return { status: 'done', cancelledSignups: live.length, mode };
+}
+
+export type EngageResult =
+	| { status: 'needs_confirmation'; liveSignups: number }
+	| { status: 'done'; engagementId: string; cancelledSignups: number; mode: WorkOrderMode };
+
+/**
+ * Delegate the task: a contractor's engagement on it, asked. Takes it off the
+ * claim board. Warn, record, allow: with people on it the first call only says
+ * how many; with `confirm` their signups are cancelled, which tells them.
+ */
+export async function engageContractor(
+	projectId: string,
+	workOrderId: string,
+	data: {
+		contractorId: string;
+		quotedCents?: number | null;
+		requestedByUserId: string;
+		confirm?: boolean;
+	}
+): Promise<EngageResult> {
+	const task = await requireLiveTask(projectId, workOrderId);
+	if (task.resolvedAt) throw new TaskConflictError('That task is already done.');
+	const from = await modeOf(task.id);
+	const live = await signupsOn(task.id, ['claimed', 'confirmed']);
+	if (live.length > 0 && !data.confirm) {
+		return { status: 'needs_confirmation', liveSignups: live.length };
+	}
+
+	// The engagement first: it refuses an archived contractor before anything moves.
+	const job = await createJob({
+		workOrderId: task.id,
+		contractorId: data.contractorId,
+		quotedCents: data.quotedCents ?? null,
+		requestedByUserId: data.requestedByUserId
+	});
+	await db
+		.update(workOrder)
+		.set({ postedAt: null, postedByUserId: null, updatedAt: new Date() })
+		.where(eq(workOrder.id, task.id));
+	for (const s of live) {
+		await releaseSignup(s.id);
+		await recordAuditEntry({
+			action: 'work_order.member_unassigned',
+			subject: { type: 'work_order', id: task.id, label: label(task) },
+			details: { userId: s.userId, memberName: s.name }
+		});
+	}
+	const mode = await modeOf(task.id);
+	await auditModeChange(task, from, mode, live.length);
+	return { status: 'done', engagementId: job.id, cancelledSignups: live.length, mode };
+}
+
+// ---------------------------------------------------------------------------
+// Duties and equipment
+// ---------------------------------------------------------------------------
+
+/** A duty under the task, at the end of its list. */
+export async function addDuty(projectId: string, workOrderId: string, label: string) {
+	const task = await requireLiveTask(projectId, workOrderId);
+	const text = label.trim();
+	if (!text) throw new TaskValidationError('Say what the duty is.');
+	const [last] = await db
+		.select({ n: sql<number>`coalesce(max(${workTask.sortOrder}), -1)` })
+		.from(workTask)
+		.where(eq(workTask.workOrderId, task.id));
+	const [row] = await db
+		.insert(workTask)
+		.values({ workOrderId: task.id, label: text, sortOrder: Number(last?.n ?? -1) + 1 })
+		.returning();
+	return row;
+}
+
+/** Tick or untick a duty, refused (404) unless it is this task's. */
+export async function setDutyDone(
+	projectId: string,
+	workOrderId: string,
+	dutyId: string,
+	done: boolean,
+	userId: string
+) {
+	const task = await requireTaskInProject(projectId, workOrderId);
+	const [duty] = await db
+		.select({ id: workTask.id })
+		.from(workTask)
+		.where(and(eq(workTask.id, dutyId), eq(workTask.workOrderId, task.id)))
+		.limit(1);
+	if (!duty) throw new TaskNotFoundError();
+	return setWorkTaskDone(duty.id, done, userId);
+}
+
+/** The unit the task is about, or none. */
+export async function setTaskEquipment(
+	projectId: string,
+	workOrderId: string,
+	assetId: string | null
+): Promise<void> {
+	const task = await requireLiveTask(projectId, workOrderId);
+	if (assetId) {
+		const [asset] = await db
+			.select({ id: inventoryAsset.id })
+			.from(inventoryAsset)
+			.where(eq(inventoryAsset.id, assetId))
+			.limit(1);
+		if (!asset) throw new TaskValidationError('That unit does not exist.');
+	}
+	await db
+		.update(workOrder)
+		.set({ assetId, updatedAt: new Date() })
+		.where(eq(workOrder.id, task.id));
 }
 
 // ---------------------------------------------------------------------------

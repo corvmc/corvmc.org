@@ -3,18 +3,28 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import { Field } from '$lib/components/ui/Form';
 	import {
 		IconChevronDown,
 		IconChevronRight,
 		IconFlag,
-		IconSquare,
-		IconSquareCheck
+		IconGripVertical
 	} from '@tabler/icons-svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '$lib/utils/with-query';
-	import AssignedSummary from './AssignedSummary.svelte';
-	import TaskCheck from './TaskCheck.svelte';
+	import {
+		createSectionForm,
+		moveTaskCommand,
+		reorderSectionsCommand
+	} from '$lib/remote/tasks.remote';
+	import AddTaskLine from './AddTaskLine.svelte';
+	import AssignPicker from './AssignPicker.svelte';
+	import DutyItems from './DutyItems.svelte';
+	import SectionMenu from './SectionMenu.svelte';
+	import TaskCheckControl from './TaskCheckControl.svelte';
+	import { dropSection, dropSlot, stepSection, stepTask, type TaskSlot } from './task-order';
 	import {
 		TASK_FILTERS,
 		TASK_FILTER_LABELS,
@@ -74,9 +84,76 @@
 	}
 
 	function rowClick(event: MouseEvent, id: string) {
-		if ((event.target as HTMLElement).closest('a,button,input,label,[data-no-row-click]')) return;
+		const target = event.target as HTMLElement;
+		if (target.closest('a,button,input,label,form,details,[data-no-row-click]')) return;
 		if (window.getSelection()?.toString()) return;
 		onopen(id);
+	}
+
+	const sectionIds = $derived(list.sections.map((s) => s.id));
+	const addSection = createSectionForm;
+
+	// Reordering: drag a handle, or focus it and press the arrow keys.
+	type Drag = { kind: 'task' | 'section'; id: string };
+	let dragging = $state<Drag | null>(null);
+	let dropAt = $state<string | null>(null);
+
+	const moveTask = (workOrderId: string, slot: TaskSlot) =>
+		moveTaskCommand({ projectId, workOrderId, ...slot });
+	const moveSections = (order: string[]) =>
+		reorderSectionsCommand({ projectId, sectionIds: order });
+
+	function startDrag(e: DragEvent, drag: Drag) {
+		dragging = drag;
+		e.dataTransfer?.setData('text/plain', drag.id);
+		if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+	}
+	function endDrag() {
+		dragging = null;
+		dropAt = null;
+	}
+	function overTask(e: DragEvent, key: string) {
+		if (dragging?.kind !== 'task') return;
+		e.preventDefault();
+		dropAt = key;
+	}
+	function dropTask(e: DragEvent, sectionId: string | null, beforeId: string | null) {
+		if (dragging?.kind !== 'task') return;
+		e.preventDefault();
+		const id = dragging.id;
+		endDrag();
+		if (id !== beforeId) void moveTask(id, dropSlot(list, id, { sectionId, beforeId }));
+	}
+	function overSection(e: DragEvent, sectionId: string | null) {
+		if (dragging?.kind === 'task') return overTask(e, `head:${sectionId}`);
+		if (dragging?.kind !== 'section' || !sectionId) return;
+		e.preventDefault();
+		dropAt = `head:${sectionId}`;
+	}
+	function dropOnSection(e: DragEvent, sectionId: string | null) {
+		if (dragging?.kind === 'task') return dropTask(e, sectionId, null);
+		if (dragging?.kind !== 'section' || !sectionId) return;
+		e.preventDefault();
+		const order = dropSection(sectionIds, dragging.id, sectionId);
+		endDrag();
+		if (order) void moveSections(order);
+	}
+	function stepKey(e: KeyboardEvent): -1 | 1 | null {
+		return e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : null;
+	}
+	function taskKey(e: KeyboardEvent, id: string) {
+		const delta = stepKey(e);
+		if (!delta) return;
+		e.preventDefault();
+		const slot = stepTask(list, id, delta);
+		if (slot) void moveTask(id, slot);
+	}
+	function sectionKey(e: KeyboardEvent, id: string) {
+		const delta = stepKey(e);
+		if (!delta) return;
+		e.preventDefault();
+		const order = stepSection(sectionIds, id, delta);
+		if (order) void moveSections(order);
 	}
 </script>
 
@@ -107,20 +184,69 @@
 			<th class="col-support cell-num">Cost</th>
 		{/snippet}
 		{#each groups as g (g.section?.id ?? 'loose')}
-			<tr class="bg-base-200">
+			{@const sid = g.section?.id ?? null}
+			<tr
+				class="bg-base-200 {dropAt === `head:${sid}` ? 'drop-target' : ''}"
+				ondragover={(e) => overSection(e, sid)}
+				ondrop={(e) => dropOnSection(e, sid)}
+			>
 				<th colspan="5" class="font-semibold">
-					{g.section?.name ?? 'No section'}
-					<span class="ml-1 text-muted font-normal">{g.done}/{g.total}</span>
+					<div class="flex items-center gap-1">
+						{#if g.section}
+							{@const name = g.section.name}
+							<Button
+								variant="ghost"
+								size="xs"
+								shape="square"
+								class="cursor-grab"
+								draggable="true"
+								aria-label="Move the {name} section: drag it, or press the up and down arrows"
+								ondragstart={(e: DragEvent) => startDrag(e, { kind: 'section', id: sid! })}
+								ondragend={endDrag}
+								onkeydown={(e: KeyboardEvent) => sectionKey(e, sid!)}
+							>
+								<IconGripVertical size={14} />
+							</Button>
+						{/if}
+						<span>{g.section?.name ?? 'No section'}</span>
+						<span class="text-muted font-normal">{g.done}/{g.total}</span>
+						{#if g.section}
+							<span class="ms-auto">
+								<SectionMenu {projectId} section={g.section} {sectionIds} taskCount={g.total} />
+							</span>
+						{/if}
+					</div>
 				</th>
 			</tr>
 			{#each g.tasks as t (t.id)}
 				{@const when = whenOf(t)}
 				<tr
-					class="hover cursor-pointer {selectedId === t.id ? 'bg-base-200' : ''}"
+					class="hover cursor-pointer {selectedId === t.id ? 'bg-base-200' : ''} {dropAt === t.id
+						? 'drop-target'
+						: ''}"
 					aria-current={selectedId === t.id ? 'true' : undefined}
 					onclick={(e) => rowClick(e, t.id)}
+					ondragover={(e) => overTask(e, t.id)}
+					ondrop={(e) => dropTask(e, sid, t.id)}
 				>
-					<td class="w-px"><TaskCheck task={t} /></td>
+					<td class="w-px">
+						<div class="flex w-max items-center">
+							<Button
+								variant="ghost"
+								size="xs"
+								shape="square"
+								class="cursor-grab"
+								draggable="true"
+								aria-label="Move {t.title}: drag it, or press the up and down arrows"
+								ondragstart={(e: DragEvent) => startDrag(e, { kind: 'task', id: t.id })}
+								ondragend={endDrag}
+								onkeydown={(e: KeyboardEvent) => taskKey(e, t.id)}
+							>
+								<IconGripVertical size={14} />
+							</Button>
+							<TaskCheckControl task={t} {projectId} place="row" {onopen} />
+						</div>
+					</td>
 					<td class="cell-primary">
 						<a
 							href={withQuery(resolve(`/staff/projects/${projectId}`), `task=${t.id}`)}
@@ -150,7 +276,7 @@
 							</div>
 						{/if}
 					</td>
-					<td><AssignedSummary task={t} /></td>
+					<td><AssignPicker task={t} {projectId} place="row" /></td>
 					<td class="col-support whitespace-nowrap">
 						<span
 							class="inline-flex items-center gap-1 {when.kind === 'none' ? 'text-subtle' : ''}"
@@ -164,23 +290,12 @@
 					<td class="col-support cell-num">{costOf(t)}</td>
 				</tr>
 				{#if unfolded.has(t.id)}
-					{#each t.dutyItems as d (d.id)}
-						<tr>
-							<td></td>
-							<td colspan="4" class="ps-10">
-								<span
-									class="inline-flex items-center gap-2 {d.done ? 'line-through opacity-60' : ''}"
-								>
-									{#if d.done}
-										<IconSquareCheck size={16} aria-label="Done" />
-									{:else}
-										<IconSquare size={16} aria-label="Not done" />
-									{/if}
-									{d.label}
-								</span>
-							</td>
-						</tr>
-					{/each}
+					<tr>
+						<td></td>
+						<td colspan="4" class="ps-6">
+							<DutyItems task={t} {projectId} place="row" />
+						</td>
+					</tr>
 				{/if}
 			{:else}
 				<tr>
@@ -190,6 +305,33 @@
 					</td>
 				</tr>
 			{/each}
+			<tr>
+				<td></td>
+				<td colspan="4">
+					<AddTaskLine {projectId} sectionId={sid} sectionName={g.section?.name ?? 'no section'} />
+				</td>
+			</tr>
 		{/each}
 	</Table>
 {/if}
+
+<Action
+	action={addSection}
+	label="Add section"
+	variant="ghost"
+	size="sm"
+	modalTitle="Add a section"
+	submitLabel="Add section"
+	successToast="Section added"
+>
+	{#snippet form()}
+		<input {...addSection.fields.projectId.as('hidden', projectId)} />
+		<Field field={addSection.fields.name} type="text" label="Name" />
+	{/snippet}
+</Action>
+
+<style>
+	.drop-target {
+		box-shadow: inset 0 2px 0 var(--color-primary);
+	}
+</style>
