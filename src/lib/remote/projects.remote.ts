@@ -31,6 +31,7 @@ import {
 	startProjectFromSuggestion,
 	updateProject
 } from '$lib/server/project/project-service';
+import { listProjectTasks } from '$lib/server/project/project-task-service';
 import { getProjectOrigin, startProjectFromBallot } from '$lib/server/project/decision-chain';
 import { applyDutyList, listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { createWorkOrder } from '$lib/server/volunteer/work-order-service';
@@ -139,9 +140,13 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 	};
 });
 
-/** One project: its burn, everything attached to it, and the pickers to change either. */
+/**
+ * One project: its burn, its task list, everything attached to it, and the
+ * pickers to change any of it. The page's one load-bearing query, so task
+ * writes in `tasks.remote.ts` refresh this.
+ */
 export const getProjectDetail = query(z.string(), async (id) => {
-	await requireCapability('project.read');
+	const viewer = await requireCapability('project.read');
 	try {
 		const [
 			project,
@@ -152,7 +157,8 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			lists,
 			origin,
 			ballotManager,
-			taking
+			taking,
+			taskList
 		] = await Promise.all([
 			getProjectById(id),
 			getProjectBurn(id),
@@ -162,7 +168,8 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			listDutyLists({ subject: 'project' }),
 			getProjectOrigin(id),
 			can('ballot.manage'),
-			listProjectCommittees([id])
+			listProjectCommittees([id]),
+			listProjectTasks(id)
 		]);
 		const dutyLists = lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
 		return {
@@ -175,7 +182,9 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			origin,
 			canCreateBallot: ballotManager,
 			/** Every committee taking part, owner first. */
-			projectCommittees: taking
+			projectCommittees: taking,
+			taskList,
+			viewerId: viewer.id
 		};
 	} catch (err) {
 		mapDomainError(err);

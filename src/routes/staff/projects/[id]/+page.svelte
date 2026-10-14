@@ -1,18 +1,13 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import { EntityCard } from '$lib/components/ui/entity';
-	import Table from '$lib/components/ui/Table.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import { EntityChip } from '$lib/components/ui/entity';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { Field, MoneyField } from '$lib/components/ui/Form';
 	import BallotLine from '$lib/components/ballot/BallotLine.svelte';
@@ -21,37 +16,65 @@
 		getProjectDetail,
 		updateProjectForm,
 		setProjectStatusForm,
-		attachToProjectForm,
-		detachFromProjectForm,
 		applyDutyListToProjectForm
 	} from '$lib/remote/projects.remote';
 	import { projectStatusOptions } from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
-	import { rowLink } from '$lib/actions/row-link';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { IconSquare, IconSquareCheck, IconSquareX } from '@tabler/icons-svelte';
+	import { IconDots } from '@tabler/icons-svelte';
+	import BudgetTab from './BudgetTab.svelte';
+	import TaskList from './TaskList.svelte';
+	import TaskPanel from './TaskPanel.svelte';
+	import { parseFilter, type TaskFilter } from './task-view';
 
 	/**
-	 * One project: the work it is made of first, then what it has cost.
-	 *
-	 * Cash and contributed value are two tables rather than two rows of one,
-	 * because they must never look addable: donated hours are worth reporting to
-	 * a funder and worth nothing against a budget. Spent-of-budget is the only
-	 * figure that leads; the breakdown sits at the end (#1800).
+	 * One project, run as a checklist: its work orders are the tasks, grouped in
+	 * sections, with a panel beside the list for the one selected. The project's
+	 * own fields change only through Edit project; they reach further than a task.
 	 */
+	type Tab = 'tasks' | 'budget';
+	const parseTab = (raw: string | null): Tab => (raw === 'budget' ? 'budget' : 'tasks');
+
+	// Above the await: the window listener below reads these.
+	let tab = $state<Tab>(parseTab(page.url.searchParams.get('tab')));
+	let filter = $state<TaskFilter>(parseFilter(page.url.searchParams.get('show')));
+	let showDone = $state(page.url.searchParams.get('done') !== 'hide');
+	const selectedId = $derived(page.url.searchParams.get('task'));
+
+	/** View state lives in the URL, written with `goto`: `replaceState()` would not update `page.url`. */
+	function setParams(changes: Record<string, string | null>, push = false) {
+		const url = new URL(page.url);
+		for (const [k, v] of Object.entries(changes)) {
+			if (v === null) url.searchParams.delete(k);
+			else url.searchParams.set(k, v);
+		}
+		void goto(url, { replaceState: !push, noScroll: true, keepFocus: true });
+	}
+
+	const openTask = (id: string) => setParams({ task: id }, true);
+	const closeTask = () => setParams({ task: null });
+
+	function onkeydown(e: KeyboardEvent) {
+		// A dialog or popover over the panel takes its own Escape first.
+		if (e.key !== 'Escape' || !selectedId || e.defaultPrevented) return;
+		if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+		closeTask();
+	}
+
 	const data = $derived(await getProjectDetail(page.params.id!));
 	const project = $derived(data.project);
 	const burn = $derived(data.burn);
 	const origin = $derived(data.origin);
+	const list = $derived(data.taskList);
+	const progress = $derived(list.progress);
+	const selected = $derived(list.tasks.find((t) => t.id === selectedId) ?? null);
 
 	const editFields = updateProjectForm.fields;
 	const statusFields = setProjectStatusForm.fields;
-	const attachFields = attachToProjectForm.fields;
-	const detachFields = detachFromProjectForm.fields;
 	const applyFields = applyDutyListToProjectForm.fields;
 	const dutyListOptions = $derived(data.dutyLists.map((l) => ({ value: l.id, label: l.name })));
-
 	const committeeOptions = $derived(data.committees.map((c) => ({ value: c.id, label: c.name })));
 	const suggestionOptions = $derived(
 		data.suggestions.map((s) => ({ value: s.id, label: s.title }))
@@ -60,113 +83,26 @@
 	const committeeNames = $derived(data.projectCommittees.map((c) => c.name).join(', '));
 	const overBudget = $derived(burn.remainingCents !== null && burn.remainingCents < 0);
 
-	/**
-	 * `formatCents` puts the sign inside the symbol — `$-109.00` — which reads as
-	 * a typo rather than as an overrun. Only this page shows a negative amount,
-	 * so the fix belongs here rather than in the shared formatter.
-	 */
-	const signedCents = (cents: number) =>
-		cents < 0 ? `-${formatCents(Math.abs(cents))}` : formatCents(cents);
-	const volunteerHours = $derived(burn.contributed.volunteerMinutes / 60);
-	const specializedHours = $derived(burn.contributed.specializedVolunteerMinutes / 60);
-	/** Specialized hours nobody has priced. Counted as zero, and said so. */
-	const unpricedHours = $derived(burn.contributed.unpricedSpecializedMinutes / 60);
-	const hrs = (h: number) => `${h.toFixed(h % 1 === 0 ? 0 : 1)} hrs`;
-
-	const workOrders = $derived(data.attachments.workOrders);
-	const doneCount = $derived(workOrders.filter((wo) => wo.resolvedAt && !wo.cancelledAt).length);
-	const cancelledCount = $derived(workOrders.filter((wo) => wo.cancelledAt).length);
-	/** Progress counts work orders, not tasks: they are what staff attach. Cancelled is not work. */
-	const liveCount = $derived(workOrders.length - cancelledCount);
-
-	/** Contractor jobs, orders and acquisitions share one table; the kind is the subline. */
-	const otherWork = $derived([
-		// A job is on the project through its work order, so detaching it detaches that.
-		...data.attachments.jobs.map((job) => ({
-			kind: 'work_order',
-			kindLabel: 'Contractor job',
-			id: job.id,
-			detachId: job.workOrderId,
-			label: job.title,
-			href: resolve(`/staff/contractors/jobs/${job.id}`),
-			status: job.status as string | null,
-			date: job.completedAt ?? job.scheduledFor,
-			amount: job.costCents === null ? 'No invoice yet' : formatCents(job.costCents)
-		})),
-		...data.attachments.orders.map((order) => ({
-			kind: 'purchase_order',
-			kindLabel: order.reference ? `Purchase order ${order.reference}` : 'Purchase order',
-			id: order.id,
-			detachId: order.id,
-			label: order.supplierName ?? 'Order',
-			href: resolve(`/staff/inventory/orders/${order.id}`),
-			status: order.status as string | null,
-			date: order.placedAt,
-			amount: '—'
-		})),
-		...data.attachments.acquisitions.map((acq) => ({
-			kind: 'acquisition',
-			kindLabel: 'Acquisition',
-			id: acq.id,
-			detachId: acq.id,
-			label: acq.sourceName ?? acq.kind,
-			href: resolve(`/staff/inventory/acquisitions/${acq.id}`),
-			status: null,
-			date: acq.occurredAt as Date | null,
-			amount: acq.totalCents
-				? formatCents(acq.totalCents)
-				: acq.fairValueCents
-					? `${formatCents(acq.fairValueCents)} donated`
-					: '—'
-		}))
-	]);
-
 	/** A date input wants `YYYY-MM-DD`, and a `Date` renders as a full timestamp. */
 	const asDateValue = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '');
-
-	const attachKinds = [
-		{ value: 'work_order', label: 'Work order' },
-		{ value: 'purchase_order', label: 'Purchase order' },
-		{ value: 'acquisition', label: 'Acquisition' },
-		{ value: 'event_listing', label: 'Event' }
-	];
 </script>
+
+<svelte:window {onkeydown} />
 
 <PageHeader
 	title={project.name}
 	subtitle={committeeNames || 'No committee owns this yet'}
 	backHref="/staff/projects"
+	sticky={false}
 >
-	<Action
-		action={setProjectStatusForm}
-		label="Change status"
-		size="sm"
-		modalTitle="Change status"
-		successToast="Status updated"
-	>
-		{#snippet form()}
-			<input {...statusFields.id.as('hidden', project.id)} />
-			<Field
-				field={statusFields.status}
-				type="select"
-				label="Status"
-				options={projectStatusOptions}
-				value={project.status}
-				description={project.suggestionId
-					? 'The suggestion this answers moves with it.'
-					: undefined}
-			/>
-		{/snippet}
-	</Action>
-
 	{#if dutyListOptions.length > 0}
 		<Action
 			action={applyDutyListToProjectForm}
 			label="Apply duty list"
-			size="sm"
+			variant="default"
 			modalTitle="Apply a duty list to {project.name}"
 			submitLabel="Apply"
-			successToast="Work orders created"
+			successToast="Tasks created"
 		>
 			{#snippet form()}
 				<input {...applyFields.projectId.as('hidden', project.id)} />
@@ -176,11 +112,11 @@
 						type="select"
 						label="Duty list"
 						options={dutyListOptions}
-						description="Creates every work order the list describes, timed from the project's start date. Applying the same list twice is refused."
+						description="Creates every task the list describes, timed from the project's start date, under the sections it names. Applying the same list twice is refused."
 					/>
 				{:else}
 					<Alert type="warning">
-						This project has no start date. Set one under Edit before applying a duty list.
+						This project has no start date. Set one under Edit project before applying a duty list.
 					</Alert>
 				{/if}
 			{/snippet}
@@ -189,8 +125,7 @@
 
 	<Action
 		action={updateProjectForm}
-		label="Edit"
-		size="sm"
+		label="Edit project"
 		modalTitle="Edit project"
 		successToast="Saved"
 	>
@@ -233,31 +168,64 @@
 			/>
 		{/snippet}
 	</Action>
+
+	<details class="dropdown dropdown-end">
+		<summary class="btn btn-square btn-ghost btn-sm" aria-label="More project actions">
+			<IconDots size={16} />
+		</summary>
+		<div class="dropdown-content dropdown-panel flex w-60 flex-col gap-1">
+			<Action
+				action={setProjectStatusForm}
+				label="Change status"
+				variant="ghost"
+				class="justify-start"
+				modalTitle="Change status"
+				successToast="Status updated"
+			>
+				{#snippet form()}
+					<input {...statusFields.id.as('hidden', project.id)} />
+					<Field
+						field={statusFields.status}
+						type="select"
+						label="Status"
+						options={projectStatusOptions}
+						value={project.status}
+						description={project.suggestionId
+							? 'The suggestion this answers moves with it.'
+							: undefined}
+					/>
+				{/snippet}
+			</Action>
+			{#if data.canCreateBallot}
+				<CreateBallotAction
+					kind="member"
+					panel="staff"
+					decides={{ projectId: project.id, title: project.name }}
+				/>
+			{/if}
+		</div>
+	</details>
 </PageHeader>
 
 <PageContent>
-	{#if data.attachments.events.length > 0}
-		<div class="grid gap-4 sm:grid-cols-2">
-			{#each data.attachments.events as ev (ev.id)}
-				<EntityCard ref={ev.ref} media="none">
-					{#snippet facts()}
-						<DefinitionList>
-							<Fact label="When">{formatDateShort(ev.startsAt)}</Fact>
-						</DefinitionList>
-					{/snippet}
-					{#snippet actions()}
-						{@render detach('event', ev.id, ev.title)}
-					{/snippet}
-				</EntityCard>
-			{/each}
-		</div>
-	{/if}
-
-	<!-- Labelled and in a list: the status, the dates and the description sat
-	     loose above the cards, in no box and with nothing naming them (#1080). -->
-	<DefinitionList>
-		<Fact label="Status"><StatusBadge status={project.status} label /></Fact>
-		<Fact label="Dates">
+	<div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm" aria-label="Project status">
+		<StatusBadge status={project.status} label />
+		<span class="inline-flex items-center gap-2">
+			<progress
+				class="progress w-28 progress-success"
+				value={progress.done}
+				max={Math.max(progress.total, 1)}
+				aria-label="Tasks done"
+			></progress>
+			<span><strong>{progress.done}</strong> of {progress.total} tasks done</span>
+		</span>
+		<span class={overBudget ? 'text-error' : ''}>
+			<strong>{formatCents(burn.cash.totalCents)}</strong>
+			{project.budgetCents === null
+				? 'spent, no budget set'
+				: `of ${formatCents(project.budgetCents)} spent`}
+		</span>
+		<span class="text-muted">
 			{#if project.startsAt}
 				{formatDateShort(project.startsAt)}{project.endsAt
 					? ` – ${formatDateShort(project.endsAt)}`
@@ -265,113 +233,17 @@
 			{:else}
 				No dates set
 			{/if}
-		</Fact>
-		{#if project.description}
-			<Fact label="About">{project.description}</Fact>
-		{/if}
-	</DefinitionList>
+		</span>
+	</div>
 
-	<Card>
-		<CardBody>
-			<div class="grid gap-6 sm:grid-cols-2">
-				<div class="space-y-2">
-					<SectionLabel label="Progress" />
-					{#if liveCount > 0}
-						<p class="text-2xl font-medium">
-							{doneCount}<span class="text-subtle text-base"> of {liveCount} work orders done</span>
-						</p>
-						<progress
-							class="progress w-full progress-success"
-							value={doneCount}
-							max={liveCount}
-							aria-label="Work orders done"
-						></progress>
-					{:else}
-						<p class="text-subtle">No work orders yet.</p>
-					{/if}
-					{#if cancelledCount > 0}
-						<p class="text-subtle text-sm">{cancelledCount} cancelled, not counted.</p>
-					{/if}
-				</div>
-				<div class="space-y-2">
-					<SectionLabel label="Budget" />
-					<p class="text-2xl font-medium">
-						{formatCents(burn.cash.totalCents)}<span class="text-subtle text-base">
-							{project.budgetCents === null
-								? ' spent'
-								: ` spent of ${formatCents(project.budgetCents)}`}</span
-						>
-					</p>
-					<p class="text-sm {overBudget ? 'text-error' : 'text-subtle'}">
-						{#if burn.remainingCents === null}
-							No budget set
-						{:else if overBudget}
-							Over budget by {formatCents(Math.abs(burn.remainingCents))}
-						{:else}
-							{formatCents(burn.remainingCents)} remaining
-						{/if}
-					</p>
-				</div>
-			</div>
-		</CardBody>
-	</Card>
-
-	<InfoCard
-		title="Work orders"
-		state={liveCount > 0 ? `${doneCount} of ${liveCount} done` : undefined}
-	>
-		{#if workOrders.length > 0}
-			<Table>
-				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Done</span></th>
-					<th class="cell-primary">Work order</th>
-					<th class="col-support cell-num">Filled</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
-				{/snippet}
-				{#each workOrders as wo (wo.id)}
-					<tr
-						class="hover cursor-pointer"
-						use:rowLink={resolve(`/staff/volunteer/shifts/${wo.id}`)}
-					>
-						<td class="w-px">
-							{#if wo.cancelledAt}
-								<IconSquareX size={20} class="text-subtle" aria-label="Cancelled" />
-							{:else if wo.resolvedAt}
-								<IconSquareCheck size={20} class="text-success" aria-label="Done" />
-							{:else}
-								<IconSquare size={20} class="text-subtle" aria-label="Open" />
-							{/if}
-						</td>
-						<td class="cell-primary">
-							<a
-								class="block truncate font-medium {wo.cancelledAt
-									? 'text-subtle line-through'
-									: ''}"
-								href={resolve(`/staff/volunteer/shifts/${wo.id}`)}>{wo.title}</a
-							>
-							<div class="truncate text-subtle text-sm">
-								{wo.startsAt ? formatDateShort(wo.startsAt) : 'Not scheduled'}
-							</div>
-						</td>
-						<td class="col-support cell-num">{wo.claimed} / {wo.capacity}</td>
-						<td class="w-px">{@render detach('work_order', wo.id, wo.title)}</td>
-					</tr>
-				{/each}
-			</Table>
-		{:else}
-			<EmptyState
-				title="No work orders"
-				description="Apply a duty list, or attach a work order below."
-			/>
-		{/if}
-	</InfoCard>
-
-	<!-- Suggestion → ballot → this project, each a link. Either may be missing:
-	     a failed breaker panel is a project nobody suggested or voted on. -->
-	<InfoCard title="Why this exists">
-		{#if !origin.suggestion && !origin.ballot && origin.decidedBy.length === 0}
-			<p class="text-muted">Staff started this directly: no suggestion or ballot led to it.</p>
-		{:else}
+	<details class="collapse-arrow collapse border border-base-300">
+		<summary class="collapse-title font-medium">About</summary>
+		<div class="collapse-content space-y-4 text-sm">
+			{#if project.description}
+				<p class="whitespace-pre-wrap">{project.description}</p>
+			{:else}
+				<p class="text-muted">No description yet. Add one under Edit project.</p>
+			{/if}
 			<DefinitionList>
 				{#if origin.suggestion}
 					<Fact label="Suggested">
@@ -393,195 +265,110 @@
 						<BallotLine ballot={b} href={resolve(`/staff/ballots/${b.id}`)} />
 					</Fact>
 				{/each}
-				<Fact label="Became">{project.name}</Fact>
+				{#if !origin.suggestion && !origin.ballot && origin.decidedBy.length === 0}
+					<Fact label="Origin">Staff started this directly.</Fact>
+				{/if}
+				{#if data.attachments.events.length > 0}
+					<Fact label="Events">
+						<span class="flex flex-wrap gap-2">
+							{#each data.attachments.events as ev (ev.id)}
+								<EntityChip ref={ev.ref} />
+							{/each}
+						</span>
+					</Fact>
+				{/if}
 			</DefinitionList>
-		{/if}
-		{#if data.canCreateBallot}
-			<div class="mt-3">
-				<CreateBallotAction
-					kind="member"
-					panel="staff"
-					decides={{ projectId: project.id, title: project.name }}
+		</div>
+	</details>
+
+	<div class="tab-bar">
+		<TabBar
+			tabs={[
+				{ key: 'tasks', label: 'Tasks', badge: `${progress.done}/${progress.total}` },
+				{ key: 'budget', label: 'Budget' }
+			]}
+			active={tab}
+			onchange={(key) => {
+				tab = parseTab(key);
+				setParams({ tab: tab === 'tasks' ? null : tab, task: tab === 'tasks' ? selectedId : null });
+			}}
+		/>
+	</div>
+
+	{#if tab === 'budget'}
+		<BudgetTab {data} />
+	{:else}
+		<div class="flex items-start">
+			<div class="@container min-w-0 flex-1 space-y-4">
+				<TaskList
+					{list}
+					viewerId={data.viewerId}
+					selectedId={selected?.id ?? null}
+					{filter}
+					{showDone}
+					projectId={project.id}
+					onopen={openTask}
+					onfilter={(f) => {
+						filter = f;
+						setParams({ show: f === 'all' ? null : f });
+					}}
+					onshowdone={(show) => {
+						showDone = show;
+						setParams({ done: show ? null : 'hide' });
+					}}
 				/>
 			</div>
-		{/if}
-	</InfoCard>
-
-	<InfoCard title="Attached work">
-		{#snippet header(title)}
-			<div class="flex items-center justify-between gap-2">
-				<CardTitle level={2}>{title}</CardTitle>
-				<Action
-					action={attachToProjectForm}
-					label="Attach"
-					size="sm"
-					modalTitle="Attach to this project"
-					successToast="Attached"
-				>
-					{#snippet form()}
-						<input {...attachFields.projectId.as('hidden', project.id)} />
-						<Field field={attachFields.kind} type="select" label="What" options={attachKinds} />
-						<Field
-							field={attachFields.rowId}
-							type="text"
-							label="Id"
-							description="The row's id, copied from its own page."
-						/>
+			{#if selected}
+				<aside class="task-panel" aria-labelledby="task-panel-title">
+					<TaskPanel task={selected} {list} onclose={closeTask} onopen={openTask} />
+				</aside>
+			{:else if selectedId}
+				<Alert type="warning" class="ml-4">
+					That task is not on this project.
+					{#snippet action()}
+						<Button size="sm" onclick={closeTask}>Close</Button>
 					{/snippet}
-				</Action>
-			</div>
-		{/snippet}
-
-		{#if otherWork.length > 0}
-			<Table>
-				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th class="cell-primary">Item</th>
-					<th class="col-support">Date</th>
-					<th class="cell-num">Amount</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
-				{/snippet}
-				{#each otherWork as row (row.id)}
-					<tr class="hover cursor-pointer" use:rowLink={row.href}>
-						<td class="w-px">
-							{#if row.status}<StatusBadge status={row.status} />{/if}
-						</td>
-						<td class="cell-primary">
-							<a class="block truncate font-medium" href={row.href}>{row.label}</a>
-							<div class="truncate text-subtle text-sm">{row.kindLabel}</div>
-						</td>
-						<td class="col-support whitespace-nowrap">
-							{row.date ? formatDateShort(row.date) : '—'}
-						</td>
-						<td class="cell-num">{row.amount}</td>
-						<td class="w-px">{@render detach(row.kind, row.detachId, row.label)}</td>
-					</tr>
-				{/each}
-			</Table>
-		{:else}
-			<EmptyState
-				title="No other work attached"
-				description="Attach an order or an acquisition, or a work order a contractor is engaged on, and its cost joins this project's burn."
-			/>
-		{/if}
-	</InfoCard>
-
-	<div class="grid gap-4 lg:grid-cols-2">
-		<InfoCard title="Cash">
-			<Table>
-				{#snippet head()}
-					<th>Source</th>
-					<th class="cell-num">Amount</th>
-				{/snippet}
-				<tr>
-					<td>Contractors</td>
-					<td class="cell-num">{formatCents(burn.cash.contractorCents)}</td>
-				</tr>
-				<tr>
-					<td>Purchase orders</td>
-					<td class="cell-num">{formatCents(burn.cash.purchaseOrderCents)}</td>
-				</tr>
-				<tr>
-					<td>Acquisitions</td>
-					<td class="cell-num">{formatCents(burn.cash.acquisitionCents)}</td>
-				</tr>
-				{#if project.kind === 'production' || burn.cash.showCents > 0}
-					<tr>
-						<td>
-							Show costs
-							<span class="block text-subtle text-xs">
-								The cost sheet and guarantee top-ups; the acts' pool passes through
-							</span>
-						</td>
-						<td class="cell-num">{formatCents(burn.cash.showCents)}</td>
-					</tr>
-				{/if}
-				<tr class="font-medium">
-					<td>Spent</td>
-					<td class="cell-num">{formatCents(burn.cash.totalCents)}</td>
-				</tr>
-				<tr>
-					<td>Budget</td>
-					<td class="cell-num">
-						{project.budgetCents === null ? 'None set' : formatCents(project.budgetCents)}
-					</td>
-				</tr>
-				<tr class="font-medium">
-					<td>Remaining</td>
-					<td class="cell-num {overBudget ? 'text-error' : ''}">
-						{burn.remainingCents === null ? '—' : signedCents(burn.remainingCents)}
-					</td>
-				</tr>
-			</Table>
-		</InfoCard>
-
-		<InfoCard title="Contributed">
-			<Table>
-				{#snippet head()}
-					<th>Source</th>
-					<th class="cell-num">Value</th>
-				{/snippet}
-				<tr>
-					<td>
-						Volunteer time — impact value
-						<span class="block text-subtle text-xs">
-							{hrs(volunteerHours)}, every approved hour at {formatCents(
-								burn.contributed.hourValueCents
-							)}/hr
-						</span>
-					</td>
-					<td class="cell-num">{formatCents(burn.contributed.volunteerValueCents)}</td>
-				</tr>
-				<tr>
-					<td>
-						Contributed services — specialized only
-						<span class="block text-subtle text-xs">
-							{hrs(specializedHours)} at each role's own rate{unpricedHours > 0
-								? `, of which ${hrs(unpricedHours)} on roles with no rate set and counted as zero`
-								: ''}
-						</span>
-					</td>
-					<td class="cell-num">{formatCents(burn.contributed.recognizableServicesCents)}</td>
-				</tr>
-				<tr>
-					<td>Donated services</td>
-					<td class="cell-num">{formatCents(burn.contributed.donatedServicesCents)}</td>
-				</tr>
-				<tr>
-					<td>Donated goods</td>
-					<td class="cell-num">{formatCents(burn.contributed.donatedGoodsCents)}</td>
-				</tr>
-			</Table>
-			<p class="mt-2 text-subtle text-sm">
-				Never added to cash: donated time and goods belong in a grant report, not against a budget.
-				The first two rows are also not added to <em>each other</em> — a donated engineer's hour is in
-				both, so they are two answers to two different questions rather than parts of one total.
-			</p>
-		</InfoCard>
-	</div>
+				</Alert>
+			{/if}
+		</div>
+	{/if}
 </PageContent>
 
-<!--
-	Detach is per row. It used to be one action asking for a `kind` and a
-	UUID "copied from its own page" — while the complete list of attached
-	rows, each with its id in scope, rendered directly beneath it (#1080).
--->
-{#snippet detach(kind: string, rowId: string, label: string)}
-	<Action
-		action={detachFromProjectForm.for(rowId)}
-		label="Detach"
-		variant="ghost"
-		size="xs"
-		modalTitle="Detach {label}?"
-		successToast="Detached"
-	>
-		{#snippet form()}
-			<input {...detachFields.projectId.as('hidden', project.id)} />
-			<input {...detachFields.kind.as('hidden', kind)} />
-			<input {...detachFields.rowId.as('hidden', rowId)} />
-			<p class="text-sm">
-				Takes <strong>{label}</strong> off this project. The record itself is untouched.
-			</p>
-		{/snippet}
-	</Action>
-{/snippet}
+<style>
+	/* Only the tab bar sticks; the header scrolls away. */
+	.tab-bar {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		margin-inline: -1.5rem;
+		padding: 0.5rem 1.5rem;
+		border-bottom: 1px solid var(--color-base-300);
+		background: var(--color-base-100);
+	}
+
+	/* A sheet over the list on a phone; full height beside it from lg. */
+	.task-panel {
+		position: fixed;
+		inset: 0;
+		z-index: 900;
+		overflow-y: auto;
+		background: var(--color-base-100);
+	}
+	@media (width >= 64rem) {
+		.task-panel {
+			position: sticky;
+			top: 4rem;
+			z-index: auto;
+			flex-shrink: 0;
+			width: 20rem;
+			max-height: calc(100dvh - 5rem);
+			margin-left: 1rem;
+			border-left: 1px solid var(--color-base-300);
+		}
+	}
+	@media (width >= 80rem) {
+		.task-panel {
+			width: 24rem;
+		}
+	}
+</style>

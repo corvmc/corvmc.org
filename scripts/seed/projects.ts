@@ -6,7 +6,8 @@ import {
 	volunteerHourLog,
 	volunteerProfile,
 	volunteerRole,
-	volunteerSignup
+	volunteerSignup,
+	workTask
 } from '../../src/lib/server/db/schema/volunteer';
 import { contractorJob } from '../../src/lib/server/db/schema/contractor';
 import { acquisition, purchaseOrder } from '../../src/lib/server/db/schema/inventory';
@@ -164,6 +165,26 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		createdByUserId: staffId
 	});
 
+	// Derived: done when its own duties are, so the list has an app-ticked row.
+	const punchList = randomUUID();
+	await db.insert(workOrder).values({
+		id: punchList,
+		title: 'Walk the room with the punch list',
+		projectId: ids.facility,
+		sectionId: section.finish,
+		sortOrder: 1,
+		doneWhen: 'tasks_ticked',
+		createdByUserId: staffId
+	});
+	await batchInsert(
+		workTask,
+		[
+			{ workOrderId: punchList, label: 'Touch up the trim', sortOrder: 0, done: true, doneAt: now },
+			{ workOrderId: punchList, label: 'Test every wall outlet', sortOrder: 1 }
+		],
+		10
+	);
+
 	// The project's own work orders, and its own hour log against one of them.
 	//
 	// Borrowing existing rows looked simpler and was not reproducible: which
@@ -213,6 +234,24 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		];
 		await batchInsert(workOrder, backlog, 10);
 		membersTaskId = backlog[0].id;
+
+		// Duties on the open task, one ticked, so the list has a row to unfold.
+		await batchInsert(
+			workTask,
+			[
+				['Photograph the current runs', true],
+				['Pull runs from the stage trough', false],
+				['Coil and label anything worth keeping', false]
+			].map(([label, done], i) => ({
+				workOrderId: backlog[1].id,
+				label: label as string,
+				sortOrder: i,
+				done: done as boolean,
+				doneAt: done ? now : null,
+				doneByUserId: done ? staffId : null
+			})),
+			10
+		);
 
 		// Ordered so the same two volunteers are assigned on every seed.
 		const assignees = await db
