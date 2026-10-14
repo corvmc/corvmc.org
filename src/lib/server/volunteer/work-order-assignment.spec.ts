@@ -149,6 +149,8 @@ describe('the assignment mode', () => {
 		engagement('contractor', 'completed');
 		workOrder('called-off', { posted_at: inHours(-1) });
 		engagement('called-off', 'cancelled');
+		workOrder('declined', { volunteer_role_id: null, title: 'Quote' });
+		engagement('declined', 'declined');
 		workOrder('members');
 		insert('volunteer_signup', {
 			id: 'su-1',
@@ -168,6 +170,7 @@ describe('the assignment mode', () => {
 		const modes = await workOrderModes([
 			'contractor',
 			'called-off',
+			'declined',
 			'members',
 			'dropped',
 			'typed',
@@ -176,6 +179,7 @@ describe('the assignment mode', () => {
 		expect(Object.fromEntries(modes)).toEqual({
 			contractor: 'contractor',
 			'called-off': 'open',
+			declined: 'unassigned',
 			members: 'members',
 			dropped: 'unassigned',
 			typed: 'unassigned'

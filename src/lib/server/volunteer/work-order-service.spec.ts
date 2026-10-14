@@ -363,6 +363,40 @@ describe('work orders', () => {
 		).rejects.toThrow();
 	});
 
+	it('creates a task with only a title: no role, not posted', async () => {
+		await createWorkOrder({
+			title: ' Buy paint ',
+			projectId: 'proj-1',
+			createdByUserId: 'staff-1'
+		});
+		const values = chainCalls.find((c) => c.method === 'values')!.args[0] as Record<
+			string,
+			unknown
+		>;
+		expect(values).toMatchObject({
+			title: 'Buy paint',
+			volunteerRoleId: null,
+			postedAt: null,
+			projectId: 'proj-1'
+		});
+	});
+
+	it('posts volunteer work, which has a role', async () => {
+		selectResult = [{ id: 'role-1', isActive: true }];
+		await createWorkOrder({ volunteerRoleId: 'role-1', createdByUserId: 'staff-1' });
+		const values = chainCalls.find((c) => c.method === 'values')!.args[0] as Record<
+			string,
+			unknown
+		>;
+		expect(values.postedAt).toBeInstanceOf(Date);
+	});
+
+	it('refuses a task with neither a role nor a title', async () => {
+		await expect(createWorkOrder({ title: '  ', createdByUserId: 'staff-1' })).rejects.toThrow(
+			'Give the task a title.'
+		);
+	});
+
 	it('queues only work that is unscheduled, unresolved and live', async () => {
 		selectResult = [];
 		await listWorkOrders();

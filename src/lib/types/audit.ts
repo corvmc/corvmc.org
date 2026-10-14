@@ -30,7 +30,16 @@ export const auditActions = [
 	'production.reopened',
 	'production.payout_recorded',
 	'production.payout_undone',
-	'event.published_over_warnings'
+	'event.published_over_warnings',
+	'work_order.created',
+	'work_order.assigned',
+	'work_order.member_assigned',
+	'work_order.member_unassigned',
+	'work_order.rescheduled',
+	'work_order.resolved',
+	'work_order.reopened',
+	'work_order.cancelled',
+	'work_order.moved'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -41,7 +50,8 @@ export const auditSubjectTypes = [
 	'role',
 	'group',
 	'production',
-	'event'
+	'event',
+	'work_order'
 ] as const;
 export type AuditSubjectType = (typeof auditSubjectTypes)[number];
 
@@ -120,6 +130,32 @@ export interface AuditDetailsByAction {
 	'production.payout_undone': ProductionPayout;
 	/** A CMC listing published over its readiness warnings (#1787). */
 	'event.published_over_warnings': { warnings: string[]; reason: string };
+	'work_order.created': { projectId: string | null; title: string };
+	/** Who answers it changed. `cancelledSignups` counts people taken off by the switch. */
+	'work_order.assigned': {
+		from: WorkOrderAssignmentMode;
+		to: WorkOrderAssignmentMode;
+		cancelledSignups: number;
+	};
+	'work_order.member_assigned': { userId: string; memberName: string };
+	'work_order.member_unassigned': { userId: string; memberName: string };
+	'work_order.rescheduled': { from: WorkOrderTiming; to: WorkOrderTiming };
+	/** `override` when the task has a done condition and was ticked by hand regardless. */
+	'work_order.resolved': { override: boolean; reason: string | null };
+	'work_order.reopened': Record<string, never>;
+	'work_order.cancelled': Record<string, never>;
+	/** Section ids; null is the unlabelled group. */
+	'work_order.moved': { fromSectionId: string | null; toSectionId: string | null };
+}
+
+/** How a work order is answered, derived from its rows (work-order-service `workOrderModes`). */
+export type WorkOrderAssignmentMode = 'contractor' | 'open' | 'members' | 'unassigned';
+
+/** A work order's window and deadline as ISO strings. */
+interface WorkOrderTiming {
+	startsAt: string | null;
+	endsAt: string | null;
+	dueAt: string | null;
 }
 
 /** A show's status move. `eventId` is what the log links to; the production has no page. */

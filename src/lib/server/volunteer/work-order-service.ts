@@ -6,13 +6,13 @@ import { and, asc, count, eq, gte, inArray, isNotNull, isNull, lte, sql } from '
 import { DomainError } from '$lib/server/errors';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
+	contractorJobStatusesWithoutSpend,
 	DEFAULT_TIMEZONE,
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_MAX_MINUTES,
 	VOLUNTEER_SHIFT_NOTES_MAX,
 	VOLUNTEER_SHIFT_TITLE_MAX
 } from '$lib/config';
-import type { ContractorJobStatus } from '$lib/config';
 import type { WorkOrder, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
 import { chunk } from '$lib/server/utils/chunk';
 
@@ -46,7 +46,7 @@ export class ShiftValidationError extends DomainError {
 }
 
 /** `YYYY-MM-DDTHH:mm` from a datetime-local input, read as club wall-clock time. */
-function parseLocal(value: string, label: string): Date {
+export function parseLocal(value: string, label: string): Date {
 	const [datePart, timePart] = value.split('T');
 	if (!datePart || !timePart)
 		throw new ShiftValidationError(`${label} is not a valid date and time`);
@@ -58,7 +58,7 @@ interface ShiftTimes {
 	endsAt: Date;
 }
 
-function validateTimes(startsAt: Date, endsAt: Date): ShiftTimes {
+export function validateTimes(startsAt: Date, endsAt: Date): ShiftTimes {
 	if (endsAt <= startsAt) {
 		throw new ShiftValidationError('The shift has to end after it starts.');
 	}
@@ -69,7 +69,7 @@ function validateTimes(startsAt: Date, endsAt: Date): ShiftTimes {
 	return { startsAt, endsAt };
 }
 
-function validateCapacity(capacity: number): number {
+export function validateCapacity(capacity: number): number {
 	if (!Number.isInteger(capacity) || capacity < 1) {
 		throw new ShiftValidationError('A shift needs at least one person.');
 	}
@@ -81,7 +81,7 @@ function validateCapacity(capacity: number): number {
 	return capacity;
 }
 
-function validateTitle(title?: string | null): string | null {
+export function validateTitle(title?: string | null): string | null {
 	const trimmed = title?.trim() ?? '';
 	if (trimmed.length > VOLUNTEER_SHIFT_TITLE_MAX) {
 		throw new ShiftValidationError(`Keep the name under ${VOLUNTEER_SHIFT_TITLE_MAX} characters.`);
@@ -95,6 +95,20 @@ function validateNotes(notes?: string | null): string | null {
 		throw new ShiftValidationError(`Keep the notes under ${VOLUNTEER_SHIFT_NOTES_MAX} characters.`);
 	}
 	return trimmed || null;
+}
+
+/** A role work can be put under: it exists and is not archived. */
+export async function requireActiveRole(volunteerRoleId: string): Promise<void> {
+	const [role] = await db
+		.select({ id: volunteerRole.id, isActive: volunteerRole.isActive })
+		.from(volunteerRole)
+		.where(eq(volunteerRole.id, volunteerRoleId))
+		.limit(1);
+
+	if (!role) throw new ShiftValidationError('That role no longer exists.');
+	if (!role.isActive) {
+		throw new ShiftValidationError('That role is archived — restore it before assigning work.');
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -542,40 +556,41 @@ function shiftRowsQuery() {
 // ---------------------------------------------------------------------------
 
 /**
- * Work that needs doing, with nobody booked to do it.
+ * Work that needs doing, with nobody booked to do it. Staff-created: a member's
+ * `work_request` reaches one of these through a coordinator.
  *
- * Staff-created, like every shift: a member reporting a broken amp raises an
- * `work_request`, and a coordinator turns some number of those into one of these.
- * That is what lets "a shift exists -> it is claimable" stay true, and why this
- * needs no draft state.
+ * With a role it is volunteer work and is posted, as queue work always was.
+ * Without one it is a task typed into a project's list: nobody answers it yet,
+ * so it is not posted, and its title is all it has.
  */
 export async function createWorkOrder(data: {
-	volunteerRoleId: string;
+	volunteerRoleId?: string | null;
+	title?: string | null;
 	assetId?: string | null;
 	projectId?: string | null;
+	/** Only meaningful with a project. */
+	sectionId?: string | null;
+	sortOrder?: number;
 	notes?: string | null;
 	/** A deadline, not a window. */
 	dueAt?: Date | null;
 	capacity?: number;
 	createdByUserId: string;
 }): Promise<WorkOrder> {
-	const [role] = await db
-		.select({ id: volunteerRole.id, isActive: volunteerRole.isActive })
-		.from(volunteerRole)
-		.where(eq(volunteerRole.id, data.volunteerRoleId))
-		.limit(1);
-
-	if (!role) throw new ShiftValidationError('That role no longer exists.');
-	if (!role.isActive) {
-		throw new ShiftValidationError('That role is archived — restore it before assigning work.');
-	}
+	const roleId = data.volunteerRoleId || null;
+	const title = validateTitle(data.title);
+	if (roleId) await requireActiveRole(roleId);
+	else if (!title) throw new ShiftValidationError('Give the task a title.');
 
 	const [row] = await db
 		.insert(workOrder)
 		.values({
-			volunteerRoleId: data.volunteerRoleId,
+			volunteerRoleId: roleId,
+			title,
 			assetId: data.assetId || null,
 			projectId: data.projectId || null,
+			sectionId: data.projectId ? data.sectionId || null : null,
+			sortOrder: data.sortOrder ?? 0,
 			// Both null: the CHECK requires either a whole window or none, and this
 			// is the "none" case by definition.
 			startsAt: null,
@@ -583,9 +598,8 @@ export async function createWorkOrder(data: {
 			dueAt: data.dueAt ?? null,
 			capacity: validateCapacity(data.capacity ?? 1),
 			notes: data.notes ? validateNotes(data.notes) : null,
-			// Open to volunteers once it has a time, as queue work has always been.
-			postedAt: new Date(),
-			postedByUserId: data.createdByUserId,
+			postedAt: roleId ? new Date() : null,
+			postedByUserId: roleId ? data.createdByUserId : null,
 			createdByUserId: data.createdByUserId
 		})
 		.returning();
@@ -923,14 +937,6 @@ export async function listOpenShiftsForMember(
 
 export type WorkOrderMode = 'contractor' | 'open' | 'members' | 'unassigned';
 
-/**
- * Engagement statuses that no longer hold the work order. Every other status is a
- * live engagement, which is what makes the work order a contractor's.
- */
-export const NOT_LIVE_ENGAGEMENT_STATUSES = [
-	'cancelled'
-] as const satisfies readonly ContractorJobStatus[];
-
 /** The precedence on its own, so it reads (and is tested) apart from the query. */
 export function deriveMode(facts: {
 	engaged: boolean;
@@ -943,10 +949,13 @@ export function deriveMode(facts: {
 	return 'unassigned';
 }
 
-/** Whether the work order in scope has a live engagement: what makes it a contractor's. */
+/**
+ * Whether the work order in scope has a live engagement: what makes it a
+ * contractor's. Declined and cancelled engagements, which carry no spend, do not.
+ */
 export function liveEngagementSql() {
 	const notLive = sql.join(
-		NOT_LIVE_ENGAGEMENT_STATUSES.map((status) => sql`${status}`),
+		contractorJobStatusesWithoutSpend.map((status) => sql`${status}`),
 		sql`, `
 	);
 	return sql<number>`exists (

@@ -406,6 +406,12 @@ All staff-facing, so each phase goes straight to `main`.
    writes. Every pre-existing creation path (`createShift`, `createWorkOrder` with a
    role, duty lists, maintenance occurrences, the host shift) posts what it creates, so
    gating the board changes nothing for them; only the task list makes unposted work.
+   The services are `project-task-service.ts` and `project-section-service.ts`
+   (src/lib/server/project/), exposed by `tasks.remote.ts`. Members → Open keeps the
+   people already on it, as Open → Members does; only unassigning cancels signups.
+   Every switch away from Contractor is refused while the engagement is live, until
+   the engagement's own Cancel exists to pair with it. Audit entries are written on
+   the `work_order` subject only; `project` joins the vocabulary with its first writer.
 4. **Project page.** The task list, panel, picker, header, About, tabs and edit form.
 5. **Task page** at `/staff/projects/[id]/tasks/[taskId]`, the work order view shared
    with `/staff/volunteer/shifts/[id]`, and the redirect between them.

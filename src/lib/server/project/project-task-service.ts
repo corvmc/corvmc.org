@@ -1,0 +1,682 @@
+import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { db } from '$lib/server/db';
+import { positions } from '$lib/config';
+import { user } from '$lib/server/db/schema/authentication';
+import { role, modelHasRole } from '$lib/server/db/schema/authorization';
+import { groupMember } from '$lib/server/db/schema/group';
+import { projectCommittee } from '$lib/server/db/schema/project';
+import {
+	volunteerRole,
+	volunteerSignup,
+	workOrder,
+	workTask,
+	type WorkOrder
+} from '$lib/server/db/schema/volunteer';
+import { eventListing } from '$lib/server/db/schema/event';
+import { DomainError } from '$lib/server/domain-error';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
+import { chunk } from '$lib/server/utils/chunk';
+import { evaluateDone, type DeliverableState } from '$lib/server/volunteer/done-conditions';
+import {
+	cancelShift,
+	claimedSql,
+	countActiveSignups,
+	createWorkOrder,
+	parseLocal,
+	requireActiveRole,
+	resolveWorkOrder,
+	validateCapacity,
+	validateTimes,
+	workOrderModes,
+	type WorkOrderMode
+} from '$lib/server/volunteer/work-order-service';
+import { claimShift, releaseSignup } from '$lib/server/volunteer/volunteer-signup-service';
+import {
+	listSections,
+	nextTaskOrders,
+	requireSection
+} from '$lib/server/project/project-section-service';
+
+// ---------------------------------------------------------------------------
+// A project's task list: the work orders on it, as a checklist. Every function
+// takes the project id and refuses a work order that is not on that project,
+// because a remote takes both ids from the client.
+// ---------------------------------------------------------------------------
+
+export class TaskNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+	constructor() {
+		super('Task not found');
+	}
+}
+
+export class TaskValidationError extends DomainError {
+	readonly httpStatus = 400;
+	constructor(message: string) {
+		super(message);
+	}
+}
+
+export class TaskConflictError extends DomainError {
+	readonly httpStatus = 409;
+	constructor(message: string) {
+		super(message);
+	}
+}
+
+const ENGAGED =
+	'A contractor is engaged on this. Cancel or decline their engagement before changing who does it.';
+
+/** The work order, refused (404) unless it belongs to this project. */
+export async function requireTaskInProject(
+	projectId: string,
+	workOrderId: string
+): Promise<WorkOrder> {
+	const [row] = await db
+		.select()
+		.from(workOrder)
+		.where(and(eq(workOrder.id, workOrderId), eq(workOrder.projectId, projectId)))
+		.limit(1);
+	if (!row) throw new TaskNotFoundError();
+	return row;
+}
+
+async function requireLiveTask(projectId: string, workOrderId: string): Promise<WorkOrder> {
+	const task = await requireTaskInProject(projectId, workOrderId);
+	if (task.cancelledAt) throw new TaskConflictError('That task was called off.');
+	return task;
+}
+
+const label = (task: Pick<WorkOrder, 'id' | 'title'>) => task.title ?? task.id;
+
+async function modeOf(id: string): Promise<WorkOrderMode> {
+	return (await workOrderModes([id])).get(id) ?? 'unassigned';
+}
+
+async function auditModeChange(
+	task: WorkOrder,
+	from: WorkOrderMode,
+	to: WorkOrderMode,
+	cancelledSignups = 0
+) {
+	if (from === to && cancelledSignups === 0) return;
+	await recordAuditEntry({
+		action: 'work_order.assigned',
+		subject: { type: 'work_order', id: task.id, label: label(task) },
+		details: { from, to, cancelledSignups }
+	});
+}
+
+// ---------------------------------------------------------------------------
+// Create, order, move
+// ---------------------------------------------------------------------------
+
+/** A line typed into the list: a title, at the end of its section, nothing else set. */
+export async function createTask(data: {
+	projectId: string;
+	title: string;
+	sectionId?: string | null;
+	createdByUserId: string;
+}): Promise<WorkOrder> {
+	const sectionId = data.sectionId || null;
+	if (sectionId) await requireSection(data.projectId, sectionId);
+	if (!data.title.trim()) throw new TaskValidationError('Give the task a title.');
+	const order = (await nextTaskOrders(data.projectId)).get(sectionId) ?? 0;
+	const row = await createWorkOrder({
+		title: data.title,
+		projectId: data.projectId,
+		sectionId,
+		sortOrder: order,
+		createdByUserId: data.createdByUserId
+	});
+	await recordAuditEntry({
+		action: 'work_order.created',
+		subject: { type: 'work_order', id: row.id, label: label(row) },
+		details: { projectId: data.projectId, title: row.title ?? '' }
+	});
+	return row;
+}
+
+function sectionIs(sectionId: string | null) {
+	return sectionId ? eq(workOrder.sectionId, sectionId) : isNull(workOrder.sectionId);
+}
+
+async function tasksIn(projectId: string, sectionId: string | null, except?: string) {
+	return db
+		.select({ id: workOrder.id })
+		.from(workOrder)
+		.where(
+			and(
+				eq(workOrder.projectId, projectId),
+				sectionIs(sectionId),
+				except ? ne(workOrder.id, except) : undefined
+			)
+		)
+		.orderBy(asc(workOrder.sortOrder), asc(workOrder.createdAt), asc(workOrder.id));
+}
+
+/** Write `ids` as positions 0..n in `sectionId`, in one batch. */
+async function writeOrder(ids: string[], sectionId: string | null) {
+	if (ids.length === 0) return;
+	const now = new Date();
+	await db.batch(
+		ids.map((id, i) =>
+			db
+				.update(workOrder)
+				.set({ sectionId, sortOrder: i, updatedAt: now })
+				.where(eq(workOrder.id, id))
+		) as unknown as Parameters<typeof db.batch>[0]
+	);
+}
+
+/**
+ * Put a task at `index` in a section (null: the unlabelled group), renumbering
+ * that section so positions stay 0..n. The section it left keeps its gaps,
+ * which order the same.
+ */
+export async function moveTask(
+	projectId: string,
+	workOrderId: string,
+	to: { sectionId: string | null; index: number }
+): Promise<void> {
+	const task = await requireTaskInProject(projectId, workOrderId);
+	if (to.sectionId) await requireSection(projectId, to.sectionId);
+	const ids = (await tasksIn(projectId, to.sectionId, workOrderId)).map((r) => r.id);
+	const at = Math.max(0, Math.min(Math.trunc(to.index), ids.length));
+	ids.splice(at, 0, workOrderId);
+	await writeOrder(ids, to.sectionId);
+
+	if (task.sectionId !== to.sectionId) {
+		await recordAuditEntry({
+			action: 'work_order.moved',
+			subject: { type: 'work_order', id: task.id, label: label(task) },
+			details: { fromSectionId: task.sectionId, toSectionId: to.sectionId }
+		});
+	}
+}
+
+/** `orderedIds` must name every task in the section exactly once. */
+export async function reorderTasks(
+	projectId: string,
+	sectionId: string | null,
+	orderedIds: string[]
+): Promise<void> {
+	if (sectionId) await requireSection(projectId, sectionId);
+	const current = new Set((await tasksIn(projectId, sectionId)).map((r) => r.id));
+	if (
+		orderedIds.length !== current.size ||
+		new Set(orderedIds).size !== orderedIds.length ||
+		orderedIds.some((id) => !current.has(id))
+	) {
+		throw new TaskValidationError('The list changed while you were moving it. Reload.');
+	}
+	await writeOrder(orderedIds, sectionId);
+}
+
+// ---------------------------------------------------------------------------
+// Assignment
+// ---------------------------------------------------------------------------
+
+export interface AssignableMember {
+	userId: string;
+	name: string;
+	via: 'staff' | 'committee';
+}
+
+/** The committee answerable for the task: its own, else its project's owner. */
+async function committeeOf(task: WorkOrder): Promise<string | null> {
+	if (task.groupId) return task.groupId;
+	if (!task.projectId) return null;
+	const [owner] = await db
+		.select({ groupId: projectCommittee.groupId })
+		.from(projectCommittee)
+		.where(and(eq(projectCommittee.projectId, task.projectId), eq(projectCommittee.role, 'owner')))
+		.limit(1);
+	return owner?.groupId ?? null;
+}
+
+async function assignableTo(task: WorkOrder): Promise<AssignableMember[]> {
+	const committeeId = await committeeOf(task);
+	const [staff, committee] = await Promise.all([
+		db
+			.selectDistinct({ userId: user.id, name: user.name })
+			.from(user)
+			.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
+			.innerJoin(role, eq(role.id, modelHasRole.roleId))
+			.where(inArray(role.name, Object.keys(positions))),
+		committeeId
+			? db
+					.select({ userId: user.id, name: user.name })
+					.from(groupMember)
+					.innerJoin(user, eq(user.id, groupMember.userId))
+					.where(and(eq(groupMember.groupId, committeeId), eq(groupMember.status, 'active')))
+			: Promise.resolve([])
+	]);
+	const byId = new Map<string, AssignableMember>();
+	for (const s of staff) byId.set(s.userId, { ...s, via: 'staff' });
+	for (const c of committee)
+		if (!byId.has(c.userId)) byId.set(c.userId, { ...c, via: 'committee' });
+	return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Who the picker lists: staff, and the members of the task's committee. */
+export async function listAssignableMembers(
+	projectId: string,
+	workOrderId: string
+): Promise<AssignableMember[]> {
+	return assignableTo(await requireTaskInProject(projectId, workOrderId));
+}
+
+async function signupsOn(workOrderId: string, statuses: string[]) {
+	return db
+		.select({ id: volunteerSignup.id, userId: volunteerSignup.userId, name: user.name })
+		.from(volunteerSignup)
+		.innerJoin(user, eq(user.id, volunteerSignup.userId))
+		.where(
+			and(
+				eq(volunteerSignup.shiftId, workOrderId),
+				inArray(volunteerSignup.status, statuses as ('claimed' | 'confirmed')[])
+			)
+		);
+}
+
+/** The role the task will run under: the one given, else its own. Required for volunteer work. */
+async function roleFor(task: WorkOrder, volunteerRoleId?: string | null): Promise<string> {
+	const roleId = volunteerRoleId || task.volunteerRoleId;
+	if (!roleId) throw new TaskValidationError('Pick a role first: hours are logged against it.');
+	if (roleId !== task.volunteerRoleId) await requireActiveRole(roleId);
+	return roleId;
+}
+
+export interface AssignResult {
+	assigned: string[];
+	/** People the signup service refused, with its reason (not cleared, no profile, …). */
+	refused: { userId: string; message: string }[];
+	mode: WorkOrderMode;
+}
+
+/**
+ * Put named people on the task: staff-made signups, landing confirmed. Takes it
+ * off the claim board and keeps whoever is already on it, so Open → Members
+ * loses nobody. Naming more people than it has places raises the places.
+ */
+export async function assignMembers(
+	projectId: string,
+	workOrderId: string,
+	data: { userIds: string[]; volunteerRoleId?: string | null }
+): Promise<AssignResult> {
+	const task = await requireLiveTask(projectId, workOrderId);
+	const from = await modeOf(task.id);
+	if (from === 'contractor') throw new TaskConflictError(ENGAGED);
+	const roleId = await roleFor(task, data.volunteerRoleId);
+
+	const allowed = new Set((await assignableTo(task)).map((m) => m.userId));
+	const wanted = [...new Set(data.userIds)];
+	if (wanted.some((id) => !allowed.has(id))) {
+		throw new TaskValidationError('Only staff and members of its committee can be assigned.');
+	}
+	const holding = await signupsOn(task.id, ['claimed', 'confirmed', 'completed']);
+	const onIt = new Set(holding.map((s) => s.userId));
+	const adding = wanted.filter((id) => !onIt.has(id));
+	if (adding.length === 0 && holding.length === 0) {
+		throw new TaskValidationError('Pick at least one person.');
+	}
+
+	const capacity = validateCapacity(Math.max(task.capacity, holding.length + adding.length));
+	await db
+		.update(workOrder)
+		.set({
+			volunteerRoleId: roleId,
+			capacity,
+			postedAt: null,
+			postedByUserId: null,
+			updatedAt: new Date()
+		})
+		.where(eq(workOrder.id, task.id));
+
+	const assigned: string[] = [];
+	const refused: AssignResult['refused'] = [];
+	for (const userId of adding) {
+		try {
+			await claimShift(task.id, userId, { assignedByStaff: true });
+			assigned.push(userId);
+		} catch (err) {
+			if (!(err instanceof DomainError)) throw err;
+			refused.push({ userId, message: err.message });
+		}
+	}
+	// Places are raised for the people actually put on it, not those refused.
+	if (refused.length > 0) {
+		await db
+			.update(workOrder)
+			.set({ capacity: Math.max(task.capacity, holding.length + assigned.length) })
+			.where(eq(workOrder.id, task.id));
+	}
+
+	const mode = await modeOf(task.id);
+	await auditModeChange(task, from, mode);
+	if (assigned.length > 0) {
+		const names = await db
+			.select({ id: user.id, name: user.name })
+			.from(user)
+			.where(inArray(user.id, assigned));
+		for (const n of names) {
+			await recordAuditEntry({
+				action: 'work_order.member_assigned',
+				subject: { type: 'work_order', id: task.id, label: label(task) },
+				details: { userId: n.id, memberName: n.name }
+			});
+		}
+	}
+	return { assigned, refused, mode };
+}
+
+/** Take one person off the task, telling them the way a dropped shift does. */
+export async function unassignMember(
+	projectId: string,
+	workOrderId: string,
+	userId: string
+): Promise<void> {
+	const task = await requireLiveTask(projectId, workOrderId);
+	const [signup] = (await signupsOn(task.id, ['claimed', 'confirmed'])).filter(
+		(s) => s.userId === userId
+	);
+	if (!signup) throw new TaskNotFoundError();
+	const from = await modeOf(task.id);
+	await releaseSignup(signup.id);
+	await recordAuditEntry({
+		action: 'work_order.member_unassigned',
+		subject: { type: 'work_order', id: task.id, label: label(task) },
+		details: { userId, memberName: signup.name }
+	});
+	await auditModeChange(task, from, await modeOf(task.id));
+}
+
+/**
+ * Open the task to volunteers on the claim board. Needs a role and a number of
+ * places; anybody already on it stays on it.
+ */
+export async function openToVolunteers(
+	projectId: string,
+	workOrderId: string,
+	data: { volunteerRoleId?: string | null; capacity?: number; postedByUserId: string }
+): Promise<WorkOrderMode> {
+	const task = await requireLiveTask(projectId, workOrderId);
+	const from = await modeOf(task.id);
+	if (from === 'contractor') throw new TaskConflictError(ENGAGED);
+	const roleId = await roleFor(task, data.volunteerRoleId);
+	const capacity = validateCapacity(data.capacity ?? task.capacity);
+	const taken = await countActiveSignups(task.id);
+	if (capacity < taken) {
+		throw new TaskValidationError(
+			`${taken} ${taken === 1 ? 'person is' : 'people are'} already on this. Ask for at least ${taken}.`
+		);
+	}
+	const now = new Date();
+	await db
+		.update(workOrder)
+		.set({
+			volunteerRoleId: roleId,
+			capacity,
+			postedAt: task.postedAt ?? now,
+			postedByUserId: task.postedAt ? task.postedByUserId : data.postedByUserId,
+			updatedAt: now
+		})
+		.where(eq(workOrder.id, task.id));
+	await auditModeChange(task, from, 'open');
+	return 'open';
+}
+
+export type UnassignResult =
+	| { status: 'needs_confirmation'; liveSignups: number }
+	| { status: 'done'; cancelledSignups: number; mode: WorkOrderMode };
+
+/**
+ * Nobody answers it. Warn, record, allow: with people on it, the first call
+ * only says how many; with `confirm`, their signups are cancelled through the
+ * ordinary release, which tells each of them.
+ */
+export async function unassignTask(
+	projectId: string,
+	workOrderId: string,
+	data: { confirm?: boolean } = {}
+): Promise<UnassignResult> {
+	const task = await requireLiveTask(projectId, workOrderId);
+	const from = await modeOf(task.id);
+	if (from === 'contractor') throw new TaskConflictError(ENGAGED);
+	const live = await signupsOn(task.id, ['claimed', 'confirmed']);
+	if (live.length > 0 && !data.confirm) {
+		return { status: 'needs_confirmation', liveSignups: live.length };
+	}
+
+	await db
+		.update(workOrder)
+		.set({ postedAt: null, postedByUserId: null, updatedAt: new Date() })
+		.where(eq(workOrder.id, task.id));
+	for (const s of live) {
+		await releaseSignup(s.id);
+		await recordAuditEntry({
+			action: 'work_order.member_unassigned',
+			subject: { type: 'work_order', id: task.id, label: label(task) },
+			details: { userId: s.userId, memberName: s.name }
+		});
+	}
+	const mode = await modeOf(task.id);
+	await auditModeChange(task, from, mode, live.length);
+	return { status: 'done', cancelledSignups: live.length, mode };
+}
+
+// ---------------------------------------------------------------------------
+// Done, reopened, rescheduled, called off
+// ---------------------------------------------------------------------------
+
+/**
+ * Tick it. A task with a done condition is the app's to tick, so ticking one by
+ * hand is an override: it needs a reason, kept as the resolution notes.
+ */
+export async function resolveTask(
+	projectId: string,
+	workOrderId: string,
+	data: { resolvedByUserId: string; reason?: string | null }
+): Promise<WorkOrder> {
+	const task = await requireLiveTask(projectId, workOrderId);
+	const reason = data.reason?.trim() || null;
+	const override = task.doneWhen !== null;
+	if (override && !reason) {
+		throw new TaskValidationError(
+			'This one ticks itself when its condition holds. Say why it is done regardless.'
+		);
+	}
+	const row = await resolveWorkOrder(task.id, {
+		resolvedByUserId: data.resolvedByUserId,
+		notes: reason
+	});
+	await recordAuditEntry({
+		action: 'work_order.resolved',
+		subject: { type: 'work_order', id: task.id, label: label(task) },
+		details: { override, reason }
+	});
+	return row;
+}
+
+/** Untick it. A task with a done condition goes back to reading it. */
+export async function reopenTask(projectId: string, workOrderId: string): Promise<WorkOrder> {
+	const task = await requireLiveTask(projectId, workOrderId);
+	if (!task.resolvedAt) throw new TaskConflictError('That task is not ticked.');
+	try {
+		const [row] = await db
+			.update(workOrder)
+			.set({
+				resolvedAt: null,
+				resolvedByUserId: null,
+				resolutionNotes: null,
+				updatedAt: new Date()
+			})
+			.where(eq(workOrder.id, task.id))
+			.returning();
+		await recordAuditEntry({
+			action: 'work_order.reopened',
+			subject: { type: 'work_order', id: task.id, label: label(task) },
+			details: {}
+		});
+		return row;
+	} catch (err) {
+		// A recurring occurrence: closing it already wrote the next one.
+		if (err instanceof Error && /UNIQUE constraint failed/i.test(err.message)) {
+			throw new TaskConflictError('The next occurrence of this is already open. Work on that one.');
+		}
+		throw err;
+	}
+}
+
+const iso = (d: Date | null) => d?.toISOString() ?? null;
+
+/**
+ * Set the window (`YYYY-MM-DDTHH:mm`, club time; both or neither) and the
+ * deadline. Either may be cleared: a task can lose its time as well as gain one.
+ */
+export async function rescheduleTask(
+	projectId: string,
+	workOrderId: string,
+	data: { startsAt: string | null; endsAt: string | null; dueAt: Date | null }
+): Promise<WorkOrder> {
+	const task = await requireLiveTask(projectId, workOrderId);
+	if (!data.startsAt !== !data.endsAt) {
+		throw new TaskValidationError('Give this both a start and an end, or neither.');
+	}
+	const times =
+		data.startsAt && data.endsAt
+			? validateTimes(parseLocal(data.startsAt, 'Start'), parseLocal(data.endsAt, 'End'))
+			: { startsAt: null, endsAt: null };
+	const [row] = await db
+		.update(workOrder)
+		.set({ ...times, dueAt: data.dueAt, updatedAt: new Date() })
+		.where(eq(workOrder.id, task.id))
+		.returning();
+	await recordAuditEntry({
+		action: 'work_order.rescheduled',
+		subject: { type: 'work_order', id: task.id, label: label(task) },
+		details: {
+			from: { startsAt: iso(task.startsAt), endsAt: iso(task.endsAt), dueAt: iso(task.dueAt) },
+			to: { startsAt: iso(row.startsAt), endsAt: iso(row.endsAt), dueAt: iso(row.dueAt) }
+		}
+	});
+	return row;
+}
+
+/** Call it off. Its signups stay, as a notify list, exactly as a cancelled shift's do. */
+export async function cancelTask(
+	projectId: string,
+	workOrderId: string,
+	cancelledByUserId: string
+): Promise<WorkOrder> {
+	const task = await requireLiveTask(projectId, workOrderId);
+	const row = await cancelShift(task.id, cancelledByUserId);
+	await recordAuditEntry({
+		action: 'work_order.cancelled',
+		subject: { type: 'work_order', id: task.id, label: label(task) },
+		details: {}
+	});
+	return row;
+}
+
+// ---------------------------------------------------------------------------
+// Reading the list
+// ---------------------------------------------------------------------------
+
+export interface Progress {
+	done: number;
+	total: number;
+}
+
+/** Done over live: every mode counts, cancelled ones do not, and done is `evaluateDone`'s. */
+function progressOf(states: Map<string, DeliverableState>): Progress {
+	let done = 0;
+	let total = 0;
+	for (const s of states.values()) {
+		if (s === 'cancelled') continue;
+		total += 1;
+		if (s === 'done') done += 1;
+	}
+	return { done, total };
+}
+
+const doneInputColumns = {
+	id: workOrder.id,
+	eventId: workOrder.eventId,
+	doneWhen: workOrder.doneWhen,
+	resolvedAt: workOrder.resolvedAt,
+	cancelledAt: workOrder.cancelledAt,
+	dueAt: workOrder.dueAt
+};
+
+export async function getProjectProgress(projectId: string): Promise<Progress> {
+	const rows = await db
+		.select(doneInputColumns)
+		.from(workOrder)
+		.where(and(eq(workOrder.projectId, projectId), isNull(workOrder.cancelledAt)));
+	return progressOf(await evaluateDone(rows));
+}
+
+/** Duty counts per work order, chunked under D1's bound-parameter cap. */
+async function dutyCounts(ids: string[]): Promise<Map<string, Progress>> {
+	const groups = await Promise.all(
+		chunk(ids, 90).map((group) =>
+			db
+				.select({
+					id: workTask.workOrderId,
+					total: sql<number>`count(*)`,
+					done: sql<number>`sum(case when ${workTask.done} then 1 else 0 end)`
+				})
+				.from(workTask)
+				.where(inArray(workTask.workOrderId, group))
+				.groupBy(workTask.workOrderId)
+		)
+	);
+	return new Map(
+		groups.flat().map((r) => [r.id, { done: Number(r.done ?? 0), total: Number(r.total) }])
+	);
+}
+
+/** Everything the task list draws: sections, each task with its mode and state, and progress. */
+export async function listProjectTasks(projectId: string) {
+	const [sections, rows] = await Promise.all([
+		listSections(projectId),
+		db
+			.select({
+				...doneInputColumns,
+				title: sql<string>`coalesce(${workOrder.title}, ${eventListing.title}, ${volunteerRole.name}, 'Untitled task')`,
+				sectionId: workOrder.sectionId,
+				sortOrder: workOrder.sortOrder,
+				volunteerRoleId: workOrder.volunteerRoleId,
+				roleName: volunteerRole.name,
+				capacity: workOrder.capacity,
+				claimed: claimedSql().mapWith(Number),
+				startsAt: workOrder.startsAt,
+				endsAt: workOrder.endsAt,
+				postedAt: workOrder.postedAt,
+				groupId: workOrder.groupId
+			})
+			.from(workOrder)
+			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+			.where(eq(workOrder.projectId, projectId))
+			.orderBy(asc(workOrder.sortOrder), asc(workOrder.createdAt), asc(workOrder.id))
+	]);
+	const ids = rows.map((r) => r.id);
+	const [modes, states, duties] = await Promise.all([
+		workOrderModes(ids),
+		evaluateDone(rows),
+		dutyCounts(ids)
+	]);
+	return {
+		sections,
+		tasks: rows.map((r) => ({
+			...r,
+			mode: modes.get(r.id) ?? 'unassigned',
+			state: states.get(r.id) ?? 'open',
+			duties: duties.get(r.id) ?? { done: 0, total: 0 }
+		})),
+		progress: progressOf(states)
+	};
+}
