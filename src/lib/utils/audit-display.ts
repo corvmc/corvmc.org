@@ -1,4 +1,9 @@
-import type { AuditAction, AuditEntry, AuditProfileField } from '$lib/types/audit';
+import type {
+	AuditAction,
+	AuditEntry,
+	AuditProfileField,
+	WorkOrderAssignmentMode
+} from '$lib/types/audit';
 import { formatCents } from '$lib/utils/format';
 
 /** `user.roles_changed` → "User roles changed". Derived, so a new action needs no label entry. */
@@ -12,6 +17,13 @@ const FIELD_LABELS: Record<AuditProfileField, string> = {
 	pronouns: 'pronouns',
 	phone: 'phone',
 	dateOfBirth: 'date of birth'
+};
+
+const MODE_LABELS: Record<WorkOrderAssignmentMode, string> = {
+	contractor: 'a contractor',
+	open: 'open to volunteers',
+	members: 'assigned members',
+	unassigned: 'nobody'
 };
 
 const CREDIT_LABELS = { free_hours: 'free hours', equipment_credits: 'equipment credits' };
@@ -100,6 +112,31 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Undid the ${formatCents(entry.details.amountCents)} payout to ${entry.details.actName}`;
 		case 'event.published_over_warnings':
 			return `Published the event over ${plural(entry.details.warnings.length, 'warning')}: “${entry.details.reason}”`;
+		case 'work_order.created':
+			return `Added the task “${entry.details.title}”`;
+		case 'work_order.assigned': {
+			const d = entry.details;
+			const head = `Changed who answers it from ${MODE_LABELS[d.from]} to ${MODE_LABELS[d.to]}`;
+			return d.cancelledSignups > 0
+				? `${head}, taking ${plural(d.cancelledSignups, 'person', 'people')} off it`
+				: head;
+		}
+		case 'work_order.member_assigned':
+			return `Assigned ${entry.details.memberName}`;
+		case 'work_order.member_unassigned':
+			return `Took ${entry.details.memberName} off it`;
+		case 'work_order.rescheduled':
+			return 'Changed when it happens or is due';
+		case 'work_order.resolved':
+			return entry.details.override
+				? `Marked done by hand: “${entry.details.reason ?? ''}”`
+				: 'Marked done';
+		case 'work_order.reopened':
+			return 'Reopened it';
+		case 'work_order.cancelled':
+			return 'Called it off';
+		case 'work_order.moved':
+			return 'Moved it to another section';
 		case 'group.role_changed': {
 			const d = entry.details;
 			if (d.role === 'member') return `Removed ${d.memberName} as a chair`;

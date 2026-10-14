@@ -32,6 +32,11 @@ import type {
 } from '$lib/config';
 import type { DutyList, DutyListItem } from '$lib/server/db/schema/volunteer';
 import { chunk, chunkSize } from '$lib/server/utils/chunk';
+import {
+	ensureSections,
+	nextTaskOrders,
+	sectionNameKey
+} from '$lib/server/project/project-section-service';
 
 /**
  * Duty lists: a named set of work orders, stamped onto a subject.
@@ -769,6 +774,25 @@ export async function applyDutyList(
 
 	const anchor = resolveAnchor(list.anchor, subj);
 
+	// On a project, each item lands under its named heading, after what is
+	// already there. A section only means something on a project's list.
+	const onProject = subject.kind === 'project';
+	const [sections, nextOrder] = onProject
+		? await Promise.all([
+				ensureSections(
+					subject.id,
+					items.flatMap((i) => (i.section ? [i.section] : []))
+				),
+				nextTaskOrders(subject.id)
+			])
+		: [new Map<string, string>(), new Map<string | null, number>()];
+	const place = (name: string | null) => {
+		const sectionId = (name && sections.get(sectionNameKey(name))) || null;
+		const sortOrder = nextOrder.get(sectionId) ?? 0;
+		nextOrder.set(sectionId, sortOrder + 1);
+		return { sectionId, sortOrder };
+	};
+
 	const shiftRows: (typeof workOrder.$inferInsert)[] = [];
 	const taskRows: (typeof workTask.$inferInsert)[] = [];
 
@@ -798,6 +822,7 @@ export async function applyDutyList(
 			groupId: item.groupId,
 			doneWhen: item.doneWhen,
 			dutyListId,
+			...(onProject ? place(item.section) : {}),
 			// On the claim board, as every stamped-out shift has always been.
 			postedAt: new Date(),
 			postedByUserId: createdByUserId,
