@@ -439,3 +439,61 @@ describe('progress', () => {
 		});
 	});
 });
+
+describe('the rows the list draws', () => {
+	it('carries the people, the engagement, the duties and the inherited committee', async () => {
+		task('crew', { volunteer_role_id: ROLE, capacity: 3 });
+		insert('volunteer_signup', { id: 'su-a', shift_id: 'crew', user_id: ADA, status: 'confirmed' });
+		insert('volunteer_signup', { id: 'su-b', shift_id: 'crew', user_id: BO, status: 'cancelled' });
+
+		task('wired');
+		sqlite.exec(`delete from contractor`);
+		insert('contractor', { id: 'ctr', name: 'Benton Electric', trade: 'electrical' });
+		const base = { work_order_id: 'wired', contractor_id: 'ctr' };
+		insert('contractor_job', { ...base, id: 'cj-old', status: 'declined', created_at: 1 });
+		insert('contractor_job', {
+			...base,
+			id: 'cj-live',
+			status: 'booked',
+			quoted_cents: 22000,
+			created_at: 2
+		});
+		insert('contractor_job', { ...base, id: 'cj-new', status: 'cancelled', created_at: 3 });
+
+		task('checklist', { done_when: 'tasks_ticked', group_id: COMMITTEE });
+		for (const [id, done, sort] of [
+			['b', 0, 1],
+			['a', 1, 0]
+		] as const) {
+			insert('work_task', {
+				id,
+				work_order_id: 'checklist',
+				label: id,
+				done,
+				done_at: done ? 1 : null,
+				sort_order: sort
+			});
+		}
+
+		const list = await tasks.listProjectTasks(PROJECT);
+		const row = (id: string) => list.tasks.find((t) => t.id === id)!;
+
+		expect(list.committee).toEqual({ id: COMMITTEE, name: 'Facilities' });
+		expect(row('crew').people.map((p) => p.userId)).toEqual([ADA]);
+		expect(row('crew').engagement).toBeNull();
+		expect(row('wired')).toMatchObject({
+			mode: 'contractor',
+			engagement: { id: 'cj-live', contractorName: 'Benton Electric', quotedCents: 22000 }
+		});
+		expect(row('checklist')).toMatchObject({
+			groupName: 'Facilities',
+			dutyItems: [
+				{ id: 'a', done: true },
+				{ id: 'b', done: false }
+			],
+			duties: { done: 1, total: 2 },
+			outstanding: { kind: 'duties' }
+		});
+		expect(row('crew').outstanding).toBeNull();
+	});
+});

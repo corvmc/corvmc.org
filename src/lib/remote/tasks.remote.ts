@@ -5,6 +5,7 @@ import { can, requireUser } from '$lib/server/authorization';
 import { requireProjectCommittee } from '$lib/server/group/group-context';
 import { mapDomainError } from '$lib/server/errors';
 import { getProjectById } from '$lib/server/project/project-service';
+import { getProjectDetail } from './projects.remote';
 import { reorderSections } from '$lib/server/project/project-section-service';
 import {
 	listAssignableMembers,
@@ -76,7 +77,10 @@ export const getTaskAssignees = query(
 	}
 );
 
-const refresh = (id: string) => void getProjectTasks(id).refresh();
+/** The staff page reads the list through its one query; a committee member cannot run it. */
+async function refresh(id: string) {
+	if (await can('project.read')) void getProjectDetail(id).refresh();
+}
 
 // ---------------------------------------------------------------------------
 // Ordering, by drag
@@ -87,7 +91,7 @@ export const reorderSectionsCommand = command(
 	async (data) => {
 		await guardProject(data.projectId);
 		await reorderSections(data.projectId, data.sectionIds);
-		refresh(data.projectId);
+		await refresh(data.projectId);
 	}
 );
 
@@ -105,7 +109,7 @@ export const moveTaskCommand = command(
 			sectionId: data.sectionId,
 			index: data.index
 		});
-		refresh(data.projectId);
+		await refresh(data.projectId);
 	}
 );
 
@@ -118,6 +122,6 @@ export const reorderTasksCommand = command(
 	async (data) => {
 		await guardProject(data.projectId);
 		await reorderTasks(data.projectId, data.sectionId, data.workOrderIds);
-		refresh(data.projectId);
+		await refresh(data.projectId);
 	}
 );

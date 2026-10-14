@@ -11,6 +11,7 @@
 		backHref,
 		documentTitle,
 		flush = false,
+		sticky = true,
 		leading,
 		children
 	}: {
@@ -42,6 +43,8 @@
 		 * canvas starts immediately under it.
 		 */
 		flush?: boolean;
+		/** Off for a page whose own bar sticks instead, so the two do not stack. */
+		sticky?: boolean;
 	} = $props();
 
 	// Header actions are one size, whatever each caller passes or omits (#1831).
@@ -64,7 +67,7 @@
 </svelte:head>
 
 <div
-	class="sticky top-0 z-10 -mx-6 {flush
+	class="{sticky ? 'sticky top-0 z-10' : ''} -mx-6 {flush
 		? ''
 		: 'mb-6'} border-b border-base-300 bg-base-100 px-6 py-3"
 >

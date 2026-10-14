@@ -3,10 +3,11 @@
 > ## Status
 >
 > **In progress.** Tracking issue #1806. Design settled in conversation with the owner on
-> 2026-10-13, against a canvas mockup of the project page. Phase 1 (#1896) and Phase 2
-> (the engagement reshape, #1900) are built. Phase 6 is built except the job-detail
-> redirect, which waits on Phase 5's task route. Phases 3–5 and 7 are in progress or not
-> started.
+> 2026-10-13, against a canvas mockup of the project page. Phase 1 (#1896), Phase 2
+> (the engagement reshape, #1900) and Phase 3 (services, #1905) are built. Phase 6 is built
+> except the job-detail redirect, which waits on Phase 5's task route. Phase 4 is in
+> progress: 4a, the page and a read-only task list, is built; 4b, editing in place, is not.
+> Phases 5 and 7 are not started.
 
 ## Purpose
 
@@ -442,6 +443,14 @@ All staff-facing, so each phase goes straight to `main`.
    the engagement's own Cancel exists to pair with it. Audit entries are written on
    the `work_order` subject only; `project` joins the vocabulary with its first writer.
 4. **Project page.** The task list, panel, picker, header, About, tabs and edit form.
+   Two PRs. **4a** is the page and a read-only list: header, About (the description,
+   the origin chain and any events), Tasks · Budget tabs, filters and show/hide done
+   in the URL, sections with counts, rows unfolding their duties, and the panel at
+   `?task=<id>`. The list is read through `getProjectDetail`, the page's one query, so
+   the task commands refresh that. The panel's **Details** link goes to
+   `/staff/volunteer/shifts/[id]` until Phase 5. "+ Event" and "+ Repeat" are left
+   out: no service sets either on an existing task. **4b** is editing in place: the
+   add line, ticking, duties, sections, ordering, the picker and the property rows.
 5. **Task page** at `/staff/projects/[id]/tasks/[taskId]`, the work order view shared
    with `/staff/volunteer/shifts/[id]`, and the redirect between them.
 6. **Contractor Jobs view** and the job-detail redirect.

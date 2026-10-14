@@ -68,6 +68,7 @@ import { seedInboxAwaiting } from './fixtures/seed-inbox-awaiting';
 import { seedDirectoryEntries } from './fixtures/seed-directory-entries';
 import { seedInstructors } from './fixtures/seed-instructors';
 import { seedContractors } from './fixtures/seed-contractors';
+import { seedProjectTasks } from './fixtures/seed-project-tasks';
 
 // Before the build, the seed, and the five minutes they cost: refuse outright if
 // another suite is already running on this machine. Two of them no longer share
@@ -117,6 +118,7 @@ await seedInventory();
 // After the inventory fixture: it reuses that fixture's category, and seeds
 // its own item and unit so the two suites never mutate the same asset.
 await seedContractors();
+await seedProjectTasks();
 await seedStaffEvent();
 await seedPublishBlockers();
 // After the staff fixture: the show is created by the staff user.
