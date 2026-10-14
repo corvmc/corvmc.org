@@ -8,6 +8,7 @@
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { formatDateShort } from '$lib/utils/format';
+	import { toast } from 'svelte-sonner';
 	import {
 		getCommitteeOpenItems,
 		takeDeliverable,
@@ -22,6 +23,12 @@
 	 * item, tick it, call it done, or hand it to another committee.
 	 */
 	let { slug }: { slug: string } = $props();
+
+	/** Taking it goes through over a missing profile or clearance; say what it went over. */
+	function warnOver(result?: unknown) {
+		const warnings = (result as { warnings?: string[] } | undefined)?.warnings ?? [];
+		if (warnings.length > 0) toast.warning(`Taken over: ${warnings.join(' ')}`);
+	}
 
 	const data = $derived(await getCommitteeOpenItems(slug));
 	const handTo = $derived([
@@ -112,6 +119,7 @@
 										variant="ghost"
 										size="xs"
 										successToast="It's yours"
+										onsuccess={warnOver}
 									>
 										{#snippet form()}
 											<input type="hidden" name="id" value={item.id} />

@@ -87,6 +87,16 @@ engagements.
 **Who may be assigned:** staff, and members of the work order's committee — `group_id`,
 falling back to the owning committee of its project. The picker lists only them.
 
+**Staff assigning past a gap warn, record and allow.** On the `assignedByStaff` path, a
+member with no volunteer profile, or without a clearance the role needs as of the work's
+date, is assigned anyway: `claimShift` returns the gaps as `warnings`, and writes a
+`work_order.assigned_over_warnings` audit entry on the work order naming the member and
+what was missing. `assignMembers` reports them as `warned`, next to `refused`. Two things
+still refuse: a profile that is `blocked` — the under-18 review queue, so rostering a
+minor nobody has reviewed is the integrity case — and anything else `claimShift` refuses
+(no room, a called-off or past shift). No profile is created on the member's behalf. A
+member claiming for themselves is refused both gaps, as before.
+
 **`volunteer_role_id` becomes nullable.** A role is required for Members and Open,
 because hours are logged per role and clearances are checked per role. It is meaningless
 for Contractor and not yet known for Unassigned. A CHECK holds
@@ -460,15 +470,6 @@ All staff-facing, so each phase goes straight to `main`.
    with `/staff/volunteer/shifts/[id]`, and the redirect between them.
 6. **Contractor Jobs view** and the job-detail redirect.
 7. **Activity tab.**
-
-## Open questions
-
-- **Staff without a volunteer profile.** `claimShift` calls `requireActiveVolunteer`
-  and the clearance check on the staff-assign path too (volunteer-signup-service.ts:158,
-  :174). Assigning a staff member with no active profile is refused today. Either the
-  assign path creates or activates a profile, or it skips that guard. Missing
-  clearances should probably warn and record rather than refuse, per the workflow-gates
-  convention.
 
 ## Out of scope
 

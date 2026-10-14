@@ -26,7 +26,12 @@ import {
 import { workRequest } from '$lib/server/db/schema/inventory';
 import { containsLiteral } from '$lib/server/db/like';
 import { DomainError } from '$lib/server/errors';
-import { requireActiveVolunteer } from './volunteer-profile-service';
+import {
+	requireActiveVolunteer,
+	VolunteerProfileBlockedError,
+	VolunteerProfileNotFoundError
+} from './volunteer-profile-service';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
@@ -84,23 +89,33 @@ export function requireVolunteerRole(shift: { volunteerRoleId: string | null }):
 
 export class NotClearedError extends DomainError {
 	readonly httpStatus = 403;
-	/** Kept on the error so a caller can reword the refusal for its own audience. */
 	readonly missing: { name: string }[];
 
-	constructor(missing: { name: string }[], audience: 'member' | 'staff' = 'member') {
+	constructor(missing: { name: string }[]) {
 		const names = missing.map((m) => m.name).join(' and ');
-		// Same refusal, two readers. The member's copy tells them what to go and get; a
-		// coordinator being told to "talk to staff" is being told to talk to themselves,
-		// and the useful next step for them is the grant form on the member's page.
 		super(
-			audience === 'staff'
-				? `They don't hold ${names} as of this shift's date. Grant it from their member page, then add them.`
-				: `This role needs ${names} before you can work it alone. ` +
-						`Talk to staff about getting cleared — you can still log hours for work you've already done.`
+			`This role needs ${names} before you can work it alone. ` +
+				`Talk to staff about getting cleared — you can still log hours for work you've already done.`
 		);
 		this.missing = missing;
 	}
 }
+
+/** Staff copy for a profile still in the under-18 review queue. */
+export class VolunteerUnderReviewError extends DomainError {
+	readonly httpStatus = 403;
+	constructor() {
+		super(
+			'Their volunteer signup is waiting on staff review (they said they are under 18). ' +
+				'Review it before adding them to anything.'
+		);
+	}
+}
+
+/** A signup as `claimShift` returns it: what staff went over to make it, if anything. */
+export type ClaimedSignup = VolunteerSignup & { warnings: string[] };
+
+const NO_PROFILE_WARNING = 'No volunteer profile on file: never signed up to volunteer.';
 
 // ---------------------------------------------------------------------------
 // Member actions
@@ -162,16 +177,25 @@ export async function claimShift(
 	shiftId: string,
 	userId: string,
 	options: { assignedByStaff?: boolean } = {}
-): Promise<VolunteerSignup> {
-	// A staff assignment lands `confirmed`, not `claimed`. `claimed` means "somebody put
-	// their hand up and a coordinator has not looked yet", and a coordinator typing the
-	// name in IS that look. Every guard above still applies, clearance included: refusing
-	// to roster somebody the system says is not cleared is the point of recording
-	// clearances, and the refusal names what is missing.
+): Promise<ClaimedSignup> {
+	// A staff assignment lands `confirmed`, not `claimed`: a coordinator typing the name
+	// in IS the look `claimed` waits for. For staff, no profile and a missing clearance
+	// warn and are recorded rather than refuse (conventions.md#workflow-gates); a member
+	// claiming for themselves is still refused both.
 	const assigned = options.assignedByStaff === true;
 	const status: VolunteerSignupStatus = assigned ? 'confirmed' : 'claimed';
+	const warnings: string[] = [];
 
-	await requireActiveVolunteer(userId);
+	try {
+		await requireActiveVolunteer(userId);
+	} catch (err) {
+		if (!assigned) throw err;
+		// `blocked` is the review queue for an under-18 self-signup. Rostering a minor
+		// nobody has reviewed is the integrity case, so staff are refused too.
+		if (err instanceof VolunteerProfileBlockedError) throw new VolunteerUnderReviewError();
+		if (!(err instanceof VolunteerProfileNotFoundError)) throw err;
+		warnings.push(NO_PROFILE_WARNING);
+	}
 
 	const shift = await getShiftById(shiftId);
 	if (!shift) throw new SignupNotFoundError();
@@ -193,7 +217,11 @@ export async function claimShift(
 	// on the night they worked -- is answered at hour-log review against
 	// `workedOn`, which is the only date that reflects reality.
 	const missing = await missingRequirements(userId, roleId, shift.startsAt ?? new Date());
-	if (missing.length > 0) throw new NotClearedError(missing, assigned ? 'staff' : 'member');
+	if (missing.length > 0) {
+		if (!assigned) throw new NotClearedError(missing);
+		const names = missing.map((m) => m.name).join(' and ');
+		warnings.push(`Not cleared: no ${names} as of this shift's date.`);
+	}
 
 	const [existing] = await db
 		.select({ id: volunteerSignup.id, status: volunteerSignup.status })
@@ -208,7 +236,8 @@ export async function claimShift(
 	// colliding with their own invitation.
 	const REUSABLE = ['cancelled', 'invited', 'declined'];
 	if (existing) {
-		if (!REUSABLE.includes(existing.status)) return reloadSignup(existing.id);
+		if (!REUSABLE.includes(existing.status))
+			return { ...(await reloadSignup(existing.id)), warnings: [] };
 
 		const now = unixNow();
 		// `returning "id"` rather than `*`: raw SQL hands back snake_case columns,
@@ -231,7 +260,8 @@ export async function claimShift(
 			assigned ? 'volunteer.signup_confirmed' : 'volunteer.signup_claimed',
 			existing.id
 		);
-		return revivedRow;
+		await recordAssignedOverWarnings(shift, userId, warnings);
+		return { ...revivedRow, warnings };
 	}
 
 	const now = unixNow();
@@ -253,7 +283,8 @@ export async function claimShift(
 		if (inserted.length === 0) throw new ShiftFullError();
 		const row = await reloadSignup(id);
 		void emitSignupEvent(assigned ? 'volunteer.signup_confirmed' : 'volunteer.signup_claimed', id);
-		return row;
+		await recordAssignedOverWarnings(shift, userId, warnings);
+		return { ...row, warnings };
 	} catch (err) {
 		if (err instanceof ShiftFullError) throw err;
 		// The unique index fired — two clicks, or two tabs, from the same member.
@@ -263,10 +294,29 @@ export async function claimShift(
 				.from(volunteerSignup)
 				.where(and(eq(volunteerSignup.shiftId, shiftId), eq(volunteerSignup.userId, userId)))
 				.limit(1);
-			if (row) return row;
+			if (row) return { ...row, warnings: [] };
 		}
 		throw err;
 	}
+}
+
+/** The audit half of warn-record-allow: what staff went over, on the work order's log. */
+async function recordAssignedOverWarnings(
+	shift: { id: string; title: string | null },
+	userId: string,
+	warnings: string[]
+): Promise<void> {
+	if (warnings.length === 0) return;
+	const [member] = await db
+		.select({ name: user.name })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	await recordAuditEntry({
+		action: 'work_order.assigned_over_warnings',
+		subject: { type: 'work_order', id: shift.id, label: shift.title ?? shift.id },
+		details: { userId, memberName: member?.name ?? 'Unknown member', warnings }
+	});
 }
 
 /**

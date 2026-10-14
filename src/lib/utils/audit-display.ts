@@ -123,6 +123,8 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 		}
 		case 'work_order.member_assigned':
 			return `Assigned ${entry.details.memberName}`;
+		case 'work_order.assigned_over_warnings':
+			return `Assigned ${entry.details.memberName} over ${plural(entry.details.warnings.length, 'warning')}: ${entry.details.warnings.join(' ')}`;
 		case 'work_order.member_unassigned':
 			return `Took ${entry.details.memberName} off it`;
 		case 'work_order.rescheduled':
