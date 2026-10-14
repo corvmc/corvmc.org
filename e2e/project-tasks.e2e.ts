@@ -36,7 +36,7 @@ test.describe('project task list', () => {
 	});
 
 	test('draws every section, the empty one included, and unfolds duties', async ({ page }) => {
-		await expect(page.getByText(SEED_TASK_EMPTY_SECTION)).toBeVisible();
+		await expect(page.getByText(SEED_TASK_EMPTY_SECTION, { exact: true })).toBeVisible();
 		await expect(page.getByText('No tasks yet.')).toBeVisible();
 
 		await page

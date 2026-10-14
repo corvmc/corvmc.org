@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { Popover } from 'bits-ui';
 	import Button from '$lib/components/ui/Button.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { errorMessage } from '$lib/error-message';
 	import AssignedSummary from './AssignedSummary.svelte';
 	import AssignPickerBody from './AssignPickerBody.svelte';
 	import type { Task } from './task-view';
@@ -40,6 +42,9 @@
 						<AssignPickerBody {task} {projectId} {place} onclose={() => (open = false)} />
 						{#snippet pending()}
 							<span class="loading loading-sm loading-spinner" aria-label="Loading"></span>
+						{/snippet}
+						{#snippet failed(error, reset)}
+							<Alert type="error" {reset}>Couldn't load the options: {errorMessage(error)}</Alert>
 						{/snippet}
 					</svelte:boundary>
 				{/if}
