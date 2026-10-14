@@ -302,8 +302,6 @@ export const relations = defineRelations(schema, (t) => ({
 	},
 	contractorJob: {
 		contractor: t.one.contractor({ from: t.contractorJob.contractorId, to: t.contractor.id }),
-		asset: t.one.inventoryAsset({ from: t.contractorJob.assetId, to: t.inventoryAsset.id }),
-		project: t.one.project({ from: t.contractorJob.projectId, to: t.project.id }),
 		requestedBy: t.one.user({ from: t.contractorJob.requestedByUserId, to: t.user.id }),
 		workOrder: t.one.workOrder({ from: t.contractorJob.workOrderId, to: t.workOrder.id })
 	},
@@ -316,11 +314,11 @@ export const relations = defineRelations(schema, (t) => ({
 	project: {
 		suggestion: t.one.suggestion({ from: t.project.suggestionId, to: t.suggestion.id }),
 		createdBy: t.one.user({ from: t.project.createdByUserId, to: t.user.id }),
-		// The four ledgers burn is summed over, plus the events. No `stockMovement`
+		// Three of the ledgers burn is summed over (contractor jobs reach a project
+		// through their work order), plus the events. No `stockMovement`
 		// arm: consumption reaches a project through the item it moved, not
 		// directly, and `project-service.ts` joins it explicitly.
 		workOrders: t.many.workOrder(),
-		contractorJobs: t.many.contractorJob(),
 		purchaseOrders: t.many.purchaseOrder(),
 		acquisitions: t.many.acquisition(),
 		events: t.many.eventListing(),

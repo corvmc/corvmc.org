@@ -1,5 +1,6 @@
 import { contractor, contractorJob } from '../../src/lib/server/db/schema/contractor';
 import { inventoryAsset } from '../../src/lib/server/db/schema/inventory';
+import { workOrder } from '../../src/lib/server/db/schema/volunteer';
 import { batchInsert, db } from './db';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
@@ -119,122 +120,146 @@ export async function seedContractors(staffId: string) {
 		.where(eq(inventoryAsset.status, 'in_service'))
 		.limit(1);
 
+	// Each job is an engagement on its own work order: role-less, unposted,
+	// carrying the title and unit, resolved when the job completed and called off
+	// when it was cancelled. `seedProjects` moves the subpanel's onto a project.
+	const specs: (Omit<typeof contractorJob.$inferInsert, 'workOrderId'> & {
+		title: string;
+		assetId?: string | null;
+	})[] = [
+		// At the shop right now, and late — the overdue list's only row.
+		{
+			id: randomUUID(),
+			contractorId: ids.amps,
+			status: 'booked' as const,
+			title: 'Retube and rebias the Bassman',
+			assetId: inShop?.id ?? null,
+			scheduledFor: new Date(now.getTime() - 21 * day),
+			expectedBackAt: new Date(now.getTime() - 5 * day),
+			quotedCents: 22000,
+			requestedByUserId: staffId,
+			notes: 'Dropped off. Rita said two weeks.'
+		},
+		// A finished repair, with an invoice — the asset page's history.
+		{
+			id: randomUUID(),
+			contractorId: ids.amps,
+			status: 'completed' as const,
+			title: 'Recone the 4x10 cabinet',
+			assetId: inService?.id ?? null,
+			scheduledFor: new Date(now.getTime() - 150 * day),
+			completedAt: new Date(now.getTime() - 132 * day),
+			quotedCents: 16000,
+			costCents: 17500,
+			invoiceRef: 'CAW-4471',
+			paidAt: new Date(now.getTime() - 125 * day),
+			requestedByUserId: staffId
+		},
+		// Building work: no asset, which is the case the module exists for.
+		{
+			id: randomUUID(),
+			contractorId: ids.electric,
+			status: 'completed' as const,
+			title: 'Add a dedicated circuit for the stage subpanel',
+			scheduledFor: new Date(now.getTime() - 60 * day),
+			completedAt: new Date(now.getTime() - 60 * day),
+			costCents: 94500,
+			invoiceRef: 'BE-2026-118',
+			paidAt: new Date(now.getTime() - 45 * day),
+			requestedByUserId: staffId
+		},
+		// Donated: the trades half of contributed services. No `costCents`,
+		// because nothing left the account -- the value is what the work
+		// would have cost, carried separately so no `sum(cost_cents)` picks
+		// it up as cash spend.
+		{
+			id: randomUUID(),
+			contractorId: ids.electric,
+			status: 'completed' as const,
+			title: 'Trace and repair the dead outlets along the north wall',
+			scheduledFor: new Date(now.getTime() - 30 * day),
+			completedAt: new Date(now.getTime() - 30 * day),
+			isDonated: true,
+			fairValueCents: 42000,
+			fairValueBasis: "Contractor's standard rate card, 4 hours at $105/hr",
+			requestedByUserId: staffId
+		},
+		{
+			id: randomUUID(),
+			contractorId: ids.fire,
+			status: 'completed' as const,
+			title: 'Annual extinguisher inspection and recharge',
+			scheduledFor: new Date(now.getTime() - 40 * day),
+			completedAt: new Date(now.getTime() - 40 * day),
+			costCents: 18000,
+			invoiceRef: 'CFS-9903',
+			requestedByUserId: staffId
+		},
+		// Booked, not yet due — the ordinary open job.
+		{
+			id: randomUUID(),
+			contractorId: ids.plumb,
+			status: 'booked' as const,
+			title: 'Green room sink is backing up',
+			scheduledFor: new Date(now.getTime() + 4 * day),
+			expectedBackAt: new Date(now.getTime() + 4 * day),
+			quotedCents: 25000,
+			requestedByUserId: staffId
+		},
+		// Nobody has been called yet.
+		{
+			id: randomUUID(),
+			contractorId: ids.handy,
+			status: 'asked' as const,
+			title: 'Rehang the practice room door — hinges pulling out of the frame',
+			requestedByUserId: staffId,
+			notes: 'Reported at the last work party.'
+		},
+		// Called off, and deliberately with no completion: the amp it was for
+		// is still in the shop under the job above.
+		{
+			id: randomUUID(),
+			contractorId: ids.hvac,
+			status: 'cancelled' as const,
+			title: 'Service the rooftop unit before summer',
+			scheduledFor: new Date(now.getTime() - 30 * day),
+			quotedCents: 45000,
+			requestedByUserId: staffId,
+			notes: 'Cancelled — their certificate of insurance had lapsed.'
+		},
+		// Against the archived tuner, proving history survives archiving.
+		{
+			id: randomUUID(),
+			contractorId: ids.piano,
+			status: 'completed' as const,
+			title: 'Tune the upright',
+			scheduledFor: new Date(now.getTime() - 200 * day),
+			completedAt: new Date(now.getTime() - 200 * day),
+			costCents: 15000,
+			requestedByUserId: staffId
+		}
+	];
+
+	const workOrders = specs.map((spec) => ({
+		id: randomUUID(),
+		title: spec.title,
+		assetId: spec.assetId ?? null,
+		volunteerRoleId: null,
+		postedAt: null,
+		resolvedAt: spec.status === 'completed' ? (spec.completedAt ?? null) : null,
+		resolvedByUserId: spec.status === 'completed' ? staffId : null,
+		cancelledAt: spec.status === 'cancelled' ? (spec.scheduledFor ?? now) : null,
+		cancelledByUserId: spec.status === 'cancelled' ? staffId : null,
+		createdByUserId: staffId
+	}));
+	await batchInsert(workOrder, workOrders);
+
 	const jobs = await batchInsert(
 		contractorJob,
-		[
-			// At the shop right now, and late — the overdue list's only row.
-			{
-				id: randomUUID(),
-				contractorId: ids.amps,
-				status: 'scheduled' as const,
-				summary: 'Retube and rebias the Bassman',
-				assetId: inShop?.id ?? null,
-				scheduledFor: new Date(now.getTime() - 21 * day),
-				expectedBackAt: new Date(now.getTime() - 5 * day),
-				quotedCents: 22000,
-				requestedByUserId: staffId,
-				notes: 'Dropped off. Rita said two weeks.'
-			},
-			// A finished repair, with an invoice — the asset page's history.
-			{
-				id: randomUUID(),
-				contractorId: ids.amps,
-				status: 'completed' as const,
-				summary: 'Recone the 4x10 cabinet',
-				assetId: inService?.id ?? null,
-				scheduledFor: new Date(now.getTime() - 150 * day),
-				completedAt: new Date(now.getTime() - 132 * day),
-				quotedCents: 16000,
-				costCents: 17500,
-				invoiceRef: 'CAW-4471',
-				paidAt: new Date(now.getTime() - 125 * day),
-				requestedByUserId: staffId
-			},
-			// Building work: no asset, which is the case the module exists for.
-			{
-				id: randomUUID(),
-				contractorId: ids.electric,
-				status: 'completed' as const,
-				summary: 'Add a dedicated circuit for the stage subpanel',
-				scheduledFor: new Date(now.getTime() - 60 * day),
-				completedAt: new Date(now.getTime() - 60 * day),
-				costCents: 94500,
-				invoiceRef: 'BE-2026-118',
-				paidAt: new Date(now.getTime() - 45 * day),
-				requestedByUserId: staffId
-			},
-			// Donated: the trades half of contributed services. No `costCents`,
-			// because nothing left the account -- the value is what the work
-			// would have cost, carried separately so no `sum(cost_cents)` picks
-			// it up as cash spend.
-			{
-				id: randomUUID(),
-				contractorId: ids.electric,
-				status: 'completed' as const,
-				summary: 'Trace and repair the dead outlets along the north wall',
-				scheduledFor: new Date(now.getTime() - 30 * day),
-				completedAt: new Date(now.getTime() - 30 * day),
-				isDonated: true,
-				fairValueCents: 42000,
-				fairValueBasis: "Contractor's standard rate card, 4 hours at $105/hr",
-				requestedByUserId: staffId
-			},
-			{
-				id: randomUUID(),
-				contractorId: ids.fire,
-				status: 'completed' as const,
-				summary: 'Annual extinguisher inspection and recharge',
-				scheduledFor: new Date(now.getTime() - 40 * day),
-				completedAt: new Date(now.getTime() - 40 * day),
-				costCents: 18000,
-				invoiceRef: 'CFS-9903',
-				requestedByUserId: staffId
-			},
-			// Booked, not yet due — the ordinary open job.
-			{
-				id: randomUUID(),
-				contractorId: ids.plumb,
-				status: 'scheduled' as const,
-				summary: 'Green room sink is backing up',
-				scheduledFor: new Date(now.getTime() + 4 * day),
-				expectedBackAt: new Date(now.getTime() + 4 * day),
-				quotedCents: 25000,
-				requestedByUserId: staffId
-			},
-			// Nobody has been called yet.
-			{
-				id: randomUUID(),
-				contractorId: ids.handy,
-				status: 'draft' as const,
-				summary: 'Rehang the practice room door — hinges pulling out of the frame',
-				requestedByUserId: staffId,
-				notes: 'Reported at the last work party.'
-			},
-			// Called off, and deliberately with no completion: the amp it was for
-			// is still in the shop under the job above.
-			{
-				id: randomUUID(),
-				contractorId: ids.hvac,
-				status: 'cancelled' as const,
-				summary: 'Service the rooftop unit before summer',
-				scheduledFor: new Date(now.getTime() - 30 * day),
-				quotedCents: 45000,
-				requestedByUserId: staffId,
-				notes: 'Cancelled — their certificate of insurance had lapsed.'
-			},
-			// Against the archived tuner, proving history survives archiving.
-			{
-				id: randomUUID(),
-				contractorId: ids.piano,
-				status: 'completed' as const,
-				summary: 'Tune the upright',
-				scheduledFor: new Date(now.getTime() - 200 * day),
-				completedAt: new Date(now.getTime() - 200 * day),
-				costCents: 15000,
-				requestedByUserId: staffId
-			}
-		],
-		4
+		specs.map(({ title: _title, assetId: _assetId, ...job }, i) => ({
+			...job,
+			workOrderId: workOrders[i].id
+		}))
 	);
 
 	return { contractors: contractors.length, jobs: jobs.length };

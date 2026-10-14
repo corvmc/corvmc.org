@@ -739,29 +739,45 @@ export const incidentStatusFilters = [...incidentStatuses, 'unresolved'] as cons
 export type IncidentStatusFilter = (typeof incidentStatusFilters)[number];
 
 /**
- * A job's lifecycle. Four states, matching `orderStatuses` in shape because the
- * shape is the same one: something is agreed, then it is committed to, then it
- * either happens or it does not.
+ * Where one contractor's engagement on a work order stands — not whether the
+ * work is done, which the work order owns. Asking two shops for a quote and
+ * booking one is two engagements, one `declined`.
  *
- * There is no `overdue`. Late is `scheduled` plus an `expectedBackAt` in the
- * past — derived on read like `listLateOrders`, because a stored status would
- * need something to come along and set it.
+ * There is no `overdue`. Late is `booked` plus an `expectedBackAt` in the past,
+ * derived on read like `listLateOrders`.
  */
-export const contractorJobStatuses = ['draft', 'scheduled', 'completed', 'cancelled'] as const;
+export const contractorJobStatuses = [
+	'asked',
+	'declined',
+	'booked',
+	'completed',
+	'cancelled',
+	'no_show'
+] as const;
 export type ContractorJobStatus = (typeof contractorJobStatuses)[number];
 
+/** Engagements whose money is not spend: nobody did the work. */
+export const contractorJobStatusesWithoutSpend = [
+	'declined',
+	'cancelled'
+] as const satisfies readonly ContractorJobStatus[];
+
 export const contractorJobStatusLabels: Record<ContractorJobStatus, string> = {
-	draft: 'Draft',
-	scheduled: 'Scheduled',
+	asked: 'Asked',
+	declined: 'Declined',
+	booked: 'Booked',
 	completed: 'Completed',
-	cancelled: 'Cancelled'
+	cancelled: 'Cancelled',
+	no_show: 'No-show'
 };
 
 export const contractorJobStatusBadge = {
-	draft: 'outline',
-	scheduled: 'info',
+	asked: 'outline',
+	declined: 'ghost',
+	booked: 'info',
 	completed: 'success',
-	cancelled: 'ghost'
+	cancelled: 'ghost',
+	no_show: 'error'
 } as const satisfies Record<ContractorJobStatus, string>;
 
 // ---------------------------------------------------------------------------

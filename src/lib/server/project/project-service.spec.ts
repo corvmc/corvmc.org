@@ -186,7 +186,7 @@ describe('attachment', () => {
 	it('sets project_id on the named table', async () => {
 		selectResults = [PROJECT()];
 
-		await attachToProject('contractor_job', 'job-1', 'proj-1');
+		await attachToProject('purchase_order', 'po-1', 'proj-1');
 
 		expect(updateValues.at(-1)).toMatchObject({ projectId: 'proj-1' });
 	});

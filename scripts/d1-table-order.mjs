@@ -15,7 +15,7 @@ export const tableOrder = [
 	// References user, group and suggestion; `project.ballot_id` points back at it.
 	'ballot',
 	// References user, group, suggestion and ballot. Must precede everything that carries
-	// `project_id`: work_order, contractor_job, purchase_order, acquisition, event.
+	// `project_id`: work_order, purchase_order, acquisition, event.
 	'project',
 	// References project and group.
 	'project_committee',
@@ -98,7 +98,7 @@ export const tableOrder = [
 	// referenced by volunteer_signup, volunteer_hour_log, work_task and
 	// member_orientation, so it sits between them.
 	'work_order',
-	// References contractor, inventory_asset, user and work_order, so it follows
+	// References contractor, user and work_order, so it follows
 	// all of them.
 	'contractor_job',
 	// The checklist inside one work order. References work_order and user.

@@ -9,8 +9,9 @@
  * Run by `e2e/prepare.ts`, before Playwright starts the preview server.
  *
  * Idempotent: deletes and recreates its own rows on every run. Jobs go first —
- * `contractor_job.contractor_id` restricts deletion, so clearing the parent
- * before the child fails outright rather than cascading.
+ * `contractor_job.contractor_id` and `.work_order_id` restrict deletion, so
+ * clearing a parent before the child fails outright rather than cascading. The
+ * work orders a run's jobs were made with go after them.
  */
 import 'dotenv/config';
 import { eq, inArray } from 'drizzle-orm';
@@ -20,6 +21,7 @@ import {
 	inventoryItem,
 	stockMovement
 } from '../../src/lib/server/db/schema/inventory';
+import { workOrder } from '../../src/lib/server/db/schema/volunteer';
 import { withPlatformDb } from './platform-db';
 import { SEED_CATEGORY_ID } from './seed-inventory';
 
@@ -40,7 +42,19 @@ export async function seedContractors() {
 	await withPlatformDb(async (db) => {
 		const contractorIds = [SEED_CONTRACTOR_ID, SEED_ARCHIVED_CONTRACTOR_ID];
 
+		const jobWorkOrders = await db
+			.select({ id: contractorJob.workOrderId })
+			.from(contractorJob)
+			.where(inArray(contractorJob.contractorId, contractorIds));
 		await db.delete(contractorJob).where(inArray(contractorJob.contractorId, contractorIds));
+		if (jobWorkOrders.length > 0) {
+			await db.delete(workOrder).where(
+				inArray(
+					workOrder.id,
+					jobWorkOrders.map((r) => r.id)
+				)
+			);
+		}
 		await db.delete(contractor).where(inArray(contractor.id, contractorIds));
 		await db.delete(stockMovement).where(eq(stockMovement.assetId, SEED_SERVICE_ASSET_ID));
 		await db.delete(inventoryAsset).where(eq(inventoryAsset.id, SEED_SERVICE_ASSET_ID));

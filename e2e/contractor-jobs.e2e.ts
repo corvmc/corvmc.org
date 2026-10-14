@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { readLocalDb } from './fixtures/platform-db';
 import { inventoryAsset, stockMovement } from '../src/lib/server/db/schema/inventory';
 import { contractorJob } from '../src/lib/server/db/schema/contractor';
+import { workOrder } from '../src/lib/server/db/schema/volunteer';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
 	SEED_CONTRACTOR_NAME,
@@ -70,7 +71,7 @@ test.describe('contractor jobs', () => {
 		await page.getByRole('button', { name: 'New job' }).click();
 		const dialog = page.getByRole('dialog');
 		await dialog.locator('select').first().selectOption({ label: SEED_CONTRACTOR_NAME });
-		await dialog.locator('input[name$="summary"]').fill('Retube the E2E amp');
+		await dialog.locator('input[name$="title"]').fill('Retube the E2E amp');
 		await dialog.locator('input[name$="assetId"]').fill(SEED_SERVICE_ASSET_ID);
 		await modalSubmit(page, /^New job$/).click();
 
@@ -121,13 +122,16 @@ test.describe('contractor jobs', () => {
 		// nor taken from stock on balance.
 		expect(after.movements.reduce((sum, m) => sum + m.quantity, 0)).toBe(0);
 
+		// Completing the engagement also resolves the work order it was made with.
 		const [job] = await readLocalDb((db) =>
 			db
-				.select({ status: contractorJob.status, assetId: contractorJob.assetId })
+				.select({ status: contractorJob.status, resolvedAt: workOrder.resolvedAt })
 				.from(contractorJob)
-				.where(eq(contractorJob.assetId, SEED_SERVICE_ASSET_ID))
+				.innerJoin(workOrder, eq(workOrder.id, contractorJob.workOrderId))
+				.where(eq(workOrder.assetId, SEED_SERVICE_ASSET_ID))
 		);
 		expect(job?.status).toBe('completed');
+		expect(job?.resolvedAt).not.toBeNull();
 	});
 
 	test('the unit shows its service history on the asset page', async ({ page }) => {

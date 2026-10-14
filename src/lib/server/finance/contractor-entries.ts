@@ -9,7 +9,9 @@ import { recordEntry } from './financial-entry-service';
  */
 export async function recordCompletedJob(params: {
 	jobId: string;
-	summary: string;
+	/** The work order's title. */
+	title: string;
+	/** The work order's project, which the entry is booked against. */
 	projectId?: string | null;
 	occurredAt: Date;
 	costCents?: number | null;
@@ -29,7 +31,7 @@ export async function recordCompletedJob(params: {
 			subjectType: 'contractor_job',
 			subjectId: params.jobId,
 			projectId: params.projectId ?? null,
-			description: `Donated work — ${params.summary}`
+			description: `Donated work — ${params.title}`
 		});
 		return;
 	}
@@ -47,6 +49,6 @@ export async function recordCompletedJob(params: {
 		subjectType: 'contractor_job',
 		subjectId: params.jobId,
 		projectId: params.projectId ?? null,
-		description: `Contractor — ${params.summary}`
+		description: `Contractor — ${params.title}`
 	});
 }

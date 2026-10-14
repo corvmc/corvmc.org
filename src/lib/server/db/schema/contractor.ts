@@ -1,34 +1,19 @@
 import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
-import { inventoryAsset } from './inventory';
-import { project } from './project';
 import { workOrder } from './volunteer';
 import { contractorJobStatuses, contractorTrades } from '../../../config';
 
 // ---------------------------------------------------------------------------
 // Contractor work
 //
-// The second of the two places a broken thing gets fixed. The first is a work
-// order — `work_order` with no start time, claimed by a member and paid in
-// volunteer hours. This is the other: work done by somebody you pay.
+// Work done by somebody you pay. What the work is lives on `work_order`, the
+// same task a member or volunteer could answer; a contractor's engagement on it
+// is `contractor_job`. A labor invoice is not stock arriving, which is why cost
+// lives here rather than on `acquisition` or `purchase_order`.
 //
-// It is deliberately **not** folded into either of the tables it resembles:
-//
-// - Not `work_order`. Its `volunteer_role_id` and `capacity` are NOT NULL
-//   and mean nothing here, and the design rests on unscheduled work having a
-//   null `starts_at` so it falls out of every member-facing query for free. A
-//   contractor's central fact is an appointment, and writing one into
-//   `starts_at` would offer the electrician's slot to members, remind them
-//   about it, survey them afterwards and credit them volunteer hours for work
-//   an invoice already paid for.
-//
-// - Not `purchase_order`. `purchase_order_line.item_id` is NOT NULL against the
-//   catalog, and closing an order *is* recording an acquisition — `applyReceipt`
-//   takes an `acquisitionId`. A labor invoice is not stock arriving, which is
-//   also why cost lives here rather than on `acquisition`.
-//
-// See `docs/specs/shipped/contractor-work-spec.md`.
+// See `docs/specs/shipped/contractor-work-spec.md` and
+// `docs/specs/work-orders-as-tasks-spec.md`.
 // ---------------------------------------------------------------------------
 
 /**
@@ -109,19 +94,13 @@ export const contractor = sqliteTable(
 export type Contractor = typeof contractor.$inferSelect;
 
 /**
- * One engagement: this contractor, this piece of work, this invoice.
+ * One contractor's engagement on one work order, the way a `volunteer_signup`
+ * is one person's place on one. The work order holds what the work is — its
+ * title, the unit, the project — and owns whether the work is done; this row
+ * holds who was engaged, where the engagement stands, and the money.
  *
- * `assetId` is what splits the two cases the module serves. Set, it is a repair
- * — a particular unit goes to the shop and comes back, and the asset's own
- * ledger records the trip. Null, it is building work: an electrician has no
- * asset, and pretending otherwise would mean inventing an inventory row for the
- * breaker panel.
- *
- * The status machine is `orderStatuses`' shape for `orderStatuses`' reason:
- * `draft` is "we should call somebody", `scheduled` is "they are coming, or they
- * have it", and the two ends are terminal. Late is not a state — it is
- * `scheduled` with `expected_back_at` behind us, derived the way
- * `listLateOrders` derives it.
+ * Late is not a state: it is `booked` with `expected_back_at` behind us,
+ * derived the way `listLateOrders` derives it.
  */
 export const contractorJob = sqliteTable(
 	'contractor_job',
@@ -137,38 +116,21 @@ export const contractorJob = sqliteTable(
 			.notNull()
 			.references(() => contractor.id, { onDelete: 'restrict' }),
 
-		status: text('status', { enum: contractorJobStatuses }).notNull().default('draft'),
+		status: text('status', { enum: contractorJobStatuses }).notNull().default('asked'),
 
-		/** What the work is, in one line: "Retube the Bassman", "Replace panel". */
-		summary: text('summary').notNull(),
-
-		/**
-		 * The unit being worked on, when there is one. Null is building work.
-		 *
-		 * Set-null rather than cascade, matching `stock_movement.asset_id`: what a
-		 * contractor was paid for is a financial fact, and it must outlive the
-		 * disposal of the amp it was spent on.
-		 */
-		assetId: text('asset_id').references(() => inventoryAsset.id, { onDelete: 'set null' }),
-
-		/**
-		 * The body of work this was part of. This is the column the schema was
-		 * reaching for when `assetId`'s comment said "null is building work": an
-		 * electrician has no asset, and now has a project instead.
-		 */
-		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
-
-		// The work order this engagement answers. Nullable until existing jobs are
-		// backfilled; NOT NULL after. Restrict: an engagement carries money and a
-		// ledger entry, so deleting its work order must fail loudly rather than
-		// orphan the spend (set-null) or erase it (cascade). Work orders are
-		// cancelled, not deleted, in every service path.
-		workOrderId: text('work_order_id').references(() => workOrder.id, { onDelete: 'restrict' }),
+		// Restrict: an engagement carries money and a ledger entry, so deleting its
+		// work order must fail loudly rather than orphan the spend (set-null) or
+		// erase it (cascade). Work orders are cancelled, not deleted, in every
+		// service path.
+		workOrderId: text('work_order_id')
+			.notNull()
+			.references(() => workOrder.id, { onDelete: 'restrict' }),
 
 		/** When they come, or when the unit went out to them. */
 		scheduledFor: integer('scheduled_for', { mode: 'timestamp' }),
 		/** When it is promised back. Drives the overdue list; nothing else reads it. */
 		expectedBackAt: integer('expected_back_at', { mode: 'timestamp' }),
+		/** When the contractor finished — not when the work order was ticked. */
 		completedAt: integer('completed_at', { mode: 'timestamp' }),
 
 		/** What they said it would cost, if they said. */
@@ -227,15 +189,13 @@ export const contractorJob = sqliteTable(
 	},
 	(t) => [
 		index('idx_contractor_job_contractor').on(t.contractorId),
-		index('idx_contractor_job_asset').on(t.assetId),
-		index('idx_contractor_job_project').on(t.projectId),
 		index('idx_contractor_job_work_order').on(t.workOrderId),
 		index('idx_contractor_job_status').on(t.status),
 		// The overdue read: out with somebody, past its date. Partial so the
 		// closed pile — which is most of the table forever — is never scanned.
 		index('idx_contractor_job_overdue')
 			.on(t.expectedBackAt)
-			.where(sql`status = 'scheduled'`),
+			.where(sql`status = 'booked'`),
 		// Money is never negative. Written as `not (x < 0)` so a NULL cost, which
 		// is the normal state before the invoice lands, passes rather than
 		// evaluating to NULL and taking the check with it.

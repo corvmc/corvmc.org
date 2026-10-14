@@ -90,7 +90,8 @@ Asset management and project management join at exactly two columns, and they ar
 two worth knowing:
 
 - **`work_request.workOrderId`** — a work request raises the work that answers it.
-- **`contractor_job.assetId`** — the work is done to a unit. Null means building work.
+- **`work_order.assetId`** — the work is done to a unit. Null means building work. A
+  contractor's engagement (`contractor_job`) reads it through its work order.
 
 ## Inside the social vertical
 
@@ -177,7 +178,7 @@ state machine, credit settlement, a cancel.
 | ----------------------- | ----------- | ----------- | ------------- | ----------- | ----------------------- |
 | `reservationStatuses`   | `scheduled` | `confirmed` | —             | `completed` | `no_show` / `cancelled` |
 | `loanStatuses`          | `requested` | `scheduled` | `checked_out` | `returned`  | `cancelled`             |
-| `contractorJobStatuses` | `draft`     | `scheduled` | —             | `completed` | `cancelled`             |
+| `contractorJobStatuses` | `asked`     | `booked`    | —             | `completed` | `no_show` / `cancelled` |
 
 Satellites line up too: `closure` ≡ `assetStatus='maintenance'` (the resource is
 unavailable and it is not a booking), `recurring_series` ≡ a standing loan, the lock code
@@ -320,9 +321,9 @@ A list like the above invites merging everything. These three are deliberate:
   holds: gear must not queue beside a harassment report, `reason` there is
   moderation-shaped, and neither `blocksUse` nor `workOrderId` means anything to
   moderation.
-- **`work_order` vs `contractor_job`.** Same shape, opposite economics: volunteer
-  labour is claimed and credited in hours, contractor labour is commissioned and paid in
-  cents.
+- **`volunteer_signup` vs `contractor_job`.** Both are one party's engagement on a
+  `work_order`, with opposite economics: volunteer labour is claimed and credited in
+  hours, contractor labour is commissioned and paid in cents.
 - **The four ledgers.** A shared table would put credits, gear and hours in one row type
   to save a `sum()`.
 

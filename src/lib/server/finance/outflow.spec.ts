@@ -21,7 +21,7 @@ describe('contractor jobs', () => {
 	it('records a paid job as money out', async () => {
 		await recordCompletedJob({
 			jobId: 'job-1',
-			summary: 'Amp repair',
+			title: 'Amp repair',
 			occurredAt: OCCURRED,
 			costCents: 12_000,
 			isDonated: false
@@ -37,6 +37,24 @@ describe('contractor jobs', () => {
 		);
 	});
 
+	it("books the entry against the work order's project", async () => {
+		await recordCompletedJob({
+			jobId: 'job-1',
+			title: 'Add a dedicated circuit',
+			projectId: 'proj-1',
+			occurredAt: OCCURRED,
+			costCents: 94_500,
+			isDonated: false
+		});
+
+		expect(recordEntry).toHaveBeenCalledWith(
+			expect.objectContaining({
+				projectId: 'proj-1',
+				description: 'Contractor — Add a dedicated circuit'
+			})
+		);
+	});
+
 	/**
 	 * The two are mutually exclusive by an invariant the job service enforces —
 	 * a row that was both would be counted as money spent *and* as value
@@ -45,7 +63,7 @@ describe('contractor jobs', () => {
 	it('records a donated job as value in, not money out', async () => {
 		await recordCompletedJob({
 			jobId: 'job-1',
-			summary: 'Amp repair',
+			title: 'Amp repair',
 			occurredAt: OCCURRED,
 			isDonated: true,
 			fairValueCents: 12_000
@@ -60,7 +78,7 @@ describe('contractor jobs', () => {
 	it('records nothing for a job that cost nothing and was not donated', async () => {
 		await recordCompletedJob({
 			jobId: 'job-1',
-			summary: 'Looked at it',
+			title: 'Looked at it',
 			occurredAt: OCCURRED,
 			costCents: 0,
 			isDonated: false
@@ -72,7 +90,7 @@ describe('contractor jobs', () => {
 	it('carries the project, so burn is one query', async () => {
 		await recordCompletedJob({
 			jobId: 'job-1',
-			summary: 'Amp repair',
+			title: 'Amp repair',
 			projectId: 'prj-1',
 			occurredAt: OCCURRED,
 			costCents: 500,

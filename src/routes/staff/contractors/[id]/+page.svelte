@@ -189,7 +189,7 @@
 				<tr class="hover">
 					<td class="cell-primary">
 						<a class="link font-medium" href={resolve(`/staff/contractors/jobs/${row.job.id}`)}>
-							{row.job.summary}
+							{row.job.title}
 						</a>
 						{#if row.itemName}
 							<div class="text-subtle">

@@ -12,7 +12,8 @@ import {
 	suggestionVisibilities,
 	marketVendorStatuses,
 	incidentStatuses,
-	ballotStatuses
+	ballotStatuses,
+	contractorJobStatuses
 } from '$lib/config';
 import { ticketStatuses } from '$lib/server/db/schema/ticket';
 import { reservationStatuses } from '$lib/server/db/schema/reservation';
@@ -84,6 +85,7 @@ const vocabularies: Record<string, readonly string[]> = {
 	production: productionStatuses,
 	marketVendor: marketVendorStatuses,
 	incident: incidentStatuses,
+	contractorJob: contractorJobStatuses,
 	// Derived from the ballot's timestamps by `ballotStatusOf`, never stored.
 	ballot: ballotStatuses,
 	// `visible` is intentionally absent: an on-the-board suggestion shows no badge.

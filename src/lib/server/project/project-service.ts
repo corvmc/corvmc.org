@@ -19,10 +19,12 @@ import {
 	inArray,
 	isNull,
 	notExists,
+	notInArray,
 	sql
 } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import {
+	contractorJobStatusesWithoutSpend,
 	valueOfMinutesCents,
 	type ProjectCommitteeRole,
 	type ProjectKind,
@@ -341,7 +343,8 @@ export async function startProjectFromSuggestion(
 // ---------------------------------------------------------------------------
 
 /**
- * The five tables that carry `project_id`, keyed by the word a caller uses.
+ * The four tables that carry `project_id`, keyed by the word a caller uses. A
+ * contractor job is not one: it belongs to a project through its work order.
  *
  * One map rather than ten near-identical functions: every attachment is the
  * same statement against a different table, and the differences that would
@@ -351,7 +354,6 @@ export async function startProjectFromSuggestion(
  */
 const ATTACHABLE = {
 	work_order: workOrder,
-	contractor_job: contractorJob,
 	purchase_order: purchaseOrder,
 	acquisition,
 	event_listing: eventListing
@@ -457,16 +459,23 @@ export interface ProjectBurn {
 export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 	const proj = await getProjectById(projectId);
 
-	// Two aggregates from one pass. A donated job has no `cost_cents` today, but
-	// reading the flag rather than relying on that keeps a mis-entered row out of
-	// cash spend instead of quietly inflating it.
+	// Two aggregates from one pass, over engagements on this project's work
+	// orders. Reading the donated flag rather than trusting a null cost keeps a
+	// mis-entered row out of cash spend. A declined or cancelled engagement is
+	// nobody's work, so a quote or cost left on it is not spend.
 	const [contractorSpend] = await db
 		.select({
 			cents: sql<number>`coalesce(sum(case when ${contractorJob.isDonated} then 0 else coalesce(${contractorJob.costCents}, 0) end), 0)`,
 			donatedCents: sql<number>`coalesce(sum(case when ${contractorJob.isDonated} then coalesce(${contractorJob.fairValueCents}, 0) else 0 end), 0)`
 		})
 		.from(contractorJob)
-		.where(eq(contractorJob.projectId, projectId));
+		.innerJoin(workOrder, eq(workOrder.id, contractorJob.workOrderId))
+		.where(
+			and(
+				eq(workOrder.projectId, projectId),
+				notInArray(contractorJob.status, [...contractorJobStatusesWithoutSpend])
+			)
+		);
 
 	// Ordered rather than received: an order that is placed has committed the
 	// money, and a project's burn has to show it before the boxes arrive.
@@ -582,9 +591,13 @@ export async function listProjectAttachments(projectId: string) {
 			.where(eq(workOrder.projectId, projectId))
 			.orderBy(asc(workOrder.startsAt)),
 		db
-			.select()
+			.select({
+				...getTableColumns(contractorJob),
+				title: sql<string>`coalesce(${workOrder.title}, 'Work order')`
+			})
 			.from(contractorJob)
-			.where(eq(contractorJob.projectId, projectId))
+			.innerJoin(workOrder, eq(workOrder.id, contractorJob.workOrderId))
+			.where(eq(workOrder.projectId, projectId))
 			.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id)),
 		db
 			.select()

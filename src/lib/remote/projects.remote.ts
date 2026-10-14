@@ -89,13 +89,7 @@ function toServiceInput(data: ProjectFields) {
 	};
 }
 
-const attachableKinds = z.enum([
-	'work_order',
-	'contractor_job',
-	'purchase_order',
-	'acquisition',
-	'event_listing'
-]);
+const attachableKinds = z.enum(['work_order', 'purchase_order', 'acquisition', 'event_listing']);
 
 // ---------------------------------------------------------------------------
 // Queries
