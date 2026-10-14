@@ -93,6 +93,11 @@ vi.mock('./member-certification-service', () => ({
 	missingRequirements: (...a: unknown[]) => missingRequirements(...a)
 }));
 
+const recordAuditEntry = vi.fn();
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
+}));
+
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 import {
@@ -322,14 +327,71 @@ describe('staff acting on somebody else', () => {
 		expect(written).toContain("'confirmed'");
 	});
 
-	it('holds the clearance gate for staff too, and rewords the refusal for them', async () => {
+	// Warn, record, allow (conventions.md#workflow-gates): staff are told what is
+	// missing, the assignment lands, and the audit log keeps what they went over.
+	it('assigns somebody missing a clearance, warns, and records it', async () => {
 		missingRequirements.mockResolvedValue([{ id: 'c1', name: 'Sound Desk Cleared' }]);
+		// Existing row, the re-read, the signup event's own read, then the member's name.
+		selectResultQueue = [[], [{ id: 'signup-new', status: 'confirmed' }], [], [{ name: 'Ada' }]];
+
+		const row = await claimShift('shift-1', 'user-1', { assignedByStaff: true });
+
+		expect(row).toMatchObject({ id: 'signup-new' });
+		expect(row.warnings).toEqual([
+			expect.stringMatching(/Sound Desk Cleared as of this shift's date/)
+		]);
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'work_order.assigned_over_warnings',
+			subject: { type: 'work_order', id: 'shift-1', label: 'shift-1' },
+			details: { userId: 'user-1', memberName: 'Ada', warnings: row.warnings }
+		});
+	});
+
+	it('assigns somebody with no volunteer profile, warns, and records it', async () => {
+		requireActiveVolunteer.mockRejectedValue(new VolunteerProfileNotFoundError());
+		selectResultQueue = [[], [{ id: 'signup-new', status: 'confirmed' }]];
+
+		const row = await claimShift('shift-1', 'user-1', { assignedByStaff: true });
+
+		expect(rawWrites).toHaveLength(1);
+		expect(row.warnings).toEqual([expect.stringMatching(/volunteer profile/)]);
+		expect(recordAuditEntry).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: 'work_order.assigned_over_warnings',
+				details: expect.objectContaining({ warnings: row.warnings })
+			})
+		);
+	});
+
+	// `blocked` is the review queue for an under-18 self-signup: nobody has looked yet.
+	it('still refuses somebody whose profile is blocked, and records nothing', async () => {
+		requireActiveVolunteer.mockRejectedValue(new VolunteerProfileBlockedError());
 
 		await expect(claimShift('shift-1', 'user-1', { assignedByStaff: true })).rejects.toThrow(
-			// Not "talk to staff" — the reader is staff. Same refusal, and it still names
-			// the certification, because that is the actionable half.
-			/Sound Desk Cleared as of this shift's date/
+			/waiting on staff review/
 		);
+		expect(rawWrites).toEqual([]);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+
+	it('records nothing extra for a clean assignment', async () => {
+		selectResultQueue = [[], [{ id: 'signup-new', status: 'confirmed' }]];
+
+		const row = await claimShift('shift-1', 'user-1', { assignedByStaff: true });
+
+		expect(row.warnings).toEqual([]);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+
+	it("still refuses a member's own claim over the same gaps", async () => {
+		missingRequirements.mockResolvedValue([{ id: 'c1', name: 'Sound Desk Cleared' }]);
+		await expect(claimShift('shift-1', 'user-1')).rejects.toThrow(NotClearedError);
+
+		requireActiveVolunteer.mockRejectedValue(new VolunteerProfileNotFoundError());
+		await expect(claimShift('shift-1', 'user-1')).rejects.toThrow(VolunteerProfileNotFoundError);
+
+		expect(rawWrites).toEqual([]);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 
 	it('releases a signup and records a cancellation, never a no-show', async () => {

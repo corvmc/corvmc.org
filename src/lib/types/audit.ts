@@ -34,6 +34,7 @@ export const auditActions = [
 	'work_order.created',
 	'work_order.assigned',
 	'work_order.member_assigned',
+	'work_order.assigned_over_warnings',
 	'work_order.member_unassigned',
 	'work_order.rescheduled',
 	'work_order.resolved',
@@ -138,6 +139,8 @@ export interface AuditDetailsByAction {
 		cancelledSignups: number;
 	};
 	'work_order.member_assigned': { userId: string; memberName: string };
+	/** Staff put somebody on it without a volunteer profile or a clearance its role needs. */
+	'work_order.assigned_over_warnings': { userId: string; memberName: string; warnings: string[] };
 	'work_order.member_unassigned': { userId: string; memberName: string };
 	'work_order.rescheduled': { from: WorkOrderTiming; to: WorkOrderTiming };
 	/** `override` when the task has a done condition and was ticked by hand regardless. */

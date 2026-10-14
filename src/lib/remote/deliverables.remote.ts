@@ -71,13 +71,14 @@ export const getCommitteeOpenItems = query(z.string().min(1), async (slug) => {
 export const takeDeliverable = form(z.object({ id: z.string().min(1), ...from }), async (data) => {
 	const { groupId } = await ownerOf(data.id);
 	const { user } = await requireCommitteeMember(groupId, MANAGE);
+	let warnings: string[] = [];
 	try {
-		await claimShift(data.id, user.id, { assignedByStaff: true });
+		({ warnings } = await claimShift(data.id, user.id, { assignedByStaff: true }));
 	} catch (err) {
 		mapDomainError(err);
 	}
 	refreshFrom(data);
-	return { success: true };
+	return { success: true, warnings };
 });
 
 /** Done anyway: the hand override, whatever the item's condition says. */

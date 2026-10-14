@@ -1825,11 +1825,9 @@ export const cancelMySignup = form(z.object({ signupId: z.string().min(1) }), as
  * Saturday" at the front desk could not be put down for Saturday, because the only door
  * into the service read the session user.
  *
- * The service takes the userId and carries every guard with it — onboarding, shift open,
- * capacity race, and the clearance check as of the shift's own date. None of them is
- * relaxed for staff. A missing clearance comes back as `NotClearedError`, which
- * `mapDomainError` turns into a 403 naming the certification, so the coordinator learns
- * what to go and grant rather than being told "no".
+ * The service takes the userId and carries every guard with it. For staff, no volunteer
+ * profile and a missing clearance come back as `warnings` (and are audited) rather than
+ * a refusal; a profile awaiting under-18 review is still refused.
  */
 /**
  * Ask somebody, rather than book them.
@@ -1892,14 +1890,17 @@ export const assignShiftToMember = form(
 	async (data) => {
 		await requireCapability('volunteer.manageRoster');
 
+		let warnings: string[] = [];
 		try {
-			await claimShiftService(data.shiftId, data.userId, { assignedByStaff: true });
+			({ warnings } = await claimShiftService(data.shiftId, data.userId, {
+				assignedByStaff: true
+			}));
 		} catch (err) {
 			mapDomainError(err);
 		}
 
 		await refreshShiftViews(data.shiftId);
-		return { success: true };
+		return { success: true, warnings };
 	}
 );
 

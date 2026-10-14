@@ -1052,8 +1052,10 @@ So:
   it are two decisions, and the first is sometimes reversed.
 - **Staff can assign, release and confirm.** `assignShiftToMember` lands the signup
   `confirmed` — a coordinator typing the name in _is_ the decision, and leaving it `claimed`
-  would cost the member their reminder. The clearance gate is **not** relaxed for staff: an
-  uncleared member is refused with the certification named.
+  would cost the member their reminder. For staff the clearance and onboarding gates warn,
+  record and allow: an uncleared member, or one with no volunteer profile, is added, the
+  gaps come back as warnings, and `work_order.assigned_over_warnings` is written to the
+  audit log. A profile awaiting under-18 review is still refused.
 - **A staff release is a cancellation, not a no-show.** Notice given is not a mark against
   somebody, and the two were previously the same button.
 - **`logHoursForMember`** lifts the 90-day backdate window and lands the log `approved`,
@@ -1070,7 +1072,8 @@ So:
   that from a booking.
 - **"Who to ask" sits beside the shift**, not on the role's page, and is judged as of the
   shift's own date. Three scopes — interested, has worked it, everybody — and one flag line
-  per candidate, resolved in priority order: missing clearance blocks, a lapsing one warns, a
+  per candidate, resolved in priority order: a missing clearance (sorted last; Add still
+  offered, over a warning), a lapsing one warns, a
   day their availability argues against warns, a skill tag on the role's `skillMatches` list
   shows as "Skills: …", otherwise what they have done before. Within a scope, candidates rank
   by times worked on this role, then by how many of their skill tags are on that list (#1445).

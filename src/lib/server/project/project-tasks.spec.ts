@@ -314,6 +314,21 @@ describe('assigning members', () => {
 		expect(one(`select posted_at from work_order where id = 't'`)).toEqual({ posted_at: null });
 	});
 
+	it('assigns somebody missing a clearance, with the warning on the result and in the log', async () => {
+		task('t', { volunteer_role_id: ROLE });
+		const { missingRequirements } =
+			await import('$lib/server/volunteer/member-certification-service');
+		vi.mocked(missingRequirements).mockResolvedValueOnce([{ id: 'c1', name: 'Forklift' }]);
+
+		const result = await tasks.assignMembers(PROJECT, 't', { userIds: [ADA] });
+
+		expect(result).toMatchObject({ assigned: [ADA], refused: [] });
+		expect(result.warned).toEqual([{ userId: ADA, warnings: [expect.stringMatching(/Forklift/)] }]);
+		expect(audits('work_order.assigned_over_warnings')).toEqual([
+			expect.objectContaining({ id: 't', userId: ADA, warnings: result.warned[0].warnings })
+		]);
+	});
+
 	it('assigns only staff and members of the committee', async () => {
 		task('t', { volunteer_role_id: ROLE });
 		const picker = await tasks.listAssignableMembers(PROJECT, 't');

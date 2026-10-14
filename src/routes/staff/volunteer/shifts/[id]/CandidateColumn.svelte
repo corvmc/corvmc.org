@@ -29,7 +29,6 @@
 
 	let {
 		shiftId,
-		roleName,
 		startsAt,
 		scope = $bindable('interested')
 	}: {
@@ -39,6 +38,12 @@
 		startsAt: Date | null;
 		scope?: 'interested' | 'worked' | 'all';
 	} = $props();
+
+	/** A staff add goes through over a missing profile or clearance; say what it went over. */
+	function warnOver(result?: unknown) {
+		const warnings = (result as { warnings?: string[] } | undefined)?.warnings ?? [];
+		if (warnings.length > 0) toast.warning(`Added over: ${warnings.join(' ')}`);
+	}
 
 	const SCOPES = [
 		{ key: 'interested', label: 'Interested' },
@@ -60,14 +65,14 @@
 	/**
 	 * The one line under a candidate's name, and whether they can be added.
 	 *
-	 * Order is the whole point: a missing clearance is a refusal the service
-	 * will make anyway, so it outranks a warning, which outranks a hint about
-	 * the day, which outranks a skill match, which outranks the ordinary case.
+	 * Order is the whole point: a missing clearance is the gap an add is recorded
+	 * going over, so it outranks a lapsing card, which outranks a hint about the
+	 * day, which outranks a skill match, which outranks the ordinary case.
 	 */
 	function flag(row: Row): { tone: string; text: string; blocked: boolean } {
 		if (row.missing.length > 0) {
 			const names = row.missing.map((m) => m.name).join(' and ');
-			return { tone: 'text-error', text: `Needs ${names}`, blocked: true };
+			return { tone: 'text-error', text: `Not cleared: needs ${names}`, blocked: true };
 		}
 		if (row.lapsing.length > 0) {
 			return {
@@ -110,7 +115,7 @@
 	}
 
 	/**
-	 * Askable first, blocked last, and the two counted apart.
+	 * Cleared first, not cleared last, and the two counted apart.
 	 *
 	 * The heading counted rows, so a shift whose only two interested members
 	 * both lacked a required clearance was headed "Who to ask · 2" and offered
@@ -126,12 +131,6 @@
 			blocked: graded.filter((g) => g.f.blocked).length
 		};
 	}
-
-	function refuse(row: Row) {
-		toast.error(
-			`Refused. ${row.missing.map((m) => m.name).join(' and ')} is required for ${roleName}.`
-		);
-	}
 </script>
 
 <InfoCard title="Who to ask">
@@ -142,7 +141,7 @@
 				<CardTitle>
 					Who to ask · {g.askable}
 					{#if g.blocked > 0}
-						<span class="text-subtle text-sm font-normal">· {g.blocked} blocked</span>
+						<span class="text-subtle text-sm font-normal">· {g.blocked} not cleared</span>
 					{/if}
 				</CardTitle>
 			{/await}
@@ -190,56 +189,53 @@
 							<div class="{f.tone} truncate text-xs">{f.text}</div>
 						</div>
 
-						{#if f.blocked}
-							<!-- Reads Blocked and refuses on press rather than vanishing:
-							     the coordinator's useful next step is to go and grant the
-							     thing, and a candidate who silently disappeared teaches
-							     them nothing. -->
-							<Button size="xs" variant="ghost" class="text-error" onclick={() => refuse(row)}>
-								Blocked
-							</Button>
-						{:else}
-							<!-- Two verbs on purpose. Invite asks and holds no place, so the
-							     shift keeps reading short-staffed until somebody answers;
-							     Add books them, which is what a coordinator who has already
-							     spoken to them means. -->
-							<Action
-								action={inviteMemberToShift.for(`${shiftId}:${row.userId}`)}
-								label="Invite"
-								variant="primary"
-								size="xs"
-								modalTitle="Ask {row.member.title} to take this?"
-								submitLabel="Send the invitation"
-								successToast="Asked. They'll see it on their dashboard."
-							>
-								{#snippet form()}
-									<input type="hidden" name="shiftId" value={shiftId} />
-									<input type="hidden" name="userId" value={row.userId} />
-									<p class="text-sm">
-										An invitation holds no place — the shift still counts as needing somebody until {row
-											.member.title} says yes. You can ask more people than the shift has room for.
+						<!-- Two verbs on purpose. Invite asks and holds no place, so the
+						     shift keeps reading short-staffed until somebody answers;
+						     Add books them, which is what a coordinator who has already
+						     spoken to them means. -->
+						<Action
+							action={inviteMemberToShift.for(`${shiftId}:${row.userId}`)}
+							label="Invite"
+							variant="primary"
+							size="xs"
+							modalTitle="Ask {row.member.title} to take this?"
+							submitLabel="Send the invitation"
+							successToast="Asked. They'll see it on their dashboard."
+						>
+							{#snippet form()}
+								<input type="hidden" name="shiftId" value={shiftId} />
+								<input type="hidden" name="userId" value={row.userId} />
+								<p class="text-sm">
+									An invitation holds no place — the shift still counts as needing somebody until {row
+										.member.title} says yes. You can ask more people than the shift has room for.
+								</p>
+							{/snippet}
+						</Action>
+						<Action
+							action={assignShiftToMember.for(`${shiftId}:${row.userId}`)}
+							label="Add"
+							variant="ghost"
+							size="xs"
+							modalTitle="Put {row.member.title} on this shift?"
+							submitLabel="Add them"
+							successToast="Added. They're booked."
+							onsuccess={warnOver}
+						>
+							{#snippet form()}
+								<input type="hidden" name="shiftId" value={shiftId} />
+								<input type="hidden" name="userId" value={row.userId} />
+								<p class="text-sm">
+									A staff add is a booking, not a claim — {row.member.title} lands confirmed, gets the
+									reminder the day before, and the shift completes afterwards with hours to log.
+								</p>
+								{#if f.blocked}
+									<p class="text-sm text-error">
+										They don't hold {row.missing.map((m) => m.name).join(' and ')} as of this shift's
+										date. Adding them anyway is recorded on its log.
 									</p>
-								{/snippet}
-							</Action>
-							<Action
-								action={assignShiftToMember.for(`${shiftId}:${row.userId}`)}
-								label="Add"
-								variant="ghost"
-								size="xs"
-								modalTitle="Put {row.member.title} on this shift?"
-								submitLabel="Add them"
-								successToast="Added. They're booked."
-							>
-								{#snippet form()}
-									<input type="hidden" name="shiftId" value={shiftId} />
-									<input type="hidden" name="userId" value={row.userId} />
-									<p class="text-sm">
-										A staff add is a booking, not a claim — {row.member.title} lands confirmed, gets the
-										reminder the day before, and the shift completes afterwards with hours to log.
-									</p>
-								{/snippet}
-							</Action>
-						{/if}
+								{/if}
+							{/snippet}
+						</Action>
 					</li>
 				{/each}
 			</ul>

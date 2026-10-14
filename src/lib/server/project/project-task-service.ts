@@ -297,8 +297,10 @@ async function roleFor(task: WorkOrder, volunteerRoleId?: string | null): Promis
 
 export interface AssignResult {
 	assigned: string[];
-	/** People the signup service refused, with its reason (not cleared, no profile, …). */
+	/** People the signup service refused, with its reason (a profile awaiting review, no room, …). */
 	refused: { userId: string; message: string }[];
+	/** People assigned over warnings (no volunteer profile, a missing clearance); recorded in the log. */
+	warned: { userId: string; warnings: string[] }[];
 	mode: WorkOrderMode;
 }
 
@@ -343,10 +345,12 @@ export async function assignMembers(
 
 	const assigned: string[] = [];
 	const refused: AssignResult['refused'] = [];
+	const warned: AssignResult['warned'] = [];
 	for (const userId of adding) {
 		try {
-			await claimShift(task.id, userId, { assignedByStaff: true });
+			const { warnings } = await claimShift(task.id, userId, { assignedByStaff: true });
 			assigned.push(userId);
+			if (warnings.length > 0) warned.push({ userId, warnings });
 		} catch (err) {
 			if (!(err instanceof DomainError)) throw err;
 			refused.push({ userId, message: err.message });
@@ -375,7 +379,7 @@ export async function assignMembers(
 			});
 		}
 	}
-	return { assigned, refused, mode };
+	return { assigned, refused, warned, mode };
 }
 
 /** Take one person off the task, telling them the way a dropped shift does. */
