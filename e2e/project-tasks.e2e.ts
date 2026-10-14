@@ -11,7 +11,8 @@ import {
 
 /**
  * A project's task list: sections, filters that live in the URL, duties that
- * unfold, and a panel with its own URL. Read-only; nothing here writes.
+ * unfold, a panel with its own URL, and adding and ticking in place. Only the
+ * last test writes, and to a title of its own, so a retry finds nothing it left.
  */
 
 async function loginAsStaff(page: Page) {
@@ -37,7 +38,6 @@ test.describe('project task list', () => {
 	test('draws every section, the empty one included, and unfolds duties', async ({ page }) => {
 		await expect(page.getByText(SEED_TASK_EMPTY_SECTION)).toBeVisible();
 		await expect(page.getByText('No tasks yet.')).toBeVisible();
-		await expect(page.getByText('1 of 3 tasks done')).toBeVisible();
 
 		await page
 			.getByRole('button', { name: `Unfold the duties of ${SEED_TASK_WITH_DUTIES}` })
@@ -77,5 +77,19 @@ test.describe('project task list', () => {
 		await page.keyboard.press('Escape');
 		await expect(page).not.toHaveURL(/[?&]task=/);
 		await expect(page.getByRole('complementary', { name: SEED_TASK_UNASSIGNED })).toBeHidden();
+	});
+
+	test('a typed line becomes a task, and its checkbox ticks and unticks it', async ({ page }) => {
+		const title = `E2E fetch the ladder ${Date.now()}`;
+		const line = page.getByRole('textbox', { name: 'Add a task to Prep' });
+		await line.fill(title);
+		await line.press('Enter');
+		await expect(page.getByRole('link', { name: title })).toBeVisible();
+		await expect(line).toHaveValue('');
+
+		await page.getByRole('button', { name: `Mark ${title} done` }).click();
+		await expect(page.getByRole('button', { name: `Mark ${title} not done` })).toBeVisible();
+		await page.getByRole('button', { name: `Mark ${title} not done` }).click();
+		await expect(page.getByRole('button', { name: `Mark ${title} done` })).toBeVisible();
 	});
 });

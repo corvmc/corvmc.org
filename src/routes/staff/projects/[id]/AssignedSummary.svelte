@@ -41,9 +41,11 @@
 		{#if task.mode === 'open'}
 			<Badge variant="outline" size="sm">Open</Badge>
 		{/if}
-		<span class="sr-only">
-			{task.people.length > 0 ? task.people.map((p) => p.name).join(', ') : 'Nobody yet'}
-		</span>
+		{#if !showNames}
+			<span class="sr-only">
+				{task.people.length > 0 ? task.people.map((p) => p.name).join(', ') : 'Nobody yet'}
+			</span>
+		{/if}
 	</span>
 	{#if showNames && task.people.length > 0}
 		<span class="mt-1 block text-muted">{task.people.map((p) => p.name).join(', ')}</span>

@@ -89,10 +89,30 @@ const untouched = () =>
 
 const cases: [string, Record<string, unknown>][] = [
 	['getTaskAssignees', pair],
-	['moveTaskCommand', { ...pair, sectionId: null, index: 0 }]
+	['moveTaskCommand', { ...pair, sectionId: null, index: 0 }],
+	['assignMembersForm', { ...pair, userIds: ['usr-staff'] }],
+	['unassignMemberForm', { ...pair, userId: 'usr-staff' }],
+	['openTaskForm', { ...pair, capacity: 2 }],
+	['engageContractorForm', { ...pair, contractorId: 'ctr-1', confirm: true }],
+	['unassignTaskForm', { ...pair, confirm: true }],
+	['resolveTaskForm', pair],
+	['reopenTaskForm', pair],
+	['rescheduleTaskForm', { ...pair, startsAt: '2030-01-01T18:00', endsAt: '2030-01-01T20:00' }],
+	['cancelTaskForm', pair],
+	['addDutyForm', { ...pair, label: 'Sweep' }],
+	['setDutyDoneForm', { ...pair, dutyId: 'duty-1', done: true }],
+	['setTaskEquipmentForm', { ...pair, assetId: '' }]
 ];
 
-const before = { project_id: THEIRS, section_id: null, sort_order: 5 };
+const before = {
+	project_id: THEIRS,
+	section_id: null,
+	sort_order: 5,
+	posted_at: null,
+	resolved_at: null,
+	cancelled_at: null,
+	starts_at: null
+};
 
 describe('a work order named with a project it is not on', () => {
 	it.each(cases)('%s refuses it with a 404 and changes nothing', async (name, input) => {
@@ -108,6 +128,8 @@ describe('a work order named with a project it is not on', () => {
 			index: 0
 		});
 		expect(untouched()).toMatchObject({ project_id: THEIRS, sort_order: 0 });
+		await remotes.openTaskForm({ projectId: THEIRS, workOrderId: 'wo-theirs', capacity: 2 });
+		expect(untouched()).toMatchObject({ posted_at: expect.any(Number) });
 	});
 });
 

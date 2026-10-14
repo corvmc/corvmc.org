@@ -320,7 +320,13 @@
 			</div>
 			{#if selected}
 				<aside class="task-panel" aria-labelledby="task-panel-title">
-					<TaskPanel task={selected} {list} onclose={closeTask} onopen={openTask} />
+					<TaskPanel
+						task={selected}
+						{list}
+						projectId={project.id}
+						onclose={closeTask}
+						onopen={openTask}
+					/>
 				</aside>
 			{:else if selectedId}
 				<Alert type="warning" class="ml-4">

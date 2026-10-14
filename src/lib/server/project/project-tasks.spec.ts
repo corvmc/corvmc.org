@@ -497,3 +497,62 @@ describe('the rows the list draws', () => {
 		expect(row('crew').outstanding).toBeNull();
 	});
 });
+
+describe('delegating to a contractor', () => {
+	it('warns about the people on it, then takes them off and books the engagement asked', async () => {
+		task('t', { volunteer_role_id: ROLE, posted_at: 1, capacity: 2 });
+		insert('volunteer_signup', { id: 'su-a', shift_id: 't', user_id: ADA, status: 'confirmed' });
+		sqlite.exec(`delete from contractor`);
+		insert('contractor', { id: 'ctr', name: 'Benton Electric', trade: 'electrical' });
+		const input = { contractorId: 'ctr', quotedCents: 22000, requestedByUserId: STAFF };
+
+		expect(await tasks.engageContractor(PROJECT, 't', input)).toEqual({
+			status: 'needs_confirmation',
+			liveSignups: 1
+		});
+		expect(one(`select count(*) n from contractor_job`)).toEqual({ n: 0 });
+
+		const done = await tasks.engageContractor(PROJECT, 't', { ...input, confirm: true });
+		expect(done).toMatchObject({ status: 'done', cancelledSignups: 1, mode: 'contractor' });
+		expect(one(`select status, quoted_cents from contractor_job`)).toEqual({
+			status: 'asked',
+			quoted_cents: 22000
+		});
+		expect(one(`select posted_at from work_order where id = 't'`)).toEqual({ posted_at: null });
+		expect(one(`select status from volunteer_signup where id = 'su-a'`)).not.toEqual({
+			status: 'confirmed'
+		});
+		expect(audits('work_order.assigned')).toEqual([
+			{ id: 't', from: 'open', to: 'contractor', cancelledSignups: 1 }
+		]);
+	});
+});
+
+describe('duties and equipment', () => {
+	it('adds duties at the end, and ticks only a duty that is the task’s own', async () => {
+		task('t');
+		task('other');
+		insert('work_task', { id: 'x', work_order_id: 'other', label: 'x', sort_order: 0 });
+		const first = await tasks.addDuty(PROJECT, 't', ' Sweep ');
+		const second = await tasks.addDuty(PROJECT, 't', 'Mop');
+		expect([first.label, first.sortOrder, second.sortOrder]).toEqual(['Sweep', 0, 1]);
+
+		await tasks.setDutyDone(PROJECT, 't', first.id, true, STAFF);
+		expect(one(`select done, done_by_user_id from work_task where id = ?`, first.id)).toEqual({
+			done: 1,
+			done_by_user_id: STAFF
+		});
+		await expect(tasks.setDutyDone(PROJECT, 't', 'x', true, STAFF)).rejects.toBeInstanceOf(
+			tasks.TaskNotFoundError
+		);
+	});
+
+	it('refuses a unit that does not exist and clears with null', async () => {
+		task('t');
+		await expect(tasks.setTaskEquipment(PROJECT, 't', 'nope')).rejects.toBeInstanceOf(
+			tasks.TaskValidationError
+		);
+		await tasks.setTaskEquipment(PROJECT, 't', null);
+		expect(one(`select asset_id from work_order where id = 't'`)).toEqual({ asset_id: null });
+	});
+});
