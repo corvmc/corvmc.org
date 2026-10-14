@@ -41,7 +41,8 @@
 	{/each}
 </ul>
 {#if !task.cancelledAt}
-	<Form remote={add} onsuccess={() => add.fields.label.set('')}>
+	<!-- Indented past the checkbox column so the prompt lines up with the duty labels. -->
+	<Form remote={add} style="--inline-add-indent: 2rem" onsuccess={() => add.fields.label.set('')}>
 		<input {...add.fields.projectId.as('hidden', projectId)} />
 		<input {...add.fields.workOrderId.as('hidden', task.id)} />
 		<InlineAddField

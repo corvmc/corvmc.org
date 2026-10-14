@@ -159,7 +159,7 @@
 
 <div class="flex flex-wrap items-center gap-2">
 	<TabBar
-		collapse
+		collapse="always"
 		tabs={TASK_FILTERS.map((key) => ({ key, label: TASK_FILTER_LABELS[key] }))}
 		active={filter}
 		onchange={(key) => onfilter(key as TaskFilter)}
@@ -198,7 +198,7 @@
 								variant="ghost"
 								size="xs"
 								shape="square"
-								class="cursor-grab"
+								class="depth-0 cursor-grab"
 								draggable="true"
 								aria-label="Move the {name} section: drag it, or press the up and down arrows"
 								ondragstart={(e: DragEvent) => startDrag(e, { kind: 'section', id: sid! })}
@@ -235,7 +235,7 @@
 								variant="ghost"
 								size="xs"
 								shape="square"
-								class="cursor-grab"
+								class="depth-0 cursor-grab"
 								draggable="true"
 								aria-label="Move {t.title}: drag it, or press the up and down arrows"
 								ondragstart={(e: DragEvent) => startDrag(e, { kind: 'task', id: t.id })}
@@ -259,7 +259,7 @@
 									<Button
 										variant="link"
 										size="xs"
-										class="px-0"
+										class="depth-0 px-0"
 										aria-expanded={unfolded.has(t.id)}
 										aria-label="{unfolded.has(t.id) ? 'Fold' : 'Unfold'} the duties of {t.title}"
 										onclick={() => toggleDuties(t.id)}
@@ -292,8 +292,10 @@
 				{#if unfolded.has(t.id)}
 					<tr>
 						<td></td>
-						<td colspan="4" class="ps-6">
-							<DutyItems task={t} {projectId} place="row" />
+						<td colspan="4">
+							<div class="border-s-2 border-base-300 ps-3">
+								<DutyItems task={t} {projectId} place="row" />
+							</div>
 						</td>
 					</tr>
 				{/if}

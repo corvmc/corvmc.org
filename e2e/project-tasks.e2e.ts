@@ -46,17 +46,22 @@ test.describe('project task list', () => {
 	});
 
 	test('filters live in the URL', async ({ page }) => {
+		// The filter is a menu whose trigger is named for the active filter.
+		const pick = async (from: string, to: string) => {
+			await page.getByRole('button', { name: from, exact: true }).click();
+			await page.getByRole('menuitem', { name: to }).click();
+		};
 		// Every seeded task is unassigned, so Contractors is the filter that hides them all.
-		await page.getByRole('tab', { name: 'Contractors' }).click();
+		await pick('All', 'Contractors');
 		await expect(page).toHaveURL(/show=contractors/);
 		await expect(page.getByRole('link', { name: SEED_TASK_UNASSIGNED })).toBeHidden();
 		await expect(page.getByText('Nothing here matches the filter.')).toBeVisible();
 
-		await page.getByRole('tab', { name: 'Unassigned' }).click();
+		await pick('Contractors', 'Unassigned');
 		await expect(page).toHaveURL(/show=unassigned/);
 		await expect(page.getByRole('link', { name: SEED_TASK_WITH_DUTIES })).toBeVisible();
 
-		await page.getByRole('tab', { name: 'All' }).click();
+		await pick('Unassigned', 'All');
 		await expect(page.getByRole('link', { name: SEED_TASK_DONE })).toBeVisible();
 		await page.getByRole('button', { name: 'Hide done' }).click();
 		await expect(page).toHaveURL(/done=hide/);

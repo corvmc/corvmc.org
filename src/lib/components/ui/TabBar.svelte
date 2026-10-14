@@ -43,8 +43,11 @@
 		 * It is not cosmetic. `ButtonGroup` is a daisyUI `join`, which does not
 		 * wrap, and `AppShell`'s <main> is `overflow-x-hidden`: without this the
 		 * tabs past the fold are clipped off the edge with no way to reach them.
+		 *
+		 * `'always'` is the menu at every width, for a filter whose options are
+		 * too long to sit side by side next to the controls around it.
 		 */
-		collapse?: boolean;
+		collapse?: boolean | 'always';
 		/**
 		 * Shrink every tab but the active one to its `icon` plus its badge, so a
 		 * long bar fits a narrow pane without scrolling sideways. The active tab
@@ -131,7 +134,7 @@
 {/snippet}
 
 {#if collapse}
-	<div class="md:hidden">
+	<div class={collapse === 'always' ? '' : 'md:hidden'}>
 		<DropdownMenu.Root>
 			<!--
 				No aria-label. The trigger's whole job is to say which section you are
@@ -177,7 +180,9 @@
 	</div>
 {/if}
 
-{#if asLinks}
+{#if collapse === 'always'}
+	<!-- The menu above is the whole control. -->
+{:else if asLinks}
 	<ButtonGroup class={groupClass}>
 		{#each tabs as tab (tab.key)}
 			<a
