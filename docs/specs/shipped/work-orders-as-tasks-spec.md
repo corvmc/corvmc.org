@@ -2,11 +2,12 @@
 
 > ## Status
 >
-> **In progress.** Tracking issue #1806. Design settled in conversation with the owner on
-> 2026-10-13, against a canvas mockup of the project page. Phase 1 (#1896), Phase 2
-> (the engagement reshape, #1900), Phase 3 (services, #1905), Phase 4 (the project page,
-> 4a and 4b, #1911), Phase 5 (the task page) and Phase 6 (the Contractor Jobs view and
-> the job-detail redirect) are built. Phase 7 is not started.
+> **Shipped.** Tracking issue #1806. Design settled in conversation with the owner on
+> 2026-10-13, against a canvas mockup of the project page. All seven phases are built:
+> Phase 1 (#1896), Phase 2 (the engagement reshape, #1900), Phase 3 (services, #1905),
+> Phase 4 (the project page, 4a and 4b, #1911), Phase 5 (the task page, #1916), Phase 6
+> (the Contractor Jobs view and the job-detail redirect) and Phase 7 (Activity, which also
+> closed #1906). Behavior is in business-workflows §16.
 
 ## Purpose
 
@@ -149,7 +150,7 @@ off, is left as it is.
 ### Derived completion
 
 Committee deliverables (shipped in #1701,
-[committee-deliverables-spec.md](shipped/committee-deliverables-spec.md)) are work
+[committee-deliverables-spec.md](committee-deliverables-spec.md)) are work
 orders whose `done_when` names a fact about their show — the listing has a poster,
 every act was asked for its artifacts, every crew shift is filled. `evaluateDone`
 (done-conditions.ts:120) reads a task as done when `resolved_at` is set **or** the
@@ -215,7 +216,7 @@ work_order
 
 Done work orders over live ones — every mode counts, cancelled ones do not, and "done"
 is `evaluateDone`'s answer (ticked, or its condition holding).
-This settles the progress question left open in [project-spec.md](project-spec.md).
+This settles the progress question left open in [project-spec.md](../project-spec.md).
 Duties do not count toward the project's figure; they show as `2/3` on their own row.
 
 ## The engagement
@@ -306,21 +307,44 @@ orders with a role where only volunteer work belongs (Phase 3):
 
 ## Activity
 
-`audit_log` has no `work_order`, `contractor_job` or `project` subject today
-(src/lib/types/audit.ts:37), and nothing records a work order changing.
+`audit_log` gained the subject types `project` and `work_order` (src/lib/types/audit.ts).
 
-- Add subject types `project` and `work_order`, and actions `work_order.created`,
-  `.assigned` (mode change, with the from/to in `details`), `.member_assigned`,
-  `.member_unassigned`, `.rescheduled`, `.resolved` (with `override: true` and the reason
-  when it has a `done_when`), `.reopened`, `.cancelled`,
-  `.moved` (section), and `contractor_job.status_changed`, `.invoice_recorded`.
-  Engagement entries are written against their work order's id, so one query reads a
+- **Work order actions:** `work_order.created`, `.assigned` (mode change, from/to in
+  `details`, with `calledOff` naming a contractor whose engagement it cancelled),
+  `.member_assigned`, `.assigned_over_warnings`, `.member_unassigned`, `.member_invited`,
+  `.rescheduled`, `.edited` (field names only: role, title, places, briefing, event,
+  equipment), `.resolved` (with `override: true` and the reason when it has a
+  `done_when`), `.reopened`, `.cancelled` and `.moved` (section).
+- **Written where both pages meet** (#1906): `updateShift`, `cancelShift` and
+  `resolveWorkOrder` in work-order-service.ts, `claimShift` (a staff assignment),
+  `releaseSignup` and `inviteToShift` in volunteer-signup-service.ts. The shift page and the
+  project page call those, so they record the same entries; `auditWorkOrderChange` turns a
+  before/after pair into `.rescheduled` and `.edited` for every edit path. Only the mode
+  change (`.assigned`) is the task list's own, since modes are a task-list idea.
+- **Engagement actions:** `contractor_job.status_changed` (`from` null when the contractor is
+  asked; booked to booked is a rebooking) and `.invoice_recorded`, written by
+  contractor-job-service.ts against the engagement's work order, so one query reads a
   task's whole history.
+- **Project actions:** `project.edited` (field names; dates compared as calendar days),
+  `.status_changed` (with whether the suggestion moved), `.duty_list_applied`, and
+  `.section_created`, `.section_renamed`, `.section_deleted`. Reordering sections is not
+  recorded.
 - Duty ticks are not audited; `work_task.done_by_user_id`/`done_at` already say who and
-  when, and the timeline reads them directly.
-- The **Activity** tab is the project's audit entries, its work orders' entries, the
-  ticks, and the origin chain — suggestion, ballot, project — read from the existing
-  tables rather than copied into the log.
+  when, and the timeline reads them directly. Project creation is not audited either: the
+  origin chain reads it from `project.created_at`/`created_by_user_id`, which covers every
+  creation path, productions included.
+- **The read** is `listActivity` (src/lib/server/project/project-activity.ts): the
+  project's entries and its work orders' (a subquery, so no number of work orders adds a
+  bound parameter under D1's cap of 100), the ticks, and the origin chain — the suggestion,
+  each ballot opened and certified, the project started — newest first. Each source is read
+  with `limit + 1`, so "Show older" knows whether there is more without a count.
+- **The Activity tab** on `/staff/projects/[id]` (`?tab=activity`) reads it through
+  `getProjectActivity`, guarded like `getProjectTasks`; an entry about a task links to its
+  task page, an origin step to its suggestion or ballot. The task page and the shift page
+  each show their work order's own list (`getProjectActivity` with a `workOrderId`, which
+  404s unless the task is on that project, and `getWorkOrderActivity` behind
+  `volunteer.read`). Each loads beside its page's one load-bearing query, behind a boundary
+  with a `failed` snippet, and the writes that change it refresh it.
 
 ## The project page
 
@@ -372,11 +396,11 @@ under the project it belongs to; the panel's **Details** link goes there. It car
 what the panel leaves out: the roster (invitations, confirmations, no-shows, and after
 a cancellation who is still to be told), hours logged against it with Approve, the
 equipment reports it answers, each engagement as a card with its money and its actions,
-feedback, the briefing, and its duties. The task's own activity waits on Phase 7.
+feedback, the briefing, its duties, and its own activity.
 
 - **Show crew is project work.** A production is a project of kind `production`, and
   a duty list applied to a show already stamps the production's `project_id` alongside
-  `event_id` ([production-projects-spec.md](production-projects-spec.md) §4). Event
+  `event_id` ([production-projects-spec.md](../production-projects-spec.md) §4). Event
   shifts therefore land on this route and in their show's task list; the event anchor
   stays for timing and re-timing.
 - **One component, two homes.** `WorkOrderView`
@@ -482,7 +506,8 @@ All staff-facing, so each phase goes straight to `main`.
    and `getStaffShiftPage` guarding itself (#1907).
 6. **Contractor Jobs view** and the job-detail redirect (the redirect landed with
    Phase 5).
-7. **Activity tab.**
+7. **Activity tab.** The audit writes above, `listActivity`, the tab, and the task and shift
+   pages' own lists. Moving the shift paths' writes into the shared services closed #1906.
 
 ## Out of scope
 

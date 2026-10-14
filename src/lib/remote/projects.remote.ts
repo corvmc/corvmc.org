@@ -31,7 +31,8 @@ import {
 	startProjectFromSuggestion,
 	updateProject
 } from '$lib/server/project/project-service';
-import { listProjectTasks } from '$lib/server/project/project-task-service';
+import { listProjectTasks, requireTaskInProject } from '$lib/server/project/project-task-service';
+import { ACTIVITY_MAX, listActivity } from '$lib/server/project/project-activity';
 import { getProjectOrigin, startProjectFromBallot } from '$lib/server/project/decision-chain';
 import { applyDutyList, listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { createWorkOrder } from '$lib/server/volunteer/work-order-service';
@@ -191,6 +192,36 @@ export const getProjectDetail = query(z.string(), async (id) => {
 	}
 });
 
+/**
+ * The Activity tab, or with `workOrderId` one task's history. Lazy, beside the
+ * page's load-bearing query. Access is the project's, as `getProjectTasks`
+ * reads it; a task is refused (404) unless it is on that project.
+ */
+export const getProjectActivity = query(
+	z.object({
+		projectId: z.uuid(),
+		workOrderId: z.string().min(1).optional(),
+		limit: z.number().int().min(1).max(ACTIVITY_MAX).optional()
+	}),
+	async ({ projectId, workOrderId, limit }) => {
+		requireUser();
+		try {
+			await getProjectById(projectId);
+			if (!(await can('project.read'))) await requireProjectCommittee(projectId, 'project.manage');
+			if (workOrderId) await requireTaskInProject(projectId, workOrderId);
+			return await listActivity(workOrderId ? { workOrderId } : { projectId }, { limit });
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/** The detail and its first page of activity: what a project write changes. */
+function refreshDetail(id: string) {
+	void getProjectDetail(id).refresh();
+	void getProjectActivity({ projectId: id }).refresh();
+}
+
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
@@ -215,7 +246,7 @@ export const updateProjectForm = form(z.object({ id: z.uuid(), ...projectFields 
 	const { id, ...data } = raw as { id: string } & ProjectFields;
 	try {
 		await updateProject(id, toServiceInput(data));
-		void getProjectDetail(id).refresh();
+		refreshDetail(id);
 		void getProjectsPage().refresh();
 		return { success: true };
 	} catch (err) {
@@ -237,7 +268,7 @@ export const setProjectStatusForm = form(
 		const { id, status } = raw as { id: string; status: (typeof projectStatuses)[number] };
 		try {
 			await setProjectStatus(id, status);
-			void getProjectDetail(id).refresh();
+			refreshDetail(id);
 			void getProjectsPage().refresh();
 			return { success: true };
 		} catch (err) {
@@ -436,7 +467,7 @@ export const applyDutyListToProjectForm = form(
 			const { user } = await requireProjectCommittee(projectId, 'project.manage');
 			const result = await applyDutyList(dutyListId, { kind: 'project', id: projectId }, user.id);
 			// The committee page lists no work orders; only the staff detail shows them.
-			if (await can('project.read')) void getProjectDetail(projectId).refresh();
+			if (await can('project.read')) refreshDetail(projectId);
 			return { workOrders: result.workOrderIds.length, tasks: result.taskCount };
 		} catch (err) {
 			mapDomainError(err);

@@ -9,6 +9,7 @@ import { DomainError } from '$lib/server/domain-error';
 import { setAssetStatus } from '$lib/server/inventory/asset-service';
 import { resolveWorkOrder } from '$lib/server/volunteer/work-order-service';
 import { getContractorById } from './contractor-service';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import type { ContractorJobStatus, ContractorJobView } from '$lib/config';
 
 /**
@@ -49,7 +50,8 @@ const engagementSelect = {
 	assetId: workOrder.assetId,
 	projectId: workOrder.projectId,
 	workOrderResolvedAt: workOrder.resolvedAt,
-	workOrderCancelledAt: workOrder.cancelledAt
+	workOrderCancelledAt: workOrder.cancelledAt,
+	contractorName: contractor.name
 };
 
 interface EngagementRow {
@@ -59,12 +61,35 @@ interface EngagementRow {
 	projectId: string | null;
 	workOrderResolvedAt: Date | null;
 	workOrderCancelledAt: Date | null;
+	contractorName: string;
 }
 
 export type Engagement = ContractorJob & Omit<EngagementRow, 'job'>;
 
 function flatten({ job, ...wo }: EngagementRow): Engagement {
 	return { ...job, ...wo };
+}
+
+/**
+ * An engagement's step, written on its work order's log so one read gives a
+ * task's whole history. `from` null is the contractor being asked.
+ */
+async function auditEngagement(
+	job: Engagement,
+	from: ContractorJobStatus | null,
+	to: ContractorJobStatus
+): Promise<void> {
+	await recordAuditEntry({
+		action: 'contractor_job.status_changed',
+		subject: { type: 'work_order', id: job.workOrderId, label: job.title },
+		details: {
+			engagementId: job.id,
+			contractorName: job.contractorName,
+			from,
+			to,
+			...(to === 'booked' ? { scheduledFor: job.scheduledFor?.toISOString() ?? null } : {})
+		}
+	});
 }
 
 export interface CreateJobInput {
@@ -122,7 +147,9 @@ export async function createJob(data: CreateJobInput): Promise<Engagement> {
 			.insert(contractorJob)
 			.values({ ...engagement, workOrderId: wo.id })
 			.returning();
-		return getJobById(row.id);
+		const asked = await getJobById(row.id);
+		await auditEngagement(asked, null, 'asked');
+		return asked;
 	}
 
 	const title = data.title?.trim();
@@ -142,7 +169,14 @@ export async function createJob(data: CreateJobInput): Promise<Engagement> {
 		}),
 		db.insert(contractorJob).values({ ...engagement, id: jobId, workOrderId })
 	]);
-	return getJobById(jobId);
+	const asked = await getJobById(jobId);
+	await recordAuditEntry({
+		action: 'work_order.created',
+		subject: { type: 'work_order', id: workOrderId, label: title },
+		details: { projectId: data.projectId ?? null, title }
+	});
+	await auditEngagement(asked, null, 'asked');
+	return asked;
 }
 
 /**
@@ -183,6 +217,7 @@ export async function scheduleJob(
 		}
 	}
 
+	await auditEngagement({ ...job, ...row }, job.status, 'booked');
 	return { ...job, ...row };
 }
 
@@ -271,6 +306,7 @@ export async function completeJob(
 		}
 	}
 
+	await auditEngagement(job, job.status, 'completed');
 	if (!job.workOrderResolvedAt && !job.workOrderCancelledAt) {
 		await resolveWorkOrder(job.workOrderId, { resolvedByUserId: opts.actorId });
 	}
@@ -298,6 +334,7 @@ export async function cancelJob(id: string) {
 		.where(eq(contractorJob.id, id))
 		.returning();
 
+	await auditEngagement(job, job.status, 'cancelled');
 	return { ...job, ...row };
 }
 
@@ -333,6 +370,7 @@ async function closeUnworked(id: string, status: 'declined' | 'no_show') {
 		.where(eq(contractorJob.id, id))
 		.returning();
 
+	await auditEngagement(job, job.status, status);
 	return { ...job, ...row };
 }
 
@@ -358,6 +396,16 @@ export async function recordInvoice(
 		.where(eq(contractorJob.id, id))
 		.returning();
 
+	await recordAuditEntry({
+		action: 'contractor_job.invoice_recorded',
+		subject: { type: 'work_order', id: job.workOrderId, label: job.title },
+		details: {
+			engagementId: job.id,
+			contractorName: job.contractorName,
+			costCents: row.costCents,
+			invoiceRef: row.invoiceRef
+		}
+	});
 	return { ...job, ...row };
 }
 
@@ -366,6 +414,7 @@ export async function getJobById(id: string): Promise<Engagement> {
 		.select(engagementSelect)
 		.from(contractorJob)
 		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
+		.innerJoin(contractor, eq(contractorJob.contractorId, contractor.id))
 		.leftJoin(volunteerRole, eq(workOrder.volunteerRoleId, volunteerRole.id))
 		.where(eq(contractorJob.id, id))
 		.limit(1);

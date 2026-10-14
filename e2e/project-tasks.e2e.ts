@@ -112,5 +112,13 @@ test.describe('project task list', () => {
 		await expect(page.getByRole('button', { name: `Mark ${title} not done` })).toBeVisible();
 		await page.getByRole('button', { name: `Mark ${title} not done` }).click();
 		await expect(page.getByRole('button', { name: `Mark ${title} done` })).toBeVisible();
+
+		// Each of those is on the Activity tab, newest first, linked to the task.
+		await page.getByRole('tab', { name: 'Activity' }).click();
+		await expect(page).toHaveURL(/[?&]tab=activity/);
+		const activity = page.getByRole('list', { name: 'Activity' });
+		await expect(activity.getByText(`Added the task “${title}”`)).toBeVisible();
+		await expect(activity.getByRole('listitem').first()).toContainText('Reopened it');
+		await expect(activity.getByRole('link', { name: title }).first()).toBeVisible();
 	});
 });

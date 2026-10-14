@@ -183,6 +183,9 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 			if (can('reservation.read'))
 				out.push({ panel: 'staff', href: resolve(`/staff/recurring/${id}`) });
 			break;
+		case 'project':
+			if (can('project.read')) out.push({ panel: 'staff', href: resolve(`/staff/projects/${id}`) });
+			break;
 		case 'incident':
 			if (can('incident.read'))
 				out.push({ panel: 'staff', href: resolve(`/staff/incidents/${id}`) });

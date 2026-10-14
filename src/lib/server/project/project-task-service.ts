@@ -25,6 +25,7 @@ import { DomainError } from '$lib/server/domain-error';
 import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import { evaluateDone, type DeliverableState } from '$lib/server/volunteer/done-conditions';
 import {
+	auditWorkOrderChange,
 	cancelShift,
 	claimedSql,
 	countActiveSignups,
@@ -433,19 +434,6 @@ export async function assignMembers(
 
 	const mode = await modeOf(task.id);
 	await auditModeChange(task, from, mode, 0, open);
-	if (assigned.length > 0) {
-		const names = await db
-			.select({ id: user.id, name: user.name })
-			.from(user)
-			.where(inArray(user.id, assigned));
-		for (const n of names) {
-			await recordAuditEntry({
-				action: 'work_order.member_assigned',
-				subject: { type: 'work_order', id: task.id, label: label(task) },
-				details: { userId: n.id, memberName: n.name }
-			});
-		}
-	}
 	return { status: 'done', assigned, refused, warned, mode };
 }
 
@@ -462,11 +450,6 @@ export async function unassignMember(
 	if (!signup) throw new TaskNotFoundError();
 	const from = await modeOf(task.id);
 	await releaseSignup(signup.id);
-	await recordAuditEntry({
-		action: 'work_order.member_unassigned',
-		subject: { type: 'work_order', id: task.id, label: label(task) },
-		details: { userId, memberName: signup.name }
-	});
 	await auditModeChange(task, from, await modeOf(task.id));
 }
 
@@ -536,14 +519,7 @@ export async function unassignTask(
 		.update(workOrder)
 		.set({ postedAt: null, postedByUserId: null, updatedAt: new Date() })
 		.where(eq(workOrder.id, task.id));
-	for (const s of live) {
-		await releaseSignup(s.id);
-		await recordAuditEntry({
-			action: 'work_order.member_unassigned',
-			subject: { type: 'work_order', id: task.id, label: label(task) },
-			details: { userId: s.userId, memberName: s.name }
-		});
-	}
+	for (const s of live) await releaseSignup(s.id);
 	const mode = await modeOf(task.id);
 	await auditModeChange(task, from, mode, live.length, open);
 	return { status: 'done', cancelledSignups: live.length, mode };
@@ -585,14 +561,7 @@ export async function engageContractor(
 		.update(workOrder)
 		.set({ postedAt: null, postedByUserId: null, updatedAt: new Date() })
 		.where(eq(workOrder.id, task.id));
-	for (const s of live) {
-		await releaseSignup(s.id);
-		await recordAuditEntry({
-			action: 'work_order.member_unassigned',
-			subject: { type: 'work_order', id: task.id, label: label(task) },
-			details: { userId: s.userId, memberName: s.name }
-		});
-	}
+	for (const s of live) await releaseSignup(s.id);
 	const mode = await modeOf(task.id);
 	await auditModeChange(task, from, mode, live.length);
 	return { status: 'done', engagementId: job.id, cancelledSignups: live.length, mode };
@@ -651,10 +620,12 @@ export async function setTaskEquipment(
 			.limit(1);
 		if (!asset) throw new TaskValidationError('That unit does not exist.');
 	}
-	await db
+	const [row] = await db
 		.update(workOrder)
 		.set({ assetId, updatedAt: new Date() })
-		.where(eq(workOrder.id, task.id));
+		.where(eq(workOrder.id, task.id))
+		.returning();
+	await auditWorkOrderChange(task, row);
 }
 
 // ---------------------------------------------------------------------------
@@ -678,16 +649,11 @@ export async function resolveTask(
 			'This one ticks itself when its condition holds. Say why it is done regardless.'
 		);
 	}
-	const row = await resolveWorkOrder(task.id, {
+	return resolveWorkOrder(task.id, {
 		resolvedByUserId: data.resolvedByUserId,
-		notes: reason
+		notes: reason,
+		override
 	});
-	await recordAuditEntry({
-		action: 'work_order.resolved',
-		subject: { type: 'work_order', id: task.id, label: label(task) },
-		details: { override, reason }
-	});
-	return row;
 }
 
 /** Untick it. A task with a done condition goes back to reading it. */
@@ -720,8 +686,6 @@ export async function reopenTask(projectId: string, workOrderId: string): Promis
 	}
 }
 
-const iso = (d: Date | null) => d?.toISOString() ?? null;
-
 /**
  * Set the window (`YYYY-MM-DDTHH:mm`, club time; both or neither) and the
  * deadline. Either may be cleared: a task can lose its time as well as gain one.
@@ -744,14 +708,7 @@ export async function rescheduleTask(
 		.set({ ...times, dueAt: data.dueAt, updatedAt: new Date() })
 		.where(eq(workOrder.id, task.id))
 		.returning();
-	await recordAuditEntry({
-		action: 'work_order.rescheduled',
-		subject: { type: 'work_order', id: task.id, label: label(task) },
-		details: {
-			from: { startsAt: iso(task.startsAt), endsAt: iso(task.endsAt), dueAt: iso(task.dueAt) },
-			to: { startsAt: iso(row.startsAt), endsAt: iso(row.endsAt), dueAt: iso(row.dueAt) }
-		}
-	});
+	await auditWorkOrderChange(task, row);
 	return row;
 }
 
@@ -762,13 +719,7 @@ export async function cancelTask(
 	cancelledByUserId: string
 ): Promise<WorkOrder> {
 	const task = await requireLiveTask(projectId, workOrderId);
-	const row = await cancelShift(task.id, cancelledByUserId);
-	await recordAuditEntry({
-		action: 'work_order.cancelled',
-		subject: { type: 'work_order', id: task.id, label: label(task) },
-		details: {}
-	});
-	return row;
+	return cancelShift(task.id, cancelledByUserId);
 }
 
 // ---------------------------------------------------------------------------

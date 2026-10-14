@@ -25,6 +25,7 @@ import {
 import { DomainError } from '$lib/server/domain-error';
 import {
 	contractorJobStatusesWithoutSpend,
+	DEFAULT_TIMEZONE,
 	valueOfMinutesCents,
 	type ProjectCommitteeRole,
 	type ProjectKind,
@@ -33,6 +34,8 @@ import {
 import { getHourValueCents } from '$lib/server/volunteer/hour-value';
 import { claimedSql } from '$lib/server/volunteer/work-order-service';
 import { toEventRef } from '$lib/server/entity/refs';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
+import type { ProjectField } from '$lib/types/audit';
 
 /**
  * A body of work with a budget and an owner — docs/specs/project-spec.md.
@@ -153,8 +156,43 @@ export function ownerRow(projectId: string, groupId: string) {
 		});
 }
 
+/** A project's dates are calendar days: the form re-anchors them at noon, which is not a change. */
+const day = (d: Date | null | undefined) =>
+	d ? new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(d) : null;
+
+/** The fields an edit changed, by name: values stay out of the log. */
+function changedFields(
+	before: typeof project.$inferSelect,
+	ownerId: string | null,
+	data: Partial<CreateProjectInput>
+): ProjectField[] {
+	const differs = <T>(next: T | undefined, now: T) => next !== undefined && (next ?? null) !== now;
+	const fields: ProjectField[] = [];
+	if (differs(data.name, before.name)) fields.push('name');
+	if (differs(data.description, before.description)) fields.push('description');
+	if (differs(data.groupId, ownerId)) fields.push('committee');
+	if (differs(data.suggestionId, before.suggestionId)) fields.push('suggestion');
+	if (differs(data.budgetCents, before.budgetCents)) fields.push('budget');
+	if (
+		differs(data.startsAt === undefined ? undefined : day(data.startsAt), day(before.startsAt)) ||
+		differs(data.endsAt === undefined ? undefined : day(data.endsAt), day(before.endsAt))
+	)
+		fields.push('dates');
+	return fields;
+}
+
+async function ownerOf(projectId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ groupId: projectCommittee.groupId })
+		.from(projectCommittee)
+		.where(and(eq(projectCommittee.projectId, projectId), eq(projectCommittee.role, 'owner')))
+		.limit(1);
+	return row?.groupId ?? null;
+}
+
 export async function updateProject(id: string, data: Partial<CreateProjectInput>) {
-	await getProjectById(id);
+	const before = await getProjectById(id);
+	const ownerBefore = await ownerOf(id);
 	if (data.groupId) await assertCommittee(data.groupId);
 	if (data.suggestionId) await assertClaimableSuggestion(data.suggestionId, id);
 
@@ -171,7 +209,16 @@ export async function updateProject(id: string, data: Partial<CreateProjectInput
 	} else {
 		await update;
 	}
-	return getProjectById(id);
+	const after = await getProjectById(id);
+	const changed = changedFields(before, ownerBefore, data);
+	if (changed.length > 0) {
+		await recordAuditEntry({
+			action: 'project.edited',
+			subject: { type: 'project', id, label: after.name },
+			details: { fields: changed }
+		});
+	}
+	return after;
 }
 
 /**
@@ -203,6 +250,13 @@ export async function setProjectStatus(id: string, status: ProjectStatus) {
 		await updateProjectRow;
 	}
 
+	if (current.status !== status) {
+		await recordAuditEntry({
+			action: 'project.status_changed',
+			subject: { type: 'project', id, label: current.name },
+			details: { from: current.status, to: status, suggestionMoved: current.suggestionId !== null }
+		});
+	}
 	return getProjectById(id);
 }
 

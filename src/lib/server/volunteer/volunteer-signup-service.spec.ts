@@ -74,7 +74,8 @@ vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => null) 
 
 const getShiftById = vi.fn();
 vi.mock('./work-order-service', () => ({
-	getShiftById: (...a: unknown[]) => getShiftById(...a)
+	getShiftById: (...a: unknown[]) => getShiftById(...a),
+	workOrderAuditLabel: (w: { id: string; title: string | null }) => w.title ?? w.id
 }));
 
 const missingRequirements = vi.fn();
@@ -374,12 +375,24 @@ describe('staff acting on somebody else', () => {
 		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 
-	it('records nothing extra for a clean assignment', async () => {
+	// The assignment is on the work order's log from either page; only warnings add a second entry.
+	it('records a clean assignment once, with no warnings entry', async () => {
 		selectResultQueue = [[], [{ id: 'signup-new', status: 'confirmed' }]];
 
 		const row = await claimShift('shift-1', 'user-1', { assignedByStaff: true });
 
 		expect(row.warnings).toEqual([]);
+		expect(recordAuditEntry).toHaveBeenCalledTimes(1);
+		expect(recordAuditEntry).toHaveBeenCalledWith(
+			expect.objectContaining({ action: 'work_order.member_assigned' })
+		);
+	});
+
+	it("records nothing for a member's own claim", async () => {
+		selectResultQueue = [[], [{ id: 'signup-new', status: 'claimed' }]];
+
+		await claimShift('shift-1', 'user-1');
+
 		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 
@@ -403,6 +416,24 @@ describe('staff acting on somebody else', () => {
 		// A cancellation is notice and a no-show is not, and only one of them is worth
 		// remembering next time. Before this the only staff lever was the wrong one.
 		expect((updatedSets[0] as Record<string, unknown>).status).toBe('cancelled');
+	});
+
+	it("records the release on the work order's log", async () => {
+		getShiftById.mockResolvedValue(shift({ title: 'Load-in' }));
+		// The release's own write, the signup event's read, then the member's name.
+		selectResultQueue = [
+			[{ id: 'signup-1', shiftId: 'shift-1', userId: 'user-1', status: 'cancelled' }],
+			[],
+			[{ name: 'Ada' }]
+		];
+
+		await releaseSignup('signup-1');
+
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'work_order.member_unassigned',
+			subject: { type: 'work_order', id: 'shift-1', label: 'Load-in' },
+			details: { userId: 'user-1', memberName: 'Ada' }
+		});
 	});
 
 	it('does not scope the release to an owner', async () => {

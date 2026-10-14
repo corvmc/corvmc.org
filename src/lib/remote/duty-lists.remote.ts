@@ -19,8 +19,9 @@ import {
 	updateDutyList as updateService,
 	updateDutyListItem as updateItemService
 } from '$lib/server/volunteer/duty-list-service';
-import { getStaffShiftPage, getVolunteerWorklist } from './volunteer.remote';
+import { getStaffShiftPage, getVolunteerWorklist, getWorkOrderActivity } from './volunteer.remote';
 import { getProjectTaskPage } from './tasks.remote';
+import { getProjectActivity } from './projects.remote';
 import { workOrderProjectId } from '$lib/server/volunteer/work-order-service';
 
 /**
@@ -324,9 +325,13 @@ export const setWorkTaskDone = form(
 			await setTaskService(data.id, data.done, staff.id);
 			const projectId = await workOrderProjectId(data.shiftId);
 			// Whichever page is canonical for it; the task page's guard is the project's.
-			if (!projectId) await getStaffShiftPage(data.shiftId).refresh();
-			else if (await can('project.read')) {
-				await getProjectTaskPage({ projectId, workOrderId: data.shiftId }).refresh();
+			const workOrderId = data.shiftId;
+			if (!projectId) {
+				void getWorkOrderActivity({ workOrderId }).refresh();
+				await getStaffShiftPage(workOrderId).refresh();
+			} else if (await can('project.read')) {
+				void getProjectActivity({ projectId, workOrderId }).refresh();
+				await getProjectTaskPage({ projectId, workOrderId }).refresh();
 			}
 			return { success: true };
 		} catch (err) {

@@ -15,6 +15,8 @@ import {
 } from '$lib/config';
 import type { WorkOrder, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
 import { chunk } from '$lib/server/utils/chunk';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
+import type { WorkOrderField } from '$lib/types/audit';
 
 import { getLiveSchedule, nextOccurrenceInsert } from './maintenance-schedule-service';
 
@@ -301,7 +303,43 @@ export async function updateShift(
 		.where(eq(workOrder.id, id))
 		.returning();
 
+	await auditWorkOrderChange(existing, row);
 	return row;
+}
+
+const iso = (d: Date | null) => d?.toISOString() ?? null;
+const timing = (w: WorkOrder) => ({
+	startsAt: iso(w.startsAt),
+	endsAt: iso(w.endsAt),
+	dueAt: iso(w.dueAt)
+});
+
+/** The label an entry keeps if the work order is later renamed or gone. */
+export const workOrderAuditLabel = (w: Pick<WorkOrder, 'id' | 'title'>) => w.title ?? w.id;
+
+/**
+ * Record what an edit changed: a new time as `.rescheduled`, anything else as
+ * `.edited` by field name. Every path that edits a work order calls this, so
+ * the shift page and the project page write the same entries.
+ */
+export async function auditWorkOrderChange(before: WorkOrder, after: WorkOrder): Promise<void> {
+	const subject = { type: 'work_order' as const, id: after.id, label: workOrderAuditLabel(after) };
+	const [from, to] = [timing(before), timing(after)];
+	if (from.startsAt !== to.startsAt || from.endsAt !== to.endsAt || from.dueAt !== to.dueAt) {
+		await recordAuditEntry({ action: 'work_order.rescheduled', subject, details: { from, to } });
+	}
+	const changed: [WorkOrderField, unknown, unknown][] = [
+		['role', before.volunteerRoleId, after.volunteerRoleId],
+		['title', before.title, after.title],
+		['capacity', before.capacity, after.capacity],
+		['notes', before.notes, after.notes],
+		['event', before.eventId, after.eventId],
+		['equipment', before.assetId, after.assetId]
+	];
+	const fields = changed.filter(([, a, b]) => (a ?? null) !== (b ?? null)).map(([f]) => f);
+	if (fields.length > 0) {
+		await recordAuditEntry({ action: 'work_order.edited', subject, details: { fields } });
+	}
 }
 
 /**
@@ -327,6 +365,11 @@ export async function cancelShift(id: string, cancelledByUserId?: string): Promi
 		: await cancel;
 
 	if (!row) throw new ShiftNotFoundError();
+	await recordAuditEntry({
+		action: 'work_order.cancelled',
+		subject: { type: 'work_order', id: row.id, label: workOrderAuditLabel(row) },
+		details: {}
+	});
 	return row;
 }
 
@@ -641,7 +684,8 @@ export async function scheduleWorkOrder(
  */
 export async function resolveWorkOrder(
 	id: string,
-	opts: { resolvedByUserId: string; notes?: string | null }
+	/** `override`: it has a done condition and was ticked by hand regardless. */
+	opts: { resolvedByUserId: string; notes?: string | null; override?: boolean }
 ): Promise<WorkOrder> {
 	const existing = await getShiftById(id);
 	if (!existing) throw new ShiftNotFoundError();
@@ -679,6 +723,11 @@ export async function resolveWorkOrder(
 		await completeSignups;
 		[row] = await close;
 	}
+	await recordAuditEntry({
+		action: 'work_order.resolved',
+		subject: { type: 'work_order', id, label: workOrderAuditLabel(existing) },
+		details: { override: opts.override ?? false, reason: opts.notes ?? null }
+	});
 
 	// The equipment reports this work answered close with it. Dynamic, like the
 	// orientation import below, so the two domains do not import each other.

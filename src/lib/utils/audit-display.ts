@@ -2,9 +2,12 @@ import type {
 	AuditAction,
 	AuditEntry,
 	AuditProfileField,
-	WorkOrderAssignmentMode
+	ProjectField,
+	WorkOrderAssignmentMode,
+	WorkOrderField
 } from '$lib/types/audit';
-import { formatCents } from '$lib/utils/format';
+import { contractorJobStatusLabels, projectStatusLabels } from '$lib/config';
+import { formatCents, formatDateShort } from '$lib/utils/format';
 
 /** `user.roles_changed` → "User roles changed". Derived, so a new action needs no label entry. */
 export function auditActionLabel(action: AuditAction): string {
@@ -25,6 +28,27 @@ const MODE_LABELS: Record<WorkOrderAssignmentMode, string> = {
 	members: 'assigned members',
 	unassigned: 'nobody'
 };
+
+const WORK_ORDER_FIELDS: Record<WorkOrderField, string> = {
+	role: 'role',
+	title: 'title',
+	capacity: 'places',
+	notes: 'briefing',
+	event: 'event',
+	equipment: 'equipment'
+};
+
+const PROJECT_FIELDS: Record<ProjectField, string> = {
+	name: 'name',
+	description: 'description',
+	committee: 'owning committee',
+	suggestion: 'linked suggestion',
+	budget: 'budget',
+	dates: 'dates'
+};
+
+const statusWord = (s: string) =>
+	(projectStatusLabels as Record<string, string>)[s]?.toLowerCase() ?? s;
 
 const CREDIT_LABELS = { free_hours: 'free hours', equipment_credits: 'equipment credits' };
 
@@ -140,6 +164,35 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return 'Called it off';
 		case 'work_order.moved':
 			return 'Moved it to another section';
+		case 'work_order.edited':
+			return `Edited its ${entry.details.fields.map((f) => WORK_ORDER_FIELDS[f] ?? f).join(', ')}`;
+		case 'work_order.member_invited':
+			return `Asked ${entry.details.memberName} to do it`;
+		case 'contractor_job.status_changed':
+			return engagementLine(entry.details);
+		case 'contractor_job.invoice_recorded': {
+			const d = entry.details;
+			const amount = d.costCents === null ? 'an invoice' : `a ${formatCents(d.costCents)} invoice`;
+			return `Recorded ${amount} from ${d.contractorName}${d.invoiceRef ? ` (${d.invoiceRef})` : ''}`;
+		}
+		case 'project.edited':
+			return `Edited the project's ${entry.details.fields.map((f) => PROJECT_FIELDS[f] ?? f).join(', ')}`;
+		case 'project.status_changed': {
+			const d = entry.details;
+			const head = `Moved the project from ${statusWord(d.from)} to ${statusWord(d.to)}`;
+			return d.suggestionMoved ? `${head}, and its suggestion with it` : head;
+		}
+		case 'project.duty_list_applied':
+			return `Applied the duty list “${entry.details.dutyListName}”: ${plural(entry.details.tasks, 'task')} added`;
+		case 'project.section_created':
+			return `Added the section “${entry.details.name}”`;
+		case 'project.section_renamed':
+			return `Renamed the section “${entry.details.from}” to “${entry.details.to}”`;
+		case 'project.section_deleted': {
+			const d = entry.details;
+			const head = `Deleted the section “${d.name}”`;
+			return d.tasks > 0 ? `${head}, keeping its ${plural(d.tasks, 'task')}` : head;
+		}
 		case 'group.role_changed': {
 			const d = entry.details;
 			if (d.role === 'member') return `Removed ${d.memberName} as a chair`;
@@ -147,5 +200,28 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 				? `Added ${d.memberName} to the roster as a chair`
 				: `Made ${d.memberName} a chair`;
 		}
+	}
+}
+
+type EngagementMove = Extract<AuditEntry, { action: 'contractor_job.status_changed' }>['details'];
+
+/** One engagement's step: asked, booked (or rebooked), and each way it can end. */
+function engagementLine(d: EngagementMove): string {
+	const who = d.contractorName;
+	const when = d.scheduledFor ? ` for ${formatDateShort(new Date(d.scheduledFor))}` : '';
+	if (d.from === null) return `Asked ${who} to do it`;
+	switch (d.to) {
+		case 'booked':
+			return d.from === 'booked' ? `Rebooked ${who}${when}` : `Booked ${who}${when}`;
+		case 'completed':
+			return `${who} finished the work`;
+		case 'cancelled':
+			return `Cancelled ${who}'s engagement`;
+		case 'declined':
+			return `${who} declined`;
+		case 'no_show':
+			return `${who} did not show`;
+		default:
+			return `${who}: ${contractorJobStatusLabels[d.to].toLowerCase()}`;
 	}
 }

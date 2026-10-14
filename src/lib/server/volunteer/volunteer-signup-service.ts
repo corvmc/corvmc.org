@@ -35,7 +35,12 @@ import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
-import { getShiftById, notOnCancelledListing, unscheduledWorkWhere } from './work-order-service';
+import {
+	getShiftById,
+	notOnCancelledListing,
+	unscheduledWorkWhere,
+	workOrderAuditLabel
+} from './work-order-service';
 import { missingRequirements } from './member-certification-service';
 import { isScheduled } from './scheduled';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -260,7 +265,7 @@ export async function claimShift(
 			assigned ? 'volunteer.signup_confirmed' : 'volunteer.signup_claimed',
 			existing.id
 		);
-		await recordAssignedOverWarnings(shift, userId, warnings);
+		if (assigned) await recordStaffAssignment(shift, userId, warnings);
 		return { ...revivedRow, warnings };
 	}
 
@@ -283,7 +288,7 @@ export async function claimShift(
 		if (inserted.length === 0) throw new ShiftFullError();
 		const row = await reloadSignup(id);
 		void emitSignupEvent(assigned ? 'volunteer.signup_confirmed' : 'volunteer.signup_claimed', id);
-		await recordAssignedOverWarnings(shift, userId, warnings);
+		if (assigned) await recordStaffAssignment(shift, userId, warnings);
 		return { ...row, warnings };
 	} catch (err) {
 		if (err instanceof ShiftFullError) throw err;
@@ -300,22 +305,50 @@ export async function claimShift(
 	}
 }
 
-/** The audit half of warn-record-allow: what staff went over, on the work order's log. */
-async function recordAssignedOverWarnings(
-	shift: { id: string; title: string | null },
-	userId: string,
-	warnings: string[]
-): Promise<void> {
-	if (warnings.length === 0) return;
+async function memberName(userId: string): Promise<string> {
 	const [member] = await db
 		.select({ name: user.name })
 		.from(user)
 		.where(eq(user.id, userId))
 		.limit(1);
+	return member?.name ?? 'Unknown member';
+}
+
+/**
+ * Staff put somebody on the work order, from the shift page or the project's
+ * picker. Over warnings, the warn-record-allow half is a second entry.
+ */
+async function recordStaffAssignment(
+	shift: { id: string; title: string | null },
+	userId: string,
+	warnings: string[]
+): Promise<void> {
+	const subject = { type: 'work_order' as const, id: shift.id, label: workOrderAuditLabel(shift) };
+	const name = await memberName(userId);
+	await recordAuditEntry({
+		action: 'work_order.member_assigned',
+		subject,
+		details: { userId, memberName: name }
+	});
+	if (warnings.length === 0) return;
 	await recordAuditEntry({
 		action: 'work_order.assigned_over_warnings',
-		subject: { type: 'work_order', id: shift.id, label: shift.title ?? shift.id },
-		details: { userId, memberName: member?.name ?? 'Unknown member', warnings }
+		subject,
+		details: { userId, memberName: name, warnings }
+	});
+}
+
+/** A roster write on the work order's log, by the signup's work order and member. */
+async function recordRosterEntry(
+	action: 'work_order.member_unassigned' | 'work_order.member_invited',
+	signup: { shiftId: string; userId: string }
+): Promise<void> {
+	const shift = await getShiftById(signup.shiftId);
+	if (!shift) return;
+	await recordAuditEntry({
+		action,
+		subject: { type: 'work_order', id: shift.id, label: workOrderAuditLabel(shift) },
+		details: { userId: signup.userId, memberName: await memberName(signup.userId) }
 	});
 }
 
@@ -427,6 +460,7 @@ async function emitSignupEvent(
 export async function releaseSignup(signupId: string): Promise<VolunteerSignup> {
 	const row = await releaseSignupRow(signupId);
 	void emitSignupEvent('volunteer.signup_cancelled', signupId);
+	await recordRosterEntry('work_order.member_unassigned', row);
 	return row;
 }
 
@@ -1265,6 +1299,7 @@ export async function inviteToShift(
 			.where(eq(volunteerSignup.id, existing.id));
 
 		void emitSignupEvent('volunteer.signup_invited', existing.id);
+		await recordRosterEntry('work_order.member_invited', { shiftId, userId });
 		return { signupId: existing.id, missingCertifications: missing };
 	}
 
@@ -1280,6 +1315,7 @@ export async function inviteToShift(
 		.returning({ id: volunteerSignup.id });
 
 	void emitSignupEvent('volunteer.signup_invited', row.id);
+	await recordRosterEntry('work_order.member_invited', { shiftId, userId });
 	return { signupId: row.id, missingCertifications: missing };
 }
 

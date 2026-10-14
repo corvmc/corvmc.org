@@ -1501,8 +1501,24 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
   the subject label once they are past the window. No other code deletes from the table, and a
   spec beside the sweep fails on any code that does.
 
+### Projects and work orders
+
+Spec: [specs/shipped/work-orders-as-tasks-spec.md](../specs/shipped/work-orders-as-tasks-spec.md)
+
+- **Write:** work order changes are recorded in the shared services both the shift page and
+  the project page call (`updateShift`, `cancelShift`, `resolveWorkOrder`, `claimShift` for a
+  staff assignment, `releaseSignup`, `inviteToShift`), engagement steps in
+  contractor-job-service.ts against the engagement's work order, and project edits, status
+  moves, duty lists and sections in the project and section services.
+- **Read:** `listActivity` in `src/lib/server/project/project-activity.ts` merges a project's
+  entries, its work orders' entries, duty ticks (from `work_task`, never audited) and the
+  origin chain (suggestion, ballots, project start, from their own rows). The project page's
+  Activity tab, the task page and the shift page render it, each loaded lazily.
+
 ### Where it breaks
 
+- **A task's history is missing an edit.** The edit went round the shared services; any new
+  write path to `work_order` should end in `auditWorkOrderChange`.
 - **A change shows no History row.** Look for the write in Sentry first; the action went
   through by design even when the insert failed.
 - **A payload over 4 KB is dropped, not truncated.** The only free-text field is a credit

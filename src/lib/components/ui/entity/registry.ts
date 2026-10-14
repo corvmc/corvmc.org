@@ -39,7 +39,8 @@ import {
 	IconSchool,
 	IconBuildingCommunity,
 	IconSpeakerphone,
-	IconAlertTriangle
+	IconAlertTriangle,
+	IconClipboardList
 } from '@tabler/icons-svelte';
 import { entityTypes, entityLabels, type EntityType, type EntitySubtypeKey } from '$lib/config';
 import type { EntityRef } from '$lib/types/entity';
@@ -145,7 +146,8 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 	recurring: { icon: IconRepeat, shape: 'none' },
 	help: { icon: IconHelp, shape: 'none' },
 	classified: { icon: IconSpeakerphone, shape: 'none' },
-	incident: { icon: IconAlertTriangle, shape: 'none' }
+	incident: { icon: IconAlertTriangle, shape: 'none' },
+	project: { icon: IconClipboardList, shape: 'none' }
 };
 
 /** Declaration order, for gallery stories and exhaustiveness checks. */
