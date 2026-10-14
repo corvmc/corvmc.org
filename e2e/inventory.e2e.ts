@@ -452,7 +452,12 @@ test.describe('inventory', () => {
 			await loginAsMember(page);
 			await page.goto('/member/equipment');
 
-			await page.getByRole('button', { name: 'Request' }).first().click();
+			// The seeded item's own card: other specs' units share the catalog, and
+			// one out on repair renders its Request button disabled.
+			await page
+				.locator('.card', { hasText: SEED_ITEM_NAME })
+				.getByRole('button', { name: 'Request' })
+				.click();
 			const dialog = page.getByRole('dialog');
 			await dialog.locator('input[name="requestedPickupDate"]').fill('2026-09-15');
 			await dialog.locator('input[name="estimatedReturnDate"]').fill('2026-09-18');
