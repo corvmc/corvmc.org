@@ -4,7 +4,9 @@
 >
 > **In progress.** Tracking issue #1806. Design settled in conversation with the owner on
 > 2026-10-13, against a canvas mockup of the project page. Phase 1 (#1896) and Phase 2
-> (the engagement reshape) are built; Phases 3–7 are not.
+> (the engagement reshape, #1900) are built. Phase 6 is built except the job-detail
+> redirect, which waits on Phase 5's task route. Phases 3–5 and 7 are in progress or not
+> started.
 
 ## Purpose
 
@@ -382,12 +384,35 @@ cancellation history, and the task's own activity.
 
 ## Contractor Jobs page
 
-`/staff/contractors/jobs` becomes a view of engagements across every work order, with
-filters Open (`asked`, `booked`), Late, Awaiting invoice (completed, no cost, not
-donated) and All, each row linking to its work order. `/staff/contractors/jobs/[id]`
-redirects to the work order's page (above), whose engagements section replaces the job
-detail page. Creating a job from the contractor page creates a work order with
-no role, no posting, and its first engagement.
+`/staff/contractors/jobs` is a view of engagements across every work order, with tabs
+Open (`asked`, `booked`, the default), Late (`booked` and `expected_back_at < now`),
+Awaiting invoice (`completed`, `cost_cents` null, not donated) and All, each with its
+count. The tab is mirrored into `?view=`. Each filter is one predicate
+(`engagementViewWhere`) shared by the list and the counts. The overdue alert that sat
+above the old list is gone: it repeated the Late tab's rows above every tab, and the Late
+tab's count and each late row's badge and promised-back date carry the same warning. The
+contractor index keeps its overdue list.
+
+Each row's title opens the engagement (`/staff/contractors/jobs/[id]`), and a **Work
+order** link beside it opens the work order. Once the redirect below lands, the title
+leads to the work order too. Until Phase 3a's null-role safety merges, a work order
+with no role (every one made from this page) 404s on `/staff/volunteer/shifts/[id]`,
+which is why the title does not link there yet.
+
+The engagement page's actions: **Book** (from `asked`; **Reschedule** once booked),
+**Complete**, **Decline** (shown on `asked`), **No-show** (shown on `booked`),
+**Cancel**, and **Invoice** (on `completed` only, since no other ending counts as
+spend). Decline and No-show are terminal. The service refuses them only from a terminal
+state, so a decline after booking is allowed even though the page offers it only on
+`asked`. Neither touches the unit, the ledger or the work order: a no-show on a repair
+leaves the unit out of service, as cancelling does, because it is still broken. The
+work order stays open for the next engagement. `no_show` joined `declined` and
+`cancelled` in `contractorJobStatusesWithoutSpend`.
+
+Still to do: `/staff/contractors/jobs/[id]` redirects to the work order's page (above),
+whose engagements section replaces the job detail page. Creating a job from the
+contractor page creates a work order with no role, no posting, and its first engagement
+(built in Phase 2).
 
 ## Phases
 

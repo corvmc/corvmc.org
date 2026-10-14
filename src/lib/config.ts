@@ -759,7 +759,8 @@ export type ContractorJobStatus = (typeof contractorJobStatuses)[number];
 /** Engagements whose money is not spend: nobody did the work. */
 export const contractorJobStatusesWithoutSpend = [
 	'declined',
-	'cancelled'
+	'cancelled',
+	'no_show'
 ] as const satisfies readonly ContractorJobStatus[];
 
 export const contractorJobStatusLabels: Record<ContractorJobStatus, string> = {
@@ -779,6 +780,17 @@ export const contractorJobStatusBadge = {
 	cancelled: 'ghost',
 	no_show: 'error'
 } as const satisfies Record<ContractorJobStatus, string>;
+
+/** The jobs list's filters. Late and Awaiting invoice are derived, not statuses. */
+export const contractorJobViews = ['open', 'late', 'awaiting-invoice', 'all'] as const;
+export type ContractorJobView = (typeof contractorJobViews)[number];
+
+export const contractorJobViewLabels: Record<ContractorJobView, string> = {
+	open: 'Open',
+	late: 'Late',
+	'awaiting-invoice': 'Awaiting invoice',
+	all: 'All'
+};
 
 // ---------------------------------------------------------------------------
 // Sponsors: businesses and their sponsorship terms

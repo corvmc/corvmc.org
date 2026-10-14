@@ -4,12 +4,12 @@ import { contractor, contractorJob } from '$lib/server/db/schema/contractor';
 import type { ContractorJob } from '$lib/server/db/schema/contractor';
 import { inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
 import { volunteerRole, workOrder } from '$lib/server/db/schema/volunteer';
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { setAssetStatus } from '$lib/server/inventory/asset-service';
 import { resolveWorkOrder } from '$lib/server/volunteer/work-order-service';
 import { getContractorById } from './contractor-service';
-import type { ContractorJobStatus } from '$lib/config';
+import type { ContractorJobStatus, ContractorJobView } from '$lib/config';
 
 /**
  * One contractor's engagement on a work order, from "we asked them" to the
@@ -301,6 +301,41 @@ export async function cancelJob(id: string) {
 	return { ...job, ...row };
 }
 
+/**
+ * They said no. Terminal: asking again is a new engagement, so the refusal
+ * stays on the record beside whoever said yes.
+ */
+export async function declineJob(id: string) {
+	return closeUnworked(id, 'declined');
+}
+
+/**
+ * Booked, and they did not come.
+ *
+ * **The asset is left where it is**, for `cancelJob`'s reason: a unit taken out
+ * of service because it was broken is still broken, and putting it back in
+ * the pool would hand it to the next member who books.
+ */
+export async function markJobNoShow(id: string) {
+	return closeUnworked(id, 'no_show');
+}
+
+/** An engagement ending with nobody's work done: no custody, ledger or work order change. */
+async function closeUnworked(id: string, status: 'declined' | 'no_show') {
+	const job = await getJobById(id);
+	if (TERMINAL.includes(job.status)) {
+		throw new ContractorJobStateError(`This job is already ${job.status}`);
+	}
+
+	const [row] = await db
+		.update(contractorJob)
+		.set({ status, updatedAt: new Date() })
+		.where(eq(contractorJob.id, id))
+		.returning();
+
+	return { ...job, ...row };
+}
+
 /** The invoice, arriving after the work — the common order of events. */
 export async function recordInvoice(
 	id: string,
@@ -369,39 +404,79 @@ function toJobRow({ contractor: who, assetTag, itemName, ...engagement }: JobRow
 	return { job: flatten(engagement), contractor: who, assetTag, itemName };
 }
 
+/**
+ * The jobs list's filters as one predicate each, so the list and its tab
+ * counts cannot disagree about what "late" means. Late is derived, not stored —
+ * an `overdue` status would need something to set it, and the day that fails
+ * is the day the list quietly empties.
+ */
+export function engagementViewWhere(view: ContractorJobView, now: Date): SQL | undefined {
+	switch (view) {
+		case 'open':
+			return inArray(contractorJob.status, ['asked', 'booked']);
+		case 'late':
+			return and(
+				eq(contractorJob.status, 'booked'),
+				sql`${contractorJob.expectedBackAt} is not null`,
+				sql`${contractorJob.expectedBackAt} < ${Math.floor(now.getTime() / 1000)}`
+			);
+		case 'awaiting-invoice':
+			// Donated work never gets an invoice, so it is not waiting on one.
+			return and(
+				eq(contractorJob.status, 'completed'),
+				isNull(contractorJob.costCents),
+				eq(contractorJob.isDonated, false)
+			);
+		case 'all':
+			return undefined;
+	}
+}
+
 export async function listJobs(
-	opts: { status?: ContractorJobStatus; contractorId?: string; assetId?: string } = {}
+	opts: {
+		status?: ContractorJobStatus;
+		contractorId?: string;
+		assetId?: string;
+		view?: ContractorJobView;
+		now?: Date;
+	} = {}
 ) {
 	const rows = await jobRowQuery()
 		.where(
 			and(
+				opts.view ? engagementViewWhere(opts.view, opts.now ?? new Date()) : undefined,
 				opts.status ? eq(contractorJob.status, opts.status) : undefined,
 				opts.contractorId ? eq(contractorJob.contractorId, opts.contractorId) : undefined,
 				opts.assetId ? eq(workOrder.assetId, opts.assetId) : undefined
 			)
 		)
-		.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id));
+		// Late is read soonest-promised first: the one most overdue is the first call.
+		.orderBy(
+			...(opts.view === 'late'
+				? [asc(contractorJob.expectedBackAt)]
+				: [desc(contractorJob.createdAt), desc(contractorJob.id)])
+		);
 	return rows.map(toJobRow);
 }
 
-/**
- * Booked and past the date they promised.
- *
- * Derived, not stored — the same call `listLateOrders` makes: an `overdue`
- * status would need something to come along and set it, and the day that
- * something fails is the day the list quietly empties.
- */
+/** How many engagements each filter holds, in one pass. */
+export async function countJobsByView(now: Date = new Date()) {
+	const count = (view: ContractorJobView) =>
+		sql<number>`coalesce(sum(case when ${engagementViewWhere(view, now) ?? sql`1`} then 1 else 0 end), 0)`;
+	const [row] = await db
+		.select({
+			open: count('open'),
+			late: count('late'),
+			'awaiting-invoice': count('awaiting-invoice'),
+			all: sql<number>`count(*)`
+		})
+		.from(contractorJob);
+	return row ?? { open: 0, late: 0, 'awaiting-invoice': 0, all: 0 };
+}
+
+/** Booked and past the date they promised. */
 export async function listOverdueJobs(now: Date = new Date()) {
-	const rows = await jobRowQuery()
-		.where(
-			and(
-				eq(contractorJob.status, 'booked'),
-				sql`${contractorJob.expectedBackAt} is not null`,
-				sql`${contractorJob.expectedBackAt} < ${Math.floor(now.getTime() / 1000)}`
-			)
-		)
-		.orderBy(asc(contractorJob.expectedBackAt));
-	return rows.map(toJobRow);
+	return listJobs({ view: 'late', now });
 }
 
 /** This unit's service history, newest first. Drives the asset page's panel. */
