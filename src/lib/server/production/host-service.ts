@@ -114,7 +114,8 @@ export async function openHostShift(eventId: string): Promise<string> {
 			title: HOST_VOLUNTEER_ROLE,
 			startsAt: prod?.loadInAt ?? null,
 			endsAt: prod?.loadOutBy ?? null,
-			capacity: 1
+			capacity: 1,
+			postedAt: new Date()
 		})
 		.returning({ id: workOrder.id });
 

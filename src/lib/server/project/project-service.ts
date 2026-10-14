@@ -578,15 +578,16 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 export async function listProjectAttachments(projectId: string) {
 	const [workOrders, jobs, orders, acquisitions, events] = await Promise.all([
 		// `title` is the column's own rule: the work order's, else its event's, else
-		// its role's. The role is NOT NULL, so there is always a name to show.
+		// its role's. The role join is a left join: contractor and unassigned work
+		// has none, and is still the project's.
 		db
 			.select({
 				...getTableColumns(workOrder),
-				title: sql<string>`coalesce(${workOrder.title}, ${eventListing.title}, ${volunteerRole.name})`,
+				title: sql<string>`coalesce(${workOrder.title}, ${eventListing.title}, ${volunteerRole.name}, 'Untitled task')`,
 				claimed: claimedSql().mapWith(Number)
 			})
 			.from(workOrder)
-			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 			.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
 			.where(eq(workOrder.projectId, projectId))
 			.orderBy(asc(workOrder.startsAt)),

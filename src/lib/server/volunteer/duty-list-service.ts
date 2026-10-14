@@ -798,6 +798,9 @@ export async function applyDutyList(
 			groupId: item.groupId,
 			doneWhen: item.doneWhen,
 			dutyListId,
+			// On the claim board, as every stamped-out shift has always been.
+			postedAt: new Date(),
+			postedByUserId: createdByUserId,
 			createdByUserId
 		});
 

@@ -11,11 +11,12 @@
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
 	import { resolveWorkOrder } from '$lib/remote/volunteer.remote';
+	import { NO_ROLE_LABEL } from '$lib/utils/shift-label';
 
 	type FinishedOrder = {
 		id: string;
 		title: string | null;
-		roleName: string;
+		roleName: string | null;
 		endsAt: Date | null;
 		unitName: string | null;
 		assetTag: string | null;
@@ -26,7 +27,7 @@
 
 	function subject(o: FinishedOrder): string {
 		if (o.unitName) return o.assetTag ? `${o.unitName} (${o.assetTag})` : o.unitName;
-		return o.title ?? o.roleName;
+		return o.title ?? o.roleName ?? NO_ROLE_LABEL;
 	}
 </script>
 
@@ -50,7 +51,7 @@
 					<a href={resolve(`/staff/volunteer/shifts/${order.id}`)} class="link font-medium">
 						{subject(order)}
 					</a>
-					<div class="truncate text-subtle">{order.roleName}</div>
+					<div class="truncate text-subtle">{order.roleName ?? NO_ROLE_LABEL}</div>
 				</td>
 				<td class="col-support whitespace-nowrap">
 					{order.endsAt ? formatDateShort(order.endsAt) : '—'}

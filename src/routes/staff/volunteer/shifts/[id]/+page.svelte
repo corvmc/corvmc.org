@@ -417,7 +417,7 @@
 								<ShiftRoleFields
 									form={editForm}
 									keepId={shift.volunteerRoleId}
-									roleId={shift.volunteerRoleId}
+									roleId={shift.volunteerRoleId ?? undefined}
 									initialEvent={shift.eventId && shift.eventTitle
 										? { id: shift.eventId, title: shift.eventTitle }
 										: null}
@@ -486,7 +486,8 @@
 				</InfoCard>
 			</div>
 
-			{#if !calledOff}
+			<!-- Nobody can be put on work with no role, so there is nobody to suggest. -->
+			{#if !calledOff && shift.roleName !== null}
 				<CandidateColumn shiftId={shift.id} roleName={shift.roleName} startsAt={shift.startsAt} />
 			{/if}
 		</div>

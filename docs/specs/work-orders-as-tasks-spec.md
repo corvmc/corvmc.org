@@ -259,21 +259,33 @@ table is empty.
 
 ## Null-role safety
 
-These inner-join `volunteer_role` on `work_order.volunteer_role_id` and would silently
-drop contractor and unassigned work orders. They become left joins, or filter to work orders
-with a role where only volunteer work belongs:
+These inner-joined `volunteer_role` on `work_order.volunteer_role_id` and would silently
+drop contractor and unassigned work orders. They are left joins now, or filter to work
+orders with a role where only volunteer work belongs (Phase 3):
 
-- `shiftRowsQuery`, work-order-service.ts:515 — the staff list, queue and detail.
-  **Must** become a left join.
-- `listProjectAttachments`, project-service.ts:580 — **must** become a left join; its
-  "The role is NOT NULL" comment goes.
-- `listOpenShiftsForMember`, work-order-service.ts:858 — fine once filtered to `open`.
+- `shiftRowsQuery`, work-order-service.ts:490 — the staff list, queue and detail. A
+  left join; `ShiftWithCounts.roleName`/`roleGroup` are nullable and the staff pages
+  print "No role" (`NO_ROLE_LABEL`, shift-label.ts).
+- `listProjectAttachments`, project-service.ts:569 — a left join; the title falls back
+  to "Untitled task" after the work order's, event's and role's names.
+- `readDeliverables`, deliverables-service.ts:66, and `listFinishedWorkToConfirm` plus
+  the equipment report's open-work picker in work-request-service.ts — left joins: a
+  committee's task or a contractor's repair has no role and is still listed.
+- `unscheduledWorkWhere`, work-order-service.ts:698 — unanchored (the coordinator's
+  queue and the sidebar badge) it lists only work with a role; anchored to a project or
+  event it lists everything.
+- `listShortStaffedShifts` (work-order-service.ts:1009) and the staff worklist's
+  short-staffed card — only work with a role can be short of people (`isRoledShift`).
+- `countUnfilledByRole` already skipped a null role; `getShiftCandidates` returns no
+  candidates for one, and the shift page hides its candidate column.
+- `listOpenShiftsForMember`, work-order-service.ts:827 — keeps its inner join: it lists
+  posted work only, and posting requires a role.
 - Signup, feedback, certification and hour-log joins (volunteer-signup-service.ts,
   volunteer-feedback-service.ts, member-certification-service.ts, hour-log-service.ts)
   — only reachable through a signup, and a signup can only exist where a role does.
   The service enforces that: `claimShift`, `inviteToShift` and member assignment refuse
-  a work order with no role.
-- `createWorkOrder` (work-order-service.ts:549) stops requiring a role.
+  a work order with no role (`NoVolunteerRoleError`).
+- `createWorkOrder` (work-order-service.ts:552) stops requiring a role.
 - `duty_list_item.volunteer_role_id` stays NOT NULL; a duty list describes volunteer
   work. Contractor work from a template is out of scope.
 
@@ -391,7 +403,9 @@ All staff-facing, so each phase goes straight to `main`.
    the work order.
 3. **Services.** Assignment modes and switching, the claim-board filter and claim
    guard, null-role-safe queries, sections and ordering, inline create, progress, audit
-   writes.
+   writes. Every pre-existing creation path (`createShift`, `createWorkOrder` with a
+   role, duty lists, maintenance occurrences, the host shift) posts what it creates, so
+   gating the board changes nothing for them; only the task list makes unposted work.
 4. **Project page.** The task list, panel, picker, header, About, tabs and edit form.
 5. **Task page** at `/staff/projects/[id]/tasks/[taskId]`, the work order view shared
    with `/staff/volunteer/shifts/[id]`, and the redirect between them.

@@ -99,7 +99,8 @@ import {
 	createWorkOrder as createWorkOrderService,
 	scheduleWorkOrder as scheduleWorkOrderService,
 	resolveWorkOrder as resolveWorkOrderService,
-	listWorkOrders
+	listWorkOrders,
+	isRoledShift
 } from '$lib/server/volunteer/work-order-service';
 import {
 	claimShift as claimShiftService,
@@ -372,7 +373,8 @@ export const getShiftCandidates = query(
 		await requireCapability('volunteer.read');
 
 		const shift = await getShiftDetail(f.shiftId);
-		if (!shift) return { gated: false, rows: [] };
+		// No role, no candidates: nobody can be put on it until it has one.
+		if (!shift?.volunteerRoleId) return { gated: false, rows: [] };
 
 		const [candidates, required] = await Promise.all([
 			listShiftCandidates(f.shiftId, shift.volunteerRoleId, f.scope, f.search || undefined),
@@ -2437,7 +2439,9 @@ export const getVolunteerWorklist = query(async () => {
 	// Computed here rather than asked of the database: `listShifts` already returns both
 	// counts per row, so "which of these is short" is a filter over rows we already hold
 	// rather than another round trip.
+	// Work with no role is nobody's to fill, so it is never short of people.
 	const shortStaffed = upcoming
+		.filter(isRoledShift)
 		.filter((shift) => shift.claimed < shift.capacity)
 		.map((shift) => ({
 			id: shift.id,

@@ -21,7 +21,7 @@
 	 * as one more thing to staff.
 	 */
 	import { page } from '$app/state';
-	import { shiftLabel } from '$lib/utils/shift-label';
+	import { NO_ROLE_LABEL, shiftLabel } from '$lib/utils/shift-label';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '$lib/utils/with-query';
@@ -247,7 +247,7 @@
 								     which is information, not a blank. -->
 								{#if shift.title}
 									<div class="truncate text-subtle">
-										{shift.roleName}{#if shift.eventTitle}
+										{shift.roleName ?? NO_ROLE_LABEL}{#if shift.eventTitle}
 											· {shift.eventTitle}{/if}
 									</div>
 								{:else if shift.eventTitle}
@@ -295,7 +295,7 @@
 												<p class="text-sm">
 													{unconfirmed}
 													{unconfirmed === 1 ? 'person has' : 'people have'} put a hand up for
-													{shift.roleName} on {formatDateShort(shift.startsAt)}. Confirming books
+													{shiftLabel(shift)} on {formatDateShort(shift.startsAt)}. Confirming books
 													them: each gets the reminder the day before, and the shift completes
 													afterwards with hours to log.
 												</p>
@@ -331,7 +331,7 @@
 					<li>
 						<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link">
 							{formatDateShort(shift.startsAt)}
-							{shift.roleName} cancelled
+							{shiftLabel(shift)} cancelled
 						</a>
 						<span class:text-warning={shift.unnotified > 0} class="text-subtle">
 							· {shift.unnotified > 0 ? `${shift.unnotified} to notify` : 'everybody notified'}

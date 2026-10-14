@@ -25,10 +25,11 @@
 	import { resolve } from '$app/paths';
 	import { formatDateShort, toLocalDateTime } from '$lib/utils/format';
 	import { scheduleWorkOrder, resolveWorkOrder } from '$lib/remote/volunteer.remote';
+	import { NO_ROLE_LABEL } from '$lib/utils/shift-label';
 
 	type WorkOrder = {
 		id: string;
-		roleName: string;
+		roleName: string | null;
 		eventTitle: string | null;
 		dueAt: Date | null;
 		capacity: number;
@@ -80,7 +81,7 @@
 			<tr class="hover">
 				<td class="cell-primary">
 					<a href={resolve(`/staff/volunteer/shifts/${order.id}`)} class="link font-medium">
-						{order.roleName}
+						{order.roleName ?? NO_ROLE_LABEL}
 					</a>
 					{#if order.eventTitle}
 						<div class="truncate text-subtle">{order.eventTitle}</div>
@@ -113,7 +114,7 @@
 							label="Schedule"
 							variant="primary"
 							size="xs"
-							modalTitle="Find a time for {order.roleName}"
+							modalTitle="Find a time for {order.roleName ?? NO_ROLE_LABEL}"
 							submitLabel="Schedule"
 							successToast="Scheduled"
 						>
@@ -150,7 +151,7 @@
 							icon={doneIcon}
 							variant="ghost"
 							size="sm"
-							modalTitle="Close {order.roleName}?"
+							modalTitle="Close {order.roleName ?? NO_ROLE_LABEL}?"
 							submitLabel="Close it"
 							successToast="Closed"
 						>
