@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { workOrderHref } from '$lib/utils/work-order-href';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -116,7 +117,12 @@
 			{#each data.jobs as row (row.job.id)}
 				<tr class="hover">
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`/staff/contractors/jobs/${row.job.id}`)}>
+						<a
+							class="link font-medium"
+							href="{resolve(
+								workOrderHref({ id: row.job.workOrderId, projectId: row.job.projectId })
+							)}#engagement-{row.job.id}"
+						>
 							{row.job.title}
 						</a>
 						<div class="text-subtle">
@@ -125,10 +131,6 @@
 							{:else}
 								Building work
 							{/if}
-							·
-							<a class="link" href={resolve(`/staff/volunteer/shifts/${row.job.workOrderId}`)}>
-								Work order
-							</a>
 						</div>
 					</td>
 					<td>

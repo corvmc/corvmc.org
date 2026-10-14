@@ -321,6 +321,7 @@ describe('assigning members', () => {
 		vi.mocked(missingRequirements).mockResolvedValueOnce([{ id: 'c1', name: 'Forklift' }]);
 
 		const result = await tasks.assignMembers(PROJECT, 't', { userIds: [ADA] });
+		if (result.status !== 'done') throw new Error('expected an assignment, not a warning');
 
 		expect(result).toMatchObject({ assigned: [ADA], refused: [] });
 		expect(result.warned).toEqual([{ userId: ADA, warnings: [expect.stringMatching(/Forklift/)] }]);
@@ -338,21 +339,79 @@ describe('assigning members', () => {
 		);
 	});
 
-	it('refuses while a contractor is engaged on it', async () => {
+	it('refuses once a contractor has done the work', async () => {
 		task('t', { volunteer_role_id: ROLE });
-		const cols = all<{ name: string; notnull: number; dflt_value: unknown }>(
-			`pragma table_info(contractor_job)`
-		);
-		const row: Record<string, unknown> = { id: 'cj', work_order_id: 't', status: 'completed' };
-		for (const c of cols)
-			if (!(c.name in row) && c.notnull && c.dflt_value === null) row[c.name] = 'x';
-		insert('contractor_job', row);
+		engagement('cj', 'completed');
 		await expect(tasks.assignMembers(PROJECT, 't', { userIds: [ADA] })).rejects.toBeInstanceOf(
 			tasks.TaskConflictError
 		);
 		await expect(
 			tasks.openToVolunteers(PROJECT, 't', { postedByUserId: STAFF })
 		).rejects.toBeInstanceOf(tasks.TaskConflictError);
+	});
+});
+
+/** An engagement on task `t`, by a contractor named "Sparky". */
+function engagement(id: string, status: string) {
+	if (!one(`select 1 as x from contractor where id = 'ctr'`)) {
+		const cols = all<{ name: string; notnull: number; dflt_value: unknown }>(
+			`pragma table_info(contractor)`
+		);
+		const row: Record<string, unknown> = { id: 'ctr', name: 'Sparky' };
+		for (const c of cols)
+			if (!(c.name in row) && c.notnull && c.dflt_value === null) row[c.name] = 'x';
+		insert('contractor', row);
+	}
+	insert('contractor_job', { id, work_order_id: 't', contractor_id: 'ctr', status });
+}
+
+describe('switching away from a contractor', () => {
+	beforeEach(() => sqlite.exec(`delete from contractor`));
+
+	it('warns whose engagement it cancels, then cancels it and assigns', async () => {
+		task('t', { volunteer_role_id: ROLE });
+		engagement('cj', 'booked');
+
+		expect(await tasks.assignMembers(PROJECT, 't', { userIds: [ADA] })).toEqual({
+			status: 'needs_confirmation',
+			liveSignups: 0,
+			engagement: { contractorName: 'Sparky', status: 'booked' }
+		});
+		expect(one(`select status from contractor_job where id = 'cj'`)).toEqual({ status: 'booked' });
+		expect(all(`select 1 from volunteer_signup`)).toHaveLength(0);
+
+		const done = await tasks.assignMembers(PROJECT, 't', { userIds: [ADA], confirm: true });
+		expect(done).toMatchObject({ status: 'done', assigned: [ADA], mode: 'members' });
+		expect(one(`select status from contractor_job where id = 'cj'`)).toEqual({
+			status: 'cancelled'
+		});
+		expect(audits('work_order.assigned')).toEqual([
+			{ id: 't', from: 'contractor', to: 'members', cancelledSignups: 0, calledOff: 'Sparky' }
+		]);
+	});
+
+	it('cancels an asked engagement when opened to volunteers or unassigned', async () => {
+		task('t', { volunteer_role_id: ROLE });
+		engagement('cj', 'asked');
+		expect(
+			await tasks.openToVolunteers(PROJECT, 't', { postedByUserId: STAFF, confirm: true })
+		).toEqual({ status: 'done', mode: 'open' });
+		expect(one(`select status from contractor_job where id = 'cj'`)).toEqual({
+			status: 'cancelled'
+		});
+
+		engagement('cj-2', 'asked');
+		expect(await tasks.unassignTask(PROJECT, 't')).toMatchObject({
+			status: 'needs_confirmation',
+			engagement: { contractorName: 'Sparky', status: 'asked' }
+		});
+		expect(await tasks.unassignTask(PROJECT, 't', { confirm: true })).toMatchObject({
+			status: 'done',
+			mode: 'unassigned'
+		});
+		expect(one(`select status from contractor_job where id = 'cj-2'`)).toEqual({
+			status: 'cancelled'
+		});
 	});
 });
 
@@ -365,7 +424,7 @@ describe('opening to volunteers', () => {
 				capacity: 4,
 				postedByUserId: STAFF
 			})
-		).toBe('open');
+		).toEqual({ status: 'done', mode: 'open' });
 		expect(one(`select capacity, posted_by_user_id from work_order where id = 't'`)).toEqual({
 			capacity: 4,
 			posted_by_user_id: STAFF
@@ -381,7 +440,8 @@ describe('unassigning', () => {
 
 		expect(await tasks.unassignTask(PROJECT, 't')).toEqual({
 			status: 'needs_confirmation',
-			liveSignups: 2
+			liveSignups: 2,
+			engagement: null
 		});
 		expect(all(`select 1 from volunteer_signup where status = 'cancelled'`)).toHaveLength(0);
 
@@ -523,7 +583,8 @@ describe('delegating to a contractor', () => {
 
 		expect(await tasks.engageContractor(PROJECT, 't', input)).toEqual({
 			status: 'needs_confirmation',
-			liveSignups: 1
+			liveSignups: 1,
+			engagement: null
 		});
 		expect(one(`select count(*) n from contractor_job`)).toEqual({ n: 0 });
 

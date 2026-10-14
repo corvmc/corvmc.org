@@ -1,11 +1,16 @@
 import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
-import { positions } from '$lib/config';
+import {
+	contractorJobStatusesWithoutSpend,
+	positions,
+	type ContractorJobStatus
+} from '$lib/config';
 import { user } from '$lib/server/db/schema/authentication';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { group, groupMember } from '$lib/server/db/schema/group';
 import { inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
+import { contractor, contractorJob } from '$lib/server/db/schema/contractor';
 import { projectCommittee } from '$lib/server/db/schema/project';
 import {
 	volunteerRole,
@@ -34,7 +39,7 @@ import {
 } from '$lib/server/volunteer/work-order-service';
 import { claimShift, releaseSignup } from '$lib/server/volunteer/volunteer-signup-service';
 import { setWorkTaskDone } from '$lib/server/volunteer/duty-list-service';
-import { createJob } from '$lib/server/contractor/contractor-job-service';
+import { cancelJob, createJob } from '$lib/server/contractor/contractor-job-service';
 import {
 	listSections,
 	nextTaskOrders,
@@ -74,8 +79,7 @@ export class TaskConflictError extends DomainError {
 	}
 }
 
-const ENGAGED =
-	'A contractor is engaged on this. Cancel or decline their engagement before changing who does it.';
+const FINISHED = 'A contractor did this work and its cost is on the record, so it stays theirs.';
 
 /** The work order, refused (404) unless it belongs to this project. */
 export async function requireTaskInProject(
@@ -107,14 +111,70 @@ async function auditModeChange(
 	task: WorkOrder,
 	from: WorkOrderMode,
 	to: WorkOrderMode,
-	cancelledSignups = 0
+	cancelledSignups = 0,
+	called: OpenEngagement[] = []
 ) {
 	if (from === to && cancelledSignups === 0) return;
+	const calledOff = called.map((e) => e.contractorName).join(', ');
 	await recordAuditEntry({
 		action: 'work_order.assigned',
 		subject: { type: 'work_order', id: task.id, label: label(task) },
-		details: { from, to, cancelledSignups }
+		details: { from, to, cancelledSignups, ...(calledOff ? { calledOff } : {}) }
 	});
+}
+
+/** A switch the caller has to confirm: who it would take off, and whose engagement it cancels. */
+export interface SwitchWarning {
+	status: 'needs_confirmation';
+	liveSignups: number;
+	engagement: { contractorName: string; status: ContractorJobStatus } | null;
+}
+
+interface OpenEngagement {
+	id: string;
+	status: ContractorJobStatus;
+	contractorName: string;
+}
+
+/**
+ * What a switch away from Contractor cancels: the engagement still asked or
+ * booked. Refused once one has completed, since that work is done and paid for.
+ */
+async function engagementsToCancel(task: WorkOrder, from: WorkOrderMode) {
+	if (from !== 'contractor') return [];
+	const rows: OpenEngagement[] = await db
+		.select({
+			id: contractorJob.id,
+			status: contractorJob.status,
+			contractorName: contractor.name
+		})
+		.from(contractorJob)
+		.innerJoin(contractor, eq(contractor.id, contractorJob.contractorId))
+		.where(
+			and(
+				eq(contractorJob.workOrderId, task.id),
+				sql`${contractorJob.status} not in (${sql.join(
+					contractorJobStatusesWithoutSpend.map((st) => sql`${st}`),
+					sql`, `
+				)})`
+			)
+		);
+	if (rows.some((r) => r.status === 'completed')) throw new TaskConflictError(FINISHED);
+	return rows;
+}
+
+function warning(liveSignups: number, open: OpenEngagement[]): SwitchWarning {
+	const [first] = open;
+	return {
+		status: 'needs_confirmation',
+		liveSignups,
+		engagement: first ? { contractorName: first.contractorName, status: first.status } : null
+	};
+}
+
+/** Through the engagement's own Cancel, which leaves a unit out of service. */
+async function cancelEngagements(open: OpenEngagement[]) {
+	for (const e of open) await cancelJob(e.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -299,6 +359,7 @@ async function roleFor(task: WorkOrder, volunteerRoleId?: string | null): Promis
 }
 
 export interface AssignResult {
+	status: 'done';
 	assigned: string[];
 	/** People the signup service refused, with its reason (a profile awaiting review, no room, …). */
 	refused: { userId: string; message: string }[];
@@ -311,15 +372,16 @@ export interface AssignResult {
  * Put named people on the task: staff-made signups, landing confirmed. Takes it
  * off the claim board and keeps whoever is already on it, so Open → Members
  * loses nobody. Naming more people than it has places raises the places.
+ * From a contractor, the first call warns and `confirm` cancels the engagement.
  */
 export async function assignMembers(
 	projectId: string,
 	workOrderId: string,
-	data: { userIds: string[]; volunteerRoleId?: string | null }
-): Promise<AssignResult> {
+	data: { userIds: string[]; volunteerRoleId?: string | null; confirm?: boolean }
+): Promise<AssignResult | SwitchWarning> {
 	const task = await requireLiveTask(projectId, workOrderId);
 	const from = await modeOf(task.id);
-	if (from === 'contractor') throw new TaskConflictError(ENGAGED);
+	const open = await engagementsToCancel(task, from);
 	const roleId = await roleFor(task, data.volunteerRoleId);
 
 	const allowed = new Set((await assignableTo(task)).map((m) => m.userId));
@@ -333,6 +395,8 @@ export async function assignMembers(
 	if (adding.length === 0 && holding.length === 0) {
 		throw new TaskValidationError('Pick at least one person.');
 	}
+	if (open.length > 0 && !data.confirm) return warning(0, open);
+	await cancelEngagements(open);
 
 	const capacity = validateCapacity(Math.max(task.capacity, holding.length + adding.length));
 	await db
@@ -368,7 +432,7 @@ export async function assignMembers(
 	}
 
 	const mode = await modeOf(task.id);
-	await auditModeChange(task, from, mode);
+	await auditModeChange(task, from, mode, 0, open);
 	if (assigned.length > 0) {
 		const names = await db
 			.select({ id: user.id, name: user.name })
@@ -382,7 +446,7 @@ export async function assignMembers(
 			});
 		}
 	}
-	return { assigned, refused, warned, mode };
+	return { status: 'done', assigned, refused, warned, mode };
 }
 
 /** Take one person off the task, telling them the way a dropped shift does. */
@@ -413,11 +477,16 @@ export async function unassignMember(
 export async function openToVolunteers(
 	projectId: string,
 	workOrderId: string,
-	data: { volunteerRoleId?: string | null; capacity?: number; postedByUserId: string }
-): Promise<WorkOrderMode> {
+	data: {
+		volunteerRoleId?: string | null;
+		capacity?: number;
+		postedByUserId: string;
+		confirm?: boolean;
+	}
+): Promise<{ status: 'done'; mode: WorkOrderMode } | SwitchWarning> {
 	const task = await requireLiveTask(projectId, workOrderId);
 	const from = await modeOf(task.id);
-	if (from === 'contractor') throw new TaskConflictError(ENGAGED);
+	const open = await engagementsToCancel(task, from);
 	const roleId = await roleFor(task, data.volunteerRoleId);
 	const capacity = validateCapacity(data.capacity ?? task.capacity);
 	const taken = await countActiveSignups(task.id);
@@ -426,6 +495,8 @@ export async function openToVolunteers(
 			`${taken} ${taken === 1 ? 'person is' : 'people are'} already on this. Ask for at least ${taken}.`
 		);
 	}
+	if (open.length > 0 && !data.confirm) return warning(0, open);
+	await cancelEngagements(open);
 	const now = new Date();
 	await db
 		.update(workOrder)
@@ -437,13 +508,12 @@ export async function openToVolunteers(
 			updatedAt: now
 		})
 		.where(eq(workOrder.id, task.id));
-	await auditModeChange(task, from, 'open');
-	return 'open';
+	await auditModeChange(task, from, 'open', 0, open);
+	return { status: 'done', mode: 'open' };
 }
 
 export type UnassignResult =
-	| { status: 'needs_confirmation'; liveSignups: number }
-	| { status: 'done'; cancelledSignups: number; mode: WorkOrderMode };
+	SwitchWarning | { status: 'done'; cancelledSignups: number; mode: WorkOrderMode };
 
 /**
  * Nobody answers it. Warn, record, allow: with people on it, the first call
@@ -457,12 +527,11 @@ export async function unassignTask(
 ): Promise<UnassignResult> {
 	const task = await requireLiveTask(projectId, workOrderId);
 	const from = await modeOf(task.id);
-	if (from === 'contractor') throw new TaskConflictError(ENGAGED);
+	const open = await engagementsToCancel(task, from);
 	const live = await signupsOn(task.id, ['claimed', 'confirmed']);
-	if (live.length > 0 && !data.confirm) {
-		return { status: 'needs_confirmation', liveSignups: live.length };
-	}
+	if ((live.length > 0 || open.length > 0) && !data.confirm) return warning(live.length, open);
 
+	await cancelEngagements(open);
 	await db
 		.update(workOrder)
 		.set({ postedAt: null, postedByUserId: null, updatedAt: new Date() })
@@ -476,12 +545,12 @@ export async function unassignTask(
 		});
 	}
 	const mode = await modeOf(task.id);
-	await auditModeChange(task, from, mode, live.length);
+	await auditModeChange(task, from, mode, live.length, open);
 	return { status: 'done', cancelledSignups: live.length, mode };
 }
 
 export type EngageResult =
-	| { status: 'needs_confirmation'; liveSignups: number }
+	| SwitchWarning
 	| { status: 'done'; engagementId: string; cancelledSignups: number; mode: WorkOrderMode };
 
 /**
@@ -503,9 +572,7 @@ export async function engageContractor(
 	if (task.resolvedAt) throw new TaskConflictError('That task is already done.');
 	const from = await modeOf(task.id);
 	const live = await signupsOn(task.id, ['claimed', 'confirmed']);
-	if (live.length > 0 && !data.confirm) {
-		return { status: 'needs_confirmation', liveSignups: live.length };
-	}
+	if (live.length > 0 && !data.confirm) return warning(live.length, []);
 
 	// The engagement first: it refuses an archived contractor before anything moves.
 	const job = await createJob({

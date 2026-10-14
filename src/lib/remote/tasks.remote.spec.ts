@@ -44,7 +44,8 @@ vi.mock('$app/server', () => {
 	};
 });
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('$lib/server/authorization', async (original) => ({
+	...(await original<object>()),
 	requireUser: () => ({ id: 'usr-staff' }),
 	can: async () => true,
 	requireCapability: async () => ({ id: 'usr-staff' })
@@ -88,6 +89,7 @@ const untouched = () =>
 		.get();
 
 const cases: [string, Record<string, unknown>][] = [
+	['getProjectTaskPage', pair],
 	['getTaskAssignees', pair],
 	['moveTaskCommand', { ...pair, sectionId: null, index: 0 }],
 	['assignMembersForm', { ...pair, userIds: ['usr-staff'] }],
@@ -130,6 +132,18 @@ describe('a work order named with a project it is not on', () => {
 		expect(untouched()).toMatchObject({ project_id: THEIRS, sort_order: 0 });
 		await remotes.openTaskForm({ projectId: THEIRS, workOrderId: 'wo-theirs', capacity: 2 });
 		expect(untouched()).toMatchObject({ posted_at: expect.any(Number) });
+	});
+});
+
+describe('the task page', () => {
+	it('serves the work order view under its own project', async () => {
+		const page = (await remotes.getProjectTaskPage({
+			projectId: THEIRS,
+			workOrderId: 'wo-theirs'
+		})) as { project: { name: string }; shift: { id: string }; engagements: unknown[] };
+		expect(page.project.name).toBe('Theirs');
+		expect(page.shift.id).toBe('wo-theirs');
+		expect(page.engagements).toEqual([]);
 	});
 });
 

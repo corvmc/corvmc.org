@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { workOrderHref } from '$lib/utils/work-order-href';
 	import { page } from '$app/state';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { getStaffAssetDetail, editAsset, changeAssetStatus } from '$lib/remote/inventory.remote';
@@ -229,7 +230,12 @@
 							{/if}
 						</td>
 						<td class="cell-primary">
-							<a class="link" href={resolve(`/staff/contractors/jobs/${row.job.id}`)}>
+							<a
+								class="link"
+								href="{resolve(
+									workOrderHref({ id: row.job.workOrderId, projectId: row.job.projectId })
+								)}#engagement-{row.job.id}"
+							>
 								{row.job.title}
 							</a>
 							<Badge

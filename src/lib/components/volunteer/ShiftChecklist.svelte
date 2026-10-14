@@ -1,20 +1,9 @@
 <script lang="ts">
 	/**
-	 * The checklist that comes with a work order.
-	 *
-	 * `applyDutyList` has always written these rows — a duty list item carries its
-	 * `tasks[]`, and stamping the list onto an event turns each one into a
-	 * `work_task`. Nothing read them back: `listWorkTasks` had no callers and
-	 * `setWorkTaskDone` was a remote form no page called, so a duty list promised
-	 * "Confirm the lineup", "Collect tech riders", "Send load-in details" and then
-	 * showed none of it to the person accountable for doing them.
-	 *
-	 * A task is a level *below* a work order and deliberately not another one:
-	 * `doneByUserId` is attribution, never credit, and nothing here touches hours.
-	 * Nobody signs up for "take the trash out" or logs four minutes against it.
-	 *
-	 * Ticking submits on change rather than behind a Save — a checklist with a
-	 * save button is a checklist people forget to save.
+	 * The duties that come with a work order (`work_task`), ticked on change
+	 * rather than behind a Save. A duty is a level below a work order and not
+	 * another one: `doneByUserId` is attribution, never credit, and nothing here
+	 * touches hours.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';

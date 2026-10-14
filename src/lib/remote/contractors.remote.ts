@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
+import { can, requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { getStaffAssetDetail } from './inventory.remote';
+import { getStaffShiftPage } from './volunteer.remote';
+import { getProjectTaskPage } from './tasks.remote';
 import {
 	contractorTrades,
 	contractorJobStatuses,
@@ -25,12 +27,12 @@ import {
 	countJobsByView,
 	createJob,
 	declineJob,
-	getJobById,
 	listJobs,
 	listOverdueJobs,
 	markJobNoShow,
 	recordInvoice,
-	scheduleJob
+	scheduleJob,
+	type Engagement
 } from '$lib/server/contractor/contractor-job-service';
 
 /**
@@ -178,15 +180,14 @@ function refreshJobsPage() {
 	for (const view of contractorJobViews) void getJobsPage({ view }).refresh();
 }
 
-export const getJobDetail = query(z.string(), async (id) => {
-	await requireCapability('contractor.read');
-	try {
-		const [job, contractors] = await Promise.all([getJobById(id), listContractors()]);
-		return { job, contractors };
-	} catch (err) {
-		mapDomainError(err);
+/** The engagement's own card lives on its work order's page, whichever route that is. */
+async function refreshWorkOrderPage(job: { workOrderId: string; projectId: string | null }) {
+	if (!job.projectId) return getStaffShiftPage(job.workOrderId).refresh();
+	// The task page's guard is the project's; a caller without it is not looking at it.
+	if (await can('project.read')) {
+		return getProjectTaskPage({ projectId: job.projectId, workOrderId: job.workOrderId }).refresh();
 	}
-});
+}
 
 // ---------------------------------------------------------------------------
 // Contractor mutations
@@ -285,7 +286,7 @@ export const scheduleJobForm = form(
 				expectedBackAt: calendarDate(data.expectedBackAt),
 				actorId: actor.id
 			});
-			void getJobDetail(data.id).refresh();
+			await refreshWorkOrderPage(job);
 			refreshJobsPage();
 			if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
 			return { success: true };
@@ -334,7 +335,7 @@ export const completeJobForm = form(
 				fairValueBasis: data.fairValueBasis ?? null,
 				actorId: actor.id
 			});
-			void getJobDetail(data.id).refresh();
+			await refreshWorkOrderPage(job);
 			refreshJobsPage();
 			if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
 			return { success: true };
@@ -349,7 +350,7 @@ export const cancelJobForm = form(z.object({ id: z.uuid() }), async (raw) => {
 	const { id } = raw as { id: string };
 	try {
 		const job = await cancelJob(id);
-		void getJobDetail(id).refresh();
+		await refreshWorkOrderPage(job);
 		refreshJobsPage();
 		if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
 		return { success: true };
@@ -359,13 +360,13 @@ export const cancelJobForm = form(z.object({ id: z.uuid() }), async (raw) => {
 });
 
 /** Two terminal endings with nobody's work done; neither touches the unit. */
-function closeJobForm(close: (id: string) => Promise<{ assetId: string | null }>) {
+function closeJobForm(close: (id: string) => Promise<Engagement>) {
 	return form(z.object({ id: z.uuid() }), async (raw) => {
 		await requireCapability('contractor.manage');
 		const { id } = raw as { id: string };
 		try {
 			const job = await close(id);
-			void getJobDetail(id).refresh();
+			await refreshWorkOrderPage(job);
 			refreshJobsPage();
 			if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
 			return { success: true };
@@ -389,12 +390,12 @@ export const recordInvoiceForm = form(
 		await requireCapability('contractor.recordInvoice');
 		const data = raw as { id: string; costCents?: number; invoiceRef?: string; paidAt?: string };
 		try {
-			await recordInvoice(data.id, {
+			const job = await recordInvoice(data.id, {
 				costCents: data.costCents ?? null,
 				invoiceRef: data.invoiceRef ?? null,
 				paidAt: calendarDate(data.paidAt) ?? null
 			});
-			void getJobDetail(data.id).refresh();
+			await refreshWorkOrderPage(job);
 			refreshJobsPage();
 			return { success: true };
 		} catch (err) {

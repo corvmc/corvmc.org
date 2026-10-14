@@ -79,6 +79,27 @@ test.describe('project task list', () => {
 		await expect(page.getByRole('complementary', { name: SEED_TASK_UNASSIGNED })).toBeHidden();
 	});
 
+	test('Details opens the task page, which the old shift URL redirects to', async ({ page }) => {
+		await page.getByRole('link', { name: SEED_TASK_WITH_DUTIES }).click();
+		const panel = page.getByRole('complementary', { name: SEED_TASK_WITH_DUTIES });
+		await panel.getByRole('link', { name: 'Details' }).click();
+
+		const taskUrl = new RegExp(`/staff/projects/${SEED_TASK_PROJECT_ID}/tasks/([^/?#]+)$`);
+		await expect(page).toHaveURL(taskUrl);
+		await expect(
+			page.getByRole('heading', { level: 1, name: SEED_TASK_WITH_DUTIES })
+		).toBeVisible();
+		await expect(page.getByRole('link', { name: SEED_TASK_PROJECT_NAME })).toBeVisible();
+		await expect(page.getByText('Stretch the new set')).toBeVisible();
+
+		const taskId = taskUrl.exec(page.url())![1];
+		await page.goto(`/staff/volunteer/shifts/${taskId}`);
+		await expect(page).toHaveURL(taskUrl);
+		await expect(
+			page.getByRole('heading', { level: 1, name: SEED_TASK_WITH_DUTIES })
+		).toBeVisible();
+	});
+
 	test('a typed line becomes a task, and its checkbox ticks and unticks it', async ({ page }) => {
 		const title = `E2E fetch the ladder ${Date.now()}`;
 		const line = page.getByRole('textbox', { name: 'Add a task to Prep' });

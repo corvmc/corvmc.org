@@ -526,6 +526,8 @@ export interface HourLogFilters {
 	status?: VolunteerHourStatus;
 	userId?: string;
 	volunteerRoleId?: string;
+	/** The shift (work order) the hours were worked on. */
+	shiftId?: string;
 	/** YYYY-MM-DD, club time. */
 	from?: string;
 	to?: string;
@@ -564,6 +566,7 @@ function buildFilters(filters: HourLogFilters): SQL[] {
 	if (filters.volunteerRoleId) {
 		conditions.push(eq(volunteerHourLog.volunteerRoleId, filters.volunteerRoleId));
 	}
+	if (filters.shiftId) conditions.push(eq(volunteerHourLog.shiftId, filters.shiftId));
 	if (filters.from) {
 		conditions.push(gte(volunteerHourLog.workedOn, buildDateInTz(filters.from, '00:00', TZ)));
 	}

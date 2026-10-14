@@ -1,15 +1,9 @@
 <script lang="ts">
 	/**
-	 * "Who to ask" — the shortlist, beside the roster rather than a navigation
-	 * away on the role's own page (docs/reports/volunteer-workflow-findings.md#a5).
-	 *
+	 * "Who to ask": the shortlist beside the roster, judged on the shift's date.
 	 * Owns `getShiftCandidates` because it is keyed by shift *and* scope, which
-	 * no page query could carry: switching the pill has to refetch, and the page
-	 * query would have to be re-keyed on a filter the rest of the page ignores.
-	 *
-	 * Every candidate gets exactly **one** flag line, resolved in priority order.
-	 * A row carrying three amber notes says nothing; the top one is the one that
-	 * decides whether you can ask this person.
+	 * the page query does not carry. Each candidate gets one flag line, the
+	 * highest-priority one: it decides whether you can ask this person.
 	 */
 	import Action from '$lib/components/ui/Action.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -114,13 +108,8 @@
 	}
 
 	/**
-	 * Cleared first, not cleared last, and the two counted apart.
-	 *
-	 * The heading counted rows, so a shift whose only two interested members
-	 * both lacked a required clearance was headed "Who to ask · 2" and offered
-	 * nobody (#1236). This panel answers one question at a glance — can I fill
-	 * this from people who already said yes — and a count that includes
-	 * refusals answers it wrongly.
+	 * Cleared first, not cleared last, and the two counted apart: a heading that
+	 * counted the uncleared said "Who to ask · 2" over nobody askable (#1236).
 	 */
 	function grade(rows: Row[]) {
 		const graded = rows.map((row) => ({ row, f: flag(row) }));

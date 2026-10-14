@@ -806,6 +806,16 @@ export async function getShiftCancelledByName(shiftId: string): Promise<string |
 	return row?.name ?? null;
 }
 
+/** The project a work order is on, or `undefined` when there is no such work order. */
+export async function workOrderProjectId(id: string): Promise<string | null | undefined> {
+	const [row] = await db
+		.select({ projectId: workOrder.projectId })
+		.from(workOrder)
+		.where(eq(workOrder.id, id))
+		.limit(1);
+	return row ? row.projectId : undefined;
+}
+
 /** An `OpenShift` the `starts_at >= now` filter already narrowed. See `isScheduled`. */
 export type ScheduledOpenShift = OpenShift & { startsAt: Date; endsAt: Date };
 

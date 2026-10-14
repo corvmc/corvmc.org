@@ -4,9 +4,9 @@
 >
 > **In progress.** Tracking issue #1806. Design settled in conversation with the owner on
 > 2026-10-13, against a canvas mockup of the project page. Phase 1 (#1896), Phase 2
-> (the engagement reshape, #1900) and Phase 3 (services, #1905) are built. Phase 6 is built
-> except the job-detail redirect, which waits on Phase 5's task route. Phase 4 (the
-> project page, 4a and 4b) is built. Phases 5 and 7 are not started.
+> (the engagement reshape, #1900), Phase 3 (services, #1905), Phase 4 (the project page,
+> 4a and 4b, #1911), Phase 5 (the task page) and Phase 6 (the Contractor Jobs view and
+> the job-detail redirect) are built. Phase 7 is not started.
 
 ## Purpose
 
@@ -121,11 +121,14 @@ Warn, record, allow — never delete.
   cancel their signups so they are notified the way a cancelled shift notifies them.
 - **Open → Members** keeps the signups and clears `posted_at`: the people stay, the
   board listing goes.
-- **Away from Contractor** with a `booked` engagement: say so, then leave the
-  engagement as it is. Calling off a contractor is a phone call, and the engagement's
-  own Cancel records it; this switch does not do it silently. Because a live engagement
-  _is_ the Contractor mode, switching away first asks to cancel or decline it — the
-  warning, then the engagement's own Cancel, in one step.
+- **Away from Contractor** with an `asked` or `booked` engagement: the first call
+  names the contractor and the engagement's status and changes nothing; confirming
+  cancels the engagement through `cancelJob` (the engagement's own Cancel, which leaves
+  a unit out of service) and then applies the new mode. Calling off a contractor is
+  still a phone call; this records it rather than doing it silently. The audit entry
+  names the contractor (`calledOff`). A `completed` engagement is not cancelled: the
+  work is done and its cost is spend, so the switch is refused and the task stays the
+  contractor's.
 - **To Contractor** clears `posted_at`.
 - Each switch writes an audit entry (below).
 
@@ -364,33 +367,41 @@ acquisitions that are attached to the project rather than to a task.
 
 ## The task page
 
-A project's work order gets its full page at `/staff/projects/[id]/tasks/[taskId]`,
-under the project it belongs to — the panel's **Details** link goes there. It carries
-what the panel leaves out: the roster (invites, confirmations, no-shows), hour
-approval, feedback, linked equipment reports, the engagements with their money, the
-cancellation history, and the task's own activity.
+A project's work order has its full page at `/staff/projects/[id]/tasks/[taskId]`,
+under the project it belongs to; the panel's **Details** link goes there. It carries
+what the panel leaves out: the roster (invitations, confirmations, no-shows, and after
+a cancellation who is still to be told), hours logged against it with Approve, the
+equipment reports it answers, each engagement as a card with its money and its actions,
+feedback, the briefing, and its duties. The task's own activity waits on Phase 7.
 
 - **Show crew is project work.** A production is a project of kind `production`, and
   a duty list applied to a show already stamps the production's `project_id` alongside
   `event_id` ([production-projects-spec.md](production-projects-spec.md) §4). Event
   shifts therefore land on this route and in their show's task list; the event anchor
   stays for timing and re-timing.
-- **One component, two homes.** Only work that belongs to no project — recurring
-  maintenance, a first rehearsal's orientation, shifts on a listing with no production —
-  keeps `/staff/volunteer/shifts/[id]`.
-  Both routes render the same work order view; the project route adds the project's
-  breadcrumb and back link.
-- **The old URL redirects.** `/staff/volunteer/shifts/[id]` for a work order that has a
-  project redirects to the task route, so existing links, notifications and emails
-  keep working. Moving a work order onto or off a project changes which URL is
-  canonical; nothing stores the URL.
-- **The guard checks the pair.** The remote takes both ids from the client, so it
-  loads the work order and refuses (404) when its `project_id` is not the project in
-  the URL — otherwise a project the caller can read becomes a window onto a work order
-  in one they cannot. Access is the project's: `project.read`, or a committee role on
-  the project through `requireProjectCommittee`.
-- `/staff/contractors/jobs/[id]` redirects to whichever of the two routes is canonical
-  for its work order.
+- **One component, two homes.** `WorkOrderView`
+  (`src/lib/components/volunteer/`) renders both routes from one payload,
+  `loadWorkOrderView` (`src/lib/server/volunteer/work-order-view.ts`). The shift page
+  passes "Shift" and the schedule as its back link; the task page passes "Task", the
+  project as its back link (`?task=` reopens the panel) and the project's name at the
+  head of the line under the title. Work that belongs to no project keeps
+  `/staff/volunteer/shifts/[id]`.
+- **The old URL redirects.** `/staff/volunteer/shifts/[id]`'s server `load` sends a
+  work order with a project to the task route (307, since the target moves with the work
+  order), so links, notifications and emails keep working. `workOrderHref` names the
+  canonical page; nothing stores the URL. The task route never redirects, so the two
+  cannot loop.
+- **The guard checks the pair.** `getProjectTaskPage` (`tasks.remote.ts`) takes both
+  ids from the client, so it loads the work order and 404s unless its `project_id` is
+  the project in the URL. Access is the project's: `project.read`, or a committee role
+  on the project through `requireProjectCommittee`. `getStaffShiftPage` guards
+  `volunteer.read` itself, first; both read through services, never through another
+  remote's guard (#1907).
+- **Writes refresh whichever page is canonical.** Roster, duty, hour and engagement
+  writes look up the work order's project and refresh the task page or the shift page.
+- `/staff/contractors/jobs/[id]` redirects to the canonical page for its work order,
+  at the engagement's card (`#engagement-<id>`), guarded by `contractor.read` so a job
+  id does not reveal its project.
 
 ## Contractor Jobs page
 
@@ -403,13 +414,12 @@ above the old list is gone: it repeated the Late tab's rows above every tab, and
 tab's count and each late row's badge and promised-back date carry the same warning. The
 contractor index keeps its overdue list.
 
-Each row's title opens the engagement (`/staff/contractors/jobs/[id]`), and a **Work
-order** link beside it opens the work order. Once the redirect below lands, the title
-leads to the work order too. Until Phase 3a's null-role safety merges, a work order
-with no role (every one made from this page) 404s on `/staff/volunteer/shifts/[id]`,
-which is why the title does not link there yet.
+Each row's title opens the engagement's card on its work order's page
+(`workOrderHref`), which is where the engagement lives now; the separate **Work
+order** link is gone. The contractor's page and a unit's service history link the
+same way.
 
-The engagement page's actions: **Book** (from `asked`; **Reschedule** once booked),
+The engagement card's actions: **Book** (from `asked`; **Reschedule** once booked),
 **Complete**, **Decline** (shown on `asked`), **No-show** (shown on `booked`),
 **Cancel**, and **Invoice** (on `completed` only, since no other ending counts as
 spend). Decline and No-show are terminal. The service refuses them only from a terminal
@@ -419,10 +429,10 @@ leaves the unit out of service, as cancelling does, because it is still broken. 
 work order stays open for the next engagement. `no_show` joined `declined` and
 `cancelled` in `contractorJobStatusesWithoutSpend`.
 
-Still to do: `/staff/contractors/jobs/[id]` redirects to the work order's page (above),
-whose engagements section replaces the job detail page. Creating a job from the
-contractor page creates a work order with no role, no posting, and its first engagement
-(built in Phase 2).
+`/staff/contractors/jobs/[id]` redirects to the work order's page (above), whose
+engagements section replaced the job detail page. Creating a job from the contractor
+page creates a work order with no role, no posting, and its first engagement (built in
+Phase 2).
 
 ## Phases
 
@@ -448,16 +458,16 @@ All staff-facing, so each phase goes straight to `main`.
    submits is not shipped. Section names compare trimmed and case-insensitively, so
    a duty list's "load-in" reuses "Load-in". Members → Open keeps the
    people already on it, as Open → Members does; only unassigning cancels signups.
-   Every switch away from Contractor is refused while the engagement is live, until
-   the engagement's own Cancel exists to pair with it. Audit entries are written on
+   Switching away from Contractor was refused here while the engagement was live; Phase 5
+   lifted that once Phase 6 had built the engagement's Cancel (see Switching modes). Audit entries are written on
    the `work_order` subject only; `project` joins the vocabulary with its first writer.
 4. **Project page.** The task list, panel, picker, header, About, tabs and edit form.
    Two PRs. **4a** is the page and a read-only list: header, About (the description,
    the origin chain and any events), Tasks · Budget tabs, filters and show/hide done
    in the URL, sections with counts, rows unfolding their duties, and the panel at
    `?task=<id>`. The list is read through `getProjectDetail`, the page's one query, so
-   the task commands refresh that. The panel's **Details** link goes to
-   `/staff/volunteer/shifts/[id]` until Phase 5. "+ Event" and "+ Repeat" are left
+   the task commands refresh that. The panel's **Details** link went to
+   `/staff/volunteer/shifts/[id]` until Phase 5, and now opens the task page. "+ Event" and "+ Repeat" are left
    out: no service sets either on an existing task. **4b** is editing in place: the
    add line, ticking (a derived task's box opens what it waits on; "Tick by hand" in the
    panel is the override, with a reason), duties, sections (add, rename, delete, move),
@@ -467,8 +477,11 @@ All staff-facing, so each phase goes straight to `main`.
    first, then cancels them on confirm. Equipment is set with `setTaskEquipment`;
    duties with `addDuty`/`setDutyDone`, which refuse a duty that is not the task's.
 5. **Task page** at `/staff/projects/[id]/tasks/[taskId]`, the work order view shared
-   with `/staff/volunteer/shifts/[id]`, and the redirect between them.
-6. **Contractor Jobs view** and the job-detail redirect.
+   with `/staff/volunteer/shifts/[id]`, and the redirect between them. Folded in: the
+   job-detail redirect (Phase 6's last item), lifting the Contractor switch refusal,
+   and `getStaffShiftPage` guarding itself (#1907).
+6. **Contractor Jobs view** and the job-detail redirect (the redirect landed with
+   Phase 5).
 7. **Activity tab.**
 
 ## Out of scope
