@@ -39,6 +39,7 @@
 	let search = $state('');
 	const picked = new SvelteSet<string>();
 	let refused = $state<{ name: string; message: string }[]>([]);
+	let warned = $state<{ name: string; warnings: string[] }[]>([]);
 	type Warning = {
 		liveSignups: number;
 		engagement: { contractorName: string; status: ContractorJobStatus } | null;
@@ -154,6 +155,7 @@
 				}
 				assignWarning = null;
 				refused = (r?.refused ?? []).map((x) => ({ name: nameOf(x.userId), message: x.message }));
+				warned = (r?.warned ?? []).map((x) => ({ name: nameOf(x.userId), warnings: x.warnings }));
 				picked.clear();
 			}}
 		>
@@ -186,9 +188,17 @@
 				size="sm"
 			/>
 		</Form>
-		{#if refused.length > 0}
+		{#if warned.length > 0}
+			<!-- Assigned regardless; each warning is on the task's log. -->
 			<Alert type="warning" class="mt-3 text-sm">
-				Not put on it:
+				Assigned over warnings:
+				{warned.map((w) => `${w.name} (${w.warnings.join(' ')})`).join('; ')}
+			</Alert>
+		{/if}
+		{#if refused.length > 0}
+			<!-- Only a profile under review, a full task or a closed one refuses. -->
+			<Alert type="error" class="mt-3 text-sm">
+				Could not be put on it:
 				{refused.map((r) => `${r.name} (${r.message})`).join('; ')}
 			</Alert>
 		{/if}
