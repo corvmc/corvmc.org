@@ -32,11 +32,18 @@ export const SEED_CONTRACTOR_NAME = 'E2E Amp Doctor';
 export const SEED_ARCHIVED_CONTRACTOR_ID = 'e2e0c04a-0000-4000-8000-000000000002';
 export const SEED_ARCHIVED_CONTRACTOR_NAME = 'E2E Retired Tuner';
 
-/** The unit the test sends out and gets back. Starts `in_service`. */
 export const SEED_SERVICE_ITEM_ID = 'e2e0c17e-0000-4000-8000-000000000001';
 export const SEED_SERVICE_ITEM_NAME = 'E2E Service Amplifier';
-export const SEED_SERVICE_ASSET_ID = 'e2e0c455-0000-4000-8000-000000000001';
-export const SEED_SERVICE_ASSET_TAG = 'E2E-SVC-01';
+
+/**
+ * One unit per attempt, all `in_service`: an attempt that fails after booking
+ * has spent its unit, and a test may not write to reset it, so a CI retry
+ * (`retries: 2`) takes the next one rather than inheriting that state.
+ */
+export const SEED_SERVICE_ASSETS = [1, 2, 3].map((n) => ({
+	id: `e2e0c455-0000-4000-8000-00000000000${n}`,
+	tag: `E2E-SVC-0${n}`
+}));
 
 export async function seedContractors() {
 	await withPlatformDb(async (db) => {
@@ -56,8 +63,9 @@ export async function seedContractors() {
 			);
 		}
 		await db.delete(contractor).where(inArray(contractor.id, contractorIds));
-		await db.delete(stockMovement).where(eq(stockMovement.assetId, SEED_SERVICE_ASSET_ID));
-		await db.delete(inventoryAsset).where(eq(inventoryAsset.id, SEED_SERVICE_ASSET_ID));
+		const assetIds = SEED_SERVICE_ASSETS.map((a) => a.id);
+		await db.delete(stockMovement).where(inArray(stockMovement.assetId, assetIds));
+		await db.delete(inventoryAsset).where(inArray(inventoryAsset.id, assetIds));
 		await db.delete(inventoryItem).where(eq(inventoryItem.id, SEED_SERVICE_ITEM_ID));
 
 		const now = new Date();
@@ -72,15 +80,17 @@ export async function seedContractors() {
 			updatedAt: now
 		});
 
-		await db.insert(inventoryAsset).values({
-			id: SEED_SERVICE_ASSET_ID,
-			itemId: SEED_SERVICE_ITEM_ID,
-			assetTag: SEED_SERVICE_ASSET_TAG,
-			condition: 'good',
-			status: 'in_service',
-			createdAt: now,
-			updatedAt: now
-		});
+		await db.insert(inventoryAsset).values(
+			SEED_SERVICE_ASSETS.map((a) => ({
+				id: a.id,
+				itemId: SEED_SERVICE_ITEM_ID,
+				assetTag: a.tag,
+				condition: 'good' as const,
+				status: 'in_service' as const,
+				createdAt: now,
+				updatedAt: now
+			}))
+		);
 
 		await db.insert(contractor).values([
 			{
