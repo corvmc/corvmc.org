@@ -34,6 +34,7 @@
 		variant="ghost"
 		size="xs"
 		shape="square"
+		class="depth-0"
 		aria-label="What {task.title} is waiting on"
 		onclick={() => onopen(task.id)}
 	>
@@ -48,6 +49,7 @@
 			variant="ghost"
 			size="xs"
 			shape="square"
+			class="depth-0"
 			aria-label="Mark {task.title} not done"
 		>
 			<TaskCheck {task} />
@@ -62,6 +64,7 @@
 			variant="ghost"
 			size="xs"
 			shape="square"
+			class="depth-0"
 			aria-label="Mark {task.title} done"
 		>
 			<TaskCheck {task} />

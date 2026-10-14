@@ -28,7 +28,7 @@
 					{...props}
 					variant="ghost"
 					size="xs"
-					class="assign-trigger"
+					class="depth-0 assign-trigger"
 					aria-label="Change who does {task.title}"
 				>
 					<AssignedSummary {task} {showNames} />

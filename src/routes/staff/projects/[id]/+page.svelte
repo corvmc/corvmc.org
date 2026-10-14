@@ -20,11 +20,11 @@
 		getProjectActivity
 	} from '$lib/remote/projects.remote';
 	import { projectStatusOptions } from '$lib/config';
-	import { formatCents, formatDateShort } from '$lib/utils/format';
+	import { formatDateShort } from '$lib/utils/format';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { IconDots } from '@tabler/icons-svelte';
+	import { IconCheck, IconDots } from '@tabler/icons-svelte';
 	import BudgetTab from './BudgetTab.svelte';
 	import ActivityCard from '$lib/components/project/ActivityCard.svelte';
 	import TaskList from './TaskList.svelte';
@@ -68,7 +68,6 @@
 
 	const data = $derived(await getProjectDetail(page.params.id!));
 	const project = $derived(data.project);
-	const burn = $derived(data.burn);
 	const origin = $derived(data.origin);
 	const list = $derived(data.taskList);
 	const progress = $derived(list.progress);
@@ -84,7 +83,6 @@
 	);
 	const owner = $derived(data.projectCommittees.find((c) => c.role === 'owner') ?? null);
 	const committeeNames = $derived(data.projectCommittees.map((c) => c.name).join(', '));
-	const overBudget = $derived(burn.remainingCents !== null && burn.remainingCents < 0);
 
 	/** A date input wants `YYYY-MM-DD`, and a `Date` renders as a full timestamp. */
 	const asDateValue = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '');
@@ -220,13 +218,10 @@
 				max={Math.max(progress.total, 1)}
 				aria-label="Tasks done"
 			></progress>
-			<span><strong>{progress.done}</strong> of {progress.total} tasks done</span>
-		</span>
-		<span class={overBudget ? 'text-error' : ''}>
-			<strong>{formatCents(burn.cash.totalCents)}</strong>
-			{project.budgetCents === null
-				? 'spent, no budget set'
-				: `of ${formatCents(project.budgetCents)} spent`}
+			<span class="inline-flex items-center gap-1">
+				<strong>{progress.done}</strong> of {progress.total}
+				<IconCheck size={14} aria-label="tasks done" />
+			</span>
 		</span>
 		<span class="text-muted">
 			{#if project.startsAt}
