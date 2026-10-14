@@ -82,10 +82,10 @@ test.describe('contractor jobs', () => {
 		// untouched until it is actually scheduled.
 		expect((await assetState()).status).toBe('in_service');
 
-		// Schedule it: this is what takes the unit out of service.
+		// Book it: this is what takes the unit out of service.
 		await jobRow.getByRole('link', { name: 'Retube the E2E amp' }).click();
-		await page.getByRole('button', { name: 'Schedule', exact: true }).click();
-		await modalSubmit(page, /^Schedule$/).click();
+		await page.getByRole('button', { name: 'Book', exact: true }).click();
+		await modalSubmit(page, /^Book$/).click();
 
 		// Poll the movement rather than read it bare. `setAssetStatus` commits the
 		// status row and the ledger row in one `db.batch`, so the window this
@@ -132,6 +132,13 @@ test.describe('contractor jobs', () => {
 		);
 		expect(job?.status).toBe('completed');
 		expect(job?.resolvedAt).not.toBeNull();
+
+		// Finished with no cost entered: it leaves Open and waits on its invoice.
+		await page.goto('/staff/contractors/jobs?view=awaiting-invoice');
+		await expect(page.getByRole('row').filter({ hasText: 'Retube the E2E amp' })).toContainText(
+			'Awaiting invoice',
+			{ timeout: 15000 }
+		);
 	});
 
 	test('the unit shows its service history on the asset page', async ({ page }) => {

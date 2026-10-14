@@ -69,6 +69,8 @@ const {
 	scheduleJob,
 	completeJob,
 	cancelJob,
+	declineJob,
+	markJobNoShow,
 	ContractorJobStateError,
 	ContractorJobNotFoundError
 } = await import('./contractor-job-service');
@@ -342,6 +344,48 @@ describe('cancelJob', () => {
 
 		await expect(cancelJob(JOB)).rejects.toThrow(ContractorJobStateError);
 	});
+});
+
+describe('declineJob and markJobNoShow', () => {
+	it('records that they said no', async () => {
+		selectResults = [[engagement({ status: 'asked' })]];
+
+		await declineJob(JOB);
+
+		expect(updateValues[0]).toMatchObject({ status: 'declined' });
+		expect(resolveWorkOrder).not.toHaveBeenCalled();
+	});
+
+	it('leaves a booked unit out of service when they do not show', async () => {
+		selectResults = [[engagement({ status: 'booked', assetId: ASSET })]];
+
+		await markJobNoShow(JOB);
+
+		expect(updateValues[0]).toMatchObject({ status: 'no_show' });
+		expect(setAssetStatus).not.toHaveBeenCalled();
+		expect(resolveWorkOrder).not.toHaveBeenCalled();
+	});
+
+	// Off the usual path, but not terminal: allowed.
+	it('allows a decline after booking and a no-show before it', async () => {
+		selectResults = [[engagement({ status: 'booked' })], [engagement({ status: 'asked' })]];
+
+		await declineJob(JOB);
+		await markJobNoShow(JOB);
+
+		expect(updateValues.map((v) => v.status)).toEqual(['declined', 'no_show']);
+	});
+
+	it.each(['completed', 'cancelled', 'declined', 'no_show'])(
+		'refuses a job that is already %s',
+		async (status) => {
+			selectResults = [[engagement({ status })], [engagement({ status })]];
+
+			await expect(declineJob(JOB)).rejects.toThrow(ContractorJobStateError);
+			await expect(markJobNoShow(JOB)).rejects.toThrow(ContractorJobStateError);
+			expect(updateValues).toHaveLength(0);
+		}
+	);
 });
 
 describe('getJobById', () => {

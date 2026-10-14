@@ -11,6 +11,8 @@
 		scheduleJobForm,
 		completeJobForm,
 		cancelJobForm,
+		declineJobForm,
+		noShowJobForm,
 		recordInvoiceForm
 	} from '$lib/remote/contractors.remote';
 	import {
@@ -26,7 +28,7 @@
 	 * One job.
 	 *
 	 * The actions are gated on status rather than always shown, because two of
-	 * them move an asset: scheduling takes a unit out of service and completing
+	 * them move an asset: booking takes a unit out of service and completing
 	 * brings it back. An action that silently does nothing on a finished job is
 	 * worse than an action that is not there.
 	 */
@@ -36,6 +38,8 @@
 	const scheduleFields = scheduleJobForm.fields;
 	const completeFields = completeJobForm.fields;
 	const cancelFields = cancelJobForm.fields;
+	const declineFields = declineJobForm.fields;
+	const noShowFields = noShowJobForm.fields;
 	const invoiceFields = recordInvoiceForm.fields;
 
 	const open = $derived(job.status === 'asked' || job.status === 'booked');
@@ -51,10 +55,10 @@
 	{#if open}
 		<Action
 			action={scheduleJobForm}
-			label={job.status === 'booked' ? 'Reschedule' : 'Schedule'}
+			label={job.status === 'booked' ? 'Reschedule' : 'Book'}
 			size="sm"
-			modalTitle="Schedule"
-			successToast="Scheduled"
+			modalTitle={job.status === 'booked' ? 'Reschedule' : 'Book'}
+			successToast={job.status === 'booked' ? 'Rescheduled' : 'Booked'}
 		>
 			{#snippet form()}
 				<input {...scheduleFields.id.as('hidden', job.id)} />
@@ -126,6 +130,47 @@
 			{/snippet}
 		</Action>
 
+		{#if job.status === 'asked'}
+			<Action
+				action={declineJobForm}
+				label="Decline"
+				variant="ghost"
+				size="sm"
+				modalTitle="They declined"
+				submitLabel="Mark declined"
+				successToast="Marked declined"
+			>
+				{#snippet form()}
+					<input {...declineFields.id.as('hidden', job.id)} />
+					<p class="text-sm">
+						The work order stays open. To ask someone else, open a new job on it.
+					</p>
+				{/snippet}
+			</Action>
+		{:else}
+			<Action
+				action={noShowJobForm}
+				label="No-show"
+				variant="ghost"
+				size="sm"
+				modalTitle="They did not show"
+				submitLabel="Mark no-show"
+				successToast="Marked no-show"
+			>
+				{#snippet form()}
+					<input {...noShowFields.id.as('hidden', job.id)} />
+					<p class="text-sm">
+						{#if job.assetId}
+							The unit stays out of service — it is still broken. The work order stays open; book
+							someone else with a new job on it.
+						{:else}
+							The work order stays open; book someone else with a new job on it.
+						{/if}
+					</p>
+				{/snippet}
+			</Action>
+		{/if}
+
 		<Action
 			action={cancelJobForm}
 			label="Cancel"
@@ -146,7 +191,8 @@
 				</p>
 			{/snippet}
 		</Action>
-	{:else}
+	{:else if job.status === 'completed'}
+		<!-- Only finished work is billed: every other ending is left out of spend. -->
 		<Action
 			action={recordInvoiceForm}
 			label="Invoice"
@@ -193,6 +239,14 @@
 				<dd>
 					<a class="link" href={resolve(`/staff/contractors/${job.contractorId}`)}>
 						{contractorName}
+					</a>
+				</dd>
+			</div>
+			<div>
+				<dt class="text-subtle text-xs">Work order</dt>
+				<dd>
+					<a class="link" href={resolve(`/staff/volunteer/shifts/${job.workOrderId}`)}>
+						{job.workOrderCancelledAt ? 'Called off' : job.workOrderResolvedAt ? 'Done' : 'Open'}
 					</a>
 				</dd>
 			</div>

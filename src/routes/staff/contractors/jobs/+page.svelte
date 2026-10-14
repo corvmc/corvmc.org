@@ -2,9 +2,9 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -13,27 +13,52 @@
 	import {
 		contractorJobStatusBadge,
 		contractorJobStatusLabels,
-		type ContractorJobStatus
+		contractorJobViews,
+		contractorJobViewLabels,
+		type ContractorJobStatus,
+		type ContractorJobView
 	} from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
+	import { withQuery } from '$lib/utils/with-query';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 
 	/**
-	 * The work queue.
-	 *
-	 * Overdue is called out above the table rather than sorted to the top of it,
-	 * for the reason the table cannot express: late is derived — `booked` with
-	 * a date behind us — so there is no column to sort by that stays true without
-	 * something maintaining it.
+	 * Every contractor engagement, across every work order, one filter at a
+	 * time. Late and Awaiting invoice are derived on the server, so a row's Late
+	 * badge and the Late tab are the same predicate.
 	 */
-	const data = $derived(await getJobsPage());
-	const { fields } = createJobForm;
+	const parseView = (raw: string | null): ContractorJobView =>
+		contractorJobViews.includes(raw as never) ? (raw as ContractorJobView) : 'open';
+	let view = $state<ContractorJobView>(parseView(page.url.searchParams.get('view')));
 
-	const contractorOptions = $derived(data.contractors.map((c) => ({ value: c.id, label: c.name })));
+	// Mirrors the filter into the URL; local state stays the source of truth.
+	$effect(() => {
+		const href = withQuery(
+			resolve('/staff/contractors/jobs'),
+			view === 'open' ? '' : `view=${view}`
+		);
+		if (location.pathname + location.search !== href) {
+			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+		}
+	});
+
+	const { fields } = createJobForm;
 	const now = new Date();
+
+	const data = $derived(await getJobsPage({ view }));
+	const contractorOptions = $derived(data.contractors.map((c) => ({ value: c.id, label: c.name })));
 
 	const isLate = (job: { status: string; expectedBackAt: Date | null }) =>
 		job.status === 'booked' && job.expectedBackAt != null && job.expectedBackAt < now;
+
+	const emptyCopy: Record<ContractorJobView, string> = {
+		open: 'Nobody is asked or booked. Open a job when something needs a professional — a repair that goes out to a tech, or work on the building itself.',
+		late: 'Every booked job is inside the date it was promised back.',
+		'awaiting-invoice': 'Every finished job has its cost recorded, or was donated.',
+		all: 'Open one when something needs a professional — a repair that goes out to a tech, or work on the building itself.'
+	};
 </script>
 
 <PageHeader title="Contractor jobs" subtitle="Space" backHref="/staff/contractors">
@@ -67,26 +92,18 @@
 </PageHeader>
 
 <PageContent>
-	{#if data.overdue.length > 0}
-		<Alert type="warning">
-			<span class="font-medium">Overdue</span>
-			{#each data.overdue as row (row.job.id)}
-				<div>
-					<a class="link font-medium" href={resolve(`/staff/contractors/jobs/${row.job.id}`)}>
-						{row.job.title}
-					</a>
-					— {row.contractor.name}, promised back
-					{row.job.expectedBackAt ? formatDateShort(row.job.expectedBackAt) : '—'}
-				</div>
-			{/each}
-		</Alert>
-	{/if}
+	<TabBar
+		tabs={contractorJobViews.map((key) => ({
+			key,
+			label: contractorJobViewLabels[key],
+			badge: data.counts[key]
+		}))}
+		active={view}
+		onchange={(key) => (view = key as ContractorJobView)}
+	/>
 
 	{#if data.jobs.length === 0}
-		<EmptyState
-			title="No jobs"
-			description="Open one when something needs a professional — a repair that goes out to a tech, or work on the building itself."
-		/>
+		<EmptyState title="No jobs" description={emptyCopy[view]} />
 	{:else}
 		<Table>
 			{#snippet head()}
@@ -108,6 +125,10 @@
 							{:else}
 								Building work
 							{/if}
+							·
+							<a class="link" href={resolve(`/staff/volunteer/shifts/${row.job.workOrderId}`)}>
+								Work order
+							</a>
 						</div>
 					</td>
 					<td>
@@ -134,9 +155,23 @@
 						{:else}
 							—
 						{/if}
+						{#if isLate(row.job) && row.job.expectedBackAt}
+							<div class="text-subtle">
+								promised back {formatDateShort(row.job.expectedBackAt)}
+							</div>
+						{/if}
 					</td>
 					<td class="cell-num">
-						{row.job.costCents != null ? formatCents(row.job.costCents) : '—'}
+						{#if row.job.isDonated}
+							Donated{#if row.job.fairValueCents != null}
+								· worth {formatCents(row.job.fairValueCents)}{/if}
+						{:else if row.job.costCents != null}
+							{formatCents(row.job.costCents)}
+						{:else if row.job.status === 'completed'}
+							<span class="text-warning">Awaiting invoice</span>
+						{:else}
+							—
+						{/if}
 					</td>
 				</tr>
 			{/each}
