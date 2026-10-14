@@ -143,6 +143,8 @@ describe('createProject', () => {
 	it('lets a project keep the suggestion it already answers', async () => {
 		selectResults = [
 			PROJECT({ suggestionId: 's-1' }),
+			// No owning committee.
+			[],
 			[{ id: 's-1' }],
 			[{ id: 'proj-1' }],
 			PROJECT({ suggestionId: 's-1' })

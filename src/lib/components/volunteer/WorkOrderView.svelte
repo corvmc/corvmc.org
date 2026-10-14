@@ -46,13 +46,16 @@
 		view,
 		subtitle,
 		backHref,
-		context
+		context,
+		activity
 	}: {
 		view: View;
 		subtitle: string;
 		backHref: string;
 		/** Leads the line under the header: the project a task belongs to. */
 		context?: Snippet;
+		/** The work order's history, read by each page through its own guard. */
+		activity?: Snippet;
 	} = $props();
 
 	const shift = $derived(view.shift);
@@ -527,6 +530,8 @@
 			</ul>
 		</InfoCard>
 	{/if}
+
+	{@render activity?.()}
 </PageContent>
 
 {#snippet checkIcon()}

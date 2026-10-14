@@ -61,6 +61,11 @@ const remotes = (await import('./tasks.remote')) as unknown as Record<
 	(raw: unknown) => Promise<unknown>
 >;
 
+const { getProjectActivity } = (await import('./projects.remote')) as unknown as Record<
+	string,
+	(raw: unknown) => Promise<unknown>
+>;
+
 const MINE = '00000000-0000-4000-8000-000000000001';
 const THEIRS = '00000000-0000-4000-8000-000000000002';
 const pair = { projectId: MINE, workOrderId: 'wo-theirs' };
@@ -160,5 +165,26 @@ describe('the guard', () => {
 		).rejects.toMatchObject({ status: 403 });
 		expect(requireProjectCommittee).toHaveBeenCalledWith(THEIRS, 'project.manage');
 		expect(untouched()).toMatchObject(before);
+	});
+});
+
+describe('the activity', () => {
+	it('refuses a task named with a project it is not on', async () => {
+		await expect(getProjectActivity(pair)).rejects.toMatchObject({ status: 404 });
+	});
+
+	it("reads a task's history under its own project, and the project's", async () => {
+		sqlite.exec(
+			`insert into audit_log (id, action, actor_name, actor_email, subject_type, subject_id, details)
+				values ('a-1', 'work_order.reopened', 'Sam', 's@x', 'work_order', 'wo-theirs', '{}')`
+		);
+		const task = { projectId: THEIRS, workOrderId: 'wo-theirs' };
+		await expect(getProjectActivity(task)).resolves.toMatchObject({
+			items: [{ summary: 'Reopened it', task: { id: 'wo-theirs' } }]
+		});
+		await expect(getProjectActivity({ projectId: THEIRS })).resolves.toMatchObject({
+			items: expect.arrayContaining([expect.objectContaining({ summary: 'Reopened it' })])
+		});
+		sqlite.exec(`delete from audit_log`);
 	});
 });

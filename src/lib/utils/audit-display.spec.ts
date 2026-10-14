@@ -159,3 +159,38 @@ describe('auditActionLabel', () => {
 		expect(auditActionLabel('credits.adjusted')).toBe('Credits adjusted');
 	});
 });
+
+describe('project activity lines', () => {
+	const move = (from: string | null, to: string) =>
+		summarizeAuditEntry(
+			entry('contractor_job.status_changed', {
+				engagementId: 'j1',
+				contractorName: 'Valve Doctor',
+				from,
+				to
+			} as never)
+		);
+
+	it("tells an engagement's steps by where it came from", () => {
+		expect(move(null, 'asked')).toBe('Asked Valve Doctor to do it');
+		expect(move('asked', 'booked')).toBe('Booked Valve Doctor');
+		expect(move('booked', 'booked')).toBe('Rebooked Valve Doctor');
+		expect(move('booked', 'no_show')).toBe('Valve Doctor did not show');
+	});
+
+	it('names fields, never values, and says when the suggestion moved too', () => {
+		expect(summarizeAuditEntry(entry('work_order.edited', { fields: ['capacity', 'notes'] }))).toBe(
+			'Edited its places, briefing'
+		);
+		expect(
+			summarizeAuditEntry(
+				entry('project.status_changed', { from: 'planned', to: 'done', suggestionMoved: true })
+			)
+		).toBe('Moved the project from planned to done, and its suggestion with it');
+		expect(
+			summarizeAuditEntry(
+				entry('project.section_deleted', { sectionId: 's1', name: 'Prep', tasks: 2 })
+			)
+		).toBe('Deleted the section “Prep”, keeping its 2 tasks');
+	});
+});

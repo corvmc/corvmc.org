@@ -11,6 +11,8 @@ import {
 import { toEventRef } from '$lib/server/entity/refs';
 import { getStaffLayout } from './layout.remote';
 import { getProjectTaskPage } from './tasks.remote';
+import { getProjectActivity } from './projects.remote';
+import { ACTIVITY_MAX, listActivity } from '$lib/server/project/project-activity';
 import { loadWorkOrderView } from '$lib/server/volunteer/work-order-view';
 import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
 import { listInterestsForUser } from '$lib/server/volunteer/volunteer-interest-service';
@@ -1490,10 +1492,15 @@ async function refreshShiftViews(shiftId?: string) {
 /** Whichever page is canonical for the work order: its project's task page, or the shift page. */
 async function refreshWorkOrderPage(id: string) {
 	const projectId = await workOrderProjectId(id);
-	if (!projectId) return getStaffShiftPage(id).refresh();
+	if (!projectId) {
+		void getWorkOrderActivity({ workOrderId: id }).refresh();
+		return getStaffShiftPage(id).refresh();
+	}
 	// The task page's guard is the project's; a caller without it is not looking at it.
-	if (await can('project.read'))
+	if (await can('project.read')) {
+		void getProjectActivity({ projectId, workOrderId: id }).refresh();
 		return getProjectTaskPage({ projectId, workOrderId: id }).refresh();
+	}
 }
 
 const shiftFilters = z.object({
@@ -1644,7 +1651,7 @@ export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data
 		mapDomainError(err);
 	}
 
-	void getStaffShiftPage(data.id).refresh();
+	await refreshWorkOrderPage(data.id);
 	return { success: true };
 });
 
@@ -2256,6 +2263,18 @@ export const getStaffShiftPage = query(z.string(), async (id) => {
 	if (!view) throw error(404, 'Shift not found');
 	return view;
 });
+
+/** A shift page's history: the work order's audit entries and duty ticks, newest first. */
+export const getWorkOrderActivity = query(
+	z.object({
+		workOrderId: z.string().min(1),
+		limit: z.number().int().min(1).max(ACTIVITY_MAX).optional()
+	}),
+	async ({ workOrderId, limit }) => {
+		await requireCapability('volunteer.read');
+		return listActivity({ workOrderId }, { limit });
+	}
+);
 
 /**
  * Setup's one load-bearing query.

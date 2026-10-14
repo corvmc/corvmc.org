@@ -64,8 +64,14 @@ vi.mock('$lib/server/inventory/asset-service', () => ({
 	setAssetStatus: (...args: unknown[]) => setAssetStatus(...(args as []))
 }));
 
+const recordAuditEntry = vi.fn(async (..._a: unknown[]) => undefined);
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
+}));
+
 const {
 	createJob,
+	recordInvoice,
 	scheduleJob,
 	completeJob,
 	cancelJob,
@@ -82,6 +88,7 @@ beforeEach(() => {
 	batches = [];
 	setAssetStatus.mockClear();
 	resolveWorkOrder.mockClear();
+	recordAuditEntry.mockClear();
 });
 
 const JOB = 'job-1';
@@ -102,7 +109,8 @@ function engagement(over: Record<string, unknown> = {}) {
 		assetId,
 		projectId: null,
 		workOrderResolvedAt,
-		workOrderCancelledAt: null
+		workOrderCancelledAt: null,
+		contractorName: 'Valve Doctor'
 	};
 }
 
@@ -393,5 +401,75 @@ describe('getJobById', () => {
 		selectResults = [[]];
 
 		await expect(cancelJob('nope')).rejects.toThrow(ContractorJobNotFoundError);
+	});
+});
+
+/** Engagement steps go on the work order's log, so a task's history includes its contractor. */
+describe("the work order's log", () => {
+	const moves = () =>
+		recordAuditEntry.mock.calls.map(
+			([e]) => e as { action: string; subject: unknown; details: Record<string, unknown> }
+		);
+
+	it('records the contractor being asked, and a new work order made for them', async () => {
+		selectResults = [[{ id: 'c-1', archivedAt: null }], [engagement({ status: 'asked' })]];
+
+		await createJob({ contractorId: 'c-1', title: 'Retube', requestedByUserId: ACTOR });
+
+		expect(moves().map((e) => e.action)).toEqual([
+			'work_order.created',
+			'contractor_job.status_changed'
+		]);
+		expect(moves()[1]).toMatchObject({
+			subject: { type: 'work_order', id: WO },
+			details: { engagementId: JOB, contractorName: 'Valve Doctor', from: null, to: 'asked' }
+		});
+	});
+
+	it('records a booking with its date, and a rebooking as booked to booked', async () => {
+		const when = new Date('2026-11-02T17:00:00Z');
+		jobThenAsset({ status: 'asked' });
+		await scheduleJob(JOB, { scheduledFor: when });
+		jobThenAsset({ status: 'booked' });
+		await scheduleJob(JOB, { scheduledFor: when });
+
+		expect(moves().map((e) => [e.details.from, e.details.to])).toEqual([
+			['asked', 'booked'],
+			['booked', 'booked']
+		]);
+		expect(moves()[0].details.scheduledFor).toBe(when.toISOString());
+	});
+
+	it.each([
+		['cancelled', () => cancelJob(JOB)],
+		['declined', () => declineJob(JOB)],
+		['no_show', () => markJobNoShow(JOB)]
+	])('records an engagement ending %s', async (to, act) => {
+		selectResults = [[engagement({ status: 'booked' })]];
+
+		await act();
+
+		expect(moves()).toEqual([
+			expect.objectContaining({
+				action: 'contractor_job.status_changed',
+				details: expect.objectContaining({ from: 'booked', to })
+			})
+		]);
+	});
+
+	it('records completion and the invoice', async () => {
+		jobThenAsset({ status: 'booked' });
+		await completeJob(JOB, { actorId: ACTOR, costCents: 12000 });
+		selectResults = [[engagement({ status: 'completed' })]];
+		await recordInvoice(JOB, { invoiceRef: 'INV-7' });
+
+		expect(moves().map((e) => e.action)).toEqual([
+			'contractor_job.status_changed',
+			'contractor_job.invoice_recorded'
+		]);
+		expect(moves()[1].details).toMatchObject({
+			contractorName: 'Valve Doctor',
+			invoiceRef: 'INV-7'
+		});
 	});
 });

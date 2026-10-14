@@ -35,8 +35,10 @@ import { chunk, chunkSize } from '$lib/server/utils/chunk';
 import {
 	ensureSections,
 	nextTaskOrders,
-	sectionNameKey
+	sectionNameKey,
+	projectSubject
 } from '$lib/server/project/project-section-service';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 
 /**
  * Duty lists: a named set of work orders, stamped onto a subject.
@@ -850,6 +852,13 @@ export async function applyDutyList(
 		);
 	}
 
+	if (onProject) {
+		await recordAuditEntry({
+			action: 'project.duty_list_applied',
+			subject: await projectSubject(subject.id),
+			details: { dutyListId, dutyListName: list.name, tasks: shiftRows.length }
+		});
+	}
 	return { workOrderIds: shiftRows.map((r) => r.id!), taskCount: taskRows.length };
 }
 

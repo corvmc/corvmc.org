@@ -4,8 +4,9 @@ import { form } from './_remote';
 import { can, requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { getStaffAssetDetail } from './inventory.remote';
-import { getStaffShiftPage } from './volunteer.remote';
+import { getStaffShiftPage, getWorkOrderActivity } from './volunteer.remote';
 import { getProjectTaskPage } from './tasks.remote';
+import { getProjectActivity } from './projects.remote';
 import {
 	contractorTrades,
 	contractorJobStatuses,
@@ -182,10 +183,15 @@ function refreshJobsPage() {
 
 /** The engagement's own card lives on its work order's page, whichever route that is. */
 async function refreshWorkOrderPage(job: { workOrderId: string; projectId: string | null }) {
-	if (!job.projectId) return getStaffShiftPage(job.workOrderId).refresh();
+	const workOrderId = job.workOrderId;
+	if (!job.projectId) {
+		void getWorkOrderActivity({ workOrderId }).refresh();
+		return getStaffShiftPage(workOrderId).refresh();
+	}
 	// The task page's guard is the project's; a caller without it is not looking at it.
 	if (await can('project.read')) {
-		return getProjectTaskPage({ projectId: job.projectId, workOrderId: job.workOrderId }).refresh();
+		void getProjectActivity({ projectId: job.projectId, workOrderId }).refresh();
+		return getProjectTaskPage({ projectId: job.projectId, workOrderId }).refresh();
 	}
 }
 

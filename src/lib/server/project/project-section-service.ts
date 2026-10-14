@@ -1,14 +1,15 @@
 import { and, asc, eq, isNull, max, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
-import { projectSection, type ProjectSection } from '$lib/server/db/schema/project';
+import { project, projectSection, type ProjectSection } from '$lib/server/db/schema/project';
 import { workOrder } from '$lib/server/db/schema/volunteer';
 import { DomainError } from '$lib/server/domain-error';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 
 // ---------------------------------------------------------------------------
 // Sections: the headings on a project's task list. Deleting one moves its
 // work orders to the unlabelled group; nothing here ever deletes a work order.
-// Depends on nothing but the schema, so the duty-list service can use it too.
+// Depends on the schema and the audit log only, so the duty-list service can use it too.
 // ---------------------------------------------------------------------------
 
 const SECTION_NAME_MAX = 80;
@@ -64,6 +65,16 @@ export async function listSections(projectId: string): Promise<ProjectSection[]>
 		.orderBy(asc(projectSection.sortOrder), asc(projectSection.createdAt), asc(projectSection.id));
 }
 
+/** The audit subject for a project, labelled with its name as it is now. */
+export async function projectSubject(projectId: string) {
+	const [row] = await db
+		.select({ name: project.name })
+		.from(project)
+		.where(eq(project.id, projectId))
+		.limit(1);
+	return { type: 'project' as const, id: projectId, label: row?.name ?? null };
+}
+
 /** The section, refused unless it is this project's: both ids come from the client. */
 export async function requireSection(
 	projectId: string,
@@ -94,6 +105,11 @@ export async function createSection(projectId: string, name: string): Promise<Pr
 			.insert(projectSection)
 			.values({ projectId, name: clean, sortOrder: await nextSectionOrder(projectId) })
 			.returning();
+		await recordAuditEntry({
+			action: 'project.section_created',
+			subject: await projectSubject(projectId),
+			details: { sectionId: row.id, name: row.name }
+		});
 		return row;
 	} catch (err) {
 		// The index is the backstop for two creates racing past the check above.
@@ -107,7 +123,7 @@ export async function renameSection(
 	sectionId: string,
 	name: string
 ): Promise<ProjectSection> {
-	await requireSection(projectId, sectionId);
+	const before = await requireSection(projectId, sectionId);
 	const clean = validName(name);
 	await assertNameFree(projectId, clean, sectionId);
 	try {
@@ -116,6 +132,13 @@ export async function renameSection(
 			.set({ name: clean, updatedAt: new Date() })
 			.where(eq(projectSection.id, sectionId))
 			.returning();
+		if (before.name !== row.name) {
+			await recordAuditEntry({
+				action: 'project.section_renamed',
+				subject: await projectSubject(projectId),
+				details: { sectionId, from: before.name, to: row.name }
+			});
+		}
 		return row;
 	} catch (err) {
 		if (isUniqueConstraintError(err)) throw duplicate(clean);
@@ -151,7 +174,7 @@ export async function reorderSections(projectId: string, orderedIds: string[]): 
  * group in their existing order. Returns how many moved.
  */
 export async function deleteSection(projectId: string, sectionId: string): Promise<number> {
-	await requireSection(projectId, sectionId);
+	const section = await requireSection(projectId, sectionId);
 	const [moving, [unlabelled]] = await Promise.all([
 		db
 			.select({ id: workOrder.id })
@@ -174,6 +197,11 @@ export async function deleteSection(projectId: string, sectionId: string): Promi
 		),
 		db.delete(projectSection).where(eq(projectSection.id, sectionId))
 	] as unknown as Parameters<typeof db.batch>[0]);
+	await recordAuditEntry({
+		action: 'project.section_deleted',
+		subject: await projectSubject(projectId),
+		details: { sectionId, name: section.name, tasks: moving.length }
+	});
 	return moving.length;
 }
 

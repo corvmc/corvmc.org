@@ -16,7 +16,8 @@
 		getProjectDetail,
 		updateProjectForm,
 		setProjectStatusForm,
-		applyDutyListToProjectForm
+		applyDutyListToProjectForm,
+		getProjectActivity
 	} from '$lib/remote/projects.remote';
 	import { projectStatusOptions } from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
@@ -25,6 +26,7 @@
 	import { resolve } from '$app/paths';
 	import { IconDots } from '@tabler/icons-svelte';
 	import BudgetTab from './BudgetTab.svelte';
+	import ActivityCard from '$lib/components/project/ActivityCard.svelte';
 	import TaskList from './TaskList.svelte';
 	import TaskPanel from './TaskPanel.svelte';
 	import { parseFilter, type TaskFilter } from './task-view';
@@ -34,8 +36,9 @@
 	 * sections, with a panel beside the list for the one selected. The project's
 	 * own fields change only through Edit project; they reach further than a task.
 	 */
-	type Tab = 'tasks' | 'budget';
-	const parseTab = (raw: string | null): Tab => (raw === 'budget' ? 'budget' : 'tasks');
+	type Tab = 'tasks' | 'budget' | 'activity';
+	const parseTab = (raw: string | null): Tab =>
+		raw === 'budget' || raw === 'activity' ? raw : 'tasks';
 
 	// Above the await: the window listener below reads these.
 	let tab = $state<Tab>(parseTab(page.url.searchParams.get('tab')));
@@ -285,7 +288,8 @@
 		<TabBar
 			tabs={[
 				{ key: 'tasks', label: 'Tasks', badge: `${progress.done}/${progress.total}` },
-				{ key: 'budget', label: 'Budget' }
+				{ key: 'budget', label: 'Budget' },
+				{ key: 'activity', label: 'Activity' }
 			]}
 			active={tab}
 			onchange={(key) => {
@@ -297,6 +301,13 @@
 
 	{#if tab === 'budget'}
 		<BudgetTab {data} />
+	{:else if tab === 'activity'}
+		<ActivityCard
+			query={(limit) =>
+				getProjectActivity(limit ? { projectId: project.id, limit } : { projectId: project.id })}
+			taskHref={(taskId) =>
+				resolve('/staff/projects/[id]/tasks/[taskId]', { id: project.id, taskId })}
+		/>
 	{:else}
 		<div class="flex items-start">
 			<div class="@container min-w-0 flex-1 space-y-4">

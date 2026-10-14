@@ -8,7 +8,7 @@ import { mapDomainError } from '$lib/server/errors';
 import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_TITLE_MAX } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { getProjectById } from '$lib/server/project/project-service';
-import { getProjectDetail } from './projects.remote';
+import { getProjectActivity, getProjectDetail } from './projects.remote';
 import {
 	createSection,
 	deleteSection,
@@ -135,7 +135,9 @@ export const getTaskAssignees = query(
 
 /** The staff page reads the list through its one query; a committee member cannot run it. */
 async function refresh(id: string) {
-	if (await can('project.read')) void getProjectDetail(id).refresh();
+	if (!(await can('project.read'))) return;
+	void getProjectDetail(id).refresh();
+	void getProjectActivity({ projectId: id }).refresh();
 }
 
 // ---------------------------------------------------------------------------

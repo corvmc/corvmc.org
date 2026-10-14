@@ -40,7 +40,17 @@ export const auditActions = [
 	'work_order.resolved',
 	'work_order.reopened',
 	'work_order.cancelled',
-	'work_order.moved'
+	'work_order.moved',
+	'work_order.edited',
+	'work_order.member_invited',
+	'contractor_job.status_changed',
+	'contractor_job.invoice_recorded',
+	'project.edited',
+	'project.status_changed',
+	'project.duty_list_applied',
+	'project.section_created',
+	'project.section_renamed',
+	'project.section_deleted'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -52,7 +62,8 @@ export const auditSubjectTypes = [
 	'group',
 	'production',
 	'event',
-	'work_order'
+	'work_order',
+	'project'
 ] as const;
 export type AuditSubjectType = (typeof auditSubjectTypes)[number];
 
@@ -153,7 +164,38 @@ export interface AuditDetailsByAction {
 	'work_order.cancelled': Record<string, never>;
 	/** Section ids; null is the unlabelled group. */
 	'work_order.moved': { fromSectionId: string | null; toSectionId: string | null };
+	/** Field names only, as `user.profile_updated` keeps them; a change of time is `.rescheduled`. */
+	'work_order.edited': { fields: WorkOrderField[] };
+	'work_order.member_invited': { userId: string; memberName: string };
+	/** An engagement, on its work order's log. `from` is null when the contractor was first asked. */
+	'contractor_job.status_changed': {
+		engagementId: string;
+		contractorName: string;
+		from: ContractorJobStatus | null;
+		to: ContractorJobStatus;
+		scheduledFor?: string | null;
+	};
+	'contractor_job.invoice_recorded': {
+		engagementId: string;
+		contractorName: string;
+		costCents: number | null;
+		invoiceRef: string | null;
+	};
+	'project.edited': { fields: ProjectField[] };
+	/** `suggestionMoved` when the suggestion it answers moved with it. */
+	'project.status_changed': { from: string; to: string; suggestionMoved: boolean };
+	'project.duty_list_applied': { dutyListId: string; dutyListName: string; tasks: number };
+	'project.section_created': { sectionId: string; name: string };
+	'project.section_renamed': { sectionId: string; from: string; to: string };
+	/** Its tasks moved to the unlabelled group; `tasks` counts them. */
+	'project.section_deleted': { sectionId: string; name: string; tasks: number };
 }
+
+/** Mirrors `contractorJobStatuses` in `$lib/config`, which the schema cannot import by alias. */
+type ContractorJobStatus = 'asked' | 'declined' | 'booked' | 'completed' | 'cancelled' | 'no_show';
+
+export type WorkOrderField = 'role' | 'title' | 'capacity' | 'notes' | 'event' | 'equipment';
+export type ProjectField = 'name' | 'description' | 'committee' | 'suggestion' | 'budget' | 'dates';
 
 /** How a work order is answered, derived from its rows (work-order-service `workOrderModes`). */
 export type WorkOrderAssignmentMode = 'contractor' | 'open' | 'members' | 'unassigned';

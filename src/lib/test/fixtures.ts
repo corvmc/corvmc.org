@@ -80,5 +80,6 @@ const sample: Record<EntityType, { title: string; subtitle?: string; [k: string]
 	recurring: { title: 'Every Tuesday, 6:00–8:00 PM', subtitle: 'Until Jun 30' },
 	help: { title: 'How to book the practice space', subtitle: 'Getting started', slug: 'booking' },
 	classified: { title: 'Drummer wanted for a surf trio', subtitle: 'Wanted · Musicians' },
-	incident: { title: 'Cable run across the side-stage steps', subtitle: 'Safety hazard' }
+	incident: { title: 'Cable run across the side-stage steps', subtitle: 'Safety hazard' },
+	project: { title: 'Rehearsal room soundproofing', subtitle: 'Facilities committee' }
 };

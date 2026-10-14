@@ -3,6 +3,8 @@
 	import { resolve } from '$app/paths';
 	import WorkOrderView from '$lib/components/volunteer/WorkOrderView.svelte';
 	import { getProjectTaskPage } from '$lib/remote/tasks.remote';
+	import { getProjectActivity } from '$lib/remote/projects.remote';
+	import ActivityCard from '$lib/components/project/ActivityCard.svelte';
 
 	/** A project's task, as the shift page shows a work order, under its project. */
 	const view = $derived(
@@ -14,5 +16,9 @@
 <WorkOrderView {view} subtitle="Task" backHref="{projectHref}?task={view.shift.id}">
 	{#snippet context()}
 		<a href={projectHref} class="link link-primary">{view.project.name}</a>
+	{/snippet}
+	{#snippet activity()}
+		{@const ids = { projectId: view.project.id, workOrderId: view.shift.id }}
+		<ActivityCard query={(limit) => getProjectActivity(limit ? { ...ids, limit } : ids)} />
 	{/snippet}
 </WorkOrderView>
