@@ -437,6 +437,7 @@ export async function listJobs(
 		status?: ContractorJobStatus;
 		contractorId?: string;
 		assetId?: string;
+		workOrderId?: string;
 		view?: ContractorJobView;
 		now?: Date;
 	} = {}
@@ -447,7 +448,8 @@ export async function listJobs(
 				opts.view ? engagementViewWhere(opts.view, opts.now ?? new Date()) : undefined,
 				opts.status ? eq(contractorJob.status, opts.status) : undefined,
 				opts.contractorId ? eq(contractorJob.contractorId, opts.contractorId) : undefined,
-				opts.assetId ? eq(workOrder.assetId, opts.assetId) : undefined
+				opts.assetId ? eq(workOrder.assetId, opts.assetId) : undefined,
+				opts.workOrderId ? eq(contractorJob.workOrderId, opts.workOrderId) : undefined
 			)
 		)
 		// Late is read soonest-promised first: the one most overdue is the first call.

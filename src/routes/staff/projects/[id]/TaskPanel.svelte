@@ -53,7 +53,7 @@
 		<h2 id="task-panel-title" class="text-lg font-semibold">{task.title}</h2>
 		<p class="text-muted">
 			{section?.name ?? 'No section'} ·
-			<a class="link" href={resolve(`/staff/volunteer/shifts/${task.id}`)}>Details</a>
+			<a class="link" href={resolve(`/staff/projects/${projectId}/tasks/${task.id}`)}>Details</a>
 		</p>
 	</div>
 	<Button variant="ghost" size="sm" shape="square" aria-label="Close the task" onclick={onclose}>

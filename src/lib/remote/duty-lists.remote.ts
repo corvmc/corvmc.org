@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
+import { can, requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { dutyListAnchors, dutyListSubjects, workDoneConditions } from '$lib/config';
 import { listCommittees } from '$lib/server/project/project-service';
@@ -20,6 +20,8 @@ import {
 	updateDutyListItem as updateItemService
 } from '$lib/server/volunteer/duty-list-service';
 import { getStaffShiftPage, getVolunteerWorklist } from './volunteer.remote';
+import { getProjectTaskPage } from './tasks.remote';
+import { workOrderProjectId } from '$lib/server/volunteer/work-order-service';
 
 /**
  * Staff-only throughout. Duty lists are a coordinator's tool — members meet them
@@ -320,7 +322,12 @@ export const setWorkTaskDone = form(
 		const staff = await requireCapability('volunteer.manageShifts');
 		try {
 			await setTaskService(data.id, data.done, staff.id);
-			await getStaffShiftPage(data.shiftId).refresh();
+			const projectId = await workOrderProjectId(data.shiftId);
+			// Whichever page is canonical for it; the task page's guard is the project's.
+			if (!projectId) await getStaffShiftPage(data.shiftId).refresh();
+			else if (await can('project.read')) {
+				await getProjectTaskPage({ projectId, workOrderId: data.shiftId }).refresh();
+			}
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { engagementHref } from '$lib/utils/work-order-href';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -188,7 +189,7 @@
 			{#each data.jobs as row (row.job.id)}
 				<tr class="hover">
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`/staff/contractors/jobs/${row.job.id}`)}>
+						<a class="link font-medium" href={engagementHref(row.job)}>
 							{row.job.title}
 						</a>
 						{#if row.itemName}

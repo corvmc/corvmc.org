@@ -132,11 +132,15 @@ export interface AuditDetailsByAction {
 	/** A CMC listing published over its readiness warnings (#1787). */
 	'event.published_over_warnings': { warnings: string[]; reason: string };
 	'work_order.created': { projectId: string | null; title: string };
-	/** Who answers it changed. `cancelledSignups` counts people taken off by the switch. */
+	/**
+	 * Who answers it changed. `cancelledSignups` counts people taken off by the
+	 * switch; `calledOff` names a contractor whose engagement it cancelled.
+	 */
 	'work_order.assigned': {
 		from: WorkOrderAssignmentMode;
 		to: WorkOrderAssignmentMode;
 		cancelledSignups: number;
+		calledOff?: string;
 	};
 	'work_order.member_assigned': { userId: string; memberName: string };
 	/** Staff put somebody on it without a volunteer profile or a clearance its role needs. */

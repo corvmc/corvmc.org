@@ -468,10 +468,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/contractors/jobs/[id]",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/credits",
 		"panel": "staff"
 	},
@@ -689,6 +685,10 @@
 	},
 	{
 		"route": "/staff/projects/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/projects/[id]/tasks/[taskId]",
 		"panel": "staff"
 	},
 	{

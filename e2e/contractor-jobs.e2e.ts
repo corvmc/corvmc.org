@@ -94,8 +94,10 @@ test.describe('contractor jobs', () => {
 		// untouched until it is actually scheduled.
 		expect((await state()).status).toBe('in_service');
 
-		// Book it: this is what takes the unit out of service.
+		// Book it: this is what takes the unit out of service. The title opens the
+		// engagement's card on its work order's page, which carries its actions.
 		await jobRow.getByRole('link', { name: title }).click();
+		await expect(page).toHaveURL(/\/staff\/volunteer\/shifts\/[^/#]+#engagement-/);
 		await page.getByRole('button', { name: 'Book', exact: true }).click();
 		await modalSubmit(page, /^Book$/).click();
 

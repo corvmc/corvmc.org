@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { command, form } from './_remote';
 import { can, requireUser } from '$lib/server/authorization';
@@ -36,6 +37,7 @@ import {
 } from '$lib/server/project/project-task-service';
 import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
 import { listContractors } from '$lib/server/contractor/contractor-service';
+import { loadWorkOrderView } from '$lib/server/volunteer/work-order-view';
 
 /**
  * A project's task list: its work orders as a checklist, with sections.
@@ -86,6 +88,28 @@ export const getProjectTasks = query(projectId, async (id) => {
 		mapDomainError(err);
 	}
 });
+
+/**
+ * A task's own page: the work order view under its project. Both ids come from
+ * the client, so it 404s unless the work order is on that project; access is
+ * the project's, as `getProjectTasks` reads it.
+ */
+export const getProjectTaskPage = query(
+	z.object({ projectId, workOrderId }),
+	async ({ projectId, workOrderId }) => {
+		requireUser();
+		try {
+			const project = await getProjectById(projectId);
+			if (!(await can('project.read'))) await requireProjectCommittee(projectId, 'project.manage');
+			await requireTaskInProject(projectId, workOrderId);
+			const view = await loadWorkOrderView(workOrderId);
+			if (!view) throw error(404, 'Task not found');
+			return { project: { id: project.id, name: project.name }, ...view };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
 
 /** What the assignment picker offers for one task: people, roles and contractors. */
 export const getTaskAssignees = query(
@@ -214,21 +238,26 @@ export const deleteSectionForm = form(z.object({ projectId, sectionId }), async 
 // Assignment
 // ---------------------------------------------------------------------------
 
-/** Members mode: name people. Raises the places if they outnumber them. */
+/**
+ * Members mode: name people. Raises the places if they outnumber them. From a
+ * contractor the first submit warns; resubmitting with `confirm` cancels them.
+ */
 export const assignMembersForm = form(
 	z.object({
 		projectId,
 		workOrderId,
 		userIds: z.array(z.string().min(1)).max(50).default([]),
-		volunteerRoleId: optionalId
+		volunteerRoleId: optionalId,
+		confirm: z.boolean().optional()
 	}),
 	async (data) => {
 		await guardTask(data.projectId, data.workOrderId);
 		const result = await assignMembers(data.projectId, data.workOrderId, {
 			userIds: data.userIds,
-			volunteerRoleId: data.volunteerRoleId || null
+			volunteerRoleId: data.volunteerRoleId || null,
+			confirm: data.confirm === true
 		});
-		await refresh(data.projectId);
+		if (result.status === 'done') await refresh(data.projectId);
 		return result;
 	}
 );
@@ -243,23 +272,25 @@ export const unassignMemberForm = form(
 	}
 );
 
-/** Open mode: post it to the claim board with a role and a number of places. */
+/** Open mode: post it to the claim board with a role and a number of places. Warns as Members does. */
 export const openTaskForm = form(
 	z.object({
 		projectId,
 		workOrderId,
 		volunteerRoleId: optionalId,
-		capacity: z.number().int().min(1).optional()
+		capacity: z.number().int().min(1).optional(),
+		confirm: z.boolean().optional()
 	}),
 	async (data) => {
 		const { user } = await guardTask(data.projectId, data.workOrderId);
-		const mode = await openToVolunteers(data.projectId, data.workOrderId, {
+		const result = await openToVolunteers(data.projectId, data.workOrderId, {
 			volunteerRoleId: data.volunteerRoleId || null,
 			capacity: data.capacity,
-			postedByUserId: user.id
+			postedByUserId: user.id,
+			confirm: data.confirm === true
 		});
-		await refresh(data.projectId);
-		return { mode };
+		if (result.status === 'done') await refresh(data.projectId);
+		return result;
 	}
 );
 
@@ -289,8 +320,8 @@ export const engageContractorForm = form(
 );
 
 /**
- * Nobody answers it. With people on it the first submit only reports how
- * many; resubmitting with `confirm` takes them off and tells them.
+ * Nobody answers it. With people or a contractor on it the first submit only
+ * says so; resubmitting with `confirm` takes them off or cancels the engagement.
  */
 export const unassignTaskForm = form(
 	z.object({ projectId, workOrderId, confirm: z.boolean().optional() }),

@@ -117,9 +117,10 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 		case 'work_order.assigned': {
 			const d = entry.details;
 			const head = `Changed who answers it from ${MODE_LABELS[d.from]} to ${MODE_LABELS[d.to]}`;
+			const off = d.calledOff ? `${head}, calling off ${d.calledOff}` : head;
 			return d.cancelledSignups > 0
-				? `${head}, taking ${plural(d.cancelledSignups, 'person', 'people')} off it`
-				: head;
+				? `${off}, taking ${plural(d.cancelledSignups, 'person', 'people')} off it`
+				: off;
 		}
 		case 'work_order.member_assigned':
 			return `Assigned ${entry.details.memberName}`;

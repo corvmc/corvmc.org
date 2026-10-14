@@ -10,6 +10,8 @@ import {
 } from '$lib/server/capability/capability-grant-service';
 import { toEventRef } from '$lib/server/entity/refs';
 import { getStaffLayout } from './layout.remote';
+import { getProjectTaskPage } from './tasks.remote';
+import { loadWorkOrderView } from '$lib/server/volunteer/work-order-view';
 import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
 import { listInterestsForUser } from '$lib/server/volunteer/volunteer-interest-service';
 import {
@@ -92,10 +94,10 @@ import {
 	updateShift as updateShiftService,
 	cancelShift as cancelShiftService,
 	listShifts,
-	getShiftCancelledByName,
 	countUnfilledByRole,
 	listOpenShiftsForMember,
 	getShiftDetail,
+	workOrderProjectId,
 	createWorkOrder as createWorkOrderService,
 	scheduleWorkOrder as scheduleWorkOrderService,
 	resolveWorkOrder as resolveWorkOrderService,
@@ -115,7 +117,6 @@ import {
 	acceptInvitation as acceptInvitationService,
 	declineInvitation as declineInvitationService,
 	listInvitationsForUser,
-	listInvitationsForShift,
 	availabilityConflictsWithDay,
 	listClaimants,
 	listOutstandingClaims,
@@ -128,7 +129,6 @@ import {
 import {
 	submitFeedback as submitFeedbackService,
 	getFeedbackContext,
-	listFeedbackForShift,
 	summarizeFeedbackByRole
 } from '$lib/server/volunteer/volunteer-feedback-service';
 import {
@@ -874,7 +874,9 @@ export const withdrawVolunteerHours = form(z.object({ id: z.string().min(1) }), 
 export const approveVolunteerHours = form(
 	z.object({
 		id: z.string().min(1),
-		notes: z.string().max(VOLUNTEER_REVIEW_NOTES_MAX).optional()
+		notes: z.string().max(VOLUNTEER_REVIEW_NOTES_MAX).optional(),
+		/** The work order page it was approved from, to put back in sync. Not read by the service. */
+		shiftId: z.string().min(1).optional()
 	}),
 	async (data) => {
 		const staff = await requireCapability('volunteer.reviewHours');
@@ -885,7 +887,10 @@ export const approveVolunteerHours = form(
 			mapDomainError(err);
 		}
 
-		await refreshStaffQueue();
+		await Promise.all([
+			refreshStaffQueue(),
+			...(data.shiftId ? [refreshWorkOrderPage(data.shiftId)] : [])
+		]);
 		return { success: true };
 	}
 );
@@ -1478,8 +1483,17 @@ async function refreshShiftViews(shiftId?: string) {
 		getVolunteerWorklist().refresh(),
 		getStaffLayout().refresh(),
 		getMemberVolunteerPage().refresh(),
-		...(shiftId ? [getStaffShiftPage(shiftId).refresh()] : [])
+		...(shiftId ? [refreshWorkOrderPage(shiftId)] : [])
 	]);
+}
+
+/** Whichever page is canonical for the work order: its project's task page, or the shift page. */
+async function refreshWorkOrderPage(id: string) {
+	const projectId = await workOrderProjectId(id);
+	if (!projectId) return getStaffShiftPage(id).refresh();
+	// The task page's guard is the project's; a caller without it is not looking at it.
+	if (await can('project.read'))
+		return getProjectTaskPage({ projectId, workOrderId: id }).refresh();
 }
 
 const shiftFilters = z.object({
@@ -1507,19 +1521,6 @@ export const getShifts = query(shiftFilters, async (f) => {
 		to: f.to ? new Date(f.to) : undefined,
 		includeCancelled: f.includeCancelled
 	});
-});
-
-export const getShift = query(z.string(), async (id) => {
-	await requireCapability('volunteer.read');
-	const shift = await getShiftDetail(id);
-	if (!shift) throw error(404, 'Shift not found');
-	const [claimants, cancelledByName] = await Promise.all([
-		listClaimants(id),
-		// Only asked when there is something to ask about. A live shift has no
-		// canceller, and the detail page's banner is the only reader.
-		shift.cancelledAt ? getShiftCancelledByName(id) : Promise.resolve(null)
-	]);
-	return { shift: { ...shift, cancelledByName }, claimants };
 });
 
 /**
@@ -1615,7 +1616,7 @@ export const updateShift = form(
 			mapDomainError(err);
 		}
 
-		void getStaffShiftPage(data.id).refresh();
+		await refreshWorkOrderPage(data.id);
 		return { success: true };
 	}
 );
@@ -2071,12 +2072,6 @@ export const submitShiftFeedback = form(
 	}
 );
 
-/** Staff: responses on one shift's detail page. */
-export const getShiftFeedback = query(z.string(), async (shiftId) => {
-	await requireCapability('volunteer.read');
-	return listFeedbackForShift(shiftId);
-});
-
 /** Staff: the per-role rollup — the version that changes how shifts are briefed. */
 export const getFeedbackByRole = query(async () => {
 	await requireCapability('volunteer.read');
@@ -2249,26 +2244,17 @@ export const getStaffVolunteerRolePage = query(z.string(), async (id) => {
 	return { role, requirements, feedback, skillSuggestions, grants };
 });
 
-/** The shift detail page's one load-bearing query. Both halves are keyed by the shift id. */
 /**
- * One shift, its feedback, and its checklist.
- *
- * `work_task` rows are written by `applyDutyList` and were readable by nothing:
- * `listWorkTasks` had no callers and `setWorkTaskDone` had a remote form no page
- * called. A checklist that can be created and never ticked is worse than none,
- * because the duty list promises it.
+ * A work order's page, for one that belongs to no project; a project's work
+ * order is served by `getProjectTaskPage` under that project's guard. Guarded
+ * here, first, and read through services, so no part of the bundle leans on
+ * another query's guard (#1907).
  */
 export const getStaffShiftPage = query(z.string(), async (id) => {
-	const [shift, feedback, tasks, invitations] = await Promise.all([
-		getShift(id),
-		getShiftFeedback(id),
-		listWorkTasks(id),
-		// Asked but not answered, plus the nos. Apart from the claimants, because
-		// neither holds a place — a shift with three invitations and no claims is
-		// still a shift that needs somebody.
-		listInvitationsForShift(id)
-	]);
-	return { shift, feedback, tasks, invitations };
+	await requireCapability('volunteer.read');
+	const view = await loadWorkOrderView(id);
+	if (!view) throw error(404, 'Shift not found');
+	return view;
 });
 
 /**
