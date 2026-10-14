@@ -1,5 +1,3 @@
-import { resolve } from '$app/paths';
-
 export type WorkOrderPath =
 	`/staff/projects/${string}/tasks/${string}` | `/staff/volunteer/shifts/${string}`;
 
@@ -12,9 +10,4 @@ export function workOrderHref(wo: { id: string; projectId: string | null }): Wor
 	return wo.projectId
 		? `/staff/projects/${wo.projectId}/tasks/${wo.id}`
 		: `/staff/volunteer/shifts/${wo.id}`;
-}
-
-/** One engagement's card on its work order's page. */
-export function engagementHref(job: { id: string; workOrderId: string; projectId: string | null }) {
-	return `${resolve(workOrderHref({ id: job.workOrderId, projectId: job.projectId }))}#engagement-${job.id}`;
 }
