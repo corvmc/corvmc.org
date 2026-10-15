@@ -8,6 +8,7 @@
 	import type { Snippet } from 'svelte';
 	import { shiftLabel } from '$lib/utils/shift-label';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import type { Crumb } from '$lib/components/ui/breadcrumbs';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
@@ -45,13 +46,14 @@
 	let {
 		view,
 		subtitle,
-		backHref,
+		parent,
 		context,
 		activity
 	}: {
 		view: View;
 		subtitle: string;
-		backHref: string;
+		/** Crumbs the URL cannot supply: the project above a task. */
+		parent?: Crumb[];
 		/** Leads the line under the header: the project a task belongs to. */
 		context?: Snippet;
 		/** The work order's history, read by each page through its own guard. */
@@ -93,7 +95,7 @@
 		? `${shiftLabel(shift)} · ${formatDateShortYear(shift.startsAt)}`
 		: shiftLabel(shift)}
 	{subtitle}
-	{backHref}
+	{parent}
 />
 
 <PageContent>

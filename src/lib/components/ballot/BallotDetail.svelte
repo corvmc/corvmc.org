@@ -37,8 +37,7 @@
 
 	type Page = Awaited<ReturnType<typeof getBallotPage>>;
 
-	let { data, backHref, panel }: { data: Page; backHref: string; panel: 'member' | 'staff' } =
-		$props();
+	let { data, panel }: { data: Page; panel: 'member' | 'staff' } = $props();
 
 	// Above anything async-gated, as on the staff suggestion page.
 	const startFields = startProjectFromBallotForm.fields;
@@ -82,12 +81,7 @@
 	}
 </script>
 
-<PageHeader
-	title={b.title}
-	subtitle={b.group?.name ?? ballotKindLabels[b.kind]}
-	{backHref}
-	width="3xl"
->
+<PageHeader title={b.title} subtitle={b.group?.name ?? ballotKindLabels[b.kind]} width="3xl">
 	{#if viewer.isManager && b.status === 'draft'}
 		<Action
 			action={updateBallotDraft}

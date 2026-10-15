@@ -137,7 +137,7 @@
 	No hand-rolled sibling links: every page in this section used to build its own row and no
 	two agreed (docs/reports/volunteer-workflow-findings.md#d2). The sidebar carries them.
 -->
-<PageHeader title="Volunteers" backHref="/staff/volunteer">
+<PageHeader title="Volunteers">
 	<LogHoursForMemberAction />
 </PageHeader>
 

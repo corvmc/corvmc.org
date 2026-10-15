@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeNavKey, childHrefsFor, flattenNav, type NavNode } from './active-nav';
+import { activeNavKey, activeNavPath, childHrefsFor, flattenNav, type NavNode } from './active-nav';
 
 /**
  * The rule every panel's sidebar now shares. It replaced `NavItem`'s exact

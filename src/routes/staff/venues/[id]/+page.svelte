@@ -41,7 +41,7 @@
 	);
 </script>
 
-<PageHeader width="3xl" title={venue.name} subtitle="Venue" backHref="/staff/venues">
+<PageHeader width="3xl" title={venue.name} subtitle="Venue">
 	<Action
 		action={editForm}
 		label="Edit"

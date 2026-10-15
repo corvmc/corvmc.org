@@ -200,12 +200,15 @@ test.describe('starting a listing', () => {
 
 		// The whole attempt retries, for the hydration race `ticket-purchase.e2e.ts`
 		// documents: the form is server-rendered, so typing before Svelte attaches
-		// leaves it clean, the back arrow simply navigates, and the assertion waits
+		// leaves it clean, the breadcrumb simply navigates, and the assertion waits
 		// out its budget on a dialog nothing opened. Each attempt starts over.
 		await expect(async () => {
 			await page.goto('/member/events/submit');
 			await page.getByLabel('Title').fill('Paper Wolves at a house show');
-			await page.getByRole('link', { name: '←' }).click();
+			await page
+				.getByRole('navigation', { name: 'Breadcrumb' })
+				.getByRole('link', { name: 'Events' })
+				.click();
 			await expect(page.getByRole('heading', { name: 'Unsaved changes' })).toBeVisible({
 				timeout: 2000
 			});

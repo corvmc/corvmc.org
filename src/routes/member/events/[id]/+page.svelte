@@ -116,7 +116,7 @@
 	}
 </script>
 
-<PageHeader title={evt.title} backHref={resolve('/member/events')}>
+<PageHeader title={evt.title}>
 	<div class="flex items-center gap-1">
 		<details class="dropdown dropdown-end">
 			<summary class="btn gap-1 btn-ghost btn-sm">

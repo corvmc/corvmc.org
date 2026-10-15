@@ -97,7 +97,6 @@
 <PageHeader
 	title={project.name}
 	subtitle={committeeNames || 'No committee owns this yet'}
-	backHref="/staff/projects"
 	sticky={false}
 >
 	{#if dutyListOptions.length > 0}

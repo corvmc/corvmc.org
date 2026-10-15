@@ -57,11 +57,7 @@
 	}
 </script>
 
-<PageHeader
-	title="Vendors: {data.event.title}"
-	subtitle={when}
-	backHref={resolve(`/member/groups/${slug}?tab=projects`)}
->
+<PageHeader title="Vendors: {data.event.title}" subtitle={when}>
 	<Button
 		href={resolve(`/member/groups/${slug}/markets/${eventId}/check-in`)}
 		variant="ghost"

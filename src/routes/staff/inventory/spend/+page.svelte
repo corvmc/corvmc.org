@@ -50,7 +50,7 @@
 	}
 </script>
 
-<PageHeader title="Spend" subtitle="Inventory" backHref="/staff/inventory" />
+<PageHeader title="Spend" subtitle="Inventory" />
 
 <PageContent>
 	<div class="mb-4 flex flex-wrap items-end gap-3">

@@ -51,7 +51,7 @@
 
 <Form remote={editItem} guard successToast="Item updated">
 	<input {...fields.id.as('hidden', id)} />
-	<PageHeader subtitle="Inventory" title={item.name} backHref="/staff/inventory">
+	<PageHeader subtitle="Inventory" title={item.name}>
 		{#if isDeactivated}
 			<Badge variant="error" size="md">Deactivated</Badge>
 		{/if}

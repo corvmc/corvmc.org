@@ -15,12 +15,7 @@
 	const fields = applyToTeach.fields;
 </script>
 
-<PageHeader
-	width="3xl"
-	subtitle="Teaching"
-	title="Apply to teach"
-	backHref={resolve('/member/profile')}
-/>
+<PageHeader width="3xl" subtitle="Teaching" title="Apply to teach" />
 <PageContent width="3xl">
 	<InfoCard title="Your application">
 		<p class="mb-4 text-subtle">

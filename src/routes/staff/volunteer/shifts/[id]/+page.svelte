@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import WorkOrderView from '$lib/components/volunteer/WorkOrderView.svelte';
 	import { getStaffShiftPage, getWorkOrderActivity } from '$lib/remote/volunteer.remote';
 	import ActivityCard from '$lib/components/project/ActivityCard.svelte';
@@ -8,7 +9,12 @@
 	const view = $derived(await getStaffShiftPage(page.params.id!));
 </script>
 
-<WorkOrderView {view} subtitle="Shift" backHref="/staff/volunteer/schedule">
+<!-- Under Volunteering by URL, but reached from the schedule, which the URL does not say. -->
+<WorkOrderView
+	{view}
+	subtitle="Shift"
+	parent={[{ label: 'Schedule', href: resolve('/staff/volunteer/schedule') }]}
+>
 	{#snippet activity()}
 		{@const ids = { workOrderId: view.shift.id }}
 		<ActivityCard query={(limit) => getWorkOrderActivity(limit ? { ...ids, limit } : ids)} />

@@ -50,7 +50,7 @@
 	});
 </script>
 
-<PageHeader width="3xl" title="Locations" subtitle="Inventory" backHref="/staff/inventory" />
+<PageHeader width="3xl" title="Locations" subtitle="Inventory" />
 
 <PageContent width="3xl">
 	{#if data.locations.length === 0}

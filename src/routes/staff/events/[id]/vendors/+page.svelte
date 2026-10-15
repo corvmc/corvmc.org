@@ -107,7 +107,11 @@
 	/>
 {/snippet}
 
-<PageHeader title="Vendors: {data.event.title}" backHref="/staff/events/{data.event.id}">
+<PageHeader
+	title="Vendors: {data.event.title}"
+	crumb="Vendors"
+	parent={{ label: data.event.title, href: resolve('/staff/events/[id]', { id: data.event.id }) }}
+>
 	{#if data.market}
 		<Button
 			href={resolve(`/staff/events/${data.event.id}/vendors/check-in`)}

@@ -228,10 +228,10 @@ describe('route coverage', () => {
 		'/staff/volunteer/roles',
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
-		'/staff/inventory/locations', // reached from Inventory, beside Categories; `backHref` points there
+		'/staff/inventory/locations', // reached from Inventory, beside Categories; its breadcrumb runs through it
 		'/staff/inventory/intake', // a session started from Inventory's header, not a list (#1838)
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
-		'/staff/grants/funders', // reached from Grants' header; `backHref` points there
+		'/staff/grants/funders', // reached from Grants' header; its breadcrumb runs through it
 		// Reached from Bands, which links to it in its header. Not its own row on
 		// purpose: an external act is the same staff job as a band — who is
 		// playing here — and one of them can turn into the other, so splitting

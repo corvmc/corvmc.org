@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -34,7 +35,8 @@
 <PageHeader
 	width="3xl"
 	title="Check-in: {data.event.title}"
-	backHref="/staff/events/{data.event.id}"
+	crumb="Check-in"
+	parent={{ label: data.event.title, href: resolve('/staff/events/[id]', { id: data.event.id }) }}
 />
 <PageContent width="3xl">
 	<!-- Stats -->

@@ -126,10 +126,10 @@
 <!--
 	No hand-rolled sibling links. Every page in this section used to build its own row and no
 	two agreed (docs/reports/volunteer-workflow-findings.md#d2); the sidebar carries all six
-	as children of Volunteering, and the back link goes to the dashboard that summarises this
+	as children of Volunteering, and the breadcrumb leads to the dashboard that summarises this
 	queue.
 -->
-<PageHeader title="Hours to review" subtitle="Volunteering" backHref="/staff/volunteer">
+<PageHeader title="Hours to review" subtitle="Volunteering">
 	<LogHoursForMemberAction />
 </PageHeader>
 

@@ -56,7 +56,7 @@ Props:
 #### Constrained detail page
 
 ```svelte
-<PageHeader title={item.name} subtitle="Inventory" backHref="/staff/inventory" />
+<PageHeader title={item.name} />
 <PageContent width="3xl">
 	<InfoCard title="Details">...</InfoCard>
 </PageContent>
@@ -1328,12 +1328,32 @@ They are not interchangeable: neither can do the other's job.
 
 ## PageHeader
 
-Page title with optional back button, subtitle, and right-side action slot.
+Page title with breadcrumbs, optional subtitle, and right-side action slot.
 
 ```svelte
-<PageHeader title="Edit User" subtitle="Staff" backHref="/staff/users">
+<PageHeader title="Edit User">
 	<SubmitButton shortcut="mod+s" />
 </PageHeader>
+```
+
+**Breadcrumbs are derived, not written.** Each panel layout (`staff`, `member`,
+`band/[slug]`) passes `navTrail()` from `$lib/components/layout/nav-trail.ts` into
+context, built from its own nav tree, and `PageHeader` appends the page's title as the
+last crumb (`crumb` overrides it). `/staff/users/abc` reads "People / Users / Jordan
+Martinez" without the page naming any of it. There is no back button and no `backHref`.
+
+Only when the URL cannot place a page does it name what sits between, with `parent`:
+a production under its event, a shift under the schedule. A parent the nav already
+shows is dropped, so naming one is safe. Outside a panel there is no nav trail, so a
+public page that wants crumbs passes `parent` alone. A trail with no link renders
+nothing. At phone width the trail collapses to "… / Parent / Leaf".
+
+```svelte
+<PageHeader
+	title={evt.title}
+	crumb="Production"
+	parent={{ label: evt.title, href: resolve('/staff/events/[id]', { id }) }}
+/>
 ```
 
 ## Public site sections

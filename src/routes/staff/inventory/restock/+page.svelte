@@ -59,7 +59,7 @@
 	);
 </script>
 
-<PageHeader title="Restock" subtitle="Inventory" backHref="/staff/inventory">
+<PageHeader title="Restock" subtitle="Inventory">
 	<Button href="/staff/inventory/orders" variant="ghost" size="sm">Orders</Button>
 </PageHeader>
 
