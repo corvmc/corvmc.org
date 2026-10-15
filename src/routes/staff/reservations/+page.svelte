@@ -109,9 +109,8 @@
 		return label;
 	}
 
-	const activeFilterCount = $derived(
-		(searchDebounced ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (bookerType ? 1 : 0)
-	);
+	const menuFilterCount = $derived((dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (bookerType ? 1 : 0));
+	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + menuFilterCount);
 
 	function clearFilters() {
 		searchText = '';
@@ -169,7 +168,7 @@
 		/>
 	{/await}
 
-	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+	<FilterBar activeCount={activeFilterCount} menuCount={menuFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
@@ -180,40 +179,48 @@
 				}}
 			/>
 		{/snippet}
-		<input
-			type="date"
-			aria-label="From date"
-			class="input input-sm"
-			bind:value={dateFrom}
-			onchange={() => {
-				page = 1;
-			}}
-		/>
-		<input
-			type="date"
-			aria-label="To date"
-			class="input input-sm"
-			bind:value={dateTo}
-			onchange={() => {
-				page = 1;
-			}}
-		/>
-		<Select
-			size="sm"
-			aria-label="Booked by"
-			value={bookerType}
-			onchange={(e: Event) => {
-				bookerType = (e.currentTarget as HTMLSelectElement).value as typeof bookerType;
-				page = 1;
-			}}
-		>
-			<option value="">Anyone</option>
-			<option value="user">Members</option>
-			<!-- A programme's session books as its group too, so this is no longer
-			     bands alone; a production's hold is only ever a show. -->
-			<option value="group">Bands &amp; programs</option>
-			<option value="production">Shows</option>
-		</Select>
+		{#snippet menu()}
+			<label class="flex flex-col gap-1">
+				<span class="text-muted text-xs">From date</span>
+				<input
+					type="date"
+					class="input input-sm"
+					bind:value={dateFrom}
+					onchange={() => {
+						page = 1;
+					}}
+				/>
+			</label>
+			<label class="flex flex-col gap-1">
+				<span class="text-muted text-xs">To date</span>
+				<input
+					type="date"
+					class="input input-sm"
+					bind:value={dateTo}
+					onchange={() => {
+						page = 1;
+					}}
+				/>
+			</label>
+			<label class="flex flex-col gap-1">
+				<span class="text-muted text-xs">Booked by</span>
+				<Select
+					size="sm"
+					value={bookerType}
+					onchange={(e: Event) => {
+						bookerType = (e.currentTarget as HTMLSelectElement).value as typeof bookerType;
+						page = 1;
+					}}
+				>
+					<option value="">Anyone</option>
+					<option value="user">Members</option>
+					<!-- A programme's session books as its group too, so this is no longer
+					     bands alone; a production's hold is only ever a show. -->
+					<option value="group">Bands &amp; programs</option>
+					<option value="production">Shows</option>
+				</Select>
+			</label>
+		{/snippet}
 	</FilterBar>
 
 	<DataList {result} empty="No reservations found" onpage={(p) => (page = p)}>

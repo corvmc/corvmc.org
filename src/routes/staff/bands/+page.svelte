@@ -33,9 +33,8 @@
 
 	let result = $derived(getStaffBands(filters));
 
-	const activeFilterCount = $derived(
-		(searchDebounced ? 1 : 0) + (status === 'active' ? 0 : 1) + (tier ? 1 : 0)
-	);
+	const menuFilterCount = $derived((status === 'active' ? 0 : 1) + (tier ? 1 : 0));
+	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + menuFilterCount);
 
 	function clearFilters() {
 		searchText = '';
@@ -54,7 +53,7 @@
 	<CreateBandAction />
 </PageHeader>
 <PageContent>
-	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+	<FilterBar activeCount={activeFilterCount} menuCount={menuFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
@@ -65,32 +64,38 @@
 				}}
 			/>
 		{/snippet}
-		<Select
-			size="sm"
-			aria-label="Status"
-			value={status}
-			onchange={(e: Event) => {
-				status = (e.currentTarget as HTMLSelectElement).value as typeof status;
-				page = 1;
-			}}
-		>
-			<option value="active">Active</option>
-			<option value="deactivated">Deactivated</option>
-			<option value="all">All statuses</option>
-		</Select>
-		<Select
-			size="sm"
-			aria-label="Tier"
-			value={tier}
-			onchange={(e: Event) => {
-				tier = (e.currentTarget as HTMLSelectElement).value as typeof tier;
-				page = 1;
-			}}
-		>
-			<option value="">All tiers</option>
-			<option value="free">Free</option>
-			<option value="premium">Premium</option>
-		</Select>
+		{#snippet menu()}
+			<label class="flex flex-col gap-1">
+				<span class="text-muted text-xs">Status</span>
+				<Select
+					size="sm"
+					value={status}
+					onchange={(e: Event) => {
+						status = (e.currentTarget as HTMLSelectElement).value as typeof status;
+						page = 1;
+					}}
+				>
+					<option value="active">Active</option>
+					<option value="deactivated">Deactivated</option>
+					<option value="all">All statuses</option>
+				</Select>
+			</label>
+			<label class="flex flex-col gap-1">
+				<span class="text-muted text-xs">Tier</span>
+				<Select
+					size="sm"
+					value={tier}
+					onchange={(e: Event) => {
+						tier = (e.currentTarget as HTMLSelectElement).value as typeof tier;
+						page = 1;
+					}}
+				>
+					<option value="">All tiers</option>
+					<option value="free">Free</option>
+					<option value="premium">Premium</option>
+				</Select>
+			</label>
+		{/snippet}
 	</FilterBar>
 
 	<DataList {result} empty="No bands found" onpage={(p) => (page = p)}>

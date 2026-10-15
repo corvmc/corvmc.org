@@ -6,7 +6,8 @@
 	 * glyphs, EntityIdentity, action clusters, group-header rows).
 	 *
 	 * Column visibility is handled with the `col-support` / `col-extra` utilities
-	 * in layout.css, applied to a column's `<th>` and its `<td>`s alike.
+	 * in layout.css, applied to a column's `<th>` and its `<td>`s alike. At wide
+	 * widths `table-packed` sends the spare width past the last column (#1925).
 	 */
 	import type { Snippet } from 'svelte';
 
@@ -32,7 +33,7 @@
 </script>
 
 <div class="overflow-x-auto">
-	<table class="table {sizeClass[size]} {zebra ? 'table-zebra' : ''} {className}">
+	<table class="table table-packed {sizeClass[size]} {zebra ? 'table-zebra' : ''} {className}">
 		{#if head}
 			<thead>
 				<tr>{@render head()}</tr>

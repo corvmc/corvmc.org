@@ -183,9 +183,13 @@ test.describe('staff event creation — reserve space', () => {
 		// Searching the title is itself part of the change: the list only matched
 		// member and band names, so an event hold was unfindable by its show.
 		await page.getByRole('searchbox').fill(title);
-		// The date bounds keep the row off a later page of the 50-row list.
+		// The date bounds keep the row off a later page of the 50-row list. They
+		// sit in the Filters menu, closed again so it cannot cover the row.
+		await page.getByRole('button', { name: /^Filters/ }).click();
 		await page.getByLabel('From date').fill(eventDate);
 		await page.getByLabel('To date').fill(eventDate);
+		await page.keyboard.press('Escape');
+		await expect(page.getByLabel('From date')).toBeHidden();
 
 		const row = page.locator('tr', { has: page.getByRole('link', { name: title }) });
 		await expect(row.getByRole('link', { name: title })).toHaveAttribute(

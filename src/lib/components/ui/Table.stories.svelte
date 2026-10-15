@@ -2,6 +2,7 @@
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import Table from './Table.svelte';
 	import StatusBadge from './StatusBadge.svelte';
+	import Button from './Button.svelte';
 
 	const { Story } = defineMeta({
 		title: 'Shared/Table',
@@ -15,7 +16,8 @@
 						'their own `<th>`/`<td>`. Column visibility comes from the `col-support` ' +
 						'and `col-extra` utilities, which are container queries against the page ' +
 						'body. The width stories below reproduce the three real content widths: ' +
-						'327px (phone), 720px (tablet), 976px (laptop).'
+						'327px (phone), 720px (tablet), 976px (laptop). From 48rem up the columns ' +
+						'pack to their content and the spare width collects after the last one.'
 				}
 			}
 		}
@@ -105,6 +107,31 @@
 					<tr class="hover">
 						<td class="cell-primary">{row.name}</td>
 						<td class="cell-num">{row.amount}</td>
+					</tr>
+				{/each}
+			</Table>
+		</div>
+	{/snippet}
+</Story>
+
+<!-- A wide page: columns sit together; the group band still spans the row. -->
+<Story name="Wide with group rows and actions (1200px)">
+	{#snippet template()}
+		<div class="@container" style="width: 1200px; max-width: 100%;">
+			<Table zebra={false}>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th>Member</th>
+					<th class="cell-num">Amount</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
+				{/snippet}
+				<tr><td colspan="4" class="cell-group">Saturday</td></tr>
+				{#each rows as row (row.id)}
+					<tr class="hover">
+						<td class="w-px"><StatusBadge status={row.status} /></td>
+						<td class="cell-primary"><div class="truncate font-medium">{row.name}</div></td>
+						<td class="cell-num">{row.amount}</td>
+						<td class="w-px"><Button variant="ghost" size="xs">Edit</Button></td>
 					</tr>
 				{/each}
 			</Table>

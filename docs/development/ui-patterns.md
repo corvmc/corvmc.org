@@ -1103,8 +1103,10 @@ Chrome only: the `overflow-x-auto` wrapper, the daisyUI modifiers, and
 ### FilterBar
 
 Toolbar layout, not filter state — pages keep their own `$state`. Search stays
-visible at every width; everything else collapses behind a "Filters" disclosure
-below the `@lg` container breakpoint.
+visible at every width. Primary filters go in `children` and sit inline; secondary
+ones go in a `menu` snippet, behind a "Filters" popover whose badge is `menuCount`.
+A bar with no `menu` collapses its `children` behind a "Filters" disclosure below
+the `@lg` container breakpoint instead.
 
 ```svelte
 <FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
@@ -1119,6 +1121,12 @@ below the `@lg` container breakpoint.
 		/>
 	{/snippet}
 	<Select size="sm" aria-label="Role" bind:value={roleFilter}>…</Select>
+	{#snippet menu()}
+		<label class="flex flex-col gap-1">
+			<span class="text-muted text-xs">Status</span>
+			<Select size="sm" bind:value={statusFilter}>…</Select>
+		</label>
+	{/snippet}
 </FilterBar>
 ```
 
@@ -1189,6 +1197,12 @@ one cell per row gets it. It also carries a floor, `min-width: min(10rem, 40cqw)
 because the browser sizes every other column to its content first: a nowrap
 sentence in a secondary cell would otherwise take the row and leave the primary
 cell a few characters wide (#1797).
+
+That holds below the `col-extra` tier. From 48rem up, `Table` packs instead
+(`table-packed`, #1925): the primary cell sizes to its content on one line,
+capped at `24rem` and truncated past it, and a trailing pseudo-cell takes the
+spare width — so the slack collects after the last column, not between the
+primary cell and the rest.
 
 **`truncate` or prose outside the primary cell needs `cell-text`.** It caps the
 cell at `24rem`, so its content width is bounded and cannot starve the row. Put

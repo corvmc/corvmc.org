@@ -56,11 +56,9 @@
 
 	let showCategoryModal = $state(false);
 
+	const menuFilterCount = $derived((kindFilter ? 1 : 0) + (includeDeleted ? 1 : 0));
 	const activeFilterCount = $derived(
-		(searchDebounced ? 1 : 0) +
-			(categoryId ? 1 : 0) +
-			(kindFilter ? 1 : 0) +
-			(includeDeleted ? 1 : 0)
+		(searchDebounced ? 1 : 0) + (categoryId ? 1 : 0) + menuFilterCount
 	);
 
 	function clearFilters() {
@@ -83,20 +81,31 @@
 	</div>
 </PageHeader>
 <PageContent>
-	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+	<FilterBar
+		activeCount={activeFilterCount}
+		menuCount={menuFilterCount}
+		onclear={clearFilters}
+		searchWidth="wide"
+	>
 		{#snippet search()}
-			<SearchInput
-				bind:value={searchText}
-				placeholder="Search name, barcode, resource ID..."
-				onsearch={(q) => {
-					searchDebounced = q;
-					page = 1;
-				}}
-			/>
-			<!-- The box already carries a UPC, so scanning it beats reading twelve
-			     digits off a shrink-wrapped packet. Search matches `gtin`, so the
-			     digits go straight in; a tag scan searches on the tag instead. -->
-			<BarcodeScanner onscan={handleScan} label="Scan" />
+			<!-- One control: Scan is the search box's end cap. While the camera is
+			     open the scanner takes its own line, for the preview and Stop. -->
+			<div
+				class="flex flex-wrap [&:not(:has(video))>input]:rounded-e-none [&>.scan-cap:has(video)]:mt-2 [&>.scan-cap:has(video)]:w-full [&>.scan-cap:not(:has(video))_.btn]:-ms-px [&>.scan-cap:not(:has(video))_.btn]:rounded-s-none [&>input]:w-auto [&>input]:min-w-0 [&>input]:flex-1"
+			>
+				<SearchInput
+					bind:value={searchText}
+					placeholder="Search name, barcode, resource ID..."
+					onsearch={(q) => {
+						searchDebounced = q;
+						page = 1;
+					}}
+				/>
+				<!-- The box already carries a UPC, so scanning it beats reading twelve
+				     digits off a shrink-wrapped packet. Search matches `gtin`, so the
+				     digits go straight in; a tag scan searches on the tag instead. -->
+				<BarcodeScanner onscan={handleScan} label="Scan" class="scan-cap" />
+			</div>
 		{/snippet}
 		<Select
 			size="sm"
@@ -110,31 +119,35 @@
 			<option value="">All categories</option>
 			<CategoryOptions />
 		</Select>
-		<Select
-			size="sm"
-			aria-label="Tracking"
-			value={kindFilter}
-			onchange={(e: Event) => {
-				kindFilter = (e.currentTarget as HTMLSelectElement).value;
-				page = 1;
-			}}
-		>
-			<option value="">All items</option>
-			{#each itemKinds as k (k)}
-				<option value={k}>{titleCase(k)}</option>
-			{/each}
-		</Select>
-		<!-- Deactivation is a soft delete, so without this the only way back to a
-		     deactivated item (and its Reactivate button) is a hand-typed URL. -->
-		<label class="label cursor-pointer gap-2 text-sm">
-			<input
-				type="checkbox"
-				class="checkbox checkbox-sm"
-				bind:checked={includeDeleted}
-				onchange={() => (page = 1)}
-			/>
-			Show deactivated
-		</label>
+		{#snippet menu()}
+			<label class="flex flex-col gap-1">
+				<span class="text-muted text-xs">Tracking</span>
+				<Select
+					size="sm"
+					value={kindFilter}
+					onchange={(e: Event) => {
+						kindFilter = (e.currentTarget as HTMLSelectElement).value;
+						page = 1;
+					}}
+				>
+					<option value="">All items</option>
+					{#each itemKinds as k (k)}
+						<option value={k}>{titleCase(k)}</option>
+					{/each}
+				</Select>
+			</label>
+			<!-- Deactivation is a soft delete, so without this the only way back to a
+			     deactivated item (and its Reactivate button) is a hand-typed URL. -->
+			<label class="label cursor-pointer gap-2 text-sm">
+				<input
+					type="checkbox"
+					class="checkbox checkbox-sm"
+					bind:checked={includeDeleted}
+					onchange={() => (page = 1)}
+				/>
+				Show deactivated
+			</label>
+		{/snippet}
 	</FilterBar>
 
 	<DataList {result} empty="No items found" onpage={(p) => (page = p)}>
