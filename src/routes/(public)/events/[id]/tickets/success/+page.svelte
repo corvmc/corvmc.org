@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -42,7 +43,13 @@
 </script>
 
 <div class="mx-auto max-w-lg space-y-6">
-	<PageHeader title="Tickets Confirmed" backHref="/events" />
+	<PageHeader
+		title="Tickets Confirmed"
+		parent={[
+			{ label: 'Events', href: resolve('/events') },
+			{ label: evt.title, href: resolve(`/events/${page.params.id!}`) }
+		]}
+	/>
 
 	<Card>
 		<CardBody class="space-y-4 text-center">

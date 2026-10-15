@@ -34,7 +34,7 @@
 	const cents = (n: number | null) => (n != null ? formatCents(n) : '—');
 </script>
 
-<PageHeader width="3xl" title={grant.funderName} subtitle="Grant" backHref="/staff/grants">
+<PageHeader width="3xl" title={grant.funderName} subtitle="Grant">
 	<Action
 		action={editForm}
 		label="Edit"

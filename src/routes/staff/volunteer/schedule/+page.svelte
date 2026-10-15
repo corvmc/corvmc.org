@@ -128,7 +128,7 @@
 	}
 </script>
 
-<PageHeader title="Schedule" subtitle="Volunteering" backHref="/staff/volunteer">
+<PageHeader title="Schedule" subtitle="Volunteering">
 	<NewWorkOrderAction onsuccess={() => void getSchedulePage(args).refresh()} />
 </PageHeader>
 

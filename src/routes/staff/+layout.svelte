@@ -51,6 +51,8 @@
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
+	import { navTrail } from '$lib/components/layout/nav-trail';
+	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
 	import {
 		activeNavKey,
 		childHrefsFor,
@@ -65,6 +67,16 @@
 	} from './nav-items';
 
 	let { children } = $props();
+
+	// Before the await: `setContext` has to run during synchronous init. The full
+	// tree, not the filtered one — a trail only ever names rows above a page the
+	// viewer already reached.
+	const trailGroups = [{ items: staffNavTop }, ...staffNavSections];
+	setBreadcrumbTrail({
+		get current() {
+			return navTrail(trailGroups, page.url.pathname);
+		}
+	});
 
 	let layout = $derived(await getStaffLayout());
 

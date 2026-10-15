@@ -50,7 +50,7 @@
 	width="3xl"
 	subtitle={asset.item.name}
 	title={asset.assetTag ?? 'Untagged unit'}
-	backHref={resolve(`/staff/inventory/${asset.itemId}`)}
+	parent={{ label: asset.item.name, href: resolve('/staff/inventory/[id]', { id: asset.itemId }) }}
 >
 	<StatusBadge status={asset.status} />
 </PageHeader>

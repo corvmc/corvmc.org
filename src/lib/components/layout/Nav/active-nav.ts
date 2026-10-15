@@ -81,3 +81,21 @@ export function activeNavKey<K extends string>(items: NavNode<K>[], pathname: st
 	}
 	return best;
 }
+
+/**
+ * The active row and the rows above it, outermost first: the same match as
+ * `activeNavKey`, read as a path through the tree rather than a single key.
+ */
+export function activeNavPath<N extends NavNode>(items: N[], pathname: string): N[] {
+	const key = activeNavKey(items, pathname);
+	if (key === null) return [];
+	const find = (nodes: N[]): N[] | null => {
+		for (const node of nodes) {
+			if (node.key === key) return [node];
+			const below = node.children ? find(node.children as N[]) : null;
+			if (below) return [node, ...below];
+		}
+		return null;
+	};
+	return find(items) ?? [];
+}

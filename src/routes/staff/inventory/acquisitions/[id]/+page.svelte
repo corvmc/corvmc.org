@@ -115,7 +115,6 @@
 	width="3xl"
 	subtitle="Acquisition"
 	title={`${acquisitionKindLabels[data.kind]} — ${formatDateShort(data.occurredAt)}`}
-	backHref={resolve('/staff/inventory/acquisitions')}
 >
 	{#if data.awaitingReimbursement}
 		<Badge variant="warning">Awaiting reimbursement</Badge>

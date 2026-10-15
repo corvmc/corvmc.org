@@ -27,9 +27,12 @@
 	import { getMemberLayout } from '$lib/remote/layout.remote';
 	import { setMemberLayoutContext } from './layout-context';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
+	import { navTrail } from '$lib/components/layout/nav-trail';
+	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
 	import {
 		activeMemberNavKey,
 		memberNavFooter,
+		memberNavItems,
 		memberNavMain,
 		type MemberNavItem,
 		type SidebarNavKey
@@ -42,6 +45,23 @@
 	setMemberLayoutContext({
 		get current() {
 			return layout;
+		}
+	});
+
+	// Before the await, like the context above; the getter reads `layout` only
+	// once a page renders. A member's groups are sidebar rows too, so a group's
+	// subpages trail through it.
+	setBreadcrumbTrail({
+		get current() {
+			const groups = layout.userGroups.map((g) => ({
+				key: `group:${g.slug}`,
+				label: g.name,
+				href: resolve('/member/groups/[slug]', { slug: g.slug })
+			}));
+			return navTrail(
+				[{ items: memberNavItems(navInput) }, { title: 'My Groups', items: groups }],
+				page.url.pathname
+			);
 		}
 	});
 

@@ -17,12 +17,7 @@
 	let campaign = $derived(await getCampaignDetail(id));
 </script>
 
-<PageHeader
-	width="3xl"
-	subtitle="Campaign"
-	title={campaign.subject}
-	backHref="/staff/marketing/campaigns"
->
+<PageHeader width="3xl" subtitle="Campaign" title={campaign.subject}>
 	<StatusBadge status={campaign.status} />
 	{#if campaign.status === 'draft'}
 		<Button href="/staff/marketing/campaigns/{id}/edit" variant="default" size="sm">Edit</Button>

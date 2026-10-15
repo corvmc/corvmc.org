@@ -443,7 +443,8 @@
 	width="3xl"
 	title={evt.title}
 	subtitle="Production"
-	backHref={resolve(`/staff/events/${id}`)}
+	crumb="Production"
+	parent={{ label: evt.title, href: resolve('/staff/events/[id]', { id }) }}
 >
 	<div class="flex items-center gap-2">
 		{#if evt.ticketingEnabled}

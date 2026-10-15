@@ -38,7 +38,7 @@
 	width="2xl"
 	title="Check-in"
 	subtitle={data.event.title}
-	backHref={resolve(`/member/volunteer/shifts/${signupId}`)}
+	parent={{ label: 'Shift', href: resolve('/member/volunteer/shifts/[signupId]', { signupId }) }}
 />
 <PageContent width="2xl">
 	<div class="flex gap-4">

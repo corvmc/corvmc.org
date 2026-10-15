@@ -21,12 +21,15 @@
 	import AppShell from '$lib/components/layout/AppShell.svelte';
 	import Nav from '$lib/components/layout/Nav';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
+	import { navTrail } from '$lib/components/layout/nav-trail';
+	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
 	import { page } from '$app/state';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { setBandLayoutContext } from './layout-context';
 	import {
 		activeBandNavKey,
 		bandNavFooter,
+		bandNavItems,
 		bandNavMain,
 		type BandNavKey,
 		type BandNavItem
@@ -40,6 +43,12 @@
 	setBandLayoutContext({
 		get current() {
 			return layout;
+		}
+	});
+
+	setBreadcrumbTrail({
+		get current() {
+			return navTrail([{ items: bandNavItems(navInput) }], page.url.pathname);
 		}
 	});
 

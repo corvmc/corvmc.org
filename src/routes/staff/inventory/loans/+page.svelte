@@ -41,7 +41,7 @@
 	}
 </script>
 
-<PageHeader title="Equipment Loans" backHref="/staff/inventory">
+<PageHeader title="Equipment Loans">
 	<CreateLoanAction />
 </PageHeader>
 <PageContent>

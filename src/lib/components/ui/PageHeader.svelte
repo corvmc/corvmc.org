@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Button, { setDefaultButtonSize } from '$lib/components/ui/Button.svelte';
+	import { setDefaultButtonSize } from '$lib/components/ui/Button.svelte';
+	import Breadcrumbs from './Breadcrumbs.svelte';
+	import { getBreadcrumbTrail, pageCrumbs, type Crumb } from './breadcrumbs';
 	import { pageTitle } from '$lib/config';
 	import { PAGE_WIDTH, type PageWidth } from './page-width';
 
@@ -8,7 +10,8 @@
 		title,
 		subtitle,
 		width = 'full',
-		backHref,
+		crumb,
+		parent,
 		documentTitle,
 		flush = false,
 		sticky = true,
@@ -22,11 +25,21 @@
 		 * left of everything it labels — 232px left of it at `2xl` (#1231).
 		 */
 		width?: PageWidth;
-		backHref?: string;
+		/**
+		 * This page's own crumb, after the trail the panel's nav implies.
+		 * Defaults to `title`; set it when the title would make a poor crumb.
+		 */
+		crumb?: string;
+		/**
+		 * Crumbs between the nav's trail and this page, for a record the URL
+		 * cannot place on its own — a production under its event. One the nav
+		 * already shows is dropped.
+		 */
+		parent?: Crumb | Crumb[];
 		children?: Snippet;
 		subtitle?: string;
 		/**
-		 * Rendered between the back button and the title. For a record whose
+		 * Rendered beside the title. For a record whose
 		 * identity is a picture as much as a name — a member's avatar — so the page
 		 * does not have to restate the name below the header to get one on screen.
 		 */
@@ -51,6 +64,10 @@
 	setDefaultButtonSize('sm');
 
 	const resolvedTitle = $derived(documentTitle === undefined ? title : documentTitle);
+
+	const trail = getBreadcrumbTrail();
+	const parents = $derived(parent === undefined ? [] : Array.isArray(parent) ? parent : [parent]);
+	const crumbs = $derived(pageCrumbs(trail?.current, parents, crumb ?? title));
 </script>
 
 <!--
@@ -78,19 +95,19 @@
 		title and the actions land on the same two edges as the content below.
 	-->
 	<div class="flex flex-wrap items-center justify-between gap-2 {PAGE_WIDTH[width]}">
-		<div class="flex min-w-0 flex-1 items-center gap-3">
-			{#if backHref}
-				<Button href={backHref} variant="ghost" size="lg" shape="square">←</Button>
-			{/if}
-			{#if leading}
-				{@render leading()}
-			{/if}
-			<hgroup class="flex min-w-0 flex-col">
-				<h1 class="truncate text-2xl font-bold">{title}</h1>
-				{#if subtitle}
-					<span class="text-sm font-bold text-primary uppercase">{subtitle}</span>
+		<div class="flex min-w-0 flex-1 flex-col">
+			<Breadcrumbs {crumbs} />
+			<div class="flex min-w-0 items-center gap-3">
+				{#if leading}
+					{@render leading()}
 				{/if}
-			</hgroup>
+				<hgroup class="flex min-w-0 flex-col">
+					<h1 class="truncate text-2xl font-bold">{title}</h1>
+					{#if subtitle}
+						<span class="text-sm font-bold text-primary uppercase">{subtitle}</span>
+					{/if}
+				</hgroup>
+			</div>
 		</div>
 		<!--
 			Actions are grouped rather than rendered as bare flex children: the

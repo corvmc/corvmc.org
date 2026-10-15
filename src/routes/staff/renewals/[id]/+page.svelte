@@ -33,7 +33,7 @@
 	const ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp,.docx';
 </script>
 
-<PageHeader title={r.name} subtitle={renewalKindLabels[r.kind]} backHref="/staff/renewals">
+<PageHeader title={r.name} subtitle={renewalKindLabels[r.kind]}>
 	<Action
 		action={editForm}
 		label="Edit"

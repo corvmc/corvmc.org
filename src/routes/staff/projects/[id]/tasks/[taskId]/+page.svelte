@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import WorkOrderView from '$lib/components/volunteer/WorkOrderView.svelte';
 	import { getProjectTaskPage } from '$lib/remote/tasks.remote';
 	import { getProjectActivity } from '$lib/remote/projects.remote';
@@ -13,7 +14,11 @@
 	const projectHref = $derived(resolve(`/staff/projects/${view.project.id}`));
 </script>
 
-<WorkOrderView {view} subtitle="Task" backHref="{projectHref}?task={view.shift.id}">
+<WorkOrderView
+	{view}
+	subtitle="Task"
+	parent={[{ label: view.project.name, href: withQuery(projectHref, `task=${view.shift.id}`) }]}
+>
 	{#snippet context()}
 		<a href={projectHref} class="link link-primary">{view.project.name}</a>
 	{/snippet}

@@ -107,7 +107,7 @@
 	}
 </script>
 
-<PageHeader width="3xl" title={evt.title} subtitle="Event" backHref="/staff/events">
+<PageHeader width="3xl" title={evt.title} subtitle="Event">
 	<div class="flex flex-wrap items-center gap-2">
 		{#if isProduction}
 			<!-- One entry, not two. "Manage production" and "Add production" sat

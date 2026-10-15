@@ -90,7 +90,6 @@
 <PageHeader
 	title={project.name}
 	subtitle={committeeNames || 'No committee owns this yet'}
-	backHref="/staff/projects"
 	sticky={false}
 >
 	<Button variant="default" href={resolve(`/staff/projects/${project.id}/budget`)}>Budget</Button>

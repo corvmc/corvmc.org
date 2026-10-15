@@ -43,7 +43,7 @@
 	const lapsed = $derived(sponsor.sponsorships.find((s) => s.deadline?.overdue));
 </script>
 
-<PageHeader title={sponsor.name} subtitle="Sponsor" backHref="/staff/sponsors">
+<PageHeader title={sponsor.name} subtitle="Sponsor">
 	<Action
 		action={editForm}
 		label="Edit"

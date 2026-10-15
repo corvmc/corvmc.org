@@ -97,7 +97,7 @@
 
 <section class="px-6 py-10">
 	<div class="mx-auto max-w-4xl">
-		<PageHeader title={evt.title} backHref="/events">
+		<PageHeader title={evt.title} parent={{ label: 'Events', href: resolve('/events') }}>
 			<div class="flex items-center gap-1">
 				<details class="dropdown dropdown-end">
 					<summary class="btn gap-1 btn-ghost btn-sm">

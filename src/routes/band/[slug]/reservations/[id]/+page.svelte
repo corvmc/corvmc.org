@@ -31,7 +31,7 @@
 	const cashDue = $derived(res.cashDueCents ?? 0);
 </script>
 
-<PageHeader width="md" title="Session" backHref="/band/{slug}/reservations" />
+<PageHeader width="md" title="Session" />
 <PageContent width="md">
 	<!--
 		The shape #1061 settled on the member's twin of this page: the ref the

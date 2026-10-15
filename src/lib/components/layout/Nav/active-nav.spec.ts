@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeNavKey, childHrefsFor, flattenNav, type NavNode } from './active-nav';
+import { activeNavKey, activeNavPath, childHrefsFor, flattenNav, type NavNode } from './active-nav';
 
 /**
  * The rule every panel's sidebar now shares. It replaced `NavItem`'s exact
@@ -110,5 +110,18 @@ describe('flattenNav and childHrefsFor', () => {
 
 	it('gives a childless row just its own href', () => {
 		expect(childHrefsFor(ITEMS[2])).toEqual(['/member/reservations']);
+	});
+});
+
+describe('activeNavPath', () => {
+	it('returns the active row under its parent, outermost first', () => {
+		expect(activeNavPath(ITEMS, '/member/events/submit').map((n) => n.key)).toEqual([
+			'events',
+			'submit'
+		]);
+	});
+
+	it('is empty where no row matches', () => {
+		expect(activeNavPath(ITEMS, '/member/groups')).toEqual([]);
 	});
 });
