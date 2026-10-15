@@ -13,6 +13,7 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { resolve } from '$app/paths';
 	import { IconCopy, IconUserOff } from '@tabler/icons-svelte';
 	import { getStaffUsers, getStaffUserTotals, bulkDeactivateUsers } from '$lib/remote/users.remote';
@@ -216,6 +217,7 @@
 					<th>Name</th>
 					<th>Email</th>
 					<th class="col-support">Phone</th>
+					<th class="col-support">Membership</th>
 					<th class="col-support">Joined</th>
 				{/snippet}
 
@@ -264,6 +266,13 @@
 								<a class="hover:underline" href="tel:{row.phone}">{row.phone}</a>
 							{:else}
 								<span class="text-fg-3">—</span>
+							{/if}
+						</td>
+						<td class="col-support whitespace-nowrap">
+							{#if row.sustaining}
+								<Badge size="sm" class="badge-primary">Sustaining</Badge>
+							{:else}
+								<span class="text-fg-3">Free</span>
 							{/if}
 						</td>
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(row.createdAt)}</td>

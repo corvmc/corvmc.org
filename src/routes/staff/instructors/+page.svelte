@@ -16,8 +16,7 @@
 	import GrantInstructorAction from './GrantInstructorAction.svelte';
 	import ReviewApplicationActions from './ReviewApplicationActions.svelte';
 	import EndGrantActions from './EndGrantActions.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 
 	/**
 	 * Who teaches in the practice room.
@@ -80,7 +79,7 @@
 						{#each awaitingReview as row (row.id)}
 							<tr>
 								<td><EntityIdentity ref={row.member} /></td>
-								<td class="cell-primary">
+								<td class="cell-text">
 									{row.headline ?? '—'}
 									{#if row.applicationNote}
 										<!--
@@ -106,14 +105,20 @@
 				(r) => status === 'all' || r.status === status
 			)}
 			<InfoCard title="Instructors">
-				<FilterBar activeCount={status === 'active' ? 0 : 1} onclear={() => (status = 'active')}>
-					<Select size="sm" aria-label="Status" bind:value={status}>
-						{#each Object.entries(rosterLabels) as [value, label] (value)}
-							<option {value}>{label}</option>
-						{/each}
-						<option value="all">All statuses</option>
-					</Select>
-				</FilterBar>
+				{@const all = [...active, ...resolved]}
+				<TabBar
+					class="mb-3"
+					active={status}
+					onchange={(key) => (status = key as RosterStatus)}
+					tabs={[
+						...Object.entries(rosterLabels).map(([key, label]) => ({
+							key,
+							label,
+							badge: all.filter((r) => r.status === key).length
+						})),
+						{ key: 'all', label: 'All', badge: all.length }
+					]}
+				/>
 				{#if roster.length === 0}
 					<EmptyState description={emptyFor[status]} />
 				{:else}

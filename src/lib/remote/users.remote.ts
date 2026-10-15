@@ -14,7 +14,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { listLowStock } from '$lib/server/inventory/stock-service';
-import { getUserTotals, userListWhere } from '$lib/server/user/user-totals-service';
+import { getUserTotals, sustainingUser, userListWhere } from '$lib/server/user/user-totals-service';
 import { listShortStaffedShifts } from '$lib/server/volunteer/work-order-service';
 import { listDevelopmentDeadlinesBetween } from '$lib/server/development/deadline-service';
 import { addIsoDays } from '$lib/utils/deadline';
@@ -192,6 +192,8 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 		.select({
 			member: memberRefColumns(),
 			phone: user.phone,
+			// The same predicate as the Sustaining filter and count.
+			sustaining: sql<number>`${sustainingUser()}`,
 			deletedAt: user.deletedAt,
 			createdAt: user.createdAt
 		})
@@ -218,6 +220,7 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 			id: u.member.id,
 			email: u.member.email,
 			phone: u.phone,
+			sustaining: Boolean(u.sustaining),
 			deletedAt: u.deletedAt,
 			createdAt: u.createdAt,
 			// Deactivation is the row's status, not a badge the page bolts on: it

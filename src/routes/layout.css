@@ -647,6 +647,15 @@ p {
 		& :where(th, td):not(.cell-text) .flex-wrap {
 			flex-wrap: nowrap;
 		}
+		/* A prose column takes the slack instead of the filler, so it widens
+		   as far as the row allows before it wraps. */
+		&:has(td.cell-text) tr::after {
+			display: none;
+		}
+		& td.cell-text {
+			width: 100%;
+			max-width: none;
+		}
 		& .cell-primary {
 			width: auto;
 			max-width: 24rem;
