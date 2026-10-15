@@ -760,6 +760,25 @@ export async function getProjectProgress(projectId: string): Promise<Progress> {
 	return progressOf(await evaluateDone(rows));
 }
 
+/** `getProjectProgress` for many projects in one query, keyed by project id. */
+export async function listProjectProgress(projectIds: string[]): Promise<Map<string, Progress>> {
+	const out = new Map<string, Progress>(projectIds.map((id) => [id, { done: 0, total: 0 }]));
+	if (projectIds.length === 0) return out;
+	const rows = await db
+		.select({ ...doneInputColumns, projectId: workOrder.projectId })
+		.from(workOrder)
+		.where(and(inArray(workOrder.projectId, projectIds), isNull(workOrder.cancelledAt)));
+	const states = await evaluateDone(rows);
+	for (const r of rows) {
+		const p = out.get(r.projectId!);
+		const s = states.get(r.id);
+		if (!p || s === 'cancelled') continue;
+		p.total += 1;
+		if (s === 'done') p.done += 1;
+	}
+	return out;
+}
+
 /** The project's owning committee, which a task with none of its own answers to. */
 async function owningCommittee(projectId: string) {
 	const [row] = await db

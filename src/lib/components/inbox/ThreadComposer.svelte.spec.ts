@@ -1,7 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import ThreadComposer from './ThreadComposer.svelte';
+import ThreadComposer from './ThreadComposer.test.svelte';
 
 /**
  * Minimal stand-in for a SvelteKit RemoteForm instance: `<Form>` only needs

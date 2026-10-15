@@ -513,6 +513,16 @@ describe('progress', () => {
 			duties: { done: 1, total: 1 }
 		});
 	});
+
+	it('counts many projects in one call, an empty project included', async () => {
+		task('ticked', { resolved_at: 1 });
+		task('open');
+		insert('work_order', { id: 'theirs', project_id: OTHER, title: 't', resolved_at: 1 });
+		const byProject = await tasks.listProjectProgress([PROJECT, OTHER, 'proj-empty']);
+		expect(byProject.get(PROJECT)).toEqual({ done: 1, total: 2 });
+		expect(byProject.get(OTHER)).toEqual({ done: 1, total: 1 });
+		expect(byProject.get('proj-empty')).toEqual({ done: 0, total: 0 });
+	});
 });
 
 describe('the rows the list draws', () => {

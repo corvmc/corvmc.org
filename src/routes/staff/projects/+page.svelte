@@ -4,20 +4,13 @@
 	import Table from '$lib/components/ui/Table.svelte';
 	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { Field, MoneyField } from '$lib/components/ui/Form';
 	import { getProjectsPage, createProjectForm } from '$lib/remote/projects.remote';
-	import {
-		projectKinds,
-		projectKindLabels,
-		projectStatuses,
-		projectStatusLabels,
-		type ProjectKind,
-		type ProjectStatus
-	} from '$lib/config';
+	import { isProjectArchived, type ProjectView } from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
 	import { resolve } from '$app/paths';
 
@@ -27,30 +20,35 @@
 	 * Budget and burn sit in the same column rather than two, because the only
 	 * question anyone brings to this table is whether a project is inside its
 	 * budget — and two columns make the reader do the subtraction. Over-budget
-	 * is coloured; under-budget is not, since "fine" needs no emphasis.
+	 * is coloured; under-budget is not, since "fine" needs no emphasis. Progress
+	 * is tasks done over tasks live; a project is active or archived (#1935).
 	 */
-	let statusFilter = $state<ProjectStatus | ''>('');
+	let view = $state<ProjectView>('active');
 	let committeeFilter = $state('');
-	let kindFilter = $state<ProjectKind | ''>('');
 
 	const filters = $derived({
-		status: (statusFilter || undefined) as ProjectStatus | undefined,
-		groupId: committeeFilter || undefined,
-		kind: (kindFilter || undefined) as ProjectKind | undefined
+		view,
+		groupId: committeeFilter || undefined
 	});
 
 	const data = $derived(await getProjectsPage(filters));
 	const { fields } = createProjectForm;
 
 	const committeeOptions = $derived(data.committees.map((c) => ({ value: c.id, label: c.name })));
-	const activeFilterCount = $derived(
-		(statusFilter ? 1 : 0) + (committeeFilter ? 1 : 0) + (kindFilter ? 1 : 0)
-	);
+	const activeFilterCount = $derived((view !== 'active' ? 1 : 0) + (committeeFilter ? 1 : 0));
 
 	function clearFilters() {
-		statusFilter = '';
+		view = 'active';
 		committeeFilter = '';
-		kindFilter = '';
+	}
+
+	/** One line: "May 3 – 17", "May 3 – Jun 2", "May 3 onward". */
+	function dateRange(start: Date | null, end: Date | null): string {
+		if (!start) return '—';
+		if (!end) return `${formatDateShort(start)} onward`;
+		const [sm, sd] = formatDateShort(start).split(' ');
+		const [em, ed] = formatDateShort(end).split(' ');
+		return sm === em ? `${sm} ${sd}–${ed}` : `${sm} ${sd} – ${em} ${ed}`;
 	}
 </script>
 
@@ -87,16 +85,15 @@
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		<Select
 			size="sm"
-			aria-label="Status"
-			value={statusFilter}
+			aria-label="Show"
+			value={view}
 			onchange={(e: Event) => {
-				statusFilter = (e.currentTarget as HTMLSelectElement).value as ProjectStatus | '';
+				view = (e.currentTarget as HTMLSelectElement).value as ProjectView;
 			}}
 		>
-			<option value="">All statuses</option>
-			{#each projectStatuses as s (s)}
-				<option value={s}>{projectStatusLabels[s]}</option>
-			{/each}
+			<option value="active">Active</option>
+			<option value="archived">Archived</option>
+			<option value="all">Active and archived</option>
 		</Select>
 		<Select
 			size="sm"
@@ -111,24 +108,11 @@
 				<option value={c.id}>{c.name}</option>
 			{/each}
 		</Select>
-		<Select
-			size="sm"
-			aria-label="Kind"
-			value={kindFilter}
-			onchange={(e: Event) => {
-				kindFilter = (e.currentTarget as HTMLSelectElement).value as ProjectKind | '';
-			}}
-		>
-			<option value="">All kinds</option>
-			{#each projectKinds as k (k)}
-				<option value={k}>{projectKindLabels[k]}</option>
-			{/each}
-		</Select>
 	</FilterBar>
 
 	{#if data.projects.length === 0}
 		<EmptyState
-			title="No projects"
+			title={view === 'archived' ? 'No archived projects' : 'No projects'}
 			description="Start one when work spans more than a single job — a facility improvement, a festival, or anything with a budget to watch."
 		/>
 	{:else}
@@ -136,7 +120,7 @@
 			{#snippet head()}
 				<th>Project</th>
 				<th>Committees</th>
-				<th>Status</th>
+				<th>Progress</th>
 				<th>Dates</th>
 				<th class="cell-num">Budget</th>
 				<th class="cell-num">Spent</th>
@@ -147,8 +131,8 @@
 						<a class="link font-medium" href={resolve(`/staff/projects/${row.project.id}`)}>
 							{row.project.name}
 						</a>
-						{#if row.project.kind !== 'general'}
-							<div class="text-subtle">{projectKindLabels[row.project.kind]}</div>
+						{#if view === 'all' && isProjectArchived(row.project.status)}
+							<Badge size="sm" variant="ghost">Archived</Badge>
 						{/if}
 						{#if row.burn.contributed.volunteerMinutes > 0}
 							<div class="text-subtle">
@@ -156,16 +140,32 @@
 							</div>
 						{/if}
 					</td>
-					<td>{row.committeeNames.join(', ') || 'Unowned'}</td>
-					<td><StatusBadge status={row.project.status} label /></td>
-					<td>
-						{#if row.project.startsAt}
-							{formatDateShort(row.project.startsAt)}
-							{row.project.endsAt ? ` – ${formatDateShort(row.project.endsAt)}` : ' onward'}
+					<td class="whitespace-nowrap" title={row.committeeNames.join(', ') || undefined}>
+						{#if row.committeeNames.length === 0}
+							<span class="text-muted">Unowned</span>
 						{:else}
-							—
+							{row.committeeNames[0]}
+							{#if row.committeeNames.length > 1}
+								<span class="text-muted">+{row.committeeNames.length - 1}</span>
+							{/if}
 						{/if}
 					</td>
+					<td class="whitespace-nowrap">
+						{#if row.progress.total === 0}
+							<span class="text-muted">No tasks</span>
+						{:else}
+							<span class="inline-flex items-center gap-2">
+								<progress
+									class="progress w-16 progress-success"
+									value={row.progress.done}
+									max={row.progress.total}
+									aria-label="Tasks done"
+								></progress>
+								{Math.round((row.progress.done / row.progress.total) * 100)}%
+							</span>
+						{/if}
+					</td>
+					<td class="whitespace-nowrap">{dateRange(row.project.startsAt, row.project.endsAt)}</td>
 					<td class="cell-num">
 						{row.project.budgetCents === null ? 'None set' : formatCents(row.project.budgetCents)}
 					</td>

@@ -571,6 +571,9 @@ const staffEventsFilters = z.object({
 	page: z.number().optional()
 });
 
+/** Acts drawn in a Productions row's avatar stack; the rest are "+N". */
+const LINEUP_STACK_MAX = 4;
+
 /**
  * The staff index of CMC work — the Productions page.
  *
@@ -619,6 +622,11 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 				// comparison rather than a guess (#859).
 				lineup: {
 					headliner: bill[0]?.name ?? null,
+					/** The first few acts for the avatar stack; `count` is the rest. */
+					acts: bill.slice(0, LINEUP_STACK_MAX).map((a) => ({
+						name: a.name,
+						image: toBandRef({ id: a.bandId, name: a.name, image: a.bandAvatarKey }).image
+					})),
 					count: bill.length,
 					wanted: e.actsWanted ?? null,
 					short: e.actsWanted == null ? 0 : Math.max(0, e.actsWanted - bill.length)

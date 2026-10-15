@@ -1845,6 +1845,8 @@ export interface LineupRow {
 	 * owner"; neither is set for the rest.
 	 */
 	externalUrl: string | null;
+	/** The CMC band's avatar storage key; resolve it with `toBandRef`. */
+	bandAvatarKey: string | null;
 	billingOrder: number;
 	status: EventBandStatus;
 	note: string | null;
@@ -1890,6 +1892,7 @@ function lineupSelect() {
 			// to link to".
 			bandId: directoryEntry.groupId,
 			bandSlug: group.slug,
+			bandAvatarKey: group.avatarKey,
 			// Where an unowned act's name should point instead. Public attribution
 			// links **out**, never in: CMC hosts no page for a party that has no
 			// relationship with CMC, and the act already has a presence it chose.

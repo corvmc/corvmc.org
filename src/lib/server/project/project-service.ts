@@ -26,6 +26,7 @@ import { DomainError } from '$lib/server/domain-error';
 import {
 	contractorJobStatusesWithoutSpend,
 	DEFAULT_TIMEZONE,
+	projectArchivedStatuses,
 	valueOfMinutesCents,
 	type ProjectCommitteeRole,
 	type ProjectKind,
@@ -321,14 +322,24 @@ function takesPart(groupId: string) {
  * `unowned` is a project no committee takes part in.
  */
 export async function listProjects(
-	opts: { status?: ProjectStatus; groupId?: string; unowned?: boolean; kind?: ProjectKind } = {}
+	opts: {
+		status?: ProjectStatus;
+		/** true is only done/declined, false only the rest; unset is both. */
+		archived?: boolean;
+		groupId?: string;
+		unowned?: boolean;
+		kind?: ProjectKind;
+	} = {}
 ) {
+	const archived = [...projectArchivedStatuses];
 	return db
 		.select()
 		.from(project)
 		.where(
 			and(
 				opts.status ? eq(project.status, opts.status) : undefined,
+				opts.archived === true ? inArray(project.status, archived) : undefined,
+				opts.archived === false ? notInArray(project.status, archived) : undefined,
 				opts.kind ? eq(project.kind, opts.kind) : undefined,
 				opts.groupId ? takesPart(opts.groupId) : undefined,
 				opts.unowned
