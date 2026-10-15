@@ -112,3 +112,16 @@ describe('flattenNav and childHrefsFor', () => {
 		expect(childHrefsFor(ITEMS[2])).toEqual(['/member/reservations']);
 	});
 });
+
+describe('activeNavPath', () => {
+	it('returns the active row under its parent, outermost first', () => {
+		expect(activeNavPath(ITEMS, '/member/events/submit').map((n) => n.key)).toEqual([
+			'events',
+			'submit'
+		]);
+	});
+
+	it('is empty where no row matches', () => {
+		expect(activeNavPath(ITEMS, '/member/groups')).toEqual([]);
+	});
+});
