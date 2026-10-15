@@ -36,7 +36,7 @@
 			image={item.image}
 			{shape}
 			size="avatar-sm"
-			class="size-6 ring-2 ring-base-100 {i > 0 ? '-ml-2' : ''}"
+			class="size-7 ring-2 ring-base-100 {i > 0 ? '-ml-1' : ''}"
 		/>
 	{/each}
 	{#if rest > 0}
