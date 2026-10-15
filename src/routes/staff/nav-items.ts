@@ -43,7 +43,6 @@ export type StaffNavKey =
 	| 'volunteer-schedule'
 	| 'volunteer-people'
 	| 'volunteer-duty-lists'
-	| 'volunteer-recurring'
 	| 'volunteer-report'
 	| 'reservations'
 	| 'recurring'
@@ -190,9 +189,8 @@ export const staffNavSections: StaffNavSection[] = [
 						href: resolve('/staff/volunteer/schedule')
 					},
 					{
-						// "People", not "Volunteers": it holds the under-18 queue and the
-						// clearances table too, and both are about people who are not yet
-						// volunteering.
+						// "People", not "Volunteers": its filters reach the under-18 queue
+						// too, who are not yet volunteering.
 						key: 'volunteer-people',
 						capability: 'volunteer.read',
 						label: 'People',
@@ -213,12 +211,6 @@ export const staffNavSections: StaffNavSection[] = [
 						capability: 'volunteer.read',
 						label: 'Duty Lists',
 						href: resolve('/staff/volunteer/duty-lists')
-					},
-					{
-						key: 'volunteer-recurring',
-						capability: 'volunteer.read',
-						label: 'Recurring Work',
-						href: resolve('/staff/volunteer/recurring')
 					}
 				]
 			}

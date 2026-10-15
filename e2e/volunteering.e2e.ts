@@ -336,7 +336,7 @@ test.describe('volunteering — roles', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/schedule');
 
-		await page.getByRole('button', { name: 'New Shift' }).click();
+		await page.getByRole('button', { name: 'New Work Order' }).click();
 		const dialog = page.getByRole('dialog');
 		const roleSelect = dialog.locator('select[name="volunteerRoleId"]');
 
@@ -359,6 +359,23 @@ test.describe('volunteering — roles', () => {
 		await page.goto('/staff/volunteer/interest');
 
 		await expect(page).toHaveURL(/\/staff\/volunteer\/people$/);
+	});
+
+	test('the retired recurring-work page redirects onto the schedule filter', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/recurring');
+
+		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule\?kind=recurring$/);
+		await expect(page.getByRole('button', { name: 'New Recurring Work' })).toBeVisible();
+	});
+
+	test('the retired sign-off tab lands on the roster filtered to it', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/people?tab=signoff');
+
+		await expect(page).toHaveURL(/status=blocked/);
+		await expect(page.getByRole('row', { name: SEED_VOL_BLOCKED_MINOR_NAME })).toBeVisible();
+		await expect(page.getByRole('row', { name: SEED_VOL_MEMBER_NAME })).toHaveCount(0);
 	});
 
 	test('the retired shift catalog redirects onto the schedule', async ({ page }) => {

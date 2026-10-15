@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { listIncidentsFiledBy } from '$lib/server/incident/incident-service';
-import { error, redirect } from '@sveltejs/kit';
+import { error, invalid, redirect } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { can, requireCapability, requireUser } from '$lib/server/authorization';
@@ -137,7 +137,6 @@ import {
 	grantCertification as grantCertificationService,
 	revokeCertification as revokeCertificationService,
 	listForUser as listCertificationsForUser,
-	listClearances,
 	listHeldForGate,
 	listHeldForGateMany,
 	missingFrom,
@@ -444,6 +443,7 @@ const volunteerListFilters = z.object({
 	search: z.string().optional(),
 	volunteerRoleId: z.string().optional(),
 	status: z.enum(volunteerProfileStatuses).optional(),
+	certificationId: z.string().optional(),
 	page: z.number().optional()
 });
 
@@ -472,15 +472,15 @@ export const getStaffVolunteers = query(volunteerListFilters, async (f) => {
 			{
 				roleId: f.volunteerRoleId || undefined,
 				search: f.search || undefined,
-				status: f.status
+				status: f.status,
+				certificationId: f.certificationId || undefined
 			},
 			{ page: f.page ?? 1, pageSize: 50 }
 		),
 		listOutstandingClaims(),
 		listLapsingBeforeRosteredShift(),
-		// Carried here rather than fetched beside it: the sign-off tab's badge has
-		// to be readable before that tab is open, and a second query declared next
-		// to this one is the fan-out `custom/no-concurrent-remote-queries` refuses.
+		// The "N awaiting sign-off" count, which has to read whatever the filters
+		// say; a second query beside this one is the fan-out the lint rule refuses.
 		listBlockedVolunteers()
 	]);
 
@@ -498,17 +498,6 @@ export const getStaffVolunteers = query(volunteerListFilters, async (f) => {
 	};
 });
 
-/**
- * Under-18 signups waiting on a person.
- *
- * Argless, so the approve form below can refresh it server-side — unlike the
- * arg-keyed queue queries, which the page has to refresh itself.
- */
-export const getBlockedVolunteers = query(async () => {
-	await requireCapability('volunteer.read');
-	return listBlockedVolunteers();
-});
-
 /** Staff clearing a minor to volunteer. Leaves `isAdult` alone — see the service. */
 export const approveVolunteerSignup = form(
 	z.object({ userId: z.string().min(1) }),
@@ -521,13 +510,9 @@ export const approveVolunteerSignup = form(
 			mapDomainError(err);
 		}
 
-		// Three: the dashboard renders the row, `getBlockedVolunteers` still backs the
-		// volunteers index's own reads, and the sidebar badge counts them.
-		await Promise.all([
-			getBlockedVolunteers().refresh(),
-			getVolunteerWorklist().refresh(),
-			getStaffLayout().refresh()
-		]);
+		// The dashboard renders the row and the sidebar badge counts it. The roster is
+		// arg-keyed, so the people page refreshes its own.
+		await Promise.all([getVolunteerWorklist().refresh(), getStaffLayout().refresh()]);
 		return { success: true };
 	}
 );
@@ -1244,19 +1229,6 @@ export const getMyCertifications = query(async () => {
 	return listCertificationsForUser(currentUser.id);
 });
 
-const clearanceFilters = z.object({
-	certificationId: z.string().optional(),
-	state: z.enum(['current', 'expiring', 'expired', 'revoked']).optional()
-});
-
-export const getClearances = query(clearanceFilters, async (f) => {
-	await requireCapability('volunteer.read');
-	return listClearances({
-		certificationId: f.certificationId || undefined,
-		state: f.state
-	});
-});
-
 export const getRoleRequirements = query(z.string(), async (roleId) => {
 	await requireCapability('volunteer.read');
 	return getRequirementsForRole(roleId);
@@ -1531,6 +1503,25 @@ export const getShifts = query(shiftFilters, async (f) => {
 });
 
 /**
+ * Schedule's one load-bearing query: every work order a coordinator staffs, the
+ * windowed ones inside the range and the ones with no time yet, which have no
+ * date for a range to bound.
+ */
+export const getSchedulePage = query(shiftFilters, async (f) => {
+	await requireCapability('volunteer.read');
+	const [shifts, unscheduled] = await Promise.all([
+		listShifts({
+			volunteerRoleId: f.volunteerRoleId || undefined,
+			from: f.from ? new Date(f.from) : undefined,
+			to: f.to ? new Date(f.to) : undefined,
+			includeCancelled: f.includeCancelled
+		}),
+		listWorkOrders({ volunteerRoleId: f.volunteerRoleId || undefined })
+	]);
+	return { shifts, unscheduled };
+});
+
+/**
  * Open shifts for the member, with the reason they can't take one attached
  * rather than the shift hidden — "you need Sound Desk Cleared" is the useful
  * half of a refusal.
@@ -1683,6 +1674,17 @@ export const getWorkOrders = query(
 export const createWorkOrder = form(
 	z.object({
 		volunteerRoleId: z.string().min(1, 'Pick a role'),
+		eventId: z.string().optional(),
+		assetId: z.string().optional(),
+		title: z
+			.string()
+			.trim()
+			.max(VOLUNTEER_SHIFT_TITLE_MAX, `Keep the name under ${VOLUNTEER_SHIFT_TITLE_MAX} characters`)
+			.optional(),
+		// Off, the window fields are ignored and the order waits on Needs scheduling.
+		timed: z.boolean().default(false),
+		startsAt: z.string().optional(),
+		endsAt: z.string().optional(),
 		dueAt: z.string().optional(),
 		capacity: z.string().optional(),
 		notes: z
@@ -1693,19 +1695,41 @@ export const createWorkOrder = form(
 			)
 			.optional()
 	}),
-	async (data) => {
+	async (data, issue) => {
 		const staff = await requireCapability('volunteer.manageShifts');
+		const capacity = data.capacity ? parseInt(data.capacity, 10) : 1;
+
+		if (data.timed) {
+			if (!data.startsAt) invalid(issue.startsAt('Pick when it starts'));
+			if (!data.endsAt) invalid(issue.endsAt('Pick when it ends'));
+		}
 
 		try {
-			await createWorkOrderService({
-				volunteerRoleId: data.volunteerRoleId,
-				// A deadline, not a window — read as club wall-clock time like every
-				// other date on this layer.
-				dueAt: data.dueAt ? new Date(data.dueAt) : null,
-				capacity: data.capacity ? parseInt(data.capacity, 10) : 1,
-				notes: data.notes,
-				createdByUserId: staff.id
-			});
+			if (data.timed) {
+				await createShiftService({
+					volunteerRoleId: data.volunteerRoleId,
+					eventId: data.eventId,
+					assetId: data.assetId,
+					title: data.title,
+					startsAt: data.startsAt!,
+					endsAt: data.endsAt!,
+					capacity,
+					notes: data.notes,
+					createdByUserId: staff.id
+				});
+			} else {
+				await createWorkOrderService({
+					volunteerRoleId: data.volunteerRoleId,
+					assetId: data.assetId,
+					title: data.title,
+					// A deadline, not a window — read as club wall-clock time like every
+					// other date on this layer.
+					dueAt: data.dueAt ? new Date(data.dueAt) : null,
+					capacity,
+					notes: data.notes,
+					createdByUserId: staff.id
+				});
+			}
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -2312,27 +2336,6 @@ export const getStaffVolunteerSetupPage = query(async () => {
 		}))
 	};
 });
-
-/**
- * The clearances page's one load-bearing query.
- *
- * Two `getClearances` calls with different arguments — the filtered view and the unfiltered set the
- * counts are drawn from — which is two query promises in flight for one screen.
- */
-export const getClearancesPage = query(
-	z.object({
-		certificationId: z.string().optional(),
-		state: z.enum(['current', 'expiring', 'expired', 'revoked']).optional()
-	}),
-	async ({ certificationId, state }) => {
-		const [rows, allRows] = await Promise.all([
-			getClearances({ certificationId, state }),
-			getClearances({ certificationId })
-		]);
-
-		return { rows, allRows };
-	}
-);
 
 /** The volunteer report page's one load-bearing query. None of the three has a refresh site. */
 export const getVolunteerReportPage = query(

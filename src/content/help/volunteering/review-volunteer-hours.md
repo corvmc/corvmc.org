@@ -89,9 +89,9 @@ notified** is for the ones you already rang.
 
 A role can require clearances (**Volunteering → Setup**) before its
 shifts can be claimed. Requirements are checked against the shift's date, so a
-lapsing card is caught before it matters. **People → Cleared** shows who holds
-what and when it runs out, one row per person and clearance. Grant from the
-member's page; revoke from either. Revoking keeps the record of the period it
+lapsing card is caught before it matters. **People**'s clearance filter shows
+who holds one today. Grant and revoke from the member's page, which lists what
+they hold and when it runs out. Revoking keeps the record of the period it
 covered, which is the point.
 
 The day after a shift, workers get a two-question survey. Responses show on the
@@ -107,12 +107,13 @@ are free, and whether they are cleared for that date. Its three filters widen th
 who have worked the role before, and then to everybody; searching it finds anyone at all,
 which is the person who walked up to the desk and is on no list.
 
-**Volunteering → People** is the full list when you do. Its **Roster** tab is everyone who
-signed up, with their roles and their availability note; each row carries the one thing
-outstanding about that person — a claim of theirs to confirm, a clearance to chase, or
-otherwise a way to log hours on their behalf. Filter by role to see how deep the bench is.
+**Volunteering → People** is the full list when you do: everyone who signed up, with their
+roles and their availability note. Each row carries the one thing outstanding about that
+person — a claim of theirs to confirm, a clearance to chase, a sign-off to approve, or otherwise
+a way to log hours on their behalf. Filter by role to see how deep the bench is, or by
+clearance to see who holds one today.
 
-**People → Awaiting sign-off** is the under-18 queue. Approving one confirms a guardian has
+The **Awaiting sign-off** status is the under-18 queue. Approving one confirms a guardian has
 signed off; the record still says they are under 18, which is what changes how a shift is
 staffed.
 

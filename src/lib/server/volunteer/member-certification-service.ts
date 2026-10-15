@@ -88,6 +88,19 @@ function heldOnSql(at: Date) {
 	);
 }
 
+/**
+ * "Holds it on `at`" as an EXISTS correlated to `user.id`, for narrowing a list of
+ * people. Any grant in force counts, which is what the shift-claim gate asks too.
+ */
+export function holdsCertificationSql(certificationId: string, at = new Date()) {
+	return sql`exists (
+		select 1 from ${memberCertification}
+		where ${memberCertification.userId} = ${user.id}
+			and ${memberCertification.certificationId} = ${certificationId}
+			and ${heldOnSql(at)}
+	)`;
+}
+
 export function certificationState(
 	row: Pick<MemberCertification, 'grantedAt' | 'expiresAt' | 'revokedAt'>,
 	today = atNoon(clubToday())
