@@ -436,10 +436,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/closures",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/clubs",
 		"panel": "staff"
 	},
@@ -620,10 +616,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/inventory/tagging",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/keys",
 		"panel": "staff"
 	},
@@ -689,10 +681,6 @@
 	},
 	{
 		"route": "/staff/projects/[id]/tasks/[taskId]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/recurring",
 		"panel": "staff"
 	},
 	{

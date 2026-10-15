@@ -16,7 +16,7 @@
 	import CategoryManagerModal from '$lib/components/inventory/CategoryManagerModal.svelte';
 	import { itemKinds } from '$lib/config';
 	import { AddItemAction } from '$lib/components/actions';
-	import IntakeButton from './IntakeButton.svelte';
+	import HeaderActions from './HeaderActions.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { titleCase } from '$lib/utils/format';
 	import BarcodeScanner from '$lib/components/ui/BarcodeScanner.svelte';
@@ -76,7 +76,7 @@
 		<Button variant="ghost" size="sm" href={resolve('/staff/inventory/locations')}>Locations</Button
 		>
 		<Button variant="ghost" size="sm" onclick={() => (showCategoryModal = true)}>Categories</Button>
-		<IntakeButton />
+		<HeaderActions />
 		<AddItemAction />
 	</div>
 </PageHeader>

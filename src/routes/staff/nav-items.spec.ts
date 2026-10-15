@@ -81,8 +81,11 @@ describe('activeNavKey', () => {
 		['/staff/inventory/restock', 'inventory-restock'],
 		['/staff/inventory/spend', 'inventory-spend'],
 		['/staff/inventory/compliance', 'inventory-compliance'],
+		// Loans left Inventory's children for a row of its own; its URL did not move.
 		['/staff/inventory/loans', 'equipment-loans'],
 		['/staff/inventory/loans/abc', 'equipment-loans'],
+		['/staff/reservations/abc', 'reservations'],
+		['/staff/recurring/abc', 'reservations'],
 		['/staff/flags/equipment', 'equipment-reports'],
 		['/staff/flags/equipment/abc', 'equipment-reports'],
 		['/staff/contractors', 'contractors'],
@@ -131,8 +134,8 @@ describe('the nav tree', () => {
 
 	it('resolves every row to its own key, so no row is shadowed by another', () => {
 		// The property `activeNavKey` actually needs. Note it holds without every
-		// child sitting under its parent's path: Reservations groups `/staff/recurring`
-		// and `/staff/closures`, which are siblings of it in the route tree.
+		// child sitting under its parent's path: Volunteering's rows do, but
+		// Reservations claims `/staff/recurring` through `also`.
 		for (const item of allStaffNavItems()) {
 			expect(activeNavKey(item.href)).toBe(item.key);
 		}
@@ -186,7 +189,13 @@ describe('the nav tree', () => {
 			'volunteer'
 		]);
 		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'contractor-jobs']);
-		expect(keys('space')).toEqual(['reservations', 'equipment', 'renewals', 'keys']);
+		expect(keys('space')).toEqual([
+			'reservations',
+			'equipment',
+			'equipment-loans',
+			'renewals',
+			'keys'
+		]);
 		expect(keys('partners')).toEqual(['sponsors', 'venues', 'local-resources', 'contractors']);
 		expect(keys('moderation')).toEqual(['flags', 'classifieds', 'incidents']);
 		expect(keys('outreach')).toEqual(['campaigns', 'audiences']);

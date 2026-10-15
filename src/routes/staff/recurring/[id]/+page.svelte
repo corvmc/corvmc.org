@@ -28,7 +28,7 @@
 	width="3xl"
 	title={formatScheduleLabel(series.frequencyLabel, series.prototypeStartsAt, series.monthlyMode)}
 	subtitle="Recurring series"
-	backHref="/staff/recurring"
+	backHref="/staff/reservations?recurring"
 >
 	{#if isActive}
 		<Action

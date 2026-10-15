@@ -385,6 +385,62 @@ describe('Action, form mode', () => {
  * It arrived as an undeclared prop at thirteen call sites, which meant it fell
  * into `...rest` and landed on the trigger as a stray `cansubmit` attribute.
  */
+describe('Action, save and add another', () => {
+	// The run-of-records case: an arrival of twelve things is twelve submits, and
+	// reopening the modal for each was the reason intake looked like the only way.
+	it('keeps the modal open and hands over to onaddanother', async () => {
+		const onsuccess = vi.fn();
+		const onaddanother = vi.fn();
+		await render(ActionHarness, {
+			action: fakeRemoteForm({ result: { id: 'item-1' } }),
+			label: 'Add Item',
+			modalTitle: 'Add Item',
+			fieldName: 'name',
+			addAnotherLabel: 'Save and add another',
+			onsuccess,
+			onaddanother
+		});
+
+		await page.getByRole('button', { name: 'Add Item' }).click();
+		await page.getByRole('button', { name: 'Save and add another' }).click();
+
+		await vi.waitFor(() => expect(onaddanother).toHaveBeenCalledWith({ id: 'item-1' }));
+		expect(onsuccess).toHaveBeenCalledWith({ id: 'item-1' });
+		expect(dialog()).not.toBeNull();
+	});
+
+	it('still closes on the plain submit', async () => {
+		const onaddanother = vi.fn();
+		await render(ActionHarness, {
+			action: fakeRemoteForm({ result: { id: 'item-1' } }),
+			label: 'Add Item',
+			modalTitle: 'Add Item',
+			fieldName: 'name',
+			addAnotherLabel: 'Save and add another',
+			onaddanother
+		});
+
+		await page.getByRole('button', { name: 'Add Item' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Add Item' }).click();
+
+		await vi.waitFor(() => expect(dialog()).toBeNull());
+		expect(onaddanother).not.toHaveBeenCalled();
+	});
+
+	it('offers no second submit unless asked', async () => {
+		await render(ActionHarness, {
+			action: fakeRemoteForm(),
+			label: 'Save',
+			modalTitle: 'Edit',
+			fieldName: 'title'
+		});
+
+		await page.getByRole('button', { name: 'Save' }).click();
+		await expect.element(page.getByRole('dialog')).toBeVisible();
+		expect(page.getByRole('button', { name: 'Save and add another' }).query()).toBeNull();
+	});
+});
+
 describe('Action, canSubmit', () => {
 	const gated = (canSubmit?: boolean) => ({
 		action: fakeRemoteForm(),

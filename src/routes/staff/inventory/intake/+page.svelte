@@ -81,7 +81,7 @@
 
 <PageHeader
 	width="3xl"
-	title={orderId ? 'Receive an order' : 'Intake'}
+	title={orderId ? 'Receive an order' : 'Receive Stock'}
 	subtitle="Inventory"
 	backHref={orderId ? `/staff/inventory/orders/${orderId}` : '/staff/inventory'}
 />

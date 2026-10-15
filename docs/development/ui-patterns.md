@@ -1163,7 +1163,7 @@ subline; a _different record_ the row points at — the booker of a reservation,
 the borrower on a loan — gets its own column with an `EntityChip` in it. Chips
 down a column scan as a column; the same chips scattered under each primary cell
 do not, and they cost the primary cell its second line. `staff/reservations`,
-`staff/recurring` and `staff/equipment/loans` all read this way. Reserve the
+the recurring-series modal and `staff/equipment/loans` all read this way. Reserve the
 subline for what genuinely qualifies the record: a series' time range, an
 equipment loan's category.
 

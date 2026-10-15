@@ -49,6 +49,8 @@
 		class: className = '',
 		disabled = false,
 		canSubmit = true,
+		addAnotherLabel,
+		onaddanother,
 		onsuccess,
 		onfailure,
 		...rest
@@ -103,6 +105,13 @@
 		 * trigger: a form you cannot open is a form you can never satisfy.
 		 */
 		canSubmit?: boolean;
+		/**
+		 * Offers a second submit that keeps the modal open, for entering a run of
+		 * records. `onaddanother` runs after `onsuccess` and clears what should not
+		 * carry over to the next record.
+		 */
+		addAnotherLabel?: string;
+		onaddanother?: (result?: unknown) => void;
 		onsuccess?: (result?: unknown) => void;
 		onfailure?: (error?: unknown) => void;
 		[key: string]: unknown;
@@ -186,6 +195,7 @@
 
 	function handleClick() {
 		if (hasModal) {
+			addAnother = false;
 			formDirty = false;
 			askingDiscard = false;
 			dialogOpen = true;
@@ -198,6 +208,8 @@
 	// unchanged still closes on the first click.
 	let formDirty = $state(false);
 	let askingDiscard = $state(false);
+	// Which footer submit was pressed; read once the submit succeeds.
+	let addAnother = false;
 
 	function confirmClose(): boolean {
 		if (!formDirty) return true;
@@ -222,6 +234,12 @@
 		}
 		// Submitted, so there is nothing left to lose — close without asking.
 		formDirty = false;
+		if (addAnother) {
+			addAnother = false;
+			if (typeof onsuccess === 'function') onsuccess(result);
+			onaddanother?.(result);
+			return;
+		}
 		dialogOpen = false;
 		if (typeof onsuccess === 'function') onsuccess(result);
 	}
@@ -297,12 +315,25 @@
 				{/if}
 				{@render formSnippet?.({ close })}
 				{#if !noFooter}
-					<div class="flex justify-end pt-2">
-						<SubmitButton
-							label={submitLabel ?? label}
-							variant={submitVariant ?? variant}
-							disabled={!canSubmit}
-						/>
+					<!-- Enter "clicks" the first submit in the DOM, so that is the plain one;
+					     `order-last` puts it back on the right. -->
+					<div
+						class="flex justify-end gap-2 pt-2"
+						onclickcapture={(e) =>
+							(addAnother = !!(e.target as Element).closest('[data-add-another]'))}
+					>
+						<div class="order-last">
+							<SubmitButton
+								label={submitLabel ?? label}
+								variant={submitVariant ?? variant}
+								disabled={!canSubmit}
+							/>
+						</div>
+						{#if addAnotherLabel}
+							<Button type="submit" variant="ghost" disabled={!canSubmit} data-add-another>
+								{addAnotherLabel}
+							</Button>
+						{/if}
 					</div>
 				{/if}
 			</Form>
