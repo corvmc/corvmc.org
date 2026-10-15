@@ -104,19 +104,6 @@
 		</InfoCard>
 	{/if}
 
-	<GroupSettingsForm
-		groupId={id}
-		joinPolicy={group.joinPolicy}
-		joinInstructions={group.joinInstructions}
-		visibility={group.visibility}
-	/>
-
-	{#if group.kind === 'committee'}
-		<CommitteeGrantsCard groupId={id} name={group.name} held={group.capabilityGrants ?? []} />
-	{/if}
-
-	{@render applications?.()}
-
 	{#if importResult}
 		<RosterImportSummary result={importResult} ondismiss={() => (importResult = null)} />
 	{/if}
@@ -176,6 +163,19 @@
 			</Table>
 		{/if}
 	</InfoCard>
+
+	<GroupSettingsForm
+		groupId={id}
+		joinPolicy={group.joinPolicy}
+		joinInstructions={group.joinInstructions}
+		visibility={group.visibility}
+	/>
+
+	{#if group.kind === 'committee'}
+		<CommitteeGrantsCard groupId={id} name={group.name} held={group.capabilityGrants ?? []} />
+	{/if}
+
+	{@render applications?.()}
 
 	<!-- One line each, so labelled facts rather than cards of their own (#1078). -->
 	<DefinitionList>

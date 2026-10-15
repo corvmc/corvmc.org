@@ -143,10 +143,10 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Item</th>
+					<th class="col-support">Category</th>
 					<th class="col-support">Tracking</th>
 					<th class="cell-num">Available</th>
-					<th class="col-support cell-num">On hand</th>
-					<th class="col-extra">Barcode</th>
+					<th class="col-support cell-num">Total</th>
 				{/snippet}
 
 				{#each equipment as e (e.id)}
@@ -155,9 +155,15 @@
 						<td class="w-px">
 							<StatusBadge status={e.deletedAt ? 'deactivated' : 'active'} />
 						</td>
-						<!-- Category was its own column; as the ref's subline it costs no width. -->
-						<td class="cell-primary"><EntityIdentity ref={e.ref} /></td>
-						<td class="col-support">
+						<td class="cell-primary">
+							<!-- Category has its own column; below col-support's width it rides as the subline. -->
+							<EntityIdentity ref={e.ref}>
+								{#snippet subtitle()}<span class="@min-[32rem]:hidden">{e.category.name}</span
+									>{/snippet}
+							</EntityIdentity>
+						</td>
+						<td class="col-support whitespace-nowrap">{e.category.name}</td>
+						<td class="col-support whitespace-nowrap">
 							<Badge size="sm" class="badge-ghost">{titleCase(e.kind)}</Badge>
 							{#if e.isConsumable}
 								<Badge size="sm" class="badge-ghost">Consumable</Badge>
@@ -167,19 +173,12 @@
 							<span class:text-error={e.availableQuantity <= 0}>{e.availableQuantity}</span>
 						</td>
 						<td class="col-support cell-num">
-							<!-- Low stock is the reorder point doing its job: nobody has to
-							     notice, so the row says so itself. -->
-							<span class:text-warning={e.isLowStock}>{e.onHand}</span>
-							{#if e.isLowStock}
-								<Badge size="sm" class="badge-warning">Low</Badge>
-							{/if}
-						</td>
-						<td class="col-extra">
-							{#if e.gtin}
-								<span class="font-mono text-xs">{e.gtin}</span>
-							{:else}
-								<span class="opacity-40">—</span>
-							{/if}
+							<!-- Low stock is the reorder point doing its job: the colour says so. -->
+							<span
+								class:text-warning={e.isLowStock}
+								class:font-semibold={e.isLowStock}
+								title={e.isLowStock ? 'Low stock' : undefined}>{e.onHand}</span
+							>
 						</td>
 					</tr>
 				{/each}

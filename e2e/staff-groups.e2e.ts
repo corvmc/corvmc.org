@@ -65,7 +65,7 @@ test.describe('staff groups', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff/clubs');
 
-		await page.getByRole('button', { name: 'New group' }).click();
+		await page.getByRole('button', { name: 'New Club' }).click();
 
 		const name = `E2E Songwriter Circle ${Date.now()}`;
 		await page.locator('input[name="name"]').fill(name);
@@ -85,7 +85,7 @@ test.describe('staff groups', () => {
 		// for that is how the test knows the choice reached the form.
 		await expect(picker).toHaveCount(0);
 
-		await page.getByRole('button', { name: 'Create group' }).click();
+		await page.getByRole('button', { name: 'Create Club' }).click();
 
 		// Straight to the new group's page, which is what carries the proof: the
 		// appointee is a chair already, with nothing to accept.

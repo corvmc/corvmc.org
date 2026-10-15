@@ -68,7 +68,7 @@
 <svelte:window onclick={handleClickOutside} />
 
 <nav
-	class="navbar z-50 h-[48px] min-h-0 justify-between border-b border-base-300 bg-base-100 px-3 pt-3 pb-1"
+	class="navbar z-50 h-[48px] min-h-0 justify-between border-b border-base-300 bg-base-100 px-3 py-0"
 >
 	<!-- Left: hamburger (mobile) + brand + panel tabs (desktop) -->
 	<div class="flex items-center gap-2">
@@ -96,7 +96,7 @@
 				     than its neighbours. `flex` plus `h-full` puts them back in
 				     step; the `rounded-[inherit]` below is the same mismatch
 				     already patched once, for corners (#1023). -->
-				<div class="bands-dropdown-wrapper relative join-item flex">
+				<div class="bands-dropdown-wrapper relative join-item flex border-0">
 					<Button
 						variant={activeBand ? 'primary' : 'ghost'}
 						size="sm"
