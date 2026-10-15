@@ -44,8 +44,8 @@ importers:
         specifier: ^10
         version: 10.70.0(@cloudflare/workers-types@5.20261006.1)(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@sveltejs/kit@2.70.3(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.0(patch_hash=6g5exr6n4klrlbmrk5ac6kdb7y)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.0(patch_hash=6g5exr6n4klrlbmrk5ac6kdb7y)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.0(patch_hash=6g5exr6n4klrlbmrk5ac6kdb7y)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))(wrangler@4.148.0(@cloudflare/workers-types@5.20261006.1)(@types/node@26.6.5))
       '@stripe/stripe-js':
-        specifier: ^9.17.0
-        version: 9.17.0
+        specifier: ^10.0.0
+        version: 10.0.0
       '@tabler/icons-svelte':
         specifier: ^3.49.0
         version: 3.49.0(svelte@5.57.0(patch_hash=6g5exr6n4klrlbmrk5ac6kdb7y)(@typescript-eslint/types@8.71.1))
@@ -2105,8 +2105,8 @@ packages:
       svelte: ^5.0.0
       vite: ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
 
-  '@stripe/stripe-js@9.17.0':
-    resolution: {integrity: sha512-uidL4OJum5kivsOAQnVfQmYLJ2zdgirtmT0zWgskASZ4TPXxpXQ0MNrzW4NsXB90uEqmPHpSEtciLFbF1QQvNA==}
+  '@stripe/stripe-js@10.0.0':
+    resolution: {integrity: sha512-y5LKFTtnz1ciM+IQfrDfHcpjGlsm5Ao4onaUn4scurI/B6rNhrmV+ScTPDo+3Ges5oF8ol4tBkBAIZyVXVBIXw==}
     engines: {node: '>=12.16'}
 
   '@sveltejs/acorn-typescript@1.0.10':
@@ -7595,7 +7595,7 @@ snapshots:
     transitivePeerDependencies:
       - '@sveltejs/vite-plugin-svelte'
 
-  '@stripe/stripe-js@9.17.0': {}
+  '@stripe/stripe-js@10.0.0': {}
 
   '@sveltejs/acorn-typescript@1.0.10(acorn@8.16.0)':
     dependencies:
