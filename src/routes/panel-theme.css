@@ -55,12 +55,9 @@ body:has([data-panel]) {
 	display: none;
 }
 
-/* A page header's subtitle is a breadcrumb-weight label, not a brand eyebrow. */
+/* Panel page headers carry no subtitle: the nav already says where you are. */
 [data-panel] [data-page-header] hgroup > span {
-	color: var(--panel-subtle);
-	font-size: var(--text-xs);
-	font-weight: 500;
-	text-transform: none;
+	display: none;
 }
 
 /* Component density. A sublayer of `utilities` declared after daisyUI's, so it
@@ -165,7 +162,9 @@ body:has([data-panel]) {
 				font-weight: 500;
 			}
 
-			.badge {
+			/* Badges match EntityChip's `h-6`, so a status and a name sit level in a row. */
+			.badge:not(.badge-xs, .badge-lg, .badge-xl) {
+				--size: calc(var(--spacing) * 6);
 				font-size: var(--text-xs);
 				font-weight: 500;
 			}

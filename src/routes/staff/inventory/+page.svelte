@@ -146,8 +146,7 @@
 					<th class="col-support">Category</th>
 					<th class="col-support">Tracking</th>
 					<th class="cell-num">Available</th>
-					<th class="col-support cell-num">On hand</th>
-					<th class="col-extra">Barcode</th>
+					<th class="col-support cell-num">Total</th>
 				{/snippet}
 
 				{#each equipment as e (e.id)}
@@ -174,19 +173,12 @@
 							<span class:text-error={e.availableQuantity <= 0}>{e.availableQuantity}</span>
 						</td>
 						<td class="col-support cell-num">
-							<!-- Low stock is the reorder point doing its job: nobody has to
-							     notice, so the row says so itself. -->
-							<span class:text-warning={e.isLowStock}>{e.onHand}</span>
-							{#if e.isLowStock}
-								<Badge size="sm" class="badge-warning">Low</Badge>
-							{/if}
-						</td>
-						<td class="col-extra">
-							{#if e.gtin}
-								<span class="font-mono text-xs">{e.gtin}</span>
-							{:else}
-								<span class="opacity-40">—</span>
-							{/if}
+							<!-- Low stock is the reorder point doing its job: the colour says so. -->
+							<span
+								class:text-warning={e.isLowStock}
+								class:font-semibold={e.isLowStock}
+								title={e.isLowStock ? 'Low stock' : undefined}>{e.onHand}</span
+							>
 						</td>
 					</tr>
 				{/each}

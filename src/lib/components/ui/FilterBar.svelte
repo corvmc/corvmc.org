@@ -1,6 +1,6 @@
 <script lang="ts" module>
 	// Literal class names: Tailwind only emits what it sees written out in full.
-	const SEARCH_WIDTHS = { fixed: '@lg:w-64', content: '@lg:w-auto' } as const;
+	const SEARCH_WIDTHS = { fixed: '@lg:w-80', content: '@lg:w-auto' } as const;
 </script>
 
 <script lang="ts">
@@ -27,7 +27,7 @@
 		/** Always visible; full width below `@lg`. */
 		search?: Snippet;
 		/**
-		 * `@lg` and up: `fixed` is 16rem, sized for one text input; `content`
+		 * `@lg` and up: `fixed` is 20rem, sized for one text input; `content`
 		 * fits what the snippet holds, for a control wider than that.
 		 */
 		searchWidth?: keyof typeof SEARCH_WIDTHS;
@@ -63,7 +63,11 @@
 		     containers. `contents` rather than `flex` there: as a flex *item* this
 		     wrapper shrinks and wraps its own children onto extra lines, so at wide
 		     widths it steps out of layout and the controls join the parent's row. -->
-		<div class="hidden w-full flex-wrap items-end gap-2 peer-checked:flex @lg:contents">
+		<!-- Controls size to their content at wide widths: daisyUI's 20rem default
+		     made three selects outgrow the row and wrap. -->
+		<div
+			class="hidden w-full flex-wrap items-end gap-2 peer-checked:flex @lg:contents @lg:[&_.input]:w-auto @lg:[&_.select]:w-auto"
+		>
 			{@render children()}
 			{#if activeCount > 0 && onclear}
 				<Button variant="ghost" size="sm" onclick={onclear}>Clear</Button>
