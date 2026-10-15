@@ -109,6 +109,15 @@ describe('AddItemAction', () => {
 		expect(Array.from(categories.options, (o) => o.value)).toEqual(['cat-1', 'cat-2']);
 	});
 
+	// An arrival is a run of items, so the form offers to stay open for the next.
+	it('offers to save and add another', async () => {
+		await open();
+
+		await expect
+			.element(page.getByRole('dialog').getByRole('button', { name: 'Save and add another' }))
+			.toBeVisible();
+	});
+
 	it('defaults the unit to a single thing', async () => {
 		await open();
 

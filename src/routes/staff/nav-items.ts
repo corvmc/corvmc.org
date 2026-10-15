@@ -45,12 +45,9 @@ export type StaffNavKey =
 	| 'volunteer-duty-lists'
 	| 'volunteer-report'
 	| 'reservations'
-	| 'recurring'
-	| 'closures'
 	| 'instructors'
 	| 'equipment'
 	| 'equipment-loans'
-	| 'inventory-tagging'
 	| 'equipment-reports'
 	| 'inventory-acquisitions'
 	| 'inventory-restock'
@@ -255,24 +252,13 @@ export const staffNavSections: StaffNavSection[] = [
 		title: 'Space',
 		items: [
 			{
+				// Closures sit in its list and recurring series in a modal off its
+				// header (#1936); a series' own page still lights this row.
 				key: 'reservations',
 				capability: 'reservation.read',
 				label: 'Reservations',
 				href: resolve('/staff/reservations'),
-				children: [
-					{
-						key: 'recurring',
-						capability: 'reservation.read',
-						label: 'Recurring',
-						href: resolve('/staff/recurring')
-					},
-					{
-						key: 'closures',
-						capability: 'reservation.manageClosures',
-						label: 'Closures',
-						href: resolve('/staff/closures')
-					}
-				]
+				also: [resolve('/staff/recurring')]
 			},
 			{
 				// Equipment used to hang the other way up: the parent row landed on
@@ -288,24 +274,12 @@ export const staffNavSections: StaffNavSection[] = [
 				href: resolve('/staff/inventory'),
 				children: [
 					{
-						key: 'inventory-tagging',
-						capability: 'inventory.manageAssets',
-						label: 'Needs tagging',
-						href: resolve('/staff/inventory/tagging')
-					},
-					{
 						// Lives on the flags surface (#552); listed here too because
 						// whoever fixes the gear reads Inventory, not Moderation.
 						key: 'equipment-reports',
 						capability: 'inventory.manageAssets',
 						label: 'Reports',
 						href: resolve('/staff/flags/equipment')
-					},
-					{
-						key: 'equipment-loans',
-						capability: 'inventory.manageLoans',
-						label: 'Loans',
-						href: resolve('/staff/inventory/loans')
 					},
 					{
 						key: 'inventory-acquisitions',
@@ -332,6 +306,14 @@ export const staffNavSections: StaffNavSection[] = [
 						href: resolve('/staff/inventory/compliance')
 					}
 				]
+			},
+			// A row of its own, not under Inventory: the loan desk is somewhere staff
+			// go, and the URL stays where loan links already point (#1937).
+			{
+				key: 'equipment-loans',
+				capability: 'inventory.manageLoans',
+				label: 'Loans',
+				href: resolve('/staff/inventory/loans')
 			},
 			// Permit, license and insurance renewals: compliance for the building.
 			{

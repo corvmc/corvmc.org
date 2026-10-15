@@ -64,6 +64,14 @@ describe('activeNavKey', () => {
 		expect(activeNavKey(ITEMS, '/member/eventsomething')).toBeNull();
 	});
 
+	it('lets a row claim a path outside its href through `also`', () => {
+		const items: NavNode[] = [
+			{ key: 'reservations', href: '/staff/reservations', also: ['/staff/recurring'] }
+		];
+		expect(activeNavKey(items, '/staff/recurring/abc')).toBe('reservations');
+		expect(activeNavKey(items, '/staff/recurringsomething')).toBeNull();
+	});
+
 	it('tolerates a trailing slash', () => {
 		expect(activeNavKey(ITEMS, '/member/reservations/')).toBe('reservations');
 	});

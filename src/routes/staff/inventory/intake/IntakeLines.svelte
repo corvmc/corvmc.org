@@ -21,8 +21,8 @@
 	 * A serialized line expands to one row per unit — tag, serial, condition —
 	 * because the service has always accepted per-unit detail and only the form
 	 * truncated it. Leaving a tag blank is normal and expected: gear reaches the
-	 * bench before the sticker roll does, and `/staff/inventory/tagging` is the
-	 * queue that finishes the job.
+	 * bench before the sticker roll does, and Inventory's Needs tagging queue
+	 * finishes the job.
 	 */
 	type Unit = { assetTag: string; serialNumber: string; condition: string };
 	type Line = { itemId: string; quantity: number; unitCost: string; units: Unit[] };

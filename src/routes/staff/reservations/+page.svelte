@@ -11,9 +11,17 @@
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
-	import { ConfirmReservationAction, CompleteReservationAction } from '$lib/components/actions';
+	import {
+		ConfirmReservationAction,
+		CompleteReservationAction,
+		CreateClosureAction,
+		UpdateClosureAction,
+		DeleteClosureAction
+	} from '$lib/components/actions';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateReservation from './CreateModal.svelte';
+	import RecurringSeriesModal from './RecurringSeriesModal.svelte';
+	import { page as appPage } from '$app/state';
 	import { EntityChip } from '$lib/components/ui/entity';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import {
@@ -27,17 +35,31 @@
 		IconCircleX,
 		IconRepeat,
 		IconUserPlus,
-		IconNote
+		IconNote,
+		IconPencil,
+		IconTrash
 	} from '@tabler/icons-svelte';
-	import { formatDate, formatTimeRange, formatPaymentBreakdown } from '$lib/utils/format';
+	import {
+		formatDate,
+		formatDateTimeShort,
+		formatTimeRange,
+		formatPaymentBreakdown,
+		toLocalDate
+	} from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { getStaffReservationsPage } from '$lib/remote/reservations.remote';
 
-	type Reservation = Awaited<ReturnType<typeof getStaffReservationsPage>>['list']['rows'][number];
+	type Row = Awaited<ReturnType<typeof getStaffReservationsPage>>['list']['rows'][number];
+	type Closure = Extract<Row, { kind: 'closure' }>;
 
 	let tab = $state<'upcoming' | 'all'>('upcoming');
+	// Closures interleave with bookings (#1833); `?show=closures` is where the
+	// old `/staff/closures` redirects.
+	const shows = ['everything', 'reservations', 'closures'] as const;
+	const initialShow = appPage.url.searchParams.get('show');
+	let show = $state<(typeof shows)[number]>(shows.find((s) => s === initialShow) ?? 'everything');
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
 	let searchText = $state('');
@@ -53,6 +75,7 @@
 		dateFrom: dateFrom || undefined,
 		dateTo: dateTo || undefined,
 		bookerType: bookerType || undefined,
+		show: show === 'everything' ? undefined : show,
 		page
 	});
 
@@ -66,6 +89,7 @@
 	const counts = $derived(pageData.then((d) => d.counts));
 	const unresolved = $derived(pageData.then((d) => d.unresolved));
 	const hourlyRates = $derived(pageData.then((d) => d.hourlyRates));
+	const canManageClosures = $derived(pageData.then((d) => d.canManageClosures));
 
 	let resolveOpen = $state(false);
 
@@ -94,7 +118,14 @@
 		}
 	}
 
-	function dayLabel(r: Reservation): string {
+	/** A closure can run for days, which a bare time range would hide. */
+	function closureRange(c: Closure): string {
+		return toLocalDate(c.startsAt) === toLocalDate(c.endsAt)
+			? formatTimeRange(c.startsAt, c.endsAt)
+			: `${formatDateTimeShort(c.startsAt)} – ${formatDateTimeShort(c.endsAt)}`;
+	}
+
+	function dayLabel(r: { startsAt: Date }): string {
 		const localDate = new Date(r.startsAt).toLocaleDateString('en-CA', {
 			timeZone: DEFAULT_TIMEZONE
 		});
@@ -109,7 +140,9 @@
 		return label;
 	}
 
-	const menuFilterCount = $derived((dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (bookerType ? 1 : 0));
+	const menuFilterCount = $derived(
+		(dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (bookerType ? 1 : 0) + (show !== 'everything' ? 1 : 0)
+	);
 	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + menuFilterCount);
 
 	function clearFilters() {
@@ -118,6 +151,7 @@
 		dateFrom = '';
 		dateTo = '';
 		bookerType = '';
+		show = 'everything';
 		page = 1;
 	}
 </script>
@@ -137,6 +171,10 @@
 					<Badge>{unresolvedData.length}</Badge>
 				{/if}
 			</Button>
+		{/await}
+		<RecurringSeriesModal />
+		{#await canManageClosures then canManage}
+			{#if canManage}<CreateClosureAction />{/if}
 		{/await}
 		<CreateReservation />
 	</div>
@@ -220,10 +258,29 @@
 					<option value="production">Shows</option>
 				</Select>
 			</label>
+			<label class="flex flex-col gap-1">
+				<span class="text-muted text-xs">Show</span>
+				<Select
+					size="sm"
+					value={show}
+					onchange={(e: Event) => {
+						show = (e.currentTarget as HTMLSelectElement).value as typeof show;
+						page = 1;
+					}}
+				>
+					<option value="everything">Reservations and closures</option>
+					<option value="reservations">Reservations</option>
+					<option value="closures">Closures</option>
+				</Select>
+			</label>
 		{/snippet}
 	</FilterBar>
 
-	<DataList {result} empty="No reservations found" onpage={(p) => (page = p)}>
+	<DataList
+		{result}
+		empty={show === 'closures' ? 'No closures found' : 'No reservations found'}
+		onpage={(p) => (page = p)}
+	>
 		{#snippet children(reservations)}
 			<!-- No zebra: the bg-base-200 day-group rows are the striping here.
 			     `wide-only` hides it below 32rem, where the cards below take over. -->
@@ -236,7 +293,7 @@
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
 
-				{#each reservations as r, idx (r.id)}
+				{#each reservations as r, idx (`${r.kind}:${r.id}`)}
 					{@const label = dayLabel(r)}
 					{@const prevLabel = idx > 0 ? dayLabel(reservations[idx - 1]) : null}
 					{#if label !== prevLabel}
@@ -246,137 +303,154 @@
 							</td>
 						</tr>
 					{/if}
-					{@const actions = visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId)}
-					{@const href = resolve(`/staff/reservations/${r.id}`)}
-					<tr class="hover cursor-pointer" use:rowLink={href}>
-						<!-- `label`, not the glyph alone: the tooltip that carried the status
+					{#if r.kind === 'closure'}
+						<tr>
+							<td class="w-px"><Badge size="sm" variant="error">Closed</Badge></td>
+							<td class="min-w-0 font-medium">{r.reason}</td>
+							<td class="cell-primary whitespace-nowrap">{closureRange(r)}</td>
+							<td class="col-support cell-num"><span class="opacity-40">—</span></td>
+							<td class="w-px">
+								{@render closureActions(r, true)}
+							</td>
+						</tr>
+					{:else}
+						{@const actions = visibleActions(
+							r.status,
+							r.startsAt,
+							r.endsAt,
+							r.stripePaymentRecordId
+						)}
+						{@const href = resolve(`/staff/reservations/${r.id}`)}
+						<tr class="hover cursor-pointer" use:rowLink={href}>
+							<!-- `label`, not the glyph alone: the tooltip that carried the status
 						     word only opens on hover, so a keyboard user got nothing (#896). -->
-						<td class="w-px">
-							<StatusBadge status={r.status} label />
-						</td>
+							<td class="w-px">
+								<StatusBadge status={r.status} label />
+							</td>
 
-						<!-- Member, band or event — the chip's glyph is what says which. -->
-						<td class="min-w-0"><EntityChip ref={r.booker} /></td>
+							<!-- Member, band or event — the chip's glyph is what says which. -->
+							<td class="min-w-0"><EntityChip ref={r.booker} /></td>
 
-						<!--
+							<!--
 							The time, and the flags that decide how the desk staffs the hour.
 							`cell-primary` stays here rather than on the booker: it is what
 							absorbs the table's slack, and moving it would let a long band
 							name push the actions column off the edge. The day is not
 							repeated — the group header above carries it.
 						-->
-						<td class="cell-primary">
-							<!-- `flex-wrap`: the icons give way, not the time. As one unwrapping
+							<td class="cell-primary">
+								<!-- `flex-wrap`: the icons give way, not the time. As one unwrapping
 							     row they overflowed into the Payment and action cells (#1835). -->
-							<div class="flex flex-wrap items-center gap-1">
-								<a {href} class="font-medium whitespace-nowrap hover:underline">
-									{formatTimeRange(r.startsAt, r.endsAt)}
-								</a>
-								{#if r.recurringSeriesId}
-									<span class="tooltip" data-tip="Recurring">
-										<IconRepeat size={14} class="text-base-content" />
-									</span>
-								{/if}
-								{#if r.bookerType === 'instructor'}
-									<!--
+								<div class="flex flex-wrap items-center gap-1">
+									<a {href} class="font-medium whitespace-nowrap hover:underline">
+										{formatTimeRange(r.startsAt, r.endsAt)}
+									</a>
+									{#if r.recurringSeriesId}
+										<span class="tooltip" data-tip="Recurring">
+											<IconRepeat size={14} class="text-base-content" />
+										</span>
+									{/if}
+									{#if r.bookerType === 'instructor'}
+										<!--
 										Retargeted from `lesson`, which held this slot for the same
 										reason and was removed once production confirmed no rows
 										carried it. A teaching booking's Booker ref resolves to the
 										member — the capacity is not the party — so without this the
 										row could not say it is teaching rather than rehearsal.
 									-->
-									<span class="tooltip" data-tip="Teaching">
-										<BookerTypeIcon type={r.bookerType} size={14} />
-									</span>
-								{/if}
-								{#if r.isFirstReservation}
-									<!--
+										<span class="tooltip" data-tip="Teaching">
+											<BookerTypeIcon type={r.bookerType} size={14} />
+										</span>
+									{/if}
+									{#if r.isFirstReservation}
+										<!--
 										The collective likes a volunteer on the desk for a member's
 										first visit, which is a fact about the booking nothing else
 										in the row carries.
 									-->
-									<span
-										class="tooltip"
-										data-tip="First reservation"
-										role="img"
-										aria-label="First reservation"
-									>
-										<IconUserPlus size={14} class="text-success" />
-									</span>
-								{/if}
-								{#if r.notes}
-									<!-- `data-tip` draws through ::before and is invisible to a
+										<span
+											class="tooltip"
+											data-tip="First reservation"
+											role="img"
+											aria-label="First reservation"
+										>
+											<IconUserPlus size={14} class="text-success" />
+										</span>
+									{/if}
+									{#if r.notes}
+										<!-- `data-tip` draws through ::before and is invisible to a
 									     screen reader, so the name goes on the span — the same
 									     thing StatusBadge does. -->
-									<span
-										class="tooltip"
-										data-tip="Member left a note"
-										role="img"
-										aria-label="Member left a note"
-									>
-										<IconNote size={14} class="text-info" />
-									</span>
-								{/if}
-							</div>
-						</td>
+										<span
+											class="tooltip"
+											data-tip="Member left a note"
+											role="img"
+											aria-label="Member left a note"
+										>
+											<IconNote size={14} class="text-info" />
+										</span>
+									{/if}
+								</div>
+							</td>
 
-						<td class="col-support cell-num">
-							{#await hourlyRates then rates}
-								{#if r.bookerType === 'production'}
-									<span class="opacity-40">—</span>
-								{:else}
-									{@const state = reservationPaymentState(r)}
-									{@const ps = paymentStatus(state)}
-									<span class="inline-flex items-center justify-end gap-1">
-										<!-- Comped keeps its cash value on screen but strikes it, so the row
+							<td class="col-support cell-num">
+								{#await hourlyRates then rates}
+									{#if r.bookerType === 'production'}
+										<span class="opacity-40">—</span>
+									{:else}
+										{@const state = reservationPaymentState(r)}
+										{@const ps = paymentStatus(state)}
+										<span class="inline-flex items-center justify-end gap-1">
+											<!-- Comped keeps its cash value on screen but strikes it, so the row
 										     still says what the room time was worth while reading as waived.
 										     A comped booking never carries credits: once credits are
 										     committed the row reports as `credits`, not `comped`. -->
-										<span class:line-through={state === 'comped'}>
-											{formatPaymentBreakdown(
-												r.startsAt,
-												r.endsAt,
-												rates[r.bookerType],
-												r.creditsUsed
-											)}
+											<span class:line-through={state === 'comped'}>
+												{formatPaymentBreakdown(
+													r.startsAt,
+													r.endsAt,
+													rates[r.bookerType],
+													r.creditsUsed
+												)}
+											</span>
+											<span class="tooltip" data-tip={ps.label}>
+												<ps.icon size={16} class={ps.color} />
+											</span>
 										</span>
-										<span class="tooltip" data-tip={ps.label}>
-											<ps.icon size={16} class={ps.color} />
-										</span>
-									</span>
-								{/if}
-							{/await}
-						</td>
+									{/if}
+								{/await}
+							</td>
 
-						<td class="w-px">
-							<div class="flex w-max items-center justify-end gap-1">
-								{#if actions.has('confirm')}
-									<ConfirmReservationAction
-										reservation={r}
-										staff
-										iconOnly
-										variant="ghost"
-										size="sm"
-										shape="square"
-										class="latched"
-									>
-										{#snippet icon()}<IconCheck size={16} />{/snippet}
-									</ConfirmReservationAction>
-								{/if}
-								{#if actions.has('complete')}
-									<CompleteReservationAction
-										reservation={r}
-										iconOnly
-										variant="ghost"
-										size="sm"
-										shape="square"
-									>
-										{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
-									</CompleteReservationAction>
-								{/if}
-							</div>
-						</td>
-					</tr>
+							<td class="w-px">
+								<div class="flex w-max items-center justify-end gap-1">
+									{#if actions.has('confirm')}
+										<ConfirmReservationAction
+											reservation={r}
+											staff
+											iconOnly
+											variant="ghost"
+											size="sm"
+											shape="square"
+											class="latched"
+										>
+											{#snippet icon()}<IconCheck size={16} />{/snippet}
+										</ConfirmReservationAction>
+									{/if}
+									{#if actions.has('complete')}
+										<CompleteReservationAction
+											reservation={r}
+											iconOnly
+											variant="ghost"
+											size="sm"
+											shape="square"
+										>
+											{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
+										</CompleteReservationAction>
+									{/if}
+								</div>
+							</td>
+						</tr>
+					{/if}
 				{/each}
 			</Table>
 
@@ -386,80 +460,119 @@
 				and the payment state say their word — and the actions are full-size.
 			-->
 			<ul class="narrow-only">
-				{#each reservations as r, idx (r.id)}
+				{#each reservations as r, idx (`${r.kind}:${r.id}`)}
 					{@const label = dayLabel(r)}
 					{#if label !== (idx > 0 ? dayLabel(reservations[idx - 1]) : null)}
 						<li class="rounded-sm cell-group">{label}</li>
 					{/if}
-					{@const actions = visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId)}
-					<li class="flex items-start justify-between gap-3 border-b border-base-300 py-3">
-						<div class="min-w-0 space-y-2">
-							<a
-								href={resolve(`/staff/reservations/${r.id}`)}
-								class="text-lg font-medium hover:underline"
-							>
-								{formatTimeRange(r.startsAt, r.endsAt)}
-							</a>
-							<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-								<EntityChip ref={r.booker} />
-								{#if r.recurringSeriesId || r.bookerType === 'instructor' || r.isFirstReservation || r.notes}
-									<ul class="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted text-sm">
-										{#if r.recurringSeriesId}
-											<li class="flex items-center gap-1"><IconRepeat size={14} />Recurring</li>
-										{/if}
-										{#if r.bookerType === 'instructor'}
-											<li class="flex items-center gap-1">
-												<BookerTypeIcon type={r.bookerType} size={14} />Teaching
-											</li>
-										{/if}
-										{#if r.isFirstReservation}
-											<li class="flex items-center gap-1">
-												<IconUserPlus size={14} class="text-success" />First reservation
-											</li>
-										{/if}
-										{#if r.notes}
-											<li class="flex items-center gap-1">
-												<IconNote size={14} class="text-info" />Member left a note
-											</li>
-										{/if}
-									</ul>
+					{#if r.kind === 'closure'}
+						<li class="flex items-start justify-between gap-3 border-b border-base-300 py-3">
+							<div class="min-w-0 space-y-1">
+								<p class="text-lg font-medium">{closureRange(r)}</p>
+								<p>{r.reason}</p>
+							</div>
+							<div class="flex shrink-0 flex-col items-end gap-2">
+								<Badge size="sm" variant="error">Closed</Badge>
+								{@render closureActions(r, false)}
+							</div>
+						</li>
+					{:else}
+						{@const actions = visibleActions(
+							r.status,
+							r.startsAt,
+							r.endsAt,
+							r.stripePaymentRecordId
+						)}
+						<li class="flex items-start justify-between gap-3 border-b border-base-300 py-3">
+							<div class="min-w-0 space-y-2">
+								<a
+									href={resolve(`/staff/reservations/${r.id}`)}
+									class="text-lg font-medium hover:underline"
+								>
+									{formatTimeRange(r.startsAt, r.endsAt)}
+								</a>
+								<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+									<EntityChip ref={r.booker} />
+									{#if r.recurringSeriesId || r.bookerType === 'instructor' || r.isFirstReservation || r.notes}
+										<ul class="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted text-sm">
+											{#if r.recurringSeriesId}
+												<li class="flex items-center gap-1"><IconRepeat size={14} />Recurring</li>
+											{/if}
+											{#if r.bookerType === 'instructor'}
+												<li class="flex items-center gap-1">
+													<BookerTypeIcon type={r.bookerType} size={14} />Teaching
+												</li>
+											{/if}
+											{#if r.isFirstReservation}
+												<li class="flex items-center gap-1">
+													<IconUserPlus size={14} class="text-success" />First reservation
+												</li>
+											{/if}
+											{#if r.notes}
+												<li class="flex items-center gap-1">
+													<IconNote size={14} class="text-info" />Member left a note
+												</li>
+											{/if}
+										</ul>
+									{/if}
+								</div>
+							</div>
+							<div class="flex shrink-0 flex-col items-end gap-2">
+								<StatusBadge status={r.status} label />
+								{#if r.bookerType !== 'production'}
+									{#await hourlyRates then rates}
+										{@const state = reservationPaymentState(r)}
+										{@const ps = paymentStatus(state)}
+										{@const owed = state === 'cash_due' || state === 'unpaid'}
+										<p class="flex flex-wrap items-center gap-1 text-sm">
+											<ps.icon size={16} class={ps.color} />
+											<span class="font-medium">{owed ? 'Due' : ps.label}</span>
+											<span class="text-muted" class:line-through={state === 'comped'}>
+												{formatPaymentBreakdown(
+													r.startsAt,
+													r.endsAt,
+													rates[r.bookerType],
+													r.creditsUsed
+												)}
+											</span>
+										</p>
+									{/await}
+								{/if}
+								{#if actions.has('confirm')}
+									<ConfirmReservationAction reservation={r} staff size="sm" />
+								{/if}
+								{#if actions.has('complete')}
+									<CompleteReservationAction reservation={r} size="sm" />
 								{/if}
 							</div>
-						</div>
-						<div class="flex shrink-0 flex-col items-end gap-2">
-							<StatusBadge status={r.status} label />
-							{#if r.bookerType !== 'production'}
-								{#await hourlyRates then rates}
-									{@const state = reservationPaymentState(r)}
-									{@const ps = paymentStatus(state)}
-									{@const owed = state === 'cash_due' || state === 'unpaid'}
-									<p class="flex flex-wrap items-center gap-1 text-sm">
-										<ps.icon size={16} class={ps.color} />
-										<span class="font-medium">{owed ? 'Due' : ps.label}</span>
-										<span class="text-muted" class:line-through={state === 'comped'}>
-											{formatPaymentBreakdown(
-												r.startsAt,
-												r.endsAt,
-												rates[r.bookerType],
-												r.creditsUsed
-											)}
-										</span>
-									</p>
-								{/await}
-							{/if}
-							{#if actions.has('confirm')}
-								<ConfirmReservationAction reservation={r} staff size="sm" />
-							{/if}
-							{#if actions.has('complete')}
-								<CompleteReservationAction reservation={r} size="sm" />
-							{/if}
-						</div>
-					</li>
+						</li>
+					{/if}
 				{/each}
 			</ul>
 		{/snippet}
 	</DataList>
 </PageContent>
+
+<!-- Only a closure that has not started can change; the server refuses the rest. -->
+{#snippet closureActions(c: Closure, compact: boolean)}
+	{#await canManageClosures then canManage}
+		{#if canManage && c.startsAt > new Date()}
+			<div class="flex w-max items-center justify-end gap-1">
+				{#if compact}
+					<UpdateClosureAction closure={c} iconOnly shape="square">
+						{#snippet icon()}<IconPencil size={16} />{/snippet}
+					</UpdateClosureAction>
+					<DeleteClosureAction closureId={c.id} iconOnly shape="square">
+						{#snippet icon()}<IconTrash size={16} />{/snippet}
+					</DeleteClosureAction>
+				{:else}
+					<UpdateClosureAction closure={c} />
+					<DeleteClosureAction closureId={c.id} />
+				{/if}
+			</div>
+		{/if}
+	{/await}
+{/snippet}
 
 {#await Promise.all([unresolved, hourlyRates]) then [unresolvedData, rates]}
 	<ResolveModal bind:open={resolveOpen} unresolved={unresolvedData} hourlyRates={rates} />

@@ -157,8 +157,8 @@ auto-creates any missing).
       article that described it as working was removed._
 - [x] `[H]` Manage reservations & resolve issues _(expands seed `staff-managing-reservations`)_
 - [x] `[H]` Take payment / comp / refund a reservation (`/staff/reservations/[id]`)
-- [x] `[H]` Manage recurring reservation series (`/staff/recurring`)
-- [x] `[H]` Set facility closures / blackout dates (`/staff/closures`)
+- [x] `[H]` Manage recurring reservation series (Recurring, on `/staff/reservations`)
+- [x] `[H]` Set facility closures / blackout dates (rows of `/staff/reservations`)
 - [x] `[H]` Create & manage events; ticketing & check-in (`/staff/events`, `.../check-in`)
 - [x] `[H]` Run an off-site or multi-day event (venue, two day-events, one project, duty lists)
 - [x] `[H]` Manage bands (deactivate/reactivate, members) (`/staff/bands`)

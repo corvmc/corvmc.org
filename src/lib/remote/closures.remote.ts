@@ -1,62 +1,20 @@
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
-import { query } from '$app/server';
 import { form } from './_remote';
 import { requireCapability } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { closure } from '$lib/server/db/schema/reservation';
-import { asc, desc, eq, gte, lt } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
-// ---------------------------------------------------------------------------
-// Queries
-// ---------------------------------------------------------------------------
+// The list is the staff reservations page (#1833); its actions invalidate it.
 
-/**
- * Upcoming closures soonest-first, then past ones newest-first.
- *
- * One `desc(startsAt)` put the most *distant* future closure at the top and
- * buried the imminent one under it; past rows then trailed off with nothing
- * saying where now was (#1053). The past side is capped — the page is for
- * arranging what is coming, and the archive grows forever.
- */
-const PAST_CLOSURES_SHOWN = 20;
-
-export const getClosures = query(z.void(), async () => {
-	await requireCapability('reservation.read');
-	const now = new Date();
-
-	const [upcoming, past] = await Promise.all([
-		db
-			.select()
-			.from(closure)
-			.where(gte(closure.endsAt, now))
-			.orderBy(asc(closure.startsAt), asc(closure.id)),
-		db
-			.select()
-			.from(closure)
-			.where(lt(closure.endsAt, now))
-			.orderBy(desc(closure.startsAt), desc(closure.id))
-			.limit(PAST_CLOSURES_SHOWN + 1)
-	]);
-
-	const shape = (c: typeof closure.$inferSelect) => ({
-		id: c.id,
-		reason: c.reason,
-		startsAt: c.startsAt,
-		endsAt: c.endsAt
-	});
-
-	return {
-		upcoming: upcoming.map(shape),
-		past: past.slice(0, PAST_CLOSURES_SHOWN).map(shape),
-		/** True when the archive is longer than what is shown. */
-		morePast: past.length > PAST_CLOSURES_SHOWN
-	};
-});
-
-// ---------------------------------------------------------------------------
-// Forms
-// ---------------------------------------------------------------------------
+/** A datetime-local value carries no zone; it is club time, not the runtime's. */
+function clubDateTime(value: string): Date {
+	const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/.exec(value);
+	return m ? buildDateInTz(m[1], m[2], DEFAULT_TIMEZONE) : new Date(value);
+}
 
 export const createClosure = form(
 	z.object({
@@ -67,8 +25,8 @@ export const createClosure = form(
 	async (data, issue) => {
 		await requireCapability('reservation.manageClosures');
 
-		const startsAt = new Date(data.startsAt as string);
-		const endsAt = new Date(data.endsAt as string);
+		const startsAt = clubDateTime(data.startsAt as string);
+		const endsAt = clubDateTime(data.endsAt as string);
 
 		if (endsAt <= startsAt) {
 			invalid(issue.endsAt('End time must be after start time'));
@@ -76,7 +34,6 @@ export const createClosure = form(
 
 		await db.insert(closure).values({ reason: data.reason as string, startsAt, endsAt });
 
-		void getClosures().refresh();
 		return { success: true };
 	}
 );
@@ -92,8 +49,8 @@ export const updateClosure = form(
 		await requireCapability('reservation.manageClosures');
 
 		const id = data.id as string;
-		const startsAt = new Date(data.startsAt as string);
-		const endsAt = new Date(data.endsAt as string);
+		const startsAt = clubDateTime(data.startsAt as string);
+		const endsAt = clubDateTime(data.endsAt as string);
 
 		const [row] = await db
 			.select({ startsAt: closure.startsAt })
@@ -110,7 +67,6 @@ export const updateClosure = form(
 			.set({ reason: data.reason as string, startsAt, endsAt })
 			.where(eq(closure.id, id));
 
-		void getClosures().refresh();
 		return { success: true };
 	}
 );
@@ -135,7 +91,6 @@ export const deleteClosure = form(
 
 		await db.delete(closure).where(eq(closure.id, id));
 
-		void getClosures().refresh();
 		return { success: true };
 	}
 );
