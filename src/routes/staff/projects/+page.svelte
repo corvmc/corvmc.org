@@ -5,7 +5,6 @@
 	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import ProgressRing from '$lib/components/ui/ProgressRing.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
@@ -128,7 +127,22 @@
 			{#each data.projects as row (row.project.id)}
 				<tr class="hover" use:rowLink={resolve(`/staff/projects/${row.project.id}`)}>
 					<td class="w-px">
-						<ProgressRing value={row.progress.done} total={row.progress.total} />
+						{#if row.progress.total === 0}
+							<span class="text-fg-3" title="No tasks yet">—</span>
+						{:else}
+							{@const pct = Math.round((row.progress.done / row.progress.total) * 100)}
+							<div
+								class="radial-progress rounded-full text-[0.5rem] shadow-[inset_0_0_0_3px_var(--color-base-300)] {pct ===
+								100
+									? 'text-success'
+									: 'text-primary'}"
+								style="--value:{pct}; --size:1.5rem; --thickness:3px"
+								role="progressbar"
+								aria-valuenow={pct}
+								aria-label="{row.progress.done} of {row.progress.total} tasks done"
+								title="{row.progress.done} of {row.progress.total} tasks done"
+							></div>
+						{/if}
 					</td>
 					<td class="cell-primary">
 						<a class="link font-medium" href={resolve(`/staff/projects/${row.project.id}`)}>

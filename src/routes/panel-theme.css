@@ -50,7 +50,7 @@ body:has([data-panel]) {
 	line-height: var(--text-base--line-height);
 }
 
-/* The brand stripe is decoration, and a gradient. */
+/* The brand stripe is decoration. */
 [data-panel] .tri-stripe {
 	display: none;
 }
