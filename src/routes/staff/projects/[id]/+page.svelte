@@ -3,7 +3,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
@@ -19,7 +19,11 @@
 		applyDutyListToProjectForm,
 		getProjectActivity
 	} from '$lib/remote/projects.remote';
-	import { projectStatusOptions } from '$lib/config';
+	import {
+		isProjectArchived,
+		projectArchiveOutcomeOptions,
+		PROJECT_UNARCHIVED_STATUS
+	} from '$lib/config';
 	import { formatDateShort } from '$lib/utils/format';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -175,28 +179,45 @@
 			<IconDots size={16} />
 		</summary>
 		<div class="dropdown-content dropdown-panel flex w-60 flex-col gap-1">
-			<Action
-				action={setProjectStatusForm}
-				label="Change status"
-				variant="ghost"
-				class="justify-start"
-				modalTitle="Change status"
-				successToast="Status updated"
-			>
-				{#snippet form()}
-					<input {...statusFields.id.as('hidden', project.id)} />
-					<Field
-						field={statusFields.status}
-						type="select"
-						label="Status"
-						options={projectStatusOptions}
-						value={project.status}
-						description={project.suggestionId
-							? 'The suggestion this answers moves with it.'
-							: undefined}
-					/>
-				{/snippet}
-			</Action>
+			{#if isProjectArchived(project.status)}
+				<Action
+					action={setProjectStatusForm}
+					label="Unarchive"
+					variant="ghost"
+					class="justify-start"
+					modalTitle="Unarchive project"
+					successToast="Project unarchived"
+				>
+					{#snippet form()}
+						<input {...statusFields.id.as('hidden', project.id)} />
+						<input {...statusFields.status.as('hidden', PROJECT_UNARCHIVED_STATUS)} />
+						<p class="text-sm">It returns to the active list with its tasks as they are.</p>
+					{/snippet}
+				</Action>
+			{:else}
+				<Action
+					action={setProjectStatusForm}
+					label="Archive"
+					variant="ghost"
+					class="justify-start"
+					modalTitle="Archive project"
+					successToast="Project archived"
+				>
+					{#snippet form()}
+						<input {...statusFields.id.as('hidden', project.id)} />
+						<Field
+							field={statusFields.status}
+							type="select"
+							label="Outcome"
+							options={projectArchiveOutcomeOptions}
+							value="done"
+							description={project.suggestionId
+								? 'The suggestion this answers reports the same outcome.'
+								: undefined}
+						/>
+					{/snippet}
+				</Action>
+			{/if}
 			{#if data.canCreateBallot}
 				<CreateBallotAction
 					kind="member"
@@ -210,7 +231,9 @@
 
 <PageContent>
 	<div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm" aria-label="Project status">
-		<StatusBadge status={project.status} label />
+		{#if isProjectArchived(project.status)}
+			<Badge variant="ghost">Archived</Badge>
+		{/if}
 		<span class="inline-flex items-center gap-2">
 			<progress
 				class="progress w-28 progress-success"

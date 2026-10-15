@@ -1797,6 +1797,28 @@ export const projectStatusOptions = projectStatuses.map((value) => ({
 }));
 
 /**
+ * What staff see: a project is active or archived, and progress is its tasks.
+ * The five stored statuses stay because a linked suggestion mirrors them and
+ * members read that outcome; archiving picks done or declined for it.
+ */
+export const projectArchivedStatuses = [
+	'done',
+	'declined'
+] as const satisfies readonly ProjectStatus[];
+export type ProjectArchiveOutcome = (typeof projectArchivedStatuses)[number];
+/** Where Unarchive puts a project: active, with whatever progress it has. */
+export const PROJECT_UNARCHIVED_STATUS: ProjectStatus = 'in_progress';
+export function isProjectArchived(status: ProjectStatus): boolean {
+	return (projectArchivedStatuses as readonly ProjectStatus[]).includes(status);
+}
+export const projectArchiveOutcomeOptions: { value: ProjectArchiveOutcome; label: string }[] = [
+	{ value: 'done', label: 'Completed' },
+	{ value: 'declined', label: 'Declined' }
+];
+export const projectViews = ['active', 'archived', 'all'] as const;
+export type ProjectView = (typeof projectViews)[number];
+
+/**
  * A `'production'` project is the generic half of a show: its production row
  * carries the show layer and points back here, one to one.
  * See docs/specs/production-projects-spec.md.

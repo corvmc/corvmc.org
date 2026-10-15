@@ -3,10 +3,11 @@
 	 * One staff conversation — the thread pane of the two-pane inbox.
 	 *
 	 * The details/status/assignment sidebar this page used to carry is now a
-	 * collapsible strip under the header — see DetailsPanel. Three columns
-	 * (queue │ thread │ sidebar) do not fit at ordinary widths, and of the three
-	 * the sidebar is the one you consult rather than read.
+	 * collapsible strip at the top of the pane — see DetailsPanel. Its subject,
+	 * status and dispositions sit in the inbox's one toolbar, which the layout
+	 * draws: this page hands it `conversationBar` (#1927).
 	 */
+	import { onDestroy } from 'svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -14,7 +15,8 @@
 	import ThreadPane from '$lib/components/inbox/ThreadPane.svelte';
 	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
 	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
-	import ThreadHeader from '$lib/components/inbox/ThreadHeader.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import { useInboxToolbar } from '../toolbar.svelte';
 	import DetailsPanel from './DetailsPanel.svelte';
 	import DispositionBar from '$lib/components/inbox/DispositionBar.svelte';
 	import {
@@ -25,7 +27,7 @@
 	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
 	import { isAlwaysEnabledChannel, isStaffInboxChannel } from '$lib/config';
 	import { formatDate } from '$lib/utils/format';
-	import { IconAlarmSnooze, IconSend } from '@tabler/icons-svelte';
+	import { IconAlarmSnooze, IconArrowLeft, IconSend } from '@tabler/icons-svelte';
 	import {
 		getInboxThread,
 		getInboxEnabledChannels,
@@ -36,6 +38,10 @@
 	} from '$lib/remote/inbox.remote';
 
 	const threadId = $derived(page.params.id!);
+
+	// Above the await: a cleanup registered after it would be async-gated.
+	const toolbar = useInboxToolbar();
+	onDestroy(() => (toolbar.conversation = null));
 
 	// One await over all three, rather than three awaited deriveds: separate async
 	// deriveds resolve at different times and the template can't read the early
@@ -69,36 +75,47 @@
 	// last wrote. Checked here rather than on send so the composer can offer a
 	// note instead, which is the only thing that still reaches anyone.
 	const metaWindowClosed = $derived(isMetaReplyWindowClosed(t.channel, t.messages));
+
+	$effect(() => {
+		toolbar.conversation = conversationBar;
+	});
 </script>
 
-<ThreadPane stacked>
-	<ThreadHeader
-		title={t.contactUserName ?? t.contactName ?? t.contactEmail ?? 'Conversation'}
-		subtitle={t.subject ?? channelLabel(t.channel)}
-		backHref="/staff/inbox"
+{#snippet conversationBar()}
+	<Button
+		href={resolve('/staff/inbox')}
+		variant="ghost"
+		size="sm"
+		shape="square"
+		class="lg:hidden"
+		aria-label="Back to the inbox"
 	>
-		{#snippet subtitleIcon()}<ChannelIcon size={14} />{/snippet}
-		{#snippet actions()}
-			<StatusBadge status={threadDisplayStatus(t)} label />
-			<!-- Above `sm` the exits live in the header, beside the status they
-			     change. Below it they move under the composer instead — see the
-			     bottom of this file. Three buttons and a badge on a 375px header
-			     wrap into ragged lines and put the primary action off the first
-			     screen. -->
-			<div class="hidden sm:contents">
-				<DispositionBar
-					threadId={t.id}
-					status={t.status}
-					awaiting={!!t.awaitingReplySince}
-					onassign={() => {
-						detailsOpen = true;
-					}}
-				/>
-			</div>
-		{/snippet}
+		<IconArrowLeft size={18} />
+	</Button>
+	<ChannelIcon size={16} class="shrink-0 text-muted" aria-label={channelLabel(t.channel)} />
+	<div class="flex min-w-0 flex-1 items-center gap-2">
+		<h2 class="truncate text-lg font-bold">{t.subject ?? channelLabel(t.channel)}</h2>
+		<StatusBadge status={threadDisplayStatus(t)} label />
+		<span class="hidden truncate text-muted text-sm md:inline">
+			{t.contactUserName ?? t.contactName ?? t.contactEmail ?? ''}
+		</span>
+	</div>
+	<!-- Above `sm` the exits live in the toolbar. Below it they move under the
+	     composer instead — see the bottom of this file. -->
+	<div class="hidden sm:contents">
+		<DispositionBar
+			threadId={t.id}
+			status={t.status}
+			awaiting={!!t.awaitingReplySince}
+			onassign={() => {
+				detailsOpen = true;
+			}}
+		/>
+	</div>
+{/snippet}
 
-		<DetailsPanel thread={t} {assignForm} bind:open={detailsOpen} />
-	</ThreadHeader>
+<ThreadPane stacked>
+	<DetailsPanel thread={t} {assignForm} bind:open={detailsOpen} />
 
 	<!-- The age line. Always present, and always the *reason* the thread is in
 	     front of you: which of the two clocks is running says more than either

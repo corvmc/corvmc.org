@@ -1,16 +1,13 @@
 <script lang="ts">
 	/**
-	 * The header line, the four view tabs, and whatever the reader has saved.
+	 * The four view tabs, and whatever the reader has saved.
 	 *
 	 * `getInboxThreadCounts` is unparameterized and the thread mutations refresh
 	 * it by name, so it cannot live in the list's filter-keyed query — see
-	 * InboxChannelFilter. It is awaited here rather than in two places because a
-	 * second awaited derived in a sibling is a second round trip that renders at
-	 * a different moment, and these two are one statement about the same numbers.
+	 * InboxChannelFilter. The toolbar's Start Daily reads the same cached entry.
 	 */
 	import { IconAlarmSnooze, IconInbox, IconInboxOff, IconLayoutList } from '@tabler/icons-svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import InboxHeader from './InboxHeader.svelte';
 	import { getInboxThreadCounts } from '$lib/remote/inbox.remote';
 	import SavedViewTabs from './SavedViewTabs.svelte';
 
@@ -19,8 +16,6 @@
 
 	const counts = $derived(await getInboxThreadCounts());
 </script>
-
-<InboxHeader open={counts.open} />
 
 <!-- `dense`: four word-tabs are wider than the ~20rem list pane at every
      viewport wide enough to show a conversation beside it, so they used to
