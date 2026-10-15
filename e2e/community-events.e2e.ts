@@ -73,18 +73,17 @@ test.describe('community listings', () => {
 		await expect(page.getByText(SEED_CE_DRAFT_TITLE)).toHaveCount(0);
 
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		// The queue is the calendar's default view, and the calendar holds
-		// /staff/events. Arriving with no query string at all has to land on Needs
-		// review, or the notification link is a lie.
+		// The calendar holds /staff/events and opens on every status (#1784); a
+		// draft is in none of them.
 		await page.goto('/staff/events');
-		await expect(page.getByLabel('Status')).toHaveValue('review');
+		await expect(page.getByLabel('Status')).toHaveValue('all');
 		await expect(page.getByText(SEED_CE_DRAFT_TITLE)).toHaveCount(0);
 
 		// The pre-split URL sent in notifications for as long as the old tab
-		// existed. It needs no redirect any more — it lands on the calendar, whose
-		// default view is the queue — but that has to stay true.
+		// existed. It needs no redirect: it lands on the calendar's default view,
+		// which includes everything pending review.
 		await page.goto('/staff/events?status=pending_review');
-		await expect(page.getByLabel('Status')).toHaveValue('review');
+		await expect(page.getByLabel('Status')).toHaveValue('all');
 		await expect(page.getByText(SEED_CE_PENDING_TITLE)).toBeVisible();
 	});
 
