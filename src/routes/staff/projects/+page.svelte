@@ -5,6 +5,7 @@
 	import Pagination from '$lib/components/ui/Pagination.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import ProgressRing from '$lib/components/ui/ProgressRing.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
@@ -117,15 +118,18 @@
 	{:else}
 		<Table>
 			{#snippet head()}
+				<th class="w-px"><span class="sr-only">Progress</span></th>
 				<th>Project</th>
 				<th>Committees</th>
-				<th>Progress</th>
 				<th>Dates</th>
 				<th class="cell-num">Budget</th>
 				<th class="cell-num">Spent</th>
 			{/snippet}
 			{#each data.projects as row (row.project.id)}
 				<tr class="hover" use:rowLink={resolve(`/staff/projects/${row.project.id}`)}>
+					<td class="w-px">
+						<ProgressRing value={row.progress.done} total={row.progress.total} />
+					</td>
 					<td class="cell-primary">
 						<a class="link font-medium" href={resolve(`/staff/projects/${row.project.id}`)}>
 							{row.project.name}
@@ -147,21 +151,6 @@
 							{#if row.committeeNames.length > 1}
 								<span class="text-muted">+{row.committeeNames.length - 1}</span>
 							{/if}
-						{/if}
-					</td>
-					<td class="whitespace-nowrap">
-						{#if row.progress.total === 0}
-							<span class="text-muted">No tasks</span>
-						{:else}
-							<span class="inline-flex items-center gap-2">
-								<progress
-									class="progress w-16 progress-success"
-									value={row.progress.done}
-									max={row.progress.total}
-									aria-label="Tasks done"
-								></progress>
-								{Math.round((row.progress.done / row.progress.total) * 100)}%
-							</span>
 						{/if}
 					</td>
 					<td class="whitespace-nowrap">{dateRange(row.project.startsAt, row.project.endsAt)}</td>
