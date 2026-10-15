@@ -12,8 +12,11 @@
 	import { resolve } from '$app/paths';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { CreateBandAction } from '$lib/components/actions';
-	import { getStaffBands } from '$lib/remote/bands.remote';
+	import { getStaffBands, getStaffBandTotals } from '$lib/remote/bands.remote';
 	import { formatDateShortYear } from '$lib/utils/format';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { retryQuery } from '$lib/utils/retry-query';
+	import BandTotals from './BandTotals.svelte';
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
@@ -53,6 +56,15 @@
 	<CreateBandAction />
 </PageHeader>
 <PageContent>
+	<svelte:boundary>
+		<BandTotals />
+		{#snippet failed(_error, reset)}
+			<Alert type="warning" reset={() => retryQuery(getStaffBandTotals(), reset)}>
+				The band totals didn't load. The table below is unaffected.
+			</Alert>
+		{/snippet}
+	</svelte:boundary>
+
 	<FilterBar activeCount={activeFilterCount} menuCount={menuFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput

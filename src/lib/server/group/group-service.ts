@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { db } from '$lib/server/db';
@@ -14,6 +14,7 @@ import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { DomainError } from '$lib/server/domain-error';
 import { groupGrantsColumn } from '$lib/server/capability/grant-columns';
 import { openApplicationCount } from '$lib/server/group/application-service';
+import { activeGroup, deactivatedGroup } from '$lib/server/group/group-totals-service';
 import type { GroupKind, GroupJoinPolicy } from '$lib/config';
 import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
 
@@ -189,8 +190,8 @@ export async function listGroups(
 	const conditions = [inArray(group.kind, [...(opts?.kinds ?? STAFF_GROUP_KINDS)])];
 
 	if (opts?.search) conditions.push(containsLiteral(group.name, opts.search));
-	if (opts?.status === 'active') conditions.push(isNull(group.deletedAt));
-	else if (opts?.status === 'deactivated') conditions.push(isNotNull(group.deletedAt));
+	if (opts?.status === 'active') conditions.push(activeGroup());
+	else if (opts?.status === 'deactivated') conditions.push(deactivatedGroup());
 
 	const where = and(...conditions);
 

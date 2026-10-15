@@ -74,11 +74,7 @@ import {
 	getConflictDetails,
 	getValidationWarnings
 } from '$lib/server/reservation/conflict-service';
-import {
-	buildDateInTz,
-	buildTimeRangeInTz,
-	formatDateInTz
-} from '$lib/server/reservation/timezone';
+import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
 import {
 	createEventSeries,
 	getByEvent,
@@ -132,6 +128,7 @@ import { eventSources } from '$lib/config';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
+import { calendarFloor, getCalendarTotals } from '$lib/server/event/calendar-totals-service';
 import { formatDateShortYear } from '$lib/utils/format';
 import { renderMarkdown } from '$lib/utils/markdown';
 import { getShifts, getVolunteerRoles } from './volunteer.remote';
@@ -657,6 +654,12 @@ const calendarStatuses = ['pending_review', 'published', 'cancelled', 'rejected'
  * source and runs the shows CMC produces. A CMC show appears in both, in two
  * roles: something you are building, and something the public can see.
  */
+/** The Calendar page's summary counts — independent of the table's filters. */
+export const getStaffCalendarTotals = query(async () => {
+	await requireCapability('event.read');
+	return getCalendarTotals();
+});
+
 export const getStaffCalendar = query(
 	z.object({
 		statuses: z.array(z.enum(calendarStatuses)).min(1).optional(),
@@ -665,15 +668,9 @@ export const getStaffCalendar = query(
 	}),
 	async (filters) => {
 		await requireCapability('event.read');
-		// Midnight tonight in venue time, not UTC — the same anchor the public gig
-		// guide uses, so the two agree about which day a late show belongs to.
-		const from = buildDateInTz(
-			formatDateInTz(new Date(), DEFAULT_TIMEZONE),
-			'00:00',
-			DEFAULT_TIMEZONE
-		);
+		// Midnight tonight in venue time, the same floor the counts above it use.
 		const { rows, pagination } = await listStaffCalendar(
-			from,
+			calendarFloor(),
 			{
 				// The default view is the queue: a staffer arrives here from a
 				// notification, and landing on the whole calendar would bury it.

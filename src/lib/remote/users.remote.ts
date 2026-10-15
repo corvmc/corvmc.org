@@ -14,7 +14,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { listLowStock } from '$lib/server/inventory/stock-service';
-import { activeUser, deactivatedUser, getUserTotals } from '$lib/server/user/user-totals-service';
+import { getUserTotals, userListWhere } from '$lib/server/user/user-totals-service';
 import { listShortStaffedShifts } from '$lib/server/volunteer/work-order-service';
 import { listDevelopmentDeadlinesBetween } from '$lib/server/development/deadline-service';
 import { addIsoDays } from '$lib/utils/deadline';
@@ -55,7 +55,6 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { eq, or, count, desc, gte, lte, ne, inArray, sql, and } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
 import { getUserRoles } from '$lib/server/authorization';
 import { memberRefColumns, toMemberRef, toEventRef } from '$lib/server/entity/refs';
 import { paginate } from '$lib/server/db/paginate';
@@ -173,26 +172,21 @@ export const getStaffUserTotals = query(async () => {
 	return getUserTotals();
 });
 
+const yesNoFilter = z.boolean().optional();
 const staffUsersFilters = z.object({
 	search: z.string().optional(),
 	status: z.enum(['active', 'deactivated', 'all']).optional(),
+	sustaining: yesNoFilter,
+	inBand: yesNoFilter,
+	staff: yesNoFilter,
+	instructor: yesNoFilter,
 	page: z.number().optional()
 });
 
 export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 	await requireCapability('user.list');
 
-	const search = filters.search?.trim();
-	const searchCondition = search
-		? or(containsLiteral(user.name, search), containsLiteral(user.email, search))
-		: undefined;
-	const status = filters.status ?? 'active';
-	const statusCondition =
-		status === 'active' ? activeUser() : status === 'deactivated' ? deactivatedUser() : undefined;
-	const where =
-		searchCondition && statusCondition
-			? and(searchCondition, statusCondition)
-			: (searchCondition ?? statusCondition);
+	const where = userListWhere(filters);
 
 	const dataQ = db
 		.select({
