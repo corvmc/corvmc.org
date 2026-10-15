@@ -20,6 +20,7 @@
 		IconBan,
 		IconSettings,
 		IconHistory,
+		IconShieldLock,
 		IconCash,
 		IconCoins,
 		IconRepeat,
@@ -137,6 +138,7 @@
 		grants: IconContract,
 		renewals: IconCertificate,
 		settings: IconSettings,
+		access: IconShieldLock,
 		audit: IconHistory
 	};
 
