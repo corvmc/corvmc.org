@@ -20,7 +20,6 @@
 		IconHistory,
 		IconCash,
 		IconCoins,
-		IconRepeat,
 		IconMusic,
 		IconMail,
 		IconMailbox,
