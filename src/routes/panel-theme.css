@@ -2,51 +2,17 @@
    Panel theme — dense, data-first styling for the staff, member and band panels.
    Applies only while a `[data-panel]` element (AppShell) is in the document;
    `:has()` on the root reaches portalled dialogs, menus and toasts too.
-   Colour, size and type tokens are vendored from Cloudflare Kumo 2.14.0
-   (`@cloudflare/kumo/dist/styles/theme-kumo.css`), MIT — notice in
-   `panel-theme.kumo-LICENSE`. Kumo's `.skeleton` gradient is deliberately absent.
+   The CMC palette and Lexend stay; control sizes and the text scale follow
+   Cloudflare Kumo 2.14.0 (`theme-kumo.css`), MIT — notice in
+   `panel-theme.kumo-LICENSE`.
    --------------------------------------------------------------------------- */
 
-/* Tokens are unlayered so they shadow daisyUI's theme blocks in both modes;
-   `light-dark()` follows the `color-scheme` each daisyUI theme already sets. */
+/* Unlayered so it shadows daisyUI's theme blocks, light and dark alike. */
 :root:has([data-panel]) {
-	/* Kumo semantic tokens (subset in use) */
-	--kumo-text-default: light-dark(oklch(21% 0.006 285.885), oklch(97% 0 0));
-	--kumo-text-inverse: light-dark(oklch(97% 0 0), oklch(20.5% 0 0));
-	--kumo-text-subtle: light-dark(oklch(55.6% 0 0), oklch(70.8% 0 0));
-	--kumo-text-link: light-dark(oklch(42.4% 0.199 265.638), oklch(70.7% 0.165 254.624));
-	--kumo-canvas: light-dark(oklch(98.75% 0 0), oklch(10% 0 0));
-	--kumo-base: light-dark(#fff, oklch(17% 0 0));
-	--kumo-recessed: light-dark(oklch(96% 0 0), oklch(15% 0 0));
-	--kumo-tint: light-dark(oklch(97% 0 0), oklch(26.9% 0 0));
-	--kumo-fill: light-dark(oklch(92.2% 0 0), oklch(26.9% 0 0));
-	--kumo-contrast: light-dark(oklch(8.5% 0 0), oklch(98.5% 0 0));
-	--kumo-line: light-dark(oklch(14.5% 0 0 / 0.1), oklch(32% 0 0));
-	--kumo-hairline: light-dark(oklch(93.5% 0 0), oklch(26.9% 0 0));
-	--kumo-shadow-drop: light-dark(oklch(0% 0 0 / 0.08), oklch(0% 0 0 / 0.3));
-	--kumo-info: light-dark(oklch(54.6% 0.245 262.881), oklch(48.8% 0.243 264.376));
-	--kumo-success: light-dark(oklch(59.6% 0.145 163.225), oklch(50.8% 0.118 165.612));
-	--kumo-warning: light-dark(oklch(73.9% 0.177 58.2), oklch(64.5% 0.168 50));
-	--kumo-danger: light-dark(oklch(57.7% 0.245 27.325), oklch(50.5% 0.213 27.518));
-	--kumo-teal: light-dark(oklch(54.9% 0.096 184.565), oklch(51.1% 0.096 186.391));
-
-	/* daisyUI palette, mapped. Primary stays CMC orange. */
-	--color-base-100: var(--kumo-base);
-	--color-base-200: light-dark(oklch(96% 0 0), oklch(20% 0 0));
-	--color-base-300: var(--kumo-fill);
-	--color-base-content: var(--kumo-text-default);
-	--color-neutral: var(--kumo-contrast);
-	--color-neutral-content: var(--kumo-text-inverse);
-	--color-secondary: var(--kumo-teal);
-	--color-secondary-content: #fff;
-	--color-info: var(--kumo-info);
-	--color-info-content: #fff;
-	--color-success: var(--kumo-success);
-	--color-success-content: #fff;
-	--color-warning: var(--kumo-warning);
-	--color-warning-content: oklch(21% 0.006 285.885);
-	--color-error: var(--kumo-danger);
-	--color-error-content: #fff;
+	/* Structure lines and fills, derived from the active CMC theme. */
+	--panel-line: color-mix(in oklab, var(--color-base-content) 12%, transparent);
+	--panel-tint: var(--color-base-300);
+	--panel-subtle: var(--fg-2);
 
 	--radius-selector: 0.25rem;
 	--radius-field: 0.375rem;
@@ -57,18 +23,9 @@
 	--depth: 0;
 	--noise: 0;
 
-	--surface: var(--kumo-base);
-	--surface-border: var(--kumo-line);
-	--bg-card: var(--kumo-base);
-
-	/* Plain UI type: no display faces, no Lexend alternates, Kumo's text scale. */
-	--default-font-family:
-		ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-		sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+	/* Lexend throughout: the chalk and script display faces step aside. */
 	--font-chalk: var(--default-font-family);
 	--font-script: var(--default-font-family);
-	--font-features-body: normal;
-	--font-features-display: normal;
 	--text-xs: 0.75rem;
 	--text-xs--line-height: calc(1 / 0.75);
 	--text-sm: 0.8125rem;
@@ -100,7 +57,7 @@ body:has([data-panel]) {
 
 /* A page header's subtitle is a breadcrumb-weight label, not a brand eyebrow. */
 [data-panel] [data-page-header] hgroup > span {
-	color: var(--kumo-text-subtle);
+	color: var(--panel-subtle);
 	font-size: var(--text-xs);
 	font-weight: 500;
 	text-transform: none;
@@ -145,11 +102,11 @@ body:has([data-panel]) {
 				)
 			) {
 				--btn-color: var(--color-base-100);
-				--btn-border: var(--kumo-line);
+				--btn-border: var(--panel-line);
 			}
 			/* A latched ghost is a resting control, not an absent one. */
 			.btn-ghost.latched {
-				--btn-border: var(--kumo-line);
+				--btn-border: var(--panel-line);
 			}
 
 			.table {
@@ -163,16 +120,16 @@ body:has([data-panel]) {
 				padding-inline: 0.625rem;
 			}
 			.table :where(thead, tfoot) {
-				color: var(--kumo-text-subtle);
+				color: var(--panel-subtle);
 				font-size: var(--text-xs);
 				font-weight: 500;
 			}
 			.table tbody tr:hover {
-				background-color: var(--kumo-tint);
+				background-color: var(--panel-tint);
 			}
 
 			.card {
-				border: var(--border) solid var(--kumo-line);
+				border: var(--border) solid var(--panel-line);
 			}
 			.card-body {
 				--card-p: 1rem;
@@ -215,9 +172,9 @@ body:has([data-panel]) {
 					.badge-dash,
 					.badge-ghost
 				) {
-				background-color: color-mix(in oklab, var(--badge-color) 14%, var(--color-base-100));
-				border-color: color-mix(in oklab, var(--badge-color) 30%, var(--color-base-100));
-				color: color-mix(in oklab, var(--badge-color) 70%, var(--color-base-content));
+				background-color: color-mix(in oklab, var(--badge-color) 22%, var(--color-base-100));
+				border-color: color-mix(in oklab, var(--badge-color) 55%, var(--color-base-100));
+				color: color-mix(in oklab, var(--badge-color) 45%, var(--color-base-content));
 			}
 
 			.menu {
