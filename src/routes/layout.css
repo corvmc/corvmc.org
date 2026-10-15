@@ -634,6 +634,19 @@ p {
 		& tr:has(> .cell-group)::after {
 			background: var(--color-base-200);
 		}
+		/* The filler carries the row rule, or separators stop short of the stripes. */
+		& :where(thead tr, tbody tr:not(:last-child))::after {
+			border-bottom: var(--border) solid color-mix(in oklch, var(--color-base-content) 5%, #0000);
+		}
+		/* Packed cells keep one line; only a `cell-text` cell may wrap. */
+		/* The filler takes 100%, so cells get min-content width: a wrapping flex
+		   row would break at every item. Unpacked tables still wrap (#1835). */
+		& :where(th, td):not(.cell-text) {
+			white-space: nowrap;
+		}
+		& :where(th, td):not(.cell-text) .flex-wrap {
+			flex-wrap: nowrap;
+		}
 		& .cell-primary {
 			width: auto;
 			max-width: 24rem;
