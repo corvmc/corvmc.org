@@ -14,7 +14,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { listLowStock } from '$lib/server/inventory/stock-service';
-import { getUserTotals } from '$lib/server/user/user-totals-service';
+import { activeUser, deactivatedUser, getUserTotals } from '$lib/server/user/user-totals-service';
 import { listShortStaffedShifts } from '$lib/server/volunteer/work-order-service';
 import { listDevelopmentDeadlinesBetween } from '$lib/server/development/deadline-service';
 import { addIsoDays } from '$lib/utils/deadline';
@@ -54,20 +54,7 @@ import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
-import {
-	eq,
-	or,
-	isNull,
-	isNotNull,
-	count,
-	desc,
-	gte,
-	lte,
-	ne,
-	inArray,
-	sql,
-	and
-} from 'drizzle-orm';
+import { eq, or, count, desc, gte, lte, ne, inArray, sql, and } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { getUserRoles } from '$lib/server/authorization';
 import { memberRefColumns, toMemberRef, toEventRef } from '$lib/server/entity/refs';
@@ -201,11 +188,7 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 		: undefined;
 	const status = filters.status ?? 'active';
 	const statusCondition =
-		status === 'active'
-			? isNull(user.deletedAt)
-			: status === 'deactivated'
-				? isNotNull(user.deletedAt)
-				: undefined;
+		status === 'active' ? activeUser() : status === 'deactivated' ? deactivatedUser() : undefined;
 	const where =
 		searchCondition && statusCondition
 			? and(searchCondition, statusCondition)

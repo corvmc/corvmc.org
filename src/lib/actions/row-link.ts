@@ -1,6 +1,7 @@
 import { goto } from '$app/navigation';
 
-const INTERACTIVE = 'a,button,input,select,textarea,label,[role="button"],[data-no-row-click]';
+const INTERACTIVE =
+	'a,button,input,select,textarea,label,[role="button"],.dropdown,[data-no-row-click]';
 
 /**
  * Mouse affordance for a clickable table row.
@@ -11,7 +12,9 @@ const INTERACTIVE = 'a,button,input,select,textarea,label,[role="button"],[data-
  * primary cell, which every list row must have.
  *
  * Clicks originating inside an interactive element are ignored, so cells no
- * longer need their own `onclick={(e) => e.stopPropagation()}`.
+ * longer need their own `onclick={(e) => e.stopPropagation()}`. "Originating"
+ * means where the press went down: an open daisyUI dropdown sets
+ * `pointer-events: none` on its trigger, so the click itself lands on the cell.
  *
  * Pass an already-resolved path — the same value the row's primary-cell `<a>`
  * uses, so the two can never drift:
@@ -24,12 +27,22 @@ const INTERACTIVE = 'a,button,input,select,textarea,label,[role="button"],[data-
  */
 export function rowLink(node: HTMLElement, href: string) {
 	let target = href;
+	let pressedInteractive = false;
+
+	const isInteractive = (el: EventTarget | null) =>
+		!!(el as Element | null)?.closest?.(INTERACTIVE);
+
+	function onPointerDown(event: PointerEvent) {
+		pressedInteractive = isInteractive(event.target);
+	}
 
 	function onClick(event: MouseEvent) {
+		const pressed = pressedInteractive;
+		pressedInteractive = false;
 		if (event.defaultPrevented || event.button !== 0) return;
 		// Let the browser handle open-in-new-tab / new-window.
 		if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-		if ((event.target as HTMLElement | null)?.closest(INTERACTIVE)) return;
+		if (pressed || isInteractive(event.target)) return;
 		// Don't hijack a click that ended a text selection.
 		if (window.getSelection()?.toString()) return;
 		// `target` is already the output of `resolve()` at the call site — the rule
@@ -37,6 +50,7 @@ export function rowLink(node: HTMLElement, href: string) {
 		void goto(target);
 	}
 
+	node.addEventListener('pointerdown', onPointerDown);
 	node.addEventListener('click', onClick);
 
 	return {
@@ -44,6 +58,7 @@ export function rowLink(node: HTMLElement, href: string) {
 			target = next;
 		},
 		destroy() {
+			node.removeEventListener('pointerdown', onPointerDown);
 			node.removeEventListener('click', onClick);
 		}
 	};

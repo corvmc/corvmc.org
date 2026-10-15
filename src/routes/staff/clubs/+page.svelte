@@ -8,6 +8,7 @@
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import { EntityChip } from '$lib/components/ui/entity';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import CreateGroupAction from '$lib/components/groups/CreateGroupAction.svelte';
@@ -36,6 +37,10 @@
 
 	let result = $derived(getStaffGroups(filters));
 
+	// Chairs past this collapse into a `+N`, as BadgeList does: one crowded club
+	// must not set the height of every row beside it.
+	const MAX_CHAIRS = 2;
+
 	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + (status ? 1 : 0));
 
 	function clearFilters() {
@@ -46,7 +51,7 @@
 	}
 </script>
 
-<PageHeader title="Clubs" subtitle="Programs members drop into">
+<PageHeader title="Clubs">
 	<CreateGroupAction />
 </PageHeader>
 <PageContent>
@@ -99,14 +104,20 @@
 						     club. The row itself is the link. -->
 						<td class="cell-primary">{g.name}</td>
 						<!-- A club with no chairs is legal; it reads as a fact, not a fault. -->
-						<td class="min-w-0">
+						<td class="whitespace-nowrap">
 							{#if g.chairs.length === 0}
 								<span class="text-fg-2">No chairs</span>
 							{:else}
-								<span class="flex flex-wrap gap-1">
-									{#each g.chairs as chair (chair.id)}
+								{@const hidden = g.chairs.slice(MAX_CHAIRS)}
+								<span class="flex items-center gap-1">
+									{#each g.chairs.slice(0, MAX_CHAIRS) as chair (chair.id)}
 										<EntityChip ref={chair} icon={false} />
 									{/each}
+									{#if hidden.length > 0}
+										<span class="inline-flex" title={hidden.map((c) => c.title).join(', ')}>
+											<Badge variant="ghost" size="sm">+{hidden.length}</Badge>
+										</span>
+									{/if}
 								</span>
 							{/if}
 						</td>

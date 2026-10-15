@@ -18,8 +18,8 @@
 
 <Action
 	action={grantInstructor}
-	label="Grant teaching status"
-	modalTitle="Grant teaching status"
+	label="Add Instructor"
+	modalTitle="Add Instructor"
 	submitLabel="Grant"
 	successToast="Teaching status granted"
 	variant="primary"

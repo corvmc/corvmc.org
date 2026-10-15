@@ -4,14 +4,13 @@
 
 	const totals = await getStaffUserTotals();
 	const stats = $derived([
-		{ title: 'Accounts', value: totals.total },
-		{ title: 'Active', value: totals.active },
+		{ title: 'Accounts', value: totals.accounts },
 		{ title: 'Sustaining members', value: totals.sustaining },
-		{ title: 'Deactivated or banned', value: totals.deactivated }
+		{ title: 'New members', value: totals.newMembers }
 	]);
 </script>
 
-<div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+<div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
 	{#each stats as stat (stat.title)}
 		<StatCard title={stat.title} value={stat.value.toLocaleString()} size="sm" />
 	{/each}

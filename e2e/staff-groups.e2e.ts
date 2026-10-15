@@ -65,7 +65,7 @@ test.describe('staff groups', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff/clubs');
 
-		await page.getByRole('button', { name: 'New group' }).click();
+		await page.getByRole('button', { name: 'New Club' }).click();
 
 		const name = `E2E Songwriter Circle ${Date.now()}`;
 		await page.locator('input[name="name"]').fill(name);
