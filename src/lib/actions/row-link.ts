@@ -28,6 +28,8 @@ const INTERACTIVE =
 export function rowLink(node: HTMLElement, href: string) {
 	let target = href;
 	let pressedInteractive = false;
+	// The whole row is a link, so it gets the link cursor without each caller asking.
+	node.style.cursor = 'pointer';
 
 	const isInteractive = (el: EventTarget | null) =>
 		!!(el as Element | null)?.closest?.(INTERACTIVE);

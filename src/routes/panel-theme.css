@@ -66,6 +66,23 @@ body:has([data-panel]) {
 @layer utilities {
 	@layer panel {
 		:where(html:has([data-panel])) {
+			/* Tailwind 4's preflight gives buttons the arrow; clickables show the pointer.
+			   Layered, so a page's own cursor utility still wins. */
+			:is(
+				button,
+				[role='button'],
+				[role='tab'],
+				[role='menuitem'],
+				[role='option'],
+				summary,
+				label[for],
+				select,
+				input[type='checkbox'],
+				input[type='radio'],
+				.btn
+			):not(:disabled, [aria-disabled='true']) {
+				cursor: pointer;
+			}
 			.btn {
 				--btn-p: 0.75rem;
 				font-weight: 500;
@@ -101,8 +118,9 @@ body:has([data-panel]) {
 				--btn-color: var(--color-base-100);
 				--btn-border: var(--panel-line);
 			}
-			/* A ghost keeps a hairline, so an action never reads as a caption. */
-			.btn-ghost {
+			/* A ghost with a label keeps a hairline, so it never reads as a caption;
+			   icon-only controls (drag handles, row toggles) stay bare. */
+			.btn-ghost:not(.btn-square, .btn-circle) {
 				--btn-border: var(--panel-line);
 			}
 

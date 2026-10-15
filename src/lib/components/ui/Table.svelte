@@ -20,6 +20,7 @@
 		children,
 		size = 'sm',
 		zebra = true,
+		packed = true,
 		class: className = ''
 	}: {
 		/** The `<th>` cells; wrapped in `<thead><tr>` here. */
@@ -28,12 +29,19 @@
 		children: Snippet;
 		size?: keyof typeof sizeClass;
 		zebra?: boolean;
+		/** Off for a table that shares its row with a sidebar: the primary cell
+		 *  absorbs the slack and truncates, so the table never outgrows its column. */
+		packed?: boolean;
 		class?: string;
 	} = $props();
 </script>
 
 <div class="overflow-x-auto">
-	<table class="table table-packed {sizeClass[size]} {zebra ? 'table-zebra' : ''} {className}">
+	<table
+		class="table {packed ? 'table-packed' : ''} {sizeClass[size]} {zebra
+			? 'table-zebra'
+			: ''} {className}"
+	>
 		{#if head}
 			<thead>
 				<tr>{@render head()}</tr>

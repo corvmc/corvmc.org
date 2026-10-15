@@ -13,6 +13,7 @@
 	import { isProjectArchived, type ProjectView } from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
 	import { resolve } from '$app/paths';
+	import { rowLink } from '$lib/actions/row-link';
 
 	/**
 	 * Every body of work with a budget and an owner. Budget and burn share a
@@ -124,7 +125,7 @@
 				<th class="cell-num">Spent</th>
 			{/snippet}
 			{#each data.projects as row (row.project.id)}
-				<tr class="hover">
+				<tr class="hover" use:rowLink={resolve(`/staff/projects/${row.project.id}`)}>
 					<td class="cell-primary">
 						<a class="link font-medium" href={resolve(`/staff/projects/${row.project.id}`)}>
 							{row.project.name}

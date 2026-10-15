@@ -167,6 +167,21 @@
 	<Button variant="ghost" size="sm" aria-pressed={!showDone} onclick={() => onshowdone(!showDone)}>
 		{showDone ? 'Hide done' : `Show done${hiddenDone > 0 ? ` (${hiddenDone})` : ''}`}
 	</Button>
+	<Action
+		action={addSection}
+		class="ml-auto"
+		label="Add Section"
+		variant="default"
+		size="sm"
+		modalTitle="Add a section"
+		submitLabel="Add section"
+		successToast="Section added"
+	>
+		{#snippet form()}
+			<input {...addSection.fields.projectId.as('hidden', projectId)} />
+			<Field field={addSection.fields.name} type="text" label="Name" />
+		{/snippet}
+	</Action>
 </div>
 
 {#if list.tasks.length === 0 && list.sections.length === 0}
@@ -175,10 +190,11 @@
 		description="Apply a duty list to start one, or add tasks to a section."
 	/>
 {:else}
-	<Table zebra={false}>
+	<Table zebra={false} packed={false}>
 		{#snippet head()}
 			<th class="w-px"><span class="sr-only">Done</span></th>
 			<th class="cell-primary">Task</th>
+			<th class="col-support">Role</th>
 			<th>Assigned</th>
 			<th class="col-support">When</th>
 			<th class="col-support cell-num">Cost</th>
@@ -190,7 +206,7 @@
 				ondragover={(e) => overSection(e, sid)}
 				ondrop={(e) => dropOnSection(e, sid)}
 			>
-				<th colspan="5" class="font-semibold">
+				<th colspan="6" class="font-semibold">
 					<div class="flex items-center gap-1">
 						{#if g.section}
 							{@const name = g.section.name}
@@ -253,7 +269,7 @@
 							class="block truncate font-medium {t.cancelledAt ? 'text-subtle line-through' : ''}"
 							onclick={(e) => open(e, t.id)}>{t.title}</a
 						>
-						{#if t.duties.total > 0 || t.roleName}
+						{#if t.duties.total > 0 || t.engagement}
 							<div class="truncate text-subtle">
 								{#if t.duties.total > 0}
 									<Button
@@ -272,9 +288,20 @@
 										{t.duties.done}/{t.duties.total} duties
 									</Button>
 								{/if}
-								{#if t.roleName && t.mode !== 'contractor'}{t.roleName}{/if}
+								{#if t.mode === 'contractor' && t.engagement}
+									<a class="link" href={resolve(`/staff/contractors/jobs/${t.engagement.id}`)}
+										>{t.engagement.invoiceRef
+											? `Invoice ${t.engagement.invoiceRef}`
+											: 'Contractor job'}</a
+									>
+								{/if}
 							</div>
 						{/if}
+					</td>
+					<td class="col-support whitespace-nowrap">
+						{#if t.roleName && t.mode !== 'contractor'}{t.roleName}{:else}<span class="text-fg-3"
+								>—</span
+							>{/if}
 					</td>
 					<td><AssignPicker task={t} {projectId} place="row" /></td>
 					<td class="col-support whitespace-nowrap">
@@ -292,7 +319,7 @@
 				{#if unfolded.has(t.id)}
 					<tr>
 						<td></td>
-						<td colspan="4">
+						<td colspan="5">
 							<div class="border-s-2 border-base-300 ps-3">
 								<DutyItems task={t} {projectId} place="row" />
 							</div>
@@ -302,35 +329,20 @@
 			{:else}
 				<tr>
 					<td></td>
-					<td colspan="4" class="text-subtle">
+					<td colspan="5" class="text-subtle">
 						{g.total > 0 ? 'Nothing here matches the filter.' : 'No tasks yet.'}
 					</td>
 				</tr>
 			{/each}
 			<tr>
 				<td></td>
-				<td colspan="4">
+				<td colspan="5">
 					<AddTaskLine {projectId} sectionId={sid} sectionName={g.section?.name ?? 'no section'} />
 				</td>
 			</tr>
 		{/each}
 	</Table>
 {/if}
-
-<Action
-	action={addSection}
-	label="Add section"
-	variant="ghost"
-	size="sm"
-	modalTitle="Add a section"
-	submitLabel="Add section"
-	successToast="Section added"
->
-	{#snippet form()}
-		<input {...addSection.fields.projectId.as('hidden', projectId)} />
-		<Field field={addSection.fields.name} type="text" label="Name" />
-	{/snippet}
-</Action>
 
 <style>
 	.drop-target {
