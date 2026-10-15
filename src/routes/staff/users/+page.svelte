@@ -14,7 +14,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';
 	import { resolve } from '$app/paths';
-	import { IconDots, IconEye, IconCopy, IconUserOff } from '@tabler/icons-svelte';
+	import { IconCopy, IconUserOff } from '@tabler/icons-svelte';
 	import { getStaffUsers, getStaffUserTotals, bulkDeactivateUsers } from '$lib/remote/users.remote';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -102,6 +102,7 @@
 
 	async function copyEmail(email: string) {
 		await navigator.clipboard.writeText(email);
+		toast.success('Email copied');
 	}
 
 	// Every filter change resets paging and the on-screen selection.
@@ -215,7 +216,6 @@
 					<th>Name</th>
 					<th>Email</th>
 					<th class="col-support">Joined</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
 
 				{#each users as row (row.id)}
@@ -242,35 +242,23 @@
 								{#if row.deletedAt}<StatusBadge status="deactivated" label />{/if}
 							</span>
 						</td>
-						<td class="min-w-0 truncate">{row.email}</td>
-						<td class="col-support whitespace-nowrap">{formatDateShortYear(row.createdAt)}</td>
-						<td class="w-px">
-							<div class="dropdown dropdown-end">
+						<td class="min-w-0">
+							<span class="flex items-center gap-1">
+								<span class="truncate">{row.email}</span>
 								<Button
 									variant="ghost"
 									size="xs"
 									shape="square"
-									tabindex={0}
-									aria-label="Row actions"
+									class="border-transparent"
+									aria-label="Copy email"
+									title="Copy email"
+									onclick={() => copyEmail(row.email)}
 								>
-									<IconDots size={16} />
+									<IconCopy size={14} />
 								</Button>
-								<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-								<ul tabindex={0} class="menu dropdown-content dropdown-panel w-44 bg-base-200">
-									<li>
-										<a href={resolve(`/staff/users/${row.id}`)}><IconEye size={16} />View</a>
-									</li>
-									<li>
-										<button onclick={() => copyEmail(row.email)}>
-											<IconCopy size={16} />Copy email
-										</button>
-									</li>
-									<!-- No Impersonate item: `/staff/users/[id]/impersonate` does not exist
-									     (404). Impersonation is deferred — see docs/specs/shipped/staff-bands-spec.md.
-									     Re-add this only alongside the route. -->
-								</ul>
-							</div>
+							</span>
 						</td>
+						<td class="col-support whitespace-nowrap">{formatDateShortYear(row.createdAt)}</td>
 					</tr>
 				{/each}
 			</Table>
