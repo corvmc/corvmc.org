@@ -39,9 +39,7 @@
 
 <InfoCard title="Lapses before a shift they're on" state={total}>
 	{#snippet action()}
-		<Button href="/staff/volunteer/people?tab=cleared" variant="ghost" size="sm">
-			Who's cleared →
-		</Button>
+		<Button href="/staff/volunteer/people" variant="ghost" size="sm">Who's cleared →</Button>
 	{/snippet}
 
 	<Table>

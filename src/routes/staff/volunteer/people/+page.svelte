@@ -1,23 +1,17 @@
 <script lang="ts">
 	/**
-	 * Everybody, in three tabs.
+	 * Everybody who signed up, as one roster (#1934). The under-18 queue is the
+	 * "Awaiting sign-off" status and "who holds this clearance" is a filter: both
+	 * were tabs once, over what is the same list of people. Each grant's own
+	 * history, and revoking it, is on the person's record.
 	 *
-	 * Volunteers, the under-18 queue and the clearances table used to be three
-	 * places. They are one question — who are these people and what do I owe them
-	 * — asked at three scopes, and splitting them meant the minor waiting on a
-	 * guardian was filed under Hours and the lapsing card was a tab you had to
-	 * remember to open (docs/reports/volunteer-workflow-findings.md#c1, #c2).
-	 *
-	 * Each tab owns one query and fetches when it opens. The roster's rows carry
-	 * exactly one action, resolved by what is actually outstanding — a row
-	 * offering Confirm, Chase and Log Hours at once has not decided what it is
-	 * for.
+	 * Each row carries exactly one action, resolved by what is outstanding — a row
+	 * offering Confirm, Chase and Log Hours at once has not decided what it is for.
 	 */
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import DataList from '$lib/components/ui/DataList.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
@@ -29,8 +23,7 @@
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
-	import SignoffTab from './SignoffTab.svelte';
-	import ClearedTab from './ClearedTab.svelte';
+	import CertificationOptions from '$lib/components/volunteer/CertificationOptions.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -42,9 +35,12 @@
 		volunteerProfileStatuses,
 		volunteerProfileStatusLabels
 	} from '$lib/config';
-	import { getStaffVolunteers, confirmSignup } from '$lib/remote/volunteer.remote';
+	import {
+		getStaffVolunteers,
+		confirmSignup,
+		approveVolunteerSignup
+	} from '$lib/remote/volunteer.remote';
 
-	type Tab = 'roster' | 'signoff' | 'cleared';
 	type StatusFilter = (typeof volunteerProfileStatuses)[number] | '';
 
 	// Two fits the column at its narrowest without wrapping, and the overflow
@@ -59,16 +55,15 @@
 	const initial = page.url.searchParams;
 	const parseStatus = (raw: string | null): StatusFilter =>
 		volunteerProfileStatuses.includes(raw as never) ? (raw as StatusFilter) : '';
-	const parseTab = (raw: string | null): Tab =>
-		raw === 'signoff' || raw === 'cleared' ? raw : 'roster';
-
-	let tab = $state<Tab>(parseTab(initial.get('tab')));
 	// `searchText` (not `search`): FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
 	let searchText = $state(initial.get('q') ?? '');
 	let searchQuery = $state(initial.get('q') ?? '');
 	let roleFilter = $state(initial.get('role') ?? '');
-	let statusFilter = $state<StatusFilter>(parseStatus(initial.get('status')));
+	// `?tab=signoff` is the retired tab's address for the same rows.
+	let statusFilter = $state<StatusFilter>(
+		initial.get('tab') === 'signoff' ? 'blocked' : parseStatus(initial.get('status'))
+	);
 	let certFilter = $state(initial.get('cert') ?? '');
 	let pageNumber = $state(Number(initial.get('page') ?? '1') || 1);
 
@@ -78,7 +73,6 @@
 	// record on the next navigation.
 	$effect(() => {
 		const pairs: [string, string][] = [];
-		if (tab !== 'roster') pairs.push(['tab', tab]);
 		if (searchQuery) pairs.push(['q', searchQuery]);
 		if (roleFilter) pairs.push(['role', roleFilter]);
 		if (statusFilter) pairs.push(['status', statusFilter]);
@@ -97,15 +91,12 @@
 			search: searchQuery || undefined,
 			volunteerRoleId: roleFilter || undefined,
 			status: statusFilter || undefined,
+			certificationId: certFilter || undefined,
 			page: pageNumber
 		})
 	);
 	const activeFilterCount = $derived(
-		tab === 'cleared'
-			? certFilter
-				? 1
-				: 0
-			: (searchQuery ? 1 : 0) + (roleFilter ? 1 : 0) + (statusFilter ? 1 : 0)
+		(searchQuery ? 1 : 0) + (roleFilter ? 1 : 0) + (statusFilter ? 1 : 0) + (certFilter ? 1 : 0)
 	);
 
 	function clearFilters() {
@@ -151,167 +142,200 @@
 </PageHeader>
 
 <PageContent>
-	{#await roster then list}
-		<TabBar
-			collapse
-			tabs={[
-				{ key: 'roster', label: 'Roster', badge: list.pagination.total },
-				{ key: 'signoff', label: 'Awaiting sign-off', badge: list.minorsWaiting },
-				{ key: 'cleared', label: 'Cleared' }
-			]}
-			active={tab}
-			onchange={(key) => {
-				tab = key as Tab;
+	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+		{#snippet search()}
+			<SearchInput
+				bind:value={searchText}
+				placeholder="Search volunteers..."
+				onsearch={(q) => {
+					searchQuery = q;
+					pageNumber = 1;
+				}}
+			/>
+		{/snippet}
+
+		<Select
+			size="sm"
+			aria-label="Interested in role"
+			value={roleFilter}
+			onchange={(e: Event) => {
+				roleFilter = (e.currentTarget as HTMLSelectElement).value;
 				pageNumber = 1;
 			}}
-		/>
-	{/await}
+		>
+			<option value="">Any role</option>
+			<RoleOptions />
+		</Select>
 
-	{#if tab === 'roster'}
-		<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
-			{#snippet search()}
-				<SearchInput
-					bind:value={searchText}
-					placeholder="Search volunteers..."
-					onsearch={(q) => {
-						searchQuery = q;
+		<Select
+			size="sm"
+			aria-label="Status"
+			value={statusFilter}
+			onchange={(e: Event) => {
+				statusFilter = (e.currentTarget as HTMLSelectElement).value as StatusFilter;
+				pageNumber = 1;
+			}}
+		>
+			<option value="">Any status</option>
+			<!-- Labels come from the vocabulary, not from here: "blocked" reads as a
+				     punishment for answering honestly, and the enum's label already says so. -->
+			{#each volunteerProfileStatuses as s (s)}
+				<option value={s}>{volunteerProfileStatusLabels[s]}</option>
+			{/each}
+		</Select>
+
+		<Select
+			size="sm"
+			aria-label="Clearance"
+			value={certFilter}
+			onchange={(e: Event) => {
+				certFilter = (e.currentTarget as HTMLSelectElement).value;
+				pageNumber = 1;
+			}}
+		>
+			<option value="">Any clearance</option>
+			<CertificationOptions />
+		</Select>
+	</FilterBar>
+
+	<!-- The count is a shortcut to the filter: the queue a tab used to hold. -->
+	{#await roster then list}
+		<p class="text-subtle text-sm">
+			{list.pagination.total}
+			{list.pagination.total === 1 ? 'volunteer' : 'volunteers'}
+			{#if list.minorsWaiting > 0 && statusFilter !== 'blocked'}
+				·
+				<button
+					type="button"
+					class="link"
+					onclick={() => {
+						statusFilter = 'blocked';
 						pageNumber = 1;
 					}}
-				/>
-			{/snippet}
+				>
+					{list.minorsWaiting} awaiting sign-off
+				</button>
+			{/if}
+		</p>
+	{/await}
 
-			<Select
-				size="sm"
-				aria-label="Interested in role"
-				value={roleFilter}
-				onchange={(e: Event) => {
-					roleFilter = (e.currentTarget as HTMLSelectElement).value;
-					pageNumber = 1;
-				}}
-			>
-				<option value="">Any role</option>
-				<RoleOptions />
-			</Select>
+	<DataList
+		result={roster}
+		empty="No one has signed up to volunteer yet."
+		onpage={(p) => (pageNumber = p)}
+	>
+		{#snippet children(volunteers)}
+			<Table>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th>Volunteer</th>
+					<th class="col-support">Followed Roles</th>
+					<th class="col-support cell-num">Hours</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
+				{/snippet}
 
-			<Select
-				size="sm"
-				aria-label="Status"
-				value={statusFilter}
-				onchange={(e: Event) => {
-					statusFilter = (e.currentTarget as HTMLSelectElement).value as StatusFilter;
-					pageNumber = 1;
-				}}
-			>
-				<option value="">Any status</option>
-				<!-- Labels come from the vocabulary, not from here: "blocked" reads as a
-				     punishment for answering honestly, and the enum's label already says so. -->
-				{#each volunteerProfileStatuses as s (s)}
-					<option value={s}>{volunteerProfileStatusLabels[s]}</option>
-				{/each}
-			</Select>
-		</FilterBar>
-
-		<DataList
-			result={roster}
-			empty="No one has signed up to volunteer yet."
-			onpage={(p) => (pageNumber = p)}
-		>
-			{#snippet children(volunteers)}
-				<Table>
-					{#snippet head()}
-						<th class="w-px"><span class="sr-only">Status</span></th>
-						<th>Volunteer</th>
-						<th class="col-support">Followed Roles</th>
-						<th class="col-support cell-num">Hours</th>
-						<th class="w-px"><span class="sr-only">Actions</span></th>
-					{/snippet}
-
-					{#each volunteers as volunteer (volunteer.userId)}
-						<!-- The staff user record's Volunteer panel is the detail view for one of
+				{#each volunteers as volunteer (volunteer.userId)}
+					<!-- The staff user record's Volunteer panel is the detail view for one of
 						     these rows, so this index needs no [id] route of its own. -->
-						{@const href = withQuery(resolve(`/staff/users/${volunteer.userId}`), 'tab=volunteer')}
-						{@const line = subline(volunteer)}
-						<tr class="hover cursor-pointer" use:rowLink={href}>
-							<td class="w-px">
-								<StatusBadge status={volunteer.status} />
-								{#if !volunteer.isAdult}
-									<!-- Kept after a staff override, so an approved minor still reads
+					{@const href = withQuery(resolve(`/staff/users/${volunteer.userId}`), 'tab=volunteer')}
+					{@const line = subline(volunteer)}
+					<tr class="hover cursor-pointer" use:rowLink={href}>
+						<td class="w-px">
+							<StatusBadge status={volunteer.status} />
+							{#if !volunteer.isAdult}
+								<!-- Kept after a staff override, so an approved minor still reads
 									     as one — the fact that changes how a shift is staffed. -->
-									<Badge variant="ghost" size="xs" class="mt-1">minor</Badge>
-								{/if}
-							</td>
+								<Badge variant="ghost" size="xs" class="mt-1">minor</Badge>
+							{/if}
+						</td>
 
-							<!-- `min-w-48`: `cell-primary` takes only what is left over, and a
+						<!-- `min-w-48`: `cell-primary` takes only what is left over, and a
 							     long free-text answer elsewhere could leave it two letters. -->
-							<td class="cell-primary min-w-48">
-								<EntityIdentity ref={volunteer.member} avatar />
-								{#if line}
-									<div class="{line.tone} truncate text-xs">{line.text}</div>
-								{/if}
-							</td>
+						<td class="cell-primary min-w-48">
+							<EntityIdentity ref={volunteer.member} avatar />
+							{#if line}
+								<div class="{line.tone} truncate text-xs">{line.text}</div>
+							{/if}
+						</td>
 
-							<td class="col-support">
-								{#if volunteer.roleNames.length > 0}
-									<BadgeList items={volunteer.roleNames} max={VISIBLE_ROLES} />
-								{:else}
-									<!-- The interests step is skippable, so this is a real answer and
-									     not missing data: they signed up without picking anything. A
-									     link, because "ask them" is the thing to do about it. -->
-									<span class="link">Ask them →</span>
-								{/if}
-							</td>
+						<td class="col-support">
+							{#if volunteer.roleNames.length > 0}
+								<BadgeList items={volunteer.roleNames} max={VISIBLE_ROLES} />
+							{:else}
+								<!-- The interests step is skippable, so this is an answer, not
+									     missing data: they signed up without picking anything. -->
+								<span class="text-subtle">None picked</span>
+							{/if}
+						</td>
 
-							<td class="col-support cell-num">
-								{#if volunteer.minutes > 0}
-									{formatVolunteerHours(volunteer.minutes)}
-								{:else}
-									<span class="text-subtle">—</span>
-								{/if}
-							</td>
+						<td class="col-support cell-num">
+							{#if volunteer.minutes > 0}
+								{formatVolunteerHours(volunteer.minutes)}
+							{:else}
+								<span class="text-subtle">—</span>
+							{/if}
+						</td>
 
-							<td class="w-px">
-								<!-- Exactly one, resolved the same way the subline is. -->
-								{#if volunteer.claim}
-									<Action
-										action={confirmSignup.for(volunteer.claim.signupId)}
-										label="Confirm"
-										variant="ghost"
-										size="xs"
-										class="text-success"
-										modalTitle="Confirm {volunteer.member.title}?"
-										submitLabel="Confirm"
-										successToast="Confirmed"
-									>
-										{#snippet form()}
-											<input type="hidden" name="signupId" value={volunteer.claim!.signupId} />
-											<input type="hidden" name="shiftId" value={volunteer.claim!.shiftId} />
-											<p class="text-sm">
-												{volunteer.claim!.roleName} on {formatDateShort(volunteer.claim!.startsAt)}.
-												Confirming books them: they get the reminder the day before, and the shift
-												completes afterwards with hours to log.
-											</p>
-										{/snippet}
-									</Action>
-								{:else if volunteer.lapse}
-									<Button href={`${href}`} variant="ghost" size="xs" class="text-warning">
-										Chase
-									</Button>
-								{:else}
-									<LogHoursForMemberAction
-										presetUser={{ id: volunteer.userId, name: volunteer.member.title }}
-										label="Log Hours"
-										size="xs"
-									/>
-								{/if}
-							</td>
-						</tr>
-					{/each}
-				</Table>
-			{/snippet}
-		</DataList>
-	{:else if tab === 'signoff'}
-		<SignoffTab />
-	{:else}
-		<ClearedTab bind:certFilter />
-	{/if}
+						<td class="w-px">
+							<!-- Exactly one, resolved the same way the subline is. A minor
+								     awaiting sign-off can do nothing else until it is given. -->
+							{#if volunteer.status === 'blocked'}
+								<Action
+									action={approveVolunteerSignup.for(volunteer.userId)}
+									label="Approve"
+									variant="ghost"
+									size="xs"
+									class="text-success"
+									modalTitle="Let {volunteer.member.title} volunteer?"
+									submitLabel="Approve"
+									successToast="{volunteer.member.title} can volunteer now"
+									onsuccess={() => void roster.refresh()}
+								>
+									{#snippet form()}
+										<input type="hidden" name="userId" value={volunteer.userId} />
+										<p class="text-sm">
+											Confirms a guardian has signed off. They can claim shifts and log hours from
+											then on, and their record still says they are under 18 — which is what changes
+											how a shift is staffed.
+										</p>
+									{/snippet}
+								</Action>
+							{:else if volunteer.claim}
+								<Action
+									action={confirmSignup.for(volunteer.claim.signupId)}
+									label="Confirm"
+									variant="ghost"
+									size="xs"
+									class="text-success"
+									modalTitle="Confirm {volunteer.member.title}?"
+									submitLabel="Confirm"
+									successToast="Confirmed"
+								>
+									{#snippet form()}
+										<input type="hidden" name="signupId" value={volunteer.claim!.signupId} />
+										<input type="hidden" name="shiftId" value={volunteer.claim!.shiftId} />
+										<p class="text-sm">
+											{volunteer.claim!.roleName} on {formatDateShort(volunteer.claim!.startsAt)}.
+											Confirming books them: they get the reminder the day before, and the shift
+											completes afterwards with hours to log.
+										</p>
+									{/snippet}
+								</Action>
+							{:else if volunteer.lapse}
+								<Button href={`${href}`} variant="ghost" size="xs" class="text-warning">
+									Chase
+								</Button>
+							{:else}
+								<LogHoursForMemberAction
+									presetUser={{ id: volunteer.userId, name: volunteer.member.title }}
+									label="Log Hours"
+									size="xs"
+								/>
+							{/if}
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/snippet}
+	</DataList>
 </PageContent>

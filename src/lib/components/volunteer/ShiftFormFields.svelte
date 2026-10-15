@@ -22,7 +22,8 @@
 		endsAt,
 		capacity,
 		notes,
-		title
+		title,
+		timed = true
 	}: {
 		/**
 		 * The remote form this field set posts into — `createShift`, or
@@ -59,6 +60,11 @@
 		notes?: string;
 		/** The shift's own name. Blank falls back to the event, then the role. */
 		title?: string;
+		/**
+		 * Off for a work order with no time yet: a deadline replaces the window, and
+		 * the event picker goes, since `createWorkOrder` only ties a timed one to a show.
+		 */
+		timed?: boolean;
 	} = $props();
 
 	// Seeded once and then owned by the picker. `untrack` says that on purpose:
@@ -82,7 +88,7 @@
 
 {#if lockedEvent}
 	<input {...form.fields.eventId.as('hidden', lockedEvent.id)} />
-{:else}
+{:else if timed}
 	<!--
 		Rendered unconditionally, even with nothing picked, and that is the whole
 		point: `updateShift` writes `eventId` only when the key is *present*, so an
@@ -144,8 +150,17 @@
 	description="Optional. Leave it blank to use the event's name, or the role's."
 />
 
-<FormField name="startsAt" label="Starts" type="datetime-local" value={startsAt} />
-<FormField name="endsAt" label="Ends" type="datetime-local" value={endsAt} />
+{#if timed}
+	<FormField name="startsAt" label="Starts" type="datetime-local" value={startsAt} />
+	<FormField name="endsAt" label="Ends" type="datetime-local" value={endsAt} />
+{:else}
+	<FormField
+		name="dueAt"
+		label="Due by"
+		type="datetime-local"
+		description="Optional. It waits on Needs scheduling until somebody gives it a time."
+	/>
+{/if}
 <FormField
 	name="capacity"
 	label="People needed"

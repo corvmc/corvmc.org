@@ -1416,9 +1416,9 @@ export const volunteerProfileStatusLabels: Record<
 	string
 > = {
 	active: 'Active',
-	// "Blocked" reads as a punishment for answering honestly. Staff are being
-	// asked to make contact, not to police anyone.
-	blocked: 'Needs review'
+	// "Blocked" reads as a punishment for answering honestly. Only an under-18
+	// sign-up is blocked, and what it waits on is a guardian's sign-off.
+	blocked: 'Awaiting sign-off'
 };
 
 /** First and last name on a volunteer profile. Matches VOLUNTEER_ROLE_NAME_MAX. */

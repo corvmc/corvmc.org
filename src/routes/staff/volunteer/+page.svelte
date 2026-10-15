@@ -30,18 +30,12 @@
 	import NeedsSchedulingCard from './NeedsSchedulingCard.svelte';
 	import ConfirmFixedCard from './ConfirmFixedCard.svelte';
 	import LapsingCard from './LapsingCard.svelte';
-	import NewShiftAction from './NewShiftAction.svelte';
 	import NewWorkOrderAction from './NewWorkOrderAction.svelte';
 	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
-	import { toLocalDateTime } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { getVolunteerWorklist } from '$lib/remote/volunteer.remote';
 
 	const work = $derived(await getVolunteerWorklist());
-
-	// Tomorrow, so the New Shift form opens on a date that hasn't already passed —
-	// the same anchor the schedule uses.
-	const defaultStart = toLocalDateTime(new Date(Date.now() + 86_400_000));
 
 	// The day, then the size of the pile. A worklist that does not say which day
 	// it is describing is a list; saying it is what makes it a shift.
@@ -59,7 +53,6 @@
 	<!-- Not a sidebar row: roles are set up now and then, not worked daily (#1791). -->
 	<Button variant="ghost" size="sm" href={resolve('/staff/volunteer/roles')}>Roles</Button>
 	<LogHoursForMemberAction />
-	<NewShiftAction {defaultStart} />
 	<NewWorkOrderAction />
 </PageHeader>
 

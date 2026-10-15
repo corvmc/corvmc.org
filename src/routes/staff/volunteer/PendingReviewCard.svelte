@@ -30,7 +30,8 @@
 
 <InfoCard title="Awaiting guardian sign-off" state={total}>
 	{#snippet action()}
-		<Button href="/staff/volunteer/people?tab=signoff" variant="ghost" size="sm">People →</Button>
+		<Button href="/staff/volunteer/people?status=blocked" variant="ghost" size="sm">People →</Button
+		>
 	{/snippet}
 
 	<p class="text-muted">

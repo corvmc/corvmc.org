@@ -99,7 +99,6 @@
 		'volunteer-schedule': IconCalendarWeek,
 		'volunteer-people': IconUsersGroup,
 		'volunteer-duty-lists': IconClipboardList,
-		'volunteer-recurring': IconRepeat,
 		'volunteer-report': IconReportAnalytics,
 		reservations: IconClipboardCheck,
 		recurring: IconRepeat,
