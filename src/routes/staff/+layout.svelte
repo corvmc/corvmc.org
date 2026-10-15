@@ -18,6 +18,7 @@
 		IconCalendarEvent,
 		IconSettings,
 		IconHistory,
+		IconShieldLock,
 		IconCash,
 		IconCoins,
 		IconMusic,
@@ -131,6 +132,7 @@
 		grants: IconContract,
 		renewals: IconCertificate,
 		settings: IconSettings,
+		access: IconShieldLock,
 		audit: IconHistory
 	};
 

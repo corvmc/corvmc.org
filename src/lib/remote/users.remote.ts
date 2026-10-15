@@ -43,7 +43,6 @@ async function dashboardDeadlines() {
 import {
 	requireCapability,
 	can,
-	isPosition,
 	requireUser,
 	committeeCapabilitiesFor
 } from '$lib/server/authorization';
@@ -56,6 +55,7 @@ import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { eq, or, count, desc, gte, lte, ne, inArray, sql, and } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
+import { positionChangeRefusal } from '$lib/server/access/position-service';
 import { memberRefColumns, toMemberRef, toEventRef } from '$lib/server/entity/refs';
 import { paginate } from '$lib/server/db/paginate';
 import { jsonArrayField } from '$lib/utils/zod-json';
@@ -421,33 +421,14 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 				error(403, 'You cannot change roles.');
 			}
 
-			// Role changes can lock people out of the panel, and nothing else can
-			// undo that from the UI. Two cases are refused outright.
-
-			// 1. Don't let a caller drop their own elevated access. Tested against
-			//    every position, not just admin/staff: a volunteer coordinator
-			//    editing their own profile would otherwise trip this guard.
-			if (id === actor.id && !nextRoleNames.some((n) => isPosition(n))) {
-				error(400, 'You cannot remove your own staff access.');
-			}
-
-			// 2. Don't let the last admin be demoted — that leaves nobody able to
-			//    restore the role. Load-bearing now in a way it was not before:
-			//    admin is the only holder of user.setRole, user.purge and
-			//    credit.adjust, so this is what stops the app reaching a state only
-			//    `wrangler d1 execute` can leave.
-			if (targetCurrentRoles.includes('admin') && !nextRoleNames.includes('admin')) {
-				const adminRoleId = [...namesById.entries()].find(([, n]) => n === 'admin')?.[0];
-				if (adminRoleId !== undefined) {
-					const [{ value: adminCount }] = await db
-						.select({ value: count() })
-						.from(modelHasRole)
-						.where(and(eq(modelHasRole.roleId, adminRoleId), ne(modelHasRole.userId, id)));
-					if (adminCount === 0) {
-						error(409, 'This is the last admin — assign another admin before removing this role.');
-					}
-				}
-			}
+			// Self-demotion and the last admin are refused here and on /staff/access.
+			const refusal = await positionChangeRefusal({
+				actorId: actor.id,
+				targetId: id,
+				current: targetCurrentRoles,
+				next: nextRoleNames
+			});
+			if (refusal) error(refusal.httpStatus, refusal.message);
 
 			roleIds = submitted;
 			roleChange = {

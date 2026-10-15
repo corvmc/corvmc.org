@@ -404,6 +404,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/access",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/audit",
 		"panel": "staff"
 	},
