@@ -68,8 +68,6 @@
 		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
 	{/snippet}
 
-	<p class="text-muted">Unconfirmed claims get no reminder and never auto-complete.</p>
-
 	<!-- Zebra off: the group header rows are the banding, which striping
 	     muddies. The same choice the reservations and events tables make. -->
 	<Table zebra={false}>

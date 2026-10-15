@@ -42,11 +42,9 @@
 		all: ['pending_review', 'published', 'cancelled', 'rejected']
 	} as const satisfies Record<View, readonly string[]>;
 
-	// A staffer reaches this page from the "listing awaiting review"
-	// notification, which links here with no query string at all — so the
-	// default has to be the queue rather than the whole calendar.
+	// The default shows everything; the review queue is one filter away (#1784).
 	const filters = urlState(resolve('/staff/events'), {
-		view: oneOf(Object.keys(STATUSES) as View[], 'review'),
+		view: oneOf(Object.keys(STATUSES) as View[], 'all'),
 		source: text<'cmc' | 'band' | 'community' | ''>(),
 		page: positiveInt(1)
 	});
@@ -78,7 +76,7 @@
 	}
 
 	function clearFilters() {
-		filters.view = 'review';
+		filters.view = 'all';
 		filters.source = '';
 		filters.page = 1;
 	}
@@ -96,7 +94,7 @@
 </PageHeader>
 <PageContent>
 	<FilterBar
-		activeCount={(filters.view === 'review' ? 0 : 1) + (filters.source ? 1 : 0)}
+		activeCount={(filters.view === 'all' ? 0 : 1) + (filters.source ? 1 : 0)}
 		onclear={clearFilters}
 	>
 		<Select
