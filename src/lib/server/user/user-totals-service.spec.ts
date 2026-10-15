@@ -25,27 +25,38 @@ const u = (id: string, over: Partial<typeof user.$inferInsert> = {}) => ({
 	...over
 });
 
+const NOW = new Date('2026-10-15T12:00:00Z');
+const daysAgo = (n: number) => new Date(NOW.getTime() - n * 24 * 60 * 60 * 1000);
+
 describe('getUserTotals', () => {
 	it('is all zeros with no accounts', async () => {
-		expect(await getUserTotals()).toEqual({ total: 0, active: 0, sustaining: 0, deactivated: 0 });
+		expect(await getUserTotals(NOW)).toEqual({ accounts: 0, sustaining: 0, newMembers: 0 });
 	});
 
-	it('splits accounts by deactivation and counts active sustaining members only', async () => {
+	it('counts active accounts only, and active sustaining members only', async () => {
 		await testDb
 			.insert(user)
 			.values([
-				u('plain'),
-				u('sustainer', { subscription: SUB }),
-				u('lapsed-sustainer', { subscription: SUB, deletedAt: GONE }),
-				u('deactivated', { deletedAt: GONE }),
-				u('banned', { deletedAt: GONE, bannedAt: GONE, banReason: 'x' })
+				u('plain', { createdAt: daysAgo(30) }),
+				u('sustainer', { subscription: SUB, createdAt: daysAgo(30) }),
+				u('lapsed-sustainer', { subscription: SUB, deletedAt: GONE, createdAt: daysAgo(30) }),
+				u('deactivated', { deletedAt: GONE, createdAt: daysAgo(30) }),
+				u('banned', { deletedAt: GONE, bannedAt: GONE, banReason: 'x', createdAt: daysAgo(30) })
 			]);
 
-		expect(await getUserTotals()).toEqual({
-			total: 5,
-			active: 2,
-			sustaining: 1,
-			deactivated: 3
-		});
+		expect(await getUserTotals(NOW)).toEqual({ accounts: 2, sustaining: 1, newMembers: 0 });
+	});
+
+	it('counts active accounts that joined in the last seven days as new members', async () => {
+		await testDb
+			.insert(user)
+			.values([
+				u('today', { createdAt: daysAgo(0) }),
+				u('six-days', { createdAt: daysAgo(6) }),
+				u('eight-days', { createdAt: daysAgo(8) }),
+				u('new-but-deactivated', { createdAt: daysAgo(1), deletedAt: GONE })
+			]);
+
+		expect(await getUserTotals(NOW)).toMatchObject({ accounts: 3, newMembers: 2 });
 	});
 });

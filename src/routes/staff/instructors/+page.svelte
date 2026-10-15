@@ -30,7 +30,7 @@
 	const instructors = getStaffInstructors();
 </script>
 
-<PageHeader title="Instructors" subtitle="Who teaches in the practice room">
+<PageHeader title="Instructors">
 	<GrantInstructorAction />
 </PageHeader>
 
@@ -72,7 +72,6 @@
 							</tr>
 						{/each}
 					</Table>
-					<Pagination total={awaitingReview.length} unit="waiting" />
 				</InfoCard>
 			{/if}
 
