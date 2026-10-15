@@ -215,8 +215,7 @@ export const getStaffItemList = query(staffItemFilters, async (filters) => {
 			...e,
 			ref: toGenericRef('equipment', {
 				id: e.id,
-				title: e.name,
-				subtitle: e.category.name
+				title: e.name
 			})
 		})),
 		pagination

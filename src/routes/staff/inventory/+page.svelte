@@ -143,6 +143,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Item</th>
+					<th class="col-support">Category</th>
 					<th class="col-support">Tracking</th>
 					<th class="cell-num">Available</th>
 					<th class="col-support cell-num">On hand</th>
@@ -155,9 +156,15 @@
 						<td class="w-px">
 							<StatusBadge status={e.deletedAt ? 'deactivated' : 'active'} />
 						</td>
-						<!-- Category was its own column; as the ref's subline it costs no width. -->
-						<td class="cell-primary"><EntityIdentity ref={e.ref} /></td>
-						<td class="col-support">
+						<td class="cell-primary">
+							<!-- Category has its own column; below col-support's width it rides as the subline. -->
+							<EntityIdentity ref={e.ref}>
+								{#snippet subtitle()}<span class="@min-[32rem]:hidden">{e.category.name}</span
+									>{/snippet}
+							</EntityIdentity>
+						</td>
+						<td class="col-support whitespace-nowrap">{e.category.name}</td>
+						<td class="col-support whitespace-nowrap">
 							<Badge size="sm" class="badge-ghost">{titleCase(e.kind)}</Badge>
 							{#if e.isConsumable}
 								<Badge size="sm" class="badge-ghost">Consumable</Badge>
