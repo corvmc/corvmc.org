@@ -7,8 +7,9 @@
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Field from '$lib/components/ui/Form/FormField.svelte';
+	import Avatar from '$lib/components/ui/Avatar.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';
@@ -25,12 +26,26 @@
 	// script binding.
 	let searchText = $state('');
 	let status = $state<'active' | 'deactivated' | 'all'>('active');
+	type YesNo = '' | 'yes' | 'no';
+	// Secondary yes/no filters, all in the Filters menu. '' is "either".
+	let flags = $state<Record<'sustaining' | 'inBand' | 'staff' | 'instructor', YesNo>>({
+		sustaining: '',
+		inBand: '',
+		staff: '',
+		instructor: ''
+	});
 	let page = $state(1);
+
+	const asBool = (v: YesNo) => (v === '' ? undefined : v === 'yes');
 
 	let searchDebounced = $state('');
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		status,
+		sustaining: asBool(flags.sustaining),
+		inBand: asBool(flags.inBand),
+		staff: asBool(flags.staff),
+		instructor: asBool(flags.instructor),
 		page
 	});
 
@@ -38,18 +53,23 @@
 
 	type User = Awaited<typeof result>['rows'][number];
 
-	const statusOptions = [
-		{ value: 'active', label: 'Active' },
-		{ value: 'deactivated', label: 'Deactivated' },
-		{ value: 'all', label: 'All' }
-	];
+	const flagFilters = [
+		{ key: 'sustaining', label: 'Sustaining member' },
+		{ key: 'inBand', label: 'In a band' },
+		{ key: 'staff', label: 'Staff position' },
+		{ key: 'instructor', label: 'Teaching instructor' }
+	] as const;
 
-	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + (status === 'active' ? 0 : 1));
+	const menuFilterCount = $derived(Object.values(flags).filter(Boolean).length);
+	const activeFilterCount = $derived(
+		(searchDebounced ? 1 : 0) + (status === 'active' ? 0 : 1) + menuFilterCount
+	);
 
 	function clearFilters() {
 		searchText = '';
 		searchDebounced = '';
 		status = 'active';
+		flags = { sustaining: '', inBand: '', staff: '', instructor: '' };
 		page = 1;
 		selected.clear();
 	}
@@ -84,9 +104,8 @@
 		await navigator.clipboard.writeText(email);
 	}
 
-	// `status` is updated by the select's own bind handler before this bubbling
-	// change handler fires; reset paging + selection for the new filter.
-	function onStatusChange() {
+	// Every filter change resets paging and the on-screen selection.
+	function onFilterChange() {
 		page = 1;
 		selected.clear();
 	}
@@ -109,7 +128,7 @@
 		{/snippet}
 	</svelte:boundary>
 
-	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+	<FilterBar activeCount={activeFilterCount} menuCount={menuFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
@@ -121,20 +140,23 @@
 				}}
 			/>
 		{/snippet}
-		<div onchange={onStatusChange}>
-			<!-- Named, not `label=""`. A select has no placeholder to fall back on
-			     the way the search box beside it does, so an empty caption left it
-			     with no accessible name at all. `FormField` builds its input props
-			     from a closed set, so an `aria-label` here would not reach the
-			     element — the caption is the supported way to name it. -->
-			<Field
-				type="select"
-				label="Status"
-				bind:value={status}
-				options={statusOptions}
-				class="w-40"
-			/>
-		</div>
+		<Select size="sm" aria-label="Status" bind:value={status} onchange={onFilterChange}>
+			<option value="active">Active</option>
+			<option value="deactivated">Deactivated</option>
+			<option value="all">All statuses</option>
+		</Select>
+		{#snippet menu()}
+			{#each flagFilters as f (f.key)}
+				<label class="flex flex-col gap-1">
+					<span class="text-muted text-xs">{f.label}</span>
+					<Select size="sm" bind:value={flags[f.key]} onchange={onFilterChange}>
+						<option value="">Either</option>
+						<option value="yes">Yes</option>
+						<option value="no">No</option>
+					</Select>
+				</label>
+			{/each}
+		{/snippet}
 	</FilterBar>
 
 	{#if selected.size > 0}
@@ -190,7 +212,8 @@
 							onchange={(e) => toggleAll(users, e.currentTarget.checked)}
 						/>
 					</th>
-					<th>Member</th>
+					<th>Name</th>
+					<th>Email</th>
 					<th class="col-support">Joined</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
@@ -208,8 +231,18 @@
 							/>
 						</td>
 						<td class="cell-primary">
-							<EntityIdentity ref={row.ref} avatar status />
+							<span class="flex items-center gap-2">
+								<Avatar
+									src={row.ref.image ?? undefined}
+									name={row.ref.title}
+									size="avatar-sm"
+									class="size-6 shrink-0"
+								/>
+								<span class="truncate">{row.ref.title}</span>
+								{#if row.deletedAt}<StatusBadge status="deactivated" label />{/if}
+							</span>
 						</td>
+						<td class="min-w-0 truncate">{row.email}</td>
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(row.createdAt)}</td>
 						<td class="w-px">
 							<div class="dropdown dropdown-end">
