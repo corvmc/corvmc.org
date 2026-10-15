@@ -2,11 +2,8 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import CreateGroupAction from '$lib/components/groups/CreateGroupAction.svelte';
 	import { getStaffCommittees } from '$lib/remote/groups.remote';
@@ -29,42 +26,36 @@
 	{#if committees.length === 0}
 		<EmptyState title="No committees" description="Create one to start taking applications." />
 	{:else}
-		<Table>
-			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th>Committee</th>
-				<th>Chairs</th>
-				<th class="col-support cell-num">Members</th>
-			{/snippet}
+		<!-- Cards, not a table: there are a handful of committees, and each card is
+		     one link, so the chairs are names rather than chips of their own. -->
+		<ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
 			{#each committees as c (c.id)}
-				{@const href = resolve(`/staff/committees/${c.id}`)}
-				<tr class="hover cursor-pointer" use:rowLink={href}>
-					<td class="w-px">
-						<StatusBadge status={c.deletedAt ? 'deactivated' : 'active'} />
-					</td>
-					<td class="cell-primary">
-						{c.name}
-						{#if c.openApplications > 0}
-							<Badge variant="info">
-								{c.openApplications}
-								{c.openApplications === 1 ? 'application' : 'applications'}
-							</Badge>
-						{/if}
-					</td>
-					<td class="min-w-0">
-						{#if c.chairs.length === 0}
-							<span class="text-fg-2">No chairs</span>
-						{:else}
-							<span class="flex flex-wrap gap-1">
-								{#each c.chairs as chair (chair.id)}
-									<EntityChip ref={chair} icon={false} />
-								{/each}
-							</span>
-						{/if}
-					</td>
-					<td class="col-support cell-num">{c.memberCount}</td>
-				</tr>
+				<li>
+					<a
+						href={resolve(`/staff/committees/${c.id}`)}
+						class="card h-full border border-base-300 bg-base-100 p-4 hover:border-primary"
+					>
+						<span class="flex items-center gap-2">
+							<span class="cell-primary truncate font-medium">{c.name}</span>
+							{#if c.deletedAt}<StatusBadge status="deactivated" label />{/if}
+						</span>
+						<span class="mt-1 text-sm text-fg-2">
+							{c.chairs.length === 0
+								? 'No chairs'
+								: `Chaired by ${c.chairs.map((ch) => ch.title).join(', ')}`}
+						</span>
+						<span class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+							<span>{c.memberCount} {c.memberCount === 1 ? 'member' : 'members'}</span>
+							{#if c.openApplications > 0}
+								<Badge variant="info">
+									{c.openApplications}
+									{c.openApplications === 1 ? 'application' : 'applications'}
+								</Badge>
+							{/if}
+						</span>
+					</a>
+				</li>
 			{/each}
-		</Table>
+		</ul>
 	{/if}
 </PageContent>

@@ -19,12 +19,15 @@
 		groupId,
 		joinPolicy,
 		joinInstructions,
-		visibility
+		visibility,
+		policyFixed = false
 	}: {
 		groupId: string;
 		joinPolicy: string;
 		joinInstructions: string | null;
 		visibility: string;
+		/** Committees all take applications (#1700): the policy is shown, not edited. */
+		policyFixed?: boolean;
 	} = $props();
 
 	const fields = updateStaffGroup.fields;
@@ -47,14 +50,21 @@
 		<input {...fields.groupId.as('hidden', groupId)} />
 
 		<div class="space-y-4">
-			<FormField
-				field={fields.joinPolicy}
-				type="select"
-				label="How people join"
-				value={joinPolicy}
-				options={policyOptions}
-				description="Invitations work the same way under all three — this decides what someone can do unaided."
-			/>
+			{#if policyFixed}
+				<input {...fields.joinPolicy.as('hidden', joinPolicy)} />
+				<p class="text-sm text-fg-2">
+					{policyOptions.find((o) => o.value === joinPolicy)?.label ?? joinPolicy}
+				</p>
+			{:else}
+				<FormField
+					field={fields.joinPolicy}
+					type="select"
+					label="How people join"
+					value={joinPolicy}
+					options={policyOptions}
+					description="Invitations work the same way under all three — this decides what someone can do unaided."
+				/>
+			{/if}
 
 			<FormField
 				field={fields.joinInstructions}

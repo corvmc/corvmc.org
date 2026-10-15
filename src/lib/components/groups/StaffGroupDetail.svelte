@@ -169,6 +169,7 @@
 		joinPolicy={group.joinPolicy}
 		joinInstructions={group.joinInstructions}
 		visibility={group.visibility}
+		policyFixed={group.kind === 'committee'}
 	/>
 
 	{#if group.kind === 'committee'}
