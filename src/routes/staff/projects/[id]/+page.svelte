@@ -4,7 +4,6 @@
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { EntityChip } from '$lib/components/ui/entity';
@@ -29,7 +28,6 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconCheck, IconDots } from '@tabler/icons-svelte';
-	import BudgetTab from './BudgetTab.svelte';
 	import ActivityCard from '$lib/components/project/ActivityCard.svelte';
 	import TaskList from './TaskList.svelte';
 	import TaskPanel from './TaskPanel.svelte';
@@ -40,12 +38,7 @@
 	 * sections, with a panel beside the list for the one selected. The project's
 	 * own fields change only through Edit project; they reach further than a task.
 	 */
-	type Tab = 'tasks' | 'budget' | 'activity';
-	const parseTab = (raw: string | null): Tab =>
-		raw === 'budget' || raw === 'activity' ? raw : 'tasks';
-
 	// Above the await: the window listener below reads these.
-	let tab = $state<Tab>(parseTab(page.url.searchParams.get('tab')));
 	let filter = $state<TaskFilter>(parseFilter(page.url.searchParams.get('show')));
 	let showDone = $state(page.url.searchParams.get('done') !== 'hide');
 	const selectedId = $derived(page.url.searchParams.get('task'));
@@ -100,6 +93,7 @@
 	backHref="/staff/projects"
 	sticky={false}
 >
+	<Button variant="default" href={resolve(`/staff/projects/${project.id}/budget`)}>Budget</Button>
 	{#if dutyListOptions.length > 0}
 		<Action
 			action={applyDutyListToProjectForm}
@@ -302,84 +296,59 @@
 		</div>
 	</details>
 
-	<div class="tab-bar">
-		<TabBar
-			tabs={[
-				{ key: 'tasks', label: 'Tasks', badge: `${progress.done}/${progress.total}` },
-				{ key: 'budget', label: 'Budget' },
-				{ key: 'activity', label: 'Activity' }
-			]}
-			active={tab}
-			onchange={(key) => {
-				tab = parseTab(key);
-				setParams({ tab: tab === 'tasks' ? null : tab, task: tab === 'tasks' ? selectedId : null });
-			}}
-		/>
-	</div>
-
-	{#if tab === 'budget'}
-		<BudgetTab {data} />
-	{:else if tab === 'activity'}
-		<ActivityCard
-			query={(limit) =>
-				getProjectActivity(limit ? { projectId: project.id, limit } : { projectId: project.id })}
-			projectId={project.id}
-		/>
-	{:else}
-		<div class="flex items-start">
-			<div class="@container min-w-0 flex-1 space-y-4">
-				<TaskList
-					{list}
-					viewerId={data.viewerId}
-					selectedId={selected?.id ?? null}
-					{filter}
-					{showDone}
-					projectId={project.id}
-					onopen={openTask}
-					onfilter={(f) => {
-						filter = f;
-						setParams({ show: f === 'all' ? null : f });
-					}}
-					onshowdone={(show) => {
-						showDone = show;
-						setParams({ done: show ? null : 'hide' });
-					}}
-				/>
-			</div>
-			{#if selected}
-				<aside class="task-panel" aria-labelledby="task-panel-title">
-					<TaskPanel
-						task={selected}
-						{list}
-						projectId={project.id}
-						onclose={closeTask}
-						onopen={openTask}
-					/>
-				</aside>
-			{:else if selectedId}
-				<Alert type="warning" class="ml-4">
-					That task is not on this project.
-					{#snippet action()}
-						<Button size="sm" onclick={closeTask}>Close</Button>
-					{/snippet}
-				</Alert>
-			{/if}
+	<div class="flex flex-col items-stretch lg:flex-row lg:items-start">
+		<div class="@container min-w-0 flex-1 space-y-4">
+			<TaskList
+				{list}
+				viewerId={data.viewerId}
+				selectedId={selected?.id ?? null}
+				{filter}
+				{showDone}
+				projectId={project.id}
+				onopen={openTask}
+				onfilter={(f) => {
+					filter = f;
+					setParams({ show: f === 'all' ? null : f });
+				}}
+				onshowdone={(show) => {
+					showDone = show;
+					setParams({ done: show ? null : 'hide' });
+				}}
+			/>
 		</div>
-	{/if}
+		{#if selected}
+			<aside class="task-panel" aria-labelledby="task-panel-title">
+				<TaskPanel
+					task={selected}
+					{list}
+					projectId={project.id}
+					onclose={closeTask}
+					onopen={openTask}
+				/>
+			</aside>
+		{:else if selectedId}
+			<Alert type="warning" class="ml-4">
+				That task is not on this project.
+				{#snippet action()}
+					<Button size="sm" onclick={closeTask}>Close</Button>
+				{/snippet}
+			</Alert>
+		{:else}
+			<!-- With no task open, the sidebar is the project's activity. -->
+			<aside class="activity-panel">
+				<ActivityCard
+					query={(limit) =>
+						getProjectActivity(
+							limit ? { projectId: project.id, limit } : { projectId: project.id }
+						)}
+					projectId={project.id}
+				/>
+			</aside>
+		{/if}
+	</div>
 </PageContent>
 
 <style>
-	/* Only the tab bar sticks; the header scrolls away. */
-	.tab-bar {
-		position: sticky;
-		top: 0;
-		z-index: 10;
-		margin-inline: -1.5rem;
-		padding: 0.5rem 1.5rem;
-		border-bottom: 1px solid var(--color-base-300);
-		background: var(--color-base-100);
-	}
-
 	/* A sheet over the list on a phone; full height beside it from lg. */
 	.task-panel {
 		position: fixed;
@@ -402,6 +371,28 @@
 	}
 	@media (width >= 80rem) {
 		.task-panel {
+			width: 24rem;
+		}
+	}
+
+	/* Below the list on a phone; the same sticky sidebar slot as a task from lg. */
+	.activity-panel {
+		margin-top: 1rem;
+	}
+	@media (width >= 64rem) {
+		.activity-panel {
+			position: sticky;
+			top: 1rem;
+			flex-shrink: 0;
+			width: 20rem;
+			max-height: calc(100dvh - 5rem);
+			overflow-y: auto;
+			margin-top: 0;
+			margin-left: 1rem;
+		}
+	}
+	@media (width >= 80rem) {
+		.activity-panel {
 			width: 24rem;
 		}
 	}

@@ -16,7 +16,7 @@
 	 * What the project has cost. Cash and contributed value are two tables
 	 * rather than two rows of one, because they must never look addable: donated
 	 * hours are worth reporting to a funder and worth nothing against a budget.
-	 * Contractor engagements are tasks, so they are on the Tasks tab, not here.
+	 * Contractor engagements are tasks, so they are on the task list, not here.
 	 */
 	let { data }: { data: ProjectDetail } = $props();
 
