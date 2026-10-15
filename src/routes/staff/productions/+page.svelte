@@ -10,7 +10,7 @@
 	import { withQuery } from '$lib/utils/with-query';
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
-	import CreateEventModal from './CreateEventModal.svelte';
+	import CreateEventModal from '$lib/components/events/CreateEventModal.svelte';
 	import { formatDate } from '$lib/utils/format';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import AvatarStack from '$lib/components/ui/AvatarStack.svelte';
