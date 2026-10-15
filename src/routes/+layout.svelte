@@ -1,6 +1,7 @@
 <script lang="ts">
 	import './layout.css';
 	import './retro-buttons.css';
+	// After layout.css: its `panel` sublayer only outranks daisyUI's when declared later.
 	import './panel-theme.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { Tooltip } from 'bits-ui';
