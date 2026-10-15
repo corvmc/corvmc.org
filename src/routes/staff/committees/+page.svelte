@@ -4,6 +4,7 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
 	import { resolve } from '$app/paths';
 	import CreateGroupAction from '$lib/components/groups/CreateGroupAction.svelte';
 	import { getStaffCommittees } from '$lib/remote/groups.remote';
@@ -31,28 +32,27 @@
 		<ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
 			{#each committees as c (c.id)}
 				<li>
-					<a
-						href={resolve(`/staff/committees/${c.id}`)}
-						class="card h-full border border-base-300 bg-base-100 p-4 hover:border-primary"
-					>
-						<span class="flex items-center gap-2">
-							<span class="cell-primary truncate font-medium">{c.name}</span>
-							{#if c.deletedAt}<StatusBadge status="deactivated" label />{/if}
-						</span>
-						<span class="mt-1 text-sm text-fg-2">
-							{c.chairs.length === 0
-								? 'No chairs'
-								: `Chaired by ${c.chairs.map((ch) => ch.title).join(', ')}`}
-						</span>
-						<span class="mt-3 flex flex-wrap items-center gap-2 text-sm">
-							<span>{c.memberCount} {c.memberCount === 1 ? 'member' : 'members'}</span>
-							{#if c.openApplications > 0}
-								<Badge variant="info">
-									{c.openApplications}
-									{c.openApplications === 1 ? 'application' : 'applications'}
-								</Badge>
-							{/if}
-						</span>
+					<a href={resolve(`/staff/committees/${c.id}`)} class="block h-full">
+						<Card bordered class="h-full p-4 hover:border-primary">
+							<span class="flex items-center gap-2">
+								<span class="truncate font-medium">{c.name}</span>
+								{#if c.deletedAt}<StatusBadge status="deactivated" label />{/if}
+							</span>
+							<span class="mt-1 text-sm text-fg-2">
+								{c.chairs.length === 0
+									? 'No chairs'
+									: `Chaired by ${c.chairs.map((ch) => ch.title).join(', ')}`}
+							</span>
+							<span class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+								<span>{c.memberCount} {c.memberCount === 1 ? 'member' : 'members'}</span>
+								{#if c.openApplications > 0}
+									<Badge variant="info">
+										{c.openApplications}
+										{c.openApplications === 1 ? 'application' : 'applications'}
+									</Badge>
+								{/if}
+							</span>
+						</Card>
 					</a>
 				</li>
 			{/each}
