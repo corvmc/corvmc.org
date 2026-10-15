@@ -67,6 +67,7 @@
 </svelte:head>
 
 <div
+	data-page-header
 	class="{sticky ? 'sticky top-0 z-10' : ''} -mx-6 {flush
 		? ''
 		: 'mb-6'} border-b border-base-300 bg-base-100 px-6 py-3"

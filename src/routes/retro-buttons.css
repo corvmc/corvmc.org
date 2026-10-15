@@ -2,8 +2,9 @@
    Retro buttons — hard shadow derived from the brand shadow-color.
    Shadow offset controlled by depth scale (--depth-0 … --depth-4).
    Imported separately from layout.css to avoid Tailwind/DaisyUI layer conflicts.
+   Public-site only: the panel theme (panel-theme.css) keeps daisyUI's flat buttons.
    --------------------------------------------------------------------------- */
-.btn {
+:where(html:not(:has([data-panel]))) .btn {
 	--shadow: var(--depth-2);
 	--shadow-size: var(--shadow);
 	--shadow-color: color-mix(
@@ -20,72 +21,72 @@
 		box-shadow 170ms cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
-.btn:disabled {
+:where(html:not(:has([data-panel]))) .btn:disabled {
 	--shadow: calc(var(--shadow) / 2);
 }
 
-.btn:hover,
-.btn:focus-visible {
+:where(html:not(:has([data-panel]))) .btn:hover,
+:where(html:not(:has([data-panel]))) .btn:focus-visible {
 	--shadow-size: calc(var(--shadow) * 0.75);
 }
 
-.btn.is-pressing,
-.btn:active {
+:where(html:not(:has([data-panel]))) .btn.is-pressing,
+:where(html:not(:has([data-panel]))) .btn:active {
 	--shadow-size: 0;
 	translate: none;
 }
-.btn:active {
+:where(html:not(:has([data-panel]))) .btn:active {
 	transition-duration: 0ms;
 }
-.btn.is-pressing {
+:where(html:not(:has([data-panel]))) .btn.is-pressing {
 	transition-duration: 60ms;
 }
 
-.btn.depth-0.is-pressing,
-.btn.depth-0:active {
+:where(html:not(:has([data-panel]))) .btn.depth-0.is-pressing,
+:where(html:not(:has([data-panel]))) .btn.depth-0:active {
 	transform: translateY(1px);
 }
 
-.btn.latched {
+:where(html:not(:has([data-panel]))) .btn.latched {
 	--shadow: var(--depth-1);
 }
 
-.btn.flat {
+:where(html:not(:has([data-panel]))) .btn.flat {
 	--shadow: 0;
 	transform: none;
 }
-.btn.flat:hover,
-.btn.flat:focus-visible {
+:where(html:not(:has([data-panel]))) .btn.flat:hover,
+:where(html:not(:has([data-panel]))) .btn.flat:focus-visible {
 	filter: brightness(0.94);
 }
 
-.depth-0 {
+:where(html:not(:has([data-panel]))) .depth-0 {
 	--shadow: var(--depth-0);
 }
-.depth-1 {
+:where(html:not(:has([data-panel]))) .depth-1 {
 	--shadow: var(--depth-1);
 }
-.depth-2 {
+:where(html:not(:has([data-panel]))) .depth-2 {
 	--shadow: var(--depth-2);
 }
-.depth-3 {
+:where(html:not(:has([data-panel]))) .depth-3 {
 	--shadow: var(--depth-3);
 }
-.depth-4 {
+:where(html:not(:has([data-panel]))) .depth-4 {
 	--shadow: var(--depth-4);
 }
 
-.btn-outline {
+:where(html:not(:has([data-panel]))) .btn-outline {
 	background: var(--color-base-100);
 }
 
-.btn-outline:active,
-.btn-outline:hover {
+:where(html:not(:has([data-panel]))) .btn-outline:active,
+:where(html:not(:has([data-panel]))) .btn-outline:hover {
 	background: var(--btn-color);
 	color: var(--btn-fg);
 }
 
-.btn-ghost {
+:where(html:not(:has([data-panel]))) .btn-ghost {
 	background: var(--color-base-100);
 	border-color: var(--shadow-color);
 }

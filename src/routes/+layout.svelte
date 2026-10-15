@@ -1,6 +1,7 @@
 <script lang="ts">
 	import './layout.css';
 	import './retro-buttons.css';
+	import './panel-theme.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { Tooltip } from 'bits-ui';
 	import { onMount } from 'svelte';
