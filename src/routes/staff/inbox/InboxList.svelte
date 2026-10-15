@@ -156,7 +156,7 @@
 			onpage={(p) => (filters.page = p)}
 		>
 			{#snippet children(threads)}
-				<ul class="flex flex-col gap-1">
+				<ul class="flex flex-col divide-y divide-base-300">
 					{#each threads as t (t.id)}
 						{@const href = resolve(`/staff/inbox/${t.id}`)}
 						{@const Icon = channelIcon(t.channel)}

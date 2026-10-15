@@ -177,11 +177,10 @@
 					<!-- Two statuses, two columns, both labelled. The glyph on the left
 					     is the listing's — is it on the guide — and this one is the
 					     production's — how far through putting it on we are. -->
-					<th class="col-support w-px">Production</th>
+					<th class="col-support w-px">Status</th>
 					<th class="col-support">Lineup</th>
 					<th class="col-extra">Venue</th>
 					<th class="col-extra">Tags</th>
-					<th class="col-support w-px">Space</th>
 				{/snippet}
 
 				{#each events as e, idx (e.id)}
@@ -189,7 +188,7 @@
 					{@const prevLabel = idx > 0 ? dayLabel(events[idx - 1]) : null}
 					{#if label !== prevLabel}
 						<tr>
-							<td colspan="7" class="cell-group">
+							<td colspan="6" class="cell-group">
 								{label}
 							</td>
 						</tr>
@@ -243,19 +242,6 @@
 									<Badge size="sm" variant="outline">{tag}</Badge>
 								{/each}
 							</div>
-						</td>
-						<!--
-							Promoted from `col-extra` to `col-support`: an unheld room is the
-							characteristic failure of a production, and hiding it below 768px
-							is how a calendar of shows once reached production with none
-							booked. The Source column it replaces only ever said "CMC".
-						-->
-						<td class="col-support w-px">
-							{#if e.reservationId}
-								<Badge size="sm" variant="info">Reserved</Badge>
-							{:else}
-								<span class="opacity-40">—</span>
-							{/if}
 						</td>
 					</tr>
 				{/each}
