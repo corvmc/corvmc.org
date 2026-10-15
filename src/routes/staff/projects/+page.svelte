@@ -15,13 +15,11 @@
 	import { resolve } from '$app/paths';
 
 	/**
-	 * Every body of work with a budget and an owner.
-	 *
-	 * Budget and burn sit in the same column rather than two, because the only
-	 * question anyone brings to this table is whether a project is inside its
-	 * budget — and two columns make the reader do the subtraction. Over-budget
-	 * is coloured; under-budget is not, since "fine" needs no emphasis. Progress
-	 * is tasks done over tasks live; a project is active or archived (#1935).
+	 * Every body of work with a budget and an owner. Budget and burn share a
+	 * column, because the only question brought to this table is whether a
+	 * project is inside its budget, and two columns make the reader subtract.
+	 * Over-budget is coloured; "fine" needs no emphasis. Progress is tasks done
+	 * over tasks live; a project is active or archived (#1935).
 	 */
 	let view = $state<ProjectView>('active');
 	let committeeFilter = $state('');
