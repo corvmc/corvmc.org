@@ -90,9 +90,7 @@
 		{#snippet search()}
 			<!-- One control: Scan is the search box's end cap. While the camera is
 			     open the scanner takes its own line, for the preview and Stop. -->
-			<div
-				class="flex flex-wrap [&:not(:has(video))>input]:rounded-e-none [&>.scan-cap:has(video)]:mt-2 [&>.scan-cap:has(video)]:w-full [&>.scan-cap:not(:has(video))_.btn]:-ms-px [&>.scan-cap:not(:has(video))_.btn]:rounded-s-none [&>input]:w-auto [&>input]:min-w-0 [&>input]:flex-1"
-			>
+			<div class="scan-search flex flex-wrap">
 				<SearchInput
 					bind:value={searchText}
 					placeholder="Search name, barcode, resource ID..."
@@ -200,3 +198,24 @@
 	</DataList>
 </PageContent>
 <CategoryManagerModal bind:open={showCategoryModal} />
+
+<style>
+	.scan-search > :global(input) {
+		flex: 1;
+		width: auto;
+		min-width: 0;
+	}
+	.scan-search:not(:has(:global(video))) > :global(input) {
+		border-start-end-radius: 0;
+		border-end-end-radius: 0;
+	}
+	.scan-search > :global(.scan-cap:not(:has(video)) .btn) {
+		margin-inline-start: -1px;
+		border-start-start-radius: 0;
+		border-end-start-radius: 0;
+	}
+	.scan-search > :global(.scan-cap:has(video)) {
+		width: 100%;
+		margin-top: 0.5rem;
+	}
+</style>
