@@ -47,9 +47,9 @@
 <Action
 	action={createStaffGroup}
 	label={kind === 'committee' ? 'New Committee' : 'New Club'}
-	modalTitle="New group"
-	submitLabel="Create group"
-	successToast="Group created"
+	modalTitle={kind === 'committee' ? 'New Committee' : 'New Club'}
+	submitLabel={kind === 'committee' ? 'Create Committee' : 'Create Club'}
+	successToast={kind === 'committee' ? 'Committee created' : 'Club created'}
 	size="sm"
 	onsuccess={(result) => {
 		const made = result as { id?: string; kind?: string } | undefined;
