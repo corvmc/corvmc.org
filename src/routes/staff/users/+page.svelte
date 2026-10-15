@@ -215,6 +215,7 @@
 					</th>
 					<th>Name</th>
 					<th>Email</th>
+					<th class="col-support">Phone</th>
 					<th class="col-support">Joined</th>
 				{/snippet}
 
@@ -257,6 +258,13 @@
 									<IconCopy size={14} />
 								</Button>
 							</span>
+						</td>
+						<td class="col-support whitespace-nowrap">
+							{#if row.phone}
+								<a class="hover:underline" href="tel:{row.phone}">{row.phone}</a>
+							{:else}
+								<span class="text-fg-3">—</span>
+							{/if}
 						</td>
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(row.createdAt)}</td>
 					</tr>

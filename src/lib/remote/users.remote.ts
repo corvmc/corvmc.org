@@ -191,6 +191,7 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 	const dataQ = db
 		.select({
 			member: memberRefColumns(),
+			phone: user.phone,
 			deletedAt: user.deletedAt,
 			createdAt: user.createdAt
 		})
@@ -216,6 +217,7 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 			// ref may describe a member who is gone.
 			id: u.member.id,
 			email: u.member.email,
+			phone: u.phone,
 			deletedAt: u.deletedAt,
 			createdAt: u.createdAt,
 			// Deactivation is the row's status, not a badge the page bolts on: it
