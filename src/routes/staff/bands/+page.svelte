@@ -18,26 +18,29 @@
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
 	let searchText = $state('');
-	let status = $state<'active' | 'deactivated' | ''>('');
+	// Deactivated bands are hidden until the filter asks for them.
+	let status = $state<'active' | 'deactivated' | 'all'>('active');
 	let tier = $state<'free' | 'premium' | ''>('');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
 	let filters = $derived({
 		search: searchDebounced || undefined,
-		status: status || undefined,
+		status: status === 'all' ? undefined : status,
 		tier: tier || undefined,
 		page
 	});
 
 	let result = $derived(getStaffBands(filters));
 
-	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + (status ? 1 : 0) + (tier ? 1 : 0));
+	const activeFilterCount = $derived(
+		(searchDebounced ? 1 : 0) + (status === 'active' ? 0 : 1) + (tier ? 1 : 0)
+	);
 
 	function clearFilters() {
 		searchText = '';
 		searchDebounced = '';
-		status = '';
+		status = 'active';
 		tier = '';
 		page = 1;
 	}
@@ -71,9 +74,9 @@
 				page = 1;
 			}}
 		>
-			<option value="">All statuses</option>
 			<option value="active">Active</option>
 			<option value="deactivated">Deactivated</option>
+			<option value="all">All statuses</option>
 		</Select>
 		<Select
 			size="sm"

@@ -46,7 +46,7 @@
 
 <Action
 	action={createStaffGroup}
-	label="New group"
+	label={kind === 'committee' ? 'New Committee' : 'New Club'}
 	modalTitle="New group"
 	submitLabel="Create group"
 	successToast="Group created"
