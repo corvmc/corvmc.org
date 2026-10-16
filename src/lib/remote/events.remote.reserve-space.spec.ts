@@ -2,13 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockUser } from '$lib/server/db/test-factory';
 
 // ---------------------------------------------------------------------------
-// Regression: "Reserve practice space" on the New Event modal created no
-// reservation at all. The handler only booked the space when BOTH reservation
-// times came through, so a submission that checked the box but sent no times
-// fell into a silent no-op — event created, no reservation, no error.
-//
-// The reservation times are an optional override for setup/teardown, not a
-// precondition: checking the box must always hold the space.
+// "Reserve practice space" moved off the New Event modal. The update-side
+// regressions for it are in events.remote.reserve-space-update.spec.ts.
 // ---------------------------------------------------------------------------
 
 const eventServiceMock = {
@@ -106,57 +101,24 @@ beforeEach(() => {
 	vi.clearAllMocks();
 });
 
-describe('createEvent — reserve space', () => {
+// The room is held from the console's edit form now (#1822's rule), so create
+// passes no reservation whatever the request carries.
+describe('createEvent — holds nothing at create', () => {
 	const base = {
 		title: 'Basement Show',
 		eventDate: '2026-08-15',
 		eventStartTime: '19:00',
 		eventEndTime: '22:00',
-		ticketingEnabled: false,
-		reserveSpace: false,
-		overrideConflicts: false,
-		recurring: false
+		kind: 'show' as const
 	};
 
-	it('holds the event window when no reservation times are supplied', async () => {
-		await createEvent({ ...base, reserveSpace: true }, issue);
-
-		const { reservation } = eventServiceMock.create.mock.calls[0][0];
-		expect(inClubTime(reservation.startsAt)).toBe('2026-08-15 19:00');
-		expect(inClubTime(reservation.endsAt)).toBe('2026-08-15 22:00');
-	});
-
-	// Falling back per-field would pair a supplied start with a defaulted end, and
-	// buildTimeRangeInTz reads an end before the start as an overnight range — a
-	// 23:00 start against the event's 22:00 end rolls onto the next day and holds
-	// the room for 23 hours. Half a window is no window.
-	it('holds the event window when only one reservation time is supplied', async () => {
-		await createEvent({ ...base, reserveSpace: true, reservationStartTime: '23:00' }, issue);
-
-		const { reservation } = eventServiceMock.create.mock.calls[0][0];
-		expect(inClubTime(reservation.startsAt)).toBe('2026-08-15 19:00');
-		expect(inClubTime(reservation.endsAt)).toBe('2026-08-15 22:00');
-	});
-
-	it('prefers the supplied setup/teardown window over the event times', async () => {
-		await createEvent(
-			{
-				...base,
-				reserveSpace: true,
-				reservationStartTime: '17:00',
-				reservationEndTime: '23:30'
-			},
-			issue
-		);
-
-		const { reservation } = eventServiceMock.create.mock.calls[0][0];
-		expect(inClubTime(reservation.startsAt)).toBe('2026-08-15 17:00');
-		expect(inClubTime(reservation.endsAt)).toBe('2026-08-15 23:30');
-	});
-
-	it('books nothing when the box is left unchecked', async () => {
+	it('creates the row with no reservation and no ticket sale', async () => {
 		await createEvent(base, issue);
 
-		expect(eventServiceMock.create.mock.calls[0][0].reservation).toBeUndefined();
+		const params = eventServiceMock.create.mock.calls[0][0];
+		expect(params.reservation).toBeUndefined();
+		expect(params.ticketingEnabled).toBeUndefined();
+		expect(inClubTime(params.startsAt)).toBe('2026-08-15 19:00');
+		expect(inClubTime(params.endsAt)).toBe('2026-08-15 22:00');
 	});
 });

@@ -1,35 +1,19 @@
 <script lang="ts">
 	import Action from '$lib/components/ui/Action.svelte';
-	import EventFields from './EventFields.svelte';
-	import { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { createBandEventForm } from '$lib/remote/band-events.remote';
 
-	// Resolved props, and a synchronous script — see the note in EventFields.
 	const fields = createBandEventForm.fields;
 
-	let { bandId, bandSlug, bandName }: { bandId: string; bandSlug: string; bandName: string } =
-		$props();
-
-	// The owner always heads its own bill; the server writes that slot too, but
-	// showing it here makes the running order legible while editing. Seeded in an
-	// effect rather than in the initializer, which would capture the props once
-	// and never track them. The owner's own chip can't be removed, so this can
-	// only fire on first render.
-	let lineup = $state<LineupChip[]>([]);
-	$effect(() => {
-		if (lineup.length === 0) {
-			lineup = [{ name: bandName, bandId, status: 'confirmed' }];
-		}
-	});
+	let { bandSlug }: { bandSlug: string } = $props();
 </script>
 
 <!--
-	Create lives in a modal on the list page rather than at its own /create route,
-	which is the house rule for create flows. Extracting EventFields is what made
-	that nearly free — and it means the field set has one owner again instead of
-	drifting between two pages.
+	Only what the row needs: a title and when it starts (#1822's rule). The end
+	time, doors, venue, bill, poster and tickets are all on the event's own page,
+	which is the edit form for anyone who can edit — this lands there.
 
 	The `form` snippet, never `body`: Action checks `{#if body}` ahead of its
 	RemoteForm branch, so a `body` snippet renders the fields bare and posts
@@ -39,7 +23,7 @@
 	action={createBandEventForm}
 	label="Create Event"
 	modalTitle="Create Event"
-	maxWidth="max-w-2xl"
+	maxWidth="max-w-md"
 	submitLabel="Create Event"
 	successToast="Event created"
 	size="sm"
@@ -55,7 +39,22 @@
 			<!-- The band this event belongs to. The guard resolves it from here now
 			     that it no longer reads the route's params. -->
 			<input {...fields.slug.as('hidden', bandSlug)} />
-			<EventFields {fields} slug={bandSlug} {bandId} bind:lineup />
+			<FormField
+				field={fields.title}
+				type="text"
+				label="Title"
+				placeholder="e.g. Live at The Venue"
+				maxlength="200"
+				required
+			/>
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+				<FormField field={fields.eventDate} type="date" label="Date" required />
+				<FormField field={fields.eventStartTime} type="time" label="Start Time" required />
+			</div>
+			<p class="text-muted">
+				Saved as a draft. The end time, venue, bill, poster and tickets are filled in on the event's
+				page next.
+			</p>
 		</div>
 	{/snippet}
 </Action>

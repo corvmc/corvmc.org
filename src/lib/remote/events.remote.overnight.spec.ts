@@ -156,10 +156,7 @@ describe('createEvent — event crossing midnight', () => {
 		eventDate: '2026-08-15',
 		eventStartTime: '21:00',
 		eventEndTime: '01:00',
-		ticketingEnabled: false,
-		reserveSpace: false,
-		overrideConflicts: false,
-		recurring: false
+		kind: 'show' as const
 	};
 
 	it('ends the event on the following day', async () => {
@@ -168,21 +165,5 @@ describe('createEvent — event crossing midnight', () => {
 		const params = eventServiceMock.create.mock.calls[0][0];
 		expect(inClubTime(params.startsAt)).toBe('2026-08-15 21:00');
 		expect(inClubTime(params.endsAt)).toBe('2026-08-16 01:00');
-	});
-
-	it('rolls the held reservation past midnight too', async () => {
-		await createEvent(
-			{
-				...base,
-				reserveSpace: true,
-				reservationStartTime: '20:00',
-				reservationEndTime: '02:00'
-			},
-			issue
-		);
-
-		const { reservation } = eventServiceMock.create.mock.calls[0][0];
-		expect(inClubTime(reservation.startsAt)).toBe('2026-08-15 20:00');
-		expect(inClubTime(reservation.endsAt)).toBe('2026-08-16 02:00');
 	});
 });

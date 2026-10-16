@@ -25,6 +25,7 @@
 	const { fields } = updateEvent;
 	const createProductionFields = createProduction.fields;
 	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
+	import RepeatEventAction from './RepeatEventAction.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import {
@@ -208,6 +209,16 @@
 	// had no way to acquire it at all before this.
 	let reserveSpace = $state(false);
 	const canReserveSpace = $derived(!data.linkedReservation);
+	// Off-site holds no room, and `updateEvent` refuses one, so the toggle goes.
+	const editIsOffSite = $derived(
+		editVenueId !== '' && !venues.find((v) => v.id === editVenueId)?.isPrimary
+	);
+	$effect(() => {
+		if (editIsOffSite && reserveSpace) {
+			reserveSpace = false;
+			toggleReserveSpace();
+		}
+	});
 
 	// Only a real overlap — an existing booking or a closure — gates the
 	// override. An advisory about opening hours or advance days renders in
@@ -291,12 +302,46 @@
 		if (reserveSpace) {
 			editReservationStartTime = editStartTime;
 			editReservationEndTime = editEndTime;
+			lastStartTime = editStartTime;
+			lastEndTime = editEndTime;
 		} else {
 			editReservationStartTime = '';
 			editReservationEndTime = '';
 			hasBlockingConflict = false;
 			overrideConflicts = false;
 		}
+	}
+
+	const toMinutes = (t: string) => {
+		const [h, m] = t.split(':').map(Number);
+		return h * 60 + m;
+	};
+	const shiftTime = (time: string, minutes: number) => {
+		const total = (((toMinutes(time) + minutes) % 1440) + 1440) % 1440;
+		return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+	};
+
+	// A new hold's window is setup and teardown padding around the show, so it
+	// moves when the show is re-timed (#1866). Run from the inputs, not an effect.
+	let lastStartTime = '';
+	let lastEndTime = '';
+	function carryReservationWindow() {
+		if (!reserveSpace) return;
+		if (editStartTime && lastStartTime && editReservationStartTime) {
+			const delta = toMinutes(editStartTime) - toMinutes(lastStartTime);
+			editReservationStartTime = shiftTime(editReservationStartTime, delta);
+		}
+		if (editEndTime && lastEndTime && editReservationEndTime) {
+			const delta = toMinutes(editEndTime) - toMinutes(lastEndTime);
+			editReservationEndTime = shiftTime(editReservationEndTime, delta);
+		}
+		lastStartTime = editStartTime;
+		lastEndTime = editEndTime;
+	}
+
+	function retimed() {
+		carryReservationWindow();
+		void checkForRebook();
 	}
 
 	// Check if times changed enough to need a rebook
@@ -526,6 +571,12 @@
 						</Form>
 					{/if}
 				</div>
+			{:else if evt.status !== 'cancelled'}
+				<RepeatEventAction
+					eventId={evt.id}
+					startsAt={evt.startsAt}
+					onsuccess={() => void getStaffEventProduction(id).refresh()}
+				/>
 			{/if}
 
 			<!-- Edit form -->
@@ -596,7 +647,7 @@
 												bind:value={editStartTime}
 												class="input w-full"
 												required
-												onchange={checkForRebook}
+												onchange={retimed}
 											/>
 										</FormField>
 
@@ -608,7 +659,7 @@
 												bind:value={editEndTime}
 												class="input w-full"
 												required
-												onchange={checkForRebook}
+												onchange={retimed}
 											/>
 										</FormField>
 									</div>
@@ -809,7 +860,11 @@
 									Hold the space for an event that never had a hold. The rebook alert
 									above covers the other case, so the two never render together.
 								-->
-									{#if canReserveSpace}
+									{#if canReserveSpace && editIsOffSite}
+										<p class="text-muted">
+											Off-site, so the practice space stays bookable while this runs.
+										</p>
+									{:else if canReserveSpace}
 										<div>
 											<label class="label cursor-pointer justify-start gap-3">
 												<input
@@ -877,7 +932,12 @@
 										<Button type="button" variant="ghost" size="sm" onclick={cancelEditing}
 											>Cancel</Button
 										>
-										<SubmitButton label="Save" variant="primary" size="sm" />
+										<SubmitButton
+											label="Save"
+											variant="primary"
+											size="sm"
+											disabled={hasBlockingConflict && !overrideConflicts}
+										/>
 									</div>
 								</div>
 							</Form>

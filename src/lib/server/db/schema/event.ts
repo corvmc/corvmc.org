@@ -6,7 +6,7 @@ import { user } from './authentication';
 import { group } from './group';
 import { directoryEntry } from './directory';
 import { reservation } from './reservation';
-import { recurringSeries, RECURRING_FREQUENCIES } from './recurring';
+import { recurringSeries } from './recurring';
 import { project } from './project';
 import { eventSources } from '../../../config';
 import { venue } from './venue';
@@ -342,64 +342,20 @@ export type LineupEntry = z.infer<typeof lineupEntrySchema>;
 // Form schemas
 // ---------------------------------------------------------------------------
 
-export const createEventSchema = z
-	.object({
-		title: z.string().min(1, 'Title is required'),
-		description: z.string().optional(),
-		kind: z.enum(eventKinds).default('show'),
-		/** The committee or club running it. A show has none; a work party does. */
-		groupId: z.string().optional(),
-		eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
-		eventStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
-		eventEndTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
-		doorsTime: z.string().optional(),
-		tags: z.string().optional(),
-		ticketingEnabled: z.boolean().default(false),
-		ticketPrice: z.string().optional(),
-		ticketQuantity: z.string().optional(),
-		/**
-		 * Where it is. Blank means the practice room, which is what every event
-		 * created before the `venue` table meant and still means.
-		 */
-		venueId: z.string().optional(),
-		location: z.string().max(200).optional(),
-		reserveSpace: z.boolean().default(false),
-		reservationStartTime: z.string().optional(),
-		reservationEndTime: z.string().optional(),
-		overrideConflicts: z.boolean().default(false),
-		recurring: z.boolean().default(false),
-		recurringFrequency: z.enum(RECURRING_FREQUENCIES).optional(),
-		monthlyMode: z.enum(['weekday', 'monthday']).optional(),
-		// Allow empty (unset) or a YYYY-MM-DD date; empty is normalized in the handler.
-		recurringEndsAt: z
-			.string()
-			.regex(/^$|^\d{4}-\d{2}-\d{2}$/, 'Invalid date')
-			.optional()
-	})
-	.superRefine((data, ctx) => {
-		// Ticketing requires a positive price. Surfacing this here turns what would
-		// otherwise be a thrown Error in the event service (→ 500 "Internal Error")
-		// into a graceful form validation failure.
-		if (data.ticketingEnabled) {
-			const cents = data.ticketPrice ? parseInt(data.ticketPrice, 10) : NaN;
-			if (!Number.isFinite(cents) || cents <= 0) {
-				ctx.addIssue({
-					code: 'custom',
-					path: ['ticketPrice'],
-					message: 'Ticket price is required when ticketing is enabled'
-				});
-			}
-		}
-
-		// A recurring series needs a frequency to expand.
-		if (data.recurring && !data.recurringFrequency) {
-			ctx.addIssue({
-				code: 'custom',
-				path: ['recurringFrequency'],
-				message: 'Choose how often the event repeats'
-			});
-		}
-	});
+/**
+ * What the create modal sends: only what the row cannot exist without (#1822's
+ * rule). `kind` decides whether a production is minted and `groupId` who owns
+ * it, so both are set here; the rest is `updateEvent`'s, from the event page.
+ */
+export const createEventSchema = z.object({
+	title: z.string().min(1, 'Title is required'),
+	kind: z.enum(eventKinds).default('show'),
+	/** The committee or club running it. A show has none; a work party does. */
+	groupId: z.string().optional(),
+	eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
+	eventStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
+	eventEndTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time')
+});
 
 /**
  * The fields a member fills in for a community listing.
