@@ -50,8 +50,8 @@
 	variant="ghost"
 	{size}
 	modalTitle={presetUser ? `Log hours for ${presetUser.name}` : 'Log hours for a member'}
-	submitLabel="Record"
-	successToast="Hours recorded"
+	submitLabel="Log hours"
+	successToast="Hours logged"
 	onsuccess={() => {
 		userId = '';
 		userName = '';

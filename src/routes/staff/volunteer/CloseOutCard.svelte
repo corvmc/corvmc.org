@@ -8,7 +8,7 @@
 	 * almost certainly did leaves no trace in the number the board is given.
 	 *
 	 * Two honest answers, which is why both are offered rather than one:
-	 * **Record Hours** records the hours and closes it, and **Close Assignment** marks the
+	 * **Log hours** records the hours and closes it, and **Close Assignment** marks the
 	 * no-show. Doing nothing is the third answer and the one the app used to make for you.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -78,12 +78,12 @@
 					<div class="flex w-max items-center gap-1">
 						<Action
 							action={logHoursForMember.for(claim.signupId)}
-							label="Record Hours"
+							label="Log hours"
 							variant="primary"
 							size="xs"
-							modalTitle="Record hours for {claim.member.title}"
-							submitLabel="Record Hours"
-							successToast="Hours recorded"
+							modalTitle="Log hours for {claim.member.title}"
+							submitLabel="Log hours"
+							successToast="Hours logged"
 						>
 							{#snippet form()}
 								<input type="hidden" name="userId" value={claim.userId} />

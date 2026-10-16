@@ -24,7 +24,7 @@ card with nothing in it:
 - **Unreviewed Hours** — the top of the approval queue, with the same approve and return
   buttons. The whole queue is **Volunteering → Hours**.
 - **Unconfirmed Shifts** — shifts that have already happened where somebody's claim was never
-  confirmed. **Record Hours** logs the shift as worked; **Close Assignment** records a no-show.
+  confirmed. **Log hours** logs the shift as worked; **Close Assignment** records a no-show.
   Leaving it is the third answer, and it loses the work.
 - **Expiring Clearances** — somebody rostered for a date their clearance does
   not reach. Not the same list as _Who's cleared_: this one has a deadline.

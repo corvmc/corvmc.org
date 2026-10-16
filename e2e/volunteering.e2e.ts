@@ -937,7 +937,7 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await dialog
 			.locator('textarea[name="description"]')
 			.fill('E2E: taken off the paper sign-in sheet.');
-		await modalSubmit(page, 'Record').click();
+		await modalSubmit(page, 'Log hours').click();
 
 		// Approved on entry and attributed to the staffer — so it never appears in the
 		// Pending queue the same person is standing in, which is why this reads the row.
