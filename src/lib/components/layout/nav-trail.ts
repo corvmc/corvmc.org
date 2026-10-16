@@ -3,7 +3,7 @@ import { activeNavPath, type NavNode } from './Nav/active-nav';
 
 type LabelledNode = NavNode & { label: string };
 
-/** A panel's nav as groups of rows; a titled group adds an unlinked crumb. */
+/** A panel's nav as groups of rows. A group title is a heading, never a crumb. */
 export interface NavTrailGroup {
 	title?: string;
 	items: LabelledNode[];
@@ -13,6 +13,7 @@ export interface NavTrailGroup {
  * The breadcrumb trail a panel's nav tree implies for a URL, so pages name only
  * their own leaf and a trail cannot drift from the sidebar (#1827). A URL no row
  * claims gets an empty trail; the page's explicit parents and leaf still apply.
+ * Only rows with a page appear above the leaf: a heading has nowhere to link.
  */
 export function navTrail(groups: NavTrailGroup[], pathname: string): NavTrail {
 	const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
@@ -23,11 +24,9 @@ export function navTrail(groups: NavTrailGroup[], pathname: string): NavTrail {
 	const leaf = rows.at(-1);
 	if (!leaf) return { crumbs: [], here: false };
 	const here = leaf.href === path;
-	const crumbs: Crumb[] = rows.map((row) =>
-		row.href && !(here && row === leaf)
-			? { label: row.label, href: row.href }
-			: { label: row.label }
-	);
-	const title = groups.find((g) => g.items.includes(rows[0]))?.title;
-	return { crumbs: title ? [{ label: title }, ...crumbs] : crumbs, here };
+	const crumbs: Crumb[] = rows.flatMap((row) => {
+		if (here && row === leaf) return [{ label: row.label }];
+		return row.href ? [{ label: row.label, href: row.href }] : [];
+	});
+	return { crumbs, here };
 }

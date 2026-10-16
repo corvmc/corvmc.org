@@ -31,7 +31,6 @@ describe.each(Object.entries(panels))('the %s panel', (_name, groups) => {
 	const rows = flattenNav(groups.flatMap((g) => g.items)).filter((r) =>
 		r.href.startsWith('/')
 	) as NavTrailGroup['items'];
-	const sectionTitles = new Set(groups.flatMap((g) => (g.title ? [g.title] : [])));
 
 	it.each(rows.map((r) => [r.key, r] as const))(
 		'row %s names itself, last and unlinked',
@@ -39,9 +38,9 @@ describe.each(Object.entries(panels))('the %s panel', (_name, groups) => {
 			const trail = navTrail(groups, row.href);
 			expect(trail.here).toBe(true);
 			expect(trail.crumbs.at(-1)).toEqual({ label: row.label });
-			// Everything above the row is a link, or a section heading.
+			// Everything above the row is a link: a nav heading has no page.
 			for (const crumb of trail.crumbs.slice(0, -1)) {
-				expect(crumb.href !== undefined || sectionTitles.has(crumb.label)).toBe(true);
+				expect(crumb.href).toBeDefined();
 			}
 		}
 	);

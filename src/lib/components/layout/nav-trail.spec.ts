@@ -36,21 +36,20 @@ const GROUPS: NavTrailGroup[] = [
 describe('navTrail', () => {
 	it('names the row itself, unlinked, on the row page', () => {
 		expect(navTrail(GROUPS, '/staff/users')).toEqual({
-			crumbs: [{ label: 'People' }, { label: 'Users' }],
+			crumbs: [{ label: 'Users' }],
 			here: true
 		});
 	});
 
 	it('links the row on a page beneath it', () => {
 		expect(navTrail(GROUPS, '/staff/users/abc')).toEqual({
-			crumbs: [{ label: 'People' }, { label: 'Users', href: '/staff/users' }],
+			crumbs: [{ label: 'Users', href: '/staff/users' }],
 			here: false
 		});
 	});
 
 	it('walks a child row through its parent', () => {
 		expect(navTrail(GROUPS, '/staff/volunteer/schedule/').crumbs).toEqual([
-			{ label: 'People' },
 			{ label: 'Volunteering', href: '/staff/volunteer' },
 			{ label: 'Schedule' }
 		]);
@@ -58,7 +57,7 @@ describe('navTrail', () => {
 
 	it('follows a row that claims another prefix', () => {
 		expect(navTrail(GROUPS, '/staff/recurring/s1')).toEqual({
-			crumbs: [{ label: 'Space' }, { label: 'Reservations', href: '/staff/reservations' }],
+			crumbs: [{ label: 'Reservations', href: '/staff/reservations' }],
 			here: false
 		});
 	});
