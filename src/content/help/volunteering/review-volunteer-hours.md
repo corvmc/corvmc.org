@@ -17,16 +17,16 @@ card with nothing in it:
   This is the one to clear first: confirming is what turns a claim into a booking, and until
   you do it they get no reminder, the shift never completes itself, and no hour log is ever
   offered. Confirm one at a time or confirm a whole shift at once.
-- **Short-staffed** — shifts in the next fortnight with places nobody has taken. **Add
-  someone** on the row shows who said they would help with that role, when they said they
+- **Understaffed Shifts** — shifts in the next fortnight with places nobody has taken.
+  **Assign** on the row opens the shift, which shows who said they would help with that role, when they said they
   were free, and whether their clearances cover _that shift's date_ — plus a search box for
   anybody else.
-- **Hours to review** — the top of the approval queue, with the same approve and return
+- **Unreviewed Hours** — the top of the approval queue, with the same approve and return
   buttons. The whole queue is **Volunteering → Hours**.
-- **Close these out** — shifts that have already happened where somebody's claim was never
-  confirmed. Say whether they worked it (which records the hours) or didn't. Leaving it is
-  the third answer, and it loses the work.
-- **Lapses before a shift they're on** — somebody rostered for a date their clearance does
+- **Unconfirmed Shifts** — shifts that have already happened where somebody's claim was never
+  confirmed. **Confirm** records their hours; **No-show** records that they didn't come.
+  Leaving it is the third answer, and it loses the work.
+- **Expiring Clearances** — somebody rostered for a date their clearance does
   not reach. Not the same list as _Who's cleared_: this one has a deadline.
 
 The count in the sidebar is all of that added up.

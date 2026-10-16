@@ -158,7 +158,7 @@
 		name="dueAt"
 		label="Due by"
 		type="datetime-local"
-		description="Optional. It waits on Needs scheduling until somebody gives it a time."
+		description="Optional. It waits on Unscheduled Work Orders until somebody gives it a time."
 	/>
 {/if}
 <FormField

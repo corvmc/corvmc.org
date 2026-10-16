@@ -60,7 +60,7 @@
 	}
 </script>
 
-<InfoCard title="Needs scheduling" state={total}>
+<InfoCard title="Unscheduled Work Orders" state={total}>
 	{#snippet action()}
 		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
 	{/snippet}
@@ -146,13 +146,13 @@
 
 						<Action
 							action={resolveWorkOrder.for(order.id)}
-							label="Close it"
+							label="Close"
 							iconOnly
 							icon={doneIcon}
 							variant="ghost"
 							size="sm"
 							modalTitle="Close {order.roleName ?? NO_ROLE_LABEL}?"
-							submitLabel="Close it"
+							submitLabel="Close"
 							successToast="Closed"
 						>
 							{#snippet form()}

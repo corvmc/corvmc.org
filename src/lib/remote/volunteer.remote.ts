@@ -1681,7 +1681,7 @@ export const createWorkOrder = form(
 			.trim()
 			.max(VOLUNTEER_SHIFT_TITLE_MAX, `Keep the name under ${VOLUNTEER_SHIFT_TITLE_MAX} characters`)
 			.optional(),
-		// Off, the window fields are ignored and the order waits on Needs scheduling.
+		// Off, the window fields are ignored and the order waits on Unscheduled Work Orders.
 		timed: z.boolean().default(false),
 		startsAt: z.string().optional(),
 		endsAt: z.string().optional(),

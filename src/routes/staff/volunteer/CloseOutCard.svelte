@@ -8,7 +8,7 @@
 	 * almost certainly did leaves no trace in the number the board is given.
 	 *
 	 * Two honest answers, which is why both are offered rather than one:
-	 * **they worked it** records the hours and closes it, and **they didn't** marks the
+	 * **Confirm** records the hours and closes it, and **they didn't** marks the
 	 * no-show. Doing nothing is the third answer and the one the app used to make for you.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -49,7 +49,7 @@
 	}
 </script>
 
-<InfoCard title="Close these out" state="{total} from the last week">
+<InfoCard title="Unconfirmed Shifts" state="{total} from the last week">
 	{#snippet action()}
 		<Button href="/staff/volunteer/people" variant="ghost" size="sm">Volunteers →</Button>
 	{/snippet}
@@ -81,12 +81,12 @@
 					<div class="flex w-max items-center gap-1">
 						<Action
 							action={logHoursForMember.for(claim.signupId)}
-							label="They worked it"
+							label="Confirm"
 							variant="primary"
 							size="xs"
-							modalTitle="Record hours for {claim.member.title}"
-							submitLabel="Record"
-							successToast="Hours recorded"
+							modalTitle="Confirm {claim.member.title} worked {claim.roleName}?"
+							submitLabel="Confirm"
+							successToast="Confirmed and hours recorded"
 						>
 							{#snippet form()}
 								<input type="hidden" name="userId" value={claim.userId} />

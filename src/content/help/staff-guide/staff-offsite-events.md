@@ -94,7 +94,7 @@ event twice is refused rather than deduplicated, so a doubled roster is not some
 by accident.
 
 The advance work orders land with no window. They show up on **Staff → Volunteer** under
-**Needs scheduling**, and on the event's production page under **Advance** — that is where their
+**Unscheduled Work Orders**, and on the event's production page under **Advance** — that is where their
 checklists are ticked off.
 
 ### The fortnight before
