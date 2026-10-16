@@ -65,9 +65,7 @@
 		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
 	{/snippet}
 
-	<p class="text-muted">
-		Work orders without a time window. Schedule opens one for members to claim; Close ends it.
-	</p>
+	<p class="text-muted">Work orders without a time window.</p>
 
 	<Table>
 		{#snippet head()}
@@ -146,13 +144,13 @@
 
 						<Action
 							action={resolveWorkOrder.for(order.id)}
-							label="Close"
+							label="Close Work Order"
 							iconOnly
 							icon={doneIcon}
 							variant="ghost"
 							size="sm"
 							modalTitle="Close {order.roleName ?? NO_ROLE_LABEL}?"
-							submitLabel="Close"
+							submitLabel="Close Work Order"
 							successToast="Closed"
 						>
 							{#snippet form()}

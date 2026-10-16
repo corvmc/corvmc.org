@@ -8,7 +8,7 @@
 	 * almost certainly did leaves no trace in the number the board is given.
 	 *
 	 * Two honest answers, which is why both are offered rather than one:
-	 * **Confirm** records the hours and closes it, and **they didn't** marks the
+	 * **Record Hours** records the hours and closes it, and **Close Assignment** marks the
 	 * no-show. Doing nothing is the third answer and the one the app used to make for you.
 	 */
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -54,10 +54,7 @@
 		<Button href="/staff/volunteer/people" variant="ghost" size="sm">Volunteers →</Button>
 	{/snippet}
 
-	<p class="text-muted">
-		Past shifts with an unconfirmed volunteer. Confirm records the volunteer's hours; No-show closes
-		the assignment.
-	</p>
+	<p class="text-muted">Past shifts with an unconfirmed volunteer.</p>
 
 	<Table>
 		{#snippet head()}
@@ -81,12 +78,12 @@
 					<div class="flex w-max items-center gap-1">
 						<Action
 							action={logHoursForMember.for(claim.signupId)}
-							label="Confirm"
+							label="Record Hours"
 							variant="primary"
 							size="xs"
-							modalTitle="Confirm {claim.member.title} worked {claim.roleName}?"
-							submitLabel="Confirm"
-							successToast="Confirmed and hours recorded"
+							modalTitle="Record hours for {claim.member.title}"
+							submitLabel="Record Hours"
+							successToast="Hours recorded"
 						>
 							{#snippet form()}
 								<input type="hidden" name="userId" value={claim.userId} />
@@ -122,16 +119,16 @@
 
 						<Action
 							action={markSignupNoShow.for(claim.signupId)}
-							label="No-show"
+							label="Close Assignment"
 							iconOnly
 							icon={noShowIcon}
 							variant="ghost"
 							size="sm"
 							class="text-error"
-							modalTitle="Mark {claim.member.title} as a no-show?"
-							submitLabel="No-show"
+							modalTitle="Close {claim.member.title}'s assignment as a no-show?"
+							submitLabel="Close Assignment"
 							submitVariant="error"
-							successToast="Marked as no-show"
+							successToast="Assignment closed as a no-show"
 						>
 							{#snippet form()}
 								<input type="hidden" name="signupId" value={claim.signupId} />
