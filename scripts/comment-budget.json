@@ -259,7 +259,6 @@
 	"src/lib/remote/directory.remote.ts",
 	"src/lib/remote/events.remote.overnight.spec.ts",
 	"src/lib/remote/events.remote.reserve-space-update.spec.ts",
-	"src/lib/remote/events.remote.reserve-space.spec.ts",
 	"src/lib/remote/events.remote.search.spec.ts",
 	"src/lib/remote/events.remote.staff-lineup.spec.ts",
 	"src/lib/remote/events.remote.ts",

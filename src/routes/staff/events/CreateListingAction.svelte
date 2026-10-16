@@ -13,5 +13,5 @@
 <!-- The same form as Productions' New Event: a listing staff post is a CMC event. -->
 {#if hasCapability(caps, 'event.manage')}
 	<Button variant="default" size="sm" onclick={() => (open = true)}>Create Listing</Button>
-	<CreateEventModal bind:open />
+	<CreateEventModal bind:open title="Create Listing" submitLabel="Create Listing" />
 {/if}

@@ -235,6 +235,13 @@ describe('recurring-series-service', () => {
 			expect(db.update).toHaveBeenCalled();
 			expect(result).toMatchObject({ id: 'series-new' });
 		});
+
+		it('refuses an event that already belongs to a series', async () => {
+			setupBatchMock({ selectReturning: [{ createdByUserId: 'u-1', recurringSeriesId: 's-0' }] });
+
+			await expect(svc.createEventSeries(params)).rejects.toThrow(svc.RecurringSeriesError);
+			expect(db.batch).not.toHaveBeenCalled();
+		});
 	});
 
 	// -------------------------------------------------------------------------

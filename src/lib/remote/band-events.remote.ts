@@ -170,25 +170,17 @@ function buildGigRange(date: string, startTime: string, endTime: string | undefi
 	return buildTimeRangeInTz(date, startTime, endTime, tz);
 }
 
+/**
+ * Only what the row needs (#1822's rule). Everything else — end and doors
+ * times, location, the bill, poster, tickets — is `updateBandEventForm`'s, on
+ * the event's own page, which this hands off to.
+ */
 export const createBandEventForm = form(
 	z.object({
 		slug: z.string().min(1),
 		title: z.string().min(1, 'Title is required').max(200),
-		description: z.string().max(5000).optional(),
 		eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
-		eventStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
-		// Optional: see buildGigRange.
-		eventEndTime: z
-			.string()
-			.regex(/^$|^\d{2}:\d{2}$/, 'Invalid time')
-			.optional(),
-		doorsTime: z.string().optional(),
-		location: z.string().max(500).optional(),
-		tags: z.string().max(500).optional(),
-		externalTicketUrl: z.string().url().optional().or(z.literal('')),
-		ticketPriceDollars: z.string().max(12).optional(),
-		lineup: z.string().optional(),
-		posterFile: z.instanceof(File).optional()
+		eventStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time')
 	}),
 	async (data, issue) => {
 		const { user, group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
@@ -197,27 +189,7 @@ export const createBandEventForm = form(
 			invalid(issue.title('Title is required'));
 		}
 
-		const ticketPrice = dollarsToCents(data.ticketPriceDollars);
-		if (ticketPrice === undefined) {
-			invalid(issue.ticketPriceDollars('Enter a price like 10.00, or leave blank'));
-		}
-
-		const poster = readPosterFile(data.posterFile);
-		if (poster) {
-			const reason = validateUpload(poster);
-			if (reason) invalid(issue.posterFile(reason));
-		}
-
-		const tz = DEFAULT_TIMEZONE;
-		const { startsAt, endsAt } = buildGigRange(
-			data.eventDate,
-			data.eventStartTime,
-			data.eventEndTime || undefined,
-			tz
-		);
-		const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : undefined;
-
-		const lineup = parseLineupField(data.lineup);
+		const startsAt = buildDateInTz(data.eventDate, data.eventStartTime, DEFAULT_TIMEZONE);
 
 		// `mapDomainError` returns `never`, so `evt` is assigned past the catch.
 		let evt;
@@ -226,17 +198,8 @@ export const createBandEventForm = form(
 				bandId: band.id,
 				createdByUserId: user.id,
 				title: data.title,
-				description: data.description || undefined,
 				startsAt,
-				endsAt,
-				doorsAt,
-				location: data.location || undefined,
-				tags: data.tags || undefined,
-				externalTicketUrl: data.externalTicketUrl || undefined,
-				ticketPrice,
-				// The owner's own slot is written by the service; these are the rest.
-				support: lineup?.filter((l) => l.bandId !== band.id),
-				posterFile: await toPosterParam(poster)
+				endsAt: null
 			});
 		} catch (err) {
 			mapDomainError(err);

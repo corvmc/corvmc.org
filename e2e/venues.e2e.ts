@@ -5,6 +5,7 @@ import {
 	SEED_VENUE_OFFSITE_NAME,
 	SEED_VENUE_ROOM_NAME
 } from './fixtures/seed-venues';
+import { SEED_EVENT_DATE, SEED_EVENT_TITLE_PREFIX } from './fixtures/seed-staff-event';
 
 /**
  * Venues exist to answer one question: does a show here hold the practice room?
@@ -54,32 +55,41 @@ test.describe('venues', () => {
 	});
 
 	/**
-	 * The refusal that matters. Ticking the box for a show somewhere else asks for
-	 * something that cannot happen, and the useful answer is to say so — not an
-	 * event that quietly came out different from the form.
-	 *
-	 * The picker withdraws the toggle once an off-site venue is chosen, so this
-	 * asserts the withdrawal, which is the same rule one step earlier.
+	 * The refusal that matters: a hold for a show somewhere else cannot happen,
+	 * and `updateEvent` says so. The console's edit form withdraws the toggle once
+	 * an off-site venue is chosen, which is the same rule one step earlier. The
+	 * create modal no longer asks about the room at all.
 	 */
 	test('an off-site venue withdraws the room hold', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/productions');
 
+		// The fixture sweeps this prefix, and the event is never given a hold.
+		const title = `${SEED_EVENT_TITLE_PREFIX} venue ${Date.now()}`;
 		await page.getByRole('button', { name: 'New Event' }).click();
-		const dialog = page.getByRole('dialog');
-		await expect(dialog).toBeVisible({ timeout: 15000 });
+		await page.locator('input[name="title"]').fill(title);
+		await page.locator('input[name="eventDate"]').fill(SEED_EVENT_DATE);
+		await page.locator('input[name="eventStartTime"]').fill('19:00');
+		await page.locator('input[name="eventEndTime"]').fill('22:00');
+		await page.getByRole('button', { name: 'Create Event' }).click();
+		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
+		await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
+		await page.goto(`${new URL(page.url()).pathname}/production`);
+		await page.getByRole('button', { name: 'Edit' }).click();
 
 		// The toggle is there while the show is in our room.
-		await expect(dialog.getByText('Reserve practice space')).toBeVisible({ timeout: 15000 });
+		await expect(page.getByRole('checkbox', { name: 'Reserve practice space' })).toBeVisible({
+			timeout: 15000
+		});
 
-		await dialog.locator('select[name="venueId"]').selectOption({ label: SEED_VENUE_OFFSITE_NAME });
+		await page.locator('select[name="venueId"]').selectOption({ label: SEED_VENUE_OFFSITE_NAME });
 
-		await expect(dialog.getByText('Reserve practice space')).toHaveCount(0);
-		await expect(dialog.getByText('Off-site, so the practice space stays bookable')).toBeVisible();
+		await expect(page.getByRole('checkbox', { name: 'Reserve practice space' })).toHaveCount(0);
+		await expect(page.getByText('Off-site, so the practice space stays bookable')).toBeVisible();
 
 		// And back: choosing the room again offers it, so this is a branch rather
 		// than a one-way door.
-		await dialog.locator('select[name="venueId"]').selectOption({ label: 'The practice room' });
-		await expect(dialog.getByText('Reserve practice space')).toBeVisible();
+		await page.locator('select[name="venueId"]').selectOption({ label: 'The practice room' });
+		await expect(page.getByRole('checkbox', { name: 'Reserve practice space' })).toBeVisible();
 	});
 });

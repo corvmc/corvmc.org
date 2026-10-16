@@ -1,229 +1,62 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { toast } from 'svelte-sonner';
+	import { withQuery } from '$lib/utils/with-query';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/ui/Form';
-	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { errorMessage } from '$lib/error-message';
 	import Button from '$lib/components/ui/Button.svelte';
-	import {
-		checkConflicts,
-		createEvent,
-		getProgramGroups,
-		previewRecurringEvents
-	} from '$lib/remote/events.remote';
-	import { getVenueOptions } from '$lib/remote/venues.remote';
-	import { responseErrorMessage } from '$lib/api';
-
-	const { fields } = createEvent;
+	import { createEvent, getProgramGroups } from '$lib/remote/events.remote';
 
 	/**
-	 * Loaded when the modal opens, not with the page.
-	 *
-	 * The page has its own load-bearing query and this is a picker nobody sees
-	 * until they ask for it, so it belongs behind its own boundary here — which
-	 * is what `no-concurrent-remote-queries` asks for rather than a second query
-	 * racing the list.
+	 * Only what the row cannot exist without (#1822's rule). `kind` and "Run by"
+	 * stay because they decide what the insert writes — a show mints its
+	 * production — and neither can be changed into later. Everything else is the
+	 * event page's: description, doors, tags and the bill on the general view;
+	 * venue, poster, tickets, the room hold and repeating on the console.
 	 */
-
-	let { open = $bindable(false) }: { open: boolean } = $props();
+	let {
+		open = $bindable(false),
+		title: modalTitle = 'New Event',
+		submitLabel = 'Create Event'
+	}: { open: boolean; title?: string; submitLabel?: string } = $props();
 
 	let title = $state('');
-	let description = $state('');
 	let kind = $state('show');
 	let groupId = $state('');
 	let eventDate = $state(new Date().toISOString().split('T')[0]);
 	let eventStartTime = $state('');
 	let eventEndTime = $state('');
-	let doorsTime = $state('');
-	let tags = $state('');
-	let venueId = $state('');
-	let addressLine = $state('');
-	let reserveSpace = $state(false);
-	let reservationStartTime = $state('');
-	let reservationEndTime = $state('');
-	let ticketingEnabled = $state(false);
-	let ticketPriceDollars = $state('');
-	let ticketQuantity = $state('');
-	let posterFile = $state<File | null>(null);
-	// The space is already taken. Not the same thing as an advisory, and the only
-	// one of the two that gates the submit.
-	let hasBlockingConflict = $state(false);
-	let overrideConflicts = $state(false);
-	let recurring = $state(false);
-	let recurringFrequency = $state('weekly');
-	let monthlyMode = $state('weekday');
-	let recurringEndsAt = $state('');
-	let recurringPreview = $state<{ dates: string[]; totalInWindow: number } | null>(null);
 
-	let venues = $state<{ id: string; name: string; isPrimary: boolean }[]>([]);
+	// Loaded when the modal opens, not with the page that mounts it.
 	let programs = $state<{ id: string; name: string }[]>([]);
 	$effect(() => {
 		if (!open) return;
-		getVenueOptions().then((rows) => (venues = rows));
 		getProgramGroups().then((rows) => (programs = rows));
 	});
 
-	const offSiteVenues = $derived(venues.filter((v) => !v.isPrimary));
-	const isOffSite = $derived(venueId !== '' && !venues.find((v) => v.id === venueId)?.isPrimary);
-
-	// Clearing matters as much as hiding: a box ticked before the venue was
-	// picked would otherwise still be submitted, and the server would refuse a
-	// form that no longer shows the field it is complaining about.
-	$effect(() => {
-		if (isOffSite && reserveSpace) reserveSpace = false;
-	});
-
-	const isMonthly = $derived(recurringFrequency === 'monthly');
-
-	$effect(() => {
-		if (recurring && recurringFrequency && eventDate && eventStartTime) {
-			recurringPreview = null;
-			previewRecurringEvents({
-				date: eventDate,
-				startTime: eventStartTime,
-				frequency: recurringFrequency as 'weekly' | 'biweekly' | 'monthly',
-				monthlyMode: isMonthly ? (monthlyMode as 'weekday' | 'monthday') : undefined
-			}).then((result) => {
-				recurringPreview = result;
-			});
-		} else {
-			recurringPreview = null;
-		}
-	});
-
-	function formatOccurrence(iso: string): string {
-		return new Date(iso).toLocaleDateString(undefined, {
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric'
-		});
-	}
-
-	// Ticket price in cents for the hidden field. Independent of the ticketing
-	// toggle: it's the price attendees pay wherever they buy.
-	const ticketPriceCents = $derived(
-		ticketPriceDollars ? String(Math.round(parseFloat(ticketPriceDollars) * 100)) : ''
-	);
-
-	const toMinutes = (t: string) => {
-		const [h, m] = t.split(':').map(Number);
-		return h * 60 + m;
-	};
-
-	/** Move an "HH:MM" time by a signed number of minutes, wrapping at midnight. */
-	function shiftTime(time: string, minutes: number): string {
-		const total = (((toMinutes(time) + minutes) % 1440) + 1440) % 1440;
-		return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-	}
-
-	// The reservation window is really setup and teardown padding around the show,
-	// so it rides along when the event is re-timed. This runs from the bindings'
-	// setters, not an effect: ConflictWarnings' await can hold an effect back past
-	// the user's next keystroke, and the late seed then overwrote it (#1866).
-	let lastEventStartTime = '';
-	let lastEventEndTime = '';
-
-	function carryReservationWindow() {
-		if (!reserveSpace) return;
-		if (eventStartTime) {
-			reservationStartTime =
-				reservationStartTime && lastEventStartTime
-					? shiftTime(
-							reservationStartTime,
-							toMinutes(eventStartTime) - toMinutes(lastEventStartTime)
-						)
-					: eventStartTime;
-			lastEventStartTime = eventStartTime;
-		}
-		if (eventEndTime) {
-			reservationEndTime =
-				reservationEndTime && lastEventEndTime
-					? shiftTime(reservationEndTime, toMinutes(eventEndTime) - toMinutes(lastEventEndTime))
-					: eventEndTime;
-			lastEventEndTime = eventEndTime;
-		}
-	}
-
-	// ConflictWarnings owns this flag but unmounts with the toggle, so a stale
-	// `true` would keep the hidden overrideConflicts input in the form and make
-	// the next submission skip the server's double-booking check.
-	$effect(() => {
-		if (!reserveSpace) {
-			hasBlockingConflict = false;
-			overrideConflicts = false;
-		}
-	});
-
-	function handleFileSelect(e: Event) {
-		const input = e.target as HTMLInputElement;
-		posterFile = input.files?.[0] ?? null;
-	}
-
 	async function handleSuccess(result?: { eventId?: string }) {
-		if (posterFile && result?.eventId) {
-			const formData = new FormData();
-			formData.append('poster', posterFile);
-			const res = await fetch(`/api/events/${result.eventId}/poster`, {
-				method: 'POST',
-				body: formData
-			});
-			if (!res.ok) {
-				toast.warning(
-					`Event created but poster upload failed: ${await responseErrorMessage(res, 'unknown error')}`
-				);
-			}
-		}
-
 		open = false;
 		resetForm();
 		await invalidateAll();
-
-		if (result?.eventId) {
-			goto(resolve(`/staff/events/${result.eventId}`));
-		}
+		// `edit` opens the page's edit card, so the next field is one click closer.
+		if (result?.eventId) goto(withQuery(resolve(`/staff/events/${result.eventId}`), 'edit=1'));
 	}
 
 	function resetForm() {
 		title = '';
-		description = '';
 		kind = 'show';
 		groupId = '';
 		eventDate = new Date().toISOString().split('T')[0];
 		eventStartTime = '';
 		eventEndTime = '';
-		doorsTime = '';
-		tags = '';
-		ticketingEnabled = false;
-		ticketPriceDollars = '';
-		ticketQuantity = '';
-		reserveSpace = false;
-		venueId = '';
-		addressLine = '';
-		reservationStartTime = '';
-		reservationEndTime = '';
-		lastEventStartTime = '';
-		lastEventEndTime = '';
-		// These outlive the form unless cleared here: ConflictWarnings writes the
-		// flag only while mounted, so a conflict seen before Cancel would arm the
-		// override for the next event entered in this modal.
-		hasBlockingConflict = false;
-		overrideConflicts = false;
-		posterFile = null;
-		recurring = false;
-		recurringFrequency = 'weekly';
-		monthlyMode = 'weekday';
-		recurringEndsAt = '';
-		recurringPreview = null;
 	}
 </script>
 
-<Modal bind:open title="New Event" maxWidth="max-w-md" onclose={resetForm}>
+<Modal bind:open title={modalTitle} maxWidth="max-w-md" onclose={resetForm}>
 	<svelte:boundary>
 		<Form
 			remote={createEvent}
@@ -232,7 +65,6 @@
 			class="space-y-4"
 		>
 			<Field name="title" type="text" label="Title" bind:value={title} />
-			<Field name="description" type="textarea" label="Description" bind:value={description} />
 			<Field
 				name="kind"
 				type="select"
@@ -263,226 +95,18 @@
 			<Field name="eventDate" type="date" label="Date" bind:value={eventDate} />
 
 			<div class="grid grid-cols-2 gap-4">
-				<Field
-					name="eventStartTime"
-					type="time"
-					label="Start time"
-					bind:value={
-						() => eventStartTime,
-						(v) => {
-							eventStartTime = v;
-							carryReservationWindow();
-						}
-					}
-				/>
-				<Field
-					name="eventEndTime"
-					type="time"
-					label="End time"
-					bind:value={
-						() => eventEndTime,
-						(v) => {
-							eventEndTime = v;
-							carryReservationWindow();
-						}
-					}
-				/>
+				<Field name="eventStartTime" type="time" label="Start time" bind:value={eventStartTime} />
+				<Field name="eventEndTime" type="time" label="End time" bind:value={eventEndTime} />
 			</div>
 
-			<Field name="doorsTime" type="time" label="Doors time" bind:value={doorsTime} />
-			<Field name="tags" type="text" label="Tags" bind:value={tags} />
-
-			<Field name="poster" label="Poster image">
-				<input
-					type="file"
-					accept="image/jpeg,image/png,image/webp"
-					onchange={handleFileSelect}
-					class="file-input w-full"
-				/>
-				{#if posterFile}
-					<p class="mt-1 text-muted">
-						{posterFile.name} ({(posterFile.size / 1024).toFixed(0)} KB)
-					</p>
-				{/if}
-			</Field>
-
-			<!-- Price stands on its own: it's what attendees pay at the door or through
-			     an outside seller, even when we aren't the ones selling. -->
-			<Field
-				name="ticketPriceDollars"
-				type="number"
-				label="Ticket price ($)"
-				bind:value={ticketPriceDollars}
-			/>
-			<input {...fields.ticketPrice.as('hidden', ticketPriceCents)} />
-
-			<Field
-				name="ticketingEnabled"
-				type="toggle"
-				bind:value={ticketingEnabled}
-				checkboxLabel="Sell tickets through the site"
-			/>
-
-			{#if ticketingEnabled}
-				<Card tone="base-200" class="space-y-4 p-4">
-					<Field name="ticketQuantity" type="number" label="Capacity" bind:value={ticketQuantity} />
-					<p class="text-muted">Leave capacity blank for unlimited tickets.</p>
-				</Card>
-			{/if}
-
-			{#if offSiteVenues.length > 0}
-				<Field
-					name="venueId"
-					type="select"
-					label="Venue"
-					bind:value={venueId}
-					options={[
-						{ value: '', label: 'The practice room' },
-						...offSiteVenues.map((v) => ({ value: v.id, label: v.name }))
-					]}
-					description="Leave it on the room unless the show is somewhere else."
-				/>
-			{/if}
-			<Field
-				name="location"
-				type="text"
-				label="Address line"
-				bind:value={addressLine}
-				description="The line the gig guide prints under the venue. Optional."
-			/>
-
-			<!--
-				A show somewhere else has no space here to hold, so the toggle goes away
-				rather than sitting there to be refused on submit.
-			-->
-			{#if isOffSite}
-				<p class="text-muted">Off-site, so the practice space stays bookable while this runs.</p>
-			{:else}
-				<Field
-					name="reserveSpace"
-					type="toggle"
-					bind:value={
-						() => reserveSpace,
-						(v) => {
-							reserveSpace = v;
-							carryReservationWindow();
-						}
-					}
-					checkboxLabel="Reserve practice space"
-				/>
-			{/if}
-
-			{#if reserveSpace}
-				<Card tone="base-200" class="space-y-4 p-4">
-					<p class="text-muted">
-						Reservation times can differ from event times to allow for setup and teardown.
-					</p>
-
-					<div class="grid grid-cols-2 gap-4">
-						<Field
-							name="reservationStartTime"
-							type="time"
-							label="Reservation start"
-							bind:value={reservationStartTime}
-						/>
-						<Field
-							name="reservationEndTime"
-							type="time"
-							label="Reservation end"
-							bind:value={reservationEndTime}
-						/>
-					</div>
-
-					<ConflictWarnings
-						date={eventDate}
-						startTime={reservationStartTime}
-						endTime={reservationEndTime}
-						{checkConflicts}
-						bind:hasBlockingConflict
-					/>
-				</Card>
-			{/if}
-
-			<Field
-				name="recurring"
-				type="toggle"
-				bind:value={recurring}
-				checkboxLabel="Repeat this event"
-			/>
-
-			{#if recurring}
-				<Card tone="base-200" class="space-y-4 p-4">
-					<Field
-						name="recurringFrequency"
-						type="select"
-						label="Frequency"
-						bind:value={recurringFrequency}
-						options={[
-							{ value: 'weekly', label: 'Weekly' },
-							{ value: 'biweekly', label: 'Every 2 weeks' },
-							{ value: 'monthly', label: 'Monthly' }
-						]}
-					/>
-
-					{#if isMonthly}
-						<Field
-							name="monthlyMode"
-							type="select"
-							label="Monthly pattern"
-							bind:value={monthlyMode}
-							options={[
-								{ value: 'weekday', label: 'Same weekday each month (e.g. 2nd Tuesday)' },
-								{ value: 'monthday', label: 'Same date each month (e.g. the 15th)' }
-							]}
-						/>
-					{/if}
-
-					<Field
-						name="recurringEndsAt"
-						type="date"
-						label="Repeat until (optional)"
-						bind:value={recurringEndsAt}
-					/>
-
-					<p class="text-muted">
-						Occurrences are created as drafts ahead of time; publish each one when ready. Each
-						occurrence starts with a copy of this event's poster, editable per occurrence.
-					</p>
-
-					{#if recurringPreview}
-						{#if recurringPreview.dates.length > 0}
-							<div class="text-sm">
-								<p class="font-medium">Next occurrences:</p>
-								<ul class="mt-1 opacity-70">
-									{#each recurringPreview.dates as iso (iso)}
-										<li>{formatOccurrence(iso)}</li>
-									{/each}
-								</ul>
-							</div>
-						{:else}
-							<p class="text-muted">No upcoming occurrences in the next 60 days.</p>
-						{/if}
-					{/if}
-				</Card>
-			{/if}
-
-			<!-- A deliberate second action, not a relabelled first one. The submit
-			     used to become "Create with Override" and go yellow, which put
-			     double-booking the space one press away and made an advisory about
-			     opening hours look identical to it. -->
-			{#if hasBlockingConflict}
-				<label class="label cursor-pointer justify-start gap-3">
-					<input type="checkbox" bind:checked={overrideConflicts} class="checkbox checkbox-sm" />
-					<span class="fieldset-legend">Book it anyway — I know this double-books the space</span>
-				</label>
-				{#if overrideConflicts}
-					<input {...fields.overrideConflicts.as('hidden', true)} />
-				{/if}
-			{/if}
+			<p class="text-muted">
+				Saved as a draft. Description, poster, tickets and the room are filled in on the event's
+				page next.
+			</p>
 
 			<div class="modal-action">
 				<Button type="button" variant="ghost" onclick={() => (open = false)}>Cancel</Button>
-				<SubmitButton label="Create Event" disabled={hasBlockingConflict && !overrideConflicts} />
+				<SubmitButton label={submitLabel} />
 			</div>
 		</Form>
 

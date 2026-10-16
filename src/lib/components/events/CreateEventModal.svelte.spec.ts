@@ -16,13 +16,9 @@ vi.mock('$lib/remote/events.remote', () => {
 			fields,
 			result: undefined
 		},
-		checkConflicts: vi.fn(async () => ({ conflicts: [] })),
-		getProgramGroups: vi.fn(async () => []),
-		previewRecurringEvents: vi.fn(async () => ({ dates: [], totalInWindow: 0 }))
+		getProgramGroups: vi.fn(async () => [])
 	};
 });
-
-vi.mock('$lib/remote/venues.remote', () => ({ getVenueOptions: vi.fn(async () => []) }));
 
 // `FormGuard`, which `<Form>` always imports, reaches for `beforeNavigate`.
 vi.mock('$app/navigation', () => ({
@@ -32,40 +28,33 @@ vi.mock('$app/navigation', () => ({
 }));
 
 const CreateEventModal = (await import('./CreateEventModal.svelte')).default;
-const { checkConflicts } = await import('$lib/remote/events.remote');
 
 describe('CreateEventModal', () => {
-	it('lets staff give the event an address line, which createEvent accepts as location', async () => {
+	// #1822's rule: the modal holds what the row cannot exist without, and the
+	// event page holds the rest.
+	it('asks only for what the row needs', async () => {
 		await render(CreateEventModal, { open: true });
 
-		const input = page.getByRole('textbox', { name: 'Address line' });
-		await expect.element(input).toBeVisible();
-		await expect.element(input).toHaveAttribute('name', 'location');
+		await expect.element(page.getByRole('textbox', { name: 'Title' })).toBeVisible();
+		await expect.element(page.getByLabelText('Date')).toBeVisible();
+		await expect.element(page.getByLabelText('Start time')).toBeVisible();
+		await expect.element(page.getByLabelText('End time')).toBeVisible();
+
+		for (const gone of ['Description', 'Doors time', 'Tags', 'Address line', 'Ticket price ($)']) {
+			await expect.element(page.getByLabelText(gone)).not.toBeInTheDocument();
+		}
+		await expect.element(page.getByText('Reserve practice space')).not.toBeInTheDocument();
+		await expect.element(page.getByText('Repeat this event')).not.toBeInTheDocument();
 	});
 
-	// #1866: the conflict check's await held back an effect that seeded the
-	// window, so the late seed overwrote what staff typed in the meantime.
-	it('keeps a reservation time typed while the conflict check is still out', async () => {
-		vi.mocked(checkConflicts).mockImplementation(
-			() => new Promise((r) => setTimeout(() => r({ conflicts: [] } as never), 300)) as never
-		);
-		await render(CreateEventModal, { open: true });
+	it('names itself after the trigger that opened it', async () => {
+		await render(CreateEventModal, {
+			open: true,
+			title: 'Create Listing',
+			submitLabel: 'Create Listing'
+		});
 
-		const start = page.getByLabelText('Reservation start');
-		const end = page.getByLabelText('Reservation end');
-		await page.getByLabelText('Start time').fill('19:00');
-		await page.getByLabelText('End time').fill('22:00');
-		await page.getByLabelText('Reserve practice space').click();
-
-		await start.fill('18:00');
-		await end.fill('23:00');
-		await new Promise((r) => setTimeout(r, 800));
-		await expect.element(start).toHaveValue('18:00');
-		await expect.element(end).toHaveValue('23:00');
-
-		await page.getByLabelText('Start time').fill('17:00');
-		await page.getByLabelText('End time').fill('20:00');
-		await expect.element(start).toHaveValue('16:00');
-		await expect.element(end).toHaveValue('21:00');
+		await expect.element(page.getByRole('heading', { name: 'Create Listing' })).toBeVisible();
+		await expect.element(page.getByRole('button', { name: 'Create Listing' })).toBeVisible();
 	});
 });
