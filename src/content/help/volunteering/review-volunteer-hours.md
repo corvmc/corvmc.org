@@ -24,7 +24,7 @@ card with nothing in it:
 - **Unreviewed Hours** — the top of the approval queue, with the same approve and return
   buttons. The whole queue is **Volunteering → Hours**.
 - **Unconfirmed Shifts** — shifts that have already happened where somebody's claim was never
-  confirmed. **Log hours** logs the shift as worked; **Close Assignment** records a no-show.
+  confirmed. **Log Hours** logs the shift as worked; **Close Assignment** records a no-show.
   Leaving it is the third answer, and it loses the work.
 - **Expiring Clearances** — somebody rostered for a date their clearance does
   not reach. Not the same list as _Who's cleared_: this one has a deadline.
@@ -52,7 +52,7 @@ keeps your view.
 ### Logging hours for somebody else
 
 Members have 90 days to log their own hours, and the app tells them to ask staff for
-anything older. **Log hours** on this page is how you do that. It is also how
+anything older. **Log Hours** on this page is how you do that. It is also how
 you record the volunteer who does not use the app at all — which matters, because the
 report only counts what is in here, and an hour nobody typed in is an hour the board never
 hears about.

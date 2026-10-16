@@ -32,10 +32,7 @@
 </script>
 
 <InfoCard title="Unverified Repairs" state={total}>
-	<p class="text-muted">
-		The work's window has passed but its reports are still open. Resolve it once the repair took,
-		and each reporter hears it was fixed.
-	</p>
+	<p class="text-muted">Finished work orders with open problem reports.</p>
 
 	<Table>
 		{#snippet head()}

@@ -29,7 +29,7 @@
 		 * case.
 		 */
 		presetUser = null,
-		label = 'Log hours',
+		label = 'Log Hours',
 		size = 'sm'
 	}: {
 		presetUser?: { id: string; name: string } | null;
@@ -50,7 +50,7 @@
 	variant="ghost"
 	{size}
 	modalTitle={presetUser ? `Log hours for ${presetUser.name}` : 'Log hours for a member'}
-	submitLabel="Log hours"
+	submitLabel="Log Hours"
 	successToast="Hours logged"
 	onsuccess={() => {
 		userId = '';

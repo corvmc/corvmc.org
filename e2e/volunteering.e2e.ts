@@ -918,7 +918,7 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/hours');
 
-		await page.getByRole('button', { name: 'Log hours', exact: true }).click();
+		await page.getByRole('button', { name: 'Log Hours', exact: true }).click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible({ timeout: 15000 });
 
@@ -937,7 +937,7 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await dialog
 			.locator('textarea[name="description"]')
 			.fill('E2E: taken off the paper sign-in sheet.');
-		await modalSubmit(page, 'Log hours').click();
+		await modalSubmit(page, 'Log Hours').click();
 
 		// Approved on entry and attributed to the staffer — so it never appears in the
 		// Pending queue the same person is standing in, which is why this reads the row.
