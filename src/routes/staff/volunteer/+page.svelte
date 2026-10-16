@@ -81,8 +81,8 @@
 		</EmptyState>
 	{/if}
 
-	<!-- Row-major, so priority order still reads left to right, then down. -->
-	<div class="grid items-start gap-6 @5xl:grid-cols-2 [&>*]:min-w-0">
+	<!-- Masonry: cards flow down the first column, then the second. -->
+	<div class="gap-6 @5xl:columns-2 [&>*]:mb-6 [&>*]:break-inside-avoid">
 		{#if work.needsConfirming.length > 0}
 			<NeedsConfirmingCard claims={work.needsConfirming} total={work.needsConfirmingTotal} />
 		{/if}

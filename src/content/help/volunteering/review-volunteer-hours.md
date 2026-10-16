@@ -13,7 +13,7 @@ sortOrder: 2
 something waiting on a person, with the action on the row, and a card you cannot see is a
 card with nothing in it:
 
-- **Needs confirming** — people who claimed an upcoming shift that nobody has confirmed.
+- **Pending Assignments** — people who claimed an upcoming shift that nobody has confirmed.
   This is the one to clear first: confirming is what turns a claim into a booking, and until
   you do it they get no reminder, the shift never completes itself, and no hour log is ever
   offered. Confirm one at a time or confirm a whole shift at once.
