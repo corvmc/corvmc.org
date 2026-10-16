@@ -2400,50 +2400,39 @@ export const getVolunteerWorklist = query(async () => {
 	const horizon = new Date(now.getTime() + WORKLIST_HORIZON_DAYS * DAY_MS);
 	const lookback = new Date(now.getTime() - CLOSE_OUT_LOOKBACK_DAYS * DAY_MS);
 
-	const [
-		claims,
-		unclosed,
-		upcoming,
-		hours,
-		counts,
-		blocked,
-		lapsing,
-		unscheduled,
-		toConfirm,
-		waitingCount
-	] = await Promise.all([
-		listOutstandingClaims({}, now),
-		listUnclosedSignups({ since: lookback }, now),
-		listShifts({ from: now, to: horizon }),
-		listHourLogs({ status: 'pending' }, { page: 1, pageSize: WORKLIST_HOURS_PREVIEW }).then(
-			// Flagged the same way the full queue flags them, so the advisory warning does
-			// not appear only on the page somebody was already going to visit.
-			async (result) => {
-				const uncleared = await flagUnclearedLogs(
-					result.rows.map((r) => ({
-						id: r.id,
-						userId: r.userId,
-						volunteerRoleId: r.volunteerRoleId,
-						workedOn: r.workedOn
-					}))
-				);
-				return result.rows.map((r) => ({ ...r, uncleared: uncleared.has(r.id) }));
-			}
-		),
-		getStatusCounts(),
-		listBlockedVolunteers(),
-		listLapsingBeforeRosteredShift(now),
-		// Work with no time on it — the advance half of a duty list, and anything
-		// a coordinator raised without a window. Every other query on this layer
-		// filters `starts_at >= now`, and `NULL >= x` is NULL, so before this card
-		// these rows were created and then invisible in the whole product.
-		listWorkOrders(),
-		// Finished work orders staff did not flag to close their reports (#1544).
-		listFinishedWorkToConfirm(now),
-		// The same call the sidebar badge makes. It shares its predicates with the
-		// lists above (`unscheduledWorkWhere`), so it counts only what a card lists.
-		countVolunteerWorkWaiting(now)
-	]);
+	const [claims, unclosed, upcoming, hours, counts, lapsing, unscheduled, toConfirm, waitingCount] =
+		await Promise.all([
+			listOutstandingClaims({}, now),
+			listUnclosedSignups({ since: lookback }, now),
+			listShifts({ from: now, to: horizon }),
+			listHourLogs({ status: 'pending' }, { page: 1, pageSize: WORKLIST_HOURS_PREVIEW }).then(
+				// Flagged the same way the full queue flags them, so the advisory warning does
+				// not appear only on the page somebody was already going to visit.
+				async (result) => {
+					const uncleared = await flagUnclearedLogs(
+						result.rows.map((r) => ({
+							id: r.id,
+							userId: r.userId,
+							volunteerRoleId: r.volunteerRoleId,
+							workedOn: r.workedOn
+						}))
+					);
+					return result.rows.map((r) => ({ ...r, uncleared: uncleared.has(r.id) }));
+				}
+			),
+			getStatusCounts(),
+			listLapsingBeforeRosteredShift(now),
+			// Work with no time on it — the advance half of a duty list, and anything
+			// a coordinator raised without a window. Every other query on this layer
+			// filters `starts_at >= now`, and `NULL >= x` is NULL, so before this card
+			// these rows were created and then invisible in the whole product.
+			listWorkOrders(),
+			// Finished work orders staff did not flag to close their reports (#1544).
+			listFinishedWorkToConfirm(now),
+			// The same call the sidebar badge makes. It shares its predicates with the
+			// lists above (`unscheduledWorkWhere`), so it counts only what a card lists.
+			countVolunteerWorkWaiting(now)
+		]);
 
 	// Computed here rather than asked of the database: `listShifts` already returns both
 	// counts per row, so "which of these is short" is a filter over rows we already hold
@@ -2475,8 +2464,6 @@ export const getVolunteerWorklist = query(async () => {
 		shortStaffedTotal: shortStaffed.length,
 		pendingHours: hours,
 		pendingHoursTotal: counts.pending,
-		blockedVolunteers: blocked.slice(0, WORKLIST_PREVIEW),
-		blockedVolunteersTotal: blocked.length,
 		/** Finished shifts whose claims never completed, so no hours were ever offered. */
 		closeOut: unclosed.slice(0, WORKLIST_PREVIEW),
 		closeOutTotal: unclosed.length,

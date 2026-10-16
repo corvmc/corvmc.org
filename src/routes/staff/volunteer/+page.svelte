@@ -25,7 +25,6 @@
 	import NeedsConfirmingCard from './NeedsConfirmingCard.svelte';
 	import ShortStaffedCard from './ShortStaffedCard.svelte';
 	import HoursToReviewCard from './HoursToReviewCard.svelte';
-	import PendingReviewCard from './PendingReviewCard.svelte';
 	import CloseOutCard from './CloseOutCard.svelte';
 	import NeedsSchedulingCard from './NeedsSchedulingCard.svelte';
 	import ConfirmFixedCard from './ConfirmFixedCard.svelte';
@@ -93,10 +92,6 @@
 
 		{#if work.pendingHours.length > 0}
 			<HoursToReviewCard logs={work.pendingHours} total={work.pendingHoursTotal} />
-		{/if}
-
-		{#if work.blockedVolunteers.length > 0}
-			<PendingReviewCard rows={work.blockedVolunteers} total={work.blockedVolunteersTotal} />
 		{/if}
 
 		{#if work.unscheduled.length > 0}

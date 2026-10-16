@@ -6,7 +6,7 @@
 	 * The hour-log status tabs and their counts, owning the query behind the badges.
 	 *
 	 * `getVolunteerStatusCounts` is unparameterized and refreshed by name after every approval, so
-	 * it stays out of the page's filter-keyed query — see PendingReviewCard.
+	 * it stays out of the page's filter-keyed query.
 	 */
 	let {
 		view = $bindable('pending'),

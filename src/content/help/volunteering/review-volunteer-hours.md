@@ -23,7 +23,6 @@ card with nothing in it:
   anybody else.
 - **Hours to review** — the top of the approval queue, with the same approve and return
   buttons. The whole queue is **Volunteering → Hours**.
-- **Waiting on a guardian's sign-off** — under-18 sign-ups.
 - **Close these out** — shifts that have already happened where somebody's claim was never
   confirmed. Say whether they worked it (which records the hours) or didn't. Leaving it is
   the third answer, and it loses the work.
