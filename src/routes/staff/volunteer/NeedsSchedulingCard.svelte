@@ -66,7 +66,7 @@
 	{/snippet}
 
 	<p class="text-muted">
-		Work with nobody booked to do it. Give it a window and it becomes a shift members can claim.
+		Work orders without a time window. Schedule opens one for members to claim; Close ends it.
 	</p>
 
 	<Table>

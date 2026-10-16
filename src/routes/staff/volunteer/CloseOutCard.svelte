@@ -55,8 +55,8 @@
 	{/snippet}
 
 	<p class="text-muted">
-		Past shifts with a volunteer nobody confirmed. Confirm records the volunteer's hours; No-show
-		closes the assignment.
+		Past shifts with an unconfirmed volunteer. Confirm records the volunteer's hours; No-show closes
+		the assignment.
 	</p>
 
 	<Table>
