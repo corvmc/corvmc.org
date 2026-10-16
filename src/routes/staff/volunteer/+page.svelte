@@ -49,14 +49,14 @@
 	const waiting = $derived(work.waitingCount + work.lapsing.length);
 </script>
 
-<PageHeader width="5xl" title="Volunteering">
+<PageHeader title="Volunteering">
 	<!-- Not a sidebar row: roles are set up now and then, not worked daily (#1791). -->
 	<Button variant="ghost" size="sm" href={resolve('/staff/volunteer/roles')}>Roles</Button>
 	<LogHoursForMemberAction />
 	<NewWorkOrderAction />
 </PageHeader>
 
-<PageContent width="5xl">
+<PageContent>
 	<p class="text-subtle text-sm">
 		{today} ·
 		{waiting === 0 ? 'nothing waiting' : `${waiting} ${waiting === 1 ? 'item' : 'items'} waiting`}
@@ -81,35 +81,38 @@
 		</EmptyState>
 	{/if}
 
-	{#if work.needsConfirming.length > 0}
-		<NeedsConfirmingCard claims={work.needsConfirming} total={work.needsConfirmingTotal} />
-	{/if}
+	<!-- Row-major, so priority order still reads left to right, then down. -->
+	<div class="grid items-start gap-6 @5xl:grid-cols-2 [&>*]:min-w-0">
+		{#if work.needsConfirming.length > 0}
+			<NeedsConfirmingCard claims={work.needsConfirming} total={work.needsConfirmingTotal} />
+		{/if}
 
-	{#if work.shortStaffed.length > 0}
-		<ShortStaffedCard shifts={work.shortStaffed} total={work.shortStaffedTotal} />
-	{/if}
+		{#if work.shortStaffed.length > 0}
+			<ShortStaffedCard shifts={work.shortStaffed} total={work.shortStaffedTotal} />
+		{/if}
 
-	{#if work.pendingHours.length > 0}
-		<HoursToReviewCard logs={work.pendingHours} total={work.pendingHoursTotal} />
-	{/if}
+		{#if work.pendingHours.length > 0}
+			<HoursToReviewCard logs={work.pendingHours} total={work.pendingHoursTotal} />
+		{/if}
 
-	{#if work.blockedVolunteers.length > 0}
-		<PendingReviewCard rows={work.blockedVolunteers} total={work.blockedVolunteersTotal} />
-	{/if}
+		{#if work.blockedVolunteers.length > 0}
+			<PendingReviewCard rows={work.blockedVolunteers} total={work.blockedVolunteersTotal} />
+		{/if}
 
-	{#if work.unscheduled.length > 0}
-		<NeedsSchedulingCard orders={work.unscheduled} total={work.unscheduledTotal} />
-	{/if}
+		{#if work.unscheduled.length > 0}
+			<NeedsSchedulingCard orders={work.unscheduled} total={work.unscheduledTotal} />
+		{/if}
 
-	{#if work.toConfirm.length > 0}
-		<ConfirmFixedCard orders={work.toConfirm} total={work.toConfirmTotal} />
-	{/if}
+		{#if work.toConfirm.length > 0}
+			<ConfirmFixedCard orders={work.toConfirm} total={work.toConfirmTotal} />
+		{/if}
 
-	{#if work.closeOut.length > 0}
-		<CloseOutCard claims={work.closeOut} total={work.closeOutTotal} />
-	{/if}
+		{#if work.closeOut.length > 0}
+			<CloseOutCard claims={work.closeOut} total={work.closeOutTotal} />
+		{/if}
 
-	{#if work.lapsing.length > 0}
-		<LapsingCard rows={work.lapsing} total={work.lapsingTotal} />
-	{/if}
+		{#if work.lapsing.length > 0}
+			<LapsingCard rows={work.lapsing} total={work.lapsingTotal} />
+		{/if}
+	</div>
 </PageContent>
