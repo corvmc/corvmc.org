@@ -55,8 +55,8 @@
 	{/snippet}
 
 	<p class="text-muted">
-		Nobody confirmed these before the shift, so they never completed — no hours were offered and no
-		feedback was asked for.
+		Past shifts with a volunteer nobody confirmed. Confirm records the volunteer's hours; No-show
+		closes the assignment.
 	</p>
 
 	<Table>
