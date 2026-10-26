@@ -146,7 +146,7 @@
 	No hand-rolled sibling links: every page in this section used to build its own row and no
 	two agreed (docs/reports/volunteer-workflow-findings.md#d2). The sidebar carries them.
 -->
-<PageHeader title="People" subtitle="Volunteering" backHref="/staff/volunteer">
+<PageHeader title="Volunteers" backHref="/staff/volunteer">
 	<LogHoursForMemberAction />
 </PageHeader>
 
@@ -221,14 +221,7 @@
 					{#snippet head()}
 						<th class="w-px"><span class="sr-only">Status</span></th>
 						<th>Volunteer</th>
-						<th class="col-support">Would do</th>
-						<!--
-							The column this list existed to have and never did. Availability is what
-							the member typed to answer "when can you help", and it was written to the
-							profile and shown to nobody
-							(docs/reports/volunteer-workflow-findings.md#a6).
-						-->
-						<th class="col-support">When they can help</th>
+						<th class="col-support">Followed Roles</th>
 						<th class="col-support cell-num">Hours</th>
 						<th class="w-px"><span class="sr-only">Actions</span></th>
 					{/snippet}
@@ -265,19 +258,6 @@
 									     not missing data: they signed up without picking anything. A
 									     link, because "ask them" is the thing to do about it. -->
 									<span class="link">Ask them →</span>
-								{/if}
-							</td>
-
-							<td class="col-support">
-								{#if volunteer.availability}
-									<!-- Wrapped and capped, not `truncate`: a nowrap sentence's
-									     intrinsic width is the whole answer, and auto layout gave it
-									     the width the name and Hours columns needed (#1789). -->
-									<div class="line-clamp-2 max-w-xs" title={volunteer.availability}>
-										{volunteer.availability}
-									</div>
-								{:else}
-									<span class="text-subtle">—</span>
 								{/if}
 							</td>
 

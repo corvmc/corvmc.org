@@ -55,7 +55,7 @@
 	const waiting = $derived(work.waitingCount + work.lapsing.length);
 </script>
 
-<PageHeader width="5xl" title="Today" subtitle="Volunteering">
+<PageHeader width="5xl" title="Volunteering">
 	<!-- Not a sidebar row: roles are set up now and then, not worked daily (#1791). -->
 	<Button variant="ghost" size="sm" href={resolve('/staff/volunteer/roles')}>Roles</Button>
 	<LogHoursForMemberAction />
