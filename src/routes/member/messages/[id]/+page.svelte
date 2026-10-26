@@ -7,6 +7,7 @@
 	 * Within a DM the order matters: a pending request shows Accept / Decline /
 	 * Report *instead of* a box, which keeps a request to one message.
 	 */
+	import { untrack } from 'svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { page } from '$app/state';
@@ -67,7 +68,7 @@
 		const id = threadId;
 		if (markedId === id) return;
 		markedId = id;
-		void markConversationRead(id).then(refreshConversations);
+		untrack(() => void markConversationRead(id).then(refreshConversations));
 	});
 </script>
 

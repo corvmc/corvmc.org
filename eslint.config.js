@@ -17,6 +17,7 @@ import noDirectFinancialEntryWrites from './eslint-rules/no-direct-financial-ent
 import noUnwrappedRemoteMutation from './eslint-rules/no-unwrapped-remote-mutation.js';
 import noClippedRowAction from './eslint-rules/no-clipped-row-action.js';
 import definiteActionLabels from './eslint-rules/definite-action-labels.js';
+import noTrackedCommandInEffect from './eslint-rules/no-tracked-command-in-effect.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -52,7 +53,8 @@ const customPlugin = {
 		'no-direct-financial-entry-writes': noDirectFinancialEntryWrites,
 		'no-unwrapped-remote-mutation': noUnwrappedRemoteMutation,
 		'no-clipped-row-action': noClippedRowAction,
-		'definite-action-labels': definiteActionLabels
+		'definite-action-labels': definiteActionLabels,
+		'no-tracked-command-in-effect': noTrackedCommandInEffect
 	}
 };
 
@@ -183,6 +185,10 @@ export default defineConfig(
 	{
 		files: ['src/lib/remote/**/*.remote.ts'],
 		rules: { 'custom/refresh-the-composed-query': 'error' }
+	},
+	{
+		files: ['**/*.svelte', '**/*.svelte.ts'],
+		rules: { 'custom/no-tracked-command-in-effect': 'error' }
 	},
 	{
 		// `_remote.ts` is the wrapper, so it is the one file that may import the
