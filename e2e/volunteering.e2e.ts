@@ -33,8 +33,6 @@ import {
 	SEED_VOL_MINOR_LAST,
 	SEED_VOL_BLOCKED_MINOR_EMAIL,
 	SEED_VOL_BLOCKED_MINOR_NAME,
-	SEED_VOL_BLOCKED_MINOR_FIRST,
-	SEED_VOL_BLOCKED_MINOR_LAST,
 	readVolunteerState,
 	readSignupStatus,
 	readShiftSignups,
@@ -607,7 +605,8 @@ test.describe('volunteering — onboarding', () => {
 		// Guardian sign-off lives on the roster, not the dashboard.
 		await page.goto('/staff/volunteer/people');
 
-		const row = rowFor(page, `${SEED_VOL_BLOCKED_MINOR_FIRST} ${SEED_VOL_BLOCKED_MINOR_LAST}`);
+		// The roster names people by account, not by their volunteer profile.
+		const row = rowFor(page, SEED_VOL_BLOCKED_MINOR_EMAIL);
 		await expect(row).toBeVisible({ timeout: 15000 });
 		await row.getByRole('button', { name: 'Approve' }).click();
 		await modalSubmit(page, 'Approve').click();

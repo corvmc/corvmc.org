@@ -100,7 +100,10 @@ test.describe('project task list', () => {
 		await expect(
 			page.getByRole('heading', { level: 1, name: SEED_TASK_WITH_DUTIES })
 		).toBeVisible();
-		await expect(page.getByRole('link', { name: SEED_TASK_PROJECT_NAME })).toBeVisible();
+		// Not the breadcrumb's copy of the same link: the line under the title.
+		await expect(
+			page.getByRole('paragraph').getByRole('link', { name: SEED_TASK_PROJECT_NAME })
+		).toBeVisible();
 		await expect(page.getByText('Stretch the new set')).toBeVisible();
 
 		const taskId = taskUrl.exec(page.url())![1];
