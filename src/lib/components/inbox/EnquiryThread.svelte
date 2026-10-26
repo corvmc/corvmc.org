@@ -7,6 +7,7 @@
 	 * organisation here, so a bandmate's reply reads as the band's side rather
 	 * than landing beside the booker's. Who wrote it comes from `authorName`.
 	 */
+	import { untrack } from 'svelte';
 	import { IconCheck, IconRotateClockwise } from '@tabler/icons-svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -48,7 +49,7 @@
 		const id = thread.id;
 		if (markedId === id) return;
 		markedId = id;
-		void markBandConversationRead(id).then(() => onchanged?.());
+		untrack(() => void markBandConversationRead(id).then(() => onchanged?.()));
 	});
 </script>
 

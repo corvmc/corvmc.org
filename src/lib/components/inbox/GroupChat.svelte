@@ -16,12 +16,12 @@
 	import ThreadTimeline from './ThreadTimeline.svelte';
 	import MuteRoomAction from './MuteRoomAction.svelte';
 	import ThreadComposer from './ThreadComposer.svelte';
+	import { untrack } from 'svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { markGroupChatSeen, postGroupChatMessage } from '$lib/remote/group-chat.remote';
 
 	// Handed in, never awaited here: on Messages the page's own query already
-	// carries the topic, and a second query in flight beside it is the
-	// suspected cause of #1776's effect_update_depth_exceeded loop.
+	// carries the topic.
 	let { chat, viewerUserId }: { chat: GroupChatTopic; viewerUserId: string } = $props();
 
 	// The id alone, so a refreshed topic (a new object) does not re-mark it.
@@ -29,8 +29,11 @@
 
 	// Opening a topic is what clears its dot. Fire-and-forget: a failed mark is
 	// a dot that stays lit, which is not worth interrupting the reader for.
+	// `untrack` because calling a command reads and writes kit's own pending
+	// count, which would make this effect re-run itself (#1956).
 	$effect(() => {
-		void markGroupChatSeen(threadId).catch(() => {});
+		const id = threadId;
+		untrack(() => void markGroupChatSeen(id).catch(() => {}));
 	});
 </script>
 
