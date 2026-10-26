@@ -604,7 +604,8 @@ test.describe('volunteering — onboarding', () => {
 	 */
 	test('staff can approve a blocked minor, and then they get in', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer');
+		// Guardian sign-off lives on the roster, not the dashboard.
+		await page.goto('/staff/volunteer/people');
 
 		const row = rowFor(page, `${SEED_VOL_BLOCKED_MINOR_FIRST} ${SEED_VOL_BLOCKED_MINOR_LAST}`);
 		await expect(row).toBeVisible({ timeout: 15000 });
