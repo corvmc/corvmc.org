@@ -123,7 +123,7 @@ export default {
 			},
 			CallExpression(node) {
 				if (commands.size === 0 || !EFFECTS.has(calleeName(node.callee) ?? '')) return;
-				const fn = node.arguments[0];
+				const fn = /** @type {RuleNode | undefined} */ (node.arguments[0]);
 				if (fn && isFunction(fn)) visit(fn.body);
 				else if (fn) visit(fn);
 			}
