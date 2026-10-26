@@ -69,14 +69,16 @@ import {
 	getValidationWarnings
 } from './conflict-service';
 import { db } from '$lib/server/db';
+import { buildDateInTz } from './timezone';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Pacific wall-clock time at the offset in force that day. A fixed -07:00 put
+// every winter fixture an hour early, and the relative-date cases cross DST (#1960).
 function makeDate(dateStr: string, timeStr: string): Date {
-	const utc = new Date(`${dateStr}T${timeStr}:00-07:00`);
-	return utc;
+	return buildDateInTz(dateStr, timeStr, 'America/Los_Angeles');
 }
 
 const date = '2025-07-15'; // A Tuesday in PDT
