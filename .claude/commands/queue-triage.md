@@ -10,11 +10,17 @@ $ARGUMENTS
 ## Find the work
 
 ```bash
-gh pr list --repo corvmc/corvmc.org --label queue-rejected --state open \
-  --json number,title,headRefName
+node scripts/claude/queue-sweep.mjs
 ```
 
-Empty output means nothing is stranded. Say so and stop.
+It lists every open PR that is **rejected** (labelled, or removed from the queue with nothing
+re-arming it), **stuck** (armed, but a required check is red on its own head or it conflicts with
+`main` — the queue never saw it, so the guard never labelled it), or **unarmed** (ready, not a bot,
+nobody armed it). `nothing stranded` means stop. A `main is red` line means a rejection may be
+`main`'s fault, not the PR's: read the `ci-failure` issue before blaming the diff.
+
+The launchd job from `scripts/claude/install-queue-sweep.sh` runs the same sweep every 15 minutes
+and posts a macOS notification for each new entry, so this command is usually opened from one.
 
 **The label is the signal; the armed flag is not.** GitHub consumes the auto-merge request when a
 PR _enters_ the queue, so `gh pr view <n> --json autoMergeRequest` returns `null` for the whole
@@ -66,22 +72,17 @@ long way round when the annotations block came back empty.
    - **No failed run at all** (manual removal, conflict, or the queue's one-hour check timeout) —
      say which, and ask before re-queueing.
 
+A **stuck** PR is not a queue rejection: its own checks failed before it could enter. Read the
+failing job the sweep links, fix a real failure on the branch, and push; a conflict is a rebase
+onto `main` and a force-push. Either way, wait for the new head's checks to start before re-arming
+— arming straight after a force-push queues on the old head's checks and gets the PR ejected.
+**Unarmed**: arm it if it is finished, or ask.
+
 Never `--admin` and never `gh pr update-branch` — both defeat the queue. See `CLAUDE.md`.
 
 ## Watch mode
 
-When the user asks to keep watching, arm a persistent `Monitor` so an open session hears about a
-rejection within a minute instead of waiting to be asked. The label is the durable half: a session
-started hours later still finds everything the watch slept through.
-
-```bash
-prev=""
-while true; do
-  cur=$(gh pr list --repo corvmc/corvmc.org --label queue-rejected --state open \
-    --json number,title --jq '.[] | "PR #\(.number) rejected by the queue: \(.title)"' \
-    2>/dev/null | sort || true)
-  comm -13 <(echo "$prev") <(echo "$cur")
-  prev=$cur
-  sleep 60
-done
-```
+To follow one PR, run `node scripts/claude/pr-await.mjs <N>` with `run_in_background`. It exits
+when the PR merges (0), is rejected (1, printing the guard's comment), is stuck before the queue
+(3, with the failing jobs), is closed or disarmed (4), or times out (2). The session is woken on
+exit; no polling loop is needed.
