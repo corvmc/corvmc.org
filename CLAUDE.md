@@ -140,9 +140,11 @@ if one is already open, say so and pick something else rather than racing it.
 `Fixes #<n>` (or `Closes`) also closes the issue when the queue merges the PR, which is the half
 that keeps the tracker honest without anyone tidying it.
 
-**A finished PR is queued, not merged.** `gh pr merge --auto`, and the session ends there. No merge
-method: a queue rejects one outright ("merge method is not valid for merge queue"), and the queue's
-own configuration squashes anyway.
+**A finished PR is queued, not merged.** `gh pr merge --auto`, then start
+`node scripts/claude/pr-await.mjs <n>` with `run_in_background` so the session is woken by the
+outcome. Act on what it reports while the session is open; `/queue-triage` covers a non-zero
+exit. No merge method: a queue rejects one outright ("merge method is not valid for merge queue"),
+and the queue's own configuration squashes anyway.
 
 That is `main`. A **phase** PR into a `feature/*` branch has no queue to enter — `merge_queue` is a
 rule on `main` alone — so a bare `gh pr merge --auto` refuses there with
