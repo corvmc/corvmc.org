@@ -40,7 +40,7 @@
 	}
 </script>
 
-<InfoCard title="Short-staffed" state="{total} in the next two weeks">
+<InfoCard title="Understaffed Shifts" state="{total} in the next two weeks">
 	{#snippet action()}
 		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
 	{/snippet}
@@ -79,7 +79,7 @@
 					     The candidate column is beside the roster now, so the place to
 					     decide who to ask is the place that shows who is already on it. -->
 					<Button href={resolve(`/staff/volunteer/shifts/${shift.id}`)} variant="ghost" size="xs">
-						Add people
+						Assign
 					</Button>
 				</td>
 			</tr>

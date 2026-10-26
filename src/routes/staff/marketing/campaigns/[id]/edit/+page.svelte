@@ -154,7 +154,7 @@
 	}
 </script>
 
-<PageHeader title="Edit Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns">
+<PageHeader title="Edit Campaign" subtitle="Marketing">
 	<Button variant="ghost" size="sm" class="text-error" onclick={handleDelete}>Delete</Button>
 </PageHeader>
 <PageContent>

@@ -43,15 +43,11 @@ export type StaffNavKey =
 	| 'volunteer-schedule'
 	| 'volunteer-people'
 	| 'volunteer-duty-lists'
-	| 'volunteer-recurring'
 	| 'volunteer-report'
 	| 'reservations'
-	| 'recurring'
-	| 'closures'
 	| 'instructors'
 	| 'equipment'
 	| 'equipment-loans'
-	| 'inventory-tagging'
 	| 'equipment-reports'
 	| 'inventory-acquisitions'
 	| 'inventory-restock'
@@ -82,6 +78,7 @@ export type StaffNavKey =
 	| 'renewals'
 	| 'reports'
 	| 'settings'
+	| 'access'
 	| 'audit';
 
 export type StaffNavSectionKey =
@@ -190,9 +187,8 @@ export const staffNavSections: StaffNavSection[] = [
 						href: resolve('/staff/volunteer/schedule')
 					},
 					{
-						// "People", not "Volunteers": it holds the under-18 queue and the
-						// clearances table too, and both are about people who are not yet
-						// volunteering.
+						// "People", not "Volunteers": its filters reach the under-18 queue
+						// too, who are not yet volunteering.
 						key: 'volunteer-people',
 						capability: 'volunteer.read',
 						label: 'People',
@@ -213,12 +209,6 @@ export const staffNavSections: StaffNavSection[] = [
 						capability: 'volunteer.read',
 						label: 'Duty Lists',
 						href: resolve('/staff/volunteer/duty-lists')
-					},
-					{
-						key: 'volunteer-recurring',
-						capability: 'volunteer.read',
-						label: 'Recurring Work',
-						href: resolve('/staff/volunteer/recurring')
 					}
 				]
 			}
@@ -263,29 +253,18 @@ export const staffNavSections: StaffNavSection[] = [
 		title: 'Space',
 		items: [
 			{
+				// Closures sit in its list and recurring series in a modal off its
+				// header (#1936); a series' own page still lights this row.
 				key: 'reservations',
 				capability: 'reservation.read',
 				label: 'Reservations',
 				href: resolve('/staff/reservations'),
-				children: [
-					{
-						key: 'recurring',
-						capability: 'reservation.read',
-						label: 'Recurring',
-						href: resolve('/staff/recurring')
-					},
-					{
-						key: 'closures',
-						capability: 'reservation.manageClosures',
-						label: 'Closures',
-						href: resolve('/staff/closures')
-					}
-				]
+				also: [resolve('/staff/recurring')]
 			},
 			{
 				// Equipment used to hang the other way up: the parent row landed on
 				// Loans and the child was labelled Inventory, which the loans page
-				// itself contradicts — it declares `backHref="/staff/inventory"`.
+				// itself contradicted by pointing back to `/staff/inventory`.
 				//
 				// "Inventory" rather than "Equipment" since #286: the section now
 				// covers consumables too, and calling it Equipment would send anyone
@@ -296,24 +275,12 @@ export const staffNavSections: StaffNavSection[] = [
 				href: resolve('/staff/inventory'),
 				children: [
 					{
-						key: 'inventory-tagging',
-						capability: 'inventory.manageAssets',
-						label: 'Needs tagging',
-						href: resolve('/staff/inventory/tagging')
-					},
-					{
 						// Lives on the flags surface (#552); listed here too because
 						// whoever fixes the gear reads Inventory, not Moderation.
 						key: 'equipment-reports',
 						capability: 'inventory.manageAssets',
 						label: 'Reports',
 						href: resolve('/staff/flags/equipment')
-					},
-					{
-						key: 'equipment-loans',
-						capability: 'inventory.manageLoans',
-						label: 'Loans',
-						href: resolve('/staff/inventory/loans')
 					},
 					{
 						key: 'inventory-acquisitions',
@@ -340,6 +307,14 @@ export const staffNavSections: StaffNavSection[] = [
 						href: resolve('/staff/inventory/compliance')
 					}
 				]
+			},
+			// A row of its own, not under Inventory: the loan desk is somewhere staff
+			// go, and the URL stays where loan links already point (#1937).
+			{
+				key: 'equipment-loans',
+				capability: 'inventory.manageLoans',
+				label: 'Loans',
+				href: resolve('/staff/inventory/loans')
 			},
 			// Permit, license and insurance renewals: compliance for the building.
 			{
@@ -566,6 +541,13 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'help.read',
 				label: 'Help Articles',
 				href: resolve('/staff/help')
+			},
+			// Who holds which position, committee grant and clearance (#1942).
+			{
+				key: 'access',
+				capability: 'user.setRole',
+				label: 'Access',
+				href: resolve('/staff/access')
 			},
 			{ key: 'audit', capability: 'audit.read', label: 'Audit Log', href: resolve('/staff/audit') }
 		]

@@ -35,7 +35,6 @@
 	width="3xl"
 	subtitle={incidentCategoryLabels[incident.category]}
 	title={incident.summary}
-	backHref="/staff/incidents"
 >
 	<StatusBadge status={incident.status} label />
 	{#if incident.status === 'reported'}

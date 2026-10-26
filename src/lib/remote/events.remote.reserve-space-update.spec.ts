@@ -39,6 +39,12 @@ vi.mock('$lib/server/reservation/recurring-series-service', () => ({
 	cancel: vi.fn()
 }));
 
+// Off-site venues hold no room; 'venue-offsite' is the one that does not.
+vi.mock('$lib/server/venue/venue-service', () => ({
+	holdsSpace: vi.fn(async (id: string | null | undefined) => id !== 'venue-offsite'),
+	listVenues: vi.fn(async () => [])
+}));
+
 vi.mock('$lib/server/feature-flags', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
@@ -164,6 +170,23 @@ describe('updateEvent — reserve space', () => {
 		await updateEvent({ ...base, rebookReservation: true, overrideConflicts: true });
 
 		expect(lastRebook().overrideConflicts).toBe(true);
+	});
+
+	it('refuses to hold the room for an off-site venue on the form', async () => {
+		await expect(
+			updateEvent({ ...base, rebookReservation: true, venueId: 'venue-offsite' })
+		).rejects.toMatchObject({ status: 400 });
+		expect(eventServiceMock.update).not.toHaveBeenCalled();
+	});
+
+	it('reads the saved venue when the form leaves it out', async () => {
+		eventServiceMock.getById.mockResolvedValueOnce({
+			id: 'event-1',
+			venueId: 'venue-offsite'
+		} as never);
+		await expect(updateEvent({ ...base, rebookReservation: true })).rejects.toMatchObject({
+			status: 400
+		});
 	});
 
 	it('books nothing when the box is left unchecked', async () => {

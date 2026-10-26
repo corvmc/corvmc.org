@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeNavKey, childHrefsFor, flattenNav, type NavNode } from './active-nav';
+import { activeNavKey, activeNavPath, childHrefsFor, flattenNav, type NavNode } from './active-nav';
 
 /**
  * The rule every panel's sidebar now shares. It replaced `NavItem`'s exact
@@ -64,6 +64,14 @@ describe('activeNavKey', () => {
 		expect(activeNavKey(ITEMS, '/member/eventsomething')).toBeNull();
 	});
 
+	it('lets a row claim a path outside its href through `also`', () => {
+		const items: NavNode[] = [
+			{ key: 'reservations', href: '/staff/reservations', also: ['/staff/recurring'] }
+		];
+		expect(activeNavKey(items, '/staff/recurring/abc')).toBe('reservations');
+		expect(activeNavKey(items, '/staff/recurringsomething')).toBeNull();
+	});
+
 	it('tolerates a trailing slash', () => {
 		expect(activeNavKey(ITEMS, '/member/reservations/')).toBe('reservations');
 	});
@@ -102,5 +110,18 @@ describe('flattenNav and childHrefsFor', () => {
 
 	it('gives a childless row just its own href', () => {
 		expect(childHrefsFor(ITEMS[2])).toEqual(['/member/reservations']);
+	});
+});
+
+describe('activeNavPath', () => {
+	it('returns the active row under its parent, outermost first', () => {
+		expect(activeNavPath(ITEMS, '/member/events/submit').map((n) => n.key)).toEqual([
+			'events',
+			'submit'
+		]);
+	});
+
+	it('is empty where no row matches', () => {
+		expect(activeNavPath(ITEMS, '/member/groups')).toEqual([]);
 	});
 });

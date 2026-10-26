@@ -66,7 +66,7 @@
 		...d.committees.map((c) => ({ value: c.id, label: c.name }))
 	]}
 
-	<PageHeader title={d.list.name} subtitle="Duty list" backHref="/staff/volunteer/duty-lists">
+	<PageHeader title={d.list.name} subtitle="Duty list">
 		<!-- The status its list row shows. It existed on this page only as a
 		     toggle inside the Edit modal, so reading it meant opening a form you
 		     then had to cancel (#1067). -->

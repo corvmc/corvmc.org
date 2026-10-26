@@ -49,6 +49,23 @@
 	 */
 	let kind = $state<'serialized' | 'bulk'>('serialized');
 
+	// Textareas own their value in `FormField`, so clearing them goes through a binding.
+	let description = $state('');
+	let notes = $state('');
+
+	/**
+	 * Clears what describes one item and keeps what describes the run: category,
+	 * tracking, unit and loanability are usually the same for the next thing off
+	 * the cart. The selects and checkbox hold their own values, so leaving them
+	 * alone is what keeps them.
+	 */
+	function nextItem() {
+		fields.set({});
+		description = '';
+		notes = '';
+		document.querySelector<HTMLInputElement>('[role="dialog"] input[name="name"]')?.focus();
+	}
+
 	const kindLabels: Record<(typeof itemKinds)[number], string> = {
 		serialized: 'Serialized — one record per physical unit',
 		bulk: 'Bulk — a count'
@@ -60,6 +77,8 @@
 	label="Add Item"
 	modalTitle="Add Item"
 	successToast="Item added"
+	addAnotherLabel="Save and add another"
+	onaddanother={nextItem}
 	{variant}
 	{size}
 	class={className}
@@ -68,7 +87,12 @@
 >
 	{#snippet form()}
 		<Field field={fields.name} type="text" label="Name" />
-		<Field field={fields.description} type="textarea" label="Description" />
+		<Field
+			field={fields.description}
+			type="textarea"
+			label="Description"
+			bind:value={description}
+		/>
 		<div class="grid grid-cols-2 gap-3">
 			<Field
 				field={fields.categoryId}
@@ -110,6 +134,6 @@
 			</div>
 		{/if}
 		<Field field={fields.resourceId} type="text" label="Resource ID" />
-		<Field field={fields.notes} type="textarea" label="Notes" />
+		<Field field={fields.notes} type="textarea" label="Notes" bind:value={notes} />
 	{/snippet}
 </Action>

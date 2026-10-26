@@ -62,7 +62,7 @@
 	};
 </script>
 
-<PageHeader title="Contractor jobs" subtitle="Space" backHref="/staff/contractors">
+<PageHeader title="Contractor jobs" subtitle="Space">
 	<Button href="/staff/contractors" variant="ghost" size="sm">Contractors</Button>
 	<Action action={createJobForm} label="New job" modalTitle="New job" successToast="Job opened">
 		{#snippet form()}

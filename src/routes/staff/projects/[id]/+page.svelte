@@ -3,8 +3,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { EntityChip } from '$lib/components/ui/entity';
@@ -19,13 +18,16 @@
 		applyDutyListToProjectForm,
 		getProjectActivity
 	} from '$lib/remote/projects.remote';
-	import { projectStatusOptions } from '$lib/config';
+	import {
+		isProjectArchived,
+		projectArchiveOutcomeOptions,
+		PROJECT_UNARCHIVED_STATUS
+	} from '$lib/config';
 	import { formatDateShort } from '$lib/utils/format';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconCheck, IconDots } from '@tabler/icons-svelte';
-	import BudgetTab from './BudgetTab.svelte';
 	import ActivityCard from '$lib/components/project/ActivityCard.svelte';
 	import TaskList from './TaskList.svelte';
 	import TaskPanel from './TaskPanel.svelte';
@@ -36,12 +38,7 @@
 	 * sections, with a panel beside the list for the one selected. The project's
 	 * own fields change only through Edit project; they reach further than a task.
 	 */
-	type Tab = 'tasks' | 'budget' | 'activity';
-	const parseTab = (raw: string | null): Tab =>
-		raw === 'budget' || raw === 'activity' ? raw : 'tasks';
-
 	// Above the await: the window listener below reads these.
-	let tab = $state<Tab>(parseTab(page.url.searchParams.get('tab')));
 	let filter = $state<TaskFilter>(parseFilter(page.url.searchParams.get('show')));
 	let showDone = $state(page.url.searchParams.get('done') !== 'hide');
 	const selectedId = $derived(page.url.searchParams.get('task'));
@@ -93,9 +90,9 @@
 <PageHeader
 	title={project.name}
 	subtitle={committeeNames || 'No committee owns this yet'}
-	backHref="/staff/projects"
 	sticky={false}
 >
+	<Button variant="default" href={resolve(`/staff/projects/${project.id}/budget`)}>Budget</Button>
 	{#if dutyListOptions.length > 0}
 		<Action
 			action={applyDutyListToProjectForm}
@@ -175,28 +172,45 @@
 			<IconDots size={16} />
 		</summary>
 		<div class="dropdown-content dropdown-panel flex w-60 flex-col gap-1">
-			<Action
-				action={setProjectStatusForm}
-				label="Change status"
-				variant="ghost"
-				class="justify-start"
-				modalTitle="Change status"
-				successToast="Status updated"
-			>
-				{#snippet form()}
-					<input {...statusFields.id.as('hidden', project.id)} />
-					<Field
-						field={statusFields.status}
-						type="select"
-						label="Status"
-						options={projectStatusOptions}
-						value={project.status}
-						description={project.suggestionId
-							? 'The suggestion this answers moves with it.'
-							: undefined}
-					/>
-				{/snippet}
-			</Action>
+			{#if isProjectArchived(project.status)}
+				<Action
+					action={setProjectStatusForm}
+					label="Unarchive"
+					variant="ghost"
+					class="justify-start"
+					modalTitle="Unarchive project"
+					successToast="Project unarchived"
+				>
+					{#snippet form()}
+						<input {...statusFields.id.as('hidden', project.id)} />
+						<input {...statusFields.status.as('hidden', PROJECT_UNARCHIVED_STATUS)} />
+						<p class="text-sm">It returns to the active list with its tasks as they are.</p>
+					{/snippet}
+				</Action>
+			{:else}
+				<Action
+					action={setProjectStatusForm}
+					label="Archive"
+					variant="ghost"
+					class="justify-start"
+					modalTitle="Archive project"
+					successToast="Project archived"
+				>
+					{#snippet form()}
+						<input {...statusFields.id.as('hidden', project.id)} />
+						<Field
+							field={statusFields.status}
+							type="select"
+							label="Outcome"
+							options={projectArchiveOutcomeOptions}
+							value="done"
+							description={project.suggestionId
+								? 'The suggestion this answers reports the same outcome.'
+								: undefined}
+						/>
+					{/snippet}
+				</Action>
+			{/if}
 			{#if data.canCreateBallot}
 				<CreateBallotAction
 					kind="member"
@@ -210,7 +224,9 @@
 
 <PageContent>
 	<div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm" aria-label="Project status">
-		<StatusBadge status={project.status} label />
+		{#if isProjectArchived(project.status)}
+			<Badge variant="ghost">Archived</Badge>
+		{/if}
 		<span class="inline-flex items-center gap-2">
 			<progress
 				class="progress w-28 progress-success"
@@ -279,84 +295,59 @@
 		</div>
 	</details>
 
-	<div class="tab-bar">
-		<TabBar
-			tabs={[
-				{ key: 'tasks', label: 'Tasks', badge: `${progress.done}/${progress.total}` },
-				{ key: 'budget', label: 'Budget' },
-				{ key: 'activity', label: 'Activity' }
-			]}
-			active={tab}
-			onchange={(key) => {
-				tab = parseTab(key);
-				setParams({ tab: tab === 'tasks' ? null : tab, task: tab === 'tasks' ? selectedId : null });
-			}}
-		/>
-	</div>
-
-	{#if tab === 'budget'}
-		<BudgetTab {data} />
-	{:else if tab === 'activity'}
-		<ActivityCard
-			query={(limit) =>
-				getProjectActivity(limit ? { projectId: project.id, limit } : { projectId: project.id })}
-			projectId={project.id}
-		/>
-	{:else}
-		<div class="flex items-start">
-			<div class="@container min-w-0 flex-1 space-y-4">
-				<TaskList
-					{list}
-					viewerId={data.viewerId}
-					selectedId={selected?.id ?? null}
-					{filter}
-					{showDone}
-					projectId={project.id}
-					onopen={openTask}
-					onfilter={(f) => {
-						filter = f;
-						setParams({ show: f === 'all' ? null : f });
-					}}
-					onshowdone={(show) => {
-						showDone = show;
-						setParams({ done: show ? null : 'hide' });
-					}}
-				/>
-			</div>
-			{#if selected}
-				<aside class="task-panel" aria-labelledby="task-panel-title">
-					<TaskPanel
-						task={selected}
-						{list}
-						projectId={project.id}
-						onclose={closeTask}
-						onopen={openTask}
-					/>
-				</aside>
-			{:else if selectedId}
-				<Alert type="warning" class="ml-4">
-					That task is not on this project.
-					{#snippet action()}
-						<Button size="sm" onclick={closeTask}>Close</Button>
-					{/snippet}
-				</Alert>
-			{/if}
+	<div class="flex flex-col items-stretch lg:flex-row lg:items-start">
+		<div class="@container min-w-0 flex-1 space-y-4">
+			<TaskList
+				{list}
+				viewerId={data.viewerId}
+				selectedId={selected?.id ?? null}
+				{filter}
+				{showDone}
+				projectId={project.id}
+				onopen={openTask}
+				onfilter={(f) => {
+					filter = f;
+					setParams({ show: f === 'all' ? null : f });
+				}}
+				onshowdone={(show) => {
+					showDone = show;
+					setParams({ done: show ? null : 'hide' });
+				}}
+			/>
 		</div>
-	{/if}
+		{#if selected}
+			<aside class="task-panel" aria-labelledby="task-panel-title">
+				<TaskPanel
+					task={selected}
+					{list}
+					projectId={project.id}
+					onclose={closeTask}
+					onopen={openTask}
+				/>
+			</aside>
+		{:else if selectedId}
+			<Alert type="warning" class="ml-4">
+				That task is not on this project.
+				{#snippet action()}
+					<Button size="sm" onclick={closeTask}>Close</Button>
+				{/snippet}
+			</Alert>
+		{:else}
+			<!-- With no task open, the sidebar is the project's activity. -->
+			<aside class="activity-panel">
+				<ActivityCard
+					query={(limit) =>
+						getProjectActivity(
+							limit ? { projectId: project.id, limit } : { projectId: project.id }
+						)}
+					projectId={project.id}
+				/>
+			</aside>
+		{/if}
+	</div>
 </PageContent>
 
 <style>
-	/* Only the tab bar sticks; the header scrolls away. */
-	.tab-bar {
-		position: sticky;
-		top: 0;
-		z-index: 10;
-		margin-inline: -1.5rem;
-		padding: 0.5rem 1.5rem;
-		border-bottom: 1px solid var(--color-base-300);
-		background: var(--color-base-100);
-	}
-
 	/* A sheet over the list on a phone; full height beside it from lg. */
 	.task-panel {
 		position: fixed;
@@ -379,6 +370,28 @@
 	}
 	@media (width >= 80rem) {
 		.task-panel {
+			width: 24rem;
+		}
+	}
+
+	/* Below the list on a phone; the same sticky sidebar slot as a task from lg. */
+	.activity-panel {
+		margin-top: 1rem;
+	}
+	@media (width >= 64rem) {
+		.activity-panel {
+			position: sticky;
+			top: 1rem;
+			flex-shrink: 0;
+			width: 20rem;
+			max-height: calc(100dvh - 5rem);
+			overflow-y: auto;
+			margin-top: 0;
+			margin-left: 1rem;
+		}
+	}
+	@media (width >= 80rem) {
+		.activity-panel {
 			width: 24rem;
 		}
 	}

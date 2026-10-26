@@ -10,13 +10,15 @@ sortOrder: 8
 ## Managing events
 
 **Staff → Events** lists events by date with status, tags, and space-reservation
-info. Create a new one with **New Event**, or open an event to manage it.
+info. Create a new one with **New Event** (or **Create Listing** on the Calendar), or open an
+event to manage it. Creating asks only for the title, kind, date and times; the event's page opens
+next, with its edit form open, for everything else.
 
 ## On the event detail page
 
-- **Edit details** — Title, description, date, start/end/doors times, and the
-  linked practice-space reservation.
-- **Ticketing** — Enable tickets and set the **price** and **quantity**.
+- **Edit details** — Title, description, date, start/end/doors times, venue and tags.
+- **On the production console** — the poster, ticketing (**price** and **quantity**), the
+  practice-space reservation, and **Repeat this event** to make it a series.
 - **Publish / Unpublish** — Control whether the event is visible.
 - **Cancel** — Call off an event.
 - **Rebook** — If you change the time, rebook the linked reservation; conflicts are

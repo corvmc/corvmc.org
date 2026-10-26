@@ -404,6 +404,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/access",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/audit",
 		"panel": "staff"
 	},
@@ -433,10 +437,6 @@
 	},
 	{
 		"route": "/staff/classifieds/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/closures",
 		"panel": "staff"
 	},
 	{
@@ -620,10 +620,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/inventory/tagging",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/keys",
 		"panel": "staff"
 	},
@@ -689,10 +685,6 @@
 	},
 	{
 		"route": "/staff/projects/[id]/tasks/[taskId]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/recurring",
 		"panel": "staff"
 	},
 	{
@@ -773,10 +765,6 @@
 	},
 	{
 		"route": "/staff/volunteer/people",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/volunteer/recurring",
 		"panel": "staff"
 	},
 	{

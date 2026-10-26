@@ -167,11 +167,17 @@ export async function createEventSeries(params: CreateEventSeriesParams): Promis
 	const { prototypeEventId, frequency, prototypeStartsAt, endsAt } = params;
 
 	const [proto] = await db
-		.select({ createdByUserId: eventListing.createdByUserId })
+		.select({
+			createdByUserId: eventListing.createdByUserId,
+			recurringSeriesId: eventListing.recurringSeriesId
+		})
 		.from(eventListing)
 		.where(eq(eventListing.id, prototypeEventId))
 		.limit(1);
 	if (!proto) throw new RecurringSeriesError('Prototype event not found');
+	// One series per listing: an occurrence carries its series' id too, and a
+	// second series would orphan the first's back-link.
+	if (proto.recurringSeriesId) throw new RecurringSeriesError('This event already repeats');
 
 	const rruleString = buildRRule(prototypeStartsAt, frequency, params.monthlyMode ?? 'weekday');
 

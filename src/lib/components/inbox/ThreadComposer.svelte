@@ -146,15 +146,16 @@
 				<input {...noteForm.fields.assignToUserId.as('hidden', assignTo)} />
 			{/if}
 			<!-- The `input` snippet rather than `type="textarea"`: that branch spreads
-			     only `inputProps`, so `rows` and `placeholder` were silently dropped and
-			     the box has been sized wrong since this was written. -->
+			     only `inputProps`, so `rows` and `placeholder` were silently dropped.
+			     Two lines that grow with the draft (`field-sizing`), capped so the
+			     timeline above keeps the pane. -->
 			<FormField name="body" label="">
 				{#snippet input(id)}
 					<textarea
 						{id}
 						name="body"
-						class="textarea w-full"
-						rows={isNote ? 2 : 4}
+						class="textarea field-sizing-content max-h-64 min-h-16 w-full"
+						rows={2}
 						placeholder={isNote ? 'Add an internal note…' : 'Type your reply…'}
 						bind:value={draft}></textarea>
 				{/snippet}
@@ -217,6 +218,9 @@
 							: sendLabel}
 					successLabel={isNote ? (assignTo ? 'Assigned' : 'Added') : 'Sent'}
 					shortcut="mod+enter"
+					title={staffSend
+						? 'Leaves the queue now and returns the moment they reply, or nudges you in 7 days if nothing comes back.'
+						: undefined}
 					disabled={!draft.trim()}
 					name={staffSend ? 'disposition' : undefined}
 					value={staffSend ? 'wait' : undefined}
@@ -227,12 +231,6 @@
 					{/snippet}
 				</SubmitButton>
 			</div>
-			{#if staffSend}
-				<p class="text-right text-subtle text-xs">
-					Default. Leaves the queue now and returns the moment they reply — or nudges you in 7 days
-					if nothing comes back.
-				</p>
-			{/if}
 		</Form>
 	</CardBody>
 </div>

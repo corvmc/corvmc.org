@@ -995,13 +995,13 @@ export async function listUnclosedSignups(
  *
  * The sidebar badge and the dashboard summary both read this, so nav and page
  * cannot disagree. It counts rather than lists: the badge runs on every staff
- * page load. Lapsing clearances are deliberately absent — those wait on a member
- * to renew something, and a badge that never reaches zero stops being read.
+ * page load. Lapsing clearances and guardian sign-offs are deliberately absent:
+ * neither is urgent, and a badge that never reaches zero stops being read.
  */
 export async function countVolunteerWorkWaiting(now = new Date()): Promise<number> {
 	const lookback = new Date(now.getTime() - CLOSE_OUT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
 
-	const [pendingHours, claims, blocked, unclosed, unscheduled, toConfirm] = await Promise.all([
+	const [pendingHours, claims, unclosed, unscheduled, toConfirm] = await Promise.all([
 		db.select({ n: count() }).from(volunteerHourLog).where(eq(volunteerHourLog.status, 'pending')),
 		db
 			.select({ n: count() })
@@ -1014,7 +1014,6 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 					gte(workOrder.startsAt, now)
 				)
 			),
-		db.select({ n: count() }).from(volunteerProfile).where(eq(volunteerProfile.status, 'blocked')),
 		db
 			.select({ n: count() })
 			.from(volunteerSignup)
@@ -1050,7 +1049,6 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 	return (
 		Number(pendingHours[0]?.n ?? 0) +
 		Number(claims[0]?.n ?? 0) +
-		Number(blocked[0]?.n ?? 0) +
 		Number(unclosed[0]?.n ?? 0) +
 		Number(unscheduled[0]?.n ?? 0) +
 		Number(toConfirm[0]?.n ?? 0)

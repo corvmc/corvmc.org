@@ -338,7 +338,7 @@ orders with a role where only volunteer work belongs (Phase 3):
   bound parameter under D1's cap of 100), the ticks, and the origin chain — the suggestion,
   each ballot opened and certified, the project started — newest first. Each source is read
   with `limit + 1`, so "Show older" knows whether there is more without a count.
-- **The Activity tab** on `/staff/projects/[id]` (`?tab=activity`) reads it through
+- **The Activity sidebar** on `/staff/projects/[id]` (shown while no task is open) reads it through
   `getProjectActivity`, guarded like `getProjectTasks`; an entry about a task links to its
   task page, an origin step to its suggestion or ballot. The task page and the shift page
   each show their work order's own list (`getProjectActivity` with a `workOrderId`, which

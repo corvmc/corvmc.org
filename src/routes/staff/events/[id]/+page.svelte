@@ -98,6 +98,15 @@
 		editing = true;
 	}
 
+	// `?edit=1` is where the create modal lands: it collects only what the row
+	// needs, so the rest is filled in here. Consumed once, so Save closes it.
+	let editFromUrl = false;
+	$effect(() => {
+		if (editFromUrl || !page.url.searchParams.has('edit')) return;
+		editFromUrl = true;
+		startEditing();
+	});
+
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
 		return tags
@@ -107,7 +116,7 @@
 	}
 </script>
 
-<PageHeader width="3xl" title={evt.title} subtitle="Event" backHref="/staff/events">
+<PageHeader width="3xl" title={evt.title} subtitle="Event">
 	<div class="flex flex-wrap items-center gap-2">
 		{#if isProduction}
 			<!-- One entry, not two. "Manage production" and "Add production" sat
@@ -359,6 +368,13 @@
 						]}
 						description="Only shows reach the homepage posters. Anything published still appears on the public calendar."
 					/>
+					{#if isProduction}
+						<p class="text-muted">
+							The poster, ticket sales, the room hold and repeating are on the
+							<a class="link" href={resolve(`/staff/events/${id}/production`)}>production console</a
+							>.
+						</p>
+					{/if}
 				</div>
 				<div class="mt-4 flex gap-2">
 					<SubmitButton label="Save" />

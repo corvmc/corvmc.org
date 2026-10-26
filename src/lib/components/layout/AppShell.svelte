@@ -36,7 +36,7 @@
 	<Toaster position="bottom-right" richColors closeButton />
 {/if}
 
-<div class="drawer lg:drawer-open">
+<div class="drawer lg:drawer-open" data-panel>
 	<input id={drawerId} type="checkbox" class="drawer-toggle" />
 
 	<!-- `h-dvh`, not `h-screen`: `100vh` on a phone is the LARGE viewport, so the

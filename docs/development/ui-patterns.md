@@ -56,7 +56,7 @@ Props:
 #### Constrained detail page
 
 ```svelte
-<PageHeader title={item.name} subtitle="Inventory" backHref="/staff/inventory" />
+<PageHeader title={item.name} />
 <PageContent width="3xl">
 	<InfoCard title="Details">...</InfoCard>
 </PageContent>
@@ -1103,8 +1103,10 @@ Chrome only: the `overflow-x-auto` wrapper, the daisyUI modifiers, and
 ### FilterBar
 
 Toolbar layout, not filter state — pages keep their own `$state`. Search stays
-visible at every width; everything else collapses behind a "Filters" disclosure
-below the `@lg` container breakpoint.
+visible at every width. Primary filters go in `children` and sit inline; secondary
+ones go in a `menu` snippet, behind a "Filters" popover whose badge is `menuCount`.
+A bar with no `menu` collapses its `children` behind a "Filters" disclosure below
+the `@lg` container breakpoint instead.
 
 ```svelte
 <FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
@@ -1119,6 +1121,12 @@ below the `@lg` container breakpoint.
 		/>
 	{/snippet}
 	<Select size="sm" aria-label="Role" bind:value={roleFilter}>…</Select>
+	{#snippet menu()}
+		<label class="flex flex-col gap-1">
+			<span class="text-muted text-xs">Status</span>
+			<Select size="sm" bind:value={statusFilter}>…</Select>
+		</label>
+	{/snippet}
 </FilterBar>
 ```
 
@@ -1155,7 +1163,7 @@ subline; a _different record_ the row points at — the booker of a reservation,
 the borrower on a loan — gets its own column with an `EntityChip` in it. Chips
 down a column scan as a column; the same chips scattered under each primary cell
 do not, and they cost the primary cell its second line. `staff/reservations`,
-`staff/recurring` and `staff/equipment/loans` all read this way. Reserve the
+the recurring-series modal and `staff/equipment/loans` all read this way. Reserve the
 subline for what genuinely qualifies the record: a series' time range, an
 equipment loan's category.
 
@@ -1189,6 +1197,12 @@ one cell per row gets it. It also carries a floor, `min-width: min(10rem, 40cqw)
 because the browser sizes every other column to its content first: a nowrap
 sentence in a secondary cell would otherwise take the row and leave the primary
 cell a few characters wide (#1797).
+
+That holds below the `col-extra` tier. From 48rem up, `Table` packs instead
+(`table-packed`, #1925): the primary cell sizes to its content on one line,
+capped at `24rem` and truncated past it, and a trailing pseudo-cell takes the
+spare width — so the slack collects after the last column, not between the
+primary cell and the rest.
 
 **`truncate` or prose outside the primary cell needs `cell-text`.** It caps the
 cell at `24rem`, so its content width is bounded and cannot starve the row. Put
@@ -1314,12 +1328,32 @@ They are not interchangeable: neither can do the other's job.
 
 ## PageHeader
 
-Page title with optional back button, subtitle, and right-side action slot.
+Page title with breadcrumbs, optional subtitle, and right-side action slot.
 
 ```svelte
-<PageHeader title="Edit User" subtitle="Staff" backHref="/staff/users">
+<PageHeader title="Edit User">
 	<SubmitButton shortcut="mod+s" />
 </PageHeader>
+```
+
+**Breadcrumbs are derived, not written.** Each panel layout (`staff`, `member`,
+`band/[slug]`) passes `navTrail()` from `$lib/components/layout/nav-trail.ts` into
+context, built from its own nav tree, and `PageHeader` appends the page's title as the
+last crumb (`crumb` overrides it). `/staff/users/abc` reads "People / Users / Jordan
+Martinez" without the page naming any of it. There is no back button and no `backHref`.
+
+Only when the URL cannot place a page does it name what sits between, with `parent`:
+a production under its event, a shift under the schedule. A parent the nav already
+shows is dropped, so naming one is safe. Outside a panel there is no nav trail, so a
+public page that wants crumbs passes `parent` alone. A trail with no link renders
+nothing. At phone width the trail collapses to "… / Parent / Leaf".
+
+```svelte
+<PageHeader
+	title={evt.title}
+	crumb="Production"
+	parent={{ label: evt.title, href: resolve('/staff/events/[id]', { id }) }}
+/>
 ```
 
 ## Public site sections

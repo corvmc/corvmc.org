@@ -12,8 +12,11 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import CreateGroupAction from '$lib/components/groups/CreateGroupAction.svelte';
-	import { getStaffGroups } from '$lib/remote/groups.remote';
+	import { getStaffGroups, getStaffClubTotals } from '$lib/remote/groups.remote';
 	import { formatDateShortYear } from '$lib/utils/format';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { retryQuery } from '$lib/utils/retry-query';
+	import ClubTotals from './ClubTotals.svelte';
 
 	/**
 	 * Clubs. Committees have their own list at `/staff/committees`, and bands are
@@ -24,7 +27,8 @@
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
 	let searchText = $state('');
-	let status = $state<'active' | 'deactivated' | ''>('');
+	// Active by default, so the table shows the clubs the counts above count.
+	let status = $state<'active' | 'deactivated' | ''>('active');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
@@ -41,12 +45,12 @@
 	// must not set the height of every row beside it.
 	const MAX_CHAIRS = 2;
 
-	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + (status ? 1 : 0));
+	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + (status === 'active' ? 0 : 1));
 
 	function clearFilters() {
 		searchText = '';
 		searchDebounced = '';
-		status = '';
+		status = 'active';
 		page = 1;
 	}
 </script>
@@ -55,6 +59,15 @@
 	<CreateGroupAction />
 </PageHeader>
 <PageContent>
+	<svelte:boundary>
+		<ClubTotals />
+		{#snippet failed(_error, reset)}
+			<Alert type="warning" reset={() => retryQuery(getStaffClubTotals(), reset)}>
+				The club totals didn't load. The table below is unaffected.
+			</Alert>
+		{/snippet}
+	</svelte:boundary>
+
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
@@ -75,9 +88,9 @@
 				page = 1;
 			}}
 		>
-			<option value="">All statuses</option>
 			<option value="active">Active</option>
 			<option value="deactivated">Deactivated</option>
+			<option value="">All statuses</option>
 		</Select>
 	</FilterBar>
 

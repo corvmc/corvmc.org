@@ -34,7 +34,7 @@
 	}
 </script>
 
-<PageHeader title="Funders" subtitle="Grants" backHref="/staff/grants">
+<PageHeader title="Funders" subtitle="Grants">
 	<Action
 		action={createFunder}
 		label="New funder"

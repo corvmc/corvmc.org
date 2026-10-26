@@ -22,12 +22,7 @@
 	const pageData = $derived(getVolunteerInterestsPage());
 </script>
 
-<PageHeader
-	width="md"
-	title="Select the roles you'd take"
-	subtitle="Volunteering"
-	backHref="/member/volunteer"
-/>
+<PageHeader width="md" title="Select the roles you'd take" subtitle="Volunteering" />
 
 <PageContent width="md">
 	{#await pageData then { step: me, roles: roleOptions, interests: myInterests }}

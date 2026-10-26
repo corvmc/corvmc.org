@@ -11,6 +11,7 @@ import { DomainError } from '$lib/server/errors';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { ROLE_NAME_SEPARATOR } from './volunteer-interest-service';
+import { holdsCertificationSql } from './member-certification-service';
 import type { MemberRef } from '$lib/types/entity';
 import { VOLUNTEER_AVAILABILITY_MAX, VOLUNTEER_NAME_MAX } from '$lib/config';
 import type { VolunteerProfile, VolunteerProfileStatus } from '$lib/server/db/schema/volunteer';
@@ -398,7 +399,13 @@ export interface VolunteerListRow {
  * staff most need to see.
  */
 export async function listVolunteers(
-	filters: { roleId?: string; search?: string; status?: VolunteerProfileStatus } = {},
+	filters: {
+		roleId?: string;
+		search?: string;
+		status?: VolunteerProfileStatus;
+		/** Only people holding this clearance today. */
+		certificationId?: string;
+	} = {},
 	pagination: PaginationInput = {}
 ): Promise<PaginatedResult<VolunteerListRow>> {
 	// An EXISTS rather than a WHERE on the joined rows, for the reason
@@ -420,7 +427,17 @@ export async function listVolunteers(
 
 	// A closed account keeps its profile via the FK, but nobody should be rostered
 	// after closing their account — the same call `listInterestedMembers` makes.
-	const where = and(isNull(user.deletedAt), matchesRole, matchesSearch, matchesStatus);
+	const holdsClearance = filters.certificationId
+		? holdsCertificationSql(filters.certificationId)
+		: undefined;
+
+	const where = and(
+		isNull(user.deletedAt),
+		matchesRole,
+		matchesSearch,
+		matchesStatus,
+		holdsClearance
+	);
 
 	// A correlated subquery, deliberately not a join. Joining the hour log
 	// alongside the interest join is a cartesian product, and the group_concat

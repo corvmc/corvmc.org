@@ -32,8 +32,11 @@ test.describe('inventory intake', () => {
 		page
 	}) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/inventory/intake');
-		await expect(page.getByRole('heading', { name: 'Intake' })).toBeVisible();
+		// Reached from Inventory's header, which names it for what it does (#1937).
+		await page.goto('/staff/inventory');
+		await page.getByRole('link', { name: 'Receive Stock' }).click();
+		await page.waitForURL(/\/staff\/inventory\/intake$/, { timeout: 15000 });
+		await expect(page.getByRole('heading', { name: 'Receive Stock' })).toBeVisible();
 
 		// Line 1: the serialized item, two units, one tagged and one not — the
 		// mixed case the tagging queue exists for.
@@ -87,21 +90,20 @@ test.describe('inventory intake', () => {
 		// intake above, so a separate test would either depend on this one having
 		// run — the order-dependence `seed-inventory.ts` warns about — or bind
 		// whichever fixture unit sorted first, which another test needs untagged.
-		await page.goto('/staff/inventory/tagging');
-		await expect(page.getByRole('heading', { name: 'Needs tagging' })).toBeVisible();
+		// A modal off the Inventory header now; the old page redirects to it.
+		await page.goto('/staff/inventory');
+		await page.getByRole('button', { name: /^Needs tagging/ }).click();
+		const queue = page.getByRole('dialog', { name: 'Needs tagging' });
+		await expect(queue).toBeVisible();
 
-		const rows = page.locator('input[name$="assetTag"]');
+		const rows = queue.locator('input[name$="assetTag"]');
 		const before = await rows.count();
 		expect(before).toBeGreaterThan(0);
 
 		// The card for the unit the intake test created, found by its serial —
 		// binding `.first()` would consume whichever fixture unit happens to sort
 		// first, which another test needs untagged.
-		const card = page
-			.locator('div')
-			.filter({ hasText: INTAKE_SERIAL })
-			.filter({ has: page.locator('input[name$="assetTag"]') })
-			.last();
+		const card = queue.locator('li').filter({ hasText: INTAKE_SERIAL });
 
 		await card.locator('input[name$="assetTag"]').fill('E2E-TAGGED-1');
 		await card.getByRole('button', { name: 'Bind' }).click();
@@ -110,5 +112,12 @@ test.describe('inventory intake', () => {
 		// The queue is derived from `asset_tag IS NULL`, so the row it just
 		// tagged has to be gone without anything invalidating a cache by hand.
 		await expect(rows).toHaveCount(before - 1);
+	});
+
+	test('the old tagging address opens the queue on Inventory', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/staff/inventory/tagging');
+		await page.waitForURL(/\/staff\/inventory\?tagging/, { timeout: 15000 });
+		await expect(page.getByRole('dialog', { name: 'Needs tagging' })).toBeVisible();
 	});
 });

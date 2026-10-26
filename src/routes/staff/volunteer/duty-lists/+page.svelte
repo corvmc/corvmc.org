@@ -26,7 +26,7 @@
 	}));
 </script>
 
-<PageHeader title="Duty Lists" subtitle="Staff" backHref="/staff/volunteer">
+<PageHeader title="Duty Lists" subtitle="Staff">
 	<Action
 		action={createDutyList}
 		label="New Duty List"

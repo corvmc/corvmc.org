@@ -2,6 +2,7 @@
 	import Button from './Button.svelte';
 	import type { ComponentProps } from 'svelte';
 	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import { resolve } from '$app/paths';
 	import PageHeader from './PageHeader.svelte';
 
 	const { Story } = defineMeta({
@@ -31,9 +32,17 @@
 
 <Story name="Title only" args={{ title: 'Reservations' }} />
 <Story name="With subtitle" args={{ title: 'Reservations', subtitle: 'Member' }} />
+<!-- In a panel the trail comes from the nav tree; outside one, from `parent` alone. -->
 <Story
-	name="With back link"
-	args={{ title: 'Edit band', subtitle: 'Band', backHref: '/member/bands' }}
+	name="With breadcrumbs"
+	args={{
+		title: 'Weekly, Tuesdays 7pm',
+		parent: [
+			{ label: 'Space' },
+			{ label: 'Reservations', href: resolve('/staff/reservations') },
+			{ label: 'Recurring series', href: resolve('/staff/reservations') }
+		]
+	}}
 />
 <Story
 	name="With actions"

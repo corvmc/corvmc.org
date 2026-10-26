@@ -215,8 +215,7 @@ export const getStaffItemList = query(staffItemFilters, async (filters) => {
 			...e,
 			ref: toGenericRef('equipment', {
 				id: e.id,
-				title: e.name,
-				subtitle: e.category.name
+				title: e.name
 			})
 		})),
 		pagination
@@ -518,8 +517,8 @@ export const bindTag = form(
 			mapDomainError(err);
 		}
 		void getStaffAssetDetail(data.assetId).refresh();
-		// The tagging page is a list of exactly the units this call removes from
-		// it, so it has to be refreshed by name — the page has no id to key on.
+		// The tagging queue is a list of exactly the units this call removes from
+		// it, so it has to be refreshed by name — the queue has no id to key on.
 		void getUntaggedAssets().refresh();
 		return { success: true };
 	}

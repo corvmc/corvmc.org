@@ -37,11 +37,9 @@
 	let { rows, total }: { rows: Row[]; total: number } = $props();
 </script>
 
-<InfoCard title="Lapses before a shift they're on" state={total}>
+<InfoCard title="Expiring Clearances" state={total}>
 	{#snippet action()}
-		<Button href="/staff/volunteer/people?tab=cleared" variant="ghost" size="sm">
-			Who's cleared →
-		</Button>
+		<Button href="/staff/volunteer/people" variant="ghost" size="sm">Who's cleared →</Button>
 	{/snippet}
 
 	<Table>
@@ -84,7 +82,7 @@
 						variant="ghost"
 						size="xs"
 						modalTitle="Renew {row.certificationName} for {row.member.title}?"
-						submitLabel="Grant"
+						submitLabel="Renew"
 						successToast="Renewed. That shift is covered."
 					>
 						{#snippet form()}

@@ -619,6 +619,53 @@ p {
 	max-width: 24rem;
 }
 
+/* Set by Table.svelte. From the col-extra tier up, columns pack to their content
+   and a trailing pseudo-cell takes the slack, so the spare width lands after the
+   actions instead of between the primary cell and the rest (#1925). The primary
+   cell keeps one line and truncates at 24rem. Below the tier it absorbs the
+   slack as before, which is what a phone needs. */
+@utility table-packed {
+	@container (width >= 48rem) {
+		& tr::after {
+			content: '';
+			display: table-cell;
+			width: 100%;
+		}
+		& tr:has(> .cell-group)::after {
+			background: var(--color-base-200);
+		}
+		/* The filler carries the row rule, or separators stop short of the stripes. */
+		& :where(thead tr, tbody tr:not(:last-child))::after {
+			border-bottom: var(--border) solid color-mix(in oklch, var(--color-base-content) 5%, #0000);
+		}
+		/* Packed cells keep one line; only a `cell-text` cell may wrap. */
+		/* The filler takes 100%, so cells get min-content width: a wrapping flex
+		   row would break at every item. Unpacked tables still wrap (#1835). */
+		& :where(th, td):not(.cell-text) {
+			white-space: nowrap;
+		}
+		& :where(th, td):not(.cell-text) .flex-wrap {
+			flex-wrap: nowrap;
+		}
+		/* A prose column takes the slack instead of the filler, so it widens
+		   as far as the row allows before it wraps. */
+		&:has(td.cell-text) tr::after {
+			display: none;
+		}
+		& td.cell-text {
+			width: 100%;
+			max-width: none;
+		}
+		& .cell-primary {
+			width: auto;
+			max-width: 24rem;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+	}
+}
+
 /* ---------------------------------------------------------------------------
    Tri-stripe band — the 10px brand recall stripe under the site header.
    --------------------------------------------------------------------------- */

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { withQuery } from '$lib/utils/with-query';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -28,7 +30,10 @@
 	width="3xl"
 	title={formatScheduleLabel(series.frequencyLabel, series.prototypeStartsAt, series.monthlyMode)}
 	subtitle="Recurring series"
-	backHref="/staff/recurring"
+	parent={{
+		label: 'Recurring series',
+		href: withQuery(resolve('/staff/reservations'), 'recurring')
+	}}
 >
 	{#if isActive}
 		<Action

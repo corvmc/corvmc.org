@@ -39,12 +39,7 @@
 	);
 </script>
 
-<PageHeader
-	width="3xl"
-	title={order.supplierName ?? 'Order'}
-	subtitle="Order"
-	backHref="/staff/inventory/orders"
->
+<PageHeader width="3xl" title={order.supplierName ?? 'Order'} subtitle="Order">
 	<Badge variant={orderStatusBadge[status]} size="md">{orderStatusLabels[status]}</Badge>
 	{#if late}
 		<Badge variant="error" size="md">Late</Badge>

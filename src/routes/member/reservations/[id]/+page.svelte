@@ -29,7 +29,7 @@
 	}
 </script>
 
-<PageHeader width="md" title="Your Reservation" backHref="/member/reservations" />
+<PageHeader width="md" title="Your Reservation" />
 <PageContent width="md">
 	<!--
 		The detail-page shape ui-patterns names: `EntityIdentity size="lg"` over a

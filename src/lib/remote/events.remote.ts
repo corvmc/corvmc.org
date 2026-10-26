@@ -74,11 +74,7 @@ import {
 	getConflictDetails,
 	getValidationWarnings
 } from '$lib/server/reservation/conflict-service';
-import {
-	buildDateInTz,
-	buildTimeRangeInTz,
-	formatDateInTz
-} from '$lib/server/reservation/timezone';
+import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
 import {
 	createEventSeries,
 	getByEvent,
@@ -86,7 +82,7 @@ import {
 	cancel as cancelSeries
 } from '$lib/server/reservation/recurring-series-service';
 import { buildRRule, getOccurrences } from '$lib/server/reservation/rrule-helpers';
-import { RECURRING_FREQUENCIES, type RecurringFrequency } from '$lib/server/db/schema/recurring';
+import { RECURRING_FREQUENCIES } from '$lib/server/db/schema/recurring';
 import {
 	getTicketsRemaining,
 	getTicketsSold,
@@ -132,6 +128,7 @@ import { eventSources } from '$lib/config';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
+import { calendarFloor, getCalendarTotals } from '$lib/server/event/calendar-totals-service';
 import { formatDateShortYear } from '$lib/utils/format';
 import { renderMarkdown } from '$lib/utils/markdown';
 import { getShifts, getVolunteerRoles } from './volunteer.remote';
@@ -571,6 +568,9 @@ const staffEventsFilters = z.object({
 	page: z.number().optional()
 });
 
+/** Acts drawn in a Productions row's avatar stack; the rest are "+N". */
+const LINEUP_STACK_MAX = 4;
+
 /**
  * The staff index of CMC work — the Productions page.
  *
@@ -619,6 +619,11 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 				// comparison rather than a guess (#859).
 				lineup: {
 					headliner: bill[0]?.name ?? null,
+					/** The first few acts for the avatar stack; `count` is the rest. */
+					acts: bill.slice(0, LINEUP_STACK_MAX).map((a) => ({
+						name: a.name,
+						image: toBandRef({ id: a.bandId, name: a.name, image: a.bandAvatarKey }).image
+					})),
 					count: bill.length,
 					wanted: e.actsWanted ?? null,
 					short: e.actsWanted == null ? 0 : Math.max(0, e.actsWanted - bill.length)
@@ -649,6 +654,12 @@ const calendarStatuses = ['pending_review', 'published', 'cancelled', 'rejected'
  * source and runs the shows CMC produces. A CMC show appears in both, in two
  * roles: something you are building, and something the public can see.
  */
+/** The Calendar page's summary counts — independent of the table's filters. */
+export const getStaffCalendarTotals = query(async () => {
+	await requireCapability('event.read');
+	return getCalendarTotals();
+});
+
 export const getStaffCalendar = query(
 	z.object({
 		statuses: z.array(z.enum(calendarStatuses)).min(1).optional(),
@@ -657,15 +668,9 @@ export const getStaffCalendar = query(
 	}),
 	async (filters) => {
 		await requireCapability('event.read');
-		// Midnight tonight in venue time, not UTC — the same anchor the public gig
-		// guide uses, so the two agree about which day a late show belongs to.
-		const from = buildDateInTz(
-			formatDateInTz(new Date(), DEFAULT_TIMEZONE),
-			'00:00',
-			DEFAULT_TIMEZONE
-		);
+		// Midnight tonight in venue time, the same floor the counts above it use.
 		const { rows, pagination } = await listStaffCalendar(
-			from,
+			calendarFloor(),
 			{
 				// The default view is the queue: a staffer arrives here from a
 				// notification, and landing on the whole calendar would bury it.
@@ -991,96 +996,33 @@ export const getProgramGroups = query(async () => {
 export const createEvent = form(createEventSchema, async (data, issue) => {
 	const staff = await requireCapability('event.manage');
 
-	const ticketingEnabled = data.ticketingEnabled;
-	const reserveSpace = data.reserveSpace;
-	const overrideConflicts = data.overrideConflicts;
-	const ticketPrice = data.ticketPrice ? parseInt(data.ticketPrice, 10) : undefined;
-	const ticketQuantity = data.ticketQuantity ? parseInt(data.ticketQuantity, 10) : undefined;
-
 	if (!data.title) {
 		invalid(issue.title('Title is required'));
 	}
 
-	const tz = DEFAULT_TIMEZONE;
 	// One date field covers both times, so an end before the start means the show
 	// runs past midnight and the range rolls onto the next day.
 	const { startsAt, endsAt } = buildTimeRangeInTz(
 		data.eventDate,
 		data.eventStartTime,
 		data.eventEndTime,
-		tz
+		DEFAULT_TIMEZONE
 	);
-	const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : undefined;
 
-	// The reservation times are an optional override for setup and teardown, not a
-	// precondition: without them the space is held for the event's own window.
-	// Gating on them meant a submission that checked the box but sent no times
-	// created the event with no reservation and no error.
-	//
-	// All-or-nothing, because buildTimeRangeInTz reads an end before the start as
-	// an overnight range: pairing a supplied 23:00 start with a defaulted 22:00
-	// end would roll the end onto the next day and hold the room for 23 hours.
-	// A show somewhere else cannot hold the practice room. Refused rather than
-	// silently ignored: staff who ticked the box asked for something, and the
-	// useful answer is why it is not going to happen — not an event that quietly
-	// came out different from the form.
-	if (reserveSpace && !(await holdsSpace(data.venueId || null))) {
-		invalid(
-			issue.reserveSpace('That venue is not the practice room, so there is no space here to hold.')
-		);
-	}
-
-	const customWindow = !!(data.reservationStartTime && data.reservationEndTime);
-	const reservation = reserveSpace
-		? {
-				...buildTimeRangeInTz(
-					data.eventDate,
-					customWindow ? data.reservationStartTime! : data.eventStartTime,
-					customWindow ? data.reservationEndTime! : data.eventEndTime,
-					tz
-				),
-				overrideConflicts
-			}
-		: undefined;
-
-	// A title clash or a booking conflict from `create` is a written rule, not a
-	// fault. `mapDomainError` returns `never`, so `event` is assigned past here.
+	// A title clash from `create` is a written rule, not a fault. `mapDomainError`
+	// returns `never`, so `event` is assigned past here.
 	let event;
 	try {
 		event = await create({
 			title: data.title,
-			description: data.description || undefined,
 			startsAt,
 			endsAt,
-			doorsAt,
-			tags: data.tags || undefined,
 			kind: data.kind,
 			groupId: data.groupId || null,
-			ticketingEnabled,
-			ticketPrice: ticketingEnabled ? ticketPrice : undefined,
-			ticketQuantity: ticketingEnabled ? ticketQuantity : undefined,
-			venueId: data.venueId || null,
-			location: data.location || null,
-			createdByUserId: staff.id,
-			reservation
+			createdByUserId: staff.id
 		});
 	} catch (err) {
 		mapDomainError(err);
-	}
-
-	// Recurring: register a series so the generation job materializes occurrences.
-	if (data.recurring && data.recurringFrequency) {
-		try {
-			await createEventSeries({
-				prototypeEventId: event.id,
-				frequency: data.recurringFrequency as RecurringFrequency,
-				prototypeStartsAt: startsAt,
-				monthlyMode: data.monthlyMode,
-				endsAt: data.recurringEndsAt ? buildDateInTz(data.recurringEndsAt, '23:59', tz) : undefined
-			});
-		} catch (err) {
-			mapDomainError(err);
-		}
 	}
 
 	return { eventId: event.id };
@@ -1370,6 +1312,42 @@ export const getEventRecurringSeries = query(z.string(), async (eventId) => {
 	return getEventSeries(series.id);
 });
 
+/**
+ * Make an existing CMC event the first of a series (staff). The create modal
+ * collects only what the row needs, so repeating is set from the console.
+ */
+export const startEventSeries = form(
+	z.object({
+		eventId: z.string().min(1),
+		recurringFrequency: z.enum(RECURRING_FREQUENCIES),
+		monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+		recurringEndsAt: z
+			.string()
+			.regex(/^$|^\d{4}-\d{2}-\d{2}$/, 'Invalid date')
+			.optional()
+	}),
+	async (data) => {
+		await requireCapability('event.manage');
+		const evt = await getById(data.eventId);
+		if (!evt) error(404, 'Event not found');
+		if (evt.source !== 'cmc') error(400, 'Only a CMC event can repeat');
+		try {
+			await createEventSeries({
+				prototypeEventId: evt.id,
+				frequency: data.recurringFrequency,
+				prototypeStartsAt: evt.startsAt,
+				monthlyMode: data.monthlyMode,
+				endsAt: data.recurringEndsAt
+					? buildDateInTz(data.recurringEndsAt, '23:59', DEFAULT_TIMEZONE)
+					: undefined
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		return { success: true };
+	}
+);
+
 /** Stop a recurring event series; existing occurrences remain (staff). */
 export const cancelEventSeries = form(z.object({ seriesId: z.string() }), async (data) => {
 	await requireCapability('event.manage');
@@ -1457,16 +1435,23 @@ export const updateEvent = form(
 				data.doorsTime && data.eventDate ? buildDateInTz(data.eventDate, data.doorsTime, tz) : null;
 		}
 
-		// Hold the space, or move the existing hold. Same rules as createEvent: the
-		// reservation times are an optional override for setup and teardown, not a
-		// precondition, and they are all-or-nothing because buildTimeRangeInTz reads
-		// an end before the start as an overnight range — a supplied 23:00 start
-		// against a defaulted 22:00 end would roll over and hold the room 23 hours.
-		//
-		// Gating on the times is what made this a silent no-op: the box was ticked,
-		// the event saved, and no space was ever held. Same defect the create path
-		// carried until #206.
+		// Hold the space, or move the existing hold. The reservation times are an
+		// optional override for setup and teardown, not a precondition, and they are
+		// all-or-nothing because buildTimeRangeInTz reads an end before the start as
+		// an overnight range — a supplied 23:00 start against a defaulted 22:00 end
+		// would roll over and hold the room 23 hours. Gating on the times made this
+		// a silent no-op: the box was ticked and no space was ever held (#206).
 		if (rebookReservation) {
+			// A show somewhere else has no room to hold. Refused rather than ignored:
+			// staff asked for something. A form that omits the venue means the saved one.
+			const venueId =
+				data.venueId !== undefined
+					? data.venueId || null
+					: ((await getById(data.eventId))?.venueId ?? null);
+			if (!(await holdsSpace(venueId))) {
+				error(400, 'That venue is not the practice room, so there is no space here to hold.');
+			}
+
 			const customWindow = !!(data.reservationStartTime && data.reservationEndTime);
 			const startTime = customWindow ? data.reservationStartTime! : data.eventStartTime;
 			const endTime = customWindow ? data.reservationEndTime! : data.eventEndTime;

@@ -1,4 +1,5 @@
 import { db, getRowCount } from '$lib/server/db';
+import { staffCalendarRow } from './calendar-totals-service';
 import { DomainError } from '$lib/server/domain-error';
 import {
 	eventListing,
@@ -53,7 +54,6 @@ import {
 	desc,
 	inArray,
 	not,
-	or,
 	count,
 	getTableColumns
 } from 'drizzle-orm';
@@ -1717,20 +1717,12 @@ export async function listStaffCalendar(
 	opts: { statuses: EventStatus[]; sources?: EventSource[] },
 	pagination: PaginationInput = {}
 ) {
+	// The date floor is the calendar's, not the queue's: `staffCalendarRow`
+	// keeps a stale pending listing, as the sidebar badge counts it.
 	const filters = [
-		// The date floor is about the calendar, not the queue. A listing whose
-		// date passes while it waits for staff is still a decision someone owes
-		// an answer to, and `countPendingSubmissions` — the sidebar badge —
-		// counts it with no date filter at all. Flooring it here too would leave
-		// the badge reading 3 above a page showing 2, and the stale row would be
-		// unreachable in the only view that can clear it.
-		or(
-			not(inArray(eventListing.status, [...publicEventStatuses])),
-			gte(eventListing.startsAt, from)
-		),
+		staffCalendarRow(from),
 		inArray(eventListing.status, opts.statuses),
-		opts.sources?.length ? inArray(eventListing.source, opts.sources) : undefined,
-		not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
+		opts.sources?.length ? inArray(eventListing.source, opts.sources) : undefined
 	].filter(Boolean);
 	const where = and(...filters);
 
@@ -1845,6 +1837,8 @@ export interface LineupRow {
 	 * owner"; neither is set for the rest.
 	 */
 	externalUrl: string | null;
+	/** The CMC band's avatar storage key; resolve it with `toBandRef`. */
+	bandAvatarKey: string | null;
 	billingOrder: number;
 	status: EventBandStatus;
 	note: string | null;
@@ -1890,6 +1884,7 @@ function lineupSelect() {
 			// to link to".
 			bandId: directoryEntry.groupId,
 			bandSlug: group.slug,
+			bandAvatarKey: group.avatarKey,
 			// Where an unowned act's name should point instead. Public attribution
 			// links **out**, never in: CMC hosts no page for a party that has no
 			// relationship with CMC, and the act already has a presence it chose.

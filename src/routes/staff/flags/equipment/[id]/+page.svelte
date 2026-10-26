@@ -34,7 +34,6 @@
 	width="3xl"
 	subtitle="Equipment Report"
 	title={report.asset?.title ?? report.location ?? 'Building problem'}
-	backHref="/staff/flags/equipment"
 >
 	<StatusBadge status={report.stage === 'in_work_order' ? 'in_progress' : report.status} label />
 </PageHeader>

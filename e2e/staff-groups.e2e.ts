@@ -53,7 +53,7 @@ test.describe('staff groups', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff/committees');
 
-		await expect(page.locator('table').getByText(SEED_COMMITTEE_NAME)).toBeVisible();
+		await expect(page.getByRole('link', { name: new RegExp(SEED_COMMITTEE_NAME) })).toBeVisible();
 		const nav = page.locator('aside ul.menu').first();
 		await expect(nav.getByRole('link', { name: 'Clubs' })).toBeVisible();
 		await expect(nav.getByRole('link', { name: 'Bands' })).toBeVisible();
@@ -85,7 +85,7 @@ test.describe('staff groups', () => {
 		// for that is how the test knows the choice reached the form.
 		await expect(picker).toHaveCount(0);
 
-		await page.getByRole('button', { name: 'Create group' }).click();
+		await page.getByRole('button', { name: 'Create Club' }).click();
 
 		// Straight to the new group's page, which is what carries the proof: the
 		// appointee is a chair already, with nothing to accept.
@@ -97,7 +97,7 @@ test.describe('staff groups', () => {
 	test('shows an application apart from the member list', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/committees');
-		await page.locator('table').getByText(SEED_COMMITTEE_NAME).click();
+		await page.getByRole('link', { name: new RegExp(SEED_COMMITTEE_NAME) }).click();
 
 		// The fixture's own id, not a uuid — it is seeded rather than created.
 		await page.waitForURL(`**/staff/committees/${SEED_COMMITTEE_ID}`, { timeout: 15000 });
@@ -108,7 +108,9 @@ test.describe('staff groups', () => {
 		await expect(page.getByText('Booked a basement series for two years.')).toBeVisible();
 		await expect(page.getByRole('button', { name: `Accept ${SEED_TARGET_NAME}` })).toBeVisible();
 
-		await expect(page.locator('select[name="joinPolicy"]')).toHaveValue('by_application');
+		// Every committee takes applications, so the policy is stated, not offered.
+		await expect(page.locator('select[name="joinPolicy"]')).toHaveCount(0);
+		await expect(page.getByText('By application — you ask, a chair approves')).toBeVisible();
 	});
 
 	test("sends a committee's old address to its committee page", async ({ page }) => {

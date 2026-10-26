@@ -40,7 +40,7 @@ test.describe('duty lists — the unscheduled half', () => {
 		// Scoped by the card root, not `div…last()`: that picked whichever div
 		// most recently contained the words, which became the header the moment
 		// the card gained a "Schedule →" action beside its title.
-		const card = page.locator('.card').filter({ hasText: 'Needs scheduling' });
+		const card = page.locator('.card').filter({ hasText: 'Unscheduled Work Orders' });
 		await expect(card.getByRole('link', { name: SEED_VOL_ADVANCE_ROLE_NAME })).toBeVisible();
 	});
 
