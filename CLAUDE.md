@@ -141,7 +141,7 @@ if one is already open, say so and pick something else rather than racing it.
 that keeps the tracker honest without anyone tidying it.
 
 **A finished PR is queued, not merged.** `gh pr merge --auto`, then start
-`node scripts/claude/pr-await.mjs <n>` with `run_in_background` so the session is woken by the
+`gh queue await <n>` with `run_in_background` so the session is woken by the
 outcome. Act on what it reports while the session is open; `/queue-triage` covers a non-zero
 exit. No merge method: a queue rejects one outright ("merge method is not valid for merge queue"),
 and the queue's own configuration squashes anyway.

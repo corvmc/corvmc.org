@@ -10,17 +10,20 @@ $ARGUMENTS
 ## Find the work
 
 ```bash
-node scripts/claude/queue-sweep.mjs
+gh queue sweep
 ```
 
-It lists every open PR that is **rejected** (labelled, or removed from the queue with nothing
-re-arming it), **stuck** (armed, but a required check is red on its own head or it conflicts with
-`main` — the queue never saw it, so the guard never labelled it), or **unarmed** (ready, not a bot,
-nobody armed it). `nothing stranded` means stop. A `main is red` line means a rejection may be
-`main`'s fault, not the PR's: read the `ci-failure` issue before blaming the diff.
+`gh queue` is a user-level extension (`gh extension install DevonCash/gh-queue`). It sweeps your
+open PRs in every repo, plus every open PR here, bots included, while `corvmc/corvmc.org` is listed
+in `~/.config/gh-queue/repos`. It reports each PR that is **rejected** (labelled, or removed from
+the queue with nothing re-arming it), **stuck** (armed, but a required check is red on its own head
+or it conflicts with `main` — the queue never saw it, so the guard never labelled it), or
+**unarmed** (yours, ready, nobody armed it). `nothing stranded` means stop. A `default branch is
+red` line means a rejection may be `main`'s fault, not the PR's: read the `ci-failure` issue before
+blaming the diff.
 
-The launchd job from `scripts/claude/install-queue-sweep.sh` runs the same sweep every 15 minutes
-and posts a macOS notification for each new entry, so this command is usually opened from one.
+The launchd job from `gh queue install` runs the same sweep every 15 minutes and posts a macOS
+notification for each new entry, so this command is usually opened from one.
 
 **The label is the signal; the armed flag is not.** GitHub consumes the auto-merge request when a
 PR _enters_ the queue, so `gh pr view <n> --json autoMergeRequest` returns `null` for the whole
@@ -82,7 +85,7 @@ Never `--admin` and never `gh pr update-branch` — both defeat the queue. See `
 
 ## Watch mode
 
-To follow one PR, run `node scripts/claude/pr-await.mjs <N>` with `run_in_background`. It exits
+To follow one PR, run `gh queue await <N>` with `run_in_background`. It exits
 when the PR merges (0), is rejected (1, printing the guard's comment), is stuck before the queue
 (3, with the failing jobs), is closed or disarmed (4), or times out (2). The session is woken on
 exit; no polling loop is needed.
