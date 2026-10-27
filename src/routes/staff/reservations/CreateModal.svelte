@@ -16,6 +16,7 @@
 	import { errorMessage } from '$lib/error-message';
 	import { retryQuery } from '$lib/utils/retry-query';
 	import { formatSlotTime } from '$lib/utils/format';
+	import { clubToday } from '$lib/config';
 
 	const { fields } = createReservation;
 
@@ -29,7 +30,7 @@
 		ownerName: string | null;
 		ownerEmail: string | null;
 	} | null>(null);
-	let date = $state(new Date().toISOString().split('T')[0]);
+	let date = $state(clubToday());
 	let startTime = $state('');
 	let endTime = $state('');
 	let notes = $state('');
@@ -108,7 +109,7 @@
 		bookerType = 'user';
 		selectedMember = null;
 		selectedBand = null;
-		date = new Date().toISOString().split('T')[0];
+		date = clubToday();
 		startTime = '';
 		endTime = '';
 		notes = '';

@@ -10,6 +10,7 @@
 	import { errorMessage } from '$lib/error-message';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { createEvent, getProgramGroups } from '$lib/remote/events.remote';
+	import { clubToday } from '$lib/config';
 
 	/**
 	 * Only what the row cannot exist without (#1822's rule). `kind` and "Run by"
@@ -27,7 +28,7 @@
 	let title = $state('');
 	let kind = $state('show');
 	let groupId = $state('');
-	let eventDate = $state(new Date().toISOString().split('T')[0]);
+	let eventDate = $state(clubToday());
 	let eventStartTime = $state('');
 	let eventEndTime = $state('');
 
@@ -50,7 +51,7 @@
 		title = '';
 		kind = 'show';
 		groupId = '';
-		eventDate = new Date().toISOString().split('T')[0];
+		eventDate = clubToday();
 		eventStartTime = '';
 		eventEndTime = '';
 	}

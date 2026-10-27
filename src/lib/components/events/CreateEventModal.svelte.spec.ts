@@ -1,5 +1,5 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 vi.mock('$lib/remote/events.remote', () => {
@@ -56,5 +56,18 @@ describe('CreateEventModal', () => {
 
 		await expect.element(page.getByRole('heading', { name: 'Create Listing' })).toBeVisible();
 		await expect.element(page.getByRole('button', { name: 'Create Listing' })).toBeVisible();
+	});
+
+	// #1984: 6pm PDT on Oct 26 is already Oct 27 in UTC.
+	describe('at 6pm club time', () => {
+		afterEach(() => vi.useRealTimers());
+
+		it('defaults the date to the club day, not the UTC day', async () => {
+			vi.useFakeTimers({ toFake: ['Date'] });
+			vi.setSystemTime(new Date('2026-10-27T01:00:00Z'));
+			await render(CreateEventModal, { open: true });
+
+			await expect.element(page.getByLabelText('Date')).toHaveValue('2026-10-26');
+		});
 	});
 });
