@@ -8,6 +8,7 @@
 	import { Tooltip } from 'bits-ui';
 	import Action from './Action.svelte';
 	import ErrorToastBoundary from './ErrorToastBoundary.svelte';
+	import SignedInProvider from './SignedInProvider.svelte';
 	import FormField from './Form/FormField.svelte';
 	import type { ComponentProps } from 'svelte';
 
@@ -22,6 +23,7 @@
 		 * specs only ever exercise the other branch (#1000).
 		 */
 		boundary = false,
+		signedIn,
 		...rest
 	}: {
 		action: ComponentProps<typeof Action>['action'];
@@ -34,6 +36,8 @@
 		formFieldName?: string;
 		bodyText?: string;
 		boundary?: boolean;
+		/** Provides the viewer's sign-in state, as the public layout does. */
+		signedIn?: boolean;
 		[key: string]: unknown;
 	} = $props();
 </script>
@@ -64,10 +68,18 @@
 	{/if}
 {/snippet}
 
-<Tooltip.Provider delayDuration={300}>
+{#snippet framed()}
 	{#if boundary}
 		<ErrorToastBoundary>{@render content()}</ErrorToastBoundary>
 	{:else}
 		{@render content()}
+	{/if}
+{/snippet}
+
+<Tooltip.Provider delayDuration={300}>
+	{#if signedIn !== undefined}
+		<SignedInProvider {signedIn}>{@render framed()}</SignedInProvider>
+	{:else}
+		{@render framed()}
 	{/if}
 </Tooltip.Provider>

@@ -684,6 +684,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/projects/[id]/budget",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/projects/[id]/tasks/[taskId]",
 		"panel": "staff"
 	},

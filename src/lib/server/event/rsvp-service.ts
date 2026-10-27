@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { eventRsvp, type EventRsvp } from '$lib/server/db/schema/event-rsvp';
 import { eventListing } from '$lib/server/db/schema/event';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Lightweight RSVP for non-ticketed events. No codes, no check-in, no capacity —
@@ -100,4 +100,31 @@ export async function listRsvpsForUser(userId: string): Promise<MemberRsvp[]> {
 		.innerJoin(eventListing, eq(eventListing.id, eventRsvp.eventId))
 		.where(eq(eventRsvp.userId, userId))
 		.orderBy(desc(eventListing.startsAt));
+}
+
+export interface EventRsvpRow {
+	id: string;
+	userId: string;
+	name: string;
+	email: string;
+	createdAt: Date;
+}
+
+/**
+ * Who said they're coming to one event, earliest first. Name and email are the
+ * ones given at RSVP time, which is what the attendee asked to be reached at.
+ * Callers guard: this is staff-facing contact data.
+ */
+export async function listRsvpsForEvent(eventId: string): Promise<EventRsvpRow[]> {
+	return db
+		.select({
+			id: eventRsvp.id,
+			userId: eventRsvp.userId,
+			name: eventRsvp.attendeeName,
+			email: eventRsvp.attendeeEmail,
+			createdAt: eventRsvp.createdAt
+		})
+		.from(eventRsvp)
+		.where(eq(eventRsvp.eventId, eventId))
+		.orderBy(asc(eventRsvp.createdAt), asc(eventRsvp.id));
 }

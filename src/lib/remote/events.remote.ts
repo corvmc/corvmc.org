@@ -16,6 +16,7 @@ import { getProjectBurn, listCommittees } from '$lib/server/project/project-serv
 import { listShowDeliverables } from '$lib/server/volunteer/deliverables-service';
 import { mapDomainError } from '$lib/server/errors';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
+import { rsvpClosedReason } from '$lib/server/event/rsvp-availability';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venue-service';
 import { getProductionByEvent } from '$lib/server/production/production-service';
@@ -1799,8 +1800,10 @@ export const rsvpToEvent = form(
 
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
-		if (evt.status !== 'published') throw error(400, 'Event is not published');
-		if (evt.ticketingEnabled) throw error(400, 'This event uses tickets, not RSVPs');
+		const closed = rsvpClosedReason(evt);
+		if (closed === 'ticketed') throw error(400, 'This event uses tickets, not RSVPs');
+		if (closed === 'past') throw error(400, 'This event has already happened');
+		if (closed) throw error(400, 'Event is not published');
 		// Band gigs are deliberately allowed here. An RSVP is a headcount row, not
 		// a ticket — it takes no money and issues no code — so it is unaffected by
 		// the rule that CMC never sells a band's gig.

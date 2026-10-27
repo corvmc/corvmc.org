@@ -37,6 +37,7 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import RecapPhotos from './RecapPhotos.svelte';
 	import RecapText from './RecapText.svelte';
+	import EventRsvps from './EventRsvps.svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import { formatTime, fullDate } from '$lib/utils/format';
 
@@ -403,6 +404,11 @@
 			venueIsPrimary={evt.venueIsPrimary}
 			reservation={detail.linkedReservation}
 		/>
+	{/if}
+
+	<!-- A ticketed event's headcount is its tickets; RSVPs are for the rest. -->
+	{#if !evt.ticketingEnabled}
+		<EventRsvps eventId={evt.id} />
 	{/if}
 
 	{#if !data.recap.closedReason || evt.recapText}

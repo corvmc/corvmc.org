@@ -49,6 +49,7 @@
 		class: className = '',
 		disabled = false,
 		canSubmit = true,
+		requiresAuth,
 		addAnotherLabel,
 		onaddanother,
 		onsuccess,
@@ -105,6 +106,11 @@
 		 * trigger: a form you cannot open is a form you can never satisfy.
 		 */
 		canSubmit?: boolean;
+		/**
+		 * Needs an account (#1999): signed out, the trigger is the sign-in
+		 * interrupt link instead (see `Button`). Not applied to a custom `trigger`.
+		 */
+		requiresAuth?: boolean | string;
 		/**
 		 * Offers a second submit that keeps the modal open, for entering a run of
 		 * records. `onaddanother` runs after `onsuccess` and clears what should not
@@ -263,6 +269,7 @@
 		{size}
 		{shape}
 		{outline}
+		{requiresAuth}
 		class={className}
 		{...rest}
 	>
