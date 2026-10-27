@@ -687,6 +687,22 @@ export async function resolveWorkOrder(
 	/** `override`: it has a done condition and was ticked by hand regardless. */
 	opts: { resolvedByUserId: string; notes?: string | null; override?: boolean }
 ): Promise<WorkOrder> {
+	const resolution = await prepareResolveWorkOrder(id, opts);
+	const [, [row]] = await db.batch(resolution.statements);
+	await resolution.afterCommit();
+	return row;
+}
+
+/**
+ * `resolveWorkOrder` in two halves, for a caller that commits the close in its
+ * own `db.batch`: the checks and `statements` (the closing update second), and
+ * `afterCommit` — the audit row and the domains that follow a resolution — to
+ * run once that batch has landed.
+ */
+export async function prepareResolveWorkOrder(
+	id: string,
+	opts: { resolvedByUserId: string; notes?: string | null; override?: boolean }
+) {
 	const existing = await getShiftById(id);
 	if (!existing) throw new ShiftNotFoundError();
 	if (existing.resolvedAt) throw new ShiftValidationError('That is already closed.');
@@ -716,36 +732,35 @@ export async function resolveWorkOrder(
 		.returning();
 
 	const schedule = await liveScheduleOf(existing);
-	let row: WorkOrder;
-	if (schedule) {
-		[, [row]] = await db.batch([completeSignups, close, nextOccurrenceInsert(schedule, now)]);
-	} else {
-		await completeSignups;
-		[row] = await close;
+	const statements = schedule
+		? ([completeSignups, close, nextOccurrenceInsert(schedule, now)] as const)
+		: ([completeSignups, close] as const);
+
+	async function afterCommit() {
+		await recordAuditEntry({
+			action: 'work_order.resolved',
+			subject: { type: 'work_order', id, label: workOrderAuditLabel(existing!) },
+			details: { override: opts.override ?? false, reason: opts.notes ?? null }
+		});
+
+		// The equipment reports this work answered close with it. Dynamic, like the
+		// orientation import below, so the two domains do not import each other.
+		const { resolveFlagsForWorkOrder } = await import('../inventory/work-request-service');
+		await resolveFlagsForWorkOrder(id, opts.resolvedByUserId, opts.notes ?? undefined);
+
+		// Staff closing an orientation by hand is the other way one gets finished.
+		// The cron path emits `volunteer.shift_completed` per signup and a listener
+		// picks it up there; this path emits nothing, because the shift's clock may
+		// never have run out. `completeOrientation` is `where completed_at is null`,
+		// so the two racing is a no-op rather than a rewrite of who ran it.
+		const { completeOrientation, orientationOwnerOf } = await import('./orientation-service');
+		const member = await orientationOwnerOf(id);
+		if (member) {
+			await completeOrientation(member.userId, { completedByUserId: opts.resolvedByUserId });
+		}
 	}
-	await recordAuditEntry({
-		action: 'work_order.resolved',
-		subject: { type: 'work_order', id, label: workOrderAuditLabel(existing) },
-		details: { override: opts.override ?? false, reason: opts.notes ?? null }
-	});
 
-	// The equipment reports this work answered close with it. Dynamic, like the
-	// orientation import below, so the two domains do not import each other.
-	const { resolveFlagsForWorkOrder } = await import('../inventory/work-request-service');
-	await resolveFlagsForWorkOrder(id, opts.resolvedByUserId, opts.notes ?? undefined);
-
-	// Staff closing an orientation by hand is the other way one gets finished.
-	// The cron path emits `volunteer.shift_completed` per signup and a listener
-	// picks it up there; this path emits nothing, because the shift's clock may
-	// never have run out. `completeOrientation` is `where completed_at is null`,
-	// so the two racing is a no-op rather than a rewrite of who ran it.
-	const { completeOrientation, orientationOwnerOf } = await import('./orientation-service');
-	const member = await orientationOwnerOf(id);
-	if (member) {
-		await completeOrientation(member.userId, { completedByUserId: opts.resolvedByUserId });
-	}
-
-	return row;
+	return { statements, afterCommit };
 }
 
 export interface WorkOrderQueueFilters {

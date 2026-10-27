@@ -48,7 +48,12 @@ export async function recordEntry(input: RecordEntryInput): Promise<void> {
  */
 export async function recordEntries(inputs: RecordEntryInput[]): Promise<void> {
 	if (inputs.length === 0) return;
-	await db.insert(financialEntry).values(
+	await entriesStatement(inputs as [RecordEntryInput, ...RecordEntryInput[]]);
+}
+
+/** The insert `recordEntries` runs, for a caller that commits it in its own `db.batch`. */
+export function entriesStatement(inputs: [RecordEntryInput, ...RecordEntryInput[]]) {
+	return db.insert(financialEntry).values(
 		inputs.map((i) => ({
 			amountCents: i.amountCents,
 			kind: i.kind,

@@ -191,13 +191,39 @@ export async function setAssetStatus(
 	status: AssetStatus,
 	opts: { notes?: string; condition?: EquipmentCondition; actorId?: string } = {}
 ) {
+	const change = await assetStatusChange(id, status, opts);
+	if (!change.statements) return change.asset;
+	if (change.statements.length === 1) {
+		const [row] = await change.statements[0];
+		return row;
+	}
+
+	// The status and its movement are one fact, so they commit as one write.
+	// As two awaits, a worker that died in between left a unit whose status said
+	// it was in the shop and whose ledger said it was on the shelf — permanently,
+	// and with nothing to detect it by, because on-hand *is* the ledger sum.
+	// db.batch, never db.transaction — the latter is broken on D1.
+	const [[row]] = await db.batch(change.statements);
+	return row;
+}
+
+/**
+ * `setAssetStatus`'s checks and writes without running them, for a caller that
+ * commits the change in its own `db.batch`. `statements` is null when the unit
+ * is already in that status; the status update is always its first statement.
+ */
+export async function assetStatusChange(
+	id: string,
+	status: AssetStatus,
+	opts: { notes?: string; condition?: EquipmentCondition; actorId?: string } = {}
+) {
 	const asset = await getAssetRaw(id);
 	if (!asset) throw new AssetNotFoundError();
 
 	if (TERMINAL_STATUSES.includes(asset.status)) {
 		throw new InvalidAssetTransitionError(asset.status, status);
 	}
-	if (asset.status === status) return asset;
+	if (asset.status === status) return { asset, statements: null };
 
 	const now = new Date();
 	const updates: Record<string, unknown> = { status, updatedAt: now };
@@ -214,30 +240,21 @@ export async function setAssetStatus(
 		.returning();
 
 	const reason = movementReasonForStatus(asset.status, status);
-	if (!reason) {
-		const [row] = await statusUpdate;
-		return row;
-	}
-
-	// The status and its movement are one fact, so they commit as one write.
-	// As two awaits, a worker that died in between left a unit whose status said
-	// it was in the shop and whose ledger said it was on the shelf — permanently,
-	// and with nothing to detect it by, because on-hand *is* the ledger sum.
-	// db.batch, never db.transaction — the latter is broken on D1.
-	const [[row]] = await db.batch([
-		statusUpdate,
-		movementStatement({
-			itemId: asset.itemId,
-			assetId: id,
-			quantity: 1,
-			reason,
-			locationId: asset.locationId,
-			actorId: opts.actorId ?? null,
-			notes: opts.notes ?? null
-		})
-	]);
-
-	return row;
+	const statements: [typeof statusUpdate, ...ReturnType<typeof movementStatement>[]] = reason
+		? [
+				statusUpdate,
+				movementStatement({
+					itemId: asset.itemId,
+					assetId: id,
+					quantity: 1,
+					reason,
+					locationId: asset.locationId,
+					actorId: opts.actorId ?? null,
+					notes: opts.notes ?? null
+				})
+			]
+		: [statusUpdate];
+	return { asset, statements };
 }
 
 /**
