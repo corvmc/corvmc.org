@@ -365,9 +365,8 @@ describe('getAvailableSlotsForDates', () => {
 	const day1 = new Date(Date.now() + 5 * 86_400_000).toLocaleDateString('en-CA', {
 		timeZone: 'America/Los_Angeles'
 	});
-	const day2 = new Date(Date.now() + 6 * 86_400_000).toLocaleDateString('en-CA', {
-		timeZone: 'America/Los_Angeles'
-	});
+	// The next calendar day, not +24h: across a DST change that lands on the same date.
+	const day2 = new Date(Date.parse(`${day1}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 
 	it('reads the range once and applies each row only to its own day', async () => {
 		vi.mocked(db.select).mockClear();
