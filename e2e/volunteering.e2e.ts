@@ -611,8 +611,8 @@ test.describe('volunteering — onboarding', () => {
 		await row.getByRole('button', { name: 'Approve' }).click();
 		await modalSubmit(page, 'Approve').click();
 
-		// The queue is the blocked list, so approving empties the row out of it.
-		await expect(row).toHaveCount(0, { timeout: 15000 });
+		// The roster keeps everyone, so approval shows as the sign-off action going away.
+		await expect(row.getByRole('button', { name: 'Approve' })).toHaveCount(0, { timeout: 15000 });
 
 		// Signing a second user in over an existing session does not swap it — the
 		// staff session would survive, and staff have no volunteer profile, so the
