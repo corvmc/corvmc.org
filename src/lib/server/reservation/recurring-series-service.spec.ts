@@ -244,70 +244,8 @@ describe('recurring-series-service', () => {
 		});
 	});
 
-	// -------------------------------------------------------------------------
-	// cancel()
-	// -------------------------------------------------------------------------
-
-	describe('cancel()', () => {
-		function setupCancelUpdate(rowCount: number) {
-			const where = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
-			const set = vi.fn().mockReturnValue({ where });
-			vi.mocked(db.update).mockReturnValue({ set } as unknown as ReturnType<typeof db.update>);
-			return { set };
-		}
-
-		it('updates cancelledAt for the matching series', async () => {
-			const { set } = setupCancelUpdate(1);
-
-			await svc.cancel('series-1');
-
-			expect(set).toHaveBeenCalledWith(expect.objectContaining({ cancelledAt: expect.any(Date) }));
-		});
-
-		it('throws RecurringSeriesError when series is not found or already cancelled', async () => {
-			setupCancelUpdate(0);
-
-			await expect(svc.cancel('series-missing')).rejects.toThrow(svc.RecurringSeriesError);
-		});
-	});
-
-	// -------------------------------------------------------------------------
-	// cancelAllForUser()
-	// -------------------------------------------------------------------------
-
-	describe('cancelAllForUser()', () => {
-		function setupSelectForUser(rows: { seriesId: string }[]) {
-			const where = vi.fn().mockResolvedValue(rows);
-			const innerJoin = vi.fn().mockReturnValue({ where });
-			const from = vi.fn().mockReturnValue({ innerJoin });
-			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
-		}
-
-		function setupUpdateForCancel(rowCount: number) {
-			const where = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
-			const set = vi.fn().mockReturnValue({ where });
-			vi.mocked(db.update).mockReturnValue({ set } as unknown as ReturnType<typeof db.update>);
-			return { set };
-		}
-
-		it('returns 0 when there are no active series for the user', async () => {
-			setupUpdateForCancel(0);
-
-			const count = await svc.cancelAllForUser('user-1');
-
-			expect(count).toBe(0);
-		});
-
-		it('cancels all found series and returns the cancelled count', async () => {
-			setupSelectForUser([{ seriesId: 'series-a' }, { seriesId: 'series-b' }]);
-			const { set } = setupUpdateForCancel(2);
-
-			const count = await svc.cancelAllForUser('user-1');
-
-			expect(set).toHaveBeenCalledWith(expect.objectContaining({ cancelledAt: expect.any(Date) }));
-			expect(count).toBe(2);
-		});
-	});
+	// cancel() and cancelAllForUser() choose rows with a WHERE, so they run on real
+	// SQLite in recurring-series-cancel.spec.ts and recurring-series-lapse.spec.ts.
 
 	// -------------------------------------------------------------------------
 	// get()

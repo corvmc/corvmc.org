@@ -1350,9 +1350,9 @@ export const startEventSeries = form(
 
 /** Stop a recurring event series; existing occurrences remain (staff). */
 export const cancelEventSeries = form(z.object({ seriesId: z.string() }), async (data) => {
-	await requireCapability('event.manage');
+	const staff = await requireCapability('event.manage');
 	try {
-		await cancelSeries(data.seriesId);
+		await cancelSeries(data.seriesId, { kind: 'staff', userId: staff.id });
 	} catch (err) {
 		mapDomainError(err);
 	}

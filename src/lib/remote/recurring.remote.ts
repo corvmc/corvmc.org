@@ -46,9 +46,9 @@ export const getStaffRecurring = query(staffRecurringFilters, async (filters) =>
 
 /** Cancel from staff list page (takes seriesId in form data) */
 export const cancelStaffSeries = form(z.object({ seriesId: z.string() }), async (data) => {
-	await requireCapability('reservation.manageRecurring');
+	const staff = await requireCapability('reservation.manageRecurring');
 	try {
-		await cancel(data.seriesId as string);
+		await cancel(data.seriesId as string, { kind: 'staff', userId: staff.id });
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -57,10 +57,10 @@ export const cancelStaffSeries = form(z.object({ seriesId: z.string() }), async 
 
 /** Cancel from detail page (takes seriesId in form data) */
 export const cancelDetailSeries = form(z.object({ seriesId: z.string() }), async (data) => {
-	await requireCapability('reservation.manageRecurring');
+	const staff = await requireCapability('reservation.manageRecurring');
 	const seriesId = data.seriesId as string;
 	try {
-		await cancel(seriesId);
+		await cancel(seriesId, { kind: 'staff', userId: staff.id });
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -77,10 +77,13 @@ export const cancelRecurringSeries = form(z.object({ id: z.string() }), async (d
 	const series = await get(id);
 	if (!series) throw error(404, 'Series not found');
 
-	await requireCapabilityOrOwner('reservation.manageRecurring', series.prototypeCreatedByUserId);
+	const as = await requireCapabilityOrOwner(
+		'reservation.manageRecurring',
+		series.prototypeCreatedByUserId
+	);
 
 	try {
-		await cancel(id);
+		await cancel(id, { kind: as, userId: locals.user.id });
 	} catch (err) {
 		mapDomainError(err);
 	}
