@@ -4,6 +4,7 @@ import { getRequestEvent } from '$app/server';
 import { error } from '@sveltejs/kit';
 import { requireCapability } from '$lib/server/authorization';
 import { requireProjectCommittee } from '$lib/server/group/group-context';
+import { requireListingWriter } from '$lib/server/event/listing-guard';
 import {
 	currentProduction,
 	projectOfArtifactRequest,
@@ -731,17 +732,17 @@ export const usePosterArtWithFooter = form(
 	}
 );
 
-/** The template flyer, rendered from the event's details, as its poster. */
+/** The template flyer, rendered from the event's details, as its poster. A listing write. */
 export const useTemplateFlyerAsPoster = form(
 	z.object({ eventId: z.string().min(1) }),
 	async (data) => {
-		await requireProjectCommittee(
-			(await projectOfEvent(data.eventId))?.projectId ?? null,
-			'production.book'
-		);
+		await requireListingWriter(data.eventId);
 		try {
 			await useTemplateFlyer(data.eventId);
-			await getStaffEventProduction(data.eventId).refresh();
+			await Promise.all([
+				getStaffEventPage(data.eventId).refresh(),
+				getStaffEventProduction(data.eventId).refresh()
+			]);
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);

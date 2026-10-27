@@ -4,8 +4,8 @@
 	import { previewRecurringEvents, startEventSeries } from '$lib/remote/events.remote';
 	import { toLocalDate, toLocalTime } from '$lib/utils/format';
 
-	// Was a toggle on the create modal; the modal now collects only what the row
-	// needs, so an event is made to repeat from here instead.
+	// Makes an existing listing the first of a series. Not on the create modal,
+	// which collects only what the row needs.
 	let { eventId, startsAt, onsuccess }: { eventId: string; startsAt: Date; onsuccess: () => void } =
 		$props();
 

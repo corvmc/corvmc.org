@@ -1,59 +1,46 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '$lib/utils/with-query';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { toast } from 'svelte-sonner';
-	import { responseErrorMessage } from '$lib/api';
 	import { CompTicketsAction } from '$lib/components/actions';
-	import {
-		getStaffEventProduction,
-		updateEvent,
-		checkRebook,
-		checkConflicts,
-		cancelEventSeries
-	} from '$lib/remote/events.remote';
-	const { fields } = updateEvent;
+	import { getStaffEventProduction } from '$lib/remote/events.remote';
+	import ListingEditForm from '$lib/components/events/ListingEditForm.svelte';
+	import ListingPosterCard from '$lib/components/events/ListingPosterCard.svelte';
+	import RecurringSeriesBar from '$lib/components/events/RecurringSeriesBar.svelte';
+	import SpaceHoldCard from '$lib/components/events/SpaceHoldCard.svelte';
 	const createProductionFields = createProduction.fields;
-	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
-	import RepeatEventAction from './RepeatEventAction.svelte';
+	import RepeatEventAction from '$lib/components/events/RepeatEventAction.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import {
 		formatCents,
 		formatDateShort,
 		formatDateTime,
-		formatDollars,
 		formatTimeRange,
 		fullDate,
 		toLocalDate,
-		toLocalDateTime,
-		toLocalTime
+		toLocalDateTime
 	} from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import { EntityIdentity, EntityChip } from '$lib/components/ui/entity';
+	import { EntityChip } from '$lib/components/ui/entity';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { goto } from '$app/navigation';
-	import { imageSrc } from '$lib/utils/images';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
 	import { createShift } from '$lib/remote/volunteer.remote';
-	import { createProduction, useTemplateFlyerAsPoster } from '$lib/remote/productions.remote';
+	import { createProduction } from '$lib/remote/productions.remote';
 	import { listActInDirectory } from '$lib/remote/external-acts.remote';
 	import { applyDutyList } from '$lib/remote/duty-lists.remote';
 	import {
@@ -179,254 +166,13 @@
 		if (first) shiftRoleId = first.id;
 	});
 
-	// ── Edit state ────────────────────────────────────────────────────────
+	// ── Edit ──────────────────────────────────────────────────────────────
+	// The form is the listing's (`ListingEditForm`), shared with the listing
+	// page until #1950 takes it off this one.
 	let editing = $state(false);
-	let editTitle = $state('');
-	let editDescription = $state('');
-	let editTags = $state('');
-	let editLocation = $state('');
-	let editVenueId = $state('');
-	let editExternalTicketUrl = $state('');
-	let editDate = $state('');
-	let editStartTime = $state('');
-	let editEndTime = $state('');
-	let editDoorsTime = $state('');
-	let editReservationStartTime = $state('');
-	let editReservationEndTime = $state('');
-	let editTicketingEnabled = $state(false);
-	let editTicketPriceDollars = $state('');
-	let editTicketFloorDollars = $state('');
-	let editTicketQuantity = $state('');
 
-	// Rebook state
-	let rebookNeeded = $state(false);
-	let rebookReason = $state('');
-	let rebookConfirmed = $state(false);
-	let overrideConflicts = $state(false);
-
-	// Holding the space for an event that never had a hold. Disjoint from rebook:
-	// an event with a reservation gets the rebook alert instead, and one without
-	// had no way to acquire it at all before this.
-	let reserveSpace = $state(false);
-	const canReserveSpace = $derived(!data.linkedReservation);
-	// Off-site holds no room, and `updateEvent` refuses one, so the toggle goes.
-	const editIsOffSite = $derived(
-		editVenueId !== '' && !venues.find((v) => v.id === editVenueId)?.isPrimary
-	);
-	$effect(() => {
-		if (editIsOffSite && reserveSpace) {
-			reserveSpace = false;
-			toggleReserveSpace();
-		}
-	});
-
-	// Only a real overlap — an existing booking or a closure — gates the
-	// override. An advisory about opening hours or advance days renders in
-	// yellow and asks for nothing.
-	let hasBlockingConflict = $state(false);
-
-	// Ticket price in cents for the hidden field. Independent of the ticketing
-	// toggle: it's the price attendees pay wherever they buy.
-	const editTicketPriceCents = $derived(
-		editTicketPriceDollars ? String(Math.round(parseFloat(editTicketPriceDollars) * 100)) : ''
-	);
-	// A blank floor posts as an empty string, which the remote reads as zero —
-	// "no minimum" rather than "leave it alone". That is the right reading: an
-	// emptied minimum is a scale opened all the way to free.
-	const editTicketFloorCents = $derived(
-		editTicketFloorDollars ? String(Math.round(parseFloat(editTicketFloorDollars) * 100)) : ''
-	);
-
-	function startEditing() {
-		editTitle = evt.title;
-		editDescription = evt.description ?? '';
-		editTags = evt.tags ?? '';
-		editLocation = evt.location ?? '';
-		editVenueId = evt.venueId ?? '';
-		editExternalTicketUrl = evt.externalTicketUrl ?? '';
-
-		// Parse existing dates into form values
-		editDate = toLocalDate(evt.startsAt);
-		editStartTime = toLocalTime(evt.startsAt);
-		editEndTime = evt.endsAt ? toLocalTime(evt.endsAt) : '';
-		editDoorsTime = evt.doorsAt ? toLocalTime(evt.doorsAt) : '';
-
-		// Pre-fill ticketing fields. Forced off for a band gig, which is never sold
-		// through our checkout. Submitting `false` rather than omitting the field
-		// means opening this form on a row that predates that rule also clears the
-		// stale flag — `update()` rejects enabling ticketing on a band event but
-		// allows disabling it. The price is untouched: a band gig legitimately has
-		// one for the door or an outside seller.
-		editTicketingEnabled = evt.ticketingEnabled;
-		editTicketPriceDollars = evt.ticketPrice ? formatDollars(evt.ticketPrice) : '';
-		editTicketFloorDollars = evt.ticketPriceFloorCents
-			? formatDollars(evt.ticketPriceFloorCents)
-			: '';
-		editTicketQuantity = evt.ticketQuantity ? String(evt.ticketQuantity) : '';
-
-		// Pre-fill reservation times from linked reservation
-		if (data.linkedReservation) {
-			editReservationStartTime = toLocalTime(data.linkedReservation.startsAt);
-			editReservationEndTime = toLocalTime(data.linkedReservation.endsAt);
-		} else {
-			editReservationStartTime = '';
-			editReservationEndTime = '';
-		}
-
-		rebookNeeded = false;
-		rebookReason = '';
-		rebookConfirmed = false;
-		overrideConflicts = false;
-		reserveSpace = false;
-		hasBlockingConflict = false;
-		editing = true;
-	}
-
-	function cancelEditing() {
-		editing = false;
-		rebookNeeded = false;
-		rebookConfirmed = false;
-		reserveSpace = false;
-		// Outlives the form otherwise: ConflictWarnings only writes it while
-		// mounted, so a conflict seen before Cancel would arm the next override.
-		hasBlockingConflict = false;
-		overrideConflicts = false;
-	}
-
-	/**
-	 * Show the hold as the event's own window when the toggle goes on. The server
-	 * falls back to exactly this, so the fields are an optional setup/teardown
-	 * override — filling them just makes what will be booked visible.
-	 */
-	function toggleReserveSpace() {
-		if (reserveSpace) {
-			editReservationStartTime = editStartTime;
-			editReservationEndTime = editEndTime;
-			lastStartTime = editStartTime;
-			lastEndTime = editEndTime;
-		} else {
-			editReservationStartTime = '';
-			editReservationEndTime = '';
-			hasBlockingConflict = false;
-			overrideConflicts = false;
-		}
-	}
-
-	const toMinutes = (t: string) => {
-		const [h, m] = t.split(':').map(Number);
-		return h * 60 + m;
-	};
-	const shiftTime = (time: string, minutes: number) => {
-		const total = (((toMinutes(time) + minutes) % 1440) + 1440) % 1440;
-		return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-	};
-
-	// A new hold's window is setup and teardown padding around the show, so it
-	// moves when the show is re-timed (#1866). Run from the inputs, not an effect.
-	let lastStartTime = '';
-	let lastEndTime = '';
-	function carryReservationWindow() {
-		if (!reserveSpace) return;
-		if (editStartTime && lastStartTime && editReservationStartTime) {
-			const delta = toMinutes(editStartTime) - toMinutes(lastStartTime);
-			editReservationStartTime = shiftTime(editReservationStartTime, delta);
-		}
-		if (editEndTime && lastEndTime && editReservationEndTime) {
-			const delta = toMinutes(editEndTime) - toMinutes(lastEndTime);
-			editReservationEndTime = shiftTime(editReservationEndTime, delta);
-		}
-		lastStartTime = editStartTime;
-		lastEndTime = editEndTime;
-	}
-
-	function retimed() {
-		carryReservationWindow();
-		void checkForRebook();
-	}
-
-	// Check if times changed enough to need a rebook
-	async function checkForRebook() {
-		if (!data.linkedReservation || !editDate || !editStartTime || !editEndTime) {
-			rebookNeeded = false;
-			return;
-		}
-
-		const { startsAt: newStartsAt, endsAt: newEndsAt } = buildISORangeFromLocal(
-			editDate,
-			editStartTime,
-			editEndTime
-		);
-
-		const result = await checkRebook({
-			eventId: evt.id,
-			newStartsAt,
-			newEndsAt
-		});
-
-		rebookNeeded = result.needed;
-		rebookReason = result.reason ?? '';
-
-		if (result.needed) {
-			// Default reservation times to event times when rebook is triggered
-			editReservationStartTime = editStartTime;
-			editReservationEndTime = editEndTime;
-			rebookConfirmed = false;
-		}
-	}
-
-	async function handleUpdateSuccess() {
-		editing = false;
-		rebookNeeded = false;
-		rebookConfirmed = false;
-		reserveSpace = false;
-		hasBlockingConflict = false;
-		overrideConflicts = false;
+	function refresh() {
 		void getStaffEventProduction(id).refresh();
-	}
-
-	async function handlePosterUpload(e: Event) {
-		const input = e.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
-
-		const formData = new FormData();
-		formData.append('poster', file);
-
-		try {
-			const res = await fetch(`/api/events/${evt.id}/poster`, {
-				method: 'POST',
-				body: formData
-			});
-			if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
-			toast.success('Poster updated');
-			void getStaffEventProduction(id).refresh();
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to upload poster');
-		}
-	}
-
-	// ── Helpers ───────────────────────────────────────────────────────────
-
-	/** Add one calendar day to a "YYYY-MM-DD" string. */
-	function nextDay(date: string): string {
-		const [year, month, day] = date.split('-').map(Number);
-		return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
-	}
-
-	function buildISORangeFromLocal(
-		date: string,
-		startTime: string,
-		endTime: string
-	): { startsAt: string; endsAt: string } {
-		// Build rough ISO strings for the rebook check query.
-		// The server will parse with proper timezone handling.
-		const startsAt = new Date(`${date}T${startTime}:00`);
-		// One date field covers both times: a show that ends past midnight ends on
-		// the following day, same as the server builds it when the form is saved.
-		const endsOnNextDay = new Date(`${date}T${endTime}:00`) < startsAt;
-		const endsAt = new Date(`${endsOnNextDay ? nextDay(date) : date}T${endTime}:00`);
-
-		return { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() };
 	}
 
 	// ── Tabs ──────────────────────────────────────────────────────────────
@@ -497,7 +243,7 @@
 		{/if}
 
 		{#if evt.status !== 'cancelled' && !editing}
-			<Button variant="ghost" size="sm" onclick={startEditing}>Edit</Button>
+			<Button variant="ghost" size="sm" onclick={() => (editing = true)}>Edit</Button>
 		{/if}
 	</div>
 </PageHeader>
@@ -548,417 +294,23 @@
 				{/if}
 			</div>
 
-			<!-- Recurring series -->
 			{#if recurringSeries}
-				<div class="flex flex-wrap items-center gap-2">
-					<Badge class="badge-info">Recurring · {recurringSeries.frequencyLabel}</Badge>
-					{#if recurringSeries.cancelledAt}
-						<span class="text-muted">Series cancelled — no new occurrences</span>
-					{:else}
-						<span class="text-muted">
-							{#if recurringSeries.endsAt}
-								Repeats until {fullDate(recurringSeries.endsAt)}
-							{:else}
-								New occurrences are generated automatically
-							{/if}
-						</span>
-						<Form
-							remote={cancelEventSeries}
-							successToast="Series cancelled"
-							onsuccess={() => void getStaffEventProduction(id).refresh()}
-						>
-							<input {...cancelEventSeries.fields.seriesId.as('hidden', recurringSeries.id)} />
-							<SubmitButton label="Cancel series" variant="ghost" size="xs" class="text-error" />
-						</Form>
-					{/if}
-				</div>
+				<RecurringSeriesBar eventId={evt.id} series={recurringSeries} onchange={refresh} />
 			{:else if evt.status !== 'cancelled'}
-				<RepeatEventAction
-					eventId={evt.id}
-					startsAt={evt.startsAt}
-					onsuccess={() => void getStaffEventProduction(id).refresh()}
-				/>
+				<RepeatEventAction eventId={evt.id} startsAt={evt.startsAt} onsuccess={refresh} />
 			{/if}
 
-			<!-- Edit form -->
 			{#if editing}
-				<svelte:boundary>
-					<Card>
-						<CardBody class="space-y-4">
-							<h3 class="text-muted font-medium">Edit Event</h3>
-
-							<Form
-								remote={updateEvent}
-								guard
-								successToast="Updated"
-								onsuccess={handleUpdateSuccess}
-							>
-								<input {...fields.eventId.as('hidden', evt.id)} />
-								<input {...fields.ticketingEnabled.as('hidden', editTicketingEnabled)} />
-								<!-- Always submitted: the price is the attendee's price whoever sells
-							     the ticket, so it has to survive the ticketing toggle being off. -->
-								<input {...fields.ticketPrice.as('hidden', editTicketPriceCents)} />
-								<input {...fields.ticketPriceFloorCents.as('hidden', editTicketFloorCents)} />
-								{#if (rebookNeeded && rebookConfirmed) || reserveSpace}
-									<input {...fields.rebookReservation.as('hidden', true)} />
-								{/if}
-								{#if overrideConflicts}
-									<input {...fields.overrideConflicts.as('hidden', true)} />
-								{/if}
-
-								<div class="space-y-4">
-									<FormField label="Title" id="editTitle" issues={[]}>
-										<input
-											id="editTitle"
-											name="title"
-											type="text"
-											bind:value={editTitle}
-											class="input w-full"
-											required
-										/>
-									</FormField>
-
-									<FormField label="Description" id="editDesc" issues={[]}>
-										<textarea
-											id="editDesc"
-											name="description"
-											bind:value={editDescription}
-											class="textarea w-full"
-											rows="4"></textarea>
-									</FormField>
-
-									<FormField label="Date" id="editDate" issues={[]}>
-										<input
-											id="editDate"
-											name="eventDate"
-											type="date"
-											bind:value={editDate}
-											class="input w-full"
-											required
-											onchange={checkForRebook}
-										/>
-									</FormField>
-
-									<div class="grid grid-cols-2 gap-4">
-										<FormField label="Start time" id="editStartTime" issues={[]}>
-											<input
-												id="editStartTime"
-												name="eventStartTime"
-												type="time"
-												bind:value={editStartTime}
-												class="input w-full"
-												required
-												onchange={retimed}
-											/>
-										</FormField>
-
-										<FormField label="End time" id="editEndTime" issues={[]}>
-											<input
-												id="editEndTime"
-												name="eventEndTime"
-												type="time"
-												bind:value={editEndTime}
-												class="input w-full"
-												required
-												onchange={retimed}
-											/>
-										</FormField>
-									</div>
-
-									<FormField label="Doors time" id="editDoorsTime" issues={[]}>
-										<input
-											id="editDoorsTime"
-											name="doorsTime"
-											type="time"
-											bind:value={editDoorsTime}
-											class="input w-full"
-										/>
-									</FormField>
-
-									<FormField label="Tags" id="editTags" issues={[]}>
-										<input
-											id="editTags"
-											name="tags"
-											type="text"
-											bind:value={editTags}
-											class="input w-full"
-											placeholder="e.g. open mic, workshop"
-										/>
-									</FormField>
-
-									<!--
-									Venue and ticket link. A CMC show is usually at the space and sells
-									through us, so both stay optional — but "usually" is the whole
-									point of the picker: `venueId` is what decides whether this show
-									holds the room, and `location` stays the free-text line the guide
-									prints.
-								-->
-									{#if venues.length > 0}
-										<FormField
-											field={fields.venueId}
-											type="select"
-											label="Venue"
-											bind:value={editVenueId}
-											options={[
-												{ value: '', label: 'The practice room' },
-												...venues
-													.filter((v) => !v.isPrimary)
-													.map((v) => ({ value: v.id, label: v.name }))
-											]}
-										/>
-									{/if}
-
-									<FormField label="Address line" id="editLocation" issues={[]}>
-										<input
-											id="editLocation"
-											name="location"
-											type="text"
-											bind:value={editLocation}
-											class="input w-full"
-											placeholder="Venue name and address"
-										/>
-									</FormField>
-
-									<FormField label="External ticket URL" id="editTicketUrl" issues={[]}>
-										<input
-											id="editTicketUrl"
-											name="externalTicketUrl"
-											type="url"
-											bind:value={editExternalTicketUrl}
-											class="input w-full"
-											placeholder="https://..."
-										/>
-									</FormField>
-
-									<!-- The price is what attendees pay wherever they buy — our checkout,
-								     the link above, or the door — so it lives outside the ticketing
-								     toggle and applies to band gigs too. Only capacity depends on us
-								     doing the selling. -->
-									<FormField label="Suggested price ($)" id="editTicketPrice" issues={[]}>
-										<input
-											id="editTicketPrice"
-											type="number"
-											bind:value={editTicketPriceDollars}
-											min="0.01"
-											step="0.01"
-											placeholder="15.00"
-											class="input w-full"
-											required={editTicketingEnabled}
-										/>
-										<span class="mt-1 text-muted">
-											Where the sliding scale opens. Leave blank for a free event.
-										</span>
-									</FormField>
-
-									<FormField label="Minimum price ($)" id="editTicketFloor" issues={[]}>
-										<input
-											id="editTicketFloor"
-											type="number"
-											bind:value={editTicketFloorDollars}
-											min="0"
-											step="0.01"
-											placeholder="0.00"
-											class="input w-full"
-										/>
-										<span class="mt-1 text-muted">
-											The least someone can pay. $0 lets anyone come for free — no card, no
-											questions. Leave it at $0 unless an act needs a floor.
-										</span>
-									</FormField>
-
-									<div class="fieldset">
-										<label class="label cursor-pointer justify-start gap-3">
-											<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
-											<span class="fieldset-legend">Sell tickets through the site</span>
-										</label>
-									</div>
-
-									{#if editTicketingEnabled}
-										<Card tone="base-200" class="p-4">
-											<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
-												<input
-													id="editTicketQuantity"
-													name="ticketQuantity"
-													type="number"
-													bind:value={editTicketQuantity}
-													min="1"
-													step="1"
-													placeholder="Unlimited"
-													class="input w-full"
-												/>
-											</FormField>
-											<p class="mt-2 text-muted">Leave capacity blank for unlimited tickets.</p>
-										</Card>
-									{/if}
-
-									<!-- Rebook warning -->
-									{#if rebookNeeded}
-										<Alert type="warning">
-											<div class="w-full space-y-3">
-												<p class="font-medium">Reservation needs rebooking</p>
-												<p class="text-sm">
-													{rebookReason}. The existing reservation will be cancelled and a new one
-													created.
-												</p>
-
-												<label class="label cursor-pointer justify-start gap-3">
-													<input
-														type="checkbox"
-														bind:checked={rebookConfirmed}
-														class="checkbox checkbox-sm"
-													/>
-													<span class="fieldset-legend">Confirm rebook</span>
-												</label>
-
-												{#if rebookConfirmed}
-													<div class="mt-2 grid grid-cols-2 gap-4">
-														<FormField label="Reservation start" id="editResStart" issues={[]}>
-															<input
-																id="editResStart"
-																name="reservationStartTime"
-																type="time"
-																bind:value={editReservationStartTime}
-																class="input w-full"
-															/>
-														</FormField>
-														<FormField label="Reservation end" id="editResEnd" issues={[]}>
-															<input
-																id="editResEnd"
-																name="reservationEndTime"
-																type="time"
-																bind:value={editReservationEndTime}
-																class="input w-full"
-															/>
-														</FormField>
-													</div>
-
-													<ConflictWarnings
-														date={editDate}
-														startTime={editReservationStartTime}
-														endTime={editReservationEndTime}
-														{checkConflicts}
-														excludeReservationId={data.linkedReservation?.id}
-														bind:hasBlockingConflict
-													/>
-													{#if hasBlockingConflict}
-														<label class="label cursor-pointer justify-start gap-3">
-															<input
-																type="checkbox"
-																bind:checked={overrideConflicts}
-																class="checkbox checkbox-sm"
-															/>
-															<span class="fieldset-legend">
-																Book it anyway — I know this double-books the space
-															</span>
-														</label>
-													{/if}
-												{/if}
-											</div>
-										</Alert>
-									{/if}
-
-									<!--
-									Hold the space for an event that never had a hold. The rebook alert
-									above covers the other case, so the two never render together.
-								-->
-									{#if canReserveSpace && editIsOffSite}
-										<p class="text-muted">
-											Off-site, so the practice space stays bookable while this runs.
-										</p>
-									{:else if canReserveSpace}
-										<div>
-											<label class="label cursor-pointer justify-start gap-3">
-												<input
-													type="checkbox"
-													bind:checked={reserveSpace}
-													onchange={toggleReserveSpace}
-													class="checkbox checkbox-sm"
-												/>
-												<span class="fieldset-legend">Reserve practice space</span>
-											</label>
-
-											{#if reserveSpace}
-												<Card tone="base-200" class="mt-2 space-y-4 p-4">
-													<p class="text-muted">
-														Reservation times can differ from event times to allow for setup and
-														teardown.
-													</p>
-
-													<div class="grid grid-cols-2 gap-4">
-														<FormField label="Reservation start" id="editReserveStart" issues={[]}>
-															<input
-																id="editReserveStart"
-																name="reservationStartTime"
-																type="time"
-																bind:value={editReservationStartTime}
-																class="input w-full"
-															/>
-														</FormField>
-														<FormField label="Reservation end" id="editReserveEnd" issues={[]}>
-															<input
-																id="editReserveEnd"
-																name="reservationEndTime"
-																type="time"
-																bind:value={editReservationEndTime}
-																class="input w-full"
-															/>
-														</FormField>
-													</div>
-
-													<ConflictWarnings
-														date={editDate}
-														startTime={editReservationStartTime}
-														endTime={editReservationEndTime}
-														{checkConflicts}
-														bind:hasBlockingConflict
-													/>
-													{#if hasBlockingConflict}
-														<label class="label cursor-pointer justify-start gap-3">
-															<input
-																type="checkbox"
-																bind:checked={overrideConflicts}
-																class="checkbox checkbox-sm"
-															/>
-															<span class="fieldset-legend">
-																Book it anyway — I know this double-books the space
-															</span>
-														</label>
-													{/if}
-												</Card>
-											{/if}
-										</div>
-									{/if}
-
-									<div class="flex justify-end gap-2 pt-2">
-										<Button type="button" variant="ghost" size="sm" onclick={cancelEditing}
-											>Cancel</Button
-										>
-										<SubmitButton
-											label="Save"
-											variant="primary"
-											size="sm"
-											disabled={hasBlockingConflict && !overrideConflicts}
-										/>
-									</div>
-								</div>
-							</Form>
-						</CardBody>
-					</Card>
-
-					{#snippet pending()}
-						<Card>
-							<CardBody class="flex items-center justify-center p-8">
-								<span class="loading loading-md loading-spinner"></span>
-							</CardBody>
-						</Card>
-					{/snippet}
-
-					{#snippet failed(error, reset)}
-						<Alert type="warning" {reset}>
-							Could not load the edit form: {errorMessage(error)}
-						</Alert>
-					{/snippet}
-				</svelte:boundary>
+				<ListingEditForm
+					event={evt}
+					linkedReservation={data.linkedReservation}
+					{venues}
+					onsaved={() => {
+						editing = false;
+						refresh();
+					}}
+					oncancel={() => (editing = false)}
+				/>
 			{/if}
 
 			<!--
@@ -1143,85 +495,17 @@
 				</InfoCard>
 			{/if}
 
-			<!-- Poster -->
-			<InfoCard title="Poster">
-				{#if data.posterUrl}
-					{@const poster = imageSrc(data.posterUrl, 'poster')}
-					<img
-						src={poster.src}
-						srcset={poster.srcset}
-						sizes={poster.sizes}
-						alt="Event poster"
-						class="max-h-64 rounded object-contain"
-					/>
-				{:else}
-					<p class="text-muted">No poster uploaded</p>
-				{/if}
-
-				{#if evt.status !== 'cancelled'}
-					<div class="mt-3 flex flex-wrap items-center gap-2">
-						<input
-							type="file"
-							accept="image/jpeg,image/png,image/webp"
-							onchange={handlePosterUpload}
-							class="file-input file-input-sm"
-						/>
-						<!-- The fallback when no art arrives: a real poster, so it passes the publish gate. -->
-						<Action
-							action={useTemplateFlyerAsPoster}
-							label="Use the template flyer"
-							variant="ghost"
-							size="sm"
-							modalTitle="Use the template flyer?"
-							submitLabel="Make the poster"
-							successToast="Poster updated"
-							onsuccess={() => getStaffEventProduction(id).refresh()}
-						>
-							{#snippet form()}
-								<input type="hidden" name="eventId" value={evt.id} />
-								<p class="text-sm">
-									A flyer is drawn from the title, date, doors, venue, bill and price, and it
-									replaces the current poster. It is a snapshot: after editing the event, run this
-									again.
-								</p>
-							{/snippet}
-						</Action>
-					</div>
-				{/if}
-			</InfoCard>
-
-			<!--
-			Linked reservation. Gated on source, and on nothing else: within a
-			production it is always rendered, because omitting the card when nothing is
-			held made "no space held" indistinguishable from "this page doesn't show
-			holds", which is how a whole calendar of events reached production with
-			none. A band gig or a community listing is at someone else's venue, so the
-			card had no question to answer there.
-
-			This used to get one case wrong on purpose — a CMC show at an outside venue
-			asked forever for a room it would never hold, because nothing on the record
-			said where a show was. `event.venueId` now does, so the card answers the
-			question instead of nagging. A blank venue still means the room, which is
-			what every event created before the column meant, so the nag survives
-			exactly where it was earning its keep.
-		-->
-			<InfoCard title="Space Reservation">
-				{#if evt.venueName && !evt.venueIsPrimary}
-					<p class="text-muted">
-						Off-site — {evt.venueName}. The practice space stays bookable while this runs.
-					</p>
-				{:else if data.linkedReservation}
-					<!-- The room held for this night, as the record it is. This was a
-					     badge, a hand-formatted time range and a "View reservation →"
-					     link — the row `EntityIdentity` exists to stop being rewritten
-					     once per page. -->
-					<EntityIdentity ref={data.linkedReservation.ref} size="md" status />
-				{:else}
-					<p class="text-muted">
-						No space held for this event. Use Edit to reserve the practice space.
-					</p>
-				{/if}
-			</InfoCard>
+			<ListingPosterCard
+				eventId={evt.id}
+				posterUrl={data.posterUrl}
+				cancelled={evt.status === 'cancelled'}
+				onchange={refresh}
+			/>
+			<SpaceHoldCard
+				venueName={evt.venueName}
+				venueIsPrimary={evt.venueIsPrimary}
+				reservation={data.linkedReservation}
+			/>
 		</div>
 	{/if}
 

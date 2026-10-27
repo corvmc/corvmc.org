@@ -53,7 +53,10 @@ const requireCapability = vi.fn(async (cap: string) => {
 	return { id: `${persona}-1` };
 });
 vi.mock('$lib/server/authorization', () => ({
-	requireCapability: (cap: string) => requireCapability(cap)
+	requireCapability: (cap: string) => requireCapability(cap),
+	// The listing guard asks these before it falls to the committee.
+	can: async (cap: string) => holds(persona, cap),
+	requireUser: () => ({ id: `${persona}-1` })
 }));
 
 const requireProjectCommittee = vi.fn(async (projectId: string | null, cap: string) => {

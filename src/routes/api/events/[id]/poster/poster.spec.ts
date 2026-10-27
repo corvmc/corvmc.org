@@ -27,13 +27,32 @@ const requestedCapabilities: string[] = [];
 vi.mock('$lib/server/authorization', async () => {
 	const { error } = await import('@sveltejs/kit');
 	const config = await import('$lib/config');
+	const holds = (cap: Capability) =>
+		signedIn && heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
 	return {
-		requireCapability: async (cap: Capability) => {
-			requestedCapabilities.push(cap);
+		requireUser: () => {
 			if (!signedIn) throw error(401, 'Not authenticated');
-			const ok = heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
-			if (!ok) throw error(403, 'Not permitted');
 			return { id: 'user-1' };
+		},
+		can: async (cap: Capability) => {
+			requestedCapabilities.push(cap);
+			return holds(cap);
+		}
+	};
+});
+
+// The listing guard's committee half: a show's poster is also its committee's.
+let listingProject: { projectId: string | null; productionId: string | null } | null = null;
+let onCommittee = false;
+vi.mock('$lib/server/production/production-scope', () => ({
+	projectOfEvent: async () => listingProject
+}));
+vi.mock('$lib/server/group/group-context', async () => {
+	const { error } = await import('@sveltejs/kit');
+	return {
+		requireProjectCommittee: async () => {
+			if (!onCommittee) throw error(403, 'Not on a committee taking part in this project');
+			return { user: { id: 'booker-1' }, groups: [], via: 'committee' };
 		}
 	};
 });
@@ -64,6 +83,8 @@ beforeEach(() => {
 	heldPositions = ['staff'];
 	signedIn = true;
 	requestedCapabilities.length = 0;
+	listingProject = null;
+	onCommittee = false;
 	mockGetById.mockResolvedValue({
 		id: 'evt-1',
 		status: 'published',
@@ -175,6 +196,25 @@ describe('the poster guard', () => {
 		await expect(DELETE(del())).rejects.toMatchObject({ status: 403 });
 		expect(mockUploadFile).not.toHaveBeenCalled();
 		expect(mockDetachSlot).not.toHaveBeenCalled();
+	});
+
+	it("admits the show's committee on a listing with a production", async () => {
+		heldPositions = [];
+		listingProject = { projectId: 'proj-1', productionId: 'prod-1' };
+		onCommittee = true;
+		const ok = new File([bytes(1024)], 'poster.png', { type: 'image/png' });
+		await POST(req(ok));
+		expect(mockReplaceSlot).toHaveBeenCalledWith(
+			expect.objectContaining({ uploadedByUserId: 'booker-1' })
+		);
+	});
+
+	it('refuses someone off the committee, uploading nothing', async () => {
+		heldPositions = [];
+		listingProject = { projectId: 'proj-1', productionId: 'prod-1' };
+		const ok = new File([bytes(1024)], 'poster.png', { type: 'image/png' });
+		await expect(POST(req(ok))).rejects.toMatchObject({ status: 403 });
+		expect(mockUploadFile).not.toHaveBeenCalled();
 	});
 
 	// Every combination of positions a person could hold, including none. The
