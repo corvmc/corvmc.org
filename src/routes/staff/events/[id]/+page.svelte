@@ -18,6 +18,7 @@
 	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
 	import ListingEditForm from '$lib/components/events/ListingEditForm.svelte';
 	import ListingPosterCard from '$lib/components/events/ListingPosterCard.svelte';
+	import ListingQrCard from '$lib/components/events/ListingQrCard.svelte';
 	import RecurringSeriesBar from '$lib/components/events/RecurringSeriesBar.svelte';
 	import RepeatEventAction from '$lib/components/events/RepeatEventAction.svelte';
 	import SpaceHoldCard from '$lib/components/events/SpaceHoldCard.svelte';
@@ -388,6 +389,10 @@
 		cancelled={evt.status === 'cancelled'}
 		onchange={refresh}
 	/>
+
+	{#if evt.status !== 'cancelled'}
+		<ListingQrCard eventId={evt.id} title={evt.title} published={evt.status === 'published'} />
+	{/if}
 
 	<ListingTicketing
 		event={evt}
