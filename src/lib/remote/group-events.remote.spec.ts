@@ -63,8 +63,10 @@ vi.mock('$lib/server/group/group-context', () => ({
 }));
 
 const createEventSeries = vi.fn(async () => ({ id: 'series-1' }));
+const getByEvent = vi.fn(async (): Promise<{ id: string } | null> => null);
 vi.mock('$lib/server/reservation/recurring-series-service', () => ({
-	createEventSeries: (...a: unknown[]) => createEventSeries(...(a as []))
+	createEventSeries: (...a: unknown[]) => createEventSeries(...(a as [])),
+	getByEvent: (...a: unknown[]) => getByEvent(...(a as []))
 }));
 
 const service = {
@@ -271,5 +273,63 @@ describe('a program still reaches them', () => {
 			expect.any(String),
 			expect.objectContaining({ reserveRoom: hold })
 		);
+	});
+});
+
+// #1990. Repeating was a create-time choice only, so a session that already
+// existed stayed one-off and staff moved its date by hand each time.
+describe('repeatGroupSession', () => {
+	const REPEAT = {
+		groupId: 'group-1',
+		eventId: 'evt-1',
+		recurringFrequency: 'monthly',
+		monthlyMode: 'weekday'
+	};
+	const startsAt = new Date('2026-11-05T02:00:00Z');
+	const session = (extra: Record<string, unknown> = {}) =>
+		({ id: 'evt-1', groupId: 'group-1', status: 'published', startsAt, ...extra }) as never;
+
+	it('makes an existing session the first of a series', async () => {
+		service.getById.mockResolvedValueOnce(session());
+
+		await expect(remotes.repeatGroupSession(REPEAT)).resolves.toMatchObject({ success: true });
+		expect(createEventSeries).toHaveBeenCalledWith(
+			expect.objectContaining({
+				prototypeEventId: 'evt-1',
+				frequency: 'monthly',
+				monthlyMode: 'weekday',
+				prototypeStartsAt: startsAt
+			})
+		);
+	});
+
+	it('refuses a member who is not an admin of the club', async () => {
+		requireProgramRole.mockRejectedValueOnce(httpError(403, 'Forbidden'));
+
+		expect(await statusOf(() => remotes.repeatGroupSession(REPEAT))).toBe(403);
+		expect(service.getById).not.toHaveBeenCalled();
+		expect(createEventSeries).not.toHaveBeenCalled();
+	});
+
+	it("404s another program's session", async () => {
+		service.getById.mockResolvedValueOnce(session({ groupId: 'group-2' }));
+
+		expect(await statusOf(() => remotes.repeatGroupSession(REPEAT))).toBe(404);
+		expect(createEventSeries).not.toHaveBeenCalled();
+	});
+
+	it('refuses a session that already repeats', async () => {
+		service.getById.mockResolvedValueOnce(session());
+		getByEvent.mockResolvedValueOnce({ id: 'series-0' });
+
+		expect(await statusOf(() => remotes.repeatGroupSession(REPEAT))).toBe(409);
+		expect(createEventSeries).not.toHaveBeenCalled();
+	});
+
+	it('refuses a cancelled session', async () => {
+		service.getById.mockResolvedValueOnce(session({ status: 'cancelled' }));
+
+		expect(await statusOf(() => remotes.repeatGroupSession(REPEAT))).toBe(409);
+		expect(createEventSeries).not.toHaveBeenCalled();
 	});
 });

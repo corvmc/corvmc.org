@@ -35,6 +35,7 @@
 	import GroupSelfEditAction from '$lib/components/groups/GroupSelfEditAction.svelte';
 	import ApplicationsCard from '$lib/components/groups/ApplicationsCard.svelte';
 	import EditSessionAction from '$lib/components/groups/EditSessionAction.svelte';
+	import RepeatSessionAction from '$lib/components/groups/RepeatSessionAction.svelte';
 	import ProjectStatusAction from './ProjectStatusAction.svelte';
 	import ProjectDutyListAction from './ProjectDutyListAction.svelte';
 	import CommitteeNumbers from './CommitteeNumbers.svelte';
@@ -368,6 +369,13 @@
 									{#if s.status !== 'cancelled'}
 										<div class="flex w-max justify-end gap-2">
 											<EditSessionAction groupId={group.id} session={s} onchanged={refreshRoster} />
+											{#if !s.repeats}
+												<RepeatSessionAction
+													groupId={group.id}
+													session={s}
+													onchanged={refreshRoster}
+												/>
+											{/if}
 											{#if s.status === 'published'}
 												<Action
 													action={unpublishGroupSession.for(s.id)}

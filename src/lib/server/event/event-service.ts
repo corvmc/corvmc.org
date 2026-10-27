@@ -265,6 +265,8 @@ export interface EventRow {
 	externalTicketUrl: string | null;
 	/** Staff's reason for turning down or pulling a community listing. */
 	reviewNotes: string | null;
+	/** Set on a series' prototype and on every occurrence it generated. */
+	recurringSeriesId: string | null;
 	createdByUserId: string;
 	createdAt: Date;
 	updatedAt: Date;

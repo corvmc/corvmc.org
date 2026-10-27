@@ -520,6 +520,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			startsAt: e.startsAt,
 			endsAt: e.endsAt,
 			status: e.status,
+			// A session already in a series has no "Repeat" to offer.
+			repeats: !!e.recurringSeriesId,
 			// The listing half, so the edit form opens pre-filled on the fields a
 			// band gig has carried all along.
 			doorsAt: e.doorsAt,
