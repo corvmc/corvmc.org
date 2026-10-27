@@ -82,6 +82,10 @@ Three of the app's columns store this table's _name_ as data, and so they read
 `'event_listing'` too: `reservation.booker_type`, `media_attachment.attachable_type`
 and `recurring_series.prototype_type`.
 
+A listing's room hold is booked to its production when it has one, else to the group
+running it, else to the listing itself (#2004). Holding the room never opens a
+production: a CMC workshop with no back-of-house can still take the room.
+
 See [project-spec.md](../specs/project-spec.md).
 
 ## The seam

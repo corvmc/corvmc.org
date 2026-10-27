@@ -375,18 +375,21 @@ describe('EventService', () => {
 			expect(lastInsertedValues!.productionId).toBe(productionId);
 		});
 
-		it('refuses a room hold for a show with neither a production nor a group', async () => {
-			await expect(
-				create({
-					...baseParams,
-					reservation: {
-						startsAt: new Date('2025-07-15T01:00:00Z'),
-						endsAt: new Date('2025-07-15T06:00:00Z'),
-						overrideConflicts: true
-					}
+		it('books a show with neither a production nor a group to the listing (#2004)', async () => {
+			await create({
+				...baseParams,
+				reservation: {
+					startsAt: new Date('2025-07-15T01:00:00Z'),
+					endsAt: new Date('2025-07-15T06:00:00Z'),
+					overrideConflicts: true
+				}
+			});
+			expect(staffCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					bookerType: 'event_listing',
+					bookerId: lastInsertedValues!.id
 				})
-			).rejects.toThrow(EventValidationError);
-			expect(staffCreate).not.toHaveBeenCalled();
+			);
 		});
 
 		it('creates linked reservation when reservation params provided', async () => {
@@ -1184,15 +1187,16 @@ describe('EventService', () => {
 
 			// Nothing to release — this is an add, not a replace.
 			expect(cancelReservation).not.toHaveBeenCalled();
-			// A show holds its room as the production running it; this listing had
-			// none, so the hold opens one.
+			// No production and no group: the listing holds the room itself, and
+			// holding it opens no production (#2004).
 			expect(staffCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
-					bookerType: 'production',
-					bookerId: 'prod-new',
+					bookerType: 'event_listing',
+					bookerId: 'evt-1',
 					status: 'confirmed'
 				})
 			);
+			expect(mockCreateProduction).not.toHaveBeenCalled();
 			expect(lastUpdateSet?.reservationId).toBe('res-1');
 		});
 

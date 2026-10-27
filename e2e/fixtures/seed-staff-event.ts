@@ -133,8 +133,8 @@ async function clearStaleEvents(db: DrizzleD1Database) {
 	}
 
 	// A reservation whose event insert was rolled back carries no link back, so
-	// sweep by booker as well. The booker is the production now (#855), and the
-	// production ids come off the listings read above.
+	// sweep by booker as well: the production (#855), or the listing itself
+	// when it has none (#2004).
 	const productionIds = stale.map((e) => e.productionId).filter((id): id is string => !!id);
 	if (productionIds.length > 0) {
 		await db
@@ -143,6 +143,9 @@ async function clearStaleEvents(db: DrizzleD1Database) {
 				and(eq(reservation.bookerType, 'production'), inArray(reservation.bookerId, productionIds))
 			);
 	}
+	await db
+		.delete(reservation)
+		.where(and(eq(reservation.bookerType, 'event_listing'), inArray(reservation.bookerId, ids)));
 }
 
 /** Hold SEED_CONFLICT_DATE so the modal's conflict warning has to fire. */

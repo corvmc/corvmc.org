@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { isEventHold } from '$lib/config';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -65,7 +66,7 @@
 	let searchText = $state('');
 	let dateFrom = $state('');
 	let dateTo = $state('');
-	let bookerType = $state<'user' | 'group' | 'production' | ''>('');
+	let bookerType = $state<'user' | 'group' | 'production' | 'event_listing' | ''>('');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
@@ -256,6 +257,8 @@
 					     bands alone; a production's hold is only ever a show. -->
 					<option value="group">Bands &amp; programs</option>
 					<option value="production">Shows</option>
+					<!-- A listing with no production holds the room in its own name. -->
+					<option value="event_listing">Listings</option>
 				</Select>
 			</label>
 			<label class="flex flex-col gap-1">
@@ -395,7 +398,7 @@
 
 							<td class="col-support cell-num">
 								{#await hourlyRates then rates}
-									{#if r.bookerType === 'production'}
+									{#if isEventHold(r.bookerType)}
 										<span class="opacity-40">—</span>
 									{:else}
 										{@const state = reservationPaymentState(r)}
@@ -519,7 +522,7 @@
 							</div>
 							<div class="flex shrink-0 flex-col items-end gap-2">
 								<StatusBadge status={r.status} label />
-								{#if r.bookerType !== 'production'}
+								{#if !isEventHold(r.bookerType)}
 									{#await hourlyRates then rates}
 										{@const state = reservationPaymentState(r)}
 										{@const ps = paymentStatus(state)}
