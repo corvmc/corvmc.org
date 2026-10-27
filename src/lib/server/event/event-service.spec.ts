@@ -356,9 +356,43 @@ describe('EventService', () => {
 			expect(lastLinkedGroups).toBeNull();
 		});
 
+		it('opens no production for a show unless one is asked for (#1947)', async () => {
+			// A listing is the advertisement; the production is an optional
+			// back-of-house layer. Putting a show on the calendar is not opening one.
+			await create(baseParams);
+
+			expect(mockCreateShowProject).not.toHaveBeenCalled();
+			expect(lastInsertedValues!.productionId).toBeNull();
+			expect(lastInsertedValues).not.toHaveProperty('projectId');
+		});
+
+		it('opens the production with the listing when asked', async () => {
+			await create({ ...baseParams, withProduction: true });
+
+			const { productionId } = mockCreateShowProject.mock.calls[0][0] as {
+				productionId: string;
+			};
+			expect(lastInsertedValues!.productionId).toBe(productionId);
+		});
+
+		it('refuses a room hold for a show with neither a production nor a group', async () => {
+			await expect(
+				create({
+					...baseParams,
+					reservation: {
+						startsAt: new Date('2025-07-15T01:00:00Z'),
+						endsAt: new Date('2025-07-15T06:00:00Z'),
+						overrideConflicts: true
+					}
+				})
+			).rejects.toThrow(EventValidationError);
+			expect(staffCreate).not.toHaveBeenCalled();
+		});
+
 		it('creates linked reservation when reservation params provided', async () => {
 			await create({
 				...baseParams,
+				withProduction: true,
 				reservation: {
 					startsAt: new Date('2025-07-15T01:00:00Z'),
 					endsAt: new Date('2025-07-15T06:00:00Z'),
@@ -386,6 +420,7 @@ describe('EventService', () => {
 			await expect(
 				create({
 					...baseParams,
+					withProduction: true,
 					reservation: {
 						startsAt: new Date('2025-07-15T01:00:00Z'),
 						endsAt: new Date('2025-07-15T06:00:00Z'),
@@ -407,7 +442,9 @@ describe('EventService', () => {
 			// is simply no hold to release here (#1202).
 			insertShouldThrow = true;
 
-			await expect(create(baseParams)).rejects.toThrow('insert failed');
+			await expect(create({ ...baseParams, withProduction: true })).rejects.toThrow(
+				'insert failed'
+			);
 
 			expect(staffCreate).not.toHaveBeenCalled();
 			const { productionId } = mockCreateShowProject.mock.calls[0][0] as {
@@ -420,6 +457,7 @@ describe('EventService', () => {
 		it('skips conflict check when overrideConflicts is true', async () => {
 			await create({
 				...baseParams,
+				withProduction: true,
 				reservation: {
 					startsAt: new Date('2025-07-15T01:00:00Z'),
 					endsAt: new Date('2025-07-15T06:00:00Z'),
@@ -437,6 +475,7 @@ describe('EventService', () => {
 			await expect(
 				create({
 					...baseParams,
+					withProduction: true,
 					reservation: {
 						startsAt: new Date('2025-07-15T01:00:00Z'),
 						endsAt: new Date('2025-07-15T06:00:00Z'),

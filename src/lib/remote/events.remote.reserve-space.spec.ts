@@ -121,4 +121,10 @@ describe('createEvent — holds nothing at create', () => {
 		expect(inClubTime(params.startsAt)).toBe('2026-08-15 19:00');
 		expect(inClubTime(params.endsAt)).toBe('2026-08-15 22:00');
 	});
+
+	it('opens no production: the Calendar posts a listing, not a show to run (#1947)', async () => {
+		await createEvent({ ...base, withProduction: true }, issue);
+
+		expect(eventServiceMock.create.mock.calls[0][0].withProduction).toBeUndefined();
+	});
 });

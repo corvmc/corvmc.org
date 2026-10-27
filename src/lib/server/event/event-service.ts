@@ -296,6 +296,12 @@ export interface CreateEventParams {
 	venueId?: string | null;
 	location?: string | null;
 	createdByUserId: string;
+	/**
+	 * Open the show's production with the listing. Off by default: a listing is
+	 * the advertisement, and a show on the calendar has no back-of-house until
+	 * someone asks for one (#1947). Ignored for anything that is not a show.
+	 */
+	withProduction?: boolean;
 	reservation?: {
 		startsAt: Date;
 		endsAt: Date;
@@ -323,6 +329,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		venueId,
 		location,
 		createdByUserId,
+		withProduction = false,
 		reservation: reservationParams,
 		posterFile
 	} = params;
@@ -348,21 +355,20 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	// reservation first, then insert the event with the link already set. If the
 	// event insert fails, compensate by deleting the just-created reservation.
 	const eventId = crypto.randomUUID();
-	// A CMC show is a production; the listing is the advertisement it emits. The
-	// id is minted here rather than by `createProduction` because the room is
-	// booked before the listing exists, and the booker has to name the show.
-	const productionId = kind === 'show' ? crypto.randomUUID() : null;
+	// Minted here rather than by `createProduction` because the room is booked
+	// before the listing exists, and the booker has to name the show.
+	const productionId = kind === 'show' && withProduction ? crypto.randomUUID() : null;
 	// Every production is a project, and the listing names it too.
 	const showProjectId = productionId ? crypto.randomUUID() : null;
 
 	let reservationId: string | null = null;
 	if (reservationParams) {
-		// Anything that is not a show is somebody's programme — a work party is
-		// Facilities', outreach is Development's — and the room is held for them.
-		// Without a group there is no party to hold it for (#1199).
+		// Without a production the hold is a group's — a work party is
+		// Facilities', outreach is Development's. With neither there is no party
+		// to hold it for (#1199).
 		if (!productionId && !groupId) {
 			throw new EventValidationError(
-				'A work party, meeting or class that takes the room has to say which group is running it',
+				'A listing that takes the room has to say which group is running it',
 				'groupId'
 			);
 		}
@@ -388,9 +394,6 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	// Before the listing, because the listing names it and `production_id` is a
 	// real foreign key. The room is booked first because `booker_id` has none —
 	// that is the only reason the reservation may come earlier.
-	//
-	// Every CMC show gets one, room or no room: the back-of-house is what a show
-	// is, and leaving it to a button is why every show before 2026-09-04 has none.
 	if (productionId && showProjectId) {
 		await createShowProject({
 			productionId,

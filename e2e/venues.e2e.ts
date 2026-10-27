@@ -62,16 +62,16 @@ test.describe('venues', () => {
 	 */
 	test('an off-site venue withdraws the room hold', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/productions');
+		await page.goto('/staff/events');
 
 		// The fixture sweeps this prefix, and the event is never given a hold.
 		const title = `${SEED_EVENT_TITLE_PREFIX} venue ${Date.now()}`;
-		await page.getByRole('button', { name: 'New Event' }).click();
+		await page.getByRole('button', { name: 'Create Listing' }).click();
 		await page.locator('input[name="title"]').fill(title);
 		await page.locator('input[name="eventDate"]').fill(SEED_EVENT_DATE);
 		await page.locator('input[name="eventStartTime"]').fill('19:00');
 		await page.locator('input[name="eventEndTime"]').fill('22:00');
-		await page.getByRole('button', { name: 'Create Event' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Create Listing' }).click();
 		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
 		await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
 		await page.goto(`${new URL(page.url()).pathname}/production`);

@@ -10,11 +10,10 @@
 	import { withQuery } from '$lib/utils/with-query';
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
-	import CreateEventModal from '$lib/components/events/CreateEventModal.svelte';
+	import NewProductionAction from './NewProductionAction.svelte';
 	import { formatDate } from '$lib/utils/format';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import AvatarStack from '$lib/components/ui/AvatarStack.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { getStaffEvents } from '$lib/remote/events.remote';
@@ -36,7 +35,6 @@
 	const initial = new URLSearchParams(pageState.url.search);
 
 	let page = $state(1);
-	let showCreateModal = $state(false);
 	let status = $state<'draft' | 'published' | 'cancelled' | ''>(
 		(initial.get('status') as 'draft' | 'published' | 'cancelled' | null) ?? ''
 	);
@@ -116,11 +114,9 @@
 </script>
 
 <PageHeader title="Productions" subtitle="Staff">
-	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}>New Event</Button>
+	<NewProductionAction />
 </PageHeader>
 <PageContent>
-	<CreateEventModal bind:open={showCreateModal} />
-
 	<FilterBar {activeCount} onclear={clearFilters}>
 		<Select size="sm" aria-label="Status" bind:value={status} onchange={() => (page = 1)}>
 			<option value="">Every status</option>

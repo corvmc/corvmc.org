@@ -10,20 +10,21 @@
 	import { errorMessage } from '$lib/error-message';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { createEvent, getProgramGroups } from '$lib/remote/events.remote';
+	import { createShow } from '$lib/remote/productions.remote';
 	import { clubToday } from '$lib/config';
 
 	/**
-	 * Only what the row cannot exist without (#1822's rule). `kind` and "Run by"
-	 * stay because they decide what the insert writes — a show mints its
-	 * production — and neither can be changed into later. Everything else is the
-	 * event page's: description, doors, tags and the bill on the general view;
-	 * venue, poster, tickets, the room hold and repeating on the console.
+	 * Only what the row cannot exist without (#1822's rule); the listing page
+	 * holds the rest, and no production is opened. `production` is "New
+	 * production" making its listing instead: it posts `createShow`, which fixes
+	 * the kind to a show, opens the production with it, and lands on the console.
 	 */
 	let {
 		open = $bindable(false),
 		title: modalTitle = 'New Event',
-		submitLabel = 'Create Event'
-	}: { open: boolean; title?: string; submitLabel?: string } = $props();
+		submitLabel = 'Create Event',
+		production = false
+	}: { open: boolean; title?: string; submitLabel?: string; production?: boolean } = $props();
 
 	let title = $state('');
 	let kind = $state('show');
@@ -35,7 +36,7 @@
 	// Loaded when the modal opens, not with the page that mounts it.
 	let programs = $state<{ id: string; name: string }[]>([]);
 	$effect(() => {
-		if (!open) return;
+		if (!open || production) return;
 		getProgramGroups().then((rows) => (programs = rows));
 	});
 
@@ -43,8 +44,13 @@
 		open = false;
 		resetForm();
 		await invalidateAll();
-		// `edit` opens the page's edit card, so the next field is one click closer.
-		if (result?.eventId) goto(withQuery(resolve(`/staff/events/${result.eventId}`), 'edit=1'));
+		if (!result?.eventId) return;
+		if (production) {
+			goto(resolve(`/staff/events/${result.eventId}/production`));
+		} else {
+			// `edit` opens the page's edit card, so the next field is one click closer.
+			goto(withQuery(resolve(`/staff/events/${result.eventId}`), 'edit=1'));
+		}
 	}
 
 	function resetForm() {
@@ -60,38 +66,40 @@
 <Modal bind:open title={modalTitle} maxWidth="max-w-md" onclose={resetForm}>
 	<svelte:boundary>
 		<Form
-			remote={createEvent}
-			successToast="Event created"
+			remote={production ? createShow : createEvent}
+			successToast={production ? 'Production opened' : 'Event created'}
 			onsuccess={handleSuccess}
 			class="space-y-4"
 		>
 			<Field name="title" type="text" label="Title" bind:value={title} />
-			<Field
-				name="kind"
-				type="select"
-				label="Kind"
-				bind:value={kind}
-				options={[
-					{ value: 'show', label: 'Show' },
-					{ value: 'work_party', label: 'Work party' },
-					{ value: 'meeting', label: 'Meeting' },
-					{ value: 'class', label: 'Class' },
-					{ value: 'market', label: 'Market' }
-				]}
-				description="Only shows reach the homepage posters. Anything published still appears on the public calendar."
-			/>
-			{#if programs.length > 0}
+			{#if !production}
 				<Field
-					name="groupId"
+					name="kind"
 					type="select"
-					label="Run by"
-					bind:value={groupId}
+					label="Kind"
+					bind:value={kind}
 					options={[
-						{ value: '', label: 'CMC' },
-						...programs.map((g) => ({ value: g.id, label: g.name }))
+						{ value: 'show', label: 'Show' },
+						{ value: 'work_party', label: 'Work party' },
+						{ value: 'meeting', label: 'Meeting' },
+						{ value: 'class', label: 'Class' },
+						{ value: 'market', label: 'Market' }
 					]}
-					description="The committee or club behind it — a work party is Facilities', outreach is Development's. Leave it on CMC for a show."
+					description="Only shows reach the homepage posters. Anything published still appears on the public calendar."
 				/>
+				{#if programs.length > 0}
+					<Field
+						name="groupId"
+						type="select"
+						label="Run by"
+						bind:value={groupId}
+						options={[
+							{ value: '', label: 'CMC' },
+							...programs.map((g) => ({ value: g.id, label: g.name }))
+						]}
+						description="The committee or club behind it — a work party is Facilities', outreach is Development's. Leave it on CMC for a show."
+					/>
+				{/if}
 			{/if}
 			<Field name="eventDate" type="date" label="Date" bind:value={eventDate} />
 
@@ -101,8 +109,13 @@
 			</div>
 
 			<p class="text-muted">
-				Saved as a draft. Description, poster, tickets and the room are filled in on the event's
-				page next.
+				{#if production}
+					Saved as a draft show with its production. The console opens next; the listing's
+					description, poster and tickets are on the event's page.
+				{:else}
+					Saved as a draft. Description, poster, tickets and the room are filled in on the event's
+					page next.
+				{/if}
 			</p>
 
 			<div class="modal-action">

@@ -108,6 +108,11 @@ vi.mock('$lib/server/event/event-service', () => ({
 	create: (...a: unknown[]) => listings.create(...a)
 }));
 
+const attachable = { listAttachableListings: vi.fn(async () => [] as unknown[]) };
+vi.mock('$lib/server/production/attachable-listings', () => ({
+	listAttachableListings: () => attachable.listAttachableListings()
+}));
+
 const runOfShow = {
 	addSlot: vi.fn(),
 	updateSlot: vi.fn(),
@@ -174,11 +179,7 @@ vi.mock('$app/server', () => ({
 		locals: { user: { id: 'staff-1' } },
 		request: { headers: new Headers() }
 	}),
-	query: () => {
-		const stub = (() => ({ refresh: async () => undefined })) as unknown as Record<string, unknown>;
-		stub.__ = { type: 'query' };
-		return stub;
-	},
+	query: (...args: unknown[]) => wrap(args),
 	command: (...args: unknown[]) => wrap(args),
 	form: (...args: unknown[]) => wrap(args)
 }));
@@ -240,6 +241,13 @@ const WRITES: Write[] = [
 	{
 		name: 'createProduction',
 		args: [{ eventId: 'evt-1' }],
+		capability: 'production.create',
+		positionOnly: true
+	},
+	// A read, but the picker for the write above, so it takes the same guard.
+	{
+		name: 'getAttachableListings',
+		args: [undefined],
 		capability: 'production.create',
 		positionOnly: true
 	},
@@ -365,6 +373,7 @@ const allSpies = () =>
 	Object.values({
 		...service,
 		...listings,
+		...attachable,
 		...runOfShow,
 		...artifacts,
 		...flyers,
@@ -427,13 +436,23 @@ describe('the production matrix', () => {
 				title: 'Friday Night',
 				kind: 'show',
 				groupId: null,
-				createdByUserId: 'booking-1'
+				createdByUserId: 'booking-1',
+				// The one create path that asks for the back-of-house (#1947).
+				withProduction: true
 			})
 		);
 		const [{ startsAt, endsAt }] = listings.create.mock.calls[0] as [
 			{ startsAt: Date; endsAt: Date }
 		];
 		expect(endsAt.getTime() - startsAt.getTime()).toBe(4 * 60 * 60 * 1000);
+	});
+
+	it('offers the listings a production can attach to on production.create alone', async () => {
+		persona = 'booking';
+		const row = { id: 'evt-2', title: 'Saturday', startsAt: new Date('2026-11-07T03:00:00Z') };
+		attachable.listAttachableListings.mockResolvedValueOnce([row]);
+		await expect(submit(productions.getAttachableListings, undefined)).resolves.toEqual([row]);
+		expect(requireCapability).toHaveBeenCalledWith('production.create');
 	});
 
 	it('refuses to open a show without production.create', async () => {
