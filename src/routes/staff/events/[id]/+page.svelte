@@ -16,13 +16,18 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
 	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
+	import ListingEditForm from '$lib/components/events/ListingEditForm.svelte';
+	import ListingPosterCard from '$lib/components/events/ListingPosterCard.svelte';
+	import RecurringSeriesBar from '$lib/components/events/RecurringSeriesBar.svelte';
+	import RepeatEventAction from '$lib/components/events/RepeatEventAction.svelte';
+	import SpaceHoldCard from '$lib/components/events/SpaceHoldCard.svelte';
 	import {
 		PublishEventAction,
 		UnpublishEventAction,
 		CancelEventAction,
 		DeleteEventAction
 	} from '$lib/components/actions';
-	import { getStaffEventPage, updateEvent, setStaffEventLineup } from '$lib/remote/events.remote';
+	import { getStaffEventPage, setStaffEventLineup } from '$lib/remote/events.remote';
 	import {
 		approveListing,
 		rejectListing,
@@ -32,21 +37,14 @@
 	import RecapPhotos from './RecapPhotos.svelte';
 	import RecapText from './RecapText.svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import { formatTime, fullDate, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { formatTime, fullDate } from '$lib/utils/format';
 
 	/**
-	 * The general view of an event — every source, any staffer.
-	 *
-	 * This is the address `entity-href` resolves every event ref to, so it is
-	 * where a staffer lands by default from anywhere in the panel: a volunteer
-	 * shift, a reservation, a member's record, a notification. That is why it
-	 * holds the *least privileged* useful view rather than the richest one. The
-	 * production console is a page you navigate to, at `[id]/production`, and can
-	 * be gated on its own without making every inbound link conditional.
-	 *
-	 * It owns the event's lifecycle — publish, approve, turn down, unpublish,
-	 * cancel, delete — and the console owns the production. One rule, so nobody
-	 * has to remember which page a button lives on.
+	 * The listing — every source, any staffer — and where `entity-href` sends
+	 * every event ref. It owns everything public-facing: the lifecycle, the full
+	 * edit, the poster, the series and the room hold (#1946). The console at
+	 * `[id]/production` is back-of-house only. Writes take `event.manage` or the
+	 * show's committee; the guard is `requireListingWriter`, on the remotes.
 	 */
 	const id = $derived(page.params.id!);
 	const data = $derived(await getStaffEventPage(id));
@@ -58,42 +56,19 @@
 	const isCommunityEvent = $derived(evt.source === 'community');
 
 	const rejectFields = rejectListing.fields;
-	const { fields } = updateEvent;
 
 	function refresh() {
 		void getStaffEventPage(id).refresh();
 	}
 
 	// ── Edit ──────────────────────────────────────────────────────────────
-	// Trimmed on purpose: no ticketing toggle, no capacity, no reservation
-	// rebooking. Those are production controls and live on the console. What is
-	// here is what a reviewer needs to fix a typo before approving.
+	// The whole listing: every `updateEvent` field, ticketing and the room hold
+	// included. Ticketing stats, comps and the ticket list are still the
+	// console's until #1949.
 	let editing = $state(false);
-	let editTitle = $state('');
-	let editDescription = $state('');
-	let editTags = $state('');
-	let editKind = $state('show');
-	let editLocation = $state('');
-	let editVenueId = $state('');
-	let editExternalTicketUrl = $state('');
-	let editDate = $state('');
-	let editStartTime = $state('');
-	let editEndTime = $state('');
-	let editDoorsTime = $state('');
 	let lineup = $state<LineupChip[]>([]);
 
 	function startEditing() {
-		editTitle = evt.title;
-		editDescription = evt.description ?? '';
-		editTags = evt.tags ?? '';
-		editKind = evt.kind ?? 'show';
-		editLocation = evt.location ?? '';
-		editVenueId = evt.venueId ?? '';
-		editExternalTicketUrl = evt.externalTicketUrl ?? '';
-		editDate = toLocalDate(evt.startsAt);
-		editStartTime = toLocalTime(evt.startsAt);
-		editEndTime = evt.endsAt ? toLocalTime(evt.endsAt) : '';
-		editDoorsTime = evt.doorsAt ? toLocalTime(evt.doorsAt) : '';
 		lineup = detail.lineup.map((l) => ({ name: l.name, bandId: l.bandId ?? undefined }));
 		editing = true;
 	}
@@ -106,6 +81,16 @@
 		editFromUrl = true;
 		startEditing();
 	});
+
+	// Held, or a CMC show that ought to say whether it is. A band gig or a
+	// community listing with no hold has no question for this card to answer.
+	const showsHold = $derived(isProduction || !!detail.linkedReservation);
+
+	// Our own listings and a club's sessions repeat; a band's gig or a community
+	// listing is someone else's to schedule.
+	const canRepeat = $derived(
+		(evt.source === 'cmc' || evt.source === 'group') && evt.status !== 'cancelled'
+	);
 
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
@@ -294,105 +279,33 @@
 		</InfoCard>
 	{/if}
 
-	{#if editing}
-		<InfoCard title="Edit">
-			<Form remote={updateEvent} guard successToast="Updated" onsuccess={() => (editing = false)}>
-				<input {...fields.eventId.as('hidden', evt.id)} />
-				<div class="space-y-4">
-					<FormField field={fields.title} label="Title" bind:value={editTitle} />
-					<FormField
-						field={fields.description}
-						type="textarea"
-						label="Description"
-						bind:value={editDescription}
-					/>
-					<div class="grid gap-4 sm:grid-cols-2">
-						<FormField field={fields.eventDate} type="date" label="Date" bind:value={editDate} />
-						<FormField
-							field={fields.doorsTime}
-							type="time"
-							label="Doors"
-							bind:value={editDoorsTime}
-						/>
-						<FormField
-							field={fields.eventStartTime}
-							type="time"
-							label="Start"
-							bind:value={editStartTime}
-						/>
-						<FormField
-							field={fields.eventEndTime}
-							type="time"
-							label="End"
-							bind:value={editEndTime}
-						/>
-					</div>
-					<!--
-						Two fields, not one, and both keep working. `venueId` is what the
-						reservation question reads — a show anywhere but our room holds no
-						space — while `location` stays the free-text line the gig guide has
-						always printed, and the only thing a band listing ever has.
-					-->
-					{#if data.venues.length > 0}
-						<FormField
-							field={fields.venueId}
-							type="select"
-							label="Venue"
-							bind:value={editVenueId}
-							options={[
-								{ value: '', label: 'The practice room' },
-								...data.venues
-									.filter((v) => !v.isPrimary)
-									.map((v) => ({ value: v.id, label: v.name }))
-							]}
-						/>
-					{/if}
-					<FormField field={fields.location} label="Address line" bind:value={editLocation} />
-					<FormField
-						field={fields.externalTicketUrl}
-						label="Ticket link"
-						bind:value={editExternalTicketUrl}
-					/>
-					<FormField field={fields.tags} label="Tags" bind:value={editTags} />
-					<FormField
-						field={fields.kind}
-						type="select"
-						label="Kind"
-						bind:value={editKind}
-						options={[
-							{ value: 'show', label: 'Show' },
-							{ value: 'work_party', label: 'Work party' },
-							{ value: 'meeting', label: 'Meeting' },
-							{ value: 'class', label: 'Class' },
-							{ value: 'market', label: 'Market' }
-						]}
-						description="Only shows reach the homepage posters. Anything published still appears on the public calendar."
-					/>
-					{#if isProduction}
-						<p class="text-muted">
-							The poster, ticket sales, the room hold and repeating are on the
-							<a class="link" href={resolve(`/staff/events/${id}/production`)}>production console</a
-							>.
-						</p>
-					{/if}
-				</div>
-				<div class="mt-4 flex gap-2">
-					<SubmitButton label="Save" />
-					<!-- `type="button"`: a Button carries no type of its own, so inside a
-					     Form it submits. Cancel was saving the form on its way out
-					     (#1075's sweep). -->
-					<Button type="button" variant="ghost" size="sm" onclick={() => (editing = false)}>
-						Cancel
-					</Button>
-				</div>
-			</Form>
+	{#if data.recurringSeries}
+		<RecurringSeriesBar eventId={evt.id} series={data.recurringSeries} onchange={refresh} />
+	{:else if canRepeat}
+		<div>
+			<RepeatEventAction eventId={evt.id} startsAt={evt.startsAt} onsuccess={refresh} />
+		</div>
+	{/if}
 
+	{#if editing}
+		<ListingEditForm
+			event={evt}
+			linkedReservation={detail.linkedReservation}
+			venues={data.venues}
+			onsaved={() => {
+				editing = false;
+				refresh();
+			}}
+			oncancel={() => (editing = false)}
+		/>
+
+		<InfoCard title="Bill">
 			<!--
 				The bill saves separately. `setStaffEventLineup` decides consent from
 				the event's source, and folding it into `updateEvent` would put that
 				rule behind a form the console also posts.
 			-->
-			<div class="mt-6 border-t border-base-200 pt-4">
+			<div>
 				<Form
 					remote={setStaffEventLineup}
 					successToast="Bill updated"
@@ -468,6 +381,21 @@
 			</div>
 		{/if}
 	</InfoCard>
+
+	<ListingPosterCard
+		eventId={evt.id}
+		posterUrl={detail.posterUrl}
+		cancelled={evt.status === 'cancelled'}
+		onchange={refresh}
+	/>
+
+	{#if showsHold}
+		<SpaceHoldCard
+			venueName={evt.venueName}
+			venueIsPrimary={evt.venueIsPrimary}
+			reservation={detail.linkedReservation}
+		/>
+	{/if}
 
 	{#if !data.recap.closedReason || evt.recapText}
 		<RecapText eventId={evt.id} text={evt.recapText} closedReason={data.recap.closedReason} />

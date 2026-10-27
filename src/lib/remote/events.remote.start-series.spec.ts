@@ -40,7 +40,9 @@ vi.mock('$lib/server/errors', () => ({
 }));
 vi.mock('$lib/server/authorization', () => ({
 	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
-	requireUser: vi.fn(async () => ({ id: 'user-1' }))
+	// `requireListingWriter` asks this first; the caller here is staff.
+	can: vi.fn(async () => true),
+	requireUser: vi.fn(() => ({ id: 'staff-1' }))
 }));
 vi.mock('$lib/server/reservation/conflict-service', () => ({
 	getConflictDetails: vi.fn(),

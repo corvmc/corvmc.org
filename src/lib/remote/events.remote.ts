@@ -10,7 +10,7 @@ import { getEventRiderSummaries } from '$lib/server/band/rider-service';
 import { getBillInputList } from '$lib/server/band/bill-input-list-service';
 import { config } from '$lib/server/site-config/site-config-service';
 import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { requireProjectCommittee } from '$lib/server/group/group-context';
+import { requireListingWriter } from '$lib/server/event/listing-guard';
 import { projectOfEvent } from '$lib/server/production/production-scope';
 import { getProjectBurn, listCommittees } from '$lib/server/project/project-service';
 import { listShowDeliverables } from '$lib/server/volunteer/deliverables-service';
@@ -1082,28 +1082,30 @@ function parseStaffLineupField(raw: string | undefined) {
  *
  * This is where `entity-href` sends every event ref, so it is the default
  * landing point for an event from anywhere in the panel: a volunteer shift, a
- * reservation, a member's record, a notification. It carries facts and the
- * moderation actions and nothing that only a producer needs; the console at
- * `[id]/production` is the specialisation, and has its own query below.
+ * reservation, a member's record, a notification. It carries the listing in
+ * full (edit, poster, series, room hold) and the moderation actions; the
+ * console at `[id]/production` is back-of-house, with its own query below.
  */
 export const getStaffEventPage = query(z.string(), async (id) => {
 	await requireCapability('event.read');
 
 	const detail = await getStaffEventDetail(id);
-	const [nearby, venues, production, photos] = await Promise.all([
+	const [nearby, venues, production, photos, recurringSeries] = await Promise.all([
 		listEventsNear(detail.event.startsAt, { excludeEventId: id }),
 		venuePickerOptions(),
 		// The header's one entry reads this to name itself, and the production
 		// card renders its status, producer and load-in. Everything else about
 		// the record is worked on in the console.
 		getProductionByEvent(id),
-		listEventPhotos(id)
+		listEventPhotos(id),
+		getEventRecurringSeries(id)
 	]);
 
 	return {
 		detail,
 		venues,
 		production,
+		recurringSeries,
 		recap: {
 			photos,
 			closedReason: recapClosedReason(detail.event),
@@ -1150,11 +1152,7 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 export const setStaffEventLineup = form(
 	z.object({ eventId: z.string().min(1), lineup: z.string().optional() }),
 	async (data) => {
-		// A show's bill is Booking's (`production.book`, through the show's
-		// project); any other listing's is still `event.manage`.
-		const show = await projectOfEvent(data.eventId);
-		if (show?.productionId) await requireProjectCommittee(show.projectId, 'production.book');
-		else await requireCapability('event.manage');
+		await requireListingWriter(data.eventId);
 		const evt = await getById(data.eventId);
 		if (!evt) error(404, 'Event not found');
 
@@ -1316,7 +1314,10 @@ export const getEventRecurringSeries = query(z.string(), async (eventId) => {
 // community listing is someone else's to repeat.
 const REPEATABLE_SOURCES: readonly string[] = ['cmc', 'group'];
 
-/** Make an existing CMC event or club/committee session the first of a series (staff). */
+/**
+ * Make an existing CMC event or club/committee session the first of a series.
+ * A listing write, so the show's committee may too.
+ */
 export const startEventSeries = form(
 	z.object({
 		eventId: z.string().min(1),
@@ -1328,7 +1329,7 @@ export const startEventSeries = form(
 			.optional()
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireListingWriter(data.eventId);
 		const evt = await getById(data.eventId);
 		if (!evt) error(404, 'Event not found');
 		if (!REPEATABLE_SOURCES.includes(evt.source)) {
@@ -1351,14 +1352,20 @@ export const startEventSeries = form(
 	}
 );
 
-/** Stop a recurring event series; existing occurrences remain (staff). */
-export const cancelEventSeries = form(z.object({ seriesId: z.string() }), async (data) => {
-	const staff = await requireCapability('event.manage');
+/**
+ * Stop the series an occurrence belongs to; existing occurrences remain. Keyed
+ * on the occurrence, so the guard and the series are read off the same row.
+ */
+export const cancelEventSeries = form(z.object({ eventId: z.string().min(1) }), async (data) => {
+	const writer = await requireListingWriter(data.eventId);
+	const series = await getByEvent(data.eventId);
+	if (!series) error(404, 'This event is not part of a series');
 	try {
-		await cancelSeries(data.seriesId, { kind: 'staff', userId: staff.id });
+		await cancelSeries(series.id, { kind: 'staff', userId: writer.id });
 	} catch (err) {
 		mapDomainError(err);
 	}
+	void getStaffEventPage(data.eventId).refresh();
 	return { success: true };
 });
 
@@ -1388,7 +1395,7 @@ export const updateEvent = form(
 		overrideConflicts: z.boolean().default(false)
 	}),
 	async (data) => {
-		const staff = await requireCapability('event.manage');
+		const staff = await requireListingWriter(data.eventId);
 		const tz = DEFAULT_TIMEZONE;
 
 		const ticketingEnabled = data.ticketingEnabled;

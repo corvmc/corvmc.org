@@ -622,7 +622,6 @@
 	"src/routes/staff/calendar/+page.ts",
 	"src/routes/staff/events/+page.svelte",
 	"src/routes/staff/events/PendingReviewBadge.svelte",
-	"src/routes/staff/events/[id]/+page.svelte",
 	"src/routes/staff/events/[id]/production/+page.svelte",
 	"src/routes/staff/events/[id]/production/ProductionStatusAction.svelte",
 	"src/routes/staff/events/[id]/production/tabs.ts",

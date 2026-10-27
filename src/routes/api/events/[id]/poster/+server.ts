@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireCapability } from '$lib/server/authorization';
+import { requireListingWriter } from '$lib/server/event/listing-guard';
 import { uploadFile, validateUpload } from '$lib/server/storage';
 import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
 import { mediaKey } from '$lib/server/storage-keys';
@@ -9,9 +9,9 @@ import { db } from '$lib/server/db';
 import { eventListing } from '$lib/server/db/schema/event';
 import { eq } from 'drizzle-orm';
 
-/** Upload or replace an event poster image. */
+/** Upload or replace an event poster image. A listing write, so the show's committee may too. */
 export const POST: RequestHandler = async ({ params, request }) => {
-	const user = await requireCapability('event.manage');
+	const user = await requireListingWriter(params.id);
 
 	const existing = await getById(params.id);
 	if (!existing) throw error(404, 'Event not found');
@@ -55,7 +55,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
 /** Delete an event poster. */
 export const DELETE: RequestHandler = async ({ params }) => {
-	await requireCapability('event.manage');
+	await requireListingWriter(params.id);
 
 	const existing = await getById(params.id);
 	if (!existing) throw error(404, 'Event not found');
