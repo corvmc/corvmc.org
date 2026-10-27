@@ -7,6 +7,8 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import { formatDateShort } from '$lib/utils/format';
+	import { clubToday } from '$lib/config';
+	import { addIsoDays } from '$lib/utils/deadline';
 	import {
 		createCommitteeRecurringWork,
 		retireCommitteeRecurringWork
@@ -37,7 +39,7 @@
 	} = $props();
 
 	const fields = createCommitteeRecurringWork.fields;
-	const firstDue = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+	const firstDue = addIsoDays(clubToday(), 7);
 	const now = Date.now();
 
 	function every(days: number): string {

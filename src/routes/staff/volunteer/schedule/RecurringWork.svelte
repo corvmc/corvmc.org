@@ -14,6 +14,8 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
 	import { formatDate } from '$lib/utils/format';
+	import { clubToday } from '$lib/config';
+	import { addIsoDays } from '$lib/utils/deadline';
 	import {
 		getRecurringWorkPage,
 		createRecurringWork,
@@ -24,7 +26,7 @@
 	// Above the await: a declaration after it is async-gated.
 	const assetField = createRecurringWork.fields.assetId;
 	let asset = $state<{ id: string; name: string; detail: string | null } | null>(null);
-	const defaultFirstDue = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+	const defaultFirstDue = addIsoDays(clubToday(), 7);
 
 	const data = $derived(await getRecurringWorkPage());
 	const roleOptions = $derived(data.roles.map((r) => ({ value: r.id, label: r.name })));
