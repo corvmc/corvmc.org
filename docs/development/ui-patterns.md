@@ -1082,6 +1082,11 @@ Two rules hold whichever you pick:
 Chrome only: the `overflow-x-auto` wrapper, the daisyUI modifiers, and
 `thead`/`tbody`.
 
+A table wider than its container scrolls inside the wrapper, never the page.
+The wrapper shows an inset shadow on each edge that has columns past it
+(`data-overflow-start` / `data-overflow-end` on the frame), so a clipped column
+reads as scrollable (#1965). It is still a fallback: tier or merge columns first.
+
 ```svelte
 <Table>
 	{#snippet head()}
