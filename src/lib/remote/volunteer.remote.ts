@@ -22,6 +22,7 @@ import {
 } from '$lib/server/volunteer/volunteer-signup-service';
 import { mapDomainError } from '$lib/server/errors';
 import { jsonArrayField } from '$lib/utils/zod-json';
+import { byDueAt } from '$lib/utils/work-order-due';
 import { suggestSkills } from '$lib/server/directory/directory-service';
 import { listMyPrograms } from '$lib/server/group/group-service';
 import { renderMarkdown } from '$lib/utils/markdown';
@@ -1518,7 +1519,9 @@ export const getSchedulePage = query(shiftFilters, async (f) => {
 		}),
 		listWorkOrders({ volunteerRoleId: f.volunteerRoleId || undefined })
 	]);
-	return { shifts, unscheduled };
+	// Re-sorted here, not in `listWorkOrders`: that is an oldest-first queue for its
+	// other callers, but on a schedule the next deadline is what reads first (#1966).
+	return { shifts, unscheduled: unscheduled.sort(byDueAt) };
 });
 
 /**

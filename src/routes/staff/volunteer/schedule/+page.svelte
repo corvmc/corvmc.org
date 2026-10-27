@@ -22,6 +22,8 @@
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import { isOverdue } from '$lib/utils/work-order-due';
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import NewWorkOrderAction from '../NewWorkOrderAction.svelte';
 	import RecurringWork from './RecurringWork.svelte';
@@ -238,6 +240,9 @@
 					<tr class="hover {empty ? 'border-l-4 border-l-warning bg-warning/5' : ''}">
 						<td class="whitespace-nowrap">
 							<a {href} class:text-subtle={!w.startsAt} class="link font-medium">{when(w)}</a>
+							{#if !w.startsAt && isOverdue(w, anchor)}
+								<Badge variant="warning" size="sm">Overdue</Badge>
+							{/if}
 						</td>
 
 						<td class="cell-primary">
