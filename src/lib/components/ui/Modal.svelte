@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Dialog } from 'bits-ui';
 	import type { Snippet } from 'svelte';
-	import { setDefaultButtonSize } from './Button.svelte';
+	import { setButtonsAsMenuItems, setDefaultButtonSize } from './Button.svelte';
 
 	let {
 		open = $bindable(false),
@@ -28,6 +28,7 @@
 
 	// A dialog opened from a header action is not part of the header.
 	setDefaultButtonSize(undefined);
+	setButtonsAsMenuItems(false);
 
 	function handleOpenChange(next: boolean) {
 		if (!next && confirmClose && !confirmClose()) {

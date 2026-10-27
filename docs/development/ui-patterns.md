@@ -1336,6 +1336,23 @@ Page title with breadcrumbs, optional subtitle, and right-side action slot.
 </PageHeader>
 ```
 
+**More actions than a phone row holds go behind •••.** Pass the rarely-used ones as a `menu`
+snippet and the one that matters as `primary`; `PageHeader` owns the ••• dropdown. Below `sm`,
+a header with a `menu` folds its `children` into that dropdown too, so a phone shows the title,
+`primary` and ••• only. Every `Button` and `Action` inside the dropdown renders as a ghost,
+left-aligned row whatever variant it was given, and a modal action still opens its modal from
+there. A header without a `menu` never folds; its actions wrap onto their own line instead.
+
+```svelte
+<PageHeader title={project.name} menuLabel="More project actions">
+	<Button variant="default" href={budgetHref}>Budget</Button>
+	{#snippet primary()}<Action action={updateProjectForm} label="Edit project" />{/snippet}
+	{#snippet menu()}<Action action={setProjectStatusForm} label="Archive" />{/snippet}
+</PageHeader>
+```
+
+`OverflowMenu` is the same ••• dropdown on its own, for an overflow anywhere else.
+
 **Breadcrumbs are derived, not written.** Each panel layout (`staff`, `member`,
 `band/[slug]`) passes `navTrail()` from `$lib/components/layout/nav-trail.ts` into
 context, built from its own nav tree, and `PageHeader` appends the page's title as the
