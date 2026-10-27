@@ -27,7 +27,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { IconCheck, IconDots } from '@tabler/icons-svelte';
+	import { IconCheck } from '@tabler/icons-svelte';
 	import ActivityCard from '$lib/components/project/ActivityCard.svelte';
 	import TaskList from './TaskList.svelte';
 	import TaskPanel from './TaskPanel.svelte';
@@ -89,6 +89,7 @@
 	title={project.name}
 	subtitle={committeeNames || 'No committee owns this yet'}
 	sticky={false}
+	menuLabel="More project actions"
 >
 	<Button variant="default" href={resolve(`/staff/projects/${project.id}/budget`)}>Budget</Button>
 	{#if dutyListOptions.length > 0}
@@ -119,105 +120,98 @@
 		</Action>
 	{/if}
 
-	<Action
-		action={updateProjectForm}
-		label="Edit project"
-		modalTitle="Edit project"
-		successToast="Saved"
-	>
-		{#snippet form()}
-			<input {...editFields.id.as('hidden', project.id)} />
-			<Field field={editFields.name} type="text" label="Name" value={project.name} />
-			<Field
-				field={editFields.description}
-				type="textarea"
-				label="Description"
-				value={project.description ?? ''}
-			/>
-			<Field
-				field={editFields.groupId}
-				type="select"
-				label="Owning committee"
-				options={committeeOptions}
-				value={owner?.groupId ?? ''}
-			/>
-			<Field
-				field={editFields.suggestionId}
-				type="select"
-				label="Answers the suggestion"
-				options={suggestionOptions}
-				value={project.suggestionId ?? ''}
-				description="One project per suggestion. Its status follows this one from now on."
-			/>
-			<MoneyField field={editFields.budgetCents} label="Budget" value={project.budgetCents} />
-			<Field
-				field={editFields.startsAt}
-				type="date"
-				label="Starts"
-				value={asDateValue(project.startsAt)}
-			/>
-			<Field
-				field={editFields.endsAt}
-				type="date"
-				label="Ends"
-				value={asDateValue(project.endsAt)}
-			/>
-		{/snippet}
-	</Action>
-
-	<details class="dropdown dropdown-end">
-		<summary class="btn btn-square btn-ghost btn-sm" aria-label="More project actions">
-			<IconDots size={16} />
-		</summary>
-		<div class="dropdown-content dropdown-panel flex w-60 flex-col gap-1">
-			{#if isProjectArchived(project.status)}
-				<Action
-					action={setProjectStatusForm}
-					label="Unarchive"
-					variant="ghost"
-					class="justify-start"
-					modalTitle="Unarchive project"
-					successToast="Project unarchived"
-				>
-					{#snippet form()}
-						<input {...statusFields.id.as('hidden', project.id)} />
-						<input {...statusFields.status.as('hidden', PROJECT_UNARCHIVED_STATUS)} />
-						<p class="text-sm">It returns to the active list with its tasks as they are.</p>
-					{/snippet}
-				</Action>
-			{:else}
-				<Action
-					action={setProjectStatusForm}
-					label="Archive"
-					variant="ghost"
-					class="justify-start"
-					modalTitle="Archive project"
-					successToast="Project archived"
-				>
-					{#snippet form()}
-						<input {...statusFields.id.as('hidden', project.id)} />
-						<Field
-							field={statusFields.status}
-							type="select"
-							label="Outcome"
-							options={projectArchiveOutcomeOptions}
-							value="done"
-							description={project.suggestionId
-								? 'The suggestion this answers reports the same outcome.'
-								: undefined}
-						/>
-					{/snippet}
-				</Action>
-			{/if}
-			{#if data.canCreateBallot}
-				<CreateBallotAction
-					kind="member"
-					panel="staff"
-					decides={{ projectId: project.id, title: project.name }}
+	{#snippet primary()}
+		<Action
+			action={updateProjectForm}
+			label="Edit project"
+			modalTitle="Edit project"
+			successToast="Saved"
+		>
+			{#snippet form()}
+				<input {...editFields.id.as('hidden', project.id)} />
+				<Field field={editFields.name} type="text" label="Name" value={project.name} />
+				<Field
+					field={editFields.description}
+					type="textarea"
+					label="Description"
+					value={project.description ?? ''}
 				/>
-			{/if}
-		</div>
-	</details>
+				<Field
+					field={editFields.groupId}
+					type="select"
+					label="Owning committee"
+					options={committeeOptions}
+					value={owner?.groupId ?? ''}
+				/>
+				<Field
+					field={editFields.suggestionId}
+					type="select"
+					label="Answers the suggestion"
+					options={suggestionOptions}
+					value={project.suggestionId ?? ''}
+					description="One project per suggestion. Its status follows this one from now on."
+				/>
+				<MoneyField field={editFields.budgetCents} label="Budget" value={project.budgetCents} />
+				<Field
+					field={editFields.startsAt}
+					type="date"
+					label="Starts"
+					value={asDateValue(project.startsAt)}
+				/>
+				<Field
+					field={editFields.endsAt}
+					type="date"
+					label="Ends"
+					value={asDateValue(project.endsAt)}
+				/>
+			{/snippet}
+		</Action>
+	{/snippet}
+
+	{#snippet menu()}
+		{#if isProjectArchived(project.status)}
+			<Action
+				action={setProjectStatusForm}
+				label="Unarchive"
+				modalTitle="Unarchive project"
+				successToast="Project unarchived"
+			>
+				{#snippet form()}
+					<input {...statusFields.id.as('hidden', project.id)} />
+					<input {...statusFields.status.as('hidden', PROJECT_UNARCHIVED_STATUS)} />
+					<p class="text-sm">It returns to the active list with its tasks as they are.</p>
+				{/snippet}
+			</Action>
+		{:else}
+			<Action
+				action={setProjectStatusForm}
+				label="Archive"
+				modalTitle="Archive project"
+				successToast="Project archived"
+			>
+				{#snippet form()}
+					<input {...statusFields.id.as('hidden', project.id)} />
+					<Field
+						field={statusFields.status}
+						type="select"
+						label="Outcome"
+						options={projectArchiveOutcomeOptions}
+						value="done"
+						description={project.suggestionId
+							? 'The suggestion this answers reports the same outcome.'
+							: undefined}
+					/>
+				{/snippet}
+			</Action>
+		{/if}
+		{#if data.canCreateBallot}
+			<CreateBallotAction
+				kind="member"
+				panel="staff"
+				decides={{ projectId: project.id, title: project.name }}
+			/>
+		{/if}
+	{/snippet}
 </PageHeader>
 
 <PageContent>

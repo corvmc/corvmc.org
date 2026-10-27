@@ -46,6 +46,17 @@
 		setContext(SIZE_KEY, size);
 	}
 
+	const MENU_ITEM_KEY = Symbol('button-menu-item');
+
+	/**
+	 * Render every Button below the caller as a menu row — ghost, left-aligned —
+	 * whatever variant it was given, so an action folded into an overflow menu
+	 * matches the rows written for it. Modal resets it with `false`.
+	 */
+	export function setButtonsAsMenuItems(on: boolean) {
+		setContext(MENU_ITEM_KEY, on);
+	}
+
 	/** Does an escape-hatch `class` already pick a colour? See the note below. */
 	const CARRIES_VARIANT = new RegExp(
 		`(^|\\s)(${Object.values(VARIANTS).filter(Boolean).join('|')})(\\s|$)`
@@ -127,8 +138,10 @@
 	const inheritedSize = getContext<ButtonSize | undefined>(SIZE_KEY);
 	const resolvedSize = $derived(size ?? inheritedSize ?? 'md');
 
+	const asMenuItem = getContext<boolean | undefined>(MENU_ITEM_KEY) ?? false;
+
 	const resolvedVariant = $derived(
-		variant ?? (CARRIES_VARIANT.test(className) ? 'default' : 'primary')
+		asMenuItem ? 'ghost' : (variant ?? (CARRIES_VARIANT.test(className) ? 'default' : 'primary'))
 	);
 
 	const classes = $derived(
@@ -141,7 +154,8 @@
 			VARIANTS[resolvedVariant],
 			SIZES[resolvedSize],
 			shape && SHAPES[shape],
-			outline && 'btn-outline',
+			outline && !asMenuItem && 'btn-outline',
+			asMenuItem && 'justify-start',
 			className
 		)
 	);

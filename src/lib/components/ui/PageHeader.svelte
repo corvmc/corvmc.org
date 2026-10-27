@@ -1,10 +1,12 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import { setDefaultButtonSize } from '$lib/components/ui/Button.svelte';
 	import Breadcrumbs from './Breadcrumbs.svelte';
 	import { getBreadcrumbTrail, pageCrumbs, type Crumb } from './breadcrumbs';
 	import { pageTitle } from '$lib/config';
 	import { PAGE_WIDTH, type PageWidth } from './page-width';
+	import { MediaQuery } from 'svelte/reactivity';
+	import OverflowMenu from './OverflowMenu.svelte';
 
 	let {
 		title,
@@ -16,8 +18,20 @@
 		flush = false,
 		sticky = true,
 		leading,
+		primary,
+		menu,
+		menuLabel,
 		children
 	}: {
+		/** The one action that stays on the row at every width, beside the ••• menu. */
+		primary?: Snippet;
+		/**
+		 * Rows of the header's ••• menu. A header with a menu folds its `children`
+		 * into it below `sm`, so a phone keeps the title, `primary` and •••.
+		 */
+		menu?: Snippet;
+		/** Accessible name of the ••• trigger. */
+		menuLabel?: string;
 		title: string;
 		/**
 		 * Match the `PageContent` below. The header is full-bleed and sticky, so
@@ -68,6 +82,13 @@
 	const trail = getBreadcrumbTrail();
 	const parents = $derived(parent === undefined ? [] : Array.isArray(parent) ? parent : [parent]);
 	const crumbs = $derived(pageCrumbs(trail?.current, parents, crumb ?? title));
+
+	// Tailwind's `sm`. SSR renders the wide row and so does hydration, which must
+	// match it; a phone folds once mounted.
+	const wide = new MediaQuery('min-width: 40rem', true);
+	let mounted = $state(false);
+	onMount(() => (mounted = true));
+	const folded = $derived(!!menu && mounted && !wide.current);
 </script>
 
 <!--
@@ -95,14 +116,19 @@
 		title and the actions land on the same two edges as the content below.
 	-->
 	<div class="flex flex-wrap items-center justify-between gap-2 {PAGE_WIDTH[width]}">
-		<div class="flex min-w-0 flex-1 flex-col">
+		<!--
+			The title column has a real minimum: with `min-w-0` alone it never
+			forces a wrap, and four actions squeezed it to "Fo…" on a phone (#1910).
+			`truncate` sits on a span because h1's unlayered `text-wrap` defeats it.
+		-->
+		<div class="flex min-w-[min(12rem,100%)] flex-1 flex-col">
 			<Breadcrumbs {crumbs} />
 			<div class="flex min-w-0 items-center gap-3">
 				{#if leading}
 					{@render leading()}
 				{/if}
 				<hgroup class="flex min-w-0 flex-col">
-					<h1 class="truncate text-2xl font-bold">{title}</h1>
+					<h1 class="text-2xl font-bold"><span class="block truncate">{title}</span></h1>
 					{#if subtitle}
 						<span class="text-sm font-bold text-primary uppercase">{subtitle}</span>
 					{/if}
@@ -114,9 +140,20 @@
 			header is `justify-between`, so two or more loose buttons get spread
 			across its whole width instead of sitting together opposite the title.
 		-->
-		{#if children}
+		{#if children || primary || menu}
 			<div class="flex flex-wrap items-center justify-end gap-2">
-				{@render children()}
+				{#if !folded}
+					{@render children?.()}
+				{/if}
+				{@render primary?.()}
+				{#if menu}
+					<OverflowMenu label={menuLabel}>
+						{#if folded}
+							{@render children?.()}
+						{/if}
+						{@render menu()}
+					</OverflowMenu>
+				{/if}
 			</div>
 		{/if}
 	</div>
