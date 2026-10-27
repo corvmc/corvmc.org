@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { form } from './_remote';
-import { getRequestEvent } from '$app/server';
+import { getRequestEvent, query } from '$app/server';
 import { error } from '@sveltejs/kit';
 import { requireCapability } from '$lib/server/authorization';
 import { requireProjectCommittee } from '$lib/server/group/group-context';
@@ -43,6 +43,7 @@ import { PERCENTAGE_BPS_MAX } from '$lib/production/terms';
 import { getStaffEventPage, getStaffEventProduction, getStaffEvents } from './events.remote';
 import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
 import { create as createEventListing } from '$lib/server/event/event-service';
+import { listAttachableListings } from '$lib/server/production/attachable-listings';
 import { DEFAULT_TIMEZONE, productionExpenseCategories, requestableArtifacts } from '$lib/config';
 
 /**
@@ -139,6 +140,12 @@ export const createProduction = form(
 	}
 );
 
+/** The shows on the calendar "New production" can attach to, on the same guard. */
+export const getAttachableListings = query(async () => {
+	await requireCapability('production.create');
+	return listAttachableListings();
+});
+
 /**
  * Open a show from nothing: a draft listing, its production, and its project
  * with Booking and Production attached. Guarded on `production.create` alone,
@@ -167,7 +174,8 @@ export const createShow = form(
 				endsAt,
 				kind: 'show',
 				groupId: null,
-				createdByUserId: user.id
+				createdByUserId: user.id,
+				withProduction: true
 			});
 			return { eventId: row.id };
 		} catch (err) {

@@ -88,13 +88,13 @@ async function createEvent(
 	start = EVENT_START,
 	end = EVENT_END
 ) {
-	await page.goto('/staff/productions');
-	await page.getByRole('button', { name: 'New Event' }).click();
+	await page.goto('/staff/events');
+	await page.getByRole('button', { name: 'Create Listing' }).click();
 	await page.locator('input[name="title"]').fill(title);
 	await page.locator('input[name="eventDate"]').fill(date);
 	await page.locator('input[name="eventStartTime"]').fill(start);
 	await page.locator('input[name="eventEndTime"]').fill(end);
-	await page.getByRole('button', { name: 'Create Event' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Create Listing' }).click();
 	await goToConsole(page, title);
 }
 
@@ -112,8 +112,8 @@ async function holdSpace(page: Page) {
 test.describe('staff event creation — minimal modal', () => {
 	test('the create modal asks for no room, ticket or poster', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/productions');
-		await page.getByRole('button', { name: 'New Event' }).click();
+		await page.goto('/staff/events');
+		await page.getByRole('button', { name: 'Create Listing' }).click();
 
 		const dialog = page.getByRole('dialog');
 		await expect(dialog.locator('input[name="title"]')).toBeVisible({ timeout: 15000 });
@@ -249,8 +249,7 @@ test.describe('staff event edit — reserve space', () => {
 		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue(EVENT_END);
 
 		// `exact`: the console also carries "Save bill", and a substring match
-		// resolves to both the moment the lineup editor renders — which every CMC
-		// show now does, because every CMC show now has a production (#1202).
+		// resolves to both the moment the lineup editor renders.
 		await page.getByRole('button', { name: 'Save', exact: true }).click();
 
 		// Presence of the link proves the reservation was created AND linked. By

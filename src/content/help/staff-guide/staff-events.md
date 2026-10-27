@@ -10,9 +10,11 @@ sortOrder: 8
 ## Managing events
 
 **Staff → Events** lists events by date with status, tags, and space-reservation
-info. Create a new one with **New Event** (or **Create Listing** on the Calendar), or open an
-event to manage it. Creating asks only for the title, kind, date and times; the event's page opens
-next, with its edit form open, for everything else.
+info. Create a new one with **Create Listing**, or open an event to manage it. Creating asks only
+for the title, kind, date and times; the event's page opens next, with its edit form open, for
+everything else. A listing has no production until someone opens one: **Staff → Productions →
+New Production** attaches one to a show already on the calendar, or makes the listing and its
+production together.
 
 ## On the event detail page
 

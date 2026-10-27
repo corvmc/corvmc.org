@@ -10,7 +10,7 @@
 	let open = $state(false);
 </script>
 
-<!-- The same form as Productions' New Event: a listing staff post is a CMC event. -->
+<!-- A listing only: no production is opened unless Productions is asked for one. -->
 {#if hasCapability(caps, 'event.manage')}
 	<Button variant="default" size="sm" onclick={() => (open = true)}>Create Listing</Button>
 	<CreateEventModal bind:open title="Create Listing" submitLabel="Create Listing" />

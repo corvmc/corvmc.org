@@ -29,7 +29,7 @@ copied from that row's page. There is no "add to project" button on the event si
 and the end only rolls past midnight when it is earlier than the start — so a 9pm–1am show works
 and a Saturday-noon-to-Sunday-night one does not. Create one event per day.
 
-Make them from **Staff → Productions → New Event**:
+Make them from **Staff → Events → Create Listing**:
 
 - **Do not tick _Reserve practice space_** on the production console for an off-site show. The
   room hold is what keeps members from booking the practice space, and a show in a park has no
