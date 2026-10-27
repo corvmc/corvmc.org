@@ -68,6 +68,9 @@
 	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
 	import { Button as BitsButton, Tooltip, mergeProps } from 'bits-ui';
 	import clsx from 'clsx';
+	import { page } from '$app/state';
+	import { signedIn } from './signed-in';
+	import { here, signInHref } from '$lib/utils/sign-in';
 
 	/**
 	 * The app's button. Variant, size and shape are props, not class strings —
@@ -99,11 +102,17 @@
 		size,
 		shape,
 		outline = false,
+		requiresAuth,
 		class: className = '',
 		children,
 		...rest
 	}: {
 		href?: string;
+		/**
+		 * Needs an account (#1999). Signed out, the button becomes the sign-in
+		 * interrupt link, returning here; a string names the intent on `/login`.
+		 */
+		requiresAuth?: boolean | string;
 		/**
 		 * Tooltip text — rendered on the button itself, not a wrapper (see below).
 		 * On a disabled button it becomes a native `title` attribute instead: a
@@ -133,7 +142,22 @@
 	// type against it makes TS give up with "union type is too complex to
 	// represent". The precision is wanted at the call site, where the typo
 	// happens — not on this hop, where the value has already been checked.
-	const passthrough = $derived(rest as Record<string, unknown>);
+	const viewerSignedIn = signedIn();
+	const interrupt = $derived(
+		requiresAuth && viewerSignedIn && !viewerSignedIn()
+			? signInHref({
+					returnTo: here(page.url),
+					intent: typeof requiresAuth === 'string' ? requiresAuth : undefined
+				})
+			: null
+	);
+	// The interrupt is a plain link, so the action it stands in for must not ride along.
+	const passthrough = $derived.by(() => {
+		if (!interrupt) return rest as Record<string, unknown>;
+		const { onclick: _c, type: _t, form: _f, ...link } = rest as Record<string, unknown>;
+		return link;
+	});
+	const resolvedHref = $derived(interrupt ?? href);
 
 	const inheritedSize = getContext<ButtonSize | undefined>(SIZE_KEY);
 	const resolvedSize = $derived(size ?? inheritedSize ?? 'md');
@@ -167,7 +191,11 @@
      accessibility tree entirely. -->
 {#snippet renderButton(triggerProps?: Record<string | symbol, unknown>)}
 	<BitsButton.Root
-		{...mergeProps(triggerProps ?? {}, passthrough, { href, disabled, class: classes })}
+		{...mergeProps(triggerProps ?? {}, passthrough, {
+			href: resolvedHref,
+			disabled,
+			class: classes
+		})}
 	>
 		{@render children?.()}
 	</BitsButton.Root>
@@ -178,7 +206,12 @@
      what a disabled control needs. Fall back to the native attribute. -->
 {#snippet plainButton(nativeTitle?: string)}
 	<BitsButton.Root
-		{...mergeProps(passthrough, { href, disabled, class: classes, title: nativeTitle })}
+		{...mergeProps(passthrough, {
+			href: resolvedHref,
+			disabled,
+			class: classes,
+			title: nativeTitle
+		})}
 	>
 		{@render children?.()}
 	</BitsButton.Root>

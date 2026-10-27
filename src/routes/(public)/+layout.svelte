@@ -3,6 +3,7 @@
 	import SiteHeader from '$lib/components/public/layout/SiteHeader.svelte';
 	import SiteFooter from '$lib/components/public/layout/SiteFooter.svelte';
 	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
+	import SignedInProvider from '$lib/components/ui/SignedInProvider.svelte';
 	import { getMe } from '$lib/remote/layout.remote';
 
 	let { children } = $props();
@@ -27,7 +28,10 @@
 			renders that snippet during SSR instead of awaiting its contents.
 		-->
 		<ErrorToastBoundary showPending={false}>
-			{@render children()}
+			<!-- What `requiresAuth` controls read to interrupt to sign-in (#1999). -->
+			<SignedInProvider signedIn={!!user}>
+				{@render children()}
+			</SignedInProvider>
 		</ErrorToastBoundary>
 	</main>
 	<!--

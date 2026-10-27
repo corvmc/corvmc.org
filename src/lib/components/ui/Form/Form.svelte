@@ -44,6 +44,9 @@
 	import { reportError } from '$lib/report-error';
 	import { errorMessage } from '$lib/error-message';
 	import { recoverFromStaleDeploy } from '$lib/stale-deploy-recovery';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { signInInterruptFor } from '$lib/utils/sign-in';
 	import { getErrorBoundary } from '../ErrorToastBoundary.svelte';
 	import FormGuard from './FormGuard.svelte';
 
@@ -195,6 +198,14 @@
 		}
 	}
 
+	async function interruptForSignIn(err: unknown): Promise<boolean> {
+		const href = signInInterruptFor(err, page.url);
+		if (!href) return false;
+		status = 'idle';
+		await goto(href);
+		return true;
+	}
+
 	// Step navigation is button-driven (a non-last-step button calls next()); the
 	// only way to accidentally submit mid-wizard is pressing Enter inside a text
 	// field, which we redirect to "advance" below. A submit *event* always means
@@ -269,6 +280,10 @@
 				// bug — reload onto the new build instead of reporting it.
 				if (await recoverFromStaleDeploy(err)) return;
 
+				// A 401 is "sign in first" (#1999), not a failure: off to sign-in,
+				// returning here. Nothing is replayed; the member submits again.
+				if (await interruptForSignIn(err)) return;
+
 				// Genuine submission failure (network/server). Surfaced whether or not
 				// the caller passed `onfailure`: a thrown error has no field to render
 				// in, and a handler that swallowed it left the user with nothing but a
@@ -305,6 +320,7 @@
 			changeCount = 0;
 		} catch (err) {
 			await delay(150 - (performance.now() - start));
+			if (await interruptForSignIn(err)) return;
 			surfaceFailure(err);
 			onfailure?.(null, err);
 			status = 'error';

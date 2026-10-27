@@ -55,6 +55,7 @@ import { seedVenues } from './fixtures/seed-venues';
 import { seedSponsorsAndGrants } from './fixtures/seed-sponsors-grants';
 import { seedProductions } from './fixtures/seed-productions';
 import { seedTicketPurchase } from './fixtures/seed-ticket-purchase';
+import { seedRsvp } from './fixtures/seed-rsvp';
 import { seedReservationPayments } from './fixtures/seed-reservation-payments';
 import { seedVolunteering } from './fixtures/seed-volunteering';
 import { seedFeatureFlags } from './fixtures/seed-feature-flags';
@@ -123,6 +124,7 @@ await seedStaffEvent();
 await seedPublishBlockers();
 // After the staff fixture: the show is created by the staff user.
 await seedTicketPurchase();
+await seedRsvp();
 await seedReservationPayments();
 await seedVolunteering();
 await seedCommunityEvents();

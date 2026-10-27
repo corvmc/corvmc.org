@@ -20,6 +20,7 @@
 	import RecapUpload from './RecapUpload.svelte';
 	import MarketVendors from './MarketVendors.svelte';
 	import SponsorCredit from './SponsorCredit.svelte';
+	import RsvpControl from './RsvpControl.svelte';
 
 	let data = $derived(await getPublicEventDetail(page.params.id!));
 
@@ -363,13 +364,7 @@
 								size="lg">Get Tickets ↗</Button
 							>
 						{/if}
-						<Button
-							href={resolve('/login')}
-							variant={mode === 'external' ? 'ghost' : 'primary'}
-							size="lg"
-						>
-							{mode === 'external' ? "Sign in to say you're going" : 'Sign in to RSVP'}
-						</Button>
+						<RsvpControl eventId={evt.id} eventTitle={evt.title} external={mode === 'external'} />
 						{#if data.rsvpCount > 0}
 							<span class="text-muted">{data.rsvpCount} going</span>
 						{/if}

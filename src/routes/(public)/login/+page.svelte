@@ -15,6 +15,7 @@
 	import { getMe } from '$lib/remote/layout.remote';
 	import { TURNSTILE_SITE_KEY } from '$lib/turnstile';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import { safeReturnPath, verificationCallbackURL } from '$lib/utils/sign-in';
 
 	// Deliberately NOT `await getMe()`. A top-level await puts the whole template
 	// behind an async boundary, and on a direct load of ?register that stops the
@@ -30,8 +31,12 @@
 	// navigation is in flight at that moment — including the first link the member
 	// clicks after landing, which then silently does nothing.
 	let navigatingAfterSignIn = false;
+	// Only ever a same-origin path: `redirect` is whatever the link said (#1999).
+	const returnTo = $derived(safeReturnPath(page.url.searchParams.get('redirect')));
+	// What the visitor was doing when the interrupt sent them here.
+	const intent = $derived(page.url.searchParams.get('intent')?.trim().slice(0, 120) || null);
 	$effect(() => {
-		if (me.current && !navigatingAfterSignIn) goto(resolve('/member'));
+		if (me.current && !navigatingAfterSignIn) goto(returnTo ?? resolve('/member'));
 	});
 
 	let inviteToken = $derived(page.url.searchParams.get('invite'));
@@ -95,6 +100,10 @@
 		if (mode === 'register') {
 			body.name = data.get('name') as string;
 			headers['x-turnstile-token'] = turnstileToken;
+			// The verification email's link lands on the return path too, so an
+			// action started signed out resumes from the inbox.
+			const callbackURL = verificationCallbackURL(returnTo);
+			if (callbackURL) body.callbackURL = callbackURL;
 		}
 
 		const res = await fetch(endpoint, {
@@ -121,7 +130,7 @@
 			throw Object.assign(new Error(error), { status: res.status });
 		}
 
-		const redirectTo = new URLSearchParams(window.location.search).get('redirect') ?? '/member';
+		const redirectTo = returnTo ?? '/member';
 		navigatingAfterSignIn = true;
 		await goto(redirectTo, { invalidateAll: true });
 	}
@@ -157,6 +166,15 @@
 							<span
 								><strong>{inviteMeta.inviterName}</strong> invited you to join
 								<strong>{inviteMeta.groupName}</strong>. Create an account to get started.</span
+							>
+						</Alert>
+					{/if}
+
+					{#if intent && !inviteMeta}
+						<Alert type="info" class="text-sm">
+							<span
+								>Sign in or create a free account to <strong>{intent}</strong>. You'll come straight
+								back to finish.</span
 							>
 						</Alert>
 					{/if}

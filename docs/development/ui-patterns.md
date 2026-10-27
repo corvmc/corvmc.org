@@ -291,6 +291,18 @@ Props:
 `Action`, `SubmitButton` and every `shared/actions/*Action.svelte` wrapper take the same
 `variant`/`size`/`shape`/`outline` props and forward them here.
 
+### Sign-in interrupt
+
+An action that needs an account takes `requiresAuth` on `Button` or `Action` (a string names
+the intent, e.g. `requiresAuth="RSVP to {title}"`). Where the layout provides the viewer's state —
+`SignedInProvider`, mounted by the public layout — a signed-out viewer gets a link to `/login` that
+returns to this page; signed in, it is the ordinary control. A `Form` whose remote answers 401 takes
+the same route on its own, so a session that lapsed mid-page needs no per-action code.
+
+Build any other sign-in link with `signInHref()` from `$lib/utils/sign-in` rather than by hand: it
+accepts only a same-origin return path, and `/login` re-validates whatever arrives. The return is
+where the visitor taps again — nothing is replayed and nothing writes on the way back. #1999.
+
 ## SubmitButton
 
 Status-aware submit button that reads from `FormContext`. Shows spinner while pending, checkmark on success, X on error.
