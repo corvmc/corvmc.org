@@ -15,7 +15,11 @@ const eventBookerJoin = and(
 	eq(reservation.bookerType, 'production'),
 	eq(eventListing.productionId, reservation.bookerId)
 );
-import { eq, and, isNull, sql, count } from 'drizzle-orm';
+import { eq, and, isNull, sql, count, gt, inArray, asc } from 'drizzle-orm';
+import { workOrder, memberOrientation } from '$lib/server/db/schema/volunteer';
+import { paymentCache } from '$lib/server/db/schema/finance';
+import { cancel as cancelReservation } from './reservation-service';
+import { promoteNextWaitlisted } from './waitlist-service';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import {
 	bandRefColumns,
@@ -203,24 +207,150 @@ export async function createEventSeries(params: CreateEventSeriesParams): Promis
 }
 
 // ---------------------------------------------------------------------------
-// cancel() — stop a series from generating new instances
+// cancel() — end a series: stop generation, cancel the next booking, delete the rest
 // ---------------------------------------------------------------------------
 
-export async function cancel(seriesId: string): Promise<void> {
-	const result = await db
-		.update(recurringSeries)
-		.set({ cancelledAt: new Date() })
+/** Who is ending the series; decides how each booking's cancellation is recorded. */
+export type SeriesCanceller =
+	{ kind: 'staff'; userId: string } | { kind: 'owner'; userId: string } | { kind: 'system' };
+
+export interface SeriesCancelOutcome {
+	cancelled: string[];
+	deleted: string[];
+	errors: string[];
+}
+
+const SERIES_CANCEL_REASON = 'Recurring series cancelled';
+const LIVE_STATUSES: ('scheduled' | 'confirmed' | 'waitlisted')[] = [
+	'scheduled',
+	'confirmed',
+	'waitlisted'
+];
+
+/**
+ * A booking that may be hard-deleted: nothing paid or committed against it, no
+ * door code issued for it, and no row pointing at it. Anything else is
+ * cancelled instead, so its refund and its listeners still run.
+ */
+const deletable = () =>
+	and(
+		isNull(reservation.stripePaymentRecordId),
+		isNull(reservation.paidAt),
+		isNull(reservation.creditsUsed),
+		isNull(reservation.cashDueCents),
+		isNull(reservation.lockCode),
+		isNull(reservation.lockAccessId),
+		isNull(reservation.lockFallbackRevealedAt),
+		sql`NOT EXISTS (SELECT 1 FROM ${workOrder} WHERE ${workOrder.reservationId} = ${reservation.id})`,
+		sql`NOT EXISTS (SELECT 1 FROM ${memberOrientation} WHERE ${memberOrientation.reservationId} = ${reservation.id})`,
+		sql`NOT EXISTS (SELECT 1 FROM ${eventListing} WHERE ${eventListing.reservationId} = ${reservation.id})`,
+		sql`NOT EXISTS (SELECT 1 FROM ${paymentCache} WHERE ${paymentCache.reservationId} = ${reservation.id})`
+	);
+
+function cancelArgs(by: SeriesCanceller): [string, Parameters<typeof cancelReservation>[3]] {
+	if (by.kind === 'staff') return [by.userId, { staffOverride: true }];
+	// The caller has already established that this user owns the series.
+	if (by.kind === 'owner') return [by.userId, { authorizedActor: true }];
+	return ['', { staffOverride: true, actor: 'system' }];
+}
+
+/**
+ * Ends a series. For a reservation series the next live booking is cancelled
+ * and each later one deleted, unless `deletable` refuses it or it is the
+ * prototype, in which case it is cancelled too. An event series only stops
+ * generating.
+ */
+export async function cancel(seriesId: string, by: SeriesCanceller): Promise<SeriesCancelOutcome> {
+	const [series] = await db
+		.select({
+			prototypeType: recurringSeries.prototypeType,
+			prototypeId: recurringSeries.prototypeId
+		})
+		.from(recurringSeries)
 		.where(
 			and(
 				eq(recurringSeries.id, seriesId),
 				isNull(recurringSeries.cancelledAt),
 				isNull(recurringSeries.supersededBy)
 			)
-		);
+		)
+		.limit(1);
+	if (!series) throw new RecurringSeriesError('Series not found or already cancelled');
 
-	if (getRowCount(result) === 0) {
+	const now = new Date();
+	const upcoming =
+		series.prototypeType === 'reservation'
+			? await db
+					.select({
+						id: reservation.id,
+						startsAt: reservation.startsAt,
+						endsAt: reservation.endsAt,
+						deletable: sql<number>`${deletable()}`.mapWith(Number)
+					})
+					.from(reservation)
+					.where(
+						and(
+							eq(reservation.recurringSeriesId, seriesId),
+							gt(reservation.startsAt, now),
+							inArray(reservation.status, LIVE_STATUSES)
+						)
+					)
+					.orderBy(asc(reservation.startsAt))
+			: [];
+
+	const candidates = upcoming
+		.slice(1)
+		.filter((r) => r.deletable && r.id !== series.prototypeId)
+		.map((r) => r.id);
+
+	const stop = db
+		.update(recurringSeries)
+		.set({ cancelledAt: now })
+		.where(and(eq(recurringSeries.id, seriesId), isNull(recurringSeries.cancelledAt)));
+	// `deletable` is re-checked in the delete, so a booking paid between the read
+	// and the batch survives it and falls through to `toCancel` below.
+	const [stopped, removed] = candidates.length
+		? await db.batch([
+				stop,
+				db
+					.delete(reservation)
+					.where(
+						and(
+							inArray(reservation.id, candidates),
+							inArray(reservation.status, LIVE_STATUSES),
+							deletable()
+						)
+					)
+					.returning({ id: reservation.id })
+			])
+		: [await stop, []];
+	if (getRowCount(stopped) === 0) {
 		throw new RecurringSeriesError('Series not found or already cancelled');
 	}
+
+	const deletedIds = new Set(removed.map((r) => r.id));
+	const toDelete = upcoming.filter((r) => deletedIds.has(r.id));
+	const toCancel = upcoming.filter((r) => !deletedIds.has(r.id));
+	const outcome: SeriesCancelOutcome = { cancelled: [], deleted: [...deletedIds], errors: [] };
+	const [userId, options] = cancelArgs(by);
+	for (const row of toCancel) {
+		try {
+			await cancelReservation(row.id, userId, SERIES_CANCEL_REASON, options);
+			outcome.cancelled.push(row.id);
+		} catch (err) {
+			outcome.errors.push(`Failed to cancel reservation ${row.id}: ${(err as Error).message}`);
+		}
+	}
+	// A deleted booking emits no `reservation.cancelled`, so its slot is offered here.
+	for (const row of toDelete) {
+		try {
+			await promoteNextWaitlisted(row.startsAt, row.endsAt);
+		} catch (err) {
+			outcome.errors.push(`Failed to promote waitlist for ${row.id}: ${(err as Error).message}`);
+		}
+	}
+	for (const msg of outcome.errors) console.error(`[recurring] ${msg}`);
+	return outcome;
 }
 
 // ---------------------------------------------------------------------------
@@ -228,25 +358,18 @@ export async function cancel(seriesId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * Called from the `subscription.deleted` webhook.
+ * Called from the `subscription.deleted` webhook. Each series ends as `cancel()`
+ * ends one, as the system: its next booking cancelled, later ones deleted.
  *
  * **Scoped to `bookerType: 'user'`, and that scope is the point.** A recurring
  * rehearsal series is a membership benefit, so a lapse ends it. Teaching time is
- * not a benefit — it is a rental at a rate CMC granted directly — and the
- * subscription never bought it, so a lapse must not take it away.
- *
- * Without the scope an instructor who let their membership lapse would lose
- * their standing lesson slots **silently**: a cancelled series does not error,
- * it simply stops generating, so the first anyone would know is a teacher
- * arriving to find the room gone.
+ * a rental at a rate CMC granted directly; the subscription never bought it, so
+ * a lapse must not take an instructor's standing lesson slots away.
  */
-
 export async function cancelAllForUser(userId: string): Promise<number> {
-	const now = new Date();
-
-	const result = await db
-		.update(recurringSeries)
-		.set({ cancelledAt: now })
+	const rows = await db
+		.select({ id: recurringSeries.id })
+		.from(recurringSeries)
 		.where(
 			and(
 				eq(recurringSeries.prototypeType, 'reservation'),
@@ -260,7 +383,17 @@ export async function cancelAllForUser(userId: string): Promise<number> {
 			)
 		);
 
-	return getRowCount(result);
+	let cancelled = 0;
+	for (const row of rows) {
+		try {
+			await cancel(row.id, { kind: 'system' });
+			cancelled++;
+		} catch (err) {
+			// Another path ended it between the read and here; nothing is left to do.
+			if (!(err instanceof RecurringSeriesError)) throw err;
+		}
+	}
+	return cancelled;
 }
 
 // ---------------------------------------------------------------------------

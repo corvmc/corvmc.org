@@ -39,6 +39,9 @@
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', seriesId)} />
-		<p class="py-4">Cancel this recurring series? Future reservations will not be created.</p>
+		<p class="py-4">
+			Cancel this recurring series? Your next session is cancelled and later ones are removed. Any
+			already paid for are cancelled and refunded instead.
+		</p>
 	{/snippet}
 </Action>
