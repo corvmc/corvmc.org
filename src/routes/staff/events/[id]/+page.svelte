@@ -21,6 +21,7 @@
 	import RecurringSeriesBar from '$lib/components/events/RecurringSeriesBar.svelte';
 	import RepeatEventAction from '$lib/components/events/RepeatEventAction.svelte';
 	import SpaceHoldCard from '$lib/components/events/SpaceHoldCard.svelte';
+	import ListingTicketing from '$lib/components/events/ListingTicketing.svelte';
 	import {
 		PublishEventAction,
 		UnpublishEventAction,
@@ -42,7 +43,7 @@
 	/**
 	 * The listing — every source, any staffer — and where `entity-href` sends
 	 * every event ref. It owns everything public-facing: the lifecycle, the full
-	 * edit, the poster, the series and the room hold (#1946). The console at
+	 * edit, the poster, the series, the room hold and the sale (#1946). The console at
 	 * `[id]/production` is back-of-house only. Writes take `event.manage` or the
 	 * show's committee; the guard is `requireListingWriter`, on the remotes.
 	 */
@@ -63,8 +64,7 @@
 
 	// ── Edit ──────────────────────────────────────────────────────────────
 	// The whole listing: every `updateEvent` field, ticketing and the room hold
-	// included. Ticketing stats, comps and the ticket list are still the
-	// console's until #1949.
+	// included. The sale's stats, comps and tickets are `ListingTicketing`.
 	let editing = $state(false);
 	let lineup = $state<LineupChip[]>([]);
 
@@ -386,6 +386,14 @@
 		eventId={evt.id}
 		posterUrl={detail.posterUrl}
 		cancelled={evt.status === 'cancelled'}
+		onchange={refresh}
+	/>
+
+	<ListingTicketing
+		event={evt}
+		ticketStats={detail.ticketStats}
+		ticketMoney={detail.ticketMoney}
+		tickets={detail.tickets}
 		onchange={refresh}
 	/>
 

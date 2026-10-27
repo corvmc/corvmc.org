@@ -8,18 +8,17 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { CompTicketsAction } from '$lib/components/actions';
 	import { getStaffEventProduction } from '$lib/remote/events.remote';
 	import ListingEditForm from '$lib/components/events/ListingEditForm.svelte';
 	import ListingPosterCard from '$lib/components/events/ListingPosterCard.svelte';
 	import RecurringSeriesBar from '$lib/components/events/RecurringSeriesBar.svelte';
 	import SpaceHoldCard from '$lib/components/events/SpaceHoldCard.svelte';
+	import ListingTicketing from '$lib/components/events/ListingTicketing.svelte';
 	const createProductionFields = createProduction.fields;
 	import RepeatEventAction from '$lib/components/events/RepeatEventAction.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import {
-		formatCents,
 		formatDateShort,
 		formatDateTime,
 		formatTimeRange,
@@ -27,7 +26,6 @@
 		toLocalDate,
 		toLocalDateTime
 	} from '$lib/utils/format';
-	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import { EntityChip } from '$lib/components/ui/entity';
@@ -108,21 +106,6 @@
 
 	const evt = $derived(data.event);
 
-	// Summed on the server, over live tickets only. This page used to add up the
-	// ledger it renders — which is `getEventTickets` with no status filter, so a
-	// cancelled purchase's money still counted as the show's.
-	const money = $derived(data.ticketMoney);
-	// What Stripe took: everything collected, less what the buyers directed. Not
-	// stored, because it is exactly this subtraction.
-	const cardCents = $derived(
-		money
-			? money.ticketsCents +
-					money.contributionsCents +
-					money.feeCoveredCents -
-					money.actsCents -
-					money.collectiveCents
-			: 0
-	);
 	const liveVolunteerRoles = $derived(volunteerRoles.filter((r) => r.isActive));
 
 	/**
@@ -784,142 +767,13 @@
 			class="space-y-6"
 			class:hidden={tab !== 'tickets'}
 		>
-			<!-- Ticketing -->
-			{#if evt.ticketingEnabled || evt.ticketPrice}
-				<InfoCard title="Ticketing">
-					<div class="flex gap-6">
-						<div>
-							<p class="text-muted">Price</p>
-							<p class="text-lg font-medium">{priceDisplay(evt).label}</p>
-						</div>
-						<div>
-							<p class="text-muted">Sold by</p>
-							<p class="text-lg font-medium">
-								{evt.ticketingEnabled ? 'Us' : evt.externalTicketUrl ? 'Off-site' : 'At the door'}
-							</p>
-						</div>
-						{#if evt.ticketingEnabled}
-							<div>
-								<p class="text-muted">Capacity</p>
-								<p class="text-lg font-medium">{evt.ticketQuantity ?? 'Unlimited'}</p>
-							</div>
-						{/if}
-						{#if data.ticketStats}
-							<div>
-								<p class="text-muted">Sold</p>
-								<p class="text-lg font-medium">{data.ticketStats.sold}</p>
-							</div>
-							<div>
-								<p class="text-muted">Remaining</p>
-								<p class="text-lg font-medium">{data.ticketStats.remaining ?? '∞'}</p>
-							</div>
-						{/if}
-						{#if money && money.contributionsCents > 0}
-							<div>
-								<p class="text-muted">Contributions</p>
-								<p class="text-lg font-medium">{formatCents(money.contributionsCents)}</p>
-							</div>
-						{/if}
-						{#if money && money.freeCount > 0}
-							<div>
-								<!-- A $0-floor show can be "sold out" on tickets nobody paid for.
-							     Staff should be able to see that at a glance. -->
-								<p class="text-muted">Free / paid</p>
-								<p class="text-lg font-medium">{money.freeCount} / {money.paidCount}</p>
-							</div>
-						{/if}
-					</div>
-
-					{#if money && (money.actsCents > 0 || money.collectiveCents > 0)}
-						<div class="mt-4 border-t border-base-200 pt-4">
-							<p class="text-muted">Where buyers sent it</p>
-							<div class="mt-2 flex gap-6">
-								<div>
-									<p class="text-muted">To the acts</p>
-									<p class="text-lg font-medium">{formatCents(money.actsCents)}</p>
-								</div>
-								<div>
-									<p class="text-muted">To the Collective</p>
-									<p class="text-lg font-medium">{formatCents(money.collectiveCents)}</p>
-								</div>
-								<div>
-									<p class="text-muted">Card processing</p>
-									<p class="text-lg font-medium">{formatCents(cardCents)}</p>
-								</div>
-							</div>
-							<!-- The only refund mechanism is a human in the Stripe dashboard,
-						     which nothing here can see. -->
-							<p class="mt-2 text-muted text-sm">
-								As sold. Refunds are handled in Stripe and are not reflected here.
-							</p>
-						</div>
-					{/if}
-
-					{#if evt.status === 'published' && evt.ticketingEnabled}
-						<div class="mt-3">
-							<a
-								href={resolve(`/events/${evt.id}/tickets`)}
-								class="link text-sm link-primary"
-								target="_blank"
-							>
-								View purchase page →
-							</a>
-						</div>
-					{/if}
-
-					{#if evt.status !== 'cancelled'}
-						<div class="mt-4 border-t border-base-200 pt-4">
-							<CompTicketsAction eventId={evt.id} />
-						</div>
-					{/if}
-				</InfoCard>
-
-				<!-- Ticket list -->
-				{#if data.tickets.length > 0}
-					<InfoCard title="Tickets ({data.tickets.length})">
-						<Table>
-							{#snippet head()}
-								<th class="w-px"><span class="sr-only">Status</span></th>
-								<th>Attendee</th>
-								<th class="w-px text-right">Paid</th>
-								<th class="w-px">Code</th>
-							{/snippet}
-							{#each data.tickets as t (t.id)}
-								<tr class="hover">
-									<td class="w-px"><StatusBadge status={t.status} /></td>
-									<td class="cell-primary">
-										<div class="truncate font-medium">{t.attendeeName}</div>
-										<div class="truncate text-muted">{t.attendeeEmail}</div>
-									</td>
-									<td class="w-px text-right whitespace-nowrap">
-										<div class="font-medium">
-											{t.unitPriceCents === null ? '—' : formatCents(t.unitPriceCents)}
-										</div>
-										{#if t.contributionCents > 0}
-											<div class="text-sm text-success">
-												+{formatCents(t.contributionCents)} contributed
-											</div>
-										{/if}
-										{#if t.actsCents > 0 || t.collectiveCents > 0}
-											<!-- Order-level, so this is on the purchase's first row only —
-										     not a per-ticket fact, and the label has to say so. -->
-											<div class="text-muted text-sm">
-												order → acts {formatCents(t.actsCents)} · collective {formatCents(
-													t.collectiveCents
-												)}
-											</div>
-										{/if}
-										{#if t.discountWaived}
-											<div class="text-muted">Waived discount</div>
-										{/if}
-									</td>
-									<td class="w-px"><span class="font-mono text-sm">{t.code}</span></td>
-								</tr>
-							{/each}
-						</Table>
-					</InfoCard>
-				{/if}
-			{/if}
+			<ListingTicketing
+				event={evt}
+				ticketStats={data.ticketStats}
+				ticketMoney={data.ticketMoney}
+				tickets={data.tickets}
+				onchange={refresh}
+			/>
 		</div>
 	{/if}
 
