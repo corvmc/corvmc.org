@@ -74,7 +74,8 @@ test.describe('venues', () => {
 		await page.getByRole('dialog').getByRole('button', { name: 'Create Listing' }).click();
 		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
 		await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
-		await page.goto(`${new URL(page.url()).pathname}/production`);
+		// Create lands with `?edit=1`; reloaded bare so the test opens Edit itself.
+		await page.goto(new URL(page.url()).pathname);
 		await page.getByRole('button', { name: 'Edit' }).click();
 
 		// The toggle is there while the show is in our room.

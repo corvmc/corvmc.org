@@ -18,13 +18,21 @@ production together.
 
 ## On the event detail page
 
-- **Edit details** — Title, description, date, start/end/doors times, venue and tags.
-- **On the production console** — the poster, ticketing (**price** and **quantity**), the
-  practice-space reservation, and **Repeat this event** to make it a series.
+- **Edit details** — Title, description, date, start/end/doors times, venue and tags, plus
+  ticketing (**price** and **quantity**) and the practice-space reservation.
+- **Poster, ticket sales and repeats** — the poster card, the ticket list and comps, and
+  **Repeat this event** to make it a series, all on the same page.
 - **Publish / Unpublish** — Control whether the event is visible.
 - **Cancel** — Call off an event.
 - **Rebook** — If you change the time, rebook the linked reservation; conflicts are
   flagged so you can override deliberately.
+
+## The production console
+
+A CMC show's **Manage production** button opens its console, which is back-of-house only: the
+production record (status, producer, host), deliverables, artifact requests and tech riders,
+volunteer shifts, the run of show, and the budget and settlement. Anything the public sees is
+edited on the event page; **View listing** on the console takes you back there.
 
 ## Check-in
 

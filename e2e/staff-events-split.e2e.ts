@@ -139,10 +139,17 @@ test.describe('staff events split', () => {
 		// production row, and the one entry into the console names the state it
 		// is in rather than claiming there is something to manage (#976).
 		await expect(page.getByRole('link', { name: 'Open a production' })).toBeVisible();
+		// The room hold is the listing's (#1946), so it is here and not below.
+		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toBeVisible();
 
 		await page.goto(`/staff/events/${SEED_SPLIT_CMC_LIVE_ID}/production`);
 		await expect(page.getByRole('heading', { name: SEED_SPLIT_CMC_LIVE_TITLE })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Production', exact: true })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toHaveCount(0);
+		await expect(page.getByRole('link', { name: 'View listing' })).toHaveAttribute(
+			'href',
+			`/staff/events/${SEED_SPLIT_CMC_LIVE_ID}`
+		);
 
 		// The console is tabbed now, and the staffing lives on Advance. Reached by
 		// the tab rather than by `?tab=`, because what this asserts is that the

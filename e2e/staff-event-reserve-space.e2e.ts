@@ -15,8 +15,8 @@ import {
 } from './fixtures/seed-staff-event';
 
 /**
- * End-to-end pin for "Reserve practice space", which lives on the production
- * console's edit form. The create modal asks only for what the row needs
+ * End-to-end pin for "Reserve practice space", which lives on the listing's
+ * edit form at `/staff/events/[id]` (#1946). The create modal asks only for what the row needs
  * (#1822's rule), so every hold below is raised after the event exists.
  *
  * The toggle once passed its value one-way to FormField, so the reservation
@@ -53,14 +53,13 @@ async function waitForEventPage(page: Page, title: string) {
 }
 
 /**
- * Creating a show lands on the general event view, which is every staffer's
- * view and carries no production controls. The room — and the edit form that
- * books it — is the console's, one level down. Everything this file asserts
- * after a create lives there.
+ * Creating a show lands on the listing with `?edit=1`, its edit form already
+ * open. Reloaded without the query so every test opens Edit itself, from the
+ * same closed state.
  */
-async function goToConsole(page: Page, title: string) {
+async function goToListing(page: Page, title: string) {
 	await waitForEventPage(page, title);
-	await page.goto(`${new URL(page.url()).pathname}/production`);
+	await page.goto(new URL(page.url()).pathname);
 	await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
 }
 
@@ -80,7 +79,7 @@ const EVENT_DATE = SEED_EVENT_DATE;
 const EVENT_START = SEED_EVENT_START;
 const EVENT_END = SEED_EVENT_END;
 
-/** Create an event through the minimal modal and open its console. */
+/** Create an event through the minimal modal and land on its listing. */
 async function createEvent(
 	page: Page,
 	title: string,
@@ -95,14 +94,14 @@ async function createEvent(
 	await page.locator('input[name="eventStartTime"]').fill(start);
 	await page.locator('input[name="eventEndTime"]').fill(end);
 	await page.getByRole('dialog').getByRole('button', { name: 'Create Listing' }).click();
-	await goToConsole(page, title);
+	await goToListing(page, title);
 }
 
-/** From the console: open Edit, tick the hold, save, and wait for the link. */
+/** From the listing: open Edit, tick the hold, save, and wait for the link. */
 async function holdSpace(page: Page) {
 	await page.getByRole('button', { name: 'Edit' }).click();
 	await page.getByRole('checkbox', RESERVE_CHECKBOX).check();
-	// `exact`: the console also carries "Save bill".
+	// `exact`: the open edit form also carries "Save bill".
 	await page.getByRole('button', { name: 'Save', exact: true }).click();
 	await expect(page.locator('a[href^="/staff/reservations/"]').first()).toBeVisible({
 		timeout: 15000
@@ -151,7 +150,7 @@ test.describe('staff event creation — minimal modal', () => {
 		const eventDate = bookingDate(SEED_LIST_LINK_DATE, retry);
 		const title = `${SEED_EVENT_TITLE_PREFIX} ${Date.now()}`;
 		await createEvent(page, title, eventDate);
-		const eventId = new URL(page.url()).pathname.split('/').at(-2)!;
+		const eventId = new URL(page.url()).pathname.split('/').at(-1)!;
 		await holdSpace(page);
 
 		await page.goto('/staff/reservations');
@@ -248,8 +247,8 @@ test.describe('staff event edit — reserve space', () => {
 		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue(EVENT_START);
 		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue(EVENT_END);
 
-		// `exact`: the console also carries "Save bill", and a substring match
-		// resolves to both the moment the lineup editor renders.
+		// `exact`: the open edit form also carries "Save bill", and a substring
+		// match resolves to both the moment the lineup editor renders.
 		await page.getByRole('button', { name: 'Save', exact: true }).click();
 
 		// Presence of the link proves the reservation was created AND linked. By

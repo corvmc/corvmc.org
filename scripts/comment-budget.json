@@ -624,7 +624,6 @@
 	"src/routes/staff/events/PendingReviewBadge.svelte",
 	"src/routes/staff/events/[id]/production/+page.svelte",
 	"src/routes/staff/events/[id]/production/ProductionStatusAction.svelte",
-	"src/routes/staff/events/[id]/production/tabs.ts",
 	"src/routes/staff/inbox/FilterPanel.svelte",
 	"src/routes/staff/inbox/InboxChannelFilter.svelte",
 	"src/routes/staff/inbox/InboxHeader.svelte",

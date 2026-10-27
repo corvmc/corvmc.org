@@ -1184,7 +1184,7 @@ async function requireShowReader(eventId: string) {
 	error(403, 'Not permitted');
 }
 
-/** Live venues, shaped for the venue picker on the two staff edit forms. */
+/** Live venues, shaped for the venue picker on the listing's edit form. */
 async function venuePickerOptions() {
 	const rows = await listLiveVenues();
 	return rows.map((v) => ({ id: v.id, name: v.name, isPrimary: v.isPrimary }));
@@ -1204,12 +1204,10 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	// `custom/no-concurrent-remote-queries` exists to stop a page fanning them out.
 	const [
 		detail,
-		recurringSeries,
 		shifts,
 		advance,
 		volunteerRoles,
 		dutyLists,
-		venues,
 		riders,
 		production,
 		runOfShow,
@@ -1221,7 +1219,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		committees
 	] = await Promise.all([
 		getStaffEventDetail(id),
-		getEventRecurringSeries(id),
 		getShifts({ eventId: id }),
 		// `listShifts` filters `starts_at IS NOT NULL`, so the advance half of an
 		// applied duty list — a `dueOffsetMinutes` item, which is where the
@@ -1230,7 +1227,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		listOpenWorkOrders({ eventId: id }),
 		getVolunteerRoles(),
 		listApplicableDutyLists(),
-		venuePickerOptions(),
 		// What each act on the bill says it needs. The advance checklist has always
 		// carried a task reading "Collect tech riders and stage plots"; this is the
 		// answer to it, on the page where that work happens.
@@ -1267,13 +1263,11 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	return {
 		budget,
 		detail,
-		recurringSeries,
 		shifts,
 		// The deliverables have their own card; the advance card keeps the rest.
 		advance: advance.filter((w) => !w.groupId && !w.doneWhen),
 		volunteerRoles,
 		dutyLists,
-		venues,
 		riders,
 		production,
 		runOfShow,
