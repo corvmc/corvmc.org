@@ -35,3 +35,40 @@ describe('Table column packing', () => {
 		expect(box('actions').right).toBeGreaterThan(330);
 	});
 });
+
+// #1965: on a phone a wide table scrolls inside its wrapper while the page does
+// not, so the clipped columns need a visible cue on the side that has more.
+describe('Table scroll cue', () => {
+	const scroller = () =>
+		page.getByTestId('primary').element().closest<HTMLElement>('.overflow-x-auto')!;
+	const frame = () => scroller().parentElement;
+
+	it('cues the end edge when the table overflows to the right', async () => {
+		await render(TableHarness, { width: 348, extra: 3 });
+		await expect.element(page.getByTestId('primary')).toBeVisible();
+
+		expect(scroller().scrollWidth).toBeGreaterThan(scroller().clientWidth);
+		await expect.poll(() => frame()?.hasAttribute('data-overflow-end')).toBe(true);
+		expect(frame()!.hasAttribute('data-overflow-start')).toBe(false);
+		expect(getComputedStyle(frame()!, '::after').boxShadow).not.toBe('none');
+	});
+
+	it('shows no cue when the table fits', async () => {
+		await render(TableHarness, { width: 348 });
+		await expect.element(page.getByTestId('primary')).toBeVisible();
+
+		expect(scroller().scrollWidth).toBe(scroller().clientWidth);
+		expect(frame()!.hasAttribute('data-overflow-end')).toBe(false);
+		expect(frame()!.hasAttribute('data-overflow-start')).toBe(false);
+	});
+
+	it('moves the cue to the start edge once scrolled to the end', async () => {
+		await render(TableHarness, { width: 348, extra: 3 });
+		await expect.poll(() => frame()?.hasAttribute('data-overflow-end')).toBe(true);
+
+		const el = scroller();
+		el.scrollLeft = el.scrollWidth;
+		await expect.poll(() => frame()!.hasAttribute('data-overflow-start')).toBe(true);
+		expect(frame()!.hasAttribute('data-overflow-end')).toBe(false);
+	});
+});
