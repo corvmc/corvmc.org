@@ -32,7 +32,7 @@
 	let { logs, total }: { logs: Log[]; total: number } = $props();
 </script>
 
-<InfoCard title="Hours to review" state={total}>
+<InfoCard title="Unreviewed Hours" state={total}>
 	{#snippet action()}
 		<Button href="/staff/volunteer/hours" variant="ghost" size="sm">
 			{total > logs.length ? `All ${total} →` : 'Open the queue →'}

@@ -26,7 +26,7 @@
 	const isLate = (o: (typeof orders)[number]) => isOrderLate(o, now);
 </script>
 
-<PageHeader title="Orders" subtitle="Inventory" backHref="/staff/inventory">
+<PageHeader title="Orders" subtitle="Inventory">
 	<Button href="/staff/inventory/restock" variant="ghost" size="sm">From the restock list</Button>
 </PageHeader>
 

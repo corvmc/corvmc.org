@@ -36,7 +36,7 @@
 	};
 </script>
 
-<PageHeader width="3xl" title={post.title} subtitle="Classifieds" backHref="/member/classifieds">
+<PageHeader width="3xl" title={post.title} subtitle="Classifieds">
 	{#if post.isMine}
 		{#if post.status === 'open'}
 			<EditClassifiedAction {post} onsuccess={refresh} />

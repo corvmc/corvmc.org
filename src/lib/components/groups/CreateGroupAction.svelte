@@ -41,15 +41,18 @@
 		{ value: 'hidden', label: 'Hidden — not listed anywhere' }
 	];
 
+	let selectedKind = $state(kind);
 	let joinPolicy = $state('invite_only');
+	// Committees all join by application (#1700), so a committee is not asked.
+	const showsInstructions = $derived(selectedKind === 'committee' || joinPolicy !== 'invite_only');
 </script>
 
 <Action
 	action={createStaffGroup}
 	label={kind === 'committee' ? 'New Committee' : 'New Club'}
-	modalTitle="New group"
-	submitLabel="Create group"
-	successToast="Group created"
+	modalTitle={kind === 'committee' ? 'New Committee' : 'New Club'}
+	submitLabel={kind === 'committee' ? 'Create Committee' : 'Create Club'}
+	successToast={kind === 'committee' ? 'Committee created' : 'Club created'}
 	size="sm"
 	onsuccess={(result) => {
 		const made = result as { id?: string; kind?: string } | undefined;
@@ -67,7 +70,7 @@
 				field={fields.kind}
 				type="select"
 				label="Kind"
-				value={kind}
+				bind:value={selectedKind}
 				options={kindOptions}
 				description="A club is a program members drop into; a committee does the Collective's work."
 				required
@@ -91,16 +94,21 @@
 			<!-- Asked at creation, not left to the column defaults: those make a
 			     group public and invite-only at once, so it is advertised and
 			     unjoinable until someone finds the settings form (#1106). -->
-			<FormField
-				field={fields.joinPolicy}
-				type="select"
-				label="Who can join"
-				bind:value={joinPolicy}
-				options={policyOptions}
-				required
-			/>
+			{#if selectedKind === 'committee'}
+				<input {...fields.joinPolicy.as('hidden', 'by_application')} />
+				<p class="text-muted">Committees take members by application; a chair approves.</p>
+			{:else}
+				<FormField
+					field={fields.joinPolicy}
+					type="select"
+					label="Who can join"
+					bind:value={joinPolicy}
+					options={policyOptions}
+					required
+				/>
+			{/if}
 
-			{#if joinPolicy !== 'invite_only'}
+			{#if showsInstructions}
 				<FormField
 					field={fields.joinInstructions}
 					type="textarea"

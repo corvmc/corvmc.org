@@ -10,6 +10,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, desc, gte } from 'drizzle-orm';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { listAll, listForUser, partitionByStatus } from '$lib/server/band/band-service';
+import { getBandTotals } from '$lib/server/band/band-totals-service';
 import {
 	memberRefColumns,
 	reservationRefColumns,
@@ -68,6 +69,12 @@ export const getStaffBands = query(staffBandsFilters, async (filters) => {
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
 	);
+});
+
+/** The Bands page's summary counts — org-wide, independent of the table's filters. */
+export const getStaffBandTotals = query(async () => {
+	await requireCapability('band.read');
+	return getBandTotals();
 });
 
 // ===========================================================================

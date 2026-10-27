@@ -81,8 +81,11 @@ describe('activeNavKey', () => {
 		['/staff/inventory/restock', 'inventory-restock'],
 		['/staff/inventory/spend', 'inventory-spend'],
 		['/staff/inventory/compliance', 'inventory-compliance'],
+		// Loans left Inventory's children for a row of its own; its URL did not move.
 		['/staff/inventory/loans', 'equipment-loans'],
 		['/staff/inventory/loans/abc', 'equipment-loans'],
+		['/staff/reservations/abc', 'reservations'],
+		['/staff/recurring/abc', 'reservations'],
 		['/staff/flags/equipment', 'equipment-reports'],
 		['/staff/flags/equipment/abc', 'equipment-reports'],
 		['/staff/contractors', 'contractors'],
@@ -131,8 +134,8 @@ describe('the nav tree', () => {
 
 	it('resolves every row to its own key, so no row is shadowed by another', () => {
 		// The property `activeNavKey` actually needs. Note it holds without every
-		// child sitting under its parent's path: Reservations groups `/staff/recurring`
-		// and `/staff/closures`, which are siblings of it in the route tree.
+		// child sitting under its parent's path: Volunteering's rows do, but
+		// Reservations claims `/staff/recurring` through `also`.
 		for (const item of allStaffNavItems()) {
 			expect(activeNavKey(item.href)).toBe(item.key);
 		}
@@ -146,8 +149,7 @@ describe('the nav tree', () => {
 			'/staff/volunteer',
 			'/staff/volunteer/schedule',
 			'/staff/volunteer/people',
-			'/staff/volunteer/duty-lists',
-			'/staff/volunteer/recurring'
+			'/staff/volunteer/duty-lists'
 		]);
 	});
 
@@ -186,7 +188,13 @@ describe('the nav tree', () => {
 			'volunteer'
 		]);
 		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'contractor-jobs']);
-		expect(keys('space')).toEqual(['reservations', 'equipment', 'renewals', 'keys']);
+		expect(keys('space')).toEqual([
+			'reservations',
+			'equipment',
+			'equipment-loans',
+			'renewals',
+			'keys'
+		]);
 		expect(keys('partners')).toEqual(['sponsors', 'venues', 'local-resources', 'contractors']);
 		expect(keys('moderation')).toEqual(['flags', 'classifieds', 'incidents']);
 		expect(keys('outreach')).toEqual(['campaigns', 'audiences']);
@@ -220,10 +228,10 @@ describe('route coverage', () => {
 		'/staff/volunteer/roles',
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
-		'/staff/inventory/locations', // reached from Inventory, beside Categories; `backHref` points there
+		'/staff/inventory/locations', // reached from Inventory, beside Categories; its breadcrumb runs through it
 		'/staff/inventory/intake', // a session started from Inventory's header, not a list (#1838)
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
-		'/staff/grants/funders', // reached from Grants' header; `backHref` points there
+		'/staff/grants/funders', // reached from Grants' header; its breadcrumb runs through it
 		// Reached from Bands, which links to it in its header. Not its own row on
 		// purpose: an external act is the same staff job as a band — who is
 		// playing here — and one of them can turn into the other, so splitting

@@ -7,8 +7,8 @@ import { requireProjectCommittee } from '$lib/server/group/group-context';
 import { getMemberGroup } from '$lib/remote/groups.remote';
 import { mapDomainError } from '$lib/server/errors';
 import {
-	projectKinds,
 	projectStatuses,
+	projectViews,
 	DEFAULT_TIMEZONE,
 	VOLUNTEER_SHIFT_NOTES_MAX
 } from '$lib/config';
@@ -31,7 +31,11 @@ import {
 	startProjectFromSuggestion,
 	updateProject
 } from '$lib/server/project/project-service';
-import { listProjectTasks, requireTaskInProject } from '$lib/server/project/project-task-service';
+import {
+	listProjectProgress,
+	listProjectTasks,
+	requireTaskInProject
+} from '$lib/server/project/project-task-service';
 import { ACTIVITY_MAX, listActivity } from '$lib/server/project/project-activity';
 import { getProjectOrigin, startProjectFromBallot } from '$lib/server/project/decision-chain';
 import { applyDutyList, listDutyLists } from '$lib/server/volunteer/duty-list-service';
@@ -108,9 +112,9 @@ async function listUnansweredSuggestions() {
 
 const projectFilters = z
 	.object({
-		status: z.enum(projectStatuses).optional(),
-		groupId: z.uuid().optional(),
-		kind: z.enum(projectKinds).optional()
+		/** Unset is `active`: archived projects are a filter away, not on by default. */
+		view: z.enum(projectViews).optional(),
+		groupId: z.uuid().optional()
 	})
 	.optional();
 
@@ -124,11 +128,22 @@ const projectFilters = z
 export const getProjectsPage = query(projectFilters, async (filters) => {
 	await requireCapability('project.read');
 
-	const [projects, committees] = await Promise.all([listProjects(filters ?? {}), listCommittees()]);
+	const view = filters?.view ?? 'active';
+	// Productions have their own index at /staff/productions.
+	const [projects, committees] = await Promise.all([
+		listProjects({
+			groupId: filters?.groupId,
+			kind: 'general',
+			archived: view === 'all' ? undefined : view === 'archived'
+		}),
+		listCommittees()
+	]);
 
-	const [burns, taking] = await Promise.all([
+	const ids = projects.map((p) => p.id);
+	const [burns, taking, progress] = await Promise.all([
 		Promise.all(projects.map((p) => getProjectBurn(p.id))),
-		listProjectCommittees(projects.map((p) => p.id))
+		listProjectCommittees(ids),
+		listProjectProgress(ids)
 	]);
 
 	return {
@@ -136,6 +151,7 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 		projects: projects.map((project, i) => ({
 			project,
 			burn: burns[i],
+			progress: progress.get(project.id) ?? { done: 0, total: 0 },
 			committeeNames: taking.filter((c) => c.projectId === project.id).map((c) => c.name)
 		}))
 	};

@@ -35,7 +35,7 @@
 	width="2xl"
 	subtitle={asset.categoryName}
 	title={asset.name}
-	backHref="/member/equipment"
+	parent={{ label: 'Equipment', href: resolve('/member/equipment') }}
 >
 	<!-- The whole point of the sticker. This page had `itemId` and used it only
 	     to fetch resources, so a member who scanned a thing they wanted was told

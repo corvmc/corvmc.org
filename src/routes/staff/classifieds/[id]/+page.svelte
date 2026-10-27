@@ -20,7 +20,7 @@
 	}
 </script>
 
-<PageHeader width="3xl" title={post.title} subtitle="Classifieds" backHref="/staff/classifieds">
+<PageHeader width="3xl" title={post.title} subtitle="Classifieds">
 	{#if post.visibility !== 'visible'}
 		<Action
 			action={showForm}

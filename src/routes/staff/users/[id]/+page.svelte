@@ -124,7 +124,7 @@
 	strip below it, because the strip's only reason to restate the name was to
 	have something to put beside the picture.
 -->
-<PageHeader subtitle="Member" title={member.name} backHref="/staff/users">
+<PageHeader subtitle="Member" title={member.name}>
 	{#snippet leading()}
 		<Avatar src={member.avatarUrl ?? undefined} name={member.name} class="size-12" />
 	{/snippet}

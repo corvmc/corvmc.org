@@ -42,7 +42,7 @@
 	};
 </script>
 
-<PageHeader title="Committees" subtitle="Volunteering" backHref="/member/volunteer" />
+<PageHeader title="Committees" subtitle="Volunteering" />
 
 <PageContent>
 	<p class="mb-4 text-subtle">

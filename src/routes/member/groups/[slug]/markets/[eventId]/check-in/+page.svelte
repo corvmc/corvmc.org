@@ -7,4 +7,12 @@
 	const eventId = $derived(page.params.eventId!);
 </script>
 
-<VendorCheckIn {eventId} backHref={resolve(`/member/groups/${slug}/markets/${eventId}`)} />
+<VendorCheckIn
+	{eventId}
+	parent={[
+		{
+			label: 'Vendors',
+			href: resolve('/member/groups/[slug]/markets/[eventId]', { slug, eventId })
+		}
+	]}
+/>

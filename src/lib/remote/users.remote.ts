@@ -14,7 +14,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { listLowStock } from '$lib/server/inventory/stock-service';
-import { activeUser, deactivatedUser, getUserTotals } from '$lib/server/user/user-totals-service';
+import { getUserTotals, sustainingUser, userListWhere } from '$lib/server/user/user-totals-service';
 import { listShortStaffedShifts } from '$lib/server/volunteer/work-order-service';
 import { listDevelopmentDeadlinesBetween } from '$lib/server/development/deadline-service';
 import { addIsoDays } from '$lib/utils/deadline';
@@ -43,7 +43,6 @@ async function dashboardDeadlines() {
 import {
 	requireCapability,
 	can,
-	isPosition,
 	requireUser,
 	committeeCapabilitiesFor
 } from '$lib/server/authorization';
@@ -55,8 +54,8 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { eq, or, count, desc, gte, lte, ne, inArray, sql, and } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
 import { getUserRoles } from '$lib/server/authorization';
+import { positionChangeRefusal } from '$lib/server/access/position-service';
 import { memberRefColumns, toMemberRef, toEventRef } from '$lib/server/entity/refs';
 import { paginate } from '$lib/server/db/paginate';
 import { jsonArrayField } from '$lib/utils/zod-json';
@@ -173,30 +172,28 @@ export const getStaffUserTotals = query(async () => {
 	return getUserTotals();
 });
 
+const yesNoFilter = z.boolean().optional();
 const staffUsersFilters = z.object({
 	search: z.string().optional(),
 	status: z.enum(['active', 'deactivated', 'all']).optional(),
+	sustaining: yesNoFilter,
+	inBand: yesNoFilter,
+	staff: yesNoFilter,
+	instructor: yesNoFilter,
 	page: z.number().optional()
 });
 
 export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 	await requireCapability('user.list');
 
-	const search = filters.search?.trim();
-	const searchCondition = search
-		? or(containsLiteral(user.name, search), containsLiteral(user.email, search))
-		: undefined;
-	const status = filters.status ?? 'active';
-	const statusCondition =
-		status === 'active' ? activeUser() : status === 'deactivated' ? deactivatedUser() : undefined;
-	const where =
-		searchCondition && statusCondition
-			? and(searchCondition, statusCondition)
-			: (searchCondition ?? statusCondition);
+	const where = userListWhere(filters);
 
 	const dataQ = db
 		.select({
 			member: memberRefColumns(),
+			phone: user.phone,
+			// The same predicate as the Sustaining filter and count.
+			sustaining: sql<number>`${sustainingUser()}`,
 			deletedAt: user.deletedAt,
 			createdAt: user.createdAt
 		})
@@ -222,6 +219,8 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 			// ref may describe a member who is gone.
 			id: u.member.id,
 			email: u.member.email,
+			phone: u.phone,
+			sustaining: Boolean(u.sustaining),
 			deletedAt: u.deletedAt,
 			createdAt: u.createdAt,
 			// Deactivation is the row's status, not a badge the page bolts on: it
@@ -427,33 +426,14 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 				error(403, 'You cannot change roles.');
 			}
 
-			// Role changes can lock people out of the panel, and nothing else can
-			// undo that from the UI. Two cases are refused outright.
-
-			// 1. Don't let a caller drop their own elevated access. Tested against
-			//    every position, not just admin/staff: a volunteer coordinator
-			//    editing their own profile would otherwise trip this guard.
-			if (id === actor.id && !nextRoleNames.some((n) => isPosition(n))) {
-				error(400, 'You cannot remove your own staff access.');
-			}
-
-			// 2. Don't let the last admin be demoted — that leaves nobody able to
-			//    restore the role. Load-bearing now in a way it was not before:
-			//    admin is the only holder of user.setRole, user.purge and
-			//    credit.adjust, so this is what stops the app reaching a state only
-			//    `wrangler d1 execute` can leave.
-			if (targetCurrentRoles.includes('admin') && !nextRoleNames.includes('admin')) {
-				const adminRoleId = [...namesById.entries()].find(([, n]) => n === 'admin')?.[0];
-				if (adminRoleId !== undefined) {
-					const [{ value: adminCount }] = await db
-						.select({ value: count() })
-						.from(modelHasRole)
-						.where(and(eq(modelHasRole.roleId, adminRoleId), ne(modelHasRole.userId, id)));
-					if (adminCount === 0) {
-						error(409, 'This is the last admin — assign another admin before removing this role.');
-					}
-				}
-			}
+			// Self-demotion and the last admin are refused here and on /staff/access.
+			const refusal = await positionChangeRefusal({
+				actorId: actor.id,
+				targetId: id,
+				current: targetCurrentRoles,
+				next: nextRoleNames
+			});
+			if (refusal) error(refusal.httpStatus, refusal.message);
 
 			roleIds = submitted;
 			roleChange = {

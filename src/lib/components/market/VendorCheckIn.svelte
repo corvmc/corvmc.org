@@ -2,6 +2,7 @@
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import type { Crumb } from '$lib/components/ui/breadcrumbs';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import StatCard from '$lib/components/ui/StatCard.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -23,7 +24,7 @@
 	 * no-show, and record whether to ask them back. Shared by the staff and the
 	 * owning committee's routes; `getMarketDayCheckIn` carries no contact detail.
 	 */
-	let { eventId, backHref }: { eventId: string; backHref: string } = $props();
+	let { eventId, parent }: { eventId: string; parent: Crumb[] } = $props();
 
 	const data = $derived(await getMarketDayCheckIn(eventId));
 	const arrived = $derived(data.vendors.filter((v) => v.checkedInAt).length);
@@ -40,7 +41,7 @@
 	width="3xl"
 	title="Market day: {data.event.title}"
 	subtitle={formatDateTime(data.event.startsAt)}
-	{backHref}
+	{parent}
 />
 <PageContent width="3xl">
 	<div class="flex flex-wrap gap-6">

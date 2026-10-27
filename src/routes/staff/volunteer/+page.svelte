@@ -25,23 +25,16 @@
 	import NeedsConfirmingCard from './NeedsConfirmingCard.svelte';
 	import ShortStaffedCard from './ShortStaffedCard.svelte';
 	import HoursToReviewCard from './HoursToReviewCard.svelte';
-	import PendingReviewCard from './PendingReviewCard.svelte';
 	import CloseOutCard from './CloseOutCard.svelte';
 	import NeedsSchedulingCard from './NeedsSchedulingCard.svelte';
 	import ConfirmFixedCard from './ConfirmFixedCard.svelte';
 	import LapsingCard from './LapsingCard.svelte';
-	import NewShiftAction from './NewShiftAction.svelte';
 	import NewWorkOrderAction from './NewWorkOrderAction.svelte';
 	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
-	import { toLocalDateTime } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { getVolunteerWorklist } from '$lib/remote/volunteer.remote';
 
 	const work = $derived(await getVolunteerWorklist());
-
-	// Tomorrow, so the New Shift form opens on a date that hasn't already passed —
-	// the same anchor the schedule uses.
-	const defaultStart = toLocalDateTime(new Date(Date.now() + 86_400_000));
 
 	// The day, then the size of the pile. A worklist that does not say which day
 	// it is describing is a list; saying it is what makes it a shift.
@@ -55,15 +48,14 @@
 	const waiting = $derived(work.waitingCount + work.lapsing.length);
 </script>
 
-<PageHeader width="5xl" title="Volunteering">
+<PageHeader title="Volunteering">
 	<!-- Not a sidebar row: roles are set up now and then, not worked daily (#1791). -->
 	<Button variant="ghost" size="sm" href={resolve('/staff/volunteer/roles')}>Roles</Button>
 	<LogHoursForMemberAction />
-	<NewShiftAction {defaultStart} />
 	<NewWorkOrderAction />
 </PageHeader>
 
-<PageContent width="5xl">
+<PageContent>
 	<p class="text-subtle text-sm">
 		{today} ·
 		{waiting === 0 ? 'nothing waiting' : `${waiting} ${waiting === 1 ? 'item' : 'items'} waiting`}
@@ -88,35 +80,34 @@
 		</EmptyState>
 	{/if}
 
-	{#if work.needsConfirming.length > 0}
-		<NeedsConfirmingCard claims={work.needsConfirming} total={work.needsConfirmingTotal} />
-	{/if}
+	<!-- Masonry: cards flow down the first column, then the second. -->
+	<div class="gap-6 @5xl:columns-2 [&>*]:mb-6 [&>*]:break-inside-avoid">
+		{#if work.needsConfirming.length > 0}
+			<NeedsConfirmingCard claims={work.needsConfirming} total={work.needsConfirmingTotal} />
+		{/if}
 
-	{#if work.shortStaffed.length > 0}
-		<ShortStaffedCard shifts={work.shortStaffed} total={work.shortStaffedTotal} />
-	{/if}
+		{#if work.shortStaffed.length > 0}
+			<ShortStaffedCard shifts={work.shortStaffed} total={work.shortStaffedTotal} />
+		{/if}
 
-	{#if work.pendingHours.length > 0}
-		<HoursToReviewCard logs={work.pendingHours} total={work.pendingHoursTotal} />
-	{/if}
+		{#if work.pendingHours.length > 0}
+			<HoursToReviewCard logs={work.pendingHours} total={work.pendingHoursTotal} />
+		{/if}
 
-	{#if work.blockedVolunteers.length > 0}
-		<PendingReviewCard rows={work.blockedVolunteers} total={work.blockedVolunteersTotal} />
-	{/if}
+		{#if work.unscheduled.length > 0}
+			<NeedsSchedulingCard orders={work.unscheduled} total={work.unscheduledTotal} />
+		{/if}
 
-	{#if work.unscheduled.length > 0}
-		<NeedsSchedulingCard orders={work.unscheduled} total={work.unscheduledTotal} />
-	{/if}
+		{#if work.toConfirm.length > 0}
+			<ConfirmFixedCard orders={work.toConfirm} total={work.toConfirmTotal} />
+		{/if}
 
-	{#if work.toConfirm.length > 0}
-		<ConfirmFixedCard orders={work.toConfirm} total={work.toConfirmTotal} />
-	{/if}
+		{#if work.closeOut.length > 0}
+			<CloseOutCard claims={work.closeOut} total={work.closeOutTotal} />
+		{/if}
 
-	{#if work.closeOut.length > 0}
-		<CloseOutCard claims={work.closeOut} total={work.closeOutTotal} />
-	{/if}
-
-	{#if work.lapsing.length > 0}
-		<LapsingCard rows={work.lapsing} total={work.lapsingTotal} />
-	{/if}
+		{#if work.lapsing.length > 0}
+			<LapsingCard rows={work.lapsing} total={work.lapsingTotal} />
+		{/if}
+	</div>
 </PageContent>

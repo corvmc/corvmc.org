@@ -13,8 +13,11 @@
 	import { urlState, oneOf, text, positiveInt } from '$lib/urlState.svelte';
 	import { formatDate } from '$lib/utils/format';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import { getStaffCalendar } from '$lib/remote/events.remote';
-	import PendingReviewBadge from './PendingReviewBadge.svelte';
+	import { getStaffCalendar, getStaffCalendarTotals } from '$lib/remote/events.remote';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { retryQuery } from '$lib/utils/retry-query';
+	import CalendarTotals from './CalendarTotals.svelte';
+	import CreateListingAction from './CreateListingAction.svelte';
 
 	/**
 	 * The staff calendar: the public gig guide, plus what is asking to join it.
@@ -51,8 +54,8 @@
 
 	// The page's one query, and a promise rather than an await: `DataList`
 	// consumes it with `{#await}`, so changing a filter does not suspend the page
-	// into the staff layout boundary's pending snippet. The review count lives in
-	// `PendingReviewBadge`, which owns its own query for the same reason.
+	// into the staff layout boundary's pending snippet. The counts live in
+	// `CalendarTotals`, which owns its own query for the same reason.
 	const result = $derived(
 		getStaffCalendar({
 			statuses: [...STATUSES[filters.view]],
@@ -90,9 +93,18 @@
 </script>
 
 <PageHeader title="Calendar" subtitle="Staff">
-	<PendingReviewBadge />
+	<CreateListingAction />
 </PageHeader>
 <PageContent>
+	<svelte:boundary>
+		<CalendarTotals />
+		{#snippet failed(_error, reset)}
+			<Alert type="warning" reset={() => retryQuery(getStaffCalendarTotals(), reset)}>
+				The calendar totals didn't load. The table below is unaffected.
+			</Alert>
+		{/snippet}
+	</svelte:boundary>
+
 	<FilterBar
 		activeCount={(filters.view === 'all' ? 0 : 1) + (filters.source ? 1 : 0)}
 		onclear={clearFilters}

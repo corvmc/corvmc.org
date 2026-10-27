@@ -66,6 +66,7 @@ export { default as RemoveSubscriberAction } from './RemoveSubscriberAction.svel
 export { default as UnscheduleCampaignAction } from './UnscheduleCampaignAction.svelte';
 
 // Closures
+export { default as CreateClosureAction } from './CreateClosureAction.svelte';
 export { default as DeleteClosureAction } from './DeleteClosureAction.svelte';
 export { default as UpdateClosureAction } from './UpdateClosureAction.svelte';
 

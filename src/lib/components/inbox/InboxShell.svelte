@@ -24,16 +24,28 @@
 	let {
 		list,
 		children,
+		toolbar,
 		/** Is a conversation open? Drives the one-pane-at-a-time swap below `lg`. */
 		threadOpen
 	}: {
 		list: Snippet;
 		children: Snippet;
+		/** One bar across both panes, above them; staff's (#1927). */
+		toolbar?: Snippet;
 		threadOpen: boolean;
 	} = $props();
 </script>
 
-<div class="flex h-full min-h-0 gap-4 py-6">
+{#if toolbar}
+	<div class="flex h-full min-h-0 flex-col gap-3 py-6">
+		{@render toolbar()}
+		<div class="flex min-h-0 flex-1 gap-4">{@render panes()}</div>
+	</div>
+{:else}
+	<div class="flex h-full min-h-0 gap-4 py-6">{@render panes()}</div>
+{/if}
+
+{#snippet panes()}
 	<!-- No static display class here: the conditional supplies it. With `flex`
 	     baked in as well, `hidden` and `flex` would both be on the element and the
 	     winner would come down to Tailwind's emit order rather than intent. -->
@@ -53,4 +65,4 @@
 	<div class="min-h-0 min-w-0 flex-1 flex-col {threadOpen ? 'flex' : 'hidden lg:flex'}">
 		{@render children()}
 	</div>
-</div>
+{/snippet}

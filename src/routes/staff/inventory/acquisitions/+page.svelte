@@ -62,7 +62,7 @@
 	}
 </script>
 
-<PageHeader title="Acquisitions" subtitle="Inventory" backHref="/staff/inventory" />
+<PageHeader title="Acquisitions" subtitle="Inventory" />
 
 <PageContent>
 	<div class="mb-4 flex flex-wrap items-end gap-3">

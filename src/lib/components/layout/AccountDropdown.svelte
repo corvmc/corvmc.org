@@ -45,11 +45,12 @@
 		variant="ghost"
 		size="sm"
 		shape="circle"
+		class="overflow-hidden border-0 p-0"
 		onclick={() => (open = !open)}
 		aria-label="Account menu"
 	>
 		<Avatar
-			class="size-7 text-xs"
+			class="size-full text-xs"
 			size="avatar-sm"
 			name={me?.name ?? ''}
 			src={me?.image ?? undefined}

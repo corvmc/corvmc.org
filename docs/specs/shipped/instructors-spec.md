@@ -217,7 +217,7 @@ Every step is an existing pattern:
 | Member applies | Insert `status: 'requested'` with listing fields + `applicationNote`     | `group_member.status = 'requested'`       |
 | Staff review   | A **Requested** block at the top of `/staff/instructors`                 | `/staff/groups/[id]` renders exactly this |
 | Approve        | Scoped positive-match update to `'active'`, stamping the grant           | `approveApplication()` in `group-service` |
-| **Send back**  | `'rejected'` + `reviewNotes`; member edits and resubmits → `'requested'` | `event.reviewNotes` + `eventStatuses`     |
+| **Reject**     | `'rejected'` + `reviewNotes`; member edits and resubmits → `'requested'` | `event.reviewNotes` + `eventStatuses`     |
 | Withdraw       | The member deletes their own `'requested'` row                           | `leaveGroup()`                            |
 
 **Declining does not delete the row, and that departs from the groups precedent deliberately.**
@@ -552,10 +552,10 @@ the only place a club is created. The panel goes on the existing **`space`** tab
 tab — `tabs.ts` already says eight "outrun a phone even collapsed" — and that is also where it belongs
 semantically: the grant is a right in the room.
 
-Five actions: **Approve**, **Send back**, **Grant** (direct, skipping the application), **Pause**,
-**Retire**. A note is **required** on Send back, Pause and Retire, for the reason
+Five actions: **Approve**, **Reject**, **Add Instructor** (direct, skipping the application), **Pause**,
+**Retire**. A note is **required** on Reject, Pause and Retire, for the reason
 `member_certification.revokedReason` already carries a CHECK: the next staffer reading the list needs
-to know why, and in Send back's case so does the applicant.
+to know why, and in Reject's case so does the applicant.
 
 **Retiring does not cancel future teaching bookings.** Ending a grant is a decision about the future;
 a booked lesson has a student on the other end who has already been told a time. The staff page

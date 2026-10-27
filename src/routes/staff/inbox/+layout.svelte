@@ -4,9 +4,13 @@
 	import InboxList from './InboxList.svelte';
 	import FilterPanel from './FilterPanel.svelte';
 	import SaveViewDialog from './SaveViewDialog.svelte';
+	import InboxToolbar from './InboxToolbar.svelte';
+	import { provideInboxToolbar } from './toolbar.svelte';
 	import { filters, filterPanel, toQuery, reset } from './filters.svelte';
 
 	let { children } = $props();
+
+	provideInboxToolbar();
 
 	// The panel takes the conversation pane rather than covering the list: you
 	// narrow a list by watching it change, and a modal over the thing you are
@@ -24,6 +28,9 @@
 	{@render children()}
 {:else}
 	<InboxShell {threadOpen}>
+		{#snippet toolbar()}
+			<InboxToolbar {threadOpen} />
+		{/snippet}
 		{#snippet list()}
 			<InboxList />
 		{/snippet}

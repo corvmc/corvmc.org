@@ -31,11 +31,8 @@
 	}
 </script>
 
-<InfoCard title="Finished: confirm fixed?" state={total}>
-	<p class="text-muted">
-		The work's window has passed but its reports are still open. Resolve it once the repair took,
-		and each reporter hears it was fixed.
-	</p>
+<InfoCard title="Unverified Repairs" state={total}>
+	<p class="text-muted">Finished work orders with open problem reports.</p>
 
 	<Table>
 		{#snippet head()}
@@ -60,12 +57,12 @@
 				<td class="w-px">
 					<Action
 						action={resolveWorkOrder.for(order.id)}
-						label="Resolve"
+						label="Verify"
 						variant="primary"
 						size="xs"
-						modalTitle="Confirm {subject(order)} is fixed?"
-						submitLabel="Resolve"
-						successToast="Resolved"
+						modalTitle="Verify {subject(order)} is fixed?"
+						submitLabel="Verify"
+						successToast="Verified"
 					>
 						{#snippet form()}
 							<input type="hidden" name="id" value={order.id} />

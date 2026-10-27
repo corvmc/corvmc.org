@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
 
-// The Projects index filters by kind, so a show's project can be found among
-// the general ones or kept out of them (production-projects-spec.md, phase 3).
+// The Projects index is general projects only (productions have their own
+// index), active by default, with archived projects a filter away (#1935).
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: { id: 'user-1' } }, url: new URL('http://x/') }),
@@ -33,20 +33,28 @@ const load = (filters: unknown) =>
 beforeEach(() => listProjects.mockClear());
 
 describe('the Projects index', () => {
-	it('passes a kind filter through to the service', async () => {
+	it('never lists productions, whatever the client asks for', async () => {
 		await load({ kind: 'production' });
-		expect(listProjects).toHaveBeenCalledWith(expect.objectContaining({ kind: 'production' }));
+		expect(listProjects).toHaveBeenCalledWith(expect.objectContaining({ kind: 'general' }));
 	});
 
-	it('refuses a kind that does not exist', async () => {
-		await expect(load({ kind: 'festival' })).rejects.toThrow();
-		expect(listProjects).not.toHaveBeenCalled();
-	});
-
-	it('lists every kind when none is chosen', async () => {
+	it('shows only active projects by default', async () => {
 		await load({});
-		expect(listProjects).toHaveBeenCalledWith(
-			expect.not.objectContaining({ kind: expect.anything() })
-		);
+		expect(listProjects).toHaveBeenCalledWith(expect.objectContaining({ archived: false }));
+	});
+
+	it('shows only archived projects in the archived view', async () => {
+		await load({ view: 'archived' });
+		expect(listProjects).toHaveBeenCalledWith(expect.objectContaining({ archived: true }));
+	});
+
+	it('shows both in the all view', async () => {
+		await load({ view: 'all' });
+		expect(listProjects).toHaveBeenCalledWith(expect.objectContaining({ archived: undefined }));
+	});
+
+	it('refuses a view that does not exist', async () => {
+		await expect(load({ view: 'planned' })).rejects.toThrow();
+		expect(listProjects).not.toHaveBeenCalled();
 	});
 });

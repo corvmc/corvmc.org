@@ -13,21 +13,20 @@ sortOrder: 2
 something waiting on a person, with the action on the row, and a card you cannot see is a
 card with nothing in it:
 
-- **Needs confirming** — people who claimed an upcoming shift that nobody has confirmed.
+- **Pending Assignments** — people who claimed an upcoming shift that nobody has confirmed.
   This is the one to clear first: confirming is what turns a claim into a booking, and until
   you do it they get no reminder, the shift never completes itself, and no hour log is ever
   offered. Confirm one at a time or confirm a whole shift at once.
-- **Short-staffed** — shifts in the next fortnight with places nobody has taken. **Add
-  someone** on the row shows who said they would help with that role, when they said they
+- **Understaffed Shifts** — shifts in the next fortnight with places nobody has taken.
+  **Assign** on the row opens the shift, which shows who said they would help with that role, when they said they
   were free, and whether their clearances cover _that shift's date_ — plus a search box for
   anybody else.
-- **Hours to review** — the top of the approval queue, with the same approve and return
+- **Unreviewed Hours** — the top of the approval queue, with the same approve and return
   buttons. The whole queue is **Volunteering → Hours**.
-- **Waiting on a guardian's sign-off** — under-18 sign-ups.
-- **Close these out** — shifts that have already happened where somebody's claim was never
-  confirmed. Say whether they worked it (which records the hours) or didn't. Leaving it is
-  the third answer, and it loses the work.
-- **Lapses before a shift they're on** — somebody rostered for a date their clearance does
+- **Unconfirmed Shifts** — shifts that have already happened where somebody's claim was never
+  confirmed. **Log Hours** logs the shift as worked; **Close Assignment** records a no-show.
+  Leaving it is the third answer, and it loses the work.
+- **Expiring Clearances** — somebody rostered for a date their clearance does
   not reach. Not the same list as _Who's cleared_: this one has a deadline.
 
 The count in the sidebar is all of that added up.
@@ -53,7 +52,7 @@ keeps your view.
 ### Logging hours for somebody else
 
 Members have 90 days to log their own hours, and the app tells them to ask staff for
-anything older. **Log hours** on this page is how you do that. It is also how
+anything older. **Log Hours** on this page is how you do that. It is also how
 you record the volunteer who does not use the app at all — which matters, because the
 report only counts what is in here, and an hour nobody typed in is an hour the board never
 hears about.
@@ -89,9 +88,9 @@ notified** is for the ones you already rang.
 
 A role can require clearances (**Volunteering → Setup**) before its
 shifts can be claimed. Requirements are checked against the shift's date, so a
-lapsing card is caught before it matters. **People → Cleared** shows who holds
-what and when it runs out, one row per person and clearance. Grant from the
-member's page; revoke from either. Revoking keeps the record of the period it
+lapsing card is caught before it matters. **People**'s clearance filter shows
+who holds one today. Grant and revoke from the member's page, which lists what
+they hold and when it runs out. Revoking keeps the record of the period it
 covered, which is the point.
 
 The day after a shift, workers get a two-question survey. Responses show on the
@@ -107,12 +106,13 @@ are free, and whether they are cleared for that date. Its three filters widen th
 who have worked the role before, and then to everybody; searching it finds anyone at all,
 which is the person who walked up to the desk and is on no list.
 
-**Volunteering → People** is the full list when you do. Its **Roster** tab is everyone who
-signed up, with their roles and their availability note; each row carries the one thing
-outstanding about that person — a claim of theirs to confirm, a clearance to chase, or
-otherwise a way to log hours on their behalf. Filter by role to see how deep the bench is.
+**Volunteering → People** is the full list when you do: everyone who signed up, with their
+roles and their availability note. Each row carries the one thing outstanding about that
+person — a claim of theirs to confirm, a clearance to chase, a sign-off to approve, or otherwise
+a way to log hours on their behalf. Filter by role to see how deep the bench is, or by
+clearance to see who holds one today.
 
-**People → Awaiting sign-off** is the under-18 queue. Approving one confirms a guardian has
+The **Awaiting sign-off** status is the under-18 queue. Approving one confirms a guardian has
 signed off; the record still says they are under 18, which is what changes how a shift is
 staffed.
 

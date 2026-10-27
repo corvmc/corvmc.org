@@ -60,14 +60,12 @@
 	}
 </script>
 
-<InfoCard title="Needs scheduling" state={total}>
+<InfoCard title="Unscheduled Work Orders" state={total}>
 	{#snippet action()}
 		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
 	{/snippet}
 
-	<p class="text-muted">
-		Work with nobody booked to do it. Give it a window and it becomes a shift members can claim.
-	</p>
+	<p class="text-muted">Work orders without a time window.</p>
 
 	<Table>
 		{#snippet head()}
@@ -146,13 +144,13 @@
 
 						<Action
 							action={resolveWorkOrder.for(order.id)}
-							label="Close it"
+							label="Close Work Order"
 							iconOnly
 							icon={doneIcon}
 							variant="ghost"
 							size="sm"
 							modalTitle="Close {order.roleName ?? NO_ROLE_LABEL}?"
-							submitLabel="Close it"
+							submitLabel="Close Work Order"
 							successToast="Closed"
 						>
 							{#snippet form()}

@@ -32,7 +32,9 @@ test.describe('project task list', () => {
 		await expect(
 			page.getByRole('heading', { level: 1, name: SEED_TASK_PROJECT_NAME })
 		).toBeVisible();
-		await expect(page.getByRole('link', { name: SEED_TASK_UNASSIGNED })).toBeVisible();
+		await expect(
+			page.getByRole('table').getByRole('link', { name: SEED_TASK_UNASSIGNED })
+		).toBeVisible();
 	});
 
 	test('draws every section, the empty one included, and unfolds duties', async ({ page }) => {
@@ -54,22 +56,26 @@ test.describe('project task list', () => {
 		// Every seeded task is unassigned, so Contractors is the filter that hides them all.
 		await pick('All', 'Contractors');
 		await expect(page).toHaveURL(/show=contractors/);
-		await expect(page.getByRole('link', { name: SEED_TASK_UNASSIGNED })).toBeHidden();
+		await expect(
+			page.getByRole('table').getByRole('link', { name: SEED_TASK_UNASSIGNED })
+		).toBeHidden();
 		await expect(page.getByText('Nothing here matches the filter.')).toBeVisible();
 
 		await pick('Contractors', 'Unassigned');
 		await expect(page).toHaveURL(/show=unassigned/);
-		await expect(page.getByRole('link', { name: SEED_TASK_WITH_DUTIES })).toBeVisible();
+		await expect(
+			page.getByRole('table').getByRole('link', { name: SEED_TASK_WITH_DUTIES })
+		).toBeVisible();
 
 		await pick('Unassigned', 'All');
-		await expect(page.getByRole('link', { name: SEED_TASK_DONE })).toBeVisible();
+		await expect(page.getByRole('table').getByRole('link', { name: SEED_TASK_DONE })).toBeVisible();
 		await page.getByRole('button', { name: 'Hide done' }).click();
 		await expect(page).toHaveURL(/done=hide/);
-		await expect(page.getByRole('link', { name: SEED_TASK_DONE })).toBeHidden();
+		await expect(page.getByRole('table').getByRole('link', { name: SEED_TASK_DONE })).toBeHidden();
 	});
 
 	test('a row opens its panel at its own URL, and Escape closes it', async ({ page }) => {
-		await page.getByRole('link', { name: SEED_TASK_UNASSIGNED }).click();
+		await page.getByRole('table').getByRole('link', { name: SEED_TASK_UNASSIGNED }).click();
 		await expect(page).toHaveURL(/[?&]task=/);
 		const panel = page.getByRole('complementary', { name: SEED_TASK_UNASSIGNED });
 		await expect(panel).toBeVisible();
@@ -85,7 +91,7 @@ test.describe('project task list', () => {
 	});
 
 	test('Details opens the task page, which the old shift URL redirects to', async ({ page }) => {
-		await page.getByRole('link', { name: SEED_TASK_WITH_DUTIES }).click();
+		await page.getByRole('table').getByRole('link', { name: SEED_TASK_WITH_DUTIES }).click();
 		const panel = page.getByRole('complementary', { name: SEED_TASK_WITH_DUTIES });
 		await panel.getByRole('link', { name: 'Details' }).click();
 
@@ -94,7 +100,10 @@ test.describe('project task list', () => {
 		await expect(
 			page.getByRole('heading', { level: 1, name: SEED_TASK_WITH_DUTIES })
 		).toBeVisible();
-		await expect(page.getByRole('link', { name: SEED_TASK_PROJECT_NAME })).toBeVisible();
+		// Not the breadcrumb's copy of the same link: the line under the title.
+		await expect(
+			page.getByRole('paragraph').getByRole('link', { name: SEED_TASK_PROJECT_NAME })
+		).toBeVisible();
 		await expect(page.getByText('Stretch the new set')).toBeVisible();
 
 		const taskId = taskUrl.exec(page.url())![1];
@@ -110,7 +119,7 @@ test.describe('project task list', () => {
 		const line = page.getByRole('textbox', { name: 'Add a task to Prep' });
 		await line.fill(title);
 		await line.press('Enter');
-		await expect(page.getByRole('link', { name: title })).toBeVisible();
+		await expect(page.getByRole('table').getByRole('link', { name: title })).toBeVisible();
 		await expect(line).toHaveValue('');
 
 		await page.getByRole('button', { name: `Mark ${title} done` }).click();
@@ -118,9 +127,7 @@ test.describe('project task list', () => {
 		await page.getByRole('button', { name: `Mark ${title} not done` }).click();
 		await expect(page.getByRole('button', { name: `Mark ${title} done` })).toBeVisible();
 
-		// Each of those is on the Activity tab, newest first, linked to the task.
-		await page.getByRole('tab', { name: 'Activity' }).click();
-		await expect(page).toHaveURL(/[?&]tab=activity/);
+		// With no task open, the sidebar is the activity: newest first, linked to the task.
 		const activity = page.getByRole('list', { name: 'Activity' });
 		await expect(activity.getByText(`Added the task “${title}”`)).toBeVisible();
 		await expect(activity.getByRole('listitem').first()).toContainText('Reopened it');

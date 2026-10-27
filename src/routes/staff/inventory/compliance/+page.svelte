@@ -23,7 +23,7 @@
 	const data = $derived(await getForm8282Obligations());
 </script>
 
-<PageHeader title="Compliance" subtitle="Inventory" backHref="/staff/inventory" />
+<PageHeader title="Compliance" subtitle="Inventory" />
 
 <PageContent>
 	{#if data.rows.length === 0}

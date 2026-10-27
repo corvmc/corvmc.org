@@ -25,7 +25,7 @@
 		{#if !instructor}
 			<EmptyState
 				title="Not an instructor"
-				description="Grant teaching status from /staff/instructors if they teach here."
+				description="Add them as an instructor from /staff/instructors if they teach here."
 			/>
 		{:else}
 			<DefinitionList>
@@ -45,7 +45,7 @@
 				{#if instructor.reviewNotes}
 					<!-- What the member was told, as opposed to statusNote below, which
 					     is what staff told each other. -->
-					<Fact label="Sent back">{instructor.reviewNotes}</Fact>
+					<Fact label="Rejected">{instructor.reviewNotes}</Fact>
 				{/if}
 				{#if instructor.statusNote}
 					<Fact label="Staff note">{instructor.statusNote}</Fact>

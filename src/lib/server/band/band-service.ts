@@ -18,6 +18,7 @@ import { alias } from 'drizzle-orm/sqlite-core';
 import { groupEntryInsert } from '$lib/server/directory/entry-service';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { bandSiteInsert, getOrCreateBandSiteId } from './band-site-service';
+import { activeBand, deactivatedBand, isBand, premiumBand } from './band-totals-service';
 import { reservation } from '$lib/server/db/schema/reservation';
 import {
 	eq,
@@ -961,17 +962,19 @@ export async function listAll(
 	opts?: { search?: string; status?: 'active' | 'deactivated'; tier?: BandTier },
 	pagination: PaginationInput = {}
 ) {
-	const conditions = [eq(group.kind, 'band')];
+	const conditions = [isBand()];
 
 	if (opts?.search) {
 		conditions.push(containsLiteral(group.name, opts.search));
 	}
 	if (opts?.status === 'active') {
-		conditions.push(isNull(group.deletedAt));
+		conditions.push(activeBand());
 	} else if (opts?.status === 'deactivated') {
-		conditions.push(isNotNull(group.deletedAt));
+		conditions.push(deactivatedBand());
 	}
-	if (opts?.tier) {
+	if (opts?.tier === 'premium') {
+		conditions.push(premiumBand());
+	} else if (opts?.tier) {
 		conditions.push(eq(bandSite.tier, opts.tier));
 	}
 

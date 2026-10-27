@@ -51,20 +51,17 @@
 
 	const id = $derived(group.id);
 	const isDeactivated = $derived(!!group.deletedAt);
-	const backHref = $derived(group.kind === 'committee' ? '/staff/committees' : '/staff/clubs');
 
 	let importResult = $state<RosterImportResult | null>(null);
 </script>
 
-<!-- `backHref` because this was the only staff `[id]` page without one: the
-     browser's Back button was the only way to the list. The two facts beside
+<!-- The two facts beside
      the badge are the ones the list row carries and this page dropped —
      `getGroupDetail` has returned both all along (#1070). -->
 <PageHeader
 	width="3xl"
 	title={group.name}
 	subtitle={group.kind === 'committee' ? 'Committee' : 'Club'}
-	{backHref}
 >
 	<StatusBadge status={isDeactivated ? 'deactivated' : 'active'} />
 	<span class="text-muted">
@@ -169,6 +166,7 @@
 		joinPolicy={group.joinPolicy}
 		joinInstructions={group.joinInstructions}
 		visibility={group.visibility}
+		policyFixed={group.kind === 'committee'}
 	/>
 
 	{#if group.kind === 'committee'}

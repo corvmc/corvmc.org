@@ -10,9 +10,10 @@
 	import { withQuery } from '$lib/utils/with-query';
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
-	import CreateEventModal from './CreateEventModal.svelte';
+	import CreateEventModal from '$lib/components/events/CreateEventModal.svelte';
 	import { formatDate } from '$lib/utils/format';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import AvatarStack from '$lib/components/ui/AvatarStack.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
@@ -94,13 +95,6 @@
 
 	function dayLabel(e: Production): string {
 		return formatDate(e.startsAt);
-	}
-
-	/** "Sunbathers +2", or nothing at all when the bill is empty. */
-	function lineupLabel(e: Production): string | null {
-		if (!e.lineup.headliner) return null;
-		const rest = e.lineup.count - 1;
-		return rest > 0 ? `${e.lineup.headliner} +${rest}` : e.lineup.headliner;
 	}
 
 	const activeCount = $derived(
@@ -216,9 +210,9 @@
 								<span class="whitespace-nowrap text-base-content/50">No production</span>
 							{/if}
 						</td>
-						<td class="col-support">
-							{#if lineupLabel(e)}
-								{lineupLabel(e)}
+						<td class="col-support whitespace-nowrap">
+							{#if e.lineup.count > 0}
+								<AvatarStack items={e.lineup.acts} total={e.lineup.count} />
 							{:else}
 								<span class="opacity-40">—</span>
 							{/if}

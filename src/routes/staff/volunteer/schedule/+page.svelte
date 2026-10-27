@@ -1,24 +1,13 @@
 <script lang="ts">
 	/**
-	 * Every shift there is, grouped by day, windowed.
+	 * Every work order a coordinator staffs, in one table by date (#1933). A shift
+	 * is a work order with a window, so the ones still waiting for a time are the
+	 * last group of the same table rather than another page.
 	 *
-	 * This absorbed `/staff/volunteer/shifts`. The two pages asked the same
-	 * question of the same query and disagreed about the answer: the catalog was
-	 * a flat list with an Include-past checkbox and no marker for today, so
-	 * "who is on tonight" — the question a coordinator asks most — was answered
-	 * there by ticking a box that merged a month of history into one list
-	 * (docs/reports/volunteer-workflow-findings.md#a4). The window control's
-	 * "Everything" option is that checkbox, in the one place that groups by day.
-	 *
-	 * Three numbers per row, not one. `claimed` counts places taken and
-	 * `confirmed` counts places actually booked; a list that prints only the
-	 * first says a shift with three unconfirmed claims is fully staffed, which is
-	 * finding #a3. The tone rule below encodes the difference: teal is booked,
-	 * amber is hands up but nobody confirmed them, orange is nobody at all.
-	 *
-	 * Cancelled shifts are not rows. They are a notify list — see the divider at
-	 * the bottom — and mixing them into the schedule made a called-off shift read
-	 * as one more thing to staff.
+	 * Three numbers per row, not one: `claimed` counts places taken and `confirmed`
+	 * places actually booked, and printing only the first says a shift with three
+	 * unconfirmed claims is staffed (docs/reports/volunteer-workflow-findings.md#a3).
+	 * Cancelled shifts are a notify list under the divider, not rows to staff.
 	 */
 	import { page } from '$app/state';
 	import { NO_ROLE_LABEL, shiftLabel } from '$lib/utils/shift-label';
@@ -27,7 +16,6 @@
 	import { withQuery } from '$lib/utils/with-query';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -35,33 +23,39 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
-	import NewShiftAction from '../NewShiftAction.svelte';
-	import { formatDateShort, relativeDay, toLocalDateTime } from '$lib/utils/format';
+	import NewWorkOrderAction from '../NewWorkOrderAction.svelte';
+	import RecurringWork from './RecurringWork.svelte';
+	import { formatDateShort, relativeDay } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { getShifts, confirmShiftClaims } from '$lib/remote/volunteer.remote';
+	import { getSchedulePage, confirmShiftClaims } from '$lib/remote/volunteer.remote';
 
-	/**
-	 * How far ahead a coordinator plans in one sitting, plus the catalog.
-	 * `'all'` drops both bounds rather than passing a wide one, so it really is
-	 * everything and not "the next decade".
-	 */
+	/** `'all'` drops both bounds rather than passing a wide one, so it is really everything. */
 	const WINDOWS = [7, 14, 30, 'all'] as const;
 	type Range = (typeof WINDOWS)[number];
 	const DAY_MS = 24 * 60 * 60 * 1000;
 	const DEFAULT_WINDOW: Range = 14;
-
 	const windowLabel = (w: Range) => (w === 'all' ? 'Everything' : `Next ${w} days`);
+
+	const KINDS = {
+		'': 'All work',
+		timed: 'Has a time',
+		untimed: 'No time yet',
+		recurring: 'Recurring'
+	} as const;
+	type Kind = keyof typeof KINDS;
 
 	function parseRange(raw: string | null): Range {
 		if (raw === 'all') return 'all';
 		const n = Number(raw);
 		return (WINDOWS as readonly (number | string)[]).includes(n) ? (n as Range) : DEFAULT_WINDOW;
 	}
+	const parseKind = (raw: string | null): Kind => (raw && raw in KINDS ? (raw as Kind) : '');
 
 	const initial = page.url.searchParams;
 
 	let range = $state(parseRange(initial.get('days')));
 	let roleFilter = $state(initial.get('role') ?? '');
+	let kind = $state<Kind>(parseKind(initial.get('kind')));
 	let shortOnly = $state(initial.get('short') === '1');
 
 	// Writes the URL, never state — `goto(..., { replaceState })` rather than
@@ -70,6 +64,7 @@
 		const pairs: [string, string][] = [];
 		if (range !== DEFAULT_WINDOW) pairs.push(['days', String(range)]);
 		if (roleFilter) pairs.push(['role', roleFilter]);
+		if (kind) pairs.push(['kind', kind]);
 		if (shortOnly) pairs.push(['short', '1']);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
@@ -79,81 +74,74 @@
 		}
 	});
 
-	// Pinned once rather than derived from the clock. `refresh()` is keyed by argument, so
-	// a `from` that ticked every re-evaluation would mint a new key each time and the
-	// refresh after a mutation would miss its query — the trap RoleShiftsCard documents.
+	// Pinned once rather than derived from the clock: `refresh()` is keyed by argument,
+	// so a `from` that ticked would mint a new key and the refresh would miss it.
 	const anchor = new Date();
 
-	const shifts = $derived(
-		getShifts({
-			// "Everything" means everything, history included: that is the catalog
-			// this page absorbed, and a `from` would quietly reinstate it.
-			from: range === 'all' ? undefined : anchor.toISOString(),
-			to: range === 'all' ? undefined : new Date(anchor.getTime() + range * DAY_MS).toISOString(),
-			volunteerRoleId: roleFilter || undefined,
-			// Fetched, then split off below the divider. They are the one thing on
-			// this page nobody can staff.
-			includeCancelled: true
-		})
-	);
+	const args = $derived({
+		from: range === 'all' ? undefined : anchor.toISOString(),
+		to: range === 'all' ? undefined : new Date(anchor.getTime() + range * DAY_MS).toISOString(),
+		volunteerRoleId: roleFilter || undefined,
+		includeCancelled: true
+	});
+	const schedule = $derived(getSchedulePage(args));
 
-	const defaultStart = toLocalDateTime(new Date(anchor.getTime() + DAY_MS));
+	type Row = Awaited<ReturnType<typeof getSchedulePage>>['unscheduled'][number];
 
-	function timeRange(start: Date, end: Date): string {
-		const fmt = new Intl.DateTimeFormat('en-US', {
-			hour: 'numeric',
-			minute: '2-digit',
-			timeZone: DEFAULT_TIMEZONE
-		});
-		return `${fmt.format(start)}–${fmt.format(end)}`;
+	const timeFmt = new Intl.DateTimeFormat('en-US', {
+		hour: 'numeric',
+		minute: '2-digit',
+		timeZone: DEFAULT_TIMEZONE
+	});
+	const dayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE });
+
+	/** The group a row sits under: its venue day, or the no-time group at the end. */
+	function groupLabel(w: Row): string {
+		return w.startsAt
+			? `${relativeDay(w.startsAt)} · ${formatDateShort(w.startsAt)}`
+			: 'No time yet';
+	}
+	const groupKey = (w: Row) => (w.startsAt ? dayFmt.format(w.startsAt) : 'none');
+
+	function when(w: Row): string {
+		if (w.startsAt && w.endsAt) return `${timeFmt.format(w.startsAt)}–${timeFmt.format(w.endsAt)}`;
+		return w.dueAt ? `due ${formatDateShort(w.dueAt)}` : 'no deadline';
 	}
 
-	/** The venue's calendar day, so the grouping matches the day the shift is on. */
-	function dayKey(d: Date): string {
-		return new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(d);
+	const isShort = (w: Row) => w.confirmed < w.capacity;
+
+	function matchesKind(w: Row): boolean {
+		if (kind === 'timed') return w.startsAt !== null;
+		if (kind === 'untimed') return w.startsAt === null;
+		if (kind === 'recurring') return w.maintenanceScheduleId !== null;
+		return true;
 	}
 
-	type Shift = Awaited<ReturnType<typeof getShifts>>[number];
-
-	const isShort = (s: Shift) => s.confirmed < s.capacity;
-
-	// Walked rather than bucketed through a Map: `listShifts` orders by start, so shifts on
-	// the same day are already adjacent. (`svelte/prefer-svelte-reactivity` bans a plain Map
-	// in a component, and a SvelteMap rebuilt on every filter change is reactivity nobody
-	// subscribes to.)
-	function byDay(rows: Shift[]) {
-		const groups: { key: string; on: Date; rows: Shift[] }[] = [];
-		for (const shift of rows) {
-			const key = dayKey(shift.startsAt);
-			const last = groups.at(-1);
-			if (last && last.key === key) last.rows.push(shift);
-			else groups.push({ key, on: shift.startsAt, rows: [shift] });
-		}
-		return groups;
-	}
-
-	/** "3 live shifts · 2 short-staffed · 4 claims to confirm", minus the zeroes. */
-	function summarize(live: Shift[]): string {
-		const short = live.filter(isShort).length;
-		const claims = live.reduce((n, s) => n + (s.claimed - s.confirmed), 0);
-
-		const parts = [`${live.length} ${live.length === 1 ? 'shift' : 'shifts'}`];
+	/** "3 work orders · 2 short-staffed · 4 claims to confirm", minus the zeroes. */
+	function summarize(rows: Row[]): string {
+		const short = rows.filter(isShort).length;
+		const claims = rows.reduce((n, w) => n + (w.claimed - w.confirmed), 0);
+		const parts = [`${rows.length} ${rows.length === 1 ? 'work order' : 'work orders'}`];
 		if (short > 0) parts.push(`${short} short-staffed`);
 		if (claims > 0) parts.push(`${claims} ${claims === 1 ? 'claim' : 'claims'} to confirm`);
 		return parts.join(' · ');
 	}
 </script>
 
-<PageHeader title="Schedule" subtitle="Volunteering" backHref="/staff/volunteer">
-	<NewShiftAction {defaultStart} />
+<PageHeader title="Schedule" subtitle="Volunteering">
+	<NewWorkOrderAction onsuccess={() => void getSchedulePage(args).refresh()} />
 </PageHeader>
 
 <PageContent>
 	<FilterBar
-		activeCount={(roleFilter ? 1 : 0) + (range !== DEFAULT_WINDOW ? 1 : 0) + (shortOnly ? 1 : 0)}
+		activeCount={(roleFilter ? 1 : 0) +
+			(range !== DEFAULT_WINDOW ? 1 : 0) +
+			(kind ? 1 : 0) +
+			(shortOnly ? 1 : 0)}
 		onclear={() => {
 			roleFilter = '';
 			range = DEFAULT_WINDOW;
+			kind = '';
 			shortOnly = false;
 		}}
 	>
@@ -167,6 +155,19 @@
 		>
 			{#each WINDOWS as w (w)}
 				<option value={String(w)}>{windowLabel(w)}</option>
+			{/each}
+		</Select>
+
+		<Select
+			size="sm"
+			aria-label="Kind"
+			value={kind}
+			onchange={(e: Event) => {
+				kind = parseKind((e.currentTarget as HTMLSelectElement).value);
+			}}
+		>
+			{#each Object.entries(KINDS) as [value, label] (value)}
+				<option {value}>{label}</option>
 			{/each}
 		</Select>
 
@@ -193,143 +194,131 @@
 		</label>
 	</FilterBar>
 
-	{#await shifts then rows}
-		{@const cancelled = rows.filter((s) => s.cancelledAt)}
-		{@const live = rows.filter((s) => !s.cancelledAt)}
+	{#if kind === 'recurring'}
+		<RecurringWork />
+	{/if}
+
+	{#await schedule then data}
+		{@const cancelled = data.shifts.filter((s) => s.cancelledAt)}
+		{@const live = [...data.shifts.filter((s) => !s.cancelledAt), ...data.unscheduled].filter(
+			matchesKind
+		)}
 		{@const shown = shortOnly ? live.filter(isShort) : live}
-		{@const groups = byDay(shown)}
 
 		{#if live.length > 0}
 			<p class="text-subtle text-sm">{summarize(live)}</p>
 		{/if}
 
-		{#if groups.length === 0}
+		{#if shown.length === 0}
 			<EmptyState
-				title="No shifts match that"
+				title="No work orders match that"
 				description="Widen the window, or clear the filters."
 			/>
 		{:else}
-			{#each groups as group (group.key)}
-				<!-- "Today" / "Tomorrow" / a weekday, in venue time. The thing the flat list
-				     could never say. -->
-				<SectionLabel label="{relativeDay(group.on)} · {formatDateShort(group.on)}" />
-				<Table>
-					{#snippet head()}
-						<th class="whitespace-nowrap">Time</th>
-						<th>Role</th>
-						<th class="cell-num whitespace-nowrap">Staffing</th>
-						<th class="w-px"><span class="sr-only">Actions</span></th>
-					{/snippet}
+			<!-- No zebra: the day-group rows are the striping, as on Reservations. -->
+			<Table zebra={false}>
+				{#snippet head()}
+					<th class="whitespace-nowrap">When</th>
+					<th>Work</th>
+					<th class="cell-num whitespace-nowrap">Staffing</th>
+					<th class="w-px"><span class="sr-only">Actions</span></th>
+				{/snippet}
 
-					{#each group.rows as shift (shift.id)}
-						{@const unconfirmed = shift.claimed - shift.confirmed}
-						{@const full = shift.confirmed >= shift.capacity}
-						{@const empty = shift.claimed === 0}
-						<!-- Nobody on it at all is the one state worth seeing from across
-						     the room, so it gets the row rather than a number. -->
-						<tr class="hover {empty ? 'border-l-4 border-l-warning bg-warning/5' : ''}">
-							<td class="whitespace-nowrap">
-								<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link font-medium">
-									{timeRange(shift.startsAt, shift.endsAt)}
-								</a>
-							</td>
-
-							<td class="cell-primary">
-								<a
-									href={resolve(`/staff/volunteer/shifts/${shift.id}`)}
-									class="link truncate font-medium"
-								>
-									{shiftLabel(shift)}
-								</a>
-								<!-- One subline, resolved by what the shift actually has:
-								     the role where the heading is a name, else the show it
-								     staffs, else the briefing, else the absence of a show —
-								     which is information, not a blank. -->
-								{#if shift.title}
-									<div class="truncate text-subtle">
-										{shift.roleName ?? NO_ROLE_LABEL}{#if shift.eventTitle}
-											· {shift.eventTitle}{/if}
-									</div>
-								{:else if shift.eventTitle}
-									<div class="truncate">
-										<a href={resolve(`/staff/events/${shift.eventId}`)} class="link text-info">
-											{shift.eventTitle}
-										</a>
-									</div>
-								{:else if shift.notes}
-									<div class="truncate text-subtle" title={shift.notes}>{shift.notes}</div>
-								{:else}
-									<div class="truncate text-subtle">not tied to an event</div>
-								{/if}
-							</td>
-
-							<td class="cell-num whitespace-nowrap">
-								<span
-									class:text-success={full}
-									class:text-error={!full && shift.confirmed === 0}
-									class:text-warning={!full && shift.confirmed > 0 && unconfirmed > 0}
-								>
-									{shift.confirmed} of {shift.capacity}
-								</span>
-								{#if unconfirmed > 0}
-									<!-- The number the old list hid inside `claimed`. -->
-									<span class="text-xs text-warning">· {unconfirmed} unconfirmed</span>
-								{/if}
-							</td>
-
-							<td class="w-px">
-								<div class="flex w-max justify-end gap-1">
-									{#if unconfirmed > 0}
-										<Action
-											label="Confirm {unconfirmed}"
-											variant="ghost"
-											size="xs"
-											class="text-success"
-											action={confirmShiftClaims.for(shift.id)}
-											modalTitle="Confirm everyone on this shift?"
-											submitLabel="Confirm all"
-											successToast="Confirmed. They're booked."
-										>
-											{#snippet form()}
-												<input type="hidden" name="shiftId" value={shift.id} />
-												<p class="text-sm">
-													{unconfirmed}
-													{unconfirmed === 1 ? 'person has' : 'people have'} put a hand up for
-													{shiftLabel(shift)} on {formatDateShort(shift.startsAt)}. Confirming books
-													them: each gets the reminder the day before, and the shift completes
-													afterwards with hours to log.
-												</p>
-											{/snippet}
-										</Action>
-									{/if}
-									{#if !full}
-										<!-- Opens the shift, whose candidate column is the list this
-										     used to pop over — and which also shows who is already on
-										     it, which a bare picker never could. -->
-										<Button
-											href={resolve(`/staff/volunteer/shifts/${shift.id}`)}
-											variant={empty ? 'primary' : 'ghost'}
-											size="xs"
-										>
-											Add {shift.capacity - shift.claimed}
-										</Button>
-									{/if}
-								</div>
-							</td>
+				{#each shown as w, idx (w.id)}
+					{@const href = resolve('/staff/volunteer/shifts/[id]', { id: w.id })}
+					{@const unconfirmed = w.claimed - w.confirmed}
+					{@const full = w.confirmed >= w.capacity}
+					{@const empty = w.claimed === 0}
+					{#if idx === 0 || groupKey(shown[idx - 1]) !== groupKey(w)}
+						<tr>
+							<td colspan="4" class="cell-group">{groupLabel(w)}</td>
 						</tr>
-					{/each}
-				</Table>
-			{/each}
+					{/if}
+					<!-- Nobody on it at all is the state worth seeing from across the room. -->
+					<tr class="hover {empty ? 'border-l-4 border-l-warning bg-warning/5' : ''}">
+						<td class="whitespace-nowrap">
+							<a {href} class:text-subtle={!w.startsAt} class="link font-medium">{when(w)}</a>
+						</td>
+
+						<td class="cell-primary">
+							<a {href} class="link truncate font-medium">{shiftLabel(w)}</a>
+							<!-- One subline: the role under a name, else the show, else the
+							     briefing. A blank one says it is not tied to a show. -->
+							{#if w.title}
+								<div class="truncate text-subtle text-xs">
+									{w.roleName ?? NO_ROLE_LABEL}{#if w.eventTitle}
+										· {w.eventTitle}{/if}
+								</div>
+							{:else if w.eventTitle}
+								<div class="truncate text-xs">
+									<a href={resolve(`/staff/events/${w.eventId}`)} class="link text-info">
+										{w.eventTitle}
+									</a>
+								</div>
+							{:else if w.notes}
+								<div class="truncate text-subtle text-xs" title={w.notes}>{w.notes}</div>
+							{/if}
+						</td>
+
+						<td class="cell-num whitespace-nowrap">
+							<span
+								class:text-success={full}
+								class:text-error={!full && w.confirmed === 0}
+								class:text-warning={!full && w.confirmed > 0 && unconfirmed > 0}
+							>
+								{w.confirmed} of {w.capacity}
+							</span>
+							{#if unconfirmed > 0}
+								<span class="text-xs text-warning">· {unconfirmed} unconfirmed</span>
+							{/if}
+						</td>
+
+						<td class="w-px">
+							<div class="flex w-max justify-end gap-1">
+								{#if unconfirmed > 0 && w.startsAt}
+									<Action
+										label="Confirm {unconfirmed}"
+										variant="ghost"
+										size="xs"
+										class="text-success"
+										action={confirmShiftClaims.for(w.id)}
+										modalTitle="Confirm everyone on this shift?"
+										submitLabel="Confirm all"
+										successToast="Confirmed. They're booked."
+									>
+										{#snippet form()}
+											<input type="hidden" name="shiftId" value={w.id} />
+											<p class="text-sm">
+												{unconfirmed}
+												{unconfirmed === 1 ? 'person has' : 'people have'} put a hand up for
+												{shiftLabel(w)} on {formatDateShort(w.startsAt!)}. Confirming books them:
+												each gets the reminder the day before, and the shift completes afterwards
+												with hours to log.
+											</p>
+										{/snippet}
+									</Action>
+								{/if}
+								{#if !full}
+									<!-- Opens the work order, whose candidate column is the picker
+									     and also shows who is already on it. -->
+									<Button {href} variant={empty ? 'primary' : 'ghost'} size="xs">
+										Add {w.capacity - w.claimed}
+									</Button>
+								{/if}
+							</div>
+						</td>
+					</tr>
+				{/each}
+			</Table>
 		{/if}
 
-		{#if cancelled.length > 0}
-			<!-- Below the divider, not in the list: a called-off shift is not work
-			     to staff, it is people to ring. The count is what is left of that. -->
+		{#if cancelled.length > 0 && kind !== 'untimed'}
+			<!-- Below the divider: a called-off shift is people to ring, not work to staff. -->
 			<div class="divider"></div>
 			<ul class="space-y-1 text-sm">
 				{#each cancelled as shift (shift.id)}
 					<li>
-						<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link">
+						<a href={resolve('/staff/volunteer/shifts/[id]', { id: shift.id })} class="link">
 							{formatDateShort(shift.startsAt)}
 							{shiftLabel(shift)} cancelled
 						</a>

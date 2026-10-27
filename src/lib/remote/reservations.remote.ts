@@ -44,6 +44,15 @@ import { eventListing } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
 import {
+	closuresInWindow,
+	closuresPage,
+	countClosures,
+	interleave,
+	type ClosureFilters,
+	type ClosureRow
+} from '$lib/server/reservation/closure-timeline';
+import type { Pagination } from '$lib/types/pagination';
+import {
 	can,
 	requireCapability,
 	requireCapabilityOrOwner,
@@ -1024,11 +1033,10 @@ const eventBookerJoin = and(
 	eq(eventListing.productionId, reservation.bookerId)
 );
 
-/** Staff: paginated, filtered reservation list. */
-export const getStaffReservations = query(staffReservationFiltersSchema, async (filters) => {
-	await requireCapability('reservation.read');
+type StaffReservationFilters = z.infer<typeof staffReservationFiltersSchema>;
 
-	const now = new Date();
+/** The list's filters as one `WHERE`, over `reservation` joined to its booker as the list joins it. */
+function staffReservationWhere(filters: StaffReservationFilters, now: Date) {
 	const tab = filters.tab ?? 'upcoming';
 	const conditions = [];
 
@@ -1076,7 +1084,37 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		);
 	}
 
-	const where = conditions.length > 0 ? and(...conditions) : undefined;
+	return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
+const STAFF_LIST_PAGE_SIZE = 50;
+
+/** Where the next page of the list starts, so a page knows which closures are its own. */
+async function nextStaffPageStart(filters: StaffReservationFilters, now: Date) {
+	const [row] = await db
+		.select({ startsAt: reservation.startsAt })
+		.from(reservation)
+		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.leftJoin(group, bandBookerJoin)
+		.leftJoin(eventListing, eventBookerJoin)
+		.where(staffReservationWhere(filters, now))
+		.orderBy(
+			(filters.tab ?? 'upcoming') === 'upcoming'
+				? asc(reservation.startsAt)
+				: desc(reservation.startsAt)
+		)
+		.limit(1)
+		.offset((filters.page ?? 1) * STAFF_LIST_PAGE_SIZE);
+	return row?.startsAt;
+}
+
+/** Staff: paginated, filtered reservation list. */
+export const getStaffReservations = query(staffReservationFiltersSchema, async (filters) => {
+	await requireCapability('reservation.read');
+
+	const now = new Date();
+	const tab = filters.tab ?? 'upcoming';
+	const where = staffReservationWhere(filters, now);
 
 	const dataQ = db
 		.select({
@@ -1123,7 +1161,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 
 	const { rows, pagination } = await paginate(dataQ, countQ, {
 		page: filters.page ?? 1,
-		pageSize: 50
+		pageSize: STAFF_LIST_PAGE_SIZE
 	});
 	return {
 		rows: rows.map(({ member, band: bandRow, event: eventRow, ...r }) => ({
@@ -2533,17 +2571,71 @@ export const getBandReservationsPage = query(
  * script would suspend the page into the staff layout boundary's `pending` snippet and blank it on
  * every keystroke, which is what `DataList` exists to avoid.
  */
-export const getStaffReservationsPage = query(staffReservationFiltersSchema, async (filters) => {
+const staffReservationsPageSchema = staffReservationFiltersSchema.extend({
+	show: z.enum(['everything', 'reservations', 'closures']).optional()
+});
+
+/**
+ * The staff reservations page's one query. The list is what the room is doing
+ * over time (#1833): closures interleave with bookings unless `show` narrows it
+ * to one kind. A closure has no booker, so a booker or status filter is a
+ * question about bookings alone and leaves them out.
+ */
+export const getStaffReservationsPage = query(staffReservationsPageSchema, async (input) => {
 	await requireCapability('reservation.read');
+	const { show = 'everything', ...filters } = input;
+	const now = new Date();
+	const tab = filters.tab ?? 'upcoming';
+	const order = tab === 'upcoming' ? 'asc' : 'desc';
+	const closureFilters: ClosureFilters = {
+		upcomingOnly: tab === 'upcoming',
+		from: filters.dateFrom ? buildDateInTz(filters.dateFrom, '00:00', DEFAULT_TIMEZONE) : undefined,
+		to: filters.dateTo ? buildDateInTz(filters.dateTo, '23:59', DEFAULT_TIMEZONE) : undefined,
+		search: filters.search
+	};
+	const withClosures =
+		show === 'everything' && !filters.bookerType && !filters.statusFilter?.length;
 
-	const [list, counts, unresolved, hourlyRates] = await Promise.all([
-		getStaffReservations(filters),
-		getReservationCounts(),
-		getUnresolvedReservations(),
-		getHourlyRates()
-	]);
+	type Row =
+		| (Awaited<ReturnType<typeof getStaffReservations>>['rows'][number] & {
+				kind: 'reservation';
+		  })
+		| ClosureRow;
+	const listRows = async (): Promise<{ rows: Row[]; pagination: Pagination }> => {
+		if (show === 'closures') {
+			return closuresPage(closureFilters, now, order, filters.page ?? 1, STAFF_LIST_PAGE_SIZE);
+		}
+		const page = await getStaffReservations(filters);
+		const rows = page.rows.map((r) => ({ ...r, kind: 'reservation' as const }));
+		const p = page.pagination.page;
+		if (!withClosures || (p > 1 && rows.length === 0)) return { ...page, rows };
+		const closures = await closuresInWindow(closureFilters, now, order, {
+			first: p > 1 ? rows[0].startsAt : undefined,
+			next: p < page.pagination.totalPages ? await nextStaffPageStart(filters, now) : undefined
+		});
+		return { ...page, rows: interleave(rows, closures, order) };
+	};
 
-	return { list, counts, unresolved, hourlyRates };
+	const [list, counts, closureCounts, unresolved, hourlyRates, canManageClosures] =
+		await Promise.all([
+			listRows(),
+			getReservationCounts(),
+			show === 'closures' || withClosures ? countClosures(now) : null,
+			getUnresolvedReservations(),
+			getHourlyRates(),
+			can('reservation.manageClosures')
+		]);
+
+	// A tab's badge counts what the tab lists.
+	const add = (key: 'upcoming' | 'all') =>
+		(show === 'closures' ? 0 : counts[key]) + (closureCounts?.[key] ?? 0);
+	return {
+		list,
+		counts: { upcoming: add('upcoming'), all: add('all') },
+		unresolved,
+		hourlyRates,
+		canManageClosures
+	};
 });
 
 /**

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -81,9 +82,14 @@
 
 <PageHeader
 	width="3xl"
-	title={orderId ? 'Receive an order' : 'Intake'}
+	title={orderId ? 'Receive an order' : 'Receive Stock'}
 	subtitle="Inventory"
-	backHref={orderId ? `/staff/inventory/orders/${orderId}` : '/staff/inventory'}
+	parent={orderId
+		? [
+				{ label: 'Orders', href: resolve('/staff/inventory/orders') },
+				{ label: 'Order', href: resolve('/staff/inventory/orders/[id]', { id: orderId }) }
+			]
+		: []}
 />
 
 <PageContent width="3xl">

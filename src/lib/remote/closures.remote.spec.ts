@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { isValidationError } from '@sveltejs/kit';
+import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // Regression: `createClosure` called `issue.endsAt(...)` without throwing it.
 // Constructing an issue is inert — only `invalid()` throws — so an inverted date
@@ -17,9 +19,7 @@ vi.mock('$lib/server/authorization', () => ({
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: null }, request: { headers: new Headers() } }),
-	// Queries are stubbed wholesale rather than passed through: the handlers under
-	// test end with `getClosures().refresh()`, so the stub only has to be callable
-	// and hand back a refreshable handle.
+	// Stubbed wholesale rather than passed through; nothing here is a query.
 	query: () => {
 		const stub = (() => ({ refresh: async () => undefined })) as unknown as Record<string, unknown>;
 		stub.__ = { type: 'query' };
@@ -105,5 +105,21 @@ describe('createClosure validation', () => {
 
 		expect(db.insert).toHaveBeenCalledTimes(1);
 		expect(insertValues).toHaveBeenCalledWith(expect.objectContaining({ reason: 'Deep clean' }));
+	});
+
+	// A datetime-local input sends no zone. `new Date()` read it in the runtime's
+	// zone, UTC on Workers, so 9am typed at the desk was stored as 2am club time.
+	it('reads a zoneless datetime-local value as club time', async () => {
+		await closures.createClosure(
+			{ reason: 'Deep clean', startsAt: '2026-09-10T09:00', endsAt: '2026-09-10T18:00' },
+			makeIssue()
+		);
+
+		expect(insertValues).toHaveBeenCalledWith(
+			expect.objectContaining({
+				startsAt: buildDateInTz('2026-09-10', '09:00', DEFAULT_TIMEZONE),
+				endsAt: buildDateInTz('2026-09-10', '18:00', DEFAULT_TIMEZONE)
+			})
+		);
 	});
 });

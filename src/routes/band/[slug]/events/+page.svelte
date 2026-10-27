@@ -49,7 +49,7 @@
 <PageHeader title="Events" subtitle={band.name}>
 	{#if isAdmin}
 		<Button variant="ghost" size="sm" onclick={() => (importing = true)}>Import past gigs</Button>
-		<CreateEventModal bandId={band.id} bandSlug={band.slug} bandName={band.name} />
+		<CreateEventModal bandSlug={band.slug} />
 	{/if}
 </PageHeader>
 <PageContent>
@@ -162,7 +162,7 @@
 			<p>No events yet</p>
 			{#if isAdmin}
 				<div class="mt-2">
-					<CreateEventModal bandId={band.id} bandSlug={band.slug} bandName={band.name} />
+					<CreateEventModal bandSlug={band.slug} />
 				</div>
 			{/if}
 		</EmptyState>

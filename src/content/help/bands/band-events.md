@@ -15,10 +15,11 @@ a list of the band's shows with their status (draft, published, or cancelled).
 ## Creating an event
 
 1. Open the band's **Events** page and choose **Create Event**.
-2. Fill in the **title, description, date**, and **start/end times**.
-3. Add **doors open** time, **location**, **tags**, and an external **ticket
-   link** if you sell tickets elsewhere.
-4. Create it. New events start as drafts, so nothing is public until you publish.
+2. Fill in the **title**, **date** and **start time** — that is all it asks.
+3. Create it. The event's page opens next: add the end and doors times,
+   **location**, **tags**, the bill, a poster and an external **ticket link**
+   there, then **Save**.
+4. New events start as drafts, so nothing is public until you publish.
 
 ## Managing an event
 

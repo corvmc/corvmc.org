@@ -119,7 +119,7 @@
 	}
 </script>
 
-<PageHeader title="New Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns" />
+<PageHeader title="New Campaign" subtitle="Marketing" />
 <PageContent>
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 		<!-- Editor pane -->

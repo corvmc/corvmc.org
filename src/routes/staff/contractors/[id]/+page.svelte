@@ -46,7 +46,6 @@
 <PageHeader
 	title={data.contractor.name}
 	subtitle={contractorTradeLabels[data.contractor.trade as ContractorTrade]}
-	backHref="/staff/contractors"
 >
 	<Action
 		action={updateContractorForm}

@@ -98,7 +98,8 @@ test.describe('productions', () => {
 		await expect(row).toBeVisible({ timeout: 15000 });
 		await expect(row.getByText('Draft', { exact: true })).toBeVisible();
 		await expect(row.getByText(SEED_VENUE_OFFSITE_NAME)).toBeVisible();
-		await expect(row.getByText(SEED_PRODUCTION_HEADLINER)).toBeVisible();
+		// The bill is an avatar stack, so the acts are its accessible name, not text.
+		await expect(row.getByLabel(SEED_PRODUCTION_HEADLINER)).toBeVisible();
 
 		// A CMC show with no production reads as absent, not as blank — the two
 		// have to be told apart, which is the reason the column carries words. A

@@ -90,7 +90,7 @@
 	}
 </script>
 
-<PageHeader title="Report" subtitle="Volunteering" backHref="/staff/volunteer">
+<PageHeader title="Report" subtitle="Volunteering">
 	<!--
 		A plain anchor rather than an Action: the endpoint returns a file, not a
 		value, so it is a `+server.ts` and the browser has to navigate to it for

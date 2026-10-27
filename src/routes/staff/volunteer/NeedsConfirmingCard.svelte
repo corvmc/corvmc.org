@@ -63,7 +63,7 @@
 	});
 </script>
 
-<InfoCard title="Needs confirming" state={total} class="border-l-4 border-warning">
+<InfoCard title="Pending Assignments" state={total} class="border-l-4 border-warning">
 	{#snippet action()}
 		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
 	{/snippet}

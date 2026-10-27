@@ -19,7 +19,7 @@
 	const deleteFields = deleteLocalResourceCategoryForm.fields;
 </script>
 
-<PageHeader title="Categories" subtitle="Local Resources" backHref="/staff/local-resources">
+<PageHeader title="Categories" subtitle="Local Resources">
 	<Action
 		action={createLocalResourceCategoryForm}
 		label="New category"

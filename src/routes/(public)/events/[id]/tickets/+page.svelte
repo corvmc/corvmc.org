@@ -46,7 +46,13 @@
      it here the header hung off both sides and the page scrolled sideways on a
      phone (#970). `/events/[id]` wraps its own header the same way. -->
 <div class="mx-auto max-w-lg space-y-6 px-6">
-	<PageHeader title={isFreeEvent ? 'Get free ticket' : 'Get Tickets'} backHref="/events" />
+	<PageHeader
+		title={isFreeEvent ? 'Get free ticket' : 'Get Tickets'}
+		parent={[
+			{ label: 'Events', href: resolve('/events') },
+			{ label: evt.title, href: resolve(`/events/${page.params.id!}`) }
+		]}
+	/>
 
 	<Card>
 		<CardBody>

@@ -63,7 +63,7 @@
 	width="3xl"
 	title={role.name}
 	subtitle="Volunteer Role"
-	backHref="/staff/volunteer/roles"
+	parent={{ label: 'Roles', href: resolve('/staff/volunteer/roles') }}
 >
 	<StatusBadge status={role.isActive ? 'active' : 'retired'} label />
 

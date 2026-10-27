@@ -39,7 +39,7 @@
 	let allowOptIn = $derived(audienceData.allowOptIn);
 </script>
 
-<PageHeader subtitle="Audience" title={audienceData.name} backHref="/staff/marketing/audiences">
+<PageHeader subtitle="Audience" title={audienceData.name}>
 	<!-- Not gated on `isBuiltIn`: `updateAudience` refuses a built-in's *slug*
 	     and its opt-in, and says in its own comment that "name and description
 	     are staff-editable copy". Before this there was no way to change either

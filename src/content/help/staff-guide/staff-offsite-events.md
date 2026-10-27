@@ -31,9 +31,9 @@ and a Saturday-noon-to-Sunday-night one does not. Create one event per day.
 
 Make them from **Staff → Productions → New Event**:
 
-- **Do not tick _Reserve space_** for an off-site show. The room hold is what keeps members from
-  booking the practice space, and a show in a park has no reason to take it. (Ticking it and
-  overriding the conflict is how the room ends up blocked for a weekend nobody was in it.)
+- **Do not tick _Reserve practice space_** on the production console for an off-site show. The
+  room hold is what keeps members from booking the practice space, and a show in a park has no
+  reason to take it. Picking an off-site venue hides the toggle.
 - **Set the venue afterwards.** The create form has no location field. Open the event at
   **Staff → Events → _the event_** and put the venue in **Location** on the inline edit form.
   Until you do, the production console's Space Reservation card will keep asking you to hold a
@@ -94,7 +94,7 @@ event twice is refused rather than deduplicated, so a doubled roster is not some
 by accident.
 
 The advance work orders land with no window. They show up on **Staff → Volunteer** under
-**Needs scheduling**, and on the event's production page under **Advance** — that is where their
+**Unscheduled Work Orders**, and on the event's production page under **Advance** — that is where their
 checklists are ticked off.
 
 ### The fortnight before

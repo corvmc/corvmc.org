@@ -44,7 +44,19 @@
 		onselect?: (value: T | null) => void;
 	} = $props();
 
+	// `typed` is what the input shows; `query` is what is searched. The awaited
+	// search holds back the batch that sets `query`, so a value read from it
+	// lags the keyboard. Updating `query` from its own debounced task keeps the
+	// input out of that batch, and stops a burst of keystrokes stacking up
+	// overlapping searches whose last result never lands (#1970).
+	let typed = $state('');
 	let query = $state('');
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	function onTyped(next: string) {
+		typed = next;
+		clearTimeout(timer);
+		timer = setTimeout(() => (query = next), 150);
+	}
 	let comboValue = $state<string[]>([]);
 
 	const results = $derived(query.length >= minChars ? await search(query) : []);
@@ -66,6 +78,8 @@
 		const found = results.find((r) => r.id === ids[0]);
 		if (!found) return;
 		value = found;
+		clearTimeout(timer);
+		typed = '';
 		query = '';
 		onselect?.(found);
 	}
@@ -108,15 +122,13 @@
 			type="multiple"
 			bind:value={comboValue}
 			onValueChange={commit}
-			inputValue={query}
+			inputValue={typed}
 		>
 			<div class="relative">
 				<Combobox.Input
 					{placeholder}
 					class="input w-full"
-					oninput={(e: Event) => {
-						query = (e.target as HTMLInputElement).value;
-					}}
+					oninput={(e: Event) => onTyped((e.target as HTMLInputElement).value)}
 				/>
 				<!--
 					`flex-nowrap` is load bearing. daisyUI's `.menu` is `flex-flow: column

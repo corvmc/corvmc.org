@@ -183,6 +183,7 @@ vi.mock('$lib/server/project/project-service', () => ({
 	listProjects: vi.fn(async () => []),
 	listCommitteeProjectEvents: vi.fn(async () => [])
 }));
+vi.mock('$lib/server/group/group-totals-service', () => ({ getClubTotals: vi.fn() }));
 vi.mock('$lib/server/group/file-service', () => ({ list: vi.fn(), getUsage: vi.fn() }));
 vi.mock('$lib/server/capability/capability-grant-service', () => ({
 	setCommitteeCapabilityGrants: vi.fn()

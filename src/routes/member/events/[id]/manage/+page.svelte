@@ -70,7 +70,7 @@
 </script>
 
 {#if !listing}
-	<PageHeader width="2xl" title="Listing not found" backHref={resolve('/member/events')} />
+	<PageHeader width="2xl" title="Listing not found" />
 	<PageContent width="2xl">
 		<Alert type="warning">
 			This listing doesn't exist, or it isn't yours.
@@ -78,7 +78,7 @@
 		</Alert>
 	</PageContent>
 {:else}
-	<PageHeader title={listing.title} backHref={resolve('/member/events')}>
+	<PageHeader title={listing.title}>
 		<StatusBadge status={listing.status} label />
 	</PageHeader>
 

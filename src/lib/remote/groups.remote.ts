@@ -10,6 +10,7 @@ import {
 	type GroupApplicationStatus
 } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
+import { getClubTotals } from '$lib/server/group/group-totals-service';
 import { setCommitteeCapabilityGrants } from '$lib/server/capability/capability-grant-service';
 import { allowlisted } from '$lib/server/capability/grant-rules';
 import { can, requireCapability, requireUser } from '$lib/server/authorization';
@@ -94,6 +95,12 @@ const staffGroupFilters = z.object({
 	status: z.enum(['active', 'deactivated']).optional(),
 	kind: staffKind.optional(),
 	page: z.number().int().min(1).optional()
+});
+
+/** The Clubs page's summary counts — org-wide, independent of the table's filters. */
+export const getStaffClubTotals = query(async () => {
+	await requireCapability('group.read');
+	return getClubTotals();
 });
 
 export const getStaffGroups = query(staffGroupFilters, async (filters) => {

@@ -16,7 +16,7 @@
 	import CategoryManagerModal from '$lib/components/inventory/CategoryManagerModal.svelte';
 	import { itemKinds } from '$lib/config';
 	import { AddItemAction } from '$lib/components/actions';
-	import IntakeButton from './IntakeButton.svelte';
+	import HeaderActions from './HeaderActions.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { titleCase } from '$lib/utils/format';
 	import BarcodeScanner from '$lib/components/ui/BarcodeScanner.svelte';
@@ -56,11 +56,9 @@
 
 	let showCategoryModal = $state(false);
 
+	const menuFilterCount = $derived((kindFilter ? 1 : 0) + (includeDeleted ? 1 : 0));
 	const activeFilterCount = $derived(
-		(searchDebounced ? 1 : 0) +
-			(categoryId ? 1 : 0) +
-			(kindFilter ? 1 : 0) +
-			(includeDeleted ? 1 : 0)
+		(searchDebounced ? 1 : 0) + (categoryId ? 1 : 0) + menuFilterCount
 	);
 
 	function clearFilters() {
@@ -78,25 +76,34 @@
 		<Button variant="ghost" size="sm" href={resolve('/staff/inventory/locations')}>Locations</Button
 		>
 		<Button variant="ghost" size="sm" onclick={() => (showCategoryModal = true)}>Categories</Button>
-		<IntakeButton />
+		<HeaderActions />
 		<AddItemAction />
 	</div>
 </PageHeader>
 <PageContent>
-	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+	<FilterBar
+		activeCount={activeFilterCount}
+		menuCount={menuFilterCount}
+		onclear={clearFilters}
+		searchWidth="wide"
+	>
 		{#snippet search()}
-			<SearchInput
-				bind:value={searchText}
-				placeholder="Search name, barcode, resource ID..."
-				onsearch={(q) => {
-					searchDebounced = q;
-					page = 1;
-				}}
-			/>
-			<!-- The box already carries a UPC, so scanning it beats reading twelve
-			     digits off a shrink-wrapped packet. Search matches `gtin`, so the
-			     digits go straight in; a tag scan searches on the tag instead. -->
-			<BarcodeScanner onscan={handleScan} label="Scan" />
+			<!-- One control: Scan is the search box's end cap. While the camera is
+			     open the scanner takes its own line, for the preview and Stop. -->
+			<div class="scan-search flex flex-wrap">
+				<SearchInput
+					bind:value={searchText}
+					placeholder="Search name, barcode, resource ID..."
+					onsearch={(q) => {
+						searchDebounced = q;
+						page = 1;
+					}}
+				/>
+				<!-- The box already carries a UPC, so scanning it beats reading twelve
+				     digits off a shrink-wrapped packet. Search matches `gtin`, so the
+				     digits go straight in; a tag scan searches on the tag instead. -->
+				<BarcodeScanner onscan={handleScan} label="Scan" class="scan-cap" />
+			</div>
 		{/snippet}
 		<Select
 			size="sm"
@@ -110,31 +117,35 @@
 			<option value="">All categories</option>
 			<CategoryOptions />
 		</Select>
-		<Select
-			size="sm"
-			aria-label="Tracking"
-			value={kindFilter}
-			onchange={(e: Event) => {
-				kindFilter = (e.currentTarget as HTMLSelectElement).value;
-				page = 1;
-			}}
-		>
-			<option value="">All items</option>
-			{#each itemKinds as k (k)}
-				<option value={k}>{titleCase(k)}</option>
-			{/each}
-		</Select>
-		<!-- Deactivation is a soft delete, so without this the only way back to a
-		     deactivated item (and its Reactivate button) is a hand-typed URL. -->
-		<label class="label cursor-pointer gap-2 text-sm">
-			<input
-				type="checkbox"
-				class="checkbox checkbox-sm"
-				bind:checked={includeDeleted}
-				onchange={() => (page = 1)}
-			/>
-			Show deactivated
-		</label>
+		{#snippet menu()}
+			<label class="flex flex-col gap-1">
+				<span class="text-muted text-xs">Tracking</span>
+				<Select
+					size="sm"
+					value={kindFilter}
+					onchange={(e: Event) => {
+						kindFilter = (e.currentTarget as HTMLSelectElement).value;
+						page = 1;
+					}}
+				>
+					<option value="">All items</option>
+					{#each itemKinds as k (k)}
+						<option value={k}>{titleCase(k)}</option>
+					{/each}
+				</Select>
+			</label>
+			<!-- Deactivation is a soft delete, so without this the only way back to a
+			     deactivated item (and its Reactivate button) is a hand-typed URL. -->
+			<label class="label cursor-pointer gap-2 text-sm">
+				<input
+					type="checkbox"
+					class="checkbox checkbox-sm"
+					bind:checked={includeDeleted}
+					onchange={() => (page = 1)}
+				/>
+				Show deactivated
+			</label>
+		{/snippet}
 	</FilterBar>
 
 	<DataList {result} empty="No items found" onpage={(p) => (page = p)}>
@@ -143,10 +154,10 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Item</th>
+					<th class="col-support">Category</th>
 					<th class="col-support">Tracking</th>
 					<th class="cell-num">Available</th>
-					<th class="col-support cell-num">On hand</th>
-					<th class="col-extra">Barcode</th>
+					<th class="col-support cell-num">Total</th>
 				{/snippet}
 
 				{#each equipment as e (e.id)}
@@ -155,9 +166,15 @@
 						<td class="w-px">
 							<StatusBadge status={e.deletedAt ? 'deactivated' : 'active'} />
 						</td>
-						<!-- Category was its own column; as the ref's subline it costs no width. -->
-						<td class="cell-primary"><EntityIdentity ref={e.ref} /></td>
-						<td class="col-support">
+						<td class="cell-primary">
+							<!-- Category has its own column; below col-support's width it rides as the subline. -->
+							<EntityIdentity ref={e.ref}>
+								{#snippet subtitle()}<span class="@min-[32rem]:hidden">{e.category.name}</span
+									>{/snippet}
+							</EntityIdentity>
+						</td>
+						<td class="col-support whitespace-nowrap">{e.category.name}</td>
+						<td class="col-support whitespace-nowrap">
 							<Badge size="sm" class="badge-ghost">{titleCase(e.kind)}</Badge>
 							{#if e.isConsumable}
 								<Badge size="sm" class="badge-ghost">Consumable</Badge>
@@ -167,19 +184,12 @@
 							<span class:text-error={e.availableQuantity <= 0}>{e.availableQuantity}</span>
 						</td>
 						<td class="col-support cell-num">
-							<!-- Low stock is the reorder point doing its job: nobody has to
-							     notice, so the row says so itself. -->
-							<span class:text-warning={e.isLowStock}>{e.onHand}</span>
-							{#if e.isLowStock}
-								<Badge size="sm" class="badge-warning">Low</Badge>
-							{/if}
-						</td>
-						<td class="col-extra">
-							{#if e.gtin}
-								<span class="font-mono text-xs">{e.gtin}</span>
-							{:else}
-								<span class="opacity-40">—</span>
-							{/if}
+							<!-- Low stock is the reorder point doing its job: the colour says so. -->
+							<span
+								class:text-warning={e.isLowStock}
+								class:font-semibold={e.isLowStock}
+								title={e.isLowStock ? 'Low stock' : undefined}>{e.onHand}</span
+							>
 						</td>
 					</tr>
 				{/each}
@@ -188,3 +198,24 @@
 	</DataList>
 </PageContent>
 <CategoryManagerModal bind:open={showCategoryModal} />
+
+<style>
+	.scan-search > :global(input) {
+		flex: 1;
+		width: auto;
+		min-width: 0;
+	}
+	.scan-search:not(:has(:global(video))) > :global(input) {
+		border-start-end-radius: 0;
+		border-end-end-radius: 0;
+	}
+	.scan-search > :global(.scan-cap:not(:has(video)) .btn) {
+		margin-inline-start: -1px;
+		border-start-start-radius: 0;
+		border-end-start-radius: 0;
+	}
+	.scan-search > :global(.scan-cap:has(video)) {
+		width: 100%;
+		margin-top: 0.5rem;
+	}
+</style>

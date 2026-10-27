@@ -63,12 +63,7 @@
 	});
 </script>
 
-<PageHeader
-	width="3xl"
-	subtitle="Equipment Loan"
-	title={loan.equipmentName ?? 'Free-form Request'}
-	backHref="/staff/inventory/loans"
->
+<PageHeader width="3xl" subtitle="Equipment Loan" title={loan.equipmentName ?? 'Free-form Request'}>
 	<StatusBadge status={loan.status} />
 	{#if loan.isOverdue}
 		<Badge variant="error" size="md">Overdue</Badge>

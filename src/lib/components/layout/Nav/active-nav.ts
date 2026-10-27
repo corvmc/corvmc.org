@@ -29,6 +29,11 @@ export interface NavNode<K extends string = string> {
 	 * their own active state (#1237).
 	 */
 	exact?: boolean;
+	/**
+	 * Other path prefixes this row owns: pages that belong to it but live
+	 * outside its href, such as a detail route whose list became part of it.
+	 */
+	also?: ResolvedPathname[];
 	children?: NavNode<K>[];
 }
 
@@ -66,12 +71,31 @@ export function activeNavKey<K extends string>(items: NavNode<K>[], pathname: st
 	let bestLength = -1;
 	for (const item of flattenNav(items)) {
 		if (!item.href.startsWith('/')) continue;
-		if (item.exact ? path !== item.href : path !== item.href && !path.startsWith(item.href + '/'))
-			continue;
-		if (item.href.length > bestLength) {
-			bestLength = item.href.length;
-			best = item.key;
+		for (const href of [item.href, ...(item.also ?? [])]) {
+			if (item.exact ? path !== href : path !== href && !path.startsWith(href + '/')) continue;
+			if (href.length > bestLength) {
+				bestLength = href.length;
+				best = item.key;
+			}
 		}
 	}
 	return best;
+}
+
+/**
+ * The active row and the rows above it, outermost first: the same match as
+ * `activeNavKey`, read as a path through the tree rather than a single key.
+ */
+export function activeNavPath<N extends NavNode>(items: N[], pathname: string): N[] {
+	const key = activeNavKey(items, pathname);
+	if (key === null) return [];
+	const find = (nodes: N[]): N[] | null => {
+		for (const node of nodes) {
+			if (node.key === key) return [node];
+			const below = node.children ? find(node.children as N[]) : null;
+			if (below) return [node, ...below];
+		}
+		return null;
+	};
+	return find(items) ?? [];
 }

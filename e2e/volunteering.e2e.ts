@@ -33,8 +33,6 @@ import {
 	SEED_VOL_MINOR_LAST,
 	SEED_VOL_BLOCKED_MINOR_EMAIL,
 	SEED_VOL_BLOCKED_MINOR_NAME,
-	SEED_VOL_BLOCKED_MINOR_FIRST,
-	SEED_VOL_BLOCKED_MINOR_LAST,
 	readVolunteerState,
 	readSignupStatus,
 	readShiftSignups,
@@ -336,7 +334,7 @@ test.describe('volunteering — roles', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/schedule');
 
-		await page.getByRole('button', { name: 'New Shift' }).click();
+		await page.getByRole('button', { name: 'New Work Order' }).click();
 		const dialog = page.getByRole('dialog');
 		const roleSelect = dialog.locator('select[name="volunteerRoleId"]');
 
@@ -359,6 +357,23 @@ test.describe('volunteering — roles', () => {
 		await page.goto('/staff/volunteer/interest');
 
 		await expect(page).toHaveURL(/\/staff\/volunteer\/people$/);
+	});
+
+	test('the retired recurring-work page redirects onto the schedule filter', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/recurring');
+
+		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule\?kind=recurring$/);
+		await expect(page.getByRole('button', { name: 'New Recurring Work' })).toBeVisible();
+	});
+
+	test('the retired sign-off tab lands on the roster filtered to it', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/people?tab=signoff');
+
+		await expect(page).toHaveURL(/status=blocked/);
+		await expect(page.getByRole('row', { name: SEED_VOL_BLOCKED_MINOR_NAME })).toBeVisible();
+		await expect(page.getByRole('row', { name: SEED_VOL_MEMBER_NAME })).toHaveCount(0);
 	});
 
 	test('the retired shift catalog redirects onto the schedule', async ({ page }) => {
@@ -587,15 +602,17 @@ test.describe('volunteering — onboarding', () => {
 	 */
 	test('staff can approve a blocked minor, and then they get in', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer');
+		// Guardian sign-off lives on the roster, not the dashboard.
+		await page.goto('/staff/volunteer/people');
 
-		const row = rowFor(page, `${SEED_VOL_BLOCKED_MINOR_FIRST} ${SEED_VOL_BLOCKED_MINOR_LAST}`);
+		// The roster names people by account, not by their volunteer profile.
+		const row = rowFor(page, SEED_VOL_BLOCKED_MINOR_EMAIL);
 		await expect(row).toBeVisible({ timeout: 15000 });
 		await row.getByRole('button', { name: 'Approve' }).click();
 		await modalSubmit(page, 'Approve').click();
 
-		// The queue is the blocked list, so approving empties the row out of it.
-		await expect(row).toHaveCount(0, { timeout: 15000 });
+		// The roster keeps everyone, so approval shows as the sign-off action going away.
+		await expect(row.getByRole('button', { name: 'Approve' })).toHaveCount(0, { timeout: 15000 });
 
 		// Signing a second user in over an existing session does not swap it — the
 		// staff session would survive, and staff have no volunteer profile, so the
@@ -901,7 +918,7 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/hours');
 
-		await page.getByRole('button', { name: 'Log hours', exact: true }).click();
+		await page.getByRole('button', { name: 'Log Hours', exact: true }).click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible({ timeout: 15000 });
 
@@ -920,7 +937,7 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await dialog
 			.locator('textarea[name="description"]')
 			.fill('E2E: taken off the paper sign-in sheet.');
-		await modalSubmit(page, 'Record').click();
+		await modalSubmit(page, 'Log Hours').click();
 
 		// Approved on entry and attributed to the staffer — so it never appears in the
 		// Pending queue the same person is standing in, which is why this reads the row.

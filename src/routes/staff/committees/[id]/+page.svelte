@@ -23,12 +23,7 @@
 {#if data.manage}
 	<StaffGroupDetail group={data.manage.group} members={data.manage.members} {applications} />
 {:else}
-	<PageHeader
-		width="3xl"
-		title={data.committee.name}
-		subtitle="Committee"
-		backHref="/staff/committees"
-	/>
+	<PageHeader width="3xl" title={data.committee.name} subtitle="Committee" />
 	<PageContent width="3xl">
 		{#if data.applications.length === 0}
 			<EmptyState description="Nothing waiting on this committee." />

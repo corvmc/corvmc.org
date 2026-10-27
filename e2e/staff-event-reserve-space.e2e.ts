@@ -15,17 +15,14 @@ import {
 } from './fixtures/seed-staff-event';
 
 /**
- * End-to-end pin for the "Reserve practice space" toggle on the New Event modal.
+ * End-to-end pin for "Reserve practice space", which lives on the production
+ * console's edit form. The create modal asks only for what the row needs
+ * (#1822's rule), so every hold below is raised after the event exists.
  *
- * The toggle's value was passed one-way (`value=` rather than `bind:value=`) to
- * FormField, whose checkbox owns the binding. The parent's `reserveSpace` never
- * flipped, so the conditional block holding the reservation times never mounted
- * and never submitted — and the server, which only booked the space when both
- * times arrived, created the event with no reservation and no error.
- *
- * This is the same FormField binding defect class documented in
- * staff-users.e2e.ts; only an e2e catches it, because the server handler tests
- * post the fields the browser was failing to render.
+ * The toggle once passed its value one-way to FormField, so the reservation
+ * times never mounted and the event saved with no hold and no error. Only an
+ * e2e catches that class: the server specs post the fields the browser failed
+ * to render.
  */
 
 async function loginAsStaff(page: Page) {
@@ -67,8 +64,7 @@ async function goToConsole(page: Page, title: string) {
 	await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
 }
 
-// A checkbox Field carries the `b:` prefix so SvelteKit submits a real boolean.
-const RESERVE_TOGGLE = 'input[name="b:reserveSpace"]';
+const RESERVE_CHECKBOX = { name: 'Reserve practice space' };
 
 // The window and title prefix come from the fixture, which clears the previous
 // run's event first — its reservation would otherwise conflict with this one.
@@ -84,78 +80,66 @@ const EVENT_DATE = SEED_EVENT_DATE;
 const EVENT_START = SEED_EVENT_START;
 const EVENT_END = SEED_EVENT_END;
 
-test.describe('staff event creation — reserve space', () => {
-	test('checking the toggle reveals the reservation times, pre-filled from the event', async ({
-		page
-	}) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/productions');
-		await page.getByRole('button', { name: 'New Event' }).click();
+/** Create an event through the minimal modal and open its console. */
+async function createEvent(
+	page: Page,
+	title: string,
+	date: string,
+	start = EVENT_START,
+	end = EVENT_END
+) {
+	await page.goto('/staff/productions');
+	await page.getByRole('button', { name: 'New Event' }).click();
+	await page.locator('input[name="title"]').fill(title);
+	await page.locator('input[name="eventDate"]').fill(date);
+	await page.locator('input[name="eventStartTime"]').fill(start);
+	await page.locator('input[name="eventEndTime"]').fill(end);
+	await page.getByRole('button', { name: 'Create Event' }).click();
+	await goToConsole(page, title);
+}
 
-		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
-		await page.locator('input[name="eventEndTime"]').fill(EVENT_END);
-
-		// Before the fix these never mounted, so the times were never submitted.
-		await expect(page.locator('input[name="reservationStartTime"]')).toHaveCount(0);
-
-		await page.locator(RESERVE_TOGGLE).check();
-
-		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue(EVENT_START);
-		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue(EVENT_END);
+/** From the console: open Edit, tick the hold, save, and wait for the link. */
+async function holdSpace(page: Page) {
+	await page.getByRole('button', { name: 'Edit' }).click();
+	await page.getByRole('checkbox', RESERVE_CHECKBOX).check();
+	// `exact`: the console also carries "Save bill".
+	await page.getByRole('button', { name: 'Save', exact: true }).click();
+	await expect(page.locator('a[href^="/staff/reservations/"]').first()).toBeVisible({
+		timeout: 15000
 	});
+}
 
-	test('creating the event books the space and links it to the event', async ({ page }, {
-		retry
-	}) => {
+test.describe('staff event creation — minimal modal', () => {
+	test('the create modal asks for no room, ticket or poster', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/productions');
 		await page.getByRole('button', { name: 'New Event' }).click();
 
-		const title = `${SEED_EVENT_TITLE_PREFIX} ${Date.now()}`;
-		await page.locator('input[name="title"]').fill(title);
-		await page.locator('input[name="eventDate"]').fill(bookingDate(EVENT_DATE, retry));
-		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
-		await page.locator('input[name="eventEndTime"]').fill(EVENT_END);
-		await page.locator(RESERVE_TOGGLE).check();
-
-		await page.getByRole('button', { name: 'Create Event' }).click();
-
-		// handleSuccess navigates to the new event's general view; the room is the
-		// console's.
-		await goToConsole(page, title);
-
-		// The card only renders off `event.reservationId`, so its presence proves
-		// the reservation was created AND linked. Matched by role, not text: the
-		// staff sidebar's Space group reads "Space / Reservations / Equipment" as
-		// one node, which a substring match on "Space Reservation" also catches.
-		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toBeVisible();
-		// The card is an EntityIdentity now, not a hand-rolled "View reservation →"
-		// link, so the assertion is the link to the record rather than to that
-		// wording — which is the thing that actually proves it was linked.
-		await expect(page.locator('a[href^="/staff/reservations/"]').first()).toBeVisible();
+		const dialog = page.getByRole('dialog');
+		await expect(dialog.locator('input[name="title"]')).toBeVisible({ timeout: 15000 });
+		await expect(dialog.locator('input[name="eventEndTime"]')).toBeVisible();
+		await expect(dialog.getByText('Reserve practice space')).toHaveCount(0);
+		await expect(dialog.getByText('Sell tickets through the site')).toHaveCount(0);
+		await expect(dialog.locator('input[type="file"]')).toHaveCount(0);
 	});
 
 	test('re-timing the event carries the setup and teardown padding', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/productions');
-		await page.getByRole('button', { name: 'New Event' }).click();
+		// Never saved, so the date cannot collide with anything.
+		await createEvent(page, `${SEED_EVENT_TITLE_PREFIX} pad ${Date.now()}`, EVENT_DATE);
 
-		await page.locator('input[name="eventStartTime"]').fill('19:00');
-		await page.locator('input[name="eventEndTime"]').fill('22:00');
-		await page.locator(RESERVE_TOGGLE).check();
+		await page.getByRole('button', { name: 'Edit' }).click();
+		await page.getByRole('checkbox', RESERVE_CHECKBOX).check();
+		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue(EVENT_START);
+		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue(EVENT_END);
 
-		// An hour either side of the show for load-in and load-out.
+		// An hour either side of the 19:00–22:00 show for load-in and load-out.
 		await page.locator('input[name="reservationStartTime"]').fill('18:00');
 		await page.locator('input[name="reservationEndTime"]').fill('23:00');
-		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue('18:00');
 
-		// The show moves two hours earlier.
+		// The show moves two hours earlier, and the padding moves with it.
 		await page.locator('input[name="eventStartTime"]').fill('17:00');
 		await page.locator('input[name="eventEndTime"]').fill('20:00');
-
-		// Seeding only-while-empty left the hold at 18:00–23:00, booking a window
-		// that no longer wrapped the show. Re-seeding from the event outright would
-		// give 17:00–20:00 and throw the padding away. The padding moves with it.
 		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue('16:00');
 		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue('21:00');
 	});
@@ -164,28 +148,23 @@ test.describe('staff event creation — reserve space', () => {
 		page
 	}, { retry }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/productions');
-		await page.getByRole('button', { name: 'New Event' }).click();
-
 		const eventDate = bookingDate(SEED_LIST_LINK_DATE, retry);
 		const title = `${SEED_EVENT_TITLE_PREFIX} ${Date.now()}`;
-		await page.locator('input[name="title"]').fill(title);
-		await page.locator('input[name="eventDate"]').fill(eventDate);
-		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
-		await page.locator('input[name="eventEndTime"]').fill(EVENT_END);
-		await page.locator(RESERVE_TOGGLE).check();
-		await page.getByRole('button', { name: 'Create Event' }).click();
-
-		await waitForEventPage(page, title);
-		const eventId = new URL(page.url()).pathname.split('/').pop()!;
+		await createEvent(page, title, eventDate);
+		const eventId = new URL(page.url()).pathname.split('/').at(-2)!;
+		await holdSpace(page);
 
 		await page.goto('/staff/reservations');
 		// Searching the title is itself part of the change: the list only matched
 		// member and band names, so an event hold was unfindable by its show.
 		await page.getByRole('searchbox').fill(title);
-		// The date bounds keep the row off a later page of the 50-row list.
+		// The date bounds keep the row off a later page of the 50-row list. They
+		// sit in the Filters menu, closed again so it cannot cover the row.
+		await page.getByRole('button', { name: /^Filters/ }).click();
 		await page.getByLabel('From date').fill(eventDate);
 		await page.getByLabel('To date').fill(eventDate);
+		await page.keyboard.press('Escape');
+		await expect(page.getByLabel('From date')).toBeHidden();
 
 		const row = page.locator('tr', { has: page.getByRole('link', { name: title }) });
 		await expect(row.getByRole('link', { name: title })).toHaveAttribute(
@@ -206,37 +185,35 @@ test.describe('staff event creation — reserve space', () => {
 		await expect(page.getByText('Booked by')).toBeVisible();
 	});
 
-	test('a double-booking blocks the submit until the override is ticked', async ({ page }) => {
+	test('a double-booking blocks the save until the override is ticked', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/productions');
-		await page.getByRole('button', { name: 'New Event' }).click();
-
-		await page.locator('input[name="title"]').fill('E2E Conflict Probe');
-		await page.locator('input[name="eventDate"]').fill(SEED_CONFLICT_DATE);
-		await page.locator('input[name="eventStartTime"]').fill(SEED_CONFLICT_START);
-		await page.locator('input[name="eventEndTime"]').fill(SEED_CONFLICT_END);
-		await page.locator(RESERVE_TOGGLE).check();
+		await createEvent(
+			page,
+			`${SEED_EVENT_TITLE_PREFIX} conflict ${Date.now()}`,
+			SEED_CONFLICT_DATE,
+			SEED_CONFLICT_START,
+			SEED_CONFLICT_END
+		);
+		await page.getByRole('button', { name: 'Edit' }).click();
+		const reserve = page.getByRole('checkbox', RESERVE_CHECKBOX);
+		await reserve.check();
 
 		// The seeded booking holds this window, so the overlap has to fire — and it
-		// is an error, not a warning. Double-booking is a different kind of thing
-		// from finishing after closing time and no longer looks like one.
+		// is an error, not a warning.
 		await expect(page.getByText(/Double-books the space/)).toBeVisible({ timeout: 15000 });
 
 		const override = page.getByRole('checkbox', { name: /double-books the space/i });
-		const submit = page.getByRole('button', { name: 'Create Event' });
+		const submit = page.getByRole('button', { name: 'Save', exact: true });
 
-		// The override is a second, deliberate action rather than a relabelled
-		// submit: until it is ticked the form cannot be sent at all.
+		// A second, deliberate action rather than a relabelled submit.
 		await expect(override).not.toBeChecked();
 		await expect(submit).toBeDisabled();
 		await override.check();
 		await expect(submit).toBeEnabled();
 
-		// ConflictWarnings unmounts with the toggle and stops maintaining the flag.
-		// Left stale, it keeps the hidden overrideConflicts input in the form and
-		// the next submission skips the server's double-booking check.
-		await page.locator(RESERVE_TOGGLE).uncheck();
-
+		// Unticking the hold clears the flag, so a stale override cannot ride
+		// along on the next save and skip the server's double-booking check.
+		await reserve.uncheck();
 		await expect(submit).toBeEnabled();
 		await expect(page.getByRole('checkbox', { name: /double-books the space/i })).toHaveCount(0);
 	});
@@ -250,24 +227,12 @@ test.describe('staff event creation — reserve space', () => {
  * reached 18 events with zero reservations and nothing could repair any of them.
  */
 test.describe('staff event edit — reserve space', () => {
-	const RESERVE_CHECKBOX = { name: 'Reserve practice space' };
-
 	test('an event created without space can book it from the edit form', async ({ page }, {
 		retry
 	}) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/productions');
-		await page.getByRole('button', { name: 'New Event' }).click();
-
 		const title = `${SEED_EVENT_TITLE_PREFIX} edit ${Date.now()}`;
-		await page.locator('input[name="title"]').fill(title);
-		await page.locator('input[name="eventDate"]').fill(bookingDate(SEED_EDIT_EVENT_DATE, retry));
-		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
-		await page.locator('input[name="eventEndTime"]').fill(EVENT_END);
-		// Deliberately left unchecked — this is the state prod is full of.
-		await page.getByRole('button', { name: 'Create Event' }).click();
-
-		await goToConsole(page, title);
+		await createEvent(page, title, bookingDate(SEED_EDIT_EVENT_DATE, retry));
 
 		// The card always renders now; with no hold it says so, rather than
 		// vanishing and leaving "not held" indistinguishable from "not shown".
@@ -299,19 +264,9 @@ test.describe('staff event edit — reserve space', () => {
 		retry
 	}) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/productions');
-		await page.getByRole('button', { name: 'New Event' }).click();
-
 		const title = `${SEED_EVENT_TITLE_PREFIX} self ${Date.now()}`;
-		await page.locator('input[name="title"]').fill(title);
-		await page.locator('input[name="eventDate"]').fill(bookingDate(SEED_SELF_CONFLICT_DATE, retry));
-		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
-		await page.locator('input[name="eventEndTime"]').fill(EVENT_END);
-		await page.locator(RESERVE_TOGGLE).check();
-		await page.getByRole('button', { name: 'Create Event' }).click();
-
-		await goToConsole(page, title);
-		await expect(page.locator('a[href^="/staff/reservations/"]').first()).toBeVisible();
+		await createEvent(page, title, bookingDate(SEED_SELF_CONFLICT_DATE, retry));
+		await holdSpace(page);
 
 		// Start the show two hours earlier. That escapes the current hold, so the
 		// edit form raises the rebook alert and mounts ConflictWarnings against a
