@@ -93,7 +93,7 @@ import {
 } from '$lib/server/reservation/reservation-service';
 import { orientationForReservation } from '$lib/server/volunteer/orientation-service';
 import { mapDomainError } from '$lib/server/errors';
-import { isTerminalStatus } from '$lib/utils/reservation-actions';
+import { isAwaitingPayment, isTerminalStatus } from '$lib/utils/reservation-actions';
 import { bookerTypes, type BookerType } from '$lib/config';
 import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
 import { requireInstructor } from '$lib/server/instructor/instructor-context';
@@ -153,13 +153,8 @@ export const getReservationPayment = query(z.string(), async (id) => {
 
 	if (!row) throw error(404, 'Reservation not found');
 	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
-	// Payable: awaiting confirmation, or already confirmed with a balance still
-	// owed ("cash at door" bookings can settle online too). cashDueCents null on
-	// a confirmed row means credits were never committed — still owed in full.
-	const confirmedUnpaid =
-		row.status === 'confirmed' && !row.paidAt && (row.cashDueCents == null || row.cashDueCents > 0);
-	if (row.status !== 'scheduled' && !confirmedUnpaid)
-		throw error(400, 'This reservation is not awaiting payment');
+	// Shared with the member UI's pay links, so the two cannot drift (#1952).
+	if (!isAwaitingPayment(row)) throw error(400, 'This reservation is not awaiting payment');
 
 	// Resolved for who is booking. Reading the config directly quoted an
 	// instructor the $15 drop-in rate on the page they pay from.

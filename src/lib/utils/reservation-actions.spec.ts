@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+	isAwaitingPayment,
 	isTerminalStatus,
+	memberPayAction,
 	overlappingReservations,
 	reservationPaymentState,
 	visibleActions
@@ -257,5 +259,34 @@ describe('overlappingReservations', () => {
 	it('never reports the reservation itself', () => {
 		const others = [{ id: 'me', startsAt: at(12), endsAt: at(14), status: 'confirmed' }];
 		expect(overlappingReservations(current, others)).toEqual([]);
+	});
+});
+
+describe('memberPayAction', () => {
+	const now = new Date('2026-10-27T18:00:00Z');
+	const hoursFromNow = (h: number) => new Date(now.getTime() + h * 3_600_000);
+
+	it('a confirmed, unpaid reservation that already ended still offers payment (#1952)', () => {
+		const ended = { status: 'confirmed', startsAt: hoursFromNow(-26), paidAt: null };
+		expect(memberPayAction({ ...ended, cashDueCents: null }, now)).toBe('balance');
+		expect(memberPayAction({ ...ended, cashDueCents: 1500 }, now)).toBe('balance');
+	});
+
+	it('a paid or fully credit-settled confirmed reservation offers nothing', () => {
+		const base = { status: 'confirmed', startsAt: hoursFromNow(-26) };
+		expect(memberPayAction({ ...base, paidAt: now, cashDueCents: 0 }, now)).toBeNull();
+		expect(memberPayAction({ ...base, paidAt: null, cashDueCents: 0 }, now)).toBeNull();
+	});
+
+	it('a scheduled slot pays to reserve only before its confirmation window opens', () => {
+		const scheduled = { status: 'scheduled', paidAt: null, cashDueCents: null };
+		expect(memberPayAction({ ...scheduled, startsAt: hoursFromNow(24 * 30) }, now)).toBe('reserve');
+		expect(memberPayAction({ ...scheduled, startsAt: hoursFromNow(-2) }, now)).toBeNull();
+	});
+
+	it('only offers a confirmed balance the server gate accepts', () => {
+		const r = { status: 'confirmed', startsAt: hoursFromNow(-2), paidAt: null, cashDueCents: 500 };
+		expect(isAwaitingPayment(r)).toBe(true);
+		expect(memberPayAction(r, now)).toBe('balance');
 	});
 });
