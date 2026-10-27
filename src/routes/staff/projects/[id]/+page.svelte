@@ -32,6 +32,7 @@
 	import TaskList from './TaskList.svelte';
 	import TaskPanel from './TaskPanel.svelte';
 	import { parseFilter, type TaskFilter } from './task-view';
+	import { asDateValue } from './date-value';
 
 	/**
 	 * One project, run as a checklist: its work orders are the tasks, grouped in
@@ -80,9 +81,6 @@
 	);
 	const owner = $derived(data.projectCommittees.find((c) => c.role === 'owner') ?? null);
 	const committeeNames = $derived(data.projectCommittees.map((c) => c.name).join(', '));
-
-	/** A date input wants `YYYY-MM-DD`, and a `Date` renders as a full timestamp. */
-	const asDateValue = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '');
 </script>
 
 <svelte:window {onkeydown} />
