@@ -29,8 +29,9 @@
 		children: Snippet;
 		size?: keyof typeof sizeClass;
 		zebra?: boolean;
-		/** Off for a table that shares its row with a sidebar: the primary cell
-		 *  absorbs the slack and truncates, so the table never outgrows its column. */
+		/** Off for a table that shares its row with a sidebar, or that has no
+		 *  actions column to end the row: the primary cell absorbs the slack and
+		 *  truncates, so no dead band trails the last column. */
 		packed?: boolean;
 		class?: string;
 	} = $props();
