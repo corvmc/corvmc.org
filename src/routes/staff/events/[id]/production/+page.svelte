@@ -9,27 +9,19 @@
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { getStaffEventProduction } from '$lib/remote/events.remote';
-	import ListingEditForm from '$lib/components/events/ListingEditForm.svelte';
-	import ListingPosterCard from '$lib/components/events/ListingPosterCard.svelte';
-	import RecurringSeriesBar from '$lib/components/events/RecurringSeriesBar.svelte';
-	import SpaceHoldCard from '$lib/components/events/SpaceHoldCard.svelte';
-	import ListingTicketing from '$lib/components/events/ListingTicketing.svelte';
-	const createProductionFields = createProduction.fields;
-	import RepeatEventAction from '$lib/components/events/RepeatEventAction.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import {
 		formatDateShort,
 		formatDateTime,
+		formatTime,
 		formatTimeRange,
 		fullDate,
 		toLocalDate,
 		toLocalDateTime
 	} from '$lib/utils/format';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import { EntityChip } from '$lib/components/ui/entity';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -38,10 +30,10 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
 	import { createShift } from '$lib/remote/volunteer.remote';
-	import { createProduction } from '$lib/remote/productions.remote';
 	import { listActInDirectory } from '$lib/remote/external-acts.remote';
 	import { applyDutyList } from '$lib/remote/duty-lists.remote';
 	import {
+		createProduction,
 		updateProduction,
 		setProductionProducer,
 		openHostShift
@@ -81,12 +73,9 @@
 	 */
 	const loaded = $derived(await getStaffEventProduction(id));
 
-	let data = $derived(loaded.detail);
-	const recurringSeries = $derived(loaded.recurringSeries);
 	const shifts = $derived(loaded.shifts);
 	const volunteerRoles = $derived(loaded.volunteerRoles);
 	const dutyLists = $derived(loaded.dutyLists);
-	const venues = $derived(loaded.venues);
 	// Work orders with no window — the advance half of an applied duty list. They
 	// are a separate list rather than rows in the table below because they have no
 	// time to sort by and no confirmed/capacity story worth printing: what a
@@ -104,19 +93,16 @@
 	/** The advance question: who has told us nothing at all. */
 	const ridersMissing = $derived(riders.filter((r) => r.empty).length);
 
-	const evt = $derived(data.event);
+	const evt = $derived(loaded.detail.event);
 
 	const liveVolunteerRoles = $derived(volunteerRoles.filter((r) => r.isActive));
 
 	/**
 	 * Only a show CMC produces has a production.
 	 *
-	 * Everything on this page — the room, the ticket ledger, the volunteer
-	 * shifts, selling through our own checkout — is meaningless for a gig at
-	 * someone else's venue that a member posted. The general view at
-	 * `/staff/events/[id]` is where every source belongs; this is the
-	 * specialisation, and a hand-typed URL should land back there rather than
-	 * render an empty shell.
+	 * Shifts, run of show and settlement mean nothing for a gig a member posted
+	 * at someone else's venue. A hand-typed URL lands back on the listing at
+	 * `/staff/events/[id]` rather than rendering an empty shell.
 	 */
 	$effect(() => {
 		if (evt.source !== 'cmc') void goto(resolve(`/staff/events/${id}`), { replaceState: true });
@@ -149,15 +135,6 @@
 		if (first) shiftRoleId = first.id;
 	});
 
-	// ── Edit ──────────────────────────────────────────────────────────────
-	// The form is the listing's (`ListingEditForm`), shared with the listing
-	// page until #1950 takes it off this one.
-	let editing = $state(false);
-
-	function refresh() {
-		void getStaffEventProduction(id).refresh();
-	}
-
 	// ── Tabs ──────────────────────────────────────────────────────────────
 	// Read out of the URL once, on mount, so a reload or a copied link lands on
 	// the right panel. `tab` is the source of truth from then on.
@@ -166,7 +143,7 @@
 	let tabBarEl = $state<HTMLElement | null>(null);
 
 	// Keep-alive. A plain {#if} would unmount the Overview panel on tab change
-	// and silently discard a half-typed edit — Form's `guard` only fires on
+	// and silently discard a half-typed production form — Form's `guard` only fires on
 	// navigation, and switching tabs is not one.
 	const visited = new SvelteSet<TabKey>([initialTab]);
 	$effect(() => {
@@ -175,7 +152,7 @@
 
 	// `replaceState` (shallow routing) rather than `goto(..., { replaceState })`,
 	// which is what the filter bars use. A tab change is not a navigation, but
-	// `goto` is one, and `FormGuard` hooks `beforeNavigate`: with the edit form
+	// `goto` is one, and `FormGuard` hooks `beforeNavigate`: with the production form
 	// dirty, every tab click would cancel the navigation and pop "You have
 	// unsaved changes", whose <dialog> then swallows pointer events for the whole
 	// page. Shallow routing rewrites the address bar and nothing else, which is
@@ -205,13 +182,10 @@
 	});
 </script>
 
-<!-- Back where this row came from: a production is on /staff/events, and
-     everything else is only ever reachable from the calendar. -->
 <!--
-	The lifecycle — publish, approve, turn down, unpublish, cancel, delete — is
-	the general view's, at `/staff/events/[id]`. This page owns the production:
-	the room, the ticket ledger, the poster, the staffing. One rule, so nobody
-	has to remember which page a given button lives on.
+	Back-of-house only (#1946). The listing at `/staff/events/[id]` owns the
+	lifecycle, the edit, the poster, the series, the room hold and the sale; this
+	page owns the production record, the advance, the run of show and the money.
 -->
 <PageHeader
 	width="3xl"
@@ -220,17 +194,21 @@
 	crumb="Production"
 	parent={{ label: evt.title, href: resolve('/staff/events/[id]', { id }) }}
 >
-	<div class="flex items-center gap-2">
-		{#if evt.ticketingEnabled}
-			<Button href="/staff/events/{evt.id}/check-in" variant="ghost" size="sm">Check-in</Button>
-		{/if}
-
-		{#if evt.status !== 'cancelled' && !editing}
-			<Button variant="ghost" size="sm" onclick={() => (editing = true)}>Edit</Button>
-		{/if}
-	</div>
+	<Button href={resolve('/staff/events/[id]', { id })} variant="ghost">View listing</Button>
 </PageHeader>
 <PageContent width="3xl">
+	<!-- When and where, read-only: the question the console is opened to answer
+	     (#1068). Changing any of it is the listing's job. -->
+	<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted text-sm">
+		<StatusBadge status={evt.status} />
+		<span>{fullDate(evt.startsAt)}</span>
+		<span>
+			{#if evt.doorsAt}Doors {formatTime(evt.doorsAt)} ·{/if}
+			Show {formatEventTimeRange(evt.startsAt, evt.endsAt)}
+		</span>
+		<span>{evt.venueName ?? evt.location ?? 'The practice space'}</span>
+	</p>
+
 	<div bind:this={tabBarEl}>
 		<TabBar {tabs} active={tab} collapse onchange={(key) => (tab = key as TabKey)} />
 	</div>
@@ -242,59 +220,11 @@
 			class="space-y-6"
 			class:hidden={tab !== 'overview'}
 		>
-			<!--
-				When the show is. These four were on the page only as seeds for the
-				edit form, so the one question a production console is opened to
-				answer needed you to click Edit to read it (#1068).
-			-->
-			<InfoCard title="The night">
-				<DefinitionList>
-					<Fact label="Doors">
-						{evt.doorsAt ? formatEventTimeRange(evt.doorsAt, null) : 'Not set'}
-					</Fact>
-					<Fact label="Show">{formatEventTimeRange(evt.startsAt, evt.endsAt)}</Fact>
-					<Fact label="Where">
-						{evt.venueName ?? evt.location ?? 'The practice space'}
-					</Fact>
-				</DefinitionList>
-
-				{#if evt.description}
-					<p class="mt-3 text-muted">{evt.description}</p>
-				{/if}
-			</InfoCard>
-
 			<DeliverablesCard
 				eventId={evt.id}
 				items={loaded.deliverables}
 				committees={loaded.deliverableCommittees}
 			/>
-
-			<!-- Status -->
-			<div class="flex items-center gap-2">
-				<StatusBadge status={evt.status} />
-				{#if evt.publishedAt}
-					<span class="text-muted">Published {fullDate(evt.publishedAt)}</span>
-				{/if}
-			</div>
-
-			{#if recurringSeries}
-				<RecurringSeriesBar eventId={evt.id} series={recurringSeries} onchange={refresh} />
-			{:else if evt.status !== 'cancelled'}
-				<RepeatEventAction eventId={evt.id} startsAt={evt.startsAt} onsuccess={refresh} />
-			{/if}
-
-			{#if editing}
-				<ListingEditForm
-					event={evt}
-					linkedReservation={data.linkedReservation}
-					{venues}
-					onsaved={() => {
-						editing = false;
-						refresh();
-					}}
-					oncancel={() => (editing = false)}
-				/>
-			{/if}
 
 			<!--
 			The production record: the ops half of the night, opened from the event
@@ -472,23 +402,11 @@
 						No production record yet. Open one to plan load-in, soundcheck and curfew.
 					</p>
 					<Form remote={createProduction} class="mt-3">
-						<input {...createProductionFields.eventId.as('hidden', id)} />
+						<input {...createProduction.fields.eventId.as('hidden', id)} />
 						<SubmitButton label="Open a production" variant="primary" size="sm" />
 					</Form>
 				</InfoCard>
 			{/if}
-
-			<ListingPosterCard
-				eventId={evt.id}
-				posterUrl={data.posterUrl}
-				cancelled={evt.status === 'cancelled'}
-				onchange={refresh}
-			/>
-			<SpaceHoldCard
-				venueName={evt.venueName}
-				venueIsPrimary={evt.venueIsPrimary}
-				reservation={data.linkedReservation}
-			/>
 		</div>
 	{/if}
 
@@ -757,23 +675,6 @@
 			<fieldset disabled={productionLocked} class="contents">
 				<RunOfShowPanel {runOfShow} eventId={id} showDate={productionDate} />
 			</fieldset>
-		</div>
-	{/if}
-
-	{#if visited.has('tickets')}
-		<div
-			role="tabpanel"
-			aria-labelledby="tab-tickets"
-			class="space-y-6"
-			class:hidden={tab !== 'tickets'}
-		>
-			<ListingTicketing
-				event={evt}
-				ticketStats={data.ticketStats}
-				ticketMoney={data.ticketMoney}
-				tickets={data.tickets}
-				onchange={refresh}
-			/>
 		</div>
 	{/if}
 

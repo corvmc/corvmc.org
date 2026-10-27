@@ -1,14 +1,10 @@
 /**
- * Tab vocabulary for the production console.
- *
- * Overview carries everything about the night itself — the listing's own fields,
- * the poster, the room, and the production record. Advance is the work owed
- * before doors: riders in, shifts filled. Run of show is who plays when.
- * Tickets is the money coming in; Settlement is what the night owes. Close-out
- * is still to come, which is why `collapse` is on the bar: six tabs outrun a
- * phone.
+ * Tab vocabulary for the production console, which is back-of-house only: the
+ * listing's own fields, poster, room and sale are `/staff/events/[id]`'s.
+ * Overview is the production record; Advance is the work owed before doors;
+ * Run of show is who plays when; Settlement is what the night owes.
  */
-export const TAB_KEYS = ['overview', 'advance', 'runOfShow', 'tickets', 'settlement'] as const;
+export const TAB_KEYS = ['overview', 'advance', 'runOfShow', 'settlement'] as const;
 
 export type TabKey = (typeof TAB_KEYS)[number];
 
@@ -16,7 +12,6 @@ export const TAB_LABELS: Record<TabKey, string> = {
 	overview: 'Overview',
 	advance: 'Advance',
 	runOfShow: 'Run of show',
-	tickets: 'Tickets',
 	settlement: 'Settlement'
 };
 
