@@ -290,6 +290,48 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		.returning();
 	rows.push(cancelledNoRes);
 
+	// A CMC workshop with no production and no group, holding the room in its
+	// own name (#2004). Fixed times, so it takes no draw from the seeded random.
+	{
+		const workshopId = crypto.randomUUID();
+		const startsAt = ptDate(10, 18);
+		const endsAt = ptDate(10, 20);
+		let reservationId: string | undefined;
+		if (claimRoom(ptDate(10, 17, 30), ptDate(10, 20, 30), 'event')) {
+			const [r] = await db
+				.insert(reservation)
+				.values({
+					bookerType: 'event_listing',
+					bookerId: workshopId,
+					hardHold: true,
+					createdByUserId: staffUsers[0].id,
+					status: 'confirmed',
+					startsAt: ptDate(10, 17, 30),
+					endsAt: ptDate(10, 20, 30),
+					notes: 'Event space reservation'
+				})
+				.returning();
+			reservationId = r.id;
+		}
+		const [workshop] = await db
+			.insert(eventListing)
+			.values({
+				id: workshopId,
+				title: 'Workshop: Live Sound Basics',
+				description: 'A hands-on intro to running the board.',
+				startsAt,
+				endsAt,
+				status: 'published',
+				publishedAt: ptDate(-3, 12),
+				kind: 'class',
+				tags: 'workshop, all ages',
+				reservationId,
+				createdByUserId: staffUsers[0].id
+			})
+			.returning();
+		rows.push(workshop);
+	}
+
 	// A published CMC event that is deliberately not a show. It belongs on the
 	// public calendar — a work party nobody is told about is a work party nobody
 	// comes to — but not in the homepage posters or "show tonight", which are the

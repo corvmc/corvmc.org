@@ -1,3 +1,4 @@
+import { bandBookerJoin, eventBookerJoin } from '$lib/server/reservation/event-hold';
 import {
 	recordReservationCash,
 	recordReservationCredit
@@ -476,8 +477,8 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin)
-		.leftJoin(eventListing, eventBookerJoin)
+		.leftJoin(group, bandBookerJoin())
+		.leftJoin(eventListing, eventBookerJoin())
 		.where(eq(reservation.id, id))
 		.limit(1);
 
@@ -1015,19 +1016,6 @@ const staffReservationFiltersSchema = z.object({
 	page: z.number().optional()
 });
 
-/**
- * `bookerId` points at a band only when `bookerType` is `band`, so the join has
- * to carry that discriminator — otherwise a band whose id happened to match a
- * user's would attach to the wrong row.
- */
-const bandBookerJoin = and(eq(reservation.bookerType, 'group'), eq(group.id, reservation.bookerId));
-
-/** The same shape for the other polymorphic booker: an event holding the room. */
-const eventBookerJoin = and(
-	eq(reservation.bookerType, 'production'),
-	eq(eventListing.productionId, reservation.bookerId)
-);
-
 type StaffReservationFilters = z.infer<typeof staffReservationFiltersSchema>;
 
 /** The list's filters as one `WHERE`, over `reservation` joined to its booker as the list joins it. */
@@ -1090,8 +1078,8 @@ async function nextStaffPageStart(filters: StaffReservationFilters, now: Date) {
 		.select({ startsAt: reservation.startsAt })
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin)
-		.leftJoin(eventListing, eventBookerJoin)
+		.leftJoin(group, bandBookerJoin())
+		.leftJoin(eventListing, eventBookerJoin())
 		.where(staffReservationWhere(filters, now))
 		.orderBy(
 			(filters.tab ?? 'upcoming') === 'upcoming'
@@ -1140,8 +1128,8 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin)
-		.leftJoin(eventListing, eventBookerJoin)
+		.leftJoin(group, bandBookerJoin())
+		.leftJoin(eventListing, eventBookerJoin())
 		.where(where)
 		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
 		.$dynamic();
@@ -1150,8 +1138,8 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		.select({ count: count() })
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin)
-		.leftJoin(eventListing, eventBookerJoin)
+		.leftJoin(group, bandBookerJoin())
+		.leftJoin(eventListing, eventBookerJoin())
 		.where(where);
 
 	const { rows, pagination } = await paginate(dataQ, countQ, {

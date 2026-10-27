@@ -2574,8 +2574,20 @@ export function grantableBy(carrier: GrantCarrier): GrantableCapability[] {
  * nothing was backfilled, which is what a rename would have required and what
  * would have minted staff grants out of historical data.
  */
-export const bookerTypes = ['user', 'group', 'production', 'instructor'] as const;
+export const bookerTypes = ['user', 'group', 'production', 'instructor', 'event_listing'] as const;
 export type BookerType = (typeof bookerTypes)[number];
+
+/**
+ * The bookers whose hold is CMC's own room time for a listing: a production's,
+ * or the listing's own when it has no production (#2004). `'event_listing'` is
+ * not #853's fossil back — that one booked every show's room, this only the
+ * ones nobody opened a back-of-house for.
+ */
+export const eventHoldBookers = ['production', 'event_listing'] as const satisfies BookerType[];
+
+export function isEventHold(bookerType: string): boolean {
+	return (eventHoldBookers as readonly string[]).includes(bookerType);
+}
 
 export function isBookerType(value: string): value is BookerType {
 	return bookerTypes.includes(value as BookerType);

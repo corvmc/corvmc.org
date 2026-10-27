@@ -19,6 +19,7 @@ import {
 	IconUser,
 	IconUsersGroup,
 	IconCalendarEvent,
+	IconCalendarStar,
 	IconMetronome,
 	IconBulb,
 	IconMessages,
@@ -128,6 +129,7 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 		subtypes: {
 			group: { icon: IconMusic, label: 'Booked by an act' },
 			production: { icon: IconCalendarEvent, label: 'Held for a show' },
+			event_listing: { icon: IconCalendarStar, label: 'Held for a listing' },
 			instructor: { icon: IconSchool, label: 'Teaching' }
 		}
 	},

@@ -40,6 +40,7 @@ vi.mock('$lib/server/db/schema/authentication', () => ({
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn((col, val) => ({ eq: [col, val] })),
 	and: vi.fn((...args) => ({ and: args })),
+	or: vi.fn((...args) => ({ or: args })),
 	isNull: vi.fn((col) => ({ isNull: col })),
 	inArray: vi.fn((col, vals) => ({ inArray: [col, vals] })),
 	sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ sql: true, strings, values }),

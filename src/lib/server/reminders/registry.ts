@@ -1,9 +1,14 @@
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, ne, and, gt, gte, lt, isNotNull } from 'drizzle-orm';
+import { eq, and, gt, gte, lt, isNotNull, notInArray } from 'drizzle-orm';
 import { formatDateFull, formatTimeSimple } from '$lib/server/reservation/timezone';
-import { CONFIRMATION_WINDOW_DAYS, DEFAULT_TIMEZONE, clubToday } from '$lib/config';
+import {
+	CONFIRMATION_WINDOW_DAYS,
+	DEFAULT_TIMEZONE,
+	clubToday,
+	eventHoldBookers
+} from '$lib/config';
 import { addIsoDays } from '$lib/utils/deadline';
 import { listDevelopmentDeadlinesBetween } from '$lib/server/development/deadline-service';
 import {
@@ -214,7 +219,9 @@ async function reservationsStartingWithin(
 		.where(
 			and(
 				eq(reservation.status, status),
-				...(status === 'scheduled' ? [ne(reservation.bookerType, 'production')] : []),
+				...(status === 'scheduled'
+					? [notInArray(reservation.bookerType, [...eventHoldBookers])]
+					: []),
 				gte(reservation.startsAt, now),
 				lt(reservation.startsAt, new Date(now.getTime() + ms))
 			)

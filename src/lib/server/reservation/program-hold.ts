@@ -1,4 +1,5 @@
-import { and, ne, sql, type SQL } from 'drizzle-orm';
+import { and, notInArray, sql, type SQL } from 'drizzle-orm';
+import { eventHoldBookers } from '$lib/config';
 import { reservation } from '$lib/server/db/schema/reservation';
 
 /**
@@ -9,8 +10,8 @@ import { reservation } from '$lib/server/db/schema/reservation';
  * #855 re-pointed those holds at the party responsible for them.
  */
 export function notAProgramHold(): SQL {
-	// A production's hold is CMC's own room time, never a member's booking.
-	return and(ne(reservation.bookerType, 'production'), notAProgramGroup())!;
+	// A listing's hold, through its production or not, is CMC's own room time.
+	return and(notInArray(reservation.bookerType, [...eventHoldBookers]), notAProgramGroup())!;
 }
 
 /**

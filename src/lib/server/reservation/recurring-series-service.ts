@@ -5,16 +5,7 @@ import { eventListing } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { group } from '$lib/server/db/schema/group';
 
-/**
- * `bookerId` points at a band only when `bookerType` says so, so the type check
- * belongs in the join — without it a band whose id happened to match a user's
- * would attach to the wrong row. Mirrors `reservations.remote.ts`.
- */
-const bandBookerJoin = and(eq(reservation.bookerType, 'group'), eq(group.id, reservation.bookerId));
-const eventBookerJoin = and(
-	eq(reservation.bookerType, 'production'),
-	eq(eventListing.productionId, reservation.bookerId)
-);
+import { bandBookerJoin, eventBookerJoin } from './event-hold';
 import { eq, and, isNull, sql, count, gt, inArray, asc } from 'drizzle-orm';
 import { workOrder, memberOrientation } from '$lib/server/db/schema/volunteer';
 import { paymentCache } from '$lib/server/db/schema/finance';
@@ -425,8 +416,8 @@ export async function get(seriesId: string): Promise<SeriesWithPrototype | null>
 		.from(recurringSeries)
 		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin)
-		.leftJoin(eventListing, eventBookerJoin)
+		.leftJoin(group, bandBookerJoin())
+		.leftJoin(eventListing, eventBookerJoin())
 		.where(eq(recurringSeries.id, seriesId))
 		.limit(1);
 
@@ -585,8 +576,8 @@ export async function listActive(opts?: { forUser?: string }): Promise<SeriesLis
 		.from(recurringSeries)
 		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin)
-		.leftJoin(eventListing, eventBookerJoin)
+		.leftJoin(group, bandBookerJoin())
+		.leftJoin(eventListing, eventBookerJoin())
 		.where(and(...conditions));
 
 	return rows.map(({ member, band: bandRow, event: eventRow, ...r }) => ({
@@ -633,8 +624,8 @@ export async function listAll(opts?: { filter?: string }, pagination: Pagination
 		.from(recurringSeries)
 		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin)
-		.leftJoin(eventListing, eventBookerJoin)
+		.leftJoin(group, bandBookerJoin())
+		.leftJoin(eventListing, eventBookerJoin())
 		.where(where)
 		.$dynamic();
 

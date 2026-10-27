@@ -19,6 +19,7 @@ import { getOccurrences, generationWindowEnd } from './rrule-helpers';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { staffCreate } from './reservation-service';
 import { hasConflict } from './conflict-service';
+import { listingHoldBooker } from './event-hold';
 import { attachExisting } from '$lib/server/media/media-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
@@ -91,9 +92,9 @@ export async function generateRecurringReservations(): Promise<GenerationResult>
 
 /**
  * Expand all active recurring series. Events are processed BEFORE reservations:
- * a recurring event's room hold is `bookerType: 'production'`, which the
- * reservation pass treats as a hard block, so generating events first lets it
- * step aside instead of grabbing a slot a recurring event needs.
+ * a recurring event's room hold is a hard hold, which the reservation pass
+ * treats as a hard block, so generating events first lets it step aside
+ * instead of grabbing a slot a recurring event needs.
  */
 export async function generateRecurring(): Promise<{
 	events: GenerationResult;
@@ -707,11 +708,13 @@ async function processEventSeries(
 				} else {
 					const res = await staffCreate({
 						userId: prototype.createdByUserId,
-						// The production for a show, the programme for anything else — the
-						// party responsible for the night, not the advertisement (#855).
-						bookerType: occProductionId ? 'production' : 'group',
+						// The production, else the programme, else the listing (#2004).
+						...listingHoldBooker({
+							id: newEventId,
+							productionId: occProductionId,
+							groupId: prototype.groupId
+						}),
 						hardHold: true,
-						bookerId: occProductionId ?? prototype.groupId!,
 						startsAt: occResStart,
 						endsAt: occResEnd,
 						// Same as the one-off path: event space is staff-held. A `scheduled`

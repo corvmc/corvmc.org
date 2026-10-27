@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { IconUser, IconCalendarEvent, IconMusic } from '@tabler/icons-svelte';
+	import { IconUser, IconCalendarEvent, IconCalendarStar, IconMusic } from '@tabler/icons-svelte';
 	import type { BookerType } from '$lib/config';
 
 	let {
@@ -19,4 +19,6 @@
 	<IconMusic {size} class={extraClass} />
 {:else if type === 'production'}
 	<IconCalendarEvent {size} class={extraClass} />
+{:else if type === 'event_listing'}
+	<IconCalendarStar {size} class={extraClass} />
 {/if}

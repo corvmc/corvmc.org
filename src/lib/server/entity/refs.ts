@@ -222,7 +222,10 @@ export function toBookerRef(row: {
 	// own ref rather than silently reporting as a member booking. `id: null`
 	// renders unlinked, so the row stays honest about what it is.
 	if (row.bookerType === 'group') return toBandRef(row.band);
-	if (row.bookerType === 'production') return toEventRef(row.event);
+	// A production's hold and a listing's own both resolve to the listing.
+	if (row.bookerType === 'production' || row.bookerType === 'event_listing') {
+		return toEventRef(row.event);
+	}
 	if (row.bookerType === 'instructor') return toMemberRef(row.member);
 	return toMemberRef(row.member);
 }

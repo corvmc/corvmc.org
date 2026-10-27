@@ -63,7 +63,7 @@ import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { memberRefColumns } from '$lib/server/entity/refs';
 import type { EventStatus } from '$lib/server/db/schema/event';
 import { staffCreate, adjustWindow } from '$lib/server/reservation/reservation-service';
-import { createProduction, getProductionByEvent } from '$lib/server/production/production-service';
+import { getProductionByEvent } from '$lib/server/production/production-service';
 import {
 	announceProductionCreated,
 	createShowProject,
@@ -74,6 +74,7 @@ import type { BatchItem } from 'drizzle-orm/batch';
 import { project } from '$lib/server/db/schema/project';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
+import { listingHoldBooker } from '$lib/server/reservation/event-hold';
 import { captureException } from '$lib/server/sentry';
 import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import { uploadFile, deleteObject } from '$lib/server/storage';
@@ -363,15 +364,6 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 
 	let reservationId: string | null = null;
 	if (reservationParams) {
-		// Without a production the hold is a group's — a work party is
-		// Facilities', outreach is Development's. With neither there is no party
-		// to hold it for (#1199).
-		if (!productionId && !groupId) {
-			throw new EventValidationError(
-				'A listing that takes the room has to say which group is running it',
-				'groupId'
-			);
-		}
 		if (!reservationParams.overrideConflicts) {
 			const conflict = await hasConflict(reservationParams.startsAt, reservationParams.endsAt);
 			if (conflict) {
@@ -381,9 +373,9 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 
 		const res = await staffCreate({
 			userId: createdByUserId,
-			bookerType: productionId ? 'production' : 'group',
+			// The listing has no row yet; its id is already minted, as is the production's.
+			...listingHoldBooker({ id: eventId, productionId, groupId: groupId ?? null }),
 			hardHold: true,
-			bookerId: productionId ?? groupId!,
 			startsAt: reservationParams.startsAt,
 			endsAt: reservationParams.endsAt,
 			status: 'confirmed'
@@ -630,31 +622,12 @@ function assertValidTicketFloor(floor: number | null | undefined, price: number 
 }
 
 /**
- * Who holds the room for a listing that already exists.
- *
- * A show's is its production, opened here if the listing predates the table.
- * Anything else is its group's — a work party is Facilities'. #853 has why the
- * listing itself stopped being the answer.
+ * Who holds the room for a listing that already exists: its production if it
+ * has one, else its group, else the listing (#2004). Never opens a production.
  */
-async function holdBookerFor(
-	eventId: string,
-	kind: EventKind,
-	groupId: string | null,
-	userId: string
-): Promise<{ type: 'production' | 'group'; id: string }> {
-	if (kind === 'show') {
-		const existingProduction = await getProductionByEvent(eventId);
-		if (existingProduction) return { type: 'production', id: existingProduction.id };
-		const opened = await createProduction(eventId, { createdByUserId: userId });
-		return { type: 'production', id: opened.id };
-	}
-	if (!groupId) {
-		throw new EventValidationError(
-			'A work party, meeting or class that takes the room has to say which group is running it',
-			'groupId'
-		);
-	}
-	return { type: 'group', id: groupId };
+async function holdBookerFor(eventId: string, groupId: string | null) {
+	const existingProduction = await getProductionByEvent(eventId);
+	return listingHoldBooker({ id: eventId, productionId: existingProduction?.id ?? null, groupId });
 }
 
 export async function update(eventId: string, params: UpdateEventParams): Promise<EventRow> {
@@ -781,18 +754,10 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 				}
 			}
 
-			const booker = await holdBookerFor(
-				eventId,
-				params.kind ?? existing.kind,
-				existing.groupId,
-				userId
-			);
-
 			const newRes = await staffCreate({
 				userId,
-				bookerType: booker.type,
+				...(await holdBookerFor(eventId, existing.groupId)),
 				hardHold: true,
-				bookerId: booker.id,
 				startsAt: reservationStartsAt,
 				endsAt: reservationEndsAt,
 				// Event space is staff-held for drafts too: there is no member confirm/pay

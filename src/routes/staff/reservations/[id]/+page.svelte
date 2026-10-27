@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { isEventHold } from '$lib/config';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -151,7 +152,7 @@
 						{conflicts
 							.map(
 								(c) =>
-									`${formatTime(c.startsAt)} – ${formatTime(c.endsAt)} (${c.bookerType === 'production' ? 'show' : c.status})`
+									`${formatTime(c.startsAt)} – ${formatTime(c.endsAt)} (${isEventHold(c.bookerType) ? 'show' : c.status})`
 							)
 							.join(', ')}
 					</span>
@@ -195,7 +196,7 @@
 		<InfoCard
 			title={r.bookerType === 'group'
 				? 'Group booking'
-				: r.bookerType === 'production'
+				: isEventHold(r.bookerType)
 					? 'Show'
 					: 'Member'}
 		>
@@ -204,7 +205,7 @@
 					<CardTitle>{title}</CardTitle>
 					{#if r.bookerType === 'group' && r.bandId}
 						<Button href="/staff/bands/{r.bandId}" variant="default" size="sm">View Band</Button>
-					{:else if r.bookerType === 'production' && r.eventId}
+					{:else if isEventHold(r.bookerType) && r.eventId}
 						<Button href="/staff/events/{r.eventId}" variant="default" size="sm">View Event</Button>
 					{:else if r.createdByUserId}
 						<Button href="/staff/users/{r.createdByUserId}" variant="default" size="sm"
@@ -240,7 +241,7 @@
 		</InfoCard>
 
 		<!-- Payment card (not shown for event reservations) -->
-		{#if r.bookerType !== 'production'}
+		{#if !isEventHold(r.bookerType)}
 			<InfoCard title="Payment">
 				<div class="mb-1 flex items-baseline justify-between">
 					<span class="text-2xl font-medium">{amountFormatted}</span>
@@ -305,7 +306,7 @@
 	</div>
 
 	<!-- Door access -->
-	{#if r.bookerType !== 'production'}
+	{#if !isEventHold(r.bookerType)}
 		<InfoCard title="Door Access">
 			{#if r.lockCode}
 				<p class="font-mono text-2xl font-bold tracking-[0.2em]">{r.lockCode}</p>
