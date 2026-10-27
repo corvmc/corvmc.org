@@ -186,6 +186,11 @@ body:has([data-panel]) {
 				font-size: var(--text-xs);
 				font-weight: 500;
 			}
+			/* daisyUI fills and edges a ghost badge in base-200, the zebra stripe, so it
+			   keeps the ghost button's hairline to read as a tag on any row (#1967). */
+			.badge-ghost {
+				border-color: var(--panel-line);
+			}
 			.menu {
 				font-size: var(--text-sm);
 			}
