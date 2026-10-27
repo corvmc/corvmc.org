@@ -4,6 +4,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { recordForm8282 } from '$lib/remote/inventory.remote';
 	import { Field } from '../ui/Form';
+	import { toLocalDate } from '$lib/utils/format';
 
 	const { fields } = recordForm8282;
 
@@ -43,7 +44,7 @@
 			<p>
 				This unit was donated and disposed of within three years, so the IRS may require Form 8282 —
 				filed within 125 days of the disposal, with a copy to the donor{#if dueBy}, by
-					<strong>{dueBy.toISOString().slice(0, 10)}</strong>{/if}.
+					<strong>{toLocalDate(dueBy)}</strong>{/if}.
 			</p>
 			<!-- The system cannot decide this. Whether it is reportable turns on
 			     whether the donor filed a Form 8283 that CMC signed, which is a fact

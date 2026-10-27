@@ -19,7 +19,7 @@
 	import { BindTagAction, RecordForm8282Action } from '$lib/components/actions';
 	import LocationField from '$lib/components/inventory/LocationField.svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateShort, formatCents } from '$lib/utils/format';
+	import { formatDateShort, formatCents, toLocalDate } from '$lib/utils/format';
 	import {
 		equipmentConditions,
 		stockReasonLabels,
@@ -69,9 +69,9 @@
 				</p>
 				<p class="mt-1 text-sm">
 					{#if form8282.state === 'overdue'}
-						The 125 days ran out on {form8282.dueBy?.toISOString().slice(0, 10)}.
+						The 125 days ran out on {form8282.dueBy && toLocalDate(form8282.dueBy)}.
 					{:else}
-						Due by {form8282.dueBy?.toISOString().slice(0, 10)} — {form8282.daysRemaining} days left.
+						Due by {form8282.dueBy && toLocalDate(form8282.dueBy)} — {form8282.daysRemaining} days left.
 					{/if}
 				</p>
 				<div class="mt-3">
@@ -128,7 +128,7 @@
 					<Fact label="Form 8282">
 						{asset.form8282Note}
 						<span class="text-subtle">
-							— recorded {asset.form8282ResolvedAt.toISOString().slice(0, 10)}
+							— recorded {toLocalDate(asset.form8282ResolvedAt)}
 						</span>
 					</Fact>
 				{/if}

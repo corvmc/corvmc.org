@@ -23,13 +23,14 @@
  * the disposals that could plausibly owe a filing and hands them to a person.
  */
 
+import { fromDate, toCalendarDate } from '@internationalized/date';
+import { DEFAULT_TIMEZONE } from '$lib/config';
+
 /** Three years, the window in which a disposal is reportable. */
 export const FORM_8282_LOOKBACK_YEARS = 3;
 
 /** Days after the disposal by which the form is due. */
 export const FORM_8282_DUE_DAYS = 125;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type Form8282State =
 	/** Not a gift, or not disposed of — nothing to consider. */
@@ -98,13 +99,18 @@ export function form8282Status(input: Form8282Input, now: Date): Form8282Status 
 		return { state: 'outside_window', dueBy: null, daysRemaining: null };
 	}
 
-	const dueBy = new Date(input.disposedAt.getTime() + FORM_8282_DUE_DAYS * DAY_MS);
+	// Club-calendar days: a fixed 125 × 24h shifts the wall clock by an hour
+	// across DST, which moves a late-evening disposal onto the next day.
+	const due = fromDate(input.disposedAt, DEFAULT_TIMEZONE).add({ days: FORM_8282_DUE_DAYS });
+	const dueBy = due.toDate();
 
 	// Resolved still reports the deadline: the record of when it was due is worth
 	// keeping next to the record that it was handled.
 	if (input.resolvedAt) return { state: 'resolved', dueBy, daysRemaining: null };
 
-	const daysRemaining = Math.ceil((dueBy.getTime() - now.getTime()) / DAY_MS);
+	const daysRemaining = toCalendarDate(due).compare(
+		toCalendarDate(fromDate(now, DEFAULT_TIMEZONE))
+	);
 
 	return {
 		state: daysRemaining < 0 ? 'overdue' : 'due',

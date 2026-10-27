@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { FORM_8282_DUE_DAYS, form8282Status, isWithinLookback, needsAttention } from './form-8282';
+import { toLocalDate } from '$lib/utils/format';
 
 /**
  * The date arithmetic is the whole risk in this rule: an off-by-one on either
@@ -134,5 +135,14 @@ describe('form8282Status', () => {
 	it('resolves an overdue one too, rather than nagging forever', () => {
 		const status = form8282Status(gift('2025-01-01', '2025-02-01', '2026-07-01'), NOW);
 		expect(needsAttention(status)).toBe(false);
+	});
+
+	/**
+	 * 125 club-calendar days, not 125 × 24h. Jan 10 + 125 is May 15; a fixed-ms
+	 * add from 11:30pm PST lands at 12:30am PDT on May 16 once DST starts.
+	 */
+	it('counts calendar days in club time across a DST change', () => {
+		const status = form8282Status(gift('2025-01-01', '2026-01-11T07:30:00Z'), NOW);
+		expect(toLocalDate(status.dueBy!)).toBe('2026-05-15');
 	});
 });
