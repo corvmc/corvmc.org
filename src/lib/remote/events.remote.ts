@@ -1312,10 +1312,11 @@ export const getEventRecurringSeries = query(z.string(), async (eventId) => {
 	return getEventSeries(series.id);
 });
 
-/**
- * Make an existing CMC event the first of a series (staff). The create modal
- * collects only what the row needs, so repeating is set from the console.
- */
+// The two sources `processEventSeries` repeats as their own; a band's gig or a
+// community listing is someone else's to repeat.
+const REPEATABLE_SOURCES: readonly string[] = ['cmc', 'group'];
+
+/** Make an existing CMC event or club/committee session the first of a series (staff). */
 export const startEventSeries = form(
 	z.object({
 		eventId: z.string().min(1),
@@ -1330,7 +1331,9 @@ export const startEventSeries = form(
 		await requireCapability('event.manage');
 		const evt = await getById(data.eventId);
 		if (!evt) error(404, 'Event not found');
-		if (evt.source !== 'cmc') error(400, 'Only a CMC event can repeat');
+		if (!REPEATABLE_SOURCES.includes(evt.source)) {
+			error(400, 'Only a CMC event or a club session can repeat');
+		}
 		try {
 			await createEventSeries({
 				prototypeEventId: evt.id,

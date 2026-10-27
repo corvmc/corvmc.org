@@ -5,7 +5,7 @@ import { mapDomainError } from '$lib/server/errors';
 import { requireProgramRole } from '$lib/server/group/group-context';
 import { DEFAULT_TIMEZONE, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
-import { createEventSeries } from '$lib/server/reservation/recurring-series-service';
+import { createEventSeries, getByEvent } from '$lib/server/reservation/recurring-series-service';
 import { RECURRING_FREQUENCIES } from '$lib/server/db/schema/recurring';
 import { readPosterFile, toPosterParam } from '$lib/server/event/poster-file';
 import { validateUpload } from '$lib/server/storage';
@@ -262,6 +262,40 @@ export const updateGroupSession = form(
 		} catch (err) {
 			// A session moved into a taken slot, or one asking for a room already
 			// held, is a 409 and an ordinary answer rather than a fault.
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * Make an existing one-off session the first of a series. The generator takes
+ * it from there, as it does for one created with "Repeats" ticked.
+ */
+export const repeatGroupSession = form(
+	sessionRef.extend({
+		recurringFrequency: z.enum(RECURRING_FREQUENCIES),
+		monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+		recurringEndsAt: z
+			.string()
+			.regex(/^$|^\d{4}-\d{2}-\d{2}$/, 'Invalid date')
+			.optional()
+	}),
+	async (data) => {
+		const { evt } = await requireOwnSession(data);
+		if (evt.status === 'cancelled') error(409, 'A cancelled session cannot repeat');
+		if (await getByEvent(evt.id)) error(409, 'This session already repeats');
+		try {
+			await createEventSeries({
+				prototypeEventId: evt.id,
+				frequency: data.recurringFrequency,
+				prototypeStartsAt: evt.startsAt,
+				monthlyMode: data.monthlyMode,
+				endsAt: data.recurringEndsAt
+					? buildDateInTz(data.recurringEndsAt, '23:59', DEFAULT_TIMEZONE)
+					: undefined
+			});
+			return { success: true };
+		} catch (err) {
 			mapDomainError(err);
 		}
 	}
