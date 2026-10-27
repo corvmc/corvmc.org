@@ -14,12 +14,14 @@
 	import { EntityIdentity, EntityChip } from '$lib/components/ui/entity';
 	import { CancelReservationAction, ConfirmWaitlistedAction } from '$lib/components/actions';
 	import ReaderPayment from './ReaderPayment.svelte';
+	import { memberPayAction } from '$lib/utils/reservation-actions';
 
 	let paidAtReader = $state(false);
 	let data = $derived(await getReservationDetail(page.params.id!));
 
 	const res = $derived(data.reservation);
 	const isPast = $derived(res.startsAt.getTime() <= Date.now());
+	const owesBalance = $derived(memberPayAction(res) === 'balance');
 
 	const refresh = () => getReservationDetail(page.params.id!).refresh();
 
@@ -131,22 +133,25 @@
 		do: cancelling was absent for every status, and a confirmed-but-unpaid
 		booking offered no way to pay (#1062).
 	-->
-	{#if !isPast && ['waitlisted', 'scheduled', 'confirmed'].includes(res.status)}
+	{#if owesBalance || (!isPast && ['waitlisted', 'scheduled', 'confirmed'].includes(res.status))}
 		<div class="flex flex-wrap items-center gap-2">
-			{#if res.status === 'waitlisted' && res.waitlistNotifiedAt}
+			{#if !isPast && res.status === 'waitlisted' && res.waitlistNotifiedAt}
 				<ConfirmWaitlistedAction reservation={res} onsuccess={refresh} variant="success" />
 			{/if}
-			{#if res.status === 'confirmed' && !res.paidAt && (res.cashDueCents == null || res.cashDueCents > 0)}
+			<!-- Not behind !isPast: a balance is still owed after the session (#1952). -->
+			{#if owesBalance}
 				{#if (res.cashDueCents ?? 0) > 0}
 					<span class="text-sm font-medium">
-						${formatDollars(res.cashDueCents ?? 0)} due at door
+						${formatDollars(res.cashDueCents ?? 0)} due{isPast ? '' : ' at door'}
 					</span>
 				{/if}
 				<Button href="/member/reservations/{res.id}/pay" variant="primary" outline>
 					Pay online
 				</Button>
 			{/if}
-			<CancelReservationAction reservation={res} onsuccess={refresh} variant="error" outline />
+			{#if !isPast}
+				<CancelReservationAction reservation={res} onsuccess={refresh} variant="error" outline />
+			{/if}
 		</div>
 	{/if}
 

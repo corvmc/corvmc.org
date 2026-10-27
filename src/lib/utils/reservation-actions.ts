@@ -1,3 +1,5 @@
+import { withinConfirmationWindow } from '$lib/config';
+
 export type ReservationActionKey =
 	| 'confirm'
 	| 'cashReceived'
@@ -127,4 +129,36 @@ export function visibleActions(
 	}
 
 	return actions;
+}
+
+interface PayableReservation {
+	status: string;
+	paidAt?: Date | null;
+	cashDueCents?: number | null;
+}
+
+/** Confirmed with a balance still owed; a null `cashDueCents` is owed in full. */
+export function confirmedUnpaid(r: PayableReservation): boolean {
+	return r.status === 'confirmed' && !r.paidAt && (r.cashDueCents == null || r.cashDueCents > 0);
+}
+
+/** What `getReservationPayment` accepts: the server's pay-page gate. */
+export function isAwaitingPayment(r: PayableReservation): boolean {
+	return r.status === 'scheduled' || confirmedUnpaid(r);
+}
+
+/**
+ * The pay link a member's own reservation offers: `reserve` pays for a future
+ * scheduled slot before its confirmation window opens, `balance` settles a
+ * confirmed one. A balance stays payable after the session ends; the
+ * start-time gate belongs to cancel and confirm, not to money owed.
+ */
+export function memberPayAction(
+	r: PayableReservation & { startsAt: Date },
+	now: Date = new Date()
+): 'reserve' | 'balance' | null {
+	if (confirmedUnpaid(r)) return 'balance';
+	if (r.startsAt <= now) return null;
+	if (r.status === 'scheduled' && !withinConfirmationWindow(r.startsAt, now)) return 'reserve';
+	return null;
 }

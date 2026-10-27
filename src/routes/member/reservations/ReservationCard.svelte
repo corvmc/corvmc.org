@@ -11,6 +11,7 @@
 	import { resolve } from '$app/paths';
 	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
 	import { withinConfirmationWindow } from '$lib/config';
+	import { memberPayAction } from '$lib/utils/reservation-actions';
 
 	let { reservation, onchange }: { reservation: Reservation; onchange?: () => void } = $props();
 
@@ -18,6 +19,7 @@
 	// Members may only confirm (without paying) within the window; before then we
 	// show when it opens and offer paying to lock the slot in early.
 	let canConfirm = $derived(withinConfirmationWindow(reservation.startsAt));
+	let payAction = $derived(memberPayAction(reservation));
 </script>
 
 <ReservationCardShell startsAt={reservation.startsAt} status={reservation.status}>
@@ -65,36 +67,21 @@
 			/>
 			{#if reservation.status === 'waitlisted' && reservation.waitlistNotifiedAt}
 				<ConfirmWaitlistedAction {reservation} onsuccess={onchange} variant="success" size="xs" />
-			{:else if reservation.status === 'scheduled'}
-				{#if canConfirm}
-					<ConfirmReservationAction
-						{reservation}
-						onsuccess={onchange}
-						variant="primary"
-						size="xs"
-					/>
-				{:else}
-					<Button
-						href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
-						variant="primary"
-						size="xs"
-						outline
-					>
-						Pay to reserve
-					</Button>
-				{/if}
-			{:else if reservation.status === 'confirmed' && !reservation.paidAt && (reservation.cashDueCents == null || reservation.cashDueCents > 0)}
-				<!-- Buttons only: this row straddles the border at zero height, and the
-				     amount owed is already the body's "$X · Due in N days" (#1783). -->
-				<Button
-					href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
-					variant="primary"
-					size="xs"
-					outline
-				>
-					Pay online
-				</Button>
+			{:else if reservation.status === 'scheduled' && canConfirm}
+				<ConfirmReservationAction {reservation} onsuccess={onchange} variant="primary" size="xs" />
 			{/if}
+		{/if}
+		{#if payAction}
+			<!-- Outside the !isPast gate: a balance is still owed once the session
+			     has ended (#1952). The amount is already in the body (#1783). -->
+			<Button
+				href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
+				variant="primary"
+				size="xs"
+				outline
+			>
+				{payAction === 'reserve' ? 'Pay to reserve' : 'Pay online'}
+			</Button>
 		{/if}
 	{/snippet}
 </ReservationCardShell>
