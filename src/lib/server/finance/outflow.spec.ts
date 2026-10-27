@@ -11,15 +11,15 @@ vi.mock('./financial-entry-service', () => ({
 	recordEntries: vi.fn()
 }));
 
-const { recordCompletedJob } = await import('./contractor-entries');
+const { completedJobEntries } = await import('./contractor-entries');
 const { syncAcquisitionSpend } = await import('./in-kind-acquisition');
 
 const OCCURRED = new Date('2026-09-13');
 beforeEach(() => vi.clearAllMocks());
 
 describe('contractor jobs', () => {
-	it('records a paid job as money out', async () => {
-		await recordCompletedJob({
+	it('records a paid job as money out', () => {
+		const entries = completedJobEntries({
 			jobId: 'job-1',
 			title: 'Amp repair',
 			occurredAt: OCCURRED,
@@ -27,7 +27,7 @@ describe('contractor jobs', () => {
 			isDonated: false
 		});
 
-		expect(recordEntry).toHaveBeenCalledWith(
+		expect(entries).toContainEqual(
 			expect.objectContaining({
 				amountCents: -12_000,
 				kind: 'spent',
@@ -37,8 +37,8 @@ describe('contractor jobs', () => {
 		);
 	});
 
-	it("books the entry against the work order's project", async () => {
-		await recordCompletedJob({
+	it("books the entry against the work order's project", () => {
+		const entries = completedJobEntries({
 			jobId: 'job-1',
 			title: 'Add a dedicated circuit',
 			projectId: 'proj-1',
@@ -47,7 +47,7 @@ describe('contractor jobs', () => {
 			isDonated: false
 		});
 
-		expect(recordEntry).toHaveBeenCalledWith(
+		expect(entries).toContainEqual(
 			expect.objectContaining({
 				projectId: 'proj-1',
 				description: 'Contractor — Add a dedicated circuit'
@@ -60,8 +60,8 @@ describe('contractor jobs', () => {
 	 * a row that was both would be counted as money spent *and* as value
 	 * contributed, which is what `getProjectBurn` must never see.
 	 */
-	it('records a donated job as value in, not money out', async () => {
-		await recordCompletedJob({
+	it('records a donated job as value in, not money out', () => {
+		const entries = completedJobEntries({
 			jobId: 'job-1',
 			title: 'Amp repair',
 			occurredAt: OCCURRED,
@@ -69,14 +69,14 @@ describe('contractor jobs', () => {
 			fairValueCents: 12_000
 		});
 
-		expect(recordEntry).toHaveBeenCalledOnce();
-		expect(recordEntry).toHaveBeenCalledWith(
+		expect(entries).toHaveLength(1);
+		expect(entries).toContainEqual(
 			expect.objectContaining({ amountCents: 12_000, kind: 'in_kind' })
 		);
 	});
 
-	it('records nothing for a job that cost nothing and was not donated', async () => {
-		await recordCompletedJob({
+	it('records nothing for a job that cost nothing and was not donated', () => {
+		const entries = completedJobEntries({
 			jobId: 'job-1',
 			title: 'Looked at it',
 			occurredAt: OCCURRED,
@@ -84,11 +84,11 @@ describe('contractor jobs', () => {
 			isDonated: false
 		});
 
-		expect(recordEntry).not.toHaveBeenCalled();
+		expect(entries).toEqual([]);
 	});
 
-	it('carries the project, so burn is one query', async () => {
-		await recordCompletedJob({
+	it('carries the project, so burn is one query', () => {
+		const entries = completedJobEntries({
 			jobId: 'job-1',
 			title: 'Amp repair',
 			projectId: 'prj-1',
@@ -97,7 +97,7 @@ describe('contractor jobs', () => {
 			isDonated: false
 		});
 
-		expect(recordEntry).toHaveBeenCalledWith(expect.objectContaining({ projectId: 'prj-1' }));
+		expect(entries).toContainEqual(expect.objectContaining({ projectId: 'prj-1' }));
 	});
 });
 

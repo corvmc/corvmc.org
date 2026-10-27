@@ -49,19 +49,25 @@ vi.mock('$lib/server/db', () => ({
 		})),
 		batch: vi.fn(async (statements: unknown[]) => {
 			batches.push(statements);
-			return statements.map(() => []);
+			return Promise.all(statements);
 		})
 	}
 }));
 
-const resolveWorkOrder = vi.fn(async () => ({}));
+// The resolution commits in completeJob's batch; only its follow-ups run after.
+const resolveWorkOrder = vi.fn(async (..._a: unknown[]) => ({
+	statements: [],
+	afterCommit: async () => undefined
+}));
 vi.mock('$lib/server/volunteer/work-order-service', () => ({
-	resolveWorkOrder: (...args: unknown[]) => resolveWorkOrder(...(args as []))
+	prepareResolveWorkOrder: (...args: unknown[]) => resolveWorkOrder(...args)
 }));
 
-const setAssetStatus = vi.fn(async () => ({}));
+// Either writer of a unit's status: scheduling runs it, completion batches it.
+const setAssetStatus = vi.fn(async (..._a: unknown[]) => ({ statements: [] }));
 vi.mock('$lib/server/inventory/asset-service', () => ({
-	setAssetStatus: (...args: unknown[]) => setAssetStatus(...(args as []))
+	setAssetStatus: (...args: unknown[]) => setAssetStatus(...args),
+	assetStatusChange: (...args: unknown[]) => setAssetStatus(...args)
 }));
 
 const recordAuditEntry = vi.fn(async (..._a: unknown[]) => undefined);

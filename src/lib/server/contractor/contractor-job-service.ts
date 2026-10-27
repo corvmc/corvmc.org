@@ -1,4 +1,5 @@
-import { recordCompletedJob } from '$lib/server/finance/contractor-entries';
+import { completedJobEntries, lateInvoiceEntries } from '$lib/server/finance/contractor-entries';
+import { entriesStatement } from '$lib/server/finance/financial-entry-service';
 import { db } from '$lib/server/db';
 import { contractor, contractorJob } from '$lib/server/db/schema/contractor';
 import type { ContractorJob } from '$lib/server/db/schema/contractor';
@@ -6,10 +7,11 @@ import { inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
 import { volunteerRole, workOrder } from '$lib/server/db/schema/volunteer';
 import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
-import { setAssetStatus } from '$lib/server/inventory/asset-service';
-import { resolveWorkOrder } from '$lib/server/volunteer/work-order-service';
+import { assetStatusChange, setAssetStatus } from '$lib/server/inventory/asset-service';
+import { prepareResolveWorkOrder } from '$lib/server/volunteer/work-order-service';
 import { getContractorById } from './contractor-service';
 import { recordAuditEntry } from '$lib/server/audit/audit-service';
+import type { RecordEntryInput } from '$lib/server/finance/financial-entry-service';
 import type { ContractorJobStatus, ContractorJobView } from '$lib/config';
 
 /**
@@ -270,46 +272,61 @@ export async function completeJob(
 	}
 
 	const now = new Date();
-	const [row] = await db
+	const completedAt = opts.completedAt ?? now;
+	const fairValueCents = isDonated ? (opts.fairValueCents ?? job.fairValueCents) : null;
+	const engagementUpdate = db
 		.update(contractorJob)
 		.set({
 			status: 'completed',
-			completedAt: opts.completedAt ?? now,
+			completedAt,
 			costCents: isDonated ? null : costCents,
 			invoiceRef: opts.invoiceRef ?? job.invoiceRef,
 			notes: opts.notes ?? job.notes,
 			isDonated,
-			fairValueCents: isDonated ? (opts.fairValueCents ?? job.fairValueCents) : null,
+			fairValueCents,
 			fairValueBasis: isDonated ? (opts.fairValueBasis ?? job.fairValueBasis) : null,
 			updatedAt: now
 		})
 		.where(eq(contractorJob.id, id))
 		.returning();
 
-	await recordCompletedJob({
-		jobId: row.id,
+	const entries = completedJobEntries({
+		jobId: id,
 		title: job.title,
 		projectId: job.projectId,
-		occurredAt: row.completedAt ?? now,
-		costCents: row.costCents,
-		isDonated: row.isDonated,
-		fairValueCents: row.fairValueCents
+		occurredAt: completedAt,
+		costCents: isDonated ? null : costCents,
+		isDonated,
+		fairValueCents
 	});
 
-	if (job.assetId && opts.returnToService !== false) {
-		const asset = await assetStatusOf(job.assetId);
-		if (asset === 'maintenance') {
-			await setAssetStatus(job.assetId, 'in_service', {
-				notes: `Back from repair: ${job.title}`,
-				actorId: opts.actorId
-			});
-		}
-	}
+	const backFromRepair =
+		job.assetId &&
+		opts.returnToService !== false &&
+		(await assetStatusOf(job.assetId)) === 'maintenance'
+			? await assetStatusChange(job.assetId, 'in_service', {
+					notes: `Back from repair: ${job.title}`,
+					actorId: opts.actorId
+				})
+			: null;
+
+	const resolution =
+		!job.workOrderResolvedAt && !job.workOrderCancelledAt
+			? await prepareResolveWorkOrder(job.workOrderId, { resolvedByUserId: opts.actorId })
+			: null;
+
+	// The engagement, what it cost, the unit and the work order are one event:
+	// as separate awaits, a failure part-way left a paid, completed job beside a
+	// unit back in service on an open work order. db.batch, never db.transaction.
+	const [[row]] = await db.batch([
+		engagementUpdate,
+		...(entries.length > 0 ? [entriesStatement(entries as [RecordEntryInput])] : []),
+		...(backFromRepair?.statements ?? []),
+		...(resolution?.statements ?? [])
+	]);
 
 	await auditEngagement(job, job.status, 'completed');
-	if (!job.workOrderResolvedAt && !job.workOrderCancelledAt) {
-		await resolveWorkOrder(job.workOrderId, { resolvedByUserId: opts.actorId });
-	}
+	await resolution?.afterCommit();
 
 	return { ...job, ...row };
 }
@@ -390,11 +407,28 @@ export async function recordInvoice(
 		);
 	}
 
-	const [row] = await db
+	const update = db
 		.update(contractorJob)
 		.set({ ...data, updatedAt: new Date() })
 		.where(eq(contractorJob.id, id))
 		.returning();
+
+	// Completion books whatever cost it knew; an invoice after it books the rest.
+	const entries =
+		job.status === 'completed' && data.costCents !== undefined
+			? lateInvoiceEntries({
+					jobId: id,
+					title: job.title,
+					projectId: job.projectId,
+					occurredAt: data.paidAt ?? new Date(),
+					bookedCents: job.costCents,
+					invoicedCents: data.costCents
+				})
+			: [];
+	const [[row]] = await db.batch([
+		update,
+		...(entries.length > 0 ? [entriesStatement(entries as [RecordEntryInput])] : [])
+	]);
 
 	await recordAuditEntry({
 		action: 'contractor_job.invoice_recorded',
