@@ -275,12 +275,12 @@ export const staffNavSections: StaffNavSection[] = [
 				href: resolve('/staff/inventory'),
 				children: [
 					{
-						// Lives on the flags surface (#552); listed here too because
-						// whoever fixes the gear reads Inventory, not Moderation.
+						// Gear and building problems members report: a repair queue, not
+						// moderation and not a Reports-section report (#1840).
 						key: 'equipment-reports',
 						capability: 'inventory.manageAssets',
-						label: 'Reports',
-						href: resolve('/staff/flags/equipment')
+						label: 'Reported Problems',
+						href: resolve('/staff/inventory/problems')
 					},
 					{
 						key: 'inventory-acquisitions',

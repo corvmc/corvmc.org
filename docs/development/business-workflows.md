@@ -578,7 +578,7 @@ whether the unit is still usable, and takes an in-service unit out of service on
 the reporter says it is not. A second report on the same unit is a second row — three
 people noticing one crackle is the signal.
 
-Staff triage them on the flags surface, `/staff/flags/equipment` (#552), behind
+Staff triage them in Inventory's Reported Problems queue, `/staff/inventory/problems` (#1840), behind
 `inventory.manageAssets`: dismiss, or send to a work order — an open one on the same unit
 or a new one — and every other untriaged report on that unit goes with it
 (`sendToWorkOrder`). Resolving the work order closes every report attached to it

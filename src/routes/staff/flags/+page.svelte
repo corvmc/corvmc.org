@@ -8,8 +8,7 @@
 	import { entityLabels } from '$lib/config';
 	import { resolve } from '$app/paths';
 	import { getFlagsQueue } from '$lib/remote/flags.remote';
-	import TriageTable from './TriageTable.svelte';
-	import TriageTabs from './TriageTabs.svelte';
+	import TriageTable from '$lib/components/ui/TriageTable.svelte';
 
 	const flagStatuses = ['pending', 'resolved', 'dismissed'] as const;
 
@@ -47,7 +46,6 @@
 
 <PageHeader title="Content Flags" />
 <PageContent>
-	<TriageTabs active="content" />
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
