@@ -13,8 +13,8 @@ Stripe, Postmark. Documentation index: `docs/README.md`.
 
 ## Commands
 
-Always through `pnpm`. A global prettier 2.8.8 shadows this project's prettier 3, so `npx prettier`
-reports results that are simply wrong.
+Always through `pnpm`: a global prettier 2.8.8 shadows this project's prettier 3, so `npx prettier`
+is wrong.
 
 | Command                   | What it does                                            | CI job that already runs it |
 | ------------------------- | ------------------------------------------------------- | --------------------------- |
@@ -27,27 +27,18 @@ reports results that are simply wrong.
 | `pnpm db:generate`        | the only way to create a migration                      | Schema drift                |
 | `pnpm db:reset`           | rebuild local D1 (wipe + migrate + seed)                | —                           |
 
-**Read the third column before running anything in the first.** Every one of those jobs runs on
-your PR and again on the merge-queue ref, so a whole-tree run here proves nothing new — and a
-whole-tree _failure_ here is not evidence of one, because a worktree per agent means several of
-these fire at once on one machine, where a starved ESLint is indistinguishable from a violation
-and an OOM-killed vitest prints `[killed]` and no summary at all. CI answers in one pass what local
-contention cannot answer in several.
-
-`scripts/claude/block-whole-tree-gate.sh` enforces this. Scoped runs stay open, and are the point.
+Leave whole-tree runs to the CI job in the third column. Concurrent worktrees share this machine,
+so a local whole-tree failure (a starved ESLint, an OOM-killed vitest printing `[killed]`) is not
+evidence of one. `scripts/claude/block-whole-tree-gate.sh` enforces this; scoped runs stay open.
 
 ### Before you push
 
-1. **The blast radius of what you changed, not the files you edited.** For anything under
-   `src/lib/server/<domain>/`, that is the whole directory —
-   `pnpm vitest --run --project=server src/lib/server/<domain>` — because specs mock `drizzle-orm`
-   export by export, so one new operator breaks a _sibling_ spec. ~10 files, under 3 seconds.
+1. **The blast radius, not the files you edited.** Under `src/lib/server/<domain>/` that is the
+   whole directory — `pnpm vitest --run --project=server src/lib/server/<domain>` — because specs
+   mock `drizzle-orm` export by export, so one new operator breaks a _sibling_ spec.
 2. **`pnpm lint:changed`** if more than a couple of files moved.
 
-Then commit, push, open the PR, and **arm `gh pr merge --auto` in the same turn** — opening the PR
-is not the finish line. Say in the PR that the full suite was deferred to CI; never imply a green
-local run you did not do. Triage of a red or rejected run is the `qc` role's job
-(`.claude/agents/`, `/queue-triage`).
+Say in the PR that the full suite was deferred to CI.
 
 ## Rules
 
@@ -56,131 +47,65 @@ local run you did not do. Triage of a red or rejected run is the `qc` role's job
   `requireFeature`, …), Zod schema second, then orchestrate. They bypass route and layout loads and
   take their params from a client header — a guard in a layout guards nothing. Components never
   import from `$lib/server/`.
-- **No `db.transaction()`** — it is broken on D1. Use `db.batch([...])`. ESLint errors on it.
-- **Migrations come only from `pnpm db:generate`.** Never hand-write one; never edit one that is
-  already committed.
-- **Components go in one of four folders.** `ui/` (domain-free primitives — a lint rule errors
-  on any `$lib/remote` or `$lib/server` import there), `layout/` (the frame a `+layout.svelte`
-  mounts), `actions/` (the `*Action.svelte` registry), or `<domain>/`. A component used by one
-  page stays next to that page instead. There is no `shared/`. See
+- **`db.batch([...])` for atomic writes** — `db.transaction()` is broken on D1 and ESLint errors
+  on it.
+- **Migrations come only from `pnpm db:generate`.** Committed migrations are immutable.
+- **Components go in one of four folders:** `ui/` (domain-free; lint errors on `$lib/remote` or
+  `$lib/server` imports), `layout/`, `actions/` (the `*Action.svelte` registry), or `<domain>/`. A
+  component used by one page sits next to that page. See
   `docs/development/conventions.md#where-a-file-goes`.
-- **Tests are `.spec.ts`**, colocated, never `.test.ts` — the vitest globs only match `.spec`,
-  so a misnamed file silently never runs. `scripts/coverage.spec.ts` fails on a `.test.ts`, and on
-  any source file that no tsconfig project compiles: `src` is the generated config's, everything
-  else — `scripts/`, `e2e/`, `eslint-rules/`, `.storybook/`, the root configs — is
-  `tsconfig.tooling.json`. A new top-level directory has to be added to one of them.
-- **Forms use `$lib/components/ui/Form/`** (`Form`, `FormField`, `SubmitButton`) — never a raw
-  `<form>`, `<input>`, or `<select>`, not even inline.
-- **No gradients** in any interface.
-- **Workflow gates warn, record and allow.** Order and completeness are warnings a user overrides
-  with a reason, not refusals; only permission, integrity, money already moved and terminal states
-  refuse. See `docs/development/conventions.md#workflow-gates`.
-- **Comments cap at eight lines**, and state a constraint rather than the history of a decision.
-  `scripts/comment-budget.spec.ts` enforces the length;
-  `docs/development/conventions.md#comments` has the rest. Do not match the surrounding comment
-  density — much of this tree predates the rule.
-- **A problem you find but did not cause is filed, not fixed.** Search the tracker
+- **Tests are colocated `.spec.ts`** — the vitest globs match only `.spec`. Every source file must
+  be compiled by a tsconfig: `src` by the generated one, everything else by `tsconfig.tooling.json`,
+  so a new top-level directory goes there. `scripts/coverage.spec.ts` enforces both.
+- **Forms use `$lib/components/ui/Form/`** (`Form`, `FormField`, `SubmitButton`) for every form,
+  input and select, inline ones included.
+- **Flat colour only** — no gradients in any interface.
+- **Workflow gates warn, record and allow.** Only permission, integrity, money already moved and
+  terminal states refuse. See `docs/development/conventions.md#workflow-gates`.
+- **Comments: at most eight lines, stating a constraint** rather than a decision's history.
+  `scripts/comment-budget.spec.ts` enforces the cap; `docs/development/conventions.md#comments`
+  has the rest. Write to the rule, not to the surrounding density.
+- **A problem you find but did not cause is filed.** Search
   (`gh issue list --state open --search '<terms>'`), then
-  `gh issue create --template finding.md --type Bug`, labelled `agent-filed` — `--template`
-  applies the file's `labels:` and silently drops its `type:`. Fixing it inside an unrelated PR
-  buries it; leaving it in the chat loses it when the session ends. A `PreToolUse` hook blocks the
-  create until a search has run.
-- **A review with several findings is a parent issue plus one sub-issue each**, not one long body —
-  including when the ask was for "an issue". The parent carries only what the findings share: scope,
-  method, anything that shifted mid-review, and an explicit "not in this issue" for adjacent
-  problems deliberately left out. Each child is a `finding.md` in its own right. A seven-finding
-  body cannot be assigned, closed or picked up in parts, and it forces one set of labels onto
-  findings that need different triage. Attach with
-  `gh api --method POST repos/<owner>/<repo>/issues/<parent>/sub_issues -F sub_issue_id=<id>`, which
-  takes the child's **database id** (`gh api repos/<owner>/<repo>/issues/<n> --jq .id`), not its
-  number. Pull in anything already filed from the same pass; cross-reference another session's issue
-  rather than reparenting it.
-- **No co-author lines** in commit messages.
+  `gh issue create --template finding.md --type Bug`, labelled `agent-filed` (`--template` drops
+  the file's `type:`).
+- **A review with several findings is a parent issue plus one `finding.md` sub-issue each**, even
+  when the ask was for "an issue". The parent holds only scope, method, and an explicit "not in
+  this issue". Attach with
+  `gh api --method POST repos/corvmc/corvmc.org/issues/<parent>/sub_issues -F sub_issue_id=<id>`,
+  where `<id>` is the child's **database id** (`gh api repos/corvmc/corvmc.org/issues/<n> --jq .id`).
+- **Commit messages carry no co-author lines.**
 
 ## Workflow
 
 Anything that adds schema or spans several files follows the nine phases in
-`docs/development/conventions.md#the-feature-checklist`. A small, single-file change just gets made
-and gated.
+`docs/development/conventions.md#the-feature-checklist`; its easily skipped finish is seed data
+(`scripts/seed-dev.ts`), the feature catalog row, and `pnpm docs:routes && pnpm docs:check` if a
+route moved.
 
-**Where the work lands is the first decision, not the last.** A member-facing or public feature that
-needs more than one PR to become usable goes on a long-lived `feature/<slug>` branch: phases are PRs
-into that branch, squash-merged as they pass, and `main` sees the feature once, working.
-`/feature-branch` carries the sequences and
-`docs/development/conventions.md#long-lived-feature-branches` the reasoning — in particular what to
-do about migrations after merging `main`, which is not what you would guess. Staff-only surfaces,
-schema and refactors still go straight to `main`; a half-built admin page is a normal intermediate
-state. This replaced feature flags, which existed only to let half-built work sit on `main`.
+**Where it lands is the first decision.** A member-facing or public feature needing more than one
+PR goes on a long-lived `feature/<slug>` branch; staff-only surfaces, schema and refactors go to
+`main`. `/feature-branch` and `docs/development/conventions.md#long-lived-feature-branches` cover
+the sequences — phase PRs take `gh pr merge --auto --squash`, and merging `main` in is a
+fast-forward push, not a PR.
 
-A `feature/*` branch **is** protected, by a ruleset rather than classic branch protection, so read
-`gh api repos/corvmc/corvmc.org/rules/branches/feature%2F<slug>` —
-`.../branches/<ref>/protection` answers `404 Branch not protected` for a ruleset and that 404 means
-nothing. The rules are `deletion`, `non_fast_forward` and `required_status_checks`; there is no
-`pull_request` rule and no queue. Checks are required but a PR is not, which is why **merging
-`main` in is a fast-forward push once the checks go green, not a PR merge**: the repo is
-squash-only, and squashing a merge PR collapses the merge commit, leaving `main` outside the
-branch's ancestry and the landing PR claiming every commit `main` made in the meantime.
+**The branch is the claim.** Search for an issue first; if one covers the work, read its linked
+PRs (an open one means pick something else), then open the **draft PR before writing code**,
+branch named for the issue, `Fixes #<n>` in the body.
 
-The finishing steps that are easiest to skip: extend `scripts/seed-dev.ts` so the feature has
-realistic local data, add its row to the feature catalog (`docs/reports/feature-catalog.md`), and run
-`pnpm docs:routes && pnpm docs:check` if any route moved.
-
-**Work that answers an issue claims it first, and the branch is the claim.** Search before
-starting (`gh issue list --state open --search '<terms>'`), and if an issue already covers it, open
-the **draft PR before writing the code** — branch named for the issue, `Fixes #<n>` in the body.
-GitHub then shows the PR on the issue, so the next session sees the work in flight instead of
-starting it again.
-
-The branch is what makes that a claim rather than an announcement. A second session pushing the
-same ref is rejected non-fast-forward, server-side, which is the only compare-and-swap GitHub gives
-us here — an assignee, a label and a project-board field are all last-write-wins, so two sessions
-can each set them and neither learns the other exists. Read the issue's linked PRs before claiming;
-if one is already open, say so and pick something else rather than racing it.
-
-`Fixes #<n>` (or `Closes`) also closes the issue when the queue merges the PR, which is the half
-that keeps the tracker honest without anyone tidying it.
-
-**A finished PR is queued, not merged.** `gh pr merge --auto`, then start
-`gh queue await <n>` with `run_in_background` so the session is woken by the
-outcome. Act on what it reports while the session is open; `/queue-triage` covers a non-zero
-exit. No merge method: a queue rejects one outright ("merge method is not valid for merge queue"),
-and the queue's own configuration squashes anyway.
-
-That is `main`. A **phase** PR into a `feature/*` branch has no queue to enter — `merge_queue` is a
-rule on `main` alone — so a bare `gh pr merge --auto` refuses there with
-`--merge, --rebase, or --squash required when not running interactively`; pass `--squash`. Nothing
-about `main` changes.
-
-**Arming it is yours to do, in the same turn you open the PR.** It is not gated on the user reading
-the PR first, and there is no class of change — not tooling, not one that alters how sessions
-themselves behave — that earns an exception. Stopping at the PR URL to let a human look leaves the
-branch outside the queue with nothing watching it, and it is the more tempting mistake precisely
-when the change feels consequential. If a PR genuinely should not merge without a human, say so and
-open it as a draft; do not open a ready PR and quietly decline to queue it.
-GitHub rebases each entry onto the queue head and runs CI on that, so a branch never has to be up to
-date to be queued and two sessions finishing at once no longer race for the merge. Do not run
-`gh pr update-branch`, do not wait for the merge to land, and never pass `--admin` — it bypasses the
-queue, which is the one way back to the race. No `--delete-branch` either: `gh` refuses it outright
-while a queue is enabled, and the repo deletes merged branches on its own.
-
-The one thing queueing does not survive is a rejection: GitHub disarms auto-merge when the queue
-run goes red, and the queue does not pick the PR back up on its own. Note that it also consumes the
-auto-merge request on queue _entry_, so an unarmed PR is a running one about as often as it is a
-rejected one — read the `queue-rejected` label or the timeline, never the armed flag alone. The failed run cannot be
-re-run either — the `gh-readonly-queue/main/pr-<n>-<sha>` ref is deleted on dequeue, so re-arming
-auto-merge is the only way back in. `.github/workflows/merge-queue-guard.yml` catches the rejection
-and leaves a `queue-rejected` label plus a comment naming the failing job; nothing re-arms
-automatically. `/queue-triage` is how a session picks those up and decides.
+**Finish in the same turn:** commit, push, open the PR, arm `gh pr merge --auto` (no merge method,
+no `--admin`, no `--delete-branch`, no `gh pr update-branch`), then start `gh queue await <n>` with
+`run_in_background`. A PR that genuinely needs a human first is opened as a draft. A queue
+rejection disarms the PR and labels it `queue-rejected`; `/queue-triage` and the `qc` agent own
+re-arming.
 
 ## Worktrees
 
-Work usually happens in a `git worktree` under `.claude/worktrees/`. Edit paths inside the worktree
-— a subagent may report paths in the main checkout. A fresh worktree has no `node_modules`, `.env`,
-or `.dev.vars`; running anything from one needs setup first: `/worktree-dev`.
+Work usually happens in a `git worktree` under `.claude/worktrees/`; edit paths inside it, even
+when a subagent reports main-checkout paths. A fresh worktree has no `node_modules`, `.env` or
+`.dev.vars` — `/worktree-dev` sets it up.
 
-A **cloud session** (claude.ai/code) is not a worktree: it is a fresh clone on its own VM, and
-`scripts/claude/cloud-session-start.sh` has already written `.env`, installed dependencies and
-seeded a local D1 before you read this. It is secretless by design — nothing that sends mail, SMS
-or real payments will work — and `gh pr merge --auto` may be refused by the GitHub proxy, in which
-case open the PR, say so plainly, and leave arming it to the user.
-`docs/development/cloud-sessions.md` has the rest, including the e2e invocation.
+A **cloud session** (claude.ai/code) is a fresh, secretless clone that
+`scripts/claude/cloud-session-start.sh` has already set up; mail, SMS and payments will not work.
+If the GitHub proxy refuses `gh pr merge --auto`, open the PR and say so.
+`docs/development/cloud-sessions.md` has the rest.
