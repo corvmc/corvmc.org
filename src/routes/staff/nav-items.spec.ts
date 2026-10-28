@@ -199,7 +199,13 @@ describe('the nav tree', () => {
 		expect(keys('moderation')).toEqual(['flags', 'classifieds', 'incidents']);
 		expect(keys('outreach')).toEqual(['campaigns', 'audiences']);
 		expect(keys('money')).toContain('grants');
-		expect(keys('reports')).toEqual(['reports', 'volunteer-report', 'inventory-spend']);
+		expect(keys('reports')).toEqual([
+			'reports',
+			'volunteer-report',
+			'inventory-spend',
+			// A record of when stock arrived; each item's page shows its own (#1841).
+			'inventory-acquisitions'
+		]);
 		expect(keys('system')).toContain('help');
 		expect(keys('events')).toContain('productions');
 	});

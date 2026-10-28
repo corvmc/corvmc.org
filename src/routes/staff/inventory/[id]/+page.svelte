@@ -32,7 +32,12 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShort, formatCents, titleCase } from '$lib/utils/format';
-	import { equipmentConditionBadge, stockReasonLabels, unitsOfMeasure } from '$lib/config';
+	import {
+		acquisitionKindLabels,
+		equipmentConditionBadge,
+		stockReasonLabels,
+		unitsOfMeasure
+	} from '$lib/config';
 
 	const { fields } = editItem;
 
@@ -44,6 +49,11 @@
 	const assets = $derived(data.assets);
 	const movements = $derived(data.movements);
 	const loanHistory = $derived(data.loanHistory);
+	const onOrder = $derived(data.onOrder);
+	const onOrderTotal = $derived(onOrder.reduce((n, l) => n + l.outstanding, 0));
+	// Null, not empty, when the viewer cannot triage reports.
+	const problems = $derived(data.problems);
+	const sources = $derived(data.sources);
 
 	let isDeactivated = $derived(!!item.deletedAt);
 	let isSerialized = $derived(item.kind === 'serialized');
@@ -140,6 +150,10 @@
 					<Fact label="Available" class={item.availableQuantity <= 0 ? 'text-error' : ''}>
 						{item.availableQuantity}
 					</Fact>
+
+					{#if onOrderTotal > 0}
+						<Fact label="On order">{onOrderTotal}</Fact>
+					{/if}
 				</DefinitionList>
 
 				<div class="mt-4 flex flex-wrap gap-2">
@@ -209,9 +223,99 @@
 		</InfoCard>
 	{/if}
 
+	<!-- Current state first: these two appear only while something is open. -->
+	{#if problems && problems.length > 0}
+		<InfoCard title="Open problems" state={problems.length} class="mt-6">
+			<Table>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th>Note</th>
+					<th class="col-support">Unit</th>
+					<th class="col-extra whitespace-nowrap">Reported</th>
+				{/snippet}
+				{#each problems as problem (problem.id)}
+					<tr
+						class="hover cursor-pointer"
+						use:rowLink={resolve(`/staff/inventory/problems/${problem.id}`)}
+					>
+						<td class="w-px">
+							<div class="flex w-max items-center gap-1">
+								<StatusBadge status={problem.inWorkOrder ? 'in_progress' : 'pending'} />
+								{#if problem.blocksUse}
+									<Badge variant="error" size="xs">Out of use</Badge>
+								{/if}
+							</div>
+						</td>
+						<td class="cell-primary">{problem.note}</td>
+						<td class="col-support font-mono text-xs">
+							{problem.assetTag ?? problem.serialNumber ?? 'Untagged'}
+						</td>
+						<td class="col-extra whitespace-nowrap">{formatDateShort(problem.createdAt)}</td>
+					</tr>
+				{/each}
+			</Table>
+		</InfoCard>
+	{/if}
+
+	{#if onOrder.length > 0}
+		<InfoCard title="Open orders" state={onOrderTotal} class="mt-6">
+			<Table>
+				{#snippet head()}
+					<th>Supplier</th>
+					<th class="cell-num">Outstanding</th>
+					<th class="col-support whitespace-nowrap">Expected</th>
+					<th class="col-extra">Reference</th>
+				{/snippet}
+				{#each onOrder as line (line.lineId)}
+					<tr
+						class="hover cursor-pointer"
+						use:rowLink={resolve(`/staff/inventory/orders/${line.orderId}`)}
+					>
+						<td class="cell-primary">{line.supplierName ?? 'No supplier recorded'}</td>
+						<td class="cell-num">{line.outstanding} of {line.quantityOrdered}</td>
+						<td class="col-support whitespace-nowrap">
+							{line.expectedAt ? formatDateShort(line.expectedAt) : '—'}
+						</td>
+						<td class="col-extra">{line.reference ?? '—'}</td>
+					</tr>
+				{/each}
+			</Table>
+		</InfoCard>
+	{/if}
+
 	<div class="mt-6">
 		<ItemResources {itemId} />
 	</div>
+
+	<InfoCard title="Past acquisitions" class="mt-6">
+		{#if sources.length === 0}
+			<EmptyState description="No acquisition recorded" />
+		{:else}
+			<Table>
+				{#snippet head()}
+					<th class="whitespace-nowrap">When</th>
+					<th>Source</th>
+					<th class="col-support">Kind</th>
+					<th class="cell-num">Quantity</th>
+					<th class="col-support cell-num">Unit value</th>
+				{/snippet}
+				{#each sources as source (source.lineId)}
+					<tr
+						class="hover cursor-pointer"
+						use:rowLink={resolve(`/staff/inventory/acquisitions/${source.acquisitionId}`)}
+					>
+						<td class="whitespace-nowrap">{formatDateShort(source.occurredAt)}</td>
+						<td class="cell-primary">{source.source ?? '—'}</td>
+						<td class="col-support">{acquisitionKindLabels[source.kind]}</td>
+						<td class="cell-num">{source.quantity}</td>
+						<td class="col-support cell-num">
+							{source.unitValueCents != null ? formatCents(source.unitValueCents) : '—'}
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/if}
+	</InfoCard>
 
 	<InfoCard title="Stock movements" class="mt-6">
 		{#if movements.length === 0}

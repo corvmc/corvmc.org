@@ -4,10 +4,12 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import {
+	can,
 	requireCapability,
 	requireCapabilityOrOwner,
 	requireUser
 } from '$lib/server/authorization';
+import { itemSections } from '$lib/server/inventory/item-sections';
 import {
 	createCategory,
 	createItem as createItemService,
@@ -1804,7 +1806,9 @@ export const getStaffItemDetail = query(z.string(), async (id) => {
 		getItemMovements(id),
 		getItemLoanHistory(id)
 	]);
-	return { item, assets, movements, loanHistory };
+	// After the guarded reads above: `getItem` has already required `inventory.read`.
+	const sections = await itemSections(id, { canTriage: await can('inventory.manageAssets') });
+	return { item, assets, movements, loanHistory, ...sections };
 });
 
 /** The staff asset detail page's one load-bearing query. */
