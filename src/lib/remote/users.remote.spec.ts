@@ -204,6 +204,13 @@ vi.mock('$lib/server/audit/audit-service', () => ({
 
 vi.mock('$lib/server/event/event-service', () => ({ listUpcoming: vi.fn(async () => []) }));
 
+const inviteMember = vi.fn(async (..._a: unknown[]) => ({ kind: 'invited', email: 'n@x.org' }));
+const listInviteGroups = vi.fn(async () => []);
+vi.mock('$lib/server/user/member-invite-service', () => ({
+	inviteMember: (...a: unknown[]) => inviteMember(...a),
+	listInviteGroups: () => listInviteGroups()
+}));
+
 // The staff user record's own services. Spied rather than stubbed inline so the
 // "argument, not params.id, identifies the target" test can read the userId
 // each one actually received.
@@ -318,7 +325,9 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	{ name: 'getUserCreditHistory', args: [{ userId: 'victim-user', page: 1 }] },
 	{ name: 'getUserSessions', args: ['victim-user'] },
 	{ name: 'getUserHistory', args: ['victim-user'] },
-	{ name: 'getStaffUserTotals' }
+	{ name: 'getStaffUserTotals' },
+	{ name: 'getMemberInviteGroups' },
+	{ name: 'inviteMemberForm', args: [{ email: 'n@x.org', groupIds: [] }] }
 ];
 
 // The target of every one of these is the argument, never `params.id`. Pinned
@@ -367,6 +376,23 @@ describe('users.remote staff guards', () => {
 			{ userId: 'victim-user' },
 			{ page: 2, pageSize: 10 }
 		);
+	});
+
+	it('inviteMemberForm sends nothing without user.invite, and invites as the caller with it', async () => {
+		await expect(users.inviteMemberForm({ email: 'n@x.org', groupIds: [] })).rejects.toThrow(
+			'Staff access required'
+		);
+		expect(inviteMember).not.toHaveBeenCalled();
+
+		requireCapability.mockResolvedValue({ id: 'acting-staff', name: 'Acting' });
+		await users.inviteMemberForm({ email: 'n@x.org', name: '', groupIds: ['grp-1'] });
+		expect(requireCapability).toHaveBeenLastCalledWith('user.invite');
+		expect(inviteMember).toHaveBeenCalledWith({
+			email: 'n@x.org',
+			name: null,
+			groupIds: ['grp-1'],
+			invitedBy: { id: 'acting-staff', name: 'Acting' }
+		});
 	});
 
 	it('getUserPayments does not leak payment history to a non-staff caller', async () => {

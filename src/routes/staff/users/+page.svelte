@@ -21,6 +21,7 @@
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { retryQuery } from '$lib/utils/retry-query';
 	import UserTotals from './UserTotals.svelte';
+	import InviteMemberAction from './InviteMemberAction.svelte';
 
 	// Named `searchText`, not `search`: FilterBar's slot for the always-visible
 	// control is a snippet called `search`, and a snippet shadows a same-named
@@ -119,7 +120,9 @@
 	}
 </script>
 
-<PageHeader title="Users" />
+<PageHeader title="Users">
+	<InviteMemberAction />
+</PageHeader>
 <PageContent>
 	<svelte:boundary>
 		<UserTotals />

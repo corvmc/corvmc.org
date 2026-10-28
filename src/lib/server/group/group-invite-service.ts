@@ -22,8 +22,14 @@ export async function createInvite(
 	groupId: string,
 	role: 'admin' | 'member',
 	position: string | null,
-	invitedById: string
-): Promise<{ type: 'group_invite' | 'existing_user'; id: string }> {
+	invitedById: string,
+	/**
+	 * `notify: false` when the caller sends its own email, as a staff member
+	 * invite does; only then is the token returned, since remotes spread this
+	 * result back to the client.
+	 */
+	opts: { notify?: boolean } = {}
+): Promise<{ type: 'group_invite' | 'existing_user'; id: string; token?: string }> {
 	const normalizedEmail = email.toLowerCase().trim();
 
 	// Check if user already exists
@@ -86,6 +92,8 @@ export async function createInvite(
 			set: { expiresAt: expiresAt(), role, position }
 		})
 		.returning();
+
+	if (opts.notify === false) return { type: 'group_invite', id: row.id, token: row.token };
 
 	// Emit event for email notification (fire-and-forget)
 	Promise.resolve().then(async () => {

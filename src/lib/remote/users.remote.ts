@@ -75,6 +75,7 @@ import { getUserOverview as getUserOverviewService } from '$lib/server/user/user
 import { listNeedsYou } from '$lib/server/user/needs-you-service';
 import { listForMember as listReservationsForMember } from '$lib/server/reservation/reservation-service';
 import { listActiveSessions, getLastLoginAt } from '$lib/server/user/user-service';
+import { inviteMember, listInviteGroups } from '$lib/server/user/member-invite-service';
 import {
 	deactivateUser as deactivateUserService,
 	deactivateUsers as deactivateUsersService,
@@ -972,3 +973,34 @@ export const getUserSessions = query(z.string(), async (userId) => {
 	]);
 	return { sessions, lastLoginAt };
 });
+
+/** The clubs and committees the Invite member modal offers. */
+export const getMemberInviteGroups = query(async () => {
+	await requireCapability('user.invite');
+	return listInviteGroups();
+});
+
+/**
+ * Invite somebody to join CMC (#1830). An address that already has an account
+ * is answered with that account rather than an email.
+ */
+export const inviteMemberForm = form(
+	z.object({
+		email: z.string().trim().email('Enter an email address'),
+		name: z.string().trim().max(SHORT_TEXT_MAX).optional(),
+		groupIds: z.array(z.string().min(1)).max(50).optional().default([])
+	}),
+	async (data) => {
+		const actor = await requireCapability('user.invite');
+		try {
+			return await inviteMember({
+				email: data.email,
+				name: data.name || null,
+				groupIds: data.groupIds,
+				invitedBy: { id: actor.id, name: actor.name }
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);

@@ -1,4 +1,8 @@
-import { domainEvents, type GroupInviteCreatedEvent } from '$lib/server/event-bus/event-bus';
+import {
+	domainEvents,
+	type GroupInviteCreatedEvent,
+	type MemberInviteCreatedEvent
+} from '$lib/server/event-bus/event-bus';
 import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE, renewalKindLabels } from '$lib/config';
 import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
@@ -65,6 +69,35 @@ function groupInvitationEmail(
 		],
 		cta: { url: `/login?invite=${token}`, label: 'Create your account & join' },
 		footnote: `This invitation expires in ${INVITE_EXPIRY_DAYS} days.`
+	};
+}
+
+/**
+ * Staff inviting somebody to CMC itself (#1830). With a group, the link carries
+ * its invite token so the sign-up page names it; `resolvePendingInvites` seats
+ * them on every chosen group whichever way they sign up.
+ */
+function memberInvitationEmail(event: MemberInviteCreatedEvent): StandaloneEmailContent {
+	const joining = event.groups.map((g) => `the ${groupKindLabels[g.kind]} ${g.name}`);
+	return {
+		...(event.name ? { recipientName: event.name } : {}),
+		subject: `${event.invitedByName} invited you to join CorvMC`,
+		heading: "You've been invited to join CorvMC",
+		paragraphs: [
+			{
+				text: `${event.invitedByName} has invited you to join the Corvallis Music Collective on CorvMC.`
+			},
+			...(joining.length > 0
+				? [{ text: `Once your account is set up you'll be in ${joining.join(', ')}.` }]
+				: []),
+			{
+				text: 'CorvMC is a community music space where bands book rehearsals, manage equipment, and coordinate with their members.'
+			}
+		],
+		cta: {
+			url: event.token ? `/login?invite=${event.token}` : '/login?register',
+			label: 'Create your account'
+		}
 	};
 }
 
@@ -517,6 +550,14 @@ export function registerAllNotificationListeners(): void {
 			type: 'group_invitation',
 			toEmail: event.email,
 			email: groupInvitationEmail(event, event.token)
+		});
+	});
+
+	domainEvents.on('member_invite.created', async ({ data: event }) => {
+		await dispatchEmailOnly({
+			type: 'member_invitation',
+			toEmail: event.email,
+			email: memberInvitationEmail(event)
 		});
 	});
 
