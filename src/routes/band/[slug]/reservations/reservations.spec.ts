@@ -131,7 +131,8 @@ vi.mock('$lib/server/reservation/recurring-series-service', () => recurringSerie
 // answers `select`.
 const fallbackCodeServiceMock = {
 	revealFallbackCodeFor: vi.fn(async () => null as string | null),
-	isInAccessWindow: vi.fn(() => false)
+	isInAccessWindow: vi.fn(() => false),
+	fallbackShownFor: vi.fn(async () => null)
 };
 
 vi.mock('$lib/server/lock/fallback-code-service', () => fallbackCodeServiceMock);

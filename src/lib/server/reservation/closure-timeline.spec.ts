@@ -13,7 +13,7 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('$lib/server/db', () => ({ db: testDb }));
 
-const { closuresInWindow, closuresPage, countClosures, interleave } =
+const { closuresInWindow, closuresOverlapping, closuresPage, countClosures, interleave } =
 	await import('./closure-timeline');
 
 /** Seconds, which is what `mode: 'timestamp'` stores. */
@@ -94,5 +94,17 @@ describe('interleave', () => {
 		const rows = [booking('b', 300), booking('a', 100)];
 		const merged = interleave(rows, [closure('d', 400), closure('c', 200)], 'desc');
 		expect(ids(merged)).toEqual(['d', 'b', 'c', 'a']);
+	});
+});
+
+// The reservation page's day timeline: anything blocking the room that day,
+// including a closure that began the day before or runs past it.
+describe('closuresOverlapping', () => {
+	it('returns closures that overlap the range, partly or wholly', async () => {
+		expect(ids(await closuresOverlapping(at(1500), at(6500)))).toEqual(['past', 'soon']);
+	});
+
+	it('leaves out closures that only touch the range at an edge', async () => {
+		expect(ids(await closuresOverlapping(at(2000), at(6000)))).toEqual([]);
 	});
 });

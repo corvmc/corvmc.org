@@ -46,6 +46,7 @@ import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone'
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
 import {
 	closuresInWindow,
+	closuresOverlapping,
 	closuresPage,
 	countClosures,
 	interleave,
@@ -99,7 +100,11 @@ import { bookerTypes, type BookerType } from '$lib/config';
 import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
 import { requireInstructor } from '$lib/server/instructor/instructor-context';
 import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
-import { isInAccessWindow, revealFallbackCodeFor } from '$lib/server/lock/fallback-code-service';
+import {
+	fallbackShownFor,
+	isInAccessWindow,
+	revealFallbackCodeFor
+} from '$lib/server/lock/fallback-code-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 import {
 	checkout,
@@ -552,6 +557,13 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		)
 		.orderBy(asc(reservation.startsAt));
 
+	// Closures share the day's timeline (#1833); the break-glass code is
+	// `lock.manage`'s to read, as on Lock health (#1814).
+	const [sameDayClosures, doorFallback] = await Promise.all([
+		closuresOverlapping(dayStart, dayEnd),
+		can('lock.manage').then((ok) => (ok ? fallbackShownFor(row) : null))
+	]);
+
 	const isLastOfDay =
 		sameDayReservations.filter((r) => r.startsAt.getTime() > row.startsAt.getTime()).length === 0;
 
@@ -591,6 +603,8 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			endsAt: r.endsAt,
 			status: r.status
 		})),
+		sameDayClosures,
+		doorFallback,
 		isLastOfDay,
 		prevId: prevRow?.id ?? null,
 		nextId: nextRow?.id ?? null,

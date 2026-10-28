@@ -188,6 +188,31 @@ export function isInAccessWindow(row: { startsAt: Date; endsAt: Date }): boolean
 	return now >= row.startsAt.getTime() - graceMs && now <= row.endsAt.getTime() + graceMs;
 }
 
+type FallbackRow = { status: string; startsAt: Date; endsAt: Date; lockSyncedAt: Date | null };
+
+/** Confirmed, its own code not on the device, and inside the access window. */
+export function fallbackApplies(row: FallbackRow): boolean {
+	return row.status === 'confirmed' && !row.lockSyncedAt && isInAccessWindow(row);
+}
+
+/**
+ * What the member's page shows in place of their own code, for staff (#1814):
+ * the code while the window is open, or when it opens. Null when the member is
+ * shown their own code or the window is over. Reads only — a staff look is not
+ * a reveal, so `lockFallbackRevealedAt` is left to `revealFallbackCodeFor`.
+ */
+export async function fallbackShownFor(
+	row: FallbackRow
+): Promise<{ code: string | null; showsFrom: Date | null } | null> {
+	if (row.status !== 'confirmed' || row.lockSyncedAt) return null;
+	if (fallbackApplies(row)) {
+		const active = await getActiveFallbackCode();
+		return { code: active?.code ?? null, showsFrom: null };
+	}
+	const showsFrom = new Date(row.startsAt.getTime() - LOCK_GRACE_MINUTES * 60_000);
+	return showsFrom.getTime() > Date.now() ? { code: null, showsFrom } : null;
+}
+
 /**
  * The break-glass code for this booking, or null. All three must hold: it is
  * confirmed, inside the access window, and its own code is not on the device.
@@ -203,9 +228,7 @@ export async function revealFallbackCodeFor(row: {
 	endsAt: Date;
 	lockSyncedAt: Date | null;
 }): Promise<string | null> {
-	if (row.status !== 'confirmed') return null;
-	if (row.lockSyncedAt) return null;
-	if (!isInAccessWindow(row)) return null;
+	if (!fallbackApplies(row)) return null;
 
 	const active = await getActiveFallbackCode();
 	if (!active) return null;

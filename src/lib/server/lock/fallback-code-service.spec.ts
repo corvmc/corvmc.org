@@ -83,7 +83,7 @@ vi.mock('./ultraloc-client', () => ({
 	LOCK_GRACE_MINUTES: 30
 }));
 
-const { maintainFallbackCode, revealFallbackCodeFor, FALLBACK_ROTATION_DAYS } =
+const { maintainFallbackCode, revealFallbackCodeFor, fallbackShownFor, FALLBACK_ROTATION_DAYS } =
 	await import('./fallback-code-service');
 
 // ---------------------------------------------------------------------------
@@ -257,5 +257,52 @@ describe('revealFallbackCodeFor', () => {
 		selectResults.push([]);
 		expect(await revealFallbackCodeFor(inWindow)).toBeNull();
 		expect(updateCalls).toHaveLength(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// fallbackShownFor — the staff read of the same rule (#1814)
+// ---------------------------------------------------------------------------
+
+describe('fallbackShownFor', () => {
+	const inWindow = {
+		status: 'confirmed',
+		startsAt: new Date(Date.now() - 10 * 60_000),
+		endsAt: new Date(Date.now() + 60 * 60_000),
+		lockSyncedAt: null
+	};
+
+	it('shows staff the code the member is shown, without recording a reveal', async () => {
+		selectResults.push([{ id: 'f1', code: '87654321', syncedAt: daysAgo(1) }]);
+
+		expect(await fallbackShownFor(inWindow)).toEqual({ code: '87654321', showsFrom: null });
+		expect(updateCalls).toHaveLength(0);
+	});
+
+	it('says when it will be shown for a booking whose window has not opened', async () => {
+		const startsAt = new Date(Date.now() + 7 * 24 * 60 * 60_000);
+		const later = { ...inWindow, startsAt, endsAt: new Date(startsAt.getTime() + 3_600_000) };
+
+		expect(await fallbackShownFor(later)).toEqual({
+			code: null,
+			showsFrom: new Date(startsAt.getTime() - 30 * 60_000)
+		});
+	});
+
+	it('is null when the member is shown their own code', async () => {
+		expect(await fallbackShownFor({ ...inWindow, lockSyncedAt: new Date() })).toBeNull();
+	});
+
+	it('is null once the window has closed', async () => {
+		const past = {
+			...inWindow,
+			startsAt: new Date(Date.now() - 5 * 3_600_000),
+			endsAt: new Date(Date.now() - 4 * 3_600_000)
+		};
+		expect(await fallbackShownFor(past)).toBeNull();
+	});
+
+	it('is null for a booking that is not confirmed', async () => {
+		expect(await fallbackShownFor({ ...inWindow, status: 'scheduled' })).toBeNull();
 	});
 });

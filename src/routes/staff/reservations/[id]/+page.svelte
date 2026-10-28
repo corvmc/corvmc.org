@@ -40,7 +40,7 @@
 	} from '$lib/utils/reservation-actions';
 	import { getStaffReservationDetail } from '$lib/remote/reservations.remote';
 	import { describeCancellation } from '$lib/utils/reservation-cancellation';
-	import { reprovisionReservationAccess } from '$lib/remote/lock.remote';
+	import { retryDoorCodes } from '$lib/remote/lock.remote';
 	import { page } from '$app/state';
 
 	let data = $derived(await getStaffReservationDetail(page.params.id!));
@@ -48,20 +48,23 @@
 	const r = $derived(data.reservation);
 	const status = $derived(r.status);
 
-	// Re-issue door access without waiting for tomorrow's cron.
-	let reprovisioning = $state(false);
-	let reprovisionResult = $state<{ ok: boolean; code?: number; error?: string } | null>(null);
+	// Retry door codes without waiting for tomorrow's cron: this booking's, then
+	// every code the daily job would handle (#1813).
+	let retrying = $state(false);
+	let retryResult = $state<Awaited<ReturnType<typeof retryDoorCodes>> | null>(null);
+	let retryError = $state<string | null>(null);
 
-	async function handleReprovision() {
-		reprovisioning = true;
-		reprovisionResult = null;
+	async function handleRetry() {
+		retrying = true;
+		retryResult = null;
+		retryError = null;
 		try {
-			reprovisionResult = await reprovisionReservationAccess(r.id);
+			retryResult = await retryDoorCodes(r.id);
 			await getStaffReservationDetail(r.id).refresh();
 		} catch (err) {
-			reprovisionResult = { ok: false, error: (err as Error).message };
+			retryError = (err as Error).message;
 		} finally {
-			reprovisioning = false;
+			retrying = false;
 		}
 	}
 	const actions = $derived(
@@ -187,6 +190,7 @@
 				label: o.memberName,
 				href: `/staff/reservations/${o.id}`
 			}))}
+			closures={data.sameDayClosures}
 		/>
 	</Card>
 
@@ -315,30 +319,54 @@
 				{:else}
 					<!-- U-tec acks a queued write the same as an applied one, so an
 					     issued code is not a working code until the lock says so. -->
-					<p class="text-warning">
-						Issued but not confirmed at the door. The member is being shown the break-glass code
-						instead while their window is open.
-					</p>
+					<p class="text-warning">Issued but not confirmed at the door.</p>
 				{/if}
 			{:else}
 				<p class="text-muted">Not provisioned yet.</p>
 			{/if}
 
+			<!-- What the member's own page shows instead, by the same rule (#1814). -->
+			{#if data.doorFallback}
+				<p class="mt-2">
+					{#if data.doorFallback.showsFrom}
+						The member will be shown the break-glass code from
+						{fullDate(data.doorFallback.showsFrom)}, {formatTime(data.doorFallback.showsFrom)}.
+					{:else if data.doorFallback.code}
+						Member sees:
+						<span class="font-mono font-bold tracking-[0.2em]">{data.doorFallback.code}</span>
+						(break-glass)
+					{:else}
+						<span class="text-warning">
+							No break-glass code is confirmed on the lock right now, so the member is shown none.
+						</span>
+					{/if}
+				</p>
+			{/if}
+
 			{#if r.status === 'confirmed'}
-				<Button
-					variant="ghost"
-					size="sm"
-					class="mt-3"
-					disabled={reprovisioning}
-					onclick={handleReprovision}
-				>
-					{reprovisioning ? 'Working…' : r.lockCode ? 'Re-issue on the lock' : 'Provision now'}
+				<Button variant="ghost" size="sm" class="mt-3" disabled={retrying} onclick={handleRetry}>
+					{retrying ? 'Working…' : 'Retry pending door codes'}
 				</Button>
-				{#if reprovisionResult}
-					<Alert type={reprovisionResult.ok ? 'success' : 'error'} class="mt-2">
-						{reprovisionResult.ok
-							? `Sent to the lock. Code ${reprovisionResult.code}.`
-							: reprovisionResult.error}
+				{#if retryError}
+					<Alert type="error" class="mt-2">{retryError}</Alert>
+				{:else if retryResult}
+					{@const { booking, job } = retryResult}
+					<Alert type={booking.ok && job.errors.length === 0 ? 'success' : 'warning'} class="mt-2">
+						<div>
+							<p>
+								{booking.ok
+									? `This booking: sent to the lock, code ${booking.code}.`
+									: `This booking: ${booking.error}`}
+							</p>
+							<p>
+								All bookings: {job.provisioned} provisioned, {job.confirmed} confirmed on the lock.
+							</p>
+							{#if job.errors.length > 0}
+								<ul class="list-disc pl-5">
+									{#each job.errors as e, i (i)}<li>{e}</li>{/each}
+								</ul>
+							{/if}
+						</div>
 					</Alert>
 				{/if}
 			{/if}

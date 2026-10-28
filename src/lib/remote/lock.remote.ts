@@ -96,9 +96,13 @@ export const getMemberCodes = query(async () => {
 	return listMemberCodes();
 });
 
-/** Re-issue door access for one booking, without waiting for tomorrow's cron. */
-export const reprovisionReservationAccess = command(z.string(), async (reservationId) => {
-	await requireCapability('lock.manage');
+/**
+ * The reservation page's retry (#1813): re-issue this booking's code, then run
+ * the daily job, since codes tend to fail together. This booking goes first and
+ * always — the job skips one that already has a code or sits outside its window.
+ */
+export const retryDoorCodes = command(z.string(), async (reservationId) => {
+	const staff = await requireCapability('lock.manage');
 
 	const [row] = await db
 		.select({
@@ -119,13 +123,15 @@ export const reprovisionReservationAccess = command(z.string(), async (reservati
 
 	// Keep the existing code when there is one: the member may already have been
 	// told it, and changing it under them is its own failure.
-	return reprovisionAccessFor({
+	const booking = await reprovisionAccessFor({
 		id: row.id,
 		startsAt: row.startsAt,
 		endsAt: row.endsAt,
 		memberName: row.memberName,
 		code: row.lockCode ? Number(row.lockCode) : undefined
 	});
+	const job = await runDailyLockJob(staff.name);
+	return { booking, job };
 });
 
 /** Mint a successor break-glass code ahead of its scheduled rotation. */
