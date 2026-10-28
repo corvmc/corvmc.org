@@ -137,3 +137,13 @@ export function interleave<R extends { startsAt: Date }>(
 	while (i < closures.length) out.push(closures[i++]);
 	return out;
 }
+
+/** Closures overlapping `[from, to)`, soonest first — a day on the reservation page's timeline. */
+export async function closuresOverlapping(from: Date, to: Date): Promise<ClosureRow[]> {
+	const rows = await db
+		.select(columns)
+		.from(closure)
+		.where(and(lt(closure.startsAt, to), gt(closure.endsAt, from)))
+		.orderBy(...orderBy('asc'));
+	return rows.map(shape);
+}

@@ -2,6 +2,7 @@
 	import type { BookerType } from '$lib/config';
 	import type { ResolvedPathname } from '$app/types';
 	import BookerTypeIcon from './BookerTypeIcon.svelte';
+	import { IconLock } from '@tabler/icons-svelte';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 
 	type TimeSlot = {
@@ -13,12 +14,17 @@
 		href?: ResolvedPathname;
 	};
 
+	type Closure = { id: string; startsAt: Date; endsAt: Date; reason: string };
+
 	let {
 		current,
-		others = []
+		others = [],
+		closures = []
 	}: {
 		current: TimeSlot;
 		others?: TimeSlot[];
+		/** Times the room is shut that day, drawn as blocked spans behind the bookings. */
+		closures?: Closure[];
 	} = $props();
 
 	// Timeline range: 9am (0%) to 10pm (100%)
@@ -41,11 +47,11 @@
 		return Math.max(0, Math.min(100, ((hourDecimal - START_HOUR) / RANGE) * 100));
 	}
 
-	function left(slot: TimeSlot): string {
+	function left(slot: { startsAt: Date }): string {
 		return `${percent(slot.startsAt)}%`;
 	}
 
-	function width(slot: TimeSlot): string {
+	function width(slot: { startsAt: Date; endsAt: Date }): string {
 		return `${percent(slot.endsAt) - percent(slot.startsAt)}%`;
 	}
 </script>
@@ -61,6 +67,19 @@
 		<span class="text-[10px] opacity-40">6pm</span>
 		<span class="text-[10px] opacity-40">9pm</span>
 	</div>
+
+	<!-- Closures (furthest back). A closure from the day before starts off the
+	     left edge, so it is clamped to 9am like any other span. -->
+	{#each closures as c (c.id)}
+		<div
+			data-closure
+			class="absolute flex h-full items-center rounded bg-neutral px-1 text-neutral-content"
+			style="left: {left(c)}; width: {width(c)}"
+			title="Closed: {c.reason}"
+		>
+			<IconLock size={14} aria-hidden="true" />
+		</div>
+	{/each}
 
 	<!-- Other reservations (background) -->
 	{#each others as other (other.id)}
