@@ -339,12 +339,20 @@
 		status,
 		size = 20,
 		label: showLabel = false,
+		responsive = false,
 		text,
 		class: className = ''
 	}: {
 		status: string;
 		size?: number;
 		label?: boolean;
+		/**
+		 * With `label`: the labelled badge at the col-extra tier (48rem container)
+		 * and up, the glyph alone below it. A focused link inside an enclosing
+		 * `group/row` opens the glyph's tooltip, so keyboard users still get the
+		 * word (#896).
+		 */
+		responsive?: boolean;
 		/**
 		 * Overrides the derived text, for a row carrying a detail the status
 		 * vocabulary cannot ("Snoozed · Mar 4"). The glyph and colour still come
@@ -359,12 +367,7 @@
 	const label = $derived(text ?? statusLabel(status));
 </script>
 
-{#if showLabel}
-	<span class="badge gap-1 badge-sm {badgeClass[status] ?? 'badge-ghost'} {className}">
-		<variant.icon size={14} />
-		{label}
-	</span>
-{:else}
+{#snippet glyph(extra: string)}
 	<!--
 		`role="img"` + `aria-label` because `data-tip` is daisyUI's CSS-only
 		tooltip: it draws through ::before, so assistive tech never sees it. Without
@@ -372,7 +375,30 @@
 		status column announced its header and then nothing for each value, and the
 		entity cards carry status as a glyph alone.
 	-->
-	<span class="tooltip tooltip-right" data-tip={label} role="img" aria-label={label}>
+	<span class="tooltip tooltip-right {extra}" data-tip={label} role="img" aria-label={label}>
 		<variant.icon {size} class="{variant.color} {className}" />
 	</span>
+{/snippet}
+
+{#if showLabel && responsive}
+	<!-- Both render and the container query picks one; `display: none` keeps the
+	     other out of the accessibility tree, so the name is never doubled. -->
+	<span
+		class="badge gap-1 badge-sm @max-3xl:hidden {badgeClass[status] ?? 'badge-ghost'} {className}"
+	>
+		<variant.icon size={14} />
+		{label}
+	</span>
+	<!-- daisyUI's `tooltip-open` is buried in a compound selector no variant can
+	     reach, so the open state is restated: what it sets on ::before/::after. -->
+	{@render glyph(
+		'@3xl:hidden group-has-focus-visible/row:before:opacity-100 group-has-focus-visible/row:after:opacity-100 group-has-focus-visible/row:before:[--tt-pos:0rem] group-has-focus-visible/row:after:[--tt-pos:0rem]'
+	)}
+{:else if showLabel}
+	<span class="badge gap-1 badge-sm {badgeClass[status] ?? 'badge-ghost'} {className}">
+		<variant.icon size={14} />
+		{label}
+	</span>
+{:else}
+	{@render glyph('')}
 {/if}

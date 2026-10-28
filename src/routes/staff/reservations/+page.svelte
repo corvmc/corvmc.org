@@ -324,11 +324,12 @@
 							r.stripePaymentRecordId
 						)}
 						{@const href = resolve(`/staff/reservations/${r.id}`)}
-						<tr class="hover cursor-pointer" use:rowLink={href}>
-							<!-- `label`, not the glyph alone: the tooltip that carried the status
-						     word only opens on hover, so a keyboard user got nothing (#896). -->
+						<tr class="group/row hover cursor-pointer" use:rowLink={href}>
+							<!-- Labelled from 48rem, the glyph below it (#1834). A hover-only
+						     tooltip left keyboard users nothing (#896), so `group/row` opens
+						     it while a link in the row holds focus. -->
 							<td class="w-px">
-								<StatusBadge status={r.status} label />
+								<StatusBadge status={r.status} label responsive />
 							</td>
 
 							<!-- Member, band or event — the chip's glyph is what says which. -->

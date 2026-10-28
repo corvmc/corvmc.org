@@ -446,6 +446,11 @@ Renders a daisyUI badge colored by status string. Handles underscore-to-space co
 <!-- renders: <span class="badge badge-warning">scheduled</span> -->
 ```
 
+With `label` it is a labelled badge. Adding `responsive` keeps the label at the `col-extra` tier
+(48rem container) and up and shows the glyph alone below it. A focused link in an enclosing
+`group/row` opens the glyph's tooltip, so put `group/row` on the `<tr>`. The staff reservations table
+uses it.
+
 Built-in variants: `scheduled` (warning), `confirmed` (info), `completed` (success), `no_show` (error), `cancelled` (ghost), `active` (success), `pending` (warning), `error` (error). Unknown statuses fall back to `badge-ghost`.
 
 ## Alert
