@@ -77,7 +77,7 @@ Filed as `agent-filed` Task issues for review, each titled as the decision:
 - **Only `event.manage` holders upload recap photos** (#1398). Not bands, not the Documentation role, not
   attendees. **Superseded by #1500:** `event.uploadRecap` guards the upload, and a volunteer role
   can grant it for one show. A confirmed signup on that show's work order, in a role that carries
-  the grant (seeded on `Photos or Video`), may upload from the public event page. The grant runs
+  the grant (seeded on `Photo/Video`, the name production uses), may upload from the public event page. The grant runs
   from the shift's start until 7 days after it ends. Captions, alt text and removal stay with
   `event.manage`.
 - **Recap photos publish without a review queue** (#1399). Staff-only uploads need no moderation step.

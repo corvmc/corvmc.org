@@ -68,7 +68,7 @@ describe('capability grant backfill', () => {
 			INSERT INTO market_day (event_id) VALUES ('ev-market');
 			INSERT INTO volunteer_role (id, name) VALUES
 				('door', 'Door'),
-				('photo', 'Photos or Video'),
+				('photo', 'Photo/Video'),
 				('repair', 'Gear Repair');
 			INSERT INTO work_order (id, volunteer_role_id, event_id) VALUES
 				('wo-door', 'door', 'ev-show'),
