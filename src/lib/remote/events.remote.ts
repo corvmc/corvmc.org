@@ -10,7 +10,7 @@ import { getEventRiderSummaries } from '$lib/server/band/rider-service';
 import { getBillInputList } from '$lib/server/band/bill-input-list-service';
 import { config } from '$lib/server/site-config/site-config-service';
 import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { requireListingWriter } from '$lib/server/event/listing-guard';
+import { requireListingReader, requireListingWriter } from '$lib/server/event/listing-guard';
 import { projectOfEvent } from '$lib/server/production/production-scope';
 import { getProjectBurn, listCommittees } from '$lib/server/project/project-service';
 import { listShowDeliverables } from '$lib/server/volunteer/deliverables-service';
@@ -726,7 +726,7 @@ async function searchEventRows(q: string) {
 }
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
-	await requireCapability('event.read');
+	await requireListingReader(id);
 
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
@@ -1063,7 +1063,7 @@ function parseStaffLineupField(raw: string | undefined) {
  * console at `[id]/production` is back-of-house, with its own query below.
  */
 export const getStaffEventPage = query(z.string(), async (id) => {
-	await requireCapability('event.read');
+	await requireListingReader(id);
 
 	const detail = await getStaffEventDetail(id);
 	const [nearby, venues, production, photos, recurringSeries] = await Promise.all([
@@ -1274,7 +1274,7 @@ export const getEventInputList = query(z.string(), async (id) => {
 });
 
 export const getEventRecurringSeries = query(z.string(), async (eventId) => {
-	await requireCapability('event.read');
+	await requireListingReader(eventId);
 	const series = await getByEvent(eventId);
 	if (!series) return null;
 	return getEventSeries(series.id);
