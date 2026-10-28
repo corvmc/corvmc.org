@@ -194,7 +194,7 @@ test.describe('volunteering — roles', () => {
 		return page.locator('li').filter({ hasText: name });
 	}
 
-	test('a role with logged hours cannot be deleted, and says to archive instead', async ({
+	test('a role with logged hours offers Archive, not Delete, and lists who is interested', async ({
 		page
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
@@ -205,32 +205,9 @@ test.describe('volunteering — roles', () => {
 		// guard is that the control is absent for one that has history.
 		await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0);
 		await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible();
-	});
 
-	test('an archived role stays visible to staff, behind the retired filter', async ({ page }) => {
-		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/roles');
-
-		// Retired roles are off by default — a coordinator filling next week's
-		// shifts reads the live list.
-		await expect(cardFor(page, SEED_VOL_ARCHIVED_ROLE_NAME)).toHaveCount(0);
-
-		await page.goto('/staff/volunteer/roles?retired=1');
-
-		// But retiring a role must never hide the work done under it.
-		await expect(cardFor(page, SEED_VOL_ARCHIVED_ROLE_NAME).first()).toBeVisible();
-		await openRole(page, SEED_VOL_ARCHIVED_ROLE_NAME);
-		await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
-	});
-
-	test('the role detail lists who is interested, and whether they are cleared', async ({
-		page
-	}) => {
-		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/roles');
-
+		// The role detail lists who is interested, and whether they are cleared.
 		// Ungated role: the member is simply on the list.
-		await openRole(page, SEED_VOL_ROLE_NAME);
 		await expect(page.getByText(SEED_VOL_MEMBER_NAME).first()).toBeVisible({ timeout: 15000 });
 
 		// Gated role: same member, but holding none of what it requires — the
@@ -247,7 +224,9 @@ test.describe('volunteering — roles', () => {
 		await expect(page.getByText('0 of 1 cleared today')).toBeVisible();
 	});
 
-	test('roles are sectioned by group, with a short-staffed count', async ({ page }) => {
+	test('roles are sectioned by group, and an archived one sits behind the retired filter', async ({
+		page
+	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/roles');
 
@@ -262,6 +241,17 @@ test.describe('volunteering — roles', () => {
 		const gatedCard = cardFor(page, SEED_VOL_GATED_ROLE_NAME).first();
 		await expect(gatedCard).toBeVisible();
 		await expect(gatedCard.locator('.badge-warning')).toBeVisible();
+
+		// Retired roles are off by default — a coordinator filling next week's
+		// shifts reads the live list.
+		await expect(cardFor(page, SEED_VOL_ARCHIVED_ROLE_NAME)).toHaveCount(0);
+
+		await page.goto('/staff/volunteer/roles?retired=1');
+
+		// But retiring a role must never hide the work done under it.
+		await expect(cardFor(page, SEED_VOL_ARCHIVED_ROLE_NAME).first()).toBeVisible();
+		await openRole(page, SEED_VOL_ARCHIVED_ROLE_NAME);
+		await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
 	});
 
 	test('editing a role from its detail page saves', async ({ page }) => {
@@ -352,34 +342,23 @@ test.describe('volunteering — roles', () => {
 		);
 	});
 
-	test('the retired interest route redirects onto the volunteers index', async ({ page }) => {
+	test('the retired interest, recurring, sign-off and shift routes land on their successors', async ({
+		page
+	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/interest');
-
 		await expect(page).toHaveURL(/\/staff\/volunteer\/people$/);
-	});
 
-	test('the retired recurring-work page redirects onto the schedule filter', async ({ page }) => {
-		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/recurring');
-
 		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule\?kind=recurring$/);
 		await expect(page.getByRole('button', { name: 'New Recurring Work' })).toBeVisible();
-	});
 
-	test('the retired sign-off tab lands on the roster filtered to it', async ({ page }) => {
-		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/people?tab=signoff');
-
 		await expect(page).toHaveURL(/status=blocked/);
 		await expect(page.getByRole('row', { name: SEED_VOL_BLOCKED_MINOR_NAME })).toBeVisible();
 		await expect(page.getByRole('row', { name: SEED_VOL_MEMBER_NAME })).toHaveCount(0);
-	});
 
-	test('the retired shift catalog redirects onto the schedule', async ({ page }) => {
-		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/shifts');
-
 		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule$/);
 	});
 

@@ -50,7 +50,9 @@ async function login(page: import('@playwright/test').Page) {
 	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
 }
 
-test('band profile edit page renders the form for an owner', async ({ page }) => {
+test('the edit form renders for an owner, and saving preserves hometown and founded year', async ({
+	page
+}) => {
 	await login(page);
 	await page.goto(`/band/${SEED_PUBLIC_BAND_SLUG}/edit`);
 
@@ -63,12 +65,6 @@ test('band profile edit page renders the form for an owner', async ({ page }) =>
 	// and foundedYear were missing entirely, which wiped them on save.
 	await expect(page.locator('input[name="hometown"]')).toHaveValue(SEED_PUBLIC_BAND_HOMETOWN);
 	await expect(page.locator('input[name="foundedYear"]')).toHaveValue(SEED_PUBLIC_BAND_FOUNDED);
-});
-
-test('saving the profile preserves hometown and founded year', async ({ page }) => {
-	await login(page);
-	await page.goto(`/band/${SEED_PUBLIC_BAND_SLUG}/edit`);
-	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
 
 	// Dirty the form so the submit is a real save, then save.
 	await page.locator('input[name="tagline"]').fill('E2E save round-trip');

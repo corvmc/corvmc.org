@@ -222,6 +222,22 @@ describe('a program still reaches them', () => {
 		expect(createEventSeries).not.toHaveBeenCalled();
 	});
 
+	// Equal times are the edge: a past-midnight end rolls forward, an equal one
+	// does not, so the comparison has to refuse it rather than book zero minutes.
+	it('refuses a session that does not end after it starts', async () => {
+		await expect(
+			remotes.createGroupSession({
+				groupId: 'group-1',
+				...SESSION,
+				startTime: '21:00',
+				endTime: '21:00',
+				reserveRoom: true
+			})
+		).rejects.toBeDefined();
+
+		expect(service.createGroupEvent).not.toHaveBeenCalled();
+	});
+
 	// Cleared, not left alone: `undefined` means "leave alone" in the service, so
 	// an emptied field has to arrive as null or it could never be removed.
 	it('clears an emptied listing field on edit rather than leaving it', async () => {

@@ -52,7 +52,9 @@ async function collapseGroup(page: Page, title: string) {
 }
 
 test.describe('staff sidebar', () => {
-	test('shows every group open on a first visit', async ({ page }) => {
+	test('shows every group open on a first visit, and highlights exactly one row', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff');
 
@@ -74,9 +76,21 @@ test.describe('staff sidebar', () => {
 		// A row from each of the far ends of the list, both reachable by role.
 		await expect(nav(page).getByRole('link', { name: 'Users' })).toBeVisible();
 		await expect(nav(page).getByRole('link', { name: 'Settings' })).toBeVisible();
+
+		// Exactly one row highlights, including on a detail page.
+		await page.goto('/staff/users');
+		await expect(nav(page).locator('a.active')).toHaveCount(1);
+		await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/staff/users');
+
+		// The regression: exact-pathname matching lit no row on any `[id]` route.
+		await page.goto(`/staff/users/${SEED_TARGET_ID}`);
+		await expect(nav(page).locator('a.active')).toHaveCount(1);
+		await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/staff/users');
 	});
 
-	test('collapses a group and remembers it across a reload', async ({ page }) => {
+	test('collapses a group, remembers it across a reload, and opens it on navigating in', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff');
 
@@ -90,14 +104,8 @@ test.describe('staff sidebar', () => {
 			'false'
 		);
 		await expect(nav(page).getByRole('link', { name: 'Payments' })).toHaveCount(0);
-	});
 
-	test('opens a collapsed group when you navigate into it', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff');
-		await collapseGroup(page, 'Money');
-		await expect(nav(page).getByRole('link', { name: 'Payments' })).toHaveCount(0);
-
+		// And navigating into the collapsed group opens it.
 		await page.goto('/staff/payments');
 
 		// A highlighted row you cannot see is worse than no highlight at all.
@@ -106,19 +114,6 @@ test.describe('staff sidebar', () => {
 			'true'
 		);
 		await expect(nav(page).getByRole('link', { name: 'Payments' })).toBeVisible();
-	});
-
-	test('highlights exactly one row, including on a detail page', async ({ page }) => {
-		await loginAsStaff(page);
-
-		await page.goto('/staff/users');
-		await expect(nav(page).locator('a.active')).toHaveCount(1);
-		await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/staff/users');
-
-		// The regression: exact-pathname matching lit no row on any `[id]` route.
-		await page.goto(`/staff/users/${SEED_TARGET_ID}`);
-		await expect(nav(page).locator('a.active')).toHaveCount(1);
-		await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/staff/users');
 	});
 
 	test('scrolls the nav itself, leaving the brand pinned', async ({ page }) => {

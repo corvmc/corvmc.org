@@ -19,7 +19,9 @@ async function loginAsStaff(page: Page) {
 const nav = (page: Page) => page.locator('aside ul.menu').first();
 
 test.describe('member sidebar', () => {
-	test('highlights the section a detail page belongs to', async ({ page }) => {
+	test('highlights the section a detail page belongs to, and keeps the chrome rows out', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 
 		await page.goto('/member/reservations');
@@ -34,10 +36,8 @@ test.describe('member sidebar', () => {
 			await expect(nav(page).locator('a.active')).toHaveCount(1);
 			await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/member/reservations');
 		}
-	});
 
-	test('keeps the meta rows pinned to the foot of the sidebar', async ({ page }) => {
-		await loginAsStaff(page);
+		// The meta rows stay pinned to the foot of the sidebar.
 		await page.goto('/member');
 
 		// Suggestions and Help, since #1244 — the member-context rows that used to
@@ -50,12 +50,8 @@ test.describe('member sidebar', () => {
 			return list.bottom - last.bottom;
 		});
 		expect(gap).toBeLessThan(40);
-	});
 
-	test('keeps the member-context rows out of the sidebar and in the chrome', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/member');
-
+		// The member-context rows are out of the sidebar and in the chrome.
 		for (const name of ['Messages', 'Profile', 'Account', 'Purchases', 'Membership']) {
 			await expect(nav(page).getByRole('link', { name, exact: true })).toHaveCount(0);
 		}
@@ -70,7 +66,7 @@ test.describe('member sidebar', () => {
 		}
 	});
 
-	test('collapses My Acts and remembers it', async ({ page }) => {
+	test('collapses My Acts, remembers it, and leaves the staff panel alone', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/member');
 
@@ -86,13 +82,8 @@ test.describe('member sidebar', () => {
 			'aria-expanded',
 			'false'
 		);
-	});
 
-	test('keeps its collapse record separate from the staff panel', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/member');
-		await nav(page).getByRole('button', { name: 'My Acts' }).click();
-
+		// The collapse record is the member panel's own, not the staff panel's.
 		await page.goto('/staff');
 		// Staff's own groups are untouched by a member-panel preference.
 		for (const title of ['People', 'Space', 'Money']) {
@@ -120,19 +111,13 @@ test.describe('band sidebar', () => {
 		await page.goto(`${band}/events/some-event-id`);
 		await expect(nav(page).locator('a.active')).toHaveCount(1);
 		await expect(nav(page).locator('a.active')).toHaveAttribute('href', `${band}/events`);
-	});
 
-	test('lights the dashboard only on the band root', async ({ page }) => {
-		await loginAsStaff(page);
-
+		// The dashboard lights only on the band root.
 		await page.goto(band);
 		await expect(nav(page).locator('a.active')).toHaveCount(1);
 		await expect(nav(page).locator('a.active')).toHaveAttribute('href', band);
-	});
 
-	test('never marks View Live Site as the active row', async ({ page }) => {
-		await loginAsStaff(page);
-
+		// View Live Site is never the active row.
 		await page.goto(`${band}/members`);
 		// Its href points at another origin, and an empty href in the data would
 		// otherwise be a prefix of every path.
