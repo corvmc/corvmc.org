@@ -408,6 +408,7 @@
 			venueName={evt.venueName}
 			venueIsPrimary={evt.venueIsPrimary}
 			reservation={detail.linkedReservation}
+			editableEventId={evt.status !== 'cancelled' ? evt.id : undefined}
 		/>
 	{/if}
 

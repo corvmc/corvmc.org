@@ -49,7 +49,8 @@ vi.mock('$lib/server/event/event-service', () => ({
 	getById: vi.fn(async (id: string) => ({
 		id,
 		source: id === 'evt-show' ? 'cmc' : 'band',
-		startsAt: new Date('2026-11-14T03:00:00Z')
+		startsAt: new Date('2026-11-14T03:00:00Z'),
+		reservationId: id === 'evt-unheld' ? null : 'res-1'
 	})),
 	setEventLineup: (...a: unknown[]) => setEventLineup(...(a as [])),
 	listAll: vi.fn(),
@@ -102,7 +103,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { updateEvent, cancelEventSeries, startEventSeries, setStaffEventLineup } =
+const { updateEvent, cancelEventSeries, startEventSeries, setStaffEventLineup, adjustListingHold } =
 	(await import('$lib/remote/events.remote')) as any;
 
 const EDIT = { title: 'Retitled', rebookReservation: false, overrideConflicts: false };
@@ -218,5 +219,42 @@ describe('setStaffEventLineup', () => {
 			status: 403
 		});
 		expect(setEventLineup).not.toHaveBeenCalled();
+	});
+});
+
+// The hold's own window, apart from the show's: setup and teardown.
+describe('adjustListingHold', () => {
+	const HOLD = {
+		eventId: 'evt-show',
+		startTime: '17:00',
+		endTime: '23:30',
+		overrideConflicts: false
+	};
+
+	it("moves the hold in place, on the show's club date", async () => {
+		persona = 'booker';
+		await adjustListingHold(HOLD);
+		const params = (update.mock.calls[0] as unknown[])[1] as {
+			rebook?: { reservationStartsAt: Date; reservationEndsAt: Date; userId: string };
+			startsAt?: Date;
+		};
+		// 2026-11-14T03:00Z is the 13th in Pacific time; 17:00 PST is 01:00Z on the 14th.
+		expect(params.rebook?.reservationStartsAt.toISOString()).toBe('2026-11-14T01:00:00.000Z');
+		expect(params.rebook?.reservationEndsAt.toISOString()).toBe('2026-11-14T07:30:00.000Z');
+		expect(params.rebook?.userId).toBe('booker-1');
+		expect(params.startsAt).toBeUndefined();
+	});
+
+	it('refuses someone off the committee, moving nothing', async () => {
+		persona = 'outsider';
+		await expect(adjustListingHold(HOLD)).rejects.toMatchObject({ status: 403 });
+		expect(update).not.toHaveBeenCalled();
+	});
+
+	it('answers 404 for a listing with no hold', async () => {
+		await expect(adjustListingHold({ ...HOLD, eventId: 'evt-unheld' })).rejects.toMatchObject({
+			status: 404
+		});
+		expect(update).not.toHaveBeenCalled();
 	});
 });
