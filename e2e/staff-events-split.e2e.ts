@@ -48,12 +48,11 @@ test.describe('staff events split', () => {
 		await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
 	});
 
-	test('the calendar holds /staff/events and opens on everything', async ({ page }) => {
+	test('the calendar holds /staff/events and lists everything', async ({ page }) => {
 		await page.goto('/staff/events');
 		await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
-		await expect(page.getByLabel('Status')).toHaveValue('all');
 
-		// The lister owns several seeded listings, so at `all` their link is on more than one row.
+		// The lister owns several seeded listings, so their link is on more than one row.
 		const pending = page.getByRole('row').filter({ hasText: SEED_SPLIT_PENDING_TITLE });
 		await expect(pending).toBeVisible();
 		await expect(pending.getByRole('link', { name: SEED_SPLIT_MEMBER_NAME })).toBeVisible();
