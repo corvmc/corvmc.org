@@ -1682,7 +1682,10 @@ export async function listAll(
  * caller should pass. The list arrives from the caller; a member's private
  * working copy must not become visible because someone widened a Zod enum later.
  */
-/** Every listing staff may see, in every status and on any date, newest first. */
+/**
+ * Every listing staff may see, in every status and on any date: the ones
+ * waiting on staff first, then newest first.
+ */
 export async function listStaffCalendar(pagination: PaginationInput = {}) {
 	const where = staffVisible();
 
@@ -1702,7 +1705,10 @@ export async function listStaffCalendar(pagination: PaginationInput = {}) {
 		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.leftJoin(user, eq(user.id, eventListing.createdByUserId))
 		.where(where)
-		.orderBy(desc(eventListing.startsAt))
+		.orderBy(
+			sql`case when ${eventListing.status} = ${'pending_review'} then 0 else 1 end`,
+			desc(eventListing.startsAt)
+		)
 		.$dynamic();
 	const countQ = db.select({ count: count() }).from(eventListing).where(where);
 	return paginate(dataQ, countQ, pagination);

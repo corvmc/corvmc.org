@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import type { SQL } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Mocks — a select chain that records the where clause and limit/offset so the
@@ -6,6 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 let capturedWhere: unknown;
+let capturedOrderBy: unknown[] = [];
 let capturedLimit: number | undefined;
 let capturedOffset: number | undefined;
 let selectRows: unknown[] = [];
@@ -19,6 +22,12 @@ function chain(): unknown {
 			if (prop === 'where') {
 				return (clause: unknown) => {
 					capturedWhere = clause;
+					return proxy;
+				};
+			}
+			if (prop === 'orderBy') {
+				return (...clauses: unknown[]) => {
+					capturedOrderBy = clauses;
 					return proxy;
 				};
 			}
@@ -113,6 +122,7 @@ const windowEnd = new Date('2026-09-01T07:00:00Z');
 
 beforeEach(() => {
 	capturedWhere = undefined;
+	capturedOrderBy = [];
 	capturedLimit = undefined;
 	capturedOffset = undefined;
 	selectRows = [];
@@ -197,6 +207,14 @@ describe('listStaffCalendar', () => {
 		}
 		expect(containsParam(capturedWhere, 'cmc')).toBe(false);
 		expect(containsParam(capturedWhere, 'band')).toBe(false);
+	});
+
+	// A listing waiting on staff is pinned above every date, so a stale one is
+	// never buried pages down.
+	it('orders pending_review rows first', async () => {
+		await listStaffCalendar({ page: 1 });
+		const first = new SQLiteSyncDialect().sqlToQuery(capturedOrderBy[0] as SQL);
+		expect(first.params).toContain('pending_review');
 	});
 
 	it('excludes community drafts', async () => {
