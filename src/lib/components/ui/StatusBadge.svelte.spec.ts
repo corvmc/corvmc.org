@@ -1,6 +1,9 @@
+import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import StatusBadge, { labels } from './StatusBadge.svelte';
+import StatusBadgeHarness from './StatusBadge.test.svelte';
+import '../../../routes/layout.css';
 
 /**
  * The icon-only form is the one used in every staff table's status column and,
@@ -37,5 +40,45 @@ describe('StatusBadge accessibility', () => {
 		expect(document.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe(
 			'Brand new thing'
 		);
+	});
+});
+
+/**
+ * `responsive` keeps the word at desk widths and drops to the glyph below the
+ * col-extra tier (48rem container), where the reservations table runs out of
+ * room (#1834). The word was added there for keyboard users (#896), so the
+ * glyph has to keep a name and show its tooltip when the row holds focus.
+ */
+describe('StatusBadge responsive', () => {
+	const tooltipOpacity = () => {
+		const tip = page.getByRole('img', { name: 'No show' }).element();
+		return getComputedStyle(tip, '::before').opacity;
+	};
+
+	it('shows the labelled badge at 48rem and up', async () => {
+		await render(StatusBadgeHarness, { width: 800 });
+		await expect.element(page.getByText('No show')).toBeVisible();
+		expect(page.getByRole('img', { name: 'No show' }).elements()).toHaveLength(0);
+	});
+
+	it('goes icon-only below 48rem and keeps an accessible name', async () => {
+		await render(StatusBadgeHarness, { width: 700 });
+		await expect.element(page.getByRole('img', { name: 'No show' })).toBeVisible();
+		await expect.element(page.getByText('No show', { exact: true })).not.toBeVisible();
+	});
+
+	it('opens the tooltip when the row holds keyboard focus', async () => {
+		await render(StatusBadgeHarness, { width: 700 });
+		expect(tooltipOpacity()).toBe('0');
+		// `userEvent.tab()` never reaches the frame's link here; a script focus
+		// with no pointer input before it matches `:focus-visible` the same way.
+		(page.getByRole('link').element() as HTMLElement).focus();
+		await expect.poll(tooltipOpacity).toBe('1');
+	});
+
+	it('leaves the plain labelled badge alone without the prop', async () => {
+		await render(StatusBadgeHarness, { width: 700, responsive: false });
+		await expect.element(page.getByText('No show')).toBeVisible();
+		expect(page.getByRole('img', { name: 'No show' }).elements()).toHaveLength(0);
 	});
 });
