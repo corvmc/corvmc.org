@@ -508,14 +508,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/flags/equipment",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/flags/equipment/[id]",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/grants",
 		"panel": "staff"
 	},
@@ -609,6 +601,14 @@
 	},
 	{
 		"route": "/staff/inventory/orders/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inventory/problems",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inventory/problems/[id]",
 		"panel": "staff"
 	},
 	{

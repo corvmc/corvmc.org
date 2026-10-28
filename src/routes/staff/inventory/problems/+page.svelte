@@ -8,8 +8,7 @@
 	import { entityLabels } from '$lib/config';
 	import { resolve } from '$app/paths';
 	import { getEquipmentReportQueue } from '$lib/remote/work-requests.remote';
-	import TriageTable from '../TriageTable.svelte';
-	import TriageTabs from '../TriageTabs.svelte';
+	import TriageTable from '$lib/components/ui/TriageTable.svelte';
 
 	const stages = [
 		{ value: 'untriaged', label: 'Needs triage' },
@@ -42,9 +41,8 @@
 	}
 </script>
 
-<PageHeader title="Equipment Reports" />
+<PageHeader title="Reported Problems" />
 <PageContent>
-	<TriageTabs active="equipment" />
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
@@ -72,13 +70,13 @@
 		</Select>
 	</FilterBar>
 
-	<DataList {result} empty="No equipment reports" onpage={(p) => (page = p)}>
+	<DataList {result} empty="No reported problems" onpage={(p) => (page = p)}>
 		{#snippet children(reports)}
 			<TriageTable
 				subjectLabel="Unit or place"
 				rows={reports.map((r) => ({
 					id: r.id,
-					href: resolve(`/staff/flags/equipment/${r.id}`),
+					href: resolve(`/staff/inventory/problems/${r.id}`),
 					// Sent to a work order is still `pending` in the table; say what it means.
 					status: r.stage === 'in_work_order' ? 'in_progress' : r.status,
 					kind: r.blocksUse ? 'Out of use' : r.asset ? entityLabels.asset.one : 'Building',

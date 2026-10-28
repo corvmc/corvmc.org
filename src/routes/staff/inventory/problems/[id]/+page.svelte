@@ -32,7 +32,7 @@
 
 <PageHeader
 	width="3xl"
-	subtitle="Equipment Report"
+	subtitle="Reported Problem"
 	title={report.asset?.title ?? report.location ?? 'Building problem'}
 >
 	<StatusBadge status={report.stage === 'in_work_order' ? 'in_progress' : report.status} label />
@@ -70,7 +70,7 @@
 					<ul class="space-y-2">
 						{#each report.otherPending as o (o.id)}
 							<li>
-								<a class="link" href={resolve(`/staff/flags/equipment/${o.id}`)}>{o.note}</a>
+								<a class="link" href={resolve(`/staff/inventory/problems/${o.id}`)}>{o.note}</a>
 								<div class="text-subtle">
 									{o.reporterName ?? 'Deleted account'} · {formatDateShort(o.createdAt)}
 								</div>
