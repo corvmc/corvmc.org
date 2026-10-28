@@ -61,7 +61,7 @@
 				{ name: 'Tech', desc: 'Operate the soundboard and run soundcheck.' },
 				{ name: 'Door', desc: 'Handle entry, welcome the audience, keep an eye on the space.' },
 				{ name: 'Merch', desc: 'Run CMC merch and concessions, coordinate band merch tables.' },
-				{ name: 'Photos or Video', desc: 'Document the show with your own equipment.' }
+				{ name: 'Photo/Video', desc: 'Document the show with your own equipment.' }
 			]
 		},
 		{

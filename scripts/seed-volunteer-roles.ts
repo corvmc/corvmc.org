@@ -50,7 +50,7 @@ const ROLES: RoleSeed[] = [
 		description: 'Handle CMC merch and concessions, and coordinate band merch tables.'
 	},
 	{
-		name: 'Photos or Video',
+		name: 'Photo/Video',
 		group: 'at-shows',
 		description: 'Document the show with photography or video, using your own equipment.',
 		// The show's documentation crew may upload its recap photos (#1500).

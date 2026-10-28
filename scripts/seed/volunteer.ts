@@ -169,7 +169,7 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		// The show's documentation crew (#1500): a confirmed signup here may upload
 		// that show's recap photos until a week after it. Same name as the canonical
 		// role in `seed-volunteer-roles.ts`, so a grant ticked in production matches.
-		name: 'Photos or Video',
+		name: 'Photo/Video',
 		group: 'at-shows' as const,
 		description: 'Document the show with photography or video, using your own equipment.',
 		displayOrder: 45,
@@ -673,7 +673,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 	// The last show's documentation crew (#1500): one completed signup, so its
 	// photographer can upload recap photos from the public event page while the
 	// role's grant window is open.
-	const docRole = roles.find((r: any) => r.name === 'Photos or Video');
+	const docRole = roles.find((r: any) => r.name === 'Photo/Video');
 	const lastShow = [...pastShows].sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0];
 	const photographer = users.find((u) => !signupRows.some((r) => r.userId === u.id)) ?? users[0];
 	let docShifts = 0;
