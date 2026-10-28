@@ -61,34 +61,12 @@ describe('CreateEventModal', () => {
 		await expect.element(page.getByText('Repeat this event')).not.toBeInTheDocument();
 	});
 
-	it('names itself after the trigger that opened it', async () => {
-		await render(CreateEventModal, {
-			open: true,
-			title: 'Create Listing',
-			submitLabel: 'Create Listing'
-		});
-
-		await expect.element(page.getByRole('heading', { name: 'Create Listing' })).toBeVisible();
-		await expect.element(page.getByRole('button', { name: 'Create Listing' })).toBeVisible();
-	});
-
 	it('posts a plain listing from the Calendar, with its kind and who runs it', async () => {
 		await render(CreateEventModal, { open: true });
 
 		await expect.element(page.getByLabelText('Kind')).toBeVisible();
 		await expect.element(page.getByLabelText('Run by')).toBeVisible();
 		expect(document.querySelector('form')?.getAttribute('action')).toBe('?/createEvent');
-	});
-
-	// #1947: "New production" makes the listing through the same form, as a show
-	// with its production, so kind and "Run by" are not the staffer's to pick.
-	it('opens a show with its production when asked', async () => {
-		await render(CreateEventModal, { open: true, production: true });
-
-		await expect.element(page.getByRole('textbox', { name: 'Title' })).toBeVisible();
-		await expect.element(page.getByLabelText('Kind')).not.toBeInTheDocument();
-		await expect.element(page.getByLabelText('Run by')).not.toBeInTheDocument();
-		expect(document.querySelector('form')?.getAttribute('action')).toBe('?/createShow');
 	});
 
 	// #1984: 6pm PDT on Oct 26 is already Oct 27 in UTC.

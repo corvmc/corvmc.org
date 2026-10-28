@@ -57,7 +57,9 @@ describe('NewProductionModal', () => {
 		await page.getByRole('button', { name: 'Create a listing' }).click();
 
 		await expect.element(page.getByRole('textbox', { name: 'Title' })).toBeVisible();
+		// #1947: a show with its production, so kind and "Run by" are not the staffer's to pick.
 		await expect.element(page.getByLabelText('Kind')).not.toBeInTheDocument();
+		await expect.element(page.getByLabelText('Run by')).not.toBeInTheDocument();
 		expect(document.querySelector('form')?.getAttribute('action')).toBe('?/createShow');
 	});
 });

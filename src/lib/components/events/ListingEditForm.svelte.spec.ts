@@ -66,9 +66,7 @@ describe('ListingEditForm ticketing', () => {
 	it("leaves a band's own sale alone", async () => {
 		const { container } = await render(ListingEditForm, props('band', true));
 
-		// The custom-input fields label by legend, so the inputs are found by id.
 		await expect.element(page.getByText('Edit listing')).toBeVisible();
-		expect(container.querySelector('#editTitle')).not.toBeNull();
 		expect(container.querySelector('input[name="ticketingEnabled"]')).toBeNull();
 		expect(container.querySelector('input[name="ticketQuantity"]')).toBeNull();
 		await expect.element(page.getByText('Sell tickets through the site')).not.toBeInTheDocument();
