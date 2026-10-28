@@ -1,8 +1,4 @@
 import { db } from '$lib/server/db';
-import {
-	announceProductionCreated,
-	createShowProject
-} from '$lib/server/production/production-project';
 import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { closure } from '$lib/server/db/schema/reservation';
@@ -564,22 +560,6 @@ async function processEventSeries(
 		const occDoors = doorsLeadMs != null ? new Date(occStart.getTime() - doorsLeadMs) : null;
 
 		const newEventId = crypto.randomUUID();
-		// Each night of a series is its own show, with its own running order and
-		// its own settlement, so each occurrence opens its own production (#1202).
-		const occProductionId = prototype.kind === 'show' ? crypto.randomUUID() : null;
-		const occProjectId = occProductionId ? crypto.randomUUID() : null;
-
-		// Before the listing, which names both by foreign key.
-		if (occProductionId && occProjectId) {
-			await createShowProject({
-				productionId: occProductionId,
-				projectId: occProjectId,
-				name: prototype.title,
-				startsAt: occStart,
-				endsAt: occEnd,
-				createdByUserId: prototype.createdByUserId
-			});
-		}
 
 		// Insert the draft event first (no reservation), so a failed space booking
 		// never leaves an orphan reservation.
@@ -598,8 +578,8 @@ async function processEventSeries(
 			// hero slot on the homepage every month.
 			source: prototype.source,
 			kind: prototype.kind,
-			productionId: occProductionId,
-			...(occProjectId ? { projectId: occProjectId } : {}),
+			// Never a production: staff attach one by hand if a night needs it (#2009).
+			productionId: null,
 			groupId: prototype.groupId,
 			location: prototype.location,
 			status: occurrenceStatus,
@@ -608,7 +588,6 @@ async function processEventSeries(
 			recurringSeriesId: series.id
 		});
 		created++;
-		if (occProductionId) await announceProductionCreated(occProductionId, newEventId, null);
 
 		// The night is sold on the series' terms, when it has any.
 		await saveTicketSale(newEventId, {
@@ -708,10 +687,10 @@ async function processEventSeries(
 				} else {
 					const res = await staffCreate({
 						userId: prototype.createdByUserId,
-						// The production, else the programme, else the listing (#2004).
+						// The programme, else the listing (#2004).
 						...listingHoldBooker({
 							id: newEventId,
-							productionId: occProductionId,
+							productionId: null,
 							groupId: prototype.groupId
 						}),
 						hardHold: true,

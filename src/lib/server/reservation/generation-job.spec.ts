@@ -178,6 +178,7 @@ vi.mock('./timezone', () => ({
 
 const mockEmit = vi.fn().mockResolvedValue(undefined);
 
+// Mocked so a regression that opens a production per occurrence is caught (#2009).
 const mockCreateShowProject = vi.fn().mockResolvedValue(undefined);
 vi.mock('$lib/server/production/production-project', () => ({
 	createShowProject: (...args: unknown[]) => mockCreateShowProject(...args),
@@ -219,9 +220,8 @@ function queueSelects(...results: unknown[][]) {
 
 /**
  * Which table each insert went to, so a test can tell an `event` row from the
- * `event_group` link the same write now owes, and from the `production` each
- * occurrence of a show opens (#855). `insertedRows` keeps its old meaning —
- * everything, in order.
+ * `event_group` link the same write now owes. `insertedRows` keeps its old
+ * meaning — everything, in order.
  */
 let insertedByTable: { table: string; row: unknown }[] = [];
 
@@ -571,8 +571,7 @@ const EVENT_PROTO = {
 	// A fixed-price show: the sliding scale opens at the price.
 	ticketPriceFloorCents: 1000,
 	source: 'cmc',
-	// `notNull` on the real table, and what decides each occurrence's booker: a
-	// show's night is its own production's (#855).
+	// `notNull` on the real table. A show's occurrence still gets no production (#2009).
 	kind: 'show',
 	createdByUserId: 'user-1',
 	reservationId: 'eres-proto'
@@ -642,11 +641,13 @@ describe('generateRecurringEvents', () => {
 		expect(result.instancesSkipped).toBe(0);
 		expect(result.errors).toHaveLength(0);
 
-		// Draft event copies prototype config with shifted times. Counted by table:
-		// a show's occurrence also opens its own production (#855).
+		// Draft event copies prototype config with shifted times. An occurrence
+		// never opens a production; staff attach one by hand (#2009).
 		const listings = insertedByTable.filter((i) => i.table === 'event_listing');
 		expect(listings).toHaveLength(1);
+		expect(mockCreateShowProject).not.toHaveBeenCalled();
 		expect(listings[0].row).toMatchObject({
+			productionId: null,
 			title: EVENT_PROTO.title,
 			description: EVENT_PROTO.description,
 			startsAt: OCC1,
@@ -668,7 +669,9 @@ describe('generateRecurringEvents', () => {
 		expect(mockHasConflict).toHaveBeenCalledOnce();
 		expect(mockStaffCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
-				bookerType: 'production',
+				// No production and no group: the listing holds the room itself.
+				bookerType: 'event_listing',
+				bookerId: (listings[0].row as { id: string }).id,
 				// A show holds the room outright, and says so on the row rather than
 				// leaving it to be inferred from how the row was created.
 				hardHold: true,
@@ -681,6 +684,22 @@ describe('generateRecurringEvents', () => {
 		);
 		// The event is linked to the new reservation
 		expect(updatedRows[0]).toMatchObject({ reservationId: 'eres-new' });
+	});
+
+	it("books a group's show occurrence to the group, with no production (#2009)", async () => {
+		const proto = { ...EVENT_PROTO, source: 'group', groupId: 'club-1' };
+		queueSelects([EVENT_SERIES], [proto], [OWNER], [EVENT_PROTO_RES], [], [{ kind: 'club' }]);
+		setupInsert();
+		setupUpdate();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		await generateRecurringEvents();
+
+		expect(mockCreateShowProject).not.toHaveBeenCalled();
+		expect(insertsFor('event_listing')[0]).toMatchObject({ productionId: null });
+		expect(mockStaffCreate).toHaveBeenCalledWith(
+			expect.objectContaining({ bookerType: 'group', bookerId: 'club-1' })
+		);
 	});
 
 	it('still creates the draft event but skips reservation when the slot conflicts', async () => {
