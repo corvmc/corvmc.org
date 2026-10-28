@@ -2162,7 +2162,7 @@ export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
  * part of their record and stays on `user.read`.
  */
 export const capabilities = {
-	user: ['list', 'read', 'update', 'setRole', 'setEmail', 'deactivate', 'ban', 'purge'],
+	user: ['list', 'read', 'update', 'setRole', 'setEmail', 'invite', 'deactivate', 'ban', 'purge'],
 	audit: ['read'],
 	credit: ['read', 'adjust', 'comp'],
 	// `collect` is taking a card at the door (#612). It is not `refund`: taking

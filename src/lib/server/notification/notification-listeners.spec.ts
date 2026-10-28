@@ -528,6 +528,44 @@ describe('collapsed listeners use the generic template', () => {
 		expect(params.email.heading).toContain('Real Book Club');
 	});
 
+	// Staff inviting somebody to CMC itself (#1830).
+	it('member_invite.created → a sign-up link when no group was chosen', async () => {
+		await emit('member_invite.created', {
+			email: 'new@test.com',
+			name: 'Nia',
+			invitedByName: 'Alice',
+			groups: [],
+			token: null
+		});
+
+		const params = mockDispatchEmailOnly.mock.calls[0][0];
+		expect(params.type).toBe('member_invitation');
+		expect(params.toEmail).toBe('new@test.com');
+		expect(params.email.recipientName).toBe('Nia');
+		expect(params.email.subject).toContain('Alice');
+		expect(params.email.cta.url).toBe('/login?register');
+	});
+
+	it('member_invite.created → names each group and links through its invite', async () => {
+		await emit('member_invite.created', {
+			email: 'new@test.com',
+			name: null,
+			invitedByName: 'Alice',
+			groups: [
+				{ name: 'Real Book Club', kind: 'club' },
+				{ name: 'Booking', kind: 'committee' }
+			],
+			token: 'tok-club'
+		});
+
+		const params = mockDispatchEmailOnly.mock.calls[0][0];
+		expect(params.email.recipientName).toBeUndefined();
+		expect(params.email.cta.url).toBe('/login?invite=tok-club');
+		const text = params.email.paragraphs.map((p: { text: string }) => p.text).join(' ');
+		expect(text).toContain('club Real Book Club');
+		expect(text).toContain('committee Booking');
+	});
+
 	// A staff roster import: one batch, each address carrying its own link.
 	it('group_invite.bulk_created → one batched send with a link per address', async () => {
 		await emit('group_invite.bulk_created', {

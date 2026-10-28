@@ -412,6 +412,18 @@ export interface GroupInvitesBulkCreatedEvent extends Omit<
 }
 
 /**
+ * Staff invited somebody with no account to join CMC (#1830). `token` is one
+ * chosen group's invite token, null when no group was chosen.
+ */
+export interface MemberInviteCreatedEvent {
+	email: string;
+	name: string | null;
+	invitedByName: string;
+	groups: { name: string; kind: GroupKind }[];
+	token: string | null;
+}
+
+/**
  * Staff put these accounts on a club's or committee's roster directly, with no
  * acceptance step on their side, so each of them is told. One event per import.
  */
@@ -919,6 +931,7 @@ export type DomainEvents = {
 	'equipment.report_resolved': EquipmentReportResolvedEvent;
 	'group_invite.created': GroupInviteCreatedEvent;
 	'group_invite.bulk_created': GroupInvitesBulkCreatedEvent;
+	'member_invite.created': MemberInviteCreatedEvent;
 	'group.members_added': GroupMembersAddedEvent;
 	'announcement.published': AnnouncementPublishedEvent;
 	'inbox.message_received': InboxMessageReceivedEvent;
