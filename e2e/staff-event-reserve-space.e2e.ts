@@ -99,7 +99,7 @@ async function createEvent(
 
 /** From the listing: open Edit, tick the hold, save, and wait for the link. */
 async function holdSpace(page: Page) {
-	await page.getByRole('button', { name: 'Edit' }).click();
+	await page.getByRole('button', { name: 'Edit', exact: true }).click();
 	await page.getByRole('checkbox', RESERVE_CHECKBOX).check();
 	// `exact`: the open edit form also carries "Save bill".
 	await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -127,7 +127,7 @@ test.describe('staff event creation — minimal modal', () => {
 		// Never saved, so the date cannot collide with anything.
 		await createEvent(page, `${SEED_EVENT_TITLE_PREFIX} pad ${Date.now()}`, EVENT_DATE);
 
-		await page.getByRole('button', { name: 'Edit' }).click();
+		await page.getByRole('button', { name: 'Edit', exact: true }).click();
 		await page.getByRole('checkbox', RESERVE_CHECKBOX).check();
 		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue(EVENT_START);
 		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue(EVENT_END);
@@ -193,7 +193,7 @@ test.describe('staff event creation — minimal modal', () => {
 			SEED_CONFLICT_START,
 			SEED_CONFLICT_END
 		);
-		await page.getByRole('button', { name: 'Edit' }).click();
+		await page.getByRole('button', { name: 'Edit', exact: true }).click();
 		const reserve = page.getByRole('checkbox', RESERVE_CHECKBOX);
 		await reserve.check();
 
@@ -237,7 +237,7 @@ test.describe('staff event edit — reserve space', () => {
 		// vanishing and leaving "not held" indistinguishable from "not shown".
 		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toBeVisible();
 
-		await page.getByRole('button', { name: 'Edit' }).click();
+		await page.getByRole('button', { name: 'Edit', exact: true }).click();
 		const reserve = page.getByRole('checkbox', RESERVE_CHECKBOX);
 		await expect(reserve).toBeVisible();
 		await reserve.check();
@@ -271,7 +271,7 @@ test.describe('staff event edit — reserve space', () => {
 		// window that overlaps the event's own reservation. Earlier rather than
 		// later on purpose: 17:00–22:00 stays inside the 09:00–22:00 operating
 		// hours, so no out-of-hours warning muddies the picture.
-		await page.getByRole('button', { name: 'Edit' }).click();
+		await page.getByRole('button', { name: 'Edit', exact: true }).click();
 		await page.locator('input[name="eventStartTime"]').fill('17:00');
 		await page.getByRole('checkbox', { name: 'Confirm rebook' }).check();
 
