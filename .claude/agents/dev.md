@@ -16,6 +16,11 @@ Two things, both scoped to what you touched:
    mentions the function you changed. The directory run is ~10 files and under 3 seconds.
 2. **`pnpm lint:changed`**, if more than a couple of files moved.
 
+A fix names its class in the PR body, and its regression check guards the class: grep for the same
+shape elsewhere, then reach for the cheapest rung that catches all of it (a type, a lint rule, an
+invariant spec) before a point test. The ladder is in
+`docs/development/conventions.md#tests-catch-classes`.
+
 Then commit, push, open the PR with `Fixes #<n>` if it answers an issue, and arm
 `gh pr merge --auto` **in that same turn** — opening the PR
 is not the finish line, and queueing is not gated on the user reading it first. If the change

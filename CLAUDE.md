@@ -57,6 +57,8 @@ Say in the PR that the full suite was deferred to CI.
 - **Tests are colocated `.spec.ts`** — the vitest globs match only `.spec`. Every source file must
   be compiled by a tsconfig: `src` by the generated one, everything else by `tsconfig.tooling.json`,
   so a new top-level directory goes there. `scripts/coverage.spec.ts` enforces both.
+- **Tests catch classes.** A bug fix names its class and adds the cheapest guard for all of it,
+  from the ladder in `docs/development/conventions.md#tests-catch-classes`.
 - **Forms use `$lib/components/ui/Form/`** (`Form`, `FormField`, `SubmitButton`) for every form,
   input and select, inline ones included.
 - **Flat colour only** — no gradients in any interface.

@@ -11,6 +11,20 @@ paths:
 > `gh issue list --state open --label flaky`. The backlog is GitHub Issues, not a
 > markdown file.
 
+## If you only remember one thing
+
+**A bug fix names its class.** State the class, grep for what else has that shape, and add the
+cheapest guard that catches the whole class. The regression check that fails before the fix sits
+at the class level; a point test is the fallback when no class guard fits.
+
+Pick the level by what the test proves, cheapest first: **types** → **lint rule** → **invariant
+spec** (walk a list the code already has: "every X has Y") → **real SQLite** (`migratedSqlite()`)
+→ **remote spec** → **component spec** (what a user sees or decides) → **E2E** (journeys across
+systems). Worked examples and the rest of the policy:
+[conventions.md#tests-catch-classes](../../docs/development/conventions.md#tests-catch-classes).
+
+## Suites
+
 Three vitest projects in `vite.config.ts`: `client` (chromium, `*.svelte.{test,spec}.ts`),
 `server` (node, `vmForks` pool), and `storybook`. `expect.requireAssertions` is on globally, so a
 test that asserts nothing fails.
