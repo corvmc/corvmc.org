@@ -28,6 +28,11 @@ test that asserts nothing fails.
   every committed migration replayed — and point `vi.mock('$lib/server/db')` at its `testDb` (see
   `src/lib/server/reservation/program-hold.spec.ts`). It works in CI: `better-sqlite3` ships
   prebuilt binaries, so nothing needs compiling.
+- **A component spec asserts what a user sees or decides** — conditional copy, a choice offered
+  or withheld, a computed value. It does not re-assert form wiring (field names, ids, hidden
+  inputs, the type given to `.as()`) against a mocked `fields` proxy: the type check and e2e own
+  that, and what a submit writes or refuses is tested at the remote, in a server spec. Components
+  whose specs mock the same modules share one file (`actions/inventory-actions.svelte.spec.ts`).
 - A spec of orchestration — which service is called, what is thrown, what is returned — mocks
   `$lib/server/db` outright. To assert only a fragment's shape, render it through
   `SQLiteSyncDialect` (see `src/lib/server/authorization.spec.ts`).

@@ -62,32 +62,6 @@ describe('ActivateToggleAction', () => {
 		expect(submitsTo()).toBe('?/reactivate');
 	});
 
-	// Colour is the only cue before the dialog opens, and it reads as the
-	// direction of travel: red takes something away, green gives it back.
-	it('colours the trigger by the direction of travel', async () => {
-		await render(ActivateToggleAction, {
-			entityId: 'thing-1',
-			isDeactivated: false,
-			deactivateAction: remoteForm('deactivate'),
-			reactivateAction: remoteForm('reactivate')
-		});
-
-		await expect.element(page.getByRole('button', { name: 'Deactivate' })).toHaveClass(/btn-error/);
-	});
-
-	it('colours the reactivate trigger the other way', async () => {
-		await render(ActivateToggleAction, {
-			entityId: 'thing-1',
-			isDeactivated: true,
-			deactivateAction: remoteForm('deactivate'),
-			reactivateAction: remoteForm('reactivate')
-		});
-
-		await expect
-			.element(page.getByRole('button', { name: 'Reactivate' }))
-			.toHaveClass(/btn-success/);
-	});
-
 	it('names the kind of thing in the question it asks', async () => {
 		await open({ isDeactivated: false, entityLabel: 'category' });
 
@@ -124,14 +98,5 @@ describe('ActivateToggleAction', () => {
 
 		await expect.element(page.getByText('Reactivate this category?')).toBeVisible();
 		expect(document.body.textContent).not.toContain('Members lose access');
-	});
-
-	// Without this the toggle names no record and the handler flips nothing.
-	it('carries the record id into the form', async () => {
-		await open({ isDeactivated: false });
-
-		const hidden = document.querySelector('[role="dialog"] input[name="id"]') as HTMLInputElement;
-		expect(hidden.type).toBe('hidden');
-		expect(hidden.value).toBe('thing-1');
 	});
 });

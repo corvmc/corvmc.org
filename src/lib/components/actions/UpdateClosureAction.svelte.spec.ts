@@ -54,12 +54,6 @@ const open = async () => {
 };
 
 describe('UpdateClosureAction', () => {
-	it('carries the closure id hidden', async () => {
-		await open();
-		expect(named('id')?.type).toBe('hidden');
-		expect(named('id')?.value).toBe('closure-2');
-	});
-
 	it('opens filled with the closure, times in club time', async () => {
 		await open();
 		expect(named('reason')?.value).toBe('Floor refinishing');

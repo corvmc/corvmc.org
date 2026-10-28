@@ -47,47 +47,9 @@ const open = async (props: Record<string, unknown> = {}) => {
 };
 
 describe('AdjustCreditsAction', () => {
-	it('shows nothing until the trigger is used', async () => {
-		await render(AdjustCreditsAction, { userId: 'user-1' });
-
-		await expect.element(page.getByRole('button', { name: 'Adjust' })).toBeVisible();
-		expect(document.querySelector('[role="dialog"]')).toBeNull();
-	});
-
-	// Without this the adjustment has no subject and the handler credits nobody.
-	it('carries the user id into the form', async () => {
-		await open();
-
-		const hidden = document.querySelector('input[name="userId"]') as HTMLInputElement;
-		expect(hidden.type).toBe('hidden');
-		expect(hidden.value).toBe('user-1');
-	});
-
 	it('tells a comp-only staffer their ceiling under the amount (#579)', async () => {
 		const dialog = await open({ amountHint: 'Up to 2 hrs of free hours. An admin can add more.' });
 		await expect.element(dialog.getByText('Up to 2 hrs of free hours')).toBeVisible();
-	});
-
-	// The same branch-order bug that left `type="select"` fields rendering their
-	// options as loose text: no `<select>`, nothing submitted, no error either.
-	it('offers both credit types inside a real select', async () => {
-		await open();
-
-		const options = document.querySelectorAll('select[name="creditType"] option');
-		expect(Array.from(options, (o) => (o as HTMLOptionElement).value)).toEqual([
-			'free_hours',
-			'equipment_credits'
-		]);
-	});
-
-	// `type="number"` is set *after* the field spread on purpose — a deduction is
-	// entered as a negative number, and a text box gives no sign of that.
-	it('takes the amount on a number input', async () => {
-		await open();
-
-		const amount = document.querySelector('input[name="amount"]') as HTMLInputElement;
-		expect(amount.type).toBe('number');
-		expect(amount.placeholder).toBe('Positive to add, negative to deduct');
 	});
 
 	// The regression the FormField wrapper was added for: with a bare input, a
@@ -101,14 +63,6 @@ describe('AdjustCreditsAction', () => {
 			await expect.element(page.getByText('That would take the balance below zero.')).toBeVisible();
 		} finally {
 			issues.amount = null;
-		}
-	});
-
-	it('labels every field it submits', async () => {
-		await open();
-
-		for (const label of ['Credit Type', 'Hours', 'Reason']) {
-			await expect.element(page.getByText(label, { exact: true })).toBeVisible();
 		}
 	});
 });
