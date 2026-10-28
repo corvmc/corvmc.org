@@ -73,17 +73,14 @@ test.describe('community listings', () => {
 		await expect(page.getByText(SEED_CE_DRAFT_TITLE)).toHaveCount(0);
 
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		// The calendar holds /staff/events and opens on every status (#1784); a
-		// draft is in none of them.
+		// The calendar lists every listing; a member's community draft is not one.
 		await page.goto('/staff/events');
-		await expect(page.getByLabel('Status')).toHaveValue('all');
 		await expect(page.getByText(SEED_CE_DRAFT_TITLE)).toHaveCount(0);
 
 		// The pre-split URL sent in notifications for as long as the old tab
-		// existed. It needs no redirect: it lands on the calendar's default view,
-		// which includes everything pending review.
+		// existed. It needs no redirect: the calendar ignores the parameter and
+		// lists everything pending review.
 		await page.goto('/staff/events?status=pending_review');
-		await expect(page.getByLabel('Status')).toHaveValue('all');
 		await expect(page.getByText(SEED_CE_PENDING_TITLE)).toBeVisible();
 	});
 

@@ -129,7 +129,7 @@ import { eventSources } from '$lib/config';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
-import { calendarFloor, getCalendarTotals } from '$lib/server/event/calendar-totals-service';
+import { getCalendarTotals } from '$lib/server/event/calendar-totals-service';
 import { formatDateShortYear } from '$lib/utils/format';
 import { renderMarkdown } from '$lib/utils/markdown';
 import { getShifts, getVolunteerRoles } from './volunteer.remote';
@@ -637,23 +637,9 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 });
 
 /**
- * The statuses the staff calendar will read, and the only ones it will.
- *
- * `draft` is absent on purpose. A CMC draft is production work and belongs on
- * `/staff/productions`, which is the page scoped to `source: 'cmc'` at every
- * status; a community draft is a member's private working copy that no staffer
- * should read. `listStaffCalendar` excludes the latter again at the service
- * level — this enum is the first of two guards, not the only one.
- */
-const calendarStatuses = ['pending_review', 'published', 'cancelled', 'rejected'] as const;
-
-/**
- * Staff: the public gig guide, plus what is asking to join it.
- *
- * The moderation surface. It is scoped by *status* and reads every source,
- * which is the whole difference from `getStaffEvents` — that one is scoped by
- * source and runs the shows CMC produces. A CMC show appears in both, in two
- * roles: something you are building, and something the public can see.
+ * Staff: every listing, whatever its source, status or date. The moderation
+ * queue is the rows badged `pending_review`; `/staff/productions` runs the
+ * shows CMC produces.
  */
 /** The Calendar page's summary counts — independent of the table's filters. */
 export const getStaffCalendarTotals = query(async () => {
@@ -662,24 +648,13 @@ export const getStaffCalendarTotals = query(async () => {
 });
 
 export const getStaffCalendar = query(
-	z.object({
-		statuses: z.array(z.enum(calendarStatuses)).min(1).optional(),
-		sources: z.array(z.enum(eventSources)).optional(),
-		page: z.number().optional()
-	}),
+	z.object({ page: z.number().optional() }),
 	async (filters) => {
 		await requireCapability('event.read');
-		// Midnight tonight in venue time, the same floor the counts above it use.
-		const { rows, pagination } = await listStaffCalendar(
-			calendarFloor(),
-			{
-				// The default view is the queue: a staffer arrives here from a
-				// notification, and landing on the whole calendar would bury it.
-				statuses: [...(filters.statuses ?? ['pending_review'])],
-				sources: filters.sources
-			},
-			{ page: filters.page ?? 1, pageSize: 50 }
-		);
+		const { rows, pagination } = await listStaffCalendar({
+			page: filters.page ?? 1,
+			pageSize: 50
+		});
 		return {
 			rows: rows.map((e) => ({
 				...e,

@@ -1,5 +1,5 @@
 import { db, getRowCount } from '$lib/server/db';
-import { staffCalendarRow } from './calendar-totals-service';
+import { staffVisible } from './calendar-totals-service';
 import { DomainError } from '$lib/server/domain-error';
 import {
 	eventListing,
@@ -1682,19 +1682,9 @@ export async function listAll(
  * caller should pass. The list arrives from the caller; a member's private
  * working copy must not become visible because someone widened a Zod enum later.
  */
-export async function listStaffCalendar(
-	from: Date,
-	opts: { statuses: EventStatus[]; sources?: EventSource[] },
-	pagination: PaginationInput = {}
-) {
-	// The date floor is the calendar's, not the queue's: `staffCalendarRow`
-	// keeps a stale pending listing, as the sidebar badge counts it.
-	const filters = [
-		staffCalendarRow(from),
-		inArray(eventListing.status, opts.statuses),
-		opts.sources?.length ? inArray(eventListing.source, opts.sources) : undefined
-	].filter(Boolean);
-	const where = and(...filters);
+/** Every listing staff may see, in every status and on any date, newest first. */
+export async function listStaffCalendar(pagination: PaginationInput = {}) {
+	const where = staffVisible();
 
 	const dataQ = db
 		.select({
@@ -1712,7 +1702,7 @@ export async function listStaffCalendar(
 		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.leftJoin(user, eq(user.id, eventListing.createdByUserId))
 		.where(where)
-		.orderBy(asc(eventListing.startsAt))
+		.orderBy(desc(eventListing.startsAt))
 		.$dynamic();
 	const countQ = db.select({ count: count() }).from(eventListing).where(where);
 	return paginate(dataQ, countQ, pagination);
