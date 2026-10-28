@@ -14,8 +14,7 @@
 		CancelReservationAction,
 		CashReceivedAction,
 		CompReservationAction,
-		RefundAndCancelReservationAction,
-		RefundOnlyReservationAction
+		RefundReservationAction
 	} from '$lib/components/actions';
 	import DayTimeline from '$lib/components/reservations/DayTimeline.svelte';
 	import RecordNav from '$lib/components/ui/RecordNav.svelte';
@@ -107,7 +106,22 @@
 	});
 </script>
 
-<PageHeader width="3xl" title="Reservation" />
+<!-- The booking's own workflow sits in the header, visible from anywhere on
+     the page; money actions stay on the Payment card. -->
+<PageHeader width="3xl" title="Reservation">
+	{#if actions.has('confirm')}
+		<ConfirmReservationAction reservation={r} staff />
+	{/if}
+	{#if actions.has('complete')}
+		<CompleteReservationAction reservation={r} />
+	{/if}
+	{#if actions.has('noShow')}
+		<NoShowReservationAction reservation={r} />
+	{/if}
+	{#if actions.has('cancel')}
+		<CancelReservationAction reservation={r} showReasonInput />
+	{/if}
+</PageHeader>
 <PageContent width="3xl">
 	<!-- Hero card -->
 	<Card>
@@ -157,23 +171,6 @@
 							.join(', ')}
 					</span>
 				</Alert>
-			{/if}
-
-			{#if actions.has('confirm') || actions.has('complete') || actions.has('noShow') || actions.has('cancel')}
-				<div class="flex flex-wrap items-center gap-2 pt-3 rule-top">
-					{#if actions.has('confirm')}
-						<ConfirmReservationAction reservation={r} staff />
-					{/if}
-					{#if actions.has('complete')}
-						<CompleteReservationAction reservation={r} />
-					{/if}
-					{#if actions.has('noShow')}
-						<NoShowReservationAction reservation={r} />
-					{/if}
-					{#if actions.has('cancel')}
-						<CancelReservationAction reservation={r} showReasonInput />
-					{/if}
-				</div>
 			{/if}
 		</CardBody>
 
@@ -243,6 +240,13 @@
 		<!-- Payment card (not shown for event reservations) -->
 		{#if !isEventHold(r.bookerType)}
 			<InfoCard title="Payment">
+				{#snippet action()}
+					<!-- `refundOnly` is the wider set: completed bookings refund but
+					     cannot cancel, so the box is offered only with `refundAndCancel`. -->
+					{#if actions.has('refundOnly')}
+						<RefundReservationAction reservation={r} canCancel={actions.has('refundAndCancel')} />
+					{/if}
+				{/snippet}
 				<div class="mb-1 flex items-baseline justify-between">
 					<span class="text-2xl font-medium">{amountFormatted}</span>
 					<span class="badge {paymentStatus.class}">{paymentStatus.label}</span>
@@ -261,7 +265,7 @@
 					</div>
 				{/if}
 
-				{#if actions.has('cashReceived') || actions.has('comp') || actions.has('refundAndCancel') || actions.has('refundOnly')}
+				{#if actions.has('cashReceived') || actions.has('comp')}
 					<div class="mt-3 flex flex-wrap gap-2 pt-3 rule-top">
 						{#if actions.has('cashReceived')}
 							<CashReceivedAction
@@ -276,24 +280,6 @@
 							<CompReservationAction
 								reservation={r}
 								variant="info"
-								size="sm"
-								outline
-								class="flex-1"
-							/>
-						{/if}
-						{#if actions.has('refundAndCancel')}
-							<RefundAndCancelReservationAction
-								reservation={r}
-								variant="error"
-								size="sm"
-								outline
-								class="flex-1"
-							/>
-						{/if}
-						{#if actions.has('refundOnly')}
-							<RefundOnlyReservationAction
-								reservation={r}
-								variant="error"
 								size="sm"
 								outline
 								class="flex-1"
