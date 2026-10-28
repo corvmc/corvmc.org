@@ -10,7 +10,8 @@
 		titleSnippet,
 		children,
 		onclose,
-		confirmClose
+		confirmClose,
+		placement = 'center'
 	}: {
 		open?: boolean;
 		title?: string;
@@ -24,7 +25,15 @@
 		 * the ✕, Escape and a click on the backdrop.
 		 */
 		confirmClose?: () => boolean;
+		/**
+		 * `end` docks it to the inline end as a full-height side panel: a row's
+		 * whole record read beside the list it came from, rather than over it.
+		 */
+		placement?: 'center' | 'end';
 	} = $props();
+
+	const placementClass = $derived(placement === 'end' ? 'modal-end' : '');
+	const boxClass = $derived(placement === 'end' ? 'w-full overflow-y-auto' : '');
 
 	// A dialog opened from a header action is not part of the header.
 	setDefaultButtonSize(undefined);
@@ -56,11 +65,11 @@
 		<Dialog.Overlay class="modal modal-open bg-black/40" />
 		<Dialog.Content
 			bind:ref={contentEl}
-			class="modal modal-open"
+			class="modal modal-open {placementClass}"
 			tabindex={-1}
 			onOpenAutoFocus={focusDialog}
 		>
-			<div class="modal-box {maxWidth}">
+			<div class="modal-box {maxWidth} {boxClass}">
 				<div class="mb-4 flex items-center justify-between">
 					{#if titleSnippet}
 						{@render titleSnippet()}

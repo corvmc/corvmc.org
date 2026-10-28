@@ -1253,6 +1253,11 @@ land on an interactive element, respects modifier-clicks, and doesn't hijack a
 click that ended a text selection — so cells no longer need their own
 `onclick={(e) => e.stopPropagation()}`.
 
+A row that previews its record instead of leaving the list passes a function:
+`use:rowLink={() => openPanel(row)}`, with a `<Modal placement="end">` side panel holding the
+whole entry and a link on to the full record. The primary cell's control is then a `<button>`
+that opens the same panel. `/staff/volunteer/people` is the example.
+
 Rows are deliberately **not** focusable: a focusable `<tr>` announces the whole
 row as one button. The accessible path is the real `<a>` in the primary cell,
 which every clickable row must have.

@@ -24,8 +24,11 @@ const INTERACTIVE =
  * <tr class="hover cursor-pointer" use:rowLink={href}>
  * 	<td class="cell-primary"><a {href}>…</a></td>
  * ```
+ *
+ * A function in place of the path runs instead of navigating — for a row whose
+ * click opens a preview of the record rather than the record itself.
  */
-export function rowLink(node: HTMLElement, href: string) {
+export function rowLink(node: HTMLElement, href: string | (() => void)) {
 	let target = href;
 	let pressedInteractive = false;
 	// The whole row is a link, so it gets the link cursor without each caller asking.
@@ -47,6 +50,7 @@ export function rowLink(node: HTMLElement, href: string) {
 		if (pressed || isInteractive(event.target)) return;
 		// Don't hijack a click that ended a text selection.
 		if (window.getSelection()?.toString()) return;
+		if (typeof target === 'function') return target();
 		// `target` is already the output of `resolve()` at the call site — the rule
 		// only checks for a literal `resolve(...)` in this expression.
 		void goto(target);
@@ -56,7 +60,7 @@ export function rowLink(node: HTMLElement, href: string) {
 	node.addEventListener('click', onClick);
 
 	return {
-		update(next: string) {
+		update(next: string | (() => void)) {
 			target = next;
 		},
 		destroy() {

@@ -24,6 +24,8 @@
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
 	import CertificationOptions from '$lib/components/volunteer/CertificationOptions.svelte';
+	import VolunteerPanel from './VolunteerPanel.svelte';
+	import { subline, type RosterRow } from './subline';
 	import { rowLink } from '$lib/actions/row-link';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -95,6 +97,9 @@
 			page: pageNumber
 		})
 	);
+	const recordHref = (row: RosterRow) =>
+		withQuery(resolve(`/staff/users/${row.userId}`), 'tab=volunteer');
+
 	const activeFilterCount = $derived(
 		(searchQuery ? 1 : 0) + (roleFilter ? 1 : 0) + (statusFilter ? 1 : 0) + (certFilter ? 1 : 0)
 	);
@@ -108,30 +113,73 @@
 		pageNumber = 1;
 	}
 
-	type RosterRow = Awaited<ReturnType<typeof getStaffVolunteers>>['rows'][number];
+	// An id, not the row: the panel re-reads it from the refreshed list, so an
+	// approval made from inside the panel shows there at once.
+	let selectedId = $state<string | null>(null);
+	let panelOpen = $state(false);
 
-	/**
-	 * The one extra line under a name: something about to lapse, else a claim of
-	 * theirs waiting on staff, else nothing — `EntityIdentity` already carries
-	 * the email, and repeating it here just made every ordinary row say its own
-	 * address twice.
-	 */
-	function subline(row: RosterRow): { tone: string; text: string } | null {
-		if (row.lapse) {
-			return {
-				tone: 'text-warning',
-				text: `${row.lapse.certificationName} expires ${formatDateShort(row.lapse.expiresAt!)}`
-			};
-		}
-		if (row.claim) {
-			return {
-				tone: 'text-info',
-				text: `awaiting your confirm · ${row.claim.roleName} ${formatDateShort(row.claim.startsAt)}`
-			};
-		}
-		return null;
+	function openPanel(row: RosterRow) {
+		selectedId = row.userId;
+		panelOpen = true;
 	}
 </script>
+
+{#snippet rowAction(volunteer: RosterRow)}
+	<!-- Exactly one, resolved the same way the subline is. A minor awaiting
+	     sign-off can do nothing else until it is given. -->
+	{#if volunteer.status === 'blocked'}
+		<Action
+			action={approveVolunteerSignup.for(volunteer.userId)}
+			label="Approve"
+			variant="ghost"
+			size="xs"
+			class="text-success"
+			modalTitle="Let {volunteer.member.title} volunteer?"
+			submitLabel="Approve"
+			successToast="{volunteer.member.title} can volunteer now"
+			onsuccess={() => void roster.refresh()}
+		>
+			{#snippet form()}
+				<input type="hidden" name="userId" value={volunteer.userId} />
+				<p class="text-sm">
+					Confirms a guardian has signed off. They can claim shifts and log hours from then on, and
+					their record still says they are under 18 — which is what changes how a shift is staffed.
+				</p>
+			{/snippet}
+		</Action>
+	{:else if volunteer.claim}
+		<Action
+			action={confirmSignup.for(volunteer.claim.signupId)}
+			label="Confirm"
+			variant="ghost"
+			size="xs"
+			class="text-success"
+			modalTitle="Confirm {volunteer.member.title}?"
+			submitLabel="Confirm"
+			successToast="Confirmed"
+		>
+			{#snippet form()}
+				<input type="hidden" name="signupId" value={volunteer.claim!.signupId} />
+				<input type="hidden" name="shiftId" value={volunteer.claim!.shiftId} />
+				<p class="text-sm">
+					{volunteer.claim!.roleName} on {formatDateShort(volunteer.claim!.startsAt)}. Confirming
+					books them: they get the reminder the day before, and the shift completes afterwards with
+					hours to log.
+				</p>
+			{/snippet}
+		</Action>
+	{:else if volunteer.lapse}
+		<Button href={recordHref(volunteer)} variant="ghost" size="xs" class="text-warning">
+			Chase
+		</Button>
+	{:else}
+		<LogHoursForMemberAction
+			presetUser={{ id: volunteer.userId, name: volunteer.member.title }}
+			label="Log Hours"
+			size="xs"
+		/>
+	{/if}
+{/snippet}
 
 <!--
 	No hand-rolled sibling links: every page in this section used to build its own row and no
@@ -235,11 +283,9 @@
 				{/snippet}
 
 				{#each volunteers as volunteer (volunteer.userId)}
-					<!-- The staff user record's Volunteer panel is the detail view for one of
-						     these rows, so this index needs no [id] route of its own. -->
-					{@const href = withQuery(resolve(`/staff/users/${volunteer.userId}`), 'tab=volunteer')}
+					<!-- A row opens its preview; the user record is one link further, in it. -->
 					{@const line = subline(volunteer)}
-					<tr class="hover cursor-pointer" use:rowLink={href}>
+					<tr class="hover cursor-pointer" use:rowLink={() => openPanel(volunteer)}>
 						<td class="w-px">
 							<StatusBadge status={volunteer.status} />
 							{#if !volunteer.isAdult}
@@ -252,7 +298,14 @@
 						<!-- `min-w-48`: `cell-primary` takes only what is left over, and a
 							     long free-text answer elsewhere could leave it two letters. -->
 						<td class="cell-primary min-w-48">
-							<EntityIdentity ref={volunteer.member} avatar />
+							<!-- The keyboard path to the preview, which a row cannot be. -->
+							<button
+								type="button"
+								class="block w-full text-left"
+								onclick={() => openPanel(volunteer)}
+							>
+								<EntityIdentity ref={volunteer.member} avatar link={false} />
+							</button>
 							{#if line}
 								<div class="{line.tone} truncate text-xs">{line.text}</div>
 							{/if}
@@ -277,65 +330,18 @@
 						</td>
 
 						<td class="w-px">
-							<!-- Exactly one, resolved the same way the subline is. A minor
-								     awaiting sign-off can do nothing else until it is given. -->
-							{#if volunteer.status === 'blocked'}
-								<Action
-									action={approveVolunteerSignup.for(volunteer.userId)}
-									label="Approve"
-									variant="ghost"
-									size="xs"
-									class="text-success"
-									modalTitle="Let {volunteer.member.title} volunteer?"
-									submitLabel="Approve"
-									successToast="{volunteer.member.title} can volunteer now"
-									onsuccess={() => void roster.refresh()}
-								>
-									{#snippet form()}
-										<input type="hidden" name="userId" value={volunteer.userId} />
-										<p class="text-sm">
-											Confirms a guardian has signed off. They can claim shifts and log hours from
-											then on, and their record still says they are under 18 — which is what changes
-											how a shift is staffed.
-										</p>
-									{/snippet}
-								</Action>
-							{:else if volunteer.claim}
-								<Action
-									action={confirmSignup.for(volunteer.claim.signupId)}
-									label="Confirm"
-									variant="ghost"
-									size="xs"
-									class="text-success"
-									modalTitle="Confirm {volunteer.member.title}?"
-									submitLabel="Confirm"
-									successToast="Confirmed"
-								>
-									{#snippet form()}
-										<input type="hidden" name="signupId" value={volunteer.claim!.signupId} />
-										<input type="hidden" name="shiftId" value={volunteer.claim!.shiftId} />
-										<p class="text-sm">
-											{volunteer.claim!.roleName} on {formatDateShort(volunteer.claim!.startsAt)}.
-											Confirming books them: they get the reminder the day before, and the shift
-											completes afterwards with hours to log.
-										</p>
-									{/snippet}
-								</Action>
-							{:else if volunteer.lapse}
-								<Button href={`${href}`} variant="ghost" size="xs" class="text-warning">
-									Chase
-								</Button>
-							{:else}
-								<LogHoursForMemberAction
-									presetUser={{ id: volunteer.userId, name: volunteer.member.title }}
-									label="Log Hours"
-									size="xs"
-								/>
-							{/if}
+							{@render rowAction(volunteer)}
 						</td>
 					</tr>
 				{/each}
 			</Table>
+
+			{@const chosen = volunteers.find((v) => v.userId === selectedId)}
+			{#if chosen}
+				<VolunteerPanel volunteer={chosen} bind:open={panelOpen}>
+					{#snippet action()}{@render rowAction(chosen)}{/snippet}
+				</VolunteerPanel>
+			{/if}
 		{/snippet}
 	</DataList>
 </PageContent>

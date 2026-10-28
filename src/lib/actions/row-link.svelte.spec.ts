@@ -18,6 +18,14 @@ describe('rowLink', () => {
 		expect(goto).toHaveBeenCalledWith('/row');
 	});
 
+	it('runs a callback in place of navigating', async () => {
+		const open = vi.fn();
+		await render(RowLinkHarness, { to: open });
+		await page.getByText('Name cell').click();
+		expect(open).toHaveBeenCalledOnce();
+		expect(goto).not.toHaveBeenCalled();
+	});
+
 	// mousedown focuses the trigger, the dropdown opens, the trigger stops taking
 	// pointer events, and the click lands on the cell behind it.
 	it('opens the row actions menu instead of navigating', async () => {
