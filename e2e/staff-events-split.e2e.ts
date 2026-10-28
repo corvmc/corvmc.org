@@ -48,12 +48,11 @@ test.describe('staff events split', () => {
 		await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
 	});
 
-	test('the calendar holds /staff/events and opens on everything', async ({ page }) => {
+	test('the calendar holds /staff/events and lists everything', async ({ page }) => {
 		await page.goto('/staff/events');
 		await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
-		await expect(page.getByLabel('Status')).toHaveValue('all');
 
-		// The lister owns several seeded listings, so at `all` their link is on more than one row.
+		// The lister owns several seeded listings, so their link is on more than one row.
 		const pending = page.getByRole('row').filter({ hasText: SEED_SPLIT_PENDING_TITLE });
 		await expect(pending).toBeVisible();
 		await expect(pending.getByRole('link', { name: SEED_SPLIT_MEMBER_NAME })).toBeVisible();
@@ -68,43 +67,14 @@ test.describe('staff events split', () => {
 		await expect(page.getByText(SEED_SPLIT_LIVE_TITLE)).toHaveCount(0);
 	});
 
-	test('a draft of any source never reaches the calendar, at any filter', async ({ page }) => {
+	// Every listing is on the calendar, drafts included, bar a member's own
+	// community draft.
+	test('the calendar lists every listing except a community draft', async ({ page }) => {
 		await page.goto('/staff/events');
-		await page.getByLabel('Status').selectOption('all');
 		await expect(page.getByText(SEED_SPLIT_PENDING_TITLE)).toBeVisible();
-
-		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toHaveCount(0);
+		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toBeVisible();
 		await expect(page.getByText(SEED_SPLIT_DRAFT_TITLE)).toHaveCount(0);
-	});
-
-	// The filter lives in the URL so a reload and a back-out both land on the
-	// view the staffer left. This is the behaviour `replaceState()` could not
-	// give: it rewrites the address bar without telling the router, so the entry
-	// pushed on the next navigation overwrote it and Back returned to the
-	// default view instead of the filtered calendar.
-	test('a filter survives a reload and a round trip into an event', async ({ page }) => {
-		await page.goto('/staff/events');
-		await page.getByLabel('Status').selectOption('review');
-		await expect(page).toHaveURL(/\?view=review$/);
-
-		await page.reload();
-		await expect(page.getByLabel('Status')).toHaveValue('review');
-
-		await page.goto(`/staff/events/${SEED_SPLIT_PENDING_ID}`);
-		await page.goBack();
-		await expect(page).toHaveURL(/\?view=review$/);
-		await expect(page.getByLabel('Status')).toHaveValue('review');
-	});
-
-	// Returning every control to its default returns the address to a bare path,
-	// so a staffer can tell at a glance whether anything is filtered.
-	test('clearing the filters clears the query string', async ({ page }) => {
-		await page.goto('/staff/events?view=review&source=cmc');
-		await expect(page.getByLabel('Source')).toHaveValue('cmc');
-
-		await page.getByLabel('Status').selectOption('all');
-		await page.getByLabel('Source').selectOption('');
-		await expect(page).toHaveURL(/\/staff\/events$/);
+		await expect(page.getByLabel('Status')).toHaveCount(0);
 	});
 
 	test('the general view carries facts and no production controls', async ({ page }) => {

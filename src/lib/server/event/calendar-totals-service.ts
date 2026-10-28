@@ -9,10 +9,13 @@ import { addIsoDays } from '$lib/utils/deadline';
 export const calendarFloor = (now = new Date()): Date =>
 	buildDateInTz(formatDateInTz(now, DEFAULT_TIMEZONE), '00:00', DEFAULT_TIMEZONE);
 
+/** A community draft is its author's, never staff's. */
+export const staffVisible = (): SQL =>
+	not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!);
+
 /**
- * Every row the staff calendar can show: public listings from tonight on, and
- * the queue whatever its date — a stale listing is still a decision owed. A
- * community draft is its author's, never staff's.
+ * The rows the calendar totals count: public listings from tonight on, and the
+ * queue whatever its date — a stale listing is still a decision owed.
  */
 export const staffCalendarRow = (from: Date): SQL =>
 	and(
@@ -20,7 +23,7 @@ export const staffCalendarRow = (from: Date): SQL =>
 			not(inArray(eventListing.status, [...publicEventStatuses])),
 			gte(eventListing.startsAt, from)
 		),
-		not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
+		staffVisible()
 	)!;
 
 /** The "On the calendar" status filter. */
