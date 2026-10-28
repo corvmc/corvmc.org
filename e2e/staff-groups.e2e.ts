@@ -49,7 +49,9 @@ test.describe('staff groups', () => {
 		await expect(table.getByText(SEED_PUBLIC_BAND_NAME)).toHaveCount(0);
 	});
 
-	test('Clubs sits beside Bands, and Committees under Planning', async ({ page }) => {
+	test('Committees sit under Planning, and a committee shows its applications apart', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/committees');
 
@@ -59,6 +61,27 @@ test.describe('staff groups', () => {
 		await expect(nav.getByRole('link', { name: 'Bands' })).toBeVisible();
 		await expect(nav.getByRole('link', { name: 'Committees' })).toBeVisible();
 		await expect(nav.getByRole('link', { name: 'Groups' })).toHaveCount(0);
+
+		// A committee shows an application apart from the member list.
+		await page.getByRole('link', { name: new RegExp(SEED_COMMITTEE_NAME) }).click();
+
+		// The fixture's own id, not a uuid — it is seeded rather than created.
+		await page.waitForURL(`**/staff/committees/${SEED_COMMITTEE_ID}`, { timeout: 15000 });
+
+		// The seeded committee is `by_application`, chaired by this staffer, and
+		// carries one open application with an answer under the board's prompt.
+		await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible();
+		await expect(page.getByText('Booked a basement series for two years.')).toBeVisible();
+		await expect(page.getByRole('button', { name: `Accept ${SEED_TARGET_NAME}` })).toBeVisible();
+
+		// Every committee takes applications, so the policy is stated, not offered.
+		await expect(page.locator('select[name="joinPolicy"]')).toHaveCount(0);
+		await expect(page.getByText('By application — you ask, a chair approves')).toBeVisible();
+
+		// And a committee's old address lands on its committee page.
+		await page.goto(`/staff/groups/${SEED_COMMITTEE_ID}`);
+		await page.waitForURL(`**/staff/committees/${SEED_COMMITTEE_ID}`, { timeout: 15000 });
+		await expect(page.getByRole('heading', { name: SEED_COMMITTEE_NAME })).toBeVisible();
 	});
 
 	test('creates a club and appoints its first chair in one step', async ({ page }) => {
@@ -92,31 +115,5 @@ test.describe('staff groups', () => {
 		await page.waitForURL(/\/staff\/clubs\/[0-9a-f-]{36}/, { timeout: 15000 });
 		await expect(page.getByRole('heading', { name })).toBeVisible();
 		await expect(page.getByText(SEED_TARGET_NAME).first()).toBeVisible();
-	});
-
-	test('shows an application apart from the member list', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/committees');
-		await page.getByRole('link', { name: new RegExp(SEED_COMMITTEE_NAME) }).click();
-
-		// The fixture's own id, not a uuid — it is seeded rather than created.
-		await page.waitForURL(`**/staff/committees/${SEED_COMMITTEE_ID}`, { timeout: 15000 });
-
-		// The seeded committee is `by_application`, chaired by this staffer, and
-		// carries one open application with an answer under the board's prompt.
-		await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible();
-		await expect(page.getByText('Booked a basement series for two years.')).toBeVisible();
-		await expect(page.getByRole('button', { name: `Accept ${SEED_TARGET_NAME}` })).toBeVisible();
-
-		// Every committee takes applications, so the policy is stated, not offered.
-		await expect(page.locator('select[name="joinPolicy"]')).toHaveCount(0);
-		await expect(page.getByText('By application — you ask, a chair approves')).toBeVisible();
-	});
-
-	test("sends a committee's old address to its committee page", async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto(`/staff/groups/${SEED_COMMITTEE_ID}`);
-		await page.waitForURL(`**/staff/committees/${SEED_COMMITTEE_ID}`, { timeout: 15000 });
-		await expect(page.getByRole('heading', { name: SEED_COMMITTEE_NAME })).toBeVisible();
 	});
 });

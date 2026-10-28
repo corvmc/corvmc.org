@@ -102,17 +102,17 @@ async function decideReport(page: Page, entityTitle: string, decision: 'resolved
 }
 
 test.describe('suggestion board', () => {
-	test('a member sees the board with its seeded suggestions', async ({ page }) => {
+	test('a member sees the board, and voting is a toggle that never counts them twice', async ({
+		page
+	}) => {
 		await login(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);
-		await page.goto('/member/suggestions');
 
+		// The board lists its seeded suggestions.
+		await page.goto('/member/suggestions');
 		await expect(page.getByRole('link', { name: SEED_SG_VISIBLE_TITLE })).toBeVisible();
 		// No feature flag gates this, so the nav item is simply there.
 		await expect(page.getByRole('link', { name: 'Suggestions' }).first()).toBeVisible();
-	});
 
-	test('voting is a toggle, and never counts the same member twice', async ({ page }) => {
-		await login(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);
 		await page.goto(`/member/suggestions/${SEED_SG_DISMISS_ID}`);
 
 		const before = (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount;

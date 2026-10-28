@@ -131,7 +131,9 @@ async function complianceLists(page: Page, tag: string): Promise<boolean> {
 }
 
 test.describe('inventory', () => {
-	test('the item list shows both kinds and their stock', async ({ page }) => {
+	test('the item list shows both kinds, and a serialized item lists its units', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/inventory');
 
@@ -142,10 +144,8 @@ test.describe('inventory', () => {
 		await page.locator('input[type="search"], input[name="search"]').first().fill('E2E Test');
 		await expect(page.getByText(SEED_ITEM_NAME)).toBeVisible({ timeout: 10000 });
 		await expect(page.getByText(SEED_CONSUMABLE_NAME)).toBeVisible();
-	});
 
-	test('a serialized item lists its units, tagged and not', async ({ page }) => {
-		await loginAsStaff(page);
+		// A serialized item lists its units, tagged and not.
 		await page.goto(`/staff/inventory/${SEED_ITEM_ID}`);
 
 		await expect(page.getByRole('heading', { name: SEED_ITEM_NAME })).toBeVisible();
@@ -245,7 +245,9 @@ test.describe('inventory', () => {
 			await expect(page.getByRole('cell', { name: SEED_CONSUMABLE_NAME })).toBeHidden();
 		});
 
-		test('the restock list says how many to buy', async ({ page }) => {
+		test('the restock list says how many to buy, and leaves off what is above its point', async ({
+			page
+		}) => {
 			await loginAsStaff(page);
 			await page.goto('/staff/inventory/restock');
 
@@ -255,11 +257,8 @@ test.describe('inventory', () => {
 			await expect(row).toContainText(String(SEED_LOW_ON_HAND));
 			// The reorder quantity wins over "enough to reach the point".
 			await expect(row).toContainText(String(SEED_LOW_REORDER_QUANTITY));
-		});
 
-		test('an item above its point stays off the restock list', async ({ page }) => {
-			await loginAsStaff(page);
-			await page.goto('/staff/inventory/restock');
+			// An item above its point stays off it.
 			await expect(page.getByText(SEED_CONSUMABLE_NAME)).toBeHidden();
 		});
 	});
@@ -269,7 +268,9 @@ test.describe('inventory', () => {
 	 * schema, using stock up overwrote a number and left nothing to total.
 	 */
 	test.describe('spend', () => {
-		test('totals purchases by category', async ({ page }) => {
+		test('totals purchases by category, and reports an empty window as nothing', async ({
+			page
+		}) => {
 			await loginAsStaff(page);
 			await page.goto('/staff/inventory/spend');
 
@@ -281,10 +282,8 @@ test.describe('inventory', () => {
 			// does not care about.
 			await expect(page.getByRole('cell', { name: 'E2E Test Gear' })).toBeVisible();
 			await expect(page.getByRole('cell', { name: 'E2E Supplier', exact: true })).toBeVisible();
-		});
 
-		test('a window with no purchases reports nothing rather than erroring', async ({ page }) => {
-			await loginAsStaff(page);
+			// A window with no purchases reports nothing rather than erroring.
 			await page.goto('/staff/inventory/spend?from=1990-01-01&to=1990-12-31');
 			await expect(page.getByRole('heading', { name: 'Spend' })).toBeVisible();
 			await expect(page.getByRole('cell', { name: 'E2E Test Gear' })).toHaveCount(0);
@@ -297,31 +296,25 @@ test.describe('inventory', () => {
 	 * flag actually reaches somewhere it will be seen.
 	 */
 	test.describe('form 8282', () => {
-		test('a donated unit disposed of inside three years raises a warning', async ({ page }) => {
+		test('a donated unit disposed of inside three years raises a warning and is listed; one with no 8283 is not', async ({
+			page
+		}) => {
 			await loginAsStaff(page);
 			await page.goto(`/staff/inventory/assets/${SEED_DISPOSED_ASSET_ID}`);
 
 			await expect(page.getByRole('alert').filter({ hasText: /8282/ })).toBeVisible();
 			await expect(page.getByRole('button', { name: 'Record 8282' })).toBeVisible();
-		});
 
-		test('it is listed where somebody will look for it later', async ({ page }) => {
-			await loginAsStaff(page);
+			// It is listed where somebody will look for it later.
 			await page.goto('/staff/inventory/compliance');
 
 			const row = page.getByRole('row').filter({ hasText: SEED_DISPOSED_ASSET_TAG });
 			await expect(row).toBeVisible();
-		});
 
-		/**
-		 * The narrowing, which is the whole point of the rule: the signed 8283 is
-		 * what makes property reportable, so a gift without one owes nothing no
-		 * matter when it was disposed of. Flagging it would be a false positive,
-		 * and a warning that is always wrong is one people stop reading.
-		 */
-		test('a donated unit with no signed 8283 raises nothing', async ({ page }) => {
-			await loginAsStaff(page);
-
+			// The narrowing, which is the whole point of the rule: the signed 8283 is
+			// what makes property reportable, so a gift without one owes nothing no
+			// matter when it was disposed of. Flagging it would be a false positive,
+			// and a warning that is always wrong is one people stop reading.
 			await page.goto(`/staff/inventory/assets/${SEED_UNACKED_ASSET_ID}`);
 			await expect(page.getByRole('alert').filter({ hasText: /8282/ })).toHaveCount(0);
 
@@ -647,13 +640,19 @@ test.describe('inventory', () => {
 	});
 
 	test.describe('scanning a tag', () => {
-		test('sends staff to the operational record', async ({ page }) => {
+		test('sends staff to the operational record, and 404s a tag no gear carries', async ({
+			page
+		}) => {
 			await loginAsStaff(page);
 			await page.goto(`/a/${SEED_ASSET_TAG}`);
 
 			await expect(page).toHaveURL(`/staff/inventory/assets/${SEED_ASSET_ID}`, {
 				timeout: 10000
 			});
+
+			// A tag no gear carries is a 404.
+			const response = await page.goto('/a/NOT-A-REAL-TAG');
+			expect(response?.status()).toBe(404);
 		});
 
 		/**
@@ -682,12 +681,6 @@ test.describe('inventory', () => {
 			await expect(page).toHaveURL(`/staff/inventory/assets/${SEED_ASSET_ID}`, {
 				timeout: 15000
 			});
-		});
-
-		test('404s on a tag no gear carries', async ({ page }) => {
-			await loginAsStaff(page);
-			const response = await page.goto('/a/NOT-A-REAL-TAG');
-			expect(response?.status()).toBe(404);
 		});
 	});
 });

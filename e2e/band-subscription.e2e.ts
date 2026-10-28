@@ -27,7 +27,9 @@ async function login(page: import('@playwright/test').Page) {
 	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
 }
 
-test('upgrade page renders both plans for a free-tier band owner', async ({ page }) => {
+test('upgrade page renders both plans, and sells a custom domain, for a free-tier owner', async ({
+	page
+}) => {
 	await login(page);
 	await page.goto(`/band/${SEED_PUBLIC_BAND_SLUG}/subscription`);
 
@@ -37,11 +39,6 @@ test('upgrade page renders both plans for a free-tier band owner', async ({ page
 	await expect(page.getByRole('button', { name: 'Subscribe Yearly' })).toBeVisible();
 	await expect(page.getByText(/failed to load/i)).toHaveCount(0);
 	await expect(page.getByText(/single `<form>` element/i)).toHaveCount(0);
-});
-
-test('upgrade page sells a custom domain, not the free subdomain', async ({ page }) => {
-	await login(page);
-	await page.goto(`/band/${SEED_PUBLIC_BAND_SLUG}/subscription`);
 
 	// The band's free address, derived from PUBLIC_SITE_URL rather than a
 	// hardcoded corvmc.org, is shown as something they already have.

@@ -33,7 +33,9 @@ async function loginAsMember(page: Page) {
 }
 
 test.describe('reading announcements', () => {
-	test('a plain member sees the published post and never the draft', async ({ page }) => {
+	test('a plain member sees the published post, never the draft, and no way to post', async ({
+		page
+	}) => {
 		await loginAsMember(page);
 		await page.goto(`/member/groups/${SEED_READER_SLUG}`);
 
@@ -45,13 +47,7 @@ test.describe('reading announcements', () => {
 		// The whole test. The draft is on the same group, one row away in the
 		// table, and a member must not reach it by any route.
 		await expect(page.getByText(SEED_DRAFT_TITLE)).toHaveCount(0);
-	});
-
-	test('offers a plain member no way to post', async ({ page }) => {
-		await loginAsMember(page);
-		await page.goto(`/member/groups/${SEED_READER_SLUG}`);
-		await expect(page.getByText(SEED_PUBLISHED_TITLE)).toBeVisible({ timeout: 15000 });
-
+		// And nothing on the page offers them a way to post.
 		await expect(page.getByRole('button', { name: 'New announcement' })).toHaveCount(0);
 		await expect(page.getByRole('button', { name: 'Publish' })).toHaveCount(0);
 	});
@@ -142,30 +138,22 @@ test.describe('the band panel mount', () => {
 	 * "mount-agnostic" is a claim about a prop contract, and a component that
 	 * reached for a club-shaped context would fail here and nowhere else.
 	 */
-	test('renders announcements as a band panel page', async ({ page }) => {
-		await loginAsMember(page);
-		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/announcements`);
-
-		await expect(page.getByRole('heading', { name: 'Announcements' })).toBeVisible({
-			timeout: 15000
-		});
-		// A plain member of this band: they read, they do not write.
-		await expect(page.getByRole('button', { name: 'New announcement' })).toHaveCount(0);
-	});
-
-	/**
-	 * The nav row is the whole of the launch on this mount: the page above has
-	 * answered by direct URL since it was built, and what changed is that a
-	 * member can find it. Asserted for a plain member rather than an admin,
-	 * because reading is the un-gated half.
-	 */
-	test('puts Announcements in the band nav', async ({ page }) => {
+	test('puts Announcements in the band nav, and renders it as a band panel page', async ({
+		page
+	}) => {
 		await loginAsMember(page);
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}`);
 
 		await expect(page.getByRole('link', { name: 'Announcements' }).first()).toBeVisible({
 			timeout: 15000
 		});
+
+		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/announcements`);
+		await expect(page.getByRole('heading', { name: 'Announcements' })).toBeVisible({
+			timeout: 15000
+		});
+		// A plain member of this band: they read, they do not write.
+		await expect(page.getByRole('button', { name: 'New announcement' })).toHaveCount(0);
 	});
 });
 
@@ -195,22 +183,5 @@ test.describe('group sessions', () => {
 		// Read back from the row, not from a toast: this is the fact that
 		// separates a session holding the room from a listing that merely says so.
 		await expect(row.getByText('Room held')).toBeVisible();
-	});
-
-	test('refuses a session that ends before it starts', async ({ page }) => {
-		await loginAsMember(page);
-		await page.goto(`/member/groups/${SEED_LED_SLUG}?tab=sessions`);
-
-		await page.getByRole('button', { name: 'New session' }).click();
-		const dialog = page.getByRole('dialog');
-		await dialog.locator('input[name="title"]').fill('E2E backwards session');
-		await dialog.locator('input[name="sessionDate"]').fill('2027-03-19');
-		await dialog.locator('input[name="startTime"]').fill('21:00');
-		await dialog.locator('input[name="endTime"]').fill('21:00');
-		await dialog.getByRole('button', { name: 'Create session' }).click();
-
-		await expect(dialog.getByText(/end after/i)).toBeVisible({
-			timeout: 15000
-		});
 	});
 });

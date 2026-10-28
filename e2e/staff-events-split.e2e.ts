@@ -42,20 +42,24 @@ test.describe('staff events split', () => {
 
 	// It shipped at /staff/calendar for a few hours, and the notification rows
 	// written in that window keep that href forever.
-	test('the address the calendar briefly held still redirects', async ({ page }) => {
+	test('the calendar holds /staff/events, its old address, and every listing', async ({ page }) => {
 		await page.goto('/staff/calendar');
 		await expect(page).toHaveURL(/\/staff\/events$/);
-		await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
-	});
-
-	test('the calendar holds /staff/events and lists everything', async ({ page }) => {
-		await page.goto('/staff/events');
 		await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
 
 		// The lister owns several seeded listings, so their link is on more than one row.
 		const pending = page.getByRole('row').filter({ hasText: SEED_SPLIT_PENDING_TITLE });
 		await expect(pending).toBeVisible();
 		await expect(pending.getByRole('link', { name: SEED_SPLIT_MEMBER_NAME })).toBeVisible();
+
+		// Every listing is on the calendar, drafts included, bar a member's own
+		// community draft.
+		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toBeVisible();
+		await expect(page.getByText(SEED_SPLIT_DRAFT_TITLE)).toHaveCount(0);
+
+		// Listings waiting on staff are pinned above the dates, under their own group.
+		await expect(page.getByRole('row').nth(1)).toHaveText('Pending Listings');
+		await expect(page.getByLabel('Status')).toHaveCount(0);
 	});
 
 	test('Productions holds CMC work, including drafts, and no listings', async ({ page }) => {
@@ -67,20 +71,9 @@ test.describe('staff events split', () => {
 		await expect(page.getByText(SEED_SPLIT_LIVE_TITLE)).toHaveCount(0);
 	});
 
-	// Every listing is on the calendar, drafts included, bar a member's own
-	// community draft.
-	test('the calendar lists every listing except a community draft', async ({ page }) => {
-		await page.goto('/staff/events');
-		await expect(page.getByText(SEED_SPLIT_PENDING_TITLE)).toBeVisible();
-		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toBeVisible();
-		await expect(page.getByText(SEED_SPLIT_DRAFT_TITLE)).toHaveCount(0);
-
-		// Listings waiting on staff are pinned above the dates, under their own group.
-		await expect(page.getByRole('row').nth(1)).toHaveText('Pending Listings');
-		await expect(page.getByLabel('Status')).toHaveCount(0);
-	});
-
-	test('the general view carries facts and no production controls', async ({ page }) => {
+	test('the general view carries facts, no production controls, and a two-hour window', async ({
+		page
+	}) => {
 		await page.goto(`/staff/events/${SEED_SPLIT_PENDING_ID}`);
 		await expect(page.getByRole('heading', { name: SEED_SPLIT_PENDING_TITLE })).toBeVisible();
 
@@ -94,10 +87,8 @@ test.describe('staff events split', () => {
 		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toHaveCount(0);
 		await expect(page.getByRole('heading', { name: 'Volunteer Shifts' })).toHaveCount(0);
 		await expect(page.getByRole('link', { name: 'Manage production' })).toHaveCount(0);
-	});
 
-	test('the window is two hours, not the day', async ({ page }) => {
-		await page.goto(`/staff/events/${SEED_SPLIT_PENDING_ID}`);
+		// The window is two hours, not the day.
 		await expect(page.getByRole('heading', { name: 'Within two hours' })).toBeVisible();
 
 		// Both are on the same date. Only a real window tells them apart, which is

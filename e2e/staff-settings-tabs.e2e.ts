@@ -35,7 +35,9 @@ async function loginAsStaff(page: Page) {
 }
 
 test.describe('staff settings tabs', () => {
-	test('renders every tab without tripping the error boundary', async ({ page }) => {
+	test('renders every tab without tripping the error boundary, channels included', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/settings');
 
@@ -48,11 +50,8 @@ test.describe('staff settings tabs', () => {
 			await expect(page.getByText(marker)).toBeVisible();
 			await expect(page.getByText(/Failed to load/)).toHaveCount(0);
 		}
-	});
 
-	test('lists the staff-administered channels and not member DMs', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/settings');
+		// Inbox Channels lists the staff-administered channels and not member DMs.
 		await page.getByRole('tab', { name: 'Inbox Channels' }).click();
 
 		for (const label of ['Email', 'SMS', 'Contact Form', 'Member Portal', 'Instagram', 'Messenger'])

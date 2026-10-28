@@ -63,7 +63,9 @@ function row(page: Page, contact: string) {
 }
 
 test.describe('inbox awaiting reply', () => {
-	test('Open holds what needs a reply and nothing else', async ({ page }) => {
+	test('Open holds what needs a reply and nothing else, counted as the nav badge counts it', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/inbox');
 
@@ -73,12 +75,27 @@ test.describe('inbox awaiting reply', () => {
 
 		// The Open row says *why* it is there — nobody here has ever answered it.
 		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toContainText('Unanswered');
+
+		// The claim the split exists to make: the number on the nav item and the
+		// number on the Open tab are the same set counted twice.
+		await expect(viewTab(page, 'Open')).toBeVisible();
+		const badge = await navBadgeCount(page);
+		const tab = Number((await viewTab(page, 'Open').innerText()).replace(/\D+/g, ''));
+
+		expect(tab).toBe(badge);
 	});
 
-	test('Snoozed holds the parked half, and survives a round trip', async ({ page }) => {
+	test('Snoozed holds the parked half, answers its old URL, and survives a round trip', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/inbox');
+		// The tab Snoozed absorbed. Old bookmarks and saved-view rows still say
+		// `awaiting` and nothing rewrites them, so it has to land on Snoozed.
+		await page.goto('/staff/inbox?view=awaiting');
+		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
+		await expect(page).toHaveURL(/view=snoozed/);
 
+		await page.goto('/staff/inbox');
 		await viewTab(page, 'Snoozed').click();
 		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
 		await expect(row(page, SEED_SNOOZED_CONTACT)).toBeVisible();
@@ -95,30 +112,6 @@ test.describe('inbox awaiting reply', () => {
 		// And a reload lands on the same view rather than back on Open.
 		await page.reload();
 		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
-	});
-
-	// The tab Snoozed absorbed. Old bookmarks and saved-view rows still say
-	// `awaiting` and nothing rewrites them, so falling back to Open would land
-	// somebody in a different queue from the one they saved.
-	test('an old ?view=awaiting URL lands on Snoozed', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/inbox?view=awaiting');
-
-		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
-		await expect(page).toHaveURL(/view=snoozed/);
-	});
-
-	// The claim the split exists to make: the number on the nav item and the
-	// number on the Open tab are the same set counted twice.
-	test('the nav badge and the Open tab agree', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/inbox');
-
-		await expect(viewTab(page, 'Open')).toBeVisible();
-		const badge = await navBadgeCount(page);
-		const tab = Number((await viewTab(page, 'Open').innerText()).replace(/\D+/g, ''));
-
-		expect(tab).toBe(badge);
 	});
 
 	// The marker's two manual directions, and the round trip that proves they are
@@ -190,7 +183,9 @@ test.describe('inbox awaiting reply', () => {
  * the failure the block exists to move earlier.
  */
 test.describe('Meta reply window', () => {
-	test('a thread past the window offers a note instead of a reply', async ({ page }) => {
+	test('a thread past the window offers a note, and one inside it still offers a reply', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/inbox/${SEED_META_STALE_THREAD_ID}`);
 
@@ -203,13 +198,9 @@ test.describe('Meta reply window', () => {
 		await expect(page.getByText('Staff only — the contact never sees this')).toBeVisible();
 		await expect(page.getByPlaceholder('Add an internal note…')).toBeVisible();
 		await expect(page.getByPlaceholder('Type your reply…')).toHaveCount(0);
-	});
 
-	// The same page, on a thread inside the window, must still offer a reply —
-	// otherwise a block that fired on every Meta thread would pass the test above
-	// and take the channel out of service.
-	test('a thread inside the window still offers a reply', async ({ page }) => {
-		await loginAsStaff(page);
+		// A thread inside the window must still offer a reply — otherwise a block
+		// that fired on every Meta thread would pass the half above.
 		await page.goto(`/staff/inbox/${SEED_NEEDS_REPLY_THREAD_ID}`);
 
 		await expect(page.getByPlaceholder('Type your reply…')).toBeVisible();

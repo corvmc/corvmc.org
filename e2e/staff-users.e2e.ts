@@ -29,7 +29,9 @@ async function loginAsStaff(page: Page) {
 }
 
 test.describe('staff user management', () => {
-	test('staff can open the users list', async ({ page }) => {
+	test('staff can open the users list, and a selection does not survive paging', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 
 		await page.goto('/staff/users');
@@ -44,6 +46,21 @@ test.describe('staff user management', () => {
 		// header; rebuilding the staff tables moved it into the pagination line,
 		// which states the visible range as well as the total.
 		await expect(page.getByText(/Showing \d+–\d+ of \d+/)).toBeVisible();
+
+		const selectAll = page.locator('thead input[type="checkbox"]');
+		await expect(selectAll).toBeVisible();
+		await selectAll.check();
+
+		// The bulk bar appears with a count of the selected rows.
+		const bulkBar = page.getByText(/\d+ selected/);
+		await expect(bulkBar).toBeVisible();
+
+		// Page 2 shows a different set of rows. The selection previously persisted,
+		// leaving the bar reading e.g. "20 selected" while Deactivate acted on rows
+		// the operator could no longer see.
+		await page.getByRole('button', { name: '2', exact: true }).click();
+
+		await expect(bulkBar).toHaveCount(0);
 	});
 
 	test('editing a profile field preserves the user’s roles', async ({ page }) => {
@@ -106,13 +123,8 @@ test.describe('staff user management', () => {
 		await page.getByRole('tab', { name: 'Money' }).click();
 		await expect(page.getByRole('heading', { name: 'Credit history' })).toBeVisible();
 		await expect(page).toHaveURL(/[?&]tab=money/);
-	});
 
-	test('a tab is addressable by URL, and an unknown one falls back to Overview', async ({
-		page
-	}) => {
-		await loginAsStaff(page);
-
+		// A tab is addressable by URL, and an unknown one falls back to Overview.
 		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=bands`);
 		// The user → bands direction did not exist anywhere in the app before this
 		// page; this is the pin that it does now.
@@ -120,6 +132,24 @@ test.describe('staff user management', () => {
 
 		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=not-a-tab`);
 		await expect(page.getByRole('heading', { name: 'At a glance' })).toBeVisible();
+
+		// Moderation is its own tab, and no longer offers to set a standing.
+		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=comms`);
+
+		// Comms answers one question: how we reach them. Reports used to sit at
+		// the top of this panel alongside the mailing lists.
+		await expect(page.getByRole('heading', { name: 'Conversations' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Email lists' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Reports against this member' })).toHaveCount(0);
+
+		// A standing is applied by an upheld report and lifted through the appeal
+		// workflow. Setting one by hand from a member's record is a non-goal, and
+		// the card that did it — "Direct messages" — went with the actions.
+		await page.getByRole('tab', { name: 'Moderation' }).click();
+		await expect(page.getByRole('heading', { name: 'Reports against this member' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Direct messages' })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: /Switch messaging off/ })).toHaveCount(0);
+		await expect(page).toHaveURL(/[?&]tab=moderation/);
 	});
 
 	test('switching tabs keeps an unsaved edit', async ({ page }) => {
@@ -148,26 +178,6 @@ test.describe('staff user management', () => {
 		await expect(page.locator('input[name="phone"]')).toHaveValue(draft);
 	});
 
-	test('moderation is its own tab, and no longer offers to set a standing', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=comms`);
-
-		// Comms answers one question: how we reach them. Reports used to sit at
-		// the top of this panel alongside the mailing lists.
-		await expect(page.getByRole('heading', { name: 'Conversations' })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Email lists' })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Reports against this member' })).toHaveCount(0);
-
-		// A standing is applied by an upheld report and lifted through the appeal
-		// workflow. Setting one by hand from a member's record is a non-goal, and
-		// the card that did it — "Direct messages" — went with the actions.
-		await page.getByRole('tab', { name: 'Moderation' }).click();
-		await expect(page.getByRole('heading', { name: 'Reports against this member' })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Direct messages' })).toHaveCount(0);
-		await expect(page.getByRole('button', { name: /Switch messaging off/ })).toHaveCount(0);
-		await expect(page).toHaveURL(/[?&]tab=moderation/);
-	});
-
 	/**
 	 * Regression: `TabBar` rendered a daisyUI `join`, which does not wrap, inside
 	 * an `overflow-x-hidden` <main>. Eight tabs are far wider than a phone, so
@@ -192,25 +202,5 @@ test.describe('staff user management', () => {
 
 		await expect(page).toHaveURL(/[?&]tab=account/);
 		await expect(page.locator('input[name="phone"]')).toBeVisible();
-	});
-
-	test('bulk selection does not survive paging to rows you cannot see', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/users');
-
-		const selectAll = page.locator('thead input[type="checkbox"]');
-		await expect(selectAll).toBeVisible();
-		await selectAll.check();
-
-		// The bulk bar appears with a count of the selected rows.
-		const bulkBar = page.getByText(/\d+ selected/);
-		await expect(bulkBar).toBeVisible();
-
-		// Page 2 shows a different set of rows. The selection previously persisted,
-		// leaving the bar reading e.g. "20 selected" while Deactivate acted on rows
-		// the operator could no longer see.
-		await page.getByRole('button', { name: '2', exact: true }).click();
-
-		await expect(bulkBar).toHaveCount(0);
 	});
 });

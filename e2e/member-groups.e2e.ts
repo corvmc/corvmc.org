@@ -44,7 +44,9 @@ async function loginAsMember(page: Page) {
 }
 
 test.describe('member groups index', () => {
-	test('separates what you could join from what you can only be invited to', async ({ page }) => {
+	test('separates what you could join from what you can only be invited to, and lists no band', async ({
+		page
+	}) => {
 		await loginAsMember(page);
 		await page.goto('/member/groups');
 
@@ -59,18 +61,10 @@ test.describe('member groups index', () => {
 		// The group's own words, next to the button rather than buried on a
 		// detail page nobody opens before deciding.
 		await expect(page.getByText(SEED_JOINABLE_INSTRUCTIONS)).toBeVisible();
-	});
 
-	/**
-	 * A band is a group in the data model, and this is the page that must not say
-	 * so. Bands are always `invite_only`, so they could never appear under
-	 * discovery, and a member's own bands already have `/member/bands`.
-	 */
-	test('never lists a band, in any section', async ({ page }) => {
-		await loginAsMember(page);
-		await page.goto('/member/groups');
-		await expect(page.getByRole('heading', { name: 'Open to join' })).toBeVisible();
-
+		// A band is a group in the data model, and this is the page that must not
+		// say so. Bands are always `invite_only`, and a member's own bands already
+		// have `/member/bands`.
 		await expect(page.getByText(SEED_PUBLIC_BAND_NAME)).toHaveCount(0);
 	});
 

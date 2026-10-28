@@ -30,7 +30,9 @@ async function loginAsStaff(page: Page) {
 }
 
 test.describe('staff reservations payment column', () => {
-	test('breaks payment into dollars and credits', async ({ page }) => {
+	test('breaks payment into dollars and credits, drops a zero half, strikes a comp', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/reservations');
 		await expect(page).toHaveURL(/\/staff\/reservations/);
@@ -45,30 +47,12 @@ test.describe('staff reservations payment column', () => {
 		for (const [i, c] of PAYMENT_CASES.entries()) {
 			await expect(rows.nth(i)).toContainText(c.expected);
 		}
-	});
-
-	test('omits the half that evaluates to zero', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/reservations');
-		await page.getByRole('searchbox').fill(SEED_PAYMENTS_NAME);
-
-		const rows = page.getByRole('row').filter({ hasText: SEED_PAYMENTS_NAME });
-		await expect(rows).toHaveCount(PAYMENT_CASES.length);
 
 		// A booking with no credits shows no credit term...
 		await expect(rows.nth(0)).not.toContainText('cr');
 		// ...and one fully covered by credits shows no dollar figure. This is the
 		// regression that motivated the change: it used to read "$30.00".
 		await expect(rows.nth(3)).not.toContainText('$');
-	});
-
-	test('strikes the amount on a comped reservation', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/reservations');
-		await page.getByRole('searchbox').fill(SEED_PAYMENTS_NAME);
-
-		const rows = page.getByRole('row').filter({ hasText: SEED_PAYMENTS_NAME });
-		await expect(rows).toHaveCount(PAYMENT_CASES.length);
 
 		// Comping waives the charge without hiding what the room time was worth.
 		const comped = rows.nth(COMPED_CASE_INDEX);
