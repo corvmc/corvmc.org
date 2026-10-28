@@ -187,7 +187,13 @@ describe('the nav tree', () => {
 			'instructors',
 			'volunteer'
 		]);
-		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'contractor-jobs']);
+		expect(keys('planning')).toEqual([
+			'suggestions',
+			'ballots',
+			'projects',
+			'recurring-work',
+			'contractor-jobs'
+		]);
 		expect(keys('space')).toEqual([
 			'reservations',
 			'equipment',

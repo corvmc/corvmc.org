@@ -692,6 +692,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/recurring-work",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/recurring/[id]",
 		"panel": "staff"
 	},

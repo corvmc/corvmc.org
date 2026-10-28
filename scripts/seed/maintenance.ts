@@ -11,7 +11,7 @@ import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 
 /**
- * Recurring facility work, in the three states `/staff/volunteer/recurring` renders:
+ * Recurring facility work, in the three states `/staff/recurring-work` renders:
  * a live schedule with history and a next one due, a live one whose open work
  * order is overdue, and a retired one whose last occurrence was closed. The
  * weekly bathroom clean has somebody on its open occurrence (#1483).

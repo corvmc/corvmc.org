@@ -26,7 +26,6 @@
 	import { isOverdue } from '$lib/utils/work-order-due';
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import NewWorkOrderAction from '../NewWorkOrderAction.svelte';
-	import RecurringWork from './RecurringWork.svelte';
 	import { formatDateShort, relativeDay } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { getSchedulePage, confirmShiftClaims } from '$lib/remote/volunteer.remote';
@@ -197,7 +196,10 @@
 	</FilterBar>
 
 	{#if kind === 'recurring'}
-		<RecurringWork />
+		<p class="text-muted text-sm">
+			Occurrences of recurring work. What repeats, and how often, is under
+			<a class="link" href={resolve('/staff/recurring-work')}>Recurring Work</a>.
+		</p>
 	{/if}
 
 	{#await schedule then data}

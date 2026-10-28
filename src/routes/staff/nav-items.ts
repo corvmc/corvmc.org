@@ -59,6 +59,7 @@ export type StaffNavKey =
 	| 'incidents'
 	| 'keys'
 	| 'projects'
+	| 'recurring-work'
 	| 'productions'
 	| 'venues'
 	| 'calendar'
@@ -237,6 +238,14 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'project.read',
 				label: 'Projects',
 				href: resolve('/staff/projects')
+			},
+			// Beside Projects, not under Volunteering (#1796): it defines work and
+			// writes work orders; Volunteering pairs that work with people.
+			{
+				key: 'recurring-work',
+				capability: 'volunteer.read',
+				label: 'Recurring Work',
+				href: resolve('/staff/recurring-work')
 			},
 			// The work; the contractor directory is under Partners.
 			{

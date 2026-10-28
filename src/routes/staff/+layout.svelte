@@ -46,7 +46,8 @@
 		IconKey,
 		IconBuildingStore,
 		IconContract,
-		IconCertificate
+		IconCertificate,
+		IconRepeat
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
@@ -124,6 +125,7 @@
 		incidents: IconAlertTriangle,
 		keys: IconKey,
 		projects: IconFolders,
+		'recurring-work': IconRepeat,
 		productions: IconCalendarEvent,
 		venues: IconMapPin,
 		calendar: IconCalendarMonth,
