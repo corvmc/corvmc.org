@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import { signInAs } from './fixtures/auth';
 import { eq } from 'drizzle-orm';
 import { readLocalDb } from './fixtures/platform-db';
 import { reservation } from '../src/lib/server/db/schema/reservation';
@@ -40,12 +41,8 @@ import {
 /** See `.claude/rules/testing.md` — a bare read of a row just written can be stale. */
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
-async function login(page: import('@playwright/test').Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_MEMBER_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_MEMBER_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+async function login(page: Page) {
+	await signInAs(page, { email: SEED_MEMBER_EMAIL, password: SEED_MEMBER_PASSWORD });
 }
 
 test('a member covers the processing fee and the reservation settles', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
 	SEED_TASK_DONE,
@@ -15,19 +15,12 @@ import {
  * last test writes, and to a title of its own, so a retry finds nothing it left.
  */
 
-async function loginAsStaff(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
-}
+test.use({ persona: { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD } });
 
 const projectUrl = `/staff/projects/${SEED_TASK_PROJECT_ID}`;
 
 test.describe('project task list', () => {
 	test.beforeEach(async ({ page }) => {
-		await loginAsStaff(page);
 		await page.goto(projectUrl);
 		await expect(
 			page.getByRole('heading', { level: 1, name: SEED_TASK_PROJECT_NAME })

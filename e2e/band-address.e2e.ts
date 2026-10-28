@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import { signInAs } from './fixtures/auth';
 import { E2E_PREVIEW_PORT } from './state-dir';
 import {
 	SEED_OWNER_EMAIL,
@@ -18,12 +19,8 @@ import {
 const NEW_SLUG = 'e2e-renamed-band';
 const PORT = E2E_PREVIEW_PORT;
 
-async function login(page: import('@playwright/test').Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_OWNER_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_OWNER_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+async function login(page: Page) {
+	await signInAs(page, { email: SEED_OWNER_EMAIL, password: SEED_OWNER_PASSWORD });
 }
 
 test('an owner can move their band to a new address', async ({ page, request }) => {
