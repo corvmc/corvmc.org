@@ -19,8 +19,8 @@
 
 	/**
 	 * The staff calendar: every listing staff may see, newest first, with no
-	 * filters. The review queue is the rows badged "Pending review"; the totals
-	 * above count it. `/staff/productions` runs the shows CMC produces.
+	 * filters. Listings waiting on staff are pinned above the dates with a
+	 * labelled badge; the totals above count them. `/staff/productions` runs the shows CMC produces.
 	 */
 	const filters = urlState(resolve('/staff/events'), { page: positiveInt(1) });
 
@@ -38,8 +38,9 @@
 			.filter(Boolean);
 	}
 
+	// Pending rows arrive pinned first, so they form one group above the dates.
 	function dayLabel(e: CalendarRow): string {
-		return formatDate(e.startsAt);
+		return e.status === 'pending_review' ? 'Pending Listings' : formatDate(e.startsAt);
 	}
 </script>
 
@@ -80,7 +81,7 @@
 					{@const href = resolve(`/staff/events/${e.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px">
-							<StatusBadge status={e.status} />
+							<StatusBadge status={e.status} label={e.status === 'pending_review'} />
 						</td>
 						<!-- The day is in the group header, so the cell carries the title
 						     and just the time range. -->

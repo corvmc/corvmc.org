@@ -74,6 +74,9 @@ test.describe('staff events split', () => {
 		await expect(page.getByText(SEED_SPLIT_PENDING_TITLE)).toBeVisible();
 		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toBeVisible();
 		await expect(page.getByText(SEED_SPLIT_DRAFT_TITLE)).toHaveCount(0);
+
+		// Listings waiting on staff are pinned above the dates, under their own group.
+		await expect(page.getByRole('row').nth(1)).toHaveText('Pending Listings');
 		await expect(page.getByLabel('Status')).toHaveCount(0);
 	});
 
