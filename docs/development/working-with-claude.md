@@ -86,6 +86,10 @@ That last row matters more than it looks: PR CI runs `lint:changed`, which globs
 mis-formatted markdown file passes every check on the PR and then reddens `main` on the full `lint`
 job after merge. Run the full `pnpm lint` before committing docs.
 
+Which test to write is a separate question: for a bug, ask for the class it belongs to and the
+cheapest guard against all of it
+([tests catch classes](conventions.md#tests-catch-classes)).
+
 Ask for evidence rather than assurance — the test output, the command and what it returned, a
 screenshot. Reading evidence is faster than re-running the check yourself, and it works for the
 sessions you weren't watching.

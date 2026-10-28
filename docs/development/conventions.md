@@ -51,7 +51,8 @@ When building a new feature, work through these phases in order:
    here only so the steps below keep their numbers.
 6. **Tests** — write tests that describe **intended behavior**, not the current
    implementation. Service-level mocks where direct DB access isn't practical. A failing
-   test that reflects unfinished business logic is acceptable.
+   test that reflects unfinished business logic is acceptable. Choose each test's level from
+   [the ladder](#the-ladder-cheapest-first), cheapest first.
 7. **Verify** — the **blast radius** of what you changed, not the files you edited: for anything
    under `src/lib/server/<domain>/`, run the whole directory
    (`pnpm vitest --run --project=server src/lib/server/<domain>`), plus `pnpm lint:changed`. That
@@ -535,6 +536,61 @@ Watch mode and CI both skip the lock: watch mode would hold it all afternoon and
 runs anyway, and a CI runner has the machine to itself. If a wait ever exhausts its 15 minutes
 the run proceeds regardless — overlapping is slow, never wrong, so the worst case is today's
 behaviour rather than a new way to fail.
+
+## Tests catch classes
+
+The aim is a suite that catches classes of error, so nobody has to check the finished product by
+hand, and integration time goes down. A test earns its place by the class it rules out, not by how
+closely it follows one screen.
+
+### A bug fix names its class
+
+A fix PR says what class the bug belongs to, greps for everything else with that shape, and adds
+the cheapest guard against the whole class. The rule that a regression check fails before the fix
+still holds; the check sits at the class level, and a point test is the fallback when no class
+guard fits.
+
+### The ladder, cheapest first
+
+Pick the level by what the test proves:
+
+1. **Types**: shapes that must line up.
+2. **Lint rule**: a pattern that is always wrong. See [Custom ESLint rules](#custom-eslint-rules).
+3. **Invariant spec**: walk a list the code already has and assert "every X has Y".
+   `scripts/remote-domain-error.spec.ts` is the model.
+4. **Real SQLite**, through `migratedSqlite()`: anything whose answer depends on SQL.
+5. **Remote spec**: behaviour, guards, what gets written, who is refused.
+6. **Component spec**: what a user sees or decides. Form wiring belongs to the types and the remote.
+7. **E2E**: journeys across systems, such as money, auth, and one per main workflow. It never
+   restates copy or wiring.
+
+### Keep the system walkable
+
+Remotes, routes, statuses and capabilities stay discoverable, from one place or by a directory glob
+plus a parse, so an invariant spec has a list to walk. A new subsystem that adds a list adds the
+spec that walks it.
+
+### Mock less
+
+Services are tested against real SQLite. `vi.mock` is for outside services: Stripe, Postmark, the
+U-tec lock, R2. A partial `drizzle-orm` mock is a second copy of drizzle's export list, and every
+new operator a service imports breaks the sibling specs that hold one.
+
+### Time code runs at its edges
+
+A date or time spec runs at a fixed set of instants: a Pacific evening after UTC midnight, both DST
+changeover days, and a month end. CI runs in UTC and Workers do too, so a spec that only runs at
+noon proves nothing about the day boundary.
+
+### Worked examples
+
+| Bug                                                                     | Class                                       | Guard                                    |
+| ----------------------------------------------------------------------- | ------------------------------------------- | ---------------------------------------- |
+| UTC dates shown as the club's day (#1984, #1985)                        | untimezoned date formatting                 | lint rule (#2000)                        |
+| A listing remote checked the wrong permission (#2002, #2031)            | a listing remote outside the listing guards | invariant spec                           |
+| Hold times reachable only through a rebook                              | a service option no form reaches            | service param vs Zod schema vs form diff |
+| Sibling specs broke after a service imported a new drizzle operator     | partial `drizzle-orm` mocks                 | real SQLite                              |
+| `getByRole('button', { name: 'Edit' })` broke when "Edit Hold" appeared | inexact role locators                       | lint rule                                |
 
 ## Forms: no raw elements
 
