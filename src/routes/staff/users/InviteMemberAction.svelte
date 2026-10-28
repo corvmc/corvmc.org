@@ -5,17 +5,14 @@
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { groupKindLabels, hasCapability } from '$lib/config';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
+	import { groupKindLabels } from '$lib/config';
 	import { getMemberInviteGroups, inviteMemberForm } from '$lib/remote/users.remote';
 
 	const { fields } = inviteMemberForm;
 
-	// The staff layout has already fetched its capabilities; the groups are
-	// asked for only by somebody who may invite.
-	const caps = $derived((await getStaffLayout()).capabilities);
-	const canInvite = $derived(hasCapability(caps, 'user.invite'));
-	const groups = $derived(canInvite ? await getMemberInviteGroups() : []);
+	// Null for a caller without `user.invite`: one query answers both whether
+	// to show the action and what it offers.
+	const groups = $derived(await getMemberInviteGroups());
 
 	function onsuccess(result?: unknown) {
 		const r = result as
@@ -33,7 +30,7 @@
 	}
 </script>
 
-{#if canInvite}
+{#if groups}
 	<Action action={inviteMemberForm} label="Invite member" modalTitle="Invite member" {onsuccess}>
 		{#snippet form()}
 			<FormField field={fields.email} type="email" label="Email" required />

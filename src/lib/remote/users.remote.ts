@@ -974,9 +974,13 @@ export const getUserSessions = query(z.string(), async (userId) => {
 	return { sessions, lastLoginAt };
 });
 
-/** The clubs and committees the Invite member modal offers. */
+/**
+ * The clubs and committees the Invite member modal offers, or null for a
+ * caller who may not invite, so the action knows from one query to hide.
+ */
 export const getMemberInviteGroups = query(async () => {
-	await requireCapability('user.invite');
+	requireUser();
+	if (!(await can('user.invite'))) return null;
 	return listInviteGroups();
 });
 

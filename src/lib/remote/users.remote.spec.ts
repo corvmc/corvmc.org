@@ -326,7 +326,6 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	{ name: 'getUserSessions', args: ['victim-user'] },
 	{ name: 'getUserHistory', args: ['victim-user'] },
 	{ name: 'getStaffUserTotals' },
-	{ name: 'getMemberInviteGroups' },
 	{ name: 'inviteMemberForm', args: [{ email: 'n@x.org', groupIds: [] }] }
 ];
 
@@ -393,6 +392,15 @@ describe('users.remote staff guards', () => {
 			groupIds: ['grp-1'],
 			invitedBy: { id: 'acting-staff', name: 'Acting' }
 		});
+	});
+
+	it('getMemberInviteGroups answers null, listing nothing, without user.invite', async () => {
+		expect(await users.getMemberInviteGroups()).toBeNull();
+		expect(listInviteGroups).not.toHaveBeenCalled();
+
+		held.add('user.invite');
+		expect(await users.getMemberInviteGroups()).toEqual([]);
+		expect(listInviteGroups).toHaveBeenCalled();
 	});
 
 	it('getUserPayments does not leak payment history to a non-staff caller', async () => {
