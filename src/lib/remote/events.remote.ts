@@ -75,7 +75,11 @@ import {
 	getConflictDetails,
 	getValidationWarnings
 } from '$lib/server/reservation/conflict-service';
-import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
+import {
+	buildDateInTz,
+	buildTimeRangeInTz,
+	formatDateInTz
+} from '$lib/server/reservation/timezone';
 import {
 	createEventSeries,
 	getByEvent,
@@ -1338,6 +1342,42 @@ export const cancelEventSeries = form(z.object({ eventId: z.string().min(1) }), 
 	void getStaffEventPage(data.eventId).refresh();
 	return { success: true };
 });
+
+/**
+ * Move a listing's existing room hold without re-timing the show: setup and
+ * teardown. Goes through `update`'s rebook path, which moves the row in place
+ * and so keeps its door code.
+ */
+export const adjustListingHold = form(
+	z.object({
+		eventId: z.string().min(1),
+		startTime: z.string().regex(/^\d{2}:\d{2}$/),
+		endTime: z.string().regex(/^\d{2}:\d{2}$/),
+		overrideConflicts: z.boolean().default(false)
+	}),
+	async (data) => {
+		const writer = await requireListingWriter(data.eventId);
+		const evt = await getById(data.eventId);
+		if (!evt?.reservationId) error(404, 'This listing has no room hold');
+
+		const date = formatDateInTz(evt.startsAt, DEFAULT_TIMEZONE);
+		const range = buildTimeRangeInTz(date, data.startTime, data.endTime, DEFAULT_TIMEZONE);
+		try {
+			await update(data.eventId, {
+				rebook: {
+					userId: writer.id,
+					reservationStartsAt: range.startsAt,
+					reservationEndsAt: range.endsAt,
+					overrideConflicts: data.overrideConflicts
+				}
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getStaffEventPage(data.eventId).refresh();
+		return { success: true };
+	}
+);
 
 export const updateEvent = form(
 	z.object({
