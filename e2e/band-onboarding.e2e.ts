@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import { signInAs } from './fixtures/auth';
 import { expectSuccessToast } from './toast';
 import {
 	SEED_OWNER_EMAIL,
@@ -42,7 +43,12 @@ function quickFact(page: import('@playwright/test').Page, label: string) {
 		.locator('dd');
 }
 
-async function login(page: import('@playwright/test').Page) {
+async function login(page: Page) {
+	await signInAs(page, { email: SEED_OWNER_EMAIL, password: SEED_OWNER_PASSWORD });
+}
+
+/** Through the form, for the test about the window right after signing in. */
+async function loginThroughForm(page: Page) {
 	await page.goto('/login');
 	await page.locator('input[name="email"]').fill(SEED_OWNER_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_OWNER_PASSWORD);
@@ -182,7 +188,7 @@ test('renaming a band saves cleanly and leaves its address alone', async ({ page
 });
 
 test('the sidebar Create Act link opens the create-act modal', async ({ page }) => {
-	await login(page);
+	await loginThroughForm(page);
 
 	// The nav entry pointed at /member/bands/create, a 404; it must point at
 	// the bands page with the create param instead. (There used to be a second,

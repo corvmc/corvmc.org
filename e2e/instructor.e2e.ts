@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
 	SEED_TEACHER_EMAIL,
@@ -32,11 +33,7 @@ function minutesBetween(from: string, to: string): number {
 }
 
 async function login(page: Page, email: string, password: string) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(email);
-	await page.locator('input[name="password"]').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email, password });
 }
 
 test('the teacher directory is public, and shows only approved instructors', async ({ page }) => {
@@ -109,7 +106,6 @@ test('an instructor can book teaching time; a member without a grant cannot', as
 
 	// A member with no grant is offered nothing — the button is the visible half
 	// of `requireInstructor`, which refuses them on the server regardless.
-	await page.context().clearCookies();
 	await login(page, SEED_APPLICANT_EMAIL, SEED_APPLICANT_PASSWORD);
 	await page.goto('/member/reservations');
 	await expect(page.getByRole('button', { name: 'Reserve Space' })).toBeVisible({

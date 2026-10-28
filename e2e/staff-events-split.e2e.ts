@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from './fixtures/auth';
 import {
 	SEED_SPLIT_CMC_DRAFT_TITLE,
 	SEED_SPLIT_CMC_LIVE_ID,
@@ -27,19 +27,9 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  * and the two-hour window really is a window rather than a day.
  */
 
-async function loginAsStaff(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
-}
+test.use({ persona: { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD } });
 
 test.describe('staff events split', () => {
-	test.beforeEach(async ({ page }) => {
-		await loginAsStaff(page);
-	});
-
 	// It shipped at /staff/calendar for a few hours, and the notification rows
 	// written in that window keep that href forever.
 	test('the address the calendar briefly held still redirects', async ({ page }) => {

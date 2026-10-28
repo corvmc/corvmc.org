@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { signInAs } from './fixtures/auth';
 import { eq } from 'drizzle-orm';
 import { expectSuccessToast } from './toast';
 import { readLocalDb } from './fixtures/platform-db';
@@ -20,11 +21,7 @@ import { SEED_ITEM_ID, SEED_INTAKE_BULK_ID } from './fixtures/seed-inventory';
 const INTAKE_SERIAL = 'E2E-INTAKE-SERIAL-1';
 
 async function loginAsStaff(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 }
 
 test.describe('inventory intake', () => {
