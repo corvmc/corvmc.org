@@ -18,3 +18,13 @@ export async function requireListingWriter(eventId: string) {
 	}
 	throw error(403, 'Not permitted');
 }
+
+/**
+ * A read of a listing: `event.read`, or anyone `requireListingWriter` admits.
+ * The show's committee reads what it may write (#2002).
+ */
+export async function requireListingReader(eventId: string) {
+	const user = requireUser();
+	if (await can('event.read')) return user;
+	return requireListingWriter(eventId);
+}
