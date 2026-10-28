@@ -63,7 +63,7 @@ export async function openProblemsForItem(itemId: string) {
 		.from(workRequest)
 		.innerJoin(inventoryAsset, eq(workRequest.assetId, inventoryAsset.id))
 		.where(and(eq(inventoryAsset.itemId, itemId), eq(workRequest.status, 'pending')))
-		.orderBy(desc(workRequest.createdAt));
+		.orderBy(desc(workRequest.createdAt), desc(workRequest.id));
 }
 
 /**
