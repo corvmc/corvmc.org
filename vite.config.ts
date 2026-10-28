@@ -132,6 +132,12 @@ export default defineConfig({
 		// core and the OOM killer takes one, which surfaces as `Worker exited
 		// unexpectedly` rather than as anything to do with the tests.
 		maxWorkers: process.env.CI ? undefined : Math.max(1, Math.floor(availableParallelism() / 2)),
+		// CI only; ci.yml carries the directory between runs. Each entry is keyed
+		// by a hash of the module's own source plus the vite config, plugin names
+		// and vitest version, and a lockfile change clears the lot — so a stale
+		// restore is a miss, never a wrong module. `define` values are not in the
+		// key: the git-SHA `__SENTRY_RELEASE_NAME__` can lag, which nothing tests.
+		experimental: { fsModuleCache: Boolean(process.env.CI) },
 		projects: [
 			{
 				extends: './vite.config.ts',
