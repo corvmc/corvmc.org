@@ -283,12 +283,6 @@ export const staffNavSections: StaffNavSection[] = [
 						href: resolve('/staff/flags/equipment')
 					},
 					{
-						key: 'inventory-acquisitions',
-						capability: 'inventory.manageAcquisitions',
-						label: 'Acquisitions',
-						href: resolve('/staff/inventory/acquisitions')
-					},
-					{
 						key: 'inventory-restock',
 						capability: 'inventory.report',
 						label: 'Restock',
@@ -522,6 +516,13 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'inventory.report',
 				label: 'Inventory Spend',
 				href: resolve('/staff/inventory/spend')
+			},
+			// When stock arrived and from whom; each item's page lists its own (#1841).
+			{
+				key: 'inventory-acquisitions',
+				capability: 'inventory.manageAcquisitions',
+				label: 'Acquisitions',
+				href: resolve('/staff/inventory/acquisitions')
 			}
 		]
 	},
