@@ -200,7 +200,8 @@ test.describe('Meta reply window', () => {
 		await expect(page.getByPlaceholder('Type your reply…')).toHaveCount(0);
 
 		// A thread inside the window must still offer a reply — otherwise a block
-		// that fired on every Meta thread would pass the half above.		await page.goto(`/staff/inbox/${SEED_NEEDS_REPLY_THREAD_ID}`);
+		// that fired on every Meta thread would pass the half above.
+		await page.goto(`/staff/inbox/${SEED_NEEDS_REPLY_THREAD_ID}`);
 
 		await expect(page.getByPlaceholder('Type your reply…')).toBeVisible();
 		await expect(page.getByText(/window has closed/i)).toHaveCount(0);
