@@ -2,11 +2,13 @@
 	import { IconDots } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { rowLink } from './row-link';
+
+	let { to = '/row' }: { to?: string | (() => void) } = $props();
 </script>
 
 <table>
 	<tbody>
-		<tr use:rowLink={'/row'}>
+		<tr use:rowLink={to}>
 			<td>Name cell</td>
 			<td>
 				<div class="dropdown dropdown-end">
