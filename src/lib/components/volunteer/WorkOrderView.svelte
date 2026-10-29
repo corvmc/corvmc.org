@@ -42,13 +42,14 @@
 		type getStaffShiftPage
 	} from '$lib/remote/volunteer.remote';
 
-	type View = Awaited<ReturnType<typeof getStaffShiftPage>>;
+	type View = Omit<Awaited<ReturnType<typeof getStaffShiftPage>>, 'contractors'>;
 	let {
 		view,
 		subtitle,
 		parent,
 		context,
-		activity
+		activity,
+		actions
 	}: {
 		view: View;
 		subtitle: string;
@@ -58,6 +59,8 @@
 		context?: Snippet;
 		/** The work order's history, read by each page through its own guard. */
 		activity?: Snippet;
+		/** Header actions a page adds to the view's own. */
+		actions?: Snippet;
 	} = $props();
 
 	const shift = $derived(view.shift);
@@ -96,7 +99,9 @@
 		: shiftLabel(shift)}
 	{subtitle}
 	{parent}
-/>
+>
+	{@render actions?.()}
+</PageHeader>
 
 <PageContent>
 	<!-- Time and event lead the body rather than the header: PageHeader's

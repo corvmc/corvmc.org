@@ -42,7 +42,10 @@ export const SEED_SERVICE_ITEM_NAME = 'E2E Service Amplifier';
  */
 export const SEED_SERVICE_ASSETS = [1, 2, 3].map((n) => ({
 	id: `e2e0c455-0000-4000-8000-00000000000${n}`,
-	tag: `E2E-SVC-0${n}`
+	tag: `E2E-SVC-0${n}`,
+	/** The unit's repair, on no project: a contractor is engaged on existing work. */
+	workOrderId: `e2e0c0a0-0000-4000-8000-00000000000${n}`,
+	title: `Retube E2E-SVC-0${n}`
 }));
 
 export async function seedContractors() {
@@ -62,6 +65,12 @@ export async function seedContractors() {
 				)
 			);
 		}
+		await db.delete(workOrder).where(
+			inArray(
+				workOrder.id,
+				SEED_SERVICE_ASSETS.map((a) => a.workOrderId)
+			)
+		);
 		await db.delete(contractor).where(inArray(contractor.id, contractorIds));
 		const assetIds = SEED_SERVICE_ASSETS.map((a) => a.id);
 		await db.delete(stockMovement).where(inArray(stockMovement.assetId, assetIds));
@@ -87,6 +96,16 @@ export async function seedContractors() {
 				assetTag: a.tag,
 				condition: 'good' as const,
 				status: 'in_service' as const,
+				createdAt: now,
+				updatedAt: now
+			}))
+		);
+
+		await db.insert(workOrder).values(
+			SEED_SERVICE_ASSETS.map((a) => ({
+				id: a.workOrderId,
+				title: a.title,
+				assetId: a.id,
 				createdAt: now,
 				updatedAt: now
 			}))

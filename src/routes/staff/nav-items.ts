@@ -55,7 +55,6 @@ export type StaffNavKey =
 	| 'inventory-spend'
 	| 'inventory-compliance'
 	| 'contractors'
-	| 'contractor-jobs'
 	| 'incidents'
 	| 'keys'
 	| 'projects'
@@ -246,13 +245,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'volunteer.read',
 				label: 'Recurring Work',
 				href: resolve('/staff/recurring-work')
-			},
-			// The work; the contractor directory is under Partners.
-			{
-				key: 'contractor-jobs',
-				capability: 'contractor.read',
-				label: 'Contractor Jobs',
-				href: resolve('/staff/contractors/jobs')
 			}
 		]
 	},

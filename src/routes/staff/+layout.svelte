@@ -121,7 +121,6 @@
 		'inventory-spend': IconChartBar,
 		'inventory-compliance': IconScale,
 		contractors: IconHammer,
-		'contractor-jobs': IconClipboardList,
 		incidents: IconAlertTriangle,
 		keys: IconKey,
 		projects: IconFolders,

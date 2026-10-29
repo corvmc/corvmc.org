@@ -67,6 +67,26 @@ describe('jobs list filters', () => {
 		expect(await ids({ view: 'all' })).toHaveLength(10);
 	});
 
+	it("flags each row Late or Awaiting invoice by the filters' own predicates", async () => {
+		const rows = await listJobs({ view: 'all', now: NOW });
+		const flagged = (key: 'late' | 'awaitingInvoice') =>
+			rows
+				.filter((r) => r[key])
+				.map((r) => r.job.id)
+				.sort();
+		expect(flagged('late')).toEqual(await ids({ view: 'late' }));
+		expect(flagged('awaitingInvoice')).toEqual(await ids({ view: 'awaiting-invoice' }));
+	});
+
+	it('narrows to the given work orders, and to nothing for none', async () => {
+		sqlite.exec(`insert into work_order (id, title) values ('wo-2', 'Other work')`);
+		sqlite.exec(
+			`insert into contractor_job (id, contractor_id, work_order_id, status) values ('elsewhere', 'c-1', 'wo-2', 'asked')`
+		);
+		expect(await ids({ workOrderIds: ['wo-2'] })).toEqual(['elsewhere']);
+		expect(await ids({ workOrderIds: [] })).toEqual([]);
+	});
+
 	it('counts each filter with the same predicates', async () => {
 		expect(await countJobsByView(NOW)).toEqual({
 			open: 4,

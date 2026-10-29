@@ -464,10 +464,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/contractors/jobs",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/credits",
 		"panel": "staff"
 	},

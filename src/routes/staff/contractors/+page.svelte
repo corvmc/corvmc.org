@@ -13,6 +13,7 @@
 	import { contractorTradeLabels, contractorTrades, type ContractorTrade } from '$lib/config';
 	import { formatDateShort } from '$lib/utils/format';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 
 	/**
 	 * Who we call, and the two things about them that need chasing.
@@ -31,7 +32,11 @@
 </script>
 
 <PageHeader title="Contractors" subtitle="Space">
-	<Button href="/staff/contractors/jobs" variant="ghost" size="sm">Jobs</Button>
+	<Button
+		href={withQuery(resolve('/staff/volunteer/schedule'), 'kind=contractor')}
+		variant="ghost"
+		size="sm">Jobs</Button
+	>
 	<Action
 		action={createContractorForm}
 		label="New contractor"
@@ -62,7 +67,11 @@
 			<span class="font-medium">Overdue</span>
 			{data.overdue.length}
 			{data.overdue.length === 1 ? 'job is' : 'jobs are'} past the date they were promised back.
-			<a class="link" href={resolve('/staff/contractors/jobs')}>Open the queue</a>
+			<a
+				class="link"
+				href={withQuery(resolve('/staff/volunteer/schedule'), 'kind=contractor&contractor=late')}
+				>Open the queue</a
+			>
 		</Alert>
 	{/if}
 
