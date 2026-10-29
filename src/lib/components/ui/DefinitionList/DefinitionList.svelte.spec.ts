@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Harness from './DefinitionListHarness.svelte';
+import OverflowHarness from './DefinitionListOverflowHarness.svelte';
 
 describe('DefinitionList + Fact', () => {
 	/**
@@ -21,10 +22,20 @@ describe('DefinitionList + Fact', () => {
 		expect(childTags).toEqual(['dt', 'dd', 'dt', 'dd', 'dt', 'dd']);
 	});
 
-	it('keeps the grid template that makes the label column shrink-to-fit', async () => {
-		await render(Harness);
+	// A `1fr` track cannot shrink below its content's min-content width, so one
+	// unwrappable value (a nowrap badge row) widened the value column past its
+	// container and every paragraph beside it scrolled sideways instead of
+	// wrapping. The value column has to be allowed to be narrower than its widest
+	// child.
+	it('keeps the value column inside its container when a value cannot wrap', async () => {
+		await render(OverflowHarness);
 		const dl = document.querySelector('dl')!;
-		expect(dl.getAttribute('style')).toContain('grid-template-columns: auto 1fr');
+		// The client project loads no Tailwind, so the `grid` class does nothing here.
+		dl.style.display = 'grid';
+		const paragraph = document.querySelectorAll('dd')[1] as HTMLElement;
+		expect(paragraph.getBoundingClientRect().right).toBeLessThanOrEqual(
+			dl.getBoundingClientRect().right
+		);
 	});
 
 	it('renders a plain value via the value prop', async () => {
