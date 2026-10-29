@@ -4,6 +4,7 @@ import {
 	costOf,
 	engagementLabel,
 	groupBySection,
+	isOverdue,
 	matchesFilter,
 	parseFilter,
 	whenOf,
@@ -87,6 +88,16 @@ describe('When', () => {
 			endsAfterDue: false
 		});
 		expect(whenOf({ startsAt: null, endsAt: null, dueAt: null }).kind).toBe('none');
+	});
+
+	// 8pm PT on Oct 2 is Oct 3 in UTC: a UTC slice would call it yesterday's.
+	it('is overdue only once its club day has passed, and never once done', () => {
+		const evening = new Date('2026-10-03T03:00:00Z');
+		expect(isOverdue(task({ dueAt: evening }), '2026-10-02')).toBe(false);
+		expect(isOverdue(task({ dueAt: evening }), '2026-10-03')).toBe(true);
+		expect(isOverdue(task({ endsAt: evening }), '2026-10-03')).toBe(true);
+		expect(isOverdue(task({ dueAt: evening, state: 'done' }), '2026-10-03')).toBe(false);
+		expect(isOverdue(task(), '2026-10-03')).toBe(false);
 	});
 });
 

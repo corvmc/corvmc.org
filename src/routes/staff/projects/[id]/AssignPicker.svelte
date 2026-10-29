@@ -28,7 +28,7 @@
 					{...props}
 					variant="ghost"
 					size="xs"
-					class="depth-0 assign-trigger"
+					class="depth-0 bare bare-hover assign-trigger"
 					aria-label="Change who does {task.title}"
 				>
 					<AssignedSummary {task} {showNames} />
@@ -57,6 +57,8 @@
 	:global(.assign-trigger) {
 		height: auto;
 		min-height: 1.75rem;
+		max-width: 100%;
+		padding-inline: 0.25rem;
 		justify-content: flex-start;
 		font-weight: normal;
 		text-align: left;

@@ -90,3 +90,22 @@
 	background: var(--color-base-100);
 	border-color: var(--shadow-color);
 }
+
+/* A control that is only its glyph — a drag grip, a tick, a link-styled toggle:
+   no frame, fill, shadow or lift in any state, public site and panel alike.
+   Unlayered and at least as specific as every rule above, so it also beats
+   daisyUI's ghost hover fill. `bare-hover` brings back a tint on hover/focus. */
+.btn.bare,
+.btn.bare:is(:hover, :focus-visible, :active, .is-pressing) {
+	--btn-bg: transparent;
+	--btn-border: transparent;
+	--shadow-size: 0;
+	border-color: transparent;
+	background-color: transparent;
+	box-shadow: none;
+	transform: none;
+	translate: none;
+}
+.btn.bare.bare-hover:is(:hover, :focus-visible) {
+	background-color: var(--color-base-200);
+}

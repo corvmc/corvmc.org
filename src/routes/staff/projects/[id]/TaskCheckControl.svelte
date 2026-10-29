@@ -49,7 +49,7 @@
 			variant="ghost"
 			size="xs"
 			shape="square"
-			class="depth-0"
+			class="depth-0 bare"
 			aria-label="Mark {task.title} not done"
 		>
 			<TaskCheck {task} />
@@ -64,7 +64,7 @@
 			variant="ghost"
 			size="xs"
 			shape="square"
-			class="depth-0"
+			class="depth-0 bare"
 			aria-label="Mark {task.title} done"
 		>
 			<TaskCheck {task} />

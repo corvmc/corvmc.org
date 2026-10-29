@@ -4,7 +4,8 @@
 
 	/**
 	 * A one-line add that reads as the next row of the list rather than a form
-	 * field: no box until focus. The label is for screen readers.
+	 * field: no box until focus, a dashed underline on the prompt. The label is
+	 * for screen readers.
 	 */
 	let {
 		field,
@@ -30,6 +31,13 @@
 		border-color: transparent;
 		background: transparent;
 		box-shadow: none;
+	}
+	/* The dashed underline is what marks the prompt as an add, not a caption. */
+	:global(.inline-add .input::placeholder) {
+		text-decoration: underline dashed;
+		text-decoration-color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+		text-decoration-thickness: 1px;
+		text-underline-offset: 0.25em;
 	}
 	:global(.inline-add .input:focus-within) {
 		outline: none;

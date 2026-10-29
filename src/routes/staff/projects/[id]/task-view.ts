@@ -1,9 +1,16 @@
 import type { getProjectDetail } from '$lib/remote/projects.remote';
 import {
+	clubToday,
 	contractorJobStatusLabels,
 	contractorJobStatusesWithoutSpend as WITHOUT_SPEND
 } from '$lib/config';
-import { formatCents, formatDateShort, formatDateTimeShort, formatTime } from '$lib/utils/format';
+import {
+	formatCents,
+	formatDateShort,
+	formatDateTimeShort,
+	formatTime,
+	toLocalDate
+} from '$lib/utils/format';
 
 /** Pure reading of the task list, kept out of the components so it can be tested. */
 
@@ -87,6 +94,20 @@ export function whenOf(t: Pick<Task, 'startsAt' | 'endsAt' | 'dueAt'>): When {
 	}
 	if (t.dueAt) return { label: `Due ${formatDateShort(t.dueAt)}`, endsAfterDue, kind: 'due' };
 	return { label: '—', endsAfterDue: false, kind: 'none' };
+}
+
+/**
+ * Still open and its deadline (the due date, else the window's end) fell on a
+ * club day before today. Compared as club-time `YYYY-MM-DD`, so a task due
+ * today is not red at 5pm PT when the UTC date has rolled over.
+ */
+export function isOverdue(
+	t: Pick<Task, 'state' | 'cancelledAt' | 'dueAt' | 'endsAt'>,
+	today: string = clubToday()
+): boolean {
+	const deadline = t.dueAt ?? t.endsAt;
+	if (!deadline || t.cancelledAt || t.state === 'done' || t.state === 'cancelled') return false;
+	return toLocalDate(deadline) < today;
 }
 
 /** A contractor's money on the row: the invoice, else donated, else the quote. */
