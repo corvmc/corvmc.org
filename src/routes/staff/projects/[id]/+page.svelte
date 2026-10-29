@@ -33,6 +33,7 @@
 	import TaskPanel from './TaskPanel.svelte';
 	import { parseFilter, type TaskFilter } from './task-view';
 	import { asDateValue } from './date-value';
+	import { toastWarnings } from '$lib/utils/toast-warnings';
 
 	/**
 	 * One project, run as a checklist: its work orders are the tasks, grouped in
@@ -95,27 +96,22 @@
 	{#if dutyListOptions.length > 0}
 		<Action
 			action={applyDutyListToProjectForm}
-			label="Apply duty list"
+			label="Apply template"
 			variant="default"
-			modalTitle="Apply a duty list to {project.name}"
+			modalTitle="Apply a template to {project.name}"
 			submitLabel="Apply"
 			successToast="Tasks created"
+			onsuccess={toastWarnings}
 		>
 			{#snippet form()}
 				<input {...applyFields.projectId.as('hidden', project.id)} />
-				{#if project.startsAt}
-					<Field
-						field={applyFields.dutyListId}
-						type="select"
-						label="Duty list"
-						options={dutyListOptions}
-						description="Creates every task the list describes, timed from the project's start date, under the sections it names. Applying the same list twice is refused."
-					/>
-				{:else}
-					<Alert type="warning">
-						This project has no start date. Set one under Edit project before applying a duty list.
-					</Alert>
-				{/if}
+				<Field
+					field={applyFields.dutyListId}
+					type="select"
+					label="Template"
+					options={dutyListOptions}
+				/>
+				<Field field={applyFields.reason} type="text" label="Reason, if applying again" />
 			{/snippet}
 		</Action>
 	{/if}

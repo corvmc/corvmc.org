@@ -1178,9 +1178,9 @@ async function venuePickerOptions() {
 	return rows.map((v) => ({ id: v.id, name: v.name, isPrimary: v.isPrimary }));
 }
 
-/** Active duty lists that actually have items on them — the apply picker. */
+/** Active project templates that actually have items on them — the apply picker. */
 async function listApplicableDutyLists() {
-	const lists = await listDutyLists({ subject: 'event' });
+	const lists = await listDutyLists({ subject: 'project' });
 	return lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
 }
 

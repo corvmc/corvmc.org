@@ -575,6 +575,7 @@ export async function seedVolunteering(): Promise<void> {
 			name: SEED_VOL_DUTY_LIST_NAME,
 			description: 'What it takes to run an ordinary night.',
 			anchor: 'doors',
+			subject: 'project',
 			createdByUserId: SEED_VOL_MEMBER_ID,
 			createdAt: now,
 			updatedAt: now

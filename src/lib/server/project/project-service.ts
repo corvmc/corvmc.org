@@ -23,6 +23,7 @@ import {
 	sql
 } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
+import { placePendingWorkOrders } from '$lib/server/volunteer/retime-work-orders';
 import {
 	contractorJobStatusesWithoutSpend,
 	DEFAULT_TIMEZONE,
@@ -209,6 +210,11 @@ export async function updateProject(id: string, data: Partial<CreateProjectInput
 		await db.batch(groupId ? [update, dropOwner, ownerRow(id, groupId)] : [update, dropOwner]);
 	} else {
 		await update;
+	}
+	// Template work stamped before the project had a start is placed now.
+	if (data.startsAt) {
+		const at = Math.floor(data.startsAt.getTime() / 1000);
+		await placePendingWorkOrders({ projectId: id }, ['project_start'], sql`${at}`);
 	}
 	const after = await getProjectById(id);
 	const changed = changedFields(before, ownerBefore, data);

@@ -44,7 +44,7 @@ import {
 	ORIENTATION_WAIVED_REASON_MAX,
 	dutyListAnchors,
 	dutyListAutoApplyTriggers,
-	dutyListSubjects,
+	dutyListStoredSubjects,
 	workDoneConditions
 } from '../../../config';
 
@@ -397,6 +397,12 @@ export const workOrder = sqliteTable(
 		// Which time this was measured from, copied at stamp time. Retime and
 		// close-out read this, never the list's current anchor (#2033).
 		anchor: text('anchor', { enum: dutyListAnchors }),
+
+		// Set only while the anchor's time is unknown, so the row was stamped
+		// unscheduled: the item's offset (a start, or a deadline when there is no
+		// duration) and its length. Placing it, once the time is set, clears both.
+		pendingOffsetMinutes: integer('pending_offset_minutes'),
+		pendingDurationMinutes: integer('pending_duration_minutes'),
 
 		// This is a member's orientation shift. Stamped, so clearing a list's
 		// trigger or deleting the list cannot orphan a booked orientation.
@@ -1053,13 +1059,10 @@ export const dutyList = sqliteTable(
 		description: text('description'),
 		anchor: text('anchor', { enum: dutyListAnchors }).notNull().default('doors'),
 
-		// What this list is stamped onto. It is not derivable from `anchor`:
-		// `start` and `end` resolve for a show and a rehearsal booking alike, and
-		// only `doors` is show-shaped. So this filters the apply picker — a
-		// coordinator must not be offered "Rehearsal Orientation" for Saturday's
-		// show — and makes `(reservation, doors)` refusable when the list is
-		// *saved* rather than only when somebody tries to apply it.
-		subject: text('subject', { enum: dutyListSubjects }).notNull().default('event'),
+		// What this list is stamped onto: a project, or (for orientation) a
+		// rehearsal booking. The default is the retired `event`, kept because
+		// changing it rebuilds the table; the service always writes a subject.
+		subject: text('subject', { enum: dutyListStoredSubjects }).notNull().default('event'),
 
 		// Which domain event stamps this list out with nobody pressing a button.
 		// Null for the ordinary case: a coordinator applies it by hand.

@@ -24,7 +24,10 @@ import {
 } from './production-project';
 import { announceShowsCancelled, openDeliverablesOnProductions } from './cancellation-notice';
 import type { OpenOwnedItem } from '$lib/server/volunteer/deliverables-service';
-import { shiftAnchoredWorkOrders } from '$lib/server/volunteer/retime-work-orders';
+import {
+	placePendingWorkOrders,
+	shiftAnchoredWorkOrders
+} from '$lib/server/volunteer/retime-work-orders';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { DutyListAnchor, ProjectStatus } from '$lib/config';
 import { project } from '$lib/server/db/schema/project';
@@ -297,7 +300,11 @@ export async function updateProductionDetails(
 				if (!(next instanceof Date)) return [];
 				const seconds = Math.floor(next.getTime() / 1000);
 				const delta = sql`${seconds} - (select ${column} from ${production} where ${production.id} = ${id})`;
-				return [shiftAnchoredWorkOrders(listing.id, [anchor], delta)];
+				// Then whatever was stamped before this time existed (#2034).
+				return [
+					shiftAnchoredWorkOrders(listing.id, [anchor], delta),
+					placePendingWorkOrders({ eventId: listing.id }, [anchor], sql`${seconds}`)
+				];
 			})
 		: [];
 

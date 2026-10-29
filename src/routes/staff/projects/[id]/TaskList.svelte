@@ -248,7 +248,7 @@
 {#if list.tasks.length === 0 && list.sections.length === 0}
 	<EmptyState
 		title="No tasks yet"
-		description="Apply a duty list, add a task, or add a section to group them."
+		description="Apply a template, add a task, or add a section to group them."
 	/>
 {:else}
 	<!-- Inset from the left: the drag grips live in that gutter, shown on row hover or focus. -->

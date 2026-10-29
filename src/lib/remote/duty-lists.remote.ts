@@ -14,6 +14,7 @@ import {
 	deleteDutyList as deleteService,
 	getDutyListDetail,
 	listDutyLists,
+	projectOfEvent,
 	removeDutyListItem as removeItemService,
 	setWorkTaskDone as setTaskService,
 	updateDutyList as updateService,
@@ -75,14 +76,10 @@ export const getDutyLists = query(async () => {
 	return listDutyLists({ includeInactive: true });
 });
 
-/**
- * The picker on the production console: only lists worth applying, and only the
- * ones for an event — a coordinator must not be offered "Rehearsal Orientation"
- * for Saturday's show.
- */
+/** The apply picker: project templates worth applying, never the orientation one. */
 export const getActiveDutyLists = query(async () => {
 	await requireCapability('volunteer.read');
-	const lists = await listDutyLists({ subject: 'event' });
+	const lists = await listDutyLists({ subject: 'project' });
 	return lists.filter((l) => l.itemCount > 0);
 });
 
@@ -112,7 +109,7 @@ export const createDutyList = form(
 		name: z.string().min(1, 'Name is required'),
 		description: z.string().optional(),
 		anchor: z.enum(dutyListAnchors).default('doors'),
-		subject: z.enum(dutyListSubjects).default('event')
+		subject: z.enum(dutyListSubjects).default('project')
 	}),
 	async (data) => {
 		const staff = await requireCapability('volunteer.manageRoles');
@@ -289,21 +286,33 @@ export const removeDutyListItem = form(
 // Applying, and ticking
 // ---------------------------------------------------------------------------
 
+/** Apply a template from a show's console: into its project, timed from this show. */
 export const applyDutyList = form(
-	z.object({ dutyListId: z.string().min(1), eventId: z.string().min(1) }),
+	z.object({
+		dutyListId: z.string().min(1),
+		eventId: z.string().min(1),
+		reason: z.string().max(500).optional()
+	}),
 	async (data) => {
 		const staff = await requireCapability('volunteer.manageShifts');
 		try {
+			const projectId = await projectOfEvent(data.eventId);
+			if (!projectId) error(422, 'This event has no project to apply a template to.');
 			const result = await applyService(
 				data.dutyListId,
-				{ kind: 'event', id: data.eventId },
-				staff.id
+				{ kind: 'project', id: projectId, eventId: data.eventId },
+				staff.id,
+				{ reason: data.reason }
 			);
 			// The advance items land unscheduled, which is the coordinator's queue on
 			// Today. Without this the card the apply just filled stays empty until
 			// somebody navigates.
 			await getVolunteerWorklist().refresh();
-			return { workOrders: result.workOrderIds.length, tasks: result.taskCount };
+			return {
+				workOrders: result.workOrderIds.length,
+				tasks: result.taskCount,
+				warnings: result.warnings
+			};
 		} catch (err) {
 			mapDomainError(err);
 		}
