@@ -23,6 +23,7 @@
 	import RepeatEventAction from '$lib/components/events/RepeatEventAction.svelte';
 	import SpaceHoldCard from '$lib/components/events/SpaceHoldCard.svelte';
 	import ListingTicketing from '$lib/components/events/ListingTicketing.svelte';
+	import DoorSalesCard from '$lib/components/events/DoorSalesCard.svelte';
 	import {
 		PublishEventAction,
 		UnpublishEventAction,
@@ -402,6 +403,10 @@
 		tickets={detail.tickets}
 		onchange={refresh}
 	/>
+
+	{#if detail.door}
+		<DoorSalesCard eventId={evt.id} takings={detail.door.takings} open={detail.door.open} />
+	{/if}
 
 	{#if showsHold}
 		<SpaceHoldCard

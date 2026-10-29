@@ -210,6 +210,13 @@ describe('the nav tree', () => {
 		expect(keys('events')).toContain('productions');
 	});
 
+	// A show's door takings are on its staff page (#1809); the till is reached from there.
+	it('has no Door Sales row', () => {
+		const hrefs = allStaffNavItems().map((i) => i.href);
+		expect(hrefs.some((h) => h.includes('/member/volunteer/door'))).toBe(false);
+		expect(allStaffNavItems().map((i) => i.label)).not.toContain('Door Sales');
+	});
+
 	it('finds the owning section for every row', () => {
 		for (const item of allStaffNavItems()) {
 			if (staffNavTop.some((t) => t.key === item.key)) continue;

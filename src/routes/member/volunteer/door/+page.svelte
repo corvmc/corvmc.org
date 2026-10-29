@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { pageTitle, TICKET_MIN_CHARGE_CENTS } from '$lib/config';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -50,7 +51,8 @@
 	let busy = $state(false);
 	let tapError = $state<string | null>(null);
 	let freeLetIn = $state<number | null>(null);
-	let chosenEventId = $state<string | undefined>();
+	// A show's staff page opens the till on that show (#1809).
+	let chosenEventId = $state<string | undefined>(page.url.searchParams.get('event') ?? undefined);
 	let quantity = $state<number | undefined>(1);
 
 	function reset() {
