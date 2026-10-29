@@ -180,12 +180,6 @@ export const staffNavSections: StaffNavSection[] = [
 				badgeKey: 'volunteerPending',
 				children: [
 					{
-						key: 'volunteer-schedule',
-						capability: 'volunteer.manageShifts',
-						label: 'Schedule',
-						href: resolve('/staff/volunteer/schedule')
-					},
-					{
 						// "People", not "Volunteers": its filters reach the under-18 queue
 						// too, who are not yet volunteering.
 						key: 'volunteer-people',
@@ -228,6 +222,13 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'project.read',
 				label: 'Project Templates',
 				href: resolve('/staff/project-templates')
+			},
+			// Every work order, in a project or not (#2034). The route stays put.
+			{
+				key: 'volunteer-schedule',
+				capability: 'volunteer.manageShifts',
+				label: 'Schedule',
+				href: resolve('/staff/volunteer/schedule')
 			},
 			// Beside Projects, not under Volunteering (#1796): it defines work and
 			// writes work orders; Volunteering pairs that work with people.
