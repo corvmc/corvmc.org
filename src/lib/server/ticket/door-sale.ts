@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { and, eq, gte, isNull, lte } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { eventListing } from '$lib/server/db/schema/event';
 import { ticket, ticketSale } from '$lib/server/db/schema/ticket';
@@ -78,6 +78,11 @@ async function toDoorEvent(row: DoorEventRow): Promise<DoorEvent> {
 		remaining,
 		onlineSales: row.enabled ?? false
 	};
+}
+
+/** Whether the door screen offers this show right now. */
+export async function isOnTheDoor(eventId: string, now = new Date()): Promise<boolean> {
+	return (await doorEvents(now)).some((e) => e.id === eventId);
 }
 
 export async function listDoorEvents(now = new Date()): Promise<DoorEvent[]> {
@@ -235,4 +240,32 @@ export async function getDoorSale(
 	if (live.length === 0) return { status: 'cancelled', quantity: 0 };
 	const paid = live.every((r) => r.status === 'checked_in');
 	return { status: paid ? 'paid' : 'pending', quantity: live.length };
+}
+
+/** A show's door takings, by how they were paid. There is no cash path at the door. */
+export interface DoorTakings {
+	card: { tickets: number; grossCents: number };
+	free: { tickets: number };
+}
+
+/**
+ * Summed from the door's own ticket rows: card sales are keyed on their `pi_`
+ * intent, free let-ins on `door-`. Live rows only, so an untapped or cancelled
+ * sale counts nothing. As sold: a refund is made in Stripe, which this cannot see.
+ */
+export async function getEventDoorTakings(eventId: string): Promise<DoorTakings> {
+	const card = sql`substr(${ticket.purchaseId}, 1, 3) = 'pi_'`;
+	const free = sql`substr(${ticket.purchaseId}, 1, 5) = 'door-'`;
+	const [row] = await db
+		.select({
+			cardTickets: sql<number>`coalesce(sum(case when ${card} then 1 else 0 end), 0)`,
+			cardGrossCents: sql<number>`coalesce(sum(case when ${card} then coalesce(${ticket.unitPriceCents}, 0) + ${ticket.contributionCents} else 0 end), 0)`,
+			freeTickets: sql<number>`coalesce(sum(case when ${free} then 1 else 0 end), 0)`
+		})
+		.from(ticket)
+		.where(and(eq(ticket.eventId, eventId), inArray(ticket.status, ['valid', 'checked_in'])));
+	return {
+		card: { tickets: row?.cardTickets ?? 0, grossCents: row?.cardGrossCents ?? 0 },
+		free: { tickets: row?.freeTickets ?? 0 }
+	};
 }

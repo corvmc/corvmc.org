@@ -27,6 +27,8 @@ const {
 	cancelDoorSale,
 	getDoorSale,
 	doorSaleEventId,
+	getEventDoorTakings,
+	isOnTheDoor,
 	DoorSaleError
 } = await import('./door-sale');
 
@@ -83,6 +85,12 @@ describe('which shows the door can sell', () => {
 			remaining: 50,
 			onlineSales: true
 		});
+	});
+
+	it('says whether one show is on the door now', async () => {
+		listing('next-week', 'cmc', at(24 * 7));
+		expect(await isOnTheDoor('tonight', NOW)).toBe(true);
+		expect(await isOnTheDoor('next-week', NOW)).toBe(false);
 	});
 
 	it("leaves out a band's own gig, a band listing, a draft, and next week", async () => {
@@ -239,5 +247,48 @@ describe('the tap landing', () => {
 
 		expect((await stripe.paymentIntents.retrieve(result.paymentIntentId)).status).toBe('canceled');
 		expect(await getDoorSale(result.paymentIntentId)).toEqual({ status: 'cancelled', quantity: 0 });
+	});
+});
+
+describe('what the door took', () => {
+	const sell = (quantity: number, unitPriceCents: number) =>
+		startDoorSale({
+			eventId: 'tonight',
+			quantity,
+			unitPriceCents,
+			staffUserId: 'staff-1',
+			now: NOW
+		});
+
+	it('is nothing for a show the door never sold', async () => {
+		expect(await getEventDoorTakings('tonight')).toEqual({
+			card: { tickets: 0, grossCents: 0 },
+			free: { tickets: 0 }
+		});
+	});
+
+	it('counts tapped card sales and free let-ins, and leaves out an untapped one', async () => {
+		const tapped = await sell(2, 1500);
+		if (tapped.kind !== 'card') throw new Error('expected a card sale');
+		await fulfillDoorSale(completeFakeTerminalPayment(tapped.paymentIntentId));
+		await sell(1, 2000); // never tapped: still pending
+		await sell(3, 0); // free
+		// An online purchase for the same show is not the door's.
+		sqlite.exec(
+			`insert into ticket (id, event_id, purchase_id, attendee_name, attendee_email, code, status, unit_price_cents)
+			 values ('online-1', 'tonight', '0b8e1c0a-online', 'Buyer', 'b@example.com', 'ONLINE1', 'valid', 1500)`
+		);
+
+		expect(await getEventDoorTakings('tonight')).toEqual({
+			card: { tickets: 2, grossCents: 3000 },
+			free: { tickets: 3 }
+		});
+	});
+
+	it('leaves out a cancelled door sale', async () => {
+		const backedOut = await sell(1, 1500);
+		if (backedOut.kind !== 'card') throw new Error('expected a card sale');
+		await cancelDoorSale(backedOut.paymentIntentId);
+		expect((await getEventDoorTakings('tonight')).card).toEqual({ tickets: 0, grossCents: 0 });
 	});
 });

@@ -102,6 +102,7 @@ import {
 	checkIn,
 	cancelTicket as cancelTicketService
 } from '$lib/server/ticket/ticket-service';
+import { getEventDoorTakings, isOnTheDoor, type DoorTakings } from '$lib/server/ticket/door-sale';
 import {
 	createRsvp,
 	cancelRsvp as cancelRsvpService,
@@ -845,6 +846,13 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		}));
 	}
 
+	// Only the collective's own shows are worked at the door (#1809).
+	let door: { takings: DoorTakings; open: boolean } | null = null;
+	if (evt.source === 'cmc') {
+		const [takings, open] = await Promise.all([getEventDoorTakings(evt.id), isOnTheDoor(evt.id)]);
+		door = { takings, open };
+	}
+
 	return {
 		event: {
 			id: evt.id,
@@ -898,7 +906,8 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		linkedReservation,
 		ticketStats,
 		ticketMoney,
-		tickets
+		tickets,
+		door
 	};
 });
 
