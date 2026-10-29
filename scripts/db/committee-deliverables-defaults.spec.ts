@@ -82,7 +82,8 @@ describe('the Show deliverables migration', () => {
 			.prepare(`SELECT name, anchor, subject, auto_apply_on AS on_ FROM duty_list`)
 			.all();
 		expect(lists).toEqual([
-			{ name: 'Show deliverables', anchor: 'start', subject: 'event', on_: 'production.created' }
+			// `backfill_templates_to_project` moved it from `event` (#2034).
+			{ name: 'Show deliverables', anchor: 'start', subject: 'project', on_: 'production.created' }
 		]);
 		const roles = db
 			.prepare(`SELECT name FROM volunteer_role WHERE "group" = 'away-from-shows' ORDER BY name`)

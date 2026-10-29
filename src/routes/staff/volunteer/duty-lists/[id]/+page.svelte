@@ -94,7 +94,7 @@
 					type="select"
 					options={subjectOptions}
 					value={d.list.subject}
-					description="A booking has no doors time — anchor those to the start or the end. A project anchors to its start date."
+					description="A booking anchors only to its start or end."
 				/>
 				<FormField
 					name="anchor"

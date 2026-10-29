@@ -7,7 +7,7 @@ import {
 import { batchInsert } from './db';
 
 /**
- * A duty list, and one show it has been stamped onto.
+ * Project templates, and one show's project they have been stamped into.
  *
  * Renders the whole shape in one place: a list whose items are described
  * relative to doors, the work orders an apply produces from it — four with
@@ -32,6 +32,7 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[], groups
 			description:
 				'The crew for an ordinary night: someone to set the room, someone on the desk, someone on the board, and enough hands to put it all away. The advance is a Production deliverable now.',
 			anchor: 'doors' as const,
+			subject: 'project' as const,
 			createdByUserId: 'seed-vol-coordinator'
 		},
 		{
@@ -43,6 +44,7 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[], groups
 			description:
 				'Hands for the part of the night that happens before anybody is watching. Anchored to the production’s load-in, so it moves when the producer moves it.',
 			anchor: 'load_in' as const,
+			subject: 'project' as const,
 			createdByUserId: 'seed-vol-coordinator'
 		},
 		{
@@ -162,6 +164,7 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[], groups
 		id: `seed-duty-wo-${n}`,
 		volunteerRoleId: item.volunteerRoleId,
 		eventId: show.id,
+		projectId: show.projectId ?? null,
 		// Every item on the crew list is a window; the deadlines are deliverables now.
 		startsAt: at(item.offsetMinutes),
 		endsAt: at(item.offsetMinutes + item.durationMinutes),
@@ -225,7 +228,7 @@ async function seedShowDeliverables(byName: Map<string, any>, groups: any[], sho
 			description:
 				'What each committee owes a show, and when. Stamped onto every new show; each item is done when the fact it names is true and its tasks are ticked.',
 			anchor: 'start' as const,
-			subject: 'event' as const,
+			subject: 'project' as const,
 			autoApplyOn: 'production.created' as const,
 			createdByUserId: 'seed-vol-coordinator'
 		}

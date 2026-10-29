@@ -65,7 +65,7 @@ beforeEach(() => {
 	`);
 });
 
-function list(id: string, anchor: string, subject = 'event', trigger: string | null = null) {
+function list(id: string, anchor: string, subject = 'project', trigger: string | null = null) {
 	sqlite
 		.prepare(
 			`insert into duty_list (id, name, anchor, subject, auto_apply_on) values (?, ?, ?, ?, ?)`
@@ -80,7 +80,7 @@ function list(id: string, anchor: string, subject = 'event', trigger: string | n
 describe('stamping', () => {
 	it('copies the list anchor onto each work order', async () => {
 		list('show', 'start');
-		await applyDutyList('show', { kind: 'event', id: 'ev-1' }, 'u-1');
+		await applyDutyList('show', { kind: 'project', id: 'proj-1' }, 'u-1');
 
 		// Offset 0 lands on the anchor instant exactly.
 		expect(all(`select anchor, is_orientation, starts_at from work_order`)).toEqual([
@@ -101,7 +101,7 @@ describe('stamping', () => {
 describe('retime reads the stamped anchor', () => {
 	it('moves a start-anchored shift after the list is re-anchored', async () => {
 		list('show', 'start');
-		await applyDutyList('show', { kind: 'event', id: 'ev-1' }, 'u-1');
+		await applyDutyList('show', { kind: 'project', id: 'proj-1' }, 'u-1');
 		sqlite.exec(`update duty_list set anchor = 'doors'`);
 
 		await shiftAnchoredWorkOrders('ev-1', ['start'], sql`${1800}`);
@@ -111,7 +111,7 @@ describe('retime reads the stamped anchor', () => {
 
 	it('moves it after the list is deleted', async () => {
 		list('show', 'start');
-		await applyDutyList('show', { kind: 'event', id: 'ev-1' }, 'u-1');
+		await applyDutyList('show', { kind: 'project', id: 'proj-1' }, 'u-1');
 		sqlite.exec(`delete from duty_list`);
 
 		await shiftAnchoredWorkOrders('ev-1', ['start'], sql`${-600}`);
@@ -121,7 +121,7 @@ describe('retime reads the stamped anchor', () => {
 
 	it('leaves a shift stamped at another anchor alone', async () => {
 		list('show', 'doors');
-		await applyDutyList('show', { kind: 'event', id: 'ev-1' }, 'u-1');
+		await applyDutyList('show', { kind: 'project', id: 'proj-1' }, 'u-1');
 		sqlite.exec(`update duty_list set anchor = 'start'`);
 
 		await shiftAnchoredWorkOrders('ev-1', ['start'], sql`${1800}`);
@@ -133,7 +133,7 @@ describe('retime reads the stamped anchor', () => {
 describe('close-out reads the stamped anchor', () => {
 	it('still counts load-out tasks after the list is re-anchored and deleted', async () => {
 		list('lockup', 'load_out');
-		await applyDutyList('lockup', { kind: 'event', id: 'ev-1' }, 'u-1');
+		await applyDutyList('lockup', { kind: 'project', id: 'proj-1' }, 'u-1');
 		sqlite.exec(`update duty_list set anchor = 'start'`);
 		expect(await outstandingCloseOutTasks('prod-1')).toEqual(['Stack chairs']);
 
@@ -143,7 +143,7 @@ describe('close-out reads the stamped anchor', () => {
 
 	it('does not count a list re-anchored to load-out after it was stamped', async () => {
 		list('show', 'start');
-		await applyDutyList('show', { kind: 'event', id: 'ev-1' }, 'u-1');
+		await applyDutyList('show', { kind: 'project', id: 'proj-1' }, 'u-1');
 		sqlite.exec(`update duty_list set anchor = 'load_out'`);
 
 		expect(await outstandingCloseOutTasks('prod-1')).toEqual([]);

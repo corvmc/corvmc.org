@@ -1,10 +1,10 @@
 {
-  "id": "c24c4e0f-7e8c-463f-8db3-1940921b19f8",
-  "prevIds": [
-    "d24a9122-f7e6-4cd5-b148-3ea881f07e0c"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "b685a7de-ddd5-4481-b71e-a03267e24540",
+  "prevIds": [
+    "c24c4e0f-7e8c-463f-8db3-1940921b19f8"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -10099,6 +10099,26 @@
       "default": null,
       "generated": null,
       "name": "anchor",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pending_offset_minutes",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pending_duration_minutes",
       "entityType": "columns",
       "table": "work_order"
     },

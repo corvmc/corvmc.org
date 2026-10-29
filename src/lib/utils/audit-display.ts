@@ -182,8 +182,11 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const head = `Moved the project from ${statusWord(d.from)} to ${statusWord(d.to)}`;
 			return d.suggestionMoved ? `${head}, and its suggestion with it` : head;
 		}
-		case 'project.duty_list_applied':
-			return `Applied the duty list “${entry.details.dutyListName}”: ${plural(entry.details.tasks, 'task')} added`;
+		case 'project.duty_list_applied': {
+			const head = `Applied the template “${entry.details.dutyListName}”: ${plural(entry.details.tasks, 'task')} added`;
+			const again = entry.details.reappliedReason;
+			return again ? `${head}, again (${again})` : head;
+		}
 		case 'project.section_created':
 			return `Added the section “${entry.details.name}”`;
 		case 'project.section_renamed':

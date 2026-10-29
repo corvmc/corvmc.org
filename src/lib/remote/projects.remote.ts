@@ -472,23 +472,37 @@ export const attachToProjectForm = form(
 	}
 );
 
-/** Stamp a project-anchored duty list's work orders onto this project. */
 /**
- * Stamp a duty list onto a project. The owning committee knows its own work, so
- * its members apply lists; `project.manage` is the staff cover.
+ * Stamp a template into a project. The owning committee knows its own work, so
+ * its members apply templates; `project.manage` is the staff cover. A second
+ * apply needs a reason, which is audited.
  */
 export const applyDutyListToProjectForm = form(
-	z.object({ projectId: z.uuid(), dutyListId: z.string().min(1) }),
+	z.object({
+		projectId: z.uuid(),
+		dutyListId: z.string().min(1),
+		reason: z.string().max(500).optional()
+	}),
 	async (raw) => {
 		requireUser();
-		const { projectId, dutyListId } = raw as { projectId: string; dutyListId: string };
+		const { projectId, dutyListId, reason } = raw as {
+			projectId: string;
+			dutyListId: string;
+			reason?: string;
+		};
 		try {
 			await getProjectById(projectId);
 			const { user } = await requireProjectCommittee(projectId, 'project.manage');
-			const result = await applyDutyList(dutyListId, { kind: 'project', id: projectId }, user.id);
+			const result = await applyDutyList(dutyListId, { kind: 'project', id: projectId }, user.id, {
+				reason
+			});
 			// The committee page lists no work orders; only the staff detail shows them.
 			if (await can('project.read')) refreshDetail(projectId);
-			return { workOrders: result.workOrderIds.length, tasks: result.taskCount };
+			return {
+				workOrders: result.workOrderIds.length,
+				tasks: result.taskCount,
+				warnings: result.warnings
+			};
 		} catch (err) {
 			mapDomainError(err);
 		}

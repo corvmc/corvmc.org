@@ -69,7 +69,10 @@ import {
 	createShowProject,
 	deleteShowProject
 } from '$lib/server/production/production-project';
-import { shiftAnchoredWorkOrders } from '$lib/server/volunteer/retime-work-orders';
+import {
+	placePendingWorkOrders,
+	shiftAnchoredWorkOrders
+} from '$lib/server/volunteer/retime-work-orders';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { project } from '$lib/server/db/schema/project';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
@@ -832,6 +835,10 @@ function listingClockWrites(
 				sql`coalesce(${doors}, ${start}) - ${current(sql`coalesce(doors_at, starts_at)`)}`
 			)
 		);
+	}
+	// Work stamped before the time existed is placed against the new one.
+	if (updates.endsAt !== undefined) {
+		writes.push(placePendingWorkOrders({ eventId }, ['end'], end));
 	}
 	if (
 		updates.startsAt !== undefined ||

@@ -32,6 +32,7 @@
 	import { createShift } from '$lib/remote/volunteer.remote';
 	import { listActInDirectory } from '$lib/remote/external-acts.remote';
 	import { applyDutyList } from '$lib/remote/duty-lists.remote';
+	import { toastWarnings } from '$lib/utils/toast-warnings';
 	import {
 		createProduction,
 		updateProduction,
@@ -544,23 +545,26 @@
 							{#if dutyLists.length > 0}
 								<Action
 									action={applyDutyList}
-									label="Apply duty list"
+									label="Apply template"
 									variant="ghost"
 									size="sm"
-									modalTitle="Apply a duty list to {evt.title}"
+									modalTitle="Apply a template to {evt.title}"
 									submitLabel="Apply"
 									successToast="Work orders created"
-									onsuccess={() => getStaffEventProduction(id).refresh()}
+									onsuccess={(r) => {
+										toastWarnings(r);
+										void getStaffEventProduction(id).refresh();
+									}}
 								>
 									{#snippet form()}
 										<input type="hidden" name="eventId" value={evt.id} />
 										<FormField
 											name="dutyListId"
-											label="Duty list"
+											label="Template"
 											type="select"
 											options={dutyLists.map((l) => ({ value: l.id, label: l.name }))}
-											description="Creates every work order the list describes, timed from this event. Applying the same list twice is refused."
 										/>
+										<FormField name="reason" label="Reason, if applying again" type="text" />
 									{/snippet}
 								</Action>
 							{/if}

@@ -36,9 +36,14 @@ beforeEach(() => {
 	exec(`delete from work_task`);
 	exec(`delete from work_order`);
 	exec(`delete from event_listing`);
+	exec(`delete from production`);
+	exec(`delete from project_section`);
+	exec(`delete from project`);
 	exec(`update duty_list set is_active = 1`);
-	exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind)
-		values ('evt', 'Friday', ${T0}, ${T0 + 7200}, 'u', 'cmc', 'show')`);
+	exec(`insert into project (id, name, kind) values ('proj', 'Friday', 'production')`);
+	exec(`insert into production (id, project_id) values ('p', 'proj')`);
+	exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, production_id)
+		values ('evt', 'Friday', ${T0}, ${T0 + 7200}, 'u', 'cmc', 'show', 'p')`);
 });
 
 const stamped = () =>
@@ -86,12 +91,21 @@ describe('production.created', () => {
 		expect(stamped()).toEqual([]);
 	});
 
-	it('reports rather than throws when the show cannot take the list', async () => {
+	it('stamps nothing for a listing with no production', async () => {
 		await domainEvents.emit('production.created', {
 			productionId: 'p',
 			eventId: 'missing',
 			createdByUserId: null
 		});
-		expect(capture).toHaveBeenCalledTimes(1);
+		expect(stamped()).toEqual([]);
+		expect(capture).not.toHaveBeenCalled();
+	});
+
+	it('lands the deliverables in the show’s project, timed from this show', async () => {
+		await applyShowDeliverables('evt', null);
+		const [row] = sqlite
+			.prepare(`select project_id as projectId, event_id as eventId, anchor from work_order`)
+			.all();
+		expect(row).toEqual({ projectId: 'proj', eventId: 'evt', anchor: 'start' });
 	});
 });

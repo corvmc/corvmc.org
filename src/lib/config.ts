@@ -1283,14 +1283,12 @@ export const volunteerRoleGroupLabels: Record<(typeof volunteerRoleGroups)[numbe
 };
 
 /**
- * Which of the subject's times a duty list measures its offsets from.
+ * Which time a template measures its offsets from.
  *
- * `doors` falls back to the subject's start when no doors time is set, matching
- * the production page's shift modal — not every show sets one. That fallback is
- * why `doors` is refused outright for a reservation rather than aliased to its
- * start: a show without a doors time still *has* doors, and a rehearsal does
- * not. Silently treating one as the other is a lie a staffer could configure
- * and never see.
+ * On a project, `doors`, `start` and `end` are its earliest event's, and the
+ * five production anchors are that event's production clock. `doors` falls back
+ * to the start when no doors time is set, as the production page's shift modal
+ * does. A rehearsal booking has only a start and an end.
  */
 export const dutyListAnchors = [
 	'doors',
@@ -1319,12 +1317,18 @@ export const productionDutyListAnchors = [
 	'load_out'
 ] as const;
 
-// Generic nouns for the first three, because `start` and `end` resolve for a
-// rehearsal booking as well as a show.
+/** Read off the project's event: its listing times, or its production's. */
+export const eventDutyListAnchors = [
+	'doors',
+	'start',
+	'end',
+	...productionDutyListAnchors
+] as const satisfies readonly DutyListAnchor[];
+
 export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
 	doors: 'Doors',
-	start: 'Start',
-	end: 'End',
+	start: 'Event start',
+	end: 'Event end',
 	load_in: 'Load-in',
 	soundcheck: 'Soundcheck',
 	first_set: 'First set',
@@ -1334,21 +1338,19 @@ export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
 };
 
 /**
- * What a duty list is stamped onto.
- *
- * The anchor enum does not need a member per subject: `start` and `end` already
- * resolve for both, because `reservation.starts_at` and `ends_at` are NOT NULL.
- * Only `doors` is show-shaped, so the illegal combination is the *pair*
- * `(reservation, doors)` — validated in the service, not in SQL. A project has
- * one date and no window, so it pairs with `project_start` and nothing else.
+ * Every value `duty_list.subject` has held. `event` is retired: its one list
+ * was backfilled to `project`. Kept for the column type, since changing the
+ * column's default would rebuild the table on prod.
  */
-export const dutyListSubjects = ['event', 'reservation', 'project'] as const;
+export const dutyListStoredSubjects = ['event', 'reservation', 'project'] as const;
+
+/** What a template can be stamped onto. */
+export const dutyListSubjects = ['project', 'reservation'] as const;
 export type DutyListSubject = (typeof dutyListSubjects)[number];
 
 export const dutyListSubjectLabels: Record<DutyListSubject, string> = {
-	event: 'An event',
-	reservation: 'A rehearsal booking',
-	project: 'A project'
+	project: 'A project',
+	reservation: 'A rehearsal booking'
 };
 
 /**

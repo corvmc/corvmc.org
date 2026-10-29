@@ -27,7 +27,14 @@ const T0 = 1_790_000_000;
 const exec = (sql: string) => sqlite.exec(sql);
 
 beforeEach(() => {
-	for (const t of ['work_task', 'work_order', 'duty_list_item', 'duty_list', 'event_listing']) {
+	for (const t of [
+		'work_task',
+		'work_order',
+		'duty_list_item',
+		'duty_list',
+		'event_listing',
+		'project'
+	]) {
 		exec(`delete from ${t}`);
 	}
 	exec(`delete from "group"`);
@@ -39,10 +46,11 @@ beforeEach(() => {
 	exec(`insert into "group" (id, name, slug, kind, deleted_at)
 		values ('g-gone', 'Old Committee', 'old-committee', 'committee', ${T0})`);
 	exec(
-		`insert into duty_list (id, name, anchor, subject) values ('dl', 'Show deliverables', 'start', 'event')`
+		`insert into duty_list (id, name, anchor, subject) values ('dl', 'Show deliverables', 'start', 'project')`
 	);
-	exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind)
-		values ('evt', 'Friday', ${T0}, ${T0 + 7200}, 'u', 'cmc', 'show')`);
+	exec(`insert into project (id, name) values ('proj', 'Friday')`);
+	exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, project_id)
+		values ('evt', 'Friday', ${T0}, ${T0 + 7200}, 'u', 'cmc', 'show', 'proj')`);
 });
 
 const item = (over: Record<string, unknown> = {}) =>
@@ -92,7 +100,7 @@ describe('applying a list with owned items', () => {
 		await item({ title: 'Lineup confirmed', groupId: 'g-book', doneWhen: 'production_confirmed' });
 		await item({ sortOrder: 1 });
 
-		const { workOrderIds } = await applyDutyList('dl', { kind: 'event', id: 'evt' }, null);
+		const { workOrderIds } = await applyDutyList('dl', { kind: 'project', id: 'proj' }, null);
 
 		const rows = sqlite
 			.prepare(
@@ -114,7 +122,7 @@ describe('applying a list with owned items', () => {
 
 	it('is a copy: re-owning the template leaves an applied show alone', async () => {
 		const row = await item({ groupId: 'g-book' });
-		await applyDutyList('dl', { kind: 'event', id: 'evt' }, null);
+		await applyDutyList('dl', { kind: 'project', id: 'proj' }, null);
 		await updateDutyListItem(row.id, { groupId: null });
 
 		const [wo] = sqlite.prepare(`select group_id as groupId from work_order`).all();

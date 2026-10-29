@@ -83,7 +83,7 @@ describe('applyDutyListToProjectForm', () => {
 		heldPositions = [];
 		committeeOf = [];
 		applyDutyList.mockReset();
-		applyDutyList.mockResolvedValue({ workOrderIds: ['wo-1', 'wo-2'], taskCount: 3 });
+		applyDutyList.mockResolvedValue({ workOrderIds: ['wo-1', 'wo-2'], taskCount: 3, warnings: [] });
 		const { error } = await import('@sveltejs/kit');
 		requireProjectCommittee.mockReset();
 		requireProjectCommittee.mockImplementation(async (projectId: string, cover: Capability) => {
@@ -104,13 +104,23 @@ describe('applyDutyListToProjectForm', () => {
 	it('lets a member of the owning committee apply a list, holding no position', async () => {
 		committeeOf = [PROJECT];
 
-		await expect(applyDutyListToProjectForm(input)).resolves.toEqual({ workOrders: 2, tasks: 3 });
-		expect(applyDutyList).toHaveBeenCalledWith('dl-1', { kind: 'project', id: PROJECT }, 'user-1');
+		await expect(applyDutyListToProjectForm(input)).resolves.toEqual({
+			workOrders: 2,
+			tasks: 3,
+			warnings: []
+		});
+		expect(applyDutyList).toHaveBeenCalledWith('dl-1', { kind: 'project', id: PROJECT }, 'user-1', {
+			reason: undefined
+		});
 	});
 
 	it.each(staffCover)('lets %s apply a list as staff cover', async (position) => {
 		heldPositions = [position];
-		await expect(applyDutyListToProjectForm(input)).resolves.toEqual({ workOrders: 2, tasks: 3 });
+		await expect(applyDutyListToProjectForm(input)).resolves.toEqual({
+			workOrders: 2,
+			tasks: 3,
+			warnings: []
+		});
 	});
 
 	it.each(others)('refuses %s outside the owning committee', async (position) => {

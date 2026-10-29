@@ -184,7 +184,13 @@ export interface AuditDetailsByAction {
 	'project.edited': { fields: ProjectField[] };
 	/** `suggestionMoved` when the suggestion it answers moved with it. */
 	'project.status_changed': { from: string; to: string; suggestionMoved: boolean };
-	'project.duty_list_applied': { dutyListId: string; dutyListName: string; tasks: number };
+	/** `reappliedReason` when the template had already been applied here. */
+	'project.duty_list_applied': {
+		dutyListId: string;
+		dutyListName: string;
+		tasks: number;
+		reappliedReason?: string;
+	};
 	'project.section_created': { sectionId: string; name: string };
 	'project.section_renamed': { sectionId: string; from: string; to: string };
 	/** Its tasks moved to the unlabelled group; `tasks` counts them. */
