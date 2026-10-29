@@ -2477,7 +2477,7 @@ export const grantableCapabilities = {
 	// Powers over records a committee owns or takes part in (projects, its
 	// markets, its schedules). The guard names the record; the resolver finds the
 	// committees on it.
-	'project.manage': { label: 'Move its projects along and apply duty lists', committee: 'owned' },
+	'project.manage': { label: 'Move its projects along and apply templates', committee: 'owned' },
 	'volunteer.manageRecurring': { label: 'Keep its recurring work', committee: 'owned' },
 	'volunteer.manageShifts': { label: 'Open and keep its work orders', committee: 'owned' },
 	'event.publish': { label: "Publish its projects' draft events", committee: 'owned' },

@@ -1108,7 +1108,17 @@ So:
   side; the staff pages under `/staff/volunteer/` are always on, per the panel-wide rule
   that staff surfaces ignore flags.
 
-### Duty lists
+### Duty lists (Project Templates)
+
+> **Since #2034** these are **Project Templates** (`/staff/project-templates`, under Planning,
+> edited with `project.manage`). The tables keep the `duty_list` names. A template is stamped
+> into a **project**, and the `event` and `reservation` subjects are retired. `doors`, `start`
+> and `end` read the project's earliest live event, or the show it is applied from, and the
+> production anchors read that event's production. Each stamped row copies its `anchor`
+> (#2033). A missing anchor time stamps the items unscheduled with a warning and
+> `pending_offset_minutes`, and `placePendingWorkOrders` places them once the time is set.
+> Re-applying by hand needs an audited reason. The rest of this section is the history and the
+> item model, which is unchanged.
 
 A duty list is a named set of work orders stamped onto a **subject** — an event, or a member's
 rehearsal booking. Staffing a show is six of them, and every one used to be entered by hand on
@@ -1153,6 +1163,13 @@ every application already has a row identifying it, and March's deep clean is a 
 from April's.
 
 ### Rehearsal orientation
+
+> **Since #2034** orientation is a **setting**, not a list. `volunteer.orientationRoleId` and
+> `volunteer.orientationMinutes` are set from Settings → Orientation, and an empty role means
+> off. `raiseOrientationShift` inserts one work order at the booking's start, with no project,
+> marked `work_order.is_orientation`, or reuses the live one already on the booking. That marker
+> is what `orientationOwnerOf` and `orientationForReservation` read. The trigger and re-apply
+> guard described below are retired.
 
 The one list that applies itself. `duty_list.auto_apply_on` names the domain event that stamps
 a list out with nobody pressing a button; a partial unique index allows one list per trigger,

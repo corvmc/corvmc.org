@@ -74,24 +74,26 @@ reported afterwards as contributed services rather than just hours: mark a role 
 Clearances live on the same screen, and they are checked **as of the shift's own date** — so a
 card that expires between Saturday and Sunday blocks Sunday and not Saturday.
 
-### Build a duty list
+### Build a project template
 
-**Staff → Volunteer → Duty Lists.** A duty list is a reusable set of work orders, timed from the
-event rather than from a calendar, so the same list serves every show.
+**Staff → Planning → Project Templates.** A template is a reusable set of work orders, stamped
+into a project and timed from it, so the same template serves every show.
 
-- **Anchor it to the start** for a festival stage. The doors anchor falls back to the start time
-  when an event has no doors, so either works — but saying "start" is saying what you mean.
+- **Anchor it to the event start** for a festival stage. The anchor reads the project's earliest
+  event, or the show you apply it from. Doors falls back to the start time when an event has no
+  doors.
 - An item with an **offset and a duration** becomes a claimable shift: _Stage hands, from 2 hours
   before, for 3 hours, 4 people._
 - An item with only a **deadline** becomes advance work with a due date, and its checklist is the
   advance list: _Booking lead, a week before — confirm the lineup, collect riders, send load-in
   details._
+- If the time it is anchored to is not set yet, its items arrive unscheduled and are placed once
+  the time is set.
 
 ### Apply it once per day
 
-From each event's **Production** page: **Apply duty list**. Applying the same list to the same
-event twice is refused rather than deduplicated, so a doubled roster is not something you can do
-by accident.
+From each event's **Production** page: **Apply template**. It lands in the show's project.
+Applying the same template to the same project again asks for a reason, which is recorded.
 
 The advance work orders land with no window. They show up on **Staff → Volunteer** under
 **Unscheduled Work Orders**, and on the event's production page under **Advance** — that is where their

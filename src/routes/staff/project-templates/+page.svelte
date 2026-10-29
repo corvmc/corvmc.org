@@ -17,13 +17,13 @@
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
 </script>
 
-<PageHeader title="Duty Lists" subtitle="Staff">
+<PageHeader title="Project Templates" subtitle="Planning">
 	<Action
 		action={createDutyList}
-		label="New Duty List"
-		modalTitle="New duty list"
+		label="New template"
+		modalTitle="New project template"
 		submitLabel="Create"
-		successToast="Duty list created"
+		successToast="Template created"
 	>
 		{#snippet form()}
 			<FormField name="name" label="Name" type="text" />
@@ -31,14 +31,14 @@
 				name="description"
 				label="Description"
 				type="textarea"
-				description="What this list is for. Staff read it when choosing which one to apply."
+				description="Shown when choosing a template to apply."
 			/>
 			<FormField
 				name="anchor"
 				label="Measure offsets from"
 				type="select"
 				options={anchorOptions}
-				description="Every item on the list is timed relative to this moment."
+				description="Every item is timed from this."
 			/>
 		{/snippet}
 	</Action>
@@ -48,11 +48,11 @@
 	{#await lists then rows}
 		{#if rows.length === 0}
 			<EmptyState
-				title="No duty lists yet"
-				description="A duty list is the set of work orders a night takes. Make one, and staffing a show becomes one action instead of six."
+				title="No templates yet"
+				description="A template is a set of work orders a project takes, applied in one step."
 			/>
 		{:else}
-			<InfoCard title="Duty lists">
+			<InfoCard title="Templates">
 				<Table>
 					{#snippet head()}
 						<th class="w-px"><span class="sr-only">Status</span></th>
@@ -62,7 +62,7 @@
 					{/snippet}
 
 					{#each rows as list (list.id)}
-						<tr use:rowLink={`/staff/volunteer/duty-lists/${list.id}`}>
+						<tr use:rowLink={`/staff/project-templates/${list.id}`}>
 							<td>
 								<StatusBadge status={list.isActive ? 'active' : 'archived'} label />
 							</td>
@@ -79,7 +79,7 @@
 						</tr>
 					{/each}
 				</Table>
-				<Pagination total={rows.length} unit="duty lists" />
+				<Pagination total={rows.length} unit="templates" />
 			</InfoCard>
 		{/if}
 	{/await}

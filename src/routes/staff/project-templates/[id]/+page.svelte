@@ -60,7 +60,7 @@
 		...d.committees.map((c) => ({ value: c.id, label: c.name }))
 	]}
 
-	<PageHeader title={d.list.name} subtitle="Duty list">
+	<PageHeader title={d.list.name} subtitle="Project template">
 		<!-- The status its list row shows. It existed on this page only as a
 		     toggle inside the Edit modal, so reading it meant opening a form you
 		     then had to cancel (#1067). -->
@@ -69,7 +69,7 @@
 			action={updateDutyList}
 			label="Edit"
 			variant="ghost"
-			modalTitle="Edit duty list"
+			modalTitle="Edit template"
 			submitLabel="Save"
 			successToast="Saved"
 		>
@@ -93,7 +93,7 @@
 					name="isActive"
 					type="checkbox"
 					label="Active"
-					checkboxLabel="Offer this list when staffing a show"
+					checkboxLabel="Offer this template when applying one"
 					value={d.list.isActive}
 				/>
 			{/snippet}
@@ -172,10 +172,7 @@
 				Offsets are measured from {anchorLabel.toLowerCase()}.
 			</p>
 			{#if d.items.length === 0}
-				<EmptyState
-					title="Nothing on this list yet"
-					description="Add the work orders a night takes — a Booking Lead a week out, then the roles that run the room."
-				/>
+				<EmptyState title="No items yet" description="Add the work orders the project takes." />
 			{:else}
 				<Table>
 					{#snippet head()}
@@ -261,7 +258,7 @@
 										label="Remove"
 										variant="ghost"
 										size="sm"
-										confirm="Remove this item from the list? Work orders already created from it are not touched."
+										confirm="Remove this item? Work orders already created from it are not touched."
 										successToast="Item removed"
 									>
 										{#snippet form()}
@@ -279,17 +276,16 @@
 
 		<InfoCard title="Danger zone">
 			<p class="mb-3 text-sm text-base-content/70">
-				Deleting a list leaves every work order it ever produced alone — those are the record of
-				work that actually happened.
+				Work orders already created from this template are not touched.
 			</p>
 			<Action
 				action={deleteDutyList}
-				label="Delete duty list"
+				label="Delete template"
 				variant="error"
 				outline
 				confirm={`Delete “${d.list.name}”?`}
-				successToast="Duty list deleted"
-				onsuccess={() => goto(resolve('/staff/volunteer/duty-lists'))}
+				successToast="Template deleted"
+				onsuccess={() => goto(resolve('/staff/project-templates'))}
 			>
 				{#snippet form()}
 					<input type="hidden" name="id" value={d.list.id} />

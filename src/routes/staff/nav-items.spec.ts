@@ -146,9 +146,15 @@ describe('the nav tree', () => {
 			// are on the dashboard — see docs/development/ui-patterns.md#section-dashboards.
 			'/staff/volunteer',
 			'/staff/volunteer/schedule',
-			'/staff/volunteer/people',
-			'/staff/volunteer/duty-lists'
+			'/staff/volunteer/people'
 		]);
+	});
+
+	it('puts Project Templates under Planning, beside Projects (#2034)', () => {
+		const planning = staffNavSections.find((s) => s.key === 'planning')!;
+		const keys = planning.items.map((i) => i.key);
+		expect(keys.indexOf('project-templates')).toBe(keys.indexOf('projects') + 1);
+		expect(activeNavKey('/staff/project-templates/abc')).toBe('project-templates');
 	});
 
 	it('keeps Inbox out of every section, so its badge survives a collapsed group', () => {
@@ -185,7 +191,13 @@ describe('the nav tree', () => {
 			'instructors',
 			'volunteer'
 		]);
-		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'recurring-work']);
+		expect(keys('planning')).toEqual([
+			'suggestions',
+			'ballots',
+			'projects',
+			'project-templates',
+			'recurring-work'
+		]);
 		expect(keys('space')).toEqual([
 			'reservations',
 			'equipment',

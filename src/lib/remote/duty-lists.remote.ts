@@ -26,9 +26,9 @@ import { getProjectActivity } from './projects.remote';
 import { workOrderProjectId } from '$lib/server/volunteer/work-order-service';
 
 /**
- * Staff-only throughout. Duty lists are a coordinator's tool — members meet them
- * only as the work orders they produce, which the volunteering surfaces already
- * render.
+ * Project templates (the `duty_list` tables). Staff-only: read under
+ * `project.read`, edited under `project.manage`. Members meet them only as the
+ * work orders they produce.
  */
 
 // ---------------------------------------------------------------------------
@@ -72,7 +72,7 @@ function parseTasks(raw: string | undefined): string[] {
 // ---------------------------------------------------------------------------
 
 export const getDutyLists = query(async () => {
-	await requireCapability('volunteer.read');
+	await requireCapability('project.read');
 	return listDutyLists({ includeInactive: true });
 });
 
@@ -83,12 +83,12 @@ export const getActiveDutyLists = query(async () => {
 	return lists.filter((l) => l.itemCount > 0);
 });
 
-/** One load-bearing query for `/staff/volunteer/duty-lists/[id]`. */
+/** One load-bearing query for `/staff/project-templates/[id]`. */
 export const getDutyListPage = query(z.string(), async (id) => {
-	await requireCapability('volunteer.read');
+	await requireCapability('project.read');
 
 	const detail = await getDutyListDetail(id);
-	if (!detail) error(404, 'Duty list not found');
+	if (!detail) error(404, 'Template not found');
 
 	const [roles, committees] = await Promise.all([listVolunteerRoles(), listCommittees()]);
 
@@ -111,7 +111,7 @@ export const createDutyList = form(
 		anchor: z.enum(dutyListAnchors).default('doors')
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageRoles');
+		const staff = await requireCapability('project.manage');
 		try {
 			const list = await createService({
 				name: data.name,
@@ -139,7 +139,7 @@ export const updateDutyList = form(
 		isActive: z.boolean().optional().default(false)
 	}),
 	async (data) => {
-		await requireCapability('volunteer.manageRoles');
+		await requireCapability('project.manage');
 		try {
 			await updateService(data.id, {
 				name: data.name,
@@ -156,7 +156,7 @@ export const updateDutyList = form(
 );
 
 export const deleteDutyList = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageRoles');
+	await requireCapability('project.manage');
 	try {
 		await deleteService(data.id);
 		await getDutyLists().refresh();
@@ -238,7 +238,7 @@ function itemInput(data: {
 export const addDutyListItem = form(
 	z.object({ dutyListId: z.string().min(1), ...itemShape }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoles');
+		await requireCapability('project.manage');
 		try {
 			await addItemService(data.dutyListId, itemInput(data));
 			await Promise.all([getDutyListPage(data.dutyListId).refresh(), getDutyLists().refresh()]);
@@ -253,7 +253,7 @@ export const addDutyListItem = form(
 export const updateDutyListItem = form(
 	z.object({ id: z.string().min(1), dutyListId: z.string().min(1), ...ownershipShape }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoles');
+		await requireCapability('project.manage');
 		try {
 			await updateItemService(data.id, ownershipInput(data));
 			await getDutyListPage(data.dutyListId).refresh();
@@ -267,7 +267,7 @@ export const updateDutyListItem = form(
 export const removeDutyListItem = form(
 	z.object({ id: z.string().min(1), dutyListId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoles');
+		await requireCapability('project.manage');
 		try {
 			await removeItemService(data.id);
 			await Promise.all([getDutyListPage(data.dutyListId).refresh(), getDutyLists().refresh()]);
