@@ -29,6 +29,7 @@ import {
 	reorderTasks,
 	requireTaskInProject,
 	rescheduleTask,
+	scopeContractorMoney,
 	resolveTask,
 	setDutyDone,
 	setTaskEquipment,
@@ -83,7 +84,11 @@ export const getProjectTasks = query(projectId, async (id) => {
 	try {
 		await getProjectById(id);
 		if (!(await can('project.read'))) await requireProjectCommittee(id, 'project.manage');
-		return await listProjectTasks(id);
+		const [list, contractorMoney] = await Promise.all([
+			listProjectTasks(id),
+			can('contractor.read')
+		]);
+		return scopeContractorMoney(list, contractorMoney);
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -104,7 +109,9 @@ export const getProjectTaskPage = query(
 			await requireTaskInProject(projectId, workOrderId);
 			const view = await loadWorkOrderView(workOrderId);
 			if (!view) throw error(404, 'Task not found');
-			return { project: { id: project.id, name: project.name }, ...view };
+			// The project's guard says nothing about contractor money (#2071).
+			const engagements = (await can('contractor.read')) ? view.engagements : [];
+			return { project: { id: project.id, name: project.name }, ...view, engagements };
 		} catch (err) {
 			mapDomainError(err);
 		}

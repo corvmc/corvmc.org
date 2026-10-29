@@ -34,6 +34,7 @@ import {
 import {
 	listProjectProgress,
 	listProjectTasks,
+	scopeContractorMoney,
 	requireTaskInProject
 } from '$lib/server/project/project-task-service';
 import { ACTIVITY_MAX, listActivity } from '$lib/server/project/project-activity';
@@ -175,7 +176,8 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			origin,
 			ballotManager,
 			taking,
-			taskList
+			tasks,
+			contractorMoney
 		] = await Promise.all([
 			getProjectById(id),
 			getProjectBurn(id),
@@ -186,13 +188,15 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			getProjectOrigin(id),
 			can('ballot.manage'),
 			listProjectCommittees([id]),
-			listProjectTasks(id)
+			listProjectTasks(id),
+			can('contractor.read')
 		]);
 		const dutyLists = lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
 		return {
 			project,
 			burn,
-			attachments,
+			// Engagement rows carry quote, cost and invoice: `contractor.read`'s (#2071).
+			attachments: contractorMoney ? attachments : { ...attachments, jobs: [] },
 			committees,
 			suggestions,
 			dutyLists,
@@ -200,7 +204,7 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			canCreateBallot: ballotManager,
 			/** Every committee taking part, owner first. */
 			projectCommittees: taking,
-			taskList,
+			taskList: scopeContractorMoney(tasks, contractorMoney),
 			viewerId: viewer.id
 		};
 	} catch (err) {
