@@ -21,7 +21,8 @@
 		others = [],
 		closures = []
 	}: {
-		current: TimeSlot;
+		/** Omitted for a whole-day overview, where no slot is the one being looked at. */
+		current?: TimeSlot;
 		others?: TimeSlot[];
 		/** Times the room is shut that day, drawn as blocked spans behind the bookings. */
 		closures?: Closure[];
@@ -105,10 +106,12 @@
 	{/each}
 
 	<!-- Current reservation (foreground) -->
-	<div
-		class="absolute flex h-full items-center justify-start rounded bg-primary px-1 text-base-100"
-		style="left: {left(current)}; width: {width(current)}"
-	>
-		<BookerTypeIcon type={current.bookerType} size={16} class="text-base-100" />
-	</div>
+	{#if current}
+		<div
+			class="absolute flex h-full items-center justify-start rounded bg-primary px-1 text-base-100"
+			style="left: {left(current)}; width: {width(current)}"
+		>
+			<BookerTypeIcon type={current.bookerType} size={16} class="text-base-100" />
+		</div>
+	{/if}
 </div>

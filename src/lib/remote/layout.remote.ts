@@ -1,5 +1,5 @@
-import { countPendingAppeals } from '$lib/server/moderation/appeal-service';
 import { z } from 'zod';
+import { countStaffQueues } from '$lib/server/user/staff-queue-counts';
 import { error, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { listForUser, getBySlug, getUserRole } from '$lib/server/band/band-service';
@@ -12,18 +12,9 @@ import {
 } from '$lib/server/authorization';
 import { hasLoanableItems } from '$lib/server/inventory/item-service';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
-import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
 import { countUnifiedUnread } from '$lib/server/inbox/unified-service';
 import { countPendingRequests } from '$lib/server/inbox/direct-service';
 import { acceptsDirectMessages } from '$lib/server/moderation/moderation-service';
-import { countVolunteerWorkWaiting } from '$lib/server/volunteer/volunteer-signup-service';
-import { countPendingSubmissions } from '$lib/server/event/community-event-service';
-import { countPendingTips } from '$lib/server/local-resource/local-resource-service';
-import {
-	countAwaitingModeration,
-	countAwaitingResponse,
-	countPendingEdits
-} from '$lib/server/suggestion/suggestion-service';
 import { getForUser, getUnreadCount } from '$lib/server/notification/in-app-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
@@ -198,34 +189,10 @@ export const getStaffLayout = query(async () => {
 	// member/band/public surfaces only, so staff can administer a feature
 	// before (and after) it is switched on for everyone else.
 	const user = locals.user;
-	const [
-		userBands,
-		inboxUnread,
-		volunteerPending,
-		listingsPending,
-		suggestionsAwaiting,
-		appealsPending,
-		resourceTipsPending,
-		chrome
-	] = await Promise.all([
+	const [userBands, queues, chrome] = await Promise.all([
 		listForUser(user.id, ['band']).catch(() => []),
-		getUnresolvedCount().catch(() => 0),
-		// Everything waiting on a coordinator, not just the hour logs. The badge used
-		// to count pending hours alone, so under-18 approvals, unconfirmed claims and
-		// shifts that finished without being closed out were all invisible from the
-		// nav (docs/reports/volunteer-workflow-findings.md#d1). The dashboard sums it,
-		// so the number and the rows it stands for cannot disagree.
-		countVolunteerWorkWaiting().catch(() => 0),
-		countPendingSubmissions().catch(() => 0),
-		// Moderation leads the badge: everything in that bucket is invisible to
-		// members while it waits, which is the cost of hiding on a single report.
-		Promise.all([countAwaitingModeration(), countAwaitingResponse(), countPendingEdits()])
-			.then(([m, r, e]) => m + r + e)
-			.catch(() => 0),
-		// Appeals, not reports: an appeal is someone waiting on an answer they were promised.
-		countPendingAppeals().catch(() => 0),
-		// Public tips waiting on a decision (#1566); the row sits beside Inbox.
-		countPendingTips().catch(() => 0),
+		// Shared with the dashboard's Pending Queues, so a badge and its row agree.
+		countStaffQueues(),
 		appChrome(user)
 	]);
 
@@ -237,14 +204,7 @@ export const getStaffLayout = query(async () => {
 		// they may open the panel at all.
 		capabilities: withSeat(capabilitySet(positions), seat),
 		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
-		inboxUnread,
-		volunteerPending,
-		// Nothing renders this yet — the staff sidebar has no listings row. Either
-		// wire it to a Moderation badge or drop it along with the query above.
-		listingsPending,
-		suggestionsAwaiting,
-		appealsPending,
-		resourceTipsPending
+		...queues
 	};
 });
 

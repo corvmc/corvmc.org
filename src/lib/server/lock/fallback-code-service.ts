@@ -182,8 +182,11 @@ export async function rotateFallbackCodeNow(): Promise<{ ok: boolean; error?: st
  * gives either side. The break-glass code opens the door at any hour, so it is
  * only ever handed to someone whose session is actually happening.
  */
-export function isInAccessWindow(row: { startsAt: Date; endsAt: Date }): boolean {
-	const now = Date.now();
+export function isInAccessWindow(
+	row: { startsAt: Date; endsAt: Date },
+	at: Date = new Date()
+): boolean {
+	const now = at.getTime();
 	const graceMs = LOCK_GRACE_MINUTES * 60_000;
 	return now >= row.startsAt.getTime() - graceMs && now <= row.endsAt.getTime() + graceMs;
 }
