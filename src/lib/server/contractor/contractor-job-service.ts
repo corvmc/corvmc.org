@@ -460,14 +460,20 @@ export async function getJobById(id: string): Promise<Engagement> {
 // Reads
 // ---------------------------------------------------------------------------
 
+/** 1 when the engagement is in `view` at `now`: the same predicate the filter runs. */
+const inView = (view: ContractorJobView, now: Date) =>
+	sql<number>`case when ${engagementViewWhere(view, now)} then 1 else 0 end`;
+
 /** One row per engagement, with the contractor and the unit already joined on. */
-function jobRowQuery() {
+function jobRowQuery(now: Date) {
 	return db
 		.select({
 			...engagementSelect,
 			contractor,
 			assetTag: inventoryAsset.assetTag,
-			itemName: inventoryItem.name
+			itemName: inventoryItem.name,
+			late: inView('late', now),
+			awaitingInvoice: inView('awaiting-invoice', now)
 		})
 		.from(contractorJob)
 		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
@@ -481,10 +487,26 @@ type JobRow = EngagementRow & {
 	contractor: typeof contractor.$inferSelect;
 	assetTag: string | null;
 	itemName: string | null;
+	late: number;
+	awaitingInvoice: number;
 };
 
-function toJobRow({ contractor: who, assetTag, itemName, ...engagement }: JobRow) {
-	return { job: flatten(engagement), contractor: who, assetTag, itemName };
+function toJobRow({
+	contractor: who,
+	assetTag,
+	itemName,
+	late,
+	awaitingInvoice,
+	...engagement
+}: JobRow) {
+	return {
+		job: flatten(engagement),
+		contractor: who,
+		assetTag,
+		itemName,
+		late: Boolean(late),
+		awaitingInvoice: Boolean(awaitingInvoice)
+	};
 }
 
 /**
@@ -521,18 +543,22 @@ export async function listJobs(
 		contractorId?: string;
 		assetId?: string;
 		workOrderId?: string;
+		workOrderIds?: string[];
 		view?: ContractorJobView;
 		now?: Date;
 	} = {}
 ) {
-	const rows = await jobRowQuery()
+	if (opts.workOrderIds?.length === 0) return [];
+	const now = opts.now ?? new Date();
+	const rows = await jobRowQuery(now)
 		.where(
 			and(
-				opts.view ? engagementViewWhere(opts.view, opts.now ?? new Date()) : undefined,
+				opts.view ? engagementViewWhere(opts.view, now) : undefined,
 				opts.status ? eq(contractorJob.status, opts.status) : undefined,
 				opts.contractorId ? eq(contractorJob.contractorId, opts.contractorId) : undefined,
 				opts.assetId ? eq(workOrder.assetId, opts.assetId) : undefined,
-				opts.workOrderId ? eq(contractorJob.workOrderId, opts.workOrderId) : undefined
+				opts.workOrderId ? eq(contractorJob.workOrderId, opts.workOrderId) : undefined,
+				opts.workOrderIds ? inArray(contractorJob.workOrderId, opts.workOrderIds) : undefined
 			)
 		)
 		// Late is read soonest-promised first: the one most overdue is the first call.

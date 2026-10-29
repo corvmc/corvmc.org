@@ -27,7 +27,12 @@
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import NewWorkOrderAction from '../NewWorkOrderAction.svelte';
 	import { formatDateShort, relativeDay } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import {
+		DEFAULT_TIMEZONE,
+		contractorJobViews,
+		contractorJobViewLabels,
+		type ContractorJobView
+	} from '$lib/config';
 	import { getSchedulePage, confirmShiftClaims } from '$lib/remote/volunteer.remote';
 
 	/** `'all'` drops both bounds rather than passing a wide one, so it is really everything. */
@@ -41,7 +46,8 @@
 		'': 'All work',
 		timed: 'Has a time',
 		untimed: 'No time yet',
-		recurring: 'Recurring'
+		recurring: 'Recurring',
+		contractor: 'Contractor'
 	} as const;
 	type Kind = keyof typeof KINDS;
 
@@ -51,6 +57,8 @@
 		return (WINDOWS as readonly (number | string)[]).includes(n) ? (n as Range) : DEFAULT_WINDOW;
 	}
 	const parseKind = (raw: string | null): Kind => (raw && raw in KINDS ? (raw as Kind) : '');
+	const parseView = (raw: string | null): ContractorJobView =>
+		contractorJobViews.includes(raw as never) ? (raw as ContractorJobView) : 'open';
 
 	const initial = page.url.searchParams;
 
@@ -58,6 +66,9 @@
 	let roleFilter = $state(initial.get('role') ?? '');
 	let kind = $state<Kind>(parseKind(initial.get('kind')));
 	let shortOnly = $state(initial.get('short') === '1');
+	let contractorView = $state(parseView(initial.get('contractor')));
+	// Contractor work is not staffed by the window, role or headcount.
+	const byContractor = $derived(kind === 'contractor');
 
 	// Writes the URL, never state — `goto(..., { replaceState })` rather than
 	// `replaceState()`, which updates neither `page.url` nor the router's own entry.
@@ -67,6 +78,7 @@
 		if (roleFilter) pairs.push(['role', roleFilter]);
 		if (kind) pairs.push(['kind', kind]);
 		if (shortOnly) pairs.push(['short', '1']);
+		if (byContractor && contractorView !== 'open') pairs.push(['contractor', contractorView]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
 		const href = withQuery(resolve('/staff/volunteer/schedule'), search);
@@ -83,9 +95,16 @@
 		from: range === 'all' ? undefined : anchor.toISOString(),
 		to: range === 'all' ? undefined : new Date(anchor.getTime() + range * DAY_MS).toISOString(),
 		volunteerRoleId: roleFilter || undefined,
-		includeCancelled: true
+		includeCancelled: true,
+		contractor: byContractor ? contractorView : undefined
 	});
 	const schedule = $derived(getSchedulePage(args));
+
+	// Whether to offer the Contractor kind; the query says, and guards it.
+	let contractorAccess = $state(false);
+	$effect(() => {
+		void schedule.then((d) => (contractorAccess = d.contractorAccess));
+	});
 
 	type Row = Awaited<ReturnType<typeof getSchedulePage>>['unscheduled'][number];
 
@@ -119,9 +138,9 @@
 	}
 
 	/** "3 work orders · 2 short-staffed · 4 claims to confirm", minus the zeroes. */
-	function summarize(rows: Row[]): string {
-		const short = rows.filter(isShort).length;
-		const claims = rows.reduce((n, w) => n + (w.claimed - w.confirmed), 0);
+	function summarize(rows: Row[], staffed: Row[]): string {
+		const short = staffed.filter(isShort).length;
+		const claims = staffed.reduce((n, w) => n + (w.claimed - w.confirmed), 0);
 		const parts = [`${rows.length} ${rows.length === 1 ? 'work order' : 'work orders'}`];
 		if (short > 0) parts.push(`${short} short-staffed`);
 		if (claims > 0) parts.push(`${claims} ${claims === 1 ? 'claim' : 'claims'} to confirm`);
@@ -135,29 +154,34 @@
 
 <PageContent>
 	<FilterBar
-		activeCount={(roleFilter ? 1 : 0) +
-			(range !== DEFAULT_WINDOW ? 1 : 0) +
-			(kind ? 1 : 0) +
-			(shortOnly ? 1 : 0)}
+		activeCount={byContractor
+			? 1 + (contractorView !== 'open' ? 1 : 0)
+			: (roleFilter ? 1 : 0) +
+				(range !== DEFAULT_WINDOW ? 1 : 0) +
+				(kind ? 1 : 0) +
+				(shortOnly ? 1 : 0)}
 		onclear={() => {
 			roleFilter = '';
 			range = DEFAULT_WINDOW;
 			kind = '';
 			shortOnly = false;
+			contractorView = 'open';
 		}}
 	>
-		<Select
-			size="sm"
-			aria-label="How far ahead"
-			value={String(range)}
-			onchange={(e: Event) => {
-				range = parseRange((e.currentTarget as HTMLSelectElement).value);
-			}}
-		>
-			{#each WINDOWS as w (w)}
-				<option value={String(w)}>{windowLabel(w)}</option>
-			{/each}
-		</Select>
+		{#if !byContractor}
+			<Select
+				size="sm"
+				aria-label="How far ahead"
+				value={String(range)}
+				onchange={(e: Event) => {
+					range = parseRange((e.currentTarget as HTMLSelectElement).value);
+				}}
+			>
+				{#each WINDOWS as w (w)}
+					<option value={String(w)}>{windowLabel(w)}</option>
+				{/each}
+			</Select>
+		{/if}
 
 		<Select
 			size="sm"
@@ -165,34 +189,56 @@
 			value={kind}
 			onchange={(e: Event) => {
 				kind = parseKind((e.currentTarget as HTMLSelectElement).value);
+				if (kind === 'contractor') {
+					range = DEFAULT_WINDOW;
+					roleFilter = '';
+					shortOnly = false;
+				}
 			}}
 		>
 			{#each Object.entries(KINDS) as [value, label] (value)}
-				<option {value}>{label}</option>
+				{#if value !== 'contractor' || contractorAccess || byContractor}
+					<option {value}>{label}</option>
+				{/if}
 			{/each}
 		</Select>
 
-		<Select
-			size="sm"
-			aria-label="Role"
-			value={roleFilter}
-			onchange={(e: Event) => {
-				roleFilter = (e.currentTarget as HTMLSelectElement).value;
-			}}
-		>
-			<option value="">All roles</option>
-			<RoleOptions />
-		</Select>
+		{#if byContractor}
+			<Select
+				size="sm"
+				aria-label="Contractor work"
+				value={contractorView}
+				onchange={(e: Event) => {
+					contractorView = parseView((e.currentTarget as HTMLSelectElement).value);
+				}}
+			>
+				{#each contractorJobViews as v (v)}
+					<option value={v}>{contractorJobViewLabels[v]}</option>
+				{/each}
+			</Select>
+		{:else}
+			<Select
+				size="sm"
+				aria-label="Role"
+				value={roleFilter}
+				onchange={(e: Event) => {
+					roleFilter = (e.currentTarget as HTMLSelectElement).value;
+				}}
+			>
+				<option value="">All roles</option>
+				<RoleOptions />
+			</Select>
 
-		<label class="label cursor-pointer gap-2 text-sm">
-			<input
-				type="checkbox"
-				class="checkbox checkbox-sm"
-				checked={shortOnly}
-				onchange={(e) => (shortOnly = e.currentTarget.checked)}
-			/>
-			Short-staffed only
-		</label>
+			<label class="label cursor-pointer gap-2 text-sm">
+				<input
+					type="checkbox"
+					class="checkbox checkbox-sm"
+					checked={shortOnly}
+					onchange={(e) => (shortOnly = e.currentTarget.checked)}
+				/>
+				Short-staffed only
+			</label>
+		{/if}
 	</FilterBar>
 
 	{#if kind === 'recurring'}
@@ -207,10 +253,11 @@
 		{@const live = [...data.shifts.filter((s) => !s.cancelledAt), ...data.unscheduled].filter(
 			matchesKind
 		)}
-		{@const shown = shortOnly ? live.filter(isShort) : live}
+		{@const staffed = live.filter((w) => !data.contractors[w.id]?.length)}
+		{@const shown = shortOnly ? staffed.filter(isShort) : live}
 
 		{#if live.length > 0}
-			<p class="text-subtle text-sm">{summarize(live)}</p>
+			<p class="text-subtle text-sm">{summarize(live, staffed)}</p>
 		{/if}
 
 		{#if shown.length === 0}
@@ -232,13 +279,16 @@
 					{@const href = resolve('/staff/volunteer/shifts/[id]', { id: w.id })}
 					{@const unconfirmed = w.claimed - w.confirmed}
 					{@const full = w.confirmed >= w.capacity}
-					{@const empty = w.claimed === 0}
+					{@const engaged = data.contractors[w.id] ?? []}
+					{@const byVolunteers = engaged.length === 0}
+					{@const empty = byVolunteers && w.claimed === 0}
 					{#if idx === 0 || groupKey(shown[idx - 1]) !== groupKey(w)}
 						<tr>
 							<td colspan="4" class="cell-group">{groupLabel(w)}</td>
 						</tr>
 					{/if}
-					<!-- Nobody on it at all is the state worth seeing from across the room. -->
+					<!-- Nobody on it at all is the state worth seeing from across the room;
+					     a contractor's work is not staffed by volunteers. -->
 					<tr class="hover {empty ? 'border-l-4 border-l-warning bg-warning/5' : ''}">
 						<td class="whitespace-nowrap">
 							<a {href} class:text-subtle={!w.startsAt} class="link font-medium">{when(w)}</a>
@@ -251,7 +301,7 @@
 							<a {href} class="link truncate font-medium">{shiftLabel(w)}</a>
 							<!-- One subline: the role under a name, else the show, else the
 							     briefing. A blank one says it is not tied to a show. -->
-							{#if w.title}
+							{#if w.title && (w.roleName || byVolunteers)}
 								<div class="truncate text-subtle text-xs">
 									{w.roleName ?? NO_ROLE_LABEL}{#if w.eventTitle}
 										· {w.eventTitle}{/if}
@@ -265,18 +315,28 @@
 							{:else if w.notes}
 								<div class="truncate text-subtle text-xs" title={w.notes}>{w.notes}</div>
 							{/if}
+							{#each engaged as c, i (i)}
+								<div class="truncate text-xs">
+									{c.name}
+									{#if c.late}<Badge variant="error" size="sm">Late</Badge>{/if}
+									{#if c.awaitingInvoice}<Badge variant="warning" size="sm">Awaiting invoice</Badge
+										>{/if}
+								</div>
+							{/each}
 						</td>
 
 						<td class="cell-num whitespace-nowrap">
-							<span
-								class:text-success={full}
-								class:text-error={!full && w.confirmed === 0}
-								class:text-warning={!full && w.confirmed > 0 && unconfirmed > 0}
-							>
-								{w.confirmed} of {w.capacity}
-							</span>
-							{#if unconfirmed > 0}
-								<span class="text-xs text-warning">· {unconfirmed} unconfirmed</span>
+							{#if byVolunteers}
+								<span
+									class:text-success={full}
+									class:text-error={!full && w.confirmed === 0}
+									class:text-warning={!full && w.confirmed > 0 && unconfirmed > 0}
+								>
+									{w.confirmed} of {w.capacity}
+								</span>
+								{#if unconfirmed > 0}
+									<span class="text-xs text-warning">· {unconfirmed} unconfirmed</span>
+								{/if}
 							{/if}
 						</td>
 
@@ -305,7 +365,7 @@
 										{/snippet}
 									</Action>
 								{/if}
-								{#if !full}
+								{#if byVolunteers && !full}
 									<!-- Opens the work order, whose candidate column is the picker
 									     and also shows who is already on it. -->
 									<Button {href} variant={empty ? 'primary' : 'ghost'} size="xs">

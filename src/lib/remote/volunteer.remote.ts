@@ -107,8 +107,13 @@ import {
 	scheduleWorkOrder as scheduleWorkOrderService,
 	resolveWorkOrder as resolveWorkOrderService,
 	listWorkOrders,
+	listWorkOrdersByIds,
+	isScheduled,
 	isRoledShift
 } from '$lib/server/volunteer/work-order-service';
+import { listJobs } from '$lib/server/contractor/contractor-job-service';
+import { listContractors } from '$lib/server/contractor/contractor-service';
+import { contractorJobViews } from '$lib/config';
 import {
 	claimShift as claimShiftService,
 	cancelSignup as cancelSignupService,
@@ -1522,21 +1527,60 @@ export const getShifts = query(shiftFilters, async (f) => {
  * windowed ones inside the range and the ones with no time yet, which have no
  * date for a range to bound.
  */
-export const getSchedulePage = query(shiftFilters, async (f) => {
-	await requireCapability('volunteer.read');
-	const [shifts, unscheduled] = await Promise.all([
-		listShifts({
-			volunteerRoleId: f.volunteerRoleId || undefined,
-			from: f.from ? new Date(f.from) : undefined,
-			to: f.to ? new Date(f.to) : undefined,
-			includeCancelled: f.includeCancelled
-		}),
-		listWorkOrders({ volunteerRoleId: f.volunteerRoleId || undefined })
-	]);
-	// Re-sorted here, not in `listWorkOrders`: that is an oldest-first queue for its
-	// other callers, but on a schedule the next deadline is what reads first (#1966).
-	return { shifts, unscheduled: unscheduled.sort(byDueAt) };
-});
+export const getSchedulePage = query(
+	shiftFilters.extend({ contractor: z.enum(contractorJobViews).optional() }),
+	async (f) => {
+		await requireCapability('volunteer.read');
+		if (f.contractor) return contractorSchedule(f.contractor);
+		const [shifts, unscheduled] = await Promise.all([
+			listShifts({
+				volunteerRoleId: f.volunteerRoleId || undefined,
+				from: f.from ? new Date(f.from) : undefined,
+				to: f.to ? new Date(f.to) : undefined,
+				includeCancelled: f.includeCancelled
+			}),
+			listWorkOrders({ volunteerRoleId: f.volunteerRoleId || undefined })
+		]);
+		// Re-sorted here, not in `listWorkOrders`: that is an oldest-first queue for its
+		// other callers, but on a schedule the next deadline is what reads first (#1966).
+		unscheduled.sort(byDueAt);
+		const ids = [...shifts, ...unscheduled].map((w) => w.id);
+		const contractorAccess = await can('contractor.read');
+		const jobs = contractorAccess ? await listJobs({ workOrderIds: ids }) : [];
+		return { shifts, unscheduled, contractors: contractorMarks(jobs), contractorAccess };
+	}
+);
+
+type ScheduleJob = Awaited<ReturnType<typeof listJobs>>[number];
+
+/** Per work order, who is engaged on it and whether that is late or awaiting invoice. */
+function contractorMarks(jobs: ScheduleJob[]) {
+	const marks: Record<string, { name: string; late: boolean; awaitingInvoice: boolean }[]> = {};
+	for (const j of jobs) {
+		(marks[j.job.workOrderId] ??= []).push({
+			name: j.contractor.name,
+			late: j.late,
+			awaitingInvoice: j.awaitingInvoice
+		});
+	}
+	return marks;
+}
+
+/**
+ * The contractor filter: work orders with an engagement in that view, unwindowed
+ * and whatever their state — work awaiting an invoice is already resolved.
+ */
+async function contractorSchedule(view: (typeof contractorJobViews)[number]) {
+	await requireCapability('contractor.read');
+	const jobs = await listJobs({ view });
+	const rows = await listWorkOrdersByIds([...new Set(jobs.map((j) => j.job.workOrderId))]);
+	return {
+		shifts: rows.filter(isScheduled),
+		unscheduled: rows.filter((w) => !isScheduled(w)).sort(byDueAt),
+		contractors: contractorMarks(jobs),
+		contractorAccess: true
+	};
+}
 
 /**
  * Open shifts for the member, with the reason they can't take one attached
@@ -2265,7 +2309,11 @@ export const getStaffShiftPage = query(z.string(), async (id) => {
 	await requireCapability('volunteer.read');
 	const view = await loadWorkOrderView(id);
 	if (!view) throw error(404, 'Shift not found');
-	return view;
+	// Who can be engaged from this page; empty for a caller who cannot engage.
+	const contractors = (await can('contractor.manage'))
+		? (await listContractors()).map((c) => ({ id: c.id, name: c.name }))
+		: [];
+	return { ...view, contractors };
 });
 
 /** A shift page's history: the work order's audit entries and duty ticks, newest first. */

@@ -43,6 +43,8 @@ vi.mock('$lib/server/authorization', async () => {
 
 const loadWorkOrderView = vi.hoisted(() => vi.fn());
 vi.mock('$lib/server/volunteer/work-order-view', () => ({ loadWorkOrderView }));
+const listContractors = vi.hoisted(() => vi.fn());
+vi.mock('$lib/server/contractor/contractor-service', () => ({ listContractors }));
 
 const { getStaffShiftPage } = (await import('./volunteer.remote')) as unknown as {
 	getStaffShiftPage: (id: string) => Promise<unknown>;
@@ -62,9 +64,15 @@ describe('getStaffShiftPage', () => {
 		expect(loadWorkOrderView).not.toHaveBeenCalled();
 	});
 
-	it('serves the view to a caller who has it', async () => {
+	it('serves the view, with who can be engaged on it, to a caller who has it', async () => {
 		loadWorkOrderView.mockResolvedValue({ shift: { id: 'wo-1' } });
-		await expect(getStaffShiftPage('wo-1')).resolves.toEqual({ shift: { id: 'wo-1' } });
+		listContractors.mockResolvedValue([
+			{ id: 'c-1', name: 'Benton Electric', trade: 'electrical' }
+		]);
+		await expect(getStaffShiftPage('wo-1')).resolves.toEqual({
+			shift: { id: 'wo-1' },
+			contractors: [{ id: 'c-1', name: 'Benton Electric' }]
+		});
 	});
 
 	it('404s on a work order that does not exist', async () => {

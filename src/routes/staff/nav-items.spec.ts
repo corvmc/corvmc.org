@@ -90,8 +90,6 @@ describe('activeNavKey', () => {
 		['/staff/inventory/problems/abc', 'equipment-reports'],
 		['/staff/contractors', 'contractors'],
 		['/staff/contractors/abc', 'contractors'],
-		['/staff/contractors/jobs', 'contractor-jobs'],
-		['/staff/contractors/jobs/abc', 'contractor-jobs'],
 		['/staff/incidents', 'incidents'],
 		['/staff/incidents/abc', 'incidents'],
 		['/staff/volunteer/report', 'volunteer-report'],
@@ -187,13 +185,7 @@ describe('the nav tree', () => {
 			'instructors',
 			'volunteer'
 		]);
-		expect(keys('planning')).toEqual([
-			'suggestions',
-			'ballots',
-			'projects',
-			'recurring-work',
-			'contractor-jobs'
-		]);
+		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'recurring-work']);
 		expect(keys('space')).toEqual([
 			'reservations',
 			'equipment',

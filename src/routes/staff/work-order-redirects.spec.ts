@@ -15,6 +15,7 @@ vi.mock('$lib/server/authorization', () => ({ can: async () => permitted }));
 
 const shift = await import('./volunteer/shifts/[id]/+page.server');
 const job = await import('./contractors/jobs/[id]/+page.server');
+const list = await import('./contractors/jobs/+page');
 
 const signedIn = { user: { id: 'usr-1' } };
 type Load = (e: unknown) => Promise<unknown>;
@@ -72,5 +73,25 @@ describe('/staff/contractors/jobs/[id]', () => {
 		permitted = false;
 		await expect(run(job.load, 'cj-1')).rejects.toMatchObject({ status: 403 });
 		expect(getJobById).not.toHaveBeenCalled();
+	});
+});
+
+describe('/staff/contractors/jobs', () => {
+	const go = async (search: string) =>
+		(list.load as unknown as Load)({
+			url: new URL(`http://x/staff/contractors/jobs${search}`),
+			route: { id: '/staff/contractors/jobs' },
+			request: new Request(`http://x/staff/contractors/jobs${search}`)
+		});
+	const to = (location: string) => ({ status: 308, location });
+
+	it("is the Schedule's contractor filter, keeping an old view", async () => {
+		await expect(go('')).rejects.toMatchObject(to('/staff/volunteer/schedule?kind=contractor'));
+		await expect(go('?view=late')).rejects.toMatchObject(
+			to('/staff/volunteer/schedule?kind=contractor&contractor=late')
+		);
+		await expect(go('?view=bogus')).rejects.toMatchObject(
+			to('/staff/volunteer/schedule?kind=contractor')
+		);
 	});
 });

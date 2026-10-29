@@ -68,7 +68,7 @@ test.describe('contractor jobs', () => {
 	 */
 	test('a repair takes the unit out of service and brings it back', async ({ page }, { retry }) => {
 		const asset = SEED_SERVICE_ASSETS[retry];
-		const title = `Retube ${asset.tag}`;
+		const title = asset.title;
 		const state = () => assetState(asset.id);
 		await loginAsStaff(page);
 
@@ -76,28 +76,22 @@ test.describe('contractor jobs', () => {
 		const before = await state();
 		expect(before.status).toBe('in_service');
 
-		// Open a job against the unit.
-		await page.goto('/staff/contractors/jobs');
-		await expect(page.getByRole('heading', { name: 'Contractor jobs' })).toBeVisible();
-
-		await page.getByRole('button', { name: 'New job' }).click();
+		// Engage a contractor on the unit's work order.
+		await page.goto(`/staff/volunteer/shifts/${asset.workOrderId}`);
+		await page.getByRole('button', { name: 'Engage contractor', exact: true }).click();
 		const dialog = page.getByRole('dialog');
 		await dialog.locator('select').first().selectOption({ label: SEED_CONTRACTOR_NAME });
-		await dialog.locator('input[name$="title"]').fill(title);
-		await dialog.locator('input[name$="assetId"]').fill(asset.id);
-		await modalSubmit(page, /^New job$/).click();
+		await modalSubmit(page, /^Engage contractor$/).click();
 
-		const jobRow = page.getByRole('row').filter({ hasText: title });
-		await expect(jobRow).toBeVisible({ timeout: 15000 });
+		await expect(page.getByRole('heading', { name: 'Engagements', exact: true })).toBeVisible({
+			timeout: 15000
+		});
 
-		// Opening a job is not sending the unit anywhere — the ledger must be
-		// untouched until it is actually scheduled.
+		// Engaging is not sending the unit anywhere — the ledger must be
+		// untouched until it is actually booked.
 		expect((await state()).status).toBe('in_service');
 
-		// Book it: this is what takes the unit out of service. The title opens the
-		// engagement's card on its work order's page, which carries its actions.
-		await jobRow.getByRole('link', { name: title }).click();
-		await expect(page).toHaveURL(/\/staff\/volunteer\/shifts\/[^/#]+#engagement-/);
+		// Book it: this is what takes the unit out of service.
 		await page.getByRole('button', { name: 'Book', exact: true }).click();
 		await modalSubmit(page, /^Book$/).click();
 
@@ -137,8 +131,12 @@ test.describe('contractor jobs', () => {
 		// nor taken from stock on balance.
 		expect(after.movements.reduce((sum, m) => sum + m.quantity, 0)).toBe(0);
 
-		// Finished with no cost entered: it leaves Open and waits on its invoice.
+		// Finished with no cost entered: the old list's address lands on the
+		// Schedule's contractor filter, where it waits on its invoice.
 		await page.goto('/staff/contractors/jobs?view=awaiting-invoice');
+		await expect(page).toHaveURL(
+			/\/staff\/volunteer\/schedule\?kind=contractor&contractor=awaiting-invoice/
+		);
 		await expect(page.getByRole('row').filter({ hasText: title })).toContainText(
 			'Awaiting invoice',
 			{ timeout: 15000 }

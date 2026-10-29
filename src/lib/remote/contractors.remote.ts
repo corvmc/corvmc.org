@@ -7,12 +7,7 @@ import { getStaffAssetDetail } from './inventory.remote';
 import { getStaffShiftPage, getWorkOrderActivity } from './volunteer.remote';
 import { getProjectTaskPage } from './tasks.remote';
 import { getProjectActivity } from './projects.remote';
-import {
-	contractorTrades,
-	contractorJobStatuses,
-	contractorJobViews,
-	DEFAULT_TIMEZONE
-} from '$lib/config';
+import { contractorTrades, contractorJobStatuses, DEFAULT_TIMEZONE } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	archiveContractor,
@@ -25,7 +20,6 @@ import {
 import {
 	cancelJob,
 	completeJob,
-	countJobsByView,
 	createJob,
 	declineJob,
 	listJobs,
@@ -83,12 +77,8 @@ const contractorFields = {
 
 const jobFields = {
 	contractorId: z.uuid(),
-	/** The work order's title: a job made here creates its work order. */
-	title: z.string().min(1).max(300),
-	// `''` rather than a bare `.optional()`: the "Building work — no unit" option
-	// submits an empty string, and `.optional()` rejects that instead of
-	// ignoring it, which fails the whole submit rather than the one field.
-	assetId: z.union([z.literal(''), z.uuid()]).optional(),
+	/** Engaged on existing work: what the work is, and its unit, are the work order's. */
+	workOrderId: z.uuid(),
 	scheduledFor: optionalDate,
 	expectedBackAt: optionalDate,
 	quotedCents: optionalMoney,
@@ -156,30 +146,6 @@ export const getContractorDetail = query(z.string(), async (id) => {
 		mapDomainError(err);
 	}
 });
-
-/**
- * Engagements across every work order, one filter at a time, with each filter's
- * count for its tab. Late gets a tab count rather than an alert: the alert
- * repeated the Late tab's rows above whichever tab was open.
- */
-export const getJobsPage = query(
-	z.object({ view: z.enum(contractorJobViews).optional() }).optional(),
-	async (input) => {
-		await requireCapability('contractor.read');
-		const now = new Date();
-		const [jobs, counts, contractors] = await Promise.all([
-			listJobs({ view: input?.view ?? 'open', now }),
-			countJobsByView(now),
-			listContractors()
-		]);
-		return { jobs, counts, contractors };
-	}
-);
-
-/** The page is keyed by its filter, and a mutation can move a job between any of them. */
-function refreshJobsPage() {
-	for (const view of contractorJobViews) void getJobsPage({ view }).refresh();
-}
 
 /** The engagement's own card lives on its work order's page, whichever route that is. */
 async function refreshWorkOrderPage(job: { workOrderId: string; projectId: string | null }) {
@@ -261,15 +227,14 @@ export const createJobForm = form(z.object(jobFields), async (raw) => {
 	try {
 		const job = await createJob({
 			contractorId: data.contractorId,
-			title: data.title,
-			assetId: data.assetId || null,
+			workOrderId: data.workOrderId,
 			scheduledFor: calendarDate(data.scheduledFor) ?? null,
 			expectedBackAt: calendarDate(data.expectedBackAt) ?? null,
 			quotedCents: data.quotedCents ?? null,
 			notes: data.notes ?? null,
 			requestedByUserId: actor.id
 		});
-		refreshJobsPage();
+		await refreshWorkOrderPage(job);
 		if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
 		return { success: true, id: job.id };
 	} catch (err) {
@@ -293,7 +258,6 @@ export const scheduleJobForm = form(
 				actorId: actor.id
 			});
 			await refreshWorkOrderPage(job);
-			refreshJobsPage();
 			if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
 			return { success: true };
 		} catch (err) {
@@ -342,7 +306,6 @@ export const completeJobForm = form(
 				actorId: actor.id
 			});
 			await refreshWorkOrderPage(job);
-			refreshJobsPage();
 			if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
 			return { success: true };
 		} catch (err) {
@@ -357,7 +320,6 @@ export const cancelJobForm = form(z.object({ id: z.uuid() }), async (raw) => {
 	try {
 		const job = await cancelJob(id);
 		await refreshWorkOrderPage(job);
-		refreshJobsPage();
 		if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
 		return { success: true };
 	} catch (err) {
@@ -373,7 +335,6 @@ function closeJobForm(close: (id: string) => Promise<Engagement>) {
 		try {
 			const job = await close(id);
 			await refreshWorkOrderPage(job);
-			refreshJobsPage();
 			if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
 			return { success: true };
 		} catch (err) {
@@ -402,7 +363,6 @@ export const recordInvoiceForm = form(
 				paidAt: calendarDate(data.paidAt) ?? null
 			});
 			await refreshWorkOrderPage(job);
-			refreshJobsPage();
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);

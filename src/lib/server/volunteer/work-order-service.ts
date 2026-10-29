@@ -840,6 +840,15 @@ export async function listShifts(
 	return withCounts(rows).filter(isScheduled);
 }
 
+/** These work orders as list rows, whatever their state; the caller picked them. */
+export async function listWorkOrdersByIds(ids: string[]): Promise<ShiftWithCounts[]> {
+	if (ids.length === 0) return [];
+	const rows = await shiftRowsQuery()
+		.where(inArray(workOrder.id, ids))
+		.orderBy(asc(workOrder.startsAt), asc(workOrder.createdAt), asc(workOrder.id));
+	return withCounts(rows);
+}
+
 /**
  * One shift, with the same trimmings as a list row.
  *
