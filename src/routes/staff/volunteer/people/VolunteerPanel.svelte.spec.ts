@@ -13,6 +13,9 @@ const availability =
 
 const volunteer = {
 	userId: 'u-1',
+	personId: 'u-1',
+	email: 'robin@example.com',
+	memberStatus: 'member' as const,
 	member: {
 		type: 'member' as const,
 		id: 'u-1',

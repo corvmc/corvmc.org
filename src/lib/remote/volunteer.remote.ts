@@ -15,6 +15,8 @@ import { getProjectActivity } from './projects.remote';
 import { ACTIVITY_MAX, listActivity } from '$lib/server/project/project-activity';
 import { loadWorkOrderView } from '$lib/server/volunteer/work-order-view';
 import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
+import { listAllVolunteers, volunteerRosterFilters } from '$lib/server/volunteer/volunteer-roster';
+import { rosterEmails } from '$lib/server/roster/roster';
 import { listInterestsForUser } from '$lib/server/volunteer/volunteer-interest-service';
 import {
 	getSignupForUser,
@@ -439,6 +441,12 @@ export const getShiftCandidates = query(
 		};
 	}
 );
+
+/** "Copy emails" on the volunteers roster: every match, not just this page. */
+export const getStaffVolunteerEmails = query(volunteerRosterFilters, async (f) => {
+	await requireCapability('volunteer.read');
+	return rosterEmails(await listAllVolunteers(f));
+});
 
 const volunteerListFilters = z.object({
 	search: z.string().optional(),
