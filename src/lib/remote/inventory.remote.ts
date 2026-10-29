@@ -1817,11 +1817,14 @@ export const getStaffAssetDetail = query(z.string(), async (id) => {
 	// component: what a contractor was paid to do to this unit is part of its
 	// record, and a second awaited query out of the page is a serial round trip
 	// on first paint.
-	const [asset, movements, serviceHistory] = await Promise.all([
+	const [asset, movements, history] = await Promise.all([
 		getAsset(id),
 		getAssetMovements(id),
 		jobsForAsset(id)
 	]);
+	// After `getAsset`'s guard. Contractor and cost are `contractor.read`'s (#2071);
+	// null hides the section rather than claiming no contractor ever touched it.
+	const serviceHistory = (await can('contractor.read')) ? history : null;
 
 	// Computed here rather than in the component: the rule is server-side and
 	// depends on the acquisition this unit arrived on, which the asset row only

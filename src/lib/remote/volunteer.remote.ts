@@ -2309,11 +2309,14 @@ export const getStaffShiftPage = query(z.string(), async (id) => {
 	await requireCapability('volunteer.read');
 	const view = await loadWorkOrderView(id);
 	if (!view) throw error(404, 'Shift not found');
+	// `volunteer.read` says nothing about contractor money (#2071): a volunteer
+	// coordinator holds it without `contractor.read`.
+	const engagements = (await can('contractor.read')) ? view.engagements : [];
 	// Who can be engaged from this page; empty for a caller who cannot engage.
 	const contractors = (await can('contractor.manage'))
 		? (await listContractors()).map((c) => ({ id: c.id, name: c.name }))
 		: [];
-	return { ...view, contractors };
+	return { ...view, engagements, contractors };
 });
 
 /** A shift page's history: the work order's audit entries and duty ticks, newest first. */

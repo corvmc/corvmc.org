@@ -349,7 +349,7 @@
 											: ''}"
 										onclick={(e) => open(e, t.id)}>{t.title}</a
 									>
-									{#if t.duties.total > 0 || t.engagement}
+									{#if t.duties.total > 0 || (t.engagement && list.contractorMoney)}
 										<div class="truncate text-subtle">
 											{#if t.duties.total > 0}
 												<Button
@@ -370,7 +370,7 @@
 													{t.duties.done}/{t.duties.total} duties
 												</Button>
 											{/if}
-											{#if t.mode === 'contractor' && t.engagement}
+											{#if t.mode === 'contractor' && t.engagement && list.contractorMoney}
 												<a class="link" href={resolve(`/staff/contractors/jobs/${t.engagement.id}`)}
 													>{t.engagement.invoiceRef
 														? `Invoice ${t.engagement.invoiceRef}`

@@ -69,7 +69,7 @@
 				<span class="block text-muted">{task.roleName}</span>
 			{/if}
 		</Fact>
-		{#if engagement}
+		{#if engagement && list.contractorMoney}
 			{#if engagement.quotedCents !== null}
 				<Fact label="Quoted" value={formatCents(engagement.quotedCents)} />
 			{/if}

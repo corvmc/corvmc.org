@@ -207,55 +207,57 @@
 		fortnight late — and those are the questions somebody actually asks of a
 		unit that has been in the shop three times.
 	-->
-	<InfoCard title="Service">
-		{#if serviceHistory.length === 0}
-			<EmptyState description="No contractor has worked on this unit" />
-		{:else}
-			<Table>
-				{#snippet head()}
-					<th class="whitespace-nowrap">When</th>
-					<th>Work</th>
-					<th>Contractor</th>
-					<th class="cell-num">Cost</th>
-				{/snippet}
-				{#each serviceHistory as row (row.job.id)}
-					<tr>
-						<td class="whitespace-nowrap">
-							{#if row.job.completedAt}
-								{formatDateShort(row.job.completedAt)}
-							{:else if row.job.scheduledFor}
-								{formatDateShort(row.job.scheduledFor)}
-							{:else}
-								—
-							{/if}
-						</td>
-						<td class="cell-primary">
-							<a
-								class="link"
-								href="{resolve(
-									workOrderHref({ id: row.job.workOrderId, projectId: row.job.projectId })
-								)}#engagement-{row.job.id}"
-							>
-								{row.job.title}
-							</a>
-							<Badge
-								variant={contractorJobStatusBadge[row.job.status as ContractorJobStatus]}
-								size="sm"
-							>
-								{contractorJobStatusLabels[row.job.status as ContractorJobStatus]}
-							</Badge>
-						</td>
-						<td>
-							<a class="link" href={resolve(`/staff/contractors/${row.contractor.id}`)}>
-								{row.contractor.name}
-							</a>
-						</td>
-						<td class="cell-num">
-							{row.job.costCents != null ? formatCents(row.job.costCents) : '—'}
-						</td>
-					</tr>
-				{/each}
-			</Table>
-		{/if}
-	</InfoCard>
+	{#if serviceHistory}
+		<InfoCard title="Service">
+			{#if serviceHistory.length === 0}
+				<EmptyState description="No contractor has worked on this unit" />
+			{:else}
+				<Table>
+					{#snippet head()}
+						<th class="whitespace-nowrap">When</th>
+						<th>Work</th>
+						<th>Contractor</th>
+						<th class="cell-num">Cost</th>
+					{/snippet}
+					{#each serviceHistory as row (row.job.id)}
+						<tr>
+							<td class="whitespace-nowrap">
+								{#if row.job.completedAt}
+									{formatDateShort(row.job.completedAt)}
+								{:else if row.job.scheduledFor}
+									{formatDateShort(row.job.scheduledFor)}
+								{:else}
+									—
+								{/if}
+							</td>
+							<td class="cell-primary">
+								<a
+									class="link"
+									href="{resolve(
+										workOrderHref({ id: row.job.workOrderId, projectId: row.job.projectId })
+									)}#engagement-{row.job.id}"
+								>
+									{row.job.title}
+								</a>
+								<Badge
+									variant={contractorJobStatusBadge[row.job.status as ContractorJobStatus]}
+									size="sm"
+								>
+									{contractorJobStatusLabels[row.job.status as ContractorJobStatus]}
+								</Badge>
+							</td>
+							<td>
+								<a class="link" href={resolve(`/staff/contractors/${row.contractor.id}`)}>
+									{row.contractor.name}
+								</a>
+							</td>
+							<td class="cell-num">
+								{row.job.costCents != null ? formatCents(row.job.costCents) : '—'}
+							</td>
+						</tr>
+					{/each}
+				</Table>
+			{/if}
+		</InfoCard>
+	{/if}
 </PageContent>

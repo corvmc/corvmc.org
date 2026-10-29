@@ -859,5 +859,27 @@ export async function listProjectTasks(projectId: string) {
 	};
 }
 
+/**
+ * The task list as a caller sees it: who is engaged stays (a committee
+ * delegates its own tasks), what they quoted, cost and invoiced only with
+ * `contractor.read`, which the remote decides and passes in.
+ */
+export function scopeContractorMoney(list: ProjectTaskList, contractorMoney: boolean) {
+	if (contractorMoney) return { ...list, contractorMoney };
+	const tasks = list.tasks.map((t) => ({
+		...t,
+		engagement: t.engagement && {
+			...t.engagement,
+			quotedCents: null,
+			costCents: null,
+			isDonated: false,
+			fairValueCents: null,
+			invoiceRef: null,
+			paidAt: null
+		}
+	}));
+	return { ...list, tasks, contractorMoney };
+}
+
 export type ProjectTaskList = Awaited<ReturnType<typeof listProjectTasks>>;
 export type ProjectTask = ProjectTaskList['tasks'][number];
