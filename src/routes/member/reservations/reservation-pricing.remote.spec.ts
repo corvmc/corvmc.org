@@ -135,3 +135,56 @@ describe('getReservations pricing', () => {
 		expect(row.creditsAvailable).toBe(false);
 	});
 });
+
+// #2054: the card offers "Pay with credits" exactly where `payForReservation`
+// would settle from free hours alone.
+describe('getReservations payableWithCredits', () => {
+	const HOUR = 60 * 60 * 1000;
+	// A 2-hour booking needs 4 credits (30-minute blocks).
+	function twoHourRow(startsInHours: number, overrides: Record<string, unknown> = {}) {
+		const startsAt = new Date(Date.now() + startsInHours * HOUR);
+		return {
+			id: 'res-2h',
+			status: 'scheduled',
+			startsAt,
+			endsAt: new Date(startsAt.getTime() + 2 * HOUR),
+			cashDueCents: null,
+			...overrides
+		};
+	}
+
+	it('is true inside the confirmation window when free hours cover all of it', async () => {
+		freeHoursBalance = 4;
+		selectResult = [twoHourRow(24)];
+		const [row] = await getReservations();
+		expect(row.payableWithCredits).toBe(true);
+	});
+
+	it('is false when free hours cover only part of it', async () => {
+		freeHoursBalance = 3;
+		selectResult = [twoHourRow(24)];
+		const [row] = await getReservations();
+		expect(row.creditsAvailable).toBe(true);
+		expect(row.payableWithCredits).toBe(false);
+	});
+
+	it('is false before the confirmation window opens, where the settle is refused', async () => {
+		freeHoursBalance = 4;
+		selectResult = [twoHourRow(24 * 10)];
+		const [row] = await getReservations();
+		expect(row.payableWithCredits).toBe(false);
+	});
+
+	it('is false for a waitlisted booking or one whose credits are committed', async () => {
+		freeHoursBalance = 4;
+		selectResult = [
+			twoHourRow(24, { status: 'waitlisted' }),
+			twoHourRow(24, { id: 'res-c', status: 'confirmed', cashDueCents: 1500 })
+		];
+		const rows = await getReservations();
+		expect(rows.map((r: { payableWithCredits: boolean }) => r.payableWithCredits)).toEqual([
+			false,
+			false
+		]);
+	});
+});

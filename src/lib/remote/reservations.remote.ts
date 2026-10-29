@@ -95,7 +95,7 @@ import {
 } from '$lib/server/reservation/reservation-service';
 import { orientationForReservation } from '$lib/server/volunteer/orientation-service';
 import { mapDomainError } from '$lib/server/errors';
-import { isAwaitingPayment, isTerminalStatus } from '$lib/utils/reservation-actions';
+import { isAwaitingPayment, isOverdue, isTerminalStatus } from '$lib/utils/reservation-actions';
 import { bookerTypes, type BookerType } from '$lib/config';
 import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
 import { requireInstructor } from '$lib/server/instructor/instructor-context';
@@ -2412,7 +2412,12 @@ export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data,
 	return { success: true };
 });
 
-type ReservationWithPrice = Reservation & { price: number; creditsAvailable: boolean };
+type ReservationWithPrice = Reservation & {
+	price: number;
+	creditsAvailable: boolean;
+	/** Free hours cover all of it and `payForReservation` would settle it now. */
+	payableWithCredits: boolean;
+};
 export const getReservations = query(
 	z
 		.object({
@@ -2477,8 +2482,20 @@ export const getReservations = query(
 			const netCents = value.cashDueCents ?? totalCents;
 			// Credits can still apply only to an uncommitted, non-terminal booking.
 			const creditsAvailable = hasFreeHours && value.cashDueCents == null && !isTerminal;
+			// The settle `payForReservation` already does, and only where it does
+			// it: outside the window it refuses a fully credit-covered booking.
+			const payableWithCredits =
+				creditsAvailable &&
+				(value.status === 'scheduled' || value.status === 'confirmed') &&
+				withinConfirmationWindow(value.startsAt) &&
+				computeReservationCredit({
+					totalCents,
+					durationHours,
+					hourlyRateCents: rateInCents,
+					freeHoursBalance
+				}).remainingCents <= 0;
 
-			return { ...value, price: netCents / 100, creditsAvailable };
+			return { ...value, price: netCents / 100, creditsAvailable, payableWithCredits };
 		});
 	}
 );
@@ -2659,7 +2676,15 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 	// `requireInstructor` is what actually authorizes the booking. Sending a
 	// boolean rather than the record keeps `applicationNote` — staff-only — off a
 	// member-facing DTO by construction rather than by remembering to omit it.
-	return { active, all, membership, contact, isInstructor: instructor?.status === 'active' };
+	return {
+		active,
+		// Kept in `all` as well: Overdue is what is owed, All is the history.
+		overdue: all.filter((r) => isOverdue(r)),
+		all,
+		membership,
+		contact,
+		isInstructor: instructor?.status === 'active'
+	};
 });
 
 // ===========================================================================

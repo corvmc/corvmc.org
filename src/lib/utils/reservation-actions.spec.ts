@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
 	isAwaitingPayment,
+	isOverdue,
 	isTerminalStatus,
 	memberPayAction,
 	overlappingReservations,
@@ -288,5 +289,32 @@ describe('memberPayAction', () => {
 		const r = { status: 'confirmed', startsAt: hoursFromNow(-2), paidAt: null, cashDueCents: 500 };
 		expect(isAwaitingPayment(r)).toBe(true);
 		expect(memberPayAction(r, now)).toBe('balance');
+	});
+});
+
+describe('isOverdue', () => {
+	const now = new Date('2026-10-29T12:00:00Z');
+	const ended = new Date('2026-10-28T12:00:00Z');
+	const base = { status: 'confirmed', endsAt: ended, paidAt: null, cashDueCents: 1500 };
+
+	it('a confirmed session that ended with a balance owed', () => {
+		expect(isOverdue(base, now)).toBe(true);
+		expect(isOverdue({ ...base, cashDueCents: null }, now)).toBe(true);
+	});
+
+	it('a completed or no-show session never paid', () => {
+		expect(isOverdue({ ...base, status: 'completed' }, now)).toBe(true);
+		expect(isOverdue({ ...base, status: 'no_show' }, now)).toBe(true);
+	});
+
+	it('not before the session ends', () => {
+		expect(isOverdue({ ...base, endsAt: new Date('2026-10-29T13:00:00Z') }, now)).toBe(false);
+	});
+
+	it('not once paid, refunded, settled to zero or cancelled', () => {
+		expect(isOverdue({ ...base, paidAt: ended }, now)).toBe(false);
+		expect(isOverdue({ ...base, refundedAt: ended }, now)).toBe(false);
+		expect(isOverdue({ ...base, cashDueCents: 0 }, now)).toBe(false);
+		expect(isOverdue({ ...base, status: 'cancelled' }, now)).toBe(false);
 	});
 });

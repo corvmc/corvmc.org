@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Action from '$lib/components/ui/Action.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import {
 		CancelReservationAction,
@@ -12,14 +13,22 @@
 	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
 	import { withinConfirmationWindow } from '$lib/config';
 	import { memberPayAction } from '$lib/utils/reservation-actions';
+	import { payForReservation } from '$lib/remote/reservations.remote';
 
-	let { reservation, onchange }: { reservation: Reservation; onchange?: () => void } = $props();
+	let {
+		reservation,
+		onchange
+	}: { reservation: Reservation & { payableWithCredits?: boolean }; onchange?: () => void } =
+		$props();
 
 	let isPast = $derived(reservation.startsAt.getTime() <= Date.now());
 	// Members may only confirm (without paying) within the window; before then we
 	// show when it opens and offer paying to lock the slot in early.
 	let canConfirm = $derived(withinConfirmationWindow(reservation.startsAt));
 	let payAction = $derived(memberPayAction(reservation));
+	// Settles from free hours alone, so it stands in for Confirm and the pay link.
+	let withCredits = $derived(reservation.payableWithCredits === true);
+	const creditPay = $derived(payForReservation.for(reservation.id));
 </script>
 
 <ReservationCardShell startsAt={reservation.startsAt} status={reservation.status}>
@@ -52,6 +61,7 @@
 		<!-- Hints live above the action row so they never wrap behind the buttons. -->
 		<UnconfirmedNotice
 			startsAt={reservation.startsAt}
+			release={false}
 			class="space-y-0.5 px-3 text-right text-subtle"
 		/>
 	{/if}
@@ -67,11 +77,28 @@
 			/>
 			{#if reservation.status === 'waitlisted' && reservation.waitlistNotifiedAt}
 				<ConfirmWaitlistedAction {reservation} onsuccess={onchange} variant="success" size="xs" />
-			{:else if reservation.status === 'scheduled' && canConfirm}
+			{:else if reservation.status === 'scheduled' && canConfirm && !withCredits}
 				<ConfirmReservationAction {reservation} onsuccess={onchange} variant="primary" size="xs" />
 			{/if}
 		{/if}
-		{#if payAction}
+		{#if withCredits}
+			<Action
+				action={creditPay}
+				label="Pay with credits"
+				modalTitle="Pay with credits"
+				submitLabel="Pay with credits"
+				successToast="Paid with credits"
+				variant="primary"
+				size="xs"
+				onsuccess={onchange}
+			>
+				{#snippet form()}
+					<input {...creditPay.fields.id.as('hidden', reservation.id)} />
+					<input {...creditPay.fields.skipPayment.as('hidden', 'on')} />
+					<p>Uses your free hours. Nothing is charged.</p>
+				{/snippet}
+			</Action>
+		{:else if payAction}
 			<!-- Outside the !isPast gate: a balance is still owed once the session
 			     has ended (#1952). The amount is already in the body (#1783). -->
 			<Button
@@ -80,7 +107,7 @@
 				size="xs"
 				outline
 			>
-				{payAction === 'reserve' ? 'Pay to reserve' : 'Pay online'}
+				{payAction === 'reserve' ? 'Prepay' : 'Pay online'}
 			</Button>
 		{/if}
 	{/snippet}
