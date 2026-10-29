@@ -89,6 +89,11 @@
 	// (which skips payment) is the single action — no redundant payment screen.
 	const showPayAhead = $derived(payAhead && !!pricing && pricing.remainingCents > 0);
 
+	// Free hours that cover it all settle the booking now, window or not (#2067).
+	const coveredByFreeHours = $derived(
+		!!pricing && pricing.creditsApplicable > 0 && pricing.remainingCents <= 0
+	);
+
 	// The confirmation window is enforced by `bookAndPayReservation`, so it
 	// applies to exactly the flow that goes through it: not a staff confirm, not
 	// a band session, and not teaching time (`payAhead={false}`, and
@@ -97,10 +102,6 @@
 	// Before this the step drew "Free hours applied" and a button called Confirm
 	// for a booking that could only be held — the credits were never committed
 	// and the button's 400 reached the member nowhere.
-	// Free hours that cover it all settle the booking now, window or not (#2067).
-	const coveredByFreeHours = $derived(
-		!!pricing && pricing.creditsApplicable > 0 && pricing.remainingCents <= 0
-	);
 	const beforeConfirmWindow = $derived(
 		payAhead &&
 			!staff &&
