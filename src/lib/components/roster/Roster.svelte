@@ -114,6 +114,15 @@
 	}
 
 	const recordHref = (row: T) => resolve(`/staff/users/${row.personId}`);
+
+	// Email has its own column, as on the users table, so the name cell drops the
+	// ref's subtitle (which is the email) rather than printing it twice.
+	const nameOnly = (row: T) => ({ ...row.member, subtitle: null });
+
+	async function copyEmail(email: string) {
+		await navigator.clipboard.writeText(email);
+		toast.success('Email copied');
+	}
 </script>
 
 <FilterBar activeCount={roster.activeCount} onclear={clear} {menu}>
@@ -163,6 +172,7 @@
 			{#snippet head()}
 				{#if lead}<th class="w-px"><span class="sr-only">{leadLabel}</span></th>{/if}
 				<th>{personLabel}</th>
+				<th>Email</th>
 				{@render columns?.()}
 				{#if actions}<th class="w-px"><span class="sr-only">Actions</span></th>{/if}
 			{/snippet}
@@ -179,12 +189,32 @@
 						{#if panel}
 							<!-- The keyboard path to the panel, which a row cannot be. -->
 							<button type="button" class="block w-full text-left" onclick={() => openPanel(row)}>
-								<EntityIdentity ref={row.member} avatar link={false} />
+								<EntityIdentity ref={nameOnly(row)} avatar link={false} />
 							</button>
 						{:else}
-							<EntityIdentity ref={row.member} avatar />
+							<EntityIdentity ref={nameOnly(row)} avatar />
 						{/if}
 						{@render detail?.(row)}
+					</td>
+
+					<td class="min-w-0">
+						{#if row.email}
+							{@const email = row.email}
+							<span class="flex items-center gap-1">
+								<span class="truncate">{email}</span>
+								<Button
+									variant="ghost"
+									size="xs"
+									shape="square"
+									class="border-transparent"
+									aria-label="Copy email"
+									title="Copy email"
+									onclick={() => copyEmail(email)}
+								>
+									<IconCopy size={14} />
+								</Button>
+							</span>
+						{/if}
 					</td>
 
 					{@render cells?.(row)}
