@@ -1,13 +1,10 @@
-import { db } from '$lib/server/db';
-import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { domainEvents } from '$lib/server/event-bus';
-import { dutyList, workOrder } from '$lib/server/db/schema/volunteer';
 import { priorBookingCount } from '$lib/server/reservation/reservation-service';
-import { applyDutyList, DutyListAlreadyAppliedError } from './duty-list-service';
 import {
 	cancelOrientationFor,
 	completeOrientation,
 	orientationOwnerOf,
+	raiseOrientationShift,
 	rescheduleOrientationFor,
 	scheduleOrientation
 } from './orientation-service';
@@ -15,10 +12,9 @@ import {
 /**
  * A member's first rehearsal booking raises a shift to meet them at the door.
  *
- * What the orientation *is* — role, lead time, length, checklist — is a duty
- * list staff can edit, found by its `auto_apply_on` trigger rather than by name
- * or constant. Until one exists the feature is simply off: no seed, no shifts,
- * no errors.
+ * What the orientation *is* — which role, how long — is a setting
+ * (`volunteer.orientationRoleId`, `volunteer.orientationMinutes`). Until a role
+ * is set the feature is simply off: no shifts, no errors.
  */
 
 /** Registered from `registerListeners()`, which is itself idempotent. */
@@ -30,9 +26,6 @@ export function registerOrientationListeners(): void {
 			// first because it is the cheapest and rules out most bookings.
 			if (event.bookerType !== 'user') return;
 
-			const list = await findAutoApplyList();
-			if (!list) return;
-
 			const prior = await priorBookingCount(
 				event.userId,
 				new Date(event.startsAt),
@@ -40,34 +33,18 @@ export function registerOrientationListeners(): void {
 			);
 			if (prior !== 0) return;
 
-			let workOrderIds: string[] | null = null;
-			try {
-				workOrderIds = (
-					await applyDutyList(list.id, { kind: 'reservation', id: event.reservationId }, null)
-				).workOrderIds;
-			} catch (err) {
-				// The bus has no dedupe, so a re-delivered event lands here twice, and
-				// `applyDutyList`'s re-apply guard is what stops it doubling the roster.
-				// Refusing by name is the correct outcome, not a failure — but it is not
-				// a reason to stop: the same refusal covers a coordinator having applied
-				// the list by hand, where the work order exists but nothing wrote
-				// `member_orientation` and the member still reads as `pending`. So fall
-				// through to the shift that is already there.
-				if (!(err instanceof DutyListAlreadyAppliedError)) throw err;
-			}
+			// Reuses a live orientation shift already on the booking — a re-delivered
+			// event, or one staff made by hand — so the roster is never doubled.
+			const shift = await raiseOrientationShift(event.reservationId, new Date(event.startsAt));
+			if (!shift?.startsAt) return;
 
-			// `scheduleOrientation` upserts on `user_id`, so taking this path on a
-			// genuine re-delivery rewrites the same three values and changes nothing.
-			const first = workOrderIds
-				? await earliestScheduled(workOrderIds)
-				: await earliestApplied(event.reservationId, list.id);
-			if (!first) return;
-
+			// `scheduleOrientation` upserts on `user_id`, so a re-delivery rewrites
+			// the same three values and changes nothing.
 			await scheduleOrientation({
 				userId: event.userId,
 				reservationId: event.reservationId,
-				workOrderId: first.id,
-				scheduledFor: first.startsAt
+				workOrderId: shift.id,
+				scheduledFor: shift.startsAt
 			});
 		} catch (err) {
 			// Best-effort, like every listener on this bus: a booking that succeeded
@@ -113,59 +90,4 @@ export function registerOrientationListeners(): void {
 			console.error('[orientation] failed to record a completed orientation', err);
 		}
 	});
-}
-
-async function findAutoApplyList() {
-	const [row] = await db
-		.select({ id: dutyList.id })
-		.from(dutyList)
-		.where(
-			and(
-				eq(dutyList.autoApplyOn, 'reservation.first'),
-				eq(dutyList.subject, 'reservation'),
-				eq(dutyList.isActive, true)
-			)
-		)
-		.limit(1);
-
-	return row ?? null;
-}
-
-/**
- * The soonest shift the list produced, found by where it is anchored rather
- * than by what an apply returned — the one the member turns up to.
- *
- * Only rows with a start: a list can carry an unscheduled item, and that is not
- * when anybody is met at the door. Cancelled rows are excluded for the same
- * reason as the re-apply guard — cancelling the lot is how you redo an apply.
- */
-async function earliestApplied(reservationId: string, dutyListId: string) {
-	const [row] = await db
-		.select({ id: workOrder.id, startsAt: workOrder.startsAt })
-		.from(workOrder)
-		.where(
-			and(
-				eq(workOrder.reservationId, reservationId),
-				eq(workOrder.dutyListId, dutyListId),
-				isNull(workOrder.cancelledAt),
-				isNotNull(workOrder.startsAt)
-			)
-		)
-		.orderBy(asc(workOrder.startsAt))
-		.limit(1);
-
-	return row?.startsAt ? { id: row.id, startsAt: row.startsAt } : null;
-}
-
-async function earliestScheduled(workOrderIds: string[]) {
-	if (workOrderIds.length === 0) return null;
-
-	const [row] = await db
-		.select({ id: workOrder.id, startsAt: workOrder.startsAt })
-		.from(workOrder)
-		.where(and(inArray(workOrder.id, workOrderIds), isNotNull(workOrder.startsAt)))
-		.orderBy(asc(workOrder.startsAt))
-		.limit(1);
-
-	return row?.startsAt ? { id: row.id, startsAt: row.startsAt } : null;
 }

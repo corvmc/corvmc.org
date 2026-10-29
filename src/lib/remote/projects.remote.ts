@@ -184,7 +184,7 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			listProjectAttachments(id),
 			listCommittees(),
 			listUnansweredSuggestions(),
-			listDutyLists({ subject: 'project' }),
+			listDutyLists(),
 			getProjectOrigin(id),
 			can('ballot.manage'),
 			listProjectCommittees([id]),

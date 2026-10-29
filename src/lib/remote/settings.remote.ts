@@ -15,6 +15,8 @@ import {
 import { testConnection, credentialStatus, listDevices } from '$lib/server/lock/ultraloc-client';
 import { issueLockSelfTest, revokeLockSelfTest } from '$lib/server/lock/lock-service';
 import { requireCapability } from '$lib/server/authorization';
+import { getOrientationSetting } from '$lib/server/volunteer/orientation-service';
+import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
 import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '$lib/server/feature-flags';
 import { getInboxChannelConfigs } from './inbox.remote';
 import { syncAllSubscriptions } from '$lib/server/finance/subscription-sync-service';
@@ -94,6 +96,16 @@ export const getVolunteerValueSettings = query(async () => {
 	return {
 		hourValueCents: Number(raw.hourValueCents ?? 0),
 		hourValueSource: String(raw.hourValueSource ?? '')
+	};
+});
+
+/** The orientation shift a first booking raises: which role, how long. */
+export const getOrientationSettings = query(async () => {
+	await requireCapability('settings.read');
+	const [setting, roles] = await Promise.all([getOrientationSetting(), listVolunteerRoles()]);
+	return {
+		...setting,
+		roles: roles.filter((r) => r.isActive).map((r) => ({ id: r.id, name: r.name }))
 	};
 });
 
@@ -332,6 +344,31 @@ export const updateVolunteerValueSettings = form(volunteerValueSchema, async (ra
 });
 
 // ---------------------------------------------------------------------------
+// Forms — Orientation
+// ---------------------------------------------------------------------------
+
+const orientationSchema = z.object({
+	// Empty switches orientation off.
+	roleId: z.string().max(100).optional(),
+	minutes: z.string().regex(/^\d+$/, 'Whole minutes, digits only')
+});
+
+export const updateOrientationSettings = form(orientationSchema, async (raw) => {
+	await requireCapability('settings.update');
+	const data = raw as z.infer<typeof orientationSchema>;
+	const minutes = Number(data.minutes);
+	if (minutes < 1 || minutes > 480) error(422, 'Between 1 and 480 minutes.');
+
+	await updateSiteConfigs([
+		{ key: 'volunteer.orientationRoleId', value: data.roleId?.trim() ?? '' },
+		{ key: 'volunteer.orientationMinutes', value: minutes }
+	]);
+
+	void getStaffSettingsPage().refresh();
+	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
 // Forms — Venue settings
 // ---------------------------------------------------------------------------
 
@@ -439,6 +476,7 @@ export const getStaffSettingsPage = query(z.void(), async () => {
 		reservation,
 		org,
 		volunteerValue,
+		orientation,
 		venue,
 		integration,
 		channelConfigs,
@@ -448,6 +486,7 @@ export const getStaffSettingsPage = query(z.void(), async () => {
 		getReservationSettings(),
 		getOrgSettings(),
 		getVolunteerValueSettings(),
+		getOrientationSettings(),
 		getVenueSettings(),
 		getIntegrationSettings(),
 		getInboxChannelConfigs(),
@@ -459,6 +498,7 @@ export const getStaffSettingsPage = query(z.void(), async () => {
 		reservation,
 		org,
 		volunteerValue,
+		orientation,
 		venue,
 		integration,
 		channelConfigs,

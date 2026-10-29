@@ -65,12 +65,10 @@ beforeEach(() => {
 	`);
 });
 
-function list(id: string, anchor: string, subject = 'project', trigger: string | null = null) {
+function list(id: string, anchor: string) {
 	sqlite
-		.prepare(
-			`insert into duty_list (id, name, anchor, subject, auto_apply_on) values (?, ?, ?, ?, ?)`
-		)
-		.run(id, id, anchor, subject, trigger);
+		.prepare(`insert into duty_list (id, name, anchor, subject) values (?, ?, ?, 'project')`)
+		.run(id, id, anchor);
 	sqlite.exec(`
 		insert into duty_list_item (id, duty_list_id, volunteer_role_id, offset_minutes, duration_minutes, tasks)
 			values ('${id}-item', '${id}', 'role-1', 0, 60, '["Stack chairs"]');
@@ -85,15 +83,6 @@ describe('stamping', () => {
 		// Offset 0 lands on the anchor instant exactly.
 		expect(all(`select anchor, is_orientation, starts_at from work_order`)).toEqual([
 			{ anchor: 'start', is_orientation: 0, starts_at: START }
-		]);
-	});
-
-	it('marks the orientation list as orientation', async () => {
-		list('orient', 'start', 'reservation', 'reservation.first');
-		await applyDutyList('orient', { kind: 'reservation', id: 'res-1' }, null);
-
-		expect(all(`select anchor, is_orientation from work_order`)).toEqual([
-			{ anchor: 'start', is_orientation: 1 }
 		]);
 	});
 });
@@ -151,23 +140,15 @@ describe('close-out reads the stamped anchor', () => {
 });
 
 describe('orientation reads the stamped marker', () => {
-	beforeEach(async () => {
-		list('orient', 'start', 'reservation', 'reservation.first');
-		await applyDutyList('orient', { kind: 'reservation', id: 'res-1' }, null);
+	// Raised from the orientation setting, so there is no list behind it at all.
+	beforeEach(() => {
+		sqlite.exec(`insert into work_order (id, reservation_id, starts_at, ends_at, is_orientation)
+			values ('wo-orient', 'res-1', ${START}, ${START + 1800}, 1)`);
 	});
 
-	const shiftId = () => all(`select id from work_order`)[0].id as string;
+	const shiftId = () => 'wo-orient';
 
-	it('survives the trigger being cleared', async () => {
-		sqlite.exec(`update duty_list set auto_apply_on = null`);
-
-		expect(await orientationOwnerOf(shiftId())).toMatchObject({ userId: 'u-1' });
-		expect(await orientationForReservation('res-1')).toMatchObject({ workOrderId: shiftId() });
-	});
-
-	it('survives the list being deleted', async () => {
-		sqlite.exec(`delete from duty_list`);
-
+	it('finds the shift by its marker, with no list behind it', async () => {
 		expect(await orientationOwnerOf(shiftId())).toMatchObject({ userId: 'u-1' });
 		expect(await orientationForReservation('res-1')).toMatchObject({ workOrderId: shiftId() });
 	});

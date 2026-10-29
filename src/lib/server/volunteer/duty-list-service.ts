@@ -12,7 +12,6 @@ import {
 } from '$lib/server/db/schema/volunteer';
 import { eventListing } from '$lib/server/db/schema/event';
 import { production } from '$lib/server/db/schema/production';
-import { reservation } from '$lib/server/db/schema/reservation';
 import { project } from '$lib/server/db/schema/project';
 import { group } from '$lib/server/db/schema/group';
 import {
@@ -21,15 +20,9 @@ import {
 	VOLUNTEER_SHIFT_NOTES_MAX,
 	VOLUNTEER_SHIFT_TITLE_MAX,
 	dutyListAnchorLabels,
-	dutyListSubjectLabels,
 	eventDutyListAnchors
 } from '$lib/config';
-import type {
-	DutyListAnchor,
-	DutyListAutoApplyTrigger,
-	DutyListSubject,
-	WorkDoneCondition
-} from '$lib/config';
+import type { DutyListAnchor, DutyListAutoApplyTrigger, WorkDoneCondition } from '$lib/config';
 import type { DutyList, DutyListItem } from '$lib/server/db/schema/volunteer';
 import { chunk, chunkSize } from '$lib/server/utils/chunk';
 import {
@@ -248,23 +241,20 @@ function validateShape(input: {
 // Duty lists
 // ---------------------------------------------------------------------------
 
-/** A template, with the retired `event` subject read as the project it became. */
-export type TemplateList = Omit<DutyList, 'subject'> & { subject: DutyListSubject };
-
-function asTemplate(list: DutyList): TemplateList {
-	return { ...list, subject: list.subject === 'reservation' ? 'reservation' : 'project' };
-}
-
-export interface DutyListRow extends TemplateList {
+export interface DutyListRow extends DutyList {
 	itemCount: number;
 }
 
-export async function listDutyLists(
-	opts: { includeInactive?: boolean; subject?: DutyListSubject } = {}
-) {
+/**
+ * Project templates. A `reservation`-subject list predates the orientation
+ * setting and is retired: never listed, opened or applied.
+ */
+const isTemplate = eq(dutyList.subject, 'project');
+
+export async function listDutyLists(opts: { includeInactive?: boolean } = {}) {
 	const filters = [
 		opts.includeInactive ? undefined : eq(dutyList.isActive, true),
-		opts.subject ? eq(dutyList.subject, opts.subject) : undefined
+		isTemplate
 	].filter(Boolean);
 
 	const rows = await db
@@ -279,7 +269,7 @@ export async function listDutyLists(
 		.orderBy(asc(dutyList.name));
 
 	return rows.map((r) => ({
-		...asTemplate(r.list),
+		...r.list,
 		itemCount: r.itemCount
 	})) satisfies DutyListRow[];
 }
@@ -293,12 +283,16 @@ export interface DutyListItemRow extends DutyListItem {
 }
 
 export interface DutyListDetail {
-	list: TemplateList;
+	list: DutyList;
 	items: DutyListItemRow[];
 }
 
 export async function getDutyListDetail(id: string): Promise<DutyListDetail | null> {
-	const [list] = await db.select().from(dutyList).where(eq(dutyList.id, id)).limit(1);
+	const [list] = await db
+		.select()
+		.from(dutyList)
+		.where(and(eq(dutyList.id, id), isTemplate))
+		.limit(1);
 	if (!list) return null;
 
 	const rows = await db
@@ -315,7 +309,7 @@ export async function getDutyListDetail(id: string): Promise<DutyListDetail | nu
 		.orderBy(asc(dutyListItem.sortOrder));
 
 	return {
-		list: asTemplate(list),
+		list,
 		items: rows.map((r) => ({
 			...r.item,
 			roleName: r.roleName,
@@ -331,15 +325,11 @@ export async function createDutyList(data: {
 	name: string;
 	description?: string | null;
 	anchor: DutyListAnchor;
-	subject?: DutyListSubject;
 	autoApplyOn?: DutyListAutoApplyTrigger | null;
 	createdByUserId: string;
 }): Promise<DutyList> {
 	const name = data.name.trim();
 	if (!name) throw new DutyListValidationError('Name is required.', 'name');
-
-	const subject = data.subject ?? 'project';
-	assertAnchorFitsSubject(data.anchor, subject);
 
 	const [existing] = await db
 		.select({ id: dutyList.id })
@@ -354,7 +344,7 @@ export async function createDutyList(data: {
 			name,
 			description: data.description?.trim() || null,
 			anchor: data.anchor,
-			subject,
+			subject: 'project',
 			autoApplyOn: data.autoApplyOn ?? null,
 			createdByUserId: data.createdByUserId
 		})
@@ -369,20 +359,18 @@ export async function updateDutyList(
 		name?: string;
 		description?: string | null;
 		anchor?: DutyListAnchor;
-		subject?: DutyListSubject;
 		autoApplyOn?: DutyListAutoApplyTrigger | null;
 		isActive?: boolean;
 	}
 ): Promise<DutyList> {
-	const [existing] = await db.select().from(dutyList).where(eq(dutyList.id, id)).limit(1);
+	const [existing] = await db
+		.select()
+		.from(dutyList)
+		.where(and(eq(dutyList.id, id), isTemplate))
+		.limit(1);
 	if (!existing) throw new DutyListNotFoundError();
 
-	// Check the pair the row would *end up* with, not the half that moved:
-	// either edit alone can look fine. A retired `event` subject saves as a project.
-	const subject = data.subject ?? (existing.subject === 'reservation' ? 'reservation' : 'project');
-	assertAnchorFitsSubject(data.anchor ?? existing.anchor, subject);
-
-	const updates: Partial<typeof dutyList.$inferInsert> = { subject, updatedAt: new Date() };
+	const updates: Partial<typeof dutyList.$inferInsert> = { updatedAt: new Date() };
 
 	if (data.name !== undefined) {
 		const name = data.name.trim();
@@ -551,11 +539,10 @@ export interface ApplyDutyListResult {
 }
 
 /**
- * What a template is stamped onto. On a project, `eventId` names the show
- * whose times the event anchors read; left out, it is the project's earliest.
+ * The project a template is stamped into. `eventId` names the show whose times
+ * the event anchors read; left out, it is the project's earliest.
  */
-export type DutySubject =
-	{ kind: 'project'; id: string; eventId?: string | null } | { kind: 'reservation'; id: string };
+export type DutySubject = { kind: 'project'; id: string; eventId?: string | null };
 
 /** The project a show's work belongs to: its own, or its production's. */
 export async function projectOfEvent(eventId: string): Promise<string | null> {
@@ -612,30 +599,6 @@ async function loadEventClock(where: SQL): Promise<Clock['event']> {
 }
 
 async function loadClock(subject: DutySubject): Promise<Clock | null> {
-	if (subject.kind === 'reservation') {
-		const [row] = await db
-			.select({ startsAt: reservation.startsAt, endsAt: reservation.endsAt })
-			.from(reservation)
-			.where(eq(reservation.id, subject.id))
-			.limit(1);
-		if (!row) return null;
-		// A booking is a window and nothing else: only `start` and `end` resolve.
-		return {
-			projectStartsAt: null,
-			event: {
-				id: subject.id,
-				...row,
-				doorsAt: null,
-				hasProduction: false,
-				loadInAt: null,
-				soundcheckAt: null,
-				firstSetAt: null,
-				curfewAt: null,
-				loadOutBy: null
-			}
-		};
-	}
-
 	const [row] = await db
 		.select({ startsAt: project.startsAt })
 		.from(project)
@@ -653,19 +616,6 @@ async function loadClock(subject: DutySubject): Promise<Clock | null> {
 				)!
 	);
 	return { projectStartsAt: row.startsAt, event };
-}
-
-/**
- * A booking has no doors and no run of show, and quietly resolving either to
- * its start would read as correct everywhere. Refused when the list is saved.
- */
-function assertAnchorFitsSubject(anchor: DutyListAnchor, subject: DutyListSubject): void {
-	if (subject === 'project') return;
-	if (anchor === 'start' || anchor === 'end') return;
-	throw new DutyListValidationError(
-		`${dutyListSubjectLabels[subject]} has only a start and an end — anchor this list to one of them.`,
-		'anchor'
-	);
 }
 
 /**
@@ -706,7 +656,7 @@ function resolveAnchor(
 }
 
 /**
- * Stamp a template onto a project (or, for orientation, a booking).
+ * Stamp a template into a project.
  *
  * Offsets are instant arithmetic from a real anchor timestamp, so daylight
  * saving needs no handling here. Applying a template a second time warns: by
@@ -727,31 +677,18 @@ export async function applyDutyList(
 		throw new DutyListValidationError('That template has no items on it yet.');
 	}
 
-	if (list.subject !== subject.kind) {
-		throw new DutyListValidationError(
-			`"${list.name}" is not for ${dutyListSubjectLabels[subject.kind].toLowerCase()}.`
-		);
-	}
-	assertAnchorFitsSubject(list.anchor, subject.kind);
-
 	const clock = await loadClock(subject);
-	if (!clock) {
-		throw new DutyListValidationError(
-			`That ${subjectNoun[subject.kind]} no longer exists.`,
-			`${subject.kind}Id`
-		);
-	}
+	if (!clock) throw new DutyListValidationError('That project no longer exists.', 'projectId');
 
 	// Cancelled work orders do not count: cancelling the lot is how you redo an
 	// apply. A repeated domain event lands here with no reason and is refused by
 	// name, which is what keeps the listeners idempotent.
-	const onProject = subject.kind === 'project';
 	const [{ existing }] = await db
 		.select({ existing: count() })
 		.from(workOrder)
 		.where(
 			and(
-				eq(onProject ? workOrder.projectId : workOrder.reservationId, subject.id),
+				eq(workOrder.projectId, subject.id),
 				eq(workOrder.dutyListId, dutyListId),
 				isNull(workOrder.cancelledAt)
 			)
@@ -761,18 +698,16 @@ export async function applyDutyList(
 
 	const { at: anchor, missing } = resolveAnchor(list.anchor, clock);
 	const readsEvent = (eventDutyListAnchors as readonly string[]).includes(list.anchor);
-	const eventId = onProject && readsEvent ? (clock.event?.id ?? null) : null;
+	const eventId = readsEvent ? (clock.event?.id ?? null) : null;
 
 	// Each item lands under its named heading, after what is already there.
-	const [sections, nextOrder] = onProject
-		? await Promise.all([
-				ensureSections(
-					subject.id,
-					items.flatMap((i) => (i.section ? [i.section] : []))
-				),
-				nextTaskOrders(subject.id)
-			])
-		: [new Map<string, string>(), new Map<string | null, number>()];
+	const [sections, nextOrder] = await Promise.all([
+		ensureSections(
+			subject.id,
+			items.flatMap((i) => (i.section ? [i.section] : []))
+		),
+		nextTaskOrders(subject.id)
+	]);
 	const place = (name: string | null) => {
 		const sectionId = (name && sections.get(sectionNameKey(name))) || null;
 		const sortOrder = nextOrder.get(sectionId) ?? 0;
@@ -792,8 +727,7 @@ export async function applyDutyList(
 			id: workOrderId,
 			volunteerRoleId: item.volunteerRoleId,
 			eventId,
-			reservationId: onProject ? null : subject.id,
-			projectId: onProject ? subject.id : null,
+			projectId: subject.id,
 			startsAt,
 			endsAt: startsAt ? addMinutes(startsAt, item.durationMinutes!) : null,
 			dueAt:
@@ -809,8 +743,7 @@ export async function applyDutyList(
 			doneWhen: item.doneWhen,
 			dutyListId,
 			anchor: list.anchor,
-			isOrientation: list.autoApplyOn === 'reservation.first',
-			...(onProject ? place(item.section) : {}),
+			...place(item.section),
 			// On the claim board, as every stamped-out shift has always been.
 			postedAt: new Date(),
 			postedByUserId: createdByUserId,
@@ -843,29 +776,22 @@ export async function applyDutyList(
 		? [`${missing} ${n === 1 ? 'Its item stays' : `All ${n} items stay`} unscheduled until then.`]
 		: [];
 
-	if (onProject) {
-		await recordAuditEntry({
-			action: 'project.duty_list_applied',
-			subject: await projectSubject(subject.id),
-			details: {
-				dutyListId,
-				dutyListName: list.name,
-				tasks: shiftRows.length,
-				...(existing > 0 ? { reappliedReason: reason! } : {})
-			}
-		});
-	}
+	await recordAuditEntry({
+		action: 'project.duty_list_applied',
+		subject: await projectSubject(subject.id),
+		details: {
+			dutyListId,
+			dutyListName: list.name,
+			tasks: shiftRows.length,
+			...(existing > 0 ? { reappliedReason: reason! } : {})
+		}
+	});
 	return {
 		workOrderIds: shiftRows.map((r) => r.id!),
 		taskCount: taskRows.length,
 		warnings
 	};
 }
-
-const subjectNoun: Record<DutyListSubject, string> = {
-	reservation: 'booking',
-	project: 'project'
-};
 
 function addMinutes(at: Date, minutes: number): Date {
 	return new Date(at.getTime() + minutes * 60_000);

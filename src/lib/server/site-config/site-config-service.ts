@@ -58,6 +58,11 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// figure or it silently starts describing the wrong year.
 	'volunteer.hourValueSource': 'Independent Sector, Oregon, 2025 (2026 report, preliminary)',
 
+	// A member's first rehearsal booking raises one shift in this role, at the
+	// booking's start, for this long. An empty role switches orientation off.
+	'volunteer.orientationRoleId': '',
+	'volunteer.orientationMinutes': 30,
+
 	// How many inputs the desk in the practice room can actually take.
 	//
 	// Runtime config rather than a constant because it is a fact about a piece of

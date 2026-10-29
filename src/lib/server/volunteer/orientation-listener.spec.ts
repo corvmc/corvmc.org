@@ -1,10 +1,10 @@
 /**
  * The orientation listener against a real database on the real migrated schema.
  *
- * Every claim here is about rows: a repeated event creates one set of work
- * orders and not two, a cancelled booking stands its shift down without
- * un-orienting somebody already shown around, a band's hold raises nothing.
- * Same `db.batch` shim as `duty-list-service.spec.ts`.
+ * Every claim here is about rows: a repeated event creates one work order and
+ * not two, a cancelled booking stands its shift down without un-orienting
+ * somebody already shown around, a band's hold raises nothing. What the shift
+ * is (role and length) is a setting, not a template (#2034).
  */
 import { describe, expect, it, beforeAll, beforeEach, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
@@ -50,6 +50,18 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: { on: vi.fn(), emit: vi.fn() }
 }));
 
+/** The orientation setting. An empty role is the feature switched off. */
+const settings = vi.hoisted(() => new Map<string, string | number>());
+vi.mock('$lib/server/site-config/site-config-service', () => ({
+	config: async (key: string) => {
+		const defaults: Record<string, string | number> = {
+			'volunteer.orientationRoleId': '',
+			'volunteer.orientationMinutes': 30
+		};
+		return settings.get(key) ?? defaults[key];
+	}
+}));
+
 async function fire(name: string, data: unknown) {
 	for (const fn of handlers.get(name) ?? []) await fn({ data });
 }
@@ -58,13 +70,11 @@ const STARTS = Math.floor(new Date('2026-10-10T03:00:00Z').getTime() / 1000);
 const ENDS = Math.floor(new Date('2026-10-10T05:00:00Z').getTime() / 1000);
 
 let getOrientation: typeof import('./orientation-service').getOrientation;
-let applyDutyList: typeof import('./duty-list-service').applyDutyList;
 
 beforeAll(async () => {
 	migrate(base, { migrationsFolder: MIGRATIONS_FOLDER });
 	const { registerOrientationListeners } = await import('./orientation-listener');
 	({ getOrientation } = await import('./orientation-service'));
-	({ applyDutyList } = await import('./duty-list-service'));
 	registerOrientationListeners();
 }, 30_000);
 
@@ -88,24 +98,27 @@ function createdEvent(over: Record<string, unknown> = {}) {
 
 function shifts() {
 	return sqlite
-		.prepare(`SELECT id, starts_at, reservation_id, cancelled_at FROM work_order`)
+		.prepare(
+			`SELECT id, starts_at, ends_at, reservation_id, project_id, volunteer_role_id,
+				is_orientation, duty_list_id, cancelled_at
+			 FROM work_order ORDER BY created_at, id`
+		)
 		.all() as {
 		id: string;
 		starts_at: number | null;
+		ends_at: number | null;
 		reservation_id: string | null;
+		project_id: string | null;
+		volunteer_role_id: string | null;
+		is_orientation: number;
+		duty_list_id: string | null;
 		cancelled_at: number | null;
 	}[];
 }
 
 beforeEach(() => {
-	for (const t of [
-		'member_orientation',
-		'work_task',
-		'work_order',
-		'duty_list_item',
-		'duty_list',
-		'reservation'
-	]) {
+	settings.clear();
+	for (const t of ['member_orientation', 'work_task', 'work_order', 'reservation']) {
 		sqlite.exec(`DELETE FROM ${t}`);
 	}
 	sqlite.exec(`DELETE FROM volunteer_role WHERE id = 'role-orient'`);
@@ -125,15 +138,17 @@ beforeEach(() => {
 	);
 });
 
-/** The list staff would have made. Absent in tests that assert the feature is off. */
+/** The setting staff would have saved. Absent in tests that assert the feature is off. */
 function seedList() {
+	settings.set('volunteer.orientationRoleId', 'role-orient');
+	settings.set('volunteer.orientationMinutes', 45);
+}
+
+/** A shift a coordinator made by hand for the booking, before the listener ran. */
+function byHandShift() {
 	sqlite.exec(
-		`INSERT INTO duty_list (id, name, anchor, subject, auto_apply_on)
-		 VALUES ('dl-orient','Rehearsal Orientation','start','reservation','reservation.first')`
-	);
-	sqlite.exec(
-		`INSERT INTO duty_list_item (id, duty_list_id, volunteer_role_id, offset_minutes, duration_minutes, tasks)
-		 VALUES ('dli-1','dl-orient','role-orient', -15, 45, '["Meet them at the door"]')`
+		`INSERT INTO work_order (id, volunteer_role_id, reservation_id, starts_at, ends_at, is_orientation)
+		 VALUES ('wo-hand','role-orient','res-1', ${STARTS}, ${STARTS + 2700}, 1)`
 	);
 }
 
@@ -144,9 +159,18 @@ describe('reservation.created', () => {
 		await fire('reservation.created', createdEvent());
 
 		const rows = shifts();
-		expect(rows).toHaveLength(1);
-		expect(rows[0].starts_at).toBe(STARTS - 15 * 60);
-		expect(rows[0].reservation_id).toBe('res-1');
+		// One work order, at the booking's start for the set length, in no project.
+		expect(rows).toEqual([
+			expect.objectContaining({
+				starts_at: STARTS,
+				ends_at: STARTS + 45 * 60,
+				reservation_id: 'res-1',
+				project_id: null,
+				volunteer_role_id: 'role-orient',
+				is_orientation: 1,
+				duty_list_id: null
+			})
+		]);
 
 		const orientation = await getOrientation('u-member', new Date(STARTS * 1000 - 86_400_000));
 		expect(orientation?.state).toBe('scheduled');
@@ -159,7 +183,7 @@ describe('reservation.created', () => {
 		await fire('reservation.created', createdEvent());
 		await fire('reservation.created', createdEvent());
 
-		// The bus has no dedupe; `applyDutyList`'s re-apply guard is the dedupe.
+		// The bus has no dedupe; the live orientation shift on the booking is it.
 		expect(shifts()).toHaveLength(1);
 	});
 
@@ -198,15 +222,15 @@ describe('reservation.created', () => {
 		expect(shifts()).toHaveLength(1);
 	});
 
-	it('does nothing at all when staff have not made an orientation list', async () => {
+	it('does nothing at all when no orientation role is set', async () => {
 		await fire('reservation.created', createdEvent());
 
 		expect(shifts()).toHaveLength(0);
 	});
 
-	it('ignores a list that has been archived', async () => {
+	it('does nothing while the role is archived', async () => {
 		seedList();
-		sqlite.exec(`UPDATE duty_list SET is_active = 0 WHERE id = 'dl-orient'`);
+		sqlite.exec(`UPDATE volunteer_role SET is_active = 0 WHERE id = 'role-orient'`);
 
 		await fire('reservation.created', createdEvent());
 
@@ -271,10 +295,10 @@ describe('a booking confirmed off the waitlist', () => {
 
 	it('does not add a second shift to a booking staff already stamped by hand', async () => {
 		seedList();
-		// The workaround for the gap this closes: a coordinator applied the
-		// orientation list to the queued booking themselves. The confirmation must
-		// land on the re-apply guard, not double the roster.
-		await applyDutyList('dl-orient', { kind: 'reservation', id: 'res-1' }, null);
+		// The workaround for the gap this closes: a coordinator raised the
+		// orientation for the queued booking themselves. The confirmation must
+		// find it, not double the roster.
+		byHandShift();
 
 		await fire('reservation.created', createdEvent());
 
@@ -283,11 +307,9 @@ describe('a booking confirmed off the waitlist', () => {
 
 	it('points the member at the shift staff made by hand instead of leaving them pending', async () => {
 		seedList();
-		// The other half of that workaround, and the half the re-apply guard used
-		// to swallow: the work order exists, so nothing needs raising, but nobody
-		// ever wrote `member_orientation` — the member read as `pending` while a
-		// volunteer was already rostered to meet them at the door.
-		await applyDutyList('dl-orient', { kind: 'reservation', id: 'res-1' }, null);
+		// The other half: the work order exists, so nothing needs raising, but
+		// nobody wrote `member_orientation`, so the member would read as `pending`.
+		byHandShift();
 		const [byHand] = shifts();
 
 		await fire('reservation.created', createdEvent());
@@ -402,12 +424,9 @@ describe('reservation.rescheduled', () => {
 
 		const after = shifts()[0];
 		expect(after.starts_at).toBe(before.starts_at! + 2 * 3600);
-		// Still forty-five minutes, still fifteen minutes before the booking.
-		const [row] = sqlite
-			.prepare(`SELECT starts_at, ends_at FROM work_order WHERE id = '${after.id}'`)
-			.all() as { starts_at: number; ends_at: number }[];
-		expect(row.ends_at - row.starts_at).toBe(45 * 60);
-		expect(row.starts_at).toBe(STARTS + 2 * 3600 - 15 * 60);
+		// Still forty-five minutes, still at the booking's start.
+		expect(after.ends_at! - after.starts_at!).toBe(45 * 60);
+		expect(after.starts_at).toBe(STARTS + 2 * 3600);
 	});
 
 	it('moves the member’s scheduled time with it', async () => {
@@ -417,20 +436,23 @@ describe('reservation.rescheduled', () => {
 		await fire('reservation.rescheduled', movedBy(2 * HOUR));
 
 		const orientation = await getOrientation('u-member', new Date(STARTS * 1000 - 86_400_000));
-		expect(orientation?.scheduledFor?.getTime()).toBe((STARTS + 2 * 3600 - 15 * 60) * 1000);
+		expect(orientation?.scheduledFor?.getTime()).toBe((STARTS + 2 * 3600) * 1000);
 		expect(orientation?.state).toBe('scheduled');
 	});
 
-	it('shifts by the delta rather than recomputing from the duty list', async () => {
+	it('shifts by the delta rather than recomputing from the setting', async () => {
 		seedList();
 		await fire('reservation.created', createdEvent());
-		// Staff edit the template after the booking was stamped out. The shift
-		// people may already have claimed must not silently re-time to match.
-		sqlite.exec(`UPDATE duty_list_item SET offset_minutes = -90 WHERE id = 'dli-1'`);
+		// Staff change the length after the shift was raised. A shift people may
+		// already have claimed must not silently change to match.
+		settings.set('volunteer.orientationMinutes', 90);
 
 		await fire('reservation.rescheduled', movedBy(HOUR));
 
-		expect(shifts()[0].starts_at).toBe(STARTS + 3600 - 15 * 60);
+		expect(shifts()[0]).toMatchObject({
+			starts_at: STARTS + 3600,
+			ends_at: STARTS + 3600 + 45 * 60
+		});
 	});
 
 	it('leaves a cancelled shift where it is', async () => {

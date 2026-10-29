@@ -52,6 +52,13 @@ vi.mock('$lib/server/site-config/site-config-service', () => ({
 	updateSiteConfig: (...args: unknown[]) => updateSiteConfig(...(args as []))
 }));
 
+vi.mock('$lib/server/volunteer/orientation-service', () => ({
+	getOrientationSetting: async () => ({ roleId: '', minutes: 30 })
+}));
+vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({
+	listVolunteerRoles: async () => []
+}));
+
 const getAllProductConfigs = vi.fn(async () => []);
 const updateProductConfig = vi.fn(async () => undefined);
 vi.mock('$lib/server/finance/product-config-service', () => ({
@@ -142,6 +149,8 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 	{ name: 'getReservationSettings', cap: 'settings.read' },
 	{ name: 'getOrgSettings', cap: 'settings.read' },
 	{ name: 'getVolunteerValueSettings', cap: 'settings.read' },
+	{ name: 'getOrientationSettings', cap: 'settings.read' },
+	{ name: 'updateOrientationSettings', cap: 'settings.update', args: [{ minutes: '30' }] },
 	{ name: 'getVenueSettings', cap: 'settings.read' },
 	{ name: 'getIntegrationSettings', cap: 'settings.read' },
 	{ name: 'getStaffSettingsPage', cap: 'settings.read' },

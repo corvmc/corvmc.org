@@ -10,6 +10,7 @@
 		updateReservationSettings,
 		updateOrgSettings,
 		updateVolunteerValueSettings,
+		updateOrientationSettings,
 		updateVenueSettings,
 		updateIntegrationSettings,
 		testUtecConnection,
@@ -64,6 +65,7 @@
 	const reservationSettings = $derived(settings.reservation);
 	const orgSettings = $derived(settings.org);
 	const volunteerValue = $derived(settings.volunteerValue);
+	const orientation = $derived(settings.orientation);
 	const venue = $derived(settings.venue);
 	const integrationSettings = $derived(settings.integration);
 	const channelConfigs = $derived(settings.channelConfigs);
@@ -569,6 +571,46 @@
 								type="text"
 								value={volunteerValue.hourValueSource}
 								placeholder="Independent Sector, Oregon, 2025"
+							/>
+						</div>
+					</CardBody>
+				</Card>
+			</Form>
+
+			<Form remote={updateOrientationSettings} guard successToast="Orientation updated">
+				<Card>
+					<CardBody>
+						<div class="flex items-center justify-between">
+							<CardTitle size="base">Orientation</CardTitle>
+							<SubmitButton
+								label="Save"
+								successLabel="Saved"
+								errorLabel="Error"
+								variant="primary"
+								size="sm"
+							/>
+						</div>
+						<p class="text-subtle">
+							A member's first rehearsal booking gets one shift in this role, at the booking's
+							start. No role, no shift.
+						</p>
+
+						<div class="mt-2 grid gap-4 sm:grid-cols-2">
+							<FormField
+								name="roleId"
+								label="Role"
+								type="select"
+								value={orientation.roleId}
+								options={[
+									{ value: '', label: 'None' },
+									...orientation.roles.map((r) => ({ value: r.id, label: r.name }))
+								]}
+							/>
+							<FormField
+								name="minutes"
+								label="Length (minutes)"
+								type="number"
+								value={String(orientation.minutes)}
 							/>
 						</div>
 					</CardBody>

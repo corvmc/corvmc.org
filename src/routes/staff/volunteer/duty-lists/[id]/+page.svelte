@@ -15,8 +15,6 @@
 	import {
 		dutyListAnchors,
 		dutyListAnchorLabels,
-		dutyListSubjects,
-		dutyListSubjectLabels,
 		workDoneConditions,
 		workDoneConditionLabels
 	} from '$lib/config';
@@ -34,10 +32,6 @@
 	let data = $derived(getDutyListPage(id));
 
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
-	const subjectOptions = dutyListSubjects.map((v) => ({
-		value: v,
-		label: dutyListSubjectLabels[v]
-	}));
 
 	const kindOptions = [
 		{ value: 'scheduled', label: 'Scheduled — a shift with a start and an end' },
@@ -87,14 +81,6 @@
 					label="Description"
 					type="textarea"
 					value={d.list.description ?? ''}
-				/>
-				<FormField
-					name="subject"
-					label="Applies to"
-					type="select"
-					options={subjectOptions}
-					value={d.list.subject}
-					description="A booking anchors only to its start or end."
 				/>
 				<FormField
 					name="anchor"
@@ -183,9 +169,7 @@
 
 		<InfoCard title="Items">
 			<p class="mb-3 text-sm text-base-content/70">
-				Offsets are measured from {anchorLabel.toLowerCase()}, on {dutyListSubjectLabels[
-					d.list.subject
-				].toLowerCase()}.
+				Offsets are measured from {anchorLabel.toLowerCase()}.
 			</p>
 			{#if d.items.length === 0}
 				<EmptyState

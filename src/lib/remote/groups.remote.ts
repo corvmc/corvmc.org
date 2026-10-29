@@ -475,7 +475,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		// `custom/no-concurrent-remote-queries`. Withheld from anyone who cannot answer them.
 		canReviewApplications ? listForGroup(group.id) : Promise.resolve([]),
 		// A committee applies duty lists to its own projects.
-		group.kind === 'committee' ? listDutyLists({ subject: 'project' }) : Promise.resolve([]),
+		group.kind === 'committee' ? listDutyLists() : Promise.resolve([]),
 		// The role picker for opening a work order on one of the committee's projects.
 		group.kind === 'committee' ? listVolunteerRoles() : Promise.resolve([]),
 		// The events on those projects, which is how Booking reaches its own shows.

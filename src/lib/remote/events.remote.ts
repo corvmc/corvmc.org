@@ -1180,7 +1180,7 @@ async function venuePickerOptions() {
 
 /** Active project templates that actually have items on them — the apply picker. */
 async function listApplicableDutyLists() {
-	const lists = await listDutyLists({ subject: 'project' });
+	const lists = await listDutyLists();
 	return lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
 }
 

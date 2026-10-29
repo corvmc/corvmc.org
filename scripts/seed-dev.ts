@@ -336,7 +336,7 @@ async function main() {
 		`  ${dutyLists.lists} duty lists (one on the show's own clock), ${dutyLists.workOrders} work orders applied to a show`
 	);
 	console.log(
-		`  ${orientation.lists} orientation list, ${orientation.workOrders} orientation shifts, ${orientation.orientations} member orientations`
+		`  ${orientation.workOrders} orientation shifts, ${orientation.orientations} member orientations`
 	);
 	console.log(`  ${externalActs.length} external acts (hidden, unowned)`);
 	console.log(
