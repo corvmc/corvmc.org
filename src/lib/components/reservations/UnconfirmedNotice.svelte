@@ -13,7 +13,16 @@
 	 * describe the same sweep, and the card used to carry only "Confirm from
 	 * Sep 15", which names a date without naming what passes with it (#895).
 	 */
-	let { startsAt, class: className = '' }: { startsAt: Date; class?: string } = $props();
+	let {
+		startsAt,
+		release = true,
+		class: className = ''
+	}: {
+		startsAt: Date;
+		/** The release sentence; the card leaves it to the detail page (#2052). */
+		release?: boolean;
+		class?: string;
+	} = $props();
 
 	// Inside the window the surfaces that use this already offer Confirm, so the
 	// date would be telling a member to wait for something they can do now.
@@ -24,5 +33,7 @@
 	{#if pending}
 		<p>Confirmation opens {formatDateShort(confirmWindowOpensAt(startsAt))}.</p>
 	{/if}
-	<p>{UNCONFIRMED_RELEASE_NOTICE}</p>
+	{#if release}
+		<p>{UNCONFIRMED_RELEASE_NOTICE}</p>
+	{/if}
 </div>

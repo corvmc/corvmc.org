@@ -162,3 +162,16 @@ export function memberPayAction(
 	if (r.status === 'scheduled' && !withinConfirmationWindow(r.startsAt, now)) return 'reserve';
 	return null;
 }
+
+/**
+ * A session that has ended with money still owed: not paid, not refunded, and
+ * not settled to zero. The same reading as `ReservationSummary`'s Overdue
+ * label, plus a confirmed booking whose session has passed unpaid (#1952).
+ */
+export function isOverdue(
+	r: PayableReservation & { endsAt: Date; refundedAt?: Date | null },
+	now: Date = new Date()
+): boolean {
+	if (r.endsAt > now || r.paidAt || r.refundedAt || r.cashDueCents === 0) return false;
+	return r.status === 'confirmed' || r.status === 'completed' || r.status === 'no_show';
+}

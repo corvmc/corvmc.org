@@ -49,6 +49,7 @@
 
 	const activeReservations = $derived(pageData.then((d) => d.active));
 	const allReservations = $derived(pageData.then((d) => d.all));
+	const overdueReservations = $derived(pageData.then((d) => d.overdue));
 	// Payment confirmation via ?paid={id}
 	//
 	// A reservation is flipped to `confirmed` with a `paidAt` by
@@ -181,7 +182,7 @@
 						value="active"
 						class={clsx('btn join-item btn-sm', {
 							'latched btn-primary': activeTab === 'active'
-						})}>Active</Tabs.Trigger
+						})}>Upcoming</Tabs.Trigger
 					>
 					<Tabs.Trigger
 						value="all"
@@ -193,16 +194,32 @@
 			</header>
 			<!-- Both panels used to be in the DOM at once: 54 reservation links while
 			     the Active tab showed one. -->
-			<Tabs.Content value="active" class="card-grid">
+			<Tabs.Content value="active">
 				{#if activeTab === 'active'}
-					{#each await activeReservations as reservation (reservation.id)}
-						<ReservationCard {reservation} onchange={refreshReservations} />
-					{:else}
-						<EmptyState
-							message="No upcoming reservations. Use Reserve Space above to book your next practice slot."
-							class="col-span-full"
-						/>
-					{/each}
+					<!-- Past sessions still owed, above the upcoming list; they stay in
+					     All too (#2053). -->
+					{#await overdueReservations then overdue}
+						{#if overdue.length > 0}
+							<section class="mb-6">
+								<SectionLabel label="Overdue" count={overdue.length} />
+								<div class="card-grid">
+									{#each overdue as reservation (reservation.id)}
+										<ReservationCard {reservation} onchange={refreshReservations} />
+									{/each}
+								</div>
+							</section>
+						{/if}
+					{/await}
+					<div class="card-grid">
+						{#each await activeReservations as reservation (reservation.id)}
+							<ReservationCard {reservation} onchange={refreshReservations} />
+						{:else}
+							<EmptyState
+								message="No upcoming reservations. Use Reserve Space above to book your next practice slot."
+								class="col-span-full"
+							/>
+						{/each}
+					</div>
 				{/if}
 			</Tabs.Content>
 			<Tabs.Content value="all">
