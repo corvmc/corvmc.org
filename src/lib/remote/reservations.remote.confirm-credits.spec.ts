@@ -87,6 +87,9 @@ vi.mock('$lib/server/reservation/reservation-credit-service', async (importOrigi
 	return {
 		// Keep the real pricing math so the pricing test reflects production behavior.
 		computeReservationCredit: actual.computeReservationCredit,
+		getFreeHoursWallet: actual.getFreeHoursWallet,
+		usableFreeHours: actual.usableFreeHours,
+		freeHoursResetAt: actual.freeHoursResetAt,
 		commitReservationCredits,
 		reverseReservationCredits: vi.fn()
 	};
@@ -260,6 +263,7 @@ describe('getReservationPricing keys free hours to the reservation owner', () =>
 	it('shows no free hours for a non-sustaining owner even when the staff user has a balance', async () => {
 		selectResults.push(
 			[{ createdByUserId: ownerId }], // reservation lookup
+			[{ subscription: null }], // owner's free-hours wallet → no reset date
 			[{ subscription: null }] // owner subscription lookup → not sustaining
 		);
 

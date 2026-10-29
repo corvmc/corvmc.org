@@ -48,6 +48,44 @@ export function computeReservationCredit(params: {
 	return { creditUnits, creditDiscountCents, remainingCents };
 }
 
+/**
+ * When the member's free hours next reset: the date "Resets to N on <date>"
+ * shows. Null without a subscription, and then free hours apply to nothing.
+ */
+export function freeHoursResetAt(sub: Subscription | null | undefined): Date | null {
+	return sub?.creditsResetAt ? new Date(sub.creditsResetAt) : null;
+}
+
+/**
+ * Free hours pay only for a session that starts before the next reset. The
+ * reset overwrites the balance, so spending it on a later session would carry
+ * this period's hours into the next one.
+ */
+export function freeHoursApplyTo(startsAt: Date, resetAt: Date | null): boolean {
+	return resetAt != null && startsAt.getTime() < resetAt.getTime();
+}
+
+export interface FreeHoursWallet {
+	balance: number;
+	resetAt: Date | null;
+}
+
+/** The member's free-hour balance and the reset that bounds it. */
+export async function getFreeHoursWallet(userId: string): Promise<FreeHoursWallet> {
+	const [row] = await db
+		.select({ subscription: user.subscription })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	const resetAt = freeHoursResetAt(row?.subscription as Subscription | null);
+	return { balance: await creditService.getBalance(userId, 'free_hours'), resetAt };
+}
+
+/** The part of the wallet a session starting at `startsAt` may spend. */
+export function usableFreeHours(wallet: FreeHoursWallet, startsAt: Date): number {
+	return freeHoursApplyTo(startsAt, wallet.resetAt) ? wallet.balance : 0;
+}
+
 /** Sum the free-hour credit units already committed to a reservation (ledger-driven). */
 async function sumCommittedUnits(reservationId: string): Promise<number> {
 	const [row] = await db
@@ -80,7 +118,7 @@ export async function commitReservationCredits(params: {
 	const { userId, reservationId, totalCents, durationHours, hourlyRateCents } = params;
 
 	const [row] = await db
-		.select({ cashDueCents: reservation.cashDueCents })
+		.select({ cashDueCents: reservation.cashDueCents, startsAt: reservation.startsAt })
 		.from(reservation)
 		.where(eq(reservation.id, reservationId))
 		.limit(1);
@@ -96,7 +134,7 @@ export async function commitReservationCredits(params: {
 		};
 	}
 
-	const freeHoursBalance = await creditService.getBalance(userId, 'free_hours');
+	const freeHoursBalance = usableFreeHours(await getFreeHoursWallet(userId), row.startsAt);
 	const { creditUnits, creditDiscountCents, remainingCents } = computeReservationCredit({
 		totalCents,
 		durationHours,

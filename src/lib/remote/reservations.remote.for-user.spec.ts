@@ -31,6 +31,8 @@ vi.mock('$lib/server/db', () => ({
 			const c: Record<string, unknown> = {
 				from: () => c,
 				where: () => c,
+				// The free-hours wallet's subscription read.
+				limit: () => Promise.resolve([{ subscription: null }]),
 				orderBy: (arg: unknown) => {
 					orderByArgs.push(arg);
 					return Promise.resolve(rows);

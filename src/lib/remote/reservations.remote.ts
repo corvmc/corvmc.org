@@ -116,7 +116,10 @@ import { notAProgramHold } from '$lib/server/reservation/program-hold';
 import {
 	commitReservationCredits,
 	computeReservationCredit,
-	reverseReservationCredits
+	freeHoursResetAt,
+	getFreeHoursWallet,
+	reverseReservationCredits,
+	usableFreeHours
 } from '$lib/server/reservation/reservation-credit-service';
 import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import { readerTapCanBeSimulated, terminalReaderId } from '$lib/server/finance/terminal-service';
@@ -168,7 +171,8 @@ export const getReservationPayment = query(z.string(), async (id) => {
 	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
-	const freeHoursBalance = await getBalance(currentUser.id, 'free_hours');
+	// Zero for a session on or after the next reset, so the page quotes the full price.
+	const freeHoursBalance = usableFreeHours(await getFreeHoursWallet(currentUser.id), row.startsAt);
 
 	return {
 		reservation: {
@@ -850,7 +854,9 @@ export const getReservationPricing = query(
 			targetUserId = res.createdByUserId;
 		}
 
-		const freeHoursBalance = targetUserId ? await getBalance(targetUserId, 'free_hours') : 0;
+		const freeHoursBalance = targetUserId
+			? usableFreeHours(await getFreeHoursWallet(targetUserId), startsAt)
+			: 0;
 
 		let isSustainingMember = false;
 		if (targetUserId) {
@@ -986,7 +992,8 @@ export const getMembershipStatus = query(async () => {
 	return {
 		isSustainingMember: sub != null,
 		freeHoursBalance,
-		creditsResetAt: sub?.creditsResetAt ?? null,
+		// The same instant that bounds which sessions free hours may pay for.
+		creditsResetAt: freeHoursResetAt(sub)?.toISOString() ?? null,
 		hoursPerReset: sub?.hoursPerReset ?? 0
 	};
 });
@@ -1330,14 +1337,18 @@ export const createReservation = form(staffCreateSchema, async (data, issue) => 
 
 const CONFIRM_WINDOW_MSG = `Confirmation opens ${CONFIRMATION_WINDOW_DAYS} days before your reservation — pay now to lock it in earlier.`;
 
-/** Whether the member's free-hour balance fully covers the reservation (nothing to charge). */
+/**
+ * Whether free hours fully cover the reservation (nothing to charge). Never for
+ * a session on or after the member's next reset.
+ */
 async function isFullyCreditCovered(
 	userId: string,
+	startsAt: Date,
 	durationHours: number,
 	totalCents: number,
 	hourlyRateCents: number
 ): Promise<boolean> {
-	const freeHoursBalance = await getBalance(userId, 'free_hours');
+	const freeHoursBalance = usableFreeHours(await getFreeHoursWallet(userId), startsAt);
 	const { remainingCents } = computeReservationCredit({
 		totalCents,
 		durationHours,
@@ -1628,7 +1639,13 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	if (
 		outsideWindow &&
 		(data.skipPayment === 'on' ||
-			(await isFullyCreditCovered(locals.user.id, durationHours, totalCents, hourlyRateCents)))
+			(await isFullyCreditCovered(
+				locals.user.id,
+				startsAt,
+				durationHours,
+				totalCents,
+				hourlyRateCents
+			)))
 	) {
 		return {
 			reservationId: res.id,
@@ -1981,8 +1998,18 @@ export const payForReservation = form(
 
 		if (data.skipPayment === 'on') {
 			// Confirm: commit free hours; settle if fully covered, else cash at door.
-			// Only a real Stripe charge confirms outside the window.
-			if (outsideWindow) throw error(400, CONFIRM_WINDOW_MSG);
+			// Outside the window only a full free-hours settle confirms (#2060).
+			if (
+				outsideWindow &&
+				!(await isFullyCreditCovered(
+					currentUser.id,
+					row.startsAt,
+					durationHours,
+					totalCents,
+					hourlyRateCents
+				))
+			)
+				throw error(400, CONFIRM_WINDOW_MSG);
 			const { settled } = await commitCreditsAndSettleIfCovered({
 				reservationId: row.id,
 				userId: currentUser.id,
@@ -1996,14 +2023,7 @@ export const payForReservation = form(
 			return { confirmed: true };
 		}
 
-		// Pay online: outside the window this is only allowed when there is a real
-		// charge — a fully credit-covered "payment" is just a credit confirmation.
-		if (
-			outsideWindow &&
-			(await isFullyCreditCovered(currentUser.id, durationHours, totalCents, hourlyRateCents))
-		)
-			throw error(400, CONFIRM_WINDOW_MSG);
-
+		// Pay online: settles from free hours when they cover it, else charges.
 		const result = await payReservationRemainder({
 			row,
 			userId: currentUser.id,
@@ -2038,18 +2058,8 @@ export const payReservation = form(
 		if (row.status !== 'scheduled' && row.status !== 'confirmed')
 			throw error(400, 'Not eligible for payment');
 
-		// Outside the confirmation window a fully credit-covered "payment" is just a
-		// credit confirmation — only a real Stripe charge confirms early.
-		const waivesWindow = await can('reservation.comp');
-		if (!waivesWindow && !withinConfirmationWindow(row.startsAt)) {
-			const reservationConfig = await getReservationConfig();
-			const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
-			const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
-			const totalCents = Math.round(durationHours * hourlyRateCents);
-			if (await isFullyCreditCovered(currentUser.id, durationHours, totalCents, hourlyRateCents))
-				throw error(400, CONFIRM_WINDOW_MSG);
-		}
-
+		// No window gate: free hours settle a covered session before the next
+		// reset at any time, and anything else is a real charge (#2060).
 		const result = await payReservationRemainder({
 			row,
 			userId: currentUser.id,
@@ -2454,7 +2464,7 @@ export const getReservations = query(
 		// `event`, so a member's own teaching bookings appear here too and would
 		// otherwise be priced at the drop-in rate on their own dashboard.
 		const reservationConfig = await getReservationConfig();
-		const freeHoursBalance = await getBalance(forUser ?? locals.user.id, 'free_hours');
+		const wallet = await getFreeHoursWallet(forUser ?? locals.user.id);
 
 		const rows = await db
 			.select()
@@ -2471,8 +2481,9 @@ export const getReservations = query(
 		// credits are available so the UI can indicate they'll apply.
 		// Confirmed/paid rows carry the real cash owed in cashDueCents (0 = fully
 		// covered by credits).
-		const hasFreeHours = freeHoursBalance > 0;
 		return rows.map((value: Reservation) => {
+			const freeHoursBalance = usableFreeHours(wallet, value.startsAt);
+			const hasFreeHours = freeHoursBalance > 0;
 			const durationHours = (value.endsAt.getTime() - value.startsAt.getTime()) / (1000 * 60 * 60);
 			const rateInCents = termsFor(value.bookerType, reservationConfig).hourlyRateCents;
 			const totalCents = Math.round(durationHours * rateInCents);
@@ -2482,12 +2493,11 @@ export const getReservations = query(
 			const netCents = value.cashDueCents ?? totalCents;
 			// Credits can still apply only to an uncommitted, non-terminal booking.
 			const creditsAvailable = hasFreeHours && value.cashDueCents == null && !isTerminal;
-			// The settle `payForReservation` already does, and only where it does
-			// it: outside the window it refuses a fully credit-covered booking.
+			// The settle `payForReservation` does: any time before the next reset,
+			// which `usableFreeHours` has already applied (#2060).
 			const payableWithCredits =
 				creditsAvailable &&
 				(value.status === 'scheduled' || value.status === 'confirmed') &&
-				withinConfirmationWindow(value.startsAt) &&
 				computeReservationCredit({
 					totalCents,
 					durationHours,

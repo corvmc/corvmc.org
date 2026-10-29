@@ -45,8 +45,18 @@ const mockCreditService = {
 };
 vi.mock('$lib/server/finance/credit-service', () => mockCreditService);
 
-const { computeReservationCredit, commitReservationCredits, reverseReservationCredits } =
-	await import('./reservation-credit-service');
+const {
+	computeReservationCredit,
+	commitReservationCredits,
+	reverseReservationCredits,
+	freeHoursApplyTo,
+	freeHoursResetAt
+} = await import('./reservation-credit-service');
+
+// The next reset, and a subscription whose "Resets to N on <date>" shows it.
+const RESET_AT = new Date('2026-11-15T08:00:00Z');
+const MINUTE = 60_000;
+const subscribed = { subscription: { hoursPerReset: 8, creditsResetAt: RESET_AT.toISOString() } };
 
 // hourlyRateCents 1500 ($15/hr) → creditValueCents = 750 (30-min block),
 // hoursToCredits(hours) = hours * 2.
@@ -204,7 +214,7 @@ describe('commitReservationCredits', () => {
 	});
 
 	it('records creditsUsed (hours) on a partially covered commit', async () => {
-		dbQueryResults = [[{ cashDueCents: null }]];
+		dbQueryResults = [[{ cashDueCents: null, startsAt: new Date(0) }], [subscribed]];
 		mockCreditService.getBalance.mockResolvedValue(2); // 2 credits = 1 hour
 
 		const result = await commitReservationCredits({
@@ -225,7 +235,7 @@ describe('commitReservationCredits', () => {
 	});
 
 	it('leaves creditsUsed null when no credits apply', async () => {
-		dbQueryResults = [[{ cashDueCents: null }]];
+		dbQueryResults = [[{ cashDueCents: null, startsAt: new Date(0) }], [subscribed]];
 		mockCreditService.getBalance.mockResolvedValue(0);
 
 		await commitReservationCredits({
@@ -238,5 +248,61 @@ describe('commitReservationCredits', () => {
 
 		expect(mockCreditService.deductCredits).not.toHaveBeenCalled();
 		expect(updateSetPayloads[0]).toMatchObject({ cashDueCents: 3000, creditsUsed: null });
+	});
+});
+
+// #2060: free hours pay only for a session that starts before the next reset,
+// so they never carry into the next allocation period.
+describe('free hours stop at the next reset', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		dbQueryResults = [];
+		updateSetPayloads.length = 0;
+		mockCreditService.getBalance.mockResolvedValue(100);
+	});
+
+	it('reads the reset from the subscription, and none without one', () => {
+		expect(freeHoursResetAt(subscribed.subscription as never)).toEqual(RESET_AT);
+		expect(freeHoursResetAt(null)).toBeNull();
+	});
+
+	it('applies to a session one minute before the reset, not one at it', () => {
+		expect(freeHoursApplyTo(new Date(RESET_AT.getTime() - MINUTE), RESET_AT)).toBe(true);
+		expect(freeHoursApplyTo(RESET_AT, RESET_AT)).toBe(false);
+		expect(freeHoursApplyTo(new Date(RESET_AT.getTime() + MINUTE), RESET_AT)).toBe(false);
+	});
+
+	it('never applies without a reset date', () => {
+		expect(freeHoursApplyTo(new Date(0), null)).toBe(false);
+	});
+
+	async function commitFor(startsAt: Date, userRow: unknown = subscribed) {
+		dbQueryResults = [[{ cashDueCents: null, startsAt }], [userRow]];
+		return commitReservationCredits({
+			userId: 'user-1',
+			reservationId: 'res-1',
+			totalCents: 3000,
+			durationHours: 2,
+			hourlyRateCents: RATE
+		});
+	}
+
+	it('commits credits for a session one minute before the reset', async () => {
+		const r = await commitFor(new Date(RESET_AT.getTime() - MINUTE));
+		expect(r.remainingCents).toBe(0);
+		expect(mockCreditService.deductCredits).toHaveBeenCalledOnce();
+	});
+
+	it('commits none for a session exactly at the reset, leaving the full price owed', async () => {
+		const r = await commitFor(RESET_AT);
+		expect(r).toMatchObject({ creditUnits: 0, remainingCents: 3000 });
+		expect(mockCreditService.deductCredits).not.toHaveBeenCalled();
+		expect(updateSetPayloads[0]).toMatchObject({ cashDueCents: 3000, creditsUsed: null });
+	});
+
+	it('commits none for a member with no subscription, whatever the balance', async () => {
+		const r = await commitFor(new Date(0), { subscription: null });
+		expect(r.remainingCents).toBe(3000);
+		expect(mockCreditService.deductCredits).not.toHaveBeenCalled();
 	});
 });
