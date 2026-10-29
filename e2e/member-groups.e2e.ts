@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { signInAs } from './fixtures/auth';
 import {
 	SEED_BANDMATE_EMAIL,
 	SEED_BANDMATE_ID,
@@ -36,11 +37,7 @@ const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
  */
 
 async function loginAsMember(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_BANDMATE_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_BANDMATE_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_BANDMATE_EMAIL, password: SEED_BANDMATE_PASSWORD });
 }
 
 test.describe('member groups index', () => {

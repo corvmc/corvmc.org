@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { signInAs } from './fixtures/auth';
 import { expectSuccessToast } from './toast';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
@@ -69,11 +70,7 @@ import {
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 async function login(page: Page, email: string, password: string) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(email);
-	await page.locator('input[name="password"]').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email, password });
 }
 
 /** Fill the onboarding form. `age` picks the 18-or-older answer. */
@@ -593,10 +590,6 @@ test.describe('volunteering — onboarding', () => {
 		// The roster keeps everyone, so approval shows as the sign-off action going away.
 		await expect(row.getByRole('button', { name: 'Approve' })).toHaveCount(0, { timeout: 15000 });
 
-		// Signing a second user in over an existing session does not swap it — the
-		// staff session would survive, and staff have no volunteer profile, so the
-		// assertion below would land on /start instead of the board.
-		await page.context().clearCookies();
 		await login(page, SEED_VOL_BLOCKED_MINOR_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer');
 		await expect(page.getByRole('heading', { name: /open shifts/i })).toBeVisible({
@@ -689,7 +682,6 @@ test.describe('volunteering — shifts', () => {
 			boardCard(page, SEED_VOL_ROLE_NAME, 'Awaiting staff confirmation').first()
 		).toBeVisible({ timeout: 15000 });
 
-		await page.context().clearCookies();
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_OPEN_ID}`);
 

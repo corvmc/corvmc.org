@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { signInAs } from './fixtures/auth';
 import {
 	SEED_MSG_PASSWORD,
 	SEED_MSG_SENDER_EMAIL,
@@ -38,20 +39,11 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
 const WAIT = { timeout: 15000 };
 
 async function login(page: Page, email: string, password: string) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(email);
-	await page.locator('input[name="password"]').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, WAIT);
+	await signInAs(page, { email, password });
 }
 
-/**
- * Log in as somebody else. `/login` bounces an already-authenticated user, so
- * the session has to go first — otherwise the "second login" quietly no-ops and
- * the rest of the test runs as the wrong account.
- */
+/** Swap to somebody else; `signInAs` replaces the cookies outright. */
 async function switchUser(page: Page, email: string, password: string) {
-	await page.context().clearCookies();
 	await login(page, email, password);
 }
 
