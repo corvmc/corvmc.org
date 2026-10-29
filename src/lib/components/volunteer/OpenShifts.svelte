@@ -5,7 +5,7 @@
 	 * Filtered to the roles the member said they'd take, because that is what
 	 * their interests are *for* — a list that ignores them makes picking roles a
 	 * form you fill in and never see again. `Show all` is one press away, and the
-	 * subline says which of the two you are looking at, since a short list and a
+	 * heading says which of the two you are looking at, since a short list and a
 	 * filtered list look identical.
 	 *
 	 * A shift they can't take is shown with the reason rather than hidden: "you
@@ -19,7 +19,6 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
 	import { shiftLabel, shiftRoleSuffix } from '$lib/utils/shift-label';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -97,7 +96,7 @@
 	{#snippet header()}
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<CardTitle>
-				{showAll || !hasInterests ? 'All open shifts' : 'Open shifts for you'}
+				{showAll || !hasInterests ? 'Open shifts' : 'Open shifts for you'}
 				<span class="text-muted font-normal">· {filtered.length}</span>
 			</CardTitle>
 			{#if hasInterests && matches.length !== available.length}
@@ -107,18 +106,6 @@
 			{/if}
 		</div>
 	{/snippet}
-
-	<p class="text-subtle text-sm">
-		{#if !hasInterests}
-			Everything that's open. <a href={resolve('/member/volunteer/interests')} class="link">
-				Pick the roles you'd take
-			</a> and we'll show those first.
-		{:else if showAll}
-			Everything that's open, whether or not it matches your roles.
-		{:else}
-			Only the roles you said you'd take.
-		{/if}
-	</p>
 
 	{#if filtered.length === 0}
 		<EmptyState

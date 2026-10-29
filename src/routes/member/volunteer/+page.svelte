@@ -2,11 +2,8 @@
 	/**
 	 * The member's volunteering dashboard: a next-action stack beside a board.
 	 *
-	 * It used to be one page doing six jobs — three stat tiles, a prefill prompt,
-	 * the board, a clearances list, the whole hour history, and two forms behind
-	 * header modals. Everything was on it, so nothing on it was the next thing to
-	 * do. The left column is now only what is owed or pending; the history moved
-	 * to its own screen and is a single summary row here.
+	 * The left column is only what is owed or pending: hours to log and shifts
+	 * claimed. Contact info, roles and hour history live on the profile.
 	 *
 	 * The gate is still the gate: inside the wrapper `getMyVolunteerAccess` is
 	 * awaited first, so its server-side redirect — an un-onboarded member to
@@ -18,16 +15,14 @@
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import ProfileFields from '$lib/components/volunteer/ProfileFields.svelte';
 	import OpenShifts from '$lib/components/volunteer/OpenShifts.svelte';
 	import ShiftInvitations from '$lib/components/volunteer/ShiftInvitations.svelte';
 	import MyShiftCard from '$lib/components/volunteer/MyShiftCard.svelte';
 	import LogHoursAction from '$lib/components/volunteer/LogHoursAction.svelte';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
-	import { formatVolunteerHours, DEFAULT_TIMEZONE } from '$lib/config';
-	import { getMemberVolunteerPage, updateVolunteerProfile } from '$lib/remote/volunteer.remote';
+	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import { getMemberVolunteerPage } from '$lib/remote/volunteer.remote';
 
 	const pageData = $derived(await getMemberVolunteerPage());
 
@@ -63,43 +58,10 @@
 				s.status !== 'completed' || !s.endsAt || s.endsAt > new Date(Date.now() - 14 * 86_400_000)
 		)
 	);
-
-	const returned = $derived(pageData.logs.filter((l) => l.status === 'rejected').length);
-	const expiring = $derived(
-		pageData.certifications.filter((c) => c.state === 'expiring' || c.state === 'expired')
-	);
 </script>
 
 <PageHeader width="5xl" title="Volunteering" subtitle="Member">
-	<Button href={resolve('/member/volunteer/interests')} variant="ghost" size="sm">Interests</Button>
-	<Button href={resolve('/member/volunteer/hours')} variant="ghost" size="sm">Hours</Button>
-	<LogHoursAction roles={pageData.roles} programs={pageData.programs} label="Log Hours" />
-	<!--
-		Not in the redesign's three header actions, and kept anyway: it is the only
-		way to correct a name or a phone number on the volunteer record, and the
-		screens that replaced this page's modals do not cover it. Dropping a page's
-		last door to a capability is a regression however tidy the result looks.
-	-->
-	<Action
-		action={updateVolunteerProfile}
-		label="Profile"
-		variant="ghost"
-		size="sm"
-		modalTitle="Your volunteer profile"
-		submitLabel="Save"
-		successToast="Profile updated"
-	>
-		{#snippet form()}
-			<ProfileFields
-				fields={updateVolunteerProfile.fields}
-				firstName={pageData.access.firstName}
-				lastName={pageData.access.lastName}
-				pronouns={pageData.access.pronouns}
-				phone={pageData.access.phone}
-				email={pageData.access.email}
-			/>
-		{/snippet}
-	</Action>
+	<Button href={resolve('/member/volunteer/profile')} variant="ghost" size="sm">Profile</Button>
 </PageHeader>
 
 <PageContent width="5xl">
@@ -151,7 +113,7 @@
 				</InfoCard>
 			{/if}
 
-			<InfoCard title="Your shifts" state={liveShifts.length}>
+			<InfoCard title="Claimed shifts" state={liveShifts.length}>
 				{#if liveShifts.length === 0}
 					<EmptyState
 						title="You're not on any shifts"
@@ -164,41 +126,6 @@
 						{/each}
 					</ul>
 				{/if}
-			</InfoCard>
-
-			<!--
-				Three rows, each a link into the screen that owns the thing. They
-				replace three stat tiles and a full table: a number you cannot act on
-				is decoration, and a number that takes you somewhere is navigation.
-			-->
-			<InfoCard title="Where you're at">
-				<ul class="divide-y divide-base-300 text-sm">
-					<li class="flex items-center justify-between gap-2 py-2">
-						<span>
-							{formatVolunteerHours(pageData.summary.approvedMinutes)} filed
-							{#if returned > 0}
-								<span class="text-warning">· {returned} returned</span>
-							{/if}
-						</span>
-						<a href={resolve('/member/volunteer/hours')} class="link">Your hours →</a>
-					</li>
-					<li class="flex items-center justify-between gap-2 py-2">
-						<span>
-							{pageData.interests.length}
-							{pageData.interests.length === 1 ? 'role' : 'roles'} selected
-						</span>
-						<a href={resolve('/member/volunteer/interests')} class="link">Interests →</a>
-					</li>
-					{#if expiring.length > 0}
-						<li class="flex items-center justify-between gap-2 py-2">
-							<span class="text-warning">
-								{expiring[0].certificationName}
-								{expiring[0].state === 'expired' ? 'has lapsed' : 'expires soon'}
-							</span>
-							<span class="text-subtle text-xs">Staff renew these</span>
-						</li>
-					{/if}
-				</ul>
 			</InfoCard>
 		</div>
 

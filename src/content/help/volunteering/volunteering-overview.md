@@ -58,7 +58,7 @@ they're what fix the briefing for the next person.
 
 ## Logging your hours
 
-After you have helped out, log the time from the same page:
+After you have helped out, log the time from your volunteer **Profile**:
 
 1. Click **Log Hours**.
 2. Pick the role, the date you worked, and how long — to the nearest quarter hour.

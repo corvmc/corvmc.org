@@ -2,8 +2,8 @@
 	import type { RemoteFormField } from '@sveltejs/kit';
 	/**
 	 * The "about you" half of volunteer onboarding, shared by the start step and
-	 * the Profile modal on /member/volunteer. The step adds the 18-or-older
-	 * select after it; the modal deliberately does not, because re-submitting
+	 * the Contact info section of /member/volunteer/profile. The step adds the
+	 * 18-or-older select after it; the profile does not, because re-submitting
 	 * that answer is how a blocked minor would unblock themselves.
 	 *
 	 * First and last name are stored on `volunteer_profile`. Pronouns and phone

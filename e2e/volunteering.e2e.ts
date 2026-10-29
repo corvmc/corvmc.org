@@ -447,9 +447,8 @@ test.describe('volunteering — member', () => {
 
 	test('a returned log shows the member the reason', async ({ page }) => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
-		// The history moved off the dashboard: a log filed in March is not a next
-		// action, and the one state that is was buried under everything approved.
-		await page.goto('/member/volunteer/hours');
+		// The history lives on the profile: a log filed in March is not a next action.
+		await page.goto('/member/volunteer/profile');
 
 		// Without the reason the member cannot correct and resubmit, which is why
 		// the service refuses a rejection that has none.
@@ -462,10 +461,10 @@ test.describe('volunteering — member', () => {
 
 	test('a member can log hours and they land as pending', async ({ page }) => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
-		await page.goto('/member/volunteer/hours');
+		await page.goto('/member/volunteer/profile');
 
 		const description = `E2E logged ${Date.now()}`;
-		await page.getByRole('button', { name: 'Log Hours' }).click();
+		await page.getByRole('button', { name: 'Log Hours', exact: true }).click();
 
 		await page
 			.locator('select[name="volunteerRoleId"]')
@@ -540,13 +539,9 @@ test.describe('volunteering — onboarding', () => {
 		// The body is shifts now — the picker must not be sitting open in it.
 		await expect(page.getByRole('heading', { name: /open shifts/i })).toBeVisible();
 
-		// Reopening shows the selection survived the replace-all write. Interests is
-		// a screen now rather than a modal over the board: it is the same length as
-		// the board it filters, and a dialog that tall is a page in a costume.
-		// `exact` matters: the summary row's "Interests →" link points at the same
-		// page, and a substring match resolves to both.
-		await page.getByRole('link', { name: 'Interests', exact: true }).click();
-		await page.waitForURL(/\/member\/volunteer\/interests/, { timeout: 15000 });
+		// The profile shows the selection survived the replace-all write.
+		await page.getByRole('link', { name: 'Profile', exact: true }).click();
+		await page.waitForURL(/\/member\/volunteer\/profile/, { timeout: 15000 });
 		await expect(page.getByRole('checkbox', { name: SEED_VOL_ROLE_NAME })).toBeChecked();
 		await expect(page.locator('textarea[name="availability"]')).toHaveValue('E2E weekday evenings');
 	});
@@ -604,17 +599,15 @@ test.describe('volunteering — onboarding', () => {
 		});
 	});
 
-	test('the profile modal saves a changed phone back to the account', async ({ page }) => {
+	test('the profile saves a changed phone back to the account', async ({ page }) => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
-		await page.goto('/member/volunteer');
+		await page.goto('/member/volunteer/profile');
 
 		const phone = `(541) 555-${String(Date.now()).slice(-4)}`;
-		await page.getByRole('button', { name: 'Profile' }).click();
-		const modal = page.getByRole('dialog');
-		await expect(modal).toBeVisible({ timeout: 15000 });
-		await modal.locator('input[name="phone"]').fill(phone);
-		await modalSubmit(page, 'Save').click();
-		await expect(modal).toHaveCount(0, { timeout: 15000 });
+		const contact = page.locator('form').filter({ has: page.locator('input[name="phone"]') });
+		await contact.locator('input[name="phone"]').fill(phone);
+		await contact.getByRole('button', { name: 'Save', exact: true }).click();
+		await expectSuccessToast(page);
 
 		// Written to `user`, not duplicated onto the profile — so it shows up on
 		// the account page, which is the other editor of the same column.

@@ -658,7 +658,7 @@ export const getVolunteerBlockedNotice = query(async () => {
 	return data;
 });
 
-/** /member/volunteer's own gate, and the data behind its two header modals. */
+/** The volunteering pages' gate, and the contact info the profile edits. */
 export const getMyVolunteerAccess = query(async () => {
 	const data = await loadOnboarding();
 	gate(data.stage, ['active']);
@@ -726,7 +726,7 @@ export const startVolunteerOnboarding = form(onboardingSchema, async (data) => {
 	redirect(303, status === 'blocked' ? '/member/volunteer/blocked' : '/member/volunteer/interests');
 });
 
-/** The Profile modal. No `isAdult` — see updateVolunteerProfile in the service. */
+/** Profile's Contact info section. No `isAdult` — see updateVolunteerProfile in the service. */
 export const updateVolunteerProfile = form(profileFieldsSchema, async (data) => {
 	const currentUser = requireUser();
 
@@ -736,7 +736,10 @@ export const updateVolunteerProfile = form(profileFieldsSchema, async (data) => 
 		mapDomainError(err);
 	}
 
-	await Promise.all([getMyVolunteerOnboarding().refresh(), getMemberVolunteerPage().refresh()]);
+	await Promise.all([
+		getMyVolunteerOnboarding().refresh(),
+		getMemberVolunteerProfilePage().refresh()
+	]);
 	return { success: true };
 });
 
@@ -812,11 +815,14 @@ export const saveVolunteerInterests = form(
 			mapDomainError(err);
 		}
 
-		// Both pages that read the interests: the dashboard and the onboarding step. This form is
-		// shared by them, so refreshing one wrapper would leave the other stale.
-		await Promise.all([getMemberVolunteerPage().refresh(), getVolunteerInterestsPage().refresh()]);
-		// No redirect: this form is shared by the onboarding step and the modal on
-		// /member/volunteer, and only the step wants to navigate. It does that itself.
+		// Every page that reads the interests: the dashboard orders by them, and the
+		// onboarding step and the profile both render this form.
+		await Promise.all([
+			getMemberVolunteerPage().refresh(),
+			getVolunteerInterestsPage().refresh(),
+			getMemberVolunteerProfilePage().refresh()
+		]);
+		// No redirect: only the onboarding step navigates, and it does that itself.
 		return { success: true };
 	}
 );
@@ -1149,12 +1155,12 @@ export const deleteVolunteerRole = form(z.object({ id: z.string().min(1) }), asy
 // ---------------------------------------------------------------------------
 
 async function refreshMemberViews() {
-	// Both member pages compose the same constituents, so a mutation has to
-	// refresh both wrappers. Refreshing only the dashboard is what left a log
-	// filed from /member/volunteer/hours invisible on the page that filed it —
-	// the same shape `custom/refresh-the-composed-query` exists to catch, one
-	// wrapper along.
-	await Promise.all([getMemberVolunteerPage().refresh(), getMemberHoursPage().refresh()]);
+	// Both member pages compose the same constituents, so a mutation refreshes
+	// both wrappers (see `custom/refresh-the-composed-query`).
+	await Promise.all([
+		getMemberVolunteerPage().refresh(),
+		getMemberVolunteerProfilePage().refresh()
+	]);
 }
 
 /**
@@ -1197,7 +1203,7 @@ async function refreshRoleViews(roleId?: string) {
 		getStaffVolunteerSetupPage().refresh(),
 		getMemberVolunteerPage().refresh(),
 		// A renamed role is the label on every log row that used it.
-		getMemberHoursPage().refresh(),
+		getMemberVolunteerProfilePage().refresh(),
 		getVolunteerInterestsPage().refresh(),
 		...(roleId ? [getStaffVolunteerRolePage(roleId).refresh()] : [])
 	]);
@@ -2170,81 +2176,44 @@ export const getMyShifts = query(async () => {
 export const getMemberVolunteerPage = query(z.void(), async () => {
 	const access = await getMyVolunteerAccess();
 
-	const [
-		roles,
-		interests,
-		openShifts,
-		unloggedShifts,
-		logs,
-		summary,
-		certifications,
-		myShifts,
-		programs,
-		invitations
-	] = await Promise.all([
-		getActiveVolunteerRoles(),
+	const [interests, openShifts, unloggedShifts, myShifts, invitations] = await Promise.all([
 		getMyVolunteerInterests(),
 		getOpenShifts(),
 		getUnloggedShifts(),
-		getMyVolunteerHours(),
-		getMyVolunteerSummary(),
-		// `getMyCertifications` was written and then had no caller anywhere, so a member
-		// could be told a shift needs a clearance and had no page saying which ones they
-		// already hold (docs/reports/volunteer-workflow-findings.md#d4).
-		getMyCertifications(),
 		getMyShifts(),
-		listMyPrograms(requireUser().id),
 		// Above the claim board on the page: an invitation is addressed to this
 		// member, where the board is addressed to everybody.
 		listInvitationsForUser(requireUser().id)
 	]);
 
-	return {
-		access,
-		roles,
-		interests,
-		openShifts,
-		unloggedShifts,
-		logs,
-		summary,
-		certifications,
-		myShifts,
-		programs,
-		invitations
-	};
+	return { access, interests, openShifts, unloggedShifts, myShifts, invitations };
 });
 
 /**
- * "Your hours" — its own screen rather than a table at the bottom of the
- * dashboard.
+ * The volunteer profile: contact info, preferred roles and the hour history.
  *
- * The dashboard is a next-action stack: what to do now. A log filed in March is
- * not a next action, and a returned one — the only kind that *is* — was buried
- * under everything already approved. Splitting them lets the dashboard carry a
- * single summary row and this page carry the whole history.
+ * The history is off the dashboard because a log filed in March is not a next
+ * action. `roles` serves both the interest picker and the log modal's role picker.
  */
-export const getMemberHoursPage = query(z.void(), async () => {
+export const getMemberVolunteerProfilePage = query(z.void(), async () => {
 	const access = await getMyVolunteerAccess();
 
-	const [logs, summary, roles, programs] = await Promise.all([
+	const [logs, roles, programs, interests] = await Promise.all([
 		getMyVolunteerHours(),
-		getMyVolunteerSummary(),
-		// The log modal's role picker, for a correction or a free entry started
-		// from this page.
 		getActiveVolunteerRoles(),
-		// And its program picker — the committees and clubs this member is on.
-		listMyPrograms(requireUser().id)
+		// The log modal's program picker — the committees and clubs this member is on.
+		listMyPrograms(requireUser().id),
+		getMyVolunteerInterests()
 	]);
 
-	return { access, logs, summary, roles, programs };
+	return { access, logs, roles, programs, interests };
 });
 
 /**
  * The volunteering onboarding step's one load-bearing query.
  *
- * Shares two constituents with `getMemberVolunteerPage`, which is why `saveVolunteerInterests`
- * refreshes both wrappers rather than the constituents: the interests form is rendered by the step
- * and by a modal on the dashboard, and refreshing one would leave the other stale.
+ * Shares constituents with `getMemberVolunteerPage` and `getMemberVolunteerProfilePage`, which
+ * is why `saveVolunteerInterests` refreshes all three wrappers rather than the constituents.
  */
 export const getVolunteerInterestsPage = query(z.void(), async () => {
 	const [step, roles, interests] = await Promise.all([

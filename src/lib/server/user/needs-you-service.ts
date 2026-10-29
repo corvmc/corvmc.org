@@ -93,7 +93,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			id: `volunteer-hours-unlogged:${c.signupId}`,
 			kind: 'volunteer-hours-unlogged',
 			title: `Log your hours for ${c.roleName}`,
-			href: resolve('/member/volunteer/hours'),
+			href: resolve('/member/volunteer/profile'),
 			label: 'Log Hours',
 			dueAt: new Date(c.endsAt.getTime() + VOLUNTEER_BACKDATE_LIMIT_DAYS * 86_400_000),
 			rank: 2
