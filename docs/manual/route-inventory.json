@@ -672,6 +672,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/project-templates",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/project-templates/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/projects",
 		"panel": "staff"
 	},
@@ -753,14 +761,6 @@
 	},
 	{
 		"route": "/staff/volunteer",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/volunteer/duty-lists",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/volunteer/duty-lists/[id]",
 		"panel": "staff"
 	},
 	{

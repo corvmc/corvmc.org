@@ -42,7 +42,7 @@ export type StaffNavKey =
 	| 'volunteer'
 	| 'volunteer-schedule'
 	| 'volunteer-people'
-	| 'volunteer-duty-lists'
+	| 'project-templates'
 	| 'volunteer-report'
 	| 'reservations'
 	| 'instructors'
@@ -192,22 +192,6 @@ export const staffNavSections: StaffNavSection[] = [
 						capability: 'volunteer.read',
 						label: 'People',
 						href: resolve('/staff/volunteer/people')
-					},
-					// Its own row rather than folded into Roles. A duty list is arguably
-					// a definition like a role is, but it landed on `main` as a screen of
-					// its own while this branch was in flight, and quietly absorbing
-					// somebody else's new surface into a redesign they did not review is
-					// not a merge resolution.
-					//
-					// Gated on `volunteer.read` rather than `event.read`: a duty list
-					// produces work orders, and a coordinator holding no `event.manage`
-					// could previously see this row, open the page, and have every write
-					// refused.
-					{
-						key: 'volunteer-duty-lists',
-						capability: 'volunteer.read',
-						label: 'Duty Lists',
-						href: resolve('/staff/volunteer/duty-lists')
 					}
 				]
 			}
@@ -237,6 +221,13 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'project.read',
 				label: 'Projects',
 				href: resolve('/staff/projects')
+			},
+			// Gated like Projects: a template is edited under `project.manage`.
+			{
+				key: 'project-templates',
+				capability: 'project.read',
+				label: 'Project Templates',
+				href: resolve('/staff/project-templates')
 			},
 			// Beside Projects, not under Volunteering (#1796): it defines work and
 			// writes work orders; Volunteering pairs that work with people.

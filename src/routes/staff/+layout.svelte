@@ -108,7 +108,7 @@
 		volunteer: IconHeartHandshake,
 		'volunteer-schedule': IconCalendarWeek,
 		'volunteer-people': IconUsersGroup,
-		'volunteer-duty-lists': IconClipboardList,
+		'project-templates': IconClipboardList,
 		'volunteer-report': IconReportAnalytics,
 		reservations: IconClipboardCheck,
 		instructors: IconSchool,
