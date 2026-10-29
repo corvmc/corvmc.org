@@ -47,6 +47,14 @@ vi.mock('$lib/server/finance/credit-service', () => ({
 	getBalance: vi.fn(async () => freeHoursBalance)
 }));
 
+// The wallet's subscription read goes through `db`, which this spec answers
+// with reservation rows, so only that read is replaced; the pricing is real.
+let resetAt: Date | null = new Date('2099-01-01T00:00:00Z');
+vi.mock('$lib/server/reservation/reservation-credit-service', async (importOriginal) => ({
+	...(await importOriginal<typeof import('$lib/server/reservation/reservation-credit-service')>()),
+	getFreeHoursWallet: vi.fn(async () => ({ balance: freeHoursBalance, resetAt }))
+}));
+
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });
 
 vi.mock('$app/server', () => ({
@@ -93,6 +101,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	selectResult = [];
 	freeHoursBalance = 0;
+	resetAt = new Date('2099-01-01T00:00:00Z');
 });
 
 describe('getReservations pricing', () => {
@@ -168,10 +177,32 @@ describe('getReservations payableWithCredits', () => {
 		expect(row.payableWithCredits).toBe(false);
 	});
 
-	it('is false before the confirmation window opens, where the settle is refused', async () => {
+	// #2060: the window does not gate a free-hours settle; the next reset does.
+	it('is true before the confirmation window opens when the session precedes the reset', async () => {
 		freeHoursBalance = 4;
-		selectResult = [twoHourRow(24 * 10)];
+		const row10 = twoHourRow(24 * 10);
+		resetAt = new Date(row10.startsAt.getTime() + 60_000); // one minute after it starts
+		selectResult = [row10];
 		const [row] = await getReservations();
+		expect(row.payableWithCredits).toBe(true);
+	});
+
+	it('is false for a session that starts exactly at the reset, and credits do not apply', async () => {
+		freeHoursBalance = 4;
+		const row10 = twoHourRow(24 * 10);
+		resetAt = row10.startsAt;
+		selectResult = [row10];
+		const [row] = await getReservations();
+		expect(row.creditsAvailable).toBe(false);
+		expect(row.payableWithCredits).toBe(false);
+	});
+
+	it('is false for a member with no reset date, whatever the balance', async () => {
+		freeHoursBalance = 4;
+		resetAt = null;
+		selectResult = [twoHourRow(24)];
+		const [row] = await getReservations();
+		expect(row.creditsAvailable).toBe(false);
 		expect(row.payableWithCredits).toBe(false);
 	});
 

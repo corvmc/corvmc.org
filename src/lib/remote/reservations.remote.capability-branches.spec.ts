@@ -49,8 +49,8 @@ vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
-// A big balance, so every booking below is fully credit-covered: the case in
-// which the confirmation window is the only thing standing in the way.
+// A big balance, but the rows below carry no subscription, so no reset date and
+// no free hours apply (#2060): the window alone decides a no-charge confirm.
 vi.mock('$lib/server/finance/credit-service', () => ({ getBalance: vi.fn(async () => 100) }));
 vi.mock('$lib/server/user/user-service', () => ({ ensureContactPhone: vi.fn(async () => true) }));
 vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
@@ -187,9 +187,9 @@ describe('cancelReservation', () => {
 
 // Before: any position committed their own booking outside the window without a
 // charge. After: `reservation.comp` (admin, staff, treasurer); see #1434.
+// `payReservation` has no window gate since #2060: it settles or charges.
 describe.each([
 	['payForReservation', () => remote.payForReservation({ id: 'res-1', skipPayment: 'on' })],
-	['payReservation', () => remote.payReservation({ coverFees: false })],
 	[
 		'bookAndPayReservation',
 		() =>
