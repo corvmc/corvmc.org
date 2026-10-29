@@ -1624,28 +1624,24 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
-	// Only a real Stripe charge (or `reservation.comp`, see #1434) commits a
-	// reservation outside the confirmation window: free hours are spent at
-	// confirmation, and confirmation opens CONFIRMATION_WINDOW_DAYS out.
+	// Outside the confirmation window only a real Stripe charge, a full
+	// free-hours settle, or `reservation.comp` (#1434) commits a reservation.
 	const waivesWindow = await can('reservation.comp');
 	const outsideWindow = !waivesWindow && !withinConfirmationWindow(startsAt);
 
-	// Nothing to charge and too early to commit — so the booking `create()` just
-	// wrote is the answer, not an error. This threw a 400 the member never saw,
-	// over a `scheduled` row that survived it: they were left owning a booking
-	// they had been told nothing about, which `cancel-unconfirmed` then killed at
-	// its start time. The row is an ordinary unconfirmed booking;
-	// report it as the hold it is.
+	// Free hours that fully cover it settle it now, window or not (#2067), so
+	// only a Confirm that leaves something owed is held. The hold is the answer,
+	// not a 400: the `scheduled` row `create()` wrote survives either way.
 	if (
 		outsideWindow &&
-		(data.skipPayment === 'on' ||
-			(await isFullyCreditCovered(
-				locals.user.id,
-				startsAt,
-				durationHours,
-				totalCents,
-				hourlyRateCents
-			)))
+		data.skipPayment === 'on' &&
+		!(await isFullyCreditCovered(
+			locals.user.id,
+			startsAt,
+			durationHours,
+			totalCents,
+			hourlyRateCents
+		))
 	) {
 		return {
 			reservationId: res.id,
