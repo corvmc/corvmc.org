@@ -26,6 +26,7 @@
 	import { isOverdue } from '$lib/utils/work-order-due';
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import NewWorkOrderAction from '../NewWorkOrderAction.svelte';
+	import { PROJECT_FILTERS, matchesProject, parseProjectFilter } from './project-filter';
 	import { formatDateShort, relativeDay } from '$lib/utils/format';
 	import {
 		DEFAULT_TIMEZONE,
@@ -66,6 +67,7 @@
 	let roleFilter = $state(initial.get('role') ?? '');
 	let kind = $state<Kind>(parseKind(initial.get('kind')));
 	let shortOnly = $state(initial.get('short') === '1');
+	let projectFilter = $state(parseProjectFilter(initial.get('project')));
 	let contractorView = $state(parseView(initial.get('contractor')));
 	// Contractor work is not staffed by the window, role or headcount.
 	const byContractor = $derived(kind === 'contractor');
@@ -78,6 +80,7 @@
 		if (roleFilter) pairs.push(['role', roleFilter]);
 		if (kind) pairs.push(['kind', kind]);
 		if (shortOnly) pairs.push(['short', '1']);
+		if (projectFilter) pairs.push(['project', projectFilter]);
 		if (byContractor && contractorView !== 'open') pairs.push(['contractor', contractorView]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
@@ -136,6 +139,7 @@
 		if (kind === 'recurring') return w.maintenanceScheduleId !== null;
 		return true;
 	}
+	const matchesFilters = (w: Row) => matchesKind(w) && matchesProject(w, projectFilter);
 
 	/** "3 work orders · 2 short-staffed · 4 claims to confirm", minus the zeroes. */
 	function summarize(rows: Row[], staffed: Row[]): string {
@@ -148,24 +152,26 @@
 	}
 </script>
 
-<PageHeader title="Schedule" subtitle="Volunteering">
+<PageHeader title="Schedule" subtitle="Planning">
 	<NewWorkOrderAction onsuccess={() => void getSchedulePage(args).refresh()} />
 </PageHeader>
 
 <PageContent>
 	<FilterBar
-		activeCount={byContractor
-			? 1 + (contractorView !== 'open' ? 1 : 0)
-			: (roleFilter ? 1 : 0) +
-				(range !== DEFAULT_WINDOW ? 1 : 0) +
-				(kind ? 1 : 0) +
-				(shortOnly ? 1 : 0)}
+		activeCount={(projectFilter ? 1 : 0) +
+			(byContractor
+				? 1 + (contractorView !== 'open' ? 1 : 0)
+				: (roleFilter ? 1 : 0) +
+					(range !== DEFAULT_WINDOW ? 1 : 0) +
+					(kind ? 1 : 0) +
+					(shortOnly ? 1 : 0))}
 		onclear={() => {
 			roleFilter = '';
 			range = DEFAULT_WINDOW;
 			kind = '';
 			shortOnly = false;
 			contractorView = 'open';
+			projectFilter = '';
 		}}
 	>
 		{#if !byContractor}
@@ -200,6 +206,19 @@
 				{#if value !== 'contractor' || contractorAccess || byContractor}
 					<option {value}>{label}</option>
 				{/if}
+			{/each}
+		</Select>
+
+		<Select
+			size="sm"
+			aria-label="Project"
+			value={projectFilter}
+			onchange={(e: Event) => {
+				projectFilter = parseProjectFilter((e.currentTarget as HTMLSelectElement).value);
+			}}
+		>
+			{#each Object.entries(PROJECT_FILTERS) as [value, label] (value)}
+				<option {value}>{label}</option>
 			{/each}
 		</Select>
 
@@ -249,9 +268,11 @@
 	{/if}
 
 	{#await schedule then data}
-		{@const cancelled = data.shifts.filter((s) => s.cancelledAt)}
+		{@const cancelled = data.shifts.filter(
+			(s) => s.cancelledAt && matchesProject(s, projectFilter)
+		)}
 		{@const live = [...data.shifts.filter((s) => !s.cancelledAt), ...data.unscheduled].filter(
-			matchesKind
+			matchesFilters
 		)}
 		{@const staffed = live.filter((w) => !data.contractors[w.id]?.length)}
 		{@const shown = shortOnly ? staffed.filter(isShort) : live}

@@ -145,7 +145,6 @@ describe('the nav tree', () => {
 			// The parent's own href leads, which is what holds the group open while you
 			// are on the dashboard — see docs/development/ui-patterns.md#section-dashboards.
 			'/staff/volunteer',
-			'/staff/volunteer/schedule',
 			'/staff/volunteer/people'
 		]);
 	});
@@ -196,6 +195,7 @@ describe('the nav tree', () => {
 			'ballots',
 			'projects',
 			'project-templates',
+			'volunteer-schedule',
 			'recurring-work'
 		]);
 		expect(keys('space')).toEqual([
