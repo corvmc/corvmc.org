@@ -1,11 +1,8 @@
 <script lang="ts">
 	/**
-	 * The recurring-work definitions, shown above Schedule's table while its
-	 * Recurring filter is on. The occurrences they write are rows of that table, so
-	 * the next one's date and who is on it live there, not here.
-	 *
-	 * Self-contained, with its own query, so #1796 can move it to wherever
-	 * recurring work ends up living without touching Schedule.
+	 * The recurring-work definitions. Each writes work orders, one open at a time,
+	 * and those occurrences are rows of the volunteer Schedule, so the next one's
+	 * date and who is on it live there, not here.
 	 */
 	import { resolve } from '$app/paths';
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';

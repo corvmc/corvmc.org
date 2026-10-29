@@ -23,7 +23,7 @@ import { getMemberGroup } from './groups.remote';
  * work orders it writes, one at a time.
  */
 
-/** One load-bearing query for `/staff/volunteer/recurring`: rows plus the form's options. */
+/** One load-bearing query for `/staff/recurring-work`: rows plus the form's options. */
 export const getRecurringWorkPage = query(async () => {
 	await requireCapability('volunteer.read');
 	const [schedules, roles, projects] = await Promise.all([
