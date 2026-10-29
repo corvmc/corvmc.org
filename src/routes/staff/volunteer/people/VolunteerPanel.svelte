@@ -58,7 +58,7 @@
 			</Fact>
 			<Fact label="Followed Roles">
 				{#if volunteer.roleNames.length > 0}
-					<BadgeList items={volunteer.roleNames} />
+					<BadgeList items={volunteer.roleNames} wrap />
 				{:else}
 					<span class="text-subtle">None picked</span>
 				{/if}
