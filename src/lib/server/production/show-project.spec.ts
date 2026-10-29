@@ -143,10 +143,10 @@ describe('shifts follow the show clock', () => {
 		exec(`insert into volunteer_role (id, name) values ('role-1', 'Sound')`);
 		exec(`insert into duty_list (id, name, anchor, subject) values
 			('dl-in', 'Load-in crew', 'load_in', 'event'), ('dl-doors', 'Door', 'doors', 'event')`);
-		exec(`insert into work_order (id, volunteer_role_id, event_id, starts_at, ends_at, duty_list_id, cancelled_at) values
-			('wo-in', 'role-1', 'evt-1', ${T0 - 1800}, ${T0 + 1800}, 'dl-in', null),
-			('wo-in-cancelled', 'role-1', 'evt-1', ${T0 - 1800}, ${T0 + 1800}, 'dl-in', ${T0}),
-			('wo-door', 'role-1', 'evt-1', ${T0 + 7200}, ${T0 + 9000}, 'dl-doors', null)`);
+		exec(`insert into work_order (id, volunteer_role_id, event_id, starts_at, ends_at, duty_list_id, anchor, cancelled_at) values
+			('wo-in', 'role-1', 'evt-1', ${T0 - 1800}, ${T0 + 1800}, 'dl-in', 'load_in', null),
+			('wo-in-cancelled', 'role-1', 'evt-1', ${T0 - 1800}, ${T0 + 1800}, 'dl-in', 'load_in', ${T0}),
+			('wo-door', 'role-1', 'evt-1', ${T0 + 7200}, ${T0 + 9000}, 'dl-doors', 'doors', null)`);
 	}
 	const at = (id: string) =>
 		sqlite.prepare(`select starts_at s, ends_at e from work_order where id = ?`).get(id) as {

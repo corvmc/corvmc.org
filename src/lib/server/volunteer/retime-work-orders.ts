@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { dutyList, workOrder } from '$lib/server/db/schema/volunteer';
+import { workOrder } from '$lib/server/db/schema/volunteer';
 import type { DutyListAnchor } from '$lib/config';
 
 /**
@@ -28,13 +28,8 @@ export function shiftAnchoredWorkOrders(
 		.where(
 			and(
 				eq(workOrder.eventId, eventId),
-				inArray(
-					workOrder.dutyListId,
-					db
-						.select({ id: dutyList.id })
-						.from(dutyList)
-						.where(inArray(dutyList.anchor, [...anchors]))
-				),
+				// The anchor stamped on the row, not the list's current one (#2033).
+				inArray(workOrder.anchor, [...anchors]),
 				isNull(workOrder.cancelledAt),
 				isNull(workOrder.resolvedAt),
 				sql`(${deltaSeconds}) is not null and (${deltaSeconds}) != 0`

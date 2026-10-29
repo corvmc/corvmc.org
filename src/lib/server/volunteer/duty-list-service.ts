@@ -44,8 +44,8 @@ import { recordAuditEntry } from '$lib/server/audit/audit-service';
  * Duty lists: a named set of work orders, stamped onto a subject.
  *
  * Applying one writes ordinary `work_order` rows carrying `dutyListId` for
- * provenance and nothing else — editing a list afterwards must not reach into
- * work people have already claimed. The subject is a show, a rehearsal booking
+ * provenance, plus the anchor and orientation facts copied at stamp time —
+ * editing a list afterwards must not reach into work people have already claimed. The subject is a show, a rehearsal booking
  * or a project: each has a time to offset from, which is all an apply needs.
  */
 
@@ -824,6 +824,8 @@ export async function applyDutyList(
 			groupId: item.groupId,
 			doneWhen: item.doneWhen,
 			dutyListId,
+			anchor: list.anchor,
+			isOrientation: list.autoApplyOn === 'reservation.first',
 			...(onProject ? place(item.section) : {}),
 			// On the claim board, as every stamped-out shift has always been.
 			postedAt: new Date(),

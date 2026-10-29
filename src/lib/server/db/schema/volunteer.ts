@@ -394,6 +394,14 @@ export const workOrder = sqliteTable(
 		// copy has "no link back".
 		dutyListId: text('duty_list_id').references(() => dutyList.id, { onDelete: 'set null' }),
 
+		// Which time this was measured from, copied at stamp time. Retime and
+		// close-out read this, never the list's current anchor (#2033).
+		anchor: text('anchor', { enum: dutyListAnchors }),
+
+		// This is a member's orientation shift. Stamped, so clearing a list's
+		// trigger or deleting the list cannot orphan a booked orientation.
+		isOrientation: integer('is_orientation', { mode: 'boolean' }).notNull().default(false),
+
 		// The recurring schedule this occurrence belongs to. Closing it — resolved
 		// or called off — is what writes the next one; see `maintenanceSchedule`.
 		maintenanceScheduleId: text('maintenance_schedule_id').references(

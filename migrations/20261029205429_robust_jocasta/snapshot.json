@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "40c2e8e3-da7d-45b2-87ee-0ee0405e4cd6",
+  "id": "d24a9122-f7e6-4cd5-b148-3ea881f07e0c",
   "prevIds": [
-    "f7522572-8adc-462e-a739-43ad8e5a0878"
+    "40c2e8e3-da7d-45b2-87ee-0ee0405e4cd6"
   ],
   "ddl": [
     {
@@ -10089,6 +10089,26 @@
       "default": null,
       "generated": null,
       "name": "duty_list_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "anchor",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "is_orientation",
       "entityType": "columns",
       "table": "work_order"
     },

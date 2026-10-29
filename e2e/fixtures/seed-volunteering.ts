@@ -590,6 +590,7 @@ export async function seedVolunteering(): Promise<void> {
 			capacity: 1,
 			postedAt: now,
 			dutyListId: SEED_VOL_DUTY_LIST_ID,
+			anchor: 'doors',
 			createdAt: now,
 			updatedAt: now
 		});

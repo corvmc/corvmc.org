@@ -167,6 +167,7 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[], groups
 		endsAt: at(item.offsetMinutes + item.durationMinutes),
 		capacity: item.capacity,
 		dutyListId: 'seed-duty-standard-show',
+		anchor: 'doors' as const,
 		createdByUserId: 'seed-vol-coordinator'
 	}));
 	await batchInsert(workOrder, workOrders, 8);
@@ -289,6 +290,7 @@ async function seedShowDeliverables(byName: Map<string, any>, groups: any[], sho
 			doneWhen: item.doneWhen,
 			dueAt: at(item.dueOffsetMinutes),
 			dutyListId: 'seed-duty-show-deliverables',
+			anchor: 'start' as const,
 			createdByUserId: 'seed-vol-coordinator'
 		})),
 		6
