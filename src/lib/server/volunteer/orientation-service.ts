@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
-import { dutyList, memberOrientation, workOrder } from '$lib/server/db/schema/volunteer';
+import { memberOrientation, workOrder } from '$lib/server/db/schema/volunteer';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import type { MemberOrientation } from '$lib/server/db/schema/volunteer';
@@ -164,8 +164,8 @@ export interface OrientationOwner {
  * Whose orientation is this work order, if it is one at all?
  *
  * Both conditions are needed: `reservation_id` alone would catch any work order
- * hanging off a booking, and the `auto_apply_on` join is what says this row came
- * from the orientation list. Returns the *member who booked* with their name and
+ * hanging off a booking, and `is_orientation`, stamped when the shift was made,
+ * is what says this row is one. Returns the *member who booked* with their name and
  * address, because both callers need to write to them.
  */
 export async function orientationOwnerOf(workOrderId: string): Promise<OrientationOwner | null> {
@@ -174,8 +174,7 @@ export async function orientationOwnerOf(workOrderId: string): Promise<Orientati
 		.from(workOrder)
 		.innerJoin(reservation, eq(reservation.id, workOrder.reservationId))
 		.innerJoin(user, eq(user.id, reservation.createdByUserId))
-		.innerJoin(dutyList, eq(dutyList.id, workOrder.dutyListId))
-		.where(and(eq(workOrder.id, workOrderId), eq(dutyList.autoApplyOn, 'reservation.first')))
+		.where(and(eq(workOrder.id, workOrderId), eq(workOrder.isOrientation, true)))
 		.limit(1);
 
 	return row ?? null;
@@ -206,11 +205,10 @@ export async function orientationForReservation(
 			capacity: workOrder.capacity
 		})
 		.from(workOrder)
-		.innerJoin(dutyList, eq(dutyList.id, workOrder.dutyListId))
 		.where(
 			and(
 				eq(workOrder.reservationId, reservationId),
-				eq(dutyList.autoApplyOn, 'reservation.first'),
+				eq(workOrder.isOrientation, true),
 				isNull(workOrder.cancelledAt)
 			)
 		)

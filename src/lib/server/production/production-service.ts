@@ -13,7 +13,7 @@ import { and, eq, getTableColumns, inArray, isNull, sql, type SQL } from 'drizzl
 import { alias } from 'drizzle-orm/sqlite-core';
 import { user } from '$lib/server/db/schema/authentication';
 import { eventListing } from '$lib/server/db/schema/event';
-import { dutyList, workOrder, workTask } from '$lib/server/db/schema/volunteer';
+import { workOrder, workTask } from '$lib/server/db/schema/volunteer';
 import { DomainError } from '$lib/server/domain-error';
 import type { Production, ProductionStatus } from '$lib/server/db/schema/production';
 import { recomputeSetTimes } from './run-of-show-service';
@@ -321,8 +321,8 @@ export async function updateProductionDetails(
 /**
  * The close-out tasks a show still owes.
  *
- * Load-out work: tasks on a work order for this event whose duty list is
- * anchored at `load_out`. The room being reset is the thing `closed` claims,
+ * Load-out work: tasks on a work order for this event that was stamped at
+ * `load_out`. The room being reset is the thing `closed` claims,
  * so a close with any of these open warns and names them.
  */
 export async function outstandingCloseOutTasks(productionId: string): Promise<string[]> {
@@ -345,11 +345,10 @@ function closeOutTasksOwed(productionIds: string[]) {
 		.innerJoin(workOrder, eq(workOrder.id, workTask.workOrderId))
 		.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
 		.innerJoin(production, eq(production.id, eventListing.productionId))
-		.innerJoin(dutyList, eq(dutyList.id, workOrder.dutyListId))
 		.where(
 			and(
 				inArray(production.id, productionIds),
-				eq(dutyList.anchor, 'load_out'),
+				eq(workOrder.anchor, 'load_out'),
 				eq(workTask.done, false),
 				isNull(workOrder.cancelledAt)
 			)

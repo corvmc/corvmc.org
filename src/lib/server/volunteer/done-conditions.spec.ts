@@ -192,8 +192,8 @@ describe('each condition', () => {
 		const row = item('close_out_done');
 		expect(await stateOf(row)).toBe('done');
 		exec(`insert into duty_list (id, name, anchor) values ('lo', 'Load-out', 'load_out')`);
-		exec(`insert into work_order (id, volunteer_role_id, event_id, starts_at, ends_at, duty_list_id)
-			values ('lo-wo', 'crew', 'evt', ${T0}, ${T0 + 3600}, 'lo')`);
+		exec(`insert into work_order (id, volunteer_role_id, event_id, starts_at, ends_at, duty_list_id, anchor)
+			values ('lo-wo', 'crew', 'evt', ${T0}, ${T0 + 3600}, 'lo', 'load_out')`);
 		task('lo-wo', false);
 		expect(await stateOf(row)).toBe('open');
 		exec(`update work_task set done = 1, done_at = ${T0} where work_order_id = 'lo-wo'`);

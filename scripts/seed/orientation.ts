@@ -103,6 +103,8 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 			capacity: 1,
 			notes: 'First visit — meet them at the front door.',
 			dutyListId: LIST_ID,
+			anchor: 'start' as const,
+			isOrientation: true,
 			createdByUserId: null
 		});
 		TASKS.forEach((label, i) =>
