@@ -97,8 +97,17 @@
 	// Before this the step drew "Free hours applied" and a button called Confirm
 	// for a booking that could only be held — the credits were never committed
 	// and the button's 400 reached the member nowhere.
+	// Free hours that cover it all settle the booking now, window or not (#2067).
+	const coveredByFreeHours = $derived(
+		!!pricing && pricing.creditsApplicable > 0 && pricing.remainingCents <= 0
+	);
 	const beforeConfirmWindow = $derived(
-		payAhead && !staff && !band && !!startsAt && !withinConfirmationWindow(startsAt)
+		payAhead &&
+			!staff &&
+			!band &&
+			!coveredByFreeHours &&
+			!!startsAt &&
+			!withinConfirmationWindow(startsAt)
 	);
 	const confirmOpensLabel = $derived(startsAt ? formatDate(confirmWindowOpensAt(startsAt)) : '');
 
@@ -241,10 +250,8 @@
 
 			{#if beforeConfirmWindow}
 				<p class="text-subtle">
-					Confirmation opens {confirmOpensLabel}. We'll hold the room until then{pricing.remainingCents >
-					0
-						? ' — or pay online now to lock it in.'
-						: '.'}
+					Confirmation opens {confirmOpensLabel}. We'll hold the room until then — or pay online now
+					to lock it in.
 				</p>
 			{/if}
 		{/if}
