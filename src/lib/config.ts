@@ -1338,38 +1338,20 @@ export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
 };
 
 /**
- * Every value `duty_list.subject` has held. `event` is retired: its one list
- * was backfilled to `project`. Kept for the column type, since changing the
- * column's default would rebuild the table on prod.
+ * Every value `duty_list.subject` has held. Only `project` is written now:
+ * `event` was backfilled to it, and `reservation` lists were orientation, which
+ * is a setting (#2034). Kept for the column type, since changing the column's
+ * default would rebuild the table on prod.
  */
 export const dutyListStoredSubjects = ['event', 'reservation', 'project'] as const;
 
-/** What a template can be stamped onto. */
-export const dutyListSubjects = ['project', 'reservation'] as const;
-export type DutyListSubject = (typeof dutyListSubjects)[number];
-
-export const dutyListSubjectLabels: Record<DutyListSubject, string> = {
-	project: 'A project',
-	reservation: 'A rehearsal booking'
-};
-
 /**
- * The domain event that stamps a list out with nobody pressing a button.
- *
- * A column on the list rather than a well-known name or a config key: a name is
- * a string staff can rename out from under the code, and a config key has no
- * referential integrity and is invisible from the duty-list page. This way, what
- * an orientation *is* — which role, how long, which checklist — stays editable
- * without a deploy, which is the same argument `duty_list` makes for being a
- * table rather than a config tuple.
+ * The domain event that stamps a template out with nobody pressing a button,
+ * found by this column rather than by name. `reservation.first` is retired with
+ * the reservation subject; nothing reads it.
  */
 export const dutyListAutoApplyTriggers = ['reservation.first', 'production.created'] as const;
 export type DutyListAutoApplyTrigger = (typeof dutyListAutoApplyTriggers)[number];
-
-export const dutyListAutoApplyTriggerLabels: Record<DutyListAutoApplyTrigger, string> = {
-	'reservation.first': "A member's first rehearsal booking",
-	'production.created': 'A new show'
-};
 
 /**
  * The fact about a show that says a committee's work order is done

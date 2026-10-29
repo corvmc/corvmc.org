@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
-import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
-import { memberOrientation, workOrder } from '$lib/server/db/schema/volunteer';
+import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import { config } from '$lib/server/site-config/site-config-service';
+import { memberOrientation, volunteerRole, workOrder } from '$lib/server/db/schema/volunteer';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import type { MemberOrientation } from '$lib/server/db/schema/volunteer';
@@ -152,6 +153,67 @@ export async function waiveOrientation(
 				updatedAt: now
 			}
 		});
+}
+
+/** The orientation setting: which role meets a first-timer, and for how long. */
+export async function getOrientationSetting(): Promise<{ roleId: string; minutes: number }> {
+	const [roleId, minutes] = await Promise.all([
+		config('volunteer.orientationRoleId'),
+		config('volunteer.orientationMinutes')
+	]);
+	return { roleId: String(roleId).trim(), minutes: Number(minutes) };
+}
+
+/**
+ * The booking's orientation shift: the live one already on it, or a new one at
+ * the booking's start, for the set length, in no project. Null while no role
+ * (or an archived one) is set — the feature is off.
+ */
+export async function raiseOrientationShift(
+	reservationId: string,
+	startsAt: Date
+): Promise<{ id: string; startsAt: Date | null } | null> {
+	const [live] = await db
+		.select({ id: workOrder.id, startsAt: workOrder.startsAt })
+		.from(workOrder)
+		.where(
+			and(
+				eq(workOrder.reservationId, reservationId),
+				eq(workOrder.isOrientation, true),
+				isNull(workOrder.cancelledAt),
+				isNotNull(workOrder.startsAt)
+			)
+		)
+		.orderBy(asc(workOrder.startsAt))
+		.limit(1);
+	if (live) return live;
+
+	const setting = await getOrientationSetting();
+	if (!setting.roleId || !(setting.minutes > 0)) return null;
+	const [role] = await db
+		.select({ isActive: volunteerRole.isActive })
+		.from(volunteerRole)
+		.where(eq(volunteerRole.id, setting.roleId))
+		.limit(1);
+	if (!role?.isActive) return null;
+
+	const now = new Date();
+	const [row] = await db
+		.insert(workOrder)
+		.values({
+			volunteerRoleId: setting.roleId,
+			reservationId,
+			startsAt,
+			endsAt: new Date(startsAt.getTime() + setting.minutes * 60_000),
+			anchor: 'start',
+			isOrientation: true,
+			notes: 'First visit — meet them at the front door.',
+			postedAt: now,
+			createdAt: now,
+			updatedAt: now
+		})
+		.returning({ id: workOrder.id, startsAt: workOrder.startsAt });
+	return row;
 }
 
 export interface OrientationOwner {

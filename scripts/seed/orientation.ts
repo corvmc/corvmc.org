@@ -2,11 +2,8 @@ import { randomUUID } from 'crypto';
 import { holdRoom } from './room';
 import { eq } from 'drizzle-orm';
 import {
-	dutyList,
-	dutyListItem,
 	memberOrientation,
 	workOrder,
-	workTask,
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
@@ -14,13 +11,12 @@ import { batchInsert, db } from './db';
 import { ptDate } from './util';
 
 /**
- * The Rehearsal Orientation duty list, and the four states a member can be in.
+ * Orientation shifts, and the four states a member can be in.
  *
- * Work orders are written by hand rather than through `applyDutyList`, the same
- * call `seed/duty-lists.ts` makes: the seed runs outside the app, where the
- * event bus is never registered and there is no listener to fire. That means the
- * offset arithmetic is duplicated here — fifteen minutes before the booking,
- * forty-five long — and it has to stay in step with the list below.
+ * Written by hand: the seed runs outside the app, where no listener fires. The
+ * shape matches the orientation setting's default — at the booking's start, 30
+ * minutes long. The setting itself lives in KV and starts empty, so the listener
+ * stays off locally until staff pick a role in Settings.
  *
  * Every state is seeded, not just the happy one. `pending` and `scheduled` are
  * what a fresh member looks like; `completed` and `waived` are the two the staff
@@ -33,47 +29,9 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 	console.log('Seeding orientation...');
 
 	const role = volunteerRoles.find((r: any) => r.name === 'Rehearsal Orientation');
-	if (!role) return { lists: 0, workOrders: 0, orientations: 0 };
+	if (!role) return { workOrders: 0, orientations: 0 };
 
-	const LIST_ID = 'seed-duty-orientation';
-	const OFFSET_MINUTES = -15;
-	const DURATION_MINUTES = 45;
-
-	const TASKS = [
-		'Meet them at the door',
-		'Door code, and how to lock up',
-		'Where the gear lives and what is off limits',
-		'How to report something broken',
-		'Booking, credits, and how to cancel'
-	];
-
-	await batchInsert(dutyList, [
-		{
-			id: LIST_ID,
-			name: 'Rehearsal Orientation',
-			description:
-				'What somebody needs to know the first time they let themselves into the room. Applied on its own when a member books their first rehearsal — nobody presses a button.',
-			// A booking has no doors, so this is anchored to the start of it.
-			anchor: 'start' as const,
-			subject: 'reservation' as const,
-			autoApplyOn: 'reservation.first' as const,
-			createdByUserId: 'seed-vol-coordinator'
-		}
-	]);
-
-	await batchInsert(dutyListItem, [
-		{
-			id: 'seed-duty-orientation-item',
-			dutyListId: LIST_ID,
-			volunteerRoleId: role.id,
-			offsetMinutes: OFFSET_MINUTES,
-			durationMinutes: DURATION_MINUTES,
-			capacity: 1,
-			notes: 'Meet them at the front door — they will not know which one it is.',
-			sortOrder: 0,
-			tasks: TASKS
-		}
-	]);
+	const DURATION_MINUTES = 30;
 
 	// Wren is the guaranteed first-timer `seed/reservations.ts` creates precisely
 	// so the desk's first-visit flag is on screen after every seed. Their booking
@@ -89,11 +47,10 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 		.limit(1);
 
 	const workOrderRows: any[] = [];
-	const taskRows: any[] = [];
 	const orientationRows: any[] = [];
 
 	function shiftFor(id: string, reservationId: string, startsAt: Date) {
-		const from = new Date(startsAt.getTime() + OFFSET_MINUTES * 60_000);
+		const from = startsAt;
 		workOrderRows.push({
 			id,
 			volunteerRoleId: role.id,
@@ -102,14 +59,10 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 			endsAt: new Date(from.getTime() + DURATION_MINUTES * 60_000),
 			capacity: 1,
 			notes: 'First visit — meet them at the front door.',
-			dutyListId: LIST_ID,
 			anchor: 'start' as const,
 			isOrientation: true,
 			createdByUserId: null
 		});
-		TASKS.forEach((label, i) =>
-			taskRows.push({ id: `${id}-task-${i}`, workOrderId: id, label, sortOrder: i })
-		);
 		return from;
 	}
 
@@ -209,7 +162,6 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 	}
 
 	if (workOrderRows.length > 0) await batchInsert(workOrder, workOrderRows, 8);
-	if (taskRows.length > 0) await batchInsert(workTask, taskRows, 12);
 	if (orientationRows.length > 0) await batchInsert(memberOrientation, orientationRows, 7);
 
 	// Sam is on the cancelled one and has not been told, which is the whole point
@@ -229,7 +181,6 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 	});
 
 	return {
-		lists: 1,
 		workOrders: workOrderRows.length,
 		orientations: orientationRows.length
 	};

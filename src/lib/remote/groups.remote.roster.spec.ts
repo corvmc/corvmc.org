@@ -439,7 +439,7 @@ describe('getMemberGroup offers a committee its project duty lists', () => {
 		const page = (await groups.getMemberGroup('facilities-committee')) as {
 			projectDutyLists: unknown;
 		};
-		expect(listDutyLists).toHaveBeenCalledWith({ subject: 'project' });
+		expect(listDutyLists).toHaveBeenCalledWith();
 		expect(page.projectDutyLists).toEqual([{ id: 'dl-1', name: 'Work Party Kickoff' }]);
 	});
 

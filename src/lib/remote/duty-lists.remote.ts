@@ -4,7 +4,7 @@ import { query } from '$app/server';
 import { form } from './_remote';
 import { can, requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
-import { dutyListAnchors, dutyListSubjects, workDoneConditions } from '$lib/config';
+import { dutyListAnchors, workDoneConditions } from '$lib/config';
 import { listCommittees } from '$lib/server/project/project-service';
 import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
 import {
@@ -79,7 +79,7 @@ export const getDutyLists = query(async () => {
 /** The apply picker: project templates worth applying, never the orientation one. */
 export const getActiveDutyLists = query(async () => {
 	await requireCapability('volunteer.read');
-	const lists = await listDutyLists({ subject: 'project' });
+	const lists = await listDutyLists();
 	return lists.filter((l) => l.itemCount > 0);
 });
 
@@ -108,8 +108,7 @@ export const createDutyList = form(
 	z.object({
 		name: z.string().min(1, 'Name is required'),
 		description: z.string().optional(),
-		anchor: z.enum(dutyListAnchors).default('doors'),
-		subject: z.enum(dutyListSubjects).default('project')
+		anchor: z.enum(dutyListAnchors).default('doors')
 	}),
 	async (data) => {
 		const staff = await requireCapability('volunteer.manageRoles');
@@ -118,7 +117,6 @@ export const createDutyList = form(
 				name: data.name,
 				description: data.description,
 				anchor: data.anchor,
-				subject: data.subject,
 				createdByUserId: staff.id
 			});
 			await getDutyLists().refresh();
@@ -135,7 +133,6 @@ export const updateDutyList = form(
 		name: z.string().optional(),
 		description: z.string().optional(),
 		anchor: z.enum(dutyListAnchors).optional(),
-		subject: z.enum(dutyListSubjects).optional(),
 		// `.optional().default(false)`, never a bare required boolean: an unchecked
 		// box is not submitted at all, and kit reports the absence as the boolean's
 		// own validation failure.
@@ -148,7 +145,6 @@ export const updateDutyList = form(
 				name: data.name,
 				description: data.description,
 				anchor: data.anchor,
-				subject: data.subject,
 				isActive: data.isActive
 			});
 			await Promise.all([getDutyLists().refresh(), getDutyListPage(data.id).refresh()]);

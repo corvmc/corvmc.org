@@ -24,8 +24,13 @@ vi.mock('$lib/server/db', () => ({
 	getRowCount: () => 0
 }));
 
-const { applyDutyList, createDutyList, DutyListAlreadyAppliedError, DutyListValidationError } =
-	await import('./duty-list-service');
+const {
+	applyDutyList,
+	createDutyList,
+	getDutyListDetail,
+	listDutyLists,
+	DutyListAlreadyAppliedError
+} = await import('./duty-list-service');
 
 const at = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
 const DOORS = at('2026-10-10T02:00:00Z');
@@ -341,69 +346,23 @@ describe('applyDutyList — project subject', () => {
 	});
 });
 
-describe('applyDutyList — reservation subject', () => {
-	const resItem = (id: string, cols: string, vals: string) => addItem(id, cols, vals, 'dl-res');
+describe('a retired reservation-subject list', () => {
+	it('is not listed, opened or applied', async () => {
+		addItem('i1', 'offset_minutes, duration_minutes', '-15, 45', 'dl-res');
 
-	it('measures offsets from the booking, and carries reservation_id alone', async () => {
-		resItem('i1', 'offset_minutes, duration_minutes', '-15, 45');
-
-		const result = await applyDutyList('dl-res', { kind: 'reservation', id: 'res-1' }, null);
-		expect(result.workOrderIds).toHaveLength(1);
-
-		const [row] = sqlite
-			.prepare(`SELECT starts_at, ends_at, event_id, project_id, reservation_id FROM work_order`)
-			.all() as Record<string, unknown>[];
-		expect(row).toEqual({
-			starts_at: STARTS - 15 * 60,
-			ends_at: STARTS + 30 * 60,
-			event_id: null,
-			project_id: null,
-			reservation_id: 'res-1'
-		});
-	});
-
-	it('refuses a second apply per booking, which is what makes the listener idempotent', async () => {
-		resItem('i1', 'offset_minutes, duration_minutes', '-15, 45');
-
-		await applyDutyList('dl-res', { kind: 'reservation', id: 'res-1' }, null);
-		await expect(
-			applyDutyList('dl-res', { kind: 'reservation', id: 'res-1' }, null)
-		).rejects.toThrow(DutyListAlreadyAppliedError);
-		expect(shifts()).toHaveLength(1);
-	});
-
-	it('refuses a project template on a booking, and a booking template on a project', async () => {
-		addItem('i1', 'offset_minutes, duration_minutes', '-180, 120');
-		resItem('i2', 'offset_minutes, duration_minutes', '-15, 45');
-
-		await expect(applyDutyList('dl-1', { kind: 'reservation', id: 'res-1' }, null)).rejects.toThrow(
-			DutyListValidationError
-		);
-		await expect(applyDutyList('dl-res', SHOW, 'u1')).rejects.toThrow(DutyListValidationError);
+		expect((await listDutyLists({ includeInactive: true })).map((l) => l.id)).toEqual(['dl-1']);
+		expect(await getDutyListDetail('dl-res')).toBeNull();
+		await expect(applyDutyList('dl-res', SHOW, 'u1')).rejects.toThrow(/not found/i);
 		expect(shifts()).toHaveLength(0);
-	});
-
-	it('refuses a doors-anchored template on a booking rather than using its start', async () => {
-		sqlite.exec(`UPDATE duty_list SET anchor = 'doors' WHERE id = 'dl-res'`);
-		resItem('i1', 'offset_minutes, duration_minutes', '-15, 45');
-
-		await expect(
-			applyDutyList('dl-res', { kind: 'reservation', id: 'res-1' }, null)
-		).rejects.toThrow(/only a start and an end/i);
 	});
 });
 
 describe('createDutyList', () => {
-	it('saves any anchor for a project, and only start or end for a booking', async () => {
+	it('saves a project template at any anchor', async () => {
 		for (const a of ['doors', 'load_out', 'project_start', 'end'] as const) {
 			await expect(
-				createDutyList({ name: `P ${a}`, anchor: a, subject: 'project', createdByUserId: 'u1' })
-			).resolves.toBeTruthy();
-		}
-		for (const a of ['doors', 'curfew', 'project_start'] as const) {
-			await expect(
-				createDutyList({ name: `R ${a}`, anchor: a, subject: 'reservation', createdByUserId: 'u1' })
-			).rejects.toThrow(DutyListValidationError);
+				createDutyList({ name: `P ${a}`, anchor: a, createdByUserId: 'u1' })
+			).resolves.toMatchObject({ subject: 'project', anchor: a });
 		}
 	});
 });
