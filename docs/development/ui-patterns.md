@@ -1054,6 +1054,15 @@ a paginated `query()` returned.
 - `empty` / `emptyTitle` / `actionLabel` + `actionHref` — passed to `EmptyState`.
 - `onpage` — omit for un-paginated lists and no `Pagination` renders.
 
+### Roster
+
+A list of _people_ is a `Roster` (`$lib/components/roster/`, #1994): any query whose rows extend
+`RosterPerson` (`toRosterPerson()` in `$lib/server/roster/roster`). It owns search, paging, Clear,
+CSV export, "Copy emails" and the row-click side panel; the page owns its query, its filters
+(`rosterState()`, URL-backed) and its columns (`lead`, `detail`, `columns` + `cells`, `actions`,
+`panel`). The export is a guarded `+server.ts` built on `rosterCsv()`. `/staff/volunteer/people`
+is the first.
+
 ### A table, unless the row earns a card
 
 A row earns a card by passing **at least one** of four tests. Each has a check you

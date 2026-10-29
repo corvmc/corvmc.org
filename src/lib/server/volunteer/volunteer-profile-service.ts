@@ -12,6 +12,8 @@ import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { ROLE_NAME_SEPARATOR } from './volunteer-interest-service';
 import { holdsCertificationSql } from './member-certification-service';
+import { toRosterPerson } from '$lib/server/roster/roster';
+import type { RosterPerson } from '$lib/types/roster';
 import type { MemberRef } from '$lib/types/entity';
 import { VOLUNTEER_AVAILABILITY_MAX, VOLUNTEER_NAME_MAX } from '$lib/config';
 import type { VolunteerProfile, VolunteerProfileStatus } from '$lib/server/db/schema/volunteer';
@@ -362,9 +364,8 @@ export async function listBlockedVolunteers(): Promise<BlockedVolunteer[]> {
 // The volunteers index
 // ---------------------------------------------------------------------------
 
-export interface VolunteerListRow {
+export interface VolunteerListRow extends RosterPerson {
 	userId: string;
-	member: MemberRef;
 	status: VolunteerProfileStatus;
 	isAdult: boolean;
 	/** Every role they ticked, name-sorted — not just the one filtered on. */
@@ -487,8 +488,8 @@ export async function listVolunteers(
 	return {
 		...result,
 		rows: result.rows.map((r): VolunteerListRow => ({
+			...toRosterPerson({ ...r.member, id: r.userId }),
 			userId: r.userId,
-			member: toMemberRef(r.member),
 			status: r.status,
 			isAdult: r.isAdult,
 			roleNames: r.roleNames ? String(r.roleNames).split(ROLE_NAME_SEPARATOR).sort() : [],
