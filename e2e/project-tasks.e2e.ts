@@ -33,7 +33,7 @@ test.describe('project task list', () => {
 			page.getByRole('heading', { level: 1, name: SEED_TASK_PROJECT_NAME })
 		).toBeVisible();
 		await expect(
-			page.getByRole('table').getByRole('link', { name: SEED_TASK_UNASSIGNED })
+			page.getByRole('table').getByRole('link', { name: SEED_TASK_UNASSIGNED, exact: true })
 		).toBeVisible();
 	});
 
@@ -48,34 +48,46 @@ test.describe('project task list', () => {
 	});
 
 	test('filters live in the URL', async ({ page }) => {
-		// The filter is a menu whose trigger is named for the active filter.
+		// The filter is a disclosure whose trigger names the active filter; "All" reads as "Filter".
+		const menu = page.locator('details', {
+			has: page.locator('summary', { hasText: /^\s*Filter/ })
+		});
 		const pick = async (from: string, to: string) => {
-			await page.getByRole('button', { name: from, exact: true }).click();
-			await page.getByRole('menuitem', { name: to }).click();
+			const trigger = menu.locator('summary');
+			await expect(trigger).toHaveText(from === 'All' ? 'Filter' : `Filter: ${from}`);
+			await trigger.click();
+			await menu.getByRole('button', { name: to, exact: true }).click();
 		};
 		// Every seeded task is unassigned, so Contractors is the filter that hides them all.
 		await pick('All', 'Contractors');
 		await expect(page).toHaveURL(/show=contractors/);
 		await expect(
-			page.getByRole('table').getByRole('link', { name: SEED_TASK_UNASSIGNED })
+			page.getByRole('table').getByRole('link', { name: SEED_TASK_UNASSIGNED, exact: true })
 		).toBeHidden();
 		await expect(page.getByText('Nothing here matches the filter.')).toBeVisible();
 
 		await pick('Contractors', 'Unassigned');
 		await expect(page).toHaveURL(/show=unassigned/);
 		await expect(
-			page.getByRole('table').getByRole('link', { name: SEED_TASK_WITH_DUTIES })
+			page.getByRole('table').getByRole('link', { name: SEED_TASK_WITH_DUTIES, exact: true })
 		).toBeVisible();
 
 		await pick('Unassigned', 'All');
-		await expect(page.getByRole('table').getByRole('link', { name: SEED_TASK_DONE })).toBeVisible();
+		await expect(
+			page.getByRole('table').getByRole('link', { name: SEED_TASK_DONE, exact: true })
+		).toBeVisible();
 		await page.getByRole('button', { name: 'Hide done' }).click();
 		await expect(page).toHaveURL(/done=hide/);
-		await expect(page.getByRole('table').getByRole('link', { name: SEED_TASK_DONE })).toBeHidden();
+		await expect(
+			page.getByRole('table').getByRole('link', { name: SEED_TASK_DONE, exact: true })
+		).toBeHidden();
 	});
 
 	test('a row opens its panel at its own URL, and Escape closes it', async ({ page }) => {
-		await page.getByRole('table').getByRole('link', { name: SEED_TASK_UNASSIGNED }).click();
+		await page
+			.getByRole('table')
+			.getByRole('link', { name: SEED_TASK_UNASSIGNED, exact: true })
+			.click();
 		await expect(page).toHaveURL(/[?&]task=/);
 		const panel = page.getByRole('complementary', { name: SEED_TASK_UNASSIGNED });
 		await expect(panel).toBeVisible();
@@ -91,7 +103,10 @@ test.describe('project task list', () => {
 	});
 
 	test('Details opens the task page, which the old shift URL redirects to', async ({ page }) => {
-		await page.getByRole('table').getByRole('link', { name: SEED_TASK_WITH_DUTIES }).click();
+		await page
+			.getByRole('table')
+			.getByRole('link', { name: SEED_TASK_WITH_DUTIES, exact: true })
+			.click();
 		const panel = page.getByRole('complementary', { name: SEED_TASK_WITH_DUTIES });
 		await panel.getByRole('link', { name: 'Details' }).click();
 
@@ -119,7 +134,9 @@ test.describe('project task list', () => {
 		const line = page.getByRole('textbox', { name: 'Add a task to Prep' });
 		await line.fill(title);
 		await line.press('Enter');
-		await expect(page.getByRole('table').getByRole('link', { name: title })).toBeVisible();
+		await expect(
+			page.getByRole('table').getByRole('link', { name: title, exact: true })
+		).toBeVisible();
 		await expect(line).toHaveValue('');
 
 		await page.getByRole('button', { name: `Mark ${title} done` }).click();

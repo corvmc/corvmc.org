@@ -1,14 +1,14 @@
 <script lang="ts">
 	import {
-		IconSquare,
-		IconSquareCheck,
-		IconSquareCheckFilled,
-		IconSquareDot,
-		IconSquareX
+		IconCircleCheck,
+		IconCircleCheckFilled,
+		IconCircleDot,
+		IconCircleX
 	} from '@tabler/icons-svelte';
 	import { workDoneConditionLabels } from '$lib/config';
 	import { checkState, type Task } from './task-view';
 
+	/** A thin ring with a check, filled once done. App-ticked states draw in info, not success. */
 	let { task, size = 20 }: { task: Task; size?: number } = $props();
 
 	const kind = $derived(checkState(task));
@@ -25,18 +25,19 @@
 	);
 </script>
 
-<span class="inline-flex" title={label}>
+<span class="inline-flex" title={label} data-check-state={kind}>
 	{#if kind === 'cancelled'}
-		<IconSquareX {size} class="text-subtle" aria-label={label} />
+		<IconCircleX {size} stroke={1.5} class="text-subtle" aria-label={label} />
 	{:else if kind === 'ticked'}
-		<IconSquareCheckFilled {size} class="text-success" aria-label={label} />
+		<IconCircleCheckFilled {size} class="text-success" aria-label={label} />
 	{:else if kind === 'derived_done'}
-		<IconSquareCheck {size} class="text-success" aria-label={label} />
+		<IconCircleCheckFilled {size} class="text-info" aria-label={label} />
 	{:else if kind === 'derived_open'}
-		<IconSquareDot {size} class="text-info" aria-label={label} />
+		<IconCircleDot {size} stroke={1.5} class="text-info" aria-label={label} />
 	{:else}
-		<IconSquare
+		<IconCircleCheck
 			{size}
+			stroke={1.5}
 			class={kind === 'overdue' ? 'text-error' : 'text-subtle'}
 			aria-label={label}
 		/>
