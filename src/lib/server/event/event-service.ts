@@ -38,7 +38,7 @@ import {
 	cancelDeliverablesForEvent,
 	cancelShiftsForEvent
 } from '$lib/server/volunteer/show-cancellation';
-import { hasDescription, hasPoster, isProductionConfirmed } from './show-readiness';
+import { showBlockers } from './show-readiness';
 import { requireProgramGroup } from '$lib/server/group/group-kind';
 import {
 	eq,
@@ -1007,15 +1007,8 @@ async function readiness(eventId: string): Promise<{ title: string | null; warni
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
 
-	if (!row || row.source !== 'cmc') return { title: row?.title ?? null, warnings: [] };
-
-	const warnings: string[] = [];
-	if (row.productionStatus && !isProductionConfirmed(row.productionStatus)) {
-		warnings.push('the production is not confirmed yet');
-	}
-	if (!hasPoster(row.posterKey)) warnings.push('there is no poster');
-	if (!hasDescription(row.description)) warnings.push('there is no description');
-	return { title: row.title, warnings };
+	if (!row) return { title: null, warnings: [] };
+	return { title: row.title, warnings: showBlockers(row) };
 }
 
 export interface PublishOptions {

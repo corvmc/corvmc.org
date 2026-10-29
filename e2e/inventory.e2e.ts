@@ -238,7 +238,7 @@ test.describe('inventory', () => {
 			await loginAsStaff(page);
 			await page.goto('/staff');
 
-			await expect(page.getByText('Running low')).toBeVisible();
+			await expect(page.getByText('Low-Stock Items')).toBeVisible();
 			await expect(page.getByRole('cell', { name: SEED_LOW_NAME })).toBeVisible();
 			// The well-stocked consumable must NOT appear — a low-stock list that
 			// shows everything is just the catalog again.

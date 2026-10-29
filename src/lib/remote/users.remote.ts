@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { titleCase } from '$lib/utils/format';
 import {
 	CONFIRMATION_WINDOW_DAYS,
-	clubToday,
 	LONG_TEXT_MAX,
 	SHORT_TEXT_MAX,
 	creditCompCeiling,
@@ -13,39 +12,9 @@ import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { listLowStock } from '$lib/server/inventory/stock-service';
 import { getUserTotals, sustainingUser, userListWhere } from '$lib/server/user/user-totals-service';
-import { listShortStaffedShifts } from '$lib/server/volunteer/work-order-service';
-import { listDevelopmentDeadlinesBetween } from '$lib/server/development/deadline-service';
-import { addIsoDays } from '$lib/utils/deadline';
 
-/**
- * How far ahead the dashboard's volunteering panel looks. A week, because the panel is a
- * glance at this week's problem; the two-week view lives on /staff/volunteer.
- */
-const DASHBOARD_SHIFT_HORIZON_DAYS = 7;
-
-/**
- * Development's deadlines through the next month, overdue ones included, for
- * whoever may read each module (#1477). The dashboard is guarded by
- * `user.list`, which says nothing about grants or sponsors.
- */
-async function dashboardDeadlines() {
-	const [grants, sponsors] = await Promise.all([can('grant.read'), can('sponsor.read')]);
-	if (!grants && !sponsors) return [];
-	const today = clubToday();
-	const rows = await listDevelopmentDeadlinesBetween('0000-01-01', addIsoDays(today, 30), {
-		grants,
-		sponsors
-	});
-	return rows.map((d) => ({ ...d, overdue: d.on < today }));
-}
-import {
-	requireCapability,
-	can,
-	requireUser,
-	committeeCapabilitiesFor
-} from '$lib/server/authorization';
+import { requireCapability, can, requireUser } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { directoryEntry } from '$lib/server/db/schema/directory';
@@ -96,76 +65,6 @@ import { parseBirthDateInput } from '$lib/utils/age';
 // ---------------------------------------------------------------------------
 // Staff list queries
 // ---------------------------------------------------------------------------
-
-export const getStaffDashboard = query(async () => {
-	// A committee seat opens the panel without `user.list` (#1578). It gets the
-	// capabilities the page offers links by, and none of the data below.
-	if (!(await can('user.list'))) {
-		const seat = await committeeCapabilitiesFor(requireUser().id);
-		if (seat.length === 0) await requireCapability('user.list');
-		return { seat };
-	}
-	const startOfMonth = new Date();
-	startOfMonth.setDate(1);
-	startOfMonth.setHours(0, 0, 0, 0);
-
-	// No `permissions` count: the spatie-derived permission tables are populated by
-	// the Postgres migrator and read by nothing in this app, so the stat was always
-	// 0. See src/lib/server/db/schema/authorization.ts.
-	const [
-		totalUsersResult,
-		totalRolesResult,
-		newUsersResult,
-		recentUsers,
-		lowStock,
-		shortShifts,
-		deadlines
-	] = await Promise.all([
-		db.select({ value: count() }).from(user),
-		db.select({ value: count() }).from(role),
-		db.select({ value: count() }).from(user).where(gte(user.createdAt, startOfMonth)),
-		db
-			.select({ member: memberRefColumns(), createdAt: user.createdAt })
-			.from(user)
-			.orderBy(desc(user.createdAt))
-			.limit(5),
-		// Folded in rather than fetched by the component: the dashboard gets one
-		// load-bearing query, and a reorder point that only shows up on a page
-		// nobody opens is not doing its job.
-		listLowStock(),
-		// Same argument, one module along. Inventory has had a "this needs an action
-		// today" panel here since it shipped and volunteering had nothing at all
-		// (docs/reports/volunteer-workflow-findings.md#d1) — while a show that runs a
-		// person short is at least as urgent as a low drumstick count.
-		listShortStaffedShifts(DASHBOARD_SHIFT_HORIZON_DAYS),
-		dashboardDeadlines()
-	]);
-
-	return {
-		seat: null,
-		stats: {
-			totalUsers: totalUsersResult[0].value,
-			totalRoles: totalRolesResult[0].value,
-			newUsersThisMonth: newUsersResult[0].value
-		},
-		// Capped: the dashboard is a glance, not the list. `/staff/inventory/restock`
-		// is where the whole thing lives, and the count says whether it is worth
-		// opening.
-		lowStock: lowStock.slice(0, 5),
-		lowStockCount: lowStock.length,
-		// Capped the same way and for the same reason. `/staff/volunteer` is where the
-		// whole worklist lives.
-		shortShifts: shortShifts.slice(0, 5),
-		shortShiftCount: shortShifts.length,
-		deadlines: deadlines.slice(0, 5),
-		deadlineCount: deadlines.length,
-		recentUsers: recentUsers.map((u) => ({
-			id: u.member.id,
-			createdAt: u.createdAt,
-			ref: toMemberRef(u.member)
-		}))
-	};
-});
 
 /** The totals strip above the staff Users table; org-wide, so it takes no filters. */
 export const getStaffUserTotals = query(async () => {

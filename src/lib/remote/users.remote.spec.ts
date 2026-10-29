@@ -911,20 +911,3 @@ describe('staff edits leave an audit entry', () => {
 		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 });
-
-describe('getStaffDashboard for a committee seat (#1578)', () => {
-	it('hands a seat without user.list the capabilities its links are filtered by, and no data', async () => {
-		held = new Set();
-		committeeCapabilitiesFor.mockResolvedValueOnce(['sponsor.read', 'grant.read']);
-		await expect(users.getStaffDashboard()).resolves.toEqual({
-			seat: ['sponsor.read', 'grant.read']
-		});
-		expect(dbSelect).not.toHaveBeenCalled();
-	});
-
-	it('refuses a caller with neither user.list nor a seat', async () => {
-		held = new Set();
-		await expect(users.getStaffDashboard()).rejects.toThrow('403');
-		expect(dbSelect).not.toHaveBeenCalled();
-	});
-});

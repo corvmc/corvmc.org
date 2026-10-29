@@ -36,3 +36,24 @@ export function hasPoster(posterKey: string | null | undefined): boolean {
 export function hasDescription(description: string | null | undefined): boolean {
 	return !!description?.trim();
 }
+
+/**
+ * What a CMC listing is still missing before the public sees it, in the words
+ * the publish dialog shows. Community listings are exempt: a member posting
+ * somebody else's gig makes no promise on the collective's behalf.
+ */
+export function showBlockers(row: {
+	source: string;
+	productionStatus: string | null;
+	posterKey: string | null;
+	description: string | null;
+}): string[] {
+	if (row.source !== 'cmc') return [];
+	const warnings: string[] = [];
+	if (row.productionStatus && !isProductionConfirmed(row.productionStatus)) {
+		warnings.push('the production is not confirmed yet');
+	}
+	if (!hasPoster(row.posterKey)) warnings.push('there is no poster');
+	if (!hasDescription(row.description)) warnings.push('there is no description');
+	return warnings;
+}
