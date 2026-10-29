@@ -614,7 +614,6 @@
 	"src/routes/member/volunteer/+page.svelte",
 	"src/routes/member/volunteer/blocked/+page.svelte",
 	"src/routes/member/volunteer/feedback/[signupId]/+page.svelte",
-	"src/routes/member/volunteer/hours/+page.svelte",
 	"src/routes/member/volunteer/interests/+page.svelte",
 	"src/routes/member/volunteer/start/+page.svelte",
 	"src/routes/robots.txt/+server.ts",

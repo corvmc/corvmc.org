@@ -44,14 +44,6 @@
 	}
 </script>
 
-<!--
-	Framed as information rather than commitment on purpose: the fear this line
-	exists to answer is "am I signing up for something", and the answer is no.
--->
-<p class="text-sm text-base-content/70">
-	Not a commitment. It tells staff who to ask, and we'll show you how the job is done.
-</p>
-
 {#each groupedRoles(roleOptions) as group (group.key)}
 	<CheckboxGroup
 		field={fields.roleIds}

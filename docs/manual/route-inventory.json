@@ -356,11 +356,11 @@
 		"panel": "member"
 	},
 	{
-		"route": "/member/volunteer/hours",
+		"route": "/member/volunteer/interests",
 		"panel": "member"
 	},
 	{
-		"route": "/member/volunteer/interests",
+		"route": "/member/volunteer/profile",
 		"panel": "member"
 	},
 	{
