@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { surfaces } from '$lib/config';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -18,6 +19,11 @@ import {
  * kept, and named for what they now mean, because the assertions below are still
  * about a fully-lit nav versus a minimal one.
  */
+
+// The assertions below describe the nav with every surface built in; the
+// switched-off case (#2116) has its own block at the end.
+surfaces.classifieds = true;
+surfaces.ballots = true;
 
 const ALL_ON: MemberNavInput = { hasLoanableEquipment: true };
 const ALL_OFF: MemberNavInput = {};
@@ -284,5 +290,20 @@ describe('purchases', () => {
 		// the row on the storefront would hide receipts that predate it.
 		expect(keysOf(ALL_ON)).toContain('purchases');
 		expect(keysOf(ALL_OFF)).toContain('purchases');
+	});
+});
+
+describe('surfaces switched off in code (#2116)', () => {
+	afterEach(() => {
+		surfaces.classifieds = true;
+		surfaces.ballots = true;
+	});
+
+	it('drops Classifieds and Ballots from the sidebar', () => {
+		surfaces.classifieds = false;
+		surfaces.ballots = false;
+		expect(sidebarKeysOf(ALL_ON)).not.toContain('classifieds');
+		expect(sidebarKeysOf(ALL_ON)).not.toContain('ballots');
+		expect(memberNavFooter(ALL_ON).map((i) => i.key)).toEqual(['suggestions', 'help']);
 	});
 });

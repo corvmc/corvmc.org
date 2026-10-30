@@ -6,11 +6,13 @@ import { can, requireCapability, requireUser } from '$lib/server/authorization';
 import { requireProjectCommittee } from '$lib/server/group/group-context';
 import { getMemberGroup } from '$lib/remote/groups.remote';
 import { mapDomainError } from '$lib/server/errors';
+import { requireSurface } from '$lib/surfaces';
 import {
 	projectStatuses,
 	projectViews,
 	DEFAULT_TIMEZONE,
-	VOLUNTEER_SHIFT_NOTES_MAX
+	VOLUNTEER_SHIFT_NOTES_MAX,
+	surfaces
 } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { db } from '$lib/server/db';
@@ -201,7 +203,7 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			suggestions,
 			dutyLists,
 			origin,
-			canCreateBallot: ballotManager,
+			canCreateBallot: surfaces.ballots && ballotManager,
 			/** Every committee taking part, owner first. */
 			projectCommittees: taking,
 			taskList: scopeContractorMoney(tasks, contractorMoney),
@@ -435,6 +437,7 @@ export const startProjectFromBallotForm = form(
 	}),
 	async (raw) => {
 		const user = await requireCapability('project.manage');
+		requireSurface('ballots');
 		const { ballotId, name, groupId, budgetCents } = raw as {
 			ballotId: string;
 			name: string;

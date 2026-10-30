@@ -29,6 +29,7 @@
  * unit-tested as a plain table, the way `directory-display.ts` is.
  */
 import { resolve } from '$app/paths';
+import { surfaces } from '$lib/config';
 import type { EntityRef, Panel, Viewer } from '$lib/types/entity';
 
 type Candidate = { panel: Panel; href: string };
@@ -108,6 +109,7 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 		}
 
 		case 'classified': {
+			if (!surfaces.classifieds) break;
 			if (can('listing.review'))
 				out.push({ panel: 'staff', href: resolve(`/staff/classifieds/${id}`) });
 			if (signedIn) out.push({ panel: 'member', href: resolve(`/member/classifieds/${id}`) });

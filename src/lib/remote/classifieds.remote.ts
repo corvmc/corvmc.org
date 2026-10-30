@@ -4,6 +4,7 @@ import { query } from '$app/server';
 import { form } from './_remote';
 import { can, requireCapability, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
+import { requireSurface } from '$lib/surfaces';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { getStanding } from '$lib/server/moderation/standing-service';
 import { listForUser } from '$lib/server/band/band-service';
@@ -75,6 +76,7 @@ const boardSchema = z.object({
 
 export const getClassifiedBoard = query(boardSchema, async (f) => {
 	const me = requireUser();
+	requireSurface('classifieds');
 	// Field by field: a member must never reach the staff `visibility` filter.
 	const { rows, pagination } = await listBoard(
 		{
@@ -91,6 +93,7 @@ export const getClassifiedBoard = query(boardSchema, async (f) => {
 
 export const getClassifiedDetail = query(z.string(), async (id) => {
 	const me = requireUser();
+	requireSurface('classifieds');
 	const post = await getPost(id).catch(mapDomainError);
 	const isStaff = await can('listing.review');
 	// 404, not 403: a report must not become a way to confirm a hidden post exists.
@@ -105,6 +108,7 @@ export const getClassifiedDetail = query(z.string(), async (id) => {
 /** What the post form needs: standing wording, bands to post as, and tag suggestions. */
 export const getClassifiedComposer = query(async () => {
 	const me = requireUser();
+	requireSurface('classifieds');
 	const [standing, groups, instruments, genres] = await Promise.all([
 		getStanding(me.id, 'classified'),
 		listForUser(me.id, ['band']).catch(() => []),
@@ -133,6 +137,7 @@ export const getStaffClassifieds = query(
 	}),
 	async (f) => {
 		await requireCapability('listing.review');
+		requireSurface('classifieds');
 		const { rows, pagination } = await listBoard(
 			{ visibility: f.visibility ?? 'pending_review', search: f.search },
 			{ page: f.page ?? 1, pageSize: PAGE_SIZE }
@@ -143,6 +148,7 @@ export const getStaffClassifieds = query(
 
 export const getStaffClassifiedDetail = query(z.string(), async (id) => {
 	await requireCapability('listing.review');
+	requireSurface('classifieds');
 	const post = await getPost(id).catch(mapDomainError);
 	return present(post);
 });
@@ -185,6 +191,7 @@ function inputOf(data: z.infer<typeof postSchema>) {
 
 export const createClassified = form(postSchema, async (data) => {
 	const me = requireUser();
+	requireSurface('classifieds');
 	try {
 		const row = await createPost({ ...inputOf(data), authorUserId: me.id });
 		return { id: row.id, visibility: row.visibility };
@@ -197,6 +204,7 @@ export const editClassified = form(
 	postSchema.extend({ postId: z.string().min(1) }),
 	async (data) => {
 		const me = requireUser();
+		requireSurface('classifieds');
 		try {
 			await updatePost(data.postId, me.id, inputOf(data));
 		} catch (err) {
@@ -209,6 +217,7 @@ export const editClassified = form(
 
 export const renewClassified = form(z.object({ postId: z.string().min(1) }), async (data) => {
 	const me = requireUser();
+	requireSurface('classifieds');
 	try {
 		await renewPost(data.postId, me.id);
 	} catch (err) {
@@ -220,6 +229,7 @@ export const renewClassified = form(z.object({ postId: z.string().min(1) }), asy
 
 export const closeClassified = form(z.object({ postId: z.string().min(1) }), async (data) => {
 	const me = requireUser();
+	requireSurface('classifieds');
 	try {
 		await closePost(data.postId, me.id);
 	} catch (err) {
@@ -238,6 +248,7 @@ export const reportClassified = form(
 	}),
 	async (data, issue) => {
 		const me = requireUser();
+		requireSurface('classifieds');
 		const post = await getPost(data.postId).catch(mapDomainError);
 		if (!canView(post, me.id, false) || post.authorUserId === me.id) {
 			error(404, 'Post not found');
@@ -275,6 +286,7 @@ export const moderateClassified = form(
 	}),
 	async (data, issue) => {
 		const staff = await requireCapability('listing.review');
+		requireSurface('classifieds');
 		// The note is the author's whole route back, so a takedown without one is refused.
 		if (data.visibility === 'hidden' && !data.note) {
 			invalid(issue.note('Tell the author what to change'));

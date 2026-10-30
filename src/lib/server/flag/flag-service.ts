@@ -3,7 +3,7 @@ import { toBandRef, toFlagTargetRef } from '$lib/server/entity/refs';
 import { DomainError } from '../domain-error';
 import { contentFlag } from '$lib/server/db/schema/flag';
 import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
-import type { StandingScope } from '$lib/config';
+import { surfaces, type StandingScope } from '$lib/config';
 import { user } from '$lib/server/db/schema/authentication';
 import { group } from '$lib/server/db/schema/group';
 import { eventListing } from '$lib/server/db/schema/event';
@@ -91,6 +91,7 @@ function entityHref(entityType: FlagEntityType, entityId: string, flagId?: strin
 		case 'suggestion':
 			return `/staff/suggestions/${entityId}`;
 		case 'classified_post':
+			if (!surfaces.classifieds) return flagId ? `/staff/flags/${flagId}` : '/staff/flags';
 			return `/staff/classifieds/${entityId}`;
 		default:
 			return `/staff/members/${entityId}`;
@@ -424,6 +425,8 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	}
 	if (filters.entityType) conditions.push(eq(contentFlag.entityType, filters.entityType));
 	if (filters.entityId) conditions.push(eq(contentFlag.entityId, filters.entityId));
+	// Classifieds are off in code (#2116); their reports leave the queue with them.
+	if (!surfaces.classifieds) conditions.push(ne(contentFlag.entityType, 'classified_post'));
 	if (filters.reportedByUserId) {
 		conditions.push(eq(contentFlag.reportedByUserId, filters.reportedByUserId));
 	}

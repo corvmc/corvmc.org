@@ -14,7 +14,8 @@ import {
 	SUGGESTION_TITLE_MAX,
 	SUGGESTION_BODY_MAX,
 	SUGGESTION_RESPONSE_MAX,
-	SUGGESTION_NOTE_MAX
+	SUGGESTION_NOTE_MAX,
+	surfaces
 } from '$lib/config';
 import {
 	listSuggestions,
@@ -442,7 +443,13 @@ export const getMemberSuggestionDetailPage = query(z.string(), async (id) => {
 		getSuggestionChain(id)
 	]);
 	// A certified result only: an open or closed ballot's tally is its electors' alone.
-	return { suggestion, standing, editState, project, ballots: chain.ballots };
+	return {
+		suggestion,
+		standing,
+		editState,
+		project,
+		ballots: surfaces.ballots ? chain.ballots : []
+	};
 });
 
 /**
@@ -475,8 +482,8 @@ export const getStaffSuggestionDetailPage = query(z.string(), async (id) => {
 		project,
 		committees,
 		fulfilledBy,
-		ballots: chain.ballots,
-		ballotCommittees: ballotManager ? await listCommitteeRosters() : null
+		ballots: surfaces.ballots ? chain.ballots : [],
+		ballotCommittees: surfaces.ballots && ballotManager ? await listCommitteeRosters() : null
 	};
 });
 

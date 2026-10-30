@@ -18,7 +18,8 @@
 	import {
 		suggestionCategoryLabels,
 		suggestionStatuses,
-		suggestionStatusLabels
+		suggestionStatusLabels,
+		surfaces
 	} from '$lib/config';
 	import {
 		getStaffSuggestionDetailPage,
@@ -141,9 +142,11 @@
 		<InfoCard title="Decide" class="bg-base-200 shadow-none">
 			<p class="mb-3 text-muted">
 				Commit to this idea directly: the project groups the work that answers it, and this
-				suggestion follows its status from now on. Both move to Planned. If it needs a vote first,
-				put it to a ballot: it reads In ballot while voting is open, and a passing result offers
-				Start project on the ballot's page.
+				suggestion follows its status from now on. Both move to Planned.
+				{#if surfaces.ballots}
+					If it needs a vote first, put it to a ballot: it reads In ballot while voting is open, and
+					a passing result offers Start project on the ballot's page.
+				{/if}
 			</p>
 			{#if ballotCommittees && !liveBallot}
 				<div class="mb-3 flex flex-wrap gap-2">

@@ -22,6 +22,7 @@
  */
 
 import { resolve } from '$app/paths';
+import { surfaces } from '$lib/config';
 import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
 import {
 	ACCOUNT_MENU,
@@ -86,9 +87,11 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 				{ key: 'events-submit', label: 'Add a Show', href: resolve('/member/events/submit') }
 			]
 		},
-		{ key: 'directory', label: 'Directory', href: resolve('/member/directory') },
-		{ key: 'classifieds', label: 'Classifieds', href: resolve('/member/classifieds') }
+		{ key: 'directory', label: 'Directory', href: resolve('/member/directory') }
 	];
+	if (surfaces.classifieds) {
+		items.push({ key: 'classifieds', label: 'Classifieds', href: resolve('/member/classifieds') });
+	}
 
 	// Between Directory and Volunteering: it belongs with the things you do in
 	// the space, not with the bottom cluster.
@@ -142,7 +145,9 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 export function memberNavFooter(_input: MemberNavInput): MemberNavItem[] {
 	return [
 		{ key: 'suggestions', label: 'Suggestions', href: resolve('/member/suggestions') },
-		{ key: 'ballots', label: 'Ballots', href: resolve('/member/ballots') },
+		...(surfaces.ballots
+			? [{ key: 'ballots' as const, label: 'Ballots', href: resolve('/member/ballots') }]
+			: []),
 		{ key: 'help', label: 'Help', href: resolve('/member/help') }
 	];
 }

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { surfaces } from '$lib/config';
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
 	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
@@ -32,6 +33,7 @@ const event = { ballotId: BALLOT, title: 'Adopt the bylaws' };
 
 beforeEach(async () => {
 	sendTemplateBatch.mockClear();
+	surfaces.ballots = true;
 	for (const t of ['notification', 'notification_preference', 'ballot_elector', 'ballot', 'user']) {
 		sqlite.exec(`delete from ${t}`);
 	}
@@ -65,6 +67,15 @@ async function notified() {
 		.map((r) => r.userId)
 		.sort();
 }
+
+describe('while Ballots is switched off (#2116)', () => {
+	it('sends nothing and leaves the notice unclaimed', async () => {
+		surfaces.ballots = false;
+		await fanOutBallotNotice('ballot_opened', event, 'https://x.test');
+		expect(await notified()).toEqual([]);
+		expect(sendTemplateBatch).not.toHaveBeenCalled();
+	});
+});
 
 describe('the open notice', () => {
 	it('reaches active electors only, in-app and by email', async () => {

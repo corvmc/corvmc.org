@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { surfaces } from '$lib/config';
 
 // These remotes are the whole access-control story for classifieds: SvelteKit
 // dispatches a remote call before any route load runs.
@@ -127,7 +128,19 @@ beforeEach(() => {
 	isStaff = false;
 	unresolvedReports = 0;
 	vi.clearAllMocks();
+	surfaces.classifieds = true;
 	svc.getPost.mockResolvedValue({ ...livePost });
+});
+
+describe('while Classifieds is switched off (#2116)', () => {
+	it('answers 404 after the sign-in check, before the service', async () => {
+		surfaces.classifieds = false;
+		await expect(remote.getClassifiedBoard({})).rejects.toThrow('404');
+		expect(svc.listBoard).not.toHaveBeenCalled();
+
+		currentUser = null;
+		await expect(remote.getClassifiedBoard({})).rejects.toThrow('401');
+	});
 });
 
 describe('member reads', () => {

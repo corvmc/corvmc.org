@@ -12,6 +12,7 @@ import { sendTemplateBatch } from '$lib/server/notification/email';
 import { pushToUser } from '$lib/server/notification/sse';
 import { captureException } from '$lib/server/sentry';
 import type { BallotEvent } from '$lib/server/event-bus/event-bus';
+import { surfaces } from '$lib/config';
 
 /**
  * The two ballot notices. Opening reaches the electors; certification reaches
@@ -86,6 +87,8 @@ export async function fanOutBallotNotice(
 	event: BallotEvent,
 	siteUrl: string
 ): Promise<void> {
+	// Unclaimed while off (#2116), so nothing is marked sent that never went.
+	if (!surfaces.ballots) return;
 	if (!(await claim(event.ballotId, type))) return;
 
 	const people = await recipients(event.ballotId, type);
