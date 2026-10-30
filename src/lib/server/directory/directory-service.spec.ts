@@ -238,36 +238,35 @@ describe('getPublicDirectory', () => {
 	});
 });
 
+// What counts as complete is asserted against SQLite in
+// `directory-listing.integration.spec.ts`; this pins that both readers share it.
 describe('isProfileComplete', () => {
-	const blank = { tagline: null, bio: null, user: { image: null }, tags: [] };
-
 	beforeEach(() => {
 		vi.clearAllMocks();
+		entryFindMany.mockResolvedValue([]);
 	});
 
-	it('is false for a brand-new account with nothing filled in', async () => {
-		entryFindFirst.mockResolvedValue(blank);
-		await expect(isProfileComplete('u1')).resolves.toBe(false);
-	});
-
-	it('is false when a missing user means there is no profile at all', async () => {
+	it('reads the same predicate the member listing carries', async () => {
 		entryFindFirst.mockResolvedValue(undefined);
 		await expect(isProfileComplete('nobody')).resolves.toBe(false);
-	});
+		await listMembers();
 
-	it.each([
-		['a tagline', { tagline: 'Bassist | Post-punk' }],
-		['a bio', { bio: '<p>Moved here in 2025.</p>' }],
-		['an avatar', { user: { image: 'avatars/u1.png' } }],
-		['one tag of any kind', { tags: [{ kind: 'instrument' }] }]
-	])('is true once the member has %s', async (_label, patch) => {
-		entryFindFirst.mockResolvedValue({ ...blank, ...patch });
-		await expect(isProfileComplete('u1')).resolves.toBe(true);
-	});
-
-	it('treats whitespace-only text as still blank', async () => {
-		entryFindFirst.mockResolvedValue({ ...blank, tagline: '   ', bio: '\n\t' });
-		await expect(isProfileComplete('u1')).resolves.toBe(false);
+		const render = (c: Record<string, unknown>) =>
+			new SQLiteSyncDialect().sqlToQuery(
+				(c.RAW as (t: unknown, o: unknown) => SQL)(
+					{
+						id: sql`"directory_entry"."id"`,
+						userId: sql`"directory_entry"."user_id"`,
+						tagline: sql`"directory_entry"."tagline"`,
+						bio: sql`"directory_entry"."bio"`
+					},
+					{}
+				)
+			).sql;
+		const own = (entryFindFirst.mock.calls[0][0] as { where: { AND: Record<string, unknown>[] } })
+			.where.AND;
+		const listed = whereConditions(entryFindMany).filter((c) => 'RAW' in c);
+		expect(listed.map(render)).toContain(render(own.find((c) => 'RAW' in c)!));
 	});
 });
 
@@ -444,6 +443,13 @@ describe('findMatchesFor', () => {
 		it('never matches the viewer to themselves', async () => {
 			await findMatchesFor('u1');
 			expect(matchWhere()).toContainEqual({ userId: { ne: 'u1' } });
+		});
+
+		it('does not carry the directory’s completeness gate', async () => {
+			// The gate is for the two directory listings only (#2112).
+			await findMatchesFor('u1');
+			const rendered = allRaw(matchWhere()).map((c) => renderRaw(c).sql);
+			expect(rendered.some((s) => s.includes('trim('))).toBe(false);
 		});
 
 		it('excludes anyone on either side of a block', async () => {

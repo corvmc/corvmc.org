@@ -20,7 +20,10 @@
 		BAND_COLORS,
 		genreFacets,
 		matchesGenre,
-		matchesSearch
+		matchesSearch,
+		sortRows,
+		directorySortOptions,
+		type DirectorySort
 	} from '$lib/utils/directory-browse';
 
 	type Tab = 'bands' | 'musicians';
@@ -46,6 +49,7 @@
 	const initial = page.url.searchParams;
 	let searchText = $state(initial.get('q') ?? '');
 	let genre = $state(initial.get('genre') ?? '');
+	let sort = $state<DirectorySort>('newest');
 
 	// One unfiltered payload; searching and faceting happen in the browser. See
 	// $lib/utils/directory-browse for why, and for what to do if that stops
@@ -54,6 +58,8 @@
 	const data = $derived(pageData.directory);
 	const user = $derived(pageData.viewer);
 	const visibility = $derived(pageData.visibility);
+	// Missing for either reason: not public, or nothing on the profile yet.
+	const profileIsIncomplete = $derived(user && visibility === 'public' && !pageData.complete);
 	const profileIsHidden = $derived(user && visibility !== 'public');
 
 	const members = $derived(data.members);
@@ -91,7 +97,10 @@
 	});
 
 	function matching<T extends { name: string; genres?: string[] }>(rows: T[]): T[] {
-		return rows.filter((r) => matchesSearch(r, searchText) && matchesGenre(r, genre));
+		return sortRows(
+			rows.filter((r) => matchesSearch(r, searchText) && matchesGenre(r, genre)),
+			sort
+		);
 	}
 
 	const bandMatches = $derived(matching(bands));
@@ -206,6 +215,14 @@
 				placeholder={tab === 'bands' ? 'Search bands by name…' : 'Search musicians by name…'}
 				bind:value={searchText}
 			/>
+			<FormField
+				type="select"
+				name="sort"
+				label="Sort"
+				class="w-full max-w-sm"
+				options={directorySortOptions}
+				bind:value={sort}
+			/>
 
 			{#if chips.length > 0}
 				<div class="flex flex-wrap justify-center gap-1">
@@ -295,6 +312,13 @@
 				<a href={resolve('/member/directory')} class="text-cmc-teal underline"
 					>Update your visibility</a
 				>
+				to appear here.
+			</p>
+		{:else if profileIsIncomplete}
+			<p class="mt-10 text-center text-sm text-fg-3">
+				Don't see your name? Profiles appear here once they have a tagline, a bio, a photo, or one
+				instrument, genre or skill.
+				<a href={resolve('/member/profile')} class="text-cmc-teal underline">Add to your profile</a>
 				to appear here.
 			</p>
 		{/if}

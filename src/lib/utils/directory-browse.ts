@@ -57,3 +57,21 @@ export function matchesGenre(row: { genres?: string[] }, genre: string): boolean
 	if (!genre) return true;
 	return (row.genres ?? []).includes(genre);
 }
+
+/** The directory's two orders. `newest` is the server's default, by join or creation date. */
+export const directorySorts = ['newest', 'name'] as const;
+export type DirectorySort = (typeof directorySorts)[number];
+
+export const directorySortOptions: { value: DirectorySort; label: string }[] = [
+	{ value: 'newest', label: 'Newest first' },
+	{ value: 'name', label: 'A–Z' }
+];
+
+/**
+ * The public page's A–Z, in the browser. Rows arrive newest first, so `newest`
+ * is the order they came in; A–Z sorts a copy, so the loaded array keeps it.
+ */
+export function sortRows<T extends { name: string }>(rows: T[], sort: DirectorySort): T[] {
+	if (sort === 'newest') return rows;
+	return [...rows].sort((a, b) => a.name.localeCompare(b.name));
+}
