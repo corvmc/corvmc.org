@@ -33,8 +33,6 @@ const svc = vi.hoisted(() => ({
 	acceptApplication: vi.fn(async () => undefined),
 	declineApplication: vi.fn(async () => undefined),
 	markContacted: vi.fn(async () => undefined),
-	listCommittees: vi.fn(async () => []),
-	listForApplicant: vi.fn(async () => []),
 	submitApplication: vi.fn(async () => 'app-1'),
 	withdrawApplication: vi.fn(async () => undefined)
 }));

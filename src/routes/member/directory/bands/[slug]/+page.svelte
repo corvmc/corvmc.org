@@ -7,6 +7,8 @@
 	import { ReportContentAction } from '$lib/components/actions';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { pageTitle } from '$lib/config';
+	import { m } from '$lib/paraglide/messages.js';
+	import { many } from '$lib/terms';
 	import ProfileHeader, {
 		type ProfilePill
 	} from '$lib/components/directory/profile/ProfileHeader.svelte';
@@ -78,10 +80,8 @@
 
 <PageContent width="3xl">
 	<div class="flex items-center justify-between">
-		<!-- Carries the tab: members are this directory's default, so a bare
-		     /member/directory would drop you somewhere other than where you came from. -->
-		<a href="{resolve('/member/directory')}?tab=bands" class="link text-muted"
-			>&larr; Back to Directory</a
+		<a href={resolve('/member/directory/bands')} class="link text-muted"
+			>&larr; {many(m.term_band)}</a
 		>
 		{#if canReport}
 			<ReportContentAction entityType="band_profile" entityId={band.id} entityLabel={band.name} />

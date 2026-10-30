@@ -66,19 +66,22 @@ test.describe('member sidebar', () => {
 		}
 	});
 
+	const myBands = 'My Bands';
+	const browseBands = 'Browse Bands';
+
 	test('collapses My Bands, remembers it, and leaves the staff panel alone', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/member');
 
-		const header = nav(page).getByRole('button', { name: 'My Bands' });
+		const header = nav(page).getByRole('button', { name: myBands });
 		await expect(header).toHaveAttribute('aria-expanded', 'true');
-		await expect(nav(page).getByRole('link', { name: 'Create Band' })).toBeVisible();
+		await expect(nav(page).getByRole('link', { name: browseBands })).toBeVisible();
 
 		await header.click();
-		await expect(nav(page).getByRole('link', { name: 'Create Band' })).toHaveCount(0);
+		await expect(nav(page).getByRole('link', { name: browseBands })).toHaveCount(0);
 
 		await page.reload();
-		await expect(nav(page).getByRole('button', { name: 'My Bands' })).toHaveAttribute(
+		await expect(nav(page).getByRole('button', { name: myBands })).toHaveAttribute(
 			'aria-expanded',
 			'false'
 		);
@@ -92,6 +95,35 @@ test.describe('member sidebar', () => {
 				'true'
 			);
 		}
+	});
+});
+
+test.describe('member sidebar browse rows', () => {
+	test('Browse Bands lights alone, and Browse Groups replaces All', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/member');
+
+		await nav(page).getByRole('link', { name: 'Browse Bands' }).click();
+		await page.waitForURL('**/member/directory/bands');
+		await expect(nav(page).locator('a.active')).toHaveCount(1);
+		await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/member/directory/bands');
+
+		await expect(nav(page).getByRole('link', { name: 'Browse Groups' })).toHaveAttribute(
+			'href',
+			'/member/groups'
+		);
+		await expect(nav(page).getByRole('link', { name: 'All', exact: true })).toHaveCount(0);
+	});
+
+	test('the old addresses redirect', async ({ page }) => {
+		await loginAsStaff(page);
+
+		await page.goto('/member/directory?tab=bands');
+		await expect(page).toHaveURL(/\/member\/directory\/bands$/);
+
+		await page.goto('/member/directory/instructors');
+		await expect(page).toHaveURL(/\/member\/directory\?teaches=collective$/);
+		await expect(page.getByRole('checkbox', { name: 'Teaches at the Collective' })).toBeChecked();
 	});
 });
 

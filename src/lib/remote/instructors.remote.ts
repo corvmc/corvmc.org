@@ -239,9 +239,8 @@ const filterSchema = z
 	.optional();
 
 /**
- * Two entry points rather than one with a viewer argument, because the
- * difference is the gate and a gate chosen by a parameter is a gate somebody can
- * pass the wrong value to. The public one takes no session at all.
+ * Public, so it takes no session. Members find teachers through the member
+ * directory's filter instead (#2115).
  */
 /**
  * Rows and the instrument facets in one round trip — the page's one
@@ -259,8 +258,3 @@ async function instructorPage(visibility: 'public' | 'members', filters?: Instru
 export const getPublicInstructors = query(filterSchema, async (filters) =>
 	instructorPage('public', filters as InstructorFilters | undefined)
 );
-
-export const getMemberInstructors = query(filterSchema, async (filters) => {
-	requireUser();
-	return instructorPage('members', filters as InstructorFilters | undefined);
-});

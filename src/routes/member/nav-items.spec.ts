@@ -163,7 +163,9 @@ describe('activeMemberNavKey', () => {
 		['/member/events/abc/manage', 'events'],
 		['/member/events/submit', 'events-submit'],
 		['/member/directory/members/abc', 'directory'],
-		['/member/directory/bands/some-band', 'directory'],
+		// Bands browse under My Bands, not Directory (#2115).
+		['/member/directory/bands', 'bands-browse'],
+		['/member/directory/bands/some-band', 'bands-browse'],
 		['/member/suggestions/abc', 'suggestions'],
 		['/member/ballots/abc', 'ballots'],
 		['/member/volunteer/start', 'volunteer'],
@@ -212,9 +214,8 @@ describe('route coverage', () => {
 		// Pointed at by a sticker on a piece of gear and nothing else. A row would
 		// be meaningless: there is no "the unit" to navigate to.
 		'/member/equipment/assets/[id]',
-		// Reached through the My Bands and My Groups sidebar groups and their "All"
-		// links rather than a row of their own. Two collapsible groups for two
-		// indexes, which is the separation the routes draw.
+		// Reached through the sidebar groups' New and Browse Groups rows rather
+		// than a main row of their own.
 		'/member/bands',
 		'/member/groups',
 		'/member/groups/[slug]',

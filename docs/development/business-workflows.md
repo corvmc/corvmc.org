@@ -1915,8 +1915,8 @@ Spec: [specs/group-applications-spec.md](../specs/shipped/group-applications-spe
 A group decides how people get in with its `joinPolicy`. `open` groups take a join straight to an
 active membership. `invite_only` groups grow by invitation only. A `by_application` group takes
 **applications**, and every committee is one. A member applies to a club from its Apply dialog,
-which shows the club's `joinInstructions` above one optional question. A committee's Apply button
-opens `/member/volunteer/committees` with that committee ticked. One application there can name
+which shows the club's `joinInstructions` above one optional question. A committee's Apply button on
+`/member/groups` opens a dialog with that committee ticked. One application there can name
 several committees and answers the board's two questions.
 
 A reviewer answers for each group separately. They can mark the applicant contacted, accept, or

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { query } from '$app/server';
 import { form } from './_remote';
 import { mapDomainError } from '$lib/server/errors';
 import { can, requireUser } from '$lib/server/authorization';
@@ -15,8 +14,6 @@ import { APPLICATION_ANSWER_MAX } from '$lib/config';
 import {
 	acceptApplication,
 	declineApplication,
-	listCommittees,
-	listForApplicant,
 	markContacted,
 	submitApplication,
 	withdrawApplication
@@ -47,18 +44,8 @@ const applySchema = z.object({
 	note: answer
 });
 
-/** The committee apply page: every committee taking applications, and yours. */
-export const getCommitteeApplyPage = query(async () => {
-	const user = requireUser();
-	const [committees, mine] = await Promise.all([
-		listCommittees({ acceptingOnly: true }),
-		listForApplicant(user.id, { kind: 'committee' })
-	]);
-	return { committees, mine };
-});
-
 async function refreshApplicantViews() {
-	await Promise.all([getCommitteeApplyPage().refresh(), getMemberGroups().refresh()]);
+	await getMemberGroups().refresh();
 }
 
 export const applyToGroups = form(applySchema, async (data) => {
