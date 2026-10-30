@@ -77,14 +77,18 @@ async function registerAuditGroup(): Promise<void> {
 }
 
 /**
- * `provisionOnConfirm` never throws: emittery runs listeners together, so one
+ * `provisionOnConfirm` and `revokeAccessFor` never throw: emittery runs listeners together, so one
  * that rejected would also reject the confirmation email's emit.
  */
 async function registerLockListeners(): Promise<void> {
-	const { provisionOnConfirm } = await import('$lib/server/lock/lock-service');
+	const { provisionOnConfirm, revokeAccessFor } = await import('$lib/server/lock/lock-service');
 
 	domainEvents.on('reservation.confirmed', async ({ data: event }) => {
 		await provisionOnConfirm(event.reservationId);
+	});
+
+	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
+		await revokeAccessFor(event.reservationId);
 	});
 }
 
