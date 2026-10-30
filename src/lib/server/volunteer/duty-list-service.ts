@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { toGenericRef } from '$lib/server/entity/refs';
-import { and, asc, count, eq, isNull, notInArray, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull, notInArray, sql, type SQL } from 'drizzle-orm';
+import { placePendingWorkOrders } from './retime-work-orders';
 import { DomainError } from '$lib/server/domain-error';
 import {
 	dutyList,
@@ -653,6 +654,38 @@ function resolveAnchor(
 		load_out: event.loadOutBy
 	}[anchor];
 	return found(at, `The show has no ${label} time yet.`);
+}
+
+/**
+ * Name the project's first event on template work stamped before it had one,
+ * then place that work at each anchor whose time is already set (#2084). It is
+ * the event `applyDutyList` would have read; an anchor still unset stays
+ * pending and is placed by that event's own retime.
+ */
+export async function placeWorkAwaitingEvent(projectId: string) {
+	const clock = await loadClock({ kind: 'project', id: projectId });
+	const event = clock?.event;
+	if (!clock || !event) return;
+
+	const claim = db
+		.update(workOrder)
+		.set({ eventId: event.id, updatedAt: new Date() })
+		.where(
+			and(
+				eq(workOrder.projectId, projectId),
+				isNull(workOrder.eventId),
+				inArray(workOrder.anchor, [...eventDutyListAnchors]),
+				isNull(workOrder.cancelledAt),
+				isNull(workOrder.resolvedAt)
+			)
+		);
+	const places = eventDutyListAnchors.flatMap((anchor) => {
+		const { at } = resolveAnchor(anchor, clock);
+		if (!at) return [];
+		const seconds = Math.floor(at.getTime() / 1000);
+		return [placePendingWorkOrders({ eventId: event.id }, [anchor], sql`${seconds}`)];
+	});
+	await db.batch([claim, ...places] as unknown as Parameters<typeof db.batch>[0]);
 }
 
 /**
