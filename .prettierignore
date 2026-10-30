@@ -30,3 +30,8 @@ worker-configuration.d.ts
 
 # The door app's generated Android project (Gradle, XML, a wrapper jar). Owned by Capacitor.
 /door-app/android/
+
+# Written by the inlang SDK whenever Paraglide opens the project (gitignored).
+/project.inlang/.lix/
+/project.inlang/.meta.json
+/project.inlang/README.md
