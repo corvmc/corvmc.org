@@ -9,10 +9,10 @@ const options = [{ terms: ['term_band', 'term_member'] }];
 tester.run('prefer-term-messages', rule as never, {
 	valid: [
 		// Prose containing the word is #2099's catalog, not a term label.
-		{ filename: 'a.svelte', code: '<p>Book a room for your act</p>', options },
-		{ filename: 'a.svelte', code: '<FormField name="act" label="Act name" />', options },
+		{ filename: 'a.svelte', code: '<p>Book a room for your band</p>', options },
+		{ filename: 'a.svelte', code: '<FormField name="band" label="Band name" />', options },
 		// Not a user-facing attribute.
-		{ filename: 'a.svelte', code: '<div class="members" data-kind="Act"></div>', options },
+		{ filename: 'a.svelte', code: '<div class="members" data-kind="Band"></div>', options },
 		// A term the options do not watch.
 		{ filename: 'a.svelte', code: '<th>Events</th>', options },
 		{ filename: 'a.svelte', code: "<script>const tab = { id: 'members' };</script>", options }
@@ -20,9 +20,9 @@ tester.run('prefer-term-messages', rule as never, {
 	invalid: [
 		{
 			filename: 'a.svelte',
-			code: '<th> Act </th>',
+			code: '<th> Band </th>',
 			options,
-			errors: [{ messageId: 'term', data: { text: 'Act', key: 'term_band' } }]
+			errors: [{ messageId: 'term', data: { text: 'Band', key: 'term_band' } }]
 		},
 		{
 			filename: 'a.svelte',
@@ -32,9 +32,9 @@ tester.run('prefer-term-messages', rule as never, {
 		},
 		{
 			filename: 'a.svelte',
-			code: "<script>const cols = [{ label: 'Acts' }];</script>",
+			code: "<script>const cols = [{ label: 'Bands' }];</script>",
 			options,
-			errors: [{ messageId: 'term', data: { text: 'Acts', key: 'term_band' } }]
+			errors: [{ messageId: 'term', data: { text: 'Bands', key: 'term_band' } }]
 		}
 	]
 });
@@ -42,8 +42,8 @@ tester.run('prefer-term-messages', rule as never, {
 describe('termForms', () => {
 	it('reads both plural forms of every term in the catalog', () => {
 		const forms = termForms(catalog, undefined);
-		expect(forms.get('act')).toBe('term_band');
-		expect(forms.get('acts')).toBe('term_band');
+		expect(forms.get('band')).toBe('term_band');
+		expect(forms.get('bands')).toBe('term_band');
 		expect(forms.get('external acts')).toBe('term_external_act');
 		expect([...forms.values()].every((key) => key.startsWith('term_'))).toBe(true);
 	});

@@ -244,8 +244,8 @@ external acts, which are the one thing that must never be addressable.
 
 **A solo act is a group.** One person's act is a `group` with `kind = 'band'` and a roster of one,
 and it gets everything a five-piece gets: a slug, `{slug}.corvmc.org`, a microsite, an EPK, a
-booking inbox, `project` ownership. There is no solo kind and no derived solo/band label — _act_ is
-size-agnostic, so there is nothing to flip when somebody joins.
+booking inbox, `project` ownership. There is no solo kind and no derived solo/band label — the word
+is one for every size, so there is nothing to flip when somebody joins.
 
 This section used to argue the opposite: that a solo performer should be a `directory_entry` on
 their user, because otherwise they "either invent a one-person 'band' or accept a member profile
@@ -271,14 +271,10 @@ the same row — applied to the roster instead of the table name.
 A member's public page is still `/directory/members/{id}`; their _act's_ page is
 `/directory/bands/{slug}` like any other. The two coexist, and a solo performer normally has both.
 
-**Only the word changed in the interface**, and only where it had to. **Act** is the general noun
-for a performing party of any size, matching _external act_, which this codebase already used with
-_external_ as the qualifier: an act has a profile, an address, a site, a subscription, and a row in
-the directory. **Band stays wherever the copy is about a roster of people** — "Invite band members",
-"Leave band", "What you play in this band", "you've been invited to join the band X". Those strings
-are only reachable, or only meaningful, once there is more than one person, so nothing a solo
-performer reads calls them a band, and nothing a four-piece reads is stilted for the sake of it.
-The dividing question is whether the sentence names the party or its people.
+**The interface calls it a band**, solo or not (#2097, reversing #425's "act"). The word comes
+from `term_band` in `messages/en.json`, which also names the band group kind. **External act**
+stays as the term for an ownerless directory entry, and staff production and settlement copy keeps
+"act" for a slot on a bill, which may be either.
 
 Nothing in the schema or the routes moved: `band_site`, `event_band`, `bandSlugFromHost`,
 `/member/bands` and `/directory/bands/{slug}` keep their names, following the precedent set inside

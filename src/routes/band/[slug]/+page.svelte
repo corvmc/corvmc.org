@@ -36,7 +36,7 @@
 <PageHeader title="Dashboard" subtitle={band.name} />
 <PageContent>
 	{#if address}
-		<AddressCard url={address} title="Your act's address">
+		<AddressCard url={address} title="Your band's address">
 			Put this on a flyer or in a bio — it goes to {band.name}'s page.
 		</AddressCard>
 	{/if}
@@ -53,7 +53,7 @@
 		</svelte:boundary>
 	{/if}
 
-	<!-- Act overview -->
+	<!-- Band overview -->
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 		<StatCard title="Members" value={band.memberCount} size="sm" />
 		<StatCard title="Your Role" value={layout.userRole} size="sm" valueClass="capitalize" />
@@ -102,7 +102,7 @@
 		>
 		{#if isOwnerOrAdmin}
 			<Button href="/band/{band.slug}/edit" variant="default" size="sm" outline
-				>Edit Act Profile</Button
+				>Edit Band Profile</Button
 			>
 		{/if}
 	</div>

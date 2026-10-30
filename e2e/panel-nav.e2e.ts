@@ -66,19 +66,19 @@ test.describe('member sidebar', () => {
 		}
 	});
 
-	test('collapses My Acts, remembers it, and leaves the staff panel alone', async ({ page }) => {
+	test('collapses My Bands, remembers it, and leaves the staff panel alone', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/member');
 
-		const header = nav(page).getByRole('button', { name: 'My Acts' });
+		const header = nav(page).getByRole('button', { name: 'My Bands' });
 		await expect(header).toHaveAttribute('aria-expanded', 'true');
-		await expect(nav(page).getByRole('link', { name: 'Create Act' })).toBeVisible();
+		await expect(nav(page).getByRole('link', { name: 'Create Band' })).toBeVisible();
 
 		await header.click();
-		await expect(nav(page).getByRole('link', { name: 'Create Act' })).toHaveCount(0);
+		await expect(nav(page).getByRole('link', { name: 'Create Band' })).toHaveCount(0);
 
 		await page.reload();
-		await expect(nav(page).getByRole('button', { name: 'My Acts' })).toHaveAttribute(
+		await expect(nav(page).getByRole('button', { name: 'My Bands' })).toHaveAttribute(
 			'aria-expanded',
 			'false'
 		);

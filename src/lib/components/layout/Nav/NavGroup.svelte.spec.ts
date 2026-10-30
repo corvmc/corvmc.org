@@ -110,12 +110,12 @@ describe('NavGroup', () => {
 /**
  * The action shares the title's row. It used to be a sibling of a `w-full`
  * toggle in the collapsible branch, so "All" was pushed onto a line of its own
- * in My Acts and My Groups — the only two groups that pass one (#1022).
+ * in My Bands and My Groups — the only two groups that pass one (#1022).
  */
 describe('NavGroup action slot', () => {
 	for (const collapsible of [false, true]) {
 		it(`keeps the action on the title's row when collapsible=${collapsible}`, async () => {
-			await render(NavGroupHarness, { withAction: true, collapsible, title: 'My Acts' });
+			await render(NavGroupHarness, { withAction: true, collapsible, title: 'My Bands' });
 
 			// By its text: the collapsible branch's disclosure toggle is also a
 			// `button[type=button]`, and picking that one compares the heading
@@ -124,7 +124,7 @@ describe('NavGroup action slot', () => {
 				(el) => el.textContent?.trim() === 'All'
 			)!;
 			const heading = [...document.querySelectorAll<HTMLElement>('span')].find(
-				(el) => el.textContent === 'My Acts'
+				(el) => el.textContent === 'My Bands'
 			)!;
 
 			// Same row: their vertical centres line up. A wrapped action sits a

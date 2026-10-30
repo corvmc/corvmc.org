@@ -145,7 +145,7 @@
 			{/each}
 		</div>
 	{:else}
-		<p class="text-muted">No press photo yet. Your act's logo is set on the profile page.</p>
+		<p class="text-muted">No press photo yet. Your band's logo is set on the profile page.</p>
 	{/if}
 
 	<div class="flex flex-wrap items-center gap-3">

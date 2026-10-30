@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 /**
  * `getBandLayout` resolved any group by slug, so `/band/{club-slug}` served a
  * club leader the entire band panel — press kit, microsite, subscription and
- * Settings → Delete Act — for a group that by design has no `band_site`.
+ * Settings → Delete Band — for a group that by design has no `band_site`.
  */
 
 let group: Record<string, unknown> | null = null;

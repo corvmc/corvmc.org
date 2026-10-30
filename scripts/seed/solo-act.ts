@@ -17,9 +17,9 @@ import { ptDate, randomInt } from './util';
  * second insert with nothing to migrate. See `docs/specs/groups-spec.md`
  * § Solo acts, which this seeds the reachable case for.
  *
- * It exists because the copy on every act surface is now written to be true at
- * a roster of one ("Nobody else yet", "Invite anyone else in this act",
- * "Book the practice space and it'll show up here for the whole act"), and none
+ * It exists because the copy on every band surface is now written to be true at
+ * a roster of one ("Nobody else yet", "Invite anyone else in this band",
+ * "Book the practice space and it'll show up here for the whole band"), and none
  * of that could be read on a real page while the seed only ever produced bands
  * of three to four.
  *
