@@ -643,7 +643,7 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 
 /**
  * Staff: every listing, whatever its source, status or date. The moderation
- * queue is the rows badged `pending_review`; `/staff/productions` runs the
+ * queue is the rows badged `pending_review`; the Productions view runs the
  * shows CMC produces.
  */
 /** The Calendar page's summary counts — independent of the table's filters. */

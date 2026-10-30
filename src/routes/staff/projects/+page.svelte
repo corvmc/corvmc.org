@@ -10,6 +10,7 @@
 	import { getProjectsPage, createProjectForm } from '$lib/remote/projects.remote';
 	import type { ProjectView } from '$lib/config';
 	import ProjectsTable from './ProjectsTable.svelte';
+	import ProjectViews from './ProjectViews.svelte';
 
 	/**
 	 * Every body of work with a budget and an owner. Budget and burn share a
@@ -38,7 +39,7 @@
 	}
 </script>
 
-<PageHeader title="Projects" subtitle="Work with a budget and an owner">
+<PageHeader title="Projects">
 	<Action
 		action={createProjectForm}
 		label="New project"
@@ -68,6 +69,7 @@
 </PageHeader>
 
 <PageContent>
+	<ProjectViews active="projects" />
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		<Select
 			size="sm"

@@ -20,7 +20,7 @@
 	/**
 	 * The staff calendar: every listing staff may see, newest first, with no
 	 * filters. Listings waiting on staff are pinned above the dates with a
-	 * labelled badge; the totals above count them. `/staff/productions` runs the shows CMC produces.
+	 * labelled badge; the totals above count them. The Productions view on Projects runs the shows CMC produces.
 	 */
 	const filters = urlState(resolve('/staff/events'), { page: positiveInt(1) });
 

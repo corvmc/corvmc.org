@@ -11,6 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
 	import NewProductionAction from './NewProductionAction.svelte';
+	import ProjectViews from '../ProjectViews.svelte';
 	import { formatDate } from '$lib/utils/format';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import AvatarStack from '$lib/components/ui/AvatarStack.svelte';
@@ -20,17 +21,12 @@
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 
 	/**
-	 * Productions: the shows CMC puts on, at every stage of putting them on.
+	 * The Productions view: the shows CMC puts on, at every status including
+	 * `draft`, since this is where a show is built. `/staff/events` is what the
+	 * public can see; a published CMC show is on both, in two roles.
 	 *
-	 * Scoped to `source: 'cmc'` and reading every status, including `draft` —
-	 * this is the surface where a show is *built*, so a half-written one belongs
-	 * here and nowhere else. What the public can see, across every source, is
-	 * `/staff/events`; a published CMC show is on both pages, in two roles.
-	 *
-	 * Naming the source rather than excluding the others is deliberate. An
-	 * exclusion filter silently adopts every source added later — Groups adds a
-	 * fourth for club sessions — where naming it means a new source goes visibly
-	 * missing instead, which is the failure you want.
+	 * Names `source: 'cmc'` rather than excluding the others, so a source added
+	 * later goes visibly missing instead of being silently adopted.
 	 */
 	const initial = new URLSearchParams(pageState.url.search);
 
@@ -59,7 +55,7 @@
 		if (page > 1) pairs.push(['page', String(page)]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = withQuery(resolve('/staff/productions'), search);
+		const href = withQuery(resolve('/staff/projects/productions'), search);
 		if (location.pathname + location.search !== href) {
 			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
 		}
@@ -113,10 +109,11 @@
 	}
 </script>
 
-<PageHeader title="Productions" subtitle="Staff">
+<PageHeader title="Projects">
 	<NewProductionAction />
 </PageHeader>
 <PageContent>
+	<ProjectViews active="productions" />
 	<FilterBar {activeCount} onclear={clearFilters}>
 		<Select size="sm" aria-label="Status" bind:value={status} onchange={() => (page = 1)}>
 			<option value="">Every status</option>

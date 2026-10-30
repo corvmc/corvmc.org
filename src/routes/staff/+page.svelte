@@ -64,7 +64,7 @@
 	);
 	let showsHref = $derived(
 		hasCapability(data.capabilities, 'event.manage')
-			? resolve('/staff/productions')
+			? resolve('/staff/projects/productions')
 			: resolve('/staff/events')
 	);
 </script>

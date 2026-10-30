@@ -23,6 +23,7 @@ import {
 	getEventProject,
 	getProjectBurn,
 	getProjectById,
+	getProjectShowId,
 	listProjectAttachments,
 	listCommittees,
 	listProjectCommittees,
@@ -130,7 +131,7 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 	await requireCapability('project.read');
 
 	const view = filters?.view ?? 'active';
-	// Productions have their own index at /staff/productions.
+	// Productions are the Productions view, which lists the shows themselves.
 	const [projects, committees] = await Promise.all([
 		listProjects({
 			groupId: filters?.groupId,
@@ -177,7 +178,8 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			ballotManager,
 			taking,
 			tasks,
-			contractorMoney
+			contractorMoney,
+			showId
 		] = await Promise.all([
 			getProjectById(id),
 			getProjectBurn(id),
@@ -189,7 +191,8 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			can('ballot.manage'),
 			listProjectCommittees([id]),
 			listProjectTasks(id),
-			can('contractor.read')
+			can('contractor.read'),
+			getProjectShowId(id)
 		]);
 		const dutyLists = lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
 		return {
@@ -205,7 +208,9 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			/** Every committee taking part, owner first. */
 			projectCommittees: taking,
 			taskList: scopeContractorMoney(tasks, contractorMoney),
-			viewerId: viewer.id
+			viewerId: viewer.id,
+			/** A production's listing: the page links to its console. */
+			showId
 		};
 	} catch (err) {
 		mapDomainError(err);
