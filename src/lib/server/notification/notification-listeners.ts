@@ -1775,7 +1775,7 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.applicantName} applied to teach`,
 					body: event.headline ?? 'A teaching application is waiting for review',
-					href: '/staff/instructors'
+					href: '/staff/members/instructors?status=requested'
 				});
 			} catch (err) {
 				captureException(err, {

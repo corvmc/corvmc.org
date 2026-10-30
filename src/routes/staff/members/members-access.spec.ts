@@ -37,6 +37,14 @@ describe('/staff/members', () => {
 		});
 	});
 
+	it('sends an instructor.read-only staffer to Instructors', async () => {
+		held = ['instructor.read'];
+		await expect(run(all.load)).rejects.toMatchObject({
+			status: 307,
+			location: '/staff/members/instructors'
+		});
+	});
+
 	it('leaves a signed-out visitor to the page', async () => {
 		await expect(run(all.load, {})).resolves.toBeUndefined();
 	});

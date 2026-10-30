@@ -93,7 +93,7 @@ describe('activeNavKey', () => {
 		['/staff/incidents', 'incidents'],
 		['/staff/incidents/abc', 'incidents'],
 		['/staff/volunteer/report', 'volunteer-report'],
-		['/staff/instructors', 'instructors'],
+		['/staff/members/instructors', 'users'],
 		['/staff/help', 'help'],
 		['/staff/marketing/campaigns/new', 'campaigns'],
 		['/staff/marketing/campaigns/abc/edit', 'campaigns'],
@@ -139,12 +139,13 @@ describe('the nav tree', () => {
 		}
 	});
 
-	it('folds the volunteer roster into Members (#2074)', () => {
+	it('folds the volunteer and instructor rosters into Members (#2074)', () => {
 		const volunteer = allStaffNavItems().find((i) => i.key === 'volunteer')!;
 		expect(volunteer.children).toBeUndefined();
 		expect(childHrefsFor(volunteer)).toEqual(['/staff/volunteer']);
 		const members = allStaffNavItems().find((i) => i.key === 'users')!;
 		expect(filterNavItems([members], ['volunteer.read'])).toHaveLength(1);
+		expect(filterNavItems([members], ['instructor.read'])).toHaveLength(1);
 		expect(filterNavItems([members], ['band.read'])).toHaveLength(0);
 	});
 
@@ -181,14 +182,7 @@ describe('the nav tree', () => {
 	it('groups rows by what they are about', () => {
 		const section = (key: string) => staffNavSections.find((s) => s.key === key)!;
 		const keys = (key: string) => section(key).items.map((i) => i.key);
-		expect(keys('people')).toEqual([
-			'users',
-			'bands',
-			'clubs',
-			'committees',
-			'instructors',
-			'volunteer'
-		]);
+		expect(keys('people')).toEqual(['users', 'bands', 'clubs', 'committees', 'volunteer']);
 		expect(keys('planning')).toEqual([
 			'suggestions',
 			'ballots',
@@ -248,7 +242,9 @@ describe('route coverage', () => {
 		'/staff/volunteer/hours',
 		// Roles and clearances: reached from the Volunteering dashboard's header (#1791).
 		'/staff/volunteer/roles',
-		'/staff/members/volunteers', // a Members view, reached from its tab bar (#2074)
+		// Members views, reached from its tab bar (#2074).
+		'/staff/members/volunteers',
+		'/staff/members/instructors',
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Inventory, beside Categories; its breadcrumb runs through it

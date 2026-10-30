@@ -5,7 +5,7 @@
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
 
-	type MemberView = 'all' | 'volunteers';
+	type MemberView = 'all' | 'volunteers' | 'instructors';
 
 	let { active }: { active: MemberView } = $props();
 
@@ -17,6 +17,12 @@
 			label: 'Volunteers',
 			href: resolve('/staff/members/volunteers'),
 			cap: 'volunteer.read'
+		},
+		{
+			key: 'instructors',
+			label: 'Instructors',
+			href: resolve('/staff/members/instructors'),
+			cap: 'instructor.read'
 		}
 	];
 
