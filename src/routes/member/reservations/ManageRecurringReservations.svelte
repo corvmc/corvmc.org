@@ -47,9 +47,7 @@
 			</div>
 			<CancelSeriesAction
 				seriesId={series.id}
-				variant="ghost"
-				size="sm"
-				shape="square"
+				size="xs"
 				onsuccess={() => getRecurringReservations().refresh()}
 			/>
 		</div>

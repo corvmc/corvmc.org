@@ -61,8 +61,8 @@ describe('ReservationCardShell', () => {
 		expect(document.querySelector('.upcoming-tag')).toBeNull();
 	});
 
-	// The action row straddles the bottom border and is 20px of dead space when
-	// empty, so a card with no controls must not render one.
+	// An empty footer is padding under every past session, so a card with no
+	// controls must not render one.
 	it('renders no action row when no actions are passed', async () => {
 		await render(ReservationCardShell, {
 			startsAt: new Date(),
@@ -70,6 +70,6 @@ describe('ReservationCardShell', () => {
 			children: body
 		});
 
-		expect(card()?.querySelector('.h-0')).toBeNull();
+		expect(card()?.querySelector('.reservation-card-actions')).toBeNull();
 	});
 });
