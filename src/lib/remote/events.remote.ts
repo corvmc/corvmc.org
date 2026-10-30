@@ -2083,13 +2083,20 @@ export const getMemberEventDetailPage = query(z.string(), async (id) => {
 });
 
 /** The public events page's one load-bearing query. Neither half has a refresh site. */
+/** Events the viewer RSVP'd to, so a gig-guide row can say so. Empty signed out. */
+async function viewerRsvpEventIds(): Promise<string[]> {
+	const user = getRequestEvent().locals.user;
+	return user ? (await listRsvpsForUser(user.id)).map((r) => r.eventId) : [];
+}
+
 export const getPublicEventsPage = query(z.string().optional(), async (from) => {
-	const [events, guide, recaps] = await Promise.all([
+	const [events, guide, recaps, rsvpEventIds] = await Promise.all([
 		getPublicEvents(),
 		getPublicGigGuide({ from, offset: 0 }),
-		listRecentRecaps()
+		listRecentRecaps(),
+		viewerRsvpEventIds()
 	]);
-	return { events, guide, recaps };
+	return { events, guide, recaps, rsvpEventIds };
 });
 
 /**
@@ -2106,10 +2113,11 @@ export const getMemberEventsPage = query(z.void(), async () => {
 	// listed published CMC shows and nothing else, so a band gig at another
 	// venue was on the public calendar and invisible to the members it is for
 	// (#1025).
-	const [events, tickets, guide] = await Promise.all([
+	const [events, tickets, guide, rsvpEventIds] = await Promise.all([
 		getMemberEvents(),
 		getMemberTickets(),
-		getPublicGigGuide({ offset: 0 })
+		getPublicGigGuide({ offset: 0 }),
+		viewerRsvpEventIds()
 	]);
-	return { events, tickets, guide };
+	return { events, tickets, guide, rsvpEventIds };
 });

@@ -40,6 +40,18 @@
 	);
 	const tickets = $derived(pageData.tickets);
 	const guide = $derived(pageData.guide);
+	const rsvpEventIds = $derived(pageData.rsvpEventIds);
+
+	// Past shows are rows, a few at a time, so they never outweigh what is coming.
+	const PAST_PREVIEW = 4;
+	let showAllPast = $state(false);
+	const pastRows: CalendarEntry[] = $derived(
+		(showAllPast ? past : past.slice(0, PAST_PREVIEW)).map((e) => ({
+			...e,
+			bandName: null,
+			bandSlug: null
+		}))
+	);
 
 	// "Show more" appends pages client-side, the same pager `/events` uses.
 	let extra: CalendarEntry[] = $state([]);
@@ -195,13 +207,12 @@
 	<!-- The same gig guide the public calendar shows, so a member reads one
 	     calendar rather than the subset we happen to produce (#1025). -->
 	<section>
-		<SectionLabel label="Around town" count={guide.total} />
 		{#if allEvents.length === 0}
 			<div class="py-8 text-center opacity-60">
 				<p class="text-base">Nothing on the calendar yet. Check back soon!</p>
 			</div>
 		{:else}
-			<GigList events={allEvents} eventBase="/member/events" bandBase="/member/directory/bands" />
+			<GigList events={allEvents} eventBase="/member/events" {rsvpEventIds} />
 			{#if hasMore}
 				<div class="mt-8 text-center">
 					<Button type="button" variant="ghost" disabled={loadingMore} onclick={showMore}>
@@ -213,25 +224,16 @@
 	</section>
 
 	{#if past.length > 0}
-		<section>
-			<SectionLabel label="Past Events" count={past.length} />
-			<div class="pgrid">
-				{#each past as evt (evt.id)}
-					<PosterCard
-						href="/member/events/{evt.id}"
-						title={evt.title}
-						posterUrl={evt.posterUrl}
-						startsAt={evt.startsAt}
-						ticketingEnabled={evt.ticketingEnabled}
-						ticketPrice={evt.ticketPrice}
-						externalTicketUrl={evt.externalTicketUrl}
-						tags={evt.tags}
-						tapeLabel={primaryTag(evt.tags)}
-						tapeColor={primaryTag(evt.tags) ? tagToTapeVariant(primaryTag(evt.tags)!) : ''}
-						class="w-full opacity-75"
-					/>
-				{/each}
-			</div>
+		<section class="opacity-75">
+			<SectionLabel label="Past Events" />
+			<GigList events={pastRows} eventBase="/member/events" />
+			{#if !showAllPast && past.length > PAST_PREVIEW}
+				<div class="mt-4 text-center">
+					<Button type="button" variant="ghost" size="sm" onclick={() => (showAllPast = true)}>
+						Show more
+					</Button>
+				</div>
+			{/if}
 		</section>
 	{/if}
 

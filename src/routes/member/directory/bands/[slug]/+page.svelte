@@ -110,7 +110,6 @@
 				pastHasMore={shows.pastHasMore}
 				loadMorePast={(offset) => getBandPastShows({ id: band.id, offset })}
 				eventBase="/member/events"
-				showByline={false}
 			/>
 			<PressBox quotes={band.pressKit.pressQuotes} achievements={band.pressKit.achievements} />
 			<PressPhoto photos={band.photos} />

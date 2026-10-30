@@ -171,11 +171,17 @@ describe('listPublicCalendarEvents', () => {
 
 describe('listPublicUpcomingEvents', () => {
 	it('maps joined band info and shows only publicly visible statuses', async () => {
-		selectRows = [{ event: bandEvent, bandName: 'The Shakes', bandSlug: 'the-shakes' }];
+		selectRows = [
+			{ event: bandEvent, bandName: 'The Shakes', bandSlug: 'the-shakes', venueName: 'Whiteside' }
+		];
 
 		const result = await listPublicUpcomingEvents(windowStart, { limit: 20, offset: 0 });
 
-		expect(result[0]).toMatchObject({ id: 'evt-band', bandName: 'The Shakes' });
+		expect(result[0]).toMatchObject({
+			id: 'evt-band',
+			bandName: 'The Shakes',
+			venueName: 'Whiteside'
+		});
 		expect(containsParam(capturedWhere, 'published')).toBe(true);
 		expect(containsParam(capturedWhere, 'cancelled')).toBe(true);
 		// The one that would publish something staff turned down.
