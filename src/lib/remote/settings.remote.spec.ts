@@ -53,7 +53,12 @@ vi.mock('$lib/server/site-config/site-config-service', () => ({
 }));
 
 vi.mock('$lib/server/volunteer/orientation-service', () => ({
-	getOrientationSetting: async () => ({ roleId: '', minutes: 30 })
+	getOrientationSetting: async () => ({ roleId: '', minutes: 30, leadMinutes: 10, tasks: [] }),
+	parseOrientationTasks: (text: string) =>
+		text
+			.split('\n')
+			.map((t) => t.trim())
+			.filter(Boolean)
 }));
 vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({
 	listVolunteerRoles: async () => []
@@ -150,7 +155,11 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 	{ name: 'getOrgSettings', cap: 'settings.read' },
 	{ name: 'getVolunteerValueSettings', cap: 'settings.read' },
 	{ name: 'getOrientationSettings', cap: 'settings.read' },
-	{ name: 'updateOrientationSettings', cap: 'settings.update', args: [{ minutes: '30' }] },
+	{
+		name: 'updateOrientationSettings',
+		cap: 'settings.update',
+		args: [{ minutes: '30', leadMinutes: '10' }]
+	},
 	{ name: 'getVenueSettings', cap: 'settings.read' },
 	{ name: 'getIntegrationSettings', cap: 'settings.read' },
 	{ name: 'getStaffSettingsPage', cap: 'settings.read' },
@@ -219,6 +228,24 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
  * render for a logged-out visitor, and nothing else.
  */
 const PUBLIC = ['getSocialLinks', 'getOrgAddress', 'getFooterInfo'];
+
+describe('updateOrientationSettings', () => {
+	it('saves the lead time and the checklist, one trimmed task per line', async () => {
+		requireCapability.mockResolvedValue(undefined);
+		await settings.updateOrientationSettings({
+			roleId: 'role-1',
+			minutes: '30',
+			leadMinutes: '10',
+			tasks: '  Meet them at the door \n\nDoor code\n'
+		});
+		expect(updateSiteConfigs).toHaveBeenCalledWith(
+			expect.arrayContaining([
+				{ key: 'volunteer.orientationLeadMinutes', value: 10 },
+				{ key: 'volunteer.orientationTasks', value: 'Meet them at the door\nDoor code' }
+			])
+		);
+	});
+});
 
 describe('settings.remote staff guards', () => {
 	for (const { name, cap, args = [] } of STAFF_ONLY) {

@@ -4,19 +4,21 @@ import { eq } from 'drizzle-orm';
 import {
 	memberOrientation,
 	workOrder,
+	workTask,
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { batchInsert, db } from './db';
+import { ORIENTATION_DEFAULT_TASKS } from '../../src/lib/config';
 import { ptDate } from './util';
 
 /**
  * Orientation shifts, and the four states a member can be in.
  *
  * Written by hand: the seed runs outside the app, where no listener fires. The
- * shape matches the orientation setting's default — at the booking's start, 30
- * minutes long. The setting itself lives in KV and starts empty, so the listener
- * stays off locally until staff pick a role in Settings.
+ * shape matches the orientation setting's defaults — ten minutes before the
+ * booking, 30 minutes long, with the default checklist. The role lives in KV and
+ * starts empty, so the listener stays off locally until staff pick one.
  *
  * Every state is seeded, not just the happy one. `pending` and `scheduled` are
  * what a fresh member looks like; `completed` and `waived` are the two the staff
@@ -32,6 +34,7 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 	if (!role) return { workOrders: 0, orientations: 0 };
 
 	const DURATION_MINUTES = 30;
+	const LEAD_MINUTES = 10;
 
 	// Wren is the guaranteed first-timer `seed/reservations.ts` creates precisely
 	// so the desk's first-visit flag is on screen after every seed. Their booking
@@ -48,9 +51,10 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 
 	const workOrderRows: any[] = [];
 	const orientationRows: any[] = [];
+	const taskRows: any[] = [];
 
 	function shiftFor(id: string, reservationId: string, startsAt: Date) {
-		const from = startsAt;
+		const from = new Date(startsAt.getTime() - LEAD_MINUTES * 60_000);
 		workOrderRows.push({
 			id,
 			volunteerRoleId: role.id,
@@ -63,6 +67,9 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 			isOrientation: true,
 			createdByUserId: null
 		});
+		ORIENTATION_DEFAULT_TASKS.forEach((label, sortOrder) =>
+			taskRows.push({ workOrderId: id, label, sortOrder })
+		);
 		return from;
 	}
 
@@ -163,6 +170,7 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 
 	if (workOrderRows.length > 0) await batchInsert(workOrder, workOrderRows, 8);
 	if (orientationRows.length > 0) await batchInsert(memberOrientation, orientationRows, 7);
+	if (taskRows.length > 0) await batchInsert(workTask, taskRows);
 
 	// Sam is on the cancelled one and has not been told, which is the whole point
 	// of seeding it.

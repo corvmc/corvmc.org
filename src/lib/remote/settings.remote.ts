@@ -15,7 +15,10 @@ import {
 import { testConnection, credentialStatus, listDevices } from '$lib/server/lock/ultraloc-client';
 import { issueLockSelfTest, revokeLockSelfTest } from '$lib/server/lock/lock-service';
 import { requireCapability } from '$lib/server/authorization';
-import { getOrientationSetting } from '$lib/server/volunteer/orientation-service';
+import {
+	getOrientationSetting,
+	parseOrientationTasks
+} from '$lib/server/volunteer/orientation-service';
 import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
 import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '$lib/server/feature-flags';
 import { getInboxChannelConfigs } from './inbox.remote';
@@ -99,7 +102,7 @@ export const getVolunteerValueSettings = query(async () => {
 	};
 });
 
-/** The orientation shift a first booking raises: which role, how long. */
+/** The orientation shift a first booking raises: role, timing and checklist. */
 export const getOrientationSettings = query(async () => {
 	await requireCapability('settings.read');
 	const [setting, roles] = await Promise.all([getOrientationSetting(), listVolunteerRoles()]);
@@ -350,7 +353,9 @@ export const updateVolunteerValueSettings = form(volunteerValueSchema, async (ra
 const orientationSchema = z.object({
 	// Empty switches orientation off.
 	roleId: z.string().max(100).optional(),
-	minutes: z.string().regex(/^\d+$/, 'Whole minutes, digits only')
+	minutes: z.string().regex(/^\d+$/, 'Whole minutes, digits only'),
+	leadMinutes: z.string().regex(/^\d+$/, 'Whole minutes, digits only'),
+	tasks: z.string().max(2000).optional()
 });
 
 export const updateOrientationSettings = form(orientationSchema, async (raw) => {
@@ -358,10 +363,17 @@ export const updateOrientationSettings = form(orientationSchema, async (raw) => 
 	const data = raw as z.infer<typeof orientationSchema>;
 	const minutes = Number(data.minutes);
 	if (minutes < 1 || minutes > 480) error(422, 'Between 1 and 480 minutes.');
+	const leadMinutes = Number(data.leadMinutes);
+	if (leadMinutes > 120) error(422, 'Lead time is at most 120 minutes.');
+	// Stamped as one insert, so the count stays well under D1's bound-parameter cap.
+	const tasks = parseOrientationTasks(data.tasks ?? '');
+	if (tasks.length > 20) error(422, 'At most 20 tasks.');
 
 	await updateSiteConfigs([
 		{ key: 'volunteer.orientationRoleId', value: data.roleId?.trim() ?? '' },
-		{ key: 'volunteer.orientationMinutes', value: minutes }
+		{ key: 'volunteer.orientationMinutes', value: minutes },
+		{ key: 'volunteer.orientationLeadMinutes', value: leadMinutes },
+		{ key: 'volunteer.orientationTasks', value: tasks.join('\n') }
 	]);
 
 	void getStaffSettingsPage().refresh();

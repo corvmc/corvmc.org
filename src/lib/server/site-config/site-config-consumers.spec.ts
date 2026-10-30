@@ -36,6 +36,8 @@ const READERS: Record<string, string> = {
 	'volunteer.hourValueSource': 'src/lib/server/volunteer/hour-value.ts',
 	'volunteer.orientationRoleId': 'src/lib/server/volunteer/orientation-service.ts',
 	'volunteer.orientationMinutes': 'src/lib/server/volunteer/orientation-service.ts',
+	'volunteer.orientationLeadMinutes': 'src/lib/server/volunteer/orientation-service.ts',
+	'volunteer.orientationTasks': 'src/lib/server/volunteer/orientation-service.ts',
 
 	'venue.consoleChannels': 'src/lib/remote/rider.remote.ts',
 

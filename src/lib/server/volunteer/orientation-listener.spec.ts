@@ -56,7 +56,9 @@ vi.mock('$lib/server/site-config/site-config-service', () => ({
 	config: async (key: string) => {
 		const defaults: Record<string, string | number> = {
 			'volunteer.orientationRoleId': '',
-			'volunteer.orientationMinutes': 30
+			'volunteer.orientationMinutes': 30,
+			'volunteer.orientationLeadMinutes': 10,
+			'volunteer.orientationTasks': 'Meet them at the door\nDoor code, and how to lock up'
 		};
 		return settings.get(key) ?? defaults[key];
 	}
@@ -159,11 +161,12 @@ describe('reservation.created', () => {
 		await fire('reservation.created', createdEvent());
 
 		const rows = shifts();
-		// One work order, at the booking's start for the set length, in no project.
+		// One work order, the lead time before the booking, for the set length,
+		// in no project.
 		expect(rows).toEqual([
 			expect.objectContaining({
-				starts_at: STARTS,
-				ends_at: STARTS + 45 * 60,
+				starts_at: STARTS - 10 * 60,
+				ends_at: STARTS - 10 * 60 + 45 * 60,
 				reservation_id: 'res-1',
 				project_id: null,
 				volunteer_role_id: 'role-orient',
@@ -175,6 +178,33 @@ describe('reservation.created', () => {
 		const orientation = await getOrientation('u-member', new Date(STARTS * 1000 - 86_400_000));
 		expect(orientation?.state).toBe('scheduled');
 		expect(orientation?.workOrderId).toBe(rows[0].id);
+	});
+
+	it('stamps the checklist onto the new shift, in order', async () => {
+		seedList();
+
+		await fire('reservation.created', createdEvent());
+
+		const [shift] = shifts();
+		const tasks = sqlite
+			.prepare(`SELECT label, done FROM work_task WHERE work_order_id = ? ORDER BY sort_order`)
+			.all(shift.id);
+		expect(tasks).toEqual([
+			{ label: 'Meet them at the door', done: 0 },
+			{ label: 'Door code, and how to lock up', done: 0 }
+		]);
+	});
+
+	it('honours a saved lead time and an emptied checklist', async () => {
+		seedList();
+		settings.set('volunteer.orientationLeadMinutes', 0);
+		settings.set('volunteer.orientationTasks', '');
+
+		await fire('reservation.created', createdEvent());
+
+		const [shift] = shifts();
+		expect(shift.starts_at).toBe(STARTS);
+		expect(sqlite.prepare(`SELECT count(*) AS n FROM work_task`).get()).toEqual({ n: 0 });
 	});
 
 	it('creates one set of work orders when the same event is delivered twice', async () => {
@@ -403,6 +433,8 @@ describe('reservation.cancelled', () => {
  */
 describe('reservation.rescheduled', () => {
 	const HOUR = 3_600_000;
+	/** The default lead time, in seconds. */
+	const LEAD = 10 * 60;
 
 	function movedBy(ms: number) {
 		return {
@@ -424,9 +456,9 @@ describe('reservation.rescheduled', () => {
 
 		const after = shifts()[0];
 		expect(after.starts_at).toBe(before.starts_at! + 2 * 3600);
-		// Still forty-five minutes, still at the booking's start.
+		// Still forty-five minutes, still the lead time before the booking.
 		expect(after.ends_at! - after.starts_at!).toBe(45 * 60);
-		expect(after.starts_at).toBe(STARTS + 2 * 3600);
+		expect(after.starts_at).toBe(STARTS - LEAD + 2 * 3600);
 	});
 
 	it('moves the member’s scheduled time with it', async () => {
@@ -436,7 +468,7 @@ describe('reservation.rescheduled', () => {
 		await fire('reservation.rescheduled', movedBy(2 * HOUR));
 
 		const orientation = await getOrientation('u-member', new Date(STARTS * 1000 - 86_400_000));
-		expect(orientation?.scheduledFor?.getTime()).toBe((STARTS + 2 * 3600) * 1000);
+		expect(orientation?.scheduledFor?.getTime()).toBe((STARTS - LEAD + 2 * 3600) * 1000);
 		expect(orientation?.state).toBe('scheduled');
 	});
 
@@ -450,8 +482,8 @@ describe('reservation.rescheduled', () => {
 		await fire('reservation.rescheduled', movedBy(HOUR));
 
 		expect(shifts()[0]).toMatchObject({
-			starts_at: STARTS + 3600,
-			ends_at: STARTS + 3600 + 45 * 60
+			starts_at: STARTS - LEAD + 3600,
+			ends_at: STARTS - LEAD + 3600 + 45 * 60
 		});
 	});
 

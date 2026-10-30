@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { grantsCapability, positions, type Capability } from '$lib/config';
 
 /**
  * Project templates are read under `project.read` and edited under
@@ -73,5 +74,11 @@ describe('project template remotes', () => {
 		await expect(remote[name](arg)).rejects.toThrow('403');
 		expect(requireCapability).toHaveBeenCalledWith(cap);
 		for (const fn of Object.values(service)) expect(fn).not.toHaveBeenCalled();
+	});
+});
+
+describe('the volunteer coordinator', () => {
+	it.each(GATES)('holds what %s asks for (%s)', (_name, cap) => {
+		expect(grantsCapability(positions.volunteer_coordinator, cap as Capability)).toBe(true);
 	});
 });

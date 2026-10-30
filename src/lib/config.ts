@@ -2333,6 +2333,15 @@ const staffCapabilities = Object.fromEntries(
 	])
 ) as Grants;
 
+/** The checklist an orientation shift carries until staff edit it in Settings. */
+export const ORIENTATION_DEFAULT_TASKS = [
+	'Meet them at the door',
+	'Door code, and how to lock up',
+	'Where the gear lives and what is off limits',
+	'How to report something broken',
+	'Booking, credits, and how to cancel'
+];
+
 export const positions: Record<Position, Grants> = {
 	admin: allCapabilities,
 	// This is it — the one line in the whole migration where authority moves.
@@ -2368,7 +2377,9 @@ export const positions: Record<Position, Grants> = {
 		// any committee — they review and decide, they do not attend.
 		committee: ['reviewApplications'],
 		// Read only: recording, notes and resolution stay with staff.
-		incident: ['read']
+		incident: ['read'],
+		// Project templates are edited under `project.manage` (#2102).
+		project: ['read', 'manage']
 	},
 	site_moderator: {
 		moderation: ['reviewFlags', 'setStanding'],
