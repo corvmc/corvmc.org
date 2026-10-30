@@ -30,7 +30,8 @@ import { topPositionFor } from '$lib/server/authorization';
 import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { memberSubtype } from '$lib/utils/entity-ref';
-import { entityLabels, flagEntityTypeToEntity } from '$lib/config';
+import { flagEntityTypeToEntity } from '$lib/config';
+import { entityLabels } from '$lib/terms';
 import { formatDate, formatDuration, formatTimeRange } from '$lib/utils/format';
 import type {
 	BandRef,

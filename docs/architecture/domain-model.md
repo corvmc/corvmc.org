@@ -335,8 +335,8 @@ A list like the above invites merging everything. These three are deliberate:
 
 The bar for what "worked out" looks like, and the thing to imitate rather than reinvent:
 
-- **Entity references.** `entityTypes` + `entityLabels` in
-  [config.ts](../../src/lib/config.ts), [`refs.ts`](../../src/lib/server/entity/refs.ts)
+- **Entity references.** `entityTypes` in [config.ts](../../src/lib/config.ts) +
+  `entityLabels` in [terms.ts](../../src/lib/terms.ts), [`refs.ts`](../../src/lib/server/entity/refs.ts)
   for the href, [`registry.ts`](../../src/lib/components/ui/entity/registry.ts) for
   icons, avatars and chips. One polymorphic reference over 17 kinds, split server/client
   so Svelte icon components never reach server code, kept honest by `registry.spec.ts`.

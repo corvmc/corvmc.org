@@ -697,8 +697,8 @@ navigates must not be announced as a button.
 
 ### Registry
 
-Per-type facts live in `entity/registry.ts` (glyph, avatar shape, subtypes) and `$lib/config`
-(`entityTypes`, `entityLabels`). Components must not branch on `ref.type`; a branch means the
+Per-type facts live in `entity/registry.ts` (glyph, avatar shape, subtypes) `$lib/config`
+(`entityTypes`) and `$lib/terms` (`entityLabels`, from the message catalog). Components must not branch on `ref.type`; a branch means the
 registry is missing a field. `registry.spec.ts` enforces coverage: every type drawn and named, no
 stale keys, identity glyphs unique across the registry, subtype glyphs unique within a type, every
 flag entity type mapped, and no success-toned status escaping `ordinaryStatuses`.

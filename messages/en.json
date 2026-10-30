@@ -1,0 +1,263 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"term_member": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "member",
+				"countPlural=*": "members"
+			}
+		}
+	],
+	"term_band": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "act",
+				"countPlural=*": "acts"
+			}
+		}
+	],
+	"term_external_act": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "external act",
+				"countPlural=*": "external acts"
+			}
+		}
+	],
+	"term_event": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "event",
+				"countPlural=*": "events"
+			}
+		}
+	],
+	"term_reservation": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "reservation",
+				"countPlural=*": "reservations"
+			}
+		}
+	],
+	"term_production": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "production",
+				"countPlural=*": "productions"
+			}
+		}
+	],
+	"term_project": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "project",
+				"countPlural=*": "projects"
+			}
+		}
+	],
+	"term_volunteer": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "volunteer",
+				"countPlural=*": "volunteers"
+			}
+		}
+	],
+	"term_instructor": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "instructor",
+				"countPlural=*": "instructors"
+			}
+		}
+	],
+	"term_suggestion": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "suggestion",
+				"countPlural=*": "suggestions"
+			}
+		}
+	],
+	"term_thread": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "conversation",
+				"countPlural=*": "conversations"
+			}
+		}
+	],
+	"term_flag": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "report",
+				"countPlural=*": "reports"
+			}
+		}
+	],
+	"term_campaign": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "campaign",
+				"countPlural=*": "campaigns"
+			}
+		}
+	],
+	"term_audience": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "audience",
+				"countPlural=*": "audiences"
+			}
+		}
+	],
+	"term_equipment": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "item",
+				"countPlural=*": "items"
+			}
+		}
+	],
+	"term_asset": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "unit",
+				"countPlural=*": "units"
+			}
+		}
+	],
+	"term_loan": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "loan",
+				"countPlural=*": "loans"
+			}
+		}
+	],
+	"term_shift": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "shift",
+				"countPlural=*": "shifts"
+			}
+		}
+	],
+	"term_role": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "volunteer role",
+				"countPlural=*": "volunteer roles"
+			}
+		}
+	],
+	"term_recurring": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "recurring series",
+				"countPlural=*": "recurring series"
+			}
+		}
+	],
+	"term_help": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "help article",
+				"countPlural=*": "help articles"
+			}
+		}
+	],
+	"term_classified": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "classified",
+				"countPlural=*": "classifieds"
+			}
+		}
+	],
+	"term_incident": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "incident",
+				"countPlural=*": "incidents"
+			}
+		}
+	],
+	"term_group_band": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "band",
+				"countPlural=*": "bands"
+			}
+		}
+	],
+	"term_club": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "club",
+				"countPlural=*": "clubs"
+			}
+		}
+	],
+	"term_committee": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "committee",
+				"countPlural=*": "committees"
+			}
+		}
+	]
+}

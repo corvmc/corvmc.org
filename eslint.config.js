@@ -18,6 +18,7 @@ import noUnwrappedRemoteMutation from './eslint-rules/no-unwrapped-remote-mutati
 import noClippedRowAction from './eslint-rules/no-clipped-row-action.js';
 import definiteActionLabels from './eslint-rules/definite-action-labels.js';
 import noTrackedCommandInEffect from './eslint-rules/no-tracked-command-in-effect.js';
+import preferTermMessages from './eslint-rules/prefer-term-messages.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -54,7 +55,11 @@ const customPlugin = {
 		'no-unwrapped-remote-mutation': noUnwrappedRemoteMutation,
 		'no-clipped-row-action': noClippedRowAction,
 		'definite-action-labels': definiteActionLabels,
-		'no-tracked-command-in-effect': noTrackedCommandInEffect
+		'no-tracked-command-in-effect': noTrackedCommandInEffect,
+		// Registered, not enabled: the tree has ~256 hits and every lint run is
+		// `--max-warnings 0`. `pnpm lint:terms` reports them; enable it below once
+		// they are cleared (#2099). See docs/development/conventions.md#terminology.
+		'prefer-term-messages': preferTermMessages
 	}
 };
 

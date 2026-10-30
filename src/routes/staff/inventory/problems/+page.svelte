@@ -5,7 +5,7 @@
 	import DataList from '$lib/components/ui/DataList.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { entityLabels } from '$lib/config';
+	import { entityLabels } from '$lib/terms';
 	import { resolve } from '$app/paths';
 	import { getEquipmentReportQueue } from '$lib/remote/work-requests.remote';
 	import TriageTable from '$lib/components/ui/TriageTable.svelte';

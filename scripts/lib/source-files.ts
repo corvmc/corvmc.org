@@ -15,9 +15,12 @@ import { globSync, statSync } from 'node:fs';
  * `test-results/`, and this filter means the next path shaped like that one is
  * simply not a source file rather than an error with nobody's name on it.
  */
+/** Compiled output nobody authors: Paraglide's messages (see conventions.md#terminology). */
+export const GENERATED = ['src/lib/paraglide/**'];
+
 export function sourceFiles(globs: string[], allowed: ReadonlySet<string>): string[] {
 	return globs
-		.flatMap((g) => globSync(g))
+		.flatMap((g) => globSync(g, { exclude: GENERATED }))
 		.map((f) => f.replaceAll('\\', '/'))
 		.filter((f) => !allowed.has(f))
 		.filter((f) => statSync(f).isFile())

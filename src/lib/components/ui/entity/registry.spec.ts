@@ -11,12 +11,12 @@ import {
 } from './registry';
 import {
 	entityTypes,
-	entityLabels,
 	flagEntityTypeToEntity,
 	eventSources,
 	bookerTypes,
 	type EntityType
 } from '$lib/config';
+import { entityLabels } from '$lib/terms';
 import { flagEntityTypes } from '$lib/server/db/schema/flag';
 import { fakeRef } from '$lib/test/fixtures';
 import { variants, badgeClass } from '../StatusBadge.svelte';
@@ -39,7 +39,7 @@ describe('entity registry', () => {
 
 	it('names every entity type', () => {
 		const missing = entityTypes.filter((t) => !(t in entityLabels));
-		expect(missing, `add these to entityLabels: ${missing.join(', ')}`).toEqual([]);
+		expect(missing, `add these to entityTerms in $lib/terms: ${missing.join(', ')}`).toEqual([]);
 	});
 
 	it('has no entries for types that no longer exist', () => {
