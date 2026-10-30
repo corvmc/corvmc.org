@@ -49,7 +49,7 @@
 		<BandAddressSection slug={band.slug} readonly={!isOwner} />
 		<div class="h-8"></div>
 	{:else}
-		<Alert type="info" href={`/staff/bands/${band.id}`}>
+		<Alert type="info" href={`/staff/groups/${band.id}`}>
 			You're viewing this band as staff. The band's address and deletion are owner-only — staff
 			tools for this band are on the staff band page.
 		</Alert>

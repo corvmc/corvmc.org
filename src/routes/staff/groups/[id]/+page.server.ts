@@ -1,16 +1,13 @@
-import { redirect } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { getGroupDetail } from '$lib/server/group/group-service';
 import type { PageServerLoad } from './$types';
 
 /**
- * A group's old staff address, sent on to its committee or club page. A server
- * `load` because the target depends on the group's kind: this is navigation,
- * like `/m/[memberNumber]`, and the page it lands on runs its own guard.
+ * Which kind's record to render. Navigation only, like `/m/[memberNumber]`:
+ * each kind's record runs its own guarded query.
  */
 export const load: PageServerLoad = async ({ params }) => {
 	const group = await getGroupDetail(params.id);
-	redirect(
-		308,
-		group?.kind === 'committee' ? `/staff/committees/${params.id}` : `/staff/clubs/${params.id}`
-	);
+	if (!group) error(404, 'Group not found');
+	return { kind: group.kind };
 };

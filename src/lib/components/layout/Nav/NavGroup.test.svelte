@@ -14,7 +14,7 @@
 		withAction = false,
 		items = [
 			{ href: resolve('/staff/members'), label: 'Users' },
-			{ href: resolve('/staff/bands'), label: 'Bands' }
+			{ href: resolve('/staff/groups'), label: 'Groups' }
 		],
 		...rest
 	}: {

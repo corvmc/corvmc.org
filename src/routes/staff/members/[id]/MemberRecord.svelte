@@ -133,7 +133,7 @@
 	{#if overview.bands.length > 0}
 		<div class="flex flex-wrap items-center gap-1">
 			{#each activeBands as b (b.id)}
-				<a href={resolve(`/staff/bands/${b.id}`)}>
+				<a href={resolve(`/staff/groups/${b.id}`)}>
 					<Badge size="sm">{b.name}</Badge>
 				</a>
 			{/each}

@@ -1,10 +1,15 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import type { Snippet } from 'svelte';
 	import StaffGroupDetail from '$lib/components/groups/StaffGroupDetail.svelte';
 	import ApplicationsCard from '$lib/components/groups/ApplicationsCard.svelte';
 	import { getStaffGroupPage } from '$lib/remote/groups.remote';
 
-	let id = $derived(page.params.id!);
+	let {
+		id,
+		variant = 'page',
+		actions
+	}: { id: string; variant?: 'page' | 'panel'; actions?: Snippet } = $props();
+
 	const data = $derived(await getStaffGroupPage(id));
 </script>
 
@@ -15,4 +20,4 @@
 	{/if}
 {/snippet}
 
-<StaffGroupDetail group={data.group} members={data.members} {applications} />
+<StaffGroupDetail group={data.group} members={data.members} {applications} {variant} {actions} />

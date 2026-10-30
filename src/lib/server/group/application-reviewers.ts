@@ -54,7 +54,7 @@ export async function applicationNotice(
 	let reviewers = chairs.map((c) => ({ ...c, href: groupHref }));
 	if (reviewers.length === 0 && g.kind === 'committee') {
 		const coordinators = await listUsersWithCapability('committee.reviewApplications');
-		reviewers = coordinators.map((c) => ({ ...c, href: '/staff/committees' }));
+		reviewers = coordinators.map((c) => ({ ...c, href: '/staff/groups/committees' }));
 	}
 
 	return { groupName: g.name, applicantName: applicant?.name ?? 'A member', reviewers };

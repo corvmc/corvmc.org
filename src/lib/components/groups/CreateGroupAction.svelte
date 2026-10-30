@@ -59,8 +59,8 @@
 		if (!made?.id) return;
 		goto(
 			made.kind === 'committee'
-				? resolve(`/staff/committees/${made.id}`)
-				: resolve(`/staff/clubs/${made.id}`)
+				? resolve(`/staff/groups/${made.id}`)
+				: resolve(`/staff/groups/${made.id}`)
 		);
 	}}
 >
