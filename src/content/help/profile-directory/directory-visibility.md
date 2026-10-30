@@ -27,3 +27,10 @@ listing in the directory:
 
 If your profile is hidden, some pages will offer a shortcut to make it visible
 again so you don't get stranded off the directory.
+
+## Blank profiles aren't listed
+
+Whatever your visibility, the directory only lists a profile with something on
+it: a tagline, a bio, a photo, or at least one instrument, genre or skill. Until
+then, people who follow a direct link to your profile (from a band's roster, for
+example) can still open it.

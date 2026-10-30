@@ -9,9 +9,15 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
 	import IdCard from '$lib/components/directory/IdCard.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { directorySortOptions, type DirectorySort } from '$lib/utils/directory-browse';
 
 	/** Cards rendered before "Show more" appears. */
 	const PAGE_SIZE = 24;
+
+	// Not a filter: changing the order is not something "Clear filters" undoes.
+	let sort = $state<DirectorySort>('newest');
 
 	// Filtering here stays server-side (see `filters` below) — unlike the public
 	// directory, this view can page through every member, not just the public ones.
@@ -40,6 +46,7 @@
 	});
 
 	const hasFilters = $derived(Object.values(filters).some((v) => v !== undefined));
+	const query = $derived({ ...filters, sort: sort === 'newest' ? undefined : sort });
 
 	function clearFilters() {
 		search = '';
@@ -55,7 +62,7 @@
 
 	// One query, not one per list: one is what this component can hold without kit 2.64
 	// rendering the error boundary instead of the page.
-	const directory = $derived(await getMemberDirectory(filters));
+	const directory = $derived(await getMemberDirectory(query));
 	const members = $derived(directory.members);
 	const instrumentSuggestions = $derived(directory.instrumentSuggestions);
 	const genreSuggestions = $derived(directory.genreSuggestions);
@@ -64,7 +71,7 @@
 	// The "Show more" window collapses whenever the listed set changes. Derived
 	// off a key rather than reset from an effect, so it can't lag the filters by
 	// a frame.
-	const listKey = $derived(JSON.stringify(filters));
+	const listKey = $derived(JSON.stringify(query));
 	let expandedTo = $state(PAGE_SIZE);
 	let expandedFor = $state('');
 	const limit = $derived(expandedFor === listKey ? expandedTo : PAGE_SIZE);
@@ -86,6 +93,17 @@
 	</Button>
 </PageHeader>
 <PageContent>
+	{#if directory.viewerHiddenBecause === 'incomplete'}
+		<Alert type="info" href={resolve('/member/profile')}>
+			You're not listed here yet. Add a tagline, a bio, a photo, or one instrument, genre or skill
+			to your profile and other members will see you.
+		</Alert>
+	{:else if directory.viewerHiddenBecause === 'hidden'}
+		<Alert type="info" href={resolve('/member/profile')}>
+			Your profile is hidden, so you're not listed here. Change your visibility to appear.
+		</Alert>
+	{/if}
+
 	<!-- Search & Filters -->
 	<div class="directory-filters">
 		<div class="directory-filters__row">
@@ -95,6 +113,13 @@
 				aria-label="Search by name"
 				class="input flex-1"
 				bind:value={search}
+			/>
+			<FormField
+				type="select"
+				name="sort"
+				label="Sort"
+				options={directorySortOptions}
+				bind:value={sort}
 			/>
 			<label class="directory-filters__toggle">
 				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForBand} />
