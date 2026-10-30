@@ -12,7 +12,6 @@
 		IconHelp,
 		IconMetronome,
 		IconHeartHandshake,
-		IconUsersGroup,
 		IconBulb,
 		IconSpeakerphone,
 		IconCheckbox
@@ -29,9 +28,12 @@
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
 	import { navTrail } from '$lib/components/layout/nav-trail';
 	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
+	import { m } from '$lib/paraglide/messages.js';
+	import { many } from '$lib/terms';
 	import {
 		activeMemberNavKey,
 		memberNavFooter,
+		memberNavGroupRows,
 		memberNavItems,
 		memberNavMain,
 		type MemberNavItem,
@@ -87,7 +89,6 @@
 		equipment: IconTool,
 		'equipment-loans': IconPackage,
 		volunteer: IconHeartHandshake,
-		'volunteer-committees': IconUsersGroup,
 		suggestions: IconBulb,
 		ballots: IconCheckbox,
 		help: IconHelp
@@ -102,6 +103,8 @@
 	let footerItems = $derived(memberNavFooter(navInput));
 
 	let activeKey = $derived(activeMemberNavKey(navInput, page.url.pathname));
+
+	const [browseBands] = memberNavGroupRows();
 </script>
 
 {#snippet row(item: MemberNavItem)}
@@ -135,14 +138,21 @@
 		     every member's localStorage, so renaming it would silently re-expand the
 		     group for everyone who had collapsed it. -->
 		<Nav.Group
-			title="My Bands"
+			title={`My ${many(m.term_band)}`}
 			collapsible
 			persistKey="my-bands"
 			persistScope="member"
-			containsActive={page.url.pathname.startsWith('/band/')}
+			containsActive={page.url.pathname.startsWith('/band/') || activeKey === browseBands.key}
 		>
 			{#snippet action()}
-				<Button href="/member/bands" variant="ghost" size="xs" class="latched">All</Button>
+				<Button
+					href={resolve('/member/bands?create=1')}
+					variant="ghost"
+					size="xs"
+					class="latched"
+					aria-label={`New ${m.term_band({ count: 1 })}`}
+					data-sveltekit-reload>New</Button
+				>
 			{/snippet}
 			{#each layout.userBands as band (band.slug)}
 				<Nav.Item href={`/band/${band.slug}`} label={band.name}>
@@ -159,18 +169,18 @@
 					{/snippet}
 				</Nav.Item>
 			{/each}
-			<Nav.Item href={resolve('/member/bands?create=1')} label="Create Band" data-sveltekit-reload>
-				{#snippet icon()}<IconPlus />{/snippet}
+			<Nav.Item
+				href={browseBands.href}
+				label={browseBands.label}
+				active={activeKey === browseBands.key}
+			>
+				{#snippet icon()}<IconSearch />{/snippet}
 			</Nav.Item>
 		</Nav.Group>
 
-		<!-- A second group rather than a merge. An act is a member's own project
-		     with a panel; a club is a program with a page, and the two indexes
-		     answer different questions.
-		     Rendered whether or not you belong to one, like My Bands above:
-		     /member/groups IS the discovery surface, so hiding the heading while
-		     the list was empty left the people most likely to want it with no
-		     link to it anywhere in the panel. -->
+		<!-- A second group rather than a merge: a band is a member's own project
+		     with a panel, a club is a program with a page. No New here, because
+		     members cannot create clubs or committees. -->
 		<Nav.Group
 			title="My Groups"
 			collapsible
@@ -178,9 +188,6 @@
 			persistScope="member"
 			containsActive={page.url.pathname.startsWith('/member/groups')}
 		>
-			{#snippet action()}
-				<Button href="/member/groups" variant="ghost" size="xs" class="latched">All</Button>
-			{/snippet}
 			{#each layout.userGroups as group (group.slug)}
 				<Nav.Item href={`/member/groups/${group.slug}`} label={group.name}>
 					{#snippet icon()}
@@ -194,14 +201,9 @@
 					{/snippet}
 				</Nav.Item>
 			{/each}
-			{#if layout.userGroups.length === 0}
-				<!-- The row that replaces the heading-over-nothing. It says what the
-				     page is for rather than repeating "All", which reads as a filter
-				     when there is nothing to filter. -->
-				<Nav.Item href={resolve('/member/groups')} label="Find a club">
-					{#snippet icon()}<IconSearch />{/snippet}
-				</Nav.Item>
-			{/if}
+			<Nav.Item href={resolve('/member/groups')} label="Browse Groups">
+				{#snippet icon()}<IconSearch />{/snippet}
+			</Nav.Item>
 		</Nav.Group>
 
 		<div class="flex grow"></div>

@@ -145,36 +145,36 @@ the column-slot grammar (`:1018-1053`) and the exception test above.
 
 Audience is `P` public, `M` member, `B` band, `S` staff.
 
-| Route                           | Page file                                     | Card                        | Aud. | Filters / paging                      | Layout                       |
-| ------------------------------- | --------------------------------------------- | --------------------------- | ---- | ------------------------------------- | ---------------------------- |
-| `/` upcoming                    | `(public)/+page.svelte`                       | `PosterCard`                | P    | none (3 items)                        | `grid-cols-1 sm:2 lg:3`      |
-| `/events`                       | `(public)/events/+page.svelte`                | `PosterCard` + `GigList`    | P    | `?from=`, "Show more"                 | `grid-gallery` + 2-col guide |
-| `/directory`                    | `(public)/directory/+page.svelte`             | `VinylCard`, `IdCard`       | P    | name search, genre facet, window 24   | `grid-gallery{,-tight}`      |
-| `/directory/instructors`        | `(public)/directory/instructors/+page.svelte` | `InstructorCard`            | P    | name search                           | `sm:2 lg:3`                  |
-| `/groups`                       | `(public)/groups/+page.svelte`                | inline `Card`               | P    | kind filter                           | `md:grid-cols-2`             |
-| `/band-site/[slug]/events`      | `band-site/[slug]/events/+page.svelte`        | inline panels               | P    | none (capped 10/20)                   | `max-w-3xl` stack            |
-| `/member/events`                | `member/events/+page.svelte`                  | `PosterCard`, `TicketStub`  | M    | tag chips                             | `.pgrid` + `Carousel`        |
-| `/member/directory`             | `member/directory/+page.svelte`               | `IdCard`, `VinylCard`       | M    | search, 4 toggles, instrument + genre | `grid-gallery{,-tight}`      |
-| `/member/directory/instructors` | `member/directory/instructors/+page.svelte`   | `InstructorCard`            | M    | name search                           | `sm:2 lg:3`                  |
-| `/member` matches               | `member/MatchesCard.svelte`                   | **`EntityCard`**            | M    | none                                  | `sm:2 lg:3`                  |
-| `/member` events                | `member/+page.svelte`                         | inline tile                 | M    | none (4 items)                        | `sm:2 lg:4`                  |
-| `/member/bands`                 | `member/bands/+page.svelte`                   | inline `Card`               | M    | none                                  | `space-y-3`, `2xl`           |
-| `/member/groups`                | `member/groups/+page.svelte`                  | inline `Card`               | M    | sectioned by state                    | `space-y-3`, `3xl`           |
-| `/member/reservations`          | `member/reservations/+page.svelte`            | `ReservationCardShell`      | M    | Active/All tabs, window               | 1 / `@lg` 2 / `@3xl` 3       |
-| `/member/equipment`             | `member/equipment/+page.svelte`               | inline `Card`               | M    | search + category, grouped            | `sm:2 lg:3`                  |
-| `/member/equipment/loans`       | `member/equipment/loans/+page.svelte`         | inline `Card`               | M    | Current/Past tabs                     | single column                |
-| `/member/suggestions`           | `member/suggestions/SuggestionCard.svelte`    | `SuggestionCard`            | M    | `FilterBar` + `DataList`              | `ul.space-y-2`               |
-| `/member/help`                  | `member/help/+page.svelte`                    | inline `Card`               | M    | typeahead                             | `sm:grid-cols-2`, `2xl`      |
-| `/member/volunteer`             | `member/volunteer/+page.svelte`               | `MyShiftCard`, `OpenShifts` | M    | none                                  | `lg:grid-cols-2`, `5xl`      |
-| `/band/[slug]`                  | `band/[slug]/+page.svelte`                    | `BandReservationCard`       | B    | none                                  | stack + stat row             |
-| `/band/[slug]/reservations`     | `band/[slug]/reservations/+page.svelte`       | `BandReservationCard`       | B    | Upcoming/Past tabs                    | stack, `2xl`                 |
-| `/band/[slug]/events`           | `band/[slug]/events/+page.svelte`             | inline `Card` ×3            | B    | sectioned                             | `space-y-3`                  |
-| `/band/[slug]/music`            | `band/[slug]/music/ReleaseCard.svelte`        | `ReleaseCard`               | B    | none                                  | `space-y-3`, `2xl`           |
-| `/band/[slug]/members`          | `band/[slug]/members/+page.svelte`            | inline `Card` ×3            | B    | sectioned                             | `grid-cols-1 gap-2`          |
-| `/band/[slug]/packing`          | `band/[slug]/packing/PackingCrate.svelte`     | `PackingCrate`              | B    | none                                  | stack + stat row             |
-| `/staff/flags`                  | `staff/flags/+page.svelte`                    | inline `li.card`            | S    | `FilterBar` + `DataList`              | `ul.space-y-2`               |
-| `/staff/closures`               | `staff/closures/+page.svelte`                 | inline `Card`               | S    | none                                  | `space-y-3`                  |
-| `/staff/volunteer`              | `staff/volunteer/+page.svelte`                | 7 queue cards               | S    | none                                  | stack, `5xl`                 |
+| Route                       | Page file                                     | Card                        | Aud. | Filters / paging                              | Layout                       |
+| --------------------------- | --------------------------------------------- | --------------------------- | ---- | --------------------------------------------- | ---------------------------- |
+| `/` upcoming                | `(public)/+page.svelte`                       | `PosterCard`                | P    | none (3 items)                                | `grid-cols-1 sm:2 lg:3`      |
+| `/events`                   | `(public)/events/+page.svelte`                | `PosterCard` + `GigList`    | P    | `?from=`, "Show more"                         | `grid-gallery` + 2-col guide |
+| `/directory`                | `(public)/directory/+page.svelte`             | `VinylCard`, `IdCard`       | P    | name search, genre facet, window 24           | `grid-gallery{,-tight}`      |
+| `/directory/instructors`    | `(public)/directory/instructors/+page.svelte` | `InstructorCard`            | P    | name search                                   | `sm:2 lg:3`                  |
+| `/groups`                   | `(public)/groups/+page.svelte`                | inline `Card`               | P    | kind filter                                   | `md:grid-cols-2`             |
+| `/band-site/[slug]/events`  | `band-site/[slug]/events/+page.svelte`        | inline panels               | P    | none (capped 10/20)                           | `max-w-3xl` stack            |
+| `/member/events`            | `member/events/+page.svelte`                  | `PosterCard`, `TicketStub`  | M    | tag chips                                     | `.pgrid` + `Carousel`        |
+| `/member/directory`         | `member/directory/+page.svelte`               | `IdCard`                    | M    | search, 5 toggles, instrument + skill + genre | `grid-gallery`               |
+| `/member/directory/bands`   | `member/directory/bands/+page.svelte`         | `VinylCard`                 | M    | search, 1 toggle, genre                       | `grid-gallery-tight`         |
+| `/member` matches           | `member/MatchesCard.svelte`                   | **`EntityCard`**            | M    | none                                          | `sm:2 lg:3`                  |
+| `/member` events            | `member/+page.svelte`                         | inline tile                 | M    | none (4 items)                                | `sm:2 lg:4`                  |
+| `/member/bands`             | `member/bands/+page.svelte`                   | inline `Card`               | M    | none                                          | `space-y-3`, `2xl`           |
+| `/member/groups`            | `member/groups/+page.svelte`                  | inline `Card`               | M    | sectioned by state                            | `space-y-3`, `3xl`           |
+| `/member/reservations`      | `member/reservations/+page.svelte`            | `ReservationCardShell`      | M    | Active/All tabs, window                       | 1 / `@lg` 2 / `@3xl` 3       |
+| `/member/equipment`         | `member/equipment/+page.svelte`               | inline `Card`               | M    | search + category, grouped                    | `sm:2 lg:3`                  |
+| `/member/equipment/loans`   | `member/equipment/loans/+page.svelte`         | inline `Card`               | M    | Current/Past tabs                             | single column                |
+| `/member/suggestions`       | `member/suggestions/SuggestionCard.svelte`    | `SuggestionCard`            | M    | `FilterBar` + `DataList`                      | `ul.space-y-2`               |
+| `/member/help`              | `member/help/+page.svelte`                    | inline `Card`               | M    | typeahead                                     | `sm:grid-cols-2`, `2xl`      |
+| `/member/volunteer`         | `member/volunteer/+page.svelte`               | `MyShiftCard`, `OpenShifts` | M    | none                                          | `lg:grid-cols-2`, `5xl`      |
+| `/band/[slug]`              | `band/[slug]/+page.svelte`                    | `BandReservationCard`       | B    | none                                          | stack + stat row             |
+| `/band/[slug]/reservations` | `band/[slug]/reservations/+page.svelte`       | `BandReservationCard`       | B    | Upcoming/Past tabs                            | stack, `2xl`                 |
+| `/band/[slug]/events`       | `band/[slug]/events/+page.svelte`             | inline `Card` ×3            | B    | sectioned                                     | `space-y-3`                  |
+| `/band/[slug]/music`        | `band/[slug]/music/ReleaseCard.svelte`        | `ReleaseCard`               | B    | none                                          | `space-y-3`, `2xl`           |
+| `/band/[slug]/members`      | `band/[slug]/members/+page.svelte`            | inline `Card` ×3            | B    | sectioned                                     | `grid-cols-1 gap-2`          |
+| `/band/[slug]/packing`      | `band/[slug]/packing/PackingCrate.svelte`     | `PackingCrate`              | B    | none                                          | stack + stat row             |
+| `/staff/flags`              | `staff/flags/+page.svelte`                    | inline `li.card`            | S    | `FilterBar` + `DataList`                      | `ul.space-y-2`               |
+| `/staff/closures`           | `staff/closures/+page.svelte`                 | inline `Card`               | S    | none                                          | `space-y-3`                  |
+| `/staff/volunteer`          | `staff/volunteer/+page.svelte`                | 7 queue cards               | S    | none                                          | stack, `5xl`                 |
 
 ### Grid utilities
 

@@ -23,6 +23,8 @@
 
 import { resolve } from '$app/paths';
 import { surfaces } from '$lib/config';
+import { m } from '$lib/paraglide/messages.js';
+import { many } from '$lib/terms';
 import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
 import {
 	ACCOUNT_MENU,
@@ -41,7 +43,7 @@ export type MemberNavKey =
 	| 'equipment'
 	| 'equipment-loans'
 	| 'volunteer'
-	| 'volunteer-committees'
+	| 'bands-browse'
 	| 'suggestions'
 	| 'ballots'
 	| 'profile'
@@ -51,11 +53,11 @@ export type MemberNavKey =
 	| 'membership';
 
 /**
- * The keys the sidebar actually draws. The rest of `MemberNavKey` is chrome —
- * still a member destination, still resolved by `activeMemberNavKey`, but drawn
- * by `AppTopbar` and `AccountDropdown`, which own their own glyphs.
+ * The keys the sidebar draws from this list. The rest of `MemberNavKey` is
+ * chrome (`AppTopbar`, `AccountDropdown`) or a group row the layout draws itself;
+ * both still resolve through `activeMemberNavKey`.
  */
-export type SidebarNavKey = Exclude<MemberNavKey, 'messages' | AccountMenuKey>;
+export type SidebarNavKey = Exclude<MemberNavKey, 'messages' | 'bands-browse' | AccountMenuKey>;
 
 export interface MemberNavItem extends NavNode<MemberNavKey> {
 	label: string;
@@ -107,25 +109,9 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 	}
 
 	// Was gated on a `volunteering` flag. The flag is retired and the feature was
-	// on in production, so the row is simply always here — this is a flag removal,
-	// not an unlink.
-	// Committees sit under Volunteering because that is where /contribute puts
-	// them and because "how do I get more involved" is one question to a member.
-	// They are not volunteering in the model — a committee is governance and a
-	// `volunteer_role` grants nothing — but a second top-level row for something
-	// most people use once would be the wrong trade.
-	items.push({
-		key: 'volunteer',
-		label: 'Volunteering',
-		href: resolve('/member/volunteer'),
-		children: [
-			{
-				key: 'volunteer-committees',
-				label: 'Committees',
-				href: resolve('/member/volunteer/committees')
-			}
-		]
-	});
+	// on in production, so the row is simply always here. Committee applications
+	// moved to Groups (#2113): a committee is a group, not volunteering.
+	items.push({ key: 'volunteer', label: 'Volunteering', href: resolve('/member/volunteer') });
 
 	return items;
 }
@@ -163,9 +149,28 @@ export function memberNavChrome(): MemberNavItem[] {
 	];
 }
 
+/**
+ * Rows the layout draws inside its My Bands group rather than through this list.
+ * Here so the band browse page and its detail pages light that row, not Directory.
+ */
+export function memberNavGroupRows(): MemberNavItem[] {
+	return [
+		{
+			key: 'bands-browse',
+			label: `Browse ${many(m.term_band)}`,
+			href: resolve('/member/directory/bands')
+		}
+	];
+}
+
 /** Every member destination, sidebar and chrome alike. Not a render list. */
 export function memberNavItems(input: MemberNavInput): MemberNavItem[] {
-	return [...memberNavMain(input), ...memberNavFooter(input), ...memberNavChrome()];
+	return [
+		...memberNavMain(input),
+		...memberNavFooter(input),
+		...memberNavGroupRows(),
+		...memberNavChrome()
+	];
 }
 
 /**

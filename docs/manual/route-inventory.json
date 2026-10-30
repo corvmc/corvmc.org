@@ -216,11 +216,11 @@
 		"panel": "member"
 	},
 	{
-		"route": "/member/directory/bands/[slug]",
+		"route": "/member/directory/bands",
 		"panel": "member"
 	},
 	{
-		"route": "/member/directory/instructors",
+		"route": "/member/directory/bands/[slug]",
 		"panel": "member"
 	},
 	{
@@ -341,10 +341,6 @@
 	},
 	{
 		"route": "/member/volunteer/blocked",
-		"panel": "member"
-	},
-	{
-		"route": "/member/volunteer/committees",
 		"panel": "member"
 	},
 	{

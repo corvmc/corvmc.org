@@ -343,3 +343,23 @@ describe('saveBandProfile', () => {
 		expect(refreshFailures).toEqual([]);
 	});
 });
+
+describe('getMemberDirectory', () => {
+	const service = async () => vi.mocked(await import('$lib/server/directory/directory-service'));
+
+	it('lists members only, and narrows to instructors when asked (#2115)', async () => {
+		const svc = await service();
+		svc.listMembers.mockResolvedValue([{ id: 'u1' }] as never);
+
+		const all = (await directory.getMemberDirectory({})) as Record<string, unknown>;
+		expect(all.members).toEqual([{ id: 'u1' }]);
+		expect(all).not.toHaveProperty('bands');
+		expect(svc.listBands).not.toHaveBeenCalled();
+
+		// The mocked db holds no instructor rows, so the filter leaves nobody.
+		const teachers = (await directory.getMemberDirectory({ teachesAtCollective: 'true' })) as {
+			members: unknown[];
+		};
+		expect(teachers.members).toEqual([]);
+	});
+});

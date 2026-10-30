@@ -595,7 +595,6 @@
 	"src/routes/band/[slug]/rider/list/+page.svelte",
 	"src/routes/m/[memberNumber]/+page.server.ts",
 	"src/routes/member/bands/+page.svelte",
-	"src/routes/member/directory/instructors/+page.svelte",
 	"src/routes/member/equipment/assets/[id]/+page.svelte",
 	"src/routes/member/groups/+page.svelte",
 	"src/routes/member/groups/[slug]/+page.svelte",

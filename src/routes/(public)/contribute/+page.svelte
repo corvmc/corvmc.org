@@ -83,7 +83,7 @@
 			roles: committees.map((c) => ({ name: c.name, desc: c.bio ?? '' })),
 			// Committees are not volunteer roles any more, so the shift signup at the
 			// foot of this section is the wrong door for them. Members apply.
-			link: { href: '/member/volunteer/committees', label: 'Apply to a committee' }
+			link: { href: '/member/groups', label: 'Apply to a committee' }
 		}
 	]);
 

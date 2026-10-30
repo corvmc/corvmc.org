@@ -8,6 +8,10 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import { replaceState } from '$app/navigation';
+	import Button from '$lib/components/ui/Button.svelte';
+	import CommitteeApplyModal from './CommitteeApplyModal.svelte';
 	import JoinGroupAction from '$lib/components/groups/JoinGroupAction.svelte';
 	import AnswerGroupInviteAction from '$lib/components/groups/AnswerGroupInviteAction.svelte';
 	import EmailInviteCard from '$lib/components/groups/EmailInviteCard.svelte';
@@ -17,6 +21,29 @@
 
 	// Above the awaited query, so `fields.X.as()` is not compiled async-gated.
 	const withdrawFields = withdrawGroupApplication.fields;
+
+	// Also above the await, for the reason `member/bands/+page.svelte` gives: an
+	// $effect over $state, opening only. `?committee=<slug>` opens the dialog,
+	// which is where the old committees page redirects.
+	let showApply = $state(false);
+	let applySlug = $state<string | null>(null);
+
+	$effect(() => {
+		const slug = page.url.searchParams.get('committee');
+		if (slug) {
+			applySlug = slug;
+			showApply = true;
+		}
+	});
+
+	function openApply(slug: string) {
+		applySlug = slug;
+		showApply = true;
+	}
+
+	function onApplyClose() {
+		if (page.url.searchParams.has('committee')) replaceState(resolve('/member/groups'), {});
+	}
 
 	/**
 	 * Your programs, and the ones you could join, on one page.
@@ -43,6 +70,9 @@
 	const statusVariant = { submitted: 'ghost', contacted: 'info', declined: 'error' } as const;
 
 	const kindLabel = (kind: string) => (kind === 'committee' ? 'Committee' : 'Club');
+
+	const committees = $derived(data.byApplication.filter((g) => g.kind === 'committee'));
+	const applyId = $derived(committees.find((c) => c.slug === applySlug)?.id ?? null);
 </script>
 
 <PageHeader width="3xl" title="Groups" subtitle="Clubs and committees at the Collective" />
@@ -161,14 +191,23 @@
 								<span class="font-semibold">{g.name}</span>
 								<p class="text-subtle">{g.joinInstructions ?? g.bio ?? kindLabel(g.kind)}</p>
 							</div>
-							<JoinGroupAction
-								groupId={g.id}
-								groupName={g.name}
-								slug={g.slug}
-								kind={g.kind}
-								policy="by_application"
-								instructions={g.joinInstructions}
-							/>
+							{#if g.kind === 'committee'}
+								<Button
+									variant="primary"
+									size="sm"
+									aria-label={`Apply to ${g.name}`}
+									onclick={() => openApply(g.slug)}>Apply</Button
+								>
+							{:else}
+								<JoinGroupAction
+									groupId={g.id}
+									groupName={g.name}
+									slug={g.slug}
+									kind={g.kind}
+									policy="by_application"
+									instructions={g.joinInstructions}
+								/>
+							{/if}
 						</CardBody>
 					</Card>
 				{/each}
@@ -195,3 +234,10 @@
 		</InfoCard>
 	{/if}
 </PageContent>
+
+<CommitteeApplyModal
+	bind:open={showApply}
+	{committees}
+	selectedId={applyId}
+	onclose={onApplyClose}
+/>

@@ -14,7 +14,7 @@
 	 * the public group page.
 	 *
 	 * `open` joins. `by_application` applies: a club in a dialog here, a
-	 * committee on the committee apply page, where one application can name
+	 * committee in the member Groups page's dialog, where one application can name
 	 * several. The services re-read the policy, so this only picks the door.
 	 */
 	let {
@@ -66,10 +66,7 @@
 	</Action>
 {:else if kind === 'committee'}
 	<Button
-		href={withQuery(
-			resolve('/member/volunteer/committees'),
-			new URLSearchParams({ committee: slug })
-		)}
+		href={withQuery(resolve('/member/groups'), new URLSearchParams({ committee: slug }))}
 		variant="primary"
 		size="sm"
 		aria-label={`Apply to ${groupName}`}

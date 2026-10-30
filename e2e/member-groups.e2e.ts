@@ -102,16 +102,16 @@ test.describe('member groups index', () => {
 		await expect(page.getByRole('heading', { name: SEED_JOINABLE_NAME })).toBeVisible();
 	});
 
-	// A committee applies on the committee page, where one application can name
-	// several; its Apply button arrives there with that committee ticked.
+	// A committee applies in one dialog on Groups, where one application can name
+	// several; its Apply button opens it with that committee ticked (#2113).
 	test('applying to a committee leaves you waiting, not a member', async ({ page }) => {
 		await loginAsMember(page);
 		await page.goto('/member/groups');
 
-		await page.getByRole('link', { name: `Apply to ${SEED_APPLY_NAME}` }).click();
-		await page.waitForURL(`**/member/volunteer/committees?committee=${SEED_APPLY_SLUG}`);
-		await expect(page.getByRole('checkbox', { name: SEED_APPLY_NAME })).toBeChecked();
-		await page.getByRole('button', { name: 'Send application' }).click();
+		await page.getByRole('button', { name: `Apply to ${SEED_APPLY_NAME}` }).click();
+		const dialog = page.getByRole('dialog');
+		await expect(dialog.getByRole('checkbox', { name: SEED_APPLY_NAME })).toBeChecked();
+		await dialog.getByRole('button', { name: 'Send application' }).click();
 
 		await expect
 			.poll(async () => (await readApplication(SEED_APPLY_SLUG, SEED_BANDMATE_ID))?.status, DB_POLL)
@@ -123,7 +123,7 @@ test.describe('member groups index', () => {
 		await expect(
 			page.getByRole('button', { name: `Withdraw your application to ${SEED_APPLY_NAME}` })
 		).toBeVisible();
-		await expect(page.getByRole('link', { name: `Apply to ${SEED_APPLY_NAME}` })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: `Apply to ${SEED_APPLY_NAME}` })).toHaveCount(0);
 	});
 
 	test('applying to a club answers its question in a dialog', async ({ page }) => {

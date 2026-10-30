@@ -9,18 +9,15 @@ sortOrder: 6
 
 ## The directory
 
-Open **Directory** from the sidebar to browse everyone in the community. Switch
-between two views:
-
-- **Musicians** — Member cards showing instruments, genres, and status flags
-  (looking for a band, for hire, and so on).
-- **Bands** — Band cards with their genres and links.
+- **Directory** in the sidebar lists members: instruments, genres, and status
+  flags (looking for a band, for hire, and so on).
+- **Browse Bands**, under My Bands, lists bands with their genres.
 
 ## Finding the right people
 
-- Use search and filters to narrow by instrument or genre.
-- Status flags help you spot, for example, players looking for a band or teachers
-  offering lessons.
+- Use search and filters to narrow by instrument, skill or genre.
+- **Teaches privately** finds members who say they give lessons; **Teaches at the
+  Collective** finds the Collective's own instructors.
 - Click any card to open the full profile, where you'll find their bio, links, and
   any contact info they've chosen to share.
 

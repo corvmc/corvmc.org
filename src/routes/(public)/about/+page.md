@@ -34,7 +34,7 @@ Committees meet monthly to build and guide the organization. They are how most o
 
 <CommitteeList />
 
-[Apply to a committee](/member/volunteer/committees)
+[Apply to a committee](/member/groups)
 
 ## Our Story
 
