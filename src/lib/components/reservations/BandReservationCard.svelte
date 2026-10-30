@@ -3,6 +3,8 @@
 	import Form from '$lib/components/ui/Form';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import ReservationCardShell from './ReservationCardShell.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import { resolve } from '$app/paths';
 	import { cancelBandReservation } from '$lib/remote/reservations.remote';
 	import { toast } from 'svelte-sonner';
 	import type { MemberRef, ReservationRef } from '$lib/types/entity';
@@ -27,6 +29,8 @@
 			bookedBy: MemberRef;
 			/** Absent on the dashboard list, which offers no controls at all. */
 			canCancel?: boolean;
+			/** Any band member may pay what is owed (#2095). */
+			canPay?: boolean;
 		};
 		slug: string;
 	} = $props();
@@ -48,18 +52,30 @@
 <!-- Passed only when it has something in it: the shell's action row straddles
      the bottom border, so an empty one is 20px of dead space under every past
      session and every card on the dashboard. -->
-{#snippet cancelAction()}
-	<Form remote={cancel} onsuccess={() => toast.success('Reservation cancelled')}>
-		<input {...cancelFields.slug.as('hidden', slug)} />
-		<input {...cancelFields.reservationId.as('hidden', reservation.id)} />
-		<SubmitButton label="Cancel" variant="error" size="xs" outline />
-	</Form>
+{#snippet rowActions()}
+	{#if showCancel}
+		<Form remote={cancel} onsuccess={() => toast.success('Reservation cancelled')}>
+			<input {...cancelFields.slug.as('hidden', slug)} />
+			<input {...cancelFields.reservationId.as('hidden', reservation.id)} />
+			<SubmitButton label="Cancel" variant="error" size="xs" outline />
+		</Form>
+	{/if}
+	{#if reservation.canPay}
+		<Button
+			href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
+			variant="primary"
+			size="xs"
+			outline
+		>
+			Pay online
+		</Button>
+	{/if}
 {/snippet}
 
 <ReservationCardShell
 	startsAt={reservation.startsAt}
 	status={reservation.status}
-	actions={showCancel ? cancelAction : undefined}
+	actions={showCancel || reservation.canPay ? rowActions : undefined}
 >
 	<div class="p-2 px-3">
 		<EntityIdentity ref={reservation.ref} size="md">

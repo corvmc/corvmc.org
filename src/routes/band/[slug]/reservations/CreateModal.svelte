@@ -4,7 +4,9 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import DateTimeStep from '$lib/components/reservations/booking/DateTimeStep.svelte';
 	import ConfirmStep from '$lib/components/reservations/booking/ConfirmStep.svelte';
+	import PaymentStep from '$lib/components/reservations/booking/PaymentStep.svelte';
 	import { bookBandReservation } from '$lib/remote/reservations.remote';
+	import { goToCheckout } from '$lib/utils/checkout-navigation';
 
 	/**
 	 * Booking the practice space for a band.
@@ -14,10 +16,9 @@
 	 * `hours × rate` that never consulted `getReservationPricing` — so the
 	 * booking member's own free hours were invisible until after the fact.
 	 *
-	 * The member wizard's first two steps do this already. Its third does not:
-	 * `bookBandReservation` is a plain form that takes no payment, unlike
-	 * `bookAndPayReservation`, so a PaymentStep here would charge nobody and show
-	 * a receipt for it. Band sessions settle at the door, as they always have.
+	 * The member wizard's steps, payment included: Pay Ahead charges the booker
+	 * after their own free hours (#2095); Book leaves it owed, payable later by
+	 * any member of the act.
 	 *
 	 * `BookingConflict` is also absent: it keys on a `{ conflict: true }` result
 	 * that only `bookAndPayReservation` returns. Giving the band flow the same
@@ -46,9 +47,11 @@
 	variant="primary"
 	size="sm"
 	maxWidth="max-w-sm"
-	onsuccess={(result) => {
-		const r = result as { waitlisted?: boolean } | undefined;
-		if (r?.waitlisted) {
+	onsuccess={async (result) => {
+		const r = result as { waitlisted?: boolean; redirectUrl?: string } | undefined;
+		if (r?.redirectUrl) {
+			await goToCheckout(r.redirectUrl);
+		} else if (r?.waitlisted) {
 			toast.info('The first instance is waitlisted because the slot is currently booked.');
 		} else {
 			toast.success('Session booked');
@@ -60,5 +63,9 @@
 		<input {...bookBandReservation.fields.slug.as('hidden', slug)} />
 		<DateTimeStep isSustaining={hasSustainingMember} {needsPhone} />
 		<ConfirmStep band />
+		<PaymentStep
+			fields={{ coverFees: bookBandReservation.fields.coverFees }}
+			submit={bookBandReservation.fields.payNow.as('submit', 'on')}
+		/>
 	{/snippet}
 </Action>

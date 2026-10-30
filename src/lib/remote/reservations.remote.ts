@@ -155,13 +155,45 @@ import {
 // Queries
 // ===========================================================================
 
-export const getReservationPayment = query(z.string(), async (id) => {
+/**
+ * Who may pay a reservation: its booker, or for a band's own booking any member
+ * of that band — resolved from the row's `bookerId`, never from the client.
+ * Paying moves nothing: free hours, overdue and reminders stay with
+ * `createdByUserId`. `backPath` is where the payer returns afterwards.
+ */
+async function requireReservationPayer(row: {
+	createdByUserId: string;
+	bookerType: BookerType;
+	bookerId: string;
+}): Promise<{ isBooker: boolean; backPath: string }> {
 	const currentUser = requireUser();
+	if (row.createdByUserId === currentUser.id) {
+		return { isBooker: true, backPath: '/member/reservations' };
+	}
+	if (row.bookerType !== 'group') throw error(403, 'Not your reservation');
+	const { group: band } = await requireGroupRole({ id: row.bookerId }, 'member');
+	return { isBooker: false, backPath: `/band/${band.slug}/reservations` };
+}
 
+type Person = { id: string; email: string; name: string | null };
+
+/** The booker's contact, for the credit settlement recorded in their name. */
+async function bookerOf(row: { createdByUserId: string }, payer: Person): Promise<Person> {
+	if (row.createdByUserId === payer.id) return payer;
+	const [b] = await db
+		.select({ email: user.email, name: user.name })
+		.from(user)
+		.where(eq(user.id, row.createdByUserId))
+		.limit(1);
+	if (!b) throw error(404, 'Booker not found');
+	return { id: row.createdByUserId, ...b };
+}
+
+export const getReservationPayment = query(z.string(), async (id) => {
 	const [row] = await db.select().from(reservation).where(eq(reservation.id, id)).limit(1);
 
 	if (!row) throw error(404, 'Reservation not found');
-	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
+	const { backPath } = await requireReservationPayer(row);
 	// Shared with the member UI's pay links, so the two cannot drift (#1952).
 	if (!isAwaitingPayment(row)) throw error(400, 'This reservation is not awaiting payment');
 
@@ -171,8 +203,11 @@ export const getReservationPayment = query(z.string(), async (id) => {
 	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
-	// Zero for a session on or after the next reset, so the page quotes the full price.
-	const freeHoursBalance = usableFreeHours(await getFreeHoursWallet(currentUser.id), row.startsAt);
+	// The booker's, whoever pays. Zero for a session on or after the next reset.
+	const freeHoursBalance = usableFreeHours(
+		await getFreeHoursWallet(row.createdByUserId),
+		row.startsAt
+	);
 
 	return {
 		reservation: {
@@ -189,7 +224,8 @@ export const getReservationPayment = query(z.string(), async (id) => {
 		// are locked in and the page must show the stored remainder, not a
 		// re-projection from the live balance.
 		cashDueCents: row.cashDueCents,
-		creditsUsedHours: row.creditsUsed
+		creditsUsedHours: row.creditsUsed,
+		backPath
 	};
 });
 
@@ -306,8 +342,10 @@ export const getBandReservations = query(
 				ref: reservationRefColumns(),
 				// Who booked it for the band. The `user` join is already here.
 				bookedBy: memberRefColumns(),
-				// Not for display — `canCancel` below is derived from it.
-				createdByUserId: reservation.createdByUserId
+				// Not for display — `canCancel` and `canPay` below derive from these.
+				createdByUserId: reservation.createdByUserId,
+				paidAt: reservation.paidAt,
+				cashDueCents: reservation.cashDueCents
 			})
 			.from(reservation)
 			.leftJoin(user, eq(user.id, reservation.createdByUserId))
@@ -328,8 +366,10 @@ export const getBandReservations = query(
 				ref: reservationRefColumns(),
 				// Who booked it for the band. The `user` join is already here.
 				bookedBy: memberRefColumns(),
-				// Not for display — `canCancel` below is derived from it.
-				createdByUserId: reservation.createdByUserId
+				// Not for display — `canCancel` and `canPay` below derive from these.
+				createdByUserId: reservation.createdByUserId,
+				paidAt: reservation.paidAt,
+				cashDueCents: reservation.cashDueCents
 			})
 			.from(reservation)
 			.leftJoin(user, eq(user.id, reservation.createdByUserId))
@@ -349,11 +389,17 @@ export const getBandReservations = query(
 			{ page: pastPage }
 		);
 
+		// Any member may pay what the band owes (#2095); staff take payment elsewhere.
+		// A scheduled session that has started is past paying online, as on the
+		// member's own card (`memberPayAction`).
+		const canPayRow = (r: (typeof upcoming)[number]) =>
+			role !== 'staff' && isAwaitingPayment(r) && (r.status === 'confirmed' || r.startsAt > now);
 		const withBooker = (r: (typeof upcoming)[number], cancellable: boolean) => ({
 			...r,
 			ref: toReservationRef(r.ref, band),
 			bookedBy: toMemberRef(r.bookedBy),
-			canCancel: cancellable && canCancelRow(r.createdByUserId)
+			canCancel: cancellable && canCancelRow(r.createdByUserId),
+			canPay: canPayRow(r)
 		});
 		// `cancel()` refuses a session already cancelled or already started, so
 		// neither may offer the button: the upcoming list now holds both.
@@ -1454,9 +1500,10 @@ async function commitCreditsAndSettleIfCovered(opts: {
  */
 async function payReservationRemainder(opts: {
 	row: { id: string; startsAt: Date; endsAt: Date; bookerType: BookerType };
-	userId: string;
-	email: string;
-	name: string | null;
+	/** Whose free hours settle it first. */
+	booker: Person;
+	/** Who is charged the remainder. */
+	payer: Person;
 	coverFees: boolean;
 	successUrl: string;
 	cancelUrl: string;
@@ -1469,24 +1516,25 @@ async function payReservationRemainder(opts: {
 
 	const { remainingCents, settled } = await commitCreditsAndSettleIfCovered({
 		reservationId: opts.row.id,
-		userId: opts.userId,
-		email: opts.email,
-		name: opts.name,
+		userId: opts.booker.id,
+		email: opts.booker.email,
+		name: opts.booker.name,
 		durationHours,
 		totalCents,
 		hourlyRateCents
 	});
 	if (settled) return { paid: true };
 
+	const { payer } = opts;
 	const stripeCustomerId = await ensureStripeCustomer(
-		opts.userId,
-		opts.email,
-		opts.name ?? undefined
+		payer.id,
+		payer.email,
+		payer.name ?? undefined
 	);
 	const result = await checkout({
 		stripeCustomerId,
-		customerEmail: opts.email,
-		userId: opts.userId,
+		customerEmail: payer.email,
+		userId: payer.id,
 		mode: 'payment',
 		lineItems: [
 			{
@@ -1832,7 +1880,10 @@ const bandBookingSchema = createReservationSchema.extend({
 	// resolved.
 	slug: z.string().min(1),
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
-	monthlyMode: z.enum(['weekday', 'monthday']).optional()
+	monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+	coverFees: z.boolean().default(false),
+	// Set only by the pay step's submit, so a plain booking never charges.
+	payNow: z.enum(['', 'on']).optional()
 });
 
 export const bookBandReservation = form(bandBookingSchema, async (data, issue) => {
@@ -1901,6 +1952,22 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 			prototypeStartsAt: startsAt,
 			monthlyMode: data.monthlyMode
 		});
+	}
+
+	if (data.payNow === 'on' && !waitlisted) {
+		const back = `${getRequestEvent().url.origin}/band/${band.slug}/reservations`;
+		const result = await payReservationRemainder({
+			row: { id: res.id, startsAt: res.startsAt, endsAt: res.endsAt, bookerType: 'group' },
+			booker: currentUser,
+			payer: currentUser,
+			coverFees: data.coverFees,
+			successUrl: back,
+			cancelUrl: back
+		});
+		if ('checkoutUrl' in result) {
+			return { reservationId: res.id, waitlisted, redirectUrl: result.checkoutUrl };
+		}
+		return { reservationId: res.id, waitlisted, paid: true as const };
 	}
 
 	return { reservationId: res.id, waitlisted };
@@ -1981,9 +2048,11 @@ export const payForReservation = form(
 		const [row] = await db.select().from(reservation).where(eq(reservation.id, data.id)).limit(1);
 
 		if (!row) throw error(404, 'Reservation not found');
-		if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
+		const { isBooker, backPath } = await requireReservationPayer(row);
 		if (row.status !== 'scheduled' && row.status !== 'confirmed')
 			throw error(400, 'Not eligible for payment');
+		// Confirming without paying is the booker's call; a bandmate only pays.
+		if (data.skipPayment === 'on' && !isBooker) throw error(403, 'Not your reservation');
 
 		const waivesWindow = await can('reservation.comp');
 		const reservationConfig = await getReservationConfig();
@@ -2022,12 +2091,11 @@ export const payForReservation = form(
 		// Pay online: settles from free hours when they cover it, else charges.
 		const result = await payReservationRemainder({
 			row,
-			userId: currentUser.id,
-			email: currentUser.email,
-			name: currentUser.name,
+			booker: await bookerOf(row, currentUser),
+			payer: currentUser,
 			coverFees: data.coverFees,
-			successUrl: `${url.origin}/member/reservations?paid=${row.id}`,
-			cancelUrl: `${url.origin}/member/reservations`
+			successUrl: `${url.origin}${backPath}?paid=${row.id}`,
+			cancelUrl: `${url.origin}${backPath}`
 		});
 
 		return 'paid' in result ? { paid: true } : { redirectUrl: result.checkoutUrl };
@@ -2050,7 +2118,7 @@ export const payReservation = form(
 			.limit(1);
 
 		if (!row) throw error(404, 'Reservation not found');
-		if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
+		const { backPath } = await requireReservationPayer(row);
 		if (row.status !== 'scheduled' && row.status !== 'confirmed')
 			throw error(400, 'Not eligible for payment');
 
@@ -2058,15 +2126,14 @@ export const payReservation = form(
 		// reset at any time, and anything else is a real charge (#2060).
 		const result = await payReservationRemainder({
 			row,
-			userId: currentUser.id,
-			email: currentUser.email,
-			name: currentUser.name,
+			booker: await bookerOf(row, currentUser),
+			payer: currentUser,
 			coverFees: data.coverFees,
-			successUrl: `${url.origin}/member/reservations?paid=${row.id}`,
+			successUrl: `${url.origin}${backPath}?paid=${row.id}`,
 			cancelUrl: `${url.origin}/member/reservations/${row.id}/pay`
 		});
 
-		redirect(303, 'paid' in result ? '/member/reservations' : result.checkoutUrl);
+		redirect(303, 'paid' in result ? backPath : result.checkoutUrl);
 	}
 );
 
