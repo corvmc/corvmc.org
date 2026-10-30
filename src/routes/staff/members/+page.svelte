@@ -23,6 +23,7 @@
 	import { retryQuery } from '$lib/utils/retry-query';
 	import UserTotals from './UserTotals.svelte';
 	import InviteMemberAction from './InviteMemberAction.svelte';
+	import MemberViews from './MemberViews.svelte';
 
 	type YesNo = '' | 'yes' | 'no';
 	const yesNo = () => oneOf<YesNo>(['', 'yes', 'no'], '');
@@ -83,6 +84,7 @@
 </PageHeader>
 
 <PageContent>
+	<MemberViews active="all" />
 	<svelte:boundary>
 		<UserTotals />
 		{#snippet failed(_error, reset)}

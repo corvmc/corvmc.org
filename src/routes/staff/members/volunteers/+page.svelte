@@ -11,7 +11,6 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import BadgeList from '$lib/components/ui/BadgeList.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -22,8 +21,8 @@
 	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
 	import CertificationOptions from '$lib/components/volunteer/CertificationOptions.svelte';
 	import VolunteerPanel from './VolunteerPanel.svelte';
+	import MemberViews from '../MemberViews.svelte';
 	import { subline, type RosterRow } from './subline';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { oneOf, text } from '$lib/urlState.svelte';
 	import { withQuery } from '$lib/utils/with-query';
@@ -47,14 +46,12 @@
 	// not a reason for their row to be four lines tall.
 	const VISIBLE_ROLES = 2;
 
-	const roster = rosterState(resolve('/staff/volunteer/people'), {
+	const roster = rosterState(resolve('/staff/members/volunteers'), {
 		role: text(),
 		status: oneOf<StatusFilter>(['', ...volunteerProfileStatuses], ''),
 		cert: text()
 	});
 	const f = roster.values;
-	// `?tab=signoff` is the retired tab's address for the same rows.
-	if (page.url.searchParams.get('tab') === 'signoff') f.status = 'blocked';
 
 	// Keyed as the URL is, which is what the export and "copy emails" read.
 	const active = $derived({
@@ -135,23 +132,21 @@
 	{/if}
 {/snippet}
 
-<!--
-	No hand-rolled sibling links: every page in this section used to build its own row and no
-	two agreed (docs/reports/volunteer-workflow-findings.md#d2). The sidebar carries them.
--->
-<PageHeader title="Volunteers">
+<PageHeader title="Members">
 	<LogHoursForMemberAction />
 </PageHeader>
 
 <PageContent>
+	<MemberViews active="volunteers" />
 	<Roster
 		{roster}
 		result={list}
 		empty="No one has signed up to volunteer yet."
 		searchPlaceholder="Search volunteers..."
 		personLabel="Volunteer"
-		exportPath={resolve('/staff/volunteer/people/export')}
+		exportPath={resolve('/staff/members/volunteers/export')}
 		emails={() => getStaffVolunteerEmails(active)}
+		tone={(v) => (v.status === 'blocked' ? 'muted' : undefined)}
 	>
 		{#snippet filters()}
 			<Select
@@ -219,12 +214,10 @@
 			{/await}
 		{/snippet}
 
-		{#snippet lead(volunteer)}
-			<StatusBadge status={volunteer.status} />
+		{#snippet aside(volunteer)}
 			{#if !volunteer.isAdult}
-				<!-- Kept after a staff override, so an approved minor still reads
-				     as one — the fact that changes how a shift is staffed. -->
-				<Badge variant="ghost" size="xs" class="mt-1">minor</Badge>
+				<!-- Kept after a staff override: an approved minor still changes how a shift is staffed. -->
+				<Badge variant="ghost" size="xs">minor</Badge>
 			{/if}
 		{/snippet}
 

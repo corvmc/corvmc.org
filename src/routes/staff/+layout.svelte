@@ -107,7 +107,6 @@
 		ballots: IconCheckbox,
 		volunteer: IconHeartHandshake,
 		'volunteer-schedule': IconCalendarWeek,
-		'volunteer-people': IconUsersGroup,
 		'project-templates': IconClipboardList,
 		'volunteer-report': IconReportAnalytics,
 		reservations: IconClipboardCheck,

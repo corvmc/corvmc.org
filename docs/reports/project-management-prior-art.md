@@ -196,7 +196,7 @@ management, and that category has four things the volunteer products do not:**
   description. `volunteer_role` is closer to a task type attached to one shift.
   Committees-as-departments (Consequence B) is what makes position a real concept
   here — "Booking Committee, Chair" is a position; "Door" is a task.
-- **Reliability as a tracked attribute.** `/staff/volunteer/people` shows lifetime
+- **Reliability as a tracked attribute.** `/staff/members/volunteers` shows lifetime
   approved hours — _contribution_, not _reliability_. The data exists
   (`volunteer_signup` records no-shows); nothing aggregates it per person. Worth
   building carefully: a visible no-show score on a volunteer is a different social

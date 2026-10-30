@@ -347,13 +347,14 @@ test.describe('volunteering — roles', () => {
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/interest');
-		await expect(page).toHaveURL(/\/staff\/volunteer\/people$/);
+		await expect(page).toHaveURL(/\/staff\/members\/volunteers$/);
 
 		await page.goto('/staff/volunteer/recurring');
 		await expect(page).toHaveURL(/\/staff\/recurring-work$/);
 		await expect(page.getByRole('button', { name: 'New Recurring Work' })).toBeVisible();
 
 		await page.goto('/staff/volunteer/people?tab=signoff');
+		await expect(page).toHaveURL(/\/staff\/members\/volunteers\?/);
 		await expect(page).toHaveURL(/status=blocked/);
 		await expect(page.getByRole('row', { name: SEED_VOL_BLOCKED_MINOR_NAME })).toBeVisible();
 		await expect(page.getByRole('row', { name: SEED_VOL_MEMBER_NAME })).toHaveCount(0);
@@ -372,7 +373,7 @@ test.describe('volunteering — roles', () => {
 		page
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/people');
+		await page.goto('/staff/members/volunteers');
 
 		const interested = page.getByRole('row', { name: SEED_VOL_MEMBER_NAME });
 		await expect(interested).toBeVisible({ timeout: 15000 });
@@ -390,7 +391,7 @@ test.describe('volunteering — roles', () => {
 		page
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/people');
+		await page.goto('/staff/members/volunteers');
 		await expect(page.getByRole('row', { name: SEED_VOL_MEMBER_NAME })).toBeVisible({
 			timeout: 15000
 		});
@@ -577,7 +578,7 @@ test.describe('volunteering — onboarding', () => {
 	test('staff can approve a blocked minor, and then they get in', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		// Guardian sign-off lives on the roster, not the dashboard.
-		await page.goto('/staff/volunteer/people');
+		await page.goto('/staff/members/volunteers');
 
 		// The roster names people by account, not by their volunteer profile.
 		const row = rowFor(page, SEED_VOL_BLOCKED_MINOR_EMAIL);

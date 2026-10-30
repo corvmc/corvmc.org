@@ -74,7 +74,7 @@
 			<p>All claims confirmed, all hours reviewed, no short shifts in the next two weeks.</p>
 			<div class="mt-4 flex flex-wrap justify-center gap-2">
 				<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule</Button>
-				<Button href="/staff/volunteer/people" variant="ghost" size="sm">People</Button>
+				<Button href="/staff/members/volunteers" variant="ghost" size="sm">Volunteers</Button>
 				<Button href="/staff/volunteer/report" variant="ghost" size="sm">Report</Button>
 			</div>
 		</EmptyState>

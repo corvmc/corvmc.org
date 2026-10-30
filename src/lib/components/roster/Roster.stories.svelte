@@ -62,7 +62,7 @@
 		<Roster
 			{roster}
 			{result}
-			exportPath="/staff/volunteer/people/export"
+			exportPath="/staff/members/volunteers/export"
 			emails={async () => rows.map((r) => r.email!)}
 		>
 			{#snippet columns()}

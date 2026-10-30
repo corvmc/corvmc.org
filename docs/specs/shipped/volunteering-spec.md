@@ -869,10 +869,10 @@ leaves `type` unset, so a trigger nested in the form would post the role edit.
   logs surfaces `VolunteerRoleInUseError` as a message pointing at archive.
 
 `/staff/volunteer/interest` remains as a 308 redirect, now pointing at
-`/staff/volunteer/people` — a bookmark to that URL was always after names, not
+`/staff/members/volunteers` — a bookmark to that URL was always after names, not
 roles.
 
-### `/staff/volunteer/people` — the volunteers index
+### `/staff/members/volunteers` — the volunteers index
 
 The people half of the old interest page, back as its own route. The roles page
 answers "who wants Door?"; this one answers "who are our volunteers?", which the

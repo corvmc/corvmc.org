@@ -6,5 +6,5 @@ import { redirect } from '@sveltejs/kit';
  * had to remember to open (docs/reports/volunteer-workflow-findings.md#c1).
  */
 export function load() {
-	redirect(308, '/staff/volunteer/people');
+	redirect(308, '/staff/members/volunteers');
 }

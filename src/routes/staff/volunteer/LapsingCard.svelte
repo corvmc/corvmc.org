@@ -39,7 +39,7 @@
 
 <InfoCard title="Expiring Clearances" state={total}>
 	{#snippet action()}
-		<Button href="/staff/volunteer/people" variant="ghost" size="sm">Who's cleared →</Button>
+		<Button href="/staff/members/volunteers" variant="ghost" size="sm">Who's cleared →</Button>
 	{/snippet}
 
 	<Table>

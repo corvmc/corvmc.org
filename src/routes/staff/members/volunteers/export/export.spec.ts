@@ -39,7 +39,7 @@ vi.mock('$lib/server/volunteer/volunteer-roster', async () => {
 import { GET } from './+server';
 
 const call = (query = '') =>
-	GET({ url: new URL(`http://localhost/staff/volunteer/people/export${query}`) } as never);
+	GET({ url: new URL(`http://localhost/staff/members/volunteers/export${query}`) } as never);
 
 const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
 	positionOrder.filter((_, i) => mask & (1 << i))

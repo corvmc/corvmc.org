@@ -37,6 +37,8 @@
 		leadLabel = 'Status',
 		leadHead,
 		detail,
+		aside,
+		tone,
 		columns,
 		cells,
 		actions,
@@ -68,6 +70,10 @@
 		leadHead?: Snippet<[T[]]>;
 		/** The person cell's second line. */
 		detail?: Snippet<[T]>;
+		/** Inline beside the name, such as a badge. */
+		aside?: Snippet<[T]>;
+		/** `muted` dims a row's cells but leaves its actions at full tone. */
+		tone?: (row: T) => 'muted' | undefined;
 		/** Header cells for `cells`. */
 		columns?: Snippet;
 		/** The page's own cells, after the person. */
@@ -187,21 +193,29 @@
 
 			{#each rows as row (row.personId)}
 				<tr
-					class="hover cursor-pointer"
+					class={[
+						'hover cursor-pointer',
+						// Dims every cell but the actions, which keep their tone.
+						tone?.(row) === 'muted' && actions && '[&>td:not(:last-child)]:opacity-60',
+						tone?.(row) === 'muted' && !actions && '[&>td]:opacity-60'
+					]}
 					use:rowLink={panel ? () => openPanel(row) : recordHref(row)}
 				>
 					{#if lead}<td class="w-px">{@render lead(row)}</td>{/if}
 
 					<!-- `min-w-48`: a long secondary cell could otherwise leave the name two letters. -->
 					<td class="cell-primary min-w-48">
-						{#if panel}
-							<!-- The keyboard path to the panel, which a row cannot be. -->
-							<button type="button" class="block w-full text-left" onclick={() => openPanel(row)}>
-								<EntityIdentity ref={nameOnly(row)} avatar link={false} />
-							</button>
-						{:else}
-							<EntityIdentity ref={nameOnly(row)} avatar />
-						{/if}
+						<span class="flex items-center gap-2">
+							{#if panel}
+								<!-- The keyboard path to the panel, which a row cannot be. -->
+								<button type="button" class="min-w-0 text-left" onclick={() => openPanel(row)}>
+									<EntityIdentity ref={nameOnly(row)} avatar link={false} />
+								</button>
+							{:else}
+								<EntityIdentity ref={nameOnly(row)} avatar />
+							{/if}
+							{@render aside?.(row)}
+						</span>
 						{@render detail?.(row)}
 					</td>
 
