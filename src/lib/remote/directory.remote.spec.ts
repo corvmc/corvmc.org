@@ -30,6 +30,7 @@ vi.mock('$lib/server/directory/directory-service', () => ({
 	listBands: vi.fn(),
 	getPublicDirectory: vi.fn(),
 	getMemberProfile: vi.fn(),
+	isProfileComplete: vi.fn(),
 	suggestInstruments: vi.fn(),
 	suggestGenres: vi.fn(),
 	suggestSkills: vi.fn()
@@ -361,5 +362,15 @@ describe('getMemberDirectory', () => {
 			members: unknown[];
 		};
 		expect(teachers.members).toEqual([]);
+	});
+
+	it('prompts nobody who has no directory entry at all, such as a staff account', async () => {
+		// The mocked db returns no entry, so visibility is null; incomplete alone is not enough.
+		const svc = await service();
+		svc.listMembers.mockResolvedValue([] as never);
+		svc.isProfileComplete.mockResolvedValue(false);
+
+		const result = (await directory.getMemberDirectory({})) as Record<string, unknown>;
+		expect(result.viewerHiddenBecause).toBeNull();
 	});
 });

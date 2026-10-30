@@ -8,7 +8,12 @@
 	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
 	import VinylCard from '$lib/components/directory/VinylCard.svelte';
 	import { hashIndex } from '$lib/utils/patterns';
-	import { BAND_COLORS } from '$lib/utils/directory-browse';
+	import {
+		BAND_COLORS,
+		directorySortOptions,
+		type DirectorySort
+	} from '$lib/utils/directory-browse';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { m } from '$lib/paraglide/messages.js';
 	import { many } from '$lib/terms';
 
@@ -21,6 +26,8 @@
 	let search = $state('');
 	let filterGenres = $state<string[]>([]);
 	let lookingForMembers = $state(false);
+	// Not a filter: "Clear filters" leaves the order alone.
+	let sort = $state<DirectorySort>('newest');
 
 	let filters = $derived({
 		search: search || undefined,
@@ -29,6 +36,7 @@
 	});
 
 	const hasFilters = $derived(Object.values(filters).some((v) => v !== undefined));
+	const query = $derived({ ...filters, sort: sort === 'newest' ? undefined : sort });
 
 	function clearFilters() {
 		search = '';
@@ -36,12 +44,12 @@
 		lookingForMembers = false;
 	}
 
-	const directory = $derived(await getMemberBandDirectory(filters));
+	const directory = $derived(await getMemberBandDirectory(query));
 	const bands = $derived(directory.bands);
 
 	// Collapses whenever the listed set changes; keyed rather than reset from an
 	// effect, so it can't lag the filters by a frame.
-	const listKey = $derived(JSON.stringify(filters));
+	const listKey = $derived(JSON.stringify(query));
 	let expandedTo = $state(PAGE_SIZE);
 	let expandedFor = $state('');
 	const limit = $derived(expandedFor === listKey ? expandedTo : PAGE_SIZE);
@@ -73,6 +81,13 @@
 				aria-label="Search by name"
 				class="input flex-1"
 				bind:value={search}
+			/>
+			<FormField
+				type="select"
+				name="sort"
+				label="Sort"
+				options={directorySortOptions}
+				bind:value={sort}
 			/>
 			<label class="directory-filters__toggle">
 				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForMembers} />
