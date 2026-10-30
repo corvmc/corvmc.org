@@ -51,7 +51,7 @@
 
 <InfoCard title="Unconfirmed Shifts" state="{total} from the last week">
 	{#snippet action()}
-		<Button href="/staff/volunteer/people" variant="ghost" size="sm">Volunteers →</Button>
+		<Button href="/staff/members/volunteers" variant="ghost" size="sm">Volunteers →</Button>
 	{/snippet}
 
 	<p class="text-muted">Past shifts with an unconfirmed volunteer.</p>

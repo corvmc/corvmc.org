@@ -41,7 +41,6 @@ export type StaffNavKey =
 	| 'ballots'
 	| 'volunteer'
 	| 'volunteer-schedule'
-	| 'volunteer-people'
 	| 'project-templates'
 	| 'volunteer-report'
 	| 'reservations'
@@ -114,6 +113,8 @@ export interface StaffNavItem extends NavNode<StaffNavKey> {
 	 * rows every position can use — the dashboard, and nothing else so far.
 	 */
 	capability?: Capability;
+	/** Further capabilities that each also show the row, for a page with per-view gates. */
+	alsoFor?: readonly Capability[];
 	/** Present ⇒ the layout renders this row as a `Nav.Collapsible`. */
 	children?: StaffNavItem[];
 }
@@ -147,7 +148,14 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'people',
 		title: 'People',
 		items: [
-			{ key: 'users', capability: 'user.list', label: 'Members', href: resolve('/staff/members') },
+			// Each view has its own gate; the page sends a viewer to one they hold.
+			{
+				key: 'users',
+				capability: 'user.list',
+				alsoFor: ['volunteer.read'],
+				label: 'Members',
+				href: resolve('/staff/members')
+			},
 			{ key: 'bands', capability: 'band.read', label: 'Bands', href: resolve('/staff/bands') },
 			// Separate from Bands on purpose: a band is a member's own project and a
 			// club is a sanctioned CMC one.
@@ -168,26 +176,13 @@ export const staffNavSections: StaffNavSection[] = [
 				href: resolve('/staff/instructors')
 			},
 			{
-				// The parent row is a dashboard, not an index — see
-				// docs/development/ui-patterns.md#section-dashboards. It keeps its own href
-				// because `Nav.Collapsible` treats the parent as clickable and holds the
-				// children open while you are on it, so the worklist is one click from
-				// anywhere and each table is one click from the worklist.
+				// A dashboard, not an index: docs/development/ui-patterns.md#section-dashboards.
+				// Its volunteers are a Members view (#2074).
 				key: 'volunteer',
 				capability: 'volunteer.read',
 				label: 'Volunteering',
 				href: resolve('/staff/volunteer'),
-				badgeKey: 'volunteerPending',
-				children: [
-					{
-						// "People", not "Volunteers": its filters reach the under-18 queue
-						// too, who are not yet volunteering.
-						key: 'volunteer-people',
-						capability: 'volunteer.read',
-						label: 'People',
-						href: resolve('/staff/volunteer/people')
-					}
-				]
+				badgeKey: 'volunteerPending'
 			}
 		]
 	},
@@ -583,7 +578,8 @@ export function activeNavKey(pathname: string): StaffNavKey | null {
  */
 export function filterNavItems(items: StaffNavItem[], held: readonly string[]): StaffNavItem[] {
 	return items.flatMap((item) => {
-		if (item.capability && !hasCapability(held, item.capability)) return [];
+		const allowed = [item.capability, ...(item.alsoFor ?? [])].filter((c) => c !== undefined);
+		if (allowed.length > 0 && !allowed.some((c) => hasCapability(held, c))) return [];
 		if (!item.children) return [item];
 		const children = filterNavItems(item.children, held);
 		return children.length > 0 ? [{ ...item, children }] : [];

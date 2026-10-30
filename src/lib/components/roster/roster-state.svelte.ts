@@ -20,7 +20,7 @@ export interface RosterState<S> {
 /**
  * A roster's filter state. `q` and `page` are added; `fields` are the page's own.
  *
- *     const roster = rosterState(resolve('/staff/volunteer/people'), { role: text() });
+ *     const roster = rosterState(resolve('/staff/members/volunteers'), { role: text() });
  */
 export function rosterState<S extends Record<string, unknown>>(
 	path: string,

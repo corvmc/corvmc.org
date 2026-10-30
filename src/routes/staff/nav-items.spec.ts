@@ -57,7 +57,7 @@ describe('activeNavKey', () => {
 		['/staff/committees', 'committees'],
 		['/staff/committees/abc', 'committees'],
 		['/staff/volunteer', 'volunteer'],
-		['/staff/volunteer/people', 'volunteer-people'],
+		['/staff/members/volunteers', 'users'],
 		['/staff/volunteer/roles', 'volunteer'],
 		// Shift detail lost its own row when the catalog folded into Schedule; it
 		// falls back to the section parent like clearances does.
@@ -139,14 +139,13 @@ describe('the nav tree', () => {
 		}
 	});
 
-	it('keeps the parent in its own childHrefs', () => {
-		const volunteer = staffNavSections.flatMap((s) => s.items).find((i) => i.key === 'volunteer')!;
-		expect(childHrefsFor(volunteer)).toEqual([
-			// The parent's own href leads, which is what holds the group open while you
-			// are on the dashboard — see docs/development/ui-patterns.md#section-dashboards.
-			'/staff/volunteer',
-			'/staff/volunteer/people'
-		]);
+	it('folds the volunteer roster into Members (#2074)', () => {
+		const volunteer = allStaffNavItems().find((i) => i.key === 'volunteer')!;
+		expect(volunteer.children).toBeUndefined();
+		expect(childHrefsFor(volunteer)).toEqual(['/staff/volunteer']);
+		const members = allStaffNavItems().find((i) => i.key === 'users')!;
+		expect(filterNavItems([members], ['volunteer.read'])).toHaveLength(1);
+		expect(filterNavItems([members], ['band.read'])).toHaveLength(0);
 	});
 
 	it('puts Project Templates under Planning, beside Projects (#2034)', () => {
@@ -249,6 +248,7 @@ describe('route coverage', () => {
 		'/staff/volunteer/hours',
 		// Roles and clearances: reached from the Volunteering dashboard's header (#1791).
 		'/staff/volunteer/roles',
+		'/staff/members/volunteers', // a Members view, reached from its tab bar (#2074)
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Inventory, beside Categories; its breadcrumb runs through it

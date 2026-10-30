@@ -6,5 +6,5 @@ import { redirect } from '@sveltejs/kit';
  * page: a bookmark to this URL was always after names, not roles.
  */
 export function load() {
-	redirect(308, '/staff/volunteer/people');
+	redirect(308, '/staff/members/volunteers');
 }

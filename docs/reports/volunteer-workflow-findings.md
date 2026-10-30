@@ -156,7 +156,7 @@ It is written by `setAvailability` and read back **only into the member's own ed
 (`volunteer-profile-service.ts:369`), not `InterestedMember`
 (`volunteer-interest-service.ts:257`), not the user page's `VolunteerPanel`.
 
-Neither list carries a phone number either. `/staff/volunteer/people` columns are
+Neither list carries a phone number either. `/staff/members/volunteers` columns are
 Volunteer · Interested in · Hours · Since, and thirteen of nineteen rows show `—` under
 Interested in — so for most volunteers the coordinator's whole picture is a name, an email
 and two dashes.
