@@ -3284,6 +3284,8 @@ export async function countMemberPastShows(userId: string): Promise<number> {
 export interface CalendarEventRow extends EventRow {
 	bandName: string | null;
 	bandSlug: string | null;
+	/** The venue row's name, where the listing has one; `location` otherwise. */
+	venueName: string | null;
 }
 
 /**
@@ -3302,9 +3304,15 @@ export async function listPublicCalendarEvents(
 	end: Date
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
-		.select({ event: eventListingColumns, bandName: group.name, bandSlug: group.slug })
+		.select({
+			event: eventListingColumns,
+			bandName: group.name,
+			bandSlug: group.slug,
+			venueName: venue.name
+		})
 		.from(eventListing)
 		.leftJoin(group, eq(group.id, eventListing.groupId))
+		.leftJoin(venue, eq(venue.id, eventListing.venueId))
 		.where(
 			and(
 				inArray(eventListing.status, [...publicEventStatuses]),
@@ -3314,7 +3322,12 @@ export async function listPublicCalendarEvents(
 		)
 		.orderBy(asc(eventListing.startsAt));
 
-	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
+	return rows.map((r) => ({
+		...r.event,
+		bandName: r.bandName,
+		bandSlug: r.bandSlug,
+		venueName: r.venueName
+	}));
 }
 
 /**
@@ -3331,9 +3344,15 @@ export async function listPublicUpcomingEvents(
 	opts: { limit: number; offset: number }
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
-		.select({ event: eventListingColumns, bandName: group.name, bandSlug: group.slug })
+		.select({
+			event: eventListingColumns,
+			bandName: group.name,
+			bandSlug: group.slug,
+			venueName: venue.name
+		})
 		.from(eventListing)
 		.leftJoin(group, eq(group.id, eventListing.groupId))
+		.leftJoin(venue, eq(venue.id, eventListing.venueId))
 		.where(
 			and(inArray(eventListing.status, [...publicEventStatuses]), gte(eventListing.startsAt, from))
 		)
@@ -3341,7 +3360,12 @@ export async function listPublicUpcomingEvents(
 		.limit(opts.limit + 1)
 		.offset(opts.offset);
 
-	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
+	return rows.map((r) => ({
+		...r.event,
+		bandName: r.bandName,
+		bandSlug: r.bandSlug,
+		venueName: r.venueName
+	}));
 }
 
 /** How many the guide has in total, so its pager can say what is left (#1059). */

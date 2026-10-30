@@ -33,6 +33,8 @@ export interface CalendarEntry {
 	 */
 	status: string;
 	location: string | null;
+	/** The structured venue's name, which the row prefers over `location`. */
+	venueName?: string | null;
 	bandName: string | null;
 	bandSlug: string | null;
 	posterUrl: string | null;

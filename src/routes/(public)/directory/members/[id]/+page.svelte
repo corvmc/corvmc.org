@@ -93,7 +93,6 @@
 				pastCount={shows.pastCount}
 				pastHasMore={shows.pastHasMore}
 				loadMorePast={(offset) => getMemberPastShows({ id, offset })}
-				bandBase={BANDS_BASE}
 			/>
 		{/snippet}
 		{#snippet side()}

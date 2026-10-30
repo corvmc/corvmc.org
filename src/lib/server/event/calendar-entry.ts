@@ -8,7 +8,7 @@ import type { EventRow } from './event-service';
  * the caller already knows whose shows these are.
  */
 export function toCalendarEntry(
-	e: EventRow & { bandName?: string | null; bandSlug?: string | null }
+	e: EventRow & { bandName?: string | null; bandSlug?: string | null; venueName?: string | null }
 ): CalendarEntry {
 	return {
 		id: e.id,
@@ -18,6 +18,7 @@ export function toCalendarEntry(
 		source: e.source,
 		status: e.status,
 		location: e.location,
+		venueName: e.venueName ?? null,
 		bandName: e.bandName ?? null,
 		bandSlug: e.bandSlug ?? null,
 		posterUrl: resolveImageUrl(e.posterKey),

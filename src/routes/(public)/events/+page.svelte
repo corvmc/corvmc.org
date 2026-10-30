@@ -25,6 +25,7 @@
 	const { upcoming } = $derived(pageData.events);
 	const guide = $derived(pageData.guide);
 	const recaps = $derived(pageData.recaps);
+	const rsvpEventIds = $derived(pageData.rsvpEventIds);
 
 	// "Show more" appends pages client-side; reset when the anchor changes.
 	let extra: CalendarEntry[] = $state([]);
@@ -142,7 +143,7 @@
 					<p class="text-base">Nothing on the calendar yet. Check back soon!</p>
 				</div>
 			{:else}
-				<GigList events={allEvents} />
+				<GigList events={allEvents} {rsvpEventIds} />
 				{#if hasMore}
 					<div class="mt-8 text-center">
 						<!-- Says what is left, like the directory's pager: a bare "Show

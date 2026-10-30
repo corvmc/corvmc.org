@@ -1,14 +1,16 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { IconMapPin, IconTicket } from '@tabler/icons-svelte';
+	import { IconCheck, IconMapPin } from '@tabler/icons-svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import {
 		toLocalDate,
 		formatShortMonth,
 		formatDayNumber,
 		formatDayOfWeek,
+		formatDate,
 		formatTime
 	} from '$lib/utils/format';
-	import { priceDisplay } from '$lib/utils/event-ticketing';
+	import { priceDisplay, ticketingMode } from '$lib/utils/event-ticketing';
 	import { hashPattern } from '$lib/utils/patterns';
 	import { imageSrc } from '$lib/utils/images';
 	import { groupGigs } from '$lib/utils/gig-groups';
@@ -17,8 +19,7 @@
 	let {
 		events,
 		eventBase = '/events',
-		bandBase = '/directory/bands',
-		showByline = true
+		rsvpEventIds = []
 	}: {
 		events: CalendarEntry[];
 		/**
@@ -28,15 +29,14 @@
 		 * could not satisfy `no-navigation-without-resolve`.
 		 */
 		eventBase?: '/events' | '/member/events';
-		/** Which band-profile route the byline links into. */
-		bandBase?: '/directory/bands' | '/member/directory/bands';
-		/** Off on a band's own profile, where every row is that band. */
-		showByline?: boolean;
+		/** Events the viewer has RSVP'd to: those rows say so instead of offering it. */
+		rsvpEventIds?: string[];
 	} = $props();
 
 	const now = new Date();
 	const today = toLocalDate(new Date());
 	const sections = $derived(groupGigs(events, today));
+	const going = $derived(new Set(rsvpEventIds));
 
 	/** Ids of the first event of each calendar day, for ?from scroll anchors. */
 	const firstOfDay = $derived.by(() => {
@@ -63,14 +63,16 @@
 						eventBase === '/member/events'
 							? resolve(`/member/events/${evt.id}`)
 							: resolve(`/events/${evt.id}`)}
-					{@const isPast = evt.startsAt < now}
 					{@const isCancelled = evt.status === 'cancelled'}
+					{@const isOpen = evt.startsAt >= now && !isCancelled}
+					{@const mode = ticketingMode(evt)}
+					{@const place = evt.venueName ?? evt.location}
 					<li
 						class="gig-row"
 						class:gig-row--cancelled={isCancelled}
 						id={firstOfDay[evt.id] ? `day-${toLocalDate(evt.startsAt)}` : undefined}
 					>
-						<div class="gig-row__date">
+						<div class="gig-row__date" aria-hidden="true">
 							<span class="gig-row__month">{formatShortMonth(evt.startsAt)}</span>
 							<span class="gig-row__daynum">{formatDayNumber(evt.startsAt)}</span>
 							<span class="gig-row__weekday">{formatDayOfWeek(evt.startsAt)}</span>
@@ -89,67 +91,65 @@
 								<div class="poster-gen poster-gen--{hashPattern(evt.title)}"></div>
 							{/if}
 						</a>
-						<div class="gig-row__info">
-							<a {href} class="gig-row__title">{evt.title}</a>
-							{#if isCancelled}
-								<!-- The row exists to be read: the cancellation IS the
-								     announcement, so mark it plainly rather than greying it
-								     down into something people skim past. -->
-								<span class="gig-row__cancelled-tag">Cancelled</span>
-							{/if}
-							{#if showByline}
-								<span class="gig-row__byline">
-									{#if evt.source === 'band' && evt.bandName}
-										by
-										{#if evt.bandSlug}
-											<a
-												href={bandBase === '/member/directory/bands'
-													? resolve(`/member/directory/bands/${evt.bandSlug}`)
-													: resolve(`/directory/bands/${evt.bandSlug}`)}
-												class="gig-row__band">{evt.bandName}</a
-											>
-										{:else}
-											{evt.bandName}
-										{/if}
-									{:else if evt.source === 'community'}
+						<div class="gig-row__body">
+							<div class="gig-row__info">
+								<span class="gig-row__head">
+									<a {href} class="gig-row__title">{evt.title}</a>
+									{#if evt.source === 'community'}
 										<span class="sticker-badge sticker-badge--sm sticker-badge--green"
 											>Community</span
 										>
-									{:else}
+									{:else if evt.source !== 'band'}
 										<span class="sticker-badge sticker-badge--sm sticker-badge--orange">CMC</span>
 									{/if}
+									{#if isCancelled}
+										<!-- The cancellation IS the announcement, so mark it plainly
+										     rather than greying the row into something people skim. -->
+										<span class="gig-row__cancelled-tag">Cancelled</span>
+									{/if}
 								</span>
+								<span class="gig-row__meta">
+									{#if place}
+										<span class="gig-row__venue">
+											<IconMapPin size={13} />
+											{place}
+										</span>
+										·
+									{/if}
+									<time datetime={evt.startsAt.toISOString()}>
+										{formatDate(evt.startsAt)} · {formatTime(evt.startsAt)}
+									</time>
+								</span>
+							</div>
+							<!-- Price and its action as one group at the row's end, so the
+							     price sits at the same x on every row (#1059). -->
+							{#if isOpen}
+								<div class="gig-row__buy">
+									{#if mode !== 'external' || evt.ticketPrice}
+										<span class="gig-row__price">{priceDisplay(evt).label}</span>
+									{/if}
+									{#if mode === 'external' && evt.externalTicketUrl}
+										<Button
+											href={evt.externalTicketUrl}
+											target="_blank"
+											rel="external noopener noreferrer"
+											size="sm">Get tickets</Button
+										>
+									{:else if mode === 'platform'}
+										<Button
+											href={eventBase === '/member/events'
+												? href
+												: resolve(`/events/${evt.id}/tickets`)}
+											size="sm">Get tickets</Button
+										>
+									{:else if going.has(evt.id)}
+										<span class="gig-row__going"><IconCheck size={14} /> Going</span>
+									{:else}
+										<Button {href} size="sm">RSVP</Button>
+									{/if}
+								</div>
 							{/if}
-							<span class="gig-row__meta">
-								{#if evt.location}
-									<span class="gig-row__venue">
-										<IconMapPin size={13} />
-										{evt.location}
-									</span>
-									·
-								{/if}
-								{formatTime(evt.startsAt)}
-								{#if evt.externalTicketUrl && !isPast && !isCancelled}
-									·
-									<a
-										href={evt.externalTicketUrl}
-										class="gig-row__tickets"
-										target="_blank"
-										rel="external noopener noreferrer"
-									>
-										<IconTicket size={13} />
-										Tickets
-									</a>
-								{/if}
-							</span>
 						</div>
-						<!-- Its own column, not the end of a flowing meta line whose
-						     preceding items are conditional: at the end of that line the
-						     price landed at a different x on every row and two gigs could
-						     not be compared by eye (#1059). -->
-						{#if !evt.externalTicketUrl || evt.ticketPrice}
-							<span class="gig-row__price">{priceDisplay(evt).label}</span>
-						{/if}
 					</li>
 				{/each}
 			</ul>
@@ -239,7 +239,18 @@
 		object-fit: cover;
 	}
 
+	/* Wraps the price group under the text once the row is too narrow for both. */
+	.gig-row__body {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem 0.75rem;
+	}
+
 	.gig-row__info {
+		flex: 1 1 12rem;
 		display: flex;
 		flex-direction: column;
 		gap: 0.15rem;
@@ -256,6 +267,9 @@
 	.gig-row--cancelled .gig-row__thumb {
 		opacity: 0.55;
 	}
+	.gig-row__head .sticker-badge {
+		margin-left: 0.4rem;
+	}
 	.gig-row__cancelled-tag {
 		display: inline-block;
 		margin-left: 0.4rem;
@@ -270,42 +284,35 @@
 		vertical-align: middle;
 	}
 
-	.gig-row__title {
-		font-weight: 700;
+	.gig-row__head {
 		font-size: 1.05rem;
 		line-height: 1.25;
-		color: var(--cmc-navy);
 		overflow: hidden;
-		text-overflow: ellipsis;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
+	}
+
+	.gig-row__title {
+		font-weight: 700;
+		color: var(--cmc-navy);
 	}
 
 	.gig-row__title:hover {
 		text-decoration: underline;
 	}
 
-	.gig-row__byline {
-		font-size: 0.85rem;
-		color: var(--fg-2);
-	}
-
-	.gig-row__band {
-		font-weight: 600;
-		color: var(--cmc-teal);
-	}
-
-	.gig-row__band:hover {
-		text-decoration: underline;
-	}
-
-	/* `margin-left: auto` rather than a fixed width: the label is short and the
-	   right edge is what the eye compares along. */
-	.gig-row__price {
+	/* `margin-left: auto` rather than a fixed width: the right edge is what the
+	   eye compares along. */
+	.gig-row__buy {
 		margin-left: auto;
 		flex-shrink: 0;
-		padding-left: 0.5rem;
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+	}
+
+	.gig-row__price {
 		font-size: 0.8rem;
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
@@ -322,17 +329,15 @@
 	}
 
 	.gig-row__venue,
-	.gig-row__tickets {
+	.gig-row__going {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.25rem;
 	}
 
-	.gig-row__tickets {
+	.gig-row__going {
+		font-size: 0.85rem;
 		font-weight: 600;
-	}
-
-	.gig-row__tickets:hover {
-		text-decoration: underline;
+		color: var(--cmc-teal);
 	}
 </style>

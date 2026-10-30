@@ -10,9 +10,7 @@
 		pastCount,
 		pastHasMore = false,
 		loadMorePast,
-		eventBase,
-		bandBase,
-		showByline = true
+		eventBase
 	}: {
 		upcoming: CalendarEntry[];
 		/** First page of past shows, newest first. */
@@ -24,10 +22,6 @@
 		loadMorePast?: (offset: number) => Promise<{ events: CalendarEntry[]; hasMore: boolean }>;
 		/** Base path for event links — member routes pass '/member/events'. */
 		eventBase?: '/events' | '/member/events';
-		/** Base path for band links in the byline. */
-		bandBase?: '/directory/bands' | '/member/directory/bands';
-		/** Off on a band's own profile, where every row is that band. */
-		showByline?: boolean;
 	} = $props();
 
 	let tab = $state<'upcoming' | 'past'>('upcoming');
@@ -77,12 +71,12 @@
 
 	{#if tab === 'upcoming'}
 		{#if upcoming.length > 0}
-			<GigList events={upcoming} {eventBase} {bandBase} {showByline} />
+			<GigList events={upcoming} {eventBase} />
 		{:else}
 			<p class="shows__empty">No upcoming dates.</p>
 		{/if}
 	{:else if pastRows.length > 0}
-		<GigList events={pastRows} {eventBase} {bandBase} {showByline} />
+		<GigList events={pastRows} {eventBase} />
 		{#if hasMore && loadMorePast}
 			<div class="shows__more">
 				<Button type="button" variant="ghost" size="sm" disabled={loading} onclick={showMore}>
