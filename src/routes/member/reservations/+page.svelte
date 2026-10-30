@@ -20,6 +20,7 @@
 	import CreateModal from './CreateModal.svelte';
 	import TeachingCreateModal from './TeachingCreateModal.svelte';
 	import ReservationCard from './ReservationCard.svelte';
+	import OverdueTable from './OverdueTable.svelte';
 	import { Tabs } from 'bits-ui';
 	import clsx from 'clsx';
 	import { formatMonthDayYear, formatTimeRange } from '$lib/utils/format';
@@ -202,11 +203,7 @@
 						{#if overdue.length > 0}
 							<section class="mb-6">
 								<SectionLabel label="Overdue" count={overdue.length} />
-								<div class="card-grid">
-									{#each overdue as reservation (reservation.id)}
-										<ReservationCard {reservation} onchange={refreshReservations} />
-									{/each}
-								</div>
+								<OverdueTable reservations={overdue} />
 							</section>
 						{/if}
 					{/await}

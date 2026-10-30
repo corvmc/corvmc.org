@@ -49,9 +49,8 @@
 	);
 </script>
 
-<!-- Passed only when it has something in it: the shell's action row straddles
-     the bottom border, so an empty one is 20px of dead space under every past
-     session and every card on the dashboard. -->
+<!-- Passed only when it has something in it: an empty footer is padding under
+     every past session and every card on the dashboard. -->
 {#snippet rowActions()}
 	{#if showCancel}
 		<Form remote={cancel} onsuccess={() => toast.success('Reservation cancelled')}>

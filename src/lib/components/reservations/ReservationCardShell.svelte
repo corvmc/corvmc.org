@@ -28,7 +28,7 @@
 		startsAt: Date;
 		status: string;
 		children: Snippet;
-		/** Sits on the bottom border, right-aligned. Omit for a card with no controls. */
+		/** A right-aligned footer, pinned to the bottom of the card. Omit for a card with no controls. */
 		actions?: Snippet;
 	} = $props();
 
@@ -71,8 +71,11 @@
 			{@render children()}
 		</div>
 		{#if actions}
-			<!-- Zero-height on purpose: the row straddles the bottom border. -->
-			<div class="mt-5 flex h-0 items-center justify-end gap-2 px-2">
+			<!-- `mt-auto` pins it to the card's foot, so footers share a baseline
+			     across a grid row however tall each body is (#2109). -->
+			<div
+				class="reservation-card-actions mt-auto flex flex-wrap items-center justify-end gap-2 p-2 px-3"
+			>
 				{@render actions()}
 			</div>
 		{/if}
