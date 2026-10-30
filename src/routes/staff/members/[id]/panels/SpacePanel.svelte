@@ -12,15 +12,10 @@
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShortYear, formatTimeRange } from '$lib/utils/format';
 
-	import InstructorPanel from './InstructorPanel.svelte';
 	import OrientationCard from './OrientationCard.svelte';
 
 	let { id }: { id: string } = $props();
 </script>
-
-<!-- Teaching status leads: it is the thing that changes what the bookings
-     below cost and how far ahead they could be made. -->
-<InstructorPanel {id} />
 
 <!-- Before the bookings, because it is the question the bookings raise: somebody
      is coming in, and has anyone shown them where anything is? -->

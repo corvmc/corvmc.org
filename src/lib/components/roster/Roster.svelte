@@ -248,7 +248,10 @@
 
 		{@const chosen = panel ? rows.find((r) => r.personId === selectedId) : undefined}
 		{#if panel && chosen}
-			{@render panel(chosen, panelState)}
+			<!-- Keyed, so a second person's panel starts fresh rather than on the last one's tab. -->
+			{#key chosen.personId}
+				{@render panel(chosen, panelState)}
+			{/key}
 		{/if}
 	{/snippet}
 </DataList>

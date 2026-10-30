@@ -19,6 +19,7 @@
 	import GrantInstructorAction from './GrantInstructorAction.svelte';
 	import ReviewApplicationActions from './ReviewApplicationActions.svelte';
 	import EndGrantActions from './EndGrantActions.svelte';
+	import MemberRecordPanel from '../[id]/MemberRecordPanel.svelte';
 
 	const statusLabels = {
 		active: 'Teaching',
@@ -134,6 +135,15 @@
 			{:else if row.status === 'active'}
 				<EndGrantActions id={row.id} name={row.member.title} />
 			{/if}
+		{/snippet}
+
+		{#snippet panel(row, ctl)}
+			<MemberRecordPanel
+				id={row.personId}
+				name={row.member.title}
+				tab="instructor"
+				bind:open={ctl.open}
+			/>
 		{/snippet}
 	</Roster>
 </PageContent>

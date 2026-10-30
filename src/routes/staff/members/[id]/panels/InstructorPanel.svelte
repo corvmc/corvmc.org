@@ -6,27 +6,19 @@
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { formatDateShortYear } from '$lib/utils/format';
+	import ReviewApplicationActions from '../../instructors/ReviewApplicationActions.svelte';
 
 	/**
-	 * This member's teaching status, on the **Space** tab rather than a ninth tab
-	 * of its own — `tabs.ts` already says eight "outrun a phone even collapsed",
-	 * and the grant is a right in the room, beside the bookings it produces.
-	 *
-	 * Read-only. Granting, pausing and retiring live at `/staff/members/instructors`,
-	 * which is where the roster is and where the decision has its context; a
-	 * second set of the same buttons here would be two places to look for one
-	 * thing.
+	 * This member's teaching status. A pending application is reviewed here as
+	 * well as on the Instructors view's rows; pausing and retiring stay there.
 	 */
-	let { id }: { id: string } = $props();
+	let { id, name }: { id: string; name: string } = $props();
 </script>
 
 <RelatedList title="Teaching" result={getUserInstructor(id)}>
 	{#snippet children(instructor)}
 		{#if !instructor}
-			<EmptyState
-				title="Not an instructor"
-				description="Add them from Members → Instructors if they teach here."
-			/>
+			<EmptyState title="Not an instructor" />
 		{:else}
 			<DefinitionList>
 				<Fact label="Status"><StatusBadge status={instructor.status} /></Fact>
@@ -34,6 +26,11 @@
 					<Fact label="Teaches">{instructor.headline}</Fact>
 				{/if}
 				<Fact label="Applied">{formatDateShortYear(instructor.createdAt)}</Fact>
+				{#if instructor.status === 'requested' && instructor.applicationNote}
+					<Fact label="Application" wrap>
+						<span class="whitespace-pre-line">{instructor.applicationNote}</span>
+					</Fact>
+				{/if}
 				{#if instructor.grantedAt}
 					<Fact label="Granted">{formatDateShortYear(instructor.grantedAt)}</Fact>
 				{/if}
@@ -52,11 +49,10 @@
 				{/if}
 			</DefinitionList>
 
-			{#if instructor.status !== 'active'}
-				<p class="mt-3 text-subtle">
-					Bookings they already hold are unaffected — ending a grant is a decision about the future,
-					and a booked lesson has a student who has been told a time.
-				</p>
+			{#if instructor.status === 'requested'}
+				<div class="mt-3">
+					<ReviewApplicationActions id={instructor.id} {name} />
+				</div>
 			{/if}
 		{/if}
 	{/snippet}

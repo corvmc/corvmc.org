@@ -24,6 +24,7 @@
 	import UserTotals from './UserTotals.svelte';
 	import InviteMemberAction from './InviteMemberAction.svelte';
 	import MemberViews from './MemberViews.svelte';
+	import MemberRecordPanel from './[id]/MemberRecordPanel.svelte';
 
 	type YesNo = '' | 'yes' | 'no';
 	const yesNo = () => oneOf<YesNo>(['', 'yes', 'no'], '');
@@ -223,6 +224,10 @@
 				{/if}
 			</td>
 			<td class="col-support whitespace-nowrap">{formatDateShortYear(row.createdAt)}</td>
+		{/snippet}
+
+		{#snippet panel(row, ctl)}
+			<MemberRecordPanel id={row.personId} name={row.member.title} bind:open={ctl.open} />
 		{/snippet}
 	</Roster>
 </PageContent>

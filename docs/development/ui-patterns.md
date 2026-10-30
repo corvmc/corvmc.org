@@ -1270,7 +1270,8 @@ click that ended a text selection — so cells no longer need their own
 A row that previews its record instead of leaving the list passes a function:
 `use:rowLink={() => openPanel(row)}`, with a `<Modal placement="end">` side panel holding the
 whole entry and a link on to the full record. The primary cell's control is then a `<button>`
-that opens the same panel. `/staff/members/volunteers` is the example.
+that opens the same panel. The three Members views are the example: each opens
+`MemberRecordPanel`, the full member record, on its own default tab.
 
 Rows are deliberately **not** focusable: a focusable `<tr>` announces the whole
 row as one button. The accessible path is the real `<a>` in the primary cell,
