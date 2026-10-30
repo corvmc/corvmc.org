@@ -69,7 +69,7 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 		}
 
 		case 'band': {
-			if (can('band.read')) out.push({ panel: 'staff', href: resolve(`/staff/bands/${id}`) });
+			if (can('band.read')) out.push({ panel: 'staff', href: resolve(`/staff/groups/${id}`) });
 			// Every band route below the staff panel is keyed by slug.
 			if (ref.slug) {
 				if (inBand(id)) out.push({ panel: 'band', href: resolve(`/band/${ref.slug}`) });

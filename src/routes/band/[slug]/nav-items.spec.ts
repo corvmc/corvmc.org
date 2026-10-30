@@ -246,7 +246,7 @@ describe('bandNavItems', () => {
 			features: {}
 		}).find((i) => i.key === 'staff-tools');
 
-		expect(item?.href).toBe('/staff/bands/band-1');
+		expect(item?.href).toBe('/staff/groups/band-1');
 	});
 });
 

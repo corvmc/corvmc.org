@@ -98,7 +98,7 @@ describe('EntityChip', () => {
 				.hover();
 			const go = page.getByRole('link', { name: 'Open The Velvet Underground' });
 			await expect.element(go).toBeVisible();
-			expect(go.element().getAttribute('href')).toBe('/staff/bands/band-1');
+			expect(go.element().getAttribute('href')).toBe('/staff/groups/band-1');
 		});
 
 		it('can be turned off', async () => {

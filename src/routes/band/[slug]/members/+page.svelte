@@ -153,7 +153,7 @@
 	/>
 
 	{#if isStaffOnly}
-		<Alert type="info" href={`/staff/bands/${layout.band.id}`}>
+		<Alert type="info" href={`/staff/groups/${layout.band.id}`}>
 			You're viewing this band as staff. Roster changes go through staff tools.
 		</Alert>
 	{/if}

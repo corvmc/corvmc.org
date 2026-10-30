@@ -205,7 +205,7 @@
 				<header class="flex justify-between">
 					<CardTitle>{title}</CardTitle>
 					{#if r.bookerType === 'group' && r.bandId}
-						<Button href="/staff/bands/{r.bandId}" variant="default" size="sm">View Band</Button>
+						<Button href="/staff/groups/{r.bandId}" variant="default" size="sm">View Band</Button>
 					{:else if isEventHold(r.bookerType) && r.eventId}
 						<Button href="/staff/events/{r.eventId}" variant="default" size="sm">View Event</Button>
 					{:else if r.createdByUserId}

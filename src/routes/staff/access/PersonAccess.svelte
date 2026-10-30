@@ -175,7 +175,7 @@
 							<td class="cell-primary">
 								<a
 									class="font-medium link-hover"
-									href={resolve('/staff/committees/[id]', { id: seat.groupId })}>{seat.name}</a
+									href={resolve('/staff/groups/[id]', { id: seat.groupId })}>{seat.name}</a
 								>
 								<div class="text-muted">{seat.chair ? 'Chair' : 'Member'}</div>
 							</td>

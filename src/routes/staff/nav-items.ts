@@ -34,10 +34,8 @@ export type StaffNavKey =
 	| 'dashboard'
 	| 'inbox'
 	| 'users'
-	| 'bands'
+	| 'groups'
 	| 'music'
-	| 'clubs'
-	| 'committees'
 	| 'ballots'
 	| 'volunteer'
 	| 'volunteer-schedule'
@@ -156,18 +154,15 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Members',
 				href: resolve('/staff/members')
 			},
-			{ key: 'bands', capability: 'band.read', label: 'Bands', href: resolve('/staff/bands') },
-			// Separate from Bands on purpose: a band is a member's own project and a
-			// club is a sanctioned CMC one.
-			{ key: 'clubs', capability: 'group.read', label: 'Clubs', href: resolve('/staff/clubs') },
-			// Each committee with its open applications counted; its applications
-			// are on its own page (#1671). Every `group.read` holder also holds
-			// `committee.reviewApplications`, so this gate admits the coordinator too.
+			// Bands, Clubs and Committees are its views, each with its own gate (#2086).
+			// External acts stay at their address, linked from the Bands view.
 			{
-				key: 'committees',
-				capability: 'committee.reviewApplications',
-				label: 'Committees',
-				href: resolve('/staff/committees')
+				key: 'groups',
+				capability: 'band.read',
+				alsoFor: ['group.read', 'committee.reviewApplications'],
+				label: 'Groups',
+				href: resolve('/staff/groups'),
+				also: [resolve('/staff/bands/acts')]
 			},
 			{
 				// A dashboard, not an index: docs/development/ui-patterns.md#section-dashboards.
