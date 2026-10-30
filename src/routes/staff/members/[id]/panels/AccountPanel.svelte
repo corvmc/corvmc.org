@@ -302,7 +302,7 @@
 				successToast="Account deleted"
 				variant="error"
 				size="sm"
-				onsuccess={() => goto(resolve('/staff/users'))}
+				onsuccess={() => goto(resolve('/staff/members'))}
 			>
 				{#snippet form()}
 					<input {...purgeFields.id.as('hidden', id)} />

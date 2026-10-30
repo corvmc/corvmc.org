@@ -542,10 +542,10 @@ left alone.
 
 ### Staff
 
-| Surface                                        | Answers                                                          |
-| ---------------------------------------------- | ---------------------------------------------------------------- |
-| `/staff/instructors`                           | _Who teaches here?_ — the roster, the Requested block, the grant |
-| `/staff/users/[id]` → `panels/InstructorPanel` | _What is this person's story?_ — grant record, status, bookings  |
+| Surface                                          | Answers                                                          |
+| ------------------------------------------------ | ---------------------------------------------------------------- |
+| `/staff/instructors`                             | _Who teaches here?_ — the roster, the Requested block, the grant |
+| `/staff/members/[id]` → `panels/InstructorPanel` | _What is this person's story?_ — grant record, status, bookings  |
 
 The list route is where applications are reviewed and grants are made, mirroring `/staff/groups` as
 the only place a club is created. The panel goes on the existing **`space`** tab rather than a ninth

@@ -75,7 +75,7 @@ describe('NavGroup', () => {
 		await expect.element(header('People')).toHaveAttribute('aria-expanded', 'false');
 		// Hidden, but still in the DOM — the collapse is a class, not an `{#if}`,
 		// so nothing was ever server-rendered as missing.
-		expect(document.querySelector('a[href="/staff/users"]')).not.toBeNull();
+		expect(document.querySelector('a[href="/staff/members"]')).not.toBeNull();
 	});
 
 	it('opens a collapsed group that holds the current page, and keeps it open', async () => {

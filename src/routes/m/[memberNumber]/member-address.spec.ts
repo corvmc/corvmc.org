@@ -83,7 +83,7 @@ describe('/m/[memberNumber]', () => {
 
 		const result = await run('142', { id: 'staff-1' });
 
-		expect(result.location).toBe('/staff/users/u1');
+		expect(result.location).toBe('/staff/members/u1');
 	});
 
 	it('404s on a number nobody holds', async () => {

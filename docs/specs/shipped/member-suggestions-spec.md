@@ -110,7 +110,7 @@ Elsewhere: `'suggestion'` added to `flagEntityTypes` in `schema/flag.ts` — tha
 | `/staff/suggestions`                 | Board · Needs review · Hidden tabs                                             |
 | `/staff/suggestions/[id]`            | Review, respond, hide/restore, merge                                           |
 | `/staff/flags` + `/staff/flags/[id]` | Where suggestion reports are resolved — the only place                         |
-| `/staff/users/[id]`                  | Suggestion standing, with a link to the triggering report and a restore button |
+| `/staff/members/[id]`                | Suggestion standing, with a link to the triggering report and a restore button |
 
 Notifications: `suggestion_responded`, `suggestion_moderated`, and `suggestion_edit_reviewed`, all defaulting to email + in-app. The second one is not politeness — a suggestion can vanish because someone reported it, and silence there reads as a shadowban.
 
@@ -123,6 +123,6 @@ Notifications: `suggestion_responded`, `suggestion_moderated`, and `suggestion_e
 - a **`pending_review`** post from a member with a `member_standing` row at scope `suggestion` and an already-upheld flag behind it
 - a **pending edit** on the most-voted suggestion, so the staff before/after card has something at stake
 
-Then: vote and unvote from the board and the detail page; report another member's suggestion and watch it leave the board; dismiss the report in `/staff/flags` and watch it come back; uphold a second one and check `/staff/users/[id]` shows the author on review with a link to the report; post as that member and approve it out of the review tab; merge two suggestions with overlapping voters and confirm the union; click Merge again and confirm nothing changes.
+Then: vote and unvote from the board and the detail page; report another member's suggestion and watch it leave the board; dismiss the report in `/staff/flags` and watch it come back; uphold a second one and check `/staff/members/[id]` shows the author on review with a link to the report; post as that member and approve it out of the review tab; merge two suggestions with overlapping voters and confirm the union; click Merge again and confirm nothing changes.
 
 Then, for editing: open your own unvoted suggestion and confirm the button says **Edit** and saves; open one with votes on it and confirm it says **Request an edit**, that submitting leaves the board text untouched, and that the author sees a pending banner; approve it from `/staff/suggestions/[id]` and confirm the text changes while the vote count does not.

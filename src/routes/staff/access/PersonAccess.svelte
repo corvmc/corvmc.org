@@ -10,7 +10,7 @@
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import CommitteeGrantsAction from '$lib/components/groups/CommitteeGrantsAction.svelte';
-	import GrantCertificationAction from '../users/[id]/panels/GrantCertificationAction.svelte';
+	import GrantCertificationAction from '../members/[id]/panels/GrantCertificationAction.svelte';
 	import RevokeClearanceAction from './RevokeClearanceAction.svelte';
 	import {
 		getAccessPage,

@@ -6,7 +6,7 @@ import { type SeedRole } from './types';
 
 /**
  * A member staff banned, so the ban record and "Lift ban" render on
- * `/staff/users/seed-banned`. Signing in as `banned@` with `password` fails,
+ * `/staff/members/seed-banned`. Signing in as `banned@` with `password` fails,
  * which is the point. Kept out of `allUsers` like the other personas; member
  * number 87 is from the free 80–89 block.
  */

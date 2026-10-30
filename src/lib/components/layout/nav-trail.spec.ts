@@ -9,7 +9,7 @@ const GROUPS: NavTrailGroup[] = [
 	{
 		title: 'People',
 		items: [
-			{ key: 'users', label: 'Users', href: p('/staff/users') },
+			{ key: 'users', label: 'Users', href: p('/staff/members') },
 			{
 				key: 'volunteer',
 				label: 'Volunteering',
@@ -35,15 +35,15 @@ const GROUPS: NavTrailGroup[] = [
 
 describe('navTrail', () => {
 	it('names the row itself, unlinked, on the row page', () => {
-		expect(navTrail(GROUPS, '/staff/users')).toEqual({
+		expect(navTrail(GROUPS, '/staff/members')).toEqual({
 			crumbs: [{ label: 'Users' }],
 			here: true
 		});
 	});
 
 	it('links the row on a page beneath it', () => {
-		expect(navTrail(GROUPS, '/staff/users/abc')).toEqual({
-			crumbs: [{ label: 'Users', href: '/staff/users' }],
+		expect(navTrail(GROUPS, '/staff/members/abc')).toEqual({
+			crumbs: [{ label: 'Users', href: '/staff/members' }],
 			here: false
 		});
 	});

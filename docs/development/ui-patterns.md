@@ -270,7 +270,7 @@ one-offs — positioning, a `join-item`, a bespoke skin.
 <Button variant="ghost" size="sm">Cancel</Button>
 <Button variant="error" outline size="sm">Delete</Button>
 <Button variant="ghost" size="sm" shape="square" title="Edit"><IconPencil size={16} /></Button>
-<Button href="/staff/users">All users</Button>
+<Button href="/staff/members">All users</Button>
 ```
 
 Props:
@@ -860,7 +860,7 @@ a detail page. Pass `active` to override it. The rule lives once, in
 `$lib/components/layout/Nav/active-nav.ts`: `activeNavKey(items, pathname)` picks the item with the
 longest matching href, and each panel wraps it (`activeNavKey`, `activeMemberNavKey`,
 `activeBandNavKey`). Two details it encodes — match on `path === href || path.startsWith(href + '/')`,
-because a bare `startsWith` lets `/staff/users` claim `/staff/usersomething`; and skip any row whose
+because a bare `startsWith` lets `/staff/members` claim `/staff/membersomething`; and skip any row whose
 href does not start with `/`, because a band's "View Live Site" is filled in by the layout and an
 empty href is a prefix of everything.
 
@@ -1121,7 +1121,7 @@ reads as scrollable (#1965). It is still a fallback: tier or merge columns first
 		<th class="col-support cell-num">Amount</th>
 	{/snippet}
 	{#each rows as row (row.id)}
-		<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/users/${row.id}`)}> ... </tr>
+		<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/members/${row.id}`)}> ... </tr>
 	{/each}
 </Table>
 ```
@@ -1259,7 +1259,7 @@ the weekday earns its space.
 ### Row navigation
 
 ```svelte
-<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/users/${row.id}`)}>
+<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/members/${row.id}`)}>
 ```
 
 `rowLink` (`$lib/actions/row-link`) navigates with `goto`, ignores clicks that
@@ -1392,7 +1392,7 @@ there. A header without a `menu` never folds; its actions wrap onto their own li
 **Breadcrumbs are derived, not written.** Each panel layout (`staff`, `member`,
 `band/[slug]`) passes `navTrail()` from `$lib/components/layout/nav-trail.ts` into
 context, built from its own nav tree, and `PageHeader` appends the page's title as the
-last crumb (`crumb` overrides it). `/staff/users/abc` reads "People / Users / Jordan
+last crumb (`crumb` overrides it). `/staff/members/abc` reads "People / Users / Jordan
 Martinez" without the page naming any of it. There is no back button and no `backHref`.
 
 Only when the URL cannot place a page does it name what sits between, with `parent`:

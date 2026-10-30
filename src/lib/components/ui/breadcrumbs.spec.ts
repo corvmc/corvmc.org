@@ -7,7 +7,7 @@ import { pageCrumbs, type NavTrail } from './breadcrumbs';
 
 const p = (s: string) => s as ResolvedPathname;
 const users: NavTrail = {
-	crumbs: [{ label: 'People' }, { label: 'Users', href: p('/staff/users') }],
+	crumbs: [{ label: 'People' }, { label: 'Users', href: p('/staff/members') }],
 	here: false
 };
 
@@ -25,8 +25,8 @@ describe('pageCrumbs', () => {
 
 	it('puts explicit parents between the trail and the leaf, minus any the nav shows', () => {
 		const parents = [
-			{ label: 'Users', href: p('/staff/users') },
-			{ label: 'Jordan', href: p('/staff/users/j') }
+			{ label: 'Users', href: p('/staff/members') },
+			{ label: 'Jordan', href: p('/staff/members/j') }
 		];
 		expect(pageCrumbs(users, parents, 'Edit').map((c) => c.label)).toEqual([
 			'People',
@@ -54,9 +54,9 @@ describe('pageCrumbs', () => {
 describe('Breadcrumbs', () => {
 	it('links every crumb but the last, which is the current page', async () => {
 		const { body } = await render(Breadcrumbs, {
-			props: { crumbs: [{ label: 'Users', href: p('/staff/users') }, { label: 'Jordan' }] }
+			props: { crumbs: [{ label: 'Users', href: p('/staff/members') }, { label: 'Jordan' }] }
 		});
-		expect(body).toContain('<a href="/staff/users">Users</a>');
+		expect(body).toContain('<a href="/staff/members">Users</a>');
 		expect(body).toMatch(/aria-current="page"[^>]*>Jordan</);
 		expect(body).not.toContain('…');
 	});

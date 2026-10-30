@@ -20,7 +20,7 @@
 			| { kind: 'invited'; email: string }
 			| undefined;
 		if (r?.kind === 'existing') {
-			const href = resolve('/staff/users/[id]', { id: r.userId });
+			const href = resolve('/staff/members/[id]', { id: r.userId });
 			toast.info(`${r.name} already has an account`, {
 				action: { label: 'Open', onClick: () => goto(href) }
 			});

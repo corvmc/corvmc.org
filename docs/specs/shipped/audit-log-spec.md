@@ -1,7 +1,7 @@
 # Staff Audit Log — Spec
 
 > **Status: shipped (#1131).** The table, `recordAuditEntry`, the History card on
-> `/staff/users/[id]` (#1351), the global `/staff/audit` view (#1374), reservation and band
+> `/staff/members/[id]` (#1351), the global `/staff/audit` view (#1374), reservation and band
 > actions (#1375), ban/unban (#1377) and the retention sweep (#1376). Behavior lives in
 > business-workflows §16. Open question 1 was ruled on 2026-09-24 (#1376); 2–4 were answered in
 > #1380, and by recording successes only and using a "System" actor.
@@ -134,7 +134,7 @@ Input validation in the service, per CLAUDE.md: `action` against a closed union,
 
 ## Where it surfaces in the UI
 
-1. **User detail page** (`/staff/users/[id]`) — a collapsed "History" `InfoCard`
+1. **User detail page** (`/staff/members/[id]`) — a collapsed "History" `InfoCard`
    listing the most recent 20 entries for that user as subject, newest first:
    timestamp, actor, and a rendered one-line summary per action key. This is the
    view that answers "why was my booking cancelled?" at the point of asking, and

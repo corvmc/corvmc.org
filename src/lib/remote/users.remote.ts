@@ -12,7 +12,9 @@ import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { getUserTotals, sustainingUser, userListWhere } from '$lib/server/user/user-totals-service';
+import { getUserTotals } from '$lib/server/user/user-totals-service';
+import { listAllStaffUsers, listStaffUsers, userRosterFilters } from '$lib/server/user/user-roster';
+import { rosterEmails } from '$lib/server/roster/roster';
 
 import { requireCapability, can, requireUser } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
@@ -22,11 +24,10 @@ import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
-import { eq, or, count, desc, gte, lte, ne, inArray, sql, and } from 'drizzle-orm';
+import { eq, or, gte, lte, ne, inArray, sql, and } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
 import { positionChangeRefusal } from '$lib/server/access/position-service';
-import { memberRefColumns, toMemberRef, toEventRef } from '$lib/server/entity/refs';
-import { paginate } from '$lib/server/db/paginate';
+import { toEventRef } from '$lib/server/entity/refs';
 import { jsonArrayField } from '$lib/utils/zod-json';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
 import {
@@ -83,52 +84,15 @@ const staffUsersFilters = z.object({
 	page: z.number().optional()
 });
 
-export const getStaffUsers = query(staffUsersFilters, async (filters) => {
+export const getStaffUsers = query(staffUsersFilters, async ({ page, ...filters }) => {
 	await requireCapability('user.list');
+	return listStaffUsers(filters, { page });
+});
 
-	const where = userListWhere(filters);
-
-	const dataQ = db
-		.select({
-			member: memberRefColumns(),
-			phone: user.phone,
-			// The same predicate as the Sustaining filter and count.
-			sustaining: sql<number>`${sustainingUser()}`,
-			deletedAt: user.deletedAt,
-			createdAt: user.createdAt
-		})
-		.from(user)
-		.where(where)
-		.orderBy(desc(user.createdAt))
-		.$dynamic();
-
-	const countQ = db.select({ count: count() }).from(user).where(where);
-
-	const { rows: users, pagination } = await paginate(dataQ, countQ, {
-		page: filters.page ?? 1,
-		pageSize: 20
-	});
-
-	// The page used to be handed every role name of every row, from a second
-	// query, so that it could work out which glyph to draw. `memberRefColumns`
-	// answers that in the same statement, and the answer is the ref.
-	return {
-		rows: users.map((u) => ({
-			// Kept alongside the ref: selection, the row link and the actions menu
-			// key off a definitely-present id, where `ref.id` is nullable because a
-			// ref may describe a member who is gone.
-			id: u.member.id,
-			email: u.member.email,
-			phone: u.phone,
-			sustaining: Boolean(u.sustaining),
-			deletedAt: u.deletedAt,
-			createdAt: u.createdAt,
-			// Deactivation is the row's status, not a badge the page bolts on: it
-			// then rides the avatar like every other status in the app.
-			ref: { ...toMemberRef(u.member), status: u.deletedAt ? 'deactivated' : null }
-		})),
-		pagination
-	};
+/** Every address the All view's filters match, not just this page's. */
+export const getStaffUserEmails = query(userRosterFilters, async (f) => {
+	await requireCapability('user.list');
+	return rosterEmails(await listAllStaffUsers(f));
 });
 
 const staffPaymentsFilters = z.object({
@@ -786,7 +750,7 @@ export const getMemberDashboard = query(async () => {
 });
 
 // ---------------------------------------------------------------------------
-// Staff user record — the cross-section behind /staff/users/[id]
+// Staff user record — the cross-section behind /staff/members/[id]
 // ---------------------------------------------------------------------------
 //
 // The page is tabbed and each tab fetches its own data on first open, so these

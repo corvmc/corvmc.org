@@ -84,7 +84,7 @@ describe('activeNavKey', () => {
 	});
 
 	it('returns null outside the panel', () => {
-		expect(activeNavKey(ITEMS, '/staff/users')).toBeNull();
+		expect(activeNavKey(ITEMS, '/staff/members')).toBeNull();
 	});
 
 	it('ignores declaration order', () => {

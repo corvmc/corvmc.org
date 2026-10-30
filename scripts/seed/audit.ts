@@ -7,7 +7,7 @@ const DAY = 86_400_000;
 
 /**
  * Staff history on a handful of members, so the History card on
- * /staff/users/[id] has something to show. Covers every action key, a
+ * /staff/members/[id] has something to show. Covers every action key, a
  * self-closed account, a bulk pair sharing a batch id, a "System" row, and a
  * purge whose subject no longer exists.
  */

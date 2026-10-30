@@ -20,7 +20,7 @@ const INTERACTIVE =
  * uses, so the two can never drift:
  *
  * ```svelte
- * {@const href = resolve(`/staff/users/${u.id}`)}
+ * {@const href = resolve(`/staff/members/${u.id}`)}
  * <tr class="hover cursor-pointer" use:rowLink={href}>
  * 	<td class="cell-primary"><a {href}>…</a></td>
  * ```

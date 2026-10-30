@@ -58,7 +58,7 @@ slots into the existing public queries with no structural change to them.
   cost a member their standing, any visitor would have a griefing tool. Wired in
   exactly one place: `resolveFlag` in `src/lib/server/flag/flag-service.ts`.
 
-  Staff restore trust from `/staff/users/[id]`. Restoring flips
+  Staff restore trust from `/staff/members/[id]`. Restoring flips
   `requiresReview` to false rather than deleting the row, so "looked at and
   forgiven" stays distinguishable from "never happened".
 

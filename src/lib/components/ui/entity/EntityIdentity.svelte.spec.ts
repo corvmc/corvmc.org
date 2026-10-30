@@ -53,7 +53,7 @@ describe('EntityIdentity', () => {
 	it('derives the link from the viewer rather than a prop', async () => {
 		await render(Harness, { ref: fakeRef('member', { id: 'm1' }), panel: 'staff', isStaff: true });
 		expect(document.querySelector('td.cell-primary a')?.getAttribute('href')).toBe(
-			'/staff/users/m1'
+			'/staff/members/m1'
 		);
 	});
 

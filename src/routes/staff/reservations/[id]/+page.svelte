@@ -209,7 +209,7 @@
 					{:else if isEventHold(r.bookerType) && r.eventId}
 						<Button href="/staff/events/{r.eventId}" variant="default" size="sm">View Event</Button>
 					{:else if r.createdByUserId}
-						<Button href="/staff/users/{r.createdByUserId}" variant="default" size="sm"
+						<Button href="/staff/members/{r.createdByUserId}" variant="default" size="sm"
 							>View Profile</Button
 						>
 					{/if}

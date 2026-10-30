@@ -7,7 +7,7 @@ import { fakeRef } from '$lib/test/fixtures';
 describe('EntityChip', () => {
 	it('derives its link from the viewer rather than a prop', async () => {
 		await render(Harness, { ref: fakeRef('member', { id: 'm1' }), panel: 'staff', isStaff: true });
-		expect(document.querySelector('a')?.getAttribute('href')).toBe('/staff/users/m1');
+		expect(document.querySelector('a')?.getAttribute('href')).toBe('/staff/members/m1');
 	});
 
 	/**

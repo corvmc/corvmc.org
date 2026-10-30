@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 /**
  * Staff guards for the cross-domain half of the staff user record.
  *
- * `/staff/users/[id]` reads a member's whole participation history, and most of
+ * `/staff/members/[id]` reads a member's whole participation history, and most of
  * it lives outside users.remote.ts — their bands, shifts, loans, tickets,
  * inbox threads, marketing suppression, directory profile. Each of those is a
  * new directly addressable endpoint returning another member's private data.

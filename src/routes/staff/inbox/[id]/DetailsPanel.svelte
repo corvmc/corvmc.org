@@ -104,7 +104,7 @@
 				<div class="flex flex-col gap-1">
 					<SectionLabel label="Contact" />
 					{#if thread.contactUserId}
-						<a href={resolve(`/staff/users/${thread.contactUserId}`)} class="link link-primary">
+						<a href={resolve(`/staff/members/${thread.contactUserId}`)} class="link link-primary">
 							{thread.contactUserName ?? thread.contactName}
 						</a>
 					{:else if thread.contactName}

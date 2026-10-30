@@ -22,7 +22,7 @@ import { capabilities, positions, positionOrder, grantsCapability } from '$lib/c
  * assertable now that the nav is data, so this pins them.
  */
 
-/** `/staff/users/[id]` → `/staff/users/x`, so a route can be fed to the matcher. */
+/** `/staff/members/[id]` → `/staff/members/x`, so a route can be fed to the matcher. */
 function concrete(route: string): string {
 	return route.replace(/\[[^\]]+\]/g, 'x');
 }
@@ -49,8 +49,8 @@ describe('activeNavKey', () => {
 		['/staff/', 'dashboard'],
 		['/staff/inbox', 'inbox'],
 		['/staff/inbox/abc', 'inbox'],
-		['/staff/users', 'users'],
-		['/staff/users/abc', 'users'],
+		['/staff/members', 'users'],
+		['/staff/members/abc', 'users'],
 		['/staff/ballots/abc', 'ballots'],
 		['/staff/clubs', 'clubs'],
 		['/staff/clubs/abc', 'clubs'],
@@ -114,7 +114,7 @@ describe('activeNavKey', () => {
 		// the panel as a prefix. That fallback was the #1237 bug — it lit the
 		// Dashboard row on pages that are not the dashboard — so the root is now
 		// `exact` and an unrecognised path lights nothing.
-		expect(activeNavKey('/staff/usersomething')).toBeNull();
+		expect(activeNavKey('/staff/membersomething')).toBeNull();
 		expect(activeNavKey('/staffing')).toBeNull();
 	});
 

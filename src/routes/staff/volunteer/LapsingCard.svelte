@@ -56,7 +56,7 @@
 				<td class="cell-primary">
 					<!-- Straight to the member's page, because granting a renewal is the fix
 					     and Grant Certification already lives there. -->
-					<a href="{resolve(`/staff/users/${row.userId}`)}?tab=volunteer" class="link">
+					<a href="{resolve(`/staff/members/${row.userId}`)}?tab=volunteer" class="link">
 						<EntityIdentity ref={row.member} />
 					</a>
 				</td>

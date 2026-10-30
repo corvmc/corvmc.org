@@ -996,7 +996,7 @@ later suggestions through review first.
   but not deny (`SelfReviewError`). A second staffer answers it. See
   [specs/shipped/moderation-appeals-spec.md](../specs/shipped/moderation-appeals-spec.md).
 - **A restriction staff need to lift** → the Restore action on the member's Moderation panel
-  (`/staff/users/[id]`), one scope at a time.
+  (`/staff/members/[id]`), one scope at a time.
 - **A reported suggestion nobody can see** → reporting takes it off the board immediately,
   so this queue is time-sensitive in a way the flag queue is not.
 
@@ -1596,7 +1596,7 @@ password from there.
 
 ### Code path
 
-- Card: `src/routes/staff/users/[id]/EmailChangeCard.svelte`, mounted by `AccountPanel`.
+- Card: `src/routes/staff/members/[id]/EmailChangeCard.svelte`, mounted by `AccountPanel`.
 - Remotes: `src/lib/remote/email-change.remote.ts`. `requestEmailChange` and
   `cancelEmailChange` require `user.setEmail`; `getPendingEmailChange` requires `user.read` and
   returns `canChange` so the card hides its buttons from viewers without it.

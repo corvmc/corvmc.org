@@ -171,7 +171,7 @@ test.describe('staff event creation — minimal modal', () => {
 			`/staff/events/${eventId}`
 		);
 		// The staff account that raised the hold is not what the row is about.
-		await expect(row.locator('a[href^="/staff/users/"]')).toHaveCount(0);
+		await expect(row.locator('a[href^="/staff/members/"]')).toHaveCount(0);
 
 		// The detail page leads with the show too — its card used to be a bare
 		// "Member", with the event nowhere on the page.

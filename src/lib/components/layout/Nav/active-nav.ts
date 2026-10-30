@@ -3,7 +3,7 @@ import type { ResolvedPathname } from '$app/types';
  * Which sidebar row to light up for a pathname, shared by all three panels.
  *
  * `NavItem` decides on its own by exact pathname equality, which means every
- * detail page in the app lit no row at all: `/staff/users/abc` matched nothing,
+ * detail page in the app lit no row at all: `/staff/members/abc` matched nothing,
  * and so did `/member/reservations/abc/pay` and `/band/x/events/abc`. Panels
  * pass the result of this in as `active` instead.
  *

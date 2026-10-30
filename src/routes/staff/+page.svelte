@@ -290,7 +290,7 @@
 					<th class="col-support whitespace-nowrap">Joined</th>
 				{/snippet}
 				{#each data.members.recent as u (u.id)}
-					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/users/${u.id}`)}>
+					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/members/${u.id}`)}>
 						<td class="cell-primary"><EntityIdentity ref={u.ref} /></td>
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(u.createdAt)}</td>
 					</tr>

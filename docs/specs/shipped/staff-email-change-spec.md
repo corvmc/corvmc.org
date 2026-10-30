@@ -10,7 +10,7 @@
 ## Purpose
 
 A member types their email wrong at signup and cannot log in. Today staff have
-no way to fix it: the email field on `/staff/users/[id]` is `readonly`, and
+no way to fix it: the email field on `/staff/members/[id]` is `readonly`, and
 `updateUser` explicitly refuses an `email` key in the payload (verified in the
 audit — adding one to the POST does nothing). The only recovery is to create a
 second account, which orphans the member's reservations, credits, band
@@ -86,7 +86,7 @@ applied directly.
 ### 1. The typo (the 95% case)
 
 1. Member calls: "I can't log in, I think I typed my email wrong."
-2. Staff opens `/staff/users/[id]`, clicks **Change email** in the Account Info
+2. Staff opens `/staff/members/[id]`, clicks **Change email** in the Account Info
    card, enters `jordan@example.com`.
 3. Validation: well-formed, not already in use, different from the current one.
 4. A `pending_email_change` is created and a confirmation email goes to

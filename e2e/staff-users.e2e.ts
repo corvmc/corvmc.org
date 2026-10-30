@@ -34,11 +34,11 @@ test.describe('staff user management', () => {
 	}) => {
 		await loginAsStaff(page);
 
-		await page.goto('/staff/users');
+		await page.goto('/staff/members');
 
 		// Not bounced to `/` (non-staff) or `/login` (anonymous).
-		await expect(page).toHaveURL(/\/staff\/users/);
-		await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
+		await expect(page).toHaveURL(/\/staff\/members/);
+		await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible();
 
 		// The row for the seeded edit target is reachable from the list.
 		await expect(page.getByRole('table')).toBeVisible();
@@ -65,7 +65,7 @@ test.describe('staff user management', () => {
 
 	test('editing a profile field preserves the user’s roles', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto(`/staff/users/${SEED_TARGET_ID}`);
+		await page.goto(`/staff/members/${SEED_TARGET_ID}`);
 
 		// The heading is in the page header, which is shared by every tab.
 		await expect(page.getByRole('heading', { name: SEED_TARGET_NAME })).toBeVisible();
@@ -99,7 +99,7 @@ test.describe('staff user management', () => {
 
 		// Re-read from the server: the edit stuck AND the roles survived it.
 		// `?tab=account` also pins the URL contract the TabBar writes.
-		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=account`);
+		await page.goto(`/staff/members/${SEED_TARGET_ID}?tab=account`);
 		await expect(page.locator('input[name="phone"]')).toHaveValue(phone);
 
 		const rolesAfter = await page.locator('input[name="roles"]').inputValue();
@@ -110,7 +110,7 @@ test.describe('staff user management', () => {
 		page
 	}) => {
 		await loginAsStaff(page);
-		await page.goto(`/staff/users/${SEED_TARGET_ID}`);
+		await page.goto(`/staff/members/${SEED_TARGET_ID}`);
 
 		// Default tab. Its content comes from the same overview query the header
 		// and the tab badges already needed, so it costs no extra request.
@@ -125,16 +125,16 @@ test.describe('staff user management', () => {
 		await expect(page).toHaveURL(/[?&]tab=money/);
 
 		// A tab is addressable by URL, and an unknown one falls back to Overview.
-		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=bands`);
+		await page.goto(`/staff/members/${SEED_TARGET_ID}?tab=bands`);
 		// The user → bands direction did not exist anywhere in the app before this
 		// page; this is the pin that it does now.
 		await expect(page.getByRole('heading', { name: 'Bands', exact: true })).toBeVisible();
 
-		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=not-a-tab`);
+		await page.goto(`/staff/members/${SEED_TARGET_ID}?tab=not-a-tab`);
 		await expect(page.getByRole('heading', { name: 'At a glance' })).toBeVisible();
 
 		// Moderation is its own tab, and no longer offers to set a standing.
-		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=comms`);
+		await page.goto(`/staff/members/${SEED_TARGET_ID}?tab=comms`);
 
 		// Comms answers one question: how we reach them. Reports used to sit at
 		// the top of this panel alongside the mailing lists.
@@ -154,7 +154,7 @@ test.describe('staff user management', () => {
 
 	test('switching tabs keeps an unsaved edit', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=account`);
+		await page.goto(`/staff/members/${SEED_TARGET_ID}?tab=account`);
 
 		// Panels are kept mounted once visited rather than re-created on every
 		// tab change. Form's `guard` only blocks navigation, and a tab switch is
@@ -187,7 +187,7 @@ test.describe('staff user management', () => {
 	test('every tab is reachable on a phone', async ({ page }) => {
 		await page.setViewportSize({ width: 375, height: 812 });
 		await loginAsStaff(page);
-		await page.goto(`/staff/users/${SEED_TARGET_ID}`);
+		await page.goto(`/staff/members/${SEED_TARGET_ID}`);
 
 		// The button group is the desktop half and is display:none at this width.
 		await expect(page.getByRole('tablist')).toBeHidden();

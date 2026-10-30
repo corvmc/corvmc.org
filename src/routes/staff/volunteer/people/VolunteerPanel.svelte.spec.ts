@@ -55,7 +55,7 @@ describe('VolunteerPanel', () => {
 		await expect.element(dialog.getByRole('button', { name: 'Log Hours' })).toBeVisible();
 		await expect
 			.element(dialog.getByRole('link', { name: 'Open Record' }))
-			.toHaveAttribute('href', '/staff/users/u-1?tab=volunteer');
+			.toHaveAttribute('href', '/staff/members/u-1?tab=volunteer');
 	});
 
 	it('opens as a side panel rather than a centred dialog', async () => {

@@ -55,7 +55,7 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 
 	switch (ref.type) {
 		case 'member': {
-			if (can('user.read')) out.push({ panel: 'staff', href: resolve(`/staff/users/${id}`) });
+			if (can('user.read')) out.push({ panel: 'staff', href: resolve(`/staff/members/${id}`) });
 			if (signedIn) {
 				out.push(
 					id === viewer.userId

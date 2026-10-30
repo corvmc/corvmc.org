@@ -1,5 +1,5 @@
 ---
-title: Members & Users Overview
+title: Members Overview
 slug: staff-users-overview
 category: staff-guide
 summary: Find members, read the tier badges, and open a user's details.
@@ -7,9 +7,9 @@ minRole: staff
 sortOrder: 1
 ---
 
-## The Users page
+## The Members page
 
-**Staff → Users** lists every account. Search by name or email and page through
+**Staff → Members** lists every account. Search by name or email and page through
 results.
 
 ## Reading the list
