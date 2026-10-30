@@ -125,5 +125,5 @@
 		/>
 	</Form>
 
-	<Button href="/member/reservations" variant="ghost" class="w-full">Back to Reservations</Button>
+	<Button href={data.backPath} variant="ghost" class="w-full">Back to Reservations</Button>
 </PageContent>

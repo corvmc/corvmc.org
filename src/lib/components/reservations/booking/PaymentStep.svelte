@@ -11,11 +11,14 @@
 	let {
 		reservation,
 		fields,
-		precedingSteps = reservation ? 1 : 2
+		precedingSteps = reservation ? 1 : 2,
+		submit
 	}: {
 		reservation?: { id: string; startsAt: Date; endsAt: Date };
 		fields: { id?: RemoteFormField<string>; coverFees: RemoteFormField<boolean> };
 		precedingSteps?: number;
+		/** Set on the submitter only, for a remote that pays just when asked to. */
+		submit?: Record<string, unknown>;
 	} = $props();
 
 	const formCtx = getFormContext()!;
@@ -170,7 +173,7 @@
 		{/if}
 
 		<div class="flex justify-end pt-2">
-			<Form.SubmitButton label={payLabel} class="btn-primary" />
+			<Form.SubmitButton label={payLabel} class="btn-primary" {...submit} />
 		</div>
 	</Form.Step>
 </div>

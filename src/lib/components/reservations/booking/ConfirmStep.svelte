@@ -34,9 +34,8 @@
 		// (no Pay Ahead / online checkout) and key pricing to the reservation owner.
 		staff?: boolean;
 		/**
-		 * A band booking its practice space. One Book action and no Pay Ahead —
-		 * `bookBandReservation` takes no payment, so a payment step would charge
-		 * nobody and show a receipt for it.
+		 * A band booking its practice space. Book leaves it owed; Pay Ahead goes
+		 * to the payment step, whose submit sets `payNow` (#2095).
 		 */
 		band?: boolean;
 		/**
@@ -300,11 +299,10 @@
 				Acts don't have their own free hours.
 				{#if pricing && pricing.creditsApplicable > 0}
 					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
-					Your personal free hours apply to this booking — {freeHours}
-					{freeHours === 1 ? 'hr' : 'hrs'} of yours will cover it, and the rest is due at the door.
+					{freeHours}
+					{freeHours === 1 ? 'hr' : 'hrs'} of your own free hours apply.
 				{:else}
-					This is booked in your name, so your personal free hours would apply — you have none left
-					this month, so the full amount is due at the door.
+					It's booked in your name, and you have no free hours left this month.
 				{/if}
 			</p>
 		{:else if staff}
@@ -324,6 +322,9 @@
 			{/if}
 			{#if band}
 				<Button type="submit" variant="primary">Book Session</Button>
+				{#if showPayAhead}
+					<Button type="button" variant="ghost" onclick={() => formCtx.next()}>Pay Ahead</Button>
+				{/if}
 			{:else if staff}
 				<!-- Staff choice: comp (fully free, no credits used) or apply the member's
 				     credits (submitter name/value sets comp only when that button submits). -->
