@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { isValidationError } from '@sveltejs/kit';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -50,6 +50,12 @@ function makeIssue() {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	// Before every date below, so "already over" never fires by accident.
+	vi.useFakeTimers({ now: new Date('2026-09-01T00:00:00Z'), toFake: ['Date'] });
+});
+
+afterEach(() => {
+	vi.useRealTimers();
 });
 
 describe('createClosure validation', () => {
@@ -121,5 +127,25 @@ describe('createClosure validation', () => {
 				endsAt: buildDateInTz('2026-09-10', '18:00', DEFAULT_TIMEZONE)
 			})
 		);
+	});
+
+	// 12–1 AM picked for 12–1 PM: the closure had ended before it was saved, so
+	// it never showed as upcoming, yet the form reported "Closure added".
+	it('rejects a closure that has already ended without inserting', async () => {
+		vi.setSystemTime(new Date('2026-10-30T16:00:00Z'));
+		let thrown: unknown;
+		try {
+			await closures.createClosure(
+				{ reason: 'Rental changeover', startsAt: '2026-10-30T00:00', endsAt: '2026-10-30T01:00' },
+				makeIssue()
+			);
+		} catch (e) {
+			thrown = e;
+		}
+
+		expect(isValidationError(thrown)).toBe(true);
+		const issues = (thrown as { issues: Array<{ path: string[] }> }).issues;
+		expect(issues.some((i) => i.path?.includes('endsAt'))).toBe(true);
+		expect(db.insert).not.toHaveBeenCalled();
 	});
 });
