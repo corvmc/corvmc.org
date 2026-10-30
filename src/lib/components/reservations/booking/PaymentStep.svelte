@@ -83,7 +83,7 @@
 	let payLabel = $derived(
 		pricing
 			? pricing.remainingCents <= 0
-				? 'Confirm (Free Hours)'
+				? 'Pay with free hours'
 				: `Pay $${formatDollars(chargeTotal)}`
 			: 'Loading...'
 	);

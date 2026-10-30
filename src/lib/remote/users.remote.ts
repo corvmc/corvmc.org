@@ -4,6 +4,7 @@ import {
 	CONFIRMATION_WINDOW_DAYS,
 	LONG_TEXT_MAX,
 	SHORT_TEXT_MAX,
+	confirmationHorizon,
 	creditCompCeiling,
 	creditsToHours,
 	hoursToCredits
@@ -24,7 +25,7 @@ import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
-import { eq, or, gte, lte, ne, inArray, sql, and } from 'drizzle-orm';
+import { eq, or, gt, gte, lte, ne, inArray, isNull, sql, and } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
 import { positionChangeRefusal } from '$lib/server/access/position-service';
 import { toEventRef } from '$lib/server/entity/refs';
@@ -43,6 +44,11 @@ import { getMemberSubscription, mapDbSubscription } from '$lib/server/finance/su
 import { listUpcoming } from '$lib/server/event/event-service';
 import { getUserOverview as getUserOverviewService } from '$lib/server/user/user-overview-service';
 import { listNeedsYou } from '$lib/server/user/needs-you-service';
+import {
+	coveredByFreeHours,
+	freeHoursResetAt
+} from '$lib/server/reservation/reservation-credit-service';
+import { getReservationConfig } from '$lib/server/reservation/config';
 import { listForMember as listReservationsForMember } from '$lib/server/reservation/reservation-service';
 import { listActiveSessions, getLastLoginAt } from '$lib/server/user/user-service';
 import { inviteMember, listInviteGroups } from '$lib/server/user/member-invite-service';
@@ -649,17 +655,24 @@ export const getMemberDashboard = query(async () => {
 		// is on one load-bearing query (`custom/no-concurrent-remote-queries`),
 		// and a card that fanned out a second one would not render past kit 2.64.
 		findMatchesFor(currentUser.id),
-		// Every future booking still waiting to be committed, whatever week it
-		// falls in. `weekReservations` above is bounded to this week, so a
-		// booking further out could not reach the page at all — and the one the
-		// member has to act on is exactly the one they have forgotten (#964).
+		// Bookings inside their confirmation window that still need paying or
+		// confirming, whatever week they fall in (#964). Bounded at the window in
+		// SQL so out-of-window rows cannot use up the five (#2107).
 		db
 			.select()
 			.from(reservation)
 			.where(
 				and(
-					eq(reservation.status, 'scheduled'),
+					or(
+						eq(reservation.status, 'scheduled'),
+						and(
+							eq(reservation.status, 'confirmed'),
+							isNull(reservation.paidAt),
+							or(isNull(reservation.cashDueCents), gt(reservation.cashDueCents, 0))
+						)
+					),
 					gte(reservation.startsAt, nowDate),
+					lte(reservation.startsAt, confirmationHorizon(nowDate)),
 					or(
 						and(
 							eq(reservation.createdByUserId, currentUser.id),
@@ -680,15 +693,29 @@ export const getMemberDashboard = query(async () => {
 
 	const subscription = mapDbSubscription(dbSubscription);
 
+	// Only read when there is a booking to price; the figure is live, never held.
+	const reservationConfig = unconfirmed.length > 0 ? await getReservationConfig() : null;
+	const freeHoursWallet = {
+		balance: credits.free_hours ?? 0,
+		resetAt: freeHoursResetAt(dbSubscription)
+	};
+
 	// After the fan-out above rather than inside it: it needs three of its
 	// results. Its own five reads are parallel, so this is one extra round of
 	// work on the server, not five.
 	const needsYou = await listNeedsYou({
 		userId: currentUser.id,
-		unconfirmed: unconfirmed.map((r) => ({
+		reservations: unconfirmed.map((r) => ({
 			id: r.id,
 			startsAt: r.startsAt,
-			bandName: r.bookerType === 'group' ? (bandNameMap[r.bookerId] ?? null) : null
+			status: r.status,
+			paidAt: r.paidAt,
+			cashDueCents: r.cashDueCents,
+			bandName: r.bookerType === 'group' ? (bandNameMap[r.bookerId] ?? null) : null,
+			coveredByFreeHours:
+				r.createdByUserId === currentUser.id &&
+				reservationConfig != null &&
+				coveredByFreeHours(r, freeHoursWallet, reservationConfig)
 		})),
 		pendingInviteCount,
 		profileComplete,

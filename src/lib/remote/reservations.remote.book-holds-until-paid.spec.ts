@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockUser } from '$lib/server/db/test-factory';
 
-// #2067: a wizard booking that the member's usable free hours fully cover is
-// settled when it is made, even outside the confirmation window. Partial
-// cover, or a session on or after the reset, is still the scheduled hold.
+// #2108: booking prices nothing. Outside the confirmation window the primary
+// button only holds the room, even when free hours would cover it; paying
+// ahead (a $0 payment when they do) is what confirms early. Inside the window,
+// confirming spends the free hours then, and any remainder is cash at the door.
 
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });
 
@@ -11,6 +12,8 @@ const DAY = 24 * 60 * 60 * 1000;
 const farOutDate = new Date(Date.now() + 30 * DAY).toISOString().slice(0, 10);
 /** The session's start, as the mocked `buildDateInTz` builds it. */
 const farOut = new Date(`${farOutDate}T09:00:00`);
+const soonDate = new Date(Date.now() + 1 * DAY).toISOString().slice(0, 10);
+const soon = new Date(`${soonDate}T09:00:00`);
 
 // Payloads passed to `db.update(...).set(...)`, in call order.
 const updateSets: Record<string, unknown>[] = [];
@@ -138,13 +141,14 @@ vi.mock('$app/server', () => ({
 
 const { bookAndPayReservation } = (await import('$lib/remote/reservations.remote')) as any;
 
-/** A one-hour wizard booking 30 days out, submitted with the primary button. */
-function book() {
+/** A one-hour wizard booking; `skipPayment` is the primary button, else Pay Ahead. */
+function book(date = farOutDate, primary = true) {
 	return bookAndPayReservation({
-		date: farOutDate,
+		date,
 		startTime: '09:00',
 		endTime: '10:00',
-		skipPayment: 'on'
+		coverFees: false,
+		...(primary ? { skipPayment: 'on' } : {})
 	});
 }
 
@@ -154,27 +158,22 @@ beforeEach(() => {
 	can.mockResolvedValue(false);
 });
 
-describe('bookAndPayReservation settles a fully covered booking from free hours', () => {
-	it('confirms and commits credits when free hours cover it before the reset', async () => {
+describe('bookAndPayReservation prices at payment, not at booking', () => {
+	it('holds a fully covered booking outside the window without moving any hours', async () => {
 		wallet.balance = 8;
 		wallet.resetAt = new Date(farOut.getTime() + 7 * DAY);
 
 		const result = await book();
 
-		expect(result).toMatchObject({ reservationId: 'res-1', confirmed: true });
-		expect(result.scheduled).toBeUndefined();
-		expect(commitReservationCredits).toHaveBeenCalledWith(
-			expect.objectContaining({ reservationId: 'res-1', userId: 'user-1' })
-		);
-		expect(recordReservationCredit).toHaveBeenCalled();
-		expect(updateSets).toContainEqual(
-			expect.objectContaining({ status: 'confirmed', cashDueCents: 0, creditsUsed: 1 })
-		);
-		expect(announceConfirmed).toHaveBeenCalledWith('res-1');
-		expect(checkout).not.toHaveBeenCalled();
+		expect(result).toMatchObject({ reservationId: 'res-1', scheduled: true });
+		expect(result.confirmed).toBeUndefined();
+		expect(commitReservationCredits).not.toHaveBeenCalled();
+		expect(recordReservationCredit).not.toHaveBeenCalled();
+		expect(updateSets).toEqual([]);
+		expect(announceConfirmed).not.toHaveBeenCalled();
 	});
 
-	it('leaves a partly covered booking as a scheduled hold', async () => {
+	it('holds a partly covered booking outside the window', async () => {
 		wallet.balance = 1;
 		wallet.resetAt = new Date(farOut.getTime() + 7 * DAY);
 
@@ -185,14 +184,31 @@ describe('bookAndPayReservation settles a fully covered booking from free hours'
 		expect(updateSets).toEqual([]);
 	});
 
-	it('leaves a booking on or after the reset as a scheduled hold', async () => {
+	it('settles a covered booking paid ahead as a $0 payment, outside the window', async () => {
 		wallet.balance = 8;
-		wallet.resetAt = farOut;
+		wallet.resetAt = new Date(farOut.getTime() + 7 * DAY);
 
-		const result = await book();
+		const result = await book(farOutDate, false);
 
-		expect(result).toMatchObject({ reservationId: 'res-1', scheduled: true });
-		expect(commitReservationCredits).not.toHaveBeenCalled();
-		expect(updateSets).toEqual([]);
+		expect(result).toMatchObject({ reservationId: 'res-1', paid: true });
+		expect(commitReservationCredits).toHaveBeenCalledWith(
+			expect.objectContaining({ reservationId: 'res-1', userId: 'user-1' })
+		);
+		expect(updateSets).toContainEqual(
+			expect.objectContaining({ status: 'confirmed', cashDueCents: 0, creditsUsed: 1 })
+		);
+		expect(checkout).not.toHaveBeenCalled();
+	});
+
+	it('spends free hours when the member confirms inside the window', async () => {
+		wallet.balance = 8;
+		wallet.resetAt = new Date(soon.getTime() + 7 * DAY);
+
+		const result = await book(soonDate);
+
+		expect(result).toMatchObject({ reservationId: 'res-1', confirmed: true });
+		expect(commitReservationCredits).toHaveBeenCalled();
+		expect(updateSets).toContainEqual(expect.objectContaining({ status: 'confirmed' }));
+		expect(checkout).not.toHaveBeenCalled();
 	});
 });

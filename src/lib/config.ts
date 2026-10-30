@@ -169,6 +169,11 @@ export function confirmWindowOpensAt(startsAt: Date): Date {
 	return new Date(startsAt.getTime() - CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 }
 
+/** The latest start whose confirmation window is open at `now`. */
+export function confirmationHorizon(now: Date = new Date()): Date {
+	return new Date(now.getTime() + CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+}
+
 /** Whether `now` is inside the member confirmation window for `startsAt`. */
 export function withinConfirmationWindow(startsAt: Date, now: Date = new Date()): boolean {
 	return now.getTime() >= confirmWindowOpensAt(startsAt).getTime();

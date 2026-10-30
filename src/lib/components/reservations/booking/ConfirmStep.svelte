@@ -84,30 +84,20 @@
 
 	const isRecurring = $derived(recurringFrequency !== '');
 
-	// Only offer "Pay Ahead" when a balance is actually owed; otherwise "Confirm"
-	// (which skips payment) is the single action — no redundant payment screen.
-	const showPayAhead = $derived(payAhead && !!pricing && pricing.remainingCents > 0);
-
-	// Free hours that cover it all settle the booking now, window or not (#2067).
-	const coveredByFreeHours = $derived(
-		!!pricing && pricing.creditsApplicable > 0 && pricing.remainingCents <= 0
-	);
-
 	// The confirmation window is enforced by `bookAndPayReservation`, so it
 	// applies to exactly the flow that goes through it: not a staff confirm, not
 	// a band session, and not teaching time (`payAhead={false}`, and
-	// `bookInstructorReservation` has no window at all).
-	//
-	// Before this the step drew "Free hours applied" and a button called Confirm
-	// for a booking that could only be held — the credits were never committed
-	// and the button's 400 reached the member nowhere.
+	// `bookInstructorReservation` has no window at all). Before it opens, booking
+	// only holds the room, even when free hours would cover it (#2108).
 	const beforeConfirmWindow = $derived(
-		payAhead &&
-			!staff &&
-			!band &&
-			!coveredByFreeHours &&
-			!!startsAt &&
-			!withinConfirmationWindow(startsAt)
+		payAhead && !staff && !band && !!startsAt && !withinConfirmationWindow(startsAt)
+	);
+
+	// Paying is the only way to confirm a held booking, so Pay Ahead is offered
+	// whenever booking would not confirm it, even at $0. Inside the window,
+	// Confirm already spends the free hours, so it is offered only for a balance.
+	const showPayAhead = $derived(
+		payAhead && !!pricing && (pricing.remainingCents > 0 || beforeConfirmWindow || band)
 	);
 	const confirmOpensLabel = $derived(startsAt ? formatDate(confirmWindowOpensAt(startsAt)) : '');
 
@@ -250,8 +240,8 @@
 
 			{#if beforeConfirmWindow}
 				<p class="text-subtle">
-					Confirmation opens {confirmOpensLabel}. We'll hold the room until then — or pay online now
-					to lock it in.
+					Confirmation opens {confirmOpensLabel}. We'll hold the room until then — or pay now to
+					lock it in{pricing.remainingCents <= 0 ? ' with your free hours' : ''}.
 				</p>
 			{/if}
 		{/if}

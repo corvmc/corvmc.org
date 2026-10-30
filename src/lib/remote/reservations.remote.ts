@@ -1353,10 +1353,9 @@ export const createReservation = form(staffCreateSchema, async (data, issue) => 
 		staffUserId: staffUser.id
 	});
 
-	// The row lands directly in `confirmed`, so settle like the member confirm
-	// path would: commit the member's free hours and record the cash remainder.
-	// Without this, cashDueCents stays null and the reservation reads as comped
-	// with no way to record a door payment.
+	// The row lands `confirmed`, and confirming without paying spends the
+	// member's qualifying free hours (#2060's reset rule) now; cash covers only
+	// the remainder, stored as `cashDueCents` so the booking is priced (#2108).
 	const reservationConfig = await getReservationConfig();
 	const hourlyRateCents = termsFor(
 		data.bandId ? 'group' : 'user',
@@ -1672,25 +1671,12 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
-	// Outside the confirmation window only a real Stripe charge, a full
-	// free-hours settle, or `reservation.comp` (#1434) commits a reservation.
+	// Outside the window, booking is a hold: nothing is priced or committed,
+	// even when free hours would cover it (#2108). Paying ahead, below, is the
+	// only way to confirm early. The hold is the answer, not a 400.
 	const waivesWindow = await can('reservation.comp');
 	const outsideWindow = !waivesWindow && !withinConfirmationWindow(startsAt);
-
-	// Free hours that fully cover it settle it now, window or not (#2067), so
-	// only a Confirm that leaves something owed is held. The hold is the answer,
-	// not a 400: the `scheduled` row `create()` wrote survives either way.
-	if (
-		outsideWindow &&
-		data.skipPayment === 'on' &&
-		!(await isFullyCreditCovered(
-			locals.user.id,
-			startsAt,
-			durationHours,
-			totalCents,
-			hourlyRateCents
-		))
-	) {
+	if (outsideWindow && data.skipPayment === 'on') {
 		return {
 			reservationId: res.id,
 			scheduled: true as const,
@@ -1699,8 +1685,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	}
 
 	if (data.skipPayment === 'on') {
-		// Confirm: commit free hours now. If fully covered, it's settled; otherwise
-		// the cash remainder is collected at the door.
+		// Confirm inside the window: price it now from free hours, and any
+		// remainder is cash at the door (owner decision on #2108).
 		const { settled } = await commitCreditsAndSettleIfCovered({
 			reservationId: res.id,
 			userId: locals.user.id,
