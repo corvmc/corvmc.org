@@ -12,7 +12,8 @@ import {
 	createMaintenanceSchedule as createService,
 	getScheduleGroupId,
 	listMaintenanceSchedules,
-	retireMaintenanceSchedule as retireService
+	retireMaintenanceSchedule as retireService,
+	updateMaintenanceSchedule as updateService
 } from '$lib/server/volunteer/maintenance-schedule-service';
 import { searchAssetOptions } from '$lib/server/inventory/asset-service';
 import { getVolunteerWorklist } from './volunteer.remote';
@@ -23,7 +24,7 @@ import { getMemberGroup } from './groups.remote';
  * work orders it writes, one at a time.
  */
 
-/** One load-bearing query for `/staff/recurring-work`: rows plus the form's options. */
+/** One load-bearing query for the Schedule's Recurring view: rows plus the form's options. */
 export const getRecurringWorkPage = query(async () => {
 	await requireCapability('volunteer.read');
 	const [schedules, roles, projects] = await Promise.all([
@@ -84,6 +85,34 @@ export const createRecurringWork = form(
 			mapDomainError(err);
 		}
 		await Promise.all([getRecurringWorkPage().refresh(), getVolunteerWorklist().refresh()]);
+		return { success: true };
+	}
+);
+
+/** Changes what later occurrences are written with; the open one keeps its own. */
+export const updateRecurringWork = form(
+	z.object({
+		id: z.string().min(1),
+		name: recurringFields.name,
+		intervalDays: recurringFields.intervalDays,
+		capacity: recurringFields.capacity,
+		notes: recurringFields.notes,
+		projectId: z.union([z.literal(''), z.uuid()]).optional()
+	}),
+	async (data) => {
+		await requireCapability('volunteer.manageRecurring');
+		try {
+			await updateService(data.id, {
+				name: data.name,
+				intervalDays: parseInt(data.intervalDays, 10),
+				capacity: data.capacity ? parseInt(data.capacity, 10) : 1,
+				projectId: data.projectId || null,
+				notes: data.notes
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getRecurringWorkPage().refresh();
 		return { success: true };
 	}
 );

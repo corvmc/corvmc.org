@@ -704,10 +704,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/recurring-work",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/recurring/[id]",
 		"panel": "staff"
 	},
@@ -781,6 +777,10 @@
 	},
 	{
 		"route": "/staff/volunteer/schedule",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/volunteer/schedule/recurring",
 		"panel": "staff"
 	},
 	{

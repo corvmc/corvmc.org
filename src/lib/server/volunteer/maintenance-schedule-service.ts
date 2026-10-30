@@ -172,6 +172,35 @@ export async function createMaintenanceSchedule(data: {
 	return { id: row.id };
 }
 
+/**
+ * Edits what later occurrences are written with. The open one is real work
+ * already queued, so it keeps what it was written with.
+ */
+export async function updateMaintenanceSchedule(
+	id: string,
+	data: {
+		name: string;
+		intervalDays: number;
+		capacity: number;
+		projectId?: string | null;
+		notes?: string | null;
+	}
+): Promise<void> {
+	const rows = await db
+		.update(maintenanceSchedule)
+		.set({
+			name: validName(data.name),
+			intervalDays: validInterval(data.intervalDays),
+			capacity: validCapacity(data.capacity),
+			projectId: data.projectId || null,
+			notes: validNotes(data.notes),
+			updatedAt: new Date()
+		})
+		.where(and(eq(maintenanceSchedule.id, id), isNull(maintenanceSchedule.retiredAt)))
+		.returning({ id: maintenanceSchedule.id });
+	if (rows.length === 0) throw new MaintenanceScheduleNotFoundError();
+}
+
 /** Stops further occurrences. The open one stays: it is real work already queued. */
 export async function retireMaintenanceSchedule(id: string): Promise<void> {
 	const rows = await db
@@ -198,6 +227,7 @@ export interface MaintenanceScheduleRow {
 	name: string;
 	intervalDays: number;
 	capacity: number;
+	notes: string | null;
 	retiredAt: Date | null;
 	roleName: string;
 	projectId: string | null;
@@ -223,6 +253,7 @@ export async function listMaintenanceSchedules(
 			name: maintenanceSchedule.name,
 			intervalDays: maintenanceSchedule.intervalDays,
 			capacity: maintenanceSchedule.capacity,
+			notes: maintenanceSchedule.notes,
 			retiredAt: maintenanceSchedule.retiredAt,
 			roleName: volunteerRole.name,
 			projectId: maintenanceSchedule.projectId,

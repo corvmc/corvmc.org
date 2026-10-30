@@ -56,7 +56,6 @@ export type StaffNavKey =
 	| 'incidents'
 	| 'keys'
 	| 'projects'
-	| 'recurring-work'
 	| 'venues'
 	| 'calendar'
 	| 'flags'
@@ -215,20 +214,13 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Project Templates',
 				href: resolve('/staff/project-templates')
 			},
-			// Every work order, in a project or not (#2034). The route stays put.
+			// Every work order, in a project or not (#2034), and the recurring
+			// work that writes them (#2087). The route stays put.
 			{
 				key: 'volunteer-schedule',
 				capability: 'volunteer.manageShifts',
 				label: 'Schedule',
 				href: resolve('/staff/volunteer/schedule')
-			},
-			// Beside Projects, not under Volunteering (#1796): it defines work and
-			// writes work orders; Volunteering pairs that work with people.
-			{
-				key: 'recurring-work',
-				capability: 'volunteer.read',
-				label: 'Recurring Work',
-				href: resolve('/staff/recurring-work')
 			}
 		]
 	},

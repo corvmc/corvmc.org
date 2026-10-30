@@ -37,7 +37,9 @@ import {
 	nextDueAt,
 	nextOccurrenceInsert,
 	retireMaintenanceSchedule,
-	MaintenanceScheduleError
+	updateMaintenanceSchedule,
+	MaintenanceScheduleError,
+	MaintenanceScheduleNotFoundError
 } from './maintenance-schedule-service';
 
 const DAY = 86_400_000;
@@ -181,6 +183,45 @@ describe('retireMaintenanceSchedule', () => {
 		expect(set.retiredAt).toBeInstanceOf(Date);
 		const where = chainCalls.find((c) => c.method === 'where')!.args[0] as SQL;
 		expect(new SQLiteSyncDialect().sqlToQuery(where).sql).toContain('"retired_at" is null');
+	});
+});
+
+describe('updateMaintenanceSchedule (#2087)', () => {
+	const edit = { name: ' Weekly mop ', intervalDays: 7, capacity: 2, projectId: '', notes: '' };
+
+	it('rewrites only a live schedule, trimming and clearing as create does', async () => {
+		selectQueue = [[{ id: 'ms-1' }]];
+		await updateMaintenanceSchedule('ms-1', edit);
+
+		const set = chainCalls.find((c) => c.method === 'set')!.args[0] as any;
+		expect(set).toMatchObject({
+			name: 'Weekly mop',
+			intervalDays: 7,
+			projectId: null,
+			notes: null
+		});
+		const where = chainCalls.find((c) => c.method === 'where')!.args[0] as SQL;
+		expect(new SQLiteSyncDialect().sqlToQuery(where).sql).toContain('"retired_at" is null');
+	});
+
+	it('leaves the open occurrence alone', async () => {
+		selectQueue = [[{ id: 'ms-1' }]];
+		await updateMaintenanceSchedule('ms-1', edit);
+		expect(batch).not.toHaveBeenCalled();
+		expect(valuesCalls()).toHaveLength(0);
+	});
+
+	it('refuses an interval under a day', async () => {
+		await expect(updateMaintenanceSchedule('ms-1', { ...edit, intervalDays: 0 })).rejects.toThrow(
+			MaintenanceScheduleError
+		);
+	});
+
+	it('404s on a retired or unknown schedule', async () => {
+		selectQueue = [[]];
+		await expect(updateMaintenanceSchedule('ms-1', edit)).rejects.toThrow(
+			MaintenanceScheduleNotFoundError
+		);
 	});
 });
 
