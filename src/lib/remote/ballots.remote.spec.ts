@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { surfaces } from '$lib/config';
 
 // Each export is only as guarded as its own first lines. These pin who may do
 // what, and that a refused caller never reaches the service.
@@ -106,9 +107,22 @@ function aBallot(kind: 'member' | 'group', status: string, extra: Record<string,
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	surfaces.ballots = true;
 	held = new Set();
 	adminOf = new Set();
 	electorIds = new Set();
+});
+
+describe('while Ballots is switched off (#2116)', () => {
+	it('answers 404 even to ballot.manage, before the service', async () => {
+		surfaces.ballots = false;
+		held.add('ballot.manage');
+		await expect(remote.getStaffBallots()).rejects.toMatchObject({ status: 404 });
+		await expect(remote.createBallot({ kind: 'member', ...NEW_BALLOT })).rejects.toMatchObject({
+			status: 404
+		});
+		expect(svc.createBallot).not.toHaveBeenCalled();
+	});
 });
 
 describe('creating', () => {

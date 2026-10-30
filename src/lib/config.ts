@@ -15,6 +15,21 @@ export function pageTitle(title?: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Surfaces switched off in code
+// ---------------------------------------------------------------------------
+
+/**
+ * Off until usable (#2116). Not a feature flag: turning one on is a deploy, so
+ * staff cannot toggle it. Nav, routes, remotes and links all read this object at
+ * call time, never at module load, which is what lets a spec switch one on.
+ */
+export const surfaces: Record<'classifieds' | 'ballots', boolean> = {
+	classifieds: false,
+	ballots: false
+};
+export type Surface = keyof typeof surfaces;
+
+// ---------------------------------------------------------------------------
 // Pagination
 // ---------------------------------------------------------------------------
 

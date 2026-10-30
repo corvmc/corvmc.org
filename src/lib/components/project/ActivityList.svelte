@@ -9,6 +9,7 @@
 	import { resolve } from '$app/paths';
 	import Button from '$lib/components/ui/Button.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import { surfaces } from '$lib/config';
 	import { formatDateTimeShort } from '$lib/utils/format';
 
 	/** One page of activity, newest first; "Show older" asks for a longer page. */
@@ -28,10 +29,13 @@
 	const activity = $derived(await query(limit));
 
 	type Origin = NonNullable<ActivityPage['items'][number]['origin']>;
+	// A ballot step stays in the history, unlinked while Ballots is off (#2116).
 	const originHref = (o: Origin) =>
 		o.kind === 'suggestion'
 			? resolve('/staff/suggestions/[id]', { id: o.id })
-			: resolve('/staff/ballots/[id]', { id: o.id });
+			: surfaces.ballots
+				? resolve('/staff/ballots/[id]', { id: o.id })
+				: null;
 </script>
 
 {#if activity.items.length === 0}
@@ -44,7 +48,7 @@
 		{#each activity.items as item (item.id)}
 			<li class="py-2 text-sm">
 				<div>
-					{#if item.origin}
+					{#if item.origin && originHref(item.origin)}
 						<a class="link" href={originHref(item.origin)}>{item.summary}</a>
 					{:else}
 						{item.summary}

@@ -22,7 +22,7 @@
  */
 
 import { resolve } from '$app/paths';
-import { hasCapability, type Capability } from '$lib/config';
+import { hasCapability, surfaces, type Capability, type Surface } from '$lib/config';
 import {
 	activeNavKey as resolveActiveNavKey,
 	childHrefsFor as resolveChildHrefs,
@@ -114,6 +114,8 @@ export interface StaffNavItem extends NavNode<StaffNavKey> {
 	capability?: Capability;
 	/** Further capabilities that each also show the row, for a page with per-view gates. */
 	alsoFor?: readonly Capability[];
+	/** A surface switched off in code drops the row for everyone (#2116). */
+	surface?: Surface;
 	/** Present ⇒ the layout renders this row as a `Nav.Collapsible`. */
 	children?: StaffNavItem[];
 }
@@ -195,6 +197,7 @@ export const staffNavSections: StaffNavSection[] = [
 			{
 				key: 'ballots',
 				capability: 'ballot.manage',
+				surface: 'ballots',
 				label: 'Ballots',
 				href: resolve('/staff/ballots')
 			},
@@ -397,6 +400,7 @@ export const staffNavSections: StaffNavSection[] = [
 			{
 				key: 'classifieds',
 				capability: 'listing.review',
+				surface: 'classifieds',
 				label: 'Classifieds',
 				href: resolve('/staff/classifieds')
 			},
@@ -571,6 +575,7 @@ export function activeNavKey(pathname: string): StaffNavKey | null {
  */
 export function filterNavItems(items: StaffNavItem[], held: readonly string[]): StaffNavItem[] {
 	return items.flatMap((item) => {
+		if (item.surface && !surfaces[item.surface]) return [];
 		const allowed = [item.capability, ...(item.alsoFor ?? [])].filter((c) => c !== undefined);
 		if (allowed.length > 0 && !allowed.some((c) => hasCapability(held, c))) return [];
 		if (!item.children) return [item];

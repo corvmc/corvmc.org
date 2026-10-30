@@ -5,6 +5,7 @@ import { form } from './_remote';
 import { can, requireCapability, requireUser } from '$lib/server/authorization';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { mapDomainError } from '$lib/server/errors';
+import { requireSurface } from '$lib/surfaces';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	ballotKinds,
@@ -67,6 +68,7 @@ async function loadBallot(ballotId: string): Promise<BallotDetail> {
 
 async function requireManager(ballotId: string) {
 	const me = requireUser();
+	requireSurface('ballots');
 	const b = await loadBallot(ballotId);
 	if (b.kind === 'member') await requireCapability('ballot.manage');
 	else if (!(await can('ballot.manage'))) await requireGroupRole({ id: b.groupId! }, 'admin');
@@ -103,6 +105,7 @@ const ballotIdField = z.object({ ballotId: z.string().min(1) });
 /** `/member/ballots`: what the caller can vote on, certify or read, and where they can create. */
 export const getMemberBallots = query(async () => {
 	const me = requireUser();
+	requireSurface('ballots');
 	const [committees, staff] = await Promise.all([
 		listCommitteeRosters({ adminUserId: me.id }),
 		can('ballot.manage')
@@ -116,6 +119,7 @@ export const getMemberBallots = query(async () => {
 /** `/staff/ballots`: every ballot, and every committee a ballot could belong to. */
 export const getStaffBallots = query(async () => {
 	await requireCapability('ballot.manage');
+	requireSurface('ballots');
 	const [ballots, committees] = await Promise.all([listAllBallots(), listCommitteeRosters()]);
 	return { ballots, committees };
 });
@@ -127,6 +131,7 @@ export const getStaffBallots = query(async () => {
  */
 export const getBallotPage = query(z.string().min(1), async (ballotId) => {
 	const me = requireUser();
+	requireSurface('ballots');
 	const b = await loadBallot(ballotId);
 	const status = ballotStatusOf(b);
 	const [manager, elector] = await Promise.all([canManage(b), isElector(ballotId, me.id)]);
@@ -226,6 +231,7 @@ export const createBallot = form(
 	}),
 	async (data) => {
 		const me = requireUser();
+		requireSurface('ballots');
 		if (data.kind === 'member') {
 			await requireCapability('ballot.manage');
 		} else {
@@ -299,6 +305,7 @@ export const castBallotVote = form(
 	z.object({ ballotId: z.string().min(1), optionId: z.string().min(1, 'Choose one') }),
 	async (data) => {
 		const me = requireUser();
+		requireSurface('ballots');
 		await castVote(data.ballotId, me.id, data.optionId);
 		await getBallotPage(data.ballotId).refresh();
 	}
@@ -311,6 +318,7 @@ export const certifyBallotForm = form(
 	}),
 	async ({ ballotId, outcome }) => {
 		const me = requireUser();
+		requireSurface('ballots');
 		await certifyBallot(ballotId, me.id, outcome === 'passed');
 		await getBallotPage(ballotId).refresh();
 	}
@@ -325,6 +333,7 @@ export const setElectorOverrideForm = form(
 	}),
 	async (data) => {
 		const staff = await requireCapability('ballot.manage');
+		requireSurface('ballots');
 		await setElectorOverride(
 			data.ballotId,
 			{ userId: data.userId, include: data.include === 'include', reason: data.reason },

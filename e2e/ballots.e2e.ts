@@ -8,11 +8,15 @@ import {
 	readCertifiedAt
 } from './fixtures/seed-ballots';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
+import { surfaces } from '../src/lib/config';
 
 /**
  * Formal balloting end to end: a secret vote lands as one participation row
  * and one counter increment, and the named certifier publishes a closed result.
  */
+
+// Ballots is off in code (#2116); switching it back on re-enables these.
+test.skip(!surfaces.ballots, 'Ballots is switched off in src/lib/config.ts (#2116)');
 
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 

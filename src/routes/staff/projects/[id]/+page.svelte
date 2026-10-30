@@ -21,7 +21,8 @@
 	import {
 		isProjectArchived,
 		projectArchiveOutcomeOptions,
-		PROJECT_UNARCHIVED_STATUS
+		PROJECT_UNARCHIVED_STATUS,
+		surfaces
 	} from '$lib/config';
 	import { formatDateShort } from '$lib/utils/format';
 	import { page } from '$app/state';
@@ -258,13 +259,16 @@
 					<Fact label="Authorised by">
 						<BallotLine
 							ballot={origin.ballot}
-							href={resolve(`/staff/ballots/${origin.ballot.id}`)}
+							href={surfaces.ballots ? resolve(`/staff/ballots/${origin.ballot.id}`) : null}
 						/>
 					</Fact>
 				{/if}
 				{#each origin.decidedBy as b (b.id)}
 					<Fact label="Put to a ballot">
-						<BallotLine ballot={b} href={resolve(`/staff/ballots/${b.id}`)} />
+						<BallotLine
+							ballot={b}
+							href={surfaces.ballots ? resolve(`/staff/ballots/${b.id}`) : null}
+						/>
 					</Fact>
 				{/each}
 				{#if !origin.suggestion && !origin.ballot && origin.decidedBy.length === 0}

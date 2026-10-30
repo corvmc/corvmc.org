@@ -13,7 +13,7 @@ import {
 	type StaffNavItem,
 	type StaffNavKey
 } from './nav-items';
-import { capabilities, positions, positionOrder, grantsCapability } from '$lib/config';
+import { capabilities, positions, positionOrder, grantsCapability, surfaces } from '$lib/config';
 
 /**
  * The staff sidebar's two long-standing defects were both invisible in the
@@ -383,5 +383,27 @@ describe('filterNavSections', () => {
 		const keys = kept.map((s) => s.key);
 		expect(keys).toContain('money');
 		expect(keys.length).toBeLessThan(staffNavSections.length);
+	});
+});
+
+describe('surfaces switched off in code (#2116)', () => {
+	const keys = () =>
+		filterNavSections(staffNavSections, ['ballot.manage', 'listing.review']).flatMap((sec) =>
+			sec.items.map((i) => i.key)
+		);
+
+	it('drops Ballots and Classifieds for everyone while off, and keeps them once on', () => {
+		const saved = { ...surfaces };
+		try {
+			surfaces.ballots = false;
+			surfaces.classifieds = false;
+			expect(keys()).not.toContain('ballots');
+			expect(keys()).not.toContain('classifieds');
+			surfaces.ballots = true;
+			surfaces.classifieds = true;
+			expect(keys()).toEqual(expect.arrayContaining(['ballots', 'classifieds']));
+		} finally {
+			Object.assign(surfaces, saved);
+		}
 	});
 });
