@@ -188,7 +188,7 @@ async function requireBandCustomer(slug: string): Promise<string> {
 		.where(eq(bandSite.groupId, band.id))
 		.limit(1);
 
-	if (!row?.stripeCustomerId) error(400, 'This act has no billing account yet.');
+	if (!row?.stripeCustomerId) error(400, 'This band has no billing account yet.');
 	return row.stripeCustomerId;
 }
 
@@ -223,7 +223,7 @@ export const finishBandAddCard = command(
 		// matters is the customer it was created against.
 		const intent = await stripe.setupIntents.retrieve(data.setupIntentId);
 		const owner = typeof intent.customer === 'string' ? intent.customer : intent.customer?.id;
-		if (owner !== customerId) error(403, 'That setup does not belong to this act.');
+		if (owner !== customerId) error(403, 'That setup does not belong to this band.');
 
 		const methodId =
 			typeof intent.payment_method === 'string' ? intent.payment_method : intent.payment_method?.id;

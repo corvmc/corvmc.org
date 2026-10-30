@@ -212,7 +212,7 @@ describe('route coverage', () => {
 		// Pointed at by a sticker on a piece of gear and nothing else. A row would
 		// be meaningless: there is no "the unit" to navigate to.
 		'/member/equipment/assets/[id]',
-		// Reached through the My Acts and My Groups sidebar groups and their "All"
+		// Reached through the My Bands and My Groups sidebar groups and their "All"
 		// links rather than a row of their own. Two collapsible groups for two
 		// indexes, which is the separation the routes draw.
 		'/member/bands',

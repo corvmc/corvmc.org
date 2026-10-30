@@ -99,7 +99,7 @@
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
 				<p class="text-muted">
 					Enter this code on the door keypad. It works for the length of the session, for whoever on
-					the act gets there first.
+					the band gets there first.
 				</p>
 			</InfoCard>
 		{:else if res.fallbackCode}
@@ -110,7 +110,7 @@
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.fallbackCode}</p>
 				<p class="text-muted">
 					We couldn't confirm this session's usual code reached the door, so this one will get the
-					act in for now. Staff know about it. If it doesn't work, call us rather than waiting
+					band in for now. Staff know about it. If it doesn't work, call us rather than waiting
 					outside.
 				</p>
 			</InfoCard>
@@ -120,7 +120,7 @@
 			<Alert type="error">
 				This session's code hasn't reached the door and we don't have a backup to give you right
 				now. Don't wait outside — <a class="link" href={resolve('/contact')}>get in touch</a> and someone
-				will let the act in.
+				will let the band in.
 			</Alert>
 		{:else if res.lockCode}
 			<p class="text-muted">

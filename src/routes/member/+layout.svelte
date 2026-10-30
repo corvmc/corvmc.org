@@ -135,7 +135,7 @@
 		     every member's localStorage, so renaming it would silently re-expand the
 		     group for everyone who had collapsed it. -->
 		<Nav.Group
-			title="My Acts"
+			title="My Bands"
 			collapsible
 			persistKey="my-bands"
 			persistScope="member"
@@ -159,7 +159,7 @@
 					{/snippet}
 				</Nav.Item>
 			{/each}
-			<Nav.Item href={resolve('/member/bands?create=1')} label="Create Act" data-sveltekit-reload>
+			<Nav.Item href={resolve('/member/bands?create=1')} label="Create Band" data-sveltekit-reload>
 				{#snippet icon()}<IconPlus />{/snippet}
 			</Nav.Item>
 		</Nav.Group>

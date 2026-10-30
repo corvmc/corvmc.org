@@ -67,7 +67,7 @@
 		{#if upcoming.length === 0}
 			<EmptyState
 				title="No upcoming sessions"
-				description="Book the practice space and it'll show up here for the whole act."
+				description="Book the practice space and it'll show up here for the whole band."
 			/>
 		{:else}
 			<div class="flex flex-col gap-2">

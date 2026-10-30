@@ -46,7 +46,7 @@
 	/**
 	 * The selector's options come off the layout the panel already holds, not a
 	 * query of their own — `custom/no-concurrent-remote-queries`, and the same
-	 * two lists the sidebar draws its My Acts and My Groups from.
+	 * two lists the sidebar draws its My Bands and My Groups from.
 	 *
 	 * Every active membership is offered: a group's chat is every member's, so
 	 * a plain bandmate gets its inbox even with no enquiries in it.

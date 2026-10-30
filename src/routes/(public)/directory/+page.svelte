@@ -32,10 +32,10 @@
 	// Declarations that follow one are async-gated, so they don't exist yet during
 	// the first render — the same ordering constraint documented in member/bands.
 
-	// Acts are the public front door, so they're the default and the clean URL;
+	// Bands are the public front door, so they're the default and the clean URL;
 	// musicians carry `?tab=musicians`. Read from the URL rather than mirrored
 	// into it, because the tabs are real links and the URL is the authority.
-	// Validate-then-fallback so a junk `?tab=` renders acts, not nothing.
+	// Validate-then-fallback so a junk `?tab=` renders bands, not nothing.
 	const tab = $derived<Tab>(
 		page.url.searchParams.get('tab') === 'musicians' ? 'musicians' : 'bands'
 	);
@@ -146,7 +146,7 @@
 
 <svelte:head>
 	<title>Directory | Corvallis Music Collective</title>
-	<meta name="description" content="Acts and musicians in the Corvallis Music Collective." />
+	<meta name="description" content="Bands and musicians in the Corvallis Music Collective." />
 </svelte:head>
 
 {#snippet empty(singular: string, plural: string, total: number)}
@@ -163,7 +163,7 @@
 <Section>
 	<div class="mb-8 text-center">
 		<h1 class="mb-3 text-4xl font-bold tracking-tight text-cmc-navy">Directory</h1>
-		<p class="text-base text-fg-2">Acts and musicians in the Corvallis Music Collective</p>
+		<p class="text-base text-fg-2">Bands and musicians in the Corvallis Music Collective</p>
 	</div>
 
 	{#if data.failed}
@@ -174,7 +174,7 @@
 				tabs={[
 					{
 						key: 'bands',
-						label: 'Acts',
+						label: 'Bands',
 						badge: bandMatches.length,
 						href: directoryHref('bands', searchText, genre)
 					},
@@ -203,7 +203,7 @@
 				name="q"
 				label="Search"
 				class="w-full max-w-sm"
-				placeholder={tab === 'bands' ? 'Search acts by name…' : 'Search musicians by name…'}
+				placeholder={tab === 'bands' ? 'Search bands by name…' : 'Search musicians by name…'}
 				bind:value={searchText}
 			/>
 
@@ -230,7 +230,7 @@
 
 		{#if tab === 'bands'}
 			{#if matchCount === 0}
-				{@render empty('act', 'acts', bands.length)}
+				{@render empty('band', 'bands', bands.length)}
 			{:else}
 				<!-- Its own container: these pages do not use `PageContent`, which is
 				     what supplies the `@container` the gallery tiers measure (#1036). -->

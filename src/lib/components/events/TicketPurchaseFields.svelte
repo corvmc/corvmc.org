@@ -130,7 +130,7 @@
 		})
 	);
 
-	const actsLabel = $derived(acts.length === 1 ? acts[0] : 'The acts');
+	const actsLabel = $derived(acts.length === 1 ? acts[0] : 'The bands');
 	// Free only when free is actually on offer. On a show with a floor, $0 is a
 	// refused amount, and labelling the (disabled) button "Get ticket" beside an
 	// error saying the minimum is $5 reads as a contradiction.

@@ -9,6 +9,7 @@
 	import ButtonGroup from '../ui/ButtonGroup.svelte';
 	import type { AppChrome } from './chrome';
 	import { MESSAGES_HREF } from './account-menu';
+	import { entityLabels } from '$lib/terms';
 
 	export interface PanelTab {
 		key: string;
@@ -104,7 +105,7 @@
 						onclick={() => (bandsOpen = !bandsOpen)}
 					>
 						<IconMusic size={16} />
-						{activeBand?.label ?? 'Acts'}
+						{activeBand?.label ?? entityLabels.band.many}
 						<IconChevronDown size={14} />
 					</Button>
 

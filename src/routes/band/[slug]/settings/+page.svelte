@@ -66,12 +66,12 @@
 			<div class="card border border-error/30 bg-base-100">
 				<CardBody>
 					<p class="text-sm">
-						Deleting this act will cancel all future reservations and remove all members. This
+						Deleting this band will cancel all future reservations and remove all members. This
 						action cannot be undone.
 					</p>
 					<div class="mt-2 card-actions justify-end">
 						<Button variant="error" size="sm" outline onclick={() => (showDeleteModal = true)}>
-							Delete Act
+							Delete Band
 						</Button>
 					</div>
 				</CardBody>
@@ -80,11 +80,11 @@
 	{/if}
 </PageContent>
 
-<Modal title="Delete Act" bind:open={showDeleteModal}>
+<Modal title="Delete Band" bind:open={showDeleteModal}>
 	<Form
 		remote={deleteBandForm}
 		onsuccess={() => {
-			toast.success('Act deleted');
+			toast.success('Band deleted');
 			goto(resolve('/member/bands'));
 		}}
 	>
@@ -95,7 +95,7 @@
 				reservations will be cancelled and all members will be removed.
 			</Alert>
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Delete Act" successLabel="Deleted" variant="error" />
+				<SubmitButton label="Delete Band" successLabel="Deleted" variant="error" />
 			</div>
 		</div>
 	</Form>

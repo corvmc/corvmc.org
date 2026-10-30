@@ -250,7 +250,7 @@ describe('ticket-confirmation', () => {
 		const { html, text } = byName('ticket-single');
 		expect(html).toContain('$9.98');
 		expect(html).toContain('$4.28');
-		expect(text).toContain('To the acts on the bill: $9.98');
+		expect(text).toContain('To the bands on the bill: $9.98');
 		expect(text).toContain('To the Collective: $4.28');
 	});
 
@@ -259,7 +259,7 @@ describe('ticket-confirmation', () => {
 		// is the outcome the model exists to allow, so the receipt says so — a
 		// missing row would read as a rounding error.
 		const { text } = byName('ticket-multiple');
-		expect(text).toContain('To the acts on the bill: $75.00');
+		expect(text).toContain('To the bands on the bill: $75.00');
 		expect(text).toContain('To the Collective: $0.00');
 	});
 });

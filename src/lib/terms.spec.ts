@@ -4,8 +4,8 @@ import { entityLabels, groupKindLabels, many, one } from './terms';
 
 describe('terms', () => {
 	it('takes one and many from the message, not a suffix', () => {
-		expect(one(m.term_band)).toBe('Act');
-		expect(many(m.term_band)).toBe('Acts');
+		expect(one(m.term_band)).toBe('Band');
+		expect(many(m.term_band)).toBe('Bands');
 		expect(entityLabels.recurring).toEqual({
 			one: 'Recurring series',
 			many: 'Recurring series'
@@ -17,7 +17,7 @@ describe('terms', () => {
 	});
 
 	it('labels the entity types exactly as config.ts did', () => {
-		expect(entityLabels.band).toEqual({ one: 'Act', many: 'Acts' });
+		expect(entityLabels.band).toEqual({ one: 'Band', many: 'Bands' });
 		expect(entityLabels.flag).toEqual({ one: 'Report', many: 'Reports' });
 		expect(entityLabels.role).toEqual({ one: 'Volunteer role', many: 'Volunteer roles' });
 	});

@@ -47,7 +47,7 @@
 		<p class="text-subtle">
 			<code>date | venue | title | ticket link</code> — only the date is required. Start a title
 			with
-			<code>w/</code> to list the other acts. Gigs must be in the past, {GIG_IMPORT_MAX_LINES} at a time.
+			<code>w/</code> to list the other bands. Gigs must be in the past, {GIG_IMPORT_MAX_LINES} at a time.
 			Imported gigs are published with no end time.
 		</p>
 

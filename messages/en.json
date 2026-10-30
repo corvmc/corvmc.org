@@ -15,8 +15,8 @@
 			"declarations": ["input count", "local countPlural = count: plural"],
 			"selectors": ["countPlural"],
 			"match": {
-				"countPlural=one": "act",
-				"countPlural=*": "acts"
+				"countPlural=one": "band",
+				"countPlural=*": "bands"
 			}
 		}
 	],
@@ -227,16 +227,6 @@
 			"match": {
 				"countPlural=one": "incident",
 				"countPlural=*": "incidents"
-			}
-		}
-	],
-	"term_group_band": [
-		{
-			"declarations": ["input count", "local countPlural = count: plural"],
-			"selectors": ["countPlural"],
-			"match": {
-				"countPlural=one": "band",
-				"countPlural=*": "bands"
 			}
 		}
 	],

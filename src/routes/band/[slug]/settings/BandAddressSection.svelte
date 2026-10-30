@@ -38,11 +38,11 @@
 </script>
 
 <section class="space-y-4">
-	<h2 class="text-lg font-semibold">Act Address</h2>
+	<h2 class="text-lg font-semibold">Band Address</h2>
 
 	<InfoCard title={`${slug}.${baseDomain}`}>
 		<p class="text-sm">
-			This is your act's address. It's also your profile at
+			This is your band's address. It's also your profile at
 			<code class="text-xs">/directory/bands/{slug}</code>
 			and your dashboard at <code class="text-xs">/band/{slug}</code>.
 		</p>
@@ -50,7 +50,7 @@
 			<!-- Admins can see the address; only the owner can move it, because
 			     `changeBandAddress` is owner-guarded. A button that 403s would be
 			     worse than none. -->
-			<p class="mt-2 text-subtle">Only the act's owner can change this address.</p>
+			<p class="mt-2 text-subtle">Only the band's owner can change this address.</p>
 		{:else}
 			<div class="mt-2 card-actions justify-end">
 				<Button variant="default" size="sm" outline onclick={() => (showChange = true)}
@@ -61,7 +61,7 @@
 	</InfoCard>
 </section>
 
-<Modal title="Change act address" bind:open={showChange}>
+<Modal title="Change band address" bind:open={showChange}>
 	<Form
 		remote={changeBandAddress}
 		onsuccess={(result) => {
@@ -90,7 +90,7 @@
 				field={fields.newSlug}
 				type="text"
 				label="New address"
-				placeholder="your-act"
+				placeholder="your-band"
 				oninput={(e: Event & { currentTarget: HTMLInputElement }) =>
 					(draft = e.currentTarget.value)}
 				description="Letters, numbers and hyphens. Spaces and punctuation are dropped."
@@ -99,7 +99,7 @@
 
 			{#if normalized}
 				<p class="text-sm">
-					Your act's site moves to <strong>{normalized}.{baseDomain}</strong>.
+					Your band's site moves to <strong>{normalized}.{baseDomain}</strong>.
 				</p>
 			{/if}
 
@@ -109,7 +109,7 @@
 
 			<Alert type="warning" class="text-sm">
 				Links to <strong>{slug}.{baseDomain}</strong> will forward to the new address — but only until
-				another act claims it, and then they stop. Update anywhere you've printed or posted the old one.
+				another band claims it, and then they stop. Update anywhere you've printed or posted the old one.
 				You can only change this a few times a year.
 			</Alert>
 

@@ -171,7 +171,7 @@
 			<EmptyState>
 				<p class="text-lg font-medium">Premium Feature</p>
 				<p class="mt-2 opacity-70">
-					The page editor is available with a premium subscription. Your act's page arrives already
+					The page editor is available with a premium subscription. Your band's page arrives already
 					built — reorder its blocks, hide the ones you don't want, and make it yours with genre
 					themes and custom CSS.
 				</p>

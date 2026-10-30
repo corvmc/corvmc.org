@@ -602,7 +602,7 @@ automatically. Full patterns and component API: [ui-patterns.md](ui-patterns.md)
 
 ## Terminology
 
-What the interface calls things — member, act, reservation, production, the group kinds —
+What the interface calls things — member, band, reservation, production, the group kinds —
 lives in one place: the Paraglide message catalog, `messages/en.json`. Each term is a
 `term_*` message with a `count` selector, so the singular and plural both come from the
 message and nothing at a call site appends an `s`. Paraglide compiles the catalog into typed
@@ -618,9 +618,7 @@ because drizzle-kit loads it through jiti, which has no `$lib` alias.
 
 **To change a term**, edit its value in `messages/en.json` and read each call site of that
 message to confirm the new word fits there. The key names the concept (`term_band` is the
-`band` entity type, currently worded "act"), so a relabel never renames a key.
-`term_group_band` is a separate message only because the group-kind wording is deliberately
-"band" today; once #2097 lands they can be one.
+`band` entity type and the band group kind), so a relabel never renames a key.
 
 **Not reached by the catalog:** Postmark templates (`postmark/templates/`, Mustachio, pushed
 by `pnpm email:push`) and help articles (`src/content/help/`, markdown synced to D1) are not
@@ -628,7 +626,7 @@ compiled by Vite, so a relabel still edits them by hand. Text a server module pa
 template — `groupKindLabels` in the invitation email, for one — does come from the catalog.
 
 `custom/prefer-term-messages` flags a whole label that is a catalogued term typed out
-(`<th>Act</th>`, `title="Members"`). It is registered but not yet enabled, because the tree
+(`<th>Band</th>`, `title="Members"`). It is registered but not yet enabled, because the tree
 still has ~256 such labels and lint runs with `--max-warnings 0`; `pnpm lint:terms` lists them.
 Enable it in `eslint.config.js` once they are cleared (#2099).
 

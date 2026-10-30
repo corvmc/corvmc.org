@@ -15,7 +15,7 @@ function upperFirst(word: string): string {
 	return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
-/** The message behind each entity type. `band` is the act term until #2097. */
+/** The message behind each entity type. */
 export const entityTerms: Record<EntityType, Term> = {
 	member: m.term_member,
 	band: m.term_band,
@@ -51,11 +51,9 @@ export const entityLabels = Object.fromEntries(
 /**
  * A group kind in lower-case prose for someone not looking at it: an invitee
  * has no page open, and "join a band" is not true of the Real Book Club.
- * `band` is `term_group_band` ("band"), not the act term: both call sites
- * address a roster, where "band" reads better (groups-spec.md § Solo acts).
  */
 export const groupKindLabels: Record<GroupKind, string> = {
-	band: m.term_group_band({ count: 1 }),
+	band: m.term_band({ count: 1 }),
 	club: m.term_club({ count: 1 }),
 	committee: m.term_committee({ count: 1 })
 };

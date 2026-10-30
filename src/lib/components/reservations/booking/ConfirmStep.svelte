@@ -296,7 +296,7 @@
 			     `createdByUserId` and a band has no balance of its own. Unexplained
 			     that reads as a bug. -->
 			<p class="text-subtle">
-				Acts don't have their own free hours.
+				Bands don't have their own free hours.
 				{#if pricing && pricing.creditsApplicable > 0}
 					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
 					{freeHours}

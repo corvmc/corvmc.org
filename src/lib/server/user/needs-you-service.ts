@@ -135,8 +135,8 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			kind: 'band-invitation',
 			title:
 				input.pendingInviteCount === 1
-					? 'An act has invited you'
-					: `${input.pendingInviteCount} acts have invited you`,
+					? 'A band has invited you'
+					: `${input.pendingInviteCount} bands have invited you`,
 			href: resolve('/member/bands'),
 			label: 'Answer',
 			dueAt: null,

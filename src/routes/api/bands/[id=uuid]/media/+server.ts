@@ -146,7 +146,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		if (limit !== null && (slotStats?.used ?? 0) + files.length > limit) {
 			throw error(
 				403,
-				`Your act can hold ${limit} press photo${limit === 1 ? '' : 's'}. A band site lifts the limit.`
+				`Your band can hold ${limit} press photo${limit === 1 ? '' : 's'}. A band site lifts the limit.`
 			);
 		}
 	}
