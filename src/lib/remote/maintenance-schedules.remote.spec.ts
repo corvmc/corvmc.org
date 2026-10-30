@@ -12,10 +12,12 @@ const requireCapability = vi.fn(async (cap: string) => {
 vi.mock('$lib/server/authorization', () => ({ requireCapability }));
 
 const createService = vi.fn(async () => ({ id: 'ms-1' }));
+const updateService = vi.fn(async () => undefined);
 vi.mock('$lib/server/volunteer/maintenance-schedule-service', () => ({
 	createMaintenanceSchedule: createService,
 	listMaintenanceSchedules: vi.fn(async () => []),
-	retireMaintenanceSchedule: vi.fn()
+	retireMaintenanceSchedule: vi.fn(),
+	updateMaintenanceSchedule: updateService
 }));
 
 const searchAssetOptions = vi.fn(async () => [{ id: 'as-1', name: 'PA speaker', detail: null }]);
@@ -111,5 +113,28 @@ describe('retireRecurringWork', () => {
 		const retire = remote.retireRecurringWork as unknown as (d: unknown) => Promise<unknown>;
 		await expect(retire({ id: 'ms-1' })).rejects.toThrow(/403/);
 		expect(requireCapability).toHaveBeenCalledWith('volunteer.manageRecurring');
+	});
+});
+
+describe('updateRecurringWork (#2087)', () => {
+	const edit = remote.updateRecurringWork as unknown as (d: unknown) => Promise<unknown>;
+	const data = { id: 'ms-1', name: 'Weekly mop', intervalDays: '7', capacity: '', projectId: '' };
+
+	it('guards on volunteer.manageRecurring before writing', async () => {
+		allowed = false;
+		await expect(edit(data)).rejects.toThrow(/403/);
+		expect(requireCapability).toHaveBeenCalledWith('volunteer.manageRecurring');
+		expect(updateService).not.toHaveBeenCalled();
+	});
+
+	it('parses the numbers and clears an empty project', async () => {
+		await edit(data);
+		expect(updateService).toHaveBeenCalledWith('ms-1', {
+			name: 'Weekly mop',
+			intervalDays: 7,
+			capacity: 1,
+			projectId: null,
+			notes: undefined
+		});
 	});
 });

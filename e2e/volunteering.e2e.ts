@@ -350,8 +350,11 @@ test.describe('volunteering — roles', () => {
 		await expect(page).toHaveURL(/\/staff\/members\/volunteers$/);
 
 		await page.goto('/staff/volunteer/recurring');
-		await expect(page).toHaveURL(/\/staff\/recurring-work$/);
+		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule\/recurring$/);
 		await expect(page.getByRole('button', { name: 'New Recurring Work' })).toBeVisible();
+
+		await page.goto('/staff/recurring-work');
+		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule\/recurring$/);
 
 		await page.goto('/staff/volunteer/people?tab=signoff');
 		await expect(page).toHaveURL(/\/staff\/members\/volunteers\?/);

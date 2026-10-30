@@ -194,9 +194,10 @@ describe('the nav tree', () => {
 			'ballots',
 			'projects',
 			'project-templates',
-			'volunteer-schedule',
-			'recurring-work'
+			'volunteer-schedule'
 		]);
+		// Recurring work is a Schedule view (#2087).
+		expect(activeNavKey('/staff/volunteer/schedule/recurring')).toBe('volunteer-schedule');
 		expect(keys('space')).toEqual([
 			'reservations',
 			'equipment',
@@ -252,6 +253,7 @@ describe('route coverage', () => {
 		'/staff/members/volunteers',
 		'/staff/members/instructors',
 		'/staff/projects/productions', // a Projects view (#2101)
+		'/staff/volunteer/schedule/recurring', // a Schedule view (#2087)
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Inventory, beside Categories; its breadcrumb runs through it

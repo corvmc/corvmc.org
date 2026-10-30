@@ -26,6 +26,7 @@
 	import { isOverdue } from '$lib/utils/work-order-due';
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import NewWorkOrderAction from '../NewWorkOrderAction.svelte';
+	import ScheduleViews from './ScheduleViews.svelte';
 	import { PROJECT_FILTERS, matchesProject, parseProjectFilter } from './project-filter';
 	import { formatDateShort, relativeDay } from '$lib/utils/format';
 	import {
@@ -157,6 +158,8 @@
 </PageHeader>
 
 <PageContent>
+	<ScheduleViews active="orders" />
+
 	<FilterBar
 		activeCount={(projectFilter ? 1 : 0) +
 			(byContractor
@@ -260,13 +263,6 @@
 		{/if}
 	</FilterBar>
 
-	{#if kind === 'recurring'}
-		<p class="text-muted text-sm">
-			Occurrences of recurring work. What repeats, and how often, is under
-			<a class="link" href={resolve('/staff/recurring-work')}>Recurring Work</a>.
-		</p>
-	{/if}
-
 	{#await schedule then data}
 		{@const cancelled = data.shifts.filter(
 			(s) => s.cancelledAt && matchesProject(s, projectFilter)
@@ -335,6 +331,15 @@
 								</div>
 							{:else if w.notes}
 								<div class="truncate text-subtle text-xs" title={w.notes}>{w.notes}</div>
+							{/if}
+							{#if w.maintenanceScheduleId}
+								<a
+									class="link text-xs"
+									href={withQuery(
+										resolve('/staff/volunteer/schedule/recurring'),
+										`id=${w.maintenanceScheduleId}`
+									)}>Recurring</a
+								>
 							{/if}
 							{#each engaged as c, i (i)}
 								<div class="truncate text-xs">

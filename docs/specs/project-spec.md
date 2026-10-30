@@ -28,7 +28,7 @@
 > `setSlotTerms` and the settlement panel reading it.
 >
 > **Generate-on-close recurring work shipped** as `maintenance_schedule` and
-> `/staff/recurring-work`: resolving or calling off an occurrence writes the
+> the Schedule's Recurring view (`/staff/volunteer/schedule/recurring`, #2087): resolving or calling off an occurrence writes the
 > next one in the same `db.batch`, due `interval_days` after the close, and a
 > partial unique index holds each schedule to one open work order.
 >
