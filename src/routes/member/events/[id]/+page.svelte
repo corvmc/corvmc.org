@@ -191,7 +191,7 @@
 				</div>
 			{/if}
 
-			<h1 class="edet__title">{evt.title}</h1>
+			<p class="edet__title">{evt.title}</p>
 
 			<div class="edet__facts">
 				<div class="edet__fact">

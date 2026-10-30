@@ -391,7 +391,7 @@
 					{/if}
 				</InfoCard>
 
-				<Button href={resolve('/staff/members/volunteers?tab=cleared')} variant="ghost" size="sm">
+				<Button href={resolve('/staff/members/volunteers')} variant="ghost" size="sm">
 					See who's cleared →
 				</Button>
 			</div>
