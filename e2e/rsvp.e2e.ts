@@ -35,10 +35,8 @@ test('a signed-out visitor signs in from the RSVP button and lands one tap from 
 	page
 }) => {
 	await page.goto(eventPath);
-	// The title renders as two headings (#2007); any visible one proves the page loaded.
-	await expect(
-		page.getByRole('heading', { name: SEED_RSVP_EVENT_TITLE }).filter({ visible: true }).first()
-	).toBeVisible();
+	// Strict: the title is one heading (#2007), and a second would fail this locator.
+	await expect(page.getByRole('heading', { name: SEED_RSVP_EVENT_TITLE })).toBeVisible();
 
 	// Signed out, the RSVP is a link to sign-in that carries the way back.
 	await page.getByRole('link', { name: 'RSVP', exact: true }).click();

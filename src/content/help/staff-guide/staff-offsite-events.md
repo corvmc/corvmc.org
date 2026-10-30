@@ -52,9 +52,23 @@ event** — a long day across two events gives you twenty-four, which is usually
 - A **CMC band** you pick from the search is invited and confirms from its own page. An **outside
   act** is just a name; it needs no account and never has to make one.
 
-**Set times are not stored anywhere.** There is no run-of-show in the app yet, so the running
-order, set lengths and changeovers live on a printed sheet. The slot note is the closest thing the
-record has, and it is worth filling in for the acts whose times are already settled.
+**Set times live in the run of show**, on the production console's **Run of show** tab
+(**Staff → Events → _the event_ → Production**). It needs a production for the event, opened from
+the **Overview** tab, which is also where the **first set** time and the curfew go.
+
+- **Build from the bill** copies the lineup into the running order. Each set has a length and a
+  changeover after it, and the start times are worked out from the first set, so moving a set up or
+  down reschedules everything after it. A set that is not on the bill (a DJ, a host) can be added
+  by hand.
+- Each set also holds a soundcheck time, tech, backline and hospitality notes, a contact for the
+  show, and **the deal** (guarantee, percentage, or donated), which feeds the settlement.
+- On the night, **Started** and **Finished** stamp the actual times, and the row shows how far
+  behind schedule each set started.
+- Once the production is **confirmed**, the public event page lists the acts with their start
+  times.
+
+The slot note on the bill stays free text. Use it for how an act is billed ("Direct support"), not
+for its time. The run of show holds the times.
 
 **Riders** are on the production console (**Staff → Events → _the event_ → Production**), as a
 read-only summary per act: how many channels, how many need phantom power, how much of it we are

@@ -1687,6 +1687,7 @@ p {
 	flex-wrap: wrap;
 }
 .edet__title {
+	font-feature-settings: var(--font-features-display);
 	font-size: 32px;
 	font-weight: 700;
 	line-height: 1.05;

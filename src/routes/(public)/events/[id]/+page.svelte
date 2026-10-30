@@ -155,7 +155,8 @@
 					</div>
 				{/if}
 
-				<h1 class="edet__title" class:edet__title--cancelled={isCancelled}>{evt.title}</h1>
+				<!-- Not a heading: the PageHeader above is the page's one <h1> (#2007). -->
+				<p class="edet__title" class:edet__title--cancelled={isCancelled}>{evt.title}</p>
 
 				{#if isCancelled}
 					<div class="edet__cancelled" role="status">
