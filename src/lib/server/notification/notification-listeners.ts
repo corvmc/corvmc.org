@@ -5,7 +5,7 @@ import {
 } from '$lib/server/event-bus/event-bus';
 import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE, renewalKindLabels } from '$lib/config';
 import { formatCents } from '$lib/utils/format';
-import { groupKindLabels } from '$lib/config';
+import { groupKindLabels } from '$lib/terms';
 import { fanOutAnnouncement, fanOutGroupRoom } from '$lib/server/group/announcement-fanout';
 import { fanOutBallotNotice } from '$lib/server/ballot/ballot-fanout';
 import { dispatch, dispatchBatch, dispatchEmailOnly, dispatchEmailOnlyBatch } from './dispatcher';

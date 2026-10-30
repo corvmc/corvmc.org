@@ -5,7 +5,7 @@
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { groupKindLabels } from '$lib/config';
+	import { groupKindLabels } from '$lib/terms';
 	import { getMemberInviteGroups, inviteMemberForm } from '$lib/remote/users.remote';
 
 	const { fields } = inviteMemberForm;

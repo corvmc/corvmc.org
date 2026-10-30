@@ -600,6 +600,38 @@ Every form in a route file uses the shared components from
 `$app/server` in a `.remote.ts` file so `<Form>` wires up validation and dirty tracking
 automatically. Full patterns and component API: [ui-patterns.md](ui-patterns.md).
 
+## Terminology
+
+What the interface calls things — member, act, reservation, production, the group kinds —
+lives in one place: the Paraglide message catalog, `messages/en.json`. Each term is a
+`term_*` message with a `count` selector, so the singular and plural both come from the
+message and nothing at a call site appends an `s`. Paraglide compiles the catalog into typed
+functions in `src/lib/paraglide/` (gitignored; the vite plugin writes it on dev/build/vitest,
+and `pnpm messages:compile` — run by `prepare` and `check` — writes it everywhere else).
+English only: `project.inlang/paraglide.config.ts` sets the `baseLocale` strategy alone, so
+there is no locale cookie, URL prefix or reroute.
+
+Code reads terms through `$lib/terms`, not the generated module directly: `entityLabels`
+(capitalised `one`/`many` per entity type), `groupKindLabels` (lower-case, for prose), and
+`one(m.term_x)` / `many(m.term_x)` for anything else. `config.ts` stays free of the import
+because drizzle-kit loads it through jiti, which has no `$lib` alias.
+
+**To change a term**, edit its value in `messages/en.json` and read each call site of that
+message to confirm the new word fits there. The key names the concept (`term_band` is the
+`band` entity type, currently worded "act"), so a relabel never renames a key.
+`term_group_band` is a separate message only because the group-kind wording is deliberately
+"band" today; once #2097 lands they can be one.
+
+**Not reached by the catalog:** Postmark templates (`postmark/templates/`, Mustachio, pushed
+by `pnpm email:push`) and help articles (`src/content/help/`, markdown synced to D1) are not
+compiled by Vite, so a relabel still edits them by hand. Text a server module passes _into_ a
+template — `groupKindLabels` in the invitation email, for one — does come from the catalog.
+
+`custom/prefer-term-messages` flags a whole label that is a catalogued term typed out
+(`<th>Act</th>`, `title="Members"`). It is registered but not yet enabled, because the tree
+still has ~256 such labels and lint runs with `--max-warnings 0`; `pnpm lint:terms` lists them.
+Enable it in `eslint.config.js` once they are cleared (#2099).
+
 ## Custom ESLint rules
 
 Project-specific rules live in `eslint-rules/` and are registered once as the
@@ -626,6 +658,7 @@ more than one config object crashes eslint with "Cannot redefine plugin custom")
 | `custom/page-header-width-matches-content` | **error** on all `*.svelte`                                           | A page whose `PageHeader` and `PageContent` declare different `width`s. The header is full-bleed and sticky so its border runs edge to edge, so a header that does not repeat the content's clamp puts the `h1` outside the column it titles — 232px left of it at `2xl`. Give `PageHeader` the same `width`. A dynamic width on either side is the page's own business and is not reported.                                                                                                                                                                                                                                                                                                                                         |
 | `custom/definite-action-labels`            | **error** on all `*.svelte`                                           | An indefinite word (someone, something, anyone, somebody, anything, anybody) in a literal `label`, `modalTitle` or `submitLabel` on `Button`, `Action`, `SubmitButton` or any `*Action` component, or in the literal default a `*Action.svelte` file gives one of those props. An action label names the act and its object; the form says who or what (#1829). Labels built at runtime are not seen.                                                                                                                                                                                                                                                                                                                                |
 | `custom/no-tracked-command-in-effect`      | **error** on `*.svelte` and `*.svelte.ts`                             | A remote `command()` called inside `$effect`/`$effect.pre` outside `untrack`. Kit's client command reads and writes its own `$state` pending count on every call, so the effect re-runs itself until `effect_update_depth_exceeded` (#1956). The rule reads the imported `.remote` module to tell a command from a query; queries in effects are fine.                                                                                                                                                                                                                                                                                                                                                                               |
+| `custom/prefer-term-messages`              | **off**; `pnpm lint:terms` runs it on `*.svelte`                      | A template text node, user-facing attribute or `label`/`title` property whose whole string is a form of a `term_*` message. Read it from `$lib/terms` instead. See [Terminology](#terminology).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 ### Money columns declare themselves
 
@@ -755,7 +788,8 @@ Every script in `package.json`:
 | `dev`                           | Vite dev server on :5173 (a worktree gets its own port — `scripts/lib/checkout-ports.ts`)          |
 | `build`                         | `vite build` (output: `.svelte-kit/cloudflare/`)                                                   |
 | `preview`                       | Serve the production build on :4173 (a worktree gets its own port)                                 |
-| `prepare`                       | (auto on install) svelte-kit sync + lefthook install                                               |
+| `prepare`                       | (auto on install) svelte-kit sync + `messages:compile` + lefthook install                          |
+| `messages:compile`              | Compile `messages/en.json` into `src/lib/paraglide/` (see [Terminology](#terminology))             |
 | `check` / `check:watch`         | svelte-check type checking                                                                         |
 | `test:unit`                     | Vitest (watch mode; `--run` for one-shot, which queues behind any other full suite)                |
 | `test:components`               | One-shot client (browser) + storybook vitest projects                                              |
@@ -766,6 +800,7 @@ Every script in `package.json`:
 | `test:report`                   | Vitest with JSON output → `test-results.json`                                                      |
 | `lint`                          | prettier `--check` + eslint over everything                                                        |
 | `lint:changed`                  | Lint only files changed vs `BASE_REF` (default `origin/main`; PR CI passes the PR's base)          |
+| `lint:terms`                    | Report catalogued terms typed out as labels (`custom/prefer-term-messages`)                        |
 | `format`                        | prettier `--write` everything                                                                      |
 | `db:generate`                   | drizzle-kit: generate a migration from schema changes, then make any table rebuild D1-safe         |
 | `db:fix-migrations`             | Rewrite unsafe table rebuilds (run automatically by `db:generate`)                                 |

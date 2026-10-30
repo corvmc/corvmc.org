@@ -2,9 +2,9 @@
  * How each entity type is *drawn*: its glyph, and whether its avatar is round
  * or square.
  *
- * Split from the vocabulary in `$lib/config` on purpose. These values carry
- * Svelte icon components, so server code cannot import this file — while
- * `entityTypes` and `entityLabels` are read by both. The routing half lives in
+ * Split from the vocabulary in `$lib/config` and `$lib/terms` on purpose. These
+ * values carry Svelte icon components, so server code cannot import this file —
+ * while `entityTypes` and `entityLabels` are read by both. The routing half lives in
  * `$lib/utils/entity-href`, which is pure so the policy can be unit-tested.
  *
  * A plain `.ts` rather than a `<script module>` on a component (the
@@ -43,7 +43,8 @@ import {
 	IconAlertTriangle,
 	IconClipboardList
 } from '@tabler/icons-svelte';
-import { entityTypes, entityLabels, type EntityType, type EntitySubtypeKey } from '$lib/config';
+import { entityTypes, type EntityType, type EntitySubtypeKey } from '$lib/config';
+import { entityLabels } from '$lib/terms';
 import type { EntityRef } from '$lib/types/entity';
 import { variants } from '../StatusBadge.svelte';
 

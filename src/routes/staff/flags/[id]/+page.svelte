@@ -13,7 +13,7 @@
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { formatDateTime } from '$lib/utils/format';
-	import { entityLabels } from '$lib/config';
+	import { entityLabels } from '$lib/terms';
 	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
 	import AppealCard from './AppealCard.svelte';
 

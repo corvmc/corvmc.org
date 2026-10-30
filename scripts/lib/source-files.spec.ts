@@ -42,6 +42,12 @@ describe('sourceFiles', () => {
 		}
 	});
 
+	it('skips generated output, which no author can shorten or fix', () => {
+		expect(sourceFiles(['src/lib/**/*.js'], new Set())).not.toContain(
+			'src/lib/paraglide/runtime.js'
+		);
+	});
+
 	it('drops allowed paths and sorts what is left', () => {
 		const files = sourceFiles([`${ROOT}/**/*.{ts,js,svelte}`], new Set([`${ROOT}/exempt.ts`]));
 

@@ -6,6 +6,8 @@ node_modules
 .netlify
 .wrangler
 /.svelte-kit
+# Compiled from messages/ by Paraglide (vite plugin, or `pnpm messages:compile`)
+/src/lib/paraglide
 /build
 
 # OS

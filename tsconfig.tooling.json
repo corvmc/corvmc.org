@@ -56,6 +56,7 @@
 		"svelte.config.js",
 		"drizzle.config.ts",
 		"vite.config.ts",
+		"project.inlang/paraglide.config.ts",
 		// `App.Platform['env']` is the only correct declaration of this project's
 		// bindings — `worker-configuration.d.ts` is stale (it still says
 		// `corvmc_db`, where wrangler.toml says `DB`).

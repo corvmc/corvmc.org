@@ -158,7 +158,12 @@ const config = {
 		typescript: {
 			config: (config) => ({
 				...config,
-				include: [...config.include, '../drizzle.config.ts']
+				include: [...config.include, '../drizzle.config.ts'],
+				// Paraglide's generated request middleware. Nothing imports it (the
+				// catalog is English-only, no locale routing), and its `Request` typing
+				// disagrees with @cloudflare/workers-types. The rest of the generated
+				// output is imported, so it is still checked.
+				exclude: [...(config.exclude ?? []), '../src/lib/paraglide/server.js']
 			})
 		}
 	},

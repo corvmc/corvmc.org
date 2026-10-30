@@ -284,27 +284,11 @@ export function estimateLoanCost(
 export const groupKinds = ['band', 'club', 'committee'] as const;
 export type GroupKind = (typeof groupKinds)[number];
 
-/**
- * What to call a group in prose written for someone who is not looking at it.
- *
- * An email to an invitee is the case that needs all three: they have no account
- * and no page open, so "you've been invited to join a band" has to be true, and
- * for the Real Book Club it is not.
- */
 /** An announcement's title and markdown body — see docs/specs/shipped/groups-spec.md. */
 export const ANNOUNCEMENT_TITLE_MAX = 200;
 export const ANNOUNCEMENT_BODY_MAX = 10000;
 
-export const groupKindLabels: Record<GroupKind, string> = {
-	// Stays "band" rather than "act", which member-facing copy otherwise uses for
-	// a musical group of any size: both call sites — the invitation email and the
-	// announcement fan-out — address somebody about a roster they are joining or
-	// already on, and a roster of people is exactly where "band" still reads
-	// better. See docs/specs/shipped/groups-spec.md § Solo acts.
-	band: 'band',
-	club: 'club',
-	committee: 'committee'
-};
+// What to call a group kind (`groupKindLabels`) lives in `$lib/terms`.
 
 /**
  * How someone gets onto the roster.
@@ -2775,33 +2759,8 @@ export const entityTypes = [
 ] as const;
 export type EntityType = (typeof entityTypes)[number];
 
-/**
- * What to call one, and what to call several.
- *
- * Domain-specific wording at a call site ("Waiting on DNS" rather than
- * "Pending") stays at the call site — the same rule `StatusBadge` follows.
- */
-export const entityLabels: Record<EntityType, { one: string; many: string }> = {
-	member: { one: 'Member', many: 'Members' },
-	band: { one: 'Act', many: 'Acts' },
-	event: { one: 'Event', many: 'Events' },
-	reservation: { one: 'Reservation', many: 'Reservations' },
-	suggestion: { one: 'Suggestion', many: 'Suggestions' },
-	thread: { one: 'Conversation', many: 'Conversations' },
-	flag: { one: 'Report', many: 'Reports' },
-	campaign: { one: 'Campaign', many: 'Campaigns' },
-	audience: { one: 'Audience', many: 'Audiences' },
-	equipment: { one: 'Item', many: 'Items' },
-	asset: { one: 'Unit', many: 'Units' },
-	loan: { one: 'Loan', many: 'Loans' },
-	shift: { one: 'Shift', many: 'Shifts' },
-	role: { one: 'Volunteer role', many: 'Volunteer roles' },
-	recurring: { one: 'Recurring series', many: 'Recurring series' },
-	help: { one: 'Help article', many: 'Help articles' },
-	classified: { one: 'Classified', many: 'Classifieds' },
-	incident: { one: 'Incident', many: 'Incidents' },
-	project: { one: 'Project', many: 'Projects' }
-};
+// What to call each one (`entityLabels`) lives in `$lib/terms`, read from the
+// message catalog.
 
 /**
  * `contentFlag.entityType` has its own vocabulary, older and narrower than

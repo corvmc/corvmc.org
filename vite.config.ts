@@ -5,6 +5,7 @@ import { defineConfig } from 'vitest/config';
 import { loadEnv } from 'vite';
 import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { assertNoTransactableStripeCredentials } from './e2e/stripe-guard';
 import fs from 'node:fs';
 import { execSync } from 'node:child_process';
@@ -65,6 +66,9 @@ export default defineConfig({
 					})
 				]),
 		tailwindcss(),
+		// The message catalog (messages/en.json). Its options live in
+		// project.inlang/paraglide.config.ts, shared with `pnpm messages:compile`.
+		paraglideVitePlugin({ project: './project.inlang' }),
 		sveltekit(),
 		/**
 		 * No `vite preview` in this repo may serve the app with a Stripe credential
