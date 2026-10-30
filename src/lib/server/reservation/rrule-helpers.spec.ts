@@ -225,6 +225,38 @@ describe('getOccurrences', () => {
 	});
 });
 
+describe('getOccurrences across daylight saving time', () => {
+	// A weekly 4 PM Pacific session is 23:00 UTC in PDT and 00:00 UTC in PST.
+	// Stepping a fixed 168 hours left it at 23:00 UTC, i.e. 3 PM, after fall-back.
+	const rule = buildRRule(new Date('2026-10-18T23:00:00Z'), 'weekly');
+
+	it('keeps club time when the clocks fall back', () => {
+		const occ = getOccurrences(
+			rule,
+			new Date('2026-10-20T00:00:00Z'),
+			new Date('2026-11-10T00:00:00Z')
+		);
+		expect(occ.map((d) => d.toISOString())).toEqual([
+			'2026-10-25T23:00:00.000Z',
+			'2026-11-02T00:00:00.000Z',
+			'2026-11-09T00:00:00.000Z'
+		]);
+	});
+
+	it('keeps club time when the clocks spring forward', () => {
+		const occ = getOccurrences(
+			rule,
+			new Date('2027-03-01T00:00:00Z'),
+			new Date('2027-03-22T00:00:00Z')
+		);
+		expect(occ.map((d) => d.toISOString())).toEqual([
+			'2027-03-08T00:00:00.000Z',
+			'2027-03-14T23:00:00.000Z',
+			'2027-03-21T23:00:00.000Z'
+		]);
+	});
+});
+
 describe('generationWindowEnd', () => {
 	it('returns a date MAX_ADVANCE_DAYS_RECURRING days in the future', async () => {
 		const from = new Date('2026-05-12T00:00:00.000Z');
