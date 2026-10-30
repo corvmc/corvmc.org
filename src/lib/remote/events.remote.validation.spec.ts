@@ -95,8 +95,14 @@ vi.mock('$lib/server/event/event-service', () => ({
 }));
 
 vi.mock('$lib/server/authorization', () => ({
+	can: vi.fn(async () => true),
 	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
 	requireUser: vi.fn(async () => ({ id: 'user-1' }))
+}));
+
+vi.mock('$lib/server/event/listing-guard', () => ({
+	requireListingReader: vi.fn(async () => ({ id: 'staff-1' })),
+	requireListingWriter: vi.fn(async () => ({ id: 'staff-1' }))
 }));
 
 vi.mock('$lib/server/reservation/conflict-service', () => ({
@@ -434,7 +440,7 @@ describe('rsvpToEvent with external ticketing', () => {
 // ---------------------------------------------------------------------------
 
 describe('checkConflicts — excludeReservationId', () => {
-	const window = { date: '2026-08-15', startTime: '19:00', endTime: '22:00' };
+	const window = { eventId: 'evt-1', date: '2026-08-15', startTime: '19:00', endTime: '22:00' };
 
 	function detail(id: string, label: string) {
 		return {
