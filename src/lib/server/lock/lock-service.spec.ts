@@ -74,6 +74,7 @@ vi.mock('drizzle-orm', () => ({
 	gt: vi.fn(),
 	gte: vi.fn(),
 	lt: vi.fn(),
+	or: vi.fn(),
 	asc: vi.fn()
 }));
 
@@ -144,6 +145,7 @@ const {
 	revokeLockSelfTest,
 	syncAccessWindow,
 	provisionOnConfirm,
+	revokeAccessFor,
 	reconcileUpcomingSync,
 	UPCOMING_SYNC_CAP
 } = await import('./lock-service');
@@ -1015,5 +1017,92 @@ describe('step isolation', () => {
 		expect(mockMaintainFallbackCode).toHaveBeenCalled();
 		expect(result.errors).toContainEqual(expect.stringContaining('D1 unavailable'));
 		consoleSpy.mockRestore();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// revokeAccessFor — a cancelled booking's code stops opening the door (#1992)
+// ---------------------------------------------------------------------------
+
+describe('revokeAccessFor', () => {
+	const cancelledRow = (overrides: Record<string, unknown> = {}) => ({
+		id: 'res-1',
+		status: 'cancelled',
+		startsAt: new Date('2999-01-01T18:00:00Z'),
+		lockCode: '4242',
+		lockAccessId: '333',
+		...overrides
+	});
+
+	it('removes the lock user by id and clears the lock columns', async () => {
+		selectResults.push([cancelledRow()]);
+
+		await expect(revokeAccessFor('res-1')).resolves.toBe(true);
+
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(333);
+		expect(updateCalls).toContainEqual(
+			expect.objectContaining({ lockCode: null, lockAccessId: null, lockSyncedAt: null })
+		);
+	});
+
+	// Rows provisioned before the id was recorded: match the window, as the re-time path does.
+	it('finds a legacy lock user by its window and code', async () => {
+		selectResults.push([cancelledRow({ lockAccessId: null, lockCode: '4242' })]);
+		mockListLockUsers.mockResolvedValue([activeRow, { id: 444, name: 'Bob', type: 2 }]);
+		mockGetLockUser.mockImplementation(async (id: number) =>
+			id === 444
+				? { id, name: 'Bob', type: 2, password: '4242', daterange: ['2999-01-01 18:00', 'x'] }
+				: { ...activeUser, password: '9999', daterange: ['2999-01-01 18:00', 'x'] }
+		);
+
+		await expect(revokeAccessFor('res-1')).resolves.toBe(true);
+
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledTimes(1);
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(444);
+	});
+
+	it('leaves a confirmed booking alone', async () => {
+		selectResults.push([cancelledRow({ status: 'confirmed' })]);
+
+		await expect(revokeAccessFor('res-1')).resolves.toBe(false);
+		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
+		expect(updateCalls).toHaveLength(0);
+	});
+
+	it('does nothing for a booking that never had a code', async () => {
+		selectResults.push([cancelledRow({ lockCode: null, lockAccessId: null })]);
+
+		await expect(revokeAccessFor('res-1')).resolves.toBe(false);
+		expect(mockListLockUsers).not.toHaveBeenCalled();
+	});
+
+	// The columns are what the daily sweep retries from, so a failed delete keeps them.
+	it('never throws, and keeps the columns when the lock API fails', async () => {
+		selectResults.push([cancelledRow()]);
+		mockRemoveTemporaryUser.mockRejectedValueOnce(new Error('U-tec 503'));
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		await expect(revokeAccessFor('res-1')).resolves.toBe(false);
+		expect(updateCalls).toHaveLength(0);
+
+		consoleSpy.mockRestore();
+	});
+});
+
+describe('daily sweep of cancelled bookings', () => {
+	it('removes the lock user a cancelled booking still holds', async () => {
+		selectResults.push([]); // provision: none
+		selectResults.push([]); // sync reconciliation: none
+		selectResults.push([
+			{ id: 'res-9', status: 'cancelled', startsAt: new Date(), lockCode: '1', lockAccessId: '555' }
+		]);
+
+		const result = await runDailyLockJob();
+
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(555);
+		expect(result.cleaned).toBe(1);
+		expect(updateCalls).toContainEqual(
+			expect.objectContaining({ lockCode: null, lockAccessId: null })
+		);
 	});
 });

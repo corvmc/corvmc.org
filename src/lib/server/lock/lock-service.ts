@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, eq, isNull, isNotNull, gt, gte, lt } from 'drizzle-orm';
+import { and, asc, eq, isNull, isNotNull, gt, gte, lt, or } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	createTemporaryUser,
@@ -91,11 +91,12 @@ export async function runDailyLockJob(triggeredBy: string | null = null): Promis
 	}
 
 	const online = await step('Lock health check', null, () => checkDeviceHealth(errors));
-	const cleaned = await step('Cleanup', 0, () => cleanupPreviousDayAccess(errors));
+	let cleaned = await step('Cleanup', 0, () => cleanupPreviousDayAccess(errors));
 	const provisioned = await step('Provisioning', 0, () => provisionDailyAccess(errors));
 	const confirmed =
 		(await step('Sync reconciliation', 0, () => reconcileSyncState(errors))) +
 		(await step('Member code sync', 0, () => reconcileMemberCodeSync(errors)));
+	cleaned += await step('Cancelled-booking sweep', 0, () => revokeCancelledAccess(errors));
 	const fallback = await step('Fallback code', { active: null, rotated: false }, () =>
 		maintainFallbackCode(errors)
 	);
@@ -640,6 +641,110 @@ async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
 		errors.push(msg);
 	}
 
+	return count;
+}
+
+// ---------------------------------------------------------------------------
+// revokeAccessFor — a cancelled booking's code stops opening the door
+// ---------------------------------------------------------------------------
+
+type HeldAccess = {
+	id: string;
+	startsAt: Date;
+	lockCode: string | null;
+	lockAccessId: string | null;
+};
+
+/**
+ * Delete a booking's lock user, then clear its three lock columns. A row with
+ * no `lockAccessId` predates the id being recorded, so its user is found by
+ * window start, and by keypad code when `get` returns one. Throws on a lock
+ * failure and leaves the columns set, so the daily sweep can retry.
+ */
+async function removeHeldAccess(row: HeldAccess): Promise<void> {
+	if (row.lockAccessId) {
+		await removeTemporaryUser(Number(row.lockAccessId));
+	} else {
+		const start = lockDateTime(row.startsAt);
+		for (const u of await listLockUsers()) {
+			if (u.type !== 2) continue;
+			const detail = await getLockUser(u.id);
+			if (detail?.daterange?.[0] !== start) continue;
+			if (detail.password && row.lockCode && detail.password !== row.lockCode) continue;
+			await removeTemporaryUser(u.id);
+		}
+	}
+
+	await db
+		.update(reservation)
+		.set({ lockCode: null, lockAccessId: null, lockSyncedAt: null, updatedAt: new Date() })
+		.where(eq(reservation.id, row.id));
+}
+
+/**
+ * Revoke the door code of a booking that is no longer confirmed, including one
+ * cancelled inside its own window. Never throws: it runs as a
+ * `reservation.cancelled` listener, and emittery would reject the emit.
+ */
+export async function revokeAccessFor(reservationId: string): Promise<boolean> {
+	try {
+		const [row] = await db
+			.select({
+				id: reservation.id,
+				status: reservation.status,
+				startsAt: reservation.startsAt,
+				lockCode: reservation.lockCode,
+				lockAccessId: reservation.lockAccessId
+			})
+			.from(reservation)
+			.where(eq(reservation.id, reservationId))
+			.limit(1);
+
+		if (!row || row.status === 'confirmed') return false;
+		if (!row.lockCode && !row.lockAccessId) return false;
+
+		await removeHeldAccess(row);
+		return true;
+	} catch (err) {
+		console.error(
+			`Failed to revoke lock access for reservation ${reservationId}: ${(err as Error).message}`
+		);
+		return false;
+	}
+}
+
+/**
+ * The daily backstop for `revokeAccessFor`: U-tec is often unreachable at
+ * cancel time. Ended bookings need no pass here, since the expiry sweep in
+ * `cleanupPreviousDayAccess` removes any temporary user past its window.
+ */
+async function revokeCancelledAccess(errors: string[]): Promise<number> {
+	const rows = await db
+		.select({
+			id: reservation.id,
+			startsAt: reservation.startsAt,
+			lockCode: reservation.lockCode,
+			lockAccessId: reservation.lockAccessId
+		})
+		.from(reservation)
+		.where(
+			and(
+				eq(reservation.status, 'cancelled'),
+				or(isNotNull(reservation.lockCode), isNotNull(reservation.lockAccessId))
+			)
+		);
+
+	let count = 0;
+	for (const row of rows) {
+		try {
+			await removeHeldAccess(row);
+			count++;
+		} catch (err) {
+			const msg = `Failed to revoke lock access for cancelled reservation ${row.id}: ${(err as Error).message}`;
+			console.error(msg);
+			errors.push(msg);
+		}
+	}
 	return count;
 }
 

@@ -57,8 +57,10 @@ vi.mock('$lib/server/reservation/waitlist-service', () => ({
 
 // Best-effort by contract: it never throws, so the listener needs no guard.
 const mockProvisionOnConfirm = vi.fn().mockResolvedValue(true);
+const mockRevokeAccessFor = vi.fn().mockResolvedValue(true);
 vi.mock('$lib/server/lock/lock-service', () => ({
-	provisionOnConfirm: (...args: unknown[]) => mockProvisionOnConfirm(...args)
+	provisionOnConfirm: (...args: unknown[]) => mockProvisionOnConfirm(...args),
+	revokeAccessFor: (...args: unknown[]) => mockRevokeAccessFor(...args)
 }));
 
 // Tested in its own spec; mocked so the waitlist handler stays the only one.
@@ -290,5 +292,22 @@ describe('reservation.confirmed — door code', () => {
 		});
 
 		expect(mockProvisionOnConfirm).toHaveBeenCalledWith('res-1');
+	});
+});
+
+describe('reservation.cancelled — door code', () => {
+	it('revokes the door code of the booking that was just cancelled', async () => {
+		const { registerListeners } = await import('./register-listeners');
+		registerListeners();
+		await vi.dynamicImportSettled();
+
+		for (const handler of registeredHandlers['reservation.cancelled']) {
+			await handler({
+				name: 'reservation.cancelled',
+				data: { reservationId: 'res-1', userId: 'user-1', cancelledBy: 'staff' }
+			});
+		}
+
+		expect(mockRevokeAccessFor).toHaveBeenCalledWith('res-1');
 	});
 });
