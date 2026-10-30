@@ -31,6 +31,11 @@ export const createClosure = form(
 		if (endsAt <= startsAt) {
 			invalid(issue.endsAt('End time must be after start time'));
 		}
+		// A closure that is already over blocks nothing and never lists as upcoming;
+		// it is almost always AM picked for PM.
+		if (endsAt <= new Date()) {
+			invalid(issue.endsAt('That time has already passed'));
+		}
 
 		await db.insert(closure).values({ reason: data.reason as string, startsAt, endsAt });
 
