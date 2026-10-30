@@ -18,7 +18,7 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  *
  * `/staff/events` is the calendar and the general event view — the address
  * every event ref resolves to, so it is where a staffer lands by default from
- * anywhere in the panel. `/staff/productions` and `/staff/events/[id]/production`
+ * anywhere in the panel. `/staff/projects/productions` and `/staff/events/[id]/production`
  * are the CMC work surfaces, sitting on their own paths so they can be gated
  * later without making every inbound link conditional.
  *
@@ -63,8 +63,8 @@ test.describe('staff events split', () => {
 	});
 
 	test('Productions holds CMC work, including drafts, and no listings', async ({ page }) => {
-		await page.goto('/staff/productions');
-		await expect(page.getByRole('heading', { name: 'Productions' })).toBeVisible();
+		await page.goto('/staff/projects/productions');
+		await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible();
 
 		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toBeVisible();
 		await expect(page.getByText(SEED_SPLIT_PENDING_TITLE)).toHaveCount(0);

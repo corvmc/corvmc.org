@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
 
-// The Projects index is general projects only (productions have their own
-// index), active by default, with archived projects a filter away (#1935).
+// The Projects view is general projects only (productions are their own
+// view, #2101), active by default, with archived projects a filter away (#1935).
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: { id: 'user-1' } }, url: new URL('http://x/') }),

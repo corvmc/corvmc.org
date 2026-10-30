@@ -341,7 +341,7 @@ events use RSVP instead.
 - **Two staff surfaces, one table, and the URLs say which is the general case.** `/staff/events`
   is the **Calendar** — `getStaffCalendar` → `listStaffCalendar()`, every source, public
   statuses plus `pending_review`, forward from today — the staff view of the public gig guide,
-  where listings are moderated. `/staff/productions` is the CMC work index, `source='cmc'` at
+  where listings are moderated. `/staff/projects/productions` is the CMC work index, `source='cmc'` at
   every status via `getStaffEvents` → `listAll()`, and the only page holding drafts. A
   published CMC show is on both. The date floor applies only to rows actually on the calendar,
   so a `pending_review` listing whose date passed stays reachable and keeps agreeing with the
@@ -1398,7 +1398,7 @@ restore crew shifts or retract a cancellation notice.
    over the three pre-completed statuses; a production that already `completed`
    describes a night that happened, and cancelling the advertisement does not
    un-happen it.
-7. `/staff/productions` reads everything through the one `getStaffEvents` query:
+7. `/staff/projects/productions` reads everything through the one `getStaffEvents` query:
    `listAll()` left-joins `venue` and `production` (both 1:1, so no fan-out), and
    `getEventLineups()` — the batched helper — supplies the headliner and the count.
 

@@ -273,6 +273,17 @@ export async function getProjectById(id: string) {
 	return row;
 }
 
+/** The listing a production project is the show for; null for a general project or a removed listing. */
+export async function getProjectShowId(projectId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ id: eventListing.id })
+		.from(production)
+		.innerJoin(eventListing, eq(eventListing.productionId, production.id))
+		.where(eq(production.projectId, projectId))
+		.limit(1);
+	return row?.id ?? null;
+}
+
 /**
  * The committees that may own a project.
  *

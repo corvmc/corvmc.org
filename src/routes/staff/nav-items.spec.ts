@@ -67,7 +67,7 @@ describe('activeNavKey', () => {
 		// page you navigate to rather than a section of its own.
 		['/staff/events/abc/check-in', 'calendar'],
 		['/staff/events/abc/production', 'calendar'],
-		['/staff/productions', 'productions'],
+		['/staff/projects/productions', 'projects'],
 		['/staff/sponsors', 'sponsors'],
 		['/staff/sponsors/abc', 'sponsors'],
 		['/staff/grants', 'grants'],
@@ -149,6 +149,12 @@ describe('the nav tree', () => {
 		expect(filterNavItems([members], ['band.read'])).toHaveLength(0);
 	});
 
+	it('folds Productions into Projects (#2101)', () => {
+		const projects = allStaffNavItems().find((i) => i.key === 'projects')!;
+		expect(filterNavItems([projects], ['event.manage'])).toHaveLength(1);
+		expect(filterNavItems([projects], ['event.read'])).toHaveLength(0);
+	});
+
 	it('puts Project Templates under Planning, beside Projects (#2034)', () => {
 		const planning = staffNavSections.find((s) => s.key === 'planning')!;
 		const keys = planning.items.map((i) => i.key);
@@ -210,7 +216,7 @@ describe('the nav tree', () => {
 			'inventory-acquisitions'
 		]);
 		expect(keys('system')).toContain('help');
-		expect(keys('events')).toContain('productions');
+		expect(keys('events')).toEqual(['calendar']);
 	});
 
 	// A show's door takings are on its staff page (#1809); the till is reached from there.
@@ -245,6 +251,7 @@ describe('route coverage', () => {
 		// Members views, reached from its tab bar (#2074).
 		'/staff/members/volunteers',
 		'/staff/members/instructors',
+		'/staff/projects/productions', // a Projects view (#2101)
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Inventory, beside Categories; its breadcrumb runs through it

@@ -676,10 +676,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/productions",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/project-templates",
 		"panel": "staff"
 	},
@@ -701,6 +697,10 @@
 	},
 	{
 		"route": "/staff/projects/[id]/tasks/[taskId]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/projects/productions",
 		"panel": "staff"
 	},
 	{

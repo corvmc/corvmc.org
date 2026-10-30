@@ -93,6 +93,11 @@
 	sticky={false}
 	menuLabel="More project actions"
 >
+	{#if data.showId}
+		<Button variant="default" href={resolve(`/staff/events/${data.showId}/production`)}>
+			Production
+		</Button>
+	{/if}
 	<Button variant="default" href={resolve(`/staff/projects/${project.id}/budget`)}>Budget</Button>
 	{#if dutyListOptions.length > 0}
 		<Action
