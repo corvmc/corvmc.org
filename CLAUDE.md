@@ -95,6 +95,14 @@ fast-forward push, not a PR.
 PRs (an open one means pick something else), then open the **draft PR before writing code**,
 branch named for the issue, `Fixes #<n>` in the body.
 
+**The order of work is the [CorvMC Priorities](https://github.com/orgs/corvmc/projects/1) project**
+(org project 1). Its `Rank` field is the owner's order, 1 first; `Tier` groups the ranks;
+`Status` runs Todo → Up next → In progress → In review → Done. To pick work unprompted, take the
+lowest-ranked Up next or Todo item with no open PR. Add an issue you file with
+`gh project item-add 1 --owner corvmc --url <issue-url>` and leave its `Rank` empty for the owner
+to place; move an item to In progress or In review as its PR opens. `gh` needs the `project`
+scope (`gh auth refresh -s project`).
+
 **Finish in the same turn:** commit, push, open the PR, arm `gh pr merge --auto` (no merge method,
 no `--admin`, no `--delete-branch`, no `gh pr update-branch`), then start `gh queue await <n>` with
 `run_in_background`. A PR that genuinely needs a human first is opened as a draft. A queue
