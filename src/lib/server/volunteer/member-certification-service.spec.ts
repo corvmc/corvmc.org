@@ -42,6 +42,7 @@ import {
 	auditClearances,
 	wasHeldOn,
 	certificationState,
+	clearancesToRenew,
 	grantCertification,
 	missingRequirements,
 	missingFrom,
@@ -160,6 +161,31 @@ describe('certificationState', () => {
 		expect(
 			certificationState({ grantedAt: noon('2020-01-01'), expiresAt: null, revokedAt: null }, today)
 		).toBe('current');
+	});
+});
+
+describe('clearancesToRenew', () => {
+	const row = (certificationId: string, state: string, expiresAt = noon('2026-06-20')) => ({
+		certificationId,
+		certificationName: certificationId.toUpperCase(),
+		expiresAt,
+		state: state as 'current' | 'expiring' | 'expired' | 'revoked'
+	});
+
+	it('names an expiring and a lapsed clearance', () => {
+		expect(clearancesToRenew([row('cpr', 'expiring'), row('food', 'expired')])).toEqual([
+			{ name: 'CPR', state: 'expiring', expiresAt: noon('2026-06-20') },
+			{ name: 'FOOD', state: 'expired', expiresAt: noon('2026-06-20') }
+		]);
+	});
+
+	it('ignores an old row once the clearance is renewed', () => {
+		// Newest grant first, as listForUser returns them.
+		expect(clearancesToRenew([row('cpr', 'current'), row('cpr', 'expired')])).toEqual([]);
+	});
+
+	it('ignores a revoked or current clearance', () => {
+		expect(clearancesToRenew([row('cpr', 'revoked'), row('food', 'current')])).toEqual([]);
 	});
 });
 
