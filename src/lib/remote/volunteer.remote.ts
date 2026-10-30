@@ -145,6 +145,7 @@ import {
 	grantCertification as grantCertificationService,
 	revokeCertification as revokeCertificationService,
 	listForUser as listCertificationsForUser,
+	clearancesToRenew,
 	listHeldForGate,
 	listHeldForGateMany,
 	missingFrom,
@@ -2250,15 +2251,17 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 export const getMemberVolunteerProfilePage = query(z.void(), async () => {
 	const access = await getMyVolunteerAccess();
 
-	const [logs, roles, programs, interests] = await Promise.all([
+	const [logs, roles, programs, interests, certifications] = await Promise.all([
 		getMyVolunteerHours(),
 		getActiveVolunteerRoles(),
 		// The log modal's program picker — the committees and clubs this member is on.
 		listMyPrograms(requireUser().id),
-		getMyVolunteerInterests()
+		getMyVolunteerInterests(),
+		listCertificationsForUser(requireUser().id)
 	]);
 
-	return { access, logs, roles, programs, interests };
+	const renew = clearancesToRenew(certifications);
+	return { access, logs, roles, programs, interests, renew };
 });
 
 /**

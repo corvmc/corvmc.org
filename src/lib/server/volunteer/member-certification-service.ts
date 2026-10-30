@@ -114,6 +114,32 @@ export function certificationState(
 	return 'current';
 }
 
+export interface ClearanceToRenew {
+	name: string;
+	state: 'expiring' | 'expired';
+	expiresAt: Date | null;
+}
+
+/**
+ * The member's clearances that are expiring or lapsed, judged on the newest
+ * grant of each: a renewal leaves the old row behind, and it must not warn.
+ * Takes `listForUser`'s rows, which come newest grant first.
+ */
+export function clearancesToRenew(
+	rows: Pick<HeldCertification, 'certificationId' | 'certificationName' | 'expiresAt' | 'state'>[]
+): ClearanceToRenew[] {
+	const seen = new Set<string>();
+	const out: ClearanceToRenew[] = [];
+	for (const r of rows) {
+		if (seen.has(r.certificationId)) continue;
+		seen.add(r.certificationId);
+		if (r.state === 'expiring' || r.state === 'expired') {
+			out.push({ name: r.certificationName, state: r.state, expiresAt: r.expiresAt });
+		}
+	}
+	return out;
+}
+
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
