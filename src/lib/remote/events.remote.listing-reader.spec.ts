@@ -51,8 +51,14 @@ vi.mock('$lib/server/production/production-scope', () => ({
 // No listing exists past the guard, so a caller the guard admits gets a 404
 // and one it refuses gets a 403: the status says which side of the guard it was.
 const getById = vi.fn(async (): Promise<null | { id: string; title: string }> => null);
+const checkRebookNeeded = vi.fn(async () => ({
+	needed: false,
+	reason: null,
+	currentReservation: null
+}));
 vi.mock('$lib/server/event/event-service', () => ({
 	getById: () => getById(),
+	checkRebookNeeded: () => checkRebookNeeded(),
 	update: vi.fn(),
 	setEventLineup: vi.fn(),
 	listAll: vi.fn(),
@@ -84,6 +90,21 @@ vi.mock('$lib/server/event/rsvp-service', () => ({
 	getUserRsvp: vi.fn()
 }));
 
+const getConflictDetails = vi.fn(async () => [
+	{
+		type: 'reservation',
+		id: 'res-other',
+		startsAt: new Date(0),
+		endsAt: new Date(1),
+		label: 'Ada'
+	},
+	{ type: 'closure', startsAt: new Date(0), endsAt: new Date(1), label: 'HVAC' }
+]);
+vi.mock('$lib/server/reservation/conflict-service', () => ({
+	getConflictDetails: () => getConflictDetails(),
+	getValidationWarnings: vi.fn(async () => [])
+}));
+
 vi.mock('$lib/server/feature-flags', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
@@ -111,8 +132,13 @@ vi.mock('$app/server', () => {
 	};
 });
 
-const { getStaffEventPage, getStaffEventDetail, getEventRecurringSeries } =
-	(await import('$lib/remote/events.remote')) as any;
+const {
+	getStaffEventPage,
+	getStaffEventDetail,
+	getEventRecurringSeries,
+	checkRebook,
+	checkConflicts
+} = (await import('$lib/remote/events.remote')) as any;
 const { getEventRsvpRoster } = (await import('$lib/remote/event-rsvp.remote')) as any;
 const { GET: rsvpCsv } = await import('../../routes/staff/events/[id]/rsvps.csv/+server');
 
@@ -205,5 +231,60 @@ describe('GET rsvps.csv', () => {
 		persona = 'booker';
 		await expect(csv('evt-gig')).rejects.toMatchObject({ status: 403 });
 		expect(listRsvpsForEvent).not.toHaveBeenCalled();
+	});
+});
+
+// The edit form's pre-save checks admit whoever may save the listing (#2031).
+describe('checkRebook', () => {
+	const args = (eventId: string) => ({
+		eventId,
+		newStartsAt: '2026-08-15T19:00:00Z',
+		newEndsAt: '2026-08-15T22:00:00Z'
+	});
+
+	it("answers the show's committee", async () => {
+		persona = 'booker';
+		await expect(checkRebook(args('evt-show'))).resolves.toMatchObject({ needed: false });
+	});
+
+	it('refuses someone off the committee, reading nothing', async () => {
+		persona = 'outsider';
+		await expect(checkRebook(args('evt-show'))).rejects.toMatchObject({ status: 403 });
+		expect(checkRebookNeeded).not.toHaveBeenCalled();
+	});
+});
+
+describe('checkConflicts', () => {
+	const args = (eventId: string) => ({
+		eventId,
+		date: '2026-08-15',
+		startTime: '19:00',
+		endTime: '22:00'
+	});
+
+	it("answers the show's committee without naming who holds the room", async () => {
+		persona = 'booker';
+		const result = await checkConflicts(args('evt-show'));
+		expect(result.conflicts.map((c: { label: string }) => c.label)).toEqual([
+			'Another booking',
+			'HVAC'
+		]);
+	});
+
+	it('still names the booker to an event.read staffer', async () => {
+		persona = 'reader';
+		const result = await checkConflicts(args('evt-gig'));
+		expect(result.conflicts.map((c: { label: string }) => c.label)).toEqual(['Ada', 'HVAC']);
+	});
+
+	it('refuses someone off the committee, reading nothing', async () => {
+		persona = 'outsider';
+		await expect(checkConflicts(args('evt-show'))).rejects.toMatchObject({ status: 403 });
+		expect(getConflictDetails).not.toHaveBeenCalled();
+	});
+
+	it('refuses a booker on a listing with no production', async () => {
+		persona = 'booker';
+		await expect(checkConflicts(args('evt-gig'))).rejects.toMatchObject({ status: 403 });
 	});
 });

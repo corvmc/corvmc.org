@@ -911,15 +911,21 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 	};
 });
 
+/**
+ * The edit form's pre-save check: whoever may read the listing may run it
+ * (#2031). Who holds a conflicting booking is `event.read`'s to see; the
+ * show's committee learns only that the room is taken.
+ */
 export const checkConflicts = query(
 	z.object({
+		eventId: z.string(),
 		date: z.string(),
 		startTime: z.string(),
 		endTime: z.string(),
 		excludeReservationId: z.string().optional()
 	}),
-	async ({ date, startTime, endTime, excludeReservationId }) => {
-		await requireCapability('event.read');
+	async ({ eventId, date, startTime, endTime, excludeReservationId }) => {
+		await requireListingReader(eventId);
 		const { startsAt, endsAt } = buildTimeRangeInTz(date, startTime, endTime, DEFAULT_TIMEZONE);
 
 		const conflicts = await getConflictDetails(startsAt, endsAt);
@@ -934,8 +940,16 @@ export const checkConflicts = query(
 		const filtered = excludeReservationId
 			? conflicts.filter((c) => c.type !== 'reservation' || c.id !== excludeReservationId)
 			: conflicts;
+		const named = await can('event.read');
 
-		return { conflicts: filtered, validationWarnings };
+		return {
+			conflicts: named
+				? filtered
+				: filtered.map((c) =>
+						c.type === 'reservation' ? { ...c, id: undefined, label: 'Another booking' } : c
+					),
+			validationWarnings
+		};
 	}
 );
 
@@ -946,7 +960,7 @@ export const checkRebook = query(
 		newEndsAt: z.string()
 	}),
 	async ({ eventId, newStartsAt, newEndsAt }) => {
-		await requireCapability('event.read');
+		await requireListingReader(eventId);
 		let result: Awaited<ReturnType<typeof checkRebookNeeded>>;
 		try {
 			result = await checkRebookNeeded(eventId, new Date(newStartsAt), new Date(newEndsAt));

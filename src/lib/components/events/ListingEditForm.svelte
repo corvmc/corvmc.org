@@ -212,6 +212,10 @@
 			rebookConfirmed = false;
 		}
 	}
+
+	/** The check is scoped to this listing, so its guard can admit the show's committee. */
+	const checkListingConflicts = (params: Omit<Parameters<typeof checkConflicts>[0], 'eventId'>) =>
+		checkConflicts({ ...params, eventId: event.id });
 </script>
 
 <svelte:boundary>
@@ -474,7 +478,7 @@
 										date={editDate}
 										startTime={editReservationStartTime}
 										endTime={editReservationEndTime}
-										{checkConflicts}
+										checkConflicts={checkListingConflicts}
 										excludeReservationId={linkedReservation?.id}
 										bind:hasBlockingConflict
 									/>
@@ -542,7 +546,7 @@
 										date={editDate}
 										startTime={editReservationStartTime}
 										endTime={editReservationEndTime}
-										{checkConflicts}
+										checkConflicts={checkListingConflicts}
 										bind:hasBlockingConflict
 									/>
 									{#if hasBlockingConflict}
