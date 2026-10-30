@@ -17,8 +17,10 @@ monthly limit.
 
 - Your remaining hours for the month are shown on your **Dashboard** and on the
   **Reservations** page.
-- When you book or pay for a session, free hours are applied automatically before
-  any charge.
+- Booking a session doesn't spend free hours. They're applied when you pay, or
+  when you confirm in the three days before the session, before any charge. Two
+  bookings can both show as covered; whichever you pay for first uses the hours.
+- Free hours only pay for a session that starts before they next reset.
 - Hours beyond your monthly allotment are billed at the standard hourly rate.
 
 ## Where they come from

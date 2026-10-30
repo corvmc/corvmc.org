@@ -1,9 +1,9 @@
 /**
- * Reservation credit policy: free-hour credits are committed (deducted) exactly
- * once, at Confirm time, tagged to the reservation in the credit ledger
- * (`source: 'reservation'`, `sourceId: reservationId`). The committed cash
- * remainder is stored on `reservation.cashDueCents` (the commitment marker:
- * null = not committed). Credits are reversed once on cancel.
+ * Reservation credit policy: nothing is priced at booking. Free-hour credits
+ * are committed exactly once, when the booking is paid or confirmed in its
+ * window, tagged in the ledger (`source: 'reservation'`, `sourceId`). The cash
+ * remainder goes on `reservation.cashDueCents` (null = not yet priced). Only
+ * committed credits are reversed on cancel (#2108).
  *
  * This keeps reservation-specific credit rules out of the generic credit- and
  * payment-services.
@@ -14,7 +14,8 @@ import { creditTransaction } from '$lib/server/db/schema/finance';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
 import { and, eq, sql } from 'drizzle-orm';
 import * as creditService from '$lib/server/finance/credit-service';
-import { creditValueCents, creditsToHours, hoursToCredits } from '$lib/config';
+import { creditValueCents, creditsToHours, hoursToCredits, type BookerType } from '$lib/config';
+import { termsFor, type ReservationConfig } from './config';
 
 export interface ReservationCreditResult {
 	/** Free-hour credit units applied to this reservation (committed or already-committed). */
@@ -84,6 +85,30 @@ export async function getFreeHoursWallet(userId: string): Promise<FreeHoursWalle
 /** The part of the wallet a session starting at `startsAt` may spend. */
 export function usableFreeHours(wallet: FreeHoursWallet, startsAt: Date): number {
 	return freeHoursApplyTo(startsAt, wallet.resetAt) ? wallet.balance : 0;
+}
+
+/**
+ * Whether the wallet would cover the whole booking if it were paid now. A live
+ * figure for display: nothing is held, so two bookings can each read covered
+ * against the same hours, and the first one paid takes them.
+ */
+export function coveredByFreeHours(
+	r: { startsAt: Date; endsAt: Date; bookerType: BookerType },
+	wallet: FreeHoursWallet,
+	cfg: ReservationConfig
+): boolean {
+	const freeHoursBalance = usableFreeHours(wallet, r.startsAt);
+	if (freeHoursBalance <= 0) return false;
+	const { hourlyRateCents } = termsFor(r.bookerType, cfg);
+	const durationHours = (r.endsAt.getTime() - r.startsAt.getTime()) / (1000 * 60 * 60);
+	return (
+		computeReservationCredit({
+			totalCents: Math.round(durationHours * hourlyRateCents),
+			durationHours,
+			hourlyRateCents,
+			freeHoursBalance
+		}).remainingCents <= 0
+	);
 }
 
 /** Sum the free-hour credit units already committed to a reservation (ledger-driven). */

@@ -121,7 +121,7 @@
 		<SubmitButton
 			variant="primary"
 			class="mt-4 w-full"
-			label={remainingCents <= 0 ? 'Confirm (Free Hours)' : `Pay $${formatDollars(chargeTotal)}`}
+			label={remainingCents <= 0 ? 'Pay with free hours' : `Pay $${formatDollars(chargeTotal)}`}
 		/>
 	</Form>
 

@@ -51,15 +51,15 @@
 			if (r?.waitlisted) {
 				toast.info('The first instance is waitlisted because the slot is currently booked.');
 			}
-			// Booked too far out to commit free hours yet. Saying so is the point:
+			// Booked outside the window: held, with nothing priced (#2108). Saying so is the point:
 			// this outcome used to arrive as a 400 nobody rendered, over a held
 			// booking the member was never told about.
 			if (r?.scheduled) {
 				const opens = r.confirmOpensAt ? formatDate(new Date(r.confirmOpensAt)) : null;
 				toast.info(
 					opens
-						? `Room held. Confirm it from ${opens} to spend your free hours.`
-						: 'Room held. Confirm it closer to the date to spend your free hours.'
+						? `Room held. Pay for it any time, or confirm it from ${opens}.`
+						: 'Room held. Pay for it any time, or confirm it closer to the date.'
 				);
 			}
 			onbooked?.();

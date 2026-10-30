@@ -209,7 +209,9 @@ describe('createReservation (staff)', () => {
 		);
 	});
 
-	it('commits the member credits so cashDueCents is never left null', async () => {
+	// #2108: the booking lands confirmed, and confirming without paying spends
+	// the member's qualifying free hours then; `cashDueCents` holds the rest.
+	it("commits the member's free hours at creation, pricing the booking", async () => {
 		await createReservation(input);
 
 		// 2 hours × $15/hr — the same settle math as the member confirm path.

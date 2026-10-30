@@ -8,6 +8,7 @@ import {
 import { listUserLoans } from '$lib/server/inventory/loan-service';
 import { countPendingRequests } from '$lib/server/inbox/direct-service';
 import { getMemberSubscription } from '$lib/server/finance/subscription-service';
+import { reservationNeedsYouItems, type ReservationNeedingYou } from './reservation-needs-you';
 
 /**
  * What the member has to do something about, and when it stops being possible.
@@ -18,17 +19,10 @@ import { getMemberSubscription } from '$lib/server/finance/subscription-service'
  * problems saw the same layout as somebody with none.
  */
 
-/** A reservation the room is released from if nobody confirms. */
-interface UnconfirmedReservation {
-	id: string;
-	startsAt: Date;
-	bandName: string | null;
-}
-
 export interface NeedsYouInput {
 	userId: string;
 	/** Already fetched by the dashboard query; passed in rather than re-read. */
-	unconfirmed: UnconfirmedReservation[];
+	reservations: ReservationNeedingYou[];
 	pendingInviteCount: number;
 	profileComplete: boolean;
 	now?: Date;
@@ -52,20 +46,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 
 	const items: NeedsYouItem[] = [];
 
-	for (const r of input.unconfirmed) {
-		items.push({
-			id: `reservation-unconfirmed:${r.id}`,
-			kind: 'reservation-unconfirmed',
-			title: 'Confirm your practice room booking',
-			detail: r.bandName
-				? `${r.bandName} — the room is released if nobody confirms`
-				: 'The room is released if nobody confirms',
-			href: resolve('/member/reservations'),
-			label: 'Confirm',
-			dueAt: r.startsAt,
-			rank: 0
-		});
-	}
+	items.push(...reservationNeedsYouItems(input.reservations, now));
 
 	for (const s of signups) {
 		// `startsAt` is nullable: a work order can exist before it is scheduled.
