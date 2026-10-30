@@ -372,6 +372,24 @@ describe('generateRecurringReservations', () => {
 		expect(insertedRows).toHaveLength(0);
 	});
 
+	// Rows generated before the daylight-saving fix (#2105) sit an hour off
+	// their rule. The same club day is the same occurrence, so no second booking.
+	it('treats an instance on the same club day as existing, even an hour off', async () => {
+		queueSelects(
+			[SERIES],
+			[PROTOTYPE],
+			[OWNER],
+			[{ startsAt: new Date(OCC1.getTime() - 60 * 60 * 1000) }]
+		);
+		setupInsert();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		const result = await generateRecurringReservations();
+
+		expect(result.instancesCreated).toBe(0);
+		expect(insertedRows).toHaveLength(0);
+	});
+
 	/**
 	 * The predicate itself, not just its result. Moving the hard block off
 	 * `booker_type` is the change that would otherwise fail in silence: nothing

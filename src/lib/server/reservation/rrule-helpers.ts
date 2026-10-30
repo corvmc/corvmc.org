@@ -1,4 +1,3 @@
-import { addWeeks } from 'date-fns';
 import { CalendarDate, endOfMonth } from '@internationalized/date';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 import type { BookerType } from '$lib/config';
@@ -97,20 +96,15 @@ export function getOccurrences(rruleString: string, after: Date, before: Date): 
 	const occurrences: Date[] = [];
 
 	if (rule.freq === 'weekly') {
-		// Start from the rule's initial date and step forward
-		let current = buildDateTimeInTz(rule.start, rule.tz);
+		// Step the club-time date, not the instant: on a UTC runtime a fixed 7 days
+		// keeps the UTC hour, so a 4 PM session drifts to 3 PM after fall-back.
+		const step = 7 * rule.interval;
+		const at = (n: number) => buildDateTimeInTz(addDaysToParts(rule.start, n * step), rule.tz);
+		let n = 0;
+		while (at(n).getTime() <= after.getTime()) n++;
 
-		// If starting before the window, advance to the first candidate in/near the window
-		while (current.getTime() <= after.getTime()) {
-			current = addWeeks(current, rule.interval);
-		}
-
-		// Generate occurrences within the window
-		while (current.getTime() < before.getTime()) {
-			if (current.getTime() > after.getTime()) {
-				occurrences.push(current);
-			}
-			current = addWeeks(current, rule.interval);
+		for (let current = at(n); current.getTime() < before.getTime(); current = at(++n)) {
+			occurrences.push(current);
 		}
 	} else if (rule.freq === 'monthly') {
 		// Monthly: find the matching date in each month - either the nth weekday
@@ -203,6 +197,15 @@ export function monthlyModeOf(rruleString: string): MonthlyMode | null {
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+/** Calendar arithmetic on date parts, independent of the runtime's zone. */
+function addDaysToParts<T extends { year: number; month: number; day: number }>(
+	parts: T,
+	days: number
+): T {
+	const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
+	return { ...parts, year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
 
 /** Last day of a 1-based month, without routing through a local-time `Date`. */
 function daysInMonth(year: number, month: number): number {

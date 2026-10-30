@@ -26,6 +26,7 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 // ---------------------------------------------------------------------------
 
 const TZ = DEFAULT_TIMEZONE;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface GenerationResult {
 	seriesProcessed: number;
@@ -198,13 +199,15 @@ async function processSeries(
 					.where(
 						and(
 							eq(reservation.recurringSeriesId, series.id),
-							gte(reservation.startsAt, occurrences[0]),
-							lte(reservation.startsAt, occurrences[occurrences.length - 1])
+							gte(reservation.startsAt, new Date(occurrences[0].getTime() - DAY_MS)),
+							lte(reservation.startsAt, new Date(occurrences.at(-1)!.getTime() + DAY_MS))
 						)
 					)
 			: [];
 
-	const existingTimes = new Set(existingInstances.map((r) => r.startsAt.getTime()));
+	// Matched by club day, not instant: rows generated before #2105 sit an hour
+	// off their rule after a daylight-saving change, and are the same session.
+	const existingDays = new Set(existingInstances.map((r) => formatDateInTz(r.startsAt, TZ)));
 
 	let created = 0;
 	let waitlisted = 0;
@@ -214,7 +217,7 @@ async function processSeries(
 		const occEnd = new Date(occStart.getTime() + durationMs);
 
 		// Already generated (or was generated and cancelled) — skip
-		if (existingTimes.has(occStart.getTime())) {
+		if (existingDays.has(formatDateInTz(occStart, TZ))) {
 			continue;
 		}
 
@@ -491,12 +494,13 @@ async function processEventSeries(
 					.where(
 						and(
 							eq(eventListing.recurringSeriesId, series.id),
-							gte(eventListing.startsAt, occurrences[0]),
-							lte(eventListing.startsAt, occurrences[occurrences.length - 1])
+							gte(eventListing.startsAt, new Date(occurrences[0].getTime() - DAY_MS)),
+							lte(eventListing.startsAt, new Date(occurrences.at(-1)!.getTime() + DAY_MS))
 						)
 					)
 			: [];
-	const existingTimes = new Set(existingInstances.map((r) => r.startsAt.getTime()));
+	// By club day, as for reservations above (#2105).
+	const existingDays = new Set(existingInstances.map((r) => formatDateInTz(r.startsAt, TZ)));
 
 	/**
 	 * An occurrence is the prototype repeated, so it inherits what the prototype
@@ -554,7 +558,7 @@ async function processEventSeries(
 	let skipped = 0;
 
 	for (const occStart of occurrences) {
-		if (existingTimes.has(occStart.getTime())) continue;
+		if (existingDays.has(formatDateInTz(occStart, TZ))) continue;
 
 		const occEnd = new Date(occStart.getTime() + durationMs);
 		const occDoors = doorsLeadMs != null ? new Date(occStart.getTime() - doorsLeadMs) : null;
