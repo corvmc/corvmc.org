@@ -1,22 +1,16 @@
 /**
- * Tab vocabulary for the staff user record.
+ * Tab vocabulary for the staff user record, shared with the panels so an
+ * Overview "jump" cannot name a tab that does not exist. One-word labels.
  *
- * Shared between the page and the panels so a "jump to the tab that owns this"
- * button on Overview cannot name a tab that does not exist.
- *
- * Labels are kept to one word wherever the tab bar allows it. Eight tabs of
- * "Space & Gear" and "Bands & Shows" outrun a phone even collapsed, and the
- * ampersand halves were never what anyone scanned for.
- *
- * No feature-flag gating: `getStaffLayout` records the panel-wide rule that
- * staff surfaces ignore flags, so an off program shows an empty section here
- * rather than vanishing.
+ * No feature-flag gating: staff surfaces ignore flags (`getStaffLayout`), so an
+ * off program shows an empty section here rather than vanishing.
  */
 export const TAB_KEYS = [
 	'overview',
 	'space',
 	'bands',
 	'volunteer',
+	'instructor',
 	'money',
 	'comms',
 	'moderation',
@@ -30,6 +24,7 @@ export const TAB_LABELS: Record<TabKey, string> = {
 	space: 'Space',
 	bands: 'Bands',
 	volunteer: 'Volunteer',
+	instructor: 'Instructor',
 	money: 'Money',
 	comms: 'Comms',
 	moderation: 'Moderation',

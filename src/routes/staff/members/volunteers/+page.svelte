@@ -20,7 +20,7 @@
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
 	import CertificationOptions from '$lib/components/volunteer/CertificationOptions.svelte';
-	import VolunteerPanel from './VolunteerPanel.svelte';
+	import MemberRecordPanel from '../[id]/MemberRecordPanel.svelte';
 	import MemberViews from '../MemberViews.svelte';
 	import { subline, type RosterRow } from './subline';
 	import { resolve } from '$app/paths';
@@ -257,9 +257,12 @@
 		{/snippet}
 
 		{#snippet panel(volunteer, ctl)}
-			<VolunteerPanel {volunteer} bind:open={ctl.open}>
-				{#snippet action()}{@render rowAction(volunteer)}{/snippet}
-			</VolunteerPanel>
+			<MemberRecordPanel
+				id={volunteer.personId}
+				name={volunteer.member.title}
+				tab="volunteer"
+				bind:open={ctl.open}
+			/>
 		{/snippet}
 	</Roster>
 </PageContent>
