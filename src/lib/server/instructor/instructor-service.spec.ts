@@ -372,3 +372,22 @@ describe('what gets announced', () => {
 		expect(seen).toHaveLength(0);
 	});
 });
+
+describe('the Members instructors view', () => {
+	it('filters by status and search, and counts pending whatever the filter', async () => {
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
+		await svc.grant(STAFF, STAFF);
+
+		const pending = await svc.listInstructorRoster({ status: 'requested' });
+		expect(pending.rows.map((r) => r.personId)).toEqual([USER]);
+		expect(pending.rows[0]).toMatchObject({ email: 'teacher@example.com', headline: 'Guitar' });
+
+		const teaching = await svc.listInstructorRoster({ status: 'active' });
+		expect(teaching.rows.map((r) => r.personId)).toEqual([STAFF]);
+		expect(teaching.pending).toBe(1);
+
+		const found = await svc.listInstructorRoster({ search: 'teacher@' });
+		expect(found.rows.map((r) => r.personId)).toEqual([USER]);
+		expect(found.pagination.total).toBe(1);
+	});
+});

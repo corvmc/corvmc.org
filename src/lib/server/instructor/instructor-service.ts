@@ -1,9 +1,12 @@
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, or } from 'drizzle-orm';
 import { db, getRowCount } from '$lib/server/db';
 import { instructor, type Instructor } from '$lib/server/db/schema/instructor';
 import { user } from '$lib/server/db/schema/authentication';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import type { EntityRef } from '$lib/types/entity';
+import { memberRefColumns } from '$lib/server/entity/refs';
+import { containsLiteral } from '$lib/server/db/like';
+import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
+import { toRosterPerson } from '$lib/server/roster/roster';
+import type { RosterPerson } from '$lib/types/roster';
 import { DomainError } from '$lib/server/domain-error';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
@@ -434,7 +437,7 @@ export function retire(id: string, staffUserId: string, statusNote: string): Pro
 // The staff read
 // ---------------------------------------------------------------------------
 
-export interface StaffInstructorRow {
+export interface StaffInstructorRow extends RosterPerson {
 	id: string;
 	userId: string;
 	status: InstructorStatus;
@@ -446,30 +449,29 @@ export interface StaffInstructorRow {
 	statusNote: string | null;
 	grantedAt: Date | null;
 	createdAt: Date;
-	member: EntityRef;
+}
+
+export interface InstructorRosterFilters {
+	search?: string;
+	/** Omitted is every status. `requested` is the Pending filter. */
+	status?: InstructorStatus;
 }
 
 /**
- * Everyone who has ever asked or been granted, in three buckets.
- *
- * The split is by **who the row is waiting on**, not by status, because that is
- * the question a staffer opening this page is asking:
- *
- * - `awaitingReview` — `requested`. Waiting on staff. Nothing else here is.
- * - `active` — the roster.
- * - `resolved` — `rejected`, `paused`, `retired`. Waiting on the member, or on
- *   nobody. The status badge tells them apart, and lumping them keeps the page
- *   from growing a section per status.
- *
- * Oldest first within each bucket, which is what `instructor_status_idx` is
- * ordered for.
+ * The Members "Instructors" view: everyone who has asked or been granted, oldest
+ * first (the order `instructor_status_idx` serves). `pending` counts open
+ * applications whatever the filters, so the view can always point at them.
  */
-export async function listForStaff(): Promise<{
-	awaitingReview: StaffInstructorRow[];
-	active: StaffInstructorRow[];
-	resolved: StaffInstructorRow[];
-}> {
-	const rows = await db
+export async function listInstructorRoster(
+	filters: InstructorRosterFilters = {},
+	pagination: PaginationInput = {}
+): Promise<PaginatedResult<StaffInstructorRow> & { pending: number }> {
+	const search = filters.search?.trim();
+	const where = and(
+		filters.status ? eq(instructor.status, filters.status) : undefined,
+		search ? or(containsLiteral(user.name, search), containsLiteral(user.email, search)) : undefined
+	);
+	const dataQ = db
 		.select({
 			id: instructor.id,
 			userId: instructor.userId,
@@ -485,17 +487,29 @@ export async function listForStaff(): Promise<{
 		})
 		.from(instructor)
 		.innerJoin(user, eq(user.id, instructor.userId))
-		.orderBy(asc(instructor.createdAt), asc(instructor.id));
+		.where(where)
+		.orderBy(asc(instructor.createdAt), asc(instructor.id))
+		.$dynamic();
+	const countQ = db
+		.select({ count: count() })
+		.from(instructor)
+		.innerJoin(user, eq(user.id, instructor.userId))
+		.where(where);
+	const pendingQ = db
+		.select({ count: count() })
+		.from(instructor)
+		.where(eq(instructor.status, 'requested'));
 
-	const shaped = rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
-
+	const [{ rows, pagination: page }, [pending]] = await Promise.all([
+		paginate(dataQ, countQ, { page: pagination.page ?? 1, pageSize: pagination.pageSize ?? 20 }),
+		pendingQ
+	]);
 	return {
-		awaitingReview: shaped.filter((r) => r.status === 'requested'),
-		active: shaped.filter((r) => r.status === 'active'),
-		// Positively matched, so a sixth status shows up somewhere rather than
-		// vanishing from a page whose whole job is to account for everyone.
-		resolved: shaped.filter((r) =>
-			(['rejected', 'paused', 'retired'] as string[]).includes(r.status)
-		)
+		rows: rows.map(({ member, ...r }) => ({
+			...toRosterPerson({ ...member, id: r.userId }),
+			...r
+		})),
+		pagination: page,
+		pending: pending?.count ?? 0
 	};
 }

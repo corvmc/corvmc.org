@@ -120,14 +120,9 @@ test('an instructor can book teaching time; a member without a grant cannot', as
 
 test('staff see a waiting application, and approving it clears the queue', async ({ page }) => {
 	await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-	await page.goto('/staff/instructors');
+	// Applications are the Instructors view's Pending filter (#2074).
+	await page.goto('/staff/members/instructors?status=requested');
 
-	// Applications lead the page — the only rows on it waiting on staff. The
-	// *heading*, not the text, so nothing else on the page that says
-	// "Applications" can race it once the capability-filtered nav has rendered.
-	await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible({
-		timeout: 15000
-	});
 	await expect(page.getByText(SEED_APPLICANT_HEADLINE)).toBeVisible({ timeout: 15000 });
 	// The private half of the application is staff-only, and this is the one
 	// surface allowed to render it.
@@ -139,8 +134,8 @@ test('staff see a waiting application, and approving it clears the queue', async
 	await dialog.getByRole('button', { name: 'Approve' }).click();
 	await expect(dialog).toBeHidden({ timeout: 20000 });
 
-	// They move from the queue to the roster, which is the whole of the approve
-	// transition being observable.
+	// They leave Pending and appear among who is teaching.
+	await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(0, { timeout: 15000 });
+	await page.goto('/staff/members/instructors');
 	await expect(page.getByText(SEED_APPLICANT_HEADLINE)).toBeVisible({ timeout: 15000 });
-	await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(0);
 });

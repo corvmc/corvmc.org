@@ -548,10 +548,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/instructors",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/inventory",
 		"panel": "staff"
 	},
@@ -665,6 +661,10 @@
 	},
 	{
 		"route": "/staff/members/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/members/instructors",
 		"panel": "staff"
 	},
 	{

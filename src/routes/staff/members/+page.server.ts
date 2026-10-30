@@ -10,4 +10,5 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user || (await can('user.list'))) return;
 	if (await can('volunteer.read')) redirect(307, '/staff/members/volunteers');
+	if (await can('instructor.read')) redirect(307, '/staff/members/instructors');
 };

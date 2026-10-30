@@ -44,7 +44,6 @@ export type StaffNavKey =
 	| 'project-templates'
 	| 'volunteer-report'
 	| 'reservations'
-	| 'instructors'
 	| 'equipment'
 	| 'equipment-loans'
 	| 'equipment-reports'
@@ -152,7 +151,7 @@ export const staffNavSections: StaffNavSection[] = [
 			{
 				key: 'users',
 				capability: 'user.list',
-				alsoFor: ['volunteer.read'],
+				alsoFor: ['volunteer.read', 'instructor.read'],
 				label: 'Members',
 				href: resolve('/staff/members')
 			},
@@ -168,12 +167,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'committee.reviewApplications',
 				label: 'Committees',
 				href: resolve('/staff/committees')
-			},
-			{
-				key: 'instructors',
-				capability: 'instructor.read',
-				label: 'Instructors',
-				href: resolve('/staff/instructors')
 			},
 			{
 				// A dashboard, not an index: docs/development/ui-patterns.md#section-dashboards.

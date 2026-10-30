@@ -17,7 +17,7 @@ const requireCapabilityOrOwner = vi.fn(async () => 'staff' as const);
 vi.mock('$lib/server/authorization', () => ({ requireCapability, requireCapabilityOrOwner }));
 
 const svc = {
-	listForStaff: vi.fn(async () => ({ awaitingReview: [], active: [], resolved: [] })),
+	listInstructorRoster: vi.fn(async () => ({ rows: [], pagination: {}, pending: 0 })),
 	getByUserId: vi.fn(async () => null),
 	approve: vi.fn(async () => undefined),
 	sendBack: vi.fn(async () => undefined),
@@ -99,9 +99,12 @@ describe('the acting staffer is recorded, not the subject', () => {
 
 describe('reads', () => {
 	it('lists for staff behind the staff guard', async () => {
-		await remote.getStaffInstructors(undefined);
-		expect(requireCapability).toHaveBeenCalled();
-		expect(svc.listForStaff).toHaveBeenCalled();
+		await remote.getStaffInstructors({ status: 'requested' });
+		expect(requireCapability).toHaveBeenCalledWith('instructor.read');
+		expect(svc.listInstructorRoster).toHaveBeenCalledWith(
+			{ search: undefined, status: 'requested' },
+			{ page: undefined }
+		);
 	});
 
 	it('lets a member read their own record, not only staff', async () => {

@@ -12,7 +12,7 @@
 	 * of its own — `tabs.ts` already says eight "outrun a phone even collapsed",
 	 * and the grant is a right in the room, beside the bookings it produces.
 	 *
-	 * Read-only. Granting, pausing and retiring live at `/staff/instructors`,
+	 * Read-only. Granting, pausing and retiring live at `/staff/members/instructors`,
 	 * which is where the roster is and where the decision has its context; a
 	 * second set of the same buttons here would be two places to look for one
 	 * thing.
@@ -25,7 +25,7 @@
 		{#if !instructor}
 			<EmptyState
 				title="Not an instructor"
-				description="Add them as an instructor from /staff/instructors if they teach here."
+				description="Add them from Members → Instructors if they teach here."
 			/>
 		{:else}
 			<DefinitionList>

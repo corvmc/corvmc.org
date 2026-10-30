@@ -7,6 +7,12 @@ import {
 	requireUser
 } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
+import {
+	instructorRosterFilters,
+	listAllInstructors,
+	toServiceFilters
+} from '$lib/server/instructor/instructor-roster';
+import { rosterEmails } from '$lib/server/roster/roster';
 import * as instructorService from '$lib/server/instructor/instructor-service';
 import {
 	INSTRUCTOR_REVIEW_NOTES_MAX,
@@ -37,9 +43,19 @@ import {
  * operating mode rather than a gap.
  */
 
-export const getStaffInstructors = query(async () => {
+/** The Members "Instructors" view, under the keys its page writes to the URL. */
+export const getStaffInstructors = query(
+	instructorRosterFilters.extend({ page: z.number().optional() }),
+	async ({ page, ...f }) => {
+		await requireCapability('instructor.read');
+		return instructorService.listInstructorRoster(toServiceFilters(f), { page });
+	}
+);
+
+/** Every address the Instructors view's filters match, not just this page's. */
+export const getStaffInstructorEmails = query(instructorRosterFilters, async (f) => {
 	await requireCapability('instructor.read');
-	return instructorService.listForStaff();
+	return rosterEmails(await listAllInstructors(f));
 });
 
 /**
