@@ -1,5 +1,6 @@
 import { getJson, putJson } from '$lib/server/kv';
 import { DomainError } from '$lib/server/domain-error';
+import { ORIENTATION_DEFAULT_TASKS } from '$lib/config';
 
 /** The caller asked for a config key that is not in the registry. */
 export class UnknownSiteConfigKeyError extends DomainError {
@@ -58,10 +59,13 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// figure or it silently starts describing the wrong year.
 	'volunteer.hourValueSource': 'Independent Sector, Oregon, 2025 (2026 report, preliminary)',
 
-	// A member's first rehearsal booking raises one shift in this role, at the
-	// booking's start, for this long. An empty role switches orientation off.
+	// A member's first rehearsal booking raises one shift in this role, starting
+	// the lead time before the booking, for this long, carrying these tasks (one
+	// per line). An empty role switches orientation off.
 	'volunteer.orientationRoleId': '',
 	'volunteer.orientationMinutes': 30,
+	'volunteer.orientationLeadMinutes': 10,
+	'volunteer.orientationTasks': ORIENTATION_DEFAULT_TASKS.join('\n'),
 
 	// How many inputs the desk in the practice room can actually take.
 	//

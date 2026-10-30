@@ -129,9 +129,10 @@ describe('applyDutyListToProjectForm', () => {
 		expect(applyDutyList).not.toHaveBeenCalled();
 	});
 
-	it('refuses the volunteer coordinator, who holds volunteer.manageShifts', async () => {
+	it('counts the volunteer coordinator as staff cover since #2102', async () => {
+		expect(staffCover).toContain('volunteer_coordinator');
 		heldPositions = ['volunteer_coordinator'];
-		await expect(applyDutyListToProjectForm(input)).rejects.toMatchObject({ status: 403 });
+		await expect(applyDutyListToProjectForm(input)).resolves.toMatchObject({ workOrders: 2 });
 	});
 
 	it('refuses a member of a different committee', async () => {

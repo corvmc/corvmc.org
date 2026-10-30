@@ -591,8 +591,7 @@
 							/>
 						</div>
 						<p class="text-subtle">
-							A member's first rehearsal booking gets one shift in this role, at the booking's
-							start. No role, no shift.
+							A member's first rehearsal booking gets one shift in this role. No role, no shift.
 						</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
@@ -612,7 +611,20 @@
 								type="number"
 								value={String(orientation.minutes)}
 							/>
+							<FormField
+								name="leadMinutes"
+								label="Starts before the booking (minutes)"
+								type="number"
+								value={String(orientation.leadMinutes)}
+							/>
 						</div>
+						<FormField
+							name="tasks"
+							label="Checklist"
+							type="textarea"
+							description="One task per line."
+							value={orientation.tasks.join('\n')}
+						/>
 					</CardBody>
 				</Card>
 			</Form>

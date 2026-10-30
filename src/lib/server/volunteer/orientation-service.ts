@@ -1,7 +1,12 @@
 import { db } from '$lib/server/db';
 import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { config } from '$lib/server/site-config/site-config-service';
-import { memberOrientation, volunteerRole, workOrder } from '$lib/server/db/schema/volunteer';
+import {
+	memberOrientation,
+	volunteerRole,
+	workOrder,
+	workTask
+} from '$lib/server/db/schema/volunteer';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import type { MemberOrientation } from '$lib/server/db/schema/volunteer';
@@ -155,23 +160,45 @@ export async function waiveOrientation(
 		});
 }
 
-/** The orientation setting: which role meets a first-timer, and for how long. */
-export async function getOrientationSetting(): Promise<{ roleId: string; minutes: number }> {
-	const [roleId, minutes] = await Promise.all([
+/**
+ * The orientation setting: which role meets a first-timer, how long before the
+ * booking, for how long, and the checklist. Tasks are stored one per line.
+ */
+export async function getOrientationSetting(): Promise<{
+	roleId: string;
+	minutes: number;
+	leadMinutes: number;
+	tasks: string[];
+}> {
+	const [roleId, minutes, leadMinutes, tasks] = await Promise.all([
 		config('volunteer.orientationRoleId'),
-		config('volunteer.orientationMinutes')
+		config('volunteer.orientationMinutes'),
+		config('volunteer.orientationLeadMinutes'),
+		config('volunteer.orientationTasks')
 	]);
-	return { roleId: String(roleId).trim(), minutes: Number(minutes) };
+	return {
+		roleId: String(roleId).trim(),
+		minutes: Number(minutes),
+		leadMinutes: Number(leadMinutes) || 0,
+		tasks: parseOrientationTasks(String(tasks))
+	};
+}
+
+export function parseOrientationTasks(text: string): string[] {
+	return text
+		.split('\n')
+		.map((t) => t.trim())
+		.filter(Boolean);
 }
 
 /**
- * The booking's orientation shift: the live one already on it, or a new one at
- * the booking's start, for the set length, in no project. Null while no role
- * (or an archived one) is set — the feature is off.
+ * The booking's orientation shift: the live one already on it, or a new one the
+ * lead time before the booking's start, for the set length, in no project, with
+ * the checklist stamped on. Null while no role (or an archived one) is set.
  */
 export async function raiseOrientationShift(
 	reservationId: string,
-	startsAt: Date
+	bookingStartsAt: Date
 ): Promise<{ id: string; startsAt: Date | null } | null> {
 	const [live] = await db
 		.select({ id: workOrder.id, startsAt: workOrder.startsAt })
@@ -198,22 +225,32 @@ export async function raiseOrientationShift(
 	if (!role?.isActive) return null;
 
 	const now = new Date();
-	const [row] = await db
-		.insert(workOrder)
-		.values({
-			volunteerRoleId: setting.roleId,
-			reservationId,
-			startsAt,
-			endsAt: new Date(startsAt.getTime() + setting.minutes * 60_000),
-			anchor: 'start',
-			isOrientation: true,
-			notes: 'First visit — meet them at the front door.',
-			postedAt: now,
-			createdAt: now,
-			updatedAt: now
-		})
-		.returning({ id: workOrder.id, startsAt: workOrder.startsAt });
-	return row;
+	const id = crypto.randomUUID();
+	const startsAt = new Date(bookingStartsAt.getTime() - setting.leadMinutes * 60_000);
+	const insertShift = db.insert(workOrder).values({
+		id,
+		volunteerRoleId: setting.roleId,
+		reservationId,
+		startsAt,
+		endsAt: new Date(startsAt.getTime() + setting.minutes * 60_000),
+		anchor: 'start',
+		isOrientation: true,
+		notes: 'First visit — meet them at the front door.',
+		postedAt: now,
+		createdAt: now,
+		updatedAt: now
+	});
+	if (setting.tasks.length === 0) {
+		await insertShift;
+	} else {
+		await db.batch([
+			insertShift,
+			db
+				.insert(workTask)
+				.values(setting.tasks.map((label, sortOrder) => ({ workOrderId: id, label, sortOrder })))
+		]);
+	}
+	return { id, startsAt };
 }
 
 export interface OrientationOwner {
