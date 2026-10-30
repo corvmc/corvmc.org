@@ -93,7 +93,7 @@ function entityHref(entityType: FlagEntityType, entityId: string, flagId?: strin
 		case 'classified_post':
 			return `/staff/classifieds/${entityId}`;
 		default:
-			return `/staff/users/${entityId}`;
+			return `/staff/members/${entityId}`;
 	}
 }
 

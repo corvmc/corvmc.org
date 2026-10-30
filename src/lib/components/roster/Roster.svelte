@@ -35,6 +35,7 @@
 		emails,
 		lead,
 		leadLabel = 'Status',
+		leadHead,
 		detail,
 		columns,
 		cells,
@@ -63,6 +64,8 @@
 		/** A narrow cell before the person, such as a status glyph. */
 		lead?: Snippet<[T]>;
 		leadLabel?: string;
+		/** The lead column's header cell, such as a select-all box; `leadLabel` otherwise. */
+		leadHead?: Snippet<[T[]]>;
 		/** The person cell's second line. */
 		detail?: Snippet<[T]>;
 		/** Header cells for `cells`. */
@@ -113,9 +116,9 @@
 		panelState.open = true;
 	}
 
-	const recordHref = (row: T) => resolve(`/staff/users/${row.personId}`);
+	const recordHref = (row: T) => resolve(`/staff/members/${row.personId}`);
 
-	// Email has its own column, as on the users table, so the name cell drops the
+	// Email has its own column, so the name cell drops the
 	// ref's subtitle (which is the email) rather than printing it twice.
 	const nameOnly = (row: T) => ({ ...row.member, subtitle: null });
 
@@ -170,7 +173,12 @@
 	{#snippet children(rows)}
 		<Table>
 			{#snippet head()}
-				{#if lead}<th class="w-px"><span class="sr-only">{leadLabel}</span></th>{/if}
+				{#if lead}
+					<th class="w-px">
+						{#if leadHead}{@render leadHead(rows)}{:else}<span class="sr-only">{leadLabel}</span
+							>{/if}
+					</th>
+				{/if}
 				<th>{personLabel}</th>
 				<th>Email</th>
 				{@render columns?.()}

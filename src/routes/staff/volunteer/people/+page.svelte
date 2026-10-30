@@ -75,7 +75,7 @@
 	);
 
 	const recordHref = (row: RosterRow) =>
-		withQuery(resolve(`/staff/users/${row.userId}`), 'tab=volunteer');
+		withQuery(resolve(`/staff/members/${row.userId}`), 'tab=volunteer');
 </script>
 
 {#snippet rowAction(volunteer: RosterRow)}

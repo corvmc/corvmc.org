@@ -1,6 +1,6 @@
 # Moderation Appeals — contesting a moderation decision
 
-> **Shipped (#578).** Differences from the design below: `/staff/users/[id]` does not yet mark a
+> **Shipped (#578).** Differences from the design below: `/staff/members/[id]` does not yet mark a
 > standing card "appeal pending" (the report link on the card leads to it); a decision requires a
 > reason whichever way it goes; and a standing counts as in force for an appeal only while it still
 > names this report as `triggeringFlagId` — a later upheld report owns the standing and its own
@@ -23,7 +23,7 @@ they are not trusted, which is exactly the moment an informal "just ask us" stop
 working. Nobody writes that message. They just stop posting.
 
 It also leaves a loose end on the staff side. **Restore standing** on
-`/staff/users/[id]` is a button somebody has to remember to press after a
+`/staff/members/[id]` is a button somebody has to remember to press after a
 conversation that happened somewhere else entirely — a different inbox, a
 different week, possibly a hallway. The decision to forgive and the act of
 forgiving are separated by human memory, which is the weakest component in the
@@ -214,7 +214,7 @@ in, and the schema delta would be near zero.
 It fails on the thing this feature exists to fix. **A thread has no outcome
 state.** Nothing on a conversation can mean "granted", nothing can be queried to
 find appeals nobody has answered, and — decisively — nothing can _cause_ the
-standing restore. The remedy would still be a button on `/staff/users/[id]` that
+standing restore. The remedy would still be a button on `/staff/members/[id]` that
 somebody has to navigate to and remember to press once the conversation ends,
 which is precisely the failure `IDEAS.md` names as the reason to build this.
 Reusing the inbox would produce a nicer-looking version of the status quo.
@@ -527,8 +527,8 @@ sides already have a page where that decision is explained.
 | `/member/account`            | The messaging standing notice gains it — the scope with no content page of its own                 |
 | `/staff/flags/[id]`          | The appeal renders beside the Resolution card: the member's argument, then the decide form         |
 | `/staff/flags`               | An **Appealed** filter, and a **new** badge on the Content Flags nav item counting pending appeals |
-| `/staff/users/[id]`          | The standing cards show "appeal pending" where one is open, linking to the flag                    |
-| `/staff/users/[id]`          | `setMemberStanding` grows a required reason — it is filing a report now, and a report needs one    |
+| `/staff/members/[id]`        | The standing cards show "appeal pending" where one is open, linking to the flag                    |
+| `/staff/members/[id]`        | `setMemberStanding` grows a required reason — it is filing a report now, and a report needs one    |
 
 The member-side placement follows the two outcomes: the content pages carry the
 appeal for a takedown, the standing banners for a restriction, and both reach the
@@ -574,11 +574,11 @@ Then, by hand:
 3. Confirm a second appeal against the same decision is refused.
 4. As the staffer who upheld it, confirm deny is disabled with the reason shown,
    and that **grant still works**.
-5. Restrict a member's messaging from `/staff/users/[id]` with no member report
+5. Restrict a member's messaging from `/staff/members/[id]` with no member report
    involved. Confirm a `staff_action` flag was created and resolved, that the
    member sees the reason, and that they can appeal it.
 6. As a different staffer, deny one; confirm the member's email carries the notes.
-7. Grant one with standing restored and content upheld; confirm `/staff/users/[id]`
+7. Grant one with standing restored and content upheld; confirm `/staff/members/[id]`
    shows the member restored while the post stays down, with nobody having touched
    the Restore button — the automatic restore is the whole reason this exists.
 8. Grant a listing's content half and confirm it returns to the **public guide**

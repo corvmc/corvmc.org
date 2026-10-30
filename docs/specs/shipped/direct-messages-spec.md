@@ -251,7 +251,7 @@ Three arms in `flag-service.ts` that fail loudly or leak if missed:
   content-free constant, **never the subject or preview**, since `listFlags`
   renders `entityLabel` in the queue and that would put private text in front of
   staff before anyone opened the report.
-- `entityHref` — its `default` sends a thread id to `/staff/users/<id>`.
+- `entityHref` — its `default` sends a thread id to `/staff/members/<id>`.
 - `listFlags`' batched labels — without a bucket the queue shows `(deleted)`.
 
 **Triage** renders the conversation inline. The report being open is what makes

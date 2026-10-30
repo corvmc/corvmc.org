@@ -13,7 +13,7 @@
 		/** Renders the `action` snippet, which only two groups in the app use. */
 		withAction = false,
 		items = [
-			{ href: resolve('/staff/users'), label: 'Users' },
+			{ href: resolve('/staff/members'), label: 'Users' },
 			{ href: resolve('/staff/bands'), label: 'Bands' }
 		],
 		...rest

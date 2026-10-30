@@ -29,7 +29,7 @@
 		action?: Snippet;
 	} = $props();
 
-	const href = $derived(withQuery(resolve(`/staff/users/${volunteer.userId}`), 'tab=volunteer'));
+	const href = $derived(withQuery(resolve(`/staff/members/${volunteer.userId}`), 'tab=volunteer'));
 	const note = $derived(subline(volunteer));
 </script>
 

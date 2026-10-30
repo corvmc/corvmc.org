@@ -41,7 +41,7 @@
 	<DefinitionList>
 		<Fact label="From">
 			{#if appeal.appellantUserId}
-				<a class="link" href={resolve(`/staff/users/${appeal.appellantUserId}`)}>
+				<a class="link" href={resolve(`/staff/members/${appeal.appellantUserId}`)}>
 					{appeal.appellantName}
 				</a>
 			{:else}

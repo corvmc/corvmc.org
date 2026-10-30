@@ -86,7 +86,7 @@ export async function getStanding(userId: string, scope: StandingScope): Promise
  * Every scope at once, for surfaces that show the whole picture — the staff
  * user detail page, the member overview.
  *
- * One query rather than one per scope: the three cards on `/staff/users/[id]`
+ * One query rather than one per scope: the three cards on `/staff/members/[id]`
  * used to be three round-trips because they were three tables.
  */
 export async function getStandings(userId: string): Promise<Record<StandingScope, Standing>> {

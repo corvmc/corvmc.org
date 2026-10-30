@@ -186,7 +186,7 @@ describe('a position that holds only part of the panel', () => {
 
 	it('is not offered the staff member record it cannot open', () => {
 		const href = entityHref(fakeRef('member', { id: 'm-1' }), treasurer());
-		expect(href).not.toBe('/staff/users/m-1');
+		expect(href).not.toBe('/staff/members/m-1');
 	});
 
 	it('is not offered a staff inventory record either', () => {
@@ -200,7 +200,7 @@ describe('a position that holds only part of the panel', () => {
 			capabilities: new Set(['user.read']),
 			panel: 'staff'
 		});
-		expect(entityHref(fakeRef('member', { id: 'm-1' }), withUsers)).toBe('/staff/users/m-1');
+		expect(entityHref(fakeRef('member', { id: 'm-1' }), withUsers)).toBe('/staff/members/m-1');
 	});
 
 	it('falls back to a page it can reach rather than returning nothing', () => {

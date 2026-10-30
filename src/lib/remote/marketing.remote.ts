@@ -539,7 +539,7 @@ export const unscheduleCampaign = form(
 );
 
 // ---------------------------------------------------------------------------
-// Staff user record (/staff/users/[id])
+// Staff user record (/staff/members/[id])
 // ---------------------------------------------------------------------------
 // Read-only, staff-guarded, and scoped by an explicit userId argument rather
 // than `params.id`, which on a remote call comes from a caller-supplied header.

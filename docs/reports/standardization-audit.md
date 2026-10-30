@@ -189,7 +189,7 @@ followed each time by hand-written `<dt class="opacity-60">` / `<dd>` pairs.
 - `src/routes/staff/flags/[id]/+page.svelte:48`, `:81`, `:182` — three in one file
 - `src/routes/staff/inventory/loans/[id]/+page.svelte:50`
 - `src/routes/staff/inventory/[id]/+page.svelte:79`
-- `src/routes/staff/users/[id]/+page.svelte:282`
+- `src/routes/staff/members/[id]/+page.svelte:282`
 - `src/routes/staff/recurring/[id]/+page.svelte:49`
 - `src/routes/staff/volunteer/shifts/[id]/+page.svelte:72`
 - `src/routes/staff/marketing/audiences/[id]/+page.svelte:53`, `campaigns/[id]/+page.svelte:34`
@@ -270,7 +270,7 @@ being applicable to every `[id]` detail page. Either adopt it broadly or delete 
 
 | Existing                         | Reach                            | Why it can't serve the others                                                                                                                                               |
 | -------------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MemberLink`                     | 16 files, **all under `staff/`** | Hard-codes `href={resolve('/staff/users/' + userId)}`. Structurally unusable from member or band panels.                                                                    |
+| `MemberLink`                     | 16 files, **all under `staff/`** | Hard-codes `href={resolve('/staff/members/' + userId)}`. Structurally unusable from member or band panels.                                                                  |
 | `CrossRefList` (`CrossRef` type) | 4 directory pages                | Its `{name, sub, href, image, avatarShape, private}` shape _is_ the right generic contract — but it's list-only, with no single-chip export, and buried under `directory/`. |
 | `Avatar`                         | 5 files                          | Initials + `hashPattern` poster art.                                                                                                                                        |
 

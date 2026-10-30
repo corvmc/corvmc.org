@@ -500,7 +500,7 @@ syncing membership state into a second product or dropping the credit benefit
 that makes lending a membership perk in the first place.
 
 Everything else compounds it: `member_standing` gates who may borrow, the
-notification bus tells staff a request came in, `/staff/users/[id]` shows a
+notification bus tells staff a request came in, `/staff/members/[id]` shows a
 member's loans beside everything else about them, and a second login for members
 is the opposite of what a one-member-record platform is for.
 

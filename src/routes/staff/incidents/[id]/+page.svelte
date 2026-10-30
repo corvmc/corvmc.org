@@ -64,7 +64,7 @@
 				<Fact label="What happened" wrap>{incident.description}</Fact>
 				{#if incident.involvedUserId}
 					<Fact label="Member involved">
-						<a class="link" href={resolve(`/staff/users/${incident.involvedUserId}`)}>
+						<a class="link" href={resolve(`/staff/members/${incident.involvedUserId}`)}>
 							{incident.involvedName ?? 'Member'}
 						</a>
 					</Fact>

@@ -22,7 +22,7 @@ Two rows sit on their own at the top:
 
 Everything else is grouped by what it's for:
 
-- **People** — **Users** (member accounts, roles, and credits), **Bands** (all bands, their
+- **People** — **Members** (member accounts, roles, and credits), **Bands** (all bands, their
   members, and moderation), and **Volunteering** (shifts, roles, certifications, and the hours
   report). The Volunteering badge counts hour logs waiting on approval.
 - **Space** — **Reservations** (practice-space bookings and payments), with **Recurring** standing

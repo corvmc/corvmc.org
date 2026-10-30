@@ -150,8 +150,8 @@ auto-creates any missing).
 ## D. Staff panel → `src/content/help/staff-guide/` (minRole=staff)
 
 - [x] `[P]` Staff dashboard & navigation (`/staff`)
-- [x] `[P]` Members & users overview (`/staff/users`, tiers, search)
-- [x] `[H]` Edit a user, manage roles & adjust credits (`/staff/users/[id]`)
+- [x] `[P]` Members & users overview (`/staff/members`, tiers, search)
+- [x] `[H]` Edit a user, manage roles & adjust credits (`/staff/members/[id]`)
 - [ ] `[H]` Impersonate a user for support — _blocked: the feature does not exist.
       Impersonation is explicitly deferred (`docs/specs/shipped/staff-bands-spec.md`), and the
       article that described it as working was removed._

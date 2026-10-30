@@ -74,18 +74,18 @@ test.describe('staff sidebar', () => {
 		}
 
 		// A row from each of the far ends of the list, both reachable by role.
-		await expect(nav(page).getByRole('link', { name: 'Users' })).toBeVisible();
+		await expect(nav(page).getByRole('link', { name: 'Members' })).toBeVisible();
 		await expect(nav(page).getByRole('link', { name: 'Settings' })).toBeVisible();
 
 		// Exactly one row highlights, including on a detail page.
-		await page.goto('/staff/users');
+		await page.goto('/staff/members');
 		await expect(nav(page).locator('a.active')).toHaveCount(1);
-		await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/staff/users');
+		await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/staff/members');
 
 		// The regression: exact-pathname matching lit no row on any `[id]` route.
-		await page.goto(`/staff/users/${SEED_TARGET_ID}`);
+		await page.goto(`/staff/members/${SEED_TARGET_ID}`);
 		await expect(nav(page).locator('a.active')).toHaveCount(1);
-		await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/staff/users');
+		await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/staff/members');
 	});
 
 	test('collapses a group, remembers it across a reload, and opens it on navigating in', async ({

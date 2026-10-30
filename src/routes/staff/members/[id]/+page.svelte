@@ -58,7 +58,7 @@
 	// wants. The address bar is all this needs to reach: `tab` is read back out of
 	// `page.url` only on mount, so a reload or a copied link still lands right.
 	$effect(() => {
-		const href = withQuery(resolve(`/staff/users/${id}`), tab === 'overview' ? '' : `tab=${tab}`);
+		const href = withQuery(resolve(`/staff/members/${id}`), tab === 'overview' ? '' : `tab=${tab}`);
 		if (location.pathname + location.search !== href) {
 			replaceState(href, {});
 		}

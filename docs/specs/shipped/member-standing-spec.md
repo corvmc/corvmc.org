@@ -53,7 +53,7 @@ member the suggestion board too. This was the original argument for keeping the
 tables apart, and it survives the merge intact — it is now a column instead of a
 table name.
 
-The staff UI follows from it. `/staff/users/[id]` → Comms still shows a separate
+The staff UI follows from it. `/staff/members/[id]` → Comms still shows a separate
 card per restricted scope with its own restore button, rather than one merged
 "standing" card, because they are separate decisions and staff forgive them
 separately.

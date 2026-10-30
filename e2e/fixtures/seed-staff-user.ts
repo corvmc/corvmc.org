@@ -12,7 +12,7 @@
  *    whose password verifies against the app's scrypt path so the test can log
  *    in through the real better-auth UI;
  *  - one target member holding `member`, used for the role-preservation test;
- *  - enough filler members that `/staff/users` (page size 20) paginates, which
+ *  - enough filler members that `/staff/members` (page size 20) paginates, which
  *    the bulk-selection test needs.
  *
  * Run by `e2e/prepare.ts`, before Playwright starts the preview server.
@@ -42,7 +42,7 @@ export const SEED_TARGET_EMAIL = 'e2e.staff.target@example.com';
 export const SEED_TARGET_NAME = 'E2E Role Target';
 export const SEED_TARGET_ROLE = 'member';
 
-/** `/staff/users` pages at 20 rows; seed past that so page 2 exists. */
+/** `/staff/members` pages at 20 rows; seed past that so page 2 exists. */
 export const FILLER_COUNT = 24;
 const fillerId = (i: number) => `e2e-staff-filler-${i}`;
 

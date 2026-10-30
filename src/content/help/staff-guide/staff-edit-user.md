@@ -9,7 +9,7 @@ sortOrder: 2
 
 ## The user detail page
 
-Open a member from **Staff → Users** to see and manage their account.
+Open a member from **Staff → Members** to see and manage their account.
 
 ## What you can do
 

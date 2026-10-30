@@ -128,7 +128,7 @@ export interface StaffNavSection {
 /** Rows above the first section header. */
 export const staffNavTop: StaffNavItem[] = [
 	// `exact`, unlike the band panel's. `/staff` is a prefix of every path here,
-	// so without it an unrecognised one — `/staff/usersomething` — lit Dashboard,
+	// so without it an unrecognised one — `/staff/membersomething` — lit Dashboard,
 	// which is the #1237 bug. The band panel keeps its fallback because a row
 	// there can be hidden by role and the root is the honest answer; no staff
 	// spec asserts that, and none of the eight paths #1237 sampled needed it.
@@ -147,7 +147,7 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'people',
 		title: 'People',
 		items: [
-			{ key: 'users', capability: 'user.list', label: 'Users', href: resolve('/staff/users') },
+			{ key: 'users', capability: 'user.list', label: 'Members', href: resolve('/staff/members') },
 			{ key: 'bands', capability: 'band.read', label: 'Bands', href: resolve('/staff/bands') },
 			// Separate from Bands on purpose: a band is a member's own project and a
 			// club is a sanctioned CMC one.

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`/staff/users/[id]` currently shows: an editable name/pronouns/email/phone/roles
+`/staff/members/[id]` currently shows: an editable name/pronouns/email/phone/roles
 card, a credits balance, a reference block (user id, Stripe id, join date), a
 Danger Zone, and a payment records table.
 

@@ -34,7 +34,7 @@ Each tab label shows its count as a badge.
 | ------- | --------------------- | ------------------- | ------------------------------------------------------------------------------------------------------ |
 | Status  | `status`              | no                  | `StatusBadge` component                                                                                |
 | Time    | `startsAt` / `endsAt` | yes (by `startsAt`) | Date on first line, time range on second. Format: "Mon, May 12" / "2:00 – 4:00 PM"                     |
-| Member  | join on `user`        | yes (by name)       | Name as link to `/staff/users/{id}`, email below in `text-sm opacity-60`                               |
+| Member  | join on `user`        | yes (by name)       | Name as link to `/staff/members/{id}`, email below in `text-sm opacity-60`                             |
 | Payment | computed              | no                  | Amount on first line (e.g. "$30.00"), payment status below as a small badge. See Payment Status below. |
 | Booker  | `bookerType`          | no                  | Badge: "user", "band", "event", "lesson"                                                               |
 
@@ -172,7 +172,7 @@ A card with the booker's info:
 ```
 
 - **Avatar placeholder**: circle with initials, `bg-primary text-primary-content`
-- **Name**: bold, linked to `/staff/users/{id}`
+- **Name**: bold, linked to `/staff/members/{id}`
 - **"First reservation"** badge — shown next to the name when the user has zero `completed` reservations (i.e. they've never successfully used the space before). Uses `badge-info badge-sm`. Helps staff know to offer extra guidance or a walkthrough.
 - **"View profile →"** link on the right
 - **Email**: `mailto:` link

@@ -898,7 +898,7 @@ them.
 - Hours are a correlated subquery, deliberately not a join: joining the hour log
   alongside the interest join is a cartesian product, and the `group_concat`
   would emit a role name once per approved log.
-- No detail route. Rows lead to `/staff/users/[id]?tab=volunteer`, which is
+- No detail route. Rows lead to `/staff/members/[id]?tab=volunteer`, which is
   already the per-member volunteer record.
 
 ### `/staff/volunteer/report`

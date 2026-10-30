@@ -113,7 +113,7 @@ properties of a `UNIQUE` column.
 
 ## How it works
 
-A staffer decides that Kit has to go. On `/staff/users/[id]` they choose
+A staffer decides that Kit has to go. On `/staff/members/[id]` they choose
 **Remove access**, pick **Suspend** or **Ban**, and — because this is filing a
 report — write down what happened. Suspension asks for an end date; a ban does
 not have one.
@@ -863,9 +863,9 @@ hand-rolled request from the imposing staffer is refused by name.
 
 | Route                 | What changes                                                                             |
 | --------------------- | ---------------------------------------------------------------------------------------- |
-| `/staff/users/[id]`   | `AccountPanel`'s deactivate control becomes **Remove access**: kind, reason, term        |
-| `/staff/users/[id]`   | A removal history card — every removal, its reason, actor, and how it ended              |
-| `/staff/users/[id]`   | Reinstate shows what will and will not come back before it is clicked                    |
+| `/staff/members/[id]` | `AccountPanel`'s deactivate control becomes **Remove access**: kind, reason, term        |
+| `/staff/members/[id]` | A removal history card — every removal, its reason, actor, and how it ended              |
+| `/staff/members/[id]` | Reinstate shows what will and will not come back before it is clicked                    |
 | `/staff/flags/[id]`   | The removal appears as the consequence of the upheld report, beside the standing outcome |
 | `/staff/blocklist`    | New. Blocked addresses, who blocked them, and refused signup attempts                    |
 | `/staff/events`       | The review queue gains listings whose author was removed                                 |
@@ -873,7 +873,7 @@ hand-rolled request from the imposing staffer is refused by name.
 | `/member/account`     | The self-delete copy says what it does and does not destroy                              |
 | `/member` (dashboard) | After reinstatement: what was restored, the rebook offers, the resubscribe offer         |
 
-`/staff/users/[id]` is where almost all of this lands, which
+`/staff/members/[id]` is where almost all of this lands, which
 `docs/specs/shipped/staff-user-detail-context-spec.md` already establishes as the
 operational record for a member. No new staff nav item beyond the blocklist,
 which is a reference tool and is linked from the staff dashboard rather than the

@@ -660,6 +660,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/members",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/members/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/music",
 		"panel": "staff"
 	},
@@ -741,14 +749,6 @@
 	},
 	{
 		"route": "/staff/suggestions/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/users",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/users/[id]",
 		"panel": "staff"
 	},
 	{

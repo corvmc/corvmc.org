@@ -56,7 +56,7 @@ is the whole reason there is one table and not one flag on the user.
 | **Suggestions**    | Posts go to review before appearing         | Not available |
 | **Messaging**      | Reply-only — cannot start new conversations | Available     |
 
-Standing lives on the member's record — **Users → the member → Moderation** —
+Standing lives on the member's record — **Members → the member → Moderation** —
 where you can also see every report for and against them. Restore from the same
 place, and restore promptly once the conversation has moved on; nothing sweeps
 these up for you.

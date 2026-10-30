@@ -27,7 +27,7 @@ import type { OnboardingStage } from '$lib/server/volunteer/volunteer-profile-se
 // User overview — one query behind the whole staff user record
 // ---------------------------------------------------------------------------
 //
-// `/staff/users/[id]` is tabbed, and a tab's own queries only run once it is
+// `/staff/members/[id]` is tabbed, and a tab's own queries only run once it is
 // opened. That leaves one thing that cannot be lazy: the tab badges and the
 // scoreboard, which have to be right on first paint or they are worse than
 // absent. This is that data — every count the header, the badges and the
