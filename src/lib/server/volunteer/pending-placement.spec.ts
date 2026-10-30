@@ -29,7 +29,7 @@ vi.mock('$lib/server/db', () => ({
 
 const { applyDutyList } = await import('./duty-list-service');
 const { updateProductionDetails } = await import('$lib/server/production/production-service');
-const { updateProject } = await import('$lib/server/project/project-service');
+const { updateProject, attachToProject } = await import('$lib/server/project/project-service');
 
 const T = Date.UTC(2026, 10, 7, 1, 0) / 1000;
 const rows = () =>
@@ -112,6 +112,45 @@ describe('placing pending work', () => {
 			{ s: T, e: T + 90 * 60, d: null, p: null },
 			{ s: null, e: null, d: T + 30 * 60, p: null }
 		]);
+	});
+
+	it('places event work and names the event when the project gains its first one (#2084)', async () => {
+		template('start');
+		sqlite.exec(`
+			insert into project (id, name, kind) values ('proj-2', 'Benefit night', 'production');
+			insert into event_listing (id, title, starts_at, ends_at, created_by_user_id)
+				values ('ev-2', 'Benefit night', ${T}, ${T + 7200}, 'u-1');
+		`);
+		const { warnings } = await applyDutyList('tpl', { kind: 'project', id: 'proj-2' }, 'u-1');
+		expect(warnings).toHaveLength(1);
+
+		await attachToProject('event_listing', 'ev-2', 'proj-2');
+
+		expect(rows()).toEqual([
+			{ s: T, e: T + 90 * 60, d: null, p: null },
+			{ s: null, e: null, d: T + 30 * 60, p: null }
+		]);
+		const events = sqlite.prepare(`select distinct event_id ev from work_order`).all();
+		expect(events).toEqual([{ ev: 'ev-2' }]);
+	});
+
+	it('names the event but leaves production work pending until its time is set', async () => {
+		template('load_in');
+		sqlite.exec(`
+			insert into project (id, name, kind) values ('proj-2', 'Benefit night', 'production');
+			insert into event_listing (id, title, starts_at, ends_at, created_by_user_id)
+				values ('ev-2', 'Benefit night', ${T}, ${T + 7200}, 'u-1');
+		`);
+		await applyDutyList('tpl', { kind: 'project', id: 'proj-2' }, 'u-1');
+
+		await attachToProject('event_listing', 'ev-2', 'proj-2');
+
+		expect(rows()).toEqual([
+			{ s: null, e: null, d: null, p: 0 },
+			{ s: null, e: null, d: null, p: 30 }
+		]);
+		const events = sqlite.prepare(`select distinct event_id ev from work_order`).all();
+		expect(events).toEqual([{ ev: 'ev-2' }]);
 	});
 
 	it('moves placed work by the delta on the next change, not twice', async () => {

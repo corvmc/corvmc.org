@@ -24,6 +24,7 @@ import {
 } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { placePendingWorkOrders } from '$lib/server/volunteer/retime-work-orders';
+import { placeWorkAwaitingEvent } from '$lib/server/volunteer/duty-list-service';
 import {
 	contractorJobStatusesWithoutSpend,
 	DEFAULT_TIMEZONE,
@@ -443,6 +444,8 @@ export async function attachToProject(kind: AttachableKind, rowId: string, proje
 		.returning({ id: table.id });
 
 	if (!row) throw new ProjectStateError(`No ${kind} with that id`);
+	// Template work stamped while the project had no event is placed now.
+	if (kind === 'event_listing') await placeWorkAwaitingEvent(projectId);
 	return row;
 }
 
