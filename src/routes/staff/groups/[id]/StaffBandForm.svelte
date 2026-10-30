@@ -13,8 +13,8 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import RichTextEditor from '$lib/components/ui/Form/RichTextEditor.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import RecordFrame from '$lib/components/ui/RecordFrame.svelte';
+	import type { Snippet } from 'svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -31,10 +31,14 @@
 	// crash on this page (same bug as /member/profile, JAVASCRIPT-SVELTEKIT-W).
 	let {
 		band,
-		id
+		id,
+		variant = 'page',
+		actions
 	}: {
 		band: Awaited<ReturnType<typeof getBand>>;
 		id: string;
+		variant?: 'page' | 'panel';
+		actions?: Snippet;
 	} = $props();
 
 	const { fields: reactivateFields } = reactivateBand;
@@ -53,17 +57,17 @@
 </script>
 
 <Form remote={updateBand} guard onsuccess={() => toast.success('Band updated')}>
-	<PageHeader width="3xl" subtitle="Band" title={band.name}>
-		{#if isDeactivated}
-			<Badge variant="error" size="md">Deactivated</Badge>
-		{/if}
-		<SubmitButton shortcut="mod+s">
-			{#snippet icon()}
-				<IconDeviceFloppy size={20} />
-			{/snippet}
-		</SubmitButton>
-	</PageHeader>
-	<PageContent width="3xl">
+	<RecordFrame {variant} {actions} subtitle="Band" title={band.name}>
+		{#snippet header()}
+			{#if isDeactivated}
+				<Badge variant="error" size="md">Deactivated</Badge>
+			{/if}
+			<SubmitButton shortcut="mod+s" size="sm">
+				{#snippet icon()}
+					<IconDeviceFloppy size={20} />
+				{/snippet}
+			</SubmitButton>
+		{/snippet}
 		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Band Info">
 				<div class="grid grid-cols-1 gap-x-2">
@@ -188,5 +192,5 @@
 				</div>
 			</InfoCard>
 		</div>
-	</PageContent>
+	</RecordFrame>
 </Form>

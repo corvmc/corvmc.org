@@ -161,7 +161,7 @@ auto-creates any missing).
 - [x] `[H]` Set facility closures / blackout dates (rows of `/staff/reservations`)
 - [x] `[H]` Create & manage events; ticketing & check-in (`/staff/events`, `.../check-in`)
 - [x] `[H]` Run an off-site or multi-day event (venue, two day-events, one project, duty lists)
-- [x] `[H]` Manage bands (deactivate/reactivate, members) (`/staff/bands`)
+- [x] `[H]` Manage bands (deactivate/reactivate, members) (`/staff/groups`)
 - [x] `[H]` Manage the inventory catalog, units & categories (`/staff/inventory`)
 - [x] `[H]` Approve loans & record returns (`/staff/inventory/loans`)
 - [x] `[H]` Send an email campaign (`/staff/marketing/campaigns`)

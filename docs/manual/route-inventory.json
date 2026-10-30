@@ -416,14 +416,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/bands",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/bands/[id]",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/bands/acts",
 		"panel": "staff"
 	},
@@ -433,22 +425,6 @@
 	},
 	{
 		"route": "/staff/classifieds/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/clubs",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/clubs/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/committees",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/committees/[id]",
 		"panel": "staff"
 	},
 	{
@@ -509,6 +485,22 @@
 	},
 	{
 		"route": "/staff/grants/funders",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/groups",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/groups/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/groups/clubs",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/groups/committees",
 		"panel": "staff"
 	},
 	{

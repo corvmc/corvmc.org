@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import type { Snippet } from 'svelte';
+	import RecordFrame from '$lib/components/ui/RecordFrame.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import StaffGroupDetail from '$lib/components/groups/StaffGroupDetail.svelte';
 	import ApplicationsCard from '$lib/components/groups/ApplicationsCard.svelte';
@@ -12,7 +11,12 @@
 	 * grants and roster for a `group.read` holder. The volunteer coordinator
 	 * reviews applications and manages nothing, so they get the first half only.
 	 */
-	let id = $derived(page.params.id!);
+	let {
+		id,
+		variant = 'page',
+		actions
+	}: { id: string; variant?: 'page' | 'panel'; actions?: Snippet } = $props();
+
 	const data = $derived(await getStaffCommitteePage(id));
 </script>
 
@@ -21,14 +25,19 @@
 {/snippet}
 
 {#if data.manage}
-	<StaffGroupDetail group={data.manage.group} members={data.manage.members} {applications} />
+	<StaffGroupDetail
+		group={data.manage.group}
+		members={data.manage.members}
+		{applications}
+		{variant}
+		{actions}
+	/>
 {:else}
-	<PageHeader width="3xl" title={data.committee.name} subtitle="Committee" />
-	<PageContent width="3xl">
+	<RecordFrame {variant} {actions} title={data.committee.name} subtitle="Committee">
 		{#if data.applications.length === 0}
-			<EmptyState description="Nothing waiting on this committee." />
+			<EmptyState description="No open applications." />
 		{:else}
 			{@render applications()}
 		{/if}
-	</PageContent>
+	</RecordFrame>
 {/if}

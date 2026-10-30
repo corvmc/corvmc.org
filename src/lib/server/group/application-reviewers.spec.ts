@@ -84,7 +84,7 @@ describe('applicationNotice', () => {
 				id: 'usr-coord',
 				name: 'Coordinator',
 				email: 'coord@example.com',
-				href: '/staff/committees'
+				href: '/staff/groups/committees'
 			}
 		]);
 	});

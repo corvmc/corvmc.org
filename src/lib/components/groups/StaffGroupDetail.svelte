@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import RecordFrame from '$lib/components/ui/RecordFrame.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
@@ -31,18 +30,22 @@
 	type StaffGroupPage = Awaited<ReturnType<typeof getStaffGroupPage>>;
 
 	/**
-	 * A club's or committee's staff page, shared by `/staff/clubs/[id]` and
-	 * `/staff/committees/[id]`. Each route runs its own one query and hands the
-	 * result here; `applications` is each route's own review card.
+	 * A club's or committee's staff record, as a page or a side panel. Each kind
+	 * runs its own one query and hands the result here; `applications` is each
+	 * kind's own review card.
 	 */
 	let {
 		group,
 		members,
-		applications
+		applications,
+		variant = 'page',
+		actions
 	}: {
 		group: StaffGroupPage['group'];
 		members: StaffGroupPage['members'];
 		applications?: Snippet;
+		variant?: 'page' | 'panel';
+		actions?: Snippet;
 	} = $props();
 
 	const deactivateFields = deactivateGroup.fields;
@@ -58,22 +61,24 @@
 <!-- The two facts beside
      the badge are the ones the list row carries and this page dropped —
      `getGroupDetail` has returned both all along (#1070). -->
-<PageHeader
-	width="3xl"
+<RecordFrame
+	{variant}
+	{actions}
 	title={group.name}
 	subtitle={group.kind === 'committee' ? 'Committee' : 'Club'}
 >
-	<StatusBadge status={isDeactivated ? 'deactivated' : 'active'} />
-	<span class="text-muted">
-		{group.memberCount}
-		{group.memberCount === 1 ? 'member' : 'members'} · since {formatDateShortYear(group.createdAt)}
-	</span>
-	{#if !isDeactivated}
-		<AddChairAction groupId={id} />
-	{/if}
-</PageHeader>
-
-<PageContent width="3xl">
+	{#snippet header()}
+		<StatusBadge status={isDeactivated ? 'deactivated' : 'active'} />
+		<span class="text-muted">
+			{group.memberCount}
+			{group.memberCount === 1 ? 'member' : 'members'} · since {formatDateShortYear(
+				group.createdAt
+			)}
+		</span>
+		{#if !isDeactivated}
+			<AddChairAction groupId={id} />
+		{/if}
+	{/snippet}
 	{#if isDeactivated}
 		<!-- Deactivation is the normal end of a program: nothing is removed and
 		     nobody loses their place, so putting it back is one control rather
@@ -226,4 +231,4 @@
 			</Action>
 		</InfoCard>
 	{/if}
-</PageContent>
+</RecordFrame>

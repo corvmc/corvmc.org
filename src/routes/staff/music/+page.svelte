@@ -159,7 +159,7 @@
 								<span class="text-subtle">· {release.trackCount} tracks</span>
 							</td>
 							<td>
-								<a class="link" href={resolve(`/staff/bands`)}>{release.bandName}</a>
+								<a class="link" href={resolve(`/staff/groups`)}>{release.bandName}</a>
 							</td>
 							<td>
 								{#if release.status === 'published'}

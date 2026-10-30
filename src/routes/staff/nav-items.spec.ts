@@ -52,10 +52,11 @@ describe('activeNavKey', () => {
 		['/staff/members', 'users'],
 		['/staff/members/abc', 'users'],
 		['/staff/ballots/abc', 'ballots'],
-		['/staff/clubs', 'clubs'],
-		['/staff/clubs/abc', 'clubs'],
-		['/staff/committees', 'committees'],
-		['/staff/committees/abc', 'committees'],
+		['/staff/groups', 'groups'],
+		['/staff/groups/clubs', 'groups'],
+		['/staff/groups/committees', 'groups'],
+		['/staff/groups/abc', 'groups'],
+		['/staff/bands/acts', 'groups'],
 		['/staff/volunteer', 'volunteer'],
 		['/staff/members/volunteers', 'users'],
 		['/staff/volunteer/roles', 'volunteer'],
@@ -155,6 +156,14 @@ describe('the nav tree', () => {
 		expect(filterNavItems([projects], ['event.read'])).toHaveLength(0);
 	});
 
+	it('folds Bands, Clubs and Committees into Groups (#2086)', () => {
+		const groups = allStaffNavItems().find((i) => i.key === 'groups')!;
+		expect(filterNavItems([groups], ['band.read'])).toHaveLength(1);
+		expect(filterNavItems([groups], ['group.read'])).toHaveLength(1);
+		expect(filterNavItems([groups], ['committee.reviewApplications'])).toHaveLength(1);
+		expect(filterNavItems([groups], ['event.read'])).toHaveLength(0);
+	});
+
 	it('puts Project Templates under Planning, beside Projects (#2034)', () => {
 		const planning = staffNavSections.find((s) => s.key === 'planning')!;
 		const keys = planning.items.map((i) => i.key);
@@ -188,7 +197,7 @@ describe('the nav tree', () => {
 	it('groups rows by what they are about', () => {
 		const section = (key: string) => staffNavSections.find((s) => s.key === key)!;
 		const keys = (key: string) => section(key).items.map((i) => i.key);
-		expect(keys('people')).toEqual(['users', 'bands', 'clubs', 'committees', 'volunteer']);
+		expect(keys('people')).toEqual(['users', 'groups', 'volunteer']);
 		expect(keys('planning')).toEqual([
 			'suggestions',
 			'ballots',
@@ -258,11 +267,11 @@ describe('route coverage', () => {
 		'/staff/inventory/intake', // a session started from Inventory's header, not a list (#1838)
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
 		'/staff/grants/funders', // reached from Grants' header; its breadcrumb runs through it
-		// Reached from Bands, which links to it in its header. Not its own row on
-		// purpose: an external act is the same staff job as a band — who is
-		// playing here — and one of them can turn into the other, so splitting
-		// them in the nav would imply two jobs where there is one.
+		// Reached from the Bands view's header: the same staff job as a band.
 		'/staff/bands/acts',
+		// Groups views, reached from its tab bar (#2086).
+		'/staff/groups/clubs',
+		'/staff/groups/committees',
 		// Started from the Inbox header, and only worth starting when the queue
 		// has something in it. A nav row would offer a session that is empty most
 		// of the day, from a place that cannot tell you whether it is.
