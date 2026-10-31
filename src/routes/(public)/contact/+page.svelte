@@ -2,7 +2,6 @@
 	import { pageTitle, EVENT_TIP_SUBJECT, contactSubjects } from '$lib/config';
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import { resolve } from '$app/paths';
 	import { signInHref } from '$lib/utils/sign-in';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
 	import { getOrgAddress } from '$lib/remote/settings.remote';
