@@ -1,5 +1,6 @@
 <script lang="ts">
 	import VolunteerStatusTabs from './VolunteerStatusTabs.svelte';
+	import MemberViews from '../../MemberViews.svelte';
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -34,7 +35,7 @@
 
 	// Seeded from the query string and mirrored back into it, so a reload lands
 	// on the same view.
-	const filters = urlState(resolve('/staff/volunteer/hours'), {
+	const filters = urlState(resolve('/staff/members/volunteers/hours'), {
 		status: oneOf(statusViews, 'pending' as StatusView),
 		role: text(),
 		from: text(),
@@ -123,17 +124,13 @@
 	}
 </script>
 
-<!--
-	No hand-rolled sibling links. Every page in this section used to build its own row and no
-	two agreed (docs/reports/volunteer-workflow-findings.md#d2); the sidebar carries all six
-	as children of Volunteering, and the breadcrumb leads to the dashboard that summarises this
-	queue.
--->
-<PageHeader title="Hours to review" subtitle="Volunteering">
+<!-- A view on Members → Volunteers (#2075), so it wears that page's frame. -->
+<PageHeader title="Members">
 	<LogHoursForMemberAction />
 </PageHeader>
 
 <PageContent>
+	<MemberViews active="volunteers" />
 	<VolunteerStatusTabs
 		bind:view={filters.status}
 		onchange={() => {

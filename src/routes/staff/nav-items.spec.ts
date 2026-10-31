@@ -92,7 +92,8 @@ describe('activeNavKey', () => {
 		['/staff/contractors/abc', 'contractors'],
 		['/staff/incidents', 'incidents'],
 		['/staff/incidents/abc', 'incidents'],
-		['/staff/volunteer/report', 'volunteer-report'],
+		['/staff/reports/volunteering', 'volunteer-report'],
+		['/staff/members/volunteers/hours', 'users'],
 		['/staff/members/instructors', 'users'],
 		['/staff/help', 'help'],
 		['/staff/marketing/campaigns/new', 'campaigns'],
@@ -242,11 +243,8 @@ describe('route coverage', () => {
 	 * the page that owns it, and each still resolves to a highlighted parent.
 	 */
 	const unlinked = new Set([
-		// The full hour-log queue. Today's "Hours to review" card shows the top five
-		// and links here for the rest; it is not its own nav row because reviewing
-		// hours is something you arrive at from the worklist, not something you go
-		// and browse.
-		'/staff/volunteer/hours',
+		// The full hour-log queue, a Members → Volunteers view (#2075).
+		'/staff/members/volunteers/hours',
 		// Roles and clearances: reached from the Volunteering dashboard's header (#1791).
 		'/staff/volunteer/roles',
 		// Members views, reached from its tab bar (#2074).

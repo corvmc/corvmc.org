@@ -63,7 +63,7 @@ function row(over: Record<string, unknown> = {}) {
 }
 
 const call = (query = '') =>
-	GET({ url: new URL(`http://localhost/staff/volunteer/report/export${query}`) } as never);
+	GET({ url: new URL(`http://localhost/staff/reports/volunteering/export${query}`) } as never);
 
 async function body(query = '') {
 	return (await call(query)).text();

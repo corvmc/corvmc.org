@@ -451,7 +451,7 @@ export const staffNavSections: StaffNavSection[] = [
 		]
 	},
 	{
-		// Every report in one place; each stays at its domain's URL.
+		// Every report in one place.
 		key: 'reports',
 		title: 'Reports',
 		items: [
@@ -467,7 +467,7 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'volunteer-report',
 				capability: 'volunteer.report',
 				label: 'Volunteering',
-				href: resolve('/staff/volunteer/report')
+				href: resolve('/staff/reports/volunteering')
 			},
 			{
 				key: 'inventory-spend',

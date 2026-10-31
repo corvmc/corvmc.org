@@ -120,7 +120,7 @@ test.describe('volunteering — staff review queue', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		// The queue moved off the section root when that became the coordinator's
 		// dashboard. Everything it asserts is unchanged; only the address is.
-		await page.goto('/staff/volunteer/hours');
+		await page.goto('/staff/members/volunteers/hours');
 
 		const row = rowFor(page, SEED_VOL_LOG_APPROVE_DESC);
 		await expect(row).toBeVisible();
@@ -151,7 +151,7 @@ test.describe('volunteering — staff review queue', () => {
 
 	test('rejecting without a reason shows written copy, not raw zod text', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/hours');
+		await page.goto('/staff/members/volunteers/hours');
 
 		const row = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
 		await rowAction(row, 'Return').click();
@@ -163,7 +163,7 @@ test.describe('volunteering — staff review queue', () => {
 
 	test('a rejection records its reason and leaves the pending queue', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/hours');
+		await page.goto('/staff/members/volunteers/hours');
 
 		const reason = 'E2E: hours look doubled for this shift.';
 		const row = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
@@ -420,7 +420,7 @@ test.describe('volunteering — roles', () => {
 
 	test('the report counts hours logged under a since-archived role', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/report');
+		await page.goto('/staff/reports/volunteering');
 
 		await expect(page.getByText(SEED_VOL_ARCHIVED_ROLE_NAME)).toBeVisible({ timeout: 15000 });
 	});
@@ -838,7 +838,7 @@ test.describe('volunteering — post-shift feedback', () => {
 
 		// The rollup is anonymous by design — the response appears under its role
 		// with no member name attached.
-		await page.goto('/staff/volunteer/report');
+		await page.goto('/staff/reports/volunteering');
 		const rollupRow = page.locator('tr').filter({ hasText: SEED_VOL_ROLE_NAME }).last();
 		await expect(page.getByRole('heading', { name: 'How shifts are going' })).toBeVisible({
 			timeout: 15000
@@ -892,7 +892,7 @@ test.describe('volunteering — staff acting on somebody else', () => {
 
 	test('staff can log hours outside the member backdate window', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/hours');
+		await page.goto('/staff/members/volunteers/hours');
 
 		await page.getByRole('button', { name: 'Log Hours', exact: true }).click();
 		const dialog = page.getByRole('dialog');

@@ -37,7 +37,7 @@
 		if (pageNumber > 1) pairs.push(['page', String(pageNumber)]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = withQuery(resolve('/staff/volunteer/report'), search);
+		const href = withQuery(resolve('/staff/reports/volunteering'), search);
 		if (location.pathname + location.search !== href) {
 			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
 		}
@@ -81,7 +81,7 @@
 			.filter(Boolean)
 			.join('&')
 			.replace(/^(.+)$/, '?$1')
-			.replace(/^/, '/staff/volunteer/report/export')
+			.replace(/^/, '/staff/reports/volunteering/export')
 	);
 
 	function percent(part: number, whole: number): string {
@@ -90,7 +90,7 @@
 	}
 </script>
 
-<PageHeader title="Report" subtitle="Volunteering">
+<PageHeader title="Volunteering" subtitle="Reports">
 	<!--
 		A plain anchor rather than an Action: the endpoint returns a file, not a
 		value, so it is a `+server.ts` and the browser has to navigate to it for

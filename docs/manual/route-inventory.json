@@ -668,6 +668,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/members/volunteers/hours",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/music",
 		"panel": "staff"
 	},
@@ -720,6 +724,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/reports/volunteering",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/reservations",
 		"panel": "staff"
 	},
@@ -757,14 +765,6 @@
 	},
 	{
 		"route": "/staff/volunteer",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/volunteer/hours",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/volunteer/report",
 		"panel": "staff"
 	},
 	{

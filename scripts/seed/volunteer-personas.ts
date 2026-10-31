@@ -488,7 +488,7 @@ export async function seedVolunteerPersonas(
 
 	// One log in every status, all reviewed by the coordinator rather than the
 	// admin, so "Reviewed by Nia Okafor" is what renders. Two of the approved ones
-	// are inside the trailing fortnight: /staff/volunteer/report defaults to
+	// are inside the trailing fortnight: /staff/reports/volunteering defaults to
 	// January 1st through today, and a seed run in early January would otherwise
 	// open on an empty report.
 	const noon = (daysAgo: number) => ptDate(-daysAgo, 12);

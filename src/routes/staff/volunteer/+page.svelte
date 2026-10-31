@@ -75,7 +75,7 @@
 			<div class="mt-4 flex flex-wrap justify-center gap-2">
 				<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule</Button>
 				<Button href="/staff/members/volunteers" variant="ghost" size="sm">Volunteers</Button>
-				<Button href="/staff/volunteer/report" variant="ghost" size="sm">Report</Button>
+				<Button href="/staff/reports/volunteering" variant="ghost" size="sm">Report</Button>
 			</div>
 		</EmptyState>
 	{/if}

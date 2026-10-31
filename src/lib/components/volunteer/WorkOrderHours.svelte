@@ -65,8 +65,9 @@
 		{/each}
 	</ul>
 	<p class="mt-2 text-subtle text-xs">
-		To return a log for correction, use the <a class="link" href={resolve('/staff/volunteer/hours')}
-			>hours queue</a
+		To return a log for correction, use the <a
+			class="link"
+			href={resolve('/staff/members/volunteers/hours')}>hours queue</a
 		>.
 	</p>
 </InfoCard>
