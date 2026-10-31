@@ -99,6 +99,7 @@ const captureException = vi.fn();
 // Whether a show is still open, and the log of what moved, have their own specs.
 vi.mock('./production-scope', () => ({
 	assertNotTerminal: async () => undefined,
+	assertProjectTakesListing: async () => undefined,
 	ProductionTerminalError: class extends Error {}
 }));
 vi.mock('$lib/server/audit/audit-service', () => ({ recordAuditEntry: async () => undefined }));
@@ -164,14 +165,15 @@ describe('createProduction', () => {
 		);
 		const { projectId } = createShowProject.mock.calls[0][0] as { projectId: string };
 
-		// The listing names the production it announces and the project it belongs to.
+		// The listing announces the show by moving onto its project (#2076).
 		const set = calls.find((c) => c.op === 'update' && c.method === 'set')?.args[0];
-		expect(set).toMatchObject({ productionId: 'prod-1', projectId });
+		expect(set).toMatchObject({ projectId });
+		expect(set).not.toHaveProperty('productionId');
 	});
 
-	// The 1:1 is held by the conditional update — the listing takes a production
-	// only while it is announcing none — not by a select-then-insert, which
-	// would be a race. Zero rows changed means somebody else got there first.
+	// The 1:1 is held by the conditional update — the listing moves only while
+	// its project is no show's — not by a select-then-insert, which would be a
+	// race. Zero rows changed means somebody else got there first.
 	it('reports the second production on one event as a conflict', async () => {
 		selectQueue = listingSource('cmc');
 		returningRows = [{ id: 'prod-2', status: 'draft' }];

@@ -1,7 +1,8 @@
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eventListing } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
+import { production } from '$lib/server/db/schema/production';
 
 /**
  * `bookerId` points at a band only when `bookerType` says so, so the type check
@@ -22,7 +23,7 @@ export function eventBookerJoin() {
 	return or(
 		and(
 			eq(reservation.bookerType, 'production'),
-			eq(eventListing.productionId, reservation.bookerId)
+			sql`${eventListing.projectId} = (select ${production.projectId} from ${production} where ${production.id} = ${reservation.bookerId})`
 		),
 		and(eq(reservation.bookerType, 'event_listing'), eq(eventListing.id, reservation.bookerId))
 	);

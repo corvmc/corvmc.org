@@ -126,7 +126,7 @@ export async function listUpcomingShows(now = new Date(), days = DASHBOARD_SHOW_
 		})
 		.from(eventListing)
 		.leftJoin(venue, eq(venue.id, eventListing.venueId))
-		.leftJoin(production, eq(production.id, eventListing.productionId))
+		.leftJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(
 			and(
 				gte(eventListing.startsAt, from),

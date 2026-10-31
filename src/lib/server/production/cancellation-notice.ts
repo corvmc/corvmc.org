@@ -26,7 +26,8 @@ export async function openDeliverablesOnProductions(
 		const shows = await db
 			.select({ id: eventListing.id })
 			.from(eventListing)
-			.where(inArray(eventListing.productionId, [...productionIds]));
+			.innerJoin(production, eq(production.projectId, eventListing.projectId))
+			.where(inArray(production.id, [...productionIds]));
 		const { listOpenOwnedOnShows } = await import('$lib/server/volunteer/deliverables-service');
 		return await listOpenOwnedOnShows(shows.map((s) => s.id));
 	} catch (err) {
@@ -39,8 +40,9 @@ export async function openDeliverablesOnProductions(
 export async function openDeliverablesOnListing(eventId: string): Promise<OpenOwnedItem[]> {
 	try {
 		const [row] = await db
-			.select({ productionId: eventListing.productionId })
+			.select({ productionId: production.id })
 			.from(eventListing)
+			.innerJoin(production, eq(production.projectId, eventListing.projectId))
 			.where(eq(eventListing.id, eventId))
 			.limit(1);
 		return row?.productionId ? await openDeliverablesOnProductions([row.productionId]) : [];
@@ -74,7 +76,7 @@ export async function announceShowsCancelled(
 					startsAt: eventListing.startsAt
 				})
 				.from(production)
-				.innerJoin(eventListing, eq(eventListing.productionId, production.id))
+				.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
 				.where(inArray(production.id, [...productionIds])),
 			actorUserId
 				? db.select({ name: user.name }).from(user).where(eq(user.id, actorUserId)).limit(1)

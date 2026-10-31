@@ -117,11 +117,11 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 	// production id and the downbeat the set times are walked from.
 	const inserted = await insertShowProductions(rows);
 
-	// Point each listing at the production it announces.
+	// Put each listing on the project of the production it announces.
 	for (const [i, row] of inserted.entries()) {
 		await db
 			.update(eventListing)
-			.set({ productionId: row.id })
+			.set({ projectId: row.projectId })
 			.where(eq(eventListing.id, eventIds[i]));
 	}
 	await syncShowProjects();

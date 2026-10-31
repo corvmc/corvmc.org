@@ -59,8 +59,8 @@ async function seed() {
 		.values({ id: PROD, status: 'confirmed', projectId: 'proj-show' } as never);
 	await testDb.insert(eventListing).values(
 		[
-			{ id: SHOW, productionId: PROD },
-			{ id: OTHER, productionId: null }
+			{ id: SHOW, projectId: 'proj-show' },
+			{ id: OTHER, projectId: null }
 		].map((e) => ({
 			...e,
 			title: e.id,

@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNull, ne } from 'drizzle-orm';
+import { and, asc, eq, gt, ne, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { eventListing } from '$lib/server/db/schema/event';
 
@@ -22,7 +22,8 @@ export async function listAttachableListings(now = new Date()): Promise<Attachab
 				eq(eventListing.source, 'cmc'),
 				eq(eventListing.kind, 'show'),
 				ne(eventListing.status, 'cancelled'),
-				isNull(eventListing.productionId),
+				sql`not exists (select 1 from "production" "p"
+					where "p"."project_id" = "event_listing"."project_id")`,
 				gt(eventListing.endsAt, now)
 			)
 		)

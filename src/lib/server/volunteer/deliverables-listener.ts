@@ -48,7 +48,7 @@ export async function applyShowDeliverables(
 	const [show] = await db
 		.select({ projectId: production.projectId })
 		.from(eventListing)
-		.innerJoin(production, eq(production.id, eventListing.productionId))
+		.innerJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
 	if (!show?.projectId) return [];

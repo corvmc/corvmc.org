@@ -145,7 +145,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				actEntryId: directoryEntry.id
 			})
 			.from(production)
-			.innerJoin(eventListing, eq(eventListing.productionId, production.id))
+			.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
 			.leftJoin(productionSlot, eq(productionSlot.productionId, production.id))
 			.leftJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
 			.leftJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
@@ -663,7 +663,7 @@ export async function listBandSlotTerms(groupId: string): Promise<BandSlotTerms[
 		.innerJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
 		.innerJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
 		.innerJoin(production, eq(production.id, productionSlot.productionId))
-		.innerJoin(eventListing, eq(eventListing.productionId, production.id))
+		.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
 		.where(
 			and(
 				eq(directoryEntry.groupId, groupId),

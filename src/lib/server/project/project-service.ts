@@ -23,6 +23,10 @@ import {
 	sql
 } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
+import {
+	assertListingKeepsShow,
+	assertProjectTakesListing
+} from '$lib/server/production/production-scope';
 import { placePendingWorkOrders } from '$lib/server/volunteer/retime-work-orders';
 import { placeWorkAwaitingEvent } from '$lib/server/volunteer/duty-list-service';
 import {
@@ -279,7 +283,7 @@ export async function getProjectShowId(projectId: string): Promise<string | null
 	const [row] = await db
 		.select({ id: eventListing.id })
 		.from(production)
-		.innerJoin(eventListing, eq(eventListing.productionId, production.id))
+		.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
 		.where(eq(production.projectId, projectId))
 		.limit(1);
 	return row?.id ?? null;
@@ -447,6 +451,10 @@ export type AttachableKind = keyof typeof ATTACHABLE;
 export async function attachToProject(kind: AttachableKind, rowId: string, projectId: string) {
 	await getProjectById(projectId);
 	const table = ATTACHABLE[kind];
+	if (kind === 'event_listing') {
+		await assertListingKeepsShow(rowId, projectId);
+		await assertProjectTakesListing(projectId, rowId);
+	}
 
 	const [row] = await db
 		.update(table)
@@ -462,6 +470,7 @@ export async function attachToProject(kind: AttachableKind, rowId: string, proje
 
 export async function detachFromProject(kind: AttachableKind, rowId: string) {
 	const table = ATTACHABLE[kind];
+	if (kind === 'event_listing') await assertListingKeepsShow(rowId, null);
 
 	const [row] = await db
 		.update(table)
@@ -735,12 +744,13 @@ export async function listCommitteeProjectEvents(groupId: string) {
 			title: eventListing.title,
 			startsAt: eventListing.startsAt,
 			status: eventListing.status,
-			productionId: eventListing.productionId,
+			productionId: production.id,
 			projectId: project.id,
 			projectName: project.name
 		})
 		.from(eventListing)
 		.innerJoin(project, eq(project.id, eventListing.projectId))
+		.leftJoin(production, eq(production.projectId, project.id))
 		.where(takesPart(groupId))
 		.orderBy(asc(eventListing.startsAt), asc(eventListing.id));
 }

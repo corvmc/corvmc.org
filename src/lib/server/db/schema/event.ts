@@ -1,5 +1,4 @@
 import { sqliteTable, text, integer, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
-import { production } from './production';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
@@ -91,21 +90,14 @@ export const eventListing = sqliteTable(
 		//
 		// Which groups *advertise* the event is `event_group` — a different
 		// question, and one that can have several answers.
-		/**
-		 * The show this announces, when CMC is running one.
-		 *
-		 * The listing is the advertisement; the production is the show. The edge
-		 * used to run the other way, which made the back-of-house hang off its own
-		 * advertisement — see #1202. Null for a band gig, a community submission
-		 * and a group session, none of which have a production.
-		 */
-		productionId: text('production_id').references(() => production.id, {
-			onDelete: 'set null'
-		}),
 		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
 		// The body of work this occasion belongs to: a festival is one project and
 		// five nights, a produced show is one project and one night, and a band
-		// gig is neither. Many-to-one — the project does not point back.
+		// gig is neither. A listing's production is the one on this project.
+		// One listing per production project is service-enforced, through
+		// `assertProjectTakesListing`: the rule reads `production`, and a trigger
+		// on one table naming another fails SQLite's rename check when either is
+		// rebuilt, which is how D1 alters a table.
 		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
 		source: text('source', { enum: eventSources }).notNull().default('cmc'),
 		kind: text('kind', { enum: eventKinds }).notNull().default('show'),
@@ -148,9 +140,6 @@ export const eventListing = sqliteTable(
 		index('idx_event_band').on(t.groupId),
 		index('idx_event_source').on(t.source, t.status, t.startsAt),
 		index('idx_event_recurring_series').on(t.recurringSeriesId),
-		// One listing per production: the 1:1 `uq_production_event` used to hold,
-		// now held from the side that names the edge (#1202).
-		uniqueIndex('uq_event_production').on(t.productionId),
 		index('idx_event_project').on(t.projectId),
 		index('idx_event_venue').on(t.venueId),
 		uniqueIndex('uq_event_recurring_instance')

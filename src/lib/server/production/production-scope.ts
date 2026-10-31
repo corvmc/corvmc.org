@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { eventListing } from '$lib/server/db/schema/event';
 import {
@@ -59,11 +59,56 @@ export async function projectOfEvent(
 	eventId: string
 ): Promise<{ projectId: string | null; productionId: string | null } | null> {
 	const [row] = await db
-		.select({ projectId: eventListing.projectId, productionId: eventListing.productionId })
+		.select({ projectId: eventListing.projectId, productionId: production.id })
 		.from(eventListing)
+		.leftJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
 	return row ?? null;
+}
+
+/** 409: the show's project already has its listing. */
+export class ProductionListingTakenError extends DomainError {
+	readonly httpStatus = 409;
+	constructor() {
+		super('That show already has its listing. A production project takes one listing.');
+		this.name = 'ProductionListingTakenError';
+	}
+}
+
+/** 409: moving the listing off its show's project would leave the show without one. */
+export class ListingAnnouncesShowError extends DomainError {
+	readonly httpStatus = 409;
+	constructor() {
+		super("This listing announces a show, so it stays on the show's project.");
+		this.name = 'ListingAnnouncesShowError';
+	}
+}
+
+/**
+ * Refuse to put `eventId` on `projectId` when that is a production project
+ * already holding another listing. Every write that sets a listing's project
+ * calls this first: the database does not hold the rule (see `event_listing`).
+ */
+export async function assertProjectTakesListing(projectId: string, eventId: string): Promise<void> {
+	const [taken] = await db
+		.select({ id: eventListing.id })
+		.from(production)
+		.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
+		.where(and(eq(production.projectId, projectId), ne(eventListing.id, eventId)))
+		.limit(1);
+	if (taken) throw new ProductionListingTakenError();
+}
+
+/** Refuse to move or detach a listing whose project is a show's: the show would lose it. */
+export async function assertListingKeepsShow(
+	eventId: string,
+	nextProjectId: string | null
+): Promise<void> {
+	const current = await projectOfEvent(eventId);
+	if (current?.productionId && current.projectId !== nextProjectId) {
+		throw new ListingAnnouncesShowError();
+	}
 }
 
 export async function projectOfArtifactRequest(requestId: string): Promise<string | null> {
@@ -124,7 +169,7 @@ async function statusOf(target: ProductionTarget) {
 	}
 	const [row] = await q
 		.from(eventListing)
-		.innerJoin(production, eq(production.id, eventListing.productionId))
+		.innerJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(eq(eventListing.id, target.eventId))
 		.limit(1);
 	return row?.status;

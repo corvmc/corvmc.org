@@ -582,8 +582,7 @@ async function processEventSeries(
 			// hero slot on the homepage every month.
 			source: prototype.source,
 			kind: prototype.kind,
-			// Never a production: staff attach one by hand if a night needs it (#2009).
-			productionId: null,
+			// No `projectId`, so never a production: staff attach one by hand (#2009).
 			groupId: prototype.groupId,
 			location: prototype.location,
 			status: occurrenceStatus,

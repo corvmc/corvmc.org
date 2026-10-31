@@ -14,7 +14,7 @@ export async function showProjectIdForEvent(eventId: string | null): Promise<str
 	const [row] = await db
 		.select({ projectId: production.projectId })
 		.from(eventListing)
-		.innerJoin(production, eq(production.id, eventListing.productionId))
+		.innerJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
 	return row?.projectId ?? null;

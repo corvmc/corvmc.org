@@ -79,9 +79,9 @@ describe('listUpcomingShows', () => {
 		) =>
 			`('${id}', '${id}', ${s(at)}, ${s(at) + 3 * 3600}, '${status}', '${source}', 'show', 'u1', ${production}, ${description})`;
 		sqlite.exec(
-			`insert into event_listing (id, title, starts_at, ends_at, status, source, kind, created_by_user_id, production_id, description) values
-				${listing('unready', 'cmc', 'draft', '2026-10-30T03:00:00Z', "'p-offered'")},
-				${listing('ready-but-posterless', 'cmc', 'published', '2026-10-31T03:00:00Z', "'p-confirmed'", "'A night'")},
+			`insert into event_listing (id, title, starts_at, ends_at, status, source, kind, created_by_user_id, project_id, description) values
+				${listing('unready', 'cmc', 'draft', '2026-10-30T03:00:00Z', "'pr1'")},
+				${listing('ready-but-posterless', 'cmc', 'published', '2026-10-31T03:00:00Z', "'pr2'", "'A night'")},
 				${listing('member-gig', 'community', 'pending_review', '2026-11-01T03:00:00Z')},
 				${listing('private-draft', 'community', 'draft', '2026-11-01T03:00:00Z')},
 				${listing('called-off', 'cmc', 'cancelled', '2026-11-02T03:00:00Z')},

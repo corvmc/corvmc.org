@@ -116,8 +116,8 @@ beforeEach(() => {
 	exec(`insert into project_committee (project_id, group_id, role) values
 		('${SHOW}', 'g-book', 'booking'), ('${SHOW}', 'g-prod', 'production')`);
 	exec(`insert into production (id, project_id, status) values ('prod-1', '${SHOW}', 'confirmed')`);
-	exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, production_id, project_id, status)
-		values ('evt-1', 'Friday Night Fuzz', ${T0}, ${T0 + 7200}, 'u-book', 'cmc', 'show', 'prod-1', '${SHOW}', 'published')`);
+	exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, project_id, status)
+		values ('evt-1', 'Friday Night Fuzz', ${T0}, ${T0 + 7200}, 'u-book', 'cmc', 'show', '${SHOW}', 'published')`);
 
 	item('wo-lineup', 'g-book', 'Lineup confirmed', 'production_confirmed');
 	item('wo-promo', 'g-comms', 'Announced', 'event_published');

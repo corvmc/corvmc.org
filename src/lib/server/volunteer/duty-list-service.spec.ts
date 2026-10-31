@@ -122,7 +122,6 @@ function withProduction(cols = 'load_in_at, soundcheck_at, first_set_at, curfew_
 		`INSERT INTO production (id, status, project_id, ${names.join(', ')})
 		 VALUES ('prod-1','confirmed', 'proj-1', ${names.map((n) => vals[n as keyof typeof vals]).join(', ')})`
 	);
-	sqlite.exec(`UPDATE event_listing SET production_id = 'prod-1' WHERE id = 'evt-1'`);
 }
 
 describe('applyDutyList — project subject', () => {

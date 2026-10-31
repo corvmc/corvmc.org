@@ -60,8 +60,8 @@ async function seed(opts: { poolCents?: number; guaranteeCents?: number | null }
 		status: 'published',
 		source: 'cmc',
 		kind: 'show',
-		// The listing names the production it announces (#1202).
-		productionId: PROD
+		// The listing announces the production by sitting on its project (#2076).
+		projectId: 'proj-1'
 	} as never);
 	const { project } = await import('$lib/server/db/schema/project');
 	await testDb.insert(project).values({ id: 'proj-1', name: 'A show', kind: 'production' });

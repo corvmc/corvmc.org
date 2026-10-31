@@ -46,8 +46,8 @@ beforeEach(() => {
 	);
 	exec(`insert into project (id, name, kind) values ('proj', 'Friday', 'production')`);
 	exec(`insert into production (id, project_id, status) values ('prod', 'proj', 'draft')`);
-	exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, production_id, project_id, status)
-		values ('evt', 'Friday', ${T0}, ${T0 + 7200}, 'u', 'cmc', 'show', 'prod', 'proj', 'draft')`);
+	exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, project_id, status)
+		values ('evt', 'Friday', ${T0}, ${T0 + 7200}, 'u', 'cmc', 'show', 'proj', 'draft')`);
 });
 
 let n = 0;

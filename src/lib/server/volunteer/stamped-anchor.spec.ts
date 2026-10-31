@@ -58,8 +58,8 @@ beforeEach(() => {
 		insert into volunteer_role (id, name) values ('role-1', 'Door');
 		insert into project (id, name, kind) values ('proj-1', 'Saturday show', 'production');
 		insert into production (id, project_id, load_out_by) values ('prod-1', 'proj-1', ${START + 4 * 3600});
-		insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, production_id, project_id)
-			values ('ev-1', 'Saturday show', ${START}, ${START + 3 * 3600}, 'u-1', 'prod-1', 'proj-1');
+		insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, project_id)
+			values ('ev-1', 'Saturday show', ${START}, ${START + 3 * 3600}, 'u-1', 'proj-1');
 		insert into reservation (id, booker_type, booker_id, created_by_user_id, starts_at, ends_at)
 			values ('res-1', 'user', 'u-1', 'u-1', ${START}, ${START + 7200});
 	`);

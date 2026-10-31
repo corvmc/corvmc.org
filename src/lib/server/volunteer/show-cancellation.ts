@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db';
 import { workOrder } from '$lib/server/db/schema/volunteer';
 import { eventListing } from '$lib/server/db/schema/event';
-import { and, eq, gt, isNotNull, isNull, or, type SQL } from 'drizzle-orm';
+import { production } from '$lib/server/db/schema/production';
+import { and, eq, gt, inArray, isNotNull, isNull, or, type SQL } from 'drizzle-orm';
 import { cancelShift } from './work-order-service';
 import { notifySignupsOfCancellation } from './volunteer-signup-service';
 
@@ -44,7 +45,16 @@ export function cancelShiftsForEvent(eventId: string, cancelledByUserId?: string
 
 /** Every listing announcing the production; the production itself holds no work orders. */
 export function cancelShiftsForProduction(productionId: string, cancelledByUserId?: string | null) {
-	return cancelLiveShifts(eq(eventListing.productionId, productionId), cancelledByUserId);
+	return cancelLiveShifts(
+		inArray(
+			eventListing.projectId,
+			db
+				.select({ id: production.projectId })
+				.from(production)
+				.where(eq(production.id, productionId))
+		),
+		cancelledByUserId
+	);
 }
 
 /**

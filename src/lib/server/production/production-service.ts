@@ -4,7 +4,11 @@ import {
 	reverseProductionExpense
 } from '$lib/server/finance/production-expense-entries';
 import { expenseLines } from './expense-service';
-import { assertNotTerminal, ProductionTerminalError } from './production-scope';
+import {
+	assertNotTerminal,
+	assertProjectTakesListing,
+	ProductionTerminalError
+} from './production-scope';
 import { isTerminalProduction, transitionWarnings } from '$lib/production/status';
 import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
@@ -131,15 +135,14 @@ export interface ProductionDetailsInput {
 // ---------------------------------------------------------------------------
 
 /**
- * The production a listing announces.
+ * The production a listing announces: the one on the listing's project.
  *
  * A correlated subquery because callers filter `production` while holding an
- * event id. The edge is on the listing now — it names what it advertises, and
- * the production no longer hangs off its own advertisement (#1202).
+ * event id. A listing on no project, or on a general one, matches nothing.
  */
 export function announcedBy(eventId: string): SQL {
-	return sql`"production"."id" = (
-		select "event_listing"."production_id" from "event_listing"
+	return sql`"production"."project_id" = (
+		select "event_listing"."project_id" from "event_listing"
 		 where "event_listing"."id" = ${eventId}
 	)`;
 }
@@ -234,6 +237,7 @@ export async function createProduction(
 
 	const productionId = opts?.id ?? crypto.randomUUID();
 	const projectId = crypto.randomUUID();
+	await assertProjectTakesListing(projectId, eventId);
 	await createShowProject({
 		productionId,
 		projectId,
@@ -243,13 +247,19 @@ export async function createProduction(
 		createdByUserId: opts?.createdByUserId ?? null
 	});
 
-	// The listing names what it announces, so claiming it is the write that can
-	// lose. If it does, the rows just written have nothing announcing them and are
-	// removed rather than left as a shell nothing can reach.
+	// Moving the listing onto the show's project is the claim, and the write that
+	// can lose: a listing already on a show's project is taken. If it loses, the
+	// rows just written have nothing announcing them and are removed.
 	const claimed = await db
 		.update(eventListing)
-		.set({ productionId, projectId, updatedAt: new Date() })
-		.where(and(eq(eventListing.id, eventId), isNull(eventListing.productionId)));
+		.set({ projectId, updatedAt: new Date() })
+		.where(
+			and(
+				eq(eventListing.id, eventId),
+				sql`not exists (select 1 from "production" "p"
+					where "p"."project_id" = "event_listing"."project_id")`
+			)
+		);
 
 	if (getRowCount(claimed) === 0) {
 		await deleteShowProject(productionId);
@@ -292,7 +302,8 @@ export async function updateProductionDetails(
 	const [listing] = await db
 		.select({ id: eventListing.id })
 		.from(eventListing)
-		.where(eq(eventListing.productionId, id))
+		.innerJoin(production, eq(production.projectId, eventListing.projectId))
+		.where(eq(production.id, id))
 		.limit(1);
 	const shifts = listing
 		? SHOW_CLOCK.flatMap(([key, anchor, column]) => {
@@ -351,7 +362,7 @@ function closeOutTasksOwed(productionIds: string[]) {
 		.from(workTask)
 		.innerJoin(workOrder, eq(workOrder.id, workTask.workOrderId))
 		.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
-		.innerJoin(production, eq(production.id, eventListing.productionId))
+		.innerJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(
 			and(
 				inArray(production.id, productionIds),
@@ -480,7 +491,7 @@ async function readForMove(id: string) {
 			title: eventListing.title
 		})
 		.from(production)
-		.leftJoin(eventListing, eq(eventListing.productionId, production.id))
+		.leftJoin(eventListing, eq(eventListing.projectId, production.projectId))
 		.where(eq(production.id, id))
 		.limit(1);
 	if (!row) throw new ProductionNotFoundError();

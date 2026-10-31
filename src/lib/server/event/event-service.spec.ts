@@ -241,6 +241,11 @@ vi.mock('$lib/server/production/production-project', () => ({
 	deleteShowProject: (id: string) => mockDeleteShowProject(id),
 	announceProductionCreated: async () => undefined
 }));
+const mockAssertProjectTakesListing = vi.fn(async (_projectId: string, _eventId: string) => {});
+vi.mock('$lib/server/production/production-scope', () => ({
+	assertProjectTakesListing: (projectId: string, eventId: string) =>
+		mockAssertProjectTakesListing(projectId, eventId)
+}));
 vi.mock('$lib/server/production/production-service', () => ({
 	cancelProductionsForEvent: (...args: unknown[]) => mockCancelProductions(...args),
 	createProduction: (...a: unknown[]) => mockCreateProduction(...(a as [string, { id?: string }])),
@@ -362,17 +367,17 @@ describe('EventService', () => {
 			await create(baseParams);
 
 			expect(mockCreateShowProject).not.toHaveBeenCalled();
-			expect(lastInsertedValues!.productionId).toBeNull();
 			expect(lastInsertedValues).not.toHaveProperty('projectId');
 		});
 
 		it('opens the production with the listing when asked', async () => {
 			await create({ ...baseParams, withProduction: true });
 
-			const { productionId } = mockCreateShowProject.mock.calls[0][0] as {
-				productionId: string;
-			};
-			expect(lastInsertedValues!.productionId).toBe(productionId);
+			const { projectId } = mockCreateShowProject.mock.calls[0][0] as { projectId: string };
+			// The listing announces the show by sitting on its project, which the
+			// one-listing rule is asked about first (#2076).
+			expect(lastInsertedValues!.projectId).toBe(projectId);
+			expect(mockAssertProjectTakesListing).toHaveBeenCalledWith(projectId, lastInsertedValues!.id);
 		});
 
 		it('books a show with neither a production nor a group to the listing (#2004)', async () => {
@@ -410,7 +415,8 @@ describe('EventService', () => {
 			expect(staffCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
 					bookerType: 'production',
-					bookerId: lastInsertedValues!.productionId,
+					bookerId: (mockCreateShowProject.mock.calls[0][0] as { productionId: string })
+						.productionId,
 					status: 'confirmed'
 				})
 			);

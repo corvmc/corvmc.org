@@ -368,7 +368,7 @@ async function readSlotForPayout(slotId: string) {
 		.innerJoin(production, eq(production.id, productionSlot.productionId))
 		// The listing is where the event id lives now: a production no longer
 		// carries its own advertisement's id (#1202).
-		.innerJoin(eventListing, eq(eventListing.productionId, production.id))
+		.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
 		.leftJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
 		.where(eq(productionSlot.id, slotId))
 		.limit(1);
