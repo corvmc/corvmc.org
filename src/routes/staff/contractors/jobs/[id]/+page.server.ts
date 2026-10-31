@@ -3,6 +3,7 @@ import { can } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { getJobById, type Engagement } from '$lib/server/contractor/contractor-job-service';
 import { workOrderHref } from '$lib/utils/work-order-href';
+import { signInHref } from '$lib/utils/sign-in';
 import type { PageServerLoad } from './$types';
 
 /**
@@ -12,7 +13,7 @@ import type { PageServerLoad } from './$types';
  * so a job id does not reveal which project its work is on.
  */
 export const load: PageServerLoad = async ({ params, locals, url }) => {
-	if (!locals.user) redirect(302, `/login?redirect=${encodeURIComponent(url.pathname)}`);
+	if (!locals.user) redirect(302, signInHref({ returnTo: url.pathname }));
 	if (!(await can('contractor.read'))) error(403, 'Not permitted');
 	let job: Engagement;
 	try {

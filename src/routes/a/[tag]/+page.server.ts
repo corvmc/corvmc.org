@@ -2,6 +2,7 @@ import { error, redirect } from '@sveltejs/kit';
 import { getAssetByTag } from '$lib/server/inventory/asset-service';
 import { capabilitySet, positionsFor } from '$lib/server/authorization';
 import { entityHref } from '$lib/utils/entity-href';
+import { signInHref } from '$lib/utils/sign-in';
 import type { PageServerLoad } from './$types';
 
 /**
@@ -34,7 +35,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	// in on their phone, so this is the common path rather than an edge case —
 	// and it answers with a login, not a dead end. Checked before the lookup so
 	// an anonymous scan cannot probe which tags exist.
-	if (!locals.user) redirect(302, `/login?redirect=/a/${encodeURIComponent(tag)}`);
+	if (!locals.user) redirect(302, signInHref({ returnTo: `/a/${encodeURIComponent(tag)}` }));
 
 	const asset = await getAssetByTag(tag);
 	if (!asset) error(404, 'No gear carries that tag');

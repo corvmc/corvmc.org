@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import { here, signInHref } from '$lib/utils/sign-in';
 	import type { ResolvedPathname } from '$app/types';
 	import logoMono from '$lib/assets/cmc-logo-mono.svg';
 
@@ -7,7 +8,7 @@
 		href?: ResolvedPathname;
 	}
 
-	let { href = resolve('/login?register') }: Props = $props();
+	let { href = signInHref({ register: true, returnTo: here(page.url) }) }: Props = $props();
 </script>
 
 <a {href} class="vinyl-card vinyl-card--cta">
