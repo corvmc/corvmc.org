@@ -55,7 +55,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		eventEndHour: number,
 		createdByUserId: string,
 		reservationStatus: (typeof reservation.$inferSelect)['status']
-	): Promise<{ reservationId: string; productionId: string } | undefined> {
+	): Promise<{ reservationId: string; productionId: string; projectId: string } | undefined> {
 		const startsAt = ptDate(day, eventStartHour, -30);
 		const endsAt = ptDate(day, eventEndHour, 30);
 		// A show whose room is already taken simply has no hold, which is the
@@ -67,7 +67,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		// The show holds its own room (#855). Minted here so the hold can name it
 		// before either row exists, the ordering event-service.create() uses.
 		const productionId = crypto.randomUUID();
-		await insertShowProductions([{ id: productionId, createdByUserId }]);
+		const [{ projectId }] = await insertShowProductions([{ id: productionId, createdByUserId }]);
 
 		const [r] = await db
 			.insert(reservation)
@@ -85,7 +85,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 					reservationStatus === 'cancelled' ? new Date(startsAt.getTime() - 86_400_000) : null
 			})
 			.returning();
-		return { reservationId: r.id, productionId };
+		return { reservationId: r.id, productionId, projectId: projectId! };
 	}
 
 	for (let i = 0; i < 6; i++) {
@@ -101,7 +101,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		// The id is minted up front so the hold can point at the event, the same
 		// ordering event-service.create() uses.
 		const eventId = crypto.randomUUID();
-		let held: { reservationId: string; productionId: string } | undefined;
+		let held: { reservationId: string; productionId: string; projectId: string } | undefined;
 		if (random() < 0.75) {
 			held = await createEventReservation(
 				eventId,
@@ -126,7 +126,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				publishedAt,
 				tags,
 				reservationId: held?.reservationId,
-				productionId: held?.productionId,
+				projectId: held?.projectId,
 				createdByUserId: creator.id
 			})
 			.returning();
@@ -174,7 +174,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		const config = futureConfigs[i];
 
 		const eventId = crypto.randomUUID();
-		let held: { reservationId: string; productionId: string } | undefined;
+		let held: { reservationId: string; productionId: string; projectId: string } | undefined;
 		if (random() < 0.75) {
 			held = await createEventReservation(
 				eventId,
@@ -203,7 +203,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				publishedAt: new Date(),
 				tags,
 				reservationId: held?.reservationId,
-				productionId: held?.productionId,
+				projectId: held?.projectId,
 				externalTicketUrl: config.externalTicketUrl ?? null,
 				createdByUserId: creator.id
 			})
@@ -226,7 +226,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		const creator = pick(staffUsers);
 
 		const eventId = crypto.randomUUID();
-		let held: { reservationId: string; productionId: string } | undefined;
+		let held: { reservationId: string; productionId: string; projectId: string } | undefined;
 		if (random() < 0.75) {
 			held = await createEventReservation(eventId, day, hour, hour + 3, creator.id, 'scheduled');
 		}
@@ -242,7 +242,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				status: 'draft',
 				tags: pick(EVENT_TAGS_POOL),
 				reservationId: held?.reservationId,
-				productionId: held?.productionId,
+				projectId: held?.projectId,
 				createdByUserId: creator.id
 			})
 			.returning();
@@ -270,7 +270,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 			status: 'cancelled',
 			tags: 'community, all ages',
 			reservationId: cancelledHeld?.reservationId,
-			productionId: cancelledHeld?.productionId,
+			projectId: cancelledHeld?.projectId,
 			createdByUserId: cancelledCreator.id
 		})
 		.returning();
@@ -390,7 +390,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				publishedAt: new Date(protoStart.getTime() - 14 * 86400000),
 				tags: 'open mic, all ages, community',
 				reservationId: protoHeld?.reservationId,
-				productionId: protoHeld?.productionId,
+				projectId: protoHeld?.projectId,
 				createdByUserId: creator.id
 			})
 			.returning();
@@ -435,7 +435,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 					status: 'draft',
 					tags: proto.tags,
 					reservationId: instHeld?.reservationId,
-					productionId: instHeld?.productionId,
+					projectId: instHeld?.projectId,
 					recurringSeriesId: series.id,
 					createdByUserId: creator.id
 				})

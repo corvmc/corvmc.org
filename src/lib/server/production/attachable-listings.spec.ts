@@ -19,13 +19,13 @@ function listing(id: string, startsAt: string, over: Record<string, string> = {}
 		source: "'cmc'",
 		kind: "'show'",
 		status: "'draft'",
-		production_id: 'null',
+		project_id: 'null',
 		...over
 	};
 	const s = at(startsAt);
 	sqlite.exec(
-		`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, status, production_id)
-		values ('${id}', 'Show ${id}', ${s}, ${s + 7200}, 'u', ${cols.source}, ${cols.kind}, ${cols.status}, ${cols.production_id})`
+		`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, status, project_id)
+		values ('${id}', 'Show ${id}', ${s}, ${s + 7200}, 'u', ${cols.source}, ${cols.kind}, ${cols.status}, ${cols.project_id})`
 	);
 }
 
@@ -55,7 +55,7 @@ describe('listAttachableListings', () => {
 	});
 
 	it('leaves out a show that already has a production', async () => {
-		listing('produced', '2026-10-20T03:00:00Z', { production_id: "'prod'" });
+		listing('produced', '2026-10-20T03:00:00Z', { project_id: "'proj'" });
 		expect(await listAttachableListings(NOW)).toEqual([]);
 	});
 

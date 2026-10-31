@@ -108,8 +108,8 @@ beforeEach(() => {
 	exec(`insert into volunteer_role (id, name) values ('crew', 'Load-out crew')`);
 	exec(`insert into project (id, name, kind) values ('proj', 'Friday', 'production')`);
 	exec(`insert into production (id, project_id, status) values ('prod', 'proj', 'draft')`);
-	exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, production_id, project_id, status)
-		values ('evt', 'Friday Night Fuzz', ${T0}, ${T0 + 7200}, 'u', 'cmc', 'show', 'prod', 'proj', 'published')`);
+	exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, project_id, status)
+		values ('evt', 'Friday Night Fuzz', ${T0}, ${T0 + 7200}, 'u', 'cmc', 'show', 'proj', 'published')`);
 	exec(`insert into production_expense (id, production_id, label, category, amount_cents)
 		values ('exp-1', 'prod', 'Sound engineer', 'sound', 15000)`);
 });

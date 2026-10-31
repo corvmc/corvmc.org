@@ -54,7 +54,7 @@ describe('shortOfActsSql', () => {
 	const short = dialect.sqlToQuery(shortOfActsSql).sql;
 
 	it('correlates both halves on the OUTER listing', () => {
-		expect(short).toContain('"p"."id" = "event_listing"."production_id"');
+		expect(short).toContain('"p"."project_id" = "event_listing"."project_id"');
 		expect(short).toContain('"eb"."event_id" = "event_listing"."id"');
 	});
 

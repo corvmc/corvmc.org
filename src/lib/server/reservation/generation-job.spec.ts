@@ -664,8 +664,8 @@ describe('generateRecurringEvents', () => {
 		const listings = insertedByTable.filter((i) => i.table === 'event_listing');
 		expect(listings).toHaveLength(1);
 		expect(mockCreateShowProject).not.toHaveBeenCalled();
+		expect(listings[0].row).not.toHaveProperty('projectId');
 		expect(listings[0].row).toMatchObject({
-			productionId: null,
 			title: EVENT_PROTO.title,
 			description: EVENT_PROTO.description,
 			startsAt: OCC1,
@@ -714,7 +714,7 @@ describe('generateRecurringEvents', () => {
 		await generateRecurringEvents();
 
 		expect(mockCreateShowProject).not.toHaveBeenCalled();
-		expect(insertsFor('event_listing')[0]).toMatchObject({ productionId: null });
+		expect(insertsFor('event_listing')[0]).not.toHaveProperty('projectId');
 		expect(mockStaffCreate).toHaveBeenCalledWith(
 			expect.objectContaining({ bookerType: 'group', bookerId: 'club-1' })
 		);

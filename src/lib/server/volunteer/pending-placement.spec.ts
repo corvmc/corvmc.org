@@ -61,8 +61,8 @@ beforeEach(() => {
 		insert into volunteer_role (id, name) values ('role-1', 'Crew');
 		insert into project (id, name, kind) values ('proj-1', 'Saturday show', 'production');
 		insert into production (id, project_id) values ('prod-1', 'proj-1');
-		insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, production_id, project_id)
-			values ('ev-1', 'Saturday show', ${T + 7200}, ${T + 14400}, 'u-1', 'prod-1', 'proj-1');
+		insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, project_id)
+			values ('ev-1', 'Saturday show', ${T + 7200}, ${T + 14400}, 'u-1', 'proj-1');
 	`);
 });
 

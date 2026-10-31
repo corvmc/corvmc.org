@@ -26,20 +26,15 @@ export async function insertShowProductions(
 	return batchInsert(production, withProjects);
 }
 
-/** Name and date each show's project from its listing, and point the listing at it. */
+/** Name and date each show's project from its listing, which already sits on it. */
 export async function syncShowProjects(): Promise<void> {
-	await db.run(sql`
-		update event_listing
-		set project_id = (select p.project_id from production p where p.id = event_listing.production_id)
-		where production_id is not null
-	`);
 	await db.run(sql`
 		update project
 		set name = e.title,
 			starts_at = e.starts_at,
 			ends_at = case when e.ends_at > e.starts_at then e.ends_at else null end
 		from event_listing e
-		join production p on p.id = e.production_id
+		join production p on p.project_id = e.project_id
 		where p.project_id = project.id and project.kind = 'production'
 	`);
 }

@@ -51,10 +51,10 @@ const HOUR = 3_600_000;
 const T0 = new Date(Date.UTC(2030, 5, 7, 2, 0, 0));
 const at = (h: number) => new Date(T0.getTime() + h * HOUR);
 
-function listing(id: string, opts: { kind?: string; productionId?: string } = {}) {
+function listing(id: string, opts: { kind?: string; projectId?: string } = {}) {
 	sqlite
 		.prepare(
-			`insert into event_listing (id, title, starts_at, ends_at, kind, source, status, production_id, created_by_user_id)
+			`insert into event_listing (id, title, starts_at, ends_at, kind, source, status, project_id, created_by_user_id)
 			 values (?, ?, ?, ?, ?, 'cmc', 'draft', ?, ?)`
 		)
 		.run(
@@ -63,7 +63,7 @@ function listing(id: string, opts: { kind?: string; productionId?: string } = {}
 			Math.floor(at(1).getTime() / 1000),
 			Math.floor(at(3).getTime() / 1000),
 			opts.kind ?? 'show',
-			opts.productionId ?? null,
+			opts.projectId ?? null,
 			STAFF
 		);
 }
@@ -223,7 +223,7 @@ describe('a production’s hold', () => {
 		sqlite.exec(
 			`insert into production (id, project_id, status) values ('prod-1', 'proj-1', 'planning')`
 		);
-		listing('ev-prod', { productionId: 'prod-1' });
+		listing('ev-prod', { projectId: 'proj-1' });
 
 		await hold('ev-prod', 0, 4);
 

@@ -42,8 +42,8 @@ beforeEach(() => {
 	exec(`update duty_list set is_active = 1`);
 	exec(`insert into project (id, name, kind) values ('proj', 'Friday', 'production')`);
 	exec(`insert into production (id, project_id) values ('p', 'proj')`);
-	exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, production_id)
-		values ('evt', 'Friday', ${T0}, ${T0 + 7200}, 'u', 'cmc', 'show', 'p')`);
+	exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, project_id)
+		values ('evt', 'Friday', ${T0}, ${T0 + 7200}, 'u', 'cmc', 'show', 'proj')`);
 });
 
 const stamped = () =>

@@ -34,6 +34,7 @@ import { venue } from '$lib/server/db/schema/venue';
 import { production } from '$lib/server/db/schema/production';
 import { cancelProductionsForEvent } from '$lib/server/production/production-service';
 import { openDeliverablesOnListing } from '$lib/server/production/cancellation-notice';
+import { assertProjectTakesListing } from '$lib/server/production/production-scope';
 import {
 	cancelDeliverablesForEvent,
 	cancelShiftsForEvent
@@ -386,10 +387,11 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		reservationId = res.id;
 	}
 
-	// Before the listing, because the listing names it and `production_id` is a
-	// real foreign key. The room is booked first because `booker_id` has none —
-	// that is the only reason the reservation may come earlier.
+	// Before the listing, because the listing names the show's project and
+	// `project_id` is a real foreign key. The room is booked first because
+	// `booker_id` has none — the only reason the reservation may come earlier.
 	if (productionId && showProjectId) {
+		await assertProjectTakesListing(showProjectId, eventId);
 		await createShowProject({
 			productionId,
 			projectId: showProjectId,
@@ -416,7 +418,6 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				venueId: venueId ?? null,
 				location: location ?? null,
 				groupId: groupId ?? null,
-				productionId,
 				...(showProjectId ? { projectId: showProjectId } : {}),
 				reservationId,
 				createdByUserId
@@ -862,7 +863,7 @@ function listingClockWrites(
 							db
 								.select({ id: production.projectId })
 								.from(production)
-								.innerJoin(eventListing, eq(eventListing.productionId, production.id))
+								.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
 								.where(eq(eventListing.id, eventId))
 						)
 					)
@@ -1010,7 +1011,7 @@ async function readiness(eventId: string): Promise<{ title: string | null; warni
 			productionStatus: production.status
 		})
 		.from(eventListing)
-		.leftJoin(production, eq(production.id, eventListing.productionId))
+		.leftJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
 
@@ -1647,7 +1648,7 @@ export async function listAll(
 		.from(eventListing)
 		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.leftJoin(venue, eq(venue.id, eventListing.venueId))
-		.leftJoin(production, eq(production.id, eventListing.productionId))
+		.leftJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(where)
 		.orderBy(desc(eventListing.startsAt))
 		.$dynamic();

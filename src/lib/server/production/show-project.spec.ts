@@ -138,8 +138,8 @@ describe('shifts follow the show clock', () => {
 		exec(
 			`insert into production (id, project_id, load_in_at, soundcheck_at) values ('prod-1', '${SHOW}', ${T0}, ${T0 + 3600})`
 		);
-		exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, production_id, project_id)
-			values ('evt-1', 'Friday', ${T0 + 7200}, ${T0 + 14400}, 'u-book', 'cmc', 'show', 'prod-1', '${SHOW}')`);
+		exec(`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, source, kind, project_id)
+			values ('evt-1', 'Friday', ${T0 + 7200}, ${T0 + 14400}, 'u-book', 'cmc', 'show', '${SHOW}')`);
 		exec(`insert into volunteer_role (id, name) values ('role-1', 'Sound')`);
 		exec(`insert into duty_list (id, name, anchor, subject) values
 			('dl-in', 'Load-in crew', 'load_in', 'event'), ('dl-doors', 'Door', 'doors', 'event')`);

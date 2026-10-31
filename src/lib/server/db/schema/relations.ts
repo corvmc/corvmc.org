@@ -102,7 +102,7 @@ export const relations = defineRelations(schema, (t) => ({
 	// Two FKs to user — who is running the night, and who opened the record — so
 	// both name which one they follow.
 	production: {
-		event: t.one.eventListing({ from: t.production.id, to: t.eventListing.productionId }),
+		event: t.one.eventListing({ from: t.production.projectId, to: t.eventListing.projectId }),
 		project: t.one.project({ from: t.production.projectId, to: t.project.id }),
 		producer: t.one.user({
 			from: t.production.producerUserId,

@@ -550,7 +550,7 @@ export async function projectOfEvent(eventId: string): Promise<string | null> {
 	const [row] = await db
 		.select({ own: eventListing.projectId, show: production.projectId })
 		.from(eventListing)
-		.leftJoin(production, eq(production.id, eventListing.productionId))
+		.leftJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
 	return row?.own ?? row?.show ?? null;
@@ -590,7 +590,7 @@ async function loadEventClock(where: SQL): Promise<Clock['event']> {
 			loadOutBy: production.loadOutBy
 		})
 		.from(eventListing)
-		.leftJoin(production, eq(production.id, eventListing.productionId))
+		.leftJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(where)
 		.orderBy(asc(eventListing.startsAt))
 		.limit(1);

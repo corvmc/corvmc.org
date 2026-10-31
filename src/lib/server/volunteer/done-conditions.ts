@@ -98,7 +98,7 @@ async function loadShowFacts(eventIds: string[]): Promise<Map<string, ShowFacts>
 			description: eventListing.description
 		})
 		.from(eventListing)
-		.leftJoin(production, eq(production.id, eventListing.productionId))
+		.leftJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(inArray(eventListing.id, eventIds));
 	return new Map(rows.map(({ eventId, ...f }) => [eventId, f]));
 }

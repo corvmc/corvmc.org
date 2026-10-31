@@ -327,7 +327,9 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 	const free = await db
 		.select({ id: eventListing.id })
 		.from(eventListing)
-		.where(isNull(eventListing.productionId));
+		.where(
+			sql`not exists (select 1 from production p where p.project_id = ${eventListing.projectId})`
+		);
 	const unproduced = new Set(free.map((r) => r.id));
 	const upcoming = events
 		.filter((e) => e.status === 'published' && e.startsAt >= now && unproduced.has(e.id))

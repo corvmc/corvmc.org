@@ -1,10 +1,10 @@
 {
-  "id": "90efd1fe-a09c-459b-89fb-34a405d9adea",
-  "prevIds": [
-    "b685a7de-ddd5-4481-b71e-a03267e24540"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "11fc20c9-538b-4f1b-8f79-8edfc4aa05e9",
+  "prevIds": [
+    "fbee8069-72a2-4b81-863d-1c2076cc97b2"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -2369,16 +2369,6 @@
       "default": null,
       "generated": null,
       "name": "tags",
-      "entityType": "columns",
-      "table": "event_listing"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "production_id",
       "entityType": "columns",
       "table": "event_listing"
     },
@@ -15144,21 +15134,6 @@
     },
     {
       "columns": [
-        "production_id"
-      ],
-      "tableTo": "production",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_event_listing_production_id_production_id_fk",
-      "entityType": "fks",
-      "table": "event_listing"
-    },
-    {
-      "columns": [
         "group_id"
       ],
       "tableTo": "group",
@@ -20485,20 +20460,6 @@
       "where": null,
       "origin": "manual",
       "name": "idx_event_recurring_series",
-      "entityType": "indexes",
-      "table": "event_listing"
-    },
-    {
-      "columns": [
-        {
-          "value": "production_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "origin": "manual",
-      "name": "uq_event_production",
       "entityType": "indexes",
       "table": "event_listing"
     },

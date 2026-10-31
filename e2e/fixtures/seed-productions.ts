@@ -139,10 +139,10 @@ export async function seedProductions(): Promise<void> {
 			updatedAt: now
 		});
 
-		// The listing names what it announces (#1202).
+		// The listing announces the show by sitting on its project (#2076).
 		await db
 			.update(eventListing)
-			.set({ productionId: SEED_PRODUCTION_ID, projectId: SEED_PRODUCTION_PROJECT_ID })
+			.set({ projectId: SEED_PRODUCTION_PROJECT_ID })
 			.where(eq(eventListing.id, SEED_PRODUCTION_EVENT_ID));
 	});
 }

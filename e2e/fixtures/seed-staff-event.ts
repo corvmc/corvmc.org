@@ -18,6 +18,7 @@ import { and, eq, inArray, like } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { withPlatformDb } from './platform-db';
 import { eventListing } from '../../src/lib/server/db/schema/event';
+import { production } from '../../src/lib/server/db/schema/production';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { buildTimeRangeInTz } from '../../src/lib/server/reservation/timezone';
 import { SEED_STAFF_ID } from './seed-staff-user';
@@ -115,9 +116,10 @@ async function clearStaleEvents(db: DrizzleD1Database) {
 		.select({
 			id: eventListing.id,
 			reservationId: eventListing.reservationId,
-			productionId: eventListing.productionId
+			productionId: production.id
 		})
 		.from(eventListing)
+		.leftJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(like(eventListing.title, `${SEED_EVENT_TITLE_PREFIX}%`));
 
 	if (stale.length === 0) return;

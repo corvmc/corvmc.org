@@ -74,9 +74,10 @@ and load-out are internal. Ticketing is neither announcement nor back-of-house, 
 its own row, `ticket_sale`, keyed to the listing: a band gig will sell tickets without a
 production (#1203). A null `group_id` means the collective is the seller.
 
-The listing names the production it announces (`event_listing.production_id`), not the
-other way round: the advertisement is downstream of the show. A production with no
-listing is a show being built before it is announced. See #1202.
+A listing announces a production by sitting on that production's project
+(`event_listing.project_id` = `production.project_id`); there is no second edge (#2076).
+A production project takes one listing, held by the services rather than the database. A
+production with no listing is a show being built before it is announced. See #1202.
 
 Three of the app's columns store this table's _name_ as data, and so they read
 `'event_listing'` too: `reservation.booker_type`, `media_attachment.attachable_type`

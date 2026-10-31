@@ -74,6 +74,6 @@ export const eventListingColumns = {
  * short of anything. Identifiers are spelled out for the reason above.
  */
 export const shortOfActsSql = sql`(SELECT "p"."acts_wanted" FROM "production" "p"
-	WHERE "p"."id" = "event_listing"."production_id") >
+	WHERE "p"."project_id" = "event_listing"."project_id") >
 	(SELECT count(*) FROM "event_band" "eb"
 	WHERE "eb"."event_id" = "event_listing"."id")`;
