@@ -269,7 +269,7 @@ describe('the acts are paid off the base rate', () => {
 			unitPriceCents: 1000,
 			collectiveCents: 941 // the whole divisible amount
 		});
-		expect(result).toEqual({ ok: false, reason: 'That leaves the acts short.' });
+		expect(result).toEqual({ ok: false, reason: 'That leaves the bands short.' });
 	});
 
 	it('lets a buyer opt the acts up, but never down', () => {
@@ -308,7 +308,7 @@ describe('the acts are paid off the base rate', () => {
 		it('refuses the cent past it', () => {
 			expect(validateTicketSplit({ ...overpaid, collectiveCents: 727 })).toEqual({
 				ok: false,
-				reason: 'That leaves the acts short.'
+				reason: 'That leaves the bands short.'
 			});
 		});
 	});

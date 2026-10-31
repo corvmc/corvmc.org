@@ -322,7 +322,7 @@
 									field={edit.fields.contactName}
 									label="Contact for this show"
 									value={slot.contactName ?? ''}
-									description="A tour manager, when it is not the act's usual contact."
+									description="A tour manager, when it is not the band's usual contact."
 								/>
 								<Field
 									field={edit.fields.contactEmail}
@@ -391,7 +391,7 @@
 									field={terms.fields.againstNet}
 									type="checkbox"
 									label="Against net"
-									checkboxLabel="The percentage is of net rather than of the acts' pool"
+									checkboxLabel="The percentage is of net rather than of the bands' pool"
 									value={slot.terms.againstNet}
 								/>
 								<Field
@@ -418,7 +418,7 @@
 			<input {...addFields.eventId.as('hidden', eventId)} />
 			<input {...addFields.productionId.as('hidden', runOfShow.productionId)} />
 			<div class="grid gap-4 md:grid-cols-3">
-				<Field field={addFields.eventBandId} type="select" label="Act" options={actOptions} />
+				<Field field={addFields.eventBandId} type="select" label="Band" options={actOptions} />
 				<Field
 					field={addFields.setLengthMinutes}
 					type="number"
@@ -439,7 +439,7 @@
 				Still off the running order: {runOfShow.unslotted.map((a) => a.name).join(', ')}
 			</p>
 		{:else if runOfShow.slots.length > 0}
-			<p class="mt-2 text-subtle">Every act on the bill has a set.</p>
+			<p class="mt-2 text-subtle">Every band on the bill has a set.</p>
 		{/if}
 	</InfoCard>
 {/if}

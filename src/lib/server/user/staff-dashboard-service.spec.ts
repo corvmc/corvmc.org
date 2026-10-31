@@ -106,7 +106,7 @@ describe('listUpcomingShows', () => {
 			'the production is not confirmed yet',
 			'there is no poster',
 			'there is no description',
-			'the bill needs 1 more act'
+			'the bill needs 1 more band'
 		]);
 		expect(byId['ready-but-posterless'].blockers).toEqual(['there is no poster']);
 		// A member's gig makes no promise on the collective's behalf.

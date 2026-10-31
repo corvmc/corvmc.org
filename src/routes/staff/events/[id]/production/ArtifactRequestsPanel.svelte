@@ -60,10 +60,10 @@
 				{#if acts.length > 0}
 					<Action
 						action={askForArtifact}
-						label="Ask an act"
+						label="Ask a band"
 						variant="ghost"
 						size="sm"
-						modalTitle="Ask an act for {eventTitle}"
+						modalTitle="Ask a band for {eventTitle}"
 						submitLabel="Ask"
 						successToast="Asked"
 						onsuccess={onchange}
@@ -72,7 +72,7 @@
 							<input type="hidden" name="eventId" value={eventId} />
 							<FormField
 								name="entryId"
-								label="Act"
+								label="Band"
 								type="select"
 								options={acts.map((a) => ({ value: a.entryId, label: a.name }))}
 							/>
@@ -139,7 +139,7 @@
 		<ul class="divide-y divide-base-300">
 			{#each requests as req (req.id)}
 				<li class="flex flex-wrap items-center gap-2 py-2">
-					<span class="font-medium">{req.actName ?? 'Unknown act'}</span>
+					<span class="font-medium">{req.actName ?? 'Unknown band'}</span>
 					<span class="text-sm">{requestableArtifactLabels[req.artifact]}</span>
 					{#if req.fulfilled}
 						<Badge variant="success">In</Badge>
@@ -217,7 +217,7 @@
 								<input type="hidden" name="id" value={req.id} />
 								<input type="hidden" name="eventId" value={eventId} />
 								<p class="text-sm">
-									{requestableArtifactLabels[req.artifact]} from {req.actName ?? 'this act'} stops counting
+									{requestableArtifactLabels[req.artifact]} from {req.actName ?? 'this band'} stops counting
 									as outstanding. Asking again re-opens it.
 								</p>
 							{/snippet}

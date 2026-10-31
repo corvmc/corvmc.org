@@ -196,7 +196,7 @@ export const updateProduction = form(
 		 */
 		actsWanted: z
 			.string()
-			.regex(/^$|^([1-9]|1\d|20)$/, 'Pick a number of acts')
+			.regex(/^$|^([1-9]|1\d|20)$/, 'Pick a number of bands')
 			.optional(),
 		billingNotes: z.string().max(2000).optional(),
 		hospitalityNotes: z.string().max(2000).optional(),

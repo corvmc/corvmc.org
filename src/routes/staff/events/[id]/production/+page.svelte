@@ -361,13 +361,13 @@
 							<FormField
 								field={productionFields.actsWanted}
 								type="select"
-								label="Acts wanted"
+								label="Bands wanted"
 								value={productionRecord.actsWanted?.toString() ?? ''}
 								options={[
 									{ value: '', label: 'No target set' },
 									...Array.from({ length: 8 }, (_, i) => ({
 										value: String(i + 1),
-										label: `${i + 1} ${i === 0 ? 'act' : 'acts'}`
+										label: `${i + 1} ${i === 0 ? 'band' : 'bands'}`
 									}))
 								]}
 								description="How many the bill should end up with. Leave it unset if nobody has decided."
@@ -376,7 +376,7 @@
 							<FormField
 								field={productionFields.billingNotes}
 								label="Billing"
-								description="What the acts were told about the money, in their words."
+								description="What the bands were told about the money, in their words."
 							/>
 							<FormField
 								field={productionFields.hospitalityNotes}
@@ -386,7 +386,7 @@
 							<FormField
 								field={productionFields.internalNotes}
 								label="Internal notes"
-								description="Staff only. Never shown to an act."
+								description="Staff only. Never shown to a band."
 							/>
 
 							<SubmitButton label="Save production" />

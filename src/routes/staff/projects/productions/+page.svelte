@@ -150,7 +150,7 @@
 				bind:checked={needsActs}
 				onchange={() => (page = 1)}
 			/>
-			Short of acts
+			Short of bands
 		</label>
 	</FilterBar>
 

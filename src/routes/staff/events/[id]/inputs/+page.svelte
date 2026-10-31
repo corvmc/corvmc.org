@@ -136,7 +136,7 @@
 					<tr class="head-row">
 						<th class="w-8 py-1">#</th>
 						<th class="py-1">Source</th>
-						<th class="py-1">Act</th>
+						<th class="py-1">Band</th>
 						<th class="py-1">Via</th>
 						<th class="py-1">Mic / DI</th>
 						<th class="py-1">Stand</th>
@@ -174,7 +174,7 @@
 
 	{#if data.channels.length === 0}
 		<p class="text-sm text-gray-600">
-			No act on this bill has listed a channel yet. The Tech riders card on the production console
+			No band on this bill has listed a channel yet. The Tech riders card on the production console
 			is where they get asked.
 		</p>
 	{/if}

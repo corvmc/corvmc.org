@@ -295,7 +295,7 @@ export async function recordSlotPayout(
 	if (isTerminalProduction(slot.status)) throw new ProductionTerminalError(slot.status);
 	// Money already moved is never edited in place: undo it, then record again.
 	if (slot.paidCents !== null) {
-		throw new PayoutError('That act is already marked paid. Undo the payout to change it.');
+		throw new PayoutError('That band is already marked paid. Undo the payout to change it.');
 	}
 
 	const now = new Date();
@@ -303,9 +303,9 @@ export async function recordSlotPayout(
 		.update(productionSlot)
 		.set({ paidCents: amountCents, paidAt: now, paidByUserId: recordedByUserId, updatedAt: now })
 		.where(and(eq(productionSlot.id, slotId), isNull(productionSlot.paidCents)));
-	if (getRowCount(claimed) === 0) throw new PayoutError('That act is already marked paid.');
+	if (getRowCount(claimed) === 0) throw new PayoutError('That band is already marked paid.');
 
-	const actName = slot.actName ?? 'the act';
+	const actName = slot.actName ?? 'the band';
 	await recordActPayout({
 		eventId: slot.eventId,
 		productionId: slot.productionId,
@@ -332,13 +332,13 @@ export async function undoSlotPayout(slotId: string): Promise<void> {
 	const slot = await readSlotForPayout(slotId);
 	if (!slot) throw new PayoutError('That slot is no longer on the bill.');
 	if (isTerminalProduction(slot.status)) throw new ProductionTerminalError(slot.status);
-	if (slot.paidCents === null) throw new PayoutError('That act has no payout recorded.');
+	if (slot.paidCents === null) throw new PayoutError('That band has no payout recorded.');
 
 	const released = await db
 		.update(productionSlot)
 		.set({ paidCents: null, paidAt: null, paidByUserId: null, updatedAt: new Date() })
 		.where(and(eq(productionSlot.id, slotId), isNotNull(productionSlot.paidCents)));
-	if (getRowCount(released) === 0) throw new PayoutError('That act has no payout recorded.');
+	if (getRowCount(released) === 0) throw new PayoutError('That band has no payout recorded.');
 
 	await reverseActPayout(slot.productionId, slotId);
 	await recordAuditEntry({
@@ -347,7 +347,7 @@ export async function undoSlotPayout(slotId: string): Promise<void> {
 		details: {
 			eventId: slot.eventId,
 			slotId,
-			actName: slot.actName ?? 'the act',
+			actName: slot.actName ?? 'the band',
 			amountCents: slot.paidCents
 		}
 	});

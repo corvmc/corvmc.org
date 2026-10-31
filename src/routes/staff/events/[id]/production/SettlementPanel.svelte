@@ -47,7 +47,7 @@
 	<EmptyState title="No production" description="Open one from the event page first." />
 {:else}
 	<Alert type="info">
-		What the night took, what it cost, and what each act is owed under its own deal. Recording a
+		What the night took, what it cost, and what each band is owed under its own deal. Recording a
 		payout writes it against the show's pool in the financial record — the app does not move the
 		money, it keeps the account of it.
 	</Alert>
@@ -55,7 +55,7 @@
 	<InfoCard title="The night">
 		<div class="grid gap-6 sm:grid-cols-4">
 			<div>
-				<p class="text-muted">Acts' pool</p>
+				<p class="text-muted">Bands' pool</p>
 				<p class="text-lg font-medium">{formatCents(settlement.actsPoolCents)}</p>
 				<p class="text-xs text-fg-2">
 					What buyers designated{#if settlement.door}, plus
@@ -106,7 +106,7 @@
 				/>
 				<FormField
 					{...recordDoorTake.fields.splitActsPercent.as('number')}
-					label="Acts' share %"
+					label="Bands' share %"
 					description="Blank is the house rule"
 					value={settlement.door?.overridden ? settlement.door.actsPercent : undefined}
 					min={0}
@@ -124,7 +124,7 @@
 			<p class="mt-3 text-muted">
 				{formatCents(settlement.door.cashCents)} splits
 				{settlement.door.actsPercent}/{100 - settlement.door.actsPercent} —
-				<strong>{formatCents(settlement.door.actsCents)}</strong> to the acts,
+				<strong>{formatCents(settlement.door.actsCents)}</strong> to the bands,
 				<strong>{formatCents(settlement.door.collectiveCents)}</strong> to the collective.
 				{#if settlement.door.overridden}
 					<Badge size="sm" variant="warning">This show's own split</Badge>
@@ -247,13 +247,13 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title="What each act is owed">
+	<InfoCard title="What each band is owed">
 		{#if acts.length === 0}
-			<p class="text-fg-2">No acts on the running order yet.</p>
+			<p class="text-fg-2">No bands on the running order yet.</p>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Act</th>
+					<th>Band</th>
 					<th class="text-right">Designated</th>
 					<th>Deal</th>
 					<th class="text-right">Suggested</th>
@@ -289,7 +289,7 @@
 											label="Undo"
 											variant="ghost"
 											size="xs"
-											modalTitle="Undo {act.actName ?? 'the act'}'s payout?"
+											modalTitle="Undo {act.actName ?? 'the band'}'s payout?"
 											submitLabel="Undo payout"
 											submitVariant="warning"
 											successToast="Payout undone"
@@ -299,7 +299,7 @@
 												<input {...undo.fields.slotId.as('hidden', act.slotId)} />
 												<p class="text-muted">
 													Writes reversing entries for the {formatCents(act.paidCents ?? 0)} in the financial
-													record and marks the act unpaid, so it can be recorded again.
+													record and marks the band unpaid, so it can be recorded again.
 												</p>
 											{/snippet}
 										</Action>
@@ -316,7 +316,7 @@
 									label="Record"
 									variant="ghost"
 									size="xs"
-									modalTitle="What did {act.actName ?? 'the act'} take?"
+									modalTitle="What did {act.actName ?? 'the band'} take?"
 									submitLabel="Record it"
 									successToast="Recorded"
 								>
@@ -345,8 +345,8 @@
 			{#if settlement.unpaidActCount > 0}
 				<p class="mt-3 text-sm text-warning">
 					{settlement.unpaidActCount}
-					{settlement.unpaidActCount === 1 ? 'act has' : 'acts have'} no payout recorded. A donated set
-					still records zero — otherwise the night reads as permanently outstanding.
+					{settlement.unpaidActCount === 1 ? 'band has' : 'bands have'} no payout recorded. A donated
+					set still records zero — otherwise the night reads as permanently outstanding.
 				</p>
 			{:else if acts.length > 0}
 				<p class="mt-3 text-sm text-success">

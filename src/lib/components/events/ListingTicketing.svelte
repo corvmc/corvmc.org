@@ -117,7 +117,7 @@
 				<p class="text-muted">Where buyers sent it</p>
 				<div class="mt-2 flex flex-wrap gap-6">
 					<div>
-						<p class="text-muted">To the acts</p>
+						<p class="text-muted">To the bands</p>
 						<p class="text-lg font-medium">{formatCents(money.actsCents)}</p>
 					</div>
 					<div>
@@ -183,7 +183,7 @@
 							{#if t.actsCents > 0 || t.collectiveCents > 0}
 								<!-- Order-level: on the purchase's first row only, and labelled so. -->
 								<div class="text-muted text-sm">
-									order → acts {formatCents(t.actsCents)} · collective {formatCents(
+									order → bands {formatCents(t.actsCents)} · collective {formatCents(
 										t.collectiveCents
 									)}
 								</div>

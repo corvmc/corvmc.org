@@ -9,7 +9,7 @@ import { error } from '@sveltejs/kit';
 
 const COLUMNS = [
 	'channel',
-	'act',
+	'band',
 	'source',
 	'item',
 	'owner',
@@ -43,7 +43,7 @@ export const GET: RequestHandler = async ({ params }) => {
 	// a plain interface is not assignable to it even when every field is a string.
 	interface Row extends Record<string, string> {
 		channel: string;
-		act: string;
+		band: string;
 		source: string;
 		item: string;
 		owner: string;
@@ -57,7 +57,7 @@ export const GET: RequestHandler = async ({ params }) => {
 
 	const rows: Row[] = list.channels.map((c) => ({
 		channel: String(c.channel),
-		act: c.actName,
+		band: c.actName,
 		source: c.label,
 		item: c.elementLabel,
 		owner: c.ownerName ?? '',

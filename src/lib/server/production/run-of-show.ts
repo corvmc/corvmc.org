@@ -117,7 +117,7 @@ export function runOfShowWarnings(input: {
 		warnings.push({
 			code: 'pool_over_allocated',
 			slotId: null,
-			message: `The acts\u2019 shares come to ${allocated / 100}% of their pool.`
+			message: `The bands\u2019 shares come to ${allocated / 100}% of their pool.`
 		});
 	}
 

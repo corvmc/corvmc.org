@@ -93,7 +93,7 @@
 					<td>
 						Show costs
 						<span class="block text-subtle text-xs">
-							The cost sheet and guarantee top-ups; the acts' pool passes through
+							The cost sheet and guarantee top-ups; the bands' pool passes through
 						</span>
 					</td>
 					<td class="cell-num">{formatCents(burn.cash.showCents)}</td>

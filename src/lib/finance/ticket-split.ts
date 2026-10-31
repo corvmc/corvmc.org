@@ -240,7 +240,7 @@ export function validateTicketSplit(
 			belowFloor: `The least you can pay for this show is $${(floorCents / 100).toFixed(2)} a ticket.`,
 			deadZone: (min) =>
 				`Pay nothing, or at least $${(min / 100).toFixed(2)} — below that, card fees take almost all of it.`,
-			remainderNegative: 'That leaves the acts short.',
+			remainderNegative: 'That leaves the bands short.',
 			shareTooLarge: 'The collective cannot take more than you paid.'
 		}
 	});

@@ -141,7 +141,7 @@ export async function listUpcomingShows(now = new Date(), days = DASHBOARD_SHOW_
 		const short = r.actsWanted == null ? 0 : Math.max(0, r.actsWanted - r.actsBilled);
 		const blockers = showBlockers(r);
 		if (r.source === 'cmc' && short > 0) {
-			blockers.push(`the bill needs ${short} more ${short === 1 ? 'act' : 'acts'}`);
+			blockers.push(`the bill needs ${short} more ${short === 1 ? 'band' : 'bands'}`);
 		}
 		return {
 			id: r.id,

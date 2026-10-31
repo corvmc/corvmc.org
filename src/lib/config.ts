@@ -489,8 +489,8 @@ export type FinancialCategory = (typeof financialCategories)[number];
 export const financialCategoryLabels: Record<FinancialCategory, string> = {
 	ticket_sales: 'Ticket sales',
 	band_ticket_sales: 'Band ticket sales',
-	act_payout: 'Paid to acts',
-	act_guarantee: 'Act guarantees',
+	act_payout: 'Paid to bands',
+	act_guarantee: 'Band guarantees',
 	payout_rounding: 'Payout rounding',
 	card_fees: 'Card fees',
 	fee_coverage: 'Fees covered by buyers',
@@ -1378,7 +1378,7 @@ export type WorkDoneCondition = (typeof workDoneConditions)[number];
 
 export const workDoneConditionLabels: Record<WorkDoneCondition, string> = {
 	production_confirmed: 'The production is confirmed',
-	artifacts_requested: 'Every act has been asked for its artifacts',
+	artifacts_requested: 'Every band has been asked for its artifacts',
 	poster_set: 'The listing has a poster',
 	description_set: 'The listing has a description',
 	event_published: 'The listing is published',
@@ -2499,7 +2499,7 @@ export const grantableCapabilities = {
 	'event.manage': { label: 'Decide vendor applications for its markets', committee: 'owned' },
 	'finance.read': { label: 'See its own numbers', committee: 'owned' },
 	'production.book': {
-		label: 'Book its shows: acts, offers, deals and billing',
+		label: 'Book its shows: bands, offers, deals and billing',
 		committee: 'owned'
 	},
 	'production.run': {

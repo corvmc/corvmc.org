@@ -76,7 +76,7 @@
 		in_kind:
 			'Donated goods and specialized volunteer time, at market value. Not cash, and not part of net.',
 		pass_through:
-			"Money held on someone else's behalf — an act's share of the door. Never the collective's income."
+			"Money held on someone else's behalf — a band's share of the door. Never the collective's income."
 	};
 </script>
 

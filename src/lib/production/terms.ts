@@ -38,7 +38,7 @@ function percent(bps: number): string {
 export function describeTerms(terms: ActTerms): string {
 	const guarantee = terms.guaranteeCents ?? 0;
 	const bps = terms.percentageBps ?? 0;
-	const pool = terms.againstNet ? 'of net' : "of the acts' pool";
+	const pool = terms.againstNet ? 'of net' : "of the bands' pool";
 
 	if (terms.contributed) return 'Donated set';
 	if (guarantee > 0 && bps > 0) {

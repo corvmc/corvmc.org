@@ -27,7 +27,7 @@ describe('describeTerms', () => {
 	});
 
 	it('names a pure split', () => {
-		expect(describeTerms({ ...none, percentageBps: 7000 })).toBe("70% of the acts' pool");
+		expect(describeTerms({ ...none, percentageBps: 7000 })).toBe("70% of the bands' pool");
 	});
 
 	// The distinction the spec's table leaves ambiguous: the flag is what makes a
@@ -35,8 +35,8 @@ describe('describeTerms', () => {
 	it('distinguishes a guarantee against a percentage from one plus a percentage', () => {
 		const both = { ...none, guaranteeCents: 30000, percentageBps: 7000 };
 
-		expect(describeTerms({ ...both, versus: true })).toBe("$300.00 versus 70% of the acts' pool");
-		expect(describeTerms(both)).toBe("$300.00 plus 70% of the acts' pool");
+		expect(describeTerms({ ...both, versus: true })).toBe("$300.00 versus 70% of the bands' pool");
+		expect(describeTerms(both)).toBe("$300.00 plus 70% of the bands' pool");
 	});
 
 	it('says when the percentage is of net', () => {
@@ -44,7 +44,7 @@ describe('describeTerms', () => {
 	});
 
 	it('keeps a fractional percentage rather than rounding it away', () => {
-		expect(describeTerms({ ...none, percentageBps: 6750 })).toBe("67.5% of the acts' pool");
+		expect(describeTerms({ ...none, percentageBps: 6750 })).toBe("67.5% of the bands' pool");
 	});
 
 	// Distinct from a donated set: nobody has agreed anything yet.
