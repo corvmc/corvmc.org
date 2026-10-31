@@ -192,7 +192,10 @@ test.describe('the public group directory', () => {
 		// Scoped to `main`: the public header carries its own "Sign In" link.
 		const signIn = page.getByRole('main').getByRole('link', { name: 'Sign in' });
 		await expect(signIn).toBeVisible();
-		await expect(signIn).toHaveAttribute('href', `/login?redirect=/groups/${SEED_JOINABLE_SLUG}`);
+		await expect(signIn).toHaveAttribute(
+			'href',
+			`/login?redirect=${encodeURIComponent(`/groups/${SEED_JOINABLE_SLUG}`)}`
+		);
 	});
 
 	/** A members-only or hidden program has no public page at all. */

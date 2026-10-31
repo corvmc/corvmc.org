@@ -90,6 +90,20 @@ describe('Form, on a 401 from its remote', () => {
 	});
 });
 
+describe('Action, on a 401 from a direct callback', () => {
+	it('goes to sign-in with this page as the return, instead of erroring', async () => {
+		const run = vi.fn(async () => {
+			throw { status: 401, body: { message: 'Not authenticated' } };
+		});
+		await render(ActionHarness, { action: run, label: 'Save' });
+
+		await page.getByRole('button', { name: 'Save' }).click();
+
+		await vi.waitFor(() => expect(goto).toHaveBeenCalledWith(RETURN));
+		await expect.element(page.getByRole('button', { name: 'Error' })).not.toBeInTheDocument();
+	});
+});
+
 describe('Action with requiresAuth', () => {
 	it('is the sign-in link, with the intent, when signed out', async () => {
 		const run = vi.fn(async () => undefined);

@@ -13,6 +13,7 @@
 	} from '@tabler/icons-svelte';
 	import type { Icon } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import { signInHref } from '$lib/utils/sign-in';
 	import { getPublicCommittees } from '$lib/remote/committees.remote';
 	import WishlistSection from './WishlistSection.svelte';
 
@@ -39,7 +40,7 @@
 	// Registration, then straight to the page with the role checkboxes. This
 	// replaced a Google Form, which forced a Google sign-in on respondents —
 	// we'd rather ask for a free account of our own than someone else's.
-	const VOLUNTEER_SIGNUP_URL = '/login?register&redirect=/member/volunteer';
+	const VOLUNTEER_SIGNUP_URL = signInHref({ register: true, returnTo: '/member/volunteer' });
 
 	// Zeffy's hosted donation form (zero-fee for nonprofits). Distinct from the
 	// `/embed/...` variant, which is the bare iframe payload meant for embedding.

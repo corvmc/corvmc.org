@@ -11,6 +11,9 @@
 	import { getErrorBoundary } from './ErrorToastBoundary.svelte';
 	import { reportError } from '$lib/report-error';
 	import { errorMessage } from '$lib/error-message';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { signInInterruptFor } from '$lib/utils/sign-in';
 
 	// ---------------------------------------------------------------------------
 	// Props
@@ -178,6 +181,13 @@
 			status = 'success';
 		} catch (err) {
 			await minDelay;
+			// A 401 is "sign in first" (#1999), as in `Form`: go, and come back here.
+			const signIn = signInInterruptFor(err, page.url);
+			if (signIn) {
+				dialogOpen = false;
+				await goto(signIn);
+				return;
+			}
 			// Surfaced the way `Form` surfaces a thrown failure, and for the same
 			// reason. `status = 'error'` renders `errorLabel` on the *trigger*, and
 			// a confirmed action's trigger is behind the open dialog — so an action

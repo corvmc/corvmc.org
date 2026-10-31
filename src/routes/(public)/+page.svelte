@@ -6,6 +6,9 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import PosterCard from '$lib/components/events/PosterCard.svelte';
 	import { getPublicEvents } from '$lib/remote/events.remote';
+	import { signInHref } from '$lib/utils/sign-in';
+
+	const JOIN_HREF = signInHref({ register: true, returnTo: '/member' });
 
 	let { upcoming } = $derived(await getPublicEvents());
 
@@ -46,9 +49,7 @@
 	musicians to grow, collaborate, and thrive together.
 
 	{#snippet actions()}
-		<Button href="/login?register&redirect=/member" variant="primary" shape="wide"
-			>Join Our Community!</Button
-		>
+		<Button href={JOIN_HREF} variant="primary" shape="wide">Join Our Community!</Button>
 		<Button href="/about" variant="ghost" shape="wide">Learn More About Us</Button>
 		<div class="mt-1 flex flex-wrap justify-center gap-2">
 			{#each ['All-ages', 'Substance-free', 'NOTAFLOF', 'Volunteer-run'] as tag (tag)}
@@ -125,9 +126,7 @@
 				Join our community of musicians and gain access to practice space, events, and networking
 				opportunities.
 			</p>
-			<Button href="/login?register&redirect=/member" variant="cmc-navy" size="sm" class="mt-2"
-				>Join Now</Button
-			>
+			<Button href={JOIN_HREF} variant="cmc-navy" size="sm" class="mt-2">Join Now</Button>
 		</Tile>
 		<Tile fill="navy">
 			<h3 class="text-xl font-bold">Volunteer</h3>

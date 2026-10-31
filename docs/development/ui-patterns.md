@@ -297,11 +297,13 @@ An action that needs an account takes `requiresAuth` on `Button` or `Action` (a 
 the intent, e.g. `requiresAuth="RSVP to {title}"`). Where the layout provides the viewer's state —
 `SignedInProvider`, mounted by the public layout — a signed-out viewer gets a link to `/login` that
 returns to this page; signed in, it is the ordinary control. A `Form` whose remote answers 401 takes
-the same route on its own, so a session that lapsed mid-page needs no per-action code.
+the same route on its own, as does an `Action` whose callback throws one, so a session that lapsed
+mid-page needs no per-action code.
 
 Build any other sign-in link with `signInHref()` from `$lib/utils/sign-in` rather than by hand: it
 accepts only a same-origin return path, and `/login` re-validates whatever arrives. The return is
-where the visitor taps again — nothing is replayed and nothing writes on the way back. #1999.
+where the visitor taps again — nothing is replayed and nothing writes on the way back. That covers
+server redirects too: `redirect(302, signInHref({ returnTo: here(url) }))`. #1999.
 
 ## SubmitButton
 

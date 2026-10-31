@@ -15,6 +15,7 @@
 	import Setlist from '$lib/components/illustrations/Setlist.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
+	import { signInHref } from '$lib/utils/sign-in';
 	import { getPublicGroups } from '$lib/remote/groups.remote';
 
 	/**
@@ -73,7 +74,7 @@
 			<div class="mt-1 text-muted">All equipment included</div>
 		</div>
 		<a
-			href={resolve('/login?register&redirect=/member')}
+			href={signInHref({ register: true, returnTo: '/member' })}
 			class="program-block__cta rounded-lg p-6 text-center tint-cmc-orange"
 		>
 			<div class="eyebrow-muted mb-2">Sustaining Members</div>
@@ -253,7 +254,7 @@
 		{/each}
 	</div>
 	<div class="mt-10 flex justify-center gap-4">
-		<Button href="/login?register&redirect=/member" variant="default" size="lg"
+		<Button href={signInHref({ register: true, returnTo: '/member' })} variant="default" size="lg"
 			>Become a Member</Button
 		>
 		<Button href="/contact" variant="default" outline>Ask Questions</Button>

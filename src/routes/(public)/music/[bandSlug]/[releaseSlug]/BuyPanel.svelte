@@ -13,6 +13,7 @@
 	import { goToCheckout } from '$lib/utils/checkout-navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { here, signInHref } from '$lib/utils/sign-in';
 
 	let {
 		bandSlug,
@@ -191,12 +192,7 @@
 					/>
 					<p class="text-muted">
 						Got an account?
-						<a
-							class="link"
-							href="{resolve('/login')}?redirect={encodeURIComponent(page.url.pathname)}"
-						>
-							Sign in
-						</a>
+						<a class="link" href={signInHref({ returnTo: here(page.url) })}> Sign in </a>
 						and it lands in your Purchases too.
 					</p>
 				{/if}

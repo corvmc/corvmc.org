@@ -11,6 +11,7 @@
 	} from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
+	import { signInHref } from '$lib/utils/sign-in';
 
 	// Sustaining membership is a sliding scale: every $5/month earns one free hour
 	// of practice time (up to 12), and every tier gets the same benefits. Kept in
@@ -99,8 +100,11 @@
 				<li>• Member directory access</li>
 				<li>• RSVP to events</li>
 			</ul>
-			<Button href="/login?register&redirect=/member" variant="default" outline class="mt-auto"
-				>Create an Account</Button
+			<Button
+				href={signInHref({ register: true, returnTo: '/member' })}
+				variant="default"
+				outline
+				class="mt-auto">Create an Account</Button
 			>
 		</Tile>
 
@@ -121,7 +125,7 @@
 				<li>• Gear perks and member-only events</li>
 			</ul>
 			<Button
-				href={resolve('/login?register&redirect=/member/membership')}
+				href={signInHref({ register: true, returnTo: '/member/membership' })}
 				variant="cmc-orange"
 				size="sm"
 				class="mt-auto"
@@ -178,7 +182,7 @@
 					{tier.body}
 				</p>
 				<Button
-					href={resolve('/login?register&redirect=/member/membership')}
+					href={signInHref({ register: true, returnTo: '/member/membership' })}
 					variant="default"
 					size="sm"
 					shape="wide"

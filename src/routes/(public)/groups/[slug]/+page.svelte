@@ -6,6 +6,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { resolve } from '$app/paths';
+	import { signInHref } from '$lib/utils/sign-in';
 	import JoinGroupAction from '$lib/components/groups/JoinGroupAction.svelte';
 	import { getPublicGroupPage } from '$lib/remote/groups.remote';
 
@@ -80,7 +81,11 @@
 			<Alert type="info">
 				<span>Sign in to {group.joinPolicy === 'open' ? 'join' : 'apply'}.</span>
 				{#snippet action()}
-					<Button href={`/login?redirect=/groups/${group.slug}`} variant="primary" size="sm">
+					<Button
+						href={signInHref({ returnTo: `/groups/${group.slug}` })}
+						variant="primary"
+						size="sm"
+					>
 						Sign in
 					</Button>
 				{/snippet}

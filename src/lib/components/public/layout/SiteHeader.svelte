@@ -3,10 +3,16 @@
 	import { resolve } from '$app/paths';
 	import Logo from '$lib/components/ui/Logo.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import { here, signInHref } from '$lib/utils/sign-in';
 
 	let { user }: { user: { name: string } | null } = $props();
 
 	let menuOpen = $state(false);
+
+	// Back to this page after signing in; from the home page, the member area.
+	const signInLink = $derived(
+		signInHref({ returnTo: page.url.pathname === '/' ? null : here(page.url) })
+	);
 
 	const links = [
 		{ href: resolve('/events'), label: 'Events' },
@@ -45,7 +51,7 @@
 				{#if user}
 					<Button href="/member" variant="default" size="sm">My Account</Button>
 				{:else}
-					<Button href="/login" variant="default" size="sm">Sign In</Button>
+					<Button href={signInLink} variant="default" size="sm">Sign In</Button>
 				{/if}
 				<Button
 					variant="ghost"

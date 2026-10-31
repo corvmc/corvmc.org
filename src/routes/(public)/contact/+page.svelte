@@ -2,7 +2,7 @@
 	import { pageTitle, EVENT_TIP_SUBJECT, contactSubjects } from '$lib/config';
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import { resolve } from '$app/paths';
+	import { signInHref } from '$lib/utils/sign-in';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
 	import { getOrgAddress } from '$lib/remote/settings.remote';
 	import {
@@ -170,7 +170,7 @@
 							>How do I become a member?</summary
 						>
 						<div class="collapse-content text-muted">
-							<a href={resolve('/login?register&redirect=/member')} class="link"
+							<a href={signInHref({ register: true, returnTo: '/member' })} class="link"
 								>Create an account</a
 							> to get started. Free memberships are available.
 						</div>

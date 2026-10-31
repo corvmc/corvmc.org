@@ -18,6 +18,7 @@ import { acceptsDirectMessages } from '$lib/server/moderation/moderation-service
 import { getForUser, getUnreadCount } from '$lib/server/notification/in-app-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
+import { here, signInHref } from '$lib/utils/sign-in';
 
 /** The authenticated caller, as the three layout queries below have already narrowed it. */
 type SignedInUser = NonNullable<App.Locals['user']>;
@@ -102,8 +103,8 @@ async function appChrome(user: SignedInUser) {
 }
 
 export const getMemberLayout = query(async () => {
-	const { locals } = getRequestEvent();
-	if (!locals.user) throw redirect(302, '/login');
+	const { locals, url } = getRequestEvent();
+	if (!locals.user) throw redirect(302, signInHref({ returnTo: here(url) }));
 	const user = locals.user;
 
 	const [
@@ -173,8 +174,8 @@ export const getMemberLayout = query(async () => {
 });
 
 export const getStaffLayout = query(async () => {
-	const { locals } = getRequestEvent();
-	if (!locals.user) throw redirect(302, '/login');
+	const { locals, url } = getRequestEvent();
+	if (!locals.user) throw redirect(302, signInHref({ returnTo: here(url) }));
 
 	// "May you open the panel at all": holding a position, or a committee seat that
 	// grants a staff module org-wide (#1578). The capability set below decides
@@ -226,8 +227,8 @@ function dashboardPathAfterRename(oldSlug: string, newSlug: string): string {
 }
 
 export const getBandLayout = query(z.string(), async (slug) => {
-	const { locals } = getRequestEvent();
-	if (!locals.user) throw redirect(302, '/login');
+	const { locals, url } = getRequestEvent();
+	if (!locals.user) throw redirect(302, signInHref({ returnTo: here(url) }));
 
 	const band = await getBySlug(slug);
 	if (!band) {
