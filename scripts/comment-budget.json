@@ -660,7 +660,7 @@
 	"src/routes/staff/volunteer/NeedsConfirmingCard.svelte",
 	"src/routes/staff/volunteer/NeedsSchedulingCard.svelte",
 	"src/routes/staff/members/volunteers/+page.svelte",
-	"src/routes/staff/volunteer/report/export/+server.ts",
+	"src/routes/staff/reports/volunteering/export/+server.ts",
 	"src/routes/staff/volunteer/roles/+page.svelte",
 	"src/routes/staff/volunteer/roles/[id]/RoleInterestedCard.svelte",
 	"src/routes/staff/volunteer/roles/[id]/RoleShiftsCard.svelte",

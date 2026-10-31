@@ -34,7 +34,7 @@
 
 <InfoCard title="Unreviewed Hours" state={total}>
 	{#snippet action()}
-		<Button href="/staff/volunteer/hours" variant="ghost" size="sm">
+		<Button href="/staff/members/volunteers/hours" variant="ghost" size="sm">
 			{total > logs.length ? `All ${total} →` : 'Open the queue →'}
 		</Button>
 	{/snippet}

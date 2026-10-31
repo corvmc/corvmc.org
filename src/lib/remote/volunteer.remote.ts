@@ -1182,7 +1182,7 @@ async function refreshMemberViews() {
  * — never the `{ status: 'pending', page: 1 }` one the queue page actually
  * subscribes to. Arg-keyed queries are refreshed by the page, which is the only
  * place that knows its own filters; see the `onsuccess` handlers on
- * /staff/volunteer and the mount refresh on /staff/volunteer/report.
+ * /staff/volunteer and the mount refresh on /staff/reports/volunteering.
  */
 async function refreshStaffQueue() {
 	// The dashboard renders the top of this queue with the same approve and return

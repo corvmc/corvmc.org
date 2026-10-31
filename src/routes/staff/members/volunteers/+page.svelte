@@ -35,6 +35,7 @@
 	import {
 		getStaffVolunteers,
 		getStaffVolunteerEmails,
+		getVolunteerStatusCounts,
 		confirmSignup,
 		approveVolunteerSignup
 	} from '$lib/remote/volunteer.remote';
@@ -210,6 +211,14 @@
 					>
 						{minorsWaiting} awaiting sign-off
 					</button>
+				{/if}
+			{/await}
+			{#await getVolunteerStatusCounts() then { pending }}
+				{#if pending > 0}
+					·
+					<a class="link" href={resolve('/staff/members/volunteers/hours')}>
+						{pending} hour {pending === 1 ? 'log' : 'logs'} to review
+					</a>
 				{/if}
 			{/await}
 		{/snippet}
