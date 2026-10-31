@@ -68,7 +68,7 @@ export class SlotNotFoundError extends DomainError {
 export class SlotExistsError extends DomainError {
 	readonly httpStatus = 422;
 	constructor() {
-		super('That act already has a set in the running order');
+		super('That band already has a set in the running order');
 		this.name = 'SlotExistsError';
 	}
 }

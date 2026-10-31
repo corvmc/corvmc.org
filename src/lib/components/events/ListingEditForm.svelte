@@ -404,7 +404,7 @@
 						/>
 						<span class="mt-1 text-muted">
 							The least someone can pay. $0 lets anyone come for free — no card, no questions. Leave
-							it at $0 unless an act needs a floor.
+							it at $0 unless a band needs a floor.
 						</span>
 					</FormField>
 

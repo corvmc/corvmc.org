@@ -66,8 +66,8 @@
 		</tr>
 	</Table>
 	<p class="mt-3 text-muted text-sm">
-		Ticket revenue {formatCents(burn.show.ticketRevenueCents)}. Passing through to the acts, and not
-		counted as spend: {formatCents(burn.show.actsPoolInCents)} in, {formatCents(
+		Ticket revenue {formatCents(burn.show.ticketRevenueCents)}. Passing through to the bands, and
+		not counted as spend: {formatCents(burn.show.actsPoolInCents)} in, {formatCents(
 			burn.show.actPayoutsCents
 		)} paid out.
 	</p>
