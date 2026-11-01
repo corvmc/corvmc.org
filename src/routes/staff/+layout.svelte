@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
 	import { EntityViewer } from '$lib/components/ui/entity';
 	import AppShell from '$lib/components/layout/AppShell.svelte';
 	import Nav from '$lib/components/layout/Nav';
+	import { readStarred, resolveStarred, toggleStarred } from '$lib/components/layout/Nav/nav-stars';
 	import {
 		IconDisc,
 		IconCheckbox,
@@ -75,6 +77,12 @@
 		}
 	});
 
+	// Above the await, so `onMount` registers during synchronous init. Read after
+	// hydration, like section collapse state, so server and first paint agree.
+	let starredKeys = $state<string[]>([]);
+	onMount(() => (starredKeys = readStarred('staff')));
+	const toggleStar = (key: StaffNavKey) => (starredKeys = toggleStarred('staff', key));
+
 	let layout = $derived(await getStaffLayout());
 
 	// Only the rows this viewer can use. `getStaffLayout` settled that they may
@@ -83,6 +91,11 @@
 	// offering a treasurer a Volunteering row is offering them a 403.
 	const navTop = $derived(filterNavItems(staffNavTop, layout.capabilities));
 	const navSections = $derived(filterNavSections(staffNavSections, layout.capabilities));
+	// Resolved against the filtered tree, so a star on a row this viewer cannot
+	// see, or on a key that no longer exists, simply does not render.
+	const navStarred = $derived(
+		resolveStarred(starredKeys, [...navTop, ...navSections.flatMap((s) => s.items)])
+	);
 
 	const panels = $derived(
 		// Staff is unconditional here: `getStaffLayout` has already redirected
@@ -165,6 +178,8 @@
 			childHrefs={childHrefsFor(item)}
 			badge={badgeFor(item)}
 			active={activeKey === item.key}
+			starred={starredKeys.includes(item.key)}
+			onstar={() => toggleStar(item.key)}
 		>
 			{#snippet icon()}<Icon />{/snippet}
 			{#each item.children as child (child.key)}
@@ -172,19 +187,35 @@
 			{/each}
 		</Nav.Collapsible>
 	{:else}
-		<Nav.Item
-			href={item.href}
-			label={item.label}
-			badge={badgeFor(item)}
-			active={activeKey === item.key}
-		>
-			{#snippet icon()}<Icon />{/snippet}
-		</Nav.Item>
+		{@render flat(item)}
 	{/if}
+{/snippet}
+
+<!-- A starred collapsible appears here as a plain row: its children stay home. -->
+{#snippet flat(item: StaffNavItem)}
+	{@const Icon = icons[item.key]}
+	<Nav.Item
+		href={item.href}
+		label={item.label}
+		badge={badgeFor(item)}
+		active={activeKey === item.key}
+		starred={starredKeys.includes(item.key)}
+		onstar={() => toggleStar(item.key)}
+	>
+		{#snippet icon()}<Icon />{/snippet}
+	</Nav.Item>
 {/snippet}
 
 <AppShell drawerId="staff-drawer" {panels} activePanel="staff" chrome={layout.chrome}>
 	{#snippet navigation()}
+		{#if navStarred.length > 0}
+			<Nav.Group title="Starred">
+				{#each navStarred as item (item.key)}
+					{@render flat(item)}
+				{/each}
+			</Nav.Group>
+		{/if}
+
 		{#each navTop as item (item.key)}
 			{@render row(item)}
 		{/each}
