@@ -877,6 +877,15 @@ collapsed group is `display: none`, and e2e selects staff nav links by role. Sto
 _collapsed_ set, so a group added later defaults open with no migration. Navigating into a collapsed
 group opens it and keeps it open.
 
+**Starred rows.** `Nav.Item` and `Nav.Collapsible` take `starred` and `onstar`; passing `onstar`
+adds a star toggle over the end of the row, shown on hover or focus. `nav-stars.ts` stores the keys
+per device under `cmc:nav-starred:<scope>`, and `resolveStarred(keys, items)` turns them into rows
+in nav order. Resolve against the tree _after_ capability filtering, so a star on a hidden or
+renamed row drops silently. The staff layout reads storage in `onMount`, as collapse state does,
+and renders the rows in a plain `Nav.Group title="Starred"` above the top rows. They also stay in
+their home sections. The button is named "Star" alone, with the row label as its description:
+Playwright matches names by substring, and "Star Credits" would answer `{ name: 'Edit' }`.
+
 Group titles are buttons, not headings, deliberately: `getByRole('heading', …)` is how pages assert
 their own titles, and a sidebar full of headings collides with that.
 
