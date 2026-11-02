@@ -25,6 +25,7 @@ import {
 	acceptInvitation,
 	declineInvitation,
 	getMembers,
+	getRosterMembers,
 	getUserRole,
 	invite,
 	partitionByStatus,
@@ -130,7 +131,7 @@ export const getStaffGroupPage = query(z.string(), async (id) => {
 
 	const [group, roster, coordinator, role] = await Promise.all([
 		getGroupDetail(id),
-		getMembers(id),
+		getRosterMembers(id),
 		can('committee.reviewApplications'),
 		getUserRole(id, user.id)
 	]);

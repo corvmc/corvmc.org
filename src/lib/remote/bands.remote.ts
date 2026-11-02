@@ -21,6 +21,7 @@ import {
 import {
 	getByIdWithDetails,
 	getMembers,
+	getRosterMembers,
 	update,
 	updateMember,
 	updateOwnMembership,
@@ -90,7 +91,7 @@ export const getStaffBand = query(z.string(), async (id) => {
 
 export const getStaffBandMembers = query(z.string(), async (bandId) => {
 	await requireCapability('band.read');
-	return getMembers(bandId);
+	return getRosterMembers(bandId);
 });
 
 export const getStaffBandReservations = query(z.string(), async (bandId) => {

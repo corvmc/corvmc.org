@@ -3,8 +3,10 @@
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import RosterTable from '$lib/components/events/RosterTable.svelte';
+	import RosterTable from '$lib/components/roster/RosterTable.svelte';
+	import CopyEmailsButton from '$lib/components/roster/CopyEmailsButton.svelte';
 	import { getEventRsvpRoster } from '$lib/remote/event-rsvp.remote';
+	import { formatDateTimeShort } from '$lib/utils/format';
 
 	let { eventId }: { eventId: string } = $props();
 
@@ -16,19 +18,29 @@
 	<InfoCard title="RSVPs" state={roster.total}>
 		{#snippet action()}
 			{#if roster.total > 0}
-				<Button
-					href={resolve(`/staff/events/${eventId}/rsvps.csv`)}
-					rel="external"
-					download
-					variant="ghost"
-					size="sm">Export CSV</Button
-				>
+				<div class="flex gap-1">
+					<CopyEmailsButton emails={roster.rows.map((r) => r.email)} />
+					<Button
+						href={resolve(`/staff/events/${eventId}/rsvps.csv`)}
+						rel="external"
+						download
+						variant="ghost"
+						size="sm">Export CSV</Button
+					>
+				</div>
 			{/if}
 		{/snippet}
 		{#if roster.total === 0}
 			<EmptyState title="No RSVPs yet" description="Members RSVP from the event's public page." />
 		{:else}
-			<RosterTable rows={roster.rows} atLabel="RSVP'd" />
+			<RosterTable rows={roster.rows}>
+				{#snippet columns()}
+					<th class="col-extra">RSVP'd</th>
+				{/snippet}
+				{#snippet cells(row)}
+					<td class="col-extra whitespace-nowrap">{formatDateTimeShort(row.rsvpedAt)}</td>
+				{/snippet}
+			</RosterTable>
 		{/if}
 	</InfoCard>
 {/if}

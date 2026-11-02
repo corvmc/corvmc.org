@@ -104,6 +104,7 @@ const { BandMemberExistsError } = vi.hoisted(() => ({
 }));
 vi.mock('$lib/server/band/band-service', () => ({
 	getMembers: vi.fn(async () => []),
+	getRosterMembers: vi.fn(async () => []),
 	getUserRole: vi.fn(async () => null),
 	partitionByStatus: () => ({ active: [], pending: [] }),
 	invite: (...a: unknown[]) => band.invite(...(a as [])),

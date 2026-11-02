@@ -8,10 +8,9 @@
 	import { formatDateShortYear } from '$lib/utils/format';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
+	import { EntityChip } from '$lib/components/ui/entity';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
@@ -25,6 +24,8 @@
 	import AddChairAction from './AddChairAction.svelte';
 	import CommitteeGrantsCard from './CommitteeGrantsCard.svelte';
 	import RosterImportAction from './RosterImportAction.svelte';
+	import RosterTable from '$lib/components/roster/RosterTable.svelte';
+	import CopyEmailsButton from '$lib/components/roster/CopyEmailsButton.svelte';
 	import RosterImportSummary from './RosterImportSummary.svelte';
 	import type { RosterImportResult } from '$lib/types/roster-import';
 
@@ -107,57 +108,55 @@
 
 	<InfoCard title="Roster">
 		{#snippet action()}
-			{#if !isDeactivated}
-				<RosterImportAction groupId={id} onresult={(r) => (importResult = r)} />
-			{/if}
+			<div class="flex gap-1">
+				{#if members.active.length > 0}
+					<CopyEmailsButton emails={members.active.map((m) => m.email)} />
+				{/if}
+				{#if !isDeactivated}
+					<RosterImportAction groupId={id} onresult={(r) => (importResult = r)} />
+				{/if}
+			</div>
 		{/snippet}
 		{#if members.active.length === 0 && members.pending.length === 0}
 			<EmptyState description="No members yet" />
 		{:else}
-			<Table>
-				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Member</th>
+			<!-- A position, where there is one, is the name's subline (`getMembers`). -->
+			<RosterTable rows={[...members.active, ...members.pending]} personLabel="Member">
+				{#snippet lead(m)}<StatusBadge status={m.status} />{/snippet}
+				{#snippet columns()}
 					<th class="w-px">Role</th>
-					<th>Position</th>
-					<th class="whitespace-nowrap">Joined</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th class="col-support whitespace-nowrap">Joined</th>
 				{/snippet}
-				{#each [...members.active, ...members.pending] as m (m.id)}
-					<tr>
-						<td class="w-px"><StatusBadge status={m.status} /></td>
-						<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
-						<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
-						<td>{m.position ?? '—'}</td>
-						<td class="whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
-						<td class="w-px">
-							{#if !isDeactivated && m.role !== 'owner'}
-								{@const makeChair = m.role !== 'admin'}
-								<Action
-									action={setStaffGroupRole.for(m.id)}
-									label={makeChair ? 'Make chair' : 'Remove chair'}
-									aria-label={makeChair
-										? `Make ${m.member.title} a chair`
-										: `Remove ${m.member.title} as a chair`}
-									confirm={makeChair
-										? `Make ${m.member.title} a chair of ${group.name}?`
-										: `Remove ${m.member.title} as a chair? They stay on the roster.`}
-									successToast={makeChair ? 'Chair added' : 'Chair removed'}
-									variant="ghost"
-									size="xs"
-									onsuccess={() => invalidateAll()}
-								>
-									{#snippet form()}
-										<input {...roleFields.groupId.as('hidden', id)} />
-										<input {...roleFields.userId.as('hidden', m.userId)} />
-										<input {...roleFields.role.as('hidden', makeChair ? 'admin' : 'member')} />
-									{/snippet}
-								</Action>
-							{/if}
-						</td>
-					</tr>
-				{/each}
-			</Table>
+				{#snippet cells(m)}
+					<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
+					<td class="col-support whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
+				{/snippet}
+				{#snippet actions(m)}
+					{#if !isDeactivated && m.role !== 'owner'}
+						{@const makeChair = m.role !== 'admin'}
+						<Action
+							action={setStaffGroupRole.for(m.id)}
+							label={makeChair ? 'Make chair' : 'Remove chair'}
+							aria-label={makeChair
+								? `Make ${m.member.title} a chair`
+								: `Remove ${m.member.title} as a chair`}
+							confirm={makeChair
+								? `Make ${m.member.title} a chair of ${group.name}?`
+								: `Remove ${m.member.title} as a chair? They stay on the roster.`}
+							successToast={makeChair ? 'Chair added' : 'Chair removed'}
+							variant="ghost"
+							size="xs"
+							onsuccess={() => invalidateAll()}
+						>
+							{#snippet form()}
+								<input {...roleFields.groupId.as('hidden', id)} />
+								<input {...roleFields.userId.as('hidden', m.userId)} />
+								<input {...roleFields.role.as('hidden', makeChair ? 'admin' : 'member')} />
+							{/snippet}
+						</Action>
+					{/if}
+				{/snippet}
+			</RosterTable>
 		{/if}
 	</InfoCard>
 

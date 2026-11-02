@@ -63,6 +63,8 @@ describe('listRsvpsForEvent', () => {
 			email: 'u-ada@rsvp.test',
 			createdAt: new Date(1000 * 1000)
 		});
+		// The account, for the roster's avatar and member status.
+		expect(rows[0].member).toMatchObject({ id: 'u-ada', name: 'ADA', email: 'ada@example.com' });
 	});
 
 	it('is empty for an event nobody RSVPd to', async () => {
