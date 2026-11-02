@@ -8,7 +8,7 @@
 	} from '$lib/remote/inventory.remote';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field, MoneyField } from '$lib/components/ui/Form';
+	import { Field, FileUpload, MoneyField } from '$lib/components/ui/Form';
 	import Action from '$lib/components/ui/Action.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -72,8 +72,6 @@
 	let donorName = $state('');
 	let paidByUserId = $state('');
 	let paidByName = $state('');
-	let uploading = $state(false);
-
 	// Seeded from the record once, so the picker shows who is already on the row
 	// without clobbering a choice the staffer has started making.
 	$effect(() => {
@@ -83,31 +81,19 @@
 		paidByName = data.paidByName ?? '';
 	});
 
-	async function uploadReceipt(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+	async function uploadReceipt(file: File) {
+		const body = new FormData();
+		body.append('file', file);
+		body.append('slot', 'receipt');
+		body.append('attachableId', id);
 
-		uploading = true;
-		try {
-			const body = new FormData();
-			body.append('file', file);
-			body.append('slot', 'receipt');
-			body.append('attachableId', id);
-
-			const res = await fetch('/api/inventory/media', { method: 'POST', body });
-			if (!res.ok) {
-				const detail = (await res.json().catch(() => null)) as { message?: string } | null;
-				throw new Error(detail?.message ?? 'Upload failed');
-			}
-			await getStaffAcquisitionDetail(id).refresh();
-			toast.success('Receipt attached');
-		} catch (err) {
-			toast.error((err as Error).message);
-		} finally {
-			uploading = false;
-			input.value = '';
+		const res = await fetch('/api/inventory/media', { method: 'POST', body });
+		if (!res.ok) {
+			const detail = (await res.json().catch(() => null)) as { message?: string } | null;
+			throw new Error(detail?.message ?? 'Upload failed');
 		}
+		await getStaffAcquisitionDetail(id).refresh();
+		toast.success('Receipt attached');
 	}
 </script>
 
@@ -337,17 +323,15 @@
 					</ul>
 				{/if}
 				<div class="mt-4">
-					<label class="btn btn-ghost btn-sm">
+					<FileUpload
+						upload={uploadReceipt}
+						accept=".pdf,image/*"
+						showPreview={false}
+						variant="ghost"
+					>
 						<IconUpload size={16} />
-						{uploading ? 'Uploading…' : 'Attach a receipt'}
-						<input
-							type="file"
-							class="hidden"
-							accept=".pdf,image/*"
-							onchange={uploadReceipt}
-							disabled={uploading}
-						/>
-					</label>
+						Attach a receipt
+					</FileUpload>
 				</div>
 			</InfoCard>
 		</div>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
+	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
 	import { IconFile, IconTrash, IconUpload } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -60,22 +61,16 @@
 	const filesFor = (slot: string) => uploads.filter((u) => u.slot === slot);
 
 	async function upload(type: string, file: File) {
-		busy = type;
-		try {
-			const body = new FormData();
-			body.set('type', type);
-			body.append('file', file);
-			const res = await fetch(`/api/bands/${bandId}/media`, { method: 'POST', body });
-			if (res.ok) {
-				toast.success('Uploaded');
-				onchanged();
-			} else {
-				const err = (await res.json().catch(() => ({}))) as { message?: string };
-				toast.error(err.message || 'Upload failed');
-			}
-		} finally {
-			busy = null;
+		const body = new FormData();
+		body.set('type', type);
+		body.append('file', file);
+		const res = await fetch(`/api/bands/${bandId}/media`, { method: 'POST', body });
+		if (!res.ok) {
+			const err = (await res.json().catch(() => ({}))) as { message?: string };
+			throw new Error(err.message || 'Upload failed');
 		}
+		toast.success('Uploaded');
+		onchanged();
 	}
 
 	async function remove(attachmentId: string) {
@@ -134,22 +129,13 @@
 			{/each}
 
 			{#if canManage}
-				<label class="fieldset">
-					<span class="sr-only">Upload {entry.label}</span>
-					<input
-						type="file"
-						class="file-input w-full file-input-sm"
-						accept="image/*,.pdf"
-						disabled={busy === entry.type}
-						onchange={async (e) => {
-							const file = e.currentTarget.files?.[0];
-							const input = e.currentTarget;
-							if (!file) return;
-							await upload(entry.type, file);
-							input.value = '';
-						}}
-					/>
-				</label>
+				<FileUpload
+					upload={(file) => upload(entry.type, file)}
+					accept="image/*,.pdf"
+					showPreview={false}
+					emptyLabel="Upload"
+					aria-label="Upload {entry.label}"
+				/>
 			{:else if filesFor(entry.slot).length === 0}
 				<p class="text-xs text-base-content/50">
 					<IconUpload size={14} class="inline" /> Nothing uploaded.

@@ -299,25 +299,16 @@
 			</FormField>
 
 			<FormField
-				name="posterFile"
-				label="Replace poster"
+				field={fields.posterFile}
+				type="file"
+				label="Poster"
 				description="JPEG, PNG or WebP, up to 10 MB."
-			>
-				{#if listing.posterUrl}
-					{@const current = imageSrc(listing.posterUrl, 'thumb')}
-					<img
-						src={current.src}
-						srcset={current.srcset}
-						alt=""
-						class="mb-2 h-32 w-auto rounded border-surface"
-					/>
-				{/if}
-				<input
-					{...fields.posterFile.as('file')}
-					accept="image/jpeg,image/png,image/webp"
-					class="file-input w-full"
-				/>
-			</FormField>
+				accept="image/jpeg,image/png,image/webp"
+				src={listing.posterUrl ? imageSrc(listing.posterUrl, 'thumb').src : undefined}
+				previewClass="h-32 w-24"
+				emptyLabel="Add a poster"
+				replaceLabel="Replace poster"
+			/>
 
 			<div class="grid gap-4 md:grid-cols-2">
 				<FormField
