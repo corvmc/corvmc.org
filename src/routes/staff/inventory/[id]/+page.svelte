@@ -34,6 +34,7 @@
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import { formatDateShort, formatCents, titleCase } from '$lib/utils/format';
 	import {
 		acquisitionKindLabels,
@@ -292,7 +293,10 @@
 							<Button
 								variant="ghost"
 								size="sm"
-								href={`${resolve('/staff/inventory/intake')}?order=${line.orderId}`}>Receive</Button
+								href={withQuery(
+									resolve('/staff/inventory/intake'),
+									new URLSearchParams({ order: line.orderId })
+								)}>Receive</Button
 							>
 						</td>
 					</tr>
