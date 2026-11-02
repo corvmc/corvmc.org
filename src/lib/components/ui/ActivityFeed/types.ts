@@ -1,3 +1,4 @@
+import type { ResolvedPathname } from '$app/types';
 import type { FeedItem } from '$lib/types/activity';
 
 export type { FeedItem, FeedPage } from '$lib/types/activity';
@@ -7,12 +8,12 @@ export interface ActivityRow {
 	id: string;
 	at: Date;
 	/** Omitted for the system. */
-	actor?: { name: string; href?: string | null } | null;
+	actor?: { name: string; href?: ResolvedPathname | null } | null;
 	summary: string;
 	/** Links the summary to the record the row is about. */
-	href?: string | null;
+	href?: ResolvedPathname | null;
 	/** A trailing reference in the meta line, such as the task an entry is about. */
-	context?: { label: string; href?: string | null } | null;
+	context?: { label: string; href?: ResolvedPathname | null } | null;
 }
 
 /** The default mapping: a feed item's actor by name, unlinked. */

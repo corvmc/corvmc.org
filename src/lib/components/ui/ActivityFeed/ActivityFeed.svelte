@@ -36,6 +36,7 @@
 				<div class="min-w-0 flex-1">
 					<div>
 						{#if row.href}
+							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- typed ResolvedPathname; the caller resolved it -->
 							<a class="link" href={row.href}>{row.summary}</a>
 						{:else}
 							{row.summary}
@@ -44,6 +45,7 @@
 					<div class="text-muted text-xs">
 						{#if row.actor}
 							{#if row.actor.href}
+								<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- typed ResolvedPathname; the caller resolved it -->
 								<a class="link" href={row.actor.href}>{row.actor.name}</a>
 							{:else}
 								{row.actor.name}
@@ -54,6 +56,7 @@
 						{#if row.context}
 							·
 							{#if row.context.href}
+								<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- typed ResolvedPathname; the caller resolved it -->
 								<a class="link" href={row.context.href}>{row.context.label}</a>
 							{:else}
 								{row.context.label}

@@ -1,7 +1,7 @@
-<script lang="ts" generics="T, R extends ActivityRow">
+<script lang="ts" generics="T extends FeedItem, R extends ActivityRow">
 	import type { Snippet } from 'svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
-	import type { ActivityRow, FeedPage } from './types';
+	import type { ActivityRow, FeedItem, FeedPage } from './types';
 	import ActivityFeed from './ActivityFeed.svelte';
 
 	let {
