@@ -81,3 +81,20 @@ describe('ListingEditForm ticketing', () => {
 		expect(container.querySelector<HTMLInputElement>('#editTicketQuantity')?.value).toBe('80');
 	});
 });
+
+// #2126: the record is editable once cancelled; the sale and the room are not.
+describe('ListingEditForm on a cancelled listing', () => {
+	it('offers no ticket terms and no space hold', async () => {
+		const { container } = await render(ListingEditForm, {
+			...props('cmc', true),
+			cancelled: true
+		});
+
+		await expect.element(page.getByText('Edit listing')).toBeVisible();
+		expect(container.querySelector('#editTitle')).not.toBeNull();
+		expect(container.querySelector('#editTicketPrice')).toBeNull();
+		expect(container.querySelector('input[name="ticketQuantity"]')).toBeNull();
+		await expect.element(page.getByText('Sell tickets through the site')).not.toBeInTheDocument();
+		await expect.element(page.getByText('Reserve practice space')).not.toBeInTheDocument();
+	});
+});
