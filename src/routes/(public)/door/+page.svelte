@@ -38,7 +38,7 @@
 	}
 
 	async function flushPending() {
-		let id: string | null = null;
+		let id: string | null;
 		try {
 			id = localStorage.getItem(PENDING_KEY);
 		} catch {
