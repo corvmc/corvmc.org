@@ -50,7 +50,7 @@ export async function listSourcesForVenue(venueId: string): Promise<CalendarSour
 		})
 		.from(calendarSource)
 		.where(eq(calendarSource.venueId, venueId))
-		.orderBy(asc(calendarSource.createdAt));
+		.orderBy(asc(calendarSource.createdAt), asc(calendarSource.id));
 }
 
 export async function addSource(params: {

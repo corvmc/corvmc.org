@@ -69,7 +69,7 @@
 						{/if}
 					</td>
 					<td>
-						<div class="flex justify-end gap-1">
+						<div class="flex w-max justify-end gap-1">
 							<Action
 								action={fetchVenueFeed.for(feed.id)}
 								label="Fetch now"
