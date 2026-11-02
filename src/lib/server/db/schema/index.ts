@@ -16,6 +16,7 @@ export * from './directory';
 export * from './band-site';
 export * from './band-page';
 export * from './group-invite';
+export * from './member-invite';
 export * from './file';
 export * from './contact';
 export * from './directory-link';

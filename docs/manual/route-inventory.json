@@ -664,6 +664,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/members/invites",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/members/volunteers",
 		"panel": "staff"
 	},

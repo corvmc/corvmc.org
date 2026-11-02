@@ -1527,6 +1527,12 @@ export const CERT_EXPIRY_WARNING_DAYS = 60;
 export const INVITE_EXPIRY_DAYS = 7;
 
 /**
+ * Invitations to join CMC one member without `user.invite` may send per rolling
+ * day. Each is mail from CMC's Postmark account, so an uncapped one is a relay.
+ */
+export const MEMBER_INVITE_DAILY_LIMIT = 5;
+
+/**
  * Distinct addresses one staff roster import may carry. Postmark takes 500 per
  * batch call, so the invitations go out as one subrequest.
  */
