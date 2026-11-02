@@ -80,11 +80,17 @@ vi.mock('$lib/server/reservation/recurring-series-service', () => ({
 	cancel: vi.fn()
 }));
 
-const listRsvpsForEvent = vi.fn(async () => [
-	{ id: 'r1', userId: 'u1', name: 'Ada', email: 'ada@example.com', createdAt: new Date(0) }
+const listRsvpRoster = vi.fn(async () => [
+	{
+		personId: 'u1',
+		member: { type: 'member' as const, id: 'u1', title: 'Ada', subtitle: 'ada@example.com' },
+		email: 'ada@example.com',
+		memberStatus: 'member' as const,
+		rsvpedAt: new Date(0)
+	}
 ]);
 vi.mock('$lib/server/event/rsvp-service', () => ({
-	listRsvpsForEvent: () => listRsvpsForEvent(),
+	listRsvpRoster: () => listRsvpRoster(),
 	cancelRsvp: vi.fn(),
 	createRsvp: vi.fn(),
 	getUserRsvp: vi.fn()
@@ -194,19 +200,19 @@ describe('getEventRsvpRoster', () => {
 	it("gives the show's committee the full roster, emails included", async () => {
 		persona = 'booker';
 		const roster = await getEventRsvpRoster('evt-show');
-		expect(roster).toMatchObject({ total: 1, rows: [{ contact: 'ada@example.com' }] });
+		expect(roster).toMatchObject({ total: 1, rows: [{ email: 'ada@example.com' }] });
 	});
 
 	it('hides it from someone off the committee, reading nothing', async () => {
 		persona = 'outsider';
 		await expect(getEventRsvpRoster('evt-show')).resolves.toBeNull();
-		expect(listRsvpsForEvent).not.toHaveBeenCalled();
+		expect(listRsvpRoster).not.toHaveBeenCalled();
 	});
 
 	it('hides it from a booker on a listing with no production', async () => {
 		persona = 'booker';
 		await expect(getEventRsvpRoster('evt-gig')).resolves.toBeNull();
-		expect(listRsvpsForEvent).not.toHaveBeenCalled();
+		expect(listRsvpRoster).not.toHaveBeenCalled();
 	});
 });
 
@@ -224,13 +230,13 @@ describe('GET rsvps.csv', () => {
 	it('403s someone off the committee', async () => {
 		persona = 'outsider';
 		await expect(csv('evt-show')).rejects.toMatchObject({ status: 403 });
-		expect(listRsvpsForEvent).not.toHaveBeenCalled();
+		expect(listRsvpRoster).not.toHaveBeenCalled();
 	});
 
 	it('403s a booker on a listing with no production', async () => {
 		persona = 'booker';
 		await expect(csv('evt-gig')).rejects.toMatchObject({ status: 403 });
-		expect(listRsvpsForEvent).not.toHaveBeenCalled();
+		expect(listRsvpRoster).not.toHaveBeenCalled();
 	});
 });
 
