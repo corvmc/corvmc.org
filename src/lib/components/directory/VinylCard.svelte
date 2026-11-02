@@ -10,7 +10,8 @@
 		name: string;
 		avatarUrl?: string | null;
 		tagline?: string | null;
-		memberCount: number;
+		/** Omitted on the public list, which does not publish a band's size (#2037). */
+		memberCount?: number;
 		/** What the act plays. The payload has carried these all along (#1056). */
 		genres?: string[];
 		lookingForMembers?: boolean;
@@ -78,18 +79,21 @@
 	</div>
 	<div class="vinyl-card__caption">
 		<div class="vinyl-card__band">{name}</div>
-		<!-- The size is always here. It used to appear only on acts that left
-		     their tagline blank, so two sleeves in one row could not be compared
-		     on it for a reason that had nothing to do with the acts (#1056). -->
+		<!-- A count, when given, shows on every card regardless of tagline, so
+		     sleeves in one row stay comparable on it (#1056). -->
 		{#if tagline}
 			<div class="vinyl-card__meta vinyl-card__tagline">{tagline}</div>
 		{/if}
-		<div class="vinyl-card__meta">
-			{memberCount} member{memberCount === 1 ? '' : 's'}
-			{#if genres.length}
-				&middot; {genres.slice(0, 2).join(', ')}
-			{/if}
-		</div>
+		{#if memberCount !== undefined || genres.length}
+			<div class="vinyl-card__meta">
+				{[
+					memberCount !== undefined && `${memberCount} member${memberCount === 1 ? '' : 's'}`,
+					genres.slice(0, 2).join(', ')
+				]
+					.filter(Boolean)
+					.join(' · ')}
+			</div>
+		{/if}
 	</div>
 </a>
 
