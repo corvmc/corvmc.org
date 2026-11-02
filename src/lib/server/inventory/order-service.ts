@@ -51,6 +51,8 @@ export interface CreateOrderData {
 	expectedAt?: Date;
 	notes?: string;
 	createdByUserId?: string;
+	/** Set to write the order already `placed` — "Mark as ordered" (#2022) has no draft step. */
+	placedAt?: Date;
 	lines: OrderLineInput[];
 }
 
@@ -66,7 +68,8 @@ export async function createOrder(data: CreateOrderData) {
 	await db.batch([
 		db.insert(purchaseOrder).values({
 			id: orderId,
-			status: 'draft',
+			status: data.placedAt ? 'placed' : 'draft',
+			placedAt: data.placedAt ?? null,
 			supplierName: data.supplierName ?? null,
 			reference: data.reference ?? null,
 			expectedAt: data.expectedAt ?? null,

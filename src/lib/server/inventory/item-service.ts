@@ -5,11 +5,12 @@ import {
 	inventoryItem,
 	inventoryLocation
 } from '$lib/server/db/schema/inventory';
-import { and, count, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { getAvailableQuantity, getOnHandMany } from './stock-service';
-import type { ItemKind, PricingTier, UnitOfMeasure } from '$lib/config';
+import type { InventoryListView, ItemKind, PricingTier, UnitOfMeasure } from '$lib/config';
+import { itemIdsInView } from './list-views';
 import { DomainError } from '$lib/server/domain-error';
 
 // ---------------------------------------------------------------------------
@@ -348,6 +349,8 @@ export interface ListItemsOptions {
 	kind?: ItemKind;
 	loanableOnly?: boolean;
 	includeDeleted?: boolean;
+	view?: Exclude<InventoryListView, 'restock'>;
+	now?: Date;
 }
 
 export async function listItems(opts: ListItemsOptions = {}, pagination: PaginationInput = {}) {
@@ -357,6 +360,9 @@ export async function listItems(opts: ListItemsOptions = {}, pagination: Paginat
 	if (opts.categoryId) conditions.push(eq(inventoryItem.categoryId, opts.categoryId));
 	if (opts.kind) conditions.push(eq(inventoryItem.kind, opts.kind));
 	if (opts.loanableOnly) conditions.push(eq(inventoryItem.isLoanable, true));
+	if (opts.view) {
+		conditions.push(inArray(inventoryItem.id, itemIdsInView(opts.view, opts.now ?? new Date())));
+	}
 	if (opts.search) {
 		conditions.push(
 			or(

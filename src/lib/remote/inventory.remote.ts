@@ -65,7 +65,7 @@ import {
 	closeOrderShort,
 	createOrder,
 	getOrderById,
-	listOrders,
+	onOrderQuantities,
 	placeOrder
 } from '$lib/server/inventory/order-service';
 import { form8282Status } from '$lib/server/inventory/form-8282';
@@ -98,6 +98,8 @@ import {
 	assetStatuses,
 	equipmentConditions,
 	itemKinds,
+	inventoryListViews,
+	inventoryListViewMeta,
 	unitsOfMeasure,
 	type AssetStatus,
 	type AcquisitionKind,
@@ -198,23 +200,29 @@ const staffItemFilters = z.object({
 	categoryId: z.string().optional(),
 	kind: z.string().optional(),
 	includeDeleted: z.boolean().optional(),
+	view: z.enum(inventoryListViews.filter((v) => v !== 'restock')).optional(),
 	page: z.number().optional()
 });
 
 export const getStaffItemList = query(staffItemFilters, async (filters) => {
 	await requireCapability('inventory.read');
+	// Open problems name their reporter, so the view keeps the queue's capability.
+	if (filters.view) await requireCapability(inventoryListViewMeta[filters.view].capability);
 	const { rows, pagination } = await listItems(
 		{
 			search: filters.search || undefined,
 			categoryId: filters.categoryId || undefined,
 			kind: (filters.kind || undefined) as ItemKind | undefined,
-			includeDeleted: filters.includeDeleted
+			includeDeleted: filters.includeDeleted,
+			view: filters.view
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
 	);
+	const onOrder = await onOrderQuantities(rows.map((r) => r.id));
 	return {
 		rows: rows.map((e) => ({
 			...e,
+			onOrder: onOrder.get(e.id) ?? 0,
 			ref: toGenericRef('equipment', {
 				id: e.id,
 				title: e.name
@@ -864,7 +872,6 @@ export const recordIntake = form(
 					received: lines.map((l) => ({ itemId: l.itemId, quantity: l.quantity }))
 				});
 				void getOrder(data.purchaseOrderId).refresh();
-				void getOrders().refresh();
 			}
 
 			// The member who asked for it hears that it arrived. Best-effort in the
@@ -896,11 +903,6 @@ export const recordIntake = form(
 // Purchase orders
 // ---------------------------------------------------------------------------
 
-export const getOrders = query(z.void(), async () => {
-	await requireCapability('inventory.read');
-	return listOrders();
-});
-
 export const getOrder = query(z.string(), async (id) => {
 	await requireCapability('inventory.read');
 	const order = await getOrderById(id);
@@ -909,10 +911,9 @@ export const getOrder = query(z.string(), async (id) => {
 });
 
 /**
- * Turn a restock selection into an order.
- *
- * The lines ride as JSON for the same reason intake's do — a remote form's
- * `FormData` cannot express an array of objects.
+ * "Mark as ordered" (#2022): writes a `placed` order straight away, because the
+ * point of recording it is that the restock view stops asking. Lines ride as
+ * JSON — a remote form's `FormData` cannot express an array of objects.
  */
 const orderLinesSchema = z
 	.array(
@@ -925,22 +926,38 @@ const orderLinesSchema = z
 	.min(1)
 	.max(250);
 
-export const startOrder = form(
-	z.object({
-		supplierName: z.string().max(255).optional(),
-		reference: z.string().max(100).optional(),
-		expectedAt: z.string().optional(),
-		notes: z.string().max(2000).optional(),
-		lines: z.string().min(1)
-	}),
+const orderHeader = {
+	supplierName: z.string().max(255).optional(),
+	reference: z.string().max(100).optional(),
+	expectedAt: z.string().min(1, 'When is it expected?')
+};
+
+async function placeNewOrder(
+	header: { supplierName?: string; reference?: string; expectedAt: string },
+	lines: z.infer<typeof orderLinesSchema>
+) {
+	const orderId = await createOrder({
+		supplierName: header.supplierName || undefined,
+		reference: header.reference || undefined,
+		expectedAt: calendarDate(header.expectedAt),
+		createdByUserId: requireUser().id,
+		placedAt: new Date(),
+		lines
+	});
+	void getRestockList().refresh();
+	for (const l of lines) void getStaffItemDetail(l.itemId).refresh();
+	return orderId;
+}
+
+/** Bulk, from the at-or-below-reorder-point view: one order, a line per item. */
+export const markOrdered = form(
+	z.object({ ...orderHeader, lines: z.string().min(1) }),
 	async (raw, issue) => {
 		await requireCapability('inventory.manageOrders');
-		const currentUser = requireUser();
 		const data = raw as {
 			supplierName?: string;
 			reference?: string;
-			expectedAt?: string;
-			notes?: string;
+			expectedAt: string;
 			lines: string;
 		};
 
@@ -952,15 +969,39 @@ export const startOrder = form(
 		}
 
 		try {
-			const orderId = await createOrder({
-				supplierName: data.supplierName || undefined,
-				reference: data.reference || undefined,
-				expectedAt: data.expectedAt ? calendarDate(data.expectedAt) : undefined,
-				notes: data.notes || undefined,
-				createdByUserId: currentUser.id,
-				lines
-			});
-			void getOrders().refresh();
+			return { success: true, orderId: await placeNewOrder(data, lines) };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/** One item, from its own page. */
+export const markItemOrdered = form(
+	z.object({
+		...orderHeader,
+		itemId: z.string().min(1),
+		quantityOrdered: z.number().int().min(1).max(9999),
+		unitCostCents: z.number().int().min(0).optional()
+	}),
+	async (raw) => {
+		await requireCapability('inventory.manageOrders');
+		const data = raw as {
+			supplierName?: string;
+			reference?: string;
+			expectedAt: string;
+			itemId: string;
+			quantityOrdered: number;
+			unitCostCents?: number;
+		};
+		try {
+			const orderId = await placeNewOrder(data, [
+				{
+					itemId: data.itemId,
+					quantityOrdered: data.quantityOrdered,
+					unitCostCents: data.unitCostCents
+				}
+			]);
 			return { success: true, orderId };
 		} catch (err) {
 			mapDomainError(err);
@@ -979,7 +1020,6 @@ export const markOrderPlaced = form(z.object({ id: z.string() }), async (raw) =>
 	// Placing is what removes an item from the restock list, so that list has to
 	// be refreshed by name — it has no id to key on.
 	void getOrder(data.id).refresh();
-	void getOrders().refresh();
 	void getRestockList().refresh();
 	return { success: true };
 });
@@ -993,7 +1033,6 @@ export const dropOrder = form(z.object({ id: z.string() }), async (raw) => {
 		mapDomainError(err);
 	}
 	void getOrder(data.id).refresh();
-	void getOrders().refresh();
 	// Cancelling puts the shortfall back on the shopping list.
 	void getRestockList().refresh();
 	return { success: true };
@@ -1008,7 +1047,6 @@ export const closeOrder = form(z.object({ id: z.string() }), async (raw) => {
 		mapDomainError(err);
 	}
 	void getOrder(data.id).refresh();
-	void getOrders().refresh();
 	void getRestockList().refresh();
 	return { success: true };
 });

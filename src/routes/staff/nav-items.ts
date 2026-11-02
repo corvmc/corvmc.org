@@ -48,8 +48,6 @@ export type StaffNavKey =
 	| 'equipment-loans'
 	| 'equipment-reports'
 	| 'inventory-acquisitions'
-	| 'inventory-restock'
-	| 'inventory-orders'
 	| 'inventory-spend'
 	| 'inventory-compliance'
 	| 'contractors'
@@ -257,18 +255,6 @@ export const staffNavSections: StaffNavSection[] = [
 						capability: 'inventory.manageAssets',
 						label: 'Reported Problems',
 						href: resolve('/staff/inventory/problems')
-					},
-					{
-						key: 'inventory-restock',
-						capability: 'inventory.report',
-						label: 'Restock',
-						href: resolve('/staff/inventory/restock')
-					},
-					{
-						key: 'inventory-orders',
-						capability: 'inventory.manageOrders',
-						label: 'Orders',
-						href: resolve('/staff/inventory/orders')
 					},
 					{
 						key: 'inventory-compliance',

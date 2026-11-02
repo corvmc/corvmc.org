@@ -266,7 +266,7 @@
 			{/each}
 		</Table>
 		<div class="mt-2">
-			<Button variant="ghost" size="sm" href={resolve('/staff/inventory/restock')}>
+			<Button variant="ghost" size="sm" href={`${resolve('/staff/inventory')}?show=restock`}>
 				{data.lowStock.total > data.lowStock.rows.length
 					? `See all ${data.lowStock.total} to restock`
 					: 'Open the restock list'}

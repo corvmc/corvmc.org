@@ -86,7 +86,7 @@
 	subtitle="Inventory"
 	parent={orderId
 		? [
-				{ label: 'Orders', href: resolve('/staff/inventory/orders') },
+				{ label: 'Inventory', href: resolve('/staff/inventory') },
 				{ label: 'Order', href: resolve('/staff/inventory/orders/[id]', { id: orderId }) }
 			]
 		: []}

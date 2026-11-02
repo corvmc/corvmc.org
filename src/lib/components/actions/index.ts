@@ -26,6 +26,7 @@ export { default as AddItemAction } from './AddItemAction.svelte';
 export { default as AddAssetAction } from './AddAssetAction.svelte';
 export { default as BindTagAction } from './BindTagAction.svelte';
 export { default as ReceiveStockAction } from './ReceiveStockAction.svelte';
+export { default as MarkOrderedAction } from './MarkOrderedAction.svelte';
 export { default as UseStockAction } from './UseStockAction.svelte';
 export { default as AdjustStockAction } from './AdjustStockAction.svelte';
 export { default as RecordForm8282Action } from './RecordForm8282Action.svelte';
