@@ -95,6 +95,7 @@ describe('activeNavKey', () => {
 		['/staff/reports/volunteering', 'volunteer-report'],
 		['/staff/members/volunteers/hours', 'users'],
 		['/staff/members/instructors', 'users'],
+		['/staff/members/invites', 'users'],
 		['/staff/help', 'help'],
 		['/staff/marketing/campaigns/new', 'campaigns'],
 		['/staff/marketing/campaigns/abc/edit', 'campaigns'],
@@ -250,6 +251,7 @@ describe('route coverage', () => {
 		// Members views, reached from its tab bar (#2074).
 		'/staff/members/volunteers',
 		'/staff/members/instructors',
+		'/staff/members/invites',
 		'/staff/projects/productions', // a Projects view (#2101)
 		'/staff/volunteer/schedule/recurring', // a Schedule view (#2087)
 		'/staff/help/create', // the create flow for Help Articles
