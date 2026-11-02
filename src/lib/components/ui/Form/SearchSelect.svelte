@@ -44,22 +44,43 @@
 		onselect?: (value: T | null) => void;
 	} = $props();
 
-	// `typed` is what the input shows; `query` is what is searched. The awaited
-	// search holds back the batch that sets `query`, so a value read from it
-	// lags the keyboard. Updating `query` from its own debounced task keeps the
-	// input out of that batch, and stops a burst of keystrokes stacking up
-	// overlapping searches whose last result never lands (#1970).
+	// Results are plain state written by the latest search alone, not an awaited
+	// `$derived`: when overlapping searches settled in one tick, the derived kept
+	// an older query's results, so a capped prefix search could hide the match
+	// for good (#1970). `seq` drops every answer but the newest.
 	let typed = $state('');
 	let query = $state('');
+	let results = $state<T[]>([]);
+	let settled = $state('');
+	let failure = $state<unknown>(null);
+	let seq = 0;
 	let timer: ReturnType<typeof setTimeout> | undefined;
+
+	async function run(q: string) {
+		const mine = ++seq;
+		query = q;
+		if (q.length < minChars) {
+			results = [];
+			settled = q;
+			return;
+		}
+		try {
+			const found = await search(q);
+			if (mine !== seq) return;
+			results = found;
+			failure = null;
+			settled = q;
+		} catch (error) {
+			if (mine === seq) failure = error;
+		}
+	}
+
 	function onTyped(next: string) {
 		typed = next;
 		clearTimeout(timer);
-		timer = setTimeout(() => (query = next), 150);
+		timer = setTimeout(() => run(next), 150);
 	}
 	let comboValue = $state<string[]>([]);
-
-	const results = $derived(query.length >= minChars ? await search(query) : []);
 
 	/**
 	 * Commits the pick in the handler bits-ui calls, not in an `$effect`.
@@ -79,8 +100,10 @@
 		if (!found) return;
 		value = found;
 		clearTimeout(timer);
+		seq++;
 		typed = '';
 		query = '';
+		results = [];
 		onselect?.(found);
 	}
 
@@ -117,61 +140,48 @@
 		{/if}
 	</div>
 {:else}
-	<svelte:boundary>
-		<Combobox.Root
-			type="multiple"
-			bind:value={comboValue}
-			onValueChange={commit}
-			inputValue={typed}
-		>
-			<div class="relative">
-				<Combobox.Input
-					{placeholder}
-					class="input w-full"
-					oninput={(e: Event) => onTyped((e.target as HTMLInputElement).value)}
-				/>
-				<!--
+	<Combobox.Root type="multiple" bind:value={comboValue} onValueChange={commit} inputValue={typed}>
+		<div class="relative">
+			<Combobox.Input
+				{placeholder}
+				class="input w-full"
+				oninput={(e: Event) => onTyped((e.target as HTMLInputElement).value)}
+			/>
+			<!--
 					`flex-nowrap` is load bearing. daisyUI's `.menu` is `flex-flow: column
 					wrap`, so a capped height makes the list wrap into a *second column*
 					rather than scroll — and since `.menu` is also `width: fit-content`,
 					that column runs off the side of the popover where it cannot be
 					reached. Invisible until a search returns more than a few results.
 				-->
-				<Combobox.Content
-					class="menu z-10 max-h-60 w-full flex-nowrap overflow-y-auto rounded-box bg-base-100 p-1 shadow-lg"
-					sideOffset={4}
-				>
-					{#each results as item (item.id)}
-						<Combobox.Item
-							value={item.id}
-							label={String(item[labelKey] ?? '')}
-							class="rounded-btn cursor-pointer px-3 py-2 data-[highlighted]:bg-base-200"
-						>
-							<span class="font-medium">{item[labelKey]}</span>
-							{#if item[descriptionKey]}
-								<span class="ml-2 text-muted">{item[descriptionKey]}</span>
-							{/if}
-						</Combobox.Item>
-					{:else}
-						{#if query.length >= minChars}
-							<div class="px-3 py-2 opacity-60">No results</div>
-						{:else}
-							<div class="px-3 py-2 opacity-60">Type to search...</div>
+			<Combobox.Content
+				class="menu z-10 max-h-60 w-full flex-nowrap overflow-y-auto rounded-box bg-base-100 p-1 shadow-lg"
+				sideOffset={4}
+			>
+				{#each results as item (item.id)}
+					<Combobox.Item
+						value={item.id}
+						label={String(item[labelKey] ?? '')}
+						class="rounded-btn cursor-pointer px-3 py-2 data-[highlighted]:bg-base-200"
+					>
+						<span class="font-medium">{item[labelKey]}</span>
+						{#if item[descriptionKey]}
+							<span class="ml-2 text-muted">{item[descriptionKey]}</span>
 						{/if}
-					{/each}
-				</Combobox.Content>
-			</div>
-		</Combobox.Root>
-
-		{#snippet pending()}
-			<div class="flex items-center gap-2 p-2">
-				<span class="loading loading-sm loading-spinner"></span>
-				<span class="text-muted">Searching...</span>
-			</div>
-		{/snippet}
-
-		{#snippet failed(error, reset)}
-			<Alert type="warning" {reset}>Search is not answering: {errorMessage(error)}</Alert>
-		{/snippet}
-	</svelte:boundary>
+					</Combobox.Item>
+				{:else}
+					{#if query.length < minChars}
+						<div class="px-3 py-2 opacity-60">Type to search...</div>
+					{:else if settled === query}
+						<div class="px-3 py-2 opacity-60">No results</div>
+					{/if}
+				{/each}
+			</Combobox.Content>
+		</div>
+	</Combobox.Root>
+	{#if failure}
+		<Alert type="warning" reset={() => run(query)}>
+			Search is not answering: {errorMessage(failure)}
+		</Alert>
+	{/if}
 {/if}
