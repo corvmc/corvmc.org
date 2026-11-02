@@ -145,7 +145,7 @@ async function alertPoolEmpty(now: Date): Promise<void> {
 						text: 'A member with a booking needed a door code and none was left. Members are being told to call staff. The daily lock job mints more once the lock is online.'
 					}
 				],
-				cta: { url: '/staff/keys', label: 'Open Key Holders' }
+				cta: { url: '/staff/keys', label: 'See door codes' }
 			}
 		});
 	} catch (err) {
