@@ -33,8 +33,6 @@
 		<EmptyState
 			title="You haven't added any shows"
 			description="Know about a gig around town? Put it on the calendar so the rest of the scene finds out."
-			actionLabel="Add a show"
-			actionHref={resolve('/member/events/submit')}
 		/>
 	{:else}
 		<ul class="mlist">

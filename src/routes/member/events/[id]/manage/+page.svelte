@@ -24,7 +24,8 @@
 	import { formatDateShort, formatDollars } from '$lib/utils/format';
 	import { imageSrc } from '$lib/utils/images';
 
-	// Declared before the awaited query below — see the note on the create page.
+	// Declared before the awaited query: a declaration after one is async-gated,
+	// which would compile every `fields.X.as()` into an async derived.
 	const fields = updateListing.fields;
 	const publishFields = publishListing.fields;
 	const unpublishFields = unpublishListing.fields;
@@ -227,12 +228,17 @@
 				required
 			/>
 
+			<!-- The `input` snippet, not children: only it is handed the id the
+			     caption points at, so children would leave the field unnamed. -->
 			<FormField name="description" label="Description">
-				<textarea
-					{...fields.description.as('text', listing.description ?? '')}
-					class="textarea w-full"
-					rows="4"
-					maxlength="5000"></textarea>
+				{#snippet input(id)}
+					<textarea
+						{...fields.description.as('text', listing.description ?? '')}
+						{id}
+						class="textarea w-full"
+						rows="4"
+						maxlength="5000"></textarea>
+				{/snippet}
 			</FormField>
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">

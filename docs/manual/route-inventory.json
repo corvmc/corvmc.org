@@ -252,10 +252,6 @@
 		"panel": "member"
 	},
 	{
-		"route": "/member/events/submit",
-		"panel": "member"
-	},
-	{
 		"route": "/member/groups",
 		"panel": "member"
 	},

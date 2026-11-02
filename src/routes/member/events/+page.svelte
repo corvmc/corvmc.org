@@ -14,7 +14,7 @@
 	// Still needed on its own for the lazy "show more" pager, which is not a fan-out.
 	import { getPublicGigGuide } from '$lib/remote/calendar.remote';
 	import MyListingsSection from './MyListingsSection.svelte';
-	import { resolve } from '$app/paths';
+	import AddShowAction from './AddShowAction.svelte';
 	import type { CalendarEntry } from '$lib/types/calendar';
 
 	interface EventItem {
@@ -120,7 +120,7 @@
 </script>
 
 <PageHeader title="Events">
-	<Button href={resolve('/member/events/submit')} variant="primary" size="sm">Add a show</Button>
+	<AddShowAction />
 </PageHeader>
 <PageContent>
 	<MyListingsSection />
