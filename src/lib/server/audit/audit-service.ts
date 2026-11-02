@@ -1,4 +1,16 @@
-import { and, count, desc, eq, gte, lte, or, sql, type SQL } from 'drizzle-orm';
+import {
+	and,
+	count,
+	desc,
+	eq,
+	gte,
+	inArray,
+	lte,
+	or,
+	sql,
+	type SQL,
+	type SQLWrapper
+} from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
@@ -12,6 +24,7 @@ import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { captureException } from '$lib/server/sentry';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 import type { EntityRef, MemberRef } from '$lib/types/entity';
+import { feedLimit } from '$lib/types/activity';
 import type {
 	AuditAction,
 	AuditActor,
@@ -24,8 +37,6 @@ export type { AuditActor, AuditEntryInput } from '$lib/types/audit';
 
 const MAX_DETAILS_BYTES = 4096;
 const MAX_LABEL_LENGTH = 200;
-const DEFAULT_SUBJECT_LIMIT = 20;
-const MAX_SUBJECT_LIMIT = 100;
 
 const SYSTEM_ACTOR: AuditActor = { id: null, name: 'System', email: '' };
 
@@ -74,19 +85,42 @@ export async function recordAuditEntry(input: AuditEntryInput): Promise<void> {
 // Queries
 // ---------------------------------------------------------------------------
 
-export async function listAuditEntriesForSubject(
-	type: AuditSubjectType,
-	id: string,
-	opts: { limit?: number } = {}
-): Promise<AuditEntry[]> {
-	const limit = Math.min(Math.max(opts.limit ?? DEFAULT_SUBJECT_LIMIT, 1), MAX_SUBJECT_LIMIT);
-	const rows = await db
+/** One subject, or every subject of a type whose id a subquery yields (no bound parameter per id). */
+export type AuditSubjectFilter =
+	{ type: AuditSubjectType; id: string } | { type: AuditSubjectType; ids: SQLWrapper };
+
+function subjectWhere(subjects: AuditSubjectFilter[]): SQL {
+	const each = subjects.map((s) =>
+		and(
+			eq(auditLog.subjectType, s.type),
+			'id' in s ? eq(auditLog.subjectId, s.id) : inArray(auditLog.subjectId, s.ids)
+		)
+	);
+	return (each.length === 1 ? each[0] : or(...each))!;
+}
+
+/** The read behind every history feed. Exported so a spec can read its SQL and bound parameters. */
+export function auditSubjectQuery(subjects: AuditSubjectFilter[], limit: number) {
+	return db
 		.select()
 		.from(auditLog)
-		.where(and(eq(auditLog.subjectType, type), eq(auditLog.subjectId, id)))
+		.where(subjectWhere(subjects))
 		.orderBy(desc(auditLog.createdAt), desc(auditLog.id))
 		.limit(limit);
-	return rows as AuditEntry[];
+}
+
+/**
+ * One page of a subject's entries, newest first. Read with `limit + 1`, so
+ * `hasMore` is exact; "show older" asks again with a longer `limit`.
+ */
+export async function listAuditEntriesForSubject(
+	subjects: AuditSubjectFilter | AuditSubjectFilter[],
+	opts: { limit?: number } = {}
+): Promise<{ entries: AuditEntry[]; hasMore: boolean }> {
+	const limit = feedLimit(opts.limit);
+	const list = Array.isArray(subjects) ? subjects : [subjects];
+	const rows = (await auditSubjectQuery(list, limit + 1)) as AuditEntry[];
+	return { entries: rows.slice(0, limit), hasMore: rows.length > limit };
 }
 
 export interface AuditLogFilters {

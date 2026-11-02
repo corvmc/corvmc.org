@@ -30,6 +30,8 @@ import { getUserRoles } from '$lib/server/authorization';
 import { positionChangeRefusal } from '$lib/server/access/position-service';
 import { toEventRef } from '$lib/server/entity/refs';
 import { jsonArrayField } from '$lib/utils/zod-json';
+import { auditFeedItem } from '$lib/utils/audit-display';
+import { FEED_MAX, type FeedPage } from '$lib/types/activity';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
 import {
 	getAllBalances,
@@ -857,10 +859,17 @@ export const getUserCreditHistory = query(
 );
 
 /** Who changed this member's account, newest first. Staff-only, like the rest of the record. */
-export const getUserHistory = query(z.string(), async (userId) => {
-	await requireCapability('user.read');
-	return listAuditEntriesForSubject('user', userId, { limit: 20 });
-});
+export const getUserHistory = query(
+	z.object({ userId: z.string(), limit: z.number().int().min(1).max(FEED_MAX).optional() }),
+	async ({ userId, limit }): Promise<FeedPage> => {
+		await requireCapability('user.read');
+		const { entries, hasMore } = await listAuditEntriesForSubject(
+			{ type: 'user', id: userId },
+			{ limit }
+		);
+		return { items: entries.map(auditFeedItem), hasMore };
+	}
+);
 
 export const getUserSessions = query(z.string(), async (userId) => {
 	await requireCapability('user.read');

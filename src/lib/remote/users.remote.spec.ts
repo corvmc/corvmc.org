@@ -196,7 +196,10 @@ vi.mock('$lib/server/user/user-service', () => ({
 }));
 
 const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
-const listAuditEntriesForSubject = vi.fn(async (..._a: unknown[]) => []);
+const listAuditEntriesForSubject = vi.fn(async (..._a: unknown[]) => ({
+	entries: [],
+	hasMore: false
+}));
 vi.mock('$lib/server/audit/audit-service', () => ({
 	recordAuditEntry: (entry: unknown) => recordAuditEntry(entry),
 	listAuditEntriesForSubject: (...a: unknown[]) => listAuditEntriesForSubject(...a)
@@ -330,7 +333,7 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	{ name: 'getUserMembership', args: ['victim-user'] },
 	{ name: 'getUserCreditHistory', args: [{ userId: 'victim-user', page: 1 }] },
 	{ name: 'getUserSessions', args: ['victim-user'] },
-	{ name: 'getUserHistory', args: ['victim-user'] },
+	{ name: 'getUserHistory', args: [{ userId: 'victim-user' }] },
 	{ name: 'getStaffUserTotals' },
 	{ name: 'inviteMemberForm', args: [{ email: 'n@x.org', groupIds: [] }] },
 	{ name: 'getMemberInvites', args: [{ page: 1 }] },
@@ -885,8 +888,11 @@ describe('staff edits leave an audit entry', () => {
 
 	it('getUserHistory reads the member named in its argument, not params.id', async () => {
 		currentParams = { id: 'someone-else' };
-		await users.getUserHistory('victim-user');
-		expect(listAuditEntriesForSubject).toHaveBeenCalledWith('user', 'victim-user', { limit: 20 });
+		await users.getUserHistory({ userId: 'victim-user', limit: 50 });
+		expect(listAuditEntriesForSubject).toHaveBeenCalledWith(
+			{ type: 'user', id: 'victim-user' },
+			{ limit: 50 }
+		);
 	});
 
 	it('records roles added and removed by name', async () => {

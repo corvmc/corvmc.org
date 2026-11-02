@@ -9,6 +9,7 @@ import type {
 } from '$lib/types/audit';
 import { contractorJobStatusLabels, projectStatusLabels } from '$lib/config';
 import { formatCents, formatDateShort } from '$lib/utils/format';
+import type { FeedItem } from '$lib/types/activity';
 
 /** `user.roles_changed` → "User roles changed". Derived, so a new action needs no label entry. */
 export function auditActionLabel(action: AuditAction): string {
@@ -246,4 +247,15 @@ function engagementLine(d: EngagementMove): string {
 		default:
 			return `${who}: ${contractorJobStatusLabels[d.to].toLowerCase()}`;
 	}
+}
+
+/** An audit entry as one row of a history feed. */
+export function auditFeedItem(entry: AuditEntry): FeedItem {
+	return {
+		id: `audit:${entry.id}`,
+		at: entry.createdAt,
+		actorId: entry.actorUserId,
+		actorName: entry.actorName,
+		summary: summarizeAuditEntry(entry)
+	};
 }
