@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { memberStatusLabels } from '$lib/types/roster';
 
 // The RSVP CSV is a `+server.ts`, so its guard is not the remote boundary: it
 // must refuse before reading a single row.
@@ -59,7 +60,13 @@ describe('GET rsvps.csv', () => {
 		);
 		const body = await res.text();
 		expect(body).toContain('name,email,member_status,rsvped_at');
-		expect(body).toContain('Ada,ada@example.com,Member,2026-11-01T18:30:00.000Z');
+		const [, ada] = body.trim().split(/\r?\n/);
+		expect(ada.split(',')).toEqual([
+			'Ada',
+			'ada@example.com',
+			memberStatusLabels.member,
+			'2026-11-01T18:30:00.000Z'
+		]);
 		expect(body).not.toMatch(/^=HYPERLINK/m);
 	});
 });
