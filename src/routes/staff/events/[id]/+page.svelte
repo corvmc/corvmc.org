@@ -30,7 +30,12 @@
 		CancelEventAction,
 		DeleteEventAction
 	} from '$lib/components/actions';
-	import { getStaffEventPage, setStaffEventLineup } from '$lib/remote/events.remote';
+	import {
+		getEventHistory,
+		getStaffEventPage,
+		setStaffEventLineup
+	} from '$lib/remote/events.remote';
+	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
 	import {
 		approveListing,
 		rejectListing,
@@ -475,4 +480,11 @@
 			</Table>
 		{/if}
 	</InfoCard>
+
+	<ActivityFeedCard
+		title="History"
+		query={(limit) => getEventHistory(limit ? { id, limit } : { id })}
+		toRow={feedItemRow}
+		empty={{ title: 'No recorded changes' }}
+	/>
 </PageContent>

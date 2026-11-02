@@ -2,6 +2,8 @@ import { captureException } from '$lib/server/sentry';
 import { recordFreeTicketSale } from '$lib/server/finance/ticket-entries';
 import { sellerFor } from '$lib/server/ticket/ticket-seller';
 import { z } from 'zod';
+import { historyArgs } from './_history';
+import { listEventHistory } from '$lib/server/event/event-history';
 import { creditsForEvent } from '$lib/server/sponsor/credit-service';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
@@ -2140,4 +2142,10 @@ export const getMemberEventsPage = query(z.void(), async () => {
 		viewerRsvpEventIds()
 	]);
 	return { events, tickets, guide, rsvpEventIds };
+});
+
+/** An event's History card: the listing's own entries and its show's. Read as the listing is. */
+export const getEventHistory = query(historyArgs, async ({ id, limit }) => {
+	await requireListingReader(id);
+	return listEventHistory(id, { limit });
 });

@@ -23,8 +23,10 @@
 		updateVolunteerRole,
 		archiveVolunteerRole,
 		restoreVolunteerRole,
-		deleteVolunteerRole
+		deleteVolunteerRole,
+		getVolunteerRoleHistory
 	} from '$lib/remote/volunteer.remote';
+	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
 
 	const { fields } = updateVolunteerRole;
 
@@ -303,6 +305,13 @@
 			{/if}
 		</InfoCard>
 	{/if}
+
+	<ActivityFeedCard
+		title="History"
+		query={(limit) => getVolunteerRoleHistory(limit ? { id, limit } : { id })}
+		toRow={feedItemRow}
+		empty={{ title: 'No recorded changes' }}
+	/>
 </PageContent>
 
 {#snippet archiveIcon()}

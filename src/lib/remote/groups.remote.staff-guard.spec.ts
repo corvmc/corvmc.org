@@ -53,8 +53,10 @@ const svc = vi.hoisted(() => ({
 	deactivate: vi.fn(),
 	reactivate: vi.fn(),
 	setCommitteeCapabilityGrants: vi.fn(),
-	importRoster: vi.fn()
+	importRoster: vi.fn(),
+	listAuditFeed: vi.fn()
 }));
+vi.mock('$lib/server/audit/audit-feed', () => ({ listAuditFeed: svc.listAuditFeed }));
 vi.mock('$lib/server/group/roster-import-service', () => ({
 	importRoster: svc.importRoster,
 	parseRosterImport: () => ({ emails: ['a@example.com'], invalid: [], duplicates: 0 }),
@@ -147,6 +149,7 @@ const settings = { joinPolicy: groupJoinPolicies[0], visibility: 'public' };
 const EXPORTS = [
 	['getStaffGroups', {}, 'group.read', svc.listGroups],
 	['getStaffGroupPage', 'group-1', 'group.read', svc.getGroupDetail],
+	['getGroupHistory', { id: 'group-1' }, 'group.read', svc.listAuditFeed],
 	[
 		'createStaffGroup',
 		{ kind: 'club', name: 'Book club', ...settings },

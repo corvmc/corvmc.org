@@ -1,5 +1,7 @@
 import { countCommitteeUnfinished } from '$lib/server/volunteer/deliverables-service';
 import { z } from 'zod';
+import { historyArgs } from './_history';
+import { listAuditFeed } from '$lib/server/audit/audit-feed';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
@@ -875,4 +877,10 @@ export const getPublicGroupPage = query(z.string(), async (slug) => {
 		: [null, false];
 
 	return { group, signedIn: !!locals.user, viewerStatus, applied };
+});
+
+/** A club's or committee's History card: roster, role and grant changes. */
+export const getGroupHistory = query(historyArgs, async ({ id, limit }) => {
+	await requireCapability('group.read');
+	return listAuditFeed({ type: 'group', id }, { limit });
 });
