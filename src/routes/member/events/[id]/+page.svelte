@@ -289,7 +289,14 @@
 				<p class="edet__desc">{@html descriptionHtml}</p>
 			{/if}
 
-			{#if evt.ticketingEnabled}
+			{#if evt.status === 'cancelled' || data.isPast}
+				<!-- The server refuses both; the page must not offer them (#2219). -->
+				<div class="edet__ctas">
+					<span class="text-base font-medium text-fg-2">
+						{evt.status === 'cancelled' ? 'Tickets and RSVPs are closed.' : 'This event has ended.'}
+					</span>
+				</div>
+			{:else if evt.ticketingEnabled}
 				{#if capacityKnown}
 					<div class="edet__capacity">
 						<div class="edet__capacity-head">
