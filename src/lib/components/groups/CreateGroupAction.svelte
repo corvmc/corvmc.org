@@ -54,14 +54,10 @@
 	submitLabel={kind === 'committee' ? 'Create Committee' : 'Create Club'}
 	successToast={kind === 'committee' ? 'Committee created' : 'Club created'}
 	size="sm"
+	data-testid="create-group"
 	onsuccess={(result) => {
-		const made = result as { id?: string; kind?: string } | undefined;
-		if (!made?.id) return;
-		goto(
-			made.kind === 'committee'
-				? resolve(`/staff/committees/${made.id}`)
-				: resolve(`/staff/clubs/${made.id}`)
-		);
+		const made = result as { id?: string } | undefined;
+		if (made?.id) goto(resolve(`/staff/groups/${made.id}`));
 	}}
 >
 	{#snippet form()}

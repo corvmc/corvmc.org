@@ -13,66 +13,74 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { CreateBandAction } from '$lib/components/actions';
 	import { getStaffBands, getStaffBandTotals } from '$lib/remote/bands.remote';
+	import { rosterState } from '$lib/components/roster/roster-state.svelte';
+	import { oneOf } from '$lib/urlState.svelte';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { retryQuery } from '$lib/utils/retry-query';
 	import BandTotals from './BandTotals.svelte';
+	import GroupViews from './GroupViews.svelte';
+	import GroupRecordPanel from './[id]/GroupRecordPanel.svelte';
 
-	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
-	// named `search`, and a snippet shadows a same-named script binding.
-	let searchText = $state('');
 	// Deactivated bands are hidden until the filter asks for them.
-	let status = $state<'active' | 'deactivated' | 'all'>('active');
-	let tier = $state<'free' | 'premium' | ''>('');
-	let page = $state(1);
-
-	let searchDebounced = $state('');
-	let filters = $derived({
-		search: searchDebounced || undefined,
-		status: status === 'all' ? undefined : status,
-		tier: tier || undefined,
-		page
+	const view = rosterState(resolve('/staff/groups'), {
+		status: oneOf(['active', 'deactivated', 'all'] as const, 'active'),
+		tier: oneOf(['', 'free', 'premium'] as const, '')
 	});
+	const f = view.values;
+	// `searchText`, not `search`: FilterBar's `search` snippet would shadow it.
+	let searchText = $state(f.q);
 
-	let result = $derived(getStaffBands(filters));
+	const result = $derived(
+		getStaffBands({
+			search: f.q || undefined,
+			status: f.status === 'all' ? undefined : f.status,
+			tier: f.tier || undefined,
+			page: f.page
+		})
+	);
 
-	const menuFilterCount = $derived((status === 'active' ? 0 : 1) + (tier ? 1 : 0));
-	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + menuFilterCount);
+	const menuFilterCount = $derived((f.status === 'active' ? 0 : 1) + (f.tier ? 1 : 0));
 
-	function clearFilters() {
-		searchText = '';
-		searchDebounced = '';
-		status = 'active';
-		tier = '';
-		page = 1;
+	let selected = $state<{ id: string; name: string } | null>(null);
+	let panelOpen = $state(false);
+	function openPanel(id: string, name: string) {
+		selected = { id, name };
+		panelOpen = true;
 	}
 </script>
 
-<PageHeader title="Bands">
-	<!-- External acts live beside bands rather than under their own nav entry:
-	     they are the same staff job (who is playing here) and one of them can
-	     turn into the other. -->
-	<Button variant="ghost" size="sm" href={resolve('/staff/bands/acts')}>External acts</Button>
+<PageHeader title="Groups">
+	<!-- External acts stay beside bands: the same staff job, and one can become the other. -->
+	<Button variant="ghost" href={resolve('/staff/bands/acts')}>External acts</Button>
 	<CreateBandAction />
 </PageHeader>
 <PageContent>
+	<GroupViews active="bands" />
 	<svelte:boundary>
 		<BandTotals />
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getStaffBandTotals(), reset)}>
-				The band totals didn't load. The table below is unaffected.
+				The totals didn't load.
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
 
-	<FilterBar activeCount={activeFilterCount} menuCount={menuFilterCount} onclear={clearFilters}>
+	<FilterBar
+		activeCount={view.activeCount}
+		menuCount={menuFilterCount}
+		onclear={() => {
+			searchText = '';
+			view.clear();
+		}}
+	>
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
 				placeholder="Search by name..."
 				onsearch={(q) => {
-					searchDebounced = q;
-					page = 1;
+					f.q = q;
+					f.page = 1;
 				}}
 			/>
 		{/snippet}
@@ -81,10 +89,10 @@
 				<span class="text-muted text-xs">Status</span>
 				<Select
 					size="sm"
-					value={status}
+					value={f.status}
 					onchange={(e: Event) => {
-						status = (e.currentTarget as HTMLSelectElement).value as typeof status;
-						page = 1;
+						f.status = (e.currentTarget as HTMLSelectElement).value as typeof f.status;
+						f.page = 1;
 					}}
 				>
 					<option value="active">Active</option>
@@ -96,10 +104,10 @@
 				<span class="text-muted text-xs">Tier</span>
 				<Select
 					size="sm"
-					value={tier}
+					value={f.tier}
 					onchange={(e: Event) => {
-						tier = (e.currentTarget as HTMLSelectElement).value as typeof tier;
-						page = 1;
+						f.tier = (e.currentTarget as HTMLSelectElement).value as typeof f.tier;
+						f.page = 1;
 					}}
 				>
 					<option value="">All tiers</option>
@@ -110,7 +118,7 @@
 		{/snippet}
 	</FilterBar>
 
-	<DataList {result} empty="No bands found" onpage={(p) => (page = p)}>
+	<DataList {result} empty="No bands found" onpage={(p) => (f.page = p)}>
 		{#snippet children(bands)}
 			<Table>
 				{#snippet head()}
@@ -123,12 +131,20 @@
 				{/snippet}
 
 				{#each bands as b (b.id)}
-					{@const href = resolve(`/staff/bands/${b.id}`)}
-					<tr class="hover cursor-pointer" use:rowLink={href}>
+					<tr class="hover cursor-pointer" use:rowLink={() => openPanel(b.id, b.ref.title)}>
 						<td class="w-px">
 							<StatusBadge status={b.deletedAt ? 'deactivated' : 'active'} />
 						</td>
-						<td class="cell-primary"><EntityIdentity ref={b.ref} /></td>
+						<td class="cell-primary">
+							<!-- The keyboard path to the panel, which a row cannot be. -->
+							<button
+								type="button"
+								class="block w-full min-w-0 text-left"
+								onclick={() => openPanel(b.id, b.ref.title)}
+							>
+								<EntityIdentity ref={b.ref} link={false} />
+							</button>
+						</td>
 						<!-- The owner is a member, not a fact about the band, so it takes a
 						     column and reaches their record. -->
 						<td class="min-w-0"><EntityChip ref={b.owner} icon={false} /></td>
@@ -141,3 +157,9 @@
 		{/snippet}
 	</DataList>
 </PageContent>
+
+{#if selected}
+	{#key selected.id}
+		<GroupRecordPanel kind="band" id={selected.id} name={selected.name} bind:open={panelOpen} />
+	{/key}
+{/if}

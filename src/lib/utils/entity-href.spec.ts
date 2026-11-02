@@ -48,7 +48,7 @@ describe('entityHref', () => {
 		});
 
 		it('gives the staff record in the staff panel', () => {
-			expect(entityHref(ref, them('staff'))).toBe('/staff/bands/band-1');
+			expect(entityHref(ref, them('staff'))).toBe('/staff/groups/band-1');
 		});
 
 		it('gives the directory entry in the member panel', () => {
@@ -159,7 +159,7 @@ describe('entityHref', () => {
 			const ref = fakeRef('band', { id: 'band-1', slug: null });
 			expect(entityHref(ref, viewer())).toBeNull();
 			expect(entityHref(ref, viewer({ isStaff: true, panel: 'staff' }))).toBe(
-				'/staff/bands/band-1'
+				'/staff/groups/band-1'
 			);
 		});
 	});

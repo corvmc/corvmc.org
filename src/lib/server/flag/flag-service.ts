@@ -79,7 +79,7 @@ export const DIRECT_CONVERSATION_LABEL = 'Direct conversation';
 function entityHref(entityType: FlagEntityType, entityId: string, flagId?: string): string {
 	switch (entityType) {
 		case 'band_profile':
-			return `/staff/bands/${entityId}`;
+			return `/staff/groups/${entityId}`;
 		// A private conversation has no staff page of its own — by design, see
 		// getThread(). The report *is* the only way in, so link to the report.
 		case 'inbox_thread':

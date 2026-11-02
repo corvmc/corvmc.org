@@ -11,81 +11,85 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
+	import { rosterState } from '$lib/components/roster/roster-state.svelte';
+	import { oneOf } from '$lib/urlState.svelte';
 	import CreateGroupAction from '$lib/components/groups/CreateGroupAction.svelte';
 	import { getStaffGroups, getStaffClubTotals } from '$lib/remote/groups.remote';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { retryQuery } from '$lib/utils/retry-query';
 	import ClubTotals from './ClubTotals.svelte';
+	import GroupViews from '../GroupViews.svelte';
+	import GroupRecordPanel from '../[id]/GroupRecordPanel.svelte';
 
-	/**
-	 * Clubs. Committees have their own list at `/staff/committees`, and bands are
-	 * a member's own project with their own surface at `/staff/bands`. A club is
-	 * the opposite of a band: staff created it and staff appoint its chairs.
-	 */
-
-	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
-	// named `search`, and a snippet shadows a same-named script binding.
-	let searchText = $state('');
+	// A club is the opposite of a band: staff create it and appoint its chairs.
 	// Active by default, so the table shows the clubs the counts above count.
-	let status = $state<'active' | 'deactivated' | ''>('active');
-	let page = $state(1);
-
-	let searchDebounced = $state('');
-	let filters = $derived({
-		search: searchDebounced || undefined,
-		status: status || undefined,
-		kind: 'club' as const,
-		page
+	const view = rosterState(resolve('/staff/groups/clubs'), {
+		status: oneOf(['active', 'deactivated', ''] as const, 'active')
 	});
+	const f = view.values;
+	// `searchText`, not `search`: FilterBar's `search` snippet would shadow it.
+	let searchText = $state(f.q);
 
-	let result = $derived(getStaffGroups(filters));
+	const result = $derived(
+		getStaffGroups({
+			search: f.q || undefined,
+			status: f.status || undefined,
+			kind: 'club',
+			page: f.page
+		})
+	);
 
 	// Chairs past this collapse into a `+N`, as BadgeList does: one crowded club
 	// must not set the height of every row beside it.
 	const MAX_CHAIRS = 2;
 
-	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + (status === 'active' ? 0 : 1));
-
-	function clearFilters() {
-		searchText = '';
-		searchDebounced = '';
-		status = 'active';
-		page = 1;
+	let selected = $state<{ id: string; name: string } | null>(null);
+	let panelOpen = $state(false);
+	function openPanel(id: string, name: string) {
+		selected = { id, name };
+		panelOpen = true;
 	}
 </script>
 
-<PageHeader title="Clubs">
+<PageHeader title="Groups">
 	<CreateGroupAction />
 </PageHeader>
 <PageContent>
+	<GroupViews active="clubs" />
 	<svelte:boundary>
 		<ClubTotals />
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getStaffClubTotals(), reset)}>
-				The club totals didn't load. The table below is unaffected.
+				The totals didn't load.
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
 
-	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+	<FilterBar
+		activeCount={view.activeCount}
+		onclear={() => {
+			searchText = '';
+			view.clear();
+		}}
+	>
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
 				placeholder="Search by name..."
 				onsearch={(q) => {
-					searchDebounced = q;
-					page = 1;
+					f.q = q;
+					f.page = 1;
 				}}
 			/>
 		{/snippet}
 		<Select
 			size="sm"
 			aria-label="Status"
-			value={status}
+			value={f.status}
 			onchange={(e: Event) => {
-				status = (e.currentTarget as HTMLSelectElement).value as typeof status;
-				page = 1;
+				f.status = (e.currentTarget as HTMLSelectElement).value as typeof f.status;
+				f.page = 1;
 			}}
 		>
 			<option value="active">Active</option>
@@ -94,7 +98,7 @@
 		</Select>
 	</FilterBar>
 
-	<DataList {result} empty="No clubs yet" onpage={(p) => (page = p)}>
+	<DataList {result} empty="No clubs yet" onpage={(p) => (f.page = p)}>
 		{#snippet children(groups)}
 			<Table>
 				{#snippet head()}
@@ -106,16 +110,19 @@
 				{/snippet}
 
 				{#each groups as g (g.id)}
-					{@const href = resolve(`/staff/clubs/${g.id}`)}
-					<tr class="hover cursor-pointer" use:rowLink={href}>
+					<tr class="hover cursor-pointer" use:rowLink={() => openPanel(g.id, g.name)}>
 						<td class="w-px">
 							<StatusBadge status={g.deletedAt ? 'deactivated' : 'active'} />
 						</td>
-						<!-- The name as text, not an `EntityIdentity`. A ref carries the
-						     canonical page for its own type, and there is no group type —
-						     handing it a band ref sent staff to `/staff/bands/{id}` for a
-						     club. The row itself is the link. -->
-						<td class="cell-primary">{g.name}</td>
+						<!-- The name, not an `EntityIdentity`: there is no group ref type, and
+						     a band ref would link a club to the wrong record. -->
+						<td class="cell-primary">
+							<button
+								type="button"
+								class="block w-full truncate text-left"
+								onclick={() => openPanel(g.id, g.name)}>{g.name}</button
+							>
+						</td>
 						<!-- A club with no chairs is legal; it reads as a fact, not a fault. -->
 						<td class="whitespace-nowrap">
 							{#if g.chairs.length === 0}
@@ -142,3 +149,9 @@
 		{/snippet}
 	</DataList>
 </PageContent>
+
+{#if selected}
+	{#key selected.id}
+		<GroupRecordPanel kind="club" id={selected.id} name={selected.name} bind:open={panelOpen} />
+	{/key}
+{/if}

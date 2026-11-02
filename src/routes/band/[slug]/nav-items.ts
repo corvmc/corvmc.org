@@ -183,7 +183,7 @@ export function bandNavFooter(input: BandNavInput): BandNavItem[] {
 		items.push({
 			key: 'staff-tools',
 			label: 'Staff tools',
-			href: resolve('/staff/bands/[id]', { id: input.bandId })
+			href: resolve('/staff/groups/[id]', { id: input.bandId })
 		});
 	}
 

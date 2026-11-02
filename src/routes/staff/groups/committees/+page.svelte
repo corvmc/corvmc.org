@@ -5,34 +5,45 @@
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
-	import { resolve } from '$app/paths';
 	import CreateGroupAction from '$lib/components/groups/CreateGroupAction.svelte';
 	import { getStaffCommittees } from '$lib/remote/groups.remote';
+	import GroupViews from '../GroupViews.svelte';
+	import GroupRecordPanel from '../[id]/GroupRecordPanel.svelte';
 
-	/**
-	 * Every committee, each with what is waiting on it. Its applications are on
-	 * its own page, which is also where a chair-less committee gets read.
-	 */
+	// Declared above the await so they are not async-gated.
+	let selected = $state<{ id: string; name: string } | null>(null);
+	let panelOpen = $state(false);
+	function openPanel(id: string, name: string) {
+		selected = { id, name };
+		panelOpen = true;
+	}
+
+	/** Every committee, each with what is waiting on it. */
 	const data = $derived(await getStaffCommittees());
 	const committees = $derived(data.committees.filter((c) => data.canManage || !c.deletedAt));
 </script>
 
-<PageHeader title="Committees" subtitle="The Collective's working groups">
+<PageHeader title="Groups">
 	{#if data.canManage}
 		<CreateGroupAction kind="committee" />
 	{/if}
 </PageHeader>
 
 <PageContent>
+	<GroupViews active="committees" />
 	{#if committees.length === 0}
-		<EmptyState title="No committees" description="Create one to start taking applications." />
+		<EmptyState title="No committees" />
 	{:else}
 		<!-- Cards, not a table: there are a handful of committees, and each card is
-		     one link, so the chairs are names rather than chips of their own. -->
+		     one control, so the chairs are names rather than chips of their own. -->
 		<ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
 			{#each committees as c (c.id)}
 				<li>
-					<a href={resolve(`/staff/committees/${c.id}`)} class="block h-full">
+					<button
+						type="button"
+						class="block h-full w-full text-left"
+						onclick={() => openPanel(c.id, c.name)}
+					>
 						<Card bordered class="h-full p-4 hover:border-primary">
 							<span class="flex items-center gap-2">
 								<span class="truncate font-medium">{c.name}</span>
@@ -53,9 +64,20 @@
 								{/if}
 							</span>
 						</Card>
-					</a>
+					</button>
 				</li>
 			{/each}
 		</ul>
 	{/if}
 </PageContent>
+
+{#if selected}
+	{#key selected.id}
+		<GroupRecordPanel
+			kind="committee"
+			id={selected.id}
+			name={selected.name}
+			bind:open={panelOpen}
+		/>
+	{/key}
+{/if}

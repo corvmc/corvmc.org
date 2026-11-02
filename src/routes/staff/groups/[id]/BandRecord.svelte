@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/state';
-
+	import type { Snippet } from 'svelte';
 	import { getStaffBandPage, updateMemberRole } from '$lib/remote/bands.remote';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
@@ -26,7 +25,13 @@
 	import CopyEmailsButton from '$lib/components/roster/CopyEmailsButton.svelte';
 	import StaffBandForm from './StaffBandForm.svelte';
 
-	let id = $derived(page.params.id!);
+	/** A band's staff record: the page at /staff/groups/[id], and the Bands view's side panel. */
+	let {
+		id,
+		variant = 'page',
+		actions
+	}: { id: string; variant?: 'page' | 'panel'; actions?: Snippet } = $props();
+
 	const data = $derived(await getStaffBandPage(id));
 	const band = $derived(data.band);
 	const members = $derived(data.members);
@@ -38,9 +43,9 @@
      await here marks later declarations "blocked", compiling its bind:value /
      fields expressions into async deriveds — the churn behind the
      effect_update_depth_exceeded crash (same bug as /member/profile). -->
-<StaffBandForm {band} {id} />
+<StaffBandForm {band} {id} {variant} {actions} />
 
-<PageContent>
+{#snippet body()}
 	<InfoCard title="Members">
 		{#snippet header(title)}
 			<header class="flex items-center justify-between">
@@ -161,4 +166,10 @@
 			</Table>
 		{/if}
 	</InfoCard>
-</PageContent>
+{/snippet}
+
+{#if variant === 'page'}
+	<PageContent>{@render body()}</PageContent>
+{:else}
+	<div class="@container mt-6 space-y-6">{@render body()}</div>
+{/if}
