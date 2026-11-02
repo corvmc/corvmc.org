@@ -54,6 +54,27 @@ test('search is mirrored into ?q= and survives a reload', async ({ page }) => {
 	await expect(page.locator('input[name="q"]')).toHaveValue('sprockets');
 });
 
+/**
+ * Holding the entry chunk back lands the fill on the server-rendered input,
+ * which a slow phone does on its own. Hydration has to pick the typed text up
+ * and the mirror has to write it, with no keystroke after hydration to help.
+ */
+test('a search typed before hydration still reaches ?q=', async ({ page }) => {
+	let held = 0;
+	await page.route('**/_app/immutable/entry/*.js', async (route) => {
+		held++;
+		await new Promise((r) => setTimeout(r, 1500));
+		await route.continue();
+	});
+
+	await page.goto('/directory');
+	await page.locator('input[name="q"]').fill('sprockets');
+	await expect(page).toHaveURL(/[?&]q=sprockets/);
+
+	expect(held, 'the entry chunk was never intercepted, so nothing was delayed').toBeGreaterThan(0);
+	await expect(page.locator('input[name="q"]')).toHaveValue('sprockets');
+});
+
 test('the search survives a tab switch', async ({ page }) => {
 	await page.goto('/directory');
 
