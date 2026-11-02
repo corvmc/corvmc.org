@@ -1,6 +1,16 @@
 import { getHourLog } from '$lib/server/volunteer/hour-log-service';
 import { getActiveVolunteerRoleById } from '$lib/server/volunteer/volunteer-role-service';
-import { recordEntry } from './financial-entry-service';
+import { recordEntry, reverseEntriesForSubject } from './financial-entry-service';
+
+/**
+ * A returned log takes its contributed service back off the ledger.
+ *
+ * A reversing entry, never a delete, so a month already reported keeps its
+ * figure. A no-op for a log that wrote nothing, which is most of them.
+ */
+export async function handleReturnedHours(logId: string): Promise<void> {
+	await reverseEntriesForSubject('volunteer_hour', logId, new Date(), { label: 'Returned' });
+}
 
 /**
  * Contributed services, as a financial entry.

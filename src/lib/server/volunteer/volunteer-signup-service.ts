@@ -515,11 +515,11 @@ export interface CompletedSignup {
 }
 
 /**
- * Move confirmed signups past their shift's end to `completed`.
+ * Move claimed and confirmed signups past their shift's end to `completed`.
  *
- * Only `confirmed` — a claim staff never confirmed is not evidence anyone
- * worked, and silently completing it would put hours in front of a member they
- * never agreed to do.
+ * An unconfirmed claim completes too, as worked (#1943): the person almost
+ * certainly turned up, and the pre-filled hour log is how that gets recorded.
+ * Marking a no-show afterwards is the correction.
  */
 export async function completeFinishedShifts(now = new Date()): Promise<CompletedSignup[]> {
 	const due = await db
@@ -541,7 +541,7 @@ export async function completeFinishedShifts(now = new Date()): Promise<Complete
 		.innerJoin(user, eq(user.id, volunteerSignup.userId))
 		.where(
 			and(
-				eq(volunteerSignup.status, 'confirmed'),
+				inArray(volunteerSignup.status, ['claimed', 'confirmed']),
 				lt(workOrder.endsAt, now),
 				isNull(workOrder.cancelledAt)
 			)
@@ -886,13 +886,6 @@ const eventTitleSql = sql<string | null>`(
 	select e."title" from "event_listing" e where e."id" = ${workOrder.eventId}
 )`;
 
-/**
- * How far back the close-out list and the badge look for shifts that finished without
- * being confirmed. Past a week this is history, not work. Shared so the number on the nav
- * and the rows on the dashboard cover the same window.
- */
-export const CLOSE_OUT_LOOKBACK_DAYS = 7;
-
 export interface OutstandingClaim {
 	signupId: string;
 	userId: string;
@@ -949,48 +942,6 @@ export async function listOutstandingClaims(
 }
 
 /**
- * Shifts that have finished with a claim nobody ever confirmed.
- *
- * These are the silent losses. `completeFinishedShifts` only promotes
- * `confirmed` signups, so an unconfirmed claim on a past shift never completes:
- * no hour log offered, no feedback asked, and the person who probably turned up
- * leaves no trace. The window is short — past a week this is history, not work.
- */
-export async function listUnclosedSignups(
-	{ since }: { since: Date },
-	now = new Date()
-): Promise<OutstandingClaim[]> {
-	const rows = await db
-		.select({
-			signupId: volunteerSignup.id,
-			userId: volunteerSignup.userId,
-			member: memberRefColumns(),
-			shiftId: workOrder.id,
-			volunteerRoleId: volunteerRole.id,
-			roleName: volunteerRole.name,
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt,
-			eventTitle: eventTitleSql,
-			claimedAt: volunteerSignup.claimedAt
-		})
-		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-		.innerJoin(user, eq(user.id, volunteerSignup.userId))
-		.where(
-			and(
-				eq(volunteerSignup.status, 'claimed'),
-				isNull(workOrder.cancelledAt),
-				lt(workOrder.endsAt, now),
-				gte(workOrder.endsAt, since)
-			)
-		)
-		.orderBy(desc(workOrder.startsAt));
-
-	return rows.filter(isScheduled).map((row) => ({ ...row, member: toMemberRef(row.member) }));
-}
-
-/**
  * How many things are waiting on a coordinator, as one number.
  *
  * The sidebar badge and the dashboard summary both read this, so nav and page
@@ -999,9 +950,7 @@ export async function listUnclosedSignups(
  * neither is urgent, and a badge that never reaches zero stops being read.
  */
 export async function countVolunteerWorkWaiting(now = new Date()): Promise<number> {
-	const lookback = new Date(now.getTime() - CLOSE_OUT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
-
-	const [pendingHours, claims, unclosed, unscheduled, toConfirm] = await Promise.all([
+	const [pendingHours, claims, unscheduled, toConfirm] = await Promise.all([
 		db.select({ n: count() }).from(volunteerHourLog).where(eq(volunteerHourLog.status, 'pending')),
 		db
 			.select({ n: count() })
@@ -1012,18 +961,6 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 					eq(volunteerSignup.status, 'claimed'),
 					isNull(workOrder.cancelledAt),
 					gte(workOrder.startsAt, now)
-				)
-			),
-		db
-			.select({ n: count() })
-			.from(volunteerSignup)
-			.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
-			.where(
-				and(
-					eq(volunteerSignup.status, 'claimed'),
-					isNull(workOrder.cancelledAt),
-					lt(workOrder.endsAt, now),
-					gte(workOrder.endsAt, lookback)
 				)
 			),
 		// Work with no time on it, by the predicate the Needs Scheduling card
@@ -1049,7 +986,6 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 	return (
 		Number(pendingHours[0]?.n ?? 0) +
 		Number(claims[0]?.n ?? 0) +
-		Number(unclosed[0]?.n ?? 0) +
 		Number(unscheduled[0]?.n ?? 0) +
 		Number(toConfirm[0]?.n ?? 0)
 	);

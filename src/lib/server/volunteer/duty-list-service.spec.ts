@@ -279,6 +279,27 @@ describe('applyDutyList — project subject', () => {
 		]);
 	});
 
+	it('stamps once per project: a second show needs a reason, then times from that show', async () => {
+		anchor('start');
+		sqlite.exec(`
+			INSERT INTO event_listing (id, title, starts_at, ends_at, created_by_user_id, project_id, status)
+				VALUES ('evt-2','Night two', ${STARTS + 86400}, ${ENDS + 86400}, 'u1', 'proj-1', 'published');
+		`);
+		addItem('i1', 'offset_minutes, duration_minutes', '0, 60');
+		const nightTwo = { ...SHOW, eventId: 'evt-2' };
+
+		await applyDutyList('dl-1', SHOW, 'u1');
+		await expect(applyDutyList('dl-1', nightTwo, 'u1')).rejects.toThrow(
+			/already on this show's project.*reason to apply it again for this show/
+		);
+
+		await applyDutyList('dl-1', nightTwo, 'u1', { reason: 'Night two crew' });
+		expect(shifts().map((r) => [r.event_id, r.starts_at])).toEqual([
+			['evt-1', STARTS],
+			['evt-2', STARTS + 86400]
+		]);
+	});
+
 	it('lets a re-apply through once the first round is cancelled', async () => {
 		addItem('i1', 'offset_minutes, duration_minutes', '-180, 120');
 

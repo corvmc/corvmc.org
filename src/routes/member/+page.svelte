@@ -9,7 +9,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { getMemberDashboard } from '$lib/remote/users.remote';
-	import { ReportBuildingProblemAction } from '$lib/components/actions';
+	import { InviteFriendAction, ReportBuildingProblemAction } from '$lib/components/actions';
 	import MatchesCard from './MatchesCard.svelte';
 	import NeedsYouCard from './NeedsYouCard.svelte';
 	import { creditsToHours } from '$lib/config';
@@ -25,6 +25,7 @@
 </script>
 
 <PageHeader title="Dashboard">
+	<InviteFriendAction />
 	<ReportBuildingProblemAction />
 </PageHeader>
 <PageContent>

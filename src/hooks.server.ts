@@ -10,6 +10,7 @@ import { initStorage } from '$lib/server/storage';
 import { initPrivateStorage } from '$lib/server/private-storage';
 import { initKv } from '$lib/server/kv';
 import { resolvePendingInvites } from '$lib/server/group/group-invite-service';
+import { resolveMemberInvite } from '$lib/server/user/member-invite-service';
 import { captureException } from '$lib/server/sentry';
 import { SENTRY_DSN } from '$lib/sentry-dsn';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
@@ -92,6 +93,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 
 		if (markSessionResolved(session.session.id)) {
 			resolvePendingInvites(session.user.id, session.user.email).catch(captureException);
+			resolveMemberInvite(session.user.id, session.user.email).catch(captureException);
 		}
 	}
 

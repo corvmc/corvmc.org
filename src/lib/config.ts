@@ -1253,6 +1253,19 @@ export const volunteerHourStatusLabels: Record<(typeof volunteerHourStatuses)[nu
 };
 
 /**
+ * Why a member's log waits for staff instead of counting on entry (#1943).
+ * Anything else lands approved; staff can still return it afterwards.
+ */
+export const hourLogExceptions = ['uncleared', 'specialized', 'long'] as const;
+export type HourLogException = (typeof hourLogExceptions)[number];
+
+export const hourLogExceptionLabels: Record<HourLogException, string> = {
+	uncleared: 'No clearance',
+	specialized: 'Specialized skill',
+	long: 'Long entry'
+};
+
+/**
  * How a role is grouped when roles are shown as a list to choose from. Purely
  * presentational — nothing branches on it. Committee work is volunteering that
  * happens in a monthly meeting rather than at the space, which is why it reads
@@ -1451,6 +1464,9 @@ export const VOLUNTEER_BACKDATE_LIMIT_DAYS = 90;
 /** 12 hours. The DB check constraint backstops at 24. */
 export const VOLUNTEER_MAX_MINUTES_PER_LOG = 720;
 
+/** A single member log longer than this (8 hours) waits for staff review. */
+export const VOLUNTEER_REVIEW_MINUTES_OVER = 480;
+
 export const VOLUNTEER_DESCRIPTION_MAX = 1000;
 export const VOLUNTEER_REVIEW_NOTES_MAX = 1000;
 /** How many hour logs one bulk approval may move. A page of the queue, not a year of it. */
@@ -1548,6 +1564,12 @@ export const CERT_EXPIRY_WARNING_DAYS = 60;
 
 /** How long a group invite stays valid. The invite email's footnote interpolates it. */
 export const INVITE_EXPIRY_DAYS = 7;
+
+/**
+ * Invitations to join CMC one member without `user.invite` may send per rolling
+ * day. Each is mail from CMC's Postmark account, so an uncapped one is a relay.
+ */
+export const MEMBER_INVITE_DAILY_LIMIT = 5;
 
 /**
  * Distinct addresses one staff roster import may carry. Postmark takes 500 per

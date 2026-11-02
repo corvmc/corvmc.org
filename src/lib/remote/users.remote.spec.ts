@@ -208,8 +208,14 @@ const inviteMember = vi.fn(async (..._a: unknown[]) => ({ kind: 'invited', email
 const listInviteGroups = vi.fn(async () => []);
 vi.mock('$lib/server/user/member-invite-service', () => ({
 	inviteMember: (...a: unknown[]) => inviteMember(...a),
-	listInviteGroups: () => listInviteGroups()
+	listInviteGroups: () => listInviteGroups(),
+	listMemberInvites: vi.fn(async () => ({ rows: [], pagination: {} })),
+	memberInviteStatusFilters: ['pending', 'accepted', 'revoked'],
+	resendMemberInvite: (...a: unknown[]) => resendMemberInvite(...a),
+	revokeMemberInvite: (...a: unknown[]) => revokeMemberInvite(...a)
 }));
+const resendMemberInvite = vi.fn(async (..._a: unknown[]) => undefined);
+const revokeMemberInvite = vi.fn(async (..._a: unknown[]) => undefined);
 
 // The staff user record's own services. Spied rather than stubbed inline so the
 // "argument, not params.id, identifies the target" test can read the userId
@@ -326,7 +332,10 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	{ name: 'getUserSessions', args: ['victim-user'] },
 	{ name: 'getUserHistory', args: ['victim-user'] },
 	{ name: 'getStaffUserTotals' },
-	{ name: 'inviteMemberForm', args: [{ email: 'n@x.org', groupIds: [] }] }
+	{ name: 'inviteMemberForm', args: [{ email: 'n@x.org', groupIds: [] }] },
+	{ name: 'getMemberInvites', args: [{ page: 1 }] },
+	{ name: 'resendMemberInviteForm', args: [{ id: 'inv-1' }] },
+	{ name: 'revokeMemberInviteForm', args: [{ id: 'inv-1' }] }
 ];
 
 // The target of every one of these is the argument, never `params.id`. Pinned
@@ -392,6 +401,36 @@ describe('users.remote staff guards', () => {
 			groupIds: ['grp-1'],
 			invitedBy: { id: 'acting-staff', name: 'Acting' }
 		});
+	});
+
+	it('inviteFriendForm lets any member invite, capped unless they hold user.invite', async () => {
+		inviteMember.mockResolvedValueOnce({ kind: 'existing', userId: 'u', name: 'N' } as never);
+		// The same answer as a real send: a member cannot learn who has an account.
+		expect(await users.inviteFriendForm({ email: 'N@x.org', name: 'Nia' })).toEqual({
+			email: 'n@x.org'
+		});
+		expect(requireCapability).not.toHaveBeenCalled();
+		expect(inviteMember).toHaveBeenLastCalledWith({
+			email: 'N@x.org',
+			name: 'Nia',
+			invitedBy: { id: 'acting-staff', name: 'Acting' },
+			limited: true
+		});
+
+		held.add('user.invite');
+		await users.inviteFriendForm({ email: 'n@x.org' });
+		expect(inviteMember).toHaveBeenLastCalledWith(expect.objectContaining({ limited: false }));
+	});
+
+	it('resend and revoke act as the staff caller on the invite named', async () => {
+		requireCapability.mockResolvedValue({ id: 'acting-staff', name: 'Acting' });
+		await users.resendMemberInviteForm({ id: 'inv-1' });
+		await users.revokeMemberInviteForm({ id: 'inv-1' });
+		expect(resendMemberInvite).toHaveBeenCalledWith('inv-1', {
+			id: 'acting-staff',
+			name: 'Acting'
+		});
+		expect(revokeMemberInvite).toHaveBeenCalledWith('inv-1', 'acting-staff');
 	});
 
 	it('getMemberInviteGroups answers null, listing nothing, without user.invite', async () => {

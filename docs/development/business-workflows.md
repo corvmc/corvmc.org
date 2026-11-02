@@ -1087,10 +1087,11 @@ So:
 - **Onboarding:** `volunteer-profile-service.ts` — the one-time name/phone/over-18 gate on
   `/member/volunteer/start`.
 - **Shifts:** `work-order-service.ts` + `volunteer-signup-service.ts`. A shift may name
-  the event it staffs. Only _confirmed_ signups get the reminder and the auto-complete.
+  the event it staffs. Only _confirmed_ signups get the reminder; claimed and confirmed
+  both auto-complete as worked once the shift ends (#1943).
   `claimShift(shiftId, userId, { assignedByStaff })` serves both the member's claim and the
   coordinator's assignment; `releaseSignup` is `cancelSignup` without the owner clause.
-- **The dashboard:** `listOutstandingClaims`, `listUnclosedSignups` and
+- **The dashboard:** `listOutstandingClaims` and
   `countVolunteerWorkWaiting` in the signup service, `listShortStaffedShifts` in the shift
   service, and `listLapsingBeforeRosteredShift` in the certification service — composed by
   `getVolunteerWorklist`. The sidebar badge reads `countVolunteerWorkWaiting` too, so the
@@ -1117,7 +1118,9 @@ So:
 > production anchors read that event's production. Each stamped row copies its `anchor`
 > (#2033). A missing anchor time stamps the items unscheduled with a warning and
 > `pending_offset_minutes`, and `placePendingWorkOrders` places them once the time is set.
-> Re-applying by hand needs an audited reason. The rest of this section is the history and the
+> Re-applying by hand needs an audited reason. A template is stamped **once per project**, not
+> once per show (#2152): a second night in the same project gets it by a reasoned re-apply from
+> that show's console, timed from that show. The rest of this section is the history and the
 > item model, which is unchanged.
 
 A duty list is a named set of work orders stamped onto a **subject** — an event, or a member's

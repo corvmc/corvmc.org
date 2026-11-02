@@ -51,7 +51,14 @@ import {
 import { getReservationConfig } from '$lib/server/reservation/config';
 import { listForMember as listReservationsForMember } from '$lib/server/reservation/reservation-service';
 import { listActiveSessions, getLastLoginAt } from '$lib/server/user/user-service';
-import { inviteMember, listInviteGroups } from '$lib/server/user/member-invite-service';
+import {
+	inviteMember,
+	listInviteGroups,
+	listMemberInvites,
+	memberInviteStatusFilters,
+	resendMemberInvite,
+	revokeMemberInvite
+} from '$lib/server/user/member-invite-service';
 import {
 	deactivateUser as deactivateUserService,
 	deactivateUsers as deactivateUsersService,
@@ -898,3 +905,63 @@ export const inviteMemberForm = form(
 		}
 	}
 );
+
+/**
+ * Any signed-in member inviting somebody to CMC. No groups: a club or
+ * committee invites through its own roster. Without `user.invite` the caller
+ * is held to the daily cap, since each invite is mail sent as CMC.
+ * An address with an account or a live invite gets no email.
+ */
+export const inviteFriendForm = form(
+	z.object({
+		email: z.string().trim().email('Enter an email address'),
+		name: z.string().trim().max(SHORT_TEXT_MAX).optional()
+	}),
+	async (data) => {
+		const actor = requireUser();
+		try {
+			await inviteMember({
+				email: data.email,
+				name: data.name || null,
+				invitedBy: { id: actor.id, name: actor.name },
+				limited: !(await can('user.invite'))
+			});
+			// One answer whatever happened, so the form cannot probe who has an account.
+			return { email: data.email.toLowerCase() };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/** The staff list of invitations to join CMC, filterable by status. */
+export const getMemberInvites = query(
+	z.object({
+		status: z.enum(memberInviteStatusFilters).optional(),
+		page: z.number().int().min(1).default(1)
+	}),
+	async (filters) => {
+		await requireCapability('user.invite');
+		return listMemberInvites(filters);
+	}
+);
+
+export const resendMemberInviteForm = form(z.object({ id: z.string().min(1) }), async (data) => {
+	const actor = await requireCapability('user.invite');
+	try {
+		await resendMemberInvite(data.id, { id: actor.id, name: actor.name });
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+export const revokeMemberInviteForm = form(z.object({ id: z.string().min(1) }), async (data) => {
+	const actor = await requireCapability('user.invite');
+	try {
+		await revokeMemberInvite(data.id, actor.id);
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});

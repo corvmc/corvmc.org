@@ -94,6 +94,12 @@ vi.mock('./volunteer-profile-service', async (importOriginal) => ({
 	requireActiveVolunteer: (...args: unknown[]) => requireActiveVolunteer(...(args as []))
 }));
 
+/** Ids of logs missing a clearance; empty by default, so a log counts on entry. */
+let unclearedIds = new Set<string>();
+vi.mock('./member-certification-service', () => ({
+	flagUnclearedLogs: async () => unclearedIds
+}));
+
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => 'member') }));
 
@@ -118,10 +124,11 @@ import { VolunteerRoleNotFoundError } from './volunteer-role-service';
 import {
 	DEFAULT_TIMEZONE,
 	VOLUNTEER_BACKDATE_LIMIT_DAYS,
-	VOLUNTEER_MAX_MINUTES_PER_LOG
+	VOLUNTEER_MAX_MINUTES_PER_LOG,
+	VOLUNTEER_REVIEW_MINUTES_OVER
 } from '$lib/config';
 
-const ROLE = { id: 'role-1', name: 'Front Desk', isActive: true };
+const ROLE = { id: 'role-1', name: 'Front Desk', isActive: true, isSpecializedSkill: false };
 const USER_ID = 'user-1';
 const STAFF_ID = 'staff-1';
 
@@ -147,6 +154,7 @@ function pendingLog(overrides: Record<string, unknown> = {}) {
 		minutes: 120,
 		workedOn: new Date(),
 		description: 'Covered the door',
+		reviewedAt: null,
 		...overrides
 	};
 }
@@ -170,12 +178,48 @@ describe('HourLogService', () => {
 		updateResult = [pendingLog({ status: 'approved' })];
 		deleteResult = [pendingLog()];
 		getActiveVolunteerRoleById.mockResolvedValue(ROLE);
+		unclearedIds = new Set();
 	});
 
 	describe('submitHours', () => {
-		it('persists the log as pending', async () => {
+		// Trust-first (#1943): a routine log counts on entry, with no reviewer named.
+		it('lands a routine log approved, reviewed by nobody', async () => {
 			await submitHours(USER_ID, validSubmission());
+			expect(insertValues).toHaveBeenCalledWith(
+				expect.objectContaining({ status: 'approved', reviewedByUserId: null, reviewedAt: null })
+			);
+		});
+
+		it('announces nothing for a routine log', async () => {
+			await submitHours(USER_ID, validSubmission());
+			await new Promise((r) => setTimeout(r, 0));
+			expect(emit).not.toHaveBeenCalled();
+		});
+
+		it.each([
+			['a missing clearance', () => (unclearedIds = new Set(['candidate'])), {}, 'uncleared'],
+			[
+				'a specialized-skill role',
+				() => getActiveVolunteerRoleById.mockResolvedValue({ ...ROLE, isSpecializedSkill: true }),
+				{},
+				'specialized'
+			],
+			['a long entry', () => {}, { minutes: VOLUNTEER_REVIEW_MINUTES_OVER + 15 }, 'long']
+		])('holds %s for review and says why', async (_label, arrange, overrides, reason) => {
+			arrange();
+			await submitHours(USER_ID, validSubmission(overrides));
+			await new Promise((r) => setTimeout(r, 0));
+
 			expect(insertValues).toHaveBeenCalledWith(expect.objectContaining({ status: 'pending' }));
+			expect(emit).toHaveBeenCalledWith(
+				'volunteer.hours_submitted',
+				expect.objectContaining({ reasons: [reason] })
+			);
+		});
+
+		it('counts an entry of exactly the review threshold on entry', async () => {
+			await submitHours(USER_ID, validSubmission({ minutes: VOLUNTEER_REVIEW_MINUTES_OVER }));
+			expect(insertValues).toHaveBeenCalledWith(expect.objectContaining({ status: 'approved' }));
 		});
 
 		it('files against the submitted role with no shift (Phase 2 is not built)', async () => {
@@ -220,6 +264,8 @@ describe('HourLogService', () => {
 		});
 
 		it('emits volunteer.hours_submitted with display hours, not minutes', async () => {
+			unclearedIds = new Set(['candidate']);
+			insertResult = [pendingLog({ minutes: 90 })];
 			await submitHours(USER_ID, validSubmission({ minutes: 90 }));
 			await new Promise((r) => setTimeout(r, 0));
 			expect(emit).toHaveBeenCalledWith(
@@ -296,7 +342,8 @@ describe('HourLogService', () => {
 				).resolves.toBeDefined();
 			});
 
-			it('lands approved and attributed to the staffer, not in their own queue', async () => {
+			it('lands approved and attributed to the staffer, even as an exception', async () => {
+				getActiveVolunteerRoleById.mockResolvedValue({ ...ROLE, isSpecializedSkill: true });
 				await submitHours(USER_ID, validSubmission(), { enteredByUserId: STAFF_ID });
 
 				expect(insertValues).toHaveBeenCalledWith(
@@ -363,10 +410,38 @@ describe('HourLogService', () => {
 			);
 		});
 
-		it('refuses an already-approved log', async () => {
-			selectResult = [pendingLog({ status: 'approved' })];
+		it('refuses a log staff have approved', async () => {
+			selectResult = [pendingLog({ status: 'approved', reviewedAt: new Date() })];
 			await expect(updateHourLog('log-1', USER_ID, { minutes: 180 })).rejects.toThrow(
 				HourLogNotEditableError
+			);
+		});
+
+		it('lets the member fix a log that counted on entry', async () => {
+			selectResult = [pendingLog({ status: 'approved' })];
+			updateResult = [pendingLog({ status: 'approved', minutes: 180 })];
+			const row = await updateHourLog('log-1', USER_ID, { minutes: 180 });
+			expect(row.minutes).toBe(180);
+		});
+
+		// The returned log's "Fix it" used to throw: only pending logs were editable.
+		it('classifies a corrected returned log again and clears the review', async () => {
+			selectResult = [pendingLog({ status: 'rejected', reviewedAt: new Date() })];
+			updateResult = [pendingLog({ status: 'approved' })];
+			const set = vi.fn(() => ({
+				where: vi.fn(() => ({ returning: vi.fn(() => Promise.resolve(updateResult)) }))
+			}));
+			vi.mocked(db.update).mockReturnValueOnce({ set } as never);
+
+			await updateHourLog('log-1', USER_ID, { minutes: 90 });
+
+			expect(set).toHaveBeenCalledWith(
+				expect.objectContaining({
+					status: 'approved',
+					minutes: 90,
+					reviewedByUserId: null,
+					reviewNotes: null
+				})
 			);
 		});
 
@@ -393,9 +468,14 @@ describe('HourLogService', () => {
 			await expect(withdrawHourLog('log-1', USER_ID)).rejects.toThrow(HourLogNotEditableError);
 		});
 
-		it('refuses an approved log', async () => {
-			selectResult = [pendingLog({ status: 'approved' })];
+		it('refuses a log staff have approved', async () => {
+			selectResult = [pendingLog({ status: 'approved', reviewedAt: new Date() })];
 			await expect(withdrawHourLog('log-1', USER_ID)).rejects.toThrow(HourLogNotEditableError);
+		});
+
+		it('withdraws a log that counted on entry', async () => {
+			selectResult = [pendingLog({ status: 'approved' })];
+			await expect(withdrawHourLog('log-1', USER_ID)).resolves.toBeUndefined();
 		});
 	});
 
@@ -566,6 +646,20 @@ describe('HourLogService', () => {
 			await rejectHourLog('log-1', STAFF_ID, 'Duplicate');
 			await new Promise((r) => setTimeout(r, 0));
 			expect(addCredits).not.toHaveBeenCalled();
+		});
+
+		// Most logs count on entry, so a return has to reach an approved one.
+		it('returns a log that was already approved', async () => {
+			selectResultQueue[0] = [pendingLog({ status: 'approved' })];
+			const row = await rejectHourLog('log-1', STAFF_ID, 'Not volunteer time');
+			expect(row.status).toBe('rejected');
+		});
+
+		it('refuses a log that was already returned', async () => {
+			selectResultQueue[0] = [pendingLog({ status: 'rejected' })];
+			await expect(rejectHourLog('log-1', STAFF_ID, 'Again')).rejects.toThrow(
+				HourLogAlreadyReviewedError
+			);
 		});
 	});
 });

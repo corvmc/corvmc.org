@@ -17,11 +17,16 @@
 	function onsuccess(result?: unknown) {
 		const r = result as
 			| { kind: 'existing'; userId: string; name: string }
-			| { kind: 'invited'; email: string }
+			| { kind: 'pending' | 'invited'; email: string }
 			| undefined;
 		if (r?.kind === 'existing') {
 			const href = resolve('/staff/members/[id]', { id: r.userId });
 			toast.info(`${r.name} already has an account`, {
+				action: { label: 'Open', onClick: () => goto(href) }
+			});
+		} else if (r?.kind === 'pending') {
+			const href = resolve('/staff/members/invites');
+			toast.info(`${r.email} already has a pending invitation`, {
 				action: { label: 'Open', onClick: () => goto(href) }
 			});
 		} else if (r?.kind === 'invited') {

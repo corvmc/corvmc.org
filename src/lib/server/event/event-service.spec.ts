@@ -2122,6 +2122,69 @@ describe('EventService', () => {
 		});
 	});
 
+	// Staff may correct a cancelled listing's record (#2126); members may not.
+	describe('editing a cancelled event', () => {
+		const cancelled = () => [
+			{ ...mockEventRow, status: 'cancelled', ticketingEnabled: true, ticketPrice: 1500 }
+		];
+
+		it('still refuses without the staff allowance', async () => {
+			selectResult = cancelled();
+			await expect(update('evt-1', { title: 'Fixed' })).rejects.toThrow(EventStateError);
+			expect(mockRecordAudit).not.toHaveBeenCalled();
+		});
+
+		it('saves the edit, leaves it cancelled, and records it as made while cancelled', async () => {
+			selectResult = cancelled();
+			const startsAt = new Date('2025-07-16T02:00:00Z');
+			const endsAt = new Date('2025-07-16T05:00:00Z');
+
+			await update(
+				'evt-1',
+				// Unchanged ticket terms, as the edit form always posts them.
+				{ title: 'Fixed', startsAt, endsAt, ticketingEnabled: true, ticketPrice: 1500 },
+				{ whileCancelled: true }
+			);
+
+			expect(lastUpdateSet).toMatchObject({ title: 'Fixed', startsAt, endsAt });
+			expect(lastUpdateSet).not.toHaveProperty('status');
+			expect(lastSaleSet).toEqual({});
+			expect(mockRecordAudit).toHaveBeenCalledWith({
+				action: 'event.edited_while_cancelled',
+				subject: { type: 'event', id: 'evt-1', label: 'Fixed' },
+				details: { fields: ['title', 'times'] }
+			});
+		});
+
+		it('refuses a change to the ticket terms', async () => {
+			selectResult = cancelled();
+			await expect(
+				update('evt-1', { ticketPrice: 2000 }, { whileCancelled: true })
+			).rejects.toThrow(EventStateError);
+			expect(lastSaleSet).toEqual({});
+		});
+
+		it('refuses to hold or move the space', async () => {
+			selectResult = cancelled();
+			await expect(
+				update(
+					'evt-1',
+					{
+						rebook: {
+							userId: 'staff-1',
+							reservationStartsAt: new Date('2025-07-16T02:00:00Z'),
+							reservationEndsAt: new Date('2025-07-16T05:00:00Z'),
+							overrideConflicts: false
+						}
+					},
+					{ whileCancelled: true }
+				)
+			).rejects.toThrow(EventStateError);
+			expect(staffCreate).not.toHaveBeenCalled();
+			expect(adjustWindow).not.toHaveBeenCalled();
+		});
+	});
+
 	describe('the bottom of the sliding scale', () => {
 		const scaled = (over: Record<string, unknown> = {}) => [
 			{

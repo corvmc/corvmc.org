@@ -33,6 +33,7 @@ export { default as RecordForm8283Action } from './RecordForm8283Action.svelte';
 export { default as MarkReimbursedAction } from './MarkReimbursedAction.svelte';
 export { default as ReportDamageAction } from './ReportDamageAction.svelte';
 export { default as ReportBuildingProblemAction } from './ReportBuildingProblemAction.svelte';
+export { default as InviteFriendAction } from './InviteFriendAction.svelte';
 export { default as RemoveCategoryAction } from './RemoveCategoryAction.svelte';
 export { default as CreateLoanAction } from './CreateLoanAction.svelte';
 export { default as CancelLoanAction } from './CancelLoanAction.svelte';

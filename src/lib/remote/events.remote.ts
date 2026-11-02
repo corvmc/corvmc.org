@@ -1093,19 +1093,24 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 	await requireListingReader(id);
 
 	const detail = await getStaffEventDetail(id);
-	const [nearby, venues, production, photos, recurringSeries] = await Promise.all([
-		listEventsNear(detail.event.startsAt, { excludeEventId: id }),
-		venuePickerOptions(),
-		// The header's one entry reads this to name itself, and the production
-		// card renders its status, producer and load-in. Everything else about
-		// the record is worked on in the console.
-		getProductionByEvent(id),
-		listEventPhotos(id),
-		getEventRecurringSeries(id)
-	]);
+	const [nearby, venues, production, photos, recurringSeries, canEditCancelled] = await Promise.all(
+		[
+			listEventsNear(detail.event.startsAt, { excludeEventId: id }),
+			venuePickerOptions(),
+			// The header's one entry reads this to name itself, and the production
+			// card renders its status, producer and load-in. Everything else about
+			// the record is worked on in the console.
+			getProductionByEvent(id),
+			listEventPhotos(id),
+			getEventRecurringSeries(id),
+			// `updateEvent` admits staff alone to a cancelled listing (#2126).
+			can('event.manage')
+		]
+	);
 
 	return {
 		detail,
+		canEditCancelled,
 		venues,
 		production,
 		recurringSeries,
@@ -1515,7 +1520,8 @@ export const updateEvent = form(
 		}
 
 		try {
-			await update(data.eventId, updateParams);
+			// A show's committee writes the listing too, but correcting a cancelled one is staff's.
+			await update(data.eventId, updateParams, { whileCancelled: await can('event.manage') });
 		} catch (err) {
 			mapDomainError(err);
 		}

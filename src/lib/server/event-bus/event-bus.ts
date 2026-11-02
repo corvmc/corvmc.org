@@ -2,6 +2,7 @@ import Emittery from 'emittery';
 import type {
 	BookerType,
 	GroupKind,
+	HourLogException,
 	RenewalKind,
 	ReservationCanceller,
 	ThreadNotifyPolicy
@@ -412,8 +413,8 @@ export interface GroupInvitesBulkCreatedEvent extends Omit<
 }
 
 /**
- * Staff invited somebody with no account to join CMC (#1830). `token` is one
- * chosen group's invite token, null when no group was chosen.
+ * Somebody with no account was invited to join CMC. `token` is one chosen
+ * group's invite token, null when no group was chosen.
  */
 export interface MemberInviteCreatedEvent {
 	email: string;
@@ -763,6 +764,8 @@ export interface VolunteerHoursSubmittedEvent {
 	/** ISO string, like every other date on this bus. */
 	workedOn: string;
 	description: string;
+	/** Why it waits for staff. Only a log with at least one is announced. */
+	reasons: HourLogException[];
 }
 
 export interface VolunteerHoursReviewedEvent {

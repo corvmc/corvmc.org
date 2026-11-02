@@ -351,10 +351,10 @@
 								</div>
 
 								{#if !calledOff && claimant.status === 'claimed'}
-									<!-- The state that silently produces nothing, said out loud
-									     on the row it applies to. -->
+									<!-- Only confirmation sends the reminder; the claim still
+									     completes as worked once the shift ends. -->
 									<p class="border-l-2 border-warning pl-2 text-xs text-warning">
-										Unconfirmed: no reminder, no auto-complete.
+										Unconfirmed: no reminder.
 									</p>
 								{/if}
 							</li>

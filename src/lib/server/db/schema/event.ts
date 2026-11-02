@@ -319,7 +319,7 @@ export const lineupEntrySchema = z.object({
 });
 
 /** A whole bill. Capped so one event can't fan out unbounded invites. */
-export const lineupSchema = z.array(lineupEntrySchema).max(12, 'At most 12 acts on a bill');
+export const lineupSchema = z.array(lineupEntrySchema).max(12, 'At most 12 bands on a bill');
 
 export type LineupEntry = z.infer<typeof lineupEntrySchema>;
 

@@ -3,7 +3,12 @@ import {
 	type GroupInviteCreatedEvent,
 	type MemberInviteCreatedEvent
 } from '$lib/server/event-bus/event-bus';
-import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE, renewalKindLabels } from '$lib/config';
+import {
+	INVITE_EXPIRY_DAYS,
+	UNCONFIRMED_RELEASE_NOTICE,
+	hourLogExceptionLabels,
+	renewalKindLabels
+} from '$lib/config';
 import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/terms';
 import { fanOutAnnouncement, fanOutGroupRoom } from '$lib/server/group/announcement-fanout';
@@ -1403,9 +1408,9 @@ export function registerAllNotificationListeners(): void {
 		}
 	});
 
-	// --- Volunteer hours submitted (notify staff) ---
-	// Fans out per-staffer rather than to a single STAFF_CONTACT_EMAIL: this is
-	// queue work, so it needs an in-app badge and each staffer's own preference.
+	// --- Volunteer hours need review (notify staff) ---
+	// Only exceptions are announced; a routine log counts on entry. Fans out
+	// per-staffer: this is queue work, so it needs an in-app badge each.
 	domainEvents.on('volunteer.hours_submitted', async ({ data: event }) => {
 		const staff = await listUsersWithCapability('volunteer.reviewHours');
 		for (const member of staff) {
@@ -1414,8 +1419,8 @@ export function registerAllNotificationListeners(): void {
 					type: 'volunteer_hours_submitted',
 					userId: member.id,
 					userEmail: member.email,
-					title: `${event.userName} logged ${formatHours(event.hours)} of volunteer time`,
-					body: `${event.roleName} — ${event.description}`,
+					title: `${event.userName} logged ${formatHours(event.hours)} to review`,
+					body: `${event.roleName} — ${event.reasons.map((r) => hourLogExceptionLabels[r]).join(', ')}`,
 					href: '/staff/volunteer'
 				});
 			} catch (err) {
@@ -1428,6 +1433,7 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- Volunteer hours approved (notify member) ---
+	// Only after a staff review; a log that counted on entry sends nothing.
 	domainEvents.on('volunteer.hours_approved', async ({ data: event }) => {
 		await dispatch({
 			type: 'volunteer_hours_approved',
@@ -1471,7 +1477,7 @@ export function registerAllNotificationListeners(): void {
 				heading: 'Volunteer hours returned',
 				paragraphs: [
 					{
-						text: "Staff reviewed the hours you logged and couldn't approve them as written. You can log them again with the correction below."
+						text: 'Staff returned the hours you logged. You can fix them with the correction below.'
 					},
 					...(event.reviewNotes ? [{ text: `Reason: ${event.reviewNotes}` }] : [])
 				],

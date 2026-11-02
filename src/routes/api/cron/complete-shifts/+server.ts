@@ -11,9 +11,8 @@ import { completeFinishedShifts } from '$lib/server/volunteer/volunteer-signup-s
  * reason: a shift that ended at 10pm should read as done well before anybody
  * looks at the page next morning.
  *
- * Only `confirmed` signups complete — see completeFinishedShifts. A claim staff
- * never confirmed is not evidence anyone worked, and completing it would put a
- * pre-filled hour log in front of a member who never got the nod.
+ * Claimed and confirmed signups both complete, as worked — see
+ * completeFinishedShifts. A no-show is the correction, marked afterwards.
  *
  *   POST /api/cron/complete-shifts
  *   Authorization: Bearer <CRON_SECRET>

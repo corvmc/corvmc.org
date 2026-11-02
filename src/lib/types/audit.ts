@@ -31,6 +31,7 @@ export const auditActions = [
 	'production.payout_recorded',
 	'production.payout_undone',
 	'event.published_over_warnings',
+	'event.edited_while_cancelled',
 	'work_order.created',
 	'work_order.assigned',
 	'work_order.member_assigned',
@@ -142,6 +143,8 @@ export interface AuditDetailsByAction {
 	'production.payout_undone': ProductionPayout;
 	/** A CMC listing published over its readiness warnings (#1787). */
 	'event.published_over_warnings': { warnings: string[]; reason: string };
+	/** A staff edit to a listing that stays cancelled (#2126). Field names only. */
+	'event.edited_while_cancelled': { fields: EventEditField[] };
 	'work_order.created': { projectId: string | null; title: string };
 	/**
 	 * Who answers it changed. `cancelledSignups` counts people taken off by the
@@ -201,6 +204,16 @@ export interface AuditDetailsByAction {
 type ContractorJobStatus = 'asked' | 'declined' | 'booked' | 'completed' | 'cancelled' | 'no_show';
 
 export type WorkOrderField = 'role' | 'title' | 'capacity' | 'notes' | 'event' | 'equipment';
+export type EventEditField =
+	| 'title'
+	| 'description'
+	| 'kind'
+	| 'tags'
+	| 'location'
+	| 'externalTicketUrl'
+	| 'venue'
+	| 'times'
+	| 'poster';
 export type ProjectField = 'name' | 'description' | 'committee' | 'suggestion' | 'budget' | 'dates';
 
 /** How a work order is answered, derived from its rows (work-order-service `workOrderModes`). */

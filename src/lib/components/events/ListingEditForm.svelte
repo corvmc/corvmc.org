@@ -39,11 +39,13 @@
 		};
 		linkedReservation: { id: string; startsAt: Date; endsAt: Date } | null;
 		venues: { id: string; name: string; isPrimary: boolean }[];
+		/** It stays cancelled: the record is editable, the sale and the room are not (#2126). */
+		cancelled?: boolean;
 		onsaved: () => void;
 		oncancel: () => void;
 	}
 
-	let { event, linkedReservation, venues, onsaved, oncancel }: Props = $props();
+	let { event, linkedReservation, venues, cancelled = false, onsaved, oncancel }: Props = $props();
 
 	const { fields } = updateEvent;
 	const sellsHere = $derived(event.source === 'cmc');
@@ -78,7 +80,7 @@
 	const offSite = $derived(
 		editVenueId !== '' && !venues.find((v) => v.id === editVenueId)?.isPrimary
 	);
-	const canReserveSpace = $derived(!linkedReservation);
+	const canReserveSpace = $derived(!linkedReservation && !cancelled);
 	// `updateEvent` refuses a hold off-site, so picking one drops the toggle.
 	$effect(() => {
 		if (offSite && reserveSpace) {
@@ -194,7 +196,7 @@
 	}
 
 	async function checkForRebook() {
-		if (!linkedReservation || !editDate || !editStartTime || !editEndTime) {
+		if (cancelled || !linkedReservation || !editDate || !editStartTime || !editEndTime) {
 			rebookNeeded = false;
 			return;
 		}
@@ -374,64 +376,66 @@
 						/>
 					</FormField>
 
-					<!-- What attendees pay wherever they buy, so it applies to every
+					{#if !cancelled}
+						<!-- What attendees pay wherever they buy, so it applies to every
 					     source. Only capacity depends on us doing the selling. -->
-					<FormField label="Suggested price ($)" id="editTicketPrice" issues={[]}>
-						<input
-							id="editTicketPrice"
-							type="number"
-							bind:value={editTicketPriceDollars}
-							min="0.01"
-							step="0.01"
-							placeholder="15.00"
-							class="input w-full"
-							required={editTicketingEnabled}
-						/>
-						<span class="mt-1 text-muted">
-							Where the sliding scale opens. Leave blank for a free event.
-						</span>
-					</FormField>
+						<FormField label="Suggested price ($)" id="editTicketPrice" issues={[]}>
+							<input
+								id="editTicketPrice"
+								type="number"
+								bind:value={editTicketPriceDollars}
+								min="0.01"
+								step="0.01"
+								placeholder="15.00"
+								class="input w-full"
+								required={editTicketingEnabled}
+							/>
+							<span class="mt-1 text-muted">
+								Where the sliding scale opens. Leave blank for a free event.
+							</span>
+						</FormField>
 
-					<FormField label="Minimum price ($)" id="editTicketFloor" issues={[]}>
-						<input
-							id="editTicketFloor"
-							type="number"
-							bind:value={editTicketFloorDollars}
-							min="0"
-							step="0.01"
-							placeholder="0.00"
-							class="input w-full"
-						/>
-						<span class="mt-1 text-muted">
-							The least someone can pay. $0 lets anyone come for free — no card, no questions. Leave
-							it at $0 unless a band needs a floor.
-						</span>
-					</FormField>
+						<FormField label="Minimum price ($)" id="editTicketFloor" issues={[]}>
+							<input
+								id="editTicketFloor"
+								type="number"
+								bind:value={editTicketFloorDollars}
+								min="0"
+								step="0.01"
+								placeholder="0.00"
+								class="input w-full"
+							/>
+							<span class="mt-1 text-muted">
+								The least someone can pay. $0 lets anyone come for free — no card, no questions.
+								Leave it at $0 unless a band needs a floor.
+							</span>
+						</FormField>
 
-					{#if sellsHere}
-						<div class="fieldset">
-							<label class="label cursor-pointer justify-start gap-3">
-								<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
-								<span class="fieldset-legend">Sell tickets through the site</span>
-							</label>
-						</div>
+						{#if sellsHere}
+							<div class="fieldset">
+								<label class="label cursor-pointer justify-start gap-3">
+									<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
+									<span class="fieldset-legend">Sell tickets through the site</span>
+								</label>
+							</div>
 
-						{#if editTicketingEnabled}
-							<Card tone="base-200" class="p-4">
-								<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
-									<input
-										id="editTicketQuantity"
-										name="ticketQuantity"
-										type="number"
-										bind:value={editTicketQuantity}
-										min="1"
-										step="1"
-										placeholder="Unlimited"
-										class="input w-full"
-									/>
-								</FormField>
-								<p class="mt-2 text-muted">Leave capacity blank for unlimited tickets.</p>
-							</Card>
+							{#if editTicketingEnabled}
+								<Card tone="base-200" class="p-4">
+									<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
+										<input
+											id="editTicketQuantity"
+											name="ticketQuantity"
+											type="number"
+											bind:value={editTicketQuantity}
+											min="1"
+											step="1"
+											placeholder="Unlimited"
+											class="input w-full"
+										/>
+									</FormField>
+									<p class="mt-2 text-muted">Leave capacity blank for unlimited tickets.</p>
+								</Card>
+							{/if}
 						{/if}
 					{/if}
 

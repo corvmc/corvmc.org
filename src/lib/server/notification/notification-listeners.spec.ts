@@ -1018,7 +1018,8 @@ describe('volunteer hour-log handlers', () => {
 			roleName: 'Front Desk',
 			hours: 2,
 			workedOn: '2026-05-21T19:00:00.000Z',
-			description: 'Covered the door'
+			description: 'Covered the door',
+			reasons: ['long']
 		});
 
 		expect(mockDispatch).toHaveBeenCalledTimes(2);
@@ -1035,11 +1036,14 @@ describe('volunteer hour-log handlers', () => {
 			roleName: 'Front Desk',
 			hours: 2,
 			workedOn: '2026-05-21T19:00:00.000Z',
-			description: 'Covered the door'
+			description: 'Covered the door',
+			reasons: ['long']
 		});
 
 		expect(mockDispatch.mock.calls[0][0].email).toBeUndefined();
 		expect(mockDispatch.mock.calls[0][0].href).toBe('/staff/volunteer');
+		// Only exceptions are announced, so the notice says which one.
+		expect(mockDispatch.mock.calls[0][0].body).toContain('Long entry');
 	});
 
 	// One staffer with a bad address must not swallow the rest of the fan-out.
@@ -1054,7 +1058,8 @@ describe('volunteer hour-log handlers', () => {
 			roleName: 'Front Desk',
 			hours: 2,
 			workedOn: '2026-05-21T19:00:00.000Z',
-			description: 'Covered the door'
+			description: 'Covered the door',
+			reasons: ['long']
 		});
 
 		expect(mockDispatch).toHaveBeenCalledTimes(2);

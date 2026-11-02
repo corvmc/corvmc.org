@@ -1,6 +1,7 @@
 <script lang="ts">
 	/**
-	 * The top of the hours queue, with its actions, and a link to the rest.
+	 * The top of the hours queue, with its actions, and a link to the rest. Only
+	 * exceptions wait here; every other log counted when it was entered.
 	 *
 	 * A summary and deliberately not a replacement: no filters, no pagination, no tabs.
 	 * The full queue is a page, and a dashboard card that grows a filter bar has become the
@@ -12,9 +13,10 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { IconCheck, IconArrowBackUp, IconAlertTriangle } from '@tabler/icons-svelte';
+	import HourLogExceptions from '$lib/components/volunteer/HourLogExceptions.svelte';
+	import { IconCheck, IconArrowBackUp } from '@tabler/icons-svelte';
 	import { formatDateShort } from '$lib/utils/format';
-	import { formatVolunteerHours } from '$lib/config';
+	import { formatVolunteerHours, type HourLogException } from '$lib/config';
 	import { approveVolunteerHours, rejectVolunteerHours } from '$lib/remote/volunteer.remote';
 	import type { MemberRef } from '$lib/types/entity';
 
@@ -26,7 +28,7 @@
 		minutes: number;
 		workedOn: Date;
 		shiftId: string | null;
-		uncleared: boolean;
+		exceptions: HourLogException[];
 	};
 
 	let { logs, total }: { logs: Log[]; total: number } = $props();
@@ -59,16 +61,7 @@
 				</td>
 				<td class="col-support">
 					{log.roleName}
-					{#if log.uncleared}
-						<!-- Advisory, exactly as on the full queue: a prompt to have a
-						     conversation, not a reason to refuse hours already worked. -->
-						<span
-							class="ml-1 inline-block align-middle text-warning"
-							title="Missing a required clearance on the date worked"
-						>
-							<IconAlertTriangle size={14} />
-						</span>
-					{/if}
+					<HourLogExceptions exceptions={log.exceptions} />
 				</td>
 				<td class="col-support whitespace-nowrap">{formatDateShort(log.workedOn)}</td>
 				<td class="cell-num">{formatVolunteerHours(log.minutes)}</td>

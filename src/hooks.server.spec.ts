@@ -80,6 +80,10 @@ const mockResolvePendingInvites = vi.fn();
 vi.mock('$lib/server/group/group-invite-service', () => ({
 	resolvePendingInvites: (...args: unknown[]) => mockResolvePendingInvites(...args)
 }));
+const mockResolveMemberInvite = vi.fn();
+vi.mock('$lib/server/user/member-invite-service', () => ({
+	resolveMemberInvite: (...args: unknown[]) => mockResolveMemberInvite(...args)
+}));
 
 const mockCaptureException = vi.fn();
 vi.mock('$lib/server/sentry', () => ({
@@ -106,6 +110,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	mockSvelteKitHandler.mockResolvedValue(new Response('ok'));
 	mockResolvePendingInvites.mockResolvedValue(undefined);
+	mockResolveMemberInvite.mockResolvedValue(undefined);
 	mockResolveBandSubdomain.mockResolvedValue(null);
 	mockResolveBandSlug.mockResolvedValue(null);
 });
@@ -212,6 +217,7 @@ describe('hooks.server handle', () => {
 		await handle({ event: event as any, resolve });
 
 		expect(mockResolvePendingInvites).toHaveBeenCalledWith('user-2', 'bob@test.com');
+		expect(mockResolveMemberInvite).toHaveBeenCalledWith('user-2', 'bob@test.com');
 	});
 
 	/**

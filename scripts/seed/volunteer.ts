@@ -551,12 +551,6 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 		endsAt: Date;
 	}[] = [];
 
-	// The most recent shift that has already finished. Its first claim is left
-	// unconfirmed on purpose — see the note where the status is picked.
-	const strandedShiftId = shiftRows
-		.filter((sh) => sh.startsAt < now)
-		.sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0]?.id;
-
 	for (const [shiftIndex, shift] of shiftRows.entries()) {
 		const volunteerRoleId = shift.volunteerRoleId;
 		if (!volunteerRoleId) throw new Error('Every seeded shift is built with a role.');
@@ -582,20 +576,14 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 			const signupId = randomUUID();
 			// Upcoming shifts mix claimed and confirmed; past ones completed, with
 			// the occasional no-show so the detail view shows the whole vocabulary.
-			// The last shift to have finished keeps one claim nobody confirmed. That is
-			// the state the close-out card exists for: `complete-shifts` only promotes
-			// confirmed signups, so it never completed, no hour log was ever offered
-			// and no feedback was asked for — and until the dashboard, nothing said so.
-			const strandedClaim = shift.id === strandedShiftId && i === 0;
-			const status = strandedClaim
-				? 'claimed'
-				: isPast
-					? i === 0 && random() < 0.2
-						? 'no_show'
-						: 'completed'
-					: i === 0
-						? 'confirmed'
-						: 'claimed';
+			// No past claim stays `claimed`: `complete-shifts` completes those too.
+			const status = isPast
+				? i === 0 && random() < 0.2
+					? 'no_show'
+					: 'completed'
+				: i === 0
+					? 'confirmed'
+					: 'claimed';
 			signupRows.push({
 				id: signupId,
 				shiftId: shift.id,
@@ -650,9 +638,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 	// the member's "You've been asked" card and the shift page's "Asked" panel
 	// both have something in them on a fresh seed. Neither holds a place, which
 	// is what keeps the short-staffed card honest beside them.
-	const invitableShift = shiftRows.find(
-		(s) => s.startsAt > now && s.id !== strandedShiftId && !s.cancelledAt
-	);
+	const invitableShift = shiftRows.find((s) => s.startsAt > now && !s.cancelledAt);
 	if (invitableShift) {
 		const asked = users.filter((u) => !signupRows.some((r) => r.userId === u.id)).slice(0, 2);
 		for (const [i, u] of asked.entries()) {
@@ -740,7 +726,8 @@ export async function seedVolunteerHours(
 	if (roles.length === 0 || users.length === 0) return [];
 
 	// Weighted so the queue has real work on first load, and the report has
-	// enough approved history to be worth opening.
+	// enough approved history to be worth opening. Pending rows are exceptions
+	// (#1943) — a specialized role or a long entry — since nothing else waits.
 	const STATUS_MIX = [
 		...Array(10).fill('pending'),
 		...Array(36).fill('approved'),
@@ -751,6 +738,7 @@ export async function seedVolunteerHours(
 	const reviewer = users[0];
 	const archivedRole = roles.find((r: any) => !r.isActive);
 	const activeRoles = roles.filter((r: any) => r.isActive);
+	const specializedRole = activeRoles.find((r: any) => r.isSpecializedSkill);
 
 	const day = 86_400_000;
 	const linked = completions
@@ -778,16 +766,24 @@ export async function seedVolunteerHours(
 	const bulk = STATUS_MIX.map((status, i) => {
 		// A few logs against the archived role, so the report has to prove it
 		// still resolves retired roles.
-		const role = archivedRole && i % 17 === 0 ? archivedRole : pick(activeRoles);
+		const pending = status === 'pending';
+		const long = pending && (!specializedRole || i % 2 === 1);
+		const role =
+			pending && !long
+				? specializedRole
+				: archivedRole && i % 17 === 0
+					? archivedRole
+					: pick(activeRoles);
 		const workedOn = ptDate(-randomInt(1, 180), 12);
-		const reviewed = status !== 'pending';
+		// Every other approved row counted on entry, so nobody reviewed it.
+		const reviewed = !pending && !(status === 'approved' && i % 2 === 0);
 
 		return {
 			userId: pick(volunteers).id,
 			volunteerRoleId: role.id,
 			shiftId: null,
 			workedOn,
-			minutes: pick([60, 90, 120, 180, 240, 300]),
+			minutes: long ? pick([540, 600]) : pick([60, 90, 120, 180, 240, 300]),
 			description: pick(VOLUNTEER_DESCRIPTIONS),
 			status,
 			reviewedByUserId: reviewed ? reviewer.id : null,

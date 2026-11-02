@@ -452,7 +452,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// In-app only, like the inbox and content-flag queues. A log every few
 		// days is routine queue work; emailing every staffer would train them to
 		// ignore it.
-		description: 'Notification when a member logs volunteer hours for review',
+		description: 'Notification when logged volunteer hours need a staff review',
 		defaults: { email: false, inApp: true, sms: false },
 		staffOnly: true
 	},

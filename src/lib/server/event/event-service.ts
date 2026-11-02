@@ -75,6 +75,7 @@ import {
 	shiftAnchoredWorkOrders
 } from '$lib/server/volunteer/retime-work-orders';
 import type { BatchItem } from 'drizzle-orm/batch';
+import type { EventEditField } from '$lib/types/audit';
 import { project } from '$lib/server/db/schema/project';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
@@ -634,10 +635,71 @@ async function holdBookerFor(eventId: string, groupId: string | null) {
 	return listingHoldBooker({ id: eventId, productionId: existingProduction?.id ?? null, groupId });
 }
 
-export async function update(eventId: string, params: UpdateEventParams): Promise<EventRow> {
+/**
+ * What a save changed, as field names. Values stay out of the audit row: a
+ * description alone can outgrow its byte cap.
+ */
+function changedFields(existing: EventRow, params: UpdateEventParams): EventEditField[] {
+	const differs = (a: Date | null | undefined, b: Date | null) =>
+		a !== undefined && (a?.getTime() ?? null) !== (b?.getTime() ?? null);
+	const fields: EventEditField[] = [];
+	const plain = ['title', 'description', 'kind', 'tags', 'location', 'externalTicketUrl'] as const;
+	for (const key of plain) {
+		if (params[key] !== undefined && params[key] !== existing[key]) fields.push(key);
+	}
+	if (params.venueId !== undefined && params.venueId !== existing.venueId) fields.push('venue');
+	if (
+		differs(params.startsAt, existing.startsAt) ||
+		differs(params.endsAt, existing.endsAt) ||
+		differs(params.doorsAt, existing.doorsAt)
+	) {
+		fields.push('times');
+	}
+	if (params.posterFile) fields.push('poster');
+	return fields;
+}
+
+/**
+ * A cancelled listing stays cancelled through an edit: the record may be
+ * corrected, but the sale and the room are left alone. Ticket terms posted
+ * unchanged (the edit form always posts them) are dropped, not refused.
+ */
+function cancelledEditParams(existing: EventRow, params: UpdateEventParams): UpdateEventParams {
+	if (params.rebook) throw new EventStateError('A cancelled event holds no space');
+	const sale = {
+		ticketingEnabled: existing.ticketingEnabled,
+		ticketPrice: existing.ticketPrice,
+		ticketPriceFloorCents: existing.ticketPriceFloorCents,
+		ticketQuantity: existing.ticketQuantity
+	};
+	const rest = { ...params };
+	for (const key of Object.keys(sale) as (keyof typeof sale)[]) {
+		if (rest[key] === undefined) continue;
+		if (rest[key] !== sale[key]) {
+			throw new EventStateError('A cancelled event’s tickets cannot be changed');
+		}
+		delete rest[key];
+	}
+	return rest;
+}
+
+export interface UpdateEventOptions {
+	/** Staff only: edit a cancelled listing's record, which stays cancelled (#2126). */
+	whileCancelled?: boolean;
+}
+
+export async function update(
+	eventId: string,
+	input: UpdateEventParams,
+	opts: UpdateEventOptions = {}
+): Promise<EventRow> {
 	const existing = await getById(eventId);
 	if (!existing) throw new EventNotFoundError();
-	if (existing.status === 'cancelled') throw new EventStateError('Cannot update a cancelled event');
+	const isCancelled = existing.status === 'cancelled';
+	if (isCancelled && !opts.whileCancelled) {
+		throw new EventStateError('Cannot update a cancelled event');
+	}
+	const params = isCancelled ? cancelledEditParams(existing, input) : input;
 	assertTimeOrder(existing, params);
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -795,6 +857,13 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 				) as (typeof eventListing.$inferSelect)[])
 			: await write;
 
+	if (isCancelled) {
+		await recordAuditEntry({
+			action: 'event.edited_while_cancelled',
+			subject: { type: 'event', id: eventId, label: updated.title },
+			details: { fields: changedFields(existing, params) }
+		});
+	}
 	return readBack(updated);
 }
 
@@ -1928,7 +1997,7 @@ export async function setEventLineup(
 	opts: SetLineupOptions = {}
 ): Promise<void> {
 	if (entries.length > LINEUP_MAX) {
-		throw new Error(`At most ${LINEUP_MAX} acts on a bill`);
+		throw new Error(`At most ${LINEUP_MAX} bands on a bill`);
 	}
 
 	const evt = await getById(eventId);

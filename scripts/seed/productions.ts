@@ -2,7 +2,7 @@ import { production, productionExpense } from '../../src/lib/server/db/schema/pr
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { batchInsert, db } from './db';
 import { insertShowProductions, syncShowProjects } from './show-project';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { type SeedEvent, type SeedUser } from './types';
 
 /**
@@ -113,16 +113,38 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 
 	// upcoming[2] and everything after it stay production-less on purpose.
 
-	// The rows come back because the run of show hangs off them: a slot needs the
-	// production id and the downbeat the set times are walked from.
-	const inserted = await insertShowProductions(rows);
-
-	// Put each listing on the project of the production it announces.
-	for (const [i, row] of inserted.entries()) {
-		await db
-			.update(eventListing)
-			.set({ projectId: row.projectId })
-			.where(eq(eventListing.id, eventIds[i]));
+	// A show that holds its own room already has a production (seed/events.ts);
+	// that one takes the status, so its hold stays booked to what the listing
+	// announces (#2143). The rest get a new one. The rows come back because the
+	// run of show hangs off them.
+	const existing = new Map(
+		(
+			await db
+				.select({ eventId: eventListing.id, productionId: production.id })
+				.from(eventListing)
+				.innerJoin(production, eq(production.projectId, eventListing.projectId))
+				.where(inArray(eventListing.id, eventIds))
+		).map((r) => [r.eventId, r.productionId])
+	);
+	const fresh = await insertShowProductions(rows.filter((_, i) => !existing.has(eventIds[i])));
+	const inserted: (typeof production.$inferSelect)[] = [];
+	for (const [i, row] of rows.entries()) {
+		const productionId = existing.get(eventIds[i]);
+		if (productionId) {
+			const [updated] = await db
+				.update(production)
+				.set(row)
+				.where(eq(production.id, productionId))
+				.returning();
+			inserted.push(updated);
+		} else {
+			const created = fresh.shift()!;
+			await db
+				.update(eventListing)
+				.set({ projectId: created.projectId })
+				.where(eq(eventListing.id, eventIds[i]));
+			inserted.push(created);
+		}
 	}
 	await syncShowProjects();
 

@@ -78,6 +78,11 @@ vi.mock('$lib/server/db', () => ({
 
 vi.mock('$lib/server/db/schema/event', () => ({ eventListing: {} }));
 
+const mockRecordAudit = vi.fn();
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (...args: unknown[]) => mockRecordAudit(...args)
+}));
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	heldPositions = ['staff'];
@@ -134,6 +139,33 @@ function del() {
 // ---------------------------------------------------------------------------
 
 describe('POST /api/events/[id]/poster', () => {
+	// #2126: staff correct a cancelled listing; the show's committee cannot.
+	describe('on a cancelled event', () => {
+		const jpg = () => new File([bytes(10)], 'p.jpg', { type: 'image/jpeg' });
+		beforeEach(() => {
+			mockGetById.mockResolvedValue({ id: 'evt-1', title: 'Gone', status: 'cancelled' });
+		});
+
+		it('takes staff’s upload and records it as an edit made while cancelled', async () => {
+			const res = await POST(req(jpg()));
+			expect(res.status).toBe(200);
+			expect(mockRecordAudit).toHaveBeenCalledWith({
+				action: 'event.edited_while_cancelled',
+				subject: { type: 'event', id: 'evt-1', label: 'Gone' },
+				details: { fields: ['poster'] }
+			});
+		});
+
+		it('refuses the show’s committee', async () => {
+			heldPositions = [];
+			listingProject = { projectId: 'proj-1', productionId: 'prod-1' };
+			onCommittee = true;
+			await expect(POST(req(jpg()))).rejects.toMatchObject({ status: 400 });
+			expect(mockUploadFile).not.toHaveBeenCalled();
+			expect(mockRecordAudit).not.toHaveBeenCalled();
+		});
+	});
+
 	it('rejects an oversized file with 400 and leaves the existing poster untouched', async () => {
 		const big = new File([bytes(11 * 1024 * 1024)], 'big.jpg', { type: 'image/jpeg' });
 
