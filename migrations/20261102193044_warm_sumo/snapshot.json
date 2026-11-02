@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "11fc20c9-538b-4f1b-8f79-8edfc4aa05e9",
+  "id": "7612b363-9983-48af-9a5c-491b4ff41f4f",
   "prevIds": [
-    "fbee8069-72a2-4b81-863d-1c2076cc97b2"
+    "11fc20c9-538b-4f1b-8f79-8edfc4aa05e9"
   ],
   "ddl": [
     {
@@ -212,6 +212,10 @@
     },
     {
       "name": "group_invite",
+      "entityType": "tables"
+    },
+    {
+      "name": "member_invite",
       "entityType": "tables"
     },
     {
@@ -6331,6 +6335,136 @@
       "name": "accepted_at",
       "entityType": "columns",
       "table": "group_invite"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "member_invite"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "email",
+      "entityType": "columns",
+      "table": "member_invite"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "member_invite"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'[]'",
+      "generated": null,
+      "name": "group_ids",
+      "entityType": "columns",
+      "table": "member_invite"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invited_by_id",
+      "entityType": "columns",
+      "table": "member_invite"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'pending'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "member_invite"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "table": "member_invite"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "sent_at",
+      "entityType": "columns",
+      "table": "member_invite"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "member_invite"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "accepted_by_id",
+      "entityType": "columns",
+      "table": "member_invite"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "accepted_at",
+      "entityType": "columns",
+      "table": "member_invite"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "revoked_by_id",
+      "entityType": "columns",
+      "table": "member_invite"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "revoked_at",
+      "entityType": "columns",
+      "table": "member_invite"
     },
     {
       "type": "text",
@@ -16154,6 +16288,51 @@
     },
     {
       "columns": [
+        "invited_by_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_member_invite_invited_by_id_user_id_fk",
+      "entityType": "fks",
+      "table": "member_invite"
+    },
+    {
+      "columns": [
+        "accepted_by_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_member_invite_accepted_by_id_user_id_fk",
+      "entityType": "fks",
+      "table": "member_invite"
+    },
+    {
+      "columns": [
+        "revoked_by_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_member_invite_revoked_by_id_user_id_fk",
+      "entityType": "fks",
+      "table": "member_invite"
+    },
+    {
+      "columns": [
         "group_id"
       ],
       "tableTo": "group",
@@ -19309,6 +19488,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "member_invite_pk",
+      "table": "member_invite",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "file_pk",
       "table": "file",
       "entityType": "pks"
@@ -21678,6 +21866,38 @@
       "name": "idx_group_invite_pending",
       "entityType": "indexes",
       "table": "group_invite"
+    },
+    {
+      "columns": [
+        {
+          "value": "email",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "status = 'pending'",
+      "origin": "manual",
+      "name": "idx_member_invite_pending",
+      "entityType": "indexes",
+      "table": "member_invite"
+    },
+    {
+      "columns": [
+        {
+          "value": "invited_by_id",
+          "isExpression": false
+        },
+        {
+          "value": "sent_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_member_invite_inviter_sent",
+      "entityType": "indexes",
+      "table": "member_invite"
     },
     {
       "columns": [

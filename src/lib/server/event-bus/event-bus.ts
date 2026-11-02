@@ -412,8 +412,8 @@ export interface GroupInvitesBulkCreatedEvent extends Omit<
 }
 
 /**
- * Staff invited somebody with no account to join CMC (#1830). `token` is one
- * chosen group's invite token, null when no group was chosen.
+ * Somebody with no account was invited to join CMC. `token` is one chosen
+ * group's invite token, null when no group was chosen.
  */
 export interface MemberInviteCreatedEvent {
 	email: string;
