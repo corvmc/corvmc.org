@@ -125,11 +125,11 @@
 				{#snippet lead(m)}<StatusBadge status={m.status} />{/snippet}
 				{#snippet columns()}
 					<th class="w-px">Role</th>
-					<th class="col-support whitespace-nowrap">Joined</th>
+					<th class="whitespace-nowrap">Joined</th>
 				{/snippet}
 				{#snippet cells(m)}
 					<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
-					<td class="col-support whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
+					<td class="whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
 				{/snippet}
 				{#snippet actions(m)}
 					{#if !isDeactivated && m.role !== 'owner'}
