@@ -166,6 +166,35 @@ describe('a project', () => {
 		expect(all.items.slice(0, 3).map((i) => i.id)).toEqual(first.items.map((i) => i.id));
 	});
 
+	// `created_at` is whole seconds and `id` a random UUID, so neither orders two quick actions.
+	it('lists two entries from the same second latest-written first', async () => {
+		for (const [id, action] of [
+			['zz-resolved', 'work_order.resolved'],
+			['aa-reopened', 'work_order.reopened'],
+			['mm-cancelled', 'work_order.cancelled']
+		]) {
+			insert('audit_log', {
+				id,
+				action,
+				actor_user_id: STAFF,
+				actor_name: 'Sam Staff',
+				actor_email: 'sam@example.com',
+				subject_type: 'work_order',
+				subject_id: 'wo-1',
+				details: '{}',
+				created_at: T0 + 5
+			});
+		}
+
+		const { items } = await listActivity({ workOrderId: 'wo-1' });
+
+		expect(items.map((i) => i.id)).toEqual([
+			'audit:mm-cancelled',
+			'audit:aa-reopened',
+			'audit:zz-resolved'
+		]);
+	});
+
 	// D1 caps a statement at 100 bound parameters; the work orders are a subquery.
 	it('binds the same few parameters however many work orders the project has', async () => {
 		for (let i = 0; i < 150; i++) {

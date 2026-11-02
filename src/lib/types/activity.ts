@@ -27,9 +27,12 @@ export function feedLimit(limit: number | undefined): number {
 	return Math.min(Math.max(Math.trunc(limit ?? FEED_PAGE), 1), FEED_MAX);
 }
 
-/** Newest first; two rows in the same second keep a stable order by id. */
+/**
+ * Newest first. A same-second tie keeps the order the sources gave (the sort is
+ * stable), so each source's own tie-break survives; an id is random and has none.
+ */
 export function newestFirst(a: FeedItem, b: FeedItem): number {
-	return b.at.getTime() - a.at.getTime() || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
+	return b.at.getTime() - a.at.getTime();
 }
 
 /** Merge already-limited sources into one page of `limit`. */

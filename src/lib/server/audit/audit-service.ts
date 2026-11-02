@@ -85,6 +85,9 @@ export async function recordAuditEntry(input: AuditEntryInput): Promise<void> {
 // Queries
 // ---------------------------------------------------------------------------
 
+/** `created_at` is whole seconds and `id` random; rowid breaks a tie in the order rows were written. */
+const writeOrder = sql`${auditLog}.rowid`;
+
 /** One subject, or every subject of a type whose id a subquery yields (no bound parameter per id). */
 export type AuditSubjectFilter =
 	{ type: AuditSubjectType; id: string } | { type: AuditSubjectType; ids: SQLWrapper };
@@ -105,7 +108,7 @@ export function auditSubjectQuery(subjects: AuditSubjectFilter[], limit: number)
 		.select()
 		.from(auditLog)
 		.where(subjectWhere(subjects))
-		.orderBy(desc(auditLog.createdAt), desc(auditLog.id))
+		.orderBy(desc(auditLog.createdAt), desc(writeOrder))
 		.limit(limit);
 }
 
@@ -175,7 +178,7 @@ export async function listAuditEntries(
 		.leftJoin(group, and(sql`${auditLog.subjectType} = 'band'`, eq(group.id, auditLog.subjectId)))
 		.leftJoin(actorUser, eq(actorUser.id, auditLog.actorUserId))
 		.where(where)
-		.orderBy(desc(auditLog.createdAt), desc(auditLog.id))
+		.orderBy(desc(auditLog.createdAt), desc(writeOrder))
 		.$dynamic();
 	const countQ = db.select({ count: count() }).from(auditLog).where(where);
 
