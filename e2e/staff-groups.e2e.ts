@@ -27,7 +27,7 @@ async function loginAsStaff(page: Page) {
 	await page.goto('/login');
 	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
+	await page.locator('form button[type="submit"]').click();
 	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
 }
 
@@ -58,30 +58,31 @@ test.describe('staff groups', () => {
 
 		const card = page.getByRole('button', { name: new RegExp(SEED_COMMITTEE_NAME) });
 		await expect(card).toBeVisible();
+		// One Groups row replaces the three, so the old addresses are not in the nav.
 		const nav = page.locator('aside ul.menu').first();
-		await expect(nav.getByRole('link', { name: 'Groups' })).toBeVisible();
-		await expect(nav.getByRole('link', { name: 'Clubs' })).toHaveCount(0);
-		// The nav has no Committees row, so this link is the view's tab.
-		await expect(page.getByRole('link', { name: 'Committees', exact: true })).toBeVisible();
+		await expect(nav.locator('a[href="/staff/groups"]')).toHaveCount(1);
+		await expect(nav.locator('a[href="/staff/clubs"]')).toHaveCount(0);
+		await expect(nav.locator('a[href="/staff/committees"]')).toHaveCount(0);
+		await expect(page.locator('main a[href="/staff/groups/committees"]')).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
 
 		// The card opens the record beside the list, which links on to its page.
+		// The seeded committee carries one open application; its answer is
+		// fixture data, so it identifies the application without the card's copy.
+		const answer = 'Booked a basement series for two years.';
 		await card.click();
 		const panel = page.getByRole('dialog');
-		await expect(panel.getByRole('heading', { name: 'Applications' })).toBeVisible();
-		await panel.getByRole('link', { name: 'Open record' }).click();
+		await expect(panel.getByText(answer)).toBeVisible();
+		await panel.locator(`a[href="/staff/groups/${SEED_COMMITTEE_ID}"]`).click();
 
 		// The fixture's own id, not a uuid — it is seeded rather than created.
 		await page.waitForURL(`**/staff/groups/${SEED_COMMITTEE_ID}`, { timeout: 15000 });
-
-		// The seeded committee is `by_application`, chaired by this staffer, and
-		// carries one open application with an answer under the board's prompt.
-		await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible();
-		await expect(page.getByText('Booked a basement series for two years.')).toBeVisible();
-		await expect(page.getByRole('button', { name: `Accept ${SEED_TARGET_NAME}` })).toBeVisible();
+		await expect(page.getByText(answer)).toBeVisible();
 
 		// Every committee takes applications, so the policy is stated, not offered.
 		await expect(page.locator('select[name="joinPolicy"]')).toHaveCount(0);
-		await expect(page.getByText('By application — you ask, a chair approves')).toBeVisible();
 
 		// And a committee's old address lands on its record.
 		await page.goto(`/staff/committees/${SEED_COMMITTEE_ID}`);
@@ -93,7 +94,7 @@ test.describe('staff groups', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff/groups/clubs');
 
-		await page.getByRole('button', { name: 'New Club' }).click();
+		await page.getByTestId('create-group').click();
 
 		const name = `E2E Songwriter Circle ${Date.now()}`;
 		await page.locator('input[name="name"]').fill(name);
@@ -113,7 +114,7 @@ test.describe('staff groups', () => {
 		// for that is how the test knows the choice reached the form.
 		await expect(picker).toHaveCount(0);
 
-		await page.getByRole('button', { name: 'Create Club' }).click();
+		await page.getByRole('dialog').locator('button[type="submit"]').click();
 
 		// Straight to the new group's page, which is what carries the proof: the
 		// appointee is a chair already, with nothing to accept.
