@@ -463,7 +463,7 @@ test.describe('volunteering — member', () => {
 		await expect(row.getByRole('button', { name: 'Fix it' })).toBeVisible();
 	});
 
-	test('a member can log hours and they land as pending', async ({ page }) => {
+	test('a member can log routine hours and they count on entry', async ({ page }) => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer/profile');
 
@@ -480,7 +480,9 @@ test.describe('volunteering — member', () => {
 		const row = page.locator('li').filter({ hasText: description });
 		await expect(row).toBeVisible({ timeout: 15000 });
 		await expect(row).toContainText('1.5 hrs');
-		// Editable only while pending — the controls are the proof of status.
+		// Trust-first (#1943): approved on entry, and still the member's to change
+		// because no staffer has approved it.
+		await expect(row).toContainText('Approved');
 		await expect(row.getByRole('button', { name: 'Withdraw' })).toBeVisible();
 	});
 });

@@ -62,23 +62,26 @@ After you have helped out, log the time from your volunteer **Profile**:
 
 1. Click **Log Hours**.
 2. Pick the role, the date you worked, and how long — to the nearest quarter hour.
-3. Write a sentence about what you did. This is what staff read when reviewing,
-   so "ran sound for the Thursday open mic" beats "volunteered."
+3. Write a sentence about what you did. "Ran sound for the Thursday open mic"
+   beats "volunteered."
 
 Log hours within 90 days of doing the work. For anything older, ask staff to
 add it.
 
 ## What happens next
 
-Your log sits as **Pending** until staff review it. While it is pending you can
-edit it or withdraw it entirely. Once staff act on it, it is fixed.
+Your hours are **Approved** as soon as you log them: they are on the record and
+count toward the totals we report to the board and to grant funders. You can
+edit or withdraw a log until a staffer has approved it themselves.
 
-- **Approved** — the hours are on the record and count toward the totals we
-  report to the board and to grant funders.
+A few logs are **Pending** until staff look at them: a role you were not cleared
+for on that date, a specialized-skill role, or more than 8 hours in one log.
+
 - **Returned** — something did not line up. The reason comes with the
-  notification; correct it and log the hours again.
+  notification; correct it and save it again.
 
-You will get a notification either way.
+If you claimed a shift, it completes on its own after it ends, and you will be
+asked to log the hours with the shift's length already filled in.
 
 ## Do volunteer hours earn anything?
 

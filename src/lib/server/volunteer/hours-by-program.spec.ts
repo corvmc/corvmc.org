@@ -30,6 +30,7 @@ vi.mock('$lib/server/events', () => ({ domainEvents: { emit: vi.fn(async () => u
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
 const { submitHours } = await import('./hour-log-service');
+const { VOLUNTEER_REVIEW_MINUTES_OVER } = await import('$lib/config');
 const { getHoursByGroup } = await import('./volunteer-report-service');
 
 const MEMBER = 'usr-member';
@@ -162,7 +163,11 @@ describe('getHoursByGroup', () => {
 	});
 
 	it('counts only approved hours, like every other line on the report', async () => {
-		await submitHours(MEMBER, log({ groupId: COMMITTEE }));
+		// Over the review threshold, so it lands pending rather than counting on entry.
+		await submitHours(
+			MEMBER,
+			log({ groupId: COMMITTEE, minutes: VOLUNTEER_REVIEW_MINUTES_OVER + 60 })
+		);
 		expect(await getHoursByGroup()).toEqual([]);
 	});
 });

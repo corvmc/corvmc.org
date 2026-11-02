@@ -19,7 +19,8 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { formatDateShort, relativeDay } from '$lib/utils/format';
 	import { formatVolunteerHours, volunteerHourStatuses } from '$lib/config';
-	import { IconCheck, IconArrowBackUp, IconAlertTriangle } from '@tabler/icons-svelte';
+	import HourLogExceptions from '$lib/components/volunteer/HourLogExceptions.svelte';
+	import { IconCheck, IconArrowBackUp } from '@tabler/icons-svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -269,19 +270,6 @@
 						{/if}
 						<td class="w-px">
 							<StatusBadge status={log.status} />
-							{#if log.uncleared}
-								<!--
-									The member didn't hold a clearance their role requires, on the
-									day they worked. Advisory: a prompt to have a conversation, not
-									a reason to refuse hours somebody already put in.
-								-->
-								<span
-									class="mt-1 block text-warning"
-									title="Missing a required clearance on the date worked"
-								>
-									<IconAlertTriangle size={14} />
-								</span>
-							{/if}
 							{#if log.shiftId}
 								<!-- Filed against a shift staff scheduled — the person was
 								     rostered, so this can be approved with less scrutiny. -->
@@ -312,6 +300,7 @@
 						<td class="col-support">
 							{log.roleName}{#if !log.roleIsActive}<span class="ml-1 text-subtle">(archived)</span
 								>{/if}
+							<HourLogExceptions exceptions={log.exceptions} />
 						</td>
 						<td class="col-support whitespace-nowrap" title={relativeDay(log.createdAt)}>
 							{formatDateShort(log.workedOn)}
@@ -319,8 +308,9 @@
 						<td class="col-support cell-num">{formatVolunteerHours(log.minutes)}</td>
 
 						<td class="w-px">
-							{#if log.status === 'pending'}
-								<div class="flex w-max justify-end gap-1">
+							<!-- Most logs count on entry, so a return is offered on approved ones too. -->
+							<div class="flex w-max justify-end gap-1">
+								{#if log.status === 'pending'}
 									<Action
 										action={approveVolunteerHours.for(log.id)}
 										label="Approve"
@@ -349,7 +339,9 @@
 											/>
 										{/snippet}
 									</Action>
+								{/if}
 
+								{#if log.status !== 'rejected'}
 									<Action
 										action={rejectVolunteerHours.for(log.id)}
 										label="Return"
@@ -379,8 +371,8 @@
 											/>
 										{/snippet}
 									</Action>
-								</div>
-							{/if}
+								{/if}
+							</div>
 						</td>
 					</tr>
 				{/each}
