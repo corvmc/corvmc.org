@@ -4,7 +4,8 @@ import {
 	reservation,
 	lockFallbackCode,
 	lockMemberCode,
-	accessHolding
+	accessHolding,
+	doorAccess
 } from '../../src/lib/server/db/schema/reservation';
 import { db } from './db';
 import { CLOSURE_REASONS } from './pools';
@@ -314,6 +315,36 @@ export async function seedLockAccess(users: SeedUser[], reservations: SeedReserv
 				]
 			: [])
 	]);
+
+	// The door page's log for that booking: the unlock timed out, so the code
+	// was shown, then a re-entry worked and check-out locked up.
+	if (past) {
+		const at = (min: number) => new Date(past.startsAt.getTime() + min * 60_000);
+		await db.insert(doorAccess).values([
+			{
+				reservationId: past.id,
+				userId: past.createdByUserId,
+				kind: 'check_in',
+				outcome: 'timed_out',
+				codeRevealed: true,
+				createdAt: at(-5)
+			},
+			{
+				reservationId: past.id,
+				userId: past.createdByUserId,
+				kind: 're_entry',
+				outcome: 'unlocked',
+				createdAt: at(40)
+			},
+			{
+				reservationId: past.id,
+				userId: past.createdByUserId,
+				kind: 'check_out',
+				outcome: 'locked',
+				createdAt: new Date(past.endsAt.getTime() - 5 * 60_000)
+			}
+		]);
+	}
 
 	const [holder, lapsed, pending] = users;
 	if (!holder) return;

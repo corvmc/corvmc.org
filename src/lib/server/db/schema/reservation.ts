@@ -10,7 +10,13 @@ import {
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
-import { accessHoldingKinds, bookerTypes, reservationCancellers } from '../../../config';
+import {
+	accessHoldingKinds,
+	bookerTypes,
+	doorAccessKinds,
+	doorAccessOutcomes,
+	reservationCancellers
+} from '../../../config';
 import { recurringSeries } from './recurring';
 
 // ---------------------------------------------------------------------------
@@ -274,6 +280,32 @@ export const accessHolding = sqliteTable(
 	]
 );
 
+/**
+ * Every attempt at the back door from `/door` (#2120), one row each. A
+ * booking's check-in and check-out are its first `check_in` and `check_out`
+ * rows, whatever the lock did — the member was there either way.
+ */
+export const doorAccess = sqliteTable(
+	'door_access',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		reservationId: text('reservation_id')
+			.notNull()
+			.references(() => reservation.id, { onDelete: 'cascade' }),
+		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+		kind: text('kind', { enum: doorAccessKinds }).notNull(),
+		outcome: text('outcome', { enum: doorAccessOutcomes }).notNull(),
+		/** Whether this attempt showed the member the booking's pool code. */
+		codeRevealed: integer('code_revealed', { mode: 'boolean' }).notNull().default(false),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [index('idx_door_access_reservation').on(t.reservationId, t.createdAt)]
+);
+
 // ---------------------------------------------------------------------------
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
@@ -283,3 +315,4 @@ export type Closure = typeof closure.$inferSelect;
 export type LockFallbackCode = typeof lockFallbackCode.$inferSelect;
 export type LockMemberCode = typeof lockMemberCode.$inferSelect;
 export type AccessHolding = typeof accessHolding.$inferSelect;
+export type DoorAccess = typeof doorAccess.$inferSelect;
