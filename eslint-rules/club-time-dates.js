@@ -39,13 +39,18 @@ function isNewDate(/** @type {RuleNode} */ node) {
 }
 
 /** True when the type checker (if this file has one) says the receiver is a Date. */
-function hasDateType(/** @type {import('eslint').Rule.RuleContext} */ context, node) {
+function hasDateType(
+	/** @type {import('eslint').Rule.RuleContext} */ context,
+	/** @type {RuleNode} */ node
+) {
 	const services = context.sourceCode.parserServices;
 	if (!services?.program || !services.esTreeNodeToTSNodeMap) return false;
 	const checker = services.program.getTypeChecker();
 	const type = checker.getTypeAtLocation(services.esTreeNodeToTSNodeMap.get(node));
 	const parts = type.isUnion() ? type.types : [type];
-	return parts.some((t) => t.getSymbol()?.getName() === 'Date');
+	return parts.some(
+		(/** @type {import('typescript').Type} */ t) => t.getSymbol()?.getName() === 'Date'
+	);
 }
 
 function isNumberLiteral(/** @type {RuleNode} */ node, /** @type {number} */ value) {
