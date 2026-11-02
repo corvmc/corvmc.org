@@ -14,6 +14,7 @@ import {
 	SEED_CE_TICKETED_ID,
 	eventExists,
 	SEED_CE_CANCELLED_TITLE,
+	SEED_CE_CANCELLED_ID,
 	readListingState
 } from './fixtures/seed-community-events';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
@@ -66,6 +67,15 @@ test.describe('community listings', () => {
 		// The badge specifically, not any text reading "Cancelled" — a title
 		// containing the word would satisfy a looser locator and prove nothing.
 		await expect(row.locator('.gig-row__cancelled-tag')).toBeVisible();
+	});
+
+	test('a cancelled listing offers members no RSVP or ticket (#2219)', async ({ page }) => {
+		await login(page, SEED_CE_REVIEW_EMAIL, SEED_CE_PASSWORD);
+		await page.goto(`/member/events/${SEED_CE_CANCELLED_ID}`);
+		// The CTA block renders first, so the count below is not read off an empty page.
+		const ctas = page.locator('.edet__ctas');
+		await expect(ctas).toBeVisible();
+		await expect(ctas.locator('button, a[href]')).toHaveCount(0);
 	});
 
 	test('a draft reaches neither the public guide nor the staff queue', async ({ page }) => {
