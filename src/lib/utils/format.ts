@@ -459,6 +459,19 @@ export function formatMonthDayYear(d: Date): string {
 	return venue(d, { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+/** "May 3" — long month and day, for a date whose year the context gives. */
+export function formatMonthDay(d: Date): string {
+	return venue(d, { month: 'long', day: 'numeric' });
+}
+
+/**
+ * "2026-05-13" for a date-only value stored as UTC midnight. Not for an
+ * instant: its UTC day is tomorrow in club time from 5pm on (use `toLocalDate`).
+ */
+export function utcCalendarDate(d: Date): string {
+	return d.toISOString().slice(0, 10);
+}
+
 /** "May 2026" — the section header a long history is cut on. */
 export function formatMonthYear(d: Date): string {
 	return venue(d, { month: 'long', year: 'numeric' });

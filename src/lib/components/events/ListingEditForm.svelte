@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { addIsoDays } from '$lib/utils/deadline';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -182,8 +183,7 @@
 
 	/** Add one calendar day to a "YYYY-MM-DD" string. */
 	function nextDay(date: string): string {
-		const [year, month, day] = date.split('-').map(Number);
-		return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+		return addIsoDays(date, 1);
 	}
 
 	/** Rough ISO strings for the rebook check; the server parses with the real zone. */

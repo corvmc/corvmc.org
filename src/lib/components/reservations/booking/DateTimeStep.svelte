@@ -65,9 +65,9 @@
 
 	const monthlyLabels = $derived.by(() => {
 		if (!date) return { weekday: 'Same weekday each month', monthday: 'Same date each month' };
-		const d = new Date(date + 'T00:00:00');
-		const weekdayName = d.toLocaleDateString('en-US', { weekday: 'long' });
-		const dayOfMonth = d.getDate();
+		const d = new Date(date + 'T00:00:00Z');
+		const weekdayName = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+		const dayOfMonth = d.getUTCDate();
 		const nth = Math.ceil(dayOfMonth / 7);
 		return {
 			weekday: `${ordinal(nth)} ${weekdayName} of the month`,

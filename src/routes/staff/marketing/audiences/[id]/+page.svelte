@@ -9,7 +9,7 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { formatDateShort } from '$lib/utils/format';
+	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
 	import {
 		DeleteAudienceAction,
 		BulkAddMembersAction,
@@ -91,7 +91,7 @@
 					{/if}
 				</Fact>
 
-				<Fact label="Created">{new Date(audienceData.createdAt).toLocaleDateString()}</Fact>
+				<Fact label="Created">{formatDateShortYear(new Date(audienceData.createdAt))}</Fact>
 			</DefinitionList>
 
 			{#if audienceData.description}

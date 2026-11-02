@@ -35,7 +35,9 @@ import {
 	reservationPaymentBreakdown,
 	toLocalDate,
 	toLocalTime,
-	formatBytes
+	formatBytes,
+	formatMonthDay,
+	utcCalendarDate
 } from './format';
 
 /**
@@ -72,6 +74,10 @@ describe('format.ts renders in venue time, not the viewer’s zone', () => {
 
 		it('fullDate uses the venue day', () => {
 			expect(fullDate(CROSSES_MIDNIGHT)).toBe('Friday, July 3, 2026');
+		});
+
+		it('formatMonthDay uses the venue day', () => {
+			expect(formatMonthDay(CROSSES_MIDNIGHT)).toBe('July 3');
 		});
 
 		it('formatDateShort uses the venue day', () => {
@@ -352,5 +358,12 @@ describe('formatCents with a negative', () => {
 	it('leaves zero and positives alone', () => {
 		expect(formatCents(0)).toBe('$0.00');
 		expect(formatCents(13_806)).toBe('$138.06');
+	});
+});
+
+describe('utcCalendarDate', () => {
+	it('keeps the stored day of a UTC-midnight date-only value', () => {
+		// toLocalDate would read this as Mar 13 in club time, a day early.
+		expect(utcCalendarDate(new Date('2026-03-14T00:00:00Z'))).toBe('2026-03-14');
 	});
 });

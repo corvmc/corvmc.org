@@ -1,4 +1,5 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
+	import { formatMonthDayYear } from '$lib/utils/format';
 	import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit';
 	import { IconAlertTriangle } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
@@ -13,13 +14,7 @@
 		resumeAction: RemoteForm<TInput, TOutput>;
 	} = $props();
 
-	const endDate = $derived(
-		subscription.currentPeriodEnd.toLocaleDateString('en-US', {
-			month: 'long',
-			day: 'numeric',
-			year: 'numeric'
-		})
-	);
+	const endDate = $derived(formatMonthDayYear(subscription.currentPeriodEnd));
 	const freeHours = $derived(subscription.quantity);
 </script>
 

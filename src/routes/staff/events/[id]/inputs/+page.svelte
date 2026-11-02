@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fullDate } from '$lib/utils/format';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -34,14 +35,7 @@
 
 	const exportHref = $derived(resolve('/staff/events/[id]/inputs/export', { id: eventId }));
 	const backHref = $derived(resolve('/staff/events/[id]/production', { id: eventId }));
-	const dateLabel = $derived(
-		data.startsAt.toLocaleDateString('en-US', {
-			weekday: 'long',
-			month: 'long',
-			day: 'numeric',
-			year: 'numeric'
-		})
-	);
+	const dateLabel = $derived(fullDate(data.startsAt));
 </script>
 
 <svelte:head>

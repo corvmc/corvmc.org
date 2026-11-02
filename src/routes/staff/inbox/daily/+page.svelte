@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatDateShortYear } from '$lib/utils/format';
 	/**
 	 * Daily — one thread, one decision, no list scanning.
 	 *
@@ -120,7 +121,7 @@
 
 						{#if t.awaitingReplySince}
 							<p class="text-subtle text-sm">
-								No response since {new Date(t.awaitingReplySince).toLocaleDateString()}
+								No response since {formatDateShortYear(new Date(t.awaitingReplySince))}
 							</p>
 						{/if}
 

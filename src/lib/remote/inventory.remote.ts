@@ -105,7 +105,8 @@ import {
 	type AcquisitionKind,
 	type ItemKind,
 	type LoanStatus,
-	DEFAULT_TIMEZONE
+	DEFAULT_TIMEZONE,
+	clubToday
 } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { getDonationWishlist, isOnWishlist } from '$lib/server/inventory/wishlist-service';
@@ -1401,8 +1402,8 @@ export const getSpendReport = query(spendRange, async (range) => {
 	const servicesCents = services.reduce((sum, r) => sum + Number(r.totalCents), 0);
 
 	return {
-		from: from.toISOString().slice(0, 10),
-		to: to.toISOString().slice(0, 10),
+		from: range.from ?? `${from.getUTCFullYear()}-01-01`,
+		to: range.to ?? clubToday(now),
 		rows: rows.map((r) => ({
 			categoryId: r.categoryId,
 			categoryName: r.categoryName,

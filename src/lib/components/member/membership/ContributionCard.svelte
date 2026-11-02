@@ -1,7 +1,7 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { formatDollars } from '$lib/utils/format';
+	import { formatDollars, formatMonthDayYear } from '$lib/utils/format';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { IconCreditCard } from '@tabler/icons-svelte';
@@ -43,13 +43,7 @@
 	const feeAmount = $derived(
 		formatDollars(calculateTotalWithFeeCoverage(amountPerMonth * 100).feeCents)
 	);
-	const nextBilling = $derived(
-		subscription.currentPeriodEnd.toLocaleDateString('en-US', {
-			month: 'long',
-			day: 'numeric',
-			year: 'numeric'
-		})
-	);
+	const nextBilling = $derived(formatMonthDayYear(subscription.currentPeriodEnd));
 </script>
 
 <Card>

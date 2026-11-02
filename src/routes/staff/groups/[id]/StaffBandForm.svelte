@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatDateShortYear } from '$lib/utils/format';
 	import { untrack } from 'svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
@@ -100,19 +101,19 @@
 
 					{#if band.subscription}
 						<Fact label="Billing">
-							{band.subscription.billingInterval}, renews {new Date(
-								band.subscription.currentPeriodEnd
-							).toLocaleDateString()}
+							{band.subscription.billingInterval}, renews {formatDateShortYear(
+								new Date(band.subscription.currentPeriodEnd)
+							)}
 							{#if band.subscription.cancelAtPeriodEnd}
 								<Badge variant="warning" size="sm">Cancels at period end</Badge>
 							{/if}
 						</Fact>
 					{/if}
 
-					<Fact label="Created">{new Date(band.createdAt).toLocaleDateString()}</Fact>
+					<Fact label="Created">{formatDateShortYear(new Date(band.createdAt))}</Fact>
 
 					{#if band.deletedAt}
-						<Fact label="Deactivated">{new Date(band.deletedAt).toLocaleDateString()}</Fact>
+						<Fact label="Deactivated">{formatDateShortYear(new Date(band.deletedAt))}</Fact>
 					{/if}
 				</DefinitionList>
 
