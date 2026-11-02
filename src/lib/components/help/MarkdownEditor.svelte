@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
+	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
 	import MarkdownPreview from './MarkdownPreview.svelte';
 	import { IconPhoto } from '@tabler/icons-svelte';
 
@@ -12,17 +13,14 @@
 	} = $props();
 
 	let textarea = $state<HTMLTextAreaElement>(undefined!);
-	let fileInput = $state<HTMLInputElement>(undefined!);
 	let activeTab = $state<'write' | 'preview'>('write');
 
-	async function handleImageUpload() {
-		if (!uploadImage || !fileInput.files?.length) return;
-		const file = fileInput.files[0];
+	async function handleImageUpload(file: File) {
+		if (!uploadImage) return;
 		const url = await uploadImage(file);
 		const insertion = `![${file.name}](${url})`;
 		const pos = textarea.selectionStart;
 		value = value.slice(0, pos) + insertion + value.slice(pos);
-		fileInput.value = '';
 	}
 </script>
 
@@ -48,23 +46,17 @@
 		</Button>
 		<div class="flex-1"></div>
 		{#if uploadImage}
-			<Button
-				type="button"
+			<FileUpload
+				upload={handleImageUpload}
+				accept="image/*"
+				showPreview={false}
 				variant="ghost"
 				size="xs"
-				shape="square"
-				title="Insert image"
-				onclick={() => fileInput.click()}
+				square
+				aria-label="Insert image"
 			>
 				<IconPhoto size={14} />
-			</Button>
-			<input
-				type="file"
-				accept="image/*"
-				class="hidden"
-				bind:this={fileInput}
-				onchange={handleImageUpload}
-			/>
+			</FileUpload>
 		{/if}
 	</div>
 

@@ -3,7 +3,7 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import { Select } from '$lib/components/ui/Form';
+	import { FileUpload, Select } from '$lib/components/ui/Form';
 	import {
 		getItemResources,
 		linkItemArticle,
@@ -24,34 +24,21 @@
 
 	const data = $derived(await getItemResources(itemId));
 
-	let uploading = $state(false);
 	let chosenArticle = $state('');
 
-	async function upload(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+	async function upload(file: File) {
+		const body = new FormData();
+		body.append('file', file);
+		body.append('slot', 'manual');
+		body.append('attachableId', itemId);
 
-		uploading = true;
-		try {
-			const body = new FormData();
-			body.append('file', file);
-			body.append('slot', 'manual');
-			body.append('attachableId', itemId);
-
-			const res = await fetch('/api/inventory/media', { method: 'POST', body });
-			if (!res.ok) {
-				const detail = (await res.json().catch(() => null)) as { message?: string } | null;
-				throw new Error(detail?.message ?? 'Upload failed');
-			}
-			await getItemResources(itemId).refresh();
-			toast.success('Manual uploaded');
-		} catch (err) {
-			toast.error((err as Error).message);
-		} finally {
-			uploading = false;
-			input.value = '';
+		const res = await fetch('/api/inventory/media', { method: 'POST', body });
+		if (!res.ok) {
+			const detail = (await res.json().catch(() => null)) as { message?: string } | null;
+			throw new Error(detail?.message ?? 'Upload failed');
 		}
+		await getItemResources(itemId).refresh();
+		toast.success('Manual uploaded');
 	}
 </script>
 
@@ -103,17 +90,10 @@
 	{/if}
 
 	<div class="mt-4 flex flex-wrap items-center gap-3">
-		<label class="btn btn-ghost btn-sm">
+		<FileUpload {upload} accept=".pdf,image/*" showPreview={false} variant="ghost">
 			<IconUpload size={16} />
-			{uploading ? 'Uploading…' : 'Add a manual'}
-			<input
-				type="file"
-				class="hidden"
-				accept=".pdf,image/*"
-				onchange={upload}
-				disabled={uploading}
-			/>
-		</label>
+			Add a manual
+		</FileUpload>
 
 		{#if data.linkable.length > 0}
 			<form

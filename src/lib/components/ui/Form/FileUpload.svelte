@@ -2,6 +2,10 @@
 	import type { Snippet } from 'svelte';
 	import { IconPhoto } from '@tabler/icons-svelte';
 
+	// Literal class names: Tailwind emits nothing for a computed one.
+	const VARIANTS = { outline: 'btn-outline', ghost: 'btn-ghost', primary: 'btn-primary' };
+	const SIZES = { xs: 'btn-xs', sm: 'btn-sm' };
+
 	let {
 		name,
 		upload,
@@ -14,14 +18,24 @@
 		previewClass = 'h-24 w-24',
 		emptyLabel = 'Add image',
 		replaceLabel = 'Replace',
-		preview
+		preview,
+		showPreview = true,
+		uploadAll,
+		variant = 'outline',
+		size = 'sm',
+		square = false,
+		busyLabel = 'Uploading…',
+		'aria-label': ariaLabel,
+		children
 	}: {
 		name?: string;
 		/**
 		 * Persist the file immediately and return its key. Used where the record
 		 * already exists — a band's avatar POSTs to `/api/bands/[id]/avatar`.
 		 */
-		upload?: (file: File) => Promise<string>;
+		upload?: (file: File) => Promise<string | void>;
+		/** Immediate mode for a multi-file pick: one call with every file. */
+		uploadAll?: (files: File[]) => Promise<void>;
 		/**
 		 * Deferred mode: attributes for a real `<input type="file">` that submits
 		 * with the form, typically `remoteForm.fields.x.as('file')`. Used where
@@ -42,9 +56,18 @@
 		emptyLabel?: string;
 		replaceLabel?: string;
 		preview?: Snippet<[{ file: File | null; src: string | null }]>;
+		/** Off for documents and audio, or where the caller renders the file itself. */
+		showPreview?: boolean;
+		variant?: keyof typeof VARIANTS;
+		size?: keyof typeof SIZES;
+		square?: boolean;
+		busyLabel?: string;
+		'aria-label'?: string;
+		/** The picker button's content, in place of the empty/replace label. */
+		children?: Snippet;
 	} = $props();
 
-	const deferred = $derived(!upload && !!inputProps);
+	const deferred = $derived(!upload && !uploadAll && !!inputProps);
 
 	let uploadStatus = $state<'idle' | 'uploading' | 'success' | 'error'>('idle');
 	let uploadError = $state('');
@@ -80,7 +103,8 @@
 
 	async function handleFileChange(e: Event) {
 		const input = e.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
+		const files = Array.from(input.files ?? []);
+		const file = files[0];
 		if (!file) return;
 
 		selectedFile = file;
@@ -97,10 +121,14 @@
 		uploadError = '';
 
 		try {
-			const key = await upload!(file);
-			value = key;
-			if (hiddenInput) {
-				hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+			if (uploadAll) {
+				await uploadAll(files);
+			} else {
+				const key = await upload!(file);
+				if (typeof key === 'string') {
+					value = key;
+					hiddenInput?.dispatchEvent(new Event('input', { bubbles: true }));
+				}
 			}
 			uploadStatus = 'success';
 		} catch (err) {
@@ -119,12 +147,14 @@
 
 <!-- Deferred mode posts through the file input itself, so a same-named hidden
      input here would submit alongside it and clobber the file. -->
-{#if !deferred}
+{#if !deferred && name}
 	<input type="hidden" {name} bind:value bind:this={hiddenInput} />
 {/if}
 
 <div class="flex items-start gap-4" class:flex-col={orientation === 'col'}>
-	{#if preview}
+	{#if !showPreview}
+		<!-- The caller shows the file, or there is nothing to show. -->
+	{:else if preview}
 		{@render preview({ file: selectedFile, src: previewUrl ?? src ?? null })}
 	{:else if previewUrl || src}
 		<img src={previewUrl ?? src} alt="" class="{previewClass} rounded object-cover" />
@@ -140,18 +170,28 @@
 
 	<div class="flex flex-col gap-1">
 		{#if uploadStatus === 'uploading'}
-			<span class="btn btn-disabled btn-outline btn-sm">
+			<span class="btn btn-disabled {VARIANTS[variant]} {SIZES[size]}" class:btn-square={square}>
 				<span class="loading loading-sm loading-spinner"></span>
-				Uploading…
+				{#if !square}{busyLabel}{/if}
 			</span>
 		{:else}
-			<label class="btn btn-outline btn-sm" class:btn-disabled={disabled}>
-				{hasPreview ? replaceLabel : emptyLabel}
+			<label
+				class="btn {VARIANTS[variant]} {SIZES[size]}"
+				class:btn-square={square}
+				class:btn-disabled={disabled}
+			>
+				{#if children}
+					{@render children()}
+				{:else}
+					{hasPreview ? replaceLabel : emptyLabel}
+				{/if}
 				<input
 					bind:this={fileInput}
 					type="file"
 					{...deferred ? inputProps : {}}
 					{accept}
+					multiple={!!uploadAll}
+					aria-label={ariaLabel}
 					onchange={handleFileChange}
 					{disabled}
 					class="hidden"
@@ -164,9 +204,9 @@
 
 		{#if uploadStatus === 'error'}
 			<p class="text-sm text-error">{uploadError}</p>
-		{:else if uploadStatus === 'success' && !isImage}
+		{:else if uploadStatus === 'success' && !isImage && name}
 			<p class="text-sm text-success">Uploaded</p>
-		{:else if !deferred && selectedFile && !isImage}
+		{:else if !deferred && selectedFile && !isImage && (name || uploadStatus === 'uploading')}
 			<!-- Immediate mode only. Deferred mode names the file above, beside the
 			     picker, and without this guard both branches match a non-image
 			     deferred pick and it is listed twice — invisible while every

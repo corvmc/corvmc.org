@@ -1,6 +1,7 @@
 <script lang="ts">
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
+	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
 	import { toast } from 'svelte-sonner';
 	import { responseErrorMessage } from '$lib/api';
 	import { imageSrc } from '$lib/utils/images';
@@ -22,20 +23,13 @@
 
 	let { eventId, posterUrl, cancelled, uploadWhileCancelled = false, onchange }: Props = $props();
 
-	async function upload(e: Event) {
-		const input = e.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+	async function upload(file: File) {
 		const formData = new FormData();
 		formData.append('poster', file);
-		try {
-			const res = await fetch(`/api/events/${eventId}/poster`, { method: 'POST', body: formData });
-			if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
-			toast.success('Poster updated');
-			onchange();
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to upload poster');
-		}
+		const res = await fetch(`/api/events/${eventId}/poster`, { method: 'POST', body: formData });
+		if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
+		toast.success('Poster updated');
+		onchange();
 	}
 </script>
 
@@ -55,14 +49,13 @@
 
 	{#if !cancelled || uploadWhileCancelled}
 		<div class="mt-3 flex flex-wrap items-center gap-2">
-			<!-- A bare file input, not a FormField: the upload posts on change to an
-			     endpoint, with no form around it to submit. -->
-			<input
-				type="file"
+			<!-- The poster is drawn above at its own size, so no preview here. -->
+			<FileUpload
+				{upload}
 				accept="image/jpeg,image/png,image/webp"
+				showPreview={false}
+				emptyLabel={posterUrl ? 'Replace poster' : 'Upload a poster'}
 				aria-label="Upload a poster"
-				onchange={upload}
-				class="file-input file-input-sm"
 			/>
 			{#if !cancelled}
 				<!-- The fallback when no art arrives: a real poster, so it passes the publish gate. -->

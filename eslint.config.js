@@ -17,6 +17,7 @@ import noDirectFinancialEntryWrites from './eslint-rules/no-direct-financial-ent
 import noUnwrappedRemoteMutation from './eslint-rules/no-unwrapped-remote-mutation.js';
 import noClippedRowAction from './eslint-rules/no-clipped-row-action.js';
 import definiteActionLabels from './eslint-rules/definite-action-labels.js';
+import noRawFileInput from './eslint-rules/no-raw-file-input.js';
 import noTrackedCommandInEffect from './eslint-rules/no-tracked-command-in-effect.js';
 import preferTermMessages from './eslint-rules/prefer-term-messages.js';
 
@@ -55,6 +56,7 @@ const customPlugin = {
 		'no-unwrapped-remote-mutation': noUnwrappedRemoteMutation,
 		'no-clipped-row-action': noClippedRowAction,
 		'definite-action-labels': definiteActionLabels,
+		'no-raw-file-input': noRawFileInput,
 		'no-tracked-command-in-effect': noTrackedCommandInEffect,
 		// Registered, not enabled: the tree has ~256 hits and every lint run is
 		// `--max-warnings 0`. `pnpm lint:terms` reports them; enable it below once
@@ -186,6 +188,12 @@ export default defineConfig(
 			'custom/no-concurrent-remote-queries': 'error',
 			'custom/definite-action-labels': 'error'
 		}
+	},
+	{
+		// FileUpload is the one place the native picker lives.
+		files: ['**/*.svelte'],
+		ignores: ['src/lib/components/ui/Form/FileUpload.svelte'],
+		rules: { 'custom/no-raw-file-input': 'error' }
 	},
 	{
 		files: ['src/lib/remote/**/*.remote.ts'],

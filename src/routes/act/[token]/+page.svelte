@@ -5,6 +5,7 @@
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
@@ -50,24 +51,17 @@
 		}
 	}
 
-	async function upload(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+	async function upload(file: File) {
 		const body = new FormData();
 		body.set('file', file);
 		await send('POST', body);
-		input.value = '';
 	}
 
 	const remove = () => send('DELETE');
 
 	let artError = $state<string | null>(null);
 
-	async function sendArt(event: Event, requestId: string) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+	async function sendArt(file: File, requestId: string) {
 		busy = true;
 		artError = null;
 		try {
@@ -84,7 +78,6 @@
 			toast.success('Art received — thank you');
 		} finally {
 			busy = false;
-			input.value = '';
 		}
 	}
 </script>
@@ -171,12 +164,12 @@
 		{/if}
 
 		<div class="mt-3 flex flex-wrap items-center gap-2">
-			<input
-				type="file"
+			<FileUpload
+				{upload}
 				accept="application/pdf,image/jpeg,image/png,image/webp"
-				class="file-input"
+				showPreview={false}
 				disabled={busy}
-				onchange={upload}
+				emptyLabel={sheet.rider ? 'Replace rider' : 'Upload a rider'}
 			/>
 			{#if sheet.rider}
 				<Button type="button" variant="ghost" size="sm" disabled={busy} onclick={remove}>
@@ -220,12 +213,12 @@
 			{/if}
 
 			<div class="mt-3">
-				<input
-					type="file"
+				<FileUpload
+					upload={(file) => sendArt(file, ask.id)}
 					accept="image/jpeg,image/png"
-					class="file-input"
+					showPreview={false}
 					disabled={busy}
-					onchange={(e) => sendArt(e, ask.id)}
+					emptyLabel={ask.deliveredUrl ? 'Replace art' : 'Upload art'}
 				/>
 			</div>
 		</InfoCard>
