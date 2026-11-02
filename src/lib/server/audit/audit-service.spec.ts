@@ -181,6 +181,23 @@ describe('listAuditEntriesForSubject', () => {
 		expect(all.hasMore).toBe(false);
 	});
 
+	it('orders same-second entries by when they were written, not by their random id', async () => {
+		for (const id of ['zz-first', 'aa-second', 'mm-third']) {
+			sqlite
+				.prepare(
+					`insert into audit_log (id, action, actor_name, actor_email, subject_type, subject_id, details, created_at)
+					 values (?, 'user.unbanned', 'Sam Staff', 's@example.com', 'user', 'member-1', '{}', 1900000000)`
+				)
+				.run(id);
+		}
+		const expected = ['mm-third', 'aa-second', 'zz-first'];
+
+		const { entries } = await listAuditEntriesForSubject({ type: 'user', id: 'member-1' });
+		expect(entries.map((e) => e.id)).toEqual(expected);
+		const { rows } = await listAuditEntries({});
+		expect(rows.map((r) => r.id)).toEqual(expected);
+	});
+
 	it('reads several subjects as one feed, one of them by subquery', async () => {
 		insertUser('member-2', 'Other');
 		await recordAuditEntry({
