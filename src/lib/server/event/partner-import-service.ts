@@ -169,11 +169,12 @@ export async function importSource(
 }
 
 /**
- * Run every feed that is not paused. One feed failing is recorded on its row
- * and does not stop the others; the cron job fails only if this throws.
+ * Run every feed that is not paused, or the one `sourceId` names whether or
+ * not it is. One feed failing is recorded on its row and does not stop the
+ * others; the cron job fails only if this throws.
  */
 export async function runPartnerImports(
-	opts: { fetcher?: Fetcher; now?: Date } = {}
+	opts: { fetcher?: Fetcher; now?: Date; sourceId?: string } = {}
 ): Promise<SourceRunResult[]> {
 	const fetcher = opts.fetcher ?? ((url, init) => fetch(url, init));
 	const now = opts.now ?? new Date();
@@ -188,7 +189,12 @@ export async function runPartnerImports(
 		})
 		.from(calendarSource)
 		.innerJoin(venue, eq(venue.id, calendarSource.venueId))
-		.where(and(eq(calendarSource.paused, false), isNull(venue.deletedAt)));
+		.where(
+			and(
+				opts.sourceId ? eq(calendarSource.id, opts.sourceId) : eq(calendarSource.paused, false),
+				isNull(venue.deletedAt)
+			)
+		);
 
 	const results: SourceRunResult[] = [];
 	for (const source of sources) {

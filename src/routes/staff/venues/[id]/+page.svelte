@@ -13,6 +13,7 @@
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { Field } from '$lib/components/ui/Form';
+	import VenueFeeds from './VenueFeeds.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -154,6 +155,10 @@
 			<p class="mt-3 text-sm">{venue.notes}</p>
 		{/if}
 	</InfoCard>
+
+	{#if !venue.isPrimary}
+		<VenueFeeds venueId={venue.id} />
+	{/if}
 
 	<div class="flex flex-wrap gap-2">
 		{#if !venue.isPrimary && !venue.deletedAt}
