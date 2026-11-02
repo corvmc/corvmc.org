@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { getStaffBandPage, updateMemberRole } from '$lib/remote/bands.remote';
+	import { getBandHistory, getStaffBandPage, updateMemberRole } from '$lib/remote/bands.remote';
+	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -166,6 +167,15 @@
 			</Table>
 		{/if}
 	</InfoCard>
+
+	{#if variant === 'page'}
+		<ActivityFeedCard
+			title="History"
+			query={(limit) => getBandHistory(limit ? { id, limit } : { id })}
+			toRow={feedItemRow}
+			empty={{ title: 'No recorded changes' }}
+		/>
+	{/if}
 {/snippet}
 
 {#if variant === 'page'}

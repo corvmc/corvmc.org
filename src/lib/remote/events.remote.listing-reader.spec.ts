@@ -138,7 +138,13 @@ vi.mock('$app/server', () => {
 	};
 });
 
+const listEventHistory = vi.fn(async () => ({ items: [], hasMore: false }));
+vi.mock('$lib/server/event/event-history', () => ({
+	listEventHistory: (...a: unknown[]) => listEventHistory(...(a as []))
+}));
+
 const {
+	getEventHistory,
 	getStaffEventPage,
 	getStaffEventDetail,
 	getEventRecurringSeries,
@@ -180,6 +186,20 @@ describe.each([
 		persona = 'booker';
 		await expect(fn()('evt-gig')).rejects.toMatchObject({ status: 403 });
 		expect(requireProjectCommittee).not.toHaveBeenCalled();
+	});
+});
+
+describe('getEventHistory', () => {
+	it("answers the show's committee", async () => {
+		persona = 'booker';
+		await getEventHistory({ id: 'evt-show' });
+		expect(listEventHistory).toHaveBeenCalledWith('evt-show', { limit: undefined });
+	});
+
+	it('refuses someone off the committee, reading nothing', async () => {
+		persona = 'outsider';
+		await expect(getEventHistory({ id: 'evt-show' })).rejects.toMatchObject({ status: 403 });
+		expect(listEventHistory).not.toHaveBeenCalled();
 	});
 });
 

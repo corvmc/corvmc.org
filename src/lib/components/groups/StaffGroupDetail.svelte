@@ -17,8 +17,10 @@
 		deactivateGroup,
 		reactivateGroup,
 		setStaffGroupRole,
+		getGroupHistory,
 		type getStaffGroupPage
 	} from '$lib/remote/groups.remote';
+	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
 	import GroupSettingsForm from './GroupSettingsForm.svelte';
 	import AddChairAction from './AddChairAction.svelte';
 	import CommitteeGrantsCard from './CommitteeGrantsCard.svelte';
@@ -205,6 +207,13 @@
 			{/if}
 		</Fact>
 	</DefinitionList>
+
+	<ActivityFeedCard
+		title="History"
+		query={(limit) => getGroupHistory(limit ? { id, limit } : { id })}
+		toRow={feedItemRow}
+		empty={{ title: 'No recorded changes' }}
+	/>
 
 	{#if !isDeactivated}
 		<InfoCard title="End this program">

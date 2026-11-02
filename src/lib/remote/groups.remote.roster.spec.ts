@@ -43,6 +43,8 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
+vi.mock('$lib/server/audit/audit-service', () => ({ listAuditFeed: vi.fn() }));
+
 vi.mock('$lib/server/authorization', () => ({
 	requireUser: () => ({ id: 'user-1' }),
 	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),

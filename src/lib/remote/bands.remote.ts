@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { historyArgs } from './_history';
+import { listAuditFeed } from '$lib/server/audit/audit-service';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupKinds } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
@@ -790,4 +792,16 @@ export const getStaffBandPage = query(z.string(), async (id) => {
 	]);
 
 	return { band, members, reservations, emailInvites };
+});
+
+/** A band's History card: deactivations, and roster and grant changes made by staff. */
+export const getBandHistory = query(historyArgs, async ({ id, limit }) => {
+	await requireCapability('band.read');
+	return listAuditFeed(
+		[
+			{ type: 'band', id },
+			{ type: 'group', id }
+		],
+		{ limit }
+	);
 });

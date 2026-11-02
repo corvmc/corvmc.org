@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { historyArgs } from './_history';
+import { listAuditFeed } from '$lib/server/audit/audit-service';
 import { listIncidentsFiledBy } from '$lib/server/incident/incident-service';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query } from '$app/server';
@@ -2337,6 +2339,12 @@ export const getWorkOrderActivity = query(
 		return listActivity({ workOrderId }, { limit });
 	}
 );
+
+/** A volunteer role's History card: its capability grant changes. */
+export const getVolunteerRoleHistory = query(historyArgs, async ({ id, limit }) => {
+	await requireCapability('volunteer.read');
+	return listAuditFeed({ type: 'role', id }, { limit });
+});
 
 /**
  * Setup's one load-bearing query.
