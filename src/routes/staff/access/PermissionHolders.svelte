@@ -3,15 +3,15 @@
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
+	import RosterTable from '$lib/components/roster/RosterTable.svelte';
+	import CopyEmailsButton from '$lib/components/roster/CopyEmailsButton.svelte';
 	import CommitteeGrantsAction from '$lib/components/groups/CommitteeGrantsAction.svelte';
 	import RevokeClearanceAction from './RevokeClearanceAction.svelte';
 	import { getAccessPage, getAccessHolders } from '$lib/remote/access.remote';
 	import { positionLabels, positionOrder, type Capability, type Position } from '$lib/config';
-	import type { MemberRef } from '$lib/types/entity';
+	import type { RosterPerson } from '$lib/types/roster';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import { capabilityLabel, everyCapability } from './capability-label';
 
@@ -47,15 +47,22 @@
 	);
 	const result = $derived(key ? getAccessHolders(selection) : null);
 
-	const matches = (m: MemberRef) =>
+	const matches = ({ member, email }: RosterPerson) =>
 		!nameFilter ||
-		`${m.title} ${m.subtitle ?? ''}`.toLowerCase().includes(nameFilter.toLowerCase());
+		`${member.title} ${email ?? ''}`.toLowerCase().includes(nameFilter.toLowerCase());
 
 	function refresh() {
 		if (key) void getAccessHolders(selection).refresh();
 		void getAccessPage().refresh();
 	}
 </script>
+
+{#snippet count(rows: RosterPerson[], label: string)}
+	<div class="flex flex-wrap items-center justify-between gap-2">
+		<p class="text-muted">{label}</p>
+		{#if rows.length > 0}<CopyEmailsButton emails={rows.map((r) => r.email)} />{/if}
+	</div>
+{/snippet}
 
 <FilterBar
 	activeCount={(nameFilter ? 1 : 0) + (clearanceState ? 1 : 0)}
@@ -119,37 +126,22 @@
 	{#await result then data}
 		{#if data.kind === 'position'}
 			{@const rows = data.members.filter(matches)}
-			<p class="text-muted">{rows.length} of {data.members.length} holding this position</p>
+			{@render count(rows, `${rows.length} of ${data.members.length} holding this position`)}
 			{#if rows.length === 0}
 				<EmptyState title="Nobody" description="No one holds this position." />
 			{:else}
-				<Table>
-					{#snippet head()}
-						<th>Person</th>
-					{/snippet}
-					{#each rows as m (m.id)}
-						<tr><td class="cell-primary"><EntityChip ref={m} /></td></tr>
-					{/each}
-				</Table>
+				<RosterTable {rows} personLabel="Person" />
 			{/if}
 		{:else if data.kind === 'capability'}
-			{@const rows = data.holders.filter((h) => matches(h.member))}
-			<p class="text-muted">{rows.length} of {data.holders.length} holding this capability</p>
+			{@const rows = data.holders.filter(matches)}
+			{@render count(rows, `${rows.length} of ${data.holders.length} holding this capability`)}
 			{#if rows.length === 0}
 				<EmptyState title="Nobody" description="No position or committee seat confers this." />
 			{:else}
-				<Table>
-					{#snippet head()}
-						<th>Person</th>
-						<th>Through</th>
-					{/snippet}
-					{#each rows as h (h.member.id)}
-						<tr>
-							<td class="cell-primary"><EntityChip ref={h.member} /></td>
-							<td class="cell-text">{h.sources.join(', ')}</td>
-						</tr>
-					{/each}
-				</Table>
+				<RosterTable {rows} personLabel="Person">
+					{#snippet columns()}<th>Through</th>{/snippet}
+					{#snippet cells(h)}<td class="cell-text">{h.sources.join(', ')}</td>{/snippet}
+				</RosterTable>
 			{/if}
 			{#if data.committees.length > 0}
 				<InfoCard title="Committees granting it" state={data.committees.length}>
@@ -180,43 +172,37 @@
 		{:else}
 			{@const rows = data.clearances.filter(
 				(c) =>
-					matches(c.member) &&
+					matches(c) &&
 					(!clearanceState ||
 						(clearanceState === 'lapsing' ? c.lapsing : c.state === clearanceState))
 			)}
-			<p class="text-muted">{rows.length} of {data.clearances.length} on record</p>
+			{@render count(rows, `${rows.length} of ${data.clearances.length} on record`)}
 			{#if rows.length === 0}
 				<EmptyState title="Nobody" description="No grant of this clearance matches." />
 			{:else}
-				<Table>
-					{#snippet head()}
-						<th class="w-px"><span class="sr-only">Status</span></th>
-						<th>Person</th>
+				<RosterTable {rows} personLabel="Person">
+					{#snippet lead(c)}<StatusBadge status={c.state} />{/snippet}
+					{#snippet columns()}
 						<th class="col-support">Granted</th>
 						<th>Expires</th>
-						<th class="w-px"><span class="sr-only">Actions</span></th>
 					{/snippet}
-					{#each rows as c (c.id)}
-						<tr>
-							<td class="w-px"><StatusBadge status={c.state} /></td>
-							<td class="cell-primary"><EntityChip ref={c.member} /></td>
-							<td class="col-support whitespace-nowrap">{formatDateShortYear(c.grantedAt)}</td>
-							<td class="whitespace-nowrap">
-								{c.expiresAt ? formatDateShortYear(c.expiresAt) : 'No expiry'}
-							</td>
-							<td class="w-px">
-								{#if c.state !== 'revoked'}
-									<RevokeClearanceAction
-										id={c.id}
-										userId={c.userId}
-										name={c.certificationName}
-										onsuccess={refresh}
-									/>
-								{/if}
-							</td>
-						</tr>
-					{/each}
-				</Table>
+					{#snippet cells(c)}
+						<td class="col-support whitespace-nowrap">{formatDateShortYear(c.grantedAt)}</td>
+						<td class="whitespace-nowrap">
+							{c.expiresAt ? formatDateShortYear(c.expiresAt) : 'No expiry'}
+						</td>
+					{/snippet}
+					{#snippet actions(c)}
+						{#if c.state !== 'revoked'}
+							<RevokeClearanceAction
+								id={c.id}
+								userId={c.userId}
+								name={c.certificationName}
+								onsuccess={refresh}
+							/>
+						{/if}
+					{/snippet}
+				</RosterTable>
 			{/if}
 		{/if}
 	{/await}

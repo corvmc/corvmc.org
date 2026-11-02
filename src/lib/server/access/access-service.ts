@@ -21,6 +21,8 @@ import {
 	type Position
 } from '$lib/config';
 import type { MemberRef } from '$lib/types/entity';
+import type { RosterPerson } from '$lib/types/roster';
+import { toRosterPerson } from '$lib/server/roster/roster';
 
 /** How far ahead "lapsing" looks on this page. Not `CERT_EXPIRY_WARNING_DAYS`, which is 60. */
 export const ACCESS_LAPSING_DAYS = 30;
@@ -28,6 +30,7 @@ const DAY_MS = 86_400_000;
 
 export interface PositionHolder {
 	member: MemberRef;
+	person: RosterPerson;
 	position: Position;
 }
 
@@ -42,7 +45,11 @@ async function listPositionHolders(only?: readonly Position[]): Promise<Position
 		.innerJoin(user, eq(user.id, modelHasRole.userId))
 		.where(and(inArray(role.name, [...names]), isNull(user.deletedAt)))
 		.orderBy(user.name);
-	return rows.map((r) => ({ member: toMemberRef(r.member), position: r.position as Position }));
+	return rows.map((r) => ({
+		member: toMemberRef(r.member),
+		person: toRosterPerson(r.member),
+		position: r.position as Position
+	}));
 }
 
 /** Is this clearance still in force and running out within `ACCESS_LAPSING_DAYS`? */
@@ -137,8 +144,7 @@ export async function getPersonAccess(userId: string): Promise<PersonAccess> {
 	};
 }
 
-export interface CapabilityHolder {
-	member: MemberRef;
+export interface CapabilityHolder extends RosterPerson {
 	/** Each way this person holds it: a position label, or a committee and its reach. */
 	sources: string[];
 }
@@ -171,15 +177,15 @@ export async function listCapabilityHolders(cap: Capability): Promise<Capability
 	]);
 
 	const byUser = new Map<string, CapabilityHolder>();
-	const add = (member: MemberRef, source: string) => {
-		const key = member.id ?? '';
-		const entry = byUser.get(key) ?? { member, sources: [] };
+	const add = (person: RosterPerson, source: string) => {
+		const key = person.personId;
+		const entry = byUser.get(key) ?? { ...person, sources: [] };
 		if (!entry.sources.includes(source)) entry.sources.push(source);
 		byUser.set(key, entry);
 	};
-	for (const h of byPosition) add(h.member, positionLabels[h.position]);
+	for (const h of byPosition) add(h.person, positionLabels[h.position]);
 	const reach = rule?.committee === 'owned' ? 'on its own records' : 'org-wide';
-	for (const c of committeeRows.seats) add(c.member, `${c.committeeName} (${reach})`);
+	for (const c of committeeRows.seats) add(c.person, `${c.committeeName} (${reach})`);
 
 	return {
 		holders: [...byUser.values()].sort((a, b) => a.member.title.localeCompare(b.member.title)),
@@ -219,7 +225,7 @@ async function committeesGranting(cap: Capability) {
 			.where(inArray(groupCapability.groupId, ids))
 	]);
 	return {
-		seats: seats.map((s) => ({ member: toMemberRef(s.member), committeeName: s.committeeName })),
+		seats: seats.map((s) => ({ person: toRosterPerson(s.member), committeeName: s.committeeName })),
 		committees: carrying.map((c) => ({
 			...c,
 			held: grants.filter((g) => g.groupId === c.groupId).map((g) => g.capability as Capability)
@@ -228,8 +234,8 @@ async function committeesGranting(cap: Capability) {
 }
 
 /** Holders of one position. */
-export async function listHoldersOfPosition(position: Position): Promise<MemberRef[]> {
-	return (await listPositionHolders([position])).map((h) => h.member);
+export async function listHoldersOfPosition(position: Position): Promise<RosterPerson[]> {
+	return (await listPositionHolders([position])).map((h) => h.person);
 }
 
 /** Every member's newest grant of one clearance, lapsed and revoked included. */
