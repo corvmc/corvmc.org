@@ -126,16 +126,14 @@ const recurringSeriesServiceMock = {
 
 vi.mock('$lib/server/reservation/recurring-series-service', () => recurringSeriesServiceMock);
 
-// The break-glass ladder, mocked at the service boundary: the real one reads
-// `lock_fallback_code` and stamps the reservation, and the db mock below only
+// The door window, mocked at the service boundary; the db mock below only
 // answers `select`.
 const fallbackCodeServiceMock = {
-	revealFallbackCodeFor: vi.fn(async () => null as string | null),
-	isInAccessWindow: vi.fn(() => false),
-	fallbackShownFor: vi.fn(async () => null)
+	isInAccessWindow: vi.fn(() => false)
 };
 
 vi.mock('$lib/server/lock/fallback-code-service', () => fallbackCodeServiceMock);
+vi.mock('$lib/server/lock/door-service', () => ({ doorRecordFor: vi.fn(async () => null) }));
 
 // Mock DB for page load
 let selectResult: unknown[] = [];
@@ -233,7 +231,6 @@ beforeEach(() => {
 	hasAnyRole.mockResolvedValue(false);
 	isElevated.mockResolvedValue(false);
 	selectResult = [];
-	fallbackCodeServiceMock.revealFallbackCodeFor.mockResolvedValue(null);
 	fallbackCodeServiceMock.isInAccessWindow.mockReturnValue(false);
 });
 
@@ -564,42 +561,23 @@ describe('getBandReservationDetail', () => {
 		expect(payload).not.toContain('pay_123');
 	});
 
-	// #756 answered the question this case used to pin open: every member of the
-	// act reads the code, because whoever arrives first opens the door. Flipping
-	// it is the decision, so the case stays and asserts the other way.
-	it('gives the door code to a bandmate who did not book', async () => {
+	// #2120: nobody on the act is handed a code. Every member checks in at
+	// `/door`, so the page says when the window is open and nothing else.
+	it('sends every member of the act to the door page, not a code', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
+		fallbackCodeServiceMock.isInAccessWindow.mockReturnValue(true);
 		selectResult = detailRow({}, 'user-2');
 
 		const result = await getBandReservationDetail(detailArgs);
 
-		expect(result.lockCode).toBe('4821');
-		expect(result.isBooker).toBe(false);
+		expect(result.inAccessWindow).toBe(true);
+		expect(result).not.toHaveProperty('lockCode');
+		expect(result).not.toHaveProperty('fallbackCode');
+		expect(JSON.stringify(result)).not.toContain('4821');
 	});
 
-	it('gives the booker their own door code', async () => {
-		selectResult = detailRow({}, 'user-owner');
-
-		const result = await getBandReservationDetail(detailArgs);
-
-		expect(result.lockCode).toBe('4821');
-	});
-
-	// Staff administer band panels, so `allowStaff` lets them onto the page —
-	// and they already read the same code on the staff detail page.
-	it('gives a staff non-member the door code', async () => {
-		bandServiceMock.getUserRole.mockResolvedValue(null);
-		isElevated.mockResolvedValue(true);
-		selectResult = detailRow({}, 'user-2');
-
-		const result = await getBandReservationDetail(detailArgs);
-
-		expect(result.lockCode).toBe('4821');
-	});
-
-	// Widening the code to the act did not widen it past the act: the guard is
-	// still membership, and the row must still belong to this band.
-	it('gives the door code to nobody outside the act', async () => {
+	// The guard is still membership, and the row must still belong to this band.
+	it('shows the booking to nobody outside the act', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
 		selectResult = detailRow({}, 'user-2');
 		await expect(getBandReservationDetail(detailArgs)).rejects.toMatchObject({ status: 403 });
@@ -607,51 +585,6 @@ describe('getBandReservationDetail', () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
 		selectResult = detailRow({ bookerId: 'band-other' }, 'user-2');
 		await expect(getBandReservationDetail(detailArgs)).rejects.toMatchObject({ status: 404 });
-	});
-
-	// #780. A code we issued is not a code the lock has. Until `lockSyncedAt` is
-	// set the act reads the break-glass code instead, and the page needs the
-	// timestamp to tell the two apart.
-	it('hands over the break-glass code when the lock has not confirmed the booking own code', async () => {
-		fallbackCodeServiceMock.revealFallbackCodeFor.mockResolvedValue('87654321');
-		fallbackCodeServiceMock.isInAccessWindow.mockReturnValue(true);
-		selectResult = detailRow({ lockSyncedAt: null }, 'user-2');
-
-		const result = await getBandReservationDetail(detailArgs);
-
-		expect(result.fallbackCode).toBe('87654321');
-		expect(result.lockSyncedAt).toBeNull();
-	});
-
-	it('hands over the booking own code once the lock confirms it', async () => {
-		selectResult = detailRow({}, 'user-2');
-
-		const result = await getBandReservationDetail(detailArgs);
-
-		expect(result.lockCode).toBe('4821');
-		expect(result.lockSyncedAt).toBeInstanceOf(Date);
-		expect(result.fallbackCode).toBeNull();
-	});
-
-	// The decision on #780: falling back is not an action. The code arrives with
-	// the page the member already loaded, so there is no reveal form to call and
-	// no question of which bandmate is allowed to press it.
-	it('takes no gesture to fall back', async () => {
-		const mod = await import('$lib/remote/reservations.remote');
-		expect(Object.keys(mod).filter((k) => /reveal|fallback/i.test(k))).toEqual([]);
-	});
-
-	// Possible mid-rotation, or before one has ever been provisioned. The member
-	// is at the door, so the page has to say so rather than leave the slot empty.
-	it('says so when there is no break-glass code to hand out', async () => {
-		fallbackCodeServiceMock.revealFallbackCodeFor.mockResolvedValue(null);
-		fallbackCodeServiceMock.isInAccessWindow.mockReturnValue(true);
-		selectResult = detailRow({ lockSyncedAt: null }, 'user-2');
-
-		const result = await getBandReservationDetail(detailArgs);
-
-		expect(result.fallbackCode).toBeNull();
-		expect(result.inAccessWindow).toBe(true);
 	});
 
 	// Same rule as the list, so the page never offers a Cancel that

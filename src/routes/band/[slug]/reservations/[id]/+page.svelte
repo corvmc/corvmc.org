@@ -1,5 +1,6 @@
 <script lang="ts">
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import DoorCheckIn from '$lib/components/reservations/DoorCheckIn.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -91,45 +92,7 @@
 	{/if}
 
 	{#if res.status === 'confirmed'}
-		<!-- A card only when there is a code to frame. Four of the five branches
-		     were a single paragraph inside an `InfoCard` titled "Door Code",
-		     which is a box around one sentence (#1061, #1077). -->
-		{#if res.lockCode && res.lockSyncedAt}
-			<InfoCard title="Door Code">
-				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
-				<p class="text-muted">
-					Enter this code on the door keypad. It works for the length of the session, for whoever on
-					the band gets there first.
-				</p>
-			</InfoCard>
-		{:else if res.fallbackCode}
-			<!-- The session's own code has not reached the lock. The break-glass
-			     code was synced long ago, so it opens the door even now, and it
-			     is shown rather than asked for — see #780. -->
-			<InfoCard title="Door Code">
-				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.fallbackCode}</p>
-				<p class="text-muted">
-					We couldn't confirm this session's usual code reached the door, so this one will get the
-					band in for now. Staff know about it. If it doesn't work, call us rather than waiting
-					outside.
-				</p>
-			</InfoCard>
-		{:else if res.inAccessWindow}
-			<!-- The session is running and nothing here opens the door. Standing
-			     outside is the failure mode, so this one is loud. -->
-			<Alert type="error">
-				This session's code hasn't reached the door and we don't have a backup to give you right
-				now. Don't wait outside — <a class="link" href={resolve('/contact')}>get in touch</a> and someone
-				will let the band in.
-			</Alert>
-		{:else if res.lockCode}
-			<p class="text-muted">
-				The code is issued but the door hasn't confirmed it yet. It should be ready before the
-				session — check back here, and get in touch if it still isn't showing.
-			</p>
-		{:else}
-			<p class="text-muted">The door code appears here on the day of the session.</p>
-		{/if}
+		<DoorCheckIn now={res.inAccessWindow} />
 	{/if}
 
 	{#if res.canCancel}

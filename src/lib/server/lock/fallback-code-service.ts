@@ -414,13 +414,12 @@ async function refill(errors: string[]): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
-// Handing it out (until the door page replaces this, #2120 phase 3)
+// The booking window
 // ---------------------------------------------------------------------------
 
 /**
  * Whether the booking is live right now, counting the grace the lock itself
- * gives either side. A pool code opens the door at any hour, so it is only
- * ever handed to someone whose session is actually happening.
+ * gives either side. Booking pages lead with the door page while it is.
  */
 export function isInAccessWindow(
 	row: { startsAt: Date; endsAt: Date },
@@ -428,56 +427,6 @@ export function isInAccessWindow(
 ): boolean {
 	const now = at.getTime();
 	return now >= row.startsAt.getTime() - graceMs() && now <= row.endsAt.getTime() + graceMs();
-}
-
-type FallbackRow = { status: string; startsAt: Date; endsAt: Date; lockSyncedAt: Date | null };
-
-/** Confirmed, its own code not on the device, and inside the access window. */
-export function fallbackApplies(row: FallbackRow): boolean {
-	return row.status === 'confirmed' && !row.lockSyncedAt && isInAccessWindow(row);
-}
-
-/**
- * What the member's page shows in place of their own code, for staff (#1814):
- * the booking's pool code while the window is open, or when it opens. Claims
- * but does not reveal — a staff look is not a member being shown it.
- */
-export async function fallbackShownFor(
-	row: FallbackRow & { id: string }
-): Promise<{ code: string | null; showsFrom: Date | null } | null> {
-	if (row.status !== 'confirmed' || row.lockSyncedAt) return null;
-	if (fallbackApplies(row)) {
-		const claimed = await claimPoolCode(row.id);
-		return { code: claimed?.code ?? null, showsFrom: null };
-	}
-	const showsFrom = new Date(row.startsAt.getTime() - graceMs());
-	return showsFrom.getTime() > Date.now() ? { code: null, showsFrom } : null;
-}
-
-/**
- * The booking's pool code, or null, when it is confirmed, inside the access
- * window, and its own code is not on the device. Every page that shows a door
- * code calls this on load (#780); the stamp on the booking stays the record
- * that it fell back.
- */
-export async function revealFallbackCodeFor(row: {
-	id: string;
-	status: string;
-	startsAt: Date;
-	endsAt: Date;
-	lockSyncedAt: Date | null;
-}): Promise<string | null> {
-	if (!fallbackApplies(row)) return null;
-
-	const code = await revealPoolCode(row.id);
-	if (!code) return null;
-
-	await db
-		.update(reservation)
-		.set({ lockFallbackRevealedAt: new Date() })
-		.where(eq(reservation.id, row.id));
-
-	return code.code;
 }
 
 // ---------------------------------------------------------------------------

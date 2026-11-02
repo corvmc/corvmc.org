@@ -144,7 +144,6 @@ const {
 	issueLockSelfTest,
 	revokeLockSelfTest,
 	syncAccessWindow,
-	provisionOnConfirm,
 	revokeAccessFor,
 	reconcileUpcomingSync,
 	UPCOMING_SYNC_CAP
@@ -205,41 +204,18 @@ beforeEach(() => {
 
 describe('runDailyLockJob', () => {
 	it('returns zeros when no reservations need processing', async () => {
-		// cleanup: no lock users; provision: no confirmed reservations today
+		// cleanup: no lock users
 		mockListLockUsers.mockResolvedValue([]);
 		selectResults.push([]);
 
 		const result = await runDailyLockJob();
 
-		expect(result.provisioned).toBe(0);
 		expect(result.cleaned).toBe(0);
 		expect(result.errors).toHaveLength(0);
 	});
 
-	it('provisions a door code for confirmed reservations today', async () => {
-		selectResults.push([
-			{
-				id: 'res-1',
-				startsAt: new Date(),
-				endsAt: new Date(Date.now() + 3600000),
-				createdByUserId: 'user-1',
-				memberName: 'Alice'
-			}
-		]);
-
-		const result = await runDailyLockJob();
-
-		expect(result.provisioned).toBe(1);
-		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
-			expect.objectContaining({ name: 'Alice', code: 4242 })
-		);
-		// The generated code is stored as the reservation's lockCode.
-		expect(updateCalls).toContainEqual(expect.objectContaining({ lockCode: '4242' }));
-	});
-
 	it('deletes only expired temporary users on cleanup', async () => {
 		mockListLockUsers.mockResolvedValue([expiredRow, activeRow]);
-		selectResults.push([]); // provision: none
 
 		const result = await runDailyLockJob();
 
@@ -263,39 +239,6 @@ describe('runDailyLockJob', () => {
 
 		expect(result.cleaned).toBe(0);
 		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
-	});
-
-	it('handles provision errors gracefully and continues', async () => {
-		selectResults.push([
-			{
-				id: 'res-fail',
-				startsAt: new Date(),
-				endsAt: new Date(),
-				createdByUserId: 'u1',
-				memberName: 'Bob'
-			},
-			{
-				id: 'res-ok',
-				startsAt: new Date(),
-				endsAt: new Date(),
-				createdByUserId: 'u2',
-				memberName: 'Carol'
-			}
-		]);
-
-		mockCreateTemporaryUser
-			.mockRejectedValueOnce(new Error('API timeout'))
-			.mockResolvedValueOnce(undefined);
-
-		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-		const result = await runDailyLockJob();
-
-		expect(result.provisioned).toBe(1);
-		expect(result.errors).toHaveLength(1);
-		expect(result.errors[0]).toContain('res-fail');
-
-		consoleSpy.mockRestore();
 	});
 
 	it('handles cleanup deletion errors gracefully', async () => {
@@ -402,67 +345,10 @@ describe('syncAccessWindow', () => {
 	// The bug this exists for: the daily cron runs in the morning and only looks
 	// at codeless rows starting today, so a booking re-timed in the afternoon has
 	// already been passed over.
-	it('provisions a code the daily cron has already gone past', async () => {
-		selectResults.push([
-			{
-				id: 'res-1',
-				status: 'confirmed',
-				startsAt: todayAt('19:00'),
-				endsAt: todayAt('21:00'),
-				lockCode: null,
-				memberName: 'Alice'
-			}
-		]);
-
-		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
-
-		expect(result.synced).toBe(true);
-		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
-			expect.objectContaining({ name: 'Alice', code: 4242 })
-		);
-		expect(updateCalls[0]).toMatchObject({ lockCode: '4242' });
-	});
 
 	// The cron has already passed over anything inside its window, not only today.
-	it('provisions a codeless booking moved into the confirmation window', async () => {
-		selectResults.push([
-			{
-				id: 'res-1',
-				status: 'confirmed',
-				startsAt: tomorrowAt('19:00'),
-				endsAt: tomorrowAt('21:00'),
-				lockCode: null,
-				memberName: 'Alice'
-			}
-		]);
-
-		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
-
-		expect(result.synced).toBe(true);
-		expect(mockCreateTemporaryUser).toHaveBeenCalledOnce();
-	});
 
 	// The lock's user table is finite; a standing code already opens the door.
-	it('does not mint for a member who already holds a standing code', async () => {
-		selectResults.push([
-			{
-				id: 'res-1',
-				status: 'confirmed',
-				startsAt: tomorrowAt('19:00'),
-				endsAt: tomorrowAt('21:00'),
-				lockCode: null,
-				createdByUserId: 'user-1',
-				memberName: 'Alice'
-			}
-		]);
-		mockHasActiveMemberCode.mockResolvedValue(true);
-
-		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
-
-		expect(result.synced).toBe(false);
-		expect(mockHasActiveMemberCode).toHaveBeenCalledWith('user-1');
-		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
-	});
 
 	it('leaves a codeless booking beyond the confirmation window to the cron', async () => {
 		selectResults.push([
@@ -685,7 +571,7 @@ describe('lock health', () => {
 	});
 
 	// Not knowing is not the same as being offline.
-	it('records null and provisions anyway when the health check itself fails', async () => {
+	it('records null and carries on when the health check itself fails', async () => {
 		mockQueryDeviceHealth.mockRejectedValue(new Error('token expired'));
 		selectResults.push([], []);
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -702,7 +588,6 @@ describe('lock health', () => {
 
 describe('sync reconciliation', () => {
 	it('promotes a code to known-good only once the lock reports sync_status 1', async () => {
-		selectResults.push([]); // provision: none
 		selectResults.push([
 			{ id: 'res-synced', lockAccessId: '111' },
 			{ id: 'res-queued', lockAccessId: '222' }
@@ -773,143 +658,12 @@ describe('reconcileUpcomingSync', () => {
 	});
 
 	it('leaves the daily backstop unbounded', async () => {
-		selectResults.push([]); // provision
+		selectResults.push([]);
 		selectResults.push([]); // reconcile
 
 		await runDailyLockJob();
 
 		expect(chainCalls.some(([m]) => m === 'limit')).toBe(false);
-	});
-});
-
-describe('persistent member codes', () => {
-	// Every code not issued is one less user on the lock's finite table.
-	it('skips provisioning for a member who already holds a standing code', async () => {
-		selectResults.push([
-			{
-				id: 'res-1',
-				startsAt: new Date(),
-				endsAt: new Date(),
-				createdByUserId: 'user-1',
-				memberName: 'Jordan'
-			}
-		]);
-		selectResults.push([]); // reconcile: nothing outstanding
-		mockHasActiveMemberCode.mockResolvedValue(true);
-
-		const result = await runDailyLockJob();
-
-		expect(mockHasActiveMemberCode).toHaveBeenCalledWith('user-1');
-		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
-		expect(result.provisioned).toBe(0);
-	});
-});
-
-describe('provisioning window', () => {
-	// The window was a single day, which left no slack: the job runs once each
-	// morning, so a lock offline then meant a member with a booking that evening
-	// had a code queued in the cloud and no way in.
-	it('provisions across the confirmation window, not just today', async () => {
-		selectResults.push([
-			{
-				id: 'res-in-3-days',
-				startsAt: new Date(Date.now() + 2.5 * 24 * 60 * 60_000),
-				endsAt: new Date(Date.now() + 2.5 * 24 * 60 * 60_000 + 3_600_000),
-				createdByUserId: 'user-1',
-				memberName: 'Jordan'
-			}
-		]);
-		selectResults.push([]);
-
-		const result = await runDailyLockJob();
-
-		expect(result.provisioned).toBe(1);
-		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
-			expect.objectContaining({ name: 'Jordan' })
-		);
-	});
-});
-
-// ---------------------------------------------------------------------------
-// provisionOnConfirm — the member has their code when they confirm (#821)
-// ---------------------------------------------------------------------------
-
-describe('provisionOnConfirm', () => {
-	const inWindow = (days: number) => new Date(Date.now() + days * 24 * 60 * 60_000);
-	const confirmedRow = (overrides: Record<string, unknown> = {}) => ({
-		id: 'res-1',
-		status: 'confirmed',
-		startsAt: inWindow(1),
-		endsAt: new Date(inWindow(1).getTime() + 3_600_000),
-		lockCode: null,
-		createdByUserId: 'user-1',
-		memberName: 'Jordan',
-		...overrides
-	});
-
-	it('mints a code for a booking confirmed inside the window', async () => {
-		selectResults.push([confirmedRow()]);
-
-		await expect(provisionOnConfirm('res-1')).resolves.toBe(true);
-
-		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
-			expect.objectContaining({ name: 'Jordan', code: 4242 })
-		);
-		expect(updateCalls).toContainEqual(expect.objectContaining({ lockCode: '4242' }));
-	});
-
-	// A Stripe charge confirms weeks ahead; minting then would load the lock's
-	// finite user table with codes nobody needs yet.
-	it('leaves a booking beyond the window to the daily job', async () => {
-		selectResults.push([confirmedRow({ startsAt: inWindow(10), endsAt: inWindow(10.1) })]);
-
-		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
-		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
-	});
-
-	it('does not mint a second code for a booking that already has one', async () => {
-		selectResults.push([confirmedRow({ lockCode: '1111' })]);
-
-		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
-		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
-	});
-
-	it('ignores a booking that is not confirmed', async () => {
-		selectResults.push([confirmedRow({ status: 'scheduled' })]);
-
-		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
-		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
-	});
-
-	it('skips a member who already holds a standing code', async () => {
-		selectResults.push([confirmedRow()]);
-		mockHasActiveMemberCode.mockResolvedValue(true);
-
-		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
-		expect(mockHasActiveMemberCode).toHaveBeenCalledWith('user-1');
-		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
-	});
-
-	// The member is waiting on the confirm; the daily job is the backstop.
-	it('never throws when the lock API fails', async () => {
-		selectResults.push([confirmedRow()]);
-		mockCreateTemporaryUser.mockRejectedValueOnce(new Error('U-tec 503'));
-		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
-		expect(updateCalls).toHaveLength(0);
-
-		consoleSpy.mockRestore();
-	});
-
-	it('never throws when the member-code check fails', async () => {
-		selectResults.push([confirmedRow()]);
-		mockHasActiveMemberCode.mockRejectedValueOnce(new Error('D1 unavailable'));
-		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
-
-		consoleSpy.mockRestore();
 	});
 });
 
@@ -965,7 +719,7 @@ describe('last run record', () => {
 		selectResults.push([]);
 		selectResults.push([]);
 
-		await expect(runDailyLockJob()).resolves.toMatchObject({ provisioned: 0 });
+		await expect(runDailyLockJob()).resolves.toMatchObject({ cleaned: 0 });
 	});
 
 	it('reads the stored record back', async () => {
@@ -983,24 +737,14 @@ describe('last run record', () => {
 // ---------------------------------------------------------------------------
 
 describe('step isolation', () => {
-	it('still provisions when KV is down for the health reading', async () => {
+	it('still keeps the pool when KV is down for the health reading', async () => {
 		mockGetJson.mockRejectedValue(new Error('KV is down'));
 		mockPutJson.mockRejectedValue(new Error('KV is down'));
-		selectResults.push([
-			{
-				id: 'res-1',
-				startsAt: new Date(),
-				endsAt: new Date(Date.now() + 3_600_000),
-				createdByUserId: 'user-1',
-				memberName: 'Jordan'
-			}
-		]);
-		selectResults.push([]);
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		const result = await runDailyLockJob();
 
-		expect(result.provisioned).toBe(1);
+		expect(mockMaintainCodePool).toHaveBeenCalled();
 		expect(result.errors).toContainEqual(expect.stringContaining('KV is down'));
 		consoleSpy.mockRestore();
 	});
@@ -1091,7 +835,6 @@ describe('revokeAccessFor', () => {
 
 describe('daily sweep of cancelled bookings', () => {
 	it('removes the lock user a cancelled booking still holds', async () => {
-		selectResults.push([]); // provision: none
 		selectResults.push([]); // sync reconciliation: none
 		selectResults.push([
 			{ id: 'res-9', status: 'cancelled', startsAt: new Date(), lockCode: '1', lockAccessId: '555' }

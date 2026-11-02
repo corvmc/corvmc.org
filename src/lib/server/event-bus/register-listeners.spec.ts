@@ -56,6 +56,7 @@ vi.mock('$lib/server/reservation/waitlist-service', () => ({
 }));
 
 // Best-effort by contract: it never throws, so the listener needs no guard.
+// `provisionOnConfirm` is retired (#2120); kept here so a listener that calls it fails.
 const mockProvisionOnConfirm = vi.fn().mockResolvedValue(true);
 const mockRevokeAccessFor = vi.fn().mockResolvedValue(true);
 vi.mock('$lib/server/lock/lock-service', () => ({
@@ -281,17 +282,20 @@ describe('reservation.cancelled — waitlist promotion', () => {
 });
 
 describe('reservation.confirmed — door code', () => {
-	it('mints the door code for the booking that was just confirmed', async () => {
+	// Members check in at `/door` (#2120); a confirmed booking gets no code.
+	it('mints nothing for the booking that was just confirmed', async () => {
 		const { registerListeners } = await import('./register-listeners');
 		registerListeners();
 		await vi.dynamicImportSettled();
 
-		await registeredHandlers['reservation.confirmed'][0]({
-			name: 'reservation.confirmed',
-			data: { reservationId: 'res-1', userId: 'user-1' }
-		});
+		for (const handler of registeredHandlers['reservation.confirmed'] ?? []) {
+			await handler({
+				name: 'reservation.confirmed',
+				data: { reservationId: 'res-1', userId: 'user-1' }
+			});
+		}
 
-		expect(mockProvisionOnConfirm).toHaveBeenCalledWith('res-1');
+		expect(mockProvisionOnConfirm).not.toHaveBeenCalled();
 	});
 });
 

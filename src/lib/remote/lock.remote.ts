@@ -8,11 +8,8 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq } from 'drizzle-orm';
 import { LOCK_MODE_PASSAGE, queryDeviceHealth } from '$lib/server/lock/ultraloc-client';
-import {
-	getLastLockJobRun,
-	reprovisionAccessFor,
-	runDailyLockJob
-} from '$lib/server/lock/lock-service';
+import { getLastLockJobRun, runDailyLockJob } from '$lib/server/lock/lock-service';
+import { readOutCodeFor } from '$lib/server/lock/door-service';
 import { listPoolCodes, poolDepth } from '$lib/server/lock/fallback-code-service';
 import {
 	listUnmanagedLockUsers,
@@ -99,41 +96,24 @@ export const getPoolCodes = query(async () => {
 });
 
 /**
- * The reservation page's retry (#1813): re-issue this booking's code, then run
- * the daily job, since codes tend to fail together. This booking goes first and
- * always — the job skips one that already has a code or sits outside its window.
+ * Staff reading a code over the phone (#2120): the booking's own code from the
+ * pool, marked revealed so it comes off the lock once the booking is over.
  */
-export const retryDoorCodes = command(z.string(), async (reservationId) => {
-	const staff = await requireCapability('lock.manage');
+export const readOutDoorCode = command(z.string().min(1), async (reservationId) => {
+	await requireCapability('lock.manage');
 
 	const [row] = await db
-		.select({
-			id: reservation.id,
-			status: reservation.status,
-			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt,
-			lockCode: reservation.lockCode,
-			memberName: user.name
-		})
+		.select({ status: reservation.status })
 		.from(reservation)
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.where(eq(reservation.id, reservationId))
 		.limit(1);
-
 	if (!row) error(404, 'Reservation not found');
-	if (row.status !== 'confirmed') error(400, 'Only a confirmed reservation gets a door code');
+	if (row.status !== 'confirmed') error(400, 'Only a confirmed booking gets a door code');
 
-	// Keep the existing code when there is one: the member may already have been
-	// told it, and changing it under them is its own failure.
-	const booking = await reprovisionAccessFor({
-		id: row.id,
-		startsAt: row.startsAt,
-		endsAt: row.endsAt,
-		memberName: row.memberName,
-		code: row.lockCode ? Number(row.lockCode) : undefined
-	});
-	const job = await runDailyLockJob(staff.name);
-	return { booking, job };
+	const code = await readOutCodeFor(reservationId);
+	if (!code) error(409, 'The door code pool is empty.');
+	void getPoolCodes().refresh();
+	return { code };
 });
 
 /** Claim an existing lock user as a managed member code. Changes nothing on the lock. */

@@ -11,6 +11,7 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
+	import DoorCheckIn from '$lib/components/reservations/DoorCheckIn.svelte';
 	import { EntityIdentity, EntityChip } from '$lib/components/ui/entity';
 	import { CancelReservationAction, ConfirmWaitlistedAction } from '$lib/components/actions';
 	import ReaderPayment from './ReaderPayment.svelte';
@@ -60,44 +61,7 @@
 	{/if}
 
 	{#if res.status === 'confirmed'}
-		<!-- A card only when there is a code to frame. Four of the five branches
-		     were a single paragraph inside an `InfoCard` titled "Door Code",
-		     which is a box around one sentence (#1061). -->
-		{#if res.lockCode && res.lockSyncedAt}
-			<InfoCard title="Door Code">
-				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
-				<p class="text-muted">
-					Enter this code on the door keypad to get in. It works for the length of your reservation.
-				</p>
-			</InfoCard>
-		{:else if data.fallbackCode}
-			<!-- Their own code has not reached the lock, and they are due in now.
-			     The break-glass code was synced long ago, so it opens the door
-			     even while the lock is offline. -->
-			<InfoCard title="Door Code">
-				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{data.fallbackCode}</p>
-				<p class="text-muted">
-					We couldn't confirm your usual code reached the door, so this one will get you in for now.
-					Staff know about it. If it doesn't work, call us rather than waiting outside.
-				</p>
-			</InfoCard>
-		{:else if data.inAccessWindow}
-			<!-- Their session is running and nothing here opens the door: no
-			     break-glass code is confirmed on the lock right now, which happens
-			     mid-rotation. Standing outside is the failure mode. -->
-			<Alert type="error">
-				Your code hasn't reached the door and we don't have a backup to give you right now. Don't
-				wait outside — <a class="link" href={resolve('/contact')}>get in touch</a> and someone will let
-				you in.
-			</Alert>
-		{:else if res.lockCode}
-			<p class="text-muted">
-				Your door code is issued but the door hasn't confirmed it yet. It should be ready before
-				your session — check back here, and get in touch if it still isn't showing.
-			</p>
-		{:else}
-			<p class="text-muted">Your door code will appear here before your reservation.</p>
-		{/if}
+		<DoorCheckIn now={data.inAccessWindow} />
 	{/if}
 
 	{#if res.status === 'scheduled'}
