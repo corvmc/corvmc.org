@@ -280,8 +280,8 @@ export const staffNavSections: StaffNavSection[] = [
 				href: resolve('/staff/renewals')
 			},
 			{
-				// Standing access to the building. Door codes are managed in Settings;
-				// this lists them beside the keys and alarm codes nothing else records.
+				// Who can open the door: keys, alarm codes, and every code on the lock,
+				// managed here (#2120).
 				key: 'keys',
 				capability: 'lock.manage',
 				label: 'Key Holders',

@@ -106,9 +106,12 @@ export const tableOrder = [
 	// References user, work_order and reservation, so it follows all three.
 	'member_orientation',
 	'volunteer_signup',
+	// References reservation (the claiming booking), so it follows it.
+	'lock_fallback_code',
+	// References reservation and user.
+	'door_access',
 	// independents (no FKs)
 	'closure',
-	'lock_fallback_code',
 	// References user twice (holder + granting staff), so it follows `user`.
 	'lock_member_code',
 	// References user three times (holder, issuer, receiver).

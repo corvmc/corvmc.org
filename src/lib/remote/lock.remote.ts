@@ -2,21 +2,15 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { command, form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq } from 'drizzle-orm';
-import { queryDeviceHealth } from '$lib/server/lock/ultraloc-client';
-import {
-	getLastLockJobRun,
-	reprovisionAccessFor,
-	runDailyLockJob
-} from '$lib/server/lock/lock-service';
-import {
-	getActiveFallbackCode,
-	rotateFallbackCodeNow
-} from '$lib/server/lock/fallback-code-service';
+import { LOCK_MODE_PASSAGE, queryDeviceHealth } from '$lib/server/lock/ultraloc-client';
+import { getLastLockJobRun, runDailyLockJob } from '$lib/server/lock/lock-service';
+import { readOutCodeFor } from '$lib/server/lock/door-service';
+import { listPoolCodes, poolDepth } from '$lib/server/lock/fallback-code-service';
 import {
 	listUnmanagedLockUsers,
 	adoptLockUser,
@@ -41,8 +35,7 @@ import { accessHoldingKinds, DEFAULT_TIMEZONE } from '$lib/config';
 // ---------------------------------------------------------------------------
 
 /**
- * Whether the lock is reachable, plus the break-glass code staff may need to
- * read out over the phone.
+ * Whether the lock is reachable. Door codes are on Key Holders.
  *
  * Only `online` is live. `lockState` and `batteryLevel` are whatever U-tec last
  * heard from the device, which during an outage may be months old.
@@ -55,16 +48,15 @@ export const getLockHealth = query(async () => {
 	const lastRun = await getLastLockJobRun();
 
 	try {
-		const [health, fallback] = await Promise.all([queryDeviceHealth(), getActiveFallbackCode()]);
+		const health = await queryDeviceHealth();
 
 		return {
 			ok: true as const,
 			lastRun,
 			online: health.online,
 			lockState: health.lockState,
-			batteryLevel: health.batteryLevel,
-			fallbackCode: fallback?.code ?? null,
-			fallbackSyncedAt: fallback?.syncedAt ?? null
+			passageMode: health.lockMode === LOCK_MODE_PASSAGE,
+			batteryLevel: health.batteryLevel
 		};
 	} catch (err) {
 		return { ok: false as const, lastRun, error: (err as Error).message };
@@ -75,8 +67,8 @@ export const getLockHealth = query(async () => {
  * Run the daily lock job now, rather than waiting for the 16:00 UTC batch.
  *
  * Safe to repeat: every stage is filtered on work still outstanding — a
- * booking with no code, a code not yet confirmed on the device, a missing
- * break-glass code — so a second run reports zeros instead of issuing anything
+ * booking with no code, a code not yet confirmed on the device, a pool below
+ * depth — so a second run reports zeros instead of issuing anything
  * twice.
  */
 export const runLockJobNow = command(async () => {
@@ -96,48 +88,32 @@ export const getMemberCodes = query(async () => {
 	return listMemberCodes();
 });
 
-/**
- * The reservation page's retry (#1813): re-issue this booking's code, then run
- * the daily job, since codes tend to fail together. This booking goes first and
- * always — the job skips one that already has a code or sits outside its window.
- */
-export const retryDoorCodes = command(z.string(), async (reservationId) => {
-	const staff = await requireCapability('lock.manage');
-
-	const [row] = await db
-		.select({
-			id: reservation.id,
-			status: reservation.status,
-			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt,
-			lockCode: reservation.lockCode,
-			memberName: user.name
-		})
-		.from(reservation)
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.where(eq(reservation.id, reservationId))
-		.limit(1);
-
-	if (!row) error(404, 'Reservation not found');
-	if (row.status !== 'confirmed') error(400, 'Only a confirmed reservation gets a door code');
-
-	// Keep the existing code when there is one: the member may already have been
-	// told it, and changing it under them is its own failure.
-	const booking = await reprovisionAccessFor({
-		id: row.id,
-		startsAt: row.startsAt,
-		endsAt: row.endsAt,
-		memberName: row.memberName,
-		code: row.lockCode ? Number(row.lockCode) : undefined
-	});
-	const job = await runDailyLockJob(staff.name);
-	return { booking, job };
+/** Booking codes (#2120): the pool's depth and every code it has handed out. */
+export const getPoolCodes = query(async () => {
+	await requireCapability('lock.manage');
+	const [codes, available] = await Promise.all([listPoolCodes(), poolDepth()]);
+	return { codes, available };
 });
 
-/** Mint a successor break-glass code ahead of its scheduled rotation. */
-export const rotateFallbackCode = command(async () => {
+/**
+ * Staff reading a code over the phone (#2120): the booking's own code from the
+ * pool, marked revealed so it comes off the lock once the booking is over.
+ */
+export const readOutDoorCode = command(z.string().min(1), async (reservationId) => {
 	await requireCapability('lock.manage');
-	return rotateFallbackCodeNow();
+
+	const [row] = await db
+		.select({ status: reservation.status })
+		.from(reservation)
+		.where(eq(reservation.id, reservationId))
+		.limit(1);
+	if (!row) error(404, 'Reservation not found');
+	if (row.status !== 'confirmed') error(400, 'Only a confirmed booking gets a door code');
+
+	const code = await readOutCodeFor(reservationId);
+	if (!code) error(409, 'The door code pool is empty.');
+	void getPoolCodes().refresh();
+	return { code };
 });
 
 /** Claim an existing lock user as a managed member code. Changes nothing on the lock. */
@@ -154,32 +130,54 @@ export const adoptUnmanagedCode = command(
 	}
 );
 
+function refreshDoorCodes() {
+	void getMemberCodes().refresh();
+	refreshRegister();
+}
+
 /** Give a member a standing door code. */
-export const grantStandingCode = command(z.string(), async (userId) => {
-	const staff = await requireUser();
-	await requireCapability('lock.manage');
+export const grantCodeForm = form(
+	z.object({ holderUserId: z.string().trim().min(1, 'Pick a member') }),
+	async ({ holderUserId }) => {
+		const staff = await requireCapability('lock.manage');
 
-	const [member] = await db
-		.select({ id: user.id, name: user.name })
-		.from(user)
-		.where(eq(user.id, userId))
-		.limit(1);
+		const [member] = await db
+			.select({ id: user.id, name: user.name })
+			.from(user)
+			.where(eq(user.id, holderUserId))
+			.limit(1);
+		if (!member) error(404, 'Member not found');
 
-	if (!member) error(404, 'Member not found');
-
-	return grantMemberCode({
-		userId: member.id,
-		memberName: member.name,
-		grantedByStaffId: staff.id
-	});
-});
+		let granted: Awaited<ReturnType<typeof grantMemberCode>>;
+		try {
+			granted = await grantMemberCode({
+				userId: member.id,
+				memberName: member.name,
+				grantedByStaffId: staff.id
+			});
+		} catch (err) {
+			// The lock, not the request: say what it said rather than a bare 500.
+			error(502, (err as Error).message);
+		}
+		refreshDoorCodes();
+		return { code: String(granted.code) };
+	}
+);
 
 /** Take a standing door code away. */
-export const revokeStandingCode = command(
-	z.object({ id: z.string().trim().min(1), reason: z.string().trim().min(1) }),
+export const revokeCodeForm = form(
+	z.object({
+		id: z.string().trim().min(1),
+		reason: z.string().trim().min(1, 'Say why').max(500)
+	}),
 	async ({ id, reason }) => {
 		await requireCapability('lock.manage');
-		await revokeMemberCode(id, reason);
+		try {
+			await revokeMemberCode(id, reason);
+		} catch (err) {
+			error(502, (err as Error).message);
+		}
+		refreshDoorCodes();
 		return { revoked: true };
 	}
 );

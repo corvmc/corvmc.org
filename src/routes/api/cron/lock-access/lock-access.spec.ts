@@ -52,7 +52,7 @@ describe('POST /api/cron/lock-access', () => {
 
 	it('delegates to runDailyLockJob', async () => {
 		mockRunDailyLockJob.mockResolvedValue({
-			provisioned: 2,
+			pool: null,
 			cleaned: 1,
 			confirmed: 1,
 			online: true,
@@ -64,7 +64,7 @@ describe('POST /api/cron/lock-access', () => {
 		expect(mockRunDailyLockJob).toHaveBeenCalled();
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({
-			provisioned: 2,
+			pool: null,
 			cleaned: 1,
 			confirmed: 1,
 			online: true,
@@ -76,7 +76,7 @@ describe('POST /api/cron/lock-access', () => {
 	// 200 here closed the check-in green through a total lock outage.
 	it('fails the run when anything went wrong, so the check-in goes red', async () => {
 		mockRunDailyLockJob.mockResolvedValue({
-			provisioned: 4,
+			pool: null,
 			cleaned: 2,
 			confirmed: 0,
 			online: false,
@@ -87,7 +87,7 @@ describe('POST /api/cron/lock-access', () => {
 
 		expect(response.status).toBe(500);
 		expect(await response.json()).toEqual({
-			provisioned: 4,
+			pool: null,
 			cleaned: 2,
 			confirmed: 0,
 			online: false,

@@ -237,9 +237,15 @@ export interface LockUserDetail extends LockUser {
 export interface LockDeviceHealth {
 	/** From `st.healthCheck`. Everything else here is last-known-cached. */
 	online: boolean;
+	/** `Locked`, `Unlocked`, `Jammed` or `Unknown`. */
 	lockState: string | null;
+	/** 0 normal, 1 passage (stays unlocked), 2 locked. */
+	lockMode: number | null;
 	batteryLevel: number | null;
 }
+
+/** `st.lockMode` 1: the lock does not relock on its own. */
+export const LOCK_MODE_PASSAGE = 1;
 
 /** Map a raw lock-user row onto the camelCase shape the rest of the app uses. */
 function toLockUser<T extends LockUser>(raw: Record<string, unknown>): T {
@@ -412,8 +418,33 @@ export async function queryDeviceHealth(): Promise<LockDeviceHealth> {
 	return {
 		online: find('st.healthCheck', 'status') === 'Online',
 		lockState: (find('st.lock', 'lockState') as string) ?? null,
+		lockMode: (find('st.lock', 'lockMode') as number) ?? null,
 		batteryLevel: (find('st.batteryLevel', 'level') as number) ?? null
 	};
+}
+
+/**
+ * Send `st.lock` `lock` or `unlock`. The ack is only `st.deferredResponse`:
+ * the device's estimate, 1–20 seconds, of when it will have acted. The result
+ * arrives on a notification URL we do not register, so callers poll
+ * `lockState`. A command for an offline lock queues with no documented expiry
+ * or cancel — see `operateDoor` for why that is gated.
+ */
+export async function sendLockCommand(
+	name: 'lock' | 'unlock'
+): Promise<{ deferredSeconds: number | null }> {
+	const { deviceId } = await getConfig();
+
+	const result = (await apiCall('Uhome.Device', 'Command', {
+		devices: [{ id: deviceId, command: { capability: 'st.lock', name } }]
+	})) as
+		| { devices?: Array<{ states?: Array<{ capability: string; name: string; value: unknown }> }> }
+		| undefined;
+
+	const deferred = result?.devices?.[0]?.states?.find(
+		(st) => st.capability.toLowerCase() === 'st.deferredresponse' && st.name === 'seconds'
+	)?.value;
+	return { deferredSeconds: typeof deferred === 'number' ? deferred : null };
 }
 
 // ---------------------------------------------------------------------------

@@ -109,8 +109,10 @@ export type AccessRegisterKind = AccessHoldingKind | 'lock_code';
 
 export interface AccessRegisterRow {
 	id: string;
-	/** `lock` rows are managed from Settings → Door access, not returned here. */
+	/** `lock` rows are standing door codes: revoked, not returned. */
 	source: 'register' | 'lock';
+	/** A standing code's digits, so staff can tell the member without resetting it. */
+	code: string | null;
 	kind: AccessRegisterKind;
 	label: string;
 	holderUserId: string | null;
@@ -153,6 +155,7 @@ export async function listAccessRegister(
 				id: lockMemberCode.id,
 				userId: lockMemberCode.userId,
 				label: lockMemberCode.label,
+				code: lockMemberCode.code,
 				memberName: member.name,
 				createdAt: lockMemberCode.createdAt,
 				revokedAt: lockMemberCode.revokedAt,
@@ -167,12 +170,13 @@ export async function listAccessRegister(
 	]);
 
 	const rows: AccessRegisterRow[] = [
-		...holdings.map((h) => ({ ...h, source: 'register' as const })),
+		...holdings.map((h) => ({ ...h, source: 'register' as const, code: null })),
 		...codes.map((c) => ({
 			id: c.id,
 			source: 'lock' as const,
 			kind: 'lock_code' as const,
 			label: c.label,
+			code: c.code ?? null,
 			holderUserId: c.userId,
 			// An adopted code nobody has matched to an account reads as its lock label.
 			holderName: c.memberName ?? c.label,

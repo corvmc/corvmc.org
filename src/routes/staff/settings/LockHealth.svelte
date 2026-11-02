@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Whether the door is actually reachable, and the break-glass code.
+	// Whether the door is actually reachable. Door codes are on Key Holders.
 	//
 	// Its own component so the settings page keeps one load-bearing query: this
 	// one talks to U-tec over the network and nothing above the fold needs it,
@@ -9,29 +9,13 @@
 	// this says whether a door code will actually work.
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import { getLockHealth, rotateFallbackCode, runLockJobNow } from '$lib/remote/lock.remote';
+	import { getLockHealth, runLockJobNow } from '$lib/remote/lock.remote';
 	import { timeAgo } from '$lib/utils/format';
 
 	const health = $derived(await getLockHealth());
 
-	let rotating = $state(false);
-	let rotateResult = $state<{ ok: boolean; error?: string } | null>(null);
-
 	let running = $state(false);
 	let runError = $state<string | null>(null);
-
-	async function handleRotate() {
-		rotating = true;
-		rotateResult = null;
-		try {
-			rotateResult = await rotateFallbackCode();
-			await getLockHealth().refresh();
-		} catch (err) {
-			rotateResult = { ok: false, error: (err as Error).message };
-		} finally {
-			rotating = false;
-		}
-	}
 
 	// Safe to press twice: every stage of the job is filtered on work still
 	// outstanding, so a repeat run reports zeros rather than issuing a code again.
@@ -60,6 +44,10 @@
 			<span class="text-subtle">
 				{health.lockState ?? 'unknown'} · battery {health.batteryLevel ?? '?'}/5
 			</span>
+			{#if health.passageMode}
+				<Badge variant="warning">Passage mode</Badge>
+				<span class="text-subtle">The lock will not relock on its own.</span>
+			{/if}
 		{:else}
 			<Badge variant="warning">Offline</Badge>
 			<span class="text-subtle">
@@ -83,8 +71,11 @@
 			<span class="text-subtle">
 				{timeAgo(new Date(health.lastRun.at))} ·
 				{health.lastRun.triggeredBy ?? 'scheduled'} ·
-				{health.lastRun.provisioned} provisioned, {health.lastRun.cleaned} cleaned,
+				{health.lastRun.cleaned} cleaned,
 				{health.lastRun.confirmed} confirmed
+				{#if health.lastRun.pool}
+					· {health.lastRun.pool.available} door codes ready
+				{/if}
 			</span>
 		{:else}
 			<span class="text-subtle">Never run, or not since this was added.</span>
@@ -104,28 +95,5 @@
 
 	{#if runError}
 		<p class="mt-1 text-error">{runError}</p>
-	{/if}
-
-	{#if health.ok}
-		<div class="mt-3 flex flex-wrap items-center gap-2">
-			<span class="text-subtle">Break-glass code</span>
-			{#if health.fallbackCode}
-				<span class="font-mono font-bold tracking-[0.2em]">{health.fallbackCode}</span>
-				<Button type="button" variant="ghost" size="sm" onclick={handleRotate} disabled={rotating}>
-					Rotate
-				</Button>
-			{:else}
-				<span class="text-subtle">
-					None confirmed on the lock yet — one is minted by the daily job.
-				</span>
-			{/if}
-		</div>
-		{#if rotateResult}
-			<p class="mt-1 text-subtle">
-				{rotateResult.ok
-					? 'A replacement is on its way to the lock. The current code keeps working until it lands.'
-					: rotateResult.error}
-			</p>
-		{/if}
 	{/if}
 </div>

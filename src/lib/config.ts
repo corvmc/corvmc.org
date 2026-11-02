@@ -137,6 +137,13 @@ export const creditCompCeiling: Record<CreditType, number> = {
 export const CONFIRMATION_WINDOW_DAYS = 3;
 
 /**
+ * Unclaimed door codes the daily lock job keeps confirmed on the lock (#2120).
+ * Each burned code needs the lock online to replace, so this is how many
+ * fallbacks an outage can spend before members are told to call staff.
+ */
+export const DOOR_CODE_POOL_SIZE = 10;
+
+/**
  * What every member surface says about a booking nobody confirmed.
  *
  * `cancelUnconfirmedReservations()` cancels anything still `scheduled` at its
@@ -724,6 +731,34 @@ export const contractorTradeLabels: Record<ContractorTrade, string> = {
  * revoke itself. Standing lock codes are not here — `lock_member_code` already
  * records who holds one, and the register reads it rather than copying it.
  */
+/** One attempt at the back door from `/door` (#2120). */
+export const doorAccessKinds = ['check_in', 're_entry', 'check_out'] as const;
+export type DoorAccessKind = (typeof doorAccessKinds)[number];
+export const doorAccessOutcomes = ['unlocked', 'locked', 'timed_out', 'lock_offline'] as const;
+export type DoorAccessOutcome = (typeof doorAccessOutcomes)[number];
+
+export const doorKindLabels: Record<DoorAccessKind, string> = {
+	check_in: 'Check-in',
+	re_entry: 'Re-entry',
+	check_out: 'Check-out'
+};
+export const doorOutcomeLabels: Record<DoorAccessOutcome, string> = {
+	unlocked: 'unlocked',
+	locked: 'locked',
+	timed_out: 'timed out',
+	lock_offline: 'lock offline'
+};
+
+/** Minutes before a booking starts that `/door` opens for it. */
+export const DOOR_WINDOW_LEAD_MINUTES = 30;
+
+/** The leaving checklist until staff edit it in Settings, one item per line. */
+export const DOOR_CHECKOUT_DEFAULT_TASKS = [
+	'Lights off',
+	'Amps and PA off',
+	'Back door shut behind you'
+];
+
 export const accessHoldingKinds = ['key', 'alarm_code'] as const;
 export type AccessHoldingKind = (typeof accessHoldingKinds)[number];
 
@@ -2215,8 +2250,8 @@ export const capabilities = {
 	event: ['read', 'manage', 'publish', 'manageTickets', 'uploadRecap'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
 	// Door access: granting and revoking standing member codes, adopting the
-	// hand-made ones already on the lock, re-provisioning a booking, rotating the
-	// break-glass code. Split out of `settings.update`, which was only ever the
+	// hand-made ones already on the lock, re-provisioning a booking, reading the
+	// booking-code pool. Split out of `settings.update`, which was only ever the
 	// nearest thing to hand — these are member-affecting acts on a physical door,
 	// not configuration.
 	lock: ['manage'],

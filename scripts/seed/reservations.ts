@@ -4,7 +4,8 @@ import {
 	reservation,
 	lockFallbackCode,
 	lockMemberCode,
-	accessHolding
+	accessHolding,
+	doorAccess
 } from '../../src/lib/server/db/schema/reservation';
 import { db } from './db';
 import { CLOSURE_REASONS } from './pools';
@@ -12,6 +13,7 @@ import { HOURLY_RATE_CENTS, type SeedReservation, type SeedUser } from './types'
 import { claimRoomNear, holdRoom } from './room';
 import { pick, ptDate, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
+import { DOOR_CODE_POOL_SIZE } from '../../src/lib/config';
 
 /** A slot for a row of this status: cancelled ones take the time they asked for. */
 function bookRoom(startsAt: Date, durationHours: number, status: string) {
@@ -252,23 +254,97 @@ export async function seedClosures() {
 }
 
 /**
- * The door-access rows that are not per-reservation: the break-glass code, and
- * a few standing member codes.
+ * The door-access rows that are not per-reservation: the door-code pool
+ * (#2120), and a few standing member codes.
  *
- * Without these the staff surfaces render empty and the member break-glass path
+ * Without these the staff surfaces render empty and the member fallback path
  * is unreachable locally — which is how the whole integration came to be built
  * against states nobody had ever seen.
  */
-export async function seedLockAccess(users: SeedUser[]) {
+export async function seedLockAccess(users: SeedUser[], reservations: SeedReservation[] = []) {
 	console.log('Seeding lock access...');
 
-	// One active break-glass code, confirmed on the lock a while back — which is
-	// the point of it: it predates any current outage.
-	await db.insert(lockFallbackCode).values({
-		code: String(randomInt(10000000, 99999999)),
-		lockAccessId: String(randomInt(100000, 999999)),
-		syncedAt: ptDate(-12, 9)
-	});
+	const lockId = () => String(randomInt(100000, 999999));
+	const code = () => String(randomInt(10000000, 99999999));
+	const confirmed = reservations.filter((r) => r.status === 'confirmed');
+	const past = reservations.find(
+		(r) => r.status === 'completed' && r.endsAt.getTime() > Date.now() - 7 * 86_400_000
+	);
+	const upcoming = confirmed.find((r) => r.startsAt.getTime() > Date.now());
+
+	await db.insert(lockFallbackCode).values([
+		// Ready on the lock: one short of depth, so a local job run mints one.
+		...Array.from({ length: DOOR_CODE_POOL_SIZE - 1 }, (_, i) => ({
+			code: code(),
+			pooled: true,
+			lockAccessId: lockId(),
+			syncedAt: ptDate(-5 + (i % 3), 9)
+		}))
+	]);
+	// Two inserts: D1 caps one statement at 100 bound parameters.
+	await db.insert(lockFallbackCode).values([
+		// Minted during an outage: not confirmed on the lock yet.
+		{ code: code(), pooled: true, lockAccessId: lockId() },
+		// The break-glass code from before the pool: burned once the pool has stock.
+		{ code: code(), lockAccessId: lockId(), syncedAt: ptDate(-40, 9) },
+		// Shown at the door for a booking that is over: awaiting removal.
+		...(past
+			? [
+					{
+						code: code(),
+						pooled: true,
+						lockAccessId: lockId(),
+						syncedAt: ptDate(-20, 9),
+						claimedByReservationId: past.id,
+						claimedAt: past.startsAt,
+						revealedAt: past.startsAt
+					}
+				]
+			: []),
+		// Claimed by an upcoming booking whose page has been opened, not revealed.
+		...(upcoming
+			? [
+					{
+						code: code(),
+						pooled: true,
+						lockAccessId: lockId(),
+						syncedAt: ptDate(-20, 9),
+						claimedByReservationId: upcoming.id,
+						claimedAt: ptDate(0, 9)
+					}
+				]
+			: [])
+	]);
+
+	// The door page's log for that booking: the unlock timed out, so the code
+	// was shown, then a re-entry worked and check-out locked up.
+	if (past) {
+		const at = (min: number) => new Date(past.startsAt.getTime() + min * 60_000);
+		await db.insert(doorAccess).values([
+			{
+				reservationId: past.id,
+				userId: past.createdByUserId,
+				kind: 'check_in',
+				outcome: 'timed_out',
+				codeRevealed: true,
+				createdAt: at(-5)
+			},
+			{
+				reservationId: past.id,
+				userId: past.createdByUserId,
+				kind: 're_entry',
+				outcome: 'unlocked',
+				createdAt: at(40)
+			},
+			{
+				reservationId: past.id,
+				userId: past.createdByUserId,
+				kind: 'check_out',
+				outcome: 'locked',
+				createdAt: new Date(past.endsAt.getTime() - 5 * 60_000)
+			}
+		]);
+	}
 
 	const [holder, lapsed, pending] = users;
 	if (!holder) return;

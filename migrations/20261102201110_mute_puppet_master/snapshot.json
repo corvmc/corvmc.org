@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "7612b363-9983-48af-9a5c-491b4ff41f4f",
+  "id": "76f27a55-f8a1-4e94-af37-07bec9d2bf65",
   "prevIds": [
-    "11fc20c9-538b-4f1b-8f79-8edfc4aa05e9"
+    "7612b363-9983-48af-9a5c-491b4ff41f4f"
   ],
   "ddl": [
     {
@@ -44,6 +44,10 @@
     },
     {
       "name": "closure",
+      "entityType": "tables"
+    },
+    {
+      "name": "door_access",
       "entityType": "tables"
     },
     {
@@ -1504,6 +1508,76 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "door_access"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reservation_id",
+      "entityType": "columns",
+      "table": "door_access"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "door_access"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "door_access"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "outcome",
+      "entityType": "columns",
+      "table": "door_access"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "code_revealed",
+      "entityType": "columns",
+      "table": "door_access"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "door_access"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "lock_fallback_code"
     },
     {
@@ -1543,6 +1617,56 @@
       "default": null,
       "generated": null,
       "name": "retired_at",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "pooled",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "claimed_by_reservation_id",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "claimed_at",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "revealed_at",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "removed_at",
       "entityType": "columns",
       "table": "lock_fallback_code"
     },
@@ -15088,6 +15212,51 @@
     },
     {
       "columns": [
+        "reservation_id"
+      ],
+      "tableTo": "reservation",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_door_access_reservation_id_reservation_id_fk",
+      "entityType": "fks",
+      "table": "door_access"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_door_access_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "door_access"
+    },
+    {
+      "columns": [
+        "claimed_by_reservation_id"
+      ],
+      "tableTo": "reservation",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_lock_fallback_code_claimed_by_reservation_id_reservation_id_fk",
+      "entityType": "fks",
+      "table": "lock_fallback_code"
+    },
+    {
+      "columns": [
         "user_id"
       ],
       "tableTo": "user",
@@ -19137,6 +19306,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "door_access_pk",
+      "table": "door_access",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "lock_fallback_code_pk",
       "table": "lock_fallback_code",
       "entityType": "pks"
@@ -20304,6 +20482,24 @@
     {
       "columns": [
         {
+          "value": "reservation_id",
+          "isExpression": false
+        },
+        {
+          "value": "created_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_door_access_reservation",
+      "entityType": "indexes",
+      "table": "door_access"
+    },
+    {
+      "columns": [
+        {
           "value": "retired_at",
           "isExpression": false
         },
@@ -20316,6 +20512,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_lock_fallback_active",
+      "entityType": "indexes",
+      "table": "lock_fallback_code"
+    },
+    {
+      "columns": [
+        {
+          "value": "claimed_by_reservation_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "removed_at IS NULL",
+      "origin": "manual",
+      "name": "uq_lock_fallback_live_claim",
       "entityType": "indexes",
       "table": "lock_fallback_code"
     },

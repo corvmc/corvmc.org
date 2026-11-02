@@ -140,6 +140,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/door",
+		"panel": "public"
+	},
+	{
 		"route": "/events",
 		"panel": "public"
 	},
@@ -601,6 +605,10 @@
 	},
 	{
 		"route": "/staff/keys",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/keys/door-poster",
 		"panel": "staff"
 	},
 	{
