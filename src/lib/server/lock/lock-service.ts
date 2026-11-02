@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, eq, isNull, isNotNull, gt, gte, lt, or } from 'drizzle-orm';
+import { and, asc, eq, isNull, isNotNull, gt, lt, or } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	createTemporaryUser,

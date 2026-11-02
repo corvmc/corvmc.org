@@ -9,7 +9,6 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { getReservationDetail } from '$lib/remote/reservations.remote';
 	import { page } from '$app/state';
-	import { resolve } from '$app/paths';
 	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
 	import DoorCheckIn from '$lib/components/reservations/DoorCheckIn.svelte';
 	import { EntityIdentity, EntityChip } from '$lib/components/ui/entity';

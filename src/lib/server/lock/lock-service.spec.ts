@@ -335,9 +335,6 @@ describe('syncAccessWindow', () => {
 	function todayAt(time: string) {
 		return new Date(`${appDay()}T${time}:00Z`);
 	}
-	function tomorrowAt(time: string) {
-		return new Date(`${appDay(1)}T${time}:00Z`);
-	}
 
 	const previousStart = todayAt('18:00');
 	const previousEnd = todayAt('20:00');

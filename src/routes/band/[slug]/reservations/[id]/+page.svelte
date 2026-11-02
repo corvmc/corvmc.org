@@ -1,9 +1,7 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import DoorCheckIn from '$lib/components/reservations/DoorCheckIn.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
@@ -14,7 +12,6 @@
 	import { formatDollars } from '$lib/utils/format';
 	import { cancelBandReservation, getBandReservationDetail } from '$lib/remote/reservations.remote';
 	import { page } from '$app/state';
-	import { resolve } from '$app/paths';
 
 	// Declared above the awaited query: a declaration after a top-level await is
 	// async-gated, which would compile every `fields.X.as()` into an async derived.
