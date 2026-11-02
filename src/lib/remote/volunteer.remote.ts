@@ -1400,6 +1400,7 @@ export const setVolunteerRoleGrants = form(
 			mapDomainError(err);
 		}
 		void getStaffVolunteerRolePage(data.roleId).refresh();
+		void getVolunteerRoleHistory({ id: data.roleId }).refresh();
 		return { success: true };
 	}
 );
