@@ -5,6 +5,8 @@
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
 		getStaffItemDetail,
+		getItemLoanFeed,
+		getItemMovementFeed,
 		editItem,
 		deactivateItem,
 		reactivateItem
@@ -26,7 +28,7 @@
 		ReceiveStockAction,
 		UseStockAction
 	} from '$lib/components/actions';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -36,12 +38,7 @@
 	import { resolve } from '$app/paths';
 	import { withQuery } from '$lib/utils/with-query';
 	import { formatDateShort, formatCents, titleCase } from '$lib/utils/format';
-	import {
-		acquisitionKindLabels,
-		equipmentConditionBadge,
-		stockReasonLabels,
-		unitsOfMeasure
-	} from '$lib/config';
+	import { acquisitionKindLabels, equipmentConditionBadge, unitsOfMeasure } from '$lib/config';
 
 	const { fields } = editItem;
 
@@ -51,8 +48,6 @@
 	const data = $derived(await getStaffItemDetail(id));
 	const item = $derived(data.item);
 	const assets = $derived(data.assets);
-	const movements = $derived(data.movements);
-	const loanHistory = $derived(data.loanHistory);
 	const onOrder = $derived(data.onOrder);
 	const onOrderTotal = $derived(onOrder.reduce((n, l) => n + l.outstanding, 0));
 	// Null, not empty, when the viewer cannot triage reports.
@@ -339,71 +334,46 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title="Stock movements" class="mt-6">
-		{#if movements.length === 0}
-			<EmptyState description="Nothing has moved yet" />
-		{:else}
-			<Table>
-				{#snippet head()}
-					<th class="whitespace-nowrap">When</th>
-					<th>What happened</th>
-					<th class="cell-num">Change</th>
-					<th class="col-extra">Note</th>
-				{/snippet}
-				{#each movements as movement (movement.id)}
-					<tr>
-						<td class="whitespace-nowrap">{formatDateShort(movement.occurredAt)}</td>
-						<td class="cell-primary">{stockReasonLabels[movement.reason]}</td>
-						<td class="cell-num" class:text-error={movement.quantity < 0}>
-							{movement.quantity > 0 ? '+' : ''}{movement.quantity}
-						</td>
-						<td class="col-extra">{movement.notes ?? '—'}</td>
-					</tr>
-				{/each}
-			</Table>
-		{/if}
-	</InfoCard>
+	<ActivityFeedCard
+		title="Stock movements"
+		class="mt-6"
+		query={(limit) => getItemMovementFeed(limit ? { id, limit } : { id })}
+		toRow={(m) => ({ ...feedItemRow(m), quantity: m.quantity })}
+		empty={{ title: 'Nothing has moved yet' }}
+	>
+		{#snippet trailing(row)}
+			<span class:text-error={row.quantity < 0}>
+				{row.quantity > 0 ? '+' : ''}{row.quantity}
+			</span>
+		{/snippet}
+	</ActivityFeedCard>
 
-	<InfoCard title="Loan History" class="mt-6">
-		{#if loanHistory.length === 0}
-			<EmptyState description="No loan history" />
-		{:else}
-			<Table>
-				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Member</th>
-					<th class="col-support whitespace-nowrap">Due</th>
-					<th class="col-extra whitespace-nowrap">Requested</th>
-					<th class="col-support cell-num">Charge</th>
-				{/snippet}
-				{#each loanHistory as loan (loan.id)}
-					<tr
-						class="hover cursor-pointer"
-						use:rowLink={resolve(`/staff/inventory/loans/${loan.id}`)}
-					>
-						<td class="w-px">
-							<div class="flex w-max items-center gap-1">
-								<StatusBadge status={loan.status} />
-								{#if loan.isOverdue}
-									<Badge variant="error" size="xs">Overdue</Badge>
-								{/if}
-							</div>
-						</td>
-						<td class="cell-primary">
-							<EntityIdentity ref={loan.member} />
-						</td>
-						<td class="col-support whitespace-nowrap">
-							{loan.dueDate ? formatDateShort(loan.dueDate) : '—'}
-						</td>
-						<td class="col-extra whitespace-nowrap">
-							{formatDateShort(loan.requestedPickupDate)}
-						</td>
-						<td class="col-support cell-num">
-							{loan.totalChargeCents != null ? formatCents(loan.totalChargeCents) : '—'}
-						</td>
-					</tr>
-				{/each}
-			</Table>
-		{/if}
-	</InfoCard>
+	<ActivityFeedCard
+		title="Loan history"
+		class="mt-6"
+		query={(limit) => getItemLoanFeed(limit ? { id, limit } : { id })}
+		toRow={(l) => ({
+			...feedItemRow(l),
+			href: resolve('/staff/inventory/loans/[id]', { id: l.loanId }),
+			loan: l
+		})}
+		empty={{ title: 'No loan history' }}
+	>
+		{#snippet trailing({ loan })}
+			<div class="flex items-center justify-end gap-1">
+				<StatusBadge status={loan.status} />
+				{#if loan.isOverdue}
+					<Badge variant="error" size="xs">Overdue</Badge>
+				{/if}
+			</div>
+			<div class="text-muted text-xs">
+				{[
+					loan.dueDate && `due ${formatDateShort(loan.dueDate)}`,
+					loan.chargeCents != null && formatCents(loan.chargeCents)
+				]
+					.filter(Boolean)
+					.join(' · ')}
+			</div>
+		{/snippet}
+	</ActivityFeedCard>
 </PageContent>

@@ -2,7 +2,14 @@
 	import { workOrderHref } from '$lib/utils/work-order-href';
 	import { page } from '$app/state';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
-	import { getStaffAssetDetail, editAsset, changeAssetStatus } from '$lib/remote/inventory.remote';
+	import {
+		getAssetHistory,
+		getStaffAssetDetail,
+		editAsset,
+		changeAssetStatus
+	} from '$lib/remote/inventory.remote';
+	import type { ResolvedPathname } from '$app/types';
+	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/ui/Form';
@@ -12,8 +19,6 @@
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { BindTagAction, RecordForm8282Action } from '$lib/components/actions';
@@ -22,10 +27,8 @@
 	import { formatDateShort, formatCents, toLocalDate } from '$lib/utils/format';
 	import {
 		equipmentConditions,
-		stockReasonLabels,
 		contractorJobStatusBadge,
-		contractorJobStatusLabels,
-		type ContractorJobStatus
+		contractorJobStatusLabels
 	} from '$lib/config';
 
 	const { fields } = editAsset;
@@ -34,8 +37,19 @@
 	let id = $derived(page.params.id!);
 	const data = $derived(await getStaffAssetDetail(id));
 	const asset = $derived(data.asset);
-	const movements = $derived(data.movements);
-	const serviceHistory = $derived(data.serviceHistory);
+	type HistoryItem = NonNullable<Awaited<ReturnType<typeof getAssetHistory>>>['items'][number];
+	function historyRow(item: HistoryItem) {
+		const row = { ...feedItemRow(item), item };
+		if (item.kind !== 'service') return row;
+		return {
+			...row,
+			href: `${resolve(workOrderHref({ id: item.job.workOrderId, projectId: item.job.projectId }))}#engagement-${item.job.id}` as ResolvedPathname,
+			context: {
+				label: item.contractor.name,
+				href: resolve('/staff/contractors/[id]', { id: item.contractor.id })
+			}
+		};
+	}
 	const form8282 = $derived(data.form8282);
 
 	/**
@@ -180,84 +194,25 @@
 		</InfoCard>
 	</div>
 
-	<InfoCard title="History">
-		{#if movements.length === 0}
-			<EmptyState description="Nothing recorded against this unit yet" />
-		{:else}
-			<Table>
-				{#snippet head()}
-					<th class="whitespace-nowrap">When</th>
-					<th>What happened</th>
-					<th>Note</th>
-				{/snippet}
-				{#each movements as movement (movement.id)}
-					<tr>
-						<td class="whitespace-nowrap">{formatDateShort(movement.occurredAt)}</td>
-						<td class="cell-primary">{stockReasonLabels[movement.reason]}</td>
-						<td>{movement.notes ?? '—'}</td>
-					</tr>
-				{/each}
-			</Table>
-		{/if}
-	</InfoCard>
-
 	<!--
-		Paid work, kept apart from the ledger above. A movement says the unit left
-		and came back; it cannot say who had it, what they charged, or that it is a
-		fortnight late — and those are the questions somebody actually asks of a
-		unit that has been in the shop three times.
+		The ledger and the paid work on this unit, as one feed: a movement says it
+		left and came back, a service row who had it and what they charged.
 	-->
-	{#if serviceHistory}
-		<InfoCard title="Service">
-			{#if serviceHistory.length === 0}
-				<EmptyState description="No contractor has worked on this unit" />
-			{:else}
-				<Table>
-					{#snippet head()}
-						<th class="whitespace-nowrap">When</th>
-						<th>Work</th>
-						<th>Contractor</th>
-						<th class="cell-num">Cost</th>
-					{/snippet}
-					{#each serviceHistory as row (row.job.id)}
-						<tr>
-							<td class="whitespace-nowrap">
-								{#if row.job.completedAt}
-									{formatDateShort(row.job.completedAt)}
-								{:else if row.job.scheduledFor}
-									{formatDateShort(row.job.scheduledFor)}
-								{:else}
-									—
-								{/if}
-							</td>
-							<td class="cell-primary">
-								<a
-									class="link"
-									href="{resolve(
-										workOrderHref({ id: row.job.workOrderId, projectId: row.job.projectId })
-									)}#engagement-{row.job.id}"
-								>
-									{row.job.title}
-								</a>
-								<Badge
-									variant={contractorJobStatusBadge[row.job.status as ContractorJobStatus]}
-									size="sm"
-								>
-									{contractorJobStatusLabels[row.job.status as ContractorJobStatus]}
-								</Badge>
-							</td>
-							<td>
-								<a class="link" href={resolve(`/staff/contractors/${row.contractor.id}`)}>
-									{row.contractor.name}
-								</a>
-							</td>
-							<td class="cell-num">
-								{row.job.costCents != null ? formatCents(row.job.costCents) : '—'}
-							</td>
-						</tr>
-					{/each}
-				</Table>
+	<ActivityFeedCard
+		title="History"
+		query={(limit) => getAssetHistory(limit ? { id, limit } : { id })}
+		toRow={historyRow}
+		empty={{ title: 'Nothing recorded against this unit yet' }}
+	>
+		{#snippet trailing({ item })}
+			{#if item.kind === 'service'}
+				<Badge variant={contractorJobStatusBadge[item.job.status]} size="sm">
+					{contractorJobStatusLabels[item.job.status]}
+				</Badge>
+				{#if item.costCents != null}
+					<div class="text-muted text-xs">{formatCents(item.costCents)}</div>
+				{/if}
 			{/if}
-		</InfoCard>
-	{/if}
+		{/snippet}
+	</ActivityFeedCard>
 </PageContent>

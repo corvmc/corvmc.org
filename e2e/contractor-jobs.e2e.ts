@@ -51,7 +51,11 @@ async function assetState(assetId: string) {
 async function jobState(assetId: string) {
 	const [job] = await readLocalDb((db) =>
 		db
-			.select({ status: contractorJob.status, resolvedAt: workOrder.resolvedAt })
+			.select({
+				id: contractorJob.id,
+				status: contractorJob.status,
+				resolvedAt: workOrder.resolvedAt
+			})
 			.from(contractorJob)
 			.innerJoin(workOrder, eq(workOrder.id, contractorJob.workOrderId))
 			.where(eq(workOrder.assetId, assetId))
@@ -142,10 +146,12 @@ test.describe('contractor jobs', () => {
 			{ timeout: 15000 }
 		);
 
-		// And the unit keeps the job in its service history.
+		// And the unit keeps the job in its history, one feed with its movements.
+		const jobId = (await jobState(asset.id))!.id;
 		await page.goto(`/staff/inventory/assets/${asset.id}`);
-		await expect(page.getByRole('heading', { name: asset.tag })).toBeVisible({ timeout: 15000 });
-		await expect(page.getByRole('heading', { name: 'Service', exact: true })).toBeVisible();
-		await expect(page.getByRole('link', { name: title })).toBeVisible();
+		const jobLink = page.locator(`a[href$="#engagement-${jobId}"]`);
+		await expect(jobLink).toBeVisible({ timeout: 15000 });
+		const history = page.locator('ol', { has: jobLink });
+		await expect(history.locator('li')).toHaveCount(after.movements.length + 1);
 	});
 });
