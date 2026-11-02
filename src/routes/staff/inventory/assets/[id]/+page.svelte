@@ -8,7 +8,7 @@
 		editAsset,
 		changeAssetStatus
 	} from '$lib/remote/inventory.remote';
-	import type { ResolvedPathname } from '$app/types';
+	import { withHash } from '$lib/utils/with-query';
 	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -43,7 +43,10 @@
 		if (item.kind !== 'service') return row;
 		return {
 			...row,
-			href: `${resolve(workOrderHref({ id: item.job.workOrderId, projectId: item.job.projectId }))}#engagement-${item.job.id}` as ResolvedPathname,
+			href: withHash(
+				resolve(workOrderHref({ id: item.job.workOrderId, projectId: item.job.projectId })),
+				`engagement-${item.job.id}`
+			),
 			context: {
 				label: item.contractor.name,
 				href: resolve('/staff/contractors/[id]', { id: item.contractor.id })

@@ -10,3 +10,8 @@ export function withQuery(path: string, query: string | URLSearchParams): Resolv
 	const q = String(query).replace(/^\?/, '');
 	return (q ? `${path}?${q}` : path) as ResolvedPathname;
 }
+
+/** Append a fragment to a `resolve()`d path, for the same reason as `withQuery`. */
+export function withHash(path: string, hash: string): ResolvedPathname {
+	return `${path}#${hash.replace(/^#/, '')}` as ResolvedPathname;
+}
