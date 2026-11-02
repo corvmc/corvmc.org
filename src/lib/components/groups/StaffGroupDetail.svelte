@@ -208,12 +208,14 @@
 		</Fact>
 	</DefinitionList>
 
-	<ActivityFeedCard
-		title="History"
-		query={(limit) => getGroupHistory(limit ? { id, limit } : { id })}
-		toRow={feedItemRow}
-		empty={{ title: 'No recorded changes' }}
-	/>
+	{#if variant === 'page'}
+		<ActivityFeedCard
+			title="History"
+			query={(limit) => getGroupHistory(limit ? { id, limit } : { id })}
+			toRow={feedItemRow}
+			empty={{ title: 'No recorded changes' }}
+		/>
+	{/if}
 
 	{#if !isDeactivated}
 		<InfoCard title="End this program">
