@@ -276,8 +276,10 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 			// An externally ticketed event still takes RSVPs here; the page needs
 			// the link to send members to whoever is actually selling.
 			source: evt.source,
-			externalTicketUrl: evt.externalTicketUrl
+			externalTicketUrl: evt.externalTicketUrl,
+			status: evt.status
 		},
+		isPast: hasEventEnded(evt.startsAt, evt.endsAt),
 		// Display names only — the split bar labels one side with them, and a
 		// touring act usually has no `directory_entry` to point at.
 		acts: lineup.filter((a) => a.status !== 'declined').map((a) => a.name),
