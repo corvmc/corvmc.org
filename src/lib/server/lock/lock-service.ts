@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, eq, isNull, isNotNull, gt, gte, lt, or } from 'drizzle-orm';
+import { and, asc, eq, isNull, isNotNull, gt, lt, or } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	createTemporaryUser,
@@ -16,14 +16,14 @@ import {
 	type LockDeviceHealth
 } from './ultraloc-client';
 import { maintainCodePool, type PoolSummary } from './fallback-code-service';
-import { hasActiveMemberCode, reconcileMemberCodeSync } from './member-code-service';
+import { reconcileMemberCodeSync } from './member-code-service';
 import { getJson, putJson } from '$lib/server/kv';
 import { dispatchEmailOnly } from '$lib/server/notification';
 import { env } from '$env/dynamic/private';
 import { DEFAULT_TIMEZONE, CONFIRMATION_WINDOW_DAYS } from '$lib/config';
 
 // ---------------------------------------------------------------------------
-// LockService — provision and clean up Ultraloc temporary users
+// LockService — the daily lock job, and what is left of per-booking codes
 // ---------------------------------------------------------------------------
 
 /**
@@ -43,7 +43,6 @@ const LAST_RUN_KEY = 'ultraloc:lastJobRun';
 
 /** What one run of the daily job did. */
 export interface LockJobSummary {
-	provisioned: number;
 	cleaned: number;
 	confirmed: number;
 	online: boolean | null;
@@ -65,13 +64,13 @@ export async function getLastLockJobRun(): Promise<LockJobRun | null> {
 }
 
 /**
- * Run the daily lock job: check the lock is reachable, clean up yesterday's
- * access, provision today's, then confirm which codes have actually landed.
+ * Run the daily lock job: check the lock is reachable, clean up what legacy
+ * per-booking codes remain, confirm codes that have landed, and keep the
+ * door-code pool at depth. Bookings no longer get a code of their own: members
+ * check in at `/door` (#2120).
  *
  * An offline lock is reported but does not stop the run. Writes are queued in
- * U-tec's cloud and pushed down when the lock reconnects, so provisioning into
- * an outage is still worth doing — it is only the *promise* that a code works
- * that has to wait for `reconcileSyncState`.
+ * U-tec's cloud and pushed down when the lock reconnects.
  */
 export async function runDailyLockJob(triggeredBy: string | null = null): Promise<LockJobSummary> {
 	const errors: string[] = [];
@@ -92,7 +91,6 @@ export async function runDailyLockJob(triggeredBy: string | null = null): Promis
 
 	const online = await step('Lock health check', null, () => checkDeviceHealth(errors));
 	let cleaned = await step('Cleanup', 0, () => cleanupPreviousDayAccess(errors));
-	const provisioned = await step('Provisioning', 0, () => provisionDailyAccess(errors));
 	const confirmed =
 		(await step('Sync reconciliation', 0, () => reconcileSyncState(errors))) +
 		(await step('Member code sync', 0, () => reconcileMemberCodeSync(errors)));
@@ -100,7 +98,6 @@ export async function runDailyLockJob(triggeredBy: string | null = null): Promis
 	const pool = await step('Door code pool', null, () => maintainCodePool(errors));
 
 	const summary: LockJobSummary = {
-		provisioned,
 		cleaned,
 		confirmed,
 		online,
@@ -267,66 +264,8 @@ export async function reconcileUpcomingSync(
 }
 
 /**
- * Create Ultraloc temporary users for confirmed reservations starting inside
- * the confirmation window that don't already have lock access.
- *
- * The window used to be a single day, which left no slack at all: the job runs
- * once each morning, so a lock that was offline then meant a member with a
- * booking that evening had a code queued in U-tec's cloud and no way in. Over
- * `CONFIRMATION_WINDOW_DAYS` the queue has days to drain instead of hours, and
- * the two numbers stop being independently chosen.
- *
- * The probe that prompted this measured 22 users on the lock, only four of them
- * temporary, so a three-day window is nowhere near the device's ceiling —
- * especially now a member holding a standing code is skipped entirely.
- */
-async function provisionDailyAccess(errors: string[]): Promise<number> {
-	const { start: dayStart, end: windowEnd } = provisioningWindow();
-
-	const rows = await db
-		.select({
-			id: reservation.id,
-			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt,
-			createdByUserId: reservation.createdByUserId,
-			memberName: user.name
-		})
-		.from(reservation)
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.where(
-			and(
-				eq(reservation.status, 'confirmed'),
-				isNull(reservation.lockCode),
-				gte(reservation.startsAt, dayStart),
-				lt(reservation.startsAt, windowEnd)
-			)
-		);
-
-	let count = 0;
-
-	for (const row of rows) {
-		try {
-			// A member with a standing door code can already get in. Issuing a
-			// second code per booking would only consume the lock's finite user
-			// table for no gain.
-			if (await hasActiveMemberCode(row.createdByUserId)) continue;
-
-			await provisionAccessFor(row);
-			count++;
-		} catch (err) {
-			const msg = `Failed to provision lock access for reservation ${row.id}: ${(err as Error).message}`;
-			console.error(msg);
-			errors.push(msg);
-		}
-	}
-
-	return count;
-}
-
-/**
- * Bookings starting in here should already hold a code: from the start of today
- * in club time through `CONFIRMATION_WINDOW_DAYS` past the end of it. Shared by
- * the daily job and every path that mints outside it, so they cannot disagree.
+ * Today in club time through `CONFIRMATION_WINDOW_DAYS` past it: the bookings
+ * whose legacy per-booking codes the upcoming-sync cron still confirms.
  */
 function provisioningWindow(now = new Date()): { start: Date; end: Date } {
 	const tz = DEFAULT_TIMEZONE;
@@ -339,71 +278,7 @@ function provisioningWindow(now = new Date()): { start: Date; end: Date } {
 	};
 }
 
-/**
- * Mint the door code for a booking the moment it is confirmed.
- *
- * Best-effort, and never throws: the member is waiting on the confirm, U-tec is
- * a third party, and the daily job picks up anything missed here. Applies the
- * daily job's own rules — inside the window, no code yet, no standing code — so
- * confirming early changes when a code appears, never how many exist.
- */
-export async function provisionOnConfirm(reservationId: string): Promise<boolean> {
-	try {
-		const [row] = await db
-			.select({
-				id: reservation.id,
-				status: reservation.status,
-				startsAt: reservation.startsAt,
-				endsAt: reservation.endsAt,
-				lockCode: reservation.lockCode,
-				createdByUserId: reservation.createdByUserId,
-				memberName: user.name
-			})
-			.from(reservation)
-			.innerJoin(user, eq(reservation.createdByUserId, user.id))
-			.where(eq(reservation.id, reservationId))
-			.limit(1);
-
-		if (!row || row.status !== 'confirmed' || row.lockCode) return false;
-
-		const { start, end } = provisioningWindow();
-		if (row.startsAt < start || row.startsAt >= end) return false;
-
-		if (await hasActiveMemberCode(row.createdByUserId)) return false;
-
-		await provisionAccessFor(row);
-		return true;
-	} catch (err) {
-		console.error(
-			`Failed to provision lock access on confirm for reservation ${reservationId}: ${(err as Error).message}`
-		);
-		return false;
-	}
-}
-
-/**
- * Re-issue door access for one booking on demand.
- *
- * The staff lever for a booking the daily job could not provision — otherwise
- * the only recourse is waiting for tomorrow's run. Errors are returned rather
- * than thrown so the page can say what went wrong.
- */
-export async function reprovisionAccessFor(row: {
-	id: string;
-	startsAt: Date;
-	endsAt: Date;
-	memberName: string;
-	code?: number;
-}): Promise<{ ok: boolean; code?: number; error?: string }> {
-	try {
-		const code = await provisionAccessFor(row);
-		return { ok: true, code };
-	} catch (err) {
-		return { ok: false, error: (err as Error).message };
-	}
-}
-
-/** One reservation's worth of provisioning: mint a code, open the window, record it. */
+/** Re-add a legacy per-booking code against its booking's window, same code. */
 async function provisionAccessFor(row: {
 	id: string;
 	startsAt: Date;
@@ -443,16 +318,11 @@ async function provisionAccessFor(row: {
 /**
  * Re-point the lock at a reservation whose window has changed.
  *
- * Two cases, and the daily cron covers neither:
- *
- * - **No code yet, and the booking now starts inside the window.**
- *   `provisionDailyAccess` runs once, in the morning. A show moved into the
- *   window after that has already been passed over, so mint here.
- * - **A code already issued, and the window moved.** The lock enforces access
- *   through the temporary user's `daterange`, which still pins the old window:
- *   push a show later and the code stops working at the old end time. Re-point
- *   that user at the new window, keeping the **same code** — staff have already
- *   been told what it is.
+ * A legacy per-booking code still on the lock enforces its booking through the
+ * temporary user's `daterange`, which pins the old window: push a show later
+ * and the code stops working at the old end time. Re-point that user at the
+ * new window, keeping the **same code**. A booking without one has nothing to
+ * follow; it gets in through `/door` (#2120).
  *
  * When `lockAccessId` is known the re-point is a single `update`, which leaves
  * the member's code untouched on the lock. Rows provisioned before the id was
@@ -490,24 +360,8 @@ export async function syncAccessWindow(
 		row.startsAt.getTime() === previousStartsAt.getTime() &&
 		row.endsAt.getTime() === previousEndsAt.getTime();
 
-	// --- Nothing provisioned yet -------------------------------------------
-	if (!row.lockCode) {
-		// Beyond the window, a later run of the daily job picks it up.
-		const { start, end } = provisioningWindow();
-		if (row.startsAt < start || row.startsAt >= end) return { synced: false, errors };
-
-		try {
-			// A standing member code already opens the door, as in the other mint paths.
-			if (await hasActiveMemberCode(row.createdByUserId)) return { synced: false, errors };
-			await provisionAccessFor(row);
-			return { synced: true, errors };
-		} catch (err) {
-			const msg = `Failed to provision lock access for reservation ${row.id}: ${(err as Error).message}`;
-			console.error(msg);
-			errors.push(msg);
-			return { synced: false, errors };
-		}
-	}
+	// No per-booking code: members get in through `/door` (#2120).
+	if (!row.lockCode) return { synced: false, errors };
 
 	if (unmoved) return { synced: false, errors };
 

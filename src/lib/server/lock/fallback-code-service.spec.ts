@@ -35,14 +35,8 @@ vi.mock('./ultraloc-client', () => ({
 	LOCK_GRACE_MINUTES: 30
 }));
 
-const {
-	claimPoolCode,
-	revealPoolCode,
-	revealFallbackCodeFor,
-	maintainCodePool,
-	listPoolCodes,
-	poolDepth
-} = await import('./fallback-code-service');
+const { claimPoolCode, revealPoolCode, maintainCodePool, listPoolCodes, poolDepth } =
+	await import('./fallback-code-service');
 const { DOOR_CODE_POOL_SIZE } = await import('$lib/config');
 
 // ---------------------------------------------------------------------------
@@ -180,43 +174,6 @@ describe('revealPoolCode', () => {
 		await revealPoolCode('r-1', later);
 
 		expect(row(id).revealed_at).toBe(s(NOW));
-	});
-});
-
-describe('revealFallbackCodeFor', () => {
-	it('reveals a pool code inside the window when the booking’s own code is not on the lock', async () => {
-		const startsAt = new Date(Date.now() - 600_000);
-		const endsAt = new Date(Date.now() + 3_600_000);
-		booking('r-1', startsAt, endsAt);
-		const id = code();
-
-		const shown = await revealFallbackCodeFor({
-			id: 'r-1',
-			status: 'confirmed',
-			startsAt,
-			endsAt,
-			lockSyncedAt: null
-		});
-
-		expect(shown).toBe(row(id).code);
-		expect(row(id).revealed_at).not.toBeNull();
-	});
-
-	it('claims nothing outside the window', async () => {
-		const startsAt = new Date(Date.now() + 7 * 86_400_000);
-		booking('r-1', startsAt, new Date(startsAt.getTime() + 3_600_000));
-		const id = code();
-
-		const shown = await revealFallbackCodeFor({
-			id: 'r-1',
-			status: 'confirmed',
-			startsAt,
-			endsAt: new Date(startsAt.getTime() + 3_600_000),
-			lockSyncedAt: null
-		});
-
-		expect(shown).toBeNull();
-		expect(row(id).claimed_by_reservation_id).toBeNull();
 	});
 });
 

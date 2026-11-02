@@ -43,19 +43,6 @@
 			     searching their history for "Recording session" found nothing (#904). -->
 			<p class="line-clamp-2 px-3 pb-1 text-subtle">{reservation.notes}</p>
 		{/if}
-		{#if reservation.status === 'confirmed' && reservation.lockCode}
-			<p class="px-3 pb-1 text-sm">
-				{#if reservation.lockSyncedAt}
-					Door code:
-					<span class="font-mono font-bold tracking-wider">{reservation.lockCode}</span>
-				{:else}
-					<!-- Issued, but the lock has not confirmed it. Showing the digits
-					     here would be a promise we cannot keep; the detail page has
-					     the break-glass code once they are due in. -->
-					<span class="text-muted">Door code pending</span>
-				{/if}
-			</p>
-		{/if}
 	</a>
 	{#if !isPast && reservation.status === 'scheduled'}
 		<!-- Hints live above the action row so they never wrap behind the buttons. -->

@@ -714,6 +714,18 @@ export type DoorAccessKind = (typeof doorAccessKinds)[number];
 export const doorAccessOutcomes = ['unlocked', 'locked', 'timed_out', 'lock_offline'] as const;
 export type DoorAccessOutcome = (typeof doorAccessOutcomes)[number];
 
+export const doorKindLabels: Record<DoorAccessKind, string> = {
+	check_in: 'Check-in',
+	re_entry: 'Re-entry',
+	check_out: 'Check-out'
+};
+export const doorOutcomeLabels: Record<DoorAccessOutcome, string> = {
+	unlocked: 'unlocked',
+	locked: 'locked',
+	timed_out: 'timed out',
+	lock_offline: 'lock offline'
+};
+
 /** Minutes before a booking starts that `/door` opens for it. */
 export const DOOR_WINDOW_LEAD_MINUTES = 30;
 

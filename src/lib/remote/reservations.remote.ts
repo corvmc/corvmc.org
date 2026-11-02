@@ -100,11 +100,8 @@ import { bookerTypes, type BookerType } from '$lib/config';
 import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
 import { requireInstructor } from '$lib/server/instructor/instructor-context';
 import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
-import {
-	fallbackShownFor,
-	isInAccessWindow,
-	revealFallbackCodeFor
-} from '$lib/server/lock/fallback-code-service';
+import { isInAccessWindow } from '$lib/server/lock/fallback-code-service';
+import { doorRecordFor } from '$lib/server/lock/door-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 import {
 	checkout,
@@ -254,12 +251,6 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
-	// A code we issued is not a code that works: U-tec queues writes in its cloud
-	// and only pushes them down when the lock is reachable. `lockSyncedAt` is the
-	// lock's own confirmation. Until it is set, the member gets the break-glass
-	// code instead — but only inside their window, and the reveal is recorded.
-	const fallbackCode = await revealFallbackCodeFor(row);
-
 	return {
 		reservation: row,
 		/** The booking as a record, for the detail page's identity (#1061). */
@@ -274,10 +265,7 @@ export const getReservationDetail = query(z.string(), async (id) => {
 		durationHours,
 		totalCents,
 		hourlyRateCents,
-		fallbackCode,
-		// Whether they are at the door right now. Without it a booking with no
-		// working code reads "check back before your session" while they stand
-		// outside during it.
+		// Whether the door window is open, so the page leads with the door page.
 		inAccessWindow: isInAccessWindow(row),
 		reader: {
 			payable: terminalReaderId() !== null && readerPayable(row),
@@ -461,11 +449,6 @@ export const getBandReservationDetail = query(
 		const bandAdmin = role === 'owner' || role === 'admin';
 		const isBooker = res.createdByUserId === currentUser.id;
 
-		// Not a gesture: the break-glass code arrives with the page, the same as on
-		// the member's own booking. Nobody on the act has to ask for what the rest
-		// of them can already read (#780).
-		const fallbackCode = await revealFallbackCodeFor(res);
-
 		return {
 			id: res.id,
 			ref: toReservationRef(row.ref, band),
@@ -487,15 +470,7 @@ export const getBandReservationDetail = query(
 			refundedAt: res.refundedAt,
 			cashDueCents: res.cashDueCents,
 			creditsUsed: res.creditsUsed,
-			// Every member of the act, not just whoever booked (#756): a band loads
-			// in together and whoever arrives first opens the door. The guard above
-			// is what bounds this — membership in the band the row belongs to.
-			lockCode: res.lockCode,
-			// A code we issued is not a code that works: U-tec queues writes in its
-			// cloud and pushes them down only when the lock is reachable, so the
-			// page shows the digits only once the lock has confirmed them (#780).
-			lockSyncedAt: res.lockSyncedAt,
-			fallbackCode,
+			// Every member of the act gets in through `/door` (#756, #2120).
 			inAccessWindow: isInAccessWindow(res),
 			canCancel:
 				(bandAdmin || isBooker) &&
@@ -607,11 +582,11 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		)
 		.orderBy(asc(reservation.startsAt));
 
-	// Closures share the day's timeline (#1833); the break-glass code is
-	// `lock.manage`'s to read, as on Lock health (#1814).
-	const [sameDayClosures, doorFallback] = await Promise.all([
+	// Closures share the day's timeline (#1833); the door record is
+	// `lock.manage`'s to read, as on Key Holders (#2120).
+	const [sameDayClosures, door] = await Promise.all([
 		closuresOverlapping(dayStart, dayEnd),
-		can('lock.manage').then((ok) => (ok ? fallbackShownFor(row) : null))
+		can('lock.manage').then((ok) => (ok ? doorRecordFor(row.id) : null))
 	]);
 
 	const isLastOfDay =
@@ -654,7 +629,7 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			status: r.status
 		})),
 		sameDayClosures,
-		doorFallback,
+		door,
 		isLastOfDay,
 		prevId: prevRow?.id ?? null,
 		nextId: nextRow?.id ?? null,

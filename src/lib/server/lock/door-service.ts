@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { doorAccess, reservation } from '$lib/server/db/schema/reservation';
 import { group, groupMember } from '$lib/server/db/schema/group';
+import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, eq, gte, inArray, lte, or } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { config } from '$lib/server/site-config/site-config-service';
@@ -240,4 +241,52 @@ export async function recordOfflineReveal(
 		.limit(1);
 	if (!owned || !(await poolCodeFor(reservationId))) return;
 	await revealPoolCode(reservationId, now);
+}
+
+export interface DoorRecord {
+	checkedInAt: Date | null;
+	checkedOutAt: Date | null;
+	attempts: {
+		kind: DoorAccessKind;
+		outcome: DoorAccessOutcome;
+		codeRevealed: boolean;
+		at: Date;
+		by: string | null;
+	}[];
+	/** The booking's pool code, while it holds one. */
+	code: { code: string; revealedAt: Date | null } | null;
+}
+
+/** What staff see on a booking: its door attempts and its code. */
+export async function doorRecordFor(reservationId: string): Promise<DoorRecord> {
+	const [rows, held] = await Promise.all([
+		db
+			.select({
+				kind: doorAccess.kind,
+				outcome: doorAccess.outcome,
+				codeRevealed: doorAccess.codeRevealed,
+				at: doorAccess.createdAt,
+				by: user.name
+			})
+			.from(doorAccess)
+			.leftJoin(user, eq(user.id, doorAccess.userId))
+			.where(eq(doorAccess.reservationId, reservationId))
+			.orderBy(asc(doorAccess.createdAt), asc(doorAccess.id)),
+		poolCodeFor(reservationId)
+	]);
+	return {
+		checkedInAt: rows.find((r) => r.kind === 'check_in')?.at ?? null,
+		checkedOutAt: rows.find((r) => r.kind === 'check_out')?.at ?? null,
+		attempts: rows,
+		code: held ? { code: held.code, revealedAt: held.revealedAt } : null
+	};
+}
+
+/**
+ * Staff reading a code over the phone (#2120): the booking's code from the
+ * same pool, marked revealed so it is burned after the booking. Null when the
+ * pool is empty.
+ */
+export async function readOutCodeFor(reservationId: string): Promise<string | null> {
+	return (await revealPoolCode(reservationId))?.code ?? null;
 }

@@ -36,6 +36,8 @@ const {
 	openDoor,
 	checkOut,
 	recordOfflineReveal,
+	doorRecordFor,
+	readOutCodeFor,
 	DoorBookingClosedError,
 	DoorCheckedOutError
 } = await import('./door-service');
@@ -254,5 +256,32 @@ describe('recordOfflineReveal', () => {
 		await recordOfflineReveal('booker', 'r-1', NOW);
 
 		expect(codeRow('c-1').claimed_by_reservation_id).toBeNull();
+	});
+});
+
+describe('staff', () => {
+	it('reads a booking’s door record: check-in, check-out, attempts and its code', async () => {
+		booking('r-1', minutes(-10), minutes(60));
+		poolCode('c-1');
+		mockOperateDoor.mockResolvedValueOnce({ outcome: 'timed_out', lockState: 'Locked' });
+		await openDoor('booker', 'r-1', { now: NOW });
+
+		const record = await doorRecordFor('r-1');
+
+		expect(record.checkedInAt).not.toBeNull();
+		expect(record.checkedOutAt).toBeNull();
+		expect(record.attempts).toMatchObject([
+			{ kind: 'check_in', outcome: 'timed_out', codeRevealed: true }
+		]);
+		expect(record.code).toEqual({ code: codeRow('c-1').code, revealedAt: expect.any(Date) });
+	});
+
+	it('reads out the booking’s own code and marks it revealed', async () => {
+		booking('r-1', minutes(60), minutes(120));
+		poolCode('c-1');
+
+		expect(await readOutCodeFor('r-1')).toBe(codeRow('c-1').code);
+		expect(codeRow('c-1').revealed_at).not.toBeNull();
+		expect(codeRow('c-1').claimed_by_reservation_id).toBe('r-1');
 	});
 });

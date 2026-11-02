@@ -71,7 +71,7 @@
 			<span class="text-subtle">
 				{timeAgo(new Date(health.lastRun.at))} ·
 				{health.lastRun.triggeredBy ?? 'scheduled'} ·
-				{health.lastRun.provisioned} provisioned, {health.lastRun.cleaned} cleaned,
+				{health.lastRun.cleaned} cleaned,
 				{health.lastRun.confirmed} confirmed
 				{#if health.lastRun.pool}
 					· {health.lastRun.pool.available} door codes ready
