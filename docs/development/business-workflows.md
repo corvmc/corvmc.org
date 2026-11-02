@@ -515,8 +515,11 @@ A `bulk` item can carry a reorder point. `listLowStock()` in `stock-service.ts`
 returns everything at or below it, emptiest first, with a `suggestedOrder` (the
 reorder quantity where one is set, otherwise enough to reach the point) and an
 `isOut` flag. It surfaces twice: the top five on the staff dashboard, and the
-whole list at `/staff/inventory/restock`, grouped by category with a Receive
-action per row so a shop trip can be recorded from the list it came off.
+whole list as the Inventory list's `?show=restock` view, grouped by category with
+a Receive action per row and a bulk **Mark as ordered**, which writes one `placed`
+purchase order with a line per ticked item. The list's other cross-item views
+(`?show=on-order`, `late`, `on-loan`, `overdue`, `problems`) replaced the Orders
+list; an order's own page stays, reached from the items on it.
 
 `/staff/inventory/spend` reports purchase spend over a window (default: the
 current calendar year), per category via `spendByCategory()` and per supplier via

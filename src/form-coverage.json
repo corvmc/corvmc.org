@@ -11,8 +11,6 @@
 	"refundAndCancelReservation.reason",
 	"replyToThread.disposition",
 	"saveMemberProfile.hometown",
-	"startOrder.notes",
-	"startOrder.reference",
 	"updateAmount.amount",
 	"updateAmount.coverFees",
 	"updateContractorForm.website",

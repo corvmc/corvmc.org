@@ -584,10 +584,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/inventory/orders",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/inventory/orders/[id]",
 		"panel": "staff"
 	},
@@ -597,10 +593,6 @@
 	},
 	{
 		"route": "/staff/inventory/problems/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/inventory/restock",
 		"panel": "staff"
 	},
 	{

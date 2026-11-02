@@ -652,6 +652,29 @@ export const equipmentConditionBadge: Record<(typeof equipmentConditions)[number
 	poor: 'badge-error'
 };
 
+/**
+ * The Inventory list's cross-item views (`?show=`), which replaced the Restock and
+ * Orders pages (#2021, #2022). Each needs the capability its old page or queue did.
+ */
+export const inventoryListViews = [
+	'restock',
+	'on-order',
+	'late',
+	'on-loan',
+	'overdue',
+	'problems'
+] as const;
+export type InventoryListView = (typeof inventoryListViews)[number];
+
+export const inventoryListViewMeta = {
+	restock: { label: 'At or below reorder point', capability: 'inventory.report' },
+	'on-order': { label: 'On order', capability: 'inventory.read' },
+	late: { label: 'Order late', capability: 'inventory.read' },
+	'on-loan': { label: 'On loan', capability: 'inventory.read' },
+	overdue: { label: 'Loan overdue', capability: 'inventory.read' },
+	problems: { label: 'Open problem', capability: 'inventory.manageAssets' }
+} as const satisfies Record<InventoryListView, { label: string; capability: Capability }>;
+
 export const pricingTiers = ['major', 'accessory'] as const;
 export type PricingTier = (typeof pricingTiers)[number];
 export const loanStatuses = [

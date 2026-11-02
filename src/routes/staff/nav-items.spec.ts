@@ -78,7 +78,8 @@ describe('activeNavKey', () => {
 		['/staff/inventory', 'equipment'],
 		['/staff/inventory/abc', 'equipment'],
 		['/staff/inventory/intake', 'equipment'],
-		['/staff/inventory/restock', 'inventory-restock'],
+		// Restock and Orders are views of the list now (#2021, #2022); an order's page stays.
+		['/staff/inventory/orders/abc', 'equipment'],
 		['/staff/inventory/spend', 'inventory-spend'],
 		['/staff/inventory/compliance', 'inventory-compliance'],
 		// Loans left Inventory's children for a row of its own; its URL did not move.

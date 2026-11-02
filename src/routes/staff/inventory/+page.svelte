@@ -21,6 +21,11 @@
 	import { titleCase } from '$lib/utils/format';
 	import BarcodeScanner from '$lib/components/ui/BarcodeScanner.svelte';
 	import { parseScan } from '$lib/utils/scan';
+	import { page as pageState } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { inventoryListViews, type InventoryListView } from '$lib/config';
+	import ViewSelect from './ViewSelect.svelte';
+	import RestockList from './RestockList.svelte';
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
@@ -31,6 +36,22 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
+
+	// `?show=` is the linkable part: the old Restock and Orders URLs redirect to it.
+	const view = $derived.by((): InventoryListView | '' => {
+		const v = pageState.url.searchParams.get('show');
+		return (inventoryListViews as readonly string[]).includes(v ?? '')
+			? (v as InventoryListView)
+			: '';
+	});
+
+	function setView(v: InventoryListView | '') {
+		const url = new URL(pageState.url);
+		if (v) url.searchParams.set('show', v);
+		else url.searchParams.delete('show');
+		page = 1;
+		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+	}
 
 	/**
 	 * Whatever was scanned becomes the search term. A consumable's own barcode
@@ -47,18 +68,19 @@
 		categoryId: categoryId || undefined,
 		kind: kindFilter || undefined,
 		includeDeleted: includeDeleted || undefined,
+		view: view && view !== 'restock' ? view : undefined,
 		page
 	});
 
 	// The page's one query. The category list moved into the two components that need it —
 	// see CategoryOptions for why it could not be composed into this one.
-	let result = $derived(getStaffItemList(filters));
+	let result = $derived(view === 'restock' ? null : getStaffItemList(filters));
 
 	let showCategoryModal = $state(false);
 
 	const menuFilterCount = $derived((kindFilter ? 1 : 0) + (includeDeleted ? 1 : 0));
 	const activeFilterCount = $derived(
-		(searchDebounced ? 1 : 0) + (categoryId ? 1 : 0) + menuFilterCount
+		(searchDebounced ? 1 : 0) + (categoryId ? 1 : 0) + (view ? 1 : 0) + menuFilterCount
 	);
 
 	function clearFilters() {
@@ -68,6 +90,7 @@
 		kindFilter = '';
 		includeDeleted = false;
 		page = 1;
+		if (view) setView('');
 	}
 </script>
 
@@ -105,6 +128,7 @@
 				<BarcodeScanner onscan={handleScan} label="Scan" class="scan-cap" />
 			</div>
 		{/snippet}
+		<ViewSelect value={view} onchange={setView} />
 		<Select
 			size="sm"
 			aria-label="Category"
@@ -148,54 +172,61 @@
 		{/snippet}
 	</FilterBar>
 
-	<DataList {result} empty="No items found" onpage={(p) => (page = p)}>
-		{#snippet children(equipment)}
-			<Table>
-				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Item</th>
-					<th class="col-support">Category</th>
-					<th class="col-support">Tracking</th>
-					<th class="cell-num">Available</th>
-					<th class="col-support cell-num">Total</th>
-				{/snippet}
+	{#if view === 'restock'}
+		<RestockList search={searchDebounced} {categoryId} />
+	{:else if result}
+		<DataList {result} empty="No items found" onpage={(p) => (page = p)}>
+			{#snippet children(equipment)}
+				<Table>
+					{#snippet head()}
+						<th class="w-px"><span class="sr-only">Status</span></th>
+						<th>Item</th>
+						<th class="col-support">Category</th>
+						<th class="col-support">Tracking</th>
+						<th class="cell-num">Available</th>
+						<th class="col-support cell-num">Total</th>
+					{/snippet}
 
-				{#each equipment as e (e.id)}
-					{@const href = resolve(`/staff/inventory/${e.id}`)}
-					<tr class="hover cursor-pointer" class:opacity-50={e.deletedAt} use:rowLink={href}>
-						<td class="w-px">
-							<StatusBadge status={e.deletedAt ? 'deactivated' : 'active'} />
-						</td>
-						<td class="cell-primary">
-							<!-- Category has its own column; below col-support's width it rides as the subline. -->
-							<EntityIdentity ref={e.ref}>
-								{#snippet subtitle()}<span class="@min-[32rem]:hidden">{e.category.name}</span
-									>{/snippet}
-							</EntityIdentity>
-						</td>
-						<td class="col-support whitespace-nowrap">{e.category.name}</td>
-						<td class="col-support whitespace-nowrap">
-							<Badge size="sm" class="badge-ghost">{titleCase(e.kind)}</Badge>
-							{#if e.isConsumable}
-								<Badge size="sm" class="badge-ghost">Consumable</Badge>
-							{/if}
-						</td>
-						<td class="cell-num">
-							<span class:text-error={e.availableQuantity <= 0}>{e.availableQuantity}</span>
-						</td>
-						<td class="col-support cell-num">
-							<!-- Low stock is the reorder point doing its job: the colour says so. -->
-							<span
-								class:text-warning={e.isLowStock}
-								class:font-semibold={e.isLowStock}
-								title={e.isLowStock ? 'Low stock' : undefined}>{e.onHand}</span
-							>
-						</td>
-					</tr>
-				{/each}
-			</Table>
-		{/snippet}
-	</DataList>
+					{#each equipment as e (e.id)}
+						{@const href = resolve(`/staff/inventory/${e.id}`)}
+						<tr class="hover cursor-pointer" class:opacity-50={e.deletedAt} use:rowLink={href}>
+							<td class="w-px">
+								<StatusBadge status={e.deletedAt ? 'deactivated' : 'active'} />
+							</td>
+							<td class="cell-primary">
+								<!-- Category has its own column; below col-support's width it rides as the subline. -->
+								<EntityIdentity ref={e.ref}>
+									{#snippet subtitle()}<span class="@min-[32rem]:hidden">{e.category.name}</span
+										>{/snippet}
+								</EntityIdentity>
+							</td>
+							<td class="col-support whitespace-nowrap">{e.category.name}</td>
+							<td class="col-support whitespace-nowrap">
+								<Badge size="sm" class="badge-ghost">{titleCase(e.kind)}</Badge>
+								{#if e.isConsumable}
+									<Badge size="sm" class="badge-ghost">Consumable</Badge>
+								{/if}
+							</td>
+							<td class="cell-num">
+								<span class:text-error={e.availableQuantity <= 0}>{e.availableQuantity}</span>
+							</td>
+							<td class="col-support cell-num">
+								<!-- Low stock is the reorder point doing its job: the colour says so. -->
+								<span
+									class:text-warning={e.isLowStock}
+									class:font-semibold={e.isLowStock}
+									title={e.isLowStock ? 'Low stock' : undefined}>{e.onHand}</span
+								>
+								{#if e.onOrder > 0}
+									<Badge variant="info" size="xs">{e.onOrder} on order</Badge>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</Table>
+			{/snippet}
+		</DataList>
+	{/if}
 </PageContent>
 <CategoryManagerModal bind:open={showCategoryModal} />
 

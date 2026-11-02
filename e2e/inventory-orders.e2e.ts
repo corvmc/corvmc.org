@@ -13,8 +13,8 @@ import { SEED_LOW_ID, SEED_LOW_NAME, SEED_LOW_REORDER_QUANTITY } from './fixture
  * something is on order, the restock list stops asking for it. That is a claim
  * about two pages and a SQL aggregate agreeing, which no unit test can make.
  *
- * **`fixme`, and deliberately not deleted.** The submit on
- * `/staff/inventory/restock` does not navigate under Playwright: the page stays
+ * **`fixme`, and deliberately not deleted.** The submit on the old
+ * `/staff/inventory/restock` did not navigate under Playwright: the page stays
  * put with the row still ticked and the sticky bar still rendered — so the page
  * *is* hydrated and the binding *did* fire — and with no validation message on
  * screen. Its markup matches the intake page's, whose equivalent test passes.
@@ -52,26 +52,23 @@ test.describe('purchase orders', () => {
 		page
 	}) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/inventory/restock');
-		await expect(page.getByRole('heading', { name: 'Restock' })).toBeVisible();
+		await page.goto('/staff/inventory?show=restock');
 
 		const row = page.getByRole('row').filter({ hasText: SEED_LOW_NAME });
 		await expect(row).toContainText(String(SEED_LOW_REORDER_QUANTITY));
 
 		await row.locator('input[type="checkbox"]').check();
+		await page.locator('input[name$="expectedAt"]').fill('2099-01-01');
 		await page.locator('input[name$="supplierName"]').fill('E2E Supply Co');
-		await page.getByRole('button', { name: /^Order 1 item$/ }).click();
+		await page.getByRole('button', { name: /^Mark 1 item as ordered$/ }).click();
+		await expectSuccessToast(page);
 
-		await page.waitForURL(/\/staff\/inventory\/orders\/[0-9a-f-]{36}/, { timeout: 15000 });
-		const orderId = page.url().split('/').pop()!;
-
-		// `exact`, because the page also explains in prose what a draft means.
-		await expect(page.getByText('Draft', { exact: true })).toBeVisible();
-		const [draft] = await readLocalDb((db) =>
-			db.select().from(purchaseOrder).where(eq(purchaseOrder.id, orderId))
+		// Mark as ordered writes the order already placed: there is no draft step (#2022).
+		const [order] = await readLocalDb((db) =>
+			db.select().from(purchaseOrder).where(eq(purchaseOrder.supplierName, 'E2E Supply Co'))
 		);
-		expect(draft.status).toBe('draft');
-		expect(draft.placedAt).toBeNull();
+		expect(order.status).toBe('placed');
+		const orderId = order.id;
 
 		const lines = await readLocalDb((db) =>
 			db.select().from(purchaseOrderLine).where(eq(purchaseOrderLine.orderId, orderId))
@@ -79,11 +76,7 @@ test.describe('purchase orders', () => {
 		expect(lines).toHaveLength(1);
 		expect(lines[0].itemId).toBe(SEED_LOW_ID);
 
-		// Placing it is what changes the restock arithmetic.
-		await page.getByRole('button', { name: 'Mark as placed' }).click();
-		await expectSuccessToast(page);
-
-		await page.goto('/staff/inventory/restock');
+		await page.goto('/staff/inventory?show=restock');
 		const afterRow = page.getByRole('row').filter({ hasText: SEED_LOW_NAME });
 		if ((await afterRow.count()) > 0) {
 			await expect(afterRow).toContainText('coming');

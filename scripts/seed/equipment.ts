@@ -553,7 +553,7 @@ export async function seedEquipment(users: SeedUser[]) {
 	 * The restock list subtracts what is on a *placed* order, so without at least
 	 * one of these a local run can never see the behaviour orders exist for —
 	 * the list would go on asking you to buy strings that are already coming.
-	 * The late one is what the Orders page flags for chasing; the draft proves a
+	 * The late one is what the list's "Order late" view flags; the draft proves a
 	 * shopping list still counts as missing until it is actually sent.
 	 */
 	const placedOrder = {
