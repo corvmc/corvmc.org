@@ -273,6 +273,8 @@ export interface EventRow {
 	reviewNotes: string | null;
 	/** Set on a series' prototype and on every occurrence it generated. */
 	recurringSeriesId: string | null;
+	/** The partner feed that wrote this listing, if one did. */
+	importSourceId?: string | null;
 	createdByUserId: string;
 	createdAt: Date;
 	updatedAt: Date;

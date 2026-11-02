@@ -22,6 +22,7 @@ const ALL_ENDPOINTS = [
 	'/api/cron/sweep-audio-purchases',
 	'/api/cron/sweep-incidents',
 	'/api/cron/sweep-audit-log',
+	'/api/cron/import-partner-calendars',
 	'/api/cron/reconcile-ledger'
 ];
 
@@ -87,6 +88,7 @@ describe('CRON_SCHEDULE', () => {
 			'/api/cron/sweep-incidents',
 			// 24-month audit retention (#1376), after the sweep that writes audit rows.
 			'/api/cron/sweep-audit-log',
+			'/api/cron/import-partner-calendars',
 			// Last: it reaps what every job above may have deleted, and nothing
 			// downstream reads its result.
 			'/api/cron/sweep-media'

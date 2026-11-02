@@ -395,6 +395,21 @@ describe('resolveFlag', () => {
 		expect(restrictStandingMock).not.toHaveBeenCalled();
 	});
 
+	it('does not touch standing for a listing a partner feed imported', async () => {
+		selectResultQueue = [[{ status: 'pending', entityType: 'event', entityId: 'e1' }]];
+		updateResult = [{ id: 'f1', status: 'resolved' }];
+		getByIdMock.mockResolvedValue({
+			id: 'e1',
+			source: 'community',
+			importSourceId: 'src-1',
+			createdByUserId: 'staff-1'
+		});
+
+		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1' });
+
+		expect(restrictStandingMock).not.toHaveBeenCalled();
+	});
+
 	it('leaves standing alone for a flagged member profile', async () => {
 		selectResultQueue = [[{ status: 'pending', entityType: 'member_profile', entityId: 'u9' }]];
 		updateResult = [{ id: 'f1', status: 'resolved' }];

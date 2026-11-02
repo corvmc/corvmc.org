@@ -31,6 +31,8 @@ export const tableOrder = [
 	// References nothing; `event.venue_id` references it, so it must precede
 	// `event`. Sits with the other rootless tables rather than beside it.
 	'venue',
+	// References venue and user; `event_listing.import_source_id` points at it.
+	'calendar_source',
 	// Roots, each ahead of the children that reference it.
 	'sponsor',
 	'sponsorship',

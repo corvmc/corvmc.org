@@ -215,11 +215,13 @@ export async function restoreStanding(params: {
  */
 export function scopeForFlag(
 	entityType: FlagEntityType,
-	context: { eventSource?: string | null } = {}
+	context: { eventSource?: string | null; imported?: boolean } = {}
 ): StandingScope | null {
 	switch (entityType) {
+		// An imported listing's author is whoever added the feed, not who wrote
+		// the show; staff pause the feed instead.
 		case 'event':
-			return context.eventSource === 'community' ? 'community_event' : null;
+			return context.eventSource === 'community' && !context.imported ? 'community_event' : null;
 		case 'suggestion':
 			return 'suggestion';
 		case 'inbox_thread':
