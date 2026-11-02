@@ -97,10 +97,15 @@ export class DutyListNameTakenError extends DomainError {
  */
 export class DutyListAlreadyAppliedError extends DomainError {
 	readonly httpStatus = 409;
-	constructor(name: string, existing: number) {
+	// Once per project (#2152): a second show stamps it again only with a reason.
+	constructor(name: string, existing: number, fromShow = false) {
+		const orders = `${existing} work ${existing === 1 ? 'order' : 'orders'}`;
 		super(
-			`"${name}" has already been applied to this one — it created ${existing} ` +
-				`work ${existing === 1 ? 'order' : 'orders'}. Cancel those first if you want to redo it.`
+			fromShow
+				? `"${name}" is already on this show's project (${orders}). ` +
+						'Give a reason to apply it again for this show.'
+				: `"${name}" is already on this project (${orders}). ` +
+						'Give a reason to apply it again, or cancel those to redo it.'
 		);
 	}
 }
@@ -727,7 +732,9 @@ export async function applyDutyList(
 			)
 		);
 	const reason = opts.reason?.trim() || null;
-	if (existing > 0 && !reason) throw new DutyListAlreadyAppliedError(list.name, existing);
+	if (existing > 0 && !reason) {
+		throw new DutyListAlreadyAppliedError(list.name, existing, Boolean(subject.eventId));
+	}
 
 	const { at: anchor, missing } = resolveAnchor(list.anchor, clock);
 	const readsEvent = (eventDutyListAnchors as readonly string[]).includes(list.anchor);
