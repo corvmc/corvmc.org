@@ -569,7 +569,10 @@ async function standingSubjectOf(
 		case 'event': {
 			const { getById } = await import('$lib/server/event/event-service');
 			const evt = await getById(entityId);
-			const scope = scopeForFlag('event', { eventSource: evt?.source });
+			const scope = scopeForFlag('event', {
+				eventSource: evt?.source,
+				imported: evt?.importSourceId != null
+			});
 			return scope && evt ? { userId: evt.createdByUserId, scope } : null;
 		}
 		case 'suggestion': {

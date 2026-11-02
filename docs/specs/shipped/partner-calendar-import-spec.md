@@ -63,4 +63,11 @@ by the next run.
 
 ## Decisions
 
-Recorded for the owner to confirm or reverse. #1459 links them.
+Recorded for the owner to confirm or reverse.
+
+- #2208: build now rather than wait for a named partner.
+- #2209: an imported listing is a community listing owned by the staffer who added the feed, and
+  upholding a report against it costs nobody standing.
+- #2210: the feed overwrites listings that are still public, never puts back one staff pulled, and
+  leaves alone a show that vanishes from the feed.
+- #2211: a show already listed by a band or member at that venue that day is not imported.

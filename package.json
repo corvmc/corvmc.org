@@ -134,6 +134,7 @@
 		"feed": "^6.0.0",
 		"fflate": "^0.8.3",
 		"ical-generator": "^11.1.2",
+		"ical.js": "^2.2.1",
 		"marked": "^18.1.0",
 		"postmark": "^5.1.0",
 		"qrcode-svg": "^1.1.0",

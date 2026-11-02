@@ -9,6 +9,7 @@ import { recurringSeries } from './recurring';
 import { project } from './project';
 import { eventSources } from '../../../config';
 import { venue } from './venue';
+import { calendarSource } from './calendar-source';
 
 /**
  * Where a listing sits between "nobody has seen it" and "it is on the guide".
@@ -124,6 +125,13 @@ export const eventListing = sqliteTable(
 		// volunteer_hour_log.reviewNotes. Null on everything staff produce
 		// themselves; nothing outside the community review flow writes it.
 		reviewNotes: text('review_notes'),
+		// Set only on a listing the partner-feed importer wrote: which feed, and
+		// the VEVENT UID it came from. The pair is the dedupe key, so a re-run
+		// updates the row rather than adding a second one.
+		importSourceId: text('import_source_id').references(() => calendarSource.id, {
+			onDelete: 'set null'
+		}),
+		importUid: text('import_uid'),
 		createdByUserId: text('created_by_user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
@@ -142,6 +150,9 @@ export const eventListing = sqliteTable(
 		index('idx_event_recurring_series').on(t.recurringSeriesId),
 		index('idx_event_project').on(t.projectId),
 		index('idx_event_venue').on(t.venueId),
+		uniqueIndex('uq_event_import_uid')
+			.on(t.importSourceId, t.importUid)
+			.where(sql`import_source_id IS NOT NULL AND import_uid IS NOT NULL`),
 		uniqueIndex('uq_event_recurring_instance')
 			.on(t.recurringSeriesId, t.startsAt)
 			.where(sql`recurring_series_id IS NOT NULL AND status != 'cancelled'`),

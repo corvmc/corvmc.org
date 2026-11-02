@@ -94,6 +94,9 @@ importers:
       ical-generator:
         specifier: ^11.1.2
         version: 11.1.2(@types/node@26.6.5)(dayjs@1.11.23)
+      ical.js:
+        specifier: ^2.2.1
+        version: 2.2.1
       marked:
         specifier: ^18.1.0
         version: 18.1.0
@@ -4240,6 +4243,9 @@ packages:
         optional: true
       rrule:
         optional: true
+
+  ical.js@2.2.1:
+    resolution: {integrity: sha512-yK/UlPbEs316igb/tjRgbFA8ZV75rCsBJp/hWOatpyaPNlgw0dGDmU+FoicOcwX4xXkeXOkYiOmCqNPFpNPkQg==}
 
   iconv-lite@0.4.24:
     resolution: {integrity: sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==}
@@ -9881,6 +9887,8 @@ snapshots:
     optionalDependencies:
       '@types/node': 26.6.5
       dayjs: 1.11.23
+
+  ical.js@2.2.1: {}
 
   iconv-lite@0.4.24:
     dependencies:
