@@ -170,45 +170,24 @@ function buildRange(date: string, startTime: string, endTime: string | undefined
 // Member forms
 // ---------------------------------------------------------------------------
 
+/**
+ * The Add a show modal: only what a listing needs to exist. The venue is here
+ * because the manage form will not save without one (#2176); everything else
+ * is set through `updateListing` on the manage page this lands on.
+ */
 export const createListing = form(
-	communityEventSchema.extend({ posterFile: z.instanceof(File).optional() }),
-	async (data, issue) => {
+	communityEventSchema.pick({ title: true, eventDate: true, eventStartTime: true }).extend({
+		location: z.string().trim().min(1, 'Venue is required').max(500)
+	}),
+	async (data) => {
 		const user = requireUser();
-
-		const ticketPrice = dollarsToCents(data.ticketPriceDollars);
-		if (ticketPrice === undefined) {
-			invalid(issue.ticketPriceDollars('Enter a price like 10.00, or leave blank'));
-		}
-
-		const poster = readPosterFile(data.posterFile);
-		if (poster) {
-			const reason = validateUpload(poster);
-			if (reason) invalid(issue.posterFile(reason));
-		}
-
-		const tz = DEFAULT_TIMEZONE;
-		const { startsAt, endsAt } = buildRange(
-			data.eventDate,
-			data.eventStartTime,
-			data.eventEndTime || undefined,
-			tz
-		);
-		const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : null;
 
 		try {
 			const evt = await createCommunityEvent({
 				createdByUserId: user.id,
 				title: data.title,
-				description: data.description || undefined,
-				startsAt,
-				endsAt,
-				doorsAt,
-				location: data.location || undefined,
-				tags: data.tags || undefined,
-				externalTicketUrl: data.externalTicketUrl || undefined,
-				ticketPrice,
-				lineup: parseLineupField(data.lineup),
-				posterFile: await toPosterParam(poster)
+				startsAt: buildDateInTz(data.eventDate, data.eventStartTime, DEFAULT_TIMEZONE),
+				location: data.location
 			});
 
 			void getMyListings().refresh();
