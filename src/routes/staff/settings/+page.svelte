@@ -21,9 +21,8 @@
 		refreshCommunityStats
 	} from '$lib/remote/settings.remote';
 	import LockHealth from './LockHealth.svelte';
-	import UnmanagedLockCodes from './UnmanagedLockCodes.svelte';
 	import UtecDevicePicker from './UtecDevicePicker.svelte';
-	import { getLockHealth, getUnmanagedLockUsers } from '$lib/remote/lock.remote';
+	import { getLockHealth } from '$lib/remote/lock.remote';
 	import { updateInboxChannelConfig, testMetaConnection } from '$lib/remote/inbox.remote';
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { channelLabel, channelIcon } from '$lib/components/inbox/channels';
@@ -757,15 +756,9 @@
 								{/snippet}
 							</svelte:boundary>
 
-							<svelte:boundary>
-								<UnmanagedLockCodes />
-
-								{#snippet failed(error, reset)}
-									<Alert type="warning" reset={() => retryQuery(getUnmanagedLockUsers(), reset)}>
-										Could not read the lock's own door codes: {errorMessage(error)}
-									</Alert>
-								{/snippet}
-							</svelte:boundary>
+							<p class="mt-2 text-subtle">
+								Door codes are on <a class="link" href={resolve('/staff/keys')}>Key Holders</a>.
+							</p>
 
 							<div class="mt-2 border-t border-base-200 pt-3">
 								<div class="flex items-start justify-between gap-2">

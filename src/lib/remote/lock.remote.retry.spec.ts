@@ -37,7 +37,7 @@ const runDailyLockJob = vi.fn(async (_by: string | null) => {
 		cleaned: 0,
 		confirmed: 3,
 		online: true,
-		fallbackActive: true,
+		pool: null,
 		errors: []
 	};
 });

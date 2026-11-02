@@ -315,15 +315,14 @@
 			{#if data.doorFallback}
 				<p class="mt-2">
 					{#if data.doorFallback.showsFrom}
-						The member will be shown the break-glass code from
+						The member will be shown a fallback code from
 						{fullDate(data.doorFallback.showsFrom)}, {formatTime(data.doorFallback.showsFrom)}.
 					{:else if data.doorFallback.code}
-						Member sees:
+						Fallback code:
 						<span class="font-mono font-bold tracking-[0.2em]">{data.doorFallback.code}</span>
-						(break-glass)
 					{:else}
 						<span class="text-warning">
-							No break-glass code is confirmed on the lock right now, so the member is shown none.
+							The door code pool is empty, so the member is shown none.
 						</span>
 					{/if}
 				</p>

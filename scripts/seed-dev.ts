@@ -129,7 +129,7 @@ async function main() {
 	await seedUserRoles(users, adminUser, roles);
 	const allUsers = [adminUser, ...users];
 	const reservations = await seedReservations(allUsers);
-	await seedLockAccess(allUsers);
+	await seedLockAccess(allUsers, reservations);
 	await seedClosures();
 	const events = await seedEvents(allUsers);
 	// After the events, because it backfills every one of them into the room —
