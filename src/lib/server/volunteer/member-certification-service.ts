@@ -12,6 +12,8 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql }
 import { DomainError } from '$lib/server/errors';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
+import type { RosterPerson } from '$lib/types/roster';
+import { toRosterPerson } from '$lib/server/roster/roster';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { getRequirementsForRoles } from './volunteer-certification-service';
 import { clubToday, CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '$lib/config';
@@ -459,11 +461,10 @@ export async function auditClearances(
 	return gaps;
 }
 
-export interface ClearanceRow {
+export interface ClearanceRow extends RosterPerson {
 	/** The grant row, so the list can revoke without a second lookup. */
 	id: string;
 	userId: string;
-	member: MemberRef;
 	certificationId: string;
 	certificationName: string;
 	grantedAt: Date;
@@ -519,7 +520,7 @@ export async function listClearances(
 	const out = [...newest.values()].map((r) => ({
 		id: r.id,
 		userId: r.userId,
-		member: toMemberRef(r.member),
+		...toRosterPerson(r.member),
 		certificationId: r.certificationId,
 		certificationName: r.certificationName,
 		grantedAt: r.grantedAt,
