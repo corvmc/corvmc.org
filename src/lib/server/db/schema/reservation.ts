@@ -151,12 +151,12 @@ export const closure = sqliteTable(
 );
 
 /**
- * The break-glass door code. Only *changes* need connectivity, so a code synced
- * last month still opens the door during today's outage.
- *
- * Exactly one row is active — `syncedAt` set, `retiredAt` null — and a
- * successor is minted before the incumbent is retired, never after, or there
- * would be a window with no working code.
+ * The door-code pool: type-0 lock users minted while the lock is online, so a
+ * booking can be handed one that already works offline. Available means
+ * synced, unclaimed and not removed. A claim lasts the booking; an unrevealed
+ * claim is released when it ends and a revealed one is burned (removed from
+ * the lock). `pooled` is false only for the break-glass codes that predate the
+ * pool, which were shown to many people and are burned rather than reused.
  */
 export const lockFallbackCode = sqliteTable(
 	'lock_fallback_code',
@@ -170,13 +170,29 @@ export const lockFallbackCode = sqliteTable(
 		lockAccessId: text('lock_access_id'),
 		/** Set when the lock reports sync_status 1 — until then it opens nothing. */
 		syncedAt: integer('synced_at', { mode: 'timestamp' }),
-		/** Set when a confirmed successor has taken over. */
+		/** Legacy: when a break-glass code was superseded. The pool does not rotate. */
 		retiredAt: integer('retired_at', { mode: 'timestamp' }),
+		pooled: integer('pooled', { mode: 'boolean' }).notNull().default(false),
+		claimedByReservationId: text('claimed_by_reservation_id').references(() => reservation.id, {
+			onDelete: 'set null'
+		}),
+		claimedAt: integer('claimed_at', { mode: 'timestamp' }),
+		/** When a member was shown it. A revealed code is never handed out again. */
+		revealedAt: integer('revealed_at', { mode: 'timestamp' }),
+		/** When the lock confirmed the user gone. Until then a burned code still opens the door. */
+		removedAt: integer('removed_at', { mode: 'timestamp' }),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`)
 	},
-	(t) => [index('idx_lock_fallback_active').on(t.retiredAt, t.syncedAt)]
+	(t) => [
+		index('idx_lock_fallback_active').on(t.retiredAt, t.syncedAt),
+		// One live code per booking, so two bandmates loading the page at once
+		// cannot each take one from the pool.
+		uniqueIndex('uq_lock_fallback_live_claim')
+			.on(t.claimedByReservationId)
+			.where(sql`removed_at IS NULL`)
+	]
 );
 
 /**

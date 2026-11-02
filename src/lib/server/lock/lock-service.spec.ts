@@ -98,10 +98,10 @@ vi.mock('$lib/server/notification', () => ({
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
 
-const mockMaintainFallbackCode = vi.fn().mockResolvedValue({ active: null, rotated: false });
+const mockMaintainCodePool = vi.fn().mockResolvedValue(null);
 
 vi.mock('./fallback-code-service', () => ({
-	maintainFallbackCode: (...args: unknown[]) => mockMaintainFallbackCode(...args)
+	maintainCodePool: (...args: unknown[]) => mockMaintainCodePool(...args)
 }));
 
 const mockHasActiveMemberCode = vi.fn().mockResolvedValue(false);
@@ -192,7 +192,7 @@ beforeEach(() => {
 	mockGetJson.mockResolvedValue(true);
 	mockPutJson.mockResolvedValue(undefined);
 	mockDispatchEmailOnly.mockResolvedValue(undefined);
-	mockMaintainFallbackCode.mockResolvedValue({ active: null, rotated: false });
+	mockMaintainCodePool.mockResolvedValue(null);
 	mockHasActiveMemberCode.mockResolvedValue(false);
 	mockReconcileMemberCodeSync.mockResolvedValue(0);
 	// `list` never carries daterange — only `get` does. Route the fixtures'
@@ -747,7 +747,7 @@ describe('reconcileUpcomingSync', () => {
 		expect(updateCalls).toEqual([expect.objectContaining({ lockSyncedAt: expect.any(Date) })]);
 		expect(mockQueryDeviceHealth).not.toHaveBeenCalled();
 		expect(mockListLockUsers).not.toHaveBeenCalled();
-		expect(mockMaintainFallbackCode).not.toHaveBeenCalled();
+		expect(mockMaintainCodePool).not.toHaveBeenCalled();
 		expect(mockReconcileMemberCodeSync).not.toHaveBeenCalled();
 	});
 
@@ -1014,7 +1014,7 @@ describe('step isolation', () => {
 
 		const result = await runDailyLockJob();
 
-		expect(mockMaintainFallbackCode).toHaveBeenCalled();
+		expect(mockMaintainCodePool).toHaveBeenCalled();
 		expect(result.errors).toContainEqual(expect.stringContaining('D1 unavailable'));
 		consoleSpy.mockRestore();
 	});

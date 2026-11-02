@@ -137,6 +137,13 @@ export const creditCompCeiling: Record<CreditType, number> = {
 export const CONFIRMATION_WINDOW_DAYS = 3;
 
 /**
+ * Unclaimed door codes the daily lock job keeps confirmed on the lock (#2120).
+ * Each burned code needs the lock online to replace, so this is how many
+ * fallbacks an outage can spend before members are told to call staff.
+ */
+export const DOOR_CODE_POOL_SIZE = 10;
+
+/**
  * What every member surface says about a booking nobody confirmed.
  *
  * `cancelUnconfirmedReservations()` cancels anything still `scheduled` at its
@@ -2170,8 +2177,8 @@ export const capabilities = {
 	event: ['read', 'manage', 'publish', 'manageTickets', 'uploadRecap'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
 	// Door access: granting and revoking standing member codes, adopting the
-	// hand-made ones already on the lock, re-provisioning a booking, rotating the
-	// break-glass code. Split out of `settings.update`, which was only ever the
+	// hand-made ones already on the lock, re-provisioning a booking, reading the
+	// booking-code pool. Split out of `settings.update`, which was only ever the
 	// nearest thing to hand — these are member-affecting acts on a physical door,
 	// not configuration.
 	lock: ['manage'],

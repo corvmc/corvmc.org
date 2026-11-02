@@ -13,7 +13,7 @@
 	import {
 		getUnmanagedLockUsers,
 		adoptUnmanagedCode,
-		getMemberCodes
+		getAccessRegister
 	} from '$lib/remote/lock.remote';
 
 	let busyId = $state<number | null>(null);
@@ -28,7 +28,8 @@
 			// No member attached yet: staff can say "this code is accounted for"
 			// before they have worked out whose it is.
 			await adoptUnmanagedCode({ lockAccessId, label, userId: null });
-			await Promise.all([getUnmanagedLockUsers().refresh(), getMemberCodes().refresh()]);
+			await getUnmanagedLockUsers().refresh();
+			await getAccessRegister(false).refresh();
 		} catch (err) {
 			failure = (err as Error).message;
 		} finally {
@@ -37,11 +38,10 @@
 	}
 </script>
 
-<div class="mt-2 border-t border-base-200 pt-3">
-	<p class="text-sm font-medium">Unmanaged door codes</p>
+<div>
 	<p class="text-subtle">
 		Standing codes on the lock that this site does not track. Adopting one changes nothing at the
-		door — it starts tracking it, which is what makes revoking it possible at all.
+		door — it starts tracking it on Held now, where it can be revoked.
 	</p>
 
 	{#if failure}

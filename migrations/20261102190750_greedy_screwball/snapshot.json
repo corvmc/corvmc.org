@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "11fc20c9-538b-4f1b-8f79-8edfc4aa05e9",
+  "id": "d2d9541a-58ce-40a6-a1c8-974d8483e95d",
   "prevIds": [
-    "fbee8069-72a2-4b81-863d-1c2076cc97b2"
+    "11fc20c9-538b-4f1b-8f79-8edfc4aa05e9"
   ],
   "ddl": [
     {
@@ -1539,6 +1539,56 @@
       "default": null,
       "generated": null,
       "name": "retired_at",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "pooled",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "claimed_by_reservation_id",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "claimed_at",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "revealed_at",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "removed_at",
       "entityType": "columns",
       "table": "lock_fallback_code"
     },
@@ -14954,6 +15004,21 @@
     },
     {
       "columns": [
+        "claimed_by_reservation_id"
+      ],
+      "tableTo": "reservation",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_lock_fallback_code_claimed_by_reservation_id_reservation_id_fk",
+      "entityType": "fks",
+      "table": "lock_fallback_code"
+    },
+    {
+      "columns": [
         "user_id"
       ],
       "tableTo": "user",
@@ -20128,6 +20193,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_lock_fallback_active",
+      "entityType": "indexes",
+      "table": "lock_fallback_code"
+    },
+    {
+      "columns": [
+        {
+          "value": "claimed_by_reservation_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "removed_at IS NULL",
+      "origin": "manual",
+      "name": "uq_lock_fallback_live_claim",
       "entityType": "indexes",
       "table": "lock_fallback_code"
     },

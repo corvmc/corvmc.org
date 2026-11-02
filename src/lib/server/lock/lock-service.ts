@@ -15,7 +15,7 @@ import {
 	LOCK_GRACE_MINUTES,
 	type LockDeviceHealth
 } from './ultraloc-client';
-import { maintainFallbackCode } from './fallback-code-service';
+import { maintainCodePool, type PoolSummary } from './fallback-code-service';
 import { hasActiveMemberCode, reconcileMemberCodeSync } from './member-code-service';
 import { getJson, putJson } from '$lib/server/kv';
 import { dispatchEmailOnly } from '$lib/server/notification';
@@ -47,8 +47,8 @@ export interface LockJobSummary {
 	cleaned: number;
 	confirmed: number;
 	online: boolean | null;
-	/** Whether a break-glass code is confirmed on the lock right now. */
-	fallbackActive: boolean;
+	/** What the door-code pool stage did; null when it did not run. */
+	pool: PoolSummary | null;
 	errors: string[];
 }
 
@@ -97,16 +97,14 @@ export async function runDailyLockJob(triggeredBy: string | null = null): Promis
 		(await step('Sync reconciliation', 0, () => reconcileSyncState(errors))) +
 		(await step('Member code sync', 0, () => reconcileMemberCodeSync(errors)));
 	cleaned += await step('Cancelled-booking sweep', 0, () => revokeCancelledAccess(errors));
-	const fallback = await step('Fallback code', { active: null, rotated: false }, () =>
-		maintainFallbackCode(errors)
-	);
+	const pool = await step('Door code pool', null, () => maintainCodePool(errors));
 
 	const summary: LockJobSummary = {
 		provisioned,
 		cleaned,
 		confirmed,
 		online,
-		fallbackActive: fallback.active !== null,
+		pool,
 		errors
 	};
 
