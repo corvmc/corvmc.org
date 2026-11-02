@@ -43,6 +43,8 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		'/api/cron/sweep-incidents',
 		// 24-month audit retention (#1376), after the sweep that writes audit rows.
 		'/api/cron/sweep-audit-log',
+		// Partner venues' feeds onto the gig guide (#1459). Owns no media.
+		'/api/cron/import-partner-calendars',
 		// Last in the batch: it reads what every job above may have deleted, and
 		// nothing downstream depends on its result.
 		'/api/cron/sweep-media'
@@ -84,6 +86,7 @@ export const CRON_MONITORS: Record<string, 'live' | RetiredMonitor> = {
 	'sweep-audio-purchases': 'live',
 	'sweep-incidents': 'live',
 	'sweep-audit-log': 'live',
+	'import-partner-calendars': 'live',
 	'sweep-media': 'live',
 	'reconcile-ledger': 'live',
 	'shift-feedback': { retired: '2026-09-17', ref: '#1198' },

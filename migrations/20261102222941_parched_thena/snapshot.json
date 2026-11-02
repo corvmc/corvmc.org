@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "7612b363-9983-48af-9a5c-491b4ff41f4f",
+  "id": "cb2520a9-d33a-4ba1-b4e4-417f228a8c50",
   "prevIds": [
-    "11fc20c9-538b-4f1b-8f79-8edfc4aa05e9"
+    "7612b363-9983-48af-9a5c-491b4ff41f4f"
   ],
   "ddl": [
     {
@@ -60,6 +60,10 @@
     },
     {
       "name": "venue",
+      "entityType": "tables"
+    },
+    {
+      "name": "calendar_source",
       "entityType": "tables"
     },
     {
@@ -2124,6 +2128,106 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "calendar_source"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "venue_id",
+      "entityType": "columns",
+      "table": "calendar_source"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "url",
+      "entityType": "columns",
+      "table": "calendar_source"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "paused",
+      "entityType": "columns",
+      "table": "calendar_source"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_fetched_at",
+      "entityType": "columns",
+      "table": "calendar_source"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_error",
+      "entityType": "columns",
+      "table": "calendar_source"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_imported_count",
+      "entityType": "columns",
+      "table": "calendar_source"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "calendar_source"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "calendar_source"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "calendar_source"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "event_band"
     },
     {
@@ -2463,6 +2567,26 @@
       "default": null,
       "generated": null,
       "name": "review_notes",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "import_source_id",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "import_uid",
       "entityType": "columns",
       "table": "event_listing"
     },
@@ -15178,6 +15302,36 @@
     },
     {
       "columns": [
+        "venue_id"
+      ],
+      "tableTo": "venue",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_calendar_source_venue_id_venue_id_fk",
+      "entityType": "fks",
+      "table": "calendar_source"
+    },
+    {
+      "columns": [
+        "created_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_calendar_source_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "calendar_source"
+    },
+    {
+      "columns": [
         "event_id"
       ],
       "tableTo": "event_listing",
@@ -15323,6 +15477,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_event_recurring_series_id_recurring_series_id_fk",
+      "entityType": "fks",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        "import_source_id"
+      ],
+      "tableTo": "calendar_source",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_event_listing_import_source_id_calendar_source_id_fk",
       "entityType": "fks",
       "table": "event_listing"
     },
@@ -19173,6 +19342,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "calendar_source_pk",
+      "table": "calendar_source",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "event_band_pk",
       "table": "event_band",
       "entityType": "pks"
@@ -20482,6 +20660,34 @@
     {
       "columns": [
         {
+          "value": "url",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_calendar_source_url",
+      "entityType": "indexes",
+      "table": "calendar_source"
+    },
+    {
+      "columns": [
+        {
+          "value": "venue_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_calendar_source_venue",
+      "entityType": "indexes",
+      "table": "calendar_source"
+    },
+    {
+      "columns": [
+        {
           "value": "event_id",
           "isExpression": false
         },
@@ -20676,6 +20882,24 @@
       "where": null,
       "origin": "manual",
       "name": "idx_event_venue",
+      "entityType": "indexes",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
+          "value": "import_source_id",
+          "isExpression": false
+        },
+        {
+          "value": "import_uid",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "import_source_id IS NOT NULL AND import_uid IS NOT NULL",
+      "origin": "manual",
+      "name": "uq_event_import_uid",
       "entityType": "indexes",
       "table": "event_listing"
     },

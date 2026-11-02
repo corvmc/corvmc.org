@@ -8,7 +8,7 @@ import {
 } from './event-columns';
 import { saveTicketSale } from '$lib/server/ticket/ticket-sale';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, count, eq, getTableColumns, gte, inArray, ne } from 'drizzle-orm';
+import { and, asc, count, eq, getTableColumns, gte, inArray, isNull, ne } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { uploadFile } from '$lib/server/storage';
@@ -91,7 +91,11 @@ export type { EventRow } from './event-service';
 // Queries
 // ---------------------------------------------------------------------------
 
-/** The member's own listings, drafts included. Nobody else's, ever. */
+/**
+ * The member's own listings, drafts included. Nobody else's, ever. A partner
+ * feed's listings are excluded from the staffer who added it: the next import
+ * would overwrite any edit made here.
+ */
 export async function listCommunityEventsForUser(userId: string): Promise<EventRow[]> {
 	return db
 		.select(eventListingColumns)
@@ -100,6 +104,7 @@ export async function listCommunityEventsForUser(userId: string): Promise<EventR
 			and(
 				eq(eventListing.source, 'community'),
 				eq(eventListing.createdByUserId, userId),
+				isNull(eventListing.importSourceId),
 				ne(eventListing.status, 'rejected')
 			)
 		)
@@ -115,6 +120,7 @@ export async function listRejectedForUser(userId: string): Promise<EventRow[]> {
 			and(
 				eq(eventListing.source, 'community'),
 				eq(eventListing.createdByUserId, userId),
+				isNull(eventListing.importSourceId),
 				eq(eventListing.status, 'rejected')
 			)
 		)

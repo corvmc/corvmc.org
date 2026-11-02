@@ -362,6 +362,7 @@ an hour with DST). The schedule spec pins this table to `CRON_SCHEDULE`:
 | `/api/cron/sweep-audio-purchases`           | Clear `pending` music purchases whose checkout was never completed                     | `0 16 * * *`   |
 | `/api/cron/sweep-incidents`                 | Delete incidents over seven years old not marked `retain`; audit each deletion         | `0 16 * * *`   |
 | `/api/cron/sweep-audit-log`                 | Delete audit rows over 24 months old; strip name and email from old `user.purged` rows | `0 16 * * *`   |
+| `/api/cron/import-partner-calendars`        | Copy partner venues' iCalendar feeds onto the gig guide (`calendar_source`)            | `0 16 * * *`   |
 | `/api/cron/sweep-media`                     | Reclaim R2 objects nothing points at any more                                          | `0 16 * * *`   |
 | `/api/cron/reconcile-ledger`                | Compare last week's ledger against the Stripe balance                                  | `0 17 * * MON` |
 

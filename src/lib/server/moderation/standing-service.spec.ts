@@ -324,6 +324,10 @@ describe('scopeForFlag', () => {
 		expect(scopeForFlag('event', {})).toBeNull();
 	});
 
+	it('spares a listing a partner feed imported — its author did not write the show', () => {
+		expect(scopeForFlag('event', { eventSource: 'community', imported: true })).toBeNull();
+	});
+
 	it('maps suggestions and conversations to their own scopes', () => {
 		expect(scopeForFlag('suggestion')).toBe('suggestion');
 		expect(scopeForFlag('inbox_thread')).toBe('messaging');
