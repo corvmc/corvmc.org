@@ -15,6 +15,7 @@ import {
 	formatDateShortYear,
 	formatDateTime,
 	formatDateTimeShort,
+	formatHistoryTime,
 	formatDateYear,
 	formatDayNumber,
 	formatDayOfWeek,
@@ -111,6 +112,15 @@ describe('format.ts renders in venue time, not the viewer’s zone', () => {
 
 		it('formatDateTimeShort uses the venue day and clock', () => {
 			expect(formatDateTimeShort(CROSSES_MIDNIGHT)).toBe('Jul 3, 7:30 PM');
+		});
+
+		it('formatHistoryTime adds the venue year only outside the current one', () => {
+			// UTC Jan 1 is still Dec 31 at the venue, so the year is the venue's.
+			const newYearUtc = new Date('2027-01-01T03:00:00Z');
+			expect(formatHistoryTime(CROSSES_MIDNIGHT, newYearUtc)).toBe('Jul 3, 7:30 PM');
+			expect(formatHistoryTime(CROSSES_MIDNIGHT, new Date('2027-01-02T12:00:00Z'))).toBe(
+				'Jul 3, 2026, 7:30 PM'
+			);
 		});
 
 		it('toLocalDate emits the venue date for date inputs', () => {

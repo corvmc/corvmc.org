@@ -1,16 +1,16 @@
+<script lang="ts" module>
+	import type { getProjectActivity } from '$lib/remote/projects.remote';
+
+	export type ActivityPage = NonNullable<Awaited<ReturnType<typeof getProjectActivity>>>;
+</script>
+
 <script lang="ts">
 	import type { RemoteQuery } from '@sveltejs/kit';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
-	import { retryQuery } from '$lib/utils/retry-query';
-	import ActivityList, { type ActivityPage } from './ActivityList.svelte';
+	import { resolve } from '$app/paths';
+	import { ActivityFeedCard, type ActivityRow } from '$lib/components/ui/ActivityFeed';
+	import { surfaces } from '$lib/config';
 
-	/**
-	 * A project's or a work order's history, loaded on its own beside the page's
-	 * one load-bearing query. The `pending` snippet keeps it off the server
-	 * render, which is the point: the page does not wait for it.
-	 */
+	/** A project's or a work order's history, beside the page's load-bearing query. */
 	let {
 		query,
 		projectId
@@ -21,23 +21,42 @@
 		projectId?: string;
 	} = $props();
 
-	let limit = $state<number | undefined>(undefined);
+	type Item = ActivityPage['items'][number];
+	type Origin = NonNullable<Item['origin']>;
+	// A ballot step stays in the history, unlinked while Ballots is off (#2116).
+	const originHref = (o: Origin) =>
+		o.kind === 'suggestion'
+			? resolve('/staff/suggestions/[id]', { id: o.id })
+			: surfaces.ballots
+				? resolve('/staff/ballots/[id]', { id: o.id })
+				: null;
+
+	function toRow(item: Item): ActivityRow {
+		return {
+			id: item.id,
+			at: item.at,
+			actor: { name: item.actorName },
+			summary: item.summary,
+			href: item.origin ? originHref(item.origin) : null,
+			context:
+				item.task && projectId
+					? {
+							label: item.task.title,
+							href: resolve('/staff/projects/[id]/tasks/[taskId]', {
+								id: projectId,
+								taskId: item.task.id
+							})
+						}
+					: null
+		};
+	}
 </script>
 
-<InfoCard title="Activity">
-	<svelte:boundary>
-		<ActivityList {query} {limit} {projectId} onmore={(next) => (limit = next)} />
-
-		{#snippet pending()}
-			<div class="flex justify-center py-6">
-				<span class="loading loading-sm loading-spinner"></span>
-			</div>
-		{/snippet}
-
-		{#snippet failed(error, reset)}
-			<Alert type="warning" reset={() => retryQuery(query(limit), reset)}>
-				Could not load the activity: {errorMessage(error)}
-			</Alert>
-		{/snippet}
-	</svelte:boundary>
-</InfoCard>
+<ActivityFeedCard
+	{query}
+	{toRow}
+	empty={{
+		title: 'Nothing recorded yet',
+		description: 'Assignments, ticks, schedule changes and engagements show up here as they happen.'
+	}}
+/>

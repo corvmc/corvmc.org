@@ -1,14 +1,24 @@
-import { and, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { db } from '$lib/server/db';
-import { auditLog } from '$lib/server/db/schema/audit';
+import {
+	listAuditEntriesForSubject,
+	type AuditSubjectFilter
+} from '$lib/server/audit/audit-service';
 import { user } from '$lib/server/db/schema/authentication';
 import { project } from '$lib/server/db/schema/project';
 import { suggestion } from '$lib/server/db/schema/suggestion';
 import { ballot } from '$lib/server/db/schema/ballot';
 import { volunteerRole, workOrder, workTask } from '$lib/server/db/schema/volunteer';
-import { summarizeAuditEntry } from '$lib/utils/audit-display';
-import type { AuditEntry } from '$lib/types/audit';
+import { auditFeedItem } from '$lib/utils/audit-display';
+import {
+	FEED_MAX,
+	FEED_PAGE,
+	feedLimit,
+	mergeFeed,
+	type FeedItem,
+	type FeedPage
+} from '$lib/types/activity';
 
 /**
  * A project's history, or one work order's: audit entries on the project and on
@@ -20,26 +30,18 @@ import type { AuditEntry } from '$lib/types/audit';
 
 export type ActivityScope = { projectId: string } | { workOrderId: string };
 
-export interface ActivityItem {
-	id: string;
-	at: Date;
-	/** Null for the system, or a member whose account is gone and left no name. */
-	actorId: string | null;
+export interface ActivityItem extends FeedItem {
 	actorName: string;
-	summary: string;
 	/** The work order it is about, when it is about one. */
 	task: { id: string; title: string } | null;
 	/** An origin step's record, for a link. */
 	origin: { kind: 'suggestion' | 'ballot'; id: string } | null;
 }
 
-export interface ActivityPage {
-	items: ActivityItem[];
-	hasMore: boolean;
-}
+export type ActivityPage = FeedPage<ActivityItem>;
 
-export const ACTIVITY_PAGE = 25;
-export const ACTIVITY_MAX = 200;
+export const ACTIVITY_PAGE = FEED_PAGE;
+export const ACTIVITY_MAX = FEED_MAX;
 
 const taskTitle = sql<string>`coalesce(${workOrder.title}, ${volunteerRole.name}, 'Untitled task')`;
 
@@ -48,42 +50,40 @@ function projectWorkOrders(projectId: string) {
 	return db.select({ id: workOrder.id }).from(workOrder).where(eq(workOrder.projectId, projectId));
 }
 
-/** The audit half. Exported so a spec can read its SQL and bound parameters. */
-export function activityAuditQuery(scope: ActivityScope, limit: number) {
-	const where =
-		'workOrderId' in scope
-			? and(eq(auditLog.subjectType, 'work_order'), eq(auditLog.subjectId, scope.workOrderId))
-			: or(
-					and(eq(auditLog.subjectType, 'project'), eq(auditLog.subjectId, scope.projectId)),
-					and(
-						eq(auditLog.subjectType, 'work_order'),
-						inArray(auditLog.subjectId, projectWorkOrders(scope.projectId))
-					)
-				);
-	return db
-		.select({ entry: auditLog, taskId: workOrder.id, taskTitle })
-		.from(auditLog)
-		.leftJoin(
-			workOrder,
-			and(eq(auditLog.subjectType, 'work_order'), eq(workOrder.id, auditLog.subjectId))
-		)
-		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-		.where(where)
-		.orderBy(desc(auditLog.createdAt), desc(auditLog.id))
-		.limit(limit);
+/** Whose audit entries the scope reads. Exported so a spec can read the SQL it makes. */
+export function activitySubjects(scope: ActivityScope): AuditSubjectFilter[] {
+	return 'workOrderId' in scope
+		? [{ type: 'work_order', id: scope.workOrderId }]
+		: [
+				{ type: 'project', id: scope.projectId },
+				{ type: 'work_order', ids: projectWorkOrders(scope.projectId) }
+			];
 }
 
-async function auditItems(scope: ActivityScope, limit: number): Promise<ActivityItem[]> {
-	const rows = await activityAuditQuery(scope, limit);
-	return rows.map(({ entry, taskId, taskTitle }) => ({
-		id: `audit:${entry.id}`,
-		at: entry.createdAt,
-		actorId: entry.actorUserId,
-		actorName: entry.actorName,
-		summary: summarizeAuditEntry(entry as AuditEntry),
-		task: taskId ? { id: taskId, title: taskTitle } : null,
-		origin: null
-	}));
+async function auditItems(scope: ActivityScope, limit: number): Promise<ActivityPage> {
+	const [{ entries, hasMore }, titles] = await Promise.all([
+		listAuditEntriesForSubject(activitySubjects(scope), { limit }),
+		db
+			.select({ id: workOrder.id, title: taskTitle })
+			.from(workOrder)
+			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.where(
+				'workOrderId' in scope
+					? eq(workOrder.id, scope.workOrderId)
+					: eq(workOrder.projectId, scope.projectId)
+			)
+	]);
+	const titleOf = new Map(titles.map((t) => [t.id, t.title]));
+	const items = entries.map((entry) => {
+		const title = entry.subjectType === 'work_order' ? titleOf.get(entry.subjectId) : undefined;
+		return {
+			...auditFeedItem(entry),
+			actorName: entry.actorName,
+			task: title !== undefined ? { id: entry.subjectId, title } : null,
+			origin: null
+		};
+	});
+	return { items, hasMore };
 }
 
 async function tickItems(scope: ActivityScope, limit: number): Promise<ActivityItem[]> {
@@ -221,21 +221,15 @@ async function originItems(projectId: string): Promise<ActivityItem[]> {
 	return items;
 }
 
-/** Newest first; an entry and a tick in the same second keep a stable order by id. */
-function newestFirst(a: ActivityItem, b: ActivityItem) {
-	return b.at.getTime() - a.at.getTime() || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
-}
-
 export async function listActivity(
 	scope: ActivityScope,
 	opts: { limit?: number } = {}
 ): Promise<ActivityPage> {
-	const limit = Math.min(Math.max(Math.trunc(opts.limit ?? ACTIVITY_PAGE), 1), ACTIVITY_MAX);
+	const limit = feedLimit(opts.limit);
 	const [audits, ticks, origin] = await Promise.all([
-		auditItems(scope, limit + 1),
+		auditItems(scope, limit),
 		tickItems(scope, limit + 1),
 		'projectId' in scope ? originItems(scope.projectId) : Promise.resolve([])
 	]);
-	const merged = [...audits, ...ticks, ...origin].sort(newestFirst);
-	return { items: merged.slice(0, limit), hasMore: merged.length > limit };
+	return mergeFeed(limit, audits, { items: [...ticks, ...origin], hasMore: false });
 }

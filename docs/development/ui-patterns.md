@@ -1014,6 +1014,28 @@ Horizontal bar showing a day's reservations from 9am–10pm. Highlights one "cur
 
 The `others` array is optional. Each slot's `href` makes it clickable; `label` shows on hover.
 
+## ActivityFeed
+
+Every staff history card — a record's audit entries, and any other per-record log merged with
+them — is `ActivityFeedCard` from `$lib/components/ui/ActivityFeed`. Do not hand-build another
+"summary / actor · time" row.
+
+```svelte
+<ActivityFeedCard
+	title="History"
+	query={(limit) => getUserHistory(limit ? { userId: id, limit } : { userId: id })}
+	toRow={feedItemRow}
+	empty={{ title: 'No recorded changes' }}
+/>
+```
+
+- The query returns a `FeedPage` (`$lib/types/activity`): newest first, `hasMore` exact. On the
+  server, `listAuditEntriesForSubject` is the one audit read, and `mergeFeed` combines it with
+  another source's rows. The first page is read with no `limit` so a write can refresh it.
+- The card loads behind its own `pending` boundary, beside the page's one load-bearing query.
+- `toRow` maps an item to `{ summary, actor, href, context }`; a `trailing` snippet carries a
+  source's own figure at the row's end. A row from an earlier venue year shows its year.
+
 ## EmptyState
 
 Consistent empty-state message for lists and tables. Prefer it over a bare

@@ -13,7 +13,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('$lib/server/db', () => ({ db: testDb }));
 
-const { listActivity, activityAuditQuery } = await import('./project-activity');
+const { listActivity, activitySubjects } = await import('./project-activity');
+const { auditSubjectQuery } = await import('$lib/server/audit/audit-service');
 
 const PROJECT = 'proj-1';
 const OTHER = 'proj-2';
@@ -181,7 +182,9 @@ describe('a project', () => {
 
 		expect(items.filter((i) => i.task?.title.startsWith('Bulk'))).toHaveLength(150);
 		expect(hasMore).toBe(false);
-		expect(activityAuditQuery({ projectId: PROJECT }, 201).toSQL().params.length).toBeLessThan(10);
+		expect(
+			auditSubjectQuery(activitySubjects({ projectId: PROJECT }), 201).toSQL().params.length
+		).toBeLessThan(10);
 	});
 });
 

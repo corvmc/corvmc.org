@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { sql } from 'drizzle-orm';
 
 /**
  * The audit log against a real SQLite: the row has to survive its actor and
@@ -54,7 +55,9 @@ describe('recordAuditEntry', () => {
 			details: { added: ['staff'], removed: [] }
 		});
 
-		const [row] = await listAuditEntriesForSubject('user', 'member-1');
+		const {
+			entries: [row]
+		} = await listAuditEntriesForSubject({ type: 'user', id: 'member-1' });
 		expect(row).toMatchObject({
 			action: 'user.roles_changed',
 			actorUserId: 'staff-1',
@@ -74,7 +77,9 @@ describe('recordAuditEntry', () => {
 			details: { subscription: 'none' }
 		});
 
-		const [row] = await listAuditEntriesForSubject('user', 'member-1');
+		const {
+			entries: [row]
+		} = await listAuditEntriesForSubject({ type: 'user', id: 'member-1' });
 		expect(row).toMatchObject({ actorUserId: null, actorName: 'System', actorEmail: '' });
 	});
 
@@ -112,7 +117,9 @@ describe('recordAuditEntry', () => {
 			}
 		});
 
-		expect(await listAuditEntriesForSubject('user', 'member-1')).toEqual([]);
+		expect((await listAuditEntriesForSubject({ type: 'user', id: 'member-1' })).entries).toEqual(
+			[]
+		);
 		expect(captureException).toHaveBeenCalledTimes(1);
 	});
 
@@ -122,7 +129,9 @@ describe('recordAuditEntry', () => {
 			subject: { type: 'user', id: 'member-1', label: 'y'.repeat(300) },
 			details: { subscription: 'none' }
 		});
-		const [row] = await listAuditEntriesForSubject('user', 'member-1');
+		const {
+			entries: [row]
+		} = await listAuditEntriesForSubject({ type: 'user', id: 'member-1' });
 		expect(row.subjectLabel).toHaveLength(200);
 	});
 
@@ -134,7 +143,9 @@ describe('recordAuditEntry', () => {
 		});
 		sqlite.exec(`delete from user where id in ('member-1', 'staff-1')`);
 
-		const [row] = await listAuditEntriesForSubject('user', 'member-1');
+		const {
+			entries: [row]
+		} = await listAuditEntriesForSubject({ type: 'user', id: 'member-1' });
 		expect(row).toMatchObject({ actorUserId: null, actorName: 'Sam Staff' });
 	});
 });
@@ -160,8 +171,33 @@ describe('listAuditEntriesForSubject', () => {
 			 where subject_id = 'member-1'`
 		);
 
-		const rows = await listAuditEntriesForSubject('user', 'member-1', { limit: 2 });
-		expect(rows.map((r) => r.details)).toMatchObject([{ delta: 3 }, { delta: 2 }]);
+		const subject = { type: 'user', id: 'member-1' } as const;
+		const first = await listAuditEntriesForSubject(subject, { limit: 2 });
+		expect(first.entries.map((r) => r.details)).toMatchObject([{ delta: 3 }, { delta: 2 }]);
+		expect(first.hasMore).toBe(true);
+
+		const all = await listAuditEntriesForSubject(subject, { limit: 3 });
+		expect(all.entries).toHaveLength(3);
+		expect(all.hasMore).toBe(false);
+	});
+
+	it('reads several subjects as one feed, one of them by subquery', async () => {
+		insertUser('member-2', 'Other');
+		await recordAuditEntry({
+			action: 'user.reactivated',
+			subject: { type: 'user', id: 'member-1' },
+			details: { subscription: 'none' }
+		});
+		await recordAuditEntry({
+			action: 'user.unbanned',
+			subject: { type: 'user', id: 'member-2' },
+			details: {}
+		});
+		const { entries } = await listAuditEntriesForSubject([
+			{ type: 'user', id: 'nobody' },
+			{ type: 'user', ids: sql`(select 'member-2')` }
+		]);
+		expect(entries.map((e) => e.subjectId)).toEqual(['member-2']);
 	});
 });
 

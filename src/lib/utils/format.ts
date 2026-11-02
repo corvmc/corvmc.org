@@ -249,6 +249,22 @@ export function formatDateTimeShort(d: Date): string {
 }
 
 /**
+ * A history row's time: "May 13, 2:30 PM" in the current venue year, with the
+ * year added before it. History is kept for years, and a bare month misdates it.
+ */
+export function formatHistoryTime(d: Date, now = new Date()): string {
+	if (venueParts(d).year === venueParts(now).year) return formatDateTimeShort(d);
+	return venue(d, {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+		hour: 'numeric',
+		minute: '2-digit',
+		hour12: true
+	});
+}
+
+/**
  * Humanise a snake_case enum value: `admin_adjustment` → "Admin adjustment".
  *
  * The fallback for every enum→label map, so a value someone forgets to add

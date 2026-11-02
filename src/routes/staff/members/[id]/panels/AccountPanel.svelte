@@ -27,7 +27,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
-	import { summarizeAuditEntry } from '$lib/utils/audit-display';
+	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
 	import { toast } from 'svelte-sonner';
 
 	let { id, member }: { id: string; member: Awaited<ReturnType<typeof getUser>> } = $props();
@@ -168,32 +168,15 @@
 </RelatedList>
 
 <!-- Staff changes to this account, newest first. Reads only; nothing here edits the log. -->
-<RelatedList title="History" result={getUserHistory(id)}>
-	{#snippet children(entries)}
-		{#if entries.length === 0}
-			<EmptyState
-				title="No recorded changes"
-				description="Role, profile, credit and account changes made by staff show up here."
-			/>
-		{:else}
-			<Table>
-				{#snippet head()}
-					<th>Change</th>
-				{/snippet}
-				{#each entries as entry (entry.id)}
-					<tr>
-						<td class="cell-primary">
-							<div>{summarizeAuditEntry(entry)}</div>
-							<div class="text-muted">
-								{entry.actorName} · {formatDateTimeShort(entry.createdAt)}
-							</div>
-						</td>
-					</tr>
-				{/each}
-			</Table>
-		{/if}
-	{/snippet}
-</RelatedList>
+<ActivityFeedCard
+	title="History"
+	query={(limit) => getUserHistory(limit ? { userId: id, limit } : { userId: id })}
+	toRow={feedItemRow}
+	empty={{
+		title: 'No recorded changes',
+		description: 'Role, profile, credit and account changes made by staff show up here.'
+	}}
+/>
 
 <InfoCard title="Details" class="bg-base-200 shadow-none">
 	<DefinitionList>
