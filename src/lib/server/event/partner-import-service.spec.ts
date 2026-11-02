@@ -139,4 +139,15 @@ describe('runPartnerImports', () => {
 		expect(await runPartnerImports({ fetcher, now: NOW })).toEqual([]);
 		expect(fetcher).not.toHaveBeenCalled();
 	});
+
+	it('runs a named source even while it is paused', async () => {
+		sqlite.exec(`update calendar_source set paused = 1`);
+		const results = await runPartnerImports({
+			fetcher: feed(whiteside),
+			now: NOW,
+			sourceId: 'src-1'
+		});
+
+		expect(results).toMatchObject([{ sourceId: 'src-1', ok: true, inserted: 5 }]);
+	});
 });

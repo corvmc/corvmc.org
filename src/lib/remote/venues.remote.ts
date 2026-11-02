@@ -14,6 +14,13 @@ import {
 	getVenue as getService,
 	listVenues
 } from '$lib/server/venue/venue-service';
+import {
+	addSource as addSourceService,
+	fetchSourceNow,
+	listSourcesForVenue,
+	removeSource,
+	setSourcePaused
+} from '$lib/server/venue/calendar-source-service';
 
 /**
  * Venues are guarded as events, not on a `venue.*` set of their own.
@@ -176,6 +183,72 @@ export const deleteVenue = form(z.object({ id: z.string().min(1) }), async (data
 		await deleteService(data.id);
 		await Promise.all([getVenues().refresh(), getVenueOptions().refresh()]);
 		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+// ---------------------------------------------------------------------------
+// Partner calendar feeds (#1459), on the venue they belong to
+// ---------------------------------------------------------------------------
+
+export const getVenueFeeds = query(z.string(), async (venueId) => {
+	await requireCapability('event.read');
+	return listSourcesForVenue(venueId);
+});
+
+const feedUrl = z
+	.string()
+	.trim()
+	.max(2000)
+	.regex(/^(https|webcal):\/\/\S+$/i, 'An https:// or webcal:// address');
+
+export const addVenueFeed = form(
+	z.object({ venueId: z.string().min(1), url: feedUrl }),
+	async (data) => {
+		const staff = await requireCapability('event.manage');
+		try {
+			await addSourceService({ venueId: data.venueId, url: data.url, createdByUserId: staff.id });
+			await getVenueFeeds(data.venueId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+export const setVenueFeedPaused = form(
+	z.object({ id: z.string().min(1), paused: z.enum(['true', 'false']) }),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			const { venueId } = await setSourcePaused(data.id, data.paused === 'true');
+			await getVenueFeeds(venueId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+export const removeVenueFeed = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireCapability('event.manage');
+	try {
+		const { venueId } = await removeSource(data.id);
+		await getVenueFeeds(venueId).refresh();
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+/** Runs the import for one feed now. A failed fetch is a result, not an error. */
+export const fetchVenueFeed = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireCapability('event.manage');
+	try {
+		const { venueId, result } = await fetchSourceNow(data.id);
+		await getVenueFeeds(venueId).refresh();
+		return { ok: result.ok, inserted: result.inserted, updated: result.updated };
 	} catch (err) {
 		mapDomainError(err);
 	}

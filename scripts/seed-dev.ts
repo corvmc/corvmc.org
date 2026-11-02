@@ -32,6 +32,7 @@ import { seedReservations, seedClosures, seedLockAccess } from './seed/reservati
 import { seedEvents } from './seed/events';
 import { findRoomConflicts, resetRoom } from './seed/room';
 import { seedVenues } from './seed/venues';
+import { seedPartnerCalendars } from './seed/partner-calendars';
 import { seedSponsors } from './seed/sponsors';
 import { seedGrants } from './seed/grants';
 import { seedRenewals } from './seed/renewals';
@@ -181,6 +182,8 @@ async function main() {
 	const groupApplications = await seedGroupApplications(groups, allUsers);
 	const bandEvents = await seedBandEvents(bands, allUsers, usage ? [usage.band] : []);
 	await seedCommunityEvents(users, adminUser);
+	// After the venues, whose rows the feeds belong to.
+	const partnerFeeds = await seedPartnerCalendars(adminUser);
 	await seedCmcEventLineups(events, bands);
 	const recapPhotos = await seedEventRecaps(events, adminUser.id);
 	// After the bill, because a production is the ops record for a night that
@@ -329,6 +332,9 @@ async function main() {
 	console.log(`  ${reservations.length} reservations`);
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${venues.venues} venues, one of them ours`);
+	console.log(
+		`  ${partnerFeeds.feeds} partner calendar feeds, ${partnerFeeds.imported} imported shows`
+	);
 	console.log(`  ${sponsors.sponsors} sponsors, ${sponsors.placements} event placements`);
 	console.log(`  ${grants.applications} grant applications to ${grants.funders} funders`);
 	console.log(`  ${renewals.renewals} permits, licenses and policies`);

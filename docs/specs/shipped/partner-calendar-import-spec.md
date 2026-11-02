@@ -2,8 +2,9 @@
 
 > ## Status
 >
-> 🔧 Building on `feature/partner-calendar-import` (#1459, the import half of #596). The outbound
-> half, `/events/calendar.ics` and `/events/feed.xml`, shipped in #1442.
+> ✅ Shipped from `feature/partner-calendar-import` (#1459, the import half of #596). The outbound
+> half, `/events/calendar.ics` and `/events/feed.xml`, shipped in #1442. No partner feed is
+> configured yet; staff add the first one from a venue's page.
 
 ## Purpose
 
@@ -23,7 +24,9 @@ at CMC authored and no member submitted still reaches the guide.
 ## Model
 
 **`calendar_source`** is one partner feed, and it always belongs to a venue (`venueId`, not null,
-cascade). Staff add it from the venue's page. Columns: `url` (unique), `paused`, `lastFetchedAt`,
+cascade). Staff add it from the venue's page (`/staff/venues/[id]`, any venue but our own room), where they
+can also pause it, remove it, or run it immediately with **Fetch now**. Removing a feed keeps the
+listings it already imported. Columns: `url` (unique), `paused`, `lastFetchedAt`,
 `lastError`, `lastImportedCount`, `createdByUserId`, timestamps.
 
 **`event_listing` provenance** is `importSourceId` (FK to `calendar_source`, set null) and
