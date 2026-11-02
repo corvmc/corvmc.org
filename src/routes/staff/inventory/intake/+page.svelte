@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import { goto } from '$app/navigation';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -86,7 +87,7 @@
 	subtitle="Inventory"
 	parent={orderId
 		? [
-				{ label: 'Orders', href: resolve('/staff/inventory/orders') },
+				{ label: 'On order', href: withQuery(resolve('/staff/inventory'), 'show=on-order') },
 				{ label: 'Order', href: resolve('/staff/inventory/orders/[id]', { id: orderId }) }
 			]
 		: []}

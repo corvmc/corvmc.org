@@ -1,6 +1,7 @@
 <script lang="ts">
 	/**
-	 * The volunteer profile: contact info, preferred roles and the hour history.
+	 * The volunteer profile: contact info, preferred roles and the hour history,
+	 * under a line for each clearance that is expiring or has lapsed.
 	 *
 	 * "Returned", never "rejected": it is a request for a correction, not a
 	 * judgement, and the stored value differs from the label on purpose.
@@ -43,6 +44,14 @@
 
 <PageContent width="3xl">
 	{#await pageData then data}
+		{#each data.renew as c (c.name)}
+			<p class="text-sm text-warning">
+				{c.name}
+				{c.state === 'expired'
+					? 'has lapsed'
+					: `expires ${c.expiresAt ? formatDateShort(c.expiresAt) : 'soon'}`}. Staff renew these.
+			</p>
+		{/each}
 		<InfoCard title="Contact info">
 			<Form remote={updateVolunteerProfile} successToast="Profile updated">
 				<ProfileFields

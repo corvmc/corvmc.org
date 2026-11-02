@@ -19,6 +19,7 @@
 		type StaffNavItem
 	} from './nav-items';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import { hasCapability } from '$lib/config';
 	import { formatDateShort, formatDateShortYear, formatTimeRange } from '$lib/utils/format';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
@@ -266,7 +267,11 @@
 			{/each}
 		</Table>
 		<div class="mt-2">
-			<Button variant="ghost" size="sm" href={resolve('/staff/inventory/restock')}>
+			<Button
+				variant="ghost"
+				size="sm"
+				href={withQuery(resolve('/staff/inventory'), 'show=restock')}
+			>
 				{data.lowStock.total > data.lowStock.rows.length
 					? `See all ${data.lowStock.total} to restock`
 					: 'Open the restock list'}

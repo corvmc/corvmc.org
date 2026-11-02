@@ -776,7 +776,6 @@ export async function getPublicDirectory(filters: PublicDirectoryFilters = {}) {
 				slug: b.slug,
 				tagline: b.tagline,
 				avatarUrl: resolveImageUrl(b.avatarKey),
-				memberCount: b.memberCount,
 				genres: b.genres,
 				lookingForMembers: b.lookingForMembers
 			})),

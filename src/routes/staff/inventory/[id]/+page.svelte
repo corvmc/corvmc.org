@@ -21,16 +21,20 @@
 		ActivateToggleAction,
 		AddAssetAction,
 		AdjustStockAction,
+		BindTagAction,
+		MarkOrderedAction,
 		ReceiveStockAction,
 		UseStockAction
 	} from '$lib/components/actions';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '$lib/utils/with-query';
 	import { formatDateShort, formatCents, titleCase } from '$lib/utils/format';
 	import {
 		acquisitionKindLabels,
@@ -163,6 +167,11 @@
 					{:else}
 						<UseStockAction itemId={id} />
 						<AdjustStockAction itemId={id} onHand={item.onHand} />
+						<MarkOrderedAction
+							itemId={id}
+							quantity={item.reorderQuantity ??
+								Math.max(1, (item.reorderPoint ?? 0) - item.onHand + 1)}
+						/>
 					{/if}
 				</div>
 
@@ -207,6 +216,7 @@
 									<!-- Gear gets entered before the roll of stickers arrives, so an
 									     unbound unit is a normal state and says so. -->
 									<span class="opacity-40">Untagged</span>
+									<BindTagAction assetId={asset.id} />
 								{/if}
 							</td>
 							<td class="col-support font-mono text-xs">{asset.serialNumber ?? '—'}</td>
@@ -265,6 +275,7 @@
 					<th class="cell-num">Outstanding</th>
 					<th class="col-support whitespace-nowrap">Expected</th>
 					<th class="col-extra">Reference</th>
+					<th class="w-px"><span class="sr-only">Receive</span></th>
 				{/snippet}
 				{#each onOrder as line (line.lineId)}
 					<tr
@@ -277,6 +288,17 @@
 							{line.expectedAt ? formatDateShort(line.expectedAt) : '—'}
 						</td>
 						<td class="col-extra">{line.reference ?? '—'}</td>
+						<td class="w-px">
+							<!-- Receiving is intake prefilled from the order, which closes the line. -->
+							<Button
+								variant="ghost"
+								size="sm"
+								href={withQuery(
+									resolve('/staff/inventory/intake'),
+									new URLSearchParams({ order: line.orderId })
+								)}>Receive</Button
+							>
+						</td>
 					</tr>
 				{/each}
 			</Table>

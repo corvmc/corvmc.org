@@ -243,7 +243,6 @@
 								name={b.name}
 								avatarUrl={b.avatarUrl}
 								tagline={b.tagline}
-								memberCount={b.memberCount}
 								genres={b.genres}
 								lookingForMembers={b.lookingForMembers}
 								color={bandColor(b.id)}

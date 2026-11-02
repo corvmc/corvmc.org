@@ -236,6 +236,25 @@ describe('getPublicDirectory', () => {
 		expect(result.failed).toBe(false);
 		expect(captureException).not.toHaveBeenCalled();
 	});
+
+	it("does not publish a band's member count on the list (#2037)", async () => {
+		entryFindMany.mockResolvedValueOnce([]).mockResolvedValueOnce([
+			{
+				groupId: 'b1',
+				name: 'The Band',
+				tagline: null,
+				tags: [],
+				lookingFor: null,
+				contact: null,
+				group: { slug: 'the-band', avatarKey: null, members: [{ status: 'active' }] }
+			}
+		]);
+
+		const { bands } = await getPublicDirectory({});
+
+		expect(bands).toHaveLength(1);
+		expect(bands[0]).not.toHaveProperty('memberCount');
+	});
 });
 
 describe('isProfileComplete', () => {
