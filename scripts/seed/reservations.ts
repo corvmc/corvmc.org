@@ -266,7 +266,9 @@ export async function seedLockAccess(users: SeedUser[], reservations: SeedReserv
 	const lockId = () => String(randomInt(100000, 999999));
 	const code = () => String(randomInt(10000000, 99999999));
 	const confirmed = reservations.filter((r) => r.status === 'confirmed');
-	const past = confirmed.find((r) => r.endsAt.getTime() < Date.now() - 3_600_000);
+	const past = reservations.find(
+		(r) => r.status === 'completed' && r.endsAt.getTime() > Date.now() - 7 * 86_400_000
+	);
 	const upcoming = confirmed.find((r) => r.startsAt.getTime() > Date.now());
 
 	await db.insert(lockFallbackCode).values([
