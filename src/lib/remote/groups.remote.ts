@@ -25,6 +25,7 @@ import {
 	acceptInvitation,
 	declineInvitation,
 	getMembers,
+	getRosterMembers,
 	getUserRole,
 	invite,
 	partitionByStatus,
@@ -130,7 +131,7 @@ export const getStaffGroupPage = query(z.string(), async (id) => {
 
 	const [group, roster, coordinator, role] = await Promise.all([
 		getGroupDetail(id),
-		getMembers(id),
+		getRosterMembers(id),
 		can('committee.reviewApplications'),
 		getUserRole(id, user.id)
 	]);
@@ -176,7 +177,7 @@ export const getStaffCommitteePage = query(z.string().min(1), async (id) => {
 	}
 	const [applications, roster] = await Promise.all([
 		group.deletedAt ? [] : listForGroup(group.id),
-		canManage ? getMembers(id) : null
+		canManage ? getRosterMembers(id) : null
 	]);
 	return {
 		committee: { id: group.id, name: group.name, slug: group.slug },

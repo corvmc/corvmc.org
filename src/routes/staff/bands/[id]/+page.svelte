@@ -9,7 +9,6 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
@@ -23,6 +22,8 @@
 		RemoveBandMemberAction,
 		RevokeEmailInviteAction
 	} from '$lib/components/actions';
+	import RosterTable from '$lib/components/roster/RosterTable.svelte';
+	import CopyEmailsButton from '$lib/components/roster/CopyEmailsButton.svelte';
 	import StaffBandForm from './StaffBandForm.svelte';
 
 	let id = $derived(page.params.id!);
@@ -45,6 +46,7 @@
 			<header class="flex items-center justify-between">
 				<CardTitle>{title}</CardTitle>
 				<div class="flex gap-2">
+					{#if members.length > 0}<CopyEmailsButton emails={members.map((m) => m.email)} />{/if}
 					<InviteByEmailAction bandId={id} />
 					<InviteMemberAction bandId={id} />
 				</div>
@@ -53,64 +55,50 @@
 		{#if members.length === 0}
 			<EmptyState description="No members" />
 		{:else}
-			<Table>
-				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Member</th>
+			<RosterTable rows={members} personLabel="Member">
+				{#snippet lead(m)}<StatusBadge status={m.status} />{/snippet}
+				{#snippet columns()}
 					<th class="w-px">Role</th>
 					<th class="col-extra whitespace-nowrap">Joined</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
-				{#each members as m (m.id)}
-					<tr class="hover">
-						<td class="w-px"><StatusBadge status={m.status} /></td>
-						<!-- Position was its own column; it qualifies the member, so the
-						     ref carries it as the subline. -->
-						<td class="cell-primary">
-							<EntityIdentity ref={m.member} />
-						</td>
-						<td class="w-px">
-							{#if m.role !== 'owner' && m.status === 'active'}
-								{@const rf = updateMemberRole.for(m.id)}
-								<Form remote={rf} successToast="Role updated">
-									<input {...rf.fields.memberId.as('hidden', m.id)} />
-									<Select
-										class="select-xs"
-										name="role"
-										aria-label="Role for {m.member.title}"
-										value={m.role}
-										onchange={(e: Event) =>
-											(e.currentTarget as HTMLSelectElement).form?.requestSubmit()}
-									>
-										<option value="member">Member</option>
-										<option value="admin">Admin</option>
-									</Select>
-								</Form>
-							{:else}
-								<Badge size="sm" variant="outline">{m.role}</Badge>
+				{#snippet cells(m)}
+					<td class="w-px">
+						{#if m.role !== 'owner' && m.status === 'active'}
+							{@const rf = updateMemberRole.for(m.id)}
+							<Form remote={rf} successToast="Role updated">
+								<input {...rf.fields.memberId.as('hidden', m.id)} />
+								<Select
+									class="select-xs"
+									name="role"
+									aria-label="Role for {m.member.title}"
+									value={m.role}
+									onchange={(e: Event) =>
+										(e.currentTarget as HTMLSelectElement).form?.requestSubmit()}
+								>
+									<option value="member">Member</option>
+									<option value="admin">Admin</option>
+								</Select>
+							</Form>
+						{:else}
+							<Badge size="sm" variant="outline">{m.role}</Badge>
+						{/if}
+					</td>
+					<td class="col-extra whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
+				{/snippet}
+				{#snippet actions(m)}
+					{#if m.role !== 'owner'}
+						<div class="flex w-max justify-end gap-1">
+							{#if m.status === 'pending'}
+								<RevokeInviteAction memberId={m.id} name={m.member.title} />
 							{/if}
-						</td>
-						<td class="col-extra whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
-						<td class="w-px">
-							{#if m.role !== 'owner'}
-								<div class="flex w-max justify-end gap-1">
-									{#if m.status === 'pending'}
-										<RevokeInviteAction memberId={m.id} name={m.member.title} />
-									{/if}
-									{#if m.status === 'active'}
-										<TransferOwnershipAction
-											bandId={id}
-											newOwnerId={m.userId}
-											name={m.member.title}
-										/>
-									{/if}
-									<RemoveBandMemberAction memberId={m.id} name={m.member.title} />
-								</div>
+							{#if m.status === 'active'}
+								<TransferOwnershipAction bandId={id} newOwnerId={m.userId} name={m.member.title} />
 							{/if}
-						</td>
-					</tr>
-				{/each}
-			</Table>
+							<RemoveBandMemberAction memberId={m.id} name={m.member.title} />
+						</div>
+					{/if}
+				{/snippet}
+			</RosterTable>
 		{/if}
 	</InfoCard>
 

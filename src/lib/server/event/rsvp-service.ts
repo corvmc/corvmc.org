@@ -1,6 +1,10 @@
 import { db } from '$lib/server/db';
 import { eventRsvp, type EventRsvp } from '$lib/server/db/schema/event-rsvp';
 import { eventListing } from '$lib/server/db/schema/event';
+import { user } from '$lib/server/db/schema/authentication';
+import { memberRefColumns, type MemberRefRow } from '$lib/server/entity/refs';
+import { toRosterPerson } from '$lib/server/roster/roster';
+import type { RosterPerson } from '$lib/types/roster';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -108,6 +112,8 @@ export interface EventRsvpRow {
 	name: string;
 	email: string;
 	createdAt: Date;
+	/** The account behind the RSVP, for an avatar and membership status. */
+	member: MemberRefRow | null;
 }
 
 /**
@@ -122,9 +128,22 @@ export async function listRsvpsForEvent(eventId: string): Promise<EventRsvpRow[]
 			userId: eventRsvp.userId,
 			name: eventRsvp.attendeeName,
 			email: eventRsvp.attendeeEmail,
-			createdAt: eventRsvp.createdAt
+			createdAt: eventRsvp.createdAt,
+			member: memberRefColumns()
 		})
 		.from(eventRsvp)
+		.leftJoin(user, eq(user.id, eventRsvp.userId))
 		.where(eq(eventRsvp.eventId, eventId))
 		.orderBy(asc(eventRsvp.createdAt), asc(eventRsvp.id));
+}
+
+export type RsvpRosterRow = RosterPerson & { rsvpedAt: Date };
+
+/** An event's RSVPs as roster rows, with the name and address given at RSVP time. */
+export async function listRsvpRoster(eventId: string): Promise<RsvpRosterRow[]> {
+	const rows = await listRsvpsForEvent(eventId);
+	return rows.map((r) => ({
+		...toRosterPerson({ ...r.member, id: r.userId, name: r.name, email: r.email }),
+		rsvpedAt: r.createdAt
+	}));
 }

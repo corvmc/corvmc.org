@@ -8,12 +8,11 @@ import {
 	cancelRsvp,
 	createRsvp,
 	getUserRsvp,
-	listRsvpsForEvent
+	listRsvpRoster,
+	type RsvpRosterRow
 } from '$lib/server/event/rsvp-service';
 import { rsvpClosedReason, type RsvpClosedReason } from '$lib/server/event/rsvp-availability';
 import { requireListingWriter } from '$lib/server/event/listing-guard';
-import { toMemberRef } from '$lib/server/entity/refs';
-import type { RosterRow } from '$lib/types/roster';
 import { getPublicEventDetail } from '$lib/remote/events.remote';
 
 /**
@@ -87,22 +86,14 @@ export const withdrawRsvp = form(z.object({ eventId: z.string().min(1) }), async
  */
 export const getEventRsvpRoster = query(
 	z.string().min(1),
-	async (eventId): Promise<{ total: number; rows: RosterRow[] } | null> => {
+	async (eventId): Promise<{ total: number; rows: RsvpRosterRow[] } | null> => {
 		try {
 			await requireListingWriter(eventId);
 		} catch (err) {
 			if ((err as { status?: number }).status === 403) return null;
 			throw err;
 		}
-		const rows = await listRsvpsForEvent(eventId);
-		return {
-			total: rows.length,
-			rows: rows.map((r) => ({
-				id: r.id,
-				person: toMemberRef({ id: r.userId, name: r.name, email: r.email }),
-				contact: r.email,
-				at: r.createdAt
-			}))
-		};
+		const rows = await listRsvpRoster(eventId);
+		return { total: rows.length, rows };
 	}
 );

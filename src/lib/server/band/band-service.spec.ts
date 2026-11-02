@@ -187,6 +187,7 @@ import {
 	listAll,
 	listBandAdmins,
 	getMembers,
+	getRosterMembers,
 	listForUser as listForUserExport,
 	partitionByStatus,
 	searchBandsByName
@@ -305,6 +306,12 @@ describe('BandService', () => {
 
 		it('leaves a removed member off the roster', async () => {
 			await getMembers('band-1');
+
+			expect(renderedWheres().at(-1)).toContain('"user"."deleted_at" is null');
+		});
+
+		it("leaves a removed member off the staff roster's list too", async () => {
+			await getRosterMembers('band-1');
 
 			expect(renderedWheres().at(-1)).toContain('"user"."deleted_at" is null');
 		});

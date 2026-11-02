@@ -81,6 +81,7 @@ vi.mock('$lib/server/group/group-context', () => ({
 const getUserRole = vi.hoisted(() => vi.fn(async (): Promise<string | null> => null));
 vi.mock('$lib/server/band/band-service', () => ({
 	getMembers: vi.fn(async () => []),
+	getRosterMembers: vi.fn(async () => []),
 	getUserRole,
 	partitionByStatus: () => ({ active: [], pending: [] }),
 	acceptInvitation: vi.fn(),

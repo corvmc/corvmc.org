@@ -1074,6 +1074,13 @@ CSV export, "Copy emails" and the row-click side panel; the page owns its query,
 `panel`). The export is a guarded `+server.ts` built on `rosterCsv()`. `/staff/members/volunteers`
 is the first.
 
+A short list inside a card — a band's members, a club's or committee's roster, an event's RSVPs —
+is a `RosterTable` with the same rows and snippets but no toolbar, plus a `CopyEmailsButton` in
+the card's `action`. It takes `rows`, not a promise, and has no search or paging: a list that
+needs either is a `Roster` page. Without `panel`, a row opens the viewer's own page for the person
+(`entityHref`). People with no account behind them (an email invite, a guest ticket) are not
+`RosterPerson`s and stay plain tables.
+
 ### A table, unless the row earns a card
 
 A row earns a card by passing **at least one** of four tests. Each has a check you

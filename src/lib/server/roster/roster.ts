@@ -1,6 +1,7 @@
 import { toMemberRef, type MemberRefRow } from '$lib/server/entity/refs';
 import { toCsv } from '$lib/server/report/csv';
 import type { PaginationInput, PaginatedResult } from '$lib/server/db/paginate';
+import { uniqueEmails } from '$lib/utils/unique-emails';
 import { memberStatusLabels, type RosterPerson } from '$lib/types/roster';
 
 /**
@@ -60,13 +61,5 @@ export function rosterCsv<T extends RosterPerson>(
 
 /** Distinct addresses in roster order, case-insensitively, skipping people with none. */
 export function rosterEmails(rows: RosterPerson[]): string[] {
-	const seen = new Set<string>();
-	const out: string[] = [];
-	for (const { email } of rows) {
-		const key = email?.trim().toLowerCase();
-		if (!key || seen.has(key)) continue;
-		seen.add(key);
-		out.push(email!.trim());
-	}
-	return out;
+	return uniqueEmails(rows.map((r) => r.email));
 }

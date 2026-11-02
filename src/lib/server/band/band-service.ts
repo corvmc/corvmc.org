@@ -37,6 +37,7 @@ import {
 import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
+import { toRosterPerson } from '$lib/server/roster/roster';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { groupGrantsColumn } from '$lib/server/capability/grant-columns';
@@ -567,8 +568,8 @@ export async function listBandAdmins(
 	return rows.map((r) => ({ userId: r.id, userName: r.name, userEmail: r.email }));
 }
 
-export async function getMembers(bandId: string) {
-	const rows = await db
+function selectMembers(bandId: string) {
+	return db
 		.select({
 			id: groupMember.id,
 			userId: groupMember.userId,
@@ -589,8 +590,12 @@ export async function getMembers(bandId: string) {
 			sql`case ${groupMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
 			user.name
 		);
+}
 
-	return rows.map((row) => ({
+type MemberRow = Awaited<ReturnType<typeof selectMembers>>[number];
+
+function toMemberRow(row: MemberRow) {
+	return {
 		...row,
 		member: {
 			...toMemberRef(row.member),
@@ -603,7 +608,22 @@ export async function getMembers(bandId: string) {
 			// separate lines, which is a third line on a two-line row.
 			subtitle: row.position ?? row.member.email
 		}
-	}));
+	};
+}
+
+export async function getMembers(bandId: string) {
+	return (await selectMembers(bandId)).map(toMemberRow);
+}
+
+/**
+ * `getMembers` with the roster contract added, for staff lists. Kept apart
+ * because it carries every address, which the member-facing lists do not show.
+ */
+export async function getRosterMembers(bandId: string) {
+	return (await selectMembers(bandId)).map((row) => {
+		const { member, ...rest } = toMemberRow(row);
+		return { ...rest, ...toRosterPerson(row.member), member };
+	});
 }
 
 export async function searchMembers(query: string, bandId: string) {
