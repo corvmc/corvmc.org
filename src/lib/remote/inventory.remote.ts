@@ -37,13 +37,19 @@ import {
 	setAssetStatus,
 	updateAsset
 } from '$lib/server/inventory/asset-service';
-import { listLowStock, listMovements } from '$lib/server/inventory/stock-service';
+import { listLowStock } from '$lib/server/inventory/stock-service';
+import {
+	listAssetHistory,
+	listLoanFeed,
+	listMovementFeed
+} from '$lib/server/inventory/inventory-history';
+import { historyArgs } from './_history';
 import {
 	fulfilSuggestion,
 	getSuggestionBrief,
 	listPlannedGear
 } from '$lib/server/suggestion/suggestion-service';
-import { contractorSpend, jobsForAsset } from '$lib/server/contractor/contractor-job-service';
+import { contractorSpend } from '$lib/server/contractor/contractor-job-service';
 import {
 	acknowledgeForm8283,
 	adjustStock,
@@ -80,7 +86,6 @@ import {
 import { mapDomainError } from '$lib/server/errors';
 import {
 	getLoanById,
-	getLoanHistory,
 	scheduleLoan,
 	checkoutLoan,
 	requestLoan,
@@ -162,14 +167,23 @@ export const getLocationsWithCounts = query(z.void(), async () => {
 	return listLocationsWithCounts();
 });
 
-export const getItemLoanHistory = query(z.string(), async (itemId) => {
+/** An item's Loan history card, newest request first. */
+export const getItemLoanFeed = query(historyArgs, async ({ id, limit }) => {
 	await requireCapability('inventory.read');
-	return getLoanHistory(itemId);
+	return listLoanFeed(id, { limit });
 });
 
-export const getItemMovements = query(z.string(), async (itemId) => {
+/** An item's Stock movements card: every unit's and the bulk count's, with who moved it. */
+export const getItemMovementFeed = query(historyArgs, async ({ id, limit }) => {
 	await requireCapability('inventory.read');
-	return listMovements({ itemId });
+	return listMovementFeed({ itemId: id }, { limit });
+});
+
+/** A unit's History card: its movements, and the paid work on it for a `contractor.read` holder. */
+export const getAssetHistory = query(historyArgs, async ({ id, limit }) => {
+	await requireCapability('inventory.read');
+	// Contractor and cost are `contractor.read`'s (#2071): without it the card is the ledger alone.
+	return listAssetHistory(id, { limit, withService: await can('contractor.read') });
 });
 
 export const getItemAssets = query(z.string(), async (itemId) => {
@@ -266,11 +280,6 @@ export const getAsset = query(z.string(), async (id) => {
 	const asset = await getAssetById(id);
 	if (!asset) error(404, 'Asset not found');
 	return asset;
-});
-
-export const getAssetMovements = query(z.string(), async (assetId) => {
-	await requireCapability('inventory.read');
-	return listMovements({ assetId });
 });
 
 // ---------------------------------------------------------------------------
@@ -508,6 +517,7 @@ export const createAsset = form(
 			actorId: currentUser.id
 		});
 		void getStaffItemDetail(data.itemId).refresh();
+		void getItemMovementFeed({ id: data.itemId }).refresh();
 		return { assetId: asset.id };
 	}
 );
@@ -593,6 +603,7 @@ export const changeAssetStatus = form(
 			actorId: currentUser.id
 		});
 		void getStaffAssetDetail(data.id).refresh();
+		void getAssetHistory({ id: data.id }).refresh();
 		return { success: true };
 	}
 );
@@ -677,6 +688,8 @@ export const receiveStock = form(
 		});
 
 		void getStaffItemDetail(data.itemId).refresh();
+		void getItemMovementFeed({ id: data.itemId }).refresh();
+
 		return { success: true };
 	}
 );
@@ -950,7 +963,10 @@ async function placeNewOrder(
 		mapDomainError(err);
 	}
 	void getRestockList().refresh();
-	for (const l of lines) void getStaffItemDetail(l.itemId).refresh();
+	for (const l of lines) {
+		void getStaffItemDetail(l.itemId).refresh();
+		void getItemMovementFeed({ id: l.itemId }).refresh();
+	}
 	return orderId;
 }
 
@@ -1065,6 +1081,7 @@ export const useStock = form(
 			notes: data.notes
 		});
 		void getStaffItemDetail(data.itemId).refresh();
+		void getItemMovementFeed({ id: data.itemId }).refresh();
 		return { success: true };
 	}
 );
@@ -1088,6 +1105,7 @@ export const correctStock = form(
 			notes: data.notes
 		});
 		void getStaffItemDetail(data.itemId).refresh();
+		void getItemMovementFeed({ id: data.itemId }).refresh();
 		return { success: true };
 	}
 );
@@ -1835,31 +1853,16 @@ export const reportAssetDamage = form(
  * lives in `CategoryOptions` instead.
  */
 export const getStaffItemDetail = query(z.string(), async (id) => {
-	const [item, assets, movements, loanHistory] = await Promise.all([
-		getItem(id),
-		getItemAssets(id),
-		getItemMovements(id),
-		getItemLoanHistory(id)
-	]);
+	// Movements and loans are the page's lazy history cards, not part of this read.
+	const [item, assets] = await Promise.all([getItem(id), getItemAssets(id)]);
 	// After the guarded reads above: `getItem` has already required `inventory.read`.
 	const sections = await itemSections(id, { canTriage: await can('inventory.manageAssets') });
-	return { item, assets, movements, loanHistory, ...sections };
+	return { item, assets, ...sections };
 });
 
-/** The staff asset detail page's one load-bearing query. */
+/** The staff asset detail page's one load-bearing query. Its history is `getAssetHistory`. */
 export const getStaffAssetDetail = query(z.string(), async (id) => {
-	// `serviceHistory` rides along rather than being its own query in the
-	// component: what a contractor was paid to do to this unit is part of its
-	// record, and a second awaited query out of the page is a serial round trip
-	// on first paint.
-	const [asset, movements, history] = await Promise.all([
-		getAsset(id),
-		getAssetMovements(id),
-		jobsForAsset(id)
-	]);
-	// After `getAsset`'s guard. Contractor and cost are `contractor.read`'s (#2071);
-	// null hides the section rather than claiming no contractor ever touched it.
-	const serviceHistory = (await can('contractor.read')) ? history : null;
+	const asset = await getAsset(id);
 
 	// Computed here rather than in the component: the rule is server-side and
 	// depends on the acquisition this unit arrived on, which the asset row only
@@ -1876,7 +1879,7 @@ export const getStaffAssetDetail = query(z.string(), async (id) => {
 		new Date()
 	);
 
-	return { asset, movements, serviceHistory, form8282, donor: acq?.donorName ?? null };
+	return { asset, form8282, donor: acq?.donorName ?? null };
 });
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { withQuery } from './with-query';
+import { withHash, withQuery } from './with-query';
 
 describe('withQuery', () => {
 	it('returns the path alone when there is no query', () => {
@@ -19,6 +19,17 @@ describe('withQuery', () => {
 		const q = new URLSearchParams({ tagKind: 'genre', tagValue: 'folk rock' });
 		expect(withQuery('/member/classifieds', q)).toBe(
 			'/member/classifieds?tagKind=genre&tagValue=folk+rock'
+		);
+	});
+});
+
+describe('withHash', () => {
+	it('appends one fragment, whether or not it is given with its #', () => {
+		expect(withHash('/staff/volunteer/shifts/wo-1', 'engagement-j')).toBe(
+			'/staff/volunteer/shifts/wo-1#engagement-j'
+		);
+		expect(withHash('/staff/volunteer/shifts/wo-1', '#engagement-j')).toBe(
+			'/staff/volunteer/shifts/wo-1#engagement-j'
 		);
 	});
 });

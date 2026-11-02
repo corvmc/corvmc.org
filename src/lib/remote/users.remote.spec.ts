@@ -331,7 +331,7 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	{ name: 'getUserOverview', args: ['victim-user'] },
 	{ name: 'getUserReservations', args: ['victim-user'] },
 	{ name: 'getUserMembership', args: ['victim-user'] },
-	{ name: 'getUserCreditHistory', args: [{ userId: 'victim-user', page: 1 }] },
+	{ name: 'getUserCreditHistory', args: [{ userId: 'victim-user' }] },
 	{ name: 'getUserSessions', args: ['victim-user'] },
 	{ name: 'getUserHistory', args: [{ userId: 'victim-user' }] },
 	{ name: 'getStaffUserTotals' },
@@ -382,10 +382,10 @@ describe('users.remote staff guards', () => {
 		// every member's transactions on one member's page.
 		requireCapability.mockResolvedValue({ id: 'acting-staff' });
 		currentParams = { id: 'someone-else' };
-		await users.getUserCreditHistory({ userId: 'victim-user', page: 2 });
+		await users.getUserCreditHistory({ userId: 'victim-user', limit: 50 });
 		expect(listTransactions).toHaveBeenCalledWith(
 			{ userId: 'victim-user' },
-			{ page: 2, pageSize: 10 }
+			{ page: 1, pageSize: 50 }
 		);
 	});
 

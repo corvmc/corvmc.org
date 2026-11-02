@@ -31,7 +31,7 @@ import { positionChangeRefusal } from '$lib/server/access/position-service';
 import { toEventRef } from '$lib/server/entity/refs';
 import { jsonArrayField } from '$lib/utils/zod-json';
 import { auditFeedItem } from '$lib/utils/audit-display';
-import { FEED_MAX, type FeedPage } from '$lib/types/activity';
+import { FEED_MAX, feedLimit, type FeedPage } from '$lib/types/activity';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
 import {
 	getAllBalances,
@@ -850,11 +850,30 @@ export const getUserMembership = query(z.string(), async (userId) => {
 	};
 });
 
+/**
+ * A member's credit ledger as feed rows. The ledger stores no actor; a staff
+ * adjustment's actor is on the `credits.adjusted` entry in their History.
+ */
 export const getUserCreditHistory = query(
-	z.object({ userId: z.string(), page: z.number().int().min(1).default(1) }),
-	async ({ userId, page }) => {
+	z.object({ userId: z.string(), limit: z.number().int().min(1).max(FEED_MAX).optional() }),
+	async ({ userId, limit }) => {
 		await requireCapability('credit.read');
-		return listTransactions({ userId }, { page, pageSize: 10 });
+		const size = feedLimit(limit);
+		const { rows, pagination } = await listTransactions({ userId }, { page: 1, pageSize: size });
+		return {
+			items: rows.map((t) => ({
+				id: `credit:${t.id}`,
+				at: new Date(t.createdAt),
+				actorId: null,
+				actorName: null,
+				summary: t.description,
+				source: t.source,
+				creditType: t.creditType,
+				amount: t.amount,
+				balanceAfter: t.balanceAfter
+			})),
+			hasMore: pagination.total > size
+		};
 	}
 );
 

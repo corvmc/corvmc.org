@@ -3,7 +3,7 @@ import { query } from '$app/server';
 import { form } from './_remote';
 import { can, requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
-import { getStaffAssetDetail } from './inventory.remote';
+import { getAssetHistory, getStaffAssetDetail } from './inventory.remote';
 import { getStaffShiftPage, getWorkOrderActivity } from './volunteer.remote';
 import { getProjectTaskPage } from './tasks.remote';
 import { getProjectActivity } from './projects.remote';
@@ -235,7 +235,10 @@ export const createJobForm = form(z.object(jobFields), async (raw) => {
 			requestedByUserId: actor.id
 		});
 		await refreshWorkOrderPage(job);
-		if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
+		if (job.assetId) {
+			void getStaffAssetDetail(job.assetId).refresh();
+			void getAssetHistory({ id: job.assetId }).refresh();
+		}
 		return { success: true, id: job.id };
 	} catch (err) {
 		mapDomainError(err);
@@ -258,7 +261,10 @@ export const scheduleJobForm = form(
 				actorId: actor.id
 			});
 			await refreshWorkOrderPage(job);
-			if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
+			if (job.assetId) {
+				void getStaffAssetDetail(job.assetId).refresh();
+				void getAssetHistory({ id: job.assetId }).refresh();
+			}
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
@@ -306,7 +312,10 @@ export const completeJobForm = form(
 				actorId: actor.id
 			});
 			await refreshWorkOrderPage(job);
-			if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
+			if (job.assetId) {
+				void getStaffAssetDetail(job.assetId).refresh();
+				void getAssetHistory({ id: job.assetId }).refresh();
+			}
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
@@ -320,7 +329,10 @@ export const cancelJobForm = form(z.object({ id: z.uuid() }), async (raw) => {
 	try {
 		const job = await cancelJob(id);
 		await refreshWorkOrderPage(job);
-		if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
+		if (job.assetId) {
+			void getStaffAssetDetail(job.assetId).refresh();
+			void getAssetHistory({ id: job.assetId }).refresh();
+		}
 		return { success: true };
 	} catch (err) {
 		mapDomainError(err);
@@ -335,7 +347,10 @@ function closeJobForm(close: (id: string) => Promise<Engagement>) {
 		try {
 			const job = await close(id);
 			await refreshWorkOrderPage(job);
-			if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
+			if (job.assetId) {
+				void getStaffAssetDetail(job.assetId).refresh();
+				void getAssetHistory({ id: job.assetId }).refresh();
+			}
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);

@@ -7,8 +7,6 @@
 		getUserPage
 	} from '$lib/remote/users.remote';
 	import { RelatedList } from '$lib/components/ui/entity';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -21,18 +19,19 @@
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { creditsToHours, creditCompCeiling, hasCapability } from '$lib/config';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
-	import { formatCents, formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
+	import {
+		formatCents,
+		formatDateTimeShort,
+		formatDateShortYear,
+		titleCase
+	} from '$lib/utils/format';
+	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
 
 	let { id }: { id: string } = $props();
 
-	// The ledger pages in place. `page` is local state rather than a URL param:
-	// the URL already carries the tab, and paging a card inside a tab is not a
-	// destination anybody links to.
-	let creditPage = $state(1);
-
 	function refreshCredits() {
 		void getUserCredits(id).refresh();
-		void getUserCreditHistory({ userId: id, page: creditPage }).refresh();
+		void getUserCreditHistory({ userId: id }).refresh();
 		void getUserPage(id).refresh();
 	}
 
@@ -101,46 +100,28 @@
 	my free hours go?" is a database question until the transactions are on the
 	page next to the number they add up to.
 -->
-<InfoCard title="Credit history">
-	<DataList
-		result={getUserCreditHistory({ userId: id, page: creditPage })}
-		emptyTitle="No credit activity"
-		empty="Nothing has been allocated, spent or adjusted yet."
-		onpage={(p) => (creditPage = p)}
-	>
-		{#snippet children(rows)}
-			<Table>
-				{#snippet head()}
-					<th>When</th>
-					<th class="col-support">Reason</th>
-					<th class="cell-num">Change</th>
-					<th class="col-extra cell-num">Balance</th>
-				{/snippet}
-				{#each rows as t (t.id)}
-					<tr class="hover">
-						<td class="cell-primary">
-							<div class="font-medium whitespace-nowrap">
-								{formatDateTimeShort(new Date(t.createdAt))}
-							</div>
-							<div class="text-muted">{t.description}</div>
-						</td>
-						<td class="col-support">{t.source.replace(/_/g, ' ')}</td>
-						<td class="cell-num font-medium" class:text-error={t.amount < 0}>
-							{t.amount > 0 ? '+' : ''}{t.creditType === 'free_hours'
-								? `${creditsToHours(t.amount)} hrs`
-								: t.amount}
-						</td>
-						<td class="col-extra cell-num opacity-60">
-							{t.creditType === 'free_hours'
-								? `${creditsToHours(t.balanceAfter)} hrs`
-								: t.balanceAfter}
-						</td>
-					</tr>
-				{/each}
-			</Table>
-		{/snippet}
-	</DataList>
-</InfoCard>
+<ActivityFeedCard
+	title="Credit history"
+	query={(limit) => getUserCreditHistory(limit ? { userId: id, limit } : { userId: id })}
+	toRow={(t) => ({
+		...feedItemRow(t),
+		context: { label: titleCase(t.source) },
+		credit: t
+	})}
+	empty={{
+		title: 'No credit activity',
+		description: 'Nothing has been allocated, spent or adjusted yet.'
+	}}
+>
+	{#snippet trailing({ credit })}
+		{@const units = (n: number) =>
+			credit.creditType === 'free_hours' ? `${creditsToHours(n)} hrs` : String(n)}
+		<span class="font-medium" class:text-error={credit.amount < 0}>
+			{credit.amount > 0 ? '+' : ''}{units(credit.amount)}
+		</span>
+		<div class="text-muted text-xs">balance {units(credit.balanceAfter)}</div>
+	{/snippet}
+</ActivityFeedCard>
 
 <RelatedList title="Payment records" result={getUserPayments(id)}>
 	{#snippet children(payments)}

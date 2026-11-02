@@ -2,11 +2,12 @@
 	import { workOrderHref } from '$lib/utils/work-order-href';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
+	import { ActivityFeed } from '$lib/components/ui/ActivityFeed';
+	import { FEED_PAGE } from '$lib/types/activity';
+	import { withHash } from '$lib/utils/with-query';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import {
@@ -36,6 +37,24 @@
 	const data = $derived(await getContractorDetail(page.params.id!));
 	const { fields } = updateContractorForm;
 	const archiveFields = archiveContractorForm.fields;
+
+	// Every job is already in the page's one query; "Show older" only reveals more of it.
+	let shown = $state(FEED_PAGE);
+	const jobRows = $derived(
+		data.jobs
+			.map(({ job, itemName, assetTag }) => ({
+				id: job.id,
+				at: job.completedAt ?? job.scheduledFor ?? job.createdAt,
+				summary: job.title,
+				href: withHash(
+					resolve(workOrderHref({ id: job.workOrderId, projectId: job.projectId })),
+					`engagement-${job.id}`
+				),
+				context: itemName ? { label: assetTag ? `${itemName} · ${assetTag}` : itemName } : null,
+				job
+			}))
+			.sort((a, b) => b.at.getTime() - a.at.getTime())
+	);
 
 	const tradeOptions = contractorTrades.map((t) => ({
 		value: t,
@@ -175,55 +194,22 @@
 		{/if}
 	</InfoCard>
 
-	{#if data.jobs.length === 0}
-		<EmptyState title="No jobs yet" description="Nothing has been sent to them." />
-	{:else}
-		<Table>
-			{#snippet head()}
-				<th>Job</th>
-				<th>Status</th>
-				<th>When</th>
-				<th class="cell-num">Cost</th>
+	<InfoCard title="Jobs">
+		<ActivityFeed
+			label="Jobs"
+			rows={jobRows.slice(0, shown)}
+			hasMore={jobRows.length > shown}
+			onmore={() => (shown += FEED_PAGE)}
+			empty={{ title: 'No jobs yet', description: 'Nothing has been sent to them.' }}
+		>
+			{#snippet trailing({ job })}
+				<Badge variant={contractorJobStatusBadge[job.status as ContractorJobStatus]} size="sm">
+					{contractorJobStatusLabels[job.status as ContractorJobStatus]}
+				</Badge>
+				{#if job.costCents != null}
+					<div class="text-muted text-xs">{formatCents(job.costCents)}</div>
+				{/if}
 			{/snippet}
-			{#each data.jobs as row (row.job.id)}
-				<tr class="hover">
-					<td class="cell-primary">
-						<a
-							class="link font-medium"
-							href="{resolve(
-								workOrderHref({ id: row.job.workOrderId, projectId: row.job.projectId })
-							)}#engagement-{row.job.id}"
-						>
-							{row.job.title}
-						</a>
-						{#if row.itemName}
-							<div class="text-subtle">
-								{row.itemName}{row.assetTag ? ` · ${row.assetTag}` : ''}
-							</div>
-						{/if}
-					</td>
-					<td>
-						<Badge
-							variant={contractorJobStatusBadge[row.job.status as ContractorJobStatus]}
-							size="sm"
-						>
-							{contractorJobStatusLabels[row.job.status as ContractorJobStatus]}
-						</Badge>
-					</td>
-					<td>
-						{#if row.job.completedAt}
-							{formatDateShort(row.job.completedAt)}
-						{:else if row.job.scheduledFor}
-							{formatDateShort(row.job.scheduledFor)}
-						{:else}
-							—
-						{/if}
-					</td>
-					<td class="cell-num">
-						{row.job.costCents != null ? formatCents(row.job.costCents) : '—'}
-					</td>
-				</tr>
-			{/each}
-		</Table>
-	{/if}
+		</ActivityFeed>
+	</InfoCard>
 </PageContent>
