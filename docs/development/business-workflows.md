@@ -1117,7 +1117,9 @@ So:
 > production anchors read that event's production. Each stamped row copies its `anchor`
 > (#2033). A missing anchor time stamps the items unscheduled with a warning and
 > `pending_offset_minutes`, and `placePendingWorkOrders` places them once the time is set.
-> Re-applying by hand needs an audited reason. The rest of this section is the history and the
+> Re-applying by hand needs an audited reason. A template is stamped **once per project**, not
+> once per show (#2152): a second night in the same project gets it by a reasoned re-apply from
+> that show's console, timed from that show. The rest of this section is the history and the
 > item model, which is unchanged.
 
 A duty list is a named set of work orders stamped onto a **subject** — an event, or a member's
