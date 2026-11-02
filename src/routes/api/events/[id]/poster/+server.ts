@@ -1,6 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireListingWriter } from '$lib/server/event/listing-guard';
+import { can } from '$lib/server/authorization';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import { uploadFile, validateUpload } from '$lib/server/storage';
 import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
 import { mediaKey } from '$lib/server/storage-keys';
@@ -15,7 +17,11 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
 	const existing = await getById(params.id);
 	if (!existing) throw error(404, 'Event not found');
-	if (existing.status === 'cancelled') throw error(400, 'Cannot update a cancelled event');
+	// Staff may correct a cancelled listing (#2126); the show's committee may not.
+	const cancelled = existing.status === 'cancelled';
+	if (cancelled && !(await can('event.manage'))) {
+		throw error(400, 'Cannot update a cancelled event');
+	}
 
 	const formData = await request.formData();
 	const file = formData.get('poster');
@@ -50,6 +56,13 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		.set({ updatedAt: new Date() })
 		.where(eq(eventListing.id, params.id));
 
+	if (cancelled) {
+		await recordAuditEntry({
+			action: 'event.edited_while_cancelled',
+			subject: { type: 'event', id: params.id, label: existing.title },
+			details: { fields: ['poster'] }
+		});
+	}
 	return json({ posterKey: key });
 };
 

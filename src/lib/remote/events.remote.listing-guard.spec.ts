@@ -118,7 +118,17 @@ describe('updateEvent', () => {
 	it("lets the show's committee edit its listing", async () => {
 		persona = 'booker';
 		await updateEvent({ eventId: 'evt-show', ...EDIT });
-		expect(update).toHaveBeenCalledWith('evt-show', expect.objectContaining({ title: 'Retitled' }));
+		// ...but not once it is cancelled: that correction is staff's (#2126).
+		expect(update).toHaveBeenCalledWith(
+			'evt-show',
+			expect.objectContaining({ title: 'Retitled' }),
+			{ whileCancelled: false }
+		);
+	});
+
+	it('lets staff edit a cancelled listing', async () => {
+		await updateEvent({ eventId: 'evt-show', ...EDIT });
+		expect(update).toHaveBeenCalledWith('evt-show', expect.anything(), { whileCancelled: true });
 	});
 
 	it('refuses someone off the committee, writing nothing', async () => {

@@ -15,10 +15,12 @@
 		eventId: string;
 		posterUrl: string | null;
 		cancelled: boolean;
+		/** Staff may still replace a cancelled listing's poster; the flyer stays off. */
+		uploadWhileCancelled?: boolean;
 		onchange: () => void;
 	}
 
-	let { eventId, posterUrl, cancelled, onchange }: Props = $props();
+	let { eventId, posterUrl, cancelled, uploadWhileCancelled = false, onchange }: Props = $props();
 
 	async function upload(e: Event) {
 		const input = e.target as HTMLInputElement;
@@ -51,7 +53,7 @@
 		<p class="text-muted">No poster uploaded</p>
 	{/if}
 
-	{#if !cancelled}
+	{#if !cancelled || uploadWhileCancelled}
 		<div class="mt-3 flex flex-wrap items-center gap-2">
 			<!-- A bare file input, not a FormField: the upload posts on change to an
 			     endpoint, with no form around it to submit. -->
@@ -62,25 +64,27 @@
 				onchange={upload}
 				class="file-input file-input-sm"
 			/>
-			<!-- The fallback when no art arrives: a real poster, so it passes the publish gate. -->
-			<Action
-				action={useTemplateFlyerAsPoster}
-				label="Use the template flyer"
-				variant="ghost"
-				size="sm"
-				modalTitle="Use the template flyer?"
-				submitLabel="Make the poster"
-				successToast="Poster updated"
-				onsuccess={onchange}
-			>
-				{#snippet form()}
-					<input type="hidden" name="eventId" value={eventId} />
-					<p class="text-sm">
-						A flyer is drawn from the title, date, doors, venue, bill and price, and it replaces the
-						current poster. It is a snapshot: after editing the event, run this again.
-					</p>
-				{/snippet}
-			</Action>
+			{#if !cancelled}
+				<!-- The fallback when no art arrives: a real poster, so it passes the publish gate. -->
+				<Action
+					action={useTemplateFlyerAsPoster}
+					label="Use the template flyer"
+					variant="ghost"
+					size="sm"
+					modalTitle="Use the template flyer?"
+					submitLabel="Make the poster"
+					successToast="Poster updated"
+					onsuccess={onchange}
+				>
+					{#snippet form()}
+						<input type="hidden" name="eventId" value={eventId} />
+						<p class="text-sm">
+							A flyer is drawn from the title, date, doors, venue, bill and price, and it replaces
+							the current poster. It is a snapshot: after editing the event, run this again.
+						</p>
+					{/snippet}
+				</Action>
+			{/if}
 		</div>
 	{/if}
 </InfoCard>

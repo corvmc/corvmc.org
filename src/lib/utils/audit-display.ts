@@ -2,6 +2,7 @@ import type {
 	AuditAction,
 	AuditEntry,
 	AuditProfileField,
+	EventEditField,
 	ProjectField,
 	WorkOrderAssignmentMode,
 	WorkOrderField
@@ -45,6 +46,18 @@ const PROJECT_FIELDS: Record<ProjectField, string> = {
 	suggestion: 'linked suggestion',
 	budget: 'budget',
 	dates: 'dates'
+};
+
+const EVENT_FIELDS: Record<EventEditField, string> = {
+	title: 'title',
+	description: 'description',
+	kind: 'kind',
+	tags: 'tags',
+	location: 'address line',
+	externalTicketUrl: 'ticket link',
+	venue: 'venue',
+	times: 'times',
+	poster: 'poster'
 };
 
 const statusWord = (s: string) =>
@@ -136,6 +149,12 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Undid the ${formatCents(entry.details.amountCents)} payout to ${entry.details.actName}`;
 		case 'event.published_over_warnings':
 			return `Published the event over ${plural(entry.details.warnings.length, 'warning')}: “${entry.details.reason}”`;
+		case 'event.edited_while_cancelled': {
+			const fields = entry.details.fields.map((f) => EVENT_FIELDS[f] ?? f);
+			return fields.length
+				? `Edited its ${fields.join(', ')} while cancelled`
+				: 'Saved it while cancelled, changing nothing';
+		}
 		case 'work_order.created':
 			return `Added the task “${entry.details.title}”`;
 		case 'work_order.assigned': {

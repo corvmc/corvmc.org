@@ -128,7 +128,7 @@
 			>
 		{/if}
 
-		{#if evt.status !== 'cancelled' && !editing}
+		{#if (evt.status !== 'cancelled' || data.canEditCancelled) && !editing}
 			<Button variant="ghost" size="sm" onclick={startEditing}>Edit</Button>
 		{/if}
 
@@ -295,6 +295,7 @@
 			event={evt}
 			linkedReservation={detail.linkedReservation}
 			venues={data.venues}
+			cancelled={evt.status === 'cancelled'}
 			onsaved={() => {
 				editing = false;
 				refresh();
@@ -389,6 +390,7 @@
 		eventId={evt.id}
 		posterUrl={detail.posterUrl}
 		cancelled={evt.status === 'cancelled'}
+		uploadWhileCancelled={data.canEditCancelled}
 		onchange={refresh}
 	/>
 
