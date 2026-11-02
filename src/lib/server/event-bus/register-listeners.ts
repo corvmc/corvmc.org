@@ -127,10 +127,14 @@ async function registerOrientationGroup(): Promise<void> {
  * why a door shift writes nothing.
  */
 async function registerInKindListeners(): Promise<void> {
-	const { handleApprovedHours } = await import('$lib/server/finance/in-kind-listener');
+	const { handleApprovedHours, handleReturnedHours } =
+		await import('$lib/server/finance/in-kind-listener');
 
 	domainEvents.on('volunteer.hours_approved', async ({ data: event }) => {
 		await handleApprovedHours(event.logId);
+	});
+	domainEvents.on('volunteer.hours_rejected', async ({ data: event }) => {
+		await handleReturnedHours(event.logId);
 	});
 }
 

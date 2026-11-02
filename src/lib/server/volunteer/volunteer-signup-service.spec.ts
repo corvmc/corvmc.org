@@ -488,6 +488,17 @@ describe('completeFinishedShifts', () => {
 		expect(done).toHaveLength(1);
 		expect(updatedSets[0]).toMatchObject({ status: 'completed' });
 	});
+
+	// Trust-first (#1943): an unconfirmed claim on a finished shift completes as
+	// worked rather than waiting on a coordinator; a no-show is the correction.
+	it('completes unconfirmed claims as well as confirmed ones', async () => {
+		selectResultQueue = [[]];
+		await completeFinishedShifts();
+
+		const where = new SQLiteSyncDialect().sqlToQuery(whereClauses[0] as SQL);
+		expect(where.sql).toMatch(/"status" in \(\?, \?\)/);
+		expect(where.params).toEqual(expect.arrayContaining(['claimed', 'confirmed']));
+	});
 });
 
 describe('the notify list on a called-off shift', () => {

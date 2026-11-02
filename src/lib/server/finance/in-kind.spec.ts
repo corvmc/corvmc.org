@@ -9,8 +9,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const recordEntry = vi.fn(async () => undefined);
+const reverseEntriesForSubject = vi.fn(async () => 0);
 vi.mock('./financial-entry-service', () => ({
 	recordEntry: (...a: unknown[]) => recordEntry(...(a as [])),
+	reverseEntriesForSubject: (...a: unknown[]) => reverseEntriesForSubject(...(a as [])),
 	recordEntries: vi.fn()
 }));
 
@@ -24,7 +26,7 @@ vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({
 	getActiveVolunteerRoleById: async () => role
 }));
 
-const { handleApprovedHours } = await import('./in-kind-listener');
+const { handleApprovedHours, handleReturnedHours } = await import('./in-kind-listener');
 const { syncAcquisitionInKind } = await import('./in-kind-acquisition');
 
 beforeEach(() => {
@@ -79,6 +81,20 @@ describe('contributed services', () => {
 		await handleApprovedHours('log-1');
 
 		expect(recordEntry).not.toHaveBeenCalled();
+	});
+});
+
+describe('a returned log', () => {
+	// Returning is possible after approval now (#1943), so the ledger has to follow.
+	it('reverses whatever the log wrote, keyed on the log', async () => {
+		await handleReturnedHours('log-1');
+
+		expect(reverseEntriesForSubject).toHaveBeenCalledWith(
+			'volunteer_hour',
+			'log-1',
+			expect.any(Date),
+			expect.objectContaining({ label: 'Returned' })
+		);
 	});
 });
 

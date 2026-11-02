@@ -18,11 +18,14 @@ import {
 	VOLUNTEER_MAX_MINUTES_PER_LOG,
 	VOLUNTEER_BULK_REVIEW_MAX,
 	VOLUNTEER_REVIEW_NOTES_MAX,
-	volunteerHourStatusLabels
+	VOLUNTEER_REVIEW_MINUTES_OVER,
+	volunteerHourStatusLabels,
+	type HourLogException
 } from '$lib/config';
 import { getActiveVolunteerRoleById } from './volunteer-role-service';
 import { VolunteerRoleNotFoundError } from './volunteer-role-service';
 import { requireActiveVolunteer } from './volunteer-profile-service';
+import { flagUnclearedLogs } from './member-certification-service';
 import { chunk } from '$lib/server/utils/chunk';
 import type { VolunteerHourLog, VolunteerHourStatus } from '$lib/server/db/schema/volunteer';
 
@@ -62,7 +65,7 @@ export class HourLogAlreadyReviewedError extends DomainError {
 export class HourLogNotEditableError extends DomainError {
 	readonly httpStatus = 422;
 	constructor() {
-		super('Only your own pending hour logs can be changed');
+		super('This log can no longer be changed. Ask staff to return it if something is wrong.');
 	}
 }
 
@@ -210,16 +213,52 @@ async function requireActiveRole(volunteerRoleId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Exceptions
+// ---------------------------------------------------------------------------
+
+export interface ExceptionCandidate {
+	id: string;
+	userId: string;
+	volunteerRoleId: string;
+	workedOn: Date;
+	minutes: number;
+	roleIsSpecialized: boolean;
+}
+
+/**
+ * Why each log needs a staff look, keyed by id; a log with none counts on entry.
+ * Specialized skill is here because approving one writes an in-kind ledger entry.
+ */
+export async function flagHourLogExceptions(
+	logs: ExceptionCandidate[]
+): Promise<Map<string, HourLogException[]>> {
+	const uncleared = await flagUnclearedLogs(logs);
+	const out = new Map<string, HourLogException[]>();
+	for (const log of logs) {
+		const reasons: HourLogException[] = [];
+		if (uncleared.has(log.id)) reasons.push('uncleared');
+		if (log.roleIsSpecialized) reasons.push('specialized');
+		if (log.minutes > VOLUNTEER_REVIEW_MINUTES_OVER) reasons.push('long');
+		out.set(log.id, reasons);
+	}
+	return out;
+}
+
+async function exceptionsFor(log: Omit<ExceptionCandidate, 'id'>): Promise<HourLogException[]> {
+	return (await flagHourLogExceptions([{ ...log, id: 'candidate' }])).get('candidate') ?? [];
+}
+
+// ---------------------------------------------------------------------------
 // Lifecycle
 // ---------------------------------------------------------------------------
 
 /**
  * Record hours for `userId`.
  *
- * `enteredByUserId` is a staffer typing it in for somebody else. It lifts the
- * backdate limit, lands the log `approved` rather than `pending` (the staffer
- * typing it IS the review), and fires no `hours_submitted` event — nothing is
- * waiting for staff. Every other rule is shared: not a second kind of row.
+ * A member's log lands `approved` unless `flagHourLogExceptions` names a reason
+ * to look first; only those land `pending` and notify staff. `enteredByUserId`
+ * is a staffer typing it in: the backdate limit lifts and it is always
+ * approved, stamped with the staffer, because the staffer typing it IS the review.
  */
 export async function submitHours(
 	userId: string,
@@ -238,6 +277,16 @@ export async function submitHours(
 	const minutes = validateMinutes(data.minutes);
 	const description = validateDescription(data.description);
 
+	const reasons = enteredByStaff
+		? []
+		: await exceptionsFor({
+				userId,
+				volunteerRoleId: role.id,
+				workedOn,
+				minutes,
+				roleIsSpecialized: role.isSpecializedSkill
+			});
+	const status = reasons.length > 0 ? 'pending' : 'approved';
 	const reviewedAt = enteredByStaff ? new Date() : null;
 
 	const [log] = await db
@@ -250,14 +299,22 @@ export async function submitHours(
 			workedOn,
 			minutes,
 			description,
-			status: enteredByStaff ? 'approved' : 'pending',
+			status,
 			reviewedByUserId: options.enteredByUserId ?? null,
 			reviewedAt
 		})
 		.returning();
 
-	if (enteredByStaff) return log;
+	if (status === 'pending') await announceSubmitted(log, role.name, reasons);
+	return log;
+}
 
+async function announceSubmitted(
+	log: VolunteerHourLog,
+	roleName: string,
+	reasons: HourLogException[]
+): Promise<void> {
+	const { userId } = log;
 	const [member] = await db
 		.select({ name: user.name, email: user.email })
 		.from(user)
@@ -271,17 +328,16 @@ export async function submitHours(
 				userId,
 				userName: member?.name ?? 'Unknown',
 				userEmail: member?.email ?? '',
-				roleName: role.name,
-				hours: minutes / 60,
-				workedOn: workedOn.toISOString(),
-				description
+				roleName,
+				hours: log.minutes / 60,
+				workedOn: log.workedOn.toISOString(),
+				description: log.description,
+				reasons
 			});
 		} catch (err) {
 			captureException(err, { event: 'volunteer.hours_submitted', logId: log.id });
 		}
 	});
-
-	return log;
 }
 
 export async function updateHourLog(
@@ -291,24 +347,45 @@ export async function updateHourLog(
 ): Promise<VolunteerHourLog> {
 	await requireActiveVolunteer(userId);
 
-	const existing = await requireOwnPendingLog(logId, userId);
+	const existing = await requireOwnEditableLog(logId, userId);
 
-	const values: Partial<typeof volunteerHourLog.$inferInsert> = { updatedAt: new Date() };
+	// Review never checks the role is live; an edit is a fresh entry and does.
+	const role = await requireActiveRole(data.volunteerRoleId ?? existing.volunteerRoleId);
+	const workedOn = data.workedOn !== undefined ? toWorkedOn(data.workedOn) : existing.workedOn;
+	const minutes = data.minutes !== undefined ? validateMinutes(data.minutes) : existing.minutes;
+	const description =
+		data.description !== undefined ? validateDescription(data.description) : existing.description;
 
-	if (data.volunteerRoleId !== undefined) {
-		values.volunteerRoleId = (await requireActiveRole(data.volunteerRoleId)).id;
-	}
-	if (data.workedOn !== undefined) values.workedOn = toWorkedOn(data.workedOn);
-	if (data.minutes !== undefined) values.minutes = validateMinutes(data.minutes);
-	if (data.description !== undefined) values.description = validateDescription(data.description);
+	// Classified again, and any earlier review cleared.
+	const reasons = await exceptionsFor({
+		userId,
+		volunteerRoleId: role.id,
+		workedOn,
+		minutes,
+		roleIsSpecialized: role.isSpecializedSkill
+	});
+	const status = reasons.length > 0 ? 'pending' : 'approved';
 
 	const [row] = await db
 		.update(volunteerHourLog)
-		.set(values)
-		.where(and(eq(volunteerHourLog.id, existing.id), eq(volunteerHourLog.status, 'pending')))
+		.set({
+			volunteerRoleId: role.id,
+			workedOn,
+			minutes,
+			description,
+			status,
+			reviewedByUserId: null,
+			reviewedAt: null,
+			reviewNotes: null,
+			updatedAt: new Date()
+		})
+		.where(and(eq(volunteerHourLog.id, existing.id), eq(volunteerHourLog.status, existing.status)))
 		.returning();
 
 	if (!row) throw new HourLogNotEditableError();
+	if (status === 'pending' && existing.status !== 'pending') {
+		await announceSubmitted(row, role.name, reasons);
+	}
 	return row;
 }
 
@@ -318,7 +395,7 @@ export async function updateHourLog(
  * `withdrawn` status would be a value no report ever selects.
  */
 export async function withdrawHourLog(logId: string, userId: string): Promise<void> {
-	await requireOwnPendingLog(logId, userId);
+	const existing = await requireOwnEditableLog(logId, userId);
 
 	const [row] = await db
 		.delete(volunteerHourLog)
@@ -326,7 +403,7 @@ export async function withdrawHourLog(logId: string, userId: string): Promise<vo
 			and(
 				eq(volunteerHourLog.id, logId),
 				eq(volunteerHourLog.userId, userId),
-				eq(volunteerHourLog.status, 'pending')
+				eq(volunteerHourLog.status, existing.status)
 			)
 		)
 		.returning();
@@ -353,7 +430,8 @@ export async function rejectHourLog(
 /**
  * Approving grants nothing. No credit_transaction is written here, deliberately
  * — volunteer hours are a record, not a currency. `hour-log-service.spec.ts`
- * asserts it.
+ * asserts it. Approval takes a pending log; a return also takes an approved
+ * one, since most logs count on entry and are only looked at afterwards.
  */
 async function review(
 	logId: string,
@@ -363,16 +441,20 @@ async function review(
 ): Promise<VolunteerHourLog> {
 	const existing = await getRawLog(logId);
 	if (!existing) throw new HourLogNotFoundError();
-	if (existing.status !== 'pending') throw new HourLogAlreadyReviewedError(existing.status);
+	const reviewable: VolunteerHourStatus[] =
+		status === 'rejected' ? ['pending', 'approved'] : ['pending'];
+	if (!reviewable.includes(existing.status)) {
+		throw new HourLogAlreadyReviewedError(existing.status);
+	}
 
 	const reviewedAt = new Date();
 
-	// Re-assert 'pending' in the WHERE so two staff clicking at once can't both
-	// win — the loser gets the already-reviewed error rather than overwriting.
+	// Re-assert the status read in the WHERE so two staff clicking at once can't
+	// both win — the loser gets the already-reviewed error rather than overwriting.
 	const [row] = await db
 		.update(volunteerHourLog)
 		.set({ status, reviewedByUserId: staffId, reviewedAt, reviewNotes, updatedAt: reviewedAt })
-		.where(and(eq(volunteerHourLog.id, logId), eq(volunteerHourLog.status, 'pending')))
+		.where(and(eq(volunteerHourLog.id, logId), eq(volunteerHourLog.status, existing.status)))
 		.returning();
 
 	if (!row) throw new HourLogAlreadyReviewedError('reviewed');
@@ -509,10 +591,15 @@ async function getRawLog(logId: string) {
 	return row ?? null;
 }
 
-async function requireOwnPendingLog(logId: string, userId: string) {
+/** A member may change their own log until staff have approved it. */
+function isMemberEditable(log: { status: VolunteerHourStatus; reviewedAt: Date | null }): boolean {
+	return log.status !== 'approved' || log.reviewedAt === null;
+}
+
+async function requireOwnEditableLog(logId: string, userId: string) {
 	const existing = await getRawLog(logId);
 	if (!existing) throw new HourLogNotFoundError();
-	if (existing.userId !== userId || existing.status !== 'pending') {
+	if (existing.userId !== userId || !isMemberEditable(existing)) {
 		throw new HourLogNotEditableError();
 	}
 	return existing;
@@ -543,6 +630,7 @@ export interface HourLogRow {
 	volunteerRoleId: string;
 	roleName: string;
 	roleIsActive: boolean;
+	roleIsSpecialized: boolean;
 	/** The committee or club this was given to, if it named one. */
 	groupId: string | null;
 	groupName: string | null;
@@ -555,6 +643,8 @@ export interface HourLogRow {
 	reviewedByName: string | null;
 	reviewedAt: Date | null;
 	reviewNotes: string | null;
+	/** The member can still edit or withdraw it: staff have not approved it. */
+	memberEditable: boolean;
 	createdAt: Date;
 }
 
@@ -591,6 +681,7 @@ function hourLogSelect() {
 		member: memberRefColumns(),
 		roleName: volunteerRole.name,
 		roleIsActive: volunteerRole.isActive,
+		roleIsSpecialized: volunteerRole.isSpecializedSkill,
 		// Correlated subquery rather than a second join on `user`, which would
 		// need an alias and complicate the count query that shares this WHERE.
 		reviewedByName: sql<
@@ -609,6 +700,7 @@ type HourLogSelectRow = {
 	member: MemberRefRow;
 	roleName: string;
 	roleIsActive: boolean;
+	roleIsSpecialized: boolean;
 	reviewedByName: string | null;
 	groupName: string | null;
 };
@@ -621,6 +713,7 @@ function toHourLogRow(row: HourLogSelectRow): HourLogRow {
 		volunteerRoleId: row.log.volunteerRoleId,
 		roleName: row.roleName,
 		roleIsActive: row.roleIsActive,
+		roleIsSpecialized: row.roleIsSpecialized,
 		groupId: row.log.groupId,
 		groupName: row.groupName,
 		workedOn: row.log.workedOn,
@@ -631,6 +724,7 @@ function toHourLogRow(row: HourLogSelectRow): HourLogRow {
 		reviewedByName: row.reviewedByName,
 		reviewedAt: row.log.reviewedAt,
 		reviewNotes: row.log.reviewNotes,
+		memberEditable: isMemberEditable(row.log),
 		createdAt: row.log.createdAt
 	};
 }

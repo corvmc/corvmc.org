@@ -15,17 +15,13 @@ card with nothing in it:
 
 - **Pending Assignments** — people who claimed an upcoming shift that nobody has confirmed.
   This is the one to clear first: confirming is what turns a claim into a booking, and until
-  you do it they get no reminder, the shift never completes itself, and no hour log is ever
-  offered. Confirm one at a time or confirm a whole shift at once.
+  you do it they get no reminder. Confirm one at a time or confirm a whole shift at once.
 - **Understaffed Shifts** — shifts in the next fortnight with places nobody has taken.
   **Assign** on the row opens the shift, which shows who said they would help with that role, when they said they
   were free, and whether their clearances cover _that shift's date_ — plus a search box for
   anybody else.
-- **Unreviewed Hours** — the top of the approval queue, with the same approve and return
-  buttons. The whole queue is **Volunteering → Hours**.
-- **Unconfirmed Shifts** — shifts that have already happened where somebody's claim was never
-  confirmed. **Log Hours** logs the shift as worked; **Close Assignment** records a no-show.
-  Leaving it is the third answer, and it loses the work.
+- **Unreviewed Hours** — the logs that need a look, with the same approve and return
+  buttons. The whole queue is **Members → Volunteers → Hours**.
 - **Expiring Clearances** — somebody rostered for a date their clearance does
   not reach. Not the same list as _Who's cleared_: this one has a deadline.
 
@@ -33,8 +29,13 @@ The count in the sidebar is all of that added up.
 
 ## The hours queue
 
-**Volunteering → Hours** opens on the **Pending** tab: hours members have logged and nobody
-has looked at yet.
+Hours members log count straight away. Only three kinds wait on the **Pending** tab of
+**Members → Volunteers → Hours**, each marked with why:
+
+- **No clearance** — the role needs a clearance the member did not hold on the date worked.
+- **Specialized skill** — the role is valued at a market rate, so approving it records an
+  in-kind contribution in the finances.
+- **Long entry** — a single log of more than 8 hours.
 
 For each log you get the member, the role, the date, the hours, and their
 description of what they did. Approve or return from the row.
@@ -43,8 +44,12 @@ description of what they did. Approve or return from the row.
 - **Return** requires a reason. The member cannot correct and resubmit without
   one, so say what was wrong — wrong duration, duplicate, not volunteer time.
 
-Review is one-way. If you approve something by mistake, ask the member to submit
-a corrected log; there is no un-approve.
+**Return** is also on every approved log, so anything that counted on entry can still be
+corrected. Returning a specialized-skill log reverses its in-kind entry. Members can edit or
+withdraw their own logs until a staffer has approved them.
+
+A claim nobody confirmed still completes as worked once the shift ends, and the member is
+offered the hours pre-filled. If they did not turn up, **Mark no-show** on the shift page.
 
 Filters (member, role, date range) stay in the URL, so a reload or a back button
 keeps your view.
@@ -69,9 +74,8 @@ Create a shift from a role (times and headcount prefill from the role's defaults
 duplicate it forward to make a standing weekly slot — there is no recurrence to configure.
 
 Every list shows **confirmed of capacity**, with anything merely claimed called out beside
-it. Those are different things: only confirmed people get the day-before reminder and
-auto-complete afterwards, so a shift showing three claims and no confirmations is not
-staffed.
+it. Those are different things: only confirmed people get the day-before reminder, so a
+shift showing three claims and no confirmations is not staffed.
 
 **Add** in a shift's **Who to ask** column puts a member on it yourself, for the person who
 tells you in person or by text. They go on confirmed. If their role needs a clearance they
@@ -152,5 +156,5 @@ range you set (defaulting to this calendar year). It gives you:
 - hours by role, with each role's share of the total;
 - hours by month.
 
-This is the shape a board packet or a grant application asks for. Approving is
-what makes a number appear here, which is the reason the review step exists.
+This is the shape a board packet or a grant application asks for. A pending log is
+not counted until somebody approves it; a returned one drops out.

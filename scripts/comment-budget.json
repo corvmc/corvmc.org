@@ -655,7 +655,6 @@
 	"src/routes/staff/members/[id]/panels/OrientationCard.svelte",
 	"src/routes/staff/members/[id]/panels/OverviewPanel.svelte",
 	"src/routes/staff/volunteer/+page.svelte",
-	"src/routes/staff/volunteer/CloseOutCard.svelte",
 	"src/routes/staff/volunteer/LapsingCard.svelte",
 	"src/routes/staff/volunteer/NeedsConfirmingCard.svelte",
 	"src/routes/staff/volunteer/NeedsSchedulingCard.svelte",

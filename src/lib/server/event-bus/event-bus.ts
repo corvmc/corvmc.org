@@ -2,6 +2,7 @@ import Emittery from 'emittery';
 import type {
 	BookerType,
 	GroupKind,
+	HourLogException,
 	RenewalKind,
 	ReservationCanceller,
 	ThreadNotifyPolicy
@@ -763,6 +764,8 @@ export interface VolunteerHoursSubmittedEvent {
 	/** ISO string, like every other date on this bus. */
 	workedOn: string;
 	description: string;
+	/** Why it waits for staff. Only a log with at least one is announced. */
+	reasons: HourLogException[];
 }
 
 export interface VolunteerHoursReviewedEvent {

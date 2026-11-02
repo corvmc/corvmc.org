@@ -25,7 +25,6 @@
 	import NeedsConfirmingCard from './NeedsConfirmingCard.svelte';
 	import ShortStaffedCard from './ShortStaffedCard.svelte';
 	import HoursToReviewCard from './HoursToReviewCard.svelte';
-	import CloseOutCard from './CloseOutCard.svelte';
 	import NeedsSchedulingCard from './NeedsSchedulingCard.svelte';
 	import ConfirmFixedCard from './ConfirmFixedCard.svelte';
 	import LapsingCard from './LapsingCard.svelte';
@@ -100,10 +99,6 @@
 
 		{#if work.toConfirm.length > 0}
 			<ConfirmFixedCard orders={work.toConfirm} total={work.toConfirmTotal} />
-		{/if}
-
-		{#if work.closeOut.length > 0}
-			<CloseOutCard claims={work.closeOut} total={work.closeOutTotal} />
 		{/if}
 
 		{#if work.lapsing.length > 0}

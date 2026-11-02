@@ -133,7 +133,8 @@ legitimately hold somebody 10–1 and somebody else 1–4.
 
 ## Afterwards
 
-Approve the hours from **Staff → Volunteer → Hours**. You can log hours on somebody's behalf with
+Hours members log count on entry; the few that need a look wait on **Members → Volunteers →
+Hours**. You can log hours on somebody's behalf with
 no 90-day limit — those land approved and stamped with your name — which is what makes "ask staff
 to add anything older" a real instruction rather than a dead end.
 

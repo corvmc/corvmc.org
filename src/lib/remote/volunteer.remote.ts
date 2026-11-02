@@ -46,7 +46,9 @@ import {
 	listHourLogs,
 	listUserHourLogs,
 	getStatusCounts,
-	getUserHourSummary
+	getUserHourSummary,
+	flagHourLogExceptions,
+	type HourLogRow
 } from '$lib/server/volunteer/hour-log-service';
 import {
 	getVolunteerTotals,
@@ -130,10 +132,8 @@ import {
 	availabilityConflictsWithDay,
 	listClaimants,
 	listOutstandingClaims,
-	listUnclosedSignups,
 	listUnloggedCompletions,
 	countVolunteerWorkWaiting,
-	CLOSE_OUT_LOOKBACK_DAYS,
 	SignupNotFoundError
 } from '$lib/server/volunteer/volunteer-signup-service';
 import {
@@ -149,8 +149,7 @@ import {
 	listHeldForGateMany,
 	missingFrom,
 	wasHeldOn,
-	listLapsingBeforeRosteredShift,
-	flagUnclearedLogs
+	listLapsingBeforeRosteredShift
 } from '$lib/server/volunteer/member-certification-service';
 import {
 	volunteerHourStatuses,
@@ -221,24 +220,29 @@ export const getStaffVolunteerLogs = query(staffLogFilters, async (f) => {
 		{ page: f.page ?? 1, pageSize: 50 }
 	);
 
-	// Advisory only: flags a log whose role required a clearance the member did
-	// not hold on the date worked. It never blocks approval — refusing the hours
-	// would not un-do the work, it would just lose the record. Flagged for the
-	// page in view, so the cost is one extra pair of queries per page load.
-	const uncleared = await flagUnclearedLogs(
-		result.rows.map((r) => ({
+	return { ...result, rows: await withExceptions(result.rows) };
+});
+
+/**
+ * Each row with the reasons it needed (or would need) a staff look.
+ *
+ * Advisory: none of them blocks approval — refusing hours would not undo the
+ * work, only lose the record. Flagged for the rows in view, so the cost is one
+ * extra pair of queries per page load.
+ */
+async function withExceptions<T extends HourLogRow>(rows: T[]) {
+	const flags = await flagHourLogExceptions(
+		rows.map((r) => ({
 			id: r.id,
 			userId: r.userId,
 			volunteerRoleId: r.volunteerRoleId,
-			workedOn: r.workedOn
+			workedOn: r.workedOn,
+			minutes: r.minutes,
+			roleIsSpecialized: r.roleIsSpecialized
 		}))
 	);
-
-	return {
-		...result,
-		rows: result.rows.map((r) => ({ ...r, uncleared: uncleared.has(r.id) }))
-	};
-});
+	return rows.map((r) => ({ ...r, exceptions: flags.get(r.id) ?? [] }));
+}
 
 export const getVolunteerStatusCounts = query(async () => {
 	await requireCapability('volunteer.read');
@@ -974,8 +978,8 @@ export const logHoursForMember = form(
 			mapDomainError(err);
 		}
 
-		// Approved on entry, so the pending count does not move — but the badge and the
-		// dashboard's close-out card can, and `refreshStaffQueue` covers all three.
+		// Approved on entry, so the pending count does not move; the hours table and
+		// the report can, and `refreshStaffQueue` covers them.
 		await refreshStaffQueue();
 		return { success: true };
 	}
@@ -2429,27 +2433,15 @@ export const getVolunteerWorklist = query(async () => {
 
 	const now = new Date();
 	const horizon = new Date(now.getTime() + WORKLIST_HORIZON_DAYS * DAY_MS);
-	const lookback = new Date(now.getTime() - CLOSE_OUT_LOOKBACK_DAYS * DAY_MS);
 
-	const [claims, unclosed, upcoming, hours, counts, lapsing, unscheduled, toConfirm, waitingCount] =
+	const [claims, upcoming, hours, counts, lapsing, unscheduled, toConfirm, waitingCount] =
 		await Promise.all([
 			listOutstandingClaims({}, now),
-			listUnclosedSignups({ since: lookback }, now),
 			listShifts({ from: now, to: horizon }),
 			listHourLogs({ status: 'pending' }, { page: 1, pageSize: WORKLIST_HOURS_PREVIEW }).then(
-				// Flagged the same way the full queue flags them, so the advisory warning does
-				// not appear only on the page somebody was already going to visit.
-				async (result) => {
-					const uncleared = await flagUnclearedLogs(
-						result.rows.map((r) => ({
-							id: r.id,
-							userId: r.userId,
-							volunteerRoleId: r.volunteerRoleId,
-							workedOn: r.workedOn
-						}))
-					);
-					return result.rows.map((r) => ({ ...r, uncleared: uncleared.has(r.id) }));
-				}
+				// Flagged the same way the full queue flags them, so the reason does not
+				// appear only on the page somebody was already going to visit.
+				(result) => withExceptions(result.rows)
 			),
 			getStatusCounts(),
 			listLapsingBeforeRosteredShift(now),
@@ -2495,9 +2487,6 @@ export const getVolunteerWorklist = query(async () => {
 		shortStaffedTotal: shortStaffed.length,
 		pendingHours: hours,
 		pendingHoursTotal: counts.pending,
-		/** Finished shifts whose claims never completed, so no hours were ever offered. */
-		closeOut: unclosed.slice(0, WORKLIST_PREVIEW),
-		closeOutTotal: unclosed.length,
 		lapsing: lapsing.slice(0, WORKLIST_PREVIEW),
 		lapsingTotal: lapsing.length,
 		/** Work orders waiting for a window, oldest first. */

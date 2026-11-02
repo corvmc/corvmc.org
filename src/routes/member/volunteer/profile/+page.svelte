@@ -122,7 +122,7 @@
 								<p class="mt-2 text-sm text-error">{log.reviewNotes}</p>
 							{/if}
 
-							{#if log.status !== 'approved'}
+							{#if log.memberEditable}
 								<div class="mt-2 flex flex-wrap gap-2">
 									<LogHoursAction
 										mode="fix"

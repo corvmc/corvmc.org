@@ -10,8 +10,8 @@
 	 * - **shift** — started from a worked shift that owes hours, so the role,
 	 *   date and duration are already known and the picker would be asking a
 	 *   question the button already answered.
-	 * - **fix** — a returned log being corrected. Same fields, filled in, and it
-	 *   resubmits as pending rather than editing an approved record.
+	 * - **fix** — a log the member is correcting. Same fields, filled in; the
+	 *   service classifies it again, as if it were new.
 	 */
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -82,10 +82,8 @@
 	{variant}
 	{size}
 	modalTitle={title}
-	submitLabel={mode === 'fix' ? 'Resubmit' : 'File it'}
-	successToast={mode === 'fix'
-		? 'Resubmitted. Staff will look again.'
-		: 'Filed. Staff review next.'}
+	submitLabel={mode === 'fix' ? 'Save' : 'File it'}
+	successToast={mode === 'fix' ? 'Saved' : 'Hours logged'}
 >
 	{#snippet form()}
 		{#if mode === 'fix'}
@@ -143,7 +141,7 @@
 			type="textarea"
 			maxlength={VOLUNTEER_DESCRIPTION_MAX}
 			value={mode === 'fix' ? log!.description : ''}
-			description="One sentence. Staff read this when reviewing."
+			description="One sentence."
 		/>
 	{/snippet}
 </Action>

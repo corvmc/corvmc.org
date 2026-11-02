@@ -1087,10 +1087,11 @@ So:
 - **Onboarding:** `volunteer-profile-service.ts` — the one-time name/phone/over-18 gate on
   `/member/volunteer/start`.
 - **Shifts:** `work-order-service.ts` + `volunteer-signup-service.ts`. A shift may name
-  the event it staffs. Only _confirmed_ signups get the reminder and the auto-complete.
+  the event it staffs. Only _confirmed_ signups get the reminder; claimed and confirmed
+  both auto-complete as worked once the shift ends (#1943).
   `claimShift(shiftId, userId, { assignedByStaff })` serves both the member's claim and the
   coordinator's assignment; `releaseSignup` is `cancelSignup` without the owner clause.
-- **The dashboard:** `listOutstandingClaims`, `listUnclosedSignups` and
+- **The dashboard:** `listOutstandingClaims` and
   `countVolunteerWorkWaiting` in the signup service, `listShortStaffedShifts` in the shift
   service, and `listLapsingBeforeRosteredShift` in the certification service — composed by
   `getVolunteerWorklist`. The sidebar badge reads `countVolunteerWorkWaiting` too, so the
