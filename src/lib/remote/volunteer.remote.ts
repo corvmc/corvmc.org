@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { historyArgs } from './_history';
-import { listAuditFeed } from '$lib/server/audit/audit-service';
+import { listAuditFeed } from '$lib/server/audit/audit-feed';
 import { listIncidentsFiledBy } from '$lib/server/incident/incident-service';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query } from '$app/server';

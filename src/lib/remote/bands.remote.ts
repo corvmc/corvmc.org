@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { historyArgs } from './_history';
-import { listAuditFeed } from '$lib/server/audit/audit-service';
+import { listAuditFeed } from '$lib/server/audit/audit-feed';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupKinds } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';

@@ -1,7 +1,7 @@
 import { countCommitteeUnfinished } from '$lib/server/volunteer/deliverables-service';
 import { z } from 'zod';
 import { historyArgs } from './_history';
-import { listAuditFeed } from '$lib/server/audit/audit-service';
+import { listAuditFeed } from '$lib/server/audit/audit-feed';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';

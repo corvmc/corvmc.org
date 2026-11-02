@@ -24,8 +24,7 @@ import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { captureException } from '$lib/server/sentry';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 import type { EntityRef, MemberRef } from '$lib/types/entity';
-import { feedLimit, type FeedPage } from '$lib/types/activity';
-import { auditFeedItem } from '$lib/utils/audit-display';
+import { feedLimit } from '$lib/types/activity';
 import type {
 	AuditAction,
 	AuditActor,
@@ -122,15 +121,6 @@ export async function listAuditEntriesForSubject(
 	const list = Array.isArray(subjects) ? subjects : [subjects];
 	const rows = (await auditSubjectQuery(list, limit + 1)) as AuditEntry[];
 	return { entries: rows.slice(0, limit), hasMore: rows.length > limit };
-}
-
-/** The same read as feed rows: what a record's History card renders. */
-export async function listAuditFeed(
-	subjects: AuditSubjectFilter | AuditSubjectFilter[],
-	opts: { limit?: number } = {}
-): Promise<FeedPage> {
-	const { entries, hasMore } = await listAuditEntriesForSubject(subjects, opts);
-	return { items: entries.map(auditFeedItem), hasMore };
 }
 
 export interface AuditLogFilters {

@@ -56,7 +56,7 @@ const svc = vi.hoisted(() => ({
 	importRoster: vi.fn(),
 	listAuditFeed: vi.fn()
 }));
-vi.mock('$lib/server/audit/audit-service', () => ({ listAuditFeed: svc.listAuditFeed }));
+vi.mock('$lib/server/audit/audit-feed', () => ({ listAuditFeed: svc.listAuditFeed }));
 vi.mock('$lib/server/group/roster-import-service', () => ({
 	importRoster: svc.importRoster,
 	parseRosterImport: () => ({ emails: ['a@example.com'], invalid: [], duplicates: 0 }),

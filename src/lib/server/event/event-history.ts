@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { eventListing } from '$lib/server/db/schema/event';
 import { production } from '$lib/server/db/schema/production';
-import { listAuditFeed, type AuditSubjectFilter } from '$lib/server/audit/audit-service';
+import type { AuditSubjectFilter } from '$lib/server/audit/audit-service';
+import { listAuditFeed } from '$lib/server/audit/audit-feed';
 import type { FeedPage } from '$lib/types/activity';
 
 /**
