@@ -5,7 +5,7 @@ import type { SQL } from 'drizzle-orm';
 /**
  * The incident log. What is worth pinning is that nothing is edited away: the
  * account is written once, follow-ups append, and reopening keeps the old
- * resolution as a note rather than overwriting it.
+ * resolution on its audit entry rather than overwriting it.
  */
 
 let selectResults: unknown[][] = [];
@@ -56,6 +56,11 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
+const recordAuditEntry = vi.fn();
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (...args: unknown[]) => recordAuditEntry(...args)
+}));
+
 const {
 	recordIncident,
 	fileShowIncident,
@@ -64,6 +69,7 @@ const {
 	addIncidentNote,
 	resolveIncident,
 	reopenIncident,
+	fitAuditText,
 	getIncident,
 	listIncidents,
 	IncidentNotFoundError,
@@ -80,6 +86,7 @@ beforeEach(() => {
 	updateValues = [];
 	insertValues = [];
 	whereArgs = [];
+	recordAuditEntry.mockReset();
 });
 
 describe('recordIncident', () => {
@@ -256,21 +263,50 @@ describe('resolveIncident', () => {
 });
 
 describe('reopenIncident', () => {
-	it('keeps the old resolution as a note instead of erasing it', async () => {
-		selectResults = [[{ id: 'inc-1', status: 'resolved', resolution: 'Moved the sub' }]];
+	it('keeps the old resolution on an audit entry, writing no note', async () => {
+		selectResults = [
+			[{ id: 'inc-1', status: 'resolved', resolution: 'Moved the sub', summary: 'Noise' }]
+		];
 		updateResults = [[{ id: 'inc-1', status: 'open' }]];
 
-		await reopenIncident('inc-1', staff);
+		await reopenIncident('inc-1');
 
-		expect(insertValues[0]).toMatchObject({ incidentId: 'inc-1', authorName: 'Pat Staff' });
-		expect(String(insertValues[0].body)).toContain('Moved the sub');
 		expect(updateValues[0]).toMatchObject({ status: 'open', resolution: null, resolvedAt: null });
+		expect(insertValues).toEqual([]);
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'incident.reopened',
+			subject: { type: 'incident', id: 'inc-1', label: 'Noise' },
+			details: { previousResolution: 'Moved the sub' }
+		});
+	});
+
+	it('records nothing when the reopen loses a race', async () => {
+		selectResults = [[{ id: 'inc-1', status: 'resolved', resolution: 'x', summary: 'Noise' }]];
+		updateResults = [[]];
+
+		await expect(reopenIncident('inc-1')).rejects.toThrow(IncidentStateError);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 
 	it('refuses one that is already open', async () => {
 		selectResults = [[{ id: 'inc-1', status: 'open' }]];
 
-		await expect(reopenIncident('inc-1', staff)).rejects.toThrow(IncidentStateError);
+		await expect(reopenIncident('inc-1')).rejects.toThrow(IncidentStateError);
+	});
+});
+
+describe('fitAuditText', () => {
+	it('keeps text that fits', () => {
+		expect(fitAuditText('Moved the sub')).toBe('Moved the sub');
+	});
+
+	it('cuts multi-byte text to under the audit details cap', () => {
+		const long = '\u{1F3B8}'.repeat(2000);
+		const fitted = fitAuditText(long);
+		expect(
+			new TextEncoder().encode(JSON.stringify({ previousResolution: fitted })).length
+		).toBeLessThan(4096);
+		expect(fitted.endsWith('…')).toBe(true);
 	});
 });
 

@@ -13,12 +13,14 @@
 	import { incidentCategoryLabels } from '$lib/config';
 	import {
 		getIncidentDetail,
+		getIncidentHistory,
 		acceptIncidentForm,
 		addIncidentNoteForm,
 		resolveIncidentForm,
 		reopenIncidentForm,
 		setIncidentRetainForm
 	} from '$lib/remote/incidents.remote';
+	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
 
 	let id = $derived(page.params.id!);
 	let incident = $derived(await getIncidentDetail(id));
@@ -143,7 +145,7 @@
 							action={reopenIncidentForm}
 							label="Reopen"
 							modalTitle="Reopen this incident"
-							confirm="The current resolution is kept as a note."
+							confirm="The current resolution is kept in its history."
 							successToast="Incident reopened"
 							size="sm"
 						>
@@ -177,11 +179,18 @@
 							field={retainFields.reason}
 							type="text"
 							label="Why"
-							description="Kept on the record as a note, e.g. an open insurance claim."
+							description="Kept in its history, e.g. an open insurance claim."
 						/>
 					{/snippet}
 				</Action>
 			</div>
 		</InfoCard>
+
+		<ActivityFeedCard
+			title="History"
+			query={(limit) => getIncidentHistory(limit ? { id, limit } : { id })}
+			toRow={feedItemRow}
+			empty={{ title: 'No recorded changes' }}
+		/>
 	</div>
 </PageContent>

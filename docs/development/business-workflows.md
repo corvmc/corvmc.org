@@ -1726,8 +1726,8 @@ comes back. Reading back is the list's status, kind and text filters.
   `incident.read`.
 - **Write:** `recordIncidentForm`, `addIncidentNoteForm`, `resolveIncidentForm`,
   `reopenIncidentForm`, behind `incident.record`, over `src/lib/server/incident/incident-service.ts`.
-- **Resolve** is a conditional update on `status = 'open'`; **reopen** writes the old resolution
-  as a note before clearing it.
+- **Resolve** is a conditional update on `status = 'open'`; **reopen** clears the old resolution
+  and writes it to an `incident.reopened` audit entry.
 
 ### Data touched
 

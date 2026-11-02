@@ -59,7 +59,6 @@ const { IncidentNotFoundError } = await import('./incident-service');
 
 const dialect = new SQLiteSyncDialect();
 const renderWhere = (i: number) => dialect.sqlToQuery(whereArgs[i] as SQL);
-const staff = { id: 'staff-1', name: 'Pat Staff' };
 
 beforeEach(() => {
 	deleteResults = [];
@@ -126,30 +125,35 @@ describe('sweepExpiredIncidents', () => {
 });
 
 describe('setIncidentRetain', () => {
-	it('marks the record retain and notes who did it and why', async () => {
-		updateResults = [[{ id: 'inc-1', retain: true }]];
+	it('marks the record retain and audits why, writing no note', async () => {
+		updateResults = [[{ id: 'inc-1', retain: true, summary: 'Cash box' }]];
 
-		await setIncidentRetain('inc-1', true, 'Open insurance claim', staff);
+		await setIncidentRetain('inc-1', true, ' Open insurance claim ');
 
 		expect(updateValues[0]).toMatchObject({ retain: true });
-		expect(insertValues[0]).toMatchObject({ incidentId: 'inc-1', authorName: 'Pat Staff' });
-		expect(String(insertValues[0].body)).toContain('Open insurance claim');
+		expect(insertValues).toEqual([]);
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'incident.retention_changed',
+			subject: { type: 'incident', id: 'inc-1', label: 'Cash box' },
+			details: { retain: true, reason: 'Open insurance claim' }
+		});
 	});
 
-	it('notes the release too, so the record says why it may now be deleted', async () => {
-		updateResults = [[{ id: 'inc-1', retain: false }]];
+	it('audits the release too, so the record says why it may now be deleted', async () => {
+		updateResults = [[{ id: 'inc-1', retain: false, summary: 'Cash box' }]];
 
-		await setIncidentRetain('inc-1', false, 'Claim settled', staff);
+		await setIncidentRetain('inc-1', false, 'Claim settled');
 
 		expect(updateValues[0]).toMatchObject({ retain: false });
-		expect(String(insertValues[0].body)).toContain('Claim settled');
+		expect(recordAuditEntry).toHaveBeenCalledWith(
+			expect.objectContaining({ details: { retain: false, reason: 'Claim settled' } })
+		);
 	});
 
 	it('throws for an incident that does not exist', async () => {
 		updateResults = [[]];
 
-		await expect(setIncidentRetain('nope', true, 'x', staff)).rejects.toThrow(
-			IncidentNotFoundError
-		);
+		await expect(setIncidentRetain('nope', true, 'x')).rejects.toThrow(IncidentNotFoundError);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 });

@@ -1,8 +1,8 @@
 import { and, eq, lt } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { incident, incidentNote } from '$lib/server/db/schema/incident';
+import { incident } from '$lib/server/db/schema/incident';
 import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { IncidentNotFoundError, type Actor } from './incident-service';
+import { IncidentNotFoundError, fitAuditText } from './incident-service';
 
 /**
  * Retention (#1468): an incident is deleted seven years after it happened
@@ -45,8 +45,8 @@ export async function sweepExpiredIncidents(now = new Date()): Promise<{ deleted
 	return { deleted: deleted.length };
 }
 
-/** Mark or release the retention hold. The reason goes on the record as a note. */
-export async function setIncidentRetain(id: string, retain: boolean, reason: string, staff: Actor) {
+/** Mark or release the retention hold. The reason goes on the audit entry. */
+export async function setIncidentRetain(id: string, retain: boolean, reason: string) {
 	const [row] = await db
 		.update(incident)
 		.set({ retain, updatedAt: new Date() })
@@ -54,12 +54,10 @@ export async function setIncidentRetain(id: string, retain: boolean, reason: str
 		.returning();
 	if (!row) throw new IncidentNotFoundError();
 
-	const verb = retain ? 'Marked retain' : 'Retention hold released';
-	await db.insert(incidentNote).values({
-		incidentId: id,
-		authorUserId: staff.id,
-		authorName: staff.name,
-		body: `${verb}: ${reason.trim()}`
+	await recordAuditEntry({
+		action: 'incident.retention_changed',
+		subject: { type: 'incident', id, label: row.summary },
+		details: { retain, reason: fitAuditText(reason.trim()) }
 	});
 	return row;
 }
