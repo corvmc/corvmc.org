@@ -616,6 +616,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/keys/door-poster",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/local-resources",
 		"panel": "staff"
 	},

@@ -8,6 +8,8 @@
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import { resolve } from '$app/paths';
 	import { Field } from '$lib/components/ui/Form';
 	import {
 		getAccessRegister,
@@ -50,6 +52,7 @@
 </script>
 
 <PageHeader title="Key Holders" subtitle="Space">
+	<Button href={resolve('/staff/keys/door-poster')} variant="ghost">Door poster</Button>
 	<Action
 		action={grantCodeForm}
 		label="Grant a door code"
