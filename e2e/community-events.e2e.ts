@@ -217,7 +217,7 @@ test.describe('starting a listing', () => {
 		await dialog.getByLabel('Start Time').fill('20:00');
 		await dialog.getByLabel('Venue').fill('The Whiteside');
 		await expect(dialog.getByLabel('Description')).toHaveCount(0);
-		await dialog.getByRole('button', { name: 'Save draft' }).click();
+		await dialog.getByRole('button', { name: 'Create Event', exact: true }).click();
 
 		await expect(page).toHaveURL(/\/member\/events\/[^/]+\/manage$/, {
 			timeout: 15000

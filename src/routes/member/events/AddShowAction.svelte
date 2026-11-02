@@ -19,7 +19,7 @@
 	label="Add a show"
 	modalTitle="Add a show"
 	maxWidth="max-w-md"
-	submitLabel="Save draft"
+	submitLabel="Create Event"
 	successToast="Draft saved"
 	variant="primary"
 	size="sm"
