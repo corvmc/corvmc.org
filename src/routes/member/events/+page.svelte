@@ -15,7 +15,6 @@
 	import { getPublicGigGuide } from '$lib/remote/calendar.remote';
 	import MyListingsSection from './MyListingsSection.svelte';
 	import AddShowAction from './AddShowAction.svelte';
-	import { resolve } from '$app/paths';
 	import type { CalendarEntry } from '$lib/types/calendar';
 
 	interface EventItem {
