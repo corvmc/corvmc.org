@@ -7,7 +7,7 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq } from 'drizzle-orm';
-import { queryDeviceHealth } from '$lib/server/lock/ultraloc-client';
+import { LOCK_MODE_PASSAGE, queryDeviceHealth } from '$lib/server/lock/ultraloc-client';
 import {
 	getLastLockJobRun,
 	reprovisionAccessFor,
@@ -58,6 +58,7 @@ export const getLockHealth = query(async () => {
 			lastRun,
 			online: health.online,
 			lockState: health.lockState,
+			passageMode: health.lockMode === LOCK_MODE_PASSAGE,
 			batteryLevel: health.batteryLevel
 		};
 	} catch (err) {

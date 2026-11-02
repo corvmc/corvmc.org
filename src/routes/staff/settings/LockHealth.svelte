@@ -44,6 +44,10 @@
 			<span class="text-subtle">
 				{health.lockState ?? 'unknown'} · battery {health.batteryLevel ?? '?'}/5
 			</span>
+			{#if health.passageMode}
+				<Badge variant="warning">Passage mode</Badge>
+				<span class="text-subtle">The lock will not relock on its own.</span>
+			{/if}
 		{:else}
 			<Badge variant="warning">Offline</Badge>
 			<span class="text-subtle">
