@@ -936,14 +936,19 @@ async function placeNewOrder(
 	header: { supplierName?: string; reference?: string; expectedAt: string },
 	lines: z.infer<typeof orderLinesSchema>
 ) {
-	const orderId = await createOrder({
-		supplierName: header.supplierName || undefined,
-		reference: header.reference || undefined,
-		expectedAt: calendarDate(header.expectedAt),
-		createdByUserId: requireUser().id,
-		placedAt: new Date(),
-		lines
-	});
+	let orderId: string;
+	try {
+		orderId = await createOrder({
+			supplierName: header.supplierName || undefined,
+			reference: header.reference || undefined,
+			expectedAt: calendarDate(header.expectedAt),
+			createdByUserId: requireUser().id,
+			placedAt: new Date(),
+			lines
+		});
+	} catch (err) {
+		mapDomainError(err);
+	}
 	void getRestockList().refresh();
 	for (const l of lines) void getStaffItemDetail(l.itemId).refresh();
 	return orderId;
@@ -968,11 +973,7 @@ export const markOrdered = form(
 			invalid(issue.lines('Pick at least one thing to order.'));
 		}
 
-		try {
-			return { success: true, orderId: await placeNewOrder(data, lines) };
-		} catch (err) {
-			mapDomainError(err);
-		}
+		return { success: true, orderId: await placeNewOrder(data, lines) };
 	}
 );
 
@@ -994,18 +995,14 @@ export const markItemOrdered = form(
 			quantityOrdered: number;
 			unitCostCents?: number;
 		};
-		try {
-			const orderId = await placeNewOrder(data, [
-				{
-					itemId: data.itemId,
-					quantityOrdered: data.quantityOrdered,
-					unitCostCents: data.unitCostCents
-				}
-			]);
-			return { success: true, orderId };
-		} catch (err) {
-			mapDomainError(err);
-		}
+		const orderId = await placeNewOrder(data, [
+			{
+				itemId: data.itemId,
+				quantityOrdered: data.quantityOrdered,
+				unitCostCents: data.unitCostCents
+			}
+		]);
+		return { success: true, orderId };
 	}
 );
 
