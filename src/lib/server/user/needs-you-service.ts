@@ -145,7 +145,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			id: 'profile-incomplete',
 			kind: 'profile-incomplete',
 			title: 'Add your instruments or a short bio',
-			detail: 'So other members can find you in the directory',
+			detail: "You're not listed in the directory until you do",
 			href: resolve('/member/profile'),
 			label: 'Edit profile',
 			dueAt: null,

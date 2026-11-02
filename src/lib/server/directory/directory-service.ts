@@ -4,8 +4,10 @@ import {
 	type DirectoryTagKind,
 	type LookingFor
 } from '$lib/server/db/schema/directory';
-import { groupMember } from '$lib/server/db/schema/group';
-import { and, asc, eq, sql, type SQLWrapper } from 'drizzle-orm';
+import { group, groupMember } from '$lib/server/db/schema/group';
+import { user } from '$lib/server/db/schema/authentication';
+import { and, asc, desc, eq, sql, type SQLWrapper } from 'drizzle-orm';
+import type { DirectorySort } from '$lib/utils/directory-browse';
 import { containsLiteral, startsWithLiteral } from '$lib/server/db/like';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
@@ -26,9 +28,11 @@ export type MemberFilters = {
 	availableForHire?: boolean;
 	teachesLessons?: boolean;
 	openToCollaboration?: boolean;
+	sort?: DirectorySort;
 };
 
 export type BandFilters = {
+	sort?: DirectorySort;
 	search?: string;
 	genres?: string[];
 	lookingForMembers?: boolean;
@@ -100,6 +104,47 @@ type MemberWhere = NonNullable<
 	NonNullable<Parameters<typeof db.query.directoryEntry.findMany>[0]>['where']
 >;
 
+/** SQLite's `trim()` strips only spaces unless told otherwise; JS `trim()` strips these too. */
+const BLANK = sql`char(32, 9, 10, 13)`;
+
+/**
+ * "This member has filled in something": a tagline, a bio, a profile photo
+ * (`user.image`), or at least one tag of any kind. The one definition of
+ * complete, shared by both directory listings and by `isProfileComplete`, so the
+ * dashboard nudge and the directory cannot disagree about who is hidden.
+ */
+function completeProfileCondition(): MemberWhere {
+	return {
+		RAW: (table: { id: unknown; userId: unknown; tagline: unknown; bio: unknown }) =>
+			sql`(trim(coalesce(${table.tagline}, ''), ${BLANK}) <> '' OR trim(coalesce(${table.bio}, ''), ${BLANK}) <> '' OR EXISTS (SELECT 1 FROM ${user} WHERE ${user.id} = ${table.userId} AND trim(coalesce(${user.image}, ''), ${BLANK}) <> '') OR EXISTS (SELECT 1 FROM ${directoryTag} WHERE ${directoryTag.entryId} = ${table.id}))`
+	} as MemberWhere;
+}
+
+/**
+ * Newest first by the member's join date (`user.createdAt`, the card's "Member
+ * since"), or A–Z. The id breaks ties so "Show more" pages through a stable order.
+ */
+function memberOrder(sort: DirectorySort = 'newest') {
+	return (t: { name: SQLWrapper; userId: SQLWrapper }) =>
+		sort === 'name'
+			? [asc(t.name), asc(t.userId)]
+			: [
+					desc(sql`(SELECT ${user.createdAt} FROM ${user} WHERE ${user.id} = ${t.userId})`),
+					desc(t.userId)
+				];
+}
+
+/** Bands' twin of `memberOrder`, by the band's creation date. */
+function bandOrder(sort: DirectorySort = 'newest') {
+	return (t: { name: SQLWrapper; groupId: SQLWrapper }) =>
+		sort === 'name'
+			? [asc(t.name), asc(t.groupId)]
+			: [
+					desc(sql`(SELECT ${group.createdAt} FROM ${group} WHERE ${group.id} = ${t.groupId})`),
+					desc(t.groupId)
+				];
+}
+
 /**
  * Members read `directory_entry` too, on the same predicate as bands with
  * `userId` in place of `groupId`. That symmetry is the point: the two halves are
@@ -112,7 +157,8 @@ type MemberWhere = NonNullable<
  */
 function memberWhereConditions(
 	visibility: 'members' | 'public',
-	filters?: MemberFilters
+	filters?: MemberFilters,
+	{ directory = false }: { directory?: boolean } = {}
 ): MemberWhere {
 	const conditions: MemberWhere[] = [
 		{ userId: { isNotNull: true } },
@@ -147,6 +193,10 @@ function memberWhereConditions(
 	if (filters?.openToCollaboration) {
 		conditions.push({ openToCollaboration: true });
 	}
+
+	// The two directory listings only. The composer search, matches and a direct
+	// profile link (band rosters, bylines) still reach a blank profile.
+	if (directory) conditions.push(completeProfileCondition());
 
 	return { AND: conditions };
 }
@@ -237,9 +287,9 @@ const memberUserWith = {
 /** Members-only directory — all active, non-opted-out members */
 export async function listMembers(filters?: MemberFilters) {
 	const rows = await db.query.directoryEntry.findMany({
-		where: memberWhereConditions('members', filters),
+		where: memberWhereConditions('members', filters, { directory: true }),
 		with: { tags: true, user: memberUserWith },
-		orderBy: { name: 'asc' },
+		orderBy: memberOrder(filters?.sort),
 		columns: memberColumns
 	});
 	return rows.map(mapMemberRow);
@@ -284,9 +334,9 @@ export async function searchDirectoryMembers(search: string, viewerId: string, l
 /** Public directory — only visibility = 'public' */
 export async function listPublicMembers(filters?: MemberFilters) {
 	const rows = await db.query.directoryEntry.findMany({
-		where: memberWhereConditions('public', filters),
+		where: memberWhereConditions('public', filters, { directory: true }),
 		with: { tags: true, user: memberUserWith },
-		orderBy: { name: 'asc' },
+		orderBy: memberOrder(filters?.sort),
 		columns: memberColumns
 	});
 	return rows.map(mapMemberRow);
@@ -297,27 +347,16 @@ export async function listPublicMembers(filters?: MemberFilters) {
  * the directory. New accounts are directory-visible by default, so without
  * something like this they appear as a card with nothing on it but a name.
  *
- * The bar is deliberately low — one instrument is enough — because this backs an
- * ambient dashboard nudge, and a nudge that survives a genuine effort to answer
- * it is worse than no nudge. Kept here, next to the directory queries, so a
- * future "hide blank profiles from the directory" change can reuse the same
- * definition rather than inventing a second one.
+ * The bar is deliberately low — one instrument is enough. It is also the bar for
+ * being listed at all: this reads `completeProfileCondition`, the same predicate
+ * both directory listings carry, so the nudge and the directory agree.
  */
 export async function isProfileComplete(userId: string): Promise<boolean> {
 	const row = await db.query.directoryEntry.findFirst({
-		where: { userId },
-		columns: { tagline: true, bio: true },
-		with: {
-			tags: { columns: { kind: true }, limit: 1 },
-			user: { columns: { image: true } }
-		}
+		where: { AND: [{ userId }, completeProfileCondition()] },
+		columns: { id: true }
 	});
-	if (!row) return false;
-
-	const hasText = (v: string | null | undefined) => !!v && v.trim().length > 0;
-	return (
-		hasText(row.tagline) || hasText(row.bio) || hasText(row.user?.image) || row.tags.length > 0
-	);
+	return !!row;
 }
 
 /** Single member profile */
@@ -438,7 +477,7 @@ export async function listBands(filters?: BandFilters) {
 	const rows = await db.query.directoryEntry.findMany({
 		where: bandWhereConditions('members', filters),
 		with: { tags: true, group: bandGroupWith },
-		orderBy: { name: 'asc' },
+		orderBy: bandOrder(filters?.sort),
 		columns: bandColumns
 	});
 	return rows.map(mapBandRow);
@@ -449,7 +488,7 @@ export async function listPublicBands(filters?: BandFilters) {
 	const rows = await db.query.directoryEntry.findMany({
 		where: bandWhereConditions('public', filters),
 		with: { tags: true, group: bandGroupWith },
-		orderBy: { name: 'asc' },
+		orderBy: bandOrder(filters?.sort),
 		columns: bandColumns
 	});
 	return rows.map(mapBandRow);
@@ -745,12 +784,14 @@ export async function getPublicDirectory(filters: PublicDirectoryFilters = {}) {
 				lookingForBand: filters.lookingForBand,
 				availableForHire: filters.availableForHire,
 				teachesLessons: filters.teachesLessons,
-				openToCollaboration: filters.openToCollaboration
+				openToCollaboration: filters.openToCollaboration,
+				sort: filters.sort
 			}),
 			listPublicBands({
 				search: filters.search,
 				genres: filters.genres,
-				lookingForMembers: filters.lookingForMembers
+				lookingForMembers: filters.lookingForMembers,
+				sort: filters.sort
 			})
 		]);
 

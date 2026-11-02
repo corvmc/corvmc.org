@@ -27,6 +27,7 @@ import 'dotenv/config';
 import { eq, inArray } from 'drizzle-orm';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../../src/lib/server/db/schema/authorization';
+import { directoryEntry } from '../../src/lib/server/db/schema/directory';
 import { scryptHash } from './seed-pay-reservation';
 import { withPlatformDb } from './platform-db';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
@@ -75,6 +76,7 @@ export async function seedStaffUser(): Promise<void> {
 	await withPlatformDb(async (db) => {
 		// Clean slate. Delete explicitly (FKs may be disabled on local D1).
 		await db.delete(modelHasRole).where(inArray(modelHasRole.userId, ALL_IDS));
+		await db.delete(directoryEntry).where(inArray(directoryEntry.userId, ALL_IDS));
 		await db.delete(account).where(inArray(account.userId, ALL_IDS));
 		await db.delete(user).where(inArray(user.id, ALL_IDS));
 
@@ -123,6 +125,14 @@ export async function seedStaffUser(): Promise<void> {
 			updatedAt: now
 		});
 		await db.insert(modelHasRole).values({ roleId: memberRole.id, userId: SEED_TARGET_ID });
+		// The directory lists only complete profiles, and the directory spec looks
+		// this member up by name. A tagline is the cheapest thing that completes it.
+		await db.insert(directoryEntry).values({
+			userId: SEED_TARGET_ID,
+			name: SEED_TARGET_NAME,
+			tagline: 'Plays bass',
+			visibility: 'members'
+		});
 
 		// Filler members so the list paginates. Inserted in small chunks: D1 caps a
 		// statement at 100 bound parameters, and the `user` table binds ~13 per row,

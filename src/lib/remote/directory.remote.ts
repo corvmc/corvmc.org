@@ -58,6 +58,7 @@ import { eq, and, sql, isNull } from 'drizzle-orm';
 import { profileLinkSchema } from '$lib/server/db/schema/authentication';
 import type { ProfileLink } from '$lib/server/db/schema/authentication';
 import { jsonArrayField } from '$lib/utils/zod-json';
+import { directorySorts } from '$lib/utils/directory-browse';
 import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
 import { publicContactStatus } from '$lib/server/instructor/instructor-directory-service';
 
@@ -91,6 +92,7 @@ const tagsField = (message: string) => jsonArrayField(z.string(), message);
 
 const filtersSchema = z.object({
 	search: z.string().optional(),
+	sort: z.enum(directorySorts).optional(),
 	instruments: arrayFilter,
 	genres: arrayFilter,
 	skills: arrayFilter,
@@ -132,29 +134,39 @@ const filtersSchema = z.object({
  * of folding them in. It buys nothing to split them back out: the request happens anyway.
  */
 export const getMemberDirectory = query(filtersSchema, async (filters) => {
-	requireUser();
+	const viewer = requireUser();
 
 	// The services rather than `getDirectoryMembers`: `filtersSchema` has `.transform()` steps,
 	// so a query's parsed output is not its own input type and cannot be handed straight on.
-	const [members, instructors, instrumentSuggestions, genreSuggestions, skillSuggestions] =
-		await Promise.all([
-			listMembers({
-				search: filters.search,
-				instruments: filters.instruments,
-				genres: filters.genres,
-				skills: filters.skills,
-				lookingForBand: filters.lookingForBand,
-				availableForHire: filters.availableForHire,
-				teachesLessons: filters.teachesLessons,
-				openToCollaboration: filters.openToCollaboration
-			}),
-			// The instructor record, not the self-declared `teachesLessons` flag: the
-			// listing's own gates (active, accepting students, visible) decide who counts.
-			filters.teachesAtCollective ? listInstructors('members') : null,
-			getInstrumentSuggestions(),
-			getGenreSuggestions(),
-			getSkillSuggestions()
-		]);
+	const [
+		members,
+		instructors,
+		instrumentSuggestions,
+		genreSuggestions,
+		skillSuggestions,
+		viewerComplete,
+		viewerVisibility
+	] = await Promise.all([
+		listMembers({
+			sort: filters.sort,
+			search: filters.search,
+			instruments: filters.instruments,
+			genres: filters.genres,
+			skills: filters.skills,
+			lookingForBand: filters.lookingForBand,
+			availableForHire: filters.availableForHire,
+			teachesLessons: filters.teachesLessons,
+			openToCollaboration: filters.openToCollaboration
+		}),
+		// The instructor record, not the self-declared `teachesLessons` flag: the
+		// listing's own gates (active, accepting students, visible) decide who counts.
+		filters.teachesAtCollective ? listInstructors('members') : null,
+		getInstrumentSuggestions(),
+		getGenreSuggestions(),
+		getSkillSuggestions(),
+		isProfileComplete(viewer.id),
+		getMyDirectoryVisibility()
+	]);
 
 	const teacherIds = instructors ? new Set(instructors.map((i) => i.userId)) : null;
 
@@ -162,13 +174,29 @@ export const getMemberDirectory = query(filtersSchema, async (filters) => {
 		members: teacherIds ? members.filter((m) => teacherIds.has(m.id)) : members,
 		instrumentSuggestions,
 		genreSuggestions,
-		skillSuggestions
+		skillSuggestions,
+		// Why the viewer is missing from this list, if they are; drives the prompt.
+		viewerHiddenBecause: hiddenBecause(viewerVisibility, viewerComplete)
 	};
 });
+
+/**
+ * A member is left out for opting out, or for having nothing on their profile.
+ * No entry at all (`visibility` null, e.g. a staff account) is not a member to prompt.
+ */
+function hiddenBecause(
+	visibility: string | null,
+	complete: boolean
+): 'hidden' | 'incomplete' | null {
+	if (visibility === null) return null;
+	if (visibility === 'hidden') return 'hidden';
+	return complete ? null : 'incomplete';
+}
 
 export const getDirectoryMembers = query(filtersSchema, async (filters) => {
 	requireUser();
 	return listMembers({
+		sort: filters.sort,
 		search: filters.search,
 		instruments: filters.instruments,
 		genres: filters.genres,
@@ -185,6 +213,7 @@ export const getMemberBandDirectory = query(filtersSchema, async (filters) => {
 	requireUser();
 	const [bands, genreSuggestions] = await Promise.all([
 		listBands({
+			sort: filters.sort,
 			search: filters.search,
 			genres: filters.genres,
 			lookingForMembers: filters.lookingForMembers
@@ -274,6 +303,7 @@ export const getDirectoryBand = query(z.string(), async (slug) => {
 
 const publicFiltersSchema = z.object({
 	search: z.string().optional(),
+	sort: z.enum(directorySorts).optional(),
 	instruments: arrayFilter,
 	genres: arrayFilter,
 	lookingForBand: z
@@ -793,13 +823,15 @@ export const getUserDirectoryProfile = query(z.string(), async (userId) => {
  * one read — and it keeps the layout free to pass `user` to the header as a plain prop.
  */
 export const getPublicDirectoryPage = query(z.void(), async () => {
-	const [directory, viewer, visibility] = await Promise.all([
+	const { locals } = getRequestEvent();
+	const [directory, viewer, visibility, complete] = await Promise.all([
 		getPublicDirectory({}),
 		getMe(),
-		getMyDirectoryVisibility()
+		getMyDirectoryVisibility(),
+		locals.user ? isProfileComplete(locals.user.id) : false
 	]);
 
-	return { directory, viewer, visibility };
+	return { directory, viewer, visibility, complete };
 });
 
 /**
