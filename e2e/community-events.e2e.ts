@@ -184,46 +184,74 @@ test.describe('deleting an event', () => {
 });
 
 /**
- * The new-listing form.
- *
- * A half-written listing is the common case — the member knows the band and the
- * date and goes looking for the address. Leaving with it is what #905 filed:
- * the page threw the draft away silently, while `/member/profile` and
- * `/member/account` both stop on the same move.
+ * Adding a show: a modal asking for what the listing needs to exist, then the
+ * manage page for the rest (#1825). A half-written listing is the common case,
+ * so closing the modal with something typed asks first (#905).
  */
 test.describe('starting a listing', () => {
-	test('leaving a part-written listing asks before discarding it', async ({ page }) => {
-		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
-
-		// The whole attempt retries, for the hydration race `ticket-purchase.e2e.ts`
-		// documents: the form is server-rendered, so typing before Svelte attaches
-		// leaves it clean, the breadcrumb simply navigates, and the assertion waits
-		// out its budget on a dialog nothing opened. Each attempt starts over.
+	async function openAddShow(page: Page) {
+		// Retried for the hydration race `ticket-purchase.e2e.ts` documents: a
+		// click before Svelte attaches opens nothing.
 		await expect(async () => {
-			await page.goto('/member/events/submit');
-			await page.getByLabel('Title').fill('Paper Wolves at a house show');
-			await page
-				.getByRole('navigation', { name: 'Breadcrumb' })
-				.getByRole('link', { name: 'Events' })
-				.click();
-			await expect(page.getByRole('heading', { name: 'Unsaved changes' })).toBeVisible({
-				timeout: 2000
-			});
+			await page.goto('/member/events');
+			await page.getByRole('button', { name: 'Add a show' }).first().click();
+			await expect(page.getByRole('dialog')).toBeVisible({ timeout: 2000 });
 		}).toPass({ timeout: 20000 });
+		return page.getByRole('dialog');
+	}
 
-		// Keep editing leaves the member where they were, with what they typed.
-		await page.getByRole('button', { name: 'Keep editing' }).click();
-		await expect(page).toHaveURL(/\/member\/events\/submit/);
+	test('a show starts from four fields and lands on its manage page', async ({ page }) => {
+		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
+		const dialog = await openAddShow(page);
+
+		const date = new Date();
+		date.setDate(date.getDate() + 30);
+		const ymd = [
+			date.getFullYear(),
+			String(date.getMonth() + 1).padStart(2, '0'),
+			String(date.getDate()).padStart(2, '0')
+		].join('-');
+
+		await dialog.getByLabel('Title').fill('Paper Wolves at a house show');
+		await dialog.getByLabel('Date').fill(ymd);
+		await dialog.getByLabel('Start Time').fill('20:00');
+		await dialog.getByLabel('Venue').fill('The Whiteside');
+		await expect(dialog.getByLabel('Description')).toHaveCount(0);
+		await dialog.getByRole('button', { name: 'Save draft' }).click();
+
+		await expect(page).toHaveURL(/\/member\/events\/[^/]+\/manage$/, {
+			timeout: 15000
+		});
 		await expect(page.getByLabel('Title')).toHaveValue('Paper Wolves at a house show');
+		await expect(page.getByLabel('Description')).toBeVisible();
 	});
 
-	test('the description field is named by its label, not its placeholder', async ({ page }) => {
+	test('closing a part-written show asks before discarding it', async ({ page }) => {
+		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
+		const dialog = await openAddShow(page);
+
+		await dialog.getByLabel('Title').fill('Paper Wolves at a house show');
+		await dialog.getByRole('button', { name: 'Close' }).click();
+		await expect(dialog.getByText('You have unsaved changes.')).toBeVisible();
+
+		// Keep editing gives back exactly what was typed.
+		await dialog.getByRole('button', { name: 'Keep editing' }).click();
+		await expect(dialog.getByLabel('Title')).toHaveValue('Paper Wolves at a house show');
+	});
+
+	test('the description field is named by its label', async ({ page }) => {
 		// A custom-input FormField is only handed the caption's id through the
 		// `input` snippet. Passed as children instead, the caption becomes a
-		// `<legend>`, and a screen reader reads the placeholder as the field's name.
+		// `<legend>` and the textarea has no accessible name at all.
 		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
-		await page.goto('/member/events/submit');
+		await page.goto(`/member/events/${SEED_CE_DRAFT_ID}/manage`);
 
 		await expect(page.getByLabel('Description')).toBeVisible();
+	});
+
+	test('the old submit address lands on the Events page', async ({ page }) => {
+		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
+		await page.goto('/member/events/submit');
+		await expect(page).toHaveURL(/\/member\/events$/);
 	});
 });

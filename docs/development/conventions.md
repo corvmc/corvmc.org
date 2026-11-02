@@ -46,7 +46,9 @@ When building a new feature, work through these phases in order:
    (max lengths, max item counts).
 4. **Routes & UI** — build pages using [ui-patterns.md](ui-patterns.md). Data access via
    remote functions (`query()`/`form()` in `src/lib/remote/`). Add nav links in the
-   relevant layout (member / band / staff).
+   relevant layout (member / band / staff). A create flow asks only for what the record needs
+   to exist and then lands on its edit page —
+   [ui-patterns](ui-patterns.md#create-forms-ask-only-for-what-the-record-needs).
 5. ~~**Seed data**~~ — **do this with step 2, as soon as the schema settles.** Kept numbered
    here only so the steps below keep their numbers.
 6. **Tests** — write tests that describe **intended behavior**, not the current

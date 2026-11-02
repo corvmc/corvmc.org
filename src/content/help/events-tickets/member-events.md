@@ -38,6 +38,9 @@ not for booking the CMC space; that's a
 
 A few things worth knowing:
 
+- **You start with the name, date, start time and venue.** Everything else —
+  description, who's playing, poster, tickets — goes on the listing's page,
+  which opens once you save.
 - **Nothing goes public until you publish it.** Saving gives you a draft only
   you can see, so you can come back and finish it later.
 - **You don't need the end time.** Leave it blank if you don't know when the

@@ -828,7 +828,7 @@ on a bill and have it appear on that band's own profile without their say-so.
   for the poster-forward list and `getPublicCalendar({month})` for the mini-calendar
   date-jumper. Both read across all three sources; `idx_event_source` on
   (`source`, `status`, `startsAt`) is the index they are written for.
-- **Member authoring:** `/member/events/submit` and `/member/events/[id]/manage` →
+- **Member authoring:** the Add a show modal on `/member/events`, then `/member/events/[id]/manage` →
   `community-events.remote.ts` → `event/community-event-service.ts`:
   `createCommunityEvent()` (always a draft), `updateCommunityEvent()`, then either
   `publishCommunityEvent()` — which checks standing and routes to `visible` or a pending

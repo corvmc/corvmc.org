@@ -227,7 +227,7 @@ test.describe('inventory', () => {
 		await expect(nav.getByRole('link', { name: 'Equipment', exact: true })).toBeVisible();
 
 		// The child only renders once the section is open — `NavCollapsible` keys
-		// that off the path, the same way "Add a Show" hides under Events. So it
+		// that off the path. So it
 		// is checked from inside the section rather than from the dashboard.
 		await page.goto('/member/equipment');
 		await expect(nav.getByRole('link', { name: 'My Loans' })).toBeVisible();

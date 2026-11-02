@@ -7,7 +7,6 @@
 		IconAddressBook,
 		IconTool,
 		IconPackage,
-		IconPlus,
 		IconSearch,
 		IconHelp,
 		IconMetronome,
@@ -81,7 +80,6 @@
 		dashboard: IconLayoutDashboard,
 		reservations: IconMetronome,
 		events: IconCalendarEvent,
-		'events-submit': IconPlus,
 		directory: IconAddressBook,
 		classifieds: IconSpeakerphone,
 		// Matches the staff panel's Inventory glyph, so the same thing looks the

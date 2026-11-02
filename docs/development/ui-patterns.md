@@ -1451,6 +1451,27 @@ Brand ink is `text-cmc-navy` / `text-cmc-teal` / `text-cmc-orange` — never an 
 
 Edit/detail views remain full pages at `[id]/`.
 
+### Create forms ask only for what the record needs
+
+The create modal carries only the fields the record cannot exist without, and on success it
+redirects to the record's edit or detail page, where every other field lives. "Cannot exist
+without" means two things:
+
+- what the remote's schema refuses to accept it without, and
+- any field the edit form marks `required`. Leaving one of those out of creation makes the
+  member's first save on the edit page fail on a field they were never asked for.
+
+Never front-load optional enrichment — description, tags, lineup, poster, pricing, recurrence —
+into creation. Whether a minimally created record is visible straight away is the domain's call;
+a draft or a staff-only record makes the question moot.
+
+| Flow                 | Asks for                         | Lands on                        |
+| -------------------- | -------------------------------- | ------------------------------- |
+| Staff Create Listing | title, kind, run by, date, times | `/staff/events/[id]?edit=1`     |
+| Group New show       | name, date, starts, ends         | `/staff/events/[id]/production` |
+| Band Create Event    | title, date, start time          | `/band/[slug]/events/[id]`      |
+| Member Add a show    | title, date, start time, venue   | `/member/events/[id]/manage`    |
+
 ## CSS conventions
 
 - Buttons are `<Button variant size>` — never a raw `<button class="btn …">` or a `class="btn-ghost btn-sm"` string. The same goes for `Action`, `SubmitButton` and the `*Action` wrappers.

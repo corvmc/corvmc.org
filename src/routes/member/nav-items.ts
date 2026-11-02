@@ -37,7 +37,6 @@ export type MemberNavKey =
 	| 'messages'
 	| 'reservations'
 	| 'events'
-	| 'events-submit'
 	| 'directory'
 	| 'classifieds'
 	| 'equipment'
@@ -84,10 +83,7 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 		{
 			key: 'events',
 			label: 'Events',
-			href: resolve('/member/events'),
-			children: [
-				{ key: 'events-submit', label: 'Add a Show', href: resolve('/member/events/submit') }
-			]
+			href: resolve('/member/events')
 		},
 		{ key: 'directory', label: 'Directory', href: resolve('/member/directory') }
 	];
