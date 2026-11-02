@@ -127,6 +127,35 @@ export async function revealPoolCode(
 	return { ...code, revealedAt: now };
 }
 
+/** The booking's live code, without claiming one. */
+export async function poolCodeFor(reservationId: string): Promise<LockFallbackCode | null> {
+	return heldBy(reservationId);
+}
+
+/**
+ * At check-out: an unrevealed code goes back to the pool now, and a revealed
+ * one is sent its delete. `removedAt` still waits for the daily job to see it
+ * gone, since an offline lock only queues the delete.
+ */
+export async function settleBookingCode(reservationId: string, errors: string[]): Promise<void> {
+	const held = await heldBy(reservationId);
+	if (!held) return;
+
+	if (!held.revealedAt) {
+		await db
+			.update(lockFallbackCode)
+			.set({ claimedByReservationId: null, claimedAt: null })
+			.where(and(eq(lockFallbackCode.id, held.id), isNull(lockFallbackCode.revealedAt)));
+		return;
+	}
+	if (!held.lockAccessId) return;
+	try {
+		await removeTemporaryUser(Number(held.lockAccessId));
+	} catch (err) {
+		errors.push(`Could not remove the booking's door code: ${(err as Error).message}`);
+	}
+}
+
 /** One email a day while the pool is empty, not one per page load. */
 async function alertPoolEmpty(now: Date): Promise<void> {
 	try {

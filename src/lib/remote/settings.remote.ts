@@ -119,7 +119,10 @@ export const getOrientationSettings = query(async () => {
 export const getVenueSettings = query(async () => {
 	await requireCapability('settings.read');
 	const raw = await getConfigsByPrefix('venue');
-	return { consoleChannels: Number(raw.consoleChannels ?? 0) };
+	return {
+		consoleChannels: Number(raw.consoleChannels ?? 0),
+		checkoutTasks: parseOrientationTasks(String(raw.checkoutTasks ?? ''))
+	};
 });
 
 export const getIntegrationSettings = query(async () => {
@@ -385,14 +388,21 @@ export const updateOrientationSettings = form(orientationSchema, async (raw) => 
 // ---------------------------------------------------------------------------
 
 const venueSettingsSchema = z.object({
-	consoleChannels: z.string().regex(/^\d+$/, 'Whole channels, digits only').transform(Number)
+	consoleChannels: z.string().regex(/^\d+$/, 'Whole channels, digits only').transform(Number),
+	checkoutTasks: z.string().max(2000).optional()
 });
 
 export const updateVenueSettings = form(venueSettingsSchema, async (raw) => {
 	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof venueSettingsSchema>;
 
-	await updateSiteConfigs([{ key: 'venue.consoleChannels', value: data.consoleChannels }]);
+	const checkoutTasks = parseOrientationTasks(data.checkoutTasks ?? '');
+	if (checkoutTasks.length > 12) error(422, 'At most 12 checklist items.');
+
+	await updateSiteConfigs([
+		{ key: 'venue.consoleChannels', value: data.consoleChannels },
+		{ key: 'venue.checkoutTasks', value: checkoutTasks.join('\n') }
+	]);
 
 	void getStaffSettingsPage().refresh();
 

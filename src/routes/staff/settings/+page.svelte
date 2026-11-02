@@ -656,6 +656,13 @@
 								placeholder="16"
 							/>
 						</div>
+						<FormField
+							name="checkoutTasks"
+							label="Leaving checklist"
+							type="textarea"
+							description="Shown at check-out on the door page. One item per line."
+							value={venue.checkoutTasks.join('\n')}
+						/>
 					</CardBody>
 				</Card>
 			</Form>
