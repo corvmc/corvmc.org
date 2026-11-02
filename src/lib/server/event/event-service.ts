@@ -1531,7 +1531,8 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 	await cancelProductionsForEvent(eventId, userId, openBefore);
 	await callOffShifts(eventId, userId);
 
-	await detachSlot('event_listing', eventId, 'poster');
+	// The poster stays attached: a cancelled listing still shows on the public
+	// calendar, marked cancelled (#2180).
 
 	// Capture ticket holders before voiding their tickets (the query below
 	// filters on live statuses), then mark the tickets cancelled so they can't

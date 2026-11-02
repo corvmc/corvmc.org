@@ -855,14 +855,12 @@ describe('EventService', () => {
 			await expect(cancel('evt-1', 'staff-1')).resolves.toBeUndefined();
 		});
 
-		it('releases the poster slot without deleting the object', async () => {
-			// A recurring series' occurrences share one poster object, so cancelling
-			// one must not take the others' image with it. See media-spec.md.
+		it('keeps the poster: a cancelled listing still shows on the calendar (#2180)', async () => {
 			selectResult = [{ ...mockEventRow, status: 'draft', posterKey: 'events/posters/evt-1.jpg' }];
 
 			await cancel('evt-1', 'staff-1');
 
-			expect(detachSlot).toHaveBeenCalledWith('event_listing', 'evt-1', 'poster');
+			expect(detachSlot).not.toHaveBeenCalled();
 			expect(deleteObject).not.toHaveBeenCalled();
 		});
 
