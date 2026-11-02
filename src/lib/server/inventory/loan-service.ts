@@ -692,7 +692,8 @@ export async function listLoans(opts: ListLoansOptions = {}, pagination: Paginat
 		.innerJoin(user, eq(inventoryLoan.userId, user.id))
 		.leftJoin(inventoryItem, eq(inventoryLoan.itemId, inventoryItem.id))
 		.where(where)
-		.orderBy(desc(inventoryLoan.createdAt), desc(inventoryLoan.id))
+		// `created_at` is whole seconds and `id` random: rowid keeps two same-second loans in write order.
+		.orderBy(desc(inventoryLoan.createdAt), desc(sql`${inventoryLoan}.rowid`))
 		.$dynamic();
 
 	const countQ = db

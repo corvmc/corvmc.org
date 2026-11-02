@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { stockMovement } from '$lib/server/db/schema/inventory';
@@ -58,7 +58,12 @@ export async function listMovementFeed(
 				? eq(stockMovement.itemId, scope.itemId)
 				: eq(stockMovement.assetId, scope.assetId)
 		)
-		.orderBy(desc(stockMovement.occurredAt), desc(stockMovement.createdAt), desc(stockMovement.id))
+		// Both timestamps are whole seconds and `id` is random: rowid keeps the order rows were written.
+		.orderBy(
+			desc(stockMovement.occurredAt),
+			desc(stockMovement.createdAt),
+			desc(sql`${stockMovement}.rowid`)
+		)
 		.limit(limit + 1);
 	const items = rows.slice(0, limit).map((r) => ({
 		kind: 'movement' as const,

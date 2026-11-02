@@ -14,7 +14,7 @@ vi.mock('$lib/server/contractor/contractor-job-service', () => ({
 	jobsForAsset: (id: string) => jobsForAsset(id)
 }));
 
-const { listMovementFeed, listAssetHistory } = await import('./inventory-history');
+const { listMovementFeed, listAssetHistory, listLoanFeed } = await import('./inventory-history');
 
 function movement(id: string, at: number, over: Record<string, unknown> = {}) {
 	const row: Record<string, unknown> = {
@@ -59,11 +59,46 @@ describe('listMovementFeed', () => {
 		expect(page.hasMore).toBe(false);
 	});
 
+	it('lists same-second movements latest-written first, not by their random id', async () => {
+		for (const id of ['zz-first', 'aa-second', 'mm-third']) movement(id, 500);
+		const page = await listMovementFeed({ itemId: 'item-1' });
+		expect(page.items.map((i) => i.id)).toEqual([
+			'move:mm-third',
+			'move:aa-second',
+			'move:zz-first'
+		]);
+	});
+
 	it('pages past the limit instead of capping silently', async () => {
 		for (let i = 0; i < 3; i++) movement(`m-${i}`, i);
 		const page = await listMovementFeed({ itemId: 'item-1' }, { limit: 2 });
 		expect(page.items).toHaveLength(2);
 		expect(page.hasMore).toBe(true);
+	});
+});
+
+describe('listLoanFeed', () => {
+	function loan(id: string, at: number) {
+		sqlite
+			.prepare(
+				`insert into inventory_loan (id, item_id, user_id, requested_pickup_date, status, created_at, updated_at)
+				 values (?, 'item-1', 'u-1', ?, 'requested', ?, ?)`
+			)
+			.run(id, at, at, at);
+	}
+
+	beforeEach(() => sqlite.exec('delete from inventory_loan'));
+
+	it('lists same-second loans latest-written first, and pages with limit + 1', async () => {
+		for (const id of ['zz-first', 'aa-second', 'mm-third']) loan(id, 500);
+
+		const all = await listLoanFeed('item-1');
+		expect(all.items.map((i) => i.loanId)).toEqual(['mm-third', 'aa-second', 'zz-first']);
+		expect(all.hasMore).toBe(false);
+
+		const first = await listLoanFeed('item-1', { limit: 2 });
+		expect(first.items.map((i) => i.loanId)).toEqual(['mm-third', 'aa-second']);
+		expect(first.hasMore).toBe(true);
 	});
 });
 
