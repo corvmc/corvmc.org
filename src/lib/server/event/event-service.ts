@@ -1928,7 +1928,7 @@ export async function setEventLineup(
 	opts: SetLineupOptions = {}
 ): Promise<void> {
 	if (entries.length > LINEUP_MAX) {
-		throw new Error(`At most ${LINEUP_MAX} acts on a bill`);
+		throw new Error(`At most ${LINEUP_MAX} bands on a bill`);
 	}
 
 	const evt = await getById(eventId);
