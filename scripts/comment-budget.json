@@ -41,7 +41,6 @@
 	"e2e/inbox-awaiting-reply.e2e.ts",
 	"e2e/instructor.e2e.ts",
 	"e2e/inventory-intake.e2e.ts",
-	"e2e/inventory-orders.e2e.ts",
 	"e2e/inventory.e2e.ts",
 	"e2e/lock.ts",
 	"e2e/member-groups.e2e.ts",
