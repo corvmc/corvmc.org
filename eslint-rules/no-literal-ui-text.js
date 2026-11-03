@@ -5,12 +5,13 @@
  * be reviewed and trimmed in `messages/en.json` rather than across 700 files.
  *
  * Flags, in a `.svelte` file: a template text node with a letter in it, a copy
- * attribute (`label`, `title`, `*Label`, `*Toast`, …), a copy property in an
- * object literal, and the first argument of `toast.*()`.
+ * attribute (`label`, `title`, `note`, `*Label`, `*Toast`, …) or property, a
+ * literal branch of a `{…}` tag, `toast.*()`'s message, and the literal a
+ * script variable rendered by any of those was declared with.
  */
 
 const COPY_NAME =
-	/^(label|title|subtitle|heading|description|desc|placeholder|alt|empty|message|aria-label|aria-description|data-tip)$|(Label|Title|Toast|Message|Text|Description|Heading|Placeholder|Hint)$/;
+	/^(label|title|subtitle|heading|description|desc|placeholder|alt|empty|message|note|caption|tooltip|confirm|legend|aria-label|aria-description|data-tip)$|(Label|Title|Toast|Message|Text|Description|Heading|Placeholder|Hint)$/;
 
 const LETTER = /\p{L}/u;
 const ENTITY = /&[a-z0-9#]+;/gi;
@@ -25,7 +26,7 @@ function isHidden(element) {
 	for (let el = element; el; el = el.parent) {
 		if (el.type === 'SvelteStyleElement' || el.type === 'SvelteScriptElement') return true;
 		if (el.type !== 'SvelteElement') continue;
-		if (el.name?.name === 'code' || el.name?.name === 'kbd') return true;
+		if (['code', 'kbd', 'style', 'script'].includes(el.name?.name)) return true;
 		const hidden = el.startTag?.attributes?.find(
 			(/** @type {RuleNode} */ a) => a.key?.name === 'aria-hidden'
 		);
@@ -63,10 +64,16 @@ export default {
 			context.report({ node, messageId: 'literal', data: { text: text.slice(0, 60) } });
 		}
 
+		/** @type {Map<string, RuleNode>} */
+		const declared = new Map();
+		/** @type {Set<string>} */
+		const rendered = new Set();
+
 		/** A literal, a template's static text, or either branch of a choice. @param {RuleNode} node */
 		function expression(node) {
 			if (!node) return;
-			if (node.type === 'Literal') report(node, node.value);
+			if (node.type === 'Identifier') rendered.add(node.name);
+			else if (node.type === 'Literal') report(node, node.value);
 			else if (node.type === 'TemplateLiteral') {
 				const text = node.quasis.map((/** @type {RuleNode} */ q) => q.value.cooked).join(' ');
 				report(node, text);
@@ -81,7 +88,28 @@ export default {
 			}
 		}
 
+		/** `$derived(x)` / `$state(x)` declare `x`. @param {RuleNode} init */
+		const unwrap = (init) =>
+			init?.type === 'CallExpression' && /^\$(derived|state)$/.test(init.callee?.name ?? '')
+				? init.arguments[0]
+				: init;
+
 		return {
+			/** @param {RuleNode} node */
+			VariableDeclarator(node) {
+				if (node.id?.type === 'Identifier' && node.init) declared.set(node.id.name, node.init);
+			},
+			/** @param {RuleNode} node */
+			SvelteMustacheTag(node) {
+				if (node.kind !== 'text' || node.parent?.type === 'SvelteAttribute') return;
+				if (!isHidden(node.parent)) expression(node.expression);
+			},
+			'Program:exit'() {
+				for (const name of rendered) {
+					const init = unwrap(declared.get(name));
+					if (init && init.type !== 'Identifier') expression(init);
+				}
+			},
 			/** @param {RuleNode} node */
 			SvelteText(node) {
 				if (!isHidden(node.parent)) report(node, node.value);
