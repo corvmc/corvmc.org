@@ -83,6 +83,7 @@
 		<Action
 			action={approveVolunteerSignup.for(volunteer.userId)}
 			label="Approve"
+			data-testid="approve-volunteer-signup"
 			variant="ghost"
 			size="xs"
 			class="text-success"

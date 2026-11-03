@@ -46,6 +46,7 @@
 	<Action
 		action={createWorkOrder}
 		label="New Work Order"
+		data-testid="new-work-order"
 		modalTitle="New work order"
 		submitLabel="Create"
 		successToast="Work order created"

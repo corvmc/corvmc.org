@@ -79,6 +79,7 @@
 <Action
 	{action}
 	label={label ?? title}
+	data-testid="log-hours-{mode}"
 	{variant}
 	{size}
 	modalTitle={title}

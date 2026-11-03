@@ -238,7 +238,10 @@
 												{claimant.notifiedAt ? 'notified' : 'not notified'}
 											</span>
 										{:else}
-											<span class="badge badge-sm {statusBadge[claimant.status]}">
+											<span
+												class="badge badge-sm {statusBadge[claimant.status]}"
+												data-status={claimant.status}
+											>
 												{claimant.status.replace('_', ' ')}
 											</span>
 										{/if}
@@ -404,6 +407,7 @@
 					<Action
 						action={editForm}
 						label="Edit"
+						data-testid="edit-shift"
 						variant="ghost"
 						size="sm"
 						modalTitle="Edit this shift"

@@ -202,6 +202,7 @@
 						<Action
 							action={assignShiftToMember.for(`${shiftId}:${row.userId}`)}
 							label="Add"
+							data-testid="assign-candidate"
 							variant="ghost"
 							size="xs"
 							modalTitle="Put {row.member.title} on this shift?"

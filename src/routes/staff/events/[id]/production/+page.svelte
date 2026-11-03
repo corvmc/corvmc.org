@@ -572,6 +572,7 @@
 								<Action
 									action={createShift}
 									label="Schedule a shift"
+									data-testid="schedule-event-shift"
 									variant="ghost"
 									size="sm"
 									modalTitle="Schedule a shift for {evt.title}"

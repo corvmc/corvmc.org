@@ -63,6 +63,7 @@
 				<Action
 					action={createShift}
 					label="New shift"
+					data-testid="new-role-shift"
 					variant="ghost"
 					size="sm"
 					modalTitle="Schedule a {role.name} shift"

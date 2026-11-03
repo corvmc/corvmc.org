@@ -375,7 +375,13 @@
 		status column announced its header and then nothing for each value, and the
 		entity cards carry status as a glyph alone.
 	-->
-	<span class="tooltip tooltip-right {extra}" data-tip={label} role="img" aria-label={label}>
+	<span
+		class="tooltip tooltip-right {extra}"
+		data-tip={label}
+		data-status={status}
+		role="img"
+		aria-label={label}
+	>
 		<variant.icon {size} class="{variant.color} {className}" />
 	</span>
 {/snippet}
