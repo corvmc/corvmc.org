@@ -11,6 +11,7 @@
 	import CommitteeGrantsAction from '$lib/components/groups/CommitteeGrantsAction.svelte';
 	import RevokeClearanceAction from './RevokeClearanceAction.svelte';
 	import { getAccessPage, getAccessHolders } from '$lib/remote/access.remote';
+	import { Latest } from '$lib/latest.svelte';
 	import { positionLabels, positionOrder, type Capability, type Position } from '$lib/config';
 	import type { RosterPerson } from '$lib/types/roster';
 	import { formatDateShortYear } from '$lib/utils/format';
@@ -47,6 +48,15 @@
 				: ({ kind, key } as const)
 	);
 	const result = $derived(key ? getAccessHolders(selection) : null);
+	// Not `{#await}`: a refresh would re-pend it and unmount an open grant dialog.
+	// Tagged with its selection so a switch never shows one key's rows under another.
+	const holders = new Latest(() => {
+		const tag = `${kind}:${key}`;
+		return result ? result.then((data) => ({ tag, data })) : Promise.resolve(null);
+	});
+	$effect(() => {
+		if (holders.error) throw holders.error.e;
+	});
 
 	const matches = ({ member, email }: RosterPerson) =>
 		!nameFilter ||
@@ -130,104 +140,101 @@
 		title={m.staff_access_permission_holders_nothing_pick()}
 		description={m.staff_access_permission_holders_there_no_clearances_catalog()}
 	/>
-{:else}
-	<!-- eslint-disable-next-line custom/no-interactive-await -- #2359 -->
-	{#await result then data}
-		{#if data.kind === 'position'}
-			{@const rows = data.members.filter(matches)}
-			{@render count(rows, `${rows.length} of ${data.members.length} holding this position`)}
-			{#if rows.length === 0}
-				<EmptyState
-					title={m.staff_access_permission_holders_nobody()}
-					description={m.staff_access_permission_holders_no_one_holds_position()}
-				/>
-			{:else}
-				<RosterTable {rows} personLabel={m.staff_access_permission_holders_person_label()} />
-			{/if}
-		{:else if data.kind === 'capability'}
-			{@const rows = data.holders.filter(matches)}
-			{@render count(rows, `${rows.length} of ${data.holders.length} holding this capability`)}
-			{#if rows.length === 0}
-				<EmptyState
-					title={m.staff_access_permission_holders_nobody()}
-					description={m.staff_access_permission_holders_no_position_committee_seat_c()}
-				/>
-			{:else}
-				<RosterTable {rows} personLabel={m.staff_access_permission_holders_person_label()}>
-					{#snippet columns()}<th>{m.staff_through()}</th>{/snippet}
-					{#snippet cells(h)}<td class="cell-text">{h.sources.join(', ')}</td>{/snippet}
-				</RosterTable>
-			{/if}
-			{#if data.committees.length > 0}
-				<InfoCard
-					title={m.staff_access_permission_holders_committees_granting()}
-					state={data.committees.length}
-				>
-					<ul class="space-y-1">
-						{#each data.committees as c (c.groupId)}
-							<li class="flex items-center justify-between gap-2">
-								<span class="font-medium">{c.name}</span>
-								<CommitteeGrantsAction
-									groupId={c.groupId}
-									name={c.name}
-									held={c.held}
-									label={m.staff_edit_grants()}
-									onsuccess={refresh}
-								/>
-							</li>
-						{/each}
-					</ul>
-				</InfoCard>
-			{/if}
-			{#if data.roles.length > 0}
-				<InfoCard
-					title={m.staff_access_permission_holders_volunteer_roles_granting_per()}
-					state={data.roles.length}
-				>
-					<p class="text-muted">
-						{m.staff_access_permission_holders_held_only_by_confirmed_volun()}
-					</p>
-					<p>{data.roles.map((r) => r.name).join(', ')}</p>
-				</InfoCard>
-			{/if}
+{:else if holders.current?.tag === `${kind}:${key}`}
+	{@const data = holders.current.data}
+	{#if data.kind === 'position'}
+		{@const rows = data.members.filter(matches)}
+		{@render count(rows, `${rows.length} of ${data.members.length} holding this position`)}
+		{#if rows.length === 0}
+			<EmptyState
+				title={m.staff_access_permission_holders_nobody()}
+				description={m.staff_access_permission_holders_no_one_holds_position()}
+			/>
 		{:else}
-			{@const rows = data.clearances.filter(
-				(c) =>
-					matches(c) &&
-					(!clearanceState ||
-						(clearanceState === 'lapsing' ? c.lapsing : c.state === clearanceState))
-			)}
-			{@render count(rows, `${rows.length} of ${data.clearances.length} on record`)}
-			{#if rows.length === 0}
-				<EmptyState
-					title={m.staff_access_permission_holders_nobody()}
-					description={m.staff_access_permission_holders_no_grant_clearance_matches()}
-				/>
-			{:else}
-				<RosterTable {rows} personLabel={m.staff_access_permission_holders_person_label()}>
-					{#snippet lead(c)}<StatusBadge status={c.state} />{/snippet}
-					{#snippet columns()}
-						<th class="col-support">{m.staff_access_permission_holders_granted()}</th>
-						<th>{m.staff_expires()}</th>
-					{/snippet}
-					{#snippet cells(c)}
-						<td class="col-support whitespace-nowrap">{formatDateShortYear(c.grantedAt)}</td>
-						<td class="whitespace-nowrap">
-							{c.expiresAt ? formatDateShortYear(c.expiresAt) : 'No expiry'}
-						</td>
-					{/snippet}
-					{#snippet actions(c)}
-						{#if c.state !== 'revoked'}
-							<RevokeClearanceAction
-								id={c.id}
-								userId={c.userId}
-								name={c.certificationName}
+			<RosterTable {rows} personLabel={m.staff_access_permission_holders_person_label()} />
+		{/if}
+	{:else if data.kind === 'capability'}
+		{@const rows = data.holders.filter(matches)}
+		{@render count(rows, `${rows.length} of ${data.holders.length} holding this capability`)}
+		{#if rows.length === 0}
+			<EmptyState
+				title={m.staff_access_permission_holders_nobody()}
+				description={m.staff_access_permission_holders_no_position_committee_seat_c()}
+			/>
+		{:else}
+			<RosterTable {rows} personLabel={m.staff_access_permission_holders_person_label()}>
+				{#snippet columns()}<th>{m.staff_through()}</th>{/snippet}
+				{#snippet cells(h)}<td class="cell-text">{h.sources.join(', ')}</td>{/snippet}
+			</RosterTable>
+		{/if}
+		{#if data.committees.length > 0}
+			<InfoCard
+				title={m.staff_access_permission_holders_committees_granting()}
+				state={data.committees.length}
+			>
+				<ul class="space-y-1">
+					{#each data.committees as c (c.groupId)}
+						<li class="flex items-center justify-between gap-2">
+							<span class="font-medium">{c.name}</span>
+							<CommitteeGrantsAction
+								groupId={c.groupId}
+								name={c.name}
+								held={c.held}
+								label={m.staff_edit_grants()}
 								onsuccess={refresh}
 							/>
-						{/if}
-					{/snippet}
-				</RosterTable>
-			{/if}
+						</li>
+					{/each}
+				</ul>
+			</InfoCard>
 		{/if}
-	{/await}
+		{#if data.roles.length > 0}
+			<InfoCard
+				title={m.staff_access_permission_holders_volunteer_roles_granting_per()}
+				state={data.roles.length}
+			>
+				<p class="text-muted">
+					{m.staff_access_permission_holders_held_only_by_confirmed_volun()}
+				</p>
+				<p>{data.roles.map((r) => r.name).join(', ')}</p>
+			</InfoCard>
+		{/if}
+	{:else}
+		{@const rows = data.clearances.filter(
+			(c) =>
+				matches(c) &&
+				(!clearanceState || (clearanceState === 'lapsing' ? c.lapsing : c.state === clearanceState))
+		)}
+		{@render count(rows, `${rows.length} of ${data.clearances.length} on record`)}
+		{#if rows.length === 0}
+			<EmptyState
+				title={m.staff_access_permission_holders_nobody()}
+				description={m.staff_access_permission_holders_no_grant_clearance_matches()}
+			/>
+		{:else}
+			<RosterTable {rows} personLabel={m.staff_access_permission_holders_person_label()}>
+				{#snippet lead(c)}<StatusBadge status={c.state} />{/snippet}
+				{#snippet columns()}
+					<th class="col-support">{m.staff_access_permission_holders_granted()}</th>
+					<th>{m.staff_expires()}</th>
+				{/snippet}
+				{#snippet cells(c)}
+					<td class="col-support whitespace-nowrap">{formatDateShortYear(c.grantedAt)}</td>
+					<td class="whitespace-nowrap">
+						{c.expiresAt ? formatDateShortYear(c.expiresAt) : 'No expiry'}
+					</td>
+				{/snippet}
+				{#snippet actions(c)}
+					{#if c.state !== 'revoked'}
+						<RevokeClearanceAction
+							id={c.id}
+							userId={c.userId}
+							name={c.certificationName}
+							onsuccess={refresh}
+						/>
+					{/if}
+				{/snippet}
+			</RosterTable>
+		{/if}
+	{/if}
 {/if}

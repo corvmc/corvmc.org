@@ -28,9 +28,14 @@
 		deleteDutyList
 	} from '$lib/remote/duty-lists.remote';
 	import { describeDuration, describeOffset, splitOffset } from '../offsets';
+	import { Latest } from '$lib/latest.svelte';
 
 	const id = $derived(page.params.id!);
-	let data = $derived(getDutyListPage(id));
+	// Not `{#await}`: a refresh would re-pend it and unmount an open item dialog.
+	const data = new Latest(() => getDutyListPage(id));
+	$effect(() => {
+		if (data.error) throw data.error.e;
+	});
 
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
 	const autoApplyOptions = [
@@ -59,8 +64,9 @@
 	];
 </script>
 
-<!-- eslint-disable-next-line custom/no-interactive-await -- #2359 -->
-{#await data then d}
+<!-- Only this template's: on a switch the last one stays until the next lands. -->
+{#if data.current?.list.id === id}
+	{@const d = data.current}
 	{@const anchorLabel = dutyListAnchorLabels[d.list.anchor]}
 	{@const roleOptions = d.roles.map((r) => ({ value: r.id, label: r.name }))}
 	{@const ownerOptions = [
@@ -256,7 +262,7 @@
 			</Action>
 		</InfoCard>
 	</PageContent>
-{/await}
+{/if}
 
 {#snippet itemFields(
 	roleOptions: { value: string; label: string }[],

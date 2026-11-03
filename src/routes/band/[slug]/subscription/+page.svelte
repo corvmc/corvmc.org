@@ -10,9 +10,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import AddCardModal from '$lib/components/member/membership/AddCardModal.svelte';
-	import { getBandBilling, startBandAddCard } from '$lib/remote/billing.remote';
+	import BandBillingCard from './BandBillingCard.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { goToCheckout } from '$lib/utils/checkout-navigation';
 	import { formatDate, formatCents } from '$lib/utils/format';
@@ -40,7 +38,6 @@
 	// card, so an admin has to be able to (#1098).
 	const canManageBilling = $derived(isOwner || layout.userRole === 'admin');
 
-	let addCardOpen = $state(false);
 	const siteUrl = $derived(
 		bandSiteUrl(
 			band.slug,
@@ -165,68 +162,7 @@
 			exactly who cannot fix it.
 		-->
 		{#if canManageBilling}
-			<!-- eslint-disable-next-line custom/no-interactive-await -- #2359 -->
-			{#await getBandBilling(band.slug) then billing}
-				<Card>
-					<CardBody>
-						<div class="flex flex-wrap items-center justify-between gap-2">
-							<CardTitle size="base">{m.band_slug_subscription_card_file()}</CardTitle>
-							<Button
-								type="button"
-								variant="default"
-								size="sm"
-								outline
-								onclick={() => (addCardOpen = true)}
-							>
-								{billing.cards.length > 0
-									? m.band_slug_subscription_replace_card()
-									: m.band_slug_subscription_add_card()}
-							</Button>
-						</div>
-
-						{#if !billing.available}
-							<p class="text-muted">
-								{m.band_slug_subscription_we_could_not_reach_our()}
-							</p>
-						{:else if billing.cards.length === 0}
-							<p class="text-muted">
-								{m.band_slug_subscription_no_card_saved_act_renewals()}
-							</p>
-						{:else}
-							{#each billing.cards as card (card.id)}
-								<p class="text-sm">
-									<ParaglideMessage
-										message={card.isDefault
-											? m.band_slug_subscription_expires_billed
-											: m.band_slug_subscription_expires}
-										inputs={{
-											toUpperCase: card.brand.toUpperCase(),
-											last4: card.last4,
-											expMonth: card.expMonth,
-											expYear: card.expYear
-										}}
-										>{#snippet span({ children })}<span class="font-medium"
-												>{@render children?.()}</span
-											>{/snippet}{#snippet span2({ children })}<span class="text-muted"
-												>{@render children?.()}</span
-											>{/snippet}</ParaglideMessage
-									>
-								</p>
-							{/each}
-							<p class="mt-2 text-muted">
-								{m.band_slug_subscription_band_s_card_not_member()}
-							</p>
-						{/if}
-
-						<AddCardModal
-							bind:open={addCardOpen}
-							driver={billing.driver}
-							start={() => startBandAddCard(band.slug)}
-							onsaved={() => getBandBilling(band.slug).refresh()}
-						/>
-					</CardBody>
-				</Card>
-			{/await}
+			<BandBillingCard slug={band.slug} />
 		{/if}
 	{:else}
 		<!-- Free tier — upgrade CTA -->
