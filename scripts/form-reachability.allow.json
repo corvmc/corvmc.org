@@ -122,12 +122,6 @@
 		"blocksUse": "internal: absent means blocking, documented at the call",
 		"loanId": "internal: re-uptake raises its flag through raiseFlag in loan-service"
 	},
-	"src/lib/server/local-resource/local-resource-service.ts#createResource(0)": {
-		"displayOrder": "#2314: local resources cannot be ordered within a category"
-	},
-	"src/lib/server/local-resource/local-resource-service.ts#updateResource(1)": {
-		"displayOrder": "#2314: local resources cannot be ordered within a category"
-	},
 	"src/lib/server/lock/access-register-service.ts#returnHolding(1)": {
 		"returnedAt": "#2317: the register cannot record when a key was returned"
 	},

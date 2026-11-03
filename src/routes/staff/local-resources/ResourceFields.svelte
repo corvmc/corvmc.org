@@ -20,6 +20,7 @@
 			phone: F;
 			// Spelled out so form-coverage.spec can see the control; an alias hides it.
 			addressLine: RemoteFormField<RemoteFormFieldValue>;
+			displayOrder: RemoteFormField<RemoteFormFieldValue>;
 		};
 		categories: { id: string; name: string }[];
 		values?: {
@@ -29,6 +30,7 @@
 			website?: string | null;
 			phone?: string | null;
 			addressLine?: string | null;
+			displayOrder?: number;
 		};
 	} = $props();
 
@@ -53,4 +55,11 @@
 <Field field={fields.website} type="text" label="Website" value={values.website ?? ''} />
 <Field field={fields.phone} type="tel" label="Phone" value={values.phone ?? ''} />
 <Field field={fields.addressLine} type="text" label="Address" value={values.addressLine ?? ''} />
+<Field
+	field={fields.displayOrder}
+	type="number"
+	label="Order"
+	value={values.displayOrder ?? 0}
+	min="0"
+/>
 <p class="text-muted text-wrap">Everything here is shown publicly on /local-resources.</p>

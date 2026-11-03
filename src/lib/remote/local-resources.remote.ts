@@ -108,7 +108,8 @@ const resourceFields = {
 	description: z.string().max(LOCAL_RESOURCE_DESCRIPTION_MAX).optional(),
 	website: z.string().max(LOCAL_RESOURCE_FIELD_MAX).optional(),
 	phone: z.string().max(40).optional(),
-	addressLine: z.string().max(LOCAL_RESOURCE_FIELD_MAX).optional()
+	addressLine: z.string().max(LOCAL_RESOURCE_FIELD_MAX).optional(),
+	displayOrder: z.number().int().min(0).max(9999).optional()
 };
 
 export const createLocalResourceForm = form(z.object(resourceFields), async (data) => {
