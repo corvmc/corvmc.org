@@ -129,6 +129,7 @@
 					<Field field={fields.expectedAt} type="date" label="Expected" required />
 					<Field field={fields.supplierName} type="text" label="Supplier" />
 					<Field field={fields.reference} type="text" label="Reference" />
+					<Field field={fields.notes} type="text" label="Notes" />
 					<SubmitButton
 						label="Mark {pickedRows.length} {pickedRows.length === 1 ? 'item' : 'items'} as ordered"
 					/>

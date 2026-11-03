@@ -962,11 +962,12 @@ const orderLinesSchema = z
 const orderHeader = {
 	supplierName: z.string().max(255).optional(),
 	reference: z.string().max(100).optional(),
-	expectedAt: z.string().min(1, 'When is it expected?')
+	expectedAt: z.string().min(1, 'When is it expected?'),
+	notes: z.string().max(2000).optional()
 };
 
 async function placeNewOrder(
-	header: { supplierName?: string; reference?: string; expectedAt: string },
+	header: { supplierName?: string; reference?: string; expectedAt: string; notes?: string },
 	lines: z.infer<typeof orderLinesSchema>
 ) {
 	let orderId: string;
@@ -975,6 +976,7 @@ async function placeNewOrder(
 			supplierName: header.supplierName || undefined,
 			reference: header.reference || undefined,
 			expectedAt: calendarDate(header.expectedAt),
+			notes: header.notes?.trim() || undefined,
 			createdByUserId: requireUser().id,
 			placedAt: new Date(),
 			lines
@@ -999,6 +1001,7 @@ export const markOrdered = form(
 			supplierName?: string;
 			reference?: string;
 			expectedAt: string;
+			notes?: string;
 			lines: string;
 		};
 
@@ -1027,6 +1030,7 @@ export const markItemOrdered = form(
 			supplierName?: string;
 			reference?: string;
 			expectedAt: string;
+			notes?: string;
 			itemId: string;
 			quantityOrdered: number;
 			unitCostCents?: number;

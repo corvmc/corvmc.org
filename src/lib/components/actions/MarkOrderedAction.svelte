@@ -40,5 +40,6 @@
 			<Field field={fields.reference} type="text" label="Reference" />
 			<MoneyField field={fields.unitCostCents} label="Unit cost" />
 		</div>
+		<Field field={fields.notes} type="textarea" label="Notes" />
 	{/snippet}
 </Action>
