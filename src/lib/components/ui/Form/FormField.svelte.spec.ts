@@ -126,6 +126,30 @@ describe('FormField', () => {
 		expect(input.name).toBe('n:totalQuantity');
 	});
 
+	// A schema that parses the string itself keeps "cleared" (`''`) apart from
+	// "untouched"; a number registration drops a cleared box instead.
+	it('registers a number input as text under submitAs, keeping the number control', async () => {
+		const field = create_field_proxy(
+			{},
+			() => ({}),
+			() => {},
+			() => ({}),
+			['validityMonths']
+		);
+
+		const { container } = await render(FormField, {
+			field,
+			type: 'number',
+			submitAs: 'text',
+			label: 'Validity',
+			value: '12'
+		});
+
+		const input = container.querySelector('input[type="number"]') as HTMLInputElement;
+		expect(input.name).toBe('validityMonths');
+		expect(input.value).toBe('12');
+	});
+
 	// Regression: `value` is destructured into its own prop, so it was not part of
 	// `...rest` and the tags branch never forwarded it to TagSelect. The hidden
 	// input therefore always serialised `[]`, and on the staff user page every

@@ -51,6 +51,11 @@ tester.run('no-manual-field-name', rule as never, {
 		},
 		{
 			filename: f,
+			code: '<Action {action}>{#snippet form()}<input type="hidden" name="id" value={id} />{/snippet}</Action>',
+			errors: [{ messageId: 'manualName' }]
+		},
+		{
+			filename: f,
 			code: '<form {...save.enhance(go)}><textarea name="body"></textarea></form>',
 			errors: [{ messageId: 'manualName' }]
 		},

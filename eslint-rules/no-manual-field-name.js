@@ -26,7 +26,8 @@ const CONTROL_ELEMENTS = new Set(['input', 'select', 'textarea', 'button']);
 /** @param {RuleNode} node @param {string} key */
 function attr(node, key) {
 	return (node.startTag?.attributes ?? []).find(
-		(/** @type {RuleNode} */ a) => a.type === 'SvelteAttribute' && a.key?.name === key
+		(/** @type {RuleNode} */ a) =>
+			(a.type === 'SvelteAttribute' || a.type === 'SvelteShorthandAttribute') && a.key?.name === key
 	);
 }
 
@@ -48,7 +49,7 @@ function formKind(/** @type {RuleNode} */ node) {
 	// action has no form to render it in.
 	if (tag === 'Action') {
 		const a = attr(node, 'action');
-		const expr = a?.value?.[0]?.expression;
+		const expr = a?.type === 'SvelteShorthandAttribute' ? a.value : a?.value?.[0]?.expression;
 		if (!expr) return null;
 		const fn = expr.type === 'ArrowFunctionExpression' || expr.type === 'FunctionExpression';
 		return fn ? 'plain' : 'remote';
