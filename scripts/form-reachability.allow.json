@@ -178,16 +178,6 @@
 	"src/lib/server/user/user-service.ts#deactivateUser(1)": {
 		"batchId": "internal: deactivateUsers (bulkDeactivateUsers) mints one per batch"
 	},
-	"src/lib/server/volunteer/duty-list-service.ts#updateDutyListItem(1)": {
-		"capacity": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
-		"dueOffsetMinutes": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
-		"durationMinutes": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
-		"notes": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
-		"offsetMinutes": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
-		"sortOrder": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
-		"tasks": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
-		"volunteerRoleId": "#2264: item edit cannot change role, timing, capacity, notes or tasks"
-	},
 	"src/lib/server/volunteer/hour-log-service.ts#updateHourLog(2)": {
 		"groupId": "internal: in the Partial<SubmitHoursData> type, never written; links are fixed at submission",
 		"shiftId": "internal: in the Partial<SubmitHoursData> type, never written; links are fixed at submission"

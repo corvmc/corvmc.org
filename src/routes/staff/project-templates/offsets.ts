@@ -31,3 +31,16 @@ export function describeDuration(minutes: number): string {
 	const hours = minutes / 60;
 	return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} hrs`;
 }
+
+/** Signed minutes as the form's amount, unit and direction: the largest unit it divides into. */
+export function splitOffset(minutes: number): {
+	amount: number;
+	unit: 'minutes' | 'hours' | 'days';
+	direction: 'before' | 'after';
+} {
+	const abs = Math.abs(minutes);
+	const direction = minutes < 0 ? 'before' : 'after';
+	if (abs !== 0 && abs % 1440 === 0) return { amount: abs / 1440, unit: 'days', direction };
+	if (abs !== 0 && abs % 60 === 0) return { amount: abs / 60, unit: 'hours', direction };
+	return { amount: abs, unit: 'minutes', direction };
+}

@@ -26,7 +26,7 @@
 		removeDutyListItem,
 		deleteDutyList
 	} from '$lib/remote/duty-lists.remote';
-	import { describeDuration, describeOffset } from '../offsets';
+	import { describeDuration, describeOffset, splitOffset } from '../offsets';
 
 	const id = $derived(page.params.id!);
 	let data = $derived(getDutyListPage(id));
@@ -50,6 +50,8 @@
 		{ value: '', label: 'Only when somebody marks it done' },
 		...workDoneConditions.map((c) => ({ value: c, label: workDoneConditionLabels[c] }))
 	];
+	type Item = Awaited<ReturnType<typeof getDutyListPage>>['items'][number];
+
 	const directionOptions = [
 		{ value: 'before', label: 'before' },
 		{ value: 'after', label: 'after' }
@@ -119,54 +121,7 @@
 		>
 			{#snippet form()}
 				<input type="hidden" name="dutyListId" value={d.list.id} />
-				<FormField name="volunteerRoleId" label="Role" type="select" options={roleOptions} />
-				<FormField
-					name="title"
-					label="Title"
-					type="text"
-					description="What the work order is called. Blank uses the role's name."
-				/>
-				<FormField name="groupId" label="Owner" type="select" options={ownerOptions} />
-				<FormField
-					name="doneWhen"
-					label="Done when"
-					type="select"
-					options={doneWhenOptions}
-					description="A fact about the show. Its tasks still have to be ticked as well."
-				/>
-				<FormField
-					name="kind"
-					label="Kind"
-					type="select"
-					options={kindOptions}
-					description="A deadline item becomes an unscheduled work order — claimable, and hour-loggable, but not a shift anyone is “on”."
-				/>
-				<div class="grid gap-4 sm:grid-cols-3">
-					<FormField name="offsetAmount" label="Offset" type="number" value="3" />
-					<FormField name="offsetUnit" label="Unit" type="select" options={unitOptions} />
-					<FormField
-						name="offsetDirection"
-						label="Direction"
-						type="select"
-						options={directionOptions}
-					/>
-				</div>
-				<FormField
-					name="durationMinutes"
-					label="Duration (minutes)"
-					type="number"
-					value="120"
-					description="Scheduled items only. Ignored on a deadline item."
-				/>
-				<FormField name="capacity" label="How many people" type="number" value="1" />
-				<FormField name="sortOrder" label="Sort order" type="number" value="0" />
-				<FormField name="notes" label="Notes" type="textarea" />
-				<FormField
-					name="tasks"
-					label="Tasks"
-					type="textarea"
-					description="One per line. These become the checklist on the work order this item produces."
-				/>
+				{@render itemFields(roleOptions, ownerOptions)}
 			{/snippet}
 		</Action>
 	</PageHeader>
@@ -247,21 +202,7 @@
 										{#snippet form()}
 											<input type="hidden" name="id" value={item.id} />
 											<input type="hidden" name="dutyListId" value={d.list.id} />
-											<FormField name="title" label="Title" type="text" value={item.title ?? ''} />
-											<FormField
-												name="groupId"
-												label="Owner"
-												type="select"
-												options={ownerOptions}
-												value={item.groupId ?? ''}
-											/>
-											<FormField
-												name="doneWhen"
-												label="Done when"
-												type="select"
-												options={doneWhenOptions}
-												value={item.doneWhen ?? ''}
-											/>
+											{@render itemFields(roleOptions, ownerOptions, item)}
 										{/snippet}
 									</Action>
 									<Action
@@ -305,3 +246,93 @@
 		</InfoCard>
 	</PageContent>
 {/await}
+
+{#snippet itemFields(
+	roleOptions: { value: string; label: string }[],
+	ownerOptions: { value: string; label: string }[],
+	item?: Item
+)}
+	{@const due = item ? item.offsetMinutes === null && item.dueOffsetMinutes !== null : false}
+	{@const offset = splitOffset(item ? (item.offsetMinutes ?? item.dueOffsetMinutes ?? 0) : -180)}
+	<FormField
+		name="volunteerRoleId"
+		label="Role"
+		type="select"
+		options={roleOptions}
+		value={item?.volunteerRoleId}
+	/>
+	<FormField
+		name="title"
+		label="Title"
+		type="text"
+		value={item?.title ?? ''}
+		description="What the work order is called. Blank uses the role's name."
+	/>
+	<FormField
+		name="groupId"
+		label="Owner"
+		type="select"
+		options={ownerOptions}
+		value={item?.groupId ?? ''}
+	/>
+	<FormField
+		name="doneWhen"
+		label="Done when"
+		type="select"
+		options={doneWhenOptions}
+		value={item?.doneWhen ?? ''}
+		description="A fact about the show. Its tasks still have to be ticked as well."
+	/>
+	<FormField
+		name="kind"
+		label="Kind"
+		type="select"
+		options={kindOptions}
+		value={due ? 'due' : 'scheduled'}
+		description="A deadline item becomes an unscheduled work order — claimable, and hour-loggable, but not a shift anyone is “on”."
+	/>
+	<div class="grid gap-4 sm:grid-cols-3">
+		<FormField name="offsetAmount" label="Offset" type="number" value={String(offset.amount)} />
+		<FormField
+			name="offsetUnit"
+			label="Unit"
+			type="select"
+			options={unitOptions}
+			value={offset.unit}
+		/>
+		<FormField
+			name="offsetDirection"
+			label="Direction"
+			type="select"
+			options={directionOptions}
+			value={offset.direction}
+		/>
+	</div>
+	<FormField
+		name="durationMinutes"
+		label="Duration (minutes)"
+		type="number"
+		value={String(item ? (item.durationMinutes ?? '') : 120)}
+		description="Scheduled items only. Ignored on a deadline item."
+	/>
+	<FormField
+		name="capacity"
+		label="How many people"
+		type="number"
+		value={String(item?.capacity ?? 1)}
+	/>
+	<FormField
+		name="sortOrder"
+		label="Sort order"
+		type="number"
+		value={String(item?.sortOrder ?? 0)}
+	/>
+	<FormField name="notes" label="Notes" type="textarea" value={item?.notes ?? ''} />
+	<FormField
+		name="tasks"
+		label="Tasks"
+		type="textarea"
+		value={item?.tasks.join('\n') ?? ''}
+		description="One per line. These become the checklist on the work order this item produces."
+	/>
+{/snippet}
