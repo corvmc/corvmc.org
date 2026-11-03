@@ -47,7 +47,10 @@ export function byDeadline<T extends { deadline: Deadline | null }>(name: (row: 
 	};
 }
 
-/** A `YYYY-MM-DD` read as that calendar day, not as UTC midnight. */
+/**
+ * A `YYYY-MM-DD` read as that calendar day. Noon UTC is the same day in club
+ * time; a viewer-local parse is not, from UTC+12 on.
+ */
 export function formatIsoDay(iso: string | null): string {
-	return iso ? formatDateShortYear(new Date(`${iso}T12:00:00`)) : '—';
+	return iso ? formatDateShortYear(new Date(`${iso}T12:00:00Z`)) : '—';
 }

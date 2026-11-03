@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { addIsoDays, due, earliest, byDeadline, formatIsoDay } from './deadline';
 
 const TODAY = '2026-09-23';
@@ -41,6 +41,23 @@ describe('formatIsoDay', () => {
 	it('reads the calendar day, not UTC midnight', () => {
 		expect(formatIsoDay('2026-10-01')).toMatch(/Oct 1/);
 		expect(formatIsoDay(null)).toBe('—');
+	});
+
+	// UTC+14: local noon is the previous day in club time.
+	describe('for a viewer at UTC+14', () => {
+		let saved: string | undefined;
+		beforeAll(() => {
+			saved = process.env.TZ;
+			process.env.TZ = 'Pacific/Kiritimati';
+		});
+		afterAll(() => {
+			if (saved === undefined) delete process.env.TZ;
+			else process.env.TZ = saved;
+		});
+
+		it('still reads the same calendar day', () => {
+			expect(formatIsoDay('2026-10-01')).toBe('Oct 1, 2026');
+		});
 	});
 });
 
