@@ -88,30 +88,35 @@
 			successToast={m.staff_saved()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="id" value={d.list.id} />
-				<FormField name="name" label={m.staff_name()} type="text" value={d.list.name} />
+				<input {...updateDutyList.fields.id.as('hidden', d.list.id)} />
 				<FormField
-					name="description"
+					field={updateDutyList.fields.name}
+					label={m.staff_name()}
+					type="text"
+					value={d.list.name}
+				/>
+				<FormField
+					field={updateDutyList.fields.description}
 					label={m.staff_description()}
 					type="textarea"
 					value={d.list.description ?? ''}
 				/>
 				<FormField
-					name="anchor"
+					field={updateDutyList.fields.anchor}
 					label={m.staff_measure_offsets_from()}
 					type="select"
 					options={anchorOptions}
 					value={d.list.anchor}
 				/>
 				<FormField
-					name="autoApplyOn"
+					field={updateDutyList.fields.autoApplyOn}
 					label={m.staff_apply_automatically()}
 					type="select"
 					options={autoApplyOptions}
 					value={d.list.autoApplyOn ?? ''}
 				/>
 				<FormField
-					name="isActive"
+					field={updateDutyList.fields.isActive}
 					type="checkbox"
 					label={m.staff_active()}
 					checkboxLabel={m.staff_project_templates_id_checkbox_label()}
@@ -128,8 +133,8 @@
 			successToast={m.staff_project_templates_id_item_added()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="dutyListId" value={d.list.id} />
-				{@render itemFields(roleOptions, ownerOptions)}
+				<input {...addDutyListItem.fields.dutyListId.as('hidden', d.list.id)} />
+				{@render itemFields(addDutyListItem.fields, roleOptions, ownerOptions)}
 			{/snippet}
 		</Action>
 	</PageHeader>
@@ -217,9 +222,18 @@
 										successToast={m.staff_saved()}
 									>
 										{#snippet form()}
-											<input type="hidden" name="id" value={item.id} />
-											<input type="hidden" name="dutyListId" value={d.list.id} />
-											{@render itemFields(roleOptions, ownerOptions, item)}
+											<input {...updateDutyListItem.for(item.id).fields.id.as('hidden', item.id)} />
+											<input
+												{...updateDutyListItem
+													.for(item.id)
+													.fields.dutyListId.as('hidden', d.list.id)}
+											/>
+											{@render itemFields(
+												updateDutyListItem.for(item.id).fields,
+												roleOptions,
+												ownerOptions,
+												item
+											)}
 										{/snippet}
 									</Action>
 									<Action
@@ -231,8 +245,8 @@
 										successToast={m.staff_project_templates_id_item_removed()}
 									>
 										{#snippet form()}
-											<input type="hidden" name="id" value={item.id} />
-											<input type="hidden" name="dutyListId" value={d.list.id} />
+											<input {...removeDutyListItem.fields.id.as('hidden', item.id)} />
+											<input {...removeDutyListItem.fields.dutyListId.as('hidden', d.list.id)} />
 										{/snippet}
 									</Action>
 								</div>
@@ -257,7 +271,7 @@
 				onsuccess={() => goto(resolve('/staff/project-templates'))}
 			>
 				{#snippet form()}
-					<input type="hidden" name="id" value={d.list.id} />
+					<input {...deleteDutyList.fields.id.as('hidden', d.list.id)} />
 				{/snippet}
 			</Action>
 		</InfoCard>
@@ -265,6 +279,7 @@
 {/if}
 
 {#snippet itemFields(
+	fields: typeof addDutyListItem.fields,
 	roleOptions: { value: string; label: string }[],
 	ownerOptions: { value: string; label: string }[],
 	item?: Item
@@ -272,28 +287,28 @@
 	{@const due = item ? item.offsetMinutes === null && item.dueOffsetMinutes !== null : false}
 	{@const offset = splitOffset(item ? (item.offsetMinutes ?? item.dueOffsetMinutes ?? 0) : -180)}
 	<FormField
-		name="volunteerRoleId"
+		field={fields.volunteerRoleId}
 		label={m.staff_role()}
 		type="select"
 		options={roleOptions}
 		value={item?.volunteerRoleId}
 	/>
 	<FormField
-		name="title"
+		field={fields.title}
 		label={m.staff_title()}
 		type="text"
 		value={item?.title ?? ''}
 		description={m.staff_project_templates_id_what_work_order_called_blank()}
 	/>
 	<FormField
-		name="groupId"
+		field={fields.groupId}
 		label={m.staff_owner()}
 		type="select"
 		options={ownerOptions}
 		value={item?.groupId ?? ''}
 	/>
 	<FormField
-		name="doneWhen"
+		field={fields.doneWhen}
 		label={m.staff_project_templates_id_done_when()}
 		type="select"
 		options={doneWhenOptions}
@@ -301,7 +316,7 @@
 		description={m.staff_project_templates_id_fact_about_show_its_tasks()}
 	/>
 	<FormField
-		name="kind"
+		field={fields.kind}
 		label={m.staff_kind()}
 		type="select"
 		options={kindOptions}
@@ -310,20 +325,21 @@
 	/>
 	<div class="grid gap-4 sm:grid-cols-3">
 		<FormField
-			name="offsetAmount"
+			field={fields.offsetAmount}
+			submitAs="text"
 			label={m.staff_project_templates_id_offset()}
 			type="number"
 			value={String(offset.amount)}
 		/>
 		<FormField
-			name="offsetUnit"
+			field={fields.offsetUnit}
 			label={m.staff_project_templates_id_unit()}
 			type="select"
 			options={unitOptions}
 			value={offset.unit}
 		/>
 		<FormField
-			name="offsetDirection"
+			field={fields.offsetDirection}
 			label={m.staff_project_templates_id_direction()}
 			type="select"
 			options={directionOptions}
@@ -331,27 +347,35 @@
 		/>
 	</div>
 	<FormField
-		name="durationMinutes"
+		field={fields.durationMinutes}
+		submitAs="text"
 		label={m.staff_project_templates_id_duration_minutes()}
 		type="number"
 		value={String(item ? (item.durationMinutes ?? '') : 120)}
 		description={m.staff_project_templates_id_scheduled_items_only_ignored_dead()}
 	/>
 	<FormField
-		name="capacity"
+		field={fields.capacity}
+		submitAs="text"
 		label={m.staff_project_templates_id_how_many_people()}
 		type="number"
 		value={String(item?.capacity ?? 1)}
 	/>
 	<FormField
-		name="sortOrder"
+		field={fields.sortOrder}
+		submitAs="text"
 		label={m.staff_sort_order()}
 		type="number"
 		value={String(item?.sortOrder ?? 0)}
 	/>
-	<FormField name="notes" label={m.staff_notes()} type="textarea" value={item?.notes ?? ''} />
 	<FormField
-		name="tasks"
+		field={fields.notes}
+		label={m.staff_notes()}
+		type="textarea"
+		value={item?.notes ?? ''}
+	/>
+	<FormField
+		field={fields.tasks}
 		label={m.staff_project_templates_id_tasks()}
 		type="textarea"
 		value={item?.tasks.join('\n') ?? ''}

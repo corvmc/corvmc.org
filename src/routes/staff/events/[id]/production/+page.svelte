@@ -623,15 +623,15 @@
 									}}
 								>
 									{#snippet form()}
-										<input type="hidden" name="eventId" value={evt.id} />
+										<input {...applyDutyList.fields.eventId.as('hidden', evt.id)} />
 										<FormField
-											name="dutyListId"
+											field={applyDutyList.fields.dutyListId}
 											label={m.staff_template()}
 											type="select"
 											options={dutyLists.map((l) => ({ value: l.id, label: l.name }))}
 										/>
 										<FormField
-											name="reason"
+											field={applyDutyList.fields.reason}
 											label={m.staff_reason_if_applying_again()}
 											type="text"
 										/>

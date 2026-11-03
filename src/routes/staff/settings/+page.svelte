@@ -248,9 +248,8 @@
 									{/each}
 									<input
 										id="name-{product.key}"
-										name="name"
+										{...instance.fields.name.as('text', product.name)}
 										type="text"
-										value={product.name}
 										class="input input-sm"
 									/>
 								</div>
@@ -305,8 +304,7 @@
 								</label>
 								<textarea
 									id="desc-{product.key}"
-									name="description"
-									value={product.description ?? ''}
+									{...instance.fields.description.as('text', product.description ?? '')}
 									class="textarea textarea-sm"
 									rows="2"></textarea>
 							</div>
@@ -372,13 +370,13 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="operatingHoursStart"
+								field={updateReservationSettings.fields.operatingHoursStart}
 								label={m.staff_settings_opens_at()}
 								type="time"
 								value={String(reservationSettings.operatingHoursStart ?? '09:00')}
 							/>
 							<FormField
-								name="operatingHoursEnd"
+								field={updateReservationSettings.fields.operatingHoursEnd}
 								label={m.staff_settings_closes_at()}
 								type="time"
 								value={String(reservationSettings.operatingHoursEnd ?? '22:00')}
@@ -393,7 +391,7 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="timeSlotMinutes"
+								field={updateReservationSettings.fields.timeSlotMinutes}
 								label={m.staff_settings_time_slot_granularity()}
 								type="select"
 								value={String(reservationSettings.timeSlotMinutes ?? 30)}
@@ -404,7 +402,8 @@
 								]}
 							/>
 							<FormField
-								name="bufferMinutes"
+								field={updateReservationSettings.fields.bufferMinutes}
+								submitAs="text"
 								label={m.staff_settings_buffer_between_reservations_min()}
 								type="number"
 								value={String(reservationSettings.bufferMinutes ?? 0)}
@@ -412,7 +411,8 @@
 								step="5"
 							/>
 							<FormField
-								name="minAdvanceMinutes"
+								field={updateReservationSettings.fields.minAdvanceMinutes}
+								submitAs="text"
 								label={m.staff_settings_min_advance_booking_minutes()}
 								type="number"
 								value={String(reservationSettings.minAdvanceMinutes ?? 60)}
@@ -420,7 +420,8 @@
 								step="15"
 							/>
 							<FormField
-								name="minDurationHours"
+								field={updateReservationSettings.fields.minDurationHours}
+								submitAs="text"
 								label={m.staff_settings_minimum_duration_hours()}
 								type="number"
 								value={String(reservationSettings.minDurationHours ?? 1)}
@@ -428,7 +429,8 @@
 								step="0.5"
 							/>
 							<FormField
-								name="maxDurationHours"
+								field={updateReservationSettings.fields.maxDurationHours}
+								submitAs="text"
 								label={m.staff_settings_maximum_duration_hours()}
 								type="number"
 								value={String(reservationSettings.maxDurationHours ?? 8)}
@@ -436,14 +438,16 @@
 								step="1"
 							/>
 							<FormField
-								name="maxAdvanceDaysOneoff"
+								field={updateReservationSettings.fields.maxAdvanceDaysOneoff}
+								submitAs="text"
 								label={m.staff_settings_max_advance_booking_one_off()}
 								type="number"
 								value={String(reservationSettings.maxAdvanceDaysOneoff ?? 14)}
 								min="1"
 							/>
 							<FormField
-								name="maxAdvanceDaysRecurring"
+								field={updateReservationSettings.fields.maxAdvanceDaysRecurring}
+								submitAs="text"
 								label={m.staff_settings_max_advance_booking_recurring_days()}
 								type="number"
 								value={String(reservationSettings.maxAdvanceDaysRecurring ?? 17.5)}
@@ -484,28 +488,28 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="addressStreet"
+								field={updateOrgSettings.fields.addressStreet}
 								label={m.staff_settings_street_address()}
 								type="text"
 								value={String(orgSettings.addressStreet ?? '')}
 								placeholder={m.staff_settings_6775_sw_philomath_blvd()}
 							/>
 							<FormField
-								name="addressCity"
+								field={updateOrgSettings.fields.addressCity}
 								label={m.staff_settings_city()}
 								type="text"
 								value={String(orgSettings.addressCity ?? '')}
 								placeholder={m.staff_settings_corvallis()}
 							/>
 							<FormField
-								name="addressState"
+								field={updateOrgSettings.fields.addressState}
 								label={m.staff_settings_state()}
 								type="text"
 								value={String(orgSettings.addressState ?? '')}
 								placeholder={m.staff_settings_text()}
 							/>
 							<FormField
-								name="addressZip"
+								field={updateOrgSettings.fields.addressZip}
 								label={m.staff_settings_zip()}
 								type="text"
 								value={String(orgSettings.addressZip ?? '')}
@@ -522,14 +526,14 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="socialFacebook"
+								field={updateOrgSettings.fields.socialFacebook}
 								label={m.staff_settings_facebook_url()}
 								type="text"
 								value={String(orgSettings.socialFacebook ?? '')}
 								placeholder={m.staff_settings_https_facebook_com()}
 							/>
 							<FormField
-								name="socialInstagram"
+								field={updateOrgSettings.fields.socialInstagram}
 								label={m.staff_settings_instagram_url()}
 								type="text"
 								value={String(orgSettings.socialInstagram ?? '')}
@@ -576,14 +580,15 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="hourValueCents"
+								field={updateVolunteerValueSettings.fields.hourValueCents}
+								submitAs="text"
 								label={m.staff_settings_hourly_value_cents()}
 								type="number"
 								value={String(volunteerValue.hourValueCents)}
 								placeholder="3766"
 							/>
 							<FormField
-								name="hourValueSource"
+								field={updateVolunteerValueSettings.fields.hourValueSource}
 								label={m.staff_settings_source()}
 								type="text"
 								value={volunteerValue.hourValueSource}
@@ -617,7 +622,7 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="roleId"
+								field={updateOrientationSettings.fields.roleId}
 								label={m.staff_settings_role()}
 								type="select"
 								value={orientation.roleId}
@@ -627,20 +632,22 @@
 								]}
 							/>
 							<FormField
-								name="minutes"
+								field={updateOrientationSettings.fields.minutes}
+								submitAs="text"
 								label={m.staff_settings_length_minutes()}
 								type="number"
 								value={String(orientation.minutes)}
 							/>
 							<FormField
-								name="leadMinutes"
+								field={updateOrientationSettings.fields.leadMinutes}
+								submitAs="text"
 								label={m.staff_settings_starts_before_booking_minutes()}
 								type="number"
 								value={String(orientation.leadMinutes)}
 							/>
 						</div>
 						<FormField
-							name="tasks"
+							field={updateOrientationSettings.fields.tasks}
 							label={m.staff_settings_checklist()}
 							type="textarea"
 							description={m.staff_settings_one_task_per_line()}
@@ -673,7 +680,8 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="consoleChannels"
+								field={updateVenueSettings.fields.consoleChannels}
+								submitAs="text"
 								label={m.staff_settings_console_channels()}
 								type="number"
 								value={String(venue.consoleChannels)}
@@ -862,13 +870,13 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="clientId"
+								field={updateIntegrationSettings.fields.clientId}
 								label={m.staff_settings_client_id()}
 								type="text"
 								value={integrationSettings.clientId}
 							/>
 							<FormField
-								name="clientSecret"
+								field={updateIntegrationSettings.fields.clientSecret}
 								label={m.staff_settings_client_secret()}
 								type="password"
 								value=""
@@ -879,7 +887,7 @@
 
 								{#snippet failed()}
 									<FormField
-										name="deviceId"
+										field={updateIntegrationSettings.fields.deviceId}
 										label={m.staff_settings_device_id()}
 										type="text"
 										value={integrationSettings.deviceId}

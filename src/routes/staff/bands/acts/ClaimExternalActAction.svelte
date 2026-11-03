@@ -41,7 +41,11 @@
 			<p class="text-sm">
 				{m.staff_bands_acts_claim_external_act_becomes_cmc_band_with_sl({ actName })}
 			</p>
-			<FormField name="ownerId" label={m.staff_owner()} required>
+			<FormField
+				field={claimStaffExternalAct.for(entryId).fields.ownerId}
+				label={m.staff_owner()}
+				required
+			>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={owner}

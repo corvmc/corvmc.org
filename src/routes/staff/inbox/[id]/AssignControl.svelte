@@ -63,7 +63,7 @@
 	>
 		<input {...action.fields.threadId.as('hidden', threadId)} />
 		<FormField
-			name="userId"
+			field={action.fields.userId}
 			label={m.staff_assigned_2()}
 			type="select"
 			options={[

@@ -47,7 +47,7 @@ function attr(node, key) {
 /** A literal `readonly` / `readonly={true}` FormField renders no control. */
 function isStaticallyReadonly(/** @type {RuleNode} */ node) {
 	const a = attr(node, 'readonly');
-	if (!a) return false;
+	if (!a || a.type === 'SvelteShorthandAttribute') return false;
 	const parts = Array.isArray(a.value) ? a.value : [];
 	if (parts.length === 0) return true;
 	const expr = parts[0]?.expression;

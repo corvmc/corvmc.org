@@ -26,10 +26,8 @@
 	let report = $derived(await getEquipmentReport(id));
 
 	const dismissFields = dismissEquipmentReport.fields;
+	// An empty workOrderId means "raise a new one"; the role picker only matters then.
 	const sendFields = sendEquipmentReportToWorkOrder.fields;
-
-	// Empty means "raise a new one"; the role picker only matters then.
-	let workOrderId = $state('');
 </script>
 
 <PageHeader
@@ -109,7 +107,7 @@
 							<input {...sendFields.id.as('hidden', id)} />
 							<label class="fieldset w-full">
 								<span class="fieldset-legend">{m.staff_inventory_problems_id_work_order()}</span>
-								<Select class="w-full" name="workOrderId" bind:value={workOrderId}>
+								<Select class="w-full" {...sendFields.workOrderId.as('select')}>
 									<option value="">{m.staff_inventory_problems_id_raise_new_work_order()}</option>
 									{#each report.openWorkOrders as w (w.id)}
 										<option value={w.id}
@@ -119,12 +117,12 @@
 									{/each}
 								</Select>
 							</label>
-							{#if !workOrderId}
+							{#if !sendFields.workOrderId.value()}
 								<label class="fieldset w-full">
 									<span class="fieldset-legend"
 										>{m.staff_inventory_problems_id_who_does_work()}</span
 									>
-									<Select class="w-full" name="volunteerRoleId">
+									<Select class="w-full" {...sendFields.volunteerRoleId.as('select')}>
 										<option value="" disabled selected
 											>{m.staff_inventory_problems_id_choose_role()}</option
 										>

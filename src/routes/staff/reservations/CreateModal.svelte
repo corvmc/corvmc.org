@@ -176,7 +176,12 @@
 				/>
 			</fieldset>
 
-			<Field name="date" type="date" label={m.staff_date()} bind:value={date} />
+			<Field
+				field={createReservation.fields.date}
+				type="date"
+				label={m.staff_date()}
+				bind:value={date}
+			/>
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">{m.staff_reservations_create_modal_start_time()}</legend>
@@ -216,7 +221,12 @@
 				/>
 			{/if}
 
-			<Field name="notes" type="textarea" label={m.staff_notes()} bind:value={notes} />
+			<Field
+				field={createReservation.fields.notes}
+				type="textarea"
+				label={m.staff_notes()}
+				bind:value={notes}
+			/>
 
 			{#snippet pending()}
 				<div class="flex items-center justify-center p-8">

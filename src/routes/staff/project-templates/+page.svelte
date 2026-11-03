@@ -34,22 +34,22 @@
 		successToast={m.staff_project_templates_success_toast()}
 	>
 		{#snippet form()}
-			<FormField name="name" label={m.staff_name()} type="text" />
+			<FormField field={createDutyList.fields.name} label={m.staff_name()} type="text" />
 			<FormField
-				name="description"
+				field={createDutyList.fields.description}
 				label={m.staff_description()}
 				type="textarea"
 				description={m.staff_project_templates_shown_when_choosing_template_apply()}
 			/>
 			<FormField
-				name="anchor"
+				field={createDutyList.fields.anchor}
 				label={m.staff_measure_offsets_from()}
 				type="select"
 				options={anchorOptions}
 				description={m.staff_project_templates_every_item_timed_from()}
 			/>
 			<FormField
-				name="autoApplyOn"
+				field={createDutyList.fields.autoApplyOn}
 				label={m.staff_apply_automatically()}
 				type="select"
 				options={autoApplyOptions}
