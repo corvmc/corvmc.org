@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/** One sponsor: who to call, and every term of support they have given. */
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -66,8 +67,12 @@
 		<Alert type="warning">
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<span>
-					<span class="font-medium">{m.staff_archived_2()}</span> Off the sponsor list, with every sponsorship
-					and credit kept.
+					<ParaglideMessage
+						message={m.staff_sponsors_id_off_sponsor_list_with_every}
+						inputs={{ staff_archived_2: m.staff_archived_2() }}
+						>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				</span>
 				<Action
 					action={restoreSponsor.for(sponsor.id)}

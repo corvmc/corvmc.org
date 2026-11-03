@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -173,12 +174,15 @@
 				in the in-kind table above.
 			-->
 			<p class="mt-3 text-subtle text-sm">
-				Impact value prices every approved hour at {formatCents(
-					r.volunteering.contributed.rateCents
-				)}/hr and is the figure a grant application asks for. The narrower
-				<strong>{formatCents(r.volunteering.contributed.recognizableServicesCents)}</strong> of specialized
-				time is what a financial statement can recognise, and it is the amount already counted as contributed
-				services above. The two overlap; adding them double-counts.
+				<ParaglideMessage
+					message={m.staff_reports_impact_value_prices_every_approved}
+					inputs={{
+						formatCents: formatCents(r.volunteering.contributed.rateCents),
+						formatCents2: formatCents(r.volunteering.contributed.recognizableServicesCents)
+					}}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 		</InfoCard>
 

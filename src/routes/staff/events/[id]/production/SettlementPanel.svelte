@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -130,10 +131,18 @@
 
 		{#if settlement.door}
 			<p class="mt-3 text-muted">
-				{formatCents(settlement.door.cashCents)} splits
-				{settlement.door.actsPercent}/{100 - settlement.door.actsPercent} —
-				<strong>{formatCents(settlement.door.actsCents)}</strong> to the bands,
-				<strong>{formatCents(settlement.door.collectiveCents)}</strong> to the collective.
+				<ParaglideMessage
+					message={m.staff_events_id_production_settlement_panel_splits_bands_col}
+					inputs={{
+						formatCents: formatCents(settlement.door.cashCents),
+						actsPercent: settlement.door.actsPercent,
+						value: 100 - settlement.door.actsPercent,
+						formatCents2: formatCents(settlement.door.actsCents),
+						formatCents3: formatCents(settlement.door.collectiveCents)
+					}}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 				{#if settlement.door.overridden}
 					<Badge size="sm" variant="warning"
 						>{m.staff_events_id_production_settlement_panel_show_s_own_split()}</Badge

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -94,10 +95,16 @@
 			{#if project.kind === 'production' || burn.cash.showCents > 0}
 				<tr>
 					<td>
-						Show costs
-						<span class="block text-subtle text-xs">
-							{m.staff_projects_id_budget_report_cost_sheet_guarantee_top_ups()}
-						</span>
+						<ParaglideMessage
+							message={m.staff_projects_id_budget_report_show_costs}
+							inputs={{
+								staff_projects_id_budget_report_cost_sheet_guarantee_top_ups:
+									m.staff_projects_id_budget_report_cost_sheet_guarantee_top_ups()
+							}}
+							>{#snippet span({ children })}<span class="block text-subtle text-xs"
+									>{@render children?.()}</span
+								>{/snippet}</ParaglideMessage
+						>
 					</td>
 					<td class="cell-num">{formatCents(burn.cash.showCents)}</td>
 				</tr>
@@ -129,13 +136,19 @@
 			{/snippet}
 			<tr>
 				<td>
-					Volunteer time — impact value
-					<span class="block text-subtle text-xs">
-						{m.staff_projects_id_budget_report_every_approved_hour_at_hr({
-							hrs: hrs(volunteerHours),
-							formatCents: formatCents(burn.contributed.hourValueCents)
-						})}
-					</span>
+					<ParaglideMessage
+						message={m.staff_projects_id_budget_report_volunteer_time_impact_value}
+						inputs={{
+							staff_projects_id_budget_report_every_approved_hour_at_hr:
+								m.staff_projects_id_budget_report_every_approved_hour_at_hr({
+									hrs: hrs(volunteerHours),
+									formatCents: formatCents(burn.contributed.hourValueCents)
+								})
+						}}
+						>{#snippet span({ children })}<span class="block text-subtle text-xs"
+								>{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				</td>
 				<td class="cell-num">{formatCents(burn.contributed.volunteerValueCents)}</td>
 			</tr>
@@ -160,11 +173,12 @@
 			</tr>
 		</Table>
 		<p class="mt-2 text-subtle text-sm">
-			Never added to cash: donated time and goods belong in a grant report, not against a budget.
-			The first two rows are also not added to <em
-				>{m.staff_projects_id_budget_report_each_other()}</em
-			> — a donated engineer's hour is in both, so they are two answers to two different questions rather
-			than parts of one total.
+			<ParaglideMessage
+				message={m.staff_projects_id_budget_report_never_added_cash_donated_tim}
+				inputs={{
+					staff_projects_id_budget_report_each_other: m.staff_projects_id_budget_report_each_other()
+				}}>{#snippet em({ children })}<em>{@render children?.()}</em>{/snippet}</ParaglideMessage
+			>
 		</p>
 	</InfoCard>
 </div>
@@ -235,7 +249,12 @@
 								<input {...detachFields.kind.as('hidden', row.kind)} />
 								<input {...detachFields.rowId.as('hidden', row.id)} />
 								<p class="text-sm">
-									Takes <strong>{row.label}</strong> off this project. The record itself is untouched.
+									<ParaglideMessage
+										message={m.staff_projects_id_budget_report_takes_off_project_record_its}
+										inputs={{ label: row.label }}
+										>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+											>{/snippet}</ParaglideMessage
+									>
 								</p>
 							{/snippet}
 						</Action>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import {
 		getPendingEmailChange,
 		requestEmailChange,
@@ -27,13 +28,23 @@
 >
 	{#snippet children({ canChange, pending })}
 		<p class="mb-3">
-			Signs in as <strong>{email}</strong>.
+			<ParaglideMessage message={m.staff_members_id_email_change_card_signs_as} inputs={{ email }}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 		{#if pending}
 			<p class="mb-3 text-muted">
-				Waiting for <strong>{pending.email}</strong> to confirm — sent
-				{formatDateTimeShort(pending.requestedAt)}, link good until
-				{formatDateTimeShort(pending.expiresAt)}.
+				<ParaglideMessage
+					message={m.staff_members_id_email_change_card_waiting_confirm_sent_link}
+					inputs={{
+						email: pending.email,
+						formatDateTimeShort: formatDateTimeShort(pending.requestedAt),
+						formatDateTimeShort2: formatDateTimeShort(pending.expiresAt)
+					}}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 		{/if}
 		{#if canChange}

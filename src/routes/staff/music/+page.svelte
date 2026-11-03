@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
@@ -55,9 +56,13 @@
 <PageContent width="full">
 	{#if !audioEnabled}
 		<Alert type="info">
-			The music storefront is switched off, so bands cannot see or upload anything yet. This page
-			works either way — turn it on in
-			<a class="link" href={resolve('/staff/settings')}>{m.staff_music_settings_features()}</a>.
+			<ParaglideMessage
+				message={m.staff_music_music_storefront_switched_off_so}
+				inputs={{ staff_music_settings_features: m.staff_music_settings_features() }}
+				>{#snippet a({ children })}<a class="link" href={resolve('/staff/settings')}
+						>{@render children?.()}</a
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{/if}
 
@@ -87,7 +92,12 @@
 				<p>
 					<Badge variant="success">{m.staff_music_air()}</Badge>
 					{#if now.current}
-						Now playing <strong>{now.current.trackTitle}</strong> — {now.current.bandName}
+						<ParaglideMessage
+							message={m.staff_music_now_playing}
+							inputs={{ trackTitle: now.current.trackTitle, bandName: now.current.bandName }}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
 					{:else}
 						{m.staff_music_nothing_scheduled_right_now()}
 					{/if}
@@ -95,9 +105,13 @@
 			{:else}
 				<p>
 					<Badge variant="ghost">{m.staff_music_off()}</Badge>
-					Switch the station on in
-					<a class="link" href={resolve('/staff/settings')}>{m.staff_music_settings_features()}</a> when
-					the pool above looks like a station.
+					<ParaglideMessage
+						message={m.staff_music_switch_station_when_pool_above}
+						inputs={{ staff_music_settings_features: m.staff_music_settings_features() }}
+						>{#snippet a({ children })}<a class="link" href={resolve('/staff/settings')}
+								>{@render children?.()}</a
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			{/if}
 
@@ -207,8 +221,12 @@
 												{@const fields = restoreReleaseForm.for(release.id).fields}
 												<input {...fields.releaseId.as('hidden', release.id)} />
 												<p>
-													Hand <strong>{release.title}</strong> back to {release.bandName} as a draft?
-													They decide whether to publish it again.
+													<ParaglideMessage
+														message={m.staff_music_hand_back_as_draft_they}
+														inputs={{ title: release.title, bandName: release.bandName }}
+														>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+															>{/snippet}</ParaglideMessage
+													>
 												</p>
 											{/snippet}
 										</Action>
@@ -228,8 +246,12 @@
 												<div class="space-y-3">
 													<input {...fields.releaseId.as('hidden', release.id)} />
 													<p>
-														Take <strong>{release.title}</strong> down. It stops being public and the
-														band cannot republish it themselves.
+														<ParaglideMessage
+															message={m.staff_music_take_down_stops_being_public}
+															inputs={{ title: release.title }}
+															>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+																>{/snippet}</ParaglideMessage
+														>
 													</p>
 													<FormField
 														field={fields.reason}
@@ -266,12 +288,23 @@
 													/>
 													{#if release.radioExcluded}
 														<p>
-															Put <strong>{release.title}</strong> back in the rotation? The band's own
-															opt-in still applies.
+															<ParaglideMessage
+																message={m.staff_music_put_back_rotation_band_s}
+																inputs={{ title: release.title }}
+																>{#snippet strong({ children })}<strong
+																		>{@render children?.()}</strong
+																	>{/snippet}</ParaglideMessage
+															>
 														</p>
 													{:else}
 														<p>
-															Take <strong>{release.title}</strong> off the air without unpublishing it.
+															<ParaglideMessage
+																message={m.staff_music_take_off_air_without_unpublishing}
+																inputs={{ title: release.title }}
+																>{#snippet strong({ children })}<strong
+																		>{@render children?.()}</strong
+																	>{/snippet}</ParaglideMessage
+															>
 														</p>
 														<FormField
 															field={fields.reason}
@@ -368,15 +401,28 @@
 												<input {...fields.purchaseId.as('hidden', purchase.purchaseId)} />
 												{#if purchase.amountPaidCents === 0}
 													<p>
-														Revoke <strong>{purchase.buyerEmail}</strong>'s download of
-														<strong>{purchase.releaseTitle}</strong>. Nothing was paid, so no money
-														moves — the link simply stops working.
+														<ParaglideMessage
+															message={m.staff_music_revoke_s_download_nothing_was}
+															inputs={{
+																buyerEmail: purchase.buyerEmail,
+																releaseTitle: purchase.releaseTitle
+															}}
+															>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+																>{/snippet}</ParaglideMessage
+														>
 													</p>
 												{:else}
 													<p>
-														Return <strong>{formatCents(purchase.amountPaidCents)}</strong> to
-														<strong>{purchase.buyerEmail}</strong>
-														for <strong>{purchase.releaseTitle}</strong>.
+														<ParaglideMessage
+															message={m.staff_music_return}
+															inputs={{
+																formatCents: formatCents(purchase.amountPaidCents),
+																buyerEmail: purchase.buyerEmail,
+																releaseTitle: purchase.releaseTitle
+															}}
+															>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+																>{/snippet}</ParaglideMessage
+														>
 													</p>
 													<!-- The part that is not obvious from the button: this
 													     takes money back out of the band's account, not just

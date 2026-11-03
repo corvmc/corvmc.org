@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { IconDeviceFloppy, IconFileText, IconUpload } from '@tabler/icons-svelte';
 	import {
@@ -115,8 +116,15 @@
 		<Alert type="warning" class="mb-4">
 			<div>
 				<p>
-					<strong>{data.paidByName}</strong> fronted
-					{formatCents(data.totalCents ?? data.linesTotalCents)} for this and has not been paid back.
+					<ParaglideMessage
+						message={m.staff_inventory_acquisitions_id_fronted_has_not_been_paid}
+						inputs={{
+							paidByName: data.paidByName ?? '',
+							formatCents: formatCents(data.totalCents ?? data.linesTotalCents)
+						}}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 				<div class="mt-3">
 					<MarkReimbursedAction

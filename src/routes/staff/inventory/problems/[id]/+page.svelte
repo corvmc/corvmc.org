@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -171,10 +172,18 @@
 				</div>
 			{:else if report.stage === 'in_work_order' && report.workOrderId}
 				<p class="text-muted">
-					Waiting on
-					<a class="link" href={resolve(`/staff/volunteer/shifts/${report.workOrderId}`)}>
-						{m.staff_inventory_problems_id_its_work_order()}</a
-					>. It closes when that does.
+					<ParaglideMessage
+						message={m.staff_inventory_problems_id_waiting_closes_when_does}
+						inputs={{
+							staff_inventory_problems_id_its_work_order:
+								m.staff_inventory_problems_id_its_work_order()
+						}}
+						>{#snippet a({ children })}<a
+								class="link"
+								href={resolve(`/staff/volunteer/shifts/${report.workOrderId}`)}
+								>{@render children?.()}</a
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			{:else}
 				<DefinitionList>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -161,8 +162,12 @@
 	{/if}
 
 	<p class="mt-4 text-subtle">
-		Gifts-in-kind are recorded but not reported here yet — see
-		<a class="link" href={resolve('/staff/inventory')}>{m.staff_inventory_spend_inventory_spec()}</a
-		> for the disclosure that is still to come.
+		<ParaglideMessage
+			message={m.staff_inventory_spend_gifts_kind_recorded_but_not}
+			inputs={{ staff_inventory_spend_inventory_spec: m.staff_inventory_spend_inventory_spec() }}
+			>{#snippet a({ children })}<a class="link" href={resolve('/staff/inventory')}
+					>{@render children?.()}</a
+				>{/snippet}</ParaglideMessage
+		>
 	</p>
 </PageContent>

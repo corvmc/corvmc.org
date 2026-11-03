@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import StickyBar from '$lib/components/ui/StickyBar.svelte';
@@ -216,8 +217,20 @@
 
 <!-- The running tally: what this session will write, before it writes it. -->
 <StickyBar class="mt-4 flex flex-wrap items-center gap-3">
-	<span><strong>{lines.filter((l) => l.itemId).length}</strong> lines</span>
-	<span><strong>{unitTotal}</strong> units</span>
+	<span
+		><ParaglideMessage
+			message={m.staff_inventory_intake_intake_lines_lines}
+			inputs={{ length: lines.filter((l) => l.itemId).length }}
+			>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+				>{/snippet}</ParaglideMessage
+		></span
+	>
+	<span
+		><ParaglideMessage message={m.staff_inventory_intake_intake_lines_units} inputs={{ unitTotal }}
+			>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+				>{/snippet}</ParaglideMessage
+		></span
+	>
 	<span><strong>{formatCents(valueTotal)}</strong></span>
 	{#if needsTagging > 0}
 		<Badge variant="warning" size="sm"

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import RoleRequirementsCard from './RoleRequirementsCard.svelte';
 	import RoleShiftsCard from './RoleShiftsCard.svelte';
 	import RoleInterestedCard from './RoleInterestedCard.svelte';
@@ -208,11 +209,15 @@
 					<legend class="px-2 text-sm font-medium">{m.staff_volunteer_roles_id_accounting()}</legend
 					>
 					<p class="mb-2 text-subtle">
-						Every approved hour counts toward the collective's impact value, at the rate on the
-						settings page. A <em>{m.staff_volunteer_roles_id_specialized_skill()}</em> is narrower: work
-						we would otherwise have had to pay for, which a financial statement can recognise as a contributed
-						service — at what that skill costs, not at the impact rate. The two are reported side by side
-						and never added together.
+						<ParaglideMessage
+							message={m.staff_volunteer_roles_id_every_approved_hour_counts_toward}
+							inputs={{
+								staff_volunteer_roles_id_specialized_skill:
+									m.staff_volunteer_roles_id_specialized_skill()
+							}}
+							>{#snippet em({ children })}<em>{@render children?.()}</em
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 					<div class="grid gap-3 sm:grid-cols-2">
 						<!--
@@ -295,8 +300,12 @@
 			<div class="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
 				<span><span class="text-lg font-medium">{summary.averageRating.toFixed(1)}</span> / 5</span>
 				<span>
-					set up on arrival
-					<span class="font-medium">{Math.round(summary.setUpShare * 100)}%</span>
+					<ParaglideMessage
+						message={m.staff_volunteer_roles_id_set_up_arrival}
+						inputs={{ round: Math.round(summary.setUpShare * 100) }}
+						>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				</span>
 				<span class="opacity-60">
 					{summary.responses}

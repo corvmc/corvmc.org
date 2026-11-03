@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -70,8 +71,13 @@
 
 	{#if tab === 'under_review'}
 		<p class="text-muted">
-			Reported posts are decided in
-			<a class="link" href={resolve('/staff/flags')}>{m.staff_content_flags()}</a>.
+			<ParaglideMessage
+				message={m.staff_classifieds_reported_posts_decided}
+				inputs={{ staff_content_flags: m.staff_content_flags() }}
+				>{#snippet a({ children })}<a class="link" href={resolve('/staff/flags')}
+						>{@render children?.()}</a
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 	{/if}
 

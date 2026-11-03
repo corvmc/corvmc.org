@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Where shows happen.
 	 *
@@ -76,9 +77,16 @@
 			off-site — including the ones that are not.
 		-->
 		<Alert type="warning">
-			<span class="font-medium">{m.staff_venues_no_practice_room()}</span>
-			Nothing is marked as ours yet, so no event can be told apart from an off-site one. Open the room's
-			row and choose <em>{m.staff_make_room()}</em>.
+			<ParaglideMessage
+				message={m.staff_venues_nothing_marked_as_ours_yet}
+				inputs={{
+					staff_venues_no_practice_room: m.staff_venues_no_practice_room(),
+					staff_make_room: m.staff_make_room()
+				}}
+				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+					>{/snippet}{#snippet em({ children })}<em>{@render children?.()}</em
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{/if}
 
