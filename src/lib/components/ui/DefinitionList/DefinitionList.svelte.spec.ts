@@ -40,7 +40,7 @@ describe('DefinitionList + Fact', () => {
 
 	it('renders a plain value via the value prop', async () => {
 		await render(Harness);
-		await expect.element(page_dd(0)).toHaveTextContent(PLAIN_VALUE);
+		await expect.element(page_dd(0)).toMatchTextContent(PLAIN_VALUE);
 	});
 
 	it('applies mono styling for ids', async () => {

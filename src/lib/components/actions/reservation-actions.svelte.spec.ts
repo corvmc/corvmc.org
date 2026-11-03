@@ -70,7 +70,7 @@ describe('CancelReservationAction', () => {
 		await expect.element(dialog).toBeVisible();
 		await expect
 			.element(dialog)
-			.toHaveTextContent(
+			.toMatchTextContent(
 				formatDuration(new Date('2026-03-14T19:00:00Z'), new Date('2026-03-14T21:00:00Z'))
 			);
 	});

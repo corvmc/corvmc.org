@@ -38,6 +38,21 @@ function resolveSentryRelease(): string | undefined {
 
 const sentryRelease = resolveSentryRelease();
 
+// Browser projects only. Vitest 5 sets `resolve.noExternal = true` on every
+// non-client environment, and Kit's remote plugin evaluates each `.remote.ts` a
+// component imports through the `ssr` runner, which then inlines CJS deps
+// (`@opentelemetry/semantic-conventions`: "exports is not defined"). Tests here
+// run in the browser, so `ssr` serves only that evaluation; Vite's own
+// externalization is what it needs. A `configEnvironment` hook loses to
+// vitest's post-order one, so this resets it once the config is resolved.
+const ssrExternalsForBrowserTests = {
+	name: 'corvmc:ssr-externals-for-browser-tests',
+	configResolved(config: { environments: Record<string, { resolve: { noExternal: unknown } }> }) {
+		const ssr = config.environments.ssr;
+		if (ssr) ssr.resolve.noExternal = [];
+	}
+};
+
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
 	plugins: [
@@ -139,9 +154,18 @@ export default defineConfig({
 		projects: [
 			{
 				extends: './vite.config.ts',
+				plugins: [ssrExternalsForBrowserTests],
 				test: {
 					name: 'client',
+					// Per-checkout, because vitest's default (63315) is a fixed
+					// constant every worktree would ask for at once — and unlike the
+					// dev server this binds during `pnpm test:unit`, so two suites
+					// collide without anyone starting a server. strictPort makes that
+					// loud rather than letting one suite adopt another's browser.
+					api: { port: browserPort(dirname), strictPort: true },
 					browser: {
+						// Substring, case-insensitive text matching, as vitest 4 did.
+						locators: { exact: false },
 						enabled: true,
 						// Out of `src/`. The default is
 						// `<test dir>/__screenshots__/<file>.svelte.spec.ts/`, whose last
@@ -153,12 +177,6 @@ export default defineConfig({
 						// `browser.ui` is on by default outside CI. `test-results/` is
 						// already gitignored.
 						screenshotDirectory: 'test-results/screenshots',
-						// Per-checkout, because vitest's default (63315) is a fixed
-						// constant every worktree would ask for at once — and unlike the
-						// dev server this binds during `pnpm test:unit`, so two suites
-						// collide without anyone starting a server. strictPort makes that
-						// loud rather than letting one suite adopt another's browser.
-						api: { port: browserPort(dirname), strictPort: true },
 						provider: playwright(),
 						instances: [
 							{
@@ -208,19 +226,21 @@ export default defineConfig({
 					// See options at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon#storybooktest
 					storybookTest({
 						configDir: path.join(dirname, '.storybook')
-					})
+					}),
+					ssrExternalsForBrowserTests
 				],
 				test: {
 					name: 'storybook',
+					// Its own port. Without one this project takes vitest's default,
+					// which is the number `client` already binds — two browser servers
+					// starting together in the same run, racing for one port.
+					api: { port: storybookPort(dirname), strictPort: true },
 					browser: {
 						enabled: true,
+						locators: { exact: false },
 						headless: true,
 						// Same reasoning as `client` above: out of the trees the gates grep.
 						screenshotDirectory: 'test-results/screenshots',
-						// Its own port. Without one this project takes vitest's default,
-						// which is the number `client` already binds — two browser servers
-						// starting together in the same run, racing for one port.
-						api: { port: storybookPort(dirname), strictPort: true },
 						provider: playwright({}),
 						instances: [
 							{

@@ -40,14 +40,14 @@ describe('TabBar collapse', () => {
 	it('renders a menu trigger naming the active tab', async () => {
 		await render(TabBarHarness, { tabs: TABS, active: 'moderation', collapse: true });
 
-		await expect.element(trigger()).toHaveTextContent(label('moderation'));
+		await expect.element(trigger()).toMatchTextContent(label('moderation'));
 		await expect.element(trigger()).toHaveAttribute('aria-haspopup', 'menu');
 	});
 
 	it('carries the active tab badge on the trigger', async () => {
 		await render(TabBarHarness, { tabs: TABS, active: 'overview', collapse: true });
 
-		await expect.element(trigger()).toHaveTextContent(String(TABS[0].badge));
+		await expect.element(trigger()).toMatchTextContent(String(TABS[0].badge));
 	});
 
 	it('offers every tab in the menu, not just the ones that fit', async () => {
@@ -114,7 +114,7 @@ describe('TabBar dense', () => {
 
 		await expect
 			.element(page.getByRole('tab', { selected: true }))
-			.toHaveTextContent(label('space'));
+			.toMatchTextContent(label('space'));
 		expect(page.getByRole('tab', { name: label('bands') }).element().textContent).not.toContain(
 			label('bands')
 		);
@@ -145,7 +145,7 @@ describe('TabBar dense', () => {
 
 		await expect
 			.element(page.getByRole('tab', { name: named('bands') }))
-			.toHaveTextContent(label('bands'));
+			.toMatchTextContent(label('bands'));
 	});
 });
 
