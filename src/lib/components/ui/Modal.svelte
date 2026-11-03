@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { Dialog } from 'bits-ui';
 	import type { Snippet } from 'svelte';
 	import { setButtonsAsMenuItems, setDefaultButtonSize } from './Button.svelte';
@@ -77,7 +78,7 @@
 						<Dialog.Title class="text-lg font-bold">{title}</Dialog.Title>
 					{/if}
 					<!-- The glyph is decoration; "Close" is the name the button is announced by. -->
-					<Dialog.Close class="btn btn-circle btn-outline btn-sm" aria-label="Close">
+					<Dialog.Close class="btn btn-circle btn-outline btn-sm" aria-label={m.ui_close()}>
 						<span aria-hidden="true">✕</span>
 					</Dialog.Close>
 				</div>

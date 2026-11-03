@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import QRCode from 'qrcode-svg';
 	import type { Snippet } from 'svelte';
 	import Card from './Card/Card.svelte';
@@ -54,8 +55,8 @@
 				<div class="mt-2">
 					<ShareButton
 						{url}
-						label="Copy address"
-						title="Copy this address"
+						label={m.ui_address_copy()}
+						title={m.ui_address_copy_hint()}
 						class="btn gap-2 btn-outline btn-sm"
 					/>
 				</div>

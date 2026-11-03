@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends ActivityRow">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import Button from '../Button.svelte';
 	import EmptyState from '../EmptyState.svelte';
@@ -73,6 +74,6 @@
 		{/each}
 	</ol>
 	{#if hasMore && onmore}
-		<Button size="sm" variant="ghost" onclick={onmore}>Show older</Button>
+		<Button size="sm" variant="ghost" onclick={onmore}>{m.ui_feed_show_older()}</Button>
 	{/if}
 {/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { getFormContext } from './Form.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -39,11 +40,11 @@
 
 <dialog bind:this={confirmModal} class="modal">
 	<div class="modal-box">
-		<h3 class="text-lg font-bold">Unsaved changes</h3>
-		<p class="py-4">You have unsaved changes. Are you sure you want to leave?</p>
+		<h3 class="text-lg font-bold">{m.ui_unsaved_title()}</h3>
+		<p class="py-4">{m.ui_unsaved_leave_prompt()}</p>
 		<div class="modal-action">
 			<Button type="button" variant="default" onclick={() => confirmModal?.close()}
-				>Keep editing</Button
+				>{m.ui_keep_editing()}</Button
 			>
 			<Button
 				type="button"
@@ -54,11 +55,11 @@
 					pendingNavigation = null;
 				}}
 			>
-				Discard changes
+				{m.ui_discard_changes()}
 			</Button>
 		</div>
 	</div>
 	<form method="dialog" class="modal-backdrop">
-		<button type="submit">close</button>
+		<button type="submit">{m.ui_close()}</button>
 	</form>
 </dialog>

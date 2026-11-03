@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { browser } from '$app/environment';
 	import Button from './Button.svelte';
 	import { IconCamera, IconCameraOff } from '@tabler/icons-svelte';
@@ -115,7 +116,7 @@
 			<video bind:this={video} class="w-full rounded bg-base-300" muted playsinline></video>
 			<Button type="button" variant="ghost" size="sm" class="mt-2" onclick={stop}>
 				<IconCameraOff size={16} />
-				Stop
+				{m.ui_scanner_stop()}
 			</Button>
 		{:else}
 			<Button type="button" variant="ghost" size="sm" onclick={start}>
@@ -126,7 +127,7 @@
 
 		{#if error}
 			<!-- Says what to do instead, because the field beside this still works. -->
-			<p class="mt-1 text-subtle">{error} Type it in instead.</p>
+			<p class="mt-1 text-subtle">{error} {m.ui_scanner_type_instead()}</p>
 		{/if}
 	</div>
 {/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import type { Snippet } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -37,7 +38,7 @@
 	<div class="alert {typeClass[type]} {className}" role="alert">
 		<div>{@render children()}</div>
 		{#if reset}
-			<Button variant="default" size="sm" onclick={reset}>Retry</Button>
+			<Button variant="default" size="sm" onclick={reset}>{m.ui_retry()}</Button>
 		{:else if action}
 			{@render action()}
 		{/if}

@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { RemoteFormFieldValue, RemoteFormField } from '@sveltejs/kit';
 	import FormField from './FormField.svelte';
 
 	let {
 		field,
 		value = $bindable('members'),
-		publicDescription = 'Anyone can see your profile, no login required',
+		publicDescription = m.ui_visibility_public_hint(),
 		name = 'directoryVisibility'
 	}: {
 		field?: RemoteFormField<RemoteFormFieldValue>;
@@ -15,13 +16,21 @@
 	} = $props();
 
 	const options = $derived([
-		{ value: 'hidden', label: 'Hidden', description: 'Not shown in any directory' },
-		{ value: 'members', label: 'Members only', description: 'Visible to logged-in members' },
-		{ value: 'public', label: 'Public', description: publicDescription }
+		{
+			value: 'hidden',
+			label: m.ui_visibility_hidden(),
+			description: m.ui_visibility_hidden_hint()
+		},
+		{
+			value: 'members',
+			label: m.ui_visibility_members(),
+			description: m.ui_visibility_members_hint()
+		},
+		{ value: 'public', label: m.ui_visibility_public(), description: publicDescription }
 	]);
 </script>
 
-<FormField {field} label="Directory visibility">
+<FormField {field} label={m.ui_visibility_label()}>
 	<div class="space-y-2">
 		{#each options as option (option.value)}
 			<label class="label cursor-pointer justify-start gap-3">

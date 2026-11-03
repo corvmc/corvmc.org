@@ -21,6 +21,7 @@
 </script>
 
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -38,12 +39,12 @@
 -->
 <Table>
 	{#snippet head()}
-		<th class="w-px"><span class="sr-only">Status</span></th>
-		<th class="col-support">Type</th>
+		<th class="w-px"><span class="sr-only">{m.ui_triage_status()}</span></th>
+		<th class="col-support">{m.ui_triage_type()}</th>
 		<th>{subjectLabel}</th>
-		<th class="cell-primary">Reason</th>
-		<th class="col-support">Reported by</th>
-		<th class="col-support">When</th>
+		<th class="cell-primary">{m.ui_triage_reason()}</th>
+		<th class="col-support">{m.ui_triage_reported_by()}</th>
+		<th class="col-support">{m.ui_triage_when()}</th>
 	{/snippet}
 	{#each rows as r (r.id)}
 		<tr class="hover cursor-pointer" use:rowLink={r.href}>
@@ -54,7 +55,7 @@
 			</td>
 			<td class="cell-primary truncate">
 				{#if r.appealed}
-					<Badge variant="warning" size="sm" class="mr-1">Appealed</Badge>
+					<Badge variant="warning" size="sm" class="mr-1">{m.ui_triage_appealed()}</Badge>
 				{/if}
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- `href` is typed ResolvedPathname; the caller resolved it -->
 				<a class="link-hover" href={r.href}>{r.text}</a>

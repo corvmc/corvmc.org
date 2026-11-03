@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { browser } from '$app/environment';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
@@ -80,7 +81,7 @@
 
 <div class="flex items-center gap-2">
 	{#if ctx.currentStep > 0}
-		<Button type="button" variant="ghost" onclick={() => ctx.back()}>Back</Button>
+		<Button type="button" variant="ghost" onclick={() => ctx.back()}>{m.ui_back()}</Button>
 	{/if}
 	<Button
 		type={isLastStep ? 'submit' : 'button'}

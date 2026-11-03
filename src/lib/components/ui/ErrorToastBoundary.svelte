@@ -14,6 +14,7 @@
 </script>
 
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { setContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -69,7 +70,7 @@
 
 	{#snippet failed(error, reset)}
 		<div class="contents" data-boundary-failed>
-			<Alert type="error" {reset}>Failed to load: {errorMessage(error)}</Alert>
+			<Alert type="error" {reset}>{m.ui_load_failed({ error: errorMessage(error) })}</Alert>
 		</div>
 	{/snippet}
 </svelte:boundary>

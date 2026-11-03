@@ -34,6 +34,7 @@
 </script>
 
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * A segmented allocation control: one total, divided between two parties, with
 	 * a third fixed segment that cannot be dragged.
@@ -170,7 +171,7 @@
 		<div
 			role="slider"
 			tabindex="0"
-			aria-label="{valueLabel} share"
+			aria-label={m.ui_split_share({ label: valueLabel })}
 			aria-valuemin={0}
 			aria-valuemax={maxValue}
 			aria-valuenow={clamped}
@@ -248,7 +249,7 @@
 
 	<!-- The accessible and fine-grained path: everything the drag does, typed. -->
 	<details>
-		<summary class="cursor-pointer text-muted">Adjust exactly</summary>
+		<summary class="cursor-pointer text-muted">{m.ui_split_adjust()}</summary>
 		<div class="mt-2 flex flex-wrap items-end gap-3">
 			<!-- Whole cents, matching the drag: it snaps to the cent, and the share
 			     this opens at is a percentage of an arbitrary total. A coarser `step`
@@ -256,7 +257,7 @@
 			     inside a closed `<details>` blocks the surrounding form's submit with
 			     nothing focusable and nothing shown. -->
 			<label class="flex flex-col">
-				<span class="text-subtle">{valueLabel} (dollars)</span>
+				<span class="text-subtle">{m.ui_split_dollars({ label: valueLabel })}</span>
 				<input
 					type="number"
 					class="input w-28 input-sm"
@@ -270,7 +271,9 @@
 					}}
 				/>
 			</label>
-			<button type="button" class="btn btn-ghost btn-sm" onclick={() => onchange(0)}> None </button>
+			<button type="button" class="btn btn-ghost btn-sm" onclick={() => onchange(0)}>
+				{m.ui_none()}
+			</button>
 		</div>
 	</details>
 </div>

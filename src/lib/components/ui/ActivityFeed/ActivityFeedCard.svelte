@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends FeedItem, R extends ActivityRow">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
 	import InfoCard from '../InfoCard.svelte';
@@ -54,7 +55,7 @@
 
 		{#snippet failed(error, reset)}
 			<Alert type="warning" reset={() => retryQuery(query(limit), reset)}>
-				Could not load the {title.toLowerCase()}: {errorMessage(error)}
+				{m.ui_feed_load_failed({ title: title.toLowerCase(), error: errorMessage(error) })}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
