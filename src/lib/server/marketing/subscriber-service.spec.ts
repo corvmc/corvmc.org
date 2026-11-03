@@ -1,308 +1,255 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
-
-vi.mock('$lib/server/db', () => {
-	const db = { update: vi.fn(), select: vi.fn(), insert: vi.fn() };
-	return { db };
+// Subscriber writes against a real SQLite: every rule here is a `WHERE`.
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db/schema/marketing', () => ({
-	subscriber: {
-		id: 'subscriber.id',
-		email: 'subscriber.email',
-		userId: 'subscriber.userId',
-		suppressedAt: 'subscriber.suppressedAt',
-		suppressionReason: 'subscriber.suppressionReason'
-	}
-}));
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
-vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: { id: 'user.id', email: 'user.email', deletedAt: 'user.deletedAt' }
-}));
-
-vi.mock('drizzle-orm', () => ({
-	eq: vi.fn((col: unknown, val: unknown) => ({ col, val, op: 'eq' })),
-	and: vi.fn((...args: unknown[]) => ({ args, op: 'and' })),
-	isNull: vi.fn((col: unknown) => ({ col, op: 'isNull' })),
-	sql: vi.fn(() => ({ op: 'sql' }))
-}));
-
-import { db } from '$lib/server/db';
-import { eq, isNull } from 'drizzle-orm';
-import {
+const {
 	suppressByEmail,
 	suppressSelfService,
 	clearSelfServiceSuppression,
 	findOrCreateForUser,
 	linkExistingSubscriberToUser,
 	linkSubscriberToExistingUser
-} from './subscriber-service';
+} = await import('./subscriber-service');
 
-// Build an update().set().where().returning() chain resolving to `rows`.
-function mockUpdateReturning(rows: unknown[]) {
-	const set = vi.fn();
-	const where = vi.fn();
-	const returning = vi.fn(() => Promise.resolve(rows));
-	(db.update as any).mockReturnValue({ set });
-	set.mockReturnValue({ where });
-	where.mockReturnValue({ returning });
-	return { set, where };
+const T0 = 1_750_000_000;
+
+function sub(
+	id: string,
+	email: string,
+	opts: { userId?: string | null; suppressedAt?: number | null; reason?: string | null } = {}
+) {
+	sqlite
+		.prepare(
+			`insert into subscriber (id, email, name, user_id, suppressed_at, suppression_reason)
+			 values (?, ?, null, ?, ?, ?)`
+		)
+		.run(id, email, opts.userId ?? null, opts.suppressedAt ?? null, opts.reason ?? null);
 }
 
-// Build an update().set().where() chain that resolves without .returning().
-function mockUpdate() {
-	const set = vi.fn();
-	const where = vi.fn(() => Promise.resolve(undefined));
-	(db.update as any).mockReturnValue({ set });
-	set.mockReturnValue({ where });
-	return { set, where };
+function account(id: string, email: string, deletedAt: number | null = null) {
+	sqlite
+		.prepare(`insert into user (id, name, email, deleted_at) values (?, 'Alice', ?, ?)`)
+		.run(id, email, deletedAt);
 }
+
+type Row = {
+	id: string;
+	email: string;
+	user_id: string | null;
+	suppressed_at: number | null;
+	suppression_reason: string | null;
+};
+const row = (id: string) =>
+	sqlite.prepare('select * from subscriber where id = ?').get(id) as Row | undefined;
+const subscriberCount = () =>
+	(sqlite.prepare('select count(*) as n from subscriber').get() as { n: number }).n;
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	for (const t of ['audience_member', 'subscriber', 'user']) sqlite.exec(`delete from ${t}`);
 });
 
 describe('suppressByEmail', () => {
 	it('normalizes the email and writes suppressedAt + reason', async () => {
-		const { set, where } = mockUpdateReturning([{ id: 'sub-1' }]);
+		sub('sub-1', 'person@example.com');
 
-		const result = await suppressByEmail('  Person@Example.COM ', 'bounce');
+		expect(await suppressByEmail('  Person@Example.COM ', 'bounce')).toBe(true);
 
-		expect(result).toBe(true);
-		const setArg = set.mock.calls[0][0];
-		expect(setArg.suppressionReason).toBe('bounce');
-		expect(setArg.suppressedAt).toBeInstanceOf(Date);
-		// matched on the normalized email
-		expect(eq).toHaveBeenCalledWith('subscriber.email', 'person@example.com');
-		expect(where).toHaveBeenCalled();
+		expect(row('sub-1')).toMatchObject({ suppression_reason: 'bounce' });
+		expect(row('sub-1')?.suppressed_at).toEqual(expect.any(Number));
 	});
 
 	it('returns false when no subscriber matches (no-op)', async () => {
-		mockUpdateReturning([]);
+		sub('sub-1', 'person@example.com');
 
-		const result = await suppressByEmail('unknown@example.com', 'complaint');
-
-		expect(result).toBe(false);
+		expect(await suppressByEmail('unknown@example.com', 'complaint')).toBe(false);
+		expect(row('sub-1')?.suppressed_at).toBeNull();
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Global self-service opt-out ("unsubscribe from all")
-// ---------------------------------------------------------------------------
-
 describe('suppressSelfService', () => {
 	it('suppresses the address with the reversible reason', async () => {
-		const { set } = mockUpdate();
+		sub('sub-1', 'a@example.com');
+		sub('sub-2', 'b@example.com');
 
 		await suppressSelfService('sub-1');
 
-		const setArg = set.mock.calls[0][0];
-		expect(setArg.suppressionReason).toBe('unsubscribe');
-		expect(setArg.suppressedAt).toBeInstanceOf(Date);
+		expect(row('sub-1')?.suppression_reason).toBe('unsubscribe');
+		expect(row('sub-1')?.suppressed_at).toEqual(expect.any(Number));
+		expect(row('sub-2')?.suppressed_at).toBeNull();
 	});
 
 	// A bounce or complaint is a fact about the address reported by Postmark.
 	// Overwriting it with the weaker reason would let a later opt-in resurrect
 	// an address we know is undeliverable.
 	it('only applies when not already suppressed, so it cannot mask a bounce', async () => {
-		mockUpdate();
+		sub('sub-1', 'a@example.com', { suppressedAt: T0, reason: 'bounce' });
 
 		await suppressSelfService('sub-1');
 
-		expect(isNull).toHaveBeenCalledWith('subscriber.suppressedAt');
+		expect(row('sub-1')).toMatchObject({ suppressed_at: T0, suppression_reason: 'bounce' });
 	});
 });
 
 describe('clearSelfServiceSuppression', () => {
 	it('lifts the suppression so opting back in actually delivers mail', async () => {
-		const { set } = mockUpdate();
+		sub('sub-1', 'a@example.com', { suppressedAt: T0, reason: 'unsubscribe' });
 
 		await clearSelfServiceSuppression('sub-1');
 
-		expect(set.mock.calls[0][0]).toEqual({ suppressedAt: null, suppressionReason: null });
+		expect(row('sub-1')).toMatchObject({ suppressed_at: null, suppression_reason: null });
 	});
 
 	it('is scoped to self-service opt-outs and never clears a bounce or complaint', async () => {
-		mockUpdate();
+		sub('sub-1', 'a@example.com', { suppressedAt: T0, reason: 'bounce' });
+		sub('sub-2', 'b@example.com', { suppressedAt: T0, reason: 'complaint' });
 
 		await clearSelfServiceSuppression('sub-1');
+		await clearSelfServiceSuppression('sub-2');
 
-		expect(eq).toHaveBeenCalledWith('subscriber.suppressionReason', 'unsubscribe');
+		expect(row('sub-1')).toMatchObject({ suppressed_at: T0, suppression_reason: 'bounce' });
+		expect(row('sub-2')).toMatchObject({ suppressed_at: T0, suppression_reason: 'complaint' });
 	});
 });
-
-// ---------------------------------------------------------------------------
-// Linking a subscriber to an account (#562)
-// ---------------------------------------------------------------------------
-
-// Build a select().from().where().limit() chain resolving to `rows`.
-function mockSelectLimit(rows: unknown[]) {
-	const from = vi.fn();
-	const where = vi.fn();
-	const limit = vi.fn(() => Promise.resolve(rows));
-	(db.select as any).mockReturnValue({ from });
-	from.mockReturnValue({ where });
-	where.mockReturnValue({ limit });
-	return { where };
-}
 
 describe('linkExistingSubscriberToUser', () => {
 	it('links the row already sitting under the signup address', async () => {
-		mockUpdateReturning([{ id: 'sub-1' }]);
+		sub('sub-1', 'alice@example.com');
 
-		const linked = await linkExistingSubscriberToUser('user-1', '  Alice@Example.COM ');
-
-		expect(linked).toBe('sub-1');
-		// Matching is equality on the normalized address, not the raw input.
-		expect(eq).toHaveBeenCalledWith('subscriber.email', 'alice@example.com');
+		expect(await linkExistingSubscriberToUser('user-1', '  Alice@Example.COM ')).toBe('sub-1');
+		expect(row('sub-1')?.user_id).toBe('user-1');
 	});
 
 	// The whole point of the link: a subscriber who opted out before they had an
-	// account must still be opted out after signup. Writing any column other
-	// than user_id is how that guarantee gets lost.
+	// account must still be opted out after signup.
 	it('writes user_id and nothing else, so a prior unsubscribe survives', async () => {
-		const { set } = mockUpdateReturning([{ id: 'sub-1' }]);
+		sub('sub-1', 'alice@example.com', { suppressedAt: T0, reason: 'unsubscribe' });
 
 		await linkExistingSubscriberToUser('user-1', 'alice@example.com');
 
-		expect(set.mock.calls[0][0]).toEqual({ userId: 'user-1' });
+		expect(row('sub-1')).toMatchObject({
+			user_id: 'user-1',
+			suppressed_at: T0,
+			suppression_reason: 'unsubscribe'
+		});
 	});
 
 	it('links nothing when no subscriber matches the address', async () => {
-		mockUpdateReturning([]);
+		sub('sub-1', 'alice@example.com');
 
 		expect(await linkExistingSubscriberToUser('user-1', 'nobody@example.com')).toBeNull();
+		expect(row('sub-1')?.user_id).toBeNull();
 	});
 
-	// The caller checks verification before reaching here, but the predicate is
-	// what makes a replayed verification link harmless: a claimed row cannot be
-	// taken over however many times the link is presented.
+	// The predicate is what makes a replayed verification link harmless: a
+	// claimed row cannot be taken over however many times it is presented.
 	it('leaves a row another account already holds alone', async () => {
-		mockUpdateReturning([]);
+		sub('sub-1', 'alice@example.com', { userId: 'user-1' });
 
-		await linkExistingSubscriberToUser('user-2', 'alice@example.com');
-
-		expect(isNull).toHaveBeenCalledWith('subscriber.userId');
+		expect(await linkExistingSubscriberToUser('user-2', 'alice@example.com')).toBeNull();
+		expect(row('sub-1')?.user_id).toBe('user-1');
 	});
 });
 
-// ---------------------------------------------------------------------------
-// findOrCreateForUser (#757)
-// ---------------------------------------------------------------------------
-// The account page's subscribe/unsubscribe path. Same claim rule as the signup
-// link: taking over a row somebody else's list signup created needs a proven
-// address; making a fresh one under your own address does not.
-// ---------------------------------------------------------------------------
-
-// db.select() is called once per lookup. Each call takes the next queued rows,
-// and the chain is awaitable both directly (findByUserId) and via .limit(1)
-// (findByEmail).
-function mockSelectQueue(...results: unknown[][]) {
-	let call = 0;
-	(db.select as any).mockImplementation(() => {
-		const rows = results[call++] ?? [];
-		const where = vi.fn(() => {
-			const chain: any = Promise.resolve(rows);
-			chain.limit = vi.fn(() => Promise.resolve(rows));
-			return chain;
-		});
-		return { from: vi.fn(() => ({ where })) };
-	});
-}
-
-function mockInsertReturning(rows: unknown[]) {
-	const returning = vi.fn(() => Promise.resolve(rows));
-	const onConflictDoUpdate = vi.fn(() => ({ returning }));
-	const values = vi.fn(() => ({ onConflictDoUpdate }));
-	(db.insert as any).mockReturnValue({ values });
-	return { values };
-}
-
+// The account page's subscribe/unsubscribe path (#757): taking over a row
+// somebody else's list signup created needs a proven address; making a fresh
+// one under your own address does not.
 describe('findOrCreateForUser', () => {
-	const own = { id: 'sub-1', email: 'alice@example.com', name: 'Alice', userId: 'user-1' };
-	const stranger = { id: 'sub-9', email: 'alice@example.com', name: null, userId: null };
-
 	it('returns the row this account already holds without writing anything', async () => {
-		mockSelectQueue([own]);
-		const { set } = mockUpdate();
+		sub('sub-1', 'old@example.com', { userId: 'user-1' });
+		sub('sub-9', 'alice@example.com');
 
-		const sub = await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', {
+		const found = await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', {
 			emailVerified: false
 		});
 
-		expect(sub?.id).toBe('sub-1');
-		expect(set).not.toHaveBeenCalled();
+		expect(found?.id).toBe('sub-1');
+		expect(row('sub-9')?.user_id).toBeNull();
+		expect(subscriberCount()).toBe(2);
 	});
 
 	// The claim vector: that row carries a stranger's audience memberships and
-	// suppression state, and typing their address into a signup form proves
-	// nothing about holding it.
+	// suppression state, and typing their address proves nothing about holding it.
 	it('refuses to claim an unclaimed row for an unconfirmed address', async () => {
-		mockSelectQueue([], [stranger]);
-		const { set } = mockUpdate();
+		sub('sub-9', 'alice@example.com');
 
-		const sub = await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', {
+		const found = await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', {
 			emailVerified: false
 		});
 
-		expect(sub).toBeNull();
-		expect(set).not.toHaveBeenCalled();
+		expect(found).toBeNull();
+		expect(row('sub-9')?.user_id).toBeNull();
 	});
 
 	it('claims that same row once the address is confirmed', async () => {
-		mockSelectQueue([], [stranger]);
-		const { set } = mockUpdate();
+		sub('sub-9', 'alice@example.com');
 
-		const sub = await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', {
+		const found = await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', {
 			emailVerified: true
 		});
 
-		expect(sub).toEqual({ ...stranger, userId: 'user-1' });
-		expect(set.mock.calls[0][0]).toEqual({ userId: 'user-1' });
+		expect(found).toMatchObject({ id: 'sub-9', userId: 'user-1' });
+		expect(row('sub-9')?.user_id).toBe('user-1');
 	});
 
 	it('never hands over a row a different account holds, confirmed or not', async () => {
-		mockSelectQueue([], [{ ...stranger, userId: 'user-2' }]);
+		sub('sub-9', 'alice@example.com', { userId: 'user-2' });
 
 		expect(
 			await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', { emailVerified: true })
 		).toBeNull();
+		expect(row('sub-9')?.user_id).toBe('user-2');
 	});
 
 	// A fresh row takes nothing from anybody, so an unconfirmed member can still
 	// manage the lists they choose themselves.
 	it('creates and links a new row for an unconfirmed address with no row yet', async () => {
-		mockSelectQueue([], []);
-		mockInsertReturning([{ id: 'sub-2', email: 'alice@example.com', name: 'Alice', userId: null }]);
-		const { set } = mockUpdate();
-
-		const sub = await findOrCreateForUser('user-1', 'alice@example.com', 'Alice', {
+		const found = await findOrCreateForUser('user-1', 'Alice@example.com', 'Alice', {
 			emailVerified: false
 		});
 
-		expect(sub?.userId).toBe('user-1');
-		expect(set.mock.calls[0][0]).toEqual({ userId: 'user-1' });
+		expect(found?.userId).toBe('user-1');
+		expect(row(found!.id)).toMatchObject({ email: 'alice@example.com', user_id: 'user-1' });
 	});
 });
 
 describe('linkSubscriberToExistingUser', () => {
 	it('links a fresh subscription to the account already under that address', async () => {
-		mockSelectLimit([{ id: 'user-1' }]);
-		const { set } = mockUpdate();
+		account('user-1', 'alice@example.com');
+		sub('sub-1', 'alice@example.com');
 
 		expect(await linkSubscriberToExistingUser('sub-1', ' Alice@Example.com ')).toBe('user-1');
-		expect(eq).toHaveBeenCalledWith('user.email', 'alice@example.com');
-		expect(set.mock.calls[0][0]).toEqual({ userId: 'user-1' });
+		expect(row('sub-1')?.user_id).toBe('user-1');
 	});
 
 	it('leaves the row unlinked when no account matches', async () => {
-		mockSelectLimit([]);
-		mockUpdate();
+		account('user-1', 'someone@example.com');
+		sub('sub-1', 'nobody@example.com');
 
 		expect(await linkSubscriberToExistingUser('sub-1', 'nobody@example.com')).toBeNull();
-		expect(db.update).not.toHaveBeenCalled();
+		expect(row('sub-1')?.user_id).toBeNull();
+	});
+
+	it('does not link to a deactivated account', async () => {
+		account('user-1', 'alice@example.com', T0);
+		sub('sub-1', 'alice@example.com');
+
+		expect(await linkSubscriberToExistingUser('sub-1', 'alice@example.com')).toBeNull();
+		expect(row('sub-1')?.user_id).toBeNull();
+	});
+
+	it('leaves a row another account already holds alone', async () => {
+		account('user-1', 'alice@example.com');
+		sub('sub-1', 'alice@example.com', { userId: 'user-2' });
+
+		await linkSubscriberToExistingUser('sub-1', 'alice@example.com');
+
+		expect(row('sub-1')?.user_id).toBe('user-2');
 	});
 });
