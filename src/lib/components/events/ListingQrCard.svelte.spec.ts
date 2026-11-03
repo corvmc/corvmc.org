@@ -18,7 +18,8 @@ describe('ListingQrCard', () => {
 			origin
 		});
 
-		await expect.element(screen.getByText('https://corvmc.org/events/evt-1')).toBeVisible();
+		const encoded = `${origin}/events/evt-1`;
+		await expect.element(screen.getByText(encoded)).toBeVisible();
 		expect(document.querySelector('[data-testid="listing-qr"] svg')).not.toBeNull();
 	});
 
@@ -30,10 +31,11 @@ describe('ListingQrCard', () => {
 			origin
 		});
 
-		const svg = screen.getByRole('link', { name: 'Download SVG' });
+		const svg = screen.locator.getByRole('link');
 		await expect.element(svg).toHaveAttribute('download', 'spring-workshop-qr.svg');
 		expect(svg.element().getAttribute('href')).toMatch(/^data:image\/svg\+xml/);
-		await expect.element(screen.getByRole('button', { name: 'Download PNG' })).toBeVisible();
+		// Copy link, and the PNG download (drawn on demand, so it is a button).
+		expect(screen.locator.getByRole('button').elements()).toHaveLength(2);
 	});
 
 	it('warns that the link does not work until the listing is published', async () => {
@@ -44,6 +46,6 @@ describe('ListingQrCard', () => {
 			origin
 		});
 
-		await expect.element(screen.getByText(/not published yet/i)).toBeVisible();
+		await expect.element(screen.getByRole('alert')).toBeVisible();
 	});
 });

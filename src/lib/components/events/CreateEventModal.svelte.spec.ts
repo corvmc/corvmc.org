@@ -49,7 +49,7 @@ describe('CreateEventModal', () => {
 	it('asks only for what the row needs', async () => {
 		await render(CreateEventModal, { open: true });
 
-		await expect.element(page.getByRole('textbox', { name: 'Title' })).toBeVisible();
+		await expect.element(page.getByLabelText('Title')).toBeVisible();
 		await expect.element(page.getByLabelText('Date')).toBeVisible();
 		await expect.element(page.getByLabelText('Start time')).toBeVisible();
 		await expect.element(page.getByLabelText('End time')).toBeVisible();
@@ -57,8 +57,16 @@ describe('CreateEventModal', () => {
 		for (const gone of ['Description', 'Doors time', 'Tags', 'Address line', 'Ticket price ($)']) {
 			await expect.element(page.getByLabelText(gone)).not.toBeInTheDocument();
 		}
-		await expect.element(page.getByText('Reserve practice space')).not.toBeInTheDocument();
-		await expect.element(page.getByText('Repeat this event')).not.toBeInTheDocument();
+		// No room hold and no repeat: the form posts the row's own fields and
+		// nothing else, and its only buttons are Cancel and the submit.
+		const form = document.querySelector('[role="dialog"] form')!;
+		const posted = new Set(
+			[...form.querySelectorAll('[name]')].map((el) => el.getAttribute('name'))
+		);
+		expect([...posted].sort()).toEqual(
+			['eventDate', 'eventEndTime', 'eventStartTime', 'groupId', 'kind', 'title'].sort()
+		);
+		expect(form.querySelectorAll('button')).toHaveLength(2);
 	});
 
 	it('posts a plain listing from the Calendar, with its kind and who runs it', async () => {
