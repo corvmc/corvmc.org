@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { forEachClockEdge } from '$lib/test/clock-edges';
 
 vi.mock('$lib/remote/reservations.remote', () => {
 	const field = (name: string) => ({
@@ -70,17 +71,15 @@ describe('CreateModal', () => {
 		await expect.element(submit).toBeEnabled();
 	});
 
-	// #1984: 6pm PDT on Oct 26 is already Oct 27 in UTC.
-	describe('at 6pm club time', () => {
-		afterEach(() => vi.useRealTimers());
-
-		it('defaults the date to the club day, not the UTC day', async () => {
-			vi.useFakeTimers({ toFake: ['Date'] });
-			vi.setSystemTime(new Date('2026-10-27T01:00:00Z'));
+	// #1984: 6pm PDT on Oct 26 was already Oct 27 in UTC.
+	forEachClockEdge(
+		'defaults the date to the club day',
+		async ({ clubDate }) => {
 			await render(CreateModal);
-			await page.getByRole('button', { name: 'New Reservation' }).click();
+			await page.getByRole('button').click();
 
-			await expect.element(page.getByLabelText('Date')).toHaveValue('2026-10-26');
-		});
-	});
+			await expect.element(page.getByLabelText('Date')).toHaveValue(clubDate);
+		},
+		{ fakeTimers: true }
+	);
 });

@@ -595,7 +595,8 @@ new operator a service imports breaks the sibling specs that hold one.
 
 A date or time spec runs at a fixed set of instants: a Pacific evening after UTC midnight, both DST
 changeover days, and a month end. CI runs in UTC and Workers do too, so a spec that only runs at
-noon proves nothing about the day boundary.
+noon proves nothing about the day boundary. `$lib/test/clock-edges` names those instants and runs a
+spec body across them, and across viewer zones (`.claude/rules/testing.md`).
 
 ### Worked examples
 

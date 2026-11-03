@@ -70,6 +70,7 @@ import {
 } from './conflict-service';
 import { db } from '$lib/server/db';
 import { buildDateInTz } from './timezone';
+import { addCalendarDays, forEachClockEdge, viewerTimeZones } from '$lib/test/clock-edges';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -282,35 +283,27 @@ describe('getAvailableSlots', () => {
 		timeZone: 'America/Los_Angeles'
 	});
 
-	// Regression: the day must be anchored to the literal date string, independent of
-	// the runtime timezone. Previously the remote layer passed a `Date` parsed at
-	// midnight in the runtime TZ (UTC on Cloudflare Workers); getAvailableSlots then
-	// re-derived the day in America/Los_Angeles, shifting it to the *previous* day.
-	// That made displayed availability belong to the wrong day (open slots rejected on
-	// submit) and made today's staff view show every slot as blocked (all in the past).
-	it('keeps future slots available for the current day regardless of runtime TZ', async () => {
-		// 09:30 LA on 2026-06-29 (= 16:30 UTC). If the day were shifted back to 06-28,
-		// every slot would be in the past and marked unavailable — the staff "all
-		// blocked" bug.
-		vi.useFakeTimers();
-		vi.setSystemTime(new Date('2026-06-29T16:30:00Z'));
-		try {
-			selectResultQueue = [[], []]; // day reservations, day closures
-			const slots = await getAvailableSlots('2026-06-29');
+	// Regression: the day is anchored to the literal date string, whatever the
+	// process zone. A `Date` parsed at runtime-zone midnight (UTC on Workers) put
+	// the slots on the previous club day, so today's staff view showed every slot
+	// as already past ("all blocked") and open slots were refused on submit.
+	forEachClockEdge(
+		'marks a slot open exactly when it clears the notice, today and tomorrow',
+		async ({ at, clubDate }) => {
+			const earliest = at.getTime() + 60 * 60_000; // minAdvanceMinutes
+			for (const day of [clubDate, addCalendarDays(clubDate, 1)]) {
+				selectResultQueue = [[], []]; // day reservations, day closures
+				const slots = await getAvailableSlots(day);
 
-			expect(slots).toHaveLength(26);
-			expect(slots[0].startTime).toBe('09:00');
-			// Cutoff is 09:30 + 60min advance = 10:30 LA; afternoon slots stay open.
-			expect(slots.find((s) => s.startTime === '14:00')?.available).toBe(true);
-			expect(slots.some((s) => s.available)).toBe(true);
-
-			// And the window opens at 09:00 *on 2026-06-29* in LA, not the prior day.
-			const firstAvailable = slots.find((s) => s.available);
-			expect(firstAvailable).toBeDefined();
-		} finally {
-			vi.useRealTimers();
-		}
-	});
+				expect(slots).toHaveLength(26);
+				expect(slots[0].startTime).toBe('09:00');
+				expect(slots.map((s) => s.available)).toEqual(
+					slots.map((s) => makeDate(day, s.startTime).getTime() >= earliest)
+				);
+			}
+		},
+		{ fakeTimers: true, zones: viewerTimeZones }
+	);
 
 	it('returns slots within operating hours when no reservations or closures', async () => {
 		selectResultQueue = [[], []]; // day reservations, day closures

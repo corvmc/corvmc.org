@@ -7,6 +7,7 @@ process.env.TZ = 'UTC';
 
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_TIMEZONE } from '$lib/config';
+import { addCalendarDays, forEachClockEdge, viewerTimeZones } from '$lib/test/clock-edges';
 import {
 	formatCents,
 	formatDate,
@@ -201,6 +202,28 @@ describe('format.ts renders in venue time, not the viewer’s zone', () => {
 			expect(formatDuration(CROSSES_MIDNIGHT, end)).toBe('1.3 hours');
 		});
 	});
+});
+
+describe('format.ts at every clock edge, in every viewer zone', () => {
+	const zones = { zones: viewerTimeZones };
+
+	forEachClockEdge(
+		'input values are the club date and clock',
+		({ at, clubDate, clubTime }) => {
+			expect([toLocalDate(at), toLocalTime(at)]).toEqual([clubDate, clubTime]);
+		},
+		zones
+	);
+
+	forEachClockEdge(
+		'day predicates count from the club day',
+		({ at, clubDate }) => {
+			// 20:00Z is midday at the club in PST and PDT; changeover days are not 24h long.
+			const nextDay = new Date(`${addCalendarDays(clubDate, 1)}T20:00:00Z`);
+			expect([isVenueToday(at, at), isVenueTomorrow(nextDay, at)]).toEqual([true, true]);
+		},
+		zones
+	);
 });
 
 describe('initials', () => {

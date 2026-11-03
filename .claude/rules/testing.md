@@ -71,6 +71,24 @@ test that asserts nothing fails.
   each claim nearly every core until the OOM killer took one. That surfaces as `Worker exited
 unexpectedly`, or as a bare SIGKILL, and never as anything about the tests.
 
+## Date and time specs run at the clock edges
+
+`$lib/test/clock-edges` names the instants where club-time code breaks: `noon` (the control),
+`pacificEveningAfterUtcMidnight`, the spring-forward and fall-back changeovers (each bracketed by a
+`…Before` and `…After`), `monthEnd` and `yearEnd`. Each carries its `clubDate` and `clubTime`, so
+a spec asserts against those rather than a literal it worked out by hand.
+
+- `forEachClockEdge(title, fn, { fakeTimers, only, zones })` is one `it` per edge. `fakeTimers`
+  fakes `Date` at the edge and restores real timers even when `fn` throws.
+- `zones: viewerTimeZones` (UTC, the club, both ends of the date line) also sets `process.env.TZ`
+  per case; `forEachTimeZone` and `withTimeZone` do the same without the edges. Server project
+  only — the browser has no settable zone, and the `client` project runs in the machine's.
+- **Never assign `process.env.TZ` by hand mid-file.** `withTimeZone` restores it and resets
+  `@internationalized/date`'s cached zone, which otherwise builds every club-time instant in
+  whichever zone it saw first. That cache made a local LA machine fail where CI's UTC passed.
+- Changeover days are 23 or 25 hours long: "tomorrow" is `addCalendarDays(clubDate, 1)`, not
+  `at + 24h`. A spec of a relative window in milliseconds (the door, the reader) gains nothing.
+
 ## Locate and assert by structure, not wording
 
 A test never matches on, or asserts, UI copy. Locate by `button[type=submit]` scoped to its dialog
