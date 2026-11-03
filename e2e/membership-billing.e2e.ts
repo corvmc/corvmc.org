@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import { signInAs } from './fixtures/auth';
 import { eq } from 'drizzle-orm';
 import { readLocalDb } from './fixtures/platform-db';
 import { user } from '../src/lib/server/db/schema/authentication';
@@ -18,13 +19,8 @@ import {
  */
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
-async function login(page: import('@playwright/test').Page) {
-	await page.goto('/login');
-	// FormField renders a <legend>, not a <label for>, so target inputs by name.
-	await page.locator('input[name="email"]').fill(SEED_BILLING_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_BILLING_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+async function login(page: Page) {
+	await signInAs(page, { email: SEED_BILLING_EMAIL, password: SEED_BILLING_PASSWORD });
 }
 
 async function addCard(page: import('@playwright/test').Page, cardNumber: string) {

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { signInAs } from './fixtures/auth';
 import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
@@ -28,11 +29,7 @@ import {
  */
 
 async function login(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_OWNER_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_OWNER_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_OWNER_EMAIL, password: SEED_OWNER_PASSWORD });
 }
 
 /** The block names, top to bottom, as the control strips report them. */

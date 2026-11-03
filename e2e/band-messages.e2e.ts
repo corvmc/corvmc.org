@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { signInAs } from './fixtures/auth';
 import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
@@ -41,11 +42,7 @@ const ENQUIRER_EMAIL = 'e2e.booker@example.com';
 const MESSAGE = 'Would you play a Thursday in April? Door split, 40 minute set.';
 
 async function login(page: Page, email: string, password: string) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(email);
-	await page.locator('input[name="password"]').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email, password });
 }
 
 /** The Messages count in the band sidebar; absent entirely when it is zero. */

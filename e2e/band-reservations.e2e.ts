@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { signInAs } from './fixtures/auth';
 import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
@@ -17,11 +18,7 @@ import {
  * hence an e2e rather than another unit test.
  */
 async function login(page: Page, email: string, password: string) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(email);
-	await page.locator('input[name="password"]').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email, password });
 }
 
 test('a band books a session, and only the booker is offered Cancel', async ({ page }) => {
@@ -80,7 +77,6 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 	await expect(upcomingRow.getByRole('button', { name: 'Cancel' })).toBeVisible();
 
 	// A plain member who didn't book sees the session but is offered nothing.
-	await page.context().clearCookies();
 	await login(page, SEED_BANDMATE_EMAIL, SEED_BANDMATE_PASSWORD);
 	await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/reservations`);
 
@@ -92,7 +88,6 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 	// The band panel used to drop it twice over — it filtered cancellations out
 	// and split the list on `startsAt` — so "why is nobody in the room?" had no
 	// answer on the surface the band was looking at.
-	await page.context().clearCookies();
 	await login(page, SEED_OWNER_EMAIL, SEED_OWNER_PASSWORD);
 	await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/reservations`);
 
