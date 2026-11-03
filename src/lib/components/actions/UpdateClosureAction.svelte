@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonShape, ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -31,10 +32,10 @@
 
 <Action
 	action={edit}
-	label="Edit closure"
-	modalTitle="Edit Closure"
-	submitLabel="Save"
-	successToast="Closure updated"
+	label={m.actions_update_closure_edit_closure()}
+	modalTitle={m.actions_update_closure_modal_title()}
+	submitLabel={m.actions_update_closure_submit_label()}
+	successToast={m.actions_update_closure_success_toast()}
 	{variant}
 	{size}
 	{shape}
@@ -44,18 +45,18 @@
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', closure.id)} />
-		<Field field={fields.reason} type="text" label="Reason" value={closure.reason} />
+		<Field field={fields.reason} type="text" label={m.actions_reason()} value={closure.reason} />
 		<div class="grid grid-cols-2 gap-3">
 			<Field
 				field={fields.startsAt}
 				type="datetime-local"
-				label="Start"
+				label={m.actions_start()}
 				value={toLocalDateTime(closure.startsAt)}
 			/>
 			<Field
 				field={fields.endsAt}
 				type="datetime-local"
-				label="End"
+				label={m.actions_end()}
 				value={toLocalDateTime(closure.endsAt)}
 			/>
 		</div>

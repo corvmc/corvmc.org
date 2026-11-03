@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -55,9 +56,9 @@
 <Action
 	action={correctStock}
 	data-testid="stocktake"
-	label="Stocktake"
-	modalTitle="Correct the count"
-	successToast="Correction recorded"
+	label={m.actions_adjust_stock_stocktake()}
+	modalTitle={m.actions_adjust_stock_modal_title()}
+	successToast={m.actions_adjust_stock_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -71,8 +72,7 @@
 		<div class="mb-3 rounded bg-base-200 p-3 text-sm">
 			<p>The system currently shows <strong>{onHand}</strong> on hand.</p>
 			<p class="mt-1 opacity-70">
-				Enter what you counted. The difference is recorded as its own entry, so the discrepancy
-				stays on the record rather than the total being quietly overwritten.
+				{m.actions_adjust_stock_enter_what_counted_difference_recorded()}
 			</p>
 		</div>
 		<!--
@@ -84,7 +84,7 @@
 		<Field
 			name="counted"
 			type="number"
-			label="Counted on the shelf"
+			label={m.actions_adjust_stock_counted_shelf()}
 			bind:value={counted}
 			min="0"
 			issues={fields.delta.issues() ?? null}
@@ -96,17 +96,20 @@
 				data-testid="stocktake-preview"
 				data-direction={delta > 0 ? 'add' : 'remove'}
 			>
-				{delta > 0 ? 'Adding' : 'Removing'}
-				{Math.abs(delta)} — {onHand} on record, {counted} counted.
+				{(delta > 0 ? m.actions_adjust_stock_preview_add : m.actions_adjust_stock_preview_remove)({
+					abs: Math.abs(delta),
+					onHand,
+					counted: counted ?? ''
+				})}
 			</p>
 		{:else if delta === 0}
 			<p class="text-subtle text-sm" data-testid="stocktake-preview" data-direction="none">
-				Matches the record. Submitting will change nothing.
+				{m.actions_adjust_stock_matches_record_submitting_will_change()}
 			</p>
 		{/if}
 		<!-- The service takes a delta and keeps taking one; only the question
 		     asked of the operator changed. -->
 		<input {...fields.delta.as('number', delta === null ? '' : String(delta))} type="hidden" />
-		<Field field={fields.notes} type="textarea" label="Why" />
+		<Field field={fields.notes} type="textarea" label={m.actions_adjust_stock_why()} />
 	{/snippet}
 </Action>

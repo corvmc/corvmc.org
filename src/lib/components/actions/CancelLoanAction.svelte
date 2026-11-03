@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -8,7 +9,7 @@
 
 	let {
 		loanId,
-		label = 'Cancel',
+		label = m.actions_cancel(),
 		confirm: confirmText = 'Cancel this loan?',
 		variant = 'ghost',
 		size = 'sm',
@@ -30,8 +31,8 @@
 <Action
 	action={cancelLoan}
 	{label}
-	modalTitle="Confirm"
-	successToast="Loan cancelled"
+	modalTitle={m.actions_confirm()}
+	successToast={m.actions_cancel_loan_success_toast()}
 	{variant}
 	{size}
 	class={className}

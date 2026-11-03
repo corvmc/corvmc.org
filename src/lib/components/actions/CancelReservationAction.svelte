@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
@@ -31,10 +32,10 @@
 
 <Action
 	action={cancelReservation}
-	label="Cancel"
-	modalTitle="Cancel Reservation"
+	label={m.actions_cancel()}
+	modalTitle={m.actions_cancel_reservation_modal_title()}
 	submitVariant="error"
-	successToast="Cancelled"
+	successToast={m.actions_cancelled()}
 	{variant}
 	{size}
 	{outline}
@@ -45,11 +46,11 @@
 	{#snippet form()}
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
-		<p class="text-sm">Are you sure you want to cancel this reservation?</p>
+		<p class="text-sm">{m.actions_cancel_reservation_sure_want_cancel_reservation()}</p>
 		{#if showReasonInput}
 			<input
 				{...fields.reason.as('text')}
-				placeholder="Reason (optional)"
+				placeholder={m.actions_cancel_reservation_placeholder()}
 				class="input w-full input-sm"
 			/>
 		{/if}

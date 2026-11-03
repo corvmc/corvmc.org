@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -8,8 +9,8 @@
 	const { fields } = inviteByEmailApi;
 
 	const ROLE_OPTIONS = [
-		{ value: 'member', label: 'Member' },
-		{ value: 'admin', label: 'Admin' }
+		{ value: 'member', label: m.actions_member() },
+		{ value: 'admin', label: m.actions_admin() }
 	];
 
 	let {
@@ -33,9 +34,9 @@
 
 <Action
 	action={inviteByEmailApi}
-	label="Invite by Email"
-	modalTitle="Invite by Email"
-	successToast="Email invitation sent"
+	label={m.actions_invite_by_email_invite_by_email()}
+	modalTitle={m.actions_invite_by_email_invite_by_email()}
+	successToast={m.actions_invite_by_email_success_toast()}
 	{variant}
 	{size}
 	{outline}
@@ -47,19 +48,27 @@
 		<input {...fields.bandId.as('hidden', bandId)} />
 		<div class="space-y-3">
 			<p class="text-muted">
-				Invite someone who doesn't have a CorvMC account. They'll get a signup link and be
-				auto-added to this band.
+				{m.actions_invite_by_email_invite_someone_who_doesn_t()}
 			</p>
 			<!-- The handler raises its "already a member" rejection as an issue on
 			     `email`, which a bare input renders as `aria-invalid` and nothing else. -->
 			<FormField
 				field={fields.email}
 				type="email"
-				label="Email"
-				placeholder="musician@example.com"
+				label={m.actions_email()}
+				placeholder={m.actions_invite_by_email_musician_example_com()}
 			/>
-			<FormField field={fields.role} type="select" label="Role" options={ROLE_OPTIONS} />
-			<FormField field={fields.position} label="Position (optional)" placeholder="e.g. Bassist" />
+			<FormField
+				field={fields.role}
+				type="select"
+				label={m.actions_role()}
+				options={ROLE_OPTIONS}
+			/>
+			<FormField
+				field={fields.position}
+				label={m.actions_position_optional()}
+				placeholder={m.actions_invite_by_email_e_g_bassist()}
+			/>
 		</div>
 	{/snippet}
 </Action>

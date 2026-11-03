@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
@@ -27,10 +28,10 @@
 
 <Action
 	action={compReservation}
-	label="Comp"
-	modalTitle="Comp Reservation"
+	label={m.actions_comp_reservation_label()}
+	modalTitle={m.actions_comp_reservation_modal_title()}
 	submitVariant="info"
-	successToast="Reservation comped"
+	successToast={m.actions_comp_reservation_success_toast()}
 	{variant}
 	{size}
 	{outline}
@@ -41,6 +42,6 @@
 	{#snippet form()}
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
-		<p class="text-sm">Waive payment for this reservation?</p>
+		<p class="text-sm">{m.actions_comp_reservation_waive_payment_reservation()}</p>
 	{/snippet}
 </Action>

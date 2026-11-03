@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Reopen a record in a terminal state. Rendered only for holders of the
 	 * admin-only `<domain>.reopen`, and deliberately quiet: an escape hatch, not a
@@ -32,19 +33,19 @@
 {#if hasCapability(caps, capability)}
 	<Action
 		{action}
-		label="Reopen"
+		label={m.actions_reopen_reopen()}
 		variant="ghost"
 		size="xs"
-		modalTitle="Reopen"
-		submitLabel="Reopen"
-		successToast="Reopened"
+		modalTitle={m.actions_reopen_reopen()}
+		submitLabel={m.actions_reopen_reopen()}
+		successToast={m.actions_reopen_success_toast()}
 	>
 		{#snippet form()}
 			<input {...action.fields.id.as('hidden', id)} />
 			{#if children}
 				<div class="text-muted text-sm">{@render children()}</div>
 			{/if}
-			<Field field={action.fields.reason} type="textarea" label="Reason" required />
+			<Field field={action.fields.reason} type="textarea" label={m.actions_reason()} required />
 		{/snippet}
 	</Action>
 {/if}

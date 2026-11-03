@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -31,9 +32,9 @@
 
 <Action
 	action={createLoan}
-	label="New Loan"
-	modalTitle="Create Loan Request"
-	successToast="Loan request created"
+	label={m.actions_create_loan_new_loan()}
+	modalTitle={m.actions_create_loan_modal_title()}
+	successToast={m.actions_create_loan_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -59,18 +60,30 @@
 				<Field
 					field={fields.itemId}
 					type="select"
-					label="Equipment"
-					placeholder="-- Select equipment --"
+					label={m.actions_create_loan_equipment()}
+					placeholder={m.actions_create_loan_placeholder()}
 					value=""
 				>
 					{#each await getAvailableItems() as eq (eq.id)}
 						<option value={eq.id}>{eq.name}</option>
 					{/each}
 				</Field>
-				<Field field={fields.quantity} type="number" label="Quantity" value={1} />
-				<Field field={fields.requestedPickupDate} type="date" label="Requested pickup date" />
-				<Field field={fields.estimatedReturnDate} type="date" label="Estimated return date" />
-				<Field field={fields.memberNotes} type="textarea" label="Notes (optional)" />
+				<Field field={fields.quantity} type="number" label={m.actions_quantity()} value={1} />
+				<Field
+					field={fields.requestedPickupDate}
+					type="date"
+					label={m.actions_create_loan_requested_pickup_date()}
+				/>
+				<Field
+					field={fields.estimatedReturnDate}
+					type="date"
+					label={m.actions_create_loan_estimated_return_date()}
+				/>
+				<Field
+					field={fields.memberNotes}
+					type="textarea"
+					label={m.actions_create_loan_notes_optional()}
+				/>
 			</div>
 
 			{#snippet pending()}
@@ -81,7 +94,9 @@
 
 			{#snippet failed(error, reset)}
 				<Alert type="warning" reset={() => retryQuery(getAvailableItems(), reset)}>
-					Could not load the equipment list: {errorMessage(error)}
+					{m.actions_create_loan_could_not_load_equipment_list({
+						errorMessage: errorMessage(error)
+					})}
 				</Alert>
 			{/snippet}
 		</svelte:boundary>

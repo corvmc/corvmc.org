@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -33,8 +34,8 @@
 
 <Action
 	action={removeBandEventPoster}
-	label="Remove Poster"
-	successToast="Removed"
+	label={m.actions_remove_event_poster_label()}
+	successToast={m.actions_remove_event_poster_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -44,6 +45,6 @@
 	{#snippet form()}
 		<input {...fields.slug.as('hidden', slug)} />
 		<input {...fields.eventId.as('hidden', eventId)} />
-		<p class="py-2">Remove the poster from this event?</p>
+		<p class="py-2">{m.actions_remove_event_poster_remove_poster_from_event()}</p>
 	{/snippet}
 </Action>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -32,11 +33,11 @@
 
 <Action
 	{action}
-	label="Confirm"
-	modalTitle="Confirm Reservation"
+	label={m.actions_confirm()}
+	modalTitle={m.actions_confirm_reservation()}
 	noFooter
 	maxWidth="max-w-md"
-	successToast="Confirmed"
+	successToast={m.actions_confirm_reservation_success_toast()}
 	{variant}
 	{size}
 	class={className}

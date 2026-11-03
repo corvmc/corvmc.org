@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -48,9 +49,9 @@
 <Action
 	action={bindTag}
 	data-testid="bind-tag"
-	label={currentTag ? 'Rebind tag' : 'Bind tag'}
-	modalTitle={currentTag ? 'Rebind the tag' : 'Bind a tag'}
-	successToast="Tag bound"
+	label={currentTag ? m.actions_bind_tag_rebind_tag() : m.actions_bind_tag_bind_tag()}
+	modalTitle={currentTag ? m.actions_bind_tag_rebind_tag_2() : m.actions_bind_tag_bind_tag_2()}
+	successToast={m.actions_bind_tag_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -66,13 +67,13 @@
 			{#if currentTag}
 				<p>This unit currently wears <strong class="font-mono">{currentTag}</strong>.</p>
 				<p class="mt-1 opacity-70">
-					Binding a new one keeps every loan and repair already recorded against it.
+					{m.actions_bind_tag_binding_new_one_keeps_every()}
 				</p>
 			{:else}
-				<p class="opacity-70">Scan or type the tag printed on the sticker.</p>
+				<p class="opacity-70">{m.actions_bind_tag_scan_type_tag_printed_sticker()}</p>
 			{/if}
 		</div>
-		<Field field={fields.assetTag} type="text" label="Tag" bind:value={assetTag} />
-		<BarcodeScanner onscan={handleScan} label="Scan the tag" class="mt-2" />
+		<Field field={fields.assetTag} type="text" label={m.actions_tag()} bind:value={assetTag} />
+		<BarcodeScanner onscan={handleScan} label={m.actions_bind_tag_scan_tag()} class="mt-2" />
 	{/snippet}
 </Action>

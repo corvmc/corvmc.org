@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '../ui/Button.svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
@@ -34,11 +35,11 @@
 {#if impact.deletable}
 	<Action
 		action={deleteEvent}
-		label="Delete"
-		modalTitle="Delete this event?"
-		submitLabel="Delete permanently"
+		label={m.actions_delete()}
+		modalTitle={m.actions_delete_event_modal_title()}
+		submitLabel={m.actions_delete_event_submit_label()}
 		submitVariant="error"
-		successToast="Event deleted"
+		successToast={m.actions_delete_event_success_toast()}
 		{variant}
 		{size}
 		class={className}
@@ -49,35 +50,41 @@
 		{#snippet form()}
 			<input {...fields.id.as('hidden', eventId)} />
 			<p class="py-2">
-				This removes the event outright. Use it for something that shouldn't exist — a test row, a
-				duplicate, a spam listing.
+				{m.actions_delete_event_removes_event_outright_use_something()}
 			</p>
 			<p class="pb-2">
-				If the show was real and isn't happening, <strong>cancel</strong> it instead: that keeps it on
-				the calendar marked cancelled so anyone who had the date finds out.
+				If the show was real and isn't happening, <strong>{m.actions_delete_event_cancel()}</strong> it
+				instead: that keeps it on the calendar marked cancelled so anyone who had the date finds out.
 			</p>
 
 			{#if impact.rsvpCount > 0 || impact.lineupCount > 0 || impact.hasReservation}
 				<Alert type="warning">
-					Deleting also removes:
+					{m.actions_delete_event_deleting_also_removes()}
 					<ul class="mt-1 list-inside list-disc">
 						{#if impact.rsvpCount > 0}
-							<li>{impact.rsvpCount} RSVP{impact.rsvpCount === 1 ? '' : 's'}</li>
+							<li>
+								{m.actions_delete_event_rsvp({
+									rsvpCount: impact.rsvpCount,
+									value: impact.rsvpCount === 1 ? '' : 's'
+								})}
+							</li>
 						{/if}
 						{#if impact.lineupCount > 0}
 							<li>
-								{impact.lineupCount} lineup credit{impact.lineupCount === 1 ? '' : 's'} — the show disappears
-								from those bands' profiles
+								{m.actions_delete_event_lineup_credit_show_disappears_from({
+									lineupCount: impact.lineupCount,
+									value: impact.lineupCount === 1 ? '' : 's'
+								})}
 							</li>
 						{/if}
 						{#if impact.hasReservation}
-							<li>the space booking is released</li>
+							<li>{m.actions_delete_event_space_booking_released()}</li>
 						{/if}
 					</ul>
 				</Alert>
 			{/if}
 
-			<p class="pt-2 text-muted">This cannot be undone.</p>
+			<p class="pt-2 text-muted">{m.actions_delete_event_cannot_undone()}</p>
 		{/snippet}
 	</Action>
 {:else}
@@ -89,8 +96,8 @@
 		class={className}
 		disabled
 		data-testid="delete-event"
-		title="Events with tickets can't be deleted — cancel it instead, which voids the tickets and tells the people holding them."
+		title={m.actions_delete_event_title()}
 	>
-		Delete
+		{m.actions_delete()}
 	</Button>
 {/if}

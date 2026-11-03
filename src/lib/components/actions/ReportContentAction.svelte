@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
@@ -34,10 +35,12 @@
 
 <Action
 	action={submitFlag}
-	label="Report"
-	modalTitle={entityLabel ? `Report ${entityLabel}` : 'Report content'}
-	submitLabel="Submit report"
-	successToast="Report submitted — thank you"
+	label={m.actions_report()}
+	modalTitle={entityLabel
+		? m.actions_report_content_report({ entityLabel })
+		: m.actions_report_content_report_content()}
+	submitLabel={m.actions_submit_report()}
+	successToast={m.actions_report_submitted_thank()}
 	{variant}
 	{size}
 	class={className}
@@ -54,15 +57,14 @@
 		<input {...fields.entityId.as('hidden', entityId)} />
 		<div class="space-y-3">
 			<p class="text-muted">
-				Let staff know what's wrong with this content. Reports are private and reviewed by the CMC
-				team.
+				{m.actions_report_content_let_staff_know_what_s()}
 			</p>
 			<!-- Custom inputs rather than FormField's own: both keep `bind:value`,
 			     which `canSubmit` and the post-success reset read, and the textarea
 			     keeps its rows and length cap. The wrapper is here for the error
 			     slot — a rejected report whose message never renders reads as a
 			     submit that did nothing. -->
-			<FormField field={fields.reason} label="Reason">
+			<FormField field={fields.reason} label={m.actions_reason()}>
 				{#snippet input(id)}
 					<input
 						{...fields.reason.as('text')}
@@ -70,11 +72,11 @@
 						class="input w-full"
 						bind:value={reason}
 						maxlength="100"
-						placeholder="e.g. Inappropriate content, impersonation, spam"
+						placeholder={m.actions_report_content_e_g_inappropriate_content_impersonati()}
 					/>
 				{/snippet}
 			</FormField>
-			<FormField field={fields.description} label="Details (optional)">
+			<FormField field={fields.description} label={m.actions_details_optional()}>
 				{#snippet input(id)}
 					<textarea
 						{...fields.description.as('text')}
@@ -83,7 +85,7 @@
 						rows="3"
 						maxlength="1000"
 						bind:value={description}
-						placeholder="Anything else that would help us review this"></textarea>
+						placeholder={m.actions_anything_else_would_help_us()}></textarea>
 				{/snippet}
 			</FormField>
 		</div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -25,9 +26,9 @@
 
 <Action
 	action={deleteClosure}
-	label="Delete"
-	modalTitle="Confirm"
-	successToast="Closure deleted"
+	label={m.actions_delete()}
+	modalTitle={m.actions_confirm()}
+	successToast={m.actions_delete_closure_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -36,6 +37,6 @@
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', closureId)} />
-		<p class="py-4">Delete this closure?</p>
+		<p class="py-4">{m.actions_delete_closure_delete_closure()}</p>
 	{/snippet}
 </Action>

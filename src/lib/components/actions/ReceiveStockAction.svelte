@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -52,9 +53,9 @@
 
 <Action
 	action={receiveStock}
-	label="Receive"
-	modalTitle="Receive stock"
-	successToast="Stock received"
+	label={m.actions_receive_stock_receive()}
+	modalTitle={m.actions_receive_stock_modal_title()}
+	successToast={m.actions_receive_stock_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -64,11 +65,11 @@
 	{#snippet form()}
 		<input {...fields.itemId.as('hidden', itemId)} />
 		<div class="grid grid-cols-2 gap-3">
-			<Field field={fields.quantity} type="number" label="Quantity" value={1} />
+			<Field field={fields.quantity} type="number" label={m.actions_quantity()} value={1} />
 			<Field
 				field={fields.kind}
 				type="select"
-				label="How it arrived"
+				label={m.actions_receive_stock_how_arrived()}
 				bind:value={kind}
 				options={acquisitionKinds.map((k) => ({ value: k, label: acquisitionKindLabels[k] }))}
 			/>
@@ -78,38 +79,46 @@
 		<Field
 			field={fields.occurredAt}
 			type="date"
-			label="When it arrived"
+			label={m.actions_receive_stock_when_arrived()}
 			value={clubToday()}
 			description={kind === 'opening_balance'
-				? 'A guess is fine. Nothing counts an opening balance as spending.'
+				? m.actions_receive_stock_guess_fine_nothing_counts_opening()
 				: undefined}
 		/>
 		{#if kind !== 'opening_balance'}
 			<Field
 				field={fields.sourceName}
 				type="text"
-				label={kind === 'purchase' ? 'Supplier' : 'Donor / grantor'}
+				label={kind === 'purchase' ? m.actions_supplier() : m.actions_receive_stock_donor_grantor()}
 			/>
 		{/if}
 		<div class="grid grid-cols-2 gap-3">
 			<MoneyField
 				field={fields.unitValueCents}
-				label={kind === 'purchase' ? 'Unit cost' : 'Value each'}
+				label={kind === 'purchase' ? m.actions_unit_cost() : m.actions_receive_stock_value_each()}
 			/>
-			<Field field={fields.reference} type="text" label="Reference / receipt no." />
+			<Field
+				field={fields.reference}
+				type="text"
+				label={m.actions_receive_stock_reference_receipt_no()}
+			/>
 		</div>
 		{#if isGift}
 			<Field
 				field={fields.fairValueBasis}
 				type="text"
-				label="How the value was determined"
-				description="Required for the gifts-in-kind disclosure — e.g. comparable sales, appraisal."
+				label={m.actions_receive_stock_how_value_was_determined()}
+				description={m.actions_receive_stock_required_gifts_kind_disclosure_e()}
 			/>
-			<Field field={fields.intendedUse} type="text" label="Intended use" />
+			<Field
+				field={fields.intendedUse}
+				type="text"
+				label={m.actions_receive_stock_intended_use()}
+			/>
 			<MoneyField
 				field={fields.fairValueCents}
-				label="Total fair value"
-				description="The gift as a whole. Leave blank to let the per-unit values above stand for it."
+				label={m.actions_receive_stock_total_fair_value()}
+				description={m.actions_receive_stock_gift_as_whole_leave_blank()}
 			/>
 			<!-- ASU 2020-07 asks whether a gift was sold or put to use, and discloses
 			     the two on separate lines. Nothing could set this before, so every
@@ -117,8 +126,8 @@
 			<Field
 				field={fields.monetized}
 				type="checkbox"
-				label="Sold rather than used"
-				checkboxLabel="The collective converted this gift to cash"
+				label={m.actions_receive_stock_sold_rather_than_used()}
+				checkboxLabel={m.actions_receive_stock_checkbox_label()}
 			/>
 		{/if}
 		<!-- Distinct from the donor: a volunteer who buys strings is owed for them,
@@ -127,9 +136,9 @@
 			field={fields.paidByUserId}
 			bind:value={paidByUserId}
 			bind:name={paidByName}
-			label="Paid by (leave blank if the collective paid)"
+			label={m.actions_receive_stock_paid_by_leave_blank_if()}
 		/>
 		<LocationField field={fields.locationId} />
-		<Field field={fields.notes} type="textarea" label="Notes" />
+		<Field field={fields.notes} type="textarea" label={m.actions_notes()} />
 	{/snippet}
 </Action>

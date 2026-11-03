@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
@@ -36,9 +37,9 @@
 
 <Action
 	action={adjustCredits}
-	label="Adjust"
-	modalTitle="Adjust Credits"
-	successToast="Credits adjusted"
+	label={m.actions_adjust_credits_adjust()}
+	modalTitle={m.actions_adjust_credits_modal_title()}
+	successToast={m.actions_adjust_credits_success_toast()}
 	{variant}
 	{size}
 	{outline}
@@ -55,15 +56,17 @@
 			     the wrapper supplies the error slot. Without it, a field issue from
 			     the server sets aria-invalid and renders no message at all — which
 			     is what happened to the over-deduction message before. -->
-			<FormField field={fields.creditType} label="Credit Type">
+			<FormField field={fields.creditType} label={m.actions_adjust_credits_credit_type()}>
 				<Select class="w-full" {...fields.creditType.as('select')} bind:value={creditType}>
-					<option value="free_hours">Free Hours</option>
-					<option value="equipment_credits">Equipment Credits</option>
+					<option value="free_hours">{m.actions_adjust_credits_free_hours()}</option>
+					<option value="equipment_credits">{m.actions_adjust_credits_equipment_credits()}</option>
 				</Select>
 			</FormField>
 			<FormField
 				field={fields.amount}
-				label={creditType === 'free_hours' ? 'Hours' : 'Credits'}
+				label={creditType === 'free_hours'
+					? m.actions_adjust_credits_hours()
+					: m.actions_adjust_credits_credits()}
 				description={amountHint}
 			>
 				<input
@@ -72,15 +75,15 @@
 					step={creditType === 'free_hours' ? 0.5 : 1}
 					class="input w-full"
 					bind:value={amount}
-					placeholder="Positive to add, negative to deduct"
+					placeholder={m.actions_adjust_credits_positive_add_negative_deduct()}
 				/>
 			</FormField>
-			<FormField field={fields.description} label="Reason">
+			<FormField field={fields.description} label={m.actions_reason()}>
 				<input
 					{...fields.description.as('text')}
 					class="input w-full"
 					bind:value={description}
-					placeholder="Why is this adjustment being made?"
+					placeholder={m.actions_adjust_credits_why_adjustment_being_made()}
 				/>
 			</FormField>
 		</div>

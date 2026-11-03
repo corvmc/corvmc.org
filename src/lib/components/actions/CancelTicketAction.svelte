@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -27,9 +28,9 @@
 
 <Action
 	action={cancelTicket}
-	label="Cancel"
-	modalTitle="Cancel Ticket"
-	successToast="Ticket cancelled"
+	label={m.actions_cancel()}
+	modalTitle={m.actions_cancel_ticket_modal_title()}
+	successToast={m.actions_cancel_ticket_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -38,6 +39,6 @@
 >
 	{#snippet form()}
 		<input {...fields.ticketId.as('hidden', ticketId)} />
-		<p class="py-2">Cancel ticket for {attendeeName}?</p>
+		<p class="py-2">{m.actions_cancel_ticket_cancel_ticket({ attendeeName })}</p>
 	{/snippet}
 </Action>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -29,10 +30,10 @@
 
 <Action
 	action={addSubscriber}
-	label="Add Subscriber"
-	modalTitle="Add Subscriber"
+	label={m.actions_add_subscriber_add_subscriber()}
+	modalTitle={m.actions_add_subscriber_add_subscriber()}
 	canSubmit={!!email.trim()}
-	successToast="Subscriber added"
+	successToast={m.actions_add_subscriber_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -51,11 +52,16 @@
 		<FormField
 			name="email"
 			type="email"
-			label="Email"
+			label={m.actions_email()}
 			bind:value={email}
-			placeholder="email@example.com"
+			placeholder={m.actions_add_subscriber_email_example_com()}
 			required
 		/>
-		<FormField name="name" label="Name (optional)" bind:value={name} placeholder="Name" />
+		<FormField
+			name="name"
+			label={m.actions_name_optional()}
+			bind:value={name}
+			placeholder={m.actions_name()}
+		/>
 	{/snippet}
 </Action>
