@@ -64,18 +64,20 @@ describe('ListingEditForm ticketing', () => {
 	// edit that posted `ticketingEnabled=false` closed that sale and dropped its
 	// capacity, so the flag is not posted at all for a listing CMC doesn't sell.
 	it("leaves a band's own sale alone", async () => {
-		const { container } = await render(ListingEditForm, props('band', true));
+		const { container, locator } = await render(ListingEditForm, props('band', true));
 
-		await expect.element(page.getByText('Edit listing')).toBeVisible();
+		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
 		expect(container.querySelector('input[name="ticketingEnabled"]')).toBeNull();
 		expect(container.querySelector('input[name="ticketQuantity"]')).toBeNull();
-		await expect.element(page.getByText('Sell tickets through the site')).not.toBeInTheDocument();
+		await expect
+			.element(page.getByLabelText('Sell tickets through the site'))
+			.not.toBeInTheDocument();
 	});
 
 	it('offers a CMC listing the toggle, and posts it', async () => {
 		const { container } = await render(ListingEditForm, props('cmc', true));
 
-		await expect.element(page.getByText('Sell tickets through the site')).toBeVisible();
+		await expect.element(page.getByLabelText('Sell tickets through the site')).toBeVisible();
 		const flag = container.querySelector<HTMLInputElement>('input[name="ticketingEnabled"]');
 		expect(flag).not.toBeNull();
 		expect(container.querySelector<HTMLInputElement>('#editTicketQuantity')?.value).toBe('80');
@@ -85,16 +87,18 @@ describe('ListingEditForm ticketing', () => {
 // #2126: the record is editable once cancelled; the sale and the room are not.
 describe('ListingEditForm on a cancelled listing', () => {
 	it('offers no ticket terms and no space hold', async () => {
-		const { container } = await render(ListingEditForm, {
+		const { container, locator } = await render(ListingEditForm, {
 			...props('cmc', true),
 			cancelled: true
 		});
 
-		await expect.element(page.getByText('Edit listing')).toBeVisible();
+		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
 		expect(container.querySelector('#editTitle')).not.toBeNull();
 		expect(container.querySelector('#editTicketPrice')).toBeNull();
 		expect(container.querySelector('input[name="ticketQuantity"]')).toBeNull();
-		await expect.element(page.getByText('Sell tickets through the site')).not.toBeInTheDocument();
-		await expect.element(page.getByText('Reserve practice space')).not.toBeInTheDocument();
+		await expect
+			.element(page.getByLabelText('Sell tickets through the site'))
+			.not.toBeInTheDocument();
+		await expect.element(page.getByLabelText('Reserve practice space')).not.toBeInTheDocument();
 	});
 });

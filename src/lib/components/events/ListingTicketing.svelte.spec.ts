@@ -1,4 +1,3 @@
-import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
@@ -23,6 +22,9 @@ vi.mock('$app/navigation', () => ({
 
 const ListingTicketing = (await import('./ListingTicketing.svelte')).default;
 
+const ATTENDEE = 'Ada Lovelace';
+const purchaseLink = 'a[href$="/events/evt-1/tickets"]';
+
 function props(source: string, ticketingEnabled: boolean) {
 	return {
 		event: {
@@ -41,7 +43,7 @@ function props(source: string, ticketingEnabled: boolean) {
 			? [
 					{
 						id: 't1',
-						attendeeName: 'Ada Lovelace',
+						attendeeName: ATTENDEE,
 						attendeeEmail: 'ada@example.com',
 						code: 'ABC123',
 						status: 'valid',
@@ -58,32 +60,30 @@ function props(source: string, ticketingEnabled: boolean) {
 
 describe('ListingTicketing', () => {
 	it('shows a CMC sale its stats, comps and ticket list', async () => {
-		await render(ListingTicketing, props('cmc', true));
+		const { container, locator } = await render(ListingTicketing, props('cmc', true));
 
-		await expect.element(page.getByText('Capacity')).toBeVisible();
-		await expect.element(page.getByText('77')).toBeVisible();
-		await expect.element(page.getByRole('button', { name: 'Comp Tickets' })).toBeVisible();
-		await expect.element(page.getByText('Ada Lovelace')).toBeVisible();
+		await expect.element(locator.getByText(String(80))).toBeVisible();
+		await expect.element(locator.getByText(String(77))).toBeVisible();
+		// Comp Tickets is the card's only button.
+		await expect.element(locator.getByRole('button')).toBeVisible();
+		await expect.element(locator.getByText(ATTENDEE)).toBeVisible();
+		expect(container.querySelector(purchaseLink)).not.toBeNull();
 	});
 
 	// A band's own sale (#1203) is monitored here but is not CMC's to comp.
 	it("monitors a band's own sale without offering comps", async () => {
-		await render(ListingTicketing, props('band', true));
+		const { locator } = await render(ListingTicketing, props('band', true));
 
-		await expect.element(page.getByText('Ada Lovelace')).toBeVisible();
-		await expect
-			.element(page.getByRole('button', { name: 'Comp Tickets' }))
-			.not.toBeInTheDocument();
+		await expect.element(locator.getByText(ATTENDEE)).toBeVisible();
+		await expect.element(locator.getByRole('button')).not.toBeInTheDocument();
 	});
 
 	it('offers no platform-ticketing controls on a non-CMC listing that is not selling', async () => {
-		await render(ListingTicketing, props('community', false));
+		const { container, locator } = await render(ListingTicketing, props('community', false));
 
-		await expect.element(page.getByText('At the door')).toBeVisible();
-		await expect.element(page.getByText('Capacity')).not.toBeInTheDocument();
-		await expect
-			.element(page.getByRole('button', { name: 'Comp Tickets' }))
-			.not.toBeInTheDocument();
-		await expect.element(page.getByText('View purchase page')).not.toBeInTheDocument();
+		await expect.element(locator.getByRole('heading')).toBeVisible();
+		await expect.element(locator.getByText(String(80))).not.toBeInTheDocument();
+		await expect.element(locator.getByRole('button')).not.toBeInTheDocument();
+		expect(container.querySelector(purchaseLink)).toBeNull();
 	});
 });

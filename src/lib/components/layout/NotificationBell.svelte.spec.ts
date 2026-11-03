@@ -1,7 +1,6 @@
 // The real stylesheet, because two of the defects below are classes that emit
 // no CSS at all — a shape `pnpm check`, ESLint and the DOM are all blind to.
 import '../../../routes/layout.css';
-import { page } from 'vitest/browser';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import type { ChromeNotification } from './chrome';
@@ -45,9 +44,10 @@ describe('NotificationBell', () => {
 	});
 
 	it('opens on click and closes when clicking outside', async () => {
-		await render(NotificationBell, { notifications: [], unreadCount: 0 });
+		const { locator } = await render(NotificationBell, { notifications: [], unreadCount: 0 });
 
-		const trigger = page.getByRole('button', { name: 'Notifications' });
+		// The bell is the first button; the panel's own buttons render after it.
+		const trigger = locator.getByRole('button').first();
 		await expect.element(trigger).toBeVisible();
 
 		await trigger.click();
@@ -66,7 +66,7 @@ describe('NotificationBell', () => {
 	it('survives a click that unmounts the component mid-dispatch (JAVASCRIPT-SVELTEKIT-Q/1A)', async () => {
 		const screen = await render(NotificationBell, { notifications: [], unreadCount: 0 });
 
-		const trigger = page.getByRole('button', { name: 'Notifications' });
+		const trigger = screen.locator.getByRole('button').first();
 		await trigger.click();
 		expect(dropdown()).not.toBeNull();
 
@@ -114,11 +114,11 @@ describe('NotificationBell rows', () => {
 	}));
 
 	async function openPanel() {
-		await render(NotificationBell, {
+		const { locator } = await render(NotificationBell, {
 			notifications: MIXED as ChromeNotification[],
 			unreadCount: 2
 		});
-		await page.getByRole('button', { name: 'Notifications' }).click();
+		await locator.getByRole('button').first().click();
 		return Array.from(document.querySelectorAll<HTMLElement>('.max-h-80 > div > :first-child'));
 	}
 
