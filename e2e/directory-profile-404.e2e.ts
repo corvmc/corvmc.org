@@ -15,25 +15,20 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 /**
- * The boundary's failed alert, tagged with the error's status. The internals
- * TypeError carries none, so it can never satisfy a 404.
+ * The page answers 404 and says so, without the copy: the error page renders
+ * `page.status`, and the minified internals TypeError would have been a 500.
  */
-function failedAs(page: Page, status: number) {
-	return page.locator(`[data-error-status="${status}"] [role="alert"]`);
+async function expect404(page: Page, path: string) {
+	const response = await page.goto(path);
+	expect(response?.status()).toBe(404);
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${response?.status()}`);
+	await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 }
 
-test('band profile 404 reaches the boundary as a 404, not a minified internals error', async ({
-	page
-}) => {
-	await page.goto('/directory/bands/does-not-exist-xyz');
-
-	await expect(failedAs(page, 404)).toBeVisible();
+test('band profile 404 answers 404, not a minified internals error', async ({ page }) => {
+	await expect404(page, '/directory/bands/does-not-exist-xyz');
 });
 
-test('member profile 404 reaches the boundary as a 404, not a minified internals error', async ({
-	page
-}) => {
-	await page.goto('/directory/members/does-not-exist-xyz');
-
-	await expect(failedAs(page, 404)).toBeVisible();
+test('member profile 404 answers 404, not a minified internals error', async ({ page }) => {
+	await expect404(page, '/directory/members/does-not-exist-xyz');
 });
