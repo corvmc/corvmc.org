@@ -1,66 +1,82 @@
-// A zone far from club time, set before anything formats a date: the old
-// viewer-zone formatting rendered Mar 1 here for an instant that is Feb 28 at
-// the club, so the assertions below cannot pass by the zones agreeing.
-process.env.TZ = 'Pacific/Kiritimati';
-
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { render } from 'svelte/server';
 import CreditBalanceCard from './CreditBalanceCard.svelte';
 import InvoiceHistoryCard from './InvoiceHistoryCard.svelte';
-import { formatMonthDay, formatMonthDayYear } from '$lib/utils/format';
+import { forEachClockEdge, viewerTimeZones } from '$lib/test/clock-edges';
 
-// 7pm on Feb 28 in club time; Mar 1 in UTC and in Kiritimati.
-const periodEnd = new Date('2026-03-01T03:00:00Z');
-const viewerDay = periodEnd.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+// The club's calendar day, spelled out with no zone involved.
+function clubMonthDay(clubDate: string): string {
+	return new Date(`${clubDate}T12:00:00Z`).toLocaleDateString('en-US', {
+		timeZone: 'UTC',
+		month: 'long',
+		day: 'numeric'
+	});
+}
+
+// The viewer-zone formatting the cards used to do (#2222).
+function viewerMonthDay(at: Date): string {
+	return at.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+}
+
+function expectClubDay(body: string, at: Date, clubDate: string) {
+	const club = clubMonthDay(clubDate);
+	expect(body).toContain(club);
+	if (viewerMonthDay(at) !== club) expect(body).not.toContain(viewerMonthDay(at));
+}
 
 beforeEach(() => {
-	vi.useFakeTimers();
+	vi.useFakeTimers({ toFake: ['Date'] });
 	vi.setSystemTime(new Date('2026-02-20T20:00:00Z'));
 });
 afterEach(() => vi.useRealTimers());
 
 describe('membership dates render in club time', () => {
-	it('dates the credit refresh by the club calendar', async () => {
-		const { body } = await render(CreditBalanceCard, {
-			props: {
-				credits: { free_hours: 4 },
-				subscription: {
-					id: 'sub_1',
-					status: 'active',
-					quantity: 4,
-					coveringFees: false,
-					currentPeriodEnd: periodEnd,
-					cancelAtPeriodEnd: false
-				},
-				allocatedThisMonth: 8,
-				usedThisMonth: 0
-			}
-		});
+	forEachClockEdge(
+		'dates the credit refresh by the club calendar',
+		async ({ at, clubDate }) => {
+			const { body } = await render(CreditBalanceCard, {
+				props: {
+					credits: { free_hours: 4 },
+					subscription: {
+						id: 'sub_1',
+						status: 'active',
+						quantity: 4,
+						coveringFees: false,
+						currentPeriodEnd: at,
+						cancelAtPeriodEnd: false
+					},
+					allocatedThisMonth: 8,
+					usedThisMonth: 0
+				}
+			});
 
-		expect(formatMonthDay(periodEnd)).not.toBe(viewerDay);
-		expect(body).toContain(formatMonthDay(periodEnd));
-		expect(body).not.toContain(viewerDay);
-	});
+			expectClubDay(body, at, clubDate);
+		},
+		{ zones: viewerTimeZones }
+	);
 
-	it('dates an invoice by the club calendar', async () => {
-		const { body } = await render(InvoiceHistoryCard, {
-			props: {
-				available: true,
-				invoices: [
-					{
-						id: 'in_1',
-						created: periodEnd,
-						amountPaidCents: 1000,
-						currency: 'usd',
-						status: 'paid',
-						hostedUrl: null,
-						pdfUrl: null
-					}
-				]
-			}
-		});
+	forEachClockEdge(
+		'dates an invoice by the club calendar',
+		async ({ at, clubDate }) => {
+			const { body } = await render(InvoiceHistoryCard, {
+				props: {
+					available: true,
+					invoices: [
+						{
+							id: 'in_1',
+							created: at,
+							amountPaidCents: 1000,
+							currency: 'usd',
+							status: 'paid',
+							hostedUrl: null,
+							pdfUrl: null
+						}
+					]
+				}
+			});
 
-		expect(body).toContain(formatMonthDayYear(periodEnd));
-		expect(body).not.toContain(viewerDay);
-	});
+			expectClubDay(body, at, clubDate);
+		},
+		{ zones: viewerTimeZones }
+	);
 });
