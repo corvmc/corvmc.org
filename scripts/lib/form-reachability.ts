@@ -1,13 +1,11 @@
 import ts from 'typescript';
 
 /**
- * Which optional keys a service function accepts that no `form()`/`command()`
- * ever passes it. A key like that is a capability the service spec covers and
- * no member or staffer can reach ("no form means not shipped", #2049).
- *
- * The comparison is on types, not names: the parameter type comes from the
- * resolved signature and the passed keys from the argument's own type, so
- * `svc(id, data)`, `svc({ ...data, x })` and `svc(id)` are all read correctly.
+ * Optional keys a service function accepts that no `form()`/`command()` passes:
+ * a capability no member or staffer can reach (#2049). Compared on types, not
+ * names — the parameter from the resolved signature, the passed keys from the
+ * argument's own type — so `svc(id, data)`, `svc({ ...data })` and `svc(id)`
+ * all read correctly.
  */
 
 export type RemoteKind = 'form' | 'command';

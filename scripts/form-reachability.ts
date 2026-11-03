@@ -1,11 +1,8 @@
 /**
- * Report the service options no `form()` or `command()` passes (#2049).
- *
- *   pnpm form-reachability          a grouped report
- *   pnpm form-reachability --json   the same, as JSON
- *
- * A report, not a gate: a service may keep an option on purpose that only a
- * job, a seed or another service sets, so the output needs a human to read it.
+ * `pnpm form-reachability [--json]`: the service options no `form()` or
+ * `command()` passes (#2049). A report, not a gate: a service may keep an
+ * option on purpose that only a job, a seed or another service sets, so the
+ * output needs a human to read it.
  */
 import ts from 'typescript';
 import { relative } from 'node:path';
