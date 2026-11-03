@@ -36,9 +36,9 @@ mcp.svelte.dev
 ```
 
 `Trusted` covers npm, GitHub, Docker and `sentry.io`, but **not** Playwright's browser CDN. Without
-`cdn.playwright.dev` there is no Chromium on the VM, which takes out the `client` and `storybook`
-vitest projects and the entire e2e suite — and takes them out the way a missing browser does, as
-whole projects reporting zero tests rather than as an error naming the download.
+`cdn.playwright.dev` there is no Chromium on the VM, which takes out the `client` vitest
+project and the entire e2e suite — and takes them out the way a missing browser does, as whole
+projects reporting zero tests rather than as an error naming the download.
 
 ### Environment variables: **leave empty**
 

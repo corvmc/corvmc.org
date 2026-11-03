@@ -1,7 +1,7 @@
-// Shared fixtures for isolated component tests and stories.
+// Shared fixtures for isolated component tests.
 //
 // These return plain objects matching the shapes that remote queries hand to
-// components — they let a `.svelte.spec.ts` or `.stories.svelte` render a
+// components — they let a `.svelte.spec.ts` render a
 // coupled component with no DB, auth, or server involved. Each factory takes an
 // `overrides` partial so a test can pin only the fields it asserts on.
 
@@ -48,7 +48,7 @@ export type FakeBand = {
 
 /**
  * A display reference for any entity type, with a plausible title per type so
- * a gallery story reads as real content rather than "member / band / event".
+ * a rendered card reads as real content rather than "member / band / event".
  *
  * `overrides` is loosely typed because `EntityRef` is a discriminated union —
  * the caller already picked the arm by passing `type`, and narrowing the

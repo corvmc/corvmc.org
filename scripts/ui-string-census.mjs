@@ -6,7 +6,7 @@
  *   node scripts/ui-string-census.mjs --json   # machine-readable totals
  *
  * Runs `custom/no-literal-ui-text` alone over shipped components and routes;
- * stories, test harnesses and fixtures are not interface. Lint enforces the
+ * test harnesses and fixtures are not interface. Lint enforces the
  * rule; this lists every hit with `--list`, ignoring the `allow` option.
  */
 import { ESLint } from 'eslint';
@@ -22,7 +22,7 @@ const eslint = new ESLint({
 	cwd: ROOT,
 	overrideConfigFile: true,
 	overrideConfig: [
-		{ ignores: ['**/*.stories.svelte', '**/*.test.svelte', '**/*Harness.svelte'] },
+		{ ignores: ['**/*.test.svelte', '**/*Harness.svelte'] },
 		{
 			files: ['**/*.svelte'],
 			languageOptions: { parser: svelteParser, parserOptions: { parser: ts.parser } },

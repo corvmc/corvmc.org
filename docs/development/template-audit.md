@@ -16,7 +16,7 @@ to remove hand-written class soup, and an expression is usually a component alre
 
 ## Baseline
 
-Measured at `e58a707` (post-#221), excluding `*.stories.svelte` and test harnesses:
+Measured at `e58a707` (post-#221), excluding Storybook stories (since removed, #2200) and test harnesses:
 
 | Scope                   | files | lines  | `class="…"` | tokens    | tok/line | inline `style=` |
 | ----------------------- | ----- | ------ | ----------- | --------- | -------- | --------------- |
@@ -231,11 +231,11 @@ Both were the same shape: a prop that quietly changes what an attribute means.
 **Storybook.** `Button`'s `title` renders as a bits-ui tooltip, and `Tooltip.Root` _throws_ without
 a `Tooltip.Provider` above it. The app has one at the root layout, so the app was fine — but
 Storybook mounts components outside that layout, so every story containing a button with a tooltip
-failed to render. `.storybook/preview.ts` now wraps stories in the same provider, the way it already
-imports the app's stylesheet.
+failed to render. Its preview then wrapped stories in the same provider. Storybook has since been
+removed (#2200); a browser spec that renders a tooltip button needs the same provider around it.
 
-Worth knowing about the vitest setup: the `storybook` project reports these as **unhandled errors**,
-not failed tests, so the summary line still reads `Test Files … passed`. Check the exit code, not
+Worth knowing about vitest browser mode: a render that throws can report as an **unhandled error**,
+not a failed test, so the summary line still reads `Test Files … passed`. Check the exit code, not
 the summary.
 
 ### A regression the e2e suite caught

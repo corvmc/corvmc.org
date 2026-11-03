@@ -131,8 +131,7 @@ describe('EntityIdentity', () => {
  * an inherited value does lose to a direct declaration.
  *
  * Asserted structurally rather than via `getComputedStyle`: this project loads
- * no app stylesheet, so `.truncate` resolves to nothing here regardless. The
- * visual proof lives in the Storybook stories, which do import `layout.css`.
+ * no app stylesheet, so `.truncate` resolves to nothing here regardless.
  */
 describe('EntityIdentity truncation elements', () => {
 	it('never puts truncate directly on a heading or a paragraph', async () => {

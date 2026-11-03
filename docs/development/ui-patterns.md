@@ -2,7 +2,7 @@
 
 When building or modifying pages in this app, use the shared components and patterns described here. Every page should compose from these building blocks so the UI stays consistent.
 
-> Testing these components in isolation (stories vs. specs, mocking the server)? See [component-testing.md](./component-testing.md).
+> Testing these components in isolation (specs, mocking the server)? See [component-testing.md](./component-testing.md).
 
 > Reducing the raw utility classes still left in page templates? See
 > [template-audit.md](./template-audit.md) for the census, the findings, and the migration phases.
@@ -247,8 +247,7 @@ purpose: the same module has to render the preview and produce what the server r
 **Do not pass `otherFloorCents` a price floor.** It is the _other party's_ floor within the
 bar, not the sale's minimum — passing the price consumed the whole amount, clamped the
 movable share's maximum to zero, and the suggested position never appeared. The other
-party's real protection is the total the buyer named. `SplitBar.stories.svelte` covers the
-positions worth looking at, including both ends and a zero total.
+party's real protection is the total the buyer named.
 
 ### Key props
 

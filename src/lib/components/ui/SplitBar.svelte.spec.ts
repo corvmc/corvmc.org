@@ -134,3 +134,22 @@ describe('SplitBar focus visibility', () => {
 		expect(parseFloat(ring.outlineWidth)).toBeGreaterThan(0);
 	});
 });
+
+/** The ticket default: $15.00, 74¢ to the card, 30% of what is left to divide. */
+describe('SplitBar slider value', () => {
+	it('carries the value in cents and shows it as dollars', async () => {
+		const { container } = await render(SplitBar, {
+			totalCents: 1500,
+			value: 282,
+			onchange: () => {},
+			fixedCents: 74,
+			fixedLabel: 'Card processing',
+			valueLabel: 'The collective',
+			otherLabel: 'Sun Atoms'
+		});
+
+		const slider = container.querySelector('[role="slider"]')!;
+		expect(slider.getAttribute('aria-valuenow')).toBe('282');
+		expect(container.textContent).toContain('$2.82');
+	});
+});

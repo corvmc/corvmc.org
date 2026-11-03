@@ -37,8 +37,9 @@ systems). Worked examples and the rest of the policy:
 
 ## Suites
 
-Three vitest projects in `vite.config.ts`: `client` (chromium, `*.svelte.{test,spec}.ts`),
-`server` (node, `vmForks` pool), and `storybook`. `expect.requireAssertions` is on globally, so a
+Two vitest projects in `vite.config.ts`: `client` (chromium, `*.svelte.{test,spec}.ts`) and
+`server` (node, `vmForks` pool). Storybook is gone (#2200): a component's behaviour is pinned in a
+colocated `.svelte.spec.ts`. `expect.requireAssertions` is on globally, so a
 test that asserts nothing fails.
 
 - **Scope the run.** Cost is dominated by per-file module-graph evaluation, not by assertions —
@@ -62,10 +63,8 @@ test that asserts nothing fails.
 - A spec of orchestration — which service is called, what is thrown, what is returned — mocks
   `$lib/server/db` outright. To assert only a fragment's shape, render it through
   `SQLiteSyncDialect` (see `src/lib/server/authorization.spec.ts`).
-- **Both browser-mode projects get a port of their own** — `client` via `browserPort()` and
-  `storybook` via `storybookPort()`, from the same helper. vitest's default is the fixed constant
-  63315, so without this every checkout asks for the same number _and_ the two projects ask for it
-  within a single run.
+- **The browser-mode project gets a port per checkout** — `client` via `browserPort()`. vitest's
+  default is the fixed constant 63315, so without this every checkout asks for the same number.
 - **A browser project that cannot bind reports no failure at all.** It never starts, so the summary
   is every test passing over a file count that is short:
 

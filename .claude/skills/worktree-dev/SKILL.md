@@ -1,6 +1,6 @@
 ---
 name: worktree-dev
-description: Set up and run the dev server, Storybook, or the browser preview from inside a git worktree under .claude/worktrees/. Use when a worktree has no node_modules or no .env, when the dev server won't boot from a worktree, or when :5173 seems to belong to someone else.
+description: Set up and run the dev server or the browser preview from inside a git worktree under .claude/worktrees/. Use when a worktree has no node_modules or no .env, when the dev server won't boot from a worktree, or when :5173 seems to belong to someone else.
 ---
 
 # Running a dev server from a worktree

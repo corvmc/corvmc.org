@@ -8,7 +8,7 @@ Run the fast component loop (skips the Node `server` project and Playwright e2e)
 
 ```sh
 pnpm test:changed             # only what your working-tree diff affects — start here
-pnpm test:components          # client + storybook projects, headless, one shot
+pnpm test:components          # the client project, headless, one shot
 pnpm test:server              # the Node `server` project only
 pnpm test:unit                # watch mode (all vitest projects)
 ```
@@ -21,18 +21,17 @@ pulled in, not the number of tests, and scoping the run is what actually helps.
 
 CI runs `pnpm test`, which executes the same files via `vitest --run`.
 
-## Which track to use
+## One track: a colocated spec
 
-Decide by whether the component reads its data from props or from the server.
+Every component test is a `*.svelte.spec.ts` next to the component, run by the `client` Vitest
+project in Chromium. A **pure** component (all data via props — Button, Badge, EmptyState,
+PageHeader, Modal, FormField, …) is rendered with its props. A **coupled** one — it `await`s a
+remote query/command, imports `$app/*`, or takes a remote `form()` (AccountDropdown,
+NotificationBell, `actions/*`) — gets its server dependency replaced with `vi.mock`.
 
-| Component shape                                                                                                                                   | Write a…                                 | Why                                                                                                                          |
-| ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Pure** — all data via props (Button, Badge, EmptyState, PageHeader, Modal, FormField, …)                                                        | `*.stories.svelte` next to the component | Doubles as a gallery **and** an automated render/interaction test (the `storybook` Vitest project runs each story's `play`). |
-| **Coupled** — `await`s a remote query/command, imports `$app/*`, or takes a remote `form()` (e.g. AccountDropdown, NotificationBell, `actions/*`) | `*.svelte.spec.ts` next to the component | `vi.mock` (native to Vitest) replaces the server dependency with a fixture. The `client` Vitest project runs these.          |
-
-> Storybook module-mocking is intentionally avoided — it needs subpath imports or
-> fragile aliases. Coupled-component logic is tested in `*.svelte.spec.ts` where
-> `vi.mock` just works. Stories stay for prop-driven components.
+Every `ui/` primitive has a spec. A spec asserts behaviour — what renders for which props, which
+callback fires, which attribute a control carries — never how it looks; a gallery of variants that
+asserts nothing is not a test. Storybook was removed in #2200.
 
 ## Shared helpers
 
@@ -41,35 +40,24 @@ Decide by whether the component reads its data from props or from the server.
 - `src/lib/test/mocks.ts` — `fakeField(name)` (a `RemoteFormField` stand-in) and
   `fakeForm(names)` (a remote `form()` stand-in) for the `actions/*` components.
 
-## Template — pure component story
+## Template — pure component spec
 
-See `src/lib/components/ui/EmptyState.stories.svelte`.
+See `src/lib/components/ui/EmptyState.svelte.spec.ts`.
 
-```svelte
-<script module>
-	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import { expect, within } from 'storybook/test';
-	import MyComponent from './MyComponent.svelte';
+```ts
+import { describe, expect, it } from 'vitest';
+import { render } from 'vitest-browser-svelte';
+import MyComponent from './MyComponent.svelte';
 
-	const { Story } = defineMeta({
-		title: 'Shared/MyComponent',
-		component: MyComponent,
-		tags: ['autodocs'],
-		args: {/* defaults shared by all stories */}
+describe('MyComponent', () => {
+	it('links the action to actionHref', async () => {
+		const { container } = await render(MyComponent, {
+			actionLabel: 'Go',
+			actionHref: '/somewhere'
+		});
+		expect(container.querySelector('a')?.getAttribute('href')).toBe('/somewhere');
 	});
-</script>
-
-<Story name="Default" />
-
-<Story
-	name="With Action"
-	args={{ actionLabel: 'Go', actionHref: '/somewhere' }}
-	play={async ({ canvasElement }) => {
-		const canvas = within(canvasElement);
-		const link = canvas.getByRole('link', { name: 'Go' });
-		await expect(link).toHaveAttribute('href', '/somewhere');
-	}}
-/>
+});
 ```
 
 ## Template — coupled component spec
@@ -124,5 +112,5 @@ await render(CancelReservationAction, { reservation: { id: 'r1' }, action: fakeF
 ## Coverage
 
 Coverage is built up incrementally, component by component, rather than tracked as a
-checklist. Issue #572 names the components still missing a story or spec — and undercounts:
+checklist. Issue #572 names the components still missing a spec — and undercounts:
 there are 55 `*Action.svelte` files and no `*Action.spec.ts` at all.

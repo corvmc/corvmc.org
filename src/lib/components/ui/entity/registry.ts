@@ -153,7 +153,7 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 	project: { icon: IconClipboardList, shape: 'none' }
 };
 
-/** Declaration order, for gallery stories and exhaustiveness checks. */
+/** Declaration order, for exhaustiveness checks. */
 export const allEntityTypes = entityTypes;
 
 /**
