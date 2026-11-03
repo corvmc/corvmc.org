@@ -202,7 +202,7 @@
 		</div>
 	{/each}
 
-	<Button type="button" variant="ghost" size="sm" onclick={addLine}>
+	<Button type="button" variant="ghost" size="sm" data-testid="add-intake-line" onclick={addLine}>
 		<IconPlus size={16} />
 		Add a line
 	</Button>

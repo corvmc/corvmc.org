@@ -54,6 +54,7 @@
 
 <Action
 	action={correctStock}
+	data-testid="stocktake"
 	label="Stocktake"
 	modalTitle="Correct the count"
 	successToast="Correction recorded"

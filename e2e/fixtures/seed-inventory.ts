@@ -45,6 +45,7 @@ import type { DrizzleD1Database } from 'drizzle-orm/d1';
  * shape the app never sees.
  */
 export const SEED_CATEGORY_ID = 'e2e-inv-category';
+export const SEED_CATEGORY_NAME = 'E2E Test Gear';
 export const SEED_LOCATION_ID = 'e2e010c0-0000-4000-8000-000000000001';
 
 /** A serialized item — one record per physical unit. */
@@ -193,6 +194,7 @@ export const SEED_ARTICLE_TITLE = 'E2E How To Use The Amp';
 export const SEED_ARTICLE_SLUG = 'e2e-how-to-use-the-amp';
 
 const SEED_ACQUISITION_ID = 'e2e-inv-acquisition';
+export const SEED_ACQUISITION_SUPPLIER = 'E2E Supplier';
 const ASSET_IDS = [
 	SEED_ASSET_ID,
 	SEED_UNTAGGED_ASSET_ID,
@@ -227,7 +229,7 @@ async function ensureCategory(db: DrizzleD1Database) {
 
 	await db.insert(equipmentCategory).values({
 		id: SEED_CATEGORY_ID,
-		name: 'E2E Test Gear',
+		name: SEED_CATEGORY_NAME,
 		displayOrder: 99,
 		pricingTier: 'major'
 	});
@@ -326,7 +328,7 @@ export async function seedInventory(): Promise<void> {
 			id: SEED_ACQUISITION_ID,
 			kind: 'purchase',
 			occurredAt: now,
-			sourceName: 'E2E Supplier',
+			sourceName: SEED_ACQUISITION_SUPPLIER,
 			reference: 'E2E-0001',
 			totalCents: 100_000
 		});

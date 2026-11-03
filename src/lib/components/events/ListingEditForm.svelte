@@ -451,6 +451,7 @@
 									<input
 										type="checkbox"
 										bind:checked={rebookConfirmed}
+										data-testid="confirm-rebook"
 										class="checkbox checkbox-sm"
 									/>
 									<span class="fieldset-legend">Confirm rebook</span>
@@ -491,6 +492,7 @@
 											<input
 												type="checkbox"
 												bind:checked={overrideConflicts}
+												data-testid="override-conflicts"
 												class="checkbox checkbox-sm"
 											/>
 											<span class="fieldset-legend">
@@ -513,6 +515,7 @@
 								<input
 									type="checkbox"
 									bind:checked={reserveSpace}
+									data-testid="reserve-space"
 									onchange={toggleReserveSpace}
 									class="checkbox checkbox-sm"
 								/>
@@ -558,6 +561,7 @@
 											<input
 												type="checkbox"
 												bind:checked={overrideConflicts}
+												data-testid="override-conflicts"
 												class="checkbox checkbox-sm"
 											/>
 											<span class="fieldset-legend">
