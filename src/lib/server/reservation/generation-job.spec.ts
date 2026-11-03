@@ -1,182 +1,41 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { eq } from 'drizzle-orm';
 
-// ---------------------------------------------------------------------------
-// Mock dependencies before importing the module under test
-// ---------------------------------------------------------------------------
+// The generator's conflict, dedup and ownership checks are WHERE clauses, so it
+// runs against a real SQLite. The occurrence list and the window are fixed
+// (rrule-helpers is mocked) so no answer depends on today's date; booking the
+// space, ticket terms and media stay mocked as the calls this job makes.
 
-// DB mock — we use a queue-based approach: each call to .select() or .insert()
-// pops the next result from selectResults or records an insert.
-let selectResults: unknown[][] = [];
-let insertedRows: unknown[] = [];
-
-function makeSelectChain(result: unknown[]) {
-	// Builds a fluent chain that resolves to result whether you call:
-	//   .from().where()          (active series — no .limit())
-	//   .from().where().limit()  (prototype, owner, existing instances)
-	//   .from().where().limit()  (conflict checks)
-	const limit = vi.fn().mockResolvedValue(result);
-	// Make `where` thenable so `await .where()` works without `.limit()`
-	const where = vi.fn().mockReturnValue(Object.assign(Promise.resolve(result), { limit }));
-	const from = vi.fn().mockReturnValue({ where, limit });
-	return { from };
-}
-
-const dbMock = {
-	select: vi.fn(),
-	insert: vi.fn(),
-	update: vi.fn()
-};
-
-vi.mock('$lib/server/db', () => ({ db: dbMock }));
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
 const mockSaveTicketSale = vi.fn();
 vi.mock('$lib/server/ticket/ticket-sale', () => ({ saveTicketSale: mockSaveTicketSale }));
 
-// Schema refs — just need to be truthy objects used in eq/and calls
-vi.mock('$lib/server/db/schema/recurring', () => ({
-	recurringSeries: {
-		id: 'id',
-		prototypeId: 'prototypeId',
-		rrule: 'rrule',
-		prototypeType: 'prototypeType',
-		endsAt: 'endsAt',
-		cancelledAt: 'cancelledAt',
-		supersededBy: 'supersededBy'
-	}
-}));
-
-vi.mock('$lib/server/db/schema/reservation', () => ({
-	reservation: {
-		id: 'id',
-		bookerType: 'bookerType',
-		bookerId: 'bookerId',
-		createdByUserId: 'createdByUserId',
-		startsAt: 'startsAt',
-		endsAt: 'endsAt',
-		notes: 'notes',
-		recurringSeriesId: 'recurringSeriesId',
-		status: 'status',
-		hardHold: 'hardHold'
-	},
-	closure: { reason: 'reason', startsAt: 'startsAt', endsAt: 'endsAt' }
-}));
-
-vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: { id: 'id', name: 'name', email: 'email', deletedAt: 'deletedAt' }
-}));
-
-// `__table` is how `insertTableName` tells these apart. The real tables carry a
-// `drizzle:Name` symbol, but these stand-ins are plain objects, so the
-// discriminator has to be one they actually have.
-vi.mock('$lib/server/db/schema/event', () => ({
-	eventListing: {
-		__table: 'event_listing',
-		id: 'id',
-		title: 'title',
-		description: 'description',
-		startsAt: 'startsAt',
-		endsAt: 'endsAt',
-		doorsAt: 'doorsAt',
-		tags: 'tags',
-		ticketingEnabled: 'ticketingEnabled',
-		ticketPrice: 'ticketPrice',
-		ticketQuantity: 'ticketQuantity',
-		source: 'source',
-		groupId: 'groupId',
-		location: 'location',
-		publishedAt: 'publishedAt',
-		status: 'status',
-		posterKey: 'posterKey',
-		reservationId: 'reservationId',
-		recurringSeriesId: 'recurringSeriesId',
-		createdByUserId: 'createdByUserId'
-	},
-	eventBand: { __table: 'event_band', id: 'id', eventId: 'eventId', bandId: 'bandId' },
-	eventGroup: { __table: 'event_group', id: 'id', eventId: 'eventId', groupId: 'groupId' }
-}));
-
-vi.mock('$lib/server/db/schema/group', () => ({
-	group: { __table: 'group', id: 'id', name: 'name', kind: 'kind' }
-}));
-
-vi.mock('$lib/server/db/schema/directory', () => ({
-	directoryEntry: { __table: 'directory_entry', id: 'id', groupId: 'group_id' }
-}));
-
-// The real one, so the `event_group` write this job now owes goes through the
-// same helper `createGroupEvent` and `importBandEvents` use rather than a copy.
-vi.mock('$lib/server/event/event-service', async () => {
-	const { db } = await import('$lib/server/db');
-	const { eventGroup } = await import('$lib/server/db/schema/event');
-	return {
-		linkManagingGroup: async (links: { eventId: string; groupId: string }[]) => {
-			await (db as unknown as { insert: (t: unknown) => { values: (v: unknown) => unknown } })
-				.insert(eventGroup)
-				.values(links.map((l) => ({ ...l, sortOrder: 0 })));
-		}
-	};
-});
-
-// Nothing in `storage.ts` copies an object any more (#771 moved the one caller
-// to the cross-bucket copies in `private-storage.ts`), so generation cannot
-// duplicate a poster even by mistake. The `attachExisting` assertion below is
-// what pins the behaviour that replaced it: one object, many attachments.
-vi.mock('$lib/server/storage', () => ({}));
-
 const mockAttachExisting = vi.fn();
-
 vi.mock('$lib/server/media/media-service', () => ({
 	attachExisting: (...args: unknown[]) => mockAttachExisting(...args)
 }));
 
 const mockStaffCreate = vi.fn();
 const mockHasConflict = vi.fn();
-
 vi.mock('./reservation-service', () => ({
 	staffCreate: (...args: unknown[]) => mockStaffCreate(...args)
 }));
-
 vi.mock('./conflict-service', () => ({
 	hasConflict: (...args: unknown[]) => mockHasConflict(...args)
 }));
 
-vi.mock('$lib/server/sentry', () => ({
-	captureException: vi.fn()
-}));
-
-// `getTableColumns` is what `event-columns` needs at import time to build the
-// listing column map that resolves `posterKey` from `media_attachment`.
-vi.mock('drizzle-orm', () => ({
-	eq: vi.fn(),
-	and: vi.fn(),
-	or: vi.fn(),
-	isNull: vi.fn(),
-	lt: vi.fn(),
-	gt: vi.fn(),
-	gte: vi.fn(),
-	lte: vi.fn(),
-	ne: vi.fn(),
-	notInArray: vi.fn(),
-	// `.mapWith` because `event-columns` decodes one fragment at import.
-	sql: vi.fn(() => ({ mapWith: () => 'sql' })),
-	getTableColumns: vi.fn(() => ({}))
-}));
+vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
 const mockGetOccurrences = vi.fn();
 const mockGenerationWindowEnd = vi.fn();
-
 vi.mock('./rrule-helpers', () => ({
 	getOccurrences: (...args: unknown[]) => mockGetOccurrences(...args),
 	generationWindowEnd: (...args: unknown[]) => mockGenerationWindowEnd(...args)
 }));
-
-vi.mock('./timezone', () => ({
-	formatDateInTz: vi.fn().mockReturnValue('May 15'),
-	formatTimeInTz: vi.fn().mockReturnValue('10:00 AM')
-}));
-
-const mockEmit = vi.fn().mockResolvedValue(undefined);
 
 // Mocked so a regression that opens a production per occurrence is caught (#2009).
 const mockCreateShowProject = vi.fn().mockResolvedValue(undefined);
@@ -185,114 +44,113 @@ vi.mock('$lib/server/production/production-project', () => ({
 	announceProductionCreated: vi.fn().mockResolvedValue(undefined)
 }));
 
+const mockEmit = vi.fn().mockResolvedValue(undefined);
 vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: { emit: (...args: unknown[]) => mockEmit(...args) }
 }));
 
+const { generateRecurringReservations, generateRecurringEvents } = await import('./generation-job');
+
 // ---------------------------------------------------------------------------
-// Helpers
+// Fixtures
 // ---------------------------------------------------------------------------
+
+const secs = (d: Date) => Math.floor(d.getTime() / 1000);
+const HOUR = 60 * 60 * 1000;
 
 const OCC1 = new Date('2026-05-20T17:00:00Z'); // occurrence start
 const OCC1_END = new Date('2026-05-20T19:00:00Z'); // +2h
+const PROTO_START = new Date('2026-05-13T17:00:00Z');
+const PROTO_END = new Date('2026-05-13T19:00:00Z');
 
-const PROTOTYPE = {
-	bookerType: 'user',
-	bookerId: 'user-1',
-	createdByUserId: 'user-1',
-	startsAt: new Date('2026-05-13T17:00:00Z'),
-	endsAt: new Date('2026-05-13T19:00:00Z'), // 2h duration
-	notes: 'Weekly practice'
-};
-
-const OWNER = { name: 'Alice Smith', email: 'alice@example.com' };
-
-const SERIES = { id: 'series-1', prototypeId: 'proto-1', rrule: 'FREQ=WEEKLY', endsAt: null };
-
-/** Push results onto the select queue in the order processSeries calls them */
-function queueSelects(...results: unknown[][]) {
-	selectResults = [...results];
-	dbMock.select.mockImplementation(() => {
-		const result = selectResults.shift() ?? [];
-		return makeSelectChain(result);
-	});
+function member(id: string, opts: { deleted?: boolean } = {}) {
+	sqlite
+		.prepare(`insert into user (id, name, email, deleted_at) values (?, ?, ?, ?)`)
+		.run(id, 'Alice Smith', 'alice@example.com', opts.deleted ? 1_746_000_000 : null);
 }
 
-/**
- * Which table each insert went to, so a test can tell an `event` row from the
- * `event_group` link the same write now owes. `insertedRows` keeps its old
- * meaning — everything, in order.
- */
-let insertedByTable: { table: string; row: unknown }[] = [];
-
-function insertTableName(table: unknown): string {
-	return (table as { __table?: string } | null)?.__table ?? 'unknown';
+function booking(
+	id: string,
+	startsAt: Date,
+	endsAt: Date,
+	opts: { status?: string; hardHold?: boolean; seriesId?: string | null; notes?: string } = {}
+) {
+	sqlite
+		.prepare(
+			`insert into reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at, hard_hold, recurring_series_id, notes)
+			 values (?, 'user', 'user-1', 'user-1', ?, ?, ?, ?, ?, ?)`
+		)
+		.run(
+			id,
+			opts.status ?? 'confirmed',
+			secs(startsAt),
+			secs(endsAt),
+			opts.hardHold ? 1 : 0,
+			opts.seriesId ?? null,
+			opts.notes ?? null
+		);
 }
 
-function setupInsert() {
-	insertedByTable = [];
-	dbMock.insert.mockImplementation((table: unknown) => ({
-		values: vi.fn().mockImplementation((row: unknown) => {
-			const rows = Array.isArray(row) ? row : [row];
-			for (const r of rows) {
-				insertedRows.push(r);
-				insertedByTable.push({ table: insertTableName(table), row: r });
-			}
-			// Thenable *and* chainable: `linkManagingGroup` ends in
-			// `.onConflictDoNothing()`, while the event insert is awaited directly.
-			const chain = {
-				onConflictDoNothing: () => chain,
-				then: (resolve: (v: unknown) => void) => resolve(undefined)
-			};
-			return chain;
-		})
-	}));
+function series(id: string, prototypeId: string, type = 'reservation') {
+	sqlite
+		.prepare(
+			`insert into recurring_series (id, prototype_type, prototype_id, rrule, created_by) values (?, ?, ?, '{}', 'user-1')`
+		)
+		.run(id, type, prototypeId);
 }
 
-function insertsFor(table: string) {
-	return insertedByTable.filter((i) => i.table === table).map((i) => i.row);
+/** A reservation series with its prototype, owned by user-1. */
+function reservationSeries(id = 'series-1', protoId = 'proto-1') {
+	booking(protoId, PROTO_START, PROTO_END, { seriesId: id, notes: 'Weekly practice' });
+	series(id, protoId);
 }
 
-let updatedRows: unknown[] = [];
+const generated = (seriesId = 'series-1') =>
+	sqlite
+		.prepare(
+			`select booker_type as bookerType, booker_id as bookerId, created_by_user_id as createdByUserId,
+			        status, starts_at as startsAt, ends_at as endsAt, notes
+			 from reservation where recurring_series_id = ? and id not like 'proto-%' order by starts_at`
+		)
+		.all(seriesId);
 
-function setupUpdate() {
-	updatedRows = [];
-	const where = vi.fn().mockResolvedValue(undefined);
-	const set = vi.fn().mockImplementation((row: unknown) => {
-		updatedRows.push(row);
-		return { where };
-	});
-	dbMock.update.mockReturnValue({ set });
-}
+beforeEach(() => {
+	vi.resetAllMocks();
+	mockEmit.mockResolvedValue(undefined);
+	mockGenerationWindowEnd.mockReturnValue(new Date('2026-06-20T00:00:00Z'));
+	mockGetOccurrences.mockReturnValue([OCC1]);
+	mockStaffCreate.mockResolvedValue({ id: 'eres-new' });
+	mockHasConflict.mockResolvedValue(false);
+	for (const t of [
+		'recurring_series',
+		'reservation',
+		'closure',
+		'event_listing',
+		'event_group',
+		'event_band',
+		'ticket_sale',
+		'media_attachment',
+		'media',
+		'directory_entry',
+		'group',
+		'user'
+	]) {
+		sqlite.exec(`delete from "${t}"`);
+	}
+	member('user-1');
+});
 
 // ---------------------------------------------------------------------------
-// Tests
+// Reservations
 // ---------------------------------------------------------------------------
-
-// Import once at module scope (mocks above are hoisted by vi.mock). Importing
-// inside each test made the first test pay the cold module-graph load within
-// its 5s budget — on a loaded CI runner that times out, and the timed-out
-// test's still-pending run then drains the next test's select queue.
-const { generateRecurringReservations, generateRecurringEvents } = await import('./generation-job');
 
 describe('generateRecurringReservations', () => {
-	beforeEach(() => {
-		vi.resetAllMocks();
-		selectResults = [];
-		insertedRows = [];
-		mockEmit.mockResolvedValue(undefined);
-		mockGenerationWindowEnd.mockReturnValue(new Date('2026-06-20T00:00:00Z'));
-	});
-
 	it('returns zeros when no active series exist', async () => {
-		// Only one select: the active series query → empty
-		queueSelects([]);
-		setupInsert();
-		mockGetOccurrences.mockReturnValue([]);
+		booking('proto-1', PROTO_START, PROTO_END);
+		series('cancelled', 'proto-1');
+		sqlite.exec(`update recurring_series set cancelled_at = 1746000000`);
 
-		const result = await generateRecurringReservations();
-
-		expect(result).toEqual({
+		expect(await generateRecurringReservations()).toEqual({
 			seriesProcessed: 0,
 			instancesCreated: 0,
 			instancesWaitlisted: 0,
@@ -302,161 +160,116 @@ describe('generateRecurringReservations', () => {
 	});
 
 	// Offboarding cancels the reservations that exist and never stopped the
-	// generator, so a removed member's series went on holding the room — a slot
-	// nobody could book and nothing would ever clear. #811.
+	// generator, so a removed member's series went on holding the room. #811.
 	it('generates nothing for a series whose member has been removed', async () => {
-		queueSelects(
-			[SERIES], // 1. active series
-			[PROTOTYPE], // 2. prototype reservation
-			[{ ...OWNER, deletedAt: new Date('2026-05-01T00:00:00Z') }] // 3. removed owner
-		);
-		setupInsert();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		sqlite.exec(`update user set deleted_at = 1746000000 where id = 'user-1'`);
+		reservationSeries();
 
 		const result = await generateRecurringReservations();
 
-		expect(result.instancesCreated).toBe(0);
-		expect(result.instancesWaitlisted).toBe(0);
-		expect(insertedRows).toHaveLength(0);
+		expect(result).toMatchObject({ instancesCreated: 0, instancesWaitlisted: 0 });
+		expect(generated()).toEqual([]);
 	});
 
 	it('creates reservation instances for occurrences with no conflicts', async () => {
-		// Selects: activeSeries, prototype, owner, existingInstances, eventConflict, closureConflict, reservationConflict
-		queueSelects(
-			[SERIES], // 1. active series
-			[PROTOTYPE], // 2. prototype reservation
-			[OWNER], // 3. user/owner info
-			[], // 4. existing instances in window (none)
-			[], // 5. event conflict check (none)
-			[], // 6. closure conflict check (none)
-			[] // 7. regular reservation conflict check (none)
-		);
-		setupInsert();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		reservationSeries();
 
 		const result = await generateRecurringReservations();
 
-		expect(result.seriesProcessed).toBe(1);
-		expect(result.instancesCreated).toBe(1);
-		expect(result.instancesSkipped).toBe(0);
-		expect(result.errors).toHaveLength(0);
-		expect(insertedRows).toHaveLength(1);
-		expect(insertedRows[0]).toMatchObject({
-			bookerType: PROTOTYPE.bookerType,
-			bookerId: PROTOTYPE.bookerId,
-			createdByUserId: PROTOTYPE.createdByUserId,
-			status: 'scheduled',
-			startsAt: OCC1,
-			endsAt: OCC1_END,
-			notes: PROTOTYPE.notes,
-			recurringSeriesId: SERIES.id
+		expect(result).toMatchObject({
+			seriesProcessed: 1,
+			instancesCreated: 1,
+			instancesSkipped: 0,
+			errors: []
 		});
+		expect(generated()).toEqual([
+			{
+				bookerType: 'user',
+				bookerId: 'user-1',
+				createdByUserId: 'user-1',
+				status: 'scheduled',
+				startsAt: secs(OCC1),
+				endsAt: secs(OCC1_END),
+				notes: 'Weekly practice'
+			}
+		]);
 	});
 
 	it('skips occurrences that already exist (dedup)', async () => {
-		// existingInstances returns OCC1 → it already exists
-		queueSelects(
-			[SERIES],
-			[PROTOTYPE],
-			[OWNER],
-			[{ startsAt: OCC1 }] // 4. existing instance matches OCC1
-			// No conflict-check selects because we short-circuit on dedup
-		);
-		setupInsert();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		reservationSeries();
+		booking('existing', OCC1, OCC1_END, { seriesId: 'series-1' });
 
 		const result = await generateRecurringReservations();
 
-		expect(result.instancesCreated).toBe(0);
-		expect(result.instancesSkipped).toBe(0); // deduped, not counted as skipped
-		expect(insertedRows).toHaveLength(0);
+		expect(result).toMatchObject({ instancesCreated: 0, instancesSkipped: 0 });
+		expect(generated()).toHaveLength(1);
 	});
 
 	// Rows generated before the daylight-saving fix (#2105) sit an hour off
 	// their rule. The same club day is the same occurrence, so no second booking.
 	it('treats an instance on the same club day as existing, even an hour off', async () => {
-		queueSelects(
-			[SERIES],
-			[PROTOTYPE],
-			[OWNER],
-			[{ startsAt: new Date(OCC1.getTime() - 60 * 60 * 1000) }]
-		);
-		setupInsert();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		reservationSeries();
+		booking('existing', new Date(OCC1.getTime() - HOUR), new Date(OCC1_END.getTime() - HOUR), {
+			seriesId: 'series-1'
+		});
 
-		const result = await generateRecurringReservations();
+		expect((await generateRecurringReservations()).instancesCreated).toBe(0);
+		expect(generated()).toHaveLength(1);
+	});
 
-		expect(result.instancesCreated).toBe(0);
-		expect(insertedRows).toHaveLength(0);
+	it('does not treat another series’ instance as this one’s', async () => {
+		reservationSeries();
+		booking('elsewhere', new Date('2026-05-20T08:00:00Z'), new Date('2026-05-20T09:00:00Z'), {
+			seriesId: 'series-other'
+		});
+
+		expect((await generateRecurringReservations()).instancesCreated).toBe(1);
 	});
 
 	/**
-	 * The predicate itself, not just its result. Moving the hard block off
-	 * `booker_type` is the change that would otherwise fail in silence: nothing
-	 * throws, holds just quietly stop blocking, and a member's booking takes a
-	 * show's room.
+	 * The predicate, not how the row was created: moving the hard block off
+	 * `hard_hold` would fail in silence — holds just stop blocking, and a
+	 * member's booking takes a show's room.
 	 */
-	it('blocks on the hold that says it is hard, not on how the row was created', async () => {
-		queueSelects([SERIES], [PROTOTYPE], [OWNER], [], [{ id: 'event-1' }], []);
-		setupInsert();
-		mockGetOccurrences.mockReturnValue([OCC1]);
-
-		await generateRecurringReservations();
-
-		expect(eq).toHaveBeenCalledWith('hardHold', true);
-		expect(eq).not.toHaveBeenCalledWith('bookerType', 'event_listing');
-	});
-
-	it('skips occurrences with event conflicts and emits recurring_skipped event', async () => {
-		queueSelects(
-			[SERIES],
-			[PROTOTYPE],
-			[OWNER],
-			[], // 4. no existing instances
-			[{ id: 'event-1' }], // 5. event conflict found
-			[] // closure check (not reached, but queue is safe)
-		);
-		setupInsert();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+	it('skips an occurrence on a hard hold and emits recurring_skipped', async () => {
+		reservationSeries();
+		booking('show-hold', OCC1, OCC1_END, { hardHold: true });
 
 		const result = await generateRecurringReservations();
 
-		expect(result.instancesCreated).toBe(0);
-		expect(result.instancesSkipped).toBe(1);
-		expect(insertedRows).toHaveLength(0);
-
+		expect(result).toMatchObject({ instancesCreated: 0, instancesSkipped: 1 });
+		expect(generated()).toEqual([]);
 		expect(mockEmit).toHaveBeenCalledOnce();
 		expect(mockEmit).toHaveBeenCalledWith(
 			'reservation.recurring_skipped',
 			expect.objectContaining({
-				seriesId: SERIES.id,
-				userId: PROTOTYPE.createdByUserId,
-				userName: OWNER.name,
-				userEmail: OWNER.email,
+				seriesId: 'series-1',
+				userId: 'user-1',
+				userName: 'Alice Smith',
+				userEmail: 'alice@example.com',
 				reason: 'Scheduled event'
 			})
 		);
 	});
 
+	it.each(['cancelled', 'waitlisted'])('is not blocked by a %s hard hold', async (status) => {
+		reservationSeries();
+		booking('show-hold', OCC1, OCC1_END, { hardHold: true, status });
+
+		expect((await generateRecurringReservations()).instancesCreated).toBe(1);
+	});
+
 	it('skips occurrences with closure conflicts', async () => {
-		queueSelects(
-			[SERIES],
-			[PROTOTYPE],
-			[OWNER],
-			[], // 4. no existing instances
-			[], // 5. no event conflict
-			[{ reason: 'Holiday closure' }] // 6. closure conflict
-		);
-		setupInsert();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		reservationSeries();
+		sqlite
+			.prepare(
+				`insert into closure (id, reason, starts_at, ends_at) values ('c1', 'Holiday closure', ?, ?)`
+			)
+			.run(secs(OCC1) + 1800, secs(OCC1_END) + 3600);
 
 		const result = await generateRecurringReservations();
 
-		expect(result.instancesCreated).toBe(0);
-		expect(result.instancesSkipped).toBe(1);
-		expect(insertedRows).toHaveLength(0);
-
-		expect(mockEmit).toHaveBeenCalledOnce();
+		expect(result).toMatchObject({ instancesCreated: 0, instancesSkipped: 1 });
 		expect(mockEmit).toHaveBeenCalledWith(
 			'reservation.recurring_skipped',
 			expect.objectContaining({ reason: 'Holiday closure' })
@@ -464,102 +277,34 @@ describe('generateRecurringReservations', () => {
 	});
 
 	it('catches per-series errors without stopping other series', async () => {
-		const SERIES_2 = { id: 'series-2', prototypeId: 'proto-2', rrule: 'FREQ=WEEKLY', endsAt: null };
-		const OCC2 = new Date('2026-05-21T17:00:00Z');
-		const OCC2_END = new Date('2026-05-21T19:00:00Z');
-
-		queueSelects(
-			[SERIES, SERIES_2], // 1. two active series
-			[], // 2. prototype for series-1 → missing → throws
-			// series-2 processing:
-			[PROTOTYPE], // 3. prototype for series-2
-			[OWNER], // 4. owner for series-2
-			[], // 5. no existing instances
-			[], // 6. no event conflict for OCC2
-			[], // 7. no closure conflict for OCC2
-			[] // 8. no regular reservation conflict for OCC2
-		);
-		setupInsert();
-
-		// series-1 gets no occurrences because it throws before reaching getOccurrences
-		// series-2 gets one occurrence
-		mockGetOccurrences.mockReturnValueOnce([OCC2]); // called only for series-2
+		series('series-1', 'proto-missing');
+		reservationSeries('series-2', 'proto-2');
 
 		const result = await generateRecurringReservations();
 
-		expect(result.seriesProcessed).toBe(1);
-		expect(result.instancesCreated).toBe(1);
-		expect(result.errors).toHaveLength(1);
-		expect(result.errors[0]).toContain('series-1');
-
-		expect(insertedRows).toHaveLength(1);
-		expect(insertedRows[0]).toMatchObject({
-			startsAt: OCC2,
-			endsAt: OCC2_END,
-			recurringSeriesId: SERIES_2.id
-		});
+		expect(result).toMatchObject({ seriesProcessed: 1, instancesCreated: 1 });
+		expect(result.errors).toEqual(['Series series-1: Prototype reservation not found']);
+		expect(generated('series-2')).toHaveLength(1);
+		expect(mockEmit).not.toHaveBeenCalled();
 	});
 
-	it('creates waitlisted instances when regular reservation conflicts exist', async () => {
-		queueSelects(
-			[SERIES], // 1. active series
-			[PROTOTYPE], // 2. prototype reservation
-			[OWNER], // 3. user/owner info
-			[], // 4. existing instances in window (none)
-			[], // 5. no event conflict
-			[], // 6. no closure conflict
-			[{ id: 'res-99' }] // 7. regular reservation conflict found
-		);
-		setupInsert();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+	it('creates waitlisted instances when a regular reservation conflicts', async () => {
+		reservationSeries();
+		booking('someone-else', new Date(OCC1.getTime() + HOUR), new Date(OCC1_END.getTime() + HOUR));
 
 		const result = await generateRecurringReservations();
 
-		expect(result.seriesProcessed).toBe(1);
-		expect(result.instancesCreated).toBe(0);
-		expect(result.instancesWaitlisted).toBe(1);
-		expect(result.instancesSkipped).toBe(0);
-		expect(result.errors).toHaveLength(0);
-		expect(insertedRows).toHaveLength(1);
-		expect(insertedRows[0]).toMatchObject({
-			bookerType: PROTOTYPE.bookerType,
-			bookerId: PROTOTYPE.bookerId,
-			createdByUserId: PROTOTYPE.createdByUserId,
-			status: 'waitlisted',
-			startsAt: OCC1,
-			endsAt: OCC1_END,
-			notes: PROTOTYPE.notes,
-			recurringSeriesId: SERIES.id
+		expect(result).toMatchObject({
+			instancesCreated: 0,
+			instancesWaitlisted: 1,
+			instancesSkipped: 0,
+			errors: []
 		});
-
-		expect(mockEmit).toHaveBeenCalledOnce();
+		expect(generated()).toEqual([expect.objectContaining({ status: 'waitlisted' })]);
 		expect(mockEmit).toHaveBeenCalledWith(
 			'reservation.recurring_waitlisted',
-			expect.objectContaining({
-				seriesId: SERIES.id,
-				userId: PROTOTYPE.createdByUserId,
-				userName: OWNER.name,
-				userEmail: OWNER.email,
-				reason: 'Time slot is currently booked'
-			})
+			expect.objectContaining({ seriesId: 'series-1', reason: 'Time slot is currently booked' })
 		);
-	});
-
-	it('handles missing prototype gracefully (adds to errors)', async () => {
-		queueSelects(
-			[SERIES], // 1. one active series
-			[] // 2. prototype query → empty → throws
-		);
-		setupInsert();
-		// getOccurrences should not be called; no need to configure it
-
-		const result = await generateRecurringReservations();
-
-		expect(result.seriesProcessed).toBe(0);
-		expect(result.instancesCreated).toBe(0);
-		expect(result.errors).toHaveLength(1);
-		expect(result.errors[0]).toMatch(/series-1.*Prototype reservation not found/);
-		expect(mockEmit).not.toHaveBeenCalled();
 	});
 });
 
@@ -567,431 +312,304 @@ describe('generateRecurringReservations', () => {
 // Event generation
 // ---------------------------------------------------------------------------
 
-const EVENT_SERIES = {
-	id: 'eseries-1',
-	prototypeId: 'eproto-1',
-	rrule: 'FREQ=WEEKLY',
-	endsAt: null
-};
+interface ProtoOpts {
+	source?: string;
+	kind?: string;
+	groupId?: string | null;
+	location?: string | null;
+	reservation?: boolean;
+	ticketed?: boolean;
+	posterKey?: string;
+}
 
-/** Prototype event with a linked reservation (space reserved). */
-const EVENT_PROTO = {
-	id: 'eproto-1',
-	title: 'Weekly Open Mic',
-	description: 'Sign up at the door',
-	startsAt: new Date('2026-05-13T17:00:00Z'),
-	endsAt: new Date('2026-05-13T19:00:00Z'), // 2h duration
-	doorsAt: new Date('2026-05-13T16:30:00Z'),
-	tags: 'open mic',
-	ticketingEnabled: true,
-	ticketPrice: 1000,
-	ticketQuantity: 40,
-	// A fixed-price show: the sliding scale opens at the price.
-	ticketPriceFloorCents: 1000,
-	source: 'cmc',
-	// `notNull` on the real table. A show's occurrence still gets no production (#2009).
-	kind: 'show',
-	createdByUserId: 'user-1',
-	reservationId: 'eres-proto'
-};
+/** A prototype event, its series, and (by default) its room booking 30m either side. */
+function eventSeries(opts: ProtoOpts = {}) {
+	const reserve = opts.reservation ?? true;
+	if (reserve) {
+		booking(
+			'eres-proto',
+			new Date(PROTO_START.getTime() - HOUR / 2),
+			new Date(PROTO_END.getTime() + HOUR / 2)
+		);
+	}
+	sqlite
+		.prepare(
+			`insert into event_listing (id, title, description, starts_at, ends_at, doors_at, tags, source, kind, group_id, location, status, created_by_user_id, reservation_id)
+			 values ('eproto-1', 'Weekly Open Mic', 'Sign up at the door', ?, ?, ?, 'open mic', ?, ?, ?, ?, 'published', 'user-1', ?)`
+		)
+		.run(
+			secs(PROTO_START),
+			secs(PROTO_END),
+			secs(PROTO_START) - 1800,
+			opts.source ?? 'cmc',
+			opts.kind ?? 'show',
+			opts.groupId ?? null,
+			opts.location ?? null,
+			reserve ? 'eres-proto' : null
+		);
+	if (opts.ticketed ?? true) {
+		sqlite.exec(
+			`insert into ticket_sale (id, event_listing_id, enabled, price_cents, price_floor_cents, quantity)
+			 values ('ts-1', 'eproto-1', 1, 1000, 1000, 40)`
+		);
+	}
+	if (opts.posterKey) {
+		sqlite
+			.prepare(
+				`insert into media (id, key, content_type, byte_size) values ('m1', ?, 'image/webp', 1)`
+			)
+			.run(opts.posterKey);
+		sqlite.exec(
+			`insert into media_attachment (id, media_id, attachable_type, attachable_id, slot)
+			 values ('ma1', 'm1', 'event_listing', 'eproto-1', 'poster')`
+		);
+	}
+	series('eseries-1', 'eproto-1', 'event_listing');
+}
 
-/**
- * A club's recurring jam. Everything the old generator threw away is here:
- * a non-CMC source, an owning group, and a location.
- */
-const GROUP_PROTO = {
-	...{
-		id: 'eproto-2',
-		title: 'Monthly Jam',
-		description: 'Bring a horn',
-		startsAt: new Date('2026-05-13T17:00:00Z'),
-		endsAt: new Date('2026-05-13T19:00:00Z'),
-		doorsAt: null,
-		tags: null,
-		ticketingEnabled: false,
-		ticketPrice: null,
-		ticketQuantity: null,
-		createdByUserId: 'user-1',
-		reservationId: 'eres-proto'
-	},
-	source: 'group' as const,
-	groupId: 'club-1',
-	location: 'Practice Room'
-};
+function groupRow(id: string, kind: string, name = 'The Squares') {
+	sqlite
+		.prepare(`insert into "group" (id, name, slug, kind) values (?, ?, ?, ?)`)
+		.run(id, name, id, kind);
+}
 
-/** A band series, which owes a lineup credit where a program's session does not. */
-const BAND_PROTO = { ...GROUP_PROTO, id: 'eproto-3', source: 'band' as const, groupId: 'band-1' };
-
-/** The prototype's reservation window: starts 30m before, ends 30m after the event. */
-const EVENT_PROTO_RES = {
-	startsAt: new Date('2026-05-13T16:30:00Z'),
-	endsAt: new Date('2026-05-13T19:30:00Z')
-};
+const occurrences = () =>
+	sqlite
+		.prepare(
+			`select id, title, description, starts_at as startsAt, ends_at as endsAt, doors_at as doorsAt,
+			        source, group_id as groupId, location, status, published_at as publishedAt,
+			        project_id as projectId, reservation_id as reservationId
+			 from event_listing where recurring_series_id = 'eseries-1'`
+		)
+		.all() as Record<string, unknown>[];
 
 describe('generateRecurringEvents', () => {
-	beforeEach(() => {
-		vi.resetAllMocks();
-		selectResults = [];
-		insertedRows = [];
-		updatedRows = [];
-		mockEmit.mockResolvedValue(undefined);
-		mockGenerationWindowEnd.mockReturnValue(new Date('2026-06-20T00:00:00Z'));
-		mockStaffCreate.mockResolvedValue({ id: 'eres-new' });
-		mockHasConflict.mockResolvedValue(false);
-	});
-
 	it('creates a draft event and books space for an unconflicted occurrence', async () => {
-		queueSelects(
-			[EVENT_SERIES], // 1. active event series
-			[EVENT_PROTO], // 2. prototype event
-			[OWNER], // 3. owner
-			[EVENT_PROTO_RES], // 4. prototype reservation window
-			[] // 5. existing instances (none)
-		);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		eventSeries();
 
 		const result = await generateRecurringEvents();
 
-		expect(result.seriesProcessed).toBe(1);
-		expect(result.instancesCreated).toBe(1);
-		expect(result.instancesSkipped).toBe(0);
-		expect(result.errors).toHaveLength(0);
-
-		// Draft event copies prototype config with shifted times. An occurrence
-		// never opens a production; staff attach one by hand (#2009).
-		const listings = insertedByTable.filter((i) => i.table === 'event_listing');
-		expect(listings).toHaveLength(1);
+		expect(result).toMatchObject({
+			seriesProcessed: 1,
+			instancesCreated: 1,
+			instancesSkipped: 0,
+			errors: []
+		});
+		// An occurrence never opens a production; staff attach one by hand (#2009).
+		const [occ] = occurrences();
 		expect(mockCreateShowProject).not.toHaveBeenCalled();
-		expect(listings[0].row).not.toHaveProperty('projectId');
-		expect(listings[0].row).toMatchObject({
-			title: EVENT_PROTO.title,
-			description: EVENT_PROTO.description,
-			startsAt: OCC1,
-			endsAt: OCC1_END,
-			doorsAt: new Date(OCC1.getTime() - 30 * 60 * 1000),
+		expect(occ).toMatchObject({
+			title: 'Weekly Open Mic',
+			description: 'Sign up at the door',
+			startsAt: secs(OCC1),
+			endsAt: secs(OCC1_END),
+			doorsAt: secs(OCC1) - 1800,
 			source: 'cmc',
 			status: 'draft',
-			recurringSeriesId: EVENT_SERIES.id
+			projectId: null,
+			// The event is linked to the new reservation.
+			reservationId: 'eres-new'
 		});
 		// The night is sold on the series' terms, written to `ticket_sale`.
-		expect(mockSaveTicketSale).toHaveBeenCalledWith((listings[0].row as { id: string }).id, {
+		expect(mockSaveTicketSale).toHaveBeenCalledWith(occ.id, {
 			enabled: true,
 			priceCents: 1000,
 			priceFloorCents: 1000,
 			quantity: 40
 		});
-
-		// Space reserved for this occurrence (30m lead/tail preserved)
+		// Space reserved for this occurrence (30m lead/tail preserved).
 		expect(mockHasConflict).toHaveBeenCalledOnce();
 		expect(mockStaffCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
 				// No production and no group: the listing holds the room itself.
 				bookerType: 'event_listing',
-				bookerId: (listings[0].row as { id: string }).id,
-				// A show holds the room outright, and says so on the row rather than
-				// leaving it to be inferred from how the row was created.
+				bookerId: occ.id,
+				// A show holds the room outright, and says so on the row.
 				hardHold: true,
-				// Matches the one-off path: event-booked space is staff-held, so it
-				// must not look like an uncommitted member booking.
+				// Event-booked space is staff-held, not an uncommitted member booking.
 				status: 'confirmed',
-				startsAt: new Date(OCC1.getTime() - 30 * 60 * 1000),
-				endsAt: new Date(OCC1_END.getTime() + 30 * 60 * 1000)
+				startsAt: new Date(OCC1.getTime() - HOUR / 2),
+				endsAt: new Date(OCC1_END.getTime() + HOUR / 2)
 			})
 		);
-		// The event is linked to the new reservation
-		expect(updatedRows[0]).toMatchObject({ reservationId: 'eres-new' });
 	});
 
 	it("books a group's show occurrence to the group, with no production (#2009)", async () => {
-		const proto = { ...EVENT_PROTO, source: 'group', groupId: 'club-1' };
-		queueSelects([EVENT_SERIES], [proto], [OWNER], [EVENT_PROTO_RES], [], [{ kind: 'club' }]);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		groupRow('club-1', 'club');
+		eventSeries({ source: 'group', groupId: 'club-1' });
 
 		await generateRecurringEvents();
 
 		expect(mockCreateShowProject).not.toHaveBeenCalled();
-		expect(insertsFor('event_listing')[0]).not.toHaveProperty('projectId');
+		expect(occurrences()[0].projectId).toBeNull();
 		expect(mockStaffCreate).toHaveBeenCalledWith(
 			expect.objectContaining({ bookerType: 'group', bookerId: 'club-1' })
 		);
 	});
 
 	it('still creates the draft event but skips reservation when the slot conflicts', async () => {
-		queueSelects([EVENT_SERIES], [EVENT_PROTO], [OWNER], [EVENT_PROTO_RES], []);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		eventSeries();
 		mockHasConflict.mockResolvedValue(true);
 
 		const result = await generateRecurringEvents();
 
-		expect(result.instancesCreated).toBe(1); // event still created
-		expect(result.instancesSkipped).toBe(1); // space not booked
-		expect(insertedByTable.filter((i) => i.table === 'event_listing')).toHaveLength(1);
+		expect(result).toMatchObject({ instancesCreated: 1, instancesSkipped: 1 });
+		expect(occurrences()).toEqual([expect.objectContaining({ reservationId: null })]);
 		expect(mockStaffCreate).not.toHaveBeenCalled();
-		expect(updatedRows).toHaveLength(0);
-
 		expect(mockEmit).toHaveBeenCalledWith(
 			'event.recurring_reservation_skipped',
 			expect.objectContaining({
-				seriesId: EVENT_SERIES.id,
-				eventTitle: EVENT_PROTO.title,
-				userId: EVENT_PROTO.createdByUserId
+				seriesId: 'eseries-1',
+				eventTitle: 'Weekly Open Mic',
+				userId: 'user-1'
 			})
 		);
 	});
 
 	it('skips occurrences that already exist (idempotent)', async () => {
-		queueSelects(
-			[EVENT_SERIES],
-			[EVENT_PROTO],
-			[OWNER],
-			[EVENT_PROTO_RES],
-			[{ startsAt: OCC1 }] // existing instance matches OCC1
-		);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		eventSeries();
+		await generateRecurringEvents();
+		vi.clearAllMocks();
 
 		const result = await generateRecurringEvents();
 
 		expect(result.instancesCreated).toBe(0);
-		expect(insertedRows).toHaveLength(0);
+		expect(occurrences()).toHaveLength(1);
 		expect(mockStaffCreate).not.toHaveBeenCalled();
 	});
 
 	it('does not book space when the prototype has no reservation', async () => {
-		const protoNoRes = { ...EVENT_PROTO, reservationId: null };
-		queueSelects(
-			[EVENT_SERIES],
-			[protoNoRes],
-			[OWNER],
-			// no prototype-reservation select because reservationId is null
-			[] // existing instances
-		);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		eventSeries({ reservation: false });
 
 		const result = await generateRecurringEvents();
 
-		expect(result.instancesCreated).toBe(1);
-		expect(result.instancesSkipped).toBe(0);
+		expect(result).toMatchObject({ instancesCreated: 1, instancesSkipped: 0 });
 		expect(mockHasConflict).not.toHaveBeenCalled();
 		expect(mockStaffCreate).not.toHaveBeenCalled();
 	});
 
 	/**
-	 * The payoff the media layer was built for. This used to copy the R2 binary
-	 * per occurrence — a 52-week series was 52 copies of one JPEG — because
-	 * deleting or re-postering one event deleted the object outright, so a shared
-	 * key would have been pulled out from under its siblings. Nothing in a request
-	 * path deletes an object any more, so the occurrences share one.
+	 * The payoff the media layer was built for: occurrences share the prototype's
+	 * one poster object rather than each copying the R2 binary.
 	 */
-	it('shares the prototype poster instead of copying the object', async () => {
-		const protoWithPoster = {
-			...EVENT_PROTO,
-			reservationId: null,
-			posterKey: 'events/posters/eproto-1.webp'
-		};
-		queueSelects([EVENT_SERIES], [protoWithPoster], [OWNER], []);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
-		mockAttachExisting.mockResolvedValue('attachment-1');
+	it.each<{ attached: string | null; label: string }>([
+		{
+			attached: 'attachment-1',
+			label: 'shares the prototype poster instead of copying the object'
+		},
+		// A key with no `media` row: the key is shared anyway and the anomaly reported.
+		{ attached: null, label: 'still shares the key when the prototype poster was never recorded' }
+	])('$label', async ({ attached }) => {
+		eventSeries({ reservation: false, posterKey: 'events/posters/eproto-1.webp' });
+		mockAttachExisting.mockResolvedValue(attached);
 
 		await generateRecurringEvents();
 
-		// One more attachment on the same object, in the occurrence's poster slot.
 		expect(mockAttachExisting).toHaveBeenCalledWith(
 			'event_listing',
-			expect.any(String),
+			occurrences()[0].id,
 			'poster',
 			'events/posters/eproto-1.webp'
 		);
-		// The attachment is the whole record — there is no column to mirror it
-		// into any more (#808) — so the occurrence's row is only touched.
-		expect(updatedRows[0]).toMatchObject({ updatedAt: expect.any(Date) });
-		expect(updatedRows[0]).not.toHaveProperty('posterKey');
-	});
-
-	it('still shares the key when the prototype poster was never recorded', async () => {
-		// A key with no `media` row means something wrote a poster without
-		// recording it. Losing the poster would be an immediate regression, while
-		// a missing attachment is a latent one the sweep surfaces, so the key is
-		// shared either way and the anomaly is reported.
-		const protoWithPoster = {
-			...EVENT_PROTO,
-			reservationId: null,
-			posterKey: 'events/posters/eproto-1.webp'
-		};
-		queueSelects([EVENT_SERIES], [protoWithPoster], [OWNER], []);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
-		mockAttachExisting.mockResolvedValue(null);
-
-		await generateRecurringEvents();
-
-		// Shared regardless: the attachment is attempted and the anomaly reported.
-		expect(mockAttachExisting).toHaveBeenCalledWith(
-			'event_listing',
-			expect.any(String),
-			'poster',
-			'events/posters/eproto-1.webp'
-		);
-		expect(updatedRows[0]).not.toHaveProperty('posterKey');
 	});
 });
 
 /**
- * What phase 9 fixed. `processEventSeries` hard-coded `source: 'cmc'` and
- * `status: 'draft'` and copied neither the owner nor the location — latent only
- * because nothing but a staff CMC event could be a prototype. The moment a
- * club's jam can be one, the old shape generates CMC-attributed drafts that
- * reach nobody and hold no room, week after week, unattended.
+ * What phase 9 fixed: the generator hard-coded `source: 'cmc'` and `draft` and
+ * copied neither the owner nor the location, so a club's jam as a prototype
+ * would generate CMC-attributed drafts that reach nobody, week after week.
  */
 describe('generateRecurringEvents — a prototype that is not a CMC event', () => {
-	beforeEach(() => {
-		vi.resetAllMocks();
-		selectResults = [];
-		insertedRows = [];
-		updatedRows = [];
-		mockEmit.mockResolvedValue(undefined);
-		mockGenerationWindowEnd.mockReturnValue(new Date('2026-06-20T00:00:00Z'));
-		mockStaffCreate.mockResolvedValue({ id: 'eres-new' });
-		mockHasConflict.mockResolvedValue(false);
-	});
+	const programSeries = () => {
+		groupRow('club-1', 'club');
+		eventSeries({ source: 'group', groupId: 'club-1', location: 'Practice Room', ticketed: false });
+	};
 
 	it("inherits the prototype's source, owner and location", async () => {
-		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], [], [{ kind: 'club' }]);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		programSeries();
 
 		await generateRecurringEvents();
 
-		expect(insertsFor('event_listing')[0]).toMatchObject({
+		expect(occurrences()[0]).toMatchObject({
 			source: 'group',
 			groupId: 'club-1',
 			location: 'Practice Room'
 		});
 	});
 
-	/**
-	 * The decision the spec makes rather than defers. A program's recurring
-	 * session sitting in draft is a session its members are never told about;
-	 * a CMC series keeps its staff review step, which already exists.
-	 */
+	/** A program's session in draft is one its members are never told about. */
 	it('publishes a program session, and still drafts a CMC one', async () => {
-		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], [], [{ kind: 'club' }]);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		programSeries();
 
 		await generateRecurringEvents();
 
-		const [occurrence] = insertsFor('event_listing') as Record<string, unknown>[];
-		expect(occurrence.status).toBe('published');
-		expect(occurrence.publishedAt).toBeInstanceOf(Date);
+		expect(occurrences()[0]).toMatchObject({
+			status: 'published',
+			publishedAt: expect.any(Number)
+		});
 	});
 
 	it('leaves a CMC series generating drafts for review', async () => {
-		queueSelects([EVENT_SERIES], [EVENT_PROTO], [OWNER], [EVENT_PROTO_RES], []);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		eventSeries();
 
 		await generateRecurringEvents();
 
-		const [occurrence] = insertsFor('event_listing') as Record<string, unknown>[];
-		expect(occurrence.status).toBe('draft');
-		expect(occurrence.publishedAt).toBeNull();
+		expect(occurrences()[0]).toMatchObject({ status: 'draft', publishedAt: null });
 	});
 
-	it('gives each occurrence its own event_group row', async () => {
-		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], [], [{ kind: 'club' }]);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+	it('gives each occurrence its own event_group row, and no lineup credit', async () => {
+		programSeries();
 
 		await generateRecurringEvents();
 
-		expect(insertsFor('event_group')).toEqual([
-			{ eventId: expect.any(String), groupId: 'club-1', sortOrder: 0 }
+		const [occ] = occurrences();
+		expect(sqlite.prepare('select event_id, group_id, sort_order from event_group').all()).toEqual([
+			{ event_id: occ.id, group_id: 'club-1', sort_order: 0 }
 		]);
+		// A program's session has no bill; a band's gig heads its own.
+		expect(sqlite.prepare('select count(*) as n from event_band').get()).toEqual({ n: 0 });
 	});
 
-	/** A program's session has no bill; a band's gig heads its own. */
-	it('writes no lineup credit for a program session', async () => {
-		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], [], [{ kind: 'club' }]);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
-
-		await generateRecurringEvents();
-
-		expect(insertsFor('event_band')).toHaveLength(0);
-	});
-
-	/**
-	 * #714. A series is the one-off repeated unattended, so it owes the same kind
-	 * check — a band prototype here would hold the free room every week rather
-	 * than once, with nothing on the path reading `kind`.
-	 */
+	/** #714. A band prototype here would hold the free room every week. */
 	it('generates nothing for a band-owned program series', async () => {
-		queueSelects(
-			[EVENT_SERIES],
-			[{ ...GROUP_PROTO, groupId: 'band-1' }],
-			[OWNER],
-			[EVENT_PROTO_RES],
-			[],
-			[{ kind: 'band' }]
-		);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		groupRow('band-1', 'band');
+		eventSeries({ source: 'group', groupId: 'band-1' });
 
 		const result = await generateRecurringEvents();
 
-		expect(insertsFor('event_listing')).toHaveLength(0);
+		expect(occurrences()).toEqual([]);
 		expect(mockStaffCreate).not.toHaveBeenCalled();
-		// Recorded rather than swallowed: the series exists and must not generate,
-		// which is worth a line the job's caller can see.
+		// Recorded rather than swallowed.
 		expect(result.seriesProcessed).toBe(0);
-		expect(result.errors).toEqual([`Series ${EVENT_SERIES.id}: Group not found`]);
+		expect(result.errors).toEqual(['Series eseries-1: Group not found']);
 	});
 
 	it('writes the owner credit for a band occurrence', async () => {
-		queueSelects(
-			[EVENT_SERIES],
-			[BAND_PROTO],
-			[OWNER],
-			[EVENT_PROTO_RES],
-			[], // existing instances
-			[{ name: 'The Squares' }], // the owning band's name, looked up once per series
-			[{ id: 'entry-band-1' }] // and its directory entry, which the credit names
+		groupRow('band-1', 'band', 'The Squares');
+		groupRow('band-2', 'band', 'Not Them');
+		sqlite.exec(
+			`insert into directory_entry (id, group_id, name) values ('entry-band-2', 'band-2', 'Not Them'), ('entry-band-1', 'band-1', 'The Squares')`
 		);
-		setupInsert();
-		setupUpdate();
-		mockGetOccurrences.mockReturnValue([OCC1]);
+		eventSeries({ source: 'band', groupId: 'band-1' });
 
 		await generateRecurringEvents();
 
-		// Copying `groupId` is what makes this owed: before phase 9 the generator
-		// forced a CMC event with no owner, so the invariant could not be broken
-		// here. It can now, which is why it is maintained here.
-		expect(insertsFor('event_band')[0]).toMatchObject({
-			// The entry, not the group — a credit names a party as of phase 10.
-			directoryEntryId: 'entry-band-1',
-			addedByGroupId: 'band-1',
-			name: 'The Squares',
-			billingOrder: 0,
-			status: 'confirmed'
-		});
+		// The entry, not the group — a credit names a party as of phase 10.
+		expect(
+			sqlite
+				.prepare(
+					`select directory_entry_id as directoryEntryId, added_by_group_id as addedByGroupId,
+					        name, billing_order as billingOrder, status from event_band`
+				)
+				.all()
+		).toEqual([
+			{
+				directoryEntryId: 'entry-band-1',
+				addedByGroupId: 'band-1',
+				name: 'The Squares',
+				billingOrder: 0,
+				status: 'confirmed'
+			}
+		]);
 	});
 });

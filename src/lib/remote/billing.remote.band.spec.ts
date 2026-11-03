@@ -16,14 +16,22 @@ vi.mock('$lib/server/group/group-context', () => ({
 	requireGroupRole: (...a: unknown[]) => mockRequireGroupRole(...(a as [{ slug: string }, string]))
 }));
 
-let customerRow: unknown[] = [{ stripeCustomerId: 'cus_band' }];
-vi.mock('$lib/server/db', () => ({
-	db: { select: () => ({ from: () => ({ where: () => ({ limit: async () => customerRow }) }) }) }
-}));
-vi.mock('$lib/server/db/schema/band-site', () => ({
-	bandSite: { groupId: 'groupId', stripeCustomerId: 'stripeCustomerId' }
-}));
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }));
+// The band's customer is read from its site row, for real.
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
+vi.mock('$lib/server/db', () => ({ db: testDb }));
+const setCustomer = (stripeCustomerId: string | null) => {
+	sqlite.exec('delete from band_site');
+	sqlite
+		.prepare(`insert into band_site (id, group_id, stripe_customer_id) values (?, ?, ?)`)
+		.run('site-1', 'band-1', stripeCustomerId);
+	// Another band's site, so a read that ignored the group would find it.
+	sqlite
+		.prepare(`insert into band_site (id, group_id, stripe_customer_id) values (?, ?, ?)`)
+		.run('site-2', 'band-2', 'cus_other_band');
+};
 
 const mockListCards = vi.fn(async () => [{ id: 'pm_1', brand: 'visa', last4: '4242' }]);
 const mockRememberCard = vi.fn(async () => undefined);
@@ -93,7 +101,7 @@ const { getBandBilling, finishBandAddCard, forgetBandCard } = await import('./bi
 beforeEach(() => {
 	vi.clearAllMocks();
 	role = 'admin';
-	customerRow = [{ stripeCustomerId: 'cus_band' }];
+	setCustomer('cus_band');
 });
 
 describe('band billing', () => {
@@ -117,7 +125,7 @@ describe('band billing', () => {
 	});
 
 	it('400s an act with no billing account rather than guessing one', async () => {
-		customerRow = [{ stripeCustomerId: null }];
+		setCustomer(null);
 
 		await expect(getBandBilling('ninety-proof')).rejects.toMatchObject({ status: 400 });
 	});
