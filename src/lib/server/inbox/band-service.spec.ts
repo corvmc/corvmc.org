@@ -1,15 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// band-service is the boundary between one act and the enquiries its public
-// booking form collects. Three invariants matter more than anything else:
-//
+// The boundary between one act and its booking enquiries, against a real SQLite:
 //   1. Ownership is `inbox_thread.group_id = <the resolved band>` in the WHERE
 //      clause, so one band's admin cannot read another's by guessing a uuid.
 //   2. Nothing here reads inbox_note. Notes are staff-private.
 //   3. Nothing here writes inbox_participant: a participant row on a band
 //      thread would surface a booking enquiry in /member/messages.
-//
-// Against a real SQLite, because a mocked `db` agrees with any WHERE.
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
 	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');

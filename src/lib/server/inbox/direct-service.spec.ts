@@ -1,16 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// direct-service is the boundary between one member and another member's
-// private conversation. Four things matter more than anything else it does:
-//
+// The boundary around a member↔member conversation, against a real SQLite:
 //   1. Every branch that silently drops a message returns the SAME value, so a
 //      sender cannot tell a decline from an unopened request.
 //   2. replyToDirectThread enforces ALL of its conditions — each is broken
 //      alone below, against a thread that is otherwise writable.
 //   3. getDirectThread does NOT hide the counterpart's authorUserId.
 //   4. Nothing here reads inbox_note.
-//
-// Against a real SQLite: the guards are raw SQL a mocked `db` would agree with.
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
 	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
