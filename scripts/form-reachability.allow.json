@@ -1,0 +1,234 @@
+{
+	"src/lib/server/audio/audio-service.ts#createRelease(0)": {
+		"description": "elsewhere: updateReleaseForm writes it after creation"
+	},
+	"src/lib/server/audit/audit-service.ts#recordAuditEntry(0)": {
+		"actor": "internal: defaults to the request's actor; only jobs and listeners name one"
+	},
+	"src/lib/server/ballot/ballot-service.ts#updateDraft(1)": {
+		"projectId": "internal: in the type through Omit<BallotInput>, never written; links are fixed at creation",
+		"suggestionId": "internal: in the type through Omit<BallotInput>, never written; links are fixed at creation"
+	},
+	"src/lib/server/band/band-service.ts#create(1)": {
+		"joinInstructions": "internal: group-service#createGroup sets it for clubs and committees; a band takes the default",
+		"joinPolicy": "internal: group-service#createGroup sets it for clubs and committees; a band takes the default",
+		"kind": "internal: group-service#createGroup sets it for clubs and committees; a band takes the default",
+		"visibility": "internal: group-service#createGroup sets it for clubs and committees; a band takes the default"
+	},
+	"src/lib/server/contractor/contractor-job-service.ts#completeJob(1)": {
+		"notes": "elsewhere: createJobForm writes the engagement's notes; completion keeps them"
+	},
+	"src/lib/server/contractor/contractor-job-service.ts#createJob(0)": {
+		"assetId": "internal: the branch without workOrderId; every caller engages on an existing work order since #1900",
+		"projectId": "internal: the branch without workOrderId; every caller engages on an existing work order since #1900",
+		"title": "internal: the branch without workOrderId; every caller engages on an existing work order since #1900"
+	},
+	"src/lib/server/event/community-event-service.ts#createCommunityEvent(0)": {
+		"address": "elsewhere: updateListing writes it after creation",
+		"description": "elsewhere: updateListing writes it after creation",
+		"doorsAt": "elsewhere: updateListing writes it after creation",
+		"endsAt": "elsewhere: updateListing writes it after creation",
+		"externalTicketUrl": "elsewhere: updateListing writes it after creation",
+		"lineup": "elsewhere: updateListing writes it after creation",
+		"posterFile": "elsewhere: updateListing writes it after creation",
+		"tags": "elsewhere: updateListing writes it after creation",
+		"ticketPrice": "elsewhere: updateListing writes it after creation"
+	},
+	"src/lib/server/event/event-service.ts#create(0)": {
+		"address": "elsewhere: updateEvent writes it after creation",
+		"description": "elsewhere: updateEvent writes it after creation",
+		"doorsAt": "elsewhere: updateEvent writes it after creation",
+		"location": "elsewhere: updateEvent writes it after creation",
+		"posterFile": "elsewhere: updateEvent writes it after creation",
+		"reservation": "elsewhere: updateEvent's reservation times and the reserve-space flow hold the room",
+		"tags": "elsewhere: updateEvent writes it after creation",
+		"ticketingEnabled": "elsewhere: updateEvent writes it after creation",
+		"ticketPrice": "elsewhere: updateEvent writes it after creation",
+		"ticketQuantity": "elsewhere: updateEvent writes it after creation",
+		"venueId": "elsewhere: updateEvent writes it after creation"
+	},
+	"src/lib/server/event/event-service.ts#createBandEvent(0)": {
+		"address": "elsewhere: updateBandEventForm writes it after creation",
+		"description": "elsewhere: updateBandEventForm writes it after creation",
+		"doorsAt": "elsewhere: updateBandEventForm writes it after creation",
+		"externalTicketUrl": "elsewhere: updateBandEventForm writes it after creation",
+		"location": "elsewhere: updateBandEventForm writes it after creation",
+		"posterFile": "elsewhere: updateBandEventForm writes it after creation",
+		"support": "elsewhere: updateBandEventForm writes it after creation",
+		"tags": "elsewhere: updateBandEventForm writes it after creation",
+		"ticketPrice": "elsewhere: updateBandEventForm writes it after creation"
+	},
+	"src/lib/server/finance/payment-service.ts#refund(0)": {
+		"metadata": "internal: a Stripe pass-through; no caller needs one yet"
+	},
+	"src/lib/server/finance/subscription-service.ts#patchMemberSubscription(1)": {
+		"cancelAtPeriodEnd": "internal: mirrored from Stripe by the subscription sync",
+		"creditsResetAt": "internal: mirrored from Stripe by the subscription sync",
+		"startedAt": "internal: mirrored from Stripe by the subscription sync",
+		"stripeSubscriptionId": "internal: mirrored from Stripe by the subscription sync"
+	},
+	"src/lib/server/finance/subscription-sync-service.ts#syncAllSubscriptions(0)": {
+		"dryRun": "internal: a test seam; the staff button always applies"
+	},
+	"src/lib/server/group/announcement-service.ts#create(2)": {
+		"pinned": "elsewhere: the pin intent on update sets it"
+	},
+	"src/lib/server/group/group-invite-service.ts#createInvite(5)": {
+		"notify": "internal: member-invite-service sends its own email and passes false"
+	},
+	"src/lib/server/help/help-service.ts#createArticle(0)": {
+		"sortOrder": "#2313: staff articles cannot be ordered within a category",
+		"source": "internal: 'static' marks rows pnpm help:sync owns; staff articles are 'dynamic'"
+	},
+	"src/lib/server/help/help-service.ts#updateArticle(1)": {
+		"createdByUserId": "internal: set once by createArticle",
+		"sortOrder": "#2313: staff articles cannot be ordered within a category",
+		"source": "internal: 'static' marks rows pnpm help:sync owns; staff articles are 'dynamic'"
+	},
+	"src/lib/server/incident/incident-service.ts#fileShowIncident(0)": {
+		"involvedUserId": "internal: naming a member stays with staff (#1469); crew describe it in the text"
+	},
+	"src/lib/server/inventory/acquisition-service.ts#addAcquisitionLine(1)": {
+		"units": "elsewhere: a serialized line mints untagged units; the tagging queue fills in tag and serial"
+	},
+	"src/lib/server/inventory/acquisition-service.ts#adjustStock(0)": {
+		"locationId": "internal: bulk on-hand is counted per item; nothing reads a movement's location"
+	},
+	"src/lib/server/inventory/acquisition-service.ts#consumeStock(0)": {
+		"locationId": "internal: bulk on-hand is counted per item; nothing reads a movement's location"
+	},
+	"src/lib/server/inventory/acquisition-service.ts#recordAcquisitionBulk(0)": {
+		"fairValueBasis": "elsewhere: editAcquisition writes it once the receipt is in",
+		"fairValueCents": "elsewhere: editAcquisition writes it once the receipt is in",
+		"intendedUse": "elsewhere: editAcquisition writes it once the receipt is in",
+		"monetized": "elsewhere: editAcquisition writes it once the receipt is in"
+	},
+	"src/lib/server/inventory/acquisition-service.ts#updateAcquisition(1)": {
+		"appraisalRef": "elsewhere: acknowledgeForm8283 writes it"
+	},
+	"src/lib/server/inventory/asset-service.ts#createAsset(0)": {
+		"acquisitionId": "internal: intake's applyLine links the units it mints"
+	},
+	"src/lib/server/inventory/item-service.ts#createLocation(0)": {
+		"displayOrder": "#2315: inventory locations cannot be ordered"
+	},
+	"src/lib/server/inventory/item-service.ts#updateItem(1)": {
+		"kind": "internal: in the Partial<CreateItemData> type, deliberately never written"
+	},
+	"src/lib/server/inventory/order-service.ts#createOrder(0)": {
+		"notes": "#2316: purchase order notes are rendered but no form writes them"
+	},
+	"src/lib/server/inventory/resources-service.ts#reportDamage(0)": {
+		"blocksUse": "internal: absent means blocking, documented at the call",
+		"loanId": "internal: re-uptake raises its flag through raiseFlag in loan-service"
+	},
+	"src/lib/server/local-resource/local-resource-service.ts#createResource(0)": {
+		"displayOrder": "#2314: local resources cannot be ordered within a category"
+	},
+	"src/lib/server/local-resource/local-resource-service.ts#updateResource(1)": {
+		"displayOrder": "#2314: local resources cannot be ordered within a category"
+	},
+	"src/lib/server/lock/access-register-service.ts#returnHolding(1)": {
+		"returnedAt": "#2317: the register cannot record when a key was returned"
+	},
+	"src/lib/server/marketing/audience-service.ts#updateAudience(1)": {
+		"slug": "elsewhere: set at creation; renaming it would break shared opt-in links"
+	},
+	"src/lib/server/notification/dispatcher.ts#dispatch(0)": {
+		"data": "internal: listeners attach notification data",
+		"email": "internal: listeners supply declared email content",
+		"forceEmail": "internal: listeners override a member's email preference for mandatory mail"
+	},
+	"src/lib/server/notification/dispatcher.ts#dispatchEmailOnly(0)": {
+		"model": "internal: the template branch of the union, used by listeners and auth mail",
+		"replyTo": "internal: listeners set it where a reply is expected",
+		"templateAlias": "internal: the template branch of the union, used by listeners and auth mail"
+	},
+	"src/lib/server/production/expense-service.ts#addExpense(0)": {
+		"notes": "internal: a column nothing reads; the settlement sheet shows label, category, amount and payee",
+		"paidAt": "internal: a column nothing reads; the settlement sheet shows label, category, amount and payee"
+	},
+	"src/lib/server/production/production-service.ts#createProduction(1)": {
+		"id": "internal: a caller-supplied id for batching with the show it belongs to"
+	},
+	"src/lib/server/production/run-of-show-service.ts#updateSlot(1)": {
+		"actualEndAt": "elsewhere: markSlotTiming writes it on the night",
+		"actualStartAt": "elsewhere: markSlotTiming writes it on the night"
+	},
+	"src/lib/server/project/decision-chain.ts#startProjectFromBallot(1)": {
+		"description": "elsewhere: updateProjectForm writes it once the project exists",
+		"endsAt": "elsewhere: updateProjectForm writes it once the project exists",
+		"startsAt": "elsewhere: updateProjectForm writes it once the project exists"
+	},
+	"src/lib/server/project/project-service.ts#createProject(0)": {
+		"status": "elsewhere: the lifecycle transition moves it; a new project starts at the default"
+	},
+	"src/lib/server/project/project-service.ts#startProjectFromSuggestion(1)": {
+		"description": "elsewhere: updateProjectForm writes it once the project exists",
+		"endsAt": "elsewhere: updateProjectForm writes it once the project exists",
+		"startsAt": "elsewhere: updateProjectForm writes it once the project exists"
+	},
+	"src/lib/server/project/project-service.ts#updateProject(1)": {
+		"createdByUserId": "internal: set once at creation",
+		"status": "elsewhere: the lifecycle transition moves it"
+	},
+	"src/lib/server/reservation/recurring-series-service.ts#create(0)": {
+		"endsAt": "#2319: a recurring room booking cannot be given an end date"
+	},
+	"src/lib/server/reservation/reservation-service.ts#cancel(3)": {
+		"actor": "internal: the system actor for jobs and webhooks",
+		"actorUserId": "internal: the system actor for jobs and webhooks"
+	},
+	"src/lib/server/reservation/reservation-service.ts#staffCreate(0)": {
+		"hardHold": "internal: hard holds come from events; staff block time with closures"
+	},
+	"src/lib/server/ticket/ticket-service.ts#createTickets(0)": {
+		"checkedInByUserId": "internal: door-sale checks in what it mints",
+		"discountWaived": "internal: documented as no longer written"
+	},
+	"src/lib/server/ticket/ticket-service.ts#issueFreeTickets(0)": {
+		"actsCents": "internal: a paid order's split; a free ticket has none",
+		"checkedInByUserId": "internal: door-sale checks in what it mints",
+		"collectiveCents": "internal: a paid order's split; a free ticket has none",
+		"contributionCents": "internal: a paid order's split; a free ticket has none",
+		"discountWaived": "internal: documented as no longer written",
+		"feeCoveredCents": "internal: a paid order's split; a free ticket has none",
+		"unitPriceCents": "internal: a free ticket is 0, the default"
+	},
+	"src/lib/server/user/user-service.ts#deactivateUser(1)": {
+		"batchId": "internal: deactivateUsers (bulkDeactivateUsers) mints one per batch"
+	},
+	"src/lib/server/volunteer/duty-list-service.ts#createDutyList(0)": {
+		"autoApplyOn": "#2265: no form sets auto-apply on production.created"
+	},
+	"src/lib/server/volunteer/duty-list-service.ts#updateDutyList(1)": {
+		"autoApplyOn": "#2265: no form sets auto-apply on production.created"
+	},
+	"src/lib/server/volunteer/duty-list-service.ts#updateDutyListItem(1)": {
+		"capacity": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
+		"dueOffsetMinutes": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
+		"durationMinutes": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
+		"notes": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
+		"offsetMinutes": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
+		"sortOrder": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
+		"tasks": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
+		"volunteerRoleId": "#2264: item edit cannot change role, timing, capacity, notes or tasks"
+	},
+	"src/lib/server/volunteer/hour-log-service.ts#updateHourLog(2)": {
+		"groupId": "internal: in the Partial<SubmitHoursData> type, never written; links are fixed at submission",
+		"shiftId": "internal: in the Partial<SubmitHoursData> type, never written; links are fixed at submission"
+	},
+	"src/lib/server/volunteer/volunteer-role-service.ts#createVolunteerRole(0)": {
+		"skillMatches": "elsewhere: the role update form writes it"
+	},
+	"src/lib/server/volunteer/work-order-service.ts#createWorkOrder(0)": {
+		"sectionId": "internal: project-task-service#addTask places a task in its section",
+		"sortOrder": "internal: project-task-service#addTask places a task in its section"
+	},
+	"src/lib/server/volunteer/work-order-service.ts#resolveWorkOrder(1)": {
+		"recordReason": "internal: completeJob passes its own record as the reason"
+	},
+	"src/lib/server/volunteer/work-order-service.ts#updateShift(1)": {
+		"closeReportsOnCompletion": "#2318: cannot be changed after the work order is scheduled"
+	}
+}
