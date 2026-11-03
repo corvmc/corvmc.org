@@ -170,7 +170,7 @@
 								successToast={m.volunteer_open_shifts_success_toast()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="shiftId" value={shift.id} />
+									<input {...claimShift.for(shift.id).fields.shiftId.as('hidden', shift.id)} />
 									<p class="text-sm">
 										{shiftLabel(shift)}, {formatDateShort(shift.startsAt)},
 										{timeRange(shift.startsAt, shift.endsAt)}.

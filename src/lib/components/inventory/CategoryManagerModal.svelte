@@ -127,21 +127,22 @@
 				{/if}
 				<div class="grid grid-cols-3 gap-3">
 					<Field
-						name="name"
+						field={categoryForm.fields.name}
 						type="text"
 						label={m.inventory_category_manager_modal_name()}
 						class="col-span-2"
 						value={editingCategory.name}
 					/>
 					<Field
-						name="displayOrder"
+						field={categoryForm.fields.displayOrder}
+						submitAs="text"
 						type="number"
 						label={m.inventory_category_manager_modal_order()}
 						value={editingCategory.displayOrder}
 					/>
 				</div>
 				<Field
-					name="pricingTier"
+					field={categoryForm.fields.pricingTier}
 					type="select"
 					label={m.inventory_category_manager_modal_pricing_tier_2()}
 					value={editingCategory.pricingTier}

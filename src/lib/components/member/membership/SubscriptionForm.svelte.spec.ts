@@ -40,7 +40,12 @@ function rejectingForm(rejectWith: unknown) {
 	};
 
 	Object.defineProperties(instance, {
-		fields: { value: { allIssues: () => null } },
+		fields: {
+			value: {
+				amount: { as: (type: string) => ({ type, name: 'amount' }), issues: () => null },
+				allIssues: () => null
+			}
+		},
 		result: { value: undefined, writable: true },
 		enhance: {
 			value: (cb: (i: { submit: () => Promise<boolean> }) => unknown) => {

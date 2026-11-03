@@ -347,7 +347,7 @@
 			{:else if staff}
 				<!-- Staff choice: comp (fully free, no credits used) or apply the member's
 				     credits (submitter name/value sets comp only when that button submits). -->
-				<Button type="submit" name="comp" value="on" variant="info" outline
+				<Button {...formCtx.fields.comp.as('submit', 'on')} variant="info" outline
 					>{m.reservations_booking_confirm_step_comp()}</Button
 				>
 				<Button type="submit" variant="primary">
@@ -362,7 +362,7 @@
 				     option (#1027). "Hold this slot" stays where it is true: before the
 				     confirmation window that is the outcome, and calling it booking
 				     would promise free hours the booking cannot spend yet. -->
-				<Button type="submit" name="skipPayment" value="on" variant="primary"
+				<Button {...formCtx.fields.skipPayment.as('submit', 'on')} variant="primary"
 					>{beforeConfirmWindow
 						? m.reservations_booking_confirm_step_hold_slot()
 						: submitLabel}</Button

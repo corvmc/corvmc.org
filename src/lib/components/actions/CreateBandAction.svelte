@@ -55,8 +55,8 @@
 		{#if selectedOwner}
 			<input {...fields.ownerId.as('hidden', selectedOwner.id)} />
 		{/if}
-		<Field name="name" type="text" label={m.actions_name()} />
-		<Field name="bio" type="textarea" label={m.actions_create_band_bio()} />
+		<Field field={createBandApi.fields.name} type="text" label={m.actions_name()} />
+		<Field field={createBandApi.fields.bio} type="textarea" label={m.actions_create_band_bio()} />
 		<fieldset class="fieldset">
 			<legend class="fieldset-legend">{m.actions_create_band_owner()}</legend>
 			<SearchSelect

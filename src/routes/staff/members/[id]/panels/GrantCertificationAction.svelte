@@ -37,15 +37,15 @@
 		{onsuccess}
 	>
 		{#snippet form()}
-			<input type="hidden" name="userId" value={userId} />
+			<input {...grantCertification.fields.userId.as('hidden', userId)} />
 			<FormField
-				name="certificationId"
+				field={grantCertification.fields.certificationId}
 				label={m.staff_members_id_panels_grant_certification_certification()}
 				type="select"
 				{options}
 			/>
 			<FormField
-				name="grantedOn"
+				field={grantCertification.fields.grantedOn}
 				label={m.staff_granted()}
 				type="date"
 				value={clubToday()}
@@ -53,12 +53,12 @@
 				description={m.staff_members_id_panels_grant_certification_expiry_worked_ou()}
 			/>
 			<FormField
-				name="reference"
+				field={grantCertification.fields.reference}
 				label={m.staff_members_id_panels_grant_certification_card_licence_num()}
 				type="text"
 				description={m.staff_members_id_panels_grant_certification_external_card_le()}
 			/>
-			<FormField name="notes" label={m.staff_notes()} type="textarea" />
+			<FormField field={grantCertification.fields.notes} label={m.staff_notes()} type="textarea" />
 		{/snippet}
 	</Action>
 {/if}

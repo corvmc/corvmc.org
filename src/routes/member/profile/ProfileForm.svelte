@@ -112,7 +112,6 @@
 
 			<div class="shrink-0">
 				<FileUpload
-					name="image"
 					upload={uploadAvatar}
 					accept="image/jpeg,image/png,image/webp"
 					src={profile?.avatarUrl ?? undefined}

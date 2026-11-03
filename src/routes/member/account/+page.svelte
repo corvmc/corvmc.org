@@ -219,19 +219,19 @@
 				>
 					{#snippet form()}
 						<FormField
-							name="currentPassword"
+							field={changePassword.fields.currentPassword}
 							type="password"
 							label={m.member_account_current_password()}
 							autocomplete="current-password"
 						/>
 						<FormField
-							name="newPassword"
+							field={changePassword.fields.newPassword}
 							type="password"
 							label={m.member_account_new_password()}
 							autocomplete="new-password"
 						/>
 						<FormField
-							name="confirmPassword"
+							field={changePassword.fields.confirmPassword}
 							type="password"
 							label={m.member_account_confirm_new_password()}
 							autocomplete="new-password"
@@ -266,7 +266,7 @@
 							</Alert>
 
 							<FormField
-								name="password"
+								field={deleteAccount.fields.password}
 								type="password"
 								label={m.member_account_enter_password_confirm()}
 								autocomplete="current-password"

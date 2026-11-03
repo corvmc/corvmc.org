@@ -84,13 +84,11 @@
 			</p>
 		</div>
 		<!--
-			Named even though it is not a form field. `correctStock` never sees
-			`counted` — Zod strips the unknown key and the ledger takes the derived
-			delta below — but without a name the input renders `name=""`, which
-			`e2e/inventory.e2e.ts` selects on.
+			Not a form field: the ledger takes the derived delta below, so this
+			input posts nothing. A name would be one kit 3 rejects.
 		-->
 		<Field
-			name="counted"
+			data-testid="stocktake-counted"
 			type="number"
 			label={m.actions_adjust_stock_counted_shelf()}
 			bind:value={counted}

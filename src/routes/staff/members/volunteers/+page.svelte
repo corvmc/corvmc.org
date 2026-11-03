@@ -95,7 +95,11 @@
 			onsuccess={() => void list.refresh()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="userId" value={volunteer.userId} />
+				<input
+					{...approveVolunteerSignup
+						.for(volunteer.userId)
+						.fields.userId.as('hidden', volunteer.userId)}
+				/>
 				<p class="text-sm">
 					{m.staff_members_volunteers_confirms_guardian_has_signed_off()}
 				</p>
@@ -113,8 +117,16 @@
 			successToast={m.staff_confirmed()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="signupId" value={volunteer.claim!.signupId} />
-				<input type="hidden" name="shiftId" value={volunteer.claim!.shiftId} />
+				<input
+					{...confirmSignup
+						.for(volunteer.claim!.signupId)
+						.fields.signupId.as('hidden', volunteer.claim!.signupId)}
+				/>
+				<input
+					{...confirmSignup
+						.for(volunteer.claim!.signupId)
+						.fields.shiftId.as('hidden', volunteer.claim!.shiftId)}
+				/>
 				<p class="text-sm">
 					{m.staff_members_volunteers_confirming_books_them_they_get({
 						roleName: volunteer.claim!.roleName,

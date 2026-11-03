@@ -214,7 +214,9 @@
 				onsuccess={handleBulkApproved}
 			>
 				{#snippet form()}
-					<input type="hidden" name="ids" value={JSON.stringify([...selected])} />
+					<input
+						{...approveVolunteerHoursBulk.fields.ids.as('hidden', JSON.stringify([...selected]))}
+					/>
 					<p class="text-sm">
 						{m.staff_members_volunteers_hours_entries_total({
 							size: selected.size,
@@ -222,7 +224,7 @@
 						})}
 					</p>
 					<FormField
-						name="notes"
+						field={approveVolunteerHoursBulk.fields.notes}
 						label={m.staff_note_optional()}
 						type="textarea"
 						description={m.staff_members_volunteers_hours_shared_with_every_member_sele()}
@@ -339,7 +341,9 @@
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
-											<input type="hidden" name="id" value={log.id} />
+											<input
+												{...approveVolunteerHours.for(log.id).fields.id.as('hidden', log.id)}
+											/>
 											<p class="text-sm">
 												{m.staff_by({
 													formatVolunteerHours: formatVolunteerHours(log.minutes),
@@ -350,7 +354,7 @@
 											</p>
 											<p class="text-muted">{log.description}</p>
 											<FormField
-												name="notes"
+												field={approveVolunteerHours.for(log.id).fields.notes}
 												label={m.staff_note_optional()}
 												type="textarea"
 												description={m.staff_shared_with_member()}
@@ -372,7 +376,9 @@
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
-											<input type="hidden" name="id" value={log.id} />
+											<input
+												{...approveVolunteerHours.for(log.id).fields.id.as('hidden', log.id)}
+											/>
 											<p class="text-sm">
 												{m.staff_members_volunteers_hours_by_were_returned_member({
 													formatVolunteerHours: formatVolunteerHours(log.minutes),
@@ -382,7 +388,7 @@
 												})}
 											</p>
 											<FormField
-												name="reason"
+												field={approveVolunteerHours.for(log.id).fields.reason}
 												label={m.staff_members_volunteers_hours_why_approve_them_now()}
 												type="textarea"
 												description={m.staff_members_volunteers_hours_recorded_audit_log()}
@@ -407,7 +413,7 @@
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
-											<input type="hidden" name="id" value={log.id} />
+											<input {...rejectVolunteerHours.for(log.id).fields.id.as('hidden', log.id)} />
 											<p class="text-sm">
 												{m.staff_by({
 													formatVolunteerHours: formatVolunteerHours(log.minutes),
@@ -418,7 +424,7 @@
 											</p>
 											<p class="text-muted">{log.description}</p>
 											<FormField
-												name="notes"
+												field={rejectVolunteerHours.for(log.id).fields.notes}
 												label={m.staff_reason()}
 												type="textarea"
 												description={m.staff_required_member_needs_correct_resubmit()}

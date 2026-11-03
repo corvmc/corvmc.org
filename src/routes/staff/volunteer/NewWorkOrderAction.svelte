@@ -55,7 +55,7 @@
 	>
 		{#snippet form()}
 			<FormField
-				name="timed"
+				field={createWorkOrder.fields.timed}
 				type="checkbox"
 				checkboxLabel={m.staff_volunteer_new_work_order_checkbox_label()}
 				bind:value={timed}

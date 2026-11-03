@@ -41,7 +41,7 @@
 					successToast={m.staff_volunteer_roles_id_role_requirements_card_success_toas()}
 				>
 					{#snippet form()}
-						<input type="hidden" name="roleId" value={role.id} />
+						<input {...setRoleCertifications.fields.roleId.as('hidden', role.id)} />
 						<p class="text-muted">
 							{m.staff_volunteer_roles_id_role_requirements_card_someone_must()}
 						</p>

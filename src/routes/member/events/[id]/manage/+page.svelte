@@ -247,7 +247,10 @@
 
 			<!-- The `input` snippet, not children: only it is handed the id the
 			     caption points at, so children would leave the field unnamed. -->
-			<FormField name="description" label={m.member_events_id_manage_description()}>
+			<FormField
+				field={updateListing.fields.description}
+				label={m.member_events_id_manage_description()}
+			>
 				{#snippet input(id)}
 					<textarea
 						{...fields.description.as('text', listing.description ?? '')}
@@ -316,11 +319,15 @@
 			/>
 
 			<FormField
-				name="lineup"
+				field={updateListing.fields.lineup}
 				label={m.member_events_id_manage_who_s_playing()}
 				description={m.member_events_id_manage_naming_band_s_site_asks()}
 			>
-				<LineupEditor bind:value={lineup} search={searchBandsForListing} />
+				<LineupEditor
+					field={updateListing.fields.lineup}
+					bind:value={lineup}
+					search={searchBandsForListing}
+				/>
 			</FormField>
 
 			<FormField

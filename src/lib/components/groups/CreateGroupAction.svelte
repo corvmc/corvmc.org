@@ -138,7 +138,7 @@
 			     control to render the issue against — a toast about highlighted
 			     fields, and nothing highlighted (#1019). -->
 			<FormField
-				name="chairId"
+				field={createStaffGroup.fields.chairId}
 				label={m.groups_create_group_chair()}
 				description={m.groups_create_group_they_become_chair_immediately_there()}
 			>

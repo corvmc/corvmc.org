@@ -78,7 +78,6 @@
 
 			<FormField
 				label={m.groups_invite_group_member_who()}
-				name="memberSearch"
 				type="text"
 				value={searchQuery}
 				oninput={onInput}

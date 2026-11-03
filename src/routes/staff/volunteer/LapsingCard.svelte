@@ -92,17 +92,27 @@
 						successToast={m.staff_volunteer_lapsing_card_success_toast()}
 					>
 						{#snippet form()}
-							<input type="hidden" name="userId" value={row.userId} />
-							<input type="hidden" name="certificationId" value={row.certificationId} />
+							<input
+								{...grantCertification
+									.for(`${row.userId}:${row.certificationId}`)
+									.fields.userId.as('hidden', row.userId)}
+							/>
+							<input
+								{...grantCertification
+									.for(`${row.userId}:${row.certificationId}`)
+									.fields.certificationId.as('hidden', row.certificationId)}
+							/>
 							<FormField
-								name="grantedOn"
+								field={grantCertification.for(`${row.userId}:${row.certificationId}`).fields
+									.grantedOn}
 								label={m.staff_granted()}
 								type="date"
 								value={clubToday()}
 								description={m.staff_volunteer_lapsing_card_expiry_stamped_from_date_locked()}
 							/>
 							<FormField
-								name="reference"
+								field={grantCertification.for(`${row.userId}:${row.certificationId}`).fields
+									.reference}
 								label={m.staff_reference()}
 								type="text"
 								maxlength={CERT_REFERENCE_MAX}

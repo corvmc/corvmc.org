@@ -63,16 +63,25 @@
 		{#snippet slugHint()}{m.actions_create_audience_used_signup_url_subscribe({
 				value: slug || '...'
 			})}{/snippet}
-		<Field name="name" type="text" label={m.actions_name()} bind:value={name} />
+		<Field
+			field={createAudience.fields.name}
+			type="text"
+			label={m.actions_name()}
+			bind:value={name}
+		/>
 		<!-- Custom input to keep the monospace slug box; `Field`'s own input has a
 		     fixed class. The wrapper supplies the label association and the error
 		     slot the bare fieldset had no room for. -->
-		<Field name="slug" label={m.actions_create_audience_slug()} description={slugHint}>
+		<Field
+			field={createAudience.fields.slug}
+			label={m.actions_create_audience_slug()}
+			description={slugHint}
+		>
 			{#snippet input(id)}
 				<input
 					{id}
 					type="text"
-					name="slug"
+					{...createAudience.fields.slug.as('text')}
 					bind:value={slug}
 					placeholder={m.actions_create_audience_placeholder()}
 					class="input w-full font-mono text-sm"
@@ -81,13 +90,13 @@
 			{/snippet}
 		</Field>
 		<Field
-			name="description"
+			field={createAudience.fields.description}
 			type="textarea"
 			label={m.actions_description()}
 			bind:value={description}
 		/>
 		<Field
-			name="allowOptIn"
+			field={createAudience.fields.allowOptIn}
 			type="checkbox"
 			value={allowOptIn}
 			checkboxLabel={m.actions_create_audience_checkbox_label()}

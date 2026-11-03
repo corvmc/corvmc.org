@@ -74,10 +74,15 @@
 			onsuccess={handleSuccess}
 			class="space-y-4"
 		>
-			<Field name="title" type="text" label={m.events_title()} bind:value={title} />
+			<Field
+				field={(production ? createShow : createEvent).fields.title}
+				type="text"
+				label={m.events_title()}
+				bind:value={title}
+			/>
 			{#if !production}
 				<Field
-					name="kind"
+					field={createEvent.fields.kind}
 					type="select"
 					label={m.events_kind()}
 					bind:value={kind}
@@ -92,7 +97,7 @@
 				/>
 				{#if programs.length > 0}
 					<Field
-						name="groupId"
+						field={createEvent.fields.groupId}
 						type="select"
 						label={m.events_create_event_modal_run_by()}
 						bind:value={groupId}
@@ -104,17 +109,22 @@
 					/>
 				{/if}
 			{/if}
-			<Field name="eventDate" type="date" label={m.events_date()} bind:value={eventDate} />
+			<Field
+				field={(production ? createShow : createEvent).fields.eventDate}
+				type="date"
+				label={m.events_date()}
+				bind:value={eventDate}
+			/>
 
 			<div class="grid grid-cols-2 gap-4">
 				<Field
-					name="eventStartTime"
+					field={(production ? createShow : createEvent).fields.eventStartTime}
 					type="time"
 					label={m.events_start_time()}
 					bind:value={eventStartTime}
 				/>
 				<Field
-					name="eventEndTime"
+					field={(production ? createShow : createEvent).fields.eventEndTime}
 					type="time"
 					label={m.events_end_time()}
 					bind:value={eventEndTime}

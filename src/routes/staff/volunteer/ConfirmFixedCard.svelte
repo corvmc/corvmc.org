@@ -70,14 +70,14 @@
 						successToast={m.staff_volunteer_confirm_fixed_card_success_toast()}
 					>
 						{#snippet form()}
-							<input type="hidden" name="id" value={order.id} />
+							<input {...resolveWorkOrder.for(order.id).fields.id.as('hidden', order.id)} />
 							<p class="text-sm">
 								{m.staff_volunteer_confirm_fixed_card_closes_work_order_its_rep({
 									reports: order.reports
 								})}
 							</p>
 							<FormField
-								name="notes"
+								field={resolveWorkOrder.for(order.id).fields.notes}
 								label={m.staff_volunteer_confirm_fixed_card_what_was_done()}
 								type="textarea"
 							/>

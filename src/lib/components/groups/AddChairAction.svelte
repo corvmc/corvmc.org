@@ -34,7 +34,7 @@
 			<input {...fields.groupId.as('hidden', groupId)} />
 			<input {...fields.role.as('hidden', 'admin')} />
 
-			<FormField name="userId" label={m.groups_member()} required>
+			<FormField field={setStaffGroupRole.fields.userId} label={m.groups_member()} required>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={chair}

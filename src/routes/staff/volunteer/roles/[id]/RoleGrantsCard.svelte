@@ -37,7 +37,7 @@
 				successToast={m.staff_volunteer_roles_id_role_grants_card_success_toast()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="roleId" value={role.id} />
+					<input {...setVolunteerRoleGrants.fields.roleId.as('hidden', role.id)} />
 					<p class="text-muted">
 						{m.staff_volunteer_roles_id_role_grants_card_volunteer_confirme()}
 					</p>

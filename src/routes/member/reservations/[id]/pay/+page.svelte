@@ -117,7 +117,7 @@
 	<Form remote={payReservation}>
 		{#if remainingCents > 0}
 			<Field
-				name="coverFees"
+				field={payReservation.fields.coverFees}
 				type="checkbox"
 				label=""
 				bind:value={coverFees}

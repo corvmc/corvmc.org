@@ -54,9 +54,9 @@
 					successToast={m.staff_members_id_panels_orientation_card_success_toast()}
 				>
 					{#snippet form()}
-						<input type="hidden" name="userId" value={id} />
+						<input {...waiveMemberOrientation.fields.userId.as('hidden', id)} />
 						<FormField
-							name="reason"
+							field={waiveMemberOrientation.fields.reason}
 							label={m.staff_members_id_panels_orientation_card_why_not_needed()}
 							type="textarea"
 							description={m.staff_members_id_panels_orientation_card_description()}

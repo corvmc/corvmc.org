@@ -25,6 +25,10 @@ function fakeRemoteForm() {
 				as: (type: string, value?: unknown) => ({ type, name: 'assignToUserId', value }),
 				issues: () => null
 			},
+			disposition: {
+				as: (type: string, value?: unknown) => ({ type, name: 'disposition', value }),
+				issues: () => null
+			},
 			allIssues: () => null
 		},
 		result: undefined

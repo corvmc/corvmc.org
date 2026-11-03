@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { RemoteFormField } from '@sveltejs/kit';
 	import { m } from '#lib/paraglide/messages.js';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	/**
@@ -85,6 +86,10 @@
 	const isNote = $derived(!!noteForm && (requestedMode === 'note' || !!replyBlockedReason));
 	const mode = $derived(isNote ? 'note' : 'reply');
 	const activeForm = $derived(isNote && noteForm ? noteForm : replyForm);
+	// Only the staff reply form has it, which is why the prop's type leaves it out.
+	const dispositionField = $derived(
+		(replyForm.fields as unknown as { disposition: RemoteFormField<string> }).disposition
+	);
 
 	// Sending sets a disposition only on the staff side. A member replying in
 	// the portal has no queue to move the thread out of, and offering them
@@ -153,11 +158,11 @@
 			     only `inputProps`, so `rows` and `placeholder` were silently dropped.
 			     Two lines that grow with the draft (`field-sizing`), capped so the
 			     timeline above keeps the pane. -->
-			<FormField name="body" label="">
+			<FormField field={activeForm.fields.body} label="">
 				{#snippet input(id)}
 					<textarea
 						{id}
-						name="body"
+						{...activeForm.fields.body.as('text')}
 						class="textarea field-sizing-content max-h-64 min-h-16 w-full"
 						rows={2}
 						placeholder={isNote
@@ -215,8 +220,7 @@
 					shortcut="mod+enter"
 					title={staffSend ? m.inbox_thread_composer_title() : undefined}
 					disabled={!draft.trim()}
-					name={staffSend ? 'disposition' : undefined}
-					value={staffSend ? 'wait' : undefined}
+					{...staffSend ? dispositionField.as('submit', 'wait') : {}}
 					class="{isNote ? 'btn-neutral' : 'btn-primary'} order-1 w-full sm:order-none sm:w-auto"
 				>
 					{#snippet icon()}

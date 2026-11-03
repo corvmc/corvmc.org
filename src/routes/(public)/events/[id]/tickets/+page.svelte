@@ -128,8 +128,16 @@
 			<input {...freeTicketFields.eventId.as('hidden', page.params.id!)} />
 			<Card>
 				<CardBody class="space-y-4">
-					<Field label={m.public_events_id_tickets_number_spots()} name="quantity">
-						<Select name="quantity" bind:value={quantity} class="w-full">
+					<Field
+						label={m.public_events_id_tickets_number_spots()}
+						field={claimFreeTicket.fields.quantity}
+					>
+						<Select
+							{...claimFreeTicket.fields.quantity.as('select')}
+							onchange={(e: Event) =>
+								(quantity = Number((e.currentTarget as HTMLSelectElement).value))}
+							class="w-full"
+						>
 							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
 								<option value={n}>{n}</option>
 							{/each}
@@ -137,10 +145,15 @@
 					</Field>
 
 					{#if !data.isAuthenticated}
-						<Field name="attendeeName" type="text" label={m.public_name()} value={attendeeName} />
+						<Field
+							field={claimFreeTicket.fields.attendeeName}
+							type="text"
+							label={m.public_name()}
+							value={attendeeName}
+						/>
 
 						<Field
-							name="attendeeEmail"
+							field={claimFreeTicket.fields.attendeeEmail}
 							type="email"
 							label={m.public_email()}
 							value={attendeeEmail}
@@ -165,9 +178,18 @@
 					<!-- The `input` snippet, not children: only it is handed the id the
 					     caption points at, so as children this select had no accessible
 					     name at all and read as "combo box, 1" (#994). -->
-					<Field label={m.public_events_id_tickets_number_tickets()} name="quantity">
+					<Field
+						label={m.public_events_id_tickets_number_tickets()}
+						field={purchaseTickets.fields.quantity}
+					>
 						{#snippet input(id)}
-							<Select {id} name="quantity" bind:value={quantity} class="w-full">
+							<Select
+								{id}
+								{...purchaseTickets.fields.quantity.as('select')}
+								onchange={(e: Event) =>
+									(quantity = Number((e.currentTarget as HTMLSelectElement).value))}
+								class="w-full"
+							>
 								{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
 									<option value={n}>{n}</option>
 								{/each}
@@ -176,10 +198,15 @@
 					</Field>
 
 					{#if !data.isAuthenticated}
-						<Field name="attendeeName" type="text" label={m.public_name()} value={attendeeName} />
+						<Field
+							field={purchaseTickets.fields.attendeeName}
+							type="text"
+							label={m.public_name()}
+							value={attendeeName}
+						/>
 
 						<Field
-							name="attendeeEmail"
+							field={purchaseTickets.fields.attendeeEmail}
 							type="email"
 							label={m.public_email()}
 							value={attendeeEmail}

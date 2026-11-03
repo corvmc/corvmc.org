@@ -83,7 +83,7 @@
 							successToast={m.staff_hours_approved()}
 						>
 							{#snippet form()}
-								<input type="hidden" name="id" value={log.id} />
+								<input {...approveVolunteerHours.for(log.id).fields.id.as('hidden', log.id)} />
 								<p class="text-sm">
 									{m.staff_by({
 										formatVolunteerHours: formatVolunteerHours(log.minutes),
@@ -94,7 +94,7 @@
 								</p>
 								<p class="text-muted">{log.description}</p>
 								<FormField
-									name="notes"
+									field={approveVolunteerHours.for(log.id).fields.notes}
 									label={m.staff_note_optional()}
 									type="textarea"
 									description={m.staff_shared_with_member()}
@@ -116,7 +116,7 @@
 							successToast={m.staff_hours_returned()}
 						>
 							{#snippet form()}
-								<input type="hidden" name="id" value={log.id} />
+								<input {...rejectVolunteerHours.for(log.id).fields.id.as('hidden', log.id)} />
 								<p class="text-sm">
 									{m.staff_by({
 										formatVolunteerHours: formatVolunteerHours(log.minutes),
@@ -127,7 +127,7 @@
 								</p>
 								<p class="text-muted">{log.description}</p>
 								<FormField
-									name="notes"
+									field={rejectVolunteerHours.for(log.id).fields.notes}
 									label={m.staff_reason()}
 									type="textarea"
 									description={m.staff_required_member_needs_correct_resubmit()}

@@ -3,6 +3,7 @@
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import FreeformTagInput from '#lib/components/ui/FreeformTagInput.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
+	import type { createClassified } from '#lib/remote/classifieds.remote.js';
 	import {
 		classifiedKindOptions,
 		classifiedCategoryOptions,
@@ -12,11 +13,14 @@
 
 	/** The fields of a classified post, shared by the create and edit modals. */
 	let {
+		fields,
 		bands,
 		instrumentSuggestions,
 		genreSuggestions,
 		initial
 	}: {
+		/** The create or edit form's fields; the two share these keys. */
+		fields: (typeof createClassified)['fields'];
 		bands: { value: string; label: string }[];
 		instrumentSuggestions: string[];
 		genreSuggestions: string[];
@@ -42,7 +46,7 @@
 
 <div class="grid gap-3 sm:grid-cols-2">
 	<FormField
-		name="kind"
+		field={fields.kind}
 		type="select"
 		label={m.classified_post_fields_wanted_offered_trade()}
 		description={m.classified_post_fields_description()}
@@ -50,7 +54,7 @@
 		options={classifiedKindOptions}
 	/>
 	<FormField
-		name="category"
+		field={fields.category}
 		type="select"
 		label={m.classified_category()}
 		bind:value={category}
@@ -63,41 +67,46 @@
 	</Alert>
 {/if}
 <FormField
-	name="title"
+	field={fields.title}
 	type="text"
 	label={m.classified_post_fields_title()}
 	value={initial?.title ?? ''}
 />
-<FormField name="body" type="textarea" label={m.classified_details()} value={initial?.body ?? ''} />
+<FormField
+	field={fields.body}
+	type="textarea"
+	label={m.classified_details()}
+	value={initial?.body ?? ''}
+/>
 {#if bands.length > 0}
 	<FormField
-		name="groupId"
+		field={fields.groupId}
 		type="select"
 		label={m.classified_post_fields_post_as()}
 		value={initial?.groupId ?? ''}
 		options={[{ value: '', label: m.classified_post_fields_just_me() }, ...bands]}
 	/>
 {/if}
-<FormField name="instruments" label={m.classified_post_fields_instruments()}>
+<FormField field={fields.instruments} label={m.classified_post_fields_instruments()}>
 	<FreeformTagInput
 		bind:value={instruments}
 		suggestions={instrumentSuggestions}
-		name="instruments"
+		field={fields.instruments}
 		placeholder={m.classified_post_fields_e_g_drums_bass()}
 	/>
 </FormField>
-<FormField name="genres" label={m.classified_post_fields_genres()}>
+<FormField field={fields.genres} label={m.classified_post_fields_genres()}>
 	<FreeformTagInput
 		bind:value={genres}
 		suggestions={genreSuggestions}
-		name="genres"
+		field={fields.genres}
 		placeholder={m.classified_post_fields_e_g_surf_jazz()}
 	/>
 </FormField>
-<FormField name="skills" label={m.classified_post_fields_skills()}>
+<FormField field={fields.skills} label={m.classified_post_fields_skills()}>
 	<FreeformTagInput
 		bind:value={skills}
-		name="skills"
+		field={fields.skills}
 		placeholder={m.classified_post_fields_e_g_mixing_lessons()}
 	/>
 </FormField>

@@ -121,7 +121,9 @@
 					successToast={m.volunteer_my_shift_card_success_toast()}
 				>
 					{#snippet form()}
-						<input type="hidden" name="signupId" value={shift.signupId} />
+						<input
+							{...cancelMySignup.for(shift.signupId).fields.signupId.as('hidden', shift.signupId)}
+						/>
 						<p class="text-sm">
 							{shift.roleName}{shift.startsAt
 								? m.volunteer_my_shift_card_text({

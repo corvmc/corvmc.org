@@ -390,7 +390,7 @@
 										successToast={m.staff_volunteer_schedule_success_toast()}
 									>
 										{#snippet form()}
-											<input type="hidden" name="shiftId" value={w.id} />
+											<input {...confirmShiftClaims.for(w.id).fields.shiftId.as('hidden', w.id)} />
 											<p class="text-sm">
 												{m.staff_volunteer_schedule_people_have_put_hand_up({
 													unconfirmed,

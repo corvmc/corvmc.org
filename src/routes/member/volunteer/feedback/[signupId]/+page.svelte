@@ -78,7 +78,7 @@
 				title={ctx.startsAt ? `${ctx.roleName} — ${formatDateShort(ctx.startsAt)}` : ctx.roleName}
 			>
 				<Form remote={submitShiftFeedback} onsuccess={() => (submitted = true)}>
-					<input type="hidden" name="signupId" value={ctx.signupId} />
+					<input {...submitShiftFeedback.fields.signupId.as('hidden', ctx.signupId)} />
 
 					<!-- Label-only wrapper: RatingGroup owns the real `rating` field via its
 				     hidden input, and naming the wrapper too double-registers the name. -->
@@ -104,7 +104,7 @@
 					</Field>
 
 					<FormField
-						name="wasSetUp"
+						field={submitShiftFeedback.fields.wasSetUp}
 						type="checkbox"
 						label={m.member_volunteer_feedback_signup_id_were_set_up_succeed()}
 						checkboxLabel={m.member_volunteer_feedback_signup_id_checkbox_label()}
@@ -112,7 +112,7 @@
 					/>
 
 					<FormField
-						name="comment"
+						field={submitShiftFeedback.fields.comment}
 						type="textarea"
 						label={m.member_volunteer_feedback_signup_id_anything_we_should_fix()}
 						description={m.member_volunteer_feedback_signup_id_optional_sent_staff_with()}

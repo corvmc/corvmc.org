@@ -220,19 +220,19 @@
 							</p>
 						{/if}
 						<FormField
-							name="title"
+							field={editSuggestion.fields.title}
 							type="text"
 							label={m.member_what_should_we_do()}
 							value={s.title}
 						/>
 						<FormField
-							name="body"
+							field={editSuggestion.fields.body}
 							type="textarea"
 							label={m.member_tell_us_bit_more()}
 							value={s.body}
 						/>
 						<FormField
-							name="category"
+							field={editSuggestion.fields.category}
 							type="select"
 							label={m.member_category()}
 							value={s.category}
@@ -265,9 +265,9 @@
 						<p class="mb-3 text-muted">
 							{m.member_takes_suggestion_off_board_straight()}
 						</p>
-						<FormField name="reason" type="text" label={m.member_what_s_problem()} />
+						<FormField field={flag.fields.reason} type="text" label={m.member_what_s_problem()} />
 						<FormField
-							name="description"
+							field={flag.fields.description}
 							type="textarea"
 							label={m.member_anything_else_optional()}
 						/>

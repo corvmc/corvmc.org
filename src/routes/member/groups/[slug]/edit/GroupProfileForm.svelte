@@ -67,7 +67,6 @@
 
 			<FormField
 				label={m.member_groups_slug_edit_group_profile_form_photo()}
-				name="avatarKey"
 				type="file"
 				upload={uploadAvatar}
 				accept="image/jpeg,image/png,image/webp"

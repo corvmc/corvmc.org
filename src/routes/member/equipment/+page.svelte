@@ -238,7 +238,7 @@
 			}}
 		>
 			<Field
-				name="requestedPickupDate"
+				field={submitRequest.fields.requestedPickupDate}
 				type="date"
 				label={m.member_equipment_preferred_pickup_date()}
 				required
@@ -250,14 +250,20 @@
 			}}
 		>
 			<Field
-				name="estimatedReturnDate"
+				field={submitRequest.fields.estimatedReturnDate}
 				type="date"
 				label={m.member_equipment_estimated_return_date()}
 				required
 			/>
 		</div>
 		{#if !isFreeForm}
-			<Field name="quantity" type="number" value={1} label={m.member_equipment_quantity()} />
+			<Field
+				field={submitRequest.fields.quantity}
+				submitAs="text"
+				type="number"
+				value={1}
+				label={m.member_equipment_quantity()}
+			/>
 		{/if}
 		{#if costEstimate != null}
 			<div class="rounded-lg bg-info/10 px-4 py-3 text-sm">
@@ -278,7 +284,7 @@
 			</div>
 		{/if}
 		<Field
-			name="memberNotes"
+			field={submitRequest.fields.memberNotes}
 			type="textarea"
 			label={isFreeForm
 				? m.member_equipment_describe_what_need()

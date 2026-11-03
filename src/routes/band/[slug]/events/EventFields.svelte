@@ -75,6 +75,7 @@
 			posterFile: RemoteFormField<File>;
 			externalTicketUrl: RemoteFormField<string>;
 			ticketPriceDollars: RemoteFormField<string>;
+			lineup: RemoteFormField<string>;
 		};
 		/** The saved event. Absent when creating. */
 		evt?: EventForDisplay;
@@ -203,8 +204,9 @@
 	/>
 {/if}
 
-<FormField name="lineup" label={m.band_slug_events_event_fields_who_s_playing()}>
+<FormField field={fields.lineup} label={m.band_slug_events_event_fields_who_s_playing()}>
 	<LineupEditor
+		field={fields.lineup}
 		bind:value={lineup}
 		ownerBandId={bandId}
 		{readonly}

@@ -62,7 +62,6 @@
 		{#if canCancel}
 			<FormField
 				type="checkbox"
-				name="alsoCancel"
 				label={m.actions_refund_reservation_cancellation()}
 				checkboxLabel={m.actions_refund_reservation_checkbox_label()}
 				bind:value={alsoCancel}

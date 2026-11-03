@@ -38,10 +38,18 @@
 		{#if standing.status !== 'none'}
 			<p class="mb-3 text-muted">{m.member_staff_will_look_at_before()}</p>
 		{/if}
-		<FormField name="title" type="text" label={m.member_what_should_we_do()} />
-		<FormField name="body" type="textarea" label={m.member_tell_us_bit_more()} />
 		<FormField
-			name="category"
+			field={createSuggestion.fields.title}
+			type="text"
+			label={m.member_what_should_we_do()}
+		/>
+		<FormField
+			field={createSuggestion.fields.body}
+			type="textarea"
+			label={m.member_tell_us_bit_more()}
+		/>
+		<FormField
+			field={createSuggestion.fields.category}
 			type="select"
 			label={m.member_category()}
 			options={suggestionCategories.map((c) => ({

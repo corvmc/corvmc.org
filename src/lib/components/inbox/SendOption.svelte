@@ -35,9 +35,7 @@
 </script>
 
 <Button
-	type="submit"
-	name="disposition"
-	{value}
+	{...ctx?.fields?.disposition.as('submit', value) ?? { type: 'submit' }}
 	variant="default"
 	size="sm"
 	class={className}

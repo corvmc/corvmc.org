@@ -14,12 +14,15 @@
 		value = $bindable<string[]>([]),
 		suggestions = [],
 		placeholder = m.ui_freeform_tag_input_placeholder(),
-		name
+		name,
+		field
 	}: {
 		value?: string[];
 		suggestions?: string[];
 		placeholder?: string;
 		name?: string;
+		/** The remote form field the JSON list submits as, in place of `name`. */
+		field?: { as: (type: 'hidden', value: string) => Record<string, unknown> };
 	} = $props();
 
 	let input = $state('');
@@ -58,7 +61,9 @@
 	}
 </script>
 
-{#if name}
+{#if field}
+	<input {...field.as('hidden', JSON.stringify(value))} />
+{:else if name}
 	<input type="hidden" {name} value={JSON.stringify(value)} />
 {/if}
 

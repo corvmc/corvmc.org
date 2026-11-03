@@ -9,6 +9,12 @@
 		readonly issues: RemoteFormIssue[] | null;
 		issuesFor(fieldName: string): RemoteFormIssue[] | null;
 		readonly values?: Record<string, unknown>;
+		/**
+		 * The remote form's fields, for a field set shared by several forms (a
+		 * wizard step) to take its names from. Untyped: each form's differ.
+		 */
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		readonly fields?: any;
 		submit(): void;
 		reset(): void;
 		changed(): void;
@@ -139,6 +145,9 @@
 		get issues() {
 			if (remote) return remote.fields.allIssues?.() ?? null;
 			return actionIssues;
+		},
+		get fields() {
+			return remote?.fields;
 		},
 		issuesFor(fieldName: string) {
 			if (remote) return remote.fields[fieldName]?.issues() ?? null;

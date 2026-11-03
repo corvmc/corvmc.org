@@ -55,7 +55,7 @@
 
 		<input
 			id="amount"
-			name="amount"
+			{...remote.fields.amount.as('text')}
 			type="range"
 			min={MIN_AMOUNT}
 			max={MAX_AMOUNT}
@@ -82,7 +82,7 @@
 
 	<div>
 		<Field
-			name="coverFees"
+			field={remote.fields.coverFees}
 			type="toggle"
 			label=""
 			bind:value={coverFees}

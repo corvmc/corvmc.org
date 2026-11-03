@@ -8,6 +8,7 @@
 		getReservationEndTimes
 	} from '#lib/remote/reservations.remote.js';
 	import * as Form from '#lib/components/ui/Form/index.js';
+	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import { today, getLocalTimeZone, parseDate, type DateValue } from '@internationalized/date';
 	import { isValidPhone } from '#lib/utils/phone.js';
@@ -35,6 +36,8 @@
 	} = $props();
 
 	const tz = getLocalTimeZone();
+	// Three booking forms share this step, so the names come from whichever one holds it.
+	const fields = getFormContext()!.fields;
 
 	// Left empty until availability loads, then preselected to the first bookable
 	// day (see the effect below). Defaulting to today opened the dialog on a dead
@@ -193,7 +196,7 @@
 		/>
 	{:else}
 		<Form.Field
-			name="date"
+			field={fields.date}
 			label=""
 			type="calendar"
 			bind:value={date}
@@ -210,7 +213,7 @@
 
 		<div class="grid grid-cols-2 gap-2">
 			<Form.Field
-				name="startTime"
+				field={fields.startTime}
 				label={m.reservations_booking_date_time_step_start_time()}
 				type="select"
 				bind:value={startTime}
@@ -224,7 +227,7 @@
 			/>
 
 			<Form.Field
-				name="endTime"
+				field={fields.endTime}
 				label={m.reservations_booking_date_time_step_end_time()}
 				type="select"
 				bind:value={endTime}
@@ -241,12 +244,9 @@
 		</div>
 
 		{#if needsPhone}
-			<!-- Bound by `name`, not `field`: FormField only wires bind:value on the
-			     name-only branch, and step1Valid needs to see each keystroke. Issues
-			     resolve identically either way (Form.issuesFor reads
-			     remote.fields[name].issues()). -->
+			<!-- Bound as well as field-backed: step1Valid needs to see each keystroke. -->
 			<Form.Field
-				name="phone"
+				field={fields.phone}
 				type="tel"
 				label={m.reservations_booking_date_time_step_contact_phone()}
 				bind:value={phone}
@@ -257,7 +257,7 @@
 		{/if}
 
 		<Form.Field
-			name="notes"
+			field={fields.notes}
 			label={m.reservations_booking_date_time_step_notes_optional()}
 			type="textarea"
 			bind:value={notes}
@@ -271,10 +271,11 @@
 				<div class="flex gap-1">
 					{#each [{ value: '', label: m.reservations_booking_date_time_step_one_time() }, { value: 'weekly', label: m.reservations_booking_date_time_step_weekly() }, { value: 'biweekly', label: m.reservations_booking_date_time_step_biweekly() }, { value: 'monthly', label: m.reservations_booking_date_time_step_monthly() }] as opt (opt.value)}
 						<label class="btn flex-1 btn-sm" class:btn-primary={frequency === opt.value}>
+							<!-- One-time posts nothing: kit refuses a radio with an empty value. -->
 							<input
-								type="radio"
-								name="recurring"
-								value={opt.value}
+								{...opt.value
+									? fields.recurring.as('radio', opt.value)
+									: { type: 'radio', value: '' }}
 								bind:group={frequency}
 								class="hidden"
 							/>
@@ -293,9 +294,7 @@
 						{#each [{ value: 'weekday', label: monthlyLabels.weekday }, { value: 'monthday', label: monthlyLabels.monthday }] as opt (opt.value)}
 							<label class="btn justify-start btn-sm" class:btn-primary={monthlyMode === opt.value}>
 								<input
-									type="radio"
-									name="monthlyMode"
-									value={opt.value}
+									{...fields.monthlyMode.as('radio', opt.value)}
 									bind:group={monthlyMode}
 									class="hidden"
 								/>
@@ -308,7 +307,7 @@
 
 			{#if frequency}
 				<Form.Field
-					name="recurringUntil"
+					field={fields.recurringUntil}
 					type="date"
 					label={m.reservations_booking_date_time_step_label()}
 					min={date}
