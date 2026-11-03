@@ -126,7 +126,7 @@
 						outline
 						modalTitle={m.band_slug_members_your_membership_leave_band()}
 						submitLabel={m.band_slug_members_your_membership_leave_band()}
-						confirm="Leave {bandName}? You'll need to be re-invited to rejoin."
+						confirm={m.band_slug_members_your_membership_confirm({ bandName })}
 						successToast={m.band_slug_members_your_membership_have_left_band()}
 						onsuccess={() => goto(resolve('/member/bands'))}
 					>

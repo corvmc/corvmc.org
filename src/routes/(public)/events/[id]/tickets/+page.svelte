@@ -100,7 +100,9 @@
 			{#if data.remaining !== null}
 				<p class="mt-1 text-sm">
 					{#if soldOut}
-						<span class="font-medium text-error">{isFreeEvent ? 'Full' : 'Sold out'}</span>
+						<span class="font-medium text-error"
+							>{isFreeEvent ? m.public_full() : m.public_events_id_tickets_sold_out()}</span
+						>
 					{:else}
 						{(isFreeEvent
 							? m.public_events_id_tickets_spots_remaining

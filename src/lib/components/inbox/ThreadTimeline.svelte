@@ -60,8 +60,13 @@
 	// Only used when a message has no stored author name. The member-facing
 	// timeline passes no contactName — naming the other side after the thread's
 	// contact would have staff replies signed with the member's own name.
-	const ownName = $derived(viewerUserId ? 'You' : 'Staff');
-	const otherName = $derived(contactName ?? (viewerUserId ? 'CorvMC' : 'Contact'));
+	const ownName = $derived(
+		viewerUserId ? m.inbox_thread_timeline_text() : m.inbox_thread_timeline_staff()
+	);
+	const otherName = $derived(
+		contactName ??
+			(viewerUserId ? m.inbox_thread_timeline_corvmc() : m.inbox_thread_timeline_contact())
+	);
 
 	type Entry =
 		{ kind: 'message'; at: number; message: Message } | { kind: 'note'; at: number; note: Note };
@@ -107,7 +112,7 @@
 			<div class="mx-6 border-l-2 border-dashed border-base-content/20 py-1 pl-3">
 				<div class="flex items-center gap-1.5 text-xs opacity-50">
 					<IconNote size={13} />
-					{note.authorName ?? 'Staff'} · {formatDateTime(note.createdAt)}
+					{note.authorName ?? m.inbox_thread_timeline_staff()} · {formatDateTime(note.createdAt)}
 				</div>
 				<div class="text-muted whitespace-pre-wrap">{note.body}</div>
 			</div>

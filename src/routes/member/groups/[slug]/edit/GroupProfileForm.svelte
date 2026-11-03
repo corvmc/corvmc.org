@@ -14,7 +14,11 @@
 	let { group }: { group: Awaited<ReturnType<typeof getGroupEditor>> } = $props();
 
 	const fields = updateGroupProfileForm.fields;
-	const kindLabel = $derived(group.kind === 'committee' ? 'committee' : 'club');
+	const kindLabel = $derived(
+		group.kind === 'committee'
+			? m.member_groups_slug_edit_group_profile_form_committee()
+			: m.member_groups_slug_edit_group_profile_form_club()
+	);
 
 	let bioHtml = $state(untrack(() => group.bio) ?? '');
 

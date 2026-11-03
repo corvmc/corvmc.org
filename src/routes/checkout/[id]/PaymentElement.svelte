@@ -215,6 +215,8 @@
 		onclick={pay}
 		title={ready ? undefined : m.public_checkout_id_payment_element_title()}
 	>
-		{confirming ? 'Paying…' : `Pay ${total}`}
+		{confirming
+			? m.public_checkout_id_payment_element_paying()
+			: m.public_checkout_id_payment_element_pay({ total })}
 	</Button>
 </div>

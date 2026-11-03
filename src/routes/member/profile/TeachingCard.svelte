@@ -125,7 +125,11 @@
 						value={instructor.applicationNote}
 					/>
 				{/if}
-				<SubmitButton>{isApplication ? 'Send for review' : 'Save listing'}</SubmitButton>
+				<SubmitButton
+					>{isApplication
+						? m.member_profile_teaching_card_send_review()
+						: m.member_profile_teaching_card_save_listing()}</SubmitButton
+				>
 			</Form>
 		{/if}
 
@@ -135,7 +139,9 @@
 					{...acceptFields.accepting.as('hidden', instructor.acceptingStudents ? 'false' : 'true')}
 				/>
 				<SubmitButton variant="ghost">
-					{instructor.acceptingStudents ? 'Stop taking new students' : 'Take new students again'}
+					{instructor.acceptingStudents
+						? m.member_profile_teaching_card_stop_taking_new_students()
+						: m.member_profile_teaching_card_take_new_students_again()}
 				</SubmitButton>
 			</Form>
 		{/if}

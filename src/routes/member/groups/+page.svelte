@@ -125,7 +125,9 @@
 							<div class="min-w-0">
 								<span class="font-semibold">{a.name}</span>
 								<p class="text-subtle">
-									{kindLabel(a.kind)} · {a.open ? 'you applied to join' : 'your application'}
+									{kindLabel(a.kind)} · {a.open
+										? m.member_groups_applied_join()
+										: m.member_groups_application()}
 								</p>
 								<!-- The reviewer's reason, where they left one: a decision you
 								     cannot see is one you cannot ask about. -->
@@ -147,8 +149,10 @@
 										variant="ghost"
 										size="xs"
 										confirm={a.sharedWith > 0
-											? `This application also names ${a.sharedWith} other ${a.sharedWith === 1 ? 'committee' : 'committees'}, and withdrawing takes it back from all of them. Anything already decided stays decided.`
-											: 'Withdraw this application?'}
+											? m.member_groups_application_also_names_other_committees({
+													sharedWith: a.sharedWith
+												})
+											: m.member_groups_confirm()}
 										successToast={m.member_groups_success_toast()}
 									>
 										{#snippet form()}

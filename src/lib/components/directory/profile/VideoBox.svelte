@@ -35,7 +35,7 @@
 						class:is-active={i === activeIndex}
 						onclick={() => (activeIndex = i)}
 					>
-						{item.video.label || `Video ${i + 1}`}
+						{item.video.label || m.directory_profile_video_box_video({ value: i + 1 })}
 					</button>
 				{/each}
 			</div>

@@ -27,7 +27,9 @@
 	const res = $derived(await getBandReservationDetail({ slug, reservationId: page.params.id! }));
 
 	const cancel = $derived(cancelBandReservation.for(res.id));
-	const durationLabel = $derived(`${res.durationHours} hour${res.durationHours === 1 ? '' : 's'}`);
+	const durationLabel = $derived(
+		m.band_slug_reservations_id_hours({ durationHours: res.durationHours })
+	);
 	// `paidAt` set ⇒ paid; null with `cashDueCents > 0` ⇒ cash owed; null with 0
 	// ⇒ comped or fully credit-settled. See the schema comment on the column.
 	const cashDue = $derived(res.cashDueCents ?? 0);
@@ -51,7 +53,7 @@
 		{/if}
 		{#if res.status === 'cancelled'}
 			<Fact label={m.band_slug_reservations_id_cancelled()} wrap
-				>{res.cancellationReason ?? 'No reason was recorded.'}</Fact
+				>{res.cancellationReason ?? m.band_slug_reservations_id_no_reason_was_recorded()}</Fact
 			>
 		{/if}
 		{#if res.notes}

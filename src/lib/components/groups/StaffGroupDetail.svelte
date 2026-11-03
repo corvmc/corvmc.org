@@ -99,7 +99,7 @@
 				label={msg.groups_staff_group_detail_reactivate()}
 				modalTitle={msg.groups_staff_group_detail_reactivate_group()}
 				submitLabel={msg.groups_staff_group_detail_reactivate()}
-				confirm="Put {group.name} back in the directory?"
+				confirm={msg.groups_staff_group_detail_put_back_directory({ name: group.name })}
 				successToast={msg.groups_staff_group_detail_reactivated()}
 				variant="primary"
 				size="sm"
@@ -156,8 +156,13 @@
 								? msg.groups_staff_group_detail_make_chair_2({ title: m.member.title })
 								: msg.groups_staff_group_detail_remove_as_chair({ title: m.member.title })}
 							confirm={makeChair
-								? `Make ${m.member.title} a chair of ${group.name}?`
-								: `Remove ${m.member.title} as a chair? They stay on the roster.`}
+								? msg.groups_staff_group_detail_make_chair_3({
+										title: m.member.title,
+										name: group.name
+									})
+								: msg.groups_staff_group_detail_remove_as_chair_they_stay({
+										title: m.member.title
+									})}
 							successToast={makeChair
 								? msg.groups_staff_group_detail_chair_added()
 								: msg.groups_staff_group_detail_chair_removed()}
@@ -242,7 +247,9 @@
 				label={msg.groups_staff_group_detail_deactivate()}
 				modalTitle={msg.groups_staff_group_detail_deactivate_group()}
 				submitLabel={msg.groups_staff_group_detail_deactivate()}
-				confirm="Deactivate {group.name}? Its roster and history stay intact and you can reactivate it later."
+				confirm={msg.groups_staff_group_detail_deactivate_its_roster_history_stay({
+					name: group.name
+				})}
 				successToast={msg.groups_staff_group_detail_deactivated()}
 				variant="error"
 				size="sm"

@@ -118,6 +118,8 @@
 		onclick={save}
 		title={ready ? undefined : m.member_membership_setup_element_title()}
 	>
-		{saving ? 'Saving…' : 'Save card'}
+		{saving
+			? m.member_membership_setup_element_saving()
+			: m.member_membership_setup_element_save_card()}
 	</Button>
 </div>

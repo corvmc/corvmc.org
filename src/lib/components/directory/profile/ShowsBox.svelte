@@ -81,7 +81,9 @@
 		{#if hasMore && loadMorePast}
 			<div class="shows__more">
 				<Button type="button" variant="ghost" size="sm" disabled={loading} onclick={showMore}>
-					{loading ? 'Loading…' : 'Show more'}
+					{loading
+						? m.directory_profile_shows_box_loading()
+						: m.directory_profile_shows_box_show_more()}
 				</Button>
 			</div>
 		{/if}

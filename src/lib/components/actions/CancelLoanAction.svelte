@@ -10,7 +10,7 @@
 	let {
 		loanId,
 		label = m.actions_cancel(),
-		confirm: confirmText = 'Cancel this loan?',
+		confirm: confirmText = m.actions_cancel_loan_confirm(),
 		variant = 'ghost',
 		size = 'sm',
 		class: className = 'text-error',

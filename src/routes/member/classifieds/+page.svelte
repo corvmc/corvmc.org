@@ -155,7 +155,9 @@
 					<th>{m.member_classifieds_post()}</th>
 					<th>{m.member_classifieds_posted_by()}</th>
 					<th class="col-support">{m.member_tags()}</th>
-					<th class="col-extra whitespace-nowrap">{tab === 'mine' ? 'Expires' : 'Posted'}</th>
+					<th class="col-extra whitespace-nowrap"
+						>{tab === 'mine' ? m.member_classifieds_expires() : m.member_classifieds_posted()}</th
+					>
 				{/snippet}
 				{#each rows as r (r.id)}
 					<tr class="hover cursor-pointer" use:rowLink={resolve(`/member/classifieds/${r.id}`)}>

@@ -15,9 +15,34 @@ tester.run('no-literal-ui-text', rule as never, {
 		{ filename: 'a.svelte', code: '<div class="text-sm" data-kind="Band" name="title"></div>' },
 		{ filename: 'a.svelte', code: "<script>const tab = { id: 'members' };</script>" },
 		{ filename: 'a.svelte', code: '<style>.a { color: red; }</style>' },
+		// A <style> in <svelte:head> is CSS, not copy.
+		{
+			filename: 'a.svelte',
+			code: '<svelte:head><style>@media print { a { color: red; } }</style></svelte:head>'
+		},
+		// A variable that never reaches the page is not interface copy.
+		{ filename: 'a.svelte', code: "<script>const kind = 'band';</script><p>{m.x({ kind })}</p>" },
+		{ filename: 'a.svelte', code: '<p>{count}</p>' },
 		{ filename: 'a.svelte', code: '<p>CorvMC</p>', options: [{ allow: ['CorvMC'] }] }
 	],
 	invalid: [
+		{
+			filename: 'a.svelte',
+			code: "<p>{open ? 'Hide' : 'Show'}</p>",
+			errors: [...literal, ...literal]
+		},
+		{ filename: 'a.svelte', code: "<p>{name ?? 'Someone'}</p>", errors: literal },
+		{
+			filename: 'a.svelte',
+			code: "<script>const label = $derived(open ? 'Hide' : 'Show');</script><p>{label}</p>",
+			errors: [...literal, ...literal]
+		},
+		{
+			filename: 'a.svelte',
+			code: "<script>const hint = 'Pick one';</script><Field label={hint} />",
+			errors: literal
+		},
+		{ filename: 'a.svelte', code: '<CrossRefList note="3 active" />', errors: literal },
 		{ filename: 'a.svelte', code: '<p>Book a room</p>', errors: literal },
 		{ filename: 'a.svelte', code: '<PageHeader title="Members" />', errors: literal },
 		{ filename: 'a.svelte', code: '<Action successToast="Saved" />', errors: literal },

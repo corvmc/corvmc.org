@@ -136,7 +136,11 @@
 			<VideoBox videos={band.pressKit.videos} />
 		{/snippet}
 		{#snippet side()}
-			<CrossRefList kind="members" items={memberRefs} note={`${band.memberCount} · roles`} />
+			<CrossRefList
+				kind="members"
+				items={memberRefs}
+				note={msg.public_directory_bands_slug_note({ memberCount: band.memberCount })}
+			/>
 			<TagCloud label={msg.public_directory_bands_slug_genres_influences()} tags={band.genres} />
 			<LinksBox links={band.links} />
 			<div id="booking">

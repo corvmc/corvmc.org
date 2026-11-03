@@ -97,12 +97,16 @@
 	{#snippet header()}
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<CardTitle>
-				{showAll || !hasInterests ? 'Open shifts' : 'Open shifts for you'}
+				{showAll || !hasInterests
+					? m.volunteer_open_shifts_open_shifts()
+					: m.volunteer_open_shifts_open_shifts_2()}
 				<span class="text-muted font-normal">· {filtered.length}</span>
 			</CardTitle>
 			{#if hasInterests && matches.length !== available.length}
 				<Button size="xs" variant="ghost" onclick={() => (showAll = !showAll)}>
-					{showAll ? `Show matches (${matches.length})` : `Show all ${available.length}`}
+					{showAll
+						? m.volunteer_open_shifts_show_matches({ length: matches.length })
+						: m.volunteer_open_shifts_show_all({ length: available.length })}
 				</Button>
 			{/if}
 		</div>
@@ -145,8 +149,11 @@
 					     most likely to get somebody to take a shift. -->
 					<div class="text-xs {shift.claimed === 0 ? 'text-warning' : 'text-subtle'}">
 						{shift.claimed === 0
-							? 'nobody on it yet'
-							: `${shift.claimed} of ${shift.capacity} filled`}
+							? m.volunteer_open_shifts_nobody_yet()
+							: m.volunteer_open_shifts_filled({
+									claimed: shift.claimed,
+									capacity: shift.capacity
+								})}
 					</div>
 
 					<div class="mt-2">

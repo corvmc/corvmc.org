@@ -143,7 +143,9 @@
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<div>
 					<p class="font-medium">
-						{toNotify > 0 ? `${toNotify} to notify` : 'Everybody has been notified'}
+						{toNotify > 0
+							? m.volunteer_work_order_view_notify({ toNotify })
+							: m.volunteer_work_order_view_everybody_has_been_notified()}
 					</p>
 					<p class="text-sm">
 						{shift.cancelledByName
@@ -200,7 +202,9 @@
 				{#snippet header()}
 					<div class="flex items-center justify-between gap-2">
 						<CardTitle>
-							{calledOff ? 'Who to tell' : "Who's on it"} · {claimants.length}
+							{calledOff
+								? m.volunteer_work_order_view_who_tell()
+								: m.volunteer_work_order_view_who_s()} · {claimants.length}
 						</CardTitle>
 						{#if !calledOff && unconfirmed.length > 1}
 							<Action
@@ -249,7 +253,9 @@
 													? 'badge-success'
 													: 'badge-warning'}"
 											>
-												{claimant.notifiedAt ? 'notified' : 'not notified'}
+												{claimant.notifiedAt
+													? m.volunteer_work_order_view_notified_2()
+													: m.volunteer_work_order_view_not_notified()}
 											</span>
 										{:else}
 											<span
@@ -398,7 +404,9 @@
 							<li class="flex flex-wrap items-center gap-2">
 								<EntityIdentity ref={invitation.member} size="sm" />
 								<Badge variant={invitation.status === 'declined' ? 'error' : 'ghost'} size="xs">
-									{invitation.status === 'declined' ? 'SAID NO' : 'WAITING'}
+									{invitation.status === 'declined'
+										? m.volunteer_work_order_view_said_no()
+										: m.volunteer_work_order_view_waiting()}
 								</Badge>
 								{#if invitation.invitedByName}
 									<span class="text-subtle text-xs"

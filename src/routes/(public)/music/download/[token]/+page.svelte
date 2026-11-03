@@ -49,8 +49,8 @@
 		<h1 class="text-3xl font-semibold">{m.public_music_download_token_confirming_payment()}</h1>
 		<Alert type={attempts >= RETRY_LIMIT ? 'warning' : 'info'}>
 			{attempts >= RETRY_LIMIT
-				? "We haven't had confirmation from our payment processor yet. Nothing has gone wrong with your order — the download link is emailed to you as soon as it lands, and this page will work then too."
-				: 'This usually takes a couple of seconds. Your files appear here as soon as it clears.'}
+				? m.public_music_download_token_we_haven_t_had_confirmation()
+				: m.public_music_download_token_usually_takes_couple_seconds_fil()}
 		</Alert>
 	{:else}
 		<div>

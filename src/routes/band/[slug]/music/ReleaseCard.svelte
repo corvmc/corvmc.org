@@ -109,7 +109,7 @@
 			     column, the price won the eye over the release's name (#1049). -->
 			<div class="shrink-0 text-right">
 				<p>
-					{release.priceMinCents === 0 ? 'Free' : formatCents(release.priceMinCents)}
+					{release.priceMinCents === 0 ? m.band_free() : formatCents(release.priceMinCents)}
 					{#if release.priceMinCents > 0 && release.allowPayMore}
 						<span class="text-muted">{m.band_slug_music_release_card_more()}</span>
 					{/if}
@@ -117,7 +117,9 @@
 				{#if release.salesCount > 0}
 					<p class="text-muted">
 						{release.salesCount}
-						{release.salesCount === 1 ? 'sale' : 'sales'}
+						{release.salesCount === 1
+							? m.band_slug_music_release_card_sale()
+							: m.band_slug_music_release_card_sales()}
 					</p>
 				{/if}
 			</div>

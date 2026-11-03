@@ -91,8 +91,12 @@
 						{/if}
 						<span>
 							{draft
-								? `Saved ${formatDateShort(post.updatedAt)}`
-								: `Posted ${formatDateShort(post.publishedAt!)}`}
+								? m.groups_announcement_list_saved({
+										formatDateShort: formatDateShort(post.updatedAt)
+									})
+								: m.groups_announcement_list_posted({
+										formatDateShort: formatDateShort(post.publishedAt!)
+									})}
 						</span>
 						{#if post.recipientCount !== null}
 							<span
@@ -112,7 +116,9 @@
 									label={m.groups_announcement_list_publish()}
 									modalTitle={m.groups_announcement_list_publish_announcement()}
 									submitLabel={m.groups_announcement_list_publish()}
-									confirm="Publish “{post.title}”? Everyone on the roster can read it from then on, and publishing cannot be undone."
+									confirm={m.groups_announcement_list_publish_everyone_roster_can_read({
+										title: post.title
+									})}
 									successToast={m.groups_announcement_list_published()}
 									variant="primary"
 									size="xs"
@@ -151,7 +157,9 @@
 								label={m.groups_delete()}
 								modalTitle={m.groups_announcement_list_delete_announcement()}
 								submitLabel={m.groups_delete()}
-								confirm="Delete “{post.title}”? It comes off the list for everyone."
+								confirm={m.groups_announcement_list_delete_comes_off_list_everyone({
+									title: post.title
+								})}
 								successToast={m.groups_deleted()}
 								variant="error"
 								size="xs"

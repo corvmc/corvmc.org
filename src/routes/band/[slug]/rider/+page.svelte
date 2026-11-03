@@ -287,7 +287,8 @@
 			{:else}
 				<DefinitionList>
 					<Fact label={msg.band_slug_rider_who_engineer_should_call()}>
-						{roster.find((m) => m.userId === rider.techContactUserId)?.name ?? 'Nobody yet'}
+						{roster.find((m) => m.userId === rider.techContactUserId)?.name ??
+							msg.band_nobody_yet()}
 					</Fact>
 					{#if rider.notes}
 						<Fact label={msg.band_notes()} class="whitespace-pre-line">{rider.notes}</Fact>

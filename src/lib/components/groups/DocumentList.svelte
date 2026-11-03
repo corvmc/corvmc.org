@@ -109,7 +109,7 @@
 							label={m.groups_delete()}
 							modalTitle={m.groups_document_list_modal_title()}
 							submitLabel={m.groups_delete()}
-							confirm="Delete “{doc.filename}”? It comes off the list for everyone."
+							confirm={m.groups_document_list_confirm({ filename: doc.filename })}
 							successToast={m.groups_deleted()}
 							variant="error"
 							size="xs"

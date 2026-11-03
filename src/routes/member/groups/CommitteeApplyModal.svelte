@@ -42,7 +42,7 @@
 		{#key selectedId}
 			<CheckboxGroup
 				field={fields.groupIds}
-				legend="Committees"
+				legend={m.member_groups_committee_apply_modal_legend()}
 				options={committees.map((c) => ({ value: c.id, label: c.name, description: c.bio }))}
 				selected={selectedId ? [selectedId] : []}
 			/>

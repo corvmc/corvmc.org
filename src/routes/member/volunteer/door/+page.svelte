@@ -155,7 +155,7 @@
 			<div class="flex flex-wrap gap-3">
 				{#if bridge}
 					<Button variant="primary" class="min-h-11" disabled={busy} onclick={tap}>
-						{tapError ? 'Try the tap again' : 'Tap to pay'}
+						{tapError ? m.member_volunteer_door_try_tap_again() : m.member_volunteer_door_tap_pay()}
 					</Button>
 				{:else if door.canSimulate}
 					<Button variant="primary" class="min-h-11" disabled={busy} onclick={simulate}>

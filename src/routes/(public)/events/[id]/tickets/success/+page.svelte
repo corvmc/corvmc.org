@@ -84,8 +84,8 @@
 	{#if pending}
 		<Alert type="info">
 			{attempts >= RETRY_LIMIT
-				? "We haven't had confirmation from our payment processor yet. Your tickets are below and stay valid — if the confirmation email doesn't arrive shortly, get in touch."
-				: 'Confirming your payment…'}
+				? m.public_events_id_tickets_success_we_haven_t_had_confirmation()
+				: m.public_events_id_tickets_success_confirming_payment()}
 		</Alert>
 	{/if}
 

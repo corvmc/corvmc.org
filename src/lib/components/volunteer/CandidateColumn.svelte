@@ -179,7 +179,7 @@
 						<div class="min-w-0">
 							<EntityIdentity ref={row.member} />
 							<div class="truncate text-subtle text-xs">
-								{row.availability || "Hasn't said when they're free"}
+								{row.availability || msg.volunteer_candidate_column_hasn_t_said_when_they()}
 							</div>
 							<div class="{f.tone} truncate text-xs">{f.text}</div>
 						</div>

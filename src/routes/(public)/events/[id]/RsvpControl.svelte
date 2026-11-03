@@ -18,7 +18,9 @@
 	}: { eventId: string; eventTitle: string; external?: boolean } = $props();
 
 	const status = $derived(await getRsvpStatus(eventId));
-	const label = $derived(external ? "I'm going" : 'RSVP');
+	const label = $derived(
+		external ? m.public_events_id_rsvp_control_i_m_going() : m.public_events_id_rsvp_control_rsvp()
+	);
 	const variant = $derived(external ? 'ghost' : 'primary');
 </script>
 

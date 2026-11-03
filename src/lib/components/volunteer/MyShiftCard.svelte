@@ -123,7 +123,11 @@
 					{#snippet form()}
 						<input type="hidden" name="signupId" value={shift.signupId} />
 						<p class="text-sm">
-							{shift.roleName}{shift.startsAt ? ` on ${formatDateShort(shift.startsAt)}` : ''}, {timeRange}.
+							{shift.roleName}{shift.startsAt
+								? m.volunteer_my_shift_card_text({
+										formatDateShort: formatDateShort(shift.startsAt)
+									})
+								: ''}, {timeRange}.
 						</p>
 						<p class="text-sm">
 							{m.volunteer_my_shift_card_notice_isn_t_no_show()}

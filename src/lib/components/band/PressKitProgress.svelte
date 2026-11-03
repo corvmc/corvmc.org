@@ -51,7 +51,7 @@
 			</div>
 			{#if compact}
 				<Button href={href(next ?? sections[0])} variant="default" size="sm" outline>
-					{next ? 'Finish it' : 'View'}
+					{next ? m.band_press_kit_progress_finish() : m.band_press_kit_progress_view()}
 				</Button>
 			{/if}
 		</div>

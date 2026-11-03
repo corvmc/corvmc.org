@@ -54,7 +54,7 @@
 				<li class="flex items-center gap-2">
 					<IconFileText size={18} class="shrink-0 opacity-60" />
 					<a class="grow link" href={manual.url ?? '#'} target="_blank" rel="noopener external">
-						{manual.filename ?? 'Manual'}
+						{manual.filename ?? m.inventory_item_resources_manual()}
 					</a>
 				</li>
 			{/each}
@@ -120,7 +120,9 @@
 				>
 					<option value="">{m.inventory_item_resources_link_how()}</option>
 					{#each data.linkable as article (article.id)}
-						<option value={article.id}>{article.title}{article.published ? '' : ' (draft)'}</option>
+						<option value={article.id}
+							>{article.title}{article.published ? '' : m.inventory_item_resources_draft()}</option
+						>
 					{/each}
 				</Select>
 				<Button type="submit" variant="ghost" size="sm" disabled={!chosenArticle}

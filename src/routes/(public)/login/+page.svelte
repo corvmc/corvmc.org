@@ -190,7 +190,7 @@
 					{/if}
 
 					<CardTitle size="lg" level={2} class="justify-center">
-						{mode === 'login' ? 'Sign in to your account' : 'Create your account'}
+						{mode === 'login' ? m.public_login_sign_account() : m.public_login_create_account_2()}
 					</CardTitle>
 
 					{#if error}
@@ -270,8 +270,8 @@
 
 					<Button variant="ghost" size="sm" onclick={toggleMode}>
 						{mode === 'login'
-							? "Don't have an account? Sign up"
-							: 'Already have an account? Sign in'}
+							? m.public_login_don_t_have_account_sign()
+							: m.public_login_already_have_account_sign()}
 					</Button>
 				</CardBody>
 			</div>

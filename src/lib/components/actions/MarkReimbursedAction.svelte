@@ -36,9 +36,14 @@
 	action={markAcquisitionReimbursed}
 	label={m.actions_mark_reimbursed_label()}
 	modalTitle={m.actions_mark_reimbursed_modal_title()}
-	confirm={`Record that ${paidByName ?? 'whoever paid'} has been paid back${
-		amountCents ? ` for ${formatCents(amountCents)}` : ''
-	}. This does not send any money — it records that the transfer has happened.`}
+	confirm={amountCents
+		? m.actions_mark_reimbursed_confirm_amount({
+				name: paidByName ?? m.actions_mark_reimbursed_whoever_paid(),
+				amount: formatCents(amountCents)
+			})
+		: m.actions_mark_reimbursed_confirm({
+				name: paidByName ?? m.actions_mark_reimbursed_whoever_paid()
+			})}
 	successToast={m.actions_mark_reimbursed_success_toast()}
 	{variant}
 	{size}

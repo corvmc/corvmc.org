@@ -184,7 +184,11 @@
 			data-testid="disposition-reopen"
 		>
 			<IconRotate size={16} />
-			{status === 'snoozed' ? 'Unsnooze' : awaiting ? 'Needs a reply' : 'Reopen'}
+			{status === 'snoozed'
+				? m.inbox_disposition_bar_unsnooze()
+				: awaiting
+					? m.inbox_disposition_bar_needs_reply()
+					: m.inbox_disposition_bar_reopen()}
 		</Button>
 	{/if}
 

@@ -59,7 +59,9 @@
 	// `Button` renders a native `title` on a disabled control precisely for this;
 	// `{...rest}` is spread after it, so a caller's own `title` still wins.
 	const disabledReason = $derived(
-		browser && !disabled && !ctx.currentStepValid ? 'Fill in the required fields first' : undefined
+		browser && !disabled && !ctx.currentStepValid
+			? m.ui_form_submit_button_disabled_reason()
+			: undefined
 	);
 
 	// The status flash outranks the caller's colour: a destructive `variant="error"`

@@ -312,7 +312,9 @@
 				<!-- The server refuses both; the page must not offer them (#2219). -->
 				<div class="edet__ctas">
 					<span class="text-base font-medium text-fg-2">
-						{evt.status === 'cancelled' ? 'Tickets and RSVPs are closed.' : 'This event has ended.'}
+						{evt.status === 'cancelled'
+							? m.member_events_id_tickets_rsvps_closed()
+							: m.member_events_id_event_has_ended()}
 					</span>
 				</div>
 			{:else if evt.ticketingEnabled}
@@ -326,7 +328,11 @@
 								})}</span
 							>
 							{#if lowAvailability}
-								<Badge variant="warning">{isFreeEvent ? 'Almost full' : 'Selling fast'}</Badge>
+								<Badge variant="warning"
+									>{isFreeEvent
+										? m.member_events_id_almost_full()
+										: m.member_events_id_selling_fast()}</Badge
+								>
 							{/if}
 						</div>
 						<progress
@@ -339,7 +345,8 @@
 
 				<div class="edet__ctas">
 					{#if soldOut}
-						<Button variant="default" size="lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</Button
+						<Button variant="default" size="lg" disabled
+							>{isFreeEvent ? m.member_events_id_full() : m.member_events_id_sold_out()}</Button
 						>
 					{:else if !data.myTicket}
 						{#if isFreeEvent}
@@ -480,15 +487,15 @@
 								<strong>{m.member_events_id_re_going()}</strong>
 								<small>
 									{mode === 'external'
-										? 'Tickets are sold separately — grab yours above'
-										: "We'll see you there"}
+										? m.member_events_id_tickets_sold_separately_grab_yours()
+										: m.member_events_id_we_ll_see_there()}
 								</small>
 							</div>
 						</div>
 						<Action
 							action={cancelRsvp}
 							label={m.member_events_id_can_t_make()}
-							confirm="Cancel your RSVP for this event?"
+							confirm={m.member_events_id_confirm()}
 							modalTitle={m.member_events_id_cancel_rsvp()}
 							submitLabel={m.member_events_id_yes_cancel_my_rsvp()}
 							submitVariant="error"

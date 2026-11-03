@@ -64,10 +64,10 @@
 	const dmsOff = $derived(layout.features.directMessages && !layout.acceptsDirectMessages);
 	const emptyMessage = $derived(
 		dmsOff
-			? 'Direct messages are switched off for your account, so only staff can reach you here.'
+			? m.member_messages_conversation_list_direct_messages_switched_o()
 			: layout.features.directMessages
-				? 'Use Message a Member or Message Staff above to start one.'
-				: 'Use Message Staff above to start one.'
+				? m.member_messages_conversation_list_use_message_member_message()
+				: m.member_messages_conversation_list_use_message_staff_above_st()
 	);
 </script>
 

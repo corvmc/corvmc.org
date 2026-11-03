@@ -73,7 +73,10 @@
 		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<h2 class="text-base font-semibold">{title}</h2>
 			{#if mine}<Badge variant="primary">{m.rider_rider_corner_text()}</Badge>{/if}
-			<Badge class="ml-auto">{inputCount} {inputCount === 1 ? 'input' : 'inputs'}</Badge>
+			<Badge class="ml-auto"
+				>{inputCount}
+				{inputCount === 1 ? m.rider_rider_corner_input() : m.rider_rider_corner_inputs()}</Badge
+			>
 		</div>
 		{#if subtitle}
 			<p class="mb-3 text-xs text-base-content/60">{subtitle}</p>

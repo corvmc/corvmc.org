@@ -201,7 +201,7 @@
 					<Fact label={m.public_act_token_playing()}>{ask.bill.join(', ')}</Fact>
 				{/if}
 				<Fact label={m.public_act_token_art_due()}>
-					{ask.dueAt ? formatDateShort(ask.dueAt) : 'No date set — sooner is better'}
+					{ask.dueAt ? formatDateShort(ask.dueAt) : m.public_act_token_no_date_set_sooner_better()}
 				</Fact>
 			</DefinitionList>
 

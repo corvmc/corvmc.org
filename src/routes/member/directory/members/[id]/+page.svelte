@@ -150,7 +150,11 @@
 				/>
 			{/snippet}
 			{#snippet side()}
-				<CrossRefList kind="bands" items={bandRefs} note={`${bandRefs.length} active`} />
+				<CrossRefList
+					kind="bands"
+					items={bandRefs}
+					note={m.member_directory_members_id_note({ length: bandRefs.length })}
+				/>
 				<TagCloud label={m.member_directory_members_id_plays_genres()} {tags} />
 				<TagCloud label={m.member_skills()} tags={member.skills ?? []} />
 				<LinksBox {links} />

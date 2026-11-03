@@ -46,8 +46,8 @@
 	{#if calledOff}
 		<Alert type="warning">
 			{data.shift.shiftCancelledAt
-				? 'This shift was called off. There is nothing to turn up for.'
-				: 'You dropped out of this shift.'}
+				? m.member_volunteer_shifts_signup_id_shift_was_called_off_there()
+				: m.member_volunteer_shifts_signup_id_dropped_out_shift()}
 		</Alert>
 	{/if}
 

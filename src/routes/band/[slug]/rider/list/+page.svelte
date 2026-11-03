@@ -152,7 +152,9 @@
 			<div>
 				<dt class="text-gray-500">{msg.band_monitors()}</dt>
 				<dd class="font-semibold">
-					{rider.monitorFormat ? riderMonitorFormatLabels[rider.monitorFormat] : 'No preference'}
+					{rider.monitorFormat
+						? riderMonitorFormatLabels[rider.monitorFormat]
+						: msg.band_slug_rider_list_no_preference()}
 				</dd>
 			</div>
 		</dl>
@@ -277,7 +279,8 @@
 			<ul class="text-sm">
 				{#each data.uploads as file (file.attachmentId)}
 					<li class="py-1">
-						{file.slot === 'stage_plot' ? 'Stage plot' : 'Tech rider'}: {file.filename ?? 'file'}
+						{file.slot === 'stage_plot' ? msg.band_stage_plot() : msg.band_tech_rider()}: {file.filename ??
+							msg.band_slug_rider_list_file()}
 					</li>
 				{/each}
 			</ul>

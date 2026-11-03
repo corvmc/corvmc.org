@@ -110,7 +110,7 @@
 	{:else if s.visibility !== 'visible'}
 		<Alert type={s.visibility === 'hidden' ? 'error' : 'warning'}>
 			<p>
-				{withheldCopy[s.visibility] ?? 'This is not on the board right now.'}
+				{withheldCopy[s.visibility] ?? m.member_suggestions_id_not_board_right_now()}
 				{#if s.visibilityNote}
 					<ParaglideMessage
 						message={m.member_staff_s_note}
@@ -281,7 +281,9 @@
 		<InfoCard title={m.member_suggestions_id_official_response()}>
 			<p class="whitespace-pre-wrap">{s.responseBody}</p>
 			<p class="mt-2 text-muted">
-				{s.responderName ?? 'Staff'}{s.responseAt ? ` · ${formatDateTime(s.responseAt)}` : ''}
+				{s.responderName ?? m.member_suggestions_id_staff()}{s.responseAt
+					? ` · ${formatDateTime(s.responseAt)}`
+					: ''}
 			</p>
 		</InfoCard>
 	{/if}

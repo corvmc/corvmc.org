@@ -42,8 +42,8 @@
 	{:else if messaging.standing.status !== 'none'}
 		<Alert type="warning">
 			{messaging.standing.status === 'disabled'
-				? 'Direct messaging is switched off for your account by staff.'
-				: 'You cannot start new conversations at the moment. You can still reply to conversations you are already in.'}
+				? m.member_account_direct_messages_section_direct_messaging_swit()
+				: m.member_account_direct_messages_section_cannot_start_new_conv()}
 			{#if messaging.standing.reason}
 				<span class="mt-1 block opacity-80">{messaging.standing.reason}</span>
 			{/if}

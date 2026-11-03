@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
 	import { getFormContext } from '$lib/components/ui/Form/Form.svelte';
 
@@ -23,7 +24,7 @@
 	$effect(() => {
 		if (!result || result === handled) return;
 		const message = result.conflict
-			? 'That time slot was just taken. Please choose another.'
+			? m.reservations_booking_booking_conflict_message()
 			: result.validationError;
 		if (!message) return;
 		handled = result;

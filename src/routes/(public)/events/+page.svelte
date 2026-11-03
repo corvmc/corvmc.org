@@ -152,7 +152,9 @@
 						<!-- Says what is left, like the directory's pager: a bare "Show
 						     more" cannot tell two remaining from two hundred (#1059). -->
 						<Button type="button" variant="ghost" disabled={loadingMore} onclick={showMore}>
-							{loadingMore ? 'Loading…' : `Show more (${remaining} left)`}
+							{loadingMore
+								? m.public_events_loading()
+								: m.public_events_show_more_left({ remaining })}
 						</Button>
 					</div>
 				{/if}

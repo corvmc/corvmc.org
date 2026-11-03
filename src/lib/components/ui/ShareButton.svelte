@@ -59,6 +59,6 @@
 		<IconShare3 size={18} />
 	{/if}
 	{#if label}
-		<span>{copied ? 'Copied' : label}</span>
+		<span>{copied ? m.ui_share_button_copied() : label}</span>
 	{/if}
 </button>

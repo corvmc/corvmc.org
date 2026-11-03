@@ -13,7 +13,9 @@
 
 	let progressLabel = $state('');
 
-	const maxLabel = `${Math.round(AUDIO_MAX_UPLOAD_BYTES / 1024 / 1024)}MB`;
+	const maxLabel = m.band_slug_music_release_id_track_uploader_max_label({
+		round: Math.round(AUDIO_MAX_UPLOAD_BYTES / 1024 / 1024)
+	});
 
 	/**
 	 * Read a file's length in the browser, before uploading it.

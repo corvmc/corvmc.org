@@ -116,7 +116,9 @@
 				size="xs"
 				outline
 			>
-				{payAction === 'reserve' ? 'Prepay' : 'Pay online'}
+				{payAction === 'reserve'
+					? m.member_reservations_reservation_card_prepay()
+					: m.member_pay_online()}
 			</Button>
 		{/if}
 	{/snippet}

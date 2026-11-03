@@ -96,7 +96,9 @@
 			</Card>
 		{:else}
 			<p class="py-8 text-center text-muted">
-				{search ? 'Nobody matches that.' : 'No tickets to check in.'}
+				{search
+					? m.member_volunteer_shifts_signup_id_check_in_nobody_matches()
+					: m.member_volunteer_shifts_signup_id_check_in_no_tickets_check()}
 			</p>
 		{/each}
 	</div>

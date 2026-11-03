@@ -39,7 +39,7 @@
 {#if releases.length > 0}
 	<ProfileSection
 		title={m.directory_profile_releases_box_title()}
-		note={`${releases.length} on CMC`}
+		note={m.directory_profile_releases_box_note({ length: releases.length })}
 	>
 		<ul class="space-y-3">
 			{#each releases as release (release.id)}
@@ -65,7 +65,9 @@
 							</span>
 						</span>
 						<span class="shrink-0 text-muted">
-							{release.priceMinCents === 0 ? 'Free' : formatCents(release.priceMinCents)}
+							{release.priceMinCents === 0
+								? m.directory_profile_releases_box_free()
+								: formatCents(release.priceMinCents)}
 						</span>
 					</a>
 				</li>
