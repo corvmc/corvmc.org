@@ -24,9 +24,7 @@
 	import { navTrail } from '$lib/components/layout/nav-trail';
 	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
 	import { page } from '$app/state';
-	import { untrack } from 'svelte';
 	import { getBandLayout, requireBandLayoutSession } from '$lib/remote/layout.remote';
-	import { afterGate } from '$lib/utils/sign-in';
 	import { setBandLayoutContext } from './layout-context';
 	import {
 		activeBandNavKey,
@@ -54,15 +52,16 @@
 		}
 	});
 
-	// Keyed on the slug alone; the path is read untracked when it changes, so moving between
-	// a band's pages reuses the gate, and an old address still keeps its subpage.
-	const gate = $derived.by(() => {
-		const slug = page.params.slug!;
-		return { slug, path: untrack(() => page.url.pathname + page.url.search) };
+	// The sign-in gate first, then the data (#2197): kit 3 gives a query no page, so the gate takes it
+	// as an argument, and the data query stays unkeyed so a mutation's `.refresh()` finds it.
+	// Serial, not beside it — two queries in flight at once is the kit ≥2.65 render loop.
+	// Runs once per mount: a slug change inside the panel falls back to `getBandLayout`'s own
+	// forward, which drops the subpage.
+	await requireBandLayoutSession({
+		slug: page.params.slug!,
+		path: page.url.pathname + page.url.search
 	});
-	let layout = $derived(
-		await afterGate(requireBandLayoutSession(gate), getBandLayout(page.params.slug!))
-	);
+	let layout = $derived(await getBandLayout(page.params.slug!));
 
 	// The gating itself lives in `nav-items.ts` as data, so it can be asserted
 	// against for every role and flag combination — this file has had the role

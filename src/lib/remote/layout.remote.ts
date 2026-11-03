@@ -107,7 +107,7 @@ async function appChrome(user: SignedInUser) {
  * Kit 3 gives a query no page, so the path arrives as the argument; the data
  * queries stay unparameterized so one cached copy serves every page in the panel
  * and a command's `.refresh()` needs no path. Their own signed-out redirect is
- * the fallback, without a return path. Pair with `afterGate` in the layout.
+ * the fallback, without a return path. The layout awaits it first.
  */
 export const requireLayoutSession = query(z.string(), async (path) => {
 	const { locals } = getRequestEvent();
