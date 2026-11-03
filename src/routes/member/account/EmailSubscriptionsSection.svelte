@@ -5,21 +5,20 @@
 	import { getMyEmailSubscriptions } from '$lib/remote/account.remote';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { retryQuery } from '$lib/utils/retry-query';
+	import { Latest } from '$lib/latest.svelte';
 
 	/**
 	 * The account page's Email Subscriptions card, owning its own query. See DirectMessagesSection.
 	 */
 	const lists = $derived(getMyEmailSubscriptions());
+	// Not `{#await}`: a refresh would re-pend it and unmount an open Unsubscribe.
+	const latest = new Latest(() => lists);
 </script>
 
 <svelte:boundary>
 	<InfoCard title={m.member_account_email_subscriptions_section_title()}>
-		<!-- eslint-disable-next-line custom/no-interactive-await -- #2359 -->
-		{#await lists}
-			<div class="flex justify-center p-4">
-				<span class="loading loading-sm loading-spinner"></span>
-			</div>
-		{:then { subscriptions: subs, available: avail }}
+		{#if latest.current}
+			{@const { subscriptions: subs, available: avail } = latest.current}
 			{#if subs.length === 0 && avail.length === 0}
 				<p class="text-muted">{m.member_account_email_subscriptions_section_no_mailing_lists()}</p>
 			{:else}
@@ -61,11 +60,15 @@
 					</div>
 				{/if}
 			{/if}
-		{:catch}
+		{:else if latest.error}
 			<p class="text-sm text-error">
 				{m.member_account_email_subscriptions_section_failed_load_subsc()}
 			</p>
-		{/await}
+		{:else}
+			<div class="flex justify-center p-4">
+				<span class="loading loading-sm loading-spinner"></span>
+			</div>
+		{/if}
 	</InfoCard>
 
 	{#snippet failed(_error, reset)}

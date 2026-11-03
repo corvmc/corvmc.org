@@ -19,6 +19,7 @@
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { getStaffEvents } from '$lib/remote/events.remote';
+	import { Latest } from '$lib/latest.svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 
 	/**
@@ -80,6 +81,10 @@
 
 	type Production = Awaited<typeof result>['rows'][number];
 
+	// The venue filter's options. Not `{#await}`: every filter change re-pended
+	// it and remounted the select mid-choice.
+	const venues = new Latest(() => result);
+
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
 		return tags
@@ -122,8 +127,8 @@
 			<option value="published">{m.staff_projects_productions_published()}</option>
 			<option value="cancelled">{m.staff_cancelled()}</option>
 		</Select>
-		<!-- eslint-disable-next-line custom/no-interactive-await -- #2359 -->
-		{#await result then data}
+		{#if venues.current}
+			{@const data = venues.current}
 			<Select
 				size="sm"
 				aria-label={m.staff_projects_productions_venue()}
@@ -135,7 +140,7 @@
 					<option value={v.id}>{v.name}</option>
 				{/each}
 			</Select>
-		{/await}
+		{/if}
 		<input
 			type="date"
 			aria-label={m.staff_projects_productions_from_date()}

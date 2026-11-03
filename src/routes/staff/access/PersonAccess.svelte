@@ -28,6 +28,7 @@
 	} from '$lib/config';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import { actionLabel, groupByResource } from './capability-label';
+	import { Latest } from '$lib/latest.svelte';
 
 	type Person = { id: string; name: string; email: string };
 	let { person = $bindable(null) }: { person?: Person | null } = $props();
@@ -36,6 +37,16 @@
 		if (person) void getPersonAccessView(person.id).refresh();
 		void getAccessPage().refresh();
 	}
+
+	// Not `{#await}`: a refresh would re-pend it and unmount an open grant dialog.
+	// Tagged with its person so a switch never shows one member's access as another's.
+	const view = new Latest(() => {
+		const id = person?.id;
+		return id ? getPersonAccessView(id).then((access) => ({ id, access })) : Promise.resolve(null);
+	});
+	$effect(() => {
+		if (view.error) throw view.error.e;
+	});
 </script>
 
 <FilterBar activeCount={person ? 1 : 0} onclear={() => (person = null)}>
@@ -55,8 +66,8 @@
 	/>
 {:else}
 	{@const userId = person.id}
-	<!-- eslint-disable-next-line custom/no-interactive-await -- #2359 -->
-	{#await getPersonAccessView(userId) then access}
+	{#if view.current?.id === userId}
+		{@const access = view.current.access}
 		{@const unheld = positionOrder.filter((p) => !access.positions.includes(p))}
 		{@const orgSeats = access.seats.flatMap((s) =>
 			s.grants
@@ -267,5 +278,5 @@
 				</Table>
 			{/if}
 		</InfoCard>
-	{/await}
+	{/if}
 {/if}
