@@ -1377,13 +1377,20 @@ export const cancelLoan = form(z.object({ id: z.string() }), async (data) => {
 export const returnLoan = form(
 	z.object({
 		id: z.string(),
-		staffNotes: z.string().max(2000).optional()
+		staffNotes: z.string().max(2000).optional(),
+		// `''` is the "not checked" option; see `reportAssetDamage`.
+		condition: z.enum(['', ...equipmentConditions]).optional(),
+		flagNote: z.string().max(1000).optional(),
+		flagBlocksUse: z.boolean().optional()
 	}),
 	async (data) => {
 		await requireCapability('inventory.manageLoans');
 		const currentUser = requireUser();
+		const flagNote = data.flagNote?.trim();
 		await returnLoanService(data.id as string, (data.staffNotes as string) || undefined, {
-			actorId: currentUser.id
+			actorId: currentUser.id,
+			condition: data.condition || undefined,
+			flags: flagNote ? [{ note: flagNote, blocksUse: data.flagBlocksUse ?? false }] : undefined
 		});
 		void getStaffLoanDetail(data.id as string).refresh();
 		return { success: true };
