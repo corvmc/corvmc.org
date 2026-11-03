@@ -83,12 +83,12 @@ export const takeDeliverable = form(z.object({ id: z.string().min(1), ...from })
 
 /** Done anyway: the hand override, whatever the item's condition says. */
 export const resolveDeliverable = form(
-	z.object({ id: z.string().min(1), ...from }),
+	z.object({ id: z.string().min(1), reason: z.string().max(500).optional(), ...from }),
 	async (data) => {
 		const { groupId } = await ownerOf(data.id);
 		const { user } = await requireCommitteeMember(groupId, MANAGE);
 		try {
-			await resolveWorkOrder(data.id, { resolvedByUserId: user.id });
+			await resolveWorkOrder(data.id, { resolvedByUserId: user.id, notes: data.reason });
 		} catch (err) {
 			mapDomainError(err);
 		}

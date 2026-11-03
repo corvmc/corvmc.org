@@ -312,7 +312,10 @@ export async function completeJob(
 
 	const resolution =
 		!job.workOrderResolvedAt && !job.workOrderCancelledAt
-			? await prepareResolveWorkOrder(job.workOrderId, { resolvedByUserId: opts.actorId })
+			? await prepareResolveWorkOrder(job.workOrderId, {
+					resolvedByUserId: opts.actorId,
+					recordReason: `Contractor job completed: ${job.title}`
+				})
 			: null;
 
 	// The engagement, what it cost, the unit and the work order are one event:

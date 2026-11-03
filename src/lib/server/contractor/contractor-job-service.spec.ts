@@ -265,7 +265,10 @@ describe('completeJob', () => {
 
 		await completeJob(JOB, { actorId: ACTOR });
 
-		expect(resolveWorkOrder).toHaveBeenCalledWith(WO, { resolvedByUserId: ACTOR });
+		expect(resolveWorkOrder).toHaveBeenCalledWith(
+			WO,
+			expect.objectContaining({ resolvedByUserId: ACTOR })
+		);
 	});
 
 	it('leaves a work order staff already ticked alone', async () => {

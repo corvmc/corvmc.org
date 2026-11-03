@@ -643,17 +643,12 @@ export async function resolveTask(
 ): Promise<WorkOrder> {
 	const task = await requireLiveTask(projectId, workOrderId);
 	const reason = data.reason?.trim() || null;
-	const override = task.doneWhen !== null;
-	if (override && !reason) {
+	if (task.doneWhen !== null && !reason) {
 		throw new TaskValidationError(
 			'This one ticks itself when its condition holds. Say why it is done regardless.'
 		);
 	}
-	return resolveWorkOrder(task.id, {
-		resolvedByUserId: data.resolvedByUserId,
-		notes: reason,
-		override
-	});
+	return resolveWorkOrder(task.id, { resolvedByUserId: data.resolvedByUserId, notes: reason });
 }
 
 /** Untick it. A task with a done condition goes back to reading it. */
