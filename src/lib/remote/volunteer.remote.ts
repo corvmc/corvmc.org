@@ -112,8 +112,7 @@ import {
 	resolveWorkOrder as resolveWorkOrderService,
 	listWorkOrders,
 	listWorkOrdersByIds,
-	isScheduled,
-	isRoledShift
+	isScheduled
 } from '$lib/server/volunteer/work-order-service';
 import { listJobs } from '$lib/server/contractor/contractor-job-service';
 import { listContractors } from '$lib/server/contractor/contractor-service';
@@ -135,7 +134,6 @@ import {
 	listClaimants,
 	listOutstandingClaims,
 	listUnloggedCompletions,
-	countVolunteerWorkWaiting,
 	SignupNotFoundError
 } from '$lib/server/volunteer/volunteer-signup-service';
 import {
