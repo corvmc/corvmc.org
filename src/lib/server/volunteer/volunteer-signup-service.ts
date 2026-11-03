@@ -205,6 +205,8 @@ export async function claimShift(
 	const shift = await getShiftById(shiftId);
 	if (!shift) throw new SignupNotFoundError();
 	if (shift.cancelledAt) throw new ShiftClosedError('That shift was called off.');
+	// Staff too (docs/development/conventions.md#workflow-gates): past work is an
+	// hour log; a signup is a promise to turn up, for a night that is over.
 	if (shift.endsAt && shift.endsAt < new Date())
 		throw new ShiftClosedError('That shift has already happened.');
 	// A member can only take what is on the claim board. Staff assign onto
