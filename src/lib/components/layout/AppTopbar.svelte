@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import Button from '../ui/Button.svelte';
 	import { IconMenu2, IconMusic, IconChevronDown, IconMessages } from '@tabler/icons-svelte';
@@ -139,7 +140,7 @@
 
 	<!-- Mobile brand -->
 	<span class="lg:hidden">
-		<img src={logo} alt="CorvMC" class="h-full" />
+		<img src={logo} alt={m.layout_brand()} class="h-full" />
 	</span>
 
 	<!-- Right: notifications + messages + account.
@@ -160,7 +161,9 @@
 			size="sm"
 			shape="circle"
 			class="relative {messagesActive ? 'latched' : ''}"
-			aria-label={chrome.messagesUnread ? `Messages, ${chrome.messagesUnread} unread` : 'Messages'}
+			aria-label={chrome.messagesUnread
+				? m.layout_messages_unread({ count: chrome.messagesUnread })
+				: m.layout_messages()}
 			aria-current={messagesActive ? 'page' : undefined}
 		>
 			<IconMessages size={20} />

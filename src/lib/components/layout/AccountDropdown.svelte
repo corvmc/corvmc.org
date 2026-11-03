@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '../ui/Button.svelte';
 	import { IconUser, IconSettings, IconStar, IconReceipt, IconLogout } from '@tabler/icons-svelte';
 	import Avatar from '../ui/Avatar.svelte';
@@ -47,7 +48,7 @@
 		shape="circle"
 		class="overflow-hidden border-0 p-0"
 		onclick={() => (open = !open)}
-		aria-label="Account menu"
+		aria-label={m.layout_account_menu()}
 	>
 		<Avatar
 			class="size-full text-xs"
@@ -94,7 +95,7 @@
 					onclick={signOut}
 				>
 					<IconLogout size={16} />
-					Sign Out
+					{m.layout_sign_out()}
 				</Button>
 			</div>
 		</div>

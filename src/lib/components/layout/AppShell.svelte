@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { onMount } from 'svelte';
 	import { Toaster } from 'svelte-sonner';
@@ -57,15 +58,15 @@
 		<Sidebar>
 			{#snippet brand()}
 				<span class="block flex h-[48px] items-center justify-between px-3">
-					<img src={logo} alt="CorvMC" class="h-full p-2" />
+					<img src={logo} alt={m.layout_brand()} class="h-full p-2" />
 					<Button
 						variant="default"
 						size="sm"
 						shape="square"
 						outline
 						class="latched"
-						title="To Public Site"
-						aria-label="To Public Site"
+						title={m.layout_to_public_site()}
+						aria-label={m.layout_to_public_site()}
 						href="/"
 					>
 						<IconWorld class="size-5 text-primary" />

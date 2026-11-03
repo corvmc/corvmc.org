@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import Button from '../ui/Button.svelte';
 	import { IconBell } from '@tabler/icons-svelte';
@@ -113,7 +114,7 @@
 		size="sm"
 		shape="circle"
 		onclick={toggleDropdown}
-		aria-label="Notifications"
+		aria-label={m.layout_notifications()}
 	>
 		<IconBell size={20} />
 		{#if unreadCount > 0}
@@ -130,17 +131,19 @@
 			class="absolute top-full right-0 z-1000 mt-2 w-80 rounded-lg border border-base-300 bg-base-100 shadow-lg"
 		>
 			<div class="flex items-center justify-between border-b border-base-300 px-4 py-3">
-				<span class="text-sm font-semibold">Notifications</span>
+				<span class="text-sm font-semibold">{m.layout_notifications()}</span>
 				{#if unreadCount > 0}
 					<button class="text-xs text-primary hover:underline" onclick={markAllRead}>
-						Mark all read
+						{m.layout_notifications_mark_all_read()}
 					</button>
 				{/if}
 			</div>
 
 			<div class="max-h-80 overflow-y-auto">
 				{#if notifications.length === 0}
-					<div class="p-6 text-center text-sm text-base-content/60">No notifications yet</div>
+					<div class="p-6 text-center text-sm text-base-content/60">
+						{m.layout_notifications_empty()}
+					</div>
 				{:else}
 					{#each notifications as n (n.id)}
 						{@const isUnread = !n.readAt}
@@ -175,7 +178,9 @@
 											     primary from the panel, and `sr-only` carries it into the
 											     accessibility tree, where 28 rows read identically. -->
 											<p class={['truncate text-sm', isUnread ? 'font-bold' : 'font-medium']}>
-												{#if isUnread}<span class="sr-only">Unread. </span>{/if}{n.title}
+												{#if isUnread}<span class="sr-only"
+														>{m.layout_notification_unread()}
+													</span>{/if}{n.title}
 											</p>
 											{#if n.body}
 												<p class="truncate text-xs text-base-content/60">{n.body}</p>
@@ -191,7 +196,7 @@
 											<button
 												class="mt-1.5 h-2 w-2 shrink-0 cursor-pointer rounded-full bg-primary"
 												onclick={() => markRead(n.id)}
-												aria-label="Mark as read"
+												aria-label={m.layout_notification_mark_read()}
 											></button>
 										{:else}
 											<span class="w-2 shrink-0"></span>
