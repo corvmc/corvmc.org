@@ -38,7 +38,9 @@
 					class="shrink-0"
 				>
 					<IconPlayerPlay size={16} />
-					{doneToday() ? 'Daily again' : 'Start Daily'} · {counts.open}
+					{doneToday()
+						? m.staff_inbox_inbox_toolbar_daily_again()
+						: m.staff_inbox_inbox_toolbar_start_daily()} · {counts.open}
 				</Button>
 			{/if}
 		{/await}

@@ -201,8 +201,7 @@
 		-->
 		<div class="flex items-center justify-between gap-3 rounded-box bg-base-200 px-4 py-2">
 			<span class="text-sm"
-				>{selected.size}
-				{selected.size === 1 ? 'entry' : 'entries'} selected</span
+				>{m.staff_members_volunteers_hours_entries_selected({ size: selected.size })}</span
 			>
 			<Action
 				action={approveVolunteerHoursBulk}
@@ -217,8 +216,10 @@
 				{#snippet form()}
 					<input type="hidden" name="ids" value={JSON.stringify([...selected])} />
 					<p class="text-sm">
-						{selected.size}
-						{selected.size === 1 ? 'entry' : 'entries'}, {formatVolunteerHours(selectedMinutes)} in total.
+						{m.staff_members_volunteers_hours_entries_total({
+							size: selected.size,
+							formatVolunteerHours: formatVolunteerHours(selectedMinutes)
+						})}
 					</p>
 					<FormField
 						name="notes"
@@ -304,7 +305,7 @@
 							</EntityIdentity>
 							{#if log.reviewNotes}
 								<div class="truncate text-subtle">
-									{log.reviewedByName ?? 'Staff'}: {log.reviewNotes}
+									{log.reviewedByName ?? m.staff_staff()}: {log.reviewNotes}
 								</div>
 							{/if}
 						</td>

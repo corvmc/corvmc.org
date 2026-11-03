@@ -50,7 +50,10 @@
 							{#if asset.serialNumber}{m.staff_inventory_tagging_queue_serial({
 									serialNumber: asset.serialNumber
 								})}{/if}
-							{asset.location?.name ?? 'Unassigned'} · entered {formatDateShort(asset.createdAt)}
+							{m.staff_inventory_tagging_queue_entered({
+								value: asset.location?.name ?? m.staff_unassigned(),
+								formatDateShort: formatDateShort(asset.createdAt)
+							})}
 						</div>
 					</div>
 					<Form remote={form} successToast={m.staff_inventory_tagging_queue_success_toast()}>

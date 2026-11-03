@@ -57,7 +57,7 @@
 								<td class="w-px"><StatusBadge status={t.status} /></td>
 								<td class="cell-primary">
 									<a class="font-medium" href={resolve(`/staff/inbox/${t.id}`)}>
-										{t.subject ?? '(no subject)'}
+										{t.subject ?? m.staff_members_id_panels_comms_panel_no_subject()}
 									</a>
 									<div class="text-muted">{t.preview ?? ''}</div>
 								</td>
@@ -98,7 +98,7 @@
 						{type.replace(/_/g, ' ')}
 						{[pref.email && 'email', pref.inApp && 'in-app', pref.sms && 'SMS']
 							.filter(Boolean)
-							.join(' · ') || 'off'}
+							.join(' · ') || m.staff_members_id_panels_comms_panel_off()}
 					</Badge>
 				{/each}
 			</div>

@@ -253,7 +253,7 @@
 			{#if project.startsAt}
 				{formatDateShort(project.startsAt)}{project.endsAt
 					? ` – ${formatDateShort(project.endsAt)}`
-					: ' onward'}
+					: m.staff_projects_id_onward()}
 			{:else}
 				{m.staff_projects_id_no_dates_set()}
 			{/if}

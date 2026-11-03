@@ -84,8 +84,8 @@
 				<input {...remove.fields.sectionId.as('hidden', section.id)} />
 				<p class="text-sm">
 					{taskCount === 0
-						? 'It has no tasks.'
-						: `Its ${taskCount === 1 ? 'task moves' : `${taskCount} tasks move`} to the top of the list, under no section. Nothing is deleted but the heading.`}
+						? m.staff_projects_id_section_menu_has_no_tasks()
+						: m.staff_projects_id_section_menu_tasks_move({ count: taskCount })}
 				</p>
 			{/snippet}
 		</Action>

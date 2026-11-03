@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -83,16 +84,30 @@
 	<InfoCard title={m.staff_night()}>
 		<div class="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
 			<span>
-				First set
-				<strong class="tabular-nums">
-					{runOfShow.firstSetAt ? formatTime(runOfShow.firstSetAt) : 'not set'}
-				</strong>
+				<ParaglideMessage
+					message={m.staff_events_id_production_run_of_show_panel_first_set}
+					inputs={{
+						value: runOfShow.firstSetAt
+							? formatTime(runOfShow.firstSetAt)
+							: m.staff_events_id_production_run_of_show_panel_not_set()
+					}}
+					>{#snippet strong({ children })}<strong class="tabular-nums"
+							>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</span>
 			<span>
-				Curfew
-				<strong class="tabular-nums">
-					{runOfShow.curfewAt ? formatTime(runOfShow.curfewAt) : 'not set'}
-				</strong>
+				<ParaglideMessage
+					message={m.staff_events_id_production_run_of_show_panel_curfew}
+					inputs={{
+						value: runOfShow.curfewAt
+							? formatTime(runOfShow.curfewAt)
+							: m.staff_events_id_production_run_of_show_panel_not_set()
+					}}
+					>{#snippet strong({ children })}<strong class="tabular-nums"
+							>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</span>
 		</div>
 	</InfoCard>
@@ -165,7 +180,7 @@
 
 						<div class="min-w-0 grow">
 							<div class="flex items-center gap-2">
-								<span class="truncate font-medium">{slot.actName ?? 'Not on the bill'}</span>
+								<span class="truncate font-medium">{slot.actName ?? m.staff_not_bill()}</span>
 								{#if slot.actStatus}
 									<StatusBadge status={slot.actStatus} />
 								{/if}
@@ -259,7 +274,9 @@
 								size="sm"
 								onclick={() => (openSlotId = openSlotId === slot.id ? null : slot.id)}
 							>
-								{openSlotId === slot.id ? 'Close' : 'Edit'}
+								{openSlotId === slot.id
+									? m.staff_events_id_production_run_of_show_panel_close()
+									: m.staff_edit()}
 							</Button>
 							<Action
 								action={drop}
@@ -278,8 +295,9 @@
 									<input {...drop.fields.eventId.as('hidden', eventId)} />
 									<input {...drop.fields.slotId.as('hidden', slot.id)} />
 									<p class="text-sm">
-										{slot.actName ?? 'This set'} comes off the running order. Every set after it moves
-										up.
+										{m.staff_events_id_production_run_of_show_panel_comes_off_runni({
+											actName: slot.actName ?? m.staff_events_id_production_run_of_show_panel_set()
+										})}
 									</p>
 								{/snippet}
 							</Action>

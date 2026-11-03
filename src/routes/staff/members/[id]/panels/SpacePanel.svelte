@@ -77,7 +77,8 @@
 								<td class="col-support">
 									<span class="inline-flex items-center gap-1">
 										<BookerTypeIcon type={r.bookerType} />
-										{r.bandName ?? (r.own ? 'Themselves' : '—')}
+										{r.bandName ??
+											(r.own ? m.staff_members_id_panels_space_panel_themselves() : '—')}
 									</span>
 								</td>
 								<td class="col-extra cell-num">
@@ -124,7 +125,9 @@
 						</td>
 						<td class="col-support">{formatTimeRange(s.startsAt, s.endsAt)}</td>
 						<td class="col-extra">
-							{s.seriesEndsAt ? formatDateShortYear(s.seriesEndsAt) : 'No end date'}
+							{s.seriesEndsAt
+								? formatDateShortYear(s.seriesEndsAt)
+								: m.staff_members_id_panels_space_panel_no_end_date()}
 						</td>
 					</tr>
 				{/each}
@@ -156,7 +159,7 @@
 						<td class="w-px"><StatusBadge status={loan.status} /></td>
 						<td class="cell-primary">
 							<a class="font-medium" href={resolve(`/staff/inventory/loans/${loan.id}`)}>
-								{loan.equipmentName ?? 'Removed item'}
+								{loan.equipmentName ?? m.staff_members_id_panels_space_panel_removed_item()}
 							</a>
 							{#if loan.quantity > 1}
 								<div class="text-muted">×{loan.quantity}</div>

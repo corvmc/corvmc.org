@@ -179,8 +179,10 @@
 		<Fact label={m.staff_membership()}>
 			{#if overview.membership.sustaining}
 				{overview.membership.hoursPerReset
-					? `${overview.membership.hoursPerReset / 2} hrs a month`
-					: 'Sustaining'}
+					? m.staff_members_id_panels_overview_panel_hrs_month({
+							value: overview.membership.hoursPerReset / 2
+						})
+					: m.staff_sustaining()}
 			{:else}
 				{m.staff_members_id_panels_overview_panel_free_tier()}
 			{/if}

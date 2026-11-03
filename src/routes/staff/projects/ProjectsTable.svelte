@@ -85,7 +85,9 @@
 			</td>
 			<td class="whitespace-nowrap">{dateRange(row.project.startsAt, row.project.endsAt)}</td>
 			<td class="cell-num">
-				{row.project.budgetCents === null ? 'None set' : formatCents(row.project.budgetCents)}
+				{row.project.budgetCents === null
+					? m.staff_none_set()
+					: formatCents(row.project.budgetCents)}
 			</td>
 			<td class="cell-num">
 				<span

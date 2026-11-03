@@ -77,7 +77,7 @@
 									href={act.links[0].url}
 									class="link"
 									target="_blank"
-									rel="noopener noreferrer nofollow">{act.links[0].label || 'Website'}</a
+									rel="noopener noreferrer nofollow">{act.links[0].label || m.staff_website()}</a
 								>
 								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							{:else}

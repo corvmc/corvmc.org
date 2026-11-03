@@ -83,7 +83,7 @@
 	ontoggle={(e) => remember((e.currentTarget as HTMLDetailsElement).open)}
 >
 	<summary class="collapse-title min-h-0 py-2 text-sm font-medium">
-		Details
+		{m.staff_inbox_id_details_panel_details()}
 		<span class="ml-2 text-subtle font-normal">
 			{thread.contactUserName ??
 				thread.contactName ??
@@ -122,8 +122,10 @@
 					{:then context}
 						<span>
 							{context.priorConversations === 0
-								? 'No other conversations'
-								: `${context.priorConversations} previous conversation${context.priorConversations === 1 ? '' : 's'}`}
+								? m.staff_inbox_id_details_panel_no_other_conversations()
+								: m.staff_inbox_id_details_panel_previous_conversations({
+										priorConversations: context.priorConversations
+									})}
 						</span>
 						<span class="text-subtle"
 							>{m.staff_inbox_id_details_panel_first_contact({
@@ -140,11 +142,14 @@
 
 				<div class="flex flex-col gap-1">
 					<SectionLabel label={m.staff_inbox_id_details_panel_thread()} />
-					<span>{thread.messageCount} message{thread.messageCount === 1 ? '' : 's'}</span>
+					<span>{m.staff_inbox_id_details_panel_message_count({ count: thread.messageCount })}</span
+					>
 					<span class="text-subtle">
 						{thread.lastOutboundAt
-							? `Last reply ${formatDateTime(thread.lastOutboundAt)}`
-							: 'Never answered'}
+							? m.staff_inbox_id_details_panel_last_reply({
+									formatDateTime: formatDateTime(thread.lastOutboundAt)
+								})
+							: m.staff_inbox_id_details_panel_never_answered()}
 					</span>
 					<span class="text-subtle"
 						>{m.staff_inbox_id_details_panel_opened({

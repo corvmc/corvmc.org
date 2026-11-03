@@ -60,7 +60,9 @@
 <PageContent>
 	<p class="text-subtle text-sm">
 		{today} ·
-		{waiting === 0 ? 'nothing waiting' : `${waiting} ${waiting === 1 ? 'item' : 'items'} waiting`}
+		{waiting === 0
+			? m.staff_volunteer_nothing_waiting_2()
+			: m.staff_volunteer_items_waiting({ waiting })}
 	</p>
 
 	{#if work.waitingCount === 0 && work.lapsing.length === 0}

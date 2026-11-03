@@ -201,7 +201,9 @@
 									class="font-medium link-hover"
 									href={resolve('/staff/groups/[id]', { id: seat.groupId })}>{seat.name}</a
 								>
-								<div class="text-muted">{seat.chair ? 'Chair' : 'Member'}</div>
+								<div class="text-muted">
+									{seat.chair ? m.staff_access_person_access_chair() : m.staff_member()}
+								</div>
 							</td>
 							<td class="cell-text whitespace-normal">
 								{#if seat.grants.length === 0}
@@ -255,13 +257,17 @@
 							<td class="cell-primary">
 								<div class="truncate font-medium">{c.certificationName}</div>
 								<div class="truncate text-muted">
-									Granted {formatDateShortYear(c.grantedAt)}{c.grantedByName
-										? ` by ${c.grantedByName}`
-										: ''}{c.revokedReason ? ` · revoked: ${c.revokedReason}` : ''}
+									{m.staff_clearance_granted({
+										date: formatDateShortYear(c.grantedAt)
+									})}{#if c.grantedByName}{m.staff_clearance_granted_by({
+											name: c.grantedByName
+										})}{/if}{#if c.revokedReason}{m.staff_clearance_revoked({
+											reason: c.revokedReason
+										})}{/if}
 								</div>
 							</td>
 							<td class="col-support whitespace-nowrap">
-								{c.expiresAt ? formatDateShortYear(c.expiresAt) : 'No expiry'}
+								{c.expiresAt ? formatDateShortYear(c.expiresAt) : m.staff_no_expiry()}
 							</td>
 							<td class="w-px">
 								{#if !c.revokedAt}

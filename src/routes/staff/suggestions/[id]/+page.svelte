@@ -73,8 +73,14 @@
 <PageContent width="3xl">
 	{#if isMerged}
 		<Alert type="info" href={resolve(`/staff/suggestions/${s.mergedIntoId}`)}>
-			Merged into <span class="font-medium">{s.mergedIntoTitle ?? 'another suggestion'}</span>. Its
-			votes moved across; this one stays off the board.
+			<ParaglideMessage
+				message={m.staff_suggestions_id_merged_into_its_votes_moved}
+				inputs={{
+					mergedIntoTitle: s.mergedIntoTitle ?? m.staff_suggestions_id_another_suggestion()
+				}}
+				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{:else if s.visibility === 'under_review'}
 		<!-- One report, one place to decide. Resolving here as well as in the flag
@@ -84,7 +90,9 @@
 		</Alert>
 	{:else if s.visibility === 'hidden'}
 		<Alert type="error">
-			Hidden from the board.{s.visibilityNote ? ` Note: ${s.visibilityNote}` : ''}
+			{s.visibilityNote
+				? m.staff_suggestions_id_hidden_note({ note: s.visibilityNote })
+				: m.staff_suggestions_id_hidden()}
 		</Alert>
 	{/if}
 
@@ -93,9 +101,12 @@
 	     the suggestion had no relationship at all (#603). -->
 	{#if fulfilledBy}
 		<Alert type="success" href={resolve(`/staff/inventory/acquisitions/${fulfilledBy.id}`)}>
-			Arrived {formatDateTime(fulfilledBy.occurredAt)}{fulfilledBy.sourceName
-				? ` from ${fulfilledBy.sourceName}`
-				: ''}.
+			{fulfilledBy.sourceName
+				? m.staff_suggestions_id_arrived_from({
+						date: formatDateTime(fulfilledBy.occurredAt),
+						source: fulfilledBy.sourceName
+					})
+				: m.staff_suggestions_id_arrived({ date: formatDateTime(fulfilledBy.occurredAt) })}
 		</Alert>
 	{:else if isGear && !isMerged && (s.status === 'planned' || s.status === 'in_progress')}
 		<Alert type="info">
@@ -257,9 +268,10 @@
 	{#if pendingEdit}
 		<InfoCard title={m.staff_suggestions_id_proposed_edit()} class="bg-base-200 shadow-none">
 			<p class="mb-3 text-muted">
-				{pendingEdit.requestedByName ?? 'The author'} wants to change this after
-				{s.voteCount} member{s.voteCount === 1 ? '' : 's'} already voted for it. Approving replaces the
-				text below; the votes stay either way.
+				{m.staff_suggestions_id_wants_change_after_members_already({
+					requestedByName: pendingEdit.requestedByName ?? m.staff_suggestions_id_author(),
+					voteCount: s.voteCount
+				})}
 			</p>
 
 			<!-- Before and after, side by side. Approving a change you can't see is
@@ -338,7 +350,9 @@
 		{#if s.responseBody}
 			<p class="whitespace-pre-wrap">{s.responseBody}</p>
 			<p class="mt-2 text-muted">
-				{s.responderName ?? 'Staff'}{s.responseAt ? ` · ${formatDateTime(s.responseAt)}` : ''}
+				{s.responderName ?? m.staff_staff()}{s.responseAt
+					? ` · ${formatDateTime(s.responseAt)}`
+					: ''}
 			</p>
 		{:else}
 			<p class="text-muted">{m.staff_suggestions_id_nobody_has_written_back_yet()}</p>
@@ -426,8 +440,8 @@
 						<label class="fieldset w-full">
 							<span class="fieldset-legend">
 								{s.visibility === 'hidden'
-									? 'Reason (shown to the member)'
-									: 'Reason (required: the member is shown it and can appeal)'}
+									? m.staff_suggestions_id_reason_shown_member()
+									: m.staff_suggestions_id_reason_required_member_shown_can()}
 							</span>
 							<textarea
 								class="textarea w-full"

@@ -95,7 +95,7 @@
 					class="{chip(subject === key)} {n === 0 && subject !== key ? 'opacity-40' : ''}"
 					onclick={() => (subject = subject === key ? '' : key)}
 				>
-					{key === 'other' ? 'Other' : key}
+					{key === 'other' ? m.staff_inbox_filter_panel_other() : key}
 					<span class="opacity-70">{n}</span>
 				</button>
 			{/each}
@@ -145,7 +145,9 @@
 				bind:value={waitingDays}
 			/>
 			<span class="text-sm whitespace-nowrap">
-				{waitingDays === 0 ? 'Any' : `${waitingDays} day${waitingDays === 1 ? '' : 's'}`}
+				{waitingDays === 0
+					? m.staff_inbox_filter_panel_any()
+					: m.staff_inbox_filter_panel_days({ waitingDays })}
 			</span>
 		</div>
 	</div>

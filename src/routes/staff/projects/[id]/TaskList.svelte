@@ -218,7 +218,9 @@
 		<details class="dropdown dropdown-end" bind:this={filterMenu}>
 			<summary class="depth-0 bare bare-hover btn btn-ghost font-normal btn-sm">
 				<IconFilter size={16} />
-				{filter === 'all' ? 'Filter' : `Filter: ${TASK_FILTER_LABELS[filter]}`}
+				{filter === 'all'
+					? m.staff_projects_id_task_list_filter()
+					: m.staff_projects_id_task_list_filter_2({ value: TASK_FILTER_LABELS[filter] })}
 			</summary>
 			<div class="dropdown-content dropdown-panel flex w-56 flex-col gap-1">
 				{#each TASK_FILTERS as key (key)}
@@ -245,7 +247,11 @@
 			onclick={() => onshowdone(!showDone)}
 		>
 			{#if showDone}<IconEyeOff size={16} />{:else}<IconEye size={16} />{/if}
-			{showDone ? 'Hide done' : `Show done${hiddenDone > 0 ? ` (${hiddenDone})` : ''}`}
+			{showDone
+				? m.staff_projects_id_task_list_hide_done()
+				: m.staff_projects_id_task_list_show_done({
+						value: hiddenDone > 0 ? ` (${hiddenDone})` : ''
+					})}
 		</Button>
 	</div>
 </div>
@@ -268,7 +274,7 @@
 		{#each groups as g (g.section?.id ?? 'loose')}
 			{@const sid = g.section?.id ?? null}
 			{@const key = sid ?? 'loose'}
-			{@const name = g.section?.name ?? 'No section'}
+			{@const name = g.section?.name ?? m.staff_no_section()}
 			{@const expanded = !folded.has(key)}
 			<tr
 				class="section-row group {dropAt === `head:${sid}` ? 'drop-target' : ''}"
@@ -387,8 +393,10 @@
 											{#if t.mode === 'contractor' && t.engagement && list.contractorMoney}
 												<a class="link" href={resolve(`/staff/contractors/jobs/${t.engagement.id}`)}
 													>{t.engagement.invoiceRef
-														? `Invoice ${t.engagement.invoiceRef}`
-														: 'Contractor job'}</a
+														? m.staff_projects_id_task_list_invoice({
+																invoiceRef: t.engagement.invoiceRef
+															})
+														: m.staff_projects_id_task_list_contractor_job()}</a
 												>
 											{/if}
 										</div>
@@ -423,7 +431,9 @@
 				{:else}
 					<tr class="detail-row">
 						<td colspan="5" class="ps-8 text-subtle">
-							{g.total > 0 ? 'Nothing here matches the filter.' : 'No tasks yet.'}
+							{g.total > 0
+								? m.staff_projects_id_task_list_nothing_here_matches_filter()
+								: m.staff_projects_id_task_list_no_tasks_yet()}
 						</td>
 					</tr>
 				{/each}

@@ -60,8 +60,10 @@
 		</Alert>
 	{:else if r.daysLeft <= 60}
 		<Alert type="warning">
-			Expires {formatIsoDay(r.expiresOn)}, in {r.daysLeft}
-			{r.daysLeft === 1 ? 'day' : 'days'}.
+			{m.staff_renewals_id_expires_days({
+				formatIsoDay: formatIsoDay(r.expiresOn),
+				daysLeft: r.daysLeft
+			})}
 		</Alert>
 	{/if}
 
@@ -110,7 +112,9 @@
 				{#each r.documents as doc (doc.attachmentId)}
 					<li class="flex items-center gap-2">
 						<IconFileText size={18} class="shrink-0 opacity-60" />
-						<a class="grow link" href={doc.url} rel="external">{doc.filename ?? 'Document'}</a>
+						<a class="grow link" href={doc.url} rel="external"
+							>{doc.filename ?? m.staff_renewals_id_document()}</a
+						>
 						<Action
 							action={removeRenewalDocument.for(doc.attachmentId)}
 							label={m.staff_remove()}

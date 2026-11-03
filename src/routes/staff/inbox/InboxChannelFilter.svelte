@@ -25,7 +25,7 @@
 	const options = $derived([...new Set([...channels, ...(value ? [value] : [])])]);
 
 	const Current = $derived(value ? channelIcon(value) : IconInbox);
-	const label = $derived(value ? channelLabel(value) : 'All channels');
+	const label = $derived(value ? channelLabel(value) : m.staff_inbox_inbox_channel_filter_label());
 
 	const itemClass =
 		'flex w-full cursor-pointer items-center gap-2 rounded-box px-3 py-2 text-sm data-highlighted:bg-base-200';

@@ -105,7 +105,9 @@
 					<Fact label={m.staff_tier()} class="flex items-center gap-2">
 						<StatusBadge status={band.tier} label />
 						<span class="text-subtle">
-							{isStripeBacked ? 'billed through Stripe' : 'set by staff'}
+							{isStripeBacked
+								? m.staff_groups_id_staff_band_form_billed_through_stripe()
+								: m.staff_groups_id_staff_band_form_set_by_staff()}
 						</span>
 					</Fact>
 

@@ -56,12 +56,15 @@
 		{#await getInboxThreadCounts() then counts}
 			<p class="text-muted">
 				{counts.open === 0
-					? 'Nothing is left open.'
-					: `${counts.open} conversation${counts.open === 1 ? ' is' : 's are'} still open${session.skipped.length ? ` — ${session.skipped.length} you skipped` : ''}.`}
+					? m.staff_inbox_daily_session_summary_nothing_left_open()
+					: session.skipped.length
+						? m.staff_inbox_daily_session_summary_open_skipped({
+								count: counts.open,
+								skipped: session.skipped.length
+							})
+						: m.staff_inbox_daily_session_summary_open({ count: counts.open })}
 				{#if counts.snoozed}
-					{counts.snoozed}
-					{counts.snoozed === 1 ? 'is' : 'are'} snoozed or waiting on a reply, and will come back
-					{counts.snoozed === 1 ? 'on its own' : 'on their own'}.
+					{m.staff_inbox_daily_session_summary_snoozed_count({ count: counts.snoozed })}
 				{/if}
 			</p>
 		{/await}

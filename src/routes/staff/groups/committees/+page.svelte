@@ -52,15 +52,22 @@
 							</span>
 							<span class="mt-1 text-sm text-fg-2">
 								{c.chairs.length === 0
-									? 'No chairs'
-									: `Chaired by ${c.chairs.map((ch) => ch.title).join(', ')}`}
+									? m.staff_groups_committees_no_chairs()
+									: m.staff_groups_committees_chaired_by({
+											join: c.chairs.map((ch) => ch.title).join(', ')
+										})}
 							</span>
 							<span class="mt-3 flex flex-wrap items-center gap-2 text-sm">
-								<span>{c.memberCount} {c.memberCount === 1 ? 'member' : 'members'}</span>
+								<span
+									>{c.memberCount}
+									{c.memberCount === 1 ? m.staff_member_2() : m.staff_members_2()}</span
+								>
 								{#if c.openApplications > 0}
 									<Badge variant="info">
 										{c.openApplications}
-										{c.openApplications === 1 ? 'application' : 'applications'}
+										{c.openApplications === 1
+											? m.staff_groups_committees_application()
+											: m.staff_groups_committees_applications()}
 									</Badge>
 								{/if}
 							</span>

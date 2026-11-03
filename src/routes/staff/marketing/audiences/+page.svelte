@@ -45,7 +45,7 @@
 							<Badge size="sm" variant="info" class="whitespace-nowrap">{m.staff_built()}</Badge>
 						{:else}
 							<Badge size="sm" variant={a.allowOptIn ? 'success' : 'ghost'}>
-								{a.allowOptIn ? 'Public' : 'Staff only'}
+								{a.allowOptIn ? m.staff_public() : m.staff_staff_only()}
 							</Badge>
 						{/if}
 					</td>

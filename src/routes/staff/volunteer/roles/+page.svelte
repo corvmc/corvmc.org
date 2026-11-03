@@ -59,8 +59,7 @@
 		label: volunteerRoleGroupLabels[g]
 	}));
 
-	const descriptionHelp =
-		'Markdown. This is what members read on their volunteering page, so say what the job actually involves.';
+	const descriptionHelp = m.staff_volunteer_roles_description_help();
 
 	// Retired roles are off by default. They stay listed for staff — the work done
 	// under them still resolves everywhere — but a coordinator setting up next
@@ -281,11 +280,13 @@
 										{/if}
 									</div>
 									<div class="text-subtle text-xs">
-										{cert.issuedBy ?? 'CMC'} · {validityLabel(cert.validityMonths)}
+										{cert.issuedBy ?? m.staff_cmc()} · {validityLabel(cert.validityMonths)}
 									</div>
 									<div class="text-subtle text-xs">
-										{cert.holderCount} hold it · required by {cert.roleCount}
-										{cert.roleCount === 1 ? 'role' : 'roles'}
+										{m.staff_volunteer_roles_hold_required_by_roles({
+											holderCount: cert.holderCount,
+											roleCount: cert.roleCount
+										})}
 									</div>
 									<div class="mt-2 flex flex-wrap gap-1">
 										<Action
@@ -415,8 +416,9 @@
 											href={resolve('/staff/volunteer')}
 											class="mt-1 inline-block link text-xs text-warning"
 										>
-											{cert.lapsingBeforeShift}
-											{cert.lapsingBeforeShift === 1 ? 'lapses' : 'lapse'} before a booked shift →
+											{m.staff_volunteer_roles_lapse_before_booked_shift({
+												lapsingBeforeShift: cert.lapsingBeforeShift
+											})}
 										</a>
 									{/if}
 								</li>

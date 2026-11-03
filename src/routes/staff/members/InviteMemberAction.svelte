@@ -49,7 +49,7 @@
 			{#if groups.length > 0}
 				<CheckboxGroup
 					field={fields.groupIds}
-					legend="Clubs and committees (optional)"
+					legend={m.staff_members_invite_member_legend()}
 					description={m.staff_members_invite_member_description()}
 					options={groups.map((g) => ({
 						value: g.id,

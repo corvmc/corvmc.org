@@ -41,8 +41,10 @@
 		{#if data.overdueCount > 0}
 			<Alert type="error" class="mb-4">
 				{data.overdueCount === 1
-					? 'One filing window has already closed.'
-					: `${data.overdueCount} filing windows have already closed.`}
+					? m.staff_inventory_compliance_one_filing_window_has_already()
+					: m.staff_inventory_compliance_filing_windows_have_already_close({
+							overdueCount: data.overdueCount
+						})}
 			</Alert>
 		{/if}
 

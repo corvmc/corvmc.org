@@ -60,7 +60,9 @@
 {:else}
 	{#if outCount > 0}
 		<Alert type="warning" class="mb-4">
-			{outCount === 1 ? 'One item has run out.' : `${outCount} items have run out.`}
+			{outCount === 1
+				? m.staff_inventory_restock_list_one_item_has_run_out()
+				: m.staff_inventory_restock_list_items_have_run_out({ outCount })}
 		</Alert>
 	{/if}
 

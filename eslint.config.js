@@ -71,8 +71,7 @@ const customPlugin = {
 		// Enabled below for specs and e2e (#2189).
 		'no-wording-locators': noWordingLocators,
 		'no-svelte-element': noSvelteElement,
-		// Registered, not enabled: ~8,750 literal strings in `.svelte`.
-		// `pnpm ui-string-census` counts them; enable it once they are cleared (#2099).
+		// Enabled below for shipped `.svelte` (#2099).
 		'no-literal-ui-text': noLiteralUiText,
 		'no-interactive-await': noInteractiveAwait
 	}
@@ -207,6 +206,15 @@ export default defineConfig(
 			'custom/definite-action-labels': 'error',
 			'custom/no-svelte-element': 'error',
 			'custom/no-interactive-await': 'error'
+		}
+	},
+	{
+		// Interface copy is read from messages/en/<area>.json (#2099). Stories, test
+		// harnesses and fixtures are not interface. `allow` is CSS shown as an example.
+		files: ['src/**/*.svelte'],
+		ignores: ['**/*.stories.svelte', '**/*.test.svelte', '**/*Harness.svelte'],
+		rules: {
+			'custom/no-literal-ui-text': ['error', { allow: ['h1 { /* your styles here */ }'] }]
 		}
 	},
 	{

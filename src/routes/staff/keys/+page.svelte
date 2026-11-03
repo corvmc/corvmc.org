@@ -98,7 +98,7 @@
 				<th>{m.staff_keys_held_by()}</th>
 				<th>{m.staff_what()}</th>
 				<th>{m.staff_keys_issued_2()}</th>
-				<th>{view === 'history' ? 'Returned' : ''}</th>
+				<th>{view === 'history' ? m.staff_returned() : ''}</th>
 			{/snippet}
 			{#each rows as row (row.source + row.id)}
 				<tr>

@@ -110,7 +110,9 @@
 
 		{#if filteredTickets.length === 0}
 			<p class="py-8 text-center opacity-50">
-				{search ? 'No tickets match your search' : 'No tickets to check in'}
+				{search
+					? m.staff_events_id_check_in_no_tickets_match_search()
+					: m.staff_events_id_check_in_no_tickets_check()}
 			</p>
 		{/if}
 	</div>

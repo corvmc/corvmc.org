@@ -145,7 +145,9 @@
 						</td>
 						<td class="col-extra whitespace-nowrap">
 							<Badge size="sm" variant="ghost">
-								{t.creditType === 'free_hours' ? 'Free hours' : 'Equipment'}
+								{t.creditType === 'free_hours'
+									? m.staff_credits_free_hours_2()
+									: m.staff_equipment()}
 							</Badge>
 						</td>
 						<td class="cell-num">

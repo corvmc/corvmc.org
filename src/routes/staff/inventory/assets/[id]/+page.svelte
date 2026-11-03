@@ -159,7 +159,7 @@
 					<Badge variant="outline" size="xs" class="ml-1">{asset.category.pricingTier}</Badge>
 				</Fact>
 				<Fact label={m.staff_tag()} mono>{asset.assetTag ?? '—'}</Fact>
-				<Fact label={m.staff_location()}>{asset.location?.name ?? 'Unassigned'}</Fact>
+				<Fact label={m.staff_location()}>{asset.location?.name ?? m.staff_unassigned()}</Fact>
 				<Fact label={m.staff_inventory_assets_id_added()}>{formatDateShort(asset.createdAt)}</Fact>
 				{#if asset.form8282ResolvedAt}
 					<Fact label={m.staff_inventory_assets_id_form_8282()}>

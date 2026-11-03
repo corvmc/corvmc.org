@@ -88,7 +88,9 @@
 		<Alert type="warning">
 			{#snippet action()}
 				<Button size="sm" onclick={drain} disabled={draining}>
-					{draining ? 'Syncing…' : 'Sync now'}
+					{draining
+						? m.staff_events_id_check_in_door_scanner_syncing()
+						: m.staff_events_id_check_in_door_scanner_sync_now()}
 				</Button>
 			{/snippet}
 			{m.staff_events_id_check_in_door_scanner_waiting_sync({

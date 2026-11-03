@@ -69,7 +69,9 @@
 				<Fact label={m.staff_status()}><StatusBadge status={data.profile.status} label /></Fact>
 
 				<Fact label={m.staff_members_id_panels_volunteer_panel_age()}
-					>{data.profile.isAdult ? 'Adult' : 'Under 18'}</Fact
+					>{data.profile.isAdult
+						? m.staff_members_id_panels_volunteer_panel_adult()
+						: m.staff_members_id_panels_volunteer_panel_under_18()}</Fact
 				>
 
 				<Fact label={m.staff_hours()}>
@@ -150,11 +152,13 @@
 								<StatusBadge status={record.state} label />
 							</div>
 							<div class="text-subtle">
-								Granted {formatDateShortYear(record.grantedAt)}{record.grantedByName
-									? ` by ${record.grantedByName}`
-									: ''}{record.expiresAt
-									? ` · expires ${formatDateShortYear(record.expiresAt)}`
-									: ' · no expiry'}
+								{m.staff_clearance_granted({
+									date: formatDateShortYear(record.grantedAt)
+								})}{#if record.grantedByName}{m.staff_clearance_granted_by({
+										name: record.grantedByName
+									})}{/if}{record.expiresAt
+									? m.staff_clearance_expires({ date: formatDateShortYear(record.expiresAt) })
+									: m.staff_clearance_no_expiry()}
 							</div>
 							{#if record.reference}
 								<div class="text-subtle">#{record.reference}</div>
@@ -233,7 +237,9 @@
 							{/if}
 						</td>
 						<td class="col-extra whitespace-nowrap">
-							{s.startsAt ? formatDateShortYear(s.startsAt) : 'Unscheduled'}
+							{s.startsAt
+								? formatDateShortYear(s.startsAt)
+								: m.staff_members_id_panels_volunteer_panel_unscheduled()}
 						</td>
 					</tr>
 				{/each}

@@ -92,7 +92,9 @@
 				<td class="col-support whitespace-nowrap">
 					{#if order.dueAt}
 						<span class:text-error={isLate(order.dueAt)}>
-							{isLate(order.dueAt) ? 'was due' : 'due'}
+							{isLate(order.dueAt)
+								? m.staff_volunteer_needs_scheduling_card_was_due()
+								: m.staff_volunteer_needs_scheduling_card_due()}
 							{formatDateShort(order.dueAt)}
 						</span>
 					{:else}

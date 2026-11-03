@@ -138,7 +138,7 @@
 
 		{#snippet summary(total)}
 			{total}
-			{total === 1 ? 'member' : 'members'}
+			{total === 1 ? m.staff_member_2() : m.staff_members_2()}
 		{/snippet}
 
 		{#snippet bulk()}
@@ -168,10 +168,7 @@
 					{#snippet form()}
 						<input {...bulkFields.ids.as('hidden', JSON.stringify([...selected]))} />
 						<p class="py-2">
-							Deactivate {selected.size} selected member{selected.size === 1 ? '' : 's'}? Their
-							future personal reservations will be cancelled, and reactivating will not bring them
-							back. Membership subscriptions end with their current period unless reactivated first.
-							Your own account is skipped.
+							{m.staff_members_deactivate_selected_members_their_future({ size: selected.size })}
 						</p>
 					{/snippet}
 				</Action>

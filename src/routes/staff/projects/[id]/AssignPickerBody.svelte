@@ -187,7 +187,7 @@
 				<CheckboxGroup
 					field={assign.fields.userIds}
 					options={memberOptions}
-					legend="Put on it"
+					legend={msg.staff_projects_id_assign_picker_body_legend()}
 					description={msg.staff_projects_id_assign_picker_body_booked_straight_as_conf()}
 				/>
 			</div>
@@ -296,8 +296,7 @@
 			{#if engageWarning > 0}
 				<input {...engage.fields.confirm.as('hidden', true)} />
 				<Alert type="warning" class="text-sm">
-					{engageWarning === 1 ? 'One person is' : `${engageWarning} people are`} on this. Handing it
-					to a contractor cancels their {engageWarning === 1 ? 'signup' : 'signups'} and tells them.
+					{msg.staff_projects_id_assign_picker_engage_warning({ count: engageWarning })}
 				</Alert>
 			{/if}
 			<p class="text-muted text-sm">

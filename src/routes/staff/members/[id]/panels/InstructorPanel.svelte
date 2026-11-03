@@ -44,7 +44,9 @@
 				{/if}
 				{#if instructor.status === 'active'}
 					<Fact label={m.staff_students()}>
-						{instructor.acceptingStudents ? 'Accepting' : 'Not accepting'}
+						{instructor.acceptingStudents
+							? m.staff_accepting()
+							: m.staff_members_id_panels_instructor_panel_not_accepting()}
 					</Fact>
 				{/if}
 				{#if instructor.reviewNotes}

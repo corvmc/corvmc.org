@@ -115,7 +115,9 @@
 			{/each}
 		{:else}
 			{#each certifications as c (c.id)}
-				<option value={c.id}>{c.name}{c.isActive ? '' : ' (archived)'}</option>
+				<option value={c.id}
+					>{c.name}{c.isActive ? '' : m.staff_access_permission_holders_archived()}</option
+				>
 			{/each}
 		{/if}
 	</Select>
@@ -221,7 +223,7 @@
 				{#snippet cells(c)}
 					<td class="col-support whitespace-nowrap">{formatDateShortYear(c.grantedAt)}</td>
 					<td class="whitespace-nowrap">
-						{c.expiresAt ? formatDateShortYear(c.expiresAt) : 'No expiry'}
+						{c.expiresAt ? formatDateShortYear(c.expiresAt) : m.staff_no_expiry()}
 					</td>
 				{/snippet}
 				{#snippet actions(c)}

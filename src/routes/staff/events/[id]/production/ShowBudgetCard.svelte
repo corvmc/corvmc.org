@@ -27,7 +27,9 @@
 <InfoCard title={m.staff_budget()} {state}>
 	{#snippet action()}
 		<a class="link text-sm" href={resolve(`/staff/projects/${projectId}`)}>
-			{burn.budgetCents === null ? 'Set a budget' : 'Open the project'}
+			{burn.budgetCents === null
+				? m.staff_events_id_production_show_budget_card_set_budget()
+				: m.staff_events_id_production_show_budget_card_open_project()}
 		</a>
 	{/snippet}
 	<Table>
@@ -56,7 +58,7 @@
 		<tr>
 			<td>{m.staff_budget()}</td>
 			<td class="cell-num">
-				{burn.budgetCents === null ? 'None set' : formatCents(burn.budgetCents)}
+				{burn.budgetCents === null ? m.staff_none_set() : formatCents(burn.budgetCents)}
 			</td>
 		</tr>
 		<tr class="font-medium">

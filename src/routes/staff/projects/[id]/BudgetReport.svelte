@@ -116,7 +116,7 @@
 			<tr>
 				<td>{m.staff_budget()}</td>
 				<td class="cell-num">
-					{project.budgetCents === null ? 'None set' : formatCents(project.budgetCents)}
+					{project.budgetCents === null ? m.staff_none_set() : formatCents(project.budgetCents)}
 				</td>
 			</tr>
 			<tr class="font-medium">
@@ -154,11 +154,16 @@
 			</tr>
 			<tr>
 				<td>
-					Contributed services — specialized only
+					{m.staff_projects_id_budget_report_specialized()}
 					<span class="block text-subtle text-xs">
-						{hrs(specializedHours)} at each role's own rate{unpricedHours > 0
-							? `, of which ${hrs(unpricedHours)} on roles with no rate set and counted as zero`
-							: ''}
+						{unpricedHours > 0
+							? m.staff_projects_id_budget_report_specialized_unpriced({
+									hours: hrs(specializedHours),
+									unpriced: hrs(unpricedHours)
+								})
+							: m.staff_projects_id_budget_report_specialized_rate({
+									hours: hrs(specializedHours)
+								})}
 					</span>
 				</td>
 				<td class="cell-num">{formatCents(burn.contributed.recognizableServicesCents)}</td>
