@@ -14,17 +14,13 @@
 	 * should not wait on.
 	 */
 	import { resolve } from '$app/paths';
-	import { IconX } from '@tabler/icons-svelte';
 	import type { RemoteForm } from '@sveltejs/kit';
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 	import AssignControl from './AssignControl.svelte';
+	import ThreadTags from './ThreadTags.svelte';
 	import { channelLabel } from '$lib/components/inbox/channels';
 	import { formatDate, formatDateTime } from '$lib/utils/format';
-	import {
-		getInboxThreadContext,
-		addInboxThreadTag,
-		removeInboxThreadTag
-	} from '$lib/remote/inbox.remote';
+	import { getInboxThreadContext } from '$lib/remote/inbox.remote';
 
 	type Thread = {
 		id: string;
@@ -79,8 +75,6 @@
 			// Same.
 		}
 	}
-
-	let newTag = $state('');
 </script>
 
 <details
@@ -163,39 +157,7 @@
 					<SectionLabel label={m.staff_inbox_id_details_panel_tags()} />
 					<!-- The same query as History; the remote layer dedupes it, and
 					     splitting the columns apart is what makes each one readable. -->
-					<!-- eslint-disable-next-line custom/no-interactive-await -- #2357 -->
-					{#await getInboxThreadContext(thread.id) then context}
-						<div class="flex flex-wrap items-center gap-1">
-							{#each context.tags as tag (tag)}
-								<span class="badge gap-1 badge-ghost badge-sm">
-									{tag}
-									<button
-										type="button"
-										class="cursor-pointer opacity-50 hover:opacity-100"
-										aria-label={m.staff_inbox_id_details_panel_remove_tag({ tag })}
-										onclick={() => removeInboxThreadTag({ threadId: thread.id, tag })}
-									>
-										<IconX size={11} />
-									</button>
-								</span>
-							{/each}
-							<!-- A bare input rather than FormField: this is not a form
-							     submission, it is a command fired on Enter, and there is no
-							     validation state to show. -->
-							<input
-								class="input w-24 input-xs"
-								placeholder={m.staff_inbox_id_details_panel_placeholder()}
-								aria-label={m.staff_inbox_id_details_panel_add_tag()}
-								bind:value={newTag}
-								onkeydown={(e) => {
-									if (e.key !== 'Enter' || !newTag.trim()) return;
-									e.preventDefault();
-									void addInboxThreadTag({ threadId: thread.id, tag: newTag.trim() });
-									newTag = '';
-								}}
-							/>
-						</div>
-					{/await}
+					<ThreadTags threadId={thread.id} />
 				</div>
 			</div>
 
