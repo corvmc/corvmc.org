@@ -28,7 +28,11 @@ function baseURL(): string {
 }
 
 /**
- * The sign-in `/login` makes, minus the page. better-auth's limiter is off for
+ * The sign-in `/login` makes, minus the page. Only the session token is kept:
+ * the `session_data` cookie caches the user row for 60s (`cookieCache`), so
+ * replaying it would show a later test the user as it was at sign-in, not as
+ * an earlier test left it — stale only within the window, so order-and-clock
+ * dependent. better-auth's limiter is off for
  * local origins (`authRateLimitEnabled`), so a burst of these is not throttled.
  */
 async function mint({ email, password }: Persona): Promise<StorageState> {
@@ -42,7 +46,8 @@ async function mint({ email, password }: Persona): Promise<StorageState> {
 		if (!res.ok()) {
 			throw new Error(`Sign-in as ${email} answered ${res.status()}: ${await res.text()}`);
 		}
-		return await ctx.storageState();
+		const state = await ctx.storageState();
+		return { ...state, cookies: state.cookies.filter((c) => !c.name.includes('.session_data')) };
 	} finally {
 		await ctx.dispose();
 	}

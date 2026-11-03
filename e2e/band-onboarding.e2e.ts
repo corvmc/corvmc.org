@@ -52,7 +52,7 @@ async function loginThroughForm(page: Page) {
 	await page.goto('/login');
 	await page.locator('input[name="email"]').fill(SEED_OWNER_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_OWNER_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
+	await page.locator('form button[type="submit"]').click();
 	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
 }
 
