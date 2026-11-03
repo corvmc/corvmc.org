@@ -27,9 +27,10 @@ test('an owner can move their band to a new address', async ({ page, request }) 
 	await login(page);
 	await page.goto(`/band/${SEED_RENAME_BAND_SLUG}/settings`);
 
-	await page.getByRole('button', { name: 'Change address' }).click();
-	await page.locator('input[name="newSlug"]').fill(NEW_SLUG);
-	await page.getByRole('button', { name: 'Change address' }).last().click();
+	await page.getByTestId('change-address').click();
+	const newSlug = page.locator('input[name="newSlug"]');
+	await newSlug.fill(NEW_SLUG);
+	await page.locator('form').filter({ has: newSlug }).locator('button[type="submit"]').click();
 
 	// The mutation refreshes nothing server-side — the client navigates, which is
 	// what re-keys every slug-scoped query on the page.

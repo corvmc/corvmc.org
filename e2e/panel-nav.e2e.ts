@@ -15,6 +15,25 @@ async function loginAsStaff(page: Page) {
 
 const nav = (page: Page) => page.locator('aside ul.menu').first();
 
+const navLink = (page: Page, href: string) => nav(page).locator(`a[href="${href}"]`);
+
+/** The disclosure button of the group holding `href`, hidden or not. */
+const groupToggle = (page: Page, href: string) =>
+	nav(page)
+		.locator('li')
+		.filter({ has: page.locator(`a[href="${href}"]`) })
+		.locator('button[aria-expanded]');
+
+const BROWSE_BANDS = '/member/directory/bands';
+
+// The member-context rows that moved from the sidebar into the chrome (#1244).
+const ACCOUNT_HREFS = [
+	'/member/profile',
+	'/member/account',
+	'/member/purchases',
+	'/member/membership'
+];
+
 test.describe('member sidebar', () => {
 	test('highlights the section a detail page belongs to, and keeps the chrome rows out', async ({
 		page
@@ -39,7 +58,7 @@ test.describe('member sidebar', () => {
 
 		// Suggestions and Help, since #1244 — the member-context rows that used to
 		// end this cluster are in the avatar dropdown now.
-		await expect(nav(page).getByRole('link', { name: 'Help' })).toBeVisible();
+		await expect(navLink(page, '/member/help')).toBeVisible();
 		// The spacer still does its job now that the list is a scroll container.
 		const gap = await nav(page).evaluate((ul) => {
 			const list = ul.getBoundingClientRect();
@@ -49,49 +68,40 @@ test.describe('member sidebar', () => {
 		expect(gap).toBeLessThan(40);
 
 		// The member-context rows are out of the sidebar and in the chrome.
-		for (const name of ['Messages', 'Profile', 'Account', 'Purchases', 'Membership']) {
-			await expect(nav(page).getByRole('link', { name, exact: true })).toHaveCount(0);
+		for (const href of ['/member/messages', ...ACCOUNT_HREFS]) {
+			await expect(navLink(page, href)).toHaveCount(0);
 		}
 
 		// The topbar carries Messages on every panel, which is the point of the
 		// move — a band admin reaches their own inbox without switching panels.
 		await expect(page.locator('a[aria-label^="Messages"]')).toBeVisible();
 
-		await page.getByRole('button', { name: 'Account menu' }).click();
-		for (const name of ['Profile', 'Account', 'Purchases', 'Membership']) {
-			await expect(page.getByRole('link', { name, exact: true })).toBeVisible();
+		const accountMenu = page.locator('.account-dropdown-wrapper');
+		await accountMenu.locator('button').first().click();
+		for (const href of ACCOUNT_HREFS) {
+			await expect(accountMenu.locator(`a[href="${href}"]`)).toBeVisible();
 		}
 	});
-
-	const myBands = 'My Bands';
-	const browseBands = 'Browse Bands';
 
 	test('collapses My Bands, remembers it, and leaves the staff panel alone', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/member');
 
-		const header = nav(page).getByRole('button', { name: myBands });
+		const header = groupToggle(page, BROWSE_BANDS);
 		await expect(header).toHaveAttribute('aria-expanded', 'true');
-		await expect(nav(page).getByRole('link', { name: browseBands })).toBeVisible();
+		await expect(navLink(page, BROWSE_BANDS)).toBeVisible();
 
 		await header.click();
-		await expect(nav(page).getByRole('link', { name: browseBands })).toHaveCount(0);
+		await expect(navLink(page, BROWSE_BANDS)).toBeHidden();
 
 		await page.reload();
-		await expect(nav(page).getByRole('button', { name: myBands })).toHaveAttribute(
-			'aria-expanded',
-			'false'
-		);
+		await expect(groupToggle(page, BROWSE_BANDS)).toHaveAttribute('aria-expanded', 'false');
 
 		// The collapse record is the member panel's own, not the staff panel's.
 		await page.goto('/staff');
 		// Staff's own groups are untouched by a member-panel preference.
-		for (const title of ['People', 'Space', 'Money']) {
-			await expect(nav(page).getByRole('button', { name: title })).toHaveAttribute(
-				'aria-expanded',
-				'true'
-			);
-		}
+		await expect(nav(page).locator('button[aria-expanded="true"]').first()).toBeVisible();
+		await expect(nav(page).locator('button[aria-expanded="false"]')).toHaveCount(0);
 	});
 });
 
@@ -100,16 +110,15 @@ test.describe('member sidebar browse rows', () => {
 		await loginAsStaff(page);
 		await page.goto('/member');
 
-		await nav(page).getByRole('link', { name: 'Browse Bands' }).click();
+		await navLink(page, BROWSE_BANDS).click();
 		await page.waitForURL('**/member/directory/bands');
 		await expect(nav(page).locator('a.active')).toHaveCount(1);
 		await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/member/directory/bands');
 
-		await expect(nav(page).getByRole('link', { name: 'Browse Groups' })).toHaveAttribute(
-			'href',
-			'/member/groups'
-		);
-		await expect(nav(page).getByRole('link', { name: 'All', exact: true })).toHaveCount(0);
+		// The browse rows replaced both headers' "All" links (#2132): one row per
+		// address, and nothing left at the bands list.
+		await expect(navLink(page, '/member/groups')).toHaveCount(1);
+		await expect(navLink(page, '/member/bands')).toHaveCount(0);
 	});
 
 	test('the old addresses redirect', async ({ page }) => {
@@ -120,7 +129,7 @@ test.describe('member sidebar browse rows', () => {
 
 		await page.goto('/member/directory/instructors');
 		await expect(page).toHaveURL(/\/member\/directory\?teaches=collective$/);
-		await expect(page.getByRole('checkbox', { name: 'Teaches at the Collective' })).toBeChecked();
+		await expect(page.locator('input[name="teachesAtCollective"]')).toBeChecked();
 	});
 });
 

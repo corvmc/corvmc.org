@@ -35,6 +35,7 @@
 		modalTitle="New sponsor"
 		submitLabel="Add sponsor"
 		successToast="Sponsor added"
+		data-testid="new-sponsor"
 	>
 		{#snippet form()}
 			<SponsorFields fields={createSponsor.fields} />

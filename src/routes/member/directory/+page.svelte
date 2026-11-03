@@ -135,7 +135,12 @@
 				<span>Teaches privately</span>
 			</label>
 			<label class="directory-filters__toggle">
-				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={teachesAtCollective} />
+				<input
+					type="checkbox"
+					name="teachesAtCollective"
+					class="checkbox checkbox-sm"
+					bind:checked={teachesAtCollective}
+				/>
 				<span>Teaches at the Collective</span>
 			</label>
 			<label class="directory-filters__toggle">

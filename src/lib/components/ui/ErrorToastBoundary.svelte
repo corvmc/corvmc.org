@@ -68,6 +68,8 @@
 	{@render children()}
 
 	{#snippet failed(error, reset)}
-		<Alert type="error" {reset}>Failed to load: {errorMessage(error)}</Alert>
+		<div class="contents" data-boundary-failed>
+			<Alert type="error" {reset}>Failed to load: {errorMessage(error)}</Alert>
+		</div>
 	{/snippet}
 </svelte:boundary>

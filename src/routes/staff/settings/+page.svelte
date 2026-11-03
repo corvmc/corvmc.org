@@ -198,7 +198,7 @@
 <PageContent width="2xl">
 	<TabBar {tabs} active={activeTab} onchange={(key) => (activeTab = key)} />
 
-	<div class="mt-6 space-y-4">
+	<div class="mt-6 space-y-4" role="tabpanel" aria-labelledby="tab-{activeTab}">
 		{#if activeTab === 'pricing'}
 			<p class="text-muted">
 				Configure the products and pricing used for checkout. Changes to names and descriptions sync
@@ -957,7 +957,7 @@
 							<div class="flex items-center gap-3">
 								<ChannelIcon size={20} class="opacity-60" />
 								<div>
-									<h3 class="font-semibold">{label}</h3>
+									<h3 class="font-semibold" data-channel={cfg.channel}>{label}</h3>
 									<p class="text-subtle">{meta.description}</p>
 								</div>
 							</div>

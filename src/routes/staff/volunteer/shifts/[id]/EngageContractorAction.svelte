@@ -20,6 +20,7 @@
 	size="sm"
 	modalTitle="Engage contractor"
 	successToast="Contractor engaged"
+	data-testid="engage-contractor"
 >
 	{#snippet form()}
 		<input type="hidden" name="workOrderId" value={workOrderId} />

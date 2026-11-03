@@ -212,6 +212,7 @@
 			submitLabel={data.needsOutcome ? 'Record' : 'Certify'}
 			successToast={data.needsOutcome ? 'Outcome recorded' : 'Result certified and published'}
 			size="sm"
+			data-testid="certify-ballot"
 		>
 			{#snippet form()}
 				<input {...certifyBallotForm.fields.ballotId.as('hidden', b.id)} />

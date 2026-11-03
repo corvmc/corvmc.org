@@ -103,10 +103,13 @@ test('an old directory profile URL forwards to the current one', async ({ page }
 
 // Negative control for the three tests above: no history row, so no forward.
 test('an unknown subdomain redirects to a directory 404 rather than erroring', async ({ page }) => {
-	await page.goto(`${subdomain('no-such-band-xyz')}/`);
+	const response = await page.goto(`${subdomain('no-such-band-xyz')}/`);
 
 	expect(page.url()).toContain('/directory/bands/no-such-band-xyz');
-	await expect(page.getByText(/not found/i).first()).toBeVisible({ timeout: 15000 });
+	expect(response?.status()).toBe(404);
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${response?.status()}`, {
+		timeout: 15000
+	});
 });
 
 test('the host-route lookup reports no band for an unrelated hostname', async ({ request }) => {

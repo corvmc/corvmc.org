@@ -88,7 +88,9 @@
 				</div>
 			{/snippet}
 			{#if access.positions.length === 0}
-				<p class="text-muted">No position. They hold only what a member holds.</p>
+				<p class="text-muted" data-testid="no-positions">
+					No position. They hold only what a member holds.
+				</p>
 			{:else}
 				<Table>
 					{#snippet head()}

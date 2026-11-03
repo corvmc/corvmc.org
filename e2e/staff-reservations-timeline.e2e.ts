@@ -20,24 +20,27 @@ test.describe('reservations timeline', () => {
 
 		// Far enough out that it blocks no slot another spec books.
 		const reason = `E2E closure ${Date.now()}`;
-		await page.getByRole('button', { name: 'New Closure' }).click();
-		const dialog = page.getByRole('dialog', { name: 'New Closure' });
+		const start = { entered: '09:00', shown: '9:00' };
+		await page.getByTestId('new-closure').click();
+		const dialog = page.getByRole('dialog').filter({ has: page.locator('input[name="reason"]') });
 		await dialog.locator('input[name="reason"]').fill(reason);
-		await dialog.locator('input[name="startsAt"]').fill('2099-01-05T09:00');
+		await dialog.locator('input[name="startsAt"]').fill(`2099-01-05T${start.entered}`);
 		await dialog.locator('input[name="endsAt"]').fill('2099-01-05T17:00');
-		await dialog.getByRole('button', { name: 'Add Closure' }).click();
+		await dialog.locator('button[type="submit"]').click();
 		await expectSuccessToast(page);
 
 		await page.getByRole('searchbox').fill(reason);
 		const row = page.getByRole('row').filter({ hasText: reason });
-		await expect(row).toContainText('Closed');
-		await expect(row).toContainText('9:00');
+		// A closure row, not a booking: the error badge is the closure's marker.
+		await expect(row.locator('.badge-error')).toBeVisible();
+		await expect(row).toContainText(start.shown);
 	});
 
 	test('the old recurring address opens the series modal', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/recurring');
 		await page.waitForURL(/\/staff\/reservations\?recurring/, { timeout: 15000 });
-		await expect(page.getByRole('dialog', { name: 'Recurring series' })).toBeVisible();
+		// The only modal `?recurring` opens.
+		await expect(page.getByRole('dialog')).toBeVisible();
 	});
 });

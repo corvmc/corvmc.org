@@ -45,6 +45,12 @@ async function login(page: Page) {
 	await signInAs(page, { email: SEED_MEMBER_EMAIL, password: SEED_MEMBER_PASSWORD });
 }
 
+// The seeded hour at the default rate, and that grossed up for 2.9% + 30¢
+// (`calculateTotalWithFeeCoverage(1500)` is 1576). Amounts, not copy.
+const BALANCE_CENTS = 1500;
+const WITH_FEES_CENTS = 1576;
+const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
 test('a member covers the processing fee and the reservation settles', async ({ page }) => {
 	// Every 5xx this flow provokes, so the assertion at the end can insist there
 	// were none. #546 added this watcher with one tolerated failure: on `main`
@@ -63,7 +69,7 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 	await page.goto(`/member/reservations/${SEED_RESERVATION_ID}/pay`);
 
 	// The pay form for a balance-due ($15.00) reservation.
-	await expect(page.getByText('$15.00').first()).toBeVisible();
+	await expect(page.getByText(dollars(BALANCE_CENTS)).first()).toBeVisible();
 
 	// The boolean field rendered with SvelteKit's `b:` prefix — the exact
 	// mechanism the original bug lived in.
@@ -72,7 +78,7 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 	await checkbox.check();
 	await expect(checkbox).toBeChecked();
 
-	await page.getByRole('button', { name: /^Pay \$/ }).click();
+	await page.locator('form').filter({ has: checkbox }).locator('button[type="submit"]').click();
 
 	// The in-app checkout page, reached by the same 303 the live integration
 	// issues. Reservations create an `elements` session now, so `checkout()`
@@ -86,10 +92,11 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 	// `exact`: the submit button beside it is labelled "Pay $15.76", so a
 	// substring match resolves to both and fails on strict mode. It passed at all
 	// only while the button had yet to render its label — a race, not a pass.
-	await expect(page.getByText('$15.76', { exact: true })).toBeVisible();
+	await expect(page.getByText(dollars(WITH_FEES_CENTS), { exact: true })).toBeVisible();
 
-	await page.locator('input[name$="cardNumber"]').fill('4242424242424242');
-	await page.getByRole('button', { name: /^Pay / }).click();
+	const card = page.locator('input[name$="cardNumber"]');
+	await card.fill('4242424242424242');
+	await page.locator('form').filter({ has: card }).locator('button[type="submit"]').click();
 
 	// `?paid=` is the session's `return_url`, which only `elements` mode sets —
 	// landing on it proves `checkout()` mapped `successUrl` rather than dropping

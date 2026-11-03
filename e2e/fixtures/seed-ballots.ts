@@ -18,6 +18,7 @@ import { SEED_STAFF_ID, SEED_TARGET_ID } from './seed-staff-user';
 export const SEED_BALLOT_OPEN_ID = 'e2e-ballot-open';
 export const SEED_BALLOT_CLOSED_ID = 'e2e-ballot-closed';
 export const SEED_BALLOT_CLOSED_TITLE = 'E2E: adopt the closed motion';
+export const SEED_BALLOT_YES_LABEL = 'Yes';
 
 const DAY = 86_400_000;
 const IDS = [SEED_BALLOT_OPEN_ID, SEED_BALLOT_CLOSED_ID];
@@ -57,7 +58,7 @@ export async function seedBallots(): Promise<void> {
 				electorateSize: 2
 			});
 			await db.insert(ballotOption).values([
-				{ id: `${spec.id}-yes`, ballotId: spec.id, label: 'Yes', position: 0 },
+				{ id: `${spec.id}-yes`, ballotId: spec.id, label: SEED_BALLOT_YES_LABEL, position: 0 },
 				{ id: `${spec.id}-no`, ballotId: spec.id, label: 'No', position: 1 }
 			]);
 			await db.insert(ballotElector).values([

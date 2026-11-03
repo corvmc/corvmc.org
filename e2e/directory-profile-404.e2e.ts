@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 /**
  * Regression test for the public band-profile 404 message in PRODUCTION builds.
@@ -14,20 +14,21 @@ import { expect, test } from '@playwright/test';
  * were unaffected, which is why this must run against build + preview.
  */
 
-test('band profile 404 shows "Band not found", not a minified internals error', async ({
-	page
-}) => {
-	await page.goto('/directory/bands/does-not-exist-xyz');
+/**
+ * The page answers 404 and says so, without the copy: the error page renders
+ * `page.status`, and the minified internals TypeError would have been a 500.
+ */
+async function expect404(page: Page, path: string) {
+	const response = await page.goto(path);
+	expect(response?.status()).toBe(404);
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${response?.status()}`);
+	await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
+}
 
-	await expect(page.locator('body')).toContainText('Band not found');
-	await expect(page.locator('body')).not.toContainText('Cannot read properties');
+test('band profile 404 answers 404, not a minified internals error', async ({ page }) => {
+	await expect404(page, '/directory/bands/does-not-exist-xyz');
 });
 
-test('member profile 404 shows "Member not found", not a minified internals error', async ({
-	page
-}) => {
-	await page.goto('/directory/members/does-not-exist-xyz');
-
-	await expect(page.locator('body')).toContainText('Member not found');
-	await expect(page.locator('body')).not.toContainText('Cannot read properties');
+test('member profile 404 answers 404, not a minified internals error', async ({ page }) => {
+	await expect404(page, '/directory/members/does-not-exist-xyz');
 });

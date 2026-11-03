@@ -175,7 +175,7 @@
 		{/await}
 		<RecurringSeriesModal />
 		{#await canManageClosures then canManage}
-			{#if canManage}<CreateClosureAction />{/if}
+			{#if canManage}<CreateClosureAction data-testid="new-closure" />{/if}
 		{/await}
 		<CreateReservation />
 	</div>

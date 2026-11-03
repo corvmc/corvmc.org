@@ -5,6 +5,7 @@ import {
 	SEED_BALLOT_OPEN_ID,
 	SEED_BALLOT_CLOSED_ID,
 	SEED_BALLOT_CLOSED_TITLE,
+	SEED_BALLOT_YES_LABEL,
 	readSecretTally,
 	readCertifiedAt
 } from './fixtures/seed-ballots';
@@ -21,6 +22,9 @@ test.skip(!surfaces.ballots, 'Ballots is switched off in src/lib/config.ts (#211
 
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
+const voteForm = (page: Page) =>
+	page.locator('form').filter({ has: page.locator('select[name="optionId"]') });
+
 async function login(page: Page) {
 	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 }
@@ -29,14 +33,16 @@ test('a secret vote is counted once and cannot be cast again', async ({ page }) 
 	await login(page);
 	await page.goto(`/member/ballots/${SEED_BALLOT_OPEN_ID}`);
 
-	await page.getByRole('combobox', { name: 'Your choice' }).selectOption({ label: 'Yes' });
-	await page.getByRole('button', { name: 'Cast my vote' }).click();
+	await voteForm(page)
+		.locator('select[name="optionId"]')
+		.selectOption(`${SEED_BALLOT_OPEN_ID}-yes`);
+	await voteForm(page).locator('button[type="submit"]').click();
 	await expectSuccessToast(page);
 
 	await expect
 		.poll(() => readSecretTally(SEED_BALLOT_OPEN_ID), DB_POLL)
 		.toEqual({ participation: 1, counted: 1 });
-	await expect(page.getByRole('button', { name: 'Cast my vote' })).toHaveCount(0);
+	await expect(voteForm(page)).toHaveCount(0);
 });
 
 test('the certifier publishes a closed result', async ({ page }) => {
@@ -46,12 +52,12 @@ test('the certifier publishes a closed result', async ({ page }) => {
 		page.getByRole('heading', { level: 1, name: SEED_BALLOT_CLOSED_TITLE })
 	).toBeVisible();
 
-	await page.getByRole('button', { name: 'Certify the result' }).click();
+	await page.getByTestId('certify-ballot').click();
 	const dialog = page.getByRole('dialog');
 	await dialog.getByLabel('Outcome').selectOption('passed');
-	await dialog.getByRole('button', { name: 'Certify' }).click();
+	await dialog.locator('button[type="submit"]').click();
 	await expectSuccessToast(page);
 
 	await expect.poll(() => readCertifiedAt(SEED_BALLOT_CLOSED_ID), DB_POLL).not.toBeNull();
-	await expect(page.getByRole('cell', { name: 'Yes' })).toBeVisible();
+	await expect(page.getByRole('cell', { name: SEED_BALLOT_YES_LABEL })).toBeVisible();
 });

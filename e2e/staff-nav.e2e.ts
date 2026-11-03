@@ -24,6 +24,15 @@ async function loginAsStaff(page: Page) {
 
 const nav = (page: Page) => page.locator('aside ul.menu').first();
 
+const navLink = (page: Page, href: string) => nav(page).locator(`a[href="${href}"]`);
+
+/** The disclosure button of the group holding `href`, hidden or not. */
+const groupToggle = (page: Page, href: string) =>
+	nav(page)
+		.locator('li')
+		.filter({ has: page.locator(`a[href="${href}"]`) })
+		.locator('button[aria-expanded]');
+
 /**
  * Collapse a group, tolerating the window before hydration.
  *
@@ -40,8 +49,8 @@ const nav = (page: Page) => page.locator('aside ul.menu').first();
  * closed. `aria-expanded` is the same state the assertions below are about to
  * read, so this cannot pass while the click is still being lost.
  */
-async function collapseGroup(page: Page, title: string) {
-	const button = nav(page).getByRole('button', { name: title });
+async function collapseGroup(page: Page, href: string) {
+	const button = groupToggle(page, href);
 	await expect(async () => {
 		if ((await button.getAttribute('aria-expanded')) === 'true') await button.click();
 		expect(await button.getAttribute('aria-expanded')).toBe('false');
@@ -71,8 +80,8 @@ test.describe('staff sidebar', () => {
 		}
 
 		// A row from each of the far ends of the list, both reachable by role.
-		await expect(nav(page).getByRole('link', { name: 'Members' })).toBeVisible();
-		await expect(nav(page).getByRole('link', { name: 'Settings' })).toBeVisible();
+		await expect(navLink(page, '/staff/members')).toBeVisible();
+		await expect(navLink(page, '/staff/settings')).toBeVisible();
 
 		// Exactly one row highlights, including on a detail page.
 		await page.goto('/staff/members');
@@ -91,26 +100,20 @@ test.describe('staff sidebar', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff');
 
-		await collapseGroup(page, 'Money');
-		await expect(nav(page).getByRole('link', { name: 'Payments' })).toHaveCount(0);
+		await collapseGroup(page, '/staff/payments');
+		await expect(navLink(page, '/staff/payments')).toBeHidden();
 
 		await page.reload();
 
-		await expect(nav(page).getByRole('button', { name: 'Money' })).toHaveAttribute(
-			'aria-expanded',
-			'false'
-		);
-		await expect(nav(page).getByRole('link', { name: 'Payments' })).toHaveCount(0);
+		await expect(groupToggle(page, '/staff/payments')).toHaveAttribute('aria-expanded', 'false');
+		await expect(navLink(page, '/staff/payments')).toBeHidden();
 
 		// And navigating into the collapsed group opens it.
 		await page.goto('/staff/payments');
 
 		// A highlighted row you cannot see is worse than no highlight at all.
-		await expect(nav(page).getByRole('button', { name: 'Money' })).toHaveAttribute(
-			'aria-expanded',
-			'true'
-		);
-		await expect(nav(page).getByRole('link', { name: 'Payments' })).toBeVisible();
+		await expect(groupToggle(page, '/staff/payments')).toHaveAttribute('aria-expanded', 'true');
+		await expect(navLink(page, '/staff/payments')).toBeVisible();
 	});
 
 	test('scrolls the nav itself, leaving the brand pinned', async ({ page }) => {
