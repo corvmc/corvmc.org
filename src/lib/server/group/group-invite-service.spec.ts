@@ -1,114 +1,21 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-let insertResult: unknown[] = [];
-let updateCalled = false;
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
-function buildChain(getResult: () => unknown[]) {
-	const proxy: any = new Proxy(() => proxy, {
-		get(_, prop) {
-			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => resolve(getResult());
-			}
-			return () => proxy;
-		}
-	});
-	return proxy;
-}
-
-let selectCallIndex = 0;
-const selectResults: unknown[][] = [];
-
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () =>
-			buildChain(() => {
-				const result = selectResults[selectCallIndex] ?? [];
-				selectCallIndex++;
-				return result;
-			}),
-		insert: () => ({
-			values: (row: unknown) => {
-				insertResult.push(row);
-				// `createInvite` upserts; `resolvePendingInvites` awaits the values()
-				// result directly. One chainable object serves both.
-				const chain = {
-					onConflictDoUpdate: () => chain,
-					returning: () =>
-						Promise.resolve([{ id: 'inv-new', token: 'tok-abc', ...(row as object) }])
-				};
-				return chain;
-			}
-		}),
-		update: () => {
-			updateCalled = true;
-			return buildChain(() => []);
-		}
-	}
-}));
-
-vi.mock('$lib/server/db/schema/group-invite', () => ({
-	groupInvite: {
-		id: 'id',
-		email: 'email',
-		groupId: 'group_id',
-		role: 'role',
-		position: 'position',
-		status: 'status',
-		token: 'token',
-		expiresAt: 'expires_at',
-		createdAt: 'created_at',
-		invitedById: 'invited_by_id',
-		acceptedAt: 'accepted_at'
-	}
-}));
-
-vi.mock('$lib/server/db/schema/group', () => ({
-	group: { id: 'id', name: 'name', slug: 'slug', kind: 'kind', deletedAt: 'deleted_at' },
-	groupMember: {
-		id: 'id',
-		groupId: 'group_id',
-		userId: 'user_id',
-		role: 'role',
-		position: 'position',
-		status: 'status',
-		invitedById: 'invited_by_id'
-	}
-}));
-
-vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: { id: 'id', name: 'name', email: 'email' }
-}));
-
-vi.mock('drizzle-orm', () => ({
-	eq: vi.fn(),
-	and: vi.fn(),
-	gt: vi.fn(),
-	desc: vi.fn(),
-	isNull: vi.fn(),
-	sql: (strings: TemplateStringsArray) => strings.join('')
-}));
-
-const mockInvite = vi.fn().mockResolvedValue({ id: 'member-1' });
-// `isUniqueConstraintError` deliberately is NOT mocked — it lives in
-// $lib/server/db/constraint-errors (no schema imports) so these tests run the
-// real predicate rather than a stub that would prove nothing.
-vi.mock('$lib/server/band/band-service', () => ({
-	invite: (...args: unknown[]) => mockInvite(...args),
-	BandMemberExistsError: class BandMemberExistsError extends Error {
-		constructor(message = 'exists') {
-			super(message);
-			this.name = 'BandMemberExistsError';
-		}
-	}
-}));
-
-const mockEmit = vi.fn().mockResolvedValue(undefined);
+const emitted: [string, Record<string, unknown>][] = [];
 vi.mock('$lib/server/event-bus/event-bus', () => ({
-	domainEvents: { emit: mockEmit }
+	domainEvents: {
+		emit: (name: string, payload: Record<string, unknown>) => {
+			emitted.push([name, payload]);
+			return Promise.resolve();
+		},
+		on: vi.fn()
+	}
 }));
 
 const {
@@ -121,23 +28,89 @@ const {
 	GroupInviteNotFoundError,
 	GroupInviteNotPendingError
 } = await import('./group-invite-service');
+const { BandMemberExistsError } = await import('$lib/server/band/band-service');
+const { INVITE_EXPIRY_DAYS } = await import('$lib/config');
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+const T0 = 1_750_000_000;
+const DAY = 86_400;
 
-beforeEach(() => {
-	vi.clearAllMocks();
-	selectCallIndex = 0;
-	selectResults.length = 0;
-	insertResult = [];
-	updateCalled = false;
+function member(id: string, email = `${id}@example.com`) {
+	sqlite
+		.prepare(`insert into user (id, name, email) values (?, ?, ?)`)
+		.run(id, `Name ${id}`, email);
+}
+
+function band(id: string, opts: { kind?: string; deleted?: boolean } = {}) {
+	sqlite
+		.prepare(`insert into "group" (id, kind, name, slug, deleted_at) values (?, ?, ?, ?, ?)`)
+		.run(id, opts.kind ?? 'band', `Group ${id}`, id, opts.deleted ? T0 : null);
+}
+
+function invitation(
+	id: string,
+	cols: {
+		email?: string;
+		groupId?: string;
+		role?: string;
+		position?: string | null;
+		invitedById?: string | null;
+		status?: string;
+		expiresAt?: number;
+		createdAt?: number;
+	} = {}
+) {
+	sqlite
+		.prepare(
+			`insert into group_invite (id, email, token, group_id, role, position, invited_by_id, status, expires_at, created_at)
+			 values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		)
+		.run(
+			id,
+			cols.email ?? 'alice@test.com',
+			`tok-${id}`,
+			cols.groupId ?? 'band-1',
+			cols.role ?? 'member',
+			cols.position ?? null,
+			cols.invitedById === undefined ? 'inviter-1' : cols.invitedById,
+			cols.status ?? 'pending',
+			cols.expiresAt ?? T0 + DAY,
+			cols.createdAt ?? T0
+		);
+}
+
+const invites = () =>
+	sqlite
+		.prepare(
+			`select id, email, group_id, role, position, status, expires_at, accepted_at from group_invite order by id`
+		)
+		.all() as Record<string, unknown>[];
+
+const roster = () =>
+	sqlite
+		.prepare(`select group_id, user_id, role, position, status from group_member order by group_id`)
+		.all();
+
+beforeEach(async () => {
+	// Drain the previous test's fire-and-forget emits so none lands in this one.
+	await new Promise((r) => setTimeout(r, 0));
+	vi.useFakeTimers({ toFake: ['Date'] });
+	vi.setSystemTime(T0 * 1000);
+	emitted.length = 0;
+	sqlite.exec(`drop trigger if exists temp.group_member_fails`);
+	for (const t of ['group_invite', 'group_member', '"group"', 'user']) {
+		sqlite.exec(`delete from ${t}`);
+	}
+	member('inviter-1');
+	band('band-1');
+});
+
+afterEach(() => {
+	vi.useRealTimers();
 });
 
 describe('createInvite', () => {
-	it('delegates to band-service invite when user already exists', async () => {
-		// select 1: user lookup — found
-		selectResults.push([{ id: 'user-existing' }]);
+	it('puts an existing account on the roster as pending instead of emailing an invite', async () => {
+		member('user-existing', 'alice@example.com');
 
 		const result = await createInvite(
 			'Alice@Example.COM',
@@ -147,342 +120,307 @@ describe('createInvite', () => {
 			'inviter-1'
 		);
 
-		expect(result.type).toBe('existing_user');
-		expect(result.id).toBe('member-1');
-		expect(mockInvite).toHaveBeenCalledWith(
+		expect(result).toEqual({ type: 'existing_user', id: expect.any(String) });
+		expect(roster()).toEqual([
+			{
+				group_id: 'band-1',
+				user_id: 'user-existing',
+				role: 'member',
+				position: 'Guitar',
+				status: 'pending'
+			}
+		]);
+		expect(invites()).toEqual([]);
+	});
+
+	it.each([
+		['active', 'That person is already in this band.'],
+		['pending', 'That person already has a pending invitation to this band.']
+	])('refuses an account already %s on this roster', async (status, message) => {
+		member('user-existing', 'alice@example.com');
+		sqlite
+			.prepare(
+				`insert into group_member (id, group_id, user_id, role, status) values ('gm', 'band-1', 'user-existing', 'member', ?)`
+			)
+			.run(status);
+
+		const err = await createInvite(
+			'alice@example.com',
 			'band-1',
-			'user-existing',
 			'member',
-			'Guitar',
+			null,
 			'inviter-1'
+		).catch((e: unknown) => e);
+
+		expect(err).toBeInstanceOf(BandMemberExistsError);
+		expect((err as Error).message).toBe(message);
+	});
+
+	it("is not refused by the account's membership of a different band", async () => {
+		member('user-existing', 'alice@example.com');
+		band('band-2');
+		sqlite.exec(
+			`insert into group_member (id, group_id, user_id, role, status) values ('gm', 'band-2', 'user-existing', 'member', 'active')`
 		);
+
+		const result = await createInvite('alice@example.com', 'band-1', 'member', null, 'inviter-1');
+
+		expect(result.type).toBe('existing_user');
 	});
 
-	it('creates a group invite when the address has no account', async () => {
-		// select 1: user lookup — not found. There is no second select: re-inviting
-		// is an upsert onto the partial unique index now, not a SELECT for an
-		// existing pending row followed by an INSERT.
-		selectResults.push([]);
+	it('creates a pending invite, lowercased and trimmed, when the address has no account', async () => {
+		const result = await createInvite('  NEW@Test.com  ', 'band-1', 'member', 'Drums', 'inviter-1');
 
-		const result = await createInvite('new@test.com', 'band-1', 'member', 'Drums', 'inviter-1');
+		expect(result).toEqual({ type: 'group_invite', id: expect.any(String) });
+		expect(invites()).toEqual([
+			{
+				id: result.id,
+				email: 'new@test.com',
+				group_id: 'band-1',
+				role: 'member',
+				position: 'Drums',
+				status: 'pending',
+				expires_at: T0 + INVITE_EXPIRY_DAYS * DAY,
+				accepted_at: null
+			}
+		]);
+	});
 
-		expect(result.type).toBe('group_invite');
-		expect(result.id).toBe('inv-new');
-		expect(insertResult).toHaveLength(1);
-		expect(insertResult[0]).toMatchObject({
-			email: 'new@test.com',
-			groupId: 'band-1',
-			role: 'member',
-			position: 'Drums',
-			invitedById: 'inviter-1',
-			status: 'pending'
+	it('re-inviting refreshes the one pending row rather than adding another', async () => {
+		invitation('inv-1', { email: 'new@test.com', expiresAt: T0 - DAY, position: 'Bass' });
+
+		const result = await createInvite('new@test.com', 'band-1', 'admin', 'Keys', 'inviter-1');
+
+		expect(result.id).toBe('inv-1');
+		expect(invites()).toEqual([
+			expect.objectContaining({
+				id: 'inv-1',
+				role: 'admin',
+				position: 'Keys',
+				expires_at: T0 + INVITE_EXPIRY_DAYS * DAY
+			})
+		]);
+	});
+
+	it('returns the token only when the caller sends its own email', async () => {
+		const quiet = await createInvite('a@test.com', 'band-1', 'member', null, 'inviter-1', {
+			notify: false
 		});
-	});
+		const loud = await createInvite('b@test.com', 'band-1', 'member', null, 'inviter-1');
 
-	it('normalizes email to lowercase', async () => {
-		selectResults.push([]);
-
-		await createInvite('  USER@Example.COM  ', 'band-1', 'member', null, 'inviter-1');
-
-		expect(insertResult[0]).toMatchObject({ email: 'user@example.com' });
+		expect(quiet.token).toBe(
+			(
+				sqlite.prepare(`select token from group_invite where id = ?`).get(quiet.id) as {
+					token: string;
+				}
+			).token
+		);
+		expect(loud).not.toHaveProperty('token');
+		await vi.waitFor(() => expect(emitted).toHaveLength(1));
+		expect(emitted[0][1]).toMatchObject({ email: 'b@test.com' });
 	});
 
 	it('emits group_invite.created with the kind the email has to name', async () => {
-		selectResults.push([]);
-		// After insert, the fire-and-forget block does 2 more selects:
-		// select 2: group name and kind
-		selectResults.push([{ name: 'Real Book Club', kind: 'club' }]);
-		// select 3: inviter name
-		selectResults.push([{ name: 'Alice' }]);
+		band('club-1', { kind: 'club' });
 
-		await createInvite('new@test.com', 'group-1', 'member', null, 'inviter-1');
+		await createInvite('new@test.com', 'club-1', 'member', null, 'inviter-1');
 
-		// Event is fire-and-forget (Promise.resolve().then), flush microtasks
-		await new Promise((r) => setTimeout(r, 0));
-
-		expect(mockEmit).toHaveBeenCalledWith(
+		await vi.waitFor(() => expect(emitted).toHaveLength(1));
+		expect(emitted[0]).toEqual([
 			'group_invite.created',
 			expect.objectContaining({
 				email: 'new@test.com',
-				groupName: 'Real Book Club',
-				// The invitee has no account and no page open, so "join a band" is
-				// the one thing the email must not say about a club.
+				groupId: 'club-1',
+				groupName: 'Group club-1',
+				// The invitee has no account, so "join a band" must not be said of a club.
 				groupKind: 'club',
-				invitedByName: 'Alice',
+				invitedByName: 'Name inviter-1',
 				role: 'member'
 			})
-		);
+		]);
 	});
 });
 
 describe('resolvePendingInvites', () => {
-	it('returns 0 when no pending invites exist', async () => {
-		selectResults.push([]); // pending invites query
+	it('returns 0 when the address has no live invite', async () => {
+		invitation('inv-expired', { expiresAt: T0 });
+		invitation('inv-revoked', { status: 'revoked' });
+		invitation('inv-other', { email: 'bob@test.com' });
 
-		const result = await resolvePendingInvites('user-1', 'alice@test.com');
-
-		expect(result).toBe(0);
+		expect(await resolvePendingInvites('user-1', 'alice@test.com')).toBe(0);
+		expect(roster()).toEqual([]);
 	});
 
-	it('creates roster rows and marks invites accepted', async () => {
-		// pending invites query
-		selectResults.push([
+	it('creates active roster rows and marks the invites accepted', async () => {
+		band('band-2');
+		invitation('inv-1', { groupId: 'band-1', role: 'member', position: 'Guitar' });
+		invitation('inv-2', { groupId: 'band-2', role: 'admin' });
+
+		expect(await resolvePendingInvites('user-1', 'ALICE@Test.com')).toBe(2);
+
+		expect(roster()).toEqual([
 			{
-				id: 'inv-1',
-				groupId: 'band-1',
+				group_id: 'band-1',
+				user_id: 'user-1',
 				role: 'member',
 				position: 'Guitar',
-				invitedById: 'inviter-1'
+				status: 'active'
 			},
-			{ id: 'inv-2', groupId: 'band-2', role: 'admin', position: null, invitedById: 'inviter-2' }
+			{ group_id: 'band-2', user_id: 'user-1', role: 'admin', position: null, status: 'active' }
 		]);
-
-		const result = await resolvePendingInvites('user-1', 'ALICE@Test.com');
-
-		expect(result).toBe(2);
-		// 2 inserts (groupMember rows) + we can't easily assert update calls
-		// but the function should have created 2 members
-		expect(insertResult).toHaveLength(2);
-		expect(insertResult[0]).toMatchObject({
-			groupId: 'band-1',
-			userId: 'user-1',
-			role: 'member',
-			position: 'Guitar',
-			status: 'active'
-		});
-		expect(insertResult[1]).toMatchObject({
-			groupId: 'band-2',
-			userId: 'user-1',
-			role: 'admin',
-			status: 'active'
-		});
+		expect(invites().map((i) => [i.id, i.status, i.accepted_at])).toEqual([
+			['inv-1', 'accepted', T0],
+			['inv-2', 'accepted', T0]
+		]);
 	});
 
-	it('handles UNIQUE constraint (already on the roster) gracefully', async () => {
-		selectResults.push([
-			{ id: 'inv-1', groupId: 'band-1', role: 'member', position: null, invitedById: 'inviter-1' }
-		]);
+	it('marks the invite accepted when the member is already on the roster', async () => {
+		invitation('inv-1');
+		sqlite.exec(
+			`insert into group_member (id, group_id, user_id, role, status) values ('gm', 'band-1', 'user-1', 'member', 'active')`
+		);
 
-		// Override insert to throw UNIQUE error
-		const dbMod = await import('$lib/server/db');
-		const origInsert = (dbMod.db as any).insert;
-		(dbMod.db as any).insert = () => ({
-			values: () => {
-				throw new Error('UNIQUE constraint failed');
-			}
-		});
-
-		const result = await resolvePendingInvites('user-1', 'alice@test.com');
-
-		expect(result).toBe(1); // still counted as resolved
-		expect(updateCalled).toBe(true); // invite marked accepted
-
-		(dbMod.db as any).insert = origInsert;
+		expect(await resolvePendingInvites('user-1', 'alice@test.com')).toBe(1);
+		expect(invites()[0]).toMatchObject({ status: 'accepted' });
+		expect(roster()).toHaveLength(1);
 	});
 
-	it('continues resolving if one invite fails with non-UNIQUE error', async () => {
-		selectResults.push([
-			{
-				id: 'inv-fail',
-				groupId: 'band-1',
-				role: 'member',
-				position: null,
-				invitedById: 'inviter-1'
-			},
-			{ id: 'inv-ok', groupId: 'band-2', role: 'member', position: null, invitedById: 'inviter-2' }
-		]);
-
-		const dbMod = await import('$lib/server/db');
-		const origInsert = (dbMod.db as any).insert;
-		let insertCount = 0;
-		(dbMod.db as any).insert = () => ({
-			values: (row: unknown) => {
-				insertCount++;
-				if (insertCount === 1) throw new Error('Some other DB error');
-				insertResult.push(row);
-				return { returning: () => Promise.resolve([row]) };
-			}
-		});
-
+	it('keeps resolving past an invite whose roster insert fails for another reason', async () => {
+		band('band-2');
+		invitation('inv-fail', { groupId: 'band-broken' });
+		invitation('inv-ok', { groupId: 'band-2' });
+		sqlite.exec(
+			`create temp trigger group_member_fails before insert on group_member
+			 when new.group_id = 'band-broken' begin select raise(abort, 'disk on fire'); end`
+		);
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-		const result = await resolvePendingInvites('user-1', 'alice@test.com');
+		expect(await resolvePendingInvites('user-1', 'alice@test.com')).toBe(1);
 
-		expect(result).toBe(1); // only the second succeeded
 		expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
-
+		expect(invites().map((i) => [i.id, i.status])).toEqual([
+			['inv-fail', 'pending'],
+			['inv-ok', 'accepted']
+		]);
 		consoleSpy.mockRestore();
-		(dbMod.db as any).insert = origInsert;
 	});
 });
 
 describe('revoke', () => {
 	it('revokes a pending invite', async () => {
-		selectResults.push([{ status: 'pending' }]);
+		invitation('inv-1');
 
 		await revoke('inv-1');
 
-		expect(updateCalled).toBe(true);
+		expect(invites()[0]).toMatchObject({ status: 'revoked' });
 	});
 
-	it('throws when invite not found', async () => {
-		selectResults.push([]);
-
+	it('throws when the invite does not exist', async () => {
 		await expect(revoke('nonexistent')).rejects.toThrow(GroupInviteNotFoundError);
 	});
 
-	it('throws when invite is not pending', async () => {
-		selectResults.push([{ status: 'accepted' }]);
+	it('throws when the invite is not pending', async () => {
+		invitation('inv-1', { status: 'accepted' });
 
 		await expect(revoke('inv-1')).rejects.toThrow(GroupInviteNotPendingError);
+		expect(invites()[0]).toMatchObject({ status: 'accepted' });
+	});
+
+	it("will not revoke another group's invite when scoped to a group", async () => {
+		invitation('inv-1', { groupId: 'band-2' });
+
+		await expect(revoke('inv-1', 'band-1')).rejects.toThrow(GroupInviteNotFoundError);
+		expect(invites()[0]).toMatchObject({ status: 'pending' });
+
+		await revoke('inv-1', 'band-2');
+		expect(invites()[0]).toMatchObject({ status: 'revoked' });
 	});
 });
 
 describe('getByToken', () => {
-	it('returns invite metadata for valid token', async () => {
-		const futureDate = new Date(Date.now() + 86400000);
-		selectResults.push([
-			{
-				email: 'alice@test.com',
-				role: 'member',
-				status: 'pending',
-				expiresAt: futureDate,
-				groupName: 'The Strokes',
-				inviterName: 'Bob'
-			}
-		]);
+	it('returns invite metadata for a live token', async () => {
+		invitation('inv-1');
 
-		const result = await getByToken('tok-abc');
-
-		expect(result).toEqual({
-			groupName: 'The Strokes',
-			inviterName: 'Bob',
+		expect(await getByToken('tok-inv-1')).toEqual({
+			groupName: 'Group band-1',
+			inviterName: 'Name inviter-1',
 			role: 'member',
 			email: 'alice@test.com'
 		});
 	});
 
-	it('returns null when token not found', async () => {
-		selectResults.push([]);
-
-		const result = await getByToken('nonexistent');
-
-		expect(result).toBeNull();
+	it('returns null for an unknown token', async () => {
+		invitation('inv-1');
+		expect(await getByToken('nonexistent')).toBeNull();
 	});
 
-	it('returns null for expired invite', async () => {
-		const pastDate = new Date(Date.now() - 86400000);
-		selectResults.push([
-			{
-				email: 'alice@test.com',
-				role: 'member',
-				status: 'pending',
-				expiresAt: pastDate,
-				groupName: 'The Strokes',
-				inviterName: 'Bob'
-			}
-		]);
-
-		const result = await getByToken('tok-expired');
-
-		expect(result).toBeNull();
+	it('returns null once the invite has expired', async () => {
+		invitation('inv-1', { expiresAt: T0 });
+		expect(await getByToken('tok-inv-1')).toBeNull();
 	});
 
-	it('returns null for non-pending invite', async () => {
-		const futureDate = new Date(Date.now() + 86400000);
-		selectResults.push([
-			{
-				email: 'alice@test.com',
-				role: 'member',
-				status: 'revoked',
-				expiresAt: futureDate,
-				groupName: 'The Strokes',
-				inviterName: 'Bob'
-			}
-		]);
-
-		const result = await getByToken('tok-revoked');
-
-		expect(result).toBeNull();
+	it('returns null for a non-pending invite', async () => {
+		invitation('inv-1', { status: 'revoked' });
+		expect(await getByToken('tok-inv-1')).toBeNull();
 	});
 
-	it('returns "Someone" when inviter not found', async () => {
-		const futureDate = new Date(Date.now() + 86400000);
-		selectResults.push([
-			{
-				email: 'alice@test.com',
-				role: 'member',
-				status: 'pending',
-				expiresAt: futureDate,
-				groupName: 'The Strokes',
-				inviterName: null
-			}
-		]);
-
-		const result = await getByToken('tok-abc');
-
-		expect(result!.inviterName).toBe('Someone');
+	it('names the inviter "Someone" when their account is gone', async () => {
+		invitation('inv-1', { invitedById: null });
+		expect((await getByToken('tok-inv-1'))!.inviterName).toBe('Someone');
 	});
 });
 
 describe('listForGroup', () => {
-	it('returns invites for the group', async () => {
-		const invites = [
-			{
-				id: 'inv-1',
-				email: 'a@test.com',
-				role: 'member',
-				position: null,
-				status: 'pending',
-				expiresAt: new Date(),
-				createdAt: new Date(),
-				invitedByName: 'Alice'
-			},
-			{
-				id: 'inv-2',
-				email: 'b@test.com',
-				role: 'admin',
-				position: 'Bass',
-				status: 'accepted',
-				expiresAt: new Date(),
-				createdAt: new Date(),
-				invitedByName: 'Bob'
-			}
-		];
-		selectResults.push(invites);
+	it("returns the group's invites of every status, newest first", async () => {
+		band('band-2');
+		invitation('inv-1', { email: 'a@test.com', createdAt: T0 - DAY });
+		invitation('inv-2', {
+			email: 'b@test.com',
+			role: 'admin',
+			position: 'Bass',
+			status: 'accepted',
+			createdAt: T0
+		});
+		invitation('inv-3', { email: 'c@test.com', groupId: 'band-2' });
 
 		const result = await listForGroup('band-1');
 
-		expect(result).toHaveLength(2);
-		expect(result[0].email).toBe('a@test.com');
-		expect(result[1].position).toBe('Bass');
+		expect(result.map((r) => [r.email, r.status, r.position, r.invitedByName])).toEqual([
+			['b@test.com', 'accepted', 'Bass', 'Name inviter-1'],
+			['a@test.com', 'pending', null, 'Name inviter-1']
+		]);
 	});
 });
 
 /**
  * #906: an emailed invitation reached the member nowhere. `resolvePendingInvites`
- * filters on `gt(expiresAt, now)` and only runs at signup; `getByToken` returns
- * null past expiry. This is the read that lets a surface say it happened.
+ * filters on expiry and only runs at signup; `getByToken` returns null past
+ * expiry. This is the read that lets a surface say it happened.
  */
 describe('listInvitesForEmail', () => {
 	it('returns expired invitations rather than filtering them out', async () => {
-		const past = new Date(Date.now() - 600 * 86400000);
-		selectResults.push([
-			{ id: 'inv-1', groupName: 'The Strokes', groupKind: 'band', expiresAt: past }
-		]);
+		invitation('inv-1', { expiresAt: T0 - 600 * DAY });
 
 		const rows = await listInvitesForEmail('alice@test.com');
 
-		expect(rows).toHaveLength(1);
-		expect(rows[0].expiresAt).toEqual(past);
+		expect(rows.map((r) => [r.id, r.groupName, r.groupKind])).toEqual([
+			['inv-1', 'Group band-1', 'band']
+		]);
+		expect(rows[0].expiresAt).toEqual(new Date((T0 - 600 * DAY) * 1000));
 	});
 
 	it('normalises the email the way createInvite stores it', async () => {
-		selectResults.push([]);
-		const { eq } = await import('drizzle-orm');
+		invitation('inv-1');
 
-		await listInvitesForEmail('  Alice@Test.com  ');
+		expect(await listInvitesForEmail('  Alice@Test.com  ')).toHaveLength(1);
+	});
 
-		expect(vi.mocked(eq)).toHaveBeenCalledWith('email', 'alice@test.com');
+	it('leaves out settled invites, deleted groups and other addresses', async () => {
+		band('band-gone', { deleted: true });
+		invitation('inv-accepted', { status: 'accepted' });
+		invitation('inv-gone', { groupId: 'band-gone' });
+		invitation('inv-bob', { email: 'bob@test.com' });
+
+		expect(await listInvitesForEmail('alice@test.com')).toEqual([]);
 	});
 });

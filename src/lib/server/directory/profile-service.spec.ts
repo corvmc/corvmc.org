@@ -1,123 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-let selectResults: unknown[][] = [];
-let selectCallIndex = 0;
-const insertedRows: unknown[] = [];
-let updatedData: unknown[] = [];
-
-function buildChain() {
-	const proxy: any = new Proxy(() => proxy, {
-		get(_, prop) {
-			if (prop === 'then') {
-				const result = selectResults[selectCallIndex] ?? [];
-				selectCallIndex++;
-				return (resolve: (v: unknown[]) => void) => resolve(result);
-			}
-			return () => proxy;
-		}
-	});
-	return proxy;
-}
-
+// better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
 vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () => buildChain(),
-		update: () => {
-			const chain: any = new Proxy(() => chain, {
-				get(_, prop) {
-					if (prop === 'set')
-						return (data: unknown) => {
-							updatedData.push(data);
-							return chain;
-						};
-					if (prop === 'then') return (resolve: (v: unknown) => void) => resolve(undefined);
-					return () => chain;
-				}
-			});
-			return chain;
-		},
-		delete: () => {
-			return buildChain();
-		},
-		insert: () => ({
-			values: (rows: unknown) => {
-				insertedRows.push(rows);
-				return Promise.resolve();
-			}
-		}),
-		batch: (queries: unknown[]) => Promise.resolve(queries.map(() => undefined))
-	}
+	db: Object.assign(testDb, {
+		batch: async (stmts: PromiseLike<unknown>[]) => {
+			const out = [];
+			for (const s of stmts) out.push(await s);
+			return out;
+		}
+	})
 }));
 
-vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: {
-		id: 'id',
-		bio: 'bio',
-		tagline: 'tagline',
-		lookingForBand: 'looking_for_band',
-		directoryVisibility: 'directory_visibility',
-		directoryContact: 'directory_contact',
-		links: 'links',
-		updatedAt: 'updated_at'
-	}
-}));
-
-vi.mock('$lib/server/db/schema/group', () => ({
-	group: {
-		id: 'id',
-		tagline: 'tagline',
-		lookingForMembers: 'looking_for_members',
-		directoryVisibility: 'directory_visibility',
-		directoryContact: 'directory_contact',
-		links: 'links',
-		updatedAt: 'updated_at'
-	},
-	groupMember: { groupId: 'group_id', userId: 'user_id', role: 'role', status: 'status' }
-}));
-
-// One table for what used to be three (`band_genre`, `user_genre`,
-// `user_instrument`), which is why the mock has a `kind` column and the
-// assertions below check it.
-vi.mock('$lib/server/db/schema/directory', () => ({
-	directoryEntry: {
-		id: 'id',
-		userId: 'user_id',
-		groupId: 'group_id',
-		name: 'name',
-		tagline: 'tagline',
-		hometown: 'hometown',
-		foundedYear: 'founded_year',
-		lookingFor: 'looking_for',
-		visibility: 'visibility',
-		contact: 'contact',
-		links: 'links',
-		updatedAt: 'updated_at'
-	},
-	directoryTag: { entryId: 'entry_id', kind: 'kind', value: 'value' }
-}));
-
-vi.mock('drizzle-orm', () => ({
-	eq: vi.fn(),
-	and: vi.fn(),
-	sql: vi.fn()
-}));
-
+// R2 is the outside service here.
 vi.mock('$lib/server/storage', () => ({
 	deleteObject: vi.fn().mockResolvedValue(undefined),
 	uploadFile: vi.fn(async (_buffer: ArrayBuffer, key: string) => key)
 }));
 
-vi.mock('$lib/server/media/media-service', () => ({
-	replaceSlot: vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' }),
-	detachSlot: vi.fn().mockResolvedValue(undefined)
-}));
-
 const { deleteObject, uploadFile } = await import('$lib/server/storage');
-const { detachSlot, replaceSlot } = await import('$lib/server/media/media-service');
 const {
 	updateMemberProfile,
 	getMemberProfileForEdit,
@@ -127,21 +32,64 @@ const {
 	clearUserAvatar
 } = await import('./profile-service');
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+function member(id: string, opts: { image?: string | null; memberNumber?: number } = {}) {
+	sqlite
+		.prepare(`insert into user (id, name, email, image, member_number) values (?, ?, ?, ?, ?)`)
+		.run(id, `Name ${id}`, `${id}@example.com`, opts.image ?? null, opts.memberNumber ?? null);
+}
+
+function entry(
+	id: string,
+	owner: { userId?: string; groupId?: string },
+	cols: Record<string, string | number | null> = {}
+) {
+	const names = ['id', 'user_id', 'group_id', 'name', ...Object.keys(cols)];
+	sqlite
+		.prepare(
+			`insert into directory_entry (${names.join(', ')}) values (${names.map(() => '?').join(', ')})`
+		)
+		.run(id, owner.userId ?? null, owner.groupId ?? null, `Entry ${id}`, ...Object.values(cols));
+}
+
+const tag = (entryId: string, kind: string, value: string) =>
+	sqlite
+		.prepare(`insert into directory_tag (entry_id, kind, value) values (?, ?, ?)`)
+		.run(entryId, kind, value);
+
+const membership = (groupId: string, userId: string, role: string, status = 'active') =>
+	sqlite
+		.prepare(
+			`insert into group_member (id, group_id, user_id, role, status) values (?, ?, ?, ?, ?)`
+		)
+		.run(`gm-${groupId}-${userId}`, groupId, userId, role, status);
+
+const entryRow = (id: string) =>
+	sqlite.prepare(`select * from directory_entry where id = ?`).get(id) as Record<string, unknown>;
+
+const tags = (entryId: string) =>
+	sqlite
+		.prepare(`select kind, value from directory_tag where entry_id = ? order by kind, rowid`)
+		.all(entryId);
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	selectResults = [];
-	selectCallIndex = 0;
-	insertedRows.length = 0;
-	updatedData = [];
+	for (const t of [
+		'directory_tag',
+		'directory_entry',
+		'group_member',
+		'media_attachment',
+		'media',
+		'user'
+	]) {
+		sqlite.exec(`delete from "${t}"`);
+	}
+	member('user-1');
+	entry('entry-1', { userId: 'user-1' });
 });
 
 describe('updateMemberProfile', () => {
-	it('updates the listing and replaces instruments/genres', async () => {
-		selectResults.push([{ id: 'entry-1' }]); // getOrCreateUserEntryId
+	it('updates the listing and replaces instruments and genres', async () => {
+		tag('entry-1', 'instrument', 'kazoo');
 
 		await updateMemberProfile('user-1', {
 			bio: 'Hello world',
@@ -150,173 +98,186 @@ describe('updateMemberProfile', () => {
 			genres: ['rock', 'jazz']
 		});
 
-		expect(updatedData).toHaveLength(1);
-		expect(updatedData[0]).toMatchObject({
+		expect(entryRow('entry-1')).toMatchObject({
 			bio: 'Hello world',
 			tagline: 'Musician',
-			// The boolean became one end of a two-way column.
-			lookingFor: null
+			looking_for: null
 		});
-		// Instruments and genres inserted
-		expect(insertedRows).toHaveLength(2);
+		expect(tags('entry-1')).toEqual([
+			{ kind: 'genre', value: 'rock' },
+			{ kind: 'genre', value: 'jazz' },
+			{ kind: 'instrument', value: 'guitar' },
+			{ kind: 'instrument', value: 'piano' }
+		]);
 	});
 
-	it('kinds each tag, so genres and instruments cannot be confused', async () => {
-		selectResults.push([{ id: 'entry-1' }]);
+	it('saving one kind leaves the other kinds alone', async () => {
+		// They share one table, so an unscoped delete would clear instruments on a genre save.
+		tag('entry-1', 'instrument', 'bass');
+		tag('entry-1', 'skill', 'promoter');
 
-		await updateMemberProfile('user-1', { instruments: ['bass'], genres: ['jazz'] });
+		await updateMemberProfile('user-1', { genres: ['jazz'] });
 
-		// They share one table now. Without `kind`, a genre filter answers with
-		// instruments and a genre save wipes them — and both still look like they
-		// work.
-		expect(insertedRows[0]).toEqual([{ entryId: 'entry-1', kind: 'instrument', value: 'bass' }]);
-		expect(insertedRows[1]).toEqual([{ entryId: 'entry-1', kind: 'genre', value: 'jazz' }]);
+		expect(tags('entry-1')).toEqual([
+			{ kind: 'genre', value: 'jazz' },
+			{ kind: 'instrument', value: 'bass' },
+			{ kind: 'skill', value: 'promoter' }
+		]);
+	});
+
+	it("never touches another entry's tags", async () => {
+		member('user-2');
+		entry('entry-2', { userId: 'user-2' });
+		tag('entry-2', 'genre', 'punk');
+
+		await updateMemberProfile('user-1', { genres: ['jazz'] });
+
+		expect(tags('entry-2')).toEqual([{ kind: 'genre', value: 'punk' }]);
 	});
 
 	it('writes whichever direction the member chose, and null for neither', async () => {
-		// The form's boolean became the column itself. Only one direction was ever
-		// reachable from it, so the whole `members` half of matching — a member
-		// assembling a band — had no way to exist.
 		for (const lookingFor of ['band', 'members', null] as const) {
-			selectResults.push([{ id: 'entry-1' }]);
 			await updateMemberProfile('user-1', { lookingFor });
-			expect(updatedData.at(-1)).toMatchObject({ lookingFor });
+			expect(entryRow('entry-1').looking_for).toBe(lookingFor);
 		}
 	});
 
 	it('writes the instruments a member needs under a different kind from the ones they play', async () => {
-		selectResults.push([{ id: 'entry-1' }]);
-
 		await updateMemberProfile('user-1', {
 			lookingFor: 'members',
 			instruments: ['guitar'],
 			seekingInstruments: ['drums']
 		});
 
-		// Same table, and confusing the two would match a bandleader on what they
-		// already play rather than on the empty chair.
-		expect(insertedRows[0]).toEqual([{ entryId: 'entry-1', kind: 'instrument', value: 'guitar' }]);
-		expect(insertedRows[1]).toEqual([
-			{ entryId: 'entry-1', kind: 'seeking_instrument', value: 'drums' }
+		expect(tags('entry-1')).toEqual([
+			{ kind: 'instrument', value: 'guitar' },
+			{ kind: 'seeking_instrument', value: 'drums' }
 		]);
 	});
 
-	it('writes skills under their own kind, so saving them never touches instruments', async () => {
-		selectResults.push([{ id: 'entry-1' }]);
-
+	it('writes skills trimmed and lowercased under their own kind', async () => {
 		await updateMemberProfile('user-1', { skills: ['Sound Engineer', ' photographer '] });
 
-		expect(insertedRows).toEqual([
-			[
-				{ entryId: 'entry-1', kind: 'skill', value: 'sound engineer' },
-				{ entryId: 'entry-1', kind: 'skill', value: 'photographer' }
-			]
+		expect(tags('entry-1')).toEqual([
+			{ kind: 'skill', value: 'sound engineer' },
+			{ kind: 'skill', value: 'photographer' }
 		]);
 	});
 
-	it('truncates bio to 2000 chars', async () => {
-		selectResults.push([{ id: 'entry-1' }]);
-		const longBio = 'x'.repeat(3000);
-		await updateMemberProfile('user-1', { bio: longBio });
+	it('truncates bio to 2000 chars and tagline to 150', async () => {
+		await updateMemberProfile('user-1', { bio: 'x'.repeat(3000), tagline: 'y'.repeat(200) });
 
-		expect((updatedData[0] as any).bio).toHaveLength(2000);
-	});
-
-	it('truncates tagline to 150 chars', async () => {
-		selectResults.push([{ id: 'entry-1' }]);
-		const longTagline = 'x'.repeat(200);
-		await updateMemberProfile('user-1', { tagline: longTagline });
-
-		expect((updatedData[0] as any).tagline).toHaveLength(150);
+		const row = entryRow('entry-1');
+		expect(row.bio).toHaveLength(2000);
+		expect(row.tagline).toHaveLength(150);
 	});
 
 	it('limits instruments to 20', async () => {
-		selectResults.push([{ id: 'entry-1' }]);
-		const manyInstruments = Array.from({ length: 30 }, (_, i) => `inst-${i}`);
-		await updateMemberProfile('user-1', { instruments: manyInstruments });
-
-		const inserted = insertedRows[0] as any[];
-		expect(inserted).toHaveLength(20);
-	});
-
-	it('validates links structure', async () => {
-		selectResults.push([{ id: 'entry-1' }]);
-
 		await updateMemberProfile('user-1', {
-			links: [
-				{ label: 'Website', url: 'https://example.com' },
-				{ label: 'Twitter', url: 'https://twitter.com/test' }
-			] as any
+			instruments: Array.from({ length: 30 }, (_, i) => `inst-${i}`)
 		});
 
-		expect((updatedData[0] as any).links).toEqual([
+		expect(tags('entry-1')).toHaveLength(20);
+	});
+
+	it('stores links in the validated shape', async () => {
+		await updateMemberProfile('user-1', {
+			links: [
+				{ label: 'Website', url: 'https://example.com', extra: 'dropped' },
+				{ label: 'Twitter', url: 'https://twitter.com/test' }
+			] as never
+		});
+
+		expect(JSON.parse(entryRow('entry-1').links as string)).toEqual([
 			{ label: 'Website', url: 'https://example.com' },
 			{ label: 'Twitter', url: 'https://twitter.com/test' }
 		]);
 	});
+
+	it('merges a contact update onto the contact already on the entry', async () => {
+		sqlite
+			.prepare(`update directory_entry set contact = ? where id = 'entry-1'`)
+			.run(JSON.stringify({ email: 'old@example.com', phone: '555-0100' }));
+
+		await updateMemberProfile('user-1', { directoryContact: { email: 'new@example.com' } });
+
+		expect(JSON.parse(entryRow('entry-1').contact as string)).toEqual({
+			email: 'new@example.com',
+			phone: '555-0100'
+		});
+	});
+
+	it('creates the entry from user.name when the member somehow has none', async () => {
+		member('user-2');
+
+		await updateMemberProfile('user-2', { tagline: 'New here' });
+
+		expect(
+			sqlite.prepare(`select name, tagline from directory_entry where user_id = 'user-2'`).all()
+		).toEqual([{ name: 'Name user-2', tagline: 'New here' }]);
+	});
 });
 
 describe('getMemberProfileForEdit', () => {
-	it('returns null when user not found', async () => {
-		selectResults.push([]);
-		const result = await getMemberProfileForEdit('nonexistent');
-		expect(result).toBeNull();
+	it('returns null when the member has no entry', async () => {
+		member('nobody');
+		expect(await getMemberProfileForEdit('nobody')).toBeNull();
 	});
 
-	it('returns profile with instruments and genres, in the shape the form speaks', async () => {
-		selectResults.push([
-			{
-				id: 'entry-1',
-				bio: 'Hi',
-				tagline: 'Dev',
-				lookingFor: 'band',
-				visibility: 'public',
-				contact: null,
-				links: null
-			}
-		]);
-		// One tag query now, split by `kind`, rather than one per table.
-		selectResults.push([
-			{ kind: 'instrument', value: 'guitar' },
-			{ kind: 'instrument', value: 'drums' },
-			{ kind: 'genre', value: 'rock' },
-			{ kind: 'seeking_instrument', value: 'bass' },
-			{ kind: 'skill', value: 'promoter' }
-		]);
+	it('returns the profile with its tags split by kind, in the shape the form speaks', async () => {
+		sqlite.exec(`delete from directory_entry`);
+		sqlite.exec(`update user set image = 'users/avatars/a.png', member_number = 42`);
+		entry('entry-1', { userId: 'user-1' }, { bio: 'Hi', tagline: 'Dev', looking_for: 'band' });
+		tag('entry-1', 'instrument', 'guitar');
+		tag('entry-1', 'instrument', 'drums');
+		tag('entry-1', 'genre', 'rock');
+		tag('entry-1', 'seeking_instrument', 'bass');
+		tag('entry-1', 'skill', 'promoter');
+		member('user-2');
+		entry('entry-2', { userId: 'user-2' });
+		tag('entry-2', 'genre', 'polka');
 
 		const result = await getMemberProfileForEdit('user-1');
 
 		expect(result).toMatchObject({
 			bio: 'Hi',
 			tagline: 'Dev',
-			// Both: the form edits the column, the staff account panel and every
-			// directory card still ask the old yes/no question.
+			image: 'users/avatars/a.png',
+			memberNumber: 42,
 			lookingFor: 'band',
 			lookingForBand: true,
 			seekingInstruments: ['bass'],
 			directoryVisibility: 'public',
 			directoryContact: null,
-			instruments: ['guitar', 'drums'],
 			genres: ['rock'],
 			skills: ['promoter']
 		});
+		expect([...result!.instruments].sort()).toEqual(['drums', 'guitar']);
 		expect(result).not.toHaveProperty('id');
 	});
 });
 
 describe('updateBandProfile', () => {
-	it('throws when user is not admin or owner', async () => {
-		// requireBandAdmin select returns member role
-		selectResults.push([{ role: 'member' }]);
+	beforeEach(() => {
+		entry('band-entry', { groupId: 'band-1' });
+	});
+
+	it.each([
+		['a plain member', () => membership('band-1', 'user-1', 'member')],
+		['an admin who is no longer active', () => membership('band-1', 'user-1', 'admin', 'left')],
+		['an admin of a different band', () => membership('band-2', 'user-1', 'admin')],
+		['not in the band at all', () => undefined]
+	])('refuses %s and writes nothing', async (_label, seed) => {
+		seed();
 
 		await expect(updateBandProfile('band-1', 'user-1', { tagline: 'Great band' })).rejects.toThrow(
 			'Not authorized'
 		);
+		expect(entryRow('band-entry').tagline).toBeNull();
 	});
 
-	it('updates the band listing when user is admin', async () => {
-		selectResults.push([{ role: 'admin' }]);
-		selectResults.push([{ id: 'entry-1' }]); // getOrCreateGroupEntryId
+	it('updates the band listing for an admin', async () => {
+		membership('band-1', 'user-1', 'admin');
 
 		await updateBandProfile('band-1', 'user-1', {
 			tagline: 'Best band ever',
@@ -324,78 +285,62 @@ describe('updateBandProfile', () => {
 			lookingForMembers: true
 		});
 
-		expect(updatedData[0]).toMatchObject({
+		expect(entryRow('band-entry')).toMatchObject({
 			tagline: 'Best band ever',
-			// The boolean became one end of a two-way column.
-			lookingFor: 'members'
+			looking_for: 'members'
 		});
-		expect(insertedRows).toHaveLength(1); // genres
-	});
-
-	it('writes genres as genre-kinded tags on the entry', async () => {
-		selectResults.push([{ role: 'admin' }]);
-		selectResults.push([{ id: 'entry-1' }]);
-
-		await updateBandProfile('band-1', 'user-1', { genres: ['punk', 'ska'] });
-
-		// Without `kind` these rows are indistinguishable from a member's
-		// instruments, and the directory would answer a genre filter with them.
-		expect(insertedRows[0]).toEqual([
-			{ entryId: 'entry-1', kind: 'genre', value: 'punk' },
-			{ entryId: 'entry-1', kind: 'genre', value: 'ska' }
+		expect(tags('band-entry')).toEqual([
+			{ kind: 'genre', value: 'punk' },
+			{ kind: 'genre', value: 'ska' }
 		]);
 	});
 
 	it('writes what the band is short of under its own kind', async () => {
-		// The half a band could not say before `seeking_instrument`: "we want
-		// members" with nothing attached to it left a match only genre to aim at.
-		// Its own kind is what keeps it out of the instrument suggestions members
-		// tag themselves from — and out of the genre filter.
-		selectResults.push([{ role: 'admin' }]);
-		selectResults.push([{ id: 'entry-1' }]);
+		membership('band-1', 'user-1', 'owner');
 
 		await updateBandProfile('band-1', 'user-1', {
 			genres: ['punk'],
 			seekingInstruments: ['drums']
 		});
 
-		expect(insertedRows).toEqual([
-			[{ entryId: 'entry-1', kind: 'genre', value: 'punk' }],
-			[{ entryId: 'entry-1', kind: 'seeking_instrument', value: 'drums' }]
+		expect(tags('band-entry')).toEqual([
+			{ kind: 'genre', value: 'punk' },
+			{ kind: 'seeking_instrument', value: 'drums' }
 		]);
 	});
 
 	it('clears lookingFor rather than writing false', async () => {
-		selectResults.push([{ role: 'owner' }]);
-		selectResults.push([{ id: 'entry-1' }]);
+		membership('band-1', 'user-1', 'owner');
+		sqlite.exec(`update directory_entry set looking_for = 'members' where id = 'band-entry'`);
 
 		await updateBandProfile('band-1', 'user-1', { lookingForMembers: false });
 
-		expect(updatedData[0]).toMatchObject({ lookingFor: null });
+		expect(entryRow('band-entry').looking_for).toBeNull();
 	});
 
 	it('round-trips hometown and foundedYear', async () => {
-		selectResults.push([{ role: 'owner' }]);
-		selectResults.push([{ id: 'entry-1' }]);
+		membership('band-1', 'user-1', 'owner');
 
 		await updateBandProfile('band-1', 'user-1', {
 			hometown: 'Corvallis, OR',
 			foundedYear: '2019'
 		});
 
-		expect(updatedData[0]).toMatchObject({
+		expect(entryRow('band-entry')).toMatchObject({
 			hometown: 'Corvallis, OR',
-			foundedYear: '2019'
+			founded_year: '2019'
 		});
 	});
 
 	it('nulls hometown and foundedYear when omitted (why the edit form must submit them)', async () => {
-		selectResults.push([{ role: 'owner' }]);
-		selectResults.push([{ id: 'entry-1' }]);
+		membership('band-1', 'user-1', 'owner');
+		sqlite.exec(
+			`update directory_entry set hometown = 'Albany', founded_year = '2001' where id = 'band-entry'`
+		);
 
 		await updateBandProfile('band-1', 'user-1', { tagline: 'Only tagline' });
 
-		expect(updatedData[0]).toMatchObject({ hometown: null, foundedYear: null });
+		expect(entryRow('band-entry')).toMatchObject({ hometown: null, founded_year: null });
 	});
 });
 
@@ -406,78 +351,72 @@ describe('setUserAvatar', () => {
 		// The per-upload token is what stops a replaced avatar reusing its URL.
 		expect(key).toMatch(/^users\/avatars\/user-1-[0-9a-f]{8}\.png$/);
 		expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), key, 'image/png');
+		expect(sqlite.prepare(`select image from user where id = 'user-1'`).get()).toEqual({
+			image: key
+		});
 	});
 
-	it('records the new object and releases the slot, without deleting anything', async () => {
-		// The replacement used to delete the previous object inline. It cannot:
-		// this request has no way to know whether something else still points at
-		// it, so the sweep decides. See docs/specs/shipped/media-spec.md.
-		await setUserAvatar('user-1', new ArrayBuffer(8), 'image/webp');
+	it('re-points the slot at the new object without deleting the old one', async () => {
+		// Whether the previous object can be reclaimed is the sweep's question.
+		const first = await setUserAvatar('user-1', new ArrayBuffer(8), 'image/png');
+		const second = await setUserAvatar('user-1', new ArrayBuffer(8), 'image/webp');
 
-		expect(replaceSlot).toHaveBeenCalledWith(
-			expect.objectContaining({ attachableType: 'user', attachableId: 'user-1', slot: 'avatar' })
+		expect(
+			sqlite
+				.prepare(
+					`select m.key from media_attachment a join media m on m.id = a.media_id
+					 where a.attachable_type = 'user' and a.attachable_id = 'user-1' and a.slot = 'avatar'`
+				)
+				.all()
+		).toEqual([{ key: second }]);
+		expect(sqlite.prepare(`select key from media order by key`).all()).toEqual(
+			[{ key: first }, { key: second }].sort((a, b) => a.key.localeCompare(b.key))
 		);
-		expect(deleteObject).not.toHaveBeenCalled();
-	});
-
-	it('needs no OAuth-URL guard any more', async () => {
-		// `user.image` may hold a provider URL rather than a key, which the old
-		// inline delete had to special-case. A provider URL was never an R2 object
-		// and so never had a `media` row — there is nothing to detach and nothing
-		// to guard.
-		await setUserAvatar('user-1', new ArrayBuffer(8), 'image/png');
-
 		expect(deleteObject).not.toHaveBeenCalled();
 	});
 });
 
 describe('clearUserAvatar', () => {
-	it('detaches the slot rather than deleting the object', async () => {
+	it('detaches the slot and clears user.image rather than deleting the object', async () => {
+		await setUserAvatar('user-1', new ArrayBuffer(8), 'image/png');
+
 		await clearUserAvatar('user-1');
 
-		expect(detachSlot).toHaveBeenCalledWith('user', 'user-1', 'avatar');
+		expect(sqlite.prepare(`select count(*) as n from media_attachment`).get()).toEqual({ n: 0 });
+		expect(sqlite.prepare(`select count(*) as n from media`).get()).toEqual({ n: 1 });
+		expect(sqlite.prepare(`select image from user where id = 'user-1'`).get()).toEqual({
+			image: null
+		});
 		expect(deleteObject).not.toHaveBeenCalled();
 	});
 });
 
 describe('getBandProfileForEdit', () => {
-	it('returns null when band not found', async () => {
-		selectResults.push([]);
-		const result = await getBandProfileForEdit('nonexistent');
-		expect(result).toBeNull();
+	it('returns null when the band has no entry', async () => {
+		expect(await getBandProfileForEdit('nonexistent')).toBeNull();
 	});
 
-	it('returns band profile with genres, in the shape the form already speaks', async () => {
-		selectResults.push([
-			{
-				id: 'entry-1',
-				tagline: 'NYC punk',
-				lookingFor: 'members',
-				visibility: 'public',
-				contact: null,
-				links: null
-			}
-		]);
-		// One read for every kind now that the band form edits two of them.
-		selectResults.push([
-			{ kind: 'genre', value: 'punk' },
-			{ kind: 'genre', value: 'rock' },
-			{ kind: 'seeking_instrument', value: 'drums' }
-		]);
+	it('returns the band profile in the shape the form already speaks', async () => {
+		entry(
+			'band-entry',
+			{ groupId: 'band-1' },
+			{ tagline: 'NYC punk', looking_for: 'members', visibility: 'public' }
+		);
+		tag('band-entry', 'genre', 'punk');
+		tag('band-entry', 'genre', 'rock');
+		tag('band-entry', 'seeking_instrument', 'drums');
+		tag('entry-1', 'genre', 'jazz');
 
 		const result = await getBandProfileForEdit('band-1');
 
-		// The entry's column names are translated back here rather than in the
-		// form: phase 3a is a server-side port, and no `.svelte` file learns that
-		// the listing changed tables.
 		expect(result).toMatchObject({
 			tagline: 'NYC punk',
 			lookingForMembers: true,
 			directoryVisibility: 'public',
 			directoryContact: null,
-			genres: ['punk', 'rock'],
 			seekingInstruments: ['drums']
 		});
+		expect([...result!.genres].sort()).toEqual(['punk', 'rock']);
 		expect(result).not.toHaveProperty('id');
 	});
 });

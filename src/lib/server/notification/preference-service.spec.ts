@@ -1,175 +1,116 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ---------------------------------------------------------------------------
-// Mocks — use vi.hoisted() so these refs are available inside vi.mock factories
-// ---------------------------------------------------------------------------
-
-const { insertMock, getNotificationTypeMock, dbSelectResult } = vi.hoisted(() => {
-	const dbSelectResult = { rows: [] as unknown[] };
-	const insertMock = vi.fn();
-	const getNotificationTypeMock = vi.fn();
-	return { insertMock, getNotificationTypeMock, dbSelectResult };
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
 });
 
-function chainable() {
-	const proxy: any = new Proxy(() => proxy, {
-		get(_, prop) {
-			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => resolve(dbSelectResult.rows);
-			}
-			return () => proxy;
-		}
-	});
-	return proxy;
+vi.mock('$lib/server/db', () => ({ db: testDb }));
+
+const { getPreference, getAllPreferences, setPreference } = await import('./preference-service');
+
+function pref(userId: string, type: string, email: boolean, inApp: boolean, sms = false) {
+	sqlite
+		.prepare(
+			`insert into notification_preference (id, user_id, notification_type, email_enabled, in_app_enabled, sms_enabled)
+			 values (?, ?, ?, ?, ?, ?)`
+		)
+		.run(`${userId}-${type}`, userId, type, email ? 1 : 0, inApp ? 1 : 0, sms ? 1 : 0);
 }
 
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () => chainable(),
-		insert: insertMock
-	}
-}));
+const rows = () =>
+	sqlite
+		.prepare(
+			`select user_id, notification_type, email_enabled, in_app_enabled, sms_enabled
+			 from notification_preference order by user_id, notification_type`
+		)
+		.all();
 
-vi.mock('$lib/server/db/schema/notification', () => ({
-	notificationPreference: {
-		userId: 'userId',
-		notificationType: 'notificationType',
-		emailEnabled: 'emailEnabled',
-		inAppEnabled: 'inAppEnabled',
-		smsEnabled: 'smsEnabled'
-	},
-	getNotificationType: getNotificationTypeMock
-}));
+beforeEach(() => {
+	sqlite.exec(`delete from notification_preference`);
+});
 
-vi.mock('drizzle-orm', () => ({
-	eq: vi.fn((col, val) => ({ col, val })),
-	and: vi.fn((...args) => ({ and: args }))
-}));
+describe('getPreference', () => {
+	it('returns a mandatory type its defaults even over a stored opt-out', async () => {
+		pref('user-1', 'membership_receipt', false, false);
 
-import { getPreference, getAllPreferences, setPreference } from './preference-service';
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-describe('preference-service', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-		dbSelectResult.rows = [];
-
-		// Default insert chain
-		const onConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
-		const values = vi.fn(() => ({ onConflictDoUpdate }));
-		insertMock.mockReturnValue({ values });
-	});
-
-	// -------------------------------------------------------------------------
-	// getPreference
-	// -------------------------------------------------------------------------
-
-	describe('getPreference', () => {
-		it('returns mandatory type defaults regardless of DB', async () => {
-			getNotificationTypeMock.mockReturnValue({
-				mandatory: true,
-				defaults: { email: true, inApp: false }
-			});
-
-			const result = await getPreference('user-1', 'ticket_confirmation');
-
-			expect(result).toEqual({ email: true, inApp: false });
-		});
-
-		it('returns DB row values when row exists for non-mandatory type', async () => {
-			getNotificationTypeMock.mockReturnValue({
-				mandatory: false,
-				defaults: { email: true, inApp: true }
-			});
-			dbSelectResult.rows = [{ emailEnabled: false, inAppEnabled: true }];
-
-			const result = await getPreference('user-1', 'check_in_reminder');
-
-			expect(result).toEqual({ email: false, inApp: true });
-		});
-
-		it('returns type defaults when no DB row exists', async () => {
-			getNotificationTypeMock.mockReturnValue({
-				mandatory: false,
-				defaults: { email: false, inApp: true }
-			});
-			dbSelectResult.rows = [];
-
-			const result = await getPreference('user-1', 'reservation_reminder');
-
-			expect(result).toEqual({ email: false, inApp: true });
-		});
-
-		it('returns fallback { email: true, inApp: true } when type is unknown', async () => {
-			getNotificationTypeMock.mockReturnValue(undefined);
-			dbSelectResult.rows = [];
-
-			const result = await getPreference('user-1', 'unknown_type');
-
-			expect(result).toEqual({ email: true, inApp: true, sms: false });
+		expect(await getPreference('user-1', 'membership_receipt')).toEqual({
+			email: true,
+			inApp: true,
+			sms: false
 		});
 	});
 
-	// -------------------------------------------------------------------------
-	// getAllPreferences
-	// -------------------------------------------------------------------------
+	it("returns the member's stored row for a non-mandatory type", async () => {
+		pref('user-1', 'check_in_reminder', false, true, true);
 
-	describe('getAllPreferences', () => {
-		it('returns empty object when no rows', async () => {
-			dbSelectResult.rows = [];
-
-			const result = await getAllPreferences('user-1');
-
-			expect(result).toEqual({});
-		});
-
-		it('returns mapped preferences from DB rows', async () => {
-			dbSelectResult.rows = [
-				{ notificationType: 'check_in_reminder', emailEnabled: false, inAppEnabled: true },
-				{ notificationType: 'band_invitation', emailEnabled: true, inAppEnabled: false }
-			];
-
-			const result = await getAllPreferences('user-1');
-
-			expect(result).toEqual({
-				check_in_reminder: { email: false, inApp: true },
-				band_invitation: { email: true, inApp: false }
-			});
+		expect(await getPreference('user-1', 'check_in_reminder')).toEqual({
+			email: false,
+			inApp: true,
+			sms: true
 		});
 	});
 
-	// -------------------------------------------------------------------------
-	// setPreference
-	// -------------------------------------------------------------------------
+	it("ignores another member's row and another type's row", async () => {
+		pref('user-2', 'inbox_message_received', true, false);
+		pref('user-1', 'check_in_reminder', true, false);
 
-	describe('setPreference', () => {
-		it('calls insert with onConflictDoUpdate', async () => {
-			const onConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
-			const values = vi.fn(() => ({ onConflictDoUpdate }));
-			insertMock.mockReturnValue({ values });
-
-			await setPreference('user-1', 'band_invitation', { email: true, inApp: false, sms: false });
-
-			expect(insertMock).toHaveBeenCalled();
-			expect(values).toHaveBeenCalledWith(
-				expect.objectContaining({
-					userId: 'user-1',
-					notificationType: 'band_invitation',
-					emailEnabled: true,
-					inAppEnabled: false
-				})
-			);
-			expect(onConflictDoUpdate).toHaveBeenCalledWith(
-				expect.objectContaining({
-					set: expect.objectContaining({
-						emailEnabled: true,
-						inAppEnabled: false
-					})
-				})
-			);
+		expect(await getPreference('user-1', 'inbox_message_received')).toEqual({
+			email: false,
+			inApp: true,
+			sms: false
 		});
+	});
+
+	it('falls back to email + in-app for an unknown type', async () => {
+		expect(await getPreference('user-1', 'unknown_type')).toEqual({
+			email: true,
+			inApp: true,
+			sms: false
+		});
+	});
+});
+
+describe('getAllPreferences', () => {
+	it('returns an empty object when the member has no rows', async () => {
+		pref('user-2', 'band_invitation', false, false);
+
+		expect(await getAllPreferences('user-1')).toEqual({});
+	});
+
+	it("keys only the member's own rows by type", async () => {
+		pref('user-1', 'check_in_reminder', false, true);
+		pref('user-1', 'band_invitation', true, false);
+		pref('user-2', 'contact_form', false, false);
+
+		expect(await getAllPreferences('user-1')).toEqual({
+			check_in_reminder: { email: false, inApp: true, sms: false },
+			band_invitation: { email: true, inApp: false, sms: false }
+		});
+	});
+});
+
+describe('setPreference', () => {
+	it('inserts a row, then overwrites the same row on a second call', async () => {
+		await setPreference('user-1', 'band_invitation', { email: true, inApp: false, sms: false });
+		await setPreference('user-1', 'band_invitation', { email: false, inApp: true, sms: true });
+		await setPreference('user-2', 'band_invitation', { email: true, inApp: true, sms: false });
+
+		expect(rows()).toEqual([
+			{
+				user_id: 'user-1',
+				notification_type: 'band_invitation',
+				email_enabled: 0,
+				in_app_enabled: 1,
+				sms_enabled: 1
+			},
+			{
+				user_id: 'user-2',
+				notification_type: 'band_invitation',
+				email_enabled: 1,
+				in_app_enabled: 1,
+				sms_enabled: 0
+			}
+		]);
 	});
 });
