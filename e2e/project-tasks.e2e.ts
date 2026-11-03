@@ -103,8 +103,10 @@ test.describe('project task list', () => {
 		const panel = page.getByRole('complementary', { name: SEED_TASK_UNASSIGNED });
 		await expect(panel).toBeVisible();
 		await expect(panel.locator(taskPages)).toBeVisible();
-		// Nobody on it: no stack of assignees.
-		await expect(panel.locator('[data-assigned-stack]')).toHaveCount(0);
+		// Nobody on it: every slot in the assignee stack is an open one.
+		const stack = panel.locator('[data-assigned-stack]');
+		await expect(stack.locator('[data-slot="open"]').first()).toBeAttached();
+		await expect(stack.locator('[data-slot="person"]')).toHaveCount(0);
 
 		await page.reload();
 		await expect(page.getByRole('complementary', { name: SEED_TASK_UNASSIGNED })).toBeVisible();
