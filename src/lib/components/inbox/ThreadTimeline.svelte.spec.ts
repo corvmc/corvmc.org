@@ -72,20 +72,21 @@ describe('ThreadTimeline — staff view (no viewerUserId)', () => {
 	});
 
 	it('still renders internal notes', async () => {
+		const note = 'Checked the locker list.';
 		await render(ThreadTimeline, {
 			messages,
 			contactName: 'Robin',
 			notes: [
 				{
 					id: 'n1',
-					body: 'Checked the locker list.',
+					body: note,
 					authorName: 'Ada',
 					createdAt: new Date('2026-01-01T10:30:00Z')
 				}
 			]
 		});
 
-		await expect.element(page.getByText('Checked the locker list.')).toBeInTheDocument();
+		await expect.element(page.getByText(note)).toBeInTheDocument();
 	});
 });
 

@@ -88,12 +88,27 @@ beforeEach(() => {
 // evaluation rather than inside a 5s test timeout.
 const RadioPlayer = (await import('./RadioPlayer.svelte')).default;
 
+/**
+ * The bar's buttons, in order: play/pause, minimize, close. The collapsed pill
+ * is a lone button. Located by position and icon, not label (#2189).
+ */
+const buttons = () => page.getByRole('button');
+const playButton = () => buttons().nth(0);
+const minimizeButton = () => buttons().nth(1);
+const closeButton = () => buttons().nth(2);
+async function expectBar() {
+	await expect.element(closeButton()).toBeInTheDocument();
+	expect(buttons().elements()).toHaveLength(3);
+}
+const offersPlay = () =>
+	playButton().element().querySelector('.tabler-icon-player-play-filled') !== null;
+
 describe('RadioPlayer', () => {
 	it('renders the current track and links the band', async () => {
 		await render(RadioPlayer);
 
-		await expect.element(page.getByText('Ferris Wheel')).toBeInTheDocument();
-		const link = page.getByRole('link', { name: 'Sour Cherry' });
+		await expect.element(page.getByText(ENTRY.trackTitle)).toBeInTheDocument();
+		const link = page.getByRole('link');
 		await expect.element(link).toBeInTheDocument();
 		// The whole reason the widget exists: whoever is playing is one click from
 		// their profile.
@@ -106,7 +121,7 @@ describe('RadioPlayer', () => {
 
 		// A switched-off station must not leave a bar, an empty strip, or an audio
 		// element on every page in the app.
-		await expect.element(page.getByLabelText('CMC Radio')).not.toBeInTheDocument();
+		expect(container.querySelectorAll('button')).toHaveLength(0);
 		expect(container.querySelectorAll('audio')).toHaveLength(0);
 	});
 
@@ -121,13 +136,15 @@ describe('RadioPlayer', () => {
 		// Browsers block it, and a bar that claims to be playing when it is not is
 		// worse than one that visibly is not.
 		await render(RadioPlayer);
-		await expect.element(page.getByRole('button', { name: 'Play CMC Radio' })).toBeInTheDocument();
+		await expectBar();
+		expect(offersPlay()).toBe(true);
 		expect(play).not.toHaveBeenCalled();
 	});
 
 	it('seeks to the live position using the server clock, not the local one', async () => {
 		await render(RadioPlayer);
-		await page.getByRole('button', { name: 'Play CMC Radio' }).click();
+		await expectBar();
+		await playButton().click();
 
 		expect(play).toHaveBeenCalled();
 
@@ -144,7 +161,8 @@ describe('RadioPlayer', () => {
 
 	it('points the element at the stream for the track that is on', async () => {
 		const { container } = await render(RadioPlayer);
-		await page.getByRole('button', { name: 'Play CMC Radio' }).click();
+		await expectBar();
+		await playButton().click();
 
 		const audio = container.querySelector('audio')!;
 		expect(audio.getAttribute('src') ?? audio.src).toContain('/api/audio/track/track-1/stream');
@@ -153,19 +171,21 @@ describe('RadioPlayer', () => {
 	it('collapses to a pill, and the pill reopens the bar', async () => {
 		await render(RadioPlayer);
 
-		await page.getByRole('button', { name: 'Minimize CMC Radio' }).click();
-		const pill = page.getByRole('button', { name: 'CMC Radio' });
-		await expect.element(pill).toBeInTheDocument();
+		await expectBar();
+		await minimizeButton().click();
+		await expect.poll(() => buttons().elements().length).toBe(1);
 
-		await pill.click();
-		await expect.element(page.getByRole('button', { name: 'Play CMC Radio' })).toBeInTheDocument();
+		await buttons().click();
+		await expectBar();
+		expect(offersPlay()).toBe(true);
 	});
 
 	it('closes completely, and remembers it', async () => {
-		await render(RadioPlayer);
-		await page.getByRole('button', { name: 'Close CMC Radio' }).click();
+		const { container } = await render(RadioPlayer);
+		await expectBar();
+		await closeButton().click();
 
-		await expect.element(page.getByLabelText('CMC Radio')).not.toBeInTheDocument();
+		await expect.poll(() => container.querySelectorAll('button').length).toBe(0);
 		// Remembered, or the bar returns on the next page load and "dismiss" means
 		// nothing. /radio clears this — that is the way back.
 		expect(localStorage.getItem('cmc:radio-widget')).toBe('hidden');
@@ -181,6 +201,6 @@ describe('RadioPlayer', () => {
 		// An absent entry means open: a visitor who has never expressed a
 		// preference should meet the station.
 		await render(RadioPlayer);
-		await expect.element(page.getByRole('button', { name: 'Play CMC Radio' })).toBeInTheDocument();
+		await expectBar();
 	});
 });

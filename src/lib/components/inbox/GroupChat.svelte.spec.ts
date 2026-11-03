@@ -37,6 +37,7 @@ vi.mock('$lib/remote/group-chat.remote', () => ({
 
 const GroupChat = (await import('./GroupChat.test.svelte')).default;
 
+const TOPIC = 'Autumn Leaves in G?';
 const chat = {
 	id: 'topic-7',
 	groupName: 'Real Book Club',
@@ -46,7 +47,7 @@ const chat = {
 	messages: [
 		{
 			id: 'm1',
-			body: 'Autumn Leaves in G?',
+			body: TOPIC,
 			direction: 'inbound',
 			authorName: 'Sam',
 			authorUserId: 'member-2',
@@ -64,7 +65,7 @@ describe('GroupChat', () => {
 	it('renders the topic it is given without querying for it', async () => {
 		await render(GroupChat, { chat, viewerUserId: 'member-1' });
 
-		await expect.element(page.getByText('Autumn Leaves in G?')).toBeInTheDocument();
+		await expect.element(page.getByText(TOPIC)).toBeInTheDocument();
 		expect(getGroupChatTopic).not.toHaveBeenCalled();
 	});
 
