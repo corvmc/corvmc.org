@@ -1,5 +1,9 @@
-import { completedJobEntries, lateInvoiceEntries } from '$lib/server/finance/contractor-entries';
-import { entriesStatement } from '$lib/server/finance/financial-entry-service';
+import {
+	bookedForJob,
+	completedJobEntries,
+	lateInvoiceEntries
+} from '$lib/server/finance/contractor-entries';
+import { entriesStatement, listForSubject } from '$lib/server/finance/financial-entry-service';
 import { db } from '$lib/server/db';
 import { contractor, contractorJob } from '$lib/server/db/schema/contractor';
 import type { ContractorJob } from '$lib/server/db/schema/contractor';
@@ -290,16 +294,6 @@ export async function completeJob(
 		.where(eq(contractorJob.id, id))
 		.returning();
 
-	const entries = completedJobEntries({
-		jobId: id,
-		title: job.title,
-		projectId: job.projectId,
-		occurredAt: completedAt,
-		costCents: isDonated ? null : costCents,
-		isDonated,
-		fairValueCents
-	});
-
 	const backFromRepair =
 		job.assetId &&
 		opts.returnToService !== false &&
@@ -314,6 +308,20 @@ export async function completeJob(
 		!job.workOrderResolvedAt && !job.workOrderCancelledAt
 			? await prepareResolveWorkOrder(job.workOrderId, { resolvedByUserId: opts.actorId })
 			: null;
+
+	// Against what is already booked: a reopened job completes again (#2259).
+	const entries = completedJobEntries(
+		{
+			jobId: id,
+			title: job.title,
+			projectId: job.projectId,
+			occurredAt: completedAt,
+			costCents: isDonated ? null : costCents,
+			isDonated,
+			fairValueCents
+		},
+		bookedForJob(await listForSubject('contractor_job', id))
+	);
 
 	// The engagement, what it cost, the unit and the work order are one event:
 	// as separate awaits, a failure part-way left a paid, completed job beside a
@@ -388,6 +396,42 @@ async function closeUnworked(id: string, status: 'declined' | 'no_show') {
 		.returning();
 
 	await auditEngagement(job, job.status, status);
+	return { ...job, ...row };
+}
+
+/**
+ * Take a finished, called-off or refused engagement back, behind the admin-only
+ * `contractor.reopen`: a terminal state is the past. It goes to `booked` when
+ * it had a date, else `asked`. Its ledger rows stay; completing it again books
+ * only the difference. The unit and the work order are left as they are.
+ */
+export async function reopenJob(id: string, reason: string): Promise<Engagement> {
+	const why = reason.trim();
+	if (!why) throw new ContractorJobStateError('Say why it is being reopened');
+	const job = await getJobById(id);
+	if (!TERMINAL.includes(job.status)) {
+		throw new ContractorJobStateError(`This job is ${job.status}, not closed`);
+	}
+	const to: ContractorJobStatus = job.scheduledFor ? 'booked' : 'asked';
+
+	const [row] = await db
+		.update(contractorJob)
+		.set({ status: to, completedAt: null, updatedAt: new Date() })
+		.where(and(eq(contractorJob.id, id), eq(contractorJob.status, job.status)))
+		.returning();
+	if (!row) throw new ContractorJobStateError('This job changed while you were looking at it');
+
+	await recordAuditEntry({
+		action: 'contractor_job.reopened',
+		subject: { type: 'work_order', id: job.workOrderId, label: job.title },
+		details: {
+			engagementId: job.id,
+			contractorName: job.contractorName,
+			from: job.status,
+			to,
+			reason: why
+		}
+	});
 	return { ...job, ...row };
 }
 

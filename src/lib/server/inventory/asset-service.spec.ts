@@ -53,12 +53,19 @@ vi.mock('./stock-service', () => ({
 	movementStatement: vi.fn((input: unknown) => ({ kind: 'movement', input }))
 }));
 
+const recordAuditEntry = vi.fn(async (..._a: unknown[]) => undefined);
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
+}));
+
 import {
+	AssetReopenError,
 	AssetTagTakenError,
 	InvalidAssetTransitionError,
 	NotSerializedError,
 	bindAssetTag,
 	createAsset,
+	reopenAsset,
 	searchAssetOptions,
 	setAssetStatus
 } from './asset-service';
@@ -198,6 +205,71 @@ describe('setAssetStatus', () => {
 		await setAssetStatus('as-1', 'in_service');
 		expect(movementStatement).not.toHaveBeenCalled();
 		expect(updatedValues).toHaveLength(0);
+	});
+});
+
+describe('reopenAsset (#2259)', () => {
+	const retired = {
+		id: 'as-1',
+		itemId: 'it-1',
+		status: 'retired',
+		locationId: 'loc-1',
+		assetTag: 'CMC-000123',
+		retiredReason: 'Dropped'
+	};
+
+	it('puts the unit back in service and brings its ledger sum back to one', async () => {
+		// receive +1, retire -1.
+		selectResultQueue = [[retired], [{ quantity: 1 }, { quantity: -1 }]];
+		await reopenAsset('as-1', ' Found it working ', 'admin-1');
+
+		expect(updatedValues[0]).toMatchObject({
+			status: 'in_service',
+			retiredAt: null,
+			retiredReason: null
+		});
+		expect(movementStatement).toHaveBeenCalledWith(
+			expect.objectContaining({
+				assetId: 'as-1',
+				quantity: 1,
+				reason: 'adjust',
+				actorId: 'admin-1'
+			})
+		);
+		expect(batchCalls[0].map((s) => s.kind)).toEqual(['update', 'movement']);
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'inventory_asset.reopened',
+			subject: { type: 'inventory_asset', id: 'as-1', label: 'CMC-000123' },
+			details: {
+				from: 'retired',
+				to: 'in_service',
+				reason: 'Found it working',
+				retiredReason: 'Dropped',
+				stockAdjusted: 1
+			}
+		});
+	});
+
+	it('restores the count for a unit lost from the shop, which had gone out twice', async () => {
+		// receive +1, repair_out -1, loss -1.
+		selectResultQueue = [
+			[{ ...retired, status: 'lost' }],
+			[{ quantity: 1 }, { quantity: -1 }, { quantity: -1 }]
+		];
+		await reopenAsset('as-1', 'Turned up', 'admin-1');
+		expect(movementStatement).toHaveBeenCalledWith(expect.objectContaining({ quantity: 2 }));
+	});
+
+	it('refuses a unit that is not retired or lost', async () => {
+		selectResultQueue = [[{ ...retired, status: 'maintenance' }]];
+		await expect(reopenAsset('as-1', 'x', 'admin-1')).rejects.toThrow(AssetReopenError);
+		expect(updatedValues).toHaveLength(0);
+	});
+
+	it('refuses a blank reason', async () => {
+		selectResultQueue = [[retired]];
+		await expect(reopenAsset('as-1', '  ', 'admin-1')).rejects.toThrow(AssetReopenError);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 });
 

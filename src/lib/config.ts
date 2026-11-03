@@ -2240,10 +2240,13 @@ export const capabilities = {
 		'manageStock',
 		'manageOrders',
 		'manageAcquisitions',
-		'report'
+		'report',
+		// A retired or lost unit, or a received or cancelled order, back: admin-only.
+		'reopen'
 	],
 	instructor: ['read', 'review'],
-	contractor: ['read', 'manage', 'recordInvoice'],
+	// `reopen` takes a finished, called-off or refused engagement back: admin-only.
+	contractor: ['read', 'manage', 'recordInvoice', 'reopen'],
 	// Its own resource, not `moderation`: an incident report can name a member,
 	// and who may read one is a decision separate from who reviews flags.
 	// `file` is the crew's own report from a show (#1469): held for one event
@@ -2349,7 +2352,9 @@ export const adminOnlyCapabilities = [
 	'credit.adjust',
 	// A terminal state is the past; leaving one is an audited admin act
 	// (docs/development/conventions.md#workflow-gates).
-	'production.reopen'
+	'production.reopen',
+	'contractor.reopen',
+	'inventory.reopen'
 ] as const satisfies readonly Capability[];
 
 /**

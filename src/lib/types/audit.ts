@@ -48,6 +48,9 @@ export const auditActions = [
 	'work_order.member_invited',
 	'contractor_job.status_changed',
 	'contractor_job.invoice_recorded',
+	'contractor_job.reopened',
+	'purchase_order.reopened',
+	'inventory_asset.reopened',
 	'equipment_loan.checked_out_unscheduled',
 	'project.edited',
 	'project.status_changed',
@@ -68,7 +71,9 @@ export const auditSubjectTypes = [
 	'production',
 	'event',
 	'work_order',
-	'project'
+	'project',
+	'purchase_order',
+	'inventory_asset'
 ] as const;
 export type AuditSubjectType = (typeof auditSubjectTypes)[number];
 
@@ -199,6 +204,24 @@ export interface AuditDetailsByAction {
 		contractorName: string;
 		costCents: number | null;
 		invoiceRef: string | null;
+	};
+	/** Out of a terminal status, by an admin (#2259). On the work order's log, as every engagement step is. */
+	'contractor_job.reopened': {
+		engagementId: string;
+		contractorName: string;
+		from: ContractorJobStatus;
+		to: ContractorJobStatus;
+		reason: string;
+	};
+	/** Out of `received` or `cancelled`, by an admin (#2259). */
+	'purchase_order.reopened': { from: string; to: string; reason: string };
+	/** Out of `retired` or `lost`, by an admin (#2259). `retiredReason` is the note being set aside. */
+	'inventory_asset.reopened': {
+		from: string;
+		to: string;
+		reason: string;
+		retiredReason: string | null;
+		stockAdjusted: number;
 	};
 	/** The subject is the borrower. A requested loan checked out without scheduling it (#2234). */
 	'equipment_loan.checked_out_unscheduled': {

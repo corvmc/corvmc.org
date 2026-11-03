@@ -33,6 +33,7 @@ import {
 	listAvailableAssets,
 	listUntaggedAssets,
 	listForm8282Obligations,
+	reopenAsset,
 	resolveForm8282,
 	setAssetStatus,
 	updateAsset
@@ -72,7 +73,8 @@ import {
 	createOrder,
 	getOrderById,
 	onOrderQuantities,
-	placeOrder
+	placeOrder,
+	reopenOrder
 } from '$lib/server/inventory/order-service';
 import { form8282Status } from '$lib/server/inventory/form-8282';
 import {
@@ -609,6 +611,23 @@ export const changeAssetStatus = form(
 	}
 );
 
+/** Out of `retired` or `lost`. Admin-only: a terminal state is the past (#2259). */
+export const reopenAssetForm = form(
+	z.object({ id: z.string().min(1), reason: z.string().trim().min(1, 'Say why').max(500) }),
+	async (raw) => {
+		const actor = await requireCapability('inventory.reopen');
+		const data = raw as { id: string; reason: string };
+		try {
+			await reopenAsset(data.id, data.reason, actor.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getStaffAssetDetail(data.id).refresh();
+		void getAssetHistory({ id: data.id }).refresh();
+		return { success: true };
+	}
+);
+
 // ---------------------------------------------------------------------------
 // Forms — Stock
 // ---------------------------------------------------------------------------
@@ -1064,6 +1083,23 @@ export const closeOrder = form(z.object({ id: z.string() }), async (raw) => {
 	void getRestockList().refresh();
 	return { success: true };
 });
+
+/** Out of `received` or `cancelled`. Admin-only: a terminal state is the past (#2259). */
+export const reopenOrderForm = form(
+	z.object({ id: z.string().min(1), reason: z.string().trim().min(1, 'Say why').max(500) }),
+	async (raw) => {
+		await requireCapability('inventory.reopen');
+		const data = raw as { id: string; reason: string };
+		try {
+			await reopenOrder(data.id, data.reason);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getOrder(data.id).refresh();
+		void getRestockList().refresh();
+		return { success: true };
+	}
+);
 
 export const useStock = form(
 	z.object({

@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 let selectResults: unknown[][] = [];
 let updateCalls: { values: unknown }[] = [];
 let batchCalls = 0;
+let returningRows: unknown[] = [];
 
 function chain(): unknown {
 	const proxy: unknown = new Proxy(() => proxy, {
@@ -35,7 +36,8 @@ vi.mock('$lib/server/db', () => ({
 			set: (values: unknown) => {
 				updateCalls.push({ values });
 				const p: unknown = Promise.resolve([]);
-				(p as { where?: unknown }).where = () => Promise.resolve([]);
+				(p as { where?: unknown }).where = () =>
+					Object.assign(Promise.resolve([]), { returning: async () => returningRows });
 				return p;
 			}
 		})),
@@ -46,11 +48,17 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
+const recordAuditEntry = vi.fn(async (..._a: unknown[]) => undefined);
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
+}));
+
 const {
 	applyReceipt,
 	placeOrder,
 	cancelOrder,
 	closeOrderShort,
+	reopenOrder,
 	OrderStateError,
 	OrderNotFoundError
 } = await import('./order-service');
@@ -59,6 +67,7 @@ beforeEach(() => {
 	selectResults = [];
 	updateCalls = [];
 	batchCalls = 0;
+	returningRows = [{ id: ORDER }];
 	vi.clearAllMocks();
 });
 
@@ -182,5 +191,56 @@ describe('closeOrderShort', () => {
 	it('refuses on a draft, which was never sent to anyone', async () => {
 		selectResults = [[{ id: ORDER, status: 'draft' }]];
 		await expect(closeOrderShort(ORDER)).rejects.toThrow(OrderStateError);
+	});
+});
+
+describe('reopenOrder (#2259)', () => {
+	const placedAt = new Date('2026-04-01T12:00:00Z');
+
+	it.each(['received', 'cancelled'])(
+		'takes a %s order back to placed, and records why',
+		async (status) => {
+			selectResults = [[{ id: ORDER, status, placedAt, supplierName: 'Sweetwater' }]];
+			await reopenOrder(ORDER, ' Closed short by mistake ');
+
+			expect(updateCalls[0].values).toMatchObject({ status: 'placed' });
+			expect(recordAuditEntry).toHaveBeenCalledWith({
+				action: 'purchase_order.reopened',
+				subject: { type: 'purchase_order', id: ORDER, label: 'Sweetwater' },
+				details: { from: status, to: 'placed', reason: 'Closed short by mistake' }
+			});
+		}
+	);
+
+	it('takes an order that was never placed back to draft', async () => {
+		selectResults = [[{ id: ORDER, status: 'cancelled', placedAt: null }]];
+		await reopenOrder(ORDER, 'Still want it');
+		expect(updateCalls[0].values).toMatchObject({ status: 'draft' });
+	});
+
+	it('leaves the lines and the acquisitions alone', async () => {
+		selectResults = [[{ id: ORDER, status: 'received', placedAt }]];
+		await reopenOrder(ORDER, 'More is coming');
+		expect(updateCalls).toHaveLength(1);
+		expect(batchCalls).toBe(0);
+	});
+
+	it('refuses an order that is still open', async () => {
+		selectResults = [[{ id: ORDER, status: 'placed', placedAt }]];
+		await expect(reopenOrder(ORDER, 'x')).rejects.toThrow(OrderStateError);
+		expect(updateCalls).toHaveLength(0);
+	});
+
+	it('refuses a blank reason', async () => {
+		selectResults = [[{ id: ORDER, status: 'received', placedAt }]];
+		await expect(reopenOrder(ORDER, '  ')).rejects.toThrow(OrderStateError);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+
+	it('refuses when somebody else moved it first', async () => {
+		selectResults = [[{ id: ORDER, status: 'received', placedAt }]];
+		returningRows = [];
+		await expect(reopenOrder(ORDER, 'x')).rejects.toThrow(OrderStateError);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 });

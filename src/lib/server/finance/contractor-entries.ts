@@ -19,30 +19,52 @@ interface CompletedJob {
 	fairValueCents?: number | null;
 }
 
-/** What completing a job books: nothing, one paid entry, or one donated. */
-export function completedJobEntries(params: CompletedJob): RecordEntryInput[] {
-	const donatedValue = params.isDonated ? (params.fairValueCents ?? 0) : 0;
-	const paid = params.isDonated ? 0 : (params.costCents ?? 0);
+/** What the ledger already holds for one job: paid out, and given in kind. */
+export interface BookedForJob {
+	paidCents: number;
+	donatedCents: number;
+}
 
-	if (donatedValue > 0) {
-		return [
-			{
-				amountCents: donatedValue,
-				kind: 'in_kind',
-				category: 'donation',
-				occurredAt: params.occurredAt,
-				settlement: 'none',
-				subjectType: 'contractor_job',
-				subjectId: params.jobId,
-				projectId: params.projectId ?? null,
-				description: `Donated work — ${params.title}`
-			}
-		];
+/** Sums a job's ledger rows into what `completedJobEntries` compares against. */
+export function bookedForJob(rows: { kind: string; amountCents: number }[]): BookedForJob {
+	let paidCents = 0;
+	let donatedCents = 0;
+	for (const r of rows) {
+		if (r.kind === 'spent') paidCents -= r.amountCents;
+		else if (r.kind === 'in_kind') donatedCents += r.amountCents;
 	}
+	return { paidCents, donatedCents };
+}
 
-	if (paid <= 0) return [];
+/**
+ * What completing a job books: the difference from what the ledger already
+ * holds for it. That is everything on a first completion; on a re-completion
+ * after a reopen (#2259) it keeps the job from being counted twice, because
+ * the ledger is append-only and reopening never reverses it.
+ */
+export function completedJobEntries(
+	params: CompletedJob,
+	booked: BookedForJob = { paidCents: 0, donatedCents: 0 }
+): RecordEntryInput[] {
+	const donatedDelta = (params.isDonated ? (params.fairValueCents ?? 0) : 0) - booked.donatedCents;
+	const paidDelta = (params.isDonated ? 0 : (params.costCents ?? 0)) - booked.paidCents;
 
-	return [paidEntry(params, paid, `Contractor — ${params.title}`)];
+	const entries: RecordEntryInput[] = [];
+	if (donatedDelta !== 0) {
+		entries.push({
+			amountCents: donatedDelta,
+			kind: 'in_kind',
+			category: 'donation',
+			occurredAt: params.occurredAt,
+			settlement: 'none',
+			subjectType: 'contractor_job',
+			subjectId: params.jobId,
+			projectId: params.projectId ?? null,
+			description: `Donated work — ${params.title}`
+		});
+	}
+	if (paidDelta !== 0) entries.push(paidEntry(params, paidDelta, `Contractor — ${params.title}`));
+	return entries;
 }
 
 /**
