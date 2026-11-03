@@ -63,16 +63,20 @@ async function navBadgeCount(page: Page, slug: string): Promise<number> {
  * Holding the entry chunk back gives a fill that lands before hydration, which a
  * slow phone produces on its own. The remote field spreads `value: ''` onto its
  * input, so hydration used to wipe name and email and keep only the textarea.
+ * The chunk waits on a gate the test opens after the fills, not on a timer: a
+ * loaded runner outran a fixed delay and hydrated mid-fill (#2347).
  */
 test('what a visitor types before the form hydrates survives it', async ({ page }) => {
 	let held = 0;
+	let release = () => {};
+	const gate = new Promise<void>((r) => (release = r));
 	await page.route('**/_app/immutable/entry/*.js', async (route) => {
 		held++;
-		await new Promise((r) => setTimeout(r, 1500));
+		await gate;
 		await route.continue();
 	});
 
-	await page.goto(`/directory/bands/${SEED_PUBLIC_BAND_SLUG}`);
+	await page.goto(`/directory/bands/${SEED_PUBLIC_BAND_SLUG}`, { waitUntil: 'domcontentloaded' });
 	const name = page.locator('input[name="name"]');
 	const email = page.locator('input[name="email"]');
 	const message = page.locator('textarea[name="message"]');
@@ -82,6 +86,7 @@ test('what a visitor types before the form hydrates survives it', async ({ page 
 	// svelte-turnstile renders nothing until onMount, so an absent token input
 	// proves the fills landed before hydration and the test cannot pass vacuously.
 	await expect(page.locator('input[name="turnstileToken"]')).toHaveCount(0);
+	release();
 
 	// The token input appears only once the client has mounted.
 	await expect(page.locator('input[name="turnstileToken"]')).not.toHaveValue('', {
