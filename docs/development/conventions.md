@@ -655,7 +655,7 @@ Enable it in `eslint.config.js` once they are cleared (#2099).
 
 ## Interface copy
 
-Every interface string is moving into the catalog (#2099), so copy is reviewed and trimmed in
+Every interface string lives in the catalog (#2099), so copy is reviewed and trimmed in
 one place: one file per area under `messages/en/` (`ui`, `layout`, `actions`, `components`,
 `band`, `member`, `staff`, `public`), each listed in `project.inlang/settings.json`; terms stay
 in `messages/en.json`. A key is prefixed by its area and then the feature or file it serves
@@ -667,9 +667,13 @@ A sentence with inline markup stays one message: the markup goes in as `{#strong
 `<ParaglideMessage message={m.key} inputs={…}>` from `@inlang/paraglide-js-svelte` renders it,
 taking one snippet per tag (`{#snippet strong({ children })}<strong>{@render children?.()}</strong>{/snippet}`).
 Splitting the sentence into fragment messages leaves pieces that can't be reviewed as a sentence.
+A word that depends on a count is a plural message (`local countPlural = count: plural`, as the
+`term_*` messages do), never `n === 1 ? 'x' : 'xs'` at the call site; a choice between two
+wordings is two whole messages, picked with `(cond ? m.a : m.b)(inputs)`.
 
-`custom/no-literal-ui-text` flags literal copy in `.svelte` files and `pnpm ui-string-census`
-counts it by directory. Glyphs, numbers, entities, `<code>`/`<kbd>` and `aria-hidden` text are
+`custom/no-literal-ui-text` fails lint on literal copy in a shipped `.svelte` file, and
+`pnpm ui-string-census` lists it by directory. Its `allow` list in `eslint.config.js` is for
+strings that look like copy but are not (CSS shown as an example). Glyphs, numbers, entities, `<code>`/`<kbd>` and `aria-hidden` text are
 not copy. Moving a string is not a licence to add one; a sweep notes redundant copy in its PR.
 
 ## Custom ESLint rules
@@ -704,7 +708,7 @@ more than one config object crashes eslint with "Cannot redefine plugin custom")
 | `custom/club-time-dates`                   | **error** on `*.svelte`, `*.svelte.ts` and `src/lib/remote/**/*.ts` (excluding specs) | A `toLocaleDateString`/`toLocaleTimeString` with no `timeZone`, a date `toLocaleString` (on `new Date(…)`, a `Date`-typed receiver, or with date options) with none, `toISOString().slice(0, 10)`/`.split('T')`, or ``new Date(`${date}T${time}`)`` with no `Z` or offset. Each renders in the runtime's zone — UTC during SSR, the viewer's after hydration — or gives the UTC day (#2000). Use `$lib/utils/format` for an instant, `clubToday()` for today, `addIsoDays()` for date arithmetic, `utcCalendarDate()` for a stored UTC-midnight date, `clubInstant()` to build an instant from a club date and time.                                                                                                                 |
 | `custom/prefer-term-messages`              | **off**; `pnpm lint:terms` runs it on `*.svelte`                                      | A template text node, user-facing attribute or `label`/`title` property whose whole string is a form of a `term_*` message. Read it from `$lib/terms` instead. See [Terminology](#terminology).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `custom/no-wording-locators`               | **error** in `*.spec.ts` and `e2e/`; `pnpm test-wording-census` reports by file       | A literal `name:` in `getByRole`, a literal `getByText`, or a literal `toHaveTextContent`/`toContainText`/`toHaveText`. See [Locate and assert by structure](#locate-and-assert-by-structure).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `custom/no-literal-ui-text`                | **off**; `pnpm ui-string-census` runs it on `src/**/*.svelte`                         | A template text node with a letter in it, a copy attribute (`label`, `title`, `note`, `confirm`, `*Label`, `*Toast`, …) or property, a literal branch of a `{…}` tag, a `toast.*()` message, or the literal a script variable rendered by any of those was declared with. Add it to `messages/en/<area>.json` and read `m.<key>()`. See [Interface copy](#interface-copy).                                                                                                                                                                                                                                                                                                                                                           |
+| `custom/no-literal-ui-text`                | **error** on `src/**/*.svelte` (not stories, `*.test.svelte` or harnesses)            | A template text node with a letter in it, a copy attribute (`label`, `title`, `note`, `confirm`, `*Label`, `*Toast`, …) or property, a literal branch of a `{…}` tag, a `toast.*()` message, or the literal a script variable rendered by any of those was declared with. Add it to `messages/en/<area>.json` and read `m.<key>()`. See [Interface copy](#interface-copy).                                                                                                                                                                                                                                                                                                                                                           |
 
 ### Money columns declare themselves
 

@@ -6,8 +6,8 @@
  *   node scripts/ui-string-census.mjs --json   # machine-readable totals
  *
  * Runs `custom/no-literal-ui-text` alone over shipped components and routes;
- * stories, test harnesses and fixtures are not interface. The rule is off in
- * eslint.config.js until the count reaches zero; this is the scoreboard.
+ * stories, test harnesses and fixtures are not interface. Lint enforces the
+ * rule; this lists every hit with `--list`, ignoring the `allow` option.
  */
 import { ESLint } from 'eslint';
 import ts from 'typescript-eslint';
