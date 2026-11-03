@@ -21,7 +21,7 @@
 	let { venueName, venueIsPrimary, reservation, editableEventId }: Props = $props();
 </script>
 
-<InfoCard title="Space Reservation">
+<InfoCard title="Space Reservation" testid="space-hold">
 	{#snippet action()}
 		{#if reservation && editableEventId}
 			<EditHoldAction

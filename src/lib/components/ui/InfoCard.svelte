@@ -15,6 +15,7 @@
 		title,
 		state,
 		class: extraClass = '',
+		testid,
 		children,
 		action,
 		header
@@ -28,6 +29,8 @@
 		 */
 		state?: string | number;
 		class?: string;
+		/** A test handle, for a section no structure tells apart (#2189). */
+		testid?: string;
 		children: Snippet;
 		/** A control beside the title — usually a link into the full queue. */
 		action?: Snippet;
@@ -39,7 +42,7 @@
 	} = $props();
 </script>
 
-<Card class={extraClass}>
+<Card class={extraClass} {testid}>
 	<CardBody>
 		{#if header}
 			{@render header(title)}

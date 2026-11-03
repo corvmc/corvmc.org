@@ -46,7 +46,7 @@
 	const nextBilling = $derived(formatMonthDayYear(subscription.currentPeriodEnd));
 </script>
 
-<Card>
+<Card testid="contribution">
 	<CardBody>
 		<div class="flex items-center gap-4">
 			<div class="flex size-12 items-center justify-center rounded-full bg-primary/10">

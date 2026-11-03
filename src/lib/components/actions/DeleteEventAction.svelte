@@ -43,6 +43,7 @@
 		{size}
 		class={className}
 		onsuccess={onsuccess ?? (() => goto(resolve('/staff/events')))}
+		data-testid="delete-event"
 		{...rest}
 	>
 		{#snippet form()}
@@ -87,6 +88,7 @@
 		{size}
 		class={className}
 		disabled
+		data-testid="delete-event"
 		title="Events with tickets can't be deleted — cancel it instead, which voids the tickets and tells the people holding them."
 	>
 		Delete

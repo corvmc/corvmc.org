@@ -1,10 +1,15 @@
+import { eq } from 'drizzle-orm';
 import { expect, test } from './fixtures/auth';
+import { readLocalDb } from './fixtures/platform-db';
+import { auditLog } from '../src/lib/server/db/schema/audit';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
 	SEED_TASK_DONE,
+	SEED_TASK_DUTY,
 	SEED_TASK_EMPTY_SECTION,
 	SEED_TASK_PROJECT_ID,
 	SEED_TASK_PROJECT_NAME,
+	SEED_TASK_SECTION,
 	SEED_TASK_UNASSIGNED,
 	SEED_TASK_WITH_DUTIES
 } from './fixtures/seed-project-tasks';
@@ -18,6 +23,9 @@ import {
 test.use({ persona: { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD } });
 
 const projectUrl = `/staff/projects/${SEED_TASK_PROJECT_ID}`;
+const taskPages = `a[href^="/staff/projects/${SEED_TASK_PROJECT_ID}/tasks/"]`;
+// Check quickly once, then back off: `readLocalDb` shares the preview's file.
+const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 test.describe('project task list', () => {
 	test.beforeEach(async ({ page }) => {
@@ -32,12 +40,18 @@ test.describe('project task list', () => {
 
 	test('draws every section, the empty one included, and unfolds duties', async ({ page }) => {
 		await expect(page.getByText(SEED_TASK_EMPTY_SECTION, { exact: true })).toBeVisible();
-		await expect(page.getByText('No tasks yet.')).toBeVisible();
+		// Under the empty section's heading: a note row, then the add line — no task.
+		const empty = page.locator('tr.section-row').filter({ hasText: SEED_TASK_EMPTY_SECTION });
+		const note = empty.locator('xpath=following-sibling::tr[1]');
+		await expect(note).not.toBeEmpty();
+		await expect(note.getByRole('link')).toHaveCount(0);
+		await expect(note.getByRole('textbox')).toHaveCount(0);
+		await expect(note.locator('xpath=following-sibling::tr[1]').getByRole('textbox')).toBeVisible();
 
 		await page
 			.getByRole('button', { name: `Unfold the duties of ${SEED_TASK_WITH_DUTIES}` })
 			.click();
-		await expect(page.getByText('Stretch the new set')).toBeVisible();
+		await expect(page.getByText(SEED_TASK_DUTY)).toBeVisible();
 	});
 
 	test('filters live in the URL', async ({ page }) => {
@@ -57,7 +71,7 @@ test.describe('project task list', () => {
 		await expect(
 			page.getByRole('table').getByRole('link', { name: SEED_TASK_UNASSIGNED, exact: true })
 		).toBeHidden();
-		await expect(page.getByText('Nothing here matches the filter.')).toBeVisible();
+		await expect(page.getByRole('table').locator('a[href*="task="]')).toHaveCount(0);
 
 		await pick('Contractors', 'Unassigned');
 		await expect(page).toHaveURL(/show=unassigned/);
@@ -69,8 +83,12 @@ test.describe('project task list', () => {
 		await expect(
 			page.getByRole('table').getByRole('link', { name: SEED_TASK_DONE, exact: true })
 		).toBeVisible();
-		await page.getByRole('button', { name: 'Hide done' }).click();
+		// The done toggle sits beside the filter menu, pressed while done is hidden.
+		const hideDone = page.locator('details + button[aria-pressed]');
+		await expect(hideDone).toHaveAttribute('aria-pressed', 'false');
+		await hideDone.click();
 		await expect(page).toHaveURL(/done=hide/);
+		await expect(hideDone).toHaveAttribute('aria-pressed', 'true');
 		await expect(
 			page.getByRole('table').getByRole('link', { name: SEED_TASK_DONE, exact: true })
 		).toBeHidden();
@@ -84,8 +102,11 @@ test.describe('project task list', () => {
 		await expect(page).toHaveURL(/[?&]task=/);
 		const panel = page.getByRole('complementary', { name: SEED_TASK_UNASSIGNED });
 		await expect(panel).toBeVisible();
-		await expect(panel.getByText('Unassigned')).toBeVisible();
-		await expect(panel.getByRole('link', { name: 'Details' })).toBeVisible();
+		await expect(panel.locator(taskPages)).toBeVisible();
+		// Nobody on it: every slot in the assignee stack is an open one.
+		const stack = panel.locator('[data-assigned-stack]');
+		await expect(stack.locator('[data-slot="open"]').first()).toBeAttached();
+		await expect(stack.locator('[data-slot="person"]')).toHaveCount(0);
 
 		await page.reload();
 		await expect(page.getByRole('complementary', { name: SEED_TASK_UNASSIGNED })).toBeVisible();
@@ -101,7 +122,7 @@ test.describe('project task list', () => {
 			.getByRole('link', { name: SEED_TASK_WITH_DUTIES, exact: true })
 			.click();
 		const panel = page.getByRole('complementary', { name: SEED_TASK_WITH_DUTIES });
-		await panel.getByRole('link', { name: 'Details' }).click();
+		await panel.locator(taskPages).click();
 
 		const taskUrl = new RegExp(`/staff/projects/${SEED_TASK_PROJECT_ID}/tasks/([^/?#]+)$`);
 		await expect(page).toHaveURL(taskUrl);
@@ -112,7 +133,7 @@ test.describe('project task list', () => {
 		await expect(
 			page.getByRole('paragraph').getByRole('link', { name: SEED_TASK_PROJECT_NAME })
 		).toBeVisible();
-		await expect(page.getByText('Stretch the new set')).toBeVisible();
+		await expect(page.getByText(SEED_TASK_DUTY)).toBeVisible();
 
 		const taskId = taskUrl.exec(page.url())![1];
 		await page.goto(`/staff/volunteer/shifts/${taskId}`);
@@ -124,7 +145,7 @@ test.describe('project task list', () => {
 
 	test('a typed line becomes a task, and its checkbox ticks and unticks it', async ({ page }) => {
 		const title = `E2E fetch the ladder ${Date.now()}`;
-		const line = page.getByRole('textbox', { name: 'Add a task to Prep' });
+		const line = page.getByLabel(`Add a task to ${SEED_TASK_SECTION}`);
 		await line.fill(title);
 		await line.press('Enter');
 		await expect(
@@ -137,10 +158,32 @@ test.describe('project task list', () => {
 		await page.getByRole('button', { name: `Mark ${title} not done` }).click();
 		await expect(page.getByRole('button', { name: `Mark ${title} done` })).toBeVisible();
 
-		// With no task open, the sidebar is the activity: newest first, linked to the task.
-		const activity = page.getByRole('list', { name: 'Activity' });
-		await expect(activity.getByText(`Added the task “${title}”`)).toBeVisible();
-		await expect(activity.getByRole('listitem').first()).toContainText('Reopened it');
-		await expect(activity.getByRole('link', { name: title }).first()).toBeVisible();
+		// What was recorded: the add, the tick and the untick, against this task.
+		const href = await page
+			.getByRole('table')
+			.getByRole('link', { name: title, exact: true })
+			.getAttribute('href');
+		const taskId = new URLSearchParams(href?.split('?')[1]).get('task') ?? '';
+		await expect
+			.poll(
+				() =>
+					readLocalDb((db) =>
+						db
+							.select({ action: auditLog.action })
+							.from(auditLog)
+							.where(eq(auditLog.subjectId, taskId))
+					).then((rows) => rows.map((r) => r.action)),
+				DB_POLL
+			)
+			.toEqual(
+				expect.arrayContaining(['work_order.created', 'work_order.resolved', 'work_order.reopened'])
+			);
+
+		// With no task open, the sidebar is the activity: newest first, linked to
+		// the task. Only this test writes to the project, so the newest is ours.
+		const activity = page.getByRole('main').getByRole('complementary');
+		const ours = `a[href="/staff/projects/${SEED_TASK_PROJECT_ID}/tasks/${taskId}"]`;
+		await expect(activity.getByRole('listitem').first().locator(ours)).toBeVisible();
+		await expect(activity.locator(ours).first()).toBeVisible();
 	});
 });

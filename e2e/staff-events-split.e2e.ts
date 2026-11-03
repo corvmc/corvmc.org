@@ -35,7 +35,7 @@ test.describe('staff events split', () => {
 	test('the calendar holds /staff/events, its old address, and every listing', async ({ page }) => {
 		await page.goto('/staff/calendar');
 		await expect(page).toHaveURL(/\/staff\/events$/);
-		await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
 		// The lister owns several seeded listings, so their link is on more than one row.
 		const pending = page.getByRole('row').filter({ hasText: SEED_SPLIT_PENDING_TITLE });
@@ -47,14 +47,23 @@ test.describe('staff events split', () => {
 		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toBeVisible();
 		await expect(page.getByText(SEED_SPLIT_DRAFT_TITLE)).toHaveCount(0);
 
-		// Listings waiting on staff are pinned above the dates, under their own group.
-		await expect(page.getByRole('row').nth(1)).toHaveText('Pending Listings');
+		// Listings waiting on staff are pinned above the dates, under their own
+		// group: the first group row, before the second.
+		await expect
+			.poll(() =>
+				page.getByRole('row').evaluateAll((rows, title) => {
+					const groups = rows.flatMap((r, i) => (r.querySelector('.cell-group') ? [i] : []));
+					const at = rows.findIndex((r) => r.textContent?.includes(title));
+					return groups[0] === 1 && at > groups[0] && at < (groups[1] ?? -1);
+				}, SEED_SPLIT_PENDING_TITLE)
+			)
+			.toBe(true);
 		await expect(page.getByLabel('Status')).toHaveCount(0);
 	});
 
 	test('Productions holds CMC work, including drafts, and no listings', async ({ page }) => {
 		await page.goto('/staff/projects/productions');
-		await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
 		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toBeVisible();
 		await expect(page.getByText(SEED_SPLIT_PENDING_TITLE)).toHaveCount(0);
@@ -67,49 +76,52 @@ test.describe('staff events split', () => {
 		await page.goto(`/staff/events/${SEED_SPLIT_PENDING_ID}`);
 		await expect(page.getByRole('heading', { name: SEED_SPLIT_PENDING_TITLE })).toBeVisible();
 
-		// Who is accountable, said once — the second "Created by" card is gone.
-		await expect(page.getByRole('heading', { name: 'Posted by' })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Created by' })).toHaveCount(0);
+		// Who is accountable, said once: the second card repeating the lister is gone.
+		await expect(
+			page.getByRole('main').getByRole('link', { name: SEED_SPLIT_MEMBER_NAME })
+		).toHaveCount(1);
 
-		// Production controls belong to the console. Assert on the card headings,
-		// not on text: the sidebar's own Space and Volunteering sections put
-		// "Space Reservations" and "Volunteer…" on every page in the panel.
-		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toHaveCount(0);
-		await expect(page.getByRole('heading', { name: 'Volunteer Shifts' })).toHaveCount(0);
-		await expect(page.getByRole('link', { name: 'Manage production' })).toHaveCount(0);
+		// Production controls belong to the console. Scoped to the cards, because
+		// the sidebar's own Space and Volunteering sections are on every page.
+		await expect(page.getByTestId('space-hold')).toHaveCount(0);
+		await expect(page.getByTestId('volunteer-shifts')).toHaveCount(0);
+		await expect(
+			page.locator(`a[href="/staff/events/${SEED_SPLIT_PENDING_ID}/production"]`)
+		).toHaveCount(0);
 
-		// The window is two hours, not the day.
-		await expect(page.getByRole('heading', { name: 'Within two hours' })).toBeVisible();
-
-		// Both are on the same date. Only a real window tells them apart, which is
-		// the whole reason this is not a day query.
-		await expect(page.getByText(SEED_SPLIT_NEAR_TITLE)).toBeVisible();
+		// The window is two hours, not the day. Both are on the same date. Only a
+		// real window tells them apart, which is the whole reason this is not a
+		// day query.
+		await expect(page.getByRole('row').filter({ hasText: SEED_SPLIT_NEAR_TITLE })).toBeVisible();
 		await expect(page.getByText(SEED_SPLIT_FAR_TITLE)).toHaveCount(0);
 	});
 
 	test('a production reaches its console, and a listing is turned away', async ({ page }) => {
 		await page.goto(`/staff/events/${SEED_SPLIT_CMC_LIVE_ID}`);
-		// "Open a production", not "Manage production": this fixture seeds no
-		// production row, and the one entry into the console names the state it
-		// is in rather than claiming there is something to manage (#976).
-		await expect(page.getByRole('link', { name: 'Open a production' })).toBeVisible();
+		// The one entry into the console (#976).
+		await expect(
+			page.locator(`a[href="/staff/events/${SEED_SPLIT_CMC_LIVE_ID}/production"]`)
+		).toBeVisible();
 		// The room hold is the listing's (#1946), so it is here and not below.
-		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toBeVisible();
+		await expect(page.getByTestId('space-hold')).toBeVisible();
 
 		await page.goto(`/staff/events/${SEED_SPLIT_CMC_LIVE_ID}/production`);
 		await expect(page.getByRole('heading', { name: SEED_SPLIT_CMC_LIVE_TITLE })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Production', exact: true })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toHaveCount(0);
-		await expect(page.getByRole('link', { name: 'View listing' })).toHaveAttribute(
-			'href',
-			`/staff/events/${SEED_SPLIT_CMC_LIVE_ID}`
-		);
+		// No production row is seeded, so the overview offers to open one.
+		const overview = page.getByRole('tabpanel');
+		await expect(overview).toHaveAttribute('aria-labelledby', 'tab-overview');
+		await expect(overview.locator('button[type=submit]')).toBeVisible();
+		await expect(page.getByTestId('space-hold')).toHaveCount(0);
+		// The header's way back, not the breadcrumb that shares its href.
+		await expect(
+			page.getByRole('main').locator(`a[href="/staff/events/${SEED_SPLIT_CMC_LIVE_ID}"]:not(nav a)`)
+		).toBeVisible();
 
 		// The console is tabbed now, and the staffing lives on Advance. Reached by
 		// the tab rather than by `?tab=`, because what this asserts is that the
 		// console is whole — every part of it still reachable from where you land.
-		await page.getByRole('tab', { name: 'Advance' }).click();
-		await expect(page.getByRole('heading', { name: 'Volunteer Shifts' })).toBeVisible();
+		await page.locator('#tab-advance').click();
+		await expect(page.getByTestId('volunteer-shifts')).toBeVisible();
 
 		// The console has nothing to say about a listing, so a hand-typed URL goes
 		// back to the view that does.

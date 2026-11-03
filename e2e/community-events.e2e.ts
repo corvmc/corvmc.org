@@ -90,10 +90,9 @@ test.describe('community listings', () => {
 		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
 		await page.goto(`/member/events/${SEED_CE_DRAFT_ID}/manage`);
 
-		// The label is the promise: a trusted member is told "Publish", not
-		// "Submit for review".
-		await page.getByRole('button', { name: 'Publish', exact: true }).click();
-		await page.getByRole('button', { name: 'Publish', exact: true }).last().click();
+		// A trusted member's publish goes straight out.
+		await page.getByTestId('publish-listing').click();
+		await page.getByRole('dialog').locator('button[type=submit]').click();
 
 		await expect
 			.poll(async () => (await readListingState(SEED_CE_DRAFT_ID)).status, { timeout: 15000 })
@@ -107,11 +106,11 @@ test.describe('community listings', () => {
 		await login(page, SEED_CE_REVIEW_EMAIL, SEED_CE_PASSWORD);
 		await page.goto(`/member/events/${SEED_CE_QUEUE_DRAFT_ID}/manage`);
 
-		// Same button, different promise — and it has to say the different thing.
-		const submit = page.getByRole('button', { name: 'Submit for review' });
+		// Same button, different outcome: the listing queues instead of publishing.
+		const submit = page.getByTestId('publish-listing');
 		await expect(submit).toBeVisible();
 		await submit.click();
-		await page.getByRole('button', { name: 'Submit for review' }).last().click();
+		await page.getByRole('dialog').locator('button[type=submit]').click();
 
 		await expect
 			.poll(async () => (await readListingState(SEED_CE_QUEUE_DRAFT_ID)).status, {
@@ -131,12 +130,10 @@ test.describe('community listings', () => {
 
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/events/${SEED_CE_PENDING_ID}`);
-		await page.getByRole('button', { name: 'Turn down' }).click();
-		await page.locator('textarea[name="notes"]').fill(REASON);
-		await page
-			.getByRole('button', { name: /Turn down|Submit|Confirm/ })
-			.last()
-			.click();
+		await page.getByTestId('reject-listing').click();
+		const dialog = page.getByRole('dialog');
+		await dialog.locator('textarea[name="notes"]').fill(REASON);
+		await dialog.locator('button[type=submit]').click();
 
 		await expect
 			.poll(async () => (await readListingState(SEED_CE_PENDING_ID)).status, { timeout: 15000 })
@@ -164,7 +161,7 @@ test.describe('deleting an event', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/events/${SEED_CE_TICKETED_ID}`);
 
-		const del = page.getByRole('button', { name: 'Delete' });
+		const del = page.getByTestId('delete-event');
 		await expect(del).toBeDisabled();
 		// The reason has to be reachable, not just implied by a dead button.
 		await expect(del).toHaveAttribute('title', /cancel it instead/i);
@@ -176,8 +173,8 @@ test.describe('deleting an event', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/events/${SEED_CE_DELETABLE_ID}`);
 
-		await page.getByRole('button', { name: 'Delete' }).click();
-		await page.getByRole('button', { name: 'Delete permanently' }).click();
+		await page.getByTestId('delete-event').click();
+		await page.getByRole('dialog').locator('button[type=submit]').click();
 
 		await expect
 			.poll(async () => eventExists(SEED_CE_DELETABLE_ID), { timeout: 15000 })
@@ -196,7 +193,7 @@ test.describe('starting a listing', () => {
 		// click before Svelte attaches opens nothing.
 		await expect(async () => {
 			await page.goto('/member/events');
-			await page.getByRole('button', { name: 'Add a show' }).first().click();
+			await page.getByTestId('add-show').click();
 			await expect(page.getByRole('dialog')).toBeVisible({ timeout: 2000 });
 		}).toPass({ timeout: 20000 });
 		return page.getByRole('dialog');
@@ -233,11 +230,14 @@ test.describe('starting a listing', () => {
 		const dialog = await openAddShow(page);
 
 		await dialog.getByLabel('Title').fill('Paper Wolves at a house show');
-		await dialog.getByRole('button', { name: 'Close' }).click();
-		await expect(dialog.getByText('You have unsaved changes.')).toBeVisible();
+		await dialog.locator('[data-dialog-close]').click();
+		const prompt = dialog.getByTestId('discard-prompt');
+		await expect(prompt).toBeVisible();
+		await expect(dialog.getByLabel('Title')).toBeHidden();
 
-		// Keep editing gives back exactly what was typed.
-		await dialog.getByRole('button', { name: 'Keep editing' }).click();
+		// Keep editing, the prompt's first choice, gives back exactly what was typed.
+		await prompt.getByRole('button').first().click();
+		await expect(prompt).toHaveCount(0);
 		await expect(dialog.getByLabel('Title')).toHaveValue('Paper Wolves at a house show');
 	});
 

@@ -54,7 +54,7 @@
 		`${String(month).padStart(2, '0')}/${String(year).slice(-2)}`;
 </script>
 
-<Card>
+<Card testid="payment-methods">
 	<CardBody>
 		<div class="flex items-center gap-4">
 			<div class="flex size-12 items-center justify-center rounded-full bg-primary/10">

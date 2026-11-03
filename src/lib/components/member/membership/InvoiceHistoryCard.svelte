@@ -30,7 +30,7 @@
 	const date = formatMonthDayYear;
 </script>
 
-<Card>
+<Card testid="billing-history">
 	<CardBody>
 		<div class="flex items-center gap-4">
 			<div class="flex size-12 items-center justify-center rounded-full bg-primary/10">

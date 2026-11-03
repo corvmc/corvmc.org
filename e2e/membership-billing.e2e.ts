@@ -23,13 +23,19 @@ async function login(page: Page) {
 	await signInAs(page, { email: SEED_BILLING_EMAIL, password: SEED_BILLING_PASSWORD });
 }
 
-async function addCard(page: import('@playwright/test').Page, cardNumber: string) {
-	await page.getByRole('button', { name: /Add (a|another) card/ }).click();
+/** The card list's own rows, by the last four digits each one shows. */
+const cardRow = (page: Page, last4: string) =>
+	page.getByTestId('payment-methods').locator('li').filter({ hasText: last4 });
+
+async function addCard(page: Page, cardNumber: string) {
+	// The add button sits below the list, so it is the card's last button.
+	await page.getByTestId('payment-methods').getByRole('button').last().click();
 	// The SetupIntent is minted when the modal opens, so the form is not there
 	// until that round trip lands.
-	await expect(page.locator('input[name$="cardNumber"]')).toBeVisible({ timeout: 15000 });
-	await page.locator('input[name$="cardNumber"]').fill(cardNumber);
-	await page.getByRole('button', { name: /^Save card/ }).click();
+	const dialog = page.getByRole('dialog');
+	await expect(dialog.locator('input[name$="cardNumber"]')).toBeVisible({ timeout: 15000 });
+	await dialog.locator('input[name$="cardNumber"]').fill(cardNumber);
+	await dialog.locator('button[type=submit]').click();
 }
 
 const readCardOnUser = async () => {
@@ -48,12 +54,15 @@ test('a member adds, defaults and removes a card without leaving the site', asyn
 
 	// The section that replaced the portal link. Nothing is on file yet: the
 	// seeded customer is a `cus_seed_…` the fake has never been asked about.
-	await expect(page.getByRole('heading', { name: 'Payment Methods' })).toBeVisible();
-	await expect(page.getByText('No card saved yet.')).toBeVisible();
+	const methods = page.getByTestId('payment-methods');
+	await expect(methods).toBeVisible();
+	await expect(methods.getByRole('button')).toHaveCount(1);
+	await expect(methods.getByRole('alert')).toHaveCount(0);
+	await expect(methods.locator('li')).toHaveCount(0);
 
 	await addCard(page, '4242424242424242');
 
-	await expect(page.getByText('•••• 4242')).toBeVisible({ timeout: 15000 });
+	await expect(cardRow(page, '4242')).toBeVisible({ timeout: 15000 });
 	// No subscription lives in the fake gateway for this customer, so there is
 	// nothing to point at the card — but it is still theirs, and still the one to
 	// remember. That mirroring is what lets a page name the card with no Stripe
@@ -65,19 +74,17 @@ test('a member adds, defaults and removes a card without leaving the site', asyn
 	// subscription is refused, and this is the path that proves the list is real
 	// rather than a single mirrored row.
 	await addCard(page, '5555555555554444');
-	await expect(page.getByText('•••• 4444')).toBeVisible({ timeout: 15000 });
+	await expect(cardRow(page, '4444')).toBeVisible({ timeout: 15000 });
+	await expect(methods.locator('li')).toHaveCount(2);
 
-	// Remove the first one. `Action` opens a confirm modal, so the click that
-	// matters is the one inside it.
-	const firstRow = page.locator('li', { hasText: '•••• 4242' });
-	await firstRow.getByRole('button', { name: 'Remove' }).click();
-	await page
-		.getByRole('button', { name: /^Remove$/ })
-		.last()
-		.click();
+	// Remove the first one: its row's last button. `Action` opens a confirm
+	// modal, so the click that matters is the one inside it, which comes last.
+	await cardRow(page, '4242').getByRole('button').last().click();
+	await page.getByRole('dialog').getByRole('button').last().click();
 
-	await expect(page.getByText('•••• 4242')).toHaveCount(0, { timeout: 15000 });
-	await expect(page.getByText('•••• 4444')).toBeVisible();
+	await expect(cardRow(page, '4242')).toHaveCount(0, { timeout: 15000 });
+	await expect(cardRow(page, '4444')).toBeVisible();
+	await expect(methods.locator('li')).toHaveCount(1);
 });
 
 test('the membership page renders even though billing is a separate query', async ({ page }) => {
@@ -88,9 +95,11 @@ test('the membership page renders even though billing is a separate query', asyn
 	// Promise.all, so a Stripe failure took the page down for every sustaining
 	// member. Both are on screen together now, which is what proves the billing
 	// section is loaded beside the page rather than inside it.
-	await expect(page.getByRole('heading', { name: 'Your Contribution' })).toBeVisible();
-	await expect(page.getByRole('heading', { name: 'Billing History' })).toBeVisible();
+	await expect(page.getByTestId('contribution')).toBeVisible();
+	await expect(page.getByTestId('billing-history')).toBeVisible();
 
-	// And the portal itself is gone.
-	await expect(page.getByRole('link', { name: 'Manage Billing' })).toHaveCount(0);
+	// And the portal itself is gone: nothing in either card links off the site.
+	for (const card of ['contribution', 'payment-methods']) {
+		await expect(page.getByTestId(card).locator('a:not([href^="/"])')).toHaveCount(0);
+	}
 });

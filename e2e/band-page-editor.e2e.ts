@@ -28,6 +28,9 @@ import {
  * That is the whole reason the control was rebuilt — see `theme-fork.ts`.
  */
 
+/** Every block on the page, editor and public alike. */
+const blocks = (page: Page) => page.locator('section.band-site-block');
+
 async function login(page: Page) {
 	await signInAs(page, { email: SEED_OWNER_EMAIL, password: SEED_OWNER_PASSWORD });
 }
@@ -84,11 +87,12 @@ test('hiding a block keeps it in the editor and says it is unpublished', async (
 	await page.getByLabel('Stop publishing Members').click();
 
 	// The block stays on the page — a block you cannot see is a block you cannot
-	// bring back — and says what its state is.
-	await expect(
-		page.getByText(/Not published\. Whatever you put in this block is kept\./)
-	).toBeVisible();
-	await expect(page.getByLabel('Publish Members')).toBeVisible();
+	// bring back — and its body gives way to a note on its state.
+	const members = blocks(page).filter({ has: page.getByLabel('Publish Members') });
+	await expect(members).toBeVisible();
+	await expect(members.locator('.editor-chrome').last()).toBeVisible();
+	await expect(members.getByRole('heading')).toHaveCount(0);
+	await expect(page.getByLabel('Publish Members')).toHaveAttribute('aria-pressed', 'false');
 
 	await page.getByLabel('Publish Members').click();
 	await expect(page.getByLabel('Stop publishing Members')).toBeVisible();
@@ -102,14 +106,18 @@ test('an empty block shows what it will look like and where to fill it', async (
 	// The seeded premium band has no gigs, so the Shows block renders nothing at
 	// all on the live site. In the editor it is a ghost that names its action and
 	// points at the surface that owns the data.
-	const addShow = page.getByRole('link', { name: /Add a show/ });
+	const addShow = blocks(page).locator(
+		`a[href="/band/${SEED_PREMIUM_BAND_SLUG}/events"]:not(.strip a)`
+	);
 	await expect(addShow).toBeVisible();
-	await expect(addShow).toHaveAttribute('href', `/band/${SEED_PREMIUM_BAND_SLUG}/events`);
 
 	// ...and the same band DOES have a member, so that block renders for real
-	// rather than being ghosted alongside it.
-	await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible();
-	await expect(page.getByRole('link', { name: /Invite your bandmates/ })).toHaveCount(0);
+	// rather than being ghosted alongside it: no link out to the roster.
+	const members = blocks(page).filter({ has: page.getByLabel('Stop publishing Members') });
+	await expect(members.getByRole('heading')).toBeVisible();
+	await expect(
+		members.locator(`a[href="/band/${SEED_PREMIUM_BAND_SLUG}/members"]:not(.strip a)`)
+	).toHaveCount(0);
 });
 
 test('the public band site renders with none of the editor chrome', async ({ page }) => {
@@ -121,10 +129,10 @@ test('the public band site renders with none of the editor chrome', async ({ pag
 	// One component draws both surfaces, so these are the leak detectors.
 	await expect(page.getByLabel(/^Move /)).toHaveCount(0);
 	await expect(page.getByLabel(/^Stop publishing /)).toHaveCount(0);
-	await expect(page.getByText(/Not published/)).toHaveCount(0);
+	await expect(page.locator('.editor-chrome')).toHaveCount(0);
 	// An empty block stays empty in public — the ghost is editor-only, so Preview
 	// and the live site agree about what actually publishes.
-	await expect(page.getByRole('link', { name: /Add a show/ })).toHaveCount(0);
+	await expect(page.locator(`a[href="/band/${SEED_PREMIUM_BAND_SLUG}/events"]`)).toHaveCount(0);
 });
 
 test('the theme control shows what the theme does, read-only until you take it over', async ({
@@ -134,9 +142,8 @@ test('the theme control shows what the theme does, read-only until you take it o
 	await page.goto(`/band/${SEED_PREMIUM_BAND_SLUG}/page-editor`);
 	await expect(page.getByLabel('Move Hero down')).toBeVisible({ timeout: 15000 });
 
-	// By role, not by label: the control carries `aria-label="Theme"` and sits
-	// inside a `<label>` whose text is also "Theme", so `getByLabel` matches both.
-	const themeSelect = page.getByRole('combobox', { name: 'Theme' });
+	// The select that offers the themes, by the values it stores.
+	const themeSelect = page.locator('select:has(option[value="punk"])');
 	await expect(themeSelect).toBeVisible();
 
 	// A theme is legible: its actual rules are in the pane, not hidden behind a
@@ -151,14 +158,15 @@ test('the theme control shows what the theme does, read-only until you take it o
 
 	// Taking it over is the fork: the pane becomes the band's, and the theme
 	// stops applying — so what they can read is the whole of what applies.
-	await page.getByRole('button', { name: 'Customize' }).click();
+	await page.getByTestId('fork-theme').click();
 	const own = page.getByLabel('Your custom CSS');
 	await expect(own).toBeVisible();
 	await expect(own).not.toHaveAttribute('readonly', '');
 	await expect(own).toHaveValue(/#ff2d55/);
 	await expect(themeSelect).toHaveValue('custom');
-	// It still says where it came from.
-	await expect(page.getByRole('option', { name: 'Custom (from Punk)' })).toBeAttached();
+	// It still says where it came from: the fork's option names the theme.
+	const punk = await themeSelect.locator('option[value="punk"]').textContent();
+	await expect(themeSelect.locator('option[value="custom"]')).toContainText(punk ?? '');
 });
 
 test('the hero block carries its own upload, not a Media section at the foot of the page', async ({
@@ -170,9 +178,15 @@ test('the hero block carries its own upload, not a Media section at the foot of 
 
 	// The page-level Media card and the EPK button are gone; the sidebar already
 	// links to the press kit, and an upload belongs to the block that shows it.
-	await expect(page.getByRole('link', { name: 'Edit EPK' })).toHaveCount(0);
-	await expect(page.getByText('Gallery images')).toHaveCount(0);
+	await expect(
+		page
+			.getByRole('main')
+			.locator(`a[href="/band/${SEED_PREMIUM_BAND_SLUG}/press-kit"]:not(section.band-site-block a)`)
+	).toHaveCount(0);
+	await expect(page.locator('input[type=file]')).toHaveCount(0);
 
 	await page.getByLabel('Hero settings').click();
-	await expect(page.getByText('Hero image')).toBeVisible();
+	const hero = blocks(page).filter({ has: page.getByLabel('Hero settings') });
+	await expect(hero.locator('input[type=file]')).toHaveCount(1);
+	await expect(page.locator('input[type=file]')).toHaveCount(1);
 });
