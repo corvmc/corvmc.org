@@ -9,7 +9,7 @@ import { SEED_CLUB_NAME, SEED_COMMITTEE_ID, SEED_COMMITTEE_NAME } from './fixtur
 import { SEED_PUBLIC_BAND_NAME } from './fixtures/seed-band-onboarding';
 
 /**
- * The Clubs and Committees views of `/staff/groups` — the only places a club or
+ * The Clubs and Committees views of `/staff/groups/*` — the only places a club or
  * committee comes into existence.
  *
  * Three things here are worth a browser rather than a unit test, because all
@@ -60,10 +60,10 @@ test.describe('staff groups', () => {
 		await expect(nav.locator('a[href="/staff/groups"]')).toHaveCount(1);
 		await expect(nav.locator('a[href="/staff/clubs"]')).toHaveCount(0);
 		await expect(nav.locator('a[href="/staff/committees"]')).toHaveCount(0);
-		await expect(page.locator('main a[href="/staff/groups/committees"]')).toHaveAttribute(
-			'aria-current',
-			'page'
-		);
+		// The view tabs sit in the page header, above what the chosen view holds.
+		await expect(
+			page.locator('[data-page-header] a[href="/staff/groups/committees"]')
+		).toHaveAttribute('aria-current', 'page');
 
 		// The card opens the record beside the list, which links on to its page.
 		// The seeded committee carries one open application; its answer is

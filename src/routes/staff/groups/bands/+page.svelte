@@ -20,11 +20,11 @@
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { retryQuery } from '$lib/utils/retry-query';
 	import BandTotals from './BandTotals.svelte';
-	import GroupViews from './GroupViews.svelte';
-	import GroupRecordPanel from './[id]/GroupRecordPanel.svelte';
+	import GroupViews from '../GroupViews.svelte';
+	import GroupRecordPanel from '../[id]/GroupRecordPanel.svelte';
 
 	// Deactivated bands are hidden until the filter asks for them.
-	const view = rosterState(resolve('/staff/groups'), {
+	const view = rosterState(resolve('/staff/groups/bands'), {
 		status: oneOf(['active', 'deactivated', 'all'] as const, 'active'),
 		tier: oneOf(['', 'free', 'premium'] as const, '')
 	});
@@ -52,12 +52,9 @@
 </script>
 
 <PageHeader title={m.staff_groups()}>
-	<!-- External acts stay beside bands: the same staff job, and one can become the other. -->
-	<Button variant="ghost" href={resolve('/staff/bands/acts')}>{m.staff_external_acts()}</Button>
-	<CreateBandAction />
+	<GroupViews active="bands" />
 </PageHeader>
 <PageContent>
-	<GroupViews active="bands" />
 	<svelte:boundary>
 		<BandTotals />
 		{#snippet failed(_error, reset)}
@@ -116,6 +113,13 @@
 					<option value="premium">{m.staff_premium()}</option>
 				</Select>
 			</label>
+		{/snippet}
+		{#snippet actions()}
+			<!-- External acts stay beside bands: the same staff job, and one can become the other. -->
+			<Button variant="ghost" size="sm" href={resolve('/staff/bands/acts')}
+				>{m.staff_external_acts()}</Button
+			>
+			<CreateBandAction />
 		{/snippet}
 	</FilterBar>
 

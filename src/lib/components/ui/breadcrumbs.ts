@@ -32,17 +32,14 @@ export function getBreadcrumbTrail(): { readonly current: NavTrail } | undefined
 /**
  * A page's full trail: the nav part, then any parents the URL cannot say, then
  * the page. A parent the nav already supplied is dropped, so naming one is safe
- * even where the row is sometimes present. Returns nothing unless some crumb
- * links somewhere, since a trail with no way up is only a second title.
+ * even where the row is sometimes present, and so is a leaf repeating the crumb
+ * before it — a view of the row's page. Returns nothing unless a crumb before
+ * the last links, since a trail with no way up is only a second title.
  */
 export function pageCrumbs(trail: NavTrail | undefined, parents: Crumb[], leaf: string): Crumb[] {
 	const nav = trail?.crumbs ?? [];
-	const crumbs = trail?.here
-		? nav
-		: [
-				...nav,
-				...parents.filter((p) => !p.href || !nav.some((n) => n.href === p.href)),
-				{ label: leaf }
-			];
-	return crumbs.some((c) => c.href) ? crumbs : [];
+	if (trail?.here) return nav.slice(0, -1).some((c) => c.href) ? nav : [];
+	const above = [...nav, ...parents.filter((p) => !p.href || !nav.some((n) => n.href === p.href))];
+	const crumbs = above.at(-1)?.label === leaf ? above : [...above, { label: leaf }];
+	return crumbs.slice(0, -1).some((c) => c.href) ? crumbs : [];
 }

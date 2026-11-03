@@ -15,7 +15,7 @@
 		{
 			key: 'bands',
 			label: m.staff_groups_group_views_bands(),
-			href: resolve('/staff/groups'),
+			href: resolve('/staff/groups/bands'),
 			cap: 'band.read'
 		},
 		{
@@ -38,5 +38,5 @@
 </script>
 
 {#if tabs.length > 1}
-	<TabBar class="mb-4" {active} {tabs} />
+	<TabBar {active} {tabs} />
 {/if}

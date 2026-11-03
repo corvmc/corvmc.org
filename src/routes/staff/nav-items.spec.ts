@@ -53,6 +53,7 @@ describe('activeNavKey', () => {
 		['/staff/members/abc', 'users'],
 		['/staff/ballots/abc', 'ballots'],
 		['/staff/groups', 'groups'],
+		['/staff/groups/bands', 'groups'],
 		['/staff/groups/clubs', 'groups'],
 		['/staff/groups/committees', 'groups'],
 		['/staff/groups/abc', 'groups'],
@@ -273,6 +274,7 @@ describe('route coverage', () => {
 		// Reached from the Bands view's header: the same staff job as a band.
 		'/staff/bands/acts',
 		// Groups views, reached from its tab bar (#2086).
+		'/staff/groups/bands',
 		'/staff/groups/clubs',
 		'/staff/groups/committees',
 		// Started from the Inbox header, and only worth starting when the queue

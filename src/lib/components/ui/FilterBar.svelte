@@ -27,6 +27,7 @@
 		search,
 		children,
 		menu,
+		actions,
 		activeCount = 0,
 		menuCount = 0,
 		onclear,
@@ -43,6 +44,8 @@
 		children?: Snippet;
 		/** Secondary filters, behind the "Filters" button. */
 		menu?: Snippet;
+		/** The current view's own actions, such as its create button, at the row's end. */
+		actions?: Snippet;
 		/** Every active filter, search included: whether Clear renders. */
 		activeCount?: number;
 		/** Active filters inside `menu`: the badge on its button. */
@@ -117,5 +120,9 @@
 				<Button variant="ghost" size="sm" onclick={onclear}>{m.ui_clear()}</Button>
 			{/if}
 		</div>
+	{/if}
+
+	{#if actions}
+		<div class="ml-auto flex flex-wrap items-center gap-2">{@render actions()}</div>
 	{/if}
 </div>

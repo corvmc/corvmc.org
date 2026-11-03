@@ -753,6 +753,10 @@ Tab navigation supporting both URL-driven (links) and client-state (buttons) mod
 
 Tabs with `href` render as `<a>` tags; without, they render as `<button>` tags and call `onchange`.
 
+Tabs that choose what the whole page shows go in the `PageHeader`'s action slot, above anything
+that depends on the chosen tab; that tab's own actions go down with its content, in `FilterBar`'s
+`actions` (`/staff/groups/*`).
+
 Two ways to survive a bar that outgrows its space. `collapse` folds the set into a dropdown below
 `md` — for bars that outrun a phone. `dense` shrinks every tab but the active one to its `icon`,
 keeping the counts visible — for bars in a narrow _pane_, where the viewport is wide and `collapse`
@@ -1178,6 +1182,8 @@ visible at every width. Primary filters go in `children` and sit inline; seconda
 ones go in a `menu` snippet, behind a "Filters" popover whose badge is `menuCount`.
 A bar with no `menu` collapses its `children` behind a "Filters" disclosure below
 the `@lg` container breakpoint instead.
+`actions` sits at the row's end, for what belongs to the current view rather than
+the page — a tabbed page's per-tab create button (`/staff/groups/*`).
 
 ```svelte
 <FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
