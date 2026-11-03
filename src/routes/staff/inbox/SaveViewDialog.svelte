@@ -39,7 +39,7 @@
 	>
 		<input {...saveInboxView.fields.filters.as('hidden', payload)} />
 		<FormField
-			name="name"
+			field={saveInboxView.fields.name}
 			label={m.staff_name()}
 			placeholder={m.staff_inbox_save_view_dialog_placeholder()}
 		/>

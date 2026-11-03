@@ -62,7 +62,7 @@
 					{m.staff_classifieds_id_nothing_deleted_author_sees_note()}
 				</p>
 				<FormField
-					name="note"
+					field={hideForm.fields.note}
 					type="textarea"
 					label={m.staff_classifieds_id_what_should_author_change()}
 				/>

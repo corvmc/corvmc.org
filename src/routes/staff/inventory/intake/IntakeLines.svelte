@@ -8,6 +8,7 @@
 	// a hidden sibling, and these rows are local state serialized into one JSON
 	// field. The dollars-in/cents-out conversion happens in `centsOf` below.
 	import { Field } from '$lib/components/ui/Form';
+	import { recordIntake } from '$lib/remote/inventory.remote';
 	import { formatCents } from '$lib/utils/format';
 	import { equipmentConditions } from '$lib/config';
 	import { IconPlus, IconTrash } from '@tabler/icons-svelte';
@@ -122,24 +123,16 @@
 
 <!--
 	These rows are editor state, not form fields — only `lines` below posts. They
-	still carry names, because a `FormField` label is a `<legend>` and an unnamed
-	input is reachable by neither name nor label.
-
-	The names are underscored rather than hyphenated for a hard reason: SvelteKit
-	parses every submitted field name into a schema path against
-	`/^[a-zA-Z_$]\w*(\.[a-zA-Z_$]\w*|\[\d+\])*$/`, and a hyphen fails it — the
-	whole submit dies with `Invalid path line-item-0` and a 500 before Zod ever
-	runs. Underscores and digits are `\w`, so these parse as plain keys and Zod
-	strips them as unknown.
+	carry ids, not names: a remote form rejects a name its fields did not hand out.
 -->
-<input type="hidden" name="lines" value={serialized} />
+<input {...recordIntake.fields.lines.as('hidden', serialized)} />
 
 <div class="space-y-4">
 	{#each lines as line, index (index)}
 		<div class="rounded-box border border-base-300 p-4">
 			<div class="grid gap-3 md:grid-cols-[2fr_auto_auto_auto]">
 				<Field
-					name="lineItem_{index}"
+					id="lineItem_{index}"
 					type="select"
 					label={m.staff_item()}
 					{options}
@@ -147,7 +140,7 @@
 					onchange={() => syncUnits(line)}
 				/>
 				<Field
-					name="lineQty_{index}"
+					id="lineQty_{index}"
 					type="number"
 					label={m.staff_quantity()}
 					min="1"
@@ -156,7 +149,7 @@
 				/>
 				<div class="w-32">
 					<Field
-						name="lineCost_{index}"
+						id="lineCost_{index}"
 						type="text"
 						label={m.staff_inventory_intake_intake_lines_each()}
 						bind:value={line.unitCost}
@@ -183,20 +176,20 @@
 					{#each line.units as unit, u (u)}
 						<div class="grid gap-2 md:grid-cols-3">
 							<Field
-								name="unitTag_{index}_{u}"
+								id="unitTag_{index}_{u}"
 								type="text"
 								label={u === 0 ? m.staff_asset_tag() : undefined}
 								placeholder={m.staff_cmc_000123()}
 								bind:value={unit.assetTag}
 							/>
 							<Field
-								name="unitSerial_{index}_{u}"
+								id="unitSerial_{index}_{u}"
 								type="text"
 								label={u === 0 ? m.staff_serial() : undefined}
 								bind:value={unit.serialNumber}
 							/>
 							<Field
-								name="unitCondition_{index}_{u}"
+								id="unitCondition_{index}_{u}"
 								type="select"
 								label={u === 0 ? m.staff_condition() : undefined}
 								options={conditionOptions}

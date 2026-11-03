@@ -46,7 +46,7 @@
 		successToast={m.staff_saved()}
 	>
 		{#snippet form()}
-			<input type="hidden" name="id" value={grant.id} />
+			<input {...editForm.fields.id.as('hidden', grant.id)} />
 			<GrantFields fields={editForm.fields} funders={grant.funders} value={grant} />
 		{/snippet}
 	</Action>
@@ -94,7 +94,7 @@
 				successToast={m.staff_grants_id_report_added()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="grantApplicationId" value={grant.id} />
+					<input {...addGrantReport.fields.grantApplicationId.as('hidden', grant.id)} />
 					<GrantReportFields fields={addGrantReport.fields} />
 				{/snippet}
 			</Action>
@@ -130,8 +130,8 @@
 								data-testid="edit-report"
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={r.id} />
-									<input type="hidden" name="grantApplicationId" value={grant.id} />
+									<input {...edit.fields.id.as('hidden', r.id)} />
+									<input {...edit.fields.grantApplicationId.as('hidden', grant.id)} />
 									<GrantReportFields fields={edit.fields} value={r} />
 								{/snippet}
 							</Action>
@@ -147,8 +147,12 @@
 								successToast={m.staff_deleted()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={r.id} />
-									<input type="hidden" name="grantApplicationId" value={grant.id} />
+									<input {...deleteGrantReport.for(r.id).fields.id.as('hidden', r.id)} />
+									<input
+										{...deleteGrantReport
+											.for(r.id)
+											.fields.grantApplicationId.as('hidden', grant.id)}
+									/>
 									<p class="text-sm">
 										{m.staff_grants_id_report_funder_does_not_require()}
 									</p>
@@ -175,7 +179,7 @@
 			onsuccess={() => goto(resolve('/staff/grants'))}
 		>
 			{#snippet form()}
-				<input type="hidden" name="id" value={grant.id} />
+				<input {...deleteGrant.for(grant.id).fields.id.as('hidden', grant.id)} />
 				<p class="text-sm">
 					{m.staff_grants_id_row_should_never_have_existed()}
 				</p>
