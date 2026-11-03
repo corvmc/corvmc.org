@@ -31,7 +31,7 @@ import {
 } from '$lib/server/lock/access-register-service';
 import { mapDomainError } from '$lib/server/errors';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { accessHoldingKinds, DEFAULT_TIMEZONE } from '$lib/config';
+import { accessHoldingKinds, clubToday, DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Door access
@@ -235,11 +235,23 @@ export const issueAccessForm = form(
 );
 
 export const returnAccessForm = form(
-	z.object({ id: z.string().min(1), notes: z.string().max(2000).optional() }),
-	async ({ id, notes }) => {
+	z.object({
+		id: z.string().min(1),
+		returnedOn: z.string().optional(),
+		notes: z.string().max(2000).optional()
+	}),
+	async ({ id, returnedOn, notes }) => {
 		const staff = await requireCapability('lock.manage');
 		try {
-			await returnHolding(id, { returnedByUserId: staff.id, notes: notes || null });
+			await returnHolding(id, {
+				returnedByUserId: staff.id,
+				notes: notes || null,
+				// Today is "now"; an earlier day is noon, as `issuedOn` is.
+				returnedAt:
+					returnedOn && returnedOn !== clubToday()
+						? buildDateInTz(returnedOn, '12:00', DEFAULT_TIMEZONE)
+						: undefined
+			});
 		} catch (err) {
 			mapDomainError(err);
 		}

@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { accessHolding, lockMemberCode } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull, lte } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { DomainError } from '$lib/server/domain-error';
 import type { AccessHoldingKind } from '$lib/config';
@@ -86,23 +86,38 @@ export async function returnHolding(
 	id: string,
 	opts: { returnedByUserId: string; notes?: string | null; returnedAt?: Date }
 ) {
+	const now = new Date();
+	const returnedAt = opts.returnedAt ?? now;
+	if (returnedAt.getTime() > now.getTime() + 60_000) {
+		throw new AccessHoldingValidationError('That date is in the future.');
+	}
 	const [row] = await db
 		.update(accessHolding)
 		.set({
-			returnedAt: opts.returnedAt ?? new Date(),
+			returnedAt,
 			returnedByUserId: opts.returnedByUserId,
 			returnNotes: opts.notes?.trim() || null
 		})
-		.where(and(eq(accessHolding.id, id), isNull(accessHolding.returnedAt)))
+		.where(
+			and(
+				eq(accessHolding.id, id),
+				isNull(accessHolding.returnedAt),
+				opts.returnedAt ? lte(accessHolding.issuedAt, returnedAt) : undefined
+			)
+		)
 		.returning();
 	if (row) return row;
 
 	const [existing] = await db
-		.select({ id: accessHolding.id })
+		.select({ returnedAt: accessHolding.returnedAt, issuedAt: accessHolding.issuedAt })
 		.from(accessHolding)
 		.where(eq(accessHolding.id, id))
 		.limit(1);
-	throw existing ? new AccessHoldingReturnedError() : new AccessHoldingNotFoundError();
+	if (!existing) throw new AccessHoldingNotFoundError();
+	if (!existing.returnedAt && existing.issuedAt > returnedAt) {
+		throw new AccessHoldingValidationError('That is before it was issued.');
+	}
+	throw new AccessHoldingReturnedError();
 }
 
 export type AccessRegisterKind = AccessHoldingKind | 'lock_code';

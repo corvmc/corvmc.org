@@ -117,9 +117,6 @@
 		"blocksUse": "internal: absent means blocking, documented at the call",
 		"loanId": "internal: re-uptake raises its flag through raiseFlag in loan-service"
 	},
-	"src/lib/server/lock/access-register-service.ts#returnHolding(1)": {
-		"returnedAt": "#2317: the register cannot record when a key was returned"
-	},
 	"src/lib/server/marketing/audience-service.ts#updateAudience(1)": {
 		"slug": "elsewhere: set at creation; renaming it would break shared opt-in links"
 	},
