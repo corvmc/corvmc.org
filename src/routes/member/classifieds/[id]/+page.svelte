@@ -101,8 +101,16 @@
 				<p class="mb-3 text-muted">
 					{m.member_classifieds_id_takes_post_off_board_while()}
 				</p>
-				<FormField name="reason" type="text" label={m.member_what_s_problem()} />
-				<FormField name="description" type="textarea" label={m.member_anything_else_optional()} />
+				<FormField
+					field={reportClassified.fields.reason}
+					type="text"
+					label={m.member_what_s_problem()}
+				/>
+				<FormField
+					field={reportClassified.fields.description}
+					type="textarea"
+					label={m.member_anything_else_optional()}
+				/>
 			{/snippet}
 		</Action>
 	{/if}

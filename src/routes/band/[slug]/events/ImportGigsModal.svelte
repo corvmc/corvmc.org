@@ -36,7 +36,10 @@
 	>
 		<input {...fields.slug.as('hidden', slug)} />
 
-		<FormField name="text" label={m.band_slug_events_import_gigs_modal_one_gig_per_line()}>
+		<FormField
+			field={importGigsForm.fields.text}
+			label={m.band_slug_events_import_gigs_modal_one_gig_per_line()}
+		>
 			<textarea
 				{...fields.text.as('text')}
 				bind:value={text}

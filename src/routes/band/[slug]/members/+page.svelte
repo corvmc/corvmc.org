@@ -386,14 +386,14 @@
 				<div class="grid grid-cols-2 gap-4">
 					<Field
 						label={msg.band_role()}
-						name="role"
+						field={inviteMember.fields.role}
 						type="select"
 						value="member"
 						options={roleOptions}
 					/>
 					<Field
 						label={msg.band_slug_members_position()}
-						name="position"
+						field={inviteMember.fields.position}
 						type="text"
 						placeholder={msg.band_slug_members_e_g_guitar()}
 					/>
@@ -426,7 +426,7 @@
 					{msg.band_slug_members_invite_someone_who_doesn_t()}
 				</p>
 				<Field
-					name="email"
+					field={inviteByEmail.fields.email}
 					type="email"
 					label={msg.band_slug_members_email_address()}
 					value={looksLikeEmail ? searchQuery : ''}
@@ -434,14 +434,14 @@
 				<div class="grid grid-cols-2 gap-4">
 					<Field
 						label={msg.band_role()}
-						name="role"
+						field={inviteByEmail.fields.role}
 						type="select"
 						value="member"
 						options={roleOptions}
 					/>
 					<Field
 						label={msg.band_slug_members_position()}
-						name="position"
+						field={inviteByEmail.fields.position}
 						type="text"
 						placeholder={msg.band_slug_members_e_g_guitar()}
 					/>

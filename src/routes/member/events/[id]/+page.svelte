@@ -367,20 +367,20 @@
 
 									<Field
 										label={m.member_events_id_number_spots()}
-										name="quantity"
+										field={claimFreeTicket.fields.quantity}
 										type="select"
 										options={quantityOptions}
 										bind:value={quantity}
 									/>
 
 									<Field
-										name="attendeeName"
+										field={claimFreeTicket.fields.attendeeName}
 										type="text"
 										label={m.member_name()}
 										bind:value={attendeeName}
 									/>
 									<Field
-										name="attendeeEmail"
+										field={claimFreeTicket.fields.attendeeEmail}
 										type="email"
 										label={m.member_email()}
 										bind:value={attendeeEmail}
@@ -412,20 +412,20 @@
 
 									<Field
 										label={m.member_events_id_number_tickets()}
-										name="quantity"
+										field={purchaseTickets.fields.quantity}
 										type="select"
 										options={quantityOptions}
 										bind:value={quantity}
 									/>
 
 									<Field
-										name="attendeeName"
+										field={purchaseTickets.fields.attendeeName}
 										type="text"
 										label={m.member_name()}
 										bind:value={attendeeName}
 									/>
 									<Field
-										name="attendeeEmail"
+										field={purchaseTickets.fields.attendeeEmail}
 										type="email"
 										label={m.member_email()}
 										bind:value={attendeeEmail}
@@ -526,13 +526,13 @@
 							{#snippet form()}
 								<input {...rsvpToEventFields.eventId.as('hidden', evt.id)} />
 								<Field
-									name="attendeeName"
+									field={rsvpToEvent.fields.attendeeName}
 									type="text"
 									label={m.member_name()}
 									bind:value={attendeeName}
 								/>
 								<Field
-									name="attendeeEmail"
+									field={rsvpToEvent.fields.attendeeEmail}
 									type="email"
 									label={m.member_email()}
 									bind:value={attendeeEmail}

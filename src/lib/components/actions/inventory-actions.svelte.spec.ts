@@ -192,7 +192,7 @@ describe('AdjustStockAction', () => {
 	it('opens with an empty box and nothing to submit', async () => {
 		await expect.element(await open()).toBeVisible();
 
-		const counted = document.querySelector('input[name="counted"]') as HTMLInputElement;
+		const counted = document.querySelector('[data-testid="stocktake-counted"]') as HTMLInputElement;
 		expect(counted.value).toBe('');
 		expect(delta().value).toBe('');
 	});

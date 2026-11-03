@@ -25,7 +25,7 @@
 
 	const data = $derived(await getItemResources(itemId));
 
-	let chosenArticle = $state('');
+	const chosenArticle = $derived(linkItemArticle.fields.articleId.value() ?? '');
 
 	async function upload(file: File) {
 		const body = new FormData();
@@ -108,15 +108,14 @@
 				class="flex items-center gap-2"
 				{...linkItemArticle.enhance(async ({ submit }) => {
 					await submit();
-					chosenArticle = '';
+					linkItemArticle.fields.articleId.set('');
 				})}
 			>
 				<input {...linkItemArticle.fields.itemId.as('hidden', itemId)} />
 				<Select
 					size="sm"
 					aria-label={m.inventory_item_resources_help_article()}
-					bind:value={chosenArticle}
-					name="articleId"
+					{...linkItemArticle.fields.articleId.as('select')}
 				>
 					<option value="">{m.inventory_item_resources_link_how()}</option>
 					{#each data.linkable as article (article.id)}

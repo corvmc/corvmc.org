@@ -50,7 +50,7 @@
 		     both read these values, and the field spread has no two-way binding.
 		     `FormField` resolves the issues by name through the form context. -->
 		<FormField
-			name="email"
+			field={addSubscriber.fields.email}
 			type="email"
 			label={m.actions_email()}
 			bind:value={email}
@@ -58,7 +58,7 @@
 			required
 		/>
 		<FormField
-			name="name"
+			field={addSubscriber.fields.name}
 			label={m.actions_name_optional()}
 			bind:value={name}
 			placeholder={m.actions_name()}

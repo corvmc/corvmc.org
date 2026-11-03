@@ -87,7 +87,10 @@
 				/>
 			</div>
 
-			<FormField name="offering" label={m.public_events_id_vendors_apply_what_do_sell()}>
+			<FormField
+				field={submitVendorApplicationForm.fields.offering}
+				label={m.public_events_id_vendors_apply_what_do_sell()}
+			>
 				<textarea
 					{...fields.offering.as('text')}
 					class="textarea w-full"
@@ -123,7 +126,10 @@
 				/>
 			</div>
 
-			<FormField name="notes" label={m.public_events_id_vendors_apply_anything_else_optional()}>
+			<FormField
+				field={submitVendorApplicationForm.fields.notes}
+				label={m.public_events_id_vendors_apply_anything_else_optional()}
+			>
 				<textarea {...fields.notes.as('text')} class="textarea w-full" rows="3" maxlength="2000"
 				></textarea>
 			</FormField>
