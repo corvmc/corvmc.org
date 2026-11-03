@@ -8,12 +8,34 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  * old pages redirect, and a closure made from the header shows up as a row.
  */
 
+// The bell's stream, held in the test's hand: a `message` makes the bell call
+// `invalidateAll()`, which is when a notification lands under an open dialog.
+async function fakeNotificationStream(page: Page) {
+	await page.addInitScript(() => {
+		const open: EventTarget[] = [];
+		class FakeEventSource extends EventTarget {
+			onerror: ((e: Event) => void) | null = null;
+			constructor() {
+				super();
+				open.push(this);
+			}
+			close() {}
+		}
+		Object.assign(window, {
+			EventSource: FakeEventSource,
+			__notificationStreams: open,
+			__notify: () => open.forEach((s) => s.dispatchEvent(new MessageEvent('message')))
+		});
+	});
+}
+
 async function loginAsStaff(page: Page) {
 	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 }
 
 test.describe('reservations timeline', () => {
 	test('a closure made from the header is a row of the list', async ({ page }) => {
+		await fakeNotificationStream(page);
 		await loginAsStaff(page);
 		await page.goto('/staff/closures');
 		await page.waitForURL(/\/staff\/reservations\?show=closures/, { timeout: 15000 });
@@ -26,6 +48,17 @@ test.describe('reservations timeline', () => {
 		await dialog.locator('input[name="reason"]').fill(reason);
 		await dialog.locator('input[name="startsAt"]').fill(`2099-01-05T${start.entered}`);
 		await dialog.locator('input[name="endsAt"]').fill('2099-01-05T17:00');
+
+		// #2350: the refresh a notification causes unmounted the open dialog.
+		await page.waitForFunction(
+			() =>
+				(window as unknown as { __notificationStreams: unknown[] }).__notificationStreams.length > 0
+		);
+		const refreshed = page.waitForResponse((r) => r.url().includes('/getStaffReservationsPage'));
+		await page.evaluate(() => (window as unknown as { __notify: () => void }).__notify());
+		await refreshed;
+		await expect(dialog.locator('input[name="reason"]')).toHaveValue(reason);
+
 		await dialog.locator('button[type="submit"]').click();
 		await expectSuccessToast(page);
 
