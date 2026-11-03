@@ -115,7 +115,8 @@ const createArticleSchema = z.object({
 	summary: z.string().trim().max(BLURB_MAX).optional(),
 	content: z.string().min(1),
 	minRole: z.string().default('member'),
-	published: z.boolean().default(false)
+	published: z.boolean().default(false),
+	sortOrder: z.number().int().min(0).max(9999).optional()
 });
 
 export const createArticle = form(createArticleSchema, async (data) => {
@@ -136,7 +137,8 @@ const updateArticleSchema = z.object({
 	summary: z.string().trim().max(BLURB_MAX).optional(),
 	content: z.string().min(1),
 	minRole: z.string(),
-	published: z.boolean().default(false)
+	published: z.boolean().default(false),
+	sortOrder: z.number().int().min(0).max(9999).optional()
 });
 
 export const updateArticle = form(updateArticleSchema, async (data) => {

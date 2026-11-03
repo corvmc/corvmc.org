@@ -57,7 +57,7 @@
 					<FormField name="slug" type="text" label="Slug" value={article.slug} />
 				</div>
 
-				<div class="grid gap-4 sm:grid-cols-3">
+				<div class="grid gap-4 sm:grid-cols-4">
 					<FormField
 						name="categoryId"
 						type="select"
@@ -78,6 +78,13 @@
 						label="Status"
 						value={article.published}
 						checkboxLabel="Published"
+					/>
+					<FormField
+						name="sortOrder"
+						type="number"
+						label="Order"
+						value={article.sortOrder}
+						min="0"
 					/>
 				</div>
 
