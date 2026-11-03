@@ -69,7 +69,8 @@ test.describe('duty lists — the unscheduled half', () => {
 		// A deadline is not a window, and the page must not print an empty range.
 		await expect(page.getByText('a time to be arranged')).toHaveCount(0);
 
-		await expect(page.getByText(SEED_VOL_ADVANCE_TASK_DONE)).toBeVisible();
+		// By its checkbox: the lazy History card also names the task (#2270).
+		await expect(page.getByLabel(SEED_VOL_ADVANCE_TASK_DONE, { exact: true })).toBeChecked();
 		const open = page.getByLabel(SEED_VOL_ADVANCE_TASK_OPEN);
 		await expect(open).not.toBeChecked();
 
