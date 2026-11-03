@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * An upload, in the settings of the block that shows the file.
 	 *
@@ -55,7 +56,7 @@
 
 		const { media } = (await res.json()) as { media: Array<{ key: string; url: string | null }> };
 		const key = media[0]?.key ?? '';
-		toast.success('Uploaded');
+		toast.success(m.band_uploaded());
 		onuploaded(key, media[0]?.url ?? null);
 		return key;
 	}
@@ -66,6 +67,13 @@
 <div class="fieldset">
 	<span class="fieldset-legend text-xs">{label}</span>
 	<div class="mt-1">
-		<FileUpload {upload} {accept} {src} {previewClass} emptyLabel="Upload" replaceLabel="Replace" />
+		<FileUpload
+			{upload}
+			{accept}
+			{src}
+			{previewClass}
+			emptyLabel={m.band_slug_page_editor_block_media_field_empty_label()}
+			replaceLabel={m.band_slug_page_editor_block_media_field_replace_label()}
+		/>
 	</div>
 </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { createReleaseForm } from '$lib/remote/audio.remote';
@@ -28,10 +29,10 @@
 -->
 <Action
 	action={createReleaseForm}
-	label="New release"
-	modalTitle="New release"
-	submitLabel="Create"
-	successToast="Release created"
+	label={m.band_slug_music_create_release_modal_new_release()}
+	modalTitle={m.band_slug_music_create_release_modal_new_release()}
+	submitLabel={m.band_slug_music_create_release_modal_submit_label()}
+	successToast={m.band_slug_music_create_release_modal_success_toast()}
 	size="sm"
 	onsuccess={(result) => {
 		const releaseId = (result as { releaseId?: string } | undefined)?.releaseId;
@@ -45,13 +46,19 @@
 			     takes from a client-supplied header. -->
 			<input {...fields.slug.as('hidden', bandSlug)} />
 
-			<FormField field={fields.title} label="Title" required />
-			<FormField field={fields.kind} label="Type" type="select" options={kindOptions} required />
+			<FormField field={fields.title} label={m.band_title()} required />
+			<FormField
+				field={fields.kind}
+				label={m.band_type()}
+				type="select"
+				options={kindOptions}
+				required
+			/>
 			<FormField
 				field={fields.releasedAt}
-				label="Release date"
+				label={m.band_release_date()}
 				type="date"
-				description="When it came out — leave blank if you'd rather not say. This is what orders your discography, so an old record can keep its real date."
+				description={m.band_slug_music_create_release_modal_description()}
 			/>
 		</div>
 	{/snippet}

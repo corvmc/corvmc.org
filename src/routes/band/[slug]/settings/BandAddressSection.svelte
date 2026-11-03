@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
@@ -38,7 +39,7 @@
 </script>
 
 <section class="space-y-4">
-	<h2 class="text-lg font-semibold">Band Address</h2>
+	<h2 class="text-lg font-semibold">{m.band_slug_settings_band_address_section_band_address()}</h2>
 
 	<InfoCard title={`${slug}.${baseDomain}`}>
 		<p class="text-sm">
@@ -50,7 +51,9 @@
 			<!-- Admins can see the address; only the owner can move it, because
 			     `changeBandAddress` is owner-guarded. A button that 403s would be
 			     worse than none. -->
-			<p class="mt-2 text-subtle">Only the band's owner can change this address.</p>
+			<p class="mt-2 text-subtle">
+				{m.band_slug_settings_band_address_section_only_band_s_owner_ca()}
+			</p>
 		{:else}
 			<div class="mt-2 card-actions justify-end">
 				<Button
@@ -58,23 +61,24 @@
 					size="sm"
 					outline
 					data-testid="change-address"
-					onclick={() => (showChange = true)}>Change address</Button
+					onclick={() => (showChange = true)}
+					>{m.band_slug_settings_band_address_section_change_address()}</Button
 				>
 			</div>
 		{/if}
 	</InfoCard>
 </section>
 
-<Modal title="Change band address" bind:open={showChange}>
+<Modal title={m.band_slug_settings_band_address_section_title()} bind:open={showChange}>
 	<Form
 		remote={changeBandAddress}
 		onsuccess={(result) => {
 			showChange = false;
 			if (!result?.changed) {
-				toast.info('That is already your address');
+				toast.info(m.band_slug_settings_band_address_section_already_address());
 				return;
 			}
-			toast.success('Address updated');
+			toast.success(m.band_slug_settings_band_address_section_address_updated());
 			// Straight to the new URL — no invalidateAll() first. Every query on this
 			// page is still keyed on the old slug, so re-running them here would
 			// bounce through the old-address redirect. Changing page.params.slug
@@ -93,11 +97,11 @@
 			<FormField
 				field={fields.newSlug}
 				type="text"
-				label="New address"
-				placeholder="your-band"
+				label={m.band_slug_settings_band_address_section_new_address()}
+				placeholder={m.band_slug_settings_band_address_section_placeholder()}
 				oninput={(e: Event & { currentTarget: HTMLInputElement }) =>
 					(draft = e.currentTarget.value)}
-				description="Letters, numbers and hyphens. Spaces and punctuation are dropped."
+				description={m.band_slug_settings_band_address_section_description()}
 				required
 			/>
 
@@ -108,7 +112,9 @@
 			{/if}
 
 			{#if reserved}
-				<p class="text-sm text-error">That address is reserved — pick another.</p>
+				<p class="text-sm text-error">
+					{m.band_slug_settings_band_address_section_address_reserved_pic()}
+				</p>
 			{/if}
 
 			<Alert type="warning" class="text-sm">
@@ -118,7 +124,11 @@
 			</Alert>
 
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Change address" successLabel="Changed" variant="warning" />
+				<SubmitButton
+					label={m.band_slug_settings_band_address_section_change_address()}
+					successLabel={m.band_slug_settings_band_address_section_success_label()}
+					variant="warning"
+				/>
 			</div>
 		</div>
 	</Form>

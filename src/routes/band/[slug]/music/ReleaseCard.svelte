@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
@@ -66,18 +67,20 @@
 				<div class="flex flex-wrap items-center gap-2">
 					<Badge size="sm">{releaseKindLabels[release.kind]}</Badge>
 					{#if release.status === 'draft'}
-						<Badge size="sm" variant="ghost">Draft</Badge>
+						<Badge size="sm" variant="ghost">{m.band_draft()}</Badge>
 					{:else if release.status === 'withheld'}
-						<Badge size="sm" variant="error">Withheld</Badge>
+						<Badge size="sm" variant="error">{m.band_withheld()}</Badge>
 					{/if}
 					{#if release.radioOptIn && !release.radioExcluded}
 						{#if release.radioAttested}
 							<Badge size="sm" variant="info">
-								<IconRadio size={12} /> Radio
+								<IconRadio size={12} />
+								{m.band_slug_music_release_card_radio()}
 							</Badge>
 						{:else}
 							<Badge size="sm" variant="warning">
-								<IconRadio size={12} /> Needs attestation
+								<IconRadio size={12} />
+								{m.band_slug_music_release_card_needs_attestation()}
 							</Badge>
 						{/if}
 					{/if}
@@ -95,9 +98,9 @@
 				     and this is where they will look. -->
 				{#if release.radioExcluded}
 					<p class="line-clamp-2 text-warning">
-						Pulled from the radio{release.radioExcludedReason
-							? ` — ${release.radioExcludedReason}`
-							: ''}
+						{m.band_slug_music_release_card_pulled_from_radio({
+							value: release.radioExcludedReason ? ` — ${release.radioExcludedReason}` : ''
+						})}
 					</p>
 				{/if}
 			</div>
@@ -108,7 +111,7 @@
 				<p>
 					{release.priceMinCents === 0 ? 'Free' : formatCents(release.priceMinCents)}
 					{#if release.priceMinCents > 0 && release.allowPayMore}
-						<span class="text-muted">or more</span>
+						<span class="text-muted">{m.band_slug_music_release_card_more()}</span>
 					{/if}
 				</p>
 				{#if release.salesCount > 0}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -18,7 +19,7 @@
 	const { releases, canManage } = $derived(await getBandMusicPage(page.params.slug!));
 </script>
 
-<PageHeader width="2xl" title="Releases" subtitle={band.name}>
+<PageHeader width="2xl" title={m.band_slug_music_releases()} subtitle={band.name}>
 	{#if canManage}
 		<CreateReleaseModal bandSlug={band.slug} />
 	{/if}
@@ -27,8 +28,8 @@
 <PageContent width="2xl">
 	{#if releases.length === 0}
 		<EmptyState
-			title="No releases yet"
-			description="Upload a record and it gets a page on the site, a spot in your profile, and — if you want it — a place in the CMC Radio rotation."
+			title={m.band_slug_music_no_releases_yet()}
+			description={m.band_slug_music_description()}
 		/>
 	{:else}
 		<div class="space-y-3">

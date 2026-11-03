@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -61,7 +62,7 @@
 	<CardBody>
 		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<h2 class="text-base font-semibold">{title}</h2>
-			{#if mine}<Badge variant="primary">You</Badge>{/if}
+			{#if mine}<Badge variant="primary">{m.band_slug_packing_packing_crate_text()}</Badge>{/if}
 			<Badge class="ml-auto">{count} {count === 1 ? 'thing' : 'things'}</Badge>
 		</div>
 		{#if subtitle}
@@ -72,27 +73,27 @@
 			<Form
 				remote={savePackingItems}
 				guard
-				successToast="Packing list saved"
+				successToast={m.band_slug_packing_packing_crate_success_toast()}
 				onsuccess={onsaved}
 				class="space-y-4"
 			>
 				<input {...savePackingItems.fields.bandId.as('hidden', bandId)} />
 				<PackingItemsEditor bind:items field={savePackingItems.fields.items} idPrefix={slotKey}>
-					{#snippet action()}<SubmitButton label="Save" />{/snippet}
+					{#snippet action()}<SubmitButton label={m.band_save()} />{/snippet}
 				</PackingItemsEditor>
 			</Form>
 		{:else if canEdit}
 			<Form
 				remote={adminRemote}
 				guard
-				successToast="Packing list saved"
+				successToast={m.band_slug_packing_packing_crate_success_toast()}
 				onsuccess={onsaved}
 				class="space-y-4"
 			>
 				<input {...adminRemote.fields.bandId.as('hidden', bandId)} />
 				<input {...adminRemote.fields.targetUserId.as('hidden', ownerUserId ?? '')} />
 				<PackingItemsEditor bind:items field={adminRemote.fields.items} idPrefix={slotKey}>
-					{#snippet action()}<SubmitButton label="Save" />{/snippet}
+					{#snippet action()}<SubmitButton label={m.band_save()} />{/snippet}
 				</PackingItemsEditor>
 			</Form>
 		{:else}

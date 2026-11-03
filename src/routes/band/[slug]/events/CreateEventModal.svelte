@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { goto } from '$app/navigation';
@@ -21,11 +22,11 @@
 -->
 <Action
 	action={createBandEventForm}
-	label="Create Event"
-	modalTitle="Create Event"
+	label={m.band_slug_events_create_event_modal_create_event()}
+	modalTitle={m.band_slug_events_create_event_modal_create_event()}
 	maxWidth="max-w-md"
-	submitLabel="Create Event"
-	successToast="Event created"
+	submitLabel={m.band_slug_events_create_event_modal_create_event()}
+	successToast={m.band_slug_events_create_event_modal_success_toast()}
 	size="sm"
 	onsuccess={(result) => {
 		// `Action` types its success payload as unknown; the remote returns
@@ -42,18 +43,17 @@
 			<FormField
 				field={fields.title}
 				type="text"
-				label="Title"
-				placeholder="e.g. Live at The Venue"
+				label={m.band_title()}
+				placeholder={m.band_e_g_live_at_venue()}
 				maxlength="200"
 				required
 			/>
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-				<FormField field={fields.eventDate} type="date" label="Date" required />
-				<FormField field={fields.eventStartTime} type="time" label="Start Time" required />
+				<FormField field={fields.eventDate} type="date" label={m.band_date()} required />
+				<FormField field={fields.eventStartTime} type="time" label={m.band_start_time()} required />
 			</div>
 			<p class="text-muted">
-				Saved as a draft. The end time, venue, bill, poster and tickets are filled in on the event's
-				page next.
+				{m.band_slug_events_create_event_modal_saved_as_draft_end_time()}
 			</p>
 		</div>
 	{/snippet}

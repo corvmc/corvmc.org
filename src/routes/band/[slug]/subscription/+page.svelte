@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
@@ -80,7 +81,7 @@
 	});
 </script>
 
-<PageHeader width="2xl" title="Subscription" subtitle={band.name} />
+<PageHeader width="2xl" title={m.band_slug_subscription_title()} subtitle={band.name} />
 <PageContent width="2xl">
 	{#if awaitingUpgrade}
 		<div class="mb-4">
@@ -96,15 +97,17 @@
 		<Card>
 			<CardBody>
 				<div class="flex items-center gap-3">
-					<CardTitle level={2}>Premium Band Page</CardTitle>
-					<Badge variant="success">Active</Badge>
+					<CardTitle level={2}>{m.band_slug_subscription_premium_band_page()}</CardTitle>
+					<Badge variant="success">{m.band_slug_subscription_active()}</Badge>
 				</div>
 				<DefinitionList class="mt-4">
-					<Fact label="Billing">
+					<Fact label={m.band_slug_subscription_billing()}>
 						<span class="capitalize">{info.subscription.billingInterval}</span>
 					</Fact>
-					<Fact label="Renews">{formatDate(new Date(info.subscription.currentPeriodEnd))}</Fact>
-					<Fact label="Your site">
+					<Fact label={m.band_slug_subscription_renews()}
+						>{formatDate(new Date(info.subscription.currentPeriodEnd))}</Fact
+					>
+					<Fact label={m.band_slug_subscription_site()}>
 						<!-- The band's own subdomain, so this leaves the app: rel="external" is
 						     both the correct annotation and what keeps it out of the router. -->
 						<a href={siteUrl} target="_blank" rel="external noopener" class="link">
@@ -115,29 +118,34 @@
 
 				{#if info.subscription.cancelAtPeriodEnd}
 					<Alert type="warning" class="mt-4">
-						Your subscription will end on {formatDate(
-							new Date(info.subscription.currentPeriodEnd)
-						)}.
+						{m.band_slug_subscription_subscription_will_end({
+							formatDate: formatDate(new Date(info.subscription.currentPeriodEnd))
+						})}
 					</Alert>
 					{#if isOwner}
 						<Form
 							remote={resumePremium}
-							successToast="Subscription resumed"
+							successToast={m.band_slug_subscription_subscription_resumed()}
 							onsuccess={() => invalidateAll()}
 						>
 							<input {...resumePremium.fields.slug.as('hidden', band.slug)} />
-							<SubmitButton label="Resume Subscription" variant="primary" size="sm" class="mt-2" />
+							<SubmitButton
+								label={m.band_slug_subscription_resume_subscription()}
+								variant="primary"
+								size="sm"
+								class="mt-2"
+							/>
 						</Form>
 					{/if}
 				{:else if isOwner}
 					<Form
 						remote={cancelPremium}
-						successToast="Subscription will cancel at end of billing period"
+						successToast={m.band_slug_subscription_subscription_will_cancel_at_end()}
 						onsuccess={() => invalidateAll()}
 					>
 						<input {...cancelPremium.fields.slug.as('hidden', band.slug)} />
 						<SubmitButton
-							label="Cancel Subscription"
+							label={m.band_slug_subscription_cancel_subscription()}
 							variant="ghost"
 							size="sm"
 							class="mt-4 text-error"
@@ -160,7 +168,7 @@
 				<Card>
 					<CardBody>
 						<div class="flex flex-wrap items-center justify-between gap-2">
-							<CardTitle size="base">Card on file</CardTitle>
+							<CardTitle size="base">{m.band_slug_subscription_card_file()}</CardTitle>
 							<Button
 								type="button"
 								variant="default"
@@ -174,11 +182,11 @@
 
 						{#if !billing.available}
 							<p class="text-muted">
-								We could not reach our payment processor just now, so the card on file is unknown.
+								{m.band_slug_subscription_we_could_not_reach_our()}
 							</p>
 						{:else if billing.cards.length === 0}
 							<p class="text-muted">
-								No card is saved for this act. Renewals will fail until one is.
+								{m.band_slug_subscription_no_card_saved_act_renewals()}
 							</p>
 						{:else}
 							{#each billing.cards as card (card.id)}
@@ -190,8 +198,7 @@
 								</p>
 							{/each}
 							<p class="mt-2 text-muted">
-								This is the band's card, not a member's. Replacing it here does not touch anyone's
-								own membership.
+								{m.band_slug_subscription_band_s_card_not_member()}
 							</p>
 						{/if}
 
@@ -210,7 +217,7 @@
 		<div class="space-y-6">
 			<Card>
 				<CardBody class="text-center">
-					<h2 class="text-2xl font-bold">Upgrade to Premium</h2>
+					<h2 class="text-2xl font-bold">{m.band_upgrade_premium()}</h2>
 					<p class="mt-2 opacity-70">
 						Your band already has <strong>{band.slug}.{baseDomain}</strong>, pointing at your
 						directory profile. Premium turns it into a real website — a block editor, custom CSS,
@@ -223,16 +230,21 @@
 				<!-- Monthly -->
 				<Card class="border">
 					<CardBody center>
-						<h3 class="text-lg font-bold">Monthly</h3>
+						<h3 class="text-lg font-bold">{m.band_slug_subscription_monthly()}</h3>
 						<p class="text-3xl font-bold">
-							{formatCents(info.pricing.monthlyCents)}<span class="text-muted font-normal">/mo</span
+							{formatCents(info.pricing.monthlyCents)}<span class="text-muted font-normal"
+								>{m.band_slug_subscription_mo()}</span
 							>
 						</p>
 						{#if isOwner}
 							<Form remote={upgradeMonthly} onsuccess={startCheckout}>
 								<input {...upgradeMonthly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeMonthly.fields.billingInterval.as('hidden', 'monthly')} />
-								<SubmitButton label="Subscribe Monthly" variant="primary" class="mt-4" />
+								<SubmitButton
+									label={m.band_slug_subscription_subscribe_monthly()}
+									variant="primary"
+									class="mt-4"
+								/>
 							</Form>
 						{/if}
 					</CardBody>
@@ -242,17 +254,25 @@
 				<Card class="border border-primary">
 					<CardBody center>
 						<Badge variant="primary">
-							{info.pricing.yearlyMonthsFree} months free
+							{m.band_slug_subscription_months_free({
+								yearlyMonthsFree: info.pricing.yearlyMonthsFree
+							})}
 						</Badge>
-						<h3 class="text-lg font-bold">Yearly</h3>
+						<h3 class="text-lg font-bold">{m.band_slug_subscription_yearly()}</h3>
 						<p class="text-3xl font-bold">
-							{formatCents(info.pricing.yearlyCents)}<span class="text-muted font-normal">/yr</span>
+							{formatCents(info.pricing.yearlyCents)}<span class="text-muted font-normal"
+								>{m.band_slug_subscription_yr()}</span
+							>
 						</p>
 						{#if isOwner}
 							<Form remote={upgradeYearly} onsuccess={startCheckout}>
 								<input {...upgradeYearly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeYearly.fields.billingInterval.as('hidden', 'yearly')} />
-								<SubmitButton label="Subscribe Yearly" variant="primary" class="mt-4" />
+								<SubmitButton
+									label={m.band_slug_subscription_subscribe_yearly()}
+									variant="primary"
+									class="mt-4"
+								/>
 							</Form>
 						{/if}
 					</CardBody>
@@ -262,7 +282,7 @@
 			<!-- Feature list -->
 			<Card>
 				<CardBody>
-					<h3 class="font-bold">What's included</h3>
+					<h3 class="font-bold">{m.band_slug_subscription_what_s_included()}</h3>
 					<ul class="mt-2 space-y-2 text-sm">
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>

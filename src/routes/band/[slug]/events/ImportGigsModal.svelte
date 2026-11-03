@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -21,10 +22,10 @@
 	const preview = $derived(text.trim() ? parseGigImport(text) : { rows: [], errors: [] });
 </script>
 
-<Modal bind:open title="Import past gigs" maxWidth="max-w-2xl">
+<Modal bind:open title={m.band_import_past_gigs()} maxWidth="max-w-2xl">
 	<Form
 		remote={importGigsForm}
-		successToast="Gigs imported"
+		successToast={m.band_slug_events_import_gigs_modal_success_toast()}
 		onsuccess={() => {
 			open = false;
 			text = '';
@@ -34,14 +35,13 @@
 	>
 		<input {...fields.slug.as('hidden', slug)} />
 
-		<FormField name="text" label="One gig per line">
+		<FormField name="text" label={m.band_slug_events_import_gigs_modal_one_gig_per_line()}>
 			<textarea
 				{...fields.text.as('text')}
 				bind:value={text}
 				class="textarea w-full font-mono text-xs"
 				rows="10"
-				placeholder="2024-03-14 | Bombs Away Cafe | w/ Paper Wolves&#10;2023-11-02 | The Majestic Theatre"
-			></textarea>
+				placeholder={m.band_slug_events_import_gigs_modal_placeholder()}></textarea>
 		</FormField>
 
 		<p class="text-subtle">
@@ -53,10 +53,14 @@
 
 		{#if preview.errors.length > 0}
 			<div class="rounded border border-error/40 bg-error/10 p-3">
-				<p class="text-sm font-medium">These lines will be skipped:</p>
+				<p class="text-sm font-medium">
+					{m.band_slug_events_import_gigs_modal_these_lines_will_skipped()}
+				</p>
 				<ul class="mt-1 space-y-0.5 text-xs">
 					{#each preview.errors as err (err.line)}
-						<li>Line {err.line}: {err.message}</li>
+						<li>
+							{m.band_slug_events_import_gigs_modal_line({ line: err.line, message: err.message })}
+						</li>
 					{/each}
 				</ul>
 			</div>
@@ -66,7 +70,11 @@
 			<div class="overflow-x-auto rounded border border-base-300">
 				<table class="table table-xs">
 					<thead>
-						<tr><th>Date</th><th>Title</th><th>Venue</th><th>With</th></tr>
+						<tr
+							><th>{m.band_date()}</th><th>{m.band_title()}</th><th>{m.band_venue()}</th><th
+								>{m.band_slug_events_import_gigs_modal_with()}</th
+							></tr
+						>
 					</thead>
 					<tbody>
 						{#each preview.rows as row (row.line)}
@@ -84,7 +92,9 @@
 
 		<div class="flex justify-end gap-2">
 			<SubmitButton
-				label={preview.rows.length > 0 ? `Import ${preview.rows.length} gigs` : 'Import'}
+				label={preview.rows.length > 0
+					? m.band_slug_events_import_gigs_modal_import_gigs({ length: preview.rows.length })
+					: m.band_slug_events_import_gigs_modal_import()}
 				variant="primary"
 				disabled={preview.rows.length === 0}
 			/>

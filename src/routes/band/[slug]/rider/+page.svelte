@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -79,7 +80,7 @@
 	const mine = $derived(roster.find((m) => m.userId === data.viewerId) ?? null);
 
 	const contactOptions = $derived([
-		{ value: '', label: 'Nobody yet' },
+		{ value: '', label: msg.band_nobody_yet() },
 		...roster.map((m) => ({ value: m.userId, label: m.name }))
 	]);
 
@@ -128,23 +129,23 @@
 
 <PageHeader
 	width="3xl"
-	title="Tech rider"
-	subtitle="What {layout.band.name} needs on stage"
-	documentTitle="Tech rider · {layout.band.name}"
+	title={msg.band_tech_rider()}
+	subtitle={msg.band_slug_rider_what_needs_stage({ name: layout.band.name })}
+	documentTitle={msg.band_slug_rider_document_title({ name: layout.band.name })}
 >
 	<Button
 		href={resolve('/band/[slug]/rider/list', { slug: layout.band.slug })}
 		variant="ghost"
 		size="sm"
 	>
-		Input list
+		{msg.band_slug_rider_input_list()}
 	</Button>
 </PageHeader>
 
 <PageContent width="3xl">
 	{#if data.isStaffViewer}
 		<Alert type="info" class="mb-4">
-			You're reading this as staff. Only the band's own members can change it.
+			{msg.band_slug_rider_re_reading_as_staff_only()}
 		</Alert>
 	{/if}
 
@@ -157,10 +158,14 @@
 	{/if}
 
 	<div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-		<StatCard title="Channels" value={rider.channelCount} size="sm" />
-		<StatCard title="Need +48V" value={rider.phantomCount} size="sm" />
-		<StatCard title="Monitor mixes" value={rider.monitorMixCount} size="sm" />
-		<StatCard title="Needed from CMC" value={rider.venueProvidedCount} size="sm" />
+		<StatCard title={msg.band_channels()} value={rider.channelCount} size="sm" />
+		<StatCard title={msg.band_need_48v()} value={rider.phantomCount} size="sm" />
+		<StatCard title={msg.band_monitor_mixes()} value={rider.monitorMixCount} size="sm" />
+		<StatCard
+			title={msg.band_slug_rider_needed_from_cmc()}
+			value={rider.venueProvidedCount}
+			size="sm"
+		/>
 	</div>
 
 	<div class="space-y-6">
@@ -174,8 +179,8 @@
 				<RiderCorner
 					bandId={data.bandId}
 					ownerUserId={data.viewerId}
-					title="Your gear"
-					subtitle="What you bring and what it needs plugged in. Only you and the band's admins can change this."
+					title={msg.band_gear()}
+					subtitle={msg.band_slug_rider_what_bring_what_needs_plugged()}
 					initial={toRows(data.viewerId)}
 					{roster}
 					mine
@@ -191,9 +196,7 @@
 						bandId={data.bandId}
 						ownerUserId={member.userId}
 						title={member.name}
-						subtitle={data.canManage
-							? 'You can edit this as an admin — but they can too, and they know their own rig.'
-							: undefined}
+						subtitle={data.canManage ? msg.band_slug_rider_can_edit_as_admin_but() : undefined}
 						initial={rows}
 						{roster}
 						canEdit={data.canManage}
@@ -206,8 +209,8 @@
 				<RiderCorner
 					bandId={data.bandId}
 					ownerUserId={null}
-					title="The band's own gear"
-					subtitle="Shared kit that belongs to nobody in particular — playback rigs, spare stands. Admins only, because there is no member whose corner it is."
+					title={msg.band_slug_rider_band_s_own_gear()}
+					subtitle={msg.band_slug_rider_shared_kit_belongs_nobody_particular()}
 					initial={toRows(null)}
 					{roster}
 					canEdit={data.canManage}
@@ -216,33 +219,33 @@
 			{/if}
 		{/key}
 
-		<InfoCard title="Stage plot">
+		<InfoCard title={msg.band_stage_plot()}>
 			<p class="mb-3 text-xs text-base-content/60">
-				Where everything stands. Drag it, or use the arrow keys once something is focused — "Place
-				exactly" below types the same numbers. Channel order on the input list is a separate thing
-				and this does not touch it.
+				{msg.band_slug_rider_where_everything_stands_drag_use()}
 			</p>
 			<Form
 				remote={saveRiderPlacements}
 				guard
-				successToast="Stage plot saved"
+				successToast={msg.band_slug_rider_stage_plot_saved()}
 				onsuccess={refresh}
 				class="space-y-3"
 			>
 				<input {...placementFields.bandId.as('hidden', data.bandId)} />
 				<StagePlot items={plotItems} field={placementFields.placements} readonly={!canPlaceAny} />
 				{#if canPlaceAny}
-					<div class="flex justify-end"><SubmitButton label="Save plot" /></div>
+					<div class="flex justify-end">
+						<SubmitButton label={msg.band_slug_rider_save_plot()} />
+					</div>
 				{/if}
 			</Form>
 		</InfoCard>
 
-		<InfoCard title="The rest of the rider">
+		<InfoCard title={msg.band_slug_rider_rest_rider()}>
 			{#if data.canManage}
 				<Form
 					remote={saveRiderDetails}
 					guard
-					successToast="Saved"
+					successToast={msg.band_saved()}
 					onsuccess={refresh}
 					class="space-y-4"
 				>
@@ -251,46 +254,47 @@
 						<Field
 							field={detailFields.techContactUserId}
 							type="select"
-							label="Who an engineer should call"
+							label={msg.band_slug_rider_who_engineer_should_call()}
 							options={contactOptions}
 							value={rider.techContactUserId ?? ''}
-							description="Every rider guide asks for one name. It is the field most often missing."
+							description={msg.band_slug_rider_every_rider_guide_asks_one()}
 						/>
 						<Field
 							field={detailFields.monitorFormat}
 							type="select"
-							label="Monitors"
-							options={[{ value: '', label: 'No preference' }, ...riderMonitorFormatOptions]}
+							label={msg.band_monitors()}
+							options={[
+								{ value: '', label: msg.band_slug_rider_no_preference() },
+								...riderMonitorFormatOptions
+							]}
 							value={rider.monitorFormat ?? ''}
 						/>
 					</div>
 					<Field
 						field={detailFields.notes}
 						type="textarea"
-						label="Anything else"
+						label={msg.band_slug_rider_anything_else()}
 						value={rider.notes ?? ''}
 						maxlength={RIDER_NOTES_MAX}
-						description="Power, load-in, anything that is not a piece of gear."
+						description={msg.band_slug_rider_power_load_anything_not_piece()}
 					/>
-					<div class="flex justify-end"><SubmitButton label="Save" /></div>
+					<div class="flex justify-end"><SubmitButton label={msg.band_save()} /></div>
 				</Form>
 			{:else}
 				<DefinitionList>
-					<Fact label="Who an engineer should call">
+					<Fact label={msg.band_slug_rider_who_engineer_should_call()}>
 						{roster.find((m) => m.userId === rider.techContactUserId)?.name ?? 'Nobody yet'}
 					</Fact>
 					{#if rider.notes}
-						<Fact label="Notes" class="whitespace-pre-line">{rider.notes}</Fact>
+						<Fact label={msg.band_notes()} class="whitespace-pre-line">{rider.notes}</Fact>
 					{/if}
 				</DefinitionList>
 			{/if}
 		</InfoCard>
 
-		<InfoCard title="Or hand over the one you already have">
+		<InfoCard title={msg.band_slug_rider_hand_over_one_already_have()}>
 			<p class="mb-4 text-xs text-base-content/60">
-				Filling in the list above is not compulsory. If you already send venues a rider PDF, upload
-				it here and CMC will read that instead — and you can do both, which is what a typed input
-				list beside a hand-drawn stage plot looks like.
+				{msg.band_slug_rider_filling_list_above_not_compulsory()}
 			</p>
 			<RiderUploads
 				bandId={data.bandId}

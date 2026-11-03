@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { getPressKitEditor } from '$lib/remote/press-kit.remote';
@@ -19,7 +20,7 @@
 	const editor = await getPressKitEditor(band.slug);
 </script>
 
-<PageHeader width="3xl" title="Press Kit" subtitle={band.name} />
+<PageHeader width="3xl" title={m.band_slug_press_kit_title()} subtitle={band.name} />
 <PageContent width="3xl">
 	<PressKitProgress
 		slug={band.slug}

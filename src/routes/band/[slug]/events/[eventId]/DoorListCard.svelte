@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
@@ -20,8 +21,13 @@
 {#if door.tickets.length > 0}
 	<Card>
 		<CardBody>
-			<CardTitle>Door list</CardTitle>
-			<p class="text-muted">{door.checkedIn} of {door.tickets.length} checked in.</p>
+			<CardTitle>{m.band_slug_events_event_id_door_list_card_door_list()}</CardTitle>
+			<p class="text-muted">
+				{m.band_slug_events_event_id_door_list_card_checked({
+					checkedIn: door.checkedIn,
+					length: door.tickets.length
+				})}
+			</p>
 			<ul class="divide-y divide-base-300">
 				{#each door.tickets as ticket (ticket.id)}
 					<li class="flex items-center justify-between gap-3 py-2">
@@ -34,14 +40,18 @@
 						{:else}
 							<Form
 								remote={checkInBandTicket.for(ticket.id)}
-								successToast="Checked in"
+								successToast={m.band_slug_events_event_id_door_list_card_success_toast()}
 								onsuccess={refresh}
 								class="inline"
 							>
 								<input {...fields.slug.as('hidden', slug)} />
 								<input {...fields.eventId.as('hidden', eventId)} />
 								<input {...fields.ticketId.as('hidden', ticket.id)} />
-								<SubmitButton label="Check in" variant="primary" class="min-h-11" />
+								<SubmitButton
+									label={m.band_slug_events_event_id_door_list_card_label()}
+									variant="primary"
+									class="min-h-11"
+								/>
 							</Form>
 						{/if}
 					</li>

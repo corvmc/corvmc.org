@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * "The date is wrong." An act credited on somebody else's listing had only
 	 * accept and decline, so a bad listing and no listing were the only two
@@ -19,11 +20,11 @@
 
 <Action
 	{action}
-	label="Request a correction"
+	label={m.band_slug_events_request_correction_request_correction()}
 	iconOnly
-	modalTitle="Request a correction"
-	submitLabel="Send to staff"
-	successToast="Sent — staff will pick it up"
+	modalTitle={m.band_slug_events_request_correction_request_correction()}
+	submitLabel={m.band_slug_events_request_correction_submit_label()}
+	successToast={m.band_slug_events_request_correction_success_toast()}
 	variant="ghost"
 	size="xs"
 >
@@ -34,12 +35,12 @@
 			<input {...fields.slug.as('hidden', slug)} />
 			<input {...fields.eventId.as('hidden', eventId)} />
 			<p class="text-muted">
-				This goes to CorvMC staff, who can edit any listing. They'll reply in your Messages.
+				{m.band_slug_events_request_correction_goes_corvmc_staff_who_ca()}
 			</p>
 			<FormField
 				field={fields.body}
-				label="What needs changing?"
-				description="The date, the spelling of your name, the set times — whatever is wrong."
+				label={m.band_slug_events_request_correction_what_needs_changing()}
+				description={m.band_slug_events_request_correction_description()}
 			/>
 		</div>
 	{/snippet}

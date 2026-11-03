@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -75,7 +76,7 @@
 	remote={saveBandProfile}
 	guard
 	onsuccess={() => {
-		toast.success('Profile saved');
+		toast.success(m.band_slug_edit_band_profile_form_toast());
 		// No slug branch: renaming the band no longer moves its address, so the
 		// page always stays where it is. Band settings is where an owner changes it.
 		invalidateAll();
@@ -86,13 +87,13 @@
 	<input {...profileFields.seekingInstruments.as('hidden', JSON.stringify(seekingInstruments))} />
 
 	<!-- Basics -->
-	<InfoCard title="Basics">
+	<InfoCard title={m.band_slug_edit_band_profile_form_basics()}>
 		<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
 			<div class="flex-1 space-y-4">
 				<FormField
 					field={profileFields.name}
 					type="text"
-					label="Band Name"
+					label={m.band_slug_edit_band_profile_form_band_name()}
 					value={band.name}
 					required
 				/>
@@ -102,11 +103,15 @@
 				     not move the address. Saying so here — with the address in
 				     front of them — beats letting them rename and then wonder why
 				     the URL didn't follow. -->
-				<FormField label="Band address" readonly display={`${band.slug}.${baseDomain}`}>
+				<FormField
+					label={m.band_slug_edit_band_profile_form_band_address()}
+					readonly
+					display={`${band.slug}.${baseDomain}`}
+				>
 					{#snippet description()}
-						Renaming the band doesn't move its address.{#if isOwner}
+						{m.band_slug_edit_band_profile_form_renaming_band_doesn_t_move()}{#if isOwner}
 							<a href={resolve(`/band/${band.slug}/settings`)} class="ml-1 link link-primary">
-								Change it in Settings
+								{m.band_slug_edit_band_profile_form_change_settings()}
 							</a>
 						{/if}
 					{/snippet}
@@ -114,16 +119,16 @@
 
 				<FormField
 					field={profileFields.tagline}
-					label="Tagline"
+					label={m.band_slug_edit_band_profile_form_tagline()}
 					type="text"
 					value={profile?.tagline ?? ''}
-					placeholder="e.g. Funk trio from Portland"
-					description="A short one-liner shown on your directory card"
+					placeholder={m.band_slug_edit_band_profile_form_e_g_funk_trio_from()}
+					description={m.band_slug_edit_band_profile_form_short_one_liner_shown_direc()}
 				/>
 			</div>
 
 			<FormField
-				label="Avatar"
+				label={m.band_slug_edit_band_profile_form_avatar()}
 				name="avatarKey"
 				type="file"
 				upload={uploadAvatar}
@@ -138,33 +143,36 @@
 			<div class="grid gap-4 sm:grid-cols-2">
 				<FormField
 					field={profileFields.hometown}
-					label="Hometown"
+					label={m.band_slug_edit_band_profile_form_hometown()}
 					type="text"
 					value={profile?.hometown ?? ''}
-					placeholder="e.g. Corvallis, OR"
-					description="Shown as “Based in” on your profile"
+					placeholder={m.band_slug_edit_band_profile_form_e_g_corvallis()}
+					description={m.band_slug_edit_band_profile_form_shown_as_based_profile()}
 				/>
 
 				<FormField
 					field={profileFields.foundedYear}
-					label="Founded"
+					label={m.band_slug_edit_band_profile_form_founded()}
 					type="text"
 					value={profile?.foundedYear ?? ''}
-					placeholder="e.g. 2019"
-					description="Shown as “Formed” on your profile"
+					placeholder={m.band_slug_edit_band_profile_form_e_g_2019()}
+					description={m.band_slug_edit_band_profile_form_shown_as_formed_profile()}
 				/>
 			</div>
 
-			<FormField field={profileFields.bio} label="Bio">
+			<FormField field={profileFields.bio} label={m.band_slug_edit_band_profile_form_bio()}>
 				<input {...profileFields.bio.as('hidden', bioHtml)} />
-				<RichTextEditor bind:value={bioHtml} placeholder="Tell people about your act..." />
+				<RichTextEditor
+					bind:value={bioHtml}
+					placeholder={m.band_slug_edit_band_profile_form_tell_people_about_act()}
+				/>
 			</FormField>
 
-			<FormField field={profileFields.genres} label="Genres">
+			<FormField field={profileFields.genres} label={m.band_slug_edit_band_profile_form_genres()}>
 				<FreeformTagInput
 					bind:value={genres}
 					suggestions={genreSuggestions}
-					placeholder="e.g. jazz, funk, rock..."
+					placeholder={m.band_slug_edit_band_profile_form_e_g_jazz_funk_rock()}
 				/>
 			</FormField>
 
@@ -172,7 +180,7 @@
 				field={profileFields.lookingForMembers}
 				type="toggle"
 				bind:value={lookingForMembers}
-				checkboxLabel="We're looking for members"
+				checkboxLabel={m.band_slug_edit_band_profile_form_checkbox_label()}
 			/>
 
 			<!-- The half a band could never say before: "we want members" had
@@ -180,11 +188,14 @@
 			     with the toggle it belongs to, and it is what puts this band on the
 			     dashboard of a member who plays what you are short of. -->
 			{#if lookingForMembers}
-				<FormField field={profileFields.seekingInstruments} label="What we're looking for">
+				<FormField
+					field={profileFields.seekingInstruments}
+					label={m.band_slug_edit_band_profile_form_what_we_re_looking()}
+				>
 					<FreeformTagInput
 						bind:value={seekingInstruments}
 						suggestions={instrumentSuggestions}
-						placeholder="e.g. drums, bass, vocals..."
+						placeholder={m.band_slug_edit_band_profile_form_e_g_drums_bass_vocals()}
 					/>
 				</FormField>
 			{/if}
@@ -192,9 +203,9 @@
 	</InfoCard>
 
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
-		<InfoCard title="Links">
+		<InfoCard title={m.band_slug_edit_band_profile_form_links()}>
 			<p class="mb-3 text-muted">
-				SoundCloud, YouTube, and Spotify links show as embedded players on your profile.
+				{m.band_slug_edit_band_profile_form_soundcloud_youtube_spotify()}
 			</p>
 			<LinkListEditor bind:value={links} field={profileFields.links} />
 		</InfoCard>
@@ -204,48 +215,52 @@
 		     form, so nothing is published for a scraper to take. The fields stay
 		     because they still route an enquiry — but the page has to say that,
 		     or a band reads "contact info" and assumes it is on display. -->
-		<InfoCard title="Where enquiries go">
+		<InfoCard title={m.band_slug_edit_band_profile_form_where_enquiries_go()}>
 			<p class="mb-3 text-muted">
-				Never shown publicly. Your page offers a contact form instead, and a message sent through it
-				lands here — or at your press kit's booking contact, if you have set one.
+				{m.band_slug_edit_band_profile_form_never_shown_publicly_page_o()}
 			</p>
 			<div class="space-y-3">
 				<FormField
 					field={profileFields.contactEmail}
-					label="Email"
+					label={m.band_email()}
 					type="email"
 					value={contact.email ?? ''}
-					placeholder="band@example.com"
+					placeholder={m.band_slug_edit_band_profile_form_band_example_com()}
 				/>
 				<FormField
 					field={profileFields.contactPhone}
-					label="Phone"
+					label={m.band_phone()}
 					type="tel"
 					value={contact.phone ?? ''}
 				/>
 				<FormField
 					field={profileFields.contactSocial}
-					label="Social handle"
+					label={m.band_slug_edit_band_profile_form_social_handle()}
 					type="text"
 					value={contact.social ?? ''}
-					placeholder="@handle or URL"
+					placeholder={m.band_slug_edit_band_profile_form_handle_url()}
 				/>
 			</div>
 		</InfoCard>
 	</div>
 
 	<div class="mb-6">
-		<InfoCard title="Visibility">
+		<InfoCard title={m.band_slug_edit_band_profile_form_visibility()}>
 			<VisibilityField
 				field={profileFields.directoryVisibility}
 				bind:value={directoryVisibility}
-				publicDescription="Anyone can see this band's profile, no login required"
+				publicDescription={m.band_slug_edit_band_profile_form_public_description()}
 			/>
 		</InfoCard>
 	</div>
 
 	<div class="flex justify-end">
-		<SubmitButton label="Save" successLabel="Saved" variant="primary" shortcut="mod+s">
+		<SubmitButton
+			label={m.band_save()}
+			successLabel={m.band_saved()}
+			variant="primary"
+			shortcut="mod+s"
+		>
 			{#snippet icon()}<IconDeviceFloppy size={18} />{/snippet}
 		</SubmitButton>
 	</div>
