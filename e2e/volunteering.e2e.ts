@@ -868,7 +868,10 @@ test.describe('volunteering — post-shift feedback', () => {
 		// form must not be offered again.
 		await page.goto(`/member/volunteer/feedback/${SEED_VOL_SIGNUP_DONE_ID}`);
 		// Rendered (the answered card links back to the board), and no survey.
-		await expect(page.locator('main a[href="/member/volunteer"]')).toBeVisible({ timeout: 15000 });
+		// `:not(nav a)`: the breadcrumb links to the same href.
+		await expect(page.locator('main a[href="/member/volunteer"]:not(nav a)')).toBeVisible({
+			timeout: 15000
+		});
 		await expect(page.locator('textarea[name="comment"]')).toHaveCount(0);
 	});
 
