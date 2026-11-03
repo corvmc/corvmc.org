@@ -25,6 +25,7 @@
 	import { resolve } from '$app/paths';
 	import { formatVolunteerHours } from '$lib/config';
 	import { formatDateShortYear } from '$lib/utils/format';
+	import { Latest } from '$lib/latest.svelte';
 
 	let { id }: { id: string } = $props();
 
@@ -35,6 +36,13 @@
 		void getMemberCertifications(id).refresh();
 		void getUserPage(id).refresh();
 	}
+
+	// Not `{#await}`: a refresh would re-pend it and unmount an open Grant or
+	// Revoke modal (#2356).
+	const certifications = new Latest(() => getMemberCertifications(id));
+	$effect(() => {
+		if (certifications.error) throw certifications.error.e;
+	});
 </script>
 
 <RelatedList
@@ -117,8 +125,8 @@
 	append-only. A renewal is a second Grant, not an edit. Keep these Actions
 	outside the profile <Form>: inside it their triggers submit the account.
 -->
-<!-- eslint-disable-next-line custom/no-interactive-await -- #2356 -->
-{#await getMemberCertifications(id) then held}
+{#if certifications.current}
+	{@const held = certifications.current}
 	<InfoCard title={m.staff_members_id_panels_volunteer_panel_certifications()}>
 		{#snippet header(title: string)}
 			<div class="flex items-center justify-between gap-2">
@@ -195,7 +203,7 @@
 			</ul>
 		{/if}
 	</InfoCard>
-{/await}
+{/if}
 
 <RelatedList title={m.staff_members_id_panels_volunteer_panel_shifts()} result={getUserShifts(id)}>
 	{#snippet children(shifts)}

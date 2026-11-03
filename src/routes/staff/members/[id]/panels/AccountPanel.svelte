@@ -30,6 +30,7 @@
 	import { formatDateTimeShort, formatDateShortYear, formatHistoryTime } from '$lib/utils/format';
 	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
 	import { toast } from 'svelte-sonner';
+	import { Latest } from '$lib/latest.svelte';
 
 	let { id, member }: { id: string; member: Awaited<ReturnType<typeof getUser>> } = $props();
 
@@ -56,6 +57,12 @@
 			toast.warning(m.staff_members_id_panels_account_panel_toast());
 		}
 	}
+
+	// Not `{#await}`: a refresh would re-pend it and remount the form mid-edit (#2356).
+	const roleCatalog = new Latest(() => getRoleCatalog());
+	$effect(() => {
+		if (roleCatalog.error) throw roleCatalog.error.e;
+	});
 </script>
 
 <!--
@@ -65,14 +72,14 @@
 	the picker from a caller who may edit the profile but not the roles: without
 	that they would submit a role set they cannot change and land on a 403.
 -->
-<!-- eslint-disable-next-line custom/no-interactive-await -- #2356 -->
-{#await getRoleCatalog() then catalog}
+{#if roleCatalog.current}
+	{@const catalog = roleCatalog.current}
 	{@const roleOptions = catalog.roles.map((r) => ({ id: String(r.id), label: r.name }))}
 	{@const initialRoles = catalog.roles
 		.filter((r) => member.roles.includes(r.name))
 		.map((r) => String(r.id))}
 	<StaffUserForm {member} {roleOptions} {initialRoles} {id} canSetRole={catalog.canSetRole} />
-{/await}
+{/if}
 
 <EmailChangeCard {id} email={member.email} />
 
