@@ -67,6 +67,7 @@
 {:else}
 	<Action
 		action={createAnnouncement}
+		data-testid="new-announcement"
 		label="New announcement"
 		modalTitle="New announcement"
 		submitLabel="Save draft"

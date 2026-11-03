@@ -154,6 +154,7 @@
 			{#snippet children({ props })}
 				<Button
 					{...props}
+					data-testid="disposition-snooze"
 					variant={focus ? 'default' : 'ghost'}
 					{size}
 					class={focus ? 'flex-1' : ''}
@@ -179,6 +180,7 @@
 			class={focus ? 'flex-1' : ''}
 			disabled={busy}
 			onclick={() => dispose('reopen', 'Back in the queue')}
+			data-testid="disposition-reopen"
 		>
 			<IconRotate size={16} />
 			{status === 'snoozed' ? 'Unsnooze' : awaiting ? 'Needs a reply' : 'Reopen'}
@@ -192,6 +194,7 @@
 			class={focus ? 'flex-1' : ''}
 			disabled={busy}
 			onclick={() => dispose('resolve', 'Resolved')}
+			data-testid="disposition-resolve"
 		>
 			{#if resolveKeys.modHeld && resolveKeys.parsed}
 				<kbd class="kbd kbd-xs">{shortcutLabel(resolveKeys.parsed)}</kbd>

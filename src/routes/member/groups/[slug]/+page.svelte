@@ -360,7 +360,7 @@
 								<!-- The fact that separates a program's session from a listing
 								     it merely advertises: this one holds the room, free. -->
 								{#if s.reservesRoom}
-									<Badge variant="ghost">Room held</Badge>
+									<Badge variant="ghost" data-testid="room-held">Room held</Badge>
 								{/if}
 							</td>
 							<td class="w-px"><StatusBadge status={s.status} /></td>

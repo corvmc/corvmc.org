@@ -384,6 +384,7 @@
 	<!-- Both render and the container query picks one; `display: none` keeps the
 	     other out of the accessibility tree, so the name is never doubled. -->
 	<span
+		data-status={status}
 		class="badge gap-1 badge-sm @max-3xl:hidden {badgeClass[status] ?? 'badge-ghost'} {className}"
 	>
 		<variant.icon size={14} />
@@ -395,7 +396,10 @@
 		'@3xl:hidden group-has-focus-visible/row:before:opacity-100 group-has-focus-visible/row:after:opacity-100 group-has-focus-visible/row:before:[--tt-pos:0rem] group-has-focus-visible/row:after:[--tt-pos:0rem]'
 	)}
 {:else if showLabel}
-	<span class="badge gap-1 badge-sm {badgeClass[status] ?? 'badge-ghost'} {className}">
+	<span
+		data-status={status}
+		class="badge gap-1 badge-sm {badgeClass[status] ?? 'badge-ghost'} {className}"
+	>
 		<variant.icon size={14} />
 		{label}
 	</span>

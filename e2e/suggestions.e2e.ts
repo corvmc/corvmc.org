@@ -14,6 +14,7 @@ import {
 	SEED_SG_VISIBLE_TITLE,
 	SEED_SG_UNVOTED_ID,
 	SEED_SG_EDIT_ID,
+	SEED_SG_EDIT_TITLE,
 	SEED_SG_EDIT_PROPOSED_TITLE,
 	SEED_SG_MERGE_TARGET_ID,
 	SEED_SG_MERGE_SOURCE_ID,
@@ -57,6 +58,13 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  */
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
+/** Titles this spec types in itself, then looks for: fixture echo, not copy. */
+const REVIEW_POST_TITLE = 'E2E Post While On Review';
+const SWAPPED_TITLE = 'E2E Swapped Out Title';
+
+/** The submit of whichever Action dialog is open; each has exactly one. */
+const dialogSubmit = (page: Page) => page.getByRole('dialog').locator('button[type="submit"]');
+
 async function login(page: Page, email: string, password: string) {
 	await signInAs(page, { email, password });
 }
@@ -69,9 +77,9 @@ async function switchUser(page: Page, email: string, password: string) {
 /** File a report against a suggestion from its member-facing detail page. */
 async function reportSuggestion(page: Page, suggestionId: string, reason: string) {
 	await page.goto(`/member/suggestions/${suggestionId}`);
-	await page.getByRole('button', { name: 'Flag for review' }).click();
+	await page.getByTestId('flag-suggestion').click();
 	await page.locator('input[name="reason"]').fill(reason);
-	await page.getByRole('button', { name: 'Send report' }).click();
+	await dialogSubmit(page).click();
 }
 
 /** Resolve or dismiss the newest pending report from the staff flag queue. */
@@ -84,7 +92,7 @@ async function decideReport(page: Page, entityTitle: string, decision: 'resolved
 	await page.goto('/staff/flags');
 	await page.getByRole('link', { name: entityTitle }).first().click();
 	await page.waitForURL(/\/staff\/flags\/[^/]+$/);
-	await page.getByRole('button', { name: 'Resolve / Dismiss' }).click();
+	await page.getByTestId('resolve-flag').click();
 	await page.locator('select[name="resolution"]').selectOption(decision);
 	// By the decision's own name, not "Save": the submit says what it will record,
 	// which is the whole of #981. Clicking it by label is also the only assertion
@@ -103,17 +111,17 @@ test.describe('suggestion board', () => {
 		await page.goto('/member/suggestions');
 		await expect(page.getByRole('link', { name: SEED_SG_VISIBLE_TITLE })).toBeVisible();
 		// No feature flag gates this, so the nav item is simply there.
-		await expect(page.getByRole('link', { name: 'Suggestions' }).first()).toBeVisible();
+		await expect(page.locator('a[href="/member/suggestions"]').first()).toBeVisible();
 
 		await page.goto(`/member/suggestions/${SEED_SG_DISMISS_ID}`);
 
 		const before = (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount;
 
-		// Named for what it does, not by its count: the control used to be
-		// `button "11"` with no pressed state, which is what #903 fixed. Locating
-		// it by that name is what keeps the fix from being undone silently.
-		const vote = page.getByRole('button', { name: /vote/i }).first();
+		// The control used to be `button "11"` with no pressed state, which is what
+		// #903 fixed: it carries aria-pressed, and its name is more than the count.
+		const vote = page.locator('main form button[type="submit"][aria-pressed]');
 		await expect(vote).toHaveAttribute('aria-pressed', 'false');
+		await expect(vote).not.toHaveAccessibleName(new RegExp(`^\\s*${before}\\s*$`));
 
 		await vote.click();
 		await expect
@@ -135,9 +143,9 @@ test.describe('suggestion board', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/suggestions/${SEED_SG_MERGE_SOURCE_ID}`);
 
-		await page.getByRole('button', { name: 'Merge into another' }).click();
+		await page.getByTestId('merge-suggestion').click();
 		await page.locator('select[name="targetId"]').selectOption(SEED_SG_MERGE_TARGET_ID);
-		await page.getByRole('button', { name: 'Merge', exact: true }).click();
+		await dialogSubmit(page).click();
 
 		// 3 voters on the target + 2 on the source, one of whom voted for both.
 		// A correct merge lands on 4; double-counting lands on 5.
@@ -230,32 +238,32 @@ test.describe('reporting a suggestion', () => {
 		await page.goto('/member/suggestions');
 		await expect(page.getByRole('alert')).toBeVisible();
 
-		await page.getByRole('button', { name: 'New suggestion' }).click();
-		await page.locator('input[name="title"]').fill('E2E Post While On Review');
+		await page.locator('[data-page-header] button').click();
+		await page.locator('input[name="title"]').fill(REVIEW_POST_TITLE);
 		await page.locator('textarea[name="body"]').fill('Should wait for staff before appearing.');
-		await page.getByRole('button', { name: 'Post it' }).click();
+		await dialogSubmit(page).click();
 		await page.waitForURL(/\/member\/suggestions\/[^/]+$/, DB_POLL);
 		await expect(page.getByRole('alert')).toBeVisible();
 
 		// Nobody else can see it yet.
 		await switchUser(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);
 		await page.goto('/member/suggestions');
-		await expect(page.getByRole('link', { name: 'E2E Post While On Review' })).toHaveCount(0);
+		await expect(page.getByRole('link', { name: REVIEW_POST_TITLE })).toHaveCount(0);
 
 		// Staff approve it out of the review queue, and it lands on the board.
 		await switchUser(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/suggestions');
-		await page.getByRole('tab', { name: 'Needs review' }).click();
-		await page.getByRole('link', { name: 'E2E Post While On Review' }).first().click();
+		await page.locator('#tab-review').click();
+		await page.getByRole('link', { name: REVIEW_POST_TITLE }).first().click();
 		await page.waitForURL(/\/staff\/suggestions\/[^/]+$/);
-		await page.getByRole('button', { name: 'Approve or reject' }).click();
+		await page.getByTestId('review-suggestion').click();
 		await page.locator('select[name="decision"]').selectOption('approve');
-		await page.getByRole('button', { name: 'Save' }).click();
+		await dialogSubmit(page).click();
 		await expect(page.getByRole('dialog')).toBeHidden({ timeout: 15000 });
 
 		await switchUser(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);
 		await page.goto('/member/suggestions');
-		await expect(page.getByRole('link', { name: 'E2E Post While On Review' })).toBeVisible();
+		await expect(page.getByRole('link', { name: REVIEW_POST_TITLE })).toBeVisible();
 	});
 });
 
@@ -277,10 +285,10 @@ test.describe('editing a suggestion', () => {
 	/** Open the author's own edit form and submit new text. */
 	async function submitEdit(page: Page, suggestionId: string, title: string, body: string) {
 		await page.goto(`/member/suggestions/${suggestionId}`);
-		await page.getByRole('button', { name: /^(Edit|Request an edit)$/ }).click();
+		await page.getByTestId('edit-suggestion').click();
 		await page.locator('input[name="title"]').fill(title);
 		await page.locator('textarea[name="body"]').fill(body);
-		await page.getByRole('button', { name: /^(Save|Send to staff)$/ }).click();
+		await dialogSubmit(page).click();
 		await expect(page.getByRole('dialog')).toBeHidden({ timeout: 15000 });
 	}
 
@@ -288,8 +296,7 @@ test.describe('editing a suggestion', () => {
 		await login(page, SEED_SG_AUTHOR_EMAIL, SEED_SG_PASSWORD);
 		await page.goto(`/member/suggestions/${SEED_SG_UNVOTED_ID}`);
 
-		// The label is the promise: this one saves, it does not queue.
-		await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();
+		await expect(page.getByTestId('edit-suggestion')).toBeVisible();
 
 		await submitEdit(page, SEED_SG_UNVOTED_ID, 'E2E Rewritten Directly', 'Rewritten body.');
 
@@ -308,10 +315,9 @@ test.describe('editing a suggestion', () => {
 		await login(page, SEED_SG_AUTHOR_EMAIL, SEED_SG_PASSWORD);
 		await page.goto(`/member/suggestions/${SEED_SG_VISIBLE_ID}`);
 
-		// Different label, because it is a different operation.
-		await expect(page.getByRole('button', { name: 'Request an edit' })).toBeVisible();
+		await expect(page.getByTestId('edit-suggestion')).toBeVisible();
 
-		await submitEdit(page, SEED_SG_VISIBLE_ID, 'E2E Swapped Out Title', 'Completely different.');
+		await submitEdit(page, SEED_SG_VISIBLE_ID, SWAPPED_TITLE, 'Completely different.');
 
 		// The words members voted for are still the words on the board.
 		const after = await readSuggestionText(SEED_SG_VISIBLE_ID);
@@ -325,7 +331,7 @@ test.describe('editing a suggestion', () => {
 		// Nobody else sees the proposed text anywhere.
 		await switchUser(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);
 		await page.goto('/member/suggestions');
-		await expect(page.getByRole('link', { name: 'E2E Swapped Out Title' })).toHaveCount(0);
+		await expect(page.getByRole('link', { name: SWAPPED_TITLE })).toHaveCount(0);
 	});
 
 	test('staff approving the edit applies it and keeps the votes', async ({ page }) => {
@@ -338,12 +344,14 @@ test.describe('editing a suggestion', () => {
 
 		// Staff see both versions before deciding — approving a change you cannot
 		// see is the failure this flow exists to prevent.
-		await expect(page.getByText('What members voted for')).toBeVisible();
-		await expect(page.getByText(SEED_SG_EDIT_PROPOSED_TITLE)).toBeVisible();
+		// One card holds both versions; the proposed title appears nowhere else.
+		const compare = page.locator('.card').filter({ hasText: SEED_SG_EDIT_PROPOSED_TITLE });
+		await expect(compare.getByText(SEED_SG_EDIT_TITLE, { exact: true })).toBeVisible();
+		await expect(compare.getByText(SEED_SG_EDIT_PROPOSED_TITLE, { exact: true })).toBeVisible();
 
-		await page.getByRole('button', { name: 'Approve or reject' }).click();
+		await page.getByTestId('review-suggestion-edit').click();
 		await page.locator('select[name="decision"]').selectOption('approve');
-		await page.getByRole('button', { name: 'Save' }).click();
+		await dialogSubmit(page).click();
 		await expect(page.getByRole('dialog')).toBeHidden({ timeout: 15000 });
 
 		await expect
@@ -357,6 +365,6 @@ test.describe('editing a suggestion', () => {
 		await login(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);
 		await page.goto(`/member/suggestions/${SEED_SG_UNVOTED_ID}`);
 
-		await expect(page.getByRole('button', { name: /^(Edit|Request an edit)$/ })).toHaveCount(0);
+		await expect(page.getByTestId('edit-suggestion')).toHaveCount(0);
 	});
 });

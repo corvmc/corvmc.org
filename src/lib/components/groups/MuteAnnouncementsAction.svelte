@@ -31,6 +31,7 @@
 
 <Action
 	action={setAnnouncementMute}
+	data-testid="mute-announcements"
 	label={muted ? 'Unmute announcements' : 'Mute announcements'}
 	successToast={muted ? 'Announcements on' : 'Announcements muted'}
 	variant="ghost"

@@ -37,6 +37,7 @@
 
 <Action
 	action={createGroupSession}
+	data-testid="new-session"
 	label="New session"
 	modalTitle="New session"
 	submitLabel="Create session"

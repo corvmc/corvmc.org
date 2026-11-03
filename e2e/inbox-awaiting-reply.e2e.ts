@@ -43,15 +43,22 @@ async function navBadgeCount(page: Page): Promise<number> {
 	return Number((await badge.first().innerText()).trim());
 }
 
+/** One of the four view tabs, by the key TabBar puts in its id. */
+function viewTab(page: Page, key: 'open' | 'snoozed') {
+	return page.locator(`#tab-${key}`);
+}
+
+/** The reason badge on a row, by the status it renders, not its words. */
+function reasonBadge(page: Page, contact: string, status: string) {
+	return row(page, contact).locator(`.badge[data-status="${status}"]`);
+}
+
 /**
- * One of the four view tabs.
- *
- * Matched on a prefix because the accessible name carries the count badge —
- * "Open 3", not "Open" — and the count is exactly what these tests are trying
- * not to hard-code.
+ * A disposition control. The bar mounts twice — toolbar above `sm`, under the
+ * composer below it — and only one is displayed at any width.
  */
-function viewTab(page: Page, label: string) {
-	return page.getByRole('tab', { name: new RegExp(`^${label}\\b`) });
+function disposition(page: Page, which: 'reopen' | 'resolve' | 'snooze') {
+	return page.getByTestId(`disposition-${which}`).filter({ visible: true });
 }
 
 function row(page: Page, contact: string) {
@@ -71,13 +78,13 @@ test.describe('inbox awaiting reply', () => {
 		await expect(row(page, SEED_AWAITING_CONTACT)).toHaveCount(0);
 
 		// The Open row says *why* it is there — nobody here has ever answered it.
-		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toContainText('Unanswered');
+		await expect(reasonBadge(page, SEED_NEEDS_REPLY_CONTACT, 'unanswered')).toBeVisible();
 
 		// The claim the split exists to make: the number on the nav item and the
 		// number on the Open tab are the same set counted twice.
-		await expect(viewTab(page, 'Open')).toBeVisible();
+		await expect(viewTab(page, 'open')).toBeVisible();
 		const badge = await navBadgeCount(page);
-		const tab = Number((await viewTab(page, 'Open').innerText()).replace(/\D+/g, ''));
+		const tab = Number((await viewTab(page, 'open').innerText()).replace(/\D+/g, ''));
 
 		expect(tab).toBe(badge);
 	});
@@ -93,15 +100,15 @@ test.describe('inbox awaiting reply', () => {
 		await expect(page).toHaveURL(/view=snoozed/);
 
 		await page.goto('/staff/inbox');
-		await viewTab(page, 'Snoozed').click();
+		await viewTab(page, 'snoozed').click();
 		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
 		await expect(row(page, SEED_SNOOZED_CONTACT)).toBeVisible();
 		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toHaveCount(0);
 
 		// One view, two reasons to be in it — and the merge's whole premise is
 		// that a row still says which of the two it is.
-		await expect(row(page, SEED_AWAITING_CONTACT)).toContainText('Awaiting reply');
-		await expect(row(page, SEED_SNOOZED_CONTACT)).toContainText('Snoozed');
+		await expect(reasonBadge(page, SEED_AWAITING_CONTACT, 'awaiting_reply')).toBeVisible();
+		await expect(reasonBadge(page, SEED_SNOOZED_CONTACT, 'snoozed')).toBeVisible();
 
 		// Mirrored into the URL, so opening a thread and coming back holds it.
 		await expect(page).toHaveURL(/view=snoozed/);
@@ -120,13 +127,14 @@ test.describe('inbox awaiting reply', () => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/inbox/${SEED_AWAITING_THREAD_ID}`);
 
-		await expect(page.getByRole('button', { name: 'Needs a reply' })).toBeVisible();
+		// An open thread offers the reopen slot only while it is marked awaiting.
+		await expect(disposition(page, 'reopen')).toBeVisible();
 		const before = await navBadgeCount(page);
 
-		await page.getByRole('button', { name: 'Needs a reply' }).click();
+		await disposition(page, 'reopen').click();
 
 		// The thread is back in the queue, and the badge counts it again.
-		await expect(page.getByRole('button', { name: 'Needs a reply' })).toHaveCount(0);
+		await expect(disposition(page, 'reopen')).toHaveCount(0);
 		await expect
 			.poll(() => navBadgeCount(page), { timeout: 10000, message: 'nav badge' })
 			.toBe(before + 1);
@@ -139,12 +147,12 @@ test.describe('inbox awaiting reply', () => {
 		// `each_key_duplicate` surfaced here, and this test fails *destructively* —
 		// the marker is already cleared by this point, so its retries start from
 		// state the fixture never described and fail somewhere else entirely.
-		await page.getByRole('button', { name: /^Snooze/ }).click();
-		const whenTheyReply = page.getByRole('menuitem', { name: 'When they reply' });
+		await disposition(page, 'snooze').click();
+		const whenTheyReply = page.getByRole('menu').getByTestId('snooze-until-reply');
 		await expect(whenTheyReply).toBeVisible();
 		await whenTheyReply.click();
 
-		await expect(page.getByRole('button', { name: 'Needs a reply' })).toBeVisible();
+		await expect(disposition(page, 'reopen')).toBeVisible();
 		await expect
 			.poll(() => navBadgeCount(page), { timeout: 10000, message: 'nav badge' })
 			.toBe(before);
@@ -157,15 +165,17 @@ test.describe('inbox awaiting reply', () => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/inbox/${SEED_NEEDS_REPLY_THREAD_ID}`);
 
-		await page.getByRole('button', { name: /^Resolve/ }).click();
-		await expect(page.getByRole('button', { name: 'Reopen' })).toBeVisible();
+		await disposition(page, 'resolve').click();
+		await expect(disposition(page, 'reopen')).toBeVisible();
+		await expect(disposition(page, 'resolve')).toHaveCount(0);
 
-		await page.getByRole('button', { name: 'Undo' }).click();
+		// The toast's action button: sonner marks its cancel button, not this one.
+		await page.locator('[data-sonner-toast] button[data-button]:not([data-cancel])').click();
 
 		// Back to open: the reopen slot is gone and the four exits are offered
 		// again.
-		await expect(page.getByRole('button', { name: 'Reopen' })).toHaveCount(0);
-		await expect(page.getByRole('button', { name: /^Resolve/ })).toBeVisible();
+		await expect(disposition(page, 'reopen')).toHaveCount(0);
+		await expect(disposition(page, 'resolve')).toBeVisible();
 	});
 });
 
@@ -189,18 +199,20 @@ test.describe('Meta reply window', () => {
 		// The thread itself renders — this is a block on replying, not on reading.
 		await expect(page.getByText(SEED_META_STALE_CONTACT).first()).toBeVisible();
 
-		await expect(page.getByText(/window has closed/i)).toBeVisible();
+		// The seeded Instagram channel is enabled, so the window is the only block
+		// that can fire here.
+		await expect(page.getByTestId('reply-blocked')).toBeVisible();
 
 		// The composer falls back to a note: staff-only, and never dispatched.
-		await expect(page.getByText('Staff only — the contact never sees this')).toBeVisible();
-		await expect(page.getByPlaceholder('Add an internal note…')).toBeVisible();
-		await expect(page.getByPlaceholder('Type your reply…')).toHaveCount(0);
+		await expect(page.locator('#tab-note')).toHaveAttribute('aria-selected', 'true');
+		await expect(page.locator('#tab-reply')).toHaveAttribute('aria-selected', 'false');
+		await expect(page.locator('textarea[name="body"]')).toBeVisible();
 
 		// A thread inside the window must still offer a reply — otherwise a block
 		// that fired on every Meta thread would pass the half above.
 		await page.goto(`/staff/inbox/${SEED_NEEDS_REPLY_THREAD_ID}`);
 
-		await expect(page.getByPlaceholder('Type your reply…')).toBeVisible();
-		await expect(page.getByText(/window has closed/i)).toHaveCount(0);
+		await expect(page.locator('#tab-reply')).toHaveAttribute('aria-selected', 'true');
+		await expect(page.getByTestId('reply-blocked')).toHaveCount(0);
 	});
 });

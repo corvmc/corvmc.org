@@ -84,7 +84,7 @@
 
 			<div class="my-1 border-t border-base-300"></div>
 
-			<DropdownMenu.Item class={itemClass} onSelect={onwait}>
+			<DropdownMenu.Item class={itemClass} onSelect={onwait} data-testid="snooze-until-reply">
 				<span class="flex items-center gap-2"><IconSend size={15} />When they reply</span>
 			</DropdownMenu.Item>
 			<p class="px-3 pt-1 pb-1 text-subtle text-xs">

@@ -151,6 +151,7 @@
 					<Button href={entityHref} variant="default" size="sm" outline>View content</Button>
 					<Action
 						action={resolveFlag}
+						data-testid="resolve-flag"
 						label="Resolve / Dismiss"
 						modalTitle="Resolve or dismiss this report"
 						submitLabel={resolveLabel}

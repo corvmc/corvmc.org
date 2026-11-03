@@ -1,7 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
+import { and, eq } from 'drizzle-orm';
+import { groupMember } from '../src/lib/server/db/schema/group';
 import { signInAs } from './fixtures/auth';
+import { readLocalDb } from './fixtures/platform-db';
 import {
 	SEED_BANDMATE_EMAIL,
+	SEED_BANDMATE_ID,
 	SEED_BANDMATE_PASSWORD,
 	SEED_MEMBERS_BAND_SLUG
 } from './fixtures/seed-band-onboarding';
@@ -9,8 +13,25 @@ import {
 	SEED_DRAFT_TITLE,
 	SEED_LED_SLUG,
 	SEED_PUBLISHED_TITLE,
+	SEED_READER_ID,
 	SEED_READER_SLUG
 } from './fixtures/seed-groups';
+
+/** Titles this spec types in itself, then looks for: fixture echo, not copy. */
+const COMPOSED_TITLE = 'E2E composed post';
+const SESSION_TITLE = 'E2E monthly jam';
+
+/** The member's own roster flag for one group, read straight from D1. */
+async function readNotifyAnnouncements(groupId: string, userId: string) {
+	return readLocalDb(async (db) => {
+		const [row] = await db
+			.select({ notify: groupMember.notifyAnnouncements })
+			.from(groupMember)
+			.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)))
+			.limit(1);
+		return row?.notify ?? null;
+	});
+}
 
 /**
  * Announcements on the club page.
@@ -45,8 +66,8 @@ test.describe('reading announcements', () => {
 		// table, and a member must not reach it by any route.
 		await expect(page.getByText(SEED_DRAFT_TITLE)).toHaveCount(0);
 		// And nothing on the page offers them a way to post.
-		await expect(page.getByRole('button', { name: 'New announcement' })).toHaveCount(0);
-		await expect(page.getByRole('button', { name: 'Publish' })).toHaveCount(0);
+		await expect(page.getByTestId('new-announcement')).toHaveCount(0);
+		await expect(page.getByTestId('publish-announcement')).toHaveCount(0);
 	});
 
 	test('a leader sees the draft, marked as one', async ({ page }) => {
@@ -57,7 +78,8 @@ test.describe('reading announcements', () => {
 		await expect(page.getByText(SEED_DRAFT_TITLE)).toBeVisible();
 		// Marked, not merely present: an unpublished post that reads like a
 		// published one is how a leader concludes they already told everybody.
-		await expect(page.getByText('Draft', { exact: true })).toBeVisible();
+		const draftCard = page.getByRole('main').locator('.card').filter({ hasText: SEED_DRAFT_TITLE });
+		await expect(draftCard.getByTestId('announcement-draft')).toBeVisible();
 	});
 });
 
@@ -65,19 +87,18 @@ test.describe('writing announcements', () => {
 	test('a leader writes a draft, and nothing says it was published', async ({ page }) => {
 		await loginAsMember(page);
 		await page.goto(`/member/groups/${SEED_LED_SLUG}`);
-		await expect(page.getByRole('button', { name: 'New announcement' })).toBeVisible({
-			timeout: 15000
-		});
+		await expect(page.getByTestId('new-announcement')).toBeVisible({ timeout: 15000 });
 
-		await page.getByRole('button', { name: 'New announcement' }).click();
+		await page.getByTestId('new-announcement').click();
 		const dialog = page.getByRole('dialog');
-		await dialog.locator('input[name="title"]').fill('E2E composed post');
+		await dialog.locator('input[name="title"]').fill(COMPOSED_TITLE);
 		await dialog.locator('textarea[name="body"]').fill('Written by the composer test.');
-		await dialog.getByRole('button', { name: 'Save draft' }).click();
+		await dialog.locator('button[type="submit"]').click();
 
-		// Saved as a draft: the submit label says so, and so must the result.
-		const composed = page.getByRole('main').getByText('E2E composed post');
+		// Saved as a draft, and the card says so.
+		const composed = page.getByRole('main').locator('.card').filter({ hasText: COMPOSED_TITLE });
 		await expect(composed).toBeVisible({ timeout: 15000 });
+		await expect(composed.getByTestId('announcement-draft')).toBeVisible();
 	});
 
 	test('publishing turns a draft into a post', async ({ page }) => {
@@ -90,8 +111,8 @@ test.describe('writing announcements', () => {
 		// another one. Without the scope this is a strict-mode violation, and with
 		// a `.first()` instead it would silently publish whichever came first.
 		const draftCard = page.getByRole('main').locator('.card').filter({ hasText: SEED_DRAFT_TITLE });
-		await draftCard.getByRole('button', { name: 'Publish' }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Publish' }).click();
+		await draftCard.getByTestId('publish-announcement').click();
+		await page.getByRole('dialog').locator('button[type="submit"]').click();
 
 		// The badge is the assertion, not a toast: it is read back from the row.
 		await expect(
@@ -99,7 +120,7 @@ test.describe('writing announcements', () => {
 				.getByRole('main')
 				.locator('.card')
 				.filter({ hasText: SEED_DRAFT_TITLE })
-				.getByText('Draft', { exact: true })
+				.getByTestId('announcement-draft')
 		).toHaveCount(0, { timeout: 15000 });
 	});
 });
@@ -115,16 +136,19 @@ test.describe('the per-group mute', () => {
 		await loginAsMember(page);
 		await page.goto(`/member/groups/${SEED_READER_SLUG}`);
 
-		const mute = page.getByRole('button', { name: 'Mute announcements' });
+		const mute = page.getByTestId('mute-announcements');
 		await expect(mute).toBeVisible({ timeout: 15000 });
+		expect(await readNotifyAnnouncements(SEED_READER_ID, SEED_BANDMATE_ID)).toBe(true);
 		await mute.click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Mute announcements' }).click();
+		await page.getByRole('dialog').locator('button[type="submit"]').click();
 
-		// The control flips, which is read back from the roster row rather than
-		// from local state — and the member is still on the roster.
-		await expect(page.getByRole('button', { name: 'Unmute announcements' })).toBeVisible({
-			timeout: 15000
-		});
+		// The roster row flips — and the member is still on the roster.
+		await expect
+			.poll(() => readNotifyAnnouncements(SEED_READER_ID, SEED_BANDMATE_ID), {
+				timeout: 15000,
+				intervals: [250, 500, 1000, 2000]
+			})
+			.toBe(false);
 		await expect(page.getByText(SEED_PUBLISHED_TITLE)).toBeVisible();
 	});
 });
@@ -141,16 +165,16 @@ test.describe('the band panel mount', () => {
 		await loginAsMember(page);
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}`);
 
-		await expect(page.getByRole('link', { name: 'Announcements' }).first()).toBeVisible({
+		const announcements = `/band/${SEED_MEMBERS_BAND_SLUG}/announcements`;
+		await expect(page.locator(`a[href="${announcements}"]`).first()).toBeVisible({
 			timeout: 15000
 		});
 
-		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/announcements`);
-		await expect(page.getByRole('heading', { name: 'Announcements' })).toBeVisible({
-			timeout: 15000
-		});
+		await page.goto(announcements);
+		// Render gate: the header mounts with the awaited page query.
+		await expect(page.locator('[data-page-header] h1')).toBeVisible({ timeout: 15000 });
 		// A plain member of this band: they read, they do not write.
-		await expect(page.getByRole('button', { name: 'New announcement' })).toHaveCount(0);
+		await expect(page.getByTestId('new-announcement')).toHaveCount(0);
 	});
 });
 
@@ -165,20 +189,20 @@ test.describe('group sessions', () => {
 		await loginAsMember(page);
 		await page.goto(`/member/groups/${SEED_LED_SLUG}?tab=sessions`);
 
-		await page.getByRole('button', { name: 'New session' }).click();
+		await page.getByTestId('new-session').click();
 		const dialog = page.getByRole('dialog');
-		await dialog.locator('input[name="title"]').fill('E2E monthly jam');
+		await dialog.locator('input[name="title"]').fill(SESSION_TITLE);
 		await dialog.locator('input[name="sessionDate"]').fill('2027-03-18');
 		await dialog.locator('input[name="startTime"]').fill('19:00');
 		await dialog.locator('input[name="endTime"]').fill('21:00');
 		// The checkbox registers with a `b:` prefix so kit coerces it to a boolean.
 		await dialog.locator('input[name="b:reserveRoom"]').check();
-		await dialog.getByRole('button', { name: 'Create session' }).click();
+		await dialog.locator('button[type="submit"]').click();
 
-		const row = page.getByRole('row').filter({ hasText: 'E2E monthly jam' });
+		const row = page.getByRole('row').filter({ hasText: SESSION_TITLE });
 		await expect(row).toBeVisible({ timeout: 15000 });
 		// Read back from the row, not from a toast: this is the fact that
 		// separates a session holding the room from a listing that merely says so.
-		await expect(row.getByText('Room held')).toBeVisible();
+		await expect(row.getByTestId('room-held')).toBeVisible();
 	});
 });

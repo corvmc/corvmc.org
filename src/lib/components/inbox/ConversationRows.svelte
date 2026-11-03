@@ -60,7 +60,9 @@
 					<span class="flex items-center gap-2">
 						<span class="truncate font-medium" class:font-bold={c.unread}>{titleOf(c)}</span>
 						{#if c.pending}
-							<span class="badge shrink-0 badge-sm badge-warning">Request</span>
+							<span class="badge shrink-0 badge-sm badge-warning" data-testid="request-badge"
+								>Request</span
+							>
 						{/if}
 						{#if showInbox && c.groupName}
 							<!-- Which inbox, on the row rather than only in the filter: a
