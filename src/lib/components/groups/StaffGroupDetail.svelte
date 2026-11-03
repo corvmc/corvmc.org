@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import RecordFrame from '$lib/components/ui/RecordFrame.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -68,7 +69,9 @@
 	{variant}
 	{actions}
 	title={group.name}
-	subtitle={group.kind === 'committee' ? 'Committee' : 'Club'}
+	subtitle={group.kind === 'committee'
+		? msg.groups_staff_group_detail_committee()
+		: msg.groups_staff_group_detail_club()}
 >
 	{#snippet header()}
 		<StatusBadge status={isDeactivated ? 'deactivated' : 'active'} />
@@ -86,18 +89,17 @@
 		<!-- Deactivation is the normal end of a program: nothing is removed and
 		     nobody loses their place, so putting it back is one control rather
 		     than a recovery procedure. -->
-		<InfoCard title="Deactivated">
+		<InfoCard title={msg.groups_staff_group_detail_deactivated()}>
 			<p class="text-sm">
-				This group is hidden from the directory and its page. Its roster, its documents and its
-				history are untouched.
+				{msg.groups_staff_group_detail_group_hidden_from_directory_its()}
 			</p>
 			<Action
 				action={reactivateGroup}
-				label="Reactivate"
-				modalTitle="Reactivate group"
-				submitLabel="Reactivate"
+				label={msg.groups_staff_group_detail_reactivate()}
+				modalTitle={msg.groups_staff_group_detail_reactivate_group()}
+				submitLabel={msg.groups_staff_group_detail_reactivate()}
 				confirm="Put {group.name} back in the directory?"
-				successToast="Reactivated"
+				successToast={msg.groups_staff_group_detail_reactivated()}
 				variant="primary"
 				size="sm"
 				onsuccess={() => invalidateAll()}
@@ -113,7 +115,7 @@
 		<RosterImportSummary result={importResult} ondismiss={() => (importResult = null)} />
 	{/if}
 
-	<InfoCard title="Roster">
+	<InfoCard title={msg.groups_staff_group_detail_roster()}>
 		{#snippet action()}
 			<div class="flex gap-1">
 				{#if members.active.length > 0}
@@ -125,14 +127,17 @@
 			</div>
 		{/snippet}
 		{#if members.active.length === 0 && members.pending.length === 0}
-			<EmptyState description="No members yet" />
+			<EmptyState description={msg.groups_staff_group_detail_description()} />
 		{:else}
 			<!-- A position, where there is one, is the name's subline (`getMembers`). -->
-			<RosterTable rows={[...members.active, ...members.pending]} personLabel="Member">
+			<RosterTable
+				rows={[...members.active, ...members.pending]}
+				personLabel={msg.groups_staff_group_detail_person_label()}
+			>
 				{#snippet lead(m)}<StatusBadge status={m.status} />{/snippet}
 				{#snippet columns()}
-					<th class="w-px">Role</th>
-					<th class="whitespace-nowrap">Joined</th>
+					<th class="w-px">{msg.groups_staff_group_detail_role()}</th>
+					<th class="whitespace-nowrap">{msg.groups_staff_group_detail_joined()}</th>
 				{/snippet}
 				{#snippet cells(m)}
 					<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
@@ -143,14 +148,18 @@
 						{@const makeChair = m.role !== 'admin'}
 						<Action
 							action={setStaffGroupRole.for(m.id)}
-							label={makeChair ? 'Make chair' : 'Remove chair'}
+							label={makeChair
+								? msg.groups_staff_group_detail_make_chair()
+								: msg.groups_staff_group_detail_remove_chair()}
 							aria-label={makeChair
-								? `Make ${m.member.title} a chair`
-								: `Remove ${m.member.title} as a chair`}
+								? msg.groups_staff_group_detail_make_chair_2({ title: m.member.title })
+								: msg.groups_staff_group_detail_remove_as_chair({ title: m.member.title })}
 							confirm={makeChair
 								? `Make ${m.member.title} a chair of ${group.name}?`
 								: `Remove ${m.member.title} as a chair? They stay on the roster.`}
-							successToast={makeChair ? 'Chair added' : 'Chair removed'}
+							successToast={makeChair
+								? msg.groups_staff_group_detail_chair_added()
+								: msg.groups_staff_group_detail_chair_removed()}
 							variant="ghost"
 							size="xs"
 							onsuccess={() => invalidateAll()}
@@ -184,9 +193,9 @@
 	<!-- One line each, so labelled facts rather than cards of their own (#1078). -->
 	<DefinitionList>
 		<!-- No chairs is legal: the program runs, and staff add one when appointed. -->
-		<Fact label="Chairs">
+		<Fact label={msg.groups_staff_group_detail_chairs()}>
 			{#if group.chairs.length === 0}
-				<span class="text-fg-2">No chairs</span>
+				<span class="text-fg-2">{msg.groups_staff_group_detail_no_chairs()}</span>
 			{:else}
 				<span class="flex flex-wrap gap-2">
 					{#each group.chairs as chair (chair.id)}
@@ -195,9 +204,10 @@
 				</span>
 			{/if}
 		</Fact>
-		<Fact label="Public page">
+		<Fact label={msg.groups_staff_group_detail_public_page()}>
 			{#if group.visibility === 'public'}
-				<a class="link link-primary" href={resolve(`/groups/${group.slug}`)}>/groups/{group.slug}</a
+				<a class="link link-primary" href={resolve(`/groups/${group.slug}`)}
+					>{msg.groups_staff_group_detail_groups({ slug: group.slug })}</a
 				>
 			{:else}
 				<span class="text-fg-2">
@@ -210,26 +220,25 @@
 
 	{#if variant === 'page'}
 		<ActivityFeedCard
-			title="History"
+			title={msg.groups_staff_group_detail_history()}
 			query={(limit) => getGroupHistory(limit ? { id, limit } : { id })}
 			toRow={feedItemRow}
-			empty={{ title: 'No recorded changes' }}
+			empty={{ title: msg.groups_staff_group_detail_no_recorded_changes() }}
 		/>
 	{/if}
 
 	{#if !isDeactivated}
-		<InfoCard title="End this program">
+		<InfoCard title={msg.groups_staff_group_detail_end_program()}>
 			<p class="text-sm">
-				Deactivating hides it from the directory and its public page. Nothing is deleted, no member
-				loses their place, and it can be put back.
+				{msg.groups_staff_group_detail_deactivating_hides_from_directory()}
 			</p>
 			<Action
 				action={deactivateGroup}
-				label="Deactivate"
-				modalTitle="Deactivate group"
-				submitLabel="Deactivate"
+				label={msg.groups_staff_group_detail_deactivate()}
+				modalTitle={msg.groups_staff_group_detail_deactivate_group()}
+				submitLabel={msg.groups_staff_group_detail_deactivate()}
 				confirm="Deactivate {group.name}? Its roster and history stay intact and you can reactivate it later."
-				successToast="Deactivated"
+				successToast={msg.groups_staff_group_detail_deactivated()}
 				variant="error"
 				size="sm"
 				outline

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** The create and edit forms share every field; `value` pre-fills the edit. */
 	import { Field } from '$lib/components/ui/Form';
 	import type { createRenewal } from '$lib/remote/renewals.remote';
@@ -31,39 +32,49 @@
 <Field
 	field={fields.name}
 	type="text"
-	label="Name"
-	description="“General liability insurance”, “OLCC special event license”."
+	label={m.renewal_renewal_fields_name()}
+	description={m.renewal_renewal_fields_general_liability_insurance_olcc_spec()}
 	value={value?.name ?? ''}
 />
 <Field
 	field={fields.kind}
 	type="select"
-	label="Kind"
+	label={m.renewal_renewal_fields_kind()}
 	options={kindOptions}
 	value={value?.kind ?? 'permit'}
 />
 <Field
 	field={fields.issuer}
 	type="text"
-	label="Issued by"
-	description="The city, the OLCC, the insurer."
+	label={m.renewal_renewal_fields_issued_by()}
+	description={m.renewal_renewal_fields_city_olcc_insurer()}
 	value={value?.issuer ?? ''}
 />
 <Field
 	field={fields.reference}
 	type="text"
-	label="Reference"
-	description="The permit, license or policy number."
+	label={m.renewal_renewal_fields_reference()}
+	description={m.renewal_renewal_fields_permit_license_policy_number()}
 	value={value?.reference ?? ''}
 />
-<Field field={fields.expiresOn} type="date" label="Expires" value={value?.expiresOn ?? ''} />
+<Field
+	field={fields.expiresOn}
+	type="date"
+	label={m.renewal_renewal_fields_expires()}
+	value={value?.expiresOn ?? ''}
+/>
 <Field
 	field={fields.responsibleUserId}
 	type="select"
-	label="Responsible"
-	description="Gets the reminders. With nobody named, everyone who manages renewals does."
-	placeholder="Nobody named"
+	label={m.renewal_renewal_fields_responsible()}
+	description={m.renewal_renewal_fields_gets_reminders_with_nobody_named()}
+	placeholder={m.renewal_renewal_fields_placeholder()}
 	options={assigneeOptions}
 	value={value?.responsibleUserId ?? ''}
 />
-<Field field={fields.notes} type="textarea" label="Notes" value={value?.notes ?? ''} />
+<Field
+	field={fields.notes}
+	type="textarea"
+	label={m.renewal_renewal_fields_notes()}
+	value={value?.notes ?? ''}
+/>

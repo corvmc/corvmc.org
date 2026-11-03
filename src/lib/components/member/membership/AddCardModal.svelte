@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
@@ -66,32 +67,34 @@
 		// confirmed twice, and a modal that reopened onto a spent secret would
 		// fail with nothing on screen to explain why.
 		clientSecret = null;
-		toast.success('Card saved');
+		toast.success(m.member_membership_add_card_modal_toast());
 	}
 </script>
 
-<Modal bind:open title="Add a card">
+<Modal bind:open title={m.member_membership_add_card_modal_title()}>
 	{#if errorMessage}
 		<Alert type="error">{errorMessage}</Alert>
 	{:else if !clientSecret}
-		<p class="py-4 text-muted">Getting things ready…</p>
+		<p class="py-4 text-muted">{m.member_membership_add_card_modal_getting_things_ready()}</p>
 	{:else if driver === 'fake'}
 		<Alert type="warning">
-			No card is stored here. The fake payment gateway is active, so this stands in for Stripe's own
-			card form.
+			{m.member_membership_add_card_modal_no_card_stored_here_fake()}
 		</Alert>
 
 		<div class="mt-4">
 			<Form remote={payFakeSetupIntent} onsuccess={done}>
 				<input {...fields.setupIntentId.as('hidden', setupIntentId)} />
 				<FormField
-					label="Card number"
+					label={m.member_membership_add_card_modal_card_number()}
 					name="cardNumber"
 					type="text"
 					field={fields.cardNumber}
-					description="Any number works here; the last four become the card on file."
+					description={m.member_membership_add_card_modal_description()}
 				/>
-				<SubmitButton label="Save card" successLabel="Saved" />
+				<SubmitButton
+					label={m.member_membership_add_card_modal_save_card()}
+					successLabel={m.member_membership_add_card_modal_success_label()}
+				/>
 			</Form>
 		</div>
 	{:else}

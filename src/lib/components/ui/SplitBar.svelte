@@ -70,7 +70,7 @@
 		otherFloorCents = 0,
 		/** A fixed, unmovable slice taken off the top (card processing). */
 		fixedCents = 0,
-		fixedLabel = 'Fees',
+		fixedLabel = m.ui_split_bar_fixed_label(),
 		/** Turns the fixed slice gold — somebody else is covering it now. */
 		fixedCovered = false,
 		valueLabel,

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -33,20 +34,25 @@
 	const fields = updateStaffGroup.fields;
 
 	const policyOptions = [
-		{ value: 'invite_only', label: 'Invite only — someone adds you' },
-		{ value: 'open', label: 'Open — any member joins themselves' },
-		{ value: 'by_application', label: 'By application — you ask, a chair approves' }
+		{ value: 'invite_only', label: m.groups_invite_only_someone_adds() },
+		{ value: 'open', label: m.groups_open_any_member_joins_themselves() },
+		{ value: 'by_application', label: m.groups_by_application_ask_chair_approves() }
 	];
 
 	const visibilityOptions = [
-		{ value: 'public', label: 'Public — anyone can find it' },
-		{ value: 'members', label: 'Members — signed-in members only' },
-		{ value: 'hidden', label: 'Hidden — not listed anywhere' }
+		{ value: 'public', label: m.groups_public_anyone_can_find() },
+		{ value: 'members', label: m.groups_members_signed_members_only() },
+		{ value: 'hidden', label: m.groups_hidden_not_listed_anywhere() }
 	];
 </script>
 
-<InfoCard title="Enrollment">
-	<Form remote={updateStaffGroup} guard successToast="Saved" onsuccess={() => invalidateAll()}>
+<InfoCard title={m.groups_group_settings_form_title()}>
+	<Form
+		remote={updateStaffGroup}
+		guard
+		successToast={m.groups_saved()}
+		onsuccess={() => invalidateAll()}
+	>
 		<input {...fields.groupId.as('hidden', groupId)} />
 
 		<div class="space-y-4">
@@ -59,31 +65,31 @@
 				<FormField
 					field={fields.joinPolicy}
 					type="select"
-					label="How people join"
+					label={m.groups_group_settings_form_how_people_join()}
 					value={joinPolicy}
 					options={policyOptions}
-					description="Invitations work the same way under all three — this decides what someone can do unaided."
+					description={m.groups_group_settings_form_invitations_work_same_way_under()}
 				/>
 			{/if}
 
 			<FormField
 				field={fields.joinInstructions}
 				type="textarea"
-				label="Joining instructions"
+				label={m.groups_group_settings_form_joining_instructions()}
 				value={joinInstructions ?? ''}
-				description="Shown beside the Join button, or over the application box. “Third Thursday, bring a horn, charts provided.”"
+				description={m.groups_group_settings_form_shown_beside_join_button_over()}
 			/>
 
 			<FormField
 				field={fields.visibility}
 				type="select"
-				label="Visibility"
+				label={m.groups_visibility()}
 				value={visibility}
 				options={visibilityOptions}
 			/>
 
 			<div class="flex justify-end">
-				<SubmitButton label="Save" />
+				<SubmitButton label={m.groups_save()} />
 			</div>
 		</div>
 	</Form>

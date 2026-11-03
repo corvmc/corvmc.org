@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import {
 		IconPlayerPlayFilled,
@@ -195,12 +196,12 @@
 			onclick={() => setWidget('open')}
 		>
 			<IconRadio size={16} />
-			CMC Radio
+			{m.radio_radio_player_cmc_radio()}
 		</button>
 	{:else}
 		<div
 			class="fixed inset-x-0 bottom-0 z-40 border-t border-base-300 bg-base-100 shadow-lg"
-			aria-label="CMC Radio"
+			aria-label={m.radio_radio_player_cmc_radio()}
 		>
 			<!-- Where the station is in the current track. `aria-hidden` because the
 			     times are already in the text below it. -->
@@ -212,7 +213,9 @@
 				<button
 					type="button"
 					class="btn btn-circle btn-primary btn-sm"
-					aria-label={playing ? 'Pause CMC Radio' : 'Play CMC Radio'}
+					aria-label={playing
+						? m.radio_radio_player_pause_cmc_radio()
+						: m.radio_radio_player_play_cmc_radio()}
 					onclick={toggle}
 				>
 					{#if playing}
@@ -228,11 +231,12 @@
 
 				<div class="min-w-0 flex-1">
 					<p class="flex items-center gap-1 text-subtle">
-						<IconRadio size={12} /> CMC Radio
+						<IconRadio size={12} />
+						{m.radio_radio_player_cmc_radio()}
 					</p>
 					<p class="truncate">
 						<span class="font-medium">{current.trackTitle}</span>
-						<span class="text-muted">by</span>
+						<span class="text-muted">{m.radio_radio_player_by()}</span>
 						<!-- The whole reason the widget exists: whoever is playing is one
 						     click from their profile. -->
 						<a class="link" href={resolve(`/directory/bands/${current.bandSlug}`)}
@@ -248,7 +252,7 @@
 				<button
 					type="button"
 					class="btn btn-circle btn-ghost btn-sm"
-					aria-label="Minimize CMC Radio"
+					aria-label={m.radio_radio_player_minimize_cmc_radio()}
 					onclick={() => setWidget('collapsed')}
 				>
 					<IconChevronUp size={16} />
@@ -256,7 +260,7 @@
 				<button
 					type="button"
 					class="btn btn-circle btn-ghost btn-sm"
-					aria-label="Close CMC Radio"
+					aria-label={m.radio_radio_player_close_cmc_radio()}
 					onclick={() => setWidget('hidden')}
 				>
 					<IconX size={16} />

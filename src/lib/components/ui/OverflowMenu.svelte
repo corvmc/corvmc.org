@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { IconDots } from '@tabler/icons-svelte';
 	import { setButtonsAsMenuItems } from './Button.svelte';
 
 	let {
-		label = 'More actions',
+		label = m.ui_overflow_menu_label(),
 		children
 	}: {
 		/** The trigger's accessible name; it shows no text of its own. */

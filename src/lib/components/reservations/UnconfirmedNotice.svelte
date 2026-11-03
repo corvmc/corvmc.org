@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { formatDateShort } from '$lib/utils/format';
 	import {
 		confirmWindowOpensAt,
@@ -31,7 +32,11 @@
 
 <div class={className}>
 	{#if pending}
-		<p>Confirmation opens {formatDateShort(confirmWindowOpensAt(startsAt))}.</p>
+		<p>
+			{m.reservations_unconfirmed_notice_confirmation_opens({
+				formatDateShort: formatDateShort(confirmWindowOpensAt(startsAt))
+			})}
+		</p>
 	{/if}
 	{#if release}
 		<p>{UNCONFIRMED_RELEASE_NOTICE}</p>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { Turnstile } from 'svelte-turnstile';
 	import ProfileSection from './ProfileSection.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
@@ -32,9 +33,9 @@
 	const fields = $derived(rf.fields);
 </script>
 
-<ProfileSection title="Booking">
+<ProfileSection title={m.directory_profile_contact_form_title()}>
 	{#if submitted}
-		<p class="contact__done">Sent. {bandName} will get back to you.</p>
+		<p class="contact__done">{m.directory_profile_contact_form_sent_will_get_back({ bandName })}</p>
 	{:else}
 		<Form
 			remote={rf}
@@ -50,9 +51,24 @@
 			class="contact__form"
 		>
 			<input {...fields.slug.as('hidden', slug)} />
-			<FormField field={fields.name} type="text" label="Your name" required />
-			<FormField field={fields.email} type="email" label="Your email" required />
-			<FormField field={fields.message} type="textarea" label="Message" required />
+			<FormField
+				field={fields.name}
+				type="text"
+				label={m.directory_profile_contact_form_name()}
+				required
+			/>
+			<FormField
+				field={fields.email}
+				type="email"
+				label={m.directory_profile_contact_form_email()}
+				required
+			/>
+			<FormField
+				field={fields.message}
+				type="textarea"
+				label={m.directory_profile_contact_form_message()}
+				required
+			/>
 			<Turnstile
 				siteKey={TURNSTILE_SITE_KEY}
 				responseFieldName={TURNSTILE_RESPONSE_FIELD}
@@ -62,7 +78,7 @@
 			{#if failure}
 				<p class="contact__error" role="alert">{failure}</p>
 			{/if}
-			<SubmitButton label="Send" />
+			<SubmitButton label={m.directory_profile_contact_form_send()} />
 		</Form>
 	{/if}
 </ProfileSection>

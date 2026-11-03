@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** Ballots as a list, for the member and staff index pages. */
 	import { resolve } from '$app/paths';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -41,11 +42,11 @@
 
 <Table>
 	{#snippet head()}
-		<th class="w-px"><span class="sr-only">Status</span></th>
-		<th>Ballot</th>
-		<th>Closes</th>
+		<th class="w-px"><span class="sr-only">{m.ballot_ballot_table_status()}</span></th>
+		<th>{m.ballot_ballot_table_ballot()}</th>
+		<th>{m.ballot_ballot_table_closes()}</th>
 		{#if panel === 'member'}
-			<th class="col-support">Your part</th>
+			<th class="col-support">{m.ballot_ballot_table_part()}</th>
 		{/if}
 	{/snippet}
 	{#each rows as r (r.id)}

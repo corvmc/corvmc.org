@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { formatSlotTime, toLocalTime } from '$lib/utils/format';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { errorMessage } from '$lib/error-message';
@@ -94,7 +95,9 @@
 	{#if checked.error}
 		<!-- No `data-conflicts` here: the check never settled, so nothing may read it as clear. -->
 		<Alert type="warning">
-			Could not check this time for conflicts: {errorMessage(checked.error)}
+			{m.reservations_conflict_warnings_could_not_check_time_conflict({
+				errorMessage: errorMessage(checked.error)
+			})}
 		</Alert>
 	{:else}
 		<!-- `data-conflicts` marks the settled state — the answer is in, whether or
@@ -119,14 +122,16 @@
 	{#snippet pending()}
 		<div class="flex items-center gap-2 py-1">
 			<span class="loading loading-xs loading-spinner"></span>
-			<span class="text-subtle">Checking conflicts...</span>
+			<span class="text-subtle">{m.reservations_conflict_warnings_checking_conflicts()}</span>
 		</div>
 	{/snippet}
 
 	<!-- No `data-conflicts` here: the check never settled, so nothing may read it as clear. -->
 	{#snippet failed(error, reset)}
 		<Alert type="warning" {reset}>
-			Could not check this time for conflicts: {errorMessage(error)}
+			{m.reservations_conflict_warnings_could_not_check_time_conflict({
+				errorMessage: errorMessage(error)
+			})}
 		</Alert>
 	{/snippet}
 </svelte:boundary>

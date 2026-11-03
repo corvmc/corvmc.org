@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import {
 		IconGripVertical,
 		IconChevronUp,
@@ -90,7 +91,7 @@
 			type="button"
 			class="flex h-[22px] w-6 items-center justify-center rounded-sm hover:bg-white/15
 			       disabled:pointer-events-none disabled:opacity-25"
-			aria-label="Move {label} up"
+			aria-label={m.band_site_band_site_block_chrome_move_up({ label })}
 			disabled={index === 0}
 			onclick={() => onMove(-1)}
 		>
@@ -100,7 +101,7 @@
 			type="button"
 			class="flex h-[22px] w-6 items-center justify-center rounded-sm hover:bg-white/15
 			       disabled:pointer-events-none disabled:opacity-25"
-			aria-label="Move {label} down"
+			aria-label={m.band_site_band_site_block_chrome_move_down({ label })}
 			disabled={index === total - 1}
 			onclick={() => onMove(1)}
 		>
@@ -109,7 +110,9 @@
 		<button
 			type="button"
 			class="flex h-[22px] w-6 items-center justify-center rounded-sm hover:bg-white/15"
-			aria-label={hidden ? `Publish ${label}` : `Stop publishing ${label}`}
+			aria-label={hidden
+				? m.band_site_band_site_block_chrome_publish({ label })
+				: m.band_site_band_site_block_chrome_stop_publishing({ label })}
 			aria-pressed={!hidden}
 			onclick={onToggleHidden}
 		>
@@ -123,7 +126,7 @@
 			<button
 				type="button"
 				class="flex h-[22px] w-6 items-center justify-center rounded-sm hover:bg-white/15"
-				aria-label="{label} settings"
+				aria-label={m.band_site_band_site_block_chrome_settings({ label })}
 				aria-expanded={open}
 				onclick={onToggleOpen}
 			>

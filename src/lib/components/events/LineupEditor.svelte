@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 
 	export type LineupChip = {
@@ -117,7 +118,7 @@
 						size="xs"
 						disabled={i === 0}
 						onclick={() => move(i, -1)}
-						aria-label="Move {chip.name} up">↑</Button
+						aria-label={msg.events_lineup_editor_move_up({ name: chip.name })}>↑</Button
 					>
 					<Button
 						type="button"
@@ -125,7 +126,7 @@
 						size="xs"
 						disabled={i === value.length - 1}
 						onclick={() => move(i, 1)}
-						aria-label="Move {chip.name} down">↓</Button
+						aria-label={msg.events_lineup_editor_move_down({ name: chip.name })}>↓</Button
 					>
 					<Button
 						type="button"
@@ -134,7 +135,7 @@
 						class="text-error"
 						disabled={!!ownerBandId && chip.bandId === ownerBandId}
 						onclick={() => remove(i)}
-						aria-label="Remove {chip.name}">✕</Button
+						aria-label={msg.events_lineup_editor_remove({ name: chip.name })}>✕</Button
 					>
 				</div>
 			{/if}
@@ -142,7 +143,7 @@
 	{/each}
 
 	{#if readonly && value.length === 0}
-		<p class="text-subtle">No other bands on this bill.</p>
+		<p class="text-subtle">{msg.events_lineup_editor_no_other_bands_bill()}</p>
 	{/if}
 
 	{#if !readonly}
@@ -150,7 +151,7 @@
 			<input
 				type="text"
 				class="input w-full"
-				placeholder="Add a band — type any name and press Enter"
+				placeholder={msg.events_lineup_editor_placeholder()}
 				bind:value={query}
 				{onkeydown}
 			/>
@@ -161,7 +162,7 @@
 						<li>
 							<button type="button" onclick={() => add({ name: b.name, bandId: b.id })}>
 								{b.name}
-								<span class="badge badge-ghost badge-xs">on CMC</span>
+								<span class="badge badge-ghost badge-xs">{msg.events_lineup_editor_cmc()}</span>
 							</button>
 						</li>
 					{/each}
@@ -169,8 +170,7 @@
 			{/if}
 
 			<p class="mt-1 text-subtle">
-				Anyone can go on the bill. Bands with a CMC account are asked to confirm before the show
-				appears on their own profile — everyone else is listed as plain text.
+				{msg.events_lineup_editor_anyone_can_go_bill_bands()}
 			</p>
 		</div>
 	{/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { IconPlayerPlayFilled, IconPlayerPauseFilled } from '@tabler/icons-svelte';
 	import { formatTrackLength } from '$lib/utils/audio';
 
@@ -13,7 +14,7 @@
 		tracks,
 		/** Rendered after each row — the band panel puts rename and delete here. */
 		rowActions,
-		empty = 'No tracks yet.'
+		empty = m.audio_track_list_empty()
 	}: {
 		tracks: PlayableTrack[];
 		rowActions?: import('svelte').Snippet<[PlayableTrack]>;
@@ -100,7 +101,9 @@
 					<button
 						type="button"
 						class="btn btn-circle btn-ghost btn-sm"
-						aria-label={active && !paused ? `Pause ${track.title}` : `Play ${track.title}`}
+						aria-label={active && !paused
+							? m.audio_track_list_pause({ title: track.title })
+							: m.audio_track_list_play({ title: track.title })}
 						onclick={() => toggle(track)}
 					>
 						{#if active && !paused}

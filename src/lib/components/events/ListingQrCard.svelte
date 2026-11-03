@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import QRCode from 'qrcode-svg';
 	import { page } from '$app/state';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -62,10 +63,10 @@
 	}
 </script>
 
-<InfoCard title="QR code">
+<InfoCard title={m.events_listing_qr_card_title()}>
 	{#if !published}
 		<Alert type="warning" class="mb-3">
-			This listing is not published yet, so the link shows nothing until it is.
+			{m.events_listing_qr_card_listing_not_published_yet_so()}
 		</Alert>
 	{/if}
 
@@ -81,10 +82,12 @@
 			<p class="text-sm break-all">{href}</p>
 			<div class="flex flex-wrap gap-2">
 				<Button size="sm" onclick={copyLink}>{copied ? 'Copied' : 'Copy link'}</Button>
-				<Button size="sm" href={svgHref} download="{slug}-qr.svg">Download SVG</Button>
-				<Button size="sm" onclick={downloadPng}>Download PNG</Button>
+				<Button size="sm" href={svgHref} download="{slug}-qr.svg"
+					>{m.events_listing_qr_card_download_svg()}</Button
+				>
+				<Button size="sm" onclick={downloadPng}>{m.events_listing_qr_card_download_png()}</Button>
 			</div>
-			<p class="text-muted text-xs">SVG scales to any print size; PNG is 1200px.</p>
+			<p class="text-muted text-xs">{m.events_listing_qr_card_svg_scales_any_print_size()}</p>
 		</div>
 	</div>
 </InfoCard>

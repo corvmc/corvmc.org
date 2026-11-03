@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	/**
 	 * One ballot, for everyone who can see it: the vote for an elector, the
 	 * result once it may be read, and the draft controls for its managers.
@@ -48,8 +49,8 @@
 	const optionLabel = $derived(new Map(b.options.map((o) => [o.id, o.label])));
 	const voteOptions = $derived(b.options.map((o) => ({ value: o.id, label: o.label })));
 	const outcomeOptions = [
-		{ value: 'passed', label: 'Passed: it authorises the work' },
-		{ value: 'not_passed', label: 'Not passed' }
+		{ value: 'passed', label: msg.ballot_ballot_detail_passed_authorises_work() },
+		{ value: 'not_passed', label: msg.ballot_ballot_detail_not_passed() }
 	];
 	const certifierOptions = $derived(
 		(data.certifierChoices ?? []).map((m) => ({ value: m.id, label: m.name }))
@@ -85,10 +86,10 @@
 	{#if viewer.isManager && b.status === 'draft'}
 		<Action
 			action={updateBallotDraft}
-			label="Edit"
-			modalTitle="Edit the draft"
-			submitLabel="Save"
-			successToast="Draft saved"
+			label={msg.ballot_ballot_detail_edit()}
+			modalTitle={msg.ballot_ballot_detail_edit_draft()}
+			submitLabel={msg.ballot_ballot_detail_save()}
+			successToast={msg.ballot_ballot_detail_draft_saved()}
 			variant="ghost"
 			size="sm"
 		>
@@ -97,33 +98,33 @@
 				<FormField
 					field={updateBallotDraft.fields.title}
 					type="text"
-					label="Question"
+					label={msg.ballot_ballot_detail_question()}
 					value={b.title}
 				/>
 				<FormField
 					field={updateBallotDraft.fields.description}
 					type="textarea"
-					label="Background (optional)"
+					label={msg.ballot_ballot_detail_background_optional()}
 					value={b.description ?? ''}
 				/>
 				<FormField
 					field={updateBallotDraft.fields.options}
 					type="textarea"
-					label="Choices"
-					description="One per line, between 2 and 10."
+					label={msg.ballot_ballot_detail_choices()}
+					description={msg.ballot_ballot_detail_one_per_line_between_2()}
 					value={b.options.map((o) => o.label).join('\n')}
 				/>
 				<FormField
 					field={updateBallotDraft.fields.closesOn}
 					type="date"
-					label="Voting closes at the end of"
+					label={msg.ballot_ballot_detail_voting_closes_at_end()}
 					value={closesOn}
 				/>
 				{#if b.kind === 'group'}
 					<FormField
 						field={updateBallotDraft.fields.certifierId}
 						type="select"
-						label="Certifier"
+						label={msg.ballot_ballot_detail_certifier()}
 						options={certifierOptions}
 						value={b.certifier?.id ?? ''}
 					/>
@@ -134,10 +135,10 @@
 		</Action>
 		<Action
 			action={openBallotForm}
-			label="Open voting"
-			modalTitle="Open voting"
-			submitLabel="Open"
-			successToast="Voting is open"
+			label={msg.ballot_ballot_detail_open_voting()}
+			modalTitle={msg.ballot_ballot_detail_open_voting()}
+			submitLabel={msg.ballot_ballot_detail_open()}
+			successToast={msg.ballot_ballot_detail_voting_open()}
 			size="sm"
 		>
 			{#snippet form()}
@@ -154,10 +155,10 @@
 	{#if viewer.isManager && (b.status === 'open' || b.status === 'closed')}
 		<Action
 			action={changeBallotCertifier}
-			label="Change certifier"
-			modalTitle="Change the certifier"
-			submitLabel="Save"
-			successToast="Certifier changed"
+			label={msg.ballot_ballot_detail_change_certifier()}
+			modalTitle={msg.ballot_ballot_detail_change_certifier_2()}
+			submitLabel={msg.ballot_ballot_detail_save()}
+			successToast={msg.ballot_ballot_detail_certifier_changed()}
 			variant="ghost"
 			size="sm"
 		>
@@ -167,14 +168,14 @@
 					<FormField
 						field={changeBallotCertifier.fields.certifierId}
 						type="select"
-						label="Certifier"
+						label={msg.ballot_ballot_detail_certifier()}
 						options={certifierOptions}
 						value={b.certifier?.id ?? ''}
 					/>
 				{:else}
 					<MemberPicker
 						field={changeBallotCertifier.fields.certifierId}
-						label="Certifier"
+						label={msg.ballot_ballot_detail_certifier()}
 						bind:value={certifierId}
 						bind:name={certifierName}
 					/>
@@ -185,11 +186,11 @@
 	{#if viewer.isManager && b.status !== 'certified' && b.status !== 'cancelled'}
 		<Action
 			action={cancelBallotForm}
-			label="Cancel ballot"
-			modalTitle="Cancel this ballot"
-			submitLabel="Cancel ballot"
+			label={msg.ballot_ballot_detail_cancel_ballot()}
+			modalTitle={msg.ballot_ballot_detail_cancel_ballot_2()}
+			submitLabel={msg.ballot_ballot_detail_cancel_ballot()}
 			submitVariant="error"
-			successToast="Ballot cancelled"
+			successToast={msg.ballot_ballot_detail_ballot_cancelled()}
 			variant="error"
 			outline
 			size="sm"
@@ -197,41 +198,46 @@
 			{#snippet form()}
 				<input {...cancelBallotForm.fields.ballotId.as('hidden', b.id)} />
 				<p class="mb-3">
-					Cancelling is final. No result is ever shown for a cancelled ballot, including votes
-					already cast.
+					{msg.ballot_ballot_detail_cancelling_final_no_result_ever()}
 				</p>
-				<FormField field={cancelBallotForm.fields.reason} type="textarea" label="Why" />
+				<FormField
+					field={cancelBallotForm.fields.reason}
+					type="textarea"
+					label={msg.ballot_ballot_detail_why()}
+				/>
 			{/snippet}
 		</Action>
 	{/if}
 	{#if viewer.isCertifier && (b.status === 'closed' || data.needsOutcome)}
 		<Action
 			action={certifyBallotForm}
-			label={data.needsOutcome ? 'Record the outcome' : 'Certify the result'}
-			modalTitle={data.needsOutcome ? 'Record the outcome' : 'Certify the result'}
-			submitLabel={data.needsOutcome ? 'Record' : 'Certify'}
-			successToast={data.needsOutcome ? 'Outcome recorded' : 'Result certified and published'}
+			label={data.needsOutcome
+				? msg.ballot_ballot_detail_record_outcome()
+				: msg.ballot_ballot_detail_certify_result()}
+			modalTitle={data.needsOutcome
+				? msg.ballot_ballot_detail_record_outcome()
+				: msg.ballot_ballot_detail_certify_result()}
+			submitLabel={data.needsOutcome
+				? msg.ballot_ballot_detail_record()
+				: msg.ballot_ballot_detail_certify()}
+			successToast={data.needsOutcome
+				? msg.ballot_ballot_detail_outcome_recorded()
+				: msg.ballot_ballot_detail_result_certified_published()}
 			size="sm"
 			data-testid="certify-ballot"
 		>
 			{#snippet form()}
 				<input {...certifyBallotForm.fields.ballotId.as('hidden', b.id)} />
 				<p class="mb-3">
-					{#if data.needsOutcome}
-						This result was certified before the outcome was recorded. Say whether it authorises the
-						work. This cannot be changed afterwards.
-					{:else}
-						Certifying fixes the result below as the official one and publishes it to every member.
-						It cannot be undone.
-					{/if}
+					{#if data.needsOutcome}{msg.ballot_ballot_detail_result_was_certified_before_outcome()}{:else}{msg.ballot_ballot_detail_certifying_fixes_result_below_as()}{/if}
 				</p>
 				<FormField
 					field={certifyBallotForm.fields.outcome}
 					type="select"
-					label="Outcome"
-					placeholder="Choose one"
+					label={msg.ballot_ballot_detail_outcome()}
+					placeholder={msg.ballot_ballot_detail_placeholder()}
 					options={outcomeOptions}
-					description="Your call, not the leading choice. Not passed declines the suggestion this decides, with the result as the reason."
+					description={msg.ballot_ballot_detail_call_not_leading_choice_not()}
 				/>
 			{/snippet}
 		</Action>
@@ -240,24 +246,24 @@
 
 <PageContent width="3xl">
 	{#if decides.suggestion || decides.project || data.authorised || data.startProject}
-		<InfoCard title="What this decides">
+		<InfoCard title={msg.ballot_ballot_detail_what_decides()}>
 			<DefinitionList>
 				{#if decides.suggestion}
-					<Fact label="Suggestion">
+					<Fact label={msg.ballot_ballot_detail_suggestion()}>
 						<a class="link" href={suggestionHref}>{decides.suggestion.title}</a>
 						<StatusBadge status={decides.suggestion.status} label />
 					</Fact>
 				{/if}
 				{#if decides.project}
 					{@const href = projectHref(decides.project.id)}
-					<Fact label="Project">
+					<Fact label={msg.ballot_ballot_detail_project()}>
 						{#if href}<a class="link" {href}>{decides.project.name}</a>{:else}{decides.project
 								.name}{/if}
 					</Fact>
 				{/if}
 				{#if b.status === 'certified'}
 					<Fact
-						label="Outcome"
+						label={msg.ballot_ballot_detail_outcome()}
 						value={data.passed === null
 							? 'Not recorded by the certifier'
 							: data.passed
@@ -267,7 +273,7 @@
 				{/if}
 				{#if data.authorised}
 					{@const href = projectHref(data.authorised.id)}
-					<Fact label="Became the project">
+					<Fact label={msg.ballot_ballot_detail_became_project()}>
 						{#if href}<a class="link" {href}>{data.authorised.name}</a>{:else}{data.authorised
 								.name}{/if}
 						<StatusBadge status={data.authorised.status} label />
@@ -279,10 +285,10 @@
 				<div class="mt-3">
 					<Action
 						action={startProjectFromBallotForm}
-						label="Start project"
-						modalTitle="Start the project this ballot authorised"
-						submitLabel="Start"
-						successToast="Project started"
+						label={msg.ballot_ballot_detail_start_project()}
+						modalTitle={msg.ballot_ballot_detail_start_project_ballot_authorised()}
+						submitLabel={msg.ballot_ballot_detail_start()}
+						successToast={msg.ballot_ballot_detail_project_started()}
 						variant="primary"
 						size="sm"
 						onsuccess={(r) => {
@@ -298,15 +304,23 @@
 									? ' and to the suggestion it decided, which moves to Planned with it'
 									: ''}.
 							</p>
-							<Field field={startFields.name} type="text" label="Project name" value={start.name} />
+							<Field
+								field={startFields.name}
+								type="text"
+								label={msg.ballot_ballot_detail_project_name()}
+								value={start.name}
+							/>
 							<Field
 								field={startFields.groupId}
 								type="select"
-								label="Owning committee"
+								label={msg.ballot_ballot_detail_owning_committee()}
 								options={start.committees.map((c) => ({ value: c.id, label: c.name }))}
-								description="Only a committee can own a project. Leave blank to decide later."
+								description={msg.ballot_ballot_detail_only_committee_can_own_project()}
 							/>
-							<MoneyField field={startFields.budgetCents} label="Budget" />
+							<MoneyField
+								field={startFields.budgetCents}
+								label={msg.ballot_ballot_detail_budget()}
+							/>
 						{/snippet}
 					</Action>
 				</div>
@@ -315,7 +329,11 @@
 	{/if}
 
 	{#if b.status === 'cancelled'}
-		<Alert type="warning">This ballot was cancelled: {b.cancelReason}</Alert>
+		<Alert type="warning"
+			>{msg.ballot_ballot_detail_ballot_was_cancelled({
+				cancelReason: b.cancelReason ?? ''
+			})}</Alert
+		>
 	{:else if b.status === 'certified' && b.certifiedAt}
 		<Alert type="success">
 			Certified by {b.certifier?.name ?? 'the certifier'} on {formatDateShortYear(b.certifiedAt)}.
@@ -330,18 +348,16 @@
 	{/if}
 
 	{#if b.description}
-		<InfoCard title="Background">
+		<InfoCard title={msg.ballot_ballot_detail_background()}>
 			<p class="whitespace-pre-wrap">{b.description}</p>
 		</InfoCard>
 	{/if}
 
 	{#if viewer.isElector && b.status === 'open'}
-		<InfoCard title="Your vote">
+		<InfoCard title={msg.ballot_ballot_detail_vote()}>
 			{#if secret && data.myVote?.voted}
 				<p>
-					Your vote is in. It is secret: the app records that you voted and adds one to your
-					choice's count, with nothing linking the two, so nobody can see how you voted. It cannot
-					be changed.
+					{msg.ballot_ballot_detail_vote_secret_app_records_voted()}
 				</p>
 			{:else}
 				{#if data.myVote?.optionId}
@@ -351,38 +367,44 @@
 					</p>
 				{:else if secret}
 					<p class="mb-3">
-						This is a secret ballot. Nobody will be able to see how you voted, and you cannot change
-						your vote once it is cast.
+						{msg.ballot_ballot_detail_secret_ballot_nobody_will_able()}
 					</p>
 				{:else}
 					<p class="mb-3">
-						This is a recorded vote: once voting closes, who voted which way appears beside the
-						result. You can change your vote until then.
+						{msg.ballot_ballot_detail_recorded_vote_once_voting_closes()}
 					</p>
 				{/if}
-				<Form remote={castBallotVote} successToast="Vote recorded">
+				<Form remote={castBallotVote} successToast={msg.ballot_ballot_detail_vote_recorded()}>
 					<input {...castBallotVote.fields.ballotId.as('hidden', b.id)} />
 					<FormField
 						field={castBallotVote.fields.optionId}
 						type="select"
-						label="Your choice"
-						placeholder="Choose one"
+						label={msg.ballot_ballot_detail_choice()}
+						placeholder={msg.ballot_ballot_detail_placeholder()}
 						options={voteOptions}
 						value={data.myVote?.optionId ?? ''}
 					/>
-					<SubmitButton label={data.myVote?.optionId ? 'Change my vote' : 'Cast my vote'} />
+					<SubmitButton
+						label={data.myVote?.optionId
+							? msg.ballot_ballot_detail_change_my_vote()
+							: msg.ballot_ballot_detail_cast_my_vote()}
+					/>
 				</Form>
 			{/if}
 		</InfoCard>
 	{/if}
 
 	{#if data.tally}
-		<InfoCard title={b.status === 'certified' ? 'Certified result' : 'Result'}>
+		<InfoCard
+			title={b.status === 'certified'
+				? msg.ballot_ballot_detail_certified_result()
+				: msg.ballot_ballot_detail_result()}
+		>
 			<Table>
 				{#snippet head()}
-					<th>Choice</th>
-					<th class="cell-num">Votes</th>
-					<th class="cell-num">Share</th>
+					<th>{msg.ballot_ballot_detail_choice_2()}</th>
+					<th class="cell-num">{msg.ballot_ballot_detail_votes()}</th>
+					<th class="cell-num">{msg.ballot_ballot_detail_share()}</th>
 				{/snippet}
 				{#each data.tally.options as o (o.optionId)}
 					<tr>
@@ -393,19 +415,22 @@
 				{/each}
 			</Table>
 			<p class="mt-3 text-muted">
-				{data.tally.turnout} of {data.tally.electorateSize} on the roll voted.
+				{msg.ballot_ballot_detail_roll_voted({
+					turnout: data.tally.turnout,
+					electorateSize: data.tally.electorateSize
+				})}
 			</p>
 		</InfoCard>
 
 		{#if data.tally.rollCall}
-			<InfoCard title="Roll call">
+			<InfoCard title={msg.ballot_ballot_detail_roll_call()}>
 				{#if data.tally.rollCall.length === 0}
-					<EmptyState title="Nobody voted" />
+					<EmptyState title={msg.ballot_ballot_detail_nobody_voted()} />
 				{:else}
 					<Table>
 						{#snippet head()}
-							<th>Member</th>
-							<th>Vote</th>
+							<th>{msg.ballot_ballot_detail_member()}</th>
+							<th>{msg.ballot_ballot_detail_vote_2()}</th>
 						{/snippet}
 						{#each data.tally.rollCall as r (r.userId)}
 							<tr>
@@ -419,26 +444,35 @@
 		{/if}
 	{/if}
 
-	<InfoCard title="Details">
+	<InfoCard title={msg.ballot_ballot_detail_details()}>
 		<DefinitionList>
-			<Fact label="Status">
+			<Fact label={msg.ballot_ballot_detail_status()}>
 				<StatusBadge status={b.status} label text={ballotStatusLabels[b.status]} />
 			</Fact>
-			<Fact label="Kind" value={ballotKindLabels[b.kind]} />
+			<Fact label={msg.ballot_ballot_detail_kind()} value={ballotKindLabels[b.kind]} />
 			{#if b.group}
-				<Fact label="Committee" value={b.group.name} />
+				<Fact label={msg.ballot_ballot_detail_committee()} value={b.group.name} />
 			{/if}
-			<Fact label="Choices" value={b.options.map((o) => o.label).join(' · ')} />
-			<Fact label="Closes" value={formatDateTime(b.closesAt)} />
-			<Fact label="Certifier" value={b.certifier?.name ?? 'Nobody named yet'} />
+			<Fact
+				label={msg.ballot_ballot_detail_choices()}
+				value={b.options.map((o) => o.label).join(' · ')}
+			/>
+			<Fact label={msg.ballot_ballot_detail_closes()} value={formatDateTime(b.closesAt)} />
+			<Fact
+				label={msg.ballot_ballot_detail_certifier()}
+				value={b.certifier?.name ?? 'Nobody named yet'}
+			/>
 			{#if b.status === 'draft' && data.previewSize !== null}
-				<Fact label="Roll if opened now" value={String(data.previewSize)} />
+				<Fact
+					label={msg.ballot_ballot_detail_roll_if_opened_now()}
+					value={String(data.previewSize)}
+				/>
 			{:else if b.electorateSize !== null}
-				<Fact label="On the roll" value={String(b.electorateSize)} />
+				<Fact label={msg.ballot_ballot_detail_roll()} value={String(b.electorateSize)} />
 			{/if}
 			{#if data.turnout}
 				<Fact
-					label="Voted so far"
+					label={msg.ballot_ballot_detail_voted_so_far()}
 					value={`${data.turnout.voted} of ${data.turnout.electorateSize}`}
 				/>
 			{/if}
@@ -446,17 +480,16 @@
 	</InfoCard>
 
 	{#if data.overrides && (b.status === 'draft' || b.status === 'open' || data.overrides.length > 0)}
-		<InfoCard title="Roll overrides">
+		<InfoCard title={msg.ballot_ballot_detail_roll_overrides()}>
 			<p class="mb-3 text-muted">
-				Put a member on the roll the rule leaves off, or take someone off it. Each change is
-				recorded in the audit log with its reason. Nobody who has already voted can be taken off.
+				{msg.ballot_ballot_detail_put_member_roll_rule_leaves()}
 			</p>
 			{#if data.overrides.length > 0}
 				<Table>
 					{#snippet head()}
-						<th>Member</th>
-						<th>Override</th>
-						<th>Reason</th>
+						<th>{msg.ballot_ballot_detail_member()}</th>
+						<th>{msg.ballot_ballot_detail_override()}</th>
+						<th>{msg.ballot_ballot_detail_reason()}</th>
 					{/snippet}
 					{#each data.overrides as o (o.userId)}
 						<tr>
@@ -471,10 +504,10 @@
 				<div class="mt-3">
 					<Action
 						action={setElectorOverrideForm}
-						label="Override the roll"
-						modalTitle="Override the roll"
-						submitLabel="Save"
-						successToast="Roll updated"
+						label={msg.ballot_ballot_detail_override_roll()}
+						modalTitle={msg.ballot_ballot_detail_override_roll()}
+						submitLabel={msg.ballot_ballot_detail_save()}
+						successToast={msg.ballot_ballot_detail_roll_updated()}
 						variant="ghost"
 						size="sm"
 					>
@@ -488,13 +521,17 @@
 							<FormField
 								field={setElectorOverrideForm.fields.include}
 								type="select"
-								label="Change"
+								label={msg.ballot_ballot_detail_change()}
 								options={[
-									{ value: 'include', label: 'Add to the roll' },
-									{ value: 'exclude', label: 'Take off the roll' }
+									{ value: 'include', label: msg.ballot_ballot_detail_add_roll() },
+									{ value: 'exclude', label: msg.ballot_ballot_detail_take_off_roll() }
 								]}
 							/>
-							<FormField field={setElectorOverrideForm.fields.reason} type="textarea" label="Why" />
+							<FormField
+								field={setElectorOverrideForm.fields.reason}
+								type="textarea"
+								label={msg.ballot_ballot_detail_why()}
+							/>
 						{/snippet}
 					</Action>
 				</div>

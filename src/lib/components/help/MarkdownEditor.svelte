@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
 	import MarkdownPreview from './MarkdownPreview.svelte';
@@ -33,7 +34,7 @@
 			class={activeTab === 'write' ? 'btn-active' : ''}
 			onclick={() => (activeTab = 'write')}
 		>
-			Write
+			{m.help_markdown_editor_write()}
 		</Button>
 		<Button
 			type="button"
@@ -42,7 +43,7 @@
 			class={activeTab === 'preview' ? 'btn-active' : ''}
 			onclick={() => (activeTab = 'preview')}
 		>
-			Preview
+			{m.help_markdown_editor_preview()}
 		</Button>
 		<div class="flex-1"></div>
 		{#if uploadImage}
@@ -53,7 +54,7 @@
 				variant="ghost"
 				size="xs"
 				square
-				aria-label="Insert image"
+				aria-label={m.help_markdown_editor_aria_label()}
 			>
 				<IconPhoto size={14} />
 			</FileUpload>
@@ -65,13 +66,13 @@
 			bind:this={textarea}
 			bind:value
 			class="min-h-64 w-full resize-y bg-base-100 p-3 font-mono text-sm focus:outline-none"
-			placeholder="Write your article in Markdown..."></textarea>
+			placeholder={m.help_markdown_editor_placeholder()}></textarea>
 	{:else}
 		<div class="min-h-64 p-3">
 			{#if value.trim()}
 				<MarkdownPreview content={value} />
 			{:else}
-				<p class="text-sm italic opacity-50">Nothing to preview</p>
+				<p class="text-sm italic opacity-50">{m.help_markdown_editor_nothing_preview()}</p>
 			{/if}
 		</div>
 	{/if}

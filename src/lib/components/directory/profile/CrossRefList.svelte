@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import ProfileSection from './ProfileSection.svelte';
 	import EntityAvatar from '$lib/components/ui/entity/EntityAvatar.svelte';
@@ -34,7 +35,7 @@
 					<div class="rel-row rel-row--private">
 						<EntityAvatar shape={item.avatarShape} name="Private member" class="rel-row__av" />
 						<div class="rel-row__meta">
-							<p class="rel-row__name">Private member</p>
+							<p class="rel-row__name">{m.directory_profile_cross_ref_list_private_member()}</p>
 							<p class="rel-row__sub">{item.sub || 'Not shown'}</p>
 						</div>
 						<IconLock size={16} class="rel-row__icon" />

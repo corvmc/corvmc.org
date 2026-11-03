@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * One shift the member is on, with the two-step rail that is the whole point.
 	 *
@@ -69,8 +70,8 @@
 			<div class="text-subtle text-xs uppercase">{dayParts.month}</div>
 			<div class="text-xl font-bold">{dayParts.day}</div>
 		{:else}
-			<div class="text-subtle text-xs uppercase">when</div>
-			<div class="text-subtle text-sm font-bold">TBD</div>
+			<div class="text-subtle text-xs uppercase">{m.volunteer_my_shift_card_when()}</div>
+			<div class="text-subtle text-sm font-bold">{m.volunteer_my_shift_card_tbd()}</div>
 		{/if}
 	</div>
 
@@ -82,7 +83,7 @@
 		</div>
 
 		{#if calledOff}
-			<p class="mt-2 text-sm text-error">This was called off. There's nothing to turn up for.</p>
+			<p class="mt-2 text-sm text-error">{m.volunteer_my_shift_card_was_called_off_there_s()}</p>
 		{:else}
 			<div class="mt-2">
 				<ShiftProgress status={shift.status} notes={shift.notes} />
@@ -98,7 +99,7 @@
 					variant="ghost"
 					size="xs"
 				>
-					Open shift
+					{m.volunteer_my_shift_card_open_shift()}
 				</Button>
 			{/if}
 			{#if worked}
@@ -107,17 +108,17 @@
 					variant="ghost"
 					size="xs"
 				>
-					How did it go?
+					{m.volunteer_my_shift_card_how_did_go()}
 				</Button>
 			{:else if !calledOff}
 				<Action
 					action={cancelMySignup.for(shift.signupId)}
-					label="Drop out"
+					label={m.volunteer_my_shift_card_label()}
 					variant="ghost"
 					size="xs"
-					modalTitle="Drop out of this shift?"
-					submitLabel="Drop out"
-					successToast="Dropped. The place is back on the board."
+					modalTitle={m.volunteer_my_shift_card_modal_title()}
+					submitLabel={m.volunteer_my_shift_card_label()}
+					successToast={m.volunteer_my_shift_card_success_toast()}
 				>
 					{#snippet form()}
 						<input type="hidden" name="signupId" value={shift.signupId} />
@@ -125,8 +126,7 @@
 							{shift.roleName}{shift.startsAt ? ` on ${formatDateShort(shift.startsAt)}` : ''}, {timeRange}.
 						</p>
 						<p class="text-sm">
-							Notice isn't a no-show. The place goes back on the board for someone else, and nothing
-							is held against you for telling us.
+							{m.volunteer_my_shift_card_notice_isn_t_no_show()}
 						</p>
 					{/snippet}
 				</Action>

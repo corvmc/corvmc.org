@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -32,27 +33,32 @@
 	const booked = $derived(data.vendors.length - noShows);
 
 	const inviteOptions = [
-		{ value: 'yes', label: 'Invite back' },
-		{ value: 'no', label: 'Do not invite back' }
+		{ value: 'yes', label: m.market_vendor_check_in_invite_back() },
+		{ value: 'no', label: m.market_vendor_check_in_do_not_invite_back() }
 	];
 </script>
 
 <PageHeader
 	width="3xl"
-	title="Market day: {data.event.title}"
+	title={m.market_vendor_check_in_market_day({ title: data.event.title })}
 	subtitle={formatDateTime(data.event.startsAt)}
 	{parent}
 />
 <PageContent width="3xl">
 	<div class="flex flex-wrap gap-6">
-		<StatCard title="Arrived" value="{arrived} / {booked}" size="sm" class="p-4" />
-		<StatCard title="No-shows" value={noShows} size="sm" class="p-4" />
+		<StatCard
+			title={m.market_vendor_check_in_arrived()}
+			value="{arrived} / {booked}"
+			size="sm"
+			class="p-4"
+		/>
+		<StatCard title={m.market_vendor_check_in_no_shows()} value={noShows} size="sm" class="p-4" />
 	</div>
 
 	{#if data.vendors.length === 0}
 		<EmptyState
-			title="No vendors booked"
-			description="Accepted vendors appear here to check in on the day."
+			title={m.market_vendor_check_in_no_vendors_booked()}
+			description={m.market_vendor_check_in_accepted_vendors_appear_here_check()}
 		/>
 	{/if}
 
@@ -64,7 +70,8 @@
 					<div>
 						<p class="font-medium">
 							{vendor.businessName}
-							{#if vendor.tableLabel}<span class="text-muted">· table {vendor.tableLabel}</span
+							{#if vendor.tableLabel}<span class="text-muted"
+									>{m.market_vendor_check_in_table({ tableLabel: vendor.tableLabel })}</span
 								>{/if}
 						</p>
 						<p class="text-muted text-sm">
@@ -87,7 +94,7 @@
 							<StatusBadge status="no_show" />
 							<Form
 								remote={markNoShowForm.for(`undo-${vendor.id}`)}
-								successToast="Restored"
+								successToast={m.market_vendor_check_in_restored()}
 								class="inline"
 							>
 								<input
@@ -98,14 +105,14 @@
 								<input
 									{...markNoShowForm.for(`undo-${vendor.id}`).fields.noShow.as('hidden', 'no')}
 								/>
-								<SubmitButton label="Undo" variant="ghost" size="sm" />
+								<SubmitButton label={m.market_vendor_check_in_undo()} variant="ghost" size="sm" />
 							</Form>
 						{:else if vendor.checkedInAt}
 							<StatusBadge status="checked_in" />
 							<span class="text-muted text-sm">{formatTime(vendor.checkedInAt)}</span>
 							<Form
 								remote={checkInVendorForm.for(`out-${vendor.id}`)}
-								successToast="Check-in undone"
+								successToast={m.market_vendor_check_in_check_undone()}
 								class="inline"
 							>
 								<input
@@ -116,13 +123,13 @@
 								<input
 									{...checkInVendorForm.for(`out-${vendor.id}`).fields.arrived.as('hidden', 'no')}
 								/>
-								<SubmitButton label="Undo" variant="ghost" size="sm" />
+								<SubmitButton label={m.market_vendor_check_in_undo()} variant="ghost" size="sm" />
 							</Form>
 						{:else}
 							<!-- 44px, as at the ticket door: tapped many times in a row, one-handed. -->
 							<Form
 								remote={checkInVendorForm.for(`in-${vendor.id}`)}
-								successToast="Checked in"
+								successToast={m.market_vendor_check_in_checked()}
 								class="inline"
 							>
 								<input
@@ -133,11 +140,15 @@
 								<input
 									{...checkInVendorForm.for(`in-${vendor.id}`).fields.arrived.as('hidden', 'yes')}
 								/>
-								<SubmitButton label="Arrived" variant="primary" class="min-h-11" />
+								<SubmitButton
+									label={m.market_vendor_check_in_arrived()}
+									variant="primary"
+									class="min-h-11"
+								/>
 							</Form>
 							<Form
 								remote={markNoShowForm.for(`ns-${vendor.id}`)}
-								successToast="Marked no-show"
+								successToast={m.market_vendor_check_in_marked_no_show()}
 								class="inline"
 							>
 								<input
@@ -146,16 +157,22 @@
 								<input
 									{...markNoShowForm.for(`ns-${vendor.id}`).fields.noShow.as('hidden', 'yes')}
 								/>
-								<SubmitButton label="No-show" variant="ghost" size="sm" />
+								<SubmitButton
+									label={m.market_vendor_check_in_no_show()}
+									variant="ghost"
+									size="sm"
+								/>
 							</Form>
 						{/if}
 
 						<Action
 							action={inviteBackForm.for(vendor.id)}
-							label="Invite back?"
-							modalTitle="Invite {vendor.businessName} back?"
-							submitLabel="Save"
-							successToast="Saved"
+							label={m.market_vendor_check_in_invite_back_2()}
+							modalTitle={m.market_vendor_check_in_modal_title({
+								businessName: vendor.businessName
+							})}
+							submitLabel={m.market_vendor_check_in_submit_label()}
+							successToast={m.market_vendor_check_in_saved()}
 							variant="ghost"
 							size="sm"
 						>
@@ -165,14 +182,14 @@
 									<FormField
 										field={inviteFields.inviteBack}
 										type="select"
-										label="Next market"
+										label={m.market_vendor_check_in_next_market()}
 										options={inviteOptions}
 										value={vendor.inviteBack === false ? 'no' : 'yes'}
 									/>
 									<FormField
 										field={inviteFields.note}
-										label="Note"
-										description="Shown on this vendor's next application. How they sold, anything to know."
+										label={m.market_vendor_check_in_note()}
+										description={m.market_vendor_check_in_shown_vendor_s_next_application()}
 										value={vendor.inviteBackNote ?? ''}
 									/>
 								</div>

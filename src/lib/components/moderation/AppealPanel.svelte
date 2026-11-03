@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { fileAppeal, getMyAppeal } from '$lib/remote/appeals.remote';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -33,15 +34,14 @@
 	<div class="mt-3 space-y-2 text-sm">
 		{#if !view.appeal}
 			<p class="text-wrap">
-				If you think this decision was wrong, you can ask a different member of staff to look at it
-				again. You get one appeal per decision.
+				{m.moderation_appeal_panel_if_think_decision_was_wrong()}
 			</p>
 			<Action
 				action={instance}
-				label="Appeal this decision"
-				modalTitle="Appeal this decision"
-				submitLabel="Send appeal"
-				successToast="Appeal sent"
+				label={m.moderation_appeal_panel_label()}
+				modalTitle={m.moderation_appeal_panel_label()}
+				submitLabel={m.moderation_appeal_panel_submit_label()}
+				successToast={m.moderation_appeal_panel_success_toast()}
 				variant="default"
 				size="sm"
 				outline
@@ -56,7 +56,9 @@
 							</p>
 						{/if}
 						<label class="fieldset w-full">
-							<span class="fieldset-legend">Why do you think it was wrong?</span>
+							<span class="fieldset-legend"
+								>{m.moderation_appeal_panel_why_do_think_was_wrong()}</span
+							>
 							<textarea
 								class="textarea w-full"
 								rows="5"
@@ -64,20 +66,23 @@
 								{...instance.fields.body.as('text')}></textarea>
 						</label>
 						<p class="text-muted text-wrap">
-							Nothing changes while your appeal is looked at. You'll get an email with the answer.
+							{m.moderation_appeal_panel_nothing_changes_while_appeal_looked()}
 						</p>
 					</div>
 				{/snippet}
 			</Action>
 		{:else if !view.appeal.decision}
 			<p class="text-wrap">
-				You appealed this on {formatDate(view.appeal.createdAt)}. A member of staff will look at it
-				and email you the answer; nothing changes until then.
+				{m.moderation_appeal_panel_appealed_member_staff_will_look({
+					formatDate: formatDate(view.appeal.createdAt)
+				})}
 			</p>
 		{:else}
 			<p class="text-wrap">
 				<span class="font-medium"
-					>Appeal {appealVerdictLabels[view.appeal.decision.verdict].toLowerCase()}</span
+					>{m.moderation_appeal_panel_appeal({
+						toLowerCase: appealVerdictLabels[view.appeal.decision.verdict].toLowerCase()
+					})}</span
 				>
 				on {formatDate(view.appeal.decision.decidedAt)}.
 			</p>

@@ -1,4 +1,5 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
+	import { m } from '$lib/paraglide/messages.js';
 	import { formatMonthDayYear } from '$lib/utils/format';
 	import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit';
 	import { IconAlertTriangle } from '@tabler/icons-svelte';
@@ -24,7 +25,7 @@
 	<div>
 		<p>
 			Your sustaining membership has been cancelled, but your benefits — including <strong
-				>{freeHours} free practice hours</strong
+				>{m.member_membership_cancelled_banner_free_practice_hours({ freeHours })}</strong
 			>
 			— are still active until <strong>{endDate}</strong>. You can pick it back up anytime before
 			then.
@@ -33,14 +34,14 @@
 		<div class="mt-3 flex flex-wrap gap-2">
 			<Action
 				action={resumeAction}
-				label="Resume Membership"
-				modalTitle="Resume Membership"
+				label={m.member_membership_cancelled_banner_label()}
+				modalTitle={m.member_membership_cancelled_banner_label()}
 				variant="primary"
 				size="sm"
-				onsuccess={() => toast.success('Membership resumed')}
+				onsuccess={() => toast.success(m.member_membership_cancelled_banner_toast())}
 			>
 				{#snippet form()}
-					<p class="py-4">Resume your sustaining membership?</p>
+					<p class="py-4">{m.member_membership_cancelled_banner_resume_sustaining_members()}</p>
 				{/snippet}
 			</Action>
 		</div>

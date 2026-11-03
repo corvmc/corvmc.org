@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	const faqs = [
 		{
 			question: 'How do free practice hours work?',
@@ -35,7 +36,9 @@
 
 <div>
 	<div class="mb-6 text-center">
-		<h2 class="text-3xl font-bold">Frequently Asked Questions</h2>
+		<h2 class="text-3xl font-bold">
+			{m.member_membership_membership_faq_frequently_asked_questions()}
+		</h2>
 	</div>
 
 	<div class="mx-auto max-w-3xl space-y-2">

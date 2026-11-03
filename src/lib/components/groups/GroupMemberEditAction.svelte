@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { updateGroupMember } from '$lib/remote/groups.remote';
@@ -30,19 +31,19 @@
 	const { fields } = updateGroupMember;
 
 	const roleOptions = [
-		{ value: 'member', label: 'Member' },
-		{ value: 'admin', label: 'Admin' }
+		{ value: 'member', label: m.groups_member() },
+		{ value: 'admin', label: m.groups_admin() }
 	];
 </script>
 
 <Action
 	action={updateGroupMember.for(memberId)}
-	label="Edit"
-	aria-label={`Edit ${memberName}`}
-	modalTitle="Edit {memberName}"
+	label={m.groups_edit()}
+	aria-label={m.groups_group_member_edit_aria_label({ memberName })}
+	modalTitle={m.groups_group_member_edit_aria_label({ memberName })}
 	variant="ghost"
 	size="xs"
-	successToast="Member updated"
+	successToast={m.groups_group_member_edit_success_toast()}
 	onsuccess={onchanged}
 >
 	{#snippet form()}
@@ -52,18 +53,20 @@
 			<FormField
 				field={fields.role}
 				type="select"
-				label="Role"
+				label={m.groups_role()}
 				value={role}
 				options={roleOptions}
-				description="Admins post announcements, upload documents, run sessions and manage the roster."
+				description={m.groups_group_member_edit_description()}
 			/>
 			<FormField
 				field={fields.position}
 				type="text"
-				label="Position"
+				label={m.groups_position()}
 				value={position ?? ''}
 				maxlength="100"
-				placeholder="e.g. {kindLabel === 'committee' ? 'Secretary' : 'Chart librarian'}"
+				placeholder={m.groups_group_member_edit_placeholder({
+					value: kindLabel === 'committee' ? 'Secretary' : 'Chart librarian'
+				})}
 			/>
 		</div>
 	{/snippet}

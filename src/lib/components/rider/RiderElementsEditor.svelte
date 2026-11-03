@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import {
@@ -74,8 +75,11 @@
 	const safePrefix = $derived(safeFieldPrefix(idPrefix));
 
 	const monitorOptions = $derived([
-		{ value: '', label: 'No preference' },
-		...roster.map((m) => ({ value: m.userId, label: `${m.name}’s mix` }))
+		{ value: '', label: msg.rider_rider_elements_editor_no_preference() },
+		...roster.map((m) => ({
+			value: m.userId,
+			label: msg.rider_rider_elements_editor_s_mix({ name: m.name })
+		}))
 	]);
 
 	const rowId = () => crypto.randomUUID();
@@ -184,7 +188,7 @@
 				<Field
 					name="{safePrefix}_kind_{index}"
 					type="select"
-					label="What it is"
+					label={msg.rider_rider_elements_editor_what()}
 					options={riderElementKindOptions}
 					bind:value={element.kind}
 					{readonly}
@@ -193,15 +197,15 @@
 				<Field
 					name="{safePrefix}_label_{index}"
 					type="text"
-					label="Name it"
-					placeholder="e.g. Fender Twin"
+					label={msg.rider_rider_elements_editor_name()}
+					placeholder={msg.rider_rider_elements_editor_e_g_fender_twin()}
 					bind:value={element.label}
 					{readonly}
 				/>
 				<Field
 					name="{safePrefix}_provided_{index}"
 					type="select"
-					label="Who brings it"
+					label={msg.rider_rider_elements_editor_who_brings()}
 					options={riderProvidedByOptions}
 					bind:value={element.providedBy}
 					{readonly}
@@ -214,7 +218,9 @@
 							variant="ghost"
 							size="sm"
 							shape="square"
-							aria-label="Move {element.label || 'item'} up"
+							aria-label={msg.rider_rider_elements_editor_move_up({
+								value: element.label || 'item'
+							})}
 							disabled={index === 0}
 							onclick={() => moveElement(index, -1)}
 						>
@@ -225,7 +231,9 @@
 							variant="ghost"
 							size="sm"
 							shape="square"
-							aria-label="Move {element.label || 'item'} down"
+							aria-label={msg.rider_rider_elements_editor_move_down({
+								value: element.label || 'item'
+							})}
 							disabled={index === elements.length - 1}
 							onclick={() => moveElement(index, 1)}
 						>
@@ -236,7 +244,9 @@
 							variant="ghost"
 							size="sm"
 							shape="square"
-							aria-label="Remove {element.label || 'item'}"
+							aria-label={msg.rider_rider_elements_editor_remove({
+								value: element.label || 'item'
+							})}
 							onclick={() => removeElement(index)}
 						>
 							<IconTrash size={16} />
@@ -248,8 +258,8 @@
 			<Field
 				name="{safePrefix}_notes_{index}"
 				type="text"
-				label="Anything the engineer should know"
-				placeholder="Optional"
+				label={msg.rider_rider_elements_editor_anything_engineer_should_know()}
+				placeholder={msg.rider_rider_elements_editor_optional()}
 				bind:value={element.notes}
 				{readonly}
 				display={text(element.notes) || '—'}
@@ -258,13 +268,12 @@
 
 			{#if element.kind === 'monitor'}
 				<p class="mt-3 text-xs text-base-content/60">
-					A monitor takes no channel on the desk, so it has no inputs — it is here so the mix count
-					is right and the stage plot has something to draw.
+					{msg.rider_rider_elements_editor_monitor_takes_no_channel_desk()}
 				</p>
 			{:else}
 				<div class="mt-4 border-t border-base-300 pt-3">
 					<div class="mb-2 flex items-center justify-between">
-						<span class="text-xs font-medium">Inputs</span>
+						<span class="text-xs font-medium">{msg.rider_rider_elements_editor_inputs()}</span>
 						{#if !readonly}
 							<Button
 								type="button"
@@ -273,14 +282,15 @@
 								disabled={element.inputs.length >= RIDER_MAX_INPUTS_PER_ELEMENT}
 								onclick={() => addInput(element)}
 							>
-								<IconPlus size={14} /> Add input
+								<IconPlus size={14} />
+								{msg.rider_rider_elements_editor_add_input()}
 							</Button>
 						{/if}
 					</div>
 
 					{#if element.inputs.length === 0}
 						<p class="text-xs text-base-content/60">
-							No channels yet. A guitar amp usually needs one mic; a kit needs several.
+							{msg.rider_rider_elements_editor_no_channels_yet_guitar_amp()}
 						</p>
 					{/if}
 
@@ -289,15 +299,15 @@
 							<Field
 								name="{safePrefix}_inlabel_{index}_{j}"
 								type="text"
-								label="Input"
-								placeholder="e.g. Kick in"
+								label={msg.rider_rider_elements_editor_input()}
+								placeholder={msg.rider_rider_elements_editor_e_g_kick()}
 								bind:value={input.label}
 								{readonly}
 							/>
 							<Field
 								name="{safePrefix}_insource_{index}_{j}"
 								type="select"
-								label="Via"
+								label={msg.rider_rider_elements_editor_via()}
 								options={riderInputSourceOptions}
 								bind:value={input.source}
 								{readonly}
@@ -306,8 +316,8 @@
 							<Field
 								name="{safePrefix}_inmic_{index}_{j}"
 								type="text"
-								label="Preferred mic/DI"
-								placeholder="Optional — the house may have better"
+								label={msg.rider_rider_elements_editor_preferred_mic_di()}
+								placeholder={msg.rider_rider_elements_editor_optional_house_may_have_better()}
 								bind:value={input.micPref}
 								{readonly}
 								display={text(input.micPref) || '—'}
@@ -315,7 +325,7 @@
 							<Field
 								name="{safePrefix}_instand_{index}_{j}"
 								type="select"
-								label="Stand"
+								label={msg.rider_rider_elements_editor_stand()}
 								options={riderStandTypeOptions}
 								bind:value={input.stand}
 								{readonly}
@@ -324,7 +334,7 @@
 							<Field
 								name="{safePrefix}_inmix_{index}_{j}"
 								type="select"
-								label="Monitor"
+								label={msg.rider_rider_elements_editor_monitor()}
 								options={monitorOptions}
 								bind:value={input.monitorMixUserId}
 								{readonly}
@@ -340,8 +350,8 @@
 								<Field
 									name="{safePrefix}_inphantom_{index}_{j}"
 									type="checkbox"
-									label="Power"
-									checkboxLabel="+48V"
+									label={msg.rider_rider_elements_editor_power()}
+									checkboxLabel={msg.rider_rider_elements_editor_checkbox_label()}
 									bind:value={input.phantom}
 									{readonly}
 									display={input.phantom ? '+48V' : 'No'}
@@ -352,7 +362,9 @@
 										variant="ghost"
 										size="sm"
 										shape="square"
-										aria-label="Move {input.label || 'input'} up"
+										aria-label={msg.rider_rider_elements_editor_move_up({
+											value: input.label || 'input'
+										})}
 										disabled={j === 0}
 										onclick={() => moveInput(element, j, -1)}
 									>
@@ -363,7 +375,9 @@
 										variant="ghost"
 										size="sm"
 										shape="square"
-										aria-label="Move {input.label || 'input'} down"
+										aria-label={msg.rider_rider_elements_editor_move_down({
+											value: input.label || 'input'
+										})}
 										disabled={j === element.inputs.length - 1}
 										onclick={() => moveInput(element, j, 1)}
 									>
@@ -374,7 +388,9 @@
 										variant="ghost"
 										size="sm"
 										shape="square"
-										aria-label="Remove {input.label || 'input'}"
+										aria-label={msg.rider_rider_elements_editor_remove({
+											value: input.label || 'input'
+										})}
 										onclick={() => removeInput(element, j)}
 									>
 										<IconTrash size={14} />
@@ -394,11 +410,12 @@
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<div class="flex items-center gap-2">
 				<Button type="button" variant="ghost" size="sm" disabled={atLimit} onclick={addElement}>
-					<IconPlus size={16} /> Add something to the stage
+					<IconPlus size={16} />
+					{msg.rider_rider_elements_editor_add_something_stage()}
 				</Button>
 				{#if atLimit}
 					<span class="text-xs text-base-content/60">
-						{RIDER_MAX_ELEMENTS} is the limit for one corner.
+						{msg.rider_rider_elements_editor_limit_one_corner({ RIDER_MAX_ELEMENTS })}
 					</span>
 				{/if}
 			</div>

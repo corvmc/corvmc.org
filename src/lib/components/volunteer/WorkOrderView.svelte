@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * One work order: who is on it, who to ask, its engagements, hours, reports
 	 * and duties. Rendered by the shift page and by a project's task page, which
@@ -114,16 +115,12 @@
 			<!-- A deadline is not a window: "done by Friday" is not "happens Friday 6-8". -->
 			due
 			<time datetime={new Date(shift.dueAt).toISOString()}>{formatDateShortYear(shift.dueAt)}</time>
-		{:else}
-			a time to be arranged
-		{/if} ·
+		{:else}{m.volunteer_work_order_view_time_arranged()}{/if} ·
 		{#if shift.eventId && shift.eventTitle}
 			<a href={resolve(`/staff/events/${shift.eventId}`)} class="link link-primary">
 				{shift.eventTitle}
 			</a>
-		{:else}
-			not tied to an event
-		{/if}
+		{:else}{m.volunteer_work_order_view_not_tied_event()}{/if}
 		{#if shift.assetId && shift.assetName}
 			·
 			<a href={resolve(`/staff/inventory/assets/${shift.assetId}`)} class="link link-primary">
@@ -150,12 +147,12 @@
 				{#if toNotify > 0}
 					<Action
 						action={notifyCancelledShift.for(shift.id)}
-						label="Notify all"
+						label={m.volunteer_work_order_view_notify_all()}
 						variant="warning"
 						size="sm"
-						modalTitle="Tell everybody this is off?"
-						submitLabel="Notify all"
-						successToast="Sent. They know."
+						modalTitle={m.volunteer_work_order_view_tell_everybody_off()}
+						submitLabel={m.volunteer_work_order_view_notify_all()}
+						successToast={m.volunteer_work_order_view_sent_they_know()}
 					>
 						{#snippet form()}
 							<input type="hidden" name="shiftId" value={shift.id} />
@@ -175,7 +172,9 @@
 	<!-- Ahead of the roster: on a contractor's task the engagement is the work. -->
 	{#if view.engagements.length > 0}
 		<section class="flex flex-col gap-3" aria-labelledby="engagements-heading">
-			<h2 id="engagements-heading" class="text-lg font-semibold">Engagements</h2>
+			<h2 id="engagements-heading" class="text-lg font-semibold">
+				{m.volunteer_work_order_view_engagements()}
+			</h2>
 			{#each view.engagements as row (row.job.id)}
 				<EngagementCard {row} />
 			{/each}
@@ -184,7 +183,11 @@
 
 	<div class="grid gap-6 {calledOff ? '' : 'lg:grid-cols-2'}">
 		<div class="flex flex-col gap-6">
-			<InfoCard title={calledOff ? 'Who to tell' : "Who's on it"}>
+			<InfoCard
+				title={calledOff
+					? m.volunteer_work_order_view_who_tell()
+					: m.volunteer_work_order_view_who_s()}
+			>
 				{#snippet header()}
 					<div class="flex items-center justify-between gap-2">
 						<CardTitle>
@@ -193,13 +196,13 @@
 						{#if !calledOff && unconfirmed.length > 1}
 							<Action
 								action={confirmSignups.for(shift.id)}
-								label="Confirm all {unconfirmed.length}"
+								label={m.volunteer_work_order_view_confirm_all({ length: unconfirmed.length })}
 								variant="ghost"
 								size="sm"
 								class="text-success"
-								modalTitle="Confirm everyone waiting?"
-								submitLabel="Confirm all"
-								successToast="Confirmed"
+								modalTitle={m.volunteer_work_order_view_confirm_everyone_waiting()}
+								submitLabel={m.volunteer_work_order_view_confirm_all_2()}
+								successToast={m.volunteer_work_order_view_confirmed()}
 							>
 								{#snippet form()}
 									<input type="hidden" name="shiftId" value={shift.id} />
@@ -207,8 +210,9 @@
 										<input type="hidden" name="signupIds" value={c.signupId} />
 									{/each}
 									<p class="text-sm">
-										{unconfirmed.map((c) => c.member.title).join(', ')} — all confirmed for this shift.
-										Each of them gets a reminder the day before.
+										{m.volunteer_work_order_view_all_confirmed_shift_each_them({
+											join: unconfirmed.map((c) => c.member.title).join(', ')
+										})}
 									</p>
 								{/snippet}
 							</Action>
@@ -218,10 +222,10 @@
 
 				{#if claimants.length === 0}
 					<EmptyState
-						title="Nobody on it yet"
+						title={m.volunteer_work_order_view_nobody_yet()}
 						description={view.engagements.length > 0
-							? 'A contractor answers this one; see the engagements above.'
-							: 'Members interested in this role see it at the top of their list.'}
+							? m.volunteer_work_order_view_contractor_answers_one_see_engagem()
+							: m.volunteer_work_order_view_members_interested_role_see_at()}
 					/>
 				{:else}
 					<ul class="flex flex-col gap-4">
@@ -251,25 +255,28 @@
 									<div class="flex shrink-0 gap-1">
 										{#if calledOff}
 											{#if claimant.notifiedAt}
-												<span class="text-sm text-success">✓ Notified</span>
+												<span class="text-sm text-success"
+													>{m.volunteer_work_order_view_notified()}</span
+												>
 											{:else}
 												<!-- The escape hatch beside the mail-out, for staff who
 												     rang them. Sends nothing. -->
 												<Action
 													action={markSignupNotified.for(claimant.signupId)}
-													label="Mark as notified"
+													label={m.volunteer_work_order_view_mark_as_notified()}
 													variant="ghost"
 													size="sm"
-													modalTitle="Mark {claimant.member.title} as told?"
-													submitLabel="Mark as notified"
-													successToast="Marked"
+													modalTitle={m.volunteer_work_order_view_mark_as_told({
+														title: claimant.member.title
+													})}
+													submitLabel={m.volunteer_work_order_view_mark_as_notified()}
+													successToast={m.volunteer_work_order_view_marked()}
 												>
 													{#snippet form()}
 														<input type="hidden" name="signupId" value={claimant.signupId} />
 														<input type="hidden" name="shiftId" value={shift.id} />
 														<p class="text-sm">
-															Use this when you reached them another way. Nothing is sent — it just
-															takes them off the list.
+															{m.volunteer_work_order_view_use_when_reached_them_another()}
 														</p>
 													{/snippet}
 												</Action>
@@ -278,23 +285,23 @@
 											{#if claimant.status === 'claimed'}
 												<Action
 													action={confirmSignup.for(claimant.signupId)}
-													label="Confirm"
+													label={m.volunteer_work_order_view_confirm()}
 													iconOnly
 													icon={checkIcon}
 													variant="ghost"
 													size="sm"
 													class="text-success"
-													modalTitle="Confirm {claimant.member.title}?"
-													submitLabel="Confirm"
-													successToast="Confirmed"
+													modalTitle={m.volunteer_work_order_view_confirm_2({
+														title: claimant.member.title
+													})}
+													submitLabel={m.volunteer_work_order_view_confirm()}
+													successToast={m.volunteer_work_order_view_confirmed()}
 												>
 													{#snippet form()}
 														<input type="hidden" name="signupId" value={claimant.signupId} />
 														<input type="hidden" name="shiftId" value={shift.id} />
 														<p class="text-sm">
-															They'll get a reminder the day before. Only confirmed claims complete
-															automatically afterwards, so this is what turns a claim into a
-															booking.
+															{m.volunteer_work_order_view_they_ll_get_reminder_day()}
 														</p>
 													{/snippet}
 												</Action>
@@ -305,21 +312,22 @@
 												     can't make it should not get a mark against them. -->
 												<Action
 													action={releaseSignup.for(claimant.signupId)}
-													label="Remove"
+													label={m.volunteer_work_order_view_remove()}
 													iconOnly
 													icon={releaseIcon}
 													variant="ghost"
 													size="sm"
-													modalTitle="Take {claimant.member.title} off this shift?"
-													submitLabel="Take them off"
-													successToast="Taken off. The place is open again."
+													modalTitle={m.volunteer_work_order_view_take_off_shift({
+														title: claimant.member.title
+													})}
+													submitLabel={m.volunteer_work_order_view_take_them_off()}
+													successToast={m.volunteer_work_order_view_taken_off_place_open_again()}
 												>
 													{#snippet form()}
 														<input type="hidden" name="signupId" value={claimant.signupId} />
 														<input type="hidden" name="shiftId" value={shift.id} />
 														<p class="text-sm">
-															Their place opens up straight away. Use this when they gave you notice
-															— a no-show is for somebody who simply didn't turn up.
+															{m.volunteer_work_order_view_their_place_opens_up_straight()}
 														</p>
 													{/snippet}
 												</Action>
@@ -329,23 +337,24 @@
 												<!-- Confirmed people only: a claim nobody confirmed was never a booking. -->
 												<Action
 													action={markSignupNoShow.for(claimant.signupId)}
-													label="Mark no-show"
+													label={m.volunteer_work_order_view_mark_no_show()}
 													iconOnly
 													icon={noShowIcon}
 													variant="ghost"
 													size="sm"
 													class="text-error"
-													modalTitle="Mark {claimant.member.title} as a no-show?"
-													submitLabel="No-show"
+													modalTitle={m.volunteer_work_order_view_mark_as_no_show({
+														title: claimant.member.title
+													})}
+													submitLabel={m.volunteer_work_order_view_no_show()}
 													submitVariant="error"
-													successToast="Marked as no-show"
+													successToast={m.volunteer_work_order_view_marked_as_no_show()}
 												>
 													{#snippet form()}
 														<input type="hidden" name="signupId" value={claimant.signupId} />
 														<input type="hidden" name="shiftId" value={shift.id} />
 														<p class="text-sm">
-															Different from removing them: a removal is notice, a no-show isn't,
-															and only one of them is worth remembering next time.
+															{m.volunteer_work_order_view_different_from_removing_them_remov()}
 														</p>
 													{/snippet}
 												</Action>
@@ -358,7 +367,7 @@
 									<!-- Only confirmation sends the reminder; the claim still
 									     completes as worked once the shift ends. -->
 									<p class="border-l-2 border-warning pl-2 text-xs text-warning">
-										Unconfirmed: no reminder.
+										{m.volunteer_work_order_view_unconfirmed_no_reminder()}
 									</p>
 								{/if}
 							</li>
@@ -374,7 +383,7 @@
 			<!-- Apart from "Who's on it", because neither an invitation nor a
 			     refusal holds a place. -->
 			{#if view.invitations.length > 0}
-				<InfoCard title="Asked">
+				<InfoCard title={m.volunteer_work_order_view_asked()}>
 					<ul class="flex flex-col gap-2">
 						{#each view.invitations as invitation (invitation.signupId)}
 							<li class="flex flex-wrap items-center gap-2">
@@ -383,37 +392,38 @@
 									{invitation.status === 'declined' ? 'SAID NO' : 'WAITING'}
 								</Badge>
 								{#if invitation.invitedByName}
-									<span class="text-subtle text-xs">{invitation.invitedByName} asked</span>
+									<span class="text-subtle text-xs"
+										>{m.volunteer_asked({ invitedByName: invitation.invitedByName })}</span
+									>
 								{/if}
 							</li>
 						{/each}
 					</ul>
 					<p class="mt-2 text-subtle text-xs">
-						An invitation holds no place. A no is kept so the same person is not asked twice by
-						mistake.
+						{m.volunteer_work_order_view_invitation_holds_no_place_no()}
 					</p>
 				</InfoCard>
 			{/if}
 
-			<InfoCard title="Briefing">
+			<InfoCard title={m.volunteer_work_order_view_briefing()}>
 				{#if shift.notes}
 					<p class="text-sm">{shift.notes}</p>
 				{:else}
 					<p class="text-subtle text-sm">
-						No briefing yet — add one and claimants see it before they commit.
+						{m.volunteer_work_order_view_no_briefing_yet_add_one()}
 					</p>
 				{/if}
 
 				<div class="mt-4 flex flex-wrap gap-2">
 					<Action
 						action={editForm}
-						label="Edit"
+						label={m.volunteer_work_order_view_edit()}
 						data-testid="edit-shift"
 						variant="ghost"
 						size="sm"
-						modalTitle="Edit this shift"
-						submitLabel="Save"
-						successToast="Shift updated. Everyone on it stays on it."
+						modalTitle={m.volunteer_work_order_view_edit_shift()}
+						submitLabel={m.volunteer_save()}
+						successToast={m.volunteer_work_order_view_shift_updated_everyone_stays()}
 					>
 						{#snippet icon()}<IconPencil size={16} />{/snippet}
 						{#snippet form()}
@@ -455,12 +465,12 @@
 						{@const copy = duplicateShift.for(shift.id)}
 						<Action
 							action={copy}
-							label="Copy forward"
+							label={m.volunteer_work_order_view_copy_forward()}
 							variant="ghost"
 							size="sm"
-							modalTitle="Copy this shift forward"
-							submitLabel="Copy"
-							successToast="Copied. Nobody is on the copy yet."
+							modalTitle={m.volunteer_work_order_view_copy_shift_forward()}
+							submitLabel={m.volunteer_work_order_view_copy()}
+							successToast={m.volunteer_work_order_view_copied_nobody_copy_yet()}
 							onsuccess={(r) => {
 								const copyId = (r as { id?: string } | undefined)?.id;
 								// The shift URL sends a project's copy on to its task page.
@@ -472,9 +482,9 @@
 								<FormField
 									field={copy.fields.offsetDays}
 									type="number"
-									label="Days later"
+									label={m.volunteer_work_order_view_days_later()}
 									value={7}
-									description="Same role, times and capacity, on a later date. A weekly slot is 7."
+									description={m.volunteer_work_order_view_same_role_times_capacity_later()}
 								/>
 							{/snippet}
 						</Action>
@@ -483,20 +493,19 @@
 					{#if !calledOff}
 						<Action
 							action={cancelShift.for(shift.id)}
-							label="Cancel shift"
+							label={m.volunteer_work_order_view_cancel_shift()}
 							variant="ghost"
 							size="sm"
 							class="text-error"
-							modalTitle="Cancel this shift?"
-							submitLabel="Cancel shift"
+							modalTitle={m.volunteer_work_order_view_cancel_shift_2()}
+							submitLabel={m.volunteer_work_order_view_cancel_shift()}
 							submitVariant="error"
-							successToast="Called off. Tell the people on it."
+							successToast={m.volunteer_work_order_view_called_off_tell_people()}
 						>
 							{#snippet form()}
 								<input type="hidden" name="id" value={shift.id} />
 								<p class="text-sm">
-									Claims and bookings stay in place — they are who you need to notify. The shift
-									stops taking claims.
+									{m.volunteer_work_order_view_claims_bookings_stay_place_they()}
 								</p>
 							{/snippet}
 						</Action>
@@ -515,9 +524,12 @@
 	     is confirmed gets no reminders, never completes and produces no hours. -->
 	{#if shift.roleName !== null}
 		<p class="text-subtle text-sm">
-			{booked.length} of {shift.capacity} confirmed{#if unconfirmed.length > 0}
+			{m.volunteer_work_order_view_confirmed_2({
+				length: booked.length,
+				capacity: shift.capacity
+			})}{#if unconfirmed.length > 0}
 				<Badge variant="warning" size="sm" class="ml-1">
-					{unconfirmed.length} unconfirmed
+					{m.volunteer_work_order_view_unconfirmed({ length: unconfirmed.length })}
 				</Badge>
 			{/if}
 		</p>
@@ -532,18 +544,21 @@
 	{/if}
 
 	{#if view.feedback.length > 0}
-		<InfoCard title="How it went">
+		<InfoCard title={m.volunteer_work_order_view_how_went()}>
 			<ul class="flex flex-col gap-3">
 				{#each view.feedback as response (response.signupId)}
 					<li class="text-sm">
 						<div class="flex items-center gap-2">
-							<span class="text-warning" aria-label="{response.rating} out of 5">
+							<span
+								class="text-warning"
+								aria-label={m.volunteer_work_order_view_aria_label({ rating: response.rating })}
+							>
 								{'★'.repeat(response.rating)}{'☆'.repeat(5 - response.rating)}
 							</span>
 							{#if !response.wasSetUp}
 								<!-- The actionable signal: enjoyment and preparedness pull
 								     apart exactly where the briefing needs work. -->
-								<Badge variant="warning">wasn't set up</Badge>
+								<Badge variant="warning">{m.volunteer_work_order_view_wasn_t_set_up()}</Badge>
 							{/if}
 						</div>
 						{#if response.comment}

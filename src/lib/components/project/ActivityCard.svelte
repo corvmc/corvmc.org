@@ -5,6 +5,7 @@
 </script>
 
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { RemoteQuery } from '@sveltejs/kit';
 	import { resolve } from '$app/paths';
 	import { ActivityFeedCard, type ActivityRow } from '$lib/components/ui/ActivityFeed';
@@ -56,7 +57,7 @@
 	{query}
 	{toRow}
 	empty={{
-		title: 'Nothing recorded yet',
-		description: 'Assignments, ticks, schedule changes and engagements show up here as they happen.'
+		title: m.project_activity_card_title(),
+		description: m.project_activity_card_description()
 	}}
 />

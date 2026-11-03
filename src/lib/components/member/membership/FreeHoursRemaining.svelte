@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { formatDate } from '$lib/utils/format';
 	import { creditsToHours } from '$lib/config';
 	import { getMembershipStatus } from '$lib/remote/reservations.remote';
@@ -12,7 +13,9 @@
 	{#await getMembershipStatus()}
 		<div class="flex items-center gap-2">
 			<IconClock size={18} class="text-gray-400" />
-			<span class="text-gray-400">Loading free hours...</span>
+			<span class="text-gray-400"
+				>{m.member_membership_free_hours_remaining_loading_free_hours()}</span
+			>
 		</div>
 	{:then membership}
 		{#if membership.isSustainingMember}
@@ -27,18 +30,19 @@
 			</div>
 			{#if membership.creditsResetAt}
 				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">
-					Resets to {creditsToHours(membership.hoursPerReset)} on {formatDate(
-						new Date(membership.creditsResetAt)
-					)}
+					{m.member_membership_free_hours_remaining_resets({
+						creditsToHours: creditsToHours(membership.hoursPerReset),
+						formatDate: formatDate(new Date(membership.creditsResetAt))
+					})}
 				</span>
 			{/if}
 		{:else}
 			<div class="flex items-center gap-3">
 				<IconClock size={18} class="shrink-0 opacity-40" />
-				<span>Get free practice hours each month with a sustaining membership.</span>
+				<span>{m.member_membership_free_hours_remaining_get_free_practice_hou()}</span>
 			</div>
 			<Button href="/member/membership" variant="default" size="sm" class="self-end sm:self-auto"
-				>Learn More</Button
+				>{m.member_membership_free_hours_remaining_learn_more()}</Button
 			>
 		{/if}
 	{/await}

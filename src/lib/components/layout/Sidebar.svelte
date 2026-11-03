@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 
 	let {
-		title = 'CorvMC',
+		title = m.layout_sidebar_title(),
 		badge = 'Staff',
 		navigation,
 		brand

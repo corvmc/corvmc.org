@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { formatMonthDay } from '$lib/utils/format';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
@@ -32,15 +33,17 @@
 				<IconMusic size={24} class="text-primary" />
 			</div>
 			<div>
-				<h3 class="text-xl font-semibold">Free Practice Hours</h3>
-				<p class="text-muted">Your monthly allocation</p>
+				<h3 class="text-xl font-semibold">
+					{m.member_membership_credit_balance_card_free_practice_hours()}
+				</h3>
+				<p class="text-muted">{m.member_membership_credit_balance_card_monthly_allocation()}</p>
 			</div>
 		</div>
 
 		<div class="mt-4 grid gap-4 sm:grid-cols-3">
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
 				<div class="text-3xl font-bold text-primary">{allocatedHours}</div>
-				<div class="text-muted">Total This Month</div>
+				<div class="text-muted">{m.member_membership_credit_balance_card_total_month()}</div>
 			</div>
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
 				<div
@@ -50,11 +53,11 @@
 				>
 					{remaining}
 				</div>
-				<div class="text-muted">Remaining</div>
+				<div class="text-muted">{m.member_membership_credit_balance_card_remaining()}</div>
 			</div>
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
 				<div class="text-3xl font-bold">{usedHours}</div>
-				<div class="text-muted">Used</div>
+				<div class="text-muted">{m.member_membership_credit_balance_card_used()}</div>
 			</div>
 		</div>
 
@@ -65,11 +68,17 @@
 		<div class="mt-4 space-y-2 border-t border-base-200 pt-4">
 			<div class="flex items-start gap-2">
 				<IconCircleCheck size={20} class="mt-0.5 shrink-0 text-success" />
-				<span><strong>Recurring reservations</strong> to lock in your regular practice times</span>
+				<span
+					><strong>{m.member_membership_credit_balance_card_recurring_reservations()}</strong> to lock
+					in your regular practice times</span
+				>
 			</div>
 			<div class="flex items-start gap-2">
 				<IconCircleCheck size={20} class="mt-0.5 shrink-0 text-success" />
-				<span><strong>Priority booking</strong> when last-minute openings pop up</span>
+				<span
+					><strong>{m.member_membership_credit_balance_card_priority_booking()}</strong> when last-minute
+					openings pop up</span
+				>
 			</div>
 		</div>
 	</CardBody>

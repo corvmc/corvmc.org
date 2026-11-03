@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
@@ -19,8 +20,12 @@
 	<!-- Non-member: three columns -->
 	<div>
 		<div class="mb-6 text-center">
-			<h2 class="text-3xl font-bold">Sustaining Member Benefits</h2>
-			<p class="mt-2 opacity-70">Everything you get with a monthly contribution</p>
+			<h2 class="text-3xl font-bold">
+				{m.member_membership_benefits_grid_sustaining_member_benefits()}
+			</h2>
+			<p class="mt-2 opacity-70">
+				{m.member_membership_benefits_grid_everything_get_with_monthly()}
+			</p>
 		</div>
 
 		<div class="grid gap-6 md:grid-cols-3">
@@ -29,11 +34,9 @@
 					<div class="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10">
 						<IconMusic size={24} class="text-primary" />
 					</div>
-					<CardTitle>Practice Time</CardTitle>
+					<CardTitle>{m.member_membership_benefits_grid_practice_time()}</CardTitle>
 					<p class="opacity-70">
-						For every $5 you put in each month, you get an hour of free practice time. Set up
-						recurring reservations so your favorite slot is always waiting, and jump the line when
-						last-minute openings pop up.
+						{m.member_membership_benefits_grid_every_5_put_each_month()}
 					</p>
 				</CardBody>
 			</Card>
@@ -43,11 +46,9 @@
 					<div class="mb-2 flex size-12 items-center justify-center rounded-xl bg-secondary/10">
 						<IconTool size={24} class="text-secondary" />
 					</div>
-					<CardTitle>Gear Library</CardTitle>
+					<CardTitle>{m.member_membership_benefits_grid_gear_library()}</CardTitle>
 					<p class="opacity-70">
-						The Collective has a whole library of gear you can borrow. Sustaining members get free
-						accessory rentals (cables, stands, the stuff you always forget), monthly equipment
-						credits that match your contribution, and better rates on the bigger stuff.
+						{m.member_membership_benefits_grid_collective_has_whole_library()}
 					</p>
 				</CardBody>
 			</Card>
@@ -57,11 +58,9 @@
 					<div class="mb-2 flex size-12 items-center justify-center rounded-xl bg-accent/10">
 						<IconUsers size={24} class="text-accent" />
 					</div>
-					<CardTitle>Shows & Community</CardTitle>
+					<CardTitle>{m.member_membership_benefits_grid_shows_community()}</CardTitle>
 					<p class="opacity-70">
-						First dibs on workshops and member-only events, and the satisfaction of knowing you're
-						helping keep independent music going in Corvallis. Show tickets are a sliding scale for
-						everyone — your contribution is what keeps that possible.
+						{m.member_membership_benefits_grid_first_dibs_workshops_member()}
 					</p>
 				</CardBody>
 			</Card>
@@ -72,7 +71,7 @@
 	<div class="grid gap-6 md:grid-cols-2">
 		<Card>
 			<CardBody>
-				<CardTitle>Gear Library</CardTitle>
+				<CardTitle>{m.member_membership_benefits_grid_gear_library()}</CardTitle>
 				<ul class="mt-2 space-y-2">
 					{@render benefitItem(
 						'<strong>Free accessory rentals</strong> — cables, stands, mic clips, all the essentials'
@@ -87,7 +86,7 @@
 
 		<Card>
 			<CardBody>
-				<CardTitle>Shows & Community</CardTitle>
+				<CardTitle>{m.member_membership_benefits_grid_shows_community()}</CardTitle>
 				<ul class="mt-2 space-y-2">
 					{@render benefitItem(
 						'<strong>Show tickets on a sliding scale</strong> — for everyone, because of you'

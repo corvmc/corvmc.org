@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { here, signInHref } from '$lib/utils/sign-in';
 	import type { ResolvedPathname } from '$app/types';
@@ -21,12 +22,13 @@
 						<path id="arc-bot-cta" d="M 85,50 a 35,35 0 1,1 -70,0" fill="none" />
 					</defs>
 					<text>
-						<textPath href="#arc-top-cta" startOffset="50%" text-anchor="middle">Your Band</textPath
+						<textPath href="#arc-top-cta" startOffset="50%" text-anchor="middle"
+							>{m.directory_vinyl_card_cta_band()}</textPath
 						>
 					</text>
 					<text>
 						<textPath href="#arc-bot-cta" startOffset="50%" text-anchor="middle"
-							>Corvallis Music Collective</textPath
+							>{m.directory_corvallis_music_collective()}</textPath
 						>
 					</text>
 				</svg>
@@ -42,8 +44,8 @@
 		</div>
 	</div>
 	<div class="vinyl-card__caption">
-		<div class="vinyl-card__band">Your band here</div>
-		<div class="vinyl-card__meta">Join the collective &rarr;</div>
+		<div class="vinyl-card__band">{m.directory_vinyl_card_cta_band_here()}</div>
+		<div class="vinyl-card__meta">{m.directory_vinyl_card_cta_join_collective()}</div>
 	</div>
 </a>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -46,17 +47,19 @@
 	const categoryForm = $derived(editingCategory?.id ? (editCategory as any) : addCategory);
 </script>
 
-<Modal bind:open title="Manage Categories" maxWidth="max-w-lg">
+<Modal bind:open title={m.inventory_category_manager_modal_title()} maxWidth="max-w-lg">
 	<div class="mb-4">
 		{#if categories.length === 0}
-			<EmptyState description="No categories" />
+			<EmptyState description={m.inventory_category_manager_modal_description()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Name</th>
-					<th class="col-support">Pricing tier</th>
-					<th class="col-support cell-num">Order</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th>{m.inventory_category_manager_modal_name()}</th>
+					<th class="col-support">{m.inventory_category_manager_modal_pricing_tier()}</th>
+					<th class="col-support cell-num">{m.inventory_category_manager_modal_order()}</th>
+					<th class="w-px"
+						><span class="sr-only">{m.inventory_category_manager_modal_actions()}</span></th
+					>
 				{/snippet}
 				{#each categories as cat (cat.id)}
 					<tr>
@@ -74,7 +77,7 @@
 										name: cat.name,
 										displayOrder: cat.displayOrder,
 										pricingTier: cat.pricingTier as PricingTier
-									})}>Edit</Button
+									})}>{m.inventory_category_manager_modal_edit()}</Button
 							>
 							<RemoveCategoryAction categoryId={cat.id} name={cat.name} />
 						</td>
@@ -100,12 +103,14 @@
 						pricingTier: 'accessory' as PricingTier
 					})}
 			>
-				+ New Category
+				{m.inventory_category_manager_modal_new_category()}
 			</Button>
 		{:else}
 			<Form
 				remote={categoryForm}
-				successToast={editingCategory.id ? 'Category updated' : 'Category added'}
+				successToast={editingCategory.id
+					? m.inventory_category_manager_modal_category_updated()
+					: m.inventory_category_manager_modal_category_added()}
 				onsuccess={refreshCategories}
 				class="space-y-3"
 			>
@@ -116,21 +121,21 @@
 					<Field
 						name="name"
 						type="text"
-						label="Name"
+						label={m.inventory_category_manager_modal_name()}
 						class="col-span-2"
 						value={editingCategory.name}
 					/>
 					<Field
 						name="displayOrder"
 						type="number"
-						label="Order"
+						label={m.inventory_category_manager_modal_order()}
 						value={editingCategory.displayOrder}
 					/>
 				</div>
 				<Field
 					name="pricingTier"
 					type="select"
-					label="Pricing Tier"
+					label={m.inventory_category_manager_modal_pricing_tier_2()}
 					value={editingCategory.pricingTier}
 					options={pricingTiers.map((t) => ({
 						value: t,
@@ -139,9 +144,15 @@
 				/>
 				<div class="flex gap-2">
 					<Button type="button" variant="ghost" size="sm" onclick={() => (editingCategory = null)}
-						>Cancel</Button
+						>{m.inventory_category_manager_modal_cancel()}</Button
 					>
-					<SubmitButton label={editingCategory.id ? 'Save' : 'Add'} variant="primary" size="sm" />
+					<SubmitButton
+						label={editingCategory.id
+							? m.inventory_category_manager_modal_save()
+							: m.inventory_category_manager_modal_add()}
+						variant="primary"
+						size="sm"
+					/>
 				</div>
 			</Form>
 		{/if}

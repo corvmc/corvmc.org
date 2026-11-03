@@ -16,7 +16,7 @@
 		value = $bindable(null),
 		labelKey = 'name' as StringKey<T>,
 		descriptionKey = 'email' as StringKey<T>,
-		placeholder = 'Search by name or email...',
+		placeholder = m.ui_search_by_name_email(),
 		minChars = 2,
 		name,
 		field,

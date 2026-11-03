@@ -10,6 +10,7 @@
 </script>
 
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import CheckboxGroup from '$lib/components/ui/Form/CheckboxGroup.svelte';
 	import { grantableBy } from '$lib/config';
@@ -20,7 +21,7 @@
 		groupId,
 		name,
 		held,
-		label = 'Edit',
+		label = m.groups_edit(),
 		onsuccess
 	}: {
 		groupId: string;
@@ -43,14 +44,14 @@
 	{label}
 	variant="ghost"
 	size="sm"
-	modalTitle="What {name} members may do"
-	successToast="Grants saved"
+	modalTitle={m.groups_committee_grants_modal_title({ name })}
+	successToast={m.groups_committee_grants_success_toast()}
 	{onsuccess}
 >
 	{#snippet form()}
 		<input type="hidden" name="groupId" value={groupId} />
 		<p class="text-muted">
-			Every active member of this committee holds these. Leaving the committee takes them away.
+			{m.groups_committee_grants_every_active_member_committee_holds()}
 		</p>
 		<CheckboxGroup field={instance.fields.capabilities} selected={held} {options} />
 	{/snippet}

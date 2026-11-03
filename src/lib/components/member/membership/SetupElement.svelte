@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import type { Stripe, StripeElements, StripePaymentElement, Appearance } from '@stripe/stripe-js';
 	import { loadStripeOrReport, PAYMENTS_UNAVAILABLE } from '$lib/stripe';
@@ -115,7 +116,7 @@
 		shape="block"
 		disabled={!ready || saving}
 		onclick={save}
-		title={ready ? undefined : 'Waiting for the card form to load'}
+		title={ready ? undefined : m.member_membership_setup_element_title()}
 	>
 		{saving ? 'Saving…' : 'Save card'}
 	</Button>

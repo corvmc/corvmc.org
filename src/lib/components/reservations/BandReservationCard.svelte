@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import Form from '$lib/components/ui/Form';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -53,10 +54,18 @@
      every past session and every card on the dashboard. -->
 {#snippet rowActions()}
 	{#if showCancel}
-		<Form remote={cancel} onsuccess={() => toast.success('Reservation cancelled')}>
+		<Form
+			remote={cancel}
+			onsuccess={() => toast.success(m.reservations_band_reservation_card_toast())}
+		>
 			<input {...cancelFields.slug.as('hidden', slug)} />
 			<input {...cancelFields.reservationId.as('hidden', reservation.id)} />
-			<SubmitButton label="Cancel" variant="error" size="xs" outline />
+			<SubmitButton
+				label={m.reservations_band_reservation_card_label()}
+				variant="error"
+				size="xs"
+				outline
+			/>
 		</Form>
 	{/if}
 	{#if reservation.canPay}
@@ -66,7 +75,7 @@
 			size="xs"
 			outline
 		>
-			Pay online
+			{m.reservations_band_reservation_card_pay_online()}
 		</Button>
 	{/if}
 {/snippet}
@@ -80,8 +89,9 @@
 		<EntityIdentity ref={reservation.ref} size="md">
 			{#snippet subtitle()}
 				{reservation.ref.subtitle}
-				{#if reservation.bookedBy.id}
-					&middot; Booked by {reservation.bookedBy.title}
+				{#if reservation.bookedBy.id}{m.reservations_band_reservation_card_booked_by({
+						title: reservation.bookedBy.title
+					})}
 				{/if}
 			{/snippet}
 		</EntityIdentity>

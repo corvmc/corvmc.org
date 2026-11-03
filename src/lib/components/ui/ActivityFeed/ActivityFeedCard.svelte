@@ -17,7 +17,7 @@
 	 * a write can refresh it; "Show older" asks for a longer page.
 	 */
 	let {
-		title = 'Activity',
+		title = m.ui_activity(),
 		query,
 		toRow,
 		empty,

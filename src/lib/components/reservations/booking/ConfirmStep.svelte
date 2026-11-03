@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { BookerType } from '$lib/config';
 	import {
 		getReservationPricing,
@@ -27,7 +28,7 @@
 		band = false,
 		bookerType = undefined,
 		payAhead = true,
-		submitLabel = 'Confirm'
+		submitLabel = m.reservations_booking_confirm_step_submit_label()
 	}: {
 		reservation?: { id: string; startsAt: Date; endsAt: Date };
 		fields?: { id?: RemoteFormField<string> };
@@ -215,14 +216,22 @@
 			{@const creditsCommitNow = pricing.creditsApplicable > 0 && !beforeConfirmWindow}
 			<dl class="space-y-2 py-4 text-sm">
 				<div class="flex justify-between">
-					<dt>{pricing.durationHours} hr × ${formatDollars(pricing.hourlyRateCents)}/hr</dt>
+					<dt>
+						{m.reservations_booking_confirm_step_hr_hr({
+							durationHours: pricing.durationHours,
+							formatDollars: formatDollars(pricing.hourlyRateCents)
+						})}
+					</dt>
 					{#if creditsCommitNow}
 						<dd>
 							<span class="line-through opacity-60">
-								<span class="sr-only">Before free hours:</span>${formatDollars(pricing.totalCents)}
+								<span class="sr-only"
+									>{m.reservations_booking_confirm_step_before_free_hours()}</span
+								>${formatDollars(pricing.totalCents)}
 							</span>
 							<span class="ml-1 font-medium text-success">
-								<span class="sr-only">You pay:</span>${formatDollars(pricing.remainingCents)}
+								<span class="sr-only">{m.reservations_booking_confirm_step_pay()}</span
+								>${formatDollars(pricing.remainingCents)}
 							</span>
 						</dd>
 					{:else}
@@ -255,7 +264,9 @@
 					<p class="text-sm font-medium">{scheduleLabel}</p>
 				{/if}
 				<div class="mt-2">
-					<p class="mb-1 text-subtle font-medium">Upcoming instances</p>
+					<p class="mb-1 text-subtle font-medium">
+						{m.reservations_booking_confirm_step_upcoming_instances()}
+					</p>
 					{#if !recurringPreview}
 						<div class="space-y-1">
 							{#each Array(3), i (i)}
@@ -263,7 +274,9 @@
 							{/each}
 						</div>
 					{:else if recurringPreview.dates.length === 0}
-						<p class="text-subtle">No upcoming instances in the next 60 days.</p>
+						<p class="text-subtle">
+							{m.reservations_booking_confirm_step_no_upcoming_instances_next()}
+						</p>
 					{:else}
 						<ul class="space-y-0.5 text-xs">
 							{#each recurringPreview.dates as iso (iso)}
@@ -272,13 +285,15 @@
 						</ul>
 						{#if recurringPreview.totalInWindow > recurringPreview.dates.length}
 							<p class="mt-1 text-xs opacity-50">
-								and {recurringPreview.totalInWindow - recurringPreview.dates.length} more...
+								{m.reservations_booking_confirm_step_more({
+									value: recurringPreview.totalInWindow - recurringPreview.dates.length
+								})}
 							</p>
 						{/if}
 					{/if}
 				</div>
 				<p class="mt-2 text-xs opacity-50">
-					Future instances are generated automatically. You'll confirm each one individually.
+					{m.reservations_booking_confirm_step_future_instances_generated()}
 				</p>
 			</div>
 		{/if}
@@ -289,39 +304,41 @@
 			     `createdByUserId` and a band has no balance of its own. Unexplained
 			     that reads as a bug. -->
 			<p class="text-subtle" data-testid="band-credit-note">
-				Bands don't have their own free hours.
+				{m.reservations_booking_confirm_step_bands_don_t_have_their()}
 				{#if pricing && pricing.creditsApplicable > 0}
 					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
 					{freeHours}
 					{freeHours === 1 ? 'hr' : 'hrs'} of your own free hours apply.
-				{:else}
-					It's booked in your name, and you have no free hours left this month.
-				{/if}
+				{:else}{m.reservations_booking_confirm_step_s_booked_name_have_no()}{/if}
 			</p>
 		{:else if staff}
 			<p class="text-subtle">
-				Comp makes this reservation fully free without using the member's free hours.
-				{#if pricing && pricing.creditsApplicable > 0}
-					Apply Credits commits their free hours; any remainder is due at the door.
-				{:else}
-					Confirm leaves the full amount due at the door.
-				{/if}
+				{m.reservations_booking_confirm_step_comp_makes_reservation_ful()}
+				{#if pricing && pricing.creditsApplicable > 0}{m.reservations_booking_confirm_step_apply_credits_commits_thei()}{:else}{m.reservations_booking_confirm_step_confirm_leaves_full_amount()}{/if}
 			</p>
 		{/if}
 
 		<div class="flex justify-end gap-2 pt-2">
 			{#if formCtx.currentStep > 0}
-				<Button type="button" variant="ghost" onclick={() => formCtx.back()}>Back</Button>
+				<Button type="button" variant="ghost" onclick={() => formCtx.back()}
+					>{m.reservations_booking_confirm_step_back()}</Button
+				>
 			{/if}
 			{#if band}
-				<Button type="submit" variant="primary">Book Session</Button>
+				<Button type="submit" variant="primary"
+					>{m.reservations_booking_confirm_step_book_session()}</Button
+				>
 				{#if showPayAhead}
-					<Button type="button" variant="ghost" onclick={() => formCtx.next()}>Pay Ahead</Button>
+					<Button type="button" variant="ghost" onclick={() => formCtx.next()}
+						>{m.reservations_booking_confirm_step_pay_ahead()}</Button
+					>
 				{/if}
 			{:else if staff}
 				<!-- Staff choice: comp (fully free, no credits used) or apply the member's
 				     credits (submitter name/value sets comp only when that button submits). -->
-				<Button type="submit" name="comp" value="on" variant="info" outline>Comp</Button>
+				<Button type="submit" name="comp" value="on" variant="info" outline
+					>{m.reservations_booking_confirm_step_comp()}</Button
+				>
 				<Button type="submit" variant="primary">
 					{pricing && pricing.creditsApplicable > 0 ? 'Apply Credits' : 'Confirm'}
 				</Button>
@@ -336,7 +353,9 @@
 					>{beforeConfirmWindow ? 'Hold this slot' : submitLabel}</Button
 				>
 				{#if showPayAhead}
-					<Button type="button" variant="ghost" onclick={() => formCtx.next()}>Pay Ahead</Button>
+					<Button type="button" variant="ghost" onclick={() => formCtx.next()}
+						>{m.reservations_booking_confirm_step_pay_ahead()}</Button
+					>
 				{/if}
 			{/if}
 		</div>

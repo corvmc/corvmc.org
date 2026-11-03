@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The rows of a conversation list, shared by the member's Messages and a
 	 * band's pre-filtered view of the same query (#1250).
@@ -61,7 +62,7 @@
 						<span class="truncate font-medium" class:font-bold={c.unread}>{titleOf(c)}</span>
 						{#if c.pending}
 							<span class="badge shrink-0 badge-sm badge-warning" data-testid="request-badge"
-								>Request</span
+								>{m.inbox_conversation_rows_request()}</span
 							>
 						{/if}
 						{#if showInbox && c.groupName}
@@ -70,7 +71,10 @@
 							<span class="badge shrink-0 badge-ghost badge-sm">{c.groupName}</span>
 						{/if}
 						{#if c.unread}
-							<span class="size-2 shrink-0 rounded-full bg-primary" title="Unread"></span>
+							<span
+								class="size-2 shrink-0 rounded-full bg-primary"
+								title={m.inbox_conversation_rows_title()}
+							></span>
 						{/if}
 					</span>
 
@@ -80,7 +84,7 @@
 
 					<span class="text-subtle text-xs">
 						{c.lastMessageAt ? relativeDay(c.lastMessageAt) : '—'}
-						{#if c.status === 'resolved'}· Closed{/if}
+						{#if c.status === 'resolved'}{m.inbox_conversation_rows_closed()}{/if}
 					</span>
 				</span>
 			</a>

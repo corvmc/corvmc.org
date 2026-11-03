@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
 	import { IconFile, IconTrash, IconUpload } from '@tabler/icons-svelte';
@@ -44,13 +45,13 @@
 		{
 			slot: 'rider',
 			type: 'rider',
-			label: 'Tech rider',
+			label: m.rider_rider_uploads_tech_rider(),
 			hint: 'A PDF or image of the rider you already send venues.'
 		},
 		{
 			slot: 'stage_plot',
 			type: 'stage_plot',
-			label: 'Stage plot',
+			label: m.rider_rider_uploads_stage_plot(),
 			// The server has always taken a PDF here; only the old input said otherwise.
 			hint: 'A drawing of where everything stands. PDF or image.'
 		}
@@ -69,7 +70,7 @@
 			const err = (await res.json().catch(() => ({}))) as { message?: string };
 			throw new Error(err.message || 'Upload failed');
 		}
-		toast.success('Uploaded');
+		toast.success(m.rider_rider_uploads_uploaded());
 		onchanged();
 	}
 
@@ -80,10 +81,10 @@
 				method: 'DELETE'
 			});
 			if (res.ok) {
-				toast.success('Removed');
+				toast.success(m.rider_rider_uploads_removed());
 				onchanged();
 			} else {
-				toast.error('Could not remove that file');
+				toast.error(m.rider_rider_uploads_could_not_remove_file());
 			}
 		} finally {
 			busy = null;
@@ -118,7 +119,7 @@
 							size="sm"
 							shape="square"
 							class="ml-auto"
-							aria-label="Remove {file.filename ?? entry.label}"
+							aria-label={m.rider_rider_uploads_remove({ value: file.filename ?? entry.label })}
 							disabled={busy === file.attachmentId}
 							onclick={() => remove(file.attachmentId)}
 						>
@@ -133,12 +134,13 @@
 					upload={(file) => upload(entry.type, file)}
 					accept="image/*,.pdf"
 					showPreview={false}
-					emptyLabel="Upload"
-					aria-label="Upload {entry.label}"
+					emptyLabel={m.rider_rider_uploads_empty_label()}
+					aria-label={m.rider_rider_uploads_upload({ label: entry.label })}
 				/>
 			{:else if filesFor(entry.slot).length === 0}
 				<p class="text-xs text-base-content/50">
-					<IconUpload size={14} class="inline" /> Nothing uploaded.
+					<IconUpload size={14} class="inline" />
+					{m.rider_rider_uploads_nothing_uploaded()}
 				</p>
 			{/if}
 		</div>

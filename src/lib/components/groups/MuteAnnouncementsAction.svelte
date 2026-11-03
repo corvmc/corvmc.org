@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { setAnnouncementMute } from '$lib/remote/announcements.remote';
@@ -32,8 +33,12 @@
 <Action
 	action={setAnnouncementMute}
 	data-testid="mute-announcements"
-	label={muted ? 'Unmute announcements' : 'Mute announcements'}
-	successToast={muted ? 'Announcements on' : 'Announcements muted'}
+	label={muted
+		? m.groups_mute_announcements_unmute_announcements()
+		: m.groups_mute_announcements_mute_announcements()}
+	successToast={muted
+		? m.groups_mute_announcements_announcements()
+		: m.groups_mute_announcements_announcements_muted()}
 	variant="ghost"
 	size="sm"
 	onsuccess={() => invalidateAll()}

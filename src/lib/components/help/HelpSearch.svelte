@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { IconSearch } from '@tabler/icons-svelte';
 
 	let {
@@ -44,7 +45,7 @@
 		<IconSearch size={16} class="absolute top-1/2 left-3 -translate-y-1/2 opacity-50" />
 		<input
 			type="text"
-			placeholder="Search help articles..."
+			placeholder={m.help_help_search_placeholder()}
 			class="input w-full pl-9"
 			bind:value={query}
 			oninput={handleInput}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import type { BookerType } from '$lib/config';
 	import type { ResolvedPathname } from '$app/types';
 	import BookerTypeIcon from './BookerTypeIcon.svelte';
@@ -62,11 +63,11 @@
 	<div
 		class="pointer-events-none absolute inset-0 -top-4 flex h-[1em] items-center justify-between px-1.5"
 	>
-		<span class="text-[10px] opacity-40">9am</span>
-		<span class="text-[10px] opacity-40">12pm</span>
-		<span class="text-[10px] opacity-40">3pm</span>
-		<span class="text-[10px] opacity-40">6pm</span>
-		<span class="text-[10px] opacity-40">9pm</span>
+		<span class="text-[10px] opacity-40">{msg.reservations_day_timeline_9am()}</span>
+		<span class="text-[10px] opacity-40">{msg.reservations_day_timeline_12pm()}</span>
+		<span class="text-[10px] opacity-40">{msg.reservations_day_timeline_3pm()}</span>
+		<span class="text-[10px] opacity-40">{msg.reservations_day_timeline_6pm()}</span>
+		<span class="text-[10px] opacity-40">{msg.reservations_day_timeline_9pm()}</span>
 	</div>
 
 	<!-- Closures (furthest back). A closure from the day before starts off the
@@ -76,7 +77,7 @@
 			data-closure
 			class="absolute flex h-full items-center rounded bg-neutral px-1 text-neutral-content"
 			style="left: {left(c)}; width: {width(c)}"
-			title="Closed: {c.reason}"
+			title={msg.reservations_day_timeline_title({ reason: c.reason })}
 		>
 			<IconLock size={14} aria-hidden="true" />
 		</div>

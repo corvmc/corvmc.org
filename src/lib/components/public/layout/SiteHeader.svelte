@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import Logo from '$lib/components/ui/Logo.svelte';
@@ -15,11 +16,11 @@
 	);
 
 	const links = [
-		{ href: resolve('/events'), label: 'Events' },
-		{ href: resolve('/directory'), label: 'Directory' },
-		{ href: resolve('/programs'), label: 'Programs' },
-		{ href: resolve('/membership'), label: 'Membership' },
-		{ href: resolve('/about'), label: 'About' }
+		{ href: resolve('/events'), label: m.public_events() },
+		{ href: resolve('/directory'), label: m.public_directory() },
+		{ href: resolve('/programs'), label: m.public_programs() },
+		{ href: resolve('/membership'), label: m.public_site_header_membership() },
+		{ href: resolve('/about'), label: m.public_about() }
 	];
 
 	function isActive(href: string): boolean {
@@ -43,22 +44,26 @@
 
 			<!-- Title -->
 			<div class="text-2xl font-bold" style="color: var(--cmc-teal); grid-row: 1; grid-column: 2">
-				Corvallis Music Collective
+				{m.public_site_header_corvallis_music_collective()}
 			</div>
 
 			<!-- Actions -->
 			<div class="flex items-center gap-2" style="grid-row: 1 / 3; grid-column: 3">
 				{#if user}
-					<Button href="/member" variant="default" size="sm">My Account</Button>
+					<Button href="/member" variant="default" size="sm"
+						>{m.public_site_header_my_account()}</Button
+					>
 				{:else}
-					<Button href={signInLink} variant="default" size="sm">Sign In</Button>
+					<Button href={signInLink} variant="default" size="sm"
+						>{m.public_site_header_sign()}</Button
+					>
 				{/if}
 				<Button
 					variant="ghost"
 					size="sm"
 					class="lg:hidden"
 					onclick={() => (menuOpen = !menuOpen)}
-					aria-label="Toggle menu"
+					aria-label={m.public_site_header_aria_label()}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -99,7 +104,7 @@
 					class="ml-3"
 					style="--btn-fill: var(--bg-page)"
 				>
-					Contribute
+					{m.public_contribute()}
 				</Button>
 			</nav>
 		</div>
@@ -111,7 +116,7 @@
 			style="border-bottom: 1px solid var(--surface-border); background: var(--bg-page)"
 		>
 			<ul class="menu menu-sm p-2">
-				{#each [...links, { href: resolve('/contribute'), label: 'Contribute' }, { href: resolve('/contact'), label: 'Contact' }] as link (link.href)}
+				{#each [...links, { href: resolve('/contribute'), label: m.public_contribute() }, { href: resolve('/contact'), label: m.public_contact() }] as link (link.href)}
 					<li>
 						<a
 							href={link.href}

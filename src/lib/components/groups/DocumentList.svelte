@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -47,8 +48,12 @@
 		<!-- Managers only. A member who cannot upload has no use for a number
 		     describing a limit they will never meet. -->
 		<span class="text-subtle">
-			{formatBytes(usage.usedBytes)} of {formatBytes(usage.quotaBytes)} · {usage.fileCount} of {usage.quotaFiles}
-			documents
+			{m.groups_document_list_documents({
+				formatBytes: formatBytes(usage.usedBytes),
+				formatBytes2: formatBytes(usage.quotaBytes),
+				fileCount: usage.fileCount,
+				quotaFiles: usage.quotaFiles
+			})}
 		</span>
 		<DocumentUploadAction {groupId} {atQuota} />
 	</div>
@@ -57,18 +62,18 @@
 {#if files.length === 0}
 	<EmptyState
 		description={canManage
-			? 'Nothing here yet. Upload minutes, charts, or anything the group shares.'
-			: 'Nothing here yet.'}
+			? m.groups_document_list_nothing_here_yet_upload_minutes()
+			: m.groups_document_list_nothing_here_yet()}
 	/>
 {:else}
 	<Table>
 		{#snippet head()}
-			<th>File</th>
-			<th class="col-support">Added by</th>
-			<th class="col-support w-px whitespace-nowrap">Size</th>
-			<th class="col-extra w-px whitespace-nowrap">Added</th>
+			<th>{m.groups_file()}</th>
+			<th class="col-support">{m.groups_document_list_added_by()}</th>
+			<th class="col-support w-px whitespace-nowrap">{m.groups_document_list_size()}</th>
+			<th class="col-extra w-px whitespace-nowrap">{m.groups_added()}</th>
 			{#if canManage}
-				<th class="w-px"><span class="sr-only">Actions</span></th>
+				<th class="w-px"><span class="sr-only">{m.groups_document_list_actions()}</span></th>
 			{/if}
 		{/snippet}
 		{#each files as doc (doc.id)}
@@ -92,7 +97,7 @@
 					{#if doc.uploadedBy}
 						<EntityIdentity ref={doc.uploadedBy} size="sm" />
 					{:else}
-						<span class="text-subtle">Former member</span>
+						<span class="text-subtle">{m.groups_former_member()}</span>
 					{/if}
 				</td>
 				<td class="col-support w-px whitespace-nowrap">{formatBytes(doc.sizeBytes)}</td>
@@ -101,11 +106,11 @@
 					<td class="w-px">
 						<Action
 							action={deleteDocument.for(doc.id)}
-							label="Delete"
-							modalTitle="Delete document"
-							submitLabel="Delete"
+							label={m.groups_delete()}
+							modalTitle={m.groups_document_list_modal_title()}
+							submitLabel={m.groups_delete()}
 							confirm="Delete “{doc.filename}”? It comes off the list for everyone."
-							successToast="Deleted"
+							successToast={m.groups_deleted()}
 							variant="error"
 							size="xs"
 							outline

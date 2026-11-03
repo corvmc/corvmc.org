@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import { hashPattern } from '$lib/utils/patterns';
 	import { imageSrc } from '$lib/utils/images';
@@ -136,7 +137,7 @@
 						target="_blank"
 						class="btn btn-primary btn-sm"
 					>
-						<IconExternalLink size={14} />Book a lesson
+						<IconExternalLink size={14} />{m.directory_instructor_card_book_lesson()}
 					</a>
 				{/if}
 			</div>

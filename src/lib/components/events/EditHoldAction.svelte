@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { adjustListingHold } from '$lib/remote/events.remote';
@@ -12,12 +13,12 @@
 
 <Action
 	action={adjustListingHold}
-	label="Edit Hold"
+	label={m.events_edit_hold_edit_hold()}
 	variant="ghost"
 	size="sm"
-	modalTitle="Edit Hold"
-	submitLabel="Save"
-	successToast="Hold updated"
+	modalTitle={m.events_edit_hold_edit_hold()}
+	submitLabel={m.events_save()}
+	successToast={m.events_edit_hold_success_toast()}
 >
 	{#snippet form()}
 		<input {...fields.eventId.as('hidden', eventId)} />
@@ -26,14 +27,14 @@
 				<FormField
 					field={fields.startTime}
 					type="time"
-					label="Hold starts"
+					label={m.events_edit_hold_hold_starts()}
 					value={toLocalTime(startsAt)}
 					required
 				/>
 				<FormField
 					field={fields.endTime}
 					type="time"
-					label="Hold ends"
+					label={m.events_edit_hold_hold_ends()}
 					value={toLocalTime(endsAt)}
 					required
 				/>
@@ -41,11 +42,11 @@
 			<FormField
 				field={fields.overrideConflicts}
 				type="checkbox"
-				label="Book it anyway"
-				description="Holds the room even if this double-books it."
+				label={m.events_edit_hold_book_anyway()}
+				description={m.events_edit_hold_description()}
 			/>
 			<p class="text-muted">
-				The hold moves in place and keeps its door code. The show's own times are unchanged.
+				{m.events_edit_hold_hold_moves_place_keeps_its()}
 			</p>
 		</div>
 	{/snippet}

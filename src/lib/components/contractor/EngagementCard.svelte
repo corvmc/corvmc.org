@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * One contractor's engagement on a work order: its money and its actions.
 	 * The actions are gated on status, because two of them move an asset —
@@ -55,27 +56,39 @@
 						{contractorJobStatusLabels[job.status]}
 					</Badge>
 					{#if isLate}
-						<Badge variant="warning" size="sm">late</Badge>
+						<Badge variant="warning" size="sm">{m.contractor_engagement_card_late()}</Badge>
 					{/if}
 				</CardTitle>
 				<div class="flex flex-wrap gap-1">
 					{#if open}
 						<Action
 							action={schedule}
-							label={job.status === 'booked' ? 'Reschedule' : 'Book'}
+							label={job.status === 'booked'
+								? m.contractor_engagement_card_reschedule()
+								: m.contractor_engagement_card_book()}
 							variant="ghost"
 							size="sm"
-							modalTitle={job.status === 'booked' ? 'Reschedule' : 'Book'}
-							successToast="Booking saved"
+							modalTitle={job.status === 'booked'
+								? m.contractor_engagement_card_reschedule()
+								: m.contractor_engagement_card_book()}
+							successToast={m.contractor_engagement_card_booking_saved()}
 							data-testid="engagement-schedule"
 						>
 							{#snippet form()}
 								<input {...schedule.fields.id.as('hidden', job.id)} />
-								<Field field={schedule.fields.scheduledFor} type="date" label="When they come" />
-								<Field field={schedule.fields.expectedBackAt} type="date" label="Promised back" />
+								<Field
+									field={schedule.fields.scheduledFor}
+									type="date"
+									label={m.contractor_engagement_card_when_they_come()}
+								/>
+								<Field
+									field={schedule.fields.expectedBackAt}
+									type="date"
+									label={m.contractor_engagement_card_promised_back()}
+								/>
 								{#if job.assetId && job.status !== 'booked'}
 									<p class="text-subtle text-sm">
-										This takes the unit out of service and writes a repair movement against it.
+										{m.contractor_engagement_card_takes_unit_out_service_writes()}
 									</p>
 								{/if}
 							{/snippet}
@@ -83,54 +96,64 @@
 
 						<Action
 							action={complete}
-							label="Complete"
+							label={m.contractor_engagement_card_complete()}
 							variant="ghost"
 							size="sm"
-							modalTitle="Complete"
-							successToast="Completed"
+							modalTitle={m.contractor_engagement_card_complete()}
+							successToast={m.contractor_engagement_card_completed()}
 							data-testid="engagement-complete"
 						>
 							{#snippet form()}
 								<input {...complete.fields.id.as('hidden', job.id)} />
 								{#if !job.workOrderResolvedAt && !job.workOrderCancelledAt}
-									<p class="text-subtle text-sm">This also marks the work order done.</p>
+									<p class="text-subtle text-sm">
+										{m.contractor_engagement_card_also_marks_work_order_done()}
+									</p>
 								{/if}
-								<Field field={complete.fields.completedAt} type="date" label="Finished" />
-								<MoneyField field={complete.fields.costCents} label="Cost" value={job.costCents} />
+								<Field
+									field={complete.fields.completedAt}
+									type="date"
+									label={m.contractor_engagement_card_finished()}
+								/>
+								<MoneyField
+									field={complete.fields.costCents}
+									label={m.contractor_engagement_card_cost()}
+									value={job.costCents}
+								/>
 								<Field
 									field={complete.fields.invoiceRef}
 									type="text"
-									label="Invoice number"
+									label={m.contractor_engagement_card_invoice_number()}
 									value={job.invoiceRef ?? ''}
-									description="The number, not the document — invoices are not uploaded."
+									description={m.contractor_engagement_card_number_not_document_invoices_not()}
 								/>
 								{#if job.assetId}
 									<Field
 										field={complete.fields.leaveOutOfService}
 										type="checkbox"
-										label="Leave the unit out of service"
-										description="Tick this if the repair did not take."
+										label={m.contractor_engagement_card_leave_unit_out_service()}
+										description={m.contractor_engagement_card_tick_if_repair_did_not()}
 									/>
 								{/if}
 								<!-- Donated work is a contributed service, kept apart from spend. -->
 								<Field
 									field={complete.fields.isDonated}
 									type="checkbox"
-									label="Donated"
+									label={m.contractor_engagement_card_donated()}
 									value={job.isDonated}
-									description="They did the work and did not invoice for it. Leave Cost blank."
+									description={m.contractor_engagement_card_they_did_work_did_not()}
 								/>
 								<MoneyField
 									field={complete.fields.fairValueCents}
-									label="Fair value"
+									label={m.contractor_engagement_card_fair_value()}
 									value={job.fairValueCents}
 								/>
 								<Field
 									field={complete.fields.fairValueBasis}
 									type="text"
-									label="Basis for that value"
+									label={m.contractor_engagement_card_basis_value()}
 									value={job.fairValueBasis ?? ''}
-									description="How the figure was arrived at — their rate card, a quote from another shop. Only used when Donated is ticked."
+									description={m.contractor_engagement_card_how_figure_was_arrived_at()}
 								/>
 							{/snippet}
 						</Action>
@@ -138,35 +161,33 @@
 						{#if job.status === 'asked'}
 							<Action
 								action={decline}
-								label="Decline"
+								label={m.contractor_engagement_card_decline()}
 								variant="ghost"
 								size="sm"
-								modalTitle="They declined"
-								submitLabel="Mark declined"
-								successToast="Marked declined"
+								modalTitle={m.contractor_engagement_card_they_declined()}
+								submitLabel={m.contractor_engagement_card_mark_declined()}
+								successToast={m.contractor_engagement_card_marked_declined()}
 							>
 								{#snippet form()}
 									<input {...decline.fields.id.as('hidden', job.id)} />
-									<p class="text-sm">The work order stays open for the next engagement.</p>
+									<p class="text-sm">{m.contractor_engagement_card_work_order_stays_open_next()}</p>
 								{/snippet}
 							</Action>
 						{:else}
 							<Action
 								action={noShow}
-								label="No-show"
+								label={m.contractor_engagement_card_no_show()}
 								variant="ghost"
 								size="sm"
-								modalTitle="They did not show"
-								submitLabel="Mark no-show"
-								successToast="Marked no-show"
+								modalTitle={m.contractor_engagement_card_they_did_not_show()}
+								submitLabel={m.contractor_engagement_card_mark_no_show()}
+								successToast={m.contractor_engagement_card_marked_no_show()}
 							>
 								{#snippet form()}
 									<input {...noShow.fields.id.as('hidden', job.id)} />
 									<p class="text-sm">
-										{#if job.assetId}
-											The unit stays out of service — it is still broken.
-										{/if}
-										The work order stays open for the next engagement.
+										{#if job.assetId}{m.contractor_engagement_card_unit_stays_out_service_still()}{/if}
+										{m.contractor_engagement_card_work_order_stays_open_next()}
 									</p>
 								{/snippet}
 							</Action>
@@ -174,23 +195,18 @@
 
 						<Action
 							action={cancel}
-							label="Cancel"
+							label={m.contractor_engagement_card_cancel()}
 							variant="ghost"
 							size="sm"
 							class="text-error"
-							modalTitle="Cancel this engagement"
+							modalTitle={m.contractor_engagement_card_cancel_engagement()}
 							submitVariant="error"
-							successToast="Cancelled"
+							successToast={m.contractor_engagement_card_cancelled()}
 						>
 							{#snippet form()}
 								<input {...cancel.fields.id.as('hidden', job.id)} />
 								<p class="text-sm">
-									{#if job.assetId}
-										The unit stays out of service. Calling off the contractor does not mend it — put
-										it back by hand if it turned out to be fine.
-									{:else}
-										The engagement is called off. Nothing else changes.
-									{/if}
+									{#if job.assetId}{m.contractor_engagement_card_unit_stays_out_service_calling()}{:else}{m.contractor_engagement_card_engagement_called_off_nothing_els()}{/if}
 								</p>
 							{/snippet}
 						</Action>
@@ -198,22 +214,30 @@
 						<!-- Only finished work is billed: every other ending is left out of spend. -->
 						<Action
 							action={invoice}
-							label="Invoice"
+							label={m.contractor_engagement_card_invoice()}
 							variant="ghost"
 							size="sm"
-							modalTitle="Record the invoice"
-							successToast="Saved"
+							modalTitle={m.contractor_engagement_card_record_invoice()}
+							successToast={m.contractor_engagement_card_saved()}
 						>
 							{#snippet form()}
 								<input {...invoice.fields.id.as('hidden', job.id)} />
-								<MoneyField field={invoice.fields.costCents} label="Cost" value={job.costCents} />
+								<MoneyField
+									field={invoice.fields.costCents}
+									label={m.contractor_engagement_card_cost()}
+									value={job.costCents}
+								/>
 								<Field
 									field={invoice.fields.invoiceRef}
 									type="text"
-									label="Invoice number"
+									label={m.contractor_engagement_card_invoice_number()}
 									value={job.invoiceRef ?? ''}
 								/>
-								<Field field={invoice.fields.paidAt} type="date" label="Paid" />
+								<Field
+									field={invoice.fields.paidAt}
+									type="date"
+									label={m.contractor_engagement_card_paid()}
+								/>
 							{/snippet}
 						</Action>
 					{/if}
@@ -228,30 +252,42 @@
 		{/snippet}
 
 		<DefinitionList>
-			<Fact label="Scheduled" value={job.scheduledFor ? formatDateShort(job.scheduledFor) : '—'} />
 			<Fact
-				label="Promised back"
+				label={m.contractor_engagement_card_scheduled()}
+				value={job.scheduledFor ? formatDateShort(job.scheduledFor) : '—'}
+			/>
+			<Fact
+				label={m.contractor_engagement_card_promised_back()}
 				value={job.expectedBackAt ? formatDateShort(job.expectedBackAt) : '—'}
 				class={isLate ? 'text-warning' : ''}
 			/>
-			<Fact label="Finished" value={job.completedAt ? formatDateShort(job.completedAt) : '—'} />
-			<Fact label="Quoted" value={job.quotedCents != null ? formatCents(job.quotedCents) : '—'} />
-			<Fact label="Cost">
+			<Fact
+				label={m.contractor_engagement_card_finished()}
+				value={job.completedAt ? formatDateShort(job.completedAt) : '—'}
+			/>
+			<Fact
+				label={m.contractor_engagement_card_quoted()}
+				value={job.quotedCents != null ? formatCents(job.quotedCents) : '—'}
+			/>
+			<Fact label={m.contractor_engagement_card_cost()}>
 				<!-- Not "$0": nothing was paid and something was given. -->
-				{#if job.isDonated}
-					Donated{#if job.fairValueCents != null}
-						· worth {formatCents(job.fairValueCents)}{/if}
+				{#if job.isDonated}{m.contractor_engagement_card_donated()}{#if job.fairValueCents != null}{m.contractor_engagement_card_worth(
+							{ formatCents: formatCents(job.fairValueCents) }
+						)}{/if}
 				{:else}
 					{job.costCents != null ? formatCents(job.costCents) : '—'}
 				{/if}
 			</Fact>
 			{#if job.isDonated && job.fairValueBasis}
-				<Fact label="Basis" value={job.fairValueBasis} />
+				<Fact label={m.contractor_engagement_card_basis()} value={job.fairValueBasis} />
 			{/if}
-			<Fact label="Invoice" value={job.invoiceRef ?? '—'} />
-			<Fact label="Paid" value={job.paidAt ? formatDateShort(job.paidAt) : '—'} />
+			<Fact label={m.contractor_engagement_card_invoice()} value={job.invoiceRef ?? '—'} />
+			<Fact
+				label={m.contractor_engagement_card_paid()}
+				value={job.paidAt ? formatDateShort(job.paidAt) : '—'}
+			/>
 			{#if job.notes}
-				<Fact label="Notes" wrap>{job.notes}</Fact>
+				<Fact label={m.contractor_engagement_card_notes()} wrap>{job.notes}</Fact>
 			{/if}
 		</DefinitionList>
 	</InfoCard>

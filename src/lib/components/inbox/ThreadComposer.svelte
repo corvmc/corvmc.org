@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	/**
 	 * One box for both outbound replies and internal notes.
@@ -37,7 +38,7 @@
 		replyBlockedReason,
 		assignees,
 		onsent,
-		sendLabel = 'Send Reply'
+		sendLabel = m.inbox_thread_composer_send_label()
 	}: {
 		threadId: string;
 		replyForm: Omit<RemoteForm<{ threadId: string; body: string }, unknown>, 'for'>;
@@ -101,8 +102,8 @@
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<TabBar
 					tabs={[
-						{ key: 'reply', label: 'Reply' },
-						{ key: 'note', label: 'Internal note' }
+						{ key: 'reply', label: m.inbox_reply() },
+						{ key: 'note', label: m.inbox_thread_composer_internal_note() }
 					]}
 					active={mode}
 					onchange={(key) => {
@@ -112,7 +113,8 @@
 				/>
 				{#if isNote}
 					<span class="flex items-center gap-1 text-subtle">
-						<IconNote size={14} /> Staff only — the contact never sees this
+						<IconNote size={14} />
+						{m.inbox_thread_composer_staff_only_contact_never_sees()}
 					</span>
 				{/if}
 			</div>
@@ -129,7 +131,9 @@
 		<Form
 			guard
 			remote={activeForm}
-			successToast={isNote ? 'Note added' : 'Reply sent'}
+			successToast={isNote
+				? m.inbox_thread_composer_note_added()
+				: m.inbox_thread_composer_reply_sent()}
 			onsuccess={() => {
 				draft = '';
 				assignTo = '';
@@ -156,7 +160,9 @@
 						name="body"
 						class="textarea field-sizing-content max-h-64 min-h-16 w-full"
 						rows={2}
-						placeholder={isNote ? 'Add an internal note…' : 'Type your reply…'}
+						placeholder={isNote
+							? m.inbox_thread_composer_add_internal_note()
+							: m.inbox_thread_composer_type_reply()}
 						bind:value={draft}></textarea>
 				{/snippet}
 			</FormField>
@@ -178,13 +184,13 @@
 					     top-down. -->
 					<SendOption
 						value="resolve"
-						label="Send + resolve"
+						label={m.inbox_thread_composer_send_resolve()}
 						disabled={!draft.trim()}
 						class="order-2 sm:order-none"
 					/>
 					<SendOption
 						value="keep_open"
-						label="Send + keep open"
+						label={m.inbox_thread_composer_send_keep_open()}
 						disabled={!draft.trim()}
 						class="order-3 sm:order-none"
 					/>
@@ -193,14 +199,14 @@
 					     the staff list is a whole extra round trip. -->
 					{#await assignees() then staffUsers}
 						<label class="flex items-center gap-2 text-sm">
-							<span class="text-subtle">Assign to</span>
+							<span class="text-subtle">{m.inbox_thread_composer_assign()}</span>
 							<Select
 								size="sm"
 								value={assignTo}
-								aria-label="Assign to"
+								aria-label={m.inbox_thread_composer_assign()}
 								onchange={(e: Event) => (assignTo = (e.currentTarget as HTMLSelectElement).value)}
 							>
-								<option value="">Nobody</option>
+								<option value="">{m.inbox_thread_composer_nobody()}</option>
 								{#each staffUsers as s (s.id)}
 									<option value={s.id}>{s.name}</option>
 								{/each}
@@ -211,16 +217,18 @@
 				<SubmitButton
 					label={isNote
 						? assignTo
-							? 'Post note + assign'
-							: 'Add note'
+							? m.inbox_thread_composer_post_note_assign()
+							: m.inbox_thread_composer_add_note()
 						: staffSend
-							? 'Send + wait for reply'
+							? m.inbox_thread_composer_send_wait_reply()
 							: sendLabel}
-					successLabel={isNote ? (assignTo ? 'Assigned' : 'Added') : 'Sent'}
+					successLabel={isNote
+						? assignTo
+							? m.inbox_thread_composer_assigned()
+							: m.inbox_thread_composer_added()
+						: m.inbox_thread_composer_sent()}
 					shortcut="mod+enter"
-					title={staffSend
-						? 'Leaves the queue now and returns the moment they reply, or nudges you in 7 days if nothing comes back.'
-						: undefined}
+					title={staffSend ? m.inbox_thread_composer_title() : undefined}
 					disabled={!draft.trim()}
 					name={staffSend ? 'disposition' : undefined}
 					value={staffSend ? 'wait' : undefined}

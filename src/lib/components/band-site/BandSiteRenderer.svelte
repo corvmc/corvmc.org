@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import type { Block, BandEpk } from '$lib/server/db/schema/band-page';
 	import { getEmbedUrl, detectPlatform } from '$lib/utils/link-platform';
@@ -210,7 +211,9 @@
 	{:else if block.type === 'members'}
 		{#if members.length > 0}
 			<div class="mx-auto max-w-3xl px-6 py-8">
-				<h2 class="mb-4 text-2xl font-bold">Members</h2>
+				<h2 class="mb-4 text-2xl font-bold">
+					{msg.band_site_band_site_band_site_renderer_members()}
+				</h2>
 				<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
 					{#each members as member (member.id)}
 						<div class="text-center">
@@ -241,7 +244,9 @@
 	{:else if block.type === 'events'}
 		{#if events.length > 0}
 			<div class="mx-auto max-w-3xl px-6 py-8">
-				<h2 class="mb-4 text-2xl font-bold">Upcoming Shows</h2>
+				<h2 class="mb-4 text-2xl font-bold">
+					{msg.band_site_band_site_band_site_renderer_upcoming_shows()}
+				</h2>
 				<div class="space-y-3">
 					{#each events.slice(0, block.limit ?? 10) as evt (evt.id)}
 						<div class="flex items-start justify-between rounded-lg bg-base-200 p-4">
@@ -265,7 +270,7 @@
 									variant="primary"
 									size="sm"
 								>
-									Tickets
+									{msg.band_site_band_site_band_site_renderer_tickets()}
 								</Button>
 							{/if}
 						</div>
@@ -276,7 +281,9 @@
 
 		{#if block.showPast && pastEvents.length > 0}
 			<div class="mx-auto max-w-3xl px-6 py-8">
-				<h2 class="mb-4 text-2xl font-bold">Past Shows</h2>
+				<h2 class="mb-4 text-2xl font-bold">
+					{msg.band_site_band_site_band_site_renderer_past_shows()}
+				</h2>
 				<div class="space-y-2">
 					{#each pastEvents.slice(0, block.limit ?? 10) as evt (evt.id)}
 						<div class="flex items-baseline gap-3 text-sm">
@@ -337,7 +344,9 @@
 	{:else if block.type === 'press'}
 		{#if epk?.pressQuotes && epk.pressQuotes.length > 0}
 			<div class="mx-auto max-w-3xl px-6 py-8">
-				<h2 class="mb-4 text-2xl font-bold">Press</h2>
+				<h2 class="mb-4 text-2xl font-bold">
+					{msg.band_site_band_site_band_site_renderer_press()}
+				</h2>
 				<div class="space-y-4">
 					{#each epk.pressQuotes as quote (quote.quote)}
 						<blockquote class="border-l-4 border-primary pl-4">
@@ -356,7 +365,9 @@
 	{:else if block.type === 'achievements'}
 		{#if epk?.achievements && epk.achievements.length > 0}
 			<div class="mx-auto max-w-3xl px-6 py-8">
-				<h2 class="mb-4 text-2xl font-bold">Highlights</h2>
+				<h2 class="mb-4 text-2xl font-bold">
+					{msg.band_site_band_site_band_site_renderer_highlights()}
+				</h2>
 				<ul class="space-y-2">
 					{#each epk.achievements as achievement (achievement)}
 						<li class="flex items-start gap-2">
@@ -371,12 +382,16 @@
 		{@const showForm = block.showForm ?? true}
 		{#if showForm || epk?.bookingContact || epk?.managementContact || epk?.prContact}
 			<div class="mx-auto max-w-3xl px-6 py-8">
-				<h2 class="mb-4 text-2xl font-bold">Contact</h2>
+				<h2 class="mb-4 text-2xl font-bold">
+					{msg.band_site_band_site_band_site_renderer_contact()}
+				</h2>
 				{#if epk?.bookingContact || epk?.managementContact || epk?.prContact}
 					<div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
 						{#if epk.bookingContact}
 							<div>
-								<h3 class="text-muted font-semibold uppercase">Booking</h3>
+								<h3 class="text-muted font-semibold uppercase">
+									{msg.band_site_band_site_band_site_renderer_booking()}
+								</h3>
 								<p class="font-medium">{epk.bookingContact.name}</p>
 								<a href="mailto:{epk.bookingContact.email}" class="link text-sm"
 									>{epk.bookingContact.email}</a
@@ -388,7 +403,9 @@
 						{/if}
 						{#if epk.managementContact}
 							<div>
-								<h3 class="text-muted font-semibold uppercase">Management</h3>
+								<h3 class="text-muted font-semibold uppercase">
+									{msg.band_site_band_site_band_site_renderer_management()}
+								</h3>
 								<p class="font-medium">{epk.managementContact.name}</p>
 								<a href="mailto:{epk.managementContact.email}" class="link text-sm"
 									>{epk.managementContact.email}</a
@@ -397,7 +414,9 @@
 						{/if}
 						{#if epk.prContact}
 							<div>
-								<h3 class="text-muted font-semibold uppercase">Press</h3>
+								<h3 class="text-muted font-semibold uppercase">
+									{msg.band_site_band_site_band_site_renderer_press()}
+								</h3>
 								<p class="font-medium">{epk.prContact.name}</p>
 								<a href="mailto:{epk.prContact.email}" class="link text-sm">{epk.prContact.email}</a
 								>
@@ -422,9 +441,15 @@
 		{@const riderMedia = media.find((m) => m.slot === 'rider')}
 		{#if stageMedia?.url || riderMedia?.url}
 			<div class="mx-auto max-w-3xl px-6 py-8">
-				<h2 class="mb-4 text-2xl font-bold">Technical Requirements</h2>
+				<h2 class="mb-4 text-2xl font-bold">
+					{msg.band_site_band_site_band_site_renderer_technical_requirement()}
+				</h2>
 				{#if stageMedia?.url}
-					<img src={stageMedia.url} alt="Stage plot" class="mb-4 max-w-full rounded-lg" />
+					<img
+						src={stageMedia.url}
+						alt={msg.band_site_band_site_band_site_renderer_alt()}
+						class="mb-4 max-w-full rounded-lg"
+					/>
 				{/if}
 				{#if riderMedia?.url}
 					<Button
@@ -434,7 +459,7 @@
 						variant="default"
 						size="sm"
 					>
-						Download tech rider
+						{msg.band_site_band_site_band_site_renderer_download_tech_rider()}
 					</Button>
 				{/if}
 			</div>
@@ -449,7 +474,9 @@
 	{:else if block.type === 'merch'}
 		{#if block.items.length > 0}
 			<div class="mx-auto max-w-3xl px-6 py-8">
-				<h2 class="mb-4 text-2xl font-bold">Merch</h2>
+				<h2 class="mb-4 text-2xl font-bold">
+					{msg.band_site_band_site_band_site_renderer_merch()}
+				</h2>
 				<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
 					{#each block.items as item (item.url)}
 						<a href={item.url} target="_blank" rel="external noopener" class="group block">
@@ -516,7 +543,7 @@
 					<p
 						class="editor-chrome m-0 flex items-center gap-2 border-b border-base-300 bg-base-200 px-4 py-3 text-xs text-base-content/60"
 					>
-						Not published. Whatever you put in this block is kept.
+						{msg.band_site_band_site_band_site_renderer_not_published_whateve()}
 					</p>
 				{:else if blockIsEmpty(block, contentContext)}
 					<BlockGhost
@@ -606,13 +633,15 @@
 	{#if events.length > 0}
 		<a
 			href={bandSiteHref(page.params.slug!, '/events', page.url)}
-			class="transition-opacity hover:opacity-100">All Events</a
+			class="transition-opacity hover:opacity-100"
+			>{msg.band_site_band_site_band_site_renderer_all_events()}</a
 		>
 	{/if}
 	{#if epk}
 		<a
 			href={bandSiteHref(page.params.slug!, '/epk', page.url)}
-			class="transition-opacity hover:opacity-100">Press Kit</a
+			class="transition-opacity hover:opacity-100"
+			>{msg.band_site_band_site_band_site_renderer_press_kit()}</a
 		>
 	{/if}
 </nav>

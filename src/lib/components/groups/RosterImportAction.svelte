@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -20,10 +21,10 @@
 
 <Action
 	action={importStaffGroupRoster}
-	label="Import emails"
-	modalTitle="Import emails"
-	submitLabel="Import"
-	successToast="Import finished"
+	label={m.groups_roster_import_import_emails()}
+	modalTitle={m.groups_roster_import_import_emails()}
+	submitLabel={m.groups_roster_import_submit_label()}
+	successToast={m.groups_roster_import_success_toast()}
 	variant="ghost"
 	size="sm"
 	onsuccess={(result) => {
@@ -38,8 +39,8 @@
 			<!-- The `input` snippet: `type="textarea"` drops `rows` and `placeholder`. -->
 			<FormField
 				field={fields.emails}
-				label="Email addresses"
-				description="One per line, or separated by commas or semicolons."
+				label={m.groups_roster_import_email_addresses()}
+				description={m.groups_roster_import_one_per_line_separated_by()}
 			>
 				{#snippet input(id)}
 					<textarea
@@ -53,15 +54,14 @@
 			<FormField
 				field={fields.file}
 				type="file"
-				label="Or a CSV"
+				label={m.groups_roster_import_csv()}
 				accept=".csv,text/csv"
-				emptyLabel="Choose a CSV"
-				replaceLabel="Choose a different CSV"
-				description="A Zeffy export works as is: the column whose header says “email” is used and the rest are ignored."
+				emptyLabel={m.groups_roster_import_empty_label()}
+				replaceLabel={m.groups_roster_import_replace_label()}
+				description={m.groups_roster_import_zeffy_export_works_as_column()}
 			/>
 			<p class="text-subtle">
-				Anyone with an account joins straight away, with nothing to accept. Everyone else is emailed
-				an invitation. Up to {ROSTER_IMPORT_MAX} addresses at a time.
+				{m.groups_roster_import_anyone_with_account_joins_straight({ ROSTER_IMPORT_MAX })}
 			</p>
 		</div>
 	{/snippet}

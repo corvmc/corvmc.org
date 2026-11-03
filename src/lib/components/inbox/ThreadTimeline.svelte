@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Messages and internal notes on one chronological spine.
 	 *
@@ -112,6 +113,8 @@
 			</div>
 		{/if}
 	{:else}
-		<p class="py-8 text-center text-muted">No messages in this conversation yet.</p>
+		<p class="py-8 text-center text-muted">
+			{m.inbox_thread_timeline_no_messages_conversation_yet()}
+		</p>
 	{/each}
 </div>

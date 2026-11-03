@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { RemoteFormFieldValue, RemoteFormField } from '@sveltejs/kit';
 	import { IconPlus, IconTrash } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -37,14 +38,14 @@
 					type="text"
 					value={link.label}
 					oninput={(e) => updateLink(i, 'label', e.currentTarget.value)}
-					placeholder="Label (e.g. My SoundCloud)"
+					placeholder={m.directory_link_list_editor_label_e_g_my_soundcloud()}
 					class="input w-full input-sm"
 				/>
 				<input
 					type="url"
 					value={link.url}
 					oninput={(e) => updateLink(i, 'url', e.currentTarget.value)}
-					placeholder="https://..."
+					placeholder={m.directory_link_list_editor_https()}
 					class="input w-full input-sm"
 				/>
 			</div>
@@ -54,7 +55,7 @@
 				size="sm"
 				shape="square"
 				class="mt-1 text-error"
-				aria-label="Remove link"
+				aria-label={m.directory_link_list_editor_aria_label()}
 				onclick={() => removeLink(i)}
 			>
 				<IconTrash size={16} />
@@ -62,6 +63,7 @@
 		</div>
 	{/each}
 	<Button type="button" variant="default" size="sm" outline class="gap-1" onclick={addLink}>
-		<IconPlus size={16} /> Add link
+		<IconPlus size={16} />
+		{m.directory_link_list_editor_add_link()}
 	</Button>
 </div>

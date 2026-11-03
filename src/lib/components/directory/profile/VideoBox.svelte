@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
 	import { detectPlatform } from '$lib/utils/link-platform';
 	import type { BandVideo } from '$lib/types/band-page';
@@ -24,7 +25,7 @@
 </script>
 
 {#if active}
-	<ProfileSection title="Watch">
+	<ProfileSection title={m.directory_profile_video_box_watch()}>
 		{#if playable.length > 1}
 			<div class="video__tabs">
 				{#each playable as item, i (item.video.url)}
@@ -41,7 +42,7 @@
 		{/if}
 		<iframe
 			src={active.embedUrl}
-			title={active.video.label || 'Live video'}
+			title={active.video.label || m.directory_profile_video_box_live_video()}
 			width="100%"
 			height="315"
 			frameborder="0"

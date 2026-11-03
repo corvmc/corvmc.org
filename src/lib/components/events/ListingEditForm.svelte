@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { addIsoDays } from '$lib/utils/deadline';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
@@ -226,9 +227,14 @@
 <svelte:boundary>
 	<Card>
 		<CardBody class="space-y-4">
-			<h3 class="text-muted font-medium">Edit listing</h3>
+			<h3 class="text-muted font-medium">{m.events_listing_edit_form_edit_listing()}</h3>
 
-			<Form remote={updateEvent} guard successToast="Updated" onsuccess={onsaved}>
+			<Form
+				remote={updateEvent}
+				guard
+				successToast={m.events_listing_edit_form_success_toast()}
+				onsuccess={onsaved}
+			>
 				<input {...fields.eventId.as('hidden', event.id)} />
 				<!-- Not posted for a listing CMC doesn't sell: a band selling its own gig
 				     (#1556) has the flag on, and `false` here would close that sale. -->
@@ -245,7 +251,7 @@
 				{/if}
 
 				<div class="space-y-4">
-					<FormField label="Title" id="editTitle" issues={[]}>
+					<FormField label={m.events_title()} id="editTitle" issues={[]}>
 						<input
 							id="editTitle"
 							name="title"
@@ -256,7 +262,7 @@
 						/>
 					</FormField>
 
-					<FormField label="Description" id="editDesc" issues={[]}>
+					<FormField label={m.events_listing_edit_form_description()} id="editDesc" issues={[]}>
 						<textarea
 							id="editDesc"
 							name="description"
@@ -265,7 +271,7 @@
 							rows="4"></textarea>
 					</FormField>
 
-					<FormField label="Date" id="editDate" issues={[]}>
+					<FormField label={m.events_date()} id="editDate" issues={[]}>
 						<input
 							id="editDate"
 							name="eventDate"
@@ -278,7 +284,7 @@
 					</FormField>
 
 					<div class="grid grid-cols-2 gap-4">
-						<FormField label="Start time" id="editStartTime" issues={[]}>
+						<FormField label={m.events_start_time()} id="editStartTime" issues={[]}>
 							<input
 								id="editStartTime"
 								name="eventStartTime"
@@ -290,7 +296,7 @@
 							/>
 						</FormField>
 
-						<FormField label="End time" id="editEndTime" issues={[]}>
+						<FormField label={m.events_end_time()} id="editEndTime" issues={[]}>
 							<input
 								id="editEndTime"
 								name="eventEndTime"
@@ -303,7 +309,7 @@
 						</FormField>
 					</div>
 
-					<FormField label="Doors time" id="editDoorsTime" issues={[]}>
+					<FormField label={m.events_listing_edit_form_doors_time()} id="editDoorsTime" issues={[]}>
 						<input
 							id="editDoorsTime"
 							name="doorsTime"
@@ -316,26 +322,26 @@
 					<FormField
 						field={fields.kind}
 						type="select"
-						label="Kind"
+						label={m.events_kind()}
 						bind:value={editKind}
 						options={[
-							{ value: 'show', label: 'Show' },
-							{ value: 'work_party', label: 'Work party' },
-							{ value: 'meeting', label: 'Meeting' },
-							{ value: 'class', label: 'Class' },
-							{ value: 'market', label: 'Market' }
+							{ value: 'show', label: m.events_show() },
+							{ value: 'work_party', label: m.events_work_party() },
+							{ value: 'meeting', label: m.events_meeting() },
+							{ value: 'class', label: m.events_class() },
+							{ value: 'market', label: m.events_market() }
 						]}
-						description="Only shows reach the homepage posters. Anything published still appears on the public calendar."
+						description={m.events_only_shows_reach_homepage_posters()}
 					/>
 
-					<FormField label="Tags" id="editTags" issues={[]}>
+					<FormField label={m.events_listing_edit_form_tags()} id="editTags" issues={[]}>
 						<input
 							id="editTags"
 							name="tags"
 							type="text"
 							bind:value={editTags}
 							class="input w-full"
-							placeholder="e.g. open mic, workshop"
+							placeholder={m.events_listing_edit_form_e_g_open_mic_workshop()}
 						/>
 					</FormField>
 
@@ -348,16 +354,16 @@
 						<FormField
 							field={fields.venueId}
 							type="select"
-							label="Venue"
+							label={m.events_listing_edit_form_venue()}
 							bind:value={editVenueId}
 							options={[
-								{ value: '', label: 'The practice room' },
+								{ value: '', label: m.events_listing_edit_form_practice_room() },
 								...venues.filter((v) => !v.isPrimary).map((v) => ({ value: v.id, label: v.name }))
 							]}
 						/>
 					{/if}
 
-					<FormField label="Venue name" id="editLocation" issues={[]}>
+					<FormField label={m.events_listing_edit_form_venue_name()} id="editLocation" issues={[]}>
 						<input
 							id="editLocation"
 							name="location"
@@ -367,7 +373,7 @@
 						/>
 					</FormField>
 
-					<FormField label="Address" id="editAddress" issues={[]}>
+					<FormField label={m.events_listing_edit_form_address()} id="editAddress" issues={[]}>
 						<input
 							id="editAddress"
 							name="address"
@@ -377,21 +383,29 @@
 						/>
 					</FormField>
 
-					<FormField label="External ticket URL" id="editTicketUrl" issues={[]}>
+					<FormField
+						label={m.events_listing_edit_form_external_ticket_url()}
+						id="editTicketUrl"
+						issues={[]}
+					>
 						<input
 							id="editTicketUrl"
 							name="externalTicketUrl"
 							type="url"
 							bind:value={editExternalTicketUrl}
 							class="input w-full"
-							placeholder="https://..."
+							placeholder={m.events_listing_edit_form_https()}
 						/>
 					</FormField>
 
 					{#if !cancelled}
 						<!-- What attendees pay wherever they buy, so it applies to every
 					     source. Only capacity depends on us doing the selling. -->
-						<FormField label="Suggested price ($)" id="editTicketPrice" issues={[]}>
+						<FormField
+							label={m.events_listing_edit_form_suggested_price()}
+							id="editTicketPrice"
+							issues={[]}
+						>
 							<input
 								id="editTicketPrice"
 								type="number"
@@ -403,11 +417,15 @@
 								required={editTicketingEnabled}
 							/>
 							<span class="mt-1 text-muted">
-								Where the sliding scale opens. Leave blank for a free event.
+								{m.events_listing_edit_form_where_sliding_scale_opens_leave()}
 							</span>
 						</FormField>
 
-						<FormField label="Minimum price ($)" id="editTicketFloor" issues={[]}>
+						<FormField
+							label={m.events_listing_edit_form_minimum_price()}
+							id="editTicketFloor"
+							issues={[]}
+						>
 							<input
 								id="editTicketFloor"
 								type="number"
@@ -418,8 +436,7 @@
 								class="input w-full"
 							/>
 							<span class="mt-1 text-muted">
-								The least someone can pay. $0 lets anyone come for free — no card, no questions.
-								Leave it at $0 unless a band needs a floor.
+								{m.events_listing_edit_form_least_someone_can_pay_0()}
 							</span>
 						</FormField>
 
@@ -427,13 +444,15 @@
 							<div class="fieldset">
 								<label class="label cursor-pointer justify-start gap-3">
 									<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
-									<span class="fieldset-legend">Sell tickets through the site</span>
+									<span class="fieldset-legend"
+										>{m.events_listing_edit_form_sell_tickets_through_site()}</span
+									>
 								</label>
 							</div>
 
 							{#if editTicketingEnabled}
 								<Card tone="base-200" class="p-4">
-									<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
+									<FormField label={m.events_capacity()} id="editTicketQuantity" issues={[]}>
 										<input
 											id="editTicketQuantity"
 											name="ticketQuantity"
@@ -441,11 +460,13 @@
 											bind:value={editTicketQuantity}
 											min="1"
 											step="1"
-											placeholder="Unlimited"
+											placeholder={m.events_listing_edit_form_unlimited()}
 											class="input w-full"
 										/>
 									</FormField>
-									<p class="mt-2 text-muted">Leave capacity blank for unlimited tickets.</p>
+									<p class="mt-2 text-muted">
+										{m.events_listing_edit_form_leave_capacity_blank_unlimited_tick()}
+									</p>
 								</Card>
 							{/if}
 						{/if}
@@ -454,9 +475,11 @@
 					{#if rebookNeeded}
 						<Alert type="warning">
 							<div class="w-full space-y-3">
-								<p class="font-medium">Reservation needs rebooking</p>
+								<p class="font-medium">
+									{m.events_listing_edit_form_reservation_needs_rebooking()}
+								</p>
 								<p class="text-sm">
-									{rebookReason}. The existing reservation will be cancelled and a new one created.
+									{m.events_listing_edit_form_existing_reservation_will_cancelled({ rebookReason })}
 								</p>
 
 								<label class="label cursor-pointer justify-start gap-3">
@@ -466,12 +489,16 @@
 										data-testid="confirm-rebook"
 										class="checkbox checkbox-sm"
 									/>
-									<span class="fieldset-legend">Confirm rebook</span>
+									<span class="fieldset-legend">{m.events_listing_edit_form_confirm_rebook()}</span>
 								</label>
 
 								{#if rebookConfirmed}
 									<div class="mt-2 grid grid-cols-2 gap-4">
-										<FormField label="Reservation start" id="editResStart" issues={[]}>
+										<FormField
+											label={m.events_listing_edit_form_reservation_start()}
+											id="editResStart"
+											issues={[]}
+										>
 											<input
 												id="editResStart"
 												name="reservationStartTime"
@@ -480,7 +507,11 @@
 												class="input w-full"
 											/>
 										</FormField>
-										<FormField label="Reservation end" id="editResEnd" issues={[]}>
+										<FormField
+											label={m.events_listing_edit_form_reservation_end()}
+											id="editResEnd"
+											issues={[]}
+										>
 											<input
 												id="editResEnd"
 												name="reservationEndTime"
@@ -508,7 +539,7 @@
 												class="checkbox checkbox-sm"
 											/>
 											<span class="fieldset-legend">
-												Book it anyway — I know this double-books the space
+												{m.events_listing_edit_form_book_anyway_i_know_double()}
 											</span>
 										</label>
 									{/if}
@@ -519,7 +550,7 @@
 
 					{#if canReserveSpace && offSite}
 						<p class="text-muted" data-testid="offsite-note">
-							Off-site, so the practice space stays bookable while this runs.
+							{m.events_listing_edit_form_off_site_so_practice_space()}
 						</p>
 					{:else if canReserveSpace}
 						<div>
@@ -531,17 +562,23 @@
 									onchange={toggleReserveSpace}
 									class="checkbox checkbox-sm"
 								/>
-								<span class="fieldset-legend">Reserve practice space</span>
+								<span class="fieldset-legend"
+									>{m.events_listing_edit_form_reserve_practice_space()}</span
+								>
 							</label>
 
 							{#if reserveSpace}
 								<Card tone="base-200" class="mt-2 space-y-4 p-4">
 									<p class="text-muted">
-										Reservation times can differ from event times to allow for setup and teardown.
+										{m.events_listing_edit_form_reservation_times_can_differ_from()}
 									</p>
 
 									<div class="grid grid-cols-2 gap-4">
-										<FormField label="Reservation start" id="editReserveStart" issues={[]}>
+										<FormField
+											label={m.events_listing_edit_form_reservation_start()}
+											id="editReserveStart"
+											issues={[]}
+										>
 											<input
 												id="editReserveStart"
 												name="reservationStartTime"
@@ -550,7 +587,11 @@
 												class="input w-full"
 											/>
 										</FormField>
-										<FormField label="Reservation end" id="editReserveEnd" issues={[]}>
+										<FormField
+											label={m.events_listing_edit_form_reservation_end()}
+											id="editReserveEnd"
+											issues={[]}
+										>
 											<input
 												id="editReserveEnd"
 												name="reservationEndTime"
@@ -577,7 +618,7 @@
 												class="checkbox checkbox-sm"
 											/>
 											<span class="fieldset-legend">
-												Book it anyway — I know this double-books the space
+												{m.events_listing_edit_form_book_anyway_i_know_double()}
 											</span>
 										</label>
 									{/if}
@@ -589,9 +630,11 @@
 					<div class="flex justify-end gap-2 pt-2">
 						<!-- `type="button"`: a Button has no type of its own, so inside a
 						     Form it submits. -->
-						<Button type="button" variant="ghost" size="sm" onclick={oncancel}>Cancel</Button>
+						<Button type="button" variant="ghost" size="sm" onclick={oncancel}
+							>{m.events_cancel()}</Button
+						>
 						<SubmitButton
-							label="Save"
+							label={m.events_save()}
 							variant="primary"
 							size="sm"
 							disabled={hasBlockingConflict && !overrideConflicts}
@@ -612,7 +655,7 @@
 
 	{#snippet failed(error, reset)}
 		<Alert type="warning" {reset}>
-			Could not load the edit form: {errorMessage(error)}
+			{m.events_listing_edit_form_could_not_load_edit_form({ errorMessage: errorMessage(error) })}
 		</Alert>
 	{/snippet}
 </svelte:boundary>

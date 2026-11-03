@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
 	import { orderEmbeddableServices } from '$lib/utils/directory-display';
 	import type { ProfileLink } from '$lib/server/db/schema/authentication';
@@ -12,7 +13,7 @@
 </script>
 
 {#if services.length > 0 && active}
-	<ProfileSection title="Listen" note="one featured at a time">
+	<ProfileSection title={m.directory_profile_listen_strip_title()} note="one featured at a time">
 		<div class="listen__tabs">
 			{#each services as service, i (service.link.url)}
 				<button

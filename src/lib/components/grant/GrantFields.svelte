@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** The create and edit forms share every field; `value` pre-fills the edit. */
 	import { Field, MoneyField } from '$lib/components/ui/Form';
 	import type { createGrant } from '$lib/remote/grants.remote';
@@ -33,36 +34,56 @@
 <Field
 	field={fields.funderId}
 	type="select"
-	label="Funder"
+	label={m.grant_grant_fields_funder()}
 	options={funderOptions}
 	value={value?.funderId ?? funders[0]?.id ?? ''}
 />
 <Field
 	field={fields.title}
 	type="text"
-	label="Title"
-	description="“2027 operating support”, “Youth workshops”."
+	label={m.grant_grant_fields_title()}
+	description={m.grant_grant_fields_2027_operating_support_youth_workshops()}
 	value={value?.title ?? ''}
 />
 <Field
 	field={fields.status}
 	type="select"
-	label="Status"
+	label={m.grant_grant_fields_status()}
 	options={statusOptions}
 	value={value?.status ?? 'prospect'}
 />
 <MoneyField
 	field={fields.amountRequestedCents}
-	label="Requested"
+	label={m.grant_grant_fields_requested()}
 	value={value?.amountRequestedCents ?? undefined}
 />
 <MoneyField
 	field={fields.amountAwardedCents}
-	label="Awarded"
-	description="Blank until the funder decides."
+	label={m.grant_grant_fields_awarded()}
+	description={m.grant_grant_fields_blank_until_funder_decides()}
 	value={value?.amountAwardedCents ?? undefined}
 />
-<Field field={fields.applyBy} type="date" label="Apply by" value={value?.applyBy ?? ''} />
-<Field field={fields.startsOn} type="date" label="Award starts" value={value?.startsOn ?? ''} />
-<Field field={fields.endsOn} type="date" label="Award ends" value={value?.endsOn ?? ''} />
-<Field field={fields.notes} type="textarea" label="Notes" value={value?.notes ?? ''} />
+<Field
+	field={fields.applyBy}
+	type="date"
+	label={m.grant_grant_fields_apply_by()}
+	value={value?.applyBy ?? ''}
+/>
+<Field
+	field={fields.startsOn}
+	type="date"
+	label={m.grant_grant_fields_award_starts()}
+	value={value?.startsOn ?? ''}
+/>
+<Field
+	field={fields.endsOn}
+	type="date"
+	label={m.grant_grant_fields_award_ends()}
+	value={value?.endsOn ?? ''}
+/>
+<Field
+	field={fields.notes}
+	type="textarea"
+	label={m.grant_grant_fields_notes()}
+	value={value?.notes ?? ''}
+/>

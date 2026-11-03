@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -41,10 +42,10 @@
 
 <Action
 	action={uploadDocument}
-	label="Add document"
-	modalTitle="Add document"
-	submitLabel="Upload"
-	successToast="Uploaded"
+	label={m.groups_document_upload_add_document()}
+	modalTitle={m.groups_document_upload_add_document()}
+	submitLabel={m.groups_document_upload_submit_label()}
+	successToast={m.groups_document_upload_success_toast()}
 	variant="primary"
 	size="sm"
 	disabled={atQuota}
@@ -56,19 +57,19 @@
 			<FormField
 				field={fields.file}
 				type="file"
-				label="File"
+				label={m.groups_file()}
 				accept={ACCEPT}
-				emptyLabel="Choose a file"
-				replaceLabel="Choose a different file"
-				description="PDF, image, text, CSV, Word or Excel. Up to 25MB."
+				emptyLabel={m.groups_document_upload_empty_label()}
+				replaceLabel={m.groups_document_upload_replace_label()}
+				description={m.groups_document_upload_pdf_image_text_csv_word()}
 				required
 			/>
 			<FormField
 				field={fields.description}
 				type="text"
-				label="Description"
-				placeholder="July minutes"
-				description="Optional. What this is, for people who did not upload it."
+				label={m.groups_document_upload_description()}
+				placeholder={m.groups_document_upload_placeholder()}
+				description={m.groups_document_upload_optional_what_people_who_did()}
 			/>
 		</div>
 	{/snippet}

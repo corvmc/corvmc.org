@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import { getReservationPolicy } from '$lib/remote/reservations.remote';
 
 	/** "09:00" → "9 AM", "21:30" → "9:30 PM" */
@@ -43,23 +44,34 @@
 	{:then policy}
 		<div class="grid grid-cols-2 divide-x divide-base-300 sm:grid-cols-4">
 			<div class="px-4 py-3 text-center">
-				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60">Rate</span>
+				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
+					>{msg.reservations_booking_policy_rate()}</span
+				>
 				<span class="block text-lg font-bold">{fmtRate(policy.hourlyRateCents)}</span>
 			</div>
 			<div class="px-4 py-3 text-center">
-				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60">Hours</span>
+				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
+					>{msg.reservations_booking_policy_hours()}</span
+				>
 				<span class="block text-lg font-bold"
 					>{fmtHour(policy.operatingHoursStart)} – {fmtHour(policy.operatingHoursEnd)}</span
 				>
 			</div>
 			<div class="px-4 py-3 text-center">
-				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60">Length</span>
+				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
+					>{msg.reservations_booking_policy_length()}</span
+				>
 				<span class="block text-lg font-bold"
-					>{policy.minDurationHours} – {policy.maxDurationHours} hrs</span
+					>{msg.reservations_booking_policy_hrs({
+						minDurationHours: policy.minDurationHours,
+						maxDurationHours: policy.maxDurationHours
+					})}</span
 				>
 			</div>
 			<div class="px-4 py-3 text-center">
-				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60">Notice</span>
+				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
+					>{msg.reservations_booking_policy_notice()}</span
+				>
 				<span class="block text-lg font-bold">{fmtNotice(policy.minAdvanceMinutes)}</span>
 			</div>
 		</div>
@@ -68,11 +80,11 @@
 		<summary
 			class="cursor-pointer px-4 py-2 text-subtle font-semibold tracking-wide uppercase hover:opacity-100"
 		>
-			Booking Policy
+			{msg.reservations_booking_policy_booking_policy()}
 		</summary>
 		<div class="space-y-1 px-4 pb-3 text-muted">
-			<p>Payment is due at reservation start time via cash in person or card online.</p>
-			<p>If you have specific needs for equipment or space, note them in the reservation form.</p>
+			<p>{msg.reservations_booking_policy_payment_due_at_reservation_start()}</p>
+			<p>{msg.reservations_booking_policy_if_have_specific_needs_equipment()}</p>
 		</div>
 	</details>
 </div>

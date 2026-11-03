@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { RemoteFormField } from '@sveltejs/kit';
 	/**
 	 * The "about you" half of volunteer onboarding, shared by the start step and
@@ -42,25 +43,37 @@
 </script>
 
 <div class="grid grid-cols-2 gap-4">
-	<FormField field={fields.firstName} type="text" label="First name" value={firstName} required />
-	<FormField field={fields.lastName} type="text" label="Last name" value={lastName} required />
+	<FormField
+		field={fields.firstName}
+		type="text"
+		label={m.volunteer_profile_fields_first_name()}
+		value={firstName}
+		required
+	/>
+	<FormField
+		field={fields.lastName}
+		type="text"
+		label={m.volunteer_profile_fields_last_name()}
+		value={lastName}
+		required
+	/>
 </div>
 
 <FormField
 	field={fields.pronouns}
 	type="text"
-	label="Pronouns"
+	label={m.volunteer_profile_fields_pronouns()}
 	value={pronouns}
-	placeholder="e.g. they/them"
+	placeholder={m.volunteer_profile_fields_placeholder()}
 />
 
 <FormField
 	field={fields.phone}
 	type="tel"
-	label="Phone"
+	label={m.volunteer_profile_fields_phone()}
 	value={phone}
 	placeholder="(541) 555-0123"
-	description="For shift-day contact."
+	description={m.volunteer_profile_fields_description()}
 />
 
 <!--
@@ -68,9 +81,17 @@
 	with, and changing it runs through its own verification flow. Shown so they
 	can check we have the right one.
 -->
-<FormField type="email" label="Email" value={email} readonly description={emailHint} />
+<FormField
+	type="email"
+	label={m.volunteer_profile_fields_email()}
+	value={email}
+	readonly
+	description={emailHint}
+/>
 
 {#snippet emailHint()}
 	Change this in your
-	<a href={resolve('/member/account')} class="link link-primary">account settings</a>.
+	<a href={resolve('/member/account')} class="link link-primary"
+		>{m.volunteer_profile_fields_account_settings()}</a
+	>.
 {/snippet}

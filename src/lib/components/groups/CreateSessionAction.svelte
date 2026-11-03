@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -23,25 +24,25 @@
 	let frequency = $state('');
 
 	const frequencyOptions = [
-		{ value: 'weekly', label: 'Every week' },
-		{ value: 'biweekly', label: 'Every other week' },
-		{ value: 'monthly', label: 'Every month' }
+		{ value: 'weekly', label: m.groups_every_week() },
+		{ value: 'biweekly', label: m.groups_every_other_week() },
+		{ value: 'monthly', label: m.groups_every_month() }
 	];
 
 	// "Third Thursday" versus "the 17th". Only a monthly series has the choice.
 	const monthlyModeOptions = [
-		{ value: 'weekday', label: 'Same weekday of the month' },
-		{ value: 'monthday', label: 'Same date each month' }
+		{ value: 'weekday', label: m.groups_same_weekday_month() },
+		{ value: 'monthday', label: m.groups_same_date_each_month() }
 	];
 </script>
 
 <Action
 	action={createGroupSession}
 	data-testid="new-session"
-	label="New session"
-	modalTitle="New session"
-	submitLabel="Create session"
-	successToast="Session created"
+	label={m.groups_create_session_new_session()}
+	modalTitle={m.groups_create_session_new_session()}
+	submitLabel={m.groups_create_session_submit_label()}
+	successToast={m.groups_create_session_success_toast()}
 	variant="primary"
 	size="sm"
 	onsuccess={() => invalidateAll()}
@@ -53,38 +54,38 @@
 			<FormField
 				field={fields.title}
 				type="text"
-				label="What is it"
-				placeholder="Monthly jam"
+				label={m.groups_what()}
+				placeholder={m.groups_create_session_monthly_jam()}
 				required
 			/>
 
 			<FormField
 				field={fields.description}
 				type="textarea"
-				label="Details"
-				description="Optional. Shown on the event page."
+				label={m.groups_details()}
+				description={m.groups_optional_shown_event_page()}
 			/>
 
-			<FormField field={fields.sessionDate} type="date" label="Date" required />
+			<FormField field={fields.sessionDate} type="date" label={m.groups_date()} required />
 
 			<div class="grid grid-cols-2 gap-3">
-				<FormField field={fields.startTime} type="time" label="Starts" required />
-				<FormField field={fields.endTime} type="time" label="Ends" required />
+				<FormField field={fields.startTime} type="time" label={m.groups_starts()} required />
+				<FormField field={fields.endTime} type="time" label={m.groups_ends()} required />
 			</div>
 
 			<FormField
 				field={fields.reserveRoom}
 				type="checkbox"
-				label="Hold the practice room"
-				description="Free for a program — the booking belongs to the session, and no credits are spent. Leave off if you're meeting somewhere else."
+				label={m.groups_hold_practice_room()}
+				description={m.groups_create_session_free_program_booking_belongs_session()}
 			/>
 
 			<FormField
 				field={fields.recurring}
 				type="checkbox"
-				label="Repeats"
+				label={m.groups_create_session_repeats()}
 				bind:value={recurring}
-				description="Puts the following sessions up automatically, each one published and holding the same room."
+				description={m.groups_create_session_puts_following_sessions_up_automatical()}
 			/>
 
 			{#if recurring}
@@ -92,7 +93,7 @@
 					<FormField
 						field={fields.recurringFrequency}
 						type="select"
-						label="How often"
+						label={m.groups_how_often()}
 						options={frequencyOptions}
 						bind:value={frequency}
 						required
@@ -102,7 +103,7 @@
 						<FormField
 							field={fields.monthlyMode}
 							type="select"
-							label="Which day"
+							label={m.groups_which_day()}
 							options={monthlyModeOptions}
 							value="weekday"
 						/>
@@ -111,13 +112,12 @@
 					<FormField
 						field={fields.recurringEndsAt}
 						type="date"
-						label="Until"
-						description="Optional. Leave empty to keep going."
+						label={m.groups_until()}
+						description={m.groups_optional_leave_empty_keep_going()}
 					/>
 
 					<p class="text-subtle">
-						If a later date is already booked, that session still goes up — it just doesn't hold the
-						room, and you get told which one.
+						{m.groups_create_session_if_later_date_already_booked()}
 					</p>
 				</div>
 			{/if}
@@ -125,40 +125,40 @@
 			<FormField
 				field={fields.doorsTime}
 				type="time"
-				label="Doors"
-				description="Optional. When people can turn up."
+				label={m.groups_doors()}
+				description={m.groups_optional_when_people_can_turn()}
 			/>
 
 			<FormField
 				field={fields.tags}
 				type="text"
-				label="Tags"
-				placeholder="jazz, jam, all ages"
-				description="Optional. Comma separated — how the gig guide filters."
+				label={m.groups_tags()}
+				placeholder={m.groups_jazz_jam_all_ages()}
+				description={m.groups_optional_comma_separated_how_gig()}
 			/>
 
 			<FormField
 				field={fields.posterFile}
 				type="file"
-				label="Poster"
+				label={m.groups_poster()}
 				accept="image/jpeg,image/png,image/webp"
-				description="Optional. Shown on the event page and the gig guide."
+				description={m.groups_create_session_optional_shown_event_page_gig()}
 			/>
 
 			<div class="grid grid-cols-2 gap-3">
 				<FormField
 					field={fields.ticketPriceDollars}
 					type="text"
-					label="Price"
+					label={m.groups_price()}
 					placeholder="10.00"
-					description="Optional. Leave blank if it's free."
+					description={m.groups_optional_leave_blank_if_s()}
 				/>
 				<FormField
 					field={fields.externalTicketUrl}
 					type="text"
-					label="Tickets at"
-					placeholder="https://"
-					description="Optional. Where people buy."
+					label={m.groups_tickets_at()}
+					placeholder={m.groups_https()}
+					description={m.groups_optional_where_people_buy()}
 				/>
 			</div>
 		</div>

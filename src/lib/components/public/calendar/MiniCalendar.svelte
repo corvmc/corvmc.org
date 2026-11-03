@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { CalendarDate, today as todayIn, getLocalTimeZone } from '@internationalized/date';
@@ -89,7 +90,7 @@
 			variant="ghost"
 			size="xs"
 			shape="square"
-			aria-label="Previous month"
+			aria-label={msg.public_calendar_mini_calendar_previous_month()}
 			onclick={() => shiftMonth(-1)}
 		>
 			<IconChevronLeft size={16} />
@@ -100,7 +101,7 @@
 			variant="ghost"
 			size="xs"
 			shape="square"
-			aria-label="Next month"
+			aria-label={msg.public_calendar_mini_calendar_next_month()}
 			onclick={() => shiftMonth(1)}
 		>
 			<IconChevronRight size={16} />
@@ -122,7 +123,7 @@
 					class:mini-cal__day--out={date.month !== monthNumber}
 					class:mini-cal__day--today={key === todayStr}
 					class:mini-cal__day--anchor={key === anchor}
-					aria-label="Jump to {key}"
+					aria-label={msg.public_calendar_mini_calendar_jump({ key })}
 				>
 					{date.day}
 					{#if dot}

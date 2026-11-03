@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -38,13 +39,13 @@
 			throw new Error(detail?.message ?? 'Upload failed');
 		}
 		await getItemResources(itemId).refresh();
-		toast.success('Manual uploaded');
+		toast.success(m.inventory_item_resources_toast());
 	}
 </script>
 
-<InfoCard title="Documentation">
+<InfoCard title={m.inventory_item_resources_title()}>
 	{#if data.articles.length === 0 && data.manuals.length === 0}
-		<EmptyState description="No manual or how-to attached yet" />
+		<EmptyState description={m.inventory_item_resources_description()} />
 	{/if}
 
 	{#if data.manuals.length > 0}
@@ -70,7 +71,9 @@
 						{#if !article.published}
 							<!-- Drafts stay off the member-facing page; saying so here stops a
 							     staffer wondering why it never appeared. -->
-							<Badge variant="outline" size="xs">Draft — members can't see this</Badge>
+							<Badge variant="outline" size="xs"
+								>{m.inventory_item_resources_draft_members_can_t_see()}</Badge
+							>
 						{/if}
 					</span>
 					<form
@@ -80,7 +83,12 @@
 					>
 						<input {...unlinkItemArticle.fields.itemId.as('hidden', itemId)} />
 						<input {...unlinkItemArticle.fields.linkId.as('hidden', article.linkId)} />
-						<Button type="submit" variant="ghost" size="xs" aria-label="Unlink {article.title}">
+						<Button
+							type="submit"
+							variant="ghost"
+							size="xs"
+							aria-label={m.inventory_item_resources_unlink({ title: article.title })}
+						>
 							<IconTrash size={16} />
 						</Button>
 					</form>
@@ -92,7 +100,7 @@
 	<div class="mt-4 flex flex-wrap items-center gap-3">
 		<FileUpload {upload} accept=".pdf,image/*" showPreview={false} variant="ghost">
 			<IconUpload size={16} />
-			Add a manual
+			{m.inventory_item_resources_add_manual()}
 		</FileUpload>
 
 		{#if data.linkable.length > 0}
@@ -104,13 +112,20 @@
 				})}
 			>
 				<input {...linkItemArticle.fields.itemId.as('hidden', itemId)} />
-				<Select size="sm" aria-label="Help article" bind:value={chosenArticle} name="articleId">
-					<option value="">Link a how-to…</option>
+				<Select
+					size="sm"
+					aria-label={m.inventory_item_resources_help_article()}
+					bind:value={chosenArticle}
+					name="articleId"
+				>
+					<option value="">{m.inventory_item_resources_link_how()}</option>
 					{#each data.linkable as article (article.id)}
 						<option value={article.id}>{article.title}{article.published ? '' : ' (draft)'}</option>
 					{/each}
 				</Select>
-				<Button type="submit" variant="ghost" size="sm" disabled={!chosenArticle}>Link</Button>
+				<Button type="submit" variant="ghost" size="sm" disabled={!chosenArticle}
+					>{m.inventory_item_resources_link()}</Button
+				>
 			</form>
 		{/if}
 	</div>

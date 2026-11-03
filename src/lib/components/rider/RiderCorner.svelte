@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -71,7 +72,7 @@
 	<CardBody>
 		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<h2 class="text-base font-semibold">{title}</h2>
-			{#if mine}<Badge variant="primary">You</Badge>{/if}
+			{#if mine}<Badge variant="primary">{m.rider_rider_corner_text()}</Badge>{/if}
 			<Badge class="ml-auto">{inputCount} {inputCount === 1 ? 'input' : 'inputs'}</Badge>
 		</div>
 		{#if subtitle}
@@ -82,7 +83,7 @@
 			<Form
 				remote={saveMyRiderElements}
 				guard
-				successToast="Rider saved"
+				successToast={m.rider_rider_corner_success_toast()}
 				onsuccess={onsaved}
 				class="space-y-4"
 			>
@@ -94,14 +95,14 @@
 					field={saveMyRiderElements.fields.elements}
 					idPrefix={ownerUserId ?? 'shared'}
 				>
-					{#snippet action()}<SubmitButton label="Save" />{/snippet}
+					{#snippet action()}<SubmitButton label={m.rider_rider_corner_label()} />{/snippet}
 				</RiderElementsEditor>
 			</Form>
 		{:else if canEdit}
 			<Form
 				remote={adminRemote}
 				guard
-				successToast="Rider saved"
+				successToast={m.rider_rider_corner_success_toast()}
 				onsuccess={onsaved}
 				class="space-y-4"
 			>
@@ -114,7 +115,7 @@
 					field={adminRemote.fields.elements}
 					idPrefix={ownerUserId ?? 'shared'}
 				>
-					{#snippet action()}<SubmitButton label="Save" />{/snippet}
+					{#snippet action()}<SubmitButton label={m.rider_rider_corner_label()} />{/snippet}
 				</RiderElementsEditor>
 			</Form>
 		{:else}

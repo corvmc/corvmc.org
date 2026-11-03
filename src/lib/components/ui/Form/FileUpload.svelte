@@ -17,15 +17,15 @@
 		disabled = false,
 		orientation = 'row',
 		previewClass = 'h-24 w-24',
-		emptyLabel = 'Add image',
-		replaceLabel = 'Replace',
+		emptyLabel = m.ui_form_file_upload_empty_label(),
+		replaceLabel = m.ui_form_file_upload_replace_label(),
 		preview,
 		showPreview = true,
 		uploadAll,
 		variant = 'outline',
 		size = 'sm',
 		square = false,
-		busyLabel = 'Uploading…',
+		busyLabel = m.ui_form_file_upload_busy_label(),
 		'aria-label': ariaLabel,
 		children
 	}: {

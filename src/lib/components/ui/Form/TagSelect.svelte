@@ -14,7 +14,7 @@
 		options,
 		value = [],
 		name,
-		placeholder = 'Type to search...',
+		placeholder = m.ui_search_prompt(),
 		onchange,
 		disabled = false
 	}: {

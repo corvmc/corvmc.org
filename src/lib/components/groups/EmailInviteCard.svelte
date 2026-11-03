@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * An invitation addressed to an email rather than to an account.
 	 *
@@ -38,11 +39,11 @@
 				{invite.role}
 			</p>
 			<p class="text-muted text-sm">
-				{#if invite.expired}
-					This invitation expired on {formatDate(invite.expiresAt)}. Ask them to send a new one.
-				{:else}
-					The link is in your email, and works until {formatDate(invite.expiresAt)}.
-				{/if}
+				{#if invite.expired}{m.groups_email_invite_card_invitation_expired_ask_them_send({
+						formatDate: formatDate(invite.expiresAt)
+					})}{:else}{m.groups_email_invite_card_link_email_works_until({
+						formatDate: formatDate(invite.expiresAt)
+					})}{/if}
 			</p>
 		</div>
 		<Badge variant={invite.expired ? 'ghost' : 'warning'}>

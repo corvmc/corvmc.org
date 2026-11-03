@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { BookerType } from '$lib/config';
 	import { untrack } from 'svelte';
 	import {
@@ -187,8 +188,8 @@
 		</div>
 	{:else if availableDates.length === 0}
 		<EmptyState
-			title="No open practice times"
-			description="Every slot in the current booking window is taken. Check back soon — cancellations free up time regularly."
+			title={m.reservations_booking_date_time_step_title()}
+			description={m.reservations_booking_date_time_step_every_slot_current_booki()}
 		/>
 	{:else}
 		<Form.Field
@@ -203,38 +204,38 @@
 
 		{#if date && noStartTimes}
 			<p class="mt-2 text-sm text-error">
-				No available times on this date. Please select another day.
+				{m.reservations_booking_date_time_step_no_available_times_date()}
 			</p>
 		{/if}
 
 		<div class="grid grid-cols-2 gap-2">
 			<Form.Field
 				name="startTime"
-				label="Start time"
+				label={m.reservations_booking_date_time_step_start_time()}
 				type="select"
 				bind:value={startTime}
 				options={startTimeOptions ?? []}
 				placeholder={startTimeOptions === null
-					? 'Loading...'
+					? m.reservations_booking_date_time_step_loading()
 					: noStartTimes
-						? 'No times available'
-						: 'Select a start time'}
+						? m.reservations_booking_date_time_step_no_times_available()
+						: m.reservations_booking_date_time_step_select_start_time()}
 				required
 			/>
 
 			<Form.Field
 				name="endTime"
-				label="End time"
+				label={m.reservations_booking_date_time_step_end_time()}
 				type="select"
 				bind:value={endTime}
 				options={endTimeOptions ?? []}
 				placeholder={!startTime
-					? 'Select a start time first'
+					? m.reservations_booking_date_time_step_select_start_time_first()
 					: endTimeOptions === null
-						? 'Loading...'
+						? m.reservations_booking_date_time_step_loading()
 						: endTimeOptions.length === 0
-							? 'No end times available'
-							: 'Select an end time'}
+							? m.reservations_booking_date_time_step_no_end_times_available()
+							: m.reservations_booking_date_time_step_select_end_time()}
 				required
 			/>
 		</div>
@@ -247,28 +248,28 @@
 			<Form.Field
 				name="phone"
 				type="tel"
-				label="Contact phone"
+				label={m.reservations_booking_date_time_step_contact_phone()}
 				bind:value={phone}
 				placeholder="(541) 555-0123"
 				required
-				description="Staff use this to reach you about your booking. Saved to your account."
+				description={m.reservations_booking_date_time_step_staff_use_reach_about_bo()}
 			/>
 		{/if}
 
 		<Form.Field
 			name="notes"
-			label="Notes (optional)"
+			label={m.reservations_booking_date_time_step_notes_optional()}
 			type="textarea"
 			bind:value={notes}
-			placeholder="What are you working on?"
+			placeholder={m.reservations_booking_date_time_step_what_working()}
 			rows={2}
 		/>
 
 		{#if isSustaining}
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend">Frequency</legend>
+				<legend class="fieldset-legend">{m.reservations_booking_date_time_step_frequency()}</legend>
 				<div class="flex gap-1">
-					{#each [{ value: '', label: 'One Time' }, { value: 'weekly', label: 'Weekly' }, { value: 'biweekly', label: 'Biweekly' }, { value: 'monthly', label: 'Monthly' }] as opt (opt.value)}
+					{#each [{ value: '', label: m.reservations_booking_date_time_step_one_time() }, { value: 'weekly', label: m.reservations_booking_date_time_step_weekly() }, { value: 'biweekly', label: m.reservations_booking_date_time_step_biweekly() }, { value: 'monthly', label: m.reservations_booking_date_time_step_monthly() }] as opt (opt.value)}
 						<label class="btn flex-1 btn-sm" class:btn-primary={frequency === opt.value}>
 							<input
 								type="radio"
@@ -285,7 +286,9 @@
 
 			{#if isMonthly}
 				<fieldset class="fieldset">
-					<legend class="fieldset-legend">Monthly pattern</legend>
+					<legend class="fieldset-legend"
+						>{m.reservations_booking_date_time_step_monthly_pattern()}</legend
+					>
 					<div class="flex flex-col gap-1">
 						{#each [{ value: 'weekday', label: monthlyLabels.weekday }, { value: 'monthday', label: monthlyLabels.monthday }] as opt (opt.value)}
 							<label class="btn justify-start btn-sm" class:btn-primary={monthlyMode === opt.value}>
@@ -310,6 +313,10 @@
 	{/if}
 
 	<div class="flex justify-end pt-2">
-		<Form.SubmitButton label="Save" continueLabel="Continue" class="btn-primary" />
+		<Form.SubmitButton
+			label={m.reservations_booking_date_time_step_save()}
+			continueLabel={m.reservations_booking_date_time_step_continue_label()}
+			class="btn-primary"
+		/>
 	</div>
 </Form.Step>

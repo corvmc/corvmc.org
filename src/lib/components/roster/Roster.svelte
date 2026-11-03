@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends RosterPerson, S extends Record<string, unknown>">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * A list of people (#1994): any query returning `RosterPerson` rows. The roster
 	 * owns search, paging, Clear, export, "copy emails" and the side panel; the page
@@ -21,9 +22,9 @@
 	let {
 		roster,
 		result,
-		empty = 'No one here yet.',
-		searchPlaceholder = 'Search...',
-		personLabel = 'Name',
+		empty = m.roster_roster_empty(),
+		searchPlaceholder = m.roster_roster_search_placeholder(),
+		personLabel = m.roster_name(),
 		filters,
 		menu,
 		summary,
@@ -31,7 +32,7 @@
 		exportPath,
 		emails,
 		lead,
-		leadLabel = 'Status',
+		leadLabel = m.roster_status(),
 		leadHead,
 		detail,
 		aside,
@@ -122,7 +123,7 @@
 		{#if exportHref}
 			<Button href={exportHref} rel="external" download variant="ghost" size="sm">
 				<IconDownload size={16} />
-				Export
+				{m.roster_roster_export()}
 			</Button>
 		{/if}
 	</div>

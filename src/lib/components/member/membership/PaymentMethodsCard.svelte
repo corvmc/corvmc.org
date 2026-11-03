@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -61,20 +62,21 @@
 				<IconCreditCard size={24} class="text-primary" />
 			</div>
 			<div>
-				<h3 class="text-xl font-semibold">Payment Methods</h3>
-				<p class="text-muted">The card your contribution is billed to</p>
+				<h3 class="text-xl font-semibold">
+					{m.member_membership_payment_methods_card_payment_methods()}
+				</h3>
+				<p class="text-muted">{m.member_membership_payment_methods_card_card_contribution_bil()}</p>
 			</div>
 		</div>
 
 		{#if !available}
 			<div class="mt-4">
 				<Alert type="warning">
-					We couldn't reach our payment processor just now, so your cards aren't shown. Everything
-					else on this page is up to date — try again in a moment.
+					{m.member_membership_payment_methods_card_we_couldn_t_reach_our()}
 				</Alert>
 			</div>
 		{:else if cards.length === 0}
-			<p class="mt-4 text-muted">No card saved yet.</p>
+			<p class="mt-4 text-muted">{m.member_membership_payment_methods_card_no_card_saved_yet()}</p>
 		{:else}
 			<ul class="mt-4 divide-y divide-base-300">
 				{#each cards as card (card.id)}
@@ -82,10 +84,12 @@
 						<span class="font-medium">{brandName(card.brand)}</span>
 						<span class="text-muted tabular-nums">•••• {card.last4}</span>
 						<span class="text-subtle text-sm tabular-nums">
-							Expires {expiry(card.expMonth, card.expYear)}
+							{m.member_membership_payment_methods_card_expires({
+								expiry: expiry(card.expMonth, card.expYear)
+							})}
 						</span>
 						{#if card.isDefault}
-							<Badge variant="success">Default</Badge>
+							<Badge variant="success">{m.member_membership_payment_methods_card_default()}</Badge>
 						{/if}
 
 						<div class="ms-auto flex gap-2">
@@ -94,11 +98,12 @@
 									action={async () => {
 										await makeDefaultCard({ paymentMethodId: card.id });
 									}}
-									label="Make default"
+									label={m.member_membership_payment_methods_card_make_default()}
 									variant="default"
 									size="sm"
 									outline
-									onsuccess={() => toast.success('Default card updated')}
+									onsuccess={() =>
+										toast.success(m.member_membership_payment_methods_card_default_card_updated())}
 									onfailure={(err) => toast.error(failureMessage(err))}
 								/>
 							{/if}
@@ -106,13 +111,14 @@
 								action={async () => {
 									await forgetCard({ paymentMethodId: card.id });
 								}}
-								label="Remove"
+								label={m.member_membership_payment_methods_card_remove()}
 								variant="error"
 								size="sm"
 								outline
-								modalTitle="Remove card"
+								modalTitle={m.member_membership_payment_methods_card_modal_title()}
 								confirm="Remove this card from your account?"
-								onsuccess={() => toast.success('Card removed')}
+								onsuccess={() =>
+									toast.success(m.member_membership_payment_methods_card_card_removed())}
 								onfailure={(err) => toast.error(failureMessage(err))}
 							/>
 						</div>

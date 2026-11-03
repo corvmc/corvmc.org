@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { Turnstile } from 'svelte-turnstile';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -21,7 +22,9 @@
 </script>
 
 {#if submitted}
-	<div class="alert alert-success">Thanks! Your message has been sent to {bandName}.</div>
+	<div class="alert alert-success">
+		{m.band_site_band_site_band_contact_form_thanks_message_has_bee({ bandName })}
+	</div>
 {:else}
 	<Form
 		remote={rf}
@@ -37,10 +40,26 @@
 	>
 		<input {...fields.slug.as('hidden', slug)} />
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-			<FormField field={fields.name} type="text" label="Name" required />
-			<FormField field={fields.email} type="email" label="Email" required />
+			<FormField
+				field={fields.name}
+				type="text"
+				label={m.band_site_band_site_band_contact_form_name()}
+				required
+			/>
+			<FormField
+				field={fields.email}
+				type="email"
+				label={m.band_site_band_site_band_contact_form_email()}
+				required
+			/>
 		</div>
-		<FormField field={fields.message} type="textarea" label="Message" rows={5} required />
+		<FormField
+			field={fields.message}
+			type="textarea"
+			label={m.band_site_band_site_band_contact_form_message()}
+			rows={5}
+			required
+		/>
 		<Turnstile
 			siteKey={TURNSTILE_SITE_KEY}
 			responseFieldName={TURNSTILE_RESPONSE_FIELD}
@@ -50,6 +69,6 @@
 		{#if failure}
 			<div class="alert alert-error" role="alert">{failure}</div>
 		{/if}
-		<SubmitButton label="Send Message" />
+		<SubmitButton label={m.band_site_band_site_band_contact_form_send_message()} />
 	</Form>
 {/if}
