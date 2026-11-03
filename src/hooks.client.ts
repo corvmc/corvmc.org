@@ -119,9 +119,6 @@ Sentry.init({
 
 	tracesSampleRate: 1.0,
 
-	// Enable logs to be sent to Sentry
-	enableLogs: true,
-
 	// This sets the sample rate to be 10%. You may want this to be 100% while
 	// in development and sample at a lower rate in production
 	replaysSessionSampleRate: 0.1,
@@ -131,11 +128,10 @@ Sentry.init({
 	replaysOnErrorSampleRate: 1.0,
 
 	// If you don't want to use Session Replay, just remove the line below:
-	integrations: [replayIntegration()],
+	integrations: [replayIntegration()]
 
-	// Enable sending user PII (Personally Identifiable Information)
-	// https://docs.sentry.io/platforms/javascript/guides/sveltekit/configuration/options/#sendDefaultPii
-	sendDefaultPii: true
+	// No `enableLogs` / `sendDefaultPii`: SDK 11 removed both. Logs ship by
+	// default, and `dataCollection`'s defaults collect what sendDefaultPii did.
 });
 
 // A new deploy replaces the immutable chunk files, so a tab opened before the

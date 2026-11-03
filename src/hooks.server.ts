@@ -255,9 +255,9 @@ export const handle: Handle = sequence(
 			if (isNotFoundError(hint?.originalException)) return null;
 			return event;
 		},
-		sendDefaultPii: true,
-		tracesSampleRate: 1.0,
-		enableLogs: true
+		// SDK 11 removed `sendDefaultPii` and `enableLogs`: `dataCollection`'s
+		// defaults collect what the former did, and logs ship by default.
+		tracesSampleRate: 1.0
 	}),
 	Sentry.sentryHandle(),
 	// Above everything below it, so it sees the final response whichever branch
