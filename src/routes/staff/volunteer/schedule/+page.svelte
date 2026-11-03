@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Every work order a coordinator staffs, in one table by date (#1933). A shift
 	 * is a work order with a window, so the ones still waiting for a time are the
@@ -153,7 +154,7 @@
 	}
 </script>
 
-<PageHeader title="Schedule" subtitle="Planning">
+<PageHeader title={m.staff_schedule()} subtitle={m.staff_planning()}>
 	<NewWorkOrderAction onsuccess={() => void getSchedulePage(args).refresh()} />
 </PageHeader>
 
@@ -180,7 +181,7 @@
 		{#if !byContractor}
 			<Select
 				size="sm"
-				aria-label="How far ahead"
+				aria-label={m.staff_volunteer_schedule_how_far_ahead()}
 				value={String(range)}
 				onchange={(e: Event) => {
 					range = parseRange((e.currentTarget as HTMLSelectElement).value);
@@ -194,7 +195,7 @@
 
 		<Select
 			size="sm"
-			aria-label="Kind"
+			aria-label={m.staff_kind()}
 			value={kind}
 			onchange={(e: Event) => {
 				kind = parseKind((e.currentTarget as HTMLSelectElement).value);
@@ -214,7 +215,7 @@
 
 		<Select
 			size="sm"
-			aria-label="Project"
+			aria-label={m.staff_project()}
 			value={projectFilter}
 			onchange={(e: Event) => {
 				projectFilter = parseProjectFilter((e.currentTarget as HTMLSelectElement).value);
@@ -228,7 +229,7 @@
 		{#if byContractor}
 			<Select
 				size="sm"
-				aria-label="Contractor work"
+				aria-label={m.staff_volunteer_schedule_contractor_work()}
 				value={contractorView}
 				onchange={(e: Event) => {
 					contractorView = parseView((e.currentTarget as HTMLSelectElement).value);
@@ -241,13 +242,13 @@
 		{:else}
 			<Select
 				size="sm"
-				aria-label="Role"
+				aria-label={m.staff_role()}
 				value={roleFilter}
 				onchange={(e: Event) => {
 					roleFilter = (e.currentTarget as HTMLSelectElement).value;
 				}}
 			>
-				<option value="">All roles</option>
+				<option value="">{m.staff_all_roles()}</option>
 				<RoleOptions />
 			</Select>
 
@@ -258,7 +259,7 @@
 					checked={shortOnly}
 					onchange={(e) => (shortOnly = e.currentTarget.checked)}
 				/>
-				Short-staffed only
+				{m.staff_volunteer_schedule_short_staffed_only()}
 			</label>
 		{/if}
 	</FilterBar>
@@ -279,17 +280,17 @@
 
 		{#if shown.length === 0}
 			<EmptyState
-				title="No work orders match that"
-				description="Widen the window, or clear the filters."
+				title={m.staff_volunteer_schedule_no_work_orders_match()}
+				description={m.staff_volunteer_schedule_description()}
 			/>
 		{:else}
 			<!-- No zebra: the day-group rows are the striping, as on Reservations. -->
 			<Table zebra={false}>
 				{#snippet head()}
-					<th class="whitespace-nowrap">When</th>
-					<th>Work</th>
-					<th class="cell-num whitespace-nowrap">Staffing</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th class="whitespace-nowrap">{m.staff_when()}</th>
+					<th>{m.staff_work()}</th>
+					<th class="cell-num whitespace-nowrap">{m.staff_volunteer_schedule_staffing()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 				{/snippet}
 
 				{#each shown as w, idx (w.id)}
@@ -310,7 +311,7 @@
 						<td class="whitespace-nowrap">
 							<a {href} class:text-subtle={!w.startsAt} class="link font-medium">{when(w)}</a>
 							{#if !w.startsAt && isOverdue(w, anchor)}
-								<Badge variant="warning" size="sm">Overdue</Badge>
+								<Badge variant="warning" size="sm">{m.staff_overdue()}</Badge>
 							{/if}
 						</td>
 
@@ -338,14 +339,15 @@
 									href={withQuery(
 										resolve('/staff/volunteer/schedule/recurring'),
 										`id=${w.maintenanceScheduleId}`
-									)}>Recurring</a
+									)}>{m.staff_recurring()}</a
 								>
 							{/if}
 							{#each engaged as c, i (i)}
 								<div class="truncate text-xs">
 									{c.name}
-									{#if c.late}<Badge variant="error" size="sm">Late</Badge>{/if}
-									{#if c.awaitingInvoice}<Badge variant="warning" size="sm">Awaiting invoice</Badge
+									{#if c.late}<Badge variant="error" size="sm">{m.staff_late()}</Badge>{/if}
+									{#if c.awaitingInvoice}<Badge variant="warning" size="sm"
+											>{m.staff_volunteer_schedule_awaiting_invoice()}</Badge
 										>{/if}
 								</div>
 							{/each}
@@ -358,10 +360,15 @@
 									class:text-error={!full && w.confirmed === 0}
 									class:text-warning={!full && w.confirmed > 0 && unconfirmed > 0}
 								>
-									{w.confirmed} of {w.capacity}
+									{m.staff_volunteer_schedule_text({
+										confirmed: w.confirmed,
+										capacity: w.capacity
+									})}
 								</span>
 								{#if unconfirmed > 0}
-									<span class="text-xs text-warning">· {unconfirmed} unconfirmed</span>
+									<span class="text-xs text-warning"
+										>{m.staff_volunteer_schedule_unconfirmed({ unconfirmed })}</span
+									>
 								{/if}
 							{/if}
 						</td>
@@ -370,14 +377,14 @@
 							<div class="flex w-max justify-end gap-1">
 								{#if unconfirmed > 0 && w.startsAt}
 									<Action
-										label="Confirm {unconfirmed}"
+										label={m.staff_volunteer_schedule_label({ unconfirmed })}
 										variant="ghost"
 										size="xs"
 										class="text-success"
 										action={confirmShiftClaims.for(w.id)}
-										modalTitle="Confirm everyone on this shift?"
-										submitLabel="Confirm all"
-										successToast="Confirmed. They're booked."
+										modalTitle={m.staff_confirm_everyone_shift()}
+										submitLabel={m.staff_confirm_all()}
+										successToast={m.staff_volunteer_schedule_success_toast()}
 									>
 										{#snippet form()}
 											<input type="hidden" name="shiftId" value={w.id} />
@@ -395,7 +402,7 @@
 									<!-- Opens the work order, whose candidate column is the picker
 									     and also shows who is already on it. -->
 									<Button {href} variant={empty ? 'primary' : 'ghost'} size="xs">
-										Add {w.capacity - w.claimed}
+										{m.staff_volunteer_schedule_add({ value: w.capacity - w.claimed })}
 									</Button>
 								{/if}
 							</div>
@@ -412,8 +419,10 @@
 				{#each cancelled as shift (shift.id)}
 					<li>
 						<a href={resolve('/staff/volunteer/shifts/[id]', { id: shift.id })} class="link">
-							{formatDateShort(shift.startsAt)}
-							{shiftLabel(shift)} cancelled
+							{m.staff_volunteer_schedule_cancelled({
+								formatDateShort: formatDateShort(shift.startsAt),
+								shiftLabel: shiftLabel(shift)
+							})}
 						</a>
 						<span class:text-warning={shift.unnotified > 0} class="text-subtle">
 							· {shift.unnotified > 0 ? `${shift.unnotified} to notify` : 'everybody notified'}

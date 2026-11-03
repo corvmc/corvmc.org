@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '$lib/utils/with-query';
@@ -191,11 +192,13 @@
 <PageHeader
 	width="3xl"
 	title={evt.title}
-	subtitle="Production"
+	subtitle={m.staff_production()}
 	crumb="Production"
 	parent={{ label: evt.title, href: resolve('/staff/events/[id]', { id }) }}
 >
-	<Button href={resolve('/staff/events/[id]', { id })} variant="ghost">View listing</Button>
+	<Button href={resolve('/staff/events/[id]', { id })} variant="ghost"
+		>{m.staff_events_id_production_view_listing()}</Button
+	>
 </PageHeader>
 <PageContent width="3xl">
 	<!-- When and where, read-only: the question the console is opened to answer
@@ -204,8 +207,12 @@
 		<StatusBadge status={evt.status} />
 		<span>{fullDate(evt.startsAt)}</span>
 		<span>
-			{#if evt.doorsAt}Doors {formatTime(evt.doorsAt)} ·{/if}
-			Show {formatEventTimeRange(evt.startsAt, evt.endsAt)}
+			{#if evt.doorsAt}{m.staff_events_id_production_doors({
+					formatTime: formatTime(evt.doorsAt)
+				})}{/if}
+			{m.staff_events_id_production_show({
+				formatEventTimeRange: formatEventTimeRange(evt.startsAt, evt.endsAt)
+			})}
 		</span>
 		<span>{evt.venueName ?? evt.location ?? 'The practice space'}</span>
 	</p>
@@ -233,7 +240,7 @@
 			guide is not a production, and most of them never become one.
 		-->
 			{#if productionRecord}
-				<InfoCard title="Production" testid="production-record">
+				<InfoCard title={m.staff_production()} testid="production-record">
 					{#snippet header(title)}
 						<div class="flex flex-wrap items-center justify-between gap-2">
 							<CardTitle>{title}</CardTitle>
@@ -260,22 +267,25 @@
 					{/if}
 					{#if productionLocked}
 						<p class="text-muted text-sm">
-							This show is {productionRecord.status}, so it is read-only.
+							{m.staff_events_id_production_show_so_read_only({ status: productionRecord.status })}
 						</p>
 					{/if}
 					<!-- A terminal show is the past. Disabled here for clarity; the server refuses
 					     the writes either way. -->
 					<fieldset disabled={productionLocked} class="contents">
 						<div class="flex flex-wrap items-center gap-2">
-							<span class="text-muted">Producer</span>
+							<span class="text-muted">{m.staff_events_id_production_producer()}</span>
 							<!-- The person running the night, reachable. It was their name as
 						     a bare string. -->
 							{#if productionRecord.producer}
 								<EntityChip ref={productionRecord.producer} />
 							{:else}
-								<span class="font-medium">Nobody yet</span>
+								<span class="font-medium">{m.staff_events_id_production_nobody_yet()}</span>
 							{/if}
-							<Form remote={setProductionProducer} successToast="Producer updated">
+							<Form
+								remote={setProductionProducer}
+								successToast={m.staff_events_id_production_producer_updated()}
+							>
 								<input {...producerFields.id.as('hidden', productionRecord.id)} />
 								<input {...producerFields.eventId.as('hidden', evt.id)} />
 								<input
@@ -285,7 +295,9 @@
 									)}
 								/>
 								<SubmitButton
-									label={productionRecord.producerUserId ? 'Hand it back' : 'I am producing this'}
+									label={productionRecord.producerUserId
+										? m.staff_events_id_production_hand_back()
+										: m.staff_events_id_production_i_am_producing()}
 									variant="ghost"
 									size="xs"
 								/>
@@ -297,28 +309,35 @@
 					     it through the same pipeline as any other volunteer, so the
 					     handover carries confirmation and hours with it (#932). -->
 						<div class="flex flex-wrap items-center gap-2">
-							<span class="text-muted">Host</span>
+							<span class="text-muted">{m.staff_events_id_production_host()}</span>
 							{#if hostShift && hostShift.hosts.length > 0}
 								{#each hostShift.hosts as host (host.signupId)}
 									<span class="font-medium">{host.name}</span>
 									<StatusBadge status={host.status} />
 								{/each}
 							{:else if hostShift}
-								<span class="font-medium">Shift open, nobody on it</span>
+								<span class="font-medium">{m.staff_events_id_production_shift_open_nobody()}</span>
 								<a
 									class="link text-sm"
 									href={resolve(`/staff/volunteer/shifts/${hostShift.workOrderId}`)}
 								>
-									Find somebody
+									{m.staff_events_id_production_find_somebody()}
 								</a>
 							{:else}
 								<!-- "No host yet", not "Nobody yet": the Producer line above
 							     already says that, and `productions.e2e.ts` reads it by
 							     text — two matches make its locator ambiguous. -->
-								<span class="font-medium">No host yet</span>
-								<Form remote={openHostShift} successToast="Host shift opened">
+								<span class="font-medium">{m.staff_events_id_production_no_host_yet()}</span>
+								<Form
+									remote={openHostShift}
+									successToast={m.staff_events_id_production_host_shift_opened()}
+								>
 									<input {...openHostShift.fields.eventId.as('hidden', evt.id)} />
-									<SubmitButton label="Open a host shift" variant="ghost" size="xs" />
+									<SubmitButton
+										label={m.staff_events_id_production_open_host_shift()}
+										variant="ghost"
+										size="xs"
+									/>
 								</Form>
 							{/if}
 						</div>
@@ -326,7 +345,7 @@
 						<Form
 							remote={updateProduction}
 							guard
-							successToast="Production updated"
+							successToast={m.staff_events_id_production_production_updated()}
 							onsuccess={() => void getStaffEventProduction(id).refresh()}
 						>
 							<input {...productionFields.id.as('hidden', productionRecord.id)} />
@@ -340,15 +359,35 @@
 							<FormField
 								field={productionFields.loadInDate}
 								type="date"
-								label="Show date"
+								label={m.staff_events_id_production_show_date()}
 								bind:value={productionDate}
 							/>
 							<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-								<FormField field={productionFields.loadInTime} type="time" label="Load-in" />
-								<FormField field={productionFields.soundcheckTime} type="time" label="Soundcheck" />
-								<FormField field={productionFields.firstSetTime} type="time" label="First set" />
-								<FormField field={productionFields.curfewTime} type="time" label="Curfew" />
-								<FormField field={productionFields.loadOutTime} type="time" label="Load-out by" />
+								<FormField
+									field={productionFields.loadInTime}
+									type="time"
+									label={m.staff_events_id_production_load()}
+								/>
+								<FormField
+									field={productionFields.soundcheckTime}
+									type="time"
+									label={m.staff_soundcheck()}
+								/>
+								<FormField
+									field={productionFields.firstSetTime}
+									type="time"
+									label={m.staff_events_id_production_first_set()}
+								/>
+								<FormField
+									field={productionFields.curfewTime}
+									type="time"
+									label={m.staff_events_id_production_curfew()}
+								/>
+								<FormField
+									field={productionFields.loadOutTime}
+									type="time"
+									label={m.staff_events_id_production_load_out_by()}
+								/>
 							</div>
 							<input {...productionFields.soundcheckDate.as('hidden', productionDate)} />
 							<input {...productionFields.firstSetDate.as('hidden', productionDate)} />
@@ -361,35 +400,35 @@
 							<FormField
 								field={productionFields.actsWanted}
 								type="select"
-								label="Bands wanted"
+								label={m.staff_events_id_production_bands_wanted()}
 								value={productionRecord.actsWanted?.toString() ?? ''}
 								options={[
-									{ value: '', label: 'No target set' },
+									{ value: '', label: m.staff_events_id_production_no_target_set() },
 									...Array.from({ length: 8 }, (_, i) => ({
 										value: String(i + 1),
 										label: `${i + 1} ${i === 0 ? 'band' : 'bands'}`
 									}))
 								]}
-								description="How many the bill should end up with. Leave it unset if nobody has decided."
+								description={m.staff_events_id_production_how_many_bill_should_end()}
 							/>
 
 							<FormField
 								field={productionFields.billingNotes}
-								label="Billing"
-								description="What the bands were told about the money, in their words."
+								label={m.staff_events_id_production_billing()}
+								description={m.staff_events_id_production_what_bands_were_told_about()}
 							/>
 							<FormField
 								field={productionFields.hospitalityNotes}
-								label="Hospitality"
-								description="Green room, food, parking — what the advance promised."
+								label={m.staff_hospitality()}
+								description={m.staff_events_id_production_green_room_food_parking_what()}
 							/>
 							<FormField
 								field={productionFields.internalNotes}
-								label="Internal notes"
-								description="Staff only. Never shown to a band."
+								label={m.staff_events_id_production_internal_notes()}
+								description={m.staff_events_id_production_staff_only_never_shown_band()}
 							/>
 
-							<SubmitButton label="Save production" />
+							<SubmitButton label={m.staff_events_id_production_save_production()} />
 						</Form>
 					</fieldset>
 				</InfoCard>
@@ -398,13 +437,17 @@
 				     used to point back at the event page, so a first-timer who came
 				     here was sent where they had just been, with nothing on screen
 				     naming the button (#976). -->
-				<InfoCard title="Production">
+				<InfoCard title={m.staff_production()}>
 					<p class="text-muted">
-						No production record yet. Open one to plan load-in, soundcheck and curfew.
+						{m.staff_events_id_production_no_production_record_yet_open()}
 					</p>
 					<Form remote={createProduction} class="mt-3">
 						<input {...createProduction.fields.eventId.as('hidden', id)} />
-						<SubmitButton label="Open a production" variant="primary" size="sm" />
+						<SubmitButton
+							label={m.staff_events_id_production_open_production()}
+							variant="primary"
+							size="sm"
+						/>
 					</Form>
 				</InfoCard>
 			{/if}
@@ -438,12 +481,14 @@
 			documents.
 		-->
 			{#if riders.length > 0}
-				<InfoCard title="Tech riders">
+				<InfoCard title={m.staff_events_id_production_tech_riders()}>
 					{#snippet header(title)}
 						<div class="flex items-center justify-between gap-2">
 							<CardTitle>{title}</CardTitle>
 							{#if ridersMissing > 0}
-								<Badge variant="warning">{ridersMissing} not in yet</Badge>
+								<Badge variant="warning"
+									>{m.staff_events_id_production_not_yet({ ridersMissing })}</Badge
+								>
 							{/if}
 						</div>
 					{/snippet}
@@ -457,17 +502,21 @@
 									     column, so it cannot be asked at all — and the old copy
 									     blamed the act for it (#974). -->
 									{#if act.entryId}
-										<span class="text-sm text-base-content/60">Nothing sent yet</span>
+										<span class="text-sm text-base-content/60"
+											>{m.staff_events_id_production_nothing_sent_yet()}</span
+										>
 									{:else}
-										<span class="text-sm text-base-content/60">Not in the directory yet</span>
+										<span class="text-sm text-base-content/60"
+											>{m.staff_events_id_production_not_directory_yet()}</span
+										>
 										<Action
 											action={listActInDirectory.for(act.id)}
-											label="Add to the directory"
+											label={m.staff_events_id_production_add_directory()}
 											variant="ghost"
 											size="xs"
-											modalTitle="Add {act.name} to the directory?"
-											submitLabel="Add to the directory"
-											successToast="{act.name} can be asked now"
+											modalTitle={m.staff_events_id_production_add_directory_2({ name: act.name })}
+											submitLabel={m.staff_events_id_production_add_directory()}
+											successToast={m.staff_events_id_production_can_asked_now({ name: act.name })}
 											onsuccess={() => getStaffEventProduction(id).refresh()}
 										>
 											{#snippet form()}
@@ -482,13 +531,21 @@
 									{/if}
 								{:else}
 									{#if act.channelCount > 0}
-										<Badge>{act.channelCount} ch</Badge>
+										<Badge
+											>{m.staff_events_id_production_ch({ channelCount: act.channelCount })}</Badge
+										>
 									{/if}
 									{#if act.phantomCount > 0}
-										<Badge>{act.phantomCount} × +48V</Badge>
+										<Badge
+											>{m.staff_events_id_production_48v({ phantomCount: act.phantomCount })}</Badge
+										>
 									{/if}
 									{#if act.venueProvidedCount > 0}
-										<Badge variant="info">{act.venueProvidedCount} from us</Badge>
+										<Badge variant="info"
+											>{m.staff_events_id_production_from_us({
+												venueProvidedCount: act.venueProvidedCount
+											})}</Badge
+										>
 									{/if}
 									{#if act.uploadCount > 0}
 										<Badge variant="ghost"
@@ -506,14 +563,14 @@
 											variant="ghost"
 											size="sm"
 										>
-											Rider
+											{m.staff_events_id_production_rider()}
 										</Button>
 										<Button
 											href={resolve('/band/[slug]/packing', { slug: act.slug })}
 											variant="ghost"
 											size="sm"
 										>
-											Packing
+											{m.staff_events_id_production_packing()}
 										</Button>
 									</div>
 								{/if}
@@ -524,7 +581,7 @@
 					     count and it is the show that has to fit it (#818). -->
 					<div class="mt-2 border-t border-base-300 pt-2">
 						<Button href={resolve('/staff/events/[id]/inputs', { id })} variant="ghost" size="sm">
-							Input list for the whole bill
+							{m.staff_events_id_production_input_list_whole_bill()}
 						</Button>
 					</div>
 				</InfoCard>
@@ -537,7 +594,7 @@
 			and the second reading is how a calendar of events reaches production with
 			nothing booked. CMC does not staff a show it isn't producing.
 		-->
-			<InfoCard title="Volunteer Shifts" testid="volunteer-shifts">
+			<InfoCard title={m.staff_events_id_production_volunteer_shifts()} testid="volunteer-shifts">
 				{#snippet header(title)}
 					<div class="flex items-center justify-between gap-2">
 						<CardTitle>{title}</CardTitle>
@@ -545,12 +602,12 @@
 							{#if dutyLists.length > 0}
 								<Action
 									action={applyDutyList}
-									label="Apply template"
+									label={m.staff_apply_template()}
 									variant="ghost"
 									size="sm"
-									modalTitle="Apply a template to {evt.title}"
-									submitLabel="Apply"
-									successToast="Work orders created"
+									modalTitle={m.staff_events_id_production_apply_template({ title: evt.title })}
+									submitLabel={m.staff_apply()}
+									successToast={m.staff_events_id_production_work_orders_created()}
 									onsuccess={(r) => {
 										toastWarnings(r);
 										void getStaffEventProduction(id).refresh();
@@ -560,24 +617,28 @@
 										<input type="hidden" name="eventId" value={evt.id} />
 										<FormField
 											name="dutyListId"
-											label="Template"
+											label={m.staff_template()}
 											type="select"
 											options={dutyLists.map((l) => ({ value: l.id, label: l.name }))}
 										/>
-										<FormField name="reason" label="Reason, if applying again" type="text" />
+										<FormField
+											name="reason"
+											label={m.staff_reason_if_applying_again()}
+											type="text"
+										/>
 									{/snippet}
 								</Action>
 							{/if}
 							{#if liveVolunteerRoles.length > 0}
 								<Action
 									action={createShift}
-									label="Schedule a shift"
+									label={m.staff_events_id_production_schedule_shift()}
 									data-testid="schedule-event-shift"
 									variant="ghost"
 									size="sm"
-									modalTitle="Schedule a shift for {evt.title}"
-									submitLabel="Create"
-									successToast="Shift scheduled"
+									modalTitle={m.staff_events_id_production_schedule_shift_2({ title: evt.title })}
+									submitLabel={m.staff_create()}
+									successToast={m.staff_shift_scheduled()}
 									onsuccess={() => getStaffEventProduction(id).refresh()}
 								>
 									{#snippet form()}
@@ -603,7 +664,7 @@
 
 				{#if advance.length > 0}
 					<div class="mb-4">
-						<h3 class="mb-2 text-sm font-semibold">Advance</h3>
+						<h3 class="mb-2 text-sm font-semibold">{m.staff_events_id_production_advance()}</h3>
 						<ul class="flex flex-col gap-1 text-sm">
 							{#each advance as order (order.id)}
 								<li class="flex flex-wrap items-baseline justify-between gap-2">
@@ -612,9 +673,9 @@
 									</a>
 									<span class="text-subtle whitespace-nowrap">
 										{#if order.dueAt}
-											due {formatDateShort(order.dueAt)}
+											{m.staff_due_2({ formatDateShort: formatDateShort(order.dueAt) })}
 										{:else}
-											no deadline
+											{m.staff_no_deadline()}
 										{/if}
 									</span>
 								</li>
@@ -625,15 +686,15 @@
 
 				{#if shifts.length === 0 && advance.length === 0}
 					<EmptyState
-						title="No volunteer shifts"
-						description="Nobody is scheduled to work this show yet."
+						title={m.staff_events_id_production_no_volunteer_shifts()}
+						description={m.staff_events_id_production_nobody_scheduled_work_show_yet()}
 					/>
 				{:else if shifts.length > 0}
 					<Table>
 						{#snippet head()}
-							<th>Role</th>
-							<th class="whitespace-nowrap">When</th>
-							<th class="cell-num">Confirmed</th>
+							<th>{m.staff_role()}</th>
+							<th class="whitespace-nowrap">{m.staff_when()}</th>
+							<th class="cell-num">{m.staff_confirmed()}</th>
 						{/snippet}
 
 						{#each shifts as shift (shift.id)}

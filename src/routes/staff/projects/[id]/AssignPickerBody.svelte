@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
@@ -82,7 +83,7 @@
 			.map((m) => ({
 				value: m.userId,
 				label: m.name,
-				description: m.via === 'staff' ? 'Staff' : 'Committee'
+				description: m.via === 'staff' ? msg.staff_staff() : msg.staff_committee()
 			}))
 	);
 	const nameOf = (id: string) => options.members.find((m) => m.userId === id)?.name ?? 'Someone';
@@ -103,14 +104,17 @@
 {#if engaged && !live}
 	<!-- Finished work stays the contractor's: its cost is on the record. -->
 	<Alert type="info" class="text-sm">
-		{engaged.contractorName} did this work ({engagementLabel(engaged)}). It stays theirs.
+		{msg.staff_projects_id_assign_picker_body_did_work_stays_theirs({
+			contractorName: engaged.contractorName,
+			engagementLabel: engagementLabel(engaged)
+		})}
 		{#snippet action()}
 			<Button
 				href="{resolve(`/staff/projects/${projectId}/tasks/${task.id}`)}#engagement-{engaged.id}"
 				size="xs"
 				variant="default"
 			>
-				Open the engagement
+				{msg.staff_projects_id_assign_picker_body_open_engagement()}
 			</Button>
 		{/snippet}
 	</Alert>
@@ -119,9 +123,9 @@
 		dense
 		class="mb-3"
 		tabs={[
-			{ key: 'members', label: 'Members' },
-			{ key: 'open', label: 'Open to volunteers' },
-			{ key: 'contractor', label: 'Contractor' }
+			{ key: 'members', label: msg.staff_members() },
+			{ key: 'open', label: msg.staff_projects_id_assign_picker_body_open_volunteers() },
+			{ key: 'contractor', label: msg.staff_contractor() }
 		]}
 		active={tab}
 		onchange={(k) => (tab = k as Mode)}
@@ -129,7 +133,7 @@
 
 	{#if tab === 'members'}
 		{#if task.people.length > 0}
-			<ul class="mb-3 space-y-1 text-sm" aria-label="On it">
+			<ul class="mb-3 space-y-1 text-sm" aria-label={msg.staff_text_2()}>
 				{#each task.people as p (p.userId)}
 					{@const drop = unassignMemberForm.for(`${place}:${task.id}:${p.userId}`)}
 					<li class="flex items-center justify-between gap-2">
@@ -139,7 +143,11 @@
 								<input {...drop.fields.projectId.as('hidden', projectId)} />
 								<input {...drop.fields.workOrderId.as('hidden', task.id)} />
 								<input {...drop.fields.userId.as('hidden', p.userId)} />
-								<SubmitButton label="Take off" variant="ghost" size="xs" />
+								<SubmitButton
+									label={msg.staff_projects_id_assign_picker_body_take_off()}
+									variant="ghost"
+									size="xs"
+								/>
 							</Form>
 						{/if}
 					</li>
@@ -164,19 +172,23 @@
 			<Field
 				field={assign.fields.volunteerRoleId}
 				type="select"
-				label="Role"
+				label={msg.staff_role()}
 				options={roleOptions}
 				value={task.volunteerRoleId ?? ''}
-				placeholder="Pick a role"
-				description="Their hours count under it."
+				placeholder={msg.staff_projects_id_assign_picker_body_pick_role()}
+				description={msg.staff_projects_id_assign_picker_body_their_hours_count_under()}
 			/>
-			<SearchInput bind:value={search} size="sm" placeholder="Search staff and the committee" />
+			<SearchInput
+				bind:value={search}
+				size="sm"
+				placeholder={msg.staff_projects_id_assign_picker_body_search_staff_committee()}
+			/>
 			<div onchange={track}>
 				<CheckboxGroup
 					field={assign.fields.userIds}
 					options={memberOptions}
 					legend="Put on it"
-					description="Booked straight on as confirmed, not posted to the claim board. Naming more people than it has spots adds spots."
+					description={msg.staff_projects_id_assign_picker_body_booked_straight_as_conf()}
 				/>
 			</div>
 			{#if assignWarning}
@@ -184,22 +196,26 @@
 				<Alert type="warning" class="text-sm">{consequence(assignWarning)}</Alert>
 			{/if}
 			<SubmitButton
-				label={assignWarning ? 'Assign and cancel the engagement' : 'Assign'}
+				label={assignWarning
+					? msg.staff_projects_id_assign_picker_body_assign_cancel_engagemen()
+					: msg.staff_assign()}
 				size="sm"
 			/>
 		</Form>
 		{#if warned.length > 0}
 			<!-- Assigned regardless; each warning is on the task's log. -->
 			<Alert type="warning" class="mt-3 text-sm">
-				Assigned over warnings:
-				{warned.map((w) => `${w.name} (${w.warnings.join(' ')})`).join('; ')}
+				{msg.staff_projects_id_assign_picker_body_assigned_over_warnings({
+					join: warned.map((w) => `${w.name} (${w.warnings.join(' ')})`).join('; ')
+				})}
 			</Alert>
 		{/if}
 		{#if refused.length > 0}
 			<!-- Only a profile under review, a full task or a closed one refuses. -->
 			<Alert type="error" class="mt-3 text-sm">
-				Could not be put on it:
-				{refused.map((r) => `${r.name} (${r.message})`).join('; ')}
+				{msg.staff_projects_id_assign_picker_body_could_not_put({
+					join: refused.map((r) => `${r.name} (${r.message})`).join('; ')
+				})}
 			</Alert>
 		{/if}
 	{:else if tab === 'open'}
@@ -215,36 +231,44 @@
 			<Field
 				field={open.fields.volunteerRoleId}
 				type="select"
-				label="Role"
+				label={msg.staff_role()}
 				options={roleOptions}
 				value={task.volunteerRoleId ?? ''}
-				placeholder="Pick a role"
+				placeholder={msg.staff_projects_id_assign_picker_body_pick_role()}
 			/>
-			<Field field={open.fields.capacity} type="number" label="Spots" value={task.capacity} />
+			<Field
+				field={open.fields.capacity}
+				type="number"
+				label={msg.staff_projects_id_assign_picker_body_spots()}
+				value={task.capacity}
+			/>
 			<p class="text-muted text-sm">
-				Posts it to the claim board once it has a time; members with the role claim the spots.
-				Anyone already on it stays.
+				{msg.staff_projects_id_assign_picker_body_posts_claim_board_once()}
 			</p>
 			{#if openWarning}
 				<input {...open.fields.confirm.as('hidden', true)} />
 				<Alert type="warning" class="text-sm">{consequence(openWarning)}</Alert>
 			{/if}
 			<SubmitButton
-				label={openWarning ? 'Open and cancel the engagement' : 'Open to volunteers'}
+				label={openWarning
+					? msg.staff_projects_id_assign_picker_body_open_cancel_engagement()
+					: msg.staff_projects_id_assign_picker_body_open_volunteers()}
 				size="sm"
 			/>
 		</Form>
 	{:else if live}
 		<Alert type="info" class="text-sm">
-			{live.contractorName} is engaged ({engagementLabel(live)}). Members or Open cancels it, after
-			a warning.
+			{msg.staff_projects_id_assign_picker_body_engaged_members_open_ca({
+				contractorName: live.contractorName,
+				engagementLabel: engagementLabel(live)
+			})}
 			{#snippet action()}
 				<Button
 					href="{resolve(`/staff/projects/${projectId}/tasks/${task.id}`)}#engagement-{live.id}"
 					size="xs"
 					variant="default"
 				>
-					Open the engagement
+					{msg.staff_projects_id_assign_picker_body_open_engagement()}
 				</Button>
 			{/snippet}
 		</Alert>
@@ -261,11 +285,14 @@
 			<Field
 				field={engage.fields.contractorId}
 				type="select"
-				label="Contractor"
+				label={msg.staff_contractor()}
 				options={contractorOptions}
-				placeholder="Pick one"
+				placeholder={msg.staff_projects_id_assign_picker_body_pick_one()}
 			/>
-			<MoneyField field={engage.fields.quotedCents} label="Quote, if they gave one" />
+			<MoneyField
+				field={engage.fields.quotedCents}
+				label={msg.staff_projects_id_assign_picker_body_quote_if_they_gave_one()}
+			/>
 			{#if engageWarning > 0}
 				<input {...engage.fields.confirm.as('hidden', true)} />
 				<Alert type="warning" class="text-sm">
@@ -274,11 +301,12 @@
 				</Alert>
 			{/if}
 			<p class="text-muted text-sm">
-				Asks them; the quote, booking and invoice live on the engagement, and its cost joins this
-				project's spend.
+				{msg.staff_projects_id_assign_picker_body_asks_them_quote_booking()}
 			</p>
 			<SubmitButton
-				label={engageWarning > 0 ? 'Engage and cancel signups' : 'Engage contractor'}
+				label={engageWarning > 0
+					? msg.staff_projects_id_assign_picker_body_engage_cancel_signups()
+					: msg.staff_engage_contractor()}
 				size="sm"
 			/>
 		</Form>
@@ -300,7 +328,9 @@
 					<Alert type="warning" class="mb-2 text-sm">{consequence(unassignWarning)}</Alert>
 				{/if}
 				<SubmitButton
-					label={unassignWarning ? 'Confirm unassign' : 'Unassign'}
+					label={unassignWarning
+						? msg.staff_projects_id_assign_picker_body_confirm_unassign()
+						: msg.staff_projects_id_assign_picker_body_unassign()}
 					variant="error"
 					outline
 					size="sm"

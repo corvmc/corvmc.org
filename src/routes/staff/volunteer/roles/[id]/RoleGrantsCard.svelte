@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -23,23 +24,22 @@
 	}));
 </script>
 
-<InfoCard title="Grants">
+<InfoCard title={m.staff_volunteer_roles_id_role_grants_card_title()}>
 	{#snippet header(title)}
 		<div class="flex items-center justify-between gap-2">
 			<CardTitle>{title}</CardTitle>
 			<Action
 				action={setVolunteerRoleGrants}
-				label="Edit"
+				label={m.staff_edit()}
 				variant="ghost"
 				size="sm"
-				modalTitle="What {role.name} may do"
-				successToast="Grants saved"
+				modalTitle={m.staff_volunteer_roles_id_role_grants_card_modal_title({ name: role.name })}
+				successToast={m.staff_volunteer_roles_id_role_grants_card_success_toast()}
 			>
 				{#snippet form()}
 					<input type="hidden" name="roleId" value={role.id} />
 					<p class="text-muted">
-						A volunteer confirmed on a shift in this role can do these for that shift's event and no
-						other. You can only grant what your own position allows.
+						{m.staff_volunteer_roles_id_role_grants_card_volunteer_confirme()}
 					</p>
 					<CheckboxGroup
 						field={setVolunteerRoleGrants.fields.capabilities}
@@ -52,7 +52,7 @@
 	{/snippet}
 
 	{#if held.length === 0}
-		<p class="text-muted">This role grants nothing beyond claiming its shifts.</p>
+		<p class="text-muted">{m.staff_volunteer_roles_id_role_grants_card_role_grants_nothin()}</p>
 	{:else}
 		<ul class="space-y-2 text-sm">
 			{#each held as cap (cap)}

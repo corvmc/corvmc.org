@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { Select } from '$lib/components/ui/Form';
 	import {
 		hasCapability,
@@ -22,12 +23,12 @@
 
 <Select
 	size="sm"
-	aria-label="Show"
+	aria-label={m.staff_show()}
 	{value}
 	onchange={(e: Event) =>
 		onchange((e.currentTarget as HTMLSelectElement).value as InventoryListView | '')}
 >
-	<option value="">All items</option>
+	<option value="">{m.staff_all_items()}</option>
 	{#each views as v (v)}
 		<option value={v}>{inventoryListViewMeta[v].label}</option>
 	{/each}

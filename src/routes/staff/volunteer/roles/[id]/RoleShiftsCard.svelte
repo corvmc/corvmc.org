@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -55,20 +56,20 @@
 	}
 </script>
 
-<InfoCard title="Upcoming Shifts">
+<InfoCard title={m.staff_volunteer_roles_id_role_shifts_card_title()}>
 	{#snippet header(title)}
 		<div class="flex items-center justify-between gap-2">
 			<CardTitle>{title}</CardTitle>
 			{#if role.isActive}
 				<Action
 					action={createShift}
-					label="New shift"
+					label={m.staff_volunteer_roles_id_role_shifts_card_label()}
 					data-testid="new-role-shift"
 					variant="ghost"
 					size="sm"
-					modalTitle="Schedule a {role.name} shift"
-					submitLabel="Create"
-					successToast="Shift scheduled"
+					modalTitle={m.staff_volunteer_roles_id_role_shifts_card_modal_title({ name: role.name })}
+					submitLabel={m.staff_create()}
+					successToast={m.staff_shift_scheduled()}
 					onsuccess={() => getShifts({ volunteerRoleId: role.id, from }).refresh()}
 				>
 					{#snippet form()}
@@ -87,13 +88,13 @@
 
 	{#await shifts then rows}
 		{#if rows.length === 0}
-			<EmptyState description="Nothing scheduled for this role yet." />
+			<EmptyState description={m.staff_volunteer_roles_id_role_shifts_card_description()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>When</th>
-					<th class="col-support">Event</th>
-					<th class="cell-num whitespace-nowrap">Confirmed</th>
+					<th>{m.staff_when()}</th>
+					<th class="col-support">{m.staff_event()}</th>
+					<th class="cell-num whitespace-nowrap">{m.staff_confirmed()}</th>
 				{/snippet}
 
 				{#each rows as shift (shift.id)}
@@ -122,7 +123,9 @@
 							{#if unconfirmed > 0}
 								<Badge variant="warning" size="xs" class="ml-2">+{unconfirmed}</Badge>
 							{:else if short}
-								<Badge variant="warning" size="xs" class="ml-2">short</Badge>
+								<Badge variant="warning" size="xs" class="ml-2"
+									>{m.staff_volunteer_roles_id_role_shifts_card_short()}</Badge
+								>
 							{/if}
 						</td>
 					</tr>

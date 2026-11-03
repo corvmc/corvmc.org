@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { untrack, type Snippet } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { resolve } from '$app/paths';
@@ -106,10 +107,10 @@
 
 {#snippet identityBadges()}
 	{#if member.deletedAt}
-		<Badge variant="error" size="md">Deactivated</Badge>
+		<Badge variant="error" size="md">{m.staff_deactivated()}</Badge>
 	{/if}
 	{#if overview.membership.sustaining}
-		<Badge variant="success" size="md">Sustaining</Badge>
+		<Badge variant="success" size="md">{m.staff_sustaining()}</Badge>
 	{/if}
 	{#each member.roles as role (role)}
 		<Badge variant="info" size="md">{role}</Badge>
@@ -183,7 +184,7 @@
 {/snippet}
 
 {#if variant === 'page'}
-	<PageHeader subtitle="Member" title={member.name}>
+	<PageHeader subtitle={m.staff_member()} title={member.name}>
 		{#snippet leading()}
 			<Avatar src={member.avatarUrl ?? undefined} name={member.name} class="size-12" />
 		{/snippet}

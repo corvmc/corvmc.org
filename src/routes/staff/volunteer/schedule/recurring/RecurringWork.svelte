@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The recurring-work definitions. Each writes work orders, one open at a time,
 	 * and those occurrences are rows of the Schedule's other view. A row opens its
@@ -31,68 +32,88 @@
 	const data = $derived(await getRecurringWorkPage());
 	const roleOptions = $derived(data.roles.map((r) => ({ value: r.id, label: r.name })));
 	const projectOptions = $derived([
-		{ value: '', label: 'None' },
+		{ value: '', label: m.staff_volunteer_schedule_recurring_recurring_work_none() },
 		...data.projects.map((p) => ({ value: p.id, label: p.name }))
 	]);
 	const selected = $derived(data.schedules.find((s) => s.id === url.id));
 </script>
 
 <div class="flex items-center justify-between gap-2">
-	<SectionLabel label="Recurring work" count={data.schedules.length} />
+	<SectionLabel
+		label={m.staff_volunteer_schedule_recurring_recurring_work_recurring()}
+		count={data.schedules.length}
+	/>
 	{#if data.roles.length > 0}
 		<Action
 			action={createRecurringWork}
-			label="New Recurring Work"
+			label={m.staff_volunteer_schedule_recurring_recurring_work_new_recurr()}
 			data-testid="new-recurring-work"
 			variant="ghost"
 			size="xs"
-			modalTitle="New recurring work"
-			submitLabel="Create"
-			successToast="Recurring work created"
+			modalTitle={m.staff_volunteer_schedule_recurring_recurring_work_modal_titl()}
+			submitLabel={m.staff_create()}
+			successToast={m.staff_volunteer_schedule_recurring_recurring_work_success_to()}
 		>
 			{#snippet form()}
-				<FormField name="name" label="Name" type="text" placeholder="Monthly deep clean" />
+				<FormField
+					name="name"
+					label={m.staff_name()}
+					type="text"
+					placeholder={m.staff_volunteer_schedule_recurring_recurring_work_monthly_de()}
+				/>
 				<FormField
 					name="volunteerRoleId"
-					label="Role"
+					label={m.staff_role()}
 					type="select"
 					options={roleOptions}
 					value={roleOptions[0]?.value}
 				/>
 				<FormField
 					name="intervalDays"
-					label="Repeat every (days)"
+					label={m.staff_repeat_every_days()}
 					type="number"
 					value="30"
-					description="Counted from when the last one closed."
+					description={m.staff_volunteer_schedule_recurring_recurring_work_descriptio()}
 				/>
-				<FormField name="firstDueOn" label="First one due" type="date" value={defaultFirstDue} />
-				<FormField name="capacity" label="How many people" type="number" value="1" />
-				<FormField name="projectId" label="Project" type="select" options={projectOptions} />
-				<FormField name="assetId" label="Equipment">
+				<FormField
+					name="firstDueOn"
+					label={m.staff_volunteer_schedule_recurring_recurring_work_first_one()}
+					type="date"
+					value={defaultFirstDue}
+				/>
+				<FormField name="capacity" label={m.staff_how_many_people()} type="number" value="1" />
+				<FormField
+					name="projectId"
+					label={m.staff_project()}
+					type="select"
+					options={projectOptions}
+				/>
+				<FormField name="assetId" label={m.staff_equipment()}>
 					<SearchSelect
 						search={(q) => searchWorkAssets(q)}
 						bind:value={asset}
 						field={assetField}
 						labelKey="name"
 						descriptionKey="detail"
-						placeholder="Search by item, tag or serial..."
+						placeholder={m.staff_search_by_item_tag_serial()}
 					/>
 				</FormField>
-				<FormField name="notes" label="Notes" type="textarea" />
+				<FormField name="notes" label={m.staff_notes()} type="textarea" />
 			{/snippet}
 		</Action>
 	{/if}
 </div>
 
 {#if data.schedules.length === 0}
-	<p class="text-subtle text-sm">None yet.</p>
+	<p class="text-subtle text-sm">
+		{m.staff_volunteer_schedule_recurring_recurring_work_none_yet()}
+	</p>
 {:else}
 	<Table>
 		{#snippet head()}
-			<th>Name</th>
-			<th class="whitespace-nowrap">Repeats</th>
-			<th class="col-support whitespace-nowrap">Last closed</th>
+			<th>{m.staff_name()}</th>
+			<th class="whitespace-nowrap">{m.staff_repeats()}</th>
+			<th class="col-support whitespace-nowrap">{m.staff_last_closed()}</th>
 		{/snippet}
 
 		{#each data.schedules as s (s.id)}
@@ -112,7 +133,9 @@
 					{#if s.lastClosedAt}
 						{formatDate(s.lastClosedAt)}
 					{:else}
-						<span class="text-subtle">Never</span>
+						<span class="text-subtle"
+							>{m.staff_volunteer_schedule_recurring_recurring_work_never()}</span
+						>
 					{/if}
 				</td>
 			</tr>

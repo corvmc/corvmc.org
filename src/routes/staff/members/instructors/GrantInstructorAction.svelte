@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
@@ -18,29 +19,27 @@
 
 <Action
 	action={grantInstructor}
-	label="Add Instructor"
-	modalTitle="Add Instructor"
-	submitLabel="Grant"
-	successToast="Teaching status granted"
+	label={m.staff_members_instructors_grant_instructor_add_instructor()}
+	modalTitle={m.staff_members_instructors_grant_instructor_add_instructor()}
+	submitLabel={m.staff_grant()}
+	successToast={m.staff_members_instructors_grant_instructor_success_toast()}
 	variant="primary"
 	size="sm"
 	onsuccess={() => invalidateAll()}
 >
 	{#snippet form()}
 		<div class="space-y-4">
-			<FormField name="userId" label="Member" required>
+			<FormField name="userId" label={m.staff_member()} required>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={member}
 					field={fields.userId}
-					placeholder="Search by name or email..."
+					placeholder={m.staff_search_by_name_email()}
 				/>
 			</FormField>
 
 			<p class="text-subtle">
-				They can book the room on teaching terms immediately — there is nothing for them to accept.
-				Teaching time is charged at the member rate with the monthly cap lifted, not at the drop-in
-				rate.
+				{m.staff_members_instructors_grant_instructor_they_can_book_roo()}
 			</p>
 		</div>
 	{/snippet}

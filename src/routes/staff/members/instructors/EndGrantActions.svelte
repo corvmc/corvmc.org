@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { pauseInstructor, retireInstructor } from '$lib/remote/instructors.remote';
@@ -22,10 +23,10 @@
 <div class="flex w-max gap-2">
 	<Action
 		action={pauseInstructor}
-		label="Pause"
-		modalTitle="Pause {name}"
-		submitLabel="Pause"
-		successToast="Paused"
+		label={m.staff_members_instructors_end_grant_actions_pause()}
+		modalTitle={m.staff_members_instructors_end_grant_actions_pause_2({ name })}
+		submitLabel={m.staff_members_instructors_end_grant_actions_pause()}
+		successToast={m.staff_members_instructors_end_grant_actions_paused()}
 		variant="ghost"
 		size="sm"
 		onsuccess={() => invalidateAll()}
@@ -33,9 +34,14 @@
 		{#snippet form()}
 			<div class="space-y-4">
 				<input {...pauseFields.id.as('hidden', id)} />
-				<FormField field={pauseFields.note} label="Why?" type="textarea" required />
+				<FormField
+					field={pauseFields.note}
+					label={m.staff_members_instructors_end_grant_actions_why()}
+					type="textarea"
+					required
+				/>
 				<p class="text-subtle">
-					They stop being listed and cannot book teaching time. Bookings they already hold stand.
+					{m.staff_members_instructors_end_grant_actions_they_stop_being()}
 				</p>
 			</div>
 		{/snippet}
@@ -43,10 +49,10 @@
 
 	<Action
 		action={retireInstructor}
-		label="Retire"
-		modalTitle="Retire {name}"
-		submitLabel="Retire"
-		successToast="Retired"
+		label={m.staff_retire()}
+		modalTitle={m.staff_members_instructors_end_grant_actions_retire({ name })}
+		submitLabel={m.staff_retire()}
+		successToast={m.staff_retired()}
 		variant="ghost"
 		size="sm"
 		onsuccess={() => invalidateAll()}
@@ -54,10 +60,14 @@
 		{#snippet form()}
 			<div class="space-y-4">
 				<input {...retireFields.id.as('hidden', id)} />
-				<FormField field={retireFields.note} label="Why?" type="textarea" required />
+				<FormField
+					field={retireFields.note}
+					label={m.staff_members_instructors_end_grant_actions_why()}
+					type="textarea"
+					required
+				/>
 				<p class="text-subtle">
-					For someone who has stopped teaching here rather than paused. Bookings they already hold
-					stand — cancel those separately if they need cancelling.
+					{m.staff_members_instructors_end_grant_actions_someone_who_has()}
 				</p>
 			</div>
 		{/snippet}

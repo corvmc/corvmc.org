@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Table from '$lib/components/ui/Table.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import type { getProjectsPage } from '$lib/remote/projects.remote';
@@ -24,18 +25,18 @@
 <!-- No actions column to end the row, so the name takes the slack (#1968). -->
 <Table packed={false}>
 	{#snippet head()}
-		<th class="w-px"><span class="sr-only">Progress</span></th>
-		<th>Project</th>
-		<th>Committees</th>
-		<th>Dates</th>
-		<th class="cell-num">Budget</th>
-		<th class="cell-num">Spent</th>
+		<th class="w-px"><span class="sr-only">{m.staff_projects_projects_table_progress()}</span></th>
+		<th>{m.staff_project()}</th>
+		<th>{m.staff_projects_projects_table_committees()}</th>
+		<th>{m.staff_projects_projects_table_dates()}</th>
+		<th class="cell-num">{m.staff_budget()}</th>
+		<th class="cell-num">{m.staff_spent()}</th>
 	{/snippet}
 	{#each projects as row (row.project.id)}
 		<tr class="hover" use:rowLink={resolve(`/staff/projects/${row.project.id}`)}>
 			<td class="w-px">
 				{#if row.progress.total === 0}
-					<span class="text-fg-3" title="No tasks yet">—</span>
+					<span class="text-fg-3" title={m.staff_no_tasks_yet()}>—</span>
 				{:else}
 					{@const pct = Math.round((row.progress.done / row.progress.total) * 100)}
 					<div
@@ -46,8 +47,14 @@
 						style="--value:{pct}; --size:1.5rem; --thickness:3px"
 						role="progressbar"
 						aria-valuenow={pct}
-						aria-label="{row.progress.done} of {row.progress.total} tasks done"
-						title="{row.progress.done} of {row.progress.total} tasks done"
+						aria-label={m.staff_projects_projects_table_aria_label({
+							done: row.progress.done,
+							total: row.progress.total
+						})}
+						title={m.staff_projects_projects_table_aria_label({
+							done: row.progress.done,
+							total: row.progress.total
+						})}
 					></div>
 				{/if}
 			</td>
@@ -56,17 +63,19 @@
 					{row.project.name}
 				</a>
 				{#if view === 'all' && isProjectArchived(row.project.status)}
-					<Badge size="sm" variant="ghost">Archived</Badge>
+					<Badge size="sm" variant="ghost">{m.staff_archived()}</Badge>
 				{/if}
 				{#if row.burn.contributed.volunteerMinutes > 0}
 					<div class="text-subtle">
-						{Math.round(row.burn.contributed.volunteerMinutes / 60)} volunteer hours
+						{m.staff_projects_projects_table_volunteer_hours({
+							round: Math.round(row.burn.contributed.volunteerMinutes / 60)
+						})}
 					</div>
 				{/if}
 			</td>
 			<td class="whitespace-nowrap" title={row.committeeNames.join(', ') || undefined}>
 				{#if row.committeeNames.length === 0}
-					<span class="text-muted">Unowned</span>
+					<span class="text-muted">{m.staff_projects_projects_table_unowned()}</span>
 				{:else}
 					{row.committeeNames[0]}
 					{#if row.committeeNames.length > 1}

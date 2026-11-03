@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { getMemberStandings, restoreMemberStanding } from '$lib/remote/standing.remote';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { getFlagsAgainstUser, getFlagsByUser } from '$lib/remote/flags.remote';
@@ -18,11 +19,11 @@
 	// sentence would be true of both and useful for neither.
 	const restrictedCopy: Record<string, { title: string; body: string }> = {
 		community_event: {
-			title: 'Community listings',
+			title: m.staff_community_listings(),
 			body: "This member's listings are reviewed by staff before they go on the public calendar, after a report was upheld against one of them."
 		},
 		suggestion: {
-			title: 'Suggestions',
+			title: m.staff_members_id_panels_moderation_panel_suggestions(),
 			body: "This member's suggestions are reviewed by staff before they go on the board, after a report was upheld against one of them."
 		}
 	};
@@ -44,10 +45,10 @@
 		(scope) => standings[scope].status !== 'none'
 	)}
 	{#if restricted.length === 0}
-		<InfoCard title="Standing">
+		<InfoCard title={m.staff_members_id_panels_moderation_panel_standing()}>
 			<EmptyState
-				title="No restrictions"
-				description="Nothing this member posts is held for review."
+				title={m.staff_members_id_panels_moderation_panel_no_restrictions()}
+				description={m.staff_members_id_panels_moderation_panel_nothing_member_post()}
 			/>
 		</InfoCard>
 	{/if}
@@ -56,23 +57,23 @@
 		<InfoCard title={restrictedCopy[scope].title}>
 			<p class="text-sm">{restrictedCopy[scope].body}</p>
 			{#if standing.reason}
-				<p class="mt-1 text-muted">Staff note: "{standing.reason}"</p>
+				<p class="mt-1 text-muted">{m.staff_staff_note({ reason: standing.reason })}</p>
 			{/if}
 			{#if standing.triggeringFlagId}
 				<p class="mt-1 text-sm">
 					<a class="link" href={resolve(`/staff/flags/${standing.triggeringFlagId}`)}>
-						See the report
+						{m.staff_members_id_panels_moderation_panel_see_report()}
 					</a>
 				</p>
 			{/if}
 			<div class="mt-2">
 				<Action
 					action={restoreMemberStanding.for(scope)}
-					label="Restore"
+					label={m.staff_restore()}
 					variant="ghost"
 					size="sm"
 					confirm="Stop holding this member's posts here for review?"
-					successToast="Standing restored"
+					successToast={m.staff_members_id_panels_moderation_panel_success_toast()}
 				>
 					{#snippet form()}
 						{@const f = restoreMemberStanding.for(scope).fields}
@@ -85,16 +86,22 @@
 	{/each}
 {/await}
 
-<RelatedList title="Reports against this member" result={getFlagsAgainstUser(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_moderation_panel_reports_against_mem()}
+	result={getFlagsAgainstUser(id)}
+>
 	{#snippet children(flags)}
 		{#if flags.length === 0}
-			<EmptyState title="No reports" description="Nobody has reported this member's profile." />
+			<EmptyState
+				title={m.staff_members_id_panels_moderation_panel_no_reports()}
+				description={m.staff_members_id_panels_moderation_panel_nobody_has_reported()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Reason</th>
-					<th class="col-extra">Filed</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_reason()}</th>
+					<th class="col-extra">{m.staff_members_id_panels_moderation_panel_filed()}</th>
 				{/snippet}
 				{#each flags as f (f.id)}
 					<tr class="hover" use:rowLink={resolve(`/staff/flags/${f.id}`)}>
@@ -111,16 +118,22 @@
 	{/snippet}
 </RelatedList>
 
-<RelatedList title="Reports they filed" result={getFlagsByUser(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_moderation_panel_reports_they_filed()}
+	result={getFlagsByUser(id)}
+>
 	{#snippet children(flags)}
 		{#if flags.length === 0}
-			<EmptyState title="None filed" description="This member has not reported anyone." />
+			<EmptyState
+				title={m.staff_members_id_panels_moderation_panel_none_filed()}
+				description={m.staff_members_id_panels_moderation_panel_member_has_not_repo()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>About</th>
-					<th class="col-extra">Filed</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_about()}</th>
+					<th class="col-extra">{m.staff_members_id_panels_moderation_panel_filed()}</th>
 				{/snippet}
 				{#each flags as f (f.id)}
 					<tr class="hover" use:rowLink={resolve(`/staff/flags/${f.id}`)}>

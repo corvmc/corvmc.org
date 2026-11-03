@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { getProjectDetail } from '$lib/remote/projects.remote';
@@ -11,8 +12,8 @@
 </script>
 
 <PageHeader
-	title="Budget"
-	documentTitle="{data.project.name} budget"
+	title={m.staff_budget()}
+	documentTitle={m.staff_projects_id_budget_document_title({ name: data.project.name })}
 	parent={{
 		label: data.project.name,
 		href: resolve(`/staff/projects/${data.project.id}`)

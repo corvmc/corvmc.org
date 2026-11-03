@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { Popover } from 'bits-ui';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -29,7 +30,7 @@
 					variant="ghost"
 					size="xs"
 					class="depth-0 bare bare-hover assign-trigger"
-					aria-label="Change who does {task.title}"
+					aria-label={m.staff_projects_id_assign_picker_change_who_does({ title: task.title })}
 				>
 					<AssignedSummary {task} {showNames} />
 				</Button>
@@ -41,10 +42,17 @@
 					<svelte:boundary>
 						<AssignPickerBody {task} {projectId} {place} onclose={() => (open = false)} />
 						{#snippet pending()}
-							<span class="loading loading-sm loading-spinner" aria-label="Loading"></span>
+							<span
+								class="loading loading-sm loading-spinner"
+								aria-label={m.staff_projects_id_assign_picker_loading()}
+							></span>
 						{/snippet}
 						{#snippet failed(error, reset)}
-							<Alert type="error" {reset}>Couldn't load the options: {errorMessage(error)}</Alert>
+							<Alert type="error" {reset}
+								>{m.staff_projects_id_assign_picker_couldn_t_load_options({
+									errorMessage: errorMessage(error)
+								})}</Alert
+							>
 						{/snippet}
 					</svelte:boundary>
 				{/if}

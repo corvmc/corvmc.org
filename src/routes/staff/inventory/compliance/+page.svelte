@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -23,15 +24,18 @@
 	const data = $derived(await getForm8282Obligations());
 </script>
 
-<PageHeader title="Compliance" subtitle="Inventory" />
+<PageHeader title={m.staff_inventory_compliance_compliance()} subtitle={m.staff_inventory()} />
 
 <PageContent>
 	{#if data.rows.length === 0}
 		<EmptyState
-			title="Nothing outstanding"
+			title={m.staff_inventory_compliance_nothing_outstanding()}
 			description={data.noFormOnRecord > 0
-				? `${data.noFormOnRecord} donated ${data.noFormOnRecord === 1 ? 'unit was' : 'units were'} disposed of inside the three-year window, but none has a signed Form 8283 on record — so no filing is expected.`
-				: 'No donated gear has been disposed of inside the three-year window.'}
+				? m.staff_inventory_compliance_donated_disposed_inside_three_yea({
+						noFormOnRecord: data.noFormOnRecord,
+						value: data.noFormOnRecord === 1 ? 'unit was' : 'units were'
+					})
+				: m.staff_inventory_compliance_no_donated_gear_has_been()}
 		/>
 	{:else}
 		{#if data.overdueCount > 0}
@@ -44,20 +48,17 @@
 
 		<!-- Stated once, at the top: the system is flagging, not determining. -->
 		<p class="mb-4 text-subtle">
-			Disposing of donated property within three years of receiving it can oblige the collective to
-			file IRS Form 8282 within 125 days, with a copy to the donor. Only gifts CMC signed a Form
-			8283 for are listed here — that signature is what makes something reportable. Recording an
-			outcome stays a person's judgement rather than the system's.
+			{m.staff_inventory_compliance_disposing_donated_property_within()}
 		</p>
 
 		<Table>
 			{#snippet head()}
-				<th>Unit</th>
-				<th class="col-support">Donor</th>
-				<th class="col-extra whitespace-nowrap">Received</th>
-				<th class="whitespace-nowrap">Disposed</th>
-				<th class="whitespace-nowrap">Due by</th>
-				<th class="w-px"><span class="sr-only">Record</span></th>
+				<th>{m.staff_unit()}</th>
+				<th class="col-support">{m.staff_inventory_compliance_donor()}</th>
+				<th class="col-extra whitespace-nowrap">{m.staff_received()}</th>
+				<th class="whitespace-nowrap">{m.staff_inventory_compliance_disposed()}</th>
+				<th class="whitespace-nowrap">{m.staff_inventory_compliance_due_by()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_record()}</span></th>
 			{/snippet}
 			{#each data.rows as row (row.id)}
 				<tr class="hover">
@@ -82,12 +83,18 @@
 					<td class="whitespace-nowrap">
 						{#if row.state === 'overdue'}
 							<Badge variant="error" size="sm">
-								Overdue {row.dueBy ? formatDateShort(row.dueBy) : ''}
+								{m.staff_inventory_compliance_overdue({
+									value: row.dueBy ? formatDateShort(row.dueBy) : ''
+								})}
 							</Badge>
 						{:else}
 							<span class:text-warning={(row.daysRemaining ?? 99) < 30}>
 								{row.dueBy ? formatDateShort(row.dueBy) : '—'}
-								<span class="text-subtle">({row.daysRemaining}d)</span>
+								<span class="text-subtle"
+									>{m.staff_inventory_compliance_d({
+										daysRemaining: row.daysRemaining ?? ''
+									})}</span
+								>
 							</span>
 						{/if}
 					</td>

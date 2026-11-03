@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Clearances that run out before a shift the holder is already on.
 	 *
@@ -37,18 +38,20 @@
 	let { rows, total }: { rows: Row[]; total: number } = $props();
 </script>
 
-<InfoCard title="Expiring Clearances" state={total}>
+<InfoCard title={m.staff_volunteer_lapsing_card_title()} state={total}>
 	{#snippet action()}
-		<Button href="/staff/members/volunteers" variant="ghost" size="sm">Who's cleared →</Button>
+		<Button href="/staff/members/volunteers" variant="ghost" size="sm"
+			>{m.staff_volunteer_lapsing_card_who_s_cleared()}</Button
+		>
 	{/snippet}
 
 	<Table>
 		{#snippet head()}
-			<th>Member</th>
-			<th class="col-support">Clearance</th>
-			<th class="col-support whitespace-nowrap">Expires</th>
-			<th class="whitespace-nowrap">Shift</th>
-			<th class="w-px"><span class="sr-only">Actions</span></th>
+			<th>{m.staff_member()}</th>
+			<th class="col-support">{m.staff_clearance()}</th>
+			<th class="col-support whitespace-nowrap">{m.staff_expires()}</th>
+			<th class="whitespace-nowrap">{m.staff_shift()}</th>
+			<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 		{/snippet}
 
 		{#each rows as row (row.userId + row.certificationId + row.shiftId)}
@@ -78,33 +81,39 @@
 					-->
 					<Action
 						action={grantCertification.for(`${row.userId}:${row.certificationId}`)}
-						label="Renew"
+						label={m.staff_volunteer_lapsing_card_renew()}
 						variant="ghost"
 						size="xs"
-						modalTitle="Renew {row.certificationName} for {row.member.title}?"
-						submitLabel="Renew"
-						successToast="Renewed. That shift is covered."
+						modalTitle={m.staff_volunteer_lapsing_card_modal_title({
+							certificationName: row.certificationName,
+							title: row.member.title
+						})}
+						submitLabel={m.staff_volunteer_lapsing_card_renew()}
+						successToast={m.staff_volunteer_lapsing_card_success_toast()}
 					>
 						{#snippet form()}
 							<input type="hidden" name="userId" value={row.userId} />
 							<input type="hidden" name="certificationId" value={row.certificationId} />
 							<FormField
 								name="grantedOn"
-								label="Granted on"
+								label={m.staff_granted()}
 								type="date"
 								value={clubToday()}
-								description="Expiry is stamped from this date and locked in. Grants append, so this is a new row rather than an edit to the old one."
+								description={m.staff_volunteer_lapsing_card_expiry_stamped_from_date_locked()}
 							/>
 							<FormField
 								name="reference"
-								label="Reference"
+								label={m.staff_reference()}
 								type="text"
 								maxlength={CERT_REFERENCE_MAX}
-								description="Card or certificate number, if there is one."
+								description={m.staff_volunteer_lapsing_card_card_certificate_number_if_ther()}
 							/>
 							<p class="text-sm">
-								Their current one expires {formatDateShortYear(row.expiresAt)}, before
-								{row.roleName} on {formatDateShort(row.startsAt)}. Granting this clears them for it.
+								{m.staff_volunteer_lapsing_card_their_current_one_expires_befor({
+									formatDateShortYear: formatDateShortYear(row.expiresAt),
+									roleName: row.roleName,
+									formatDateShort: formatDateShort(row.startsAt)
+								})}
 							</p>
 						{/snippet}
 					</Action>

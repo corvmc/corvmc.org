@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { workOrderHref } from '$lib/utils/work-order-href';
 	import { page } from '$app/state';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
@@ -66,7 +67,7 @@
 <PageHeader
 	width="3xl"
 	subtitle={asset.item.name}
-	title={asset.assetTag ?? 'Untagged unit'}
+	title={asset.assetTag ?? m.staff_inventory_assets_id_untagged_unit()}
 	parent={{ label: asset.item.name, href: resolve('/staff/inventory/[id]', { id: asset.itemId }) }}
 >
 	<StatusBadge status={asset.status} />
@@ -79,16 +80,22 @@
 		<Alert type={form8282.state === 'overdue' ? 'error' : 'warning'} class="mb-4">
 			<div>
 				<p>
-					<strong>Form 8282 may be due.</strong>
+					<strong>{m.staff_inventory_assets_id_form_8282_may_due()}</strong>
 					This unit was donated{#if data.donor}
-						by {data.donor}{/if}, CMC signed a Form 8283 for it, and it was disposed of within three
-					years — which can oblige a filing within 125 days, with a copy to the donor.
+						{m.staff_inventory_assets_id_by({
+							donor: data.donor
+						})}{/if}{m.staff_inventory_assets_id_cmc_signed_form_8283_was()}
 				</p>
 				<p class="mt-1 text-sm">
 					{#if form8282.state === 'overdue'}
-						The 125 days ran out on {form8282.dueBy && toLocalDate(form8282.dueBy)}.
+						{m.staff_inventory_assets_id_125_days_ran_out({
+							value: (form8282.dueBy && toLocalDate(form8282.dueBy)) ?? ''
+						})}
 					{:else}
-						Due by {form8282.dueBy && toLocalDate(form8282.dueBy)} — {form8282.daysRemaining} days left.
+						{m.staff_inventory_assets_id_due_by_days_left({
+							value: (form8282.dueBy && toLocalDate(form8282.dueBy)) ?? '',
+							daysRemaining: form8282.daysRemaining ?? ''
+						})}
 					{/if}
 				</p>
 				<div class="mt-3">
@@ -99,19 +106,19 @@
 	{/if}
 
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
-		<Form remote={editAsset} guard successToast="Unit updated">
+		<Form remote={editAsset} guard successToast={m.staff_inventory_assets_id_unit_updated()}>
 			<input {...fields.id.as('hidden', id)} />
-			<InfoCard title="This unit">
+			<InfoCard title={m.staff_inventory_assets_id_unit()}>
 				<Field
 					field={fields.serialNumber}
 					type="text"
-					label="Serial number"
+					label={m.staff_inventory_assets_id_serial_number()}
 					value={asset.serialNumber ?? ''}
 				/>
 				<Field
 					field={fields.condition}
 					type="select"
-					label="Condition"
+					label={m.staff_condition()}
 					value={asset.condition}
 					options={equipmentConditions.map((c) => ({ value: c, label: c }))}
 				/>
@@ -120,7 +127,12 @@
 				     "clear it". Gear moved to Unassigned whenever anyone edited a
 				     serial number. -->
 				<LocationField field={fields.locationId} value={asset.locationId} />
-				<Field field={fields.notes} type="textarea" label="Notes" value={asset.notes ?? ''} />
+				<Field
+					field={fields.notes}
+					type="textarea"
+					label={m.staff_notes()}
+					value={asset.notes ?? ''}
+				/>
 				<div class="mt-3">
 					<SubmitButton>
 						{#snippet icon()}
@@ -131,26 +143,28 @@
 			</InfoCard>
 		</Form>
 
-		<InfoCard title="Record" class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_record()} class="bg-base-200 shadow-none">
 			<DefinitionList>
-				<Fact label="Item">{asset.item.name}</Fact>
-				<Fact label="Category">
+				<Fact label={m.staff_item()}>{asset.item.name}</Fact>
+				<Fact label={m.staff_category()}>
 					{asset.category.name}
 					<Badge variant="outline" size="xs" class="ml-1">{asset.category.pricingTier}</Badge>
 				</Fact>
-				<Fact label="Tag" mono>{asset.assetTag ?? '—'}</Fact>
-				<Fact label="Location">{asset.location?.name ?? 'Unassigned'}</Fact>
-				<Fact label="Added">{formatDateShort(asset.createdAt)}</Fact>
+				<Fact label={m.staff_tag()} mono>{asset.assetTag ?? '—'}</Fact>
+				<Fact label={m.staff_location()}>{asset.location?.name ?? 'Unassigned'}</Fact>
+				<Fact label={m.staff_inventory_assets_id_added()}>{formatDateShort(asset.createdAt)}</Fact>
 				{#if asset.form8282ResolvedAt}
-					<Fact label="Form 8282">
+					<Fact label={m.staff_inventory_assets_id_form_8282()}>
 						{asset.form8282Note}
 						<span class="text-subtle">
-							— recorded {toLocalDate(asset.form8282ResolvedAt)}
+							{m.staff_inventory_assets_id_recorded({
+								toLocalDate: toLocalDate(asset.form8282ResolvedAt)
+							})}
 						</span>
 					</Fact>
 				{/if}
 				{#if asset.retiredAt}
-					<Fact label="Retired">
+					<Fact label={m.staff_retired()}>
 						{formatDateShort(asset.retiredAt)}
 						{#if asset.retiredReason}
 							<span class="text-subtle">— {asset.retiredReason}</span>
@@ -163,7 +177,7 @@
 				<!-- The URL printed on the sticker. It resolves through entityHref, so
 				     it keeps working when the pages behind it move. -->
 				<p class="mt-3 font-mono text-subtle">
-					{page.url.origin}/a/{asset.assetTag}
+					{m.staff_inventory_assets_id_text({ origin: page.url.origin, assetTag: asset.assetTag })}
 				</p>
 			{/if}
 
@@ -171,31 +185,38 @@
 				<BindTagAction assetId={id} currentTag={asset.assetTag} />
 				{#if isTerminal}
 					<ReopenAction action={reopenAssetForm} {id} capability="inventory.reopen">
-						Back in service, with a stock adjustment. The {asset.status} entry stays in its history.
+						{m.staff_inventory_assets_id_back_service_with_stock_adjustment({
+							status: asset.status
+						})}
 					</ReopenAction>
 				{/if}
 			</div>
 
 			{#if !isTerminal}
-				<Form remote={changeAssetStatus} guard successToast="Status updated" class="mt-4">
+				<Form
+					remote={changeAssetStatus}
+					guard
+					successToast={m.staff_inventory_assets_id_status_updated()}
+					class="mt-4"
+				>
 					<input {...statusFields.id.as('hidden', id)} />
 					<div class="grid grid-cols-2 gap-3">
 						<Field
 							field={statusFields.status}
 							type="select"
-							label="Move to"
+							label={m.staff_inventory_assets_id_move()}
 							value={asset.status}
 							options={[
-								{ value: 'in_service', label: 'In service' },
-								{ value: 'maintenance', label: 'Maintenance' },
-								{ value: 'retired', label: 'Retired' },
-								{ value: 'lost', label: 'Lost' }
+								{ value: 'in_service', label: m.staff_inventory_assets_id_service() },
+								{ value: 'maintenance', label: m.staff_inventory_assets_id_maintenance() },
+								{ value: 'retired', label: m.staff_retired() },
+								{ value: 'lost', label: m.staff_inventory_assets_id_lost() }
 							]}
 						/>
-						<Field field={statusFields.notes} type="text" label="Why" />
+						<Field field={statusFields.notes} type="text" label={m.staff_why()} />
 					</div>
 					<div class="mt-2">
-						<SubmitButton label="Update status" variant="ghost" />
+						<SubmitButton label={m.staff_inventory_assets_id_update_status()} variant="ghost" />
 					</div>
 				</Form>
 			{/if}
@@ -207,10 +228,10 @@
 		left and came back, a service row who had it and what they charged.
 	-->
 	<ActivityFeedCard
-		title="History"
+		title={m.staff_history()}
 		query={(limit) => getAssetHistory(limit ? { id, limit } : { id })}
 		toRow={historyRow}
-		empty={{ title: 'Nothing recorded against this unit yet' }}
+		empty={{ title: m.staff_inventory_assets_id_nothing_recorded_against_unit_yet() }}
 	>
 		{#snippet trailing({ item })}
 			{#if item.kind === 'service'}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -35,80 +36,92 @@
 					<Button
 						href={resolve('/staff/volunteer/shifts/[id]', { id: s.openWorkOrderId })}
 						variant="ghost"
-						size="sm">Open work order</Button
+						size="sm">{m.staff_volunteer_schedule_recurring_recurring_panel_open_work()}</Button
 					>
 				{/if}
 				<Action
 					action={updateRecurringWork.for(s.id)}
-					label="Edit"
+					label={m.staff_edit()}
 					variant="ghost"
 					size="sm"
-					modalTitle="Edit {s.name}"
-					submitLabel="Save"
-					successToast="Saved"
+					modalTitle={m.staff_edit_2({ name: s.name })}
+					submitLabel={m.staff_save()}
+					successToast={m.staff_saved()}
 				>
 					{#snippet form()}
 						{@const fields = updateRecurringWork.for(s.id).fields}
 						<input {...fields.id.as('hidden', s.id)} />
-						<FormField name="name" label="Name" type="text" value={s.name} />
+						<FormField name="name" label={m.staff_name()} type="text" value={s.name} />
 						<FormField
 							name="intervalDays"
-							label="Repeat every (days)"
+							label={m.staff_repeat_every_days()}
 							type="number"
 							value={String(s.intervalDays)}
 						/>
 						<FormField
 							name="capacity"
-							label="How many people"
+							label={m.staff_how_many_people()}
 							type="number"
 							value={String(s.capacity)}
 						/>
 						<FormField
 							name="projectId"
-							label="Project"
+							label={m.staff_project()}
 							type="select"
 							options={projectOptions}
 							value={s.projectId ?? ''}
 						/>
-						<FormField name="notes" label="Notes" type="textarea" value={s.notes ?? ''} />
+						<FormField name="notes" label={m.staff_notes()} type="textarea" value={s.notes ?? ''} />
 					{/snippet}
 				</Action>
 				<Action
 					action={retireRecurringWork.for(s.id)}
-					label="Retire"
+					label={m.staff_retire()}
 					variant="ghost"
 					size="sm"
-					modalTitle="Retire {s.name}?"
-					submitLabel="Retire"
+					modalTitle={m.staff_volunteer_schedule_recurring_recurring_panel_retire({ name: s.name })}
+					submitLabel={m.staff_retire()}
 					submitVariant="error"
-					successToast="Retired"
+					successToast={m.staff_retired()}
 				>
 					{#snippet form()}
 						{@const fields = retireRecurringWork.for(s.id).fields}
 						<input {...fields.id.as('hidden', s.id)} />
-						<p>No new work orders. The open one stays queued.</p>
+						<p>{m.staff_volunteer_schedule_recurring_recurring_panel_no_new_wo()}</p>
 					{/snippet}
 				</Action>
 			</div>
 		{/if}
 
 		<DefinitionList>
-			<Fact label="Repeats" value={s.retiredAt ? 'Retired' : every(s.intervalDays)} />
-			<Fact label="Role" value={s.roleName} />
-			<Fact label="People" value={String(s.capacity)} />
-			{#if s.groupName}<Fact label="Committee" value={s.groupName} />{/if}
-			{#if s.projectName}<Fact label="Project" value={s.projectName} />{/if}
+			<Fact label={m.staff_repeats()} value={s.retiredAt ? 'Retired' : every(s.intervalDays)} />
+			<Fact label={m.staff_role()} value={s.roleName} />
+			<Fact
+				label={m.staff_volunteer_schedule_recurring_recurring_panel_people()}
+				value={String(s.capacity)}
+			/>
+			{#if s.groupName}<Fact label={m.staff_committee()} value={s.groupName} />{/if}
+			{#if s.projectName}<Fact label={m.staff_project()} value={s.projectName} />{/if}
 			{#if s.assetId && s.assetName}
-				<Fact label="Equipment">
+				<Fact label={m.staff_equipment()}>
 					<a class="link" href={resolve('/staff/inventory/assets/[id]', { id: s.assetId })}
 						>{s.assetName}</a
 					>
 				</Fact>
 			{/if}
-			{#if s.openDueAt}<Fact label="Next due" value={formatDateShort(s.openDueAt)} />{/if}
-			{#if s.assignees.length > 0}<Fact label="On it" value={s.assignees.join(', ')} />{/if}
-			<Fact label="Last closed" value={s.lastClosedAt ? formatDate(s.lastClosedAt) : 'Never'} />
-			{#if s.notes}<Fact label="Notes" wrap value={s.notes} />{/if}
+			{#if s.openDueAt}<Fact
+					label={m.staff_volunteer_schedule_recurring_recurring_panel_next_due()}
+					value={formatDateShort(s.openDueAt)}
+				/>{/if}
+			{#if s.assignees.length > 0}<Fact
+					label={m.staff_text_2()}
+					value={s.assignees.join(', ')}
+				/>{/if}
+			<Fact
+				label={m.staff_last_closed()}
+				value={s.lastClosedAt ? formatDate(s.lastClosedAt) : 'Never'}
+			/>
+			{#if s.notes}<Fact label={m.staff_notes()} wrap value={s.notes} />{/if}
 		</DefinitionList>
 	</div>
 </Modal>

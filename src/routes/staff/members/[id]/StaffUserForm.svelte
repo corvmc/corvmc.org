@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { getUser, updateUser } from '$lib/remote/users.remote';
@@ -41,8 +42,8 @@
 	renders a bare <Button>, which has no `type` and therefore submits — every
 	action on this page deliberately sits in a sibling panel.
 -->
-<Form remote={updateUser} guard successToast="Changes saved">
-	<InfoCard title="Account Info">
+<Form remote={updateUser} guard successToast={m.staff_members_id_staff_user_form_success_toast()}>
+	<InfoCard title={m.staff_members_id_staff_user_form_title()}>
 		{#snippet header(title: string)}
 			<div class="flex items-center justify-between gap-2">
 				<CardTitle>{title}</CardTitle>
@@ -91,7 +92,7 @@
 			<Field
 				name="dateOfBirth"
 				type="date"
-				label="Date of birth"
+				label={m.staff_members_id_staff_user_form_label()}
 				value={toBirthDateInput(member.dateOfBirth)}
 				class="col-span-4 @md:col-span-2 @lg:col-span-2"
 			/>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -11,10 +12,10 @@
 	import TriageTable from '$lib/components/ui/TriageTable.svelte';
 
 	const stages = [
-		{ value: 'untriaged', label: 'Needs triage' },
-		{ value: 'in_work_order', label: 'In a work order' },
-		{ value: 'resolved', label: 'Resolved' },
-		{ value: 'dismissed', label: 'Dismissed' }
+		{ value: 'untriaged', label: m.staff_inventory_problems_needs_triage() },
+		{ value: 'in_work_order', label: m.staff_inventory_problems_work_order() },
+		{ value: 'resolved', label: m.staff_inventory_problems_resolved() },
+		{ value: 'dismissed', label: m.staff_inventory_problems_dismissed() }
 	] as const;
 	type Stage = (typeof stages)[number]['value'];
 
@@ -41,13 +42,13 @@
 	}
 </script>
 
-<PageHeader title="Reported Problems" />
+<PageHeader title={m.staff_inventory_problems_title()} />
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search note, item or place..."
+				placeholder={m.staff_inventory_problems_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -56,24 +57,24 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Stage"
+			aria-label={m.staff_inventory_problems_aria_label()}
 			value={stage}
 			onchange={(e: Event) => {
 				stage = (e.currentTarget as HTMLSelectElement).value as typeof stage;
 				page = 1;
 			}}
 		>
-			<option value="">All reports</option>
+			<option value="">{m.staff_inventory_problems_all_reports()}</option>
 			{#each stages as s (s.value)}
 				<option value={s.value}>{s.label}</option>
 			{/each}
 		</Select>
 	</FilterBar>
 
-	<DataList {result} empty="No reported problems" onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_inventory_problems_empty()} onpage={(p) => (page = p)}>
 		{#snippet children(reports)}
 			<TriageTable
-				subjectLabel="Unit or place"
+				subjectLabel={m.staff_inventory_problems_subject_label()}
 				rows={reports.map((r) => ({
 					id: r.id,
 					href: resolve(`/staff/inventory/problems/${r.id}`),

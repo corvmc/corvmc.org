@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import CreateEventModal from '$lib/components/events/CreateEventModal.svelte';
 	import { hasCapability } from '$lib/config';
@@ -13,7 +14,11 @@
 <!-- A listing only: no production is opened unless Productions is asked for one. -->
 {#if hasCapability(caps, 'event.manage')}
 	<Button variant="default" size="sm" data-testid="create-listing" onclick={() => (open = true)}
-		>Create Listing</Button
+		>{m.staff_create_listing()}</Button
 	>
-	<CreateEventModal bind:open title="Create Listing" submitLabel="Create Listing" />
+	<CreateEventModal
+		bind:open
+		title={m.staff_create_listing()}
+		submitLabel={m.staff_create_listing()}
+	/>
 {/if}

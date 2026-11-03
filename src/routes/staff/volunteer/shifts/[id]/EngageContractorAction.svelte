@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { Field, MoneyField } from '$lib/components/ui/Form';
 	import { createJobForm } from '$lib/remote/contractors.remote';
@@ -15,19 +16,27 @@
 
 <Action
 	action={createJobForm}
-	label="Engage contractor"
+	label={m.staff_engage_contractor()}
 	variant="ghost"
 	size="sm"
-	modalTitle="Engage contractor"
-	successToast="Contractor engaged"
+	modalTitle={m.staff_engage_contractor()}
+	successToast={m.staff_volunteer_shifts_id_engage_contractor_success_toast()}
 	data-testid="engage-contractor"
 >
 	{#snippet form()}
 		<input type="hidden" name="workOrderId" value={workOrderId} />
-		<Field field={fields.contractorId} type="select" label="Contractor" {options} />
-		<Field field={fields.scheduledFor} type="date" label="When they come" />
-		<Field field={fields.expectedBackAt} type="date" label="Promised back" />
-		<MoneyField field={fields.quotedCents} label="Quoted" />
-		<Field field={fields.notes} type="textarea" label="Notes" />
+		<Field field={fields.contractorId} type="select" label={m.staff_contractor()} {options} />
+		<Field
+			field={fields.scheduledFor}
+			type="date"
+			label={m.staff_volunteer_shifts_id_engage_contractor_when_they_come()}
+		/>
+		<Field
+			field={fields.expectedBackAt}
+			type="date"
+			label={m.staff_volunteer_shifts_id_engage_contractor_promised_back()}
+		/>
+		<MoneyField field={fields.quotedCents} label={m.staff_quoted()} />
+		<Field field={fields.notes} type="textarea" label={m.staff_notes()} />
 	{/snippet}
 </Action>

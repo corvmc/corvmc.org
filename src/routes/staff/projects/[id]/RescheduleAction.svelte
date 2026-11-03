@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import { rescheduleTaskForm } from '$lib/remote/tasks.remote';
@@ -25,9 +26,9 @@
 	variant="ghost"
 	size="xs"
 	class="justify-start font-normal"
-	modalTitle="When: {task.title}"
-	submitLabel="Save"
-	successToast="Saved"
+	modalTitle={m.staff_projects_id_reschedule_modal_title({ title: task.title })}
+	submitLabel={m.staff_save()}
+	successToast={m.staff_saved()}
 >
 	{#snippet form()}
 		<input {...edit.fields.projectId.as('hidden', projectId)} />
@@ -35,22 +36,22 @@
 		<Field
 			field={edit.fields.startsAt}
 			type="datetime-local"
-			label="Starts"
+			label={m.staff_starts()}
 			value={task.startsAt ? toLocalDateTime(task.startsAt) : ''}
 		/>
 		<Field
 			field={edit.fields.endsAt}
 			type="datetime-local"
-			label="Ends"
+			label={m.staff_ends()}
 			value={task.endsAt ? toLocalDateTime(task.endsAt) : ''}
-			description="A window needs both ends. Clear both to take it off the schedule."
+			description={m.staff_projects_id_reschedule_window_needs_both_ends_clear()}
 		/>
 		<Field
 			field={edit.fields.dueAt}
 			type="date"
-			label="Due"
+			label={m.staff_due()}
 			value={task.dueAt ? toLocalDate(task.dueAt) : ''}
-			description="A deadline, not a window: done by then."
+			description={m.staff_projects_id_reschedule_deadline_not_window_done_by()}
 		/>
 	{/snippet}
 </Action>

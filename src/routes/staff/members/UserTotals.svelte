@@ -1,12 +1,13 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import StatCard from '$lib/components/ui/StatCard.svelte';
 	import { getStaffUserTotals } from '$lib/remote/users.remote';
 
 	const totals = await getStaffUserTotals();
 	const stats = $derived([
-		{ title: 'Accounts', value: totals.accounts },
-		{ title: 'Sustaining members', value: totals.sustaining },
-		{ title: 'New members', value: totals.newMembers }
+		{ title: m.staff_members_user_totals_accounts(), value: totals.accounts },
+		{ title: m.staff_members_user_totals_sustaining_members(), value: totals.sustaining },
+		{ title: m.staff_members_user_totals_new_members(), value: totals.newMembers }
 	]);
 </script>
 

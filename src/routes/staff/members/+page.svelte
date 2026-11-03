@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -39,10 +40,10 @@
 	const f = roster.values;
 
 	const flagFilters = [
-		{ key: 'sustaining', label: 'Sustaining member' },
-		{ key: 'inBand', label: 'In a band' },
-		{ key: 'staff', label: 'Staff position' },
-		{ key: 'instructor', label: 'Teaching instructor' }
+		{ key: 'sustaining', label: m.staff_members_sustaining_member() },
+		{ key: 'inBand', label: m.staff_members_band() },
+		{ key: 'staff', label: m.staff_members_staff_position() },
+		{ key: 'instructor', label: m.staff_members_teaching_instructor() }
 	] as const;
 
 	const asBool = (v: YesNo) => (v === '' ? undefined : v === 'yes');
@@ -80,7 +81,7 @@
 	}
 </script>
 
-<PageHeader title="Members">
+<PageHeader title={m.staff_members()}>
 	<InviteMemberAction />
 </PageHeader>
 
@@ -90,7 +91,7 @@
 		<UserTotals />
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getStaffUserTotals(), reset)}>
-				The totals didn't load.
+				{m.staff_members_totals_didn_t_load()}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
@@ -98,22 +99,22 @@
 	<Roster
 		{roster}
 		result={list}
-		empty="No members found"
-		searchPlaceholder="Search by name or email..."
+		empty={m.staff_members_empty()}
+		searchPlaceholder={m.staff_search_by_name_email()}
 		exportPath={resolve('/staff/members/export')}
 		emails={() => getStaffUserEmails({ ...f, q: f.q || undefined })}
 	>
 		{#snippet filters()}
 			<Select
 				size="sm"
-				aria-label="Status"
+				aria-label={m.staff_status()}
 				value={f.status}
 				onchange={(e: Event) =>
 					setFilter('status', (e.currentTarget as HTMLSelectElement).value as typeof f.status)}
 			>
-				<option value="active">Active</option>
-				<option value="deactivated">Deactivated</option>
-				<option value="all">All statuses</option>
+				<option value="active">{m.staff_active()}</option>
+				<option value="deactivated">{m.staff_deactivated()}</option>
+				<option value="all">{m.staff_all_statuses()}</option>
 			</Select>
 		{/snippet}
 
@@ -127,9 +128,9 @@
 						onchange={(e: Event) =>
 							setFilter(x.key, (e.currentTarget as HTMLSelectElement).value as YesNo)}
 					>
-						<option value="">Either</option>
-						<option value="yes">Yes</option>
-						<option value="no">No</option>
+						<option value="">{m.staff_members_either()}</option>
+						<option value="yes">{m.staff_yes()}</option>
+						<option value="no">{m.staff_members_no()}</option>
 					</Select>
 				</label>
 			{/each}
@@ -142,21 +143,23 @@
 
 		{#snippet bulk()}
 			{#if selected.size > 0}
-				<span class="text-sm" data-testid="selected-count">{selected.size} selected</span>
+				<span class="text-sm" data-testid="selected-count"
+					>{m.staff_members_selected({ size: selected.size })}</span
+				>
 				<Action
 					action={bulkDeactivateUsers}
-					label="Deactivate"
+					label={m.staff_deactivate()}
 					variant="error"
 					size="sm"
-					modalTitle="Deactivate members"
-					submitLabel="Deactivate"
+					modalTitle={m.staff_members_modal_title()}
+					submitLabel={m.staff_deactivate()}
 					submitVariant="error"
 					onsuccess={(result) => {
 						const r = result as { deactivated: string[]; skipped: string[] };
 						selected.clear();
 						void list.refresh();
 						const skipped = r.skipped.length ? `, ${r.skipped.length} skipped` : '';
-						toast.success(`${r.deactivated.length} deactivated${skipped}`);
+						toast.success(m.staff_members_toast({ length: r.deactivated.length, skipped }));
 					}}
 				>
 					{#snippet icon()}
@@ -172,7 +175,9 @@
 						</p>
 					{/snippet}
 				</Action>
-				<Button variant="ghost" size="sm" onclick={() => selected.clear()}>Clear</Button>
+				<Button variant="ghost" size="sm" onclick={() => selected.clear()}
+					>{m.staff_members_clear()}</Button
+				>
 			{/if}
 		{/snippet}
 
@@ -181,7 +186,7 @@
 			<input
 				type="checkbox"
 				class="checkbox checkbox-sm"
-				aria-label="Select all on this page"
+				aria-label={m.staff_members_select_all_page()}
 				disabled={ids.length === 0}
 				checked={ids.length > 0 && ids.every((id) => selected.has(id))}
 				onchange={(e) => toggleAll(rows, e.currentTarget.checked)}
@@ -192,7 +197,7 @@
 			<input
 				type="checkbox"
 				class="checkbox checkbox-sm"
-				aria-label="Select {row.member.title}"
+				aria-label={m.staff_members_select({ title: row.member.title })}
 				disabled={!!row.deletedAt}
 				checked={selected.has(row.id)}
 				onchange={(e) => {
@@ -203,9 +208,9 @@
 		{/snippet}
 
 		{#snippet columns()}
-			<th class="col-support">Phone</th>
-			<th class="col-support">Membership</th>
-			<th class="col-support">Joined</th>
+			<th class="col-support">{m.staff_phone()}</th>
+			<th class="col-support">{m.staff_membership()}</th>
+			<th class="col-support">{m.staff_joined()}</th>
 		{/snippet}
 
 		{#snippet cells(row)}
@@ -218,9 +223,9 @@
 			</td>
 			<td class="col-support whitespace-nowrap">
 				{#if row.sustaining}
-					<Badge size="sm" class="badge-primary">Sustaining</Badge>
+					<Badge size="sm" class="badge-primary">{m.staff_sustaining()}</Badge>
 				{:else}
-					<span class="text-fg-3">Free</span>
+					<span class="text-fg-3">{m.staff_members_free()}</span>
 				{/if}
 			</td>
 			<td class="col-support whitespace-nowrap">{formatDateShortYear(row.createdAt)}</td>

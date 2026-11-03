@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import CheckboxGroup from '$lib/components/ui/Form/CheckboxGroup.svelte';
@@ -21,30 +22,35 @@
 			| undefined;
 		if (r?.kind === 'existing') {
 			const href = resolve('/staff/members/[id]', { id: r.userId });
-			toast.info(`${r.name} already has an account`, {
-				action: { label: 'Open', onClick: () => goto(href) }
+			toast.info(m.staff_members_invite_member_already_has_account({ name: r.name }), {
+				action: { label: m.staff_open(), onClick: () => goto(href) }
 			});
 		} else if (r?.kind === 'pending') {
 			const href = resolve('/staff/members/invites');
-			toast.info(`${r.email} already has a pending invitation`, {
-				action: { label: 'Open', onClick: () => goto(href) }
+			toast.info(m.staff_members_invite_member_already_has_pending_invitation({ email: r.email }), {
+				action: { label: m.staff_open(), onClick: () => goto(href) }
 			});
 		} else if (r?.kind === 'invited') {
-			toast.success(`Invitation sent to ${r.email}`);
+			toast.success(m.staff_members_invite_member_invitation_sent({ email: r.email }));
 		}
 	}
 </script>
 
 {#if groups}
-	<Action action={inviteMemberForm} label="Invite member" modalTitle="Invite member" {onsuccess}>
+	<Action
+		action={inviteMemberForm}
+		label={m.staff_members_invite_member_invite_member()}
+		modalTitle={m.staff_members_invite_member_invite_member()}
+		{onsuccess}
+	>
 		{#snippet form()}
-			<FormField field={fields.email} type="email" label="Email" required />
-			<FormField field={fields.name} label="Name (optional)" />
+			<FormField field={fields.email} type="email" label={m.staff_email()} required />
+			<FormField field={fields.name} label={m.staff_members_invite_member_name_optional()} />
 			{#if groups.length > 0}
 				<CheckboxGroup
 					field={fields.groupIds}
 					legend="Clubs and committees (optional)"
-					description="They join these when their account is set up."
+					description={m.staff_members_invite_member_description()}
 					options={groups.map((g) => ({
 						value: g.id,
 						label: g.name,

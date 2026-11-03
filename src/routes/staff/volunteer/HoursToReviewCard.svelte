@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The top of the hours queue, with its actions, and a link to the rest. Only
 	 * exceptions wait here; every other log counted when it was entered.
@@ -34,7 +35,7 @@
 	let { logs, total }: { logs: Log[]; total: number } = $props();
 </script>
 
-<InfoCard title="Unreviewed Hours" state={total}>
+<InfoCard title={m.staff_volunteer_hours_to_review_card_title()} state={total}>
 	{#snippet action()}
 		<Button href="/staff/members/volunteers/hours" variant="ghost" size="sm">
 			{total > logs.length ? `All ${total} →` : 'Open the queue →'}
@@ -43,11 +44,11 @@
 
 	<Table>
 		{#snippet head()}
-			<th>Member</th>
-			<th class="col-support">Role</th>
-			<th class="col-support whitespace-nowrap">Worked</th>
-			<th class="cell-num">Hours</th>
-			<th class="w-px"><span class="sr-only">Actions</span></th>
+			<th>{m.staff_member()}</th>
+			<th class="col-support">{m.staff_role()}</th>
+			<th class="col-support whitespace-nowrap">{m.staff_worked()}</th>
+			<th class="cell-num">{m.staff_hours()}</th>
+			<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 		{/snippet}
 
 		{#each logs as log (log.id)}
@@ -69,57 +70,65 @@
 					<div class="flex w-max justify-end gap-1">
 						<Action
 							action={approveVolunteerHours.for(log.id)}
-							label="Approve"
+							label={m.staff_approve()}
 							iconOnly
 							icon={checkIcon}
 							variant="ghost"
 							size="sm"
 							class="text-success"
-							modalTitle="Approve these hours?"
-							submitLabel="Approve"
-							successToast="Hours approved"
+							modalTitle={m.staff_approve_these_hours()}
+							submitLabel={m.staff_approve()}
+							successToast={m.staff_hours_approved()}
 						>
 							{#snippet form()}
 								<input type="hidden" name="id" value={log.id} />
 								<p class="text-sm">
-									{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.member.title} on
-									{formatDateShort(log.workedOn)}.
+									{m.staff_by({
+										formatVolunteerHours: formatVolunteerHours(log.minutes),
+										roleName: log.roleName,
+										title: log.member.title,
+										formatDateShort: formatDateShort(log.workedOn)
+									})}
 								</p>
 								<p class="text-muted">{log.description}</p>
 								<FormField
 									name="notes"
-									label="Note (optional)"
+									label={m.staff_note_optional()}
 									type="textarea"
-									description="Shared with the member."
+									description={m.staff_shared_with_member()}
 								/>
 							{/snippet}
 						</Action>
 
 						<Action
 							action={rejectVolunteerHours.for(log.id)}
-							label="Return"
+							label={m.staff_return()}
 							iconOnly
 							icon={returnIcon}
 							variant="ghost"
 							size="sm"
 							class="text-error"
-							modalTitle="Return these hours?"
-							submitLabel="Return"
+							modalTitle={m.staff_return_these_hours()}
+							submitLabel={m.staff_return()}
 							submitVariant="error"
-							successToast="Hours returned"
+							successToast={m.staff_hours_returned()}
 						>
 							{#snippet form()}
 								<input type="hidden" name="id" value={log.id} />
 								<p class="text-sm">
-									{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.member.title} on
-									{formatDateShort(log.workedOn)}.
+									{m.staff_by({
+										formatVolunteerHours: formatVolunteerHours(log.minutes),
+										roleName: log.roleName,
+										title: log.member.title,
+										formatDateShort: formatDateShort(log.workedOn)
+									})}
 								</p>
 								<p class="text-muted">{log.description}</p>
 								<FormField
 									name="notes"
-									label="Reason"
+									label={m.staff_reason()}
 									type="textarea"
-									description="Required — the member needs this to correct and resubmit."
+									description={m.staff_required_member_needs_correct_resubmit()}
 								/>
 							{/snippet}
 						</Action>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Who teaches in the practice room. CMC's relationship is with the teacher, not
 	 * the student, so there is nothing here about lessons or money between them.
@@ -42,7 +43,7 @@
 	);
 </script>
 
-<PageHeader title="Members">
+<PageHeader title={m.staff_members()}>
 	<GrantInstructorAction />
 </PageHeader>
 
@@ -51,16 +52,16 @@
 	<Roster
 		{roster}
 		result={list}
-		empty="No instructors here."
-		searchPlaceholder="Search instructors..."
-		personLabel="Instructor"
+		empty={m.staff_members_instructors_empty()}
+		searchPlaceholder={m.staff_members_instructors_search_placeholder()}
+		personLabel={m.staff_members_instructors_person_label()}
 		exportPath={resolve('/staff/members/instructors/export')}
 		emails={() => getStaffInstructorEmails({ q: f.q || undefined, status: f.status })}
 	>
 		{#snippet filters()}
 			<Select
 				size="sm"
-				aria-label="Status"
+				aria-label={m.staff_status()}
 				value={f.status}
 				onchange={(e: Event) => {
 					f.status = (e.currentTarget as HTMLSelectElement).value as Status;
@@ -87,7 +88,7 @@
 							f.page = 1;
 						}}
 					>
-						{pending} pending
+						{m.staff_members_instructors_pending({ pending })}
 					</button>
 				{/if}
 			{/await}
@@ -109,9 +110,9 @@
 		{/snippet}
 
 		{#snippet columns()}
-			<th>Teaches</th>
-			<th class="w-px">Students</th>
-			<th class="col-support whitespace-nowrap">Since</th>
+			<th>{m.staff_teaches()}</th>
+			<th class="w-px">{m.staff_students()}</th>
+			<th class="col-support whitespace-nowrap">{m.staff_since()}</th>
 		{/snippet}
 
 		{#snippet cells(row)}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import StickyBar from '$lib/components/ui/StickyBar.svelte';
@@ -38,7 +39,7 @@
 	const itemById = $derived(new Map(items.map((i) => [i.id, i])));
 
 	const options = $derived([
-		{ value: '', label: 'Pick an item…' },
+		{ value: '', label: m.staff_inventory_intake_intake_lines_pick_item() },
 		...items.map((i) => ({
 			value: i.id,
 			label: i.categoryName ? `${i.categoryName} → ${i.name}` : i.name
@@ -139,7 +140,7 @@
 				<Field
 					name="lineItem_{index}"
 					type="select"
-					label="Item"
+					label={m.staff_item()}
 					{options}
 					bind:value={line.itemId}
 					onchange={() => syncUnits(line)}
@@ -147,20 +148,25 @@
 				<Field
 					name="lineQty_{index}"
 					type="number"
-					label="Quantity"
+					label={m.staff_quantity()}
 					min="1"
 					bind:value={line.quantity}
 					onchange={() => syncUnits(line)}
 				/>
 				<div class="w-32">
-					<Field name="lineCost_{index}" type="text" label="Each ($)" bind:value={line.unitCost} />
+					<Field
+						name="lineCost_{index}"
+						type="text"
+						label={m.staff_inventory_intake_intake_lines_each()}
+						bind:value={line.unitCost}
+					/>
 				</div>
 				<div class="flex items-end pb-1">
 					<Button
 						type="button"
 						variant="ghost"
 						size="sm"
-						aria-label="Remove line {index + 1}"
+						aria-label={m.staff_inventory_intake_intake_lines_aria_label({ value: index + 1 })}
 						onclick={() => removeLine(index)}
 					>
 						<IconTrash size={16} />
@@ -171,27 +177,27 @@
 			{#if isSerialized(line) && line.units.length > 0}
 				<div class="mt-3 space-y-2">
 					<p class="text-subtle text-sm">
-						One row per unit. A blank tag is fine — it lands in the tagging queue.
+						{m.staff_inventory_intake_intake_lines_one_row_per_unit_blank()}
 					</p>
 					{#each line.units as unit, u (u)}
 						<div class="grid gap-2 md:grid-cols-3">
 							<Field
 								name="unitTag_{index}_{u}"
 								type="text"
-								label={u === 0 ? 'Asset tag' : undefined}
-								placeholder="CMC-000123"
+								label={u === 0 ? m.staff_asset_tag() : undefined}
+								placeholder={m.staff_cmc_000123()}
 								bind:value={unit.assetTag}
 							/>
 							<Field
 								name="unitSerial_{index}_{u}"
 								type="text"
-								label={u === 0 ? 'Serial' : undefined}
+								label={u === 0 ? m.staff_serial() : undefined}
 								bind:value={unit.serialNumber}
 							/>
 							<Field
 								name="unitCondition_{index}_{u}"
 								type="select"
-								label={u === 0 ? 'Condition' : undefined}
+								label={u === 0 ? m.staff_condition() : undefined}
 								options={conditionOptions}
 								bind:value={unit.condition}
 							/>
@@ -204,7 +210,7 @@
 
 	<Button type="button" variant="ghost" size="sm" data-testid="add-intake-line" onclick={addLine}>
 		<IconPlus size={16} />
-		Add a line
+		{m.staff_add_line()}
 	</Button>
 </div>
 
@@ -214,6 +220,8 @@
 	<span><strong>{unitTotal}</strong> units</span>
 	<span><strong>{formatCents(valueTotal)}</strong></span>
 	{#if needsTagging > 0}
-		<Badge variant="warning" size="sm">{needsTagging} will need tagging</Badge>
+		<Badge variant="warning" size="sm"
+			>{m.staff_inventory_intake_intake_lines_will_need_tagging({ needsTagging })}</Badge
+		>
 	{/if}
 </StickyBar>

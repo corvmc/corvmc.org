@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -15,7 +16,7 @@
 </script>
 
 {#if roster}
-	<InfoCard title="RSVPs" state={roster.total}>
+	<InfoCard title={m.staff_events_id_event_rsvps_rsvps()} state={roster.total}>
 		{#snippet action()}
 			{#if roster.total > 0}
 				<div class="flex gap-1">
@@ -25,17 +26,20 @@
 						rel="external"
 						download
 						variant="ghost"
-						size="sm">Export CSV</Button
+						size="sm">{m.staff_events_id_event_rsvps_export_csv()}</Button
 					>
 				</div>
 			{/if}
 		{/snippet}
 		{#if roster.total === 0}
-			<EmptyState title="No RSVPs yet" description="Members RSVP from the event's public page." />
+			<EmptyState
+				title={m.staff_events_id_event_rsvps_no_rsvps_yet()}
+				description={m.staff_events_id_event_rsvps_description()}
+			/>
 		{:else}
 			<RosterTable rows={roster.rows}>
 				{#snippet columns()}
-					<th class="col-extra">RSVP'd</th>
+					<th class="col-extra">{m.staff_events_id_event_rsvps_rsvp_d()}</th>
 				{/snippet}
 				{#snippet cells(row)}
 					<td class="col-extra whitespace-nowrap">{formatDateTimeShort(row.rsvpedAt)}</td>

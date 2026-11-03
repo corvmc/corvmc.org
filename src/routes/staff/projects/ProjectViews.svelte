@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import { hasCapability, type Capability } from '$lib/config';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
@@ -11,10 +12,15 @@
 
 	// Presentation only: each view's remotes keep their own guard.
 	const views: { key: ProjectsView; label: string; href: ResolvedPathname; cap: Capability }[] = [
-		{ key: 'projects', label: 'Projects', href: resolve('/staff/projects'), cap: 'project.read' },
+		{
+			key: 'projects',
+			label: m.staff_projects(),
+			href: resolve('/staff/projects'),
+			cap: 'project.read'
+		},
 		{
 			key: 'productions',
-			label: 'Productions',
+			label: m.staff_projects_project_views_productions(),
 			href: resolve('/staff/projects/productions'),
 			cap: 'event.manage'
 		}

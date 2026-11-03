@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import RoleRequirementsCard from './RoleRequirementsCard.svelte';
 	import RoleShiftsCard from './RoleShiftsCard.svelte';
 	import RoleInterestedCard from './RoleInterestedCard.svelte';
@@ -64,8 +65,8 @@
 <PageHeader
 	width="3xl"
 	title={role.name}
-	subtitle="Volunteer Role"
-	parent={{ label: 'Roles', href: resolve('/staff/volunteer/roles') }}
+	subtitle={m.staff_volunteer_roles_id_subtitle()}
+	parent={{ label: m.staff_roles(), href: resolve('/staff/volunteer/roles') }}
 >
 	<StatusBadge status={role.isActive ? 'active' : 'retired'} label />
 
@@ -77,38 +78,37 @@
 	{#if role.isActive}
 		<Action
 			action={archiveVolunteerRole}
-			label="Archive"
+			label={m.staff_archive()}
 			data-testid="role-archive"
 			icon={archiveIcon}
 			variant="ghost"
 			size="sm"
-			modalTitle="Archive {role.name}?"
-			submitLabel="Archive"
-			successToast="Role archived"
+			modalTitle={m.staff_archive_2({ name: role.name })}
+			submitLabel={m.staff_archive()}
+			successToast={m.staff_volunteer_roles_id_role_archived()}
 		>
 			{#snippet form()}
 				<input type="hidden" name="id" value={role.id} />
 				<p class="text-sm">
-					Members won't be able to log new hours against this role. Existing hours stay in the queue
-					and in every report.
+					{m.staff_volunteer_roles_id_members_won_t_able_log()}
 				</p>
 			{/snippet}
 		</Action>
 	{:else}
 		<Action
 			action={restoreVolunteerRole}
-			label="Restore"
+			label={m.staff_restore()}
 			data-testid="role-restore"
 			icon={unarchiveIcon}
 			variant="ghost"
 			size="sm"
-			modalTitle="Restore {role.name}?"
-			submitLabel="Restore"
-			successToast="Role restored"
+			modalTitle={m.staff_restore_2({ name: role.name })}
+			submitLabel={m.staff_restore()}
+			successToast={m.staff_volunteer_roles_id_role_restored()}
 		>
 			{#snippet form()}
 				<input type="hidden" name="id" value={role.id} />
-				<p class="text-sm">Members will be able to log hours against this again.</p>
+				<p class="text-sm">{m.staff_volunteer_roles_id_members_will_able_log_hours()}</p>
 			{/snippet}
 		</Action>
 	{/if}
@@ -116,22 +116,22 @@
 	{#if role.logCount === 0}
 		<Action
 			action={deleteVolunteerRole}
-			label="Delete"
+			label={m.staff_delete()}
 			data-testid="role-delete"
 			icon={trashIcon}
 			variant="ghost"
 			size="sm"
 			class="text-error"
-			modalTitle="Delete {role.name}?"
-			submitLabel="Delete"
+			modalTitle={m.staff_delete_2({ name: role.name })}
+			submitLabel={m.staff_delete()}
 			submitVariant="error"
-			successToast="Role deleted"
+			successToast={m.staff_volunteer_roles_id_role_deleted()}
 			onsuccess={() => goto(resolve('/staff/volunteer/roles'))}
 		>
 			{#snippet form()}
 				<input type="hidden" name="id" value={role.id} />
 				<p class="text-sm">
-					Nothing has been logged against this role, so it can be removed outright.
+					{m.staff_volunteer_roles_id_nothing_has_been_logged_against()}
 				</p>
 			{/snippet}
 		</Action>
@@ -140,37 +140,42 @@
 
 <PageContent width="3xl">
 	<div class="grid gap-6 lg:grid-cols-2">
-		<Form remote={updateVolunteerRole} guard successToast="Role updated">
+		<Form
+			remote={updateVolunteerRole}
+			guard
+			successToast={m.staff_volunteer_roles_id_role_updated()}
+		>
 			<input {...fields.id.as('hidden', role.id)} />
-			<InfoCard title="Role Info">
-				<Field field={fields.name} type="text" label="Name" value={role.name} />
+			<InfoCard title={m.staff_volunteer_roles_id_role_info()}>
+				<Field field={fields.name} type="text" label={m.staff_name()} value={role.name} />
 				<Field
 					field={fields.description}
 					type="textarea"
-					label="Job description"
+					label={m.staff_job_description()}
 					value={role.description ?? ''}
-					description="Markdown. This is what members read on their volunteering page, so say what the job actually involves."
+					description={m.staff_volunteer_roles_id_markdown_what_members_read_their()}
 				/>
 				<Field
 					field={fields.group}
 					type="select"
-					label="Group"
+					label={m.staff_group()}
 					value={role.group}
 					options={groupOptions}
 				/>
 				<Field
 					field={fields.displayOrder}
 					type="number"
-					label="Display order"
+					label={m.staff_display_order()}
 					value={String(role.displayOrder)}
-					description="Lower sorts first, within this group."
+					description={m.staff_volunteer_roles_id_lower_sorts_first_within_group()}
 				/>
 
 				<fieldset class="mt-2 rounded-box border border-base-300 p-4">
-					<legend class="px-2 text-sm font-medium">Shift defaults</legend>
+					<legend class="px-2 text-sm font-medium"
+						>{m.staff_volunteer_roles_id_shift_defaults()}</legend
+					>
 					<p class="mb-2 text-subtle">
-						What the New Shift form starts with. Not a limit — either can be changed on the shift
-						itself, and leaving them blank just means the form starts on its own defaults.
+						{m.staff_volunteer_roles_id_what_new_shift_form_starts()}
 					</p>
 					<!--
 						Posted by name rather than through `fields.x`. A field registered as
@@ -184,7 +189,7 @@
 							name="defaultDurationMinutes"
 							type="number"
 							min="1"
-							label="Usual length (minutes)"
+							label={m.staff_volunteer_roles_id_usual_length_minutes()}
 							value={role.defaultDurationMinutes === null
 								? ''
 								: String(role.defaultDurationMinutes)}
@@ -193,19 +198,21 @@
 							name="defaultCapacity"
 							type="number"
 							min="1"
-							label="People needed"
+							label={m.staff_volunteer_roles_id_people_needed()}
 							value={role.defaultCapacity === null ? '' : String(role.defaultCapacity)}
 						/>
 					</div>
 				</fieldset>
 
 				<fieldset class="mt-2 rounded-box border border-base-300 p-4">
-					<legend class="px-2 text-sm font-medium">Accounting</legend>
+					<legend class="px-2 text-sm font-medium">{m.staff_volunteer_roles_id_accounting()}</legend
+					>
 					<p class="mb-2 text-subtle">
 						Every approved hour counts toward the collective's impact value, at the rate on the
-						settings page. A <em>specialized skill</em> is narrower: work we would otherwise have had
-						to pay for, which a financial statement can recognise as a contributed service — at what that
-						skill costs, not at the impact rate. The two are reported side by side and never added together.
+						settings page. A <em>{m.staff_volunteer_roles_id_specialized_skill()}</em> is narrower: work
+						we would otherwise have had to pay for, which a financial statement can recognise as a contributed
+						service — at what that skill costs, not at the impact rate. The two are reported side by side
+						and never added together.
 					</p>
 					<div class="grid gap-3 sm:grid-cols-2">
 						<!--
@@ -217,9 +224,9 @@
 						<Field
 							field={fields.isSpecializedSkill}
 							type="checkbox"
-							label="Specialized skill"
+							label={m.staff_volunteer_roles_id_specialized_skill_2()}
 							value={role.isSpecializedSkill}
-							description="Work the collective would otherwise have paid for."
+							description={m.staff_volunteer_roles_id_work_collective_would_otherwise_hav()}
 						/>
 						<!--
 							Posted by name rather than through `fields.x`, like the shift
@@ -232,9 +239,9 @@
 							type="number"
 							min="0"
 							step="0.01"
-							label="Market rate ($/hr)"
+							label={m.staff_volunteer_roles_id_market_rate_hr()}
 							value={role.marketRateCents === null ? '' : (role.marketRateCents / 100).toFixed(2)}
-							description="Blank counts as zero, never as the impact rate — a report shows it as unpriced."
+							description={m.staff_volunteer_roles_id_blank_counts_as_zero_never()}
 						/>
 					</div>
 				</fieldset>
@@ -242,13 +249,13 @@
 				<input {...fields.skillMatches.as('hidden', JSON.stringify(skillMatches))} />
 				<FormField
 					field={fields.skillMatches}
-					label="Skills that suit this role"
-					description="Member skill tags, as members write them. A member with one of these ranks higher on a shift's Who to ask list. It never stops anyone being asked."
+					label={m.staff_volunteer_roles_id_skills_suit_role()}
+					description={m.staff_volunteer_roles_id_member_skill_tags_as_members()}
 				>
 					<FreeformTagInput
 						bind:value={skillMatches}
 						suggestions={pageData.skillSuggestions}
-						placeholder="e.g. sound engineer, live sound..."
+						placeholder={m.staff_volunteer_roles_id_placeholder()}
 					/>
 				</FormField>
 
@@ -284,7 +291,7 @@
 	-->
 	{@const summary = feedbackList.find((f) => f.volunteerRoleId === id)}
 	{#if summary}
-		<InfoCard title="How it's going">
+		<InfoCard title={m.staff_volunteer_roles_id_how_s_going()}>
 			<div class="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
 				<span><span class="text-lg font-medium">{summary.averageRating.toFixed(1)}</span> / 5</span>
 				<span>
@@ -310,10 +317,10 @@
 	{/if}
 
 	<ActivityFeedCard
-		title="History"
+		title={m.staff_history()}
 		query={(limit) => getVolunteerRoleHistory(limit ? { id, limit } : { id })}
 		toRow={feedItemRow}
-		empty={{ title: 'No recorded changes' }}
+		empty={{ title: m.staff_no_recorded_changes() }}
 	/>
 </PageContent>
 

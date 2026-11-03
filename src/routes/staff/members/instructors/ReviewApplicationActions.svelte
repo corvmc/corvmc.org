@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { approveInstructor, sendBackInstructor } from '$lib/remote/instructors.remote';
@@ -20,10 +21,10 @@
 <div class="flex w-max gap-2">
 	<Action
 		action={sendBackInstructor}
-		label="Reject"
-		modalTitle="Reject {name}"
-		submitLabel="Reject"
-		successToast="Rejected"
+		label={m.staff_members_instructors_review_application_actions_reject()}
+		modalTitle={m.staff_members_instructors_review_application_actions_reject_2({ name })}
+		submitLabel={m.staff_members_instructors_review_application_actions_reject()}
+		successToast={m.staff_rejected()}
 		variant="ghost"
 		size="sm"
 		onsuccess={() => invalidateAll()}
@@ -33,13 +34,12 @@
 				<input {...sendBackFields.id.as('hidden', id)} />
 				<FormField
 					field={sendBackFields.note}
-					label="What needs changing?"
+					label={m.staff_members_instructors_review_application_actions_what_ne()}
 					type="textarea"
 					required
 				/>
 				<p class="text-subtle">
-					They see this note, edit their listing and send it back. Nothing is deleted and they do
-					not have to start again.
+					{m.staff_members_instructors_review_application_actions_they_se()}
 				</p>
 			</div>
 		{/snippet}
@@ -47,11 +47,11 @@
 
 	<Action
 		action={approveInstructor}
-		label="Approve"
-		modalTitle="Approve {name}"
+		label={m.staff_approve()}
+		modalTitle={m.staff_members_instructors_review_application_actions_approve({ name })}
 		data-testid="approve-instructor"
-		submitLabel="Approve"
-		successToast="Approved"
+		submitLabel={m.staff_approve()}
+		successToast={m.staff_approved()}
 		variant="primary"
 		size="sm"
 		onsuccess={() => invalidateAll()}
@@ -60,8 +60,7 @@
 			<div class="space-y-4">
 				<input {...approveFields.id.as('hidden', id)} />
 				<p class="text-subtle">
-					Their listing goes live and they can book the room on teaching terms. Approving is what
-					publishes what you are looking at — there is no second draft.
+					{m.staff_members_instructors_review_application_actions_their_l()}
 				</p>
 			</div>
 		{/snippet}

@@ -1,12 +1,13 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import StatCard from '$lib/components/ui/StatCard.svelte';
 	import { getStaffCalendarTotals } from '$lib/remote/events.remote';
 
 	const totals = await getStaffCalendarTotals();
 	const stats = $derived([
-		{ title: 'This week', value: totals.thisWeek },
-		{ title: 'This month', value: totals.thisMonth },
-		{ title: 'Needs review', value: totals.needsReview }
+		{ title: m.staff_events_calendar_totals_week(), value: totals.thisWeek },
+		{ title: m.staff_events_calendar_totals_month(), value: totals.thisMonth },
+		{ title: m.staff_events_calendar_totals_needs_review(), value: totals.needsReview }
 	]);
 </script>
 

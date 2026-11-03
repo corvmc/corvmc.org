@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { getUserInstructor } from '$lib/remote/instructors.remote';
 	import { RelatedList } from '$lib/components/ui/entity';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -15,37 +16,46 @@
 	let { id, name }: { id: string; name: string } = $props();
 </script>
 
-<RelatedList title="Teaching" result={getUserInstructor(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_instructor_panel_teaching()}
+	result={getUserInstructor(id)}
+>
 	{#snippet children(instructor)}
 		{#if !instructor}
-			<EmptyState title="Not an instructor" />
+			<EmptyState title={m.staff_members_id_panels_instructor_panel_not_instructor()} />
 		{:else}
 			<DefinitionList>
-				<Fact label="Status"><StatusBadge status={instructor.status} /></Fact>
+				<Fact label={m.staff_status()}><StatusBadge status={instructor.status} /></Fact>
 				{#if instructor.headline}
-					<Fact label="Teaches">{instructor.headline}</Fact>
+					<Fact label={m.staff_teaches()}>{instructor.headline}</Fact>
 				{/if}
-				<Fact label="Applied">{formatDateShortYear(instructor.createdAt)}</Fact>
+				<Fact label={m.staff_members_id_panels_instructor_panel_applied()}
+					>{formatDateShortYear(instructor.createdAt)}</Fact
+				>
 				{#if instructor.status === 'requested' && instructor.applicationNote}
-					<Fact label="Application" wrap>
+					<Fact label={m.staff_members_id_panels_instructor_panel_application()} wrap>
 						<span class="whitespace-pre-line">{instructor.applicationNote}</span>
 					</Fact>
 				{/if}
 				{#if instructor.grantedAt}
-					<Fact label="Granted">{formatDateShortYear(instructor.grantedAt)}</Fact>
+					<Fact label={m.staff_members_id_panels_instructor_panel_granted()}
+						>{formatDateShortYear(instructor.grantedAt)}</Fact
+					>
 				{/if}
 				{#if instructor.status === 'active'}
-					<Fact label="Students">
+					<Fact label={m.staff_students()}>
 						{instructor.acceptingStudents ? 'Accepting' : 'Not accepting'}
 					</Fact>
 				{/if}
 				{#if instructor.reviewNotes}
 					<!-- What the member was told, as opposed to statusNote below, which
 					     is what staff told each other. -->
-					<Fact label="Rejected">{instructor.reviewNotes}</Fact>
+					<Fact label={m.staff_rejected()}>{instructor.reviewNotes}</Fact>
 				{/if}
 				{#if instructor.statusNote}
-					<Fact label="Staff note">{instructor.statusNote}</Fact>
+					<Fact label={m.staff_members_id_panels_instructor_panel_staff_note()}
+						>{instructor.statusNote}</Fact
+					>
 				{/if}
 			</DefinitionList>
 

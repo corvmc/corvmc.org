@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -50,13 +51,12 @@
 	});
 </script>
 
-<PageHeader width="3xl" title="Locations" subtitle="Inventory" />
+<PageHeader width="3xl" title={m.staff_locations()} subtitle={m.staff_inventory()} />
 
 <PageContent width="3xl">
 	{#if data.locations.length === 0}
 		<Alert type="info" class="mb-4">
-			Nothing has a home yet. Name the rooms first — every unit you enter can then be filed as you
-			go, which is far quicker than moving them afterwards.
+			{m.staff_inventory_locations_nothing_has_home_yet_name()}
 		</Alert>
 	{/if}
 
@@ -65,8 +65,8 @@
 			{#if data.locations.length > 0}
 				<Table>
 					{#snippet head()}
-						<th>Location</th>
-						<th class="cell-num">Units</th>
+						<th>{m.staff_location()}</th>
+						<th class="cell-num">{m.staff_units()}</th>
 					{/snippet}
 					{#each rows as row (row.id)}
 						<tr class="hover">
@@ -85,10 +85,12 @@
 					{#if data.unassignedCount > 0}
 						<tr class="hover">
 							<td class="cell-primary">
-								<span class="font-medium">Unassigned</span>
-								<Badge variant="warning" size="xs">needs filing</Badge>
+								<span class="font-medium">{m.staff_unassigned()}</span>
+								<Badge variant="warning" size="xs"
+									>{m.staff_inventory_locations_needs_filing()}</Badge
+								>
 								<div class="text-subtle">
-									Units entered before a location existed, or saved before this page did.
+									{m.staff_inventory_locations_units_entered_before_location_exis()}
 								</div>
 							</td>
 							<td class="cell-num">{data.unassignedCount}</td>
@@ -99,22 +101,28 @@
 			{/if}
 		</div>
 
-		<InfoCard title="Add a location">
-			<Form remote={addLocation} successToast="Location added">
-				<Field field={fields.name} type="text" label="Name" />
+		<InfoCard title={m.staff_inventory_locations_add_location()}>
+			<Form remote={addLocation} successToast={m.staff_inventory_locations_success_toast()}>
+				<Field field={fields.name} type="text" label={m.staff_name()} />
 				<Field
 					field={fields.parentId}
 					type="select"
-					label="Inside"
+					label={m.staff_inventory_locations_inside()}
 					options={[
-						{ value: '', label: 'Nothing — it is its own place' },
+						{ value: '', label: m.staff_inventory_locations_nothing_its_own_place() },
 						...rows.map((r) => ({ value: r.id, label: r.path.join(' → ') }))
 					]}
 				/>
-				<Field field={fields.notes} type="textarea" label="Notes" />
-				<Field field={fields.displayOrder} type="number" label="Order" value={0} min="0" />
+				<Field field={fields.notes} type="textarea" label={m.staff_notes()} />
+				<Field
+					field={fields.displayOrder}
+					type="number"
+					label={m.staff_order_2()}
+					value={0}
+					min="0"
+				/>
 				<div class="mt-3">
-					<SubmitButton label="Add location" />
+					<SubmitButton label={m.staff_inventory_locations_add_location_2()} />
 				</div>
 			</Form>
 		</InfoCard>
