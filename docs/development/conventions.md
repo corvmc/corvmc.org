@@ -410,7 +410,9 @@ to author migration SQL yourself, and it does not break the "migrations come onl
 - Every remote function starts with a **guard** (`requireUser`, `requireCapability`,
   `requireGroupRole`, `requireFeature`, ...) and validates its input with a **Zod
   schema**. A guard in the layout is not a guard on the data — the remote function is the
-  security boundary.
+  security boundary. `scripts/remote-guard.spec.ts` checks that each one reaches a guard before
+  it touches `db`; a remote meant to answer anyone goes in `scripts/remote-guard.public.json`
+  with its reason.
 - A group-scoped guard takes the group as an **argument**, never from `params`. A remote
   function's `params` describe the page the client says it is on; the slug or id is a
   lookup key that the guard resolves before checking the caller's role on what it
