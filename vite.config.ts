@@ -181,6 +181,8 @@ export default defineConfig({
 					// file. `drizzle-orm/sqlite-core` alone costs ~400ms to evaluate in a
 					// cold process, which the default `forks` pool re-paid 136 times.
 					pool: 'vmForks',
+					// The VM context is per file but `process.env` is per process.
+					setupFiles: ['./src/vitest-restore-tz.ts'],
 					include: [
 						'src/**/*.spec.{js,ts}',
 						'scripts/**/*.spec.{js,ts}',
