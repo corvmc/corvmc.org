@@ -62,6 +62,6 @@ describe('POST /api/cron/lock-sync', () => {
 		const response = await POST(req());
 
 		expect(response.status).toBe(200);
-		expect((await response.json()).skipped).toBe('lock-offline');
+		expect(((await response.json()) as { skipped?: string }).skipped).toBe('lock-offline');
 	});
 });

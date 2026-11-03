@@ -375,11 +375,11 @@ describe('rate limiting', () => {
 		vi.mocked(kv.putJson).mockReset();
 	});
 
-	function respond(res: Partial<Response> & { body?: unknown }) {
+	function respond(res: { status?: number; headers?: Record<string, string>; body?: unknown }) {
 		fetchMock = vi.fn(async () => ({
 			ok: res.status === undefined || res.status === 200,
 			status: res.status ?? 200,
-			headers: new Headers(res.headers as HeadersInit),
+			headers: new Headers(res.headers),
 			json: async () => res.body,
 			text: async () => ''
 		}));
@@ -387,7 +387,7 @@ describe('rate limiting', () => {
 	}
 
 	it('treats a 429 as a throttle, honours Retry-After, and makes no call until it passes', async () => {
-		respond({ status: 429, headers: { 'Retry-After': '120' } as never });
+		respond({ status: 429, headers: { 'Retry-After': '120' } });
 
 		const first = await listLockUsers().catch((e) => e);
 		expect(first).toBeInstanceOf(UtecRateLimitedError);
