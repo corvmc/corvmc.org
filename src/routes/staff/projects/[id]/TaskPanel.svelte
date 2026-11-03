@@ -53,7 +53,7 @@
 	<div class="min-w-0 flex-1">
 		<h2 id="task-panel-title" class="text-lg font-semibold">{task.title}</h2>
 		<p class="text-muted">
-			{section?.name ?? 'No section'} ·
+			{section?.name ?? m.staff_no_section()} ·
 			<a class="link" href={resolve(`/staff/projects/${projectId}/tasks/${task.id}`)}
 				>{m.staff_details()}</a
 			>
@@ -86,9 +86,11 @@
 				{#if engagement.costCents !== null}
 					{formatCents(engagement.costCents)}
 				{:else if engagement.isDonated}
-					Donated{engagement.fairValueCents !== null
-						? `, worth ${formatCents(engagement.fairValueCents)}`
-						: ''}
+					{engagement.fairValueCents !== null
+						? m.staff_projects_id_task_panel_donated_worth({
+								value: formatCents(engagement.fairValueCents)
+							})
+						: m.staff_projects_id_task_panel_donated()}
 				{:else}
 					<span class="text-muted">{m.staff_projects_id_task_panel_no_invoice_yet()}</span>
 				{/if}
@@ -96,7 +98,9 @@
 			{#if engagement.invoiceRef}
 				<Fact label={m.staff_projects_id_task_panel_invoice()}>
 					{engagement.invoiceRef}{engagement.paidAt
-						? ` · paid ${formatDateShort(engagement.paidAt)}`
+						? m.staff_projects_id_task_panel_paid({
+								formatDateShort: formatDateShort(engagement.paidAt)
+							})
 						: ''}
 				</Fact>
 			{/if}
@@ -151,10 +155,13 @@
 					<EquipmentAction
 						{task}
 						{projectId}
-						label="{task.assetName ?? 'Equipment'}{task.assetTag ? ` · ${task.assetTag}` : ''}"
+						label="{task.assetName ??
+							m.staff_projects_id_task_panel_equipment_fallback()}{task.assetTag
+							? ` · ${task.assetTag}`
+							: ''}"
 					/>
 				{:else}
-					{task.assetName ?? 'Equipment'}{task.assetTag ? ` · ${task.assetTag}` : ''}
+					{task.assetName ?? m.staff_equipment()}{task.assetTag ? ` · ${task.assetTag}` : ''}
 				{/if}
 				{#if task.assetStatus && task.assetStatus !== 'in_service'}
 					<span class="block text-muted">{assetStatusLabels[task.assetStatus]}</span>

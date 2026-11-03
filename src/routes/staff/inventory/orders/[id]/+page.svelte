@@ -104,7 +104,7 @@
 				<DefinitionList>
 					<Fact label={m.staff_reference()}>{order.reference ?? '—'}</Fact>
 					<Fact label={m.staff_inventory_orders_id_placed()}>
-						{order.placedAt ? formatDateShort(order.placedAt) : 'Not yet'}
+						{order.placedAt ? formatDateShort(order.placedAt) : m.staff_not_yet()}
 					</Fact>
 					<Fact label={m.staff_expected()} class={late ? 'text-error' : ''}>
 						{order.expectedAt ? formatDateShort(order.expectedAt) : '—'}
@@ -141,7 +141,9 @@
 				<div class="flex items-center justify-between gap-2">
 					<p class="text-subtle">{m.staff_inventory_orders_id_order_closed()}</p>
 					<ReopenAction action={reopenOrderForm} id={order.id} capability="inventory.reopen">
-						Back to {order.placedAt ? 'placed' : 'draft'}. What was received stays received.
+						{(order.placedAt
+							? m.staff_inventory_orders_id_back_placed_what_was_received
+							: m.staff_inventory_orders_id_back_draft_what_was_received)()}
 					</ReopenAction>
 				</div>
 			{:else}

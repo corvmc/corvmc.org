@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Everybody who signed up, as one roster (#1934). The under-18 queue is the
 	 * "Awaiting sign-off" status and "who holds this clearance" is a filter: both
@@ -199,7 +200,9 @@
 		<!-- The count is a shortcut to the filter: the queue a tab used to hold. -->
 		{#snippet summary(total)}
 			{total}
-			{total === 1 ? 'volunteer' : 'volunteers'}
+			{total === 1
+				? m.staff_members_volunteers_volunteer()
+				: m.staff_members_volunteers_volunteers()}
 			{#await list then { minorsWaiting }}
 				{#if minorsWaiting > 0 && f.status !== 'blocked'}
 					·
@@ -217,10 +220,14 @@
 			{/await}
 			{#await getVolunteerStatusCounts() then { pending }}
 				{#if pending > 0}
-					·
-					<a class="link" href={resolve('/staff/members/volunteers/hours')}>
-						{pending} hour {pending === 1 ? 'log' : 'logs'} to review
-					</a>
+					<ParaglideMessage
+						message={m.staff_members_volunteers_hour_logs_review}
+						inputs={{ pending }}
+						>{#snippet a({ children })}<a
+								class="link"
+								href={resolve('/staff/members/volunteers/hours')}>{@render children?.()}</a
+							>{/snippet}</ParaglideMessage
+					>
 				{/if}
 			{/await}
 		{/snippet}

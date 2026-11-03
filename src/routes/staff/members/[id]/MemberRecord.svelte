@@ -140,9 +140,9 @@
 			{/each}
 			{#if overview.counts.pendingBandInvites > 0}
 				<Badge size="sm" variant="warning">
-					{overview.counts.pendingBandInvites} invite{overview.counts.pendingBandInvites === 1
-						? ''
-						: 's'} pending
+					{m.staff_members_id_member_record_invites_pending({
+						pendingBandInvites: overview.counts.pendingBandInvites
+					})}
 				</Badge>
 			{/if}
 		</div>

@@ -38,7 +38,9 @@
 <InfoCard title={m.staff_volunteer_hours_to_review_card_title()} state={total}>
 	{#snippet action()}
 		<Button href="/staff/members/volunteers/hours" variant="ghost" size="sm">
-			{total > logs.length ? `All ${total} →` : 'Open the queue →'}
+			{total > logs.length
+				? m.staff_volunteer_hours_to_review_card_all({ total })
+				: m.staff_volunteer_hours_to_review_card_open_queue()}
 		</Button>
 	{/snippet}
 

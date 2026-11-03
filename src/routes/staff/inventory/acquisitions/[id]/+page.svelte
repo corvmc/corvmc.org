@@ -342,7 +342,7 @@
 									target="_blank"
 									rel="noopener external"
 								>
-									{receipt.filename ?? 'Receipt'}
+									{receipt.filename ?? m.staff_inventory_acquisitions_id_receipt()}
 								</a>
 							</li>
 						{/each}

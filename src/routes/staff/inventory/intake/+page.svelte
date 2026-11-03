@@ -97,8 +97,9 @@
 <PageContent width="3xl">
 	{#if data.order}
 		<Alert type="info" class="mb-4">
-			Receiving against {data.order.supplierName ?? 'an order'}. Partial deliveries are normal —
-			record what actually turned up and the order stays open for the rest.
+			{m.staff_inventory_intake_receiving_against_partial_deliveries({
+				supplierName: data.order.supplierName ?? m.staff_inventory_intake_order()
+			})}
 		</Alert>
 	{:else}
 		<Alert type="info" class="mb-4">

@@ -179,7 +179,7 @@
 								{/if}
 							</td>
 							<td class="col-support">
-								{item.groupName ?? 'Staff'}
+								{item.groupName ?? m.staff_staff()}
 								{#if item.doneWhen}
 									<div class="text-sm text-base-content/60">
 										{workDoneConditionLabels[item.doneWhen]}
@@ -227,7 +227,7 @@
 										label={m.staff_remove()}
 										variant="ghost"
 										size="sm"
-										confirm="Remove this item? Work orders already created from it are not touched."
+										confirm={m.staff_project_templates_id_remove_item_work_orders_already()}
 										successToast={m.staff_project_templates_id_item_removed()}
 									>
 										{#snippet form()}
@@ -252,7 +252,7 @@
 				label={m.staff_project_templates_id_delete_template()}
 				variant="error"
 				outline
-				confirm={`Delete “${d.list.name}”?`}
+				confirm={m.staff_project_templates_id_delete({ name: d.list.name })}
 				successToast={m.staff_project_templates_id_template_deleted()}
 				onsuccess={() => goto(resolve('/staff/project-templates'))}
 			>

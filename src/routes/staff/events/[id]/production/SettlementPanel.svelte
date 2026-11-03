@@ -288,7 +288,7 @@
 				{/snippet}
 				{#each acts as act (act.slotId)}
 					<tr>
-						<td>{act.actName ?? 'Not on the bill'}</td>
+						<td>{act.actName ?? m.staff_not_bill()}</td>
 						<td class="text-right">{formatCents(act.designatedCents)}</td>
 						<td class="text-sm text-fg-2">
 							{#if act.contributed}
@@ -296,10 +296,15 @@
 							{:else}
 								{#if act.guaranteeCents}{formatCents(act.guaranteeCents)}{/if}
 								{#if act.guaranteeCents && act.percentageBps}
-									{act.versus ? ' versus ' : ' plus '}
+									{act.versus
+										? m.staff_events_id_production_settlement_panel_versus()
+										: m.staff_events_id_production_settlement_panel_plus()}
 								{/if}
-								{#if act.percentageBps}{(act.percentageBps / 100).toFixed(0)}% of the
-									{act.againstNet ? 'net' : 'pool'}{/if}
+								{#if act.percentageBps}{(act.againstNet
+										? m.staff_events_id_production_settlement_panel_net_2
+										: m.staff_events_id_production_settlement_panel_pool)({
+										toFixed: (act.percentageBps / 100).toFixed(0)
+									})}{/if}
 							{/if}
 						</td>
 						<td class="text-right font-medium">{formatCents(act.suggestedPayoutCents)}</td>
@@ -378,9 +383,9 @@
 
 			{#if settlement.unpaidActCount > 0}
 				<p class="mt-3 text-sm text-warning">
-					{settlement.unpaidActCount}
-					{settlement.unpaidActCount === 1 ? 'band has' : 'bands have'} no payout recorded. A donated
-					set still records zero — otherwise the night reads as permanently outstanding.
+					{m.staff_events_id_production_settlement_panel_bands_have_no_pa({
+						unpaidActCount: settlement.unpaidActCount
+					})}
 				</p>
 			{:else if acts.length > 0}
 				<p class="mt-3 text-sm text-success">

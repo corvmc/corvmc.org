@@ -76,7 +76,9 @@
 
 		{#snippet summary(total)}
 			{total}
-			{total === 1 ? 'instructor' : 'instructors'}
+			{total === 1
+				? m.staff_members_instructors_instructor()
+				: m.staff_members_instructors_instructors()}
 			{#await list then { pending }}
 				{#if pending > 0 && f.status !== 'requested'}
 					·
@@ -121,7 +123,7 @@
 				<!-- The instructor's own switch: "my book is full" is theirs to set. -->
 				{#if row.status === 'active'}
 					<Badge variant={row.acceptingStudents ? 'success' : 'ghost'}>
-						{row.acceptingStudents ? 'Accepting' : 'Full'}
+						{row.acceptingStudents ? m.staff_accepting() : m.staff_members_instructors_full()}
 					</Badge>
 				{/if}
 			</td>

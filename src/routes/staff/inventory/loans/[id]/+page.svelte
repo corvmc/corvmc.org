@@ -224,7 +224,7 @@
 							<CancelLoanAction
 								loanId={id}
 								label={m.staff_inventory_loans_id_cancel_request()}
-								confirm="Cancel this loan request?"
+								confirm={m.staff_inventory_loans_id_confirm()}
 							/>
 						</div>
 					</Form>
@@ -253,7 +253,9 @@
 											<option value="" disabled>{m.staff_inventory_loans_id_select_tag()}</option>
 											{#each availableAssets as unit (unit.id)}
 												<option value={unit.id}>
-													{unit.assetTag ?? unit.serialNumber ?? 'Untagged unit'}
+													{unit.assetTag ??
+														unit.serialNumber ??
+														m.staff_inventory_loans_id_untagged_unit()}
 												</option>
 											{/each}
 										</Select>
@@ -287,7 +289,9 @@
 									<option value="" disabled>{m.staff_inventory_loans_id_scan_select_tag()}</option>
 									{#each availableAssets as unit (unit.id)}
 										<option value={unit.id}>
-											{unit.assetTag ?? unit.serialNumber ?? 'Untagged unit'}
+											{unit.assetTag ??
+												unit.serialNumber ??
+												m.staff_inventory_loans_id_untagged_unit()}
 											{unit.condition ? ` — ${unit.condition}` : ''}
 										</option>
 									{/each}
@@ -317,10 +321,18 @@
 					{#if chargePreview}
 						<div class="mb-3 rounded bg-base-200 p-3 text-sm">
 							<p>
-								<strong>{m.staff_inventory_loans_id_charge_preview()}</strong>
-								{chargePreview.days} day{chargePreview.days !== 1 ? 's' : ''} × {formatCents(
-									loan.dailyRateCents ?? 0
-								)}/day = <strong>{formatCents(chargePreview.total)}</strong>
+								<ParaglideMessage
+									message={m.staff_inventory_loans_id_days_day}
+									inputs={{
+										staff_inventory_loans_id_charge_preview:
+											m.staff_inventory_loans_id_charge_preview(),
+										days: chargePreview.days,
+										formatCents: formatCents(loan.dailyRateCents ?? 0),
+										formatCents2: formatCents(chargePreview.total)
+									}}
+									>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+										>{/snippet}</ParaglideMessage
+								>
 							</p>
 						</div>
 					{/if}

@@ -269,7 +269,7 @@
 						</td>
 						<td class="cell-primary">{problem.note}</td>
 						<td class="col-support font-mono text-xs">
-							{problem.assetTag ?? problem.serialNumber ?? 'Untagged'}
+							{problem.assetTag ?? problem.serialNumber ?? msg.staff_inventory_id_untagged()}
 						</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShort(problem.createdAt)}</td>
 					</tr>
@@ -293,7 +293,9 @@
 						class="hover cursor-pointer"
 						use:rowLink={resolve(`/staff/inventory/orders/${line.orderId}`)}
 					>
-						<td class="cell-primary">{line.supplierName ?? 'No supplier recorded'}</td>
+						<td class="cell-primary"
+							>{line.supplierName ?? msg.staff_inventory_id_no_supplier_recorded()}</td
+						>
 						<td class="cell-num"
 							>{msg.staff_inventory_id_text({
 								outstanding: line.outstanding,

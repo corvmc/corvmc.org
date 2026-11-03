@@ -50,10 +50,10 @@
 	// The button says what it will do, because it is the only thing read.
 	const resolveLabel = $derived(
 		resolution === 'resolved'
-			? 'Resolve — action taken'
+			? m.staff_flags_id_resolve_action_taken()
 			: resolution === 'dismissed'
-				? 'Dismiss — no action'
-				: 'Choose an outcome first'
+				? m.staff_flags_id_dismiss_no_action()
+				: m.staff_flags_id_choose_outcome_first()
 	);
 	let notes = $state('');
 </script>

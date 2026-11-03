@@ -177,7 +177,11 @@
 >
 	{#snippet children(data)}
 		<p class="mb-3 text-muted">
-			Last sign-in: {data.lastLoginAt ? formatDateTimeShort(data.lastLoginAt) : 'never on record'}
+			{m.staff_members_id_panels_account_panel_last_sign({
+				value: data.lastLoginAt
+					? formatDateTimeShort(data.lastLoginAt)
+					: m.staff_members_id_panels_account_panel_never_record()
+			})}
 		</p>
 		{#if data.sessions.length === 0}
 			<EmptyState
@@ -195,7 +199,9 @@
 					<tr class="hover">
 						<td class="cell-primary">
 							<div class="font-medium whitespace-nowrap">{formatDateTimeShort(s.createdAt)}</div>
-							<div class="truncate text-muted">{s.userAgent ?? 'Unknown device'}</div>
+							<div class="truncate text-muted">
+								{s.userAgent ?? m.staff_members_id_panels_account_panel_unknown_device()}
+							</div>
 						</td>
 						<td class="col-support font-mono text-xs">{s.ipAddress ?? '—'}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(s.expiresAt)}</td>
@@ -249,8 +255,11 @@
 
 		{#if member.bannedAt}
 			<Fact label={m.staff_members_id_panels_account_panel_banned()}>
-				{formatHistoryTime(new Date(member.bannedAt))} by {member.bannedByName ??
-					'a removed account'}
+				{m.staff_members_id_panels_account_panel_by({
+					formatHistoryTime: formatHistoryTime(new Date(member.bannedAt)),
+					bannedByName:
+						member.bannedByName ?? m.staff_members_id_panels_account_panel_removed_account()
+				})}
 			</Fact>
 			<Fact label={m.staff_members_id_panels_account_panel_ban_reason()} class="whitespace-pre-line"
 				>{member.banReason}</Fact

@@ -105,17 +105,20 @@
 					<CardBody class="gap-4">
 						<div class="flex flex-wrap items-baseline justify-between gap-2">
 							<h2 class="text-lg font-bold">
-								{t.contactUserName ?? t.contactName ?? t.contactEmail ?? 'Conversation'}
+								{t.contactUserName ??
+									t.contactName ??
+									t.contactEmail ??
+									m.staff_inbox_daily_conversation()}
 							</h2>
 							<!-- The age line is the pressure signal, and in Daily it is the
 							     only context on screen — there is no list beside it saying
 							     how this thread compares to the rest. -->
 							<p class="text-muted text-sm">
-								{t.subject ?? channelLabel(t.channel)} · waiting {waitingDays(t)} day{waitingDays(
-									t
-								) === 1
-									? ''
-									: 's'}
+								{m.staff_inbox_daily_waiting_days({
+									value: t.subject ?? channelLabel(t.channel),
+									waitingDays: waitingDays(t),
+									count: waitingDays(t)
+								})}
 							</p>
 						</div>
 

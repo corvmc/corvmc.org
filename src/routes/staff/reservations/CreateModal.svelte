@@ -167,7 +167,7 @@
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">
-					{bookerType === 'group' ? 'Booked by' : 'Member'}
+					{bookerType === 'group' ? m.staff_booked_by() : m.staff_member()}
 				</legend>
 				<SearchSelect
 					search={searchMembers}
@@ -184,7 +184,7 @@
 					<option value="">{m.staff_reservations_create_modal_select_start_time()}</option>
 					{#each await startOptions as opt (opt.value)}
 						<option value={opt.value}>
-							{opt.label}{opt.available ? '' : ' ⚠ conflict'}
+							{opt.label}{opt.available ? '' : m.staff_reservations_create_modal_conflict()}
 						</option>
 					{/each}
 				</Select>
@@ -196,7 +196,7 @@
 					<option value="">{m.staff_reservations_create_modal_select_end_time()}</option>
 					{#each await endOptions as opt (opt.value)}
 						<option value={opt.value} class:opacity-40={!opt.available}>
-							{opt.label}{opt.available ? '' : ' (unavailable)'}
+							{opt.label}{opt.available ? '' : m.staff_reservations_create_modal_unavailable()}
 						</option>
 					{/each}
 				</Select>

@@ -59,11 +59,11 @@
 							</div>
 						{/if}
 					</td>
-					<td>{item.groupName ?? 'Staff'}</td>
+					<td>{item.groupName ?? m.staff_staff()}</td>
 					<td>
 						{item.assignees.length > 0
 							? item.assignees.map((a) => a.name).join(', ')
-							: 'Nobody yet'}
+							: m.staff_events_id_production_deliverables_card_nobody_yet()}
 					</td>
 					<td class="whitespace-nowrap">{item.dueAt ? formatDateShort(item.dueAt) : '—'}</td>
 					<td class="w-px">

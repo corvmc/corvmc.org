@@ -546,7 +546,7 @@
 										{@const owed = state === 'cash_due' || state === 'unpaid'}
 										<p class="flex flex-wrap items-center gap-1 text-sm">
 											<ps.icon size={16} class={ps.color} />
-											<span class="font-medium">{owed ? 'Due' : ps.label}</span>
+											<span class="font-medium">{owed ? m.staff_due() : ps.label}</span>
 											<span class="text-muted" class:line-through={state === 'comped'}>
 												{formatPaymentBreakdown(
 													r.startsAt,

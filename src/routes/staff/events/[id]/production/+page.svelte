@@ -215,7 +215,7 @@
 				formatEventTimeRange: formatEventTimeRange(evt.startsAt, evt.endsAt)
 			})}
 		</span>
-		<span>{evt.venueName ?? evt.location ?? 'The practice space'}</span>
+		<span>{evt.venueName ?? evt.location ?? m.staff_events_id_production_practice_space()}</span>
 	</p>
 
 	<div bind:this={tabBarEl}>
@@ -261,9 +261,14 @@
 					{#if productionRecord.closedAt}
 						<!-- `updatedAt` is not this date: it moves on any later write. -->
 						<p class="text-muted text-sm">
-							Closed {formatDateTime(productionRecord.closedAt)}{productionRecord.closedByName
-								? ` by ${productionRecord.closedByName}`
-								: ''}
+							{productionRecord.closedByName
+								? m.staff_events_id_production_closed_by({
+										date: formatDateTime(productionRecord.closedAt),
+										name: productionRecord.closedByName
+									})
+								: m.staff_events_id_production_closed({
+										date: formatDateTime(productionRecord.closedAt)
+									})}
 						</p>
 					{/if}
 					{#if productionLocked}
@@ -553,7 +558,7 @@
 									{/if}
 									{#if act.uploadCount > 0}
 										<Badge variant="ghost"
-											>{act.uploadCount} file{act.uploadCount === 1 ? '' : 's'}</Badge
+											>{m.staff_events_id_production_files({ uploadCount: act.uploadCount })}</Badge
 										>
 									{/if}
 								{/if}

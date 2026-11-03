@@ -158,7 +158,10 @@
 					class="textarea w-full font-mono text-sm"
 					rows="20"></textarea>
 				<p class="mt-1 text-subtle">
-					Available variables: {'{{subscriber_name}}'}, {'{{unsubscribe_url}}'}
+					{m.staff_marketing_campaigns_available_variables({
+						first: '{{subscriber_name}}',
+						second: '{{unsubscribe_url}}'
+					})}
 				</p>
 			</div>
 
@@ -227,9 +230,16 @@
 
 <Modal bind:open={confirmingSend} title={m.staff_send_campaign_now()}>
 	<p>
-		This goes to <strong>{totalSubscribers}</strong>
-		{totalSubscribers === 1 ? 'person' : 'people'} immediately, as
-		<em>{subject.trim() || 'an untitled campaign'}</em>.
+		<ParaglideMessage
+			message={m.staff_goes_people_immediately_as}
+			inputs={{
+				totalSubscribers,
+				trim: subject.trim() || m.staff_marketing_campaigns_new_untitled_campaign()
+			}}
+			>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+				>{/snippet}{#snippet em({ children })}<em>{@render children?.()}</em
+				>{/snippet}</ParaglideMessage
+		>
 	</p>
 	<p class="mt-2 text-muted">
 		{m.staff_marketing_campaigns_new_there_no_recall_if_not()}
@@ -239,8 +249,7 @@
 			{m.staff_not_yet()}
 		</Button>
 		<Button variant="primary" size="sm" onclick={sendNow}>
-			Send to {totalSubscribers}
-			{totalSubscribers === 1 ? 'person' : 'people'}
+			{m.staff_send_people({ totalSubscribers })}
 		</Button>
 	</div>
 </Modal>

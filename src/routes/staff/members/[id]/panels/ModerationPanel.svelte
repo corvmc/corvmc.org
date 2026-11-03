@@ -80,7 +80,7 @@
 					label={m.staff_restore()}
 					variant="ghost"
 					size="sm"
-					confirm="Stop holding this member's posts here for review?"
+					confirm={m.staff_members_id_panels_moderation_panel_confirm()}
 					successToast={m.staff_members_id_panels_moderation_panel_success_toast()}
 				>
 					{#snippet form()}
@@ -116,7 +116,12 @@
 						<td class="w-px"><StatusBadge status={f.status} /></td>
 						<td class="cell-primary">
 							<a class="font-medium" href={resolve(`/staff/flags/${f.id}`)}>{f.reason}</a>
-							<div class="text-muted">by {f.reportedByName ?? 'Anonymous'}</div>
+							<div class="text-muted">
+								{m.staff_members_id_panels_moderation_panel_by({
+									reportedByName:
+										f.reportedByName ?? m.staff_members_id_panels_moderation_panel_anonymous()
+								})}
+							</div>
 						</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(f.createdAt)}</td>
 					</tr>

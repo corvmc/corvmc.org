@@ -149,7 +149,9 @@
 		<ul class="divide-y divide-base-300">
 			{#each requests as req (req.id)}
 				<li class="flex flex-wrap items-center gap-2 py-2">
-					<span class="font-medium">{req.actName ?? 'Unknown band'}</span>
+					<span class="font-medium"
+						>{req.actName ?? m.staff_events_id_production_artifact_requests_panel_unknown_b()}</span
+					>
 					<span class="text-sm">{requestableArtifactLabels[req.artifact]}</span>
 					{#if req.fulfilled}
 						<Badge variant="success"
@@ -194,7 +196,11 @@
 									<input type="hidden" name="requestId" value={req.id} />
 									<input type="hidden" name="eventId" value={eventId} />
 									<p class="text-sm">
-										The art from {req.actName ?? 'the artist'} replaces the event's current poster.
+										{m.staff_events_id_production_artifact_requests_panel_art_from({
+											actName:
+												req.actName ??
+												m.staff_events_id_production_artifact_requests_panel_artist_2()
+										})}
 									</p>
 								{/snippet}
 							</Action>
@@ -231,8 +237,11 @@
 								<input type="hidden" name="id" value={req.id} />
 								<input type="hidden" name="eventId" value={eventId} />
 								<p class="text-sm">
-									{requestableArtifactLabels[req.artifact]} from {req.actName ?? 'this band'} stops counting
-									as outstanding. Asking again re-opens it.
+									{m.staff_events_id_production_artifact_requests_panel_from_stop({
+										value: requestableArtifactLabels[req.artifact],
+										actName:
+											req.actName ?? m.staff_events_id_production_artifact_requests_panel_band()
+									})}
 								</p>
 							{/snippet}
 						</Action>

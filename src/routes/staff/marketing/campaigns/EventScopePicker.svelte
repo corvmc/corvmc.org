@@ -57,9 +57,7 @@
 {#if count}
 	{#await count then n}
 		<p class="mt-1 text-subtle">
-			“This show's audience” resolves to {n}
-			{n === 1 ? 'person' : 'people'} — ticket holders and RSVPs, minus anyone who has opted out. Tick
-			it above to send to them.
+			{m.staff_marketing_campaigns_event_scope_picker_show_s_audience({ n })}
 		</p>
 	{/await}
 {:else}

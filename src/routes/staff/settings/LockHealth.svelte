@@ -59,13 +59,18 @@
 		{:else if health.online}
 			<Badge variant="success">{m.staff_settings_lock_health_online()}</Badge>
 			<span class="text-subtle">
-				{health.lockState ?? 'unknown'} · battery {health.batteryLevel ?? '?'}/5
+				{m.staff_settings_lock_health_battery_5({
+					lockState: health.lockState ?? m.staff_settings_lock_health_unknown(),
+					value: health.batteryLevel ?? '?'
+				})}
 			</span>
 		{:else}
 			<Badge variant="warning">{m.staff_settings_lock_health_offline()}</Badge>
 			<span class="text-subtle">
-				Door codes are queued and will not work until it reconnects. Last known:
-				{health.lockState ?? 'unknown'} · battery {health.batteryLevel ?? '?'}/5
+				{m.staff_settings_lock_health_door_codes_queued_will_not({
+					lockState: health.lockState ?? m.staff_settings_lock_health_unknown(),
+					value: health.batteryLevel ?? '?'
+				})}
 			</span>
 		{/if}
 	</div>
@@ -76,22 +81,27 @@
 			{#if health.lastRun.errors.length > 0}
 				<Badge variant="error">
 					{health.lastRun.errors.length}
-					{health.lastRun.errors.length === 1 ? 'error' : 'errors'}
+					{health.lastRun.errors.length === 1
+						? m.staff_settings_lock_health_error()
+						: m.staff_settings_lock_health_errors()}
 				</Badge>
 			{:else}
 				<Badge variant="success">{m.staff_settings_lock_health_clean()}</Badge>
 			{/if}
 			<span class="text-subtle">
-				{timeAgo(new Date(health.lastRun.at))} ·
-				{health.lastRun.triggeredBy ?? 'scheduled'} ·
-				{health.lastRun.provisioned} provisioned, {health.lastRun.cleaned} cleaned,
-				{health.lastRun.confirmed} confirmed
+				{m.staff_settings_lock_health_provisioned_cleaned_confirmed({
+					timeAgo: timeAgo(new Date(health.lastRun.at)),
+					triggeredBy: health.lastRun.triggeredBy ?? m.staff_settings_lock_health_scheduled(),
+					provisioned: health.lastRun.provisioned,
+					cleaned: health.lastRun.cleaned,
+					confirmed: health.lastRun.confirmed
+				})}
 			</span>
 		{:else}
 			<span class="text-subtle">{m.staff_settings_lock_health_never_run_not_since_was()}</span>
 		{/if}
 		<Button type="button" variant="ghost" size="sm" onclick={handleRun} disabled={running}>
-			{running ? 'Running…' : 'Run now'}
+			{running ? m.staff_settings_lock_health_running() : m.staff_settings_lock_health_run_now()}
 		</Button>
 	</div>
 
@@ -124,7 +134,7 @@
 		{#if rotateResult}
 			<p class="mt-1 text-subtle">
 				{rotateResult.ok
-					? 'A replacement is on its way to the lock. The current code keeps working until it lands.'
+					? m.staff_settings_lock_health_replacement_its_way_lock_current()
 					: rotateResult.error}
 			</p>
 		{/if}

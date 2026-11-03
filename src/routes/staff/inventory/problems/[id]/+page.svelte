@@ -50,7 +50,7 @@
 				{/if}
 				<Fact label={m.staff_note()} wrap>{report.note}</Fact>
 				<Fact label={m.staff_inventory_problems_id_still_usable()}
-					>{report.blocksUse ? 'No — out of use' : 'Yes'}</Fact
+					>{report.blocksUse ? m.staff_inventory_problems_id_no_out_use() : m.staff_yes()}</Fact
 				>
 				{#if report.condition}
 					<Fact label={m.staff_condition()} class="capitalize">{report.condition}</Fact>
@@ -79,7 +79,9 @@
 							<li>
 								<a class="link" href={resolve(`/staff/inventory/problems/${o.id}`)}>{o.note}</a>
 								<div class="text-subtle">
-									{o.reporterName ?? 'Deleted account'} · {formatDateShort(o.createdAt)}
+									{o.reporterName ?? m.staff_inventory_problems_id_deleted_account()} · {formatDateShort(
+										o.createdAt
+									)}
 								</div>
 							</li>
 						{/each}
@@ -111,7 +113,8 @@
 									<option value="">{m.staff_inventory_problems_id_raise_new_work_order()}</option>
 									{#each report.openWorkOrders as w (w.id)}
 										<option value={w.id}
-											>{w.roleName ?? NO_ROLE_LABEL}: {w.notes ?? 'No notes'}</option
+											>{w.roleName ?? NO_ROLE_LABEL}: {w.notes ??
+												m.staff_inventory_problems_id_no_notes()}</option
 										>
 									{/each}
 								</Select>
@@ -142,8 +145,8 @@
 							{/if}
 							<p class="text-muted text-wrap">
 								{report.asset
-									? 'Every other open report on this unit goes with it, and all of them close when the work order is resolved.'
-									: 'It closes when the work order is resolved.'}
+									? m.staff_inventory_problems_id_every_other_open_report_unit()
+									: m.staff_inventory_problems_id_closes_when_work_order_resolved()}
 							</p>
 						{/snippet}
 					</Action>

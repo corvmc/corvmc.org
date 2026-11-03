@@ -259,7 +259,9 @@
 									<div class="fieldset">
 										<label class="label" for="amount-{product.key}">
 											<span class="fieldset-legend">
-												Amount ({product.unitLabel ?? 'per unit'})
+												{m.staff_settings_amount({
+													unitLabel: product.unitLabel ?? m.staff_settings_per_unit()
+												})}
 											</span>
 										</label>
 										{#each instance.fields.unitAmountCents.issues() ?? [] as issue (issue.message)}
@@ -697,7 +699,9 @@
 							<div class="flex items-center gap-2">
 								<CardTitle size="base">{m.staff_settings_u_tec_smart_lock()}</CardTitle>
 								<span class="badge badge-sm {utecConnected ? 'badge-success' : 'badge-ghost'}">
-									{utecConnected ? 'Connected' : 'Not connected'}
+									{utecConnected
+										? m.staff_settings_connected_2()
+										: m.staff_settings_not_connected()}
 								</span>
 							</div>
 							<div class="flex gap-2">
@@ -948,7 +952,7 @@
 									outline={enabled}
 									size="sm"
 								>
-									{enabled ? 'Disable' : 'Enable'}
+									{enabled ? m.staff_settings_disable() : m.staff_settings_enable()}
 								</Button>
 							</Form>
 						</div>
@@ -996,7 +1000,7 @@
 										outline={cfg.enabled}
 										size="sm"
 									>
-										{cfg.enabled ? 'Disable' : 'Enable'}
+										{cfg.enabled ? m.staff_settings_disable() : m.staff_settings_enable()}
 									</Button>
 								</Form>
 							{/if}

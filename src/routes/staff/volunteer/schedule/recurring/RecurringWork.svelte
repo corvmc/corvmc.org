@@ -128,7 +128,7 @@
 							· {s.projectName}{/if}
 					</div>
 				</td>
-				<td class="whitespace-nowrap">{s.retiredAt ? 'Retired' : every(s.intervalDays)}</td>
+				<td class="whitespace-nowrap">{s.retiredAt ? m.staff_retired() : every(s.intervalDays)}</td>
 				<td class="col-support whitespace-nowrap">
 					{#if s.lastClosedAt}
 						{formatDate(s.lastClosedAt)}

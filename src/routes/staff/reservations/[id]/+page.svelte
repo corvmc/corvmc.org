@@ -82,7 +82,9 @@
 
 	// Derived formatting
 	const hours = $derived(calcDurationHours(r.startsAt, r.endsAt));
-	const durationLabel = $derived(hours === 1 ? '1 hour' : `${hours} hours`);
+	const durationLabel = $derived(
+		hours === 1 ? m.staff_reservations_id_1_hour() : m.staff_reservations_id_hours({ hours })
+	);
 	const amountFormatted = $derived(formatCents(Math.round(hours * data.hourlyRateCents)));
 	const rateFormatted = $derived(formatCents(data.hourlyRateCents));
 	const creditsDiscountFormatted = $derived(
@@ -172,13 +174,15 @@
 			{#if conflicts.length > 0}
 				<Alert type="warning" class="py-2 text-sm">
 					<span>
-						Overlaps {conflicts.length} other {conflicts.length === 1 ? 'booking' : 'bookings'}:
-						{conflicts
-							.map(
-								(c) =>
-									`${formatTime(c.startsAt)} – ${formatTime(c.endsAt)} (${isEventHold(c.bookerType) ? 'show' : c.status})`
-							)
-							.join(', ')}
+						{m.staff_reservations_id_overlaps_other_bookings({
+							length: conflicts.length,
+							join: conflicts
+								.map(
+									(c) =>
+										`${formatTime(c.startsAt)} – ${formatTime(c.endsAt)} (${isEventHold(c.bookerType) ? 'show' : c.status})`
+								)
+								.join(', ')
+						})}
 					</span>
 				</Alert>
 			{/if}
@@ -269,8 +273,10 @@
 				<p class="text-muted">{m.staff_reservations_id_hr({ durationLabel, rateFormatted })}</p>
 				{#if (r.creditsUsed ?? 0) > 0}
 					<p class="text-sm text-success">
-						Free hours applied: {r.creditsUsed}
-						{r.creditsUsed === 1 ? 'hr' : 'hrs'} (−{creditsDiscountFormatted})
+						{m.staff_reservations_id_free_hours_applied_hrs({
+							creditsUsed: r.creditsUsed ?? '',
+							creditsDiscountFormatted
+						})}
 					</p>
 				{/if}
 
@@ -353,7 +359,9 @@
 
 			{#if r.status === 'confirmed'}
 				<Button variant="ghost" size="sm" class="mt-3" disabled={retrying} onclick={handleRetry}>
-					{retrying ? 'Working…' : 'Retry pending door codes'}
+					{retrying
+						? m.staff_reservations_id_working()
+						: m.staff_reservations_id_retry_pending_door_codes()}
 				</Button>
 				{#if retryError}
 					<Alert type="error" class="mt-2">{retryError}</Alert>
@@ -363,8 +371,8 @@
 						<div>
 							<p>
 								{booking.ok
-									? `This booking: sent to the lock, code ${booking.code}.`
-									: `This booking: ${booking.error}`}
+									? m.staff_reservations_id_booking_sent_lock_code({ code: booking.code ?? '' })
+									: m.staff_reservations_id_booking({ error: booking.error ?? '' })}
 							</p>
 							<p>
 								{m.staff_reservations_id_all_bookings_provisioned_confirmed_loc({
@@ -406,7 +414,7 @@
 		     to notice, and the body is one line either way. -->
 		<Alert type="error">
 			<strong>{describeCancellation(r)}</strong>
-			{r.cancellationReason ?? 'No reason given.'}
+			{r.cancellationReason ?? m.staff_reservations_id_no_reason_given()}
 		</Alert>
 	{/if}
 </PageContent>

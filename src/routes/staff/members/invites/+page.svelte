@@ -91,7 +91,7 @@
 									aria-label={m.staff_members_invites_resend_invitation({ email: inv.email })}
 									variant="ghost"
 									size="xs"
-									confirm="Send the invitation to {inv.email} again?"
+									confirm={m.staff_members_invites_send_invitation_again({ email: inv.email })}
 									successToast={m.staff_members_invites_invitation_sent()}
 									onsuccess={() => result.refresh()}
 								>
@@ -105,7 +105,7 @@
 									aria-label={m.staff_members_invites_revoke_invitation({ email: inv.email })}
 									variant="ghost"
 									size="xs"
-									confirm="Revoke the invitation to {inv.email}?"
+									confirm={m.staff_members_invites_revoke_invitation_2({ email: inv.email })}
 									successToast={m.staff_members_invites_invitation_revoked()}
 									onsuccess={() => result.refresh()}
 								>

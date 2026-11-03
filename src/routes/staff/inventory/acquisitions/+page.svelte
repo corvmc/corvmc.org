@@ -92,8 +92,10 @@
 	{#if data.owedCount > 0 && !owed}
 		<p class="mb-4 text-subtle">
 			{data.owedCount === 1
-				? 'One acquisition is awaiting reimbursement.'
-				: `${data.owedCount} acquisitions are awaiting reimbursement.`}
+				? m.staff_inventory_acquisitions_one_acquisition_awaiting_reimbu()
+				: m.staff_inventory_acquisitions_acquisitions_awaiting_reimburse({
+						owedCount: data.owedCount
+					})}
 		</p>
 	{/if}
 

@@ -72,8 +72,9 @@
 						{#snippet form()}
 							<input type="hidden" name="id" value={order.id} />
 							<p class="text-sm">
-								Closes the work order and its {order.reports}
-								{order.reports === 1 ? 'report' : 'reports'}, and tells each reporter it was fixed.
+								{m.staff_volunteer_confirm_fixed_card_closes_work_order_its_rep({
+									reports: order.reports
+								})}
 							</p>
 							<FormField
 								name="notes"

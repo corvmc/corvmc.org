@@ -45,7 +45,7 @@
 			action={acceptIncidentForm}
 			label={m.staff_incidents_id_accept()}
 			modalTitle={m.staff_incidents_id_accept_report()}
-			confirm="It joins the log as an open incident. You can resolve it straight away instead."
+			confirm={m.staff_incidents_id_joins_log_as_open_incident()}
 			successToast={m.staff_incidents_id_accepted()}
 			variant="primary"
 			size="sm"
@@ -68,14 +68,14 @@
 				{#if incident.involvedUserId}
 					<Fact label={m.staff_member_involved()}>
 						<a class="link" href={resolve(`/staff/members/${incident.involvedUserId}`)}>
-							{incident.involvedName ?? 'Member'}
+							{incident.involvedName ?? m.staff_member()}
 						</a>
 					</Fact>
 				{/if}
 				{#if incident.eventId}
 					<Fact label={m.staff_show()}>
 						<a class="link" href={resolve(`/staff/events/${incident.eventId}`)}>
-							{incident.eventTitle ?? 'Event'}
+							{incident.eventTitle ?? m.staff_event()}
 						</a>
 					</Fact>
 				{/if}
@@ -150,7 +150,7 @@
 							action={reopenIncidentForm}
 							label={m.staff_reopen()}
 							modalTitle={m.staff_incidents_id_reopen_incident()}
-							confirm="The current resolution is kept in its history."
+							confirm={m.staff_incidents_id_current_resolution_kept_its_history()}
 							successToast={m.staff_incidents_id_incident_reopened()}
 							size="sm"
 						>
@@ -166,8 +166,8 @@
 		<InfoCard title={m.staff_incidents_id_retention()} class="bg-base-200 shadow-none">
 			<p class="text-muted text-wrap">
 				{incident.retain
-					? 'Marked retain: kept past the seven-year deletion until the hold is released.'
-					: 'Deleted seven years after it happened, unless marked retain.'}
+					? m.staff_incidents_id_marked_retain_kept_past_seven()
+					: m.staff_incidents_id_deleted_seven_years_after_happened()}
 			</p>
 			<div class="mt-3">
 				<Action

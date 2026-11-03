@@ -74,7 +74,9 @@
 
 		{#if scope.longWaiting}
 			<p class="text-muted text-sm">
-				{scope.longWaiting} of these {scope.longWaiting === 1 ? 'has' : 'have'} been waiting over a week.
+				{m.staff_inbox_daily_daily_start_card_these_have_been_waiting_o({
+					longWaiting: scope.longWaiting
+				})}
 			</p>
 		{/if}
 

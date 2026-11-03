@@ -2,11 +2,13 @@
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 	"staff_about": "About",
 	"staff_about_show": "About a show",
+	"staff_accepting": "Accepting",
 	"staff_access_access": "Access",
 	"staff_access_admins": "Admins",
 	"staff_access_by_permission": "By permission",
 	"staff_access_by_person": "By person",
 	"staff_access_clearances_lapsing_30_days": "Clearances lapsing in 30 days",
+	"staff_access_permission_holders_archived": "(archived)",
 	"staff_access_permission_holders_capability": "Capability",
 	"staff_access_permission_holders_clearance_state": "Clearance state",
 	"staff_access_permission_holders_committees_granting": "Committees granting it",
@@ -33,6 +35,7 @@
 	"staff_access_person_access_assign_position": "Assign position",
 	"staff_access_person_access_assign_position_2": "Assign a position to {value}",
 	"staff_access_person_access_capabilities": "Capabilities",
+	"staff_access_person_access_chair": "Chair",
 	"staff_access_person_access_clearances": "Clearances",
 	"staff_access_person_access_committee_seats": "Committee seats",
 	"staff_access_person_access_description": "Search by name or email to see every position, committee seat and clearance they hold.",
@@ -158,6 +161,11 @@
 	"staff_classifieds_posted_by": "Posted by",
 	"staff_classifieds_reported_posts_decided": "Reported posts are decided in {#a}{staff_content_flags}{/a}.",
 	"staff_clearance": "Clearance",
+	"staff_clearance_expires": " · expires {date}",
+	"staff_clearance_granted": "Granted {date}",
+	"staff_clearance_granted_by": " by {name}",
+	"staff_clearance_no_expiry": " · no expiry",
+	"staff_clearance_revoked": " · revoked: {reason}",
 	"staff_cleared": "Cleared",
 	"staff_closed": "Closed",
 	"staff_cmc": "CMC",
@@ -182,6 +190,8 @@
 	"staff_contractors_add_people_call_when_something": "Add the people you call when something needs a professional — an instrument tech, an electrician, the company that services the extinguishers.",
 	"staff_contractors_contractors": "Contractors",
 	"staff_contractors_expired": "Expired {formatDateShort}",
+	"staff_contractors_expired_2": "expired",
+	"staff_contractors_expires": "expires",
 	"staff_contractors_id_archived_history_below_stays": "{#span}{staff_archived}{/span} Archived {formatDateShort}. The history below stays.",
 	"staff_contractors_id_bring_back": "Bring back",
 	"staff_contractors_id_insurance_expired": "Insurance expired",
@@ -192,6 +202,21 @@
 	"staff_contractors_id_their_certificate_ran_out": "{#span}{staff_contractors_id_insurance_expired}{/span} Their certificate ran out {formatDateShort}.",
 	"staff_contractors_id_they_stay_out_pickers_no": "They stay out of the pickers and no new job can be opened against them. Their history is untouched.",
 	"staff_contractors_id_they_will_show_pickers_again": "They will show in the pickers again.",
+	"staff_contractors_jobs_past_date_they_were": [
+		{
+			"declarations": [
+				"input staff_contractors_overdue",
+				"input length",
+				"input staff_contractors_open_queue",
+				"local lengthPlural = length: plural"
+			],
+			"selectors": ["lengthPlural"],
+			"match": {
+				"lengthPlural=one": "{#span}{staff_contractors_overdue}{/span} {length} job is past the date they were promised back. {#a}{staff_contractors_open_queue}{/a}",
+				"lengthPlural=*": "{#span}{staff_contractors_overdue}{/span} {length} jobs are past the date they were promised back. {#a}{staff_contractors_open_queue}{/a}"
+			}
+		}
+	],
 	"staff_contractors_leave_blank_if_we_hold": "Leave blank if we hold no certificate — that is not the same as current, and the warnings above leave it out.",
 	"staff_contractors_new_contractor": "New contractor",
 	"staff_contractors_no_contractors_yet": "No contractors yet",
@@ -209,6 +234,7 @@
 	"staff_credits_empty": "No credit transactions found",
 	"staff_credits_equipment_credits": "Equipment Credits",
 	"staff_credits_free_hours": "Free Hours",
+	"staff_credits_free_hours_2": "Free hours",
 	"staff_credits_title": "Credit Transactions",
 	"staff_dashboard": "Dashboard",
 	"staff_date": "Date",
@@ -225,6 +251,7 @@
 	"staff_donated_by": "Donated by",
 	"staff_done": "Done",
 	"staff_donor_grantor": "Donor / grantor",
+	"staff_door_codes_sessions_happening_now": "{doorCodes} door codes for sessions happening now are not confirmed on the lock yet.",
 	"staff_draft": "Draft",
 	"staff_due": "Due",
 	"staff_due_2": "due {formatDateShort}",
@@ -256,8 +283,12 @@
 	"staff_events_id_check_in_checked": "Checked In",
 	"staff_events_id_check_in_door_scanner_find_them_by_name_belo": "Or find them by name below.",
 	"staff_events_id_check_in_door_scanner_label": "Scan tickets",
+	"staff_events_id_check_in_door_scanner_sync_now": "Sync now",
+	"staff_events_id_check_in_door_scanner_syncing": "Syncing…",
 	"staff_events_id_check_in_door_scanner_waiting_sync": "Waiting to sync: {join}",
 	"staff_events_id_check_in_label": "Check In",
+	"staff_events_id_check_in_no_tickets_check": "No tickets to check in",
+	"staff_events_id_check_in_no_tickets_match_search": "No tickets match your search",
 	"staff_events_id_check_in_placeholder": "Search by name, email, or code...",
 	"staff_events_id_check_in_success_toast": "Checked in",
 	"staff_events_id_check_in_tickets_sold": "Tickets Sold",
@@ -290,10 +321,12 @@
 	"staff_events_id_inputs_via": "Via",
 	"staff_events_id_load": "Load-in {fullDate}",
 	"staff_events_id_load_soundcheck_curfew_not_set": "Load-in, soundcheck and curfew are not set yet.",
+	"staff_events_id_manage_production": "Manage production",
 	"staff_events_id_member_s_listings_checked_before": "This member's listings are checked before they publish, after a report was upheld against one of them.",
 	"staff_events_id_no_producer_yet": "No producer yet",
 	"staff_events_id_nothing_else_within_two_hours": "Nothing else within two hours of this show.",
 	"staff_events_id_open_console": "Open the console",
+	"staff_events_id_open_production": "Open a production",
 	"staff_events_id_produced_by": "Produced by {producerName}",
 	"staff_events_id_production_48v": "{phantomCount} × +48V",
 	"staff_events_id_production_add_directory": "Add to the directory",
@@ -302,16 +335,20 @@
 	"staff_events_id_production_apply_template": "Apply a template to {title}",
 	"staff_events_id_production_artifact_requests_panel_add_show": "Add the show details under this art?",
 	"staff_events_id_production_artifact_requests_panel_alt": "Poster art from {value}",
+	"staff_events_id_production_artifact_requests_panel_art_from": "The art from {actName} replaces the event's current poster.",
 	"staff_events_id_production_artifact_requests_panel_art_sits": "The art sits above a footer with the date, doors, venue and price, and the result replaces the current poster. It is a snapshot: after editing the event, run this again.",
 	"staff_events_id_production_artifact_requests_panel_artist": "Artist",
+	"staff_events_id_production_artifact_requests_panel_artist_2": "the artist",
 	"staff_events_id_production_artifact_requests_panel_artist_up": "The artist uploads on their contact-sheet page. Send them its link from the listing if they do not have it.",
 	"staff_events_id_production_artifact_requests_panel_ask": "Ask",
 	"staff_events_id_production_artifact_requests_panel_ask_band": "Ask a band",
 	"staff_events_id_production_artifact_requests_panel_ask_band_2": "Ask a band for {eventTitle}",
 	"staff_events_id_production_artifact_requests_panel_asked": "Asked for",
 	"staff_events_id_production_artifact_requests_panel_asked_2": "Asked",
+	"staff_events_id_production_artifact_requests_panel_band": "this band",
 	"staff_events_id_production_artifact_requests_panel_commissio": "Commission poster art",
 	"staff_events_id_production_artifact_requests_panel_commissio_2": "Commission poster art for {eventTitle}",
+	"staff_events_id_production_artifact_requests_panel_from_stop": "{value} from {actName} stops counting as outstanding. Asking again re-opens it.",
 	"staff_events_id_production_artifact_requests_panel_make_post": "Make this the poster?",
 	"staff_events_id_production_artifact_requests_panel_make_post_2": "Make the poster",
 	"staff_events_id_production_artifact_requests_panel_nobody_ha": "Nobody has been asked for a rider, a press kit or poster art yet.",
@@ -323,6 +360,7 @@
 	"staff_events_id_production_artifact_requests_panel_poster_up": "Poster updated",
 	"staff_events_id_production_artifact_requests_panel_stop_wait": "Stop waiting on this?",
 	"staff_events_id_production_artifact_requests_panel_text": "In",
+	"staff_events_id_production_artifact_requests_panel_unknown_b": "Unknown band",
 	"staff_events_id_production_artifact_requests_panel_use_as_po": "Use as poster",
 	"staff_events_id_production_artifact_requests_panel_use_with": "Use with a details footer",
 	"staff_events_id_production_artifact_requests_panel_waiting": "Waiting",
@@ -331,10 +369,13 @@
 	"staff_events_id_production_billing": "Billing",
 	"staff_events_id_production_can_asked_now": "{name} can be asked now",
 	"staff_events_id_production_ch": "{channelCount} ch",
+	"staff_events_id_production_closed": "Closed {date}",
+	"staff_events_id_production_closed_by": "Closed {date} by {name}",
 	"staff_events_id_production_curfew": "Curfew",
 	"staff_events_id_production_deliverables_card_aria_label": "Reassign {title}",
 	"staff_events_id_production_deliverables_card_art_waiting_use": "Art is in; waiting for it to be used",
 	"staff_events_id_production_deliverables_card_done": "Done",
+	"staff_events_id_production_deliverables_card_nobody_yet": "Nobody yet",
 	"staff_events_id_production_deliverables_card_owner": "Owner",
 	"staff_events_id_production_deliverables_card_reassign": "Reassign",
 	"staff_events_id_production_deliverables_card_state": "State",
@@ -342,6 +383,16 @@
 	"staff_events_id_production_deliverables_card_title": "Deliverables",
 	"staff_events_id_production_deliverables_card_who": "Who",
 	"staff_events_id_production_doors": "Doors {formatTime} ·",
+	"staff_events_id_production_files": [
+		{
+			"declarations": ["input uploadCount", "local uploadCountPlural = uploadCount: plural"],
+			"selectors": ["uploadCountPlural"],
+			"match": {
+				"uploadCountPlural=one": "{uploadCount} file",
+				"uploadCountPlural=*": "{uploadCount} files"
+			}
+		}
+	],
 	"staff_events_id_production_find_somebody": "Find somebody",
 	"staff_events_id_production_first_set": "First set",
 	"staff_events_id_production_from_us": "{venueProvidedCount} from us",
@@ -367,6 +418,7 @@
 	"staff_events_id_production_open_host_shift": "Open a host shift",
 	"staff_events_id_production_open_production": "Open a production",
 	"staff_events_id_production_packing": "Packing",
+	"staff_events_id_production_practice_space": "The practice space",
 	"staff_events_id_production_producer": "Producer",
 	"staff_events_id_production_producer_updated": "Producer updated",
 	"staff_events_id_production_production_status_aria_label": "More",
@@ -398,11 +450,15 @@
 	"staff_events_id_production_run_of_show_panel_build_from_bill": "Build from the bill",
 	"staff_events_id_production_run_of_show_panel_build_running_o": "Build the running order from the bill.",
 	"staff_events_id_production_run_of_show_panel_changeover_afte": "Changeover after (minutes)",
+	"staff_events_id_production_run_of_show_panel_close": "Close",
+	"staff_events_id_production_run_of_show_panel_comes_off_runni": "{actName} comes off the running order. Every set after it moves up.",
 	"staff_events_id_production_run_of_show_panel_contact_show": "Contact for this show",
+	"staff_events_id_production_run_of_show_panel_curfew": "Curfew {#strong} {value} {/strong}",
 	"staff_events_id_production_run_of_show_panel_deal": "The deal",
 	"staff_events_id_production_run_of_show_panel_donated": "Donated",
 	"staff_events_id_production_run_of_show_panel_down": "Down",
 	"staff_events_id_production_run_of_show_panel_every_band_bill": "Every band on the bill has a set.",
+	"staff_events_id_production_run_of_show_panel_first_set": "First set {#strong} {value} {/strong}",
 	"staff_events_id_production_run_of_show_panel_guarantee": "Guarantee",
 	"staff_events_id_production_run_of_show_panel_leave_empty_no": "Leave empty for no guarantee. Zero is a deal at zero.",
 	"staff_events_id_production_run_of_show_panel_m": "{value}m",
@@ -411,6 +467,7 @@
 	"staff_events_id_production_run_of_show_panel_no_production_y": "No production yet",
 	"staff_events_id_production_run_of_show_panel_not_bill_dj_hos": "Not on the bill (a DJ, a host)",
 	"staff_events_id_production_run_of_show_panel_not_part_schedu": "Not part of the schedule — it usually runs in reverse.",
+	"staff_events_id_production_run_of_show_panel_not_set": "not set",
 	"staff_events_id_production_run_of_show_panel_noted": "Noted",
 	"staff_events_id_production_run_of_show_panel_nothing_stage_y": "Nothing on stage yet",
 	"staff_events_id_production_run_of_show_panel_open_one_overvi": "Open one on the Overview tab, and the running order lives here.",
@@ -420,6 +477,7 @@
 	"staff_events_id_production_run_of_show_panel_played_free_rec": "Played for free — records what the set was worth",
 	"staff_events_id_production_run_of_show_panel_running_order_b": "Running order built",
 	"staff_events_id_production_run_of_show_panel_save_terms": "Save terms",
+	"staff_events_id_production_run_of_show_panel_set": "This set",
 	"staff_events_id_production_run_of_show_panel_set_added": "Set added",
 	"staff_events_id_production_run_of_show_panel_set_first_set_t": "Set the first set time on the Overview tab and the running order will schedule itself.",
 	"staff_events_id_production_run_of_show_panel_set_length_minu": "Set length (minutes)",
@@ -436,6 +494,19 @@
 	"staff_events_id_production_schedule_shift_2": "Schedule a shift for {title}",
 	"staff_events_id_production_settlement_panel_add": "Add it",
 	"staff_events_id_production_settlement_panel_add_cost": "Add a cost",
+	"staff_events_id_production_settlement_panel_bands_have_no_pa": [
+		{
+			"declarations": [
+				"input unpaidActCount",
+				"local unpaidActCountPlural = unpaidActCount: plural"
+			],
+			"selectors": ["unpaidActCountPlural"],
+			"match": {
+				"unpaidActCountPlural=one": "{unpaidActCount} band has no payout recorded. A donated set still records zero — otherwise the night reads as permanently outstanding.",
+				"unpaidActCountPlural=*": "{unpaidActCount} bands have no payout recorded. A donated set still records zero — otherwise the night reads as permanently outstanding."
+			}
+		}
+	],
 	"staff_events_id_production_settlement_panel_bands_pool": "Bands' pool",
 	"staff_events_id_production_settlement_panel_bands_share": "Bands' share %",
 	"staff_events_id_production_settlement_panel_blank_house_rule": "Blank is the house rule",
@@ -457,6 +528,7 @@
 	"staff_events_id_production_settlement_panel_everybody_settle": "Everybody settled — {formatCents} paid out.",
 	"staff_events_id_production_settlement_panel_expenses": "Expenses",
 	"staff_events_id_production_settlement_panel_net": "Net",
+	"staff_events_id_production_settlement_panel_net_2": "{toFixed}% of the net",
 	"staff_events_id_production_settlement_panel_no_bands_running": "No bands on the running order yet.",
 	"staff_events_id_production_settlement_panel_nobody_has_count": "Nobody has counted the drawer yet.",
 	"staff_events_id_production_settlement_panel_not_deductible": "Not deductible",
@@ -464,7 +536,9 @@
 	"staff_events_id_production_settlement_panel_open_one_from_ev": "Open one from the event page first.",
 	"staff_events_id_production_settlement_panel_paid": "Paid to",
 	"staff_events_id_production_settlement_panel_payout_undone": "Payout undone",
+	"staff_events_id_production_settlement_panel_plus": "plus",
 	"staff_events_id_production_settlement_panel_plus_door": ", plus {formatCents} of the door",
+	"staff_events_id_production_settlement_panel_pool": "{toFixed}% of the pool",
 	"staff_events_id_production_settlement_panel_record": "Record it",
 	"staff_events_id_production_settlement_panel_recorded": "Recorded",
 	"staff_events_id_production_settlement_panel_remove_cost": "Remove this cost?",
@@ -474,6 +548,7 @@
 	"staff_events_id_production_settlement_panel_undo_payout": "Undo payout",
 	"staff_events_id_production_settlement_panel_undo_s_payout": "Undo {value}'s payout?",
 	"staff_events_id_production_settlement_panel_unpaid": "Unpaid",
+	"staff_events_id_production_settlement_panel_versus": "versus",
 	"staff_events_id_production_settlement_panel_what_buyers_desi": "What buyers designated",
 	"staff_events_id_production_settlement_panel_what_did_show_pa": "What did the show pay for?",
 	"staff_events_id_production_settlement_panel_what_did_take": "What did {value} take?",
@@ -485,7 +560,9 @@
 	"staff_events_id_production_shift_open_nobody": "Shift open, nobody on it",
 	"staff_events_id_production_show": "Show {formatEventTimeRange}",
 	"staff_events_id_production_show_budget_card_guarantee_top_up": "Guarantee top-ups",
+	"staff_events_id_production_show_budget_card_open_project": "Open the project",
 	"staff_events_id_production_show_budget_card_orders_contracto": "Orders, contractors and acquisitions",
+	"staff_events_id_production_show_budget_card_set_budget": "Set a budget",
 	"staff_events_id_production_show_budget_card_show_expenses": "Show expenses",
 	"staff_events_id_production_show_budget_card_ticket_revenue_p": "Ticket revenue {formatCents}. Passing through to the bands, and not counted as spend: {formatCents2} in, {formatCents3} paid out.",
 	"staff_events_id_production_show_date": "Show date",
@@ -560,6 +637,7 @@
 	"staff_events_id_vendors_paid": "Paid {formatCents}",
 	"staff_events_id_vendors_per_table_charged_when_vendor": "Per table, charged when a vendor is accepted. Blank means no fee.",
 	"staff_events_id_vendors_per_table_only_used_with": "Per table. Only used with the sliding scale.",
+	"staff_events_id_vendors_power": ", power",
 	"staff_events_id_vendors_pulled_out": "{businessName} pulled out",
 	"staff_events_id_vendors_refunded": "Refunded",
 	"staff_events_id_vendors_review": "To review",
@@ -569,8 +647,10 @@
 	"staff_events_id_vendors_sliding_scale_floor": "Sliding-scale floor",
 	"staff_events_id_vendors_table": "Table",
 	"staff_events_id_vendors_table_2": "Table for {businessName}",
+	"staff_events_id_vendors_table_3": "table",
 	"staff_events_id_vendors_table_fee": "Table fee",
 	"staff_events_id_vendors_table_saved": "Table saved",
+	"staff_events_id_vendors_tables": "tables",
 	"staff_events_id_vendors_tables_available": "Tables available",
 	"staff_events_id_vendors_tables_taken": "Tables taken",
 	"staff_events_id_vendors_take_vendor_applications": "Take vendor applications",
@@ -615,8 +695,10 @@
 	"staff_flags_id_appeal_card_verdict": "Verdict",
 	"staff_flags_id_between": "Between",
 	"staff_flags_id_choose_outcome": "Choose an outcome",
+	"staff_flags_id_choose_outcome_first": "Choose an outcome first",
 	"staff_flags_id_cmc": "CMC",
 	"staff_flags_id_conversation": "Conversation",
+	"staff_flags_id_dismiss_no_action": "Dismiss — no action",
 	"staff_flags_id_dismissed_no_action_needed": "Dismissed — no action needed",
 	"staff_flags_id_dismissing_puts_suggestion_straight_back": "Dismissing puts the suggestion straight back on the board. The member's standing is unchanged.",
 	"staff_flags_id_event_details": "Event details",
@@ -628,6 +710,7 @@
 	"staff_flags_id_reported": "Reported",
 	"staff_flags_id_reported_2": "(reported it)",
 	"staff_flags_id_reported_by": "Reported by",
+	"staff_flags_id_resolve_action_taken": "Resolve — action taken",
 	"staff_flags_id_resolve_dismiss": "Resolve / Dismiss",
 	"staff_flags_id_resolved_action_taken": "Resolved — action taken",
 	"staff_flags_id_resolving_also_means_member_who": "Resolving this also means the member who posted it has their future listings checked by staff before they publish. Dismissing changes nothing.",
@@ -646,6 +729,20 @@
 	"staff_funder": "Funder",
 	"staff_funder_sponsor": "Funder or sponsor",
 	"staff_funders": "Funders",
+	"staff_goes_people_immediately_as": [
+		{
+			"declarations": [
+				"input totalSubscribers",
+				"input trim",
+				"local totalSubscribersPlural = totalSubscribers: plural"
+			],
+			"selectors": ["totalSubscribersPlural"],
+			"match": {
+				"totalSubscribersPlural=one": "This goes to {#strong}{totalSubscribers}{/strong} person immediately, as {#em}{trim}{/em}.",
+				"totalSubscribersPlural=*": "This goes to {#strong}{totalSubscribers}{/strong} people immediately, as {#em}{trim}{/em}."
+			}
+		}
+	],
 	"staff_grant": "Grant",
 	"staff_granted": "Granted on",
 	"staff_grants": "Grants",
@@ -695,6 +792,10 @@
 	"staff_groups_clubs_club_totals_club_members": "Club members",
 	"staff_groups_clubs_empty": "No clubs yet",
 	"staff_groups_clubs_no_chairs": "No chairs",
+	"staff_groups_committees_application": "application",
+	"staff_groups_committees_applications": "applications",
+	"staff_groups_committees_chaired_by": "Chaired by {join}",
+	"staff_groups_committees_no_chairs": "No chairs",
 	"staff_groups_committees_no_committees": "No committees",
 	"staff_groups_empty": "No bands found",
 	"staff_groups_free": "Free",
@@ -718,6 +819,7 @@
 	"staff_groups_id_staff_band_form_band_id": "Band ID",
 	"staff_groups_id_staff_band_form_band_info": "Band Info",
 	"staff_groups_id_staff_band_form_band_reactivated": "Band reactivated",
+	"staff_groups_id_staff_band_form_billed_through_stripe": "billed through Stripe",
 	"staff_groups_id_staff_band_form_billing": "Billing",
 	"staff_groups_id_staff_band_form_bio": "Bio",
 	"staff_groups_id_staff_band_form_cancels_at_period_end": "Cancels at period end",
@@ -734,6 +836,7 @@
 	"staff_groups_id_staff_band_form_reactivate_band": "Reactivate this band?",
 	"staff_groups_id_staff_band_form_renews": "{billingInterval}, renews {formatDateShortYear}",
 	"staff_groups_id_staff_band_form_revoke_premium": "Revoke premium",
+	"staff_groups_id_staff_band_form_set_by_staff": "set by staff",
 	"staff_groups_id_staff_band_form_toast": "Band updated",
 	"staff_hand": "On hand",
 	"staff_help": "Help",
@@ -751,6 +854,16 @@
 	"staff_help_create_select_category": "Select category...",
 	"staff_help_delete_all_its_articles": "Delete \"{name}\" and all its articles?",
 	"staff_help_edit_category": "Edit category",
+	"staff_help_hide_articles_from_members": [
+		{
+			"declarations": ["input length", "local lengthPlural = length: plural"],
+			"selectors": ["lengthPlural"],
+			"match": {
+				"lengthPlural=one": "Hide {length} article from members?",
+				"lengthPlural=*": "Hide {length} articles from members?"
+			}
+		}
+	],
 	"staff_help_icon": "Icon",
 	"staff_help_id_article_deleted": "Article deleted",
 	"staff_help_id_article_synced_from_markdown_file": "This article is synced from a markdown file. Edits here will be overwritten on the next sync.",
@@ -762,10 +875,30 @@
 	"staff_help_manage_categories": "Manage Categories ({length})",
 	"staff_help_message": "No help articles yet. Create one to get started.",
 	"staff_help_publish_articles": "Publish articles",
+	"staff_help_publish_articles_member_help_centre": [
+		{
+			"declarations": ["input length", "local lengthPlural = length: plural"],
+			"selectors": ["lengthPlural"],
+			"match": {
+				"lengthPlural=one": "Publish {length} article to the member help centre?",
+				"lengthPlural=*": "Publish {length} articles to the member help centre?"
+			}
+		}
+	],
 	"staff_help_publish_selected": "Publish selected",
 	"staff_help_select": "Select {title}",
 	"staff_help_select_all_articles": "Select all articles",
 	"staff_help_select_all_drafts": "Select all drafts",
+	"staff_help_selected_drafts": [
+		{
+			"declarations": ["input length", "input length2", "local length2Plural = length2: plural"],
+			"selectors": ["length2Plural"],
+			"match": {
+				"length2Plural=one": "{length} selected · {length2} draft",
+				"length2Plural=*": "{length} selected · {length2} drafts"
+			}
+		}
+	],
 	"staff_help_tabler_book": "tabler-book",
 	"staff_help_title": "Help Articles",
 	"staff_help_unpublish_articles": "Unpublish articles",
@@ -781,6 +914,7 @@
 	"staff_how_arrived": "How it arrived",
 	"staff_how_many_people": "How many people",
 	"staff_impact_value": "Impact value",
+	"staff_inbox_daily_conversation": "Conversation",
 	"staff_inbox_daily_daily": "Daily",
 	"staff_inbox_daily_daily_start_card_already_finished_daily_to": "You already finished a Daily today. These arrived since, or you skipped them.",
 	"staff_inbox_daily_daily_start_card_daily_conversations": "Daily · {length} conversations",
@@ -788,29 +922,97 @@
 	"staff_inbox_daily_daily_start_card_one_at_time_every_thread": "One at a time. Every thread gets a decision — reply, assign, snooze or resolve — before the next appears.",
 	"staff_inbox_daily_daily_start_card_roughly_minutes": "Roughly {minutes} minutes",
 	"staff_inbox_daily_daily_start_card_snoozed_threads_came_back": "Snoozed threads that came back",
+	"staff_inbox_daily_daily_start_card_these_have_been_waiting_o": [
+		{
+			"declarations": ["input longWaiting", "local longWaitingPlural = longWaiting: plural"],
+			"selectors": ["longWaitingPlural"],
+			"match": {
+				"longWaitingPlural=one": "{longWaiting} of these has been waiting over a week.",
+				"longWaitingPlural=*": "{longWaiting} of these have been waiting over a week."
+			}
+		}
+	],
 	"staff_inbox_daily_daily_start_card_they_replied_waiting": "They replied and are waiting",
 	"staff_inbox_daily_daily_start_card_unanswered_by": "Unanswered by you",
 	"staff_inbox_daily_description": "The queue is clear. Daily has nothing to walk you through.",
 	"staff_inbox_daily_esc_exit": "Esc to exit",
 	"staff_inbox_daily_no_response_since": "No response since {formatDateShortYear}",
 	"staff_inbox_daily_session_summary_daily_done_handled": "Daily done — {handled} handled",
+	"staff_inbox_daily_session_summary_nothing_left_open": "Nothing is left open.",
+	"staff_inbox_daily_session_summary_open": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} conversation is still open.",
+				"countPlural=*": "{count} conversations are still open."
+			}
+		}
+	],
+	"staff_inbox_daily_session_summary_open_skipped": [
+		{
+			"declarations": ["input skipped", "input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} conversation is still open — {skipped} you skipped.",
+				"countPlural=*": "{count} conversations are still open — {skipped} you skipped."
+			}
+		}
+	],
 	"staff_inbox_daily_session_summary_reopened": "reopened",
 	"staff_inbox_daily_session_summary_resolved": "resolved",
 	"staff_inbox_daily_session_summary_review_what_i_sent": "Review what I sent",
 	"staff_inbox_daily_session_summary_skipped": "skipped",
 	"staff_inbox_daily_session_summary_snoozed": "snoozed",
+	"staff_inbox_daily_session_summary_snoozed_count": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} is snoozed or waiting on a reply, and will come back on its own.",
+				"countPlural=*": "{count} are snoozed or waiting on a reply, and will come back on their own."
+			}
+		}
+	],
 	"staff_inbox_daily_session_summary_undo_last_action": "Undo last action",
 	"staff_inbox_daily_session_summary_waiting_them": "waiting on them",
 	"staff_inbox_daily_skip_stays_open_moves_end": "Skip — stays open, moves to the end",
 	"staff_inbox_daily_text": "{position} of {total}",
 	"staff_inbox_daily_title": "Nothing to triage",
+	"staff_inbox_daily_waiting_days": [
+		{
+			"declarations": [
+				"input value",
+				"input waitingDays",
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{value} · waiting {waitingDays} day",
+				"countPlural=*": "{value} · waiting {waitingDays} days"
+			}
+		}
+	],
 	"staff_inbox_description": "Pick a conversation from the queue to read and reply.",
+	"staff_inbox_filter_panel_any": "Any",
 	"staff_inbox_filter_panel_close_filters": "Close filters",
+	"staff_inbox_filter_panel_days": [
+		{
+			"declarations": ["input waitingDays", "local waitingDaysPlural = waitingDays: plural"],
+			"selectors": ["waitingDaysPlural"],
+			"match": {
+				"waitingDaysPlural=one": "{waitingDays} day",
+				"waitingDaysPlural=*": "{waitingDays} days"
+			}
+		}
+	],
 	"staff_inbox_filter_panel_filter_conversations": "Filter conversations",
 	"staff_inbox_filter_panel_inquiry_type": "Inquiry type",
 	"staff_inbox_filter_panel_list_updates_as_change_these": "The list updates as you change these.",
 	"staff_inbox_filter_panel_match": "{matching} of {total} match",
 	"staff_inbox_filter_panel_me": "Me",
+	"staff_inbox_filter_panel_other": "Other",
 	"staff_inbox_filter_panel_reset": "Reset",
 	"staff_inbox_filter_panel_waiting_longer_than": "Waiting longer than",
 	"staff_inbox_filter_panel_waiting_longer_than_days": "Waiting longer than, in days",
@@ -821,9 +1023,36 @@
 	"staff_inbox_id_channel_disabled_enable_settings_inbox": "The {channelLabel} channel is disabled. Enable it in Settings → Inbox Channels to send replies.",
 	"staff_inbox_id_details_panel_add_tag": "Add a tag",
 	"staff_inbox_id_details_panel_assigned": "· assigned to {assignedToName}",
+	"staff_inbox_id_details_panel_details": "Details",
 	"staff_inbox_id_details_panel_first_contact": "First contact {formatDate}",
+	"staff_inbox_id_details_panel_last_reply": "Last reply {formatDateTime}",
+	"staff_inbox_id_details_panel_message_count": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} message",
+				"countPlural=*": "{count} messages"
+			}
+		}
+	],
+	"staff_inbox_id_details_panel_never_answered": "Never answered",
+	"staff_inbox_id_details_panel_no_other_conversations": "No other conversations",
 	"staff_inbox_id_details_panel_opened": "Opened {formatDate}",
 	"staff_inbox_id_details_panel_placeholder": "add",
+	"staff_inbox_id_details_panel_previous_conversations": [
+		{
+			"declarations": [
+				"input priorConversations",
+				"local priorConversationsPlural = priorConversations: plural"
+			],
+			"selectors": ["priorConversationsPlural"],
+			"match": {
+				"priorConversationsPlural=one": "{priorConversations} previous conversation",
+				"priorConversationsPlural=*": "{priorConversations} previous conversations"
+			}
+		}
+	],
 	"staff_inbox_id_details_panel_remove_tag": "Remove tag {tag}",
 	"staff_inbox_id_details_panel_source": "Source: {channelLabel}",
 	"staff_inbox_id_details_panel_tags": "Tags",
@@ -832,6 +1061,7 @@
 	"staff_inbox_id_waiting_reply_since": "Waiting on a reply since {formatDate}",
 	"staff_inbox_inbox_channel_filter_all_channels": "All channels",
 	"staff_inbox_inbox_channel_filter_aria_label": "Channel: {label}",
+	"staff_inbox_inbox_channel_filter_label": "All channels",
 	"staff_inbox_inbox_list_clear_filters": "Clear filters",
 	"staff_inbox_inbox_list_filters": "Filters",
 	"staff_inbox_inbox_list_filters_active": "Filters, {activeCount} active",
@@ -840,7 +1070,9 @@
 	"staff_inbox_inbox_list_nothing_waiting_date_reply": "Nothing is waiting on a date or a reply.",
 	"staff_inbox_inbox_list_placeholder": "Search conversations…",
 	"staff_inbox_inbox_list_sorted_by_longest_waiting": "Sorted by longest waiting",
+	"staff_inbox_inbox_toolbar_daily_again": "Daily again",
 	"staff_inbox_inbox_toolbar_inbox": "Inbox",
+	"staff_inbox_inbox_toolbar_start_daily": "Start Daily",
 	"staff_inbox_inbox_views_snoozed": "Snoozed",
 	"staff_inbox_save_view_dialog_placeholder": "Practice space, unanswered",
 	"staff_inbox_save_view_dialog_save_view": "Save view",
@@ -854,14 +1086,18 @@
 	"staff_incidents_id_accepted": "Accepted",
 	"staff_incidents_id_add_note": "Add note",
 	"staff_incidents_id_add_note_2": "Add a note",
+	"staff_incidents_id_current_resolution_kept_its_history": "The current resolution is kept in its history.",
+	"staff_incidents_id_deleted_seven_years_after_happened": "Deleted seven years after it happened, unless marked retain.",
 	"staff_incidents_id_description": "Kept in its history, e.g. an open insurance claim.",
 	"staff_incidents_id_hold_released": "Hold released",
 	"staff_incidents_id_how_was_resolved": "How it was resolved",
 	"staff_incidents_id_incident_reopened": "Incident reopened",
 	"staff_incidents_id_incident_resolved": "Incident resolved",
+	"staff_incidents_id_joins_log_as_open_incident": "It joins the log as an open incident. You can resolve it straight away instead.",
 	"staff_incidents_id_keep_record": "Keep this record",
 	"staff_incidents_id_mark_retain": "Mark retain",
 	"staff_incidents_id_marked_retain": "Marked retain",
+	"staff_incidents_id_marked_retain_kept_past_seven": "Marked retain: kept past the seven-year deletion until the hold is released.",
 	"staff_incidents_id_no_follow_ups_yet": "No follow-ups yet.",
 	"staff_incidents_id_not_resolved_yet": "Not resolved yet.",
 	"staff_incidents_id_note": "Note",
@@ -885,6 +1121,7 @@
 	"staff_insurance_expires": "Insurance expires",
 	"staff_inventory": "Inventory",
 	"staff_inventory_acquisitions_8283_signed": "8283 signed",
+	"staff_inventory_acquisitions_acquisitions_awaiting_reimburse": "{owedCount} acquisitions are awaiting reimbursement.",
 	"staff_inventory_acquisitions_checkbox_label": "Only what somebody is owed for",
 	"staff_inventory_acquisitions_id_acquisition_updated": "Acquisition updated",
 	"staff_inventory_acquisitions_id_adding_line_receives_stock_n": "Adding a line receives the stock now — a serialized item becomes one unit per quantity, anything else a receive movement.",
@@ -907,6 +1144,7 @@
 	"staff_inventory_acquisitions_id_occurred": "Occurred",
 	"staff_inventory_acquisitions_id_paid_by": "Paid by",
 	"staff_inventory_acquisitions_id_paid_by_owed_back_leave": "Paid by, and owed it back (leave blank for a gift or a collective card)",
+	"staff_inventory_acquisitions_id_receipt": "Receipt",
 	"staff_inventory_acquisitions_id_receipt_says": "— receipt says {formatCents}",
 	"staff_inventory_acquisitions_id_receipts": "Receipts",
 	"staff_inventory_acquisitions_id_reimbursed": "— reimbursed {formatDateShort}",
@@ -920,6 +1158,7 @@
 	"staff_inventory_acquisitions_lines": "Lines",
 	"staff_inventory_acquisitions_nobody_currently_owed_anything": "Nobody is currently owed for anything the collective has taken in.",
 	"staff_inventory_acquisitions_nothing_recorded": "Nothing recorded",
+	"staff_inventory_acquisitions_one_acquisition_awaiting_reimbu": "One acquisition is awaiting reimbursement.",
 	"staff_inventory_acquisitions_owed": "Owed to {paidByName}",
 	"staff_inventory_acquisitions_receiving_stock_against_item_wh": "Receiving stock against an item is what creates an acquisition.",
 	"staff_inventory_acquisitions_reimbursement": "Reimbursement",
@@ -955,8 +1194,10 @@
 	"staff_inventory_compliance_donated_disposed_inside_three_yea": "{noFormOnRecord} donated {value} disposed of inside the three-year window, but none has a signed Form 8283 on record — so no filing is expected.",
 	"staff_inventory_compliance_donor": "Donor",
 	"staff_inventory_compliance_due_by": "Due by",
+	"staff_inventory_compliance_filing_windows_have_already_close": "{overdueCount} filing windows have already closed.",
 	"staff_inventory_compliance_no_donated_gear_has_been": "No donated gear has been disposed of inside the three-year window.",
 	"staff_inventory_compliance_nothing_outstanding": "Nothing outstanding",
+	"staff_inventory_compliance_one_filing_window_has_already": "One filing window has already closed.",
 	"staff_inventory_compliance_overdue": "Overdue {value}",
 	"staff_inventory_empty": "No items found",
 	"staff_inventory_id_barcode": "Barcode",
@@ -965,6 +1206,7 @@
 	"staff_inventory_id_members_can_borrow": "Members can borrow this",
 	"staff_inventory_id_no_acquisition_recorded": "No acquisition recorded",
 	"staff_inventory_id_no_loan_history": "No loan history",
+	"staff_inventory_id_no_supplier_recorded": "No supplier recorded",
 	"staff_inventory_id_no_units_recorded_yet": "No units recorded yet",
 	"staff_inventory_id_nothing_has_moved_yet": "Nothing has moved yet",
 	"staff_inventory_id_open_orders": "Open orders",
@@ -993,10 +1235,12 @@
 	"staff_inventory_intake_marks_request_done_tells_whoever": "Marks the request Done and tells whoever asked for it that it arrived.",
 	"staff_inventory_intake_one_trip_one_receipt_however": "One trip, one receipt, however many things came off it. Everything here lands on a single acquisition, so the provenance stays together.",
 	"staff_inventory_intake_optional_record_total_receipt_now": "Optional. Record the total and the receipt now; whoever itemises it later adds the lines from the image.",
+	"staff_inventory_intake_order": "an order",
 	"staff_inventory_intake_paid_by_owed_back_leave": "Paid by, and owed it back (leave blank if the collective paid)",
 	"staff_inventory_intake_placeholder": "Nothing in particular",
 	"staff_inventory_intake_promised_by_donors": "Promised by donors",
 	"staff_inventory_intake_receive_order": "Receive an order",
+	"staff_inventory_intake_receiving_against_partial_deliveries": "Receiving against {supplierName}. Partial deliveries are normal — record what actually turned up and the order stays open for the rest.",
 	"staff_inventory_intake_record_arrival": "Record this arrival",
 	"staff_inventory_intake_toast": "{value} recorded",
 	"staff_inventory_intake_trip": "The trip",
@@ -1014,8 +1258,25 @@
 	"staff_inventory_loans_id_check_out": "Check Out",
 	"staff_inventory_loans_id_check_out_without_scheduling": "Check out without scheduling",
 	"staff_inventory_loans_id_checked_out": "Checked out",
+	"staff_inventory_loans_id_confirm": "Cancel this loan request?",
 	"staff_inventory_loans_id_daily_rate": "Daily rate",
 	"staff_inventory_loans_id_day": "{formatCents}/day",
+	"staff_inventory_loans_id_days_day": [
+		{
+			"declarations": [
+				"input staff_inventory_loans_id_charge_preview",
+				"input days",
+				"input formatCents",
+				"input formatCents2",
+				"local daysPlural = days: plural"
+			],
+			"selectors": ["daysPlural"],
+			"match": {
+				"daysPlural=one": "{#strong}{staff_inventory_loans_id_charge_preview}{/strong} {days} day × {formatCents}/day = {#strong}{formatCents2}{/strong}",
+				"daysPlural=*": "{#strong}{staff_inventory_loans_id_charge_preview}{/strong} {days} days × {formatCents}/day = {#strong}{formatCents2}{/strong}"
+			}
+		}
+	],
 	"staff_inventory_loans_id_due_date": "Due date",
 	"staff_inventory_loans_id_due_date_2": "Due Date",
 	"staff_inventory_loans_id_free_form_request": "Free-form Request",
@@ -1044,6 +1305,7 @@
 	"staff_inventory_loans_id_subtitle": "Equipment Loan",
 	"staff_inventory_loans_id_total_charge": "Total charge",
 	"staff_inventory_loans_id_unit_handed_over": "Unit Handed Over",
+	"staff_inventory_loans_id_untagged_unit": "Untagged unit",
 	"staff_inventory_loans_id_why_skip_scheduling": "Why skip scheduling?",
 	"staff_inventory_loans_loan": "Loan",
 	"staff_inventory_loans_placeholder": "Search by member...",
@@ -1059,6 +1321,8 @@
 	"staff_inventory_locations_units_entered_before_location_exis": "Units entered before a location existed, or saved before this page did.",
 	"staff_inventory_low_stock": "Low stock",
 	"staff_inventory_order": "{onOrder} on order",
+	"staff_inventory_orders_id_back_draft_what_was_received": "Back to draft. What was received stays received.",
+	"staff_inventory_orders_id_back_placed_what_was_received": "Back to placed. What was received stays received.",
 	"staff_inventory_orders_id_cancel_order": "Cancel this order",
 	"staff_inventory_orders_id_close_short": "Close it short",
 	"staff_inventory_orders_id_draft_still_shopping_list_nothing": "A draft is still a shopping list — nothing is on the way and the restock list still counts these as missing. Placing it is what changes that.",
@@ -1083,14 +1347,18 @@
 	"staff_inventory_problems_empty": "No reported problems",
 	"staff_inventory_problems_id_building_problem": "Building problem",
 	"staff_inventory_problems_id_choose_role": "Choose a role",
+	"staff_inventory_problems_id_closes_when_work_order_resolved": "It closes when the work order is resolved.",
 	"staff_inventory_problems_id_deleted_account": "Deleted account",
 	"staff_inventory_problems_id_description": "Leave blank to use the member's note.",
 	"staff_inventory_problems_id_dismiss": "Dismiss",
 	"staff_inventory_problems_id_dismiss_nothing_do": "Dismiss — nothing to do",
 	"staff_inventory_problems_id_dismiss_report": "Dismiss this report",
 	"staff_inventory_problems_id_dismissing_does_not_put_unit": "Dismissing does not put the unit back in service — do that from its page.",
+	"staff_inventory_problems_id_every_other_open_report_unit": "Every other open report on this unit goes with it, and all of them close when the work order is resolved.",
 	"staff_inventory_problems_id_its_work_order": "its work order",
 	"staff_inventory_problems_id_needed_by_optional": "Needed by (optional)",
+	"staff_inventory_problems_id_no_notes": "No notes",
+	"staff_inventory_problems_id_no_out_use": "No — out of use",
 	"staff_inventory_problems_id_none_sending_work_order_takes": "None. Sending this to a work order takes any that arrive first.",
 	"staff_inventory_problems_id_other_open_reports_unit": "Other open reports on this unit",
 	"staff_inventory_problems_id_raise_new_work_order": "Raise a new work order",
@@ -1119,7 +1387,9 @@
 	"staff_inventory_restock_list_coming": "{onOrder} coming",
 	"staff_inventory_restock_list_covered": "covered",
 	"staff_inventory_restock_list_description": "Every counted item is above its reorder point.",
+	"staff_inventory_restock_list_items_have_run_out": "{outCount} items have run out.",
 	"staff_inventory_restock_list_mark_as_ordered": "Mark {length} {value} as ordered",
+	"staff_inventory_restock_list_one_item_has_run_out": "One item has run out.",
 	"staff_inventory_restock_list_out": "Out",
 	"staff_inventory_restock_list_success_toast": "Marked as ordered",
 	"staff_inventory_restock_list_title": "Nothing to restock",
@@ -1139,6 +1409,7 @@
 	"staff_inventory_spend_window": "Window",
 	"staff_inventory_spend_work_paid_out_instrument_tech": "Work paid out to an instrument tech, an electrician or a service company shows here.",
 	"staff_inventory_tagging_queue_bind": "Bind",
+	"staff_inventory_tagging_queue_entered": "{value} · entered {formatDateShort}",
 	"staff_inventory_tagging_queue_everything_tagged": "Everything is tagged.",
 	"staff_inventory_tagging_queue_needs_tagging": "Needs tagging",
 	"staff_inventory_tagging_queue_oldest_first_scan_type_tag": "Oldest first. Scan or type the tag on the sticker you are about to put on the unit.",
@@ -1218,9 +1489,12 @@
 	"staff_make_room": "Make this the room",
 	"staff_marketing": "Marketing",
 	"staff_marketing_audiences_description": "No audiences yet. Create one to start building your email lists.",
+	"staff_marketing_audiences_id_active": "active",
 	"staff_marketing_audiences_id_allow_public_opt": "Allow public opt-in",
 	"staff_marketing_audiences_id_audience_updated": "Audience updated",
+	"staff_marketing_audiences_id_matching_members": "matching members",
 	"staff_marketing_audiences_id_matching_members_showing": "Matching members (showing {length} of {subscriberCount})",
+	"staff_marketing_audiences_id_member_since": "Member since",
 	"staff_marketing_audiences_id_membership_worked_out_from_memb": "Membership is worked out from member attributes each time you send, so this list is always current — there is nothing to refresh. Subscribers without a member account, such as public newsletter signups, are never included.",
 	"staff_marketing_audiences_id_modal_title": "Rename this audience",
 	"staff_marketing_audiences_id_no_members_currently_match": "No members currently match",
@@ -1230,37 +1504,66 @@
 	"staff_marketing_audiences_id_signup_url": "Signup URL:",
 	"staff_marketing_audiences_id_subscriber": "Subscriber",
 	"staff_marketing_audiences_id_subscribers": "Subscribers ({subscriberCount})",
+	"staff_marketing_audiences_id_unsubscribed": "Unsubscribed",
 	"staff_marketing_audiences_id_what_list_staff_only_subscriber": "What this list is for. Staff-only — subscribers never see it.",
 	"staff_marketing_campaigns_audience_picker_recipients_before": "~{total} recipients (before deduplication)",
+	"staff_marketing_campaigns_available_variables": "Available variables: {first}, {second}",
 	"staff_marketing_campaigns_campaign_preview_start_typing_see": "Start typing to see a preview...",
 	"staff_marketing_campaigns_description": "No campaigns yet.",
 	"staff_marketing_campaigns_event_scope_picker_clear": "Clear",
 	"staff_marketing_campaigns_event_scope_picker_optional_pick_o": "Optional. Pick one and “This show's audience” resolves to its ticket holders and RSVPs; leave it blank and that audience is empty.",
+	"staff_marketing_campaigns_event_scope_picker_show_s_audience": [
+		{
+			"declarations": ["input n", "local nPlural = n: plural"],
+			"selectors": ["nPlural"],
+			"match": {
+				"nPlural=one": "“This show's audience” resolves to {n} person — ticket holders and RSVPs, minus anyone who has opted out. Tick it above to send to them.",
+				"nPlural=*": "“This show's audience” resolves to {n} people — ticket holders and RSVPs, minus anyone who has opted out. Tick it above to send to them."
+			}
+		}
+	],
 	"staff_marketing_campaigns_id_edit_campaign_deleted": "Campaign deleted",
 	"staff_marketing_campaigns_id_edit_campaign_scheduled": "Campaign scheduled",
 	"staff_marketing_campaigns_id_edit_campaign_sent": "Campaign sent",
 	"staff_marketing_campaigns_id_edit_delete_draft": "Delete this draft?",
 	"staff_marketing_campaigns_id_edit_delete_draft_2": "Delete the draft",
+	"staff_marketing_campaigns_id_edit_delete_goes": "{#em}{subject}{/em} and its audience selection go with it.",
 	"staff_marketing_campaigns_id_edit_draft_saved": "Draft saved",
 	"staff_marketing_campaigns_id_edit_edit_campaign": "Edit Campaign",
 	"staff_marketing_campaigns_id_edit_failed_delete": "Failed to delete",
 	"staff_marketing_campaigns_id_edit_failed_save": "Failed to save",
 	"staff_marketing_campaigns_id_edit_failed_schedule": "Failed to schedule",
+	"staff_marketing_campaigns_id_edit_its_audience_selection_go": "{#em}{trim}{/em} and its audience selection go with it.",
 	"staff_marketing_campaigns_id_edit_keep": "Keep it",
 	"staff_marketing_campaigns_id_edit_there_no_recall": "There is no recall.",
+	"staff_marketing_campaigns_id_edit_untitled_campaign": "an untitled campaign",
+	"staff_marketing_campaigns_id_edit_untitled_campaign_2": "This untitled campaign",
 	"staff_marketing_campaigns_id_markdown_source": "Markdown Source",
 	"staff_marketing_campaigns_id_rendered_preview": "Rendered Preview",
 	"staff_marketing_campaigns_id_scheduled": "Scheduled for",
 	"staff_marketing_campaigns_id_sent_at": "Sent at",
 	"staff_marketing_campaigns_new_there_no_recall_if_not": "There is no recall. If you are not sure, save it as a draft and send it from the campaign page once you have read it back.",
+	"staff_marketing_campaigns_new_untitled_campaign": "an untitled campaign",
 	"staff_marketing_campaigns_scheduled": "Scheduled",
 	"staff_marketing_campaigns_title": "Campaigns",
 	"staff_measure_offsets_from": "Measure offsets from",
 	"staff_member": "Member",
+	"staff_member_2": "member",
 	"staff_member_involved": "Member involved",
 	"staff_members": "Members",
+	"staff_members_2": "members",
 	"staff_members_band": "In a band",
 	"staff_members_clear": "Clear",
+	"staff_members_deactivate_selected_members_their_future": [
+		{
+			"declarations": ["input size", "local sizePlural = size: plural"],
+			"selectors": ["sizePlural"],
+			"match": {
+				"sizePlural=one": "Deactivate {size} selected member? Their future personal reservations will be cancelled, and reactivating will not bring them back. Membership subscriptions end with their current period unless reactivated first. Your own account is skipped.",
+				"sizePlural=*": "Deactivate {size} selected members? Their future personal reservations will be cancelled, and reactivating will not bring them back. Membership subscriptions end with their current period unless reactivated first. Your own account is skipped."
+			}
+		}
+	],
 	"staff_members_either": "Either",
 	"staff_members_empty": "No members found",
 	"staff_members_free": "Free",
@@ -1279,6 +1582,19 @@
 	"staff_members_id_email_change_card_title": "Login email",
 	"staff_members_id_email_change_card_waiting_confirm_sent_link": "Waiting for {#strong}{email}{/strong} to confirm — sent {formatDateTimeShort}, link good until {formatDateTimeShort2}.",
 	"staff_members_id_email_change_card_we_email_confirmation_lin": "We email a confirmation link to the new address. Nothing changes until the member clicks it; then they are signed out everywhere and the old address gets a notice.",
+	"staff_members_id_member_record_invites_pending": [
+		{
+			"declarations": [
+				"input pendingBandInvites",
+				"local pendingBandInvitesPlural = pendingBandInvites: plural"
+			],
+			"selectors": ["pendingBandInvitesPlural"],
+			"match": {
+				"pendingBandInvitesPlural=one": "{pendingBandInvites} invite pending",
+				"pendingBandInvitesPlural=*": "{pendingBandInvites} invites pending"
+			}
+		}
+	],
 	"staff_members_id_member_record_panel_open_record": "Open record",
 	"staff_members_id_member_record_panel_record_didn_t_load": "The record didn't load.",
 	"staff_members_id_panels_account_panel_account_banned_lifting": "This account is banned. Lifting the ban restores access; the reason above is cleared with it.",
@@ -1292,6 +1608,7 @@
 	"staff_members_id_panels_account_panel_ban_lifted": "Ban lifted",
 	"staff_members_id_panels_account_panel_ban_reason": "Ban reason",
 	"staff_members_id_panels_account_panel_banned": "Banned",
+	"staff_members_id_panels_account_panel_by": "{formatHistoryTime} by {bannedByName}",
 	"staff_members_id_panels_account_panel_cancelled_reservations": "the cancelled reservations are not restored",
 	"staff_members_id_panels_account_panel_collaboration": "Collaboration",
 	"staff_members_id_panels_account_panel_danger_zone": "Danger Zone",
@@ -1305,12 +1622,14 @@
 	"staff_members_id_panels_account_panel_hometown": "Hometown",
 	"staff_members_id_panels_account_panel_instruments": "Instruments",
 	"staff_members_id_panels_account_panel_ip": "IP",
+	"staff_members_id_panels_account_panel_last_sign": "Last sign-in: {value}",
 	"staff_members_id_panels_account_panel_lift_ban": "Lift ban",
 	"staff_members_id_panels_account_panel_lift_ban_restore_their": "Lift the ban on {#strong}{name}{/strong} and restore their access?",
 	"staff_members_id_panels_account_panel_looking_band": "Looking for a band",
 	"staff_members_id_panels_account_panel_member_banned": "Member banned",
 	"staff_members_id_panels_account_panel_member_no": "Member no.",
 	"staff_members_id_panels_account_panel_modal_title": "Ban {name}",
+	"staff_members_id_panels_account_panel_never_record": "never on record",
 	"staff_members_id_panels_account_panel_no_active_sessions": "No active sessions",
 	"staff_members_id_panels_account_panel_no_profile": "No profile",
 	"staff_members_id_panels_account_panel_not_yet_full_access_ei": "Not yet — full access either way",
@@ -1319,6 +1638,7 @@
 	"staff_members_id_panels_account_panel_profile_incomplete": "Profile incomplete",
 	"staff_members_id_panels_account_panel_reactivate": "Reactivate",
 	"staff_members_id_panels_account_panel_reactivate_account": "Reactivate this account?",
+	"staff_members_id_panels_account_panel_removed_account": "a removed account",
 	"staff_members_id_panels_account_panel_role_profile_credit_ac": "Role, profile, credit and account changes made by staff show up here.",
 	"staff_members_id_panels_account_panel_sign_activity": "Sign-in activity",
 	"staff_members_id_panels_account_panel_staff_only_what_they_d": "Staff-only. What they did, for whoever reviews this later.",
@@ -1327,6 +1647,7 @@
 	"staff_members_id_panels_account_panel_teaches_privately": "Teaches privately",
 	"staff_members_id_panels_account_panel_they_signed_out_everyw": "They are signed out everywhere, or their sessions have expired.",
 	"staff_members_id_panels_account_panel_toast": "Membership lapsed while the account was closed — it needs a new checkout.",
+	"staff_members_id_panels_account_panel_unknown_device": "Unknown device",
 	"staff_members_id_panels_account_panel_user_id": "User ID",
 	"staff_members_id_panels_account_panel_view_public_profile": "View public profile",
 	"staff_members_id_panels_account_panel_visibility": "Visibility",
@@ -1354,11 +1675,13 @@
 	"staff_members_id_panels_comms_panel_last_message": "Last message",
 	"staff_members_id_panels_comms_panel_no_conversations": "No conversations",
 	"staff_members_id_panels_comms_panel_no_marketing_subscriber": "No marketing subscriber record is linked to this account.",
+	"staff_members_id_panels_comms_panel_no_subject": "(no subject)",
 	"staff_members_id_panels_comms_panel_not_any_list": "Not on any list.",
 	"staff_members_id_panels_comms_panel_not_subscriber": "Not a subscriber",
 	"staff_members_id_panels_comms_panel_nothing_inbox_from_membe": "Nothing in the inbox from this member, by portal or by email.",
 	"staff_members_id_panels_comms_panel_nothing_sent_yet": "Nothing sent yet.",
 	"staff_members_id_panels_comms_panel_notifications": "Notifications",
+	"staff_members_id_panels_comms_panel_off": "off",
 	"staff_members_id_panels_comms_panel_open_unread_by_them": "{open} open · {unread} unread by them",
 	"staff_members_id_panels_comms_panel_portal": "Portal",
 	"staff_members_id_panels_comms_panel_recent_unread": "Recent ({unread} unread)",
@@ -1374,9 +1697,13 @@
 	"staff_members_id_panels_instructor_panel_application": "Application",
 	"staff_members_id_panels_instructor_panel_applied": "Applied",
 	"staff_members_id_panels_instructor_panel_granted": "Granted",
+	"staff_members_id_panels_instructor_panel_not_accepting": "Not accepting",
 	"staff_members_id_panels_instructor_panel_not_instructor": "Not an instructor",
 	"staff_members_id_panels_instructor_panel_staff_note": "Staff note",
 	"staff_members_id_panels_instructor_panel_teaching": "Teaching",
+	"staff_members_id_panels_moderation_panel_anonymous": "Anonymous",
+	"staff_members_id_panels_moderation_panel_by": "by {reportedByName}",
+	"staff_members_id_panels_moderation_panel_confirm": "Stop holding this member's posts here for review?",
 	"staff_members_id_panels_moderation_panel_filed": "Filed",
 	"staff_members_id_panels_moderation_panel_member_has_not_repo": "This member has not reported anyone.",
 	"staff_members_id_panels_moderation_panel_no_reports": "No reports",
@@ -1392,6 +1719,7 @@
 	"staff_members_id_panels_moderation_panel_suggestions": "Suggestions",
 	"staff_members_id_panels_money_panel_allocation": "Allocation",
 	"staff_members_id_panels_money_panel_balance": "balance {units}",
+	"staff_members_id_panels_money_panel_comp_hint": "Up to {creditsToHours} hrs of free hours. An admin can add more.",
 	"staff_members_id_panels_money_panel_covering_fees": "Covering fees",
 	"staff_members_id_panels_money_panel_credit_history": "Credit history",
 	"staff_members_id_panels_money_panel_credits": "Credits",
@@ -1400,6 +1728,7 @@
 	"staff_members_id_panels_money_panel_hrs": "{creditsToHours} hrs",
 	"staff_members_id_panels_money_panel_hrs_month": "{creditsToHours} hrs a month",
 	"staff_members_id_panels_money_panel_member_free_tier_free_ho": "This member is on the free tier. Free hours only arrive with a sustaining membership.",
+	"staff_members_id_panels_money_panel_no": "No",
 	"staff_members_id_panels_money_panel_no_credit_activity": "No credit activity",
 	"staff_members_id_panels_money_panel_no_membership_subscripti": "No membership subscription",
 	"staff_members_id_panels_money_panel_no_payments_yet": "No payments yet",
@@ -1425,6 +1754,7 @@
 	"staff_members_id_panels_overview_panel_at_glance": "At a glance",
 	"staff_members_id_panels_overview_panel_directory": "Directory",
 	"staff_members_id_panels_overview_panel_free_tier": "Free tier",
+	"staff_members_id_panels_overview_panel_hrs_month": "{value} hrs a month",
 	"staff_members_id_panels_overview_panel_last_sign": "Last sign-in",
 	"staff_members_id_panels_overview_panel_needs_attention": "Needs attention",
 	"staff_members_id_panels_overview_panel_never_signed_out_ever": "Never, or signed out everywhere",
@@ -1432,6 +1762,7 @@
 	"staff_members_id_panels_space_panel_booked_by": "Booked by",
 	"staff_members_id_panels_space_panel_equipment_loans": "Equipment loans",
 	"staff_members_id_panels_space_panel_member_has_never_borrowe": "This member has never borrowed equipment.",
+	"staff_members_id_panels_space_panel_no_end_date": "No end date",
 	"staff_members_id_panels_space_panel_no_loans": "No loans",
 	"staff_members_id_panels_space_panel_no_recurring_bookings": "No recurring bookings",
 	"staff_members_id_panels_space_panel_no_reservations": "No reservations",
@@ -1441,8 +1772,10 @@
 	"staff_members_id_panels_space_panel_past": "Past",
 	"staff_members_id_panels_space_panel_pattern": "Pattern",
 	"staff_members_id_panels_space_panel_recurring_bookings": "Recurring bookings",
+	"staff_members_id_panels_space_panel_removed_item": "Removed item",
 	"staff_members_id_panels_space_panel_reservations": "Reservations",
 	"staff_members_id_panels_space_panel_runs_until": "Runs until",
+	"staff_members_id_panels_space_panel_themselves": "Themselves",
 	"staff_members_id_panels_space_panel_time": "Time",
 	"staff_members_id_panels_space_panel_unpaid": "{unpaid} unpaid",
 	"staff_members_id_panels_space_panel_upcoming": "Upcoming",
@@ -1451,6 +1784,7 @@
 	"staff_members_id_panels_user_scoreboard_lifetime_paid": "Lifetime paid",
 	"staff_members_id_panels_user_scoreboard_upcoming_bookings": "Upcoming bookings",
 	"staff_members_id_panels_user_scoreboard_volunteer_hrs_ytd": "Volunteer hrs (YTD)",
+	"staff_members_id_panels_volunteer_panel_adult": "Adult",
 	"staff_members_id_panels_volunteer_panel_age": "Age",
 	"staff_members_id_panels_volunteer_panel_approved_year": "{formatVolunteerHours} approved · {formatVolunteerHours2} this year",
 	"staff_members_id_panels_volunteer_panel_certifications": "Certifications",
@@ -1477,6 +1811,8 @@
 	"staff_members_id_panels_volunteer_panel_shown_staff_page_mos": "Shown to staff on this page. Most reasons are blameless — a replaced desk, an expired card, a change of duties.",
 	"staff_members_id_panels_volunteer_panel_signup_blocked_under": "Signup is blocked. An under-18 volunteer stays blocked until staff record guardian approval.",
 	"staff_members_id_panels_volunteer_panel_success_toast": "Certification revoked",
+	"staff_members_id_panels_volunteer_panel_under_18": "Under 18",
+	"staff_members_id_panels_volunteer_panel_unscheduled": "Unscheduled",
 	"staff_members_id_panels_volunteer_panel_volunteer_profile": "Volunteer profile",
 	"staff_members_id_staff_user_form_label": "Date of birth",
 	"staff_members_id_staff_user_form_success_toast": "Changes saved",
@@ -1489,9 +1825,12 @@
 	"staff_members_instructors_end_grant_actions_someone_who_has": "For someone who has stopped teaching here rather than paused. Bookings they already hold stand — cancel those separately if they need cancelling.",
 	"staff_members_instructors_end_grant_actions_they_stop_being": "They stop being listed and cannot book teaching time. Bookings they already hold stand.",
 	"staff_members_instructors_end_grant_actions_why": "Why?",
+	"staff_members_instructors_full": "Full",
 	"staff_members_instructors_grant_instructor_add_instructor": "Add Instructor",
 	"staff_members_instructors_grant_instructor_success_toast": "Teaching status granted",
 	"staff_members_instructors_grant_instructor_they_can_book_roo": "They can book the room on teaching terms immediately — there is nothing for them to accept. Teaching time is charged at the member rate with the monthly cap lifted, not at the drop-in rate.",
+	"staff_members_instructors_instructor": "instructor",
+	"staff_members_instructors_instructors": "instructors",
 	"staff_members_instructors_pending": "{pending} pending",
 	"staff_members_instructors_person_label": "Instructor",
 	"staff_members_instructors_review_application_actions_approve": "Approve {name}",
@@ -1506,6 +1845,7 @@
 	"staff_members_invite_member_description": "They join these when their account is set up.",
 	"staff_members_invite_member_invitation_sent": "Invitation sent to {email}",
 	"staff_members_invite_member_invite_member": "Invite member",
+	"staff_members_invite_member_legend": "Clubs and committees (optional)",
 	"staff_members_invite_member_name_optional": "Name (optional)",
 	"staff_members_invites_empty": "No invitations",
 	"staff_members_invites_expired": "Expired",
@@ -1515,8 +1855,11 @@
 	"staff_members_invites_invited_by": "Invited by",
 	"staff_members_invites_resend_invitation": "Resend the invitation to {email}",
 	"staff_members_invites_revoke_invitation": "Revoke the invitation to {email}",
+	"staff_members_invites_revoke_invitation_2": "Revoke the invitation to {email}?",
 	"staff_members_invites_revoked": "Revoked",
+	"staff_members_invites_send_invitation_again": "Send the invitation to {email} again?",
 	"staff_members_invites_sent": "Sent",
+	"staff_members_joined_month": "{newThisMonth} members joined this month.",
 	"staff_members_member_views_instructors": "Instructors",
 	"staff_members_member_views_invites": "Invites",
 	"staff_members_modal_title": "Deactivate members",
@@ -1542,6 +1885,16 @@
 	"staff_members_volunteers_confirms_guardian_has_signed_off": "Confirms a guardian has signed off. They can claim shifts and log hours from then on, and their record still says they are under 18 — which is what changes how a shift is staffed.",
 	"staff_members_volunteers_empty": "No one has signed up to volunteer yet.",
 	"staff_members_volunteers_followed_roles": "Followed Roles",
+	"staff_members_volunteers_hour_logs_review": [
+		{
+			"declarations": ["input pending", "local pendingPlural = pending: plural"],
+			"selectors": ["pendingPlural"],
+			"match": {
+				"pendingPlural=one": "· {#a} {pending} hour log to review {/a}",
+				"pendingPlural=*": "· {#a} {pending} hour logs to review {/a}"
+			}
+		}
+	],
 	"staff_members_volunteers_hours_approve_anyway": "Approve anyway",
 	"staff_members_volunteers_hours_approve_returned_hours": "Approve returned hours?",
 	"staff_members_volunteers_hours_approve_selected": "Approve selected",
@@ -1549,6 +1902,30 @@
 	"staff_members_volunteers_hours_approved_were_already_reviewe": "{approved} approved. {skipped} were already reviewed.",
 	"staff_members_volunteers_hours_archived": "(archived)",
 	"staff_members_volunteers_hours_by_were_returned_member": "{formatVolunteerHours} of {roleName} by {title} on {formatDateShort} were returned to the member.",
+	"staff_members_volunteers_hours_entries_selected": [
+		{
+			"declarations": ["input size", "local sizePlural = size: plural"],
+			"selectors": ["sizePlural"],
+			"match": {
+				"sizePlural=one": "{size} entry selected",
+				"sizePlural=*": "{size} entries selected"
+			}
+		}
+	],
+	"staff_members_volunteers_hours_entries_total": [
+		{
+			"declarations": [
+				"input size",
+				"input formatVolunteerHours",
+				"local sizePlural = size: plural"
+			],
+			"selectors": ["sizePlural"],
+			"match": {
+				"sizePlural=one": "{size} entry, {formatVolunteerHours} in total.",
+				"sizePlural=*": "{size} entries, {formatVolunteerHours} in total."
+			}
+		}
+	],
 	"staff_members_volunteers_hours_logged_from_scheduled_shift": "Logged from a scheduled shift",
 	"staff_members_volunteers_hours_no_hour_logs_found": "No hour logs found",
 	"staff_members_volunteers_hours_nothing_review_queue_clear": "Nothing to review — the queue is clear.",
@@ -1568,6 +1945,8 @@
 	"staff_members_volunteers_none_picked": "None picked",
 	"staff_members_volunteers_person_label": "Volunteer",
 	"staff_members_volunteers_search_placeholder": "Search volunteers...",
+	"staff_members_volunteers_volunteer": "volunteer",
+	"staff_members_volunteers_volunteers": "volunteers",
 	"staff_membership": "Membership",
 	"staff_money": "Money",
 	"staff_more_grants_sponsors": "{value} more in Grants and Sponsors.",
@@ -1583,6 +1962,7 @@
 	"staff_music_cmc_radio": "CMC Radio",
 	"staff_music_comes_back_out_s_stripe": "{formatCents} comes back out of {bandName}'s Stripe account and {formatCents2} out of the collective's. If the band has already been paid out, Stripe recovers it from their next sale.",
 	"staff_music_eligible_tracks": "Eligible tracks",
+	"staff_music_free": "Free",
 	"staff_music_gross": "Gross",
 	"staff_music_hand_back_as_draft_they": "Hand {#strong}{title}{/strong} back to {bandName} as a draft? They decide whether to publish it again.",
 	"staff_music_music_storefront_switched_off_so": "The music storefront is switched off, so bands cannot see or upload anything yet. This page works either way — turn it on in {#a}{staff_music_settings_features}{/a}.",
@@ -1600,6 +1980,7 @@
 	"staff_music_put_back_air": "Put back on air",
 	"staff_music_put_back_rotation_band_s": "Put {#strong}{title}{/strong} back in the rotation? The band's own opt-in still applies.",
 	"staff_music_radio": "Radio",
+	"staff_music_readiness": "Nothing is eligible yet.",
 	"staff_music_realised_take_what_buyers_paid": "Realised take: {toFixed}% of what buyers paid, after card fees.",
 	"staff_music_reason_shown_band": "Reason (shown to the band)",
 	"staff_music_recent_sales": "Recent sales",
@@ -1620,6 +2001,29 @@
 	"staff_music_take_off_air_without_unpublishing": "Take {#strong}{title}{/strong} off the air without unpublishing it.",
 	"staff_music_their_download_link_stops_working": "Their download link stops working either way.",
 	"staff_music_tracks": "· {trackCount} tracks",
+	"staff_music_tracks_from_bands": [
+		{
+			"declarations": ["input eligibleTracks", "input bands", "local bandsPlural = bands: plural"],
+			"selectors": ["bandsPlural"],
+			"match": {
+				"bandsPlural=one": "{eligibleTracks} tracks from {bands} band.",
+				"bandsPlural=*": "{eligibleTracks} tracks from {bands} bands."
+			}
+		}
+	],
+	"staff_music_tracks_opted_but_outside_station": [
+		{
+			"declarations": [
+				"input excludedByLength",
+				"local excludedByLengthPlural = excludedByLength: plural"
+			],
+			"selectors": ["excludedByLengthPlural"],
+			"match": {
+				"excludedByLengthPlural=one": "{excludedByLength} track is opted in but outside the station's length limits, so the scheduler skips them.",
+				"excludedByLengthPlural=*": "{excludedByLength} tracks are opted in but outside the station's length limits, so the scheduler skips them."
+			}
+		}
+	],
 	"staff_music_were_free_downloads": "{freeSales} of {sales} were free downloads.",
 	"staff_music_withheld": "Withheld",
 	"staff_music_withhold": "Withhold",
@@ -1632,22 +2036,30 @@
 	"staff_night": "The night",
 	"staff_no_categories_yet": "No categories yet",
 	"staff_no_deadline": "no deadline",
+	"staff_no_expiry": "No expiry",
 	"staff_no_funders_yet": "No funders yet",
 	"staff_no_members_yet": "No members yet",
 	"staff_no_production": "No production",
 	"staff_no_recorded_changes": "No recorded changes",
+	"staff_no_section": "No section",
 	"staff_no_show": "No-show",
 	"staff_no_shows_next_seven_days": "No shows in the next seven days.",
 	"staff_no_tasks_yet": "No tasks yet",
+	"staff_none_set": "None set",
+	"staff_not_bill": "Not on the bill",
 	"staff_not_file": "Not on file",
 	"staff_not_yet": "Not yet",
 	"staff_note": "Note",
 	"staff_note_optional": "Note (optional)",
 	"staff_notes": "Notes",
 	"staff_nothing_waiting_staff_right_now": "Nothing is waiting on staff right now.",
+	"staff_one_door_code_session_happening": "One door code for a session happening now is not confirmed on the lock yet.",
+	"staff_one_member_joined_month": "One member joined this month.",
 	"staff_open": "Open",
 	"staff_open_reservations": "Open reservations",
+	"staff_open_restock_list": "Open the restock list",
 	"staff_open_shows_list": "Open the shows list",
+	"staff_open_volunteering_worklist": "Open the volunteering worklist",
 	"staff_opt": "Opt-in",
 	"staff_order": "On order",
 	"staff_order_2": "Order",
@@ -1696,6 +2108,7 @@
 	"staff_project_templates_id_danger_zone": "Danger zone",
 	"staff_project_templates_id_days": "days",
 	"staff_project_templates_id_deadline_item_becomes_unscheduled": "A deadline item becomes an unscheduled work order — claimable, and hour-loggable, but not a shift anyone is “on”.",
+	"staff_project_templates_id_delete": "Delete “{name}”?",
 	"staff_project_templates_id_delete_template": "Delete template",
 	"staff_project_templates_id_direction": "Direction",
 	"staff_project_templates_id_done_when": "Done when",
@@ -1715,6 +2128,7 @@
 	"staff_project_templates_id_offsets_measured_from": "Offsets are measured from {toLowerCase}.",
 	"staff_project_templates_id_one_per_line_these_become": "One per line. These become the checklist on the work order this item produces.",
 	"staff_project_templates_id_only_when_somebody_marks_done": "Only when somebody marks it done",
+	"staff_project_templates_id_remove_item_work_orders_already": "Remove this item? Work orders already created from it are not touched.",
 	"staff_project_templates_id_scheduled_items_only_ignored_dead": "Scheduled items only. Ignored on a deadline item.",
 	"staff_project_templates_id_scheduled_shift_with_start_end": "Scheduled — a shift with a start and an end",
 	"staff_project_templates_id_subtitle": "Project template",
@@ -1750,6 +2164,7 @@
 	"staff_projects_id_assign_picker_body_did_work_stays_theirs": "{contractorName} did this work ({engagementLabel}). It stays theirs.",
 	"staff_projects_id_assign_picker_body_engage_cancel_signups": "Engage and cancel signups",
 	"staff_projects_id_assign_picker_body_engaged_members_open_ca": "{contractorName} is engaged ({engagementLabel}). Members or Open cancels it, after a warning.",
+	"staff_projects_id_assign_picker_body_legend": "Put on it",
 	"staff_projects_id_assign_picker_body_open_cancel_engagement": "Open and cancel the engagement",
 	"staff_projects_id_assign_picker_body_open_engagement": "Open the engagement",
 	"staff_projects_id_assign_picker_body_open_volunteers": "Open to volunteers",
@@ -1764,7 +2179,21 @@
 	"staff_projects_id_assign_picker_body_unassign": "Unassign",
 	"staff_projects_id_assign_picker_change_who_does": "Change who does {title}",
 	"staff_projects_id_assign_picker_couldn_t_load_options": "Couldn't load the options: {errorMessage}",
+	"staff_projects_id_assign_picker_engage_warning": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "One person is on this. Handing it to a contractor cancels their signup and tells them.",
+				"countPlural=*": "{count} people are on this. Handing it to a contractor cancels their signups and tells them."
+			}
+		}
+	],
 	"staff_projects_id_assign_picker_loading": "Loading",
+	"staff_projects_id_assigned_summary_nobody": "nobody yet",
+	"staff_projects_id_assigned_summary_open": ", open to volunteers",
+	"staff_projects_id_assigned_summary_spoken": "{filled} of {capacity}: {names}{mode}",
+	"staff_projects_id_assigned_summary_unassigned": ", unassigned",
 	"staff_projects_id_authorised_by": "Authorised by",
 	"staff_projects_id_budget_document_title": "{name} budget",
 	"staff_projects_id_budget_report_attach": "Attach",
@@ -1791,6 +2220,9 @@
 	"staff_projects_id_budget_report_purchase_orders": "Purchase orders",
 	"staff_projects_id_budget_report_row_s_id_copied_from": "The row's id, copied from its own page.",
 	"staff_projects_id_budget_report_show_costs": "Show costs {#span} {staff_projects_id_budget_report_cost_sheet_guarantee_top_ups} {/span}",
+	"staff_projects_id_budget_report_specialized": "Contributed services — specialized only",
+	"staff_projects_id_budget_report_specialized_rate": "{hours} at each role's own rate",
+	"staff_projects_id_budget_report_specialized_unpriced": "{hours} at each role's own rate, of which {unpriced} on roles with no rate set and counted as zero",
 	"staff_projects_id_budget_report_takes_off_project_record_its": "Takes {#strong}{label}{/strong} off this project. The record itself is untouched.",
 	"staff_projects_id_budget_report_volunteer_time_impact_value": "Volunteer time — impact value {#span} {staff_projects_id_budget_report_every_approved_hour_at_hr} {/span}",
 	"staff_projects_id_budget_report_work_order_lands_task_list": "Work order (lands in the task list)",
@@ -1805,6 +2237,7 @@
 	"staff_projects_id_no_dates_set": "No dates set",
 	"staff_projects_id_no_description_yet_add_one": "No description yet. Add one under Edit project.",
 	"staff_projects_id_one_project_per_suggestion_its": "One project per suggestion. Its status follows this one from now on.",
+	"staff_projects_id_onward": "onward",
 	"staff_projects_id_origin": "Origin",
 	"staff_projects_id_project_archived": "Project archived",
 	"staff_projects_id_project_status": "Project status",
@@ -1816,6 +2249,7 @@
 	"staff_projects_id_returns_active_list_with_its": "It returns to the active list with its tasks as they are.",
 	"staff_projects_id_section_menu_aria_label": "{name} section actions",
 	"staff_projects_id_section_menu_delete_section": "Delete section",
+	"staff_projects_id_section_menu_has_no_tasks": "It has no tasks.",
 	"staff_projects_id_section_menu_move_section_down": "Move section down",
 	"staff_projects_id_section_menu_move_section_up": "Move section up",
 	"staff_projects_id_section_menu_rename": "Rename {name}",
@@ -1823,6 +2257,16 @@
 	"staff_projects_id_section_menu_rename_section": "Rename section",
 	"staff_projects_id_section_menu_renamed": "Renamed",
 	"staff_projects_id_section_menu_section_deleted": "Section deleted",
+	"staff_projects_id_section_menu_tasks_move": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Its task moves to the top of the list, under no section. Nothing is deleted but the heading.",
+				"countPlural=*": "Its {count} tasks move to the top of the list, under no section. Nothing is deleted but the heading."
+			}
+		}
+	],
 	"staff_projects_id_staff_started_directly": "Staff started this directly.",
 	"staff_projects_id_subtitle": "No committee owns this yet",
 	"staff_projects_id_suggestion_answers_reports_same_outcome": "The suggestion this answers reports the same outcome.",
@@ -1832,14 +2276,22 @@
 	"staff_projects_id_task_list_add_section": "Add section",
 	"staff_projects_id_task_list_add_section_2": "Add a section",
 	"staff_projects_id_task_list_add_task": "Add task",
+	"staff_projects_id_task_list_contractor_job": "Contractor job",
 	"staff_projects_id_task_list_description": "Apply a template, add a task, or add a section to group them.",
 	"staff_projects_id_task_list_duties": "{value} the duties of {title}",
 	"staff_projects_id_task_list_duties_2": "{done}/{total} duties",
+	"staff_projects_id_task_list_filter": "Filter",
+	"staff_projects_id_task_list_filter_2": "Filter: {value}",
+	"staff_projects_id_task_list_hide_done": "Hide done",
+	"staff_projects_id_task_list_invoice": "Invoice {invoiceRef}",
 	"staff_projects_id_task_list_move_drag_press_up_down": "Move {title}: drag it, or press the up and down arrows",
 	"staff_projects_id_task_list_move_section_drag_press_up": "Move the {name} section: drag it, or press the up and down arrows",
+	"staff_projects_id_task_list_no_tasks_yet": "No tasks yet.",
+	"staff_projects_id_task_list_nothing_here_matches_filter": "Nothing here matches the filter.",
 	"staff_projects_id_task_list_open_details": "Open the details of {title}",
 	"staff_projects_id_task_list_section": "{value} the {name} section",
 	"staff_projects_id_task_list_section_added": "Section added",
+	"staff_projects_id_task_list_show_done": "Show done{value}",
 	"staff_projects_id_task_list_task_added": "Task added",
 	"staff_projects_id_task_list_title": "Title",
 	"staff_projects_id_task_not_project": "That task is not on this project.",
@@ -1851,16 +2303,20 @@
 	"staff_projects_id_task_panel_cancel_task": "Cancel task",
 	"staff_projects_id_task_panel_close_task": "Close the task",
 	"staff_projects_id_task_panel_crew_tasks_list_full_others": "The crew tasks on this list are full; others on the show may not be.",
+	"staff_projects_id_task_panel_donated": "Donated",
+	"staff_projects_id_task_panel_donated_worth": "Donated, worth {value}",
 	"staff_projects_id_task_panel_done_when": "Done when",
 	"staff_projects_id_task_panel_due_date": "+ Due date",
 	"staff_projects_id_task_panel_duties": "Duties",
 	"staff_projects_id_task_panel_equipment": "+ Equipment",
+	"staff_projects_id_task_panel_equipment_fallback": "Equipment",
 	"staff_projects_id_task_panel_from_project": "· from the project",
 	"staff_projects_id_task_panel_invoice": "Invoice",
 	"staff_projects_id_task_panel_its_duties_below": "Its duties, below.",
 	"staff_projects_id_task_panel_no_invoice_yet": "No invoice yet",
 	"staff_projects_id_task_panel_not_asked_yet": "Not asked yet: {join}",
 	"staff_projects_id_task_panel_open_show": "Open the show",
+	"staff_projects_id_task_panel_paid": "· paid {formatDateShort}",
 	"staff_projects_id_task_panel_scheduled": "+ Scheduled",
 	"staff_projects_id_task_panel_still_short": "Still short:",
 	"staff_projects_id_task_panel_task_called_off": "Task called off",
@@ -1913,6 +2369,7 @@
 	"staff_projects_start_one_when_work_spans": "Start one when work spans more than a single job — a facility improvement, a festival, or anything with a budget to watch.",
 	"staff_projects_success_toast": "Project created",
 	"staff_projects_what_work_live_room_refresh": "What the work is — “Live room refresh”, “Winter showcase”.",
+	"staff_public": "Public",
 	"staff_published": "Published",
 	"staff_quantity": "Quantity",
 	"staff_queue": "Queue",
@@ -1950,9 +2407,24 @@
 	"staff_renewals_id_attached": "Attached",
 	"staff_renewals_id_certificate_permit_policy_pdf_photo": "The certificate, permit or policy. PDF, photo or Word, up to 25MB.",
 	"staff_renewals_id_delete_renewal": "Delete renewal",
+	"staff_renewals_id_document": "Document",
 	"staff_renewals_id_documents": "Documents",
 	"staff_renewals_id_empty_label": "Choose a file",
 	"staff_renewals_id_expired_once_renewed_edit_expiry": "Expired {formatIsoDay}. Once it is renewed, edit the expiry date and attach the new certificate.",
+	"staff_renewals_id_expires_days": [
+		{
+			"declarations": [
+				"input formatIsoDay",
+				"input daysLeft",
+				"local daysLeftPlural = daysLeft: plural"
+			],
+			"selectors": ["daysLeftPlural"],
+			"match": {
+				"daysLeftPlural=one": "Expires {formatIsoDay}, in {daysLeft} day.",
+				"daysLeftPlural=*": "Expires {formatIsoDay}, in {daysLeft} days."
+			}
+		}
+	],
 	"staff_renewals_id_file": "File",
 	"staff_renewals_id_file_deleted_with": "The file is deleted with it.",
 	"staff_renewals_id_issued_by": "Issued by",
@@ -2024,7 +2496,9 @@
 	"staff_reports_volunteering_responses": "Responses",
 	"staff_reports_volunteering_set_up_succeed": "Set up to succeed",
 	"staff_reports_volunteering_specialized_hours_only_each_at": "Specialized hours only, each at its own rate",
+	"staff_reports_volunteering_specialized_hr": "specialized · {formatCents}/hr",
 	"staff_reports_volunteering_specialized_time_sits_role_with": "{formatVolunteerHours} of specialized time sits on a role with no market rate set, and counts as zero above rather than as the impact rate. Set one on the role to include it.",
+	"staff_reports_volunteering_specialized_unpriced": "specialized · unpriced",
 	"staff_reports_volunteering_still_review": "Still in review",
 	"staff_reports_volunteering_these_two_answers_two_different": "These are two answers to two different questions, not parts of one total — the specialized hours are counted in both, so adding them double-counts that work. Impact value is what a grant application asks for; contributed services is the narrower figure a financial statement can recognise. Rate: {rateSource}.",
 	"staff_reports_volunteering_volunteering": "Volunteering",
@@ -2041,6 +2515,7 @@
 	"staff_reservations_create_modal_band": "A band",
 	"staff_reservations_create_modal_booking": "Booking for",
 	"staff_reservations_create_modal_checkbox_label": "Book it anyway — I know this double-books the space",
+	"staff_reservations_create_modal_conflict": "⚠ conflict",
 	"staff_reservations_create_modal_could_not_load_booking_form": "Could not load the booking form: {errorMessage}",
 	"staff_reservations_create_modal_end_time": "End time",
 	"staff_reservations_create_modal_member": "A member",
@@ -2051,25 +2526,57 @@
 	"staff_reservations_create_modal_select_start_time": "Select start time",
 	"staff_reservations_create_modal_start_time": "Start time",
 	"staff_reservations_create_modal_submit_label": "Create Reservation",
+	"staff_reservations_create_modal_unavailable": "(unavailable)",
+	"staff_reservations_id_1_hour": "1 hour",
 	"staff_reservations_id_all_bookings_provisioned_confirmed_loc": "All bookings: {provisioned} provisioned, {confirmed} confirmed on the lock.",
 	"staff_reservations_id_booked_by_staff": "Booked by staff: {createdByStaffName}",
+	"staff_reservations_id_booking": "This booking: {error}",
+	"staff_reservations_id_booking_sent_lock_code": "This booking: sent to the lock, code {code}.",
 	"staff_reservations_id_cash_due": "Cash due {formatCents}",
 	"staff_reservations_id_confirmed_lock": "Confirmed on the lock {fullDate}.",
 	"staff_reservations_id_door_access": "Door Access",
 	"staff_reservations_id_end_label": "Last of the day",
+	"staff_reservations_id_free_hours_applied_hrs": [
+		{
+			"declarations": [
+				"input creditsUsed",
+				"input creditsDiscountFormatted",
+				"local creditsUsedPlural = creditsUsed: plural"
+			],
+			"selectors": ["creditsUsedPlural"],
+			"match": {
+				"creditsUsedPlural=one": "Free hours applied: {creditsUsed} hr (−{creditsDiscountFormatted})",
+				"creditsUsedPlural=*": "Free hours applied: {creditsUsed} hrs (−{creditsDiscountFormatted})"
+			}
+		}
+	],
 	"staff_reservations_id_group_booking": "Group booking",
+	"staff_reservations_id_hours": "{hours} hours",
 	"staff_reservations_id_hr": "{durationLabel} × {rateFormatted}/hr",
 	"staff_reservations_id_issued_but_not_confirmed_at": "Issued but not confirmed at the door.",
 	"staff_reservations_id_member_sees_break_glass": "Member sees: {#span}{code}{/span} (break-glass)",
 	"staff_reservations_id_member_will_shown_break_glass": "The member will be shown the break-glass code from {fullDate}, {formatTime}.",
 	"staff_reservations_id_no_break_glass_code_confirmed": "No break-glass code is confirmed on the lock right now, so the member is shown none.",
+	"staff_reservations_id_no_reason_given": "No reason given.",
 	"staff_reservations_id_not_provisioned_yet": "Not provisioned yet.",
 	"staff_reservations_id_orientation_covered": "Orientation covered",
 	"staff_reservations_id_orientation_unclaimed": "Orientation unclaimed",
+	"staff_reservations_id_overlaps_other_bookings": [
+		{
+			"declarations": ["input length", "input join", "local lengthPlural = length: plural"],
+			"selectors": ["lengthPlural"],
+			"match": {
+				"lengthPlural=one": "Overlaps {length} other booking: {join}",
+				"lengthPlural=*": "Overlaps {length} other bookings: {join}"
+			}
+		}
+	],
+	"staff_reservations_id_retry_pending_door_codes": "Retry pending door codes",
 	"staff_reservations_id_stripe_record": "Stripe record",
 	"staff_reservations_id_view_band": "View Band",
 	"staff_reservations_id_view_event": "View Event",
 	"staff_reservations_id_view_profile": "View Profile",
+	"staff_reservations_id_working": "Working…",
 	"staff_reservations_member_left_note": "Member left a note",
 	"staff_reservations_no_closures_found": "No closures found",
 	"staff_reservations_no_reservations_found": "No reservations found",
@@ -2115,8 +2622,23 @@
 	"staff_search_by_name_email": "Search by name or email...",
 	"staff_search_name_email": "Search name or email...",
 	"staff_search_shows_by_name": "Search shows by name…",
+	"staff_see_all_restock": "See all {total} to restock",
+	"staff_see_all_short_shifts": "See all {total} short shifts",
 	"staff_send_campaign_now": "Send this campaign now?",
 	"staff_send_now": "Send Now",
+	"staff_send_people": [
+		{
+			"declarations": [
+				"input totalSubscribers",
+				"local totalSubscribersPlural = totalSubscribers: plural"
+			],
+			"selectors": ["totalSubscribersPlural"],
+			"match": {
+				"totalSubscribersPlural=one": "Send to {totalSubscribers} person",
+				"totalSubscribersPlural=*": "Send to {totalSubscribers} people"
+			}
+		}
+	],
 	"staff_sent": "Sent",
 	"staff_serial": "Serial",
 	"staff_series_cancelled": "Series cancelled",
@@ -2125,6 +2647,7 @@
 	"staff_settings_60_minutes": "60 minutes",
 	"staff_settings_6775_sw_philomath_blvd": "6775 SW Philomath Blvd",
 	"staff_settings_always": "Always On",
+	"staff_settings_amount": "Amount ({unitLabel})",
 	"staff_settings_bands_cleared": "Bands cleared",
 	"staff_settings_bands_updated": "Bands updated",
 	"staff_settings_booking_rules": "Booking Rules",
@@ -2141,6 +2664,7 @@
 	"staff_settings_configure_products_pricing_used_checkout": "Configure the products and pricing used for checkout. Changes to names and descriptions sync to Stripe automatically. Price changes take effect on the next checkout.",
 	"staff_settings_connect_u_tec": "Connect to U-tec",
 	"staff_settings_connected": "Connected to {pageName}.",
+	"staff_settings_connected_2": "Connected",
 	"staff_settings_connection_failed": "Connection failed: {error}",
 	"staff_settings_connection_successful_token_refresh_verified": "Connection successful — token refresh verified.",
 	"staff_settings_console_channels": "Console channels",
@@ -2151,6 +2675,8 @@
 	"staff_settings_credits_reconciled": "Credits reconciled",
 	"staff_settings_description": "Description",
 	"staff_settings_device_id": "Device ID",
+	"staff_settings_disable": "Disable",
+	"staff_settings_enable": "Enable",
 	"staff_settings_enable_disable_communication_channels_staff": "Enable or disable communication channels for the staff inbox. Disabled channels won't receive or send messages. Environment variables must be configured for each channel to function.",
 	"staff_settings_enable_disable_feature_modules_members": "Enable or disable feature modules for members, bands and the public site. Disabled features are hidden from member navigation and return 404 if accessed directly. The staff panel always shows every feature, so you can set one up here before switching it on for everyone.",
 	"staff_settings_env": "Env: {envHint}",
@@ -2171,15 +2697,25 @@
 	"staff_settings_length_minutes": "Length (minutes)",
 	"staff_settings_location": "Location",
 	"staff_settings_lock_did_not_answer": "The lock did not answer: {errorMessage}",
+	"staff_settings_lock_health_battery_5": "{lockState} · battery {value}/5",
 	"staff_settings_lock_health_break_glass_code": "Break-glass code",
 	"staff_settings_lock_health_clean": "Clean",
 	"staff_settings_lock_health_daily_job": "Daily job",
+	"staff_settings_lock_health_door_codes_queued_will_not": "Door codes are queued and will not work until it reconnects. Last known: {lockState} · battery {value}/5",
+	"staff_settings_lock_health_error": "error",
+	"staff_settings_lock_health_errors": "errors",
 	"staff_settings_lock_health_lock": "Lock",
 	"staff_settings_lock_health_never_run_not_since_was": "Never run, or not since this was added.",
 	"staff_settings_lock_health_none_confirmed_lock_yet_one": "None confirmed on the lock yet — one is minted by the daily job.",
 	"staff_settings_lock_health_offline": "Offline",
 	"staff_settings_lock_health_online": "Online",
+	"staff_settings_lock_health_provisioned_cleaned_confirmed": "{timeAgo} · {triggeredBy} · {provisioned} provisioned, {cleaned} cleaned, {confirmed} confirmed",
+	"staff_settings_lock_health_replacement_its_way_lock_current": "A replacement is on its way to the lock. The current code keeps working until it lands.",
 	"staff_settings_lock_health_rotate": "Rotate",
+	"staff_settings_lock_health_run_now": "Run now",
+	"staff_settings_lock_health_running": "Running…",
+	"staff_settings_lock_health_scheduled": "scheduled",
+	"staff_settings_lock_health_unknown": "unknown",
 	"staff_settings_lock_health_unreachable": "Unreachable",
 	"staff_settings_lock_self_test": "Lock self-test",
 	"staff_settings_manage_credentials_third_party_integrations": "Manage credentials for third-party integrations. Changes take effect immediately.",
@@ -2191,6 +2727,7 @@
 	"staff_settings_minimum_duration_hours": "Minimum duration (hours)",
 	"staff_settings_no_test_codes_remove": "No test codes to remove",
 	"staff_settings_none": "None",
+	"staff_settings_not_connected": "Not connected",
 	"staff_settings_one_task_per_line": "One task per line.",
 	"staff_settings_opens_at": "Opens at",
 	"staff_settings_operating_hours": "Operating Hours",
@@ -2200,6 +2737,7 @@
 	"staff_settings_orientation": "Orientation",
 	"staff_settings_orientation_updated": "Orientation updated",
 	"staff_settings_participation": "Participation",
+	"staff_settings_per_unit": "per unit",
 	"staff_settings_pricing": "Pricing",
 	"staff_settings_product_name": "Product name",
 	"staff_settings_reconciles_every_member_band_subscription": "Reconciles every member and band subscription status from Stripe into the local database. Use this as a one-time backfill after migration, or any time to re-sync if a webhook was missed. For active members it also tops up any missing monthly credits by replaying their latest paid invoice — it never reduces a balance already spent down this month, and leaves canceled members' credits untouched.",
@@ -2321,12 +2859,15 @@
 	"staff_sponsors_id_term": "Term",
 	"staff_sponsors_id_their_credits_show_name_alone": "Their credits show the name alone until a new one is uploaded.",
 	"staff_sponsors_label": "New sponsor",
+	"staff_sponsors_never_sponsored": "Never sponsored",
+	"staff_sponsors_no_current_sponsorship": "No current sponsorship",
 	"staff_sponsors_no_sponsors_yet": "No sponsors yet",
 	"staff_sponsors_sponsors": "Sponsors",
 	"staff_sponsors_submit_label": "Add sponsor",
 	"staff_sponsors_success_toast": "Sponsor added",
 	"staff_staff": "Staff",
 	"staff_staff_note": "Staff note: \"{reason}\"",
+	"staff_staff_only": "Staff only",
 	"staff_starred": "Starred",
 	"staff_start": "Start",
 	"staff_started": "Started",
@@ -2348,10 +2889,14 @@
 	"staff_suggestions_author": "Author",
 	"staff_suggestions_board": "Board",
 	"staff_suggestions_edits_waiting_approval": "Edits waiting on approval",
+	"staff_suggestions_id_another_suggestion": "another suggestion",
 	"staff_suggestions_id_answered_by_its_status_drives": "Answered by {#span}{name}{/span}. Its status drives this suggestion's from now on.",
 	"staff_suggestions_id_approve_put_board": "Approve — put it on the board",
 	"staff_suggestions_id_approve_reject": "Approve or reject",
 	"staff_suggestions_id_approve_replace_text": "Approve — replace the text",
+	"staff_suggestions_id_arrived": "Arrived {date}.",
+	"staff_suggestions_id_arrived_from": "Arrived {date} from {source}.",
+	"staff_suggestions_id_author": "The author",
 	"staff_suggestions_id_ballot": "Ballot",
 	"staff_suggestions_id_budget": "Budget",
 	"staff_suggestions_id_commit_idea_directly_project_groups": "Commit to this idea directly: the project groups the work that answers it, and this suggestion follows its status from now on. Both move to Planned.",
@@ -2363,6 +2908,8 @@
 	"staff_suggestions_id_edit_reviewed": "Edit reviewed",
 	"staff_suggestions_id_fold_into_suggestion_duplicates_its": "Fold this into the suggestion it duplicates. Its votes move across, and anyone who voted for both is only counted once.",
 	"staff_suggestions_id_got_record_arrival_closes_itself": "Got it in? Record the arrival and this closes itself — the member who asked hears about it.",
+	"staff_suggestions_id_hidden": "Hidden from the board.",
+	"staff_suggestions_id_hidden_note": "Hidden from the board. Note: {note}",
 	"staff_suggestions_id_hide_from_board": "Hide from the board",
 	"staff_suggestions_id_hide_suggestion": "Hide suggestion",
 	"staff_suggestions_id_if_needs_vote_first_put": "If it needs a vote first, put it to a ballot: it reads In ballot while voting is open, and a passing result offers Start project on the ballot's page.",
@@ -2373,6 +2920,7 @@
 	"staff_suggestions_id_merge_into_another": "Merge into another",
 	"staff_suggestions_id_merge_suggestion": "Merge suggestion",
 	"staff_suggestions_id_merged": "Merged",
+	"staff_suggestions_id_merged_into_its_votes_moved": "Merged into {#span}{mergedIntoTitle}{/span}. Its votes moved across; this one stays off the board.",
 	"staff_suggestions_id_moderation": "Moderation",
 	"staff_suggestions_id_nobody_has_written_back_yet": "Nobody has written back yet.",
 	"staff_suggestions_id_note_member_optional": "Note to the member (optional)",
@@ -2384,6 +2932,8 @@
 	"staff_suggestions_id_public_reply": "Public reply",
 	"staff_suggestions_id_put_back_board": "Put back on the board",
 	"staff_suggestions_id_put_back_board_if_was": "Put this back on the board if it was taken down by mistake.",
+	"staff_suggestions_id_reason_required_member_shown_can": "Reason (required: the member is shown it and can appeal)",
+	"staff_suggestions_id_reason_shown_member": "Reason (shown to the member)",
 	"staff_suggestions_id_record_arrival": "Record the arrival",
 	"staff_suggestions_id_reject_hide": "Reject — hide it",
 	"staff_suggestions_id_reject_keep_what_members_voted": "Reject — keep what members voted for",
@@ -2399,6 +2949,20 @@
 	"staff_suggestions_id_start_project": "Start a project",
 	"staff_suggestions_id_suggestion_comes_off_board_points": "This suggestion comes off the board and points at the one you pick. There's no undo.",
 	"staff_suggestions_id_take_off_board_use_above": "Take this off the board. Use {#span}{staff_suggestions_id_declined}{/span} above instead if it's a real suggestion you're saying no to — a decline is public and explained, a hide just makes it vanish.",
+	"staff_suggestions_id_wants_change_after_members_already": [
+		{
+			"declarations": [
+				"input requestedByName",
+				"input voteCount",
+				"local voteCountPlural = voteCount: plural"
+			],
+			"selectors": ["voteCountPlural"],
+			"match": {
+				"voteCountPlural=one": "{requestedByName} wants to change this after {voteCount} member already voted for it. Approving replaces the text below; the votes stay either way.",
+				"voteCountPlural=*": "{requestedByName} wants to change this after {voteCount} members already voted for it. Approving replaces the text below; the votes stay either way."
+			}
+		}
+	],
 	"staff_suggestions_id_what_members_voted": "What members voted for",
 	"staff_suggestions_needs_review": "Needs review",
 	"staff_suggestions_no_reported_suggestions": "No reported suggestions",
@@ -2471,6 +3035,16 @@
 	"staff_venues_nothing_marked_as_ours_yet": "{#span}{staff_venues_no_practice_room}{/span} Nothing is marked as ours yet, so no event can be told apart from an off-site one. Open the room's row and choose {#em}{staff_make_room}{/em}.",
 	"staff_venues_success_toast": "Venue added",
 	"staff_venues_venues": "Venues",
+	"staff_volunteer_confirm_fixed_card_closes_work_order_its_rep": [
+		{
+			"declarations": ["input reports", "local reportsPlural = reports: plural"],
+			"selectors": ["reportsPlural"],
+			"match": {
+				"reportsPlural=one": "Closes the work order and its {reports} report, and tells each reporter it was fixed.",
+				"reportsPlural=*": "Closes the work order and its {reports} reports, and tells each reporter it was fixed."
+			}
+		}
+	],
 	"staff_volunteer_confirm_fixed_card_finished_work_orders_with": "Finished work orders with open problem reports.",
 	"staff_volunteer_confirm_fixed_card_modal_title": "Verify {subject} is fixed?",
 	"staff_volunteer_confirm_fixed_card_reports": "Reports",
@@ -2479,7 +3053,19 @@
 	"staff_volunteer_confirm_fixed_card_verify": "Verify",
 	"staff_volunteer_confirm_fixed_card_what_was_done": "What was done",
 	"staff_volunteer_description": "All claims confirmed, all hours reviewed, no short shifts in the next two weeks.",
+	"staff_volunteer_hours_to_review_card_all": "All {total} →",
+	"staff_volunteer_hours_to_review_card_open_queue": "Open the queue →",
 	"staff_volunteer_hours_to_review_card_title": "Unreviewed Hours",
+	"staff_volunteer_items_waiting": [
+		{
+			"declarations": ["input waiting", "local waitingPlural = waiting: plural"],
+			"selectors": ["waitingPlural"],
+			"match": {
+				"waitingPlural=one": "{waiting} item waiting",
+				"waitingPlural=*": "{waiting} items waiting"
+			}
+		}
+	],
 	"staff_volunteer_lapsing_card_card_certificate_number_if_ther": "Card or certificate number, if there is one.",
 	"staff_volunteer_lapsing_card_expiry_stamped_from_date_locked": "Expiry is stamped from this date and locked in. Grants append, so this is a new row rather than an edit to the old one.",
 	"staff_volunteer_lapsing_card_modal_title": "Renew {certificationName} for {title}?",
@@ -2497,18 +3083,21 @@
 	"staff_volunteer_needs_scheduling_card_close": "Close {value}?",
 	"staff_volunteer_needs_scheduling_card_close_work_order": "Close Work Order",
 	"staff_volunteer_needs_scheduling_card_description": "When the window ends, close any equipment reports on this and tell the reporters it was fixed. Off, it waits on Today for you to confirm.",
+	"staff_volunteer_needs_scheduling_card_due": "due",
 	"staff_volunteer_needs_scheduling_card_find_time": "Find a time for {value}",
 	"staff_volunteer_needs_scheduling_card_no_deadline": "No deadline",
 	"staff_volunteer_needs_scheduling_card_once_has_window_appear": "Once it has a window it appears on the schedule and members can claim it.",
 	"staff_volunteer_needs_scheduling_card_says_work_finished_whi": "Says the work is finished, which is not the same as anybody having turned up. Anyone on it is completed at the same time.",
 	"staff_volunteer_needs_scheduling_card_text": "{claimed} of {capacity}",
 	"staff_volunteer_needs_scheduling_card_title": "Unscheduled Work Orders",
+	"staff_volunteer_needs_scheduling_card_was_due": "was due",
 	"staff_volunteer_needs_scheduling_card_work_orders_without_ti": "Work orders without a time window.",
 	"staff_volunteer_new_work_order_checkbox_label": "It has a set time",
 	"staff_volunteer_new_work_order_label": "New Work Order",
 	"staff_volunteer_new_work_order_modal_title": "New work order",
 	"staff_volunteer_new_work_order_success_toast": "Work order created",
 	"staff_volunteer_nothing_waiting": "Nothing waiting",
+	"staff_volunteer_nothing_waiting_2": "nothing waiting",
 	"staff_volunteer_roles_blank_means_never_lapses_changing": "Blank means it never lapses. Changing this affects future grants only — an existing grant keeps the expiry it was stamped with.",
 	"staff_volunteer_roles_blank_means_never_lapses_changing_2": "Blank means it never lapses. Changing this applies to future grants only — the {holderCount} already issued keep the expiry they were stamped with.",
 	"staff_volunteer_roles_clearance_archived": "Clearance archived",
@@ -2519,8 +3108,23 @@
 	"staff_volunteer_roles_clearance_updated": "Clearance updated",
 	"staff_volunteer_roles_clearances": "Clearances",
 	"staff_volunteer_roles_clearances_2": "Clearances · {length}",
+	"staff_volunteer_roles_description_help": "Markdown. This is what members read on their volunteering page, so say what the job actually involves.",
 	"staff_volunteer_roles_disappears_from_grant_form_everyone": "It disappears from the grant form. Everyone who holds it keeps it, and roles that require it still require it.",
 	"staff_volunteer_roles_grants_made_person_s_record": "Grants are made on a person's record. A renewal is a new row, never an edit — which is what keeps \"was their card current on the night?\" answerable.",
+	"staff_volunteer_roles_hold_required_by_roles": [
+		{
+			"declarations": [
+				"input holderCount",
+				"input roleCount",
+				"local roleCountPlural = roleCount: plural"
+			],
+			"selectors": ["roleCountPlural"],
+			"match": {
+				"roleCountPlural=one": "{holderCount} hold it · required by {roleCount} role",
+				"roleCountPlural=*": "{holderCount} hold it · required by {roleCount} roles"
+			}
+		}
+	],
 	"staff_volunteer_roles_id_accounting": "Accounting",
 	"staff_volunteer_roles_id_blank_counts_as_zero_never": "Blank counts as zero, never as the impact rate — a report shows it as unpriced.",
 	"staff_volunteer_roles_id_every_approved_hour_counts_toward": "Every approved hour counts toward the collective's impact value, at the rate on the settings page. A {#em}{staff_volunteer_roles_id_specialized_skill}{/em} is narrower: work we would otherwise have had to pay for, which a financial statement can recognise as a contributed service — at what that skill costs, not at the impact rate. The two are reported side by side and never added together.",
@@ -2534,6 +3138,8 @@
 	"staff_volunteer_roles_id_nothing_has_been_logged_against": "Nothing has been logged against this role, so it can be removed outright.",
 	"staff_volunteer_roles_id_people_needed": "People needed",
 	"staff_volunteer_roles_id_placeholder": "e.g. sound engineer, live sound...",
+	"staff_volunteer_roles_id_response": "response",
+	"staff_volunteer_roles_id_responses": "responses",
 	"staff_volunteer_roles_id_role_archived": "Role archived",
 	"staff_volunteer_roles_id_role_deleted": "Role deleted",
 	"staff_volunteer_roles_id_role_grants_card_modal_title": "What {name} may do",
@@ -2551,6 +3157,7 @@
 	"staff_volunteer_roles_id_role_interested_card_title": "Interested Members",
 	"staff_volunteer_roles_id_role_requirements_card_anyone_can_c": "Anyone can claim a shift for this role — no clearance needed.",
 	"staff_volunteer_roles_id_role_requirements_card_description": "Granted by CMC",
+	"staff_volunteer_roles_id_role_requirements_card_granted_by_c": "Granted by CMC",
 	"staff_volunteer_roles_id_role_requirements_card_modal_title": "What {name} requires",
 	"staff_volunteer_roles_id_role_requirements_card_someone_must": "Someone must hold all of these before they can claim a shift for this role. Logging hours is never blocked — the review queue just flags it.",
 	"staff_volunteer_roles_id_role_requirements_card_success_toas": "Requirements saved",
@@ -2572,6 +3179,19 @@
 	"staff_volunteer_roles_id_what_new_shift_form_starts": "What the New Shift form starts with. Not a limit — either can be changed on the shift itself, and leaving them blank just means the form starts on its own defaults.",
 	"staff_volunteer_roles_id_work_collective_would_otherwise_hav": "Work the collective would otherwise have paid for.",
 	"staff_volunteer_roles_issued_by": "Issued by",
+	"staff_volunteer_roles_lapse_before_booked_shift": [
+		{
+			"declarations": [
+				"input lapsingBeforeShift",
+				"local lapsingBeforeShiftPlural = lapsingBeforeShift: plural"
+			],
+			"selectors": ["lapsingBeforeShiftPlural"],
+			"match": {
+				"lapsingBeforeShiftPlural=one": "{lapsingBeforeShift} lapses before a booked shift →",
+				"lapsingBeforeShiftPlural=*": "{lapsingBeforeShift} lapse before a booked shift →"
+			}
+		}
+	],
 	"staff_volunteer_roles_leave_blank_something_cmc_signs": "Leave blank for something CMC signs off itself.",
 	"staff_volunteer_roles_lower_sorts_first": "Lower sorts first.",
 	"staff_volunteer_roles_needs": "needs {name}",
@@ -2596,9 +3216,26 @@
 	"staff_volunteer_schedule_cancelled": "{formatDateShort} {shiftLabel} cancelled",
 	"staff_volunteer_schedule_contractor_work": "Contractor work",
 	"staff_volunteer_schedule_description": "Widen the window, or clear the filters.",
+	"staff_volunteer_schedule_everybody_notified": "everybody notified",
 	"staff_volunteer_schedule_how_far_ahead": "How far ahead",
 	"staff_volunteer_schedule_label": "Confirm {unconfirmed}",
 	"staff_volunteer_schedule_no_work_orders_match": "No work orders match that",
+	"staff_volunteer_schedule_notify": "{unnotified} to notify",
+	"staff_volunteer_schedule_people_have_put_hand_up": [
+		{
+			"declarations": [
+				"input unconfirmed",
+				"input shiftLabel",
+				"input formatDateShort",
+				"local unconfirmedPlural = unconfirmed: plural"
+			],
+			"selectors": ["unconfirmedPlural"],
+			"match": {
+				"unconfirmedPlural=one": "{unconfirmed} person has put a hand up for {shiftLabel} on {formatDateShort}. Confirming books them: each gets the reminder the day before, and the shift completes afterwards with hours to log.",
+				"unconfirmedPlural=*": "{unconfirmed} people have put a hand up for {shiftLabel} on {formatDateShort}. Confirming books them: each gets the reminder the day before, and the shift completes afterwards with hours to log."
+			}
+		}
+	],
 	"staff_volunteer_schedule_recurring_recurring_panel_next_due": "Next due",
 	"staff_volunteer_schedule_recurring_recurring_panel_no_new_wo": "No new work orders. The open one stays queued.",
 	"staff_volunteer_schedule_recurring_recurring_panel_open_work": "Open work order",

@@ -392,11 +392,11 @@
 										{#snippet form()}
 											<input type="hidden" name="shiftId" value={w.id} />
 											<p class="text-sm">
-												{unconfirmed}
-												{unconfirmed === 1 ? 'person has' : 'people have'} put a hand up for
-												{shiftLabel(w)} on {formatDateShort(w.startsAt!)}. Confirming books them:
-												each gets the reminder the day before, and the shift completes afterwards
-												with hours to log.
+												{m.staff_volunteer_schedule_people_have_put_hand_up({
+													unconfirmed,
+													shiftLabel: shiftLabel(w),
+													formatDateShort: formatDateShort(w.startsAt!)
+												})}
 											</p>
 										{/snippet}
 									</Action>
@@ -428,7 +428,9 @@
 							})}
 						</a>
 						<span class:text-warning={shift.unnotified > 0} class="text-subtle">
-							· {shift.unnotified > 0 ? `${shift.unnotified} to notify` : 'everybody notified'}
+							· {shift.unnotified > 0
+								? m.staff_volunteer_schedule_notify({ unnotified: shift.unnotified })
+								: m.staff_volunteer_schedule_everybody_notified()}
 						</span>
 					</li>
 				{/each}

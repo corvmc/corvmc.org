@@ -253,7 +253,7 @@
 		-->
 		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<span class="text-muted">
-				{selectedIds.length} selected · {drafts.length} draft{drafts.length === 1 ? '' : 's'}
+				{m.staff_help_selected_drafts({ length: selectedIds.length, length2: drafts.length })}
 			</span>
 			{#if drafts.length > 0}
 				<Button variant="ghost" size="xs" onclick={selectDrafts}
@@ -276,8 +276,7 @@
 						{/each}
 						<input {...bulkFields.published.as('hidden', true)} />
 						<p class="py-4">
-							Publish {selectedIds.length} article{selectedIds.length === 1 ? '' : 's'} to the member
-							help centre?
+							{m.staff_help_publish_articles_member_help_centre({ length: selectedIds.length })}
 						</p>
 					{/snippet}
 				</Action>
@@ -296,7 +295,7 @@
 						{/each}
 						<input {...unpublishSelected.fields.published.as('hidden', false)} />
 						<p class="py-4">
-							Hide {selectedIds.length} article{selectedIds.length === 1 ? '' : 's'} from members?
+							{m.staff_help_hide_articles_from_members({ length: selectedIds.length })}
 						</p>
 					{/snippet}
 				</Action>

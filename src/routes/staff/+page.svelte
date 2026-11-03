@@ -77,8 +77,8 @@
 		{#if doorCodes > 0}
 			<Alert type="warning">
 				{doorCodes === 1
-					? 'One door code for a session happening now is not confirmed on the lock yet.'
-					: `${doorCodes} door codes for sessions happening now are not confirmed on the lock yet.`}
+					? m.staff_one_door_code_session_happening()
+					: m.staff_door_codes_sessions_happening_now({ doorCodes })}
 			</Alert>
 		{/if}
 		{#each data.room as day, i (day.date)}
@@ -209,8 +209,8 @@
 		<div class="mt-2">
 			<Button variant="ghost" size="sm" href={resolve('/staff/volunteer')}>
 				{data.shortShifts.total > data.shortShifts.rows.length
-					? `See all ${data.shortShifts.total} short shifts`
-					: 'Open the volunteering worklist'}
+					? m.staff_see_all_short_shifts({ total: data.shortShifts.total })
+					: m.staff_open_volunteering_worklist()}
 			</Button>
 		</div>
 	{/if}
@@ -276,8 +276,8 @@
 				href={withQuery(resolve('/staff/inventory'), 'show=restock')}
 			>
 				{data.lowStock.total > data.lowStock.rows.length
-					? `See all ${data.lowStock.total} to restock`
-					: 'Open the restock list'}
+					? m.staff_see_all_restock({ total: data.lowStock.total })
+					: m.staff_open_restock_list()}
 			</Button>
 		</div>
 	{/if}
@@ -286,8 +286,8 @@
 		<SectionLabel label={m.staff_recent_members()} />
 		<p class="mb-2 text-muted">
 			{data.members.newThisMonth === 1
-				? 'One member joined this month.'
-				: `${data.members.newThisMonth} members joined this month.`}
+				? m.staff_one_member_joined_month()
+				: m.staff_members_joined_month({ newThisMonth: data.members.newThisMonth })}
 		</p>
 		{#if data.members.recent.length === 0}
 			<EmptyState description={m.staff_no_members_yet()} />

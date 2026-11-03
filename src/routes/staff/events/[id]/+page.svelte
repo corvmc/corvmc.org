@@ -120,7 +120,9 @@
 			     state, which is the page that explains what a production is
 			     (#976). -->
 			<Button href={resolve(`/staff/events/${id}/production`)} variant="default" size="sm" outline>
-				{data.production ? 'Manage production' : 'Open a production'}
+				{data.production
+					? m.staff_events_id_manage_production()
+					: m.staff_events_id_open_production()}
 			</Button>
 		{/if}
 

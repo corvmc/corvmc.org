@@ -87,14 +87,16 @@
 
 				<Fact label={m.staff_subscribers()}>
 					{audienceData.subscriberCount}
-					{isBuiltIn ? 'matching members' : 'active'}
+					{isBuiltIn
+						? m.staff_marketing_audiences_id_matching_members()
+						: m.staff_marketing_audiences_id_active()}
 				</Fact>
 
 				<Fact label={m.staff_opt()}>
 					{#if isBuiltIn}
 						<Badge variant="info" size="xs">{m.staff_built()}</Badge>
 					{:else}
-						{audienceData.allowOptIn ? 'Public' : 'Staff only'}
+						{audienceData.allowOptIn ? m.staff_public() : m.staff_staff_only()}
 					{/if}
 				</Fact>
 
@@ -180,7 +182,9 @@
 					{#if !isBuiltIn}
 						<th class="col-support w-px">{m.staff_status()}</th>
 					{/if}
-					<th class="col-extra whitespace-nowrap">{isBuiltIn ? 'Member since' : 'Joined'}</th>
+					<th class="col-extra whitespace-nowrap"
+						>{isBuiltIn ? m.staff_marketing_audiences_id_member_since() : m.staff_joined()}</th
+					>
 					{#if !isBuiltIn}
 						<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 					{/if}
@@ -200,7 +204,9 @@
 						{#if !isBuiltIn}
 							<td class="col-support w-px">
 								<Badge variant={s.unsubscribedAt ? 'ghost' : 'success'} size="xs">
-									{s.unsubscribedAt ? 'Unsubscribed' : 'Active'}
+									{s.unsubscribedAt
+										? m.staff_marketing_audiences_id_unsubscribed()
+										: m.staff_active()}
 								</Badge>
 							</td>
 						{/if}

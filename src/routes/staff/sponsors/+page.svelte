@@ -90,7 +90,10 @@
 							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived()}</Badge>
 						{/if}
 						<div class="truncate text-muted">
-							{s.current?.title ?? (s.sponsorships ? 'No current sponsorship' : 'Never sponsored')}
+							{s.current?.title ??
+								(s.sponsorships
+									? m.staff_sponsors_no_current_sponsorship()
+									: m.staff_sponsors_never_sponsored())}
 						</div>
 					</td>
 					<td class="whitespace-nowrap">

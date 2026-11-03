@@ -225,8 +225,10 @@
 											class="ml-2"
 											variant={row.marketRateCents === null ? 'warning' : 'outline'}
 											>{row.marketRateCents === null
-												? 'specialized · unpriced'
-												: `specialized · ${formatCents(row.marketRateCents)}/hr`}</Badge
+												? msg.staff_reports_volunteering_specialized_unpriced()
+												: msg.staff_reports_volunteering_specialized_hr({
+														formatCents: formatCents(row.marketRateCents)
+													})}</Badge
 										>{/if}
 								</span>
 								<span class="whitespace-nowrap">

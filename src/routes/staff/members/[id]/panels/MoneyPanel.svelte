@@ -40,7 +40,9 @@
 	const caps = $derived((await getStaffLayout()).capabilities);
 	const canAdjust = $derived(hasCapability(caps, 'credit.adjust'));
 	const canComp = $derived(hasCapability(caps, 'credit.comp'));
-	const compHint = `Up to ${creditsToHours(creditCompCeiling.free_hours)} hrs of free hours. An admin can add more.`;
+	const compHint = msg.staff_members_id_panels_money_panel_comp_hint({
+		creditsToHours: creditsToHours(creditCompCeiling.free_hours)
+	});
 </script>
 
 <RelatedList title={msg.staff_membership()} result={getUserMembership(id)}>
@@ -80,7 +82,7 @@
 				>
 
 				<Fact label={msg.staff_members_id_panels_money_panel_covering_fees()}
-					>{m.coveringFees ? 'Yes' : 'No'}</Fact
+					>{m.coveringFees ? msg.staff_yes() : msg.staff_members_id_panels_money_panel_no()}</Fact
 				>
 
 				<Fact label={msg.staff_members_id_panels_money_panel_subscription()}

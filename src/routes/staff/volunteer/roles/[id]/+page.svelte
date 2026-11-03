@@ -309,7 +309,9 @@
 				</span>
 				<span class="opacity-60">
 					{summary.responses}
-					{summary.responses === 1 ? 'response' : 'responses'}
+					{summary.responses === 1
+						? m.staff_volunteer_roles_id_response()
+						: m.staff_volunteer_roles_id_responses()}
 				</span>
 			</div>
 

@@ -254,7 +254,11 @@
 						</td>
 						<td class="col-support">
 							{row.tablesRequested}
-							{row.tablesRequested === 1 ? 'table' : 'tables'}{row.needsPower ? ', power' : ''}
+							{row.tablesRequested === 1
+								? m.staff_events_id_vendors_table_3()
+								: m.staff_events_id_vendors_tables()}{row.needsPower
+								? m.staff_events_id_vendors_power()
+								: ''}
 						</td>
 						<td class="col-support">
 							{#if row.threadId}

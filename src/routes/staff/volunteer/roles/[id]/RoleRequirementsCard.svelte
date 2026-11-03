@@ -68,7 +68,10 @@
 			{#each held as cert (cert.id)}
 				<li>
 					<span class="font-medium">{cert.name}</span>
-					<span class="opacity-60">· {cert.issuedBy ?? 'Granted by CMC'}</span>
+					<span class="opacity-60"
+						>· {cert.issuedBy ??
+							m.staff_volunteer_roles_id_role_requirements_card_granted_by_c()}</span
+					>
 				</li>
 			{/each}
 		</ul>

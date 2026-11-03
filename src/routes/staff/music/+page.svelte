@@ -46,8 +46,8 @@
 	 */
 	const readiness = $derived(
 		pool.eligibleTracks === 0
-			? 'Nothing is eligible yet.'
-			: `${pool.eligibleTracks} tracks from ${pool.bands} ${pool.bands === 1 ? 'band' : 'bands'}.`
+			? m.staff_music_readiness()
+			: m.staff_music_tracks_from_bands({ eligibleTracks: pool.eligibleTracks, bands: pool.bands })
 	);
 </script>
 
@@ -82,9 +82,9 @@
 				<!-- Bands that opted in and will still never be heard. Without this
 				     they have no way to find that out. -->
 				<Alert type="warning">
-					{pool.excludedByLength}
-					{pool.excludedByLength === 1 ? 'track is' : 'tracks are'} opted in but outside the station's
-					length limits, so the scheduler skips them.
+					{m.staff_music_tracks_opted_but_outside_station({
+						excludedByLength: pool.excludedByLength
+					})}
 				</Alert>
 			{/if}
 
@@ -364,7 +364,9 @@
 								{purchase.paidAt ? formatDate(purchase.paidAt) : '—'}
 							</td>
 							<td>
-								{purchase.amountPaidCents === 0 ? 'Free' : formatCents(purchase.amountPaidCents)}
+								{purchase.amountPaidCents === 0
+									? m.staff_music_free()
+									: formatCents(purchase.amountPaidCents)}
 							</td>
 							<td class="col-extra">{formatCents(purchase.bandNetCents)}</td>
 							<td>

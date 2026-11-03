@@ -16,9 +16,22 @@
 	const openSlots = $derived(Math.max(0, task.capacity - task.people.length));
 	const lone = $derived(task.people.length === 1 ? task.people[0] : null);
 	const spoken = $derived(
-		`${task.people.length} of ${task.capacity}: ${
-			task.people.length > 0 ? task.people.map((p) => p.name).join(', ') : 'nobody yet'
-		}${task.mode === 'open' ? ', open to volunteers' : ''}${task.mode === 'unassigned' ? ', unassigned' : ''}`
+		m.staff_projects_id_assigned_summary_spoken({
+			filled: task.people.length,
+			capacity: task.capacity,
+			names:
+				task.people.length > 0
+					? new Intl.ListFormat('en', { style: 'short', type: 'unit' }).format(
+							task.people.map((p) => p.name)
+						)
+					: m.staff_projects_id_assigned_summary_nobody(),
+			mode:
+				task.mode === 'open'
+					? m.staff_projects_id_assigned_summary_open()
+					: task.mode === 'unassigned'
+						? m.staff_projects_id_assigned_summary_unassigned()
+						: ''
+		})
 	);
 </script>
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -65,13 +66,21 @@
 <PageContent>
 	{#if data.overdue.length > 0}
 		<Alert type="warning">
-			<span class="font-medium">{m.staff_contractors_overdue()}</span>
-			{data.overdue.length}
-			{data.overdue.length === 1 ? 'job is' : 'jobs are'} past the date they were promised back.
-			<a
-				class="link"
-				href={withQuery(resolve('/staff/volunteer/schedule'), 'kind=contractor&contractor=late')}
-				>{m.staff_contractors_open_queue()}</a
+			<ParaglideMessage
+				message={m.staff_contractors_jobs_past_date_they_were}
+				inputs={{
+					staff_contractors_overdue: m.staff_contractors_overdue(),
+					length: data.overdue.length,
+					staff_contractors_open_queue: m.staff_contractors_open_queue()
+				}}
+				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+					>{/snippet}{#snippet a({ children })}<a
+						class="link"
+						href={withQuery(
+							resolve('/staff/volunteer/schedule'),
+							'kind=contractor&contractor=late'
+						)}>{@render children?.()}</a
+					>{/snippet}</ParaglideMessage
 			>
 		</Alert>
 	{/if}
@@ -83,7 +92,9 @@
 				<div>
 					<a class="link font-medium" href={resolve(`/staff/contractors/${c.id}`)}>{c.name}</a>
 					{#if c.insuranceExpiresAt}
-						— {c.insuranceExpiresAt < new Date() ? 'expired' : 'expires'}
+						— {c.insuranceExpiresAt < new Date()
+							? m.staff_contractors_expired_2()
+							: m.staff_contractors_expires()}
 						{formatDateShort(c.insuranceExpiresAt)}
 					{/if}
 				</div>
