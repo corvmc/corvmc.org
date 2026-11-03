@@ -123,7 +123,7 @@
 
 					<!-- Custom input mode: FormField's built-in textarea drops `rest`, so rows
 					     and placeholder would be lost. Issues still resolve by name. -->
-					<FormField name="message" label={m.public_contact_message()}>
+					<FormField field={submitContactForm.fields.message} label={m.public_contact_message()}>
 						<textarea
 							{...fields.message.as('text')}
 							class="textarea w-full"

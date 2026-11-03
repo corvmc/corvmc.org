@@ -339,8 +339,11 @@
 					}}
 				>
 					<input {...setStaffEventLineup.fields.eventId.as('hidden', evt.id)} />
-					<input {...setStaffEventLineup.fields.lineup.as('hidden', JSON.stringify(lineup))} />
-					<LineupEditor bind:value={lineup} search={searchBandsForListing} />
+					<LineupEditor
+						field={setStaffEventLineup.fields.lineup}
+						bind:value={lineup}
+						search={searchBandsForListing}
+					/>
 					<div class="mt-3"><SubmitButton label={m.staff_events_id_save_bill()} /></div>
 				</Form>
 			</div>

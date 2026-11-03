@@ -129,7 +129,6 @@
 
 			<FormField
 				label={m.band_slug_edit_band_profile_form_avatar()}
-				name="avatarKey"
 				type="file"
 				upload={uploadAvatar}
 				accept="image/jpeg,image/png,image/webp"

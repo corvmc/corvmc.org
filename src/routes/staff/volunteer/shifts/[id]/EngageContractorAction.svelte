@@ -24,7 +24,7 @@
 	data-testid="engage-contractor"
 >
 	{#snippet form()}
-		<input type="hidden" name="workOrderId" value={workOrderId} />
+		<input {...createJobForm.fields.workOrderId.as('hidden', workOrderId)} />
 		<Field field={fields.contractorId} type="select" label={m.staff_contractor()} {options} />
 		<Field
 			field={fields.scheduledFor}

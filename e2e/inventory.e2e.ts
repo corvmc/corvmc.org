@@ -193,7 +193,7 @@ test.describe('inventory', () => {
 		// The modal asks for the counted total now, not the difference; the delta
 		// it derives is what still reaches the ledger.
 		await page.getByTestId('stocktake').click();
-		await page.getByRole('dialog').locator('input[name="counted"]').fill(String(before));
+		await page.getByRole('dialog').getByTestId('stocktake-counted').fill(String(before));
 		await modalSubmit(page).click();
 		await expectSuccessToast(page, 10000);
 

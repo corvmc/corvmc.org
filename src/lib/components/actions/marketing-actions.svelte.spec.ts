@@ -25,7 +25,13 @@ vi.mock('$lib/remote/marketing.remote', () => {
 		},
 		createAudience: {
 			enhance: () => ({ method: 'POST', action: '?/createAudience' }),
-			fields: { allIssues: () => null },
+			fields: {
+				name: field('name'),
+				slug: field('slug'),
+				description: field('description'),
+				allowOptIn: field('allowOptIn'),
+				allIssues: () => null
+			},
 			result: undefined
 		}
 	};

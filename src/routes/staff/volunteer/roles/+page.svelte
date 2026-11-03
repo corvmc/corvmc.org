@@ -137,22 +137,27 @@
 									successToast={m.staff_volunteer_roles_role_created()}
 								>
 									{#snippet form()}
-										<FormField name="name" label={m.staff_name()} type="text" />
 										<FormField
-											name="description"
+											field={createVolunteerRole.fields.name}
+											label={m.staff_name()}
+											type="text"
+										/>
+										<FormField
+											field={createVolunteerRole.fields.description}
 											label={m.staff_job_description()}
 											type="textarea"
 											description={descriptionHelp}
 											maxlength={VOLUNTEER_ROLE_DESCRIPTION_MAX}
 										/>
 										<FormField
-											name="group"
+											field={createVolunteerRole.fields.group}
 											label={m.staff_group()}
 											type="select"
 											options={groupOptions}
 										/>
 										<FormField
-											name="displayOrder"
+											field={createVolunteerRole.fields.displayOrder}
+											submitAs="text"
 											label={m.staff_display_order()}
 											type="number"
 											value="0"
@@ -236,25 +241,26 @@
 							>
 								{#snippet form()}
 									<FormField
-										name="name"
+										field={createCertification.fields.name}
 										label={m.staff_name()}
 										type="text"
 										maxlength={CERT_NAME_MAX}
 									/>
 									<FormField
-										name="description"
+										field={createCertification.fields.description}
 										label={m.staff_volunteer_roles_what_covers()}
 										type="textarea"
 										maxlength={CERT_DESCRIPTION_MAX}
 									/>
 									<FormField
-										name="issuedBy"
+										field={createCertification.fields.issuedBy}
 										label={m.staff_volunteer_roles_issued_by()}
 										type="text"
 										description={m.staff_volunteer_roles_leave_blank_something_cmc_signs()}
 									/>
 									<FormField
-										name="validityMonths"
+										field={createCertification.fields.validityMonths}
+										submitAs="text"
 										label={m.staff_volunteer_roles_valid_months()}
 										type="number"
 										description={m.staff_volunteer_roles_blank_means_never_lapses_changing()}
@@ -300,29 +306,32 @@
 											successToast={m.staff_volunteer_roles_clearance_updated()}
 										>
 											{#snippet form()}
-												<input type="hidden" name="id" value={cert.id} />
+												<input
+													{...updateCertification.for(cert.id).fields.id.as('hidden', cert.id)}
+												/>
 												<FormField
-													name="name"
+													field={updateCertification.for(cert.id).fields.name}
 													label={m.staff_name()}
 													type="text"
 													value={cert.name}
 												/>
 												<FormField
-													name="description"
+													field={updateCertification.for(cert.id).fields.description}
 													label={m.staff_volunteer_roles_what_covers()}
 													type="textarea"
 													value={cert.description ?? ''}
 													maxlength={CERT_DESCRIPTION_MAX}
 												/>
 												<FormField
-													name="issuedBy"
+													field={updateCertification.for(cert.id).fields.issuedBy}
 													label={m.staff_volunteer_roles_issued_by()}
 													type="text"
 													value={cert.issuedBy ?? ''}
 													description={m.staff_volunteer_roles_leave_blank_something_cmc_signs()}
 												/>
 												<FormField
-													name="validityMonths"
+													field={updateCertification.for(cert.id).fields.validityMonths}
+													submitAs="text"
 													label={m.staff_volunteer_roles_valid_months()}
 													type="number"
 													min="1"
@@ -332,7 +341,8 @@
 													})}
 												/>
 												<FormField
-													name="displayOrder"
+													field={updateCertification.for(cert.id).fields.displayOrder}
+													submitAs="text"
 													label={m.staff_display_order()}
 													type="number"
 													value={String(cert.displayOrder)}
@@ -353,7 +363,9 @@
 												successToast={m.staff_volunteer_roles_clearance_archived()}
 											>
 												{#snippet form()}
-													<input type="hidden" name="id" value={cert.id} />
+													<input
+														{...archiveCertification.for(cert.id).fields.id.as('hidden', cert.id)}
+													/>
 													<p class="text-sm">
 														{m.staff_volunteer_roles_disappears_from_grant_form_everyone()}
 													</p>
@@ -372,7 +384,9 @@
 												successToast={m.staff_volunteer_roles_clearance_restored()}
 											>
 												{#snippet form()}
-													<input type="hidden" name="id" value={cert.id} />
+													<input
+														{...restoreCertification.for(cert.id).fields.id.as('hidden', cert.id)}
+													/>
 													<p class="text-sm">
 														{m.staff_volunteer_roles_staff_will_able_grant_again()}
 													</p>
@@ -400,7 +414,9 @@
 												successToast={m.staff_volunteer_roles_clearance_deleted()}
 											>
 												{#snippet form()}
-													<input type="hidden" name="id" value={cert.id} />
+													<input
+														{...deleteCertification.for(cert.id).fields.id.as('hidden', cert.id)}
+													/>
 													<p class="text-sm">
 														{m.staff_volunteer_roles_nobody_holds_so_can_removed()}
 													</p>

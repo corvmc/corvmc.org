@@ -29,7 +29,7 @@
 >
 	{#snippet form()}
 		<div class="space-y-4">
-			<FormField name="userId" label={m.staff_member()} required>
+			<FormField field={grantInstructor.fields.userId} label={m.staff_member()} required>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={member}

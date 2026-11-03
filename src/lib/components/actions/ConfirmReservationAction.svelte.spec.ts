@@ -20,8 +20,12 @@ vi.mock('$lib/remote/reservations.remote', () => {
 		result: undefined
 	});
 	return {
-		payForReservation: form({ id: field('id'), coverFees: field('coverFees') }),
-		confirmReservation: form({ id: field('id') }),
+		payForReservation: form({
+			id: field('id'),
+			coverFees: field('coverFees'),
+			skipPayment: field('skipPayment')
+		}),
+		confirmReservation: form({ id: field('id'), comp: field('comp') }),
 		getReservationPricing: vi.fn(async () => ({
 			durationHours: 2,
 			hourlyRateCents: 1500,

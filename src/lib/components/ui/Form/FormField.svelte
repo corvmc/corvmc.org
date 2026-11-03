@@ -196,8 +196,11 @@
 
 	// When field is provided, `fieldAttrs.name` already carries the `b:` prefix. For
 	// name-only boolean inputs (no `field`), apply the prefix manually so SvelteKit
-	// still coerces the value to a boolean.
-	let resolvedName = $derived(fieldAttrs?.name ?? (isBooleanInput ? `b:${_name}` : _name));
+	// still coerces the value to a boolean. An `id` alone names nothing: the input
+	// is editor state, and a remote form rejects a name it did not hand out.
+	let resolvedName = $derived(
+		fieldAttrs?.name ?? (name ? (isBooleanInput ? `b:${name}` : name) : undefined)
+	);
 	let resolvedId = $derived(
 		propId ?? (fieldAttrs?.name ? `form-field-${fieldAttrs.name}-${uid}` : _id)
 	);
@@ -353,9 +356,16 @@
 	{:else if type === 'tags'}
 		<!-- `value` is its own prop, so it is not in `...rest` and must be forwarded
 		     explicitly — without it TagSelect starts empty and submits `[]`. -->
-		<TagSelect {...rest} options={tagOptions} {...inputProps} {value} disabled={pending} />
+		<TagSelect
+			{...rest}
+			options={tagOptions}
+			{...inputProps}
+			name={resolvedName ?? ''}
+			{value}
+			disabled={pending}
+		/>
 	{:else if type === 'calendar'}
-		<CalendarSelect {...rest} name={resolvedName} bind:value disabled={pending || readonly} />
+		<CalendarSelect {...rest} name={resolvedName ?? ''} bind:value disabled={pending || readonly} />
 	{:else if type === 'checkbox'}
 		<label class="label cursor-pointer items-center gap-2">
 			<input
@@ -408,6 +418,13 @@
 			{type}
 			id={resolvedId}
 			disabled={pending || readonly}
+			oninput={(e) => {
+				// The field owns the input, so `bind:value` is kept current by hand,
+				// typed as Svelte's own binding types it: a number input gives a number.
+				const el = e.currentTarget;
+				value = type === 'number' ? (el.value === '' ? null : el.valueAsNumber) : el.value;
+				(rest.oninput as ((e: Event) => void) | undefined)?.(e);
+			}}
 		/>
 	{:else}
 		<input class="input w-full" class:ghost={readonly} {...rest} {...inputProps} bind:value />

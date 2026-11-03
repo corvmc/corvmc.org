@@ -89,7 +89,7 @@
 			successToast={m.staff_volunteer_roles_id_role_archived()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="id" value={role.id} />
+				<input {...archiveVolunteerRole.fields.id.as('hidden', role.id)} />
 				<p class="text-sm">
 					{m.staff_volunteer_roles_id_members_won_t_able_log()}
 				</p>
@@ -108,7 +108,7 @@
 			successToast={m.staff_volunteer_roles_id_role_restored()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="id" value={role.id} />
+				<input {...restoreVolunteerRole.fields.id.as('hidden', role.id)} />
 				<p class="text-sm">{m.staff_volunteer_roles_id_members_will_able_log_hours()}</p>
 			{/snippet}
 		</Action>
@@ -130,7 +130,7 @@
 			onsuccess={() => goto(resolve('/staff/volunteer/roles'))}
 		>
 			{#snippet form()}
-				<input type="hidden" name="id" value={role.id} />
+				<input {...deleteVolunteerRole.fields.id.as('hidden', role.id)} />
 				<p class="text-sm">
 					{m.staff_volunteer_roles_id_nothing_has_been_logged_against()}
 				</p>
@@ -187,7 +187,8 @@
 					-->
 					<div class="grid gap-3 sm:grid-cols-2">
 						<FormField
-							name="defaultDurationMinutes"
+							field={updateVolunteerRole.fields.defaultDurationMinutes}
+							submitAs="text"
 							type="number"
 							min="1"
 							label={m.staff_volunteer_roles_id_usual_length_minutes()}
@@ -196,7 +197,8 @@
 								: String(role.defaultDurationMinutes)}
 						/>
 						<FormField
-							name="defaultCapacity"
+							field={updateVolunteerRole.fields.defaultCapacity}
+							submitAs="text"
 							type="number"
 							min="1"
 							label={m.staff_volunteer_roles_id_people_needed()}
@@ -240,7 +242,8 @@
 							"untouched" — and blank is a real answer here.
 						-->
 						<FormField
-							name="marketRate"
+							field={updateVolunteerRole.fields.marketRate}
+							submitAs="text"
 							type="number"
 							min="0"
 							step="0.01"

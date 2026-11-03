@@ -188,13 +188,15 @@
 								onsuccess={refreshCertifications}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={record.id} />
-									<input type="hidden" name="userId" value={id} />
+									<input
+										{...revokeCertification.for(record.id).fields.id.as('hidden', record.id)}
+									/>
+									<input {...revokeCertification.for(record.id).fields.userId.as('hidden', id)} />
 									<p class="text-sm">
 										{m.staff_members_id_panels_volunteer_panel_record_stays_period()}
 									</p>
 									<FormField
-										name="reason"
+										field={revokeCertification.for(record.id).fields.reason}
 										label={m.staff_why()}
 										type="textarea"
 										description={m.staff_members_id_panels_volunteer_panel_shown_staff_page_mos()}

@@ -86,7 +86,10 @@
 				     posts from the hidden field above, but an issue on it belongs
 				     beside the box where the member is picked, which is the only
 				     thing on screen when `userId` is still empty. -->
-				<FormField name="userId" label={m.actions_invite_member_search_members()}>
+				<FormField
+					field={addBandMember.fields.userId}
+					label={m.actions_invite_member_search_members()}
+				>
 					{#snippet input(id)}
 						<input
 							{id}

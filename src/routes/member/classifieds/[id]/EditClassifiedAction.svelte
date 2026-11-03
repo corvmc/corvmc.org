@@ -40,6 +40,7 @@
 	{#snippet form()}
 		<input {...editClassified.fields.postId.as('hidden', post.id)} />
 		<PostFields
+			fields={editClassified.fields}
 			bands={composer.bands}
 			instrumentSuggestions={composer.instrumentSuggestions}
 			genreSuggestions={composer.genreSuggestions}

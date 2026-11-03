@@ -63,7 +63,7 @@
 >
 	{#snippet form()}
 		{#if presetUser}
-			<input type="hidden" name="userId" value={presetUser.id} />
+			<input {...logHoursForMember.fields.userId.as('hidden', presetUser.id)} />
 		{:else}
 			<MemberPicker field={fields.userId} bind:value={userId} bind:name={userName} />
 		{/if}
@@ -77,14 +77,20 @@
 			<span class="fieldset-legend"
 				>{m.volunteer_log_hours_for_member_what_did_they_help_with()}</span
 			>
-			<Select name="volunteerRoleId">
+			<Select {...fields.volunteerRoleId.as('select')}>
 				<RoleOptions activeOnly />
 			</Select>
 		</label>
 
-		<FormField name="workedOn" label={m.volunteer_date()} type="date" value={clubToday()} />
 		<FormField
-			name="hours"
+			field={logHoursForMember.fields.workedOn}
+			label={m.volunteer_date()}
+			type="date"
+			value={clubToday()}
+		/>
+		<FormField
+			field={logHoursForMember.fields.hours}
+			submitAs="text"
 			label={m.volunteer_hours()}
 			type="number"
 			step={VOLUNTEER_HOUR_STEP}
@@ -92,7 +98,7 @@
 			description={m.volunteer_log_hours_for_member_nearest_quarter_hour()}
 		/>
 		<FormField
-			name="description"
+			field={logHoursForMember.fields.description}
 			label={m.volunteer_log_hours_for_member_what_they_did()}
 			type="textarea"
 			description={m.volunteer_log_hours_for_member_record_s_what_funder_s()}

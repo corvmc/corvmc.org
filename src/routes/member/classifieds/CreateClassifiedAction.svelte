@@ -30,6 +30,7 @@
 			<p class="mb-3 text-muted">{m.member_staff_will_look_at_before()}</p>
 		{/if}
 		<PostFields
+			fields={createClassified.fields}
 			bands={composer.bands}
 			instrumentSuggestions={composer.instrumentSuggestions}
 			genreSuggestions={composer.genreSuggestions}

@@ -203,8 +203,16 @@
 							successToast={msg.volunteer_candidate_column_asked_they_ll_see_their()}
 						>
 							{#snippet form()}
-								<input type="hidden" name="shiftId" value={shiftId} />
-								<input type="hidden" name="userId" value={row.userId} />
+								<input
+									{...inviteMemberToShift
+										.for(`${shiftId}:${row.userId}`)
+										.fields.shiftId.as('hidden', shiftId)}
+								/>
+								<input
+									{...inviteMemberToShift
+										.for(`${shiftId}:${row.userId}`)
+										.fields.userId.as('hidden', row.userId)}
+								/>
 								<p class="text-sm">
 									{msg.volunteer_candidate_column_invitation_holds_no_place_shift({
 										title: row.member.title
@@ -224,8 +232,16 @@
 							onsuccess={warnOver}
 						>
 							{#snippet form()}
-								<input type="hidden" name="shiftId" value={shiftId} />
-								<input type="hidden" name="userId" value={row.userId} />
+								<input
+									{...assignShiftToMember
+										.for(`${shiftId}:${row.userId}`)
+										.fields.shiftId.as('hidden', shiftId)}
+								/>
+								<input
+									{...assignShiftToMember
+										.for(`${shiftId}:${row.userId}`)
+										.fields.userId.as('hidden', row.userId)}
+								/>
 								<p class="text-sm">
 									{msg.volunteer_candidate_column_staff_add_booking_not_claim({
 										title: row.member.title

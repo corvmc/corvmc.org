@@ -13,14 +13,21 @@ let roles = [
 	{ id: 'role-2', name: 'Retired Role', isActive: false }
 ];
 
-// Every field the form spreads: `as()` for the hidden inputs, `issues()` for the rest.
+// Every field the form spreads, prefixed as kit prefixes a boolean checkbox.
 const fields = new Proxy(
 	{ allIssues: () => null },
 	{
 		get: (target, name: string) =>
 			name in target
 				? target[name as keyof typeof target]
-				: { as: (type: string, value = '') => ({ type, name, value }), issues: () => null }
+				: {
+						as: (type: string, value = '') => ({
+							type,
+							name: type === 'checkbox' ? `b:${name}` : name,
+							value
+						}),
+						issues: () => null
+					}
 	}
 );
 

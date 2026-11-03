@@ -116,11 +116,15 @@
 	{#snippet icon()}<IconPlus size={16} />{/snippet}
 	{#snippet form()}
 		<FormField
-			name="subject"
+			field={startForm.fields.subject}
 			label={m.member_messages_compose_what_s_about()}
 			type="text"
 			description={m.member_messages_compose_description()}
 		/>
-		<FormField name="body" label={m.member_messages_compose_message()} type="textarea" />
+		<FormField
+			field={startForm.fields.body}
+			label={m.member_messages_compose_message()}
+			type="textarea"
+		/>
 	{/snippet}
 </Action>

@@ -47,8 +47,8 @@
 						successToast={m.volunteer_work_order_hours_success_toast()}
 					>
 						{#snippet form()}
-							<input type="hidden" name="id" value={log.id} />
-							<input type="hidden" name="shiftId" value={shiftId} />
+							<input {...approve.fields.id.as('hidden', log.id)} />
+							<input {...approve.fields.shiftId.as('hidden', shiftId)} />
 							<p class="text-sm">
 								{m.volunteer_work_order_hours_by({
 									formatVolunteerHours: formatVolunteerHours(log.minutes),
@@ -59,7 +59,7 @@
 							</p>
 							<p class="text-muted">{log.description}</p>
 							<FormField
-								name="notes"
+								field={approve.fields.notes}
 								label={m.volunteer_work_order_hours_note_optional()}
 								type="textarea"
 								description={m.volunteer_work_order_hours_description()}

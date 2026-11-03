@@ -73,7 +73,7 @@
 					onsuccess={onchange}
 				>
 					{#snippet form()}
-						<input type="hidden" name="eventId" value={eventId} />
+						<input {...useTemplateFlyerAsPoster.fields.eventId.as('hidden', eventId)} />
 						<p class="text-sm">
 							{m.events_listing_poster_card_flyer_drawn_from_title_date()}
 						</p>

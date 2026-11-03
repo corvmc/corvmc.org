@@ -43,7 +43,7 @@
 		<input {...fields.id.as('hidden', eventId)} />
 		<p class="py-2">{m.actions_unpublish_event_revert_event_draft_will_no()}</p>
 		<FormField
-			name="notes"
+			field={unpublishEvent.fields.notes}
 			type="textarea"
 			label={m.actions_reason()}
 			description={m.actions_unpublish_event_description()}

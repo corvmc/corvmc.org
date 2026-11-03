@@ -119,8 +119,12 @@
 					<p class="mb-3 text-muted">
 						{m.member_takes_suggestion_off_board_straight()}
 					</p>
-					<FormField name="reason" type="text" label={m.member_what_s_problem()} />
-					<FormField name="description" type="textarea" label={m.member_anything_else_optional()} />
+					<FormField field={flag.fields.reason} type="text" label={m.member_what_s_problem()} />
+					<FormField
+						field={flag.fields.description}
+						type="textarea"
+						label={m.member_anything_else_optional()}
+					/>
 				{/snippet}
 			</Action>
 		{/if}

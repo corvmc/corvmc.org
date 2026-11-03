@@ -49,7 +49,7 @@
 	{onsuccess}
 >
 	{#snippet form()}
-		<input type="hidden" name="groupId" value={groupId} />
+		<input {...instance.fields.groupId.as('hidden', groupId)} />
 		<p class="text-muted">
 			{m.groups_committee_grants_every_active_member_committee_holds()}
 		</p>

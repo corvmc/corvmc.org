@@ -180,7 +180,9 @@
 										successToast={m.member_volunteer_profile_withdrawn()}
 									>
 										{#snippet form()}
-											<input type="hidden" name="id" value={log.id} />
+											<input
+												{...withdrawVolunteerHours.for(log.id).fields.id.as('hidden', log.id)}
+											/>
 											<p class="text-sm">
 												{m.member_volunteer_profile_comes_off_record_file_again()}
 											</p>

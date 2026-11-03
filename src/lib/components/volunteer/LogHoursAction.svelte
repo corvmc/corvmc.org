@@ -64,13 +64,11 @@
 	// `.for()` keys the form instance. A free entry has nothing to key on, so it
 	// uses the bare form — two of those on one page would share state, which is
 	// why the dashboard renders exactly one.
-	const action = $derived(
-		mode === 'fix'
-			? editVolunteerHours.for(log!.id)
-			: shift
-				? submitVolunteerHours.for(shift.signupId)
-				: submitVolunteerHours
+	const submitForm = $derived(
+		shift ? submitVolunteerHours.for(shift.signupId) : submitVolunteerHours
 	);
+	const editForm = $derived(log ? editVolunteerHours.for(log.id) : undefined);
+	const action = $derived(mode === 'fix' ? editForm! : submitForm);
 
 	const title = $derived(
 		mode === 'fix'
@@ -93,16 +91,16 @@
 >
 	{#snippet form()}
 		{#if mode === 'fix'}
-			<input type="hidden" name="id" value={log!.id} />
-			<input type="hidden" name="volunteerRoleId" value={log!.volunteerRoleId} />
+			<input {...editForm!.fields.id.as('hidden', log!.id)} />
+			<input {...editForm!.fields.volunteerRoleId.as('hidden', log!.volunteerRoleId)} />
 		{:else if mode === 'shift'}
-			<input type="hidden" name="volunteerRoleId" value={shift!.volunteerRoleId} />
-			<input type="hidden" name="shiftId" value={shift!.shiftId} />
+			<input {...submitForm.fields.volunteerRoleId.as('hidden', shift!.volunteerRoleId)} />
+			<input {...submitForm.fields.shiftId.as('hidden', shift!.shiftId)} />
 			<p class="text-sm">{m.volunteer_log_hours_pre_filled_from_shift_adjust()}</p>
 		{:else}
 			<label class="fieldset w-full">
 				<span class="fieldset-legend">{m.volunteer_log_hours_what_did_help_with()}</span>
-				<Select name="volunteerRoleId">
+				<Select {...submitForm.fields.volunteerRoleId.as('select')}>
 					{#each roles as role (role.id)}
 						<option value={role.id}>{role.name}</option>
 					{/each}
@@ -115,7 +113,7 @@
 			     large, so this stays optional and blank by default. -->
 			<label class="fieldset w-full">
 				<span class="fieldset-legend">{m.volunteer_log_hours_was_committee_club()}</span>
-				<Select name="groupId">
+				<Select {...submitForm.fields.groupId.as('select')}>
 					<option value="">{m.volunteer_log_hours_cmc_generally()}</option>
 					{#each programs as program (program.id)}
 						<option value={program.id}>{program.name}</option>
@@ -125,14 +123,15 @@
 		{/if}
 
 		<FormField
-			name="workedOn"
+			field={action.fields.workedOn}
 			label={m.volunteer_date()}
 			type="date"
 			max={clubToday()}
 			value={mode === 'fix' ? log!.workedOn : mode === 'shift' ? shift!.workedOn : clubToday()}
 		/>
 		<FormField
-			name="hours"
+			field={action.fields.hours}
+			submitAs="text"
 			label={m.volunteer_hours()}
 			type="number"
 			step={VOLUNTEER_HOUR_STEP}
@@ -142,7 +141,7 @@
 			description={m.volunteer_log_hours_nearest_quarter_hour_twelve_most()}
 		/>
 		<FormField
-			name="description"
+			field={action.fields.description}
 			label={m.volunteer_log_hours_what_did()}
 			type="textarea"
 			maxlength={VOLUNTEER_DESCRIPTION_MAX}
