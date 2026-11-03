@@ -109,6 +109,9 @@ async function uncoveredFields() {
 			// field objects get aliased, passed as snippet parameters and spread into
 			// child sets, and chasing every binding shape costs more than it catches.
 			if (new RegExp(`\\.${k}\\b`).test(scoped)) continue;
+			// A shared step a host imports, reading `fields.${k}` off a prop or the
+			// form context.
+			if (new RegExp(`fields\\??\\.${k}\\b`).test(renderScope(hosts, files))) continue;
 			// A field set declaring `${k}: RemoteFormField<…>` renders it.
 			if (declaresFieldSet(k, hosts, files)) continue;
 			out.push(`${name}.${k}`);
