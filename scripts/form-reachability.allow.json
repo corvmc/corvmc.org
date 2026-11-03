@@ -115,9 +115,6 @@
 	"src/lib/server/inventory/item-service.ts#updateItem(1)": {
 		"kind": "internal: in the Partial<CreateItemData> type, deliberately never written"
 	},
-	"src/lib/server/inventory/order-service.ts#createOrder(0)": {
-		"notes": "#2316: purchase order notes are rendered but no form writes them"
-	},
 	"src/lib/server/inventory/resources-service.ts#reportDamage(0)": {
 		"blocksUse": "internal: absent means blocking, documented at the call",
 		"loanId": "internal: re-uptake raises its flag through raiseFlag in loan-service"
