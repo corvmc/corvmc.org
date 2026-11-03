@@ -1,145 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Two rules carry most of the weight in this file, and both are the kind that
-// look redundant to someone tidying up later:
-//
+// Blocks and reachability against a real SQLite, with the real standing service:
 //   1. Blocks are directional rows read in both directions. Unblocking removes
 //      only your own row — if the other person blocked you too, theirs stands.
-//   2. Reachability has two independent halves — a restriction staff or a
-//      report imposed (`member_standing`), and the member's own switch
-//      (`user.acceptsDirectMessages`). Either one alone makes a member
-//      unreachable, and the member's switch can never lift a restriction,
-//      because the two write different tables. The standing half is
-//      standing-service.spec.ts's; what this file pins is that both halves are
-//      consulted and that they stay independent.
+//   2. Reachability has independent halves — a restriction (`member_standing`),
+//      the member's own switch (`user.accepts_direct_messages`) and their age.
+//      The member's switch cannot lift a restriction: they write different tables.
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-const TABLES = {
-	userBlock: {
-		__table: 'user_block',
-		id: 'block.id',
-		blockerUserId: 'block.blockerUserId',
-		blockedUserId: 'block.blockedUserId',
-		source: 'block.source',
-		createdAt: 'block.createdAt'
-	}
-};
-
-let results: unknown[] = [];
-
-/** A birth date `n` years before now, for the age-derived messaging gate. */
-function yearsAgo(n: number): Date {
-	const d = new Date();
-	d.setFullYear(d.getFullYear() - n);
-	return d;
-}
-let inserted: { table: string; values: unknown; conflict: unknown }[] = [];
-let deleted: { table: string; where: unknown }[] = [];
-let updated: { table: string; set: unknown }[] = [];
-/** Every `where` a select built, in order. */
-let selectWheres: unknown[] = [];
-
-function chain(record?: (key: string, value: unknown) => void) {
-	const self: Record<string, unknown> = {};
-	for (const m of ['from', 'innerJoin', 'leftJoin', 'orderBy', 'limit', 'groupBy']) {
-		self[m] = () => self;
-	}
-	self.where = (w: unknown) => {
-		record?.('where', w);
-		return self;
-	};
-	self.values = (v: unknown) => {
-		record?.('values', v);
-		return self;
-	};
-	self.set = (v: unknown) => {
-		record?.('set', v);
-		return self;
-	};
-	self.onConflictDoNothing = () => {
-		record?.('conflict', 'nothing');
-		return self;
-	};
-	self.onConflictDoUpdate = (c: unknown) => {
-		record?.('conflict', c);
-		return self;
-	};
-	self.then = (resolve: (v: unknown) => unknown) => resolve(results.shift() ?? []);
-	return self;
-}
-
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () =>
-			chain((k, v) => {
-				if (k === 'where') selectWheres.push(v);
-			}),
-		insert: (table: { __table: string }) => {
-			const entry = {
-				table: table.__table,
-				values: undefined as unknown,
-				conflict: undefined as unknown
-			};
-			inserted.push(entry);
-			return chain((k, v) => {
-				if (k === 'values') entry.values = v;
-				if (k === 'conflict') entry.conflict = v;
-			});
-		},
-		update: (table: { __table: string }) => {
-			const entry = { table: table.__table, set: undefined as unknown };
-			updated.push(entry);
-			return chain((k, v) => {
-				if (k === 'set') entry.set = v;
-			});
-		},
-		delete: (table: { __table: string }) => {
-			const entry = { table: table.__table, where: undefined as unknown };
-			deleted.push(entry);
-			return chain((k, v) => {
-				if (k === 'where') entry.where = v;
-			});
-		}
-	}
-}));
-vi.mock('$lib/server/db/schema/moderation', () => TABLES);
-vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: {
-		__table: 'user',
-		id: 'user.id',
-		name: 'user.name',
-		acceptsDirectMessages: 'user.acceptsDirectMessages'
-	}
-}));
-
-// Standing storage is standing-service.spec.ts's subject. Here it is a stub, so
-// these tests assert how the two halves combine and nothing about the table.
-type Standing = {
-	status: string;
-	reason: string | null;
-	triggeringFlagId: string | null;
-	updatedAt: Date | null;
-};
-const getStandingMock = vi.fn(async (): Promise<Standing> => ({
-	status: 'none',
-	reason: null,
-	triggeringFlagId: null,
-	updatedAt: null
-}));
-vi.mock('$lib/server/moderation/standing-service', () => ({
-	getStanding: (...a: unknown[]) => getStandingMock(...(a as []))
-}));
-
-vi.mock('drizzle-orm', () => ({
-	eq: (a: unknown, b: unknown) => ({ op: 'eq', a, b }),
-	and: (...a: unknown[]) => ({ op: 'and', a }),
-	or: (...a: unknown[]) => ({ op: 'or', a }),
-	desc: vi.fn(),
-	sql: (strings: TemplateStringsArray, ...v: unknown[]) => ({
-		op: 'sql',
-		text: strings.join('?'),
-		v
-	})
-}));
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
 const {
 	blockUser,
@@ -151,229 +23,218 @@ const {
 	setAcceptsDirectMessages,
 	getMessagingState
 } = await import('./moderation-service');
+const { sql } = await import('drizzle-orm');
+
+const NOW = new Date('2026-06-15T12:00:00Z');
+const T0 = 1_750_000_000;
+
+/** A birth date `n` years before NOW, in epoch seconds. */
+function yearsAgo(n: number): number {
+	const d = new Date(NOW.getTime());
+	d.setFullYear(d.getFullYear() - n);
+	return d.getTime() / 1000;
+}
+
+function account(id: string, opts: { accepts?: boolean; dob?: number } = {}) {
+	sqlite
+		.prepare(
+			`insert into user (id, name, email, accepts_direct_messages, date_of_birth) values (?, ?, ?, ?, ?)`
+		)
+		.run(id, id, `${id}@example.com`, opts.accepts === false ? 0 : 1, opts.dob ?? null);
+}
+
+function standing(userId: string, status: string, reason: string | null = null) {
+	sqlite
+		.prepare(
+			`insert into member_standing (user_id, scope, status, reason, triggering_flag_id, updated_at)
+			 values (?, 'messaging', ?, ?, 'flag-1', ?)`
+		)
+		.run(userId, status, reason, T0);
+}
+
+function block(blocker: string, blocked: string) {
+	sqlite
+		.prepare(`insert into user_block (blocker_user_id, blocked_user_id) values (?, ?)`)
+		.run(blocker, blocked);
+}
+
+const blocks = () =>
+	sqlite
+		.prepare(
+			'select blocker_user_id as blocker, blocked_user_id as blocked, source from user_block order by blocker'
+		)
+		.all() as { blocker: string; blocked: string; source: string }[];
 
 beforeEach(() => {
-	results = [];
-	inserted = [];
-	deleted = [];
-	updated = [];
-	selectWheres = [];
-	getStandingMock.mockResolvedValue({
-		status: 'none',
-		reason: null,
-		triggeringFlagId: null,
-		updatedAt: null
-	});
+	vi.useFakeTimers({ toFake: ['Date'] });
+	vi.setSystemTime(NOW);
+	for (const t of ['user_block', 'member_standing', 'user']) sqlite.exec(`delete from ${t}`);
+});
+
+afterEach(() => {
+	vi.useRealTimers();
 });
 
 describe('blockUser', () => {
 	it('is idempotent — blocking twice writes one row', async () => {
 		await blockUser({ blockerUserId: 'alice', blockedUserId: 'bob' });
-		expect(inserted[0].table).toBe('user_block');
-		expect(inserted[0].conflict).toBe('nothing');
+		await blockUser({ blockerUserId: 'alice', blockedUserId: 'bob' });
+		expect(blocks()).toHaveLength(1);
 	});
 
 	it('records why, so staff have context without asking', async () => {
 		await blockUser({ blockerUserId: 'alice', blockedUserId: 'bob', source: 'declined_request' });
-		expect(inserted[0].values).toMatchObject({ source: 'declined_request' });
+		expect(blocks()[0].source).toBe('declined_request');
 	});
 
 	it('defaults to a manual block', async () => {
 		await blockUser({ blockerUserId: 'alice', blockedUserId: 'bob' });
-		expect(inserted[0].values).toMatchObject({ source: 'manual' });
+		expect(blocks()[0].source).toBe('manual');
 	});
 
 	it('refuses to let someone block themselves', async () => {
 		await blockUser({ blockerUserId: 'alice', blockedUserId: 'alice' });
-		expect(inserted).toHaveLength(0);
+		expect(blocks()).toHaveLength(0);
 	});
 });
 
 describe('unblockUser', () => {
+	// Deleting "the pair" would let either party unilaterally reopen a channel
+	// the other closed.
 	it('removes only the caller’s own row', async () => {
-		// If both people blocked each other, lifting one must leave the other
-		// standing. Deleting "the pair" would let either party unilaterally
-		// reopen a channel the other closed.
+		block('alice', 'bob');
+		block('bob', 'alice');
+		block('alice', 'carol');
+
 		await unblockUser('alice', 'bob');
-		expect(deleted).toHaveLength(1);
-		const where = deleted[0].where as Record<string, unknown>;
-		expect(where.op).toBe('and');
-		const parts = where.a as Record<string, unknown>[];
-		expect(parts).toEqual([
-			{ op: 'eq', a: TABLES.userBlock.blockerUserId, b: 'alice' },
-			{ op: 'eq', a: TABLES.userBlock.blockedUserId, b: 'bob' }
-		]);
+
+		expect(blocks().map((b) => `${b.blocker}>${b.blocked}`)).toEqual(['alice>carol', 'bob>alice']);
 	});
 });
 
 describe('block checks read both directions', () => {
-	it('isBlockedEitherWay ORs the two orderings', async () => {
-		// A check that only asks "did the sender block the recipient" lets a
-		// blocked person keep writing to the person who blocked them. Both
-		// orderings have to be in the query.
-		results = [[]];
-		await isBlockedEitherWay('alice', 'bob');
-
-		expect(selectWheres).toHaveLength(1);
-		const where = selectWheres[0] as Record<string, unknown>;
-		expect(where.op).toBe('or');
-
-		const [first, second] = where.a as Record<string, unknown>[];
-		expect(first.a).toEqual([
-			{ op: 'eq', a: TABLES.userBlock.blockerUserId, b: 'alice' },
-			{ op: 'eq', a: TABLES.userBlock.blockedUserId, b: 'bob' }
-		]);
-		expect(second.a).toEqual([
-			{ op: 'eq', a: TABLES.userBlock.blockerUserId, b: 'bob' },
-			{ op: 'eq', a: TABLES.userBlock.blockedUserId, b: 'alice' }
-		]);
+	// A check that only asks "did the sender block the recipient" lets a
+	// blocked person keep writing to the person who blocked them.
+	it('isBlockedEitherWay finds a block in either direction', async () => {
+		block('bob', 'alice');
+		expect(await isBlockedEitherWay('alice', 'bob')).toBe(true);
+		expect(await isBlockedEitherWay('bob', 'alice')).toBe(true);
 	});
 
-	it('reports a block found in either direction', async () => {
-		results = [[{ id: 'block-1' }]];
-		expect(await isBlockedEitherWay('alice', 'bob')).toBe(true);
-		results = [[]];
+	it('isBlockedEitherWay ignores blocks involving someone else', async () => {
+		block('alice', 'carol');
+		block('carol', 'bob');
 		expect(await isBlockedEitherWay('alice', 'bob')).toBe(false);
 	});
 
-	it('blockExistsBetween names both people on both sides', () => {
-		const fragment = blockExistsBetween('alice', 'bob') as unknown as Record<string, unknown>;
-		expect(fragment.op).toBe('sql');
-		expect(fragment.text).toContain('user_block');
-		// alice and bob each appear twice: once as blocker, once as blocked.
-		const values = fragment.v as string[];
-		expect(values.filter((v) => v === 'alice')).toHaveLength(2);
-		expect(values.filter((v) => v === 'bob')).toHaveLength(2);
+	it('blockExistsBetween matches either ordering and nothing else', async () => {
+		block('bob', 'alice');
+		block('alice', 'carol');
+		const hit = (a: string, b: string) =>
+			(testDb.get(sql`select ${blockExistsBetween(a, b)} as hit`) as { hit: number }).hit;
+
+		expect(hit('alice', 'bob')).toBe(1);
+		expect(hit('bob', 'alice')).toBe(1);
+		expect(hit('bob', 'carol')).toBe(0);
 	});
 });
 
 describe('canInitiateMessages', () => {
+	// Their own switch stops people reaching them; it is not a finding against
+	// them, so it does not close conversations they are already in.
 	it('is about the restriction only — a member who switched themselves off may still reply', async () => {
-		// Their own switch stops people reaching them; it is not a finding against
-		// them, so it does not close conversations they are already in.
-		getStandingMock.mockResolvedValue({
-			status: 'none',
-			reason: null,
-			triggeringFlagId: null,
-			updatedAt: null
-		});
-		results = [[{ dateOfBirth: null }]];
+		account('alice', { accepts: false });
 		expect(await canInitiateMessages('alice')).toBe(true);
 	});
 
 	it('a restricted member may not start conversations', async () => {
-		results = [[{ dateOfBirth: null }]];
-		getStandingMock.mockResolvedValue({
-			status: 'restricted',
-			reason: null,
-			triggeringFlagId: null,
-			updatedAt: null
-		});
+		account('alice');
+		standing('alice', 'restricted');
 		expect(await canInitiateMessages('alice')).toBe(false);
 	});
 
-	// Age is checked before standing, and answers differently: nobody restricted
-	// this member, so there is no note to quote and nothing to appeal. Before
-	// #556 this was written as a `member_standing` row and was indistinguishable
-	// from the case above.
+	// Nobody restricted this member, so there is no note to quote and nothing
+	// to appeal (#556).
 	it('a member under 18 may not start conversations either', async () => {
-		results = [[{ dateOfBirth: yearsAgo(16) }]];
+		account('alice', { dob: yearsAgo(16) });
 		expect(await canInitiateMessages('alice')).toBe(false);
 	});
 });
 
 describe('messagingIsDisabled — the three parts', () => {
 	it('is true when staff switched messaging off', async () => {
-		// The fixture reason is no longer "under 18": that case has its own
-		// mechanism now and is the test below, not a staff decision.
-		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: null }]];
-		getStandingMock.mockResolvedValue({
-			status: 'disabled',
-			reason: 'continued messaging after being asked to stop',
-			triggeringFlagId: null,
-			updatedAt: null
-		});
+		account('alice');
+		standing('alice', 'disabled', 'continued messaging after being asked to stop');
 		expect(await messagingIsDisabled('alice')).toBe(true);
 	});
 
 	it('is true when the member switched it off themselves', async () => {
-		results = [[{ acceptsDirectMessages: false }]];
+		account('alice', { accepts: false });
 		expect(await messagingIsDisabled('alice')).toBe(true);
 	});
 
-	// Their standing says `none` throughout — nobody restricted them. Before #556
-	// making this true meant writing a `member_standing` row that said otherwise.
 	it('is true for a member under 18 whose standing is good', async () => {
-		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: yearsAgo(16) }]];
-		getStandingMock.mockResolvedValue({
-			status: 'none',
-			reason: null,
-			triggeringFlagId: null,
-			updatedAt: null
-		});
+		account('alice', { dob: yearsAgo(16) });
 		expect(await messagingIsDisabled('alice')).toBe(true);
 	});
 
 	it('is false for a member who has just turned 18', async () => {
-		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: yearsAgo(18) }]];
+		account('alice', { dob: yearsAgo(18) });
 		expect(await messagingIsDisabled('alice')).toBe(false);
 	});
 
-	// The caller gets one boolean and cannot tell which half produced it. That is
-	// deliberate: telling a sender would leak either a moderation decision or a
-	// personal preference.
+	// One boolean: telling a sender which half produced it would leak either a
+	// moderation decision or a personal preference.
 	it('is false only when none of the three says so', async () => {
-		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: null }]];
+		account('alice');
+		account('bob', { accepts: false });
+		standing('bob', 'disabled');
 		expect(await messagingIsDisabled('alice')).toBe(false);
 	});
 
+	// `restricted` is reply-only for the restricted member; others can still
+	// write to them — that is what separates it from `disabled`.
 	it('a report-driven restriction does not make someone unreachable', async () => {
-		// `restricted` is reply-only for the restricted member. Other people can
-		// still write to them — that is what separates it from `disabled`.
-		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: null }]];
-		getStandingMock.mockResolvedValue({
-			status: 'restricted',
-			reason: null,
-			triggeringFlagId: null,
-			updatedAt: null
-		});
+		account('alice');
+		standing('alice', 'restricted');
 		expect(await messagingIsDisabled('alice')).toBe(false);
 	});
 });
 
 describe('setAcceptsDirectMessages', () => {
-	// The rule that replaced `MessagingStandingNotYoursError`: the member's switch
-	// is a different table from their standing, so "turn my messages back on"
-	// structurally cannot clear a suspension. There is no guard to forget.
+	// The member's switch is a different table from their standing, so "turn my
+	// messages back on" structurally cannot clear a suspension.
 	it('writes the member’s own preference and nothing else', async () => {
+		account('alice');
+		account('bob');
+
 		await setAcceptsDirectMessages('alice', false);
-		expect(updated).toHaveLength(1);
-		expect(updated[0].table).toBe('user');
-		expect(updated[0].set).toEqual({ acceptsDirectMessages: false });
-		expect(inserted).toHaveLength(0);
+
+		expect(
+			sqlite.prepare('select id, accepts_direct_messages as a from user order by id').all()
+		).toEqual([
+			{ id: 'alice', a: 0 },
+			{ id: 'bob', a: 1 }
+		]);
+		expect(sqlite.prepare('select count(*) as n from member_standing').get()).toEqual({ n: 0 });
 	});
 
-	it('lets a restricted member still set their own switch', async () => {
-		getStandingMock.mockResolvedValue({
-			status: 'restricted',
-			reason: 'harassment',
-			triggeringFlagId: 'flag-1',
-			updatedAt: null
-		});
+	it('lets a restricted member set their own switch, and leaves the restriction standing', async () => {
+		account('alice', { accepts: false });
+		standing('alice', 'restricted', 'harassment');
+
 		await setAcceptsDirectMessages('alice', true);
-		expect(updated[0].set).toEqual({ acceptsDirectMessages: true });
+
+		const state = await getMessagingState('alice');
+		expect(state.acceptsDirectMessages).toBe(true);
+		expect(state.standing.status).toBe('restricted');
 	});
 });
 
 describe('getMessagingState', () => {
 	it('returns all three separately, so the account page can show each for what it is', async () => {
-		results = [[{ acceptsDirectMessages: false }], [{ dateOfBirth: null }]];
-		getStandingMock.mockResolvedValue({
-			status: 'restricted',
-			reason: 'harassment',
-			triggeringFlagId: 'flag-1',
-			updatedAt: null
-		});
+		account('alice', { accepts: false });
+		standing('alice', 'restricted', 'harassment');
 
 		expect(await getMessagingState('alice')).toEqual({
 			acceptsDirectMessages: false,
@@ -381,20 +242,16 @@ describe('getMessagingState', () => {
 				status: 'restricted',
 				reason: 'harassment',
 				triggeringFlagId: 'flag-1',
-				updatedAt: null
+				updatedAt: new Date(T0 * 1000)
 			},
 			ageRestricted: false
 		});
 	});
 
-	/**
-	 * The field the account page needs to word the notice, and the whole of #556
-	 * from the member's side: a 16-year-old must not be shown a staff note, an
-	 * appeal, or "switched off for your account by staff", because nobody
-	 * decided anything about them.
-	 */
+	// #556 from the member's side: a 16-year-old must not be shown a staff note
+	// or an appeal, because nobody decided anything about them.
 	it('reports a minor as age-restricted, with their standing untouched', async () => {
-		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: yearsAgo(16) }]];
+		account('robin', { dob: yearsAgo(16) });
 
 		const state = await getMessagingState('robin');
 		expect(state.ageRestricted).toBe(true);
@@ -403,12 +260,11 @@ describe('getMessagingState', () => {
 	});
 
 	it('defaults to reachable when the row is missing', async () => {
-		results = [[], []];
 		expect((await getMessagingState('ghost')).acceptsDirectMessages).toBe(true);
 	});
 
 	it('does not restrict the members who have given no date, which is most of them', async () => {
-		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: null }]];
+		account('alice');
 		expect((await getMessagingState('alice')).ageRestricted).toBe(false);
 	});
 });

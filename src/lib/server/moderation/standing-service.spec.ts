@@ -1,94 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Three rules carry the weight in this file, and each is the kind that looks
-// redundant to someone tidying up later:
-//
+// Member standing against a real SQLite. Three rules carry the weight:
 //   1. `(userId, scope)` is the key, not `userId`. An upheld report about a gig
 //      listing must not put someone on probation for suggestions.
 //   2. `scopeForFlag` is NOT the identity function — an `event` report only
 //      costs standing when the event is a member's community listing.
 //   3. Restoring is an UPDATE. Absence of a row means good standing, so
 //      restoring someone who was never restricted must not insert one.
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-const TABLES = {
-	memberStanding: {
-		__table: 'member_standing',
-		userId: 'standing.userId',
-		scope: 'standing.scope',
-		status: 'standing.status',
-		reason: 'standing.reason',
-		triggeringFlagId: 'standing.triggeringFlagId',
-		updatedByUserId: 'standing.updatedByUserId',
-		updatedAt: 'standing.updatedAt'
-	}
-};
-
-let results: unknown[] = [];
-let inserted: { table: string; values: unknown; conflict: unknown }[] = [];
-let updated: { table: string; set: unknown; where: unknown }[] = [];
-let selectWheres: unknown[] = [];
-
-function chain(record?: (key: string, value: unknown) => void) {
-	const self: Record<string, unknown> = {};
-	for (const m of ['from', 'orderBy', 'limit']) self[m] = () => self;
-	self.where = (w: unknown) => {
-		record?.('where', w);
-		return self;
-	};
-	self.values = (v: unknown) => {
-		record?.('values', v);
-		return self;
-	};
-	self.set = (v: unknown) => {
-		record?.('set', v);
-		return self;
-	};
-	self.onConflictDoUpdate = (c: unknown) => {
-		record?.('conflict', c);
-		return self;
-	};
-	self.then = (resolve: (v: unknown) => unknown) => resolve(results.shift() ?? []);
-	return self;
-}
-
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () =>
-			chain((k, v) => {
-				if (k === 'where') selectWheres.push(v);
-			}),
-		insert: (table: { __table: string }) => {
-			const entry = {
-				table: table.__table,
-				values: undefined as unknown,
-				conflict: undefined as unknown
-			};
-			inserted.push(entry);
-			return chain((k, v) => {
-				if (k === 'values') entry.values = v;
-				if (k === 'conflict') entry.conflict = v;
-			});
-		},
-		update: (table: { __table: string }) => {
-			const entry = {
-				table: table.__table,
-				set: undefined as unknown,
-				where: undefined as unknown
-			};
-			updated.push(entry);
-			return chain((k, v) => {
-				if (k === 'set') entry.set = v;
-				if (k === 'where') entry.where = v;
-			});
-		}
-	}
-}));
-vi.mock('$lib/server/db/schema/standing', () => TABLES);
-
-vi.mock('drizzle-orm', () => ({
-	eq: (a: unknown, b: unknown) => ({ op: 'eq', a, b }),
-	and: (...a: unknown[]) => ({ op: 'and', a })
-}));
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
 const {
 	getStanding,
@@ -101,16 +25,38 @@ const {
 	StandingWithoutReportError
 } = await import('./standing-service');
 
+const T0 = 1_750_000_000;
+
+function standing(userId: string, scope: string, status: string, reason: string | null = null) {
+	sqlite
+		.prepare(
+			`insert into member_standing (user_id, scope, status, reason, triggering_flag_id, updated_by_user_id, updated_at)
+			 values (?, ?, ?, ?, 'f1', 'staff0', ?)`
+		)
+		.run(userId, scope, status, reason, T0);
+}
+
+type Row = {
+	user_id: string;
+	scope: string;
+	status: string;
+	reason: string | null;
+	triggering_flag_id: string | null;
+	updated_by_user_id: string | null;
+};
+const rows = () =>
+	sqlite.prepare('select * from member_standing order by user_id, scope').all() as Row[];
+const rowFor = (userId: string, scope: string) =>
+	sqlite
+		.prepare('select * from member_standing where user_id = ? and scope = ?')
+		.get(userId, scope) as Row | undefined;
+
 beforeEach(() => {
-	results = [];
-	inserted = [];
-	updated = [];
-	selectWheres = [];
+	sqlite.exec('delete from member_standing');
 });
 
 describe('getStanding', () => {
 	it('treats an absent row as good standing — the case every reader assumes', async () => {
-		results = [[]];
 		await expect(getStanding('u1', 'suggestion')).resolves.toEqual({
 			status: 'none',
 			reason: null,
@@ -120,44 +66,30 @@ describe('getStanding', () => {
 	});
 
 	it('reads the stored row when there is one', async () => {
-		const updatedAt = new Date('2026-01-01');
-		results = [[{ status: 'restricted', reason: 'Spam', triggeringFlagId: 'f1', updatedAt }]];
+		standing('u1', 'suggestion', 'restricted', 'Spam');
 		await expect(getStanding('u1', 'suggestion')).resolves.toEqual({
 			status: 'restricted',
 			reason: 'Spam',
 			triggeringFlagId: 'f1',
-			updatedAt
+			updatedAt: new Date(T0 * 1000)
 		});
 	});
 
-	// The point of the whole table. A single global standing was explicitly
-	// rejected: being on review for gig listings says nothing about suggestions.
+	// The point of the whole table: being on review for gig listings says
+	// nothing about suggestions.
 	it('narrows on the scope as well as the member', async () => {
-		results = [[]];
-		await getStanding('u1', 'messaging');
-		expect(selectWheres[0]).toEqual({
-			op: 'and',
-			a: [
-				{ op: 'eq', a: 'standing.userId', b: 'u1' },
-				{ op: 'eq', a: 'standing.scope', b: 'messaging' }
-			]
-		});
+		standing('u1', 'community_event', 'restricted');
+		standing('u2', 'messaging', 'disabled');
+
+		expect((await getStanding('u1', 'messaging')).status).toBe('none');
+		expect((await getStanding('u1', 'community_event')).status).toBe('restricted');
 	});
 });
 
 describe('getStandings', () => {
-	it('fills in every scope from one query, defaulting the absent ones', async () => {
-		results = [
-			[
-				{
-					scope: 'suggestion',
-					status: 'restricted',
-					reason: 'Spam',
-					triggeringFlagId: 'f1',
-					updatedAt: null
-				}
-			]
-		];
+	it('fills in every scope, defaulting the absent ones, for this member only', async () => {
+		standing('u1', 'suggestion', 'restricted', 'Spam');
+		standing('u2', 'messaging', 'disabled');
 
 		const all = await getStandings('u1');
 
@@ -171,41 +103,32 @@ describe('getStandings', () => {
 		expect(all.community_event.status).toBe('none');
 		expect(all.messaging.status).toBe('none');
 	});
-
-	it('reads the member once, not once per scope', async () => {
-		results = [[]];
-		await getStandings('u1');
-		expect(selectWheres).toEqual([{ op: 'eq', a: 'standing.userId', b: 'u1' }]);
-	});
 });
 
 describe('setStanding', () => {
 	it('upserts on the composite key, so a second upheld report restates rather than fails', async () => {
-		await setStanding({
+		const base = {
 			userId: 'u1',
-			scope: 'suggestion',
-			status: 'restricted',
-			staffId: 'staff1',
-			reason: 'Spam',
-			flagId: 'f1'
-		});
+			scope: 'suggestion' as const,
+			status: 'restricted' as const,
+			staffId: 'staff1'
+		};
+		standing('u1', 'messaging', 'restricted', 'other scope');
 
-		expect(inserted[0].table).toBe('member_standing');
-		expect(inserted[0].values).toMatchObject({
-			userId: 'u1',
-			scope: 'suggestion',
+		await setStanding({ ...base, reason: 'Spam', flagId: 'f1' });
+		await setStanding({ ...base, reason: 'More spam', flagId: 'f2' });
+
+		expect(rows()).toHaveLength(2);
+		expect(rowFor('u1', 'suggestion')).toMatchObject({
 			status: 'restricted',
-			reason: 'Spam',
-			triggeringFlagId: 'f1',
-			updatedByUserId: 'staff1'
+			reason: 'More spam',
+			triggering_flag_id: 'f2',
+			updated_by_user_id: 'staff1'
 		});
-		expect(inserted[0].conflict).toMatchObject({
-			target: ['standing.userId', 'standing.scope']
-		});
+		expect(rowFor('u1', 'messaging')?.reason).toBe('other scope');
 	});
 
-	// Only messaging has a use for `disabled`. "You may not post community
-	// listings at all" is not a thing staff can do, so storing it would leave a
+	// Only messaging has a use for `disabled`; storing it elsewhere would leave a
 	// value in the column that no reader knows how to interpret.
 	it('refuses a status the scope has no meaning for', async () => {
 		await expect(
@@ -217,12 +140,11 @@ describe('setStanding', () => {
 				flagId: 'f1'
 			})
 		).rejects.toBeInstanceOf(StandingStatusNotAllowedError);
-		expect(inserted).toHaveLength(0);
+		expect(rows()).toHaveLength(0);
 	});
 
-	// The rung stays legal and the justification changed. `disabled` is the
-	// escalation past reply-only `restricted`; it used to double as the
-	// under-18 switch-off, which #556 moved to `user.date_of_birth`.
+	// `disabled` is the escalation past reply-only `restricted`; it used to
+	// double as the under-18 switch-off, which #556 moved to `user.date_of_birth`.
 	it('allows disabled for messaging — the escalation past reply-only', async () => {
 		await setStanding({
 			userId: 'u1',
@@ -231,7 +153,7 @@ describe('setStanding', () => {
 			staffId: 'staff1',
 			flagId: 'f1'
 		});
-		expect(inserted[0].values).toMatchObject({ scope: 'messaging', status: 'disabled' });
+		expect(rowFor('u1', 'messaging')?.status).toBe('disabled');
 	});
 
 	it('trims a long staff note rather than storing it whole', async () => {
@@ -243,11 +165,11 @@ describe('setStanding', () => {
 			reason: 'x'.repeat(900),
 			flagId: 'f1'
 		});
-		expect((inserted[0].values as { reason: string }).reason).toHaveLength(500);
+		expect(rowFor('u1', 'messaging')?.reason).toHaveLength(500);
 	});
 
-	// Every moderation action is an upheld report. This is the test that stops a
-	// flagless path growing back: with no report there is nothing to appeal.
+	// Every moderation action is an upheld report: with no report there is
+	// nothing to appeal.
 	it('rejects a standing with no report behind it', async () => {
 		await expect(
 			setStanding({
@@ -258,7 +180,7 @@ describe('setStanding', () => {
 				flagId: undefined as unknown as string
 			})
 		).rejects.toBeInstanceOf(StandingWithoutReportError);
-		expect(inserted).toHaveLength(0);
+		expect(rows()).toHaveLength(0);
 	});
 });
 
@@ -272,11 +194,9 @@ describe('restrictStanding', () => {
 			reason: 'Misleading listing'
 		});
 
-		expect(inserted[0].values).toMatchObject({
-			userId: 'u1',
-			scope: 'community_event',
+		expect(rowFor('u1', 'community_event')).toMatchObject({
 			status: 'restricted',
-			triggeringFlagId: 'f9',
+			triggering_flag_id: 'f9',
 			reason: 'Misleading listing'
 		});
 	});
@@ -285,34 +205,40 @@ describe('restrictStanding', () => {
 describe('restoreStanding', () => {
 	it('updates rather than inserting — restoring an unrestricted member is a no-op', async () => {
 		await restoreStanding({ userId: 'u1', scope: 'suggestion', staffId: 'staff1' });
-		expect(inserted).toHaveLength(0);
-		expect(updated[0].table).toBe('member_standing');
+		expect(rows()).toHaveLength(0);
 	});
 
 	// Flipping the status is what marks it forgiven. Wiping the reason and the
 	// flag would make "why was I in review?" unanswerable afterwards.
 	it('leaves the reason and the triggering report in place', async () => {
+		standing('u1', 'suggestion', 'restricted', 'Spam');
+
 		await restoreStanding({ userId: 'u1', scope: 'suggestion', staffId: 'staff1' });
-		expect(updated[0].set).toMatchObject({ status: 'none', updatedByUserId: 'staff1' });
-		expect(updated[0].set).not.toHaveProperty('reason');
-		expect(updated[0].set).not.toHaveProperty('triggeringFlagId');
+
+		expect(rowFor('u1', 'suggestion')).toMatchObject({
+			status: 'none',
+			updated_by_user_id: 'staff1',
+			reason: 'Spam',
+			triggering_flag_id: 'f1'
+		});
 	});
 
-	it('restores one scope only', async () => {
+	it('restores one scope of one member only', async () => {
+		standing('u1', 'messaging', 'restricted');
+		standing('u1', 'suggestion', 'restricted');
+		standing('u2', 'messaging', 'restricted');
+
 		await restoreStanding({ userId: 'u1', scope: 'messaging', staffId: 'staff1' });
-		expect(updated[0].where).toEqual({
-			op: 'and',
-			a: [
-				{ op: 'eq', a: 'standing.userId', b: 'u1' },
-				{ op: 'eq', a: 'standing.scope', b: 'messaging' }
-			]
-		});
+
+		expect(rows().map((r) => `${r.user_id}/${r.scope}=${r.status}`)).toEqual([
+			'u1/messaging=none',
+			'u1/suggestion=restricted',
+			'u2/messaging=restricted'
+		]);
 	});
 });
 
-// The mapping `resolveFlag` used to carry inline, three branches deep. Pinned
-// here directly because it is not the identity function and the exception is
-// easy to lose in a refactor.
+// Not the identity function, and the exception is easy to lose in a refactor.
 describe('scopeForFlag', () => {
 	it('costs a member their listing standing only when the event is theirs to answer for', () => {
 		expect(scopeForFlag('event', { eventSource: 'community' })).toBe('community_event');
