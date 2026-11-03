@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import clsx from 'clsx';
 	import { LinkPreview } from 'bits-ui';
 	import { browser } from '$app/environment';
@@ -181,7 +182,13 @@
 
 		Same arrow `CrossRefList` already uses for "go to this record".
 	-->
-	<Button href={href!} shape="square" size="sm" variant="ghost" aria-label="Open {ref.title}">
+	<Button
+		href={href!}
+		shape="square"
+		size="sm"
+		variant="ghost"
+		aria-label={m.ui_open_named({ title: ref.title })}
+	>
 		<IconArrowRight size={18} />
 	</Button>
 {/snippet}

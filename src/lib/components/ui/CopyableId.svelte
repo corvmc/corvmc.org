@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from './Button.svelte';
 	import { IconCopy } from '@tabler/icons-svelte';
 
@@ -25,7 +26,7 @@
 			variant="ghost"
 			size="xs"
 			onclick={() => navigator.clipboard.writeText(value)}
-			title="Copy"
+			title={m.ui_copy()}
 		>
 			<IconCopy size={14} />
 		</Button>

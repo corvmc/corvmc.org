@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import type { RemoteForm } from '@sveltejs/kit';
 	import { toast } from 'svelte-sonner';
@@ -177,7 +178,7 @@
 			await minDelay;
 			dialogOpen = false;
 			onsuccess?.(result);
-			toast.success(successToast ?? `${label} successful`);
+			toast.success(successToast ?? m.ui_action_succeeded({ label }));
 			status = 'success';
 		} catch (err) {
 			await minDelay;
@@ -309,12 +310,12 @@
 			     that "Keep editing" gives back exactly what was typed. -->
 			{#if askingDiscard}
 				<div class="space-y-4" data-testid="discard-prompt">
-					<p class="py-4">You have unsaved changes. Closing will lose them.</p>
+					<p class="py-4">{m.ui_unsaved_close_prompt()}</p>
 					<div class="flex justify-end gap-2">
 						<Button type="button" variant="default" onclick={() => (askingDiscard = false)}>
-							Keep editing
+							{m.ui_keep_editing()}
 						</Button>
-						<Button type="button" variant="error" onclick={discard}>Discard</Button>
+						<Button type="button" variant="error" onclick={discard}>{m.ui_discard()}</Button>
 					</div>
 				</div>
 			{/if}
@@ -358,7 +359,7 @@
 		{:else if confirm}
 			<p class="py-4">{confirm}</p>
 			<div class="modal-action">
-				<Button type="button" variant="default" outline onclick={close}>Dismiss</Button>
+				<Button type="button" variant="default" outline onclick={close}>{m.ui_dismiss()}</Button>
 				<Button type="button" variant="primary" onclick={run}>
 					{@render icon?.()}
 					{label}

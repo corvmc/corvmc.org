@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 
 	let {
@@ -73,7 +74,7 @@
 				class="carousel__nav"
 				onclick={prev}
 				disabled={currentIndex === 0}
-				aria-label="Previous"
+				aria-label={m.ui_previous()}
 			>
 				<svg
 					viewBox="0 0 24 24"
@@ -90,7 +91,7 @@
 						class="carousel__dot"
 						class:is-active={i === currentIndex}
 						onclick={() => scrollTo(i)}
-						aria-label="Go to slide {i + 1}"
+						aria-label={m.ui_carousel_go_to({ n: i + 1 })}
 					></button>
 				{/each}
 			</div>
@@ -98,7 +99,7 @@
 				class="carousel__nav"
 				onclick={next}
 				disabled={currentIndex >= maxIndex}
-				aria-label="Next"
+				aria-label={m.ui_next()}
 			>
 				<svg
 					viewBox="0 0 24 24"

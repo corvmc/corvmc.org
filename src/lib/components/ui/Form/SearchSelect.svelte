@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends { id: string }">
+	import { m } from '$lib/paraglide/messages.js';
 	/** The keys of `T` whose value is a string — the only ones that can label an option. */
 	type StringKey<O> = {
 		[K in keyof O]: O[K] extends string | null | undefined ? K : never;
@@ -131,7 +132,7 @@
 				variant="ghost"
 				size="xs"
 				shape="circle"
-				aria-label="Clear {value[labelKey]}"
+				aria-label={m.ui_clear_value({ value: String(value[labelKey]) })}
 				onclick={clear}>✕</Button
 			>
 		</div>
@@ -171,9 +172,9 @@
 					</Combobox.Item>
 				{:else}
 					{#if query.length < minChars}
-						<div class="px-3 py-2 opacity-60">Type to search...</div>
+						<div class="px-3 py-2 opacity-60">{m.ui_search_prompt()}</div>
 					{:else if settled === query}
-						<div class="px-3 py-2 opacity-60">No results</div>
+						<div class="px-3 py-2 opacity-60">{m.ui_search_no_results()}</div>
 					{/if}
 				{/each}
 			</Combobox.Content>
@@ -181,7 +182,7 @@
 	</Combobox.Root>
 	{#if failure}
 		<Alert type="warning" reset={() => run(query)}>
-			Search is not answering: {errorMessage(failure)}
+			{m.ui_search_failed({ error: errorMessage(failure) })}
 		</Alert>
 	{/if}
 {/if}

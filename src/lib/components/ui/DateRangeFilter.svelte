@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * A from/to date range in a `FilterBar`, with the periods a report is
 	 * actually asked for as one click.
@@ -36,9 +37,9 @@
 	// End-of-year is spelled out rather than computed: `new Date(y, 11, 31)` is
 	// local time, and this value is read back as a club-time date string.
 	const presets = [
-		{ label: 'This year', from: `${thisYear}-01-01`, to: '' },
-		{ label: 'Last year', from: `${thisYear - 1}-01-01`, to: `${thisYear - 1}-12-31` },
-		{ label: 'All time', from: '', to: '' }
+		{ label: m.ui_range_this_year(), from: `${thisYear}-01-01`, to: '' },
+		{ label: m.ui_range_last_year(), from: `${thisYear - 1}-01-01`, to: `${thisYear - 1}-12-31` },
+		{ label: m.ui_range_all_time(), from: '', to: '' }
 	];
 
 	const activeFilterCount = $derived((from !== defaultFrom ? 1 : 0) + (to !== defaultTo ? 1 : 0));
@@ -63,7 +64,7 @@
 		<div class="flex flex-wrap items-center gap-2">
 			<!-- Each label wraps with its own input, never apart from it. -->
 			<span class="flex items-center gap-2">
-				<label class="text-muted" for="range-from-{uid}">From</label>
+				<label class="text-muted" for="range-from-{uid}">{m.ui_range_from()}</label>
 				<input
 					id="range-from-{uid}"
 					type="date"
@@ -73,7 +74,7 @@
 				/>
 			</span>
 			<span class="flex items-center gap-2">
-				<label class="text-muted" for="range-to-{uid}">To</label>
+				<label class="text-muted" for="range-to-{uid}">{m.ui_range_to()}</label>
 				<input
 					id="range-to-{uid}"
 					type="date"

@@ -39,6 +39,7 @@
 </script>
 
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { reportError } from '$lib/report-error';
@@ -268,7 +269,7 @@
 					// rendered; surface them without reporting a bug to Sentry.
 					await delay(150 - (performance.now() - start));
 					if (onfailure) onfailure(ctx.issues);
-					else toast.error('Please fix the highlighted fields and try again.');
+					else toast.error(m.ui_form_fix_fields());
 					status = 'error';
 				}
 			} catch (err) {

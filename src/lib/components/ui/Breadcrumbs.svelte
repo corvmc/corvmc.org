@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Crumb } from './breadcrumbs';
 
 	let { crumbs, class: className = '' }: { crumbs: Crumb[]; class?: string } = $props();
@@ -8,7 +9,10 @@
 </script>
 
 {#if crumbs.length > 0}
-	<nav aria-label="Breadcrumb" class="breadcrumbs py-0 text-xs text-base-content/60 {className}">
+	<nav
+		aria-label={m.ui_breadcrumb()}
+		class="breadcrumbs py-0 text-xs text-base-content/60 {className}"
+	>
 		<ol>
 			{#if collapses}
 				<li class="sm:hidden" aria-hidden="true"><span class="cursor-default">…</span></li>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { IconPhoto } from '@tabler/icons-svelte';
 
@@ -205,7 +206,7 @@
 		{#if uploadStatus === 'error'}
 			<p class="text-sm text-error">{uploadError}</p>
 		{:else if uploadStatus === 'success' && !isImage && name}
-			<p class="text-sm text-success">Uploaded</p>
+			<p class="text-sm text-success">{m.ui_upload_done()}</p>
 		{:else if !deferred && selectedFile && !isImage && (name || uploadStatus === 'uploading')}
 			<!-- Immediate mode only. Deferred mode names the file above, beside the
 			     picker, and without this guard both branches match a non-image

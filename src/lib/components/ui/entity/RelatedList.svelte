@@ -1,4 +1,5 @@
 <script lang="ts" generics="T">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import InfoCard from '../InfoCard.svelte';
 	import Alert from '../Alert.svelte';
@@ -41,6 +42,6 @@
 	{:then value}
 		{@render children(value)}
 	{:catch}
-		<Alert type="warning">Could not load {title.toLowerCase()}.</Alert>
+		<Alert type="warning">{m.ui_related_load_failed({ title: title.toLowerCase() })}</Alert>
 	{/await}
 </InfoCard>

@@ -8,6 +8,7 @@
 </script>
 
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Filter toolbar layout. Owns no filter state — pages keep their own `$state`
 	 * and pass the controls in.
@@ -73,7 +74,7 @@
 				{#snippet child({ props })}
 					<Button {...props} variant="ghost" size="sm">
 						<IconFilter size={16} />
-						Filters
+						{m.ui_filters()}
 						{@render badge(menuCount)}
 					</Button>
 				{/snippet}
@@ -89,7 +90,7 @@
 			</Popover.Content>
 		</Popover.Root>
 		{#if showClear}
-			<Button variant="ghost" size="sm" onclick={onclear}>Clear</Button>
+			<Button variant="ghost" size="sm" onclick={onclear}>{m.ui_clear()}</Button>
 		{/if}
 	{:else if children}
 		<!-- Peer checkbox rather than <details>: <details> cannot be reliably
@@ -97,7 +98,7 @@
 		<input id="filters-{uid}" type="checkbox" class="peer hidden" />
 		<label for="filters-{uid}" class="btn btn-ghost btn-sm @lg:hidden">
 			<IconFilter size={16} />
-			Filters
+			{m.ui_filters()}
 			{@render badge(activeCount)}
 		</label>
 
@@ -113,7 +114,7 @@
 		>
 			{@render children()}
 			{#if showClear}
-				<Button variant="ghost" size="sm" onclick={onclear}>Clear</Button>
+				<Button variant="ghost" size="sm" onclick={onclear}>{m.ui_clear()}</Button>
 			{/if}
 		</div>
 	{/if}

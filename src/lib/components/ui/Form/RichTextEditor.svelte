@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { untrack } from 'svelte';
 	import { browser } from '$app/environment';
@@ -117,7 +118,7 @@
 				size="xs"
 				shape="square"
 				class="join-item rounded-b-none {isActive('bold') ? 'btn-active' : ''}"
-				aria-label="Bold"
+				aria-label={m.ui_editor_bold()}
 				onclick={() => editor!.chain().focus().toggleBold().run()}
 			>
 				<IconBold size={16} />
@@ -128,7 +129,7 @@
 				size="xs"
 				shape="square"
 				class="join-item {isActive('italic') ? 'btn-active' : ''}"
-				aria-label="Italic"
+				aria-label={m.ui_editor_italic()}
 				onclick={() => editor!.chain().focus().toggleItalic().run()}
 			>
 				<IconItalic size={16} />
@@ -139,7 +140,7 @@
 				size="xs"
 				shape="square"
 				class="join-item {isActive('underline') ? 'btn-active' : ''}"
-				aria-label="Underline"
+				aria-label={m.ui_editor_underline()}
 				onclick={() => editor!.chain().focus().toggleUnderline().run()}
 			>
 				<IconUnderline size={16} />
@@ -150,7 +151,7 @@
 				size="xs"
 				shape="square"
 				class="join-item {isActive('heading', { level: 3 }) ? 'btn-active' : ''}"
-				aria-label="Heading"
+				aria-label={m.ui_editor_heading()}
 				onclick={() => editor!.chain().focus().toggleHeading({ level: 3 }).run()}
 			>
 				<IconH3 size={16} />
@@ -161,7 +162,7 @@
 				size="xs"
 				shape="square"
 				class="join-item {isActive('bulletList') ? 'btn-active' : ''}"
-				aria-label="Bullet list"
+				aria-label={m.ui_editor_bullet_list()}
 				onclick={() => editor!.chain().focus().toggleBulletList().run()}
 			>
 				<IconList size={16} />
@@ -172,7 +173,7 @@
 				size="xs"
 				shape="square"
 				class="join-item {isActive('orderedList') ? 'btn-active' : ''}"
-				aria-label="Numbered list"
+				aria-label={m.ui_editor_numbered_list()}
 				onclick={() => editor!.chain().focus().toggleOrderedList().run()}
 			>
 				<IconListNumbers size={16} />
@@ -183,7 +184,7 @@
 				size="xs"
 				shape="square"
 				class="join-item {isActive('blockquote') ? 'btn-active' : ''}"
-				aria-label="Quote"
+				aria-label={m.ui_editor_quote()}
 				onclick={() => editor!.chain().focus().toggleBlockquote().run()}
 			>
 				<IconBlockquote size={16} />
@@ -194,7 +195,7 @@
 				size="xs"
 				shape="square"
 				class="join-item rounded-b-none {isActive('link') ? 'btn-active' : ''}"
-				aria-label="Link"
+				aria-label={m.ui_editor_link()}
 				onclick={toggleLink}
 			>
 				<IconLink size={16} />

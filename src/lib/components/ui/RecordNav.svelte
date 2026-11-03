@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { IconArrowLeft, IconArrowRight } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 
@@ -22,27 +23,27 @@
 
 <div class="flex items-center gap-4">
 	{#if prevHref}
-		<Button href={prevHref} variant="ghost" size="sm" title="Previous">
+		<Button href={prevHref} variant="ghost" size="sm" title={m.ui_previous()}>
 			<IconArrowLeft size={16} />
-			Prev
+			{m.ui_prev()}
 		</Button>
 	{:else}
 		<Button disabled variant="ghost" size="sm">
 			<IconArrowLeft size={16} />
-			Prev
+			{m.ui_prev()}
 		</Button>
 	{/if}
 
 	{#if nextHref}
-		<Button href={nextHref} variant="ghost" size="sm" title="Next">
-			Next
+		<Button href={nextHref} variant="ghost" size="sm" title={m.ui_next()}>
+			{m.ui_next()}
 			<IconArrowRight size={16} />
 		</Button>
 	{:else if endLabel}
 		<span class="text-xs opacity-50">{endLabel}</span>
 	{:else}
 		<Button disabled variant="ghost" size="sm">
-			Next
+			{m.ui_next()}
 			<IconArrowRight size={16} />
 		</Button>
 	{/if}
