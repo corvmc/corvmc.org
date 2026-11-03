@@ -23,6 +23,7 @@ import preferTermMessages from './eslint-rules/prefer-term-messages.js';
 import clubTimeDates from './eslint-rules/club-time-dates.js';
 import noWordingLocators from './eslint-rules/no-wording-locators.js';
 import noSvelteElement from './eslint-rules/no-svelte-element.js';
+import noLiteralUiText from './eslint-rules/no-literal-ui-text.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -68,7 +69,10 @@ const customPlugin = {
 		'prefer-term-messages': preferTermMessages,
 		// Enabled below for specs and e2e (#2189).
 		'no-wording-locators': noWordingLocators,
-		'no-svelte-element': noSvelteElement
+		'no-svelte-element': noSvelteElement,
+		// Registered, not enabled: ~8,750 literal strings in `.svelte`.
+		// `pnpm ui-string-census` counts them; enable it once they are cleared (#2099).
+		'no-literal-ui-text': noLiteralUiText
 	}
 };
 

@@ -653,6 +653,21 @@ template — `groupKindLabels` in the invitation email, for one — does come fr
 still has ~256 such labels and lint runs with `--max-warnings 0`; `pnpm lint:terms` lists them.
 Enable it in `eslint.config.js` once they are cleared (#2099).
 
+## Interface copy
+
+Every interface string is moving into the catalog (#2099), so copy is reviewed and trimmed in
+one place: one file per area under `messages/en/` (`ui`, `layout`, `actions`, `components`,
+`band`, `member`, `staff`, `public`), each listed in `project.inlang/settings.json`; terms stay
+in `messages/en.json`. A key is prefixed by its area and then the feature or file it serves
+(`ui_`, `layout_`, `actions_cancel_reservation_`, …), and it is not renamed when its wording
+changes. Read one as
+`m.ui_close()` from `$lib/paraglide/messages.js`; an interpolated string takes named inputs
+(`m.ui_pagination_range({ from, to, total })`).
+
+`custom/no-literal-ui-text` flags literal copy in `.svelte` files and `pnpm ui-string-census`
+counts it by directory. Glyphs, numbers, entities, `<code>`/`<kbd>` and `aria-hidden` text are
+not copy. Moving a string is not a licence to add one; a sweep notes redundant copy in its PR.
+
 ## Custom ESLint rules
 
 Project-specific rules live in `eslint-rules/` and are registered once as the
@@ -684,6 +699,7 @@ more than one config object crashes eslint with "Cannot redefine plugin custom")
 | `custom/club-time-dates`                   | **error** on `*.svelte`, `*.svelte.ts` and `src/lib/remote/**/*.ts` (excluding specs) | A `toLocaleDateString`/`toLocaleTimeString` with no `timeZone`, a date `toLocaleString` (on `new Date(…)`, a `Date`-typed receiver, or with date options) with none, `toISOString().slice(0, 10)`/`.split('T')`, or ``new Date(`${date}T${time}`)`` with no `Z` or offset. Each renders in the runtime's zone — UTC during SSR, the viewer's after hydration — or gives the UTC day (#2000). Use `$lib/utils/format` for an instant, `clubToday()` for today, `addIsoDays()` for date arithmetic, `utcCalendarDate()` for a stored UTC-midnight date, `clubInstant()` to build an instant from a club date and time.                                                                                                                 |
 | `custom/prefer-term-messages`              | **off**; `pnpm lint:terms` runs it on `*.svelte`                                      | A template text node, user-facing attribute or `label`/`title` property whose whole string is a form of a `term_*` message. Read it from `$lib/terms` instead. See [Terminology](#terminology).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `custom/no-wording-locators`               | **error** in `*.spec.ts` and `e2e/`; `pnpm test-wording-census` reports by file       | A literal `name:` in `getByRole`, a literal `getByText`, or a literal `toHaveTextContent`/`toContainText`/`toHaveText`. See [Locate and assert by structure](#locate-and-assert-by-structure).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `custom/no-literal-ui-text`                | **off**; `pnpm ui-string-census` runs it on `src/**/*.svelte`                         | A template text node with a letter in it, a copy attribute (`label`, `title`, `*Label`, `*Toast`, …) or property, or a `toast.*()` message, typed as a literal. Add it to `messages/en.json` and read `m.<key>()`. See [Interface copy](#interface-copy).                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 ### Money columns declare themselves
 
@@ -828,6 +844,7 @@ Every script in `package.json`:
 | `lint:terms`                    | Report catalogued terms typed out as labels (`custom/prefer-term-messages`)                        |
 | `test-wording-census`           | Count tests that locate or assert by UI copy (`custom/no-wording-locators`), by directory          |
 | `form-reachability`             | Print the service keys no `form()`/`command()` passes (#2049); gated by its `.spec.ts`             |
+| `ui-string-census`              | Count literal interface strings in `.svelte` (`custom/no-literal-ui-text`), by directory; `--list` |
 | `format`                        | prettier `--write` everything                                                                      |
 | `db:generate`                   | drizzle-kit: generate a migration from schema changes, then make any table rebuild D1-safe         |
 | `db:fix-migrations`             | Rewrite unsafe table rebuilds (run automatically by `db:generate`)                                 |
