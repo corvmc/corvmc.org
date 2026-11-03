@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { toGenericRef } from '$lib/server/entity/refs';
-import { and, asc, count, eq, inArray, isNull, notInArray, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull, ne, notInArray, sql, type SQL } from 'drizzle-orm';
 import { placePendingWorkOrders } from './retime-work-orders';
 import { DomainError } from '$lib/server/domain-error';
 import {
@@ -344,7 +344,7 @@ export async function createDutyList(data: {
 		.limit(1);
 	if (existing) throw new DutyListNameTakenError(name);
 
-	const [row] = await db
+	const insert = db
 		.insert(dutyList)
 		.values({
 			name,
@@ -356,7 +356,26 @@ export async function createDutyList(data: {
 		})
 		.returning();
 
+	if (!data.autoApplyOn) return (await insert)[0];
+	const [, [row]] = await db.batch([releaseTrigger(data.autoApplyOn), insert]);
 	return row;
+}
+
+/**
+ * A trigger stamps one template, so claiming it takes it off whichever project
+ * template held it. Runs first in the claiming write's batch.
+ */
+function releaseTrigger(trigger: DutyListAutoApplyTrigger, exceptId?: string) {
+	return db
+		.update(dutyList)
+		.set({ autoApplyOn: null, updatedAt: new Date() })
+		.where(
+			and(
+				isTemplate,
+				eq(dutyList.autoApplyOn, trigger),
+				exceptId ? ne(dutyList.id, exceptId) : undefined
+			)
+		);
 }
 
 export async function updateDutyList(
@@ -396,7 +415,9 @@ export async function updateDutyList(
 	if (data.autoApplyOn !== undefined) updates.autoApplyOn = data.autoApplyOn;
 	if (data.isActive !== undefined) updates.isActive = data.isActive;
 
-	const [row] = await db.update(dutyList).set(updates).where(eq(dutyList.id, id)).returning();
+	const update = db.update(dutyList).set(updates).where(eq(dutyList.id, id)).returning();
+	if (!data.autoApplyOn) return (await update)[0];
+	const [, [row]] = await db.batch([releaseTrigger(data.autoApplyOn, id), update]);
 	return row;
 }
 

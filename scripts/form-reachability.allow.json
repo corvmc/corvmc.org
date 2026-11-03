@@ -178,12 +178,6 @@
 	"src/lib/server/user/user-service.ts#deactivateUser(1)": {
 		"batchId": "internal: deactivateUsers (bulkDeactivateUsers) mints one per batch"
 	},
-	"src/lib/server/volunteer/duty-list-service.ts#createDutyList(0)": {
-		"autoApplyOn": "#2265: no form sets auto-apply on production.created"
-	},
-	"src/lib/server/volunteer/duty-list-service.ts#updateDutyList(1)": {
-		"autoApplyOn": "#2265: no form sets auto-apply on production.created"
-	},
 	"src/lib/server/volunteer/duty-list-service.ts#updateDutyListItem(1)": {
 		"capacity": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
 		"dueOffsetMinutes": "#2264: item edit cannot change role, timing, capacity, notes or tasks",
