@@ -22,9 +22,9 @@ Two rows sit on their own at the top:
 
 Everything else is grouped by what it's for:
 
-- **People** — **Members** (member accounts, roles, and credits), **Bands** (all bands, their
-  members, and moderation), and **Volunteering** (shifts, roles, certifications, and the hours
-  report). The Volunteering badge counts hour logs waiting on approval.
+- **People** — **Members** (member accounts, roles, and credits, with volunteers and the hours
+  queue as views) and **Bands** (all bands, their members, and moderation). Volunteer shifts
+  are **Planning → Schedule**, whose badge counts volunteer work waiting on staff.
 - **Space** — **Reservations** (practice-space bookings and payments), with **Recurring** standing
   series and **Closures** blackout dates beneath it; and **Equipment** (the inventory), with
   **Loans** beneath it.

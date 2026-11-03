@@ -18,7 +18,7 @@ import {
 import { countStaffQueues } from '$lib/server/user/staff-queue-counts';
 import { addIsoDays } from '$lib/utils/deadline';
 
-/** A glance at this week's short shifts; the two-week view is /staff/volunteer. */
+/** A glance at this week's short shifts; the two-week view is the Schedule. */
 const SHIFT_HORIZON_DAYS = 7;
 /** Each list is capped: the dashboard is a glance, and its link opens the whole thing. */
 const CAP = 5;

@@ -34,7 +34,6 @@ vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({ listVolunteerRo
 vi.mock('$lib/server/volunteer/work-order-service', () => ({ workOrderProjectId: vi.fn() }));
 vi.mock('./volunteer.remote', () => ({
 	getStaffShiftPage: vi.fn(),
-	getVolunteerWorklist: vi.fn(),
 	getWorkOrderActivity: vi.fn()
 }));
 vi.mock('./tasks.remote', () => ({ getProjectTaskPage: vi.fn() }));

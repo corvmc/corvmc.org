@@ -52,7 +52,7 @@
 	const byGroup = $derived(pageData.then((d) => d.byGroup));
 	const stillInReview = $derived(pageData.then((d) => d.stillInReview));
 
-	// Refresh once on mount. An approval on /staff/volunteer changes these totals,
+	// Refresh once on mount. An approval in the hours queue changes these totals,
 	// but it can't refresh them from there — `refresh()` is keyed by argument and
 	// the queue page doesn't know this page's date range. Arriving here after
 	// approving something would otherwise show cached pre-approval numbers, which

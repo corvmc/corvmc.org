@@ -1036,11 +1036,11 @@ were bound to the session.
 
 So:
 
-- **`/staff/volunteer` is Today, a worklist rather than a table.** Cards for the things
-  waiting on a person — claims to confirm, shifts that are short, hours to review, under-18
-  approvals, shifts that finished without being closed out, clearances lapsing before a shift
-  somebody is already on — each with its action on the row, each hidden when its queue is
-  empty. See [ui-patterns.md#section-dashboards](./ui-patterns.md#section-dashboards).
+- **The Schedule is the worklist (#2379).** `/staff/volunteer` was a dashboard of cards and
+  308s to `/staff/volunteer/schedule` now. Claims to confirm, short shifts, unscheduled work
+  and unverified repairs are count chips that filter the Schedule (`?needs=`); hours to review
+  and clearances lapsing before a booked shift are counts that link to Members → Volunteers
+  (`/hours`, `?lapsing=1`). Each is hidden at zero.
 - **Four screens, not seven.** Today, Schedule, People, Setup, plus a read-only Report.
   Schedule absorbed the shift catalog (its "Everything" window is what the old Include-past
   checkbox was); People absorbed the volunteers index, the under-18 queue and the clearances

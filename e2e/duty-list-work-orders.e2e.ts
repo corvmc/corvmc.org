@@ -30,15 +30,17 @@ async function loginAsStaff(page: Page) {
 }
 
 test.describe('duty lists — the unscheduled half', () => {
-	test('an advance work order reaches the coordinator dashboard', async ({ page }) => {
+	test('an advance work order reaches the Schedule’s unscheduled queue', async ({ page }) => {
 		await loginAsStaff(page);
+		// The old dashboard address, which now lands on the Schedule (#2379).
 		await page.goto('/staff/volunteer');
+		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule/);
 
-		// Scoped by the card root, not `div…last()`: that picked whichever div
-		// most recently contained the words, which became the header the moment
-		// the card gained a "Schedule →" action beside its title.
-		const card = page.locator('.card').filter({ hasText: 'Unscheduled Work Orders' });
-		await expect(card.getByRole('link', { name: SEED_VOL_ADVANCE_ROLE_NAME })).toBeVisible();
+		await page.locator('[data-testid="schedule-needs"] [data-needs="unscheduled"]').click();
+		await expect(page).toHaveURL(/needs=unscheduled/);
+		await expect(
+			page.locator(`main table a[href="/staff/volunteer/shifts/${SEED_VOL_ADVANCE_ID}"]`).first()
+		).toBeVisible();
 	});
 
 	test('and the show it is for says so, beside the timed shifts', async ({ page }) => {

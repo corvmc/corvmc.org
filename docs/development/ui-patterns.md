@@ -807,13 +807,15 @@ section's work is spread across several tables, because then no page holds it: t
 coordinator's version of "what needs me" lives one row in each of five places, and finding
 it means already knowing where to look.
 
-Two sections do it the other way and should be copied rather than re-derived:
+One section does it the other way and should be copied rather than re-derived:
 
 - **`/staff/instructors`** — one query, three cards, and Applications first, with the
   reason in the source: _"the only rows on this page waiting on staff. Everything below is
   either settled or waiting on the member."_
-- **`/staff/volunteer`** — the fuller version, and the one
-  [the volunteering friction log](../reports/volunteer-workflow-findings.md) argues for.
+
+Volunteering had one too, until #2379 folded it into the Schedule: when every card's rows are
+already rows of one table, the cards become that table's filters, each with a count, and the
+cards about people become counts that link to the page holding them.
 
 The rules, so the next one does not have to re-invent them:
 

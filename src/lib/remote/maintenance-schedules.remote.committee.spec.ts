@@ -28,9 +28,6 @@ vi.mock('$lib/server/volunteer/maintenance-schedule-service', () => ({
 
 vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({ listVolunteerRoles: vi.fn() }));
 vi.mock('$lib/server/project/project-service', () => ({ listProjects: vi.fn() }));
-vi.mock('./volunteer.remote', () => ({
-	getVolunteerWorklist: () => ({ refresh: async () => undefined })
-}));
 vi.mock('./groups.remote', () => ({
 	getMemberGroup: () => ({ refresh: async () => undefined })
 }));

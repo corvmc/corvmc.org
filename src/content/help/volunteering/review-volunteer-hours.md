@@ -9,23 +9,30 @@ sortOrder: 2
 
 ## What needs you today
 
-**Volunteering** in the staff panel opens on a worklist, not a table. Each card is
-something waiting on a person, with the action on the row, and a card you cannot see is a
-card with nothing in it:
+**Planning → Schedule** opens with a row of counts above the table. Each is something
+waiting on a person, and a count you cannot see has nothing in it. Four narrow the table:
 
-- **Pending Assignments** — people who claimed an upcoming shift that nobody has confirmed.
-  This is the one to clear first: confirming is what turns a claim into a booking, and until
-  you do it they get no reminder. Confirm one at a time or confirm a whole shift at once.
-- **Understaffed Shifts** — shifts in the next fortnight with places nobody has taken.
-  **Assign** on the row opens the shift, which shows who said they would help with that role, when they said they
-  were free, and whether their clearances cover _that shift's date_ — plus a search box for
-  anybody else.
-- **Unreviewed Hours** — the logs that need a look, with the same approve and return
-  buttons. The whole queue is **Members → Volunteers → Hours**.
-- **Expiring Clearances** — somebody rostered for a date their clearance does
-  not reach. Not the same list as _Who's cleared_: this one has a deadline.
+- **Pending Assignments** — shifts with claims nobody has confirmed. This is the one to clear
+  first: confirming is what turns a claim into a booking, and until you do it they get no
+  reminder. Confirm a whole shift from its row, or one person at a time on the shift page.
+- **Understaffed Shifts** — shifts with fewer people confirmed than they need. **Add** on the
+  row opens the shift, which shows who said they would help with that role, when they said
+  they were free, and whether their clearances cover _that shift's date_ — plus a search box
+  for anybody else.
+- **Unscheduled Work Orders** — work with no time yet. **Schedule** on the row gives it a
+  window; the tick closes it as done.
+- **Unverified Repairs** — finished repairs whose equipment reports are still open.
+  **Verify** closes them and tells each reporter.
 
-The count in the sidebar is all of that added up.
+Two are about people, and open the page that holds them:
+
+- **Unreviewed Hours** — the logs that need a look, in **Members → Volunteers → Hours**.
+- **Expiring Clearances** — somebody rostered for a date their clearance does not reach,
+  shown as a filter on **Members → Volunteers**. Not the same list as _Who's cleared_: this
+  one has a deadline.
+
+The count beside **Schedule** in the sidebar is claims, unscheduled work, unverified repairs
+and unreviewed hours added up.
 
 ## The hours queue
 
@@ -57,7 +64,7 @@ keeps your view.
 ### Logging hours for somebody else
 
 Members have 90 days to log their own hours, and the app tells them to ask staff for
-anything older. **Log Hours** on this page is how you do that. It is also how
+anything older. **Log Hours** on this page, or in the Schedule's header, is how you do that. It is also how
 you record the volunteer who does not use the app at all — which matters, because the
 report only counts what is in here, and an hour nobody typed in is an hour the board never
 hears about.
@@ -67,8 +74,8 @@ to you. You typing it in is the review.
 
 ## Scheduling shifts
 
-**Volunteering → Schedule** is the next two weeks, grouped by day — the view for "who is on
-tonight". **Volunteering → Shifts** is the whole catalog, past included, for finding one.
+**Planning → Schedule** is the next two weeks, grouped by day — the view for "who is on
+tonight". Its **Everything** window is the whole catalog, past included, for finding one.
 
 Create a shift from a role (times and headcount prefill from the role's defaults), and
 duplicate it forward to make a standing weekly slot — there is no recurrence to configure.
@@ -90,7 +97,7 @@ When a shift is called off, its roster stays put — that is who you have to tel
 page turns into a notify list: **Notify all** emails everybody still on it, and **Mark as
 notified** is for the ones you already rang.
 
-A role can require clearances (**Volunteering → Setup**) before its
+A role can require clearances (**Roles**, in the Schedule's header) before its
 shifts can be claimed. Requirements are checked against the shift's date, so a
 lapsing card is caught before it matters. **People**'s clearance filter shows
 who holds one today. Grant and revoke from the member's page, which lists what
@@ -110,7 +117,7 @@ are free, and whether they are cleared for that date. Its three filters widen th
 who have worked the role before, and then to everybody; searching it finds anyone at all,
 which is the person who walked up to the desk and is on no list.
 
-**Volunteering → People** is the full list when you do: everyone who signed up, with their
+**Members → Volunteers** is the full list when you do: everyone who signed up, with their
 roles and their availability note. Each row carries the one thing outstanding about that
 person — a claim of theirs to confirm, a clearance to chase, a sign-off to approve, or otherwise
 a way to log hours on their behalf. Filter by role to see how deep the bench is, or by
@@ -126,7 +133,7 @@ several people at once.
 
 ## Managing roles
 
-**Volunteering → Setup** holds both halves of what volunteering is made of: the roles
+**Roles**, in the Schedule's header, holds both halves of what volunteering is made of: the roles
 members pick from on the left, the clearances that gate some of them on the right. A role
 is a name plus a job description in markdown — the description is what members read when
 deciding whether to help, so write what the job actually involves rather than a label.
@@ -148,7 +155,7 @@ Archive is almost always what you want.
 
 ## The report
 
-**Volunteering → Report** covers **approved hours only**, over whatever date
+**Reports → Volunteering** covers **approved hours only**, over whatever date
 range you set (defaulting to this calendar year). It gives you:
 
 - headline totals — hours, distinct volunteers, logs, average per volunteer;

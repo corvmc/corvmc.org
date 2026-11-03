@@ -1041,7 +1041,7 @@ describe('volunteer hour-log handlers', () => {
 		});
 
 		expect(mockDispatch.mock.calls[0][0].email).toBeUndefined();
-		expect(mockDispatch.mock.calls[0][0].href).toBe('/staff/volunteer');
+		expect(mockDispatch.mock.calls[0][0].href).toBe('/staff/members/volunteers/hours');
 		// Only exceptions are announced, so the notice says which one.
 		expect(mockDispatch.mock.calls[0][0].body).toContain('Long entry');
 	});

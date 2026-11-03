@@ -476,7 +476,7 @@ async function main() {
 	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');
 	console.log('    ridermember@corvallismusic.org  member — own corner only');
 	console.log('\n  Volunteer demo logins (all `password`):');
-	console.log('    coordinator@corvallismusic.org  staff — every /staff/volunteer page');
+	console.log('    coordinator@corvallismusic.org  staff — every /staff/volunteer/** page');
 	console.log('    volunteer@corvallismusic.org    active volunteer — /member/volunteer');
 	console.log('    newcomer@corvallismusic.org     no profile — /member/volunteer/start');
 	console.log('    minor@corvallismusic.org        blocked — /member/volunteer/blocked');

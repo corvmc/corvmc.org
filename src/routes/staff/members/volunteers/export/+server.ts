@@ -19,7 +19,8 @@ export const GET: RequestHandler = async ({ url }) => {
 		q: url.searchParams.get('q') ?? undefined,
 		role: url.searchParams.get('role') ?? undefined,
 		status: url.searchParams.get('status') ?? undefined,
-		cert: url.searchParams.get('cert') ?? undefined
+		cert: url.searchParams.get('cert') ?? undefined,
+		lapsing: url.searchParams.get('lapsing') ?? undefined
 	});
 
 	const rows = await listAllVolunteers(filters);

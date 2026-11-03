@@ -37,7 +37,6 @@ export type StaffNavKey =
 	| 'groups'
 	| 'music'
 	| 'ballots'
-	| 'volunteer'
 	| 'volunteer-schedule'
 	| 'project-templates'
 	| 'volunteer-report'
@@ -160,15 +159,6 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Groups',
 				href: resolve('/staff/groups'),
 				also: [resolve('/staff/bands/acts')]
-			},
-			{
-				// A dashboard, not an index: docs/development/ui-patterns.md#section-dashboards.
-				// Its volunteers are a Members view (#2074).
-				key: 'volunteer',
-				capability: 'volunteer.read',
-				label: 'Volunteering',
-				href: resolve('/staff/volunteer'),
-				badgeKey: 'volunteerPending'
 			}
 		]
 	},
@@ -208,12 +198,15 @@ export const staffNavSections: StaffNavSection[] = [
 				href: resolve('/staff/project-templates')
 			},
 			// Every work order, in a project or not (#2034), and the recurring
-			// work that writes them (#2087). The route stays put.
+			// work that writes them (#2087). The Volunteering dashboard folded in
+			// (#2379), so it takes that row's gate, badge and the rest of the path.
 			{
 				key: 'volunteer-schedule',
-				capability: 'volunteer.manageShifts',
+				capability: 'volunteer.read',
 				label: 'Schedule',
-				href: resolve('/staff/volunteer/schedule')
+				href: resolve('/staff/volunteer/schedule'),
+				also: [resolve('/staff/volunteer')],
+				badgeKey: 'volunteerPending'
 			}
 		]
 	},
@@ -504,7 +497,7 @@ export function allStaffNavItems(): StaffNavItem[] {
 
 /**
  * What `Nav.Collapsible` wants: the hrefs that should hold the row open. The
- * parent counts — being on `/staff/volunteer` itself keeps its children visible.
+ * parent counts — being on a parent's own page keeps its children visible.
  */
 export function childHrefsFor(item: StaffNavItem): string[] {
 	return resolveChildHrefs(item);

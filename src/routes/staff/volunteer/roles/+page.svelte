@@ -413,7 +413,7 @@
 										<!-- The one thing on this screen that is a person rather
 										     than a definition, so it links to the people. -->
 										<a
-											href={resolve('/staff/volunteer')}
+											href={withQuery(resolve('/staff/members/volunteers'), 'lapsing=1')}
 											class="mt-1 inline-block link text-xs text-warning"
 										>
 											{m.staff_volunteer_roles_lapse_before_booked_shift({

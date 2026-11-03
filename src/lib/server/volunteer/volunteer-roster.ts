@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { allRosterRows, rosterCsv } from '$lib/server/roster/roster';
 import { listVolunteers, type VolunteerListRow } from './volunteer-profile-service';
+import { listLapsingBeforeRosteredShift } from './member-certification-service';
 import { volunteerProfileStatuses } from '$lib/config';
 
 /**
@@ -12,20 +13,25 @@ export const volunteerRosterFilters = z.object({
 	q: z.string().optional(),
 	role: z.string().optional(),
 	status: z.enum(volunteerProfileStatuses).optional().catch(undefined),
-	cert: z.string().optional()
+	cert: z.string().optional(),
+	lapsing: z.enum(['1']).optional().catch(undefined)
 });
 
 export type VolunteerRosterFilters = z.infer<typeof volunteerRosterFilters>;
 
 /** Everyone the filters match, unpaginated. */
-export function listAllVolunteers(f: VolunteerRosterFilters): Promise<VolunteerListRow[]> {
+export async function listAllVolunteers(f: VolunteerRosterFilters): Promise<VolunteerListRow[]> {
+	const userIds = f.lapsing
+		? [...new Set((await listLapsingBeforeRosteredShift()).map((l) => l.userId))]
+		: undefined;
 	return allRosterRows((pagination) =>
 		listVolunteers(
 			{
 				search: f.q || undefined,
 				roleId: f.role || undefined,
 				status: f.status,
-				certificationId: f.cert || undefined
+				certificationId: f.cert || undefined,
+				userIds
 			},
 			pagination
 		)
