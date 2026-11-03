@@ -32,7 +32,7 @@ Compose the existing shared primitives rather than inventing new ones.
   could stay uncommitted after an SPA navigation, producing dead modals.
 - **A `$effect` created inside a pending boundary could be stranded forever** — a separate Svelte
   scheduler bug with the same symptom (a dead modal, because `bits-ui`'s `Dialog.Portal` mounts
-  from a `$effect`). Fixed in `patches/svelte@5.57.0.patch`; see
+  from a `$effect`). Fixed in `patches/svelte@5.57.3.patch`; see
   `docs/development/conventions.md#patched-dependencies`. If dead-UI-after-navigation ever returns,
   check that the patch still applies before reading page code.
 - **`<svelte:window>` listeners are not gated.** They are attached synchronously during setup, so a
