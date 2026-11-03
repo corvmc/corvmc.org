@@ -11,6 +11,7 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShortYear } from '$lib/utils/format';
+	import { Latest } from '$lib/latest.svelte';
 
 	let { id }: { id: string } = $props();
 
@@ -27,6 +28,12 @@
 			body: "This member's suggestions are reviewed by staff before they go on the board, after a report was upheld against one of them."
 		}
 	};
+
+	// Not `{#await}`: a refresh would re-pend it and unmount an open Restore (#2356).
+	const standingsQuery = new Latest(() => getMemberStandings(id));
+	$effect(() => {
+		if (standingsQuery.error) throw standingsQuery.error.e;
+	});
 </script>
 
 <!--
@@ -40,8 +47,8 @@
 	because they are separate decisions: an upheld report about an event must not
 	quietly cost someone their suggestion-posting rights, or the reverse.
 -->
-<!-- eslint-disable-next-line custom/no-interactive-await -- #2356 -->
-{#await getMemberStandings(id) then standings}
+{#if standingsQuery.current}
+	{@const standings = standingsQuery.current}
 	{@const restricted = (['community_event', 'suggestion'] as const).filter(
 		(scope) => standings[scope].status !== 'none'
 	)}
@@ -85,7 +92,7 @@
 			</div>
 		</InfoCard>
 	{/each}
-{/await}
+{/if}
 
 <RelatedList
 	title={m.staff_members_id_panels_moderation_panel_reports_against_mem()}
