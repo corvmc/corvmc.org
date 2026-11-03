@@ -66,8 +66,7 @@ const customPlugin = {
 		// `--max-warnings 0`. `pnpm lint:terms` reports them; enable it below once
 		// they are cleared (#2099). See docs/development/conventions.md#terminology.
 		'prefer-term-messages': preferTermMessages,
-		// Registered, not enabled, for the same reason: ~870 hits in specs and e2e.
-		// `pnpm test-wording-census` counts them; enable it once they are cleared (#2189).
+		// Enabled below for specs and e2e (#2189).
 		'no-wording-locators': noWordingLocators,
 		'no-svelte-element': noSvelteElement
 	}
@@ -168,6 +167,11 @@ export default defineConfig(
 		// *return shape* is cast, so a signature change in the code under test still fails.
 		files: ['**/*.spec.ts', '**/*.test.ts', 'scripts/**', 'e2e/**'],
 		rules: { '@typescript-eslint/no-explicit-any': 'off' }
+	},
+	{
+		// Tests locate by structure and assert state, not UI copy (#2189).
+		files: ['**/*.spec.ts', 'e2e/**/*.ts'],
+		rules: { 'custom/no-wording-locators': 'error' }
 	},
 	{
 		// The Form boundary applies to every theme, so this one keeps its full reach.

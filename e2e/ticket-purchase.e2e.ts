@@ -297,6 +297,7 @@ test('a declined card keeps the buyer on checkout with the real decline copy', a
 
 	await payOnFakeCheckout(page, '4000000000000002');
 
+	// eslint-disable-next-line custom/no-wording-locators -- the processor's decline copy, shown verbatim on purpose
 	await expect(page.getByText('Your card has been declined.')).toBeVisible();
 	await expect(page).toHaveURL(/\/checkout\//);
 });

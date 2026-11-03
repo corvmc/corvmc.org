@@ -6,8 +6,8 @@
  *   node scripts/test-wording-census.mjs --json   # machine-readable totals
  *
  * Runs `custom/no-wording-locators` alone over e2e/ and every `*.spec.ts`. The
- * rule is off in eslint.config.js because lint is `--max-warnings 0`; this is
- * the backlog's scoreboard until it reaches zero and the rule is switched on.
+ * rule is an error for specs and e2e in eslint.config.js now that the backlog
+ * reached zero; this reports any hit that comes back, by file.
  */
 import { ESLint } from 'eslint';
 import ts from 'typescript-eslint';

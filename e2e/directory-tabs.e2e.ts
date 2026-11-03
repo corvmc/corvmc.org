@@ -9,10 +9,14 @@ import { expect, test } from '@playwright/test';
  * of public bands and musicians is not something this test should depend on.
  */
 
+// The two in-page tabs are the only `main` links to `/directory` itself, not
+// to a profile under it; musicians is the one that carries `tab=musicians`.
+const directoryTabs = (page: import('@playwright/test').Page) =>
+	page.locator('main a[href^="/directory"]:not([href^="/directory/"])');
 const bandsTab = (page: import('@playwright/test').Page) =>
-	page.getByRole('link', { name: /Bands/ });
+	directoryTabs(page).and(page.locator(':not([href*="tab=musicians"])'));
 const musiciansTab = (page: import('@playwright/test').Page) =>
-	page.getByRole('link', { name: /Musicians/ });
+	directoryTabs(page).and(page.locator('[href*="tab=musicians"]'));
 
 test('bands is the default tab and the clean URL', async ({ page }) => {
 	await page.goto('/directory');
