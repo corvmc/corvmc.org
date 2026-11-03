@@ -31,9 +31,10 @@
 	/** Cards rendered before "Show more" appears. */
 	const PAGE_SIZE = 24;
 
-	// Everything seeded from the URL is declared above the top-level await below.
-	// Declarations that follow one are async-gated, so they don't exist yet during
-	// the first render — the same ordering constraint documented in member/bands.
+	// Everything seeded from the URL, and the effect mirroring it back, is declared
+	// above the top-level await below. Declarations that follow one are
+	// async-gated, so they don't exist yet during the first render, and an effect
+	// created there can be stranded (#2224). `url-mirror.spec.ts` holds the line.
 
 	// Bands are the public front door, so they're the default and the clean URL;
 	// musicians carry `?tab=musicians`. Read from the URL rather than mirrored
@@ -50,20 +51,6 @@
 	let searchText = $state(initial.get('q') ?? '');
 	let genre = $state(initial.get('genre') ?? '');
 	let sort = $state<DirectorySort>('newest');
-
-	// One unfiltered payload; searching and faceting happen in the browser. See
-	// $lib/utils/directory-browse for why, and for what to do if that stops
-	// being the right trade.
-	const pageData = $derived(await getPublicDirectoryPage());
-	const data = $derived(pageData.directory);
-	const user = $derived(pageData.viewer);
-	const visibility = $derived(pageData.visibility);
-	// Missing for either reason: not public, or nothing on the profile yet.
-	const profileIsIncomplete = $derived(user && visibility === 'public' && !pageData.complete);
-	const profileIsHidden = $derived(user && visibility !== 'public');
-
-	const members = $derived(data.members);
-	const bands = $derived(data.bands);
 
 	/** Shared by the tab links and the URL mirror, so they can't disagree. */
 	function directoryHref(target: Tab, q: string, g: string): ResolvedPathname {
@@ -95,6 +82,20 @@
 		}, 300);
 		return () => clearTimeout(timer);
 	});
+
+	// One unfiltered payload; searching and faceting happen in the browser. See
+	// $lib/utils/directory-browse for why, and for what to do if that stops
+	// being the right trade.
+	const pageData = $derived(await getPublicDirectoryPage());
+	const data = $derived(pageData.directory);
+	const user = $derived(pageData.viewer);
+	const visibility = $derived(pageData.visibility);
+	// Missing for either reason: not public, or nothing on the profile yet.
+	const profileIsIncomplete = $derived(user && visibility === 'public' && !pageData.complete);
+	const profileIsHidden = $derived(user && visibility !== 'public');
+
+	const members = $derived(data.members);
+	const bands = $derived(data.bands);
 
 	function matching<T extends { name: string; genres?: string[] }>(rows: T[]): T[] {
 		return sortRows(
