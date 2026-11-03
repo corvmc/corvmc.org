@@ -992,3 +992,12 @@ warnings, `transitionProduction` returns them unmoved until they are acknowledge
 Publishing a CMC event follows the same shape: `publish` in `src/lib/server/event/event-service.ts`
 returns its readiness warnings unpublished until acknowledged with a reason, and writes
 `event.published_over_warnings` when it goes ahead over them.
+
+So do approving a returned volunteer hour log (`approveHourLog`, which writes
+`volunteer_hours.approved_over_return`) and checking out a requested equipment loan without
+scheduling it (`checkoutLoan`, which writes `equipment_loan.checked_out_unscheduled`). Some
+refusals look like ordering but are kept on purpose, and each says why at the throw. Opening a
+ballot whose certifier's account is gone is one: the reference is broken, and the draft edit is
+the fix. Editing or sending a scheduled campaign is another: unscheduling is the reversal, and the
+cron sender claims it at most once. So is staff putting somebody on a shift that has already
+ended: past work is recorded as an hour log, not a signup.

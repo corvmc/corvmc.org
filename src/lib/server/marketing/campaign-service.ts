@@ -135,6 +135,7 @@ export async function updateCampaign(
 	if (!existing) throw new CampaignNotFoundError();
 
 	const status = deriveCampaignStatus(existing.scheduledFor, existing.sentAt);
+	// Kept as a refusal, as in `sendNow`: unscheduling is the reversal.
 	if (status !== 'draft') throw new CampaignStateError('Can only edit draft campaigns');
 
 	if (data.subject !== undefined && data.subject.length > 500)
@@ -297,6 +298,8 @@ export async function sendNow(id: string) {
 	if (!existing) throw new CampaignNotFoundError();
 
 	const status = deriveCampaignStatus(existing.scheduledFor, existing.sentAt);
+	// Kept as a refusal (docs/development/conventions.md#workflow-gates): a scheduled
+	// campaign belongs to the cron sender, and unscheduling is the reversal.
 	if (status !== 'draft') throw new CampaignStateError('Can only send draft campaigns');
 
 	// Set scheduledFor to now — executeSend picks it up

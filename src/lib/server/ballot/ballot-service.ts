@@ -663,6 +663,9 @@ export async function openBallot(ballotId: string, ctx: { now?: Date } = {}): Pr
 	if (b.closesAt.getTime() <= now.getTime()) {
 		throw new BallotStateError('The close date has passed; set a new one first');
 	}
+	// Integrity, not order (docs/development/conventions.md#workflow-gates): a
+	// draft always names a certifier, so a null one means that account was
+	// purged. The draft edit is the fix.
 	if (!b.certifierId) throw new BallotStateError('Name a certifier first');
 
 	const options = await db

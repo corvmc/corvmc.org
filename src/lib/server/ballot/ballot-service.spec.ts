@@ -43,7 +43,7 @@ const svc = await import('./ballot-service');
 const { user } = await import('$lib/server/db/schema/authentication');
 const { group, groupMember } = await import('$lib/server/db/schema/group');
 const { memberOrientation } = await import('$lib/server/db/schema/volunteer');
-const { ballotElector, ballotChoice, ballotParticipation, ballotRecordedVote } =
+const { ballot, ballotElector, ballotChoice, ballotParticipation, ballotRecordedVote } =
 	await import('$lib/server/db/schema/ballot');
 const { eq } = await import('drizzle-orm');
 
@@ -270,6 +270,17 @@ describe('opening a member-wide ballot', () => {
 		const counters = await testDb.select().from(ballotChoice).where(eq(ballotChoice.ballotId, id));
 		expect(counters).toHaveLength(2);
 		expect(counters.every((c) => c.votes === 0)).toBe(true);
+	});
+
+	// Kept as a refusal (#2235): createBallot requires a certifier, so a null one
+	// is a purged account, and opening would leave nobody able to certify.
+	it('refuses to open once the certifier is gone, and records no override', async () => {
+		const id = await memberBallot();
+		await testDb.update(ballot).set({ certifierId: null }).where(eq(ballot.id, id));
+
+		await expect(svc.openBallot(id, { now: NOW })).rejects.toBeInstanceOf(svc.BallotStateError);
+		expect((await svc.getBallot(id)).openedAt).toBeNull();
+		expect(await roll(id)).toEqual([]);
 	});
 
 	it('cannot be opened twice', async () => {
