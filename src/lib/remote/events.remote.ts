@@ -220,9 +220,13 @@ export const getMemberTickets = query(async () => {
 });
 
 export const getMemberEventDetail = query(z.string(), async (id) => {
+	requireUser();
 	const { locals } = getRequestEvent();
 	const evt = await getById(id);
-	if (!evt) throw error(404, 'Event not found');
+	// The public page's rule: a draft or rejected listing is not anyone's to read here.
+	if (!evt || !(publicEventStatuses as readonly string[]).includes(evt.status)) {
+		throw error(404, 'Event not found');
+	}
 	const [remaining, lineup, isSustainingMember, seller] = await Promise.all([
 		evt.ticketingEnabled ? getTicketsRemaining(id) : Promise.resolve(null),
 		getEventLineup(id),
