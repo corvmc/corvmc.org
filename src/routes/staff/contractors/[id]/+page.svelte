@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { workOrderHref } from '$lib/utils/work-order-href';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -160,15 +161,29 @@
 <PageContent>
 	{#if data.contractor.archivedAt}
 		<Alert type="info">
-			<span class="font-medium">{m.staff_archived()}</span>
-			Archived {formatDateShort(data.contractor.archivedAt)}. The history below stays.
+			<ParaglideMessage
+				message={m.staff_contractors_id_archived_history_below_stays}
+				inputs={{
+					staff_archived: m.staff_archived(),
+					formatDateShort: formatDateShort(data.contractor.archivedAt)
+				}}
+				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{/if}
 
 	{#if data.contractor.insuranceExpiresAt && data.contractor.insuranceExpiresAt < new Date()}
 		<Alert type="error">
-			<span class="font-medium">{m.staff_contractors_id_insurance_expired()}</span>
-			Their certificate ran out {formatDateShort(data.contractor.insuranceExpiresAt)}.
+			<ParaglideMessage
+				message={m.staff_contractors_id_their_certificate_ran_out}
+				inputs={{
+					staff_contractors_id_insurance_expired: m.staff_contractors_id_insurance_expired(),
+					formatDateShort: formatDateShort(data.contractor.insuranceExpiresAt)
+				}}
+				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{/if}
 

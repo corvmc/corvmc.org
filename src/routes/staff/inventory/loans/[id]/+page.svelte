@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import {
@@ -175,7 +176,12 @@
 		     of the page was a titled box around it (#1078). -->
 		{#if loan.status !== 'requested' && loan.status !== 'scheduled' && loan.status !== 'checked_out'}
 			<p class="text-muted">
-				This loan is <strong>{loan.status}</strong>. No actions available.
+				<ParaglideMessage
+					message={m.staff_inventory_loans_id_loan_no_actions_available}
+					inputs={{ status: loan.status }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 		{:else}
 			<InfoCard title={m.staff_actions()}>

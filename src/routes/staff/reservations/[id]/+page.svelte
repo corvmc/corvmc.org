@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { isEventHold } from '$lib/config';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
@@ -335,9 +336,13 @@
 							formatTime: formatTime(data.doorFallback.showsFrom)
 						})}
 					{:else if data.doorFallback.code}
-						Member sees:
-						<span class="font-mono font-bold tracking-[0.2em]">{data.doorFallback.code}</span>
-						(break-glass)
+						<ParaglideMessage
+							message={m.staff_reservations_id_member_sees_break_glass}
+							inputs={{ code: data.doorFallback.code }}
+							>{#snippet span({ children })}<span class="font-mono font-bold tracking-[0.2em]"
+									>{@render children?.()}</span
+								>{/snippet}</ParaglideMessage
+						>
 					{:else}
 						<span class="text-warning">
 							{m.staff_reservations_id_no_break_glass_code_confirmed()}

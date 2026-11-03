@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -134,8 +135,13 @@
 
 	{#if tab === 'review'}
 		<p class="text-muted">
-			Nothing here is visible to members. Reported suggestions are resolved in
-			<a class="link" href={resolve('/staff/flags')}>{m.staff_content_flags()}</a>, not here.
+			<ParaglideMessage
+				message={m.staff_suggestions_nothing_here_visible_members_reported}
+				inputs={{ staff_content_flags: m.staff_content_flags() }}
+				>{#snippet a({ children })}<a class="link" href={resolve('/staff/flags')}
+						>{@render children?.()}</a
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 	{/if}
 

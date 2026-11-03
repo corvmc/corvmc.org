@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -239,7 +240,12 @@
 				aria-label={m.staff_projects_id_tasks_done()}
 			></progress>
 			<span class="inline-flex items-center gap-1">
-				<strong>{progress.done}</strong> of {progress.total}
+				<ParaglideMessage
+					message={m.staff_projects_id_text}
+					inputs={{ done: progress.done, total: progress.total }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 				<IconCheck size={14} aria-label={m.staff_projects_id_tasks_done_2()} />
 			</span>
 		</span>

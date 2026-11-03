@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import AudiencePicker from '../../AudiencePicker.svelte';
 	import EventScopePicker from '../../EventScopePicker.svelte';
 	import CampaignPreview from '../../CampaignPreview.svelte';
@@ -254,8 +255,11 @@
 
 			{#if submitting}
 				<div class="flex items-center gap-2 text-muted">
-					<span class="loading loading-sm loading-spinner"></span>
-					Working...
+					<ParaglideMessage message={m.staff_working} inputs={{}}
+						>{#snippet span({ children })}<span class="loading loading-sm loading-spinner"
+								>{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				</div>
 			{/if}
 		</div>

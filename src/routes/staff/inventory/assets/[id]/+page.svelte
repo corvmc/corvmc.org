@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { workOrderHref } from '$lib/utils/work-order-href';
 	import { page } from '$app/state';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
@@ -80,8 +81,15 @@
 		<Alert type={form8282.state === 'overdue' ? 'error' : 'warning'} class="mb-4">
 			<div>
 				<p>
-					<strong>{m.staff_inventory_assets_id_form_8282_may_due()}</strong>
-					This unit was donated{#if data.donor}
+					<ParaglideMessage
+						message={m.staff_inventory_assets_id_unit_was_donated}
+						inputs={{
+							staff_inventory_assets_id_form_8282_may_due:
+								m.staff_inventory_assets_id_form_8282_may_due()
+						}}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>{#if data.donor}
 						{m.staff_inventory_assets_id_by({
 							donor: data.donor
 						})}{/if}{m.staff_inventory_assets_id_cmc_signed_form_8283_was()}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
@@ -122,8 +123,12 @@
 	-->
 	{#if project}
 		<Alert type="success" href={resolve(`/staff/projects/${project.id}`)}>
-			Answered by <span class="font-medium">{project.name}</span>. Its status drives this
-			suggestion's from now on.
+			<ParaglideMessage
+				message={m.staff_suggestions_id_answered_by_its_status_drives}
+				inputs={{ name: project.name }}
+				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{/if}
 
@@ -389,10 +394,12 @@
 					{#if s.visibility === 'hidden'}
 						{m.staff_suggestions_id_put_back_board_if_was()}
 					{:else}
-						Take this off the board. Use <span class="font-medium"
-							>{m.staff_suggestions_id_declined()}</span
-						> above instead if it's a real suggestion you're saying no to — a decline is public and explained,
-						a hide just makes it vanish.
+						<ParaglideMessage
+							message={m.staff_suggestions_id_take_off_board_use_above}
+							inputs={{ staff_suggestions_id_declined: m.staff_suggestions_id_declined() }}
+							>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+								>{/snippet}</ParaglideMessage
+						>
 					{/if}
 				</p>
 				<Action

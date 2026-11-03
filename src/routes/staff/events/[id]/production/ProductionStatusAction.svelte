@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Move a production one step along the usual path.
 	 *
@@ -128,7 +129,14 @@
 					required
 				/>
 			{:else}
-				<p class="text-muted">Move this production to <strong>{move.to}</strong>?</p>
+				<p class="text-muted">
+					<ParaglideMessage
+						message={m.staff_events_id_production_production_status_move_production}
+						inputs={{ to: move.to }}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>
+				</p>
 			{/if}
 		{/snippet}
 	</Action>

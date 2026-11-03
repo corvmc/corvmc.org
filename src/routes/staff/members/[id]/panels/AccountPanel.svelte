@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import {
 		getUser,
 		getRoleCatalog,
@@ -298,7 +299,12 @@
 				{#snippet form()}
 					<input {...unbanFields.id.as('hidden', id)} />
 					<p class="py-4">
-						Lift the ban on <strong>{member.name}</strong> and restore their access?
+						<ParaglideMessage
+							message={m.staff_members_id_panels_account_panel_lift_ban_restore_their}
+							inputs={{ name: member.name }}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 				{/snippet}
 			</Action>
@@ -332,8 +338,12 @@
 				{#snippet form()}
 					<input {...purgeFields.id.as('hidden', id)} />
 					<p class="py-4">
-						Permanently delete <strong>{member.name}</strong>? This cannot be undone. The account
-						must own no bands.
+						<ParaglideMessage
+							message={m.staff_members_id_panels_account_panel_permanently_delete_can}
+							inputs={{ name: member.name }}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 				{/snippet}
 			</Action>
@@ -341,13 +351,15 @@
 		</div>
 	{:else}
 		<p class="mb-3 text-muted">
-			Deactivating signs this member out, hides them from the directory, cancels all of their future
-			reservations, and cancels their membership subscription at the end of its current period.
-			Reactivating restores their access, but <strong
-				>{m.staff_members_id_panels_account_panel_cancelled_reservations()}</strong
+			<ParaglideMessage
+				message={m.staff_members_id_panels_account_panel_deactivating_signs_mem}
+				inputs={{
+					staff_members_id_panels_account_panel_cancelled_reservations:
+						m.staff_members_id_panels_account_panel_cancelled_reservations()
+				}}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
 			>
-			— they would have to be rebooked. The subscription resumes if they are reactivated before the period
-			ends; after that it needs a new checkout.
 		</p>
 		<div class="flex gap-2">
 			<Action

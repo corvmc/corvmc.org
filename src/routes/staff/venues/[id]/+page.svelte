@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * One venue.
 	 *
@@ -117,8 +118,12 @@
 		<Alert type="warning">
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<span>
-					<span class="font-medium">{m.staff_archived_2()}</span> It stays on every event that named it,
-					and is off the picker for new ones.
+					<ParaglideMessage
+						message={m.staff_venues_id_stays_every_event_named_off}
+						inputs={{ staff_archived_2: m.staff_archived_2() }}
+						>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				</span>
 				<Action
 					action={restoreVenue.for(venue.id)}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { fullDate } from '$lib/utils/format';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
@@ -107,14 +108,26 @@
 
 	{#if overCapacity}
 		<p class="over-capacity mb-6">
-			The bill asks for <strong>{data.channelCount}</strong> channels and the desk takes
-			<strong>{data.consoleChannels}</strong>.
+			<ParaglideMessage
+				message={m.staff_events_id_inputs_bill_asks_channels_desk_takes}
+				inputs={{ channelCount: data.channelCount, consoleChannels: data.consoleChannels }}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
+			>
 			{#if fitsIfShared}
-				It fits at <strong>{data.distinctCount}</strong> if every repeated source below is patched once
-				— which is a conversation to have at the advance, not at load-in.
+				<ParaglideMessage
+					message={m.staff_events_id_inputs_fits_at_if_every_repeated}
+					inputs={{ distinctCount: data.distinctCount }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			{:else}
-				Sharing every repeated source still leaves <strong>{data.distinctCount}</strong>, so
-				something is getting sub-mixed or dropped. Agree which before load-in.
+				<ParaglideMessage
+					message={m.staff_events_id_inputs_sharing_every_repeated_source_still}
+					inputs={{ distinctCount: data.distinctCount }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			{/if}
 		</p>
 	{/if}

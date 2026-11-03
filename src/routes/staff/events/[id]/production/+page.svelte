@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '$lib/utils/with-query';
@@ -522,9 +523,12 @@
 											{#snippet form()}
 												<input {...listActInDirectory.fields.eventBandId.as('hidden', act.id)} />
 												<p class="text-sm">
-													This records <strong>{act.name}</strong> as an external act — no page, no membership,
-													nothing members can see. It is what makes them askable for a rider, and gives
-													them a link to answer on.
+													<ParaglideMessage
+														message={m.staff_events_id_production_records_as_external_act_no}
+														inputs={{ name: act.name }}
+														>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+															>{/snippet}</ParaglideMessage
+													>
 												</p>
 											{/snippet}
 										</Action>
