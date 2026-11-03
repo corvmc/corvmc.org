@@ -6,6 +6,7 @@ import { and, asc, count, desc, eq, ne, or } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { DomainError } from '$lib/server/domain-error';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import type { IncidentCategory, IncidentStatusFilter } from '$lib/config';
 
 /**
@@ -166,7 +167,12 @@ export async function listIncidentsFiledBy(userId: string, eventId: string) {
 
 async function loadStatus(id: string) {
 	const [row] = await db
-		.select({ id: incident.id, status: incident.status, resolution: incident.resolution })
+		.select({
+			id: incident.id,
+			status: incident.status,
+			resolution: incident.resolution,
+			summary: incident.summary
+		})
 		.from(incident)
 		.where(eq(incident.id, id))
 		.limit(1);
@@ -207,22 +213,13 @@ export async function resolveIncident(id: string, resolution: string, staff: Act
 }
 
 /**
- * Open it again. The resolution being set aside is kept as a note first, so
+ * Open it again. The resolution being set aside goes on the audit entry, so
  * "we thought this was dealt with on the 3rd" stays on the record.
  */
-export async function reopenIncident(id: string, staff: Actor) {
+export async function reopenIncident(id: string) {
 	const current = await loadStatus(id);
 	if (current.status !== 'resolved') {
 		throw new IncidentStateError('That incident is already open.');
-	}
-
-	if (current.resolution) {
-		await db.insert(incidentNote).values({
-			incidentId: id,
-			authorUserId: staff.id,
-			authorName: staff.name,
-			body: `Reopened. Previous resolution: ${current.resolution}`
-		});
 	}
 
 	const [row] = await db
@@ -237,7 +234,26 @@ export async function reopenIncident(id: string, staff: Actor) {
 		.where(and(eq(incident.id, id), eq(incident.status, 'resolved')))
 		.returning();
 	if (!row) throw new IncidentStateError('That incident changed while you were looking at it.');
+
+	await recordAuditEntry({
+		action: 'incident.reopened',
+		subject: { type: 'incident', id, label: current.summary },
+		details: {
+			previousResolution: current.resolution ? fitAuditText(current.resolution) : null
+		}
+	});
 	return row;
+}
+
+/** Audit details cap at 4 KB; a 2,000-character note can exceed that once encoded. */
+const AUDIT_TEXT_BYTES = 3000;
+
+export function fitAuditText(text: string): string {
+	const bytes = (t: string) => new TextEncoder().encode(JSON.stringify(t)).length;
+	if (bytes(text) <= AUDIT_TEXT_BYTES) return text;
+	let cut = text;
+	while (bytes(`${cut}…`) > AUDIT_TEXT_BYTES) cut = cut.slice(0, Math.floor(cut.length * 0.9));
+	return `${cut}…`;
 }
 
 export async function getIncident(id: string) {

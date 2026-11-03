@@ -21,6 +21,8 @@ export const auditActions = [
 	'user.email_changed',
 	'credits.adjusted',
 	'incident.deleted',
+	'incident.reopened',
+	'incident.retention_changed',
 	'capability.grants_changed',
 	'ballot.elector_overridden',
 	'group.roster_imported',
@@ -109,6 +111,10 @@ export interface AuditDetailsByAction {
 	};
 	/** The retention sweep's deletion (#1468). The row is gone, so this is the record it existed. */
 	'incident.deleted': { category: string; occurredAt: string; retentionYears: number };
+	/** The resolution set aside, null when there was none. Kept as long as the incident is. */
+	'incident.reopened': { previousResolution: string | null };
+	/** The retention hold set (`retain`) or released, and why. Kept as long as the incident is. */
+	'incident.retention_changed': { retain: boolean; reason: string };
 	/** A volunteer role's (`role`) or a committee's (`group`) grant list was edited. */
 	'capability.grants_changed': { added: string[]; removed: string[] };
 	/** The subject is the member put on or taken off a member-wide ballot's roll. */

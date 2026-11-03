@@ -20,6 +20,8 @@ import {
 	INCIDENT_SUMMARY_MAX
 } from '$lib/server/incident/incident-service';
 import { setIncidentRetain } from '$lib/server/incident/incident-retention';
+import { listAuditFeed } from '$lib/server/audit/audit-feed';
+import { historyArgs } from './_history';
 
 /**
  * The incident & safety log — every surface staff-only, behind `incident.*`.
@@ -53,6 +55,12 @@ export const getIncidentDetail = query(z.string(), async (id) => {
 	} catch (err) {
 		mapDomainError(err);
 	}
+});
+
+/** An incident's History card: reopenings and retention holds. Its notes are the Notes card. */
+export const getIncidentHistory = query(historyArgs, async ({ id, limit }) => {
+	await requireCapability('incident.read');
+	return listAuditFeed({ type: 'incident', id }, { limit });
 });
 
 const accountFields = {
@@ -112,9 +120,10 @@ export const resolveIncidentForm = form(
 export const reopenIncidentForm = form(
 	z.object({ incidentId: z.string().min(1) }),
 	async (data) => {
-		const staff = await requireCapability('incident.record');
-		await reopenIncident(data.incidentId, { id: staff.id, name: staff.name });
+		await requireCapability('incident.record');
+		await reopenIncident(data.incidentId);
 		void getIncidentDetail(data.incidentId).refresh();
+		void getIncidentHistory({ id: data.incidentId }).refresh();
 		return { success: true };
 	}
 );
@@ -169,16 +178,14 @@ export const setIncidentRetainForm = form(
 		reason: z.string().trim().min(1, 'Say why').max(INCIDENT_NOTE_MAX)
 	}),
 	async (data) => {
-		const staff = await requireCapability('incident.record');
+		await requireCapability('incident.record');
 		try {
-			await setIncidentRetain(data.incidentId, data.retain === 'true', data.reason, {
-				id: staff.id,
-				name: staff.name
-			});
+			await setIncidentRetain(data.incidentId, data.retain === 'true', data.reason);
 		} catch (err) {
 			mapDomainError(err);
 		}
 		void getIncidentDetail(data.incidentId).refresh();
+		void getIncidentHistory({ id: data.incidentId }).refresh();
 		return { success: true };
 	}
 );

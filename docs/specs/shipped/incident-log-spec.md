@@ -38,10 +38,11 @@
 
 - **Kept seven years, unless marked `retain`** (#1468). The daily cron
   `/api/cron/sweep-incidents` deletes every incident whose `occurredAt` is more than seven years
-  ago and whose `retain` is false; notes go by FK cascade. Each deletion writes an
+  ago and whose `retain` is false; notes go by FK cascade, and its reopen and retention audit entries
+  with the next `/api/cron/sweep-audit-log` run, which otherwise exempts them from its 24 months. Each deletion writes an
   `incident.deleted` row to `audit_log` (actor System, the summary as the subject label), which is
   then the only trace it existed. Staff mark or release `retain` on the detail page, with a reason
-  kept as a note. It is the same horizon the audit-log retention question (#1376) is asked against.
+  kept as an `incident.retention_changed` audit entry. It is the same horizon the audit-log retention question (#1376) is asked against.
 
 ## Schema
 

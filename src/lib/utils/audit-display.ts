@@ -129,6 +129,14 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 		}
 		case 'incident.deleted':
 			return `Deleted after ${entry.details.retentionYears} years (occurred ${entry.details.occurredAt.slice(0, 10)})`;
+		case 'incident.reopened':
+			return entry.details.previousResolution
+				? `Reopened it, setting aside “${entry.details.previousResolution}”`
+				: 'Reopened it';
+		case 'incident.retention_changed':
+			return entry.details.retain
+				? `Marked retain: “${entry.details.reason}”`
+				: `Released the retention hold: “${entry.details.reason}”`;
 		case 'ballot.elector_overridden': {
 			const d = entry.details;
 			const verb = d.include ? 'Added to' : 'Removed from';
